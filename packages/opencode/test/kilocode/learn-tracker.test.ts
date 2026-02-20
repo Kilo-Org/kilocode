@@ -518,4 +518,137 @@ describe("LearnTracker", () => {
       expect(sum.level).toBe("intermediate")
     })
   })
+
+  describe("aggregate", () => {
+    test("returns empty aggregate for fresh project", async () => {
+      await using tmp = await tmpdir({ git: true })
+      await Instance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          const agg = await LearnTracker.getAggregate()
+          expect(agg.checks).toEqual([])
+          expect(agg.level).toBe("intermediate")
+          expect(agg.sessions).toBe(0)
+        },
+      })
+    })
+
+    test("record() also appends to aggregate", async () => {
+      await using tmp = await tmpdir({ git: true })
+      await Instance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          await LearnTracker.record({
+            sessionID: "agg-s1",
+            check: { question: "Q1", category: "comprehension", quality: "correct", concepts: ["fn1"] },
+          })
+
+          const agg = await LearnTracker.getAggregate()
+          expect(agg.checks).toHaveLength(1)
+          expect(agg.checks[0].sessionID).toBe("agg-s1")
+          expect(agg.checks[0].question).toBe("Q1")
+          expect(agg.sessions).toBe(1)
+        },
+      })
+    })
+
+    test("aggregates checks across multiple sessions", async () => {
+      await using tmp = await tmpdir({ git: true })
+      await Instance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          await LearnTracker.record({
+            sessionID: "agg-multi-1",
+            check: { question: "Q1", category: "comprehension", quality: "correct", concepts: ["a"] },
+          })
+          await LearnTracker.record({
+            sessionID: "agg-multi-2",
+            check: { question: "Q2", category: "reasoning", quality: "wrong", concepts: ["b"] },
+          })
+          await LearnTracker.record({
+            sessionID: "agg-multi-1",
+            check: { question: "Q3", category: "system", quality: "correct", concepts: ["c"] },
+          })
+
+          const agg = await LearnTracker.getAggregate()
+          expect(agg.checks).toHaveLength(3)
+          expect(agg.sessions).toBe(2)
+          expect(agg.checks[0].sessionID).toBe("agg-multi-1")
+          expect(agg.checks[1].sessionID).toBe("agg-multi-2")
+          expect(agg.checks[2].sessionID).toBe("agg-multi-1")
+        },
+      })
+    })
+
+    test("aggregate level calibrates from all checks", async () => {
+      await using tmp = await tmpdir({ git: true })
+      await Instance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          // 4 correct across 2 sessions => advanced
+          await LearnTracker.record({
+            sessionID: "agg-level-1",
+            check: { question: "Q1", category: "comprehension", quality: "correct", concepts: ["a"] },
+          })
+          await LearnTracker.record({
+            sessionID: "agg-level-1",
+            check: { question: "Q2", category: "reasoning", quality: "correct", concepts: ["b"] },
+          })
+          await LearnTracker.record({
+            sessionID: "agg-level-2",
+            check: { question: "Q3", category: "system", quality: "correct", concepts: ["c"] },
+          })
+          await LearnTracker.record({
+            sessionID: "agg-level-2",
+            check: { question: "Q4", category: "edge", quality: "correct", concepts: ["d"] },
+          })
+
+          const agg = await LearnTracker.getAggregate()
+          expect(agg.level).toBe("advanced")
+        },
+      })
+    })
+
+    test("clearAggregate resets to empty", async () => {
+      await using tmp = await tmpdir({ git: true })
+      await Instance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          await LearnTracker.record({
+            sessionID: "agg-clear",
+            check: { question: "Q1", category: "comprehension", quality: "correct", concepts: ["x"] },
+          })
+
+          await LearnTracker.clearAggregate()
+
+          const agg = await LearnTracker.getAggregate()
+          expect(agg.checks).toEqual([])
+          expect(agg.level).toBe("intermediate")
+          expect(agg.sessions).toBe(0)
+        },
+      })
+    })
+
+    test("session-level state and aggregate are independent", async () => {
+      await using tmp = await tmpdir({ git: true })
+      await Instance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          await LearnTracker.record({
+            sessionID: "agg-indep",
+            check: { question: "Q1", category: "comprehension", quality: "correct", concepts: ["a"] },
+          })
+
+          // Clear session state but aggregate should persist
+          await LearnTracker.clear("agg-indep")
+
+          const session = await LearnTracker.get("agg-indep")
+          expect(session.checks).toEqual([])
+
+          const agg = await LearnTracker.getAggregate()
+          expect(agg.checks).toHaveLength(1)
+        },
+      })
+    })
+  })
 })

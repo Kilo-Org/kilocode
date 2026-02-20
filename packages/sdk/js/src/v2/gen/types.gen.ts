@@ -2099,6 +2099,28 @@ export type McpResource = {
   client: string
 }
 
+export type LearnAggregateCheck = {
+  id: string
+  question: string
+  category: "comprehension" | "reasoning" | "system" | "edge"
+  quality: "correct" | "partial" | "wrong" | "skipped"
+  /**
+   * Concepts or identifiers referenced in this check
+   */
+  concepts: Array<string>
+  timestamp: number
+  sessionID: string
+}
+
+export type LearnAggregate = {
+  checks: Array<LearnAggregateCheck>
+  level: "beginner" | "intermediate" | "advanced"
+  /**
+   * Number of sessions with learn data
+   */
+  sessions: number
+}
+
 export type TextPartInput = {
   id?: string
   type: "text"
@@ -3034,6 +3056,33 @@ export type SessionStatusResponses = {
 }
 
 export type SessionStatusResponse = SessionStatusResponses[keyof SessionStatusResponses]
+
+export type SessionLearnAggregateData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/session/learn-aggregate"
+}
+
+export type SessionLearnAggregateErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type SessionLearnAggregateError = SessionLearnAggregateErrors[keyof SessionLearnAggregateErrors]
+
+export type SessionLearnAggregateResponses = {
+  /**
+   * Learn aggregate
+   */
+  200: LearnAggregate
+}
+
+export type SessionLearnAggregateResponse = SessionLearnAggregateResponses[keyof SessionLearnAggregateResponses]
 
 export type SessionDeleteData = {
   body?: never

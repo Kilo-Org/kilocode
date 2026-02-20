@@ -90,6 +90,31 @@ export const SessionRoutes = lazy(() =>
         return c.json(result)
       },
     )
+    // kilocode_change start
+    .get(
+      "/learn-aggregate",
+      describeRoute({
+        summary: "Get project learn aggregate",
+        description: "Retrieve the aggregated learning progress across all sessions for the current project.",
+        operationId: "session.learnAggregate",
+        responses: {
+          200: {
+            description: "Learn aggregate",
+            content: {
+              "application/json": {
+                schema: resolver(LearnTracker.Aggregate),
+              },
+            },
+          },
+          ...errors(400),
+        },
+      }),
+      async (c) => {
+        const aggregate = await LearnTracker.getAggregate()
+        return c.json(aggregate)
+      },
+    )
+    // kilocode_change end
     .get(
       "/:sessionID",
       describeRoute({

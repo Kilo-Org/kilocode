@@ -121,6 +121,8 @@ import type {
   SessionGetResponses,
   SessionInitErrors,
   SessionInitResponses,
+  SessionLearnAggregateErrors,
+  SessionLearnAggregateResponses,
   SessionLearnErrors,
   SessionLearnResponses,
   SessionListResponses,
@@ -1028,6 +1030,29 @@ export class Session extends HeyApiClient {
     const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "directory" }] }])
     return (options?.client ?? this.client).get<SessionStatusResponses, SessionStatusErrors, ThrowOnError>({
       url: "/session/status",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get project learn aggregate
+   *
+   * Retrieve the aggregated learning progress across all sessions for the current project.
+   */
+  public learnAggregate<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "directory" }] }])
+    return (options?.client ?? this.client).get<
+      SessionLearnAggregateResponses,
+      SessionLearnAggregateErrors,
+      ThrowOnError
+    >({
+      url: "/session/learn-aggregate",
       ...options,
       ...params,
     })

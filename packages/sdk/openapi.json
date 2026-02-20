@@ -1425,6 +1425,50 @@
         ]
       }
     },
+    "/session/learn-aggregate": {
+      "get": {
+        "operationId": "session.learnAggregate",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Get project learn aggregate",
+        "description": "Retrieve the aggregated learning progress across all sessions for the current project.",
+        "responses": {
+          "200": {
+            "description": "Learn aggregate",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearnAggregate"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@kilocode/sdk\n\nconst client = createOpencodeClient()\nawait client.session.learnAggregate({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/session/{sessionID}": {
       "get": {
         "operationId": "session.get",
@@ -11076,6 +11120,59 @@
           }
         },
         "required": ["name", "uri", "client"]
+      },
+      "LearnAggregateCheck": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "question": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string",
+            "enum": ["comprehension", "reasoning", "system", "edge"]
+          },
+          "quality": {
+            "type": "string",
+            "enum": ["correct", "partial", "wrong", "skipped"]
+          },
+          "concepts": {
+            "description": "Concepts or identifiers referenced in this check",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "timestamp": {
+            "type": "number"
+          },
+          "sessionID": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "question", "category", "quality", "concepts", "timestamp", "sessionID"]
+      },
+      "LearnAggregate": {
+        "type": "object",
+        "properties": {
+          "checks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LearnAggregateCheck"
+            }
+          },
+          "level": {
+            "type": "string",
+            "enum": ["beginner", "intermediate", "advanced"]
+          },
+          "sessions": {
+            "description": "Number of sessions with learn data",
+            "type": "number"
+          }
+        },
+        "required": ["checks", "level", "sessions"]
       },
       "TextPartInput": {
         "type": "object",
