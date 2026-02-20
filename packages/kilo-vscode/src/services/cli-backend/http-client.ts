@@ -338,7 +338,7 @@ export class HttpClient {
    */
   async importCloudSession(sessionId: string): Promise<SessionInfo | null> {
     try {
-      return await this.request<SessionInfo>("POST", "/session/import-cloud", { sessionId })
+      return await this.request<SessionInfo>("POST", "/kilo/cloud/session/import", { sessionId })
     } catch {
       return null
     }

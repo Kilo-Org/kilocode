@@ -248,6 +248,8 @@ export namespace Server {
             errors,
             Auth,
             z,
+            Storage, // kilocode_change
+            Instance, // kilocode_change
           }),
         )
         // kilocode_change end

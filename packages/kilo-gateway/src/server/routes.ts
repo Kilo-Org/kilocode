@@ -19,6 +19,8 @@ type Resolver = any
 type Errors = any
 type Auth = any
 type Z = any
+type Storage = any
+type Instance = any
 
 interface KiloRoutesDeps {
   Hono: new () => Hono
@@ -28,6 +30,8 @@ interface KiloRoutesDeps {
   errors: Errors
   Auth: Auth
   z: Z
+  Storage: Storage
+  Instance: Instance
 }
 
 /**
@@ -54,7 +58,7 @@ interface KiloRoutesDeps {
  * ```
  */
 export function createKiloRoutes(deps: KiloRoutesDeps) {
-  const { Hono, describeRoute, validator, resolver, errors, Auth, z } = deps
+  const { Hono, describeRoute, validator, resolver, errors, Auth, z, Storage, Instance } = deps
 
   const Organization = z.object({
     id: z.string(),
@@ -159,6 +163,73 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
         }))
 
         return c.json({ sessions, nextCursor: result.nextCursor ?? null })
+      },
+    )
+    .post(
+      "/cloud/session/import",
+      describeRoute({
+        summary: "Import session from cloud",
+        description: "Download a cloud-synced session and write it to local storage.",
+        operationId: "kilo.cloud.session.import",
+        responses: {
+          200: {
+            description: "Imported session info",
+            content: {
+              "application/json": {
+                schema: resolver(z.unknown()),
+              },
+            },
+          },
+          ...errors(400, 401, 404),
+        },
+      }),
+      validator(
+        "json",
+        z.object({
+          sessionId: z.string().startsWith("ses_").length(30),
+        }),
+      ),
+      async (c: any) => {
+        const { sessionId } = c.req.valid("json")
+
+        const auth = await Auth.get("kilo")
+        if (!auth) return c.json({ error: "Not authenticated with Kilo" }, 401)
+
+        const token =
+          auth.type === "api"
+            ? auth.key
+            : auth.type === "oauth"
+              ? auth.access
+              : auth.type === "wellknown"
+                ? auth.token
+                : undefined
+        if (!token) return c.json({ error: "No valid token found" }, 401)
+
+        const ingestBase = process.env["KILO_SESSION_INGEST_URL"] ?? "https://ingest.kilosessions.ai"
+        const response = await fetch(`${ingestBase}/api/session/${sessionId}/export`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+
+        if (response.status === 404) return c.json({ error: "Session not found in cloud" }, 404)
+        if (!response.ok) {
+          const text = await response.text()
+          return c.json({ error: `Cloud export failed: ${response.status} ${text}` }, 500 as any)
+        }
+
+        const data = (await response.json()) as any
+        if (!data?.info?.id) return c.json({ error: "Invalid export data" }, 400)
+
+        const projectID = Instance.project.id
+        await Storage.write(["session", projectID, data.info.id], data.info)
+
+        for (const msg of data.messages ?? []) {
+          await Storage.write(["message", data.info.id, msg.info.id], msg.info)
+          for (const part of msg.parts ?? []) {
+            await Storage.write(["part", msg.info.id, part.id], part)
+          }
+        }
+
+        return c.json(data.info)
       },
     )
     .get(
