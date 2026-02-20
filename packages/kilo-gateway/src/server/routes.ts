@@ -215,7 +215,14 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
         if (response.status === 404) return c.json({ error: "Session not found in cloud" }, 404)
         if (!response.ok) {
           const text = await response.text()
-          return c.json({ error: `Cloud export failed: ${response.status} ${text}` }, 500 as any)
+          console.error("[Kilo Gateway] cloud/session/import export failed:", {
+            status: response.status,
+            body: text.slice(0, 500),
+          })
+          return c.json(
+            { error: `This session cannot be imported (export failed: ${response.status})` },
+            response.status as any,
+          )
         }
 
         const data = (await response.json()) as any
