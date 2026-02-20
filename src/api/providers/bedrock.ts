@@ -1159,7 +1159,9 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 		reasoningBudget?: number
 	} {
 		// kilocode_change start: If we have a resolved model from inference profile, update costModelConfig
-		if (this.resolvedModelIdFromProfile && (!this.costModelConfig || !this.costModelConfig.id)) {
+		// Use _costModelConfig directly (not the getter) to avoid infinite recursion:
+		// the getter calls getModel(), which would re-enter here before _costModelConfig is assigned.
+		if (this.resolvedModelIdFromProfile && (!this._costModelConfig || !this._costModelConfig.id)) {
 			this.costModelConfig = this.getModelById(this.resolvedModelIdFromProfile)
 			logger.info("Updated cost model config with resolved inference profile model", {
 				ctx: "bedrock",
@@ -1168,7 +1170,7 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 		}
 		// kilocode_change end
 
-		if (this.costModelConfig?.id?.trim().length > 0) {
+		if ((this._costModelConfig?.id?.trim().length ?? 0) > 0) {
 			// Apply 1M context tier pricing if enabled
 			let modelInfo = this.costModelConfig.info
 			const baseModelId = this.parseBaseModelId(this.costModelConfig.id)

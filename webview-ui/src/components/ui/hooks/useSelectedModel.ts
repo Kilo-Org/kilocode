@@ -273,6 +273,14 @@ function getSelectedModel({
 		case "bedrock": {
 			const id = apiConfiguration.apiModelId ?? defaultModelId
 
+			// Provide safe defaults while ARN resolution is pending (resolvedBedrockModelId not yet set)
+			if (id === "custom-arn") {
+				return {
+					id,
+					info: { maxTokens: 5000, contextWindow: 128_000, supportsPromptCache: false, supportsImages: true },
+				}
+			}
+
 			const baseInfo = bedrockModels[id as keyof typeof bedrockModels]
 
 			// Apply 1M context for Claude Sonnet 4 / 4.5 when enabled
