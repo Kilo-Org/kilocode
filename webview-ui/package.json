@@ -43,7 +43,7 @@
 		"i18next-http-backend": "^3.0.2",
 		"knuth-shuffle-seeded": "^1.0.6",
 		"lucide-react": "^0.475.0",
-		"mermaid": "^11.4.1",
+		"mermaid": "^11.10.0",
 		"posthog-js": "^1.227.2",
 		"react": "^18.3.1",
 		"react-dom": "^18.3.1",
@@ -92,10 +92,10 @@
 		"jest-environment-jsdom": "^29.7.0",
 		"jest-simple-dot-reporter": "^1.0.5",
 		"shiki": "^2.3.2",
-		"storybook": "^8.5.6",
+		"storybook": "^8.6.17",
 		"storybook-dark-mode": "^4.0.2",
 		"ts-jest": "^29.2.5",
 		"typescript": "^5.4.5",
-		"vite": "6.0.11"
+		"vite": "6.4.1"
 	}
 }
