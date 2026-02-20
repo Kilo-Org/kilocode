@@ -391,7 +391,7 @@ export async function getEnvironmentDetails(cline: Task, includeFileDetails: boo
 	let localWorkflowToggles: Record<string, boolean> = {}
 	let globalWorkflowToggles: Record<string, boolean> = {}
 
-	if (clineProvider?.context) {
+	if (Experiments.isEnabled(experiments ?? {}, EXPERIMENT_IDS.AUTO_EXECUTE_WORKFLOW) && clineProvider?.context) {
 		const toggles = await refreshWorkflowToggles(clineProvider.context, cline.cwd)
 		localWorkflowToggles = toggles.localWorkflowToggles
 		globalWorkflowToggles = toggles.globalWorkflowToggles

@@ -130,32 +130,13 @@ export class RunSlashCommandTool extends BaseTool<"run_slash_command"> {
 		const commandName: string | undefined = block.params.command
 		const args: string | undefined = block.params.args
 
-		// kilocode_change: Fix workflow display bug - include complete workflow data when transitioning to complete
-		// When transitioning from partial to complete (block.partial === false), we need to include
-		// the complete workflow data (source, description, content) in the message text.
-		// Without this, the tool object parsed from message.text still contains the old partial
-		// tool message data, which causes SlashCommandItem to render it incorrectly
-		// (e.g., showing partial=true when the workflow is actually complete).
-		if (!block.partial) {
-			// Transitioning to complete - fetch and include complete workflow data
-			const workflow = await getWorkflow(task.cwd, commandName || "")
-			const completeMessage = JSON.stringify({
-				tool: "runSlashCommand",
-				command: commandName,
-				args: args,
-				source: workflow?.source,
-				description: workflow?.description,
-			})
-			await task.ask("tool", completeMessage, false).catch(() => {})
-		} else {
-			// Partial message - use minimal data structure
-			const partialMessage = JSON.stringify({
-				tool: "runSlashCommand",
-				command: this.removeClosingTag("command", commandName, block.partial),
-				args: this.removeClosingTag("args", args, block.partial),
-			})
-			await task.ask("tool", partialMessage, block.partial).catch(() => {})
-		}
+		// kilocode_change: Send partial workflow data during streaming
+		const partialMessage = JSON.stringify({
+			tool: "runSlashCommand",
+			command: this.removeClosingTag("command", commandName, block.partial),
+			args: this.removeClosingTag("args", args, block.partial),
+		})
+		await task.ask("tool", partialMessage, block.partial).catch(() => {})
 		// kilocode_change end
 	}
 }
