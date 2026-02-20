@@ -6,7 +6,7 @@ sidebar_label: ZenMux
 
 ZenMux is a unified API gateway that provides access to multiple AI models from different providers through a single endpoint. It supports OpenAI, Anthropic, Google, and other major AI providers, with automatic routing, fallbacks, and cost optimization.
 
-**Website:** [https://zenmux.ai](https://zenmux.ai)
+**Website:** [https://zenmux.ai/](https://zenmux.ai/)
 
 ## Getting an API Key
 
