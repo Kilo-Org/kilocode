@@ -17,6 +17,7 @@ import { ThinkingSelector } from "./ThinkingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
 import { useImageAttachments } from "../../hooks/useImageAttachments"
 import { fileName, dirName, buildHighlightSegments } from "./prompt-input-utils"
+import { addHistory, navigate, reset, canNavigate } from "./history"
 
 const AUTOCOMPLETE_DEBOUNCE_MS = 500
 const MIN_TEXT_LENGTH = 3
@@ -190,6 +191,22 @@ export const PromptInput: Component = () => {
       return
     }
 
+    if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+      if (e.altKey || e.ctrlKey || e.metaKey) return
+      if (!textareaRef) return
+      if (textareaRef.selectionStart !== textareaRef.selectionEnd) return
+      const dir = e.key === "ArrowUp" ? ("up" as const) : ("down" as const)
+      if (!canNavigate(dir, textareaRef)) return
+      const result = navigate(dir, text())
+      if (result === null) return
+      setText(result.text)
+      textareaRef.value = result.text
+      textareaRef.setSelectionRange(result.text.length, result.text.length)
+      adjustHeight()
+      e.preventDefault()
+      return
+    }
+
     if ((e.key === "Tab" || e.key === "ArrowRight") && ghostText()) {
       e.preventDefault()
       acceptSuggestion()
@@ -228,6 +245,8 @@ export const PromptInput: Component = () => {
 
     session.sendMessage(message, sel?.providerID, sel?.modelID, attachments)
 
+    addHistory(message)
+    reset()
     requestCounter++
     setText("")
     setGhostText("")
