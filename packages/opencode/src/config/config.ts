@@ -1458,7 +1458,8 @@ export namespace Config {
 
   // kilocode_change start - Add function to persist MCP enabled state to config
   export async function persistMcpToggle(name: string, enabled: boolean) {
-    const configPath = await resolveConfigPath(Instance.worktree)
+    // kilocode_change: Note - concurrent config writes could race (low risk for user-triggered actions)
+    const configPath = await resolveConfigPath()
     const file = Bun.file(configPath)
 
     let text = "{}"
@@ -1472,25 +1473,32 @@ export namespace Config {
     const result = applyEdits(text, edits)
 
     await Bun.write(configPath, result)
+    await Instance.dispose()
   }
 
-  async function resolveConfigPath(baseDir: string, global = false) {
-    const candidates = [path.join(baseDir, "opencode.json"), path.join(baseDir, "opencode.jsonc")]
-
-    if (!global) {
-      candidates.push(
-        path.join(baseDir, ".opencode", "opencode.json"),
-        path.join(baseDir, ".opencode", "opencode.jsonc"),
-      )
+  async function resolveConfigPath() {
+    // kilocode_change: Use same resolution logic as loading to ensure we write to the same file
+    // Check if custom config path is set via flag
+    if (Flag.KILO_CONFIG) {
+      return Flag.KILO_CONFIG
     }
 
-    for (const candidate of candidates) {
-      if (await Bun.file(candidate).exists()) {
-        return candidate
+    // Check if project config is disabled
+    if (Flag.KILO_DISABLE_PROJECT_CONFIG) {
+      return globalConfigFile()
+    }
+
+    // Find project config using same priority as loading (jsonc first, then json)
+    for (const file of ["opencode.jsonc", "opencode.json"]) {
+      const found = await Filesystem.findUp(file, Instance.directory, Instance.worktree)
+      if (found.length > 0) {
+        // Use the closest file (first in array, which is highest priority)
+        return found[0]
       }
     }
 
-    return candidates[0]
+    // Fallback to global config
+    return globalConfigFile()
   }
   // kilocode_change end
 

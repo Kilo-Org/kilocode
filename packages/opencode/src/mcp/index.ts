@@ -550,8 +550,12 @@ export namespace MCP {
       s.clients[name] = result.mcpClient
     }
 
-    // kilocode_change start - Persist enabled: true to config
-    await Config.persistMcpToggle(name, true)
+    // kilocode_change start - Persist enabled: true to config only if connection succeeded
+    if (result.status.status === "connected") {
+      await Config.persistMcpToggle(name, true).catch((error) => {
+        log.error("Failed to persist MCP enabled state to config", { name, error })
+      })
+    }
     // kilocode_change end
   }
 
@@ -567,7 +571,9 @@ export namespace MCP {
     s.status[name] = { status: "disabled" }
 
     // kilocode_change start - Persist enabled: false to config
-    await Config.persistMcpToggle(name, false)
+    await Config.persistMcpToggle(name, false).catch((error) => {
+      log.error("Failed to persist MCP disabled state to config", { name, error })
+    })
     // kilocode_change end
   }
 
