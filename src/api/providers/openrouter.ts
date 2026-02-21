@@ -429,7 +429,27 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 
 		let stream
 		try {
-			stream = await this.client.chat.completions.create(completionParams, requestOptions)
+			// kilocode_change start
+			let attempts = 0
+			while (true) {
+				try {
+					attempts++
+					stream = await this.client.chat.completions.create(completionParams, requestOptions)
+					break
+				} catch (error: any) {
+					const msg = error?.message || ""
+					const isBedrockNetworkError =
+						msg.includes("Amazon Bedrock error") && msg.includes("Network connection lost")
+
+					if (isBedrockNetworkError && attempts < 3) {
+						console.log(`[OpenRouter] Retrying Bedrock network error (attempt ${attempts}/3): ${msg}`)
+						await new Promise((resolve) => setTimeout(resolve, attempts * 2000))
+						continue
+					}
+					throw error
+				}
+			}
+			// kilocode_change end
 		} catch (error) {
 			// kilocode_change start
 			// KiloCode backend errors are already user-readable and should be handled upstream.
