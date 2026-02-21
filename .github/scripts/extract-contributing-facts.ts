@@ -51,6 +51,7 @@ interface TemplateField {
   label: string
   required: boolean
   type: string
+  requiredOptionLabels?: string[]
 }
 
 interface ParsedTemplate {
@@ -95,20 +96,39 @@ function parseIssueTemplate(raw: string, file: string): ParsedTemplate {
 
       // Determine required:
       // - For textarea/input: validations.required: true
-      // - For checkboxes: options[].required: true
+      // - For checkboxes: any options[].required: true
       let required = false
+      let requiredOptionLabels: string[] | undefined
+
       if (type === "checkboxes") {
-        required = /required:\s*true/.test(item)
+        // Parse each option under `options:` to collect labels of required ones
+        const optionsSection = item.match(/options:\s*\n([\s\S]+)/)
+        if (optionsSection) {
+          const optItems = optionsSection[1].split(/\n(?=\s+-\s+label:)/)
+          const reqLabels: string[] = []
+          for (const opt of optItems) {
+            if (/required:\s*true/.test(opt)) {
+              const optLabel = opt.match(/label:\s*(.+)/)
+              if (optLabel) reqLabels.push(optLabel[1].trim().replace(/^["']|["']$/g, ""))
+            }
+          }
+          if (reqLabels.length > 0) {
+            required = true
+            requiredOptionLabels = reqLabels
+          }
+        }
       } else {
         required = /validations:\s*\n\s+required:\s*true/.test(item)
       }
 
-      fields.push({ id, label, required, type })
+      fields.push({ id, label, required, type, requiredOptionLabels })
     }
   }
 
   const requiredFields = fields.filter(f => f.required).map(f => f.label)
-  const requiredCheckboxLabels = fields.filter(f => f.required && f.type === "checkboxes").map(f => f.label)
+  const requiredCheckboxLabels = fields
+    .filter(f => f.required && f.type === "checkboxes")
+    .flatMap(f => f.requiredOptionLabels ?? [])
   const optionalFields = fields.filter(f => !f.required).map(f => f.label)
 
   return { file, name, labels, defaultTitle, requiredFields, requiredCheckboxLabels, optionalFields }
