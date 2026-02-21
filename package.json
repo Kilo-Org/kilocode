@@ -18,9 +18,9 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/Kilo-Org/kilocode"
+		"url": "https://github.com/canstralian/CodeFlux-AI-Kit"
 	},
-	"homepage": "https://kilocode.ai",
+	"homepage": "https://github.com/canstralian/CodeFlux-AI-Kit",
 	"categories": [
 		"AI",
 		"Chat",
