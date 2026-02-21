@@ -96,6 +96,17 @@ export class AnthropicVertexHandler extends BaseProvider implements SingleComple
 				}
 			: {}
 
+		// Add fine-grained tool streaming beta when native tools are used
+		// This matches the behavior of AnthropicHandler and BedrockHandler
+		if (shouldIncludeNativeTools) {
+			const toolStreamingBeta = "fine-grained-tool-streaming-2025-05-14"
+			if (!betas) {
+				betas = [toolStreamingBeta]
+			} else if (!betas.includes(toolStreamingBeta)) {
+				betas.push(toolStreamingBeta)
+			}
+		}
+
 		/**
 		 * Vertex API has specific limitations for prompt caching:
 		 * 1. Maximum of 4 blocks can have cache_control

@@ -570,7 +570,7 @@ export const VERTEX_1M_CONTEXT_MODEL_IDS = [
 	"claude-sonnet-4@20250514",
 	"claude-sonnet-4-5@20250929",
 	"claude-sonnet-4-6@20260114",
-	"claude-opus-4-6",
+	"claude-opus-4-6@default",
 ] as const
 
 export const VERTEX_REGIONS = [
