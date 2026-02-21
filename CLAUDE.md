@@ -18,7 +18,7 @@ This file provides context and conventions for AI assistants (Claude, Copilot, e
 ## Repository Structure
 
 ```
-CodeAnywhere/
+kilocode/
 ├── src/                        # Extension backend (TypeScript, Node.js)
 │   ├── extension.ts            # Entry point: registers commands, activates providers
 │   ├── core/                   # Core agent logic
