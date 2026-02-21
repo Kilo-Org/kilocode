@@ -1060,7 +1060,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const editor = vscode.window.activeTextEditor
       if (editor && editor.document.uri.scheme === "file") {
         const url = editorContextUrl(editor)
-        const already = files?.some((f) => f.url === url)
+        const baseUrl = url.split("?")[0]
+        const already = files?.some((f) => f.url.split("?")[0] === baseUrl)
         if (!already) {
           parts.push({ type: "file", mime: "text/plain", url })
         }
