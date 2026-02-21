@@ -27,10 +27,18 @@ const TuiStub = {
   handler() {},
 }
 
+// Stand-in for AttachCommand — same reason as TuiStub above.
+const AttachStub = {
+  command: "attach <url>",
+  describe: "attach to a running kilo server",
+  handler() {},
+}
+
 const commands = [
   AcpCommand,
   McpCommand,
   TuiStub,
+  AttachStub,
   RunCommand,
   GenerateCommand,
   DebugCommand,
@@ -102,7 +110,7 @@ describe("edge cases", () => {
   })
 
   test("kilo help nonexistent throws unknown command error", async () => {
-    expect(generateHelp({ command: "nonexistent", commands })).rejects.toThrow("unknown command")
+    await expect(generateHelp({ command: "nonexistent", commands })).rejects.toThrow("unknown command")
   })
 })
 

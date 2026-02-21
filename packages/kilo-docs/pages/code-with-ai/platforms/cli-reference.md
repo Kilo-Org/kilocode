@@ -20,7 +20,7 @@ Options:
   --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)  [boolean] [default: false]
   --mdns-domain  custom domain name for mDNS service (default: opencode.local)  [string] [default: "opencode.local"]
   --cors         additional domains to allow for CORS  [array] [default: []]
-  --cwd          working directory  [string] [default: "/var/home/matt/dev/kilo/packages/opencode"]
+  --cwd          working directory  [string] [default: "."]
 ```
 
 ## kilo mcp

@@ -163,9 +163,11 @@ export async function generateHelp(options: {
   const format = options.format ?? "md"
 
   const all = options.commands ?? (await loadCommands())
-  const relevant = options.command
-    ? all.filter((c) => extractCommandName(c) === options.command)
-    : all.filter((c) => extractCommandName(c) !== undefined)
+  const relevant = (() => {
+    if (options.command) return all.filter((c) => extractCommandName(c) === options.command)
+    if (options.all) return all.filter((c) => extractCommandName(c) !== undefined)
+    return []
+  })()
 
   if (options.command && relevant.length === 0) {
     throw new Error(`unknown command: ${options.command}`)
