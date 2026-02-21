@@ -28,8 +28,5 @@ export function editorContextUrl(editor: Editor): string {
   const end =
     selection.end.character === 0 && selection.end.line > selection.start.line ? Math.max(start, rawEnd - 1) : rawEnd
 
-  const file = new URL(uri)
-  file.searchParams.set("start", String(start))
-  file.searchParams.set("end", String(end))
-  return file.toString()
+  return `${uri}?start=${start}&end=${end}`
 }
