@@ -1456,6 +1456,44 @@ export namespace Config {
     return global()
   }
 
+  // kilocode_change start - Add function to persist MCP enabled state to config
+  export async function persistMcpToggle(name: string, enabled: boolean) {
+    const configPath = await resolveConfigPath(Instance.worktree)
+    const file = Bun.file(configPath)
+
+    let text = "{}"
+    if (await file.exists()) {
+      text = await file.text()
+    }
+
+    const edits = modify(text, ["mcp", name, "enabled"], enabled, {
+      formattingOptions: { tabSize: 2, insertSpaces: true },
+    })
+    const result = applyEdits(text, edits)
+
+    await Bun.write(configPath, result)
+  }
+
+  async function resolveConfigPath(baseDir: string, global = false) {
+    const candidates = [path.join(baseDir, "opencode.json"), path.join(baseDir, "opencode.jsonc")]
+
+    if (!global) {
+      candidates.push(
+        path.join(baseDir, ".opencode", "opencode.json"),
+        path.join(baseDir, ".opencode", "opencode.jsonc"),
+      )
+    }
+
+    for (const candidate of candidates) {
+      if (await Bun.file(candidate).exists()) {
+        return candidate
+      }
+    }
+
+    return candidates[0]
+  }
+  // kilocode_change end
+
   export async function update(config: Info) {
     const filepath = path.join(Instance.directory, "config.json")
     const existing = await loadFile(filepath)

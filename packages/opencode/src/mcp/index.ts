@@ -549,6 +549,10 @@ export namespace MCP {
       }
       s.clients[name] = result.mcpClient
     }
+
+    // kilocode_change start - Persist enabled: true to config
+    await Config.persistMcpToggle(name, true)
+    // kilocode_change end
   }
 
   export async function disconnect(name: string) {
@@ -561,6 +565,10 @@ export namespace MCP {
       delete s.clients[name]
     }
     s.status[name] = { status: "disabled" }
+
+    // kilocode_change start - Persist enabled: false to config
+    await Config.persistMcpToggle(name, false)
+    // kilocode_change end
   }
 
   export async function tools() {
