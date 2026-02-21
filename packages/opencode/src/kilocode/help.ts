@@ -41,6 +41,9 @@ async function getSubcommands(name: string, cmd: Cmd): Promise<Array<{ name: str
   const result: Array<{ name: string; hidden: boolean; help: string }> = []
 
   try {
+    // yargs 18 internal API — verified against yargs@18.0.0
+    // If these internals change, the catch block below will log a warning
+    // and subcommand help will be omitted (top-level help still works)
     const internal = (inst as any).getInternalMethods()
     const cmdInstance = internal.getCommandInstance()
     const handlers = cmdInstance.getCommandHandlers()
@@ -69,7 +72,7 @@ async function getSubcommands(name: string, cmd: Cmd): Promise<Array<{ name: str
       })
     }
   } catch (err) {
-    // yargs internals unavailable
+    console.warn("failed to extract subcommands via yargs internals", err)
   }
 
   return result
