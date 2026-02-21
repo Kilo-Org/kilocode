@@ -12,12 +12,9 @@ interface BenchModelSelectorProps {
 
 export function BenchModelSelector({ onRunBenchmark, onCancel }: BenchModelSelectorProps) {
 	const { apiConfiguration } = useExtensionState()
-	const { providerModels, providerDefaultModel, isLoading } = useProviderModels(apiConfiguration)
+	const { providerModels, isLoading } = useProviderModels(apiConfiguration)
 
-	const [selectedModels, setSelectedModels] = useState<Set<string>>(() => {
-		// Pre-select the current default model
-		return providerDefaultModel ? new Set([providerDefaultModel]) : new Set()
-	})
+	const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set())
 	const [searchQuery, setSearchQuery] = useState("")
 
 	const modelIds = useMemo(() => {
