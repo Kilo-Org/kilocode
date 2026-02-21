@@ -608,10 +608,9 @@
 			"none": "Nenhum",
 			"minimal": "Mínimo (mais rápido)",
 			"high": "Alto",
-			"xhigh": "Muito alto",
+			"xhigh": "Extra Alto",
 			"medium": "Médio",
-			"low": "Baixo",
-			"xhigh": "Extra Alto"
+			"low": "Baixo"
 		},
 		"verbosity": {
 			"label": "Verbosidade da saída",
@@ -670,7 +669,13 @@
 		"autocompleteLabel": "(Autocompletar)",
 		"autocomplete": {
 			"onlyOneAllowed": "Apenas um perfil de autocompletar é permitido. O perfil \"{{existingName}}\" já está configurado para autocompletar. Por favor, mude seu tipo primeiro ou delete-o."
-		}
+		},
+		"awsInferenceProfileResolution": "Inference Profile Resolution",
+		"awsInferenceProfileResolving": "Resolving...",
+		"awsInferenceProfileResolve": "Resolve",
+		"awsInferenceProfileUnderlyingModel": "Underlying Model: ",
+		"awsInferenceProfileCapabilitiesNote": "This model capabilities will be used for this ARN.",
+		"awsInferenceProfileClickResolve": "Click Resolve to retrieve the underlying model information for this inference profile."
 	},
 	"browser": {
 		"enable": {

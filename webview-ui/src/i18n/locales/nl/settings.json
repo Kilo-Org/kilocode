@@ -634,10 +634,9 @@
 			"none": "Geen",
 			"minimal": "Minimaal (Snelst)",
 			"high": "Hoog",
-			"xhigh": "Zeer hoog",
+			"xhigh": "Extra Hoog",
 			"medium": "Middel",
-			"low": "Laag",
-			"xhigh": "Extra Hoog"
+			"low": "Laag"
 		},
 		"verbosity": {
 			"label": "Uitvoerbaarheid",
@@ -670,7 +669,13 @@
 		"autocompleteLabel": "(Automatisch aanvullen)",
 		"autocomplete": {
 			"onlyOneAllowed": "Er is slechts één automatisch aanvullen profiel toegestaan. Profiel \"{{existingName}}\" is al geconfigureerd voor automatisch aanvullen. Wijzig eerst het type of verwijder het."
-		}
+		},
+		"awsInferenceProfileResolution": "Inference Profile Resolution",
+		"awsInferenceProfileResolving": "Resolving...",
+		"awsInferenceProfileResolve": "Resolve",
+		"awsInferenceProfileUnderlyingModel": "Underlying Model: ",
+		"awsInferenceProfileCapabilitiesNote": "This model capabilities will be used for this ARN.",
+		"awsInferenceProfileClickResolve": "Click Resolve to retrieve the underlying model information for this inference profile."
 	},
 	"browser": {
 		"enable": {

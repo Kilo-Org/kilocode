@@ -634,10 +634,9 @@
 			"none": "Tidak Ada",
 			"minimal": "Minimal (Tercepat)",
 			"high": "Tinggi",
-			"xhigh": "Sangat tinggi",
+			"xhigh": "Ekstra Tinggi",
 			"medium": "Sedang",
-			"low": "Rendah",
-			"xhigh": "Ekstra Tinggi"
+			"low": "Rendah"
 		},
 		"verbosity": {
 			"label": "Verbositas Output",
@@ -670,7 +669,13 @@
 		"autocompleteLabel": "(Pelengkapan Otomatis)",
 		"autocomplete": {
 			"onlyOneAllowed": "Hanya satu profil pelengkapan otomatis yang diizinkan. Profil \"{{existingName}}\" sudah dikonfigurasi untuk pelengkapan otomatis. Silakan ubah jenisnya terlebih dahulu atau hapus."
-		}
+		},
+		"awsInferenceProfileResolution": "Inference Profile Resolution",
+		"awsInferenceProfileResolving": "Resolving...",
+		"awsInferenceProfileResolve": "Resolve",
+		"awsInferenceProfileUnderlyingModel": "Underlying Model: ",
+		"awsInferenceProfileCapabilitiesNote": "This model capabilities will be used for this ARN.",
+		"awsInferenceProfileClickResolve": "Click Resolve to retrieve the underlying model information for this inference profile."
 	},
 	"browser": {
 		"enable": {

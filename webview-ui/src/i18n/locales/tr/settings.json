@@ -608,10 +608,9 @@
 			"none": "Yok",
 			"minimal": "Minimal (en hızlı)",
 			"high": "Yüksek",
-			"xhigh": "Çok yüksek",
+			"xhigh": "Ekstra Yüksek",
 			"medium": "Orta",
-			"low": "Düşük",
-			"xhigh": "Ekstra Yüksek"
+			"low": "Düşük"
 		},
 		"verbosity": {
 			"label": "Çıktı Ayrıntı Düzeyi",
@@ -670,7 +669,13 @@
 			"supportedProvidersDesc1": "SAP AI Core sağlayıcısı şu anda yalnızca aşağıdaki LLM sağlayıcıları için temel modelleri desteklemektedir:",
 			"supportedProvidersDesc2": "Daha fazla modele erişim için Orkestrasyon Moduna geçmeyi düşünün.",
 			"supportedProvidersDesc3": "Orkestrasyon Modu hakkında daha fazla bilgi edinin"
-		}
+		},
+		"awsInferenceProfileResolution": "Inference Profile Resolution",
+		"awsInferenceProfileResolving": "Resolving...",
+		"awsInferenceProfileResolve": "Resolve",
+		"awsInferenceProfileUnderlyingModel": "Underlying Model: ",
+		"awsInferenceProfileCapabilitiesNote": "This model capabilities will be used for this ARN.",
+		"awsInferenceProfileClickResolve": "Click Resolve to retrieve the underlying model information for this inference profile."
 	},
 	"browser": {
 		"enable": {

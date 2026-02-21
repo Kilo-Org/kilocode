@@ -648,10 +648,9 @@
 			"none": "Nessuno",
 			"minimal": "Minimo (più veloce)",
 			"high": "Alto",
-			"xhigh": "Molto alto",
+			"xhigh": "Extra Alto",
 			"medium": "Medio",
-			"low": "Basso",
-			"xhigh": "Extra Alto"
+			"low": "Basso"
 		},
 		"verbosity": {
 			"label": "Verbosity dell'output",
@@ -675,7 +674,13 @@
 			"description": "Questo provider utilizza l'autenticazione OAuth dal servizio Qwen e non richiede chiavi API.",
 			"instructions": "Segui la documentazione ufficiale per ottenere il file di autorizzazione e posizionarlo nel percorso specificato.",
 			"setupLink": "Documentazione ufficiale Qwen"
-		}
+		},
+		"awsInferenceProfileResolution": "Inference Profile Resolution",
+		"awsInferenceProfileResolving": "Resolving...",
+		"awsInferenceProfileResolve": "Resolve",
+		"awsInferenceProfileUnderlyingModel": "Underlying Model: ",
+		"awsInferenceProfileCapabilitiesNote": "This model capabilities will be used for this ARN.",
+		"awsInferenceProfileClickResolve": "Click Resolve to retrieve the underlying model information for this inference profile."
 	},
 	"browser": {
 		"enable": {

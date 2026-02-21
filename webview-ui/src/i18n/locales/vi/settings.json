@@ -636,8 +636,7 @@
 			"high": "Cao",
 			"xhigh": "Rất cao",
 			"medium": "Trung bình",
-			"low": "Thấp",
-			"xhigh": "Rất cao"
+			"low": "Thấp"
 		},
 		"verbosity": {
 			"label": "Mức độ chi tiết đầu ra",
@@ -670,7 +669,13 @@
 		"autocompleteLabel": "(Tự động hoàn thành)",
 		"autocomplete": {
 			"onlyOneAllowed": "Chỉ cho phép một hồ sơ tự động hoàn thành. Hồ sơ \"{{existingName}}\" đã được cấu hình cho tự động hoàn thành. Vui lòng thay đổi loại của nó trước hoặc xóa nó."
-		}
+		},
+		"awsInferenceProfileResolution": "Inference Profile Resolution",
+		"awsInferenceProfileResolving": "Resolving...",
+		"awsInferenceProfileResolve": "Resolve",
+		"awsInferenceProfileUnderlyingModel": "Underlying Model: ",
+		"awsInferenceProfileCapabilitiesNote": "This model capabilities will be used for this ARN.",
+		"awsInferenceProfileClickResolve": "Click Resolve to retrieve the underlying model information for this inference profile."
 	},
 	"browser": {
 		"enable": {

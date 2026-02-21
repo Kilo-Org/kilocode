@@ -440,8 +440,8 @@
 		"minimaxApiKey": "คีย์ API ของ MiniMax",
 		"getMiniMaxApiKey": "รับคีย์ API ของ MiniMax",
 		"minimaxBaseUrl": "จุดเข้าใช้งาน MiniMax",
-		"zaiApiKey": "คีย์ API ของ Z AI",
-		"getZaiApiKey": "รับคีย์ API ของ Z AI",
+		"zaiApiKey": "คีย์ API ของ Z.AI",
+		"getZaiApiKey": "รับคีย์ API ของ Z.AI",
 		"zaiEntrypoint": "จุดเข้าใช้งาน Z AI",
 		"zaiEntrypointDescription": "โปรดเลือกจุดเข้าใช้งาน API ที่เหมาะสมตามตำแหน่งของคุณ หากคุณอยู่ในจีน ให้เลือก open.bigmodel.cn มิฉะนั้น ให้เลือก api.z.ai",
 		"geminiApiKey": "คีย์ API ของ Gemini",
@@ -574,8 +574,6 @@
 			"personalized": "โมเดลส่วนตัว",
 			"subscription": "โมเดลตามการสมัครสมาชิก"
 		},
-		"zaiApiKey": "คีย์ API ของ Z.AI",
-		"getZaiApiKey": "รับคีย์ API ของ Z.AI",
 		"sambaNovaApiKey": "คีย์ API ของ SambaNova",
 		"getSambaNovaApiKey": "รับคีย์ API ของ SambaNova",
 		"poeApiKey": "คีย์ API ของ Poe",
@@ -717,7 +715,13 @@
 			"supportedProvidersDesc1": "ผู้ให้บริการ SAP AI Core ปัจจุบันรองรับเฉพาะโมเดลพื้นฐานสำหรับผู้ให้บริการ LLM ต่อไปนี้เท่านั้น:",
 			"supportedProvidersDesc2": "พิจารณาเปลี่ยนไปใช้โหมด Orchestration เพื่อเข้าถึงโมเดลเพิ่มเติม",
 			"supportedProvidersDesc3": "เรียนรู้เพิ่มเติมเกี่ยวกับโหมด Orchestration"
-		}
+		},
+		"awsInferenceProfileResolution": "Inference Profile Resolution",
+		"awsInferenceProfileResolving": "Resolving...",
+		"awsInferenceProfileResolve": "Resolve",
+		"awsInferenceProfileUnderlyingModel": "Underlying Model: ",
+		"awsInferenceProfileCapabilitiesNote": "This model capabilities will be used for this ARN.",
+		"awsInferenceProfileClickResolve": "Click Resolve to retrieve the underlying model information for this inference profile."
 	},
 	"contextWindow": {
 		"description": "บริบทการสนทนาสูงสุด",

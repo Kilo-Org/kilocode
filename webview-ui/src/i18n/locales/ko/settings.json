@@ -636,8 +636,7 @@
 			"high": "높음",
 			"xhigh": "매우 높음",
 			"medium": "중간",
-			"low": "낮음",
-			"xhigh": "매우 높음"
+			"low": "낮음"
 		},
 		"verbosity": {
 			"label": "출력 상세도",
@@ -670,7 +669,13 @@
 		"autocompleteLabel": "(자동 완성)",
 		"autocomplete": {
 			"onlyOneAllowed": "자동 완성 프로필은 하나만 허용됩니다. 프로필 \"{{existingName}}\"이(가) 이미 자동 완성용으로 구성되어 있습니다. 먼저 유형을 변경하거나 삭제하세요."
-		}
+		},
+		"awsInferenceProfileResolution": "Inference Profile Resolution",
+		"awsInferenceProfileResolving": "Resolving...",
+		"awsInferenceProfileResolve": "Resolve",
+		"awsInferenceProfileUnderlyingModel": "Underlying Model: ",
+		"awsInferenceProfileCapabilitiesNote": "This model capabilities will be used for this ARN.",
+		"awsInferenceProfileClickResolve": "Click Resolve to retrieve the underlying model information for this inference profile."
 	},
 	"browser": {
 		"enable": {

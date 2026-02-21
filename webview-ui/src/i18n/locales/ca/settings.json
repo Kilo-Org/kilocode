@@ -634,10 +634,9 @@
 			"none": "Cap",
 			"minimal": "Mínim (el més ràpid)",
 			"high": "Alt",
-			"xhigh": "Molt alt",
+			"xhigh": "Molt Alt",
 			"medium": "Mitjà",
-			"low": "Baix",
-			"xhigh": "Molt Alt"
+			"low": "Baix"
 		},
 		"verbosity": {
 			"label": "Verbositat de la sortida",
@@ -670,7 +669,13 @@
 		"autocompleteLabel": "(Autocompletat)",
 		"autocomplete": {
 			"onlyOneAllowed": "Només es permet un perfil d'autocompletat. El perfil \"{{existingName}}\" ja està configurat per a autocompletat. Si us plau, canvia el seu tipus primer o elimina'l."
-		}
+		},
+		"awsInferenceProfileResolution": "Inference Profile Resolution",
+		"awsInferenceProfileResolving": "Resolving...",
+		"awsInferenceProfileResolve": "Resolve",
+		"awsInferenceProfileUnderlyingModel": "Underlying Model: ",
+		"awsInferenceProfileCapabilitiesNote": "This model capabilities will be used for this ARN.",
+		"awsInferenceProfileClickResolve": "Click Resolve to retrieve the underlying model information for this inference profile."
 	},
 	"browser": {
 		"enable": {

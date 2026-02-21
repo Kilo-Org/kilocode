@@ -634,10 +634,9 @@
 			"none": "कोई नहीं",
 			"minimal": "न्यूनतम (सबसे तेज़)",
 			"high": "उच्च",
-			"xhigh": "बहुत उच्च",
+			"xhigh": "अत्यंत उच्च",
 			"medium": "मध्यम",
-			"low": "निम्न",
-			"xhigh": "अत्यंत उच्च"
+			"low": "निम्न"
 		},
 		"verbosity": {
 			"label": "आउटपुट वर्बोसिटी",
@@ -670,7 +669,13 @@
 		"autocompleteLabel": "(ऑटोकम्पलीट)",
 		"autocomplete": {
 			"onlyOneAllowed": "केवल एक ऑटोकम्पलीट प्रोफ़ाइल की अनुमति है। प्रोफ़ाइल \"{{existingName}}\" पहले से ही ऑटोकम्पलीट के लिए कॉन्फ़िगर है। कृपया पहले इसका प्रकार बदलें या इसे हटाएं।"
-		}
+		},
+		"awsInferenceProfileResolution": "Inference Profile Resolution",
+		"awsInferenceProfileResolving": "Resolving...",
+		"awsInferenceProfileResolve": "Resolve",
+		"awsInferenceProfileUnderlyingModel": "Underlying Model: ",
+		"awsInferenceProfileCapabilitiesNote": "This model capabilities will be used for this ARN.",
+		"awsInferenceProfileClickResolve": "Click Resolve to retrieve the underlying model information for this inference profile."
 	},
 	"browser": {
 		"enable": {

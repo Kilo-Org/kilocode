@@ -617,10 +617,9 @@
 			"none": "Ninguno",
 			"minimal": "Mínimo (el más rápido)",
 			"high": "Alto",
-			"xhigh": "Muy alto",
+			"xhigh": "Extra Alto",
 			"medium": "Medio",
-			"low": "Bajo",
-			"xhigh": "Extra Alto"
+			"low": "Bajo"
 		},
 		"verbosity": {
 			"label": "Verbosidad de la salida",
@@ -670,7 +669,13 @@
 			"supportedProvidersDesc1": "El proveedor SAP AI Core actualmente solo admite modelos base para los siguientes proveedores de LLM:",
 			"supportedProvidersDesc2": "Considere cambiar al modo de orquestación para acceder a más modelos.",
 			"supportedProvidersDesc3": "Más información sobre el modo de orquestación"
-		}
+		},
+		"awsInferenceProfileResolution": "Inference Profile Resolution",
+		"awsInferenceProfileResolving": "Resolving...",
+		"awsInferenceProfileResolve": "Resolve",
+		"awsInferenceProfileUnderlyingModel": "Underlying Model: ",
+		"awsInferenceProfileCapabilitiesNote": "This model capabilities will be used for this ARN.",
+		"awsInferenceProfileClickResolve": "Click Resolve to retrieve the underlying model information for this inference profile."
 	},
 	"browser": {
 		"enable": {

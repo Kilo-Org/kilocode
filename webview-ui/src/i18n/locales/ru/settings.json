@@ -636,8 +636,7 @@
 			"high": "Высокие",
 			"xhigh": "Очень высокие",
 			"medium": "Средние",
-			"low": "Низкие",
-			"xhigh": "Очень высокие"
+			"low": "Низкие"
 		},
 		"verbosity": {
 			"label": "Подробность вывода",
@@ -670,7 +669,13 @@
 		"autocompleteLabel": "(Автодополнение)",
 		"autocomplete": {
 			"onlyOneAllowed": "Разрешён только один профиль автодополнения. Профиль \"{{existingName}}\" уже настроен для автодополнения. Пожалуйста, сначала измени его тип или удали его."
-		}
+		},
+		"awsInferenceProfileResolution": "Inference Profile Resolution",
+		"awsInferenceProfileResolving": "Resolving...",
+		"awsInferenceProfileResolve": "Resolve",
+		"awsInferenceProfileUnderlyingModel": "Underlying Model: ",
+		"awsInferenceProfileCapabilitiesNote": "This model capabilities will be used for this ARN.",
+		"awsInferenceProfileClickResolve": "Click Resolve to retrieve the underlying model information for this inference profile."
 	},
 	"browser": {
 		"enable": {

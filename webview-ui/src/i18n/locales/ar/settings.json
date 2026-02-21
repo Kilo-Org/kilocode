@@ -731,7 +731,13 @@
 		"autocompleteLabel": "(الإكمال التلقائي)",
 		"autocomplete": {
 			"onlyOneAllowed": "يُسمح بملف إكمال تلقائي واحد فقط. الملف الشخصي \"{{existingName}}\" مُكوّن بالفعل للإكمال التلقائي. يرجى تغيير نوعه أولاً أو حذفه."
-		}
+		},
+		"awsInferenceProfileResolution": "Inference Profile Resolution",
+		"awsInferenceProfileResolving": "Resolving...",
+		"awsInferenceProfileResolve": "Resolve",
+		"awsInferenceProfileUnderlyingModel": "Underlying Model: ",
+		"awsInferenceProfileCapabilitiesNote": "This model capabilities will be used for this ARN.",
+		"awsInferenceProfileClickResolve": "Click Resolve to retrieve the underlying model information for this inference profile."
 	},
 	"contextWindow": {
 		"description": "أقصى سياق محادثة",
