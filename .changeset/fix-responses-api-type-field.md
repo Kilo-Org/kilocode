@@ -1,5 +1,5 @@
 ---
-"@kilocode/api": patch
+"@kilocode": patch
 ---
 
 Fix Responses API compatibility by adding type field to message objects
