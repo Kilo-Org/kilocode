@@ -242,7 +242,7 @@ When adding a new provider, register it in `src/api/index.ts` and add its config
 
 ## Internationalization
 
-- 14 languages in `src/i18n/locales/`: `en`, `es`, `fr`, `de`, `it`, `ja`, `ko`, `zh-CN`, `zh-TW`, `pt-BR`, `ca`, `vi`, `tr`, `hi`
+- Languages in `src/i18n/locales/`: `en`, `es`, `fr`, `de`, `it`, `ja`, `ko`, `zh-CN`, `zh-TW`, `pt-BR`, `ca`, `vi`, `tr`, `hi`
 - CI checks translation completeness — all keys must be present in all locales.
 - Use the i18n helpers; do not hardcode user-visible strings.
 
