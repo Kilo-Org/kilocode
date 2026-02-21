@@ -150,6 +150,11 @@ export interface ToolUse<TName extends ToolName = ToolName> {
 	toolUseId?: string // kilocode_change
 	// nativeArgs is properly typed based on TName if it's in NativeToolArgs, otherwise never
 	nativeArgs?: TName extends keyof NativeToolArgs ? NativeToolArgs[TName] : never
+	/**
+	 * Extra content from provider-specific extensions (e.g., Gemini 3 thought_signature).
+	 * Must be preserved and sent back in subsequent requests for multi-turn conversations.
+	 */
+	extra_content?: Record<string, unknown>
 }
 
 /**
@@ -170,6 +175,11 @@ export interface McpToolUse {
 	/** Arguments passed to the MCP tool */
 	arguments: Record<string, unknown>
 	partial: boolean
+	/**
+	 * Extra content from provider-specific extensions (e.g., Gemini 3 thought_signature).
+	 * Must be preserved and sent back in subsequent requests for multi-turn conversations.
+	 */
+	extra_content?: Record<string, unknown>
 }
 
 export interface ExecuteCommandToolUse extends ToolUse<"execute_command"> {

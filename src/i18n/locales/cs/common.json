@@ -279,5 +279,8 @@
 		"copyInstructions": "Zkopírujte podrobnosti chyby níže:",
 		"errorStack": "Zásobník chyb",
 		"componentStack": "Zásobník komponent"
+	},
+	"suggestions": {
+		"start_code_review": "Zahájit revizi kódu"
 	}
 }

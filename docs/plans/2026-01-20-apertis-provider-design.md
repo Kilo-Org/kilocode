@@ -10,13 +10,13 @@ Apertis is a unified AI API platform providing access to 450+ models from multip
 
 ## API Endpoints
 
-| Endpoint | Format | Authentication | Use Case |
-|----------|--------|----------------|----------|
-| `/v1/chat/completions` | OpenAI Chat | `Authorization: Bearer` | General models (GPT, Gemini, etc.) |
-| `/v1/messages` | Anthropic | `x-api-key` | Claude models |
-| `/v1/responses` | OpenAI Responses | `Authorization: Bearer` | Reasoning models (o1, o3) |
-| `/api/models` | - | None required | Public model list |
-| `/v1/models` | OpenAI | `Authorization: Bearer` | Detailed model info |
+| Endpoint               | Format           | Authentication          | Use Case                           |
+| ---------------------- | ---------------- | ----------------------- | ---------------------------------- |
+| `/v1/chat/completions` | OpenAI Chat      | `Authorization: Bearer` | General models (GPT, Gemini, etc.) |
+| `/v1/messages`         | Anthropic        | `x-api-key`             | Claude models                      |
+| `/v1/responses`        | OpenAI Responses | `Authorization: Bearer` | Reasoning models (o1, o3)          |
+| `/api/models`          | -                | None required           | Public model list                  |
+| `/v1/models`           | OpenAI           | `Authorization: Bearer` | Detailed model info                |
 
 **Base URL:** `https://api.apertis.ai` (configurable for enterprise/self-hosted)
 
@@ -40,6 +40,7 @@ The ApertisHandler implements intelligent routing based on model ID:
 ```
 
 **Routing Rules:**
+
 - `claude-*` → `/v1/messages` (Anthropic format)
 - `o1-*`, `o3-*` or reasoning enabled → `/v1/responses` (Responses API)
 - Others → `/v1/chat/completions` (OpenAI Chat)
@@ -78,21 +79,21 @@ webview-ui/src/i18n/locales/*/settings.json # i18n translations
 
 ```typescript
 const apertisSchema = baseProviderSettingsSchema.extend({
-  // Authentication
-  apertisApiKey: z.string().optional(),
+	// Authentication
+	apertisApiKey: z.string().optional(),
 
-  // Model selection
-  apertisModelId: z.string().optional(),
+	// Model selection
+	apertisModelId: z.string().optional(),
 
-  // Base URL (default: https://api.apertis.ai)
-  apertisBaseUrl: z.string().optional(),
+	// Base URL (default: https://api.apertis.ai)
+	apertisBaseUrl: z.string().optional(),
 
-  // Responses API specific
-  apertisInstructions: z.string().optional(),
+	// Responses API specific
+	apertisInstructions: z.string().optional(),
 
-  // Reasoning settings
-  apertisReasoningEffort: z.enum(["low", "medium", "high"]).optional(),
-  apertisReasoningSummary: z.enum(["auto", "concise", "detailed"]).optional(),
+	// Reasoning settings
+	apertisReasoningEffort: z.enum(["low", "medium", "high"]).optional(),
+	apertisReasoningSummary: z.enum(["auto", "concise", "detailed"]).optional(),
 })
 ```
 
@@ -111,44 +112,44 @@ export const apertisDefaultModelId = "claude-sonnet-4-20250514"
 // src/api/providers/apertis.ts
 
 export class ApertisHandler extends BaseProvider implements SingleCompletionHandler {
-  private options: ApiHandlerOptions
-  private client: OpenAI
-  private anthropicClient: Anthropic
+	private options: ApiHandlerOptions
+	private client: OpenAI
+	private anthropicClient: Anthropic
 
-  constructor(options: ApiHandlerOptions) {
-    const baseURL = options.apertisBaseUrl || APERTIS_DEFAULT_BASE_URL
+	constructor(options: ApiHandlerOptions) {
+		const baseURL = options.apertisBaseUrl || APERTIS_DEFAULT_BASE_URL
 
-    this.client = new OpenAI({
-      baseURL: `${baseURL}/v1`,
-      apiKey: options.apertisApiKey,
-    })
+		this.client = new OpenAI({
+			baseURL: `${baseURL}/v1`,
+			apiKey: options.apertisApiKey,
+		})
 
-    this.anthropicClient = new Anthropic({
-      baseURL: `${baseURL}/v1`,
-      apiKey: options.apertisApiKey,
-    })
-  }
+		this.anthropicClient = new Anthropic({
+			baseURL: `${baseURL}/v1`,
+			apiKey: options.apertisApiKey,
+		})
+	}
 
-  private getApiFormat(modelId: string): "messages" | "responses" | "chat" {
-    if (modelId.startsWith("claude-")) return "messages"
-    if (modelId.startsWith("o1-") || modelId.startsWith("o3-")) return "responses"
-    return "chat"
-  }
+	private getApiFormat(modelId: string): "messages" | "responses" | "chat" {
+		if (modelId.startsWith("claude-")) return "messages"
+		if (modelId.startsWith("o1-") || modelId.startsWith("o3-")) return "responses"
+		return "chat"
+	}
 
-  async *createMessage(systemPrompt, messages, metadata) {
-    const format = this.getApiFormat(this.getModel().id)
+	async *createMessage(systemPrompt, messages, metadata) {
+		const format = this.getApiFormat(this.getModel().id)
 
-    switch (format) {
-      case "messages":
-        yield* this.createAnthropicMessage(systemPrompt, messages, metadata)
-        break
-      case "responses":
-        yield* this.createResponsesMessage(systemPrompt, messages, metadata)
-        break
-      default:
-        yield* this.createChatMessage(systemPrompt, messages, metadata)
-    }
-  }
+		switch (format) {
+			case "messages":
+				yield* this.createAnthropicMessage(systemPrompt, messages, metadata)
+				break
+			case "responses":
+				yield* this.createResponsesMessage(systemPrompt, messages, metadata)
+				break
+			default:
+				yield* this.createChatMessage(systemPrompt, messages, metadata)
+		}
+	}
 }
 ```
 
@@ -157,33 +158,31 @@ export class ApertisHandler extends BaseProvider implements SingleCompletionHand
 ```typescript
 // src/api/providers/fetchers/apertis.ts
 
-export async function getApertisModels(options?: {
-  apiKey?: string
-  baseUrl?: string
-}): Promise<ModelRecord> {
-  const baseUrl = options?.baseUrl || APERTIS_DEFAULT_BASE_URL
+export async function getApertisModels(options?: { apiKey?: string; baseUrl?: string }): Promise<ModelRecord> {
+	const baseUrl = options?.baseUrl || APERTIS_DEFAULT_BASE_URL
 
-  // Use public endpoint (no auth required)
-  const response = await fetch(`${baseUrl}/api/models`)
-  const data = await response.json()
+	// Use public endpoint (no auth required)
+	const response = await fetch(`${baseUrl}/api/models`)
+	const data = await response.json()
 
-  const models: ModelRecord = {}
+	const models: ModelRecord = {}
 
-  for (const modelId of data.data) {
-    models[modelId] = {
-      contextWindow: getContextWindow(modelId),
-      supportsPromptCache: modelId.startsWith("claude-"),
-      supportsImages: supportsVision(modelId),
-    }
-  }
+	for (const modelId of data.data) {
+		models[modelId] = {
+			contextWindow: getContextWindow(modelId),
+			supportsPromptCache: modelId.startsWith("claude-"),
+			supportsImages: supportsVision(modelId),
+		}
+	}
 
-  return models
+	return models
 }
 ```
 
 ## UI Settings Component
 
 Key features:
+
 - API Key input with link to `https://apertis.ai/token`
 - Model picker with dynamic model list
 - Reasoning settings (shown only for o1/o3 models)
@@ -191,14 +190,14 @@ Key features:
 
 ## Special Features Support
 
-| Feature | API | Implementation |
-|---------|-----|----------------|
-| Extended Thinking | Messages API | `thinking.budget_tokens` parameter |
-| Reasoning Effort | Responses API | `reasoning.effort` parameter |
-| Reasoning Summary | Responses API | `reasoning.summary` parameter |
-| Instructions | Responses API | `instructions` parameter |
-| Web Search | Responses API | `tools` with web_search type |
-| Streaming | All APIs | `stream: true` parameter |
+| Feature           | API           | Implementation                     |
+| ----------------- | ------------- | ---------------------------------- |
+| Extended Thinking | Messages API  | `thinking.budget_tokens` parameter |
+| Reasoning Effort  | Responses API | `reasoning.effort` parameter       |
+| Reasoning Summary | Responses API | `reasoning.summary` parameter      |
+| Instructions      | Responses API | `instructions` parameter           |
+| Web Search        | Responses API | `tools` with web_search type       |
+| Streaming         | All APIs      | `stream: true` parameter           |
 
 ## Error Handling
 

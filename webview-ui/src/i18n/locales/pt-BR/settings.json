@@ -316,6 +316,8 @@
 		"getVercelAiGatewayApiKey": "Obter chave API do Vercel AI Gateway",
 		"glamaApiKey": "Chave API do Glama",
 		"getGlamaApiKey": "Obter chave API do Glama",
+		"aihubmixApiKey": "Chave API do AIhubmix",
+		"getAihubmixApiKey": "Obter chave API do AIhubmix",
 		"apiKeyStorageNotice": "As chaves de API são armazenadas com segurança no Armazenamento Secreto do VSCode",
 		"openAiCodexRateLimits": {
 			"title": "Usage Limits for Codex{{planLabel}}",
@@ -425,6 +427,8 @@
 		"groqApiKey": "Chave de API Groq",
 		"getSambaNovaApiKey": "Obter chave de API SambaNova",
 		"sambaNovaApiKey": "Chave de API SambaNova",
+		"poeApiKey": "Chave de API Poe",
+		"getPoeApiKey": "Obter chave de API Poe",
 		"getGeminiApiKey": "Obter chave de API Gemini",
 		"getHuggingFaceApiKey": "Obter chave de API Hugging Face",
 		"huggingFaceApiKey": "Chave de API Hugging Face",

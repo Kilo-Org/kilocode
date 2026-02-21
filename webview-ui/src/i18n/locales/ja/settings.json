@@ -321,6 +321,8 @@
 		"getVercelAiGatewayApiKey": "Vercel AI Gateway APIキーを取得",
 		"glamaApiKey": "Glama APIキー",
 		"getGlamaApiKey": "Glama APIキーを取得",
+		"aihubmixApiKey": "AIhubmix APIキー",
+		"getAihubmixApiKey": "AIhubmix APIキーを取得",
 		"apiKeyStorageNotice": "APIキーはVSCodeのシークレットストレージに安全に保存されます",
 		"openAiCodexRateLimits": {
 			"title": "Usage Limits for Codex{{planLabel}}",
@@ -422,6 +424,8 @@
 		"groqApiKey": "Groq APIキー",
 		"getSambaNovaApiKey": "SambaNova APIキーを取得",
 		"sambaNovaApiKey": "SambaNova APIキー",
+		"poeApiKey": "Poe APIキー",
+		"getPoeApiKey": "Poe APIキーを取得",
 		"getHuggingFaceApiKey": "Hugging Face APIキーを取得",
 		"huggingFaceApiKey": "Hugging Face APIキー",
 		"getOvhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints APIキーを取得",

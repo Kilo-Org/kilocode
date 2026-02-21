@@ -718,7 +718,7 @@ const ModesView = ({ hideHeader = false }: { hideHeader?: boolean }) => {
 								style={{ display: "inline" }}
 								aria-label="Learn about using modes"></VSCodeLink>
 							<VSCodeLink
-								href={buildDocLink("features/custom-modes", "prompts_view_modes")}
+								href={buildDocLink("customize/custom-modes", "prompts_view_modes")}
 								style={{ display: "inline" }}
 								aria-label="Learn about customizing modes"></VSCodeLink>
 						</Trans>

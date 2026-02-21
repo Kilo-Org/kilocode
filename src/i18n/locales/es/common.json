@@ -278,5 +278,8 @@
 		"copyInstructions": "Copia los detalles del error a continuación:",
 		"errorStack": "Pila del Error",
 		"componentStack": "Pila de Componentes"
+	},
+	"suggestions": {
+		"start_code_review": "Iniciar revisión de código"
 	}
 }

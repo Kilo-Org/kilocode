@@ -130,7 +130,9 @@ export function createProviderForTesting(
 	costTrackingCallback: CostTrackingCallback = () => {},
 	getSettings: () => AutocompleteServiceSettings | null = () => null,
 ): AutocompleteInlineCompletionProvider {
-	const instance = Object.create(AutocompleteInlineCompletionProvider.prototype) as AutocompleteInlineCompletionProvider
+	const instance = Object.create(
+		AutocompleteInlineCompletionProvider.prototype,
+	) as AutocompleteInlineCompletionProvider
 	// Initialize private fields using Object.assign to bypass TypeScript private access
 	Object.assign(instance, {
 		suggestionsHistory: [],

@@ -148,11 +148,11 @@ describe("OpenAiHandler", () => {
 			}
 
 			expect(chunks.length).toBeGreaterThan(0)
-			const textChunk = chunks.find((chunk) => chunk.type === "text")
+			const textChunks = chunks.filter((chunk) => chunk.type === "text")
 			const usageChunk = chunks.find((chunk) => chunk.type === "usage")
 
-			expect(textChunk).toBeDefined()
-			expect(textChunk?.text).toBe("Test response")
+			expect(textChunks).toHaveLength(1)
+			expect(textChunks[0]?.text).toBe("Test response")
 			expect(usageChunk).toBeDefined()
 			expect(usageChunk?.inputTokens).toBe(10)
 			expect(usageChunk?.outputTokens).toBe(5)

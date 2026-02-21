@@ -283,5 +283,8 @@
 		"copyInstructions": "Copiez les détails de l'erreur ci-dessous :",
 		"errorStack": "Pile d'erreur",
 		"componentStack": "Pile de composants"
+	},
+	"suggestions": {
+		"start_code_review": "Démarrer la revue de code"
 	}
 }

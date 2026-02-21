@@ -281,5 +281,8 @@
 		"copyInstructions": "Skopírujte podrobnosti chyby nižšie:",
 		"errorStack": "Zásobník chýb",
 		"componentStack": "Zásobník komponentov"
+	},
+	"suggestions": {
+		"start_code_review": "Spustiť kontrolu kódu"
 	}
 }

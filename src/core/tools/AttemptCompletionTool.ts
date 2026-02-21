@@ -1,6 +1,6 @@
 import * as vscode from "vscode"
 
-import { RooCodeEventName, type HistoryItem } from "@roo-code/types"
+import { RooCodeEventName, type HistoryItem, type SuggestionItem } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 
 import { Task } from "../task/Task"
@@ -25,6 +25,16 @@ async function getClineMessageOptions(
 			kiloCode: { commitRange },
 		},
 	}
+}
+// kilocode_change end
+
+// kilocode_change start - Generate post-completion suggestions based on task mode
+export function getCompletionSuggestions(task: Task): SuggestionItem[] | undefined {
+	const mode = task.taskMode
+	if (mode === "code" || mode === "orchestrator") {
+		return [{ answer: t("common:suggestions.start_code_review"), mode: "review" }]
+	}
+	return undefined
 }
 // kilocode_change end
 
@@ -170,7 +180,12 @@ export class AttemptCompletionTool extends BaseTool<"attempt_completion"> {
 				}
 			}
 
-			const { response, text, images } = await task.ask("completion_result", "", false)
+			// kilocode_change start - Pass completion suggestions based on task mode
+			const completionSuggestions = getCompletionSuggestions(task)
+			const completionAskText = completionSuggestions ? JSON.stringify({ suggest: completionSuggestions }) : ""
+			// kilocode_change end
+
+			const { response, text, images } = await task.ask("completion_result", completionAskText, false)
 
 			if (response === "yesButtonClicked") {
 				return

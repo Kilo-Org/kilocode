@@ -7,7 +7,7 @@ export const vertexDefaultModelId: VertexModelId = "claude-sonnet-4-5@20250929"
 
 export const vertexModels = {
 	// kilocode_change start
-	"claude-opus-4-6@default": {
+	"claude-opus-4-6": {
 		maxTokens: 128_000,
 		contextWindow: 200_000,
 		supportsImages: true,
@@ -22,6 +22,37 @@ export const vertexModels = {
 		supportsVerbosity: ["low", "medium", "high", "max"],
 	},
 	// kilocode_change end
+	"gemini-3.1-pro-preview": {
+		maxTokens: 65_536,
+		contextWindow: 1_048_576,
+		supportsImages: true,
+		supportsNativeTools: true, // kilocode_change
+		defaultToolProtocol: "native", // kilocode_change
+		supportsPromptCache: true,
+		supportsReasoningEffort: ["low", "medium", "high"],
+		reasoningEffort: "low",
+
+		supportsTemperature: true,
+		defaultTemperature: 1,
+		inputPrice: 4.0,
+		outputPrice: 18.0,
+		cacheReadsPrice: 0.4,
+		cacheWritesPrice: 4.5,
+		tiers: [
+			{
+				contextWindow: 200_000,
+				inputPrice: 2.0,
+				outputPrice: 12.0,
+				cacheReadsPrice: 0.2,
+			},
+			{
+				contextWindow: Infinity,
+				inputPrice: 4.0,
+				outputPrice: 18.0,
+				cacheReadsPrice: 0.4,
+			},
+		],
+	},
 	"gemini-3-pro-preview": {
 		maxTokens: 65_536,
 		contextWindow: 1_048_576,
@@ -563,6 +594,31 @@ export const vertexModels = {
 		description: "Qwen3 235B A22B Instruct. Available in us-south1",
 	},
 } as const satisfies Record<string, ModelInfo>
+
+// kilocode_change start
+/**
+ * Normalize legacy Vertex model IDs to canonical IDs.
+ *
+ * Legacy aliases are kept here to support existing saved settings while ensuring
+ * API requests use valid Vertex model names.
+ */
+export function normalizeVertexModelId(modelId: string): VertexModelId {
+	const normalized = modelId.trim()
+
+	// Use Object.hasOwn() instead of 'in' to avoid inherited properties.
+	if (Object.hasOwn(vertexModels, normalized)) {
+		return normalized as VertexModelId
+	}
+
+	switch (normalized.toLowerCase()) {
+		case "claude-opus-4-6@default":
+		case "claude-opus-4-6@vertex":
+			return "claude-opus-4-6"
+		default:
+			return vertexDefaultModelId
+	}
+}
+// kilocode_change end
 
 // Vertex AI models that support 1M context window beta
 // Uses the same beta header 'context-1m-2025-08-07' as Anthropic and Bedrock

@@ -11,6 +11,7 @@ import {
 	AwsBedrockHandler,
 	CerebrasHandler,
 	OpenRouterHandler,
+	PoeHandler, // kilocode_change
 	ZenMuxHandler, // kilocode_change
 	VertexHandler,
 	AnthropicVertexHandler,
@@ -38,6 +39,7 @@ import {
 	SyntheticHandler,
 	OVHcloudAIEndpointsHandler,
 	SapAiCoreHandler,
+	AihubmixHandler,
 	ApertisHandler,
 	// kilocode_change end
 	ClaudeCodeHandler,
@@ -190,6 +192,10 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 		// kilocode_change end
 		case "openrouter":
 			return new OpenRouterHandler(options)
+		// kilocode_change start
+		case "poe":
+			return new PoeHandler(options)
+		// kilocode_change end
 		case "zenmux": // kilocode_change
 			return new ZenMuxHandler(options) // kilocode_change
 		case "bedrock":
@@ -265,6 +271,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new OVHcloudAIEndpointsHandler(options)
 		case "sap-ai-core":
 			return new SapAiCoreHandler(options)
+		case "aihubmix":
+			return new AihubmixHandler(options)
 		case "apertis":
 			return new ApertisHandler(options)
 		// kilocode_change end

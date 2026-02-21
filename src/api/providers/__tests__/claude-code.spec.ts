@@ -55,6 +55,18 @@ describe("ClaudeCodeHandler", () => {
 		expect(model.id).toBe("claude-sonnet-4-5") // default model
 	})
 
+	test("should normalize legacy dated model ids to canonical claude-code models", () => {
+		const options: ApiHandlerOptions = {
+			apiModelId: "claude-opus-4-5-20251101",
+		}
+		const handlerWithLegacyModel = new ClaudeCodeHandler(options)
+		const model = handlerWithLegacyModel.getModel()
+
+		expect(model.id).toBe("claude-opus-4-5")
+		expect(model.info.supportsImages).toBe(true)
+		expect(model.info.supportsPromptCache).toBe(true)
+	})
+
 	test("should return model maxTokens from model definition", () => {
 		const options: ApiHandlerOptions = {
 			apiModelId: "claude-opus-4-5",

@@ -102,10 +102,13 @@ export class ChutesHandler extends RouterProvider implements SingleCompletionHan
 		const model = await this.fetchModel()
 
 		if (model.id.includes("DeepSeek-R1")) {
-			const stream = await this.client.chat.completions.create({
-				...this.getCompletionParams(systemPrompt, messages, metadata),
-				messages: convertToR1Format([{ role: "user", content: systemPrompt }, ...messages]),
-			}, this.getRequestOptions())
+			const stream = await this.client.chat.completions.create(
+				{
+					...this.getCompletionParams(systemPrompt, messages, metadata),
+					messages: convertToR1Format([{ role: "user", content: systemPrompt }, ...messages]),
+				},
+				this.getRequestOptions(),
+			)
 
 			const matcher = new XmlMatcher(
 				"think",

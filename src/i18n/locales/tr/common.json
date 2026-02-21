@@ -283,5 +283,8 @@
 		"copyInstructions": "Aşağıdaki hata ayrıntılarını kopyalayın:",
 		"errorStack": "Hata Stack'i",
 		"componentStack": "Bileşen Stack'i"
+	},
+	"suggestions": {
+		"start_code_review": "Kod incelemesini başlat"
 	}
 }

@@ -7,6 +7,7 @@ import {
 	claudeCodeReasoningConfig,
 	type ClaudeCodeReasoningLevel,
 	type ModelInfo,
+	normalizeClaudeCodeModelId,
 } from "@roo-code/types"
 import { type ApiHandler, ApiHandlerCreateMessageMetadata, type SingleCompletionHandler } from ".."
 import { ApiStreamUsageChunk, type ApiStream } from "../transform/stream"
@@ -303,9 +304,9 @@ export class ClaudeCodeHandler implements ApiHandler, SingleCompletionHandler {
 	}
 
 	getModel(): { id: string; info: ModelInfo } {
-		const modelId = this.options.apiModelId
-		if (modelId && Object.hasOwn(claudeCodeModels, modelId)) {
-			const id = modelId as ClaudeCodeModelId
+		const modelId = this.options.apiModelId?.trim()
+		if (modelId) {
+			const id = normalizeClaudeCodeModelId(modelId) as ClaudeCodeModelId
 			return { id, info: { ...claudeCodeModels[id] } }
 		}
 

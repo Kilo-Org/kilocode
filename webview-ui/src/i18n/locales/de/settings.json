@@ -328,6 +328,8 @@
 		"apiKeyStorageNotice": "API-Schlüssel werden sicher im VSCode Secret Storage gespeichert",
 		"glamaApiKey": "Glama API-Schlüssel",
 		"getGlamaApiKey": "Glama API-Schlüssel erhalten",
+		"aihubmixApiKey": "AIhubmix API-Schlüssel",
+		"getAihubmixApiKey": "AIhubmix API-Schlüssel erhalten",
 		"openAiCodexRateLimits": {
 			"title": "Usage Limits for Codex{{planLabel}}",
 			"loading": "Loading usage limits...",
@@ -426,6 +428,8 @@
 		"groqApiKey": "Groq API-Schlüssel",
 		"getSambaNovaApiKey": "SambaNova API-Schlüssel erhalten",
 		"sambaNovaApiKey": "SambaNova API-Schlüssel",
+		"poeApiKey": "Poe API-Schlüssel",
+		"getPoeApiKey": "Poe API-Schlüssel erhalten",
 		"getHuggingFaceApiKey": "Hugging Face API-Schlüssel erhalten",
 		"huggingFaceApiKey": "Hugging Face API-Schlüssel",
 		"getOvhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API-Schlüssel erhalten",

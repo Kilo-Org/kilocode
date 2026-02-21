@@ -349,6 +349,8 @@
 		"apiKeyStorageNotice": "คีย์ API จะถูกเก็บไว้อย่างปลอดภัยในที่เก็บข้อมูลลับของ VSCode",
 		"glamaApiKey": "คีย์ API ของ Glama",
 		"getGlamaApiKey": "รับคีย์ API ของ Glama",
+		"aihubmixApiKey": "คีย์ API ของ AIhubmix",
+		"getAihubmixApiKey": "รับคีย์ API ของ AIhubmix",
 		"openAiCodexRateLimits": {
 			"title": "ขีดจำกัดการใช้งานสำหรับ Codex{{planLabel}}",
 			"loading": "กำลังโหลดขีดจำกัดการใช้งาน...",
@@ -576,6 +578,8 @@
 		"getZaiApiKey": "รับคีย์ API ของ Z.AI",
 		"sambaNovaApiKey": "คีย์ API ของ SambaNova",
 		"getSambaNovaApiKey": "รับคีย์ API ของ SambaNova",
+		"poeApiKey": "คีย์ API ของ Poe",
+		"getPoeApiKey": "รับคีย์ API ของ Poe",
 		"customModel": {
 			"capabilities": "กำหนดค่าความสามารถและราคาสำหรับโมเดลที่เข้ากันได้กับ OpenAI ที่กำหนดเองของคุณ ระมัดระวังในการระบุความสามารถของโมเดล เนื่องจากอาจส่งผลต่อประสิทธิภาพของ Kilo Code",
 			"maxTokens": {

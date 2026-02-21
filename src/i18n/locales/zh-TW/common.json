@@ -283,5 +283,8 @@
 		"copyInstructions": "複製下方的錯誤詳情：",
 		"errorStack": "錯誤堆疊",
 		"componentStack": "元件堆疊"
+	},
+	"suggestions": {
+		"start_code_review": "開始程式碼審查"
 	}
 }

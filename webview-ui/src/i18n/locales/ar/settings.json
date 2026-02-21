@@ -353,6 +353,8 @@
 		"apiKeyStorageNotice": "المفاتيح تُحفظ بأمان في مخزن أسرار VSCode",
 		"glamaApiKey": "مفتاح Glama",
 		"getGlamaApiKey": "احصل على مفتاح Glama",
+		"aihubmixApiKey": "مفتاح AIhubmix API",
+		"getAihubmixApiKey": "احصل على مفتاح AIhubmix API",
 		"openAiCodexRateLimits": {
 			"title": "حدود الاستخدام لـ Codex{{planLabel}}",
 			"loading": "جاري تحميل حدود الاستخدام...",
@@ -463,6 +465,8 @@
 		"groqApiKey": "مفتاح Groq",
 		"getSambaNovaApiKey": "احصل على مفتاح SambaNova",
 		"sambaNovaApiKey": "مفتاح SambaNova",
+		"poeApiKey": "مفتاح Poe",
+		"getPoeApiKey": "احصل على مفتاح Poe",
 		"getGeminiApiKey": "احصل على مفتاح Gemini",
 		"openAiApiKey": "مفتاح OpenAI",
 		"getHuggingFaceApiKey": "احصل على مفتاح Hugging Face API",

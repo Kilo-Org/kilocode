@@ -66,6 +66,7 @@ export const PROVIDERS = [
 	{ value: "gemini", label: "Google Gemini", proxy: false },
 	{ value: "doubao", label: "Doubao", proxy: false },
 	// kilocode_change start
+	{ value: "aihubmix", label: "AIhubmix", proxy: false },
 	{ value: "zenmux", label: "ZenMux" },
 	{ value: "inception", label: "Inception", proxy: false },
 	{ value: "virtual-quota-fallback", label: "Virtual Quota Fallback", proxy: false },
@@ -106,6 +107,7 @@ export const PROVIDERS = [
 	{ value: "vercel-ai-gateway", label: "Vercel AI Gateway", proxy: false },
 	{ value: "minimax", label: "MiniMax", proxy: false },
 	{ value: "baseten", label: "Baseten", proxy: false },
+	{ value: "poe", label: "Poe", proxy: false }, // kilocode_change
 	{ value: "corethink", label: "Corethink", proxy: false },
 ].sort((a, b) => a.label.localeCompare(b.label))
 

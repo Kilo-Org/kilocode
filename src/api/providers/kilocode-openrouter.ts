@@ -210,7 +210,8 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 			Accept: "application/json",
 			"x-api-key": this.options.kilocodeToken ?? "",
 			Authorization: `Bearer ${this.options.kilocodeToken}`,
-			...this.customRequestOptions({ taskId: taskId ?? "autocomplete", mode: "code", feature: "autocomplete" })?.headers,
+			...this.customRequestOptions({ taskId: taskId ?? "autocomplete", mode: "code", feature: "autocomplete" })
+				?.headers,
 		}
 
 		// temperature: 0.2 is mentioned as a sane example in mistral's docs and is what continue uses.

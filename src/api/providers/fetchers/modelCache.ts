@@ -33,6 +33,7 @@ import { getGeminiModels } from "./gemini"
 import { getInceptionModels } from "./inception"
 import { getSyntheticModels } from "./synthetic"
 import { getSapAiCoreModels } from "./sap-ai-core"
+import { getAihubmixModels } from "./aihubmix"
 import { getApertisModels } from "./apertis"
 // kilocode_change end
 
@@ -41,6 +42,7 @@ import { getHuggingFaceModels } from "./huggingface"
 import { getRooModels } from "./roo"
 import { getChutesModels } from "./chutes"
 import { getNanoGptModels } from "./nano-gpt" //kilocode_change
+import { getPoeModels } from "./poe" // kilocode_change
 import { getZenmuxModels } from "./zenmux"
 
 const memoryCache = new NodeCache({ stdTTL: 5 * 60, checkperiod: 5 * 60 })
@@ -186,7 +188,18 @@ async function fetchModelsFromProvider(options: GetModelsOptions): Promise<Model
 				apiKey: options.apiKey,
 			})
 			break
+		case "aihubmix":
+			models = await getAihubmixModels({
+				baseUrl: options.baseUrl,
+				apiKey: options.apiKey,
+			})
+			break
 		//kilocode_change end
+		// kilocode_change start
+		case "poe":
+			models = await getPoeModels(options.apiKey)
+			break
+		// kilocode_change end
 		default: {
 			// Ensures router is exhaustively checked if RouterName is a strict union.
 			const exhaustiveCheck: never = provider
@@ -348,6 +361,7 @@ export async function initializeModelCacheRefresh(): Promise<void> {
 			{ provider: "ovhcloud", options: { provider: "ovhcloud" } }, // kilocode_change: Add ovhcloud to background refresh
 			{ provider: "litellm", options: { provider: "litellm" } }, // kilocode_change: Add litellm to background refresh
 			{ provider: "apertis", options: { provider: "apertis" } }, // kilocode_change: Add apertis to background refresh
+			{ provider: "aihubmix", options: { provider: "aihubmix" } }, // kilocode_change: Add aihubmix to background refresh
 		]
 
 		// Refresh each provider in background (fire and forget)

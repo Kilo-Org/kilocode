@@ -22,6 +22,7 @@ import {
 	openAiModelInfoSaneDefaults,
 	openAiNativeModels,
 	vertexModels,
+	normalizeVertexModelId, // kilocode_change
 	xaiModels,
 	groqModels,
 	vscodeLlmModels,
@@ -293,9 +294,12 @@ function getSelectedModel({
 			return { id, info: baseInfo }
 		}
 		case "vertex": {
-			const id = apiConfiguration.apiModelId ?? defaultModelId
+			// kilocode_change start
+			const rawId = apiConfiguration.apiModelId ?? defaultModelId
+			const id = normalizeVertexModelId(rawId)
 			const info = vertexModels[id as keyof typeof vertexModels]
 			return { id, info }
+			// kilocode_change end
 		}
 		// kilocode_change start
 		case "gemini": {
@@ -424,6 +428,13 @@ function getSelectedModel({
 			const info = routerModels.deepinfra?.[id]
 			return { id, info }
 		}
+		// kilocode_change start
+		case "poe": {
+			const id = getValidatedModelId(apiConfiguration.poeModelId, routerModels.poe, defaultModelId)
+			const info = routerModels.poe?.[id]
+			return { id, info }
+		}
+		// kilocode_change end
 		case "vscode-lm": {
 			const id = apiConfiguration?.vsCodeLmModelSelector
 				? `${apiConfiguration.vsCodeLmModelSelector.vendor}/${apiConfiguration.vsCodeLmModelSelector.family}`
@@ -576,6 +587,11 @@ function getSelectedModel({
 				supportsPromptCache: true,
 				description: "GPT-5: The best model for coding and agentic tasks across domains",
 			}
+			return { id, info }
+		}
+		case "aihubmix": {
+			const id = getValidatedModelId(apiConfiguration.aihubmixModelId, routerModels.aihubmix, defaultModelId)
+			const info = routerModels.aihubmix?.[id]
 			return { id, info }
 		}
 		case "zenmux": {

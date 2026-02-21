@@ -50,7 +50,8 @@ export async function getZenmuxModels(
 
 		for (const model of data) {
 			const { id, owned_by, display_name, context_length, input_modalities } = model
-			const contextWindow = context_length && context_length > 0 ? context_length : zenmuxDefaultModelInfo.contextWindow
+			const contextWindow =
+				context_length && context_length > 0 ? context_length : zenmuxDefaultModelInfo.contextWindow
 
 			const modelInfo: ModelInfo = {
 				// Keep max tokens conservative and let centralized max-token logic decide runtime reservation.

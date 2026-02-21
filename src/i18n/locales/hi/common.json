@@ -283,5 +283,8 @@
 		"copyInstructions": "नीचे त्रुटि विवरण कॉपी करें:",
 		"errorStack": "त्रुटि स्टैक",
 		"componentStack": "कॉम्पोनेंट स्टैक"
+	},
+	"suggestions": {
+		"start_code_review": "कोड समीक्षा शुरू करें"
 	}
 }

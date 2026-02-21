@@ -1,7 +1,7 @@
 import { EventEmitter } from "events"
 import { createVSCodeAPIMock, type IdentityInfo, type ExtensionContext } from "./VSCode.js"
 import { logs } from "../utils/logger.js"
-import type { ExtensionMessage, WebviewMessage, ExtensionState, ModeConfig } from "../types/index.js"
+import type { ExtensionMessage, WebviewMessage, ExtensionState, ModeConfig, HistoryItem } from "../types/index.js" // kilocode_change
 import { argsToMessage } from "../utils/safe-stringify.js"
 
 export interface ExtensionHostOptions {
@@ -1229,26 +1229,39 @@ export class ExtensionHost extends EventEmitter {
 			throw new Error("Cannot add history item: globalState not available")
 		}
 
+		// kilocode_change start
 		// Get existing task history
-		const taskHistory = (globalState.get("taskHistory") as unknown[]) || []
+		type ResumeHistoryItem = Partial<HistoryItem> & { mentionCount?: number } & Record<string, unknown>
+		const taskHistory = ((globalState.get("taskHistory") as ResumeHistoryItem[]) || []).slice()
 
 		// Check if this task already exists in history
 		const existingIndex = taskHistory.findIndex((item: unknown) => (item as { id?: string }).id === taskId)
+		const existingItem = existingIndex >= 0 ? taskHistory[existingIndex] : undefined
 
-		// Create the HistoryItem with minimal required fields
-		const historyItem = {
+		const getExistingNumber = (value: unknown): number | undefined =>
+			typeof value === "number" && Number.isFinite(value) ? value : undefined
+		const getExistingString = (value: unknown): string | undefined =>
+			typeof value === "string" && value.length > 0 ? value : undefined
+		const getExistingBoolean = (value: unknown): boolean | undefined =>
+			typeof value === "boolean" ? value : undefined
+
+		// Create HistoryItem by merging existing entry with conservative resume bootstrap fields.
+		const historyItem: ResumeHistoryItem = {
+			...(existingItem || {}),
 			id: taskId,
-			number:
-				existingIndex >= 0
-					? (taskHistory[existingIndex] as { number?: number }).number || 0
-					: taskHistory.length + 1,
-			ts,
-			task,
-			tokensIn: 0,
-			tokensOut: 0,
-			totalCost: 0,
-			mode,
+			number: getExistingNumber(existingItem?.number) ?? taskHistory.length + 1,
+			ts: getExistingNumber(existingItem?.ts) ?? ts,
+			task: getExistingString(existingItem?.task) ?? task,
+			tokensIn: getExistingNumber(existingItem?.tokensIn) ?? 0,
+			tokensOut: getExistingNumber(existingItem?.tokensOut) ?? 0,
+			totalCost: getExistingNumber(existingItem?.totalCost) ?? 0,
+			size: getExistingNumber(existingItem?.size) ?? 0,
+			mode: getExistingString(existingItem?.mode) ?? mode,
+			workspace: getExistingString(existingItem?.workspace) ?? this.options.workspacePath,
+			mentionCount: getExistingNumber(existingItem?.mentionCount) ?? 0,
+			isFavorited: getExistingBoolean(existingItem?.isFavorited) ?? false,
 		}
+		// kilocode_change end
 
 		if (existingIndex >= 0) {
 			// Update existing entry
