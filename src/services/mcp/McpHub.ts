@@ -1,6 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { StdioClientTransport, StdioServerParameters } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js"
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js"
 import ReconnectingEventSource from "reconnecting-eventsource"
 import {
 	CallToolResultSchema,
@@ -34,7 +35,7 @@ import { arePathsEqual } from "../../utils/path"
 export type McpConnection = {
 	server: McpServer
 	client: Client
-	transport: StdioClientTransport | SSEClientTransport
+	transport: StdioClientTransport | SSEClientTransport | StreamableHTTPClientTransport
 }
 
 // Base configuration schema for common settings
@@ -46,14 +47,15 @@ const BaseConfigSchema = z.object({
 })
 
 // Custom error messages for better user feedback
-const typeErrorMessage = "Server type must be either 'stdio' or 'sse'"
+const typeErrorMessage = "Server type must be 'stdio', 'sse', or 'streamable-http'"
 const stdioFieldsErrorMessage =
 	"For 'stdio' type servers, you must provide a 'command' field and can optionally include 'args' and 'env'"
 const sseFieldsErrorMessage =
-	"For 'sse' type servers, you must provide a 'url' field and can optionally include 'headers'"
+	"For 'sse' or 'streamable-http' type servers, you must provide a 'url' field and can optionally include 'headers'"
 const mixedFieldsErrorMessage =
-	"Cannot mix 'stdio' and 'sse' fields. For 'stdio' use 'command', 'args', and 'env'. For 'sse' use 'url' and 'headers'"
-const missingFieldsErrorMessage = "Server configuration must include either 'command' (for stdio) or 'url' (for sse)"
+	"Cannot mix 'stdio' and HTTP fields. For 'stdio' use 'command', 'args', and 'env'. For 'sse'/'streamable-http' use 'url' and 'headers'"
+const missingFieldsErrorMessage =
+	"Server configuration must include either 'command' (for stdio) or 'url' (for sse/streamable-http)"
 
 // Helper function to create a refined schema with better error messages
 const createServerTypeSchema = () => {
@@ -64,7 +66,7 @@ const createServerTypeSchema = () => {
 			command: z.string().min(1, "Command cannot be empty"),
 			args: z.array(z.string()).optional(),
 			env: z.record(z.string()).optional(),
-			// Ensure no SSE fields are present
+			// Ensure no HTTP fields are present
 			url: z.undefined().optional(),
 			headers: z.undefined().optional(),
 		})
@@ -73,7 +75,7 @@ const createServerTypeSchema = () => {
 				type: "stdio" as const,
 			}))
 			.refine((data) => data.type === undefined || data.type === "stdio", { message: typeErrorMessage }),
-		// SSE config (has url field)
+		// Legacy SSE config (has url field, uses HTTP+SSE transport from MCP spec 2024-11-05)
 		BaseConfigSchema.extend({
 			type: z.enum(["sse"]).optional(),
 			url: z.string().url("URL must be a valid URL format"),
@@ -88,6 +90,20 @@ const createServerTypeSchema = () => {
 				type: "sse" as const,
 			}))
 			.refine((data) => data.type === undefined || data.type === "sse", { message: typeErrorMessage }),
+		// Streamable HTTP config (MCP spec 2025-03-26 — preferred over SSE for new servers)
+		BaseConfigSchema.extend({
+			type: z.enum(["streamable-http"]),
+			url: z.string().url("URL must be a valid URL format"),
+			headers: z.record(z.string()).optional(),
+			// Ensure no stdio fields are present
+			command: z.undefined().optional(),
+			args: z.undefined().optional(),
+			env: z.undefined().optional(),
+		})
+			.transform((data) => ({
+				...data,
+				type: "streamable-http" as const,
+			})),
 	])
 }
 
@@ -135,7 +151,7 @@ export class McpHub {
 			throw new Error(mixedFieldsErrorMessage)
 		}
 
-		// Check if it's a stdio or SSE config and add type if missing
+		// Check if it's a stdio or HTTP-based config and add type if missing
 		if (!config.type) {
 			if (hasStdioFields) {
 				config.type = "stdio"
@@ -144,7 +160,7 @@ export class McpHub {
 			} else {
 				throw new Error(missingFieldsErrorMessage)
 			}
-		} else if (config.type !== "stdio" && config.type !== "sse") {
+		} else if (config.type !== "stdio" && config.type !== "sse" && config.type !== "streamable-http") {
 			throw new Error(typeErrorMessage)
 		}
 
@@ -152,7 +168,7 @@ export class McpHub {
 		if (config.type === "stdio" && !hasStdioFields) {
 			throw new Error(stdioFieldsErrorMessage)
 		}
-		if (config.type === "sse" && !hasSseFields) {
+		if ((config.type === "sse" || config.type === "streamable-http") && !hasSseFields) {
 			throw new Error(sseFieldsErrorMessage)
 		}
 
@@ -421,7 +437,7 @@ export class McpHub {
 				},
 			)
 
-			let transport: StdioClientTransport | SSEClientTransport
+			let transport: StdioClientTransport | SSEClientTransport | StreamableHTTPClientTransport
 
 			if (config.type === "stdio") {
 				transport = new StdioClientTransport({
@@ -482,25 +498,33 @@ export class McpHub {
 					console.error(`No stderr stream for ${name}`)
 				}
 				transport.start = async () => {} // No-op now, .connect() won't fail
-			} else {
-				// SSE connection
-				const sseOptions = {
-					requestInit: {
-						headers: config.headers,
-					},
+			} else if (config.type === "streamable-http") {
+				// Streamable HTTP connection (MCP spec 2025-03-26 — preferred for new servers)
+				const requestInit = config.headers ? { headers: config.headers } : undefined
+				transport = new StreamableHTTPClientTransport(new URL(config.url), { requestInit })
+
+				transport.onerror = async (error) => {
+					console.error(`Transport error for "${name}":`, error)
+					const connection = this.findConnection(name, source)
+					if (connection) {
+						connection.server.status = "disconnected"
+						this.appendErrorMessage(connection, error instanceof Error ? error.message : `${error}`)
+					}
+					await this.notifyWebviewOfServerChanges()
 				}
-				// Configure ReconnectingEventSource options
+			} else {
+				// Legacy SSE connection (MCP spec 2024-11-05)
+				// Configure ReconnectingEventSource for automatic reconnection
 				const reconnectingEventSourceOptions = {
 					max_retry_time: 5000, // Maximum retry time in milliseconds
 					withCredentials: config.headers?.["Authorization"] ? true : false, // Enable credentials if Authorization header exists
 				}
 				global.EventSource = ReconnectingEventSource
 				transport = new SSEClientTransport(new URL(config.url), {
-					...sseOptions,
+					requestInit: { headers: config.headers },
 					eventSourceInit: reconnectingEventSourceOptions,
 				})
 
-				// Set up SSE specific error handling
 				transport.onerror = async (error) => {
 					console.error(`Transport error for "${name}":`, error)
 					const connection = this.findConnection(name, source)
