@@ -46,7 +46,7 @@ kilocode/
 │   │   ├── api.ts              # Provider/model type definitions
 │   │   └── modes.ts            # Agent operating modes
 │   └── i18n/                   # Internationalization
-│       └── locales/            # 14 language JSON files
+│       └── locales/            # Language JSON files
 ├── webview-ui/                 # React sidebar UI (Vite + Tailwind CSS)
 │   └── src/
 │       ├── components/         # React components
