@@ -1,5 +1,47 @@
 # kilo-code
 
+## 5.9.0
+
+### Minor Changes
+
+- [#5560](https://github.com/Kilo-Org/kilocode/pull/5560) [`84ab615`](https://github.com/Kilo-Org/kilocode/commit/84ab615365737f1db98ac9297bbffa8829c04963) Thanks [@marciepeters](https://github.com/marciepeters)! - Add Poe as a supported API provider
+
+### Patch Changes
+
+- [#5860](https://github.com/Kilo-Org/kilocode/pull/5860) [`baeb3f4`](https://github.com/Kilo-Org/kilocode/commit/baeb3f486d8e53f7207b3fc81522b4f352b066d4) Thanks [@Neonsy](https://github.com/Neonsy)! - Fix OpenAI Responses Azure URL normalization so Azure v1 endpoints avoid unsupported `api-version` parameters.
+
+- [#5968](https://github.com/Kilo-Org/kilocode/pull/5968) [`053775e`](https://github.com/Kilo-Org/kilocode/commit/053775e2e797d6c0a7dd23026823106132c4cd70) Thanks [@Olusammytee](https://github.com/Olusammytee)! - Normalize legacy Claude Code model IDs so dated aliases resolve to canonical model metadata and preserve capabilities (including image support).
+
+- [#5995](https://github.com/Kilo-Org/kilocode/pull/5995) [`a2c7c49`](https://github.com/Kilo-Org/kilocode/commit/a2c7c49bc389caa8dfcabe50969458dbe9841998) Thanks [@mujtaba93](https://github.com/mujtaba93)! - Fix: Prevent terminal focus stealing in Agent Manager (fixes #5946)
+
+- [#5990](https://github.com/Kilo-Org/kilocode/pull/5990) [`7d23f2c`](https://github.com/Kilo-Org/kilocode/commit/7d23f2c9200552c4cbd0564d9ed79da799aa3a5b) Thanks [@hdcodedev](https://github.com/hdcodedev)! - Fix OpenAI-compatible Responses fallback requests when custom base URLs already include `/v1` (https://github.com/Kilo-Org/kilocode/issues/5979).
+
+- [#5916](https://github.com/Kilo-Org/kilocode/pull/5916) [`8cceb67`](https://github.com/Kilo-Org/kilocode/commit/8cceb678a3c49f93639f81bb8e5cbaa60ae290c9) Thanks [@Githubguy132010](https://github.com/Githubguy132010)! - Fix blank messages and UI not updating when canceling a task in Agent Manager
+
+- [#5634](https://github.com/Kilo-Org/kilocode/pull/5634) [`be40801`](https://github.com/Kilo-Org/kilocode/commit/be40801adb101b2da622095ea4961f9b92220f78) Thanks [@Patel230](https://github.com/Patel230)! - Fix context condensing prompt not saving properly
+
+- [#5864](https://github.com/Kilo-Org/kilocode/pull/5864) [`c92c6b1`](https://github.com/Kilo-Org/kilocode/commit/c92c6b1675adfb53ae591931dd7c600b8e67551f) Thanks [@Githubguy132010](https://github.com/Githubguy132010)! - Fixed organization selector overlapping with "Recent" text in chat pane header
+
+- [#5267](https://github.com/Kilo-Org/kilocode/pull/5267) [`1467783`](https://github.com/Kilo-Org/kilocode/commit/14677835d2a279dcf2022b4ce76394a5532e2c7b) Thanks [@maywzh](https://github.com/maywzh)! - fix: preserve extra_content for Gemini 3 thought_signature support
+
+- [#5569](https://github.com/Kilo-Org/kilocode/pull/5569) [`30eb061`](https://github.com/Kilo-Org/kilocode/commit/30eb06116cf5bdbf90e93fb08a935b5200d8f9ef) Thanks [@romeoscript](https://github.com/romeoscript)! - Retry Amazon Bedrock network connection lost errors up till 3 times
+
+- [#5992](https://github.com/Kilo-Org/kilocode/pull/5992) [`23a083a`](https://github.com/Kilo-Org/kilocode/commit/23a083a130681801ba8821d00437190e3dbe45a5) Thanks [@shssoichiro](https://github.com/shssoichiro)! - fix: allow dropdowns in Modes modal to be changed
+
+- [#5648](https://github.com/Kilo-Org/kilocode/pull/5648) [`af395f8`](https://github.com/Kilo-Org/kilocode/commit/af395f8e55674f13a46b17a90b4d458aef4f27bd) Thanks [@DDU1222](https://github.com/DDU1222)! - Feature: add new provider AIHubmix
+
+- [#5993](https://github.com/Kilo-Org/kilocode/pull/5993) [`bedf59d`](https://github.com/Kilo-Org/kilocode/commit/bedf59d3a2959d3108f2488281ef0c19dd478390) Thanks [@saneroen](https://github.com/saneroen)! - Use OpenAI Codex OAuth credentials in Agent Manager so ChatGPT Plus/Pro works in agent mode
+
+- [#5942](https://github.com/Kilo-Org/kilocode/pull/5942) [`d266500`](https://github.com/Kilo-Org/kilocode/commit/d2665000ef1f0b19f533461e0a2fe91da7a67668) Thanks [@Githubguy132010](https://github.com/Githubguy132010)! - Fixed resumed agent runtime orchestrator tasks so previous task history is preserved.
+
+- [#5893](https://github.com/Kilo-Org/kilocode/pull/5893) [`e29306d`](https://github.com/Kilo-Org/kilocode/commit/e29306d8f4ca9b5a0f9ad714b867a81ae5df17cb) Thanks [@evanjacobson](https://github.com/evanjacobson)! - Fix duplicate text output when using OpenAI-compatible providers with streaming disabled.
+
+- [#5969](https://github.com/Kilo-Org/kilocode/pull/5969) [`902a33f`](https://github.com/Kilo-Org/kilocode/commit/902a33f22a9c57ba1830f086a4cc44a34c40edf8) Thanks [@Olusammytee](https://github.com/Olusammytee)! - Normalize Vertex Claude Opus 4.6 legacy aliases to the canonical model ID to prevent invalid API calls and keep UI/runtime model capabilities consistent.
+
+- [#5568](https://github.com/Kilo-Org/kilocode/pull/5568) [`82ba1a8`](https://github.com/Kilo-Org/kilocode/commit/82ba1a8f85d8e2e1bb6c5ed85b8476930b5bd248) Thanks [@romeoscript](https://github.com/romeoscript)! - fix: override context window for MiniMax/Kimi free models
+
+- [#5885](https://github.com/Kilo-Org/kilocode/pull/5885) [`c7d5865`](https://github.com/Kilo-Org/kilocode/commit/c7d5865ac2f7004b31a31f1f28886987294f62a1) Thanks [@Olusammytee](https://github.com/Olusammytee)! - fix: cap qwen3-max-thinking max_tokens to provider limit
+
 ## 5.8.1
 
 ### Patch Changes
