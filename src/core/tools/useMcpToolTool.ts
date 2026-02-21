@@ -81,6 +81,15 @@ export async function useMcpToolTool(
 							if (item.type === "text") {
 								return item.text
 							}
+							if (item.type === "image") {
+								return `[Image: ${item.mimeType}]`
+							}
+							if (item.type === "audio") {
+								return `[Audio: ${item.mimeType}]`
+							}
+							if (item.type === "resource_link") {
+								return `[Resource: ${item.uri}${item.name ? ` (${item.name})` : ""}]`
+							}
 							if (item.type === "resource") {
 								const { blob, ...rest } = item.resource
 								return JSON.stringify(rest, null, 2)

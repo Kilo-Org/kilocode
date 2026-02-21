@@ -9,6 +9,9 @@ on:
     branches:
       - main
 
+env:
+  NODE_VERSION: 20.18.1
+
 jobs:
   build:
     name: Build and Lint Cloudflare Worker
@@ -21,7 +24,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: Install dependencies
         working-directory: webview-ui
@@ -49,6 +52,14 @@ jobs:
     if: github.event_name == 'push'
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
       - name: Download Build Artifacts
         uses: actions/download-artifact@v4
         with:
@@ -57,4 +68,4 @@ jobs:
       - name: Deploy Worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: npx wrangler publish
+        run: npx wrangler deploy

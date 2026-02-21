@@ -84,14 +84,14 @@ npm run watch
 
 ## Build Commands
 
-| Command | Purpose |
-|---|---|
-| `npm run compile` | Compile TypeScript + bundle with esbuild |
-| `npm run package` | Full build: webview → esbuild → type-check → lint |
-| `npm run vsix` | Build distributable `.vsix` package |
-| `npm run vscode:prepublish` | Pre-publish build (runs `package`) |
-| `npm run generate-types` | Regenerate TypeScript declaration files |
-| `npm run knip` | Detect unused files/exports |
+| Command                     | Purpose                                           |
+| --------------------------- | ------------------------------------------------- |
+| `npm run compile`           | Compile TypeScript + bundle with esbuild          |
+| `npm run package`           | Full build: webview → esbuild → type-check → lint |
+| `npm run vsix`              | Build distributable `.vsix` package               |
+| `npm run vscode:prepublish` | Pre-publish build (runs `package`)                |
+| `npm run generate-types`    | Regenerate TypeScript declaration files           |
+| `npm run knip`              | Detect unused files/exports                       |
 
 ---
 
@@ -144,11 +144,11 @@ E2E tests launch a real VS Code instance via `@vscode/test-electron`. See `e2e/V
 
 ```json
 {
-  "tabWidth": 4,
-  "useTabs": true,
-  "printWidth": 120,
-  "semi": false,
-  "bracketSameLine": true
+	"tabWidth": 4,
+	"useTabs": true,
+	"printWidth": 120,
+	"semi": false,
+	"bracketSameLine": true
 }
 ```
 
@@ -193,12 +193,12 @@ VSCode API  ←→  Extension Host (Node.js)  ←→  Webview (React)
 
 The extension uses VSCode's built-in storage, not a database:
 
-| Storage | Used For |
-|---|---|
-| `context.globalState` | Persistent user settings (API keys, preferences) |
-| `context.workspaceState` | Per-workspace settings |
-| `CheckpointService` | Per-task conversation history snapshots |
-| File system | `.vscode/` workspace configuration |
+| Storage                  | Used For                                         |
+| ------------------------ | ------------------------------------------------ |
+| `context.globalState`    | Persistent user settings (API keys, preferences) |
+| `context.workspaceState` | Per-workspace settings                           |
+| `CheckpointService`      | Per-task conversation history snapshots          |
+| File system              | `.vscode/` workspace configuration               |
 
 ### Adding a New Setting
 
@@ -214,6 +214,7 @@ This is a multi-file operation. Follow `cline_docs/settings.md` exactly:
 ### Tool System
 
 The agent tools live in `src/core/tools/`. Each tool:
+
 - Receives parameters parsed from the AI response
 - Executes an operation (file I/O, terminal, browser, MCP, etc.)
 - Returns structured output back to `Cline.ts` for inclusion in the next prompt turn
@@ -226,15 +227,15 @@ Key tools: `readFileTool`, `writeToFileTool`, `applyDiffTool`, `executeCommandTo
 
 Providers are in `src/api/providers/`. All implement the `ApiHandler` interface:
 
-| Provider | File |
-|---|---|
-| Anthropic (Claude) | `anthropic.ts` |
-| AWS Bedrock | `bedrock.ts` |
-| Google Vertex AI | `vertex.ts` |
-| OpenAI | `openai.ts`, `openai-native.ts` |
-| Mistral | `mistral.ts` |
-| Ollama (local) | `ollama.ts` |
-| + 8 more | See `src/api/providers/` |
+| Provider           | File                            |
+| ------------------ | ------------------------------- |
+| Anthropic (Claude) | `anthropic.ts`                  |
+| AWS Bedrock        | `bedrock.ts`                    |
+| Google Vertex AI   | `vertex.ts`                     |
+| OpenAI             | `openai.ts`, `openai-native.ts` |
+| Mistral            | `mistral.ts`                    |
+| Ollama (local)     | `ollama.ts`                     |
+| + 8 more           | See `src/api/providers/`        |
 
 When adding a new provider, register it in `src/api/index.ts` and add its configuration type to `src/shared/api.ts`.
 
@@ -242,7 +243,7 @@ When adding a new provider, register it in `src/api/index.ts` and add its config
 
 ## Internationalization
 
-- Languages in `src/i18n/locales/`: `en`, `es`, `fr`, `de`, `it`, `ja`, `ko`, `zh-CN`, `zh-TW`, `pt-BR`, `ca`, `vi`, `tr`, `hi`
+- Languages in `src/i18n/locales/`: `en`, `es`, `fr`, `de`, `it`, `ja`, `ko`, `zh-CN`, `zh-TW`, `pt-BR`, `ca`, `vi`, `tr`, `hi`, `pl`
 - CI checks translation completeness — all keys must be present in all locales.
 - Use the i18n helpers; do not hardcode user-visible strings.
 
@@ -250,13 +251,13 @@ When adding a new provider, register it in `src/api/index.ts` and add its config
 
 ## CI/CD (`.github/workflows/code-qa.yml`)
 
-| Job | What it runs |
-|---|---|
-| `compile` | `check-types` + `lint` + `compile` |
-| `check-translations` | Verifies all locale keys are present |
-| `test-extension` | Jest unit tests for extension |
-| `test-webview` | Jest unit tests for React UI |
-| `integration-test` | E2E VSCode tests (requires `OPENROUTER_API_KEY` secret) |
+| Job                  | What it runs                                            |
+| -------------------- | ------------------------------------------------------- |
+| `compile`            | `check-types` + `lint` + `compile`                      |
+| `check-translations` | Verifies all locale keys are present                    |
+| `test-extension`     | Jest unit tests for extension                           |
+| `test-webview`       | Jest unit tests for React UI                            |
+| `integration-test`   | E2E VSCode tests (requires `OPENROUTER_API_KEY` secret) |
 
 All jobs must pass before merging.
 
@@ -264,18 +265,18 @@ All jobs must pass before merging.
 
 ## Key Files Quick Reference
 
-| File | Role |
-|---|---|
-| `src/extension.ts` | VSCode activation, command registration |
-| `src/core/Cline.ts` | Central AI agent loop and tool dispatch |
-| `src/core/prompts/system.ts` | System prompt assembly |
-| `src/api/index.ts` | Provider factory (`buildApiHandler`) |
-| `src/shared/ExtensionMessage.ts` | Extension→Webview message contract |
-| `src/shared/WebviewMessage.ts` | Webview→Extension message contract |
-| `src/shared/api.ts` | All provider/model type definitions |
-| `src/shared/modes.ts` | Agent operating mode definitions |
-| `src/core/webview/ClineProvider.ts` | Webview lifecycle + global state management |
-| `webview-ui/src/context/ExtensionStateContext.tsx` | React state shared across webview |
-| `webview-ui/src/components/settings/SettingsView.tsx` | Settings UI |
-| `cline_docs/settings.md` | Step-by-step guide for adding settings |
-| `.clinerules` | Code quality rules (read before making changes) |
+| File                                                  | Role                                            |
+| ----------------------------------------------------- | ----------------------------------------------- |
+| `src/extension.ts`                                    | VSCode activation, command registration         |
+| `src/core/Cline.ts`                                   | Central AI agent loop and tool dispatch         |
+| `src/core/prompts/system.ts`                          | System prompt assembly                          |
+| `src/api/index.ts`                                    | Provider factory (`buildApiHandler`)            |
+| `src/shared/ExtensionMessage.ts`                      | Extension→Webview message contract              |
+| `src/shared/WebviewMessage.ts`                        | Webview→Extension message contract              |
+| `src/shared/api.ts`                                   | All provider/model type definitions             |
+| `src/shared/modes.ts`                                 | Agent operating mode definitions                |
+| `src/core/webview/ClineProvider.ts`                   | Webview lifecycle + global state management     |
+| `webview-ui/src/context/ExtensionStateContext.tsx`    | React state shared across webview               |
+| `webview-ui/src/components/settings/SettingsView.tsx` | Settings UI                                     |
+| `cline_docs/settings.md`                              | Step-by-step guide for adding settings          |
+| `.clinerules`                                         | Code quality rules (read before making changes) |

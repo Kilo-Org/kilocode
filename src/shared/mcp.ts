@@ -49,11 +49,31 @@ export type McpToolCallResponse = {
 		| {
 				type: "text"
 				text: string
+				annotations?: McpContentAnnotations
+				_meta?: Record<string, unknown>
 		  }
 		| {
 				type: "image"
 				data: string
 				mimeType: string
+				annotations?: McpContentAnnotations
+				_meta?: Record<string, unknown>
+		  }
+		| {
+				type: "audio"
+				data: string
+				mimeType: string
+				annotations?: McpContentAnnotations
+				_meta?: Record<string, unknown>
+		  }
+		| {
+				type: "resource_link"
+				uri: string
+				name?: string
+				description?: string
+				mimeType?: string
+				annotations?: McpContentAnnotations
+				_meta?: Record<string, unknown>
 		  }
 		| {
 				type: "resource"
@@ -63,7 +83,16 @@ export type McpToolCallResponse = {
 					text?: string
 					blob?: string
 				}
+				annotations?: McpContentAnnotations
+				_meta?: Record<string, unknown>
 		  }
 	>
+	structuredContent?: Record<string, unknown>
 	isError?: boolean
+}
+
+export type McpContentAnnotations = {
+	audience?: ("user" | "assistant")[]
+	priority?: number
+	lastModified?: string
 }
