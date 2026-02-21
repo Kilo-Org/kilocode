@@ -59,6 +59,7 @@ interface ParsedTemplate {
   labels: string[]
   defaultTitle: string | null
   requiredFields: string[]
+  requiredCheckboxLabels: string[]
   optionalFields: string[]
 }
 
@@ -107,9 +108,10 @@ function parseIssueTemplate(raw: string, file: string): ParsedTemplate {
   }
 
   const requiredFields = fields.filter(f => f.required).map(f => f.label)
+  const requiredCheckboxLabels = fields.filter(f => f.required && f.type === "checkboxes").map(f => f.label)
   const optionalFields = fields.filter(f => !f.required).map(f => f.label)
 
-  return { file, name, labels, defaultTitle, requiredFields, optionalFields }
+  return { file, name, labels, defaultTitle, requiredFields, requiredCheckboxLabels, optionalFields }
 }
 
 // ---------------------------------------------------------------------------
@@ -280,12 +282,7 @@ async function main() {
         ? {
             labels: featureTemplate.labels,
             titlePrefix: featureTemplate.defaultTitle ?? "[FEATURE]:",
-            requiredCheckboxes: featureTemplate.requiredFields.filter((_, i) => {
-              // Checkboxes are the first required fields in feature-request.yml
-              const field = templates
-                .find(t => t.file === "feature-request.yml")
-              return field !== undefined
-            }),
+            requiredCheckboxes: featureTemplate.requiredCheckboxLabels,
             requiredFields: featureTemplate.requiredFields,
           }
         : {
