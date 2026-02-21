@@ -1,6 +1,6 @@
 # Contributing to Kilo CLI
 
-See [the Documentation for details on contributing](https://kilo.ai/docs/extending/contributing-to-kilo).
+See [the Documentation for details on contributing](https://kilo.ai/docs/contributing).
 
 ## TL;DR
 
