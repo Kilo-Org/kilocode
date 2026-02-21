@@ -8,7 +8,7 @@ import { arePathsEqual, getWorkspacePath } from "../../utils/path"
 import { logger } from "../../utils/logging"
 import { GlobalFileNames } from "../../shared/globalFileNames"
 
-const ROOMODES_FILENAME = ".kilocodemodes"
+const ROOMODES_FILENAME = ".codefluxaimodes"
 
 export class CustomModesManager {
 	private disposables: vscode.Disposable[] = []
@@ -152,11 +152,11 @@ export class CustomModesManager {
 						return
 					}
 
-					// Get modes from .kilocodemodes if it exists (takes precedence)
+					// Get modes from .codefluxaimodes if it exists (takes precedence)
 					const roomodesPath = await this.getWorkspaceRoomodes()
 					const roomodesModes = roomodesPath ? await this.loadModesFromFile(roomodesPath) : []
 
-					// Merge modes from both sources (.kilocodemodes takes precedence)
+					// Merge modes from both sources (.codefluxaimodes takes precedence)
 					const mergedModes = await this.mergeCustomModes(roomodesModes, result.data.customModes)
 					await this.context.globalState.update("customModes", mergedModes)
 					await this.onUpdate()
@@ -164,7 +164,7 @@ export class CustomModesManager {
 			}),
 		)
 
-		// Watch .kilocodemodes file if it exists
+		// Watch .codefluxaimodes file if it exists
 		const roomodesPath = await this.getWorkspaceRoomodes()
 		if (roomodesPath) {
 			this.disposables.push(
@@ -172,7 +172,7 @@ export class CustomModesManager {
 					if (arePathsEqual(document.uri.fsPath, roomodesPath)) {
 						const settingsModes = await this.loadModesFromFile(settingsPath)
 						const roomodesModes = await this.loadModesFromFile(roomodesPath)
-						// .kilocodemodes takes precedence
+						// .codefluxaimodes takes precedence
 						const mergedModes = await this.mergeCustomModes(roomodesModes, settingsModes)
 						await this.context.globalState.update("customModes", mergedModes)
 						await this.onUpdate()
@@ -187,7 +187,7 @@ export class CustomModesManager {
 		const settingsPath = await this.getCustomModesFilePath()
 		const settingsModes = await this.loadModesFromFile(settingsPath)
 
-		// Get modes from .kilocodemodes if it exists
+		// Get modes from .codefluxaimodes if it exists
 		const roomodesPath = await this.getWorkspaceRoomodes()
 		const roomodesModes = roomodesPath ? await this.loadModesFromFile(roomodesPath) : []
 

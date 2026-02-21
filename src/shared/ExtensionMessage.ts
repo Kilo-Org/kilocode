@@ -183,7 +183,7 @@ export type ExtensionState = Pick<
 	checkpointStorage: CheckpointStorage
 	maxOpenTabsContext: number // Maximum number of VSCode open tabs to include in context (0-500)
 	maxWorkspaceFiles: number // Maximum number of files to include in current working directory details (0-500)
-	showRooIgnoredFiles: boolean // Whether to show .kilocodeignore'd files in listings
+	showRooIgnoredFiles: boolean // Whether to show .codefluxaiignore'd files in listings
 	maxReadFileLine: number // Maximum number of lines to read from a file before truncating
 
 	rateLimitSeconds: number // Minimum time between successive requests (0 = disabled).

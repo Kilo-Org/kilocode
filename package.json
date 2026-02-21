@@ -1,8 +1,8 @@
 {
-	"name": "kilo-code",
-	"displayName": "Kilo Code",
+	"name": "codeflux-ai",
+	"displayName": "CodeFlux AI",
 	"description": "A whole dev team of AI agents in your editor.",
-	"publisher": "kilocode",
+	"publisher": "codefluxai",
 	"version": "4.8.0",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
@@ -14,13 +14,13 @@
 		"node": "20.18.1"
 	},
 	"author": {
-		"name": "Kilo Code"
+		"name": "CodeFlux AI"
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/Kilo-Org/kilocode"
+		"url": "https://github.com/canstralian/CodeAnywhere"
 	},
-	"homepage": "https://kilocode.ai",
+	"homepage": "https://github.com/canstralian/CodeAnywhere",
 	"categories": [
 		"AI",
 		"Chat",
@@ -42,8 +42,8 @@
 		"sonnet",
 		"ai",
 		"llama",
-		"Kilo Code",
-		"kilocode",
+		"CodeFlux AI",
+		"codefluxai",
 		"roocode"
 	],
 	"activationEvents": [
@@ -54,8 +54,8 @@
 	"contributes": {
 		"walkthroughs": [
 			{
-				"id": "kiloCodeWalkthrough",
-				"title": "5 things Kilo Code can do for you",
+				"id": "codeFluxAIWalkthrough",
+				"title": "5 things CodeFlux AI can do for you",
 				"description": "You now have a personal AI code assistant that can do the following:",
 				"steps": [
 					{
@@ -80,7 +80,7 @@
 					{
 						"id": "modes",
 						"title": "Debug code for you",
-						"description": "Kilo Code can automatically analyze your file and make it runnable again.",
+						"description": "CodeFlux AI can automatically analyze your file and make it runnable again.",
 						"media": {
 							"markdown": "walkthrough/step3.md"
 						}
@@ -88,7 +88,7 @@
 					{
 						"id": "code-actions",
 						"title": "Plan your logic before jumping into code",
-						"description": "Kilo Code can be as your software architect, guiding you through a clear structure.",
+						"description": "CodeFlux AI can be as your software architect, guiding you through a clear structure.",
 						"media": {
 							"markdown": "walkthrough/step4.md"
 						}
@@ -106,204 +106,204 @@
 		],
 		"submenus": [
 			{
-				"id": "kilo-code.contextMenu",
-				"label": "Kilo Code"
+				"id": "codeflux-ai.contextMenu",
+				"label": "CodeFlux AI"
 			},
 			{
-				"id": "kilo-code.terminalMenu",
-				"label": "Kilo Code"
+				"id": "codeflux-ai.terminalMenu",
+				"label": "CodeFlux AI"
 			}
 		],
 		"viewsContainers": {
 			"activitybar": [
 				{
-					"id": "kilo-code-ActivityBar",
-					"title": "Kilo Code",
+					"id": "codeflux-ai-ActivityBar",
+					"title": "CodeFlux AI",
 					"icon": "assets/icons/kilo.png"
 				}
 			]
 		},
 		"views": {
-			"kilo-code-ActivityBar": [
+			"codeflux-ai-ActivityBar": [
 				{
 					"type": "webview",
-					"id": "kilo-code.SidebarProvider",
+					"id": "codeflux-ai.SidebarProvider",
 					"name": ""
 				}
 			]
 		},
 		"commands": [
 			{
-				"command": "kilo-code.plusButtonClicked",
+				"command": "codeflux-ai.plusButtonClicked",
 				"title": "New Task",
 				"icon": "$(add)"
 			},
 			{
-				"command": "kilo-code.mcpButtonClicked",
+				"command": "codeflux-ai.mcpButtonClicked",
 				"title": "MCP Servers",
 				"icon": "$(server)"
 			},
 			{
-				"command": "kilo-code.promptsButtonClicked",
+				"command": "codeflux-ai.promptsButtonClicked",
 				"title": "Prompts",
 				"icon": "$(notebook)"
 			},
 			{
-				"command": "kilo-code.historyButtonClicked",
+				"command": "codeflux-ai.historyButtonClicked",
 				"title": "History",
 				"icon": "$(history)"
 			},
 			{
-				"command": "kilo-code.popoutButtonClicked",
+				"command": "codeflux-ai.popoutButtonClicked",
 				"title": "Open in Editor",
 				"icon": "$(link-external)"
 			},
 			{
-				"command": "kilo-code.settingsButtonClicked",
+				"command": "codeflux-ai.settingsButtonClicked",
 				"title": "Settings",
 				"icon": "$(settings-gear)"
 			},
 			{
-				"command": "kilo-code.helpButtonClicked",
+				"command": "codeflux-ai.helpButtonClicked",
 				"title": "Documentation",
 				"icon": "$(question)"
 			},
 			{
-				"command": "kilo-code.openInNewTab",
+				"command": "codeflux-ai.openInNewTab",
 				"title": "Open In New Tab",
-				"category": "Kilo Code"
+				"category": "CodeFlux AI"
 			},
 			{
-				"command": "kilo-code.explainCode",
+				"command": "codeflux-ai.explainCode",
 				"title": "Explain Code",
-				"category": "Kilo Code"
+				"category": "CodeFlux AI"
 			},
 			{
-				"command": "kilo-code.fixCode",
+				"command": "codeflux-ai.fixCode",
 				"title": "Fix Code",
-				"category": "Kilo Code"
+				"category": "CodeFlux AI"
 			},
 			{
-				"command": "kilo-code.improveCode",
+				"command": "codeflux-ai.improveCode",
 				"title": "Improve Code",
-				"category": "Kilo Code"
+				"category": "CodeFlux AI"
 			},
 			{
-				"command": "kilo-code.addToContext",
+				"command": "codeflux-ai.addToContext",
 				"title": "Add To Context",
-				"category": "Kilo Code"
+				"category": "CodeFlux AI"
 			},
 			{
-				"command": "kilo-code.newTask",
+				"command": "codeflux-ai.newTask",
 				"title": "New Task",
-				"category": "Kilo Code"
+				"category": "CodeFlux AI"
 			},
 			{
-				"command": "kilo-code.terminalAddToContext",
+				"command": "codeflux-ai.terminalAddToContext",
 				"title": "Add Terminal Content to Context",
-				"category": "Kilo Code"
+				"category": "CodeFlux AI"
 			},
 			{
-				"command": "kilo-code.terminalFixCommand",
+				"command": "codeflux-ai.terminalFixCommand",
 				"title": "Fix This Command",
-				"category": "Kilo Code"
+				"category": "CodeFlux AI"
 			},
 			{
-				"command": "kilo-code.terminalExplainCommand",
+				"command": "codeflux-ai.terminalExplainCommand",
 				"title": "Explain This Command",
-				"category": "Kilo Code"
+				"category": "CodeFlux AI"
 			},
 			{
-				"command": "kilo-code.terminalFixCommandInCurrentTask",
+				"command": "codeflux-ai.terminalFixCommandInCurrentTask",
 				"title": "Fix This Command (Current Task)",
-				"category": "Kilo Code"
+				"category": "CodeFlux AI"
 			},
 			{
-				"command": "kilo-code.terminalExplainCommandInCurrentTask",
+				"command": "codeflux-ai.terminalExplainCommandInCurrentTask",
 				"title": "Explain This Command (Current Task)",
 				"category": "Terminal"
 			},
 			{
-				"command": "kilo-code.setCustomStoragePath",
+				"command": "codeflux-ai.setCustomStoragePath",
 				"title": "Set Custom Storage Path",
-				"category": "Kilo Code"
+				"category": "CodeFlux AI"
 			}
 		],
 		"menus": {
 			"editor/context": [
 				{
-					"submenu": "kilo-code.contextMenu",
+					"submenu": "codeflux-ai.contextMenu",
 					"group": "navigation"
 				}
 			],
-			"kilo-code.contextMenu": [
+			"codeflux-ai.contextMenu": [
 				{
-					"command": "kilo-code.explainCode",
+					"command": "codeflux-ai.explainCode",
 					"group": "1_actions@1"
 				},
 				{
-					"command": "kilo-code.fixCode",
+					"command": "codeflux-ai.fixCode",
 					"group": "1_actions@2"
 				},
 				{
-					"command": "kilo-code.improveCode",
+					"command": "codeflux-ai.improveCode",
 					"group": "1_actions@3"
 				},
 				{
-					"command": "kilo-code.addToContext",
+					"command": "codeflux-ai.addToContext",
 					"group": "1_actions@4"
 				}
 			],
 			"terminal/context": [
 				{
-					"submenu": "kilo-code.terminalMenu",
+					"submenu": "codeflux-ai.terminalMenu",
 					"group": "navigation"
 				}
 			],
-			"kilo-code.terminalMenu": [
+			"codeflux-ai.terminalMenu": [
 				{
-					"command": "kilo-code.terminalAddToContext",
+					"command": "codeflux-ai.terminalAddToContext",
 					"group": "1_actions@1"
 				},
 				{
-					"command": "kilo-code.terminalFixCommand",
+					"command": "codeflux-ai.terminalFixCommand",
 					"group": "1_actions@2"
 				},
 				{
-					"command": "kilo-code.terminalExplainCommand",
+					"command": "codeflux-ai.terminalExplainCommand",
 					"group": "1_actions@3"
 				},
 				{
-					"command": "kilo-code.terminalFixCommandInCurrentTask",
+					"command": "codeflux-ai.terminalFixCommandInCurrentTask",
 					"group": "1_actions@5"
 				},
 				{
-					"command": "kilo-code.terminalExplainCommandInCurrentTask",
+					"command": "codeflux-ai.terminalExplainCommandInCurrentTask",
 					"group": "1_actions@6"
 				}
 			],
 			"view/title": [
 				{
-					"command": "kilo-code.popoutButtonClicked",
+					"command": "codeflux-ai.popoutButtonClicked",
 					"group": "navigation@4",
-					"when": "view == kilo-code.SidebarProvider"
+					"when": "view == codeflux-ai.SidebarProvider"
 				},
 				{
-					"command": "kilo-code.settingsButtonClicked",
+					"command": "codeflux-ai.settingsButtonClicked",
 					"group": "navigation@1",
-					"when": "view == kilo-code.SidebarProvider"
+					"when": "view == codeflux-ai.SidebarProvider"
 				},
 				{
-					"command": "kilo-code.helpButtonClicked",
+					"command": "codeflux-ai.helpButtonClicked",
 					"group": "navigation@6",
-					"when": "false && view == kilo-code.SidebarProvider"
+					"when": "false && view == codeflux-ai.SidebarProvider"
 				}
 			]
 		},
 		"configuration": {
-			"title": "Kilo Code",
+			"title": "CodeFlux AI",
 			"properties": {
-				"kiloCode.allowedCommands": {
+				"codeFluxAI.allowedCommands": {
 					"type": "array",
 					"items": {
 						"type": "string"
@@ -318,7 +318,7 @@
 					],
 					"description": "Commands that can be auto-executed when 'Always approve execute operations' is enabled"
 				},
-				"kiloCode.vsCodeLmModelSelector": {
+				"codeFluxAI.vsCodeLmModelSelector": {
 					"type": "object",
 					"properties": {
 						"vendor": {
@@ -332,10 +332,10 @@
 					},
 					"description": "Settings for VSCode Language Model API"
 				},
-				"kiloCode.customStoragePath": {
+				"codeFluxAI.customStoragePath": {
 					"type": "string",
 					"default": "",
-					"description": "Custom storage path. Leave empty to use the default location. Supports absolute paths (e.g. 'D:\\KiloCodeStorage')"
+					"description": "Custom storage path. Leave empty to use the default location. Supports absolute paths (e.g. 'D:\\CodeFluxAIStorage')"
 				}
 			}
 		}

@@ -123,7 +123,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		allowedCommands: [],
 		apiConfiguration: {
 			// TODO: Fix types to require this default:
-			apiProvider: "kilocode",
+			apiProvider: "codefluxai",
 		},
 		alwaysAllowReadOnly: true,
 		alwaysAllowWrite: true,

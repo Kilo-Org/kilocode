@@ -25,10 +25,10 @@ export const handleUri = async (uri: vscode.Uri) => {
 			}
 			break
 		}
-		case "/kilocode": {
+		case "/codefluxai": {
 			const token = query.get("token")
 			if (token) {
-				await visibleProvider.handleKiloCodeCallback(token)
+				await visibleProvider.handleCodeFluxAICallback(token)
 			}
 			break
 		}

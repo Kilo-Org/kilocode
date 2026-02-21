@@ -1,14 +1,14 @@
 {
 	"title": "MCP Sunucuları",
 	"done": "Tamam",
-	"description": "<0>Model Context Protocol</0>, Kilo Code'nun yeteneklerini genişletmek için ek araçlar ve kaynaklar sağlayan yerel olarak çalışan MCP sunucularıyla iletişim kurmanızı sağlar. <1>Topluluk tarafından oluşturulan sunucuları</1> kullanabilir veya Kilo Code'dan iş akışınıza özel yeni araçlar oluşturmasını isteyebilirsiniz (örneğin, \"en son npm belgelerini alan bir araç ekle\").",
+	"description": "<0>Model Context Protocol</0>, CodeFlux AI'nun yeteneklerini genişletmek için ek araçlar ve kaynaklar sağlayan yerel olarak çalışan MCP sunucularıyla iletişim kurmanızı sağlar. <1>Topluluk tarafından oluşturulan sunucuları</1> kullanabilir veya CodeFlux AI'dan iş akışınıza özel yeni araçlar oluşturmasını isteyebilirsiniz (örneğin, \"en son npm belgelerini alan bir araç ekle\").",
 	"enableToggle": {
 		"title": "MCP Sunucularını Etkinleştir",
-		"description": "Etkinleştirildiğinde, Kilo Code gelişmiş işlevler için MCP sunucularıyla etkileşim kurabilecektir. MCP kullanmıyorsanız, Kilo Code'nun token kullanımını azaltmak için bunu devre dışı bırakabilirsiniz."
+		"description": "Etkinleştirildiğinde, CodeFlux AI gelişmiş işlevler için MCP sunucularıyla etkileşim kurabilecektir. MCP kullanmıyorsanız, CodeFlux AI'nun token kullanımını azaltmak için bunu devre dışı bırakabilirsiniz."
 	},
 	"enableServerCreation": {
 		"title": "MCP Sunucu Oluşturmayı Etkinleştir",
-		"description": "Etkinleştirildiğinde, Kilo Code \"için yeni bir araç ekle...\" gibi komutlar aracılığıyla yeni MCP sunucuları oluşturmanıza yardımcı olabilir. MCP sunucuları oluşturmanız gerekmiyorsa, Kilo Code'nun token kullanımını azaltmak için bunu devre dışı bırakabilirsiniz."
+		"description": "Etkinleştirildiğinde, CodeFlux AI \"için yeni bir araç ekle...\" gibi komutlar aracılığıyla yeni MCP sunucuları oluşturmanıza yardımcı olabilir. MCP sunucuları oluşturmanız gerekmiyorsa, CodeFlux AI'nun token kullanımını azaltmak için bunu devre dışı bırakabilirsiniz."
 	},
 	"editGlobalMCP": "Global MCP'yi Düzenle",
 	"editProjectMCP": "Proje MCP'yi Düzenle",

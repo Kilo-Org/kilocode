@@ -108,7 +108,7 @@ const WelcomeView = () => {
 			</TabContent>
 			<div className="sticky bottom-0 bg-vscode-sideBar-background p-5">
 				<div className="flex flex-col gap-1">
-					{!apiConfiguration?.apiProvider || apiConfiguration?.apiProvider === "kilocode" ? null : (
+					{!apiConfiguration?.apiProvider || apiConfiguration?.apiProvider === "codefluxai" ? null : (
 						<VSCodeButton onClick={handleSubmit} appearance="primary">
 							{t("welcome:start")}
 						</VSCodeButton>

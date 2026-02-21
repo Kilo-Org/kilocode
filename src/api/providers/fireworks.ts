@@ -36,7 +36,7 @@ export class FireworksHandler extends BaseProvider implements ApiHandler, Single
 				text:
 					"ERROR: Fireworks API key is required but was not provided.\n\n" +
 					"Please set your API key in the extension settings:\n" +
-					"1. Open the KiloCode settings panel\n" +
+					"1. Open the CodeFluxAI settings panel\n" +
 					"2. Select 'Fireworks' as your provider\n" +
 					"3. Enter your API key\n\n" +
 					"You can get your API key from: https://fireworks.ai/account/api-keys",

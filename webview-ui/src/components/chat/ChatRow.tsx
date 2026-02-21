@@ -582,8 +582,8 @@ export const ChatRowContent = ({
 								<div style={{ display: "flex", alignItems: "center", gap: "10px", flexGrow: 1 }}>
 									{icon}
 									{title}
-									{/* kilocode_change */}
-									{apiConfiguration?.apiProvider !== "kilocode" && (
+									{/* codefluxai_change */}
+									{apiConfiguration?.apiProvider !== "codefluxai" && (
 										<VSCodeBadge
 											style={{
 												opacity: cost !== null && cost !== undefined && cost > 0 ? 1 : 0,

@@ -1,6 +1,6 @@
 {
 	"extension": {
-		"name": "Kilo Code",
+		"name": "CodeFlux AI",
 		"description": "Cały zespół programistów AI w Twoim edytorze."
 	},
 	"number_format": {
@@ -52,7 +52,7 @@
 		"list_api_config": "Nie udało się pobrać listy konfiguracji API",
 		"update_server_timeout": "Nie udało się zaktualizować limitu czasu serwera",
 		"failed_update_project_mcp": "Nie udało się zaktualizować serwerów MCP projektu",
-		"create_mcp_json": "Nie udało się utworzyć lub otworzyć .kilocode/mcp.json: {{error}}",
+		"create_mcp_json": "Nie udało się utworzyć lub otworzyć .codefluxai/mcp.json: {{error}}",
 		"hmr_not_running": "Lokalny serwer deweloperski nie jest uruchomiony, HMR nie będzie działać. Uruchom 'npm run dev' przed uruchomieniem rozszerzenia, aby włączyć HMR.",
 		"retrieve_current_mode": "Błąd podczas pobierania bieżącego trybu ze stanu.",
 		"failed_delete_repo": "Nie udało się usunąć powiązanego repozytorium lub gałęzi pomocniczej: {{error}}",
@@ -89,12 +89,12 @@
 	},
 	"storage": {
 		"prompt_custom_path": "Wprowadź niestandardową ścieżkę przechowywania dla historii konwersacji lub pozostaw puste, aby użyć lokalizacji domyślnej",
-		"path_placeholder": "D:\\KiloCodeStorage",
-		"enter_absolute_path": "Wprowadź pełną ścieżkę (np. D:\\KiloCodeStorage lub /home/user/storage)",
+		"path_placeholder": "D:\\CodeFluxAIStorage",
+		"enter_absolute_path": "Wprowadź pełną ścieżkę (np. D:\\CodeFluxAIStorage lub /home/user/storage)",
 		"enter_valid_path": "Wprowadź prawidłową ścieżkę"
 	},
 	"input": {
-		"task_prompt": "Co ma zrobić Kilo Code?",
+		"task_prompt": "Co ma zrobić CodeFlux AI?",
 		"task_placeholder": "Wpisz swoje zadanie tutaj"
 	}
 }

@@ -1,14 +1,14 @@
 {
 	"title": "MCP-Server",
 	"done": "Fertig",
-	"description": "Das <0>Model Context Protocol</0> ermöglicht die Kommunikation mit lokal laufenden MCP-Servern, die zusätzliche Tools und Ressourcen zur Erweiterung der Fähigkeiten von Kilo Code bereitstellen. Du kannst <1>von der Community erstellte Server</1> verwenden oder Kilo Code bitten, neue Tools speziell für deinen Workflow zu erstellen (z.B. \"ein Tool hinzufügen, das die neueste npm-Dokumentation abruft\").",
+	"description": "Das <0>Model Context Protocol</0> ermöglicht die Kommunikation mit lokal laufenden MCP-Servern, die zusätzliche Tools und Ressourcen zur Erweiterung der Fähigkeiten von CodeFlux AI bereitstellen. Du kannst <1>von der Community erstellte Server</1> verwenden oder CodeFlux AI bitten, neue Tools speziell für deinen Workflow zu erstellen (z.B. \"ein Tool hinzufügen, das die neueste npm-Dokumentation abruft\").",
 	"enableToggle": {
 		"title": "MCP-Server aktivieren",
-		"description": "Wenn aktiviert, kann Kilo Code mit MCP-Servern für erweiterte Funktionen interagieren. Wenn du MCP nicht verwendest, kannst du dies deaktivieren, um den Token-Verbrauch von Kilo Code zu reduzieren."
+		"description": "Wenn aktiviert, kann CodeFlux AI mit MCP-Servern für erweiterte Funktionen interagieren. Wenn du MCP nicht verwendest, kannst du dies deaktivieren, um den Token-Verbrauch von CodeFlux AI zu reduzieren."
 	},
 	"enableServerCreation": {
 		"title": "MCP-Server-Erstellung aktivieren",
-		"description": "Wenn aktiviert, kann Kilo Code dir helfen, neue MCP-Server über Befehle wie \"neues Tool hinzufügen zu...\" zu erstellen. Wenn du keine MCP-Server erstellen musst, kannst du dies deaktivieren, um den Token-Verbrauch von Kilo Code zu reduzieren."
+		"description": "Wenn aktiviert, kann CodeFlux AI dir helfen, neue MCP-Server über Befehle wie \"neues Tool hinzufügen zu...\" zu erstellen. Wenn du keine MCP-Server erstellen musst, kannst du dies deaktivieren, um den Token-Verbrauch von CodeFlux AI zu reduzieren."
 	},
 	"editGlobalMCP": "Globales MCP bearbeiten",
 	"editProjectMCP": "Projekt-MCP bearbeiten",

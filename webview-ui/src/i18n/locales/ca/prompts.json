@@ -6,8 +6,8 @@
 		"createNewMode": "Crear nou mode",
 		"editModesConfig": "Editar configuració de modes",
 		"editGlobalModes": "Editar modes globals",
-		"editProjectModes": "Editar modes de projecte (.kilocodemodes)",
-		"createModeHelpText": "Feu clic a + per crear un nou mode personalitzat, o simplement demaneu a Kilo Code al xat que en creï un per a vostè!"
+		"editProjectModes": "Editar modes de projecte (.codefluxaimodes)",
+		"createModeHelpText": "Feu clic a + per crear un nou mode personalitzat, o simplement demaneu a CodeFlux AI al xat que en creï un per a vostè!"
 	},
 	"apiConfiguration": {
 		"title": "Configuració d'API",
@@ -30,7 +30,7 @@
 	"roleDefinition": {
 		"title": "Definició de rol",
 		"resetToDefault": "Restablir a valors predeterminats",
-		"description": "Definiu l'experiència i personalitat de Kilo Code per a aquest mode. Aquesta descripció determina com Kilo Code es presenta i aborda les tasques."
+		"description": "Definiu l'experiència i personalitat de CodeFlux AI per a aquest mode. Aquesta descripció determina com CodeFlux AI es presenta i aborda les tasques."
 	},
 	"customInstructions": {
 		"title": "Instruccions personalitzades específiques del mode (opcional)",
@@ -40,7 +40,7 @@
 	},
 	"globalCustomInstructions": {
 		"title": "Instruccions personalitzades per a tots els modes",
-		"description": "Aquestes instruccions s'apliquen a tots els modes. Proporcionen un conjunt bàsic de comportaments que es poden millorar amb instruccions específiques de cada mode a continuació.\nSi voleu que Kilo Code pensi i parli en un idioma diferent al de la visualització del vostre editor ({{language}}), podeu especificar-ho aquí.",
+		"description": "Aquestes instruccions s'apliquen a tots els modes. Proporcionen un conjunt bàsic de comportaments que es poden millorar amb instruccions específiques de cada mode a continuació.\nSi voleu que CodeFlux AI pensi i parli en un idioma diferent al de la visualització del vostre editor ({{language}}), podeu especificar-ho aquí.",
 		"loadFromFile": "Les instruccions també es poden carregar des de <span>.clinerules</span> al vostre espai de treball."
 	},
 	"systemPrompt": {
@@ -62,7 +62,7 @@
 		"types": {
 			"ENHANCE": {
 				"label": "Millorar prompt",
-				"description": "Utilitzeu la millora de prompts per obtenir suggeriments o millores personalitzades per a les vostres entrades. Això assegura que Kilo Code entengui la vostra intenció i proporcioni les millors respostes possibles. Disponible a través de la icona ✨ al xat."
+				"description": "Utilitzeu la millora de prompts per obtenir suggeriments o millores personalitzades per a les vostres entrades. Això assegura que CodeFlux AI entengui la vostra intenció i proporcioni les millors respostes possibles. Disponible a través de la icona ✨ al xat."
 			},
 			"EXPLAIN": {
 				"label": "Explicar codi",
@@ -100,7 +100,7 @@
 	},
 	"advancedSystemPrompt": {
 		"title": "Avançat: Sobreescriure prompt del sistema",
-		"description": "Podeu reemplaçar completament el prompt del sistema per a aquest mode (a part de la definició de rol i instruccions personalitzades) creant un fitxer a <span>.kilo-code/system-prompt-{{slug}}</span> al vostre espai de treball. Aquesta és una funcionalitat molt avançada que eludeix les salvaguardes integrades i les comprovacions de consistència (especialment al voltant de l'ús d'eines), així que aneu amb compte!"
+		"description": "Podeu reemplaçar completament el prompt del sistema per a aquest mode (a part de la definició de rol i instruccions personalitzades) creant un fitxer a <span>.codeflux-ai/system-prompt-{{slug}}</span> al vostre espai de treball. Aquesta és una funcionalitat molt avançada que eludeix les salvaguardes integrades i les comprovacions de consistència (especialment al voltant de l'ús d'eines), així que aneu amb compte!"
 	},
 	"createModeDialog": {
 		"title": "Crear nou mode",
@@ -121,13 +121,13 @@
 				"description": "Disponible a tots els espais de treball"
 			},
 			"project": {
-				"label": "Específic del projecte (.kilocodemodes)",
+				"label": "Específic del projecte (.codefluxaimodes)",
 				"description": "Només disponible en aquest espai de treball, té prioritat sobre el global"
 			}
 		},
 		"roleDefinition": {
 			"label": "Definició de rol",
-			"description": "Definiu l'experiència i personalitat de Kilo Code per a aquest mode."
+			"description": "Definiu l'experiència i personalitat de CodeFlux AI per a aquest mode."
 		},
 		"tools": {
 			"label": "Eines disponibles",

@@ -1,6 +1,6 @@
 {
 	"extension": {
-		"name": "Kilo Code",
+		"name": "CodeFlux AI",
 		"description": "에디터 내에서 동작하는 AI 개발팀 전체입니다."
 	},
 	"number_format": {
@@ -52,7 +52,7 @@
 		"list_api_config": "API 구성 목록 가져오기에 실패했습니다",
 		"update_server_timeout": "서버 타임아웃 업데이트에 실패했습니다",
 		"failed_update_project_mcp": "프로젝트 MCP 서버 업데이트에 실패했습니다",
-		"create_mcp_json": ".kilocode/mcp.json 생성 또는 열기 실패: {{error}}",
+		"create_mcp_json": ".codefluxai/mcp.json 생성 또는 열기 실패: {{error}}",
 		"hmr_not_running": "로컬 개발 서버가 실행되고 있지 않아 HMR이 작동하지 않습니다. HMR을 활성화하려면 확장 프로그램을 실행하기 전에 'npm run dev'를 실행하세요.",
 		"retrieve_current_mode": "상태에서 현재 모드를 검색하는 데 오류가 발생했습니다.",
 		"failed_delete_repo": "관련 shadow 저장소 또는 브랜치 삭제 실패: {{error}}",
@@ -89,12 +89,12 @@
 	},
 	"storage": {
 		"prompt_custom_path": "대화 내역을 위한 사용자 지정 저장 경로를 입력하세요. 기본 위치를 사용하려면 비워두세요",
-		"path_placeholder": "D:\\KiloCodeStorage",
-		"enter_absolute_path": "절대 경로를 입력하세요 (예: D:\\KiloCodeStorage 또는 /home/user/storage)",
+		"path_placeholder": "D:\\CodeFluxAIStorage",
+		"enter_absolute_path": "절대 경로를 입력하세요 (예: D:\\CodeFluxAIStorage 또는 /home/user/storage)",
 		"enter_valid_path": "유효한 경로를 입력하세요"
 	},
 	"input": {
-		"task_prompt": "Kilo Code에게 무엇을 시킬까요?",
+		"task_prompt": "CodeFlux AI에게 무엇을 시킬까요?",
 		"task_placeholder": "여기에 작업을 입력하세요"
 	}
 }

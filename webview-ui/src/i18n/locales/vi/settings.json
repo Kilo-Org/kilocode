@@ -29,17 +29,17 @@
 		"advanced": "Nâng cao",
 		"experimental": "Tính năng thử nghiệm",
 		"language": "Ngôn ngữ",
-		"about": "Về Kilo Code",
+		"about": "Về CodeFlux AI",
 		"mcp": "Máy chủ MCP"
 	},
 	"autoApprove": {
-		"description": "Cho phép Kilo Code tự động thực hiện các hoạt động mà không cần phê duyệt. Chỉ bật những cài đặt này nếu bạn hoàn toàn tin tưởng AI và hiểu rõ các rủi ro bảo mật liên quan.",
+		"description": "Cho phép CodeFlux AI tự động thực hiện các hoạt động mà không cần phê duyệt. Chỉ bật những cài đặt này nếu bạn hoàn toàn tin tưởng AI và hiểu rõ các rủi ro bảo mật liên quan.",
 		"readOnly": {
 			"label": "Luôn phê duyệt các hoạt động chỉ đọc",
-			"description": "Khi được bật, Kilo Code sẽ tự động xem nội dung thư mục và đọc tệp mà không yêu cầu bạn nhấp vào nút Phê duyệt.",
+			"description": "Khi được bật, CodeFlux AI sẽ tự động xem nội dung thư mục và đọc tệp mà không yêu cầu bạn nhấp vào nút Phê duyệt.",
 			"outsideWorkspace": {
 				"label": "Bao gồm các tệp ngoài không gian làm việc",
-				"description": "Cho phép Kilo Code đọc các tệp bên ngoài không gian làm việc hiện tại mà không yêu cầu phê duyệt."
+				"description": "Cho phép CodeFlux AI đọc các tệp bên ngoài không gian làm việc hiện tại mà không yêu cầu phê duyệt."
 			}
 		},
 		"write": {
@@ -48,7 +48,7 @@
 			"delayLabel": "Trì hoãn sau khi ghi để cho phép chẩn đoán phát hiện các vấn đề tiềm ẩn",
 			"outsideWorkspace": {
 				"label": "Bao gồm các tệp ngoài không gian làm việc",
-				"description": "Cho phép Kilo Code tạo và chỉnh sửa các tệp bên ngoài không gian làm việc hiện tại mà không yêu cầu phê duyệt."
+				"description": "Cho phép CodeFlux AI tạo và chỉnh sửa các tệp bên ngoài không gian làm việc hiện tại mà không yêu cầu phê duyệt."
 			}
 		},
 		"browser": {
@@ -151,13 +151,13 @@
 			"draftModelDesc": "Mô hình nháp phải từ cùng một họ mô hình để giải mã suy đoán hoạt động chính xác.",
 			"selectDraftModel": "Chọn mô hình nháp",
 			"noModelsFound": "Không tìm thấy mô hình nháp nào. Vui lòng đảm bảo LM Studio đang chạy với chế độ máy chủ được bật.",
-			"description": "LM Studio cho phép bạn chạy các mô hình cục bộ trên máy tính của bạn. Để biết hướng dẫn về cách bắt đầu, xem <a>hướng dẫn nhanh</a> của họ. Bạn cũng sẽ cần khởi động tính năng <b>máy chủ cục bộ</b> của LM Studio để sử dụng nó với tiện ích mở rộng này. <span>Lưu ý:</span> Kilo Code sử dụng các lời nhắc phức tạp và hoạt động tốt nhất với các mô hình Claude. Các mô hình kém mạnh hơn có thể không hoạt động như mong đợi."
+			"description": "LM Studio cho phép bạn chạy các mô hình cục bộ trên máy tính của bạn. Để biết hướng dẫn về cách bắt đầu, xem <a>hướng dẫn nhanh</a> của họ. Bạn cũng sẽ cần khởi động tính năng <b>máy chủ cục bộ</b> của LM Studio để sử dụng nó với tiện ích mở rộng này. <span>Lưu ý:</span> CodeFlux AI sử dụng các lời nhắc phức tạp và hoạt động tốt nhất với các mô hình Claude. Các mô hình kém mạnh hơn có thể không hoạt động như mong đợi."
 		},
 		"ollama": {
 			"baseUrl": "URL cơ sở (tùy chọn)",
 			"modelId": "ID mô hình",
 			"description": "Ollama cho phép bạn chạy các mô hình cục bộ trên máy tính của bạn. Để biết hướng dẫn về cách bắt đầu, xem hướng dẫn nhanh của họ.",
-			"warning": "Lưu ý: Kilo Code sử dụng các lời nhắc phức tạp và hoạt động tốt nhất với các mô hình Claude. Các mô hình kém mạnh hơn có thể không hoạt động như mong đợi."
+			"warning": "Lưu ý: CodeFlux AI sử dụng các lời nhắc phức tạp và hoạt động tốt nhất với các mô hình Claude. Các mô hình kém mạnh hơn có thể không hoạt động như mong đợi."
 		},
 		"openRouterTransformsText": "Nén lời nhắc và chuỗi tin nhắn theo kích thước ngữ cảnh (<a>OpenRouter Transforms</a>)",
 		"unboundApiKey": "Khóa API Unbound",
@@ -174,7 +174,7 @@
 			}
 		},
 		"customModel": {
-			"capabilities": "Cấu hình các khả năng và giá cả cho mô hình tương thích OpenAI tùy chỉnh của bạn. Hãy cẩn thận khi chỉ định khả năng của mô hình, vì chúng có thể ảnh hưởng đến cách Kilo Code hoạt động.",
+			"capabilities": "Cấu hình các khả năng và giá cả cho mô hình tương thích OpenAI tùy chỉnh của bạn. Hãy cẩn thận khi chỉ định khả năng của mô hình, vì chúng có thể ảnh hưởng đến cách CodeFlux AI hoạt động.",
 			"maxTokens": {
 				"label": "Số token đầu ra tối đa",
 				"description": "Số lượng token tối đa mà mô hình có thể tạo ra trong một phản hồi. (Chỉ định -1 để cho phép máy chủ đặt số token tối đa.)"
@@ -219,7 +219,7 @@
 	"browser": {
 		"enable": {
 			"label": "Bật công cụ trình duyệt",
-			"description": "Khi được bật, Kilo Code có thể sử dụng trình duyệt để tương tác với các trang web khi sử dụng các mô hình hỗ trợ sử dụng máy tính."
+			"description": "Khi được bật, CodeFlux AI có thể sử dụng trình duyệt để tương tác với các trang web khi sử dụng các mô hình hỗ trợ sử dụng máy tính."
 		},
 		"viewport": {
 			"label": "Kích thước khung nhìn",
@@ -247,18 +247,18 @@
 	"checkpoints": {
 		"enable": {
 			"label": "Bật điểm kiểm tra tự động",
-			"description": "Khi được bật, Kilo Code sẽ tự động tạo các điểm kiểm tra trong quá trình thực hiện nhiệm vụ, giúp dễ dàng xem lại các thay đổi hoặc quay lại trạng thái trước đó."
+			"description": "Khi được bật, CodeFlux AI sẽ tự động tạo các điểm kiểm tra trong quá trình thực hiện nhiệm vụ, giúp dễ dàng xem lại các thay đổi hoặc quay lại trạng thái trước đó."
 		}
 	},
 	"notifications": {
 		"sound": {
 			"label": "Bật hiệu ứng âm thanh",
-			"description": "Khi được bật, Kilo Code sẽ phát hiệu ứng âm thanh cho thông báo và sự kiện.",
+			"description": "Khi được bật, CodeFlux AI sẽ phát hiệu ứng âm thanh cho thông báo và sự kiện.",
 			"volumeLabel": "Âm lượng"
 		},
 		"tts": {
 			"label": "Bật chuyển văn bản thành giọng nói",
-			"description": "Khi được bật, Kilo Code sẽ đọc to các phản hồi của nó bằng chức năng chuyển văn bản thành giọng nói.",
+			"description": "Khi được bật, CodeFlux AI sẽ đọc to các phản hồi của nó bằng chức năng chuyển văn bản thành giọng nói.",
 			"speedLabel": "Tốc độ"
 		}
 	},
@@ -273,12 +273,12 @@
 			"description": "Số lượng tệp tối đa để đưa vào chi tiết thư mục làm việc hiện tại. Giá trị cao hơn cung cấp nhiều ngữ cảnh hơn nhưng tăng sử dụng token."
 		},
 		"rooignore": {
-			"label": "Hiển thị tệp .kilocodeignore trong danh sách và tìm kiếm",
-			"description": "Khi được bật, các tệp khớp với mẫu trong .kilocodeignore sẽ được hiển thị trong danh sách với biểu tượng khóa. Khi bị tắt, các tệp này sẽ hoàn toàn bị ẩn khỏi danh sách tệp và tìm kiếm."
+			"label": "Hiển thị tệp .codefluxaiignore trong danh sách và tìm kiếm",
+			"description": "Khi được bật, các tệp khớp với mẫu trong .codefluxaiignore sẽ được hiển thị trong danh sách với biểu tượng khóa. Khi bị tắt, các tệp này sẽ hoàn toàn bị ẩn khỏi danh sách tệp và tìm kiếm."
 		},
 		"maxReadFile": {
 			"label": "Ngưỡng tự động cắt ngắn khi đọc tệp",
-			"description": "Kilo Code đọc số dòng này khi mô hình không chỉ định giá trị bắt đầu/kết thúc. Nếu số này nhỏ hơn tổng số dòng của tệp, Kilo Code sẽ tạo một chỉ mục số dòng của các định nghĩa mã. Trường hợp đặc biệt: -1 chỉ thị Kilo Code đọc toàn bộ tệp (không tạo chỉ mục), và 0 chỉ thị không đọc dòng nào và chỉ cung cấp chỉ mục dòng cho ngữ cảnh tối thiểu. Giá trị thấp hơn giảm thiểu việc sử dụng ngữ cảnh ban đầu, cho phép đọc chính xác các phạm vi dòng sau này. Các yêu cầu có chỉ định bắt đầu/kết thúc rõ ràng không bị giới hạn bởi cài đặt này.",
+			"description": "CodeFlux AI đọc số dòng này khi mô hình không chỉ định giá trị bắt đầu/kết thúc. Nếu số này nhỏ hơn tổng số dòng của tệp, CodeFlux AI sẽ tạo một chỉ mục số dòng của các định nghĩa mã. Trường hợp đặc biệt: -1 chỉ thị CodeFlux AI đọc toàn bộ tệp (không tạo chỉ mục), và 0 chỉ thị không đọc dòng nào và chỉ cung cấp chỉ mục dòng cho ngữ cảnh tối thiểu. Giá trị thấp hơn giảm thiểu việc sử dụng ngữ cảnh ban đầu, cho phép đọc chính xác các phạm vi dòng sau này. Các yêu cầu có chỉ định bắt đầu/kết thúc rõ ràng không bị giới hạn bởi cài đặt này.",
 			"lines": "dòng",
 			"always_full_read": "Luôn đọc toàn bộ tệp"
 		}
@@ -300,7 +300,7 @@
 		},
 		"diff": {
 			"label": "Bật chỉnh sửa qua diff",
-			"description": "Khi được bật, Kilo Code sẽ có thể chỉnh sửa tệp nhanh hơn và sẽ tự động từ chối ghi toàn bộ tệp bị cắt ngắn. Hoạt động tốt nhất với mô hình Claude 3.7 Sonnet mới nhất.",
+			"description": "Khi được bật, CodeFlux AI sẽ có thể chỉnh sửa tệp nhanh hơn và sẽ tự động từ chối ghi toàn bộ tệp bị cắt ngắn. Hoạt động tốt nhất với mô hình Claude 3.7 Sonnet mới nhất.",
 			"strategy": {
 				"label": "Chiến lược diff",
 				"options": {
@@ -328,19 +328,19 @@
 		},
 		"SEARCH_AND_REPLACE": {
 			"name": "Sử dụng công cụ tìm kiếm và thay thế thử nghiệm",
-			"description": "Bật công cụ tìm kiếm và thay thế thử nghiệm, cho phép Kilo Code thay thế nhiều phiên bản của một thuật ngữ tìm kiếm trong một yêu cầu."
+			"description": "Bật công cụ tìm kiếm và thay thế thử nghiệm, cho phép CodeFlux AI thay thế nhiều phiên bản của một thuật ngữ tìm kiếm trong một yêu cầu."
 		},
 		"INSERT_BLOCK": {
 			"name": "Sử dụng công cụ chèn nội dung thử nghiệm",
-			"description": "Bật công cụ chèn nội dung thử nghiệm, cho phép Kilo Code chèn nội dung tại số dòng cụ thể mà không cần tạo diff."
+			"description": "Bật công cụ chèn nội dung thử nghiệm, cho phép CodeFlux AI chèn nội dung tại số dòng cụ thể mà không cần tạo diff."
 		},
 		"POWER_STEERING": {
 			"name": "Sử dụng chế độ \"power steering\" thử nghiệm",
-			"description": "Khi được bật, Kilo Code sẽ nhắc nhở mô hình về chi tiết định nghĩa chế độ hiện tại thường xuyên hơn. Điều này sẽ dẫn đến việc tuân thủ chặt chẽ hơn các định nghĩa vai trò và hướng dẫn tùy chỉnh, nhưng sẽ sử dụng nhiều token hơn cho mỗi tin nhắn."
+			"description": "Khi được bật, CodeFlux AI sẽ nhắc nhở mô hình về chi tiết định nghĩa chế độ hiện tại thường xuyên hơn. Điều này sẽ dẫn đến việc tuân thủ chặt chẽ hơn các định nghĩa vai trò và hướng dẫn tùy chỉnh, nhưng sẽ sử dụng nhiều token hơn cho mỗi tin nhắn."
 		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Sử dụng công cụ diff đa khối thử nghiệm",
-			"description": "Khi được bật, Kilo Code sẽ sử dụng công cụ diff đa khối. Điều này sẽ cố gắng cập nhật nhiều khối mã trong tệp trong một yêu cầu."
+			"description": "Khi được bật, CodeFlux AI sẽ sử dụng công cụ diff đa khối. Điều này sẽ cố gắng cập nhật nhiều khối mã trong tệp trong một yêu cầu."
 		}
 	},
 	"temperature": {
@@ -371,18 +371,18 @@
 		}
 	},
 	"modelPicker": {
-		"automaticFetch": "Tiện ích mở rộng tự động lấy danh sách mới nhất các mô hình có sẵn trên <serviceLink>{{serviceName}}</serviceLink>. Nếu bạn không chắc chắn nên chọn mô hình nào, Kilo Code hoạt động tốt nhất với <defaultModelLink>{{defaultModelId}}</defaultModelLink>. Bạn cũng có thể thử tìm kiếm \"free\" cho các tùy chọn miễn phí hiện có.",
+		"automaticFetch": "Tiện ích mở rộng tự động lấy danh sách mới nhất các mô hình có sẵn trên <serviceLink>{{serviceName}}</serviceLink>. Nếu bạn không chắc chắn nên chọn mô hình nào, CodeFlux AI hoạt động tốt nhất với <defaultModelLink>{{defaultModelId}}</defaultModelLink>. Bạn cũng có thể thử tìm kiếm \"free\" cho các tùy chọn miễn phí hiện có.",
 		"label": "Mô hình",
 		"searchPlaceholder": "Tìm kiếm",
 		"noMatchFound": "Không tìm thấy kết quả",
 		"useCustomModel": "Sử dụng tùy chỉnh: {{modelId}}"
 	},
 	"footer": {
-		"feedback": "Nếu bạn có bất kỳ câu hỏi hoặc phản hồi nào, vui lòng mở một vấn đề tại <githubLink>github.com/Kilo-Org/kilocode</githubLink> hoặc tham gia <redditLink>reddit.com/r/kilocode</redditLink> hoặc <discordLink>discord.gg/fxrhCFGhkP</discordLink>",
-		"version": "Kilo Code v{{version}}",
+		"feedback": "Nếu bạn có bất kỳ câu hỏi hoặc phản hồi nào, vui lòng mở một vấn đề tại <githubLink>github.com/Kilo-Org/codefluxai</githubLink> hoặc tham gia <redditLink>reddit.com/r/codefluxai</redditLink> hoặc <discordLink>discord.gg/fxrhCFGhkP</discordLink>",
+		"version": "CodeFlux AI v{{version}}",
 		"telemetry": {
 			"label": "Cho phép báo cáo lỗi và sử dụng ẩn danh",
-			"description": "Giúp cải thiện Kilo Code bằng cách gửi dữ liệu sử dụng ẩn danh và báo cáo lỗi. Không bao giờ gửi mã, lời nhắc hoặc thông tin cá nhân. Xem chính sách bảo mật của chúng tôi để biết thêm chi tiết."
+			"description": "Giúp cải thiện CodeFlux AI bằng cách gửi dữ liệu sử dụng ẩn danh và báo cáo lỗi. Không bao giờ gửi mã, lời nhắc hoặc thông tin cá nhân. Xem chính sách bảo mật của chúng tôi để biết thêm chi tiết."
 		},
 		"settings": {
 			"import": "Nhập",

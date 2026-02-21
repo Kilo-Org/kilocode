@@ -6,8 +6,8 @@
 		"createNewMode": "Yeni mod oluştur",
 		"editModesConfig": "Mod yapılandırmasını düzenle",
 		"editGlobalModes": "Global modları düzenle",
-		"editProjectModes": "Proje modlarını düzenle (.kilocodemodes)",
-		"createModeHelpText": "Yeni bir özel mod oluşturmak için + düğmesine tıklayın veya sohbette Kilo Code'dan sizin için bir tane oluşturmasını isteyin!"
+		"editProjectModes": "Proje modlarını düzenle (.codefluxaimodes)",
+		"createModeHelpText": "Yeni bir özel mod oluşturmak için + düğmesine tıklayın veya sohbette CodeFlux AI'dan sizin için bir tane oluşturmasını isteyin!"
 	},
 	"apiConfiguration": {
 		"title": "API Yapılandırması",
@@ -30,7 +30,7 @@
 	"roleDefinition": {
 		"title": "Rol Tanımı",
 		"resetToDefault": "Varsayılana sıfırla",
-		"description": "Bu mod için Kilo Code'nun uzmanlığını ve kişiliğini tanımlayın. Bu açıklama, Kilo Code'nun kendini nasıl sunduğunu ve görevlere nasıl yaklaştığını şekillendirir."
+		"description": "Bu mod için CodeFlux AI'nun uzmanlığını ve kişiliğini tanımlayın. Bu açıklama, CodeFlux AI'nun kendini nasıl sunduğunu ve görevlere nasıl yaklaştığını şekillendirir."
 	},
 	"customInstructions": {
 		"title": "Moda özgü özel talimatlar (isteğe bağlı)",
@@ -40,7 +40,7 @@
 	},
 	"globalCustomInstructions": {
 		"title": "Tüm Modlar için Özel Talimatlar",
-		"description": "Bu talimatlar tüm modlara uygulanır. Aşağıdaki moda özgü talimatlarla geliştirilebilen temel davranış seti sağlarlar.\nKilo Code'nun editörünüzün görüntüleme dilinden ({{language}}) farklı bir dilde düşünmesini ve konuşmasını istiyorsanız, burada belirtebilirsiniz.",
+		"description": "Bu talimatlar tüm modlara uygulanır. Aşağıdaki moda özgü talimatlarla geliştirilebilen temel davranış seti sağlarlar.\nCodeFlux AI'nun editörünüzün görüntüleme dilinden ({{language}}) farklı bir dilde düşünmesini ve konuşmasını istiyorsanız, burada belirtebilirsiniz.",
 		"loadFromFile": "Talimatlar ayrıca çalışma alanınızdaki <span>.clinerules</span> adresinden de yüklenebilir."
 	},
 	"systemPrompt": {
@@ -62,7 +62,7 @@
 		"types": {
 			"ENHANCE": {
 				"label": "Promptu Geliştir",
-				"description": "Girdileriniz için özel öneriler veya iyileştirmeler almak için prompt geliştirmeyi kullanın. Bu, Kilo Code'nun niyetinizi anlamasını ve mümkün olan en iyi yanıtları sağlamasını garanti eder. Sohbetteki ✨ simgesi aracılığıyla kullanılabilir."
+				"description": "Girdileriniz için özel öneriler veya iyileştirmeler almak için prompt geliştirmeyi kullanın. Bu, CodeFlux AI'nun niyetinizi anlamasını ve mümkün olan en iyi yanıtları sağlamasını garanti eder. Sohbetteki ✨ simgesi aracılığıyla kullanılabilir."
 			},
 			"EXPLAIN": {
 				"label": "Kodu Açıkla",
@@ -100,7 +100,7 @@
 	},
 	"advancedSystemPrompt": {
 		"title": "Gelişmiş: Sistem Promptunu Geçersiz Kıl",
-		"description": "Çalışma alanınızda <span>.kilo-code/system-prompt-{{slug}}</span> adresinde bir dosya oluşturarak bu mod için sistem istemini tamamen değiştirebilirsiniz (rol tanımı ve özel talimatlar hariç). Bu, yerleşik güvenlik önlemlerini ve tutarlılık kontrollerini (özellikle araç kullanımıyla ilgili) aşan çok gelişmiş bir özelliktir, bu yüzden dikkatli olun!"
+		"description": "Çalışma alanınızda <span>.codeflux-ai/system-prompt-{{slug}}</span> adresinde bir dosya oluşturarak bu mod için sistem istemini tamamen değiştirebilirsiniz (rol tanımı ve özel talimatlar hariç). Bu, yerleşik güvenlik önlemlerini ve tutarlılık kontrollerini (özellikle araç kullanımıyla ilgili) aşan çok gelişmiş bir özelliktir, bu yüzden dikkatli olun!"
 	},
 	"createModeDialog": {
 		"title": "Yeni Mod Oluştur",
@@ -121,13 +121,13 @@
 				"description": "Tüm çalışma alanlarında kullanılabilir"
 			},
 			"project": {
-				"label": "Projeye özgü (.kilocodemodes)",
+				"label": "Projeye özgü (.codefluxaimodes)",
 				"description": "Yalnızca bu çalışma alanında kullanılabilir, globale göre önceliklidir"
 			}
 		},
 		"roleDefinition": {
 			"label": "Rol Tanımı",
-			"description": "Bu mod için Kilo Code'nun uzmanlığını ve kişiliğini tanımlayın."
+			"description": "Bu mod için CodeFlux AI'nun uzmanlığını ve kişiliğini tanımlayın."
 		},
 		"tools": {
 			"label": "Kullanılabilir Araçlar",

@@ -29,17 +29,17 @@
 		"advanced": "進階",
 		"experimental": "實驗性功能",
 		"language": "語言",
-		"about": "關於 Kilo Code",
+		"about": "關於 CodeFlux AI",
 		"mcp": "MCP 伺服器"
 	},
 	"autoApprove": {
-		"description": "允許 Kilo Code 無需批准即執行操作。僅在您完全信任 AI 並了解相關安全風險時啟用這些設定。",
+		"description": "允許 CodeFlux AI 無需批准即執行操作。僅在您完全信任 AI 並了解相關安全風險時啟用這些設定。",
 		"readOnly": {
 			"label": "始終批准只讀操作",
-			"description": "啟用後，Kilo Code 將自動查看目錄內容和讀取文件，無需點擊批准按鈕。",
+			"description": "啟用後，CodeFlux AI 將自動查看目錄內容和讀取文件，無需點擊批准按鈕。",
 			"outsideWorkspace": {
 				"label": "包含工作區外的檔案",
-				"description": "允許 Kilo Code 讀取當前工作區外的檔案，無需批准。"
+				"description": "允許 CodeFlux AI 讀取當前工作區外的檔案，無需批准。"
 			}
 		},
 		"write": {
@@ -48,7 +48,7 @@
 			"delayLabel": "寫入後延遲以允許診斷檢測潛在問題",
 			"outsideWorkspace": {
 				"label": "包含工作區外的檔案",
-				"description": "允許 Kilo Code 在當前工作區外建立和編輯檔案，無需批准。"
+				"description": "允許 CodeFlux AI 在當前工作區外建立和編輯檔案，無需批准。"
 			}
 		},
 		"browser": {
@@ -152,13 +152,13 @@
 			"draftModelDesc": "草稿模型必須來自相同模型系列才能正確運作。",
 			"selectDraftModel": "選擇草稿模型",
 			"noModelsFound": "未找到草稿模型。請確保 LM Studio 以伺服器模式運行。",
-			"description": "LM Studio 允許您在本地電腦運行模型。詳細資訊請參閱快速入門指南。您需要啟動 LM Studio 的本地伺服器功能才能與此擴充功能搭配使用。<span>注意：</span> Kilo Code 使用複雜提示，與 Claude 模型搭配最佳。功能較弱的模型可能無法正常運作。"
+			"description": "LM Studio 允許您在本地電腦運行模型。詳細資訊請參閱快速入門指南。您需要啟動 LM Studio 的本地伺服器功能才能與此擴充功能搭配使用。<span>注意：</span> CodeFlux AI 使用複雜提示，與 Claude 模型搭配最佳。功能較弱的模型可能無法正常運作。"
 		},
 		"ollama": {
 			"baseUrl": "基礎 URL（可選）",
 			"modelId": "模型 ID",
 			"description": "Ollama 允許您在本地電腦運行模型。請參閱快速入門指南。",
-			"warning": "注意：Kilo Code 使用複雜提示，與 Claude 模型搭配最佳。功能較弱的模型可能無法正常運作。"
+			"warning": "注意：CodeFlux AI 使用複雜提示，與 Claude 模型搭配最佳。功能較弱的模型可能無法正常運作。"
 		},
 		"unboundApiKey": "Unbound API 金鑰",
 		"getUnboundApiKey": "取得 Unbound API 金鑰",
@@ -219,7 +219,7 @@
 	"browser": {
 		"enable": {
 			"label": "啟用瀏覽器工具",
-			"description": "啟用後，Kilo Code 可在使用支援電腦使用的模型時使用瀏覽器互動。"
+			"description": "啟用後，CodeFlux AI 可在使用支援電腦使用的模型時使用瀏覽器互動。"
 		},
 		"viewport": {
 			"label": "視口大小",
@@ -247,18 +247,18 @@
 	"checkpoints": {
 		"enable": {
 			"label": "啟用自動檢查點",
-			"description": "啟用後，Kilo Code 將在任務執行期間自動建立檢查點。"
+			"description": "啟用後，CodeFlux AI 將在任務執行期間自動建立檢查點。"
 		}
 	},
 	"notifications": {
 		"sound": {
 			"label": "啟用音效",
-			"description": "啟用後，Kilo Code 將為通知播放音效",
+			"description": "啟用後，CodeFlux AI 將為通知播放音效",
 			"volumeLabel": "音量"
 		},
 		"tts": {
 			"label": "啟用文字轉語音",
-			"description": "啟用後，Kilo Code 將使用文字轉語音朗讀回應",
+			"description": "啟用後，CodeFlux AI 將使用文字轉語音朗讀回應",
 			"speedLabel": "速度"
 		}
 	},
@@ -273,12 +273,12 @@
 			"description": "最多包含的當前工作目錄詳細資訊檔案數"
 		},
 		"rooignore": {
-			"label": "顯示 .kilocodeignore 檔案",
-			"description": "啟用後，符合 .kilocodeignore 模式之檔案會顯示上鎖符號"
+			"label": "顯示 .codefluxaiignore 檔案",
+			"description": "啟用後，符合 .codefluxaiignore 模式之檔案會顯示上鎖符號"
 		},
 		"maxReadFile": {
 			"label": "檔案讀取自動截斷閾值",
-			"description": "當模型未指定起始/結束值時，Kilo Code 讀取的行數。如果此數值小於檔案總行數，Kilo Code 將產生程式碼定義的行號索引。特殊情況：-1 指示 Kilo Code 讀取整個檔案（不建立索引），0 指示不讀取任何行並僅提供行索引以取得最小上下文。較低的值可最小化初始上下文使用，允許後續精確的行範圍讀取。明確指定起始/結束的請求不受此設定限制。",
+			"description": "當模型未指定起始/結束值時，CodeFlux AI 讀取的行數。如果此數值小於檔案總行數，CodeFlux AI 將產生程式碼定義的行號索引。特殊情況：-1 指示 CodeFlux AI 讀取整個檔案（不建立索引），0 指示不讀取任何行並僅提供行索引以取得最小上下文。較低的值可最小化初始上下文使用，允許後續精確的行範圍讀取。明確指定起始/結束的請求不受此設定限制。",
 			"lines": "行",
 			"always_full_read": "始終讀取整個檔案"
 		}
@@ -328,7 +328,7 @@
 		},
 		"SEARCH_AND_REPLACE": {
 			"name": "使用實驗性搜尋與取代工具",
-			"description": "允許 Kilo Code 在單一請求中取代多個搜尋詞實例"
+			"description": "允許 CodeFlux AI 在單一請求中取代多個搜尋詞實例"
 		},
 		"INSERT_BLOCK": {
 			"name": "使用實驗性插入內容工具",
@@ -371,7 +371,7 @@
 		}
 	},
 	"modelPicker": {
-		"automaticFetch": "擴充功能會自動取得 {{serviceName}} 上最新模型列表。若不確定選擇，Kilo Code 與 {{defaultModelId}} 搭配最佳。",
+		"automaticFetch": "擴充功能會自動取得 {{serviceName}} 上最新模型列表。若不確定選擇，CodeFlux AI 與 {{defaultModelId}} 搭配最佳。",
 		"label": "模型",
 		"searchPlaceholder": "搜尋",
 		"noMatchFound": "未找到相符項目",
@@ -379,10 +379,10 @@
 	},
 	"footer": {
 		"feedback": "若有問題或建議，請在 <githubLink>GitHub</githubLink> 建立 issue 或加入 <discordLink>Discord</discordLink>",
-		"version": "Kilo Code v{{version}}",
+		"version": "CodeFlux AI v{{version}}",
 		"telemetry": {
 			"label": "允許匿名錯誤和使用報告",
-			"description": "匿名資料協助改善 Kilo Code，絕不傳送程式碼或個人資訊"
+			"description": "匿名資料協助改善 CodeFlux AI，絕不傳送程式碼或個人資訊"
 		},
 		"settings": {
 			"import": "匯入",

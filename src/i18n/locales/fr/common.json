@@ -1,6 +1,6 @@
 {
 	"extension": {
-		"name": "Kilo Code",
+		"name": "CodeFlux AI",
 		"description": "Une équipe complète de développeurs IA dans votre éditeur."
 	},
 	"number_format": {
@@ -52,7 +52,7 @@
 		"list_api_config": "Erreur lors de l'obtention de la liste des configurations API",
 		"update_server_timeout": "Erreur lors de la mise à jour du délai d'attente du serveur",
 		"failed_update_project_mcp": "Échec de la mise à jour des serveurs MCP du projet",
-		"create_mcp_json": "Échec de la création ou de l'ouverture de .kilocode/mcp.json : {{error}}",
+		"create_mcp_json": "Échec de la création ou de l'ouverture de .codefluxai/mcp.json : {{error}}",
 		"hmr_not_running": "Le serveur de développement local n'est pas en cours d'exécution, HMR ne fonctionnera pas. Veuillez exécuter 'npm run dev' avant de lancer l'extension pour activer l'HMR.",
 		"retrieve_current_mode": "Erreur lors de la récupération du mode actuel à partir du state.",
 		"failed_delete_repo": "Échec de la suppression du repo fantôme ou de la branche associée : {{error}}",
@@ -89,12 +89,12 @@
 	},
 	"storage": {
 		"prompt_custom_path": "Entrez le chemin de stockage personnalisé pour l'historique des conversations, laissez vide pour utiliser l'emplacement par défaut",
-		"path_placeholder": "D:\\KiloCodeStorage",
-		"enter_absolute_path": "Veuillez entrer un chemin absolu (ex. D:\\KiloCodeStorage ou /home/user/storage)",
+		"path_placeholder": "D:\\CodeFluxAIStorage",
+		"enter_absolute_path": "Veuillez entrer un chemin absolu (ex. D:\\CodeFluxAIStorage ou /home/user/storage)",
 		"enter_valid_path": "Veuillez entrer un chemin valide"
 	},
 	"input": {
-		"task_prompt": "Que doit faire Kilo Code ?",
+		"task_prompt": "Que doit faire CodeFlux AI ?",
 		"task_placeholder": "Écris ta tâche ici"
 	}
 }

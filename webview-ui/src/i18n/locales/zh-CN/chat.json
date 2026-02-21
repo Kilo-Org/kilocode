@@ -1,5 +1,5 @@
 {
-	"greeting": "Kilo Code能为您做什么？",
+	"greeting": "CodeFlux AI能为您做什么？",
 	"task": {
 		"title": "任务",
 		"seeMore": "查看更多",
@@ -82,7 +82,7 @@
 	"edit": "编辑...",
 	"forNextMode": "用于下一个模式",
 	"error": "错误",
-	"troubleMessage": "Kilo Code遇到问题...",
+	"troubleMessage": "CodeFlux AI遇到问题...",
 	"apiRequest": {
 		"title": "API请求",
 		"failed": "API请求失败",
@@ -107,45 +107,45 @@
 		"current": "当前"
 	},
 	"instructions": {
-		"wantsToFetch": "Kilo Code 想要获取详细指示以协助当前任务"
+		"wantsToFetch": "CodeFlux AI 想要获取详细指示以协助当前任务"
 	},
 	"fileOperations": {
-		"wantsToRead": "Kilo Code想读取此文件:",
-		"wantsToReadOutsideWorkspace": "Kilo Code想读取此工作区外的文件:",
-		"didRead": "Kilo Code已读取此文件:",
-		"wantsToEdit": "Kilo Code想编辑此文件:",
-		"wantsToEditOutsideWorkspace": "Kilo Code想编辑此工作区外的文件:",
-		"wantsToCreate": "Kilo Code想创建新文件:"
+		"wantsToRead": "CodeFlux AI想读取此文件:",
+		"wantsToReadOutsideWorkspace": "CodeFlux AI想读取此工作区外的文件:",
+		"didRead": "CodeFlux AI已读取此文件:",
+		"wantsToEdit": "CodeFlux AI想编辑此文件:",
+		"wantsToEditOutsideWorkspace": "CodeFlux AI想编辑此工作区外的文件:",
+		"wantsToCreate": "CodeFlux AI想创建新文件:"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Kilo Code想查看此目录中的顶层文件:",
-		"didViewTopLevel": "Kilo Code已查看此目录中的顶层文件:",
-		"wantsToViewRecursive": "Kilo Code想递归查看此目录中的所有文件:",
-		"didViewRecursive": "Kilo Code已递归查看此目录中的所有文件:",
-		"wantsToViewDefinitions": "Kilo Code想查看此目录中使用的源代码定义名称:",
-		"didViewDefinitions": "Kilo Code已查看此目录中使用的源代码定义名称:",
-		"wantsToSearch": "Kilo Code想在此目录中搜索 <code>{{regex}}</code>:",
-		"didSearch": "Kilo Code已在此目录中搜索 <code>{{regex}}</code>:"
+		"wantsToViewTopLevel": "CodeFlux AI想查看此目录中的顶层文件:",
+		"didViewTopLevel": "CodeFlux AI已查看此目录中的顶层文件:",
+		"wantsToViewRecursive": "CodeFlux AI想递归查看此目录中的所有文件:",
+		"didViewRecursive": "CodeFlux AI已递归查看此目录中的所有文件:",
+		"wantsToViewDefinitions": "CodeFlux AI想查看此目录中使用的源代码定义名称:",
+		"didViewDefinitions": "CodeFlux AI已查看此目录中使用的源代码定义名称:",
+		"wantsToSearch": "CodeFlux AI想在此目录中搜索 <code>{{regex}}</code>:",
+		"didSearch": "CodeFlux AI已在此目录中搜索 <code>{{regex}}</code>:"
 	},
 	"commandOutput": "命令输出",
 	"response": "响应",
 	"arguments": "参数",
 	"mcp": {
-		"wantsToUseTool": "Kilo Code想在{{serverName}} MCP服务器上使用工具:",
-		"wantsToAccessResource": "Kilo Code想访问{{serverName}} MCP服务器上的资源:"
+		"wantsToUseTool": "CodeFlux AI想在{{serverName}} MCP服务器上使用工具:",
+		"wantsToAccessResource": "CodeFlux AI想访问{{serverName}} MCP服务器上的资源:"
 	},
 	"modes": {
-		"wantsToSwitch": "Kilo Code想切换到<code>{{mode}}</code>模式",
-		"wantsToSwitchWithReason": "Kilo Code想切换到<code>{{mode}}</code>模式，原因: {{reason}}",
-		"didSwitch": "Kilo Code已切换到<code>{{mode}}</code>模式",
-		"didSwitchWithReason": "Kilo Code已切换到<code>{{mode}}</code>模式，原因: {{reason}}"
+		"wantsToSwitch": "CodeFlux AI想切换到<code>{{mode}}</code>模式",
+		"wantsToSwitchWithReason": "CodeFlux AI想切换到<code>{{mode}}</code>模式，原因: {{reason}}",
+		"didSwitch": "CodeFlux AI已切换到<code>{{mode}}</code>模式",
+		"didSwitchWithReason": "CodeFlux AI已切换到<code>{{mode}}</code>模式，原因: {{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Kilo Code想在<code>{{mode}}</code>模式下创建新子任务:",
-		"wantsToFinish": "Kilo Code想完成此子任务"
+		"wantsToCreate": "CodeFlux AI想在<code>{{mode}}</code>模式下创建新子任务:",
+		"wantsToFinish": "CodeFlux AI想完成此子任务"
 	},
 	"questions": {
-		"hasQuestion": "Kilo Code有一个问题:"
+		"hasQuestion": "CodeFlux AI有一个问题:"
 	},
 	"taskCompleted": "任务完成",
 	"shellIntegration": {
@@ -158,7 +158,7 @@
 	"autoApprove": {
 		"title": "自动批准:",
 		"none": "无",
-		"description": "自动批准允许Kilo Code无需请求许可即可执行操作。仅为您完全信任的操作启用。更详细的配置可在<settingsLink>设置</settingsLink>中查看。",
+		"description": "自动批准允许CodeFlux AI无需请求许可即可执行操作。仅为您完全信任的操作启用。更详细的配置可在<settingsLink>设置</settingsLink>中查看。",
 		"actions": {
 			"readFiles": {
 				"label": "读取文件和目录",
@@ -222,7 +222,7 @@
 		"detailsDiscussLinks": "在<discordLink>Discord</discordLink>和<redditLink>Reddit</redditLink>获取更多详情并参与讨论 🚀"
 	},
 	"browser": {
-		"rooWantsToUse": "Kilo Code想使用浏览器:",
+		"rooWantsToUse": "CodeFlux AI想使用浏览器:",
 		"consoleLogs": "控制台日志",
 		"noNewLogs": "(没有新日志)",
 		"screenshot": "浏览器截图",

@@ -7,29 +7,29 @@ import { BaseProvider } from "./base-provider"
 import { ANTHROPIC_DEFAULT_MAX_TOKENS } from "./constants"
 import { SingleCompletionHandler, getModelParams } from "../index"
 
-export class KiloCodeHandler extends BaseProvider implements SingleCompletionHandler {
+export class CodeFluxAIHandler extends BaseProvider implements SingleCompletionHandler {
 	private options: ApiHandlerOptions
 	private client: Anthropic
-	private baseURL: string = "https://kilocode.ai"
+	private baseURL: string = "https://codefluxai.ai"
 
 	constructor(options: ApiHandlerOptions) {
 		super()
 		this.options = options
 		this.getBaseURL()
 		this.client = new Anthropic({
-			authToken: this.options.kilocodeToken,
+			authToken: this.options.codefluxaiToken,
 			baseURL: `${this.baseURL}/api/claude/`,
 		})
 	}
 
 	private getBaseURL() {
 		try {
-			const token = this.options.kilocodeToken as string
+			const token = this.options.codefluxaiToken as string
 			const payload_string = token.split(".")[1]
 			const payload = JSON.parse(Buffer.from(payload_string, "base64").toString())
 			if (payload.env === "development") this.baseURL = "http://localhost:3000"
 		} catch (_error) {
-			console.warn("Failed to get base URL from Kilo Code token")
+			console.warn("Failed to get base URL from CodeFlux AI token")
 		}
 	}
 
@@ -175,23 +175,23 @@ export class KiloCodeHandler extends BaseProvider implements SingleCompletionHan
 				yield {
 					type: "text",
 					text:
-						"ERROR: Not logged in to Kilo Code.\n\n" +
-						"Please log in to Kilo Code from the extension settings.\n" +
-						"Kilo Code has a free tier with $15 worth of Claude 3.7 Sonnet tokens.\n" +
+						"ERROR: Not logged in to CodeFlux AI.\n\n" +
+						"Please log in to CodeFlux AI from the extension settings.\n" +
+						"CodeFlux AI has a free tier with $15 worth of Claude 3.7 Sonnet tokens.\n" +
 						"We'll give out more free tokens if you leave useful feedback.",
 				}
 			}
 			if (error.status === 402) {
 				yield {
 					type: "text",
-					text: "Go to https://kilocode.ai/profile to purchase more credits.",
+					text: "Go to https://codefluxai.ai/profile to purchase more credits.",
 				}
 			} else {
 				yield {
 					type: "text",
 					text:
-						`ERROR: ${error.message || "Failed to communicate with Kilo Code API"}\n\n` +
-						"If you need any help please check https://kilocode.ai to reach out to us",
+						`ERROR: ${error.message || "Failed to communicate with CodeFlux AI API"}\n\n` +
+						"If you need any help please check https://codefluxai.ai to reach out to us",
 				}
 			}
 

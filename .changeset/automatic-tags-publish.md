@@ -1,5 +1,5 @@
 ---
-"kilo-code": patch
+"codeflux-ai": patch
 ---
 
 Update GitHub Actions workflow to automatically create and push git tags during release

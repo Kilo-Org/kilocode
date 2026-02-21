@@ -1,5 +1,5 @@
 {
-	"greeting": "¿Qué puede hacer Kilo Code por ti?",
+	"greeting": "¿Qué puede hacer CodeFlux AI por ti?",
 	"task": {
 		"title": "Tarea",
 		"seeMore": "Ver más",
@@ -82,7 +82,7 @@
 	"edit": "Editar...",
 	"forNextMode": "para el siguiente modo",
 	"error": "Error",
-	"troubleMessage": "Kilo Code está teniendo problemas...",
+	"troubleMessage": "CodeFlux AI está teniendo problemas...",
 	"apiRequest": {
 		"title": "Solicitud API",
 		"failed": "Solicitud API falló",
@@ -107,45 +107,45 @@
 		"current": "Actual"
 	},
 	"instructions": {
-		"wantsToFetch": "Kilo Code quiere obtener instrucciones detalladas para ayudar con la tarea actual"
+		"wantsToFetch": "CodeFlux AI quiere obtener instrucciones detalladas para ayudar con la tarea actual"
 	},
 	"fileOperations": {
-		"wantsToRead": "Kilo Code quiere leer este archivo:",
-		"wantsToReadOutsideWorkspace": "Kilo Code quiere leer este archivo fuera del espacio de trabajo:",
-		"didRead": "Kilo Code leyó este archivo:",
-		"wantsToEdit": "Kilo Code quiere editar este archivo:",
-		"wantsToEditOutsideWorkspace": "Kilo Code quiere editar este archivo fuera del espacio de trabajo:",
-		"wantsToCreate": "Kilo Code quiere crear un nuevo archivo:"
+		"wantsToRead": "CodeFlux AI quiere leer este archivo:",
+		"wantsToReadOutsideWorkspace": "CodeFlux AI quiere leer este archivo fuera del espacio de trabajo:",
+		"didRead": "CodeFlux AI leyó este archivo:",
+		"wantsToEdit": "CodeFlux AI quiere editar este archivo:",
+		"wantsToEditOutsideWorkspace": "CodeFlux AI quiere editar este archivo fuera del espacio de trabajo:",
+		"wantsToCreate": "CodeFlux AI quiere crear un nuevo archivo:"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Kilo Code quiere ver los archivos de nivel superior en este directorio:",
-		"didViewTopLevel": "Kilo Code vio los archivos de nivel superior en este directorio:",
-		"wantsToViewRecursive": "Kilo Code quiere ver recursivamente todos los archivos en este directorio:",
-		"didViewRecursive": "Kilo Code vio recursivamente todos los archivos en este directorio:",
-		"wantsToViewDefinitions": "Kilo Code quiere ver nombres de definiciones de código fuente utilizados en este directorio:",
-		"didViewDefinitions": "Kilo Code vio nombres de definiciones de código fuente utilizados en este directorio:",
-		"wantsToSearch": "Kilo Code quiere buscar en este directorio <code>{{regex}}</code>:",
-		"didSearch": "Kilo Code buscó en este directorio <code>{{regex}}</code>:"
+		"wantsToViewTopLevel": "CodeFlux AI quiere ver los archivos de nivel superior en este directorio:",
+		"didViewTopLevel": "CodeFlux AI vio los archivos de nivel superior en este directorio:",
+		"wantsToViewRecursive": "CodeFlux AI quiere ver recursivamente todos los archivos en este directorio:",
+		"didViewRecursive": "CodeFlux AI vio recursivamente todos los archivos en este directorio:",
+		"wantsToViewDefinitions": "CodeFlux AI quiere ver nombres de definiciones de código fuente utilizados en este directorio:",
+		"didViewDefinitions": "CodeFlux AI vio nombres de definiciones de código fuente utilizados en este directorio:",
+		"wantsToSearch": "CodeFlux AI quiere buscar en este directorio <code>{{regex}}</code>:",
+		"didSearch": "CodeFlux AI buscó en este directorio <code>{{regex}}</code>:"
 	},
 	"commandOutput": "Salida del comando",
 	"response": "Respuesta",
 	"arguments": "Argumentos",
 	"mcp": {
-		"wantsToUseTool": "Kilo Code quiere usar una herramienta en el servidor MCP {{serverName}}:",
-		"wantsToAccessResource": "Kilo Code quiere acceder a un recurso en el servidor MCP {{serverName}}:"
+		"wantsToUseTool": "CodeFlux AI quiere usar una herramienta en el servidor MCP {{serverName}}:",
+		"wantsToAccessResource": "CodeFlux AI quiere acceder a un recurso en el servidor MCP {{serverName}}:"
 	},
 	"modes": {
-		"wantsToSwitch": "Kilo Code quiere cambiar a modo <code>{{mode}}</code>",
-		"wantsToSwitchWithReason": "Kilo Code quiere cambiar a modo <code>{{mode}}</code> porque: {{reason}}",
-		"didSwitch": "Kilo Code cambió a modo <code>{{mode}}</code>",
-		"didSwitchWithReason": "Kilo Code cambió a modo <code>{{mode}}</code> porque: {{reason}}"
+		"wantsToSwitch": "CodeFlux AI quiere cambiar a modo <code>{{mode}}</code>",
+		"wantsToSwitchWithReason": "CodeFlux AI quiere cambiar a modo <code>{{mode}}</code> porque: {{reason}}",
+		"didSwitch": "CodeFlux AI cambió a modo <code>{{mode}}</code>",
+		"didSwitchWithReason": "CodeFlux AI cambió a modo <code>{{mode}}</code> porque: {{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Kilo Code quiere crear una nueva subtarea en modo <code>{{mode}}</code>:",
-		"wantsToFinish": "Kilo Code quiere finalizar esta subtarea"
+		"wantsToCreate": "CodeFlux AI quiere crear una nueva subtarea en modo <code>{{mode}}</code>:",
+		"wantsToFinish": "CodeFlux AI quiere finalizar esta subtarea"
 	},
 	"questions": {
-		"hasQuestion": "Kilo Code tiene una pregunta:"
+		"hasQuestion": "CodeFlux AI tiene una pregunta:"
 	},
 	"taskCompleted": "Tarea completada",
 	"shellIntegration": {
@@ -158,7 +158,7 @@
 	"autoApprove": {
 		"title": "Auto-aprobar:",
 		"none": "Ninguno",
-		"description": "Auto-aprobar permite a Kilo Code realizar acciones sin pedir permiso. Habilita solo para acciones en las que confíes plenamente. Configuración más detallada disponible en <settingsLink>Configuración</settingsLink>.",
+		"description": "Auto-aprobar permite a CodeFlux AI realizar acciones sin pedir permiso. Habilita solo para acciones en las que confíes plenamente. Configuración más detallada disponible en <settingsLink>Configuración</settingsLink>.",
 		"actions": {
 			"readFiles": {
 				"label": "Leer archivos y directorios",
@@ -222,7 +222,7 @@
 		"detailsDiscussLinks": "Obtén más detalles y participa en <discordLink>Discord</discordLink> y <redditLink>Reddit</redditLink> 🚀"
 	},
 	"browser": {
-		"rooWantsToUse": "Kilo Code quiere usar el navegador:",
+		"rooWantsToUse": "CodeFlux AI quiere usar el navegador:",
 		"consoleLogs": "Registros de la consola",
 		"noNewLogs": "(No hay nuevos registros)",
 		"screenshot": "Captura de pantalla del navegador",

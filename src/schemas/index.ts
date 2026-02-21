@@ -11,8 +11,8 @@ import { Equals, Keys, AssertEqual } from "../utils/type-fu"
  */
 
 export const providerNames = [
-	// kilocode_change
-	"kilocode",
+	// codefluxai_change
+	"codefluxai",
 	"fireworks",
 	"anthropic",
 	"glama",
@@ -393,8 +393,8 @@ export const providerSettingsSchema = z.object({
 	includeMaxTokens: z.boolean().optional(),
 	// Fake AI
 	fakeAi: z.unknown().optional(),
-	// kilocode_change
-	kilocodeToken: z.string().optional(),
+	// codefluxai_change
+	codefluxaiToken: z.string().optional(),
 	fireworksModelId: z.string().optional(),
 	fireworksApiKey: z.string().optional(),
 })
@@ -481,8 +481,8 @@ const providerSettingsRecord: ProviderSettingsRecord = {
 	includeMaxTokens: undefined,
 	// Fake AI
 	fakeAi: undefined,
-	// kilocode_change
-	kilocodeToken: undefined,
+	// codefluxai_change
+	codefluxaiToken: undefined,
 	fireworksModelId: undefined,
 	fireworksApiKey: undefined,
 }
@@ -658,7 +658,7 @@ export type SecretState = Pick<
 	| "mistralApiKey"
 	| "unboundApiKey"
 	| "requestyApiKey"
-	| "kilocodeToken"
+	| "codefluxaiToken"
 	| "fireworksApiKey"
 >
 
@@ -678,7 +678,7 @@ const secretStateRecord: SecretStateRecord = {
 	mistralApiKey: undefined,
 	unboundApiKey: undefined,
 	requestyApiKey: undefined,
-	kilocodeToken: undefined,
+	codefluxaiToken: undefined,
 	fireworksApiKey: undefined,
 }
 

@@ -57,7 +57,7 @@ describe("ContextWindowProgress", () => {
 		return render(<TaskHeader {...defaultProps} {...props} />)
 	}
 
-	// kilocode_change
+	// codefluxai_change
 	const expandTaskHeader = () => {
 		const taskHeader = screen.getByTestId("toggle-task-header")
 
@@ -74,7 +74,7 @@ describe("ContextWindowProgress", () => {
 			contextWindow: 4000,
 		})
 
-		// kilocode_change
+		// codefluxai_change
 		expandTaskHeader()
 
 		// Now check for basic elements
@@ -91,7 +91,7 @@ describe("ContextWindowProgress", () => {
 			contextWindow: 0,
 		})
 
-		// kilocode_change
+		// codefluxai_change
 		expandTaskHeader()
 
 		// In the current implementation, the component is still displayed with zero values
@@ -106,7 +106,7 @@ describe("ContextWindowProgress", () => {
 			contextWindow: 4000,
 		})
 
-		// kilocode_change
+		// codefluxai_change
 		expandTaskHeader()
 
 		// Should show 0 instead of -100
@@ -124,7 +124,7 @@ describe("ContextWindowProgress", () => {
 			contextWindow,
 		})
 
-		// kilocode_change
+		// codefluxai_change
 		expandTaskHeader()
 
 		// Instead of checking the title attribute, verify the data-test-id

@@ -152,7 +152,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, o
 		setChangeDetected(false)
 	}, [currentApiConfigName, extensionState, isChangeDetected])
 
-	// kilocode_change
+	// codefluxai_change
 	// Temporary way of making sure that the Settings view updates its local state properly when receiving
 	// api keys from providers that support url callbacks. This whole Settings View needs proper with this local state thing later
 	useEffect(() => {
@@ -161,7 +161,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, o
 		// }
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [
-		extensionState.apiConfiguration?.kilocodeToken,
+		extensionState.apiConfiguration?.codefluxaiToken,
 		extensionState.apiConfiguration?.openRouterApiKey,
 		extensionState.apiConfiguration?.glamaApiKey,
 		extensionState.apiConfiguration?.requestyApiKey,

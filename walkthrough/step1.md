@@ -4,7 +4,7 @@
 
 Just type your prompt and press 'Enter', or click the arrow button.
 
-Kilo Code has 4 different "modes" you can use to not just code, but debug, ask for explanations and architect your code.
+CodeFlux AI has 4 different "modes" you can use to not just code, but debug, ask for explanations and architect your code.
 
 Continue reading to see more examples on how to use those modes.
 

@@ -393,7 +393,7 @@ describe("ClineProvider", () => {
 			taskHistory: [],
 			shouldShowAnnouncement: false,
 			apiConfiguration: {
-				apiProvider: "kilocode",
+				apiProvider: "codefluxai",
 			},
 			customInstructions: undefined,
 			alwaysAllowReadOnly: false,

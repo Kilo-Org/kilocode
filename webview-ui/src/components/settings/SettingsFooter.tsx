@@ -13,15 +13,15 @@ export const SettingsFooter = ({ version, className, ...props }: SettingsFooterP
 	<div className={cn("text-vscode-descriptionForeground p-5", className)} {...props}>
 		<p style={{ wordWrap: "break-word", margin: 0, padding: 0 }}>
 			If you have any questions or feedback, feel free to open an issue at{" "}
-			<VSCodeLink href="https://github.com/Kilo-Org/kilocode" style={{ display: "inline" }}>
-				github.com/Kilo-Org/kilocode
+			<VSCodeLink href="https://github.com/Kilo-Org/codefluxai" style={{ display: "inline" }}>
+				github.com/Kilo-Org/codefluxai
 			</VSCodeLink>{" "}
 			or join{" "}
-			<VSCodeLink href="https://www.reddit.com/r/KiloCode/" style={{ display: "inline" }}>
-				reddit.com/r/KiloCode
+			<VSCodeLink href="https://www.reddit.com/r/CodeFluxAI/" style={{ display: "inline" }}>
+				reddit.com/r/CodeFluxAI
 			</VSCodeLink>
 		</p>
-		<p className="italic">Kilo Code v{version}</p>
+		<p className="italic">CodeFlux AI v{version}</p>
 		<div className="flex justify-between items-center gap-3">
 			<p>Reset all global state and secret storage in the extension.</p>
 			<VSCodeButton

@@ -1,6 +1,6 @@
 # VSCode Integration Tests
 
-This document describes the integration test setup for the Kilo Code VSCode extension.
+This document describes the integration test setup for the CodeFlux AI VSCode extension.
 
 ## Overview
 

@@ -1,6 +1,6 @@
 {
 	"extension": {
-		"name": "Kilo Code",
+		"name": "CodeFlux AI",
 		"description": "Ein komplettes Entwicklerteam mit KI in deinem Editor."
 	},
 	"number_format": {
@@ -52,7 +52,7 @@
 		"list_api_config": "Fehler beim Abrufen der API-Konfigurationsliste",
 		"update_server_timeout": "Fehler beim Aktualisieren des Server-Timeouts",
 		"failed_update_project_mcp": "Fehler beim Aktualisieren der Projekt-MCP-Server",
-		"create_mcp_json": "Fehler beim Erstellen oder Öffnen von .kilocode/mcp.json: {{error}}",
+		"create_mcp_json": "Fehler beim Erstellen oder Öffnen von .codefluxai/mcp.json: {{error}}",
 		"hmr_not_running": "Der lokale Entwicklungsserver läuft nicht, HMR wird nicht funktionieren. Bitte führen Sie 'npm run dev' vor dem Start der Erweiterung aus, um HMR zu aktivieren.",
 		"retrieve_current_mode": "Fehler beim Abrufen des aktuellen Modus aus dem Zustand.",
 		"failed_delete_repo": "Fehler beim Löschen des zugehörigen Shadow-Repositorys oder -Zweigs: {{error}}",
@@ -89,12 +89,12 @@
 	},
 	"storage": {
 		"prompt_custom_path": "Gib den benutzerdefinierten Speicherpfad für den Gesprächsverlauf ein, leer lassen für Standardspeicherort",
-		"path_placeholder": "D:\\KiloCodeStorage",
-		"enter_absolute_path": "Bitte gib einen absoluten Pfad ein (z.B. D:\\KiloCodeStorage oder /home/user/storage)",
+		"path_placeholder": "D:\\CodeFluxAIStorage",
+		"enter_absolute_path": "Bitte gib einen absoluten Pfad ein (z.B. D:\\CodeFluxAIStorage oder /home/user/storage)",
 		"enter_valid_path": "Bitte gib einen gültigen Pfad ein"
 	},
 	"input": {
-		"task_prompt": "Was soll Kilo Code tun?",
+		"task_prompt": "Was soll CodeFlux AI tun?",
 		"task_placeholder": "Gib deine Aufgabe hier ein"
 	}
 }

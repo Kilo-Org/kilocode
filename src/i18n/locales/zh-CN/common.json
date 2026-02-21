@@ -1,6 +1,6 @@
 {
 	"extension": {
-		"name": "Kilo Code",
+		"name": "CodeFlux AI",
 		"description": "您编辑器中的完整AI开发团队。"
 	},
 	"number_format": {
@@ -52,7 +52,7 @@
 		"list_api_config": "获取API配置列表失败",
 		"update_server_timeout": "更新服务器超时设置失败",
 		"failed_update_project_mcp": "更新项目MCP服务器失败",
-		"create_mcp_json": "创建或打开 .kilocode/mcp.json 失败：{{error}}",
+		"create_mcp_json": "创建或打开 .codefluxai/mcp.json 失败：{{error}}",
 		"hmr_not_running": "本地开发服务器未运行，HMR将不起作用。请在启动扩展前运行'npm run dev'以启用HMR。",
 		"retrieve_current_mode": "从状态中检索当前模式失败。",
 		"failed_delete_repo": "删除关联的影子仓库或分支失败：{{error}}",
@@ -89,12 +89,12 @@
 	},
 	"storage": {
 		"prompt_custom_path": "输入自定义会话历史存储路径，留空以使用默认位置",
-		"path_placeholder": "D:\\KiloCodeStorage",
-		"enter_absolute_path": "请输入绝对路径（例如 D:\\KiloCodeStorage 或 /home/user/storage）",
+		"path_placeholder": "D:\\CodeFluxAIStorage",
+		"enter_absolute_path": "请输入绝对路径（例如 D:\\CodeFluxAIStorage 或 /home/user/storage）",
 		"enter_valid_path": "请输入有效的路径"
 	},
 	"input": {
-		"task_prompt": "让Kilo Code做什么？",
+		"task_prompt": "让CodeFlux AI做什么？",
 		"task_placeholder": "在这里输入任务"
 	}
 }

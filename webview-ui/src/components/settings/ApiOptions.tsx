@@ -315,32 +315,32 @@ const ApiOptions = ({
 
 			{errorMessage && <ApiErrorMessage errorMessage={errorMessage} />}
 
-			{selectedProvider === "kilocode" && (
+			{selectedProvider === "codefluxai" && (
 				<>
 					<div style={{ marginTop: "0px" }} className="text-sm text-vscode-descriptionForeground -mt-2">
 						Uses Claude 3.7 Sonnet. You get $15 for free.
 					</div>
-					{apiConfiguration.kilocodeToken ? (
+					{apiConfiguration.codefluxaiToken ? (
 						<div>
 							<Button
 								variant="secondary"
 								onClick={async () => {
-									setApiConfigurationField("kilocodeToken", "")
+									setApiConfigurationField("codefluxaiToken", "")
 
 									vscode.postMessage({
 										type: "upsertApiConfiguration",
 										apiConfiguration: {
 											...apiConfiguration,
-											kilocodeToken: "",
+											codefluxaiToken: "",
 										},
 									})
 								}}>
-								Log out from Kilo Code
+								Log out from CodeFlux AI
 							</Button>
 						</div>
 					) : (
-						<VSCodeButtonLink variant="secondary" href={getKiloCodeBackendAuthUrl(uriScheme)}>
-							Log in at Kilo Code
+						<VSCodeButtonLink variant="secondary" href={getCodeFluxAIBackendAuthUrl(uriScheme)}>
+							Log in at CodeFlux AI
 						</VSCodeButtonLink>
 					)}
 				</>
@@ -1677,12 +1677,12 @@ const ApiOptions = ({
 	)
 }
 
-export function getKiloCodeBackendAuthUrl(uriScheme?: string) {
-	return `https://kilocode.ai/auth/signin?source=${uriScheme || "vscode"}`
+export function getCodeFluxAIBackendAuthUrl(uriScheme?: string) {
+	return `https://codefluxai.ai/auth/signin?source=${uriScheme || "vscode"}`
 }
 
 export function normalizeApiConfiguration(apiConfiguration?: ApiConfiguration) {
-	const provider = apiConfiguration?.apiProvider ?? "kilocode"
+	const provider = apiConfiguration?.apiProvider ?? "codefluxai"
 	const modelId = apiConfiguration?.apiModelId
 
 	const getProviderData = (models: Record<string, ModelInfo>, defaultId: string) => {

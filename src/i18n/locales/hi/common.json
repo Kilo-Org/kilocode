@@ -1,6 +1,6 @@
 {
 	"extension": {
-		"name": "Kilo Code",
+		"name": "CodeFlux AI",
 		"description": "आपके एडिटर में AI डेवलपर्स की पूरी टीम।"
 	},
 	"number_format": {
@@ -52,7 +52,7 @@
 		"list_api_config": "API कॉन्फ़िगरेशन की सूची प्राप्त करने में विफल",
 		"update_server_timeout": "सर्वर टाइमआउट अपडेट करने में विफल",
 		"failed_update_project_mcp": "प्रोजेक्ट MCP सर्वर अपडेट करने में विफल",
-		"create_mcp_json": ".kilocode/mcp.json बनाने या खोलने में विफल: {{error}}",
+		"create_mcp_json": ".codefluxai/mcp.json बनाने या खोलने में विफल: {{error}}",
 		"hmr_not_running": "स्थानीय विकास सर्वर चल नहीं रहा है, HMR काम नहीं करेगा। कृपया HMR सक्षम करने के लिए एक्सटेंशन लॉन्च करने से पहले 'npm run dev' चलाएँ।",
 		"retrieve_current_mode": "स्टेट से वर्तमान मोड प्राप्त करने में त्रुटि।",
 		"failed_delete_repo": "संबंधित शैडो रिपॉजिटरी या ब्रांच हटाने में विफल: {{error}}",
@@ -89,12 +89,12 @@
 	},
 	"storage": {
 		"prompt_custom_path": "वार्तालाप इतिहास के लिए कस्टम स्टोरेज पाथ दर्ज करें, डिफ़ॉल्ट स्थान का उपयोग करने के लिए खाली छोड़ दें",
-		"path_placeholder": "D:\\KiloCodeStorage",
-		"enter_absolute_path": "कृपया एक पूर्ण पाथ दर्ज करें (उदाहरण: D:\\KiloCodeStorage या /home/user/storage)",
+		"path_placeholder": "D:\\CodeFluxAIStorage",
+		"enter_absolute_path": "कृपया एक पूर्ण पाथ दर्ज करें (उदाहरण: D:\\CodeFluxAIStorage या /home/user/storage)",
 		"enter_valid_path": "कृपया एक वैध पाथ दर्ज करें"
 	},
 	"input": {
-		"task_prompt": "Kilo Code को क्या करना है?",
+		"task_prompt": "CodeFlux AI को क्या करना है?",
 		"task_placeholder": "अपना कार्य यहाँ लिखें"
 	}
 }

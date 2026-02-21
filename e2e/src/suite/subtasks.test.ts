@@ -2,7 +2,7 @@ import * as assert from "assert"
 
 import { sleep, waitFor, getMessage, waitForCompletion } from "./utils"
 
-suite("Kilo Code Subtasks", () => {
+suite("CodeFlux AI Subtasks", () => {
 	test("Should handle subtask cancellation and resumption correctly", async function () {
 		const api = globalThis.api
 

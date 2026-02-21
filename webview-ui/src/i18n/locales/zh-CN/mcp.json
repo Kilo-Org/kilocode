@@ -1,14 +1,14 @@
 {
 	"title": "MCP 服务器",
 	"done": "完成",
-	"description": "<0>Model Context Protocol</0> 可以与本地运行的 MCP 服务器进行通信，提供额外的工具和资源来扩展 Kilo Code 的功能。您可以使用<1>社区开发的服务器</1>，或者要求 Kilo Code 创建特定于您的工作流程的新工具（例如，\"添加一个获取最新 npm 文档的工具\"）。",
+	"description": "<0>Model Context Protocol</0> 可以与本地运行的 MCP 服务器进行通信，提供额外的工具和资源来扩展 CodeFlux AI 的功能。您可以使用<1>社区开发的服务器</1>，或者要求 CodeFlux AI 创建特定于您的工作流程的新工具（例如，\"添加一个获取最新 npm 文档的工具\"）。",
 	"enableToggle": {
 		"title": "启用 MCP 服务器",
-		"description": "启用后，Kilo Code 将能够与 MCP 服务器交互以获取高级功能。如果您不使用 MCP，可以禁用此功能以减少 Kilo Code 的 token 使用量。"
+		"description": "启用后，CodeFlux AI 将能够与 MCP 服务器交互以获取高级功能。如果您不使用 MCP，可以禁用此功能以减少 CodeFlux AI 的 token 使用量。"
 	},
 	"enableServerCreation": {
 		"title": "启用 MCP 服务器创建",
-		"description": "启用后，Kilo Code 可以通过诸如\"添加新工具到...\"之类的命令帮助您创建新的 MCP 服务器。如果您不需要创建 MCP 服务器，可以禁用此功能以减少 Kilo Code 的 token 使用量。"
+		"description": "启用后，CodeFlux AI 可以通过诸如\"添加新工具到...\"之类的命令帮助您创建新的 MCP 服务器。如果您不需要创建 MCP 服务器，可以禁用此功能以减少 CodeFlux AI 的 token 使用量。"
 	},
 	"editGlobalMCP": "编辑全局 MCP",
 	"editProjectMCP": "编辑项目 MCP",

@@ -1,5 +1,5 @@
 {
-	"greeting": "Kilo Code sizin için ne yapabilir?",
+	"greeting": "CodeFlux AI sizin için ne yapabilir?",
 	"task": {
 		"title": "Görev",
 		"seeMore": "Daha fazla gör",
@@ -82,7 +82,7 @@
 	"edit": "Düzenle...",
 	"forNextMode": "sonraki mod için",
 	"error": "Hata",
-	"troubleMessage": "Kilo Code sorun yaşıyor...",
+	"troubleMessage": "CodeFlux AI sorun yaşıyor...",
 	"apiRequest": {
 		"title": "API İsteği",
 		"failed": "API İsteği Başarısız",
@@ -107,45 +107,45 @@
 		"current": "Mevcut"
 	},
 	"instructions": {
-		"wantsToFetch": "Kilo Code mevcut göreve yardımcı olmak için ayrıntılı talimatlar almak istiyor"
+		"wantsToFetch": "CodeFlux AI mevcut göreve yardımcı olmak için ayrıntılı talimatlar almak istiyor"
 	},
 	"fileOperations": {
-		"wantsToRead": "Kilo Code bu dosyayı okumak istiyor:",
-		"wantsToReadOutsideWorkspace": "Kilo Code çalışma alanı dışındaki bu dosyayı okumak istiyor:",
-		"didRead": "Kilo Code bu dosyayı okudu:",
-		"wantsToEdit": "Kilo Code bu dosyayı düzenlemek istiyor:",
-		"wantsToEditOutsideWorkspace": "Kilo Code çalışma alanı dışındaki bu dosyayı düzenlemek istiyor:",
-		"wantsToCreate": "Kilo Code yeni bir dosya oluşturmak istiyor:"
+		"wantsToRead": "CodeFlux AI bu dosyayı okumak istiyor:",
+		"wantsToReadOutsideWorkspace": "CodeFlux AI çalışma alanı dışındaki bu dosyayı okumak istiyor:",
+		"didRead": "CodeFlux AI bu dosyayı okudu:",
+		"wantsToEdit": "CodeFlux AI bu dosyayı düzenlemek istiyor:",
+		"wantsToEditOutsideWorkspace": "CodeFlux AI çalışma alanı dışındaki bu dosyayı düzenlemek istiyor:",
+		"wantsToCreate": "CodeFlux AI yeni bir dosya oluşturmak istiyor:"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Kilo Code bu dizindeki üst düzey dosyaları görüntülemek istiyor:",
-		"didViewTopLevel": "Kilo Code bu dizindeki üst düzey dosyaları görüntüledi:",
-		"wantsToViewRecursive": "Kilo Code bu dizindeki tüm dosyaları özyinelemeli olarak görüntülemek istiyor:",
-		"didViewRecursive": "Kilo Code bu dizindeki tüm dosyaları özyinelemeli olarak görüntüledi:",
-		"wantsToViewDefinitions": "Kilo Code bu dizinde kullanılan kaynak kod tanımlama isimlerini görüntülemek istiyor:",
-		"didViewDefinitions": "Kilo Code bu dizinde kullanılan kaynak kod tanımlama isimlerini görüntüledi:",
-		"wantsToSearch": "Kilo Code bu dizinde <code>{{regex}}</code> için arama yapmak istiyor:",
-		"didSearch": "Kilo Code bu dizinde <code>{{regex}}</code> için arama yaptı:"
+		"wantsToViewTopLevel": "CodeFlux AI bu dizindeki üst düzey dosyaları görüntülemek istiyor:",
+		"didViewTopLevel": "CodeFlux AI bu dizindeki üst düzey dosyaları görüntüledi:",
+		"wantsToViewRecursive": "CodeFlux AI bu dizindeki tüm dosyaları özyinelemeli olarak görüntülemek istiyor:",
+		"didViewRecursive": "CodeFlux AI bu dizindeki tüm dosyaları özyinelemeli olarak görüntüledi:",
+		"wantsToViewDefinitions": "CodeFlux AI bu dizinde kullanılan kaynak kod tanımlama isimlerini görüntülemek istiyor:",
+		"didViewDefinitions": "CodeFlux AI bu dizinde kullanılan kaynak kod tanımlama isimlerini görüntüledi:",
+		"wantsToSearch": "CodeFlux AI bu dizinde <code>{{regex}}</code> için arama yapmak istiyor:",
+		"didSearch": "CodeFlux AI bu dizinde <code>{{regex}}</code> için arama yaptı:"
 	},
 	"commandOutput": "Komut Çıktısı",
 	"response": "Yanıt",
 	"arguments": "Argümanlar",
 	"mcp": {
-		"wantsToUseTool": "Kilo Code {{serverName}} MCP sunucusunda bir araç kullanmak istiyor:",
-		"wantsToAccessResource": "Kilo Code {{serverName}} MCP sunucusundaki bir kaynağa erişmek istiyor:"
+		"wantsToUseTool": "CodeFlux AI {{serverName}} MCP sunucusunda bir araç kullanmak istiyor:",
+		"wantsToAccessResource": "CodeFlux AI {{serverName}} MCP sunucusundaki bir kaynağa erişmek istiyor:"
 	},
 	"modes": {
-		"wantsToSwitch": "Kilo Code <code>{{mode}}</code> moduna geçmek istiyor",
-		"wantsToSwitchWithReason": "Kilo Code <code>{{mode}}</code> moduna geçmek istiyor çünkü: {{reason}}",
-		"didSwitch": "Kilo Code <code>{{mode}}</code> moduna geçti",
-		"didSwitchWithReason": "Kilo Code <code>{{mode}}</code> moduna geçti çünkü: {{reason}}"
+		"wantsToSwitch": "CodeFlux AI <code>{{mode}}</code> moduna geçmek istiyor",
+		"wantsToSwitchWithReason": "CodeFlux AI <code>{{mode}}</code> moduna geçmek istiyor çünkü: {{reason}}",
+		"didSwitch": "CodeFlux AI <code>{{mode}}</code> moduna geçti",
+		"didSwitchWithReason": "CodeFlux AI <code>{{mode}}</code> moduna geçti çünkü: {{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Kilo Code <code>{{mode}}</code> modunda yeni bir alt görev oluşturmak istiyor:",
-		"wantsToFinish": "Kilo Code bu alt görevi bitirmek istiyor"
+		"wantsToCreate": "CodeFlux AI <code>{{mode}}</code> modunda yeni bir alt görev oluşturmak istiyor:",
+		"wantsToFinish": "CodeFlux AI bu alt görevi bitirmek istiyor"
 	},
 	"questions": {
-		"hasQuestion": "Kilo Code'nun bir sorusu var:"
+		"hasQuestion": "CodeFlux AI'nun bir sorusu var:"
 	},
 	"taskCompleted": "Görev Tamamlandı",
 	"shellIntegration": {
@@ -158,7 +158,7 @@
 	"autoApprove": {
 		"title": "Otomatik-onay:",
 		"none": "Hiçbiri",
-		"description": "Otomatik onay, Kilo Code'un izin istemeden işlemler gerçekleştirmesine olanak tanır. Yalnızca tamamen güvendiğiniz eylemler için etkinleştirin. Daha detaylı yapılandırma <settingsLink>Ayarlar</settingsLink>'da mevcuttur.",
+		"description": "Otomatik onay, CodeFlux AI'un izin istemeden işlemler gerçekleştirmesine olanak tanır. Yalnızca tamamen güvendiğiniz eylemler için etkinleştirin. Daha detaylı yapılandırma <settingsLink>Ayarlar</settingsLink>'da mevcuttur.",
 		"actions": {
 			"readFiles": {
 				"label": "Dosyaları ve dizinleri oku",
@@ -222,7 +222,7 @@
 		"detailsDiscussLinks": "<discordLink>Discord</discordLink> ve <redditLink>Reddit</redditLink> üzerinde daha fazla ayrıntı edinin ve tartışmalara katılın 🚀"
 	},
 	"browser": {
-		"rooWantsToUse": "Kilo Code tarayıcıyı kullanmak istiyor:",
+		"rooWantsToUse": "CodeFlux AI tarayıcıyı kullanmak istiyor:",
 		"consoleLogs": "Konsol Kayıtları",
 		"noNewLogs": "(Yeni kayıt yok)",
 		"screenshot": "Tarayıcı ekran görüntüsü",

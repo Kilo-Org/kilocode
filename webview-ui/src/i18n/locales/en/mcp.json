@@ -1,14 +1,14 @@
 {
 	"title": "MCP Servers",
 	"done": "Done",
-	"description": "The <0>Model Context Protocol</0> enables communication with locally running MCP servers that provide additional tools and resources to extend Kilo Code's capabilities. You can use <1>community-made servers</1> or ask Kilo Code to create new tools specific to your workflow (e.g., \"add a tool that gets the latest npm docs\").",
+	"description": "The <0>Model Context Protocol</0> enables communication with locally running MCP servers that provide additional tools and resources to extend CodeFlux AI's capabilities. You can use <1>community-made servers</1> or ask CodeFlux AI to create new tools specific to your workflow (e.g., \"add a tool that gets the latest npm docs\").",
 	"enableToggle": {
 		"title": "Enable MCP Servers",
-		"description": "When enabled, Kilo Code will be able to interact with MCP servers for advanced functionality. If you're not using MCP, you can disable this to reduce Kilo Code's token usage."
+		"description": "When enabled, CodeFlux AI will be able to interact with MCP servers for advanced functionality. If you're not using MCP, you can disable this to reduce CodeFlux AI's token usage."
 	},
 	"enableServerCreation": {
 		"title": "Enable MCP Server Creation",
-		"description": "When enabled, Kilo Code can help you create new MCP servers via commands like \"add a new tool to...\". If you don't need to create MCP servers you can disable this to reduce Kilo Code's token usage."
+		"description": "When enabled, CodeFlux AI can help you create new MCP servers via commands like \"add a new tool to...\". If you don't need to create MCP servers you can disable this to reduce CodeFlux AI's token usage."
 	},
 	"editGlobalMCP": "Edit Global MCP",
 	"editProjectMCP": "Edit Project MCP",

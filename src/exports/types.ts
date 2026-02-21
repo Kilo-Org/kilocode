@@ -4,7 +4,7 @@
 type ProviderSettings = {
 	apiProvider?:
 		| (
-				| "kilocode"
+				| "codefluxai"
 				| "fireworks"
 				| "anthropic"
 				| "glama"
@@ -166,7 +166,7 @@ type ProviderSettings = {
 	modelMaxThinkingTokens?: number | undefined
 	includeMaxTokens?: boolean | undefined
 	fakeAi?: unknown | undefined
-	kilocodeToken?: string | undefined
+	codefluxaiToken?: string | undefined
 	fireworksModelId?: string | undefined
 	fireworksApiKey?: string | undefined
 }
@@ -181,7 +181,7 @@ type GlobalSettings = {
 				name: string
 				apiProvider?:
 					| (
-							| "kilocode"
+							| "codefluxai"
 							| "fireworks"
 							| "anthropic"
 							| "glama"

@@ -29,17 +29,17 @@
 		"advanced": "Avançat",
 		"experimental": "Funcions experimentals",
 		"language": "Idioma",
-		"about": "Sobre Kilo Code",
+		"about": "Sobre CodeFlux AI",
 		"mcp": "Servidors MCP"
 	},
 	"autoApprove": {
-		"description": "Permet que Kilo Code realitzi operacions automàticament sense requerir aprovació. Activeu aquesta configuració només si confieu plenament en la IA i enteneu els riscos de seguretat associats.",
+		"description": "Permet que CodeFlux AI realitzi operacions automàticament sense requerir aprovació. Activeu aquesta configuració només si confieu plenament en la IA i enteneu els riscos de seguretat associats.",
 		"readOnly": {
 			"label": "Aprovar sempre operacions de només lectura",
-			"description": "Quan està activat, Kilo Code veurà automàticament el contingut del directori i llegirà fitxers sense que calgui fer clic al botó Aprovar.",
+			"description": "Quan està activat, CodeFlux AI veurà automàticament el contingut del directori i llegirà fitxers sense que calgui fer clic al botó Aprovar.",
 			"outsideWorkspace": {
 				"label": "Incloure fitxers fora de l'espai de treball",
-				"description": "Permetre a Kilo Code llegir fitxers fora de l'espai de treball actual sense requerir aprovació."
+				"description": "Permetre a CodeFlux AI llegir fitxers fora de l'espai de treball actual sense requerir aprovació."
 			}
 		},
 		"write": {
@@ -48,7 +48,7 @@
 			"delayLabel": "Retard després d'escriptura per permetre que els diagnòstics detectin possibles problemes",
 			"outsideWorkspace": {
 				"label": "Incloure fitxers fora de l'espai de treball",
-				"description": "Permetre a Kilo Code crear i editar fitxers fora de l'espai de treball actual sense requerir aprovació."
+				"description": "Permetre a CodeFlux AI crear i editar fitxers fora de l'espai de treball actual sense requerir aprovació."
 			}
 		},
 		"browser": {
@@ -152,13 +152,13 @@
 			"draftModelDesc": "El model d'esborrany ha de ser de la mateixa família de models perquè la descodificació especulativa funcioni correctament.",
 			"selectDraftModel": "Seleccionar model d'esborrany",
 			"noModelsFound": "No s'han trobat models d'esborrany. Assegureu-vos que LM Studio s'està executant amb el mode servidor habilitat.",
-			"description": "LM Studio permet executar models localment al vostre ordinador. Per a instruccions sobre com començar, consulteu la seva <a>Guia d'inici ràpid</a>. També necessitareu iniciar la funció de <b>Servidor Local</b> de LM Studio per utilitzar-la amb aquesta extensió. <span>Nota:</span> Kilo Code utilitza prompts complexos i funciona millor amb models Claude. Els models menys capaços poden no funcionar com s'espera."
+			"description": "LM Studio permet executar models localment al vostre ordinador. Per a instruccions sobre com començar, consulteu la seva <a>Guia d'inici ràpid</a>. També necessitareu iniciar la funció de <b>Servidor Local</b> de LM Studio per utilitzar-la amb aquesta extensió. <span>Nota:</span> CodeFlux AI utilitza prompts complexos i funciona millor amb models Claude. Els models menys capaços poden no funcionar com s'espera."
 		},
 		"ollama": {
 			"baseUrl": "URL base (opcional)",
 			"modelId": "ID del model",
 			"description": "Ollama permet executar models localment al vostre ordinador. Per a instruccions sobre com començar, consulteu la Guia d'inici ràpid.",
-			"warning": "Nota: Kilo Code utilitza prompts complexos i funciona millor amb models Claude. Els models menys capaços poden no funcionar com s'espera."
+			"warning": "Nota: CodeFlux AI utilitza prompts complexos i funciona millor amb models Claude. Els models menys capaços poden no funcionar com s'espera."
 		},
 		"unboundApiKey": "Clau API d'Unbound",
 		"getUnboundApiKey": "Obtenir clau API d'Unbound",
@@ -174,7 +174,7 @@
 			}
 		},
 		"customModel": {
-			"capabilities": "Configureu les capacitats i preus per al vostre model personalitzat compatible amb OpenAI. Tingueu cura en especificar les capacitats del model, ja que poden afectar com funciona Kilo Code.",
+			"capabilities": "Configureu les capacitats i preus per al vostre model personalitzat compatible amb OpenAI. Tingueu cura en especificar les capacitats del model, ja que poden afectar com funciona CodeFlux AI.",
 			"maxTokens": {
 				"label": "Màxim de tokens de sortida",
 				"description": "El nombre màxim de tokens que el model pot generar en una resposta. (Establiu -1 per permetre que el servidor estableixi el màxim de tokens.)"
@@ -219,7 +219,7 @@
 	"browser": {
 		"enable": {
 			"label": "Habilitar eina de navegador",
-			"description": "Quan està habilitat, Kilo Code pot utilitzar un navegador per interactuar amb llocs web quan s'utilitzen models que admeten l'ús de l'ordinador."
+			"description": "Quan està habilitat, CodeFlux AI pot utilitzar un navegador per interactuar amb llocs web quan s'utilitzen models que admeten l'ús de l'ordinador."
 		},
 		"viewport": {
 			"label": "Mida del viewport",
@@ -247,18 +247,18 @@
 	"checkpoints": {
 		"enable": {
 			"label": "Habilitar punts de control automàtics",
-			"description": "Quan està habilitat, Kilo Code crearà automàticament punts de control durant l'execució de tasques, facilitant la revisió de canvis o la reversió a estats anteriors."
+			"description": "Quan està habilitat, CodeFlux AI crearà automàticament punts de control durant l'execució de tasques, facilitant la revisió de canvis o la reversió a estats anteriors."
 		}
 	},
 	"notifications": {
 		"sound": {
 			"label": "Habilitar efectes de so",
-			"description": "Quan està habilitat, Kilo Code reproduirà efectes de so per a notificacions i esdeveniments.",
+			"description": "Quan està habilitat, CodeFlux AI reproduirà efectes de so per a notificacions i esdeveniments.",
 			"volumeLabel": "Volum"
 		},
 		"tts": {
 			"label": "Habilitar text a veu",
-			"description": "Quan està habilitat, Kilo Code llegirà en veu alta les seves respostes utilitzant text a veu.",
+			"description": "Quan està habilitat, CodeFlux AI llegirà en veu alta les seves respostes utilitzant text a veu.",
 			"speedLabel": "Velocitat"
 		}
 	},
@@ -273,12 +273,12 @@
 			"description": "Nombre màxim de fitxers a incloure als detalls del directori de treball actual. Valors més alts proporcionen més context però augmenten l'ús de token."
 		},
 		"rooignore": {
-			"label": "Mostrar fitxers .kilocodeignore en llistes i cerques",
-			"description": "Quan està habilitat, els fitxers que coincideixen amb els patrons a .kilocodeignore es mostraran en llistes amb un símbol de cadenat. Quan està deshabilitat, aquests fitxers s'ocultaran completament de les llistes de fitxers i cerques."
+			"label": "Mostrar fitxers .codefluxaiignore en llistes i cerques",
+			"description": "Quan està habilitat, els fitxers que coincideixen amb els patrons a .codefluxaiignore es mostraran en llistes amb un símbol de cadenat. Quan està deshabilitat, aquests fitxers s'ocultaran completament de les llistes de fitxers i cerques."
 		},
 		"maxReadFile": {
 			"label": "Llindar d'auto-truncament de lectura de fitxers",
-			"description": "Kilo Code llegeix aquest nombre de línies quan el model omet els valors d'inici/final. Si aquest nombre és menor que el total del fitxer, Kilo Code genera un índex de números de línia de les definicions de codi. Casos especials: -1 indica a Kilo Code que llegeixi tot el fitxer (sense indexació), i 0 indica que no llegeixi cap línia i proporcioni només índexs de línia per a un context mínim. Valors més baixos minimitzen l'ús inicial de context, permetent lectures posteriors de rangs de línies precisos. Les sol·licituds amb inici/final explícits no estan limitades per aquesta configuració.",
+			"description": "CodeFlux AI llegeix aquest nombre de línies quan el model omet els valors d'inici/final. Si aquest nombre és menor que el total del fitxer, CodeFlux AI genera un índex de números de línia de les definicions de codi. Casos especials: -1 indica a CodeFlux AI que llegeixi tot el fitxer (sense indexació), i 0 indica que no llegeixi cap línia i proporcioni només índexs de línia per a un context mínim. Valors més baixos minimitzen l'ús inicial de context, permetent lectures posteriors de rangs de línies precisos. Les sol·licituds amb inici/final explícits no estan limitades per aquesta configuració.",
 			"lines": "línies",
 			"always_full_read": "Llegeix sempre el fitxer sencer"
 		}
@@ -300,7 +300,7 @@
 		},
 		"diff": {
 			"label": "Habilitar edició mitjançant diffs",
-			"description": "Quan està habilitat, Kilo Code podrà editar fitxers més ràpidament i rebutjarà automàticament escriptures completes de fitxers truncats. Funciona millor amb l'últim model Claude 3.7 Sonnet.",
+			"description": "Quan està habilitat, CodeFlux AI podrà editar fitxers més ràpidament i rebutjarà automàticament escriptures completes de fitxers truncats. Funciona millor amb l'últim model Claude 3.7 Sonnet.",
 			"strategy": {
 				"label": "Estratègia de diff",
 				"options": {
@@ -328,19 +328,19 @@
 		},
 		"SEARCH_AND_REPLACE": {
 			"name": "Utilitzar eina de cerca i reemplaçament experimental",
-			"description": "Activar l'eina de cerca i reemplaçament experimental, permetent a Kilo Code reemplaçar múltiples instàncies d'un terme de cerca en una sola petició."
+			"description": "Activar l'eina de cerca i reemplaçament experimental, permetent a CodeFlux AI reemplaçar múltiples instàncies d'un terme de cerca en una sola petició."
 		},
 		"INSERT_BLOCK": {
 			"name": "Utilitzar eina d'inserció de contingut experimental",
-			"description": "Activar l'eina d'inserció de contingut experimental, permetent a Kilo Code inserir contingut a números de línia específics sense necessitat de crear un diff."
+			"description": "Activar l'eina d'inserció de contingut experimental, permetent a CodeFlux AI inserir contingut a números de línia específics sense necessitat de crear un diff."
 		},
 		"POWER_STEERING": {
 			"name": "Utilitzar mode \"direcció assistida\" experimental",
-			"description": "Quan està activat, Kilo Code recordarà al model els detalls de la seva definició de mode actual amb més freqüència. Això portarà a una adherència més forta a les definicions de rol i instruccions personalitzades, però utilitzarà més tokens per missatge."
+			"description": "Quan està activat, CodeFlux AI recordarà al model els detalls de la seva definició de mode actual amb més freqüència. Això portarà a una adherència més forta a les definicions de rol i instruccions personalitzades, però utilitzarà més tokens per missatge."
 		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Utilitzar eina diff de blocs múltiples experimental",
-			"description": "Quan està activat, Kilo Code utilitzarà l'eina diff de blocs múltiples. Això intentarà actualitzar múltiples blocs de codi a l'arxiu en una sola petició."
+			"description": "Quan està activat, CodeFlux AI utilitzarà l'eina diff de blocs múltiples. Això intentarà actualitzar múltiples blocs de codi a l'arxiu en una sola petició."
 		}
 	},
 	"temperature": {
@@ -371,18 +371,18 @@
 		}
 	},
 	"modelPicker": {
-		"automaticFetch": "L'extensió obté automàticament la llista més recent de models disponibles a <serviceLink>{{serviceName}}</serviceLink>. Si no esteu segur de quin model triar, Kilo Code funciona millor amb <defaultModelLink>{{defaultModelId}}</defaultModelLink>. També podeu cercar \"free\" per a opcions gratuïtes actualment disponibles.",
+		"automaticFetch": "L'extensió obté automàticament la llista més recent de models disponibles a <serviceLink>{{serviceName}}</serviceLink>. Si no esteu segur de quin model triar, CodeFlux AI funciona millor amb <defaultModelLink>{{defaultModelId}}</defaultModelLink>. També podeu cercar \"free\" per a opcions gratuïtes actualment disponibles.",
 		"label": "Model",
 		"searchPlaceholder": "Cerca",
 		"noMatchFound": "No s'ha trobat cap coincidència",
 		"useCustomModel": "Utilitzar personalitzat: {{modelId}}"
 	},
 	"footer": {
-		"feedback": "Si teniu qualsevol pregunta o comentari, no dubteu a obrir un issue a <githubLink>github.com/Kilo-Org/kilocode</githubLink> o unir-vos a <redditLink>reddit.com/r/kilocode</redditLink> o <discordLink>discord.gg/fxrhCFGhkP</discordLink>",
-		"version": "Kilo Code v{{version}}",
+		"feedback": "Si teniu qualsevol pregunta o comentari, no dubteu a obrir un issue a <githubLink>github.com/Kilo-Org/codefluxai</githubLink> o unir-vos a <redditLink>reddit.com/r/codefluxai</redditLink> o <discordLink>discord.gg/fxrhCFGhkP</discordLink>",
+		"version": "CodeFlux AI v{{version}}",
 		"telemetry": {
 			"label": "Permetre informes anònims d'errors i ús",
-			"description": "Ajudeu a millorar Kilo Code enviant dades d'ús anònimes i informes d'errors. Mai s'envia codi, prompts o informació personal. Vegeu la nostra política de privacitat per a més detalls."
+			"description": "Ajudeu a millorar CodeFlux AI enviant dades d'ús anònimes i informes d'errors. Mai s'envia codi, prompts o informació personal. Vegeu la nostra política de privacitat per a més detalls."
 		},
 		"settings": {
 			"import": "Importar",

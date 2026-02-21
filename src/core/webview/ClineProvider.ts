@@ -89,8 +89,8 @@ export type ClineProviderEvents = {
 }
 
 export class ClineProvider extends EventEmitter<ClineProviderEvents> implements vscode.WebviewViewProvider {
-	public static readonly sideBarId = "kilo-code.SidebarProvider" // used in package.json as the view's id. This value cannot be changed due to how vscode caches views based on their id, and updating the id would break existing instances of the extension.
-	public static readonly tabPanelId = "kilo-code.TabPanelProvider"
+	public static readonly sideBarId = "codeflux-ai.SidebarProvider" // used in package.json as the view's id. This value cannot be changed due to how vscode caches views based on their id, and updating the id would break existing instances of the extension.
+	public static readonly tabPanelId = "codeflux-ai.TabPanelProvider"
 	private static activeInstances: Set<ClineProvider> = new Set()
 	private disposables: vscode.Disposable[] = []
 	private view?: vscode.WebviewView | vscode.WebviewPanel
@@ -252,7 +252,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 
 		// If no visible provider, try to show the sidebar view
 		if (!visibleProvider) {
-			await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
+			await vscode.commands.executeCommand("codeflux-ai.SidebarProvider.focus")
 			// Wait briefly for the view to become visible
 			await delay(100)
 			visibleProvider = ClineProvider.getVisibleInstance()
@@ -638,7 +638,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 					<script nonce="${nonce}">
 						window.IMAGES_BASE_URI = "${imagesUri}"
 					</script>
-					<title>Kilo Code</title>
+					<title>CodeFlux AI</title>
 				</head>
 				<body>
 					<div id="root"></div>
@@ -723,7 +723,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			<script nonce="${nonce}">
 				window.IMAGES_BASE_URI = "${imagesUri}"
 			</script>
-            <title>Kilo Code</title>
+            <title>CodeFlux AI</title>
           </head>
           <body>
             <noscript>You need to enable JavaScript to run this app.</noscript>
@@ -1225,7 +1225,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 						await this.context.globalState.update("allowedCommands", message.commands)
 						// Also update workspace settings
 						await vscode.workspace
-							.getConfiguration("kiloCode")
+							.getConfiguration("codeFluxAI")
 							.update("allowedCommands", message.commands, vscode.ConfigurationTarget.Global)
 						break
 					case "openMcpSettings": {
@@ -1782,11 +1782,11 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 
 						if (answer === githubIssuesText) {
 							await vscode.env.openExternal(
-								vscode.Uri.parse("https://github.com/Kilo-Org/kilocode/issues"),
+								vscode.Uri.parse("https://github.com/canstralian/CodeAnywhere/issues"),
 							)
 						} else if (answer === githubDiscussionsText) {
 							await vscode.env.openExternal(
-								vscode.Uri.parse("https://github.com/Kilo-Org/kilocode/discussions"),
+								vscode.Uri.parse("https://github.com/canstralian/CodeAnywhere/discussions"),
 							)
 						} else if (answer === discordText) {
 							await vscode.env.openExternal(vscode.Uri.parse("https://discord.gg/fxrhCFGhkP"))
@@ -2054,7 +2054,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 						break
 					case "humanRelayResponse":
 						if (message.requestId && message.text) {
-							vscode.commands.executeCommand("kilo-code.handleHumanRelayResponse", {
+							vscode.commands.executeCommand("codeflux-ai.handleHumanRelayResponse", {
 								requestId: message.requestId,
 								text: message.text,
 								cancelled: false,
@@ -2064,7 +2064,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 
 					case "humanRelayCancel":
 						if (message.requestId) {
-							vscode.commands.executeCommand("kilo-code.handleHumanRelayResponse", {
+							vscode.commands.executeCommand("codeflux-ai.handleHumanRelayResponse", {
 								requestId: message.requestId,
 								cancelled: true,
 							})
@@ -2269,21 +2269,21 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		// Get platform-specific application data directory
 		let mcpServersDir: string
 		if (process.platform === "win32") {
-			// Windows: %APPDATA%\Kilo-Code\MCP
-			mcpServersDir = path.join(os.homedir(), "AppData", "Roaming", "Kilo-Code", "MCP")
+			// Windows: %APPDATA%\CodeFlux-AI\MCP
+			mcpServersDir = path.join(os.homedir(), "AppData", "Roaming", "CodeFlux-AI", "MCP")
 		} else if (process.platform === "darwin") {
-			// macOS: ~/Documents/Kilo-Code/MCP
-			mcpServersDir = path.join(os.homedir(), "Documents", "Kilo-Code", "MCP")
+			// macOS: ~/Documents/CodeFlux-AI/MCP
+			mcpServersDir = path.join(os.homedir(), "Documents", "CodeFlux-AI", "MCP")
 		} else {
 			// Linux: ~/.local/share/Cline/MCP
-			mcpServersDir = path.join(os.homedir(), ".local", "share", "Kilo-Code", "MCP")
+			mcpServersDir = path.join(os.homedir(), ".local", "share", "CodeFlux-AI", "MCP")
 		}
 
 		try {
 			await fs.mkdir(mcpServersDir, { recursive: true })
 		} catch (error) {
 			// Fallback to a relative path if directory creation fails
-			return path.join(os.homedir(), ".kilo-code", "mcp")
+			return path.join(os.homedir(), ".codeflux-ai", "mcp")
 		}
 		return mcpServersDir
 	}
@@ -2415,23 +2415,23 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		}
 	}
 
-	// kilocode_change:
-	async handleKiloCodeCallback(token: string) {
-		const kilocode: ApiProvider = "kilocode"
+	// codefluxai_change:
+	async handleCodeFluxAICallback(token: string) {
+		const codefluxai: ApiProvider = "codefluxai"
 		let { apiConfiguration, currentApiConfigName } = await this.getState()
 
 		await this.upsertApiConfiguration(currentApiConfigName, {
 			...apiConfiguration,
-			apiProvider: "kilocode",
-			kilocodeToken: token,
+			apiProvider: "codefluxai",
+			codefluxaiToken: token,
 		})
 
-		vscode.window.showInformationMessage("Kilo Code successfully configured!")
+		vscode.window.showInformationMessage("CodeFlux AI successfully configured!")
 
 		if (this.getCurrentCline()) {
 			this.getCurrentCline()!.api = buildApiHandler({
-				apiProvider: kilocode,
-				kilocodeToken: token,
+				apiProvider: codefluxai,
+				codefluxaiToken: token,
 			})
 		}
 	}
@@ -2604,7 +2604,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		} = await this.getState()
 
 		const machineId = vscode.env.machineId
-		const allowedCommands = vscode.workspace.getConfiguration("kilo-code").get<string[]>("allowedCommands") || []
+		const allowedCommands = vscode.workspace.getConfiguration("codeflux-ai").get<string[]>("allowedCommands") || []
 		const cwd = this.cwd
 
 		return {
@@ -2612,7 +2612,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			osInfo: os.platform() === "win32" ? "win32" : "unix",
 			apiConfiguration,
 			customInstructions,
-			// kilocode_change: default values set to true
+			// codefluxai_change: default values set to true
 			alwaysAllowReadOnly: alwaysAllowReadOnly ?? true,
 			alwaysAllowReadOnlyOutsideWorkspace: alwaysAllowReadOnlyOutsideWorkspace ?? true,
 			alwaysAllowWrite: alwaysAllowWrite ?? true,
@@ -2689,7 +2689,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 		const customModes = await this.customModesManager.getCustomModes()
 
 		// Determine apiProvider with the same logic as before.
-		const apiProvider: ApiProvider = stateValues.apiProvider ? stateValues.apiProvider : "kilocode" // kilocode_change: fall back to kilocode
+		const apiProvider: ApiProvider = stateValues.apiProvider ? stateValues.apiProvider : "codefluxai" // codefluxai_change: fall back to codefluxai
 
 		// Build the apiConfiguration object combining state values and secrets.
 		const providerSettings = this.contextProxy.getProviderSettings()

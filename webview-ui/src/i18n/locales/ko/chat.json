@@ -1,5 +1,5 @@
 {
-	"greeting": "Kilo Code가 어떻게 도와드릴까요?",
+	"greeting": "CodeFlux AI가 어떻게 도와드릴까요?",
 	"task": {
 		"title": "작업",
 		"seeMore": "더 보기",
@@ -82,7 +82,7 @@
 	"edit": "편집...",
 	"forNextMode": "다음 모드용",
 	"error": "오류",
-	"troubleMessage": "Kilo Code에 문제가 발생했습니다...",
+	"troubleMessage": "CodeFlux AI에 문제가 발생했습니다...",
 	"apiRequest": {
 		"title": "API 요청",
 		"failed": "API 요청 실패",
@@ -107,45 +107,45 @@
 		"current": "현재"
 	},
 	"instructions": {
-		"wantsToFetch": "Kilo Code는 현재 작업을 지원하기 위해 자세한 지침을 가져오려고 합니다"
+		"wantsToFetch": "CodeFlux AI는 현재 작업을 지원하기 위해 자세한 지침을 가져오려고 합니다"
 	},
 	"fileOperations": {
-		"wantsToRead": "Kilo Code가 이 파일을 읽고 싶어합니다:",
-		"wantsToReadOutsideWorkspace": "Kilo Code가 워크스페이스 외부의 이 파일을 읽고 싶어합니다:",
-		"didRead": "Kilo Code가 이 파일을 읽었습니다:",
-		"wantsToEdit": "Kilo Code가 이 파일을 편집하고 싶어합니다:",
-		"wantsToEditOutsideWorkspace": "Kilo Code가 워크스페이스 외부의 이 파일을 편집하고 싶어합니다:",
-		"wantsToCreate": "Kilo Code가 새 파일을 만들고 싶어합니다:"
+		"wantsToRead": "CodeFlux AI가 이 파일을 읽고 싶어합니다:",
+		"wantsToReadOutsideWorkspace": "CodeFlux AI가 워크스페이스 외부의 이 파일을 읽고 싶어합니다:",
+		"didRead": "CodeFlux AI가 이 파일을 읽었습니다:",
+		"wantsToEdit": "CodeFlux AI가 이 파일을 편집하고 싶어합니다:",
+		"wantsToEditOutsideWorkspace": "CodeFlux AI가 워크스페이스 외부의 이 파일을 편집하고 싶어합니다:",
+		"wantsToCreate": "CodeFlux AI가 새 파일을 만들고 싶어합니다:"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Kilo Code가 이 디렉토리의 최상위 파일을 보고 싶어합니다:",
-		"didViewTopLevel": "Kilo Code가 이 디렉토리의 최상위 파일을 보았습니다:",
-		"wantsToViewRecursive": "Kilo Code가 이 디렉토리의 모든 파일을 재귀적으로 보고 싶어합니다:",
-		"didViewRecursive": "Kilo Code가 이 디렉토리의 모든 파일을 재귀적으로 보았습니다:",
-		"wantsToViewDefinitions": "Kilo Code가 이 디렉토리에서 사용된 소스 코드 정의 이름을 보고 싶어합니다:",
-		"didViewDefinitions": "Kilo Code가 이 디렉토리에서 사용된 소스 코드 정의 이름을 보았습니다:",
-		"wantsToSearch": "Kilo Code가 이 디렉토리에서 <code>{{regex}}</code>을(를) 검색하고 싶어합니다:",
-		"didSearch": "Kilo Code가 이 디렉토리에서 <code>{{regex}}</code>을(를) 검색했습니다:"
+		"wantsToViewTopLevel": "CodeFlux AI가 이 디렉토리의 최상위 파일을 보고 싶어합니다:",
+		"didViewTopLevel": "CodeFlux AI가 이 디렉토리의 최상위 파일을 보았습니다:",
+		"wantsToViewRecursive": "CodeFlux AI가 이 디렉토리의 모든 파일을 재귀적으로 보고 싶어합니다:",
+		"didViewRecursive": "CodeFlux AI가 이 디렉토리의 모든 파일을 재귀적으로 보았습니다:",
+		"wantsToViewDefinitions": "CodeFlux AI가 이 디렉토리에서 사용된 소스 코드 정의 이름을 보고 싶어합니다:",
+		"didViewDefinitions": "CodeFlux AI가 이 디렉토리에서 사용된 소스 코드 정의 이름을 보았습니다:",
+		"wantsToSearch": "CodeFlux AI가 이 디렉토리에서 <code>{{regex}}</code>을(를) 검색하고 싶어합니다:",
+		"didSearch": "CodeFlux AI가 이 디렉토리에서 <code>{{regex}}</code>을(를) 검색했습니다:"
 	},
 	"commandOutput": "명령 출력",
 	"response": "응답",
 	"arguments": "인수",
 	"mcp": {
-		"wantsToUseTool": "Kilo Code가 {{serverName}} MCP 서버에서 도구를 사용하고 싶어합니다:",
-		"wantsToAccessResource": "Kilo Code가 {{serverName}} MCP 서버에서 리소스에 접근하고 싶어합니다:"
+		"wantsToUseTool": "CodeFlux AI가 {{serverName}} MCP 서버에서 도구를 사용하고 싶어합니다:",
+		"wantsToAccessResource": "CodeFlux AI가 {{serverName}} MCP 서버에서 리소스에 접근하고 싶어합니다:"
 	},
 	"modes": {
-		"wantsToSwitch": "Kilo Code가 <code>{{mode}}</code> 모드로 전환하고 싶어합니다",
-		"wantsToSwitchWithReason": "Kilo Code가 다음 이유로 <code>{{mode}}</code> 모드로 전환하고 싶어합니다: {{reason}}",
-		"didSwitch": "Kilo Code가 <code>{{mode}}</code> 모드로 전환했습니다",
-		"didSwitchWithReason": "Kilo Code가 다음 이유로 <code>{{mode}}</code> 모드로 전환했습니다: {{reason}}"
+		"wantsToSwitch": "CodeFlux AI가 <code>{{mode}}</code> 모드로 전환하고 싶어합니다",
+		"wantsToSwitchWithReason": "CodeFlux AI가 다음 이유로 <code>{{mode}}</code> 모드로 전환하고 싶어합니다: {{reason}}",
+		"didSwitch": "CodeFlux AI가 <code>{{mode}}</code> 모드로 전환했습니다",
+		"didSwitchWithReason": "CodeFlux AI가 다음 이유로 <code>{{mode}}</code> 모드로 전환했습니다: {{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Kilo Code가 <code>{{mode}}</code> 모드에서 새 하위 작업을 만들고 싶어합니다:",
-		"wantsToFinish": "Kilo Code가 이 하위 작업을 완료하고 싶어합니다"
+		"wantsToCreate": "CodeFlux AI가 <code>{{mode}}</code> 모드에서 새 하위 작업을 만들고 싶어합니다:",
+		"wantsToFinish": "CodeFlux AI가 이 하위 작업을 완료하고 싶어합니다"
 	},
 	"questions": {
-		"hasQuestion": "Kilo Code에게 질문이 있습니다:"
+		"hasQuestion": "CodeFlux AI에게 질문이 있습니다:"
 	},
 	"taskCompleted": "작업 완료",
 	"shellIntegration": {
@@ -158,7 +158,7 @@
 	"autoApprove": {
 		"title": "자동 승인:",
 		"none": "없음",
-		"description": "자동 승인을 사용하면 Kilo Code가 권한을 요청하지 않고 작업을 수행할 수 있습니다. 완전히 신뢰할 수 있는 작업에만 활성화하세요. 더 자세한 구성은 <settingsLink>설정</settingsLink>에서 사용할 수 있습니다.",
+		"description": "자동 승인을 사용하면 CodeFlux AI가 권한을 요청하지 않고 작업을 수행할 수 있습니다. 완전히 신뢰할 수 있는 작업에만 활성화하세요. 더 자세한 구성은 <settingsLink>설정</settingsLink>에서 사용할 수 있습니다.",
 		"actions": {
 			"readFiles": {
 				"label": "파일 및 디렉토리 읽기",
@@ -222,7 +222,7 @@
 		"detailsDiscussLinks": "<discordLink>Discord</discordLink>와 <redditLink>Reddit</redditLink>에서 더 자세한 정보를 확인하고 논의하세요 🚀"
 	},
 	"browser": {
-		"rooWantsToUse": "Kilo Code가 브라우저를 사용하고 싶어합니다:",
+		"rooWantsToUse": "CodeFlux AI가 브라우저를 사용하고 싶어합니다:",
 		"consoleLogs": "콘솔 로그",
 		"noNewLogs": "(새 로그 없음)",
 		"screenshot": "브라우저 스크린샷",

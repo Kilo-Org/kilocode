@@ -1,14 +1,14 @@
 {
 	"title": "Máy chủ MCP",
 	"done": "Hoàn thành",
-	"description": "<0>Giao thức ngữ cảnh mô hình</0> cho phép giao tiếp với các máy chủ MCP đang chạy cục bộ, cung cấp các công cụ và tài nguyên bổ sung để mở rộng khả năng của Kilo Code. Bạn có thể sử dụng <1>các máy chủ do cộng đồng tạo</1> hoặc yêu cầu Kilo Code tạo các công cụ mới dành riêng cho quy trình làm việc của bạn (ví dụ: \"thêm công cụ lấy tài liệu npm mới nhất\").",
+	"description": "<0>Giao thức ngữ cảnh mô hình</0> cho phép giao tiếp với các máy chủ MCP đang chạy cục bộ, cung cấp các công cụ và tài nguyên bổ sung để mở rộng khả năng của CodeFlux AI. Bạn có thể sử dụng <1>các máy chủ do cộng đồng tạo</1> hoặc yêu cầu CodeFlux AI tạo các công cụ mới dành riêng cho quy trình làm việc của bạn (ví dụ: \"thêm công cụ lấy tài liệu npm mới nhất\").",
 	"enableToggle": {
 		"title": "Bật máy chủ MCP",
-		"description": "Khi được bật, Kilo Code sẽ có thể tương tác với các máy chủ MCP cho chức năng nâng cao. Nếu bạn không sử dụng MCP, bạn có thể tắt tính năng này để giảm lượng token mà Kilo Code sử dụng."
+		"description": "Khi được bật, CodeFlux AI sẽ có thể tương tác với các máy chủ MCP cho chức năng nâng cao. Nếu bạn không sử dụng MCP, bạn có thể tắt tính năng này để giảm lượng token mà CodeFlux AI sử dụng."
 	},
 	"enableServerCreation": {
 		"title": "Bật tạo máy chủ MCP",
-		"description": "Khi được bật, Kilo Code có thể giúp bạn tạo máy chủ MCP mới thông qua các lệnh như \"thêm công cụ mới để...\". Nếu bạn không cần tạo máy chủ MCP, bạn có thể tắt tính năng này để giảm lượng token mà Kilo Code sử dụng."
+		"description": "Khi được bật, CodeFlux AI có thể giúp bạn tạo máy chủ MCP mới thông qua các lệnh như \"thêm công cụ mới để...\". Nếu bạn không cần tạo máy chủ MCP, bạn có thể tắt tính năng này để giảm lượng token mà CodeFlux AI sử dụng."
 	},
 	"editGlobalMCP": "Chỉnh sửa MCP toàn cục",
 	"editProjectMCP": "Chỉnh sửa MCP dự án",

@@ -45,7 +45,7 @@ describe("TerminalProcess", () => {
 			shellIntegration: {
 				executeCommand: jest.fn(),
 			},
-			name: "Kilo Code",
+			name: "CodeFlux AI",
 			processId: Promise.resolve(123),
 			creationOptions: {},
 			exitStatus: undefined,

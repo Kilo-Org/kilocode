@@ -46,7 +46,7 @@ type WaitUntilReadyOptions = WaitForOptions & {
 }
 
 export const waitUntilReady = async ({ api, ...options }: WaitUntilReadyOptions) => {
-	await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
+	await vscode.commands.executeCommand("codeflux-ai.SidebarProvider.focus")
 	await waitFor(() => api.isReady(), options)
 }
 

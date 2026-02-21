@@ -20,7 +20,7 @@ import { ApiStream } from "./transform/stream"
 import { UnboundHandler } from "./providers/unbound"
 import { RequestyHandler } from "./providers/requesty"
 import { HumanRelayHandler } from "./providers/human-relay"
-import { KiloCodeHandler } from "./providers/kilocode"
+import { CodeFluxAIHandler } from "./providers/codefluxai"
 import { FireworksHandler } from "./providers/fireworks"
 import { FakeAIHandler } from "./providers/fake-ai"
 
@@ -46,8 +46,8 @@ export interface ApiHandler {
 export function buildApiHandler(configuration: ApiConfiguration): ApiHandler {
 	const { apiProvider, ...options } = configuration
 	switch (apiProvider) {
-		case "kilocode":
-			return new KiloCodeHandler(options)
+		case "codefluxai":
+			return new CodeFluxAIHandler(options)
 		case "anthropic":
 			return new AnthropicHandler(options)
 		case "glama":

@@ -1,5 +1,5 @@
 {
-	"greeting": "Que peut faire Kilo Code pour vous ?",
+	"greeting": "Que peut faire CodeFlux AI pour vous ?",
 	"task": {
 		"title": "Tâche",
 		"seeMore": "Voir plus",
@@ -82,7 +82,7 @@
 	"edit": "Éditer...",
 	"forNextMode": "pour le prochain mode",
 	"error": "Erreur",
-	"troubleMessage": "Kilo Code rencontre des difficultés...",
+	"troubleMessage": "CodeFlux AI rencontre des difficultés...",
 	"apiRequest": {
 		"title": "Requête API",
 		"failed": "Échec de la requête API",
@@ -107,45 +107,45 @@
 		"current": "Actuel"
 	},
 	"fileOperations": {
-		"wantsToRead": "Kilo Code veut lire ce fichier :",
-		"wantsToReadOutsideWorkspace": "Kilo Code veut lire ce fichier en dehors de l'espace de travail :",
-		"didRead": "Kilo Code a lu ce fichier :",
-		"wantsToEdit": "Kilo Code veut éditer ce fichier :",
-		"wantsToEditOutsideWorkspace": "Kilo Code veut éditer ce fichier en dehors de l'espace de travail :",
-		"wantsToCreate": "Kilo Code veut créer un nouveau fichier :"
+		"wantsToRead": "CodeFlux AI veut lire ce fichier :",
+		"wantsToReadOutsideWorkspace": "CodeFlux AI veut lire ce fichier en dehors de l'espace de travail :",
+		"didRead": "CodeFlux AI a lu ce fichier :",
+		"wantsToEdit": "CodeFlux AI veut éditer ce fichier :",
+		"wantsToEditOutsideWorkspace": "CodeFlux AI veut éditer ce fichier en dehors de l'espace de travail :",
+		"wantsToCreate": "CodeFlux AI veut créer un nouveau fichier :"
 	},
 	"instructions": {
-		"wantsToFetch": "Kilo Code veut récupérer des instructions détaillées pour aider à la tâche actuelle"
+		"wantsToFetch": "CodeFlux AI veut récupérer des instructions détaillées pour aider à la tâche actuelle"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Kilo Code veut voir les fichiers de premier niveau dans ce répertoire :",
-		"didViewTopLevel": "Kilo Code a vu les fichiers de premier niveau dans ce répertoire :",
-		"wantsToViewRecursive": "Kilo Code veut voir récursivement tous les fichiers dans ce répertoire :",
-		"didViewRecursive": "Kilo Code a vu récursivement tous les fichiers dans ce répertoire :",
-		"wantsToViewDefinitions": "Kilo Code veut voir les noms de définitions de code source utilisés dans ce répertoire :",
-		"didViewDefinitions": "Kilo Code a vu les noms de définitions de code source utilisés dans ce répertoire :",
-		"wantsToSearch": "Kilo Code veut rechercher dans ce répertoire <code>{{regex}}</code> :",
-		"didSearch": "Kilo Code a recherché dans ce répertoire <code>{{regex}}</code> :"
+		"wantsToViewTopLevel": "CodeFlux AI veut voir les fichiers de premier niveau dans ce répertoire :",
+		"didViewTopLevel": "CodeFlux AI a vu les fichiers de premier niveau dans ce répertoire :",
+		"wantsToViewRecursive": "CodeFlux AI veut voir récursivement tous les fichiers dans ce répertoire :",
+		"didViewRecursive": "CodeFlux AI a vu récursivement tous les fichiers dans ce répertoire :",
+		"wantsToViewDefinitions": "CodeFlux AI veut voir les noms de définitions de code source utilisés dans ce répertoire :",
+		"didViewDefinitions": "CodeFlux AI a vu les noms de définitions de code source utilisés dans ce répertoire :",
+		"wantsToSearch": "CodeFlux AI veut rechercher dans ce répertoire <code>{{regex}}</code> :",
+		"didSearch": "CodeFlux AI a recherché dans ce répertoire <code>{{regex}}</code> :"
 	},
 	"commandOutput": "Sortie de commande",
 	"response": "Réponse",
 	"arguments": "Arguments",
 	"mcp": {
-		"wantsToUseTool": "Kilo Code veut utiliser un outil sur le serveur MCP {{serverName}} :",
-		"wantsToAccessResource": "Kilo Code veut accéder à une ressource sur le serveur MCP {{serverName}} :"
+		"wantsToUseTool": "CodeFlux AI veut utiliser un outil sur le serveur MCP {{serverName}} :",
+		"wantsToAccessResource": "CodeFlux AI veut accéder à une ressource sur le serveur MCP {{serverName}} :"
 	},
 	"modes": {
-		"wantsToSwitch": "Kilo Code veut passer au mode <code>{{mode}}</code>",
-		"wantsToSwitchWithReason": "Kilo Code veut passer au mode <code>{{mode}}</code> car : {{reason}}",
-		"didSwitch": "Kilo Code est passé au mode <code>{{mode}}</code>",
-		"didSwitchWithReason": "Kilo Code est passé au mode <code>{{mode}}</code> car : {{reason}}"
+		"wantsToSwitch": "CodeFlux AI veut passer au mode <code>{{mode}}</code>",
+		"wantsToSwitchWithReason": "CodeFlux AI veut passer au mode <code>{{mode}}</code> car : {{reason}}",
+		"didSwitch": "CodeFlux AI est passé au mode <code>{{mode}}</code>",
+		"didSwitchWithReason": "CodeFlux AI est passé au mode <code>{{mode}}</code> car : {{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Kilo Code veut créer une nouvelle sous-tâche en mode <code>{{mode}}</code> :",
-		"wantsToFinish": "Kilo Code veut terminer cette sous-tâche"
+		"wantsToCreate": "CodeFlux AI veut créer une nouvelle sous-tâche en mode <code>{{mode}}</code> :",
+		"wantsToFinish": "CodeFlux AI veut terminer cette sous-tâche"
 	},
 	"questions": {
-		"hasQuestion": "Kilo Code a une question :"
+		"hasQuestion": "CodeFlux AI a une question :"
 	},
 	"taskCompleted": "Tâche terminée",
 	"shellIntegration": {
@@ -158,7 +158,7 @@
 	"autoApprove": {
 		"title": "Auto-approbation :",
 		"none": "Aucune",
-		"description": "L'auto-approbation permet à Kilo Code d'effectuer des actions sans demander d'autorisation. Activez-la uniquement pour les actions auxquelles vous faites entièrement confiance. Configuration plus détaillée disponible dans les <settingsLink>Paramètres</settingsLink>.",
+		"description": "L'auto-approbation permet à CodeFlux AI d'effectuer des actions sans demander d'autorisation. Activez-la uniquement pour les actions auxquelles vous faites entièrement confiance. Configuration plus détaillée disponible dans les <settingsLink>Paramètres</settingsLink>.",
 		"actions": {
 			"readFiles": {
 				"label": "Lire fichiers et répertoires",
@@ -222,7 +222,7 @@
 		"detailsDiscussLinks": "Obtenez plus de détails et participez aux discussions sur <discordLink>Discord</discordLink> et <redditLink>Reddit</redditLink> 🚀"
 	},
 	"browser": {
-		"rooWantsToUse": "Kilo Code veut utiliser le navigateur :",
+		"rooWantsToUse": "CodeFlux AI veut utiliser le navigateur :",
 		"consoleLogs": "Journaux de console",
 		"noNewLogs": "(Pas de nouveaux journaux)",
 		"screenshot": "Capture d'écran du navigateur",

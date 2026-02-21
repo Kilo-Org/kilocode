@@ -100,7 +100,7 @@ export class UnboundHandler extends BaseProvider implements SingleCompletionHand
 						labels: [
 							{
 								key: "app",
-								value: "kilo-code",
+								value: "codeflux-ai",
 							},
 						],
 					}),
@@ -172,7 +172,7 @@ export class UnboundHandler extends BaseProvider implements SingleCompletionHand
 						labels: [
 							{
 								key: "app",
-								value: "kilo-code",
+								value: "codeflux-ai",
 							},
 						],
 					}),

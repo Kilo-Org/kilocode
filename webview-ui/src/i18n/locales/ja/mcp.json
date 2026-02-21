@@ -1,14 +1,14 @@
 {
 	"title": "MCPサーバー",
 	"done": "完了",
-	"description": "<0>Model Context Protocol</0>は、ローカルで実行されているMCPサーバーとの通信を可能にし、Kilo Codeの機能を拡張するための追加ツールやリソースを提供します。<1>コミュニティによって作成されたサーバー</1>を使用したり、Kilo Codeにワークフロー専用の新しいツールを作成するよう依頼したりできます（例：「最新のnpmドキュメントを取得するツールを追加する」）。",
+	"description": "<0>Model Context Protocol</0>は、ローカルで実行されているMCPサーバーとの通信を可能にし、CodeFlux AIの機能を拡張するための追加ツールやリソースを提供します。<1>コミュニティによって作成されたサーバー</1>を使用したり、CodeFlux AIにワークフロー専用の新しいツールを作成するよう依頼したりできます（例：「最新のnpmドキュメントを取得するツールを追加する」）。",
 	"enableToggle": {
 		"title": "MCPサーバーを有効にする",
-		"description": "有効にすると、Kilo Codeは高度な機能のためにMCPサーバーと対話できるようになります。MCPを使用していない場合は、これを無効にしてKilo Codeのtoken使用量を減らすことができます。"
+		"description": "有効にすると、CodeFlux AIは高度な機能のためにMCPサーバーと対話できるようになります。MCPを使用していない場合は、これを無効にしてCodeFlux AIのtoken使用量を減らすことができます。"
 	},
 	"enableServerCreation": {
 		"title": "MCPサーバー作成を有効にする",
-		"description": "有効にすると、Kilo Codeは「新しいツールを追加する...」などのコマンドを通じて新しいMCPサーバーの作成を支援できます。MCPサーバーを作成する必要がない場合は、これを無効にしてKilo Codeのtoken使用量を減らすことができます。"
+		"description": "有効にすると、CodeFlux AIは「新しいツールを追加する...」などのコマンドを通じて新しいMCPサーバーの作成を支援できます。MCPサーバーを作成する必要がない場合は、これを無効にしてCodeFlux AIのtoken使用量を減らすことができます。"
 	},
 	"editGlobalMCP": "グローバルMCPを編集",
 	"editProjectMCP": "プロジェクトMCPを編集",

@@ -1,5 +1,5 @@
 {
-	"greeting": "O que o Kilo Code pode fazer por você?",
+	"greeting": "O que o CodeFlux AI pode fazer por você?",
 	"task": {
 		"title": "Tarefa",
 		"seeMore": "Ver mais",
@@ -82,7 +82,7 @@
 	"edit": "Editar...",
 	"forNextMode": "para o próximo modo",
 	"error": "Erro",
-	"troubleMessage": "Kilo Code está tendo problemas...",
+	"troubleMessage": "CodeFlux AI está tendo problemas...",
 	"apiRequest": {
 		"title": "Requisição API",
 		"failed": "Requisição API falhou",
@@ -107,45 +107,45 @@
 		"current": "Atual"
 	},
 	"instructions": {
-		"wantsToFetch": "Kilo Code quer buscar instruções detalhadas para ajudar com a tarefa atual"
+		"wantsToFetch": "CodeFlux AI quer buscar instruções detalhadas para ajudar com a tarefa atual"
 	},
 	"fileOperations": {
-		"wantsToRead": "Kilo Code quer ler este arquivo:",
-		"wantsToReadOutsideWorkspace": "Kilo Code quer ler este arquivo fora do espaço de trabalho:",
-		"didRead": "Kilo Code leu este arquivo:",
-		"wantsToEdit": "Kilo Code quer editar este arquivo:",
-		"wantsToEditOutsideWorkspace": "Kilo Code quer editar este arquivo fora do espaço de trabalho:",
-		"wantsToCreate": "Kilo Code quer criar um novo arquivo:"
+		"wantsToRead": "CodeFlux AI quer ler este arquivo:",
+		"wantsToReadOutsideWorkspace": "CodeFlux AI quer ler este arquivo fora do espaço de trabalho:",
+		"didRead": "CodeFlux AI leu este arquivo:",
+		"wantsToEdit": "CodeFlux AI quer editar este arquivo:",
+		"wantsToEditOutsideWorkspace": "CodeFlux AI quer editar este arquivo fora do espaço de trabalho:",
+		"wantsToCreate": "CodeFlux AI quer criar um novo arquivo:"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Kilo Code quer visualizar os arquivos de nível superior neste diretório:",
-		"didViewTopLevel": "Kilo Code visualizou os arquivos de nível superior neste diretório:",
-		"wantsToViewRecursive": "Kilo Code quer visualizar recursivamente todos os arquivos neste diretório:",
-		"didViewRecursive": "Kilo Code visualizou recursivamente todos os arquivos neste diretório:",
-		"wantsToViewDefinitions": "Kilo Code quer visualizar nomes de definição de código-fonte usados neste diretório:",
-		"didViewDefinitions": "Kilo Code visualizou nomes de definição de código-fonte usados neste diretório:",
-		"wantsToSearch": "Kilo Code quer pesquisar neste diretório por <code>{{regex}}</code>:",
-		"didSearch": "Kilo Code pesquisou neste diretório por <code>{{regex}}</code>:"
+		"wantsToViewTopLevel": "CodeFlux AI quer visualizar os arquivos de nível superior neste diretório:",
+		"didViewTopLevel": "CodeFlux AI visualizou os arquivos de nível superior neste diretório:",
+		"wantsToViewRecursive": "CodeFlux AI quer visualizar recursivamente todos os arquivos neste diretório:",
+		"didViewRecursive": "CodeFlux AI visualizou recursivamente todos os arquivos neste diretório:",
+		"wantsToViewDefinitions": "CodeFlux AI quer visualizar nomes de definição de código-fonte usados neste diretório:",
+		"didViewDefinitions": "CodeFlux AI visualizou nomes de definição de código-fonte usados neste diretório:",
+		"wantsToSearch": "CodeFlux AI quer pesquisar neste diretório por <code>{{regex}}</code>:",
+		"didSearch": "CodeFlux AI pesquisou neste diretório por <code>{{regex}}</code>:"
 	},
 	"commandOutput": "Saída do comando",
 	"response": "Resposta",
 	"arguments": "Argumentos",
 	"mcp": {
-		"wantsToUseTool": "Kilo Code quer usar uma ferramenta no servidor MCP {{serverName}}:",
-		"wantsToAccessResource": "Kilo Code quer acessar um recurso no servidor MCP {{serverName}}:"
+		"wantsToUseTool": "CodeFlux AI quer usar uma ferramenta no servidor MCP {{serverName}}:",
+		"wantsToAccessResource": "CodeFlux AI quer acessar um recurso no servidor MCP {{serverName}}:"
 	},
 	"modes": {
-		"wantsToSwitch": "Kilo Code quer mudar para o modo <code>{{mode}}</code>",
-		"wantsToSwitchWithReason": "Kilo Code quer mudar para o modo <code>{{mode}}</code> porque: {{reason}}",
-		"didSwitch": "Kilo Code mudou para o modo <code>{{mode}}</code>",
-		"didSwitchWithReason": "Kilo Code mudou para o modo <code>{{mode}}</code> porque: {{reason}}"
+		"wantsToSwitch": "CodeFlux AI quer mudar para o modo <code>{{mode}}</code>",
+		"wantsToSwitchWithReason": "CodeFlux AI quer mudar para o modo <code>{{mode}}</code> porque: {{reason}}",
+		"didSwitch": "CodeFlux AI mudou para o modo <code>{{mode}}</code>",
+		"didSwitchWithReason": "CodeFlux AI mudou para o modo <code>{{mode}}</code> porque: {{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Kilo Code quer criar uma nova subtarefa no modo <code>{{mode}}</code>:",
-		"wantsToFinish": "Kilo Code quer finalizar esta subtarefa"
+		"wantsToCreate": "CodeFlux AI quer criar uma nova subtarefa no modo <code>{{mode}}</code>:",
+		"wantsToFinish": "CodeFlux AI quer finalizar esta subtarefa"
 	},
 	"questions": {
-		"hasQuestion": "Kilo Code tem uma pergunta:"
+		"hasQuestion": "CodeFlux AI tem uma pergunta:"
 	},
 	"taskCompleted": "Tarefa concluída",
 	"shellIntegration": {
@@ -158,7 +158,7 @@
 	"autoApprove": {
 		"title": "Aprovação automática:",
 		"none": "Nenhuma",
-		"description": "A aprovação automática permite que o Kilo Code execute ações sem pedir permissão. Ative apenas para ações nas quais você confia totalmente. Configuração mais detalhada disponível nas <settingsLink>Configurações</settingsLink>.",
+		"description": "A aprovação automática permite que o CodeFlux AI execute ações sem pedir permissão. Ative apenas para ações nas quais você confia totalmente. Configuração mais detalhada disponível nas <settingsLink>Configurações</settingsLink>.",
 		"actions": {
 			"readFiles": {
 				"label": "Ler arquivos e diretórios",
@@ -222,7 +222,7 @@
 		"detailsDiscussLinks": "Obtenha mais detalhes e participe da discussão no <discordLink>Discord</discordLink> e <redditLink>Reddit</redditLink> 🚀"
 	},
 	"browser": {
-		"rooWantsToUse": "Kilo Code quer usar o navegador:",
+		"rooWantsToUse": "CodeFlux AI quer usar o navegador:",
 		"consoleLogs": "Logs do console",
 		"noNewLogs": "(Sem novos logs)",
 		"screenshot": "Captura de tela do navegador",

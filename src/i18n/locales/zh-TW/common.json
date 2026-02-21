@@ -1,6 +1,6 @@
 {
 	"extension": {
-		"name": "Kilo Code",
+		"name": "CodeFlux AI",
 		"description": "您編輯器中的完整AI開發團隊。"
 	},
 	"number_format": {
@@ -52,7 +52,7 @@
 		"list_api_config": "獲取API配置列表失敗",
 		"update_server_timeout": "更新服務器超時設置失敗",
 		"failed_update_project_mcp": "更新項目MCP服務器失敗",
-		"create_mcp_json": "創建或打開 .kilocode/mcp.json 失敗：{{error}}",
+		"create_mcp_json": "創建或打開 .codefluxai/mcp.json 失敗：{{error}}",
 		"hmr_not_running": "本地開發服務器未運行，HMR將不起作用。請在啟動擴展前運行'npm run dev'以啟用HMR。",
 		"retrieve_current_mode": "從狀態中檢索當前模式失敗。",
 		"failed_delete_repo": "刪除關聯的影子倉庫或分支失敗：{{error}}",
@@ -89,12 +89,12 @@
 	},
 	"storage": {
 		"prompt_custom_path": "輸入自定義會話歷史存儲路徑，留空以使用默認位置",
-		"path_placeholder": "D:\\KiloCodeStorage",
-		"enter_absolute_path": "請輸入絕對路徑（例如 D:\\KiloCodeStorage 或 /home/user/storage）",
+		"path_placeholder": "D:\\CodeFluxAIStorage",
+		"enter_absolute_path": "請輸入絕對路徑（例如 D:\\CodeFluxAIStorage 或 /home/user/storage）",
 		"enter_valid_path": "請輸入有效的路徑"
 	},
 	"input": {
-		"task_prompt": "讓Kilo Code做什麼？",
+		"task_prompt": "讓CodeFlux AI做什麼？",
 		"task_placeholder": "在這裡輸入任務"
 	}
 }

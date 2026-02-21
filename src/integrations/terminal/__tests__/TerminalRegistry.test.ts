@@ -27,7 +27,7 @@ describe("TerminalRegistry", () => {
 
 			expect(mockCreateTerminal).toHaveBeenCalledWith({
 				cwd: "/test/path",
-				name: "Kilo Code",
+				name: "CodeFlux AI",
 				iconPath: expect.any(Object),
 				env: {
 					PAGER: "cat",

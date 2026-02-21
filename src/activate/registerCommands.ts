@@ -50,30 +50,30 @@ export const registerCommands = (options: RegisterCommandOptions) => {
 
 const getCommandsMap = ({ context, outputChannel, provider }: RegisterCommandOptions) => {
 	return {
-		"kilo-code.activationCompleted": () => {},
-		"kilo-code.plusButtonClicked": async () => {
+		"codeflux-ai.activationCompleted": () => {},
+		"codeflux-ai.plusButtonClicked": async () => {
 			await provider.removeClineFromStack()
 			await provider.postStateToWebview()
 			await provider.postMessageToWebview({ type: "action", action: "chatButtonClicked" })
 		},
-		"kilo-code.mcpButtonClicked": () => {
+		"codeflux-ai.mcpButtonClicked": () => {
 			provider.postMessageToWebview({ type: "action", action: "mcpButtonClicked" })
 		},
-		"kilo-code.promptsButtonClicked": () => {
+		"codeflux-ai.promptsButtonClicked": () => {
 			provider.postMessageToWebview({ type: "action", action: "promptsButtonClicked" })
 		},
-		"kilo-code.popoutButtonClicked": () => openClineInNewTab({ context, outputChannel }),
-		"kilo-code.openInNewTab": () => openClineInNewTab({ context, outputChannel }),
-		"kilo-code.settingsButtonClicked": () => {
+		"codeflux-ai.popoutButtonClicked": () => openClineInNewTab({ context, outputChannel }),
+		"codeflux-ai.openInNewTab": () => openClineInNewTab({ context, outputChannel }),
+		"codeflux-ai.settingsButtonClicked": () => {
 			provider.postMessageToWebview({ type: "action", action: "settingsButtonClicked" })
 		},
-		"kilo-code.historyButtonClicked": () => {
+		"codeflux-ai.historyButtonClicked": () => {
 			provider.postMessageToWebview({ type: "action", action: "historyButtonClicked" })
 		},
-		"kilo-code.helpButtonClicked": () => {
-			vscode.env.openExternal(vscode.Uri.parse("https://docs.kilocode.ai"))
+		"codeflux-ai.helpButtonClicked": () => {
+			vscode.env.openExternal(vscode.Uri.parse("https://docs.codefluxai.ai"))
 		},
-		"kilo-code.showHumanRelayDialog": (params: { requestId: string; promptText: string }) => {
+		"codeflux-ai.showHumanRelayDialog": (params: { requestId: string; promptText: string }) => {
 			const panel = getPanel()
 
 			if (panel) {
@@ -84,11 +84,11 @@ const getCommandsMap = ({ context, outputChannel, provider }: RegisterCommandOpt
 				})
 			}
 		},
-		"kilo-code.registerHumanRelayCallback": registerHumanRelayCallback,
-		"kilo-code.unregisterHumanRelayCallback": unregisterHumanRelayCallback,
-		"kilo-code.handleHumanRelayResponse": handleHumanRelayResponse,
-		"kilo-code.newTask": handleNewTask,
-		"kilo-code.setCustomStoragePath": async () => {
+		"codeflux-ai.registerHumanRelayCallback": registerHumanRelayCallback,
+		"codeflux-ai.unregisterHumanRelayCallback": unregisterHumanRelayCallback,
+		"codeflux-ai.handleHumanRelayResponse": handleHumanRelayResponse,
+		"codeflux-ai.newTask": handleNewTask,
+		"codeflux-ai.setCustomStoragePath": async () => {
 			const { promptForCustomStoragePath } = await import("../shared/storagePathManager")
 			await promptForCustomStoragePath()
 		},
@@ -96,7 +96,7 @@ const getCommandsMap = ({ context, outputChannel, provider }: RegisterCommandOpt
 }
 
 const openClineInNewTab = async ({ context, outputChannel }: Omit<RegisterCommandOptions, "provider">) => {
-	outputChannel.appendLine("Opening Kilo Code in new tab")
+	outputChannel.appendLine("Opening CodeFlux AI in new tab")
 
 	// (This example uses webviewProvider activation event which is necessary to
 	// deserialize cached webview, but since we use retainContextWhenHidden, we
@@ -115,7 +115,7 @@ const openClineInNewTab = async ({ context, outputChannel }: Omit<RegisterComman
 
 	const targetCol = hasVisibleEditors ? Math.max(lastCol + 1, 1) : vscode.ViewColumn.Two
 
-	const newPanel = vscode.window.createWebviewPanel(ClineProvider.tabPanelId, "Kilo Code", targetCol, {
+	const newPanel = vscode.window.createWebviewPanel(ClineProvider.tabPanelId, "CodeFlux AI", targetCol, {
 		enableScripts: true,
 		retainContextWhenHidden: true,
 		localResourceRoots: [context.extensionUri],

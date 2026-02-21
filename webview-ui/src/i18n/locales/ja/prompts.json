@@ -6,8 +6,8 @@
 		"createNewMode": "新しいモードを作成",
 		"editModesConfig": "モード設定を編集",
 		"editGlobalModes": "グローバルモードを編集",
-		"editProjectModes": "プロジェクトモードを編集 (.kilocodemodes)",
-		"createModeHelpText": "+ をクリックして新しいカスタムモードを作成するか、チャットで Kilo Code に作成を依頼してください！"
+		"editProjectModes": "プロジェクトモードを編集 (.codefluxaimodes)",
+		"createModeHelpText": "+ をクリックして新しいカスタムモードを作成するか、チャットで CodeFlux AI に作成を依頼してください！"
 	},
 	"apiConfiguration": {
 		"title": "API設定",
@@ -30,7 +30,7 @@
 	"roleDefinition": {
 		"title": "役割の定義",
 		"resetToDefault": "デフォルトにリセット",
-		"description": "このモードのKilo Codeの専門知識と個性を定義します。この説明は、Kilo Codeが自身をどのように表現し、タスクにどのように取り組むかを形作ります。"
+		"description": "このモードのCodeFlux AIの専門知識と個性を定義します。この説明は、CodeFlux AIが自身をどのように表現し、タスクにどのように取り組むかを形作ります。"
 	},
 	"customInstructions": {
 		"title": "モード固有のカスタム指示（オプション）",
@@ -40,7 +40,7 @@
 	},
 	"globalCustomInstructions": {
 		"title": "すべてのモードのカスタム指示",
-		"description": "これらの指示はすべてのモードに適用されます。モード固有の指示で強化できる基本的な動作セットを提供します。\nKilo Codeにエディタの表示言語({{language}})とは異なる言語で考えたり話したりさせたい場合は、ここで指定できます。",
+		"description": "これらの指示はすべてのモードに適用されます。モード固有の指示で強化できる基本的な動作セットを提供します。\nCodeFlux AIにエディタの表示言語({{language}})とは異なる言語で考えたり話したりさせたい場合は、ここで指定できます。",
 		"loadFromFile": "指示はワークスペースの<span>.clinerules</span>からも読み込めます。"
 	},
 	"systemPrompt": {
@@ -62,7 +62,7 @@
 		"types": {
 			"ENHANCE": {
 				"label": "プロンプトを強化",
-				"description": "プロンプト強化を使用して、入力に合わせたカスタマイズされた提案や改善を得ることができます。これにより、Kilo Codeがあなたの意図を理解し、最適な回答を提供できます。チャットの✨アイコンから利用できます。"
+				"description": "プロンプト強化を使用して、入力に合わせたカスタマイズされた提案や改善を得ることができます。これにより、CodeFlux AIがあなたの意図を理解し、最適な回答を提供できます。チャットの✨アイコンから利用できます。"
 			},
 			"EXPLAIN": {
 				"label": "コードを説明",
@@ -100,7 +100,7 @@
 	},
 	"advancedSystemPrompt": {
 		"title": "詳細設定：システムプロンプトの上書き",
-		"description": "ワークスペースの<span>.kilo-code/system-prompt-{{slug}}</span>にファイルを作成することで、このモードのシステムプロンプト（役割定義とカスタム指示以外）を完全に置き換えることができます。これは組み込みの安全対策と一貫性チェック（特にツールの使用に関して）をバイパスする非常に高度な機能なので、注意して使用してください！"
+		"description": "ワークスペースの<span>.codeflux-ai/system-prompt-{{slug}}</span>にファイルを作成することで、このモードのシステムプロンプト（役割定義とカスタム指示以外）を完全に置き換えることができます。これは組み込みの安全対策と一貫性チェック（特にツールの使用に関して）をバイパスする非常に高度な機能なので、注意して使用してください！"
 	},
 	"createModeDialog": {
 		"title": "新しいモードを作成",
@@ -121,13 +121,13 @@
 				"description": "すべてのワークスペースで利用可能"
 			},
 			"project": {
-				"label": "プロジェクト固有 (.kilocodemodes)",
+				"label": "プロジェクト固有 (.codefluxaimodes)",
 				"description": "このワークスペースでのみ使用可能、グローバルよりも優先"
 			}
 		},
 		"roleDefinition": {
 			"label": "役割の定義",
-			"description": "このモードのKilo Codeの専門知識と個性を定義します。"
+			"description": "このモードのCodeFlux AIの専門知識と個性を定義します。"
 		},
 		"tools": {
 			"label": "利用可能なツール",

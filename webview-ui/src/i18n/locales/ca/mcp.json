@@ -1,14 +1,14 @@
 {
 	"title": "Servidors MCP",
 	"done": "Fet",
-	"description": "El <0>Model Context Protocol</0> permet la comunicació amb servidors MCP que s'executen localment i proporcionen eines i recursos addicionals per ampliar les capacitats de Kilo Code. Pots utilitzar <1>servidors creats per la comunitat</1> o demanar a Kilo Code que creï noves eines específiques per al teu flux de treball (per exemple, \"afegir una eina que obtingui la documentació més recent de npm\").",
+	"description": "El <0>Model Context Protocol</0> permet la comunicació amb servidors MCP que s'executen localment i proporcionen eines i recursos addicionals per ampliar les capacitats de CodeFlux AI. Pots utilitzar <1>servidors creats per la comunitat</1> o demanar a CodeFlux AI que creï noves eines específiques per al teu flux de treball (per exemple, \"afegir una eina que obtingui la documentació més recent de npm\").",
 	"enableToggle": {
 		"title": "Habilitar servidors MCP",
-		"description": "Quan està habilitat, Kilo Code podrà interactuar amb servidors MCP per a funcionalitats avançades. Si no utilitzes MCP, pots desactivar això per reduir l'ús de tokens de Kilo Code."
+		"description": "Quan està habilitat, CodeFlux AI podrà interactuar amb servidors MCP per a funcionalitats avançades. Si no utilitzes MCP, pots desactivar això per reduir l'ús de tokens de CodeFlux AI."
 	},
 	"enableServerCreation": {
 		"title": "Habilitar creació de servidors MCP",
-		"description": "Quan està habilitat, Kilo Code pot ajudar-te a crear nous servidors MCP mitjançant ordres com \"afegir una nova eina per a...\". Si no necessites crear servidors MCP, pots desactivar això per reduir l'ús de tokens de Kilo Code."
+		"description": "Quan està habilitat, CodeFlux AI pot ajudar-te a crear nous servidors MCP mitjançant ordres com \"afegir una nova eina per a...\". Si no necessites crear servidors MCP, pots desactivar això per reduir l'ús de tokens de CodeFlux AI."
 	},
 	"editGlobalMCP": "Editar MCP Global",
 	"editProjectMCP": "Editar MCP del Projecte",

@@ -111,7 +111,7 @@ export class TerminalRegistry {
 	static createTerminal(cwd: string | vscode.Uri): Terminal {
 		const terminal = vscode.window.createTerminal({
 			cwd,
-			name: "Kilo Code",
+			name: "CodeFlux AI",
 			iconPath: new vscode.ThemeIcon("kilo"),
 			env: {
 				PAGER: "cat",

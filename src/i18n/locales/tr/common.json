@@ -1,6 +1,6 @@
 {
 	"extension": {
-		"name": "Kilo Code",
+		"name": "CodeFlux AI",
 		"description": "Düzenleyicinizde tam bir AI geliştirici ekibi."
 	},
 	"number_format": {
@@ -52,7 +52,7 @@
 		"list_api_config": "API yapılandırma listesi alınamadı",
 		"update_server_timeout": "Sunucu zaman aşımı güncellenemedi",
 		"failed_update_project_mcp": "Proje MCP sunucuları güncellenemedi",
-		"create_mcp_json": ".kilocode/mcp.json oluşturulamadı veya açılamadı: {{error}}",
+		"create_mcp_json": ".codefluxai/mcp.json oluşturulamadı veya açılamadı: {{error}}",
 		"hmr_not_running": "Yerel geliştirme sunucusu çalışmıyor, HMR çalışmayacak. HMR'yi etkinleştirmek için uzantıyı başlatmadan önce lütfen 'npm run dev' komutunu çalıştırın.",
 		"retrieve_current_mode": "Mevcut mod durumdan alınırken hata oluştu.",
 		"failed_delete_repo": "İlişkili gölge depo veya dal silinemedi: {{error}}",
@@ -89,12 +89,12 @@
 	},
 	"storage": {
 		"prompt_custom_path": "Konuşma geçmişi için özel depolama yolunu girin, varsayılan konumu kullanmak için boş bırakın",
-		"path_placeholder": "D:\\KiloCodeStorage",
-		"enter_absolute_path": "Lütfen mutlak bir yol girin (örn. D:\\KiloCodeStorage veya /home/user/storage)",
+		"path_placeholder": "D:\\CodeFluxAIStorage",
+		"enter_absolute_path": "Lütfen mutlak bir yol girin (örn. D:\\CodeFluxAIStorage veya /home/user/storage)",
 		"enter_valid_path": "Lütfen geçerli bir yol girin"
 	},
 	"input": {
-		"task_prompt": "Kilo Code ne yapsın?",
+		"task_prompt": "CodeFlux AI ne yapsın?",
 		"task_placeholder": "Görevini buraya yaz"
 	}
 }

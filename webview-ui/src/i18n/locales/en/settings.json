@@ -29,17 +29,17 @@
 		"advanced": "Advanced",
 		"experimental": "Experimental Features",
 		"language": "Language",
-		"about": "About Kilo Code",
+		"about": "About CodeFlux AI",
 		"mcp": "MCP Servers"
 	},
 	"autoApprove": {
-		"description": "Allow Kilo Code to automatically perform operations without requiring approval. Enable these settings only if you fully trust the AI and understand the associated security risks.",
+		"description": "Allow CodeFlux AI to automatically perform operations without requiring approval. Enable these settings only if you fully trust the AI and understand the associated security risks.",
 		"readOnly": {
 			"label": "Always approve read-only operations",
-			"description": "When enabled, Kilo Code will automatically view directory contents and read files without requiring you to click the Approve button.",
+			"description": "When enabled, CodeFlux AI will automatically view directory contents and read files without requiring you to click the Approve button.",
 			"outsideWorkspace": {
 				"label": "Include files outside workspace",
-				"description": "Allow Kilo Code to read files outside the current workspace without requiring approval."
+				"description": "Allow CodeFlux AI to read files outside the current workspace without requiring approval."
 			}
 		},
 		"write": {
@@ -48,7 +48,7 @@
 			"delayLabel": "Delay after writes to allow diagnostics to detect potential problems",
 			"outsideWorkspace": {
 				"label": "Include files outside workspace",
-				"description": "Allow Kilo Code to create and edit files outside the current workspace without requiring approval."
+				"description": "Allow CodeFlux AI to create and edit files outside the current workspace without requiring approval."
 			}
 		},
 		"browser": {
@@ -152,13 +152,13 @@
 			"draftModelDesc": "Draft model must be from the same model family for speculative decoding to work correctly.",
 			"selectDraftModel": "Select Draft Model",
 			"noModelsFound": "No draft models found. Please ensure LM Studio is running with Server Mode enabled.",
-			"description": "LM Studio allows you to run models locally on your computer. For instructions on how to get started, see their <a>quickstart guide</a>. You will also need to start LM Studio's <b>local server</b> feature to use it with this extension. <span>Note:</span> Kilo Code uses complex prompts and works best with Claude models. Less capable models may not work as expected."
+			"description": "LM Studio allows you to run models locally on your computer. For instructions on how to get started, see their <a>quickstart guide</a>. You will also need to start LM Studio's <b>local server</b> feature to use it with this extension. <span>Note:</span> CodeFlux AI uses complex prompts and works best with Claude models. Less capable models may not work as expected."
 		},
 		"ollama": {
 			"baseUrl": "Base URL (optional)",
 			"modelId": "Model ID",
 			"description": "Ollama allows you to run models locally on your computer. For instructions on how to get started, see their quickstart guide.",
-			"warning": "Note: Kilo Code uses complex prompts and works best with Claude models. Less capable models may not work as expected."
+			"warning": "Note: CodeFlux AI uses complex prompts and works best with Claude models. Less capable models may not work as expected."
 		},
 		"unboundApiKey": "Unbound API Key",
 		"getUnboundApiKey": "Get Unbound API Key",
@@ -174,7 +174,7 @@
 			}
 		},
 		"customModel": {
-			"capabilities": "Configure the capabilities and pricing for your custom OpenAI-compatible model. Be careful when specifying the model capabilities, as they can affect how Kilo Code performs.",
+			"capabilities": "Configure the capabilities and pricing for your custom OpenAI-compatible model. Be careful when specifying the model capabilities, as they can affect how CodeFlux AI performs.",
 			"maxTokens": {
 				"label": "Max Output Tokens",
 				"description": "Maximum number of tokens the model can generate in a response. (Specify -1 to allow the server to set the max tokens.)"
@@ -219,7 +219,7 @@
 	"browser": {
 		"enable": {
 			"label": "Enable browser tool",
-			"description": "When enabled, Kilo Code can use a browser to interact with websites when using models that support computer use."
+			"description": "When enabled, CodeFlux AI can use a browser to interact with websites when using models that support computer use."
 		},
 		"viewport": {
 			"label": "Viewport size",
@@ -247,18 +247,18 @@
 	"checkpoints": {
 		"enable": {
 			"label": "Enable automatic checkpoints",
-			"description": "When enabled, Kilo Code will automatically create checkpoints during task execution, making it easy to review changes or revert to earlier states."
+			"description": "When enabled, CodeFlux AI will automatically create checkpoints during task execution, making it easy to review changes or revert to earlier states."
 		}
 	},
 	"notifications": {
 		"sound": {
 			"label": "Enable sound effects",
-			"description": "When enabled, Kilo Code will play sound effects for notifications and events.",
+			"description": "When enabled, CodeFlux AI will play sound effects for notifications and events.",
 			"volumeLabel": "Volume"
 		},
 		"tts": {
 			"label": "Enable text-to-speech",
-			"description": "When enabled, Kilo Code will read aloud its responses using text-to-speech.",
+			"description": "When enabled, CodeFlux AI will read aloud its responses using text-to-speech.",
 			"speedLabel": "Speed"
 		}
 	},
@@ -273,12 +273,12 @@
 			"description": "Maximum number of files to include in current working directory details. Higher values provide more context but increase token usage."
 		},
 		"rooignore": {
-			"label": "Show .kilocodeignore'd files in lists and searches",
+			"label": "Show .codefluxaiignore'd files in lists and searches",
 			"description": "When enabled, files matching patterns in .kiloignore will be shown in lists with a lock symbol. When disabled, these files will be completely hidden from file lists and searches."
 		},
 		"maxReadFile": {
 			"label": "File read auto-truncate threshold",
-			"description": "Kilo Code reads this number of lines when the model omits start/end values. If this number is less than the file's total, Kilo Code generates a line number index of code definitions. Special cases: -1 instructs Kilo Code to read the entire file (without indexing), and 0 instructs it to read no lines and provides line indexes only for minimal context. Lower values minimize initial context usage, enabling precise subsequent line-range reads. Explicit start/end requests are not limited by this setting.",
+			"description": "CodeFlux AI reads this number of lines when the model omits start/end values. If this number is less than the file's total, CodeFlux AI generates a line number index of code definitions. Special cases: -1 instructs CodeFlux AI to read the entire file (without indexing), and 0 instructs it to read no lines and provides line indexes only for minimal context. Lower values minimize initial context usage, enabling precise subsequent line-range reads. Explicit start/end requests are not limited by this setting.",
 			"lines": "lines",
 			"always_full_read": "Always read entire file"
 		}
@@ -300,7 +300,7 @@
 		},
 		"diff": {
 			"label": "Enable editing through diffs",
-			"description": "When enabled, Kilo Code will be able to edit files more quickly and will automatically reject truncated full-file writes. Works best with the latest Claude 3.7 Sonnet model.",
+			"description": "When enabled, CodeFlux AI will be able to edit files more quickly and will automatically reject truncated full-file writes. Works best with the latest Claude 3.7 Sonnet model.",
 			"strategy": {
 				"label": "Diff strategy",
 				"options": {
@@ -328,19 +328,19 @@
 		},
 		"SEARCH_AND_REPLACE": {
 			"name": "Use experimental search and replace tool",
-			"description": "Enable the experimental search and replace tool, allowing Kilo Code to replace multiple instances of a search term in one request."
+			"description": "Enable the experimental search and replace tool, allowing CodeFlux AI to replace multiple instances of a search term in one request."
 		},
 		"INSERT_BLOCK": {
 			"name": "Use experimental insert content tool",
-			"description": "Enable the experimental insert content tool, allowing Kilo Code to insert content at specific line numbers without needing to create a diff."
+			"description": "Enable the experimental insert content tool, allowing CodeFlux AI to insert content at specific line numbers without needing to create a diff."
 		},
 		"POWER_STEERING": {
 			"name": "Use experimental \"power steering\" mode",
-			"description": "When enabled, Kilo Code will remind the model about the details of its current mode definition more frequently. This will lead to stronger adherence to role definitions and custom instructions, but will use more tokens per message."
+			"description": "When enabled, CodeFlux AI will remind the model about the details of its current mode definition more frequently. This will lead to stronger adherence to role definitions and custom instructions, but will use more tokens per message."
 		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Use experimental multi block diff tool",
-			"description": "When enabled, Kilo Code will use multi block diff tool. This will try to update multiple code blocks in the file in one request."
+			"description": "When enabled, CodeFlux AI will use multi block diff tool. This will try to update multiple code blocks in the file in one request."
 		}
 	},
 	"temperature": {
@@ -371,17 +371,17 @@
 		}
 	},
 	"modelPicker": {
-		"automaticFetch": "The extension automatically fetches the latest list of models available on <serviceLink>{{serviceName}}</serviceLink>. If you're unsure which model to choose, Kilo Code works best with <defaultModelLink>{{defaultModelId}}</defaultModelLink>. You can also try searching \"free\" for no-cost options currently available.",
+		"automaticFetch": "The extension automatically fetches the latest list of models available on <serviceLink>{{serviceName}}</serviceLink>. If you're unsure which model to choose, CodeFlux AI works best with <defaultModelLink>{{defaultModelId}}</defaultModelLink>. You can also try searching \"free\" for no-cost options currently available.",
 		"label": "Model",
 		"searchPlaceholder": "Search",
 		"noMatchFound": "No match found",
 		"useCustomModel": "Use custom: {{modelId}}"
 	},
 	"footer": {
-		"feedback": "If you have any questions or feedback, feel free to open an issue at <githubLink>github.com/Kilo-Org/kilocode</githubLink> or join <redditLink>reddit.com/r/kilocode</redditLink> or <discordLink>discord.gg/fxrhCFGhkP</discordLink>",
+		"feedback": "If you have any questions or feedback, feel free to open an issue at <githubLink>github.com/Kilo-Org/codefluxai</githubLink> or join <redditLink>reddit.com/r/codefluxai</redditLink> or <discordLink>discord.gg/fxrhCFGhkP</discordLink>",
 		"telemetry": {
 			"label": "Allow anonymous error and usage reporting",
-			"description": "Help improve Kilo Code by sending anonymous usage data and error reports. No code, prompts, or personal information is ever sent. See our privacy policy for more details."
+			"description": "Help improve CodeFlux AI by sending anonymous usage data and error reports. No code, prompts, or personal information is ever sent. See our privacy policy for more details."
 		},
 		"settings": {
 			"import": "Import",

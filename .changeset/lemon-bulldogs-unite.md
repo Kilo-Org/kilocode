@@ -1,5 +1,5 @@
 ---
-"kilo-code": patch
+"codeflux-ai": patch
 ---
 
 App tab layout fixes

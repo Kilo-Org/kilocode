@@ -12,7 +12,7 @@ declare global {
 }
 
 export async function run() {
-	const extension = vscode.extensions.getExtension<RooCodeAPI>("kilocode.Kilo-Code")
+	const extension = vscode.extensions.getExtension<RooCodeAPI>("codefluxai.codeflux-ai")
 
 	if (!extension) {
 		throw new Error("Extension not found")

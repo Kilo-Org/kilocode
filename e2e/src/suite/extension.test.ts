@@ -1,7 +1,7 @@
 import * as assert from "assert"
 import * as vscode from "vscode"
 
-suite("Kilo Code Extension", () => {
+suite("CodeFlux AI Extension", () => {
 	test("OPENROUTER_API_KEY environment variable is set", () => {
 		if (!process.env.OPENROUTER_API_KEY) {
 			assert.fail("OPENROUTER_API_KEY environment variable is not set")
@@ -10,15 +10,15 @@ suite("Kilo Code Extension", () => {
 
 	test("Commands should be registered", async () => {
 		const expectedCommands = [
-			"kilo-code.plusButtonClicked",
-			"kilo-code.mcpButtonClicked",
-			"kilo-code.historyButtonClicked",
-			"kilo-code.popoutButtonClicked",
-			"kilo-code.settingsButtonClicked",
-			"kilo-code.openInNewTab",
-			"kilo-code.explainCode",
-			"kilo-code.fixCode",
-			"kilo-code.improveCode",
+			"codeflux-ai.plusButtonClicked",
+			"codeflux-ai.mcpButtonClicked",
+			"codeflux-ai.historyButtonClicked",
+			"codeflux-ai.popoutButtonClicked",
+			"codeflux-ai.settingsButtonClicked",
+			"codeflux-ai.openInNewTab",
+			"codeflux-ai.explainCode",
+			"codeflux-ai.fixCode",
+			"codeflux-ai.improveCode",
 		]
 
 		const commands = await vscode.commands.getCommands(true)

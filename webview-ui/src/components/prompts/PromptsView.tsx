@@ -446,7 +446,7 @@ const PromptsView = ({ onDone }: PromptsViewProps) => {
 												e.preventDefault() // Prevent blur
 												vscode.postMessage({
 													type: "openFile",
-													text: "./.kilocodemodes",
+													text: "./.codefluxaimodes",
 													values: {
 														create: true,
 														content: JSON.stringify({ customModes: [] }, null, 2),

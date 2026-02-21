@@ -1,14 +1,14 @@
 {
 	"title": "Serveurs MCP",
 	"done": "Terminé",
-	"description": "Le <0>Model Context Protocol</0> permet la communication avec des serveurs MCP exécutés localement qui fournissent des outils et des ressources supplémentaires pour étendre les capacités de Kilo Code. Vous pouvez utiliser <1>des serveurs créés par la communauté</1> ou demander à Kilo Code de créer de nouveaux outils spécifiques à votre flux de travail (par exemple, \"ajouter un outil qui récupère la dernière documentation npm\").",
+	"description": "Le <0>Model Context Protocol</0> permet la communication avec des serveurs MCP exécutés localement qui fournissent des outils et des ressources supplémentaires pour étendre les capacités de CodeFlux AI. Vous pouvez utiliser <1>des serveurs créés par la communauté</1> ou demander à CodeFlux AI de créer de nouveaux outils spécifiques à votre flux de travail (par exemple, \"ajouter un outil qui récupère la dernière documentation npm\").",
 	"enableToggle": {
 		"title": "Activer les serveurs MCP",
-		"description": "Lorsqu'activé, Kilo Code pourra interagir avec les serveurs MCP pour des fonctionnalités avancées. Si vous n'utilisez pas MCP, vous pouvez désactiver cette option pour réduire l'utilisation de tokens par Kilo Code."
+		"description": "Lorsqu'activé, CodeFlux AI pourra interagir avec les serveurs MCP pour des fonctionnalités avancées. Si vous n'utilisez pas MCP, vous pouvez désactiver cette option pour réduire l'utilisation de tokens par CodeFlux AI."
 	},
 	"enableServerCreation": {
 		"title": "Activer la création de serveurs MCP",
-		"description": "Lorsqu'activé, Kilo Code peut vous aider à créer de nouveaux serveurs MCP via des commandes comme \"ajouter un nouvel outil pour...\". Si vous n'avez pas besoin de créer des serveurs MCP, vous pouvez désactiver cette option pour réduire l'utilisation de tokens par Kilo Code."
+		"description": "Lorsqu'activé, CodeFlux AI peut vous aider à créer de nouveaux serveurs MCP via des commandes comme \"ajouter un nouvel outil pour...\". Si vous n'avez pas besoin de créer des serveurs MCP, vous pouvez désactiver cette option pour réduire l'utilisation de tokens par CodeFlux AI."
 	},
 	"editGlobalMCP": "Modifier MCP Global",
 	"editProjectMCP": "Modifier MCP du Projet",

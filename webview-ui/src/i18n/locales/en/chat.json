@@ -1,5 +1,5 @@
 {
-	"greeting": "What can Kilo Code do for you?",
+	"greeting": "What can CodeFlux AI do for you?",
 	"task": {
 		"title": "Task",
 		"seeMore": "See more",
@@ -105,49 +105,49 @@
 		"current": "Current"
 	},
 	"instructions": {
-		"wantsToFetch": "Kilo Code wants to fetch detailed instructions to assist with the current task"
+		"wantsToFetch": "CodeFlux AI wants to fetch detailed instructions to assist with the current task"
 	},
 	"fileOperations": {
-		"wantsToRead": "Kilo Code wants to read this file:",
-		"wantsToReadOutsideWorkspace": "Kilo Code wants to read this file outside of the workspace:",
-		"didRead": "Kilo Code read this file:",
-		"wantsToEdit": "Kilo Code wants to edit this file:",
-		"wantsToEditOutsideWorkspace": "Kilo Code wants to edit this file outside of the workspace:",
-		"wantsToCreate": "Kilo Code wants to create a new file:"
+		"wantsToRead": "CodeFlux AI wants to read this file:",
+		"wantsToReadOutsideWorkspace": "CodeFlux AI wants to read this file outside of the workspace:",
+		"didRead": "CodeFlux AI read this file:",
+		"wantsToEdit": "CodeFlux AI wants to edit this file:",
+		"wantsToEditOutsideWorkspace": "CodeFlux AI wants to edit this file outside of the workspace:",
+		"wantsToCreate": "CodeFlux AI wants to create a new file:"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Kilo Code wants to view the top level files in this directory:",
-		"didViewTopLevel": "Kilo Code viewed the top level files in this directory:",
-		"wantsToViewRecursive": "Kilo Code wants to recursively view all files in this directory:",
-		"didViewRecursive": "Kilo Code recursively viewed all files in this directory:",
-		"wantsToViewDefinitions": "Kilo Code wants to view source code definition names used in this directory:",
-		"didViewDefinitions": "Kilo Code viewed source code definition names used in this directory:",
-		"wantsToSearch": "Kilo Code wants to search this directory for <code>{{regex}}</code>:",
-		"didSearch": "Kilo Code searched this directory for <code>{{regex}}</code>:"
+		"wantsToViewTopLevel": "CodeFlux AI wants to view the top level files in this directory:",
+		"didViewTopLevel": "CodeFlux AI viewed the top level files in this directory:",
+		"wantsToViewRecursive": "CodeFlux AI wants to recursively view all files in this directory:",
+		"didViewRecursive": "CodeFlux AI recursively viewed all files in this directory:",
+		"wantsToViewDefinitions": "CodeFlux AI wants to view source code definition names used in this directory:",
+		"didViewDefinitions": "CodeFlux AI viewed source code definition names used in this directory:",
+		"wantsToSearch": "CodeFlux AI wants to search this directory for <code>{{regex}}</code>:",
+		"didSearch": "CodeFlux AI searched this directory for <code>{{regex}}</code>:"
 	},
 	"commandOutput": "Command Output",
 	"response": "Response",
 	"arguments": "Arguments",
 	"mcp": {
-		"wantsToUseTool": "Kilo Code wants to use a tool on the {{serverName}} MCP server:",
-		"wantsToAccessResource": "Kilo Code wants to access a resource on the {{serverName}} MCP server:"
+		"wantsToUseTool": "CodeFlux AI wants to use a tool on the {{serverName}} MCP server:",
+		"wantsToAccessResource": "CodeFlux AI wants to access a resource on the {{serverName}} MCP server:"
 	},
 	"modes": {
-		"wantsToSwitch": "Kilo Code wants to switch to {{mode}} mode",
-		"wantsToSwitchWithReason": "Kilo Code wants to switch to {{mode}} mode because: {{reason}}",
-		"didSwitch": "Kilo Code switched to {{mode}} mode",
-		"didSwitchWithReason": "Kilo Code switched to {{mode}} mode because: {{reason}}"
+		"wantsToSwitch": "CodeFlux AI wants to switch to {{mode}} mode",
+		"wantsToSwitchWithReason": "CodeFlux AI wants to switch to {{mode}} mode because: {{reason}}",
+		"didSwitch": "CodeFlux AI switched to {{mode}} mode",
+		"didSwitchWithReason": "CodeFlux AI switched to {{mode}} mode because: {{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Kilo Code wants to create a new subtask in {{mode}} mode:",
-		"wantsToFinish": "Kilo Code wants to finish this subtask"
+		"wantsToCreate": "CodeFlux AI wants to create a new subtask in {{mode}} mode:",
+		"wantsToFinish": "CodeFlux AI wants to finish this subtask"
 	},
 	"questions": {
-		"hasQuestion": "Kilo Code has a question:"
+		"hasQuestion": "CodeFlux AI has a question:"
 	},
 	"taskCompleted": "Task Completed",
 	"error": "Error",
-	"troubleMessage": "Kilo Code is having trouble...",
+	"troubleMessage": "CodeFlux AI is having trouble...",
 	"shellIntegration": {
 		"unavailable": "Shell Integration Unavailable",
 		"troubleshooting": "Still having trouble?"
@@ -158,7 +158,7 @@
 	"autoApprove": {
 		"title": "Auto-approve:",
 		"none": "None",
-		"description": "Auto-approve allows Kilo Code Code to perform actions without asking for permission. Only enable for actions you fully trust. More detailed configuration available in <settingsLink>Settings</settingsLink>.",
+		"description": "Auto-approve allows CodeFlux AI Code to perform actions without asking for permission. Only enable for actions you fully trust. More detailed configuration available in <settingsLink>Settings</settingsLink>.",
 		"actions": {
 			"readFiles": {
 				"label": "Read files and directories",
@@ -222,7 +222,7 @@
 		"copyToInput": "Copy to input (same as shift + click)"
 	},
 	"browser": {
-		"rooWantsToUse": "Kilo Code wants to use the browser:",
+		"rooWantsToUse": "CodeFlux AI wants to use the browser:",
 		"consoleLogs": "Console Logs",
 		"noNewLogs": "(No new logs)",
 		"screenshot": "Browser screenshot",

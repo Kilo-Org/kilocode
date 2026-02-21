@@ -28,7 +28,7 @@ export async function run() {
 	 * Activate the extension.
 	 */
 
-	const extension = vscode.extensions.getExtension<RooCodeAPI>("kilocode.Kilo-Code")
+	const extension = vscode.extensions.getExtension<RooCodeAPI>("codefluxai.codeflux-ai")
 
 	if (!extension) {
 		throw new Error("Extension not found.")
@@ -67,7 +67,7 @@ export async function run() {
 	})
 
 	await vscode.workspace
-		.getConfiguration("kiloCode")
+		.getConfiguration("codeFluxAI")
 		.update("allowedCommands", ["*"], vscode.ConfigurationTarget.Global)
 
 	await sleep(2_000)

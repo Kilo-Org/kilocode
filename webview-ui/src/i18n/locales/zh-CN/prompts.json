@@ -6,8 +6,8 @@
 		"createNewMode": "创建新模式",
 		"editModesConfig": "编辑模式配置",
 		"editGlobalModes": "编辑全局模式",
-		"editProjectModes": "编辑项目模式 (.kilocodemodes)",
-		"createModeHelpText": "点击 + 创建新的自定义模式，或者在聊天中直接要求 Kilo Code 为您创建一个！"
+		"editProjectModes": "编辑项目模式 (.codefluxaimodes)",
+		"createModeHelpText": "点击 + 创建新的自定义模式，或者在聊天中直接要求 CodeFlux AI 为您创建一个！"
 	},
 	"apiConfiguration": {
 		"title": "API配置",
@@ -30,7 +30,7 @@
 	"roleDefinition": {
 		"title": "角色定义",
 		"resetToDefault": "重置为默认值",
-		"description": "为此模式定义Kilo Code的专业知识和个性。此描述塑造了Kilo Code如何展示自己并处理任务。"
+		"description": "为此模式定义CodeFlux AI的专业知识和个性。此描述塑造了CodeFlux AI如何展示自己并处理任务。"
 	},
 	"customInstructions": {
 		"title": "模式特定的自定义指令（可选）",
@@ -40,7 +40,7 @@
 	},
 	"globalCustomInstructions": {
 		"title": "所有模式的自定义指令",
-		"description": "这些指令适用于所有模式。它们提供了一套基本行为，可以通过下面的模式特定指令来增强。\n如果您希望Kilo Code使用不同于编辑器显示语言({{language}})的语言进行思考和对话，您可以在这里指定。",
+		"description": "这些指令适用于所有模式。它们提供了一套基本行为，可以通过下面的模式特定指令来增强。\n如果您希望CodeFlux AI使用不同于编辑器显示语言({{language}})的语言进行思考和对话，您可以在这里指定。",
 		"loadFromFile": "指令也可以从工作区中的 <span>.clinerules</span> 加载。"
 	},
 	"systemPrompt": {
@@ -62,7 +62,7 @@
 		"types": {
 			"ENHANCE": {
 				"label": "增强提示词",
-				"description": "使用提示词增强功能获取针对您输入的定制建议或改进。这确保Kilo Code理解您的意图并提供最佳的回应。可通过聊天中的✨图标使用。"
+				"description": "使用提示词增强功能获取针对您输入的定制建议或改进。这确保CodeFlux AI理解您的意图并提供最佳的回应。可通过聊天中的✨图标使用。"
 			},
 			"EXPLAIN": {
 				"label": "解释代码",
@@ -100,7 +100,7 @@
 	},
 	"advancedSystemPrompt": {
 		"title": "高级：覆盖系统提示词",
-		"description": "您可以通过在工作区创建文件 <span>.kilo-code/system-prompt-{{slug}}</span>，完全替换此模式的系统提示（角色定义和自定义指令除外）。这是一个非常高级的功能，会绕过内置的安全措施和一致性检查（尤其是与工具使用相关的部分），请谨慎操作！"
+		"description": "您可以通过在工作区创建文件 <span>.codeflux-ai/system-prompt-{{slug}}</span>，完全替换此模式的系统提示（角色定义和自定义指令除外）。这是一个非常高级的功能，会绕过内置的安全措施和一致性检查（尤其是与工具使用相关的部分），请谨慎操作！"
 	},
 	"createModeDialog": {
 		"title": "创建新模式",
@@ -121,13 +121,13 @@
 				"description": "在所有工作区可用"
 			},
 			"project": {
-				"label": "项目特定 (.kilocodemodes)",
+				"label": "项目特定 (.codefluxaimodes)",
 				"description": "仅在此工作区可用，优先于全局模式"
 			}
 		},
 		"roleDefinition": {
 			"label": "角色定义",
-			"description": "为此模式定义Kilo Code的专业知识和个性。"
+			"description": "为此模式定义CodeFlux AI的专业知识和个性。"
 		},
 		"tools": {
 			"label": "可用工具",

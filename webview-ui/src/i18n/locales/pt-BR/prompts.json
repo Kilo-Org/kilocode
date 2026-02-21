@@ -6,8 +6,8 @@
 		"createNewMode": "Criar novo modo",
 		"editModesConfig": "Editar configuração de modos",
 		"editGlobalModes": "Editar modos globais",
-		"editProjectModes": "Editar modos do projeto (.kilocodemodes)",
-		"createModeHelpText": "Clique em + para criar um novo modo personalizado, ou simplesmente peça ao Kilo Code no chat para criar um para você!"
+		"editProjectModes": "Editar modos do projeto (.codefluxaimodes)",
+		"createModeHelpText": "Clique em + para criar um novo modo personalizado, ou simplesmente peça ao CodeFlux AI no chat para criar um para você!"
 	},
 	"apiConfiguration": {
 		"title": "Configuração de API",
@@ -30,7 +30,7 @@
 	"roleDefinition": {
 		"title": "Definição de função",
 		"resetToDefault": "Restaurar para padrão",
-		"description": "Defina a expertise e personalidade do Kilo Code para este modo. Esta descrição molda como o Kilo Code se apresenta e aborda tarefas."
+		"description": "Defina a expertise e personalidade do CodeFlux AI para este modo. Esta descrição molda como o CodeFlux AI se apresenta e aborda tarefas."
 	},
 	"customInstructions": {
 		"title": "Instruções personalizadas específicas do modo (opcional)",
@@ -40,7 +40,7 @@
 	},
 	"globalCustomInstructions": {
 		"title": "Instruções personalizadas para todos os modos",
-		"description": "Estas instruções se aplicam a todos os modos. Elas fornecem um conjunto base de comportamentos que podem ser aprimorados por instruções específicas do modo abaixo.\nSe você desejar que o Kilo Code pense e fale em um idioma diferente do idioma de exibição do seu editor ({{language}}), você pode especificá-lo aqui.",
+		"description": "Estas instruções se aplicam a todos os modos. Elas fornecem um conjunto base de comportamentos que podem ser aprimorados por instruções específicas do modo abaixo.\nSe você desejar que o CodeFlux AI pense e fale em um idioma diferente do idioma de exibição do seu editor ({{language}}), você pode especificá-lo aqui.",
 		"loadFromFile": "As instruções também podem ser carregadas de .clinerules no seu espaço de trabalho."
 	},
 	"systemPrompt": {
@@ -62,7 +62,7 @@
 		"types": {
 			"ENHANCE": {
 				"label": "Aprimorar Prompt",
-				"description": "Use prompt enhancement to get tailored suggestions or improvements for your inputs. This ensures Kilo Code understands your intent and provides the best possible responses. Available via the ✨ icon in chat."
+				"description": "Use prompt enhancement to get tailored suggestions or improvements for your inputs. This ensures CodeFlux AI understands your intent and provides the best possible responses. Available via the ✨ icon in chat."
 			},
 			"EXPLAIN": {
 				"label": "Explicar Código",
@@ -100,7 +100,7 @@
 	},
 	"advancedSystemPrompt": {
 		"title": "Avançado: Substituir prompt do sistema",
-		"description": "Você pode substituir completamente o prompt do sistema para este modo (além da definição de função e instruções personalizadas) criando um arquivo em .kilo-code/system-prompt-{{modeSlug}} no seu espaço de trabalho. Esta é uma funcionalidade muito avançada que contorna as salvaguardas integradas e verificações de consistência (especialmente em torno do uso de ferramentas), então tenha cuidado!"
+		"description": "Você pode substituir completamente o prompt do sistema para este modo (além da definição de função e instruções personalizadas) criando um arquivo em .codeflux-ai/system-prompt-{{modeSlug}} no seu espaço de trabalho. Esta é uma funcionalidade muito avançada que contorna as salvaguardas integradas e verificações de consistência (especialmente em torno do uso de ferramentas), então tenha cuidado!"
 	},
 	"createModeDialog": {
 		"title": "Criar novo modo",
@@ -121,13 +121,13 @@
 				"description": "Disponível em todos os espaços de trabalho"
 			},
 			"project": {
-				"label": "Específico do projeto (.kilocodemodes)",
+				"label": "Específico do projeto (.codefluxaimodes)",
 				"description": "Disponível apenas neste espaço de trabalho, tem precedência sobre o global"
 			}
 		},
 		"roleDefinition": {
 			"label": "Definição de função",
-			"description": "Defina a expertise e personalidade do Kilo Code para este modo."
+			"description": "Defina a expertise e personalidade do CodeFlux AI para este modo."
 		},
 		"tools": {
 			"label": "Ferramentas disponíveis",

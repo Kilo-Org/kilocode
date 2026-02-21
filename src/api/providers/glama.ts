@@ -109,7 +109,7 @@ export class GlamaHandler extends BaseProvider implements SingleCompletionHandle
 						labels: [
 							{
 								key: "app",
-								value: "vscode.kilocode.Kilo-Code",
+								value: "vscode.codefluxai.codeflux-ai",
 							},
 						],
 					}),

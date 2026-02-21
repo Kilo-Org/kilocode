@@ -1,5 +1,5 @@
 {
-	"greeting": "你好，我是 Kilo Code！",
+	"greeting": "你好，我是 CodeFlux AI！",
 	"notice": "首先，请配置一个大模型 API 服务商。",
 	"start": "开始吧！",
 	"chooseProvider": "选择一个 API 服务商开始：",

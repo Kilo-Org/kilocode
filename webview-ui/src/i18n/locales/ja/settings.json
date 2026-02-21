@@ -29,17 +29,17 @@
 		"advanced": "詳細設定",
 		"experimental": "実験的機能",
 		"language": "言語",
-		"about": "Kilo Codeについて",
+		"about": "CodeFlux AIについて",
 		"mcp": "MCPサーバー"
 	},
 	"autoApprove": {
-		"description": "Kilo Codeが承認なしで自動的に操作を実行できるようにします。AIを完全に信頼し、関連するセキュリティリスクを理解している場合にのみ、これらの設定を有効にしてください。",
+		"description": "CodeFlux AIが承認なしで自動的に操作を実行できるようにします。AIを完全に信頼し、関連するセキュリティリスクを理解している場合にのみ、これらの設定を有効にしてください。",
 		"readOnly": {
 			"label": "読み取り専用操作を常に承認",
-			"description": "有効にすると、Kilo Codeは承認ボタンをクリックすることなく、自動的にディレクトリの内容を表示してファイルを読み取ります。",
+			"description": "有効にすると、CodeFlux AIは承認ボタンをクリックすることなく、自動的にディレクトリの内容を表示してファイルを読み取ります。",
 			"outsideWorkspace": {
 				"label": "ワークスペース外のファイルを含める",
-				"description": "Kilo Codeが承認なしで現在のワークスペース外のファイルを読み取ることを許可します。"
+				"description": "CodeFlux AIが承認なしで現在のワークスペース外のファイルを読み取ることを許可します。"
 			}
 		},
 		"write": {
@@ -48,7 +48,7 @@
 			"delayLabel": "診断が潜在的な問題を検出できるよう、書き込み後に遅延を設ける",
 			"outsideWorkspace": {
 				"label": "ワークスペース外のファイルを含める",
-				"description": "Kilo Codeが承認なしで現在のワークスペース外のファイルを作成・編集することを許可します。"
+				"description": "CodeFlux AIが承認なしで現在のワークスペース外のファイルを作成・編集することを許可します。"
 			}
 		},
 		"browser": {
@@ -152,13 +152,13 @@
 			"draftModelDesc": "推論デコーディングが正しく機能するには、ドラフトモデルは同じモデルファミリーから選択する必要があります。",
 			"selectDraftModel": "ドラフトモデルを選択",
 			"noModelsFound": "ドラフトモデルが見つかりません。LM Studioがサーバーモードで実行されていることを確認してください。",
-			"description": "LM Studioを使用すると、ローカルコンピューターでモデルを実行できます。始め方については、<a>クイックスタートガイド</a>をご覧ください。また、この拡張機能で使用するには、LM Studioの<b>ローカルサーバー</b>機能を起動する必要があります。<span>注意：</span>Kilo Codeは複雑なプロンプトを使用し、Claudeモデルで最適に動作します。能力の低いモデルは期待通りに動作しない場合があります。"
+			"description": "LM Studioを使用すると、ローカルコンピューターでモデルを実行できます。始め方については、<a>クイックスタートガイド</a>をご覧ください。また、この拡張機能で使用するには、LM Studioの<b>ローカルサーバー</b>機能を起動する必要があります。<span>注意：</span>CodeFlux AIは複雑なプロンプトを使用し、Claudeモデルで最適に動作します。能力の低いモデルは期待通りに動作しない場合があります。"
 		},
 		"ollama": {
 			"baseUrl": "ベースURL（オプション）",
 			"modelId": "モデルID",
 			"description": "Ollamaを使用すると、ローカルコンピューターでモデルを実行できます。始め方については、クイックスタートガイドをご覧ください。",
-			"warning": "注意：Kilo Codeは複雑なプロンプトを使用し、Claudeモデルで最適に動作します。能力の低いモデルは期待通りに動作しない場合があります。"
+			"warning": "注意：CodeFlux AIは複雑なプロンプトを使用し、Claudeモデルで最適に動作します。能力の低いモデルは期待通りに動作しない場合があります。"
 		},
 		"unboundApiKey": "Unbound APIキー",
 		"getUnboundApiKey": "Unbound APIキーを取得",
@@ -174,7 +174,7 @@
 			}
 		},
 		"customModel": {
-			"capabilities": "カスタムOpenAI互換モデルの機能と価格を設定します。モデルの機能はKilo Codeのパフォーマンスに影響を与える可能性があるため、慎重に指定してください。",
+			"capabilities": "カスタムOpenAI互換モデルの機能と価格を設定します。モデルの機能はCodeFlux AIのパフォーマンスに影響を与える可能性があるため、慎重に指定してください。",
 			"maxTokens": {
 				"label": "最大出力トークン",
 				"description": "モデルが生成できる応答の最大トークン数。（サーバーが最大トークンを設定できるようにするには-1を指定します。）"
@@ -219,7 +219,7 @@
 	"browser": {
 		"enable": {
 			"label": "ブラウザツールを有効化",
-			"description": "有効にすると、コンピューター使用をサポートするモデルを使用する際に、Kilo Codeはウェブサイトとのやり取りにブラウザを使用できます。"
+			"description": "有効にすると、コンピューター使用をサポートするモデルを使用する際に、CodeFlux AIはウェブサイトとのやり取りにブラウザを使用できます。"
 		},
 		"viewport": {
 			"label": "ビューポートサイズ",
@@ -247,18 +247,18 @@
 	"checkpoints": {
 		"enable": {
 			"label": "自動チェックポイントを有効化",
-			"description": "有効にすると、Kilo Codeはタスク実行中に自動的にチェックポイントを作成し、変更の確認や以前の状態への復帰を容易にします。"
+			"description": "有効にすると、CodeFlux AIはタスク実行中に自動的にチェックポイントを作成し、変更の確認や以前の状態への復帰を容易にします。"
 		}
 	},
 	"notifications": {
 		"sound": {
 			"label": "サウンドエフェクトを有効化",
-			"description": "有効にすると、Kilo Codeは通知やイベントのためにサウンドエフェクトを再生します。",
+			"description": "有効にすると、CodeFlux AIは通知やイベントのためにサウンドエフェクトを再生します。",
 			"volumeLabel": "音量"
 		},
 		"tts": {
 			"label": "音声合成を有効化",
-			"description": "有効にすると、Kilo Codeは音声合成を使用して応答を音声で読み上げます。",
+			"description": "有効にすると、CodeFlux AIは音声合成を使用して応答を音声で読み上げます。",
 			"speedLabel": "速度"
 		}
 	},
@@ -273,12 +273,12 @@
 			"description": "現在の作業ディレクトリの詳細に含めるファイルの最大数。高い値はより多くのコンテキストを提供しますが、token使用量が増加します。"
 		},
 		"rooignore": {
-			"label": "リストと検索で.kilocodeignoreファイルを表示",
-			"description": "有効にすると、.kilocodeignoreのパターンに一致するファイルがロックシンボル付きでリストに表示されます。無効にすると、これらのファイルはファイルリストや検索から完全に非表示になります。"
+			"label": "リストと検索で.codefluxaiignoreファイルを表示",
+			"description": "有効にすると、.codefluxaiignoreのパターンに一致するファイルがロックシンボル付きでリストに表示されます。無効にすると、これらのファイルはファイルリストや検索から完全に非表示になります。"
 		},
 		"maxReadFile": {
 			"label": "ファイル読み込み自動切り詰めしきい値",
-			"description": "モデルが開始/終了の値を指定しない場合、Kilo Codeはこの行数を読み込みます。この数がファイルの総行数より少ない場合、Kilo Codeはコード定義の行番号インデックスを生成します。特殊なケース：-1はKilo Codeにファイル全体を読み込むよう指示し（インデックス作成なし）、0は行を読み込まず最小限のコンテキストのために行インデックスのみを提供するよう指示します。低い値は初期コンテキスト使用量を最小限に抑え、後続の正確な行範囲の読み込みを可能にします。明示的な開始/終了の要求はこの設定による制限を受けません。",
+			"description": "モデルが開始/終了の値を指定しない場合、CodeFlux AIはこの行数を読み込みます。この数がファイルの総行数より少ない場合、CodeFlux AIはコード定義の行番号インデックスを生成します。特殊なケース：-1はCodeFlux AIにファイル全体を読み込むよう指示し（インデックス作成なし）、0は行を読み込まず最小限のコンテキストのために行インデックスのみを提供するよう指示します。低い値は初期コンテキスト使用量を最小限に抑え、後続の正確な行範囲の読み込みを可能にします。明示的な開始/終了の要求はこの設定による制限を受けません。",
 			"lines": "行",
 			"always_full_read": "常にファイル全体を読み込む"
 		}
@@ -300,7 +300,7 @@
 		},
 		"diff": {
 			"label": "diff経由の編集を有効化",
-			"description": "有効にすると、Kilo Codeはファイルをより迅速に編集でき、切り詰められた全ファイル書き込みを自動的に拒否します。最新のClaude 3.7 Sonnetモデルで最良に機能します。",
+			"description": "有効にすると、CodeFlux AIはファイルをより迅速に編集でき、切り詰められた全ファイル書き込みを自動的に拒否します。最新のClaude 3.7 Sonnetモデルで最良に機能します。",
 			"strategy": {
 				"label": "Diff戦略",
 				"options": {
@@ -328,19 +328,19 @@
 		},
 		"SEARCH_AND_REPLACE": {
 			"name": "実験的な検索と置換ツールを使用する",
-			"description": "実験的な検索と置換ツールを有効にし、Kilo Codeが1つのリクエストで検索語の複数のインスタンスを置き換えることを可能にします。"
+			"description": "実験的な検索と置換ツールを有効にし、CodeFlux AIが1つのリクエストで検索語の複数のインスタンスを置き換えることを可能にします。"
 		},
 		"INSERT_BLOCK": {
 			"name": "実験的なコンテンツ挿入ツールを使用する",
-			"description": "実験的なコンテンツ挿入ツールを有効にし、Kilo Codeがdiffを作成せずに特定の行番号にコンテンツを挿入できるようにします。"
+			"description": "実験的なコンテンツ挿入ツールを有効にし、CodeFlux AIがdiffを作成せずに特定の行番号にコンテンツを挿入できるようにします。"
 		},
 		"POWER_STEERING": {
 			"name": "実験的な「パワーステアリング」モードを使用する",
-			"description": "有効にすると、Kilo Codeはより頻繁にモデルに現在のモード定義の詳細を思い出させます。これにより、役割定義とカスタム指示へのより強い遵守が実現しますが、メッセージごとにより多くのtokenを使用します。"
+			"description": "有効にすると、CodeFlux AIはより頻繁にモデルに現在のモード定義の詳細を思い出させます。これにより、役割定義とカスタム指示へのより強い遵守が実現しますが、メッセージごとにより多くのtokenを使用します。"
 		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "実験的なマルチブロックdiffツールを使用する",
-			"description": "有効にすると、Kilo Codeはマルチブロックdiffツールを使用します。これにより、1つのリクエストでファイル内の複数のコードブロックを更新しようとします。"
+			"description": "有効にすると、CodeFlux AIはマルチブロックdiffツールを使用します。これにより、1つのリクエストでファイル内の複数のコードブロックを更新しようとします。"
 		}
 	},
 	"temperature": {
@@ -371,18 +371,18 @@
 		}
 	},
 	"modelPicker": {
-		"automaticFetch": "拡張機能は<serviceLink>{{serviceName}}</serviceLink>で利用可能な最新のモデルリストを自動的に取得します。どのモデルを選ぶべきか迷っている場合、Kilo Codeは<defaultModelLink>{{defaultModelId}}</defaultModelLink>で最適に動作します。また、「free」で検索すると、現在利用可能な無料オプションを見つけることができます。",
+		"automaticFetch": "拡張機能は<serviceLink>{{serviceName}}</serviceLink>で利用可能な最新のモデルリストを自動的に取得します。どのモデルを選ぶべきか迷っている場合、CodeFlux AIは<defaultModelLink>{{defaultModelId}}</defaultModelLink>で最適に動作します。また、「free」で検索すると、現在利用可能な無料オプションを見つけることができます。",
 		"label": "モデル",
 		"searchPlaceholder": "検索",
 		"noMatchFound": "一致するものが見つかりません",
 		"useCustomModel": "カスタムを使用: {{modelId}}"
 	},
 	"footer": {
-		"feedback": "質問やフィードバックがある場合は、<githubLink>github.com/Kilo-Org/kilocode</githubLink>で問題を開くか、<redditLink>reddit.com/r/kilocode</redditLink>や<discordLink>discord.gg/fxrhCFGhkP</discordLink>に参加してください",
-		"version": "Kilo Code v{{version}}",
+		"feedback": "質問やフィードバックがある場合は、<githubLink>github.com/Kilo-Org/codefluxai</githubLink>で問題を開くか、<redditLink>reddit.com/r/codefluxai</redditLink>や<discordLink>discord.gg/fxrhCFGhkP</discordLink>に参加してください",
+		"version": "CodeFlux AI v{{version}}",
 		"telemetry": {
 			"label": "匿名のエラーと使用状況レポートを許可",
-			"description": "匿名の使用データとエラーレポートを送信してKilo Codeの改善にご協力ください。コード、プロンプト、個人情報が送信されることはありません。詳細については、プライバシーポリシーをご覧ください。"
+			"description": "匿名の使用データとエラーレポートを送信してCodeFlux AIの改善にご協力ください。コード、プロンプト、個人情報が送信されることはありません。詳細については、プライバシーポリシーをご覧ください。"
 		},
 		"settings": {
 			"import": "インポート",

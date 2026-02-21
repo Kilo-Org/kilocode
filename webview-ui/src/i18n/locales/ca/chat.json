@@ -1,5 +1,5 @@
 {
-	"greeting": "Què pot fer Kilo Code per tu?",
+	"greeting": "Què pot fer CodeFlux AI per tu?",
 	"task": {
 		"title": "Tasca",
 		"seeMore": "Veure més",
@@ -82,7 +82,7 @@
 	"edit": "Edita...",
 	"forNextMode": "per al següent mode",
 	"error": "Error",
-	"troubleMessage": "Kilo Code està tenint problemes...",
+	"troubleMessage": "CodeFlux AI està tenint problemes...",
 	"apiRequest": {
 		"title": "Sol·licitud API",
 		"failed": "Sol·licitud API ha fallat",
@@ -107,45 +107,45 @@
 		"current": "Actual"
 	},
 	"instructions": {
-		"wantsToFetch": "Kilo Code vol obtenir instruccions detallades per ajudar amb la tasca actual."
+		"wantsToFetch": "CodeFlux AI vol obtenir instruccions detallades per ajudar amb la tasca actual."
 	},
 	"fileOperations": {
-		"wantsToRead": "Kilo Code vol llegir aquest fitxer:",
-		"wantsToReadOutsideWorkspace": "Kilo Code vol llegir aquest fitxer fora de l'espai de treball:",
-		"didRead": "Kilo Code ha llegit aquest fitxer:",
-		"wantsToEdit": "Kilo Code vol editar aquest fitxer:",
-		"wantsToEditOutsideWorkspace": "Kilo Code vol editar aquest fitxer fora de l'espai de treball:",
-		"wantsToCreate": "Kilo Code vol crear un nou fitxer:"
+		"wantsToRead": "CodeFlux AI vol llegir aquest fitxer:",
+		"wantsToReadOutsideWorkspace": "CodeFlux AI vol llegir aquest fitxer fora de l'espai de treball:",
+		"didRead": "CodeFlux AI ha llegit aquest fitxer:",
+		"wantsToEdit": "CodeFlux AI vol editar aquest fitxer:",
+		"wantsToEditOutsideWorkspace": "CodeFlux AI vol editar aquest fitxer fora de l'espai de treball:",
+		"wantsToCreate": "CodeFlux AI vol crear un nou fitxer:"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Kilo Code vol veure els fitxers de nivell superior en aquest directori:",
-		"didViewTopLevel": "Kilo Code ha vist els fitxers de nivell superior en aquest directori:",
-		"wantsToViewRecursive": "Kilo Code vol veure recursivament tots els fitxers en aquest directori:",
-		"didViewRecursive": "Kilo Code ha vist recursivament tots els fitxers en aquest directori:",
-		"wantsToViewDefinitions": "Kilo Code vol veure noms de definicions de codi font utilitzats en aquest directori:",
-		"didViewDefinitions": "Kilo Code ha vist noms de definicions de codi font utilitzats en aquest directori:",
-		"wantsToSearch": "Kilo Code vol cercar en aquest directori <code>{{regex}}</code>:",
-		"didSearch": "Kilo Code ha cercat en aquest directori <code>{{regex}}</code>:"
+		"wantsToViewTopLevel": "CodeFlux AI vol veure els fitxers de nivell superior en aquest directori:",
+		"didViewTopLevel": "CodeFlux AI ha vist els fitxers de nivell superior en aquest directori:",
+		"wantsToViewRecursive": "CodeFlux AI vol veure recursivament tots els fitxers en aquest directori:",
+		"didViewRecursive": "CodeFlux AI ha vist recursivament tots els fitxers en aquest directori:",
+		"wantsToViewDefinitions": "CodeFlux AI vol veure noms de definicions de codi font utilitzats en aquest directori:",
+		"didViewDefinitions": "CodeFlux AI ha vist noms de definicions de codi font utilitzats en aquest directori:",
+		"wantsToSearch": "CodeFlux AI vol cercar en aquest directori <code>{{regex}}</code>:",
+		"didSearch": "CodeFlux AI ha cercat en aquest directori <code>{{regex}}</code>:"
 	},
 	"commandOutput": "Sortida de l'ordre",
 	"response": "Resposta",
 	"arguments": "Arguments",
 	"mcp": {
-		"wantsToUseTool": "Kilo Code vol utilitzar una eina al servidor MCP {{serverName}}:",
-		"wantsToAccessResource": "Kilo Code vol accedir a un recurs al servidor MCP {{serverName}}:"
+		"wantsToUseTool": "CodeFlux AI vol utilitzar una eina al servidor MCP {{serverName}}:",
+		"wantsToAccessResource": "CodeFlux AI vol accedir a un recurs al servidor MCP {{serverName}}:"
 	},
 	"modes": {
-		"wantsToSwitch": "Kilo Code vol canviar a mode <code>{{mode}}</code>",
-		"wantsToSwitchWithReason": "Kilo Code vol canviar a mode <code>{{mode}}</code> perquè: {{reason}}",
-		"didSwitch": "Kilo Code ha canviat a mode <code>{{mode}}</code>",
-		"didSwitchWithReason": "Kilo Code ha canviat a mode <code>{{mode}}</code> perquè: {{reason}}"
+		"wantsToSwitch": "CodeFlux AI vol canviar a mode <code>{{mode}}</code>",
+		"wantsToSwitchWithReason": "CodeFlux AI vol canviar a mode <code>{{mode}}</code> perquè: {{reason}}",
+		"didSwitch": "CodeFlux AI ha canviat a mode <code>{{mode}}</code>",
+		"didSwitchWithReason": "CodeFlux AI ha canviat a mode <code>{{mode}}</code> perquè: {{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Kilo Code vol crear una nova subtasca en mode <code>{{mode}}</code>:",
-		"wantsToFinish": "Kilo Code vol finalitzar aquesta subtasca"
+		"wantsToCreate": "CodeFlux AI vol crear una nova subtasca en mode <code>{{mode}}</code>:",
+		"wantsToFinish": "CodeFlux AI vol finalitzar aquesta subtasca"
 	},
 	"questions": {
-		"hasQuestion": "Kilo Code té una pregunta:"
+		"hasQuestion": "CodeFlux AI té una pregunta:"
 	},
 	"taskCompleted": "Tasca completada",
 	"shellIntegration": {
@@ -158,7 +158,7 @@
 	"autoApprove": {
 		"title": "Aprovació automàtica:",
 		"none": "Cap",
-		"description": "L'aprovació automàtica permet a Kilo Code realitzar accions sense demanar permís. Activa-la només per a accions en les que confies plenament. Configuració més detallada disponible a la <settingsLink>Configuració</settingsLink>.",
+		"description": "L'aprovació automàtica permet a CodeFlux AI realitzar accions sense demanar permís. Activa-la només per a accions en les que confies plenament. Configuració més detallada disponible a la <settingsLink>Configuració</settingsLink>.",
 		"actions": {
 			"readFiles": {
 				"label": "Llegir fitxers i directoris",
@@ -222,7 +222,7 @@
 		"detailsDiscussLinks": "Obté més detalls i participa a <discordLink>Discord</discordLink> i <redditLink>Reddit</redditLink> 🚀"
 	},
 	"browser": {
-		"rooWantsToUse": "Kilo Code vol utilitzar el navegador:",
+		"rooWantsToUse": "CodeFlux AI vol utilitzar el navegador:",
 		"consoleLogs": "Registres de consola",
 		"noNewLogs": "(Cap registre nou)",
 		"screenshot": "Captura de pantalla del navegador",

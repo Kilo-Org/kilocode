@@ -1,6 +1,6 @@
 {
 	"extension": {
-		"name": "Kilo Code",
+		"name": "CodeFlux AI",
 		"description": "Toàn bộ đội ngũ phát triển AI trong trình soạn thảo của bạn."
 	},
 	"number_format": {
@@ -52,7 +52,7 @@
 		"list_api_config": "Không thể lấy danh sách cấu hình API",
 		"update_server_timeout": "Không thể cập nhật thời gian chờ máy chủ",
 		"failed_update_project_mcp": "Không thể cập nhật máy chủ MCP của dự án",
-		"create_mcp_json": "Không thể tạo hoặc mở .kilocode/mcp.json: {{error}}",
+		"create_mcp_json": "Không thể tạo hoặc mở .codefluxai/mcp.json: {{error}}",
 		"hmr_not_running": "Máy chủ phát triển cục bộ không chạy, HMR sẽ không hoạt động. Vui lòng chạy 'npm run dev' trước khi khởi chạy tiện ích mở rộng để bật HMR.",
 		"retrieve_current_mode": "Lỗi không thể truy xuất chế độ hiện tại từ trạng thái.",
 		"failed_delete_repo": "Không thể xóa kho lưu trữ hoặc nhánh liên quan: {{error}}",
@@ -89,12 +89,12 @@
 	},
 	"storage": {
 		"prompt_custom_path": "Nhập đường dẫn lưu trữ tùy chỉnh cho lịch sử hội thoại, để trống để sử dụng vị trí mặc định",
-		"path_placeholder": "D:\\KiloCodeStorage",
-		"enter_absolute_path": "Vui lòng nhập đường dẫn tuyệt đối (ví dụ: D:\\KiloCodeStorage hoặc /home/user/storage)",
+		"path_placeholder": "D:\\CodeFluxAIStorage",
+		"enter_absolute_path": "Vui lòng nhập đường dẫn tuyệt đối (ví dụ: D:\\CodeFluxAIStorage hoặc /home/user/storage)",
 		"enter_valid_path": "Vui lòng nhập đường dẫn hợp lệ"
 	},
 	"input": {
-		"task_prompt": "Bạn muốn Kilo Code làm gì?",
+		"task_prompt": "Bạn muốn CodeFlux AI làm gì?",
 		"task_placeholder": "Nhập nhiệm vụ của bạn ở đây"
 	}
 }

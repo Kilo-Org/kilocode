@@ -119,7 +119,7 @@ export interface WebviewMessage {
 		| "language"
 		| "maxReadFileLine"
 		| "searchFiles"
-		| "showFeedbackOptions" // kilocode_change
+		| "showFeedbackOptions" // codefluxai_change
 		| "toggleApiConfigPin"
 	text?: string
 	disabled?: boolean

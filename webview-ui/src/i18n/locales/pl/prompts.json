@@ -6,8 +6,8 @@
 		"createNewMode": "Utwórz nowy tryb",
 		"editModesConfig": "Edytuj konfigurację trybów",
 		"editGlobalModes": "Edytuj tryby globalne",
-		"editProjectModes": "Edytuj tryby projektu (.kilocodemodes)",
-		"createModeHelpText": "Kliknij +, aby utworzyć nowy niestandardowy tryb, lub po prostu poproś Kilo Code w czacie, aby utworzył go dla Ciebie!"
+		"editProjectModes": "Edytuj tryby projektu (.codefluxaimodes)",
+		"createModeHelpText": "Kliknij +, aby utworzyć nowy niestandardowy tryb, lub po prostu poproś CodeFlux AI w czacie, aby utworzył go dla Ciebie!"
 	},
 	"apiConfiguration": {
 		"title": "Konfiguracja API",
@@ -30,7 +30,7 @@
 	"roleDefinition": {
 		"title": "Definicja roli",
 		"resetToDefault": "Przywróć domyślne",
-		"description": "Zdefiniuj wiedzę specjalistyczną i osobowość Kilo Code dla tego trybu. Ten opis kształtuje, jak Kilo Code prezentuje się i podchodzi do zadań."
+		"description": "Zdefiniuj wiedzę specjalistyczną i osobowość CodeFlux AI dla tego trybu. Ten opis kształtuje, jak CodeFlux AI prezentuje się i podchodzi do zadań."
 	},
 	"customInstructions": {
 		"title": "Niestandardowe instrukcje dla trybu (opcjonalne)",
@@ -40,7 +40,7 @@
 	},
 	"globalCustomInstructions": {
 		"title": "Niestandardowe instrukcje dla wszystkich trybów",
-		"description": "Te instrukcje dotyczą wszystkich trybów. Zapewniają podstawowy zestaw zachowań, które mogą być rozszerzone przez instrukcje specyficzne dla trybów poniżej.\nJeśli chcesz, aby Kilo Code myślał i mówił w języku innym niż język wyświetlania Twojego edytora ({{language}}), możesz to określić tutaj.",
+		"description": "Te instrukcje dotyczą wszystkich trybów. Zapewniają podstawowy zestaw zachowań, które mogą być rozszerzone przez instrukcje specyficzne dla trybów poniżej.\nJeśli chcesz, aby CodeFlux AI myślał i mówił w języku innym niż język wyświetlania Twojego edytora ({{language}}), możesz to określić tutaj.",
 		"loadFromFile": "Instrukcje mogą być również ładowane z .clinerules w Twoim obszarze roboczym."
 	},
 	"systemPrompt": {
@@ -62,7 +62,7 @@
 		"types": {
 			"ENHANCE": {
 				"label": "Ulepsz podpowiedź",
-				"description": "Użyj ulepszenia podpowiedzi, aby uzyskać dostosowane sugestie lub ulepszenia dla swoich danych wejściowych. Zapewnia to, że Kilo Code rozumie Twoje intencje i dostarcza najlepsze możliwe odpowiedzi. Dostępne za pośrednictwem ikony ✨ w czacie."
+				"description": "Użyj ulepszenia podpowiedzi, aby uzyskać dostosowane sugestie lub ulepszenia dla swoich danych wejściowych. Zapewnia to, że CodeFlux AI rozumie Twoje intencje i dostarcza najlepsze możliwe odpowiedzi. Dostępne za pośrednictwem ikony ✨ w czacie."
 			},
 			"EXPLAIN": {
 				"label": "Wyjaśnij kod",
@@ -100,7 +100,7 @@
 	},
 	"advancedSystemPrompt": {
 		"title": "Zaawansowane: Zastąp podpowiedź systemową",
-		"description": "Możesz całkowicie zastąpić podpowiedź systemową dla tego trybu (oprócz definicji roli i niestandardowych instrukcji) poprzez utworzenie pliku w .kilo-code/system-prompt-{{modeSlug}} w swoim obszarze roboczym. Jest to bardzo zaawansowana funkcja, która omija wbudowane zabezpieczenia i kontrole spójności (szczególnie wokół używania narzędzi), więc bądź ostrożny!"
+		"description": "Możesz całkowicie zastąpić podpowiedź systemową dla tego trybu (oprócz definicji roli i niestandardowych instrukcji) poprzez utworzenie pliku w .codeflux-ai/system-prompt-{{modeSlug}} w swoim obszarze roboczym. Jest to bardzo zaawansowana funkcja, która omija wbudowane zabezpieczenia i kontrole spójności (szczególnie wokół używania narzędzi), więc bądź ostrożny!"
 	},
 	"createModeDialog": {
 		"title": "Utwórz nowy tryb",
@@ -121,13 +121,13 @@
 				"description": "Dostępny we wszystkich obszarach roboczych"
 			},
 			"project": {
-				"label": "Specyficzny dla projektu (.kilocodemodes)",
+				"label": "Specyficzny dla projektu (.codefluxaimodes)",
 				"description": "Dostępny tylko w tym obszarze roboczym, ma pierwszeństwo przed globalnym"
 			}
 		},
 		"roleDefinition": {
 			"label": "Definicja roli",
-			"description": "Zdefiniuj wiedzę specjalistyczną i osobowość Kilo Code dla tego trybu."
+			"description": "Zdefiniuj wiedzę specjalistyczną i osobowość CodeFlux AI dla tego trybu."
 		},
 		"tools": {
 			"label": "Dostępne narzędzia",

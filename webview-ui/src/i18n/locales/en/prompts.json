@@ -6,8 +6,8 @@
 		"createNewMode": "Create new mode",
 		"editModesConfig": "Edit modes configuration",
 		"editGlobalModes": "Edit Global Modes",
-		"editProjectModes": "Edit Project Modes (.kilocodemodes)",
-		"createModeHelpText": "Hit the + to create a new custom mode, or just ask Kilo Code in chat to create one for you!"
+		"editProjectModes": "Edit Project Modes (.codefluxaimodes)",
+		"createModeHelpText": "Hit the + to create a new custom mode, or just ask CodeFlux AI in chat to create one for you!"
 	},
 	"apiConfiguration": {
 		"title": "API Configuration",
@@ -30,7 +30,7 @@
 	"roleDefinition": {
 		"title": "Role Definition",
 		"resetToDefault": "Reset to default",
-		"description": "Define Kilo Code's expertise and personality for this mode. This description shapes how Kilo Code presents itself and approaches tasks."
+		"description": "Define CodeFlux AI's expertise and personality for this mode. This description shapes how CodeFlux AI presents itself and approaches tasks."
 	},
 	"customInstructions": {
 		"title": "Mode-specific Custom Instructions (optional)",
@@ -40,7 +40,7 @@
 	},
 	"globalCustomInstructions": {
 		"title": "Custom Instructions for All Modes",
-		"description": "These instructions apply to all modes. They provide a base set of behaviors that can be enhanced by mode-specific instructions below.\nIf you would like Kilo Code to think and speak in a different language than your editor display language ({{language}}), you can specify it here.",
+		"description": "These instructions apply to all modes. They provide a base set of behaviors that can be enhanced by mode-specific instructions below.\nIf you would like CodeFlux AI to think and speak in a different language than your editor display language ({{language}}), you can specify it here.",
 		"loadFromFile": "Instructions can also be loaded from <span>.clinerules</span> in your workspace."
 	},
 	"systemPrompt": {
@@ -62,7 +62,7 @@
 		"types": {
 			"ENHANCE": {
 				"label": "Enhance Prompt",
-				"description": "Use prompt enhancement to get tailored suggestions or improvements for your inputs. This ensures Kilo Code understands your intent and provides the best possible responses. Available via the ✨ icon in chat."
+				"description": "Use prompt enhancement to get tailored suggestions or improvements for your inputs. This ensures CodeFlux AI understands your intent and provides the best possible responses. Available via the ✨ icon in chat."
 			},
 			"EXPLAIN": {
 				"label": "Explain Code",
@@ -100,7 +100,7 @@
 	},
 	"advancedSystemPrompt": {
 		"title": "Advanced: Override System Prompt",
-		"description": "You can completely replace the system prompt for this mode (aside from the role definition and custom instructions) by creating a file at <span>.kilo-code/system-prompt-{{slug}}</span> in your workspace. This is a very advanced feature that bypasses built-in safeguards and consistency checks (especially around tool usage), so be careful!"
+		"description": "You can completely replace the system prompt for this mode (aside from the role definition and custom instructions) by creating a file at <span>.codeflux-ai/system-prompt-{{slug}}</span> in your workspace. This is a very advanced feature that bypasses built-in safeguards and consistency checks (especially around tool usage), so be careful!"
 	},
 	"createModeDialog": {
 		"title": "Create New Mode",
@@ -121,13 +121,13 @@
 				"description": "Available in all workspaces"
 			},
 			"project": {
-				"label": "Project-specific (.kilocodemodes)",
+				"label": "Project-specific (.codefluxaimodes)",
 				"description": "Only available in this workspace, takes precedence over global"
 			}
 		},
 		"roleDefinition": {
 			"label": "Role Definition",
-			"description": "Define Kilo Code's expertise and personality for this mode."
+			"description": "Define CodeFlux AI's expertise and personality for this mode."
 		},
 		"tools": {
 			"label": "Available Tools",

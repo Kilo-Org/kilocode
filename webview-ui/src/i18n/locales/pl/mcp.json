@@ -1,14 +1,14 @@
 {
 	"title": "Serwery MCP",
 	"done": "Gotowe",
-	"description": "<0>Model Context Protocol</0> umożliwia komunikację z lokalnie uruchomionymi serwerami MCP, które zapewniają dodatkowe narzędzia i zasoby rozszerzające możliwości Kilo Code. Możesz korzystać z <1>serwerów stworzonych przez społeczność</1> lub poprosić Kilo Code o utworzenie nowych narzędzi specyficznych dla twojego przepływu pracy (np. \"dodaj narzędzie, które pobiera najnowszą dokumentację npm\").",
+	"description": "<0>Model Context Protocol</0> umożliwia komunikację z lokalnie uruchomionymi serwerami MCP, które zapewniają dodatkowe narzędzia i zasoby rozszerzające możliwości CodeFlux AI. Możesz korzystać z <1>serwerów stworzonych przez społeczność</1> lub poprosić CodeFlux AI o utworzenie nowych narzędzi specyficznych dla twojego przepływu pracy (np. \"dodaj narzędzie, które pobiera najnowszą dokumentację npm\").",
 	"enableToggle": {
 		"title": "Włącz serwery MCP",
-		"description": "Po włączeniu, Kilo Code będzie mógł komunikować się z serwerami MCP w celu uzyskania zaawansowanych funkcji. Jeśli nie korzystasz z MCP, możesz to wyłączyć, aby zmniejszyć zużycie tokenów przez Kilo Code."
+		"description": "Po włączeniu, CodeFlux AI będzie mógł komunikować się z serwerami MCP w celu uzyskania zaawansowanych funkcji. Jeśli nie korzystasz z MCP, możesz to wyłączyć, aby zmniejszyć zużycie tokenów przez CodeFlux AI."
 	},
 	"enableServerCreation": {
 		"title": "Włącz tworzenie serwerów MCP",
-		"description": "Po włączeniu, Kilo Code może pomóc w tworzeniu nowych serwerów MCP za pomocą poleceń takich jak \"dodaj nowe narzędzie do...\". Jeśli nie potrzebujesz tworzyć serwerów MCP, możesz to wyłączyć, aby zmniejszyć zużycie tokenów przez Kilo Code."
+		"description": "Po włączeniu, CodeFlux AI może pomóc w tworzeniu nowych serwerów MCP za pomocą poleceń takich jak \"dodaj nowe narzędzie do...\". Jeśli nie potrzebujesz tworzyć serwerów MCP, możesz to wyłączyć, aby zmniejszyć zużycie tokenów przez CodeFlux AI."
 	},
 	"editGlobalMCP": "Edytuj globalne MCP",
 	"editProjectMCP": "Edytuj projektowe MCP",

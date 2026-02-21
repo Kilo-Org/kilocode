@@ -29,17 +29,17 @@
 		"advanced": "Gelişmiş",
 		"experimental": "Deneysel Özellikler",
 		"language": "Dil",
-		"about": "Kilo Code Hakkında",
+		"about": "CodeFlux AI Hakkında",
 		"mcp": "MCP Sunucuları"
 	},
 	"autoApprove": {
-		"description": "Kilo Code'nun onay gerektirmeden otomatik olarak işlemler gerçekleştirmesine izin verin. Bu ayarları yalnızca yapay zekaya tamamen güveniyorsanız ve ilgili güvenlik risklerini anlıyorsanız etkinleştirin.",
+		"description": "CodeFlux AI'nun onay gerektirmeden otomatik olarak işlemler gerçekleştirmesine izin verin. Bu ayarları yalnızca yapay zekaya tamamen güveniyorsanız ve ilgili güvenlik risklerini anlıyorsanız etkinleştirin.",
 		"readOnly": {
 			"label": "Salt okunur işlemleri her zaman onayla",
-			"description": "Etkinleştirildiğinde, Kilo Code otomatik olarak dizin içeriğini görüntüleyecek ve Onayla düğmesine tıklamanıza gerek kalmadan dosyaları okuyacaktır.",
+			"description": "Etkinleştirildiğinde, CodeFlux AI otomatik olarak dizin içeriğini görüntüleyecek ve Onayla düğmesine tıklamanıza gerek kalmadan dosyaları okuyacaktır.",
 			"outsideWorkspace": {
 				"label": "Çalışma alanı dışındaki dosyaları dahil et",
-				"description": "Kilo Code'nun onay gerektirmeden mevcut çalışma alanı dışındaki dosyaları okumasına izin ver."
+				"description": "CodeFlux AI'nun onay gerektirmeden mevcut çalışma alanı dışındaki dosyaları okumasına izin ver."
 			}
 		},
 		"write": {
@@ -48,7 +48,7 @@
 			"delayLabel": "Tanılamanın potansiyel sorunları tespit etmesine izin vermek için yazmalardan sonra gecikme",
 			"outsideWorkspace": {
 				"label": "Çalışma alanı dışındaki dosyaları dahil et",
-				"description": "Kilo Code'nun onay gerektirmeden mevcut çalışma alanı dışında dosya oluşturmasına ve düzenlemesine izin ver."
+				"description": "CodeFlux AI'nun onay gerektirmeden mevcut çalışma alanı dışında dosya oluşturmasına ve düzenlemesine izin ver."
 			}
 		},
 		"browser": {
@@ -152,13 +152,13 @@
 			"draftModelDesc": "Spekülatif kod çözmenin doğru çalışması için taslak model aynı model ailesinden olmalıdır.",
 			"selectDraftModel": "Taslak Model Seç",
 			"noModelsFound": "Taslak model bulunamadı. Lütfen LM Studio'nun Sunucu Modu etkinken çalıştığından emin olun.",
-			"description": "LM Studio, modelleri bilgisayarınızda yerel olarak çalıştırmanıza olanak tanır. Başlamak için <a>hızlı başlangıç kılavuzlarına</a> bakın. Bu uzantıyla kullanmak için LM Studio'nun <b>yerel sunucu</b> özelliğini de başlatmanız gerekecektir. <span>Not:</span> Kilo Code karmaşık istemler kullanır ve Claude modelleriyle en iyi şekilde çalışır. Daha az yetenekli modeller beklendiği gibi çalışmayabilir."
+			"description": "LM Studio, modelleri bilgisayarınızda yerel olarak çalıştırmanıza olanak tanır. Başlamak için <a>hızlı başlangıç kılavuzlarına</a> bakın. Bu uzantıyla kullanmak için LM Studio'nun <b>yerel sunucu</b> özelliğini de başlatmanız gerekecektir. <span>Not:</span> CodeFlux AI karmaşık istemler kullanır ve Claude modelleriyle en iyi şekilde çalışır. Daha az yetenekli modeller beklendiği gibi çalışmayabilir."
 		},
 		"ollama": {
 			"baseUrl": "Temel URL (İsteğe bağlı)",
 			"modelId": "Model Kimliği",
 			"description": "Ollama, modelleri bilgisayarınızda yerel olarak çalıştırmanıza olanak tanır. Başlamak için hızlı başlangıç kılavuzlarına bakın.",
-			"warning": "Not: Kilo Code karmaşık istemler kullanır ve Claude modelleriyle en iyi şekilde çalışır. Daha az yetenekli modeller beklendiği gibi çalışmayabilir."
+			"warning": "Not: CodeFlux AI karmaşık istemler kullanır ve Claude modelleriyle en iyi şekilde çalışır. Daha az yetenekli modeller beklendiği gibi çalışmayabilir."
 		},
 		"unboundApiKey": "Unbound API Anahtarı",
 		"getUnboundApiKey": "Unbound API Anahtarı Al",
@@ -174,7 +174,7 @@
 			}
 		},
 		"customModel": {
-			"capabilities": "Özel OpenAI uyumlu modelinizin yeteneklerini ve fiyatlandırmasını yapılandırın. Model yeteneklerini belirtirken dikkatli olun, çünkü bunlar Kilo Code'un performansını etkileyebilir.",
+			"capabilities": "Özel OpenAI uyumlu modelinizin yeteneklerini ve fiyatlandırmasını yapılandırın. Model yeteneklerini belirtirken dikkatli olun, çünkü bunlar CodeFlux AI'un performansını etkileyebilir.",
 			"maxTokens": {
 				"label": "Maksimum Çıktı Token'ları",
 				"description": "Modelin bir yanıtta üretebileceği maksimum token sayısı. (Sunucunun maksimum token'ları ayarlamasına izin vermek için -1 belirtin.)"
@@ -219,7 +219,7 @@
 	"browser": {
 		"enable": {
 			"label": "Tarayıcı aracını etkinleştir",
-			"description": "Etkinleştirildiğinde, Kilo Code bilgisayar kullanımını destekleyen modeller kullanırken web siteleriyle etkileşim kurmak için bir tarayıcı kullanabilir."
+			"description": "Etkinleştirildiğinde, CodeFlux AI bilgisayar kullanımını destekleyen modeller kullanırken web siteleriyle etkileşim kurmak için bir tarayıcı kullanabilir."
 		},
 		"viewport": {
 			"label": "Görünüm alanı boyutu",
@@ -247,18 +247,18 @@
 	"checkpoints": {
 		"enable": {
 			"label": "Otomatik kontrol noktalarını etkinleştir",
-			"description": "Etkinleştirildiğinde, Kilo Code görev yürütme sırasında otomatik olarak kontrol noktaları oluşturarak değişiklikleri gözden geçirmeyi veya önceki durumlara dönmeyi kolaylaştırır."
+			"description": "Etkinleştirildiğinde, CodeFlux AI görev yürütme sırasında otomatik olarak kontrol noktaları oluşturarak değişiklikleri gözden geçirmeyi veya önceki durumlara dönmeyi kolaylaştırır."
 		}
 	},
 	"notifications": {
 		"sound": {
 			"label": "Ses efektlerini etkinleştir",
-			"description": "Etkinleştirildiğinde, Kilo Code bildirimler ve olaylar için ses efektleri çalacaktır.",
+			"description": "Etkinleştirildiğinde, CodeFlux AI bildirimler ve olaylar için ses efektleri çalacaktır.",
 			"volumeLabel": "Ses Düzeyi"
 		},
 		"tts": {
 			"label": "Metinden sese özelliğini etkinleştir",
-			"description": "Etkinleştirildiğinde, Kilo Code yanıtlarını metinden sese teknolojisi kullanarak sesli okuyacaktır.",
+			"description": "Etkinleştirildiğinde, CodeFlux AI yanıtlarını metinden sese teknolojisi kullanarak sesli okuyacaktır.",
 			"speedLabel": "Hız"
 		}
 	},
@@ -273,12 +273,12 @@
 			"description": "Mevcut çalışma dizini ayrıntılarına dahil edilecek maksimum dosya sayısı. Daha yüksek değerler daha fazla bağlam sağlar ancak token kullanımını artırır."
 		},
 		"rooignore": {
-			"label": "Listelerde ve aramalarda .kilocodeignore dosyalarını göster",
-			"description": "Etkinleştirildiğinde, .kilocodeignore'daki desenlerle eşleşen dosyalar kilit sembolü ile listelerde gösterilecektir. Devre dışı bırakıldığında, bu dosyalar dosya listelerinden ve aramalardan tamamen gizlenecektir."
+			"label": "Listelerde ve aramalarda .codefluxaiignore dosyalarını göster",
+			"description": "Etkinleştirildiğinde, .codefluxaiignore'daki desenlerle eşleşen dosyalar kilit sembolü ile listelerde gösterilecektir. Devre dışı bırakıldığında, bu dosyalar dosya listelerinden ve aramalardan tamamen gizlenecektir."
 		},
 		"maxReadFile": {
 			"label": "Dosya okuma otomatik kısaltma eşiği",
-			"description": "Model başlangıç/bitiş değerlerini belirtmediğinde Kilo Code bu sayıda satırı okur. Bu sayı dosyanın toplam satır sayısından azsa, Kilo Code kod tanımlamalarının satır numarası dizinini oluşturur. Özel durumlar: -1, Kilo Code'ya tüm dosyayı okumasını (dizinleme olmadan), 0 ise hiç satır okumamasını ve minimum bağlam için yalnızca satır dizinleri sağlamasını belirtir. Düşük değerler başlangıç bağlam kullanımını en aza indirir ve sonraki hassas satır aralığı okumalarına olanak tanır. Açık başlangıç/bitiş istekleri bu ayarla sınırlı değildir.",
+			"description": "Model başlangıç/bitiş değerlerini belirtmediğinde CodeFlux AI bu sayıda satırı okur. Bu sayı dosyanın toplam satır sayısından azsa, CodeFlux AI kod tanımlamalarının satır numarası dizinini oluşturur. Özel durumlar: -1, CodeFlux AI'ya tüm dosyayı okumasını (dizinleme olmadan), 0 ise hiç satır okumamasını ve minimum bağlam için yalnızca satır dizinleri sağlamasını belirtir. Düşük değerler başlangıç bağlam kullanımını en aza indirir ve sonraki hassas satır aralığı okumalarına olanak tanır. Açık başlangıç/bitiş istekleri bu ayarla sınırlı değildir.",
 			"lines": "satır",
 			"always_full_read": "Her zaman tüm dosyayı oku"
 		}
@@ -300,7 +300,7 @@
 		},
 		"diff": {
 			"label": "Diff'ler aracılığıyla düzenlemeyi etkinleştir",
-			"description": "Etkinleştirildiğinde, Kilo Code dosyaları daha hızlı düzenleyebilecek ve kesik tam dosya yazımlarını otomatik olarak reddedecektir. En son Claude 3.7 Sonnet modeliyle en iyi şekilde çalışır.",
+			"description": "Etkinleştirildiğinde, CodeFlux AI dosyaları daha hızlı düzenleyebilecek ve kesik tam dosya yazımlarını otomatik olarak reddedecektir. En son Claude 3.7 Sonnet modeliyle en iyi şekilde çalışır.",
 			"strategy": {
 				"label": "Diff stratejisi",
 				"options": {
@@ -328,19 +328,19 @@
 		},
 		"SEARCH_AND_REPLACE": {
 			"name": "Deneysel arama ve değiştirme aracını kullan",
-			"description": "Deneysel arama ve değiştirme aracını etkinleştir, Kilo Code'nun tek bir istekte bir arama teriminin birden fazla örneğini değiştirmesine olanak tanır."
+			"description": "Deneysel arama ve değiştirme aracını etkinleştir, CodeFlux AI'nun tek bir istekte bir arama teriminin birden fazla örneğini değiştirmesine olanak tanır."
 		},
 		"INSERT_BLOCK": {
 			"name": "Deneysel içerik ekleme aracını kullan",
-			"description": "Deneysel içerik ekleme aracını etkinleştir, Kilo Code'nun bir diff oluşturma gereği duymadan belirli satır numaralarına içerik eklemesine olanak tanır."
+			"description": "Deneysel içerik ekleme aracını etkinleştir, CodeFlux AI'nun bir diff oluşturma gereği duymadan belirli satır numaralarına içerik eklemesine olanak tanır."
 		},
 		"POWER_STEERING": {
 			"name": "Deneysel \"güç direksiyon\" modunu kullan",
-			"description": "Etkinleştirildiğinde, Kilo Code modele geçerli mod tanımının ayrıntılarını daha sık hatırlatacaktır. Bu, rol tanımlarına ve özel talimatlara daha güçlü uyum sağlayacak, ancak mesaj başına daha fazla token kullanacaktır."
+			"description": "Etkinleştirildiğinde, CodeFlux AI modele geçerli mod tanımının ayrıntılarını daha sık hatırlatacaktır. Bu, rol tanımlarına ve özel talimatlara daha güçlü uyum sağlayacak, ancak mesaj başına daha fazla token kullanacaktır."
 		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Deneysel çoklu blok diff aracını kullan",
-			"description": "Etkinleştirildiğinde, Kilo Code çoklu blok diff aracını kullanacaktır. Bu, tek bir istekte dosyadaki birden fazla kod bloğunu güncellemeye çalışacaktır."
+			"description": "Etkinleştirildiğinde, CodeFlux AI çoklu blok diff aracını kullanacaktır. Bu, tek bir istekte dosyadaki birden fazla kod bloğunu güncellemeye çalışacaktır."
 		}
 	},
 	"temperature": {
@@ -371,18 +371,18 @@
 		}
 	},
 	"modelPicker": {
-		"automaticFetch": "Uzantı <serviceLink>{{serviceName}}</serviceLink> üzerinde bulunan mevcut modellerin en güncel listesini otomatik olarak alır. Hangi modeli seçeceğinizden emin değilseniz, Kilo Code <defaultModelLink>{{defaultModelId}}</defaultModelLink> ile en iyi şekilde çalışır. Şu anda mevcut olan ücretsiz seçenekleri bulmak için \"free\" araması da yapabilirsiniz.",
+		"automaticFetch": "Uzantı <serviceLink>{{serviceName}}</serviceLink> üzerinde bulunan mevcut modellerin en güncel listesini otomatik olarak alır. Hangi modeli seçeceğinizden emin değilseniz, CodeFlux AI <defaultModelLink>{{defaultModelId}}</defaultModelLink> ile en iyi şekilde çalışır. Şu anda mevcut olan ücretsiz seçenekleri bulmak için \"free\" araması da yapabilirsiniz.",
 		"label": "Model",
 		"searchPlaceholder": "Ara",
 		"noMatchFound": "Eşleşme bulunamadı",
 		"useCustomModel": "Özel kullan: {{modelId}}"
 	},
 	"footer": {
-		"feedback": "Herhangi bir sorunuz veya geri bildiriminiz varsa, <githubLink>github.com/Kilo-Org/kilocode</githubLink> adresinde bir konu açmaktan veya <redditLink>reddit.com/r/kilocode</redditLink> ya da <discordLink>discord.gg/fxrhCFGhkP</discordLink>'a katılmaktan çekinmeyin",
-		"version": "Kilo Code v{{version}}",
+		"feedback": "Herhangi bir sorunuz veya geri bildiriminiz varsa, <githubLink>github.com/Kilo-Org/codefluxai</githubLink> adresinde bir konu açmaktan veya <redditLink>reddit.com/r/codefluxai</redditLink> ya da <discordLink>discord.gg/fxrhCFGhkP</discordLink>'a katılmaktan çekinmeyin",
+		"version": "CodeFlux AI v{{version}}",
 		"telemetry": {
 			"label": "Anonim hata ve kullanım raporlamaya izin ver",
-			"description": "Anonim kullanım verileri ve hata raporları göndererek Kilo Code'u geliştirmeye yardımcı olun. Hiçbir kod, istem veya kişisel bilgi asla gönderilmez. Daha fazla ayrıntı için gizlilik politikamıza bakın."
+			"description": "Anonim kullanım verileri ve hata raporları göndererek CodeFlux AI'u geliştirmeye yardımcı olun. Hiçbir kod, istem veya kişisel bilgi asla gönderilmez. Daha fazla ayrıntı için gizlilik politikamıza bakın."
 		},
 		"settings": {
 			"import": "İçe Aktar",

@@ -1,14 +1,14 @@
 {
 	"title": "Server MCP",
 	"done": "Fatto",
-	"description": "Il <0>Model Context Protocol</0> permette la comunicazione con server MCP in esecuzione locale che forniscono strumenti e risorse aggiuntive per estendere le capacità di Kilo Code. Puoi utilizzare <1>server creati dalla comunità</1> o chiedere a Kilo Code di creare nuovi strumenti specifici per il tuo flusso di lavoro (ad esempio, \"aggiungi uno strumento che ottiene la documentazione npm più recente\").",
+	"description": "Il <0>Model Context Protocol</0> permette la comunicazione con server MCP in esecuzione locale che forniscono strumenti e risorse aggiuntive per estendere le capacità di CodeFlux AI. Puoi utilizzare <1>server creati dalla comunità</1> o chiedere a CodeFlux AI di creare nuovi strumenti specifici per il tuo flusso di lavoro (ad esempio, \"aggiungi uno strumento che ottiene la documentazione npm più recente\").",
 	"enableToggle": {
 		"title": "Abilita server MCP",
-		"description": "Quando abilitato, Kilo Code sarà in grado di interagire con i server MCP per funzionalità avanzate. Se non stai utilizzando MCP, puoi disabilitare questa opzione per ridurre l'utilizzo di token da parte di Kilo Code."
+		"description": "Quando abilitato, CodeFlux AI sarà in grado di interagire con i server MCP per funzionalità avanzate. Se non stai utilizzando MCP, puoi disabilitare questa opzione per ridurre l'utilizzo di token da parte di CodeFlux AI."
 	},
 	"enableServerCreation": {
 		"title": "Abilita creazione server MCP",
-		"description": "Quando abilitato, Kilo Code può aiutarti a creare nuovi server MCP tramite comandi come \"aggiungi un nuovo strumento per...\". Se non hai bisogno di creare server MCP, puoi disabilitare questa opzione per ridurre l'utilizzo di token da parte di Kilo Code."
+		"description": "Quando abilitato, CodeFlux AI può aiutarti a creare nuovi server MCP tramite comandi come \"aggiungi un nuovo strumento per...\". Se non hai bisogno di creare server MCP, puoi disabilitare questa opzione per ridurre l'utilizzo di token da parte di CodeFlux AI."
 	},
 	"editGlobalMCP": "Modifica MCP Globale",
 	"editProjectMCP": "Modifica MCP del Progetto",

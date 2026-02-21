@@ -1,4 +1,4 @@
-# CLAUDE.md — AI Assistant Guide for Kilo Code
+# CLAUDE.md — AI Assistant Guide for CodeFlux AI
 
 This file provides context and conventions for AI assistants (Claude, Copilot, etc.) working in this repository.
 
@@ -6,19 +6,19 @@ This file provides context and conventions for AI assistants (Claude, Copilot, e
 
 ## Project Overview
 
-**Kilo Code** (`kilo-code` v4.8.0) is a VSCode extension that delivers a full AI-powered development assistant — a "whole dev team of AI agents in your editor." It supports 15+ AI providers (Anthropic, OpenAI, Bedrock, Vertex AI, Mistral, Ollama, etc.) and implements the Model Context Protocol (MCP) for extensibility.
+**CodeFlux AI** (`codeflux-ai` v4.8.0) is a VSCode extension that delivers a full AI-powered development assistant — a "whole dev team of AI agents in your editor." It supports 15+ AI providers (Anthropic, OpenAI, Bedrock, Vertex AI, Mistral, Ollama, etc.) and implements the Model Context Protocol (MCP) for extensibility.
 
-- **Publisher**: kilocode
+- **Publisher**: codefluxai
 - **VSCode requirement**: ^1.84.0
 - **Node version**: 20.18.1 (enforced via `.nvmrc`)
-- **Upstream repo**: https://github.com/Kilo-Org/kilocode
+- **Upstream repo**: https://github.com/canstralian/CodeAnywhere
 
 ---
 
 ## Repository Structure
 
 ```
-kilocode/
+codefluxai/
 ├── src/                        # Extension backend (TypeScript, Node.js)
 │   ├── extension.ts            # Entry point: registers commands, activates providers
 │   ├── core/                   # Core agent logic

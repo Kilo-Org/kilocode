@@ -33,8 +33,8 @@ export const About = ({ version, className, ...props }: AboutProps) => {
 					<Trans
 						i18nKey="settings:footer.feedback"
 						components={{
-							githubLink: <VSCodeLink href="https://github.com/Kilo-Org/kilocode" />,
-							redditLink: <VSCodeLink href="https://reddit.com/r/kilocode" />,
+							githubLink: <VSCodeLink href="https://github.com/Kilo-Org/codefluxai" />,
+							redditLink: <VSCodeLink href="https://reddit.com/r/codefluxai" />,
 							discordLink: <VSCodeLink href="https://discord.gg/fxrhCFGhkP" />,
 						}}
 					/>
