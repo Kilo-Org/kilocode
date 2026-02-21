@@ -213,7 +213,7 @@ This is a multi-file operation. Follow `cline_docs/settings.md` exactly:
 
 ### Tool System
 
-The 19 agent tools live in `src/core/tools/`. Each tool:
+The agent tools live in `src/core/tools/`. Each tool:
 - Receives parameters parsed from the AI response
 - Executes an operation (file I/O, terminal, browser, MCP, etc.)
 - Returns structured output back to `Cline.ts` for inclusion in the next prompt turn
