@@ -22,7 +22,7 @@ kilocode/
 ├── src/                        # Extension backend (TypeScript, Node.js)
 │   ├── extension.ts            # Entry point: registers commands, activates providers
 │   ├── core/                   # Core agent logic
-│   │   ├── Cline.ts            # Main AI agent (2,600+ lines) — orchestrates all tool use
+│   │   ├── Cline.ts            # Main AI agent — orchestrates all tool use
 │   │   ├── CodeActionProvider.ts
 │   │   ├── EditorUtils.ts
 │   │   ├── prompts/            # System prompt generation and response formatting
