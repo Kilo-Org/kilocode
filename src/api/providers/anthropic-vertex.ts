@@ -5,7 +5,7 @@ import { GoogleAuth, JWTInput } from "google-auth-library"
 import {
 	type ModelInfo,
 	type VertexModelId,
-	vertexDefaultModelId,
+	normalizeVertexModelId,
 	vertexModels,
 	ANTHROPIC_DEFAULT_MAX_TOKENS,
 	TOOL_PROTOCOL,
@@ -223,8 +223,10 @@ export class AnthropicVertexHandler extends BaseProvider implements SingleComple
 
 	getModel() {
 		const modelId = this.options.apiModelId
-		let id = modelId && modelId in vertexModels ? (modelId as VertexModelId) : vertexDefaultModelId
+		// kilocode_change start
+		let id: VertexModelId = modelId ? normalizeVertexModelId(modelId) : normalizeVertexModelId("")
 		let info: ModelInfo = vertexModels[id]
+		// kilocode_change end
 
 		// Check if 1M context beta should be enabled for supported models
 		const supports1MContext = VERTEX_1M_CONTEXT_MODEL_IDS.includes(

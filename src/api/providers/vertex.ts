@@ -1,4 +1,4 @@
-import { type ModelInfo, type VertexModelId, vertexDefaultModelId, vertexModels } from "@roo-code/types"
+import { type ModelInfo, type VertexModelId, normalizeVertexModelId, vertexModels } from "@roo-code/types"
 
 import type { ApiHandlerOptions } from "../../shared/api"
 
@@ -14,8 +14,10 @@ export class VertexHandler extends GeminiHandler implements SingleCompletionHand
 
 	override getModel() {
 		const modelId = this.options.apiModelId
-		let id = modelId && modelId in vertexModels ? (modelId as VertexModelId) : vertexDefaultModelId
+		// kilocode_change start
+		let id: VertexModelId = modelId ? normalizeVertexModelId(modelId) : normalizeVertexModelId("")
 		const info: ModelInfo = vertexModels[id]
+		// kilocode_change end
 		const params = getModelParams({ format: "gemini", modelId: id, model: info, settings: this.options })
 
 		// The `:thinking` suffix indicates that the model is a "Hybrid"

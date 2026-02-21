@@ -1550,6 +1550,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 		try {
 			await this.safeWriteToStdin(sessionId, message, "cancel")
 			this.log(sessionId, "Cancel request sent via stdin")
+			this.stopAgentSession(sessionId)
 		} catch (error) {
 			// Fallback to SIGTERM if stdin write fails
 			this.outputChannel.appendLine(`Failed to send cancel via stdin, falling back to SIGTERM: ${error}`)

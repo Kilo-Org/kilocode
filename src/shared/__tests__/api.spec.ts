@@ -211,6 +211,44 @@ describe("getModelMaxOutputTokens", () => {
 		})
 	})
 
+	// kilocode_change start
+	test("should cap qwen3-max-thinking to provider max output limit of 32,768", () => {
+		const model: ModelInfo = {
+			contextWindow: 300_000,
+			supportsPromptCache: false,
+			maxTokens: 200_000,
+		}
+
+		const result = getModelMaxOutputTokens({
+			modelId: "qwen/qwen3-max-thinking",
+			model,
+			settings: {},
+			format: "openrouter",
+		})
+
+		// 20% cap would be 60,000, but model-specific provider cap is 32,768.
+		expect(result).toBe(32_768)
+	})
+
+	test("should still honor lower context-based cap for qwen3-max-thinking", () => {
+		const model: ModelInfo = {
+			contextWindow: 100_000,
+			supportsPromptCache: false,
+			maxTokens: 200_000,
+		}
+
+		const result = getModelMaxOutputTokens({
+			modelId: "qwen/qwen3-max-thinking",
+			model,
+			settings: {},
+			format: "openrouter",
+		})
+
+		// 20% cap is 20,000 which is lower than 32,768.
+		expect(result).toBe(20_000)
+	})
+	// kilocode_change end
+
 	test("should handle GPT-5 models with various max token configurations", () => {
 		const testCases = [
 			{

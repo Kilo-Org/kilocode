@@ -320,5 +320,11 @@ export const parseOpenRouterModel = ({
 		modelInfo.maxTokens = 32768
 	}
 
+	// kilocode_change start
+	if (id.includes("minimax-2.1:free") || id.includes("kimi-2.5:free")) {
+		modelInfo.contextWindow = 200000
+	}
+	// kilocode_change end
+
 	return modelInfo
 }

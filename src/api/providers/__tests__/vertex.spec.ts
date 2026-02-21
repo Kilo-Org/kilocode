@@ -151,6 +151,20 @@ describe("VertexHandler", () => {
 		})
 
 		// kilocode_change start
+		it("should normalize legacy claude-opus-4-6 aliases", () => {
+			const testHandler = new VertexHandler({
+				apiModelId: "claude-opus-4-6@default",
+				vertexProjectId: "test-project",
+				vertexRegion: "us-central1",
+			})
+
+			const modelInfo = testHandler.getModel()
+			expect(modelInfo.id).toBe("claude-opus-4-6")
+			expect(modelInfo.info.supportsImages).toBe(true)
+		})
+		// kilocode_change end
+
+		// kilocode_change start
 		it("should expose native tools metadata for gemini-3.1-pro-preview", () => {
 			const testHandler = new VertexHandler({
 				apiModelId: "gemini-3.1-pro-preview",
