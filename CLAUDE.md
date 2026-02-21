@@ -26,7 +26,7 @@ kilocode/
 │   │   ├── CodeActionProvider.ts
 │   │   ├── EditorUtils.ts
 │   │   ├── prompts/            # System prompt generation and response formatting
-│   │   └── tools/              # 19 individual tool implementations
+│   │   └── tools/              # Individual tool implementations
 │   ├── api/                    # AI provider abstraction
 │   │   ├── index.ts            # Provider factory
 │   │   └── providers/          # One file per provider (anthropic, openai, bedrock, …)
