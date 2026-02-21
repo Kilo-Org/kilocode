@@ -189,3 +189,35 @@ export async function generateHelp(options: {
 
   return format === "md" ? formatMarkdown(sections) : formatText(sections)
 }
+
+export async function generateCommandTable(options?: { commands?: Cmd[] }) {
+  const all = options?.commands ?? (await loadCommands())
+
+  const rows: Array<{ display: string; description: string }> = []
+
+  for (const cmd of all) {
+    const raw = typeof cmd.command === "string" ? cmd.command : cmd.command?.[0]
+    if (!raw) continue
+    if (!cmd.describe) continue
+
+    const display = raw.startsWith("$0") ? "kilo" + raw.slice(2) : "kilo " + raw
+
+    rows.push({
+      display: display.trim(),
+      description: typeof cmd.describe === "string" ? cmd.describe : "",
+    })
+  }
+
+  rows.push({
+    display: "kilo completion",
+    description: "generate shell completion script",
+  })
+
+  const lines = ["| Command | Description |", "| --- | --- |"]
+
+  for (const row of rows) {
+    lines.push(`| \`${row.display}\` | ${row.description} |`)
+  }
+
+  return lines.join("\n") + "\n"
+}

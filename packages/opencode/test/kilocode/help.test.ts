@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test"
-import { generateHelp } from "../../src/kilocode/help"
+import { generateHelp, generateCommandTable } from "../../src/kilocode/help"
 import { AcpCommand } from "../../src/cli/cmd/acp"
 import { McpCommand } from "../../src/cli/cmd/mcp"
 import { RunCommand } from "../../src/cli/cmd/run"
@@ -17,10 +17,20 @@ import { ExportCommand } from "../../src/cli/cmd/export"
 import { ImportCommand } from "../../src/cli/cmd/import"
 import { PrCommand } from "../../src/cli/cmd/pr"
 import { SessionCommand } from "../../src/cli/cmd/session"
+import { HelpCommand } from "../../src/kilocode/help-command"
+
+// Stand-in for TuiThreadCommand — the real one imports @opentui/solid which
+// doesn't resolve in the test environment. Only command/describe matter here.
+const TuiStub = {
+  command: "$0 [project]",
+  describe: "start kilo tui",
+  handler() {},
+}
 
 const commands = [
   AcpCommand,
   McpCommand,
+  TuiStub,
   RunCommand,
   GenerateCommand,
   DebugCommand,
@@ -36,6 +46,7 @@ const commands = [
   ImportCommand,
   PrCommand,
   SessionCommand,
+  HelpCommand,
 ] as any[]
 
 describe("kilo help --all (markdown)", () => {
@@ -92,5 +103,45 @@ describe("edge cases", () => {
 
   test("kilo help nonexistent throws unknown command error", async () => {
     expect(generateHelp({ command: "nonexistent", commands })).rejects.toThrow("unknown command")
+  })
+})
+
+describe("generateCommandTable", () => {
+  test("returns a string containing a markdown table header", async () => {
+    const output = await generateCommandTable({ commands })
+    expect(output).toContain("| Command | Description |")
+  })
+
+  test("contains rows for known commands", async () => {
+    const output = await generateCommandTable({ commands })
+    for (const name of ["run", "auth", "debug", "mcp"]) {
+      expect(output).toContain(`kilo ${name}`)
+    }
+  })
+
+  test("default command appears as kilo [project], not $0", async () => {
+    const output = await generateCommandTable({ commands })
+    expect(output).toContain("`kilo [project]`")
+    expect(output).not.toContain("$0")
+  })
+
+  test("contains no ANSI escape sequences", async () => {
+    const output = await generateCommandTable({ commands })
+    expect(/\x1b\[/.test(output)).toBe(false)
+  })
+
+  test("skips commands with no describe", async () => {
+    const output = await generateCommandTable({ commands })
+    expect(output).not.toContain("`kilo generate`")
+  })
+
+  test("contains kilo completion row", async () => {
+    const output = await generateCommandTable({ commands })
+    expect(output).toContain("`kilo completion`")
+  })
+
+  test("contains kilo help row", async () => {
+    const output = await generateCommandTable({ commands })
+    expect(output).toContain("`kilo help")
   })
 })
