@@ -32,7 +32,10 @@ export async function showChangelogOnUpdate(input: Input) {
   }
 
   await input.update(input.version)
-  const clicked = await input.show(`Kilo Code was updated to v${input.version}.`, CHANGELOG_ACTION)
+  const clicked = await input.show(
+    `Kilo Code was updated to ${input.version.startsWith("v") ? "" : "v"}${input.version}.`,
+    CHANGELOG_ACTION,
+  )
 
   if (clicked !== CHANGELOG_ACTION) {
     return
