@@ -34,7 +34,7 @@ kilocode/
 │   │   ├── mcp/                # MCP server management
 │   │   ├── browser/            # Puppeteer browser automation
 │   │   ├── checkpoints/        # Task state persistence
-│   │   └── tree-sitter/        # Code parsing (14 language grammars via WASM)
+│   │   └── tree-sitter/        # Code parsing (language grammars via WASM)
 │   ├── integrations/           # VSCode-specific integrations
 │   │   ├── editor/             # Diff view, file operations
 │   │   ├── terminal/           # Terminal creation, command execution
