@@ -128,8 +128,7 @@ function extractComplianceHours(raw: string): number {
   const generic = raw.match(/=\s*(\d+)\s*\*\s*60\s*\*\s*60\s*\*\s*1000/)
   if (generic) return parseInt(generic[1], 10)
 
-  console.warn("WARNING: Could not parse compliance window hours from compliance-close.yml; using default 2")
-  return 2
+  throw new Error("Could not parse compliance window hours from compliance-close.yml — update the regex if the file format changed")
 }
 
 /** Extract DAYS_BEFORE_STALE and DAYS_BEFORE_CLOSE from stale-issues.yml */
@@ -137,16 +136,12 @@ function extractStaleDays(raw: string): { staleDays: number; closeDays: number }
   const staleMatch = raw.match(/DAYS_BEFORE_STALE:\s*(\d+)/)
   const closeMatch = raw.match(/DAYS_BEFORE_CLOSE:\s*(\d+)/)
 
-  if (!staleMatch) {
-    console.warn("WARNING: Could not parse DAYS_BEFORE_STALE from stale-issues.yml; using default 90")
-  }
-  if (!closeMatch) {
-    console.warn("WARNING: Could not parse DAYS_BEFORE_CLOSE from stale-issues.yml; using default 7")
-  }
+  if (!staleMatch) throw new Error("Could not parse DAYS_BEFORE_STALE from stale-issues.yml — update the regex if the file format changed")
+  if (!closeMatch) throw new Error("Could not parse DAYS_BEFORE_CLOSE from stale-issues.yml — update the regex if the file format changed")
 
   return {
-    staleDays: staleMatch ? parseInt(staleMatch[1], 10) : 90,
-    closeDays: closeMatch ? parseInt(closeMatch[1], 10) : 7,
+    staleDays: parseInt(staleMatch[1], 10),
+    closeDays: parseInt(closeMatch[1], 10),
   }
 }
 
@@ -155,8 +150,7 @@ function extractPrStaleDays(raw: string): number {
   const match = raw.match(/const\s+DAYS_INACTIVE\s*=\s*(\d+)/)
   if (match) return parseInt(match[1], 10)
 
-  console.warn("WARNING: Could not parse DAYS_INACTIVE from close-stale-prs.yml; using default 60")
-  return 60
+  throw new Error("Could not parse DAYS_INACTIVE from close-stale-prs.yml — update the regex if the file format changed")
 }
 
 /** Extract the PR title regex pattern from pr-standards.yml */
@@ -165,8 +159,7 @@ function extractPrTitleRegex(raw: string): string {
   const match = raw.match(/const\s+titlePattern\s*=\s*\/([^/]+)\//)
   if (match) return match[1]
 
-  console.warn("WARNING: Could not parse titlePattern from pr-standards.yml; using default")
-  return "^(feat|fix|docs|chore|refactor|test)\\s*(\\([a-zA-Z0-9-]+\\))?\\s*:"
+  throw new Error("Could not parse titlePattern from pr-standards.yml — update the regex if the file format changed")
 }
 
 /** Extract the list of valid prefixes from the titlePattern in pr-standards.yml */
@@ -176,8 +169,7 @@ function extractPrPrefixes(raw: string): string[] {
     return match[1].split("|").map(s => s.trim()).filter(Boolean)
   }
 
-  console.warn("WARNING: Could not parse PR prefixes from pr-standards.yml; using defaults")
-  return ["feat", "fix", "docs", "chore", "refactor", "test"]
+  throw new Error("Could not parse PR prefixes from pr-standards.yml — update the regex if the file format changed")
 }
 
 /** Extract the skip-issue-check prefixes from pr-standards.yml */
@@ -188,8 +180,7 @@ function extractSkipIssuePrefixes(raw: string): string[] {
     return match[1].split("|").map(s => s.trim()).filter(Boolean)
   }
 
-  console.warn("WARNING: Could not parse skipIssueCheck prefixes from pr-standards.yml; using defaults")
-  return ["docs", "refactor"]
+  throw new Error("Could not parse skipIssueCheck prefixes from pr-standards.yml — update the regex if the file format changed")
 }
 
 // ---------------------------------------------------------------------------

@@ -50,12 +50,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           KILO_PERMISSION: |
             {
-              "write_file": { "*": "allow" },
+              "write_file": { "CONTRIBUTING.md": "allow" },
               "bash": { "*": "deny" },
               "webfetch": "deny"
             }
         run: |
-          FACTS=$(cat contributing-facts.json)
           kilo run -m "kilo/anthropic/claude-sonnet-4-5" \
             "Read the file contributing-facts.json which contains structured facts extracted from the GitHub issue templates and workflow files. Then update CONTRIBUTING.md to ensure these sections accurately reflect the facts:
           - 'Opening Issues' section: blank issues policy, template names, compliance rules, auto-close window
