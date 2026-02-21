@@ -42,6 +42,7 @@ export const clineAsks = [
 	// kilocode_change start
 	"payment_required_prompt", // Added for the low credits dialog
 	"unauthorized_prompt", // Added for unauthorized error when using paid models
+	"promotion_model_sign_up_required_prompt",
 	"invalid_model",
 	"report_bug",
 	"condense",
@@ -62,6 +63,7 @@ export const idleAsks = [
 	// kilocode_change start
 	"payment_required_prompt",
 	"unauthorized_prompt",
+	"promotion_model_sign_up_required_prompt",
 	"invalid_model",
 	// kilocode_change end
 	"completion_result",

@@ -330,6 +330,8 @@
 		"getVercelAiGatewayApiKey": "Ottieni chiave API Vercel AI Gateway",
 		"glamaApiKey": "Chiave API Glama",
 		"getGlamaApiKey": "Ottieni chiave API Glama",
+		"aihubmixApiKey": "Chiave API AIhubmix",
+		"getAihubmixApiKey": "Ottieni chiave API AIhubmix",
 		"apiKeyStorageNotice": "Le chiavi API sono memorizzate in modo sicuro nell'Archivio Segreto di VSCode",
 		"openAiCodexRateLimits": {
 			"title": "Usage Limits for Codex{{planLabel}}",
@@ -439,6 +441,8 @@
 		},
 		"getSambaNovaApiKey": "Ottieni chiave API SambaNova",
 		"sambaNovaApiKey": "Chiave API SambaNova",
+		"poeApiKey": "Chiave API Poe",
+		"getPoeApiKey": "Ottieni chiave API Poe",
 		"getHuggingFaceApiKey": "Ottieni chiave API Hugging Face",
 		"huggingFaceApiKey": "Chiave API Hugging Face",
 		"getOvhCloudAiEndpointsApiKey": "Ottieni chiave API OVHcloud AI Endpoints",

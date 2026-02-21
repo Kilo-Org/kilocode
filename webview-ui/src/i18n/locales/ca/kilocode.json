@@ -39,6 +39,11 @@
 		"message": "Inicia sessió o crea un compte per accedir a més de 500 models, utilitzar crèdits a preu de cost o portar la teva pròpia clau.",
 		"loginButton": "Iniciar Sessió"
 	},
+	"promotionError": {
+		"title": "Has de registrar-te per continuar",
+		"message": "Registra't gratuïtament per continuar i explorar 500 models més. Només 2 minuts, sense targeta de crèdit. O torna més tard.",
+		"signUpButton": "Registrar-se"
+	},
 	"pricing": {
 		"costUnknown": "cost desconegut",
 		"costUnknownDescription": "El proveïdor de l'API no va proporcionar cap dada de cost o la sol·licitud va ser cancel·lada.",

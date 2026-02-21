@@ -16,7 +16,11 @@ export type { HoleFillerAutocompletePrompt, FillInAtCursorSuggestion, ChatComple
  * Parse the response - only handles responses with <COMPLETION> tags
  * Returns a FillInAtCursorSuggestion with the extracted text, or an empty string if nothing found
  */
-export function parseAutocompleteResponse(fullResponse: string, prefix: string, suffix: string): FillInAtCursorSuggestion {
+export function parseAutocompleteResponse(
+	fullResponse: string,
+	prefix: string,
+	suffix: string,
+): FillInAtCursorSuggestion {
 	let fimText: string = ""
 
 	// Match content strictly between <COMPLETION> and </COMPLETION> tags

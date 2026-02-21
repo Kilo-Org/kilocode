@@ -202,12 +202,14 @@ const dynamicProviderExtras = {
 	synthetic: {} as { apiKey?: string }, // kilocode_change
 	roo: {} as { apiKey?: string; baseUrl?: string },
 	chutes: {} as { apiKey?: string },
+	poe: {} as { apiKey?: string }, // kilocode_change
 	// kilocode_change start
 	"sap-ai-core": {} as {
 		sapAiCoreServiceKey?: string
 		sapAiCoreResourceGroup?: string
 		sapAiCoreUseOrchestration?: boolean
 	},
+	aihubmix: {} as { apiKey?: string; baseUrl?: string },
 	apertis: {} as { apiKey?: string; baseUrl?: string },
 	// kilocode_change end
 } as const satisfies Record<RouterName, object>

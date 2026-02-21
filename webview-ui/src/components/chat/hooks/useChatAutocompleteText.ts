@@ -53,7 +53,10 @@ export function useChatAutocompleteText({
 		// 2. The cursor is at the end of the text
 		// 3. We have saved autocomplete text that matches the current prefix
 		const shouldShowAutocompleteText =
-			isFocusedRef.current && isCursorAtEnd && savedAutocompleteTextRef.current && currentText === savedPrefixRef.current
+			isFocusedRef.current &&
+			isCursorAtEnd &&
+			savedAutocompleteTextRef.current &&
+			currentText === savedPrefixRef.current
 
 		if (shouldShowAutocompleteText) {
 			setAutocompleteText(savedAutocompleteTextRef.current)

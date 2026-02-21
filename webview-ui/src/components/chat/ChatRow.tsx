@@ -87,6 +87,7 @@ import { formatFileSize } from "@/lib/formatting-utils"
 import ChatTimestamps from "./ChatTimestamps"
 import { removeLeadingNonAlphanumeric } from "@/utils/removeLeadingNonAlphanumeric"
 import { KILOCODE_TOKEN_REQUIRED_ERROR } from "@roo/kilocode/errorUtils"
+import { PromotionWarning } from "../kilocode/chat/PromotionWarning"
 // kilocode_change end
 
 // Helper function to get previous todos before a specific message
@@ -456,6 +457,16 @@ export const ChatRowContent = ({
 		}
 		return null
 	}, [message.type, message.ask, message.partial, message.text])
+
+	// kilocode_change start - Parse completion suggestions from completion_result ask
+	const completionSuggestions = useMemo(() => {
+		if (message.type === "ask" && message.ask === "completion_result" && !message.partial && message.text) {
+			const parsed = safeJsonParse<{ suggest?: SuggestionItem[] }>(message.text)
+			return parsed?.suggest
+		}
+		return undefined
+	}, [message.type, message.ask, message.partial, message.text])
+	// kilocode_change end
 
 	if (tool) {
 		const toolIcon = (name: string) => (
@@ -1362,7 +1373,7 @@ export const ChatRowContent = ({
 									isEditing ? "overflow-visible" : "overflow-hidden", // kilocode_change
 									isEditing
 										? "bg-vscode-editor-background text-vscode-editor-foreground"
-										: "cursor-text p-1 bg-vscode-sideBar-background text-vscode-foreground", // kilocode_change
+										: "cursor-text p-1 bg-vscode-editor-background text-vscode-editor-foreground border-vscode-editorGroup-border", // kilocode_change
 								)}>
 								{isEditing ? (
 									<div className="flex flex-col gap-2">
@@ -1804,6 +1815,25 @@ export const ChatRowContent = ({
 						</>
 					)
 				case "completion_result":
+					// kilocode_change start - Render completion suggestions when available
+					if (completionSuggestions && completionSuggestions.length > 0) {
+						return (
+							<div className="flex flex-col gap-2 ml-6">
+								<FollowUpSuggest
+									suggestions={completionSuggestions}
+									onSuggestionClick={onSuggestionClick}
+									ts={message?.ts}
+								/>
+							</div>
+						)
+					}
+					// kilocode_change - Guard: don't render structured JSON payloads as markdown.
+					// If the text is valid JSON (i.e. our suggestion payload) but has no suggestions
+					// to display, suppress rendering rather than showing raw JSON.
+					if (message.text && safeJsonParse(message.text) !== undefined) {
+						return null
+					}
+					// kilocode_change end
 					if (message.text) {
 						return (
 							<div className="group">
@@ -1875,6 +1905,9 @@ export const ChatRowContent = ({
 				}
 				case "unauthorized_prompt": {
 					return <UnauthorizedWarning message={message} />
+				}
+				case "promotion_model_sign_up_required_prompt": {
+					return <PromotionWarning message={message} />
 				}
 				case "invalid_model": {
 					return <InvalidModelWarning message={message} isLast={isLast} />

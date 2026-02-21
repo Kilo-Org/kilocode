@@ -39,5 +39,5 @@ export function getCostBreakdownIfNeeded(
  * @returns Formatted string like "0.0234" or "1.23"
  */
 export function formatCost(cost: number): string {
-  return (cost === 0 || cost > 0.05) ? cost.toFixed(2) : cost.toFixed(4);
+	return cost === 0 || cost > 0.05 ? cost.toFixed(2) : cost.toFixed(4)
 }

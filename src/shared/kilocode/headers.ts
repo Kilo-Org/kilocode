@@ -6,3 +6,4 @@ export const X_KILOCODE_EDITORNAME = "X-KiloCode-EditorName"
 export const X_KILOCODE_MACHINEID = "X-KiloCode-MachineId"
 export const X_KILOCODE_MODE = "X-KiloCode-Mode"
 export const X_KILOCODE_TESTER = "X-KILOCODE-TESTER"
+export const X_KILOCODE_FEATURE = "X-KiloCode-Feature" // kilocode_change

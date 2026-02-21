@@ -1,5 +1,7 @@
 # Contributing to Kilo Code
 
+> **Note**: New versions of the VS Code extension and CLI are being developed in [Kilo-Org/Kilo](https://github.com/Kilo-Org/Kilo) (extension at `packages/kilo-vscode`, CLI at `packages/opencode`). If you're looking to contribute to the extension or CLI, please head over to that repository.
+
 First off, thanks for taking the time to contribute! ❤️
 
 All types of contributions are encouraged and valued. See the [Table of Contents](#table-of-contents) for different ways to help and details about how this project handles them. Please make sure to read the relevant section before making your contribution. It will make it a lot easier for the team and smooth out the experience for all involved. The community looks forward to your contributions. 🎉
@@ -32,7 +34,7 @@ to [hi@kilocode.ai](mailto:hi@kilocode.ai).
 
 ## I Have a Question
 
-If you need clarification after reading this document, we encourage you to join our [discord](https://kilocode.ai/discord) workspace and join channels [kilo-dev-contributors](https://discord.com/channels/1349288496988160052/1391109167275577464) and [extensions-support channel](https://discord.com/channels/1349288496988160052/1349358641295265864).
+If you need clarification after reading this document, we encourage you to join our [discord](https://kilo.ai/discord) workspace and join channels [kilo-dev-contributors](https://discord.com/channels/1349288496988160052/1391109167275577464) and [extensions-support channel](https://discord.com/channels/1349288496988160052/1349358641295265864).
 
 ## I Want To Contribute
 
@@ -74,7 +76,7 @@ Custom modes are a powerful way to extend Kilo Code's capabilities. To create an
 
 ### Feature Requests
 
-Suggest feature requests in [Discussion](https://github.com/Kilo-Org/kilocode/discussions), only open an [Issue](https://github.com/Kilo-Org/kilocode/issues/new/choose) for reporting a bug or actual contributions. Don't open issues for questions or support, instead join our [Discord workspace](https://kilocode.ai/discord) and ask there.
+Suggest feature requests in [Discussion](https://github.com/Kilo-Org/kilocode/discussions), only open an [Issue](https://github.com/Kilo-Org/kilocode/issues/new/choose) for reporting a bug or actual contributions. Don't open issues for questions or support, instead join our [Discord workspace](https://kilo.ai/discord) and ask there.
 
 - Provide as much context as you can about what you're running into.
 

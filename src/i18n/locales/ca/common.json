@@ -283,5 +283,8 @@
 		"copyInstructions": "Copia els detalls de l'error a continuació:",
 		"errorStack": "Pila d'errors",
 		"componentStack": "Pila de components"
+	},
+	"suggestions": {
+		"start_code_review": "Iniciar revisió de codi"
 	}
 }

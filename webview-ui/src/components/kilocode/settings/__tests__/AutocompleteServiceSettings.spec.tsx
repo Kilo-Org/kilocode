@@ -224,7 +224,9 @@ describe("AutocompleteServiceSettingsView", () => {
 		const onAutocompleteServiceSettingsChange = vi.fn()
 		renderComponent({ onAutocompleteServiceSettingsChange })
 
-		const checkboxLabel = screen.getByText(/kilocode:autocomplete.settings.enableAutoTrigger.label/).closest("label")
+		const checkboxLabel = screen
+			.getByText(/kilocode:autocomplete.settings.enableAutoTrigger.label/)
+			.closest("label")
 		const checkbox = checkboxLabel?.querySelector('input[type="checkbox"]') as HTMLInputElement
 
 		fireEvent.click(checkbox)
@@ -250,7 +252,9 @@ describe("AutocompleteServiceSettingsView", () => {
 		const onAutocompleteServiceSettingsChange = vi.fn()
 		renderComponent({ onAutocompleteServiceSettingsChange })
 
-		const checkboxLabel = screen.getByText(/kilocode:autocomplete.settings.enableChatAutocomplete.label/).closest("label")
+		const checkboxLabel = screen
+			.getByText(/kilocode:autocomplete.settings.enableChatAutocomplete.label/)
+			.closest("label")
 		const checkbox = checkboxLabel?.querySelector('input[type="checkbox"]') as HTMLInputElement
 
 		fireEvent.click(checkbox)

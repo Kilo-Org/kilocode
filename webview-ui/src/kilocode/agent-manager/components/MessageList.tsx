@@ -141,15 +141,26 @@ export function MessageList({ sessionId }: MessageListProps) {
 		return info
 	}, [messages])
 
+	// Track previous message count to detect new messages vs content updates
+	const prevMessageCountRef = useRef(combinedMessages.length)
+
 	// Auto-scroll to bottom when new messages arrive using Virtuoso API
 	useEffect(() => {
-		if (isAtBottom && combinedMessages.length > 0) {
+		// Reset scroll state when switching sessions
+		prevMessageCountRef.current = combinedMessages.length
+
+		// Only auto-scroll if:
+		// 1. User is at bottom (isAtBottom is true)
+		// 2. A new message was added (not just content update)
+		if (isAtBottom && combinedMessages.length > prevMessageCountRef.current) {
 			virtuosoRef.current?.scrollToIndex({
 				index: combinedMessages.length - 1,
 				behavior: "smooth",
 			})
 		}
-	}, [combinedMessages.length, isAtBottom])
+		// Update the previous count for next render
+		prevMessageCountRef.current = combinedMessages.length
+	}, [combinedMessages.length, isAtBottom, sessionId])
 
 	const handleSuggestionClick = useCallback(
 		(suggestion: SuggestionItem) => {
@@ -252,10 +263,10 @@ export function MessageList({ sessionId }: MessageListProps) {
 				ref={virtuosoRef}
 				data={allItems}
 				itemContent={itemContent}
-				followOutput={isAtBottom ? "smooth" : false} // kilocode_change
-				atBottomStateChange={setIsAtBottom} // kilocode_change
+				atBottomStateChange={setIsAtBottom}
 				increaseViewportBy={{ top: 400, bottom: 400 }}
 				className="am-messages-list"
+				followOutput={isAtBottom ? "smooth" : false}
 			/>
 			{showScrollToBottom && (
 				<div className="am-scroll-to-bottom">

@@ -354,6 +354,8 @@
 		"apiKeyStorageNotice": "Ключі API надійно зберігаються в Secret Storage VSCode",
 		"glamaApiKey": "Ключ API Glama",
 		"getGlamaApiKey": "Отримати ключ API Glama",
+		"aihubmixApiKey": "Ключ API AIhubmix",
+		"getAihubmixApiKey": "Отримати ключ API AIhubmix",
 		"openAiCodexRateLimits": {
 			"title": "Ліміти використання для Codex{{planLabel}}",
 			"loading": "Завантаження лімітів використання...",
@@ -606,6 +608,8 @@
 		"getZaiApiKey": "Отримати ключ API Z.AI",
 		"sambaNovaApiKey": "Ключ API SambaNova",
 		"getSambaNovaApiKey": "Отримати ключ API SambaNova",
+		"poeApiKey": "Ключ API Poe",
+		"getPoeApiKey": "Отримати ключ API Poe",
 		"nanoGptApiKey": "Ключ API Nano-GPT",
 		"getNanoGptApiKey": "Отримати ключ API Nano-GPT",
 		"nanoGptModelList": "Список моделей",

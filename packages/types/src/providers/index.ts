@@ -16,6 +16,7 @@ export * from "./synthetic.js"
 export * from "./inception.js"
 export * from "./minimax.js"
 export * from "./glama.js"
+export * from "./aihubmix.js"
 export * from "./apertis.js"
 export * from "./zenmux.js"
 // kilocode_change end
@@ -32,6 +33,7 @@ export * from "./openai.js"
 export * from "./openai-codex.js"
 export * from "./openai-codex-rate-limits.js"
 export * from "./openrouter.js"
+export * from "./poe.js" // kilocode_change
 export * from "./qwen-code.js"
 export * from "./requesty.js"
 export * from "./roo.js"
@@ -58,6 +60,7 @@ import { featherlessDefaultModelId } from "./featherless.js"
 import { fireworksDefaultModelId } from "./fireworks.js"
 import { geminiDefaultModelId } from "./gemini.js"
 import { glamaDefaultModelId } from "./glama.js" // kilocode_change
+import { aihubmixDefaultModelId } from "./aihubmix.js" // kilocode_change
 import { apertisDefaultModelId } from "./apertis.js" // kilocode_change
 import { zenmuxDefaultModelId } from "./zenmux.js" // kilocode_change
 import { groqDefaultModelId } from "./groq.js"
@@ -67,6 +70,7 @@ import { mistralDefaultModelId } from "./mistral.js"
 import { moonshotDefaultModelId } from "./moonshot.js"
 import { openAiCodexDefaultModelId } from "./openai-codex.js"
 import { openRouterDefaultModelId } from "./openrouter.js"
+import { poeDefaultModelId } from "./poe.js" // kilocode_change
 import { qwenCodeDefaultModelId } from "./qwen-code.js"
 import { requestyDefaultModelId } from "./requesty.js"
 import { rooDefaultModelId } from "./roo.js"
@@ -95,6 +99,8 @@ export function getProviderDefaultModelId(
 	switch (provider) {
 		case "openrouter":
 			return openRouterDefaultModelId
+		case "poe": // kilocode_change
+			return poeDefaultModelId // kilocode_change
 		case "zenmux": // kilocode_change
 			return zenmuxDefaultModelId // kilocode_change
 		case "requesty":
@@ -102,6 +108,8 @@ export function getProviderDefaultModelId(
 		// kilocode_change start
 		case "glama":
 			return glamaDefaultModelId
+		case "aihubmix":
+			return aihubmixDefaultModelId
 		case "apertis":
 			return apertisDefaultModelId
 		// kilocode_change end

@@ -335,7 +335,9 @@ describe("MoonshotHandler", () => {
 				}),
 			})
 
-			for await (const _chunk of strictHandler.createMessage(systemPrompt, messages, { taskId: "task-cache-2" })) {
+			for await (const _chunk of strictHandler.createMessage(systemPrompt, messages, {
+				taskId: "task-cache-2",
+			})) {
 				// Drain stream
 			}
 

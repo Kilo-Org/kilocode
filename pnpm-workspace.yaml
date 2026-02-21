@@ -1,7 +1,6 @@
 packages:
   - src
   - webview-ui
-  - cli
   - apps/*
   - packages/*
   - jetbrains/host

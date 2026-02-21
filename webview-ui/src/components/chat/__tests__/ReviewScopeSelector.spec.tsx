@@ -246,6 +246,56 @@ describe("ReviewScopeSelector", () => {
 			const branchRadio = screen.getByRole("radio", { name: /branch/i })
 			expect(branchRadio).toBeChecked()
 		})
+
+		it("sends branch scope even with default uncommitted when branch is only option", () => {
+			// This test verifies the bug fix where effectiveScope should be used instead of selectedScope
+			// When uncommitted is unavailable and branch is available, the dialog auto-selects branch
+			// and should send "branch" even though the initial selectedScope state is "uncommitted"
+			const scopeInfo: ReviewScopeInfo = {
+				uncommitted: { available: false, fileCount: 0 },
+				branch: {
+					available: true,
+					currentBranch: "feature/test",
+					baseBranch: "main",
+					fileCount: 5,
+				},
+			}
+			render(<ReviewScopeSelector {...defaultProps} scopeInfo={scopeInfo} />)
+
+			// Immediately click Start Review without manually selecting anything
+			fireEvent.click(screen.getByText("Start Review"))
+
+			// Should send "branch" due to auto-selection (effectiveScope), not "uncommitted" (selectedScope)
+			expect(mockPostMessage).toHaveBeenCalledWith({
+				type: "reviewScopeSelected",
+				reviewScope: "branch",
+			})
+		})
+
+		it("sends uncommitted scope when branch is unavailable and auto-selected", () => {
+			// This tests the reverse scenario - when only uncommitted is available
+			const scopeInfo: ReviewScopeInfo = {
+				uncommitted: { available: true, fileCount: 3 },
+				branch: {
+					available: false,
+					currentBranch: "main",
+					baseBranch: "main",
+					fileCount: 0,
+				},
+			}
+			render(<ReviewScopeSelector {...defaultProps} scopeInfo={scopeInfo} />)
+
+			// Uncommitted should be auto-selected and checked
+			const uncommittedRadio = screen.getByRole("radio", { name: /uncommitted/i })
+			expect(uncommittedRadio).toBeChecked()
+
+			fireEvent.click(screen.getByText("Start Review"))
+
+			expect(mockPostMessage).toHaveBeenCalledWith({
+				type: "reviewScopeSelected",
+				reviewScope: "uncommitted",
+			})
+		})
 	})
 
 	describe("Null scopeInfo handling", () => {

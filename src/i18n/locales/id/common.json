@@ -283,5 +283,8 @@
 		"copyInstructions": "Salin detail error di bawah:",
 		"errorStack": "Stack Error",
 		"componentStack": "Stack Komponen"
+	},
+	"suggestions": {
+		"start_code_review": "Mulai tinjauan kode"
 	}
 }

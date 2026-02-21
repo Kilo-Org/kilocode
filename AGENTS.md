@@ -8,7 +8,6 @@ This is a pnpm monorepo using Turbo for task orchestration:
 
 - **`src/`** - VSCode extension (core logic, API providers, tools)
 - **`webview-ui/`** - React frontend (chat UI, settings)
-- **`cli/`** - Standalone CLI package
 - **`packages/`** - Shared packages (`types`, `ipc`, `telemetry`, `cloud`)
 - **`jetbrains/`** - JetBrains plugin (Kotlin + Node.js host)
 - **`apps/`** - E2E tests, Storybook, docs
@@ -28,7 +27,7 @@ The `@kilocode/agent-runtime` package enables running Kilo Code agents as isolat
 
 ```
 ┌─────────────────────┐     fork()      ┌─────────────────────┐
-│  CLI / Manager      │ ───────────────▶│  Agent Process      │
+│  Agent Manager      │ ───────────────▶│  Agent Process      │
 │                     │◀───── IPC ─────▶│  (extension host)   │
 └─────────────────────┘                 └─────────────────────┘
 ```
@@ -135,7 +134,6 @@ Brief description of the change
 ```
 
 - Use `patch` for fixes, `minor` for features, `major` for breaking changes
-- For CLI changes, use `"@kilocode/cli": patch` instead
 
 Keep changesets concise and feature-oriented as they appear directly in release notes.
 
@@ -176,7 +174,6 @@ const bar = 2
 
 Code in these directories is Kilo Code-specific and doesn't need markers:
 
-- `cli/` - CLI package
 - `jetbrains/` - JetBrains plugin
 - `agent-manager/` directories
 - Any path containing `kilocode` in filename or directory name
@@ -208,7 +205,6 @@ Keep changes to core extension code minimal to reduce merge conflicts during ups
     - Example: For `src/tests/user.spec.ts`, run `cd src && pnpm test tests/user.spec.ts` NOT `pnpm test src/tests/user.spec.ts`
     - **Test File Naming Convention**:
         - Monorepo default: `.spec.ts` / `.spec.tsx`
-        - CLI package exception: `.test.ts` / `.test.tsx` (match existing CLI convention)
 
 2. Lint Rules:
 

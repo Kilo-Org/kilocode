@@ -391,7 +391,7 @@ export class ContextProxy {
 
 		await this.setValues({
 			...PROVIDER_SETTINGS_KEYS.filter((key) => !isSecretStateKey(key))
-				.filter((key) => !!this.stateCache[key])
+				.filter((key) => this.stateCache[key] !== undefined) // kilocode_change
 				.reduce((acc, key) => ({ ...acc, [key]: undefined }), {} as ProviderSettings),
 			...values,
 		})

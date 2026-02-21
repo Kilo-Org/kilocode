@@ -283,5 +283,8 @@
 		"copyInstructions": "Skopiuj szczegóły błędu poniżej:",
 		"errorStack": "Stos błędu",
 		"componentStack": "Stos komponentów"
+	},
+	"suggestions": {
+		"start_code_review": "Rozpocznij przegląd kodu"
 	}
 }

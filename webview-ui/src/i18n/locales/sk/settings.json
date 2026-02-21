@@ -347,6 +347,8 @@
 		"apiKeyStorageNotice": "Kľúče API sú bezpečne uložené v tajnom úložisku VSCode",
 		"glamaApiKey": "Kľúč API Glama",
 		"getGlamaApiKey": "Získať kľúč API Glama",
+		"aihubmixApiKey": "Kľúč API AIhubmix",
+		"getAihubmixApiKey": "Získať kľúč API AIhubmix",
 		"openAiCodexRateLimits": {
 			"title": "Limity využitia pre Codex{{planLabel}}",
 			"loading": "Načítanie limitov využitia...",
@@ -457,6 +459,8 @@
 		"groqApiKey": "Kľúč API Groq",
 		"getSambaNovaApiKey": "Získať kľúč API SambaNova",
 		"sambaNovaApiKey": "Kľúč API SambaNova",
+		"poeApiKey": "Kľúč API Poe",
+		"getPoeApiKey": "Získať kľúč API Poe",
 		"getGeminiApiKey": "Získať kľúč API Gemini",
 		"openAiApiKey": "Kľúč API OpenAI",
 		"getHuggingFaceApiKey": "Získať kľúč API Hugging Face",

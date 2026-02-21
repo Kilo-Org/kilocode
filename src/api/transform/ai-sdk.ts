@@ -5,13 +5,7 @@
 
 import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
-import {
-	tool as createTool,
-	jsonSchema,
-	type AssistantModelMessage,
-	type ModelMessage,
-	type TextStreamPart,
-} from "ai"
+import { tool as createTool, jsonSchema, type AssistantModelMessage, type ModelMessage, type TextStreamPart } from "ai"
 import type { ApiStreamChunk } from "./stream"
 
 /**

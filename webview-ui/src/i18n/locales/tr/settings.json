@@ -316,6 +316,8 @@
 		"getVercelAiGatewayApiKey": "Vercel AI Gateway API Anahtarı Al",
 		"glamaApiKey": "Glama API Anahtarı",
 		"getGlamaApiKey": "Glama API Anahtarı Al",
+		"aihubmixApiKey": "AIhubmix API Anahtarı",
+		"getAihubmixApiKey": "AIhubmix API Anahtarı Al",
 		"apiKeyStorageNotice": "API anahtarları VSCode'un Gizli Depolamasında güvenli bir şekilde saklanır",
 		"openAiCodexRateLimits": {
 			"title": "Usage Limits for Codex{{planLabel}}",
@@ -417,6 +419,8 @@
 		"groqApiKey": "Groq API Anahtarı",
 		"getSambaNovaApiKey": "SambaNova API Anahtarı Al",
 		"sambaNovaApiKey": "SambaNova API Anahtarı",
+		"poeApiKey": "Poe API Anahtarı",
+		"getPoeApiKey": "Poe API Anahtarı Al",
 		"getHuggingFaceApiKey": "Hugging Face API Anahtarı Al",
 		"huggingFaceApiKey": "Hugging Face API Anahtarı",
 		"getOvhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API Anahtarı Al",

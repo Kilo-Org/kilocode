@@ -28,7 +28,7 @@ describe("CerebrasHandler", () => {
 	let handler: CerebrasHandler
 	const mockOptions = {
 		cerebrasApiKey: "test-api-key",
-		apiModelId: "llama-3.3-70b" as CerebrasModelId,
+		apiModelId: "gpt-oss-120b" as CerebrasModelId,
 	}
 
 	beforeEach(() => {
@@ -49,8 +49,8 @@ describe("CerebrasHandler", () => {
 	describe("getModel", () => {
 		it("should return correct model info", () => {
 			const { id, info } = handler.getModel()
-			expect(id).toBe("llama-3.3-70b")
-			expect(info).toEqual(cerebrasModels["llama-3.3-70b"])
+			expect(id).toBe("gpt-oss-120b")
+			expect(info).toEqual(cerebrasModels["gpt-oss-120b"])
 		})
 
 		it("should fallback to default model when apiModelId is not provided", () => {

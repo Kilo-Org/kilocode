@@ -17,10 +17,11 @@ import {
 	X_KILOCODE_TESTER,
 	X_KILOCODE_EDITORNAME,
 	X_KILOCODE_MACHINEID,
+	X_KILOCODE_FEATURE, // kilocode_change
 } from "../../shared/kilocode/headers"
 import { DEFAULT_HEADERS } from "./constants"
 import { streamSse } from "../../services/autocomplete/continuedev/core/fetch/stream"
-import { getEditorNameHeader } from "../../core/kilocode/wrapper"
+import { getEditorNameHeader, getKiloCodeWrapperProperties } from "../../core/kilocode/wrapper"
 import type { FimHandler } from "./kilocode/FimHandler"
 import * as vscode from "vscode"
 
@@ -91,8 +92,37 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 			headers[X_KILOCODE_TESTER] = "SUPPRESS"
 		}
 
+		// kilocode_change start: Feature attribution for microdollar usage tracking
+		headers[X_KILOCODE_FEATURE] = this.resolveFeature(metadata)
+		// kilocode_change end
+
 		return Object.keys(headers).length > 0 ? { headers } : undefined
 	}
+
+	// kilocode_change start
+	/**
+	 * Determine the feature value for microdollar usage tracking.
+	 * Priority: explicit metadata override > wrapper detection > default
+	 */
+	private resolveFeature(metadata?: ApiHandlerCreateMessageMetadata): string {
+		// 1. Explicit override from metadata (e.g. 'parallel-agent', 'autocomplete')
+		if (metadata?.feature) {
+			return metadata.feature
+		}
+
+		// 2. Detect context from wrapper properties
+		const wrapperProps = getKiloCodeWrapperProperties()
+		if (wrapperProps.kiloCodeWrapperJetbrains) {
+			return "jetbrains-extension"
+		}
+		if (wrapperProps.kiloCodeWrapper === "agent-manager") {
+			return "agent-manager"
+		}
+
+		// 3. Default: VS Code extension
+		return "vscode-extension"
+	}
+	// kilocode_change end
 
 	override getTotalCost(lastUsage: CompletionUsage): number {
 		const model = this.getModel().info
@@ -173,13 +203,15 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 		const endpoint = new URL("fim/completions", this.apiFIMBase)
 
 		// Build headers using customRequestOptions for consistency
+		// kilocode_change: pass feature: "autocomplete" through metadata so resolveFeature() handles it centrally
 		const headers: Record<string, string> = {
 			...DEFAULT_HEADERS,
 			"Content-Type": "application/json",
 			Accept: "application/json",
 			"x-api-key": this.options.kilocodeToken ?? "",
 			Authorization: `Bearer ${this.options.kilocodeToken}`,
-			...this.customRequestOptions(taskId ? { taskId, mode: "code" } : undefined)?.headers,
+			...this.customRequestOptions({ taskId: taskId ?? "autocomplete", mode: "code", feature: "autocomplete" })
+				?.headers,
 		}
 
 		// temperature: 0.2 is mentioned as a sane example in mistral's docs and is what continue uses.

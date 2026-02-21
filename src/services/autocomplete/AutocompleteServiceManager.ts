@@ -36,7 +36,9 @@ export class AutocompleteServiceManager {
 
 	constructor(context: vscode.ExtensionContext, cline: ClineProvider) {
 		if (AutocompleteServiceManager._instance) {
-			throw new Error("AutocompleteServiceManager is a singleton. Use AutocompleteServiceManager.getInstance() instead.")
+			throw new Error(
+				"AutocompleteServiceManager is a singleton. Use AutocompleteServiceManager.getInstance() instead.",
+			)
 		}
 
 		this.context = context

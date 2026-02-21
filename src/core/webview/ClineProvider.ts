@@ -1417,7 +1417,7 @@ export class ClineProvider
 	 * Handle switching to a new mode, including updating the associated API configuration
 	 * @param newMode The mode to switch to
 	 */
-	public async handleModeSwitch(newMode: Mode) {
+	public async handleModeSwitch(newMode: Mode, options?: { reviewScope?: "uncommitted" | "branch" }) {
 		const task = this.getCurrentTask()
 
 		if (task) {
@@ -1498,7 +1498,12 @@ export class ClineProvider
 
 		// kilocode_change start: Review mode scope selection
 		if (newMode === "review") {
-			await this.triggerReviewScopeSelection()
+			if (options?.reviewScope) {
+				// Skip the scope dialog and start review directly with the specified scope
+				await this.handleReviewScopeSelected(options.reviewScope)
+			} else {
+				await this.triggerReviewScopeSelection()
+			}
 		}
 		// kilocode_change end
 	}

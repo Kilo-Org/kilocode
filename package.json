@@ -21,7 +21,7 @@
 		"vsix:nightly": "turbo vsix:nightly --log-order grouped --output-logs new-only",
 		"clean": "turbo clean --log-order grouped --output-logs new-only && rimraf dist out bin .vite-port .turbo",
 		"install:vsix": "pnpm install --frozen-lockfile && pnpm clean && pnpm vsix && node scripts/install-vsix.js",
-		"changeset:version": "cp CHANGELOG.md src/CHANGELOG.md && changeset version && cp -vf src/CHANGELOG.md . && pnpm --filter @kilocode/cli changeset:version",
+		"changeset:version": "cp CHANGELOG.md src/CHANGELOG.md && changeset version && cp -vf src/CHANGELOG.md .",
 		"knip": "knip --include files",
 		"evals": "dotenvx run -f packages/evals/.env.development packages/evals/.env.local -- docker compose -f packages/evals/docker-compose.yml --profile server --profile runner up --build --scale runner=0",
 		"playwright": "turbo playwright",
@@ -32,14 +32,7 @@
 		"jetbrains:run-bundle": "turbo jetbrains:run-bundle",
 		"jetbrains:build": "turbo jetbrains:build",
 		"jetbrains:run": "turbo jetbrains:run",
-		"jetbrains-host:build": "turbo jetbrains-host:build",
-		"cli:build": "turbo run cli:build",
-		"cli:bundle": "turbo run cli:bundle --force",
-		"cli:deps": "pnpm --filter @kilocode/cli run deps:install",
-		"cli:dev": "pnpm --filter @kilocode/cli run dev",
-		"cli:run": "pnpm --filter @kilocode/cli run start",
-		"docs:dev": "pnpm --filter kilocode-docs dev",
-		"docs:build": "pnpm --filter kilocode-docs build"
+		"jetbrains-host:build": "turbo jetbrains-host:build"
 	},
 	"devDependencies": {
 		"@changesets/changelog-github": "^0.5.1",

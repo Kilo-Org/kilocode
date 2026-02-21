@@ -326,6 +326,8 @@
 		"getVercelAiGatewayApiKey": "取得 Vercel AI Gateway API 金鑰",
 		"glamaApiKey": "Glama API 金鑰",
 		"getGlamaApiKey": "取得 Glama API 金鑰",
+		"aihubmixApiKey": "AIhubmix API 金鑰",
+		"getAihubmixApiKey": "取得 AIhubmix API 金鑰",
 		"apiKeyStorageNotice": "API 金鑰會安全地儲存在 VS Code 的 Secret Storage 中",
 		"openAiCodexRateLimits": {
 			"title": "Usage Limits for Codex{{planLabel}}",
@@ -427,6 +429,8 @@
 		"groqApiKey": "Groq API 金鑰",
 		"getSambaNovaApiKey": "取得 SambaNova API 金鑰",
 		"sambaNovaApiKey": "SambaNova API 金鑰",
+		"poeApiKey": "Poe API 金鑰",
+		"getPoeApiKey": "取得 Poe API 金鑰",
 		"getHuggingFaceApiKey": "取得 Hugging Face API 金鑰",
 		"huggingFaceApiKey": "Hugging Face API 金鑰",
 		"getOvhCloudAiEndpointsApiKey": "取得 OVHcloud AI Endpoints API 金鑰",

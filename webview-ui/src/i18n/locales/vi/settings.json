@@ -324,6 +324,8 @@
 		"getVercelAiGatewayApiKey": "Lấy khóa API Vercel AI Gateway",
 		"glamaApiKey": "Khóa API Glama",
 		"getGlamaApiKey": "Lấy khóa API Glama",
+		"aihubmixApiKey": "Khóa API AIhubmix",
+		"getAihubmixApiKey": "Lấy khóa API AIhubmix",
 		"apiKeyStorageNotice": "Khóa API được lưu trữ an toàn trong Bộ lưu trữ bí mật của VSCode",
 		"openAiCodexRateLimits": {
 			"title": "Usage Limits for Codex{{planLabel}}",
@@ -425,6 +427,8 @@
 		"groqApiKey": "Khóa API Groq",
 		"getSambaNovaApiKey": "Lấy khóa API SambaNova",
 		"sambaNovaApiKey": "Khóa API SambaNova",
+		"poeApiKey": "Khóa API Poe",
+		"getPoeApiKey": "Lấy khóa API Poe",
 		"getHuggingFaceApiKey": "Lấy Khóa API Hugging Face",
 		"huggingFaceApiKey": "Khóa API Hugging Face",
 		"getOvhCloudAiEndpointsApiKey": "Lấy Khóa API OVHcloud AI Endpoints",

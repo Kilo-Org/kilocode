@@ -283,5 +283,8 @@
 		"copyInstructions": "Скопируйте детали ошибки ниже:",
 		"errorStack": "Стек ошибки",
 		"componentStack": "Стек компонентов"
+	},
+	"suggestions": {
+		"start_code_review": "Начать проверку кода"
 	}
 }

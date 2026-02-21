@@ -1,5 +1,7 @@
 package ai.kilocode.jetbrains.editor
 
+import ai.kilocode.jetbrains.core.ExtensionHostManager
+import ai.kilocode.jetbrains.core.PluginContext
 import ai.kilocode.jetbrains.monitoring.ScopeRegistry
 import ai.kilocode.jetbrains.monitoring.DisposableTracker
 import ai.kilocode.jetbrains.plugin.SystemObjectProvider
@@ -162,10 +164,12 @@ class EditorAndDocManager(val project: Project) : Disposable {
         CoroutineScope(Dispatchers.Default).launch {
             // Wait for extension host to be ready before initializing editors
             try {
-                // Get ExtensionHostManager from SystemObjectProvider
+                // Get ExtensionHostManager from SystemObjectProvider with PluginContext fallback
                 val systemObjectProvider = SystemObjectProvider.getInstance(project)
-                val extensionHostManager = systemObjectProvider.get<ai.kilocode.jetbrains.core.ExtensionHostManager>("extensionHostManager")
-                
+                val extensionHostManager =
+                    systemObjectProvider.get<ExtensionHostManager>("extensionHostManager")
+                        ?: project.getService(PluginContext::class.java).getExtensionHostManager()
+
                 if (extensionHostManager == null) {
                     logger.error("ExtensionHostManager not available in SystemObjectProvider, skipping editor initialization")
                     return@launch

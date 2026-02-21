@@ -2,7 +2,7 @@
 import OpenAI from "openai"
 import type Anthropic from "@anthropic-ai/sdk"
 import type { ModelInfo } from "@roo-code/types"
-import { zenmuxDefaultModelId, zenmuxDefaultModelInfo } from "@roo-code/types"
+import { NATIVE_TOOL_DEFAULTS, TOOL_PROTOCOL, zenmuxDefaultModelId, zenmuxDefaultModelInfo } from "@roo-code/types"
 import { ApiProviderError } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 
@@ -24,7 +24,6 @@ import { ChatCompletionTool } from "openai/resources"
 import { convertToOpenAiMessages } from "../transform/openai-format"
 import { convertToR1Format } from "../transform/r1-format"
 import { resolveToolProtocol } from "../../utils/resolveToolProtocol"
-import { TOOL_PROTOCOL } from "@roo-code/types"
 import { ApiStreamChunk } from "../transform/stream"
 import { NativeToolCallParser } from "../../core/assistant-message/NativeToolCallParser"
 import { KiloCodeChunkSchema } from "./kilocode/chunk-schema"
@@ -117,21 +116,16 @@ export class ZenMuxHandler extends BaseProvider implements SingleCompletionHandl
 	}
 	async createZenMuxStream(
 		client: OpenAI,
-		systemPrompt: string,
-		messages: Anthropic.Messages.MessageParam[],
+		openAiMessages: OpenAI.Chat.ChatCompletionMessageParam[],
 		model: { id: string; info: ModelInfo },
 		_reasoningEffort?: string,
 		thinkingBudgetTokens?: number,
 		zenMuxProviderSorting?: string,
 		tools?: Array<ChatCompletionTool>,
+		toolChoice?: OpenAI.Chat.ChatCompletionCreateParams["tool_choice"],
+		parallelToolCalls: boolean = false,
 		_geminiThinkingLevel?: string,
 	) {
-		// Convert Anthropic messages to OpenAI format
-		const openAiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-			{ role: "system", content: systemPrompt },
-			...convertToOpenAiMessages(messages),
-		]
-
 		// Build reasoning config if thinking budget is set
 		let reasoning: { max_tokens: number } | undefined
 		if (thinkingBudgetTokens && thinkingBudgetTokens > 0) {
@@ -155,16 +149,20 @@ export class ZenMuxHandler extends BaseProvider implements SingleCompletionHandl
 						},
 					}
 				: {}),
-			...this.getOpenAIToolParams(tools),
+			...this.getOpenAIToolParams(tools, toolChoice, parallelToolCalls),
 		})
 
 		return stream
 	}
-	getOpenAIToolParams(tools?: ChatCompletionTool[], enableParallelToolCalls: boolean = false) {
+	getOpenAIToolParams(
+		tools?: ChatCompletionTool[],
+		toolChoice?: OpenAI.Chat.ChatCompletionCreateParams["tool_choice"],
+		enableParallelToolCalls: boolean = false,
+	) {
 		return tools?.length
 			? {
 					tools,
-					tool_choice: tools ? "auto" : undefined,
+					tool_choice: toolChoice ?? "auto",
 					parallel_tool_calls: enableParallelToolCalls ? true : false,
 				}
 			: {
@@ -219,7 +217,9 @@ export class ZenMuxHandler extends BaseProvider implements SingleCompletionHandl
 		}
 
 		// Process reasoning_details when switching models to Gemini for native tool call compatibility
-		const toolProtocol = resolveToolProtocol(this.options, model.info)
+		// kilocode_change start
+		const toolProtocol = resolveToolProtocol(this.options, model.info, metadata?.toolProtocol)
+		// kilocode_change end
 		const isNativeProtocol = toolProtocol === TOOL_PROTOCOL.NATIVE
 		const isGemini = modelId.startsWith("google/gemini")
 
@@ -264,17 +264,24 @@ export class ZenMuxHandler extends BaseProvider implements SingleCompletionHandl
 			}
 		}
 
+		// kilocode_change start
+		const tools = isNativeProtocol ? metadata?.tools : undefined
+		const toolChoice = isNativeProtocol ? metadata?.tool_choice : undefined
+		const parallelToolCalls = isNativeProtocol ? (metadata?.parallelToolCalls ?? false) : false
+		// kilocode_change end
+
 		let stream
 		try {
 			stream = await this.createZenMuxStream(
 				this.client,
-				systemPrompt,
-				messages,
+				openAiMessages,
 				model,
 				this.options.reasoningEffort,
 				this.options.modelMaxThinkingTokens,
 				this.options.zenmuxProviderSort,
-				metadata?.tools,
+				tools,
+				toolChoice,
+				parallelToolCalls,
 			)
 		} catch (error) {
 			const errorMessage = error instanceof Error ? error.message : String(error)
@@ -447,7 +454,9 @@ export class ZenMuxHandler extends BaseProvider implements SingleCompletionHandl
 
 	override getModel() {
 		const id = this.options.zenmuxModelId ?? zenmuxDefaultModelId
-		let info = this.models[id] ?? zenmuxDefaultModelInfo
+		// kilocode_change start
+		let info = { ...NATIVE_TOOL_DEFAULTS, ...(this.models[id] ?? zenmuxDefaultModelInfo) }
+		// kilocode_change end
 
 		const isDeepSeekR1 = id.startsWith("deepseek/deepseek-r1") || id === "perplexity/sonar-reasoning"
 

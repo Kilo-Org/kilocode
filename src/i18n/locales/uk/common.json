@@ -279,5 +279,8 @@
 		"copyInstructions": "Скопіюйте деталі помилки нижче:",
 		"errorStack": "Стек помилки",
 		"componentStack": "Стек компонентів"
+	},
+	"suggestions": {
+		"start_code_review": "Розпочати огляд коду"
 	}
 }
