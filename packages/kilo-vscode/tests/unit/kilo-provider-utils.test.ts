@@ -4,9 +4,10 @@ import {
   normalizeProviders,
   filterVisibleAgents,
   buildSettingPath,
+  resolveDefaultModelSelection,
   mapSSEEventToWebviewMessage,
 } from "../../src/kilo-provider-utils"
-import type { SessionInfo, AgentInfo, Provider, SSEEvent } from "../../src/services/cli-backend/types"
+import type { SessionInfo, AgentInfo, Provider, ProviderModel, SSEEvent } from "../../src/services/cli-backend/types"
 
 function makeSession(overrides: Partial<SessionInfo> = {}): SessionInfo {
   return {
@@ -18,8 +19,12 @@ function makeSession(overrides: Partial<SessionInfo> = {}): SessionInfo {
   }
 }
 
-function makeProvider(id: string): Provider {
-  return { id, name: id.toUpperCase(), models: {} }
+function makeProvider(id: string, modelIDs: string[] = []): Provider {
+  const models: Record<string, ProviderModel> = {}
+  for (const modelID of modelIDs) {
+    models[modelID] = { id: modelID, name: modelID }
+  }
+  return { id, name: id.toUpperCase(), models }
 }
 
 function makeAgent(overrides: Partial<AgentInfo> = {}): AgentInfo {
@@ -136,6 +141,60 @@ describe("buildSettingPath", () => {
     const { section, leaf } = buildSettingPath("foo..bar")
     expect(leaf).toBe("bar")
     expect(section).toBe("foo.")
+  })
+})
+
+describe("resolveDefaultModelSelection", () => {
+  it("uses explicitly configured model selection when valid", () => {
+    const providers = {
+      kilo: makeProvider("kilo", ["kilo/auto"]),
+      anthropic: makeProvider("anthropic", ["claude-sonnet-4"]),
+    }
+
+    const result = resolveDefaultModelSelection({
+      providers,
+      defaults: { kilo: "kilo/auto", anthropic: "claude-sonnet-4" },
+      configured: { providerID: "anthropic", modelID: "claude-sonnet-4" },
+    })
+
+    expect(result).toEqual({ providerID: "anthropic", modelID: "claude-sonnet-4" })
+  })
+
+  it("falls back to backend defaults when configured selection is invalid", () => {
+    const providers = {
+      kilo: makeProvider("kilo", ["kilo/auto"]),
+      anthropic: makeProvider("anthropic", ["claude-sonnet-4"]),
+    }
+
+    const result = resolveDefaultModelSelection({
+      providers,
+      defaults: { kilo: "kilo/auto", anthropic: "claude-sonnet-4" },
+      configured: { providerID: "anthropic", modelID: "missing-model" },
+    })
+
+    expect(result).toEqual({ providerID: "kilo", modelID: "kilo/auto" })
+  })
+
+  it("uses first model when backend default model is unavailable", () => {
+    const providers = {
+      openai: makeProvider("openai", ["gpt-5", "gpt-4.1"]),
+    }
+
+    const result = resolveDefaultModelSelection({
+      providers,
+      defaults: { openai: "does-not-exist" },
+    })
+
+    expect(result).toEqual({ providerID: "openai", modelID: "gpt-5" })
+  })
+
+  it("returns hardcoded fallback when there are no valid providers", () => {
+    const result = resolveDefaultModelSelection({
+      providers: {},
+      defaults: {},
+    })
+
+    expect(result).toEqual({ providerID: "kilo", modelID: "kilo/auto" })
   })
 })
 

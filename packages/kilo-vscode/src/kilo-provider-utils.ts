@@ -1,4 +1,4 @@
-import type { SessionInfo, AgentInfo, Provider, SSEEvent } from "./services/cli-backend/types"
+import type { SessionInfo, AgentInfo, Provider, SSEEvent, ModelSelection } from "./services/cli-backend/types"
 
 export function sessionToWebview(session: SessionInfo) {
   return {
@@ -28,6 +28,38 @@ export function buildSettingPath(key: string): { section: string; leaf: string }
   const section = parts.slice(0, -1).join(".")
   const leaf = parts[parts.length - 1]!
   return { section, leaf }
+}
+
+const DEFAULT_FALLBACK_SELECTION: ModelSelection = { providerID: "kilo", modelID: "kilo/auto" }
+
+export function resolveDefaultModelSelection(input: {
+  providers: Record<string, Provider>
+  defaults: Record<string, string>
+  configured?: Partial<ModelSelection>
+}): ModelSelection {
+  const configuredProviderID = input.configured?.providerID?.trim()
+  const configuredModelID = input.configured?.modelID?.trim()
+
+  if (configuredProviderID && configuredModelID) {
+    const configuredProvider = input.providers[configuredProviderID]
+    if (configuredProvider?.models?.[configuredModelID]) {
+      return { providerID: configuredProviderID, modelID: configuredModelID }
+    }
+  }
+
+  for (const provider of Object.values(input.providers)) {
+    const defaultModelID = input.defaults[provider.id]
+    if (defaultModelID && provider.models?.[defaultModelID]) {
+      return { providerID: provider.id, modelID: defaultModelID }
+    }
+
+    const firstModelID = Object.keys(provider.models ?? {})[0]
+    if (firstModelID) {
+      return { providerID: provider.id, modelID: firstModelID }
+    }
+  }
+
+  return DEFAULT_FALLBACK_SELECTION
 }
 
 export type WebviewMessage =

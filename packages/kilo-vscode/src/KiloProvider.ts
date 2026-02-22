@@ -14,6 +14,7 @@ import { TelemetryProxy, type TelemetryPropertiesProvider } from "./services/tel
 import {
   sessionToWebview,
   normalizeProviders,
+  resolveDefaultModelSelection,
   filterVisibleAgents,
   buildSettingPath,
   mapSSEEventToWebviewMessage,
@@ -846,15 +847,27 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const normalized = normalizeProviders(response.all)
 
       const config = vscode.workspace.getConfiguration("kilo-code.new.model")
-      const providerID = config.get<string>("providerID", "kilo")
-      const modelID = config.get<string>("modelID", "kilo/auto")
+      const providerInspect = config.inspect<string>("providerID")
+      const modelInspect = config.inspect<string>("modelID")
+      const configuredProviderID =
+        providerInspect?.workspaceFolderValue ?? providerInspect?.workspaceValue ?? providerInspect?.globalValue
+      const configuredModelID =
+        modelInspect?.workspaceFolderValue ?? modelInspect?.workspaceValue ?? modelInspect?.globalValue
+      const defaultSelection = resolveDefaultModelSelection({
+        providers: normalized,
+        defaults: response.default,
+        configured: {
+          providerID: configuredProviderID,
+          modelID: configuredModelID,
+        },
+      })
 
       const message = {
         type: "providersLoaded",
         providers: normalized,
         connected: response.connected,
         defaults: response.default,
-        defaultSelection: { providerID, modelID },
+        defaultSelection,
       }
       this.cachedProvidersMessage = message
       this.postMessage(message)
