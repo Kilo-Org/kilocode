@@ -28,6 +28,7 @@ Shell integration is built into Kilo Code and works automatically in most cases.
 2. **Ensure a compatible shell is selected**: Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P`) → "Terminal: Select Default Profile" → Choose bash, zsh, PowerShell, or fish
 3. **Windows PowerShell users**: Run `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser` then restart VS Code
 4. **WSL users**: Add `. "$(code --locate-shell-integration-path bash)"` to your `~/.bashrc`
+5. **macOS/Linux users**: Run `echo "$TERM_PROGRAM"` and use that value in your shell config guard (examples below)
 
 ## Terminal Integration Settings
 
@@ -125,6 +126,29 @@ Common policies:
 ### Manual Shell Integration Installation
 
 If automatic integration fails, add the appropriate line to your shell configuration:
+
+#### macOS/Linux IDE variants (Cursor, Windsurf, etc.)
+
+On macOS/Linux, many VSCode-based editors use a different `TERM_PROGRAM` value than `vscode`.
+
+1. Check your current value:
+
+```bash
+echo "$TERM_PROGRAM"
+```
+
+2. Use that value in your shell startup guard.
+
+Common values:
+- `vscode` (VS Code and many forks)
+- `cursor`
+- `surf` (Windsurf)
+
+Example for Windsurf + Zsh:
+
+```bash
+[[ "$TERM_PROGRAM" == "surf" ]] && . "$(code --locate-shell-integration-path zsh)"
+```
 
 **Bash** (`~/.bashrc`):
 
