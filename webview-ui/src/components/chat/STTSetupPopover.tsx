@@ -36,7 +36,7 @@ export const STTSetupPopoverContent: React.FC<STTSetupPopoverContentProps> = ({
 	error,
 }) => {
 	const { t } = useTranslation()
-	const docsUrl = buildDocLink("features/experimental/voice-transcription", "stt_setup")
+	const docsUrl = buildDocLink("code-with-ai/features/speech-to-text", "stt_setup")
 
 	const handleOpenAiHelpClick = () => {
 		vscode.postMessage({ type: "openExternal", url: docsUrl })
