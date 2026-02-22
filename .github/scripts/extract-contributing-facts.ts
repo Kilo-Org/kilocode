@@ -15,16 +15,21 @@
 // Minimal YAML parser helpers (no external dependency needed for these simple files)
 // ---------------------------------------------------------------------------
 
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
 /** Extract a top-level scalar value from YAML text, e.g. `blank_issues_enabled: false` */
 function yamlScalar(text: string, key: string): string | null {
-  const match = text.match(new RegExp(`^${key}:\\s*(.+)$`, "m"))
+  const match = text.match(new RegExp(`^${escapeRegex(key)}:\\s*(.+)$`, "m"))
   return match ? match[1].trim() : null
 }
 
 /** Extract a top-level list value from YAML text, e.g. `labels: ["bug"]` or `labels:\n  - bug` */
 function yamlList(text: string, key: string): string[] {
+  const escaped = escapeRegex(key)
   // Inline array: labels: ["bug", "discussion"]
-  const inline = text.match(new RegExp(`^${key}:\\s*\\[([^\\]]+)\\]`, "m"))
+  const inline = text.match(new RegExp(`^${escaped}:\\s*\\[([^\\]]+)\\]`, "m"))
   if (inline) {
     return inline[1]
       .split(",")
@@ -32,7 +37,7 @@ function yamlList(text: string, key: string): string[] {
       .filter(Boolean)
   }
   // Block list: labels:\n  - bug
-  const blockMatch = text.match(new RegExp(`^${key}:\\s*\\n((?:[ \\t]+-[^\\n]+\\n?)+)`, "m"))
+  const blockMatch = text.match(new RegExp(`^${escaped}:\\s*\\n((?:[ \\t]+-[^\\n]+\\n?)+)`, "m"))
   if (blockMatch) {
     return blockMatch[1]
       .split("\n")
@@ -216,6 +221,14 @@ async function readFileSafe(path: string): Promise<string | null> {
   }
 }
 
+async function readFileRequired(path: string): Promise<string> {
+  try {
+    return await Bun.file(path).text()
+  } catch (err) {
+    throw new Error(`Required source file missing: ${path} — ${err}`)
+  }
+}
+
 async function main() {
   // Parse --output argument
   const args = process.argv.slice(2)
@@ -244,22 +257,22 @@ async function main() {
     : false
 
   // --- compliance-close.yml ---
-  const complianceRaw = await readFileSafe(".github/workflows/compliance-close.yml")
-  const autoCloseWindowHours = complianceRaw ? extractComplianceHours(complianceRaw) : 2
+  const complianceRaw = await readFileRequired(".github/workflows/compliance-close.yml")
+  const autoCloseWindowHours = extractComplianceHours(complianceRaw)
 
   // --- stale-issues.yml ---
-  const staleRaw = await readFileSafe(".github/workflows/stale-issues.yml")
-  const { staleDays, closeDays } = staleRaw ? extractStaleDays(staleRaw) : { staleDays: 90, closeDays: 7 }
+  const staleRaw = await readFileRequired(".github/workflows/stale-issues.yml")
+  const { staleDays, closeDays } = extractStaleDays(staleRaw)
 
   // --- close-stale-prs.yml ---
-  const prStaleRaw = await readFileSafe(".github/workflows/close-stale-prs.yml")
-  const prDaysBeforeClose = prStaleRaw ? extractPrStaleDays(prStaleRaw) : 60
+  const prStaleRaw = await readFileRequired(".github/workflows/close-stale-prs.yml")
+  const prDaysBeforeClose = extractPrStaleDays(prStaleRaw)
 
   // --- pr-standards.yml ---
-  const prRaw = await readFileSafe(".github/workflows/pr-standards.yml")
-  const prTitlePattern = prRaw ? extractPrTitleRegex(prRaw) : "^(feat|fix|docs|chore|refactor|test)\\s*(\\([a-zA-Z0-9-]+\\))?\\s*:"
-  const prPrefixes = prRaw ? extractPrPrefixes(prRaw) : ["feat", "fix", "docs", "chore", "refactor", "test"]
-  const linkedIssueExemptions = prRaw ? extractSkipIssuePrefixes(prRaw) : ["docs", "refactor"]
+  const prRaw = await readFileRequired(".github/workflows/pr-standards.yml")
+  const prTitlePattern = extractPrTitleRegex(prRaw)
+  const prPrefixes = extractPrPrefixes(prRaw)
+  const linkedIssueExemptions = extractSkipIssuePrefixes(prRaw)
 
   // --- Compliance rules (hardcoded: extracted from the AI prompt in duplicate-issues.yml)
   // These are hardcoded because they live inside a natural-language AI prompt and cannot

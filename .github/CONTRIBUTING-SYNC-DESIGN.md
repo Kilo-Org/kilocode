@@ -116,8 +116,8 @@ Push to dev branch
        ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  Step 6: Open PR via gh pr create                           │
-│  Branch: chore/sync-contributing-<run-id>                   │
-│  Title: chore: sync CONTRIBUTING.md with templates/workflows│
+│  Branch: docs/sync-contributing-<timestamp>                  │
+│  Title: docs: sync CONTRIBUTING.md with templates/workflows │
 │  Body: lists which source files changed + facts diff        │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -221,13 +221,13 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.committer.outputs.token }}
         run: |
-          BRANCH="chore/sync-contributing-${{ github.run_id }}"
+          BRANCH="docs/sync-contributing-$(date +%Y%m%d-%H%M%S)"
           git checkout -b "$BRANCH"
           git add CONTRIBUTING.md
-          git commit -m "chore: sync CONTRIBUTING.md with templates and workflows"
+          git commit -m "docs: sync CONTRIBUTING.md with issue templates and workflow changes"
           git push origin "$BRANCH"
           gh pr create \
-            --title "chore: sync CONTRIBUTING.md with templates and workflows" \
+            --title "docs: sync CONTRIBUTING.md with issue templates and workflow changes" \
             --body "Automated update triggered by changes to issue templates or workflow files.
 
           **Changed source files in this push:**
@@ -431,19 +431,15 @@ JSON, which can be used for debugging.
 ### 6.6 PR title format
 
 The sync PR itself must follow the `pr-standards.yml` title regex. The title
-`chore: sync CONTRIBUTING.md with templates and workflows` satisfies the
-`chore:` prefix requirement.
+`docs: sync CONTRIBUTING.md with issue templates and workflow changes` satisfies
+the `docs:` prefix requirement and is exempt from the linked-issue check
+(see 6.7).
 
 ### 6.7 `docs` and `refactor` PRs skip the linked-issue check
 
 Per `pr-standards.yml`, PRs with `docs:` or `refactor:` prefixes skip the
-linked-issue requirement. The sync PR uses `chore:` which does require a linked
-issue. Since this is an automated PR, it won't have one.
-
-**Mitigation:** Change the PR title prefix to `docs:` (documentation change) so
-it skips the linked-issue check. Alternatively, the `pr-standards.yml` could be
-updated to also skip the check for `chore:` prefixed automated PRs — but that
-is a separate decision.
+linked-issue requirement. The sync PR uses `docs:` so it is automatically
+exempt — no linked issue is needed.
 
 ---
 
