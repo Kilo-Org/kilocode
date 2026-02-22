@@ -1,5 +1,5 @@
 const CHANGELOG_ACTION = "View Changelog"
-const CHANGELOG_URL = "https://github.com/Kilo-Org/kilo/blob/dev/packages/kilo-vscode/CHANGELOG.md"
+const CHANGELOG_URL = "https://github.com/Kilo-Org/kilocode/blob/dev/packages/kilo-vscode/CHANGELOG.md"
 const RELEASE_URL = "https://github.com/Kilo-Org/kilo/releases/tag"
 
 export const VERSION_KEY = "kilo-code.new.version"
