@@ -22,6 +22,16 @@ Kilo Code supports Google's Gemini family of models through the Google AI Gemini
 3.  **Enter API Key:** Paste your Gemini API key into the "Gemini API Key" field.
 4.  **Select Model:** Choose your desired Gemini model from the "Model" dropdown.
 
+## Using Gemini CLI with Kilo Code
+
+If you're already using Gemini CLI, note that Kilo Code does not currently reuse Gemini CLI auth/session state directly.
+
+To use Gemini models in Kilo Code:
+
+1. Keep Gemini CLI for terminal workflows, if desired.
+2. Configure Kilo Code separately with the **Google Gemini** provider and a Gemini API key.
+3. If you prefer Google Cloud auth/quotas, use [Vertex AI](/docs/ai-providers/vertex) instead.
+
 ## Tips and Notes
 
 - **Pricing:** Gemini API usage is priced based on input and output tokens. Refer to the [Gemini pricing page](https://ai.google.dev/pricing) for detailed information.
