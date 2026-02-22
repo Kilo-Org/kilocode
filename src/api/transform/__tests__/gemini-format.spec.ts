@@ -174,7 +174,7 @@ describe("convertAnthropicMessageToGemini", () => {
 		])
 	})
 
-	it("should use skip_thought_signature_validator and drop text signatures when fallbackThoughtSignatures is true", () => {
+	it("should use skip_thought_signature_validator and drop thoughtSignature blocks when fallbackThoughtSignatures is true", () => { // kilocode_change
 		const anthropicMessage: Anthropic.Messages.MessageParam = {
 			role: "assistant",
 			content: [
