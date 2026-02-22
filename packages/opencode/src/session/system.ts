@@ -10,6 +10,7 @@ import PROMPT_GEMINI from "./prompt/gemini.txt"
 import PROMPT_CODEX from "./prompt/codex_header.txt"
 import PROMPT_TRINITY from "./prompt/trinity.txt"
 import type { Provider } from "@/provider/provider"
+import { Shell } from "@/shell/shell"
 
 // kilocode_change start
 import SOUL from "../kilocode/soul.txt"
@@ -46,6 +47,7 @@ export namespace SystemPrompt {
         `  Working directory: ${Instance.directory}`,
         `  Is directory a git repo: ${project.vcs === "git" ? "yes" : "no"}`,
         `  Platform: ${process.platform}`,
+        `  Shell: ${Shell.acceptable()}`,
         `  Today's date: ${new Date().toDateString()}`,
         `</env>`,
         `<directories>`,
