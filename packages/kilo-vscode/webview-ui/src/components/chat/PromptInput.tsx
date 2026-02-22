@@ -50,12 +50,12 @@ export const PromptInput: Component = () => {
       if (prev !== undefined && prev !== key) {
         drafts.set(prev, untrack(text))
       }
+      reset()
       const draft = drafts.get(key) ?? ""
       setText(draft)
       setGhostText("")
       if (textareaRef) {
         textareaRef.value = draft
-        // Reset height then adjust
         textareaRef.style.height = "auto"
         textareaRef.style.height = `${Math.min(textareaRef.scrollHeight, 200)}px`
       }
