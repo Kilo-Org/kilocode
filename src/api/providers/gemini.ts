@@ -412,7 +412,7 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 				if (
 					!hasYielded &&
 					attempt === 0 &&
-					(errorMessage.toLowerCase().includes("signature") ||
+					(errorMessage.toLowerCase().includes("thoughtsignature") ||
 						errorMessage.toLowerCase().includes("thoughtsignature"))
 				) {
 					console.warn(
