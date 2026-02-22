@@ -413,7 +413,8 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 					!hasYielded &&
 					attempt === 0 &&
 					(errorMessage.toLowerCase().includes("thoughtsignature") ||
-						errorMessage.toLowerCase().includes("thoughtsignature"))
+					errorMessage.toLowerCase().includes("thoughtsignature") ||
+						errorMessage.toLowerCase().includes("thought_signature"))
 				) {
 					console.warn(
 						"[GeminiHandler] Thought signature validation failed, retrying with fallback signatures...",
