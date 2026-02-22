@@ -6,6 +6,15 @@ export function getNonce(): string {
   return crypto.randomBytes(16).toString("hex")
 }
 
+export function withVersionQuery(uri: vscode.Uri, version?: string): vscode.Uri {
+  if (!version || version === "unknown") {
+    return uri
+  }
+  const query = new URLSearchParams(uri.query)
+  query.set("v", version)
+  return uri.with({ query: query.toString() })
+}
+
 export function buildWebviewHtml(
   webview: vscode.Webview,
   opts: {

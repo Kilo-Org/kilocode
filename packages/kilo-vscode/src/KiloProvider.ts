@@ -9,7 +9,7 @@ import {
 } from "./services/cli-backend"
 import { handleChatCompletionRequest } from "./services/autocomplete/chat-autocomplete/handleChatCompletionRequest"
 import { handleChatCompletionAccepted } from "./services/autocomplete/chat-autocomplete/handleChatCompletionAccepted"
-import { buildWebviewHtml } from "./utils"
+import { buildWebviewHtml, withVersionQuery } from "./utils"
 import { TelemetryProxy, type TelemetryPropertiesProvider } from "./services/telemetry"
 import {
   sessionToWebview,
@@ -1524,8 +1524,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private _getHtmlForWebview(webview: vscode.Webview): string {
     return buildWebviewHtml(webview, {
-      scriptUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "webview.js")),
-      styleUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "webview.css")),
+      scriptUri: withVersionQuery(
+        webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "webview.js")),
+        this.extensionVersion,
+      ),
+      styleUri: withVersionQuery(
+        webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "webview.css")),
+        this.extensionVersion,
+      ),
       iconsBaseUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "assets", "icons")),
       title: "Kilo Code",
       port: this.connectionService.getServerInfo()?.port,
