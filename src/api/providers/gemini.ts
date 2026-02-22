@@ -260,6 +260,7 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 
 		const params: GenerateContentParameters = { model, contents, config }
 
+		// kilocode_change start
 		let attempt = 0
 		let hasYielded = false
 
@@ -303,7 +304,6 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 								thoughtSignature?: string
 								functionCall?: { name: string; args: Record<string, unknown> }
 							}>) {
-								hasYielded = true
 								// Capture thought signatures so they can be persisted into API history.
 								const thoughtSignature = part.thoughtSignature
 								// Persist thought signatures so they can be round-tripped in the next step.
@@ -317,10 +317,12 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 									// This is a thinking/reasoning part
 									if (part.text) {
 										hasReasoning = true
+										hasYielded = true
 										yield { type: "reasoning", text: part.text }
 									}
 								} else if (part.functionCall) {
 									hasContent = true
+									hasYielded = true
 									// Gemini sends complete function calls in a single chunk
 									// Emit as partial chunks for consistent handling with NativeToolCallParser
 									const callId = `${part.functionCall.name}-${toolCallCounter}`
@@ -349,6 +351,7 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 									// This is regular content
 									if (part.text) {
 										hasContent = true
+										hasYielded = true
 										yield { type: "text", text: part.text }
 									}
 								}
@@ -413,7 +416,6 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 					!hasYielded &&
 					attempt === 0 &&
 					(errorMessage.toLowerCase().includes("thoughtsignature") ||
-					errorMessage.toLowerCase().includes("thoughtsignature") ||
 						errorMessage.toLowerCase().includes("thought_signature"))
 				) {
 					console.warn(
@@ -442,6 +444,7 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 				throw error
 			}
 		} // end while
+		// kilocode_change end
 	}
 
 	override getModel() {

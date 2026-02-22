@@ -134,6 +134,7 @@ describe("GeminiHandler", () => {
 			}).rejects.toThrow()
 		})
 
+		// kilocode_change start
 		it("should retry once with fallback thought signatures when signature validation fails before streaming", async () => {
 			const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
 			let firstAttemptContents: any[] | undefined
@@ -226,6 +227,7 @@ describe("GeminiHandler", () => {
 
 			warnSpy.mockRestore()
 		})
+		// kilocode_change end
 	})
 
 	describe("completePrompt", () => {

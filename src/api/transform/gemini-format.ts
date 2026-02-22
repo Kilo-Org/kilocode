@@ -25,11 +25,13 @@ function isThoughtSignatureContentBlock(block: ExtendedContentBlockParam): block
 
 export function convertAnthropicContentToGemini(
 	content: ExtendedAnthropicContent,
+	// kilocode_change start
 	options?: {
 		includeThoughtSignatures?: boolean
 		toolIdToName?: Map<string, string>
 		fallbackThoughtSignatures?: boolean
 	},
+	// kilocode_change end
 ): Part[] {
 	const includeThoughtSignatures = options?.includeThoughtSignatures ?? true
 	const toolIdToName = options?.toolIdToName
@@ -43,9 +45,11 @@ export function convertAnthropicContentToGemini(
 		}
 	}
 
+	// kilocode_change start
 	if (options?.fallbackThoughtSignatures) {
 		activeThoughtSignature = undefined
 	}
+	// kilocode_change end
 
 	// Determine the signature to attach to function calls.
 	// If we're in a mode that expects signatures (includeThoughtSignatures is true):
@@ -190,11 +194,13 @@ export function convertAnthropicContentToGemini(
 
 export function convertAnthropicMessageToGemini(
 	message: Anthropic.Messages.MessageParam,
+	// kilocode_change start
 	options?: {
 		includeThoughtSignatures?: boolean
 		toolIdToName?: Map<string, string>
 		fallbackThoughtSignatures?: boolean
 	},
+	// kilocode_change end
 ): Content[] {
 	const parts = convertAnthropicContentToGemini(message.content, options)
 

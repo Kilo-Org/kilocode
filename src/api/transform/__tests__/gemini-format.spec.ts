@@ -140,6 +140,7 @@ describe("convertAnthropicMessageToGemini", () => {
 		])
 	})
 
+	// kilocode_change start
 	it("should omit thoughtSignature when includeThoughtSignatures is false", () => {
 		const anthropicMessage: Anthropic.Messages.MessageParam = {
 			role: "assistant",
@@ -209,6 +210,7 @@ describe("convertAnthropicMessageToGemini", () => {
 			},
 		])
 	})
+	// kilocode_change end
 
 	it("should only attach thoughtSignature to the first functionCall in the message", () => {
 		const anthropicMessage: Anthropic.Messages.MessageParam = {
