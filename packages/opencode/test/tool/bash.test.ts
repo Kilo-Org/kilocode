@@ -5,6 +5,7 @@ import { Instance } from "../../src/project/instance"
 import { tmpdir } from "../fixture/fixture"
 import type { PermissionNext } from "../../src/permission/next"
 import { Truncate } from "../../src/tool/truncation"
+import { Filesystem } from "../../src/util/filesystem"
 
 const ctx = {
   sessionID: "test",
@@ -108,6 +109,7 @@ describe("tool.bash permissions", () => {
             requests.push(req)
           },
         }
+        const parentDir = Filesystem.normalize(path.join(tmp.path, ".."))
         await bash.execute(
           {
             command: "cd ../",
@@ -117,6 +119,7 @@ describe("tool.bash permissions", () => {
         )
         const extDirReq = requests.find((r) => r.permission === "external_directory")
         expect(extDirReq).toBeDefined()
+        expect(extDirReq!.patterns.some((p) => p.includes(Filesystem.normalize(parentDir)))).toBe(true)
       },
     })
   })
@@ -134,17 +137,18 @@ describe("tool.bash permissions", () => {
             requests.push(req)
           },
         }
+        const tmpDir = process.platform === "win32" ? "C:/Windows/Temp" : "/tmp"
         await bash.execute(
           {
             command: "ls",
-            workdir: "/tmp",
-            description: "List /tmp",
+            workdir: tmpDir,
+            description: "List tmp directory",
           },
           testCtx,
         )
         const extDirReq = requests.find((r) => r.permission === "external_directory")
         expect(extDirReq).toBeDefined()
-        expect(extDirReq!.patterns).toContain("/tmp/*")
+        expect(extDirReq!.patterns.some((p) => p.includes(Filesystem.normalize(tmpDir)))).toBe(true)
       },
     })
   })
@@ -176,7 +180,7 @@ describe("tool.bash permissions", () => {
           testCtx,
         )
         const extDirReq = requests.find((r) => r.permission === "external_directory")
-        const expected = path.join(outerTmp.path, "*")
+        const expected = Filesystem.normalize(path.join(outerTmp.path, "*"))
         expect(extDirReq).toBeDefined()
         expect(extDirReq!.patterns).toContain(expected)
         expect(extDirReq!.always).toContain(expected)

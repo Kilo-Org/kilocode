@@ -411,10 +411,13 @@ export namespace Config {
   }
 
   function rel(item: string, patterns: string[]) {
+    // Normalize the item path first
+    const normalizedItem = Filesystem.normalize(item)
     for (const pattern of patterns) {
-      const index = item.indexOf(pattern)
+      const normalizedPattern = Filesystem.normalize(pattern)
+      const index = normalizedItem.indexOf(normalizedPattern)
       if (index === -1) continue
-      return item.slice(index + pattern.length)
+      return normalizedItem.slice(index + normalizedPattern.length)
     }
   }
 

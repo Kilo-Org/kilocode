@@ -350,7 +350,8 @@ test("very long filenames", async () => {
       const before = await Snapshot.track()
       expect(before).toBeTruthy()
 
-      const longName = "a".repeat(200) + ".txt"
+      // kilocode_change - use shorter path on Windows to avoid MAX_PATH issues
+      const longName = process.platform === "win32" ? "a".repeat(100) + ".txt" : "a".repeat(200) + ".txt"
       const longFile = `${tmp.path}/${longName}`
 
       await Bun.write(longFile, "long filename content")
@@ -385,6 +386,9 @@ test("hidden files", async () => {
 })
 
 test("nested symlinks", async () => {
+  // kilocode_change - skip on Windows (symlinks require admin privileges)
+  if (process.platform === "win32") return
+
   await using tmp = await bootstrap()
   await Instance.provide({
     directory: tmp.path,

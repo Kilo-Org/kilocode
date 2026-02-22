@@ -857,7 +857,7 @@ export function Session() {
           } else {
             const exportDir = process.cwd()
             const filename = options.filename.trim()
-            const filepath = path.join(exportDir, filename)
+            const filepath = Filesystem.join(exportDir, filename)
 
             await Bun.write(filepath, transcript)
 
@@ -1675,7 +1675,7 @@ function Bash(props: ToolProps<typeof BashTool>) {
     const base = sync.data.path.directory
     if (!base) return undefined
 
-    const absolute = path.resolve(base, workdir)
+    const absolute = Filesystem.resolve(base, workdir)
     if (absolute === base) return undefined
 
     const home = Global.Path.home
@@ -1730,7 +1730,7 @@ function Write(props: ToolProps<typeof WriteTool>) {
   })
 
   const diagnostics = createMemo(() => {
-    const filePath = Filesystem.normalizePath(props.input.filePath ?? "")
+    const filePath = Filesystem.realpath(props.input.filePath ?? "")
     return props.metadata.diagnostics?.[filePath] ?? []
   })
 
@@ -1940,7 +1940,7 @@ function Edit(props: ToolProps<typeof EditTool>) {
   const diffContent = createMemo(() => props.metadata.diff)
 
   const diagnostics = createMemo(() => {
-    const filePath = Filesystem.normalizePath(props.input.filePath ?? "")
+    const filePath = Filesystem.realpath(props.input.filePath ?? "")
     const arr = props.metadata.diagnostics?.[filePath] ?? []
     return arr.filter((x) => x.severity === 1).slice(0, 3)
   })
@@ -2133,7 +2133,7 @@ function Skill(props: ToolProps<typeof SkillTool>) {
 function normalizePath(input?: string) {
   if (!input) return ""
   if (path.isAbsolute(input)) {
-    return path.relative(process.cwd(), input) || "."
+    return Filesystem.relative(process.cwd(), input) || "."
   }
   return input
 }

@@ -58,12 +58,12 @@ export namespace Project {
       const dotgit = await matches.next().then((x) => x.value)
       await matches.return()
       if (dotgit) {
-        let sandbox = path.dirname(dotgit)
+        let sandbox = Filesystem.dirname(dotgit)
 
         const gitBinary = Bun.which("git")
 
         // cached id calculation
-        let id = await Bun.file(path.join(dotgit, "opencode"))
+        let id = await Bun.file(Filesystem.join(dotgit, "opencode"))
           .text()
           .then((x) => x.trim())
           .catch(() => undefined)
@@ -102,7 +102,7 @@ export namespace Project {
 
           id = roots[0]
           if (id) {
-            void Bun.file(path.join(dotgit, "opencode"))
+            void Bun.file(Filesystem.join(dotgit, "opencode"))
               .write(id)
               .catch(() => undefined)
           }
@@ -120,7 +120,7 @@ export namespace Project {
         const top = await git(["rev-parse", "--show-toplevel"], {
           cwd: sandbox,
         })
-          .then(async (result) => path.resolve(sandbox, (await result.text()).trim()))
+          .then(async (result) => Filesystem.resolve(sandbox, (await result.text()).trim()))
           .catch(() => undefined)
 
         if (!top) {
@@ -138,7 +138,7 @@ export namespace Project {
           cwd: sandbox,
         })
           .then(async (result) => {
-            const dirname = path.dirname((await result.text()).trim())
+            const dirname = Filesystem.dirname((await result.text()).trim())
             if (dirname === ".") return sandbox
             return dirname
           })

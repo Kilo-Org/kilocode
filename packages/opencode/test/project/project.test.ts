@@ -2,6 +2,7 @@ import { describe, expect, mock, test } from "bun:test"
 import type { Project as ProjectNS } from "../../src/project/project"
 import { Log } from "../../src/util/log"
 import { Storage } from "../../src/storage/storage"
+import { Filesystem } from "../../src/util/filesystem"
 import { $ } from "bun"
 import path from "path"
 import { tmpdir } from "../fixture/fixture"
@@ -157,10 +158,10 @@ describe("Project.fromDirectory with worktrees", () => {
 
     const { project, sandbox } = await p.fromDirectory(worktreePath)
 
-    expect(project.worktree).toBe(tmp.path)
-    expect(sandbox).toBe(worktreePath)
-    expect(project.sandboxes).toContain(worktreePath)
-    expect(project.sandboxes).not.toContain(tmp.path)
+    expect(Filesystem.normalize(project.worktree)).toBe(Filesystem.normalize(tmp.path))
+    expect(Filesystem.normalize(sandbox)).toBe(Filesystem.normalize(worktreePath))
+    expect(project.sandboxes.map(Filesystem.normalize)).toContain(Filesystem.normalize(worktreePath))
+    expect(project.sandboxes.map(Filesystem.normalize)).not.toContain(Filesystem.normalize(tmp.path))
 
     await $`git worktree remove ${worktreePath}`.cwd(tmp.path).quiet()
   })
@@ -177,10 +178,10 @@ describe("Project.fromDirectory with worktrees", () => {
     await p.fromDirectory(worktree1)
     const { project } = await p.fromDirectory(worktree2)
 
-    expect(project.worktree).toBe(tmp.path)
-    expect(project.sandboxes).toContain(worktree1)
-    expect(project.sandboxes).toContain(worktree2)
-    expect(project.sandboxes).not.toContain(tmp.path)
+    expect(Filesystem.normalize(project.worktree)).toBe(Filesystem.normalize(tmp.path))
+    expect(project.sandboxes.map(Filesystem.normalize)).toContain(Filesystem.normalize(worktree1))
+    expect(project.sandboxes.map(Filesystem.normalize)).toContain(Filesystem.normalize(worktree2))
+    expect(project.sandboxes.map(Filesystem.normalize)).not.toContain(Filesystem.normalize(tmp.path))
 
     await $`git worktree remove ${worktree1}`.cwd(tmp.path).quiet()
     await $`git worktree remove ${worktree2}`.cwd(tmp.path).quiet()

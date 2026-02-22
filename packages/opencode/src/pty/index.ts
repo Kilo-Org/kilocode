@@ -7,6 +7,7 @@ import { Log } from "../util/log"
 import { Instance } from "../project/instance"
 import { lazy } from "@opencode-ai/util/lazy"
 import { Shell } from "@/shell/shell"
+import { Filesystem } from "@/util/filesystem"
 import { Plugin } from "@/plugin"
 
 export namespace Pty {
@@ -134,7 +135,13 @@ export namespace Pty {
       args.push("-l")
     }
 
-    const cwd = input.cwd || Instance.directory
+    const cwd = Filesystem.normalize(input.cwd || Instance.directory)
+
+    // Validate directory exists
+    if (!(await Filesystem.isDir(cwd))) {
+      throw new Error(`Directory does not exist: ${cwd}`)
+    }
+
     const shellEnv = await Plugin.trigger("shell.env", { cwd }, { env: {} })
     const env = {
       ...process.env,
