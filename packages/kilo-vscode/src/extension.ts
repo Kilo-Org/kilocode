@@ -5,12 +5,14 @@ import { EXTENSION_DISPLAY_NAME } from "./constants"
 import { KiloConnectionService } from "./services/cli-backend"
 import { registerAutocompleteProvider } from "./services/autocomplete"
 import { BrowserAutomationService } from "./services/browser-automation"
+import { showChangelogOnUpdate as showChangelog, VERSION_KEY } from "./changelog"
 import { TelemetryProxy } from "./services/telemetry"
 import { registerCommitMessageService } from "./services/commit-message"
 import { registerCodeActions, registerTerminalActions, KiloCodeActionProvider } from "./services/code-actions"
 
 export function activate(context: vscode.ExtensionContext) {
   console.log("Kilo Code extension is now active")
+  void showChangelogOnUpdate(context)
 
   const telemetry = TelemetryProxy.getInstance()
 
@@ -134,6 +136,16 @@ export function activate(context: vscode.ExtensionContext) {
 
 export function deactivate() {
   TelemetryProxy.getInstance().shutdown()
+}
+
+async function showChangelogOnUpdate(context: vscode.ExtensionContext) {
+  await showChangelog({
+    version: String(context.extension.packageJSON.version || ""),
+    previous: context.globalState.get<string>(VERSION_KEY),
+    update: (version) => context.globalState.update(VERSION_KEY, version),
+    show: (message, action) => vscode.window.showInformationMessage(message, action),
+    open: (url) => vscode.env.openExternal(vscode.Uri.parse(url)),
+  })
 }
 
 async function openKiloInNewTab(context: vscode.ExtensionContext, connectionService: KiloConnectionService) {

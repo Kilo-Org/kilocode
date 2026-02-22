@@ -13,7 +13,7 @@ Orchestrate agents from your terminal. Plan, debug, and code fast with keyboard-
 
 The Kilo Code CLI uses the same underlying technology that powers the IDE extensions, so you can expect the same workflow to handle agentic coding tasks from start to finish.
 
-**Source code & issues (Kilo CLI 1.0):** [Kilo-Org/kilo](https://github.com/Kilo-Org/kilo) · [Report an issue](https://github.com/Kilo-Org/kilo/issues)
+**Source code & issues (Kilo CLI 1.0):** [Kilo-Org/kilocode](https://github.com/Kilo-Org/kilocode) · [Report an issue](https://github.com/Kilo-Org/kilocode/issues)
 
 ## Getting Started
 
@@ -167,7 +167,7 @@ Review your code locally before pushing — catch issues early without waiting f
 Configuration is managed through:
 
 - `/connect` command for provider setup (interactive)
-- Config files in **`~/.config/kilo/`**: the CLI (Kilo CLI 1.0 from [Kilo-Org/kilo](https://github.com/Kilo-Org/kilo)) merges `config.json`, `opencode.json`, and `opencode.jsonc`. Use **`opencode.json`** (or `opencode.jsonc`) for provider, model, permission, and **MCP** settings. Restart the CLI after editing. See [Using MCP in the CLI](/docs/automate/mcp/using-in-cli) for MCP config format.
+- Config files in **`~/.config/kilo/`**: the CLI (Kilo CLI 1.0 from [Kilo-Org/kilocode](https://github.com/Kilo-Org/kilocode)) merges `config.json`, `opencode.json`, and `opencode.jsonc`. Use **`opencode.json`** (or `opencode.jsonc`) for provider, model, permission, and **MCP** settings. Restart the CLI after editing. See [Using MCP in the CLI](/docs/automate/mcp/using-in-cli) for MCP config format.
 - `kilo auth` for credential management
 
 ## Slash Commands
@@ -290,7 +290,7 @@ Any directory allowed here inherits the same defaults as the current workspace. 
 
 ## Configuration
 
-The Kilo CLI is a fork of [OpenCode](https://opencode.ai) and supports the same configuration options. The CLI you install with `npm install -g @kilocode/cli` (Kilo CLI 1.0) is built from [Kilo-Org/kilo](https://github.com/Kilo-Org/kilo). For comprehensive configuration documentation, see the [OpenCode Config documentation](https://opencode.ai/docs/config).
+The Kilo CLI is a fork of [OpenCode](https://opencode.ai) and supports the same configuration options. The CLI you install with `npm install -g @kilocode/cli` (Kilo CLI 1.0) is built from [Kilo-Org/kilocode](https://github.com/Kilo-Org/kilocode). For comprehensive configuration documentation, see the [OpenCode Config documentation](https://opencode.ai/docs/config).
 
 ### Config File Location (Kilo CLI 1.0)
 
