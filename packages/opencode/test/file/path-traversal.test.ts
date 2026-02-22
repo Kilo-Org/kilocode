@@ -29,6 +29,15 @@ describe("Filesystem.contains", () => {
     expect(Filesystem.contains("/project", "/project-other/file")).toBe(false)
     expect(Filesystem.contains("/project", "/projectfile")).toBe(false)
   })
+
+  test("blocks cross-drive access on Windows", () => {
+    expect(Filesystem.contains("C:\\project", "D:\\other\\file.txt", "win32")).toBe(false)
+  })
+
+  test("handles Git Bash style paths on Windows", () => {
+    expect(Filesystem.contains("C:\\project", "/c/project/src/file.ts", "win32")).toBe(true)
+    expect(Filesystem.contains("C:\\project", "/d/project/src/file.ts", "win32")).toBe(false)
+  })
 })
 
 /*

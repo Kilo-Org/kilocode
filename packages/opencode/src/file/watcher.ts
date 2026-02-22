@@ -22,6 +22,19 @@ declare const KILO_LIBC: string | undefined
 export namespace FileWatcher {
   const log = Log.create({ service: "file.watcher" })
 
+  function resolveGitDirPath(raw: string, cwd: string): string {
+    const value = raw.trim()
+    if (!value) return ""
+    if (process.platform !== "win32") return path.resolve(cwd, value)
+    if (/^[a-z]:[\\/]/i.test(value)) return path.win32.normalize(value)
+    if (/^\/[a-z]\//i.test(value)) {
+      const drive = value[1]!.toUpperCase()
+      const rest = value.slice(3).replace(/\//g, "\\")
+      return path.win32.normalize(`${drive}:\\${rest}`)
+    }
+    return path.win32.resolve(cwd, value)
+  }
+
   export const Event = {
     Updated: BusEvent.define(
       "file.watcher.updated",
@@ -93,7 +106,7 @@ export namespace FileWatcher {
         .nothrow()
         .cwd(Instance.worktree)
         .text()
-        .then((x) => path.resolve(Instance.worktree, x.trim()))
+        .then((x) => resolveGitDirPath(x, Instance.worktree))
         .catch(() => undefined)
       if (vcsDir && !cfgIgnores.includes(".git") && !cfgIgnores.includes(vcsDir)) {
         const gitDirContents = await readdir(vcsDir).catch(() => [])

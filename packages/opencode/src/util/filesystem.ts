@@ -1,7 +1,40 @@
 import { realpathSync } from "fs"
-import { dirname, join, relative } from "path"
+import path, { dirname, join, relative } from "path"
 
 export namespace Filesystem {
+  function normalizeComparablePath(input: string, platform = process.platform): string {
+    const value = input.trim()
+    if (!value) return value
+
+    if (platform === "win32") {
+      if (/^\/[a-z](?:\/|$)/i.test(value)) {
+        const drive = value[1]!.toUpperCase()
+        const rest = value.slice(2).replace(/\//g, "\\")
+        return `${drive}:${rest}`
+      }
+      return value.replace(/\//g, "\\")
+    }
+
+    return value
+  }
+
+  function isInside(parent: string, child: string, platform = process.platform): boolean {
+    if (platform === "win32") {
+      const parentResolved = path.win32.resolve(normalizeComparablePath(parent, "win32"))
+      const childResolved = path.win32.resolve(normalizeComparablePath(child, "win32"))
+      const parentRoot = path.win32.parse(parentResolved).root.toLowerCase()
+      const childRoot = path.win32.parse(childResolved).root.toLowerCase()
+      if (parentRoot !== childRoot) return false
+      const rel = path.win32.relative(parentResolved, childResolved)
+      return rel === "" || (!rel.startsWith("..") && !path.win32.isAbsolute(rel))
+    }
+
+    const parentResolved = path.resolve(normalizeComparablePath(parent, platform))
+    const childResolved = path.resolve(normalizeComparablePath(child, platform))
+    const rel = relative(parentResolved, childResolved)
+    return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel))
+  }
+
   export const exists = (p: string) =>
     Bun.file(p)
       .stat()
@@ -26,14 +59,12 @@ export namespace Filesystem {
       return p
     }
   }
-  export function overlaps(a: string, b: string) {
-    const relA = relative(a, b)
-    const relB = relative(b, a)
-    return !relA || !relA.startsWith("..") || !relB || !relB.startsWith("..")
+  export function overlaps(a: string, b: string, platform = process.platform) {
+    return isInside(a, b, platform) || isInside(b, a, platform)
   }
 
-  export function contains(parent: string, child: string) {
-    return !relative(parent, child).startsWith("..")
+  export function contains(parent: string, child: string, platform = process.platform) {
+    return isInside(parent, child, platform)
   }
 
   export async function findUp(target: string, start: string, stop?: string) {
