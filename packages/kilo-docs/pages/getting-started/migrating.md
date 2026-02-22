@@ -259,6 +259,19 @@ ls -la AGENTS.md
 
 **Note:** Both `AGENTS.md` and `AGENT.md` are write-protected files in Kilo Code and require user approval to modify.
 
+## Migrating from Memory Bank to AGENTS.md
+
+Kilo Code's legacy Memory Bank flow has been deprecated in favor of `AGENTS.md`.
+
+### Quick migration steps
+
+1. Create `AGENTS.md` in your repository root.
+2. Copy over durable project guidance from your previous Memory Bank notes (architecture decisions, conventions, constraints, and workflow rules).
+3. Keep transient task state in chat/todo flow, and keep `AGENTS.md` focused on persistent project knowledge.
+4. Remove old Memory Bank-specific references from project docs once verified.
+
+For details and precedence, see [agents.md](/docs/customize/agents-md).
+
 ## Understanding Mode-Specific Rules
 
 This is Kilo Code's unique feature that replaces both Cursor's `globs` and Windsurf's activation modes.
