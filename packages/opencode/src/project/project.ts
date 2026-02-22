@@ -50,6 +50,19 @@ export namespace Project {
     Updated: BusEvent.define("project.updated", Info),
   }
 
+  export function normalizeGitPath(raw: string, cwd: string, win = process.platform === "win32") {
+    const value = raw.trim()
+    if (!value) return ""
+    if (!win) return path.resolve(cwd, value)
+    if (/^[a-z]:[\\/]/i.test(value)) return path.win32.normalize(value)
+    if (/^\/[a-z]\//i.test(value)) {
+      const drive = value[1]!.toUpperCase()
+      const rest = value.slice(3).replace(/\//g, "\\")
+      return path.win32.normalize(`${drive}:\\${rest}`)
+    }
+    return path.win32.resolve(cwd, value)
+  }
+
   export async function fromDirectory(directory: string) {
     log.info("fromDirectory", { directory })
 
@@ -120,7 +133,7 @@ export namespace Project {
         const top = await git(["rev-parse", "--show-toplevel"], {
           cwd: sandbox,
         })
-          .then(async (result) => path.resolve(sandbox, (await result.text()).trim()))
+          .then(async (result) => normalizeGitPath(await result.text(), sandbox)) // kilocode_change
           .catch(() => undefined)
 
         if (!top) {
@@ -138,7 +151,8 @@ export namespace Project {
           cwd: sandbox,
         })
           .then(async (result) => {
-            const dirname = path.dirname((await result.text()).trim())
+            const normalized = normalizeGitPath(await result.text(), sandbox) // kilocode_change
+            const dirname = path.dirname(normalized)
             if (dirname === ".") return sandbox
             return dirname
           })

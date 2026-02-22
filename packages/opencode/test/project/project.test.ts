@@ -136,6 +136,26 @@ describe("Project.fromDirectory", () => {
   })
 })
 
+describe("Project.normalizeGitPath", () => {
+  test("normalizes git bash drive-prefixed paths on Windows", async () => {
+    const p = await loadProject()
+    const result = p.normalizeGitPath("/d/workspaces/repo\n", "C:\\Users\\dev\\repo", true)
+    expect(result).toBe(path.win32.normalize("D:\\workspaces\\repo"))
+  })
+
+  test("resolves relative git paths on Windows", async () => {
+    const p = await loadProject()
+    const result = p.normalizeGitPath(".git\n", "C:\\Users\\dev\\repo", true)
+    expect(result).toBe(path.win32.normalize("C:\\Users\\dev\\repo\\.git"))
+  })
+
+  test("resolves absolute paths on non-Windows", async () => {
+    const p = await loadProject()
+    const result = p.normalizeGitPath("/tmp/repo\n", "/home/dev/repo", false)
+    expect(result).toBe("/tmp/repo")
+  })
+})
+
 describe("Project.fromDirectory with worktrees", () => {
   test("should set worktree to root when called from root", async () => {
     const p = await loadProject()
