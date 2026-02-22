@@ -22,17 +22,38 @@ export async function getEnabledRules(
 	workspacePath: string,
 	contextProxy: ContextProxy,
 	context: vscode.ExtensionContext,
+	mode?: string,
 ): Promise<RulesData> {
 	const homedir = os.homedir()
+	const globalRulesToggles = ((await contextProxy.getGlobalState("globalRulesToggles")) as ClineRulesToggles) || {}
+	const localRulesToggles =
+		((await contextProxy.getWorkspaceState(context, "localRulesToggles")) as ClineRulesToggles) || {}
+
+	const globalRulesBase = path.join(homedir, GlobalFileNames.kiloRules)
+	const localRulesBase = path.join(workspacePath, GlobalFileNames.kiloRules)
+
+	const [globalRules, localRules] = await Promise.all([
+		getEnabledRulesFromDirectory(globalRulesBase, globalRulesToggles),
+		getEnabledRulesFromDirectory(localRulesBase, localRulesToggles),
+	])
+
+	// Also include mode-specific rules directories (e.g. .kilocode/rules-code/)
+	if (mode) {
+		const globalModeRulesDir = path.join(homedir, ".kilocode", `rules-${mode}`)
+		const localModeRulesDir = path.join(workspacePath, ".kilocode", `rules-${mode}`)
+
+		const [globalModeRules, localModeRules] = await Promise.all([
+			getEnabledRulesFromDirectory(globalModeRulesDir, globalRulesToggles),
+			getEnabledRulesFromDirectory(localModeRulesDir, localRulesToggles),
+		])
+
+		Object.assign(globalRules, globalModeRules)
+		Object.assign(localRules, localModeRules)
+	}
+
 	return {
-		globalRules: await getEnabledRulesFromDirectory(
-			path.join(homedir, GlobalFileNames.kiloRules),
-			((await contextProxy.getGlobalState("globalRulesToggles")) as ClineRulesToggles) || {},
-		),
-		localRules: await getEnabledRulesFromDirectory(
-			path.join(workspacePath, GlobalFileNames.kiloRules),
-			((await contextProxy.getWorkspaceState(context, "localRulesToggles")) as ClineRulesToggles) || {},
-		),
+		globalRules,
+		localRules,
 		globalWorkflows: await getEnabledRulesFromDirectory(
 			path.join(os.homedir(), GlobalFileNames.workflows),
 			((await contextProxy.getGlobalState("globalWorkflowToggles")) as ClineRulesToggles) || {},

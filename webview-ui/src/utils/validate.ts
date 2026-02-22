@@ -104,6 +104,13 @@ function validateModelsAndKeysProvided(apiConfiguration: ProviderSettings): stri
 				return i18next.t("settings:validation.openAi")
 			}
 			break
+		// kilocode_change start
+		case "openai-responses":
+			if (!apiConfiguration.openAiBaseUrl || !apiConfiguration.openAiApiKey || !apiConfiguration.openAiModelId) {
+				return i18next.t("settings:validation.openAi")
+			}
+			break
+		// kilocode_change end
 		case "ollama":
 			if (!apiConfiguration.ollamaModelId) {
 				return i18next.t("settings:validation.modelId")

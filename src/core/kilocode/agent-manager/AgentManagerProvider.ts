@@ -47,6 +47,7 @@ import { startSessionMessageSchema, type StartSessionMessage } from "./types"
 import { openImage } from "../../../integrations/misc/image-handler"
 import { getModelsFromCache } from "../../../api/providers/fetchers/modelCache"
 import { isRouterName, type ModelRecord } from "../../../shared/api"
+import { OPENAI_CODEX_CREDENTIALS_KEY } from "../../../integrations/openai-codex/oauth"
 
 /**
  * Message format for sending responses to the agent runtime via IPC.
@@ -342,25 +343,12 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 		try {
 			switch (message.type) {
-				case "agentManager.webviewReady": {
+				case "agentManager.webviewReady":
 					this.postStateToWebview()
-					// Send cached messages for selected session (fixes stale state when panel is reopened)
-					const selectedId = this.registry.selectedId
-					if (selectedId) {
-						const cachedMessages = this.sessionMessages.get(selectedId)
-						if (cachedMessages && cachedMessages.length > 0) {
-							this.postMessage({
-								type: "agentManager.chatMessages",
-								sessionId: selectedId,
-								messages: cachedMessages,
-							})
-						}
-					}
 					void this.fetchAndPostRemoteSessions()
 					void this.fetchAndPostAvailableModels()
 					void this.fetchAndPostAvailableModes()
 					break
-				}
 				case "agentManager.refreshModels":
 					void this.fetchAndPostAvailableModels(true)
 					break
@@ -455,10 +443,6 @@ export class AgentManagerProvider implements vscode.Disposable {
 				case "agentManager.setMode":
 					void this.setSessionMode(message.sessionId as string, message.mode as string)
 					break
-				case "agentManager.renameSession":
-					this.registry.updateSessionLabel(message.sessionId as string, message.label as string)
-					this.postStateToWebview()
-					break
 			}
 		} catch (error) {
 			this.outputChannel.appendLine(`Error handling message: ${error}`)
@@ -483,7 +467,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 		}
 
 		const validatedMessage: StartSessionMessage = parseResult.data
-		const { prompt, parallelMode = false, existingBranch, model, mode, images, yoloMode = true } = validatedMessage
+		const { prompt, parallelMode = false, existingBranch, model, mode, images } = validatedMessage
 
 		// For agent-runtime, pass base64 images directly (not file paths)
 		// The extension expects base64 data URLs in the format "data:image/png;base64,..."
@@ -506,7 +490,6 @@ export class AgentManagerProvider implements vscode.Disposable {
 			const config = configs[0]
 			await this.startAgentSession(config.prompt, {
 				parallelMode: config.parallelMode,
-				yoloMode,
 				labelOverride: config.label,
 				existingBranch: config.existingBranch,
 				model,
@@ -526,7 +509,6 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 			await this.startAgentSession(config.prompt, {
 				parallelMode: config.parallelMode,
-				yoloMode,
 				labelOverride: config.label,
 				existingBranch: config.existingBranch,
 				model,
@@ -674,7 +656,6 @@ export class AgentManagerProvider implements vscode.Disposable {
 		prompt: string,
 		options?: {
 			parallelMode?: boolean
-			yoloMode?: boolean
 			labelOverride?: string
 			existingBranch?: string
 			model?: string
@@ -739,7 +720,6 @@ export class AgentManagerProvider implements vscode.Disposable {
 			prompt,
 			{
 				parallelMode: options?.parallelMode,
-				yoloMode: options?.yoloMode,
 				label: options?.labelOverride,
 				gitUrl,
 				existingBranch: options?.existingBranch,
@@ -801,7 +781,6 @@ export class AgentManagerProvider implements vscode.Disposable {
 		prompt: string,
 		options: {
 			parallelMode?: boolean
-			yoloMode?: boolean
 			label?: string
 			gitUrl?: string
 			existingBranch?: string
@@ -861,6 +840,29 @@ export class AgentManagerProvider implements vscode.Disposable {
 			)
 		}
 
+		// When using OpenAI Codex (ChatGPT Plus/Pro), pass OAuth credentials to the agent process
+		// so it can authenticate; the agent process has its own context and no access to main extension secrets
+		let secrets: Record<string, string> | undefined
+		if (apiConfiguration?.apiProvider === "openai-codex") {
+			try {
+				const credentialsJson = await this.context.secrets.get(OPENAI_CODEX_CREDENTIALS_KEY)
+				if (credentialsJson) {
+					secrets = { [OPENAI_CODEX_CREDENTIALS_KEY]: credentialsJson }
+					this.outputChannel.appendLine("[AgentManager] Passing OpenAI Codex credentials to agent process")
+				} else {
+					this.outputChannel.appendLine(
+						"[AgentManager] OpenAI Codex selected but no credentials found; sign in using the Kilo Code sidebar first.",
+					)
+				}
+			} catch (error) {
+				this.outputChannel.appendLine(
+					`[AgentManager] Failed to read OpenAI Codex credentials: ${
+						error instanceof Error ? error.message : String(error)
+					}`,
+				)
+			}
+		}
+
 		// RuntimeProcessHandler uses fork() with agent-runtime, cliPath is ignored
 		this.processHandler.spawnProcess(
 			"", // cliPath not used - RuntimeProcessHandler forks agent-runtime
@@ -872,6 +874,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 				customModes,
 				// Pass worktree info for session state tracking
 				worktreeInfo: options.worktreeInfo,
+				secrets,
 			},
 			(sid, event) => {
 				if (!this.processStartTimes.has(sid)) {
@@ -1462,7 +1465,6 @@ export class AgentManagerProvider implements vscode.Disposable {
 				await this.spawnAgentWithCommonSetup(content, {
 					sessionId,
 					parallelMode: true,
-					yoloMode: session.yoloMode,
 					gitUrl: session.gitUrl,
 					worktreeInfo,
 					effectiveWorkspace: worktreeInfo.path,
@@ -1482,7 +1484,6 @@ export class AgentManagerProvider implements vscode.Disposable {
 			sessionId,
 			label: sessionLabel || session?.label,
 			parallelMode: session?.parallelMode?.enabled,
-			yoloMode: session?.yoloMode,
 			gitUrl: session?.gitUrl,
 			images,
 			sessionData,

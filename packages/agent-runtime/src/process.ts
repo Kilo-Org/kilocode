@@ -105,6 +105,10 @@ interface AgentConfig {
 			mode: string | null
 		}
 	}
+	// kilocode_change start
+	// Secrets (e.g. OAuth credentials) to inject so providers like OpenAI Codex work in the agent process
+	secrets?: Record<string, string>
+	// kilocode_change end
 }
 
 /**
@@ -304,6 +308,12 @@ async function main(): Promise<void> {
 				}
 
 				await extensionHost.injectConfiguration(stateConfig)
+				// kilocode_change start
+				// Inject OAuth/secrets so providers like OpenAI Codex can authenticate
+				if (config.secrets && Object.keys(config.secrets).length > 0) {
+					await extensionHost.injectSecrets(config.secrets)
+				}
+				// kilocode_change end
 				logs.info("Configuration injected", "AgentProcess")
 			} catch (error) {
 				logs.error("Failed to inject configuration", "AgentProcess", { error })

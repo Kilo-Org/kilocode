@@ -7,7 +7,6 @@ import {
 	azureOpenAiDefaultApiVersion,
 	openAiModelInfoSaneDefaults,
 	NATIVE_TOOL_DEFAULTS,
-	OPENAI_AZURE_AI_INFERENCE_PATH,
 } from "@roo-code/types"
 
 import type { ApiHandlerOptions } from "../../shared/api"
@@ -19,7 +18,6 @@ import { calculateApiCostOpenAI } from "../../shared/cost"
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { getApiRequestTimeout } from "./utils/timeout-config"
-import { handleOpenAIError } from "./utils/openai-error-handler"
 import { normalizeObjectAdditionalPropertiesFalse } from "./kilocode/openai-strict-schema" // kilocode_change
 import { isMcpTool } from "../../utils/mcp-name"
 
@@ -31,6 +29,8 @@ export class OpenAiCompatibleResponsesHandler extends BaseProvider implements Si
 	private readonly providerName = "OpenAI Compatible (Responses)"
 	private abortController?: AbortController
 	private readonly toolCallIdentityById = new Map<string, { id: string; name: string }>()
+	private readonly isAzureAiInferenceEndpoint: boolean
+	private readonly isAzureOpenAiEndpoint: boolean
 
 	constructor(options: ApiHandlerOptions) {
 		super()
@@ -43,19 +43,12 @@ export class OpenAiCompatibleResponsesHandler extends BaseProvider implements Si
 		const baseURL = this.options.openAiBaseUrl ?? "https://api.openai.com/v1"
 		const apiKey = this.options.openAiApiKey ?? "not-provided"
 		const timeout = getApiRequestTimeout()
-		const isAzureAiInference = this._isAzureAiInference(this.options.openAiBaseUrl)
 		const urlHost = this._getUrlHost(this.options.openAiBaseUrl)
-		const isAzureOpenAi = urlHost === "azure.com" || urlHost.endsWith(".azure.com") || options.openAiUseAzure
+		this.isAzureAiInferenceEndpoint = this._isAzureAiInference(this.options.openAiBaseUrl)
+		this.isAzureOpenAiEndpoint =
+			urlHost === "azure.com" || urlHost.endsWith(".azure.com") || !!options.openAiUseAzure
 
-		if (isAzureAiInference) {
-			this.client = new OpenAI({
-				baseURL,
-				apiKey,
-				defaultHeaders: this.options.openAiHeaders || {},
-				defaultQuery: { "api-version": this.options.azureApiVersion || "2024-05-01-preview" },
-				timeout,
-			})
-		} else if (isAzureOpenAi) {
+		if (this.isAzureOpenAiEndpoint) {
 			this.client = new AzureOpenAI({
 				baseURL,
 				apiKey,
@@ -78,6 +71,9 @@ export class OpenAiCompatibleResponsesHandler extends BaseProvider implements Si
 		messages: Anthropic.Messages.MessageParam[],
 		metadata?: ApiHandlerCreateMessageMetadata,
 	): ApiStream {
+		// kilocode_change start
+		this.assertSupportedResponsesEndpoint()
+		// kilocode_change end
 		const model = this.getModel()
 		yield* this.handleResponsesApiMessage(model, systemPrompt, messages, metadata)
 	}
@@ -92,11 +88,8 @@ export class OpenAiCompatibleResponsesHandler extends BaseProvider implements Si
 
 		const formattedInput = this.formatFullConversation(systemPrompt, messages)
 		const requestBody = this.buildRequestBody(model, formattedInput, systemPrompt, verbosity, metadata)
-		const requestOptions = this._isAzureAiInference(this.options.openAiBaseUrl)
-			? { path: OPENAI_AZURE_AI_INFERENCE_PATH }
-			: undefined
 
-		yield* this.executeRequest(requestBody, requestOptions)
+		yield* this.executeRequest(requestBody)
 	}
 
 	private buildRequestBody(
@@ -170,12 +163,11 @@ export class OpenAiCompatibleResponsesHandler extends BaseProvider implements Si
 		return body
 	}
 
-	private async *executeRequest(requestBody: any, requestOptions?: OpenAI.RequestOptions): ApiStream {
+	private async *executeRequest(requestBody: any): ApiStream {
 		this.abortController = new AbortController()
 
 		try {
 			const stream = (await (this.client as any).responses.create(requestBody, {
-				...(requestOptions || {}),
 				signal: this.abortController.signal,
 			})) as AsyncIterable<any>
 
@@ -194,7 +186,7 @@ export class OpenAiCompatibleResponsesHandler extends BaseProvider implements Si
 					yield outChunk
 				}
 			}
-		} catch (sdkErr: any) {
+		} catch (_sdkErr: any) {
 			yield* this.makeResponsesApiRequest(requestBody)
 		} finally {
 			this.abortController = undefined
@@ -285,9 +277,11 @@ export class OpenAiCompatibleResponsesHandler extends BaseProvider implements Si
 	}
 
 	private async *makeResponsesApiRequest(requestBody: any): ApiStream {
+		// kilocode_change start
+		this.assertSupportedResponsesEndpoint()
+		// kilocode_change end
 		const apiKey = this.options.openAiApiKey ?? "not-provided"
-		const baseUrl = this.options.openAiBaseUrl || "https://api.openai.com"
-		const url = `${baseUrl}/v1/responses`
+		const { url, headers } = this.getResponsesFallbackTarget(apiKey)
 
 		this.abortController = new AbortController()
 
@@ -296,9 +290,8 @@ export class OpenAiCompatibleResponsesHandler extends BaseProvider implements Si
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
-					Authorization: `Bearer ${apiKey}`,
 					Accept: "text/event-stream",
-					...(this.options.openAiHeaders || {}),
+					...headers,
 				},
 				body: JSON.stringify(requestBody),
 				signal: this.abortController.signal,
@@ -318,8 +311,14 @@ export class OpenAiCompatibleResponsesHandler extends BaseProvider implements Si
 						errorMessage = "Access denied. Your API key doesn't have access to this resource."
 						break
 					case 404:
-						errorMessage =
-							"Responses API endpoint not found. The endpoint may not be available yet or requires a different configuration."
+						// kilocode_change start
+						errorMessage = this.isAzureOpenAiEndpoint
+							? "Responses API endpoint not found. For Azure OpenAI, use a base URL like https://<resource>.openai.azure.com/openai/v1 and set model to your deployment name."
+							: "Responses API endpoint not found. The endpoint may not be available yet or requires a different configuration."
+						if ((this.options.openAiBaseUrl || "").includes("/deployments/")) {
+							errorMessage += " Do not use a /deployments/.../chat/completions URL as the base URL."
+						}
+						// kilocode_change end
 						break
 					case 429:
 						errorMessage = "Rate limit exceeded. Please try again later."
@@ -499,6 +498,9 @@ export class OpenAiCompatibleResponsesHandler extends BaseProvider implements Si
 	}
 
 	async completePrompt(prompt: string): Promise<string> {
+		// kilocode_change start
+		this.assertSupportedResponsesEndpoint()
+		// kilocode_change end
 		this.abortController = new AbortController()
 
 		try {
@@ -517,9 +519,6 @@ export class OpenAiCompatibleResponsesHandler extends BaseProvider implements Si
 
 			const response = await (this.client as any).responses.create(requestBody, {
 				signal: this.abortController.signal,
-				...(this._isAzureAiInference(this.options.openAiBaseUrl)
-					? { path: OPENAI_AZURE_AI_INFERENCE_PATH }
-					: {}),
 			})
 
 			if (response?.output && Array.isArray(response.output)) {
@@ -545,6 +544,86 @@ export class OpenAiCompatibleResponsesHandler extends BaseProvider implements Si
 			this.abortController = undefined
 		}
 	}
+
+	// kilocode_change start
+	private assertSupportedResponsesEndpoint(): void {
+		if (this.isAzureAiInferenceEndpoint) {
+			throw new Error(
+				"Azure AI Inference endpoints (*.services.ai.azure.com) are not supported by OpenAI Compatible (Responses). Use an Azure OpenAI endpoint like https://<resource>.openai.azure.com/openai/v1 and set model to your deployment name.",
+			)
+		}
+	}
+
+	private getResponsesFallbackTarget(apiKey: string): { url: string; headers: Record<string, string> } {
+		const normalizedBaseUrl = this.normalizeResponsesBaseUrl(this.options.openAiBaseUrl)
+		const url = new URL(`${normalizedBaseUrl.replace(/\/+$/, "")}/responses`)
+		const headers: Record<string, string> = {
+			...(this.options.openAiHeaders || {}),
+		}
+
+		if (this.isAzureOpenAiEndpoint) {
+			headers["api-key"] = apiKey
+			if (this.shouldAppendAzureApiVersion(url) && !url.searchParams.has("api-version")) {
+				url.searchParams.set("api-version", this.options.azureApiVersion || azureOpenAiDefaultApiVersion)
+			}
+		} else {
+			headers.Authorization = `Bearer ${apiKey}`
+		}
+
+		return { url: url.toString(), headers }
+	}
+
+	private normalizeResponsesBaseUrl(baseUrl?: string): string {
+		const defaultBaseUrl = this.isAzureOpenAiEndpoint
+			? "https://api.openai.azure.com/openai/v1"
+			: "https://api.openai.com/v1"
+
+		if (!baseUrl) {
+			return defaultBaseUrl
+		}
+
+		try {
+			const parsed = new URL(baseUrl)
+			parsed.search = ""
+			parsed.hash = ""
+
+			let pathname = parsed.pathname.replace(/\/+$/, "")
+			pathname = pathname.replace(/\/(chat\/completions|completions|responses)$/, "")
+
+			if (this.isAzureOpenAiEndpoint) {
+				if (/\/openai\/deployments\/[^/]+$/.test(pathname)) {
+					pathname = "/openai/v1"
+				} else if (pathname === "" || pathname === "/") {
+					pathname = "/openai/v1"
+				} else if (pathname === "/v1") {
+					pathname = "/openai/v1"
+				} else if (pathname === "/openai") {
+					pathname = "/openai/v1"
+				} else if (pathname.endsWith("/openai")) {
+					pathname = `${pathname}/v1`
+				} else if (!pathname.endsWith("/v1")) {
+					pathname = `${pathname}/v1`
+				}
+			} else {
+				if (pathname === "" || pathname === "/") {
+					pathname = "/v1"
+				} else if (!pathname.endsWith("/v1")) {
+					pathname = `${pathname}/v1`
+				}
+			}
+
+			parsed.pathname = pathname
+			return parsed.toString().replace(/\/$/, "")
+		} catch {
+			return defaultBaseUrl
+		}
+	}
+
+	private shouldAppendAzureApiVersion(url: URL): boolean {
+		const pathname = url.pathname.replace(/\/+$/, "")
+		return !pathname.includes("/openai/v1")
+	}
+	// kilocode_change end
 
 	protected _getUrlHost(baseUrl?: string): string {
 		try {
