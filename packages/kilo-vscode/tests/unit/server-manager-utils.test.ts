@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test"
-import { parseServerPort } from "../../src/services/cli-backend/server-utils"
+import { buildKillTreeCommand, parseServerPort } from "../../src/services/cli-backend/server-utils"
 
 describe("parseServerPort", () => {
   it("parses port from standard CLI startup message", () => {
@@ -42,5 +42,21 @@ describe("parseServerPort", () => {
   it("matches only first occurrence when multiple ports present", () => {
     const output = "listening on http://127.0.0.1:3000 and http://127.0.0.1:4000"
     expect(parseServerPort(output)).toBe(3000)
+  })
+})
+
+describe("buildKillTreeCommand", () => {
+  it("builds taskkill command on Windows", () => {
+    expect(buildKillTreeCommand(1234, "win32")).toEqual({
+      command: "taskkill",
+      args: ["/pid", "1234", "/f", "/t"],
+    })
+  })
+
+  it("builds process-group kill command on POSIX", () => {
+    expect(buildKillTreeCommand(987, "linux")).toEqual({
+      command: "kill",
+      args: ["-TERM", "-987"],
+    })
   })
 })

@@ -3,7 +3,7 @@ import * as crypto from "crypto"
 import * as fs from "fs"
 import * as path from "path"
 import * as vscode from "vscode"
-import { parseServerPort } from "./server-utils"
+import { killProcessTree, parseServerPort } from "./server-utils"
 
 export interface ServerInstance {
   port: number
@@ -76,6 +76,7 @@ export class ServerManager {
           KILO_APP_VERSION: this.context.extension.packageJSON.version,
           KILO_VSCODE_VERSION: vscode.version,
         },
+        detached: process.platform !== "win32",
         stdio: ["ignore", "pipe", "pipe"],
       })
       console.log("[Kilo New] ServerManager: 📦 Process spawned with PID:", serverProcess.pid)
@@ -120,7 +121,7 @@ export class ServerManager {
       setTimeout(() => {
         if (!resolved) {
           console.error("[Kilo New] ServerManager: ⏰ Server startup timeout (30s)")
-          serverProcess.kill()
+          killProcessTree(serverProcess)
           reject(new Error("Server startup timeout"))
         }
       }, 30000)
@@ -137,7 +138,7 @@ export class ServerManager {
 
   dispose(): void {
     if (this.instance) {
-      this.instance.process.kill("SIGTERM")
+      killProcessTree(this.instance.process)
       this.instance = null
     }
   }
