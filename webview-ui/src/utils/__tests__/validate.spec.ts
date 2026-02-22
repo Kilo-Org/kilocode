@@ -204,6 +204,31 @@ describe("Model Validation Functions", () => {
 			expect(result).toBeUndefined()
 		})
 
+		// kilocode_change start
+		it("returns openAi validation error for incomplete openai-responses configuration", () => {
+			const config: ProviderSettings = {
+				apiProvider: "openai-responses",
+				openAiApiKey: "valid-key",
+				openAiModelId: "gpt-5.2-codex",
+			}
+
+			const result = validateApiConfigurationExcludingModelErrors(config, mockRouterModels, allowAllOrganization)
+			expect(result).toBe("settings:validation.openAi")
+		})
+
+		it("returns undefined for valid openai-responses configuration", () => {
+			const config: ProviderSettings = {
+				apiProvider: "openai-responses",
+				openAiBaseUrl: "https://myresource.openai.azure.com/openai/v1",
+				openAiApiKey: "valid-key",
+				openAiModelId: "my-deployment",
+			}
+
+			const result = validateApiConfigurationExcludingModelErrors(config, mockRouterModels, allowAllOrganization)
+			expect(result).toBeUndefined()
+		})
+		// kilocode_change end
+
 		it("returns error for missing API key", () => {
 			const config: ProviderSettings = {
 				apiProvider: "openrouter",

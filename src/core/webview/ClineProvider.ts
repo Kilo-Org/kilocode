@@ -2076,9 +2076,10 @@ export class ClineProvider
 	async postRulesDataToWebview() {
 		const workspacePath = this.cwd
 		if (workspacePath) {
+			const mode = this.contextProxy.getGlobalState("mode") as string | undefined
 			this.postMessageToWebview({
 				type: "rulesData",
-				...(await getEnabledRules(workspacePath, this.contextProxy, this.context)),
+				...(await getEnabledRules(workspacePath, this.contextProxy, this.context, mode)),
 			})
 		}
 	}

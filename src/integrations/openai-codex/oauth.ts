@@ -23,8 +23,10 @@ export const OPENAI_CODEX_OAUTH_CONFIG = {
 	callbackPort: 1455,
 } as const
 
-// Token storage key
-const OPENAI_CODEX_CREDENTIALS_KEY = "openai-codex-oauth-credentials"
+// kilocode_change start
+// Token storage key (exported for agent-manager to pass credentials to agent processes)
+export const OPENAI_CODEX_CREDENTIALS_KEY = "openai-codex-oauth-credentials"
+// kilocode_change end
 
 // Credentials schema
 const openAiCodexCredentialsSchema = z.object({

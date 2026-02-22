@@ -141,7 +141,7 @@ export class SessionTerminalManager {
 			)
 		}
 
-		entry.terminal.show()
+		entry.terminal.show(true)
 	}
 
 	/**
@@ -173,7 +173,7 @@ export class SessionTerminalManager {
 			return false
 		}
 
-		entry.terminal.show()
+		entry.terminal.show(true)
 		this.outputChannel.appendLine(`[AgentManager] showExistingTerminal: revealed terminal for session ${sessionId}`)
 		return true
 	}

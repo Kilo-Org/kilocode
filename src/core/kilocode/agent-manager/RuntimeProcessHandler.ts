@@ -81,7 +81,6 @@ interface PendingProcessInfo {
 	prompt: string
 	startTime: number
 	parallelMode?: boolean
-	yoloMode?: boolean
 	desiredSessionId?: string
 	desiredLabel?: string
 	worktreeInfo?: { branch: string; path: string; parentBranch: string }
@@ -229,6 +228,7 @@ export class RuntimeProcessHandler {
 			images?: string[]
 			autoApprove?: boolean
 			sessionData?: SessionData // For resuming with history
+			secrets?: Record<string, string> // OAuth credentials for agent process
 		},
 	): Record<string, unknown> {
 		const modeToUse = options?.mode || "code"
@@ -281,6 +281,11 @@ export class RuntimeProcessHandler {
 			}
 		}
 
+		// Pass secrets (e.g. OpenAI Codex OAuth credentials) so the agent process can authenticate
+		if (options?.secrets && Object.keys(options.secrets).length > 0) {
+			config.secrets = options.secrets
+		}
+
 		return config
 	}
 
@@ -297,7 +302,6 @@ export class RuntimeProcessHandler {
 		options:
 			| {
 					parallelMode?: boolean
-					yoloMode?: boolean
 					sessionId?: string
 					label?: string
 					gitUrl?: string
@@ -310,6 +314,7 @@ export class RuntimeProcessHandler {
 					customModes?: ModeConfig[] // Custom modes including organization modes
 					images?: string[]
 					sessionData?: SessionData // For resuming with history
+					secrets?: Record<string, string> // OAuth credentials for agent process
 			  }
 			| undefined,
 		onEvent: (sessionId: string, event: StreamEvent) => void,
@@ -323,7 +328,6 @@ export class RuntimeProcessHandler {
 			} else {
 				this.registry.createSession(options!.sessionId!, prompt, Date.now(), {
 					parallelMode: options?.parallelMode,
-					yoloMode: options?.yoloMode,
 					labelOverride: options?.label,
 					gitUrl: options?.gitUrl,
 					model: options?.model,
@@ -345,18 +349,13 @@ export class RuntimeProcessHandler {
 		} else {
 			const pendingSession = this.registry.setPendingSession(prompt, {
 				parallelMode: options?.parallelMode,
-				yoloMode: options?.yoloMode,
 				gitUrl: options?.gitUrl,
 			})
 			this.callbacks.onPendingSessionChanged(pendingSession)
 		}
 
 		// Build agent configuration
-		// Map yoloMode to autoApprove for the agent config
-		const agentConfig = this.buildAgentConfig(workspace, prompt, {
-			...options,
-			autoApprove: options?.yoloMode,
-		})
+		const agentConfig = this.buildAgentConfig(workspace, prompt, options)
 
 		// Get process entry point path
 		const entryPath = this.getProcessEntryPath()
@@ -381,7 +380,6 @@ export class RuntimeProcessHandler {
 				prompt,
 				startTime: Date.now(),
 				parallelMode: options?.parallelMode,
-				yoloMode: options?.yoloMode,
 				desiredSessionId: options?.sessionId,
 				desiredLabel: options?.label,
 				worktreeInfo: options?.worktreeInfo,
@@ -515,7 +513,6 @@ export class RuntimeProcessHandler {
 		// Create the session in registry
 		this.registry.createSession(sessionId, prompt, Date.now(), {
 			parallelMode: this.pendingProcess.parallelMode,
-			yoloMode: this.pendingProcess.yoloMode,
 			labelOverride: this.pendingProcess.desiredLabel,
 			gitUrl: this.pendingProcess.gitUrl,
 			model: this.pendingProcess.model,
