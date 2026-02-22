@@ -46,8 +46,8 @@ export function convertAnthropicContentToGemini(
 	}
 
 	// kilocode_change start
-	if (options?.fallbackThoughtSignatures) {
-		activeThoughtSignature = undefined
+	if (options?.fallbackThoughtSignatures && !activeThoughtSignature) {
+		activeThoughtSignature = "skip_thought_signature_validator"
 	}
 	// kilocode_change end
 
