@@ -20,8 +20,8 @@ export const ServeCommand = cmd({
     if (args.cwd) {
       try {
         process.chdir(args.cwd)
-      } catch {
-        console.error(`Failed to change directory to ${args.cwd}`)
+      } catch(err) {
+        console.error(`Failed to change directory to ${args.cwd}:`, err)
         process.exit(1)
       }
     }
