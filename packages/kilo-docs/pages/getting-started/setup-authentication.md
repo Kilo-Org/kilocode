@@ -17,6 +17,14 @@ When you install Kilo Code, you'll be prompted to sign in or create a free accou
 
 That's it! You're ready to [start your first task](/docs/getting-started/quickstart).
 
+## Recommended: Start with Kilo Gateway
+
+For most users, the best default is the built-in Kilo Gateway provider:
+
+- Get started with free and budget-friendly models immediately
+- Top up credits directly in Kilo and use them across supported models
+- Keep one auth flow and one billing surface instead of managing many separate provider keys
+
 {% callout type="tip" title="Bonus Credits" %}
 [Add credits to your account](https://app.kilo.ai/profile) and get $20 bonus credits, or sign up for [Kilo Pass](https://kilo.ai/features/kilo-pass).
 {% /callout %}
@@ -30,9 +38,9 @@ If you're using the [Kilo AI Gateway](/docs/gateway/) outside of the Kilo Code e
 3. Scroll to the bottom of the page
 4. Copy your API key
 
-## Using Another API Provider
+## Using Another API Provider (Optional)
 
-If you prefer to use your own API key or existing subscription, Kilo Code supports **over 30 providers**. Here are some popular options to get started:
+If you want to use your own API key or an existing subscription, Kilo Code supports **over 30 providers**. Here are some popular options:
 
 | Provider                                                       | Best For                            | API Key Required |
 | -------------------------------------------------------------- | ----------------------------------- | ---------------- |
