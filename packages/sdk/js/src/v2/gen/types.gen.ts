@@ -1038,6 +1038,62 @@ export type KeybindsConfig = {
    */
   username_toggle?: string
   /**
+   * Toggle console
+   */
+  console_toggle?: string
+  /**
+   * Toggle MCP dialog
+   */
+  mcp_toggle?: string
+  /**
+   * Toggle MCP slot 1
+   */
+  mcp_toggle_1?: string
+  /**
+   * Toggle MCP slot 2
+   */
+  mcp_toggle_2?: string
+  /**
+   * Toggle MCP slot 3
+   */
+  mcp_toggle_3?: string
+  /**
+   * Toggle MCP slot 4
+   */
+  mcp_toggle_4?: string
+  /**
+   * Toggle MCP slot 5
+   */
+  mcp_toggle_5?: string
+  /**
+   * Toggle MCP slot 6
+   */
+  mcp_toggle_6?: string
+  /**
+   * Toggle MCP slot 7
+   */
+  mcp_toggle_7?: string
+  /**
+   * Toggle MCP slot 8
+   */
+  mcp_toggle_8?: string
+  /**
+   * Toggle MCP slot 9
+   */
+  mcp_toggle_9?: string
+  /**
+   * Toggle MCP slot 10
+   */
+  mcp_toggle_10?: string
+  /**
+   * Toggle timestamps visibility
+   */
+  timestamps_toggle?: string
+  /**
+   * Toggle diff wrapping
+   */
+  diffwrap_toggle?: string
+  /**
    * View status
    */
   status_view?: string
@@ -1145,6 +1201,10 @@ export type KeybindsConfig = {
    * Copy message
    */
   messages_copy?: string
+  /**
+   * Copy session transcript
+   */
+  session_copy?: string
   /**
    * Undo message
    */

@@ -467,10 +467,52 @@ function App() {
       slash: {
         name: "mcps",
       },
+      keybind: "mcp_toggle",
       onSelect: () => {
         dialog.replace(() => <DialogMcp />)
       },
     },
+    ...Array.from({ length: 10 }, (_, i) => {
+      const slot = i + 1
+      return {
+        title: `Toggle MCP slot ${slot}`,
+        value: `mcp.toggle.${slot}`,
+        category: "Agent",
+        keybind: `mcp_toggle_${slot}` as keyof typeof sync.data.config.keybinds,
+        hidden: true,
+        onSelect: async () => {
+          const mcpNames = Object.keys(sync.data.mcp).sort()
+          const mcpName = mcpNames[i]
+          if (!mcpName) {
+            toast.show({
+              variant: "warning",
+              message: `No MCP configured in slot ${slot}`,
+              duration: 2000,
+            })
+            return
+          }
+          try {
+            await local.mcp.toggle(mcpName)
+            const status = await sdk.client.mcp.status()
+            if (status.data) {
+              sync.set("mcp", status.data)
+            }
+            const isEnabled = local.mcp.isEnabled(mcpName)
+            toast.show({
+              variant: "info",
+              message: `${mcpName}: ${isEnabled ? "enabled" : "disabled"}`,
+              duration: 2000,
+            })
+          } catch (error) {
+            toast.show({
+              variant: "error",
+              message: `Failed to toggle ${mcpName}: ${error}`,
+              duration: 3000,
+            })
+          }
+        },
+      }
+    }),
     {
       title: "Agent cycle",
       value: "agent.cycle",
@@ -589,6 +631,7 @@ function App() {
       title: "Toggle console",
       category: "System",
       value: "app.console",
+      keybind: "console_toggle",
       onSelect: (dialog) => {
         renderer.console.toggle()
         dialog.clear()

@@ -152,7 +152,7 @@ export function Session() {
   const [showAssistantMetadata, setShowAssistantMetadata] = kv.signal("assistant_metadata_visibility", true)
   const [showScrollbar, setShowScrollbar] = kv.signal("scrollbar_visible", false)
   const [showHeader, setShowHeader] = kv.signal("header_visible", true)
-  const [diffWrapMode] = kv.signal<"word" | "none">("diff_wrap_mode", "word")
+  const [diffWrapMode, setDiffWrapMode] = kv.signal<"word" | "none">("diff_wrap_mode", "word")
   const [animationsEnabled, setAnimationsEnabled] = kv.signal("animations_enabled", true)
 
   const wide = createMemo(() => dimensions().width > 120)
@@ -558,6 +558,7 @@ export function Session() {
         name: "timestamps",
         aliases: ["toggle-timestamps"],
       },
+      keybind: "timestamps_toggle",
       onSelect: (dialog) => {
         setTimestamps((prev) => (prev === "show" ? "hide" : "show"))
         dialog.clear()
@@ -574,6 +575,19 @@ export function Session() {
       },
       onSelect: (dialog) => {
         setShowThinking((prev) => !prev)
+        dialog.clear()
+      },
+    },
+    {
+      title: "Toggle diff wrapping",
+      value: "session.toggle.diffwrap",
+      category: "Session",
+      slash: {
+        name: "diffwrap",
+      },
+      keybind: "diffwrap_toggle",
+      onSelect: (dialog) => {
+        setDiffWrapMode((prev) => (prev === "word" ? "none" : "word"))
         dialog.clear()
       },
     },
@@ -792,6 +806,7 @@ export function Session() {
       slash: {
         name: "copy",
       },
+      keybind: "session_copy",
       onSelect: async (dialog) => {
         try {
           const sessionData = session()
