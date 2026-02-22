@@ -24,24 +24,28 @@ export function buildKillTreeCommand(pid: number, platform = process.platform): 
   }
 }
 
+function spawnKillCommand(command: string, args: string[]): void {
+  const child = spawn(command, args, { stdio: "ignore" })
+  // Prevent unhandled "error" events if the kill utility is unavailable.
+  child.once("error", () => {})
+  child.unref()
+}
+
 export function killProcessTree(proc: ChildProcess): void {
   const pid = proc.pid
   if (!pid) return
 
   if (process.platform === "win32") {
     const command = buildKillTreeCommand(pid, "win32")
-    const killer = spawn(command.command, command.args, { stdio: "ignore" })
-    killer.unref()
+    spawnKillCommand(command.command, command.args)
     return
   }
 
   const termCommand = buildKillTreeCommand(pid, process.platform)
-  const term = spawn(termCommand.command, termCommand.args, { stdio: "ignore" })
-  term.unref()
+  spawnKillCommand(termCommand.command, termCommand.args)
 
   const timeout = setTimeout(() => {
-    const kill = spawn("kill", ["-KILL", `-${pid}`], { stdio: "ignore" })
-    kill.unref()
+    spawnKillCommand("kill", ["-KILL", `-${pid}`])
   }, 1000)
   timeout.unref()
 }
