@@ -140,6 +140,76 @@ describe("convertAnthropicMessageToGemini", () => {
 		])
 	})
 
+	it("should omit thoughtSignature when includeThoughtSignatures is false", () => {
+		const anthropicMessage: Anthropic.Messages.MessageParam = {
+			role: "assistant",
+			content: [
+				{ type: "thoughtSignature", thoughtSignature: "sig-123" } as any,
+				{
+					type: "tool_use",
+					id: "calc-123",
+					name: "calculator",
+					input: { operation: "add", numbers: [2, 3] },
+				},
+			],
+		}
+
+		const result = convertAnthropicMessageToGemini(anthropicMessage, {
+			includeThoughtSignatures: false,
+		})
+
+		expect(result).toEqual([
+			{
+				role: "model",
+				parts: [
+					{
+						functionCall: {
+							name: "calculator",
+							args: { operation: "add", numbers: [2, 3] },
+						},
+					},
+				],
+			},
+		])
+	})
+
+	it("should use skip_thought_signature_validator and drop text signatures when fallbackThoughtSignatures is true", () => {
+		const anthropicMessage: Anthropic.Messages.MessageParam = {
+			role: "assistant",
+			content: [
+				{ type: "thoughtSignature", thoughtSignature: "sig-123" } as any,
+				{ type: "text", text: "Here is my thought" },
+				{
+					type: "tool_use",
+					id: "calc-123",
+					name: "calculator",
+					input: { operation: "add", numbers: [2, 3] },
+				},
+			],
+		}
+
+		const result = convertAnthropicMessageToGemini(anthropicMessage, {
+			includeThoughtSignatures: true,
+			fallbackThoughtSignatures: true,
+		})
+
+		expect(result).toEqual([
+			{
+				role: "model",
+				parts: [
+					{ text: "Here is my thought" },
+					{
+						functionCall: {
+							name: "calculator",
+							args: { operation: "add", numbers: [2, 3] },
+						},
+						thoughtSignature: "skip_thought_signature_validator",
+					},
+				],
+			},
+		])
+	})
+
 	it("should only attach thoughtSignature to the first functionCall in the message", () => {
 		const anthropicMessage: Anthropic.Messages.MessageParam = {
 			role: "assistant",

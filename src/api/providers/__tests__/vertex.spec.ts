@@ -89,6 +89,65 @@ describe("VertexHandler", () => {
 			// Since we're directly mocking createMessage, we don't need to verify
 			// that generateContentStream was called
 		})
+
+		// kilocode_change start
+		it("should include thoughtSignature in Vertex tool_call history when native tools are enabled", async () => {
+			;(handler["client"].models.generateContentStream as any).mockResolvedValue({
+				[Symbol.asyncIterator]: async function* () {
+					yield { usageMetadata: { promptTokenCount: 1, candidatesTokenCount: 0 } }
+				},
+			})
+
+			const messagesWithToolCall: Anthropic.Messages.MessageParam[] = [
+				{
+					role: "assistant",
+					content: [
+						{
+							type: "tool_use",
+							id: "toolu_1",
+							name: "read_file",
+							input: { path: "README.md" },
+						},
+					] as any,
+				},
+			]
+
+			await handler
+				.createMessage(systemPrompt, messagesWithToolCall, {
+					taskId: "task-1",
+					tools: [
+						{
+							type: "function",
+							function: {
+								name: "read_file",
+								description: "Read a file",
+								parameters: { type: "object", properties: {} },
+							},
+						},
+					],
+				} as any)
+				.next()
+
+			expect(handler["client"].models.generateContentStream).toHaveBeenCalledTimes(1)
+
+			const callParams = (handler["client"].models.generateContentStream as any).mock.calls[0][0]
+			expect(callParams.contents).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						role: "model",
+						parts: expect.arrayContaining([
+							expect.objectContaining({
+								functionCall: expect.objectContaining({
+									name: "read_file",
+								}),
+								thoughtSignature: "skip_thought_signature_validator",
+							}),
+						]),
+					}),
+				]),
+			)
+		})
+		// kilocode_change end
 	})
 
 	describe("completePrompt", () => {

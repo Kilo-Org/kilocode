@@ -133,6 +133,99 @@ describe("GeminiHandler", () => {
 				}
 			}).rejects.toThrow()
 		})
+
+		it("should retry once with fallback thought signatures when signature validation fails before streaming", async () => {
+			const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+			let firstAttemptContents: any[] | undefined
+			let secondAttemptContents: any[] | undefined
+			;(handler["client"].models.generateContentStream as any)
+				.mockImplementationOnce(async (params: any) => {
+					firstAttemptContents = JSON.parse(JSON.stringify(params.contents))
+					throw new Error("ThoughtSignature validation failed")
+				})
+				.mockImplementationOnce(async (params: any) => {
+					secondAttemptContents = JSON.parse(JSON.stringify(params.contents))
+					return {
+						[Symbol.asyncIterator]: async function* () {
+							yield { usageMetadata: { promptTokenCount: 1, candidatesTokenCount: 0 } }
+						},
+					}
+				})
+
+			const messagesWithThoughtSignature: Anthropic.Messages.MessageParam[] = [
+				{
+					role: "assistant",
+					content: [
+						{ type: "thoughtSignature", thoughtSignature: "sig-123" } as any,
+						{
+							type: "tool_use",
+							id: "toolu_1",
+							name: "read_file",
+							input: { path: "README.md" },
+						} as any,
+					] as any,
+				},
+			]
+
+			const stream = handler.createMessage(systemPrompt, messagesWithThoughtSignature, {
+				taskId: "task-1",
+				tools: [
+					{
+						type: "function",
+						function: {
+							name: "read_file",
+							description: "Read a file",
+							parameters: { type: "object", properties: {} },
+						},
+					},
+				],
+			} as any)
+
+			const chunks = []
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			expect(handler["client"].models.generateContentStream).toHaveBeenCalledTimes(2)
+			expect(firstAttemptContents).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						role: "model",
+						parts: expect.arrayContaining([
+							expect.objectContaining({
+								functionCall: expect.objectContaining({
+									name: "read_file",
+								}),
+								thoughtSignature: "sig-123",
+							}),
+						]),
+					}),
+				]),
+			)
+
+			expect(secondAttemptContents).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						role: "model",
+						parts: expect.arrayContaining([
+							expect.objectContaining({
+								functionCall: expect.objectContaining({
+									name: "read_file",
+								}),
+								thoughtSignature: "skip_thought_signature_validator",
+							}),
+						]),
+					}),
+				]),
+			)
+
+			expect(chunks.some((chunk: any) => chunk.type === "usage")).toBe(true)
+			expect(warnSpy).toHaveBeenCalledWith(
+				"[GeminiHandler] Thought signature validation failed, retrying with fallback signatures...",
+			)
+
+			warnSpy.mockRestore()
+		})
 	})
 
 	describe("completePrompt", () => {

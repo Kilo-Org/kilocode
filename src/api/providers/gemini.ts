@@ -260,153 +260,187 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 
 		const params: GenerateContentParameters = { model, contents, config }
 
-		try {
-			const result = await this.client.models.generateContentStream(params)
+		let attempt = 0
+		let hasYielded = false
 
-			let lastUsageMetadata: GenerateContentResponseUsageMetadata | undefined
-			let pendingGroundingMetadata: GroundingMetadata | undefined
-			let finalResponse: { responseId?: string } | undefined
-			let finishReason: string | undefined
+		while (true) {
+			try {
+				const result = await this.client.models.generateContentStream(params)
 
-			let toolCallCounter = 0
-			let hasContent = false
-			let hasReasoning = false
+				let lastUsageMetadata: GenerateContentResponseUsageMetadata | undefined
+				let pendingGroundingMetadata: GroundingMetadata | undefined
+				let finalResponse: { responseId?: string } | undefined
+				let finishReason: string | undefined
 
-			for await (const chunk of result) {
-				// Track the final structured response (per SDK pattern: candidate.finishReason)
-				if (chunk.candidates && chunk.candidates[0]?.finishReason) {
-					finalResponse = chunk as { responseId?: string }
-					finishReason = chunk.candidates[0].finishReason
-				}
-				// Process candidates and their parts to separate thoughts from content
-				if (chunk.candidates && chunk.candidates.length > 0) {
-					const candidate = chunk.candidates[0]
+				let toolCallCounter = 0
+				let hasContent = false
+				let hasReasoning = false
 
-					// kilocode_change start
-					if (candidate.finishReason === FinishReason.MAX_TOKENS) {
-						throwMaxCompletionTokensReachedError()
+				for await (const chunk of result) {
+					// Track the final structured response (per SDK pattern: candidate.finishReason)
+					if (chunk.candidates && chunk.candidates[0]?.finishReason) {
+						finalResponse = chunk as { responseId?: string }
+						finishReason = chunk.candidates[0].finishReason
 					}
-					// kilocode_change end
+					// Process candidates and their parts to separate thoughts from content
+					if (chunk.candidates && chunk.candidates.length > 0) {
+						const candidate = chunk.candidates[0]
 
-					if (candidate.groundingMetadata) {
-						pendingGroundingMetadata = candidate.groundingMetadata
-					}
+						// kilocode_change start
+						if (candidate.finishReason === FinishReason.MAX_TOKENS) {
+							throwMaxCompletionTokensReachedError()
+						}
+						// kilocode_change end
 
-					if (candidate.content && candidate.content.parts) {
-						for (const part of candidate.content.parts as Array<{
-							thought?: boolean
-							text?: string
-							thoughtSignature?: string
-							functionCall?: { name: string; args: Record<string, unknown> }
-						}>) {
-							// Capture thought signatures so they can be persisted into API history.
-							const thoughtSignature = part.thoughtSignature
-							// Persist thought signatures so they can be round-tripped in the next step.
-							// Gemini 3 requires this during tool calling; other Gemini thinking models
-							// benefit from it for continuity.
-							if (includeThoughtSignatures && thoughtSignature) {
-								this.lastThoughtSignature = thoughtSignature
-							}
+						if (candidate.groundingMetadata) {
+							pendingGroundingMetadata = candidate.groundingMetadata
+						}
 
-							if (part.thought) {
-								// This is a thinking/reasoning part
-								if (part.text) {
-									hasReasoning = true
-									yield { type: "reasoning", text: part.text }
-								}
-							} else if (part.functionCall) {
-								hasContent = true
-								// Gemini sends complete function calls in a single chunk
-								// Emit as partial chunks for consistent handling with NativeToolCallParser
-								const callId = `${part.functionCall.name}-${toolCallCounter}`
-								const args = JSON.stringify(part.functionCall.args)
-
-								// Emit name first
-								yield {
-									type: "tool_call_partial",
-									index: toolCallCounter,
-									id: callId,
-									name: part.functionCall.name,
-									arguments: undefined,
+						if (candidate.content && candidate.content.parts) {
+							for (const part of candidate.content.parts as Array<{
+								thought?: boolean
+								text?: string
+								thoughtSignature?: string
+								functionCall?: { name: string; args: Record<string, unknown> }
+							}>) {
+								hasYielded = true
+								// Capture thought signatures so they can be persisted into API history.
+								const thoughtSignature = part.thoughtSignature
+								// Persist thought signatures so they can be round-tripped in the next step.
+								// Gemini 3 requires this during tool calling; other Gemini thinking models
+								// benefit from it for continuity.
+								if (includeThoughtSignatures && thoughtSignature) {
+									this.lastThoughtSignature = thoughtSignature
 								}
 
-								// Then emit arguments
-								yield {
-									type: "tool_call_partial",
-									index: toolCallCounter,
-									id: callId,
-									name: undefined,
-									arguments: args,
-								}
-
-								toolCallCounter++
-							} else {
-								// This is regular content
-								if (part.text) {
+								if (part.thought) {
+									// This is a thinking/reasoning part
+									if (part.text) {
+										hasReasoning = true
+										yield { type: "reasoning", text: part.text }
+									}
+								} else if (part.functionCall) {
 									hasContent = true
-									yield { type: "text", text: part.text }
+									// Gemini sends complete function calls in a single chunk
+									// Emit as partial chunks for consistent handling with NativeToolCallParser
+									const callId = `${part.functionCall.name}-${toolCallCounter}`
+									const args = JSON.stringify(part.functionCall.args)
+
+									// Emit name first
+									yield {
+										type: "tool_call_partial",
+										index: toolCallCounter,
+										id: callId,
+										name: part.functionCall.name,
+										arguments: undefined,
+									}
+
+									// Then emit arguments
+									yield {
+										type: "tool_call_partial",
+										index: toolCallCounter,
+										id: callId,
+										name: undefined,
+										arguments: args,
+									}
+
+									toolCallCounter++
+								} else {
+									// This is regular content
+									if (part.text) {
+										hasContent = true
+										yield { type: "text", text: part.text }
+									}
 								}
 							}
 						}
 					}
+
+					// Fallback to the original text property if no candidates structure
+					else if (chunk.text) {
+						hasYielded = true
+						hasContent = true
+						yield { type: "text", text: chunk.text }
+					}
+
+					if (chunk.usageMetadata) {
+						lastUsageMetadata = chunk.usageMetadata
+					}
 				}
 
-				// Fallback to the original text property if no candidates structure
-				else if (chunk.text) {
-					hasContent = true
-					yield { type: "text", text: chunk.text }
+				if (finalResponse?.responseId) {
+					// Capture responseId so Task.addToApiConversationHistory can store it
+					// alongside the assistant message in api_history.json.
+					this.lastResponseId = finalResponse.responseId
 				}
 
-				if (chunk.usageMetadata) {
-					lastUsageMetadata = chunk.usageMetadata
+				if (pendingGroundingMetadata) {
+					const sources = this.extractGroundingSources(pendingGroundingMetadata)
+					if (sources.length > 0) {
+						yield { type: "grounding", sources }
+					}
 				}
-			}
 
-			if (finalResponse?.responseId) {
-				// Capture responseId so Task.addToApiConversationHistory can store it
-				// alongside the assistant message in api_history.json.
-				this.lastResponseId = finalResponse.responseId
-			}
+				if (lastUsageMetadata) {
+					const inputTokens = lastUsageMetadata.promptTokenCount ?? 0
+					const outputTokens = lastUsageMetadata.candidatesTokenCount ?? 0
+					const cacheReadTokens = lastUsageMetadata.cachedContentTokenCount
+					const reasoningTokens = lastUsageMetadata.thoughtsTokenCount
 
-			if (pendingGroundingMetadata) {
-				const sources = this.extractGroundingSources(pendingGroundingMetadata)
-				if (sources.length > 0) {
-					yield { type: "grounding", sources }
-				}
-			}
-
-			if (lastUsageMetadata) {
-				const inputTokens = lastUsageMetadata.promptTokenCount ?? 0
-				const outputTokens = lastUsageMetadata.candidatesTokenCount ?? 0
-				const cacheReadTokens = lastUsageMetadata.cachedContentTokenCount
-				const reasoningTokens = lastUsageMetadata.thoughtsTokenCount
-
-				yield {
-					type: "usage",
-					inputTokens,
-					outputTokens,
-					cacheReadTokens,
-					reasoningTokens,
-					totalCost: this.calculateCost({
-						info,
+					yield {
+						type: "usage",
 						inputTokens,
 						outputTokens,
 						cacheReadTokens,
 						reasoningTokens,
-					}),
+						totalCost: this.calculateCost({
+							info,
+							inputTokens,
+							outputTokens,
+							cacheReadTokens,
+							reasoningTokens,
+						}),
+					}
 				}
-			}
-		} catch (error) {
-			const errorMessage = error instanceof Error ? error.message : String(error)
-			const apiError = new ApiProviderError(errorMessage, this.providerName, model, "createMessage")
-			TelemetryService.instance.captureException(apiError)
+				break
+			} catch (error) {
+				const errorMessage = error instanceof Error ? error.message : String(error)
 
-			if (error instanceof Error) {
-				throw new Error(t("common:errors.gemini.generate_stream", { error: error.message }))
-			}
+				// If signature validation fails, retry with fallback signatures
+				// This handles cases where switching models or providers (e.g. Vertex -> Gemini API)
+				// causes signature validation errors because the previous signature was generated by a different backend.
+				if (
+					!hasYielded &&
+					attempt === 0 &&
+					(errorMessage.toLowerCase().includes("signature") ||
+						errorMessage.toLowerCase().includes("thoughtsignature"))
+				) {
+					console.warn(
+						"[GeminiHandler] Thought signature validation failed, retrying with fallback signatures...",
+					)
+					params.contents = geminiMessages
+						.map((message) =>
+							convertAnthropicMessageToGemini(message, {
+								includeThoughtSignatures,
+								toolIdToName,
+								fallbackThoughtSignatures: true,
+							}),
+						)
+						.flat()
+					attempt++
+					continue
+				}
 
-			throw error
-		}
+				const apiError = new ApiProviderError(errorMessage, this.providerName, model, "createMessage")
+				TelemetryService.instance.captureException(apiError)
+
+				if (error instanceof Error) {
+					throw new Error(t("common:errors.gemini.generate_stream", { error: error.message }))
+				}
+
+				throw error
+			}
+		} // end while
 	}
 
 	override getModel() {

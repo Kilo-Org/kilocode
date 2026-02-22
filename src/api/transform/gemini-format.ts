@@ -25,7 +25,11 @@ function isThoughtSignatureContentBlock(block: ExtendedContentBlockParam): block
 
 export function convertAnthropicContentToGemini(
 	content: ExtendedAnthropicContent,
-	options?: { includeThoughtSignatures?: boolean; toolIdToName?: Map<string, string> },
+	options?: {
+		includeThoughtSignatures?: boolean
+		toolIdToName?: Map<string, string>
+		fallbackThoughtSignatures?: boolean
+	},
 ): Part[] {
 	const includeThoughtSignatures = options?.includeThoughtSignatures ?? true
 	const toolIdToName = options?.toolIdToName
@@ -37,6 +41,10 @@ export function convertAnthropicContentToGemini(
 		if (sigBlock?.thoughtSignature) {
 			activeThoughtSignature = sigBlock.thoughtSignature
 		}
+	}
+
+	if (options?.fallbackThoughtSignatures) {
+		activeThoughtSignature = undefined
 	}
 
 	// Determine the signature to attach to function calls.
@@ -182,7 +190,11 @@ export function convertAnthropicContentToGemini(
 
 export function convertAnthropicMessageToGemini(
 	message: Anthropic.Messages.MessageParam,
-	options?: { includeThoughtSignatures?: boolean; toolIdToName?: Map<string, string> },
+	options?: {
+		includeThoughtSignatures?: boolean
+		toolIdToName?: Map<string, string>
+		fallbackThoughtSignatures?: boolean
+	},
 ): Content[] {
 	const parts = convertAnthropicContentToGemini(message.content, options)
 
