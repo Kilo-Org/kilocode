@@ -188,13 +188,13 @@ export function getToolInfo(tool: string, input: any = {}): ToolInfo {
       return {
         icon: "glasses",
         title: i18n.t("ui.tool.read"),
-        subtitle: input.filePath ? getFilename(input.filePath) : undefined,
+        subtitle: input.filePath, // kilocode_change
       }
     case "list":
       return {
         icon: "bullet-list",
         title: i18n.t("ui.tool.list"),
-        subtitle: input.path ? getFilename(input.path) : undefined,
+        subtitle: input.path, // kilocode_change
       }
     case "glob":
       return {
@@ -759,6 +759,9 @@ ToolRegistry.register({
       if (!value || !Array.isArray(value)) return []
       return value.filter((p): p is string => typeof p === "string")
     })
+    // kilocode_change start
+    const subtitle = () => relativizeProjectPaths(props.input.filePath ?? "", data.directory)
+    // kilocode_change end
     return (
       <>
         <BasicTool
@@ -766,7 +769,7 @@ ToolRegistry.register({
           icon="glasses"
           trigger={{
             title: i18n.t("ui.tool.read"),
-            subtitle: props.input.filePath ? getFilename(props.input.filePath) : "",
+            subtitle: subtitle(), // kilocode_change
             args,
           }}
           // kilocode_change start
@@ -797,13 +800,13 @@ ToolRegistry.register({
 ToolRegistry.register({
   name: "list",
   render(props) {
+    const data = useData()
     const i18n = useI18n()
+    // kilocode_change start
+    const subtitle = () => relativizeProjectPaths(props.input.path ?? "", data.directory)
+    // kilocode_change end
     return (
-      <BasicTool
-        {...props}
-        icon="bullet-list"
-        trigger={{ title: i18n.t("ui.tool.list"), subtitle: getDirectory(props.input.path || "/") }}
-      >
+      <BasicTool {...props} icon="bullet-list" trigger={{ title: i18n.t("ui.tool.list"), subtitle: subtitle() }}>
         <Show when={props.output}>
           {(output) => (
             <div data-component="tool-output" data-scrollable>
