@@ -1,4 +1,4 @@
-import { spawn, type ChildProcessWithoutNullStreams } from "child_process"
+import { spawn as childSpawn, type ChildProcessWithoutNullStreams, type SpawnOptionsWithoutStdio } from "child_process"
 import path from "path"
 import os from "os"
 import { Global } from "../global"
@@ -13,6 +13,20 @@ import { Archive } from "../util/archive"
 
 export namespace LSPServer {
   const log = Log.create({ service: "lsp.server" })
+  // Spawn each LSP in its own process group so tree-kill can terminate descendants.
+  const spawn = (
+    command: string,
+    argsOrOptions?: readonly string[] | SpawnOptionsWithoutStdio,
+    options?: SpawnOptionsWithoutStdio,
+  ) => {
+    const hasArgs = Array.isArray(argsOrOptions)
+    const args = hasArgs ? argsOrOptions : []
+    const spawnOptions = (hasArgs ? options : argsOrOptions) ?? {}
+    return childSpawn(command, args, {
+      ...(spawnOptions as SpawnOptionsWithoutStdio),
+      detached: process.platform !== "win32",
+    })
+  }
   const pathExists = async (p: string) =>
     fs
       .stat(p)
