@@ -10,6 +10,7 @@ import { Config } from "../config/config"
 import { spawn } from "child_process"
 import { Instance } from "../project/instance"
 import { Flag } from "@/flag/flag"
+import { Shell } from "../shell/shell" // kilocode_change
 
 export namespace LSP {
   const log = Log.create({ service: "lsp" })
@@ -199,21 +200,21 @@ export namespace LSP {
         serverID: server.id,
         server: handle,
         root,
-      }).catch((err) => {
+      }).catch(async (err) => {
         s.broken.add(key)
-        handle.process.kill()
+        await Shell.killTree(handle.process) // kilocode_change
         log.error(`Failed to initialize LSP client ${server.id}`, { error: err })
         return undefined
       })
 
       if (!client) {
-        handle.process.kill()
+        await Shell.killTree(handle.process) // kilocode_change
         return undefined
       }
 
       const existing = s.clients.find((x) => x.root === root && x.serverID === server.id)
       if (existing) {
-        handle.process.kill()
+        await Shell.killTree(handle.process) // kilocode_change
         return existing
       }
 
