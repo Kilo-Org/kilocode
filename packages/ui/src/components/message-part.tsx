@@ -188,13 +188,13 @@ export function getToolInfo(tool: string, input: any = {}): ToolInfo {
       return {
         icon: "glasses",
         title: i18n.t("ui.tool.read"),
-        subtitle: input.filePath, // kilocode_change
+        subtitle: input.filePath ? getFilename(input.filePath) : undefined,
       }
     case "list":
       return {
         icon: "bullet-list",
         title: i18n.t("ui.tool.list"),
-        subtitle: input.path, // kilocode_change
+        subtitle: input.path ? getFilename(input.path) : undefined,
       }
     case "glob":
       return {
