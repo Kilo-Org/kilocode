@@ -48,7 +48,13 @@ For version-controlled mode instructions, use the mode rules file paths document
 - Fallback: `.kilorules-{mode-slug}` (single file)
 
 {% callout type="info" title="Legacy Naming Note" %}
-Older naming like `.clinerules-{mode-slug}` is not the recommended path for current Kilo mode-specific instructions.
+Legacy `.clinerules-{mode-slug}` files are deprecated and are not the active mode-specific path in current Kilo versions.
+If you still have those files, migrate to:
+
+- Preferred: `.kilo/rules-{mode-slug}/`
+- Fallback: `.kilorules-{mode-slug}`
+
+Note: `.clinerules` (without a mode suffix) is for project-level custom rules, not mode-specific instructions.
 {% /callout %}
 
 ## Related Features
