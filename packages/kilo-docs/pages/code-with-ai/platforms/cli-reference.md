@@ -146,14 +146,6 @@ Options:
       --auto      auto-approve all permissions (for autonomous/pipeline usage)  [boolean] [default: false]
 ```
 
-## kilo generate
-
-```
-Options:
-  --help     Show help  [boolean]
-  --version  Show version number  [boolean]
-```
-
 ## kilo debug
 
 ```

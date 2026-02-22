@@ -162,10 +162,10 @@ export async function generateHelp(options: {
 }): Promise<string> {
   const format = options.format ?? "md"
 
-  const all = options.commands ?? (await loadCommands())
+  const cmds = options.commands ?? (await loadCommands())
   const relevant = (() => {
-    if (options.command) return all.filter((c) => extractCommandName(c) === options.command)
-    if (options.all) return all.filter((c) => extractCommandName(c) !== undefined)
+    if (options.command) return cmds.filter((c) => extractCommandName(c) === options.command)
+    if (options.all) return cmds.filter((c) => extractCommandName(c) !== undefined && c.describe)
     return []
   })()
 
@@ -193,11 +193,11 @@ export async function generateHelp(options: {
 }
 
 export async function generateCommandTable(options?: { commands?: Cmd[] }) {
-  const all = options?.commands ?? (await loadCommands())
+  const cmds = options?.commands ?? (await loadCommands())
 
   const rows: Array<{ display: string; description: string }> = []
 
-  for (const cmd of all) {
+  for (const cmd of cmds) {
     const raw = typeof cmd.command === "string" ? cmd.command : cmd.command?.[0]
     if (!raw) continue
     if (!cmd.describe) continue

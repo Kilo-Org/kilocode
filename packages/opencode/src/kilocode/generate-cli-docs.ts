@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import { generateHelp, generateCommandTable } from "./help"
 
 const root = new URL("../../../../", import.meta.url).pathname
