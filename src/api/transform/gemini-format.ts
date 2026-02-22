@@ -35,19 +35,24 @@ export function convertAnthropicContentToGemini(
 ): Part[] {
 	const includeThoughtSignatures = options?.includeThoughtSignatures ?? true
 	const toolIdToName = options?.toolIdToName
+	// kilocode_change start
+	const isFallbackThoughtSignatureMode = options?.fallbackThoughtSignatures === true
+	const fallbackThoughtSignature = "skip_thought_signature_validator"
+	// kilocode_change end
 
-	// First pass: find thoughtSignature if it exists in the content blocks
+	// kilocode_change start
+	// First pass: find thoughtSignature if it exists in the content blocks.
+	// In fallback mode, ignore history signatures and force fallback behavior.
 	let activeThoughtSignature: string | undefined
-	if (Array.isArray(content)) {
+	if (Array.isArray(content) && !isFallbackThoughtSignatureMode) {
 		const sigBlock = content.find((block) => isThoughtSignatureContentBlock(block)) as ThoughtSignatureContentBlock
 		if (sigBlock?.thoughtSignature) {
 			activeThoughtSignature = sigBlock.thoughtSignature
 		}
 	}
 
-	// kilocode_change start
-	if (options?.fallbackThoughtSignatures) {
-		activeThoughtSignature = "skip_thought_signature_validator"
+	if (isFallbackThoughtSignatureMode) {
+		activeThoughtSignature = fallbackThoughtSignature
 	}
 	// kilocode_change end
 
@@ -56,9 +61,13 @@ export function convertAnthropicContentToGemini(
 	// 1. Use the actual signature if we found one in the history/content.
 	// 2. Fallback to "skip_thought_signature_validator" if missing (e.g. cross-model history).
 	let functionCallSignature: string | undefined
+	// kilocode_change start
 	if (includeThoughtSignatures) {
-		functionCallSignature = activeThoughtSignature || "skip_thought_signature_validator"
+		functionCallSignature = isFallbackThoughtSignatureMode
+			? fallbackThoughtSignature
+			: activeThoughtSignature || fallbackThoughtSignature
 	}
+	// kilocode_change end
 
 	if (typeof content === "string") {
 		return [{ text: content }]

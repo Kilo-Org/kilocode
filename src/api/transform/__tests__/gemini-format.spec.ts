@@ -174,7 +174,8 @@ describe("convertAnthropicMessageToGemini", () => {
 		])
 	})
 
-	it("should use skip_thought_signature_validator and drop thoughtSignature blocks when fallbackThoughtSignatures is true", () => { // kilocode_change
+	it("should use skip_thought_signature_validator and drop thoughtSignature blocks when fallbackThoughtSignatures is true", () => {
+		// kilocode_change
 		const anthropicMessage: Anthropic.Messages.MessageParam = {
 			role: "assistant",
 			content: [
@@ -207,6 +208,65 @@ describe("convertAnthropicMessageToGemini", () => {
 						thoughtSignature: "skip_thought_signature_validator",
 					},
 				],
+			},
+		])
+	})
+
+	it("should force skip_thought_signature_validator for tool calls in fallback retry mode when a stale thoughtSignature exists", () => {
+		// kilocode_change
+		const anthropicMessage: Anthropic.Messages.MessageParam = {
+			role: "assistant",
+			content: [
+				{ type: "thoughtSignature", thoughtSignature: "stale-retry-signature" } as any,
+				{
+					type: "tool_use",
+					id: "retry-call-1",
+					name: "calculator",
+					input: { operation: "add", numbers: [1, 4] },
+				},
+			],
+		}
+
+		const result = convertAnthropicMessageToGemini(anthropicMessage, {
+			includeThoughtSignatures: true,
+			fallbackThoughtSignatures: true,
+		})
+
+		expect(result).toEqual([
+			{
+				role: "model",
+				parts: [
+					{
+						functionCall: {
+							name: "calculator",
+							args: { operation: "add", numbers: [1, 4] },
+						},
+						thoughtSignature: "skip_thought_signature_validator",
+					},
+				],
+			},
+		])
+	})
+
+	it("should not re-attach stale thoughtSignature during post-processing in fallback retry mode", () => {
+		// kilocode_change
+		const anthropicMessage: Anthropic.Messages.MessageParam = {
+			role: "assistant",
+			content: [
+				{ type: "thoughtSignature", thoughtSignature: "stale-retry-signature" } as any,
+				{ type: "text", text: "Retrying without a tool call" },
+			],
+		}
+
+		const result = convertAnthropicMessageToGemini(anthropicMessage, {
+			includeThoughtSignatures: true,
+			fallbackThoughtSignatures: true,
+		})
+
+		expect(result).toEqual([
+			{
+				role: "model",
+				parts: [{ text: "Retrying without a tool call", thoughtSignature: "skip_thought_signature_validator" }],
 			},
 		])
 	})
