@@ -125,6 +125,10 @@ You can directly edit the configuration files to create or modify custom modes. 
 - **Project Modes:** Edit `.kilocodemodes` in your project root (YAML preferred; JSON still supported for compatibility).
 - **Open from UI:** Open the Modes area, click <Codicon name="gear" /> next to Global or Project Modes, then choose **Edit Global Modes** or **Edit Project Modes**.
 
+{% callout type="info" title="Legacy Docs Note" %}
+Older references to a "Prompts" tab or JSON-only mode editing are outdated. Current versions use the **Modes** area and write to YAML-first files (with JSON fallback for compatibility).
+{% /callout %}
+
 These files define an array/list of custom modes.
 
 {% callout type="info" title="Why JSON Files May Still Exist" %}

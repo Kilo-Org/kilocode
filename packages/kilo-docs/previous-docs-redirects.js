@@ -201,6 +201,12 @@ module.exports = [
     permanent: true,
   },
   {
+    source: "/docs/features/custom-modes",
+    destination: "/docs/customize/custom-modes",
+    basePath: false,
+    permanent: true,
+  },
+  {
     source: "/docs/basic-usage/task-todo-list",
     destination: "/docs/code-with-ai/features/task-todo-list",
     basePath: false,
