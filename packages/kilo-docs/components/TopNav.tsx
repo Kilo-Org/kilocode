@@ -337,7 +337,7 @@ export function TopNav({ onMobileMenuToggle, isMobileMenuOpen = false, showMobil
         <p>
           We're <Link href="https://blog.kilo.ai/p/kilo-cli">replatforming our extensions on the new Kilo CLI</Link>.
           Contribute to the new CLI and pre-release extensions at{" "}
-          <Link href="https://github.com/Kilo-Org/kilo">Kilo-Org/kilo</Link>.
+          <Link href="https://github.com/Kilo-Org/kilocode">Kilo-Org/kilocode</Link>.
         </p>
       </div>
 
