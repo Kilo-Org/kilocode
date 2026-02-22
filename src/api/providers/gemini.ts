@@ -271,17 +271,13 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 				let lastUsageMetadata: GenerateContentResponseUsageMetadata | undefined
 				let pendingGroundingMetadata: GroundingMetadata | undefined
 				let finalResponse: { responseId?: string } | undefined
-				let finishReason: string | undefined
 
 				let toolCallCounter = 0
-				let hasContent = false
-				let hasReasoning = false
 
 				for await (const chunk of result) {
 					// Track the final structured response (per SDK pattern: candidate.finishReason)
 					if (chunk.candidates && chunk.candidates[0]?.finishReason) {
 						finalResponse = chunk as { responseId?: string }
-						finishReason = chunk.candidates[0].finishReason
 					}
 					// Process candidates and their parts to separate thoughts from content
 					if (chunk.candidates && chunk.candidates.length > 0) {
@@ -316,12 +312,10 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 								if (part.thought) {
 									// This is a thinking/reasoning part
 									if (part.text) {
-										hasReasoning = true
 										hasYielded = true
 										yield { type: "reasoning", text: part.text }
 									}
 								} else if (part.functionCall) {
-									hasContent = true
 									hasYielded = true
 									// Gemini sends complete function calls in a single chunk
 									// Emit as partial chunks for consistent handling with NativeToolCallParser
@@ -350,7 +344,6 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 								} else {
 									// This is regular content
 									if (part.text) {
-										hasContent = true
 										hasYielded = true
 										yield { type: "text", text: part.text }
 									}
@@ -362,7 +355,6 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 					// Fallback to the original text property if no candidates structure
 					else if (chunk.text) {
 						hasYielded = true
-						hasContent = true
 						yield { type: "text", text: chunk.text }
 					}
 
@@ -380,6 +372,7 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 				if (pendingGroundingMetadata) {
 					const sources = this.extractGroundingSources(pendingGroundingMetadata)
 					if (sources.length > 0) {
+						hasYielded = true
 						yield { type: "grounding", sources }
 					}
 				}
@@ -390,6 +383,7 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 					const cacheReadTokens = lastUsageMetadata.cachedContentTokenCount
 					const reasoningTokens = lastUsageMetadata.thoughtsTokenCount
 
+					hasYielded = true
 					yield {
 						type: "usage",
 						inputTokens,
