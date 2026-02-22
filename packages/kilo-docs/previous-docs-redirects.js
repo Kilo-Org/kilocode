@@ -201,6 +201,12 @@ module.exports = [
     permanent: true,
   },
   {
+    source: "/docs/features/experimental/voice-transcription",
+    destination: "/docs/code-with-ai/features/speech-to-text",
+    basePath: false,
+    permanent: true,
+  },
+  {
     source: "/docs/basic-usage/task-todo-list",
     destination: "/docs/code-with-ai/features/task-todo-list",
     basePath: false,
