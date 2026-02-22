@@ -11,3 +11,10 @@ runs:
     - name: Add Kilo to PATH
       run: echo "$HOME/.kilo/bin" >> $GITHUB_PATH
       shell: bash
+
+    - name: Create opencode compatibility shim
+      run: |
+        if [ -x "$HOME/.kilo/bin/kilo" ] && [ ! -x "$HOME/.kilo/bin/opencode" ]; then
+          ln -sf "$HOME/.kilo/bin/kilo" "$HOME/.kilo/bin/opencode"
+        fi
+      shell: bash
