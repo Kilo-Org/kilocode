@@ -3,6 +3,7 @@ import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
 import z from "zod"
 import { Storage } from "../storage/storage"
+import { Lock } from "../util/lock"
 import { Instance } from "../project/instance"
 import { Log } from "../util/log"
 
@@ -54,6 +55,7 @@ export namespace LearnTracker {
   }
 
   export async function record(input: { sessionID: string; check: Omit<Check, "id" | "timestamp"> }) {
+    using _ = await Lock.write(`learn:${input.sessionID}`)
     const current = await get(input.sessionID)
     const now = Date.now()
     const check: Check = {
@@ -134,6 +136,7 @@ export namespace LearnTracker {
   const MAX_AGGREGATE_CHECKS = 500
 
   export async function appendAggregate(input: { sessionID: string; check: Check }) {
+    using _ = await Lock.write("learn:aggregate")
     const current = await getAggregate()
     const entry: AggregateCheck = { ...input.check, sessionID: input.sessionID }
     current.checks.push(entry)
