@@ -215,6 +215,18 @@ function App() {
   const exit = useExit()
   const promptRef = usePromptRef()
 
+  // kilocode_change start - graceful shutdown on external signals
+  onMount(() => {
+    const handler = () => exit()
+    process.on("SIGHUP", handler)
+    process.on("SIGTERM", handler)
+    return () => {
+      process.off("SIGHUP", handler)
+      process.off("SIGTERM", handler)
+    }
+  })
+  // kilocode_change end
+
   useKeyboard((evt) => {
     if (!Flag.KILO_EXPERIMENTAL_DISABLE_COPY_ON_SELECT) return
     if (!renderer.getSelection()) return
