@@ -638,7 +638,7 @@ export interface AgentManagerSendInitialMessage {
   type: "agentManager.sendInitialMessage"
   sessionId: string
   worktreeId: string
-  text: string
+  text?: string
   providerID?: string
   modelID?: string
   agent?: string

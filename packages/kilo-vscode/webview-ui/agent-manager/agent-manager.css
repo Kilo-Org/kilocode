@@ -1069,15 +1069,6 @@ button.am-section-toggle:hover .am-section-label {
   padding: 4px 0;
 }
 
-.am-branch-group-label {
-  padding: 6px 10px 4px;
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  color: var(--text-weaker);
-}
-
 .am-branch-item {
   display: flex;
   align-items: center;
@@ -1141,13 +1132,6 @@ button.am-section-toggle:hover .am-section-label {
   font-size: 11px;
   color: var(--text-weaker);
   white-space: nowrap;
-}
-
-.am-branch-empty {
-  padding: 12px 10px;
-  font-size: 12px;
-  color: var(--text-weaker);
-  text-align: center;
 }
 
 /* HoverCard popover for worktree items */
