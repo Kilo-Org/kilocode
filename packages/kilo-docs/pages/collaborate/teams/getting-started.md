@@ -76,6 +76,6 @@ You can find the dedicated Teams support methods directly on your Organization's
 
 ## Next Steps
 
-- [Learn about team roles and permissions](/docs/plans/team-management)
-- [Explore the dashboard features](/docs/plans/dashboard)
-- [Set up team management policies](/docs/plans/team-management)
+- [Learn about team roles and permissions](/docs/collaborate/teams/team-management)
+- [Explore the dashboard features](/docs/collaborate/adoption-dashboard/overview)
+- [Set up team management policies](/docs/collaborate/teams/team-management)

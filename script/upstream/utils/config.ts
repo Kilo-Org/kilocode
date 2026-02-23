@@ -211,7 +211,7 @@ export const defaultConfig: MergeConfig = {
     "**/yarn.lock",
   ],
 
-  baseBranch: "dev",
+  baseBranch: "main",
   branchPrefix: "upstream-merge",
   upstreamRemote: "upstream",
   originRemote: "origin",

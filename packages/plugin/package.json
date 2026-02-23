@@ -1,12 +1,12 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@kilocode/plugin",
-  "version": "1.0.24",
+  "version": "1.0.25",
   "type": "module",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Kilo-Org/kilo",
+    "url": "https://github.com/Kilo-Org/kilocode",
     "directory": "packages/plugin"
   },
   "scripts": {

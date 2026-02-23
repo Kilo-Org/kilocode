@@ -221,4 +221,4 @@ If your custom rules aren't being properly followed:
 - [Custom Modes](/docs/customize/custom-modes)
 - [Custom Instructions](/docs/customize/custom-instructions)
 - [Settings Management](/docs/getting-started/settings)
-- [Auto-Approval Settings](/docs/features/auto-approving-actions)
+- [Auto-Approval Settings](/docs/getting-started/settings/auto-approving-actions)

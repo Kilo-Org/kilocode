@@ -183,7 +183,7 @@ else
     fi
 
     if [ -z "$requested_version" ]; then
-        url="https://github.com/Kilo-Org/kilo/releases/latest/download/$filename"
+        url="https://github.com/Kilo-Org/kilocode/releases/latest/download/$filename"
         specific_version=$(curl -s https://api.github.com/repos/Kilo-Org/kilo/releases/latest | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')
 
         if [[ $? -ne 0 || -z "$specific_version" ]]; then
@@ -193,14 +193,14 @@ else
     else
         # Strip leading 'v' if present
         requested_version="${requested_version#v}"
-        url="https://github.com/Kilo-Org/kilo/releases/download/v${requested_version}/$filename"
+        url="https://github.com/Kilo-Org/kilocode/releases/download/v${requested_version}/$filename"
         specific_version=$requested_version
 
         # Verify the release exists before downloading
-        http_status=$(curl -sI -o /dev/null -w "%{http_code}" "https://github.com/Kilo-Org/kilo/releases/tag/v${requested_version}")
+        http_status=$(curl -sI -o /dev/null -w "%{http_code}" "https://github.com/Kilo-Org/kilocode/releases/tag/v${requested_version}")
         if [ "$http_status" = "404" ]; then
             echo -e "${RED}Error: Release v${requested_version} not found${NC}"
-            echo -e "${MUTED}Available releases: https://github.com/Kilo-Org/kilo/releases${NC}"
+            echo -e "${MUTED}Available releases: https://github.com/Kilo-Org/kilocode/releases${NC}"
             exit 1
         fi
     fi
