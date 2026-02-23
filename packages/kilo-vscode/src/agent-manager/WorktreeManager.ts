@@ -8,6 +8,7 @@
 
 import * as path from "path"
 import * as fs from "fs"
+import { execSync } from "child_process"
 import simpleGit, { type SimpleGit } from "simple-git"
 import { generateBranchName } from "./branch-name"
 
@@ -27,6 +28,20 @@ export interface CreateWorktreeResult {
   parentBranch: string
 }
 
+export interface BranchInfo {
+  name: string
+  isLocal: boolean
+  isRemote: boolean
+  lastCommitDate: number
+  isDefault: boolean
+}
+
+export interface ExternalWorktreeInfo {
+  branch: string
+  path: string
+  isMain: boolean
+}
+
 const KILOCODE_DIR = ".kilocode"
 const SESSION_ID_FILE = "session-id"
 const METADATA_FILE = "metadata.json"
@@ -44,7 +59,12 @@ export class WorktreeManager {
     this.log = log
   }
 
-  async createWorktree(params: { prompt?: string; existingBranch?: string }): Promise<CreateWorktreeResult> {
+  async createWorktree(params: {
+    prompt?: string
+    existingBranch?: string
+    baseBranch?: string
+    branchName?: string
+  }): Promise<CreateWorktreeResult> {
     const repo = await this.git.checkIsRepo()
     if (!repo)
       throw new Error(
@@ -54,15 +74,29 @@ export class WorktreeManager {
     await this.ensureDir()
     await this.ensureGitExclude()
 
-    const parent = await this.currentBranch()
-    let branch = params.existingBranch ?? generateBranchName(params.prompt || "agent-task")
+    const parent = params.baseBranch || (await this.currentBranch())
+
+    // Validate baseBranch exists if explicitly provided
+    if (params.baseBranch) {
+      const exists = await this.branchExists(params.baseBranch)
+      if (!exists) throw new Error(`Base branch "${params.baseBranch}" does not exist`)
+      // Check if the base branch is a remote-only branch and fetch it
+      const branches = await this.git.branch()
+      if (!branches.all.includes(params.baseBranch) && branches.all.includes(`remotes/origin/${params.baseBranch}`)) {
+        await this.git.fetch("origin", params.baseBranch)
+      }
+    }
+
+    let branch = params.existingBranch ?? params.branchName ?? generateBranchName(params.prompt || "agent-task")
 
     if (params.existingBranch) {
       const exists = await this.branchExists(branch)
       if (!exists) throw new Error(`Branch "${branch}" does not exist`)
     }
 
-    let worktreePath = path.join(this.dir, branch)
+    // Sanitize directory name — replace slashes with dashes for filesystem safety
+    const dirName = branch.replace(/\//g, "-")
+    let worktreePath = path.join(this.dir, dirName)
 
     if (fs.existsSync(worktreePath)) {
       this.log(`Worktree directory exists, cleaning up before re-creation: ${worktreePath}`)
@@ -72,20 +106,32 @@ export class WorktreeManager {
     try {
       const args = params.existingBranch
         ? ["worktree", "add", worktreePath, branch]
-        : ["worktree", "add", "-b", branch, worktreePath]
+        : params.baseBranch
+          ? ["worktree", "add", "-b", branch, worktreePath, params.baseBranch]
+          : ["worktree", "add", "-b", branch, worktreePath]
       await this.git.raw(args)
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
+      if (msg.includes("already checked out")) {
+        // Extract worktree path from error like "fatal: 'branch' is already checked out at '/path'"
+        const match = msg.match(/already checked out at '([^']+)'/)
+        const loc = match ? match[1] : "another worktree"
+        throw new Error(`Branch "${branch}" is already checked out in worktree at: ${loc}`)
+      }
       if (!msg.includes("already exists") || params.existingBranch) {
         throw new Error(`Failed to create worktree: ${msg}`)
       }
       // Branch name collision -- retry with unique suffix
       branch = `${branch}-${Date.now()}`
-      worktreePath = path.join(this.dir, branch)
-      await this.git.raw(["worktree", "add", "-b", branch, worktreePath])
+      const retryDir = branch.replace(/\//g, "-")
+      worktreePath = path.join(this.dir, retryDir)
+      const retryArgs = params.baseBranch
+        ? ["worktree", "add", "-b", branch, worktreePath, params.baseBranch]
+        : ["worktree", "add", "-b", branch, worktreePath]
+      await this.git.raw(retryArgs)
     }
 
-    this.log(`Created worktree: ${worktreePath} (branch: ${branch})`)
+    this.log(`Created worktree: ${worktreePath} (branch: ${branch}, base: ${parent})`)
     return { branch, path: worktreePath, parentBranch: parent }
   }
 
@@ -174,6 +220,168 @@ export class WorktreeManager {
     }
 
     return undefined
+  }
+
+  // ---------------------------------------------------------------------------
+  // Branch & worktree discovery
+  // ---------------------------------------------------------------------------
+
+  async listBranches(): Promise<{ branches: BranchInfo[]; defaultBranch: string }> {
+    const defBranch = await this.defaultBranch()
+
+    // Get local branches with commit dates
+    const localRaw = await this.git
+      .raw(["for-each-ref", "--sort=-committerdate", "--format=%(refname:short)\t%(committerdate:unix)", "refs/heads/"])
+      .then((out) => out.trim())
+      .catch(() => "")
+
+    // Get remote branches with commit dates
+    const remoteRaw = await this.git
+      .raw([
+        "for-each-ref",
+        "--sort=-committerdate",
+        "--format=%(refname:short)\t%(committerdate:unix)",
+        "refs/remotes/origin/",
+      ])
+      .then((out) => out.trim())
+      .catch(() => "")
+
+    const map = new Map<string, BranchInfo>()
+
+    for (const line of localRaw.split("\n").filter(Boolean)) {
+      const [name, dateStr] = line.split("\t")
+      if (!name) continue
+      map.set(name, {
+        name,
+        isLocal: true,
+        isRemote: false,
+        lastCommitDate: parseInt(dateStr || "0", 10),
+        isDefault: name === defBranch,
+      })
+    }
+
+    for (const line of remoteRaw.split("\n").filter(Boolean)) {
+      const [ref, dateStr] = line.split("\t")
+      if (!ref) continue
+      const name = ref.replace(/^origin\//, "")
+      if (name === "HEAD") continue
+      const existing = map.get(name)
+      if (existing) {
+        existing.isRemote = true
+      } else {
+        map.set(name, {
+          name,
+          isLocal: false,
+          isRemote: true,
+          lastCommitDate: parseInt(dateStr || "0", 10),
+          isDefault: name === defBranch,
+        })
+      }
+    }
+
+    // Sort: default first, then by lastCommitDate descending
+    const branches = [...map.values()].sort((a, b) => {
+      if (a.isDefault && !b.isDefault) return -1
+      if (!a.isDefault && b.isDefault) return 1
+      return b.lastCommitDate - a.lastCommitDate
+    })
+
+    return { branches, defaultBranch: defBranch }
+  }
+
+  async listExternalWorktrees(): Promise<ExternalWorktreeInfo[]> {
+    const raw = await this.git.raw(["worktree", "list", "--porcelain"]).catch(() => "")
+    if (!raw.trim()) return []
+
+    const entries: Array<{ path: string; branch: string; bare: boolean }> = []
+    let current: { path?: string; branch?: string; bare: boolean } = { bare: false }
+
+    for (const line of raw.split("\n")) {
+      if (line.startsWith("worktree ")) {
+        if (current.path) entries.push({ path: current.path, branch: current.branch || "HEAD", bare: current.bare })
+        current = { path: line.slice("worktree ".length).trim(), bare: false }
+      } else if (line.startsWith("branch ")) {
+        current.branch = line
+          .slice("branch ".length)
+          .trim()
+          .replace(/^refs\/heads\//, "")
+      } else if (line === "bare") {
+        current.bare = true
+      } else if (line === "" && current.path) {
+        entries.push({ path: current.path, branch: current.branch || "HEAD", bare: current.bare })
+        current = { bare: false }
+      }
+    }
+    if (current.path) entries.push({ path: current.path, branch: current.branch || "HEAD", bare: current.bare })
+
+    // Filter: exclude the main repo root and any worktrees we manage (inside .kilocode/worktrees/)
+    const mainRoot = path.resolve(this.root)
+    return entries
+      .filter((e) => !e.bare)
+      .map((e) => ({
+        branch: e.branch,
+        path: e.path,
+        isMain: path.resolve(e.path) === mainRoot,
+      }))
+      .filter((e) => !e.isMain && !e.path.startsWith(this.dir))
+  }
+
+  async createFromPR(url: string): Promise<{ branch: string; owner: string; repo: string; number: number }> {
+    const parsed = this.parsePRUrl(url)
+    if (!parsed) throw new Error("Invalid PR URL. Expected format: https://github.com/owner/repo/pull/123")
+
+    // Use gh CLI to fetch PR info
+    let prInfo: {
+      headRefName: string
+      isCrossRepository: boolean
+      headRepositoryOwner?: { login: string }
+    }
+
+    try {
+      const out = execSync(
+        `gh pr view ${parsed.number} --repo ${parsed.owner}/${parsed.repo} --json headRefName,isCrossRepository,headRepositoryOwner`,
+        { encoding: "utf-8", timeout: 30000 },
+      )
+      prInfo = JSON.parse(out)
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error)
+      if (msg.includes("ENOENT") || msg.includes("not found")) {
+        throw new Error("GitHub CLI (gh) is not installed. Install it from https://cli.github.com/")
+      }
+      if (msg.includes("not logged in")) {
+        throw new Error("Not logged in to GitHub CLI. Run 'gh auth login'")
+      }
+      if (msg.includes("Could not resolve")) {
+        throw new Error(`PR #${parsed.number} not found in ${parsed.owner}/${parsed.repo}`)
+      }
+      throw new Error(`Failed to fetch PR info: ${msg}`)
+    }
+
+    let branch = prInfo.headRefName
+    if (prInfo.isCrossRepository && prInfo.headRepositoryOwner) {
+      const forkOwner = prInfo.headRepositoryOwner.login.toLowerCase()
+      // Add fork remote if needed
+      try {
+        await this.git.raw(["remote", "add", forkOwner, `https://github.com/${forkOwner}/${parsed.repo}.git`])
+      } catch {
+        // Remote might already exist
+      }
+      await this.git.fetch(forkOwner, prInfo.headRefName)
+      branch = `${forkOwner}/${prInfo.headRefName}`
+    } else {
+      await this.git.fetch("origin", prInfo.headRefName)
+    }
+
+    return { branch, ...parsed }
+  }
+
+  private parsePRUrl(url: string): { owner: string; repo: string; number: number } | null {
+    let normalized = url.trim()
+    if (!normalized.startsWith("http")) normalized = `https://${normalized}`
+    // Match github.com/owner/repo/pull/123 pattern directly
+    const match = normalized.match(/github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)/)
+    if (!match) return null
+    return { owner: match[1], repo: match[2], number: parseInt(match[3], 10) }
   }
 
   // ---------------------------------------------------------------------------
@@ -279,7 +487,7 @@ export class WorktreeManager {
     return (await this.git.revparse(["--abbrev-ref", "HEAD"])).trim()
   }
 
-  private async branchExists(name: string): Promise<boolean> {
+  async branchExists(name: string): Promise<boolean> {
     try {
       const branches = await this.git.branch()
       return branches.all.includes(name) || branches.all.includes(`remotes/origin/${name}`)
@@ -288,7 +496,7 @@ export class WorktreeManager {
     }
   }
 
-  private async defaultBranch(): Promise<string> {
+  async defaultBranch(): Promise<string> {
     try {
       const head = await this.git.raw(["symbolic-ref", "refs/remotes/origin/HEAD"])
       const match = head.trim().match(/refs\/remotes\/origin\/(.+)$/)

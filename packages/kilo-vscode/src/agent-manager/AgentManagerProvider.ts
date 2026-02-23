@@ -129,7 +129,9 @@ export class AgentManagerProvider implements vscode.Disposable {
   private async onMessage(msg: Record<string, unknown>): Promise<Record<string, unknown> | null> {
     const type = msg.type as string
 
-    if (type === "agentManager.createWorktree") return this.onCreateWorktree()
+    if (type === "agentManager.createWorktree") {
+      return this.onCreateWorktree(msg.baseBranch as string | undefined, msg.branchName as string | undefined)
+    }
     if (type === "agentManager.deleteWorktree" && typeof msg.worktreeId === "string")
       return this.onDeleteWorktree(msg.worktreeId)
     if (type === "agentManager.promoteSession" && typeof msg.sessionId === "string")
@@ -173,6 +175,10 @@ export class AgentManagerProvider implements vscode.Disposable {
         })
       return null
     }
+    if (type === "agentManager.requestBranches") {
+      void this.onRequestBranches()
+      return null
+    }
     if (type === "agentManager.setTabOrder" && typeof msg.key === "string" && Array.isArray(msg.order)) {
       this.state?.setTabOrder(msg.key as string, msg.order as string[])
       return null
@@ -205,7 +211,12 @@ export class AgentManagerProvider implements vscode.Disposable {
   // ---------------------------------------------------------------------------
 
   /** Create a git worktree on disk and register it in state. Returns null on failure. */
-  private async createWorktreeOnDisk(groupId?: string): Promise<{
+  private async createWorktreeOnDisk(opts?: {
+    groupId?: string
+    baseBranch?: string
+    branchName?: string
+    existingBranch?: string
+  }): Promise<{
     worktree: ReturnType<WorktreeStateManager["addWorktree"]>
     result: CreateWorktreeResult
   } | null> {
@@ -224,7 +235,12 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     let result: CreateWorktreeResult
     try {
-      result = await manager.createWorktree({ prompt: "kilo" })
+      result = await manager.createWorktree({
+        prompt: "kilo",
+        baseBranch: opts?.baseBranch,
+        branchName: opts?.branchName,
+        existingBranch: opts?.existingBranch,
+      })
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
       this.postToWebview({
@@ -239,7 +255,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       branch: result.branch,
       path: result.path,
       parentBranch: result.parentBranch,
-      groupId,
+      groupId: opts?.groupId,
     })
 
     // Push state immediately so the sidebar shows the new worktree with a loading indicator
@@ -322,8 +338,8 @@ export class AgentManagerProvider implements vscode.Disposable {
   // ---------------------------------------------------------------------------
 
   /** Create a new worktree with an auto-created first session. */
-  private async onCreateWorktree(): Promise<null> {
-    const created = await this.createWorktreeOnDisk()
+  private async onCreateWorktree(baseBranch?: string, branchName?: string): Promise<null> {
+    const created = await this.createWorktreeOnDisk({ baseBranch, branchName })
     if (!created) return null
 
     // Run setup script for new worktree (blocks until complete, shows in overlay)
@@ -376,7 +392,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
   /** Promote a session: create a worktree and move the session into it. */
   private async onPromoteSession(sessionId: string): Promise<null> {
-    const created = await this.createWorktreeOnDisk()
+    const created = await this.createWorktreeOnDisk({})
     if (!created) return null
 
     // Run setup script for new worktree (blocks until complete, shows in overlay)
@@ -452,25 +468,41 @@ export class AgentManagerProvider implements vscode.Disposable {
   }
 
   // ---------------------------------------------------------------------------
+  // Import / branch / external worktree handlers
+  // ---------------------------------------------------------------------------
+
+  private async onRequestBranches(): Promise<void> {
+    const manager = this.getWorktreeManager()
+    if (!manager) return
+    try {
+      const data = await manager.listBranches()
+      this.postToWebview({ type: "agentManager.branches", branches: data.branches, defaultBranch: data.defaultBranch })
+    } catch (error) {
+      this.log(`Failed to list branches: ${error}`)
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Multi-version worktree creation
   // ---------------------------------------------------------------------------
 
   /** Create N worktree sessions for the same prompt (multi-version mode). */
   private async onCreateMultiVersion(msg: Record<string, unknown>): Promise<null> {
-    const text = msg.text as string
-    if (!text) return null
+    const text = (msg.text as string | undefined)?.trim() || undefined
 
     const versions = Math.min(Math.max(Number(msg.versions) || 1, 1), 4)
     const providerID = msg.providerID as string | undefined
     const modelID = msg.modelID as string | undefined
     const agent = msg.agent as string | undefined
     const files = msg.files as Array<{ mime: string; url: string }> | undefined
+    const baseBranch = msg.baseBranch as string | undefined
+    const branchName = (msg.branchName as string | undefined)?.trim() || undefined
 
     // Generate a shared group ID for multi-version worktrees
     const groupId = versions > 1 ? `grp-${Date.now()}` : undefined
 
     this.log(
-      `Creating ${versions} multi-version worktrees for: ${text.slice(0, 60)}${groupId ? ` (group=${groupId})` : ""}`,
+      `Creating ${versions} worktrees${text ? ` for: ${text.slice(0, 60)}` : ""}${groupId ? ` (group=${groupId})` : ""}`,
     )
 
     // Notify webview that multi-version creation has started
@@ -494,7 +526,10 @@ export class AgentManagerProvider implements vscode.Disposable {
     for (let i = 0; i < versions; i++) {
       this.log(`Creating worktree ${i + 1}/${versions}`)
 
-      const wt = await this.createWorktreeOnDisk(groupId)
+      // For multi-version with a custom branch name, suffix with -v1, -v2, etc.
+      const effectiveBranchName = branchName && versions > 1 ? `${branchName}-v${i + 1}` : branchName
+
+      const wt = await this.createWorktreeOnDisk({ groupId, baseBranch, branchName: effectiveBranchName })
       if (!wt) {
         this.log(`Failed to create worktree for version ${i + 1}`)
         continue
@@ -537,29 +572,28 @@ export class AgentManagerProvider implements vscode.Disposable {
       })
     }
 
-    // Phase 2: Send the initial prompt to all sessions via the KiloProvider's
-    // message handling (same path as typing in the chat). This ensures SSE
-    // subscriptions and session tracking are properly set up before the message
-    // is sent. We route each message through the webview→KiloProvider pipeline.
-    for (let i = 0; i < created.length; i++) {
-      const entry = created[i]!
-      this.log(`Sending initial message to version ${i + 1} (session=${entry.sessionId})`)
+    // Phase 2: Send the initial prompt to all sessions (only if there's text)
+    if (text) {
+      for (let i = 0; i < created.length; i++) {
+        const entry = created[i]!
+        this.log(`Sending initial message to version ${i + 1} (session=${entry.sessionId})`)
 
-      // Tell the webview to send the message through the normal session flow
-      this.postToWebview({
-        type: "agentManager.sendInitialMessage",
-        sessionId: entry.sessionId,
-        worktreeId: entry.worktreeId,
-        text,
-        providerID,
-        modelID,
-        agent,
-        files,
-      })
+        // Tell the webview to send the message through the normal session flow
+        this.postToWebview({
+          type: "agentManager.sendInitialMessage",
+          sessionId: entry.sessionId,
+          worktreeId: entry.worktreeId,
+          text,
+          providerID,
+          modelID,
+          agent,
+          files,
+        })
 
-      // Small delay between sends to avoid overwhelming the backend
-      if (i < created.length - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 300))
+        // Small delay between sends to avoid overwhelming the backend
+        if (i < created.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 300))
+        }
       }
     }
 
