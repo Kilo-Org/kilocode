@@ -52,11 +52,19 @@
   background: var(--surface-base-active);
 }
 
+.am-local-item-active .am-local-icon {
+  color: var(--text-base);
+}
+
+.am-local-item-active .am-local-branch {
+  color: var(--text-weak);
+}
+
 .am-local-icon {
   width: 18px;
   height: 18px;
   flex-shrink: 0;
-  color: var(--text-weaker);
+  color: var(--text-weak);
 }
 
 .am-local-text {
@@ -74,7 +82,7 @@
 
 .am-local-branch {
   font-size: var(--font-size-small);
-  color: var(--text-weaker);
+  color: var(--text-weak);
   line-height: 1.2;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -185,6 +193,10 @@ button.am-section-toggle:hover .am-section-label {
 
 .am-worktree-item-active {
   background: var(--surface-interactive-base);
+  color: var(--text-on-interactive-base);
+}
+
+.am-worktree-item-active [data-component="icon"] {
   color: var(--text-on-interactive-base);
 }
 
