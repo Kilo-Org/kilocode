@@ -4,6 +4,7 @@ import { KiloProvider } from "../KiloProvider"
 import { buildWebviewHtml } from "../utils"
 import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
 import { WorktreeStateManager } from "./WorktreeStateManager"
+import { versionedName } from "./branch-name"
 import { SetupScriptService } from "./SetupScriptService"
 import { SetupScriptRunner } from "./SetupScriptRunner"
 import { SessionTerminalManager } from "./SessionTerminalManager"
@@ -154,6 +155,14 @@ export class AgentManagerProvider implements vscode.Disposable {
       void this.onCreateMultiVersion(msg)
       return null
     }
+    if (type === "agentManager.renameWorktree" && typeof msg.worktreeId === "string" && typeof msg.label === "string") {
+      const state = this.getStateManager()
+      if (state) {
+        state.updateWorktreeLabel(msg.worktreeId as string, msg.label as string)
+        this.pushState()
+      }
+      return null
+    }
     if (type === "agentManager.requestState") {
       void this.stateReady
         ?.then(() => {
@@ -205,7 +214,11 @@ export class AgentManagerProvider implements vscode.Disposable {
   // ---------------------------------------------------------------------------
 
   /** Create a git worktree on disk and register it in state. Returns null on failure. */
-  private async createWorktreeOnDisk(groupId?: string): Promise<{
+  private async createWorktreeOnDisk(
+    groupId?: string,
+    name?: string,
+    label?: string,
+  ): Promise<{
     worktree: ReturnType<WorktreeStateManager["addWorktree"]>
     result: CreateWorktreeResult
   } | null> {
@@ -224,7 +237,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     let result: CreateWorktreeResult
     try {
-      result = await manager.createWorktree({ prompt: "kilo" })
+      result = await manager.createWorktree({ prompt: name || "kilo" })
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
       this.postToWebview({
@@ -240,6 +253,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       path: result.path,
       parentBranch: result.parentBranch,
       groupId,
+      label,
     })
 
     // Push state immediately so the sidebar shows the new worktree with a loading indicator
@@ -461,6 +475,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     if (!text) return null
 
     const versions = Math.min(Math.max(Number(msg.versions) || 1, 1), 4)
+    const worktreeName = (msg.name as string | undefined)?.trim() || undefined
     const providerID = msg.providerID as string | undefined
     const modelID = msg.modelID as string | undefined
     const agent = msg.agent as string | undefined
@@ -494,7 +509,8 @@ export class AgentManagerProvider implements vscode.Disposable {
     for (let i = 0; i < versions; i++) {
       this.log(`Creating worktree ${i + 1}/${versions}`)
 
-      const wt = await this.createWorktreeOnDisk(groupId)
+      const version = versionedName(worktreeName, i, versions)
+      const wt = await this.createWorktreeOnDisk(groupId, version.branch, version.label)
       if (!wt) {
         this.log(`Failed to create worktree for version ${i + 1}`)
         continue
