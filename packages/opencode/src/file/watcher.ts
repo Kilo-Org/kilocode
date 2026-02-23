@@ -5,7 +5,6 @@ import { Instance } from "../project/instance"
 import { Log } from "../util/log"
 import { FileIgnore } from "./ignore"
 import { Config } from "../config/config"
-import path from "path"
 // @ts-ignore
 import { createWrapper } from "@parcel/watcher/wrapper"
 import { lazy } from "@/util/lazy"
@@ -14,6 +13,7 @@ import type ParcelWatcher from "@parcel/watcher"
 import { $ } from "bun"
 import { Flag } from "@/flag/flag"
 import { readdir } from "fs/promises"
+import { Filesystem } from "@/util/filesystem"
 
 const SUBSCRIBE_TIMEOUT_MS = 10_000
 
@@ -21,19 +21,6 @@ declare const KILO_LIBC: string | undefined
 
 export namespace FileWatcher {
   const log = Log.create({ service: "file.watcher" })
-
-  function resolveGitDirPath(raw: string, cwd: string): string {
-    const value = raw.trim()
-    if (!value) return ""
-    if (process.platform !== "win32") return path.resolve(cwd, value)
-    if (/^[a-z]:[\\/]/i.test(value)) return path.win32.normalize(value)
-    if (/^\/[a-z]\//i.test(value)) {
-      const drive = value[1]!.toUpperCase()
-      const rest = value.slice(3).replace(/\//g, "\\")
-      return path.win32.normalize(`${drive}:\\${rest}`)
-    }
-    return path.win32.resolve(cwd, value)
-  }
 
   export const Event = {
     Updated: BusEvent.define(
@@ -106,7 +93,7 @@ export namespace FileWatcher {
         .nothrow()
         .cwd(Instance.worktree)
         .text()
-        .then((x) => resolveGitDirPath(x, Instance.worktree))
+        .then((x) => Filesystem.normalizeGitPath(x, Instance.worktree))
         .catch(() => undefined)
       if (vcsDir && !cfgIgnores.includes(".git") && !cfgIgnores.includes(vcsDir)) {
         const gitDirContents = await readdir(vcsDir).catch(() => [])

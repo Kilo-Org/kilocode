@@ -59,6 +59,20 @@ export namespace Filesystem {
       return p
     }
   }
+
+  export function normalizeGitPath(raw: string, cwd: string, platform = process.platform): string {
+    const value = raw.trim()
+    if (!value) return ""
+    if (platform !== "win32") return path.resolve(cwd, value)
+    if (/^[a-z]:[\\/]/i.test(value)) return path.win32.normalize(value)
+    if (/^\/[a-z]\//i.test(value)) {
+      const drive = value[1]!.toUpperCase()
+      const rest = value.slice(3).replace(/\//g, "\\")
+      return path.win32.normalize(`${drive}:\\${rest}`)
+    }
+    return path.win32.resolve(cwd, value)
+  }
+
   export function overlaps(a: string, b: string, platform = process.platform) {
     return isInside(a, b, platform) || isInside(b, a, platform)
   }

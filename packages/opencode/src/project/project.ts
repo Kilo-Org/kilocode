@@ -51,16 +51,7 @@ export namespace Project {
   }
 
   export function normalizeGitPath(raw: string, cwd: string, win = process.platform === "win32") {
-    const value = raw.trim()
-    if (!value) return ""
-    if (!win) return path.resolve(cwd, value)
-    if (/^[a-z]:[\\/]/i.test(value)) return path.win32.normalize(value)
-    if (/^\/[a-z]\//i.test(value)) {
-      const drive = value[1]!.toUpperCase()
-      const rest = value.slice(3).replace(/\//g, "\\")
-      return path.win32.normalize(`${drive}:\\${rest}`)
-    }
-    return path.win32.resolve(cwd, value)
+    return Filesystem.normalizeGitPath(raw, cwd, win ? "win32" : "linux")
   }
 
   export async function fromDirectory(directory: string) {

@@ -36,4 +36,19 @@ describe("util.filesystem", () => {
 
     await rm(tmp, { recursive: true, force: true })
   })
+
+  test("normalizeGitPath handles Git Bash drive-prefixed paths on Windows", () => {
+    const result = Filesystem.normalizeGitPath("/d/workspaces/repo", "C:\\code", "win32")
+    expect(result).toBe("D:\\workspaces\\repo")
+  })
+
+  test("normalizeGitPath resolves relative Windows paths against cwd", () => {
+    const result = Filesystem.normalizeGitPath("..\\shared\\.git", "C:\\work\\repo", "win32")
+    expect(result).toBe(path.win32.resolve("C:\\work\\repo", "..\\shared\\.git"))
+  })
+
+  test("normalizeGitPath resolves non-Windows paths with path.resolve", () => {
+    const result = Filesystem.normalizeGitPath("../.git", "/home/user/repo", "linux")
+    expect(result).toBe(path.resolve("/home/user/repo", "../.git"))
+  })
 })
