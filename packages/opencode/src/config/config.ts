@@ -1497,6 +1497,10 @@ export namespace Config {
       text = await file.text()
     }
 
+    // kilocode_change: Check if value is already the same to avoid unnecessary writes
+    const data = parseJsonc(text, [], { allowTrailingComma: true })
+    if (data?.mcp?.[name]?.enabled === enabled) return
+
     const edits = modify(text, ["mcp", name, "enabled"], enabled, {
       formattingOptions: { tabSize: 2, insertSpaces: true },
     })
