@@ -23,8 +23,8 @@ jobs:
 
       - uses: ./.github/actions/setup-bun
 
-      - name: Install opencode
-        run: curl -fsSL https://opencode.ai/install | bash
+      - name: Install kilo # kilocode_change
+        run: curl -fsSL https://kilo.ai/cli/install | bash # kilocode_change
 
       - name: Generate daily issues recap
         id: recap
@@ -46,7 +46,7 @@ jobs:
           # Get today's date range
           TODAY=$(date -u +%Y-%m-%d)
 
-          opencode run -m kilo/anthropic/claude-sonnet-4.5 "Generate a daily issues recap for the OpenCode repository.
+          kilo run -m kilo/anthropic/claude-sonnet-4.5 "Generate a daily issues recap # kilocode_change for the OpenCode repository.
 
           TODAY'S DATE: ${TODAY}
 

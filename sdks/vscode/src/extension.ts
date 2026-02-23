@@ -3,7 +3,7 @@ export function deactivate() {}
 
 import * as vscode from "vscode"
 
-const TERMINAL_NAME = "opencode"
+const TERMINAL_NAME = "kilo" // kilocode_change
 
 export function activate(context: vscode.ExtensionContext) {
   let openNewTerminalDisposable = vscode.commands.registerCommand("opencode.openNewTerminal", async () => {
@@ -62,7 +62,7 @@ export function activate(context: vscode.ExtensionContext) {
     })
 
     terminal.show()
-    terminal.sendText(`opencode --port ${port}`)
+    terminal.sendText(`kilo --port ${port}`) // kilocode_change
 
     const fileRef = getActiveFile()
     if (!fileRef) {

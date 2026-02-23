@@ -383,7 +383,7 @@ export namespace MCP {
               // Show toast for needs_auth
               Bus.publish(TuiEvent.ToastShow, {
                 title: "MCP Authentication Required",
-                message: `Server "${key}" requires authentication. Run: opencode mcp auth ${key}`,
+                message: `Server "${key}" requires authentication. Run: kilo mcp auth ${key}`, // kilocode_change
                 variant: "warning",
                 duration: 8000,
               }).catch((e) => log.debug("failed to show toast", { error: e }))
@@ -415,7 +415,7 @@ export namespace MCP {
         cwd,
         env: {
           ...process.env,
-          ...(cmd === "opencode" ? { BUN_BE_BUN: "1" } : {}),
+          ...(cmd === "kilo" ? { BUN_BE_BUN: "1" } : {}), // kilocode_change
           ...mcp.environment,
         },
       })

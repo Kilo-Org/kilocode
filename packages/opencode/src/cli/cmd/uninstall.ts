@@ -183,7 +183,7 @@ async function executeUninstall(method: Installation.Method, targets: RemovalTar
       pnpm: ["pnpm", "uninstall", "-g", "@kilocode/cli"], // kilocode_change
       bun: ["bun", "remove", "-g", "@kilocode/cli"], // kilocode_change
       yarn: ["yarn", "global", "remove", "@kilocode/cli"], // kilocode_change
-      brew: ["brew", "uninstall", "opencode"],
+      brew: ["brew", "uninstall", "kilo"], // kilocode_change
       choco: ["choco", "uninstall", "kilo"], // kilocode_change
       scoop: ["scoop", "uninstall", "kilo"], // kilocode_change
     }

@@ -71,7 +71,7 @@ export const PrCommand = cmd({
                 UI.println(`Found opencode session: ${sessionUrl}`)
                 UI.println(`Importing session...`)
 
-                const importResult = await $`opencode import ${sessionUrl}`.nothrow()
+                const importResult = await $`kilo import ${sessionUrl}`.nothrow() // kilocode_change
                 if (importResult.exitCode === 0) {
                   const importOutput = importResult.text().trim()
                   // Extract session ID from the output (format: "Imported session: <session-id>")
@@ -88,13 +88,14 @@ export const PrCommand = cmd({
 
         UI.println(`Successfully checked out PR #${prNumber} as branch '${localBranchName}'`)
         UI.println()
-        UI.println("Starting opencode...")
+        UI.println("Starting kilo...") // kilocode_change
         UI.println()
 
-        // Launch opencode TUI with session ID if available
+        // Launch kilo TUI with session ID if available // kilocode_change
         const { spawn } = await import("child_process")
         const opencodeArgs = sessionId ? ["-s", sessionId] : []
-        const opencodeProcess = spawn("opencode", opencodeArgs, {
+        // kilocode_change start
+        const opencodeProcess = spawn("kilo", opencodeArgs, {
           stdio: "inherit",
           cwd: process.cwd(),
         })
@@ -102,8 +103,9 @@ export const PrCommand = cmd({
         await new Promise<void>((resolve, reject) => {
           opencodeProcess.on("exit", (code) => {
             if (code === 0) resolve()
-            else reject(new Error(`opencode exited with code ${code}`))
+            else reject(new Error(`kilo exited with code ${code}`))
           })
+          // kilocode_change end
           opencodeProcess.on("error", reject)
         })
       },

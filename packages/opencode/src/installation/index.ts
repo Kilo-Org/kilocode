@@ -59,7 +59,8 @@ export namespace Installation {
   }
 
   export async function method() {
-    if (process.execPath.includes(path.join(".opencode", "bin"))) return "curl"
+    if (process.execPath.includes(path.join(".opencode", "bin"))) return "curl" // kilocode_change - keep for legacy installs
+    if (process.execPath.includes(path.join(".kilo", "bin"))) return "curl" // kilocode_change
     if (process.execPath.includes(path.join(".local", "bin"))) return "curl"
     const exec = process.execPath.toLowerCase()
 
@@ -79,15 +80,15 @@ export namespace Installation {
       },
       {
         name: "brew" as const,
-        command: () => $`brew list --formula opencode`.throws(false).quiet().text(),
+        command: () => $`brew list --formula kilo`.throws(false).quiet().text(), // kilocode_change
       },
       {
         name: "scoop" as const,
-        command: () => $`scoop list opencode`.throws(false).quiet().text(),
+        command: () => $`scoop list kilo`.throws(false).quiet().text(), // kilocode_change
       },
       {
         name: "choco" as const,
-        command: () => $`choco list --limit-output opencode`.throws(false).quiet().text(),
+        command: () => $`choco list --limit-output kilo`.throws(false).quiet().text(), // kilocode_change
       },
     ]
     // kilocode_change end
@@ -104,7 +105,7 @@ export namespace Installation {
       const output = await check.command()
       // kilocode_change start - check for @kilocode/cli instead of opencode-ai for JS package managers
       const installedName =
-        check.name === "brew" || check.name === "choco" || check.name === "scoop" ? "opencode" : "@kilocode/cli"
+        check.name === "brew" || check.name === "choco" || check.name === "scoop" ? "kilo" : "@kilocode/cli" // kilocode_change
       // kilocode_change end
       if (output.includes(installedName)) {
         return check.name
@@ -121,19 +122,22 @@ export namespace Installation {
     }),
   )
 
+  // kilocode_change start
   async function getBrewFormula() {
-    const tapFormula = await $`brew list --formula anomalyco/tap/opencode`.throws(false).quiet().text()
-    if (tapFormula.includes("opencode")) return "anomalyco/tap/opencode"
-    const coreFormula = await $`brew list --formula opencode`.throws(false).quiet().text()
-    if (coreFormula.includes("opencode")) return "opencode"
-    return "opencode"
+    const tapFormula = await $`brew list --formula kilo-org/tap/kilo`.throws(false).quiet().text()
+    if (tapFormula.includes("kilo")) return "kilo-org/tap/kilo"
+    const coreFormula = await $`brew list --formula kilo`.throws(false).quiet().text()
+    if (coreFormula.includes("kilo")) return "kilo"
+    return "kilo"
   }
+  // kilocode_change end
 
   export async function upgrade(method: Method, target: string) {
     let cmd
     switch (method) {
       case "curl":
-        cmd = $`curl -fsSL https://opencode.ai/install | bash`.env({
+        cmd = $`curl -fsSL https://kilo.ai/cli/install | bash`.env({
+          // kilocode_change
           ...process.env,
           VERSION: target,
         })
@@ -151,7 +155,8 @@ export namespace Installation {
         const formula = await getBrewFormula()
         if (formula.includes("/")) {
           cmd =
-            $`brew tap anomalyco/tap && cd "$(brew --repo anomalyco/tap)" && git pull --ff-only && brew upgrade ${formula}`.env(
+            $`brew tap kilo-org/tap && cd "$(brew --repo kilo-org/tap)" && git pull --ff-only && brew upgrade ${formula}`.env(
+              // kilocode_change
               {
                 HOMEBREW_NO_AUTO_UPDATE: "1",
                 ...process.env,
@@ -166,10 +171,10 @@ export namespace Installation {
         break
       }
       case "choco":
-        cmd = $`echo Y | choco upgrade opencode --version=${target}`
+        cmd = $`echo Y | choco upgrade kilo --version=${target}` // kilocode_change
         break
       case "scoop":
-        cmd = $`scoop install opencode@${target}`
+        cmd = $`scoop install kilo@${target}` // kilocode_change
         break
       default:
         throw new Error(`Unknown method: ${method}`)
@@ -206,7 +211,7 @@ export namespace Installation {
         if (!version) throw new Error(`Could not detect version for tap formula: ${formula}`)
         return version
       }
-      return fetch("https://formulae.brew.sh/api/formula/opencode.json")
+      return fetch("https://formulae.brew.sh/api/formula/kilo.json") // kilocode_change
         .then((res) => {
           if (!res.ok) throw new Error(res.statusText)
           return res.json()
