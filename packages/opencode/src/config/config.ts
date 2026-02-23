@@ -1729,6 +1729,16 @@ export namespace Config {
     await Bun.write(filepath, JSON.stringify(mergeDeep(existing, config), null, 2))
     // kilocode_change: Dispose only the Config state, not the entire instance (preserves MCP connections)
     await State.disposeEntry(Instance.directory, initConfigState)
+    // kilocode_change: Emit config changed event to notify UI/watchers
+    GlobalBus.emit("event", {
+      directory: Instance.directory,
+      payload: {
+        type: Event.Changed.type,
+        properties: {
+          directory: Instance.directory,
+        },
+      },
+    })
   }
 
   function globalConfigFile() {
