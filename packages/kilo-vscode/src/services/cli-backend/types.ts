@@ -336,3 +336,17 @@ export interface Config {
   layout?: "auto" | "stretch"
   experimental?: ExperimentalConfig
 }
+
+/** VS Code editor context sent alongside messages to the CLI backend */
+export interface EditorContext {
+  /** Workspace-relative paths of currently visible editors */
+  visibleFiles?: string[]
+  /** Workspace-relative paths of open tabs */
+  openTabs?: string[]
+  /** Workspace-relative path of the active editor file */
+  activeFile?: string
+  /** User's default shell (from vscode.env.shell) */
+  shell?: string
+  /** User's timezone (e.g. "Europe/Amsterdam") */
+  timezone?: string
+}

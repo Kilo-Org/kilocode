@@ -145,7 +145,8 @@ export const dict = {
   "provider.connect.oauth.code.invalid": "授權碼無效",
   "provider.connect.oauth.auto.visit.prefix": "造訪 ",
   "provider.connect.oauth.auto.visit.link": "此連結",
-  "provider.connect.oauth.auto.visit.suffix": " 並輸入以下程式碼，以連線你的帳戶並在 Kilo 中使用 {{provider}} 模型。",
+  "provider.connect.oauth.auto.visit.suffix":
+    " 並輸入以下程式碼，以連線你的帳戶並在 Kilo 中使用 {{provider}} 模型。",
   "provider.connect.oauth.auto.confirmationCode": "確認碼",
   "provider.connect.toast.connected.title": "{{provider}} 已連線",
   "provider.connect.toast.connected.description": "現在可以使用 {{provider}} 模型了。",
@@ -566,6 +567,7 @@ export const dict = {
   "sidebar.gettingStarted.line2": "連線任意提供者即可使用更多模型，如 Claude、GPT、Gemini 等。",
   "sidebar.project.recentSessions": "最近工作階段",
   "sidebar.project.viewAllSessions": "查看全部工作階段",
+  "sidebar.project.clearNotifications": "清除通知",
 
   "app.name.desktop": "Kilo Desktop",
   "settings.section.desktop": "桌面",
@@ -619,6 +621,7 @@ export const dict = {
   "font.option.robotoMono": "Roboto Mono",
   "font.option.sourceCodePro": "Source Code Pro",
   "font.option.ubuntuMono": "Ubuntu Mono",
+  "font.option.geistMono": "Geist Mono",
   "sound.option.alert01": "警報 01",
   "sound.option.alert02": "警報 02",
   "sound.option.alert03": "警報 03",

@@ -49,7 +49,7 @@ runs:
       id: version
       shell: bash
       run: |
-        VERSION=$(curl -sf https://api.github.com/repos/Kilo-Org/kilo/releases/latest | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)
+        VERSION=$(curl -sf https://api.github.com/repos/Kilo-Org/kilocode/releases/latest | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)
         echo "version=${VERSION:-latest}" >> $GITHUB_OUTPUT
 
     - name: Cache Kilo

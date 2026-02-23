@@ -144,7 +144,8 @@ export const dict = {
   "provider.connect.oauth.code.invalid": "รหัสการอนุญาตไม่ถูกต้อง",
   "provider.connect.oauth.auto.visit.prefix": "เยี่ยมชม ",
   "provider.connect.oauth.auto.visit.link": "ลิงก์นี้",
-  "provider.connect.oauth.auto.visit.suffix": " และป้อนรหัสด้านล่างเพื่อเชื่อมต่อบัญชีและใช้โมเดล {{provider}} ใน Kilo",
+  "provider.connect.oauth.auto.visit.suffix":
+    " และป้อนรหัสด้านล่างเพื่อเชื่อมต่อบัญชีและใช้โมเดล {{provider}} ใน Kilo",
   "provider.connect.oauth.auto.confirmationCode": "รหัสยืนยัน",
   "provider.connect.toast.connected.title": "{{provider}} ที่เชื่อมต่อแล้ว",
   "provider.connect.toast.connected.description": "โมเดล {{provider}} พร้อมใช้งานแล้ว",
@@ -570,6 +571,7 @@ export const dict = {
   "sidebar.gettingStarted.line2": "เชื่อมต่อผู้ให้บริการใด ๆ เพื่อใช้โมเดล รวมถึง Claude, GPT, Gemini ฯลฯ",
   "sidebar.project.recentSessions": "เซสชันล่าสุด",
   "sidebar.project.viewAllSessions": "ดูเซสชันทั้งหมด",
+  "sidebar.project.clearNotifications": "ล้างการแจ้งเตือน",
 
   "app.name.desktop": "Kilo Desktop",
 
@@ -624,6 +626,7 @@ export const dict = {
   "font.option.robotoMono": "Roboto Mono",
   "font.option.sourceCodePro": "Source Code Pro",
   "font.option.ubuntuMono": "Ubuntu Mono",
+  "font.option.geistMono": "Geist Mono",
   "sound.option.alert01": "เสียงเตือน 01",
   "sound.option.alert02": "เสียงเตือน 02",
   "sound.option.alert03": "เสียงเตือน 03",

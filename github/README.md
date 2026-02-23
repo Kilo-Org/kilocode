@@ -91,7 +91,7 @@ This will walk you through installing the KiloConnect GitHub app, creating the w
              persist-credentials: false
 
          - name: Run Kilo
-           uses: Kilo-Org/kilo/github@latest
+           uses: Kilo-Org/kilocode/github@latest
            with:
              model: kilo/claude-sonnet-4-20250514
              kilo_api_key: ${{ secrets.KILO_API_KEY }}
@@ -120,7 +120,7 @@ You can also use other AI providers by setting their API keys:
 
 ```yml
 - name: Run Kilo
-  uses: Kilo-Org/kilo/github@latest
+  uses: Kilo-Org/kilocode/github@latest
   with:
     model: anthropic/claude-sonnet-4-20250514
   env:
@@ -129,7 +129,7 @@ You can also use other AI providers by setting their API keys:
 
 ## Support
 
-If you encounter issues or have feedback, please create an issue at https://github.com/Kilo-Org/kilo/issues.
+If you encounter issues or have feedback, please create an issue at https://github.com/Kilo-Org/kilocode/issues.
 
 ## Development
 

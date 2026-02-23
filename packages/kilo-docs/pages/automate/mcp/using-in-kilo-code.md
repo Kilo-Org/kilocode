@@ -170,7 +170,7 @@ To set the maximum time to wait for a response after a tool call to the MCP serv
 
 MCP tool auto-approval works on a per-tool basis and is disabled by default. To configure auto-approval:
 
-1. First enable the global "Use MCP servers" auto-approval option in [auto-approving-actions](/docs/features/auto-approving-actions)
+1. First enable the global "Use MCP servers" auto-approval option in [auto-approving-actions](/docs/getting-started/settings/auto-approving-actions)
 2. Navigate to Settings > Agent Behaviour > MCP Servers, then locate the specific tool you want to auto-approve
 3. Check the `Always allow` checkbox next to the tool name
 

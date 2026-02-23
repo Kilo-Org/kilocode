@@ -19,6 +19,7 @@ import type {
   AgentManagerKeybindingsMessage,
   AgentManagerMultiVersionProgressMessage,
   AgentManagerSendInitialMessage,
+  AgentManagerBranchInfo,
   WorktreeState,
   ManagedSessionState,
   SessionInfo,
@@ -87,6 +88,7 @@ const defaultBindings: Record<string, string> = {
   newTab: isMac ? "⌘T" : "Ctrl+T",
   closeTab: isMac ? "⌘W" : "Ctrl+W",
   newWorktree: isMac ? "⌘N" : "Ctrl+N",
+  advancedWorktree: isMac ? "⌘⇧N" : "Ctrl+Shift+N",
   closeWorktree: isMac ? "⌘⇧W" : "Ctrl+Shift+W",
   agentManagerOpen: isMac ? "⌘⇧M" : "Ctrl+Shift+M",
   focusPanel: isMac ? "⌘." : "Ctrl+.",
@@ -177,6 +179,7 @@ function buildShortcutCategories(bindings: Record<string, string>): ShortcutCate
         { label: "Previous item", binding: bindings.previousSession ?? "" },
         { label: "Next item", binding: bindings.nextSession ?? "" },
         { label: "New worktree", binding: bindings.newWorktree ?? "" },
+        { label: "Advanced worktree", binding: bindings.advancedWorktree ?? "" },
         { label: "Delete worktree", binding: bindings.closeWorktree ?? "" },
       ],
     },
@@ -379,8 +382,9 @@ const AgentManagerContent: Component = () => {
   const visibleTabId = createMemo(() => session.currentSessionID() ?? activePendingId())
   const tabScroll = useTabScroll(activeTabs, visibleTabId)
 
-  // Display name for worktree — uses first tab in custom order when available
+  // Display name for worktree — prefers persisted label, then first session title, then branch
   const worktreeLabel = (wt: WorktreeState): string => {
+    if (wt.label) return wt.label
     const managed = managedSessions().filter((ms) => ms.worktreeId === wt.id)
     const ids = new Set(managed.map((ms) => ms.id))
     const sessions = session.sessions().filter((s) => ids.has(s.id))
@@ -543,6 +547,7 @@ const AgentManagerContent: Component = () => {
       } else if (msg.action === "newTab") handleNewTabForCurrentSelection()
       else if (msg.action === "closeTab") closeActiveTab()
       else if (msg.action === "newWorktree") handleNewWorktreeOrPromote()
+      else if (msg.action === "advancedWorktree") showAdvancedWorktreeDialog()
       else if (msg.action === "closeWorktree") closeSelectedWorktree()
       else if (msg.action === "focusInput") window.dispatchEvent(new Event("focusPrompt"))
     }
@@ -558,8 +563,8 @@ const AgentManagerContent: Component = () => {
       if (["t", "w", "n"].includes(e.key.toLowerCase()) && !e.shiftKey) {
         e.preventDefault()
       }
-      // Prevent defaults for shift variants (close worktree)
-      if (e.key.toLowerCase() === "w" && e.shiftKey) {
+      // Prevent defaults for shift variants (close worktree, advanced new worktree)
+      if (["w", "n"].includes(e.key.toLowerCase()) && e.shiftKey) {
         e.preventDefault()
       }
     }
@@ -720,15 +725,18 @@ const AgentManagerContent: Component = () => {
           session.setSessionAgent(ev.sessionId, ev.agent)
         }
 
-        vscode.postMessage({
-          type: "sendMessage",
-          text: ev.text,
-          sessionID: ev.sessionId,
-          providerID: ev.providerID,
-          modelID: ev.modelID,
-          agent: ev.agent,
-          files: ev.files,
-        })
+        // Only send a message if there's text — otherwise just clear busy state
+        if (ev.text) {
+          vscode.postMessage({
+            type: "sendMessage",
+            text: ev.text,
+            sessionID: ev.sessionId,
+            providerID: ev.providerID,
+            modelID: ev.modelID,
+            agent: ev.agent,
+            files: ev.files,
+          })
+        }
         // Clear busy state — use worktreeId from the message directly
         // to avoid race condition where managedSessions() hasn't updated yet
         if (ev.worktreeId) {
@@ -1073,11 +1081,21 @@ const AgentManagerContent: Component = () => {
                       <DropdownMenu.Content class="am-split-menu">
                         <DropdownMenu.Item onSelect={handleCreateWorktree}>
                           <DropdownMenu.ItemLabel>New Worktree</DropdownMenu.ItemLabel>
+                          <span class="am-menu-shortcut">
+                            {parseBindingTokens(kb().newWorktree ?? "").map((t) => (
+                              <kbd class="am-menu-key">{t}</kbd>
+                            ))}
+                          </span>
                         </DropdownMenu.Item>
                         <DropdownMenu.Separator />
                         <DropdownMenu.Item onSelect={showAdvancedWorktreeDialog}>
-                          <Icon name="layers" size="small" />
-                          <DropdownMenu.ItemLabel>New with Versions...</DropdownMenu.ItemLabel>
+                          <Icon name="settings-gear" size="small" />
+                          <DropdownMenu.ItemLabel>Advanced...</DropdownMenu.ItemLabel>
+                          <span class="am-menu-shortcut">
+                            {parseBindingTokens(kb().advancedWorktree ?? "").map((t) => (
+                              <kbd class="am-menu-key">{t}</kbd>
+                            ))}
+                          </span>
                         </DropdownMenu.Item>
                       </DropdownMenu.Content>
                     </DropdownMenu.Portal>
@@ -1108,6 +1126,32 @@ const AgentManagerContent: Component = () => {
                 {(() => {
                   const [hoveredWt, setHoveredWt] = createSignal<string | null>(null)
                   const [overClose, setOverClose] = createSignal(false)
+                  const [renamingWt, setRenamingWt] = createSignal<string | null>(null)
+                  const [renameValue, setRenameValue] = createSignal("")
+
+                  const startRename = (wtId: string, current: string) => {
+                    setRenamingWt(wtId)
+                    setRenameValue(current)
+                  }
+
+                  let cancelled = false
+
+                  const commitRename = (wtId: string) => {
+                    if (cancelled) {
+                      cancelled = false
+                      return
+                    }
+                    const value = renameValue().trim()
+                    setRenamingWt(null)
+                    if (!value) return
+                    vscode.postMessage({ type: "agentManager.renameWorktree", worktreeId: wtId, label: value })
+                  }
+
+                  const cancelRename = () => {
+                    cancelled = true
+                    setRenamingWt(null)
+                  }
+
                   return (
                     <For each={sortedWorktrees()}>
                       {(wt, idx) => {
@@ -1161,7 +1205,45 @@ const AgentManagerContent: Component = () => {
                                   >
                                     <Icon name="branch" size="small" />
                                   </Show>
-                                  <span class="am-worktree-branch">{worktreeLabel(wt)}</span>
+                                  <Show
+                                    when={renamingWt() === wt.id}
+                                    fallback={
+                                      <span
+                                        class="am-worktree-branch"
+                                        onDblClick={(e) => {
+                                          e.stopPropagation()
+                                          startRename(wt.id, worktreeLabel(wt))
+                                        }}
+                                        title="Double-click to rename"
+                                      >
+                                        {worktreeLabel(wt)}
+                                      </span>
+                                    }
+                                  >
+                                    <input
+                                      class="am-worktree-rename-input"
+                                      value={renameValue()}
+                                      onInput={(e) => setRenameValue(e.currentTarget.value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          e.preventDefault()
+                                          commitRename(wt.id)
+                                        }
+                                        if (e.key === "Escape") {
+                                          e.preventDefault()
+                                          cancelRename()
+                                        }
+                                      }}
+                                      onBlur={() => commitRename(wt.id)}
+                                      onClick={(e) => e.stopPropagation()}
+                                      ref={(el) =>
+                                        requestAnimationFrame(() => {
+                                          el.focus()
+                                          el.select()
+                                        })
+                                      }
+                                    />
+                                  </Show>
                                   <Show when={!busyWorktrees().has(wt.id)}>
                                     <div
                                       class="am-worktree-close"
@@ -1481,21 +1563,62 @@ const AgentManagerContent: Component = () => {
 }
 
 // ---------------------------------------------------------------------------
-// Advanced "New Worktree" dialog — prompt, versions, model, mode
+// Advanced "New Worktree" dialog — prompt, versions, model, mode, advanced options
 // ---------------------------------------------------------------------------
 
 type VersionCount = 1 | 2 | 3 | 4
 const VERSION_OPTIONS: VersionCount[] = [1, 2, 3, 4]
 
+function sanitizeSegment(text: string, maxLength = 50): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9._+@-]/g, "")
+    .replace(/\.{2,}/g, ".")
+    .replace(/@\{/g, "@")
+    .replace(/-+/g, "-")
+    .replace(/^[-.]|[-.]+$/g, "")
+    .replace(/\.lock$/g, "")
+    .slice(0, maxLength)
+}
+
+function sanitizeBranchName(name: string): string {
+  return name
+    .split("/")
+    .map((s) => sanitizeSegment(s))
+    .filter(Boolean)
+    .join("/")
+}
+
+function formatRelativeTime(epoch: number): string {
+  const diff = Math.floor(Date.now() / 1000) - epoch
+  if (diff < 60) return "now"
+  if (diff < 3600) return `${Math.floor(diff / 60)}m`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h`
+  if (diff < 2592000) return `${Math.floor(diff / 86400)}d`
+  if (diff < 31536000) return `${Math.floor(diff / 2592000)}mo`
+  return `${Math.floor(diff / 31536000)}y`
+}
+
 const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
   const vscode = useVSCode()
   const session = useSession()
 
+  const [name, setName] = createSignal("")
   const [prompt, setPrompt] = createSignal("")
-  const [versions, setVersions] = createSignal<VersionCount>(2)
+  const [versions, setVersions] = createSignal<VersionCount>(1)
   const [model, setModel] = createSignal<{ providerID: string; modelID: string } | null>(null)
   const [agent, setAgent] = createSignal(session.selectedAgent())
   const [starting, setStarting] = createSignal(false)
+  const [showAdvanced, setShowAdvanced] = createSignal(false)
+  const [branchName, setBranchName] = createSignal("")
+  const [baseBranch, setBaseBranch] = createSignal<string | null>(null)
+  const [branches, setBranches] = createSignal<AgentManagerBranchInfo[]>([])
+  const [defaultBranch, setDefaultBranch] = createSignal("main")
+  const [branchSearch, setBranchSearch] = createSignal("")
+  const [baseBranchOpen, setBaseBranchOpen] = createSignal(false)
+  const [highlightedIndex, setHighlightedIndex] = createSignal(0)
 
   let textareaRef: HTMLTextAreaElement | undefined
 
@@ -1505,26 +1628,52 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
       textareaRef.focus()
       textareaRef.select()
     })
+    vscode.postMessage({ type: "agentManager.requestBranches" })
   })
 
-  const canSubmit = () => prompt().trim().length > 0 && !starting()
+  // Listen for branch data
+  const handler = (e: MessageEvent) => {
+    const msg = e.data as ExtensionMessage
+    if (msg.type === "agentManager.branches") {
+      setBranches(msg.branches)
+      setDefaultBranch(msg.defaultBranch)
+    }
+  }
+  window.addEventListener("message", handler)
+  onCleanup(() => window.removeEventListener("message", handler))
+
+  const effectiveBaseBranch = () => baseBranch() ?? defaultBranch()
+
+  const filteredBranches = createMemo(() => {
+    const search = branchSearch().toLowerCase()
+    if (!search) return branches()
+    return branches().filter((b) => b.name.toLowerCase().includes(search))
+  })
+
+  const canSubmit = () => !starting()
 
   const handleSubmit = () => {
-    const text = prompt().trim()
-    if (!text || starting()) return
+    if (starting()) return
     setStarting(true)
 
+    const text = prompt().trim() || undefined
     const count = versions()
     const sel = model()
     const defaultAgent = session.agents()[0]?.name
     const selectedAgent = agent() !== defaultAgent ? agent() : undefined
+    const advanced = showAdvanced()
+    const customBranch = advanced ? branchName().trim() || undefined : undefined
+
     vscode.postMessage({
       type: "agentManager.createMultiVersion",
       text,
+      name: name().trim() || undefined,
       versions: count,
       providerID: sel?.providerID,
       modelID: sel?.modelID,
       agent: selectedAgent,
+      baseBranch: advanced ? (baseBranch() ?? undefined) : undefined,
+      branchName: customBranch,
     })
 
     props.onClose()
@@ -1546,13 +1695,21 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
   return (
     <Dialog title="New Worktree" fit>
       <div class="am-nv-dialog" onKeyDown={handleKeyDown}>
-        {/* Prompt input — reuses the same CSS as the sidebar chat input */}
-        <div class="am-prompt-input-container">
-          <div class="am-prompt-input-wrapper">
-            <div class="am-prompt-input-ghost-wrapper">
+        {/* Optional worktree name */}
+        <input
+          class="am-nv-name-input"
+          placeholder="Worktree name (optional)"
+          value={name()}
+          onInput={(e) => setName(e.currentTarget.value)}
+        />
+
+        {/* Prompt input — reuses the sidebar chat-input base classes for consistent styling */}
+        <div class="prompt-input-container am-prompt-input-container">
+          <div class="prompt-input-wrapper am-prompt-input-wrapper">
+            <div class="prompt-input-ghost-wrapper am-prompt-input-ghost-wrapper">
               <textarea
                 ref={textareaRef}
-                class="am-prompt-input"
+                class="prompt-input am-prompt-input"
                 placeholder={`Type a message (${isMac ? "\u2318" : "Ctrl+"}Enter to send)`}
                 value={prompt()}
                 onInput={(e) => {
@@ -1576,27 +1733,137 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
                 <ModeSwitcherBase agents={session.agents()} value={agent()} onSelect={setAgent} />
               </Show>
             </div>
-            <div class="prompt-input-hint-actions">
-              <Tooltip value={`${isMac ? "\u2318" : "Ctrl+"}Enter`} placement="top">
-                <Button variant="primary" size="small" onClick={handleSubmit} disabled={!canSubmit()}>
-                  <Show
-                    when={!starting()}
-                    fallback={
-                      <>
-                        <Spinner class="am-nv-spinner" />
-                        <span>Creating...</span>
-                      </>
-                    }
-                  >
-                    <svg data-slot="icon-svg" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                      <path d="M1.5 1.5L14.5 8L1.5 14.5V9L10 8L1.5 7V1.5Z" />
-                    </svg>
-                  </Show>
-                </Button>
-              </Tooltip>
-            </div>
+            <div class="prompt-input-hint-actions" />
           </div>
         </div>
+
+        {/* Advanced options toggle */}
+        <button class="am-advanced-toggle" onClick={() => setShowAdvanced(!showAdvanced())} type="button">
+          <Icon name={showAdvanced() ? "chevron-down" : "chevron-right"} size="small" />
+          <span>Advanced options</span>
+        </button>
+
+        <Show when={showAdvanced()}>
+          <div class="am-advanced-section">
+            <div class="am-advanced-field">
+              <span class="am-nv-config-label">Branch name</span>
+              <input
+                class="am-advanced-input"
+                type="text"
+                placeholder="auto-generated"
+                value={branchName()}
+                onInput={(e) => setBranchName(sanitizeBranchName(e.currentTarget.value))}
+              />
+            </div>
+            <div class="am-advanced-field">
+              <span class="am-nv-config-label">Base branch</span>
+              <div class="am-branch-selector-wrapper">
+                <button
+                  class="am-branch-selector-trigger"
+                  onClick={() => setBaseBranchOpen(!baseBranchOpen())}
+                  type="button"
+                >
+                  <Icon name="branch" size="small" />
+                  <span class="am-branch-selector-value">{effectiveBaseBranch()}</span>
+                  <Show when={!baseBranch()}>
+                    <span class="am-branch-badge">default</span>
+                  </Show>
+                  <Icon name="selector" size="small" />
+                </button>
+                <Show when={baseBranchOpen()}>
+                  <div class="am-branch-dropdown" onWheel={(e) => e.stopPropagation()}>
+                    <div class="am-branch-search">
+                      <Icon name="magnifying-glass" size="small" />
+                      <input
+                        class="am-branch-search-input"
+                        type="text"
+                        placeholder="Search branches..."
+                        value={branchSearch()}
+                        ref={(el) => requestAnimationFrame(() => el.focus())}
+                        onInput={(e) => {
+                          setBranchSearch(e.currentTarget.value)
+                          setHighlightedIndex(0)
+                        }}
+                        onKeyDown={(e) => {
+                          const items = filteredBranches()
+                          if (e.key === "ArrowDown") {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            const next = Math.min(highlightedIndex() + 1, items.length - 1)
+                            setHighlightedIndex(next)
+                            requestAnimationFrame(() => {
+                              document
+                                .querySelector(`.am-branch-item[data-index="${next}"]`)
+                                ?.scrollIntoView({ block: "nearest" })
+                            })
+                          } else if (e.key === "ArrowUp") {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            const prev = Math.max(highlightedIndex() - 1, 0)
+                            setHighlightedIndex(prev)
+                            requestAnimationFrame(() => {
+                              document
+                                .querySelector(`.am-branch-item[data-index="${prev}"]`)
+                                ?.scrollIntoView({ block: "nearest" })
+                            })
+                          } else if (e.key === "Enter") {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            const selected = items[highlightedIndex()]
+                            if (selected) {
+                              setBaseBranch(selected.name)
+                              setBaseBranchOpen(false)
+                              setBranchSearch("")
+                              setHighlightedIndex(0)
+                            }
+                          } else if (e.key === "Escape") {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            setBaseBranchOpen(false)
+                            setBranchSearch("")
+                            setHighlightedIndex(0)
+                          }
+                        }}
+                      />
+                    </div>
+                    <div class="am-branch-list">
+                      <For each={filteredBranches()}>
+                        {(branch, index) => (
+                          <button
+                            class="am-branch-item"
+                            classList={{
+                              "am-branch-item-active": effectiveBaseBranch() === branch.name,
+                              "am-branch-item-highlighted": highlightedIndex() === index(),
+                            }}
+                            data-index={index()}
+                            onClick={() => {
+                              setBaseBranch(branch.name)
+                              setBaseBranchOpen(false)
+                              setBranchSearch("")
+                              setHighlightedIndex(0)
+                            }}
+                            onMouseEnter={() => setHighlightedIndex(index())}
+                            type="button"
+                          >
+                            <Icon name="branch" size="small" />
+                            <span class="am-branch-item-name">{branch.name}</span>
+                            <Show when={branch.isDefault}>
+                              <span class="am-branch-badge">default</span>
+                            </Show>
+                            <Show when={!branch.isLocal && branch.isRemote}>
+                              <span class="am-branch-badge am-branch-badge-remote">remote</span>
+                            </Show>
+                            <span class="am-branch-item-time">{formatRelativeTime(branch.lastCommitDate)}</span>
+                          </button>
+                        )}
+                      </For>
+                    </div>
+                  </div>
+                </Show>
+              </div>
+            </div>
+          </div>
+        </Show>
 
         {/* Version selector + info */}
         <div class="am-nv-version-bar">
@@ -1617,6 +1884,21 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
             <span class="am-nv-version-hint">{versions()} worktrees will run in parallel</span>
           </Show>
         </div>
+
+        {/* Submit button */}
+        <Button variant="primary" size="large" class="am-nv-submit" onClick={handleSubmit} disabled={!canSubmit()}>
+          <Show
+            when={!starting()}
+            fallback={
+              <>
+                <Spinner class="am-nv-spinner" />
+                <span>Creating...</span>
+              </>
+            }
+          >
+            Create Workspace
+          </Show>
+        </Button>
       </div>
     </Dialog>
   )

@@ -6,28 +6,28 @@ on:
   workflow_dispatch:
 
 env:
-  DAYS_BEFORE_STALE: 90
-  DAYS_BEFORE_CLOSE: 7
+  DAYS_BEFORE_ISSUE_CLOSE: 90
+  DAYS_BEFORE_PR_CLOSE: 30
 
 jobs:
   stale:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       issues: write
+      pull-requests: write
     steps:
       - uses: actions/stale@v10
         with:
-          days-before-stale: ${{ env.DAYS_BEFORE_STALE }}
-          days-before-close: ${{ env.DAYS_BEFORE_CLOSE }}
-          stale-issue-label: "stale"
+          days-before-issue-stale: ${{ env.DAYS_BEFORE_ISSUE_CLOSE }}
+          days-before-pr-stale: ${{ env.DAYS_BEFORE_PR_CLOSE }}
+          days-before-issue-close: 0
+          days-before-pr-close: 0
           close-issue-message: |
-            [automated] Closing due to ${{ env.DAYS_BEFORE_STALE }}+ days of inactivity.
+            Closing this one out since it's been inactive for a while — not because it's a bad issue, just that older items tend to lose context over time and we'd rather start fresh if this is still a problem.
 
-            Feel free to reopen if you still need this!
-          stale-issue-message: |
-            [automated] This issue has had no activity for ${{ env.DAYS_BEFORE_STALE }} days.
+            Please feel free to reopen (or open a new issue) if you're still running into this. We're happy to take another look! 🙏
+          close-pr-message: |
+            Closing this one out since it's been inactive for a while — not because it's a bad PR, just that older items tend to lose context over time and we'd rather start fresh if this is still relevant.
 
-            It will be closed in ${{ env.DAYS_BEFORE_CLOSE }} days if there's no new activity.
-          remove-stale-when-updated: true
-          exempt-issue-labels: "pinned,security,feature-request,on-hold"
-          start-date: "2025-12-27"
+            Please feel free to reopen (or open a new PR) if you're still working on this. We're happy to take another look! 🙏
+          operations-per-run: 200
