@@ -84,6 +84,8 @@ export const dict = {
   "ui.permission.deny": "拒否",
   "ui.permission.allowAlways": "常に許可",
   "ui.permission.allowOnce": "今回のみ許可",
+  "ui.permission.sessionHint":
+    "「常に許可」はこのセッションにのみ適用されます。グローバルな権限は設定で変更してください。",
 
   "ui.message.expand": "メッセージを展開",
   "ui.message.collapse": "メッセージを折りたたむ",

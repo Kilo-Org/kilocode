@@ -141,7 +141,7 @@ If you need help with your contribution:
 
 - Join our [Discord community](https://kilo.ai/discord) for real-time support
 - Ask questions on [GitHub Discussions](https://github.com/Kilo-Org/kilocode/discussions)
-- Visit our [Reddit community](https://www.reddit.com/r/KiloCode)
+- Visit our [Reddit community](https://www.reddit.com/r/kilocode)
 
 ## Recognition
 

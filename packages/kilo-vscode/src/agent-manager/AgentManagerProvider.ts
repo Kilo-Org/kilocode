@@ -94,7 +94,10 @@ export class AgentManagerProvider implements vscode.Disposable {
   private async initializeState(): Promise<void> {
     const manager = this.getWorktreeManager()
     const state = this.getStateManager()
-    if (!manager || !state) return
+    if (!manager || !state) {
+      this.pushEmptyState()
+      return
+    }
 
     await state.load()
 
@@ -153,7 +156,17 @@ export class AgentManagerProvider implements vscode.Disposable {
     }
     if (type === "agentManager.requestState") {
       void this.stateReady
-        ?.then(() => this.pushState())
+        ?.then(() => {
+          this.pushState()
+          // Refresh sessions after pushState so the webview's sessionsLoaded
+          // handler is guaranteed to be registered (requestState fires from
+          // onMount). Without this, the initial refreshSessions() in
+          // initializeState() can race ahead of webview mount, causing
+          // sessionsLoaded to never flip to true.
+          if (this.state && this.state.getSessions().length > 0) {
+            this.provider?.refreshSessions()
+          }
+        })
         .catch((err) => {
           this.log("initializeState failed, pushing partial state:", err)
           this.pushState()
@@ -228,11 +241,26 @@ export class AgentManagerProvider implements vscode.Disposable {
       parentBranch: result.parentBranch,
       groupId,
     })
+
+    // Push state immediately so the sidebar shows the new worktree with a loading indicator
+    this.pushState()
+    this.postToWebview({
+      type: "agentManager.worktreeSetup",
+      status: "creating",
+      message: "Setting up workspace...",
+      branch: result.branch,
+      worktreeId: worktree.id,
+    })
+
     return { worktree, result }
   }
 
   /** Create a CLI session in a worktree directory. Returns null on failure. */
-  private async createSessionInWorktree(worktreePath: string, branch: string): Promise<SessionInfo | null> {
+  private async createSessionInWorktree(
+    worktreePath: string,
+    branch: string,
+    worktreeId?: string,
+  ): Promise<SessionInfo | null> {
     let client: HttpClient
     try {
       client = this.connectionService.getHttpClient()
@@ -241,6 +269,7 @@ export class AgentManagerProvider implements vscode.Disposable {
         type: "agentManager.worktreeSetup",
         status: "error",
         message: "Not connected to CLI backend",
+        worktreeId,
       })
       return null
     }
@@ -250,6 +279,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       status: "starting",
       message: "Starting session...",
       branch,
+      worktreeId,
     })
 
     try {
@@ -260,13 +290,14 @@ export class AgentManagerProvider implements vscode.Disposable {
         type: "agentManager.worktreeSetup",
         status: "error",
         message: `Failed to create session: ${err}`,
+        worktreeId,
       })
       return null
     }
   }
 
   /** Send worktreeSetup.ready + sessionMeta + pushState after worktree creation. */
-  private notifyWorktreeReady(sessionId: string, result: CreateWorktreeResult): void {
+  private notifyWorktreeReady(sessionId: string, result: CreateWorktreeResult, worktreeId?: string): void {
     this.pushState()
     this.postToWebview({
       type: "agentManager.worktreeSetup",
@@ -274,6 +305,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       message: "Worktree ready",
       sessionId,
       branch: result.branch,
+      worktreeId,
     })
     this.postToWebview({
       type: "agentManager.sessionMeta",
@@ -295,21 +327,22 @@ export class AgentManagerProvider implements vscode.Disposable {
     if (!created) return null
 
     // Run setup script for new worktree (blocks until complete, shows in overlay)
-    await this.runSetupScriptForWorktree(created.result.path, created.result.branch)
+    await this.runSetupScriptForWorktree(created.result.path, created.result.branch, created.worktree.id)
 
-    const session = await this.createSessionInWorktree(created.result.path, created.result.branch)
+    const session = await this.createSessionInWorktree(created.result.path, created.result.branch, created.worktree.id)
     if (!session) {
       const state = this.getStateManager()
       const manager = this.getWorktreeManager()
       state?.removeWorktree(created.worktree.id)
       await manager?.removeWorktree(created.result.path)
+      this.pushState()
       return null
     }
 
     const state = this.getStateManager()!
     state.addSession(session.id, created.worktree.id)
     this.registerWorktreeSession(session.id, created.result.path)
-    this.notifyWorktreeReady(session.id, created.result)
+    this.notifyWorktreeReady(session.id, created.result, created.worktree.id)
     this.log(`Created worktree ${created.worktree.id} with session ${session.id}`)
     return null
   }
@@ -347,7 +380,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     if (!created) return null
 
     // Run setup script for new worktree (blocks until complete, shows in overlay)
-    await this.runSetupScriptForWorktree(created.result.path, created.result.branch)
+    await this.runSetupScriptForWorktree(created.result.path, created.result.branch, created.worktree.id)
 
     const state = this.getStateManager()!
     if (!state.getSession(sessionId)) {
@@ -357,7 +390,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     }
 
     this.registerWorktreeSession(sessionId, created.result.path)
-    this.notifyWorktreeReady(sessionId, created.result)
+    this.notifyWorktreeReady(sessionId, created.result, created.worktree.id)
     this.log(`Promoted session ${sessionId} to worktree ${created.worktree.id}`)
     return null
   }
@@ -595,7 +628,7 @@ export class AgentManagerProvider implements vscode.Disposable {
   }
 
   /** Run the worktree setup script if configured. Blocks until complete. Shows progress in overlay. */
-  private async runSetupScriptForWorktree(worktreePath: string, branch?: string): Promise<void> {
+  private async runSetupScriptForWorktree(worktreePath: string, branch?: string, worktreeId?: string): Promise<void> {
     const root = this.getWorkspaceRoot()
     if (!root) return
     try {
@@ -606,6 +639,7 @@ export class AgentManagerProvider implements vscode.Disposable {
         status: "creating",
         message: "Running setup script...",
         branch,
+        worktreeId,
       })
       const runner = new SetupScriptRunner(this.outputChannel, service)
       await runner.runIfConfigured({ worktreePath, repoPath: root })
@@ -655,6 +689,17 @@ export class AgentManagerProvider implements vscode.Disposable {
       sessions: state.getSessions(),
       tabOrder: state.getTabOrder(),
       sessionsCollapsed: state.getSessionsCollapsed(),
+      isGitRepo: true,
+    })
+  }
+
+  /** Push empty state when the workspace is not a git repo or has no workspace folder. */
+  private pushEmptyState(): void {
+    this.postToWebview({
+      type: "agentManager.state",
+      worktrees: [],
+      sessions: [],
+      isGitRepo: false,
     })
   }
 

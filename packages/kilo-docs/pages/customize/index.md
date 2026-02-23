@@ -27,7 +27,7 @@ Help Kilo understand your codebase better:
 
 - [**Codebase Indexing**](/docs/customize/context/codebase-indexing) - Build a semantic index of your code for better context awareness
 - [**Context Condensing**](/docs/customize/context/context-condensing) - Summarize older context to stay within limits
-- [**Memory Bank**](/docs/customize/context/memory-bank) - Store project context, decisions, and important information
+- [**AGENTS.md**](/docs/customize/agents-md) - Store project context, decisions, and important information
 - [**Large Projects**](/docs/customize/context/large-projects) - Best practices for working with monorepos and large codebases
 
 ## Getting Started

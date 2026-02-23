@@ -88,6 +88,8 @@ export const dict = {
   "ui.permission.deny": "Verweigern",
   "ui.permission.allowAlways": "Immer erlauben",
   "ui.permission.allowOnce": "Einmal erlauben",
+  "ui.permission.sessionHint":
+    '"Immer erlauben" gilt nur für diese Sitzung. Globale Berechtigungen in den Einstellungen ändern.',
 
   "ui.message.expand": "Nachricht erweitern",
   "ui.message.collapse": "Nachricht reduzieren",

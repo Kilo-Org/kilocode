@@ -763,8 +763,8 @@ button.am-section-toggle:hover .am-section-label {
   min-width: 460px;
 }
 
-/* Reuse prompt-input-container inside dialog — resizable from bottom edge */
-.am-nv-dialog .prompt-input-container {
+/* Reuse am-prompt-input-container inside dialog — resizable from bottom edge */
+.am-nv-dialog .am-prompt-input-container {
   margin: 0;
   resize: vertical;
   overflow: hidden;
@@ -774,16 +774,16 @@ button.am-section-toggle:hover .am-section-label {
   flex-direction: column;
 }
 
-.am-nv-dialog .prompt-input-wrapper {
+.am-nv-dialog .am-prompt-input-wrapper {
   flex: 1;
   min-height: 0;
 }
 
-.am-nv-dialog .prompt-input-ghost-wrapper {
+.am-nv-dialog .am-prompt-input-ghost-wrapper {
   height: 100%;
 }
 
-.am-nv-dialog .prompt-input {
+.am-nv-dialog .am-prompt-input {
   color: var(--vscode-input-foreground, var(--text-base));
   resize: none;
   min-height: 100%;
@@ -1025,6 +1025,17 @@ button.am-section-toggle:hover .am-section-label {
   50% {
     opacity: 0.28;
   }
+}
+
+/* Not a git repo notice */
+
+.am-not-git-notice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--text-weak);
 }
 
 .am-skeleton-list {

@@ -1,3 +1,4 @@
+import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Agent } from "@/agent/agent"
 import { Bus } from "@/bus"
 import { TuiEvent } from "@/cli/cmd/tui/event"
@@ -237,12 +238,19 @@ export namespace PlanFollowup {
     if (!user || user.role !== "user" || !user.model) return "break"
 
     const answers = await prompt({ sessionID: input.sessionID, abort: input.abort })
-    if (!answers) return "break"
+    if (!answers) {
+      Telemetry.trackPlanFollowup(input.sessionID, "dismissed")
+      return "break"
+    }
 
     const answer = answers[0]?.[0]?.trim()
-    if (!answer) return "break"
+    if (!answer) {
+      Telemetry.trackPlanFollowup(input.sessionID, "dismissed")
+      return "break"
+    }
 
     if (answer === ANSWER_NEW_SESSION) {
+      Telemetry.trackPlanFollowup(input.sessionID, "new_session")
       await startNew({
         sessionID: input.sessionID,
         plan,
@@ -254,6 +262,7 @@ export namespace PlanFollowup {
     }
 
     if (answer === ANSWER_CONTINUE) {
+      Telemetry.trackPlanFollowup(input.sessionID, "continue")
       await inject({
         sessionID: input.sessionID,
         agent: "code",
@@ -263,6 +272,7 @@ export namespace PlanFollowup {
       return "continue"
     }
 
+    Telemetry.trackPlanFollowup(input.sessionID, "custom")
     await inject({
       sessionID: input.sessionID,
       agent: "plan",

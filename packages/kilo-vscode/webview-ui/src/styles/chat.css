@@ -7,15 +7,31 @@
    Chat View Layout
    ============================================ */
 
-.chat-view {
+.container {
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  position: relative;
+}
+
+.chat-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.chat-messages-wrapper {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
 }
 
 .chat-messages {
-  flex: 1;
+  height: 100%;
   overflow: hidden;
   min-height: 0;
 }
@@ -41,6 +57,17 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.message-list-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--vscode-descriptionForeground);
+  gap: 12px;
+  font-size: 13px;
 }
 
 .message-list-empty {
@@ -559,6 +586,42 @@
 }
 
 /* ============================================
+   Thinking Selector (uses kilo-ui Popover)
+   ============================================ */
+
+.thinking-selector-trigger-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+
+.thinking-selector-list {
+  min-width: 120px;
+}
+
+.thinking-selector-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.thinking-selector-item:hover {
+  background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+}
+
+.thinking-selector-item.selected {
+  background: var(
+    --surface-interactive-active,
+    var(--vscode-list-activeSelectionBackground, var(--vscode-list-hoverBackground))
+  );
+}
+
+.thinking-selector-item-name {
+  font-weight: 500;
+}
+
+/* ============================================
    Mode Switcher (uses kilo-ui Popover)
    ============================================ */
 
@@ -706,11 +769,26 @@
    ============================================ */
 
 .kilo-notifications {
-  flex-shrink: 0;
-  width: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
   display: flex;
   flex-direction: column;
   border-bottom: 1px solid var(--vscode-panel-border);
+  animation: kilo-notifications-slide-in 0.3s ease-out;
+}
+
+@keyframes kilo-notifications-slide-in {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .kilo-notifications-card {
@@ -719,6 +797,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .kilo-notifications-header {

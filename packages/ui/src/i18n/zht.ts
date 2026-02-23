@@ -89,6 +89,7 @@ export const dict = {
   "ui.permission.deny": "拒絕",
   "ui.permission.allowAlways": "永遠允許",
   "ui.permission.allowOnce": "允許一次",
+  "ui.permission.sessionHint": '"永遠允許" 僅適用於此工作階段。如需全域權限設定，請使用設定。',
 
   "ui.message.expand": "展開訊息",
   "ui.message.collapse": "收合訊息",

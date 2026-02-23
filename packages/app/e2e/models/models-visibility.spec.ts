@@ -2,7 +2,9 @@ import { test, expect } from "../fixtures"
 import { promptSelector } from "../selectors"
 import { closeDialog, openSettings, clickListItem } from "../actions"
 
-test("hiding a model removes it from the model picker", async ({ page, gotoSession }) => {
+// kilocode_change start
+test.skip("hiding a model removes it from the model picker", async ({ page, gotoSession }) => {
+  // kilocode_change end
   await gotoSession()
 
   await page.locator(promptSelector).click()

@@ -158,6 +158,12 @@ export const MessageList: Component<MessageListProps> = (props) => {
   return (
     <div class="message-list-container">
       <div ref={containerRef} class="message-list" role="log" aria-live="polite">
+        <Show when={session.loading()}>
+          <div class="message-list-loading" role="status">
+            <Spinner />
+            <span>{language.t("session.messages.loading")}</span>
+          </div>
+        </Show>
         <Show when={isEmpty()}>
           <div class="message-list-empty">
             <KiloLogo />
@@ -177,8 +183,10 @@ export const MessageList: Component<MessageListProps> = (props) => {
             </Show>
           </div>
         </Show>
-        <For each={messages()}>{(message) => <Message message={message} />}</For>
-        <WorkingIndicator />
+        <Show when={!session.loading()}>
+          <For each={messages()}>{(message) => <Message message={message} />}</For>
+          <WorkingIndicator />
+        </Show>
       </div>
 
       <Show when={showScrollButton()}>

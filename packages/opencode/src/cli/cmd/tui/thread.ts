@@ -127,6 +127,13 @@ export const TuiThreadCommand = cmd({
       process.on("SIGUSR2", async () => {
         await client.call("reload", undefined)
       })
+      // kilocode_change start - graceful shutdown on external signals
+      const shutdown = async () => {
+        await client.call("shutdown", undefined).catch(() => {})
+      }
+      process.on("SIGHUP", shutdown)
+      process.on("SIGTERM", shutdown)
+      // kilocode_change end
 
       const prompt = await iife(async () => {
         const piped = !process.stdin.isTTY ? await Bun.stdin.text() : undefined

@@ -173,6 +173,21 @@
     /* border-radius: 2px; */
     /* background: var(--surface-base); */
     /* box-shadow: 0 0 0 0.5px var(--border-weak-base); */
+
+    /* kilocode_change start */
+    &.file-link {
+      cursor: pointer;
+      text-decoration-line: underline;
+      text-decoration-style: dotted;
+      text-underline-offset: 2px;
+      transition: color 0.15s ease;
+
+      &:hover {
+        color: var(--text-interactive-base);
+        text-decoration-style: solid;
+      }
+    }
+    /* kilocode_change end */
   }
 
   /* Tables */

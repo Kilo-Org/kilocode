@@ -162,6 +162,6 @@ Manage your Kilo Teams plan and seat allocation.
 
 ## Next Steps
 
-- [Learn about team management](/docs/plans/team-management)
-- [Understand billing and credits](/docs/plans/billing)
-- [Explore usage analytics](/docs/plans/analytics)
+- [Learn about team management](/docs/collaborate/teams/team-management)
+- [Understand billing and credits](/docs/collaborate/teams/billing)
+- [Explore usage analytics](/docs/collaborate/teams/analytics)

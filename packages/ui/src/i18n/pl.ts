@@ -84,6 +84,8 @@ export const dict = {
   "ui.permission.deny": "Odmów",
   "ui.permission.allowAlways": "Zezwalaj zawsze",
   "ui.permission.allowOnce": "Zezwól raz",
+  "ui.permission.sessionHint":
+    '"Zezwalaj zawsze" dotyczy tylko tej sesji. Użyj ustawień, aby zmienić globalne uprawnienia.',
 
   "ui.message.expand": "Rozwiń wiadomość",
   "ui.message.collapse": "Zwiń wiadomość",

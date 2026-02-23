@@ -89,6 +89,7 @@ export const dict = {
   "ui.permission.deny": "拒绝",
   "ui.permission.allowAlways": "始终允许",
   "ui.permission.allowOnce": "允许一次",
+  "ui.permission.sessionHint": '"始终允许" 仅适用于本次会话。如需全局权限设置，请使用设置。',
 
   "ui.message.expand": "展开消息",
   "ui.message.collapse": "收起消息",
