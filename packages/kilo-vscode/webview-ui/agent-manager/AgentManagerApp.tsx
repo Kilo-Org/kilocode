@@ -379,8 +379,9 @@ const AgentManagerContent: Component = () => {
   const visibleTabId = createMemo(() => session.currentSessionID() ?? activePendingId())
   const tabScroll = useTabScroll(activeTabs, visibleTabId)
 
-  // Display name for worktree — uses first tab in custom order when available
+  // Display name for worktree — prefers persisted label, then first session title, then branch
   const worktreeLabel = (wt: WorktreeState): string => {
+    if (wt.label) return wt.label
     const managed = managedSessions().filter((ms) => ms.worktreeId === wt.id)
     const ids = new Set(managed.map((ms) => ms.id))
     const sessions = session.sessions().filter((s) => ids.has(s.id))
@@ -1108,6 +1109,32 @@ const AgentManagerContent: Component = () => {
                 {(() => {
                   const [hoveredWt, setHoveredWt] = createSignal<string | null>(null)
                   const [overClose, setOverClose] = createSignal(false)
+                  const [renamingWt, setRenamingWt] = createSignal<string | null>(null)
+                  const [renameValue, setRenameValue] = createSignal("")
+
+                  const startRename = (wtId: string, current: string) => {
+                    setRenamingWt(wtId)
+                    setRenameValue(current)
+                  }
+
+                  let cancelled = false
+
+                  const commitRename = (wtId: string) => {
+                    if (cancelled) {
+                      cancelled = false
+                      return
+                    }
+                    const value = renameValue().trim()
+                    setRenamingWt(null)
+                    if (!value) return
+                    vscode.postMessage({ type: "agentManager.renameWorktree", worktreeId: wtId, label: value })
+                  }
+
+                  const cancelRename = () => {
+                    cancelled = true
+                    setRenamingWt(null)
+                  }
+
                   return (
                     <For each={sortedWorktrees()}>
                       {(wt, idx) => {
@@ -1161,7 +1188,45 @@ const AgentManagerContent: Component = () => {
                                   >
                                     <Icon name="branch" size="small" />
                                   </Show>
-                                  <span class="am-worktree-branch">{worktreeLabel(wt)}</span>
+                                  <Show
+                                    when={renamingWt() === wt.id}
+                                    fallback={
+                                      <span
+                                        class="am-worktree-branch"
+                                        onDblClick={(e) => {
+                                          e.stopPropagation()
+                                          startRename(wt.id, worktreeLabel(wt))
+                                        }}
+                                        title="Double-click to rename"
+                                      >
+                                        {worktreeLabel(wt)}
+                                      </span>
+                                    }
+                                  >
+                                    <input
+                                      class="am-worktree-rename-input"
+                                      value={renameValue()}
+                                      onInput={(e) => setRenameValue(e.currentTarget.value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          e.preventDefault()
+                                          commitRename(wt.id)
+                                        }
+                                        if (e.key === "Escape") {
+                                          e.preventDefault()
+                                          cancelRename()
+                                        }
+                                      }}
+                                      onBlur={() => commitRename(wt.id)}
+                                      onClick={(e) => e.stopPropagation()}
+                                      ref={(el) =>
+                                        requestAnimationFrame(() => {
+                                          el.focus()
+                                          el.select()
+                                        })
+                                      }
+                                    />
+                                  </Show>
                                   <Show when={!busyWorktrees().has(wt.id)}>
                                     <div
                                       class="am-worktree-close"
@@ -1491,6 +1556,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
   const vscode = useVSCode()
   const session = useSession()
 
+  const [name, setName] = createSignal("")
   const [prompt, setPrompt] = createSignal("")
   const [versions, setVersions] = createSignal<VersionCount>(2)
   const [model, setModel] = createSignal<{ providerID: string; modelID: string } | null>(null)
@@ -1521,6 +1587,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
     vscode.postMessage({
       type: "agentManager.createMultiVersion",
       text,
+      name: name().trim() || undefined,
       versions: count,
       providerID: sel?.providerID,
       modelID: sel?.modelID,
@@ -1546,13 +1613,21 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
   return (
     <Dialog title="New Worktree" fit>
       <div class="am-nv-dialog" onKeyDown={handleKeyDown}>
-        {/* Prompt input — reuses the same CSS as the sidebar chat input */}
-        <div class="am-prompt-input-container">
-          <div class="am-prompt-input-wrapper">
-            <div class="am-prompt-input-ghost-wrapper">
+        {/* Optional worktree name */}
+        <input
+          class="am-nv-name-input"
+          placeholder="Worktree name (optional)"
+          value={name()}
+          onInput={(e) => setName(e.currentTarget.value)}
+        />
+
+        {/* Prompt input — reuses the sidebar chat-input base classes for consistent styling */}
+        <div class="prompt-input-container am-prompt-input-container">
+          <div class="prompt-input-wrapper am-prompt-input-wrapper">
+            <div class="prompt-input-ghost-wrapper am-prompt-input-ghost-wrapper">
               <textarea
                 ref={textareaRef}
-                class="am-prompt-input"
+                class="prompt-input am-prompt-input"
                 placeholder={`Type a message (${isMac ? "\u2318" : "Ctrl+"}Enter to send)`}
                 value={prompt()}
                 onInput={(e) => {

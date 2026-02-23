@@ -283,8 +283,8 @@ describe("plan follow-up", () => {
       await Todo.update({
         sessionID: seeded.sessionID,
         todos: [
-          { id: "1", content: "Add API endpoint", status: "completed", priority: "high" },
-          { id: "2", content: "Write tests", status: "pending", priority: "medium" },
+          { content: "Add API endpoint", status: "completed", priority: "high" },
+          { content: "Write tests", status: "pending", priority: "medium" },
         ],
       })
 
@@ -338,8 +338,8 @@ describe("plan follow-up", () => {
 
       const newTodos = await Todo.get(newSessionID)
       expect(newTodos).toHaveLength(2)
-      expect(newTodos).toContainEqual({ id: "1", content: "Add API endpoint", status: "completed", priority: "high" })
-      expect(newTodos).toContainEqual({ id: "2", content: "Write tests", status: "pending", priority: "medium" })
+      expect(newTodos).toContainEqual({ content: "Add API endpoint", status: "completed", priority: "high" })
+      expect(newTodos).toContainEqual({ content: "Write tests", status: "pending", priority: "medium" })
 
       SessionPrompt.cancel(newSessionID)
     }))
@@ -477,10 +477,10 @@ describe("plan follow-up", () => {
 
   test("formatTodos - formats todos with status icons", () => {
     const todos: Todo.Info[] = [
-      { id: "1", content: "Set up project", status: "completed", priority: "high" },
-      { id: "2", content: "Write code", status: "in_progress", priority: "high" },
-      { id: "3", content: "Add tests", status: "pending", priority: "medium" },
-      { id: "4", content: "Dropped task", status: "cancelled", priority: "low" },
+      { content: "Set up project", status: "completed", priority: "high" },
+      { content: "Write code", status: "in_progress", priority: "high" },
+      { content: "Add tests", status: "pending", priority: "medium" },
+      { content: "Dropped task", status: "cancelled", priority: "low" },
     ]
     const result = formatTodos(todos)
     expect(result).toBe("- [x] Set up project\n- [~] Write code\n- [ ] Add tests\n- [-] Dropped task")

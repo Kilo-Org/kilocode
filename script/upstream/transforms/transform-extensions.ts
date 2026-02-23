@@ -54,13 +54,13 @@ const EXTENSION_REPLACEMENTS: ExtensionReplacement[] = [
   // GitHub/Repository references
   {
     pattern: /repository\s*=\s*"[^"]*anomalyco\/opencode[^"]*"/g,
-    replacement: 'repository = "https://github.com/Kilo-Org/kilo"',
+    replacement: 'repository = "https://github.com/Kilo-Org/kilocode"',
     description: "Repository URL",
     fileTypes: [".toml"],
   },
   {
     pattern: /github\.com\/anomalyco\/opencode/g,
-    replacement: "github.com/Kilo-Org/kilo",
+    replacement: "github.com/Kilo-Org/kilocode",
     description: "GitHub URL",
   },
   {

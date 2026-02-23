@@ -79,7 +79,7 @@ const TAURI_REPLACEMENTS: TauriReplacement[] = [
   // GitHub references
   {
     pattern: /github\.com\/anomalyco\/opencode/g,
-    replacement: "github.com/Kilo-Org/kilo",
+    replacement: "github.com/Kilo-Org/kilocode",
     description: "GitHub URL",
   },
   {
@@ -109,6 +109,12 @@ const TAURI_REPLACEMENTS: TauriReplacement[] = [
   },
 
   // Rust source specific
+  {
+    pattern: /opencode\.db/g,
+    replacement: "kilo.db",
+    description: "Database filename",
+    fileTypes: [".rs"],
+  },
   {
     pattern: /opencode\.settings\.dat/g,
     replacement: "kilo.settings.dat",
