@@ -33,7 +33,7 @@ function yamlList(text: string, key: string): string[] {
   if (inline) {
     return inline[1]
       .split(",")
-      .map(s => s.trim().replace(/^["']|["']$/g, ""))
+      .map((s) => s.trim().replace(/^["']|["']$/g, ""))
       .filter(Boolean)
   }
   // Block list: labels:\n  - bug
@@ -41,7 +41,12 @@ function yamlList(text: string, key: string): string[] {
   if (blockMatch) {
     return blockMatch[1]
       .split("\n")
-      .map(l => l.replace(/^\s*-\s*/, "").trim().replace(/^["']|["']$/g, ""))
+      .map((l) =>
+        l
+          .replace(/^\s*-\s*/, "")
+          .trim()
+          .replace(/^["']|["']$/g, ""),
+      )
       .filter(Boolean)
   }
   return []
@@ -130,11 +135,11 @@ function parseIssueTemplate(raw: string, file: string): ParsedTemplate {
     }
   }
 
-  const requiredFields = fields.filter(f => f.required).map(f => f.label)
+  const requiredFields = fields.filter((f) => f.required).map((f) => f.label)
   const requiredCheckboxLabels = fields
-    .filter(f => f.required && f.type === "checkboxes")
-    .flatMap(f => f.requiredOptionLabels ?? [])
-  const optionalFields = fields.filter(f => !f.required).map(f => f.label)
+    .filter((f) => f.required && f.type === "checkboxes")
+    .flatMap((f) => f.requiredOptionLabels ?? [])
+  const optionalFields = fields.filter((f) => !f.required).map((f) => f.label)
 
   return { file, name, labels, defaultTitle, requiredFields, requiredCheckboxLabels, optionalFields }
 }
@@ -153,7 +158,9 @@ function extractComplianceHours(raw: string): number {
   const generic = raw.match(/=\s*(\d+)\s*\*\s*60\s*\*\s*60\s*\*\s*1000/)
   if (generic) return parseInt(generic[1], 10)
 
-  throw new Error("Could not parse compliance window hours from compliance-close.yml — update the regex if the file format changed")
+  throw new Error(
+    "Could not parse compliance window hours from compliance-close.yml — update the regex if the file format changed",
+  )
 }
 
 /** Extract DAYS_BEFORE_STALE and DAYS_BEFORE_CLOSE from stale-issues.yml */
@@ -161,8 +168,14 @@ function extractStaleDays(raw: string): { staleDays: number; closeDays: number }
   const staleMatch = raw.match(/DAYS_BEFORE_STALE:\s*(\d+)/)
   const closeMatch = raw.match(/DAYS_BEFORE_CLOSE:\s*(\d+)/)
 
-  if (!staleMatch) throw new Error("Could not parse DAYS_BEFORE_STALE from stale-issues.yml — update the regex if the file format changed")
-  if (!closeMatch) throw new Error("Could not parse DAYS_BEFORE_CLOSE from stale-issues.yml — update the regex if the file format changed")
+  if (!staleMatch)
+    throw new Error(
+      "Could not parse DAYS_BEFORE_STALE from stale-issues.yml — update the regex if the file format changed",
+    )
+  if (!closeMatch)
+    throw new Error(
+      "Could not parse DAYS_BEFORE_CLOSE from stale-issues.yml — update the regex if the file format changed",
+    )
 
   return {
     staleDays: parseInt(staleMatch[1], 10),
@@ -175,7 +188,9 @@ function extractPrStaleDays(raw: string): number {
   const match = raw.match(/const\s+DAYS_INACTIVE\s*=\s*(\d+)/)
   if (match) return parseInt(match[1], 10)
 
-  throw new Error("Could not parse DAYS_INACTIVE from close-stale-prs.yml — update the regex if the file format changed")
+  throw new Error(
+    "Could not parse DAYS_INACTIVE from close-stale-prs.yml — update the regex if the file format changed",
+  )
 }
 
 /** Extract the PR title regex pattern from pr-standards.yml */
@@ -191,7 +206,10 @@ function extractPrTitleRegex(raw: string): string {
 function extractPrPrefixes(raw: string): string[] {
   const match = raw.match(/const\s+titlePattern\s*=\s*\/\^\(([^)]+)\)/)
   if (match) {
-    return match[1].split("|").map(s => s.trim()).filter(Boolean)
+    return match[1]
+      .split("|")
+      .map((s) => s.trim())
+      .filter(Boolean)
   }
 
   throw new Error("Could not parse PR prefixes from pr-standards.yml — update the regex if the file format changed")
@@ -202,10 +220,15 @@ function extractSkipIssuePrefixes(raw: string): string[] {
   // Pattern: const skipIssueCheck = /^(docs|refactor)\s*(\([a-zA-Z0-9-]+\))?\s*:/.test(title);
   const match = raw.match(/skipIssueCheck\s*=\s*\/\^\(([^)]+)\)/)
   if (match) {
-    return match[1].split("|").map(s => s.trim()).filter(Boolean)
+    return match[1]
+      .split("|")
+      .map((s) => s.trim())
+      .filter(Boolean)
   }
 
-  throw new Error("Could not parse skipIssueCheck prefixes from pr-standards.yml — update the regex if the file format changed")
+  throw new Error(
+    "Could not parse skipIssueCheck prefixes from pr-standards.yml — update the regex if the file format changed",
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -216,8 +239,7 @@ async function readFileSafe(path: string): Promise<string | null> {
   try {
     return await Bun.file(path).text()
   } catch (err) {
-    console.warn(`WARNING: Could not read ${path}: ${err}`)
-    return null
+    throw new Error(`Could not read ${path}: ${err}`)
   }
 }
 
@@ -233,9 +255,7 @@ async function main() {
   // Parse --output argument
   const args = process.argv.slice(2)
   const outputIdx = args.indexOf("--output")
-  const outputPath = outputIdx !== -1 && args[outputIdx + 1]
-    ? args[outputIdx + 1]
-    : "contributing-facts.json"
+  const outputPath = outputIdx !== -1 && args[outputIdx + 1] ? args[outputIdx + 1] : "contributing-facts.json"
 
   // --- Issue templates ---
   const templateFiles = ["bug-report.yml", "feature-request.yml", "question.yml"]
@@ -243,18 +263,12 @@ async function main() {
 
   for (const file of templateFiles) {
     const raw = await readFileSafe(`.github/ISSUE_TEMPLATE/${file}`)
-    if (raw) {
-      templates.push(parseIssueTemplate(raw, file))
-    } else {
-      console.warn(`WARNING: Skipping template ${file} (could not read)`)
-    }
+    templates.push(parseIssueTemplate(raw, file))
   }
 
   // --- config.yml ---
   const configRaw = await readFileSafe(".github/ISSUE_TEMPLATE/config.yml")
-  const blankIssuesEnabled = configRaw
-    ? yamlScalar(configRaw, "blank_issues_enabled") === "true"
-    : false
+  const blankIssuesEnabled = configRaw ? yamlScalar(configRaw, "blank_issues_enabled") === "true" : false
 
   // --- compliance-close.yml ---
   const complianceRaw = await readFileRequired(".github/workflows/compliance-close.yml")
@@ -287,9 +301,9 @@ async function main() {
   ]
 
   // --- Build structured output ---
-  const bugTemplate = templates.find(t => t.file === "bug-report.yml")
-  const featureTemplate = templates.find(t => t.file === "feature-request.yml")
-  const questionTemplate = templates.find(t => t.file === "question.yml")
+  const bugTemplate = templates.find((t) => t.file === "bug-report.yml")
+  const featureTemplate = templates.find((t) => t.file === "feature-request.yml")
+  const questionTemplate = templates.find((t) => t.file === "question.yml")
 
   const facts = {
     generatedAt: new Date().toISOString(),
@@ -342,7 +356,7 @@ async function main() {
   console.log(`Facts written to ${outputPath}`)
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error("ERROR:", err)
   process.exit(1)
 })

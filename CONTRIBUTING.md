@@ -128,6 +128,8 @@ All pull requests must reference an existing issue. Before opening a PR:
 3. Wait for maintainer acknowledgment before investing significant effort
 4. Reference the issue in your PR with `Fixes #N` or `Closes #N`
 
+**Exceptions:** PRs with `docs:` or `refactor:` prefixes are exempt from this requirement.
+
 This policy ensures changes are discussed and aligned with project direction before implementation work begins.
 
 ## Stale Issues and PRs
@@ -206,16 +208,17 @@ kilo web             # Start server + open web interface
 
 PR titles must follow [Conventional Commits](https://www.conventionalcommits.org/) format:
 
-| Prefix | When to use |
-|--------|-------------|
-| `feat:` | New feature |
-| `fix:` | Bug fix |
-| `docs:` | Documentation changes only |
-| `chore:` | Maintenance, dependency updates, tooling |
+| Prefix      | When to use                                |
+| ----------- | ------------------------------------------ |
+| `feat:`     | New feature                                |
+| `fix:`      | Bug fix                                    |
+| `docs:`     | Documentation changes only                 |
+| `chore:`    | Maintenance, dependency updates, tooling   |
 | `refactor:` | Code restructuring without behavior change |
-| `test:` | Adding or updating tests |
+| `test:`     | Adding or updating tests                   |
 
 Examples:
+
 - `feat: add support for custom themes`
 - `fix: resolve crash when config file is missing`
 - `docs: update installation instructions`

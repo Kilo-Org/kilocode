@@ -44,17 +44,17 @@ update preserves prose while refreshing only the data-driven sections.
 
 The following files trigger the sync workflow when changed on the `dev` branch:
 
-| File | What it controls in CONTRIBUTING.md |
-|------|--------------------------------------|
-| `.github/ISSUE_TEMPLATE/bug-report.yml` | Required/optional fields, labels |
+| File                                         | What it controls in CONTRIBUTING.md           |
+| -------------------------------------------- | --------------------------------------------- |
+| `.github/ISSUE_TEMPLATE/bug-report.yml`      | Required/optional fields, labels              |
 | `.github/ISSUE_TEMPLATE/feature-request.yml` | Required fields, default title prefix, labels |
-| `.github/ISSUE_TEMPLATE/question.yml` | Required fields, labels |
-| `.github/ISSUE_TEMPLATE/config.yml` | Blank issues enabled/disabled |
-| `.github/workflows/duplicate-issues.yml` | Compliance rules, auto-close window |
-| `.github/workflows/compliance-close.yml` | Auto-close window (2 hours) |
-| `.github/workflows/stale-issues.yml` | Issue stale/close days |
-| `.github/workflows/close-stale-prs.yml` | PR stale close days |
-| `.github/workflows/pr-standards.yml` | PR title regex, linked-issue requirement |
+| `.github/ISSUE_TEMPLATE/question.yml`        | Required fields, labels                       |
+| `.github/ISSUE_TEMPLATE/config.yml`          | Blank issues enabled/disabled                 |
+| `.github/workflows/duplicate-issues.yml`     | Compliance rules, auto-close window           |
+| `.github/workflows/compliance-close.yml`     | Auto-close window (2 hours)                   |
+| `.github/workflows/stale-issues.yml`         | Issue stale/close days                        |
+| `.github/workflows/close-stale-prs.yml`      | PR stale close days                           |
+| `.github/workflows/pr-standards.yml`         | PR title regex, linked-issue requirement      |
 
 ---
 
@@ -182,7 +182,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           KILO_PERMISSION: |
             {
-              "write_file": { "*": "allow" },
+              "write_file": { "CONTRIBUTING.md": "allow" },
               "bash": { "*": "deny" },
               "webfetch": "deny"
             }
@@ -261,7 +261,7 @@ single source of truth passed to the AI agent.
 
 ```typescript
 // kilocode_change - new file
-import { parse as parseYaml } from "..."  // use a bun-compatible yaml parser
+import { parse as parseYaml } from "..." // use a bun-compatible yaml parser
 
 // --- Issue templates ---
 const templates = []
@@ -274,11 +274,11 @@ for (const file of ["bug-report.yml", "feature-request.yml", "question.yml"]) {
     labels: parsed.labels,
     defaultTitle: parsed.title ?? null,
     requiredFields: parsed.body
-      .filter(f => f.validations?.required === true || f.attributes?.options?.some(o => o.required))
-      .map(f => f.attributes?.label ?? f.id),
+      .filter((f) => f.validations?.required === true || f.attributes?.options?.some((o) => o.required))
+      .map((f) => f.attributes?.label ?? f.id),
     optionalFields: parsed.body
-      .filter(f => !f.validations?.required && !f.attributes?.options?.some(o => o.required))
-      .map(f => f.attributes?.label ?? f.id),
+      .filter((f) => !f.validations?.required && !f.attributes?.options?.some((o) => o.required))
+      .map((f) => f.attributes?.label ?? f.id),
   })
 }
 
@@ -290,26 +290,26 @@ const blankIssuesEnabled = config.blank_issues_enabled
 // Extract the twoHours constant (2 * 60 * 60 * 1000) → 2 hours
 // Parse with regex: /const twoHours = (\d+) \* 60 \* 60 \* 1000/
 const complianceRaw = await Bun.file(".github/workflows/compliance-close.yml").text()
-const complianceHours = extractComplianceHours(complianceRaw)  // → 2
+const complianceHours = extractComplianceHours(complianceRaw) // → 2
 
 // --- stale-issues.yml ---
 const staleRaw = await Bun.file(".github/workflows/stale-issues.yml").text()
 const staleParsed = parseYaml(staleRaw)
-const issueStaleDays = staleParsed.env.DAYS_BEFORE_STALE   // → 90
-const issueCloseDays = staleParsed.env.DAYS_BEFORE_CLOSE   // → 7
-const issueTotalDays = issueStaleDays + issueCloseDays      // → 97
+const issueStaleDays = staleParsed.env.DAYS_BEFORE_STALE // → 90
+const issueCloseDays = staleParsed.env.DAYS_BEFORE_CLOSE // → 7
+const issueTotalDays = issueStaleDays + issueCloseDays // → 97
 
 // --- close-stale-prs.yml ---
 const prStaleRaw = await Bun.file(".github/workflows/close-stale-prs.yml").text()
 // Parse: /const DAYS_INACTIVE = (\d+)/
-const prStaleDays = extractPrStaleDays(prStaleRaw)  // → 60
+const prStaleDays = extractPrStaleDays(prStaleRaw) // → 60
 
 // --- pr-standards.yml ---
 const prRaw = await Bun.file(".github/workflows/pr-standards.yml").text()
 // Parse: /const titlePattern = \/\^(.*)\//
 // Parse: /const skipIssueCheck = \/\^(.*)\//
 const prTitleRegex = extractPrTitleRegex(prRaw)
-const skipPrefixes = extractSkipPrefixes(prRaw)  // → ["docs", "refactor"]
+const skipPrefixes = extractSkipPrefixes(prRaw) // → ["docs", "refactor"]
 const conventionalPrefixes = extractConventionalPrefixes(prRaw)
 // → ["feat", "fix", "docs", "chore", "refactor", "test"]
 
@@ -344,7 +344,14 @@ console.log("Facts written to .github/scripts/contributing-facts.json")
       "labels": ["bug"],
       "defaultTitle": null,
       "requiredFields": ["Description"],
-      "optionalFields": ["Plugins", "Kilo version", "Steps to reproduce", "Screenshot and/or share link", "Operating System", "Terminal"]
+      "optionalFields": [
+        "Plugins",
+        "Kilo version",
+        "Steps to reproduce",
+        "Screenshot and/or share link",
+        "Operating System",
+        "Terminal"
+      ]
     },
     {
       "file": "feature-request.yml",
@@ -395,6 +402,7 @@ The `kilo run` step instructs the AI to update only specific sections. However,
 AI agents can occasionally drift and modify unintended sections.
 
 **Mitigation:**
+
 - The PR review step is the primary safeguard — a human reviews the diff before
   merging.
 - The prompt explicitly lists the sections to update and says "Do NOT change any
@@ -448,33 +456,33 @@ exempt — no linked issue is needed.
 The following files need to be created or modified, in order:
 
 - [ ] **Create** `.github/scripts/extract-contributing-facts.ts`
-  — TypeScript/Bun script that reads source-of-truth files and writes
-  `contributing-facts.json`. Includes robust error handling for missing
-  constants.
+      — TypeScript/Bun script that reads source-of-truth files and writes
+      `contributing-facts.json`. Includes robust error handling for missing
+      constants.
 
 - [ ] **Create** `.github/scripts/contributing-facts.json`
-  — Output artifact (gitignored or committed as a reference snapshot).
-  Consider adding to `.gitignore` since it is regenerated on every run.
+      — Output artifact (gitignored or committed as a reference snapshot).
+      Consider adding to `.gitignore` since it is regenerated on every run.
 
 - [ ] **Create** `.github/workflows/sync-contributing.yml`
-  — The GitHub Actions workflow described in Section 4. Uses `paths:` filter
-  to trigger only when source files change.
+      — The GitHub Actions workflow described in Section 4. Uses `paths:` filter
+      to trigger only when source files change.
 
 - [ ] **Update** `.gitignore` (optional)
-  — Add `.github/scripts/contributing-facts.json` if it should not be
-  committed to the repo.
+      — Add `.github/scripts/contributing-facts.json` if it should not be
+      committed to the repo.
 
 - [ ] **Verify** secrets are configured in the repo
-  — `KILO_API_KEY`, `KILO_ORG_ID`, `KILO_MAINTAINER_APP_ID`,
-  `KILO_MAINTAINER_APP_SECRET` must all be present for the workflow to
-  succeed end-to-end.
+      — `KILO_API_KEY`, `KILO_ORG_ID`, `KILO_MAINTAINER_APP_ID`,
+      `KILO_MAINTAINER_APP_SECRET` must all be present for the workflow to
+      succeed end-to-end.
 
 - [ ] **Test** by making a trivial change to one source file (e.g., add a
-  comment to `stale-issues.yml`) and pushing to `dev`, then verifying the
-  workflow runs and either opens a PR or exits cleanly.
+      comment to `stale-issues.yml`) and pushing to `dev`, then verifying the
+      workflow runs and either opens a PR or exits cleanly.
 
 - [ ] **Optional: add auto-merge** — If the PR diff is small and the CI passes,
-  enable auto-merge on the sync PR so it merges without manual intervention.
+      enable auto-merge on the sync PR so it merges without manual intervention.
 
 ---
 
