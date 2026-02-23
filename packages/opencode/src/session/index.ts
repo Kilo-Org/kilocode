@@ -525,8 +525,8 @@ export namespace Session {
 
   export function* list() {
     const project = Instance.project
-    const rel = Filesystem.relative(Instance.worktree, Instance.directory)
-    const suffix = '/' + rel
+    //const rel = Filesystem.relative(Instance.worktree, Instance.directory)
+    //const suffix = '/' + rel
     const rows = Database.use((db) =>
       db
         .select()
@@ -534,7 +534,7 @@ export namespace Session {
         .where(
           and(
             eq(SessionTable.project_id, project.id),
-            or(eq(SessionTable.directory, Instance.directory), like(SessionTable.directory, `%${suffix}`)),
+            // or(eq(SessionTable.directory, Instance.directory), like(SessionTable.directory, `%${suffix}`)),
           ),
         )
         .all(),

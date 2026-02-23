@@ -258,9 +258,9 @@ export namespace SessionProcessor {
                     usage.tokens.cache.read > 0
                   ) {
                     Telemetry.trackLlmCompletion({
-                      sessionId: input.sessionID,
-                      provider: input.model.providerID,
-                      model: input.model.id,
+                      taskId: input.sessionID,
+                      apiProvider: input.model.providerID,
+                      modelId: input.model.id,
                       inputTokens: usage.tokens.input,
                       outputTokens: usage.tokens.output,
                       cacheReadTokens: usage.tokens.cache.read,
