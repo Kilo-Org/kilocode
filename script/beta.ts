@@ -43,11 +43,11 @@ async function main() {
     return
   }
 
-  console.log("Fetching latest dev branch...")
-  await $`git fetch origin dev`
+  console.log("Fetching latest main branch...")
+  await $`git fetch origin main`
 
   console.log("Checking out beta branch...")
-  await $`git checkout -B beta origin/dev`
+  await $`git checkout -B beta origin/main`
 
   const applied: number[] = []
   const failed: FailedPR[] = []
@@ -80,7 +80,7 @@ async function main() {
         await $`git clean -fd`
       } catch {}
       failed.push({ number: pr.number, title: pr.title, reason: "Merge conflicts" })
-      await commentOnPR(pr.number, "Merge conflicts with dev branch")
+      await commentOnPR(pr.number, "Merge conflicts with main branch")
       continue
     }
 

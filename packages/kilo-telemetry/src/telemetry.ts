@@ -162,6 +162,10 @@ export namespace Telemetry {
     track(TelemetryEvent.AGENT_USED, { agent, sessionId })
   }
 
+  export function trackPlanFollowup(sessionId: string, choice: "new_session" | "continue" | "custom" | "dismissed") {
+    track(TelemetryEvent.PLAN_FOLLOWUP, { sessionId, choice })
+  }
+
   // Share
   export function trackShareCreated(sessionId: string) {
     track(TelemetryEvent.SHARE_CREATED, { sessionId })

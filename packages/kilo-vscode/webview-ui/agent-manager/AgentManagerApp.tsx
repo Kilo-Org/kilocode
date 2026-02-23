@@ -1546,13 +1546,13 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
   return (
     <Dialog title="New Worktree" fit>
       <div class="am-nv-dialog" onKeyDown={handleKeyDown}>
-        {/* Prompt input — reuses the same CSS as the sidebar chat input */}
-        <div class="am-prompt-input-container">
-          <div class="am-prompt-input-wrapper">
-            <div class="am-prompt-input-ghost-wrapper">
+        {/* Prompt input — reuses the sidebar chat-input base classes for consistent styling */}
+        <div class="prompt-input-container am-prompt-input-container">
+          <div class="prompt-input-wrapper am-prompt-input-wrapper">
+            <div class="prompt-input-ghost-wrapper am-prompt-input-ghost-wrapper">
               <textarea
                 ref={textareaRef}
-                class="am-prompt-input"
+                class="prompt-input am-prompt-input"
                 placeholder={`Type a message (${isMac ? "\u2318" : "Ctrl+"}Enter to send)`}
                 value={prompt()}
                 onInput={(e) => {
