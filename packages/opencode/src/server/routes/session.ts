@@ -54,18 +54,15 @@ export const SessionRoutes = lazy(() =>
       ),
       async (c) => {
         const query = c.req.valid("query")
-        const term = query.search?.toLowerCase()
-        // Normalize directory path for comparison
-        const normalizedQueryDir = query.directory ? Filesystem.normalize(query.directory) : undefined
         const sessions: Session.Info[] = []
-        for await (const session of Session.list()) {
-          if (normalizedQueryDir !== undefined && Filesystem.normalize(session.directory) !== normalizedQueryDir)
-            continue
-          if (query.roots && session.parentID) continue
-          if (query.start !== undefined && session.time.updated < query.start) continue
-          if (term !== undefined && !session.title.toLowerCase().includes(term)) continue
+        for await (const session of Session.list({
+          directory: query.directory ? Filesystem.normalize(query.directory) : undefined,
+          roots: query.roots,
+          start: query.start,
+          search: query.search,
+          limit: query.limit,
+        })) {
           sessions.push(session)
-          if (query.limit !== undefined && sessions.length >= query.limit) break
         }
         return c.json(sessions)
       },

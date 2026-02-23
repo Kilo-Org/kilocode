@@ -84,7 +84,7 @@ const TAURI_REPLACEMENTS: TauriReplacement[] = [
   },
   {
     pattern: /anomalyco\/opencode/g,
-    replacement: "Kilo-Org/kilo",
+    replacement: "Kilo-Org/kilocode",
     description: "GitHub repo",
   },
 
