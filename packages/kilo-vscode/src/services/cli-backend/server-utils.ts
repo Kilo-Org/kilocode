@@ -20,20 +20,24 @@ export function buildKillTreeCommand(pid: number, platform = process.platform): 
   }
   return {
     command: "kill",
-    args: ["-TERM", `-${pid}`],
+    // `--` avoids parsing the negative PGID as an option.
+    args: ["-TERM", "--", `-${pid}`],
   }
 }
 
 function spawnKillCommand(command: string, args: string[]): void {
   const child = spawn(command, args, { stdio: "ignore" })
   // Prevent unhandled "error" events if the kill utility is unavailable.
-  child.once("error", () => {})
+  child.once("error", (error) => {
+    console.warn("[Kilo New] ServerManager: failed to run kill command", command, args, error)
+  })
   child.unref()
 }
 
 export function killProcessTree(proc: ChildProcess): void {
   const pid = proc.pid
   if (!pid) return
+  if (proc.exitCode !== null || proc.signalCode !== null) return
 
   if (process.platform === "win32") {
     const command = buildKillTreeCommand(pid, "win32")
@@ -45,7 +49,16 @@ export function killProcessTree(proc: ChildProcess): void {
   spawnKillCommand(termCommand.command, termCommand.args)
 
   const timeout = setTimeout(() => {
-    spawnKillCommand("kill", ["-KILL", `-${pid}`])
+    cleanupEscalation()
+    if (proc.exitCode !== null || proc.signalCode !== null) return
+    spawnKillCommand("kill", ["-KILL", "--", `-${pid}`])
   }, 1000)
+  const cleanupEscalation = () => {
+    clearTimeout(timeout)
+    proc.removeListener("exit", cleanupEscalation)
+    proc.removeListener("error", cleanupEscalation)
+  }
+  proc.once("exit", cleanupEscalation)
+  proc.once("error", cleanupEscalation)
   timeout.unref()
 }

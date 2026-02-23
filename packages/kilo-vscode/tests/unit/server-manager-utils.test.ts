@@ -56,7 +56,7 @@ describe("buildKillTreeCommand", () => {
   it("builds process-group kill command on POSIX", () => {
     expect(buildKillTreeCommand(987, "linux")).toEqual({
       command: "kill",
-      args: ["-TERM", "-987"],
+      args: ["-TERM", "--", "-987"],
     })
   })
 })
