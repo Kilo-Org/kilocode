@@ -6,6 +6,7 @@
  * This factory function accepts OpenCode dependencies to create Kilo-specific routes
  */
 
+import { randomBytes } from "crypto"
 import { fetchProfile, fetchBalance } from "../api/profile.js"
 import { fetchKilocodeNotifications, KilocodeNotificationSchema } from "../api/notifications.js"
 import { KILO_API_BASE, HEADER_FEATURE } from "../api/constants.js" // kilocode_change - added HEADER_FEATURE
@@ -57,6 +58,19 @@ interface KiloRoutesDeps {
  * })
  * ```
  */
+// Lightweight ID generator matching opencode's Identifier format (prefix + hex timestamp + random)
+function generateId(prefix: string, descending: boolean): string {
+  const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+  const bytes = randomBytes(14)
+  let rand = ""
+  for (let i = 0; i < 14; i++) rand += chars[bytes[i] % 62]
+  let now = BigInt(Date.now()) * BigInt(0x1000) + BigInt(1)
+  if (descending) now = ~now
+  const buf = Buffer.alloc(6)
+  for (let i = 0; i < 6; i++) buf[i] = Number((now >> BigInt(40 - 8 * i)) & BigInt(0xff))
+  return prefix + "_" + buf.toString("hex") + rand
+}
+
 export function createKiloRoutes(deps: KiloRoutesDeps) {
   const { Hono, describeRoute, validator, resolver, errors, Auth, z, Storage, Instance } = deps
 
@@ -230,13 +244,27 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
         const data = (await response.json()) as any
         if (!data?.info?.id) return c.json({ error: "Invalid export data" }, 400)
 
+        // Generate fresh local IDs so repeated imports don't collide
+        const sessionID = generateId("ses", true)
+        const msgMap = new Map<string, string>()
+
         const projectID = Instance.project.id
-        await Storage.write(["session", projectID, data.info.id], data.info)
+        data.info.id = sessionID
+        data.info.projectID = projectID
+        await Storage.write(["session", projectID, sessionID], data.info)
 
         for (const msg of data.messages ?? []) {
-          await Storage.write(["message", data.info.id, msg.info.id], msg.info)
+          const msgID = generateId("msg", false)
+          msgMap.set(msg.info.id, msgID)
+          msg.info.id = msgID
+          msg.info.sessionID = sessionID
+          if (msg.info.parentID) msg.info.parentID = msgMap.get(msg.info.parentID) ?? msg.info.parentID
+          await Storage.write(["message", sessionID, msgID], msg.info)
           for (const part of msg.parts ?? []) {
-            await Storage.write(["part", msg.info.id, part.id], part)
+            part.id = generateId("prt", false)
+            part.messageID = msgID
+            part.sessionID = sessionID
+            await Storage.write(["part", msgID, part.id], part)
           }
         }
 
