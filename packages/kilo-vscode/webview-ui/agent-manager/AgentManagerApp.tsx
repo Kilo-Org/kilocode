@@ -1488,6 +1488,28 @@ const AgentManagerContent: Component = () => {
 type VersionCount = 1 | 2 | 3 | 4
 const VERSION_OPTIONS: VersionCount[] = [1, 2, 3, 4]
 
+function sanitizeSegment(text: string, maxLength = 50): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9._+@-]/g, "")
+    .replace(/\.{2,}/g, ".")
+    .replace(/@\{/g, "@")
+    .replace(/-+/g, "-")
+    .replace(/^[-.]|[-.]+$/g, "")
+    .replace(/\.lock$/g, "")
+    .slice(0, maxLength)
+}
+
+function sanitizeBranchName(name: string): string {
+  return name
+    .split("/")
+    .map((s) => sanitizeSegment(s))
+    .filter(Boolean)
+    .join("/")
+}
+
 function formatRelativeTime(epoch: number): string {
   const diff = Math.floor(Date.now() / 1000) - epoch
   if (diff < 60) return "now"
@@ -1514,6 +1536,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
   const [defaultBranch, setDefaultBranch] = createSignal("main")
   const [branchSearch, setBranchSearch] = createSignal("")
   const [baseBranchOpen, setBaseBranchOpen] = createSignal(false)
+  const [highlightedIndex, setHighlightedIndex] = createSignal(0)
 
   let textareaRef: HTMLTextAreaElement | undefined
 
@@ -1656,7 +1679,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
                 type="text"
                 placeholder="auto-generated"
                 value={branchName()}
-                onInput={(e) => setBranchName(e.currentTarget.value)}
+                onInput={(e) => setBranchName(sanitizeBranchName(e.currentTarget.value))}
               />
             </div>
             <div class="am-advanced-field">
@@ -1683,21 +1706,60 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
                         type="text"
                         placeholder="Search branches..."
                         value={branchSearch()}
-                        onInput={(e) => setBranchSearch(e.currentTarget.value)}
+                        onInput={(e) => {
+                          setBranchSearch(e.currentTarget.value)
+                          setHighlightedIndex(0)
+                        }}
+                        onKeyDown={(e) => {
+                          const items = filteredBranches()
+                          if (e.key === "ArrowDown") {
+                            e.preventDefault()
+                            setHighlightedIndex((i) => Math.min(i + 1, items.length - 1))
+                            document
+                              .querySelector(`.am-branch-item[data-index="${highlightedIndex()}"]`)
+                              ?.scrollIntoView({ block: "nearest" })
+                          } else if (e.key === "ArrowUp") {
+                            e.preventDefault()
+                            setHighlightedIndex((i) => Math.max(i - 1, 0))
+                            document
+                              .querySelector(`.am-branch-item[data-index="${highlightedIndex()}"]`)
+                              ?.scrollIntoView({ block: "nearest" })
+                          } else if (e.key === "Enter") {
+                            e.preventDefault()
+                            const selected = items[highlightedIndex()]
+                            if (selected) {
+                              setBaseBranch(selected.name)
+                              setBaseBranchOpen(false)
+                              setBranchSearch("")
+                              setHighlightedIndex(0)
+                            }
+                          } else if (e.key === "Escape") {
+                            e.preventDefault()
+                            setBaseBranchOpen(false)
+                            setBranchSearch("")
+                            setHighlightedIndex(0)
+                          }
+                        }}
                         autofocus
                       />
                     </div>
                     <div class="am-branch-list">
                       <For each={filteredBranches()}>
-                        {(branch) => (
+                        {(branch, index) => (
                           <button
                             class="am-branch-item"
-                            classList={{ "am-branch-item-active": effectiveBaseBranch() === branch.name }}
+                            classList={{
+                              "am-branch-item-active": effectiveBaseBranch() === branch.name,
+                              "am-branch-item-highlighted": highlightedIndex() === index(),
+                            }}
+                            data-index={index()}
                             onClick={() => {
                               setBaseBranch(branch.name)
                               setBaseBranchOpen(false)
                               setBranchSearch("")
+                              setHighlightedIndex(0)
                             }}
+                            onMouseEnter={() => setHighlightedIndex(index())}
                             type="button"
                           >
                             <Icon name="branch" size="small" />

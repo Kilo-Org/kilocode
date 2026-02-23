@@ -1092,6 +1092,10 @@ button.am-section-toggle:hover .am-section-label {
   background: var(--surface-raised-base);
 }
 
+.am-branch-item-highlighted {
+  background: var(--surface-raised-base-hover);
+}
+
 .am-branch-item-name {
   flex: 1;
   overflow: hidden;
