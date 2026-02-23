@@ -89,6 +89,13 @@ const BRANDING_REPLACEMENTS: BrandingReplacement[] = [
     description: "upgrade command",
   },
 
+  // Database filename
+  {
+    pattern: /opencode\.db/g,
+    replacement: "kilo.db",
+    description: "Database filename",
+  },
+
   // Generic product name replacement (must come after specific patterns)
   // Only replace "OpenCode" when it's a standalone word
   {

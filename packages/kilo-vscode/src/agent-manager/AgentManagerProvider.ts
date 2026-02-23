@@ -4,6 +4,7 @@ import { KiloProvider } from "../KiloProvider"
 import { buildWebviewHtml } from "../utils"
 import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
 import { WorktreeStateManager } from "./WorktreeStateManager"
+import { versionedName } from "./branch-name"
 import { SetupScriptService } from "./SetupScriptService"
 import { SetupScriptRunner } from "./SetupScriptRunner"
 import { SessionTerminalManager } from "./SessionTerminalManager"
@@ -156,6 +157,14 @@ export class AgentManagerProvider implements vscode.Disposable {
       void this.onCreateMultiVersion(msg)
       return null
     }
+    if (type === "agentManager.renameWorktree" && typeof msg.worktreeId === "string" && typeof msg.label === "string") {
+      const state = this.getStateManager()
+      if (state) {
+        state.updateWorktreeLabel(msg.worktreeId as string, msg.label as string)
+        this.pushState()
+      }
+      return null
+    }
     if (type === "agentManager.requestState") {
       void this.stateReady
         ?.then(() => {
@@ -216,6 +225,8 @@ export class AgentManagerProvider implements vscode.Disposable {
     baseBranch?: string
     branchName?: string
     existingBranch?: string
+    name?: string
+    label?: string
   }): Promise<{
     worktree: ReturnType<WorktreeStateManager["addWorktree"]>
     result: CreateWorktreeResult
@@ -236,7 +247,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     let result: CreateWorktreeResult
     try {
       result = await manager.createWorktree({
-        prompt: "kilo",
+        prompt: opts?.name || "kilo",
         baseBranch: opts?.baseBranch,
         branchName: opts?.branchName,
         existingBranch: opts?.existingBranch,
@@ -256,6 +267,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       path: result.path,
       parentBranch: result.parentBranch,
       groupId: opts?.groupId,
+      label: opts?.label,
     })
 
     // Push state immediately so the sidebar shows the new worktree with a loading indicator
@@ -491,6 +503,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     const text = (msg.text as string | undefined)?.trim() || undefined
 
     const versions = Math.min(Math.max(Number(msg.versions) || 1, 1), 4)
+    const worktreeName = (msg.name as string | undefined)?.trim() || undefined
     const providerID = msg.providerID as string | undefined
     const modelID = msg.modelID as string | undefined
     const agent = msg.agent as string | undefined
@@ -526,10 +539,14 @@ export class AgentManagerProvider implements vscode.Disposable {
     for (let i = 0; i < versions; i++) {
       this.log(`Creating worktree ${i + 1}/${versions}`)
 
-      // For multi-version with a custom branch name, suffix with -v1, -v2, etc.
-      const effectiveBranchName = branchName && versions > 1 ? `${branchName}-v${i + 1}` : branchName
-
-      const wt = await this.createWorktreeOnDisk({ groupId, baseBranch, branchName: effectiveBranchName })
+      const version = versionedName(branchName || worktreeName, i, versions)
+      const wt = await this.createWorktreeOnDisk({
+        groupId,
+        baseBranch,
+        branchName: version.branch,
+        name: version.branch,
+        label: version.label,
+      })
       if (!wt) {
         this.log(`Failed to create worktree for version ${i + 1}`)
         continue

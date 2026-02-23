@@ -569,6 +569,8 @@ export interface WorktreeState {
   createdAt: string
   /** Shared identifier for worktrees created together via multi-version mode. */
   groupId?: string
+  /** User-provided display name for the worktree. */
+  label?: string
 }
 
 export interface ManagedSessionState {
