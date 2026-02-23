@@ -1,17 +1,13 @@
-import { Log } from "../util/log"
-import path from "path"
-import { pathToFileURL } from "url"
-import os from "os"
-import z from "zod"
-import { Filesystem } from "../util/filesystem"
-import { ModelsDev } from "../provider/models"
-import { mergeDeep, pipe, unique } from "remeda"
-import { Global } from "../global"
-import fs from "fs/promises"
-import { lazy } from "../util/lazy"
+import { BunProc } from "@/bun"
+import { PackageRegistry } from "@/bun/registry"
+import { Bus } from "@/bus"
+import { GlobalBus } from "@/bus/global"
+import { Installation } from "@/installation"
+import { iife } from "@/util/iife"
+import { proxied } from "@/util/proxied"
 import { NamedError } from "@opencode-ai/util/error"
-import { Flag } from "../flag/flag"
-import { Auth } from "../auth"
+import { constants, existsSync } from "fs"
+import fs from "fs/promises"
 import {
   type ParseError as JsoncParseError,
   applyEdits,
@@ -19,24 +15,28 @@ import {
   parse as parseJsonc,
   printParseErrorCode,
 } from "jsonc-parser"
-import { Instance } from "../project/instance"
+import os from "os"
+import path from "path"
+import { mergeDeep, pipe, unique } from "remeda"
+import { pathToFileURL } from "url"
+import z from "zod"
+import { Auth } from "../auth"
+import { Flag } from "../flag/flag"
+import { Global } from "../global"
 import { LSPServer } from "../lsp/server"
-import { BunProc } from "@/bun"
-import { Installation } from "@/installation"
-import { ConfigMarkdown } from "./markdown"
-import { constants, existsSync } from "fs"
-import { Bus } from "@/bus"
-import { GlobalBus } from "@/bus/global"
+import { Instance } from "../project/instance"
+import { ModelsDev } from "../provider/models"
 import { Event } from "../server/event"
-import { PackageRegistry } from "@/bun/registry"
-import { proxied } from "@/util/proxied"
-import { iife } from "@/util/iife"
+import { Filesystem } from "../util/filesystem"
+import { lazy } from "../util/lazy"
+import { Log } from "../util/log"
+import { ConfigMarkdown } from "./markdown"
 
+import { IgnoreMigrator } from "../kilocode/ignore-migrator" // kilocode_change
+import { McpMigrator } from "../kilocode/mcp-migrator" // kilocode_change
 import { ModesMigrator } from "../kilocode/modes-migrator" // kilocode_change
 import { RulesMigrator } from "../kilocode/rules-migrator" // kilocode_change
 import { WorkflowsMigrator } from "../kilocode/workflows-migrator" // kilocode_change
-import { McpMigrator } from "../kilocode/mcp-migrator" // kilocode_change
-import { IgnoreMigrator } from "../kilocode/ignore-migrator" // kilocode_change
 
 export namespace Config {
   const ModelId = z.string().meta({ $ref: "https://models.dev/model-schema.json#/$defs/Model" })
@@ -1485,12 +1485,16 @@ export namespace Config {
     // kilocode_change: Find which config file contains the MCP server definition
     // Search in reverse priority order (highest precedence first) to find where it's defined
 
-    // Check managed config first (highest priority)
+    // Check managed config first (highest priority) - but only to warn, don't return it
+    // since managed config directories are typically read-only for regular users
     if (existsSync(managedConfigDir)) {
       for (const file of ["opencode.jsonc", "opencode.json"]) {
         const filepath = path.join(managedConfigDir, file)
         if (await hasMcpDefinition(filepath, mcpName)) {
-          return filepath
+          log.warn("MCP server is defined in managed config (read-only), toggle will be written to user config", {
+            mcp: mcpName,
+            managedConfig: filepath,
+          })
         }
       }
     }
@@ -1572,7 +1576,8 @@ export namespace Config {
       const text = await Bun.file(filepath).text()
       const data = parseJsonc(text, [], { allowTrailingComma: true })
       return data?.mcp?.[mcpName] !== undefined
-    } catch {
+    } catch (err) {
+      log.warn("failed to check MCP definition", { filepath, mcpName, error: err })
       return false
     }
   }
