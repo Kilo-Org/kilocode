@@ -525,8 +525,8 @@ export namespace Session {
 
   export function* list() {
     const project = Instance.project
-    const rel = path.relative(Instance.worktree, Instance.directory)
-    const suffix = path.sep + rel
+    const rel = Filesystem.relative(Instance.worktree, Instance.directory)
+    const suffix = '/' + rel
     const rows = Database.use((db) =>
       db
         .select()
