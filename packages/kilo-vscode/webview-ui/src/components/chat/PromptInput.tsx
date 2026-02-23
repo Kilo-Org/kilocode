@@ -23,6 +23,8 @@ const MIN_TEXT_LENGTH = 3
 
 // Per-session input text storage (module-level so it survives remounts)
 const drafts = new Map<string, string>()
+const messageHistory = new Map<string, string[]>()
+const MAX_HISTORY = 100
 
 export const PromptInput: Component = () => {
   const session = useSession()
@@ -36,6 +38,8 @@ export const PromptInput: Component = () => {
 
   const [text, setText] = createSignal("")
   const [ghostText, setGhostText] = createSignal("")
+  const [historyIndex, setHistoryIndex] = createSignal(-1)
+  const [savedDraft, setSavedDraft] = createSignal<string | null>(null)
 
   let textareaRef: HTMLTextAreaElement | undefined
   let highlightRef: HTMLDivElement | undefined
@@ -52,6 +56,8 @@ export const PromptInput: Component = () => {
       const draft = drafts.get(key) ?? ""
       setText(draft)
       setGhostText("")
+      setHistoryIndex(-1)
+      setSavedDraft(null)
       if (textareaRef) {
         textareaRef.value = draft
         // Reset height then adjust
@@ -82,6 +88,7 @@ export const PromptInput: Component = () => {
     if (message.type === "setChatBoxMessage") {
       setText(message.text)
       setGhostText("")
+      resetHistoryNavigation()
       if (textareaRef) {
         textareaRef.value = message.text
         adjustHeight()
@@ -152,6 +159,71 @@ export const PromptInput: Component = () => {
     textareaRef.style.height = `${Math.min(textareaRef.scrollHeight, 200)}px`
   }
 
+  const resetHistoryNavigation = () => {
+    setHistoryIndex(-1)
+    setSavedDraft(null)
+  }
+
+  const applyHistoryText = (next: string) => {
+    setText(next)
+    setGhostText("")
+    if (!textareaRef) return
+    textareaRef.value = next
+    adjustHeight()
+    const end = next.length
+    textareaRef.setSelectionRange(end, end)
+  }
+
+  const getHistoryEntries = () => messageHistory.get(sessionKey()) ?? []
+
+  const pushHistoryEntry = (message: string) => {
+    const normalized = message.trim()
+    if (!normalized) return
+    const entries = getHistoryEntries()
+    if (entries[0] === normalized) {
+      resetHistoryNavigation()
+      return
+    }
+    messageHistory.set(sessionKey(), [normalized, ...entries].slice(0, MAX_HISTORY))
+    resetHistoryNavigation()
+  }
+
+  const navigateHistory = (direction: "up" | "down") => {
+    const entries = getHistoryEntries()
+    if (entries.length === 0) return false
+
+    if (direction === "up") {
+      if (historyIndex() === -1) {
+        setSavedDraft(text())
+        setHistoryIndex(0)
+        applyHistoryText(entries[0] ?? "")
+        return true
+      }
+      if (historyIndex() < entries.length - 1) {
+        const nextIndex = historyIndex() + 1
+        setHistoryIndex(nextIndex)
+        applyHistoryText(entries[nextIndex] ?? "")
+        return true
+      }
+      return false
+    }
+
+    if (historyIndex() > 0) {
+      const nextIndex = historyIndex() - 1
+      setHistoryIndex(nextIndex)
+      applyHistoryText(entries[nextIndex] ?? "")
+      return true
+    }
+
+    if (historyIndex() === 0) {
+      applyHistoryText(savedDraft() ?? "")
+      resetHistoryNavigation()
+      return true
+    }
+
+    return false
+  }
+
   const handlePaste = (e: ClipboardEvent) => {
     imageAttach.handlePaste(e)
     // After pasting text, the textarea content changes but the layout may not
@@ -167,6 +239,7 @@ export const PromptInput: Component = () => {
     const target = e.target as HTMLTextAreaElement
     const val = target.value
     setText(val)
+    if (historyIndex() !== -1) resetHistoryNavigation()
     adjustHeight()
     setGhostText("")
     syncHighlightScroll()
@@ -187,6 +260,35 @@ export const PromptInput: Component = () => {
     if (mention.onKeyDown(e, textareaRef, setText, adjustHeight)) {
       setGhostText("")
       queueMicrotask(scrollToActiveItem)
+      return
+    }
+
+    if ((e.key === "ArrowUp" || e.key === "ArrowDown") && !e.altKey && !e.ctrlKey && !e.metaKey) {
+      const el = textareaRef
+      if (!el) return
+      if (el.selectionStart !== el.selectionEnd) return
+
+      const currentText = text()
+      const cursor = el.selectionStart ?? currentText.length
+      const atStart = cursor === 0
+      const atEnd = cursor === currentText.length
+      const inHistory = historyIndex() >= 0
+      const hasMultiline = currentText.includes("\n")
+
+      if (e.key === "ArrowUp") {
+        if (!atStart && !inHistory) return
+        if (hasMultiline && !inHistory) return
+        if (navigateHistory("up")) {
+          e.preventDefault()
+        }
+        return
+      }
+
+      if (!inHistory) return
+      if (!atEnd) return
+      if (navigateHistory("down")) {
+        e.preventDefault()
+      }
       return
     }
 
@@ -227,6 +329,7 @@ export const PromptInput: Component = () => {
     const attachments = allFiles.length > 0 ? allFiles : undefined
 
     session.sendMessage(message, sel?.providerID, sel?.modelID, attachments)
+    pushHistoryEntry(message)
 
     requestCounter++
     setText("")
