@@ -209,6 +209,21 @@ button.am-section-toggle:hover .am-section-label {
   min-width: 0;
 }
 
+.am-worktree-rename-input {
+  flex: 1;
+  min-width: 0;
+  height: 22px;
+  padding: 0 4px;
+  border: 1px solid var(--border-focus, #007fd4);
+  border-radius: 3px;
+  background: var(--surface-base);
+  color: var(--text-base);
+  font-size: inherit;
+  font-weight: 500;
+  font-family: inherit;
+  outline: none;
+}
+
 .am-worktree-close {
   position: absolute;
   right: 4px;
@@ -223,6 +238,11 @@ button.am-section-toggle:hover .am-section-label {
 
 .am-worktree-item:hover .am-worktree-close {
   opacity: 1;
+}
+
+.am-worktree-item:has(.am-worktree-rename-input) .am-worktree-close {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .am-worktree-spinner {
@@ -773,6 +793,27 @@ button.am-section-toggle:hover .am-section-label {
   gap: 14px;
   padding: 0 20px 20px;
   min-width: 460px;
+}
+
+.am-nv-name-input {
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-sm);
+  background: var(--surface-base);
+  color: var(--text-base);
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.am-nv-name-input:focus {
+  border-color: var(--border-focus, #007fd4);
+}
+
+.am-nv-name-input::placeholder {
+  color: var(--text-weaker);
 }
 
 /* Dialog overrides for prompt-input-container — resizable from bottom edge */
