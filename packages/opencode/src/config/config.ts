@@ -1433,7 +1433,9 @@ export namespace Config {
         parsed.data.$schema = "https://kilo.ai/config.json" // kilocode_change
         // Write the $schema to the original text to preserve variables like {env:VAR}
         const updated = original.replace(/^\s*\{/, '{\n  "$schema": "https://kilo.ai/config.json",') // kilocode_change
-        await Bun.write(configFilepath, updated).catch(() => {})
+        await Bun.write(configFilepath, updated).catch((err) => {
+          log.warn("failed to write $schema to config file", { configFilepath, error: err })
+        })
       }
       const data = parsed.data
       if (data.plugin) {
@@ -1441,7 +1443,9 @@ export namespace Config {
           const plugin = data.plugin[i]
           try {
             data.plugin[i] = import.meta.resolve!(plugin, configFilepath)
-          } catch (err) {}
+          } catch (err) {
+            log.warn("failed to resolve plugin path", { plugin, configFilepath, error: err })
+          }
         }
       }
       return data
@@ -1496,6 +1500,10 @@ export namespace Config {
     if (await file.exists()) {
       text = await file.text()
     }
+
+    // kilocode_change: Check if value is already the same to avoid unnecessary writes
+    const data = parseJsonc(text, [], { allowTrailingComma: true })
+    if (data?.mcp?.[name]?.enabled === enabled) return
 
     const edits = modify(text, ["mcp", name, "enabled"], enabled, {
       formattingOptions: { tabSize: 2, insertSpaces: true },
@@ -1702,7 +1710,8 @@ export namespace Config {
     const filepath = path.join(Instance.directory, "config.json")
     const existing = await loadFile(filepath)
     await Bun.write(filepath, JSON.stringify(mergeDeep(existing, config), null, 2))
-    await Instance.dispose()
+    // kilocode_change: Dispose only the Config state, not the entire instance (preserves MCP connections)
+    await State.disposeEntry(Instance.directory, initConfigState)
   }
 
   function globalConfigFile() {
