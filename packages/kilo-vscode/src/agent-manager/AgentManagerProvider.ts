@@ -1,5 +1,4 @@
 import * as vscode from "vscode"
-import * as fs from "fs/promises"
 import type { KiloConnectionService, SessionInfo, HttpClient } from "../services/cli-backend"
 import { KiloProvider } from "../KiloProvider"
 import { buildWebviewHtml } from "../utils"
