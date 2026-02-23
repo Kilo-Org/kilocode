@@ -50,7 +50,7 @@
 
   h5,
   h6 {
-    font-size: var(--font-size-small);
+    font-size: var(--font-size-base);
   }
 
   /* Emphasis & Strong: Neutral strong color */
