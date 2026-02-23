@@ -70,7 +70,8 @@ export namespace Config {
     return merged
   }
 
-  export const state = Instance.state(async () => {
+  // kilocode_change: Export the init function so it can be used for targeted state disposal
+  async function initConfigState() {
     const auth = await Auth.all()
 
     // This ensures Opencode native configs always take precedence over legacy Kilocode configs
@@ -328,7 +329,9 @@ export namespace Config {
       directories,
       deps,
     }
-  })
+  }
+
+  export const state = Instance.state(initConfigState)
 
   export async function waitForDependencies() {
     const deps = await state().then((x) => x.deps)
@@ -1473,7 +1476,9 @@ export namespace Config {
     const result = applyEdits(text, edits)
 
     await Bun.write(configPath, result)
-    await Instance.dispose()
+    // kilocode_change: Dispose only the Config state, not the entire instance (preserves MCP connections)
+    const { State } = await import("@/project/state")
+    await State.disposeEntry(Instance.directory, initConfigState)
   }
 
   async function resolveConfigPath() {
@@ -1503,6 +1508,15 @@ export namespace Config {
         if (existsSync(filepath)) {
           return filepath
         }
+      }
+    }
+
+    // Check ~/.opencode/ (user home directory config)
+    const homeOpencodeDir = path.join(Global.Path.home, ".opencode")
+    for (const file of ["opencode.jsonc", "opencode.json"]) {
+      const filepath = path.join(homeOpencodeDir, file)
+      if (existsSync(filepath)) {
+        return filepath
       }
     }
 
