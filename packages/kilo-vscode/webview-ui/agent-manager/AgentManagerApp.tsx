@@ -1117,14 +1117,23 @@ const AgentManagerContent: Component = () => {
                     setRenameValue(current)
                   }
 
+                  let cancelled = false
+
                   const commitRename = (wtId: string) => {
+                    if (cancelled) {
+                      cancelled = false
+                      return
+                    }
                     const value = renameValue().trim()
                     setRenamingWt(null)
                     if (!value) return
                     vscode.postMessage({ type: "agentManager.renameWorktree", worktreeId: wtId, label: value })
                   }
 
-                  const cancelRename = () => setRenamingWt(null)
+                  const cancelRename = () => {
+                    cancelled = true
+                    setRenamingWt(null)
+                  }
 
                   return (
                     <For each={sortedWorktrees()}>

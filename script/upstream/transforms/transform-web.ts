@@ -38,7 +38,7 @@ const WEB_REPLACEMENTS: WebReplacement[] = [
   },
   {
     pattern: /anomalyco\/opencode/g,
-    replacement: "Kilo-Org/kilo",
+    replacement: "Kilo-Org/kilocode",
     description: "GitHub repo",
   },
 

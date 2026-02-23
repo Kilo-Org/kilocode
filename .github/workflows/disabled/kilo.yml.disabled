@@ -29,7 +29,7 @@ jobs:
       - uses: ./.github/actions/setup-bun
 
       - name: Run opencode
-        uses: Kilo-Org/kilo/github@latest
+        uses: Kilo-Org/kilocode/github@latest
         env:
           KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
           KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
