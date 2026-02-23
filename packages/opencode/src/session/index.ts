@@ -163,17 +163,32 @@ export namespace Session {
         parentID: Identifier.schema("session").optional(),
         title: z.string().optional(),
         permission: Info.shape.permission,
+        platform: z.string().optional(), // kilocode_change - per-session platform override for telemetry attribution
       })
       .optional(),
     async (input) => {
-      return createNext({
+      const session = await createNext({
         parentID: input?.parentID,
         directory: Instance.directory,
         title: input?.title,
         permission: input?.permission,
       })
+      // kilocode_change start - store platform override for session ingest
+      if (input?.platform) {
+        platformOverrides.set(session.id, input.platform)
+      }
+      // kilocode_change end
+      return session
     },
   )
+
+  // kilocode_change start - per-session platform overrides for telemetry attribution
+  const platformOverrides = new Map<string, string>()
+
+  export function getPlatformOverride(sessionId: string): string | undefined {
+    return platformOverrides.get(sessionId)
+  }
+  // kilocode_change end
 
   export const fork = fn(
     z.object({
@@ -378,6 +393,7 @@ export namespace Session {
       }
       const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
       await KiloSessions.remove(sessionID).catch(() => {}) // kilocode_change
+      platformOverrides.delete(sessionID) // kilocode_change - clean up platform override
       for (const msg of await Storage.list(["message", sessionID])) {
         for (const part of await Storage.list(["part", msg.at(-1)!])) {
           await Storage.remove(part)

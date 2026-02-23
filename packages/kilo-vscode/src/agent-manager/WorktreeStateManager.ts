@@ -283,6 +283,9 @@ export class WorktreeStateManager {
     if (this.saving) {
       this.pendingSave = true
       await this.saving
+      // The in-flight save finished but our data may not have been written yet.
+      // If there's a new save already running (the pendingSave follow-up), wait for it.
+      if (this.saving) await this.saving
       return
     }
 

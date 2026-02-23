@@ -118,9 +118,12 @@ export class HttpClient {
 
   /**
    * Create a new session in the specified directory.
+   * Optionally pass a platform identifier for backend tracking attribution.
    */
-  async createSession(directory: string): Promise<SessionInfo> {
-    return this.request<SessionInfo>("POST", "/session", {}, { directory })
+  async createSession(directory: string, options?: { platform?: string }): Promise<SessionInfo> {
+    return this.request<SessionInfo>("POST", "/session", options?.platform ? { platform: options.platform } : {}, {
+      directory,
+    })
   }
 
   /**
