@@ -2,7 +2,7 @@ name: Check Links
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main]
   pull_request:
   schedule:
     # Run daily at 9am UTC

@@ -7,7 +7,7 @@
   "publisher": "kilocode",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Kilo-Org/kilo.git",
+    "url": "https://github.com/Kilo-Org/kilocode.git",
     "directory": "packages/kilo-vscode"
   },
   "engines": {
