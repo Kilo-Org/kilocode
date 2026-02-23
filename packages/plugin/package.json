@@ -6,7 +6,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Kilo-Org/kilo",
+    "url": "https://github.com/Kilo-Org/kilocode",
     "directory": "packages/plugin"
   },
   "scripts": {

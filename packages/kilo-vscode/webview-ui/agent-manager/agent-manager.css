@@ -52,11 +52,19 @@
   background: var(--surface-base-active);
 }
 
+.am-local-item-active .am-local-icon {
+  color: var(--text-base);
+}
+
+.am-local-item-active .am-local-branch {
+  color: var(--text-weak);
+}
+
 .am-local-icon {
   width: 18px;
   height: 18px;
   flex-shrink: 0;
-  color: var(--text-weaker);
+  color: var(--text-weak);
 }
 
 .am-local-text {
@@ -74,7 +82,7 @@
 
 .am-local-branch {
   font-size: var(--font-size-small);
-  color: var(--text-weaker);
+  color: var(--text-weak);
   line-height: 1.2;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -188,6 +196,10 @@ button.am-section-toggle:hover .am-section-label {
   color: var(--text-on-interactive-base);
 }
 
+.am-worktree-item-active [data-component="icon"] {
+  color: var(--text-on-interactive-base);
+}
+
 .am-worktree-branch {
   flex: 1;
   overflow: hidden;
@@ -195,6 +207,21 @@ button.am-section-toggle:hover .am-section-label {
   white-space: nowrap;
   font-weight: 500;
   min-width: 0;
+}
+
+.am-worktree-rename-input {
+  flex: 1;
+  min-width: 0;
+  height: 22px;
+  padding: 0 4px;
+  border: 1px solid var(--border-focus, #007fd4);
+  border-radius: 3px;
+  background: var(--surface-base);
+  color: var(--text-base);
+  font-size: inherit;
+  font-weight: 500;
+  font-family: inherit;
+  outline: none;
 }
 
 .am-worktree-close {
@@ -211,6 +238,11 @@ button.am-section-toggle:hover .am-section-label {
 
 .am-worktree-item:hover .am-worktree-close {
   opacity: 1;
+}
+
+.am-worktree-item:has(.am-worktree-rename-input) .am-worktree-close {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .am-worktree-spinner {
@@ -763,7 +795,28 @@ button.am-section-toggle:hover .am-section-label {
   min-width: 460px;
 }
 
-/* Reuse am-prompt-input-container inside dialog — resizable from bottom edge */
+.am-nv-name-input {
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-sm);
+  background: var(--surface-base);
+  color: var(--text-base);
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.am-nv-name-input:focus {
+  border-color: var(--border-focus, #007fd4);
+}
+
+.am-nv-name-input::placeholder {
+  color: var(--text-weaker);
+}
+
+/* Dialog overrides for prompt-input-container — resizable from bottom edge */
 .am-nv-dialog .am-prompt-input-container {
   margin: 0;
   resize: vertical;
@@ -786,6 +839,7 @@ button.am-section-toggle:hover .am-section-label {
 .am-nv-dialog .am-prompt-input {
   color: var(--vscode-input-foreground, var(--text-base));
   resize: none;
+  width: 100%;
   min-height: 100%;
   max-height: none;
 }

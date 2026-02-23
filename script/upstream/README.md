@@ -212,7 +212,7 @@ The only remaining conflicts are files with **actual code differences** - files 
 Options:
   --version <version>    Target upstream version (e.g., v1.1.49)
   --commit <hash>        Target upstream commit hash
-  --base-branch <name>   Base branch to merge into (default: dev)
+  --base-branch <name>   Base branch to merge into (default: main)
   --dry-run              Preview changes without applying them
   --no-push              Don't push branches to remote
   --report-only          Only generate conflict report
@@ -226,29 +226,29 @@ Options:
 Options:
   --version <version>    Target upstream version
   --commit <hash>        Target commit hash
-  --base-branch <name>   Base branch to analyze from (default: dev)
+  --base-branch <name>   Base branch to analyze from (default: main)
   --output <file>        Output file for report
 ```
 
 ## Using Custom Base Branches
 
-By default, upstream merges start from the `dev` branch. However, you can use `--base-branch` to start from a different branch. This is useful for:
+By default, upstream merges start from the `main` branch. However, you can use `--base-branch` to start from a different branch. This is useful for:
 
 ### Incremental Merges
 
 When working on multiple upstream versions, you can create a chain of merge PRs:
 
 ```bash
-# First merge: v1.1.44 into dev
+# First merge: v1.1.44 into main
 bun run merge.ts --version v1.1.44
 
-# Create PR: catrielmuller/kilo-opencode-v1.1.44 -> dev
+# Create PR: catrielmuller/kilo-opencode-v1.1.44 -> main
 
 # Second merge: v1.1.50 based on the previous PR (without waiting for approval)
 bun run merge.ts --version v1.1.50 --base-branch catrielmuller/kilo-opencode-v1.1.44
 
 # Create PR: catrielmuller/kilo-opencode-v1.1.50 -> catrielmuller/kilo-opencode-v1.1.44
-# OR: catrielmuller/kilo-opencode-v1.1.50 -> dev (once first PR is merged)
+# OR: catrielmuller/kilo-opencode-v1.1.50 -> main (once first PR is merged)
 ```
 
 ### Benefits
@@ -269,7 +269,7 @@ bun run merge.ts --version v1.1.50 --base-branch catrielmuller/kilo-opencode-v1.
 
 # 3. Create PR from catrielmuller/kilo-opencode-v1.1.50
 #    - Target: catrielmuller/kilo-opencode-v1.1.44 (if first PR not merged yet)
-#    - Target: dev (if first PR is already merged)
+#    - Target: main (if first PR is already merged)
 ```
 
 ## Manual Conflict Resolution
@@ -294,8 +294,8 @@ If something goes wrong:
 git branch | grep backup
 
 # Reset to backup
-git checkout dev
-git reset --hard backup/dev-<timestamp>
+git checkout main
+git reset --hard backup/main-<timestamp>
 ```
 
 ## Adding New Transformations

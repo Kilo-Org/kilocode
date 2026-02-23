@@ -457,5 +457,5 @@ ${userInput}
 
 ### Already Done / Tracked Elsewhere
 
-- **View title bar buttons**: ✅ Done ([#181](https://github.com/Kilo-Org/kilo/issues/181))
+- **View title bar buttons**: ✅ Done ([#181](https://github.com/Kilo-Org/kilocode/issues/181))
 - **SCM commit message generation**: Tracked in [git-commit-message-generation.md](git-commit-message-generation.md)
