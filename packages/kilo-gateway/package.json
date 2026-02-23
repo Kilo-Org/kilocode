@@ -29,7 +29,7 @@
   "dependencies": {
     "@kilocode/plugin": "workspace:*",
     "@kilocode/sdk": "workspace:*",
-    "@openrouter/ai-sdk-provider": "1.5.2",
+    "@openrouter/ai-sdk-provider": "2.2.3",
     "@clack/prompts": "1.0.0-alpha.1",
     "ai": "catalog:",
     "open": "10.1.2",

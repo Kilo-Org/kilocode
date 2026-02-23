@@ -83,7 +83,7 @@ export namespace ProviderTransform {
         const nextMsg = msgs[i + 1]
 
         if ((msg.role === "assistant" || msg.role === "tool") && Array.isArray(msg.content)) {
-          msg.content = msg.content.map((part) => {
+          msg.content = (msg.content as any[]).map((part: any) => {
             if ((part.type === "tool-call" || part.type === "tool-result") && "toolCallId" in part) {
               // Mistral requires alphanumeric tool call IDs with exactly 9 characters
               const normalizedId = part.toolCallId
@@ -185,7 +185,7 @@ export namespace ProviderTransform {
       if (shouldUseContentOptions) {
         const lastContent = msg.content[msg.content.length - 1]
         if (lastContent && typeof lastContent === "object") {
-          lastContent.providerOptions = mergeDeep(lastContent.providerOptions ?? {}, providerOptions)
+          ;(lastContent as any).providerOptions = mergeDeep((lastContent as any).providerOptions ?? {}, providerOptions)
           continue
         }
       }
@@ -234,39 +234,9 @@ export namespace ProviderTransform {
     })
   }
 
-  // kilocode_change - function added
-  function fixDuplicateReasoning(msgs: ModelMessage[]) {
-    for (const msg of msgs) {
-      if (!Array.isArray(msg.content)) {
-        continue
-      }
-      let isFirstToolCall = true
-      for (const part of msg.content) {
-        if (part.type === "reasoning") {
-          // this entry is corrupt
-          delete part.providerOptions?.openrouter?.reasoning_details
-        }
-        if (part.type === "tool-call" && isFirstToolCall) {
-          isFirstToolCall = false
-          continue
-        }
-        if (part.type === "tool-call") {
-          // this is a duplicate entry
-          delete part.providerOptions?.openrouter?.reasoning_details
-        }
-      }
-    }
-  }
-
   export function message(msgs: ModelMessage[], model: Provider.Model, options: Record<string, unknown>) {
     msgs = unsupportedParts(msgs, model)
     msgs = normalizeMessages(msgs, model, options)
-
-    // kilocode_change - workaround for @openrouter/ai-sdk-provider v1 duplicating reasoning
-    // fixed in https://github.com/OpenRouterTeam/ai-sdk-provider/pull/344/
-    if (model.api.npm === "@kilocode/kilo-gateway") {
-      fixDuplicateReasoning(msgs)
-    }
 
     if (
       model.providerID === "anthropic" ||
@@ -296,7 +266,7 @@ export namespace ProviderTransform {
         return {
           ...msg,
           providerOptions: remap(msg.providerOptions),
-          content: msg.content.map((part) => ({ ...part, providerOptions: remap(part.providerOptions) })),
+          content: msg.content.map((part: any) => ({ ...part, providerOptions: remap(part.providerOptions) })),
         } as typeof msg
       })
     }
@@ -377,6 +347,19 @@ export namespace ProviderTransform {
 
     switch (model.api.npm) {
       case "@openrouter/ai-sdk-provider":
+        // kilocode_change start - Claude/Anthropic models support reasoning via effort levels through OpenRouter API
+        if (
+          model.id.includes("claude") ||
+          model.id.includes("anthropic") ||
+          model.api.id.includes("claude") ||
+          model.api.id.includes("anthropic")
+        ) {
+          const ANTHROPIC_EFFORTS = ["none", "minimal", ...WIDELY_SUPPORTED_EFFORTS, "max"]
+          return Object.fromEntries(
+            ANTHROPIC_EFFORTS.map((effort) => [effort, { reasoning: { effort: effort === "max" ? "xhigh" : effort } }]),
+          )
+        }
+        // kilocode_change end
         if (!model.id.includes("gpt") && !model.id.includes("gemini-3")) return {}
         return Object.fromEntries(OPENAI_EFFORTS.map((effort) => [effort, { reasoning: { effort } }]))
 
@@ -774,9 +757,18 @@ export namespace ProviderTransform {
       return { thinkingConfig: { thinkingBudget: 0 } }
     }
     if (model.providerID === "openrouter" || model.api.npm === "@kilocode/kilo-gateway") {
-      // kilocode_change - add Kilo Gateway support
+      // kilocode_change - add Kilo Gateway support with model-specific handling
       if (model.api.id.includes("google")) {
         return { reasoning: { enabled: false } }
+      }
+      // Claude models need reasoning.effort format (OpenRouter API)
+      if (
+        model.id.includes("claude") ||
+        model.id.includes("anthropic") ||
+        model.api.id.includes("claude") ||
+        model.api.id.includes("anthropic")
+      ) {
+        return { reasoning: { effort: "minimal" } }
       }
       // Other models use reasoningEffort (AI SDK format)
       return { reasoningEffort: "minimal" }

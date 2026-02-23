@@ -72,5 +72,5 @@ export function createKilo(options: KiloProviderOptions = {}): SDK {
     apiKey: apiKey ?? ANONYMOUS_API_KEY,
     headers: customHeaders,
     fetch: wrappedFetch as typeof fetch,
-  })
+  }) as SDK
 }

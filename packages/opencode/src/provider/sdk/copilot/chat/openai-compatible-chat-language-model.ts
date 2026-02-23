@@ -332,7 +332,7 @@ export class OpenAICompatibleChatLanguageModel implements LanguageModelV2 {
       hasFinished: boolean
     }> = []
 
-    let finishReason: LanguageModelV2FinishReason = "unknown"
+    let finishReason: LanguageModelV2FinishReason = "other"
     const usage: {
       completionTokens: number | undefined
       completionTokensDetails: {

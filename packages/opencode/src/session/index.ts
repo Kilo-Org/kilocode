@@ -22,7 +22,7 @@ import { Snapshot } from "@/snapshot"
 import type { Provider } from "@/provider/provider"
 import { PermissionNext } from "@/permission/next"
 import { Global } from "@/global"
-import type { LanguageModelV2Usage } from "@ai-sdk/provider"
+import type { LanguageModelUsage } from "ai"
 import { iife } from "@/util/iife"
 
 export namespace Session {
@@ -459,7 +459,9 @@ export namespace Session {
   export const getUsage = fn(
     z.object({
       model: z.custom<Provider.Model>(),
-      usage: z.custom<LanguageModelV2Usage>(),
+      usage: z.custom<
+        Partial<LanguageModelUsage> & Pick<LanguageModelUsage, "inputTokens" | "outputTokens" | "totalTokens">
+      >(),
       metadata: z.custom<ProviderMetadata>().optional(),
       provider: z.custom<Provider.Info>().optional(), // kilocode_change
     }),
