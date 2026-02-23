@@ -23,20 +23,20 @@ import z from "zod"
 import { Auth } from "../auth"
 import { Flag } from "../flag/flag"
 import { Global } from "../global"
+import { IgnoreMigrator } from "../kilocode/ignore-migrator" // kilocode_change
+import { McpMigrator } from "../kilocode/mcp-migrator" // kilocode_change
+import { ModesMigrator } from "../kilocode/modes-migrator" // kilocode_change
+import { RulesMigrator } from "../kilocode/rules-migrator" // kilocode_change
+import { WorkflowsMigrator } from "../kilocode/workflows-migrator" // kilocode_change
 import { LSPServer } from "../lsp/server"
 import { Instance } from "../project/instance"
+import { State } from "../project/state"
 import { ModelsDev } from "../provider/models"
 import { Event } from "../server/event"
 import { Filesystem } from "../util/filesystem"
 import { lazy } from "../util/lazy"
 import { Log } from "../util/log"
 import { ConfigMarkdown } from "./markdown"
-
-import { IgnoreMigrator } from "../kilocode/ignore-migrator" // kilocode_change
-import { McpMigrator } from "../kilocode/mcp-migrator" // kilocode_change
-import { ModesMigrator } from "../kilocode/modes-migrator" // kilocode_change
-import { RulesMigrator } from "../kilocode/rules-migrator" // kilocode_change
-import { WorkflowsMigrator } from "../kilocode/workflows-migrator" // kilocode_change
 
 export namespace Config {
   const ModelId = z.string().meta({ $ref: "https://models.dev/model-schema.json#/$defs/Model" })
@@ -1473,11 +1473,12 @@ export namespace Config {
     const edits = modify(text, ["mcp", name, "enabled"], enabled, {
       formattingOptions: { tabSize: 2, insertSpaces: true },
     })
-    const result = applyEdits(text, edits)
 
+    if (!edits.length) return
+
+    const result = applyEdits(text, edits)
     await Bun.write(configPath, result)
     // kilocode_change: Dispose only the Config state, not the entire instance (preserves MCP connections)
-    const { State } = await import("@/project/state")
     await State.disposeEntry(Instance.directory, initConfigState)
   }
 
@@ -1486,7 +1487,8 @@ export namespace Config {
     // Search in reverse priority order (highest precedence first) to find where it's defined
 
     // Check managed config first (highest priority) - but only to warn, don't return it
-    // since managed config directories are typically read-only for regular users
+    // since managed config directories are typically read-only for regular users.
+    // Continue searching to find a writable location for the toggle.
     if (existsSync(managedConfigDir)) {
       for (const file of ["opencode.jsonc", "opencode.json"]) {
         const filepath = path.join(managedConfigDir, file)
@@ -1495,6 +1497,7 @@ export namespace Config {
             mcp: mcpName,
             managedConfig: filepath,
           })
+          // Continue searching - we need to find a writable location
         }
       }
     }
@@ -1565,8 +1568,9 @@ export namespace Config {
       return globalPath
     }
 
-    // MCP not found in any existing file - fall back to default resolution
-    // This will create a new entry in the highest-priority writable location
+    // MCP not found in any existing file - fall back to default resolution.
+    // This creates a new entry in the highest-priority writable location,
+    // which shadows any managed config definition (user config overrides system config).
     return resolveConfigPath()
   }
 

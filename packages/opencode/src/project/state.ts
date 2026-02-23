@@ -68,7 +68,7 @@ export namespace State {
     log.info("state disposal completed", { key })
   }
 
-  export async function disposeEntry(key: string, init: any) {
+  export async function disposeEntry(key: string, init: () => unknown) {
     const entries = recordsByKey.get(key)
     if (!entries) return
 
