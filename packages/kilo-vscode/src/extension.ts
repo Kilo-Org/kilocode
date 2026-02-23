@@ -29,8 +29,25 @@ export function activate(context: vscode.ExtensionContext) {
       if (config) {
         telemetry.configure(config.baseUrl, config.password)
       }
+      // Sync VS Code telemetry preference to the CLI so CLI-native events respect it
+      try {
+        connectionService.getHttpClient().setTelemetryEnabled(vscode.env.isTelemetryEnabled)
+      } catch (err) {
+        console.error("[Kilo New] Failed to sync telemetry state to CLI:", err)
+      }
     }
   })
+
+  // Keep the CLI in sync when the user toggles VS Code's telemetry setting at runtime
+  context.subscriptions.push(
+    vscode.env.onDidChangeTelemetryEnabled((enabled) => {
+      try {
+        connectionService.getHttpClient().setTelemetryEnabled(enabled)
+      } catch {
+        // CLI not connected yet — will be synced on next connect
+      }
+    }),
+  )
 
   // Create the provider with shared service
   const provider = new KiloProvider(context.extensionUri, connectionService, context)

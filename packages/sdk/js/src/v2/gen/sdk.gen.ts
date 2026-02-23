@@ -153,6 +153,8 @@ import type {
   SubtaskPartInput,
   TelemetryCaptureErrors,
   TelemetryCaptureResponses,
+  TelemetrySetEnabledErrors,
+  TelemetrySetEnabledResponses,
   TextPartInput,
   ToolIdsErrors,
   ToolIdsResponses,
@@ -2216,6 +2218,43 @@ export class Telemetry extends HeyApiClient {
         ...params.headers,
       },
     })
+  }
+
+  /**
+   * Set telemetry enabled state
+   *
+   * Dynamically enable or disable telemetry at runtime. Used by the VS Code extension to sync the user's telemetry preference after the CLI process has started.
+   */
+  public setEnabled<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      enabled?: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "body", key: "enabled" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<TelemetrySetEnabledResponses, TelemetrySetEnabledErrors, ThrowOnError>(
+      {
+        url: "/telemetry/set-enabled",
+        ...options,
+        ...params,
+        headers: {
+          "Content-Type": "application/json",
+          ...options?.headers,
+          ...params.headers,
+        },
+      },
+    )
   }
 }
 

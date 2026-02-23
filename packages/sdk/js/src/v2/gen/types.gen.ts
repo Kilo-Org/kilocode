@@ -4258,6 +4258,38 @@ export type TelemetryCaptureResponses = {
 
 export type TelemetryCaptureResponse = TelemetryCaptureResponses[keyof TelemetryCaptureResponses]
 
+export type TelemetrySetEnabledData = {
+  body?: {
+    /**
+     * Whether telemetry should be enabled
+     */
+    enabled: boolean
+  }
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/telemetry/set-enabled"
+}
+
+export type TelemetrySetEnabledErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type TelemetrySetEnabledError = TelemetrySetEnabledErrors[keyof TelemetrySetEnabledErrors]
+
+export type TelemetrySetEnabledResponses = {
+  /**
+   * Telemetry state updated
+   */
+  200: boolean
+}
+
+export type TelemetrySetEnabledResponse = TelemetrySetEnabledResponses[keyof TelemetrySetEnabledResponses]
+
 export type CommitMessageGenerateData = {
   body?: {
     /**

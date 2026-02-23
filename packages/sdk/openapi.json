@@ -4122,6 +4122,66 @@
         ]
       }
     },
+    "/telemetry/set-enabled": {
+      "post": {
+        "operationId": "telemetry.setEnabled",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Set telemetry enabled state",
+        "description": "Dynamically enable or disable telemetry at runtime. Used by the VS Code extension to sync the user's telemetry preference after the CLI process has started.",
+        "responses": {
+          "200": {
+            "description": "Telemetry state updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "description": "Whether telemetry should be enabled",
+                    "type": "boolean"
+                  }
+                },
+                "required": ["enabled"]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@kilocode/sdk\n\nconst client = createOpencodeClient()\nawait client.telemetry.setEnabled({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/commit-message": {
       "post": {
         "operationId": "commitMessage.generate",

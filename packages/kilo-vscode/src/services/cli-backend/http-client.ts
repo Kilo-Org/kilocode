@@ -487,6 +487,18 @@ export class HttpClient {
   }
 
   // ============================================
+  // Telemetry Methods
+  // ============================================
+
+  /**
+   * Dynamically update the CLI server's telemetry enabled state.
+   * Used to sync the VS Code telemetry preference after the CLI has started.
+   */
+  async setTelemetryEnabled(enabled: boolean): Promise<void> {
+    await this.request<boolean>("POST", "/telemetry/set-enabled", { enabled })
+  }
+
+  // ============================================
   // MCP Methods
   // ============================================
 
