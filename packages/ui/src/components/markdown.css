@@ -16,19 +16,41 @@
     margin-bottom: 0;
   }
 
-  /* Headings: Same size, distinguished by color and spacing */
+  /* Headings: clear visual hierarchy */
   h1,
   h2,
   h3,
   h4,
   h5,
   h6 {
-    font-size: var(--font-size-base);
     color: var(--text-strong);
     font-weight: var(--font-weight-medium);
     margin-top: 2rem;
     margin-bottom: 0.75rem;
     line-height: var(--line-height-large);
+  }
+
+  h1 {
+    font-size: var(--font-size-x-large);
+    line-height: var(--line-height-large);
+  }
+
+  h2 {
+    font-size: calc(var(--font-size-large) + 2px);
+    line-height: var(--line-height-large);
+  }
+
+  h3 {
+    font-size: var(--font-size-large);
+  }
+
+  h4 {
+    font-size: var(--font-size-base);
+  }
+
+  h5,
+  h6 {
+    font-size: var(--font-size-small);
   }
 
   /* Emphasis & Strong: Neutral strong color */
