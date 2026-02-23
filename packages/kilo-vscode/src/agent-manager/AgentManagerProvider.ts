@@ -9,6 +9,7 @@ import { SetupScriptService } from "./SetupScriptService"
 import { SetupScriptRunner } from "./SetupScriptRunner"
 import { SessionTerminalManager } from "./SessionTerminalManager"
 import { formatKeybinding } from "./format-keybinding"
+import { TelemetryProxy, TelemetryEventName } from "../services/telemetry"
 
 /**
  * AgentManagerProvider opens the Agent Manager panel.
@@ -18,6 +19,8 @@ import { formatKeybinding } from "./format-keybinding"
  * sections: WORKTREES (top) with managed worktrees + their sessions, and
  * SESSIONS (bottom) with unassociated workspace sessions.
  */
+const PLATFORM = "agent-manager" as const
+
 export class AgentManagerProvider implements vscode.Disposable {
   public static readonly viewType = "kilo-code.new.AgentManagerPanel"
 
@@ -52,6 +55,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       return
     }
     this.log("Opening Agent Manager panel")
+    TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_OPENED, { source: PLATFORM })
 
     this.panel = vscode.window.createWebviewPanel(
       AgentManagerProvider.viewType,
@@ -212,6 +216,14 @@ export class AgentManagerProvider implements vscode.Disposable {
       })
     }
 
+    // Track when a user stops/cancels a running session in the agent manager
+    if (type === "abort" && typeof msg.sessionID === "string") {
+      TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_SESSION_STOPPED, {
+        source: PLATFORM,
+        sessionId: msg.sessionID,
+      })
+    }
+
     return msg
   }
 
@@ -259,6 +271,11 @@ export class AgentManagerProvider implements vscode.Disposable {
         status: "error",
         message: msg,
       })
+      TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_SESSION_ERROR, {
+        source: PLATFORM,
+        error: msg,
+        context: "createWorktree",
+      })
       return null
     }
 
@@ -299,6 +316,11 @@ export class AgentManagerProvider implements vscode.Disposable {
         message: "Not connected to CLI backend",
         worktreeId,
       })
+      TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_SESSION_ERROR, {
+        source: PLATFORM,
+        error: "Not connected to CLI backend",
+        context: "createSession",
+      })
       return null
     }
 
@@ -311,7 +333,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     })
 
     try {
-      return await client.createSession(worktreePath)
+      return await client.createSession(worktreePath, { platform: PLATFORM })
     } catch (error) {
       const err = error instanceof Error ? error.message : String(error)
       this.postToWebview({
@@ -319,6 +341,11 @@ export class AgentManagerProvider implements vscode.Disposable {
         status: "error",
         message: `Failed to create session: ${err}`,
         worktreeId,
+      })
+      TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_SESSION_ERROR, {
+        source: PLATFORM,
+        error: err,
+        context: "createSession",
       })
       return null
     }
@@ -371,6 +398,12 @@ export class AgentManagerProvider implements vscode.Disposable {
     state.addSession(session.id, created.worktree.id)
     this.registerWorktreeSession(session.id, created.result.path)
     this.notifyWorktreeReady(session.id, created.result, created.worktree.id)
+    TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_SESSION_STARTED, {
+      source: PLATFORM,
+      sessionId: session.id,
+      worktreeId: created.worktree.id,
+      branch: created.result.branch,
+    })
     this.log(`Created worktree ${created.worktree.id} with session ${session.id}`)
     return null
   }
@@ -444,10 +477,16 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     let session: SessionInfo
     try {
-      session = await client.createSession(worktree.path)
+      session = await client.createSession(worktree.path, { platform: PLATFORM })
     } catch (error) {
       const err = error instanceof Error ? error.message : String(error)
       this.postToWebview({ type: "error", message: `Failed to create session: ${err}` })
+      TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_SESSION_ERROR, {
+        source: PLATFORM,
+        error: err,
+        context: "addSessionToWorktree",
+        worktreeId,
+      })
       return null
     }
 
@@ -464,6 +503,11 @@ export class AgentManagerProvider implements vscode.Disposable {
       this.provider.registerSession(session)
     }
 
+    TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_SESSION_STARTED, {
+      source: PLATFORM,
+      sessionId: session.id,
+      worktreeId,
+    })
     this.log(`Added session ${session.id} to worktree ${worktreeId}`)
     return null
   }
@@ -577,6 +621,16 @@ export class AgentManagerProvider implements vscode.Disposable {
         parentBranch: wt.result.parentBranch,
       })
 
+      TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_SESSION_STARTED, {
+        source: PLATFORM,
+        sessionId: session.id,
+        worktreeId: wt.worktree.id,
+        branch: wt.result.branch,
+        multiVersion: true,
+        version: i + 1,
+        totalVersions: versions,
+        groupId,
+      })
       this.log(`Version ${i + 1} worktree ready: session=${session.id}`)
 
       // Update progress

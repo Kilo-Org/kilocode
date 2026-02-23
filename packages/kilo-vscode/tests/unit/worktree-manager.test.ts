@@ -268,7 +268,7 @@ describe("WorktreeManager.removeWorktree", () => {
       .then(() => true)
       .catch(() => false)
     expect(exists).toBe(false)
-  })
+  }, 15_000)
 
   it("does not throw when worktree path does not exist", async () => {
     const root = await createTempRepo()

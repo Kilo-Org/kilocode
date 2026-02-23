@@ -805,7 +805,7 @@ fn opencode_db_path() -> Result<PathBuf, &'static str> {
         }
     };
 
-    Ok(data_home.join("kilo").join("kilo.db"))
+    Ok(data_home.join("kilo").join("kilo.db")) // kilocode_change
 }
 
 // Creates a `once` listener for the specified event and returns a future that resolves
