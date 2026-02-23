@@ -100,6 +100,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.agentManager.closeWorktree", () => {
       agentManagerProvider.postMessage({ type: "action", action: "closeWorktree" })
     }),
+    vscode.commands.registerCommand("kilo-code.new.agentManager.advancedWorktree", () => {
+      agentManagerProvider.postMessage({ type: "action", action: "advancedWorktree" })
+    }),
   )
 
   // Register autocomplete provider
