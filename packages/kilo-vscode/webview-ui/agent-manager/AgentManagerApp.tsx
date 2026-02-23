@@ -88,6 +88,7 @@ const defaultBindings: Record<string, string> = {
   newTab: isMac ? "⌘T" : "Ctrl+T",
   closeTab: isMac ? "⌘W" : "Ctrl+W",
   newWorktree: isMac ? "⌘N" : "Ctrl+N",
+  advancedWorktree: isMac ? "⌘⇧N" : "Ctrl+Shift+N",
   closeWorktree: isMac ? "⌘⇧W" : "Ctrl+Shift+W",
   agentManagerOpen: isMac ? "⌘⇧M" : "Ctrl+Shift+M",
   focusPanel: isMac ? "⌘." : "Ctrl+.",
@@ -544,6 +545,7 @@ const AgentManagerContent: Component = () => {
       } else if (msg.action === "newTab") handleNewTabForCurrentSelection()
       else if (msg.action === "closeTab") closeActiveTab()
       else if (msg.action === "newWorktree") handleNewWorktreeOrPromote()
+      else if (msg.action === "advancedWorktree") showAdvancedWorktreeDialog()
       else if (msg.action === "closeWorktree") closeSelectedWorktree()
       else if (msg.action === "focusInput") window.dispatchEvent(new Event("focusPrompt"))
     }
@@ -559,8 +561,8 @@ const AgentManagerContent: Component = () => {
       if (["t", "w", "n"].includes(e.key.toLowerCase()) && !e.shiftKey) {
         e.preventDefault()
       }
-      // Prevent defaults for shift variants (close worktree)
-      if (e.key.toLowerCase() === "w" && e.shiftKey) {
+      // Prevent defaults for shift variants (close worktree, advanced new worktree)
+      if (["w", "n"].includes(e.key.toLowerCase()) && e.shiftKey) {
         e.preventDefault()
       }
     }
@@ -721,15 +723,18 @@ const AgentManagerContent: Component = () => {
           session.setSessionAgent(ev.sessionId, ev.agent)
         }
 
-        vscode.postMessage({
-          type: "sendMessage",
-          text: ev.text,
-          sessionID: ev.sessionId,
-          providerID: ev.providerID,
-          modelID: ev.modelID,
-          agent: ev.agent,
-          files: ev.files,
-        })
+        // Only send a message if there's text — otherwise just clear busy state
+        if (ev.text) {
+          vscode.postMessage({
+            type: "sendMessage",
+            text: ev.text,
+            sessionID: ev.sessionId,
+            providerID: ev.providerID,
+            modelID: ev.modelID,
+            agent: ev.agent,
+            files: ev.files,
+          })
+        }
         // Clear busy state — use worktreeId from the message directly
         // to avoid race condition where managedSessions() hasn't updated yet
         if (ev.worktreeId) {
@@ -1074,11 +1079,21 @@ const AgentManagerContent: Component = () => {
                       <DropdownMenu.Content class="am-split-menu">
                         <DropdownMenu.Item onSelect={handleCreateWorktree}>
                           <DropdownMenu.ItemLabel>New Worktree</DropdownMenu.ItemLabel>
+                          <span class="am-menu-shortcut">
+                            {parseBindingTokens(kb().newWorktree ?? "").map((t) => (
+                              <kbd class="am-menu-key">{t}</kbd>
+                            ))}
+                          </span>
                         </DropdownMenu.Item>
                         <DropdownMenu.Separator />
                         <DropdownMenu.Item onSelect={showAdvancedWorktreeDialog}>
                           <Icon name="settings-gear" size="small" />
                           <DropdownMenu.ItemLabel>Advanced...</DropdownMenu.ItemLabel>
+                          <span class="am-menu-shortcut">
+                            {parseBindingTokens(kb().advancedWorktree ?? "").map((t) => (
+                              <kbd class="am-menu-key">{t}</kbd>
+                            ))}
+                          </span>
                         </DropdownMenu.Item>
                       </DropdownMenu.Content>
                     </DropdownMenu.Portal>
@@ -1706,6 +1721,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
                         type="text"
                         placeholder="Search branches..."
                         value={branchSearch()}
+                        ref={(el) => requestAnimationFrame(() => el.focus())}
                         onInput={(e) => {
                           setBranchSearch(e.currentTarget.value)
                           setHighlightedIndex(0)
@@ -1714,18 +1730,27 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
                           const items = filteredBranches()
                           if (e.key === "ArrowDown") {
                             e.preventDefault()
-                            setHighlightedIndex((i) => Math.min(i + 1, items.length - 1))
-                            document
-                              .querySelector(`.am-branch-item[data-index="${highlightedIndex()}"]`)
-                              ?.scrollIntoView({ block: "nearest" })
+                            e.stopPropagation()
+                            const next = Math.min(highlightedIndex() + 1, items.length - 1)
+                            setHighlightedIndex(next)
+                            requestAnimationFrame(() => {
+                              document
+                                .querySelector(`.am-branch-item[data-index="${next}"]`)
+                                ?.scrollIntoView({ block: "nearest" })
+                            })
                           } else if (e.key === "ArrowUp") {
                             e.preventDefault()
-                            setHighlightedIndex((i) => Math.max(i - 1, 0))
-                            document
-                              .querySelector(`.am-branch-item[data-index="${highlightedIndex()}"]`)
-                              ?.scrollIntoView({ block: "nearest" })
+                            e.stopPropagation()
+                            const prev = Math.max(highlightedIndex() - 1, 0)
+                            setHighlightedIndex(prev)
+                            requestAnimationFrame(() => {
+                              document
+                                .querySelector(`.am-branch-item[data-index="${prev}"]`)
+                                ?.scrollIntoView({ block: "nearest" })
+                            })
                           } else if (e.key === "Enter") {
                             e.preventDefault()
+                            e.stopPropagation()
                             const selected = items[highlightedIndex()]
                             if (selected) {
                               setBaseBranch(selected.name)
@@ -1735,12 +1760,12 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
                             }
                           } else if (e.key === "Escape") {
                             e.preventDefault()
+                            e.stopPropagation()
                             setBaseBranchOpen(false)
                             setBranchSearch("")
                             setHighlightedIndex(0)
                           }
                         }}
-                        autofocus
                       />
                     </div>
                     <div class="am-branch-list">

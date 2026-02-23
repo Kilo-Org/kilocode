@@ -135,6 +135,11 @@
         "category": "Kilo Code"
       },
       {
+        "command": "kilo-code.new.agentManager.advancedWorktree",
+        "title": "Agent Manager: Advanced New Worktree",
+        "category": "Kilo Code"
+      },
+      {
         "command": "kilo-code.new.generateCommitMessage",
         "title": "Generate Commit Message",
         "category": "Kilo Code (NEW)",
@@ -361,6 +366,12 @@
         "command": "kilo-code.new.agentManager.closeWorktree",
         "key": "ctrl+shift+w",
         "mac": "cmd+shift+w",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.agentManager.advancedWorktree",
+        "key": "ctrl+shift+n",
+        "mac": "cmd+shift+n",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       }
     ],

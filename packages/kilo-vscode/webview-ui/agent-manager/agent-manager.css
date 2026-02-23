@@ -876,43 +876,6 @@ button.am-section-toggle:hover .am-section-label {
   height: 14px;
 }
 
-/* Tab switcher (New / Import) */
-
-.am-tab-switcher {
-  display: flex;
-  background: var(--surface-base);
-  border-radius: var(--radius-sm);
-  padding: 2px;
-  gap: 2px;
-}
-
-.am-tab-pill {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px 12px;
-  border: none;
-  border-radius: calc(var(--radius-sm) - 1px);
-  background: transparent;
-  color: var(--text-weak);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 100ms;
-}
-
-.am-tab-pill:hover {
-  color: var(--text-base);
-  background: var(--surface-inset-base-hover);
-}
-
-.am-tab-pill-active {
-  background: var(--surface-raised-base) !important;
-  color: var(--text-base) !important;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
-}
-
 /* Advanced options toggle */
 
 .am-advanced-toggle {
@@ -1096,6 +1059,30 @@ button.am-section-toggle:hover .am-section-label {
   background: var(--surface-raised-base-hover);
 }
 
+/* Keyboard shortcut hints in dropdown menus */
+
+.am-menu-shortcut {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.am-menu-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--surface-raised-stronger-non-alpha);
+  color: var(--text-weak);
+  font-size: 10px;
+  font-family: inherit;
+  line-height: 1;
+}
+
 .am-branch-item-name {
   flex: 1;
   overflow: hidden;
@@ -1115,115 +1102,6 @@ button.am-section-toggle:hover .am-section-label {
   font-size: 12px;
   color: var(--text-weaker);
   text-align: center;
-}
-
-/* Import tab */
-
-.am-import-tab {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.am-import-section {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.am-import-divider {
-  height: 1px;
-  background: var(--border-base);
-  margin: 2px 0;
-}
-
-.am-pr-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.am-pr-input-wrapper {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  border: 1px solid var(--border-base);
-  border-radius: var(--radius-sm);
-  background: var(--surface-base);
-}
-
-.am-pr-input {
-  flex: 1;
-  border: none;
-  background: none;
-  color: var(--text-base);
-  font-size: 12px;
-  font-family: inherit;
-  outline: none;
-}
-
-.am-pr-input::placeholder {
-  color: var(--text-weaker);
-}
-
-/* Worktree import item with two-line layout */
-
-.am-worktree-item-import {
-  flex-direction: row;
-  align-items: flex-start;
-}
-
-.am-worktree-item-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-  min-width: 0;
-}
-
-.am-worktree-item-path {
-  font-size: 10px;
-  color: var(--text-weaker);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.am-worktree-count {
-  font-size: 11px;
-  color: var(--text-weaker);
-  padding: 0 6px;
-  background: var(--surface-raised-stronger-non-alpha);
-  border-radius: 3px;
-  min-width: 18px;
-  text-align: center;
-}
-
-/* Import all button */
-
-.am-import-all-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 8px;
-  border: none;
-  background: none;
-  color: var(--text-weak);
-  font-size: 12px;
-  cursor: pointer;
-  transition: color 100ms;
-}
-
-.am-import-all-btn:hover {
-  color: var(--text-base);
-}
-
-.am-import-all-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 /* HoverCard popover for worktree items */

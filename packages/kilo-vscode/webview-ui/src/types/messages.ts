@@ -976,7 +976,7 @@ export interface SetSessionsCollapsedRequest {
   collapsed: boolean
 }
 
-// Request branch list for base branch selector / import tab
+// Request branch list for base branch selector
 export interface RequestBranchesMessage {
   type: "agentManager.requestBranches"
 }

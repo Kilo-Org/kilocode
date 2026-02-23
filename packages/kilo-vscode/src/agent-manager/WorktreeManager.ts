@@ -8,7 +8,6 @@
 
 import * as path from "path"
 import * as fs from "fs"
-import { execSync } from "child_process"
 import simpleGit, { type SimpleGit } from "simple-git"
 import { generateBranchName } from "./branch-name"
 
@@ -34,12 +33,6 @@ export interface BranchInfo {
   isRemote: boolean
   lastCommitDate: number
   isDefault: boolean
-}
-
-export interface ExternalWorktreeInfo {
-  branch: string
-  path: string
-  isMain: boolean
 }
 
 const KILOCODE_DIR = ".kilocode"
@@ -287,101 +280,6 @@ export class WorktreeManager {
     })
 
     return { branches, defaultBranch: defBranch }
-  }
-
-  async listExternalWorktrees(): Promise<ExternalWorktreeInfo[]> {
-    const raw = await this.git.raw(["worktree", "list", "--porcelain"]).catch(() => "")
-    if (!raw.trim()) return []
-
-    const entries: Array<{ path: string; branch: string; bare: boolean }> = []
-    let current: { path?: string; branch?: string; bare: boolean } = { bare: false }
-
-    for (const line of raw.split("\n")) {
-      if (line.startsWith("worktree ")) {
-        if (current.path) entries.push({ path: current.path, branch: current.branch || "HEAD", bare: current.bare })
-        current = { path: line.slice("worktree ".length).trim(), bare: false }
-      } else if (line.startsWith("branch ")) {
-        current.branch = line
-          .slice("branch ".length)
-          .trim()
-          .replace(/^refs\/heads\//, "")
-      } else if (line === "bare") {
-        current.bare = true
-      } else if (line === "" && current.path) {
-        entries.push({ path: current.path, branch: current.branch || "HEAD", bare: current.bare })
-        current = { bare: false }
-      }
-    }
-    if (current.path) entries.push({ path: current.path, branch: current.branch || "HEAD", bare: current.bare })
-
-    // Filter: exclude the main repo root and any worktrees we manage (inside .kilocode/worktrees/)
-    const mainRoot = path.resolve(this.root)
-    return entries
-      .filter((e) => !e.bare)
-      .map((e) => ({
-        branch: e.branch,
-        path: e.path,
-        isMain: path.resolve(e.path) === mainRoot,
-      }))
-      .filter((e) => !e.isMain && !e.path.startsWith(this.dir))
-  }
-
-  async createFromPR(url: string): Promise<{ branch: string; owner: string; repo: string; number: number }> {
-    const parsed = this.parsePRUrl(url)
-    if (!parsed) throw new Error("Invalid PR URL. Expected format: https://github.com/owner/repo/pull/123")
-
-    // Use gh CLI to fetch PR info
-    let prInfo: {
-      headRefName: string
-      isCrossRepository: boolean
-      headRepositoryOwner?: { login: string }
-    }
-
-    try {
-      const out = execSync(
-        `gh pr view ${parsed.number} --repo ${parsed.owner}/${parsed.repo} --json headRefName,isCrossRepository,headRepositoryOwner`,
-        { encoding: "utf-8", timeout: 30000 },
-      )
-      prInfo = JSON.parse(out)
-    } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : String(error)
-      if (msg.includes("ENOENT") || msg.includes("not found")) {
-        throw new Error("GitHub CLI (gh) is not installed. Install it from https://cli.github.com/")
-      }
-      if (msg.includes("not logged in")) {
-        throw new Error("Not logged in to GitHub CLI. Run 'gh auth login'")
-      }
-      if (msg.includes("Could not resolve")) {
-        throw new Error(`PR #${parsed.number} not found in ${parsed.owner}/${parsed.repo}`)
-      }
-      throw new Error(`Failed to fetch PR info: ${msg}`)
-    }
-
-    let branch = prInfo.headRefName
-    if (prInfo.isCrossRepository && prInfo.headRepositoryOwner) {
-      const forkOwner = prInfo.headRepositoryOwner.login.toLowerCase()
-      // Add fork remote if needed
-      try {
-        await this.git.raw(["remote", "add", forkOwner, `https://github.com/${forkOwner}/${parsed.repo}.git`])
-      } catch {
-        // Remote might already exist
-      }
-      await this.git.fetch(forkOwner, prInfo.headRefName)
-      branch = `${forkOwner}/${prInfo.headRefName}`
-    } else {
-      await this.git.fetch("origin", prInfo.headRefName)
-    }
-
-    return { branch, ...parsed }
-  }
-
-  private parsePRUrl(url: string): { owner: string; repo: string; number: number } | null {
-    let normalized = url.trim()
-    if (!normalized.startsWith("http")) normalized = `https://${normalized}`
-    // Match github.com/owner/repo/pull/123 pattern directly
-    const match = normalized.match(/github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)/)
-    if (!match) return null
-    return { owner: match[1], repo: match[2], number: parseInt(match[3], 10) }
   }
 
   // ---------------------------------------------------------------------------

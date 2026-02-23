@@ -468,7 +468,7 @@ export class AgentManagerProvider implements vscode.Disposable {
   }
 
   // ---------------------------------------------------------------------------
-  // Import / branch / external worktree handlers
+  // Branch discovery
   // ---------------------------------------------------------------------------
 
   private async onRequestBranches(): Promise<void> {
@@ -572,13 +572,11 @@ export class AgentManagerProvider implements vscode.Disposable {
       })
     }
 
-    // Phase 2: Send the initial prompt to all sessions (only if there's text)
-    if (text) {
-      for (let i = 0; i < created.length; i++) {
-        const entry = created[i]!
+    // Phase 2: Send the initial prompt to all sessions, or clear busy state if no text
+    for (let i = 0; i < created.length; i++) {
+      const entry = created[i]!
+      if (text) {
         this.log(`Sending initial message to version ${i + 1} (session=${entry.sessionId})`)
-
-        // Tell the webview to send the message through the normal session flow
         this.postToWebview({
           type: "agentManager.sendInitialMessage",
           sessionId: entry.sessionId,
@@ -589,11 +587,16 @@ export class AgentManagerProvider implements vscode.Disposable {
           agent,
           files,
         })
-
-        // Small delay between sends to avoid overwhelming the backend
         if (i < created.length - 1) {
           await new Promise((resolve) => setTimeout(resolve, 300))
         }
+      } else {
+        // No prompt — just clear the busy state for this worktree
+        this.postToWebview({
+          type: "agentManager.sendInitialMessage",
+          sessionId: entry.sessionId,
+          worktreeId: entry.worktreeId,
+        })
       }
     }
 
