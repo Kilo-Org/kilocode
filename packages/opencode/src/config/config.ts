@@ -1613,14 +1613,9 @@ export namespace Config {
 
   async function hasMcpDefinition(filepath: string, mcpName: string): Promise<boolean> {
     if (!existsSync(filepath)) return false
-    try {
-      const text = await Bun.file(filepath).text()
-      const data = parseJsonc(text, [], { allowTrailingComma: true })
-      return data?.mcp?.[mcpName] !== undefined
-    } catch (err) {
-      log.warn("failed to check MCP definition", { filepath, mcpName, error: err })
-      return false
-    }
+    const text = await Bun.file(filepath).text()
+    const data = parseJsonc(text, [], { allowTrailingComma: true })
+    return data?.mcp?.[mcpName] !== undefined
   }
 
   async function resolveConfigPath() {
