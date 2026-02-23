@@ -8,9 +8,23 @@
 
 import * as path from "path"
 import * as fs from "fs"
+import * as cp from "child_process"
 import simpleGit, { type SimpleGit } from "simple-git"
 import { generateBranchName } from "./branch-name"
+import {
+  parsePRUrl,
+  localBranchName,
+  parseForEachRefOutput,
+  buildBranchList,
+  parseWorktreeList,
+  checkedOutBranchesFromWorktreeList,
+  classifyPRError,
+  validateGitRef,
+  type PRInfo,
+  type BranchListItem,
+} from "./git-import"
 
+export type { BranchListItem }
 export { generateBranchName }
 
 export interface WorktreeInfo {
@@ -25,6 +39,11 @@ export interface CreateWorktreeResult {
   branch: string
   path: string
   parentBranch: string
+}
+
+export interface ExternalWorktreeItem {
+  path: string
+  branch: string
 }
 
 const KILOCODE_DIR = ".kilocode"
@@ -62,7 +81,9 @@ export class WorktreeManager {
       if (!exists) throw new Error(`Branch "${branch}" does not exist`)
     }
 
-    let worktreePath = path.join(this.dir, branch)
+    // Sanitize branch name for filesystem path (replace / with --)
+    const dirName = branch.replace(/\//g, "--")
+    let worktreePath = path.join(this.dir, dirName)
 
     if (fs.existsSync(worktreePath)) {
       this.log(`Worktree directory exists, cleaning up before re-creation: ${worktreePath}`)
@@ -81,7 +102,7 @@ export class WorktreeManager {
       }
       // Branch name collision -- retry with unique suffix
       branch = `${branch}-${Date.now()}`
-      worktreePath = path.join(this.dir, branch)
+      worktreePath = path.join(this.dir, branch.replace(/\//g, "--"))
       await this.git.raw(["worktree", "add", "-b", branch, worktreePath])
     }
 
@@ -279,7 +300,7 @@ export class WorktreeManager {
     return (await this.git.revparse(["--abbrev-ref", "HEAD"])).trim()
   }
 
-  private async branchExists(name: string): Promise<boolean> {
+  async branchExists(name: string): Promise<boolean> {
     try {
       const branches = await this.git.branch()
       return branches.all.includes(name) || branches.all.includes(`remotes/origin/${name}`)
@@ -288,7 +309,7 @@ export class WorktreeManager {
     }
   }
 
-  private async defaultBranch(): Promise<string> {
+  async defaultBranch(): Promise<string> {
     try {
       const head = await this.git.raw(["symbolic-ref", "refs/remotes/origin/HEAD"])
       const match = head.trim().match(/refs\/remotes\/origin\/(.+)$/)
@@ -302,5 +323,152 @@ export class WorktreeManager {
     } catch {}
 
     return "main"
+  }
+
+  // ---------------------------------------------------------------------------
+  // Import
+  // ---------------------------------------------------------------------------
+
+  async listBranches(): Promise<{ branches: BranchListItem[]; defaultBranch: string }> {
+    const defBranch = await this.defaultBranch()
+    const raw = await this.git.raw([
+      "for-each-ref",
+      "--sort=-committerdate",
+      "--format=%(refname)\t%(committerdate:iso-strict)",
+      "refs/heads/",
+      "refs/remotes/origin/",
+    ])
+    const { locals, remotes, dates } = parseForEachRefOutput(raw)
+    return { branches: buildBranchList(locals, remotes, dates, defBranch), defaultBranch: defBranch }
+  }
+
+  async checkedOutBranches(): Promise<Set<string>> {
+    try {
+      const raw = await this.git.raw(["worktree", "list", "--porcelain"])
+      return checkedOutBranchesFromWorktreeList(raw)
+    } catch (error) {
+      this.log(`Failed to list worktree branches: ${error}`)
+      const result = new Set<string>()
+      try {
+        result.add(await this.currentBranch())
+      } catch (inner) {
+        this.log(`Failed to get current branch: ${inner}`)
+      }
+      return result
+    }
+  }
+
+  async listExternalWorktrees(managedPaths: Set<string>): Promise<ExternalWorktreeItem[]> {
+    try {
+      const raw = await this.git.raw(["worktree", "list", "--porcelain"])
+      return parseWorktreeList(raw)
+        .filter((e) => !e.bare && e.path !== this.root && !managedPaths.has(e.path))
+        .map((e) => ({ path: e.path, branch: e.branch }))
+    } catch (error) {
+      this.log(`Failed to list external worktrees: ${error}`)
+      return []
+    }
+  }
+
+  async createFromPR(url: string): Promise<CreateWorktreeResult> {
+    const parsed = parsePRUrl(url)
+    if (!parsed) throw new Error("Invalid PR URL. Expected: https://github.com/owner/repo/pull/123")
+
+    const info = await this.fetchPRInfo(parsed)
+    const branch = localBranchName(info)
+    const isFork = info.isCrossRepository
+    const forkOwner = info.headRepositoryOwner?.login?.toLowerCase()
+
+    const checkedOut = await this.checkedOutBranches()
+    if (checkedOut.has(branch) || checkedOut.has(info.headRefName)) {
+      throw new Error("This PR's branch is already checked out in another worktree")
+    }
+
+    await this.fetchPRBranch(info, parsed, isFork, forkOwner)
+
+    if (isFork && forkOwner) {
+      if (await this.branchExists(branch)) {
+        await this.git.raw(["branch", "-D", branch])
+      }
+      await this.git.raw(["branch", branch, `${forkOwner}/${info.headRefName}`])
+    }
+
+    return this.createWorktree({ existingBranch: branch })
+  }
+
+  private async fetchPRInfo(parsed: { owner: string; repo: string; number: number }): Promise<PRInfo> {
+    try {
+      const json = await this.exec(
+        "gh",
+        [
+          "pr",
+          "view",
+          String(parsed.number),
+          "--repo",
+          `${parsed.owner}/${parsed.repo}`,
+          "--json",
+          "headRefName,headRepositoryOwner,isCrossRepository,title",
+        ],
+        30000,
+      )
+      return JSON.parse(json) as PRInfo
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error)
+      const kind = classifyPRError(msg)
+      if (kind === "not_found") throw new Error(`PR #${parsed.number} not found in ${parsed.owner}/${parsed.repo}`)
+      if (kind === "gh_missing")
+        throw new Error("GitHub CLI (gh) is not installed. Install it from https://cli.github.com/")
+      if (kind === "gh_auth") throw new Error("Not authenticated with GitHub CLI. Run 'gh auth login' first.")
+      throw new Error(`Failed to fetch PR info: ${msg}`)
+    }
+  }
+
+  private async fetchPRBranch(
+    info: PRInfo,
+    parsed: { owner: string; repo: string; number: number },
+    isFork: boolean,
+    forkOwner: string | undefined,
+  ): Promise<void> {
+    if (isFork && forkOwner) {
+      validateGitRef(forkOwner, "fork owner")
+      validateGitRef(info.headRefName, "branch name")
+      const remotes = await this.git.getRemotes()
+      if (!remotes.some((r) => r.name === forkOwner)) {
+        await this.git.addRemote(forkOwner, `https://github.com/${forkOwner}/${parsed.repo}.git`)
+      }
+      await this.gitExec(["fetch", forkOwner, info.headRefName])
+    } else {
+      validateGitRef(info.headRefName, "branch name")
+      const ok = await this.gitTry(["fetch", "origin", info.headRefName])
+      if (!ok) {
+        await this.gitExec([
+          "fetch",
+          "origin",
+          `+refs/pull/${parsed.number}/head:refs/remotes/origin/${info.headRefName}`,
+        ])
+      }
+    }
+  }
+
+  private exec(cmd: string, args: string[], timeout = 120000): Promise<string> {
+    return new Promise((resolve, reject) => {
+      cp.execFile(cmd, args, { cwd: this.root, timeout, encoding: "utf-8" }, (error, stdout) => {
+        if (error) reject(error)
+        else resolve(stdout)
+      })
+    })
+  }
+
+  private async gitExec(args: string[]): Promise<void> {
+    await this.exec("git", args)
+  }
+
+  private async gitTry(args: string[]): Promise<boolean> {
+    try {
+      await this.gitExec(args)
+      return true
+    } catch {
+      return false
+    }
   }
 }

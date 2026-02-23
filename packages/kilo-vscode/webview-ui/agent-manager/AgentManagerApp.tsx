@@ -19,9 +19,12 @@ import type {
   AgentManagerKeybindingsMessage,
   AgentManagerMultiVersionProgressMessage,
   AgentManagerSendInitialMessage,
+  AgentManagerBranchesMessage,
+  AgentManagerImportResultMessage,
   WorktreeState,
   ManagedSessionState,
   SessionInfo,
+  BranchInfo,
 } from "../src/types/messages"
 import { DragDropProvider, DragDropSensors, DragOverlay, SortableProvider, closestCenter } from "@thisbeyond/solid-dnd"
 import type { DragEvent } from "@thisbeyond/solid-dnd"
@@ -34,13 +37,14 @@ import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
 import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff"
 import { Code } from "@kilocode/kilo-ui/code"
 import { Diff } from "@kilocode/kilo-ui/diff"
-import { Toast } from "@kilocode/kilo-ui/toast"
+import { Toast, showToast } from "@kilocode/kilo-ui/toast"
 import { ResizeHandle } from "@kilocode/kilo-ui/resize-handle"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
+import { Popover } from "@kilocode/kilo-ui/popover"
 import { HoverCard } from "@kilocode/kilo-ui/hover-card"
 import { VSCodeProvider, useVSCode } from "../src/context/vscode"
 import { ServerProvider } from "../src/context/server"
@@ -1546,16 +1550,21 @@ const AgentManagerContent: Component = () => {
 }
 
 // ---------------------------------------------------------------------------
-// Advanced "New Worktree" dialog — prompt, versions, model, mode
+// Advanced "New Worktree" dialog — prompt, versions, model, mode + Import tab
 // ---------------------------------------------------------------------------
 
 type VersionCount = 1 | 2 | 3 | 4
 const VERSION_OPTIONS: VersionCount[] = [1, 2, 3, 4]
 
+type DialogTab = "new" | "import"
+
 const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
   const vscode = useVSCode()
   const session = useSession()
 
+  const [tab, setTab] = createSignal<DialogTab>("new")
+
+  // --- New tab state ---
   const [name, setName] = createSignal("")
   const [prompt, setPrompt] = createSignal("")
   const [versions, setVersions] = createSignal<VersionCount>(2)
@@ -1610,89 +1619,286 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
     textareaRef.style.height = `${Math.min(textareaRef.scrollHeight, 200)}px`
   }
 
-  return (
-    <Dialog title="New Worktree" fit>
-      <div class="am-nv-dialog" onKeyDown={handleKeyDown}>
-        {/* Optional worktree name */}
-        <input
-          class="am-nv-name-input"
-          placeholder="Worktree name (optional)"
-          value={name()}
-          onInput={(e) => setName(e.currentTarget.value)}
-        />
+  // --- Import tab state ---
+  const [prUrl, setPrUrl] = createSignal("")
+  const [prPending, setPrPending] = createSignal(false)
+  const [branches, setBranches] = createSignal<BranchInfo[]>([])
+  const [branchesLoading, setBranchesLoading] = createSignal(false)
+  const [branchSearch, setBranchSearch] = createSignal("")
+  const [branchOpen, setBranchOpen] = createSignal(false)
+  const [importPending, setImportPending] = createSignal(false)
 
-        {/* Prompt input — reuses the sidebar chat-input base classes for consistent styling */}
-        <div class="prompt-input-container am-prompt-input-container">
-          <div class="prompt-input-wrapper am-prompt-input-wrapper">
-            <div class="prompt-input-ghost-wrapper am-prompt-input-ghost-wrapper">
-              <textarea
-                ref={textareaRef}
-                class="prompt-input am-prompt-input"
-                placeholder={`Type a message (${isMac ? "\u2318" : "Ctrl+"}Enter to send)`}
-                value={prompt()}
-                onInput={(e) => {
-                  setPrompt(e.currentTarget.value)
-                  adjustHeight()
-                }}
-                rows={3}
-              />
+  const isPending = () => prPending() || importPending()
+
+  // Request data when switching to import tab
+  createEffect(() => {
+    if (tab() !== "import") return
+    setBranchesLoading(true)
+    vscode.postMessage({ type: "agentManager.requestBranches" })
+  })
+
+  // Listen for import-related messages
+  const importUnsub = vscode.onMessage((msg) => {
+    if (msg.type === "agentManager.branches") {
+      const ev = msg as AgentManagerBranchesMessage
+      setBranches(ev.branches)
+      setBranchesLoading(false)
+    }
+    if (msg.type === "agentManager.importResult") {
+      const ev = msg as AgentManagerImportResultMessage
+      setPrPending(false)
+      setImportPending(false)
+      if (ev.success) {
+        props.onClose()
+      } else {
+        showToast({ variant: "error", title: "Import failed", description: ev.message })
+      }
+    }
+  })
+
+  onCleanup(() => importUnsub())
+
+  const filteredBranches = createMemo(() => {
+    const q = branchSearch().toLowerCase()
+    if (!q) return branches()
+    return branches().filter((b) => b.name.toLowerCase().includes(q))
+  })
+
+  const handlePRSubmit = () => {
+    const url = prUrl().trim()
+    if (!url || isPending()) return
+    setPrPending(true)
+    vscode.postMessage({ type: "agentManager.importFromPR", url })
+  }
+
+  const handleBranchSelect = (name: string) => {
+    if (isPending()) return
+    setImportPending(true)
+    setBranchOpen(false)
+    setBranchSearch("")
+    vscode.postMessage({ type: "agentManager.importFromBranch", branch: name })
+  }
+
+  return (
+    <Dialog title="Open Workspace" fit>
+      {/* Tab switcher */}
+      <div class="am-tab-switcher">
+        <button
+          class="am-tab-switcher-pill"
+          classList={{ "am-tab-switcher-pill-active": tab() === "new" }}
+          onClick={() => setTab("new")}
+          type="button"
+        >
+          New
+        </button>
+        <button
+          class="am-tab-switcher-pill"
+          classList={{ "am-tab-switcher-pill-active": tab() === "import" }}
+          onClick={() => setTab("import")}
+          type="button"
+        >
+          Import
+        </button>
+      </div>
+
+      {/* New tab */}
+      <Show when={tab() === "new"}>
+        <div class="am-nv-dialog" onKeyDown={handleKeyDown}>
+          <input
+            class="am-nv-name-input"
+            placeholder="Worktree name (optional)"
+            value={name()}
+            onInput={(e) => setName(e.currentTarget.value)}
+          />
+          {/* Prompt input — reuses the sidebar chat-input base classes for consistent styling */}
+          <div class="prompt-input-container am-prompt-input-container">
+            <div class="prompt-input-wrapper am-prompt-input-wrapper">
+              <div class="prompt-input-ghost-wrapper am-prompt-input-ghost-wrapper">
+                <textarea
+                  ref={textareaRef}
+                  class="prompt-input am-prompt-input"
+                  placeholder={`Type a message (${isMac ? "\u2318" : "Ctrl+"}Enter to send)`}
+                  value={prompt()}
+                  onInput={(e) => {
+                    setPrompt(e.currentTarget.value)
+                    adjustHeight()
+                  }}
+                  rows={3}
+                />
+              </div>
+            </div>
+            <div class="prompt-input-hint">
+              <div class="prompt-input-hint-selectors">
+                <ModelSelectorBase
+                  value={model()}
+                  onSelect={(pid, mid) => setModel(pid && mid ? { providerID: pid, modelID: mid } : null)}
+                  placement="top-start"
+                  allowClear
+                  clearLabel="Default"
+                />
+                <Show when={session.agents().length > 1}>
+                  <ModeSwitcherBase agents={session.agents()} value={agent()} onSelect={setAgent} />
+                </Show>
+              </div>
+              <div class="prompt-input-hint-actions">
+                <Tooltip value={`${isMac ? "\u2318" : "Ctrl+"}Enter`} placement="top">
+                  <Button variant="primary" size="small" onClick={handleSubmit} disabled={!canSubmit()}>
+                    <Show
+                      when={!starting()}
+                      fallback={
+                        <>
+                          <Spinner class="am-nv-spinner" />
+                          <span>Creating...</span>
+                        </>
+                      }
+                    >
+                      <svg data-slot="icon-svg" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M1.5 1.5L14.5 8L1.5 14.5V9L10 8L1.5 7V1.5Z" />
+                      </svg>
+                    </Show>
+                  </Button>
+                </Tooltip>
+              </div>
             </div>
           </div>
-          <div class="prompt-input-hint">
-            <div class="prompt-input-hint-selectors">
-              <ModelSelectorBase
-                value={model()}
-                onSelect={(pid, mid) => setModel(pid && mid ? { providerID: pid, modelID: mid } : null)}
-                placement="top-start"
-                allowClear
-                clearLabel="Default"
-              />
-              <Show when={session.agents().length > 1}>
-                <ModeSwitcherBase agents={session.agents()} value={agent()} onSelect={setAgent} />
-              </Show>
+
+          <div class="am-nv-version-bar">
+            <span class="am-nv-config-label">Versions</span>
+            <div class="am-nv-pills">
+              {VERSION_OPTIONS.map((count) => (
+                <button
+                  class="am-nv-pill"
+                  classList={{ "am-nv-pill-active": versions() === count }}
+                  onClick={() => setVersions(count)}
+                  type="button"
+                >
+                  {count}
+                </button>
+              ))}
             </div>
-            <div class="prompt-input-hint-actions">
-              <Tooltip value={`${isMac ? "\u2318" : "Ctrl+"}Enter`} placement="top">
-                <Button variant="primary" size="small" onClick={handleSubmit} disabled={!canSubmit()}>
+            <Show when={versions() > 1}>
+              <span class="am-nv-version-hint">{versions()} worktrees will run in parallel</span>
+            </Show>
+          </div>
+        </div>
+      </Show>
+
+      {/* Import tab */}
+      <Show when={tab() === "import"}>
+        <div class="am-import-tab">
+          {/* Pull Request section */}
+          <div class="am-import-section">
+            <span class="am-nv-config-label">Pull Request</span>
+            <div class="am-pr-row">
+              <div class="am-pr-input-wrapper">
+                <Icon name="branch" size="small" />
+                <input
+                  class="am-pr-input"
+                  type="text"
+                  placeholder="Paste PR URL..."
+                  value={prUrl()}
+                  onInput={(e) => setPrUrl(e.currentTarget.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      handlePRSubmit()
+                    }
+                  }}
+                  disabled={isPending()}
+                />
+              </div>
+              <Button
+                variant="secondary"
+                size="small"
+                onClick={handlePRSubmit}
+                disabled={!prUrl().trim() || isPending()}
+              >
+                <Show when={prPending()} fallback="Open">
+                  <Spinner class="am-nv-spinner" />
+                </Show>
+              </Button>
+            </div>
+          </div>
+
+          <div class="am-import-divider" />
+
+          {/* Branches section */}
+          <div class="am-import-section">
+            <span class="am-nv-config-label">Branches</span>
+            <div class="am-selector-wrapper">
+              <Popover
+                open={branchOpen()}
+                onOpenChange={setBranchOpen}
+                placement="bottom-start"
+                sameWidth
+                class="am-dropdown"
+                trigger={
+                  <button class="am-selector-trigger" disabled={isPending()} type="button">
+                    <span class="am-selector-left">
+                      <Icon name="branch" size="small" />
+                      <span class="am-selector-value">{branchesLoading() ? "Loading..." : "Select branch..."}</span>
+                    </span>
+                    <span class="am-selector-right">
+                      <Icon name="selector" size="small" />
+                    </span>
+                  </button>
+                }
+              >
+                <div class="am-dropdown-search">
+                  <Icon name="magnifying-glass" size="small" />
+                  <input
+                    class="am-dropdown-search-input"
+                    type="text"
+                    placeholder="Search branches..."
+                    value={branchSearch()}
+                    onInput={(e) => setBranchSearch(e.currentTarget.value)}
+                    autofocus
+                  />
+                </div>
+                <div class="am-dropdown-list">
                   <Show
-                    when={!starting()}
+                    when={filteredBranches().length > 0}
                     fallback={
-                      <>
-                        <Spinner class="am-nv-spinner" />
-                        <span>Creating...</span>
-                      </>
+                      <div class="am-dropdown-empty">
+                        {branchesLoading() ? "Loading branches..." : "No matching branches"}
+                      </div>
                     }
                   >
-                    <svg data-slot="icon-svg" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                      <path d="M1.5 1.5L14.5 8L1.5 14.5V9L10 8L1.5 7V1.5Z" />
-                    </svg>
+                    <For each={filteredBranches()}>
+                      {(branch) => (
+                        <div class="am-branch-item" onClick={() => handleBranchSelect(branch.name)}>
+                          <span class="am-branch-item-left">
+                            <Icon name="branch" size="small" />
+                            <span class="am-branch-item-name">{branch.name}</span>
+                            <Show when={branch.isDefault}>
+                              <span class="am-branch-badge">default</span>
+                            </Show>
+                            <Show when={!branch.isLocal && branch.isRemote}>
+                              <span class="am-branch-badge">remote</span>
+                            </Show>
+                          </span>
+                          <Show when={branch.lastCommitDate}>
+                            <span class="am-branch-item-time">{formatRelativeDate(branch.lastCommitDate!)}</span>
+                          </Show>
+                        </div>
+                      )}
+                    </For>
                   </Show>
-                </Button>
-              </Tooltip>
+                </div>
+              </Popover>
             </div>
           </div>
-        </div>
 
-        {/* Version selector + info */}
-        <div class="am-nv-version-bar">
-          <span class="am-nv-config-label">Versions</span>
-          <div class="am-nv-pills">
-            {VERSION_OPTIONS.map((count) => (
-              <button
-                class="am-nv-pill"
-                classList={{ "am-nv-pill-active": versions() === count }}
-                onClick={() => setVersions(count)}
-                type="button"
-              >
-                {count}
-              </button>
-            ))}
-          </div>
-          <Show when={versions() > 1}>
-            <span class="am-nv-version-hint">{versions()} worktrees will run in parallel</span>
+          {/* Empty state when no branches are available */}
+          <Show when={!branchesLoading() && branches().length === 0}>
+            <div class="am-import-empty">
+              No branches found.
+              <br />
+              Paste a PR URL above or create a new worktree.
+            </div>
           </Show>
         </div>
-      </div>
+      </Show>
     </Dialog>
   )
 }

@@ -545,3 +545,80 @@ describe("WorktreeManager.removeWorktree safety", () => {
     expect(exists).toBe(true)
   })
 })
+
+// ---------------------------------------------------------------------------
+// WorktreeManager -- listBranches
+// ---------------------------------------------------------------------------
+
+describe("WorktreeManager.listBranches", () => {
+  it("returns the current branch", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    const { branches, defaultBranch } = await mgr.listBranches()
+
+    const names = branches.map((b) => b.name)
+    const git = simpleGit(root)
+    const current = (await git.revparse(["--abbrev-ref", "HEAD"])).trim()
+    expect(names).toContain(current)
+    expect(defaultBranch).toBeTruthy()
+  })
+
+  it("includes branches created after init", async () => {
+    const root = await createTempRepo()
+    const git = simpleGit(root)
+    await git.branch(["feature-test"])
+
+    const mgr = createManager(root)
+    const { branches } = await mgr.listBranches()
+
+    expect(branches.map((b) => b.name)).toContain("feature-test")
+  })
+
+  it("marks local branches as isLocal", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    const { branches } = await mgr.listBranches()
+    for (const b of branches) {
+      expect(b.isLocal).toBe(true)
+    }
+  })
+})
+
+// ---------------------------------------------------------------------------
+// WorktreeManager -- checkedOutBranches
+// ---------------------------------------------------------------------------
+
+describe("WorktreeManager.checkedOutBranches", () => {
+  it("includes the main branch", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    const checked = await mgr.checkedOutBranches()
+    const git = simpleGit(root)
+    const current = (await git.revparse(["--abbrev-ref", "HEAD"])).trim()
+    expect(checked.has(current)).toBe(true)
+  })
+
+  it("includes worktree branches", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    const wt = await mgr.createWorktree({ prompt: "checked-out-test" })
+    const checked = await mgr.checkedOutBranches()
+
+    expect(checked.has(wt.branch)).toBe(true)
+  })
+
+  it("excludes branches after worktree removal", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    const wt = await mgr.createWorktree({ prompt: "removal-test" })
+    await mgr.removeWorktree(wt.path)
+
+    const checked = await mgr.checkedOutBranches()
+    expect(checked.has(wt.branch)).toBe(false)
+  })
+})
