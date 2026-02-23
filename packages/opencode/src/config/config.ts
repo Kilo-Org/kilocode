@@ -1461,8 +1461,8 @@ export namespace Config {
 
   // kilocode_change start - Add function to persist MCP enabled state to config
   export async function persistMcpToggle(name: string, enabled: boolean) {
-    // kilocode_change: Note - concurrent config writes could race (low risk for user-triggered actions)
-    const configPath = await resolveConfigPath()
+    // kilocode_change: Find the file where this MCP server is actually defined
+    const configPath = await findMcpConfigPath(name)
     const file = Bun.file(configPath)
 
     let text = "{}"
@@ -1479,6 +1479,102 @@ export namespace Config {
     // kilocode_change: Dispose only the Config state, not the entire instance (preserves MCP connections)
     const { State } = await import("@/project/state")
     await State.disposeEntry(Instance.directory, initConfigState)
+  }
+
+  async function findMcpConfigPath(mcpName: string): Promise<string> {
+    // kilocode_change: Find which config file contains the MCP server definition
+    // Search in reverse priority order (highest precedence first) to find where it's defined
+
+    // Check managed config first (highest priority)
+    if (existsSync(managedConfigDir)) {
+      for (const file of ["opencode.jsonc", "opencode.json"]) {
+        const filepath = path.join(managedConfigDir, file)
+        if (await hasMcpDefinition(filepath, mcpName)) {
+          return filepath
+        }
+      }
+    }
+
+    // Check inline config content (can't write here, fall through)
+    // Skip: Flag.KILO_CONFIG_CONTENT is read-only
+
+    // Check custom config path
+    if (Flag.KILO_CONFIG) {
+      if (await hasMcpDefinition(Flag.KILO_CONFIG, mcpName)) {
+        return Flag.KILO_CONFIG
+      }
+    }
+
+    // Check KILO_CONFIG_DIR
+    if (Flag.KILO_CONFIG_DIR) {
+      for (const file of ["opencode.jsonc", "opencode.json"]) {
+        const filepath = path.join(Flag.KILO_CONFIG_DIR, file)
+        if (await hasMcpDefinition(filepath, mcpName)) {
+          return filepath
+        }
+      }
+    }
+
+    // Check ~/.opencode/
+    const homeOpencodeDir = path.join(Global.Path.home, ".opencode")
+    for (const file of ["opencode.jsonc", "opencode.json"]) {
+      const filepath = path.join(homeOpencodeDir, file)
+      if (await hasMcpDefinition(filepath, mcpName)) {
+        return filepath
+      }
+    }
+
+    // Check project .opencode directories (closest first)
+    if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
+      const opencodeDirs = await Array.fromAsync(
+        Filesystem.up({
+          targets: [".opencode"],
+          start: Instance.directory,
+          stop: Instance.worktree,
+        }),
+      )
+      for (const dir of opencodeDirs.toReversed()) {
+        for (const file of ["opencode.jsonc", "opencode.json"]) {
+          const filepath = path.join(dir, file)
+          if (await hasMcpDefinition(filepath, mcpName)) {
+            return filepath
+          }
+        }
+      }
+    }
+
+    // Check project config files (opencode.jsonc/json in project root)
+    if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
+      for (const file of ["opencode.jsonc", "opencode.json"]) {
+        const found = await Filesystem.findUp(file, Instance.directory, Instance.worktree)
+        for (const filepath of found) {
+          if (await hasMcpDefinition(filepath, mcpName)) {
+            return filepath
+          }
+        }
+      }
+    }
+
+    // Check global config
+    const globalPath = globalConfigFile()
+    if (await hasMcpDefinition(globalPath, mcpName)) {
+      return globalPath
+    }
+
+    // MCP not found in any existing file - fall back to default resolution
+    // This will create a new entry in the highest-priority writable location
+    return resolveConfigPath()
+  }
+
+  async function hasMcpDefinition(filepath: string, mcpName: string): Promise<boolean> {
+    if (!existsSync(filepath)) return false
+    try {
+      const text = await Bun.file(filepath).text()
+      const data = parseJsonc(text, [], { allowTrailingComma: true })
+      return data?.mcp?.[mcpName] !== undefined
+    } catch {
+      return false
+    }
   }
 
   async function resolveConfigPath() {
