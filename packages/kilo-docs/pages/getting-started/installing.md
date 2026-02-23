@@ -48,7 +48,7 @@ Get started with Kilo Code by installing it on your preferred platform. Choose y
 ## Pre-Release Extension
 
 {% callout type="info" %}
-We're rebuilding Kilo Code from the ground up on the new [Kilo CLI](https://github.com/Kilo-Org/kilo). The pre-release extension is available for users who want to try the latest architecture and provide feedback, and don't mind some missing features and rough edges.
+We're rebuilding Kilo Code from the ground up on the new [Kilo CLI](https://github.com/Kilo-Org/kilocode). The pre-release extension is available for users who want to try the latest architecture and provide feedback, and don't mind some missing features and rough edges.
 {% /callout %}
 
 The pre-release extension is a complete rebuild featuring:
@@ -61,7 +61,7 @@ The pre-release extension is a complete rebuild featuring:
 
 This is an early pre-release. Core features like chat, markdown rendering, authentication, and model/mode switching are working. Some features from the stable extension are still being implemented.
 
-For the full feature status, see the [feature parity tracking document](https://github.com/Kilo-Org/kilo/blob/main/packages/kilo-vscode/docs/opencode-migration-plan.md).
+For the full feature status, see the [feature parity tracking document](https://github.com/Kilo-Org/kilocode/blob/main/packages/kilo-vscode/docs/opencode-migration-plan.md).
 
 ### Installing the Pre-Release
 
@@ -80,7 +80,7 @@ If you need to return to the stable version:
 
 ### Feedback and Issues
 
-Report issues or provide feedback in the [Kilo-Org/kilo repository](https://github.com/Kilo-Org/kilo/issues).
+Report issues or provide feedback in the [Kilo-Org/kilocode repository](https://github.com/Kilo-Org/kilocode/issues).
 
 ## Manual Installations
 

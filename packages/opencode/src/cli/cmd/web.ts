@@ -3,6 +3,7 @@ import { UI } from "../ui"
 import { cmd } from "./cmd"
 import { withNetworkOptions, resolveNetworkOptions } from "../network"
 import { Flag } from "../../flag/flag"
+import { Instance } from "../../project/instance" // kilocode_change
 import open from "open"
 import { networkInterfaces } from "os"
 
@@ -75,7 +76,20 @@ export const WebCommand = cmd({
       open(displayUrl).catch(() => {})
     }
 
-    await new Promise(() => {})
-    await server.stop()
+    // kilocode_change start - graceful signal shutdown
+    const abort = new AbortController()
+    const shutdown = async () => {
+      try {
+        await Instance.disposeAll()
+        await server.stop(true)
+      } finally {
+        abort.abort()
+      }
+    }
+    process.on("SIGTERM", shutdown)
+    process.on("SIGINT", shutdown)
+    process.on("SIGHUP", shutdown)
+    await new Promise((resolve) => abort.signal.addEventListener("abort", resolve))
+    // kilocode_change end
   },
 })

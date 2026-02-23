@@ -85,6 +85,7 @@ export const dict = {
   "ui.permission.deny": "ปฏิเสธ",
   "ui.permission.allowAlways": "อนุญาตเสมอ",
   "ui.permission.allowOnce": "อนุญาตครั้งเดียว",
+  "ui.permission.sessionHint": '"อนุญาตเสมอ" ใช้ได้เฉพาะในเซสชันนี้เท่านั้น ใช้การตั้งค่าสำหรับสิทธิ์ส่วนกลาง',
 
   "ui.message.expand": "ขยายข้อความ",
   "ui.message.collapse": "ย่อข้อความ",

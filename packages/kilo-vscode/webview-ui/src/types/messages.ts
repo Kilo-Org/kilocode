@@ -215,6 +215,8 @@ export interface ProviderModel {
   latest?: boolean
   // Actual shape returned by the server (Provider.Model)
   limit?: { context: number; input?: number; output: number }
+  variants?: Record<string, Record<string, unknown>>
+  capabilities?: { reasoning: boolean }
 }
 
 export interface Provider {
@@ -334,6 +336,7 @@ export interface ErrorMessage {
   type: "error"
   message: string
   code?: string
+  sessionID?: string
 }
 
 export interface PartUpdatedMessage {
@@ -554,6 +557,7 @@ export interface AgentManagerWorktreeSetupMessage {
   message: string
   sessionId?: string
   branch?: string
+  worktreeId?: string
 }
 
 // Agent Manager worktree state types (mirrored from WorktreeStateManager)
@@ -603,6 +607,12 @@ export interface AgentManagerMultiVersionProgressMessage {
   total: number
   completed: number
   groupId?: string
+}
+
+// Stored variant selections loaded from extension globalState (extension → webview)
+export interface VariantsLoadedMessage {
+  type: "variantsLoaded"
+  variants: Record<string, string>
 }
 
 // Request webview to send initial prompt to a newly created session (extension → webview)
@@ -661,6 +671,7 @@ export type ExtensionMessage =
   | AgentManagerSendInitialMessage
   | SetChatBoxMessage
   | TriggerTaskMessage
+  | VariantsLoadedMessage
 
 // ============================================
 // Messages FROM webview TO extension
@@ -678,6 +689,7 @@ export interface SendMessageRequest {
   providerID?: string
   modelID?: string
   agent?: string
+  variant?: string
   files?: FileAttachment[]
 }
 
@@ -725,6 +737,13 @@ export interface RefreshProfileRequest {
 export interface OpenExternalRequest {
   type: "openExternal"
   url: string
+}
+
+export interface OpenFileRequest {
+  type: "openFile"
+  filePath: string
+  line?: number
+  column?: number
 }
 
 export interface CancelLoginRequest {
@@ -938,6 +957,18 @@ export interface SetSessionsCollapsedRequest {
   collapsed: boolean
 }
 
+// Variant persistence (webview → extension)
+export interface PersistVariantRequest {
+  type: "persistVariant"
+  key: string
+  value: string
+}
+
+// Request stored variants from extension (webview → extension)
+export interface RequestVariantsMessage {
+  type: "requestVariants"
+}
+
 export type WebviewMessage =
   | SendMessageRequest
   | AbortRequest
@@ -950,6 +981,7 @@ export type WebviewMessage =
   | LogoutRequest
   | RefreshProfileRequest
   | OpenExternalRequest
+  | OpenFileRequest
   | CancelLoginRequest
   | SetOrganizationRequest
   | WebviewReadyRequest
@@ -989,6 +1021,8 @@ export type WebviewMessage =
   | CreateMultiVersionRequest
   | SetTabOrderRequest
   | SetSessionsCollapsedRequest
+  | PersistVariantRequest
+  | RequestVariantsMessage
 
 // ============================================
 // VS Code API type

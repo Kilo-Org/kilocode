@@ -85,6 +85,8 @@ export const dict = {
   "ui.permission.deny": "Negar",
   "ui.permission.allowAlways": "Permitir sempre",
   "ui.permission.allowOnce": "Permitir uma vez",
+  "ui.permission.sessionHint":
+    '"Permitir sempre" aplica-se apenas a esta sessão. Use as configurações para permissões globais.',
 
   "ui.message.expand": "Expandir mensagem",
   "ui.message.collapse": "Recolher mensagem",

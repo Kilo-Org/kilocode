@@ -111,7 +111,7 @@ When you need more capability than free models provide, these options deliver ex
 **Strategic file mentions:**
 
 - Only include files directly relevant to the task
-- Use [`@folder/`](/docs/basic-usage/context-mentions) for broad context, specific files for targeted work
+- Use [`@folder/`](/docs/code-with-ai/agents/context-mentions) for broad context, specific files for targeted work
 
 ### Model Switching Strategies
 
@@ -233,7 +233,7 @@ When you need more capability than free models provide, these options deliver ex
 
 **Optimize conversation length:**
 
-- Use [Checkpoints](/docs/features/checkpoints) to reset context
+- Use [Checkpoints](/docs/code-with-ai/features/checkpoints) to reset context
 - Start fresh conversations for unrelated tasks
 - Archive completed work
 
@@ -257,19 +257,19 @@ When you need more capability than free models provide, these options deliver ex
 
 **Free tier foundation:**
 
-- [OpenRouter](/docs/providers/openrouter) - Free models
-- [Groq](/docs/providers/groq) - Fast inference for supported models
+- [OpenRouter](/docs/ai-providers/openrouter) - Free models
+- [Groq](/docs/ai-providers/groq) - Fast inference for supported models
 - [Z.ai](https://z.ai/model-api) - Provides a free model GLM-4.5-Flash
 
 **Budget tier options:**
 
-- [DeepSeek](/docs/providers/deepseek) - Excellent value models
-- [Mistral](/docs/providers/mistral) - Specialized coding models
+- [DeepSeek](/docs/ai-providers/deepseek) - Excellent value models
+- [Mistral](/docs/ai-providers/mistral) - Specialized coding models
 
 **Premium tier backup:**
 
-- [Anthropic](/docs/providers/anthropic) - Claude for complex reasoning
-- [OpenAI](/docs/providers/openai) - GPT-4 for critical tasks
+- [Anthropic](/docs/ai-providers/anthropic) - Claude for complex reasoning
+- [OpenAI](/docs/ai-providers/openai) - GPT-4 for critical tasks
 
 ## Measuring Success
 

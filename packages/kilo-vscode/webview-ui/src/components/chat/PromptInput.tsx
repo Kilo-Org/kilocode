@@ -13,6 +13,7 @@ import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { ModelSelector } from "./ModelSelector"
 import { ModeSwitcher } from "./ModeSwitcher"
+import { ThinkingSelector } from "./ThinkingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
 import { useImageAttachments } from "../../hooks/useImageAttachments"
 import { fileName, dirName, buildHighlightSegments } from "./prompt-input-utils"
@@ -149,6 +150,17 @@ export const PromptInput: Component = () => {
     if (!textareaRef) return
     textareaRef.style.height = "auto"
     textareaRef.style.height = `${Math.min(textareaRef.scrollHeight, 200)}px`
+  }
+
+  const handlePaste = (e: ClipboardEvent) => {
+    imageAttach.handlePaste(e)
+    // After pasting text, the textarea content changes but the layout may not
+    // have reflowed yet, causing the caret position to be visually out of sync.
+    // Defer height recalculation to after the browser completes the reflow.
+    requestAnimationFrame(() => {
+      adjustHeight()
+      syncHighlightScroll()
+    })
   }
 
   const handleInput = (e: InputEvent) => {
@@ -303,7 +315,7 @@ export const PromptInput: Component = () => {
             value={text()}
             onInput={handleInput}
             onKeyDown={handleKeyDown}
-            onPaste={imageAttach.handlePaste}
+            onPaste={handlePaste}
             onScroll={syncHighlightScroll}
             disabled={isDisabled()}
             rows={1}
@@ -314,6 +326,7 @@ export const PromptInput: Component = () => {
         <div class="prompt-input-hint-selectors">
           <ModeSwitcher />
           <ModelSelector />
+          <ThinkingSelector />
         </div>
         <div class="prompt-input-hint-actions">
           <Show

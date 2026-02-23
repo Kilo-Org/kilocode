@@ -21,7 +21,7 @@ description: "Track and manage tasks with AI-generated todo lists"
 
 **Manual triggers**:
 
-- Ask Kilo to "use the [update_todo_list tool](/docs/features/tools/update-todo-list)"
+- Ask Kilo to "use the [update_todo_list tool](/docs/automate/tools/update-todo-list)"
 - Say "create a todo list"
 
 **The bottom line**: Kilo decides what goes in the list, but you can provide feedback during approval dialogs.
@@ -30,7 +30,7 @@ description: "Track and manage tasks with AI-generated todo lists"
 
 ## How todo lists are updated
 
-Todo lists are managed with the [`update_todo_list` tool](/docs/features/tools/update-todo-list). Each time Kilo updates the list, it replaces the entire checklist with the latest view of the task.
+Todo lists are managed with the [`update_todo_list` tool](/docs/automate/tools/update-todo-list). Each time Kilo updates the list, it replaces the entire checklist with the latest view of the task.
 
 Kilo updates the list when:
 
@@ -113,7 +113,7 @@ You can disable todo lists in Settings -> Advanced -> **Enable todo list tool**.
 
 **When to use it**: Long workflows where constant interruptions slow you down.
 
-**How to enable it**: Check the [Update Todo List auto-approval settings](/docs/features/auto-approving-actions#update-todo-list).
+**How to enable it**: Check the [Update Todo List auto-approval settings](/docs/getting-started/settings/auto-approving-actions#update-todo-list).
 
 **The catch**: Less control, but faster execution.
 {% /callout %}

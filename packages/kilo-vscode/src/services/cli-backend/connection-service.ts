@@ -9,6 +9,7 @@ export type ConnectionState = "connecting" | "connected" | "disconnected" | "err
 type SSEEventListener = (event: SSEEvent) => void
 type StateListener = (state: ConnectionState) => void
 type SSEEventFilter = (event: SSEEvent) => boolean
+type NotificationDismissListener = (notificationId: string) => void
 
 /**
  * Shared connection service that owns the single ServerManager, HttpClient, and SSEClient.
@@ -25,6 +26,7 @@ export class KiloConnectionService {
 
   private readonly eventListeners: Set<SSEEventListener> = new Set()
   private readonly stateListeners: Set<StateListener> = new Set()
+  private readonly notificationDismissListeners: Set<NotificationDismissListener> = new Set()
 
   /**
    * Shared mapping used to resolve session scope for events that don't reliably include a sessionID.
@@ -140,6 +142,25 @@ export class KiloConnectionService {
   }
 
   /**
+   * Subscribe to notification dismiss events broadcast from any KiloProvider. Returns unsubscribe function.
+   */
+  onNotificationDismissed(listener: NotificationDismissListener): () => void {
+    this.notificationDismissListeners.add(listener)
+    return () => {
+      this.notificationDismissListeners.delete(listener)
+    }
+  }
+
+  /**
+   * Broadcast a notification dismiss event to all subscribed KiloProvider instances.
+   */
+  notifyNotificationDismissed(notificationId: string): void {
+    for (const listener of this.notificationDismissListeners) {
+      listener(notificationId)
+    }
+  }
+
+  /**
    * Subscribe to connection state changes. Returns unsubscribe function.
    */
   onStateChange(listener: StateListener): () => void {
@@ -157,6 +178,7 @@ export class KiloConnectionService {
     this.serverManager.dispose()
     this.eventListeners.clear()
     this.stateListeners.clear()
+    this.notificationDismissListeners.clear()
     this.messageSessionIdsByMessageId.clear()
     this.client = null
     this.sseClient = null

@@ -5,4 +5,8 @@
   [data-slot="text-part-body"] {
     margin-top: 0;
   }
+
+  [data-slot="text-part-copy-wrapper"] {
+    display: none;
+  }
 }

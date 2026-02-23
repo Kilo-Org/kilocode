@@ -35,10 +35,6 @@ export const ContributingNav: NavSection[] = [
             children: "Agent Observability",
           },
           {
-            href: "/contributing/architecture/annual-billing",
-            children: "Annual Billing",
-          },
-          {
             href: "/contributing/architecture/benchmarking",
             children: "Benchmarking",
           },
