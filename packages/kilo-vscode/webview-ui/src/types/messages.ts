@@ -615,6 +615,39 @@ export interface VariantsLoadedMessage {
   variants: Record<string, string>
 }
 
+// Agent Manager Import tab: branch list (extension → webview)
+export interface BranchInfo {
+  name: string
+  isLocal: boolean
+  isRemote: boolean
+  isDefault: boolean
+  lastCommitDate?: string
+}
+
+export interface AgentManagerBranchesMessage {
+  type: "agentManager.branches"
+  branches: BranchInfo[]
+  defaultBranch: string
+}
+
+// Agent Manager Import tab: external worktrees (extension → webview)
+export interface ExternalWorktreeInfo {
+  path: string
+  branch: string
+}
+
+export interface AgentManagerExternalWorktreesMessage {
+  type: "agentManager.externalWorktrees"
+  worktrees: ExternalWorktreeInfo[]
+}
+
+// Agent Manager Import tab: result feedback (extension → webview)
+export interface AgentManagerImportResultMessage {
+  type: "agentManager.importResult"
+  success: boolean
+  message: string
+}
+
 // Request webview to send initial prompt to a newly created session (extension → webview)
 export interface AgentManagerSendInitialMessage {
   type: "agentManager.sendInitialMessage"
@@ -672,6 +705,9 @@ export type ExtensionMessage =
   | SetChatBoxMessage
   | TriggerTaskMessage
   | VariantsLoadedMessage
+  | AgentManagerBranchesMessage
+  | AgentManagerExternalWorktreesMessage
+  | AgentManagerImportResultMessage
 
 // ============================================
 // Messages FROM webview TO extension
@@ -957,6 +993,40 @@ export interface SetSessionsCollapsedRequest {
   collapsed: boolean
 }
 
+// Agent Manager Import tab: request branch list (webview → extension)
+export interface RequestBranchesMessage {
+  type: "agentManager.requestBranches"
+}
+
+// Agent Manager Import tab: request external worktrees (webview → extension)
+export interface RequestExternalWorktreesMessage {
+  type: "agentManager.requestExternalWorktrees"
+}
+
+// Agent Manager Import tab: import from existing branch (webview → extension)
+export interface ImportFromBranchRequest {
+  type: "agentManager.importFromBranch"
+  branch: string
+}
+
+// Agent Manager Import tab: import from PR URL (webview → extension)
+export interface ImportFromPRRequest {
+  type: "agentManager.importFromPR"
+  url: string
+}
+
+// Agent Manager Import tab: import a single external worktree (webview → extension)
+export interface ImportExternalWorktreeRequest {
+  type: "agentManager.importExternalWorktree"
+  path: string
+  branch: string
+}
+
+// Agent Manager Import tab: import all external worktrees (webview → extension)
+export interface ImportAllExternalWorktreesRequest {
+  type: "agentManager.importAllExternalWorktrees"
+}
+
 // Variant persistence (webview → extension)
 export interface PersistVariantRequest {
   type: "persistVariant"
@@ -1023,6 +1093,12 @@ export type WebviewMessage =
   | SetSessionsCollapsedRequest
   | PersistVariantRequest
   | RequestVariantsMessage
+  | RequestBranchesMessage
+  | RequestExternalWorktreesMessage
+  | ImportFromBranchRequest
+  | ImportFromPRRequest
+  | ImportExternalWorktreeRequest
+  | ImportAllExternalWorktreesRequest
 
 // ============================================
 // VS Code API type

@@ -8,6 +8,7 @@
 
 import * as path from "path"
 import * as fs from "fs"
+import * as cp from "child_process"
 import simpleGit, { type SimpleGit } from "simple-git"
 import { generateBranchName } from "./branch-name"
 
@@ -25,6 +26,19 @@ export interface CreateWorktreeResult {
   branch: string
   path: string
   parentBranch: string
+}
+
+export interface BranchListItem {
+  name: string
+  isLocal: boolean
+  isRemote: boolean
+  isDefault: boolean
+  lastCommitDate?: string
+}
+
+export interface ExternalWorktreeItem {
+  path: string
+  branch: string
 }
 
 const KILOCODE_DIR = ".kilocode"
@@ -62,7 +76,9 @@ export class WorktreeManager {
       if (!exists) throw new Error(`Branch "${branch}" does not exist`)
     }
 
-    let worktreePath = path.join(this.dir, branch)
+    // Sanitize branch name for filesystem path (replace / with --)
+    const dirName = branch.replace(/\//g, "--")
+    let worktreePath = path.join(this.dir, dirName)
 
     if (fs.existsSync(worktreePath)) {
       this.log(`Worktree directory exists, cleaning up before re-creation: ${worktreePath}`)
@@ -81,7 +97,7 @@ export class WorktreeManager {
       }
       // Branch name collision -- retry with unique suffix
       branch = `${branch}-${Date.now()}`
-      worktreePath = path.join(this.dir, branch)
+      worktreePath = path.join(this.dir, branch.replace(/\//g, "--"))
       await this.git.raw(["worktree", "add", "-b", branch, worktreePath])
     }
 
@@ -279,7 +295,7 @@ export class WorktreeManager {
     return (await this.git.revparse(["--abbrev-ref", "HEAD"])).trim()
   }
 
-  private async branchExists(name: string): Promise<boolean> {
+  async branchExists(name: string): Promise<boolean> {
     try {
       const branches = await this.git.branch()
       return branches.all.includes(name) || branches.all.includes(`remotes/origin/${name}`)
@@ -288,7 +304,7 @@ export class WorktreeManager {
     }
   }
 
-  private async defaultBranch(): Promise<string> {
+  async defaultBranch(): Promise<string> {
     try {
       const head = await this.git.raw(["symbolic-ref", "refs/remotes/origin/HEAD"])
       const match = head.trim().match(/refs\/remotes\/origin\/(.+)$/)
@@ -302,5 +318,196 @@ export class WorktreeManager {
     } catch {}
 
     return "main"
+  }
+
+  // ---------------------------------------------------------------------------
+  // Import tab helpers
+  // ---------------------------------------------------------------------------
+
+  /** List all branches (local + remote) with metadata for the Import tab. */
+  async listBranches(): Promise<{ branches: BranchListItem[]; defaultBranch: string }> {
+    const defBranch = await this.defaultBranch()
+    const result = await this.git.branch(["-a", "--sort=-committerdate"])
+    const seen = new Set<string>()
+    const branches: BranchListItem[] = []
+
+    for (const key of result.all) {
+      // Skip HEAD pointer entries
+      if (key.includes("HEAD")) continue
+
+      const remote = key.startsWith("remotes/origin/")
+      const name = remote ? key.replace("remotes/origin/", "") : key
+      if (seen.has(name)) {
+        // Already have a local entry — mark it as also remote
+        const existing = branches.find((b) => b.name === name)
+        if (existing && remote) existing.isRemote = true
+        continue
+      }
+      seen.add(name)
+
+      let date: string | undefined
+      try {
+        date = (await this.git.raw(["log", "-1", "--format=%cI", key])).trim()
+      } catch {
+        // ignore
+      }
+
+      branches.push({
+        name,
+        isLocal: !remote,
+        isRemote: remote || result.all.includes(`remotes/origin/${name}`),
+        isDefault: name === defBranch,
+        lastCommitDate: date || undefined,
+      })
+    }
+
+    // Sort: default first, then by date descending
+    branches.sort((a, b) => {
+      if (a.isDefault && !b.isDefault) return -1
+      if (!a.isDefault && b.isDefault) return 1
+      if (a.lastCommitDate && b.lastCommitDate) return b.lastCommitDate.localeCompare(a.lastCommitDate)
+      return 0
+    })
+
+    return { branches, defaultBranch: defBranch }
+  }
+
+  /** Return all branch names currently checked out in any worktree (including the main repo). */
+  async checkedOutBranches(): Promise<Set<string>> {
+    const result = new Set<string>()
+    try {
+      const raw = await this.git.raw(["worktree", "list", "--porcelain"])
+      for (const block of raw.split("\n\n").filter(Boolean)) {
+        const branchLine = block.split("\n").find((l: string) => l.startsWith("branch "))
+        if (branchLine) result.add(branchLine.slice(7).replace("refs/heads/", ""))
+      }
+    } catch {
+      // Fall back to just current branch
+      try {
+        result.add(await this.currentBranch())
+      } catch {
+        // ignore
+      }
+    }
+    return result
+  }
+
+  /** List external worktrees (on-disk but not managed by our state). */
+  async listExternalWorktrees(managedPaths: Set<string>): Promise<ExternalWorktreeItem[]> {
+    const items: ExternalWorktreeItem[] = []
+    try {
+      const raw = await this.git.raw(["worktree", "list", "--porcelain"])
+      const blocks = raw.split("\n\n").filter(Boolean)
+      for (const block of blocks) {
+        const lines = block.split("\n")
+        const wtPath = lines.find((l: string) => l.startsWith("worktree "))?.slice(9)
+        const branchLine = lines.find((l: string) => l.startsWith("branch "))
+        const bare = lines.some((l: string) => l === "bare")
+        const detached = lines.some((l: string) => l === "HEAD")
+        if (!wtPath || bare) continue
+        // Skip main repo root
+        if (wtPath === this.root) continue
+        // Skip worktrees already managed by us
+        if (managedPaths.has(wtPath)) continue
+
+        const branch = branchLine ? branchLine.slice(7).replace("refs/heads/", "") : detached ? "(detached)" : "unknown"
+        items.push({ path: wtPath, branch })
+      }
+    } catch (error) {
+      this.log(`Failed to list external worktrees: ${error}`)
+    }
+    return items
+  }
+
+  /** Parse a GitHub PR URL and create a worktree from the PR branch. */
+  async createFromPR(url: string): Promise<CreateWorktreeResult> {
+    const parsed = this.parsePRUrl(url)
+    if (!parsed) throw new Error("Invalid PR URL. Expected: https://github.com/owner/repo/pull/123")
+
+    const prInfo = await this.fetchPRInfo(parsed)
+    const isFork = prInfo.isCrossRepository
+    const forkOwner = prInfo.headRepositoryOwner?.login?.toLowerCase()
+    const localBranch = isFork && forkOwner ? `${forkOwner}/${prInfo.headRefName}` : prInfo.headRefName
+
+    // Check if this branch is already checked out in any worktree
+    const checkedOut = await this.checkedOutBranches()
+    if (checkedOut.has(localBranch) || checkedOut.has(prInfo.headRefName)) {
+      throw new Error(`This PR's branch is already checked out in another worktree`)
+    }
+
+    // Fetch the branch from the correct remote
+    await this.fetchPRBranch(prInfo, parsed, isFork, forkOwner)
+
+    // For fork PRs, create a local branch from the fetched remote ref
+    if (isFork && forkOwner) {
+      const remoteRef = `${forkOwner}/${prInfo.headRefName}`
+      try {
+        await this.git.raw(["branch", "-D", localBranch])
+      } catch {
+        // branch may not exist yet — that's fine
+      }
+      await this.git.raw(["branch", localBranch, remoteRef])
+    }
+
+    return this.createWorktree({ existingBranch: localBranch })
+  }
+
+  private async fetchPRInfo(parsed: { owner: string; repo: string; number: number }) {
+    try {
+      const json = cp.execSync(
+        `gh pr view ${parsed.number} --repo ${parsed.owner}/${parsed.repo} --json headRefName,headRepositoryOwner,isCrossRepository,title`,
+        { encoding: "utf-8", cwd: this.root, timeout: 30000 },
+      )
+      return JSON.parse(json) as {
+        headRefName: string
+        headRepositoryOwner?: { login: string }
+        isCrossRepository: boolean
+        title: string
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error)
+      if (msg.includes("not found") || msg.includes("Could not resolve")) {
+        throw new Error(`PR #${parsed.number} not found in ${parsed.owner}/${parsed.repo}`)
+      }
+      if (msg.includes("command not found") || msg.includes("ENOENT") || msg.includes("is not recognized")) {
+        throw new Error("GitHub CLI (gh) is not installed. Install it from https://cli.github.com/")
+      }
+      if (msg.includes("not logged") || msg.includes("auth login")) {
+        throw new Error("Not authenticated with GitHub CLI. Run 'gh auth login' first.")
+      }
+      throw new Error(`Failed to fetch PR info: ${msg}`)
+    }
+  }
+
+  private async fetchPRBranch(
+    prInfo: { headRefName: string; headRepositoryOwner?: { login: string }; isCrossRepository: boolean },
+    parsed: { owner: string; repo: string; number: number },
+    isFork: boolean,
+    forkOwner: string | undefined,
+  ): Promise<void> {
+    if (isFork && forkOwner) {
+      // Fork PR: add the fork as a named remote, fetch from it
+      const remotes = await this.git.getRemotes()
+      if (!remotes.some((r) => r.name === forkOwner)) {
+        await this.git.addRemote(forkOwner, `https://github.com/${forkOwner}/${parsed.repo}.git`)
+      }
+      await this.git.fetch(forkOwner, prInfo.headRefName)
+    } else {
+      // Same-repo PR: fetch the branch, or fall back to PR ref
+      try {
+        await this.git.fetch("origin", prInfo.headRefName)
+      } catch {
+        await this.git.fetch(["origin", `+refs/pull/${parsed.number}/head:refs/remotes/origin/${prInfo.headRefName}`])
+      }
+    }
+  }
+
+  private parsePRUrl(url: string): { owner: string; repo: string; number: number } | null {
+    let normalized = url.trim()
+    if (!normalized.startsWith("http")) normalized = `https://${normalized}`
+    normalized = normalized.replace(/\/+$/, "")
+    const match = normalized.match(/github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)/)
+    if (!match) return null
+    return { owner: match[1], repo: match[2], number: parseInt(match[3], 10) }
   }
 }
