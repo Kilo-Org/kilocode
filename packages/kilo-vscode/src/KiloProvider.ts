@@ -6,6 +6,7 @@ import {
   type SSEEvent,
   type KiloConnectionService,
   type KilocodeNotification,
+  type Config,
 } from "./services/cli-backend"
 import { handleChatCompletionRequest } from "./services/autocomplete/chat-autocomplete/handleChatCompletionRequest"
 import { handleChatCompletionAccepted } from "./services/autocomplete/chat-autocomplete/handleChatCompletionAccepted"
@@ -18,6 +19,7 @@ import {
   buildSettingPath,
   mapSSEEventToWebviewMessage,
 } from "./kilo-provider-utils"
+import { migrateLegacySettingsIfNeeded } from "./settings-migration"
 
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "kilo-code.new.sidebarView"
@@ -537,10 +539,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage({ type: "connectionState", state: this.connectionState })
       await this.syncWebviewState("initializeConnection")
 
-      // Fetch providers and agents, then send to webview
+      // Fetch config first so settings migration can decide whether to apply changes
+      // or show a preview-only diff when CLI config is already set.
+      const cliConfig = await this.fetchAndSendConfig()
+      await migrateLegacySettingsIfNeeded({
+        context: this.extensionContext,
+        cliConfig,
+      })
+
+      // Re-fetch providers after migration so default model selection reflects
+      // any migrated VS Code settings.
       await this.fetchAndSendProviders()
       await this.fetchAndSendAgents()
-      await this.fetchAndSendConfig()
       await this.fetchAndSendNotifications()
       this.sendNotificationSettings()
 
@@ -901,7 +911,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /**
    * Fetch backend config and send to webview.
    */
-  private async fetchAndSendConfig(): Promise<void> {
+  private async fetchAndSendConfig(): Promise<Config | undefined> {
     if (!this.httpClient) {
       if (this.cachedConfigMessage) {
         this.postMessage(this.cachedConfigMessage)
@@ -919,8 +929,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
       this.cachedConfigMessage = message
       this.postMessage(message)
+      return config
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to fetch config:", error)
+      return
     }
   }
 
