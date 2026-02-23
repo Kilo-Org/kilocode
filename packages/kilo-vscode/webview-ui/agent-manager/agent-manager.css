@@ -763,7 +763,7 @@ button.am-section-toggle:hover .am-section-label {
   min-width: 460px;
 }
 
-/* Reuse am-prompt-input-container inside dialog — resizable from bottom edge */
+/* Dialog overrides for prompt-input-container — resizable from bottom edge */
 .am-nv-dialog .am-prompt-input-container {
   margin: 0;
   resize: vertical;
@@ -786,6 +786,7 @@ button.am-section-toggle:hover .am-section-label {
 .am-nv-dialog .am-prompt-input {
   color: var(--vscode-input-foreground, var(--text-base));
   resize: none;
+  width: 100%;
   min-height: 100%;
   max-height: none;
 }
