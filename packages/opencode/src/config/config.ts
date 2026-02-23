@@ -1646,6 +1646,10 @@ export namespace Config {
           return filepath
         }
       }
+      // Directory exists but no config file - create new file here
+      if (existsSync(Flag.KILO_CONFIG_DIR)) {
+        return path.join(Flag.KILO_CONFIG_DIR, "opencode.jsonc")
+      }
     }
 
     // Check ~/.opencode/ (user home directory config)
@@ -1655,6 +1659,10 @@ export namespace Config {
       if (existsSync(filepath)) {
         return filepath
       }
+    }
+    // ~/.opencode/ exists but no config file - create new file here
+    if (existsSync(homeOpencodeDir)) {
+      return path.join(homeOpencodeDir, "opencode.jsonc")
     }
 
     // Check .opencode directories (scanned from closest to project root)
@@ -1672,6 +1680,8 @@ export namespace Config {
           return filepath
         }
       }
+      // .opencode/ directory exists but no config file - create new file here
+      return path.join(dir, "opencode.jsonc")
     }
 
     // Find project config using same priority as loading (jsonc first, then json)
