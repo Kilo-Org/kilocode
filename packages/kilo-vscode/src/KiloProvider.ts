@@ -1568,8 +1568,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const activeEditor = vscode.window.activeTextEditor
     const activeRel =
       activeEditor?.document.uri.scheme === "file" ? toRelative(activeEditor.document.uri.fsPath) : undefined
-    const activeFile =
-      activeRel && controller.validateAccess(activeEditor!.document.uri.fsPath) ? activeRel : undefined
+    const activeFile = activeRel && controller.validateAccess(activeEditor!.document.uri.fsPath) ? activeRel : undefined
 
     // Shell
     const shell = vscode.env.shell || undefined

@@ -30,3 +30,4 @@ jobs:
             Closing this one out since it's been inactive for a while — not because it's a bad PR, just that older items tend to lose context over time and we'd rather start fresh if this is still relevant.
 
             Please feel free to reopen (or open a new PR) if you're still working on this. We're happy to take another look! 🙏
+          operations-per-run: 200

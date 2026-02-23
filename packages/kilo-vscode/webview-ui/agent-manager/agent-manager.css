@@ -795,6 +795,14 @@ button.am-section-toggle:hover .am-section-label {
   min-width: 460px;
 }
 
+/* Allow dropdowns to escape the dialog bounds */
+[data-component="dialog"]:has(.am-nv-dialog) [data-slot="dialog-content"] {
+  overflow: visible;
+}
+[data-component="dialog"]:has(.am-nv-dialog) [data-slot="dialog-body"] {
+  overflow: visible;
+}
+
 .am-nv-name-input {
   width: 100%;
   height: 32px;
@@ -907,6 +915,223 @@ button.am-section-toggle:hover .am-section-label {
 .am-nv-spinner {
   width: 14px;
   height: 14px;
+}
+
+.am-nv-submit {
+  width: 100%;
+  justify-content: center;
+}
+
+/* Advanced options toggle */
+
+.am-advanced-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 0;
+  border: none;
+  background: none;
+  color: var(--text-weak);
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 100ms;
+}
+
+.am-advanced-toggle:hover {
+  color: var(--text-base);
+}
+
+/* Advanced options section */
+
+.am-advanced-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.am-advanced-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.am-advanced-input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-sm);
+  background: var(--surface-base);
+  color: var(--text-base);
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 120ms;
+}
+
+.am-advanced-input:focus {
+  border-color: var(--border-focus, #007fd4);
+}
+
+.am-advanced-input::placeholder {
+  color: var(--text-weaker);
+}
+
+/* Branch selector trigger + dropdown */
+
+.am-branch-selector-wrapper {
+  position: relative;
+}
+
+.am-branch-selector-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-sm);
+  background: var(--surface-base);
+  color: var(--text-base);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 120ms;
+}
+
+.am-branch-selector-trigger:hover {
+  border-color: var(--border-hover);
+}
+
+.am-branch-selector-value {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.am-branch-badge {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--surface-raised-stronger-non-alpha);
+  color: var(--text-weak);
+  white-space: nowrap;
+}
+
+.am-branch-badge-remote {
+  background: var(--surface-raised-base);
+  opacity: 0.7;
+}
+
+.am-branch-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 100;
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-sm);
+  background: var(--surface-float-base, var(--surface-raised-base));
+  box-shadow: var(--shadow-lg-border-base, 0 8px 24px rgba(0, 0, 0, 0.3));
+  max-height: 280px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.am-branch-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-base);
+}
+
+.am-branch-search-input {
+  flex: 1;
+  border: none;
+  background: none;
+  color: var(--text-base);
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+}
+
+.am-branch-search-input::placeholder {
+  color: var(--text-weaker);
+}
+
+.am-branch-list {
+  overflow-y: auto;
+  max-height: 220px;
+  padding: 4px 0;
+}
+
+.am-branch-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  background: none;
+  color: var(--text-base);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 80ms;
+  text-align: left;
+}
+
+.am-branch-item:hover {
+  background: var(--surface-raised-base-hover);
+}
+
+.am-branch-item-active {
+  background: var(--surface-raised-base);
+}
+
+.am-branch-item-highlighted {
+  background: var(--surface-raised-base-hover);
+}
+
+/* Keyboard shortcut hints in dropdown menus */
+
+.am-menu-shortcut {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.am-menu-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--surface-raised-stronger-non-alpha);
+  color: var(--text-weak);
+  font-size: 10px;
+  font-family: inherit;
+  line-height: 1;
+}
+
+.am-branch-item-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono, monospace);
+}
+
+.am-branch-item-time {
+  font-size: 11px;
+  color: var(--text-weaker);
+  white-space: nowrap;
 }
 
 /* HoverCard popover for worktree items */

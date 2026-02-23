@@ -617,7 +617,6 @@ export interface VariantsLoadedMessage {
   variants: Record<string, string>
 }
 
-// Agent Manager Import tab: branch list (extension → webview)
 export interface BranchInfo {
   name: string
   isLocal: boolean
@@ -655,7 +654,7 @@ export interface AgentManagerSendInitialMessage {
   type: "agentManager.sendInitialMessage"
   sessionId: string
   worktreeId: string
-  text: string
+  text?: string
   providerID?: string
   modelID?: string
   agent?: string
@@ -925,6 +924,8 @@ export interface TelemetryRequest {
 // Create a new worktree (with auto-created first session)
 export interface CreateWorktreeRequest {
   type: "agentManager.createWorktree"
+  baseBranch?: string
+  branchName?: string
 }
 
 // Delete a worktree and dissociate its sessions
@@ -973,13 +974,14 @@ export interface ShowTerminalRequest {
 // Create multiple worktree sessions for the same prompt (multi-version mode)
 export interface CreateMultiVersionRequest {
   type: "agentManager.createMultiVersion"
-  text: string
+  text?: string
   versions: number
   providerID?: string
   modelID?: string
   agent?: string
   files?: FileAttachment[]
   baseBranch?: string
+  branchName?: string
 }
 
 // Persist tab order for a context (worktree ID or "local")
@@ -995,40 +997,33 @@ export interface SetSessionsCollapsedRequest {
   collapsed: boolean
 }
 
-// Agent Manager Import tab: request branch list (webview → extension)
 export interface RequestBranchesMessage {
   type: "agentManager.requestBranches"
 }
 
-// Agent Manager Import tab: request external worktrees (webview → extension)
 export interface RequestExternalWorktreesMessage {
   type: "agentManager.requestExternalWorktrees"
 }
 
-// Agent Manager Import tab: import from existing branch (webview → extension)
 export interface ImportFromBranchRequest {
   type: "agentManager.importFromBranch"
   branch: string
 }
 
-// Agent Manager Import tab: import from PR URL (webview → extension)
 export interface ImportFromPRRequest {
   type: "agentManager.importFromPR"
   url: string
 }
 
-// Agent Manager Import tab: import a single external worktree (webview → extension)
 export interface ImportExternalWorktreeRequest {
   type: "agentManager.importExternalWorktree"
   path: string
   branch: string
 }
 
-// Agent Manager Import tab: import all external worktrees (webview → extension)
 export interface ImportAllExternalWorktreesRequest {
   type: "agentManager.importAllExternalWorktrees"
 }
-
 // Variant persistence (webview → extension)
 export interface PersistVariantRequest {
   type: "persistVariant"

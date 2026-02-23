@@ -63,7 +63,12 @@ export class WorktreeManager {
     this.log = log
   }
 
-  async createWorktree(params: { prompt?: string; existingBranch?: string }): Promise<CreateWorktreeResult> {
+  async createWorktree(params: {
+    prompt?: string
+    existingBranch?: string
+    baseBranch?: string
+    branchName?: string
+  }): Promise<CreateWorktreeResult> {
     const repo = await this.git.checkIsRepo()
     if (!repo)
       throw new Error(
@@ -73,16 +78,27 @@ export class WorktreeManager {
     await this.ensureDir()
     await this.ensureGitExclude()
 
-    const parent = await this.currentBranch()
-    let branch = params.existingBranch ?? generateBranchName(params.prompt || "agent-task")
+    const parent = params.baseBranch || (await this.currentBranch())
+
+    // Validate baseBranch exists if explicitly provided
+    if (params.baseBranch) {
+      const exists = await this.branchExists(params.baseBranch)
+      if (!exists) throw new Error(`Base branch "${params.baseBranch}" does not exist`)
+      // Check if the base branch is a remote-only branch and fetch it
+      const branches = await this.git.branch()
+      if (!branches.all.includes(params.baseBranch) && branches.all.includes(`remotes/origin/${params.baseBranch}`)) {
+        await this.git.fetch("origin", params.baseBranch)
+      }
+    }
+
+    let branch = params.existingBranch ?? params.branchName ?? generateBranchName(params.prompt || "agent-task")
 
     if (params.existingBranch) {
       const exists = await this.branchExists(branch)
       if (!exists) throw new Error(`Branch "${branch}" does not exist`)
     }
 
-    // Sanitize branch name for filesystem path (replace / with --)
-    const dirName = branch.replace(/\//g, "--")
+    const dirName = branch.replace(/\//g, "-")
     let worktreePath = path.join(this.dir, dirName)
 
     if (fs.existsSync(worktreePath)) {
@@ -93,20 +109,32 @@ export class WorktreeManager {
     try {
       const args = params.existingBranch
         ? ["worktree", "add", worktreePath, branch]
-        : ["worktree", "add", "-b", branch, worktreePath]
+        : params.baseBranch
+          ? ["worktree", "add", "-b", branch, worktreePath, params.baseBranch]
+          : ["worktree", "add", "-b", branch, worktreePath]
       await this.git.raw(args)
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
+      if (msg.includes("already checked out")) {
+        // Extract worktree path from error like "fatal: 'branch' is already checked out at '/path'"
+        const match = msg.match(/already checked out at '([^']+)'/)
+        const loc = match ? match[1] : "another worktree"
+        throw new Error(`Branch "${branch}" is already checked out in worktree at: ${loc}`)
+      }
       if (!msg.includes("already exists") || params.existingBranch) {
         throw new Error(`Failed to create worktree: ${msg}`)
       }
       // Branch name collision -- retry with unique suffix
       branch = `${branch}-${Date.now()}`
-      worktreePath = path.join(this.dir, branch.replace(/\//g, "--"))
-      await this.git.raw(["worktree", "add", "-b", branch, worktreePath])
+      const retryDir = branch.replace(/\//g, "-")
+      worktreePath = path.join(this.dir, retryDir)
+      const retryArgs = params.baseBranch
+        ? ["worktree", "add", "-b", branch, worktreePath, params.baseBranch]
+        : ["worktree", "add", "-b", branch, worktreePath]
+      await this.git.raw(retryArgs)
     }
 
-    this.log(`Created worktree: ${worktreePath} (branch: ${branch})`)
+    this.log(`Created worktree: ${worktreePath} (branch: ${branch}, base: ${parent})`)
     return { branch, path: worktreePath, parentBranch: parent }
   }
 
