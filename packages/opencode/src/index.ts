@@ -42,6 +42,7 @@ if (!process.env[ENV_FEATURE]) {
 import { Config } from "./config/config"
 import { Auth } from "./auth"
 // kilocode_change end
+import { DbCommand } from "./cli/cmd/db"
 import path from "path"
 import { Global } from "./global"
 import { JsonMigration } from "./storage/json-migration"
@@ -177,6 +178,7 @@ const cli = yargs(hideBin(process.argv))
   // .command(GithubCommand) // kilocode_change (Disabled until backend is ready)
   .command(PrCommand)
   .command(SessionCommand)
+  .command(DbCommand)
   .fail((msg, err) => {
     if (
       msg?.startsWith("Unknown argument") ||

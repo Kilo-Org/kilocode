@@ -138,6 +138,13 @@ export type UserMessage = {
     [key: string]: boolean
   }
   variant?: string
+  editorContext?: {
+    visibleFiles?: Array<string>
+    openTabs?: Array<string>
+    activeFile?: string
+    shell?: string
+    timezone?: string
+  }
 }
 
 export type ProviderAuthError = {
@@ -3473,6 +3480,13 @@ export type SessionPromptData = {
     format?: OutputFormat
     system?: string
     variant?: string
+    editorContext?: {
+      visibleFiles?: Array<string>
+      openTabs?: Array<string>
+      activeFile?: string
+      shell?: string
+      timezone?: string
+    }
     parts: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
   }
   path: {
@@ -3661,6 +3675,13 @@ export type SessionPromptAsyncData = {
     format?: OutputFormat
     system?: string
     variant?: string
+    editorContext?: {
+      visibleFiles?: Array<string>
+      openTabs?: Array<string>
+      activeFile?: string
+      shell?: string
+      timezone?: string
+    }
     parts: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
   }
   path: {

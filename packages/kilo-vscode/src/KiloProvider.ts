@@ -1,3 +1,4 @@
+import * as path from "path"
 import * as vscode from "vscode"
 import { z } from "zod"
 import {
@@ -7,6 +8,8 @@ import {
   type KiloConnectionService,
   type KilocodeNotification,
 } from "./services/cli-backend"
+import type { EditorContext } from "./services/cli-backend/types"
+import { FileIgnoreController } from "./services/autocomplete/shims/FileIgnoreController"
 import { handleChatCompletionRequest } from "./services/autocomplete/chat-autocomplete/handleChatCompletionRequest"
 import { handleChatCompletionAccepted } from "./services/autocomplete/chat-autocomplete/handleChatCompletionAccepted"
 import { buildWebviewHtml } from "./utils"
@@ -47,6 +50,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private unsubscribeState: (() => void) | null = null
   private unsubscribeNotificationDismiss: (() => void) | null = null
   private webviewMessageDisposable: vscode.Disposable | null = null
+
+  /** Lazily initialized ignore controller for .kilocodeignore filtering */
+  private ignoreController: FileIgnoreController | null = null
+  private ignoreControllerDir: string | null = null
 
   /** Optional interceptor called before the standard message handler.
    *  Return null to consume the message, or return a (possibly transformed) message. */
@@ -1055,16 +1062,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // Build parts array with file context and user text
       const parts: Array<{ type: "text"; text: string } | { type: "file"; mime: string; url: string }> = []
 
-      // Inject active editor file as context
-      const editor = vscode.window.activeTextEditor
-      if (editor && editor.document.uri.scheme === "file") {
-        const url = editor.document.uri.toString()
-        const already = files?.some((f) => f.url === url)
-        if (!already) {
-          parts.push({ type: "file", mime: "text/plain", url })
-        }
-      }
-
       // Add any explicitly attached files from the webview
       if (files) {
         for (const f of files) {
@@ -1074,11 +1071,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       parts.push({ type: "text", text })
 
+      const editorContext = await this.gatherEditorContext()
+
       await this.httpClient.sendMessage(targetSessionID, parts, workspaceDir, {
         providerID,
         modelID,
         agent,
         variant,
+        editorContext,
       })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to send message:", error)
@@ -1507,6 +1507,86 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /**
+   * Gather VS Code editor context to send alongside messages to the CLI backend.
+   */
+  /**
+   * Get or create a FileIgnoreController for the current workspace directory.
+   * Reinitializes if the workspace directory has changed.
+   */
+  private async getIgnoreController(workspaceDir: string): Promise<FileIgnoreController> {
+    if (this.ignoreController && this.ignoreControllerDir === workspaceDir) {
+      return this.ignoreController
+    }
+    const controller = new FileIgnoreController(workspaceDir)
+    await controller.initialize()
+    this.ignoreController = controller
+    this.ignoreControllerDir = workspaceDir
+    return controller
+  }
+
+  private async gatherEditorContext(): Promise<EditorContext> {
+    const workspaceDir = this.getWorkspaceDirectory()
+    const controller = await this.getIgnoreController(workspaceDir)
+
+    const toRelative = (fsPath: string): string | undefined => {
+      if (!workspaceDir) {
+        return undefined
+      }
+      const relative = path.relative(workspaceDir, fsPath)
+      if (relative.startsWith("..")) {
+        return undefined
+      }
+      return relative
+    }
+
+    // Visible files (capped to avoid bloating context, filtered through .kilocodeignore)
+    const visibleFiles = vscode.window.visibleTextEditors
+      .map((e) => e.document.uri)
+      .filter((uri) => uri.scheme === "file")
+      .map((uri) => toRelative(uri.fsPath))
+      .filter((p): p is string => p !== undefined && controller.validateAccess(path.resolve(workspaceDir, p)))
+      .slice(0, 200)
+
+    // Open tabs — use instanceof TabInputText to exclude notebooks, diffs, custom editors
+    const openTabSet = new Set<string>()
+    for (const group of vscode.window.tabGroups.all) {
+      for (const tab of group.tabs) {
+        if (tab.input instanceof vscode.TabInputText) {
+          const uri = tab.input.uri
+          if (uri.scheme === "file") {
+            const rel = toRelative(uri.fsPath)
+            if (rel && controller.validateAccess(uri.fsPath)) {
+              openTabSet.add(rel)
+            }
+          }
+        }
+      }
+    }
+    const openTabs = [...openTabSet].slice(0, 20)
+
+    // Active file (also filtered through .kilocodeignore)
+    const activeEditor = vscode.window.activeTextEditor
+    const activeRel =
+      activeEditor?.document.uri.scheme === "file" ? toRelative(activeEditor.document.uri.fsPath) : undefined
+    const activeFile =
+      activeRel && controller.validateAccess(activeEditor!.document.uri.fsPath) ? activeRel : undefined
+
+    // Shell
+    const shell = vscode.env.shell || undefined
+
+    // Timezone
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || undefined
+
+    return {
+      ...(visibleFiles.length > 0 ? { visibleFiles } : {}),
+      ...(openTabs.length > 0 ? { openTabs } : {}),
+      ...(activeFile ? { activeFile } : {}),
+      ...(shell ? { shell } : {}),
+      ...(timezone ? { timezone } : {}),
+    }
+  }
+
+  /**
    * Get the workspace directory for a session.
    * Checks session directory overrides first (e.g., worktree paths), then falls back to workspace root.
    */
@@ -1544,5 +1624,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.webviewMessageDisposable?.dispose()
     this.trackedSessionIds.clear()
     this.sessionDirectories.clear()
+    this.ignoreController?.dispose()
   }
 }

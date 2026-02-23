@@ -77,6 +77,10 @@ kilo web             # Start server + open web interface
 - **Logic Changes:** Explain how you verified it works.
 - **PR Titles:** Follow conventional commit standards (`feat:`, `fix:`, `docs:`, etc.).
 
+### Issue and PR Lifecycle
+
+To keep our backlog manageable, we automatically close inactive issues and PRs after a period of inactivity. This isn't a judgment on quality — older items tend to lose context over time and we'd rather start fresh if they're still relevant. Feel free to reopen or create a new issue/PR if you're still working on something!
+
 ### Style Preferences
 
 - **Functions:** Keep logic within a single function unless breaking it out adds clear reuse.
