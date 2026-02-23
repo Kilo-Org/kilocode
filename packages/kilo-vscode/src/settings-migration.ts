@@ -134,34 +134,37 @@ export async function migrateLegacySettingsIfNeeded(input: {
   if (!context) return
   if (context.globalState.get<boolean>(MIGRATION_STATE_KEY)) return
 
-  const extension = vscode.extensions.getExtension("kilocode.kilo-code")
-  const steps = collectSteps(extension)
-  if (steps.length === 0) {
-    await context.globalState.update(MIGRATION_STATE_KEY, true)
-    return
-  }
+  try {
+    const extension = vscode.extensions.getExtension("kilocode.kilo-code")
+    const steps = collectSteps(extension)
+    if (steps.length === 0) {
+      return
+    }
 
-  if (hasCliOverrides(input.cliConfig)) {
-    const action = "View diff"
+    if (hasCliOverrides(input.cliConfig)) {
+      const action = "View diff"
+      const selected = await vscode.window.showInformationMessage(
+        `Kilo detected ${steps.length} legacy settings from the old extension. CLI config is already set, so changes were not auto-applied.`,
+        action,
+      )
+      if (selected === action) {
+        await showDiffDocument("Kilo Settings Migration Preview (Not Applied)", steps)
+      }
+      return
+    }
+
+    await applySteps(steps)
+    const action = "View migrated settings"
     const selected = await vscode.window.showInformationMessage(
-      `Kilo detected ${steps.length} legacy settings from the old extension. CLI config is already set, so changes were not auto-applied.`,
+      `Migrated ${steps.length} legacy Kilo setting${steps.length === 1 ? "" : "s"} to the new namespace.`,
       action,
     )
     if (selected === action) {
-      await showDiffDocument("Kilo Settings Migration Preview (Not Applied)", steps)
+      await showDiffDocument("Kilo Settings Migration (Applied)", steps)
     }
+  } catch (error) {
+    console.error("[Kilo New] Settings migration failed:", error)
+  } finally {
     await context.globalState.update(MIGRATION_STATE_KEY, true)
-    return
   }
-
-  await applySteps(steps)
-  const action = "View migrated settings"
-  const selected = await vscode.window.showInformationMessage(
-    `Migrated ${steps.length} legacy Kilo setting${steps.length === 1 ? "" : "s"} to the new namespace.`,
-    action,
-  )
-  if (selected === action) {
-    await showDiffDocument("Kilo Settings Migration (Applied)", steps)
-  }
-  await context.globalState.update(MIGRATION_STATE_KEY, true)
 }
