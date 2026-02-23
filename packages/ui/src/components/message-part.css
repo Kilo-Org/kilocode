@@ -586,6 +586,24 @@
     margin: 4px 0 0 0;
     text-align: right;
   }
+
+  [data-slot="permission-targets"] {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 8px;
+    max-height: 120px;
+    overflow-y: auto;
+  }
+
+  [data-slot="permission-target"] {
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-small);
+    line-height: var(--line-height-large);
+    color: var(--text-base);
+    word-break: break-all;
+    white-space: normal;
+  }
 }
 
 [data-component="question-prompt"] {

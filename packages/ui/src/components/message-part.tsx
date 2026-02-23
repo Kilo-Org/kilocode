@@ -18,6 +18,7 @@ import {
   FilePart,
   Message as MessageType,
   Part as PartType,
+  PermissionRequest,
   ReasoningPart,
   TextPart,
   ToolPart,
@@ -174,6 +175,31 @@ export function getSessionToolParts(store: ReturnType<typeof useData>["store"], 
 }
 
 import type { IconProps } from "./icon"
+
+function addPermissionTarget(targets: string[], value: unknown) {
+  if (typeof value !== "string") return
+  const trimmed = value.trim()
+  if (!trimmed) return
+  if (targets.includes(trimmed)) return
+  targets.push(trimmed)
+}
+
+function permissionTargets(request?: PermissionRequest): string[] {
+  if (!request) return []
+
+  const targets: string[] = []
+  for (const pattern of request.patterns ?? []) {
+    addPermissionTarget(targets, pattern)
+  }
+
+  const metadata = request.metadata ?? {}
+  addPermissionTarget(targets, metadata.path)
+  addPermissionTarget(targets, metadata.filePath)
+  addPermissionTarget(targets, metadata.filepath)
+  addPermissionTarget(targets, metadata.parentDir)
+
+  return targets
+}
 
 export type ToolInfo = {
   icon: IconProps["name"]
@@ -602,6 +628,7 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
   }
 
   const render = ToolRegistry.render(part.tool) ?? GenericTool
+  const permissionTargetList = createMemo(() => permissionTargets(permission()))
 
   return (
     <div data-component="tool-part-wrapper" data-permission={showPermission()} data-question={showQuestion()}>
@@ -659,6 +686,11 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
               {i18n.t("ui.permission.allowOnce")}
             </Button>
           </div>
+          <Show when={permissionTargetList().length > 0}>
+            <div data-slot="permission-targets">
+              <For each={permissionTargetList()}>{(target) => <code data-slot="permission-target">{target}</code>}</For>
+            </div>
+          </Show>
           <p data-slot="permission-hint">{i18n.t("ui.permission.sessionHint")}</p>
         </div>
       </Show>
@@ -993,6 +1025,7 @@ ToolRegistry.register({
       const permissions = data.store.permission?.[sessionId] ?? []
       return permissions[0]
     })
+    const childPermissionTargets = createMemo(() => permissionTargets(childPermission()))
 
     const childToolPart = createMemo(() => {
       const perm = childPermission()
@@ -1065,6 +1098,13 @@ ToolRegistry.register({
                     {i18n.t("ui.permission.allowOnce")}
                   </Button>
                 </div>
+                <Show when={childPermissionTargets().length > 0}>
+                  <div data-slot="permission-targets">
+                    <For each={childPermissionTargets()}>
+                      {(target) => <code data-slot="permission-target">{target}</code>}
+                    </For>
+                  </div>
+                </Show>
                 <p data-slot="permission-hint">{i18n.t("ui.permission.sessionHint")}</p>
               </div>
             </>
