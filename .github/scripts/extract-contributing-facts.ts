@@ -239,7 +239,7 @@ async function readFileSafe(path: string): Promise<string | null> {
   try {
     return await Bun.file(path).text()
   } catch (err) {
-    throw new Error(`Could not read ${path}: ${err}`)
+    return null
   }
 }
 
@@ -262,7 +262,7 @@ async function main() {
   const templates: ParsedTemplate[] = []
 
   for (const file of templateFiles) {
-    const raw = await readFileSafe(`.github/ISSUE_TEMPLATE/${file}`)
+    const raw = await readFileRequired(`.github/ISSUE_TEMPLATE/${file}`)
     templates.push(parseIssueTemplate(raw, file))
   }
 
