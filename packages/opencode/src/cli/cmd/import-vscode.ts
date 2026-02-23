@@ -1,3 +1,4 @@
+// kilocode_change - new file: VS Code session import command
 import type { Argv } from "yargs"
 import { cmd } from "./cmd"
 import { bootstrap } from "../bootstrap"
@@ -127,12 +128,17 @@ export function transformVSCodeMessages(
     summary: { additions: 0, deletions: 0, files: 0 },
   }
   
+  // kilocode_change - track role alternation properly instead of using index
+  let lastRole: "user" | "assistant" = "assistant"
+  
   const kiloMessages = messages
     .filter((m) => m.type === "say" && m.say === "text" && m.text)
     .map((m, idx) => {
       const msgId = `msg_${String(idx + 1).padStart(4, "0")}`
       const partId = `prt_${String(idx + 1).padStart(4, "0")}`
-      const role = idx % 2 === 0 ? "user" : "assistant"
+      // Alternate roles based on last message, not index
+      const role: "user" | "assistant" = lastRole === "user" ? "assistant" : "user"
+      lastRole = role
       
       return {
         info: {
@@ -142,7 +148,8 @@ export function transformVSCodeMessages(
           time: { created: m.ts || now },
           summary: { diffs: [] },
           agent: "code",
-          model: { providerID: "kilo", modelID: "z-ai/glm-5:free" },
+          // kilocode_change - use imported model instead of hardcoded
+          model: { providerID: "kilo", modelID: "imported" },
         },
         parts: [
           {
