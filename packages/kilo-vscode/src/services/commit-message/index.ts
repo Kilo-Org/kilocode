@@ -1,6 +1,7 @@
 import * as vscode from "vscode"
 import type { KiloConnectionService } from "../cli-backend/connection-service"
 import type { HttpClient } from "../cli-backend/http-client"
+import { t } from "../../i18n"
 
 let lastGeneratedMessage: string | undefined
 let lastWorkspacePath: string | undefined
@@ -25,7 +26,7 @@ export function registerCommitMessageService(
   const command = vscode.commands.registerCommand("kilo-code.new.generateCommitMessage", async () => {
     const extension = vscode.extensions.getExtension<GitExtensionExports>("vscode.git")
     if (!extension) {
-      vscode.window.showErrorMessage("Git extension not found")
+      vscode.window.showErrorMessage(t("git.commitMessage.noExtension"))
       return
     }
 
@@ -36,7 +37,7 @@ export function registerCommitMessageService(
     const git = extension.exports?.getAPI(1)
     const repository = git?.repositories[0]
     if (!repository) {
-      vscode.window.showErrorMessage("No Git repository found")
+      vscode.window.showErrorMessage(t("git.commitMessage.noRepository"))
       return
     }
 
@@ -44,11 +45,11 @@ export function registerCommitMessageService(
     try {
       client = connectionService.getHttpClient()
     } catch {
-      vscode.window.showErrorMessage("Kilo backend is not connected. Please wait for the connection to establish.")
+      vscode.window.showErrorMessage(t("git.commitMessage.notConnected"))
       return
     }
     if (!client) {
-      vscode.window.showErrorMessage("Kilo backend is not connected. Please wait for the connection to establish.")
+      vscode.window.showErrorMessage(t("git.commitMessage.notConnected"))
       return
     }
 
@@ -70,7 +71,7 @@ export function registerCommitMessageService(
       .then(undefined, (error: unknown) => {
         const msg = error instanceof Error ? error.message : String(error)
         console.error("[Kilo New] Failed to generate commit message:", msg)
-        vscode.window.showErrorMessage(`Failed to generate commit message: ${msg}`)
+        vscode.window.showErrorMessage(t("git.commitMessage.failed", { message: msg }))
       })
   })
 
