@@ -1488,6 +1488,34 @@ export namespace Config {
       return globalConfigFile()
     }
 
+    // Check .opencode directories (highest priority after KILO_CONFIG)
+    // These are scanned from closest to project root (reverse order gives closest first priority)
+    const opencodeDirs = await Array.fromAsync(
+      Filesystem.up({
+        targets: [".opencode"],
+        start: Instance.directory,
+        stop: Instance.worktree,
+      }),
+    )
+    for (const dir of opencodeDirs.toReversed()) {
+      for (const file of ["opencode.jsonc", "opencode.json"]) {
+        const filepath = path.join(dir, file)
+        if (existsSync(filepath)) {
+          return filepath
+        }
+      }
+    }
+
+    // Check KILO_CONFIG_DIR
+    if (Flag.KILO_CONFIG_DIR) {
+      for (const file of ["opencode.jsonc", "opencode.json"]) {
+        const filepath = path.join(Flag.KILO_CONFIG_DIR, file)
+        if (existsSync(filepath)) {
+          return filepath
+        }
+      }
+    }
+
     // Find project config using same priority as loading (jsonc first, then json)
     for (const file of ["opencode.jsonc", "opencode.json"]) {
       const found = await Filesystem.findUp(file, Instance.directory, Instance.worktree)
