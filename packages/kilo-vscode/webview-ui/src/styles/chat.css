@@ -690,10 +690,11 @@
 }
 
 /* ============================================
-   Text Part Copy Button Fix
-   In the sidebar, the text-part copy button overflows into the
-   element above because the gap between messages is smaller.
-   Position it inside the text body instead of above it.
+   Text Part Copy Button
+   Override kilo-ui's display:none to show the copy button on
+   assistant text parts. Position it inside the text body instead
+   of above it so it doesn't overflow into the element above
+   (the gap between messages is smaller in the sidebar).
    ============================================ */
 
 [data-component="text-part"] [data-slot="text-part-body"] {
@@ -701,6 +702,7 @@
 }
 
 [data-component="text-part"] [data-slot="text-part-copy-wrapper"] {
+  display: block;
   top: 4px;
   right: 4px;
 }
