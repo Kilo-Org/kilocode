@@ -173,7 +173,7 @@ for (const item of targets) {
         cpu: [item.arch],
         repository: {
           type: "git",
-          url: "https://github.com/Kilo-Org/kilo",
+          url: "https://github.com/Kilo-Org/kilocode",
         },
       },
       null,
