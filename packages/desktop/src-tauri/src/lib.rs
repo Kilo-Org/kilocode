@@ -566,7 +566,7 @@ async fn initialize(app: AppHandle) {
     // come from any invocation of the sidecar CLI. The progress is captured by a stdout stream interceptor.
     // Then in the loading task, we wait for sqlite migration to complete before
     // starting our health check against the server, otherwise long migrations could result in a timeout.
-    let needs_sqlite_migration = option_env!("KILO_SQLITE").is_some() && !sqlite_file_exists();
+    let needs_sqlite_migration = !sqlite_file_exists();
     let sqlite_done = needs_sqlite_migration.then(|| {
         tracing::info!(
             path = %opencode_db_path().expect("failed to get db path").display(),
@@ -805,7 +805,7 @@ fn opencode_db_path() -> Result<PathBuf, &'static str> {
         }
     };
 
-    Ok(data_home.join("opencode").join("opencode.db"))
+    Ok(data_home.join("kilo").join("kilo.db"))
 }
 
 // Creates a `once` listener for the specified event and returns a future that resolves

@@ -398,7 +398,7 @@ jobs:
           persist-credentials: false
 
       - name: Run Kilo
-        uses: Kilo-Org/kilo/github@latest${envStr}
+        uses: Kilo-Org/kilocode/github@latest${envStr}
         with:
           model: ${provider}/${model}`,
             )

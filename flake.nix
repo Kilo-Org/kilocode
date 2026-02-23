@@ -88,12 +88,12 @@
               filename="kilo-$target$ext"
 
               if [ "$VERSION" = "latest" ]; then
-                url="https://github.com/Kilo-Org/kilo/releases/latest/download/$filename"
+                url="https://github.com/Kilo-Org/kilocode/releases/latest/download/$filename"
                 echo "Installing latest version of kilo..." >&2
               else
                 # Strip leading 'v' if present
                 VERSION="''${VERSION#v}"
-                url="https://github.com/Kilo-Org/kilo/releases/download/v''${VERSION}/$filename"
+                url="https://github.com/Kilo-Org/kilocode/releases/download/v''${VERSION}/$filename"
                 echo "Installing kilo version $VERSION..." >&2
               fi
 
@@ -107,7 +107,7 @@
               echo "Downloading from $url..." >&2
               if ! ${pkgs.curl}/bin/curl -fsSL -o "$tmp_dir/$filename" "$url"; then
                 echo "Error: Failed to download kilo from $url" >&2
-                echo "Please check your internet connection or visit https://github.com/Kilo-Org/kilo/releases" >&2
+                echo "Please check your internet connection or visit https://github.com/Kilo-Org/kilocode/releases" >&2
                 exit 1
               fi
 
