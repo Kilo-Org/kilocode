@@ -818,6 +818,26 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
           },
         },
       }),
+    // kilocode_change start - Avian provider (OpenAI-compatible)
+    avian: Effect.fnUntraced(function* (input: Info) {
+      const env = yield* dep.env()
+      const auth = yield* dep.auth(input.id)
+      const config = yield* dep.config()
+      const hasKey =
+        input.env.some((item) => env[item]) ||
+        Boolean(auth) ||
+        Boolean(config.provider?.["avian"]?.options?.apiKey)
+
+      if (!hasKey) {
+        return { autoload: false }
+      }
+
+      return {
+        autoload: Object.keys(input.models).length > 0,
+        options: {},
+      }
+    }),
+    // kilocode_change end
     kilo: () =>
       Effect.succeed({
         autoload: false,
