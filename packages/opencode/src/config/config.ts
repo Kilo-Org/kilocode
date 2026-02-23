@@ -6,6 +6,7 @@ import { BusEvent } from "@/bus/bus-event"
 import { Control } from "@/control"
 import { Installation } from "@/installation"
 import { iife } from "@/util/iife"
+import { Lock } from "@/util/lock"
 import { proxied } from "@/util/proxied"
 import { NamedError } from "@opencode-ai/util/error"
 import { constants, existsSync } from "fs"
@@ -1494,6 +1495,10 @@ export namespace Config {
   export async function persistMcpToggle(name: string, enabled: boolean) {
     // kilocode_change: Find the file where this MCP server is actually defined
     const configPath = await findMcpConfigPath(name)
+
+    // kilocode_change: Serialize config file writes to prevent race conditions
+    using _lock = await Lock.write(configPath)
+
     const file = Bun.file(configPath)
 
     let text = "{}"
@@ -1549,6 +1554,18 @@ export namespace Config {
 
     // Check inline config content (can't write here, fall through)
     // Skip: Flag.KILO_CONFIG_CONTENT is read-only
+    if (Flag.KILO_CONFIG_CONTENT) {
+      try {
+        const inlineConfig = JSON.parse(Flag.KILO_CONFIG_CONTENT)
+        if (inlineConfig?.mcp?.[mcpName]) {
+          log.warn("MCP server is defined in KILO_CONFIG_CONTENT (read-only), toggle will be written to user config", {
+            mcp: mcpName,
+          })
+        }
+      } catch (err) {
+        log.debug("failed to parse KILO_CONFIG_CONTENT", { error: err })
+      }
+    }
 
     // Check custom config path
     if (Flag.KILO_CONFIG) {
@@ -1628,7 +1645,7 @@ export namespace Config {
 
   async function resolveConfigPath() {
     // kilocode_change: Use same resolution logic as loading to ensure we write to the same file
-    // Resolution order follows loading precedence (low to high):
+    // Resolution order follows loading precedence (high to low):
     // 1. KILO_CONFIG (explicit flag, highest priority)
     // 2. KILO_CONFIG_DIR (if set)
     // 3. ~/.opencode/
