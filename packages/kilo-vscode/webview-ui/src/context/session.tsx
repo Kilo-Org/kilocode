@@ -399,8 +399,8 @@ export const SessionProvider: ParentComponent = (props) => {
           break
 
         case "cloudSessionImported":
-          setImportingCloudSessionId(null)
           handleSessionCreated(message.session)
+          setImportingCloudSessionId(null)
           break
 
         case "cloudSessionImportFailed":

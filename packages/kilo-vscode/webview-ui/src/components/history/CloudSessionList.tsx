@@ -5,7 +5,7 @@
  * Uses kilo-ui List component for consistent styling with SessionList.
  */
 
-import { Component, Show, createSignal, createEffect, onMount } from "solid-js"
+import { Component, Show, createSignal, createEffect, onMount, batch } from "solid-js"
 import { List } from "@kilocode/kilo-ui/list"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Button } from "@kilocode/kilo-ui/button"
@@ -70,8 +70,10 @@ const CloudSessionList: Component<CloudSessionListProps> = (props) => {
 
   const handleSelect = (s: CloudSession | undefined) => {
     if (!s || session.importingCloudSessionId()) return
-    setPendingImport(s.session_id)
-    session.importCloudSession(s.session_id)
+    batch(() => {
+      setPendingImport(s.session_id)
+      session.importCloudSession(s.session_id)
+    })
   }
 
   const handleLoadMore = () => {
