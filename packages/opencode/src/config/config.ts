@@ -2,6 +2,7 @@ import { BunProc } from "@/bun"
 import { PackageRegistry } from "@/bun/registry"
 import { Bus } from "@/bus"
 import { GlobalBus } from "@/bus/global"
+import { BusEvent } from "@/bus/bus-event"
 import { Control } from "@/control"
 import { Installation } from "@/installation"
 import { iife } from "@/util/iife"
@@ -27,23 +28,33 @@ import { Global } from "../global"
 import { LSPServer } from "../lsp/server"
 import { Instance } from "../project/instance"
 import { ModelsDev } from "../provider/models"
-import { Event } from "../server/event"
+import { Event as ServerEvent } from "../server/event"
 import { Filesystem } from "../util/filesystem"
 import { lazy } from "../util/lazy"
 import { Log } from "../util/log"
 import { ConfigMarkdown } from "./markdown"
 
-import { State } from "@/project/state"; // kilocode_change
-import { IgnoreMigrator } from "../kilocode/ignore-migrator"; // kilocode_change
-import { McpMigrator } from "../kilocode/mcp-migrator"; // kilocode_change
-import { ModesMigrator } from "../kilocode/modes-migrator"; // kilocode_change
-import { RulesMigrator } from "../kilocode/rules-migrator"; // kilocode_change
-import { WorkflowsMigrator } from "../kilocode/workflows-migrator"; // kilocode_change
+import { State } from "@/project/state" // kilocode_change
+import { IgnoreMigrator } from "../kilocode/ignore-migrator" // kilocode_change
+import { McpMigrator } from "../kilocode/mcp-migrator" // kilocode_change
+import { ModesMigrator } from "../kilocode/modes-migrator" // kilocode_change
+import { RulesMigrator } from "../kilocode/rules-migrator" // kilocode_change
+import { WorkflowsMigrator } from "../kilocode/workflows-migrator" // kilocode_change
 
 export namespace Config {
   const ModelId = z.string().meta({ $ref: "https://models.dev/model-schema.json#/$defs/Model" })
 
   const log = Log.create({ service: "config" })
+
+  // kilocode_change: Export Config.Event for config change notifications
+  export const Event = {
+    Changed: BusEvent.define(
+      "config.changed",
+      z.object({
+        directory: z.string(),
+      }),
+    ),
+  }
 
   // Managed settings directory for enterprise deployments (highest priority, admin-controlled)
   // These settings override all user and project settings
@@ -1496,6 +1507,16 @@ export namespace Config {
     await Bun.write(configPath, result)
     // kilocode_change: Dispose only the Config state, not the entire instance (preserves MCP connections)
     await State.disposeEntry(Instance.directory, initConfigState)
+    // kilocode_change: Emit config changed event to notify UI/watchers
+    GlobalBus.emit("event", {
+      directory: Instance.directory,
+      payload: {
+        type: Event.Changed.type,
+        properties: {
+          directory: Instance.directory,
+        },
+      },
+    })
   }
 
   async function findMcpConfigPath(mcpName: string): Promise<string> {
@@ -1604,6 +1625,14 @@ export namespace Config {
 
   async function resolveConfigPath() {
     // kilocode_change: Use same resolution logic as loading to ensure we write to the same file
+    // Resolution order follows loading precedence (low to high):
+    // 1. KILO_CONFIG (explicit flag, highest priority)
+    // 2. KILO_CONFIG_DIR (if set)
+    // 3. ~/.opencode/
+    // 4. Project .opencode/ directories (closest first)
+    // 5. Project config files (opencode.jsonc/json in project root)
+    // 6. Global config (fallback)
+
     // Check if custom config path is set via flag
     if (Flag.KILO_CONFIG) {
       return Flag.KILO_CONFIG
@@ -1614,18 +1643,10 @@ export namespace Config {
       return globalConfigFile()
     }
 
-    // Check .opencode directories (highest priority after KILO_CONFIG)
-    // These are scanned from closest to project root (reverse order gives closest first priority)
-    const opencodeDirs = await Array.fromAsync(
-      Filesystem.up({
-        targets: [".opencode"],
-        start: Instance.directory,
-        stop: Instance.worktree,
-      }),
-    )
-    for (const dir of opencodeDirs.toReversed()) {
+    // Check KILO_CONFIG_DIR (higher precedence than ~/.opencode/)
+    if (Flag.KILO_CONFIG_DIR) {
       for (const file of ["opencode.jsonc", "opencode.json"]) {
-        const filepath = path.join(dir, file)
+        const filepath = path.join(Flag.KILO_CONFIG_DIR, file)
         if (existsSync(filepath)) {
           return filepath
         }
@@ -1641,10 +1662,17 @@ export namespace Config {
       }
     }
 
-    // Check KILO_CONFIG_DIR
-    if (Flag.KILO_CONFIG_DIR) {
+    // Check .opencode directories (scanned from closest to project root)
+    const opencodeDirs = await Array.fromAsync(
+      Filesystem.up({
+        targets: [".opencode"],
+        start: Instance.directory,
+        stop: Instance.worktree,
+      }),
+    )
+    for (const dir of opencodeDirs.toReversed()) {
       for (const file of ["opencode.jsonc", "opencode.json"]) {
-        const filepath = path.join(Flag.KILO_CONFIG_DIR, file)
+        const filepath = path.join(dir, file)
         if (existsSync(filepath)) {
           return filepath
         }
@@ -1768,7 +1796,7 @@ export namespace Config {
         GlobalBus.emit("event", {
           directory: "global",
           payload: {
-            type: Event.Disposed.type,
+            type: ServerEvent.Disposed.type,
             properties: {},
           },
         })
