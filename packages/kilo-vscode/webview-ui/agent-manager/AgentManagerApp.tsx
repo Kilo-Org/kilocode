@@ -179,6 +179,7 @@ function buildShortcutCategories(bindings: Record<string, string>): ShortcutCate
         { label: "Previous item", binding: bindings.previousSession ?? "" },
         { label: "Next item", binding: bindings.nextSession ?? "" },
         { label: "New worktree", binding: bindings.newWorktree ?? "" },
+        { label: "Advanced worktree", binding: bindings.advancedWorktree ?? "" },
         { label: "Delete worktree", binding: bindings.closeWorktree ?? "" },
       ],
     },
@@ -1657,25 +1658,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
                 <ModeSwitcherBase agents={session.agents()} value={agent()} onSelect={setAgent} />
               </Show>
             </div>
-            <div class="prompt-input-hint-actions">
-              <Tooltip value={`${isMac ? "\u2318" : "Ctrl+"}Enter`} placement="top">
-                <Button variant="primary" size="small" onClick={handleSubmit} disabled={!canSubmit()}>
-                  <Show
-                    when={!starting()}
-                    fallback={
-                      <>
-                        <Spinner class="am-nv-spinner" />
-                        <span>Creating...</span>
-                      </>
-                    }
-                  >
-                    <svg data-slot="icon-svg" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                      <path d="M1.5 1.5L14.5 8L1.5 14.5V9L10 8L1.5 7V1.5Z" />
-                    </svg>
-                  </Show>
-                </Button>
-              </Tooltip>
-            </div>
+            <div class="prompt-input-hint-actions" />
           </div>
         </div>
 
@@ -1826,6 +1809,21 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
             <span class="am-nv-version-hint">{versions()} worktrees will run in parallel</span>
           </Show>
         </div>
+
+        {/* Submit button */}
+        <Button variant="primary" size="large" class="am-nv-submit" onClick={handleSubmit} disabled={!canSubmit()}>
+          <Show
+            when={!starting()}
+            fallback={
+              <>
+                <Spinner class="am-nv-spinner" />
+                <span>Creating...</span>
+              </>
+            }
+          >
+            Create Workspace
+          </Show>
+        </Button>
       </div>
     </Dialog>
   )

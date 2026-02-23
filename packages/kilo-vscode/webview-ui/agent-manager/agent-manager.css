@@ -876,6 +876,11 @@ button.am-section-toggle:hover .am-section-label {
   height: 14px;
 }
 
+.am-nv-submit {
+  width: 100%;
+  justify-content: center;
+}
+
 /* Advanced options toggle */
 
 .am-advanced-toggle {
