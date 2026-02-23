@@ -27,6 +27,14 @@ export interface CreateWorktreeResult {
   parentBranch: string
 }
 
+export interface BranchInfo {
+  name: string
+  isLocal: boolean
+  isRemote: boolean
+  lastCommitDate: number
+  isDefault: boolean
+}
+
 const KILOCODE_DIR = ".kilocode"
 const SESSION_ID_FILE = "session-id"
 const METADATA_FILE = "metadata.json"
@@ -44,7 +52,12 @@ export class WorktreeManager {
     this.log = log
   }
 
-  async createWorktree(params: { prompt?: string; existingBranch?: string }): Promise<CreateWorktreeResult> {
+  async createWorktree(params: {
+    prompt?: string
+    existingBranch?: string
+    baseBranch?: string
+    branchName?: string
+  }): Promise<CreateWorktreeResult> {
     const repo = await this.git.checkIsRepo()
     if (!repo)
       throw new Error(
@@ -54,15 +67,29 @@ export class WorktreeManager {
     await this.ensureDir()
     await this.ensureGitExclude()
 
-    const parent = await this.currentBranch()
-    let branch = params.existingBranch ?? generateBranchName(params.prompt || "agent-task")
+    const parent = params.baseBranch || (await this.currentBranch())
+
+    // Validate baseBranch exists if explicitly provided
+    if (params.baseBranch) {
+      const exists = await this.branchExists(params.baseBranch)
+      if (!exists) throw new Error(`Base branch "${params.baseBranch}" does not exist`)
+      // Check if the base branch is a remote-only branch and fetch it
+      const branches = await this.git.branch()
+      if (!branches.all.includes(params.baseBranch) && branches.all.includes(`remotes/origin/${params.baseBranch}`)) {
+        await this.git.fetch("origin", params.baseBranch)
+      }
+    }
+
+    let branch = params.existingBranch ?? params.branchName ?? generateBranchName(params.prompt || "agent-task")
 
     if (params.existingBranch) {
       const exists = await this.branchExists(branch)
       if (!exists) throw new Error(`Branch "${branch}" does not exist`)
     }
 
-    let worktreePath = path.join(this.dir, branch)
+    // Sanitize directory name — replace slashes with dashes for filesystem safety
+    const dirName = branch.replace(/\//g, "-")
+    let worktreePath = path.join(this.dir, dirName)
 
     if (fs.existsSync(worktreePath)) {
       this.log(`Worktree directory exists, cleaning up before re-creation: ${worktreePath}`)
@@ -72,20 +99,32 @@ export class WorktreeManager {
     try {
       const args = params.existingBranch
         ? ["worktree", "add", worktreePath, branch]
-        : ["worktree", "add", "-b", branch, worktreePath]
+        : params.baseBranch
+          ? ["worktree", "add", "-b", branch, worktreePath, params.baseBranch]
+          : ["worktree", "add", "-b", branch, worktreePath]
       await this.git.raw(args)
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
+      if (msg.includes("already checked out")) {
+        // Extract worktree path from error like "fatal: 'branch' is already checked out at '/path'"
+        const match = msg.match(/already checked out at '([^']+)'/)
+        const loc = match ? match[1] : "another worktree"
+        throw new Error(`Branch "${branch}" is already checked out in worktree at: ${loc}`)
+      }
       if (!msg.includes("already exists") || params.existingBranch) {
         throw new Error(`Failed to create worktree: ${msg}`)
       }
       // Branch name collision -- retry with unique suffix
       branch = `${branch}-${Date.now()}`
-      worktreePath = path.join(this.dir, branch)
-      await this.git.raw(["worktree", "add", "-b", branch, worktreePath])
+      const retryDir = branch.replace(/\//g, "-")
+      worktreePath = path.join(this.dir, retryDir)
+      const retryArgs = params.baseBranch
+        ? ["worktree", "add", "-b", branch, worktreePath, params.baseBranch]
+        : ["worktree", "add", "-b", branch, worktreePath]
+      await this.git.raw(retryArgs)
     }
 
-    this.log(`Created worktree: ${worktreePath} (branch: ${branch})`)
+    this.log(`Created worktree: ${worktreePath} (branch: ${branch}, base: ${parent})`)
     return { branch, path: worktreePath, parentBranch: parent }
   }
 
@@ -174,6 +213,73 @@ export class WorktreeManager {
     }
 
     return undefined
+  }
+
+  // ---------------------------------------------------------------------------
+  // Branch & worktree discovery
+  // ---------------------------------------------------------------------------
+
+  async listBranches(): Promise<{ branches: BranchInfo[]; defaultBranch: string }> {
+    const defBranch = await this.defaultBranch()
+
+    // Get local branches with commit dates
+    const localRaw = await this.git
+      .raw(["for-each-ref", "--sort=-committerdate", "--format=%(refname:short)\t%(committerdate:unix)", "refs/heads/"])
+      .then((out) => out.trim())
+      .catch(() => "")
+
+    // Get remote branches with commit dates
+    const remoteRaw = await this.git
+      .raw([
+        "for-each-ref",
+        "--sort=-committerdate",
+        "--format=%(refname:short)\t%(committerdate:unix)",
+        "refs/remotes/origin/",
+      ])
+      .then((out) => out.trim())
+      .catch(() => "")
+
+    const map = new Map<string, BranchInfo>()
+
+    for (const line of localRaw.split("\n").filter(Boolean)) {
+      const [name, dateStr] = line.split("\t")
+      if (!name) continue
+      map.set(name, {
+        name,
+        isLocal: true,
+        isRemote: false,
+        lastCommitDate: parseInt(dateStr || "0", 10),
+        isDefault: name === defBranch,
+      })
+    }
+
+    for (const line of remoteRaw.split("\n").filter(Boolean)) {
+      const [ref, dateStr] = line.split("\t")
+      if (!ref) continue
+      const name = ref.replace(/^origin\//, "")
+      if (name === "HEAD") continue
+      const existing = map.get(name)
+      if (existing) {
+        existing.isRemote = true
+      } else {
+        map.set(name, {
+          name,
+          isLocal: false,
+          isRemote: true,
+          lastCommitDate: parseInt(dateStr || "0", 10),
+          isDefault: name === defBranch,
+        })
+      }
+    }
+
+    // Sort: default first, then by lastCommitDate descending
+    const branches = [...map.values()].sort((a, b) => {
+      if (a.isDefault && !b.isDefault) return -1
+      if (!a.isDefault && b.isDefault) return 1
+      return b.lastCommitDate - a.lastCommitDate
+    })
+
+    return { branches, defaultBranch: defBranch }
   }
 
   // ---------------------------------------------------------------------------
@@ -279,7 +385,7 @@ export class WorktreeManager {
     return (await this.git.revparse(["--abbrev-ref", "HEAD"])).trim()
   }
 
-  private async branchExists(name: string): Promise<boolean> {
+  async branchExists(name: string): Promise<boolean> {
     try {
       const branches = await this.git.branch()
       return branches.all.includes(name) || branches.all.includes(`remotes/origin/${name}`)
@@ -288,7 +394,7 @@ export class WorktreeManager {
     }
   }
 
-  private async defaultBranch(): Promise<string> {
+  async defaultBranch(): Promise<string> {
     try {
       const head = await this.git.raw(["symbolic-ref", "refs/remotes/origin/HEAD"])
       const match = head.trim().match(/refs\/remotes\/origin\/(.+)$/)
