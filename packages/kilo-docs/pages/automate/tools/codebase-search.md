@@ -1,7 +1,7 @@
 # codebase_search
 
 {% callout type="info" title="Setup Required" %}
-The `codebase_search` tool is part of the [Codebase Indexing](/docs/features/codebase-indexing) feature. It requires additional setup including an embedding provider and vector database.
+The `codebase_search` tool is part of the [Codebase Indexing](/docs/customize/context/codebase-indexing) feature. It requires additional setup including an embedding provider and vector database.
 {% /callout %}
 
 The `codebase_search` tool performs semantic searches across your entire codebase using AI embeddings. Unlike traditional text-based search, it understands the meaning of your queries and finds relevant code even when exact keywords don't match.

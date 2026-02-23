@@ -134,7 +134,7 @@ export namespace KiloSessions {
       await ingest.sync(evt.properties.info.id, [
         {
           type: "kilo_meta",
-          data: await meta(),
+          data: await meta(evt.properties.info.id),
         },
         {
           type: "session",
@@ -353,7 +353,7 @@ export namespace KiloSessions {
     await ingest.sync(sessionId, [
       {
         type: "kilo_meta",
-        data: await meta(),
+        data: await meta(sessionId),
       },
       {
         type: "session",
@@ -414,8 +414,9 @@ export namespace KiloSessions {
     })
   }
 
-  async function meta() {
-    const platform = process.env["KILO_PLATFORM"] || "cli"
+  async function meta(sessionId?: string) {
+    const override = sessionId ? Session.getPlatformOverride(sessionId) : undefined
+    const platform = override || process.env["KILO_PLATFORM"] || "cli"
     const orgId = await getOrgId()
     const gitBranch = await Vcs.branch().catch(() => undefined)
     const gitUrl = await getGitUrl().catch(() => undefined)

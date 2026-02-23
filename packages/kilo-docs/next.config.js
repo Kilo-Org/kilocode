@@ -6,7 +6,15 @@ module.exports = withMarkdoc(/* config: https://markdoc.io/docs/nextjs#options *
   basePath: "/docs",
   turbopack: {},
   async redirects() {
-    return [...previousDocsRedirects]
+    return [
+      {
+        source: "/",
+        destination: "/docs",
+        basePath: false,
+        permanent: true,
+      },
+      ...previousDocsRedirects,
+    ]
   },
   async rewrites() {
     return {

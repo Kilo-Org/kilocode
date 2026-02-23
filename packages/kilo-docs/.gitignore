@@ -9,3 +9,4 @@ screenshots/
 .env
 next-env.d.ts
 tsconfig.tsbuildinfo
+lycheeout.*

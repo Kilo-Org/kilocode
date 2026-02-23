@@ -129,7 +129,8 @@ export class ServerManager {
 
   private getCliPath(): string {
     // Always use the bundled binary from the extension directory
-    const cliPath = path.join(this.context.extensionPath, "bin", "kilo")
+    const binName = process.platform === "win32" ? "kilo.exe" : "kilo" // kilocode_change
+    const cliPath = path.join(this.context.extensionPath, "bin", binName)
     console.log("[Kilo New] ServerManager: 📦 Using CLI path:", cliPath)
     return cliPath
   }

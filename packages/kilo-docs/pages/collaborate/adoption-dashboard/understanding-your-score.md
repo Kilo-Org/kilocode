@@ -147,5 +147,5 @@ Individual scores are most useful for personal development and self-assessment, 
 
 ## Next Steps
 
-- [Learn strategies to improve each dimension](/docs/plans/adoption-dashboard/improving-your-score)
-- [Use the dashboard for team leadership](/docs/plans/adoption-dashboard/for-team-leads)
+- [Learn strategies to improve each dimension](/docs/collaborate/adoption-dashboard/improving-your-score)
+- [Use the dashboard for team leadership](/docs/collaborate/adoption-dashboard/for-team-leads)

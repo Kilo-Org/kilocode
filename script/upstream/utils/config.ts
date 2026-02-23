@@ -109,6 +109,7 @@ export const defaultConfig: MergeConfig = {
     "README.ru.md",
     "README.th.md",
     "README.tr.md",
+    "README.uk.md",
     "README.zh.md",
     "README.zht.md",
     // Stats file
@@ -211,7 +212,7 @@ export const defaultConfig: MergeConfig = {
     "**/yarn.lock",
   ],
 
-  baseBranch: "dev",
+  baseBranch: "main",
   branchPrefix: "upstream-merge",
   upstreamRemote: "upstream",
   originRemote: "origin",

@@ -430,12 +430,12 @@ export async function transformConflictedPackageJson(
 }
 
 /**
- * Get Kilo's package.json from the base branch (dev) for comparison
+ * Get Kilo's package.json from the base branch (main) for comparison
  * Used during pre-merge to compare upstream versions against Kilo's versions
  */
-async function getKiloPackageJson(path: string, baseBranch = "dev"): Promise<Record<string, unknown> | null> {
+async function getKiloPackageJson(path: string, baseBranch = "main"): Promise<Record<string, unknown> | null> {
   try {
-    // Try to get the file from origin/dev (or whatever base branch)
+    // Try to get the file from origin/main (or whatever base branch)
     const content = await $`git show origin/${baseBranch}:${path}`.text()
     return JSON.parse(content)
   } catch {

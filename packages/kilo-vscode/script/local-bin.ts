@@ -22,7 +22,8 @@ const packagesDir = join(kiloVscodeDir, "..")
 const opencodeDir = join(packagesDir, "opencode")
 
 const targetBinDir = join(kiloVscodeDir, "bin")
-const targetBinPath = join(targetBinDir, "kilo")
+const binName = process.platform === "win32" ? "kilo.exe" : "kilo"
+const targetBinPath = join(targetBinDir, binName)
 
 function log(msg: string) {
   console.log(`[local-bin] ${msg}`)
@@ -44,7 +45,7 @@ async function findKiloBinaryInOpencodeDist(): Promise<string | null> {
 
   // Prefer the binary matching the current platform (e.g. cli-darwin-arm64)
   const tag = platformTag()
-  const preferred = join(distDir, `@kilocode`, tag, "bin", "kilo")
+  const preferred = join(distDir, `@kilocode`, tag, "bin", binName)
   try {
     statSync(preferred)
     return preferred
@@ -52,7 +53,7 @@ async function findKiloBinaryInOpencodeDist(): Promise<string | null> {
     // fall through to generic search
   }
 
-  // Fallback: find any dist/**/bin/kilo
+  // Fallback: find any dist/**/bin/kilo or kilo.exe
   const queue = [distDir]
   while (queue.length) {
     const dir = queue.pop()
@@ -71,7 +72,7 @@ async function findKiloBinaryInOpencodeDist(): Promise<string | null> {
         queue.push(p)
         continue
       }
-      if (e.isFile() && e.name === "kilo" && basename(dirname(p)) === "bin") {
+      if (e.isFile() && (e.name === "kilo" || e.name === "kilo.exe") && basename(dirname(p)) === "bin") {
         return p
       }
     }

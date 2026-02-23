@@ -109,6 +109,30 @@ const targets = singleFlag
     })
   : allTargets
 
+const migrationDirs = (await fs.promises.readdir(path.join(dir, "migration"), { withFileTypes: true }))
+  .filter((entry) => entry.isDirectory() && /^\d{4}\d{2}\d{2}\d{2}\d{2}\d{2}/.test(entry.name))
+  .map((entry) => entry.name)
+  .sort()
+
+const migrationEntries = await Promise.all(
+  migrationDirs.map(async (name) => {
+    const sql = await Bun.file(path.join(dir, "migration", name, "migration.sql")).text()
+    const match = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/.exec(name)
+    const timestamp = match
+      ? Date.UTC(
+          Number(match[1]),
+          Number(match[2]) - 1,
+          Number(match[3]),
+          Number(match[4]),
+          Number(match[5]),
+          Number(match[6]),
+        )
+      : 0
+    return { sql, timestamp }
+  }),
+)
+console.log(`Loaded ${migrationEntries.length} migrations`)
+
 await $`rm -rf dist`
 
 const binaries: Record<string, string> = {}
@@ -160,6 +184,7 @@ for (const item of targets) {
       KILO_WORKER_PATH: workerPath,
       KILO_CHANNEL: `'${Script.channel}'`, // kilocode_change
       KILO_LIBC: item.os === "linux" ? `'${item.abi ?? "glibc"}'` : "",
+      KILO_MIGRATIONS: JSON.stringify(migrationEntries),
     },
   })
 
@@ -173,7 +198,7 @@ for (const item of targets) {
         cpu: [item.arch],
         repository: {
           type: "git",
-          url: "https://github.com/Kilo-Org/kilo",
+          url: "https://github.com/Kilo-Org/kilocode",
         },
       },
       null,

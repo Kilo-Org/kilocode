@@ -1489,6 +1489,13 @@ export class Session extends HeyApiClient {
       format?: OutputFormat
       system?: string
       variant?: string
+      editorContext?: {
+        visibleFiles?: Array<string>
+        openTabs?: Array<string>
+        activeFile?: string
+        shell?: string
+        timezone?: string
+      }
       parts?: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
     },
     options?: Options<never, ThrowOnError>,
@@ -1508,6 +1515,7 @@ export class Session extends HeyApiClient {
             { in: "body", key: "format" },
             { in: "body", key: "system" },
             { in: "body", key: "variant" },
+            { in: "body", key: "editorContext" },
             { in: "body", key: "parts" },
           ],
         },
@@ -1579,6 +1587,13 @@ export class Session extends HeyApiClient {
       format?: OutputFormat
       system?: string
       variant?: string
+      editorContext?: {
+        visibleFiles?: Array<string>
+        openTabs?: Array<string>
+        activeFile?: string
+        shell?: string
+        timezone?: string
+      }
       parts?: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
     },
     options?: Options<never, ThrowOnError>,
@@ -1598,6 +1613,7 @@ export class Session extends HeyApiClient {
             { in: "body", key: "format" },
             { in: "body", key: "system" },
             { in: "body", key: "variant" },
+            { in: "body", key: "editorContext" },
             { in: "body", key: "parts" },
           ],
         },

@@ -2,9 +2,62 @@
 
 This file provides guidance to agents when working with code in this repository.
 
-## Package Context
+## Product Context
 
-VSCode extension for Kilo Code. Part of a Bun/Turbo monorepo using Bun workspace dependencies.
+Kilo Code is an open source AI coding agent platform. It ships as multiple products that all build on the same backend. This package (`packages/kilo-vscode/`) is the **VS Code extension** — one of several clients.
+
+### Products and How They Relate
+
+All products are thin clients over the **CLI** (`packages/opencode/`, published as `@kilocode/cli`). The CLI is a fork of upstream [OpenCode](https://github.com/anomalyco/opencode) with Kilo-specific additions (gateway auth, telemetry, migration, code review, branding). It contains the full AI agent runtime, tool execution, session management, provider integrations (500+ models), and an HTTP API server.
+
+Every client spawns or connects to a `kilo serve` process and communicates via HTTP REST + SSE using the auto-generated `@kilocode/sdk`.
+
+```
+                        @kilocode/cli  (packages/opencode/)
+                     ┌────────────────────────────────┐
+                     │  AI agents, tools, sessions,    │
+                     │  providers, config, MCP, LSP    │
+                     │  Hono HTTP server + SSE         │
+                     └──┬──────────┬──────────┬───────┘
+                        │          │          │
+                ┌───────┴──┐ ┌────┴────┐ ┌───┴──────────┐
+                │ TUI      │ │ VS Code │ │ Desktop / Web│
+                │ (builtin)│ │Extension│ │              │
+                └──────────┘ └─────────┘ └──────────────┘
+```
+
+| Product                    | Package                                | What it is                                          | How it uses the CLI                                               |
+| -------------------------- | -------------------------------------- | --------------------------------------------------- | ----------------------------------------------------------------- |
+| Kilo CLI (TUI)             | `packages/opencode/`                   | Interactive terminal UI (SolidJS + OpenTUI)         | In-process — TUI and server run together                          |
+| Kilo CLI (`kilo run`)      | `packages/opencode/`                   | Non-interactive headless mode for scripting         | In-process — no network socket                                    |
+| **Kilo VS Code Extension** | **`packages/kilo-vscode/`**            | VS Code extension with sidebar chat + Agent Manager | Bundles CLI binary, spawns `kilo serve --port 0` as child process |
+| OpenCode Desktop           | `packages/desktop/`                    | Standalone native app (Tauri)                       | Bundles CLI binary as sidecar, spawns `kilo serve`                |
+| OpenCode Web (`kilo web`)  | `packages/opencode/` + `packages/app/` | Browser-based UI                                    | CLI starts server + opens browser                                 |
+
+**OpenCode Desktop** (`packages/desktop/`) and `kilo web` both render the shared `@opencode-ai/app` SolidJS frontend (`packages/app/`). They differ only in the platform layer (Tauri native APIs vs browser APIs). Neither has any relationship to this extension or the Agent Manager — they are independent clients of the same `kilo serve` backend.
+
+### Kilo-Domain Packages
+
+| Package                    | Name                       | Role                                                                                                                         |
+| -------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `packages/kilo-vscode/`    | `kilo-code`                | **This package.** VS Code extension.                                                                                         |
+| `packages/kilo-gateway/`   | `@kilocode/kilo-gateway`   | Auth (device flow), AI provider routing (OpenRouter), Kilo API integration (profile, balance, teams)                         |
+| `packages/kilo-ui/`        | `@kilocode/kilo-ui`        | SolidJS component library (40+ components, built on `@kobalte/core`). Shared by this extension's webview and `packages/app/` |
+| `packages/kilo-telemetry/` | `@kilocode/kilo-telemetry` | PostHog analytics + OpenTelemetry tracing for the CLI                                                                        |
+| `packages/kilo-i18n/`      | `@kilocode/kilo-i18n`      | Translation strings (16 languages)                                                                                           |
+| `packages/kilo-docs/`      | `@kilocode/kilo-docs`      | Documentation site (Next.js + Markdoc)                                                                                       |
+
+### Upstream OpenCode Packages (not Kilo-specific)
+
+| Package              | Name                   | Role                                                                                     |
+| -------------------- | ---------------------- | ---------------------------------------------------------------------------------------- |
+| `packages/opencode/` | `@kilocode/cli`        | Core CLI — forked from upstream OpenCode. AI agents, tools, sessions, server.            |
+| `packages/sdk/js/`   | `@kilocode/sdk`        | Auto-generated TypeScript SDK client for the server API. Do not edit `src/gen/` by hand. |
+| `packages/app/`      | `@opencode-ai/app`     | Shared SolidJS web UI consumed by desktop app and `kilo web`                             |
+| `packages/desktop/`  | `@opencode-ai/desktop` | Tauri desktop app shell                                                                  |
+| `packages/ui/`       | `@opencode-ai/ui`      | Shared UI primitives                                                                     |
+| `packages/util/`     | `@opencode-ai/util`    | Shared utilities (error, path, retry, slug)                                              |
+| `packages/plugin/`   | `@kilocode/plugin`     | Plugin/tool interface definitions                                                        |
 
 ## Commands
 
@@ -20,7 +73,7 @@ Single test: `bun run test -- --grep "test name"`
 
 ## CLI Binary
 
-The extension bundles a CLI backend binary. To build it:
+The extension bundles its own CLI binary at `bin/kilo` — it does NOT use a system-installed CLI. To build it:
 
 ```bash
 bun script/local-bin.ts
@@ -32,20 +85,49 @@ Or use `--force` to rebuild:
 bun script/local-bin.ts --force
 ```
 
-The script automatically handles building the opencode package if needed.
+The script checks for a prebuilt binary in `packages/opencode/dist/`, builds the CLI if needed, and copies it to `bin/kilo`.
 
-## Architecture (Non-Obvious)
+## Architecture
 
-- Two separate esbuild builds in [`esbuild.js`](esbuild.js): extension (Node/CJS) and webview (browser/IIFE)
-- Webview uses **Solid.js** (not React) - JSX compiles via `esbuild-plugin-solid`
+### Extension ↔ CLI Backend
+
+The extension is a client of the CLI. At startup it spawns `bin/kilo serve --port 0`, captures the dynamically-assigned port from stdout, and communicates over HTTP + SSE. A random password is generated and passed via `KILO_SERVER_PASSWORD` env var for basic auth.
+
+```
+Extension (Node.js)                          CLI Backend (child process)
+┌──────────────────────────┐                ┌──────────────────────┐
+│ KiloConnectionService    │── HTTP/SSE ──> │ kilo serve --port 0  │
+│   ├── ServerManager      │                │   Hono REST API      │
+│   ├── HttpClient         │                │   SSE event stream   │
+│   └── SSEClient          │                │   Session management │
+│                          │                │   AI agent runtime   │
+│ KiloProvider (sidebar)   │                └──────────────────────┘
+│ KiloProvider (agent mgr) │
+│ KiloProvider (open tabs) │
+└──────────────────────────┘
+```
+
+- **`KiloConnectionService`** (`src/services/cli-backend/connection-service.ts`) is a singleton shared across all webviews. It owns the server process, HTTP client, and SSE connection.
+- **`ServerManager`** (`src/services/cli-backend/server-manager.ts`) spawns the CLI binary and manages the process lifecycle.
+- Multiple **`KiloProvider`** instances (sidebar, Agent Manager, "open in tab" panels) subscribe to the shared connection. SSE events are filtered per-webview via a `trackedSessionIds` Set.
+
+### Builds
+
+Two separate esbuild builds in [`esbuild.js`](esbuild.js):
+
+- **Extension** (Node/CJS): `src/extension.ts` → `dist/extension.js`
+- **Webview** (browser/IIFE): `webview-ui/src/index.tsx` → `dist/webview.js` AND `webview-ui/agent-manager/index.tsx` → `dist/agent-manager.js`
+
+### Non-Obvious Details
+
+- Webview uses **Solid.js** (not React) — JSX compiles via `esbuild-plugin-solid`
 - Extension code in `src/`, webview code in `webview-ui/src/` with separate tsconfig
 - Tests compile to `out/` via `compile-tests`, not `dist/`
-- CSP requires nonce for scripts and `font-src` for bundled fonts - see [`KiloProvider.ts`](src/KiloProvider.ts:777)
+- CSP requires nonce for scripts and `font-src` for bundled fonts — see [`KiloProvider.ts`](src/KiloProvider.ts:777)
 - HTML root has `data-theme="kilo-vscode"` to activate kilo-ui's VS Code theme bridge
-- Extension and webview have no shared state - communicate via `vscode.Webview.postMessage()`
-- For editor panels, use [`AgentManagerProvider`](src/AgentManagerProvider.ts) pattern with `retainContextWhenHidden: true`
+- Extension and webview have no shared state — communicate via `vscode.Webview.postMessage()`
+- For editor panels, use [`AgentManagerProvider`](src/agent-manager/AgentManagerProvider.ts) pattern with `retainContextWhenHidden: true`
 - esbuild webview build includes [`cssPackageResolvePlugin`](esbuild.js:29) for CSS `@import` resolution and font loaders (`.woff`, `.woff2`, `.ttf`)
-- [`KiloConnectionService`](src/services/cli-backend/connection-service.ts) is the shared singleton managing server lifecycle, HTTP, SSE — sidebar and editor tabs share one instance
 - Avoid `setTimeout` for sequencing VS Code operations — use deterministic event-based waits (e.g. `waitForWebviewPanelToBeActive()`)
 
 ## Extension ↔ Webview Feature Pattern
@@ -64,14 +146,27 @@ Key patterns:
 - **Cached messages** (e.g. `cachedProvidersMessage`, `cachedAgentsMessage` in KiloProvider): Ensures webview refreshes get data immediately without waiting for a new HTTP round-trip
 - **Retry timers** (e.g. `agentRetryTimer` in session context): Handles race conditions where the extension's HTTP client isn't ready when the webview first requests data
 
-## Shared Connection Architecture
+## Agent Manager
 
-- [`KiloConnectionService`](src/services/cli-backend/connection-service.ts) is the shared singleton managing server lifecycle, HTTP client, and SSE connection
-- Multiple `KiloProvider` instances (sidebar + editor tabs) subscribe via `onEvent()` / `onStateChange()`
-- Each `KiloProvider` tracks its own session IDs via a `trackedSessionIds` Set
-- SSE events are filtered per-webview using `onEventFiltered()` so tabs only see their own sessions
-- `KiloProvider.dispose()` only unsubscribes from the service; `KiloConnectionService.dispose()` kills the server
-- Session→message mapping (`recordMessageSessionId`) enables resolving `message.part.updated` events to the correct session
+The Agent Manager is a feature within this extension (not a separate product). It opens as an **editor tab** (`Cmd+Shift+M`) and provides multi-session orchestration — running multiple independent AI sessions in parallel, each optionally isolated in its own git worktree.
+
+### How It Differs From the Sidebar
+
+| Aspect        | Sidebar                    | Agent Manager                                           |
+| ------------- | -------------------------- | ------------------------------------------------------- |
+| Location      | Activity bar sidebar panel | Editor tab (full panel)                                 |
+| Sessions      | Single session at a time   | Multiple parallel sessions with tabbed UI               |
+| Git isolation | Uses workspace root        | Each session can get its own worktree branch            |
+| State         | No dedicated state file    | `.kilocode/agent-manager.json`                          |
+| Terminals     | None                       | Dedicated VS Code terminal per session                  |
+| Setup scripts | None                       | Configurable `.kilocode/setup-script` runs per worktree |
+| Multi-version | Not supported              | Up to 4 parallel worktrees with the same prompt         |
+
+### Architecture
+
+All Agent Manager sessions share the **single `kilo serve` process** managed by `KiloConnectionService`. No separate server is spawned per session. Session isolation comes from directory scoping — worktree sessions pass the worktree path to the CLI backend, which creates a session scoped to that directory.
+
+Extension-side code lives in `src/agent-manager/`, webview code in `webview-ui/agent-manager/`. The webview reuses the sidebar's provider chain and `ChatView` component, adding a `WorktreeModeProvider` and a split layout.
 
 ## Webview UI (kilo-ui)
 
@@ -102,10 +197,6 @@ New webview features must use **`@kilocode/kilo-ui`** components instead of raw 
 ## Coexistence with Old Extension
 
 While the old extension coexists, runtime labels append `(NEW)` — controlled by the flag in [`constants.ts`](src/constants.ts). Static labels in `package.json` must be updated separately. Remove this convention once the old extension is retired.
-
-## Agent Manager
-
-Opens as an editor tab (not the sidebar) and lets users run multiple independent AI sessions in parallel. It has a left sidebar listing active sessions and a right panel showing the chat UI for the selected one. Each session is a standard `kilo serve` session. The extension side uses the same `KiloProvider` wiring as the sidebar; the webview side reuses the same provider chain and `ChatView` component.
 
 ## Kilocode Change Markers
 

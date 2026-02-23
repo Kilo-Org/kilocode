@@ -34,6 +34,9 @@ const STRING_REPLACEMENTS: StringReplacement[] = [
   { pattern: /\bnpm install opencode\b/g, replacement: "npm install @kilocode/cli" },
   { pattern: /\bnpm i opencode\b/g, replacement: "npm i @kilocode/cli" },
 
+  // Database filename
+  { pattern: /\bopencode\.db\b/g, replacement: "kilo.db" },
+
   // Binary name references (be careful with these)
   { pattern: /\bopencode upgrade\b/g, replacement: "kilo upgrade" },
 

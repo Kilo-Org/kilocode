@@ -135,9 +135,9 @@ export namespace Telemetry {
 
   // LLM
   export function trackLlmCompletion(properties: {
-    sessionId?: string
-    provider: string
-    model: string
+    taskId?: string
+    apiProvider: string
+    modelId: string
     inputTokens?: number
     outputTokens?: number
     cacheReadTokens?: number
@@ -160,6 +160,10 @@ export namespace Telemetry {
 
   export function trackAgentUsed(agent: string, sessionId?: string) {
     track(TelemetryEvent.AGENT_USED, { agent, sessionId })
+  }
+
+  export function trackPlanFollowup(sessionId: string, choice: "new_session" | "continue" | "custom" | "dismissed") {
+    track(TelemetryEvent.PLAN_FOLLOWUP, { sessionId, choice })
   }
 
   // Share

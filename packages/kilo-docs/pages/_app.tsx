@@ -73,7 +73,7 @@ export default function MyApp({ Component, pageProps }: AppProps<MyAppProps>) {
     posthog.capture("$pageview")
   }, [])
 
-  // Close mobile menu on route change and track pageviews
+  // Close mobile menu on route change, track pageviews, and reset scroll position
   useEffect(() => {
     const handleRouteChange = () => {
       setIsMobileMenuOpen(false)
@@ -81,6 +81,11 @@ export default function MyApp({ Component, pageProps }: AppProps<MyAppProps>) {
 
     const handleRouteComplete = () => {
       posthog.capture("$pageview")
+      // Reset scroll position of the main content container on navigation
+      const mainContent = document.querySelector(".main-content")
+      if (mainContent) {
+        mainContent.scrollTop = 0
+      }
     }
 
     router.events.on("routeChangeStart", handleRouteChange)
@@ -175,7 +180,7 @@ export default function MyApp({ Component, pageProps }: AppProps<MyAppProps>) {
               <div className="article-content flex column mt-5">
                 <Component {...pageProps} />
               </div>
-              <div className="right-sidebar">
+              <div className="right-sidebar" key={router.asPath}>
                 {markdoc && <CopyPageButton />}
                 <TableOfContents toc={toc} />
               </div>
