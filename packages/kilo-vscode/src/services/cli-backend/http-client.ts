@@ -433,6 +433,13 @@ export class HttpClient {
   // ============================================
 
   /**
+   * Set authentication credentials (API key) for a provider.
+   */
+  async setProviderAuth(providerId: string, key: string): Promise<boolean> {
+    return this.request<boolean>("PUT", `/auth/${providerId}`, { type: "api", key })
+  }
+
+  /**
    * Remove authentication credentials for a provider.
    * Used for logout when called with "kilo".
    */

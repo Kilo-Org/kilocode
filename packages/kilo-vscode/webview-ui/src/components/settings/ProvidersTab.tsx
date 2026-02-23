@@ -1,4 +1,4 @@
-import { Component, For, createSignal, createMemo } from "solid-js"
+import { Component, For, createSignal, createMemo, Show } from "solid-js"
 import { Select } from "@kilocode/kilo-ui/select"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Button } from "@kilocode/kilo-ui/button"
@@ -9,6 +9,7 @@ import { useLanguage } from "../../context/language"
 import { ModelSelectorBase } from "../chat/ModelSelector"
 import type { ModelSelection } from "../../types/messages"
 import SettingsRow from "./SettingsRow"
+import { CustomProviderDialog } from "./CustomProviderDialog"
 
 interface ProviderOption {
   value: string
@@ -31,6 +32,7 @@ const ProvidersTab: Component = () => {
   const { config, updateConfig } = useConfig()
   const provider = useProvider()
   const language = useLanguage()
+  const [showCustomProviderDialog, setShowCustomProviderDialog] = createSignal(false)
 
   const providerOptions = createMemo<ProviderOption[]>(() =>
     Object.keys(provider.providers())
@@ -70,7 +72,41 @@ const ProvidersTab: Component = () => {
 
   return (
     <div>
+      <Show when={showCustomProviderDialog()}>
+        <CustomProviderDialog onClose={() => setShowCustomProviderDialog(false)} />
+      </Show>
+
+      {/* Custom provider section */}
+      <h4 style={{ "margin-top": "0", "margin-bottom": "8px" }}>{language.t("settings.providers.custom")}</h4>
+      <Card>
+        <div
+          style={{
+            display: "flex",
+            "align-items": "center",
+            "justify-content": "space-between",
+            padding: "8px 0",
+          }}
+        >
+          <div>
+            <div style={{ "font-size": "13px" }}>{language.t("settings.providers.custom.title")}</div>
+            <div
+              style={{
+                "font-size": "11px",
+                color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                "margin-top": "2px",
+              }}
+            >
+              {language.t("settings.providers.custom.description")}
+            </div>
+          </div>
+          <Button size="small" onClick={() => setShowCustomProviderDialog(true)}>
+            {language.t("settings.providers.custom.add")}
+          </Button>
+        </div>
+      </Card>
+
       {/* Model selection */}
+      <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>{language.t("settings.providers.models.title")}</h4>
       <Card>
         <SettingsRow
           title={language.t("settings.providers.defaultModel.title")}

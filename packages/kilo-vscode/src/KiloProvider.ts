@@ -435,6 +435,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "dismissNotification":
           await this.handleDismissNotification(message.notificationId)
           break
+        case "setProviderAuth":
+          await this.handleSetProviderAuth(message.providerID, message.apiKey)
+          break
         case "resetAllSettings":
           await this.handleResetAllSettings()
           break
@@ -1330,6 +1333,28 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       },
       (err) => console.error("[Kilo New] KiloProvider: Failed to open file:", uri.fsPath, err),
     )
+  }
+
+  /**
+   * Handle setting API key authentication for a custom provider.
+   */
+  private async handleSetProviderAuth(providerID: string, apiKey: string): Promise<void> {
+    if (!this.httpClient) {
+      this.postMessage({ type: "setProviderAuthResult", success: false, error: "Not connected to CLI backend" })
+      return
+    }
+
+    try {
+      await this.httpClient.setProviderAuth(providerID, apiKey)
+      this.postMessage({ type: "setProviderAuthResult", success: true })
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to set provider auth:", error)
+      this.postMessage({
+        type: "setProviderAuthResult",
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to set provider auth",
+      })
+    }
   }
 
   /**

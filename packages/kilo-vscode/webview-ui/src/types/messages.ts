@@ -672,6 +672,7 @@ export type ExtensionMessage =
   | SetChatBoxMessage
   | TriggerTaskMessage
   | VariantsLoadedMessage
+  | SetProviderAuthResultMessage
 
 // ============================================
 // Messages FROM webview TO extension
@@ -844,6 +845,18 @@ export interface RequestConfigMessage {
 export interface UpdateConfigMessage {
   type: "updateConfig"
   config: Partial<Config>
+}
+
+export interface SetProviderAuthRequest {
+  type: "setProviderAuth"
+  providerID: string
+  apiKey: string
+}
+
+export interface SetProviderAuthResultMessage {
+  type: "setProviderAuthResult"
+  success: boolean
+  error?: string
 }
 
 export interface RequestNotificationSettingsMessage {
@@ -1023,6 +1036,7 @@ export type WebviewMessage =
   | SetSessionsCollapsedRequest
   | PersistVariantRequest
   | RequestVariantsMessage
+  | SetProviderAuthRequest
 
 // ============================================
 // VS Code API type
