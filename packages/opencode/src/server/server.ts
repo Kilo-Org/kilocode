@@ -33,7 +33,7 @@ import { ProviderRoutes } from "./routes/provider"
 import { createKiloRoutes } from "@kilocode/kilo-gateway" // kilocode_change
 import { lazy } from "../util/lazy"
 import { InstanceBootstrap } from "../project/bootstrap"
-import { Storage } from "../storage/storage"
+import { NotFoundError } from "../storage/db"
 import type { ContentfulStatusCode } from "hono/utils/http-status"
 import { websocket } from "hono/bun"
 import { HTTPException } from "hono/http-exception"
@@ -68,7 +68,7 @@ export namespace Server {
           })
           if (err instanceof NamedError) {
             let status: ContentfulStatusCode
-            if (err instanceof Storage.NotFoundError) status = 404
+            if (err instanceof NotFoundError) status = 404
             else if (err instanceof Provider.ModelNotFoundError) status = 400
             else if (err.name.startsWith("Worktree")) status = 400
             else status = 500

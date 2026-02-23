@@ -129,7 +129,7 @@ You can also use other AI providers by setting their API keys:
 
 ## Support
 
-If you encounter issues or have feedback, please create an issue at https://github.com/Kilo-Org/kilo/issues.
+If you encounter issues or have feedback, please create an issue at https://github.com/Kilo-Org/kilocode/issues.
 
 ## Development
 
