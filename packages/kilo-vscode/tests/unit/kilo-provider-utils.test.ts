@@ -188,6 +188,20 @@ describe("resolveDefaultModelSelection", () => {
     expect(result).toEqual({ providerID: "openai", modelID: "gpt-5" })
   })
 
+  it("checks all provider defaults before falling back to first model", () => {
+    const providers = {
+      openai: makeProvider("openai", ["gpt-5", "gpt-4.1"]),
+      anthropic: makeProvider("anthropic", ["claude-sonnet-4"]),
+    }
+
+    const result = resolveDefaultModelSelection({
+      providers,
+      defaults: { anthropic: "claude-sonnet-4" },
+    })
+
+    expect(result).toEqual({ providerID: "anthropic", modelID: "claude-sonnet-4" })
+  })
+
   it("returns hardcoded fallback when there are no valid providers", () => {
     const result = resolveDefaultModelSelection({
       providers: {},

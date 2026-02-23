@@ -52,7 +52,9 @@ export function resolveDefaultModelSelection(input: {
     if (defaultModelID && provider.models?.[defaultModelID]) {
       return { providerID: provider.id, modelID: defaultModelID }
     }
+  }
 
+  for (const provider of Object.values(input.providers)) {
     const firstModelID = Object.keys(provider.models ?? {})[0]
     if (firstModelID) {
       return { providerID: provider.id, modelID: firstModelID }
