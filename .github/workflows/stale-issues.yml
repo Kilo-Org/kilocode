@@ -22,6 +22,8 @@ jobs:
           days-before-pr-stale: ${{ env.DAYS_BEFORE_PR_CLOSE }}
           days-before-issue-close: 0
           days-before-pr-close: 0
+          stale-issue-message: ""
+          stale-pr-message: ""
           close-issue-message: |
             Closing this one out since it's been inactive for a while — not because it's a bad issue, just that older items tend to lose context over time and we'd rather start fresh if this is still a problem.
 
