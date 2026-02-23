@@ -760,7 +760,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
-    const session = await this.httpClient.importCloudSession(sessionId)
+    const workspaceDir = this.getWorkspaceDirectory()
+    const session = await this.httpClient.importCloudSession(sessionId, workspaceDir)
     if (!session) {
       this.postMessage({ type: "cloudSessionImportFailed", error: "Failed to import session from cloud" })
       return
