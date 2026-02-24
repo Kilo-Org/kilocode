@@ -730,6 +730,14 @@ const AgentManagerContent: Component = () => {
         }
       }
 
+      // Set per-session model selection without clearing busy state.
+      // Used during Phase 1 of multi-version creation so the UI selector
+      // reflects the correct model as soon as the worktree appears.
+      if ((msg as { type: string }).type === "agentManager.setSessionModel") {
+        const ev = msg as { type: string; sessionId: string; providerID: string; modelID: string }
+        session.setSessionModel(ev.sessionId, ev.providerID, ev.modelID)
+      }
+
       // Handle initial message send for multi-version sessions.
       // The extension creates the worktrees/sessions, then asks the webview
       // to send the prompt through the normal KiloProvider sendMessage path.

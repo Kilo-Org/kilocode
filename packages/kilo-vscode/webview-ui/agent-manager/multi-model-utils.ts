@@ -56,6 +56,7 @@ export function setAllocationCount(
   modelID: string,
   count: number,
 ): ModelAllocations {
+  if (count < 1) return allocations
   const key = allocationKey(providerID, modelID)
   const existing = allocations.get(key)
   if (!existing) return allocations

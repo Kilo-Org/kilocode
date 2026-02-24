@@ -657,14 +657,14 @@ export class AgentManagerProvider implements vscode.Disposable {
 
       // Set the per-version model immediately so the UI selector reflects
       // the correct model as soon as the worktree appears, before Phase 2.
+      // Uses a dedicated message type to avoid clearing the busy state.
       const versionModel = perVersionModels[i]
       const earlyProviderID = versionModel?.providerID ?? providerID
       const earlyModelID = versionModel?.modelID ?? modelID
       if (earlyProviderID && earlyModelID) {
         this.postToWebview({
-          type: "agentManager.sendInitialMessage",
+          type: "agentManager.setSessionModel",
           sessionId: session.id,
-          worktreeId: wt.worktree.id,
           providerID: earlyProviderID,
           modelID: earlyModelID,
         })

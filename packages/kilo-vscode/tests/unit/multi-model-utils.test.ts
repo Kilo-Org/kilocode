@@ -72,6 +72,12 @@ describe("multi-model-utils", () => {
     expect(result.get("a/m1")?.count).toBe(3)
   })
 
+  test("setAllocationCount rejects count below 1", () => {
+    const alloc = make(["a", "m1", "Model 1", 2])
+    expect(setAllocationCount(alloc, "a", "m1", 0)).toBe(alloc)
+    expect(setAllocationCount(alloc, "a", "m1", -1)).toBe(alloc)
+  })
+
   test("setAllocationCount does nothing for non-existent model", () => {
     const alloc = make(["a", "m1", "Model 1", 1])
     const result = setAllocationCount(alloc, "b", "m2", 2)
