@@ -1418,6 +1418,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
+    const confirmed = await vscode.window.showWarningMessage(
+      `Delete workflow "${validated}"?`,
+      { modal: true },
+      "Delete",
+    )
+    if (confirmed !== "Delete") return
+
     const filePath = path.join(this.getWorkflowsDir(), `${validated}.md`)
 
     try {
