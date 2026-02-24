@@ -1099,7 +1099,7 @@ const AgentManagerContent: Component = () => {
                         <DropdownMenu.Item onSelect={handleCreateWorktree}>
                           <DropdownMenu.ItemLabel>{t("agentManager.worktree.new")}</DropdownMenu.ItemLabel>
                           <span class="am-menu-shortcut">
-                            {parseBindingTokens(kb().newWorktree ?? "").map((t) => (
+                            {parseBindingTokens(kb().newWorktree ?? "").map((token) => (
                               <kbd class="am-menu-key">{t}</kbd>
                             ))}
                           </span>
