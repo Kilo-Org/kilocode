@@ -44,15 +44,10 @@ export function useSlashCommand(commands: Accessor<CommandInfo[]>): SlashCommand
   }
 
   const onInput = (val: string) => {
-    if (val.startsWith("/")) {
-      const rest = val.slice(1).split(/\s/)[0]
-      if (!val.includes(" ") || val.indexOf(" ") > val.length - 1) {
-        if (!val.slice(1).includes(" ")) {
-          setQuery(rest)
-          setIndex(0)
-          return
-        }
-      }
+    if (val.startsWith("/") && !val.slice(1).includes(" ")) {
+      setQuery(val.slice(1))
+      setIndex(0)
+      return
     }
     close()
   }

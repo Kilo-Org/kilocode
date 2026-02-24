@@ -1344,7 +1344,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    */
   private validateWorkflowName(name: string): string | null {
     const sanitized = path.basename(name).replace(/\.md$/, "")
-    if (!sanitized || sanitized !== name || /[/\\]/.test(name)) return null
+    if (!sanitized || sanitized !== name || !/^[a-zA-Z0-9_-]+$/.test(sanitized)) return null
     return sanitized
   }
 
@@ -1391,7 +1391,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       // Create template content
       const template = `# ${validated}\n\nDescribe your workflow here.\n`
-      await fs.promises.writeFile(filePath, template, "utf-8")
+      await fs.promises.writeFile(filePath, template, { encoding: "utf-8", flag: "wx" })
 
       // Open in editor
       const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(filePath))
