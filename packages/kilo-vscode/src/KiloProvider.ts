@@ -1338,10 +1338,27 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /**
+   * Validate a workflow name to prevent path traversal attacks.
+   * Only allows alphanumeric characters, hyphens, and underscores.
+   * Returns the sanitized name, or null if invalid.
+   */
+  private validateWorkflowName(name: string): string | null {
+    const sanitized = path.basename(name).replace(/\.md$/, "")
+    if (!sanitized || sanitized !== name || /[/\\]/.test(name)) return null
+    return sanitized
+  }
+
+  /**
    * Open a workflow file in the editor.
    */
   private async handleOpenWorkflowFile(name: string): Promise<void> {
-    const filePath = path.join(this.getWorkflowsDir(), `${name}.md`)
+    const validated = this.validateWorkflowName(name)
+    if (!validated) {
+      this.postMessage({ type: "error", message: "Invalid workflow name" })
+      return
+    }
+
+    const filePath = path.join(this.getWorkflowsDir(), `${validated}.md`)
     try {
       const uri = vscode.Uri.file(filePath)
       const doc = await vscode.workspace.openTextDocument(uri)
@@ -1359,15 +1376,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Create a new workflow file and open it in the editor.
    */
   private async handleCreateWorkflowFile(name: string): Promise<void> {
+    const validated = this.validateWorkflowName(name)
+    if (!validated) {
+      this.postMessage({ type: "error", message: "Invalid workflow name" })
+      return
+    }
+
     const dir = this.getWorkflowsDir()
-    const filePath = path.join(dir, `${name}.md`)
+    const filePath = path.join(dir, `${validated}.md`)
 
     try {
       // Ensure directory exists
       await fs.promises.mkdir(dir, { recursive: true })
 
       // Create template content
-      const template = `# ${name}\n\nDescribe your workflow here.\n`
+      const template = `# ${validated}\n\nDescribe your workflow here.\n`
       await fs.promises.writeFile(filePath, template, "utf-8")
 
       // Open in editor
@@ -1389,7 +1412,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Delete a workflow file and refresh the commands list.
    */
   private async handleDeleteWorkflowFile(name: string): Promise<void> {
-    const filePath = path.join(this.getWorkflowsDir(), `${name}.md`)
+    const validated = this.validateWorkflowName(name)
+    if (!validated) {
+      this.postMessage({ type: "error", message: "Invalid workflow name" })
+      return
+    }
+
+    const filePath = path.join(this.getWorkflowsDir(), `${validated}.md`)
 
     try {
       await fs.promises.unlink(filePath)
