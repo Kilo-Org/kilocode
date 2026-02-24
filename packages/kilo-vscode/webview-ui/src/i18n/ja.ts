@@ -1002,6 +1002,7 @@ export const dict = {
   "agentManager.dialog.versionHint": "{{count}}個のWorktreeが並行して実行されます",
   "agentManager.dialog.creating": "作成中...",
   "agentManager.dialog.createWorkspace": "ワークスペースを作成",
+  "agentManager.dialog.removeImage": "画像を削除",
   "agentManager.dialog.advanced": "詳細...",
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "PR URLを貼り付け...",

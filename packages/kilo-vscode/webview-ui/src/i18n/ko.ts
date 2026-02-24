@@ -1002,6 +1002,7 @@ export const dict = {
   "agentManager.dialog.versionHint": "{{count}}개의 Worktree가 병렬로 실행됩니다",
   "agentManager.dialog.creating": "생성 중...",
   "agentManager.dialog.createWorkspace": "워크스페이스 생성",
+  "agentManager.dialog.removeImage": "이미지 제거",
   "agentManager.dialog.advanced": "고급...",
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "PR URL 붙여넣기...",

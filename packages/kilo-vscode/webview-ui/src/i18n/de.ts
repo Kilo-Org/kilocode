@@ -1020,6 +1020,7 @@ export const dict = {
   "agentManager.dialog.versionHint": "{{count}} Worktrees werden parallel ausgeführt",
   "agentManager.dialog.creating": "Wird erstellt...",
   "agentManager.dialog.createWorkspace": "Arbeitsbereich erstellen",
+  "agentManager.dialog.removeImage": "Bild entfernen",
   "agentManager.dialog.advanced": "Erweitert...",
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "PR-URL einfügen...",

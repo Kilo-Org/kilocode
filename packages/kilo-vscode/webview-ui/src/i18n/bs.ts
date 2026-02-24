@@ -1033,6 +1033,7 @@ export const dict = {
   "agentManager.dialog.versionHint": "{{count}} worktree-ova će se pokrenuti paralelno",
   "agentManager.dialog.creating": "Kreiranje...",
   "agentManager.dialog.createWorkspace": "Kreiraj radni prostor",
+  "agentManager.dialog.removeImage": "Ukloni sliku",
   "agentManager.dialog.advanced": "Napredno...",
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Zalijepite PR URL...",

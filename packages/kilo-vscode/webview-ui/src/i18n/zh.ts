@@ -997,6 +997,7 @@ export const dict = {
   "agentManager.dialog.versionHint": "{{count}} 个 Worktree 将并行运行",
   "agentManager.dialog.creating": "创建中...",
   "agentManager.dialog.createWorkspace": "创建工作区",
+  "agentManager.dialog.removeImage": "移除图片",
   "agentManager.dialog.advanced": "高级...",
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "粘贴 PR URL...",

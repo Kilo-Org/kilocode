@@ -1808,7 +1808,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
                         type="button"
                         class="image-attachment-remove"
                         onClick={() => imageAttach.remove(img.id)}
-                        aria-label="Remove image"
+                        aria-label={t("agentManager.dialog.removeImage")}
                       >
                         ×
                       </button>

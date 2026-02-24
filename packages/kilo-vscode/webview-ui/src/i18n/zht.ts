@@ -993,6 +993,7 @@ export const dict = {
   "agentManager.dialog.versionHint": "{{count}} 個 Worktree 將並行執行",
   "agentManager.dialog.creating": "建立中...",
   "agentManager.dialog.createWorkspace": "建立工作區",
+  "agentManager.dialog.removeImage": "移除圖片",
   "agentManager.dialog.advanced": "進階...",
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "貼上 PR URL...",

@@ -995,6 +995,7 @@ export const dict = {
   "agentManager.dialog.versionHint": "{{count}} Worktrees จะทำงานพร้อมกัน",
   "agentManager.dialog.creating": "กำลังสร้าง...",
   "agentManager.dialog.createWorkspace": "สร้าง Workspace",
+  "agentManager.dialog.removeImage": "ลบรูปภาพ",
   "agentManager.dialog.advanced": "ขั้นสูง...",
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "วาง URL ของ PR...",

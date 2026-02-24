@@ -1011,6 +1011,7 @@ export const dict = {
   "agentManager.dialog.versionHint": "{{count}} worktrees serão executados em paralelo",
   "agentManager.dialog.creating": "Criando...",
   "agentManager.dialog.createWorkspace": "Criar Workspace",
+  "agentManager.dialog.removeImage": "Remover imagem",
   "agentManager.dialog.advanced": "Avançado...",
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Cole a URL do PR...",

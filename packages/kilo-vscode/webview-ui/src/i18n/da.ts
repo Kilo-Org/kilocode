@@ -1006,6 +1006,7 @@ export const dict = {
   "agentManager.dialog.versionHint": "{{count}} worktrees vil køre parallelt",
   "agentManager.dialog.creating": "Opretter...",
   "agentManager.dialog.createWorkspace": "Opret Workspace",
+  "agentManager.dialog.removeImage": "Fjern billede",
   "agentManager.dialog.advanced": "Avanceret...",
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Indsæt PR URL...",

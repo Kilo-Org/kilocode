@@ -997,6 +997,7 @@ export const dict = {
   "agentManager.dialog.versionHint": "{{count}} Worktrees ستعمل بالتوازي",
   "agentManager.dialog.creating": "جارٍ الإنشاء...",
   "agentManager.dialog.createWorkspace": "إنشاء مساحة عمل",
+  "agentManager.dialog.removeImage": "إزالة الصورة",
   "agentManager.dialog.advanced": "متقدم...",
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "الصق رابط PR...",
