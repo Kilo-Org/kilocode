@@ -1003,7 +1003,7 @@ export const dict = {
     "? Dies entfernt den Worktree von der Festplatte und trennt alle Sitzungen.",
   "agentManager.dialog.deleteWorktree.cancel": "Abbrechen",
   "agentManager.dialog.deleteWorktree.confirm": "Löschen",
-  "agentManager.dialog.openWorkspace": "Arbeitsbereich öffnen",
+  "agentManager.dialog.openWorktree": "Worktree öffnen",
   "agentManager.dialog.tab.new": "Neu",
   "agentManager.dialog.tab.import": "Importieren",
   "agentManager.dialog.namePlaceholder": "Worktree-Name (optional)",

@@ -985,7 +985,7 @@ export const dict = {
   "agentManager.dialog.deleteWorktree.messagePost": "? 디스크에서 Worktree를 제거하고 모든 세션의 연결을 해제합니다.",
   "agentManager.dialog.deleteWorktree.cancel": "취소",
   "agentManager.dialog.deleteWorktree.confirm": "삭제",
-  "agentManager.dialog.openWorkspace": "워크스페이스 열기",
+  "agentManager.dialog.openWorktree": "워크트리 열기",
   "agentManager.dialog.tab.new": "새로 만들기",
   "agentManager.dialog.tab.import": "가져오기",
   "agentManager.dialog.namePlaceholder": "Worktree 이름 (선택사항)",

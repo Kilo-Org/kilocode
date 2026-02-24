@@ -1754,7 +1754,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
   }
 
   return (
-    <Dialog title={t("agentManager.dialog.openWorkspace")} fit>
+    <Dialog title={t("agentManager.dialog.openWorktree")} fit>
       {/* Tab switcher */}
       <div class="am-tab-switcher">
         <button

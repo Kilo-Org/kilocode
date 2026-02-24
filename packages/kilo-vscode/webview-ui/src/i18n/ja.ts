@@ -985,7 +985,7 @@ export const dict = {
     "？ ディスクからWorktreeを削除し、すべてのセッションの関連付けを解除します。",
   "agentManager.dialog.deleteWorktree.cancel": "キャンセル",
   "agentManager.dialog.deleteWorktree.confirm": "削除",
-  "agentManager.dialog.openWorkspace": "ワークスペースを開く",
+  "agentManager.dialog.openWorktree": "ワークツリーを開く",
   "agentManager.dialog.tab.new": "新規",
   "agentManager.dialog.tab.import": "インポート",
   "agentManager.dialog.namePlaceholder": "Worktree名（任意）",

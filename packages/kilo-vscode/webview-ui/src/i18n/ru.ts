@@ -993,7 +993,7 @@ export const dict = {
   "agentManager.dialog.deleteWorktree.messagePost": "? Это удалит Worktree с диска и отключит все сессии.",
   "agentManager.dialog.deleteWorktree.cancel": "Отмена",
   "agentManager.dialog.deleteWorktree.confirm": "Удалить",
-  "agentManager.dialog.openWorkspace": "Открыть рабочее пространство",
+  "agentManager.dialog.openWorktree": "Открыть worktree",
   "agentManager.dialog.tab.new": "Новый",
   "agentManager.dialog.tab.import": "Импорт",
   "agentManager.dialog.namePlaceholder": "Имя Worktree (необязательно)",

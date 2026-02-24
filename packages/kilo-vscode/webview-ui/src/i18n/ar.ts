@@ -980,7 +980,7 @@ export const dict = {
   "agentManager.dialog.deleteWorktree.messagePost": "؟ سيؤدي هذا إلى إزالة Worktree من القرص وفصل جميع الجلسات.",
   "agentManager.dialog.deleteWorktree.cancel": "إلغاء",
   "agentManager.dialog.deleteWorktree.confirm": "حذف",
-  "agentManager.dialog.openWorkspace": "فتح مساحة العمل",
+  "agentManager.dialog.openWorktree": "فتح شجرة العمل",
   "agentManager.dialog.tab.new": "جديد",
   "agentManager.dialog.tab.import": "استيراد",
   "agentManager.dialog.namePlaceholder": "اسم Worktree (اختياري)",
