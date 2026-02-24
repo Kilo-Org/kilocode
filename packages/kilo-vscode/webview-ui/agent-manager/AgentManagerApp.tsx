@@ -657,6 +657,9 @@ const AgentManagerContent: Component = () => {
         setManagedSessions(state.sessions)
         if (state.isGitRepo !== undefined) setIsGitRepo(state.isGitRepo)
         if (!worktreesLoaded()) setWorktreesLoaded(true)
+        // When not a git repo, also mark sessions as loaded since the Kilo
+        // server won't connect to send the sessionsLoaded message.
+        if (state.isGitRepo === false && !sessionsLoaded()) setSessionsLoaded(true)
         if (state.tabOrder) setWorktreeTabOrder(state.tabOrder)
         const current = session.currentSessionID()
         if (current) {

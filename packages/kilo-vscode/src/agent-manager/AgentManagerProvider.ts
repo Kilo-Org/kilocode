@@ -172,19 +172,30 @@ export class AgentManagerProvider implements vscode.Disposable {
     if (type === "agentManager.requestState") {
       void this.stateReady
         ?.then(() => {
+          // When the workspace is not a git repo (or has no folder open),
+          // this.state is never created. pushState() silently returns in that
+          // case, so re-send the empty/non-git state explicitly.
+          if (!this.state) {
+            this.pushEmptyState()
+            return
+          }
           this.pushState()
           // Refresh sessions after pushState so the webview's sessionsLoaded
           // handler is guaranteed to be registered (requestState fires from
           // onMount). Without this, the initial refreshSessions() in
           // initializeState() can race ahead of webview mount, causing
           // sessionsLoaded to never flip to true.
-          if (this.state && this.state.getSessions().length > 0) {
+          if (this.state.getSessions().length > 0) {
             this.provider?.refreshSessions()
           }
         })
         .catch((err) => {
           this.log("initializeState failed, pushing partial state:", err)
-          this.pushState()
+          if (!this.state) {
+            this.pushEmptyState()
+          } else {
+            this.pushState()
+          }
         })
       return null
     }

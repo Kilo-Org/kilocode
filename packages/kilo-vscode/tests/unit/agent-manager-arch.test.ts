@@ -256,4 +256,55 @@ describe("Agent Manager Provider — onMessage routing", () => {
     // Must also send sessionMeta so the webview knows the branch/path
     expect(text).toContain("agentManager.sessionMeta")
   })
+
+  // -- agentManager.requestState in non-git workspace -------------------------
+
+  /**
+   * Regression: when the workspace is not a git repo, this.state is undefined.
+   * pushState() silently returns in that case, so requestState must explicitly
+   * call pushEmptyState() instead — otherwise the webview stays stuck on
+   * loading skeletons forever.
+   */
+  it("requestState handler calls pushEmptyState when this.state is falsy", () => {
+    const text = body("onMessage")
+    // Extract the requestState branch
+    const start = text.indexOf('"agentManager.requestState"')
+    expect(start, "requestState branch must exist").toBeGreaterThan(-1)
+    // Grab a reasonable window after the match
+    const snippet = text.slice(start, start + 600)
+    expect(snippet, "must call pushEmptyState when state is absent").toContain("pushEmptyState")
+    expect(snippet, "must guard on this.state being falsy").toMatch(/!this\.state/)
+  })
+
+  it("requestState handler calls pushState when this.state is truthy", () => {
+    const text = body("onMessage")
+    const start = text.indexOf('"agentManager.requestState"')
+    const snippet = text.slice(start, start + 600)
+    expect(snippet, "must call pushState for the normal path").toContain("this.pushState()")
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Webview — non-git skeleton fix
+// ---------------------------------------------------------------------------
+
+describe("Agent Manager Webview — non-git sessionsLoaded fix", () => {
+  const tsx = readAllTsx()
+
+  /**
+   * Regression: when isGitRepo is false, the Kilo server never sends a
+   * "sessionsLoaded" message, so the skeleton was stuck forever.
+   * The fix must set sessionsLoaded(true) when receiving a state message
+   * with isGitRepo === false.
+   */
+  it("sets sessionsLoaded when agentManager.state arrives with isGitRepo false", () => {
+    // Find the agentManager.state handler block
+    const start = tsx.indexOf('"agentManager.state"')
+    expect(start, "agentManager.state handler must exist").toBeGreaterThan(-1)
+    const snippet = tsx.slice(start, start + 800)
+    expect(snippet, "must call setSessionsLoaded in the non-git branch").toContain("setSessionsLoaded")
+    expect(snippet, "must check isGitRepo === false before setting sessionsLoaded").toMatch(
+      /isGitRepo.*false|false.*isGitRepo/,
+    )
+  })
 })
