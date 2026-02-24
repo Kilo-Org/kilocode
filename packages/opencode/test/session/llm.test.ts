@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test"
+import { afterAll, beforeAll, beforeEach, describe, expect, test, mock } from "bun:test"
 import path from "path"
 import type { ModelMessage } from "ai"
 import { LLM } from "../../src/session/llm"
@@ -10,6 +10,31 @@ import { ModelsDev } from "../../src/provider/models"
 import { tmpdir } from "../fixture/fixture"
 import type { Agent } from "../../src/agent/agent"
 import type { MessageV2 } from "../../src/session/message-v2"
+
+// Mock BunProc to avoid package installation timeouts in tests
+mock.module("../../src/bun/index", () => ({
+  BunProc: {
+    install: async (pkg: string, _version?: string) => {
+      const lastAtIndex = pkg.lastIndexOf("@")
+      return lastAtIndex > 0 ? pkg.substring(0, lastAtIndex) : pkg
+    },
+    run: async () => {
+      throw new Error("BunProc.run should not be called in tests")
+    },
+    which: () => process.execPath,
+    InstallFailedError: class extends Error {},
+  },
+}))
+
+// Mock Plugin to avoid loading plugins during provider initialization
+mock.module("../../src/plugin/index", () => ({
+  Plugin: {
+    list: async () => [],
+    load: async () => {},
+    reload: async () => {},
+    trigger: async (_event: string, _context: unknown, input: Record<string, unknown>) => input,
+  },
+}))
 
 describe("session.llm.hasToolCalls", () => {
   test("returns false for empty messages array", () => {
@@ -127,19 +152,19 @@ beforeAll(() => {
   state.server = Bun.serve({
     port: 0,
     async fetch(req) {
-      const next = state.queue.shift()
-      if (!next) {
+      const url = new URL(req.url)
+      if (state.queue.length === 0) {
         return new Response("unexpected request", { status: 500 })
       }
 
-      const url = new URL(req.url)
-      const body = (await req.json()) as Record<string, unknown>
-      next.resolve({ url, headers: req.headers, body })
-
-      if (!url.pathname.endsWith(next.path)) {
+      const index = state.queue.findIndex((item) => url.pathname.endsWith(item.path))
+      if (index === -1) {
         return new Response("not found", { status: 404 })
       }
 
+      const next = state.queue.splice(index, 1)[0]
+      const body = (await req.json()) as Record<string, unknown>
+      next.resolve({ url, headers: req.headers, body })
       return next.response
     },
   })

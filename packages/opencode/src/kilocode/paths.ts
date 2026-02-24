@@ -62,7 +62,7 @@ export namespace KilocodePaths {
       }),
     )
     for (const dir of projectDirs) {
-      const skillsDir = path.join(dir, "skills")
+      const skillsDir = Filesystem.join(dir, "skills")
       if (await Filesystem.isDir(skillsDir)) {
         directories.push(dir) // Return parent (.kilocode/), not skills/
       }
@@ -71,14 +71,14 @@ export namespace KilocodePaths {
     if (!opts.skipGlobalPaths) {
       // 2. Global ~/.kilocode/
       const global = globalDir()
-      const globalSkills = path.join(global, "skills")
+      const globalSkills = Filesystem.join(global, "skills")
       if (await Filesystem.isDir(globalSkills)) {
         directories.push(global) // Return parent, not skills/
       }
 
       // 3. VSCode extension global storage (marketplace-installed skills)
       const vscode = vscodeGlobalStorage()
-      const vscodeSkills = path.join(vscode, "skills")
+      const vscodeSkills = Filesystem.join(vscode, "skills")
       if (await Filesystem.isDir(vscodeSkills)) {
         directories.push(vscode) // Return parent, not skills/
       }

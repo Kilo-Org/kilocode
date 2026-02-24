@@ -88,7 +88,7 @@ describe("tool.registry", () => {
           JSON.stringify({
             name: "custom-tools",
             dependencies: {
-              "@kilocode/plugin": "^0.0.0",
+              "@kilocode/plugin": "*",
               cowsay: "^1.6.0",
             },
           }),

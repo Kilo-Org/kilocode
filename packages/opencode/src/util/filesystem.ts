@@ -1,5 +1,6 @@
 import { realpathSync } from "fs"
-import { dirname, join, relative } from "path"
+import path from "path"
+import { normalize as _normalize } from "@opencode-ai/util/path"
 
 export namespace Filesystem {
   export const exists = (p: string) =>
@@ -13,37 +14,59 @@ export namespace Filesystem {
       .stat()
       .then((s) => s.isDirectory())
       .catch(() => false)
+
   /**
    * On Windows, normalize a path to its canonical casing using the filesystem.
    * This is needed because Windows paths are case-insensitive but LSP servers
    * may return paths with different casing than what we send them.
    */
-  export function normalizePath(p: string): string {
+  export function realpath(p: string): string {
     if (process.platform !== "win32") return p
     try {
-      return realpathSync.native(p)
+      return normalize(realpathSync.native(p))
     } catch {
-      return p
+      return normalize(p)
     }
   }
-  export function overlaps(a: string, b: string) {
-    const relA = relative(a, b)
-    const relB = relative(b, a)
-    return !relA || !relA.startsWith("..") || !relB || !relB.startsWith("..")
+
+  /**
+   * Normalize a path to use forward slashes on all platforms.
+   * On Windows, also convert MSYS and Cygwin style paths to Windows drive letter paths.
+   */
+  export function normalize(p: string): string {
+    if (process.platform !== "win32") return p
+    return _normalize(p)
+  }
+
+  export function relative(from: string, to: string) {
+    return normalize(path.relative(normalize(from), normalize(to)))
+  }
+
+  export function resolve(...segments: string[]) {
+    return normalize(path.resolve(...segments))
+  }
+
+  export function join(...segments: string[]) {
+    return normalize(path.join(...segments))
+  }
+
+  export function dirname(p: string) {
+    return normalize(path.dirname(p))
   }
 
   export function contains(parent: string, child: string) {
-    return !relative(parent, child).startsWith("..")
+    const path = relative(parent, child)
+    return !/^\.\.|^.:/.test(path)
   }
 
   export async function findUp(target: string, start: string, stop?: string) {
     let current = start
     const result = []
     while (true) {
-      const search = join(current, target)
+      const search = normalize(path.join(current, target))
       if (await exists(search)) result.push(search)
       if (stop === current) break
-      const parent = dirname(current)
+      const parent = normalize(path.dirname(current))
       if (parent === current) break
       current = parent
     }
@@ -55,11 +78,11 @@ export namespace Filesystem {
     let current = start
     while (true) {
       for (const target of targets) {
-        const search = join(current, target)
+        const search = normalize(path.join(current, target))
         if (await exists(search)) yield search
       }
       if (stop === current) break
-      const parent = dirname(current)
+      const parent = normalize(path.dirname(current))
       if (parent === current) break
       current = parent
     }
@@ -84,7 +107,7 @@ export namespace Filesystem {
         // Skip invalid glob patterns
       }
       if (stop === current) break
-      const parent = dirname(current)
+      const parent = normalize(path.dirname(current))
       if (parent === current) break
       current = parent
     }

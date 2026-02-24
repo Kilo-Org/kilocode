@@ -45,6 +45,7 @@ import { LLM } from "./llm"
 import { iife } from "@/util/iife"
 import { Shell } from "@/shell/shell"
 import { Truncate } from "@/tool/truncation"
+import { Filesystem } from "@/util/filesystem"
 import { PlanFollowup } from "@/kilocode/plan-followup" // kilocode_change
 
 // @ts-ignore
@@ -1116,7 +1117,7 @@ export namespace SessionPrompt {
               log.info("file", { mime: part.mime })
               // have to normalize, symbol search returns absolute paths
               // Decode the pathname since URL constructor doesn't automatically decode it
-              const filepath = fileURLToPath(part.url)
+              const filepath = Filesystem.normalize(fileURLToPath(part.url))
               const stat = await Bun.file(filepath)
                 .stat()
                 .catch(() => undefined)

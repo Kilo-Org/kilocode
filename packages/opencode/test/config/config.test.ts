@@ -687,7 +687,11 @@ test("resolves scoped npm plugins in config", async () => {
       const config = await Config.get()
       const pluginEntries = config.plugin ?? []
 
-      const baseUrl = pathToFileURL(path.join(tmp.path, "opencode.json")).href
+      // kilocode_change - on Windows, use regular path instead of file:// URL for import.meta.resolve
+      const baseUrl =
+        process.platform === "win32"
+          ? path.join(tmp.path, "opencode.json")
+          : pathToFileURL(path.join(tmp.path, "opencode.json")).href
       const expected = import.meta.resolve("@scope/plugin", baseUrl)
 
       expect(pluginEntries.includes(expected)).toBe(true)

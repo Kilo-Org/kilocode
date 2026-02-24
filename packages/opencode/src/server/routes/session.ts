@@ -16,6 +16,7 @@ import { Log } from "../../util/log"
 import { PermissionNext } from "@/permission/next"
 import { errors } from "../error"
 import { lazy } from "../../util/lazy"
+import { Filesystem } from "@/util/filesystem"
 
 const log = Log.create({ service: "server" })
 
@@ -55,7 +56,7 @@ export const SessionRoutes = lazy(() =>
         const query = c.req.valid("query")
         const sessions: Session.Info[] = []
         for await (const session of Session.list({
-          directory: query.directory,
+          directory: query.directory ? Filesystem.normalize(query.directory) : undefined,
           roots: query.roots,
           start: query.start,
           search: query.search,

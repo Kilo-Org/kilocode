@@ -2,7 +2,8 @@ import { describe, expect, test, afterEach } from "bun:test"
 import { Ide } from "../../src/ide"
 
 describe("ide", () => {
-  const original = structuredClone(process.env)
+  // kilocode_change - use shallow copy instead of structuredClone for process.env
+  const original = { ...process.env }
 
   afterEach(() => {
     Object.keys(process.env).forEach((key) => {

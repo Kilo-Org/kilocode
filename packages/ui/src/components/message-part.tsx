@@ -43,7 +43,7 @@ import { DiffChanges } from "./diff-changes"
 import { Markdown } from "./markdown"
 import { ImagePreview } from "./image-preview"
 import { findLast } from "@opencode-ai/util/array"
-import { getDirectory as _getDirectory, getFilename } from "@opencode-ai/util/path"
+import { getDirectory as _getDirectory, getFilename, normalize } from "@opencode-ai/util/path"
 import { checksum } from "@opencode-ai/util/encode"
 import { Tooltip } from "./tooltip"
 import { IconButton } from "./icon-button"
@@ -64,7 +64,9 @@ function getDiagnostics(
   filePath: string | undefined,
 ): Diagnostic[] {
   if (!diagnosticsByFile || !filePath) return []
-  const diagnostics = diagnosticsByFile[filePath] ?? []
+  // kilocode_change - normalize filePath for diagnostics lookup
+  const normalizedPath = normalize(filePath)
+  const diagnostics = diagnosticsByFile[normalizedPath] ?? diagnosticsByFile[filePath] ?? []
   return diagnostics.filter((d) => d.severity === 1).slice(0, 3)
 }
 
