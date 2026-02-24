@@ -2378,62 +2378,6 @@ describe("ProviderTransform.variants", () => {
         expect(Object.keys(result)).toEqual(["low", "high"])
       })
     })
-
-    describe("@ai-sdk/cohere", () => {
-      test("returns empty object", () => {
-        const model = createMockModel({
-          id: "cohere/command-r",
-          providerID: "cohere",
-          api: {
-            id: "command-r",
-            url: "https://api.cohere.com",
-            npm: "@ai-sdk/cohere",
-          },
-        })
-        const result = ProviderTransform.variants(model)
-        expect(result).toEqual({})
-      })
-    })
-
-    describe("@ai-sdk/groq", () => {
-      test("returns none and WIDELY_SUPPORTED_EFFORTS with thinkingLevel", () => {
-        const model = createMockModel({
-          id: "groq/llama-4",
-          providerID: "groq",
-          api: {
-            id: "llama-4-sc",
-            url: "https://api.groq.com",
-            npm: "@ai-sdk/groq",
-          },
-        })
-        const result = ProviderTransform.variants(model)
-        expect(Object.keys(result)).toEqual(["none", "low", "medium", "high"])
-        expect(result.none).toEqual({
-          includeThoughts: true,
-          thinkingLevel: "none",
-        })
-        expect(result.low).toEqual({
-          includeThoughts: true,
-          thinkingLevel: "low",
-        })
-      })
-    })
-
-    describe("@ai-sdk/perplexity", () => {
-      test("returns empty object", () => {
-        const model = createMockModel({
-          id: "perplexity/sonar-plus",
-          providerID: "perplexity",
-          api: {
-            id: "sonar-plus",
-            url: "https://api.perplexity.ai",
-            npm: "@ai-sdk/perplexity",
-          },
-        })
-        const result = ProviderTransform.variants(model)
-        expect(result).toEqual({})
-      })
-    })
   })
 
   // kilocode_change start
@@ -2480,6 +2424,44 @@ describe("ProviderTransform.variants", () => {
         const result = ProviderTransform.smallOptions(model)
         expect(result).toEqual({ reasoning: { enabled: false } })
       })
+    })
+  })
+
+  describe("@ai-sdk/groq", () => {
+    test("returns none and WIDELY_SUPPORTED_EFFORTS with thinkingLevel", () => {
+      const model = createMockModel({
+        id: "groq/llama-4",
+        providerID: "groq",
+        api: {
+          id: "llama-4-sc",
+          url: "https://api.groq.com",
+          npm: "@ai-sdk/groq",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["none", "low", "medium", "high"])
+      expect(result.none).toEqual({
+        reasoningEffort: "none",
+      })
+      expect(result.low).toEqual({
+        reasoningEffort: "low",
+      })
+    })
+  })
+
+  describe("@ai-sdk/perplexity", () => {
+    test("returns empty object", () => {
+      const model = createMockModel({
+        id: "perplexity/sonar-plus",
+        providerID: "perplexity",
+        api: {
+          id: "sonar-plus",
+          url: "https://api.perplexity.ai",
+          npm: "@ai-sdk/perplexity",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(result).toEqual({})
     })
   })
 })

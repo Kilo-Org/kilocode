@@ -634,12 +634,19 @@ export namespace ProviderTransform {
             },
           }
         }
+        let levels = ["low", "high"]
+        if (id.includes("3.1")) {
+          levels = ["low", "medium", "high"]
+        }
+
         return Object.fromEntries(
-          ["low", "high"].map((effort) => [
+          levels.map((effort) => [
             effort,
             {
-              includeThoughts: true,
-              thinkingLevel: effort,
+              thinkingConfig: {
+                includeThoughts: true,
+                thinkingLevel: effort,
+              },
             },
           ]),
         )
@@ -659,8 +666,7 @@ export namespace ProviderTransform {
           groqEffort.map((effort) => [
             effort,
             {
-              includeThoughts: true,
-              thinkingLevel: effort,
+              reasoningEffort: effort,
             },
           ]),
         )

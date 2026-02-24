@@ -92,6 +92,16 @@ export interface Message {
   content?: string
   parts?: Part[]
   createdAt: string
+  time?: { created: number; completed?: number }
+  agent?: string
+  model?: { providerID: string; modelID: string }
+  providerID?: string
+  modelID?: string
+  mode?: string
+  parentID?: string
+  path?: { cwd: string; root: string }
+  error?: { name: string; data?: Record<string, unknown> }
+  summary?: { title?: string; body?: string; diffs?: unknown[] } | boolean
   cost?: number
   tokens?: TokenUsage
 }
@@ -102,6 +112,14 @@ export interface SessionInfo {
   title?: string
   createdAt: string
   updatedAt: string
+}
+
+// Cloud session info (from Kilo cloud API)
+export interface CloudSessionInfo {
+  session_id: string
+  title: string | null
+  created_at: string
+  updated_at: string
 }
 
 // Permission request
@@ -399,6 +417,36 @@ export interface SessionsLoadedMessage {
   sessions: SessionInfo[]
 }
 
+export interface CloudSessionsLoadedMessage {
+  type: "cloudSessionsLoaded"
+  sessions: CloudSessionInfo[]
+  nextCursor: string | null
+}
+
+export interface GitRemoteUrlLoadedMessage {
+  type: "gitRemoteUrlLoaded"
+  gitUrl: string | null
+}
+
+export interface CloudSessionDataLoadedMessage {
+  type: "cloudSessionDataLoaded"
+  cloudSessionId: string
+  title: string
+  messages: Message[]
+}
+
+export interface CloudSessionImportedMessage {
+  type: "cloudSessionImported"
+  cloudSessionId: string
+  session: SessionInfo
+}
+
+export interface CloudSessionImportFailedMessage {
+  type: "cloudSessionImportFailed"
+  cloudSessionId: string
+  error: string
+}
+
 export interface ActionMessage {
   type: "action"
   action: string
@@ -441,7 +489,7 @@ export interface DeviceAuthCancelledMessage {
 
 export interface NavigateMessage {
   type: "navigate"
-  view: "newTask" | "marketplace" | "history" | "profile" | "settings"
+  view: "newTask" | "marketplace" | "history" | "cloudHistory" | "profile" | "settings"
 }
 
 export interface ProvidersLoadedMessage {
@@ -675,6 +723,8 @@ export type ExtensionMessage =
   | MessagesLoadedMessage
   | MessageCreatedMessage
   | SessionsLoadedMessage
+  | CloudSessionsLoadedMessage
+  | GitRemoteUrlLoadedMessage
   | ActionMessage
   | ProfileDataMessage
   | DeviceAuthStartedMessage
@@ -706,6 +756,9 @@ export type ExtensionMessage =
   | SetChatBoxMessage
   | TriggerTaskMessage
   | VariantsLoadedMessage
+  | CloudSessionDataLoadedMessage
+  | CloudSessionImportedMessage
+  | CloudSessionImportFailedMessage
   | AgentManagerBranchesMessage
   | AgentManagerExternalWorktreesMessage
   | AgentManagerImportResultMessage
@@ -757,6 +810,33 @@ export interface LoadMessagesRequest {
 
 export interface LoadSessionsRequest {
   type: "loadSessions"
+}
+
+export interface RequestCloudSessionsMessage {
+  type: "requestCloudSessions"
+  cursor?: string
+  limit?: number
+  gitUrl?: string
+}
+
+export interface RequestGitRemoteUrlMessage {
+  type: "requestGitRemoteUrl"
+}
+
+export interface RequestCloudSessionDataMessage {
+  type: "requestCloudSessionData"
+  sessionId: string
+}
+
+export interface ImportAndSendMessage {
+  type: "importAndSend"
+  cloudSessionId: string
+  text: string
+  providerID?: string
+  modelID?: string
+  agent?: string
+  variant?: string
+  files?: FileAttachment[]
 }
 
 export interface LoginRequest {
@@ -1068,6 +1148,8 @@ export type WebviewMessage =
   | ClearSessionRequest
   | LoadMessagesRequest
   | LoadSessionsRequest
+  | RequestCloudSessionsMessage
+  | RequestGitRemoteUrlMessage
   | LoginRequest
   | LogoutRequest
   | RefreshProfileRequest
@@ -1115,6 +1197,8 @@ export type WebviewMessage =
   | SetSessionsCollapsedRequest
   | PersistVariantRequest
   | RequestVariantsMessage
+  | RequestCloudSessionDataMessage
+  | ImportAndSendMessage
   | RequestBranchesMessage
   | RequestExternalWorktreesMessage
   | ImportFromBranchRequest

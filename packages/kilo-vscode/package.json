@@ -60,6 +60,11 @@
         "icon": "$(history)"
       },
       {
+        "command": "kilo-code.new.cloudHistoryButtonClicked",
+        "title": "Cloud History",
+        "icon": "$(cloud)"
+      },
+      {
         "command": "kilo-code.new.profileButtonClicked",
         "title": "Profile",
         "icon": "$(account)"
@@ -217,18 +222,23 @@
           "when": "view == kilo-code.new.sidebarView"
         },
         {
-          "command": "kilo-code.new.historyButtonClicked",
+          "command": "kilo-code.new.cloudHistoryButtonClicked",
           "group": "navigation@3",
           "when": "view == kilo-code.new.sidebarView"
         },
         {
-          "command": "kilo-code.new.profileButtonClicked",
+          "command": "kilo-code.new.historyButtonClicked",
           "group": "navigation@4",
           "when": "view == kilo-code.new.sidebarView"
         },
         {
-          "command": "kilo-code.new.settingsButtonClicked",
+          "command": "kilo-code.new.profileButtonClicked",
           "group": "navigation@5",
+          "when": "view == kilo-code.new.sidebarView"
+        },
+        {
+          "command": "kilo-code.new.settingsButtonClicked",
+          "group": "navigation@6",
           "when": "view == kilo-code.new.sidebarView"
         }
       ],

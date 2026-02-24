@@ -764,6 +764,27 @@
   white-space: nowrap;
 }
 
+/* Cloud Session List */
+.cloud-session-list {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.cloud-session-filters {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.cloud-session-load-more {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  padding: 8px;
+}
+
 /* ============================================
    Kilo Notifications
    ============================================ */

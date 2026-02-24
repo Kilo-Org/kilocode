@@ -65,6 +65,7 @@ import {
 import { LanguageBridge, DataBridge } from "../src/App"
 import { useLanguage } from "../src/context/language"
 import { formatRelativeDate } from "../src/utils/date"
+import { useImageAttachments } from "../src/hooks/useImageAttachments"
 import { validateLocalSession, nextSelectionAfterDelete, adjacentHint, LOCAL } from "./navigate"
 import { reorderTabs, applyTabOrder, firstOrderedTitle } from "./tab-order"
 import { ConstrainDragYAxis, SortableTab } from "./sortable-tab"
@@ -1663,6 +1664,8 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
   const [baseBranchOpen, setBaseBranchOpen] = createSignal(false)
   const [highlightedIndex, setHighlightedIndex] = createSignal(0)
 
+  const imageAttach = useImageAttachments()
+
   let textareaRef: HTMLTextAreaElement | undefined
 
   onMount(() => {
@@ -1698,6 +1701,8 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
     const selectedAgent = agent() !== defaultAgent ? agent() : undefined
     const advanced = showAdvanced()
     const customBranch = advanced ? branchName().trim() || undefined : undefined
+    const imgs = imageAttach.images()
+    const imgFiles = imgs.length > 0 ? imgs.map((img) => ({ mime: img.mime, url: img.dataUrl })) : undefined
 
     const isCompare = compareMode()
     const allocations = isCompare ? allocationsToArray(modelAllocations()) : undefined
@@ -1715,6 +1720,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
       baseBranch: advanced ? (baseBranch() ?? undefined) : undefined,
       branchName: customBranch,
       modelAllocations: allocations,
+      files: imgFiles,
     })
 
     props.onClose()
@@ -1810,7 +1816,32 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
             onInput={(e) => setName(e.currentTarget.value)}
           />
           {/* Prompt input — reuses the sidebar chat-input base classes for consistent styling */}
-          <div class="prompt-input-container am-prompt-input-container">
+          <div
+            class="prompt-input-container am-prompt-input-container"
+            classList={{ "prompt-input-container--dragging": imageAttach.dragging() }}
+            onDragOver={imageAttach.handleDragOver}
+            onDragLeave={imageAttach.handleDragLeave}
+            onDrop={imageAttach.handleDrop}
+          >
+            <Show when={imageAttach.images().length > 0}>
+              <div class="image-attachments">
+                <For each={imageAttach.images()}>
+                  {(img) => (
+                    <div class="image-attachment">
+                      <img src={img.dataUrl} alt={img.filename} title={img.filename} />
+                      <button
+                        type="button"
+                        class="image-attachment-remove"
+                        onClick={() => imageAttach.remove(img.id)}
+                        aria-label={t("agentManager.dialog.removeImage")}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
+                </For>
+              </div>
+            </Show>
             <div class="prompt-input-wrapper am-prompt-input-wrapper">
               <div class="prompt-input-ghost-wrapper am-prompt-input-ghost-wrapper">
                 <textarea
@@ -1824,6 +1855,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
                     setPrompt(e.currentTarget.value)
                     adjustHeight()
                   }}
+                  onPaste={(e) => imageAttach.handlePaste(e)}
                   rows={3}
                 />
               </div>

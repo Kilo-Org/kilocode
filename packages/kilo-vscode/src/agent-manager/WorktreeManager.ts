@@ -10,7 +10,7 @@ import * as path from "path"
 import * as fs from "fs"
 import * as cp from "child_process"
 import simpleGit, { type SimpleGit } from "simple-git"
-import { generateBranchName } from "./branch-name"
+import { generateBranchName, sanitizeBranchName } from "./branch-name"
 import {
   parsePRUrl,
   localBranchName,
@@ -91,7 +91,8 @@ export class WorktreeManager {
       }
     }
 
-    let branch = params.existingBranch ?? params.branchName ?? generateBranchName(params.prompt || "agent-task")
+    const sanitized = params.branchName ? sanitizeBranchName(params.branchName) : undefined
+    let branch = params.existingBranch ?? (sanitized || undefined) ?? generateBranchName(params.prompt || "agent-task")
 
     if (params.existingBranch) {
       const exists = await this.branchExists(branch)

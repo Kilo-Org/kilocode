@@ -40,7 +40,7 @@ export type WebviewMessage =
     }
   | {
       type: "messageCreated"
-      message: { id: string; sessionID: string; role: string; createdAt: string; cost?: number; tokens?: unknown }
+      message: Record<string, unknown>
     }
   | { type: "sessionStatus"; sessionID: string; status: string; attempt?: number; message?: string; next?: number }
   | {
@@ -75,18 +75,27 @@ export function mapSSEEventToWebviewMessage(event: SSEEvent, sessionID: string |
         delta: event.properties.delta ? { type: "text-delta", textDelta: event.properties.delta } : undefined,
       }
     }
-    case "message.updated":
+    case "message.part.delta": {
+      const props = event.properties
+      if (!sessionID) return null
+      return {
+        type: "partUpdated",
+        sessionID: props.sessionID,
+        messageID: props.messageID,
+        part: { id: props.partID, type: "text", messageID: props.messageID, text: props.delta },
+        delta: { type: "text-delta", textDelta: props.delta },
+      }
+    }
+    case "message.updated": {
+      const info = event.properties.info
       return {
         type: "messageCreated",
         message: {
-          id: event.properties.info.id,
-          sessionID: event.properties.info.sessionID,
-          role: event.properties.info.role,
-          createdAt: new Date(event.properties.info.time.created).toISOString(),
-          cost: event.properties.info.cost,
-          tokens: event.properties.info.tokens,
+          ...info,
+          createdAt: new Date(info.time.created).toISOString(),
         },
       }
+    }
     case "session.status": {
       const info = event.properties.status
       return {

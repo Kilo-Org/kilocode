@@ -12,6 +12,8 @@ import type {
   McpConfig,
   Config,
   KilocodeNotification,
+  CloudSessionsResponse,
+  CloudSessionData,
   EditorContext,
 } from "./types"
 import { extractHttpErrorMessage, parseSSEDataLine } from "./http-utils"
@@ -350,6 +352,54 @@ export class HttpClient {
     } catch (err) {
       console.warn("[Kilo] Failed to fetch notifications:", err)
       return []
+    }
+  }
+
+  /**
+   * Fetch cloud CLI sessions from the Kilo cloud API.
+   * Returns null if not logged in or if the request fails.
+   */
+  async getCloudSessions(params?: {
+    cursor?: string
+    limit?: number
+    gitUrl?: string
+  }): Promise<CloudSessionsResponse | null> {
+    try {
+      const query = new URLSearchParams()
+      if (params?.cursor) query.set("cursor", params.cursor)
+      if (params?.limit) query.set("limit", String(params.limit))
+      if (params?.gitUrl) query.set("gitUrl", params.gitUrl)
+      const qs = query.toString()
+      return await this.request<CloudSessionsResponse>("GET", `/kilo/cloud-sessions${qs ? `?${qs}` : ""}`)
+    } catch (err) {
+      console.warn("[Kilo] Failed to fetch cloud sessions:", err)
+      return null
+    }
+  }
+
+  /**
+   * Fetch full cloud session data for read-only preview.
+   * Returns null if the session is not found or the request fails.
+   */
+  async getCloudSession(sessionId: string): Promise<CloudSessionData | null> {
+    try {
+      return await this.request<CloudSessionData>("GET", `/kilo/cloud/session/${sessionId}`)
+    } catch (err) {
+      console.warn("[Kilo] Failed to fetch cloud session:", err)
+      return null
+    }
+  }
+
+  /**
+   * Import a cloud session into local storage with fresh IDs.
+   * Returns the imported session info, or null on failure.
+   */
+  async importCloudSession(sessionId: string, directory: string): Promise<SessionInfo | null> {
+    try {
+      return await this.request<SessionInfo>("POST", "/kilo/cloud/session/import", { sessionId }, { directory })
+    } catch (err) {
+      console.warn("[Kilo] Failed to import cloud session:", err)
+      return null
     }
   }
 

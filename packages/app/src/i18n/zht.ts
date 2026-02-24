@@ -73,6 +73,8 @@ export const dict = {
   "command.agent.cycle.reverse.description": "切換到上一個代理程式",
   "command.model.variant.cycle": "循環思考強度",
   "command.model.variant.cycle.description": "切換到下一個強度等級",
+  "command.prompt.mode.shell": "Shell",
+  "command.prompt.mode.normal": "Prompt",
   "command.permissions.autoaccept.enable": "自動接受編輯",
   "command.permissions.autoaccept.disable": "停止自動接受編輯",
   "command.workspace.toggle": "切換工作區",
@@ -145,8 +147,7 @@ export const dict = {
   "provider.connect.oauth.code.invalid": "授權碼無效",
   "provider.connect.oauth.auto.visit.prefix": "造訪 ",
   "provider.connect.oauth.auto.visit.link": "此連結",
-  "provider.connect.oauth.auto.visit.suffix":
-    " 並輸入以下程式碼，以連線你的帳戶並在 Kilo 中使用 {{provider}} 模型。",
+  "provider.connect.oauth.auto.visit.suffix": " 並輸入以下程式碼，以連線你的帳戶並在 Kilo 中使用 {{provider}} 模型。",
   "provider.connect.oauth.auto.confirmationCode": "確認碼",
   "provider.connect.toast.connected.title": "{{provider}} 已連線",
   "provider.connect.toast.connected.description": "現在可以使用 {{provider}} 模型了。",
@@ -223,9 +224,11 @@ export const dict = {
 
   "prompt.placeholder.shell": "輸入 shell 命令...",
   "prompt.placeholder.normal": '隨便問點什麼... "{{example}}"',
+  "prompt.placeholder.simple": "隨便問點什麼...",
   "prompt.placeholder.summarizeComments": "摘要評論…",
   "prompt.placeholder.summarizeComment": "摘要這則評論…",
   "prompt.mode.shell": "Shell",
+  "prompt.mode.normal": "Prompt",
   "prompt.mode.shell.exit": "按 esc 退出",
 
   "prompt.example.1": "修復程式碼庫中的一個 TODO",
@@ -497,6 +500,9 @@ export const dict = {
 
   "session.messages.jumpToLatest": "跳到最新",
   "session.context.addToContext": "將 {{selection}} 新增到上下文",
+  "session.todo.title": "待辦事項",
+  "session.todo.collapse": "折疊",
+  "session.todo.expand": "展開",
 
   "session.new.worktree.main": "主分支",
   "session.new.worktree.mainWithBranch": "主分支 ({{branch}})",
