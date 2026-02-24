@@ -42,6 +42,8 @@ export const dict = {
   "ui.sessionTurn.status.gatheringThoughts": "考えをまとめています",
   "ui.sessionTurn.status.consideringNextSteps": "次のステップを検討中",
 
+  "ui.reasoning.label": "推論",
+
   "ui.messagePart.diagnostic.error": "エラー",
   "ui.messagePart.title.edit": "編集",
   "ui.messagePart.title.write": "作成",

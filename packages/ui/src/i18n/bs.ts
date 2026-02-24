@@ -47,6 +47,8 @@ export const dict = {
   "ui.sessionTurn.status.gatheringThoughts": "Sređivanje misli",
   "ui.sessionTurn.status.consideringNextSteps": "Razmatranje sljedećih koraka",
 
+  "ui.reasoning.label": "Razmišljanje",
+
   "ui.messagePart.diagnostic.error": "Greška",
   "ui.messagePart.title.edit": "Uredi",
   "ui.messagePart.title.write": "Napiši",
