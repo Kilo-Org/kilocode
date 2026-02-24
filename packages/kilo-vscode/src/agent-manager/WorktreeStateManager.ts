@@ -320,8 +320,17 @@ export class WorktreeStateManager {
       data.sessionsCollapsed = true
     }
 
-    const dir = path.dirname(this.file)
-    if (!fs.existsSync(dir)) await fs.promises.mkdir(dir, { recursive: true })
-    await fs.promises.writeFile(this.file, JSON.stringify(data, null, 2), "utf-8")
+    try {
+      const dir = path.dirname(this.file)
+      if (!fs.existsSync(dir)) await fs.promises.mkdir(dir, { recursive: true })
+      await fs.promises.writeFile(this.file, JSON.stringify(data, null, 2), "utf-8")
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code
+      if (code === "ENOENT") {
+        this.log("State directory was removed, skipping save")
+        return
+      }
+      throw error
+    }
   }
 }

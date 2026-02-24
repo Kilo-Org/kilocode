@@ -218,7 +218,13 @@ export class HttpClient {
     sessionId: string,
     parts: Array<{ type: "text"; text: string } | { type: "file"; mime: string; url: string }>,
     directory: string,
-    options?: { providerID?: string; modelID?: string; agent?: string; variant?: string; editorContext?: EditorContext },
+    options?: {
+      providerID?: string
+      modelID?: string
+      agent?: string
+      variant?: string
+      editorContext?: EditorContext
+    },
   ): Promise<void> {
     const body: Record<string, unknown> = { parts }
     if (options?.providerID && options?.modelID) {

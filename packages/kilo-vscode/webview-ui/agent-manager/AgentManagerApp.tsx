@@ -19,10 +19,12 @@ import type {
   AgentManagerKeybindingsMessage,
   AgentManagerMultiVersionProgressMessage,
   AgentManagerSendInitialMessage,
-  AgentManagerBranchInfo,
+  AgentManagerBranchesMessage,
+  AgentManagerImportResultMessage,
   WorktreeState,
   ManagedSessionState,
   SessionInfo,
+  BranchInfo,
 } from "../src/types/messages"
 import { DragDropProvider, DragDropSensors, DragOverlay, SortableProvider, closestCenter } from "@thisbeyond/solid-dnd"
 import type { DragEvent } from "@thisbeyond/solid-dnd"
@@ -35,13 +37,14 @@ import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
 import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff"
 import { Code } from "@kilocode/kilo-ui/code"
 import { Diff } from "@kilocode/kilo-ui/diff"
-import { Toast } from "@kilocode/kilo-ui/toast"
+import { Toast, showToast } from "@kilocode/kilo-ui/toast"
 import { ResizeHandle } from "@kilocode/kilo-ui/resize-handle"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
+import { Popover } from "@kilocode/kilo-ui/popover"
 import { HoverCard } from "@kilocode/kilo-ui/hover-card"
 import { VSCodeProvider, useVSCode } from "../src/context/vscode"
 import { ServerProvider } from "../src/context/server"
@@ -1566,11 +1569,13 @@ const AgentManagerContent: Component = () => {
 }
 
 // ---------------------------------------------------------------------------
-// Advanced "New Worktree" dialog — prompt, versions, model, mode, advanced options
+// Advanced "New Worktree" dialog — prompt, versions, model, mode, import tab
 // ---------------------------------------------------------------------------
 
 type VersionCount = 1 | 2 | 3 | 4
 const VERSION_OPTIONS: VersionCount[] = [1, 2, 3, 4]
+
+type DialogTab = "new" | "import"
 
 function sanitizeSegment(text: string, maxLength = 50): string {
   return text
@@ -1594,20 +1599,19 @@ function sanitizeBranchName(name: string): string {
     .join("/")
 }
 
-function formatRelativeTime(epoch: number): string {
-  const diff = Math.floor(Date.now() / 1000) - epoch
-  if (diff < 60) return "now"
-  if (diff < 3600) return `${Math.floor(diff / 60)}m`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h`
-  if (diff < 2592000) return `${Math.floor(diff / 86400)}d`
-  if (diff < 31536000) return `${Math.floor(diff / 2592000)}mo`
-  return `${Math.floor(diff / 31536000)}y`
-}
-
 const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
   const vscode = useVSCode()
   const session = useSession()
 
+  const [tab, setTab] = createSignal<DialogTab>("new")
+
+  // --- Shared branch data (used by both New tab's base branch selector and Import tab) ---
+  const [branches, setBranches] = createSignal<BranchInfo[]>([])
+  const [branchesLoading, setBranchesLoading] = createSignal(false)
+  const [defaultBranch, setDefaultBranch] = createSignal("main")
+  const [branchSearch, setBranchSearch] = createSignal("")
+
+  // --- New tab state ---
   const [name, setName] = createSignal("")
   const [prompt, setPrompt] = createSignal("")
   const [versions, setVersions] = createSignal<VersionCount>(1)
@@ -1617,9 +1621,6 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
   const [showAdvanced, setShowAdvanced] = createSignal(false)
   const [branchName, setBranchName] = createSignal("")
   const [baseBranch, setBaseBranch] = createSignal<string | null>(null)
-  const [branches, setBranches] = createSignal<AgentManagerBranchInfo[]>([])
-  const [defaultBranch, setDefaultBranch] = createSignal("main")
-  const [branchSearch, setBranchSearch] = createSignal("")
   const [baseBranchOpen, setBaseBranchOpen] = createSignal(false)
   const [highlightedIndex, setHighlightedIndex] = createSignal(0)
 
@@ -1631,19 +1632,9 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
       textareaRef.focus()
       textareaRef.select()
     })
+    setBranchesLoading(true)
     vscode.postMessage({ type: "agentManager.requestBranches" })
   })
-
-  // Listen for branch data
-  const handler = (e: MessageEvent) => {
-    const msg = e.data as ExtensionMessage
-    if (msg.type === "agentManager.branches") {
-      setBranches(msg.branches)
-      setDefaultBranch(msg.defaultBranch)
-    }
-  }
-  window.addEventListener("message", handler)
-  onCleanup(() => window.removeEventListener("message", handler))
 
   const effectiveBaseBranch = () => baseBranch() ?? defaultBranch()
 
@@ -1695,214 +1686,399 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
     textareaRef.style.height = `${Math.min(textareaRef.scrollHeight, 200)}px`
   }
 
+  // --- Import tab state ---
+  const [prUrl, setPrUrl] = createSignal("")
+  const [prPending, setPrPending] = createSignal(false)
+  const [branchOpen, setBranchOpen] = createSignal(false)
+  const [importPending, setImportPending] = createSignal(false)
+
+  const isPending = () => prPending() || importPending()
+
+  // Listen for branch data + import results
+  const importUnsub = vscode.onMessage((msg) => {
+    if (msg.type === "agentManager.branches") {
+      const ev = msg as AgentManagerBranchesMessage
+      setBranches(ev.branches)
+      setDefaultBranch(ev.defaultBranch)
+      setBranchesLoading(false)
+    }
+    if (msg.type === "agentManager.importResult") {
+      const ev = msg as AgentManagerImportResultMessage
+      setPrPending(false)
+      setImportPending(false)
+      if (ev.success) {
+        props.onClose()
+      } else {
+        showToast({ variant: "error", title: "Import failed", description: ev.message })
+      }
+    }
+  })
+
+  onCleanup(() => importUnsub())
+
+  const handlePRSubmit = () => {
+    const url = prUrl().trim()
+    if (!url || isPending()) return
+    setPrPending(true)
+    vscode.postMessage({ type: "agentManager.importFromPR", url })
+  }
+
+  const handleBranchSelect = (name: string) => {
+    if (isPending()) return
+    setImportPending(true)
+    setBranchOpen(false)
+    setBranchSearch("")
+    vscode.postMessage({ type: "agentManager.importFromBranch", branch: name })
+  }
+
   return (
-    <Dialog title="New Worktree" fit>
-      <div class="am-nv-dialog" onKeyDown={handleKeyDown}>
-        {/* Optional worktree name */}
-        <input
-          class="am-nv-name-input"
-          placeholder="Worktree name (optional)"
-          value={name()}
-          onInput={(e) => setName(e.currentTarget.value)}
-        />
-
-        {/* Prompt input — reuses the sidebar chat-input base classes for consistent styling */}
-        <div class="prompt-input-container am-prompt-input-container">
-          <div class="prompt-input-wrapper am-prompt-input-wrapper">
-            <div class="prompt-input-ghost-wrapper am-prompt-input-ghost-wrapper">
-              <textarea
-                ref={textareaRef}
-                class="prompt-input am-prompt-input"
-                placeholder={`Type a message (${isMac ? "\u2318" : "Ctrl+"}Enter to send)`}
-                value={prompt()}
-                onInput={(e) => {
-                  setPrompt(e.currentTarget.value)
-                  adjustHeight()
-                }}
-                rows={3}
-              />
-            </div>
-          </div>
-          <div class="prompt-input-hint">
-            <div class="prompt-input-hint-selectors">
-              <ModelSelectorBase
-                value={model()}
-                onSelect={(pid, mid) => setModel(pid && mid ? { providerID: pid, modelID: mid } : null)}
-                placement="top-start"
-                allowClear
-                clearLabel="Default"
-              />
-              <Show when={session.agents().length > 1}>
-                <ModeSwitcherBase agents={session.agents()} value={agent()} onSelect={setAgent} />
-              </Show>
-            </div>
-            <div class="prompt-input-hint-actions" />
-          </div>
-        </div>
-
-        {/* Advanced options toggle */}
-        <button class="am-advanced-toggle" onClick={() => setShowAdvanced(!showAdvanced())} type="button">
-          <Icon name={showAdvanced() ? "chevron-down" : "chevron-right"} size="small" />
-          <span>Advanced options</span>
+    <Dialog title="Open Workspace" fit>
+      {/* Tab switcher */}
+      <div class="am-tab-switcher">
+        <button
+          class="am-tab-switcher-pill"
+          classList={{ "am-tab-switcher-pill-active": tab() === "new" }}
+          onClick={() => setTab("new")}
+          type="button"
+        >
+          New
         </button>
+        <button
+          class="am-tab-switcher-pill"
+          classList={{ "am-tab-switcher-pill-active": tab() === "import" }}
+          onClick={() => setTab("import")}
+          type="button"
+        >
+          Import
+        </button>
+      </div>
 
-        <Show when={showAdvanced()}>
-          <div class="am-advanced-section">
-            <div class="am-advanced-field">
-              <span class="am-nv-config-label">Branch name</span>
-              <input
-                class="am-advanced-input"
-                type="text"
-                placeholder="auto-generated"
-                value={branchName()}
-                onInput={(e) => setBranchName(sanitizeBranchName(e.currentTarget.value))}
-              />
+      {/* New tab */}
+      <Show when={tab() === "new"}>
+        <div class="am-nv-dialog" onKeyDown={handleKeyDown}>
+          <input
+            class="am-nv-name-input"
+            placeholder="Worktree name (optional)"
+            value={name()}
+            onInput={(e) => setName(e.currentTarget.value)}
+          />
+          {/* Prompt input — reuses the sidebar chat-input base classes for consistent styling */}
+          <div class="prompt-input-container am-prompt-input-container">
+            <div class="prompt-input-wrapper am-prompt-input-wrapper">
+              <div class="prompt-input-ghost-wrapper am-prompt-input-ghost-wrapper">
+                <textarea
+                  ref={textareaRef}
+                  class="prompt-input am-prompt-input"
+                  placeholder={`Type a message (${isMac ? "\u2318" : "Ctrl+"}Enter to send)`}
+                  value={prompt()}
+                  onInput={(e) => {
+                    setPrompt(e.currentTarget.value)
+                    adjustHeight()
+                  }}
+                  rows={3}
+                />
+              </div>
             </div>
-            <div class="am-advanced-field">
-              <span class="am-nv-config-label">Base branch</span>
-              <div class="am-branch-selector-wrapper">
-                <button
-                  class="am-branch-selector-trigger"
-                  onClick={() => setBaseBranchOpen(!baseBranchOpen())}
-                  type="button"
-                >
-                  <Icon name="branch" size="small" />
-                  <span class="am-branch-selector-value">{effectiveBaseBranch()}</span>
-                  <Show when={!baseBranch()}>
-                    <span class="am-branch-badge">default</span>
-                  </Show>
-                  <Icon name="selector" size="small" />
-                </button>
-                <Show when={baseBranchOpen()}>
-                  <div class="am-branch-dropdown" onWheel={(e) => e.stopPropagation()}>
-                    <div class="am-branch-search">
-                      <Icon name="magnifying-glass" size="small" />
-                      <input
-                        class="am-branch-search-input"
-                        type="text"
-                        placeholder="Search branches..."
-                        value={branchSearch()}
-                        ref={(el) => requestAnimationFrame(() => el.focus())}
-                        onInput={(e) => {
-                          setBranchSearch(e.currentTarget.value)
-                          setHighlightedIndex(0)
-                        }}
-                        onKeyDown={(e) => {
-                          const items = filteredBranches()
-                          if (e.key === "ArrowDown") {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            const next = Math.min(highlightedIndex() + 1, items.length - 1)
-                            setHighlightedIndex(next)
-                            requestAnimationFrame(() => {
-                              document
-                                .querySelector(`.am-branch-item[data-index="${next}"]`)
-                                ?.scrollIntoView({ block: "nearest" })
-                            })
-                          } else if (e.key === "ArrowUp") {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            const prev = Math.max(highlightedIndex() - 1, 0)
-                            setHighlightedIndex(prev)
-                            requestAnimationFrame(() => {
-                              document
-                                .querySelector(`.am-branch-item[data-index="${prev}"]`)
-                                ?.scrollIntoView({ block: "nearest" })
-                            })
-                          } else if (e.key === "Enter") {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            const selected = items[highlightedIndex()]
-                            if (selected) {
-                              setBaseBranch(selected.name)
+            <div class="prompt-input-hint">
+              <div class="prompt-input-hint-selectors">
+                <ModelSelectorBase
+                  value={model()}
+                  onSelect={(pid, mid) => setModel(pid && mid ? { providerID: pid, modelID: mid } : null)}
+                  placement="top-start"
+                  allowClear
+                  clearLabel="Default"
+                />
+                <Show when={session.agents().length > 1}>
+                  <ModeSwitcherBase agents={session.agents()} value={agent()} onSelect={setAgent} />
+                </Show>
+              </div>
+              <div class="prompt-input-hint-actions" />
+            </div>
+          </div>
+
+          {/* Advanced options toggle */}
+          <button class="am-advanced-toggle" onClick={() => setShowAdvanced(!showAdvanced())} type="button">
+            <Icon name={showAdvanced() ? "chevron-down" : "chevron-right"} size="small" />
+            <span>Advanced options</span>
+          </button>
+
+          <Show when={showAdvanced()}>
+            <div class="am-advanced-section">
+              <div class="am-advanced-field">
+                <span class="am-nv-config-label">Branch name</span>
+                <input
+                  class="am-advanced-input"
+                  type="text"
+                  placeholder="auto-generated"
+                  value={branchName()}
+                  onInput={(e) => setBranchName(sanitizeBranchName(e.currentTarget.value))}
+                />
+              </div>
+              <div class="am-advanced-field">
+                <span class="am-nv-config-label">Base branch</span>
+                <div class="am-branch-selector-wrapper">
+                  <button
+                    class="am-branch-selector-trigger"
+                    onClick={() => setBaseBranchOpen(!baseBranchOpen())}
+                    type="button"
+                  >
+                    <Icon name="branch" size="small" />
+                    <span class="am-branch-selector-value">{effectiveBaseBranch()}</span>
+                    <Show when={!baseBranch()}>
+                      <span class="am-branch-badge">default</span>
+                    </Show>
+                    <Icon name="selector" size="small" />
+                  </button>
+                  <Show when={baseBranchOpen()}>
+                    <div class="am-branch-dropdown" onWheel={(e) => e.stopPropagation()}>
+                      <div class="am-branch-search">
+                        <Icon name="magnifying-glass" size="small" />
+                        <input
+                          class="am-branch-search-input"
+                          type="text"
+                          placeholder="Search branches..."
+                          value={branchSearch()}
+                          ref={(el) => requestAnimationFrame(() => el.focus())}
+                          onInput={(e) => {
+                            setBranchSearch(e.currentTarget.value)
+                            setHighlightedIndex(0)
+                          }}
+                          onKeyDown={(e) => {
+                            const items = filteredBranches()
+                            if (e.key === "ArrowDown") {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              const next = Math.min(highlightedIndex() + 1, items.length - 1)
+                              setHighlightedIndex(next)
+                              requestAnimationFrame(() => {
+                                document
+                                  .querySelector(`.am-branch-item[data-index="${next}"]`)
+                                  ?.scrollIntoView({ block: "nearest" })
+                              })
+                            } else if (e.key === "ArrowUp") {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              const prev = Math.max(highlightedIndex() - 1, 0)
+                              setHighlightedIndex(prev)
+                              requestAnimationFrame(() => {
+                                document
+                                  .querySelector(`.am-branch-item[data-index="${prev}"]`)
+                                  ?.scrollIntoView({ block: "nearest" })
+                              })
+                            } else if (e.key === "Enter") {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              const selected = items[highlightedIndex()]
+                              if (selected) {
+                                setBaseBranch(selected.name)
+                                setBaseBranchOpen(false)
+                                setBranchSearch("")
+                                setHighlightedIndex(0)
+                              }
+                            } else if (e.key === "Escape") {
+                              e.preventDefault()
+                              e.stopPropagation()
                               setBaseBranchOpen(false)
                               setBranchSearch("")
                               setHighlightedIndex(0)
                             }
-                          } else if (e.key === "Escape") {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            setBaseBranchOpen(false)
-                            setBranchSearch("")
-                            setHighlightedIndex(0)
-                          }
-                        }}
-                      />
+                          }}
+                        />
+                      </div>
+                      <div class="am-branch-list">
+                        <For each={filteredBranches()}>
+                          {(branch, index) => (
+                            <button
+                              class="am-branch-item"
+                              classList={{
+                                "am-branch-item-active": effectiveBaseBranch() === branch.name,
+                                "am-branch-item-highlighted": highlightedIndex() === index(),
+                              }}
+                              data-index={index()}
+                              onClick={() => {
+                                setBaseBranch(branch.name)
+                                setBaseBranchOpen(false)
+                                setBranchSearch("")
+                                setHighlightedIndex(0)
+                              }}
+                              onMouseEnter={() => setHighlightedIndex(index())}
+                              type="button"
+                            >
+                              <Icon name="branch" size="small" />
+                              <span class="am-branch-item-name">{branch.name}</span>
+                              <Show when={branch.isDefault}>
+                                <span class="am-branch-badge">default</span>
+                              </Show>
+                              <Show when={!branch.isLocal && branch.isRemote}>
+                                <span class="am-branch-badge am-branch-badge-remote">remote</span>
+                              </Show>
+                              <Show when={branch.lastCommitDate}>
+                                <span class="am-branch-item-time">{formatRelativeDate(branch.lastCommitDate!)}</span>
+                              </Show>
+                            </button>
+                          )}
+                        </For>
+                      </div>
                     </div>
-                    <div class="am-branch-list">
-                      <For each={filteredBranches()}>
-                        {(branch, index) => (
-                          <button
-                            class="am-branch-item"
-                            classList={{
-                              "am-branch-item-active": effectiveBaseBranch() === branch.name,
-                              "am-branch-item-highlighted": highlightedIndex() === index(),
-                            }}
-                            data-index={index()}
-                            onClick={() => {
-                              setBaseBranch(branch.name)
-                              setBaseBranchOpen(false)
-                              setBranchSearch("")
-                              setHighlightedIndex(0)
-                            }}
-                            onMouseEnter={() => setHighlightedIndex(index())}
-                            type="button"
-                          >
+                  </Show>
+                </div>
+              </div>
+            </div>
+          </Show>
+
+          {/* Version selector + info */}
+          <div class="am-nv-version-bar">
+            <span class="am-nv-config-label">Versions</span>
+            <div class="am-nv-pills">
+              {VERSION_OPTIONS.map((count) => (
+                <button
+                  class="am-nv-pill"
+                  classList={{ "am-nv-pill-active": versions() === count }}
+                  onClick={() => setVersions(count)}
+                  type="button"
+                >
+                  {count}
+                </button>
+              ))}
+            </div>
+            <Show when={versions() > 1}>
+              <span class="am-nv-version-hint">{versions()} worktrees will run in parallel</span>
+            </Show>
+          </div>
+
+          {/* Submit button */}
+          <Button variant="primary" size="large" class="am-nv-submit" onClick={handleSubmit} disabled={!canSubmit()}>
+            <Show
+              when={!starting()}
+              fallback={
+                <>
+                  <Spinner class="am-nv-spinner" />
+                  <span>Creating...</span>
+                </>
+              }
+            >
+              Create Workspace
+            </Show>
+          </Button>
+        </div>
+      </Show>
+
+      {/* Import tab */}
+      <Show when={tab() === "import"}>
+        <div class="am-import-tab">
+          {/* Pull Request section */}
+          <div class="am-import-section">
+            <span class="am-nv-config-label">Pull Request</span>
+            <div class="am-pr-row">
+              <div class="am-pr-input-wrapper">
+                <Icon name="branch" size="small" />
+                <input
+                  class="am-pr-input"
+                  type="text"
+                  placeholder="Paste PR URL..."
+                  value={prUrl()}
+                  onInput={(e) => setPrUrl(e.currentTarget.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      handlePRSubmit()
+                    }
+                  }}
+                  disabled={isPending()}
+                />
+              </div>
+              <Button
+                variant="secondary"
+                size="small"
+                onClick={handlePRSubmit}
+                disabled={!prUrl().trim() || isPending()}
+              >
+                <Show when={prPending()} fallback="Open">
+                  <Spinner class="am-nv-spinner" />
+                </Show>
+              </Button>
+            </div>
+          </div>
+
+          <div class="am-import-divider" />
+
+          {/* Branches section */}
+          <div class="am-import-section">
+            <span class="am-nv-config-label">Branches</span>
+            <div class="am-selector-wrapper">
+              <Popover
+                open={branchOpen()}
+                onOpenChange={setBranchOpen}
+                placement="bottom-start"
+                sameWidth
+                class="am-dropdown"
+                trigger={
+                  <button class="am-selector-trigger" disabled={isPending()} type="button">
+                    <span class="am-selector-left">
+                      <Icon name="branch" size="small" />
+                      <span class="am-selector-value">{branchesLoading() ? "Loading..." : "Select branch..."}</span>
+                    </span>
+                    <span class="am-selector-right">
+                      <Icon name="selector" size="small" />
+                    </span>
+                  </button>
+                }
+              >
+                <div class="am-dropdown-search">
+                  <Icon name="magnifying-glass" size="small" />
+                  <input
+                    class="am-dropdown-search-input"
+                    type="text"
+                    placeholder="Search branches..."
+                    value={branchSearch()}
+                    onInput={(e) => setBranchSearch(e.currentTarget.value)}
+                    autofocus
+                  />
+                </div>
+                <div class="am-dropdown-list">
+                  <Show
+                    when={filteredBranches().length > 0}
+                    fallback={
+                      <div class="am-dropdown-empty">
+                        {branchesLoading() ? "Loading branches..." : "No matching branches"}
+                      </div>
+                    }
+                  >
+                    <For each={filteredBranches()}>
+                      {(branch) => (
+                        <div class="am-branch-item" onClick={() => handleBranchSelect(branch.name)}>
+                          <span class="am-branch-item-left">
                             <Icon name="branch" size="small" />
                             <span class="am-branch-item-name">{branch.name}</span>
                             <Show when={branch.isDefault}>
                               <span class="am-branch-badge">default</span>
                             </Show>
                             <Show when={!branch.isLocal && branch.isRemote}>
-                              <span class="am-branch-badge am-branch-badge-remote">remote</span>
+                              <span class="am-branch-badge">remote</span>
                             </Show>
-                            <span class="am-branch-item-time">{formatRelativeTime(branch.lastCommitDate)}</span>
-                          </button>
-                        )}
-                      </For>
-                    </div>
-                  </div>
-                </Show>
-              </div>
+                          </span>
+                          <Show when={branch.lastCommitDate}>
+                            <span class="am-branch-item-time">{formatRelativeDate(branch.lastCommitDate!)}</span>
+                          </Show>
+                        </div>
+                      )}
+                    </For>
+                  </Show>
+                </div>
+              </Popover>
             </div>
           </div>
-        </Show>
 
-        {/* Version selector + info */}
-        <div class="am-nv-version-bar">
-          <span class="am-nv-config-label">Versions</span>
-          <div class="am-nv-pills">
-            {VERSION_OPTIONS.map((count) => (
-              <button
-                class="am-nv-pill"
-                classList={{ "am-nv-pill-active": versions() === count }}
-                onClick={() => setVersions(count)}
-                type="button"
-              >
-                {count}
-              </button>
-            ))}
-          </div>
-          <Show when={versions() > 1}>
-            <span class="am-nv-version-hint">{versions()} worktrees will run in parallel</span>
+          {/* Empty state when no branches are available */}
+          <Show when={!branchesLoading() && branches().length === 0}>
+            <div class="am-import-empty">
+              No branches found.
+              <br />
+              Paste a PR URL above or create a new worktree.
+            </div>
           </Show>
         </div>
-
-        {/* Submit button */}
-        <Button variant="primary" size="large" class="am-nv-submit" onClick={handleSubmit} disabled={!canSubmit()}>
-          <Show
-            when={!starting()}
-            fallback={
-              <>
-                <Spinner class="am-nv-spinner" />
-                <span>Creating...</span>
-              </>
-            }
-          >
-            Create Workspace
-          </Show>
-        </Button>
-      </div>
+      </Show>
     </Dialog>
   )
 }

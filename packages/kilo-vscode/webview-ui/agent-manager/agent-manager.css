@@ -1387,3 +1387,294 @@ button.am-section-toggle:hover .am-section-label {
 .am-skeleton-session:nth-child(3) .am-skeleton-session-time {
   animation-delay: 0.3s;
 }
+
+/* Tab switcher for New/Import tabs in the dialog */
+
+.am-tab-switcher {
+  display: flex;
+  gap: 2px;
+  padding: 0 20px;
+  margin-bottom: 4px;
+}
+
+.am-tab-switcher-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 14px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-weak);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 100ms;
+}
+
+.am-tab-switcher-pill:hover {
+  background: var(--surface-inset-base-hover);
+  color: var(--text-base);
+}
+
+.am-tab-switcher-pill-active {
+  background: var(--surface-interactive-base) !important;
+  color: var(--text-on-interactive-base) !important;
+}
+
+/* Import tab layout */
+
+.am-import-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 16px 16px;
+  min-width: 460px;
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+.am-import-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.am-import-divider {
+  height: 1px;
+  background: var(--border-weak-base);
+}
+
+/* PR URL input row */
+
+.am-pr-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.am-pr-input-wrapper {
+  flex: 1;
+  position: relative;
+}
+
+.am-pr-input-wrapper [data-component="icon"] {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-weaker);
+  pointer-events: none;
+}
+
+.am-pr-input {
+  width: 100%;
+  height: 32px;
+  padding: 0 12px 0 32px;
+  border: 1px solid var(--border-weak-base);
+  border-radius: var(--radius-sm);
+  background: var(--vscode-input-background, var(--surface-inset-base));
+  color: var(--vscode-input-foreground, var(--text-base));
+  font-size: var(--font-size-base);
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.am-pr-input:focus {
+  border-color: var(--border-focus, #007fd4);
+}
+
+.am-pr-input::placeholder {
+  color: var(--vscode-input-placeholderForeground, var(--text-weaker));
+}
+
+.am-pr-input:disabled {
+  opacity: 0.5;
+}
+
+/* Branch/worktree selector — popover trigger must be full-width */
+
+.am-selector-wrapper [data-slot="popover-trigger"] {
+  display: flex;
+  width: 100%;
+}
+
+.am-selector-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border-weak-base);
+  border-radius: var(--radius-sm);
+  background: var(--vscode-input-background, var(--surface-inset-base));
+  color: var(--text-base);
+  font-size: var(--font-size-base);
+  font-weight: 400;
+  cursor: pointer;
+  text-align: left;
+}
+
+.am-selector-trigger:hover {
+  border-color: var(--text-weaker);
+}
+
+.am-selector-trigger:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.am-selector-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.am-selector-left [data-component="icon"] {
+  color: var(--text-weaker);
+  flex-shrink: 0;
+}
+
+.am-selector-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-weaker);
+}
+
+.am-selector-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.am-selector-right [data-component="icon"] {
+  color: var(--text-weaker);
+}
+
+/* Dropdown popover — must override kilo-ui defaults for max-width and body padding */
+
+.am-dropdown[data-component="popover-content"] {
+  max-width: none;
+  width: var(--kb-popper-anchor-width);
+}
+
+.am-dropdown [data-slot="popover-body"] {
+  padding: 0;
+}
+
+.am-dropdown-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border-weak-base);
+}
+
+.am-dropdown-search [data-component="icon"] {
+  color: var(--text-weaker);
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+.am-dropdown-search-input {
+  flex: 1;
+  border: none;
+  background: none;
+  color: var(--vscode-input-foreground, var(--text-base));
+  font-size: var(--font-size-base);
+  font-family: inherit;
+  outline: none;
+  min-width: 0;
+}
+
+.am-dropdown-search-input::placeholder {
+  color: var(--vscode-input-placeholderForeground, var(--text-weaker));
+}
+
+.am-dropdown-list {
+  max-height: 200px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px;
+}
+
+/* Branch item in dropdown */
+
+.am-branch-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--font-size-base);
+}
+
+.am-branch-item:hover {
+  background: var(--surface-inset-base-hover);
+}
+
+.am-branch-item-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.am-branch-item-left [data-component="icon"] {
+  color: var(--text-weaker);
+  flex-shrink: 0;
+}
+
+.am-branch-item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.am-branch-item-time {
+  font-size: 11px;
+  color: var(--text-weaker);
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.am-branch-badge {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--surface-inset-base);
+  color: var(--text-weaker);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.am-dropdown-empty {
+  padding: 16px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-weaker);
+}
+
+/* Import empty state */
+
+.am-import-empty {
+  padding: 20px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-weaker);
+  line-height: 1.5;
+}
