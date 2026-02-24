@@ -222,6 +222,105 @@ function findViolations(): Violation[] {
   return violations
 }
 
+/**
+ * Detects arrow-function parameters that shadow the `t` i18n function, and
+ * JSX expressions that render `{t}` (the translation function itself) instead
+ * of the intended loop variable.
+ *
+ * Catches bugs like:
+ *   .map((token) => <kbd>{t}</kbd>)   — renders the i18n function, not `token`
+ *   .map((t) => <kbd>{t}</kbd>)       — shadows outer `t`, works by accident
+ */
+interface ShadowViolation {
+  file: string
+  line: number
+  text: string
+  context: string
+}
+
+function findTranslationShadowViolations(): ShadowViolation[] {
+  const project = new Project({
+    compilerOptions: {
+      jsx: 4, // JsxEmit.Preserve
+      jsxImportSource: "solid-js",
+      allowJs: true,
+      strict: false,
+      noEmit: true,
+    },
+    skipAddingFilesFromTsConfig: true,
+  })
+
+  const results: ShadowViolation[] = []
+
+  for (const filePath of TSX_FILES) {
+    const source = project.addSourceFileAtPath(filePath)
+    const basename = path.basename(filePath)
+
+    // Find arrow functions whose parameter list includes `t` AND whose body
+    // contains JSX — this shadows the outer `t` from useLanguage() in a
+    // rendering context, which is almost certainly a bug.
+    // Non-JSX callbacks (e.g. `.map((t) => t.id)`) are harmless data transforms.
+    source.getDescendantsOfKind(SyntaxKind.ArrowFunction).forEach((arrow) => {
+      for (const param of arrow.getParameters()) {
+        if (param.getName() === "t") {
+          const parent = arrow.getParent()
+          if (!parent) continue
+          // Allow top-level destructuring like `const { t } = useLanguage()`
+          if (Node.isVariableDeclaration(parent)) continue
+          // Only flag if the arrow body contains JSX elements
+          const hasJsx =
+            arrow.getDescendantsOfKind(SyntaxKind.JsxElement).length > 0 ||
+            arrow.getDescendantsOfKind(SyntaxKind.JsxSelfClosingElement).length > 0
+          if (!hasJsx) continue
+          results.push({
+            file: basename,
+            line: param.getStartLineNumber(),
+            text: param.getText(),
+            context: "arrow parameter shadows i18n t() function in JSX context",
+          })
+        }
+      }
+    })
+
+    // Find .map() calls where the callback has a parameter but JSX inside
+    // references `{t}` instead of the parameter name
+    source.getDescendantsOfKind(SyntaxKind.CallExpression).forEach((call) => {
+      const expr = call.getExpression()
+      if (!Node.isPropertyAccessExpression(expr)) return
+      if (expr.getName() !== "map") return
+
+      const args = call.getArguments()
+      if (args.length === 0) return
+      const callback = args[0]
+      if (!Node.isArrowFunction(callback)) return
+
+      const params = callback.getParameters()
+      if (params.length === 0) return
+      const paramName = params[0].getName()
+
+      // If the param is already `t`, it's caught by the shadow check above.
+      // Here we check: param is NOT `t`, but JSX inside uses `{t}` — meaning
+      // the callback renders the i18n function instead of the loop variable.
+      if (paramName === "t") return
+
+      callback.getDescendantsOfKind(SyntaxKind.JsxExpression).forEach((jsx) => {
+        const inner = jsx.getExpression()
+        if (!inner) return
+        if (Node.isIdentifier(inner) && inner.getText() === "t") {
+          results.push({
+            file: basename,
+            line: jsx.getStartLineNumber(),
+            text: `{t} inside .map((${paramName}) => ...) — should be {${paramName}}`,
+            context: "JSX renders i18n function instead of map callback parameter",
+          })
+        }
+      })
+    })
+  }
+
+  return results
+}
+
 describe("Agent Manager i18n — no hardcoded strings", () => {
   const violations = findViolations()
 
@@ -231,5 +330,17 @@ describe("Agent Manager i18n — no hardcoded strings", () => {
       expect(violations, `Found ${violations.length} hardcoded string(s):\n${report}`).toEqual([])
     }
     expect(violations).toEqual([])
+  })
+})
+
+describe("Agent Manager i18n — no t() shadowing", () => {
+  const shadows = findTranslationShadowViolations()
+
+  it("should not shadow the t() translation function in callbacks", () => {
+    if (shadows.length > 0) {
+      const report = shadows.map((v) => `  ${v.file}:${v.line} [${v.context}] ${v.text}`).join("\n")
+      expect(shadows, `Found ${shadows.length} t() shadow/misuse(s):\n${report}`).toEqual([])
+    }
+    expect(shadows).toEqual([])
   })
 })

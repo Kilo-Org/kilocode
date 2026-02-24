@@ -1100,7 +1100,7 @@ const AgentManagerContent: Component = () => {
                           <DropdownMenu.ItemLabel>{t("agentManager.worktree.new")}</DropdownMenu.ItemLabel>
                           <span class="am-menu-shortcut">
                             {parseBindingTokens(kb().newWorktree ?? "").map((token) => (
-                              <kbd class="am-menu-key">{t}</kbd>
+                              <kbd class="am-menu-key">{token}</kbd>
                             ))}
                           </span>
                         </DropdownMenu.Item>
@@ -1109,8 +1109,8 @@ const AgentManagerContent: Component = () => {
                           <Icon name="settings-gear" size="small" />
                           <DropdownMenu.ItemLabel>{t("agentManager.dialog.advanced")}</DropdownMenu.ItemLabel>
                           <span class="am-menu-shortcut">
-                            {parseBindingTokens(kb().advancedWorktree ?? "").map((t) => (
-                              <kbd class="am-menu-key">{t}</kbd>
+                            {parseBindingTokens(kb().advancedWorktree ?? "").map((token) => (
+                              <kbd class="am-menu-key">{token}</kbd>
                             ))}
                           </span>
                         </DropdownMenu.Item>
