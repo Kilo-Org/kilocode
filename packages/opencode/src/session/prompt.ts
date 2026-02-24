@@ -326,10 +326,14 @@ export namespace SessionPrompt {
       let lastUser: MessageV2.User | undefined
       let lastAssistant: MessageV2.Assistant | undefined
       let lastFinished: MessageV2.Assistant | undefined
+      let lastUserParts: MessageV2.Part[] | undefined // kilocode_change
       let tasks: (MessageV2.CompactionPart | MessageV2.SubtaskPart)[] = []
       for (let i = msgs.length - 1; i >= 0; i--) {
         const msg = msgs[i]
-        if (!lastUser && msg.info.role === "user") lastUser = msg.info as MessageV2.User
+        if (!lastUser && msg.info.role === "user") {
+          lastUser = msg.info as MessageV2.User
+          lastUserParts = msg.parts // kilocode_change
+        }
         if (!lastAssistant && msg.info.role === "assistant") lastAssistant = msg.info as MessageV2.Assistant
         if (!lastFinished && msg.info.role === "assistant" && msg.info.finish)
           lastFinished = msg.info as MessageV2.Assistant
@@ -346,10 +350,14 @@ export namespace SessionPrompt {
         !["tool-calls", "unknown"].includes(lastAssistant.finish) &&
         lastUser.id < lastAssistant.id
       ) {
-        // kilocode_change start - ask follow-up after plan agent completes
+        // kilocode_change start - ask follow-up after plan agent completes (skip for synthetic messages to prevent repeated prompting)
         if (lastUser.agent === "plan" && !abort.aborted && ["cli", "vscode"].includes(Flag.KILO_CLIENT)) {
-          const action = await PlanFollowup.ask({ sessionID, messages: msgs, abort })
-          if (action === "continue") continue
+          const texts = lastUserParts?.filter((p) => p.type === "text") ?? []
+          const synthetic = texts.length > 0 && texts.every((p) => "synthetic" in p && p.synthetic)
+          if (!synthetic) {
+            const action = await PlanFollowup.ask({ sessionID, messages: msgs, abort })
+            if (action === "continue") continue
+          }
         }
         // kilocode_change end
         log.info("exiting loop", { sessionID })
