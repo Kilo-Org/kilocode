@@ -890,6 +890,17 @@ export class AgentManagerProvider implements vscode.Disposable {
       return
     }
 
+    if (this.importing) {
+      this.postToWebview({
+        type: "agentManager.importResult",
+        success: false,
+        message: "Another import is already in progress",
+      })
+      return
+    }
+    this.importing = true
+
+    let worktree: ReturnType<typeof state.addWorktree> | undefined
     try {
       const externals = await manager.listExternalWorktrees(new Set(state.getWorktrees().map((wt) => wt.path)))
       if (!externals.some((e) => e.path === wtPath)) {
@@ -902,7 +913,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       }
 
       const parent = await manager.defaultBranch()
-      const worktree = state.addWorktree({ branch, path: wtPath, parentBranch: parent })
+      worktree = state.addWorktree({ branch, path: wtPath, parentBranch: parent })
       this.pushState()
 
       const session = await this.createSessionInWorktree(wtPath, branch, worktree.id)
@@ -935,8 +946,14 @@ export class AgentManagerProvider implements vscode.Disposable {
       this.postToWebview({ type: "agentManager.importResult", success: true, message: `Imported ${branch}` })
       this.log(`Imported external worktree ${wtPath} (${branch})`)
     } catch (error) {
+      if (worktree) {
+        state.removeWorktree(worktree.id)
+        this.pushState()
+      }
       const msg = error instanceof Error ? error.message : String(error)
       this.postToWebview({ type: "agentManager.importResult", success: false, message: msg })
+    } finally {
+      this.importing = false
     }
   }
 
