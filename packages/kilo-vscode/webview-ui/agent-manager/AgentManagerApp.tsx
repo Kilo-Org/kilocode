@@ -1060,7 +1060,7 @@ const AgentManagerContent: Component = () => {
             <span class="am-section-label">{t("agentManager.section.worktrees")}</span>
             <Show when={isGitRepo()}>
               <div class="am-section-actions">
-                <DropdownMenu>
+                <DropdownMenu gutter={4} placement="bottom-end">
                   <DropdownMenu.Trigger
                     as={IconButton}
                     icon="settings-gear"
@@ -1069,7 +1069,7 @@ const AgentManagerContent: Component = () => {
                     label={t("agentManager.worktree.settings")}
                   />
                   <DropdownMenu.Portal>
-                    <DropdownMenu.Content>
+                    <DropdownMenu.Content class="am-split-menu">
                       <DropdownMenu.Item onSelect={handleShowKeyboardShortcuts}>
                         <DropdownMenu.ItemLabel>{t("agentManager.shortcuts.title")}</DropdownMenu.ItemLabel>
                       </DropdownMenu.Item>
