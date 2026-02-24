@@ -1005,7 +1005,7 @@ export const dict = {
     " ? Cela supprime le Worktree du disque et dissocie toutes les sessions.",
   "agentManager.dialog.deleteWorktree.cancel": "Annuler",
   "agentManager.dialog.deleteWorktree.confirm": "Supprimer",
-  "agentManager.dialog.openWorkspace": "Ouvrir l'espace de travail",
+  "agentManager.dialog.openWorktree": "Ouvrir le worktree",
   "agentManager.dialog.tab.new": "Nouveau",
   "agentManager.dialog.tab.import": "Importer",
   "agentManager.dialog.namePlaceholder": "Nom du Worktree (optionnel)",

@@ -990,7 +990,7 @@ export const dict = {
   "agentManager.dialog.deleteWorktree.messagePost": "? Dette fjerner Worktree fra disken og kobler fra alle økter.",
   "agentManager.dialog.deleteWorktree.cancel": "Avbryt",
   "agentManager.dialog.deleteWorktree.confirm": "Slett",
-  "agentManager.dialog.openWorkspace": "Åpne arbeidsområde",
+  "agentManager.dialog.openWorktree": "Åpne worktree",
   "agentManager.dialog.tab.new": "Ny",
   "agentManager.dialog.tab.import": "Importer",
   "agentManager.dialog.namePlaceholder": "Worktree-navn (valgfritt)",

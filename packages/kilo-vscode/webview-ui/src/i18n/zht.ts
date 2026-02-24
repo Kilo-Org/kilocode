@@ -976,7 +976,7 @@ export const dict = {
   "agentManager.dialog.deleteWorktree.messagePost": "？這將從磁碟中移除 Worktree 並取消所有工作階段的關聯。",
   "agentManager.dialog.deleteWorktree.cancel": "取消",
   "agentManager.dialog.deleteWorktree.confirm": "刪除",
-  "agentManager.dialog.openWorkspace": "開啟工作區",
+  "agentManager.dialog.openWorktree": "開啟工作樹",
   "agentManager.dialog.tab.new": "新建",
   "agentManager.dialog.tab.import": "匯入",
   "agentManager.dialog.namePlaceholder": "Worktree 名稱（選填）",

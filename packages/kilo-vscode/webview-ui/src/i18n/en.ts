@@ -1045,7 +1045,7 @@ export const dict = {
   "agentManager.dialog.deleteWorktree.cancel": "Cancel",
   "agentManager.dialog.deleteWorktree.confirm": "Delete",
 
-  "agentManager.dialog.openWorkspace": "Open Workspace",
+  "agentManager.dialog.openWorktree": "Open Worktree",
   "agentManager.dialog.tab.new": "New",
   "agentManager.dialog.tab.import": "Import",
   "agentManager.dialog.namePlaceholder": "Worktree name (optional)",

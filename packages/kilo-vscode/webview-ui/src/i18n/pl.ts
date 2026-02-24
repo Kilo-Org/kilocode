@@ -992,7 +992,7 @@ export const dict = {
     "? Spowoduje to usunięcie Worktree z dysku i odłączenie wszystkich sesji.",
   "agentManager.dialog.deleteWorktree.cancel": "Anuluj",
   "agentManager.dialog.deleteWorktree.confirm": "Usuń",
-  "agentManager.dialog.openWorkspace": "Otwórz Workspace",
+  "agentManager.dialog.openWorktree": "Otwórz Worktree",
   "agentManager.dialog.tab.new": "Nowy",
   "agentManager.dialog.tab.import": "Importuj",
   "agentManager.dialog.namePlaceholder": "Nazwa Worktree (opcjonalnie)",

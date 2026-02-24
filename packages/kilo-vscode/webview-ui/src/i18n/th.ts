@@ -978,7 +978,7 @@ export const dict = {
     "? การดำเนินการนี้จะลบ Worktree ออกจากดิสก์และยกเลิกการเชื่อมโยงเซสชันทั้งหมด",
   "agentManager.dialog.deleteWorktree.cancel": "ยกเลิก",
   "agentManager.dialog.deleteWorktree.confirm": "ลบ",
-  "agentManager.dialog.openWorkspace": "เปิด Workspace",
+  "agentManager.dialog.openWorktree": "เปิด Worktree",
   "agentManager.dialog.tab.new": "ใหม่",
   "agentManager.dialog.tab.import": "นำเข้า",
   "agentManager.dialog.namePlaceholder": "ชื่อ Worktree (ไม่บังคับ)",

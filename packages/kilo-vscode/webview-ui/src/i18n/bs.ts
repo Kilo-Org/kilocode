@@ -1016,7 +1016,7 @@ export const dict = {
   "agentManager.dialog.deleteWorktree.messagePost": "? Ovo uklanja Worktree sa diska i odvezuje sve sesije.",
   "agentManager.dialog.deleteWorktree.cancel": "Otkaži",
   "agentManager.dialog.deleteWorktree.confirm": "Obriši",
-  "agentManager.dialog.openWorkspace": "Otvori radni prostor",
+  "agentManager.dialog.openWorktree": "Otvori worktree",
   "agentManager.dialog.tab.new": "Novo",
   "agentManager.dialog.tab.import": "Uvezi",
   "agentManager.dialog.namePlaceholder": "Naziv Worktree-a (opcionalno)",

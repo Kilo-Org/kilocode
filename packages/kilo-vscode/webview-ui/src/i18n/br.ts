@@ -994,7 +994,7 @@ export const dict = {
   "agentManager.dialog.deleteWorktree.messagePost": "? Isso remove o Worktree do disco e desassocia todas as sessões.",
   "agentManager.dialog.deleteWorktree.cancel": "Cancelar",
   "agentManager.dialog.deleteWorktree.confirm": "Excluir",
-  "agentManager.dialog.openWorkspace": "Abrir Workspace",
+  "agentManager.dialog.openWorktree": "Abrir Worktree",
   "agentManager.dialog.tab.new": "Novo",
   "agentManager.dialog.tab.import": "Importar",
   "agentManager.dialog.namePlaceholder": "Nome do Worktree (opcional)",
