@@ -33,6 +33,18 @@ export namespace ModelsDev {
   const log = Log.create({ service: "models.dev" })
   const filepath = path.join(Global.Path.cache, "models.json")
 
+  // kilocode_change start
+  const refreshCallbacks: Array<() => void> = []
+
+  /**
+   * Register a callback to be invoked after model data is refreshed.
+   * Used by Provider to invalidate its cached state when models change.
+   */
+  export function onRefresh(cb: () => void) {
+    refreshCallbacks.push(cb)
+  }
+  // kilocode_change end
+
   export const Model = z.object({
     id: z.string(),
     name: z.string(),
@@ -179,6 +191,14 @@ export namespace ModelsDev {
       await Filesystem.write(filepath, await result.text())
       ModelsDev.Data.reset()
     }
+
+    // kilocode_change start - also refresh Kilo Gateway models and notify consumers
+    ModelCache.clear("kilo")
+    for (const cb of refreshCallbacks) {
+      cb()
+    }
+    log.info("refresh complete, provider state invalidated")
+    // kilocode_change end
   }
 }
 

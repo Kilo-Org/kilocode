@@ -1052,6 +1052,22 @@ export namespace Provider {
     return state().then((state) => state.providers)
   }
 
+  // kilocode_change start
+  /**
+   * Reset cached provider state so the next access recomputes from fresh model data.
+   * Called after model list refresh to ensure consumers see updated models.
+   */
+  export function reset() {
+    state.reset()
+  }
+
+  // Invalidate provider state when models are refreshed
+  ModelsDev.onRefresh(() => {
+    state.reset()
+    log.info("provider state reset after model refresh")
+  })
+  // kilocode_change end
+
   async function getSDK(model: Model) {
     try {
       using _ = log.time("getSDK", {
