@@ -25,7 +25,7 @@ Orchestrator Mode (formerly known as Boomerang Tasks) allows you to break down c
 
 ## Key Considerations
 
-- **Approval Required:** By default, you must approve the creation and completion of each subtask. This can be automated via the [Auto-Approving Actions](/docs/features/auto-approving-actions#subtasks) settings if desired.
+- **Approval Required:** By default, you must approve the creation and completion of each subtask. This can be automated via the [Auto-Approving Actions](/docs/getting-started/settings/auto-approving-actions#subtasks) settings if desired.
 - **Context Isolation and Transfer:** Each subtask operates in complete isolation with its own conversation history. It does not automatically inherit the parent's context. Information must be explicitly passed:
   - **Down:** Via the initial instructions provided when the subtask is created.
   - **Up:** Via the final summary provided when the subtask finishes. Be mindful that only this summary returns to the parent.
@@ -37,6 +37,6 @@ Orchestrator Mode provides a powerful way to manage complex development workflow
 Use subtasks to maintain clarity. If a request significantly shifts focus or requires a different expertise (mode), consider creating a subtask rather than overloading the current one.
 {% /callout %}
 
-1. This context is passed via the `message` parameter of the [`new_task`](/docs/features/tools/new-task) tool.
-2. The mode for the subtask is specified via the `mode` parameter of the [`new_task`](/docs/features/tools/new-task) tool during initiation.
-3. This summary is passed via the `result` parameter of the [`attempt_completion`](/docs/features/tools/attempt-completion) tool when the subtask finishes.
+1. This context is passed via the `message` parameter of the [`new_task`](/docs/automate/tools/new-task) tool.
+2. The mode for the subtask is specified via the `mode` parameter of the [`new_task`](/docs/automate/tools/new-task) tool during initiation.
+3. This summary is passed via the `result` parameter of the [`attempt_completion`](/docs/automate/tools/attempt-completion) tool when the subtask finishes.

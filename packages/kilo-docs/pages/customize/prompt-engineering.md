@@ -13,7 +13,7 @@ Prompt engineering is the art of crafting effective instructions for AI models l
   - **Bad:** Fix the code.
   - **Good:** Fix the bug in the `calculateTotal` function that causes it to return incorrect results.
 
-- **Provide Context:** Use [Context Mentions](/docs/basic-usage/context-mentions) to refer to specific files, folders, or problems.
+- **Provide Context:** Use [Context Mentions](/docs/code-with-ai/agents/context-mentions) to refer to specific files, folders, or problems.
   - **Good:** `@/src/utils.ts` Refactor the `calculateTotal` function to use async/await.
 
 - **Break Down Tasks:** Divide complex tasks into smaller, well-defined steps.

@@ -9,6 +9,7 @@ import { createRoot } from "solid-js"
 import type { SessionInfo } from "../src/types/messages"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
+import { useLanguage } from "../src/context/language"
 
 /** Lock drag movement to the X axis (horizontal-only tab dragging). */
 export const ConstrainDragYAxis: Component = () => {
@@ -39,6 +40,7 @@ export const SortableTab: Component<{
   onMiddleClick: (e: MouseEvent) => void
   onClose: (e: MouseEvent) => void
 }> = (props) => {
+  const { t } = useLanguage()
   const sortable = createSortable(props.tab.id)
   // Prevent tree-shaking of the directive reference used by `use:sortable`
   void sortable
@@ -50,7 +52,7 @@ export const SortableTab: Component<{
       data-tab-id={props.tab.id}
     >
       <TooltipKeybind
-        title={props.tab.title || "Untitled"}
+        title={props.tab.title || t("agentManager.session.untitled")}
         keybind={props.keybind ?? ""}
         placement="bottom"
         inactive={props.active}
@@ -60,13 +62,13 @@ export const SortableTab: Component<{
           onClick={props.onSelect}
           onMouseDown={props.onMiddleClick}
         >
-          <span class="am-tab-label">{props.tab.title || "Untitled"}</span>
-          <TooltipKeybind title="Close" keybind={props.closeKeybind ?? ""} placement="bottom">
+          <span class="am-tab-label">{props.tab.title || t("agentManager.session.untitled")}</span>
+          <TooltipKeybind title={t("agentManager.tab.close")} keybind={props.closeKeybind ?? ""} placement="bottom">
             <IconButton
               icon="close-small"
               size="small"
               variant="ghost"
-              label="Close tab"
+              label={t("agentManager.tab.closeTab")}
               class="am-tab-close"
               onClick={props.onClose}
             />

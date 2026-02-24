@@ -161,7 +161,6 @@ describe("GeneratorReuseManager", () => {
 
   test("calls onError when generator throws an error", async () => {
     const error = new Error("Generator error")
-    // eslint-disable-next-line require-yield
     const mockGenerator = async function* () {
       throw error
     }

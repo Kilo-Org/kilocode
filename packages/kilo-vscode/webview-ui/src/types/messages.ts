@@ -92,6 +92,16 @@ export interface Message {
   content?: string
   parts?: Part[]
   createdAt: string
+  time?: { created: number; completed?: number }
+  agent?: string
+  model?: { providerID: string; modelID: string }
+  providerID?: string
+  modelID?: string
+  mode?: string
+  parentID?: string
+  path?: { cwd: string; root: string }
+  error?: { name: string; data?: Record<string, unknown> }
+  summary?: { title?: string; body?: string; diffs?: unknown[] } | boolean
   cost?: number
   tokens?: TokenUsage
 }
@@ -102,6 +112,14 @@ export interface SessionInfo {
   title?: string
   createdAt: string
   updatedAt: string
+}
+
+// Cloud session info (from Kilo cloud API)
+export interface CloudSessionInfo {
+  session_id: string
+  title: string | null
+  created_at: string
+  updated_at: string
 }
 
 // Permission request
@@ -399,6 +417,36 @@ export interface SessionsLoadedMessage {
   sessions: SessionInfo[]
 }
 
+export interface CloudSessionsLoadedMessage {
+  type: "cloudSessionsLoaded"
+  sessions: CloudSessionInfo[]
+  nextCursor: string | null
+}
+
+export interface GitRemoteUrlLoadedMessage {
+  type: "gitRemoteUrlLoaded"
+  gitUrl: string | null
+}
+
+export interface CloudSessionDataLoadedMessage {
+  type: "cloudSessionDataLoaded"
+  cloudSessionId: string
+  title: string
+  messages: Message[]
+}
+
+export interface CloudSessionImportedMessage {
+  type: "cloudSessionImported"
+  cloudSessionId: string
+  session: SessionInfo
+}
+
+export interface CloudSessionImportFailedMessage {
+  type: "cloudSessionImportFailed"
+  cloudSessionId: string
+  error: string
+}
+
 export interface ActionMessage {
   type: "action"
   action: string
@@ -441,7 +489,7 @@ export interface DeviceAuthCancelledMessage {
 
 export interface NavigateMessage {
   type: "navigate"
-  view: "newTask" | "marketplace" | "history" | "profile" | "settings"
+  view: "newTask" | "marketplace" | "history" | "cloudHistory" | "profile" | "settings"
 }
 
 export interface ProvidersLoadedMessage {
@@ -569,6 +617,8 @@ export interface WorktreeState {
   createdAt: string
   /** Shared identifier for worktrees created together via multi-version mode. */
   groupId?: string
+  /** User-provided display name for the worktree. */
+  label?: string
 }
 
 export interface ManagedSessionState {
@@ -615,12 +665,44 @@ export interface VariantsLoadedMessage {
   variants: Record<string, string>
 }
 
+export interface BranchInfo {
+  name: string
+  isLocal: boolean
+  isRemote: boolean
+  isDefault: boolean
+  lastCommitDate?: string
+}
+
+export interface AgentManagerBranchesMessage {
+  type: "agentManager.branches"
+  branches: BranchInfo[]
+  defaultBranch: string
+}
+
+// Agent Manager Import tab: external worktrees (extension → webview)
+export interface ExternalWorktreeInfo {
+  path: string
+  branch: string
+}
+
+export interface AgentManagerExternalWorktreesMessage {
+  type: "agentManager.externalWorktrees"
+  worktrees: ExternalWorktreeInfo[]
+}
+
+// Agent Manager Import tab: result feedback (extension → webview)
+export interface AgentManagerImportResultMessage {
+  type: "agentManager.importResult"
+  success: boolean
+  message: string
+}
+
 // Request webview to send initial prompt to a newly created session (extension → webview)
 export interface AgentManagerSendInitialMessage {
   type: "agentManager.sendInitialMessage"
   sessionId: string
   worktreeId: string
-  text: string
+  text?: string
   providerID?: string
   modelID?: string
   agent?: string
@@ -641,6 +723,8 @@ export type ExtensionMessage =
   | MessagesLoadedMessage
   | MessageCreatedMessage
   | SessionsLoadedMessage
+  | CloudSessionsLoadedMessage
+  | GitRemoteUrlLoadedMessage
   | ActionMessage
   | ProfileDataMessage
   | DeviceAuthStartedMessage
@@ -672,6 +756,12 @@ export type ExtensionMessage =
   | SetChatBoxMessage
   | TriggerTaskMessage
   | VariantsLoadedMessage
+  | CloudSessionDataLoadedMessage
+  | CloudSessionImportedMessage
+  | CloudSessionImportFailedMessage
+  | AgentManagerBranchesMessage
+  | AgentManagerExternalWorktreesMessage
+  | AgentManagerImportResultMessage
 
 // ============================================
 // Messages FROM webview TO extension
@@ -720,6 +810,33 @@ export interface LoadMessagesRequest {
 
 export interface LoadSessionsRequest {
   type: "loadSessions"
+}
+
+export interface RequestCloudSessionsMessage {
+  type: "requestCloudSessions"
+  cursor?: string
+  limit?: number
+  gitUrl?: string
+}
+
+export interface RequestGitRemoteUrlMessage {
+  type: "requestGitRemoteUrl"
+}
+
+export interface RequestCloudSessionDataMessage {
+  type: "requestCloudSessionData"
+  sessionId: string
+}
+
+export interface ImportAndSendMessage {
+  type: "importAndSend"
+  cloudSessionId: string
+  text: string
+  providerID?: string
+  modelID?: string
+  agent?: string
+  variant?: string
+  files?: FileAttachment[]
 }
 
 export interface LoginRequest {
@@ -887,6 +1004,8 @@ export interface TelemetryRequest {
 // Create a new worktree (with auto-created first session)
 export interface CreateWorktreeRequest {
   type: "agentManager.createWorktree"
+  baseBranch?: string
+  branchName?: string
 }
 
 // Delete a worktree and dissociate its sessions
@@ -913,6 +1032,13 @@ export interface CloseSessionRequest {
   sessionId: string
 }
 
+// Rename a worktree's display label
+export interface RenameWorktreeRequest {
+  type: "agentManager.renameWorktree"
+  worktreeId: string
+  label: string
+}
+
 export interface RequestRepoInfoMessage {
   type: "agentManager.requestRepoInfo"
 }
@@ -935,13 +1061,14 @@ export interface ShowTerminalRequest {
 // Create multiple worktree sessions for the same prompt (multi-version mode)
 export interface CreateMultiVersionRequest {
   type: "agentManager.createMultiVersion"
-  text: string
+  text?: string
   versions: number
   providerID?: string
   modelID?: string
   agent?: string
   files?: FileAttachment[]
   baseBranch?: string
+  branchName?: string
 }
 
 // Persist tab order for a context (worktree ID or "local")
@@ -957,6 +1084,33 @@ export interface SetSessionsCollapsedRequest {
   collapsed: boolean
 }
 
+export interface RequestBranchesMessage {
+  type: "agentManager.requestBranches"
+}
+
+export interface RequestExternalWorktreesMessage {
+  type: "agentManager.requestExternalWorktrees"
+}
+
+export interface ImportFromBranchRequest {
+  type: "agentManager.importFromBranch"
+  branch: string
+}
+
+export interface ImportFromPRRequest {
+  type: "agentManager.importFromPR"
+  url: string
+}
+
+export interface ImportExternalWorktreeRequest {
+  type: "agentManager.importExternalWorktree"
+  path: string
+  branch: string
+}
+
+export interface ImportAllExternalWorktreesRequest {
+  type: "agentManager.importAllExternalWorktrees"
+}
 // Variant persistence (webview → extension)
 export interface PersistVariantRequest {
   type: "persistVariant"
@@ -977,6 +1131,8 @@ export type WebviewMessage =
   | ClearSessionRequest
   | LoadMessagesRequest
   | LoadSessionsRequest
+  | RequestCloudSessionsMessage
+  | RequestGitRemoteUrlMessage
   | LoginRequest
   | LogoutRequest
   | RefreshProfileRequest
@@ -1013,6 +1169,7 @@ export type WebviewMessage =
   | PromoteSessionRequest
   | AddSessionToWorktreeRequest
   | CloseSessionRequest
+  | RenameWorktreeRequest
   | TelemetryRequest
   | RequestRepoInfoMessage
   | RequestStateMessage
@@ -1023,6 +1180,14 @@ export type WebviewMessage =
   | SetSessionsCollapsedRequest
   | PersistVariantRequest
   | RequestVariantsMessage
+  | RequestCloudSessionDataMessage
+  | ImportAndSendMessage
+  | RequestBranchesMessage
+  | RequestExternalWorktreesMessage
+  | ImportFromBranchRequest
+  | ImportFromPRRequest
+  | ImportExternalWorktreeRequest
+  | ImportAllExternalWorktreesRequest
 
 // ============================================
 // VS Code API type

@@ -34,7 +34,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
   '';
 
   env.MODELS_DEV_API_JSON = "${models-dev}/dist/_api.json";
-  env.OPENCODE_DISABLE_MODELS_FETCH = true;
+  env.KILO_DISABLE_MODELS_FETCH = true;
   env.KILO_VERSION = finalAttrs.version;
   env.KILO_CHANNEL = "local";
 
@@ -80,7 +80,10 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     writableTmpDirAsHomeHook
   ];
   doInstallCheck = true;
-  versionCheckKeepEnvironment = [ "HOME" "OPENCODE_DISABLE_MODELS_FETCH" ];
+  versionCheckKeepEnvironment = [
+    "HOME"
+    "KILO_DISABLE_MODELS_FETCH"
+  ];
   versionCheckProgramArg = "--version";
 
   passthru = {
@@ -88,7 +91,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
   };
 
   meta = {
-    description = "The open source coding agent";
+    description = "AI-powered development tool";
     homepage = "https://kilo.ai/";
     license = lib.licenses.mit;
     mainProgram = "kilo";

@@ -144,4 +144,4 @@ The project uses:
 ## Further Reading
 
 - [Development Environment](/docs/contributing/development-environment) - Setup guide
-- [Tools Reference](/docs/features/tools/tool-use-overview) - Available tools
+- [Tools Reference](/docs/automate/tools) - Available tools

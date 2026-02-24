@@ -43,11 +43,11 @@ async function main() {
     return
   }
 
-  console.log("Fetching latest dev branch...")
-  await $`git fetch origin dev`
+  console.log("Fetching latest main branch...")
+  await $`git fetch origin main`
 
   console.log("Checking out beta branch...")
-  await $`git checkout -B beta origin/dev`
+  await $`git checkout -B beta origin/main`
 
   const applied: number[] = []
   const failed: FailedPR[] = []
@@ -80,7 +80,7 @@ async function main() {
         await $`git clean -fd`
       } catch {}
       failed.push({ number: pr.number, title: pr.title, reason: "Merge conflicts" })
-      await commentOnPR(pr.number, "Merge conflicts with dev branch")
+      await commentOnPR(pr.number, "Merge conflicts with main branch")
       continue
     }
 
@@ -128,10 +128,15 @@ async function main() {
   await $`git fetch origin beta`
 
   const localTree = await $`git rev-parse beta^{tree}`.text()
-  const remoteTree = await $`git rev-parse origin/beta^{tree}`.text()
+  const remoteTrees = (await $`git log origin/dev..origin/beta --format=%T`.text()).split("\n")
 
-  if (localTree.trim() === remoteTree.trim()) {
-    console.log("Beta branch has identical contents, no push needed")
+  const matchIdx = remoteTrees.indexOf(localTree.trim())
+  if (matchIdx !== -1) {
+    if (matchIdx !== 0) {
+      console.log(`Beta branch contains this sync, but additional commits exist after it. Leaving beta branch as is.`)
+    } else {
+      console.log("Beta branch has identical contents, no push needed")
+    }
     return
   }
 

@@ -56,4 +56,4 @@ Older naming like `.clinerules-{mode-slug}` is not the recommended path for curr
 - [Custom Modes](/docs/customize/custom-modes)
 - [Custom Rules](/docs/customize/custom-rules)
 - [Settings Management](/docs/getting-started/settings)
-- [Auto-Approval Settings](/docs/features/auto-approving-actions)
+- [Auto-Approval Settings](/docs/getting-started/settings/auto-approving-actions)

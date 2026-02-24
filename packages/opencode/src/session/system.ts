@@ -13,6 +13,7 @@ import type { Provider } from "@/provider/provider"
 
 // kilocode_change start
 import SOUL from "../kilocode/soul.txt"
+import { editorContextEnvLines, type EditorContext } from "../kilocode/editor-context"
 // kilocode_change end
 
 export namespace SystemPrompt {
@@ -36,7 +37,9 @@ export namespace SystemPrompt {
     return [PROMPT_ANTHROPIC_WITHOUT_TODO]
   }
 
-  export async function environment(model: Provider.Model) {
+  // kilocode_change start
+  export async function environment(model: Provider.Model, editorContext?: EditorContext) {
+    // kilocode_change end
     const project = Instance.project
     return [
       [
@@ -46,7 +49,7 @@ export namespace SystemPrompt {
         `  Working directory: ${Instance.directory}`,
         `  Is directory a git repo: ${project.vcs === "git" ? "yes" : "no"}`,
         `  Platform: ${process.platform}`,
-        `  Today's date: ${new Date().toDateString()}`,
+        ...editorContextEnvLines(editorContext), // kilocode_change
         `</env>`,
         `<directories>`,
         `  ${

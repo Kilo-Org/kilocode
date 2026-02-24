@@ -52,11 +52,19 @@
   background: var(--surface-base-active);
 }
 
+.am-local-item-active .am-local-icon {
+  color: var(--text-base);
+}
+
+.am-local-item-active .am-local-branch {
+  color: var(--text-weak);
+}
+
 .am-local-icon {
   width: 18px;
   height: 18px;
   flex-shrink: 0;
-  color: var(--text-weaker);
+  color: var(--text-weak);
 }
 
 .am-local-text {
@@ -74,7 +82,7 @@
 
 .am-local-branch {
   font-size: var(--font-size-small);
-  color: var(--text-weaker);
+  color: var(--text-weak);
   line-height: 1.2;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -188,6 +196,10 @@ button.am-section-toggle:hover .am-section-label {
   color: var(--text-on-interactive-base);
 }
 
+.am-worktree-item-active [data-component="icon"] {
+  color: var(--text-on-interactive-base);
+}
+
 .am-worktree-branch {
   flex: 1;
   overflow: hidden;
@@ -195,6 +207,21 @@ button.am-section-toggle:hover .am-section-label {
   white-space: nowrap;
   font-weight: 500;
   min-width: 0;
+}
+
+.am-worktree-rename-input {
+  flex: 1;
+  min-width: 0;
+  height: 22px;
+  padding: 0 4px;
+  border: 1px solid var(--border-focus, #007fd4);
+  border-radius: 3px;
+  background: var(--surface-base);
+  color: var(--text-base);
+  font-size: inherit;
+  font-weight: 500;
+  font-family: inherit;
+  outline: none;
 }
 
 .am-worktree-close {
@@ -211,6 +238,11 @@ button.am-section-toggle:hover .am-section-label {
 
 .am-worktree-item:hover .am-worktree-close {
   opacity: 1;
+}
+
+.am-worktree-item:has(.am-worktree-rename-input) .am-worktree-close {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .am-worktree-spinner {
@@ -763,7 +795,36 @@ button.am-section-toggle:hover .am-section-label {
   min-width: 460px;
 }
 
-/* Reuse am-prompt-input-container inside dialog — resizable from bottom edge */
+/* Allow dropdowns to escape the dialog bounds */
+[data-component="dialog"]:has(.am-nv-dialog) [data-slot="dialog-content"] {
+  overflow: visible;
+}
+[data-component="dialog"]:has(.am-nv-dialog) [data-slot="dialog-body"] {
+  overflow: visible;
+}
+
+.am-nv-name-input {
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-sm);
+  background: var(--surface-base);
+  color: var(--text-base);
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.am-nv-name-input:focus {
+  border-color: var(--border-focus, #007fd4);
+}
+
+.am-nv-name-input::placeholder {
+  color: var(--text-weaker);
+}
+
+/* Dialog overrides for prompt-input-container — resizable from bottom edge */
 .am-nv-dialog .am-prompt-input-container {
   margin: 0;
   resize: vertical;
@@ -786,6 +847,7 @@ button.am-section-toggle:hover .am-section-label {
 .am-nv-dialog .am-prompt-input {
   color: var(--vscode-input-foreground, var(--text-base));
   resize: none;
+  width: 100%;
   min-height: 100%;
   max-height: none;
 }
@@ -853,6 +915,223 @@ button.am-section-toggle:hover .am-section-label {
 .am-nv-spinner {
   width: 14px;
   height: 14px;
+}
+
+.am-nv-submit {
+  width: 100%;
+  justify-content: center;
+}
+
+/* Advanced options toggle */
+
+.am-advanced-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 0;
+  border: none;
+  background: none;
+  color: var(--text-weak);
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 100ms;
+}
+
+.am-advanced-toggle:hover {
+  color: var(--text-base);
+}
+
+/* Advanced options section */
+
+.am-advanced-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.am-advanced-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.am-advanced-input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-sm);
+  background: var(--surface-base);
+  color: var(--text-base);
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 120ms;
+}
+
+.am-advanced-input:focus {
+  border-color: var(--border-focus, #007fd4);
+}
+
+.am-advanced-input::placeholder {
+  color: var(--text-weaker);
+}
+
+/* Branch selector trigger + dropdown */
+
+.am-branch-selector-wrapper {
+  position: relative;
+}
+
+.am-branch-selector-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-sm);
+  background: var(--surface-base);
+  color: var(--text-base);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 120ms;
+}
+
+.am-branch-selector-trigger:hover {
+  border-color: var(--border-hover);
+}
+
+.am-branch-selector-value {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.am-branch-badge {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--surface-raised-stronger-non-alpha);
+  color: var(--text-weak);
+  white-space: nowrap;
+}
+
+.am-branch-badge-remote {
+  background: var(--surface-raised-base);
+  opacity: 0.7;
+}
+
+.am-branch-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 100;
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-sm);
+  background: var(--surface-float-base, var(--surface-raised-base));
+  box-shadow: var(--shadow-lg-border-base, 0 8px 24px rgba(0, 0, 0, 0.3));
+  max-height: 280px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.am-branch-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-base);
+}
+
+.am-branch-search-input {
+  flex: 1;
+  border: none;
+  background: none;
+  color: var(--text-base);
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+}
+
+.am-branch-search-input::placeholder {
+  color: var(--text-weaker);
+}
+
+.am-branch-list {
+  overflow-y: auto;
+  max-height: 220px;
+  padding: 4px 0;
+}
+
+.am-branch-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  background: none;
+  color: var(--text-base);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 80ms;
+  text-align: left;
+}
+
+.am-branch-item:hover {
+  background: var(--surface-raised-base-hover);
+}
+
+.am-branch-item-active {
+  background: var(--surface-raised-base);
+}
+
+.am-branch-item-highlighted {
+  background: var(--surface-raised-base-hover);
+}
+
+/* Keyboard shortcut hints in dropdown menus */
+
+.am-menu-shortcut {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.am-menu-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--surface-raised-stronger-non-alpha);
+  color: var(--text-weak);
+  font-size: 10px;
+  font-family: inherit;
+  line-height: 1;
+}
+
+.am-branch-item-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono, monospace);
+}
+
+.am-branch-item-time {
+  font-size: 11px;
+  color: var(--text-weaker);
+  white-space: nowrap;
 }
 
 /* HoverCard popover for worktree items */
@@ -1107,4 +1386,295 @@ button.am-section-toggle:hover .am-section-label {
 .am-skeleton-session:nth-child(3) .am-skeleton-session-title,
 .am-skeleton-session:nth-child(3) .am-skeleton-session-time {
   animation-delay: 0.3s;
+}
+
+/* Tab switcher for New/Import tabs in the dialog */
+
+.am-tab-switcher {
+  display: flex;
+  gap: 2px;
+  padding: 0 20px;
+  margin-bottom: 4px;
+}
+
+.am-tab-switcher-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 14px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-weak);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 100ms;
+}
+
+.am-tab-switcher-pill:hover {
+  background: var(--surface-inset-base-hover);
+  color: var(--text-base);
+}
+
+.am-tab-switcher-pill-active {
+  background: var(--surface-interactive-base) !important;
+  color: var(--text-on-interactive-base) !important;
+}
+
+/* Import tab layout */
+
+.am-import-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 16px 16px;
+  min-width: 460px;
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+.am-import-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.am-import-divider {
+  height: 1px;
+  background: var(--border-weak-base);
+}
+
+/* PR URL input row */
+
+.am-pr-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.am-pr-input-wrapper {
+  flex: 1;
+  position: relative;
+}
+
+.am-pr-input-wrapper [data-component="icon"] {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-weaker);
+  pointer-events: none;
+}
+
+.am-pr-input {
+  width: 100%;
+  height: 32px;
+  padding: 0 12px 0 32px;
+  border: 1px solid var(--border-weak-base);
+  border-radius: var(--radius-sm);
+  background: var(--vscode-input-background, var(--surface-inset-base));
+  color: var(--vscode-input-foreground, var(--text-base));
+  font-size: var(--font-size-base);
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.am-pr-input:focus {
+  border-color: var(--border-focus, #007fd4);
+}
+
+.am-pr-input::placeholder {
+  color: var(--vscode-input-placeholderForeground, var(--text-weaker));
+}
+
+.am-pr-input:disabled {
+  opacity: 0.5;
+}
+
+/* Branch/worktree selector — popover trigger must be full-width */
+
+.am-selector-wrapper [data-slot="popover-trigger"] {
+  display: flex;
+  width: 100%;
+}
+
+.am-selector-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border-weak-base);
+  border-radius: var(--radius-sm);
+  background: var(--vscode-input-background, var(--surface-inset-base));
+  color: var(--text-base);
+  font-size: var(--font-size-base);
+  font-weight: 400;
+  cursor: pointer;
+  text-align: left;
+}
+
+.am-selector-trigger:hover {
+  border-color: var(--text-weaker);
+}
+
+.am-selector-trigger:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.am-selector-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.am-selector-left [data-component="icon"] {
+  color: var(--text-weaker);
+  flex-shrink: 0;
+}
+
+.am-selector-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-weaker);
+}
+
+.am-selector-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.am-selector-right [data-component="icon"] {
+  color: var(--text-weaker);
+}
+
+/* Dropdown popover — must override kilo-ui defaults for max-width and body padding */
+
+.am-dropdown[data-component="popover-content"] {
+  max-width: none;
+  width: var(--kb-popper-anchor-width);
+}
+
+.am-dropdown [data-slot="popover-body"] {
+  padding: 0;
+}
+
+.am-dropdown-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border-weak-base);
+}
+
+.am-dropdown-search [data-component="icon"] {
+  color: var(--text-weaker);
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+.am-dropdown-search-input {
+  flex: 1;
+  border: none;
+  background: none;
+  color: var(--vscode-input-foreground, var(--text-base));
+  font-size: var(--font-size-base);
+  font-family: inherit;
+  outline: none;
+  min-width: 0;
+}
+
+.am-dropdown-search-input::placeholder {
+  color: var(--vscode-input-placeholderForeground, var(--text-weaker));
+}
+
+.am-dropdown-list {
+  max-height: 200px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px;
+}
+
+/* Branch item in dropdown */
+
+.am-branch-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--font-size-base);
+}
+
+.am-branch-item:hover {
+  background: var(--surface-inset-base-hover);
+}
+
+.am-branch-item-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.am-branch-item-left [data-component="icon"] {
+  color: var(--text-weaker);
+  flex-shrink: 0;
+}
+
+.am-branch-item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.am-branch-item-time {
+  font-size: 11px;
+  color: var(--text-weaker);
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.am-branch-badge {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--surface-inset-base);
+  color: var(--text-weaker);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.am-dropdown-empty {
+  padding: 16px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-weaker);
+}
+
+/* Import empty state */
+
+.am-import-empty {
+  padding: 20px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-weaker);
+  line-height: 1.5;
 }

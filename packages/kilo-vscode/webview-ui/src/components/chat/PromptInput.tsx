@@ -152,6 +152,17 @@ export const PromptInput: Component = () => {
     textareaRef.style.height = `${Math.min(textareaRef.scrollHeight, 200)}px`
   }
 
+  const handlePaste = (e: ClipboardEvent) => {
+    imageAttach.handlePaste(e)
+    // After pasting text, the textarea content changes but the layout may not
+    // have reflowed yet, causing the caret position to be visually out of sync.
+    // Defer height recalculation to after the browser completes the reflow.
+    requestAnimationFrame(() => {
+      adjustHeight()
+      syncHighlightScroll()
+    })
+  }
+
   const handleInput = (e: InputEvent) => {
     const target = e.target as HTMLTextAreaElement
     const val = target.value
@@ -304,7 +315,7 @@ export const PromptInput: Component = () => {
             value={text()}
             onInput={handleInput}
             onKeyDown={handleKeyDown}
-            onPaste={imageAttach.handlePaste}
+            onPaste={handlePaste}
             onScroll={syncHighlightScroll}
             disabled={isDisabled()}
             rows={1}
