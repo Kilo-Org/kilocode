@@ -233,6 +233,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     void this.handleLoadSessions()
   }
 
+  public openCloudSession(sessionId: string): void {
+    this.postMessage({ type: "openCloudSession", sessionId })
+  }
+
   /**
    * Attach to a webview that already has its own HTML set.
    * Sets up message handling and connection without overriding HTML content.
