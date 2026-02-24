@@ -620,6 +620,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       path: string
       branch: string
       parentBranch: string
+      versionIndex: number
     }> = []
 
     for (let i = 0; i < versions; i++) {
@@ -676,6 +677,7 @@ export class AgentManagerProvider implements vscode.Disposable {
         path: wt.result.path,
         branch: wt.result.branch,
         parentBranch: wt.result.parentBranch,
+        versionIndex: i,
       })
 
       TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_SESSION_STARTED, {
@@ -704,8 +706,9 @@ export class AgentManagerProvider implements vscode.Disposable {
     // Always include per-version model so the UI selector reflects the correct model.
     for (let i = 0; i < created.length; i++) {
       const entry = created[i]!
-      // Use per-version model when in compare mode, otherwise fall back to shared model
-      const versionModel = perVersionModels[i]
+      // Use the original version index to match the correct model from perVersionModels,
+      // since `created` may have gaps if earlier worktree creations failed.
+      const versionModel = perVersionModels[entry.versionIndex]
       const versionProviderID = versionModel?.providerID ?? providerID
       const versionModelID = versionModel?.modelID ?? modelID
       if (text) {
