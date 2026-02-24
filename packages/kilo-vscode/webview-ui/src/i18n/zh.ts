@@ -893,6 +893,12 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles.description": "包含在系统提示词中的附加指令文件路径",
   "settings.agentBehaviour.mcpEmpty": "未配置 MCP 服务器。编辑 opencode 配置文件以添加 MCP 服务器。",
   "settings.agentBehaviour.workflowsPlaceholder": "工作流通过工作区中的工作流文件管理。",
+  "settings.agentBehaviour.workflowsEmpty":
+    "未找到工作流。请在项目的 .kilocode/workflows/ 或全局的 ~/.kilocode/workflows/ 中添加 .md 文件。",
+  "settings.agentBehaviour.workflows.title": "工作流",
+  "settings.agentBehaviour.workflows.description":
+    "工作流是 .kilocode/workflows/ 中的 .md 文件。在聊天中使用 /名称 来运行它们。",
+  "settings.agentBehaviour.workflows.namePlaceholder": "例如：deploy, test-suite",
   "settings.agentBehaviour.notImplemented": "尚未实现。",
   "settings.autoApprove.setAll": "设置所有权限",
   "settings.autoApprove.level.allow": "允许",

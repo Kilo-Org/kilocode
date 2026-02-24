@@ -5,6 +5,8 @@ import { Card } from "@kilocode/kilo-ui/card"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 
+import { useCommands } from "../../context/commands"
+import { useVSCode } from "../../context/vscode"
 import { useConfig } from "../../context/config"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
@@ -56,6 +58,9 @@ const AgentBehaviourTab: Component = () => {
   const [newSkillPath, setNewSkillPath] = createSignal("")
   const [newSkillUrl, setNewSkillUrl] = createSignal("")
   const [newInstruction, setNewInstruction] = createSignal("")
+  const { commands } = useCommands()
+  const vscode = useVSCode()
+  const [newWorkflowName, setNewWorkflowName] = createSignal("")
 
   const agentNames = createMemo(() => {
     const names = session.agents().map((a) => a.name)
@@ -517,6 +522,126 @@ const AgentBehaviourTab: Component = () => {
     </div>
   )
 
+  const renderWorkflowsSubtab = () => {
+    const items = createMemo(() => commands().filter((cmd) => cmd.source === "command"))
+
+    const createWorkflow = () => {
+      const name = newWorkflowName()
+        .trim()
+        .replace(/\.md$/, "")
+        .replace(/[^a-zA-Z0-9_-]/g, "-")
+      if (!name) return
+      vscode.postMessage({ type: "createWorkflowFile", name })
+      setNewWorkflowName("")
+    }
+
+    return (
+      <div>
+        <Card style={{ "margin-bottom": "12px" }}>
+          <div
+            style={{
+              "padding-bottom": "8px",
+              "border-bottom": "1px solid var(--border-weak-base)",
+            }}
+          >
+            <div style={{ "font-weight": "500" }}>{language.t("settings.agentBehaviour.workflows.title")}</div>
+            <div
+              style={{
+                "font-size": "11px",
+                color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                "margin-top": "2px",
+              }}
+            >
+              {language.t("settings.agentBehaviour.workflows.description")}
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              gap: "8px",
+              "align-items": "center",
+              padding: "8px 0",
+              "border-bottom": items().length > 0 ? "1px solid var(--border-weak-base)" : "none",
+            }}
+          >
+            <div style={{ flex: 1 }}>
+              <TextField
+                value={newWorkflowName()}
+                placeholder={language.t("settings.agentBehaviour.workflows.namePlaceholder")}
+                onChange={(val) => setNewWorkflowName(val)}
+                onKeyDown={(e: KeyboardEvent) => {
+                  if (e.key === "Enter") createWorkflow()
+                }}
+              />
+            </div>
+            <Button size="small" onClick={createWorkflow}>
+              {language.t("common.add")}
+            </Button>
+          </div>
+
+          <Show
+            when={items().length > 0}
+            fallback={
+              <div
+                style={{
+                  padding: "8px 0",
+                  "font-size": "12px",
+                  color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                }}
+              >
+                {language.t("settings.agentBehaviour.workflowsEmpty")}
+              </div>
+            }
+          >
+            <For each={items()}>
+              {(cmd, index) => (
+                <div
+                  style={{
+                    display: "flex",
+                    "align-items": "center",
+                    "justify-content": "space-between",
+                    padding: "6px 0",
+                    "border-bottom": index() < items().length - 1 ? "1px solid var(--border-weak-base)" : "none",
+                  }}
+                >
+                  <div style={{ "min-width": "0", flex: "1" }}>
+                    <div style={{ "font-weight": "500" }}>{cmd.name}</div>
+                    <Show when={cmd.description}>
+                      <div
+                        style={{
+                          "font-size": "11px",
+                          color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                          "margin-top": "2px",
+                        }}
+                      >
+                        {cmd.description}
+                      </div>
+                    </Show>
+                  </div>
+                  <div style={{ display: "flex", gap: "4px", "flex-shrink": "0" }}>
+                    <IconButton
+                      size="small"
+                      variant="ghost"
+                      icon="edit"
+                      onClick={() => vscode.postMessage({ type: "openWorkflowFile", name: cmd.name })}
+                    />
+                    <IconButton
+                      size="small"
+                      variant="ghost"
+                      icon="close"
+                      onClick={() => vscode.postMessage({ type: "deleteWorkflowFile", name: cmd.name })}
+                    />
+                  </div>
+                </div>
+              )}
+            </For>
+          </Show>
+        </Card>
+      </div>
+    )
+  }
+
   const renderSubtabContent = () => {
     switch (activeSubtab()) {
       case "agents":
@@ -526,7 +651,7 @@ const AgentBehaviourTab: Component = () => {
       case "rules":
         return renderRulesSubtab()
       case "workflows":
-        return <Placeholder text={language.t("settings.agentBehaviour.workflowsPlaceholder")} />
+        return renderWorkflowsSubtab()
       case "skills":
         return renderSkillsSubtab()
       default:

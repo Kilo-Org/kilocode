@@ -903,6 +903,12 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty":
     "Ingen MCP-servere konfigurert. Rediger opencode-konfigurasjonsfilen for å legge til MCP-servere.",
   "settings.agentBehaviour.workflowsPlaceholder": "Arbeidsflyter administreres via arbeidsflytfiler i arbeidsområdet.",
+  "settings.agentBehaviour.workflowsEmpty":
+    "Ingen arbeidsflyter funnet. Legg til .md-filer i .kilocode/workflows/ i prosjektet ditt eller ~/.kilocode/workflows/ globalt.",
+  "settings.agentBehaviour.workflows.title": "Arbeidsflyter",
+  "settings.agentBehaviour.workflows.description":
+    "Arbeidsflyter er .md-filer i .kilocode/workflows/. Bruk /navn i chatten for å kjøre dem.",
+  "settings.agentBehaviour.workflows.namePlaceholder": "f.eks. deploy, test-suite",
   "settings.agentBehaviour.notImplemented": "Ikke implementert ennå.",
   "settings.autoApprove.setAll": "Sett alle tillatelser",
   "settings.autoApprove.level.allow": "Tillat",

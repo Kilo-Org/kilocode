@@ -1,4 +1,5 @@
 import * as path from "path"
+import * as fs from "fs"
 import * as vscode from "vscode"
 import { z } from "zod"
 import {
@@ -38,6 +39,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private cachedAgentsMessage: unknown = null
   /** Cached configLoaded payload so requestConfig can be served before httpClient is ready */
   private cachedConfigMessage: unknown = null
+  /** Cached commandsLoaded payload so requestCommands can be served before httpClient is ready */
+  private cachedCommandsMessage: unknown = null
   /** Cached notificationsLoaded payload */
   private cachedNotificationsMessage: unknown = null
 
@@ -357,6 +360,25 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             this.handleOpenFile(message.filePath, message.line, message.column)
           }
           break
+        case "sendCommand":
+          await this.handleSendCommand(
+            message.command,
+            message.arguments,
+            message.sessionID,
+            message.providerID,
+            message.modelID,
+            message.agent,
+          )
+          break
+        case "openWorkflowFile":
+          await this.handleOpenWorkflowFile(message.name)
+          break
+        case "createWorkflowFile":
+          await this.handleCreateWorkflowFile(message.name)
+          break
+        case "deleteWorkflowFile":
+          await this.handleDeleteWorkflowFile(message.name)
+          break
         case "requestProviders":
           this.fetchAndSendProviders().catch((e) => console.error("[Kilo New] fetchAndSendProviders failed:", e))
           break
@@ -374,6 +396,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "requestConfig":
           this.fetchAndSendConfig().catch((e) => console.error("[Kilo New] fetchAndSendConfig failed:", e))
+          break
+        case "requestCommands":
+          this.fetchAndSendCommands().catch((e) => console.error("[Kilo New] fetchAndSendCommands failed:", e))
           break
         case "updateConfig":
           await this.handleUpdateConfig(message.config)
@@ -591,6 +616,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.fetchAndSendProviders(),
         this.fetchAndSendAgents(),
         this.fetchAndSendConfig(),
+        this.fetchAndSendCommands(),
         this.fetchAndSendNotifications(),
       ])
       this.sendNotificationSettings()
@@ -968,6 +994,37 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /**
+   * Fetch available commands (workflows, skills, MCP prompts) and send to webview.
+   */
+  private async fetchAndSendCommands(): Promise<void> {
+    if (!this.httpClient) {
+      if (this.cachedCommandsMessage) {
+        this.postMessage(this.cachedCommandsMessage)
+      }
+      return
+    }
+
+    try {
+      const workspaceDir = this.getWorkspaceDirectory()
+      const commands = await this.httpClient.listCommands(workspaceDir)
+
+      const message = {
+        type: "commandsLoaded",
+        commands: commands.map((cmd) => ({
+          name: cmd.name,
+          description: cmd.description,
+          source: cmd.source,
+          hints: cmd.hints,
+        })),
+      }
+      this.cachedCommandsMessage = message
+      this.postMessage(message)
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to fetch commands:", error)
+    }
+  }
+
+  /**
    * Fetch Kilo news/notifications and send to webview.
    * Uses the cached message pattern so the webview gets data immediately on refresh.
    */
@@ -1221,6 +1278,127 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage({
         type: "error",
         message: error instanceof Error ? error.message : "Failed to update config",
+      })
+    }
+  }
+
+  /**
+   * Handle command execution request from the webview.
+   * Routes "/command args" to the session command endpoint.
+   */
+  private async handleSendCommand(
+    command: string,
+    args: string,
+    sessionID?: string,
+    providerID?: string,
+    modelID?: string,
+    agent?: string,
+  ): Promise<void> {
+    if (!this.httpClient) {
+      this.postMessage({ type: "error", message: "Not connected to CLI backend" })
+      return
+    }
+
+    try {
+      const workspaceDir = this.getWorkspaceDirectory(sessionID || this.currentSession?.id)
+
+      // Create session if needed
+      if (!sessionID && !this.currentSession) {
+        this.currentSession = await this.httpClient.createSession(workspaceDir)
+        this.trackedSessionIds.add(this.currentSession.id)
+        this.postMessage({
+          type: "sessionCreated",
+          session: this.sessionToWebview(this.currentSession),
+        })
+      }
+
+      const target = sessionID || this.currentSession?.id
+      if (!target) {
+        throw new Error("No session available")
+      }
+
+      const model = providerID && modelID ? `${providerID}/${modelID}` : undefined
+
+      await this.httpClient.executeCommand(target, command, args, workspaceDir, { agent, model })
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to execute command:", error)
+      this.postMessage({
+        type: "error",
+        message: error instanceof Error ? error.message : "Failed to execute command",
+      })
+    }
+  }
+
+  /**
+   * Resolve the project-level workflows directory.
+   */
+  private getWorkflowsDir(): string {
+    const workspaceDir = this.getWorkspaceDirectory()
+    return path.join(workspaceDir, ".kilocode", "workflows")
+  }
+
+  /**
+   * Open a workflow file in the editor.
+   */
+  private async handleOpenWorkflowFile(name: string): Promise<void> {
+    const filePath = path.join(this.getWorkflowsDir(), `${name}.md`)
+    try {
+      const uri = vscode.Uri.file(filePath)
+      const doc = await vscode.workspace.openTextDocument(uri)
+      await vscode.window.showTextDocument(doc)
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to open workflow file:", error)
+      this.postMessage({
+        type: "error",
+        message: error instanceof Error ? error.message : "Failed to open workflow file",
+      })
+    }
+  }
+
+  /**
+   * Create a new workflow file and open it in the editor.
+   */
+  private async handleCreateWorkflowFile(name: string): Promise<void> {
+    const dir = this.getWorkflowsDir()
+    const filePath = path.join(dir, `${name}.md`)
+
+    try {
+      // Ensure directory exists
+      await fs.promises.mkdir(dir, { recursive: true })
+
+      // Create template content
+      const template = `# ${name}\n\nDescribe your workflow here.\n`
+      await fs.promises.writeFile(filePath, template, "utf-8")
+
+      // Open in editor
+      const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(filePath))
+      await vscode.window.showTextDocument(doc)
+
+      // Refresh commands so the new workflow appears
+      await this.fetchAndSendCommands()
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to create workflow file:", error)
+      this.postMessage({
+        type: "error",
+        message: error instanceof Error ? error.message : "Failed to create workflow file",
+      })
+    }
+  }
+
+  /**
+   * Delete a workflow file and refresh the commands list.
+   */
+  private async handleDeleteWorkflowFile(name: string): Promise<void> {
+    const filePath = path.join(this.getWorkflowsDir(), `${name}.md`)
+
+    try {
+      await fs.promises.unlink(filePath)
+      await this.fetchAndSendCommands()
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to delete workflow file:", error)
+      this.postMessage({
+        type: "error",
+        message: error instanceof Error ? error.message : "Failed to delete workflow file",
       })
     }
   }

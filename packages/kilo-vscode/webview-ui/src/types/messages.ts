@@ -174,6 +174,14 @@ export interface AgentInfo {
   color?: string
 }
 
+// Command/workflow info from CLI backend
+export interface CommandInfo {
+  name: string
+  description?: string
+  source?: "command" | "mcp" | "skill"
+  hints: string[]
+}
+
 // Server info
 export interface ServerInfo {
   port: number
@@ -569,6 +577,11 @@ export interface ConfigUpdatedMessage {
   config: Config
 }
 
+export interface CommandsLoadedMessage {
+  type: "commandsLoaded"
+  commands: CommandInfo[]
+}
+
 export interface NotificationSettingsLoadedMessage {
   type: "notificationSettingsLoaded"
   settings: {
@@ -748,6 +761,7 @@ export type ExtensionMessage =
   | BrowserSettingsLoadedMessage
   | ConfigLoadedMessage
   | ConfigUpdatedMessage
+  | CommandsLoadedMessage
   | NotificationSettingsLoadedMessage
   | NotificationsLoadedMessage
   | AgentManagerSessionMetaMessage
@@ -787,6 +801,16 @@ export interface SendMessageRequest {
   agent?: string
   variant?: string
   files?: FileAttachment[]
+}
+
+export interface SendCommandRequest {
+  type: "sendCommand"
+  command: string
+  arguments: string
+  sessionID?: string
+  providerID?: string
+  modelID?: string
+  agent?: string
 }
 
 export interface AbortRequest {
@@ -867,6 +891,21 @@ export interface OpenFileRequest {
   filePath: string
   line?: number
   column?: number
+}
+
+export interface OpenWorkflowFileRequest {
+  type: "openWorkflowFile"
+  name: string
+}
+
+export interface CreateWorkflowFileRequest {
+  type: "createWorkflowFile"
+  name: string
+}
+
+export interface DeleteWorkflowFileRequest {
+  type: "deleteWorkflowFile"
+  name: string
 }
 
 export interface CancelLoginRequest {
@@ -962,6 +1001,10 @@ export interface RequestBrowserSettingsMessage {
 
 export interface RequestConfigMessage {
   type: "requestConfig"
+}
+
+export interface RequestCommandsMessage {
+  type: "requestCommands"
 }
 
 export interface UpdateConfigMessage {
@@ -1131,6 +1174,7 @@ export interface RequestVariantsMessage {
 
 export type WebviewMessage =
   | SendMessageRequest
+  | SendCommandRequest
   | AbortRequest
   | PermissionResponseRequest
   | CreateSessionRequest
@@ -1144,6 +1188,9 @@ export type WebviewMessage =
   | RefreshProfileRequest
   | OpenExternalRequest
   | OpenFileRequest
+  | OpenWorkflowFileRequest
+  | CreateWorkflowFileRequest
+  | DeleteWorkflowFileRequest
   | CancelLoginRequest
   | SetOrganizationRequest
   | WebviewReadyRequest
@@ -1163,6 +1210,7 @@ export type WebviewMessage =
   | UpdateSettingRequest
   | RequestBrowserSettingsMessage
   | RequestConfigMessage
+  | RequestCommandsMessage
   | UpdateConfigMessage
   | RequestNotificationSettingsMessage
   | ResetAllSettingsRequest

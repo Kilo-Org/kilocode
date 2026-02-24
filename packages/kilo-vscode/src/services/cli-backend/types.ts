@@ -297,6 +297,14 @@ export interface CommandConfig {
   description?: string
 }
 
+/** Command/workflow info returned by GET /command */
+export interface CommandInfo {
+  name: string
+  description?: string
+  source?: "command" | "mcp" | "skill"
+  hints: string[]
+}
+
 /** Skills configuration */
 export interface SkillsConfig {
   paths?: string[]

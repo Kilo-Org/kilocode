@@ -940,6 +940,12 @@ export const dict = {
     "Paths to additional instruction files that are included in the system prompt",
   "settings.agentBehaviour.mcpEmpty": "No MCP servers configured. Edit the opencode config file to add MCP servers.",
   "settings.agentBehaviour.workflowsPlaceholder": "Workflows are managed via workflow files in your workspace.",
+  "settings.agentBehaviour.workflowsEmpty":
+    "No workflows found. Add .md files to .kilocode/workflows/ in your project or ~/.kilocode/workflows/ globally.",
+  "settings.agentBehaviour.workflows.title": "Workflows",
+  "settings.agentBehaviour.workflows.description":
+    "Workflows are .md files in .kilocode/workflows/. Use /name in the chat to run them.",
+  "settings.agentBehaviour.workflows.namePlaceholder": "e.g. deploy, test-suite",
   "settings.agentBehaviour.notImplemented": "Not yet implemented.",
 
   "settings.autoApprove.setAll": "Set all permissions",

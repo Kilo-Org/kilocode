@@ -909,6 +909,12 @@ export const dict = {
     "No hay servidores MCP configurados. Edite el archivo de configuración de opencode para añadir servidores MCP.",
   "settings.agentBehaviour.workflowsPlaceholder":
     "Los flujos de trabajo se gestionan mediante archivos de flujo de trabajo en su espacio de trabajo.",
+  "settings.agentBehaviour.workflowsEmpty":
+    "No se encontraron flujos de trabajo. Añada archivos .md en .kilocode/workflows/ en su proyecto o ~/.kilocode/workflows/ globalmente.",
+  "settings.agentBehaviour.workflows.title": "Flujos de trabajo",
+  "settings.agentBehaviour.workflows.description":
+    "Los flujos de trabajo son archivos .md en .kilocode/workflows/. Use /nombre en el chat para ejecutarlos.",
+  "settings.agentBehaviour.workflows.namePlaceholder": "ej. deploy, test-suite",
   "settings.agentBehaviour.notImplemented": "Aún no implementado.",
   "settings.autoApprove.setAll": "Establecer todos los permisos",
   "settings.autoApprove.level.allow": "Permitir",

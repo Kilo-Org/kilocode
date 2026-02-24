@@ -928,6 +928,12 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty":
     "Nema konfiguriranih MCP servera. Uredite konfiguracijsku datoteku opencode za dodavanje MCP servera.",
   "settings.agentBehaviour.workflowsPlaceholder": "Tokovi rada se upravljaju putem datoteka tokova rada.",
+  "settings.agentBehaviour.workflowsEmpty":
+    "Nisu pronađeni tokovi rada. Dodajte .md datoteke u .kilocode/workflows/ u vašem projektu ili ~/.kilocode/workflows/ globalno.",
+  "settings.agentBehaviour.workflows.title": "Tokovi rada",
+  "settings.agentBehaviour.workflows.description":
+    "Tokovi rada su .md datoteke u .kilocode/workflows/. Koristite /naziv u chatu za pokretanje.",
+  "settings.agentBehaviour.workflows.namePlaceholder": "npr. deploy, test-suite",
   "settings.agentBehaviour.notImplemented": "Još nije implementirano.",
   "settings.autoApprove.setAll": "Postavi sve dozvole",
   "settings.autoApprove.level.allow": "Dozvoli",

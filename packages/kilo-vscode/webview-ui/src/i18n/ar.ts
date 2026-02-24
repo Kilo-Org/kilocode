@@ -892,6 +892,12 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles.description": "مسارات ملفات التعليمات الإضافية في موجه النظام",
   "settings.agentBehaviour.mcpEmpty": "لم يتم تهيئة خوادم MCP. قم بتحرير ملف تهيئة opencode لإضافة خوادم MCP.",
   "settings.agentBehaviour.workflowsPlaceholder": "تُدار سير العمل عبر ملفات سير العمل في مساحة العمل.",
+  "settings.agentBehaviour.workflowsEmpty":
+    "لم يتم العثور على سير عمل. أضف ملفات .md إلى .kilocode/workflows/ في مشروعك أو ~/.kilocode/workflows/ بشكل عام.",
+  "settings.agentBehaviour.workflows.title": "سير العمل",
+  "settings.agentBehaviour.workflows.description":
+    "سير العمل هي ملفات .md في .kilocode/workflows/. استخدم /name في الدردشة لتشغيلها.",
+  "settings.agentBehaviour.workflows.namePlaceholder": "مثال: deploy, test-suite",
   "settings.agentBehaviour.notImplemented": "لم يتم التنفيذ بعد.",
   "settings.autoApprove.setAll": "تعيين جميع الأذونات",
   "settings.autoApprove.level.allow": "سماح",

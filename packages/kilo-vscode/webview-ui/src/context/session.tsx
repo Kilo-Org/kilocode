@@ -114,6 +114,7 @@ interface SessionContextValue {
 
   // Actions
   sendMessage: (text: string, providerID?: string, modelID?: string, files?: FileAttachment[]) => void
+  sendCommand: (command: string, args: string, providerID?: string, modelID?: string) => void
   abort: () => void
   compact: () => void
   respondToPermission: (permissionId: string, response: "once" | "always" | "reject") => void
@@ -822,6 +823,26 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
+  function sendCommand(command: string, args: string, providerID?: string, modelID?: string) {
+    if (!server.isConnected()) {
+      console.warn("[Kilo New] Cannot send command: not connected")
+      return
+    }
+
+    const sid = currentSessionID()
+    const agent = selectedAgentName() !== defaultAgent() ? selectedAgentName() : undefined
+
+    vscode.postMessage({
+      type: "sendCommand",
+      command,
+      arguments: args,
+      sessionID: sid,
+      providerID,
+      modelID,
+      agent,
+    })
+  }
+
   function abort() {
     const sessionID = currentSessionID()
     if (!sessionID) {
@@ -1076,6 +1097,7 @@ export const SessionProvider: ParentComponent = (props) => {
     currentVariant,
     selectVariant,
     sendMessage,
+    sendCommand,
     abort,
     compact,
     respondToPermission,

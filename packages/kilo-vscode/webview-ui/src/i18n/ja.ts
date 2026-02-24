@@ -897,6 +897,12 @@ export const dict = {
     "MCPサーバーが設定されていません。opencode設定ファイルを編集してMCPサーバーを追加してください。",
   "settings.agentBehaviour.workflowsPlaceholder":
     "ワークフローはワークスペース内のワークフローファイルを通じて管理されます。",
+  "settings.agentBehaviour.workflowsEmpty":
+    "ワークフローが見つかりません。プロジェクトの .kilocode/workflows/ または ~/.kilocode/workflows/ にグローバルに .md ファイルを追加してください。",
+  "settings.agentBehaviour.workflows.title": "ワークフロー",
+  "settings.agentBehaviour.workflows.description":
+    "ワークフローは .kilocode/workflows/ の .md ファイルです。チャットで /名前 を使用して実行します。",
+  "settings.agentBehaviour.workflows.namePlaceholder": "例: deploy, test-suite",
   "settings.agentBehaviour.notImplemented": "まだ実装されていません。",
   "settings.autoApprove.setAll": "すべての権限を設定",
   "settings.autoApprove.level.allow": "許可",

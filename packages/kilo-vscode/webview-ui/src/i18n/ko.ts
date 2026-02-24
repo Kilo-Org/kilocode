@@ -898,6 +898,12 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty":
     "MCP 서버가 구성되지 않았습니다. opencode 구성 파일을 편집하여 MCP 서버를 추가하세요.",
   "settings.agentBehaviour.workflowsPlaceholder": "워크플로우는 워크스페이스의 워크플로우 파일을 통해 관리됩니다.",
+  "settings.agentBehaviour.workflowsEmpty":
+    "워크플로우를 찾을 수 없습니다. 프로젝트의 .kilocode/workflows/ 또는 ~/.kilocode/workflows/에 .md 파일을 추가하세요.",
+  "settings.agentBehaviour.workflows.title": "워크플로우",
+  "settings.agentBehaviour.workflows.description":
+    "워크플로우는 .kilocode/workflows/의 .md 파일입니다. 채팅에서 /이름을 사용하여 실행하세요.",
+  "settings.agentBehaviour.workflows.namePlaceholder": "예: deploy, test-suite",
   "settings.agentBehaviour.notImplemented": "아직 구현되지 않았습니다.",
   "settings.autoApprove.setAll": "모든 권한 설정",
   "settings.autoApprove.level.allow": "허용",

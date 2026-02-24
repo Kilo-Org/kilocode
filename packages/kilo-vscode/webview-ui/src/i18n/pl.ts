@@ -904,6 +904,12 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty":
     "Brak skonfigurowanych serwerów MCP. Edytuj plik konfiguracyjny opencode, aby dodać serwery MCP.",
   "settings.agentBehaviour.workflowsPlaceholder": "Przepływy pracy zarządzane są za pomocą plików przepływów pracy.",
+  "settings.agentBehaviour.workflowsEmpty":
+    "Nie znaleziono przepływów pracy. Dodaj pliki .md do .kilocode/workflows/ w projekcie lub ~/.kilocode/workflows/ globalnie.",
+  "settings.agentBehaviour.workflows.title": "Przepływy pracy",
+  "settings.agentBehaviour.workflows.description":
+    "Przepływy pracy to pliki .md w .kilocode/workflows/. Użyj /nazwa w czacie, aby je uruchomić.",
+  "settings.agentBehaviour.workflows.namePlaceholder": "np. deploy, test-suite",
   "settings.agentBehaviour.notImplemented": "Jeszcze nie zaimplementowano.",
   "settings.autoApprove.setAll": "Ustaw wszystkie uprawnienia",
   "settings.autoApprove.level.allow": "Zezwól",

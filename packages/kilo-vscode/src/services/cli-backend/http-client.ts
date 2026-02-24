@@ -15,6 +15,7 @@ import type {
   CloudSessionsResponse,
   CloudSessionData,
   EditorContext,
+  CommandInfo,
 } from "./types"
 import { extractHttpErrorMessage, parseSSEDataLine } from "./http-utils"
 
@@ -207,6 +208,40 @@ export class HttpClient {
    */
   async updateConfig(config: Partial<Config>): Promise<Config> {
     return this.request<Config>("PATCH", "/global/config", config)
+  }
+
+  // ============================================
+  // Command/Workflow Methods
+  // ============================================
+
+  /**
+   * List all available commands (includes workflows, skills, MCP prompts).
+   */
+  async listCommands(directory: string): Promise<CommandInfo[]> {
+    return this.request<CommandInfo[]>("GET", "/command", undefined, { directory })
+  }
+
+  /**
+   * Execute a command (workflow) in a session.
+   */
+  async executeCommand(
+    sessionId: string,
+    command: string,
+    args: string,
+    directory: string,
+    options?: { agent?: string; model?: string },
+  ): Promise<void> {
+    await this.request<void>(
+      "POST",
+      `/session/${sessionId}/command`,
+      {
+        command,
+        arguments: args,
+        agent: options?.agent,
+        model: options?.model,
+      },
+      { directory, allowEmpty: true },
+    )
   }
 
   // ============================================

@@ -15,6 +15,8 @@ import { ModelSelector } from "./ModelSelector"
 import { ModeSwitcher } from "./ModeSwitcher"
 import { ThinkingSelector } from "./ThinkingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
+import { useSlashCommand } from "../../hooks/useSlashCommand"
+import { useCommands } from "../../context/commands"
 import { useImageAttachments } from "../../hooks/useImageAttachments"
 import { fileName, dirName, buildHighlightSegments } from "./prompt-input-utils"
 
@@ -30,6 +32,8 @@ export const PromptInput: Component = () => {
   const language = useLanguage()
   const vscode = useVSCode()
   const mention = useFileMention(vscode)
+  const { commands } = useCommands()
+  const slash = useSlashCommand(commands)
   const imageAttach = useImageAttachments()
 
   const sessionKey = () => session.currentSessionID() ?? "__new__"
@@ -40,6 +44,7 @@ export const PromptInput: Component = () => {
   let textareaRef: HTMLTextAreaElement | undefined
   let highlightRef: HTMLDivElement | undefined
   let dropdownRef: HTMLDivElement | undefined
+  let slashDropdownRef: HTMLDivElement | undefined
   let debounceTimer: ReturnType<typeof setTimeout> | undefined
   let requestCounter = 0
   // Save/restore input text when switching sessions.
@@ -140,6 +145,13 @@ export const PromptInput: Component = () => {
     if (active) active.scrollIntoView({ block: "nearest" })
   }
 
+  const scrollToActiveSlashItem = () => {
+    if (!slashDropdownRef) return
+    const items = slashDropdownRef.querySelectorAll(".slash-command-item")
+    const active = items[slash.index()] as HTMLElement | undefined
+    if (active) active.scrollIntoView({ block: "nearest" })
+  }
+
   const syncHighlightScroll = () => {
     if (highlightRef && textareaRef) {
       highlightRef.scrollTop = textareaRef.scrollTop
@@ -172,8 +184,9 @@ export const PromptInput: Component = () => {
     syncHighlightScroll()
 
     mention.onInput(val, target.selectionStart ?? val.length)
+    slash.onInput(val)
 
-    if (mention.showMention()) {
+    if (mention.showMention() || slash.show()) {
       setGhostText("")
       if (debounceTimer) clearTimeout(debounceTimer)
       return
@@ -187,6 +200,12 @@ export const PromptInput: Component = () => {
     if (mention.onKeyDown(e, textareaRef, setText, adjustHeight)) {
       setGhostText("")
       queueMicrotask(scrollToActiveItem)
+      return
+    }
+
+    if (slash.onKeyDown(e, textareaRef, setText, adjustHeight)) {
+      setGhostText("")
+      queueMicrotask(scrollToActiveSlashItem)
       return
     }
 
@@ -219,6 +238,26 @@ export const PromptInput: Component = () => {
     const imgs = imageAttach.images()
     if ((!message && imgs.length === 0) || isBusy() || isDisabled()) return
 
+    if (message.startsWith("/")) {
+      const parts = message.slice(1).split(/\s+/)
+      const command = parts[0]
+      const args = parts.slice(1).join(" ")
+      if (command) {
+        const sel = session.selected()
+        session.sendCommand(command, args, sel?.providerID, sel?.modelID)
+        requestCounter++
+        setText("")
+        setGhostText("")
+        imageAttach.clear()
+        if (debounceTimer) clearTimeout(debounceTimer)
+        slash.close()
+        mention.closeMention()
+        drafts.delete(sessionKey())
+        if (textareaRef) textareaRef.style.height = "auto"
+        return
+      }
+    }
+
     const mentionFiles = mention.parseFileAttachments(message)
     const imgFiles = imgs.map((img) => ({ mime: img.mime, url: img.dataUrl }))
     const allFiles = [...mentionFiles, ...imgFiles]
@@ -234,6 +273,7 @@ export const PromptInput: Component = () => {
     imageAttach.clear()
     if (debounceTimer) clearTimeout(debounceTimer)
     mention.closeMention()
+    slash.close()
     drafts.delete(sessionKey())
 
     if (textareaRef) textareaRef.style.height = "auto"
@@ -267,6 +307,50 @@ export const PromptInput: Component = () => {
                   <FileIcon node={{ path, type: "file" }} class="file-mention-icon" />
                   <span class="file-mention-name">{fileName(path)}</span>
                   <span class="file-mention-dir">{dirName(path)}</span>
+                </div>
+              )}
+            </For>
+          </Show>
+        </div>
+      </Show>
+      <Show when={slash.show()}>
+        <div class="slash-command-dropdown" ref={slashDropdownRef}>
+          <Show
+            when={slash.filtered().length > 0}
+            fallback={<div class="slash-command-empty">{language.t("prompt.popover.emptyCommands")}</div>}
+          >
+            <For each={slash.filtered()}>
+              {(cmd, index) => (
+                <div
+                  class="slash-command-item"
+                  classList={{ "slash-command-item--active": index() === slash.index() }}
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    const newText = `/${cmd.name} `
+                    setText(newText)
+                    if (textareaRef) {
+                      textareaRef.value = newText
+                      textareaRef.setSelectionRange(newText.length, newText.length)
+                      textareaRef.focus()
+                    }
+                    slash.close()
+                    adjustHeight()
+                  }}
+                  onMouseEnter={() => slash.setIndex(index())}
+                >
+                  <span class="slash-command-name">/{cmd.name}</span>
+                  <Show when={cmd.description}>
+                    <span class="slash-command-description">{cmd.description}</span>
+                  </Show>
+                  <Show when={cmd.source && cmd.source !== "command"}>
+                    <span class="slash-command-badge">
+                      {cmd.source === "skill"
+                        ? language.t("prompt.slash.badge.skill")
+                        : cmd.source === "mcp"
+                          ? language.t("prompt.slash.badge.mcp")
+                          : language.t("prompt.slash.badge.custom")}
+                    </span>
+                  </Show>
                 </div>
               )}
             </For>

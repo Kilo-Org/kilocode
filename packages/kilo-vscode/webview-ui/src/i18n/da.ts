@@ -901,6 +901,12 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty":
     "Ingen MCP-servere konfigureret. Rediger opencode-konfigurationsfilen for at tilføje MCP-servere.",
   "settings.agentBehaviour.workflowsPlaceholder": "Workflows administreres via workflow-filer i dit arbejdsområde.",
+  "settings.agentBehaviour.workflowsEmpty":
+    "Ingen workflows fundet. Tilføj .md-filer til .kilocode/workflows/ i dit projekt eller ~/.kilocode/workflows/ globalt.",
+  "settings.agentBehaviour.workflows.title": "Workflows",
+  "settings.agentBehaviour.workflows.description":
+    "Workflows er .md-filer i .kilocode/workflows/. Brug /navn i chatten for at køre dem.",
+  "settings.agentBehaviour.workflows.namePlaceholder": "f.eks. deploy, test-suite",
   "settings.agentBehaviour.notImplemented": "Endnu ikke implementeret.",
   "settings.autoApprove.setAll": "Indstil alle tilladelser",
   "settings.autoApprove.level.allow": "Tillad",

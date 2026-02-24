@@ -14,6 +14,7 @@ import { VSCodeProvider, useVSCode } from "./context/vscode"
 import { ServerProvider, useServer } from "./context/server"
 import { ProviderProvider, useProvider } from "./context/provider"
 import { ConfigProvider } from "./context/config"
+import { CommandsProvider } from "./context/commands"
 import { SessionProvider, useSession } from "./context/session"
 import { LanguageProvider } from "./context/language"
 import { ChatView } from "./components/chat"
@@ -230,13 +231,15 @@ const App: Component = () => {
                   <CodeComponentProvider component={Code}>
                     <ProviderProvider>
                       <ConfigProvider>
-                        <NotificationsProvider>
-                          <SessionProvider>
-                            <DataBridge>
-                              <AppContent />
-                            </DataBridge>
-                          </SessionProvider>
-                        </NotificationsProvider>
+                        <CommandsProvider>
+                          <NotificationsProvider>
+                            <SessionProvider>
+                              <DataBridge>
+                                <AppContent />
+                              </DataBridge>
+                            </SessionProvider>
+                          </NotificationsProvider>
+                        </CommandsProvider>
                       </ConfigProvider>
                     </ProviderProvider>
                   </CodeComponentProvider>

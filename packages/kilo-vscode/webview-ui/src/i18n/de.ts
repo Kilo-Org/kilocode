@@ -913,6 +913,12 @@ export const dict = {
     "Keine MCP-Server konfiguriert. Bearbeiten Sie die opencode-Konfigurationsdatei, um MCP-Server hinzuzufügen.",
   "settings.agentBehaviour.workflowsPlaceholder":
     "Workflows werden über Workflow-Dateien in Ihrem Arbeitsbereich verwaltet.",
+  "settings.agentBehaviour.workflowsEmpty":
+    "Keine Workflows gefunden. Fügen Sie .md-Dateien zu .kilocode/workflows/ in Ihrem Projekt oder ~/.kilocode/workflows/ global hinzu.",
+  "settings.agentBehaviour.workflows.title": "Workflows",
+  "settings.agentBehaviour.workflows.description":
+    "Workflows sind .md-Dateien in .kilocode/workflows/. Verwenden Sie /name im Chat, um sie auszuführen.",
+  "settings.agentBehaviour.workflows.namePlaceholder": "z.B. deploy, test-suite",
   "settings.agentBehaviour.notImplemented": "Noch nicht implementiert.",
   "settings.autoApprove.setAll": "Alle Berechtigungen festlegen",
   "settings.autoApprove.level.allow": "Erlauben",

@@ -890,6 +890,12 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty":
     "ไม่ได้กำหนดค่าเซิร์ฟเวอร์ MCP แก้ไขไฟล์กำหนดค่า opencode เพื่อเพิ่มเซิร์ฟเวอร์ MCP",
   "settings.agentBehaviour.workflowsPlaceholder": "เวิร์กโฟลว์จัดการผ่านไฟล์เวิร์กโฟลว์ในพื้นที่ทำงาน",
+  "settings.agentBehaviour.workflowsEmpty":
+    "ไม่พบเวิร์กโฟลว์ เพิ่มไฟล์ .md ใน .kilocode/workflows/ ของโปรเจกต์หรือ ~/.kilocode/workflows/ แบบทั่วไป",
+  "settings.agentBehaviour.workflows.title": "เวิร์กโฟลว์",
+  "settings.agentBehaviour.workflows.description":
+    "เวิร์กโฟลว์คือไฟล์ .md ใน .kilocode/workflows/ ใช้ /ชื่อ ในแชทเพื่อเรียกใช้",
+  "settings.agentBehaviour.workflows.namePlaceholder": "เช่น deploy, test-suite",
   "settings.agentBehaviour.notImplemented": "ยังไม่ได้ใช้งาน",
   "settings.autoApprove.setAll": "ตั้งค่าสิทธิ์ทั้งหมด",
   "settings.autoApprove.level.allow": "อนุญาต",

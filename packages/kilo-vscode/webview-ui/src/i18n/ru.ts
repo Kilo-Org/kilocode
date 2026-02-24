@@ -906,6 +906,12 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty":
     "MCP-серверы не настроены. Отредактируйте файл конфигурации opencode для добавления MCP-серверов.",
   "settings.agentBehaviour.workflowsPlaceholder": "Рабочие процессы управляются через файлы рабочих процессов.",
+  "settings.agentBehaviour.workflowsEmpty":
+    "Рабочие процессы не найдены. Добавьте .md файлы в .kilocode/workflows/ вашего проекта или ~/.kilocode/workflows/ глобально.",
+  "settings.agentBehaviour.workflows.title": "Рабочие процессы",
+  "settings.agentBehaviour.workflows.description":
+    "Рабочие процессы — это .md файлы в .kilocode/workflows/. Используйте /имя в чате для запуска.",
+  "settings.agentBehaviour.workflows.namePlaceholder": "напр. deploy, test-suite",
   "settings.agentBehaviour.notImplemented": "Ещё не реализовано.",
   "settings.autoApprove.setAll": "Установить все разрешения",
   "settings.autoApprove.level.allow": "Разрешить",
