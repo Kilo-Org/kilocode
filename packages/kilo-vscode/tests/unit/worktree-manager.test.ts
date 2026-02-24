@@ -3,7 +3,7 @@ import os from "node:os"
 import path from "node:path"
 import fs from "node:fs/promises"
 import { WorktreeManager } from "../../src/agent-manager/WorktreeManager"
-import { generateBranchName, versionedName } from "../../src/agent-manager/branch-name"
+import { generateBranchName, sanitizeBranchName, versionedName } from "../../src/agent-manager/branch-name"
 import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
 import simpleGit from "simple-git"
 
@@ -87,6 +87,50 @@ describe("generateBranchName", () => {
   it("handles a clean custom name", () => {
     const name = generateBranchName("auth-refactor")
     expect(name).toMatch(/^auth-refactor-\d+$/)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// sanitizeBranchName
+// ---------------------------------------------------------------------------
+
+describe("sanitizeBranchName", () => {
+  it("replaces spaces with hyphens", () => {
+    expect(sanitizeBranchName("model comparison")).toBe("model-comparison")
+  })
+
+  it("lowercases input", () => {
+    expect(sanitizeBranchName("My Feature")).toBe("my-feature")
+  })
+
+  it("strips special characters", () => {
+    expect(sanitizeBranchName("fix bug #123 & add feature!")).toBe("fix-bug-123-add-feature")
+  })
+
+  it("collapses consecutive hyphens", () => {
+    expect(sanitizeBranchName("one   two   three")).toBe("one-two-three")
+  })
+
+  it("strips leading and trailing hyphens", () => {
+    expect(sanitizeBranchName("---hello---")).toBe("hello")
+  })
+
+  it("truncates to maxLength", () => {
+    const result = sanitizeBranchName("a".repeat(100))
+    expect(result.length).toBeLessThanOrEqual(50)
+  })
+
+  it("returns empty string for whitespace-only input", () => {
+    expect(sanitizeBranchName("   ")).toBe("")
+  })
+
+  it("returns empty string for empty input", () => {
+    expect(sanitizeBranchName("")).toBe("")
+  })
+
+  it("handles custom maxLength", () => {
+    const result = sanitizeBranchName("abcdefghij", 5)
+    expect(result).toBe("abcde")
   })
 })
 
