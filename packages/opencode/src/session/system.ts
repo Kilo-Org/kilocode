@@ -67,6 +67,10 @@ export namespace SystemPrompt {
             : ""
         }`,
         `</directories>`,
+        // kilocode_change start
+        ``,
+        `At the end of each user message, you may receive <environment_details> with information about the user's currently active file, visible editors, and open tabs. This is auto-generated context — use it to understand which files the user is working with.`,
+        // kilocode_change end
       ].join("\n"),
     ]
   }
