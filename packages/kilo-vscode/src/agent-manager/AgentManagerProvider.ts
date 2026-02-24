@@ -10,6 +10,7 @@ import { SetupScriptRunner } from "./SetupScriptRunner"
 import { SessionTerminalManager } from "./SessionTerminalManager"
 import { formatKeybinding } from "./format-keybinding"
 import { TelemetryProxy, TelemetryEventName } from "../services/telemetry"
+import { MAX_MULTI_VERSIONS } from "./constants"
 
 /**
  * AgentManagerProvider opens the Agent Manager panel.
@@ -568,20 +569,39 @@ export class AgentManagerProvider implements vscode.Disposable {
   private async onCreateMultiVersion(msg: Record<string, unknown>): Promise<null> {
     const text = (msg.text as string | undefined)?.trim() || undefined
 
-    const versions = Math.min(Math.max(Number(msg.versions) || 1, 1), 4)
     const worktreeName = (msg.name as string | undefined)?.trim() || undefined
-    const providerID = msg.providerID as string | undefined
-    const modelID = msg.modelID as string | undefined
     const agent = msg.agent as string | undefined
     const files = msg.files as Array<{ mime: string; url: string }> | undefined
     const baseBranch = msg.baseBranch as string | undefined
     const branchName = (msg.branchName as string | undefined)?.trim() || undefined
 
+    // Expand model allocations into per-version model assignments
+    const rawAllocations = msg.modelAllocations as
+      | Array<{ providerID: string; modelID: string; count: number }>
+      | undefined
+    const perVersionModels: Array<{ providerID: string; modelID: string } | undefined> = []
+    if (rawAllocations && rawAllocations.length > 0) {
+      for (const alloc of rawAllocations) {
+        for (let c = 0; c < alloc.count; c++) {
+          perVersionModels.push({ providerID: alloc.providerID, modelID: alloc.modelID })
+        }
+      }
+    }
+
+    const versions =
+      perVersionModels.length > 0
+        ? Math.min(perVersionModels.length, MAX_MULTI_VERSIONS)
+        : Math.min(Math.max(Number(msg.versions) || 1, 1), MAX_MULTI_VERSIONS)
+
+    // Fall back to single model when not in compare mode
+    const providerID = perVersionModels.length > 0 ? undefined : (msg.providerID as string | undefined)
+    const modelID = perVersionModels.length > 0 ? undefined : (msg.modelID as string | undefined)
+
     // Generate a shared group ID for multi-version worktrees
     const groupId = versions > 1 ? `grp-${Date.now()}` : undefined
 
     this.log(
-      `Creating ${versions} worktrees${text ? ` for: ${text.slice(0, 60)}` : ""}${groupId ? ` (group=${groupId})` : ""}`,
+      `Creating ${versions} worktrees${perVersionModels.length > 0 ? " (model comparison)" : ""}${text ? ` for: ${text.slice(0, 60)}` : ""}${groupId ? ` (group=${groupId})` : ""}`,
     )
 
     // Notify webview that multi-version creation has started
@@ -635,6 +655,21 @@ export class AgentManagerProvider implements vscode.Disposable {
       this.registerWorktreeSession(session.id, wt.result.path)
       this.notifyWorktreeReady(session.id, wt.result)
 
+      // Set the per-version model immediately so the UI selector reflects
+      // the correct model as soon as the worktree appears, before Phase 2.
+      const versionModel = perVersionModels[i]
+      const earlyProviderID = versionModel?.providerID ?? providerID
+      const earlyModelID = versionModel?.modelID ?? modelID
+      if (earlyProviderID && earlyModelID) {
+        this.postToWebview({
+          type: "agentManager.sendInitialMessage",
+          sessionId: session.id,
+          worktreeId: wt.worktree.id,
+          providerID: earlyProviderID,
+          modelID: earlyModelID,
+        })
+      }
+
       created.push({
         worktreeId: wt.worktree.id,
         sessionId: session.id,
@@ -665,18 +700,25 @@ export class AgentManagerProvider implements vscode.Disposable {
       })
     }
 
-    // Phase 2: Send the initial prompt to all sessions, or clear busy state if no text
+    // Phase 2: Send the initial prompt to all sessions, or clear busy state if no text.
+    // Always include per-version model so the UI selector reflects the correct model.
     for (let i = 0; i < created.length; i++) {
       const entry = created[i]!
+      // Use per-version model when in compare mode, otherwise fall back to shared model
+      const versionModel = perVersionModels[i]
+      const versionProviderID = versionModel?.providerID ?? providerID
+      const versionModelID = versionModel?.modelID ?? modelID
       if (text) {
-        this.log(`Sending initial message to version ${i + 1} (session=${entry.sessionId})`)
+        this.log(
+          `Sending initial message to version ${i + 1} (session=${entry.sessionId}${versionModel ? `, model=${versionProviderID}/${versionModelID}` : ""})`,
+        )
         this.postToWebview({
           type: "agentManager.sendInitialMessage",
           sessionId: entry.sessionId,
           worktreeId: entry.worktreeId,
           text,
-          providerID,
-          modelID,
+          providerID: versionProviderID,
+          modelID: versionModelID,
           agent,
           files,
         })
@@ -684,11 +726,13 @@ export class AgentManagerProvider implements vscode.Disposable {
           await new Promise((resolve) => setTimeout(resolve, 300))
         }
       } else {
-        // No prompt — just clear the busy state for this worktree
+        // No prompt — still include model info so the UI selector is correct
         this.postToWebview({
           type: "agentManager.sendInitialMessage",
           sessionId: entry.sessionId,
           worktreeId: entry.worktreeId,
+          providerID: versionProviderID,
+          modelID: versionModelID,
         })
       }
     }

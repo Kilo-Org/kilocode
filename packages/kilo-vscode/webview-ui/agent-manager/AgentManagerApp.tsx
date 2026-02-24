@@ -55,6 +55,13 @@ import { WorktreeModeProvider } from "../src/context/worktree-mode"
 import { ChatView } from "../src/components/chat"
 import { ModelSelectorBase } from "../src/components/chat/ModelSelector"
 import { ModeSwitcherBase } from "../src/components/chat/ModeSwitcher"
+import {
+  MultiModelSelector,
+  type ModelAllocations,
+  MAX_MULTI_VERSIONS,
+  totalAllocations,
+  allocationsToArray,
+} from "./MultiModelSelector"
 import { LanguageBridge, DataBridge } from "../src/App"
 import { useLanguage } from "../src/context/language"
 import { formatRelativeDate } from "../src/utils/date"
@@ -1638,6 +1645,8 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
   const [prompt, setPrompt] = createSignal("")
   const [versions, setVersions] = createSignal<VersionCount>(1)
   const [model, setModel] = createSignal<{ providerID: string; modelID: string } | null>(null)
+  const [compareMode, setCompareMode] = createSignal(false)
+  const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(new Map())
   const [agent, setAgent] = createSignal(session.selectedAgent())
   const [starting, setStarting] = createSignal(false)
   const [showAdvanced, setShowAdvanced] = createSignal(false)
@@ -1666,19 +1675,26 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
     return branches().filter((b) => b.name.toLowerCase().includes(search))
   })
 
-  const canSubmit = () => !starting()
+  const canSubmit = () => {
+    if (starting()) return false
+    if (compareMode() && totalAllocations(modelAllocations()) === 0) return false
+    return true
+  }
 
   const handleSubmit = () => {
-    if (starting()) return
+    if (!canSubmit()) return
     setStarting(true)
 
     const text = prompt().trim() || undefined
-    const count = versions()
-    const sel = model()
     const defaultAgent = session.agents()[0]?.name
     const selectedAgent = agent() !== defaultAgent ? agent() : undefined
     const advanced = showAdvanced()
     const customBranch = advanced ? branchName().trim() || undefined : undefined
+
+    const isCompare = compareMode()
+    const allocations = isCompare ? allocationsToArray(modelAllocations()) : undefined
+    const count = isCompare ? totalAllocations(modelAllocations()) : versions()
+    const sel = isCompare ? null : model()
 
     vscode.postMessage({
       type: "agentManager.createMultiVersion",
@@ -1690,6 +1706,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
       agent: selectedAgent,
       baseBranch: advanced ? (baseBranch() ?? undefined) : undefined,
       branchName: customBranch,
+      modelAllocations: allocations,
     })
 
     props.onClose()
@@ -1805,13 +1822,15 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
             </div>
             <div class="prompt-input-hint">
               <div class="prompt-input-hint-selectors">
-                <ModelSelectorBase
-                  value={model()}
-                  onSelect={(pid, mid) => setModel(pid && mid ? { providerID: pid, modelID: mid } : null)}
-                  placement="top-start"
-                  allowClear
-                  clearLabel="Default"
-                />
+                <Show when={!compareMode()}>
+                  <ModelSelectorBase
+                    value={model()}
+                    onSelect={(pid, mid) => setModel(pid && mid ? { providerID: pid, modelID: mid } : null)}
+                    placement="top-start"
+                    allowClear
+                    clearLabel="Default"
+                  />
+                </Show>
                 <Show when={session.agents().length > 1}>
                   <ModeSwitcherBase agents={session.agents()} value={agent()} onSelect={setAgent} />
                 </Show>
@@ -1952,25 +1971,63 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
             </div>
           </Show>
 
-          {/* Version selector + info */}
-          <div class="am-nv-version-bar">
-            <span class="am-nv-config-label">{t("agentManager.dialog.versions")}</span>
-            <div class="am-nv-pills">
-              {VERSION_OPTIONS.map((count) => (
+          {/* Version / compare mode selector */}
+          <Show
+            when={compareMode()}
+            fallback={
+              <div class="am-nv-version-bar">
+                <span class="am-nv-config-label">{t("agentManager.dialog.versions")}</span>
+                <div class="am-nv-pills">
+                  {VERSION_OPTIONS.map((count) => (
+                    <button
+                      class="am-nv-pill"
+                      classList={{ "am-nv-pill-active": versions() === count }}
+                      onClick={() => setVersions(count)}
+                      type="button"
+                    >
+                      {count}
+                    </button>
+                  ))}
+                  <button
+                    class="am-nv-pill am-nv-pill-compare"
+                    onClick={() => setCompareMode(true)}
+                    type="button"
+                    title={t("agentManager.dialog.compareModels")}
+                  >
+                    <Icon name="layers" size="small" />
+                  </button>
+                </div>
+                <Show when={versions() > 1}>
+                  <span class="am-nv-version-hint">{t("agentManager.dialog.versionHint", { count: versions() })}</span>
+                </Show>
+              </div>
+            }
+          >
+            <div class="am-nv-compare-section">
+              <div class="am-nv-version-bar">
+                <span class="am-nv-config-label">
+                  {t("agentManager.dialog.compareModels")}
+                  <Show when={totalAllocations(modelAllocations()) > 0}>
+                    <span class="am-nv-compare-count">
+                      {totalAllocations(modelAllocations())}/{MAX_MULTI_VERSIONS}
+                    </span>
+                  </Show>
+                </span>
                 <button
-                  class="am-nv-pill"
-                  classList={{ "am-nv-pill-active": versions() === count }}
-                  onClick={() => setVersions(count)}
+                  class="am-nv-pill-back"
+                  onClick={() => {
+                    setCompareMode(false)
+                    setModelAllocations(new Map())
+                  }}
                   type="button"
+                  title={t("agentManager.dialog.versions")}
                 >
-                  {count}
+                  <Icon name="close-small" size="small" />
                 </button>
-              ))}
+              </div>
+              <MultiModelSelector allocations={modelAllocations()} onChange={setModelAllocations} />
             </div>
-            <Show when={versions() > 1}>
-              <span class="am-nv-version-hint">{t("agentManager.dialog.versionHint", { count: versions() })}</span>
-            </Show>
-          </div>
+          </Show>
 
           {/* Submit button */}
           <Button variant="primary" size="large" class="am-nv-submit" onClick={handleSubmit} disabled={!canSubmit()}>

@@ -1000,6 +1000,8 @@ export const dict = {
   "agentManager.dialog.branchBadge.remote": "원격",
   "agentManager.dialog.versions": "버전",
   "agentManager.dialog.versionHint": "{{count}}개의 Worktree가 병렬로 실행됩니다",
+  "agentManager.dialog.compareModels": "모델 비교",
+  "agentManager.dialog.compareModels.searchModels": "모델 검색...",
   "agentManager.dialog.creating": "생성 중...",
   "agentManager.dialog.createWorkspace": "워크스페이스 생성",
   "agentManager.dialog.advanced": "고급...",
