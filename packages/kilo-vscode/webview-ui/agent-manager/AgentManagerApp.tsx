@@ -56,6 +56,7 @@ import { ChatView } from "../src/components/chat"
 import { ModelSelectorBase } from "../src/components/chat/ModelSelector"
 import { ModeSwitcherBase } from "../src/components/chat/ModeSwitcher"
 import { LanguageBridge, DataBridge } from "../src/App"
+import { useLanguage } from "../src/context/language"
 import { formatRelativeDate } from "../src/utils/date"
 import { validateLocalSession, nextSelectionAfterDelete, adjacentHint, LOCAL } from "./navigate"
 import { reorderTabs, applyTabOrder, firstOrderedTitle } from "./tab-order"
@@ -174,37 +175,42 @@ interface ShortcutCategory {
 }
 
 /** Build the categorized list of keyboard shortcuts from the current bindings */
-function buildShortcutCategories(bindings: Record<string, string>): ShortcutCategory[] {
+function buildShortcutCategories(
+  bindings: Record<string, string>,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): ShortcutCategory[] {
   return [
     {
-      title: "Sidebar",
+      title: t("agentManager.shortcuts.category.sidebar"),
       shortcuts: [
-        { label: "Previous item", binding: bindings.previousSession ?? "" },
-        { label: "Next item", binding: bindings.nextSession ?? "" },
-        { label: "New worktree", binding: bindings.newWorktree ?? "" },
-        { label: "Advanced worktree", binding: bindings.advancedWorktree ?? "" },
-        { label: "Delete worktree", binding: bindings.closeWorktree ?? "" },
+        { label: t("agentManager.shortcuts.previousItem"), binding: bindings.previousSession ?? "" },
+        { label: t("agentManager.shortcuts.nextItem"), binding: bindings.nextSession ?? "" },
+        { label: t("agentManager.shortcuts.newWorktree"), binding: bindings.newWorktree ?? "" },
+        { label: t("agentManager.shortcuts.advancedWorktree"), binding: bindings.advancedWorktree ?? "" },
+        { label: t("agentManager.shortcuts.deleteWorktree"), binding: bindings.closeWorktree ?? "" },
       ],
     },
     {
-      title: "Tabs",
+      title: t("agentManager.shortcuts.category.tabs"),
       shortcuts: [
-        { label: "Previous tab", binding: bindings.previousTab ?? "" },
-        { label: "Next tab", binding: bindings.nextTab ?? "" },
-        { label: "New tab", binding: bindings.newTab ?? "" },
-        { label: "Close tab", binding: bindings.closeTab ?? "" },
+        { label: t("agentManager.shortcuts.previousTab"), binding: bindings.previousTab ?? "" },
+        { label: t("agentManager.shortcuts.nextTab"), binding: bindings.nextTab ?? "" },
+        { label: t("agentManager.shortcuts.newTab"), binding: bindings.newTab ?? "" },
+        { label: t("agentManager.shortcuts.closeTab"), binding: bindings.closeTab ?? "" },
       ],
     },
     {
-      title: "Terminal",
+      title: t("agentManager.shortcuts.category.terminal"),
       shortcuts: [
-        { label: "Toggle terminal", binding: bindings.showTerminal ?? "" },
-        { label: "Focus panel", binding: bindings.focusPanel ?? "" },
+        { label: t("agentManager.shortcuts.toggleTerminal"), binding: bindings.showTerminal ?? "" },
+        { label: t("agentManager.shortcuts.focusPanel"), binding: bindings.focusPanel ?? "" },
       ],
     },
     {
-      title: "Global",
-      shortcuts: [{ label: "Open Agent Manager", binding: bindings.agentManagerOpen ?? "" }].filter((s) => s.binding),
+      title: t("agentManager.shortcuts.category.global"),
+      shortcuts: [
+        { label: t("agentManager.shortcuts.openAgentManager"), binding: bindings.agentManagerOpen ?? "" },
+      ].filter((s) => s.binding),
     },
   ].filter((c) => c.shortcuts.length > 0)
 }
@@ -234,6 +240,7 @@ function parseBindingTokens(binding: string): string[] {
 }
 
 const AgentManagerContent: Component = () => {
+  const { t } = useLanguage()
   const session = useSession()
   const vscode = useVSCode()
   const dialog = useDialog()
@@ -343,7 +350,7 @@ const AgentManagerContent: Component = () => {
       if (real) {
         result.push(real)
       } else if (isPending(id)) {
-        result.push({ id, title: "New Session", createdAt: now, updatedAt: now })
+        result.push({ id, title: t("agentManager.session.newSession"), createdAt: now, updatedAt: now })
       }
     }
     return result
@@ -782,9 +789,9 @@ const AgentManagerContent: Component = () => {
   }
 
   const handleShowKeyboardShortcuts = () => {
-    const categories = buildShortcutCategories(kb())
+    const categories = buildShortcutCategories(kb(), t)
     dialog.show(() => (
-      <Dialog title="Keyboard Shortcuts" fit>
+      <Dialog title={t("agentManager.shortcuts.title")} fit>
         <div class="am-shortcuts">
           <For each={categories}>
             {(category) => (
@@ -844,21 +851,22 @@ const AgentManagerContent: Component = () => {
       }
     }
     dialog.show(() => (
-      <Dialog title="Delete Worktree" fit>
+      <Dialog title={t("agentManager.dialog.deleteWorktree.title")} fit>
         <div class="am-confirm" onKeyDown={onKeyDown}>
           <div class="am-confirm-message">
             <Icon name="trash" size="small" />
             <span>
-              Delete worktree <code class="am-confirm-branch">{wt.branch}</code>? This removes the worktree from disk
-              and dissociates all sessions.
+              {t("agentManager.dialog.deleteWorktree.messagePre")}
+              <code class="am-confirm-branch">{wt.branch}</code>
+              {t("agentManager.dialog.deleteWorktree.messagePost")}
             </span>
           </div>
           <div class="am-confirm-actions">
             <Button variant="ghost" size="large" onClick={() => dialog.close()}>
-              Cancel
+              {t("agentManager.dialog.deleteWorktree.cancel")}
             </Button>
             <Button variant="primary" size="large" class="am-confirm-delete" onClick={doDelete} autofocus>
-              Delete
+              {t("agentManager.dialog.deleteWorktree.confirm")}
             </Button>
           </div>
         </div>
@@ -1038,7 +1046,7 @@ const AgentManagerContent: Component = () => {
             <path d="M10 13.5V16.5" stroke="currentColor" />
           </svg>
           <div class="am-local-text">
-            <span class="am-local-label">local</span>
+            <span class="am-local-label">{t("agentManager.local")}</span>
             <Show when={repoBranch()}>
               <span class="am-local-branch">{repoBranch()}</span>
             </Show>
@@ -1048,7 +1056,7 @@ const AgentManagerContent: Component = () => {
         {/* WORKTREES section */}
         <div class={`am-section ${sessionsCollapsed() ? "am-section-grow" : ""}`}>
           <div class="am-section-header">
-            <span class="am-section-label">WORKTREES</span>
+            <span class="am-section-label">{t("agentManager.section.worktrees")}</span>
             <Show when={isGitRepo()}>
               <div class="am-section-actions">
                 <DropdownMenu>
@@ -1057,16 +1065,16 @@ const AgentManagerContent: Component = () => {
                     icon="settings-gear"
                     size="small"
                     variant="ghost"
-                    label="Worktree settings"
+                    label={t("agentManager.worktree.settings")}
                   />
                   <DropdownMenu.Portal>
                     <DropdownMenu.Content>
                       <DropdownMenu.Item onSelect={handleShowKeyboardShortcuts}>
-                        <DropdownMenu.ItemLabel>Keyboard Shortcuts</DropdownMenu.ItemLabel>
+                        <DropdownMenu.ItemLabel>{t("agentManager.shortcuts.title")}</DropdownMenu.ItemLabel>
                       </DropdownMenu.Item>
                       <DropdownMenu.Separator />
                       <DropdownMenu.Item onSelect={handleConfigureSetupScript}>
-                        <DropdownMenu.ItemLabel>Worktree Setup Script</DropdownMenu.ItemLabel>
+                        <DropdownMenu.ItemLabel>{t("agentManager.worktree.setupScript")}</DropdownMenu.ItemLabel>
                       </DropdownMenu.Item>
                     </DropdownMenu.Content>
                   </DropdownMenu.Portal>
@@ -1076,17 +1084,20 @@ const AgentManagerContent: Component = () => {
                     icon="plus"
                     size="small"
                     variant="ghost"
-                    label="New Worktree"
+                    label={t("agentManager.worktree.new")}
                     onClick={handleCreateWorktree}
                   />
                   <DropdownMenu gutter={4} placement="bottom-end">
-                    <DropdownMenu.Trigger class="am-split-arrow" aria-label="Advanced worktree options">
+                    <DropdownMenu.Trigger
+                      class="am-split-arrow"
+                      aria-label={t("agentManager.worktree.advancedOptions")}
+                    >
                       <Icon name="chevron-down" size="small" />
                     </DropdownMenu.Trigger>
                     <DropdownMenu.Portal>
                       <DropdownMenu.Content class="am-split-menu">
                         <DropdownMenu.Item onSelect={handleCreateWorktree}>
-                          <DropdownMenu.ItemLabel>New Worktree</DropdownMenu.ItemLabel>
+                          <DropdownMenu.ItemLabel>{t("agentManager.worktree.new")}</DropdownMenu.ItemLabel>
                           <span class="am-menu-shortcut">
                             {parseBindingTokens(kb().newWorktree ?? "").map((t) => (
                               <kbd class="am-menu-key">{t}</kbd>
@@ -1096,7 +1107,7 @@ const AgentManagerContent: Component = () => {
                         <DropdownMenu.Separator />
                         <DropdownMenu.Item onSelect={showAdvancedWorktreeDialog}>
                           <Icon name="settings-gear" size="small" />
-                          <DropdownMenu.ItemLabel>Advanced...</DropdownMenu.ItemLabel>
+                          <DropdownMenu.ItemLabel>{t("agentManager.dialog.advanced")}</DropdownMenu.ItemLabel>
                           <span class="am-menu-shortcut">
                             {parseBindingTokens(kb().advancedWorktree ?? "").map((t) => (
                               <kbd class="am-menu-key">{t}</kbd>
@@ -1125,7 +1136,7 @@ const AgentManagerContent: Component = () => {
               <Show when={!isGitRepo()}>
                 <div class="am-not-git-notice">
                   <Icon name="info" size="small" />
-                  <span>Not a git repository</span>
+                  <span>{t("agentManager.notGitRepo")}</span>
                 </div>
               </Show>
               <Show when={isGitRepo()}>
@@ -1184,7 +1195,9 @@ const AgentManagerContent: Component = () => {
                             <Show when={start()}>
                               <div class="am-wt-group-header">
                                 <Icon name="layers" size="small" />
-                                <span class="am-wt-group-label">{groupSize()} versions</span>
+                                <span class="am-wt-group-label">
+                                  {t("agentManager.worktree.versions", { count: groupSize() })}
+                                </span>
                               </div>
                             </Show>
                             <HoverCard
@@ -1220,7 +1233,7 @@ const AgentManagerContent: Component = () => {
                                           e.stopPropagation()
                                           startRename(wt.id, worktreeLabel(wt))
                                         }}
-                                        title="Double-click to rename"
+                                        title={t("agentManager.worktree.doubleClickRename")}
                                       >
                                         {worktreeLabel(wt)}
                                       </span>
@@ -1257,7 +1270,7 @@ const AgentManagerContent: Component = () => {
                                       onMouseLeave={() => setOverClose(false)}
                                     >
                                       <TooltipKeybind
-                                        title="Delete worktree"
+                                        title={t("agentManager.worktree.delete")}
                                         keybind={kb().closeWorktree ?? ""}
                                         placement="top"
                                       >
@@ -1265,7 +1278,7 @@ const AgentManagerContent: Component = () => {
                                           icon="close-small"
                                           size="small"
                                           variant="ghost"
-                                          label="Delete worktree"
+                                          label={t("agentManager.worktree.delete")}
                                           onClick={(e: MouseEvent) => handleDeleteWorktree(wt.id, e)}
                                         />
                                       </TooltipKeybind>
@@ -1277,7 +1290,7 @@ const AgentManagerContent: Component = () => {
                               <div class="am-hover-card">
                                 <div class="am-hover-card-header">
                                   <div>
-                                    <div class="am-hover-card-label">BRANCH</div>
+                                    <div class="am-hover-card-label">{t("agentManager.hoverCard.branch")}</div>
                                     <div class="am-hover-card-branch">{wt.branch}</div>
                                     <div class="am-hover-card-meta">{formatRelativeDate(wt.createdAt)}</div>
                                   </div>
@@ -1288,13 +1301,13 @@ const AgentManagerContent: Component = () => {
                                 <Show when={wt.parentBranch}>
                                   <div class="am-hover-card-divider" />
                                   <div class="am-hover-card-row">
-                                    <span class="am-hover-card-row-label">Base</span>
+                                    <span class="am-hover-card-row-label">{t("agentManager.hoverCard.base")}</span>
                                     <span class="am-hover-card-row-value">{wt.parentBranch}</span>
                                   </div>
                                 </Show>
                                 <div class="am-hover-card-divider" />
                                 <div class="am-hover-card-row">
-                                  <span class="am-hover-card-row-label">Sessions</span>
+                                  <span class="am-hover-card-row-label">{t("agentManager.hoverCard.sessions")}</span>
                                   <span class="am-hover-card-row-value">{sessions().length}</span>
                                 </div>
                               </div>
@@ -1308,7 +1321,7 @@ const AgentManagerContent: Component = () => {
                 <Show when={worktrees().length === 0}>
                   <button class="am-worktree-create" onClick={handleCreateWorktree}>
                     <Icon name="plus" size="small" />
-                    <span>New Worktree</span>
+                    <span>{t("agentManager.worktree.new")}</span>
                   </button>
                 </Show>
               </Show>
@@ -1332,7 +1345,7 @@ const AgentManagerContent: Component = () => {
                 size="small"
                 class="am-section-chevron"
               />
-              SESSIONS
+              {t("agentManager.section.sessions")}
             </span>
           </button>
           <Show when={!sessionsCollapsed()}>
@@ -1367,15 +1380,19 @@ const AgentManagerContent: Component = () => {
                         session.selectSession(s.id)
                       }}
                     >
-                      <span class="am-item-title">{s.title || "Untitled"}</span>
+                      <span class="am-item-title">{s.title || t("agentManager.session.untitled")}</span>
                       <span class="am-item-time">{formatRelativeDate(s.updatedAt)}</span>
                       <div class="am-item-promote">
-                        <TooltipKeybind title="Open in worktree" keybind={kb().newWorktree ?? ""} placement="right">
+                        <TooltipKeybind
+                          title={t("agentManager.session.openInWorktree")}
+                          keybind={kb().newWorktree ?? ""}
+                          placement="right"
+                        >
                           <IconButton
                             icon="branch"
                             size="small"
                             variant="ghost"
-                            label="Open in worktree"
+                            label={t("agentManager.session.openInWorktree")}
                             onClick={(e: MouseEvent) => handlePromote(s.id, e)}
                           />
                         </TooltipKeybind>
@@ -1443,23 +1460,27 @@ const AgentManagerContent: Component = () => {
                 </div>
                 <div class={`am-tab-fade am-tab-fade-right ${tabScroll.showRight() ? "am-tab-fade-visible" : ""}`} />
               </div>
-              <TooltipKeybind title="New session" keybind={kb().newTab ?? ""} placement="bottom">
+              <TooltipKeybind title={t("agentManager.session.new")} keybind={kb().newTab ?? ""} placement="bottom">
                 <IconButton
                   icon="plus"
                   size="small"
                   variant="ghost"
-                  label="New session"
+                  label={t("agentManager.session.new")}
                   class="am-tab-add"
                   onClick={handleAddSession}
                 />
               </TooltipKeybind>
               <div class="am-tab-terminal">
-                <TooltipKeybind title="Terminal" keybind={kb().showTerminal ?? ""} placement="bottom">
+                <TooltipKeybind
+                  title={t("agentManager.tab.terminal")}
+                  keybind={kb().showTerminal ?? ""}
+                  placement="bottom"
+                >
                   <IconButton
                     icon="console"
                     size="small"
                     variant="ghost"
-                    label="Open Terminal"
+                    label={t("agentManager.tab.openTerminal")}
                     onClick={() => {
                       const id = session.currentSessionID()
                       if (id) vscode.postMessage({ type: "agentManager.showTerminal", sessionId: id })
@@ -1472,7 +1493,7 @@ const AgentManagerContent: Component = () => {
               <Show when={draggedTab()}>
                 {(tab) => (
                   <div class="am-tab am-tab-overlay">
-                    <span class="am-tab-label">{tab().title || "Untitled"}</span>
+                    <span class="am-tab-label">{tab().title || t("agentManager.session.untitled")}</span>
                   </div>
                 )}
               </Show>
@@ -1486,9 +1507,9 @@ const AgentManagerContent: Component = () => {
             <div class="am-empty-state-icon">
               <Icon name="branch" size="large" />
             </div>
-            <div class="am-empty-state-text">No sessions open</div>
+            <div class="am-empty-state-text">{t("agentManager.session.noSessions")}</div>
             <Button variant="primary" size="small" onClick={handleAddSession}>
-              New session
+              {t("agentManager.session.new")}
               <span class="am-shortcut-hint">{kb().newTab ?? ""}</span>
             </Button>
           </div>
@@ -1519,7 +1540,7 @@ const AgentManagerContent: Component = () => {
                   <div class="am-setup-card">
                     <Icon name="branch" size="large" />
                     <div class="am-setup-title">
-                      {state().error ? "Workspace setup failed" : "Setting up workspace"}
+                      {state().error ? t("agentManager.setup.failed") : t("agentManager.setup.settingUp")}
                     </div>
                     <Show when={state().branch}>
                       <div class="am-setup-branch">{state().branch}</div>
@@ -1548,7 +1569,7 @@ const AgentManagerContent: Component = () => {
             <Show when={readOnly()}>
               <div class="am-readonly-banner">
                 <Icon name="branch" size="small" />
-                <span class="am-readonly-text">Read-only session</span>
+                <span class="am-readonly-text">{t("agentManager.session.readonly")}</span>
                 <Button
                   variant="primary"
                   size="small"
@@ -1557,7 +1578,7 @@ const AgentManagerContent: Component = () => {
                     if (sid) vscode.postMessage({ type: "agentManager.promoteSession", sessionId: sid })
                   }}
                 >
-                  Open in worktree
+                  {t("agentManager.session.openInWorktree")}
                 </Button>
               </div>
             </Show>
@@ -1600,6 +1621,7 @@ function sanitizeBranchName(name: string): string {
 }
 
 const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
+  const { t } = useLanguage()
   const vscode = useVSCode()
   const session = useSession()
 
@@ -1709,7 +1731,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
       if (ev.success) {
         props.onClose()
       } else {
-        showToast({ variant: "error", title: "Import failed", description: ev.message })
+        showToast({ variant: "error", title: t("agentManager.import.failed"), description: ev.message })
       }
     }
   })
@@ -1732,7 +1754,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
   }
 
   return (
-    <Dialog title="Open Workspace" fit>
+    <Dialog title={t("agentManager.dialog.openWorkspace")} fit>
       {/* Tab switcher */}
       <div class="am-tab-switcher">
         <button
@@ -1741,7 +1763,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
           onClick={() => setTab("new")}
           type="button"
         >
-          New
+          {t("agentManager.dialog.tab.new")}
         </button>
         <button
           class="am-tab-switcher-pill"
@@ -1749,7 +1771,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
           onClick={() => setTab("import")}
           type="button"
         >
-          Import
+          {t("agentManager.dialog.tab.import")}
         </button>
       </div>
 
@@ -1758,7 +1780,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
         <div class="am-nv-dialog" onKeyDown={handleKeyDown}>
           <input
             class="am-nv-name-input"
-            placeholder="Worktree name (optional)"
+            placeholder={t("agentManager.dialog.namePlaceholder")}
             value={name()}
             onInput={(e) => setName(e.currentTarget.value)}
           />
@@ -1769,7 +1791,9 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
                 <textarea
                   ref={textareaRef}
                   class="prompt-input am-prompt-input"
-                  placeholder={`Type a message (${isMac ? "\u2318" : "Ctrl+"}Enter to send)`}
+                  placeholder={t(
+                    isMac ? "agentManager.dialog.promptPlaceholder.mac" : "agentManager.dialog.promptPlaceholder.other",
+                  )}
                   value={prompt()}
                   onInput={(e) => {
                     setPrompt(e.currentTarget.value)
@@ -1799,23 +1823,23 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
           {/* Advanced options toggle */}
           <button class="am-advanced-toggle" onClick={() => setShowAdvanced(!showAdvanced())} type="button">
             <Icon name={showAdvanced() ? "chevron-down" : "chevron-right"} size="small" />
-            <span>Advanced options</span>
+            <span>{t("agentManager.dialog.advancedOptions")}</span>
           </button>
 
           <Show when={showAdvanced()}>
             <div class="am-advanced-section">
               <div class="am-advanced-field">
-                <span class="am-nv-config-label">Branch name</span>
+                <span class="am-nv-config-label">{t("agentManager.dialog.branchName")}</span>
                 <input
                   class="am-advanced-input"
                   type="text"
-                  placeholder="auto-generated"
+                  placeholder={t("agentManager.dialog.branchNamePlaceholder")}
                   value={branchName()}
                   onInput={(e) => setBranchName(sanitizeBranchName(e.currentTarget.value))}
                 />
               </div>
               <div class="am-advanced-field">
-                <span class="am-nv-config-label">Base branch</span>
+                <span class="am-nv-config-label">{t("agentManager.dialog.baseBranch")}</span>
                 <div class="am-branch-selector-wrapper">
                   <button
                     class="am-branch-selector-trigger"
@@ -1825,7 +1849,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
                     <Icon name="branch" size="small" />
                     <span class="am-branch-selector-value">{effectiveBaseBranch()}</span>
                     <Show when={!baseBranch()}>
-                      <span class="am-branch-badge">default</span>
+                      <span class="am-branch-badge">{t("agentManager.dialog.branchBadge.default")}</span>
                     </Show>
                     <Icon name="selector" size="small" />
                   </button>
@@ -1836,7 +1860,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
                         <input
                           class="am-branch-search-input"
                           type="text"
-                          placeholder="Search branches..."
+                          placeholder={t("agentManager.dialog.searchBranches")}
                           value={branchSearch()}
                           ref={(el) => requestAnimationFrame(() => el.focus())}
                           onInput={(e) => {
@@ -1907,10 +1931,12 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
                               <Icon name="branch" size="small" />
                               <span class="am-branch-item-name">{branch.name}</span>
                               <Show when={branch.isDefault}>
-                                <span class="am-branch-badge">default</span>
+                                <span class="am-branch-badge">{t("agentManager.dialog.branchBadge.default")}</span>
                               </Show>
                               <Show when={!branch.isLocal && branch.isRemote}>
-                                <span class="am-branch-badge am-branch-badge-remote">remote</span>
+                                <span class="am-branch-badge am-branch-badge-remote">
+                                  {t("agentManager.dialog.branchBadge.remote")}
+                                </span>
                               </Show>
                               <Show when={branch.lastCommitDate}>
                                 <span class="am-branch-item-time">{formatRelativeDate(branch.lastCommitDate!)}</span>
@@ -1928,7 +1954,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
 
           {/* Version selector + info */}
           <div class="am-nv-version-bar">
-            <span class="am-nv-config-label">Versions</span>
+            <span class="am-nv-config-label">{t("agentManager.dialog.versions")}</span>
             <div class="am-nv-pills">
               {VERSION_OPTIONS.map((count) => (
                 <button
@@ -1942,7 +1968,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
               ))}
             </div>
             <Show when={versions() > 1}>
-              <span class="am-nv-version-hint">{versions()} worktrees will run in parallel</span>
+              <span class="am-nv-version-hint">{t("agentManager.dialog.versionHint", { count: versions() })}</span>
             </Show>
           </div>
 
@@ -1953,11 +1979,11 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
               fallback={
                 <>
                   <Spinner class="am-nv-spinner" />
-                  <span>Creating...</span>
+                  <span>{t("agentManager.dialog.creating")}</span>
                 </>
               }
             >
-              Create Workspace
+              {t("agentManager.dialog.createWorkspace")}
             </Show>
           </Button>
         </div>
@@ -1968,14 +1994,14 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
         <div class="am-import-tab">
           {/* Pull Request section */}
           <div class="am-import-section">
-            <span class="am-nv-config-label">Pull Request</span>
+            <span class="am-nv-config-label">{t("agentManager.import.pullRequest")}</span>
             <div class="am-pr-row">
               <div class="am-pr-input-wrapper">
                 <Icon name="branch" size="small" />
                 <input
                   class="am-pr-input"
                   type="text"
-                  placeholder="Paste PR URL..."
+                  placeholder={t("agentManager.import.pastePrUrl")}
                   value={prUrl()}
                   onInput={(e) => setPrUrl(e.currentTarget.value)}
                   onKeyDown={(e) => {
@@ -1993,7 +2019,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
                 onClick={handlePRSubmit}
                 disabled={!prUrl().trim() || isPending()}
               >
-                <Show when={prPending()} fallback="Open">
+                <Show when={prPending()} fallback={t("agentManager.import.open")}>
                   <Spinner class="am-nv-spinner" />
                 </Show>
               </Button>
@@ -2004,7 +2030,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
 
           {/* Branches section */}
           <div class="am-import-section">
-            <span class="am-nv-config-label">Branches</span>
+            <span class="am-nv-config-label">{t("agentManager.import.branches")}</span>
             <div class="am-selector-wrapper">
               <Popover
                 open={branchOpen()}
@@ -2016,7 +2042,9 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
                   <button class="am-selector-trigger" disabled={isPending()} type="button">
                     <span class="am-selector-left">
                       <Icon name="branch" size="small" />
-                      <span class="am-selector-value">{branchesLoading() ? "Loading..." : "Select branch..."}</span>
+                      <span class="am-selector-value">
+                        {branchesLoading() ? t("agentManager.import.loading") : t("agentManager.import.selectBranch")}
+                      </span>
                     </span>
                     <span class="am-selector-right">
                       <Icon name="selector" size="small" />
@@ -2029,7 +2057,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
                   <input
                     class="am-dropdown-search-input"
                     type="text"
-                    placeholder="Search branches..."
+                    placeholder={t("agentManager.dialog.searchBranches")}
                     value={branchSearch()}
                     onInput={(e) => setBranchSearch(e.currentTarget.value)}
                     autofocus
@@ -2040,7 +2068,9 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
                     when={filteredBranches().length > 0}
                     fallback={
                       <div class="am-dropdown-empty">
-                        {branchesLoading() ? "Loading branches..." : "No matching branches"}
+                        {branchesLoading()
+                          ? t("agentManager.import.loadingBranches")
+                          : t("agentManager.import.noMatchingBranches")}
                       </div>
                     }
                   >
@@ -2051,10 +2081,10 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
                             <Icon name="branch" size="small" />
                             <span class="am-branch-item-name">{branch.name}</span>
                             <Show when={branch.isDefault}>
-                              <span class="am-branch-badge">default</span>
+                              <span class="am-branch-badge">{t("agentManager.dialog.branchBadge.default")}</span>
                             </Show>
                             <Show when={!branch.isLocal && branch.isRemote}>
-                              <span class="am-branch-badge">remote</span>
+                              <span class="am-branch-badge">{t("agentManager.dialog.branchBadge.remote")}</span>
                             </Show>
                           </span>
                           <Show when={branch.lastCommitDate}>
@@ -2072,9 +2102,9 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
           {/* Empty state when no branches are available */}
           <Show when={!branchesLoading() && branches().length === 0}>
             <div class="am-import-empty">
-              No branches found.
+              {t("agentManager.import.noBranchesFound")}
               <br />
-              Paste a PR URL above or create a new worktree.
+              {t("agentManager.import.noBranchesHint")}
             </div>
           </Show>
         </div>
