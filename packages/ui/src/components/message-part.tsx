@@ -729,17 +729,28 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
 
 PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props) {
   const part = props.part as ReasoningPart
+  const i18n = useI18n()
   // kilocode_change start
   // Filter out redacted reasoning chunks from OpenRouter
   // OpenRouter sends encrypted reasoning data that appears as [REDACTED]
   const text = () => part.text.replace("[REDACTED]", "").trim()
   // kilocode_change end
   const throttledText = createThrottledValue(text)
+  const [collapsed, setCollapsed] = createSignal(false)
 
   return (
     <Show when={throttledText()}>
-      <div data-component="reasoning-part">
-        <Markdown text={throttledText()} cacheKey={part.id} />
+      <div data-component="reasoning-part" data-collapsed={collapsed()}>
+        <div data-slot="reasoning-header" onClick={() => setCollapsed(!collapsed())}>
+          <Icon name="brain" size="small" />
+          <span data-slot="reasoning-label">{i18n.t("ui.reasoning.label")}</span>
+          <svg data-slot="reasoning-chevron" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M6.667 8.333L10 11.667l3.333-3.334" stroke="currentColor" stroke-linecap="square" fill="none" />
+          </svg>
+        </div>
+        <div data-slot="reasoning-body">
+          <Markdown text={throttledText()} cacheKey={part.id} />
+        </div>
       </div>
     </Show>
   )

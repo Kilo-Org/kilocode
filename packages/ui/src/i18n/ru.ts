@@ -42,6 +42,8 @@ export const dict = {
   "ui.sessionTurn.status.gatheringThoughts": "Сбор мыслей",
   "ui.sessionTurn.status.consideringNextSteps": "Рассмотрение следующих шагов",
 
+  "ui.reasoning.label": "Рассуждение",
+
   "ui.messagePart.diagnostic.error": "Ошибка",
   "ui.messagePart.title.edit": "Редактировать",
   "ui.messagePart.title.write": "Написать",

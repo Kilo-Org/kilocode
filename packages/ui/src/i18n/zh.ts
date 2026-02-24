@@ -47,6 +47,8 @@ export const dict = {
   "ui.sessionTurn.status.gatheringThoughts": "正在整理思路",
   "ui.sessionTurn.status.consideringNextSteps": "正在考虑下一步",
 
+  "ui.reasoning.label": "推理",
+
   "ui.messagePart.diagnostic.error": "错误",
   "ui.messagePart.title.edit": "编辑",
   "ui.messagePart.title.write": "写入",

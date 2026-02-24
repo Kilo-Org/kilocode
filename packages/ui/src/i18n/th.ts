@@ -43,6 +43,8 @@ export const dict = {
   "ui.sessionTurn.status.gatheringThoughts": "รวบรวมความคิด",
   "ui.sessionTurn.status.consideringNextSteps": "พิจารณาขั้นตอนถัดไป",
 
+  "ui.reasoning.label": "การให้เหตุผล",
+
   "ui.messagePart.diagnostic.error": "ข้อผิดพลาด",
   "ui.messagePart.title.edit": "แก้ไข",
   "ui.messagePart.title.write": "เขียน",
