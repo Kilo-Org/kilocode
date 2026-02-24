@@ -13,7 +13,7 @@ import type { Provider } from "@/provider/provider"
 
 // kilocode_change start
 import SOUL from "../kilocode/soul.txt"
-import { editorContextEnvLines, type EditorContext } from "../kilocode/editor-context"
+import { staticEnvLines, type EditorContext } from "../kilocode/editor-context"
 // kilocode_change end
 
 export namespace SystemPrompt {
@@ -55,7 +55,7 @@ export namespace SystemPrompt {
         `  Working directory: ${Instance.directory}`,
         `  Is directory a git repo: ${project.vcs === "git" ? "yes" : "no"}`,
         `  Platform: ${process.platform}`,
-        ...editorContextEnvLines(editorContext), // kilocode_change
+        ...staticEnvLines(editorContext), // kilocode_change
         `</env>`,
         `<directories>`,
         `  ${
