@@ -1017,11 +1017,11 @@ button.am-section-toggle:hover .am-section-label {
 }
 
 .am-mm-item:hover {
-  background: var(--surface-inset-base-hover, rgba(255, 255, 255, 0.04));
+  background: var(--surface-inset-base-hover);
 }
 
 .am-mm-item-checked {
-  background: var(--surface-inset-base-hover, rgba(255, 255, 255, 0.03));
+  background: var(--surface-inset-base-hover);
 }
 
 .am-mm-item-disabled {
@@ -1041,7 +1041,7 @@ button.am-section-toggle:hover .am-section-label {
   flex-shrink: 0;
   width: 14px;
   height: 14px;
-  accent-color: var(--border-focus, #007fd4);
+  accent-color: var(--border-focus);
   cursor: pointer;
 }
 
@@ -1067,7 +1067,7 @@ button.am-section-toggle:hover .am-section-label {
 }
 
 .am-mm-count-select:focus {
-  border-color: var(--border-focus, #007fd4);
+  border-color: var(--border-focus);
 }
 
 .am-nv-spinner {
