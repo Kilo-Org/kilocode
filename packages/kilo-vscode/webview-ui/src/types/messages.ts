@@ -952,6 +952,13 @@ export interface CloseSessionRequest {
   sessionId: string
 }
 
+// Rename a worktree's display label
+export interface RenameWorktreeRequest {
+  type: "agentManager.renameWorktree"
+  worktreeId: string
+  label: string
+}
+
 export interface RequestRepoInfoMessage {
   type: "agentManager.requestRepoInfo"
 }
@@ -1080,6 +1087,7 @@ export type WebviewMessage =
   | PromoteSessionRequest
   | AddSessionToWorktreeRequest
   | CloseSessionRequest
+  | RenameWorktreeRequest
   | TelemetryRequest
   | RequestRepoInfoMessage
   | RequestStateMessage

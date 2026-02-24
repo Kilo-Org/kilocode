@@ -165,7 +165,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     if (type === "agentManager.renameWorktree" && typeof msg.worktreeId === "string" && typeof msg.label === "string") {
       const state = this.getStateManager()
       if (state) {
-        state.updateWorktreeLabel(msg.worktreeId as string, msg.label as string)
+        state.updateWorktreeLabel(msg.worktreeId, msg.label)
         this.pushState()
       }
       return null
@@ -205,28 +205,24 @@ export class AgentManagerProvider implements vscode.Disposable {
       return null
     }
     if (type === "agentManager.setTabOrder" && typeof msg.key === "string" && Array.isArray(msg.order)) {
-      this.state?.setTabOrder(msg.key as string, msg.order as string[])
+      this.state?.setTabOrder(msg.key, msg.order as string[])
       return null
     }
     if (type === "agentManager.setSessionsCollapsed" && typeof msg.collapsed === "boolean") {
-      this.state?.setSessionsCollapsed(msg.collapsed as boolean)
+      this.state?.setSessionsCollapsed(msg.collapsed)
       return null
     }
 
-    if (type === "agentManager.requestBranches") {
-      void this.onRequestBranches()
-      return null
-    }
     if (type === "agentManager.requestExternalWorktrees") {
       void this.onRequestExternalWorktrees()
       return null
     }
     if (type === "agentManager.importFromBranch" && typeof msg.branch === "string") {
-      void this.onImportFromBranch(msg.branch as string)
+      void this.onImportFromBranch(msg.branch)
       return null
     }
     if (type === "agentManager.importFromPR" && typeof msg.url === "string") {
-      void this.onImportFromPR(msg.url as string)
+      void this.onImportFromPR(msg.url)
       return null
     }
     if (
@@ -234,7 +230,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       typeof msg.path === "string" &&
       typeof msg.branch === "string"
     ) {
-      void this.onImportExternalWorktree(msg.path as string, msg.branch as string)
+      void this.onImportExternalWorktree(msg.path, msg.branch)
       return null
     }
     if (type === "agentManager.importAllExternalWorktrees") {
