@@ -42,6 +42,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private cachedNotificationsMessage: unknown = null
 
   private trackedSessionIds: Set<string> = new Set()
+  private syncedChildSessions: Set<string> = new Set()
   /** Per-session directory overrides (e.g., worktree paths registered by AgentManagerProvider). */
   private sessionDirectories = new Map<string, string>()
   /** Abort controller for the current loadMessages request; aborted when a new session is selected. */
@@ -317,10 +318,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           void this.handleLoadMessages(message.sessionID)
           break
         case "syncSession":
-          await this.handleSyncSession(message.sessionID)
+          this.handleSyncSession(message.sessionID).catch((e) =>
+            console.error("[Kilo New] handleSyncSession failed:", e),
+          )
           break
         case "loadSessions":
-          await this.handleLoadSessions()
+          this.handleLoadSessions().catch((e) => console.error("[Kilo New] handleLoadSessions failed:", e))
           break
         case "login":
           await this.handleLogin()
@@ -351,13 +354,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           }
           break
         case "requestProviders":
-          await this.fetchAndSendProviders()
+          this.fetchAndSendProviders().catch((e) => console.error("[Kilo New] fetchAndSendProviders failed:", e))
           break
         case "compact":
           await this.handleCompact(message.sessionID, message.providerID, message.modelID)
           break
         case "requestAgents":
-          await this.fetchAndSendAgents()
+          this.fetchAndSendAgents().catch((e) => console.error("[Kilo New] fetchAndSendAgents failed:", e))
           break
         case "questionReply":
           await this.handleQuestionReply(message.requestID, message.answers)
@@ -366,7 +369,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           await this.handleQuestionReject(message.requestID)
           break
         case "requestConfig":
-          await this.fetchAndSendConfig()
+          this.fetchAndSendConfig().catch((e) => console.error("[Kilo New] fetchAndSendConfig failed:", e))
           break
         case "updateConfig":
           await this.handleUpdateConfig(message.config)
@@ -437,7 +440,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.sendNotificationSettings()
           break
         case "requestNotifications":
-          await this.fetchAndSendNotifications()
+          this.fetchAndSendNotifications().catch((e) =>
+            console.error("[Kilo New] fetchAndSendNotifications failed:", e),
+          )
           break
         case "dismissNotification":
           await this.handleDismissNotification(message.notificationId)
@@ -544,11 +549,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage({ type: "connectionState", state: this.connectionState })
       await this.syncWebviewState("initializeConnection")
 
-      // Fetch providers and agents, then send to webview
-      await this.fetchAndSendProviders()
-      await this.fetchAndSendAgents()
-      await this.fetchAndSendConfig()
-      await this.fetchAndSendNotifications()
+      // Fetch providers, agents, config, and notifications in parallel
+      await Promise.all([
+        this.fetchAndSendProviders(),
+        this.fetchAndSendAgents(),
+        this.fetchAndSendConfig(),
+        this.fetchAndSendNotifications(),
+      ])
       this.sendNotificationSettings()
 
       console.log("[Kilo New] KiloProvider: ✅ initializeConnection completed successfully")
@@ -696,8 +703,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    */
   private async handleSyncSession(sessionID: string): Promise<void> {
     if (!this.httpClient) return
-    if (this.trackedSessionIds.has(sessionID)) return
+    if (this.syncedChildSessions.has(sessionID)) return
 
+    this.syncedChildSessions.add(sessionID)
     this.trackedSessionIds.add(sessionID)
 
     try {
@@ -1568,8 +1576,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const activeEditor = vscode.window.activeTextEditor
     const activeRel =
       activeEditor?.document.uri.scheme === "file" ? toRelative(activeEditor.document.uri.fsPath) : undefined
-    const activeFile =
-      activeRel && controller.validateAccess(activeEditor!.document.uri.fsPath) ? activeRel : undefined
+    const activeFile = activeRel && controller.validateAccess(activeEditor!.document.uri.fsPath) ? activeRel : undefined
 
     // Shell
     const shell = vscode.env.shell || undefined
