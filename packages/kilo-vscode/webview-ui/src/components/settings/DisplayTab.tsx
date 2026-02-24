@@ -39,7 +39,6 @@ const DisplayTab: Component = () => {
         <SettingsRow
           title={language.t("settings.display.layout.title")}
           description={language.t("settings.display.layout.description")}
-          last
         >
           <Select
             options={LAYOUT_OPTIONS}
@@ -51,6 +50,30 @@ const DisplayTab: Component = () => {
             size="small"
             triggerVariant="settings"
           />
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.display.fontSize.title")}
+          description={language.t("settings.display.fontSize.description")}
+          last
+        >
+          <div style={{ display: "flex", "align-items": "center", gap: "8px", width: "160px" }}>
+            <input
+              type="range"
+              min="10"
+              max="24"
+              step="1"
+              value={config().fontSize ?? 13}
+              onInput={(e) => {
+                const value = parseInt(e.currentTarget.value, 10)
+                if (!isNaN(value) && value >= 10 && value <= 24) {
+                  updateConfig({ fontSize: value })
+                }
+              }}
+              style={{ flex: 1 }}
+            />
+            <span style={{ "min-width": "40px", "text-align": "right" }}>{config().fontSize ?? 13}px</span>
+          </div>
         </SettingsRow>
       </Card>
     </div>
