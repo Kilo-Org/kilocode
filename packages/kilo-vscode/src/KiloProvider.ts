@@ -131,18 +131,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     // Always attempt to fetch+push profile when connected.
+    // Profile returns 401 when user isn't logged into Kilo Gateway — that's expected.
+    // Use fire-and-forget (no throwOnError) to match old getProfile() which returned null on error.
     if (this.connectionState === "connected" && this.client) {
       console.log("[Kilo New] KiloProvider: 👤 syncWebviewState fetching profile...")
-      try {
-        const { data: profileData } = await this.client.kilo.profile(undefined, { throwOnError: true })
-        console.log("[Kilo New] KiloProvider: 👤 syncWebviewState profile:", profileData ? "received" : "null")
-        this.postMessage({
-          type: "profileData",
-          data: profileData,
-        })
-      } catch (error) {
-        console.error("[Kilo New] KiloProvider: ❌ syncWebviewState failed to fetch profile:", error)
-      }
+      const profileResult = await this.client.kilo.profile()
+      const profileData = profileResult.data ?? null
+      console.log("[Kilo New] KiloProvider: 👤 syncWebviewState profile:", profileData ? "received" : "null")
+      this.postMessage({
+        type: "profileData",
+        data: profileData,
+      })
     }
   }
 
@@ -548,10 +547,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
         if (state === "connected") {
           try {
+            // Profile fetch is best-effort — returns 401 when user isn't logged into gateway.
             const sdkClient = this.client
             if (sdkClient) {
-              const { data: profileData } = await sdkClient.kilo.profile(undefined, { throwOnError: true })
-              this.postMessage({ type: "profileData", data: profileData })
+              const profileResult = await sdkClient.kilo.profile()
+              this.postMessage({ type: "profileData", data: profileResult.data ?? null })
             }
             await this.syncWebviewState("sse-connected")
           } catch (error) {
@@ -1547,18 +1547,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to switch organization:", error)
       // Re-fetch current profile to reset webview state (clears switching indicator)
-      const { data: profileData } = await sdkClient.kilo.profile(undefined, { throwOnError: true })
-      this.postMessage({ type: "profileData", data: profileData })
+      const profileResult = await sdkClient.kilo.profile()
+      this.postMessage({ type: "profileData", data: profileResult.data ?? null })
       return
     }
 
     // Org switch succeeded — refresh profile and providers independently (best-effort)
-    try {
-      const { data: profileData } = await sdkClient.kilo.profile(undefined, { throwOnError: true })
-      this.postMessage({ type: "profileData", data: profileData })
-    } catch (error) {
-      console.error("[Kilo New] KiloProvider: Failed to refresh profile after org switch:", error)
-    }
+    const profileResult = await sdkClient.kilo.profile()
+    this.postMessage({ type: "profileData", data: profileResult.data ?? null })
     try {
       await this.fetchAndSendProviders()
     } catch (error) {
@@ -1614,10 +1610,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     console.log("[Kilo New] KiloProvider: 🔄 Refreshing profile...")
-    const { data: profileData } = await this.client.kilo.profile(undefined, { throwOnError: true })
+    const profileResult = await this.client.kilo.profile()
     this.postMessage({
       type: "profileData",
-      data: profileData,
+      data: profileResult.data ?? null,
     })
   }
 
