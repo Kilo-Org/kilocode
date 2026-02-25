@@ -1,6 +1,6 @@
 import * as vscode from "vscode"
 import { ServerManager } from "./server-manager"
-import { HttpClient } from "./http-client"
+import { createKiloClient, type KiloClient } from "@kilocode/sdk/v2/client"
 import { SSEClient } from "./sse-client"
 import type { ServerConfig, SSEEvent } from "./types"
 import { resolveEventSessionId as resolveEventSessionIdPure } from "./connection-utils"
@@ -12,12 +12,12 @@ type SSEEventFilter = (event: SSEEvent) => boolean
 type NotificationDismissListener = (notificationId: string) => void
 
 /**
- * Shared connection service that owns the single ServerManager, HttpClient, and SSEClient.
+ * Shared connection service that owns the single ServerManager, KiloClient (SDK), and SSEClient.
  * Multiple KiloProvider instances subscribe to it for SSE events and state changes.
  */
 export class KiloConnectionService {
   private readonly serverManager: ServerManager
-  private client: HttpClient | null = null
+  private client: KiloClient | null = null
   private sseClient: SSEClient | null = null
   private info: { port: number } | null = null
   private config: ServerConfig | null = null
@@ -65,9 +65,9 @@ export class KiloConnectionService {
   }
 
   /**
-   * Get the shared HttpClient. Throws if not connected.
+   * Get the shared SDK client. Throws if not connected.
    */
-  getHttpClient(): HttpClient {
+  getClient(): KiloClient {
     if (!this.client) {
       throw new Error("Not connected — call connect() first")
     }
@@ -207,7 +207,16 @@ export class KiloConnectionService {
     }
 
     this.config = config
-    this.client = new HttpClient(config)
+
+    // Create SDK client with Basic Auth header
+    const authHeader = `Basic ${Buffer.from(`kilo:${server.password}`).toString("base64")}`
+    this.client = createKiloClient({
+      baseUrl: config.baseUrl,
+      headers: {
+        Authorization: authHeader,
+      },
+    })
+
     this.sseClient = new SSEClient(config)
 
     // Wait until SSE actually reaches a terminal state before resolving connect().
