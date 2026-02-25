@@ -16,7 +16,18 @@ export const AutomateNav: NavSection[] = [
         ],
       },
       { href: "/automate/agent-manager", children: "Agent Manager" },
-      { href: "/automate/kiloclaw", children: "KiloClaw" },
+      {
+        href: "/automate/kiloclaw/overview",
+        children: "KiloClaw",
+        subLinks: [
+          { href: "/automate/kiloclaw/overview", children: "Overview" },
+          {
+            href: "/automate/kiloclaw/chat-platforms",
+            children: "Chat Platforms",
+          },
+          { href: "/automate/kiloclaw/pricing", children: "Pricing" },
+        ],
+      },
     ],
   },
   {

@@ -5,7 +5,7 @@ description: "One-click deployment of your personal AI agent with OpenClaw"
 
 # KiloClaw 🦀
 
-KiloClaw is Kilo's hosted [OpenClaw](https://openclaw.ai) service—a one-click deployment that gives you a personal AI agent without the complexity of self-hosting. OpenClaw is an open source AI agent that connects to chat platforms like WhatsApp, Telegram, and Discord.
+KiloClaw is Kilo's hosted [OpenClaw](https://openclaw.ai) service—a one-click deployment that gives you a personal AI agent without the complexity of self-hosting. OpenClaw is an open source AI agent that connects to chat platforms like Telegram, Discord, and Slack.
 
 ## Why KiloClaw?
 
@@ -88,18 +88,6 @@ To connect to your agent's web interface:
 
 {% image src="/docs/img/kiloclaw/openclaw-dashboard.png" alt="OpenClaw web interface" width="800" caption="OpenClaw web UI" /%}
 
-## Connecting Chat Platforms
-
-OpenClaw supports integration with popular messaging platforms:
-
-- WhatsApp
-- Telegram
-- Discord
-- Slack
-- And more
-
-For platform-specific setup instructions, refer to the [OpenClaw documentation](https://docs.openclaw.ai).
-
 ## Using your OpenClaw Agent
 
 OpenClaw lets you customize your own AI assistant that can actually take action — check your email, manage your calendar, control smart devices, browse the web, and message you on Telegram or Discord when something needs attention. It's like having a personal assistant that runs 24/7, with the skills and access you choose to give it.
@@ -109,16 +97,6 @@ For more information on use cases for OpenClaw, see:
 - [OpenClaw Showcase](https://docs.openclaw.ai/start/showcase)
 - [100 hours of OpenClaw in 35 Minutes](https://www.youtube.com/watch?v=_kZCoW-Qxnc)
 - [Clawhub](https://clawhub.ai/): search for skills
-
-## Pricing
-
-KiloClaw uses your existing Kilo Gateway credits—there's no separate billing or subscription:
-
-- **Instance hosting** — Free for 7 days during beta
-- **Model inference** — Charged against your Gateway credit balance
-- **Free models** — Several models are available at no cost. See the [Kilo Leaderboard](https://kilo.ai/leaderboard#all-models) for current availability.
-
-See [Gateway Usage and Billing](/docs/gateway/usage-and-billing) for credit pricing details.
 
 ## Limitations
 
@@ -135,6 +113,8 @@ Have feedback or running into issues? Join the [Kilo Discord](https://kilo.ai/di
 
 ## Related
 
+- [Connecting Chat Platforms](/docs/automate/kiloclaw/chat-platforms)
+- [KiloClaw Pricing](/docs/automate/kiloclaw/pricing)
 - [Gateway Usage and Billing](/docs/gateway/usage-and-billing)
 - [Agent Manager](/docs/automate/agent-manager)
 - [OpenClaw Documentation](https://docs.openclaw.ai)
