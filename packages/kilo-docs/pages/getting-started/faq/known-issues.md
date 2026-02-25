@@ -94,7 +94,7 @@ If PowerShell is missing or blocked, system policies or security tools may need 
 
 ## JetBrains
 
-### Cascade not visible (JCEF errors)
+### Kilo Code not visible (JCEF errors)
 
 #### Symptoms
 
