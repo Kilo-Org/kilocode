@@ -34,8 +34,8 @@ export type {
 export { ServerManager } from "./server-manager"
 export type { ServerInstance } from "./server-manager"
 
-export { SSEClient } from "./sse-client"
-export type { SSEEventHandler, SSEErrorHandler, SSEStateHandler } from "./sse-client"
+export { SdkSSEAdapter } from "./sdk-sse-adapter"
+export type { SSEEventHandler, SSEErrorHandler, SSEStateHandler } from "./sdk-sse-adapter"
 
 export { KiloConnectionService } from "./connection-service"
 export type { ConnectionState } from "./connection-service"

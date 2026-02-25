@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 import { ServerManager } from "./server-manager"
 import { createKiloClient, type KiloClient } from "@kilocode/sdk/v2/client"
-import { SSEClient } from "./sse-client"
+import { SdkSSEAdapter } from "./sdk-sse-adapter"
 import type { ServerConfig, SSEEvent } from "./types"
 import { resolveEventSessionId as resolveEventSessionIdPure } from "./connection-utils"
 
@@ -12,13 +12,13 @@ type SSEEventFilter = (event: SSEEvent) => boolean
 type NotificationDismissListener = (notificationId: string) => void
 
 /**
- * Shared connection service that owns the single ServerManager, KiloClient (SDK), and SSEClient.
+ * Shared connection service that owns the single ServerManager, KiloClient (SDK), and SdkSSEAdapter.
  * Multiple KiloProvider instances subscribe to it for SSE events and state changes.
  */
 export class KiloConnectionService {
   private readonly serverManager: ServerManager
   private client: KiloClient | null = null
-  private sseClient: SSEClient | null = null
+  private sseClient: SdkSSEAdapter | null = null
   private info: { port: number } | null = null
   private config: ServerConfig | null = null
   private state: ConnectionState = "disconnected"
@@ -217,7 +217,7 @@ export class KiloConnectionService {
       },
     })
 
-    this.sseClient = new SSEClient(config)
+    this.sseClient = new SdkSSEAdapter(this.client!)
 
     // Wait until SSE actually reaches a terminal state before resolving connect().
     let resolveConnected: (() => void) | null = null
@@ -262,7 +262,7 @@ export class KiloConnectionService {
       }
     })
 
-    this.sseClient.connect(workspaceDir)
+    this.sseClient.connect()
 
     await connectedPromise
   }
