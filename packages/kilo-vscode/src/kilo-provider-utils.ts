@@ -1,4 +1,4 @@
-import type { SessionInfo, AgentInfo, Provider, SSEEvent } from "./services/cli-backend/types"
+import type { Session, Agent, Provider, Event } from "@kilocode/sdk/v2/client"
 
 /**
  * Extract a human-readable error message from an unknown error value.
@@ -33,7 +33,7 @@ export function getErrorMessage(error: unknown): string {
   return String(error)
 }
 
-export function sessionToWebview(session: SessionInfo) {
+export function sessionToWebview(session: Session) {
   return {
     id: session.id,
     title: session.title,
@@ -50,7 +50,7 @@ export function normalizeProviders(all: Record<string, Provider>): Record<string
   return normalized
 }
 
-export function filterVisibleAgents(agents: AgentInfo[]): { visible: AgentInfo[]; defaultAgent: string } {
+export function filterVisibleAgents(agents: Agent[]): { visible: Agent[]; defaultAgent: string } {
   const visible = agents.filter((a) => a.mode !== "subagent" && !a.hidden)
   const defaultAgent = visible.length > 0 ? visible[0]!.name : "code"
   return { visible, defaultAgent }
@@ -95,7 +95,7 @@ export type WebviewMessage =
   | { type: "sessionUpdated"; session: ReturnType<typeof sessionToWebview> }
   | null
 
-export function mapSSEEventToWebviewMessage(event: SSEEvent, sessionID: string | undefined): WebviewMessage {
+export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | undefined): WebviewMessage {
   switch (event.type) {
     case "message.part.updated": {
       const part = event.properties.part as { messageID?: string; sessionID?: string }
@@ -105,7 +105,6 @@ export function mapSSEEventToWebviewMessage(event: SSEEvent, sessionID: string |
         sessionID,
         messageID: part.messageID || "",
         part: event.properties.part,
-        delta: event.properties.delta ? { type: "text-delta", textDelta: event.properties.delta } : undefined,
       }
     }
     case "message.part.delta": {
@@ -155,7 +154,7 @@ export function mapSSEEventToWebviewMessage(event: SSEEvent, sessionID: string |
       return {
         type: "todoUpdated",
         sessionID: event.properties.sessionID,
-        items: event.properties.items,
+        items: event.properties.todos,
       }
     case "question.asked":
       return {

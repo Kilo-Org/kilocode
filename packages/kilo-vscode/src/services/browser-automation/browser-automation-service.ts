@@ -1,6 +1,6 @@
 import * as vscode from "vscode"
-import type { KiloClient } from "@kilocode/sdk/v2/client"
-import { type KiloConnectionService, type McpStatus } from "../cli-backend"
+import type { KiloClient, McpStatus } from "@kilocode/sdk/v2/client"
+import type { KiloConnectionService } from "../cli-backend"
 
 export type BrowserAutomationState = "disabled" | "registering" | "connected" | "failed" | "disconnected"
 

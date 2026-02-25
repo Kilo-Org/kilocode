@@ -3,7 +3,8 @@ import * as cp from "child_process"
 import * as fs from "fs"
 import * as path from "path"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
-import type { KiloConnectionService, SessionInfo } from "../services/cli-backend"
+import type { Session } from "@kilocode/sdk/v2/client"
+import type { KiloConnectionService } from "../services/cli-backend"
 import { getErrorMessage } from "../kilo-provider-utils"
 import { KiloProvider } from "../KiloProvider"
 import { buildWebviewHtml } from "../utils"
@@ -396,7 +397,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     worktreePath: string,
     branch: string,
     worktreeId?: string,
-  ): Promise<SessionInfo | null> {
+  ): Promise<Session | null> {
     let client: KiloClient
     try {
       client = this.connectionService.getClient()
@@ -428,7 +429,7 @@ export class AgentManagerProvider implements vscode.Disposable {
         { directory: worktreePath, platform: PLATFORM },
         { throwOnError: true },
       )
-      return session as unknown as SessionInfo
+      return session as unknown as Session
     } catch (error) {
       const err = getErrorMessage(error)
       this.postToWebview({
@@ -570,13 +571,13 @@ export class AgentManagerProvider implements vscode.Disposable {
       return null
     }
 
-    let session: SessionInfo
+    let session: Session
     try {
       const { data } = await client.session.create(
         { directory: worktree.path, platform: PLATFORM },
         { throwOnError: true },
       )
-      session = data as unknown as SessionInfo
+      session = data as unknown as Session
     } catch (error) {
       const err = getErrorMessage(error)
       this.postToWebview({ type: "error", message: `Failed to create session: ${err}` })

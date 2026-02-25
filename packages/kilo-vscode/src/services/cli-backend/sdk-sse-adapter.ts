@@ -1,7 +1,6 @@
-import type { KiloClient, GlobalEvent } from "@kilocode/sdk/v2/client"
-import type { SSEEvent } from "./types"
+import type { KiloClient, GlobalEvent, Event } from "@kilocode/sdk/v2/client"
 
-export type SSEEventHandler = (event: SSEEvent) => void
+export type SSEEventHandler = (event: Event) => void
 export type SSEErrorHandler = (error: Error) => void
 export type SSEStateHandler = (state: "connecting" | "connected" | "disconnected") => void
 
@@ -131,7 +130,7 @@ export class SdkSSEAdapter {
 					// Extract `payload` (the actual Event) — equivalent to the old `unwrapSSEPayload()`.
 					const globalEvent = event as GlobalEvent
 					const payload = globalEvent.payload ?? event
-					this.notifyEvent(payload as SSEEvent)
+					this.notifyEvent(payload as Event)
 				}
 			} catch (error) {
 				if (!signal.aborted) {
@@ -174,7 +173,7 @@ export class SdkSSEAdapter {
 
 	// ── Notify helpers ─────────────────────────────────────────────────
 
-	private notifyEvent(event: SSEEvent): void {
+	private notifyEvent(event: Event): void {
 		for (const handler of this.handlers) {
 			try {
 				handler(event)

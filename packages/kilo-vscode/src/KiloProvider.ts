@@ -1,11 +1,8 @@
 import * as path from "path"
 import * as vscode from "vscode"
 import { z } from "zod"
-import type { KiloClient } from "@kilocode/sdk/v2/client"
+import type { KiloClient, Session, SessionStatus, Event } from "@kilocode/sdk/v2/client"
 import {
-  type SessionInfo,
-  type SessionStatusInfo,
-  type SSEEvent,
   type KiloConnectionService,
   type KilocodeNotification,
 } from "./services/cli-backend"
@@ -28,7 +25,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   public static readonly viewType = "kilo-code.new.sidebarView"
 
   private webview: vscode.Webview | null = null
-  private currentSession: SessionInfo | null = null
+  private currentSession: Session | null = null
   private connectionState: "connecting" | "connected" | "disconnected" | "error" = "connecting"
   private loginAttempt = 0
   private isWebviewReady = false
@@ -199,7 +196,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Register a session created externally (e.g., worktree sessions from AgentManagerProvider).
    * Sets currentSession, adds to trackedSessionIds, and notifies the webview.
    */
-  public registerSession(session: SessionInfo): void {
+  public registerSession(session: Session): void {
     this.currentSession = session
     this.trackedSessionIds.add(session.id)
     this.postMessage({
@@ -540,7 +537,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           return this.trackedSessionIds.has(sessionId)
         },
         (event) => {
-          this.handleSSEEvent(event)
+          this.handleEvent(event)
         },
       )
 
@@ -612,7 +609,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
-  private sessionToWebview(session: SessionInfo) {
+  private sessionToWebview(session: Session) {
     return sessionToWebview(session)
   }
 
@@ -631,7 +628,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     try {
       const workspaceDir = this.getWorkspaceDirectory()
       const { data: session } = await this.client.session.create({ directory: workspaceDir }, { throwOnError: true })
-      this.currentSession = session as unknown as SessionInfo
+      this.currentSession = session as unknown as Session
       this.trackedSessionIds.add(session.id)
 
       // Notify webview of the new session
@@ -688,7 +685,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         .get({ sessionID, directory: workspaceDir })
         .then((result) => {
           if (result.data && (!this.currentSession || this.currentSession.id === sessionID)) {
-            this.currentSession = result.data as unknown as SessionInfo
+            this.currentSession = result.data as unknown as Session
           }
         })
         .catch((err: unknown) => console.warn("[Kilo New] KiloProvider: getSession failed (non-critical):", err))
@@ -704,7 +701,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         .status({ directory: workspaceDir })
         .then((result) => {
           if (!result.data) return
-          for (const [sid, info] of Object.entries(result.data) as [string, SessionStatusInfo][]) {
+          for (const [sid, info] of Object.entries(result.data) as [string, SessionStatus][]) {
             if (!this.trackedSessionIds.has(sid)) continue
             this.postMessage({
               type: "sessionStatus",
@@ -806,7 +803,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             .then(({ data }) => data)
             .catch((err: unknown) => {
               console.error(`[Kilo New] KiloProvider: Failed to list sessions for ${dir}:`, err)
-              return [] as SessionInfo[]
+              return [] as Session[]
             }),
         ),
       )
@@ -877,7 +874,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         { throwOnError: true },
       )
       if (this.currentSession?.id === sessionID) {
-        this.currentSession = updated as unknown as SessionInfo
+        this.currentSession = updated as unknown as Session
       }
       this.postMessage({ type: "sessionUpdated", session: this.sessionToWebview(this.currentSession!) })
     } catch (error) {
@@ -1281,7 +1278,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           { directory: workspaceDir },
           { throwOnError: true },
         )
-        this.currentSession = newSession as unknown as SessionInfo
+        this.currentSession = newSession as unknown as Session
         this.trackedSessionIds.add(this.currentSession.id)
         // Notify webview of the new session
         this.postMessage({
@@ -1690,7 +1687,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Extract sessionID from an SSE event, if applicable.
    * Returns undefined for global events (server.connected, server.heartbeat).
    */
-  private extractSessionID(event: SSEEvent): string | undefined {
+  private extractSessionID(event: Event): string | undefined {
     return this.connectionService.resolveEventSessionId(event)
   }
 
@@ -1698,7 +1695,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Handle SSE events from the CLI backend.
    * Filters events by tracked session IDs so each webview only sees its own sessions.
    */
-  private handleSSEEvent(event: SSEEvent): void {
+  private handleEvent(event: Event): void {
     // Extract sessionID from the event
     const sessionID = this.extractSessionID(event)
 

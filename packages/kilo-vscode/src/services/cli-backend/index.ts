@@ -1,31 +1,28 @@
 // Main exports for cli-backend services
-// Classes will be exported here as they are created in subsequent phases
 
+// SDK types — re-exported so consumers can import from "cli-backend" barrel
 export type {
-  SessionInfo,
-  SessionStatusInfo,
-  MessageInfo,
-  MessagePart,
-  TokenUsage,
+  Session,
+  SessionStatus,
+  Message as MessageInfo,
+  Part as MessagePart,
   ToolState,
   PermissionRequest,
-  SSEEvent,
-  TodoItem,
-  AgentInfo,
-  ServerConfig,
-  KilocodeOrganization,
-  KilocodeProfile,
-  KilocodeBalance,
-  ProfileData,
-  ProviderModel,
+  Event,
+  Todo,
+  Agent,
   Provider,
-  ProviderListResponse,
-  ModelSelection,
+  Model as ProviderModel,
   McpStatus,
   McpLocalConfig,
   McpRemoteConfig,
-  McpConfig,
   Config,
+} from "@kilocode/sdk/v2/client"
+
+// Local types — extension-specific, not from the API
+export type {
+  ServerConfig,
+  EditorContext,
   KilocodeNotification,
   KilocodeNotificationAction,
   CloudSessionData,

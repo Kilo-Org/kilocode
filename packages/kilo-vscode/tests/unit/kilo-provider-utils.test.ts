@@ -6,24 +6,29 @@ import {
   buildSettingPath,
   mapSSEEventToWebviewMessage,
 } from "../../src/kilo-provider-utils"
-import type { SessionInfo, AgentInfo, Provider, SSEEvent } from "../../src/services/cli-backend/types"
+import type { Session, Agent, Provider, Event } from "@kilocode/sdk/v2/client"
 
-function makeSession(overrides: Partial<SessionInfo> = {}): SessionInfo {
+function makeSession(overrides: Record<string, unknown> = {}): Session {
   return {
     id: "sess-1",
     title: "Test Session",
     directory: "/tmp",
     time: { created: 1700000000000, updated: 1700001000000 },
     ...overrides,
-  }
+  } as unknown as Session
 }
 
 function makeProvider(id: string): Provider {
-  return { id, name: id.toUpperCase(), models: {} }
+  return { id, name: id.toUpperCase(), models: {} } as unknown as Provider
 }
 
-function makeAgent(overrides: Partial<AgentInfo> = {}): AgentInfo {
-  return { name: "code", mode: "primary", ...overrides }
+function makeAgent(overrides: Record<string, unknown> = {}): Agent {
+  return { name: "code", mode: "primary", ...overrides } as unknown as Agent
+}
+
+/** Helper to create a partial Event for testing — only the fields accessed by the function under test matter. */
+function makeEvent(partial: Record<string, unknown>): Event {
+  return partial as unknown as Event
 }
 
 describe("sessionToWebview", () => {
@@ -141,11 +146,10 @@ describe("buildSettingPath", () => {
 
 describe("mapSSEEventToWebviewMessage", () => {
   it("maps message.part.updated to partUpdated", () => {
-    const event: SSEEvent = {
+    const event = {
       type: "message.part.updated",
       properties: {
         part: { type: "text", id: "p1", text: "hello", messageID: "m1" },
-        delta: "hello",
       },
     }
     const msg = mapSSEEventToWebviewMessage(event, "sess-1")
@@ -153,12 +157,11 @@ describe("mapSSEEventToWebviewMessage", () => {
     if (msg?.type === "partUpdated") {
       expect(msg.sessionID).toBe("sess-1")
       expect(msg.messageID).toBe("m1")
-      expect(msg.delta).toEqual({ type: "text-delta", textDelta: "hello" })
     }
   })
 
   it("returns null for message.part.updated when sessionID is undefined", () => {
-    const event: SSEEvent = {
+    const event = {
       type: "message.part.updated",
       properties: { part: { type: "text", id: "p1", text: "" } },
     }
@@ -166,7 +169,7 @@ describe("mapSSEEventToWebviewMessage", () => {
   })
 
   it("maps message.updated to messageCreated with ISO date", () => {
-    const event: SSEEvent = {
+    const event = {
       type: "message.updated",
       properties: {
         info: {
@@ -187,7 +190,7 @@ describe("mapSSEEventToWebviewMessage", () => {
   })
 
   it("maps session.status idle to sessionStatus", () => {
-    const event: SSEEvent = {
+    const event = {
       type: "session.status",
       properties: { sessionID: "sess-1", status: { type: "idle" } },
     }
@@ -200,7 +203,7 @@ describe("mapSSEEventToWebviewMessage", () => {
   })
 
   it("maps session.status retry with attempt/message/next", () => {
-    const event: SSEEvent = {
+    const event = {
       type: "session.status",
       properties: {
         sessionID: "sess-1",
@@ -216,7 +219,7 @@ describe("mapSSEEventToWebviewMessage", () => {
   })
 
   it("maps permission.asked to permissionRequest", () => {
-    const event: SSEEvent = {
+    const event = {
       type: "permission.asked",
       properties: {
         id: "perm-1",
@@ -255,11 +258,11 @@ describe("mapSSEEventToWebviewMessage", () => {
   })
 
   it("maps todo.updated to todoUpdated", () => {
-    const event: SSEEvent = {
+    const event = {
       type: "todo.updated",
       properties: {
         sessionID: "sess-1",
-        items: [{ id: "t1", content: "do something", status: "pending" }],
+        todos: [{ content: "do something", status: "pending", priority: "medium" }],
       },
     }
     const msg = mapSSEEventToWebviewMessage(event, "sess-1")
@@ -270,7 +273,7 @@ describe("mapSSEEventToWebviewMessage", () => {
   })
 
   it("maps question.asked to questionRequest", () => {
-    const event: SSEEvent = {
+    const event = {
       type: "question.asked",
       properties: {
         id: "q1",
@@ -283,7 +286,7 @@ describe("mapSSEEventToWebviewMessage", () => {
   })
 
   it("maps question.replied to questionResolved", () => {
-    const event: SSEEvent = {
+    const event = {
       type: "question.replied",
       properties: { sessionID: "sess-1", requestID: "req-1", answers: [] },
     }
@@ -295,7 +298,7 @@ describe("mapSSEEventToWebviewMessage", () => {
   })
 
   it("maps question.rejected to questionResolved", () => {
-    const event: SSEEvent = {
+    const event = {
       type: "question.rejected",
       properties: { sessionID: "sess-1", requestID: "req-2" },
     }
@@ -307,7 +310,7 @@ describe("mapSSEEventToWebviewMessage", () => {
   })
 
   it("maps session.created to sessionCreated with ISO dates", () => {
-    const event: SSEEvent = {
+    const event = {
       type: "session.created",
       properties: { info: makeSession() },
     }
@@ -319,7 +322,7 @@ describe("mapSSEEventToWebviewMessage", () => {
   })
 
   it("maps session.updated to sessionUpdated with ISO dates", () => {
-    const event: SSEEvent = {
+    const event = {
       type: "session.updated",
       properties: { info: makeSession({ id: "sess-2" }) },
     }
@@ -328,12 +331,12 @@ describe("mapSSEEventToWebviewMessage", () => {
   })
 
   it("returns null for server.connected (no webview message)", () => {
-    const event: SSEEvent = { type: "server.connected", properties: {} }
+    const event = { type: "server.connected", properties: {} }
     expect(mapSSEEventToWebviewMessage(event, undefined)).toBeNull()
   })
 
   it("returns null for server.heartbeat", () => {
-    const event: SSEEvent = { type: "server.heartbeat", properties: {} }
+    const event = { type: "server.heartbeat", properties: {} }
     expect(mapSSEEventToWebviewMessage(event, undefined)).toBeNull()
   })
 })
