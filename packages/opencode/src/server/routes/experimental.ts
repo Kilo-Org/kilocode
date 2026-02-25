@@ -290,7 +290,7 @@ export const ExperimentalRoutes = lazy(() =>
             const f = Bun.file(path.join(dir, file))
             if (!(await f.exists())) continue
             const content = await f.text()
-            const lines = content.split("\n").length
+            const lines = content.endsWith("\n") ? content.split("\n").length - 1 : content.split("\n").length
             diffs.push({
               file,
               before: "",

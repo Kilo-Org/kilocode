@@ -816,8 +816,10 @@ const AgentManagerContent: Component = () => {
       const ms = managedSessions().find((s) => s.id === id)
       if (ms?.worktreeId) {
         vscode.postMessage({ type: "agentManager.startDiffWatch", sessionId: id })
+      } else {
+        vscode.postMessage({ type: "agentManager.stopDiffWatch" })
       }
-    } else if (!open) {
+    } else {
       vscode.postMessage({ type: "agentManager.stopDiffWatch" })
     }
   })

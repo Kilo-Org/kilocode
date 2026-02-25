@@ -1243,7 +1243,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       const client = this.connectionService.getHttpClient()
       const diffs = await client.getWorktreeDiff(target.directory, target.baseBranch)
 
-      const hash = diffs.map((d) => `${d.file}:${d.status}:${d.additions}:${d.deletions}`).join("|")
+      const hash = diffs.map((d) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`).join("|")
       this.lastDiffHash = hash
       this.diffSessionId = sessionId
 
@@ -1264,7 +1264,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       const client = this.connectionService.getHttpClient()
       const diffs = await client.getWorktreeDiff(target.directory, target.baseBranch)
 
-      const hash = diffs.map((d) => `${d.file}:${d.status}:${d.additions}:${d.deletions}`).join("|")
+      const hash = diffs.map((d) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`).join("|")
       if (hash === this.lastDiffHash && this.diffSessionId === sessionId) return
       this.lastDiffHash = hash
       this.diffSessionId = sessionId
