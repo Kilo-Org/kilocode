@@ -158,6 +158,8 @@ describe("Agent Manager Provider — onMessage routing", () => {
       "agentManager.closeSession",
       "agentManager.configureSetupScript",
       "agentManager.showTerminal",
+      "agentManager.showLocalTerminal",
+      "agentManager.showExistingLocalTerminal",
       "agentManager.requestRepoInfo",
       "agentManager.requestState",
       "agentManager.setTabOrder",

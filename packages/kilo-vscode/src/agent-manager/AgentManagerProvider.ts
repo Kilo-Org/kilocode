@@ -162,6 +162,14 @@ export class AgentManagerProvider implements vscode.Disposable {
       this.terminalManager.showTerminal(msg.sessionId, this.state)
       return null
     }
+    if (type === "agentManager.showLocalTerminal") {
+      this.terminalManager.showLocalTerminal()
+      return null
+    }
+    if (type === "agentManager.showExistingLocalTerminal") {
+      this.terminalManager.showExisting("__local__")
+      return null
+    }
     if (type === "agentManager.requestRepoInfo") {
       void this.sendRepoInfo()
       return null

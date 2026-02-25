@@ -1097,6 +1097,16 @@ export interface ShowTerminalRequest {
   sessionId: string
 }
 
+// Show terminal for the local workspace (when no session is active)
+export interface ShowLocalTerminalRequest {
+  type: "agentManager.showLocalTerminal"
+}
+
+// Show existing local terminal when switching to local context (no-op if none exists)
+export interface ShowExistingLocalTerminalRequest {
+  type: "agentManager.showExistingLocalTerminal"
+}
+
 /**
  * Maximum number of parallel worktree versions for multi-version mode.
  * Keep in sync with MAX_MULTI_VERSIONS in src/agent-manager/constants.ts.
@@ -1249,6 +1259,8 @@ export type WebviewMessage =
   | RequestStateMessage
   | ConfigureSetupScriptRequest
   | ShowTerminalRequest
+  | ShowLocalTerminalRequest
+  | ShowExistingLocalTerminalRequest
   | CreateMultiVersionRequest
   | SetTabOrderRequest
   | SetSessionsCollapsedRequest
