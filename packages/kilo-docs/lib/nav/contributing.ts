@@ -35,6 +35,10 @@ export const ContributingNav: NavSection[] = [
             children: "Agent Observability",
           },
           {
+            href: "/contributing/architecture/auto-model-tiers",
+            children: "Auto Model Tiers",
+          },
+          {
             href: "/contributing/architecture/benchmarking",
             children: "Benchmarking",
           },

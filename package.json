@@ -67,10 +67,12 @@
   "devDependencies": {
     "@actions/artifact": "5.0.1",
     "@tsconfig/bun": "catalog:",
+    "@types/mime-types": "3.0.1",
+    "glob": "13.0.5",
     "husky": "9.1.7",
     "prettier": "3.6.2",
     "semver": "^7.6.0",
-    "sst": "3.17.23",
+    "sst": "3.18.10",
     "turbo": "2.5.6"
   },
   "dependencies": {
@@ -105,6 +107,6 @@
     "@openrouter/ai-sdk-provider@1.5.4": "patches/@openrouter%2Fai-sdk-provider@1.5.4.patch",
     "ghostty-web@0.3.0": "patches/ghostty-web@0.3.0.patch"
   },
-  "version": "7.0.27",
+  "version": "7.0.28",
   "peerDependencies": {}
 }

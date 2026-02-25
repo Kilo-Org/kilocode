@@ -233,6 +233,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     void this.handleLoadSessions()
   }
 
+  public openCloudSession(sessionId: string): void {
+    this.postMessage({ type: "openCloudSession", sessionId })
+  }
+
   /**
    * Attach to a webview that already has its own HTML set.
    * Sets up message handling and connection without overriding HTML content.
@@ -311,6 +315,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "clearSession":
           this.currentSession = null
           this.trackedSessionIds.clear()
+          this.syncedChildSessions.clear()
           break
         case "loadMessages":
           // Don't await: allow parallel loads so rapid session switching
@@ -444,6 +449,39 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             console.error("[Kilo New] fetchAndSendNotifications failed:", e),
           )
           break
+        case "requestCloudSessions":
+          await this.handleRequestCloudSessions(message)
+          break
+        case "requestGitRemoteUrl":
+          void this.getGitRemoteUrl().then((url) => {
+            this.postMessage({ type: "gitRemoteUrlLoaded", gitUrl: url ?? null })
+          })
+          break
+        case "requestCloudSessionData":
+          void this.handleRequestCloudSessionData(message.sessionId)
+          break
+        case "importAndSend": {
+          const files = z
+            .array(
+              z.object({
+                mime: z.string(),
+                url: z.string().refine((u) => u.startsWith("file://") || u.startsWith("data:")),
+              }),
+            )
+            .optional()
+            .catch(undefined)
+            .parse(message.files)
+          void this.handleImportAndSend(
+            message.cloudSessionId,
+            message.text,
+            message.providerID,
+            message.modelID,
+            message.agent,
+            message.variant,
+            files,
+          )
+          break
+        }
         case "dismissNotification":
           await this.handleDismissNotification(message.notificationId)
           break
@@ -491,9 +529,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         (event) => {
           const sessionId = this.connectionService.resolveEventSessionId(event)
 
-          // message.part.updated is always session-scoped; if we can't determine the session, drop it.
+          // message.part.updated and message.part.delta are always session-scoped; drop if session unknown.
           if (!sessionId) {
-            return event.type !== "message.part.updated"
+            return event.type !== "message.part.updated" && event.type !== "message.part.delta"
           }
 
           return this.trackedSessionIds.has(sessionId)
@@ -665,15 +703,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         })
         .catch((err) => console.error("[Kilo New] KiloProvider: Failed to fetch session statuses:", err))
 
-      // Convert to webview format, including cost/tokens for assistant messages
       const messages = messagesData.map((m) => ({
-        id: m.info.id,
-        sessionID: m.info.sessionID,
-        role: m.info.role,
+        ...m.info,
         parts: m.parts,
         createdAt: new Date(m.info.time.created).toISOString(),
-        cost: m.info.cost,
-        tokens: m.info.tokens,
       }))
 
       for (const message of messages) {
@@ -713,13 +746,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const messagesData = await this.httpClient.getMessages(sessionID, workspaceDir)
 
       const messages = messagesData.map((m) => ({
-        id: m.info.id,
-        sessionID: m.info.sessionID,
-        role: m.info.role,
+        ...m.info,
         parts: m.parts,
         createdAt: new Date(m.info.time.created).toISOString(),
-        cost: m.info.cost,
-        tokens: m.info.tokens,
       }))
 
       for (const message of messages) {
@@ -798,6 +827,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const workspaceDir = this.getWorkspaceDirectory(sessionID)
       await this.httpClient.deleteSession(sessionID, workspaceDir)
       this.trackedSessionIds.delete(sessionID)
+      this.syncedChildSessions.delete(sessionID)
       this.sessionDirectories.delete(sessionID)
       if (this.currentSession?.id === sessionID) {
         this.currentSession = null
@@ -964,6 +994,175 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage(message)
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to fetch notifications:", error)
+    }
+  }
+
+  /**
+   * Handle cloud sessions request from webview.
+   * Fetches sessions from the Kilo cloud API and sends them back.
+   */
+  private async handleRequestCloudSessions(message: {
+    cursor?: string
+    limit?: number
+    gitUrl?: string
+  }): Promise<void> {
+    if (!this.httpClient) {
+      this.postMessage({
+        type: "error",
+        message: "Not connected to CLI backend",
+      })
+      return
+    }
+
+    try {
+      const result = await this.httpClient.getCloudSessions({
+        cursor: message.cursor,
+        limit: message.limit,
+        gitUrl: message.gitUrl,
+      })
+
+      this.postMessage({
+        type: "cloudSessionsLoaded",
+        sessions: result?.cliSessions ?? [],
+        nextCursor: result?.nextCursor ?? null,
+      })
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to fetch cloud sessions:", error)
+      this.postMessage({
+        type: "error",
+        message: error instanceof Error ? error.message : "Failed to fetch cloud sessions",
+      })
+    }
+  }
+
+  /**
+   * Fetch full cloud session data for read-only preview.
+   * Transforms the export data into webview message format and sends it back.
+   */
+  private async handleRequestCloudSessionData(sessionId: string): Promise<void> {
+    if (!this.httpClient) {
+      this.postMessage({
+        type: "cloudSessionImportFailed",
+        cloudSessionId: sessionId,
+        error: "Not connected to CLI backend",
+      })
+      return
+    }
+
+    try {
+      const data = await this.httpClient.getCloudSession(sessionId)
+      if (!data) {
+        this.postMessage({
+          type: "cloudSessionImportFailed",
+          cloudSessionId: sessionId,
+          error: "Failed to fetch cloud session",
+        })
+        return
+      }
+
+      const messages = (data.messages ?? [])
+        .filter((m) => m.info)
+        .map((m) => ({
+          id: m.info.id,
+          sessionID: m.info.sessionID,
+          role: m.info.role as "user" | "assistant",
+          parts: m.parts,
+          createdAt: m.info.time?.created ? new Date(m.info.time.created).toISOString() : new Date().toISOString(),
+          cost: m.info.cost,
+          tokens: m.info.tokens,
+        }))
+
+      this.postMessage({
+        type: "cloudSessionDataLoaded",
+        cloudSessionId: sessionId,
+        title: data.info.title ?? "Untitled",
+        messages,
+      })
+    } catch (err) {
+      console.error("[Kilo New] Failed to load cloud session data:", err)
+      this.postMessage({
+        type: "cloudSessionImportFailed",
+        cloudSessionId: sessionId,
+        error: err instanceof Error ? err.message : "Failed to load cloud session",
+      })
+    }
+  }
+
+  /**
+   * Import a cloud session to local storage, then send a new message on it.
+   * This is the "clone on first message" flow — the cloud session becomes a
+   * local session only when the user decides to continue it.
+   */
+  private async handleImportAndSend(
+    cloudSessionId: string,
+    text: string,
+    providerID?: string,
+    modelID?: string,
+    agent?: string,
+    variant?: string,
+    files?: Array<{ mime: string; url: string }>,
+  ): Promise<void> {
+    if (!this.httpClient) {
+      this.postMessage({
+        type: "cloudSessionImportFailed",
+        cloudSessionId,
+        error: "Not connected to CLI backend",
+      })
+      return
+    }
+
+    const workspaceDir = this.getWorkspaceDirectory()
+
+    // Step 1: Import the cloud session with fresh IDs
+    const session = await this.httpClient.importCloudSession(cloudSessionId, workspaceDir)
+    if (!session) {
+      this.postMessage({
+        type: "cloudSessionImportFailed",
+        cloudSessionId,
+        error: "Failed to import session from cloud",
+      })
+      return
+    }
+
+    // Track the new local session
+    this.currentSession = session
+    this.trackedSessionIds.add(session.id)
+
+    // Notify webview of the import success
+    this.postMessage({
+      type: "cloudSessionImported",
+      cloudSessionId,
+      session: this.sessionToWebview(session),
+    })
+
+    // Step 2: Send the user's message on the new local session
+    const parts: Array<{ type: "text"; text: string } | { type: "file"; mime: string; url: string }> = []
+
+    if (files) {
+      for (const f of files) {
+        parts.push({ type: "file", mime: f.mime, url: f.url })
+      }
+    }
+
+    parts.push({ type: "text", text })
+
+    try {
+      const editorContext = await this.gatherEditorContext()
+
+      await this.httpClient.sendMessage(session.id, parts, workspaceDir, {
+        providerID,
+        modelID,
+        agent,
+        variant,
+        editorContext,
+      })
+    } catch (err) {
+      console.error("[Kilo New] Failed to send message after cloud import:", err)
+      this.postMessage({
+        type: "error",
+        message: err instanceof Error ? err.message : "Failed to send message after import",
+        sessionID: session.id,
+      })
     }
   }
 
@@ -1453,8 +1652,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     // Events without sessionID (server.connected, server.heartbeat) → always forward
     // Events with sessionID → only forward if this webview tracks that session
-    // message.part.updated is always session-scoped; if we can't determine the session, drop it to avoid cross-webview leakage.
-    if (!sessionID && event.type === "message.part.updated") {
+    // message.part.updated and message.part.delta are always session-scoped; drop if session unknown.
+    if (!sessionID && (event.type === "message.part.updated" || event.type === "message.part.delta")) {
       return
     }
     if (sessionID && !this.trackedSessionIds.has(sessionID)) {
@@ -1512,6 +1711,26 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     void this.webview.postMessage(message).then(undefined, (error) => {
       console.error("[Kilo New] KiloProvider: ❌ postMessage failed", error)
     })
+  }
+
+  /**
+   * Get the git remote URL for the current workspace using VS Code's built-in Git API.
+   * Returns undefined if not in a git repo or no remotes are configured.
+   */
+  private async getGitRemoteUrl(): Promise<string | undefined> {
+    try {
+      const extension = vscode.extensions.getExtension("vscode.git")
+      if (!extension) return undefined
+      const api = extension.isActive ? extension.exports?.getAPI(1) : (await extension.activate())?.getAPI(1)
+      if (!api) return undefined
+      const repo = api.repositories?.[0]
+      if (!repo) return undefined
+      const remote = repo.state?.remotes?.find((r: { name: string }) => r.name === "origin")
+      return remote?.fetchUrl ?? remote?.pushUrl
+    } catch (error) {
+      console.warn("[Kilo New] KiloProvider: Failed to get git remote URL:", error)
+      return undefined
+    }
   }
 
   /**
@@ -1630,6 +1849,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.unsubscribeNotificationDismiss?.()
     this.webviewMessageDisposable?.dispose()
     this.trackedSessionIds.clear()
+    this.syncedChildSessions.clear()
     this.sessionDirectories.clear()
     this.ignoreController?.dispose()
   }

@@ -17,6 +17,7 @@ const CSS_FILE = path.join(ROOT, "webview-ui/agent-manager/agent-manager.css")
 const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/MultiModelSelector.tsx"),
 ]
 const TSX_FILE = TSX_FILES[0]
 const PROVIDER_FILE = path.join(ROOT, "src/agent-manager/AgentManagerProvider.ts")

@@ -55,9 +55,17 @@ import { WorktreeModeProvider } from "../src/context/worktree-mode"
 import { ChatView } from "../src/components/chat"
 import { ModelSelectorBase } from "../src/components/chat/ModelSelector"
 import { ModeSwitcherBase } from "../src/components/chat/ModeSwitcher"
+import {
+  MultiModelSelector,
+  type ModelAllocations,
+  MAX_MULTI_VERSIONS,
+  totalAllocations,
+  allocationsToArray,
+} from "./MultiModelSelector"
 import { LanguageBridge, DataBridge } from "../src/App"
 import { useLanguage } from "../src/context/language"
 import { formatRelativeDate } from "../src/utils/date"
+import { useImageAttachments } from "../src/hooks/useImageAttachments"
 import { validateLocalSession, nextSelectionAfterDelete, adjacentHint, LOCAL } from "./navigate"
 import { reorderTabs, applyTabOrder, firstOrderedTitle } from "./tab-order"
 import { ConstrainDragYAxis, SortableTab } from "./sortable-tab"
@@ -723,6 +731,14 @@ const AgentManagerContent: Component = () => {
         }
       }
 
+      // Set per-session model selection without clearing busy state.
+      // Used during Phase 1 of multi-version creation so the UI selector
+      // reflects the correct model as soon as the worktree appears.
+      if ((msg as { type: string }).type === "agentManager.setSessionModel") {
+        const ev = msg as { type: string; sessionId: string; providerID: string; modelID: string }
+        session.setSessionModel(ev.sessionId, ev.providerID, ev.modelID)
+      }
+
       // Handle initial message send for multi-version sessions.
       // The extension creates the worktrees/sessions, then asks the webview
       // to send the prompt through the normal KiloProvider sendMessage path.
@@ -1059,7 +1075,7 @@ const AgentManagerContent: Component = () => {
             <span class="am-section-label">{t("agentManager.section.worktrees")}</span>
             <Show when={isGitRepo()}>
               <div class="am-section-actions">
-                <DropdownMenu>
+                <DropdownMenu gutter={4} placement="bottom-end">
                   <DropdownMenu.Trigger
                     as={IconButton}
                     icon="settings-gear"
@@ -1068,7 +1084,7 @@ const AgentManagerContent: Component = () => {
                     label={t("agentManager.worktree.settings")}
                   />
                   <DropdownMenu.Portal>
-                    <DropdownMenu.Content>
+                    <DropdownMenu.Content class="am-split-menu">
                       <DropdownMenu.Item onSelect={handleShowKeyboardShortcuts}>
                         <DropdownMenu.ItemLabel>{t("agentManager.shortcuts.title")}</DropdownMenu.ItemLabel>
                       </DropdownMenu.Item>
@@ -1100,7 +1116,7 @@ const AgentManagerContent: Component = () => {
                           <DropdownMenu.ItemLabel>{t("agentManager.worktree.new")}</DropdownMenu.ItemLabel>
                           <span class="am-menu-shortcut">
                             {parseBindingTokens(kb().newWorktree ?? "").map((token) => (
-                              <kbd class="am-menu-key">{t}</kbd>
+                              <kbd class="am-menu-key">{token}</kbd>
                             ))}
                           </span>
                         </DropdownMenu.Item>
@@ -1109,8 +1125,8 @@ const AgentManagerContent: Component = () => {
                           <Icon name="settings-gear" size="small" />
                           <DropdownMenu.ItemLabel>{t("agentManager.dialog.advanced")}</DropdownMenu.ItemLabel>
                           <span class="am-menu-shortcut">
-                            {parseBindingTokens(kb().advancedWorktree ?? "").map((t) => (
-                              <kbd class="am-menu-key">{t}</kbd>
+                            {parseBindingTokens(kb().advancedWorktree ?? "").map((token) => (
+                              <kbd class="am-menu-key">{token}</kbd>
                             ))}
                           </span>
                         </DropdownMenu.Item>
@@ -1638,6 +1654,8 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
   const [prompt, setPrompt] = createSignal("")
   const [versions, setVersions] = createSignal<VersionCount>(1)
   const [model, setModel] = createSignal<{ providerID: string; modelID: string } | null>(null)
+  const [compareMode, setCompareMode] = createSignal(false)
+  const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(new Map())
   const [agent, setAgent] = createSignal(session.selectedAgent())
   const [starting, setStarting] = createSignal(false)
   const [showAdvanced, setShowAdvanced] = createSignal(false)
@@ -1645,6 +1663,8 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
   const [baseBranch, setBaseBranch] = createSignal<string | null>(null)
   const [baseBranchOpen, setBaseBranchOpen] = createSignal(false)
   const [highlightedIndex, setHighlightedIndex] = createSignal(0)
+
+  const imageAttach = useImageAttachments()
 
   let textareaRef: HTMLTextAreaElement | undefined
 
@@ -1666,19 +1686,28 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
     return branches().filter((b) => b.name.toLowerCase().includes(search))
   })
 
-  const canSubmit = () => !starting()
+  const canSubmit = () => {
+    if (starting()) return false
+    if (compareMode() && totalAllocations(modelAllocations()) === 0) return false
+    return true
+  }
 
   const handleSubmit = () => {
-    if (starting()) return
+    if (!canSubmit()) return
     setStarting(true)
 
     const text = prompt().trim() || undefined
-    const count = versions()
-    const sel = model()
     const defaultAgent = session.agents()[0]?.name
     const selectedAgent = agent() !== defaultAgent ? agent() : undefined
     const advanced = showAdvanced()
     const customBranch = advanced ? branchName().trim() || undefined : undefined
+    const imgs = imageAttach.images()
+    const imgFiles = imgs.length > 0 ? imgs.map((img) => ({ mime: img.mime, url: img.dataUrl })) : undefined
+
+    const isCompare = compareMode()
+    const allocations = isCompare ? allocationsToArray(modelAllocations()) : undefined
+    const count = isCompare ? totalAllocations(modelAllocations()) : versions()
+    const sel = isCompare ? null : model()
 
     vscode.postMessage({
       type: "agentManager.createMultiVersion",
@@ -1690,6 +1719,8 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
       agent: selectedAgent,
       baseBranch: advanced ? (baseBranch() ?? undefined) : undefined,
       branchName: customBranch,
+      modelAllocations: allocations,
+      files: imgFiles,
     })
 
     props.onClose()
@@ -1754,7 +1785,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
   }
 
   return (
-    <Dialog title={t("agentManager.dialog.openWorkspace")} fit>
+    <Dialog title={t("agentManager.dialog.openWorktree")} fit>
       {/* Tab switcher */}
       <div class="am-tab-switcher">
         <button
@@ -1785,7 +1816,32 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
             onInput={(e) => setName(e.currentTarget.value)}
           />
           {/* Prompt input — reuses the sidebar chat-input base classes for consistent styling */}
-          <div class="prompt-input-container am-prompt-input-container">
+          <div
+            class="prompt-input-container am-prompt-input-container"
+            classList={{ "prompt-input-container--dragging": imageAttach.dragging() }}
+            onDragOver={imageAttach.handleDragOver}
+            onDragLeave={imageAttach.handleDragLeave}
+            onDrop={imageAttach.handleDrop}
+          >
+            <Show when={imageAttach.images().length > 0}>
+              <div class="image-attachments">
+                <For each={imageAttach.images()}>
+                  {(img) => (
+                    <div class="image-attachment">
+                      <img src={img.dataUrl} alt={img.filename} title={img.filename} />
+                      <button
+                        type="button"
+                        class="image-attachment-remove"
+                        onClick={() => imageAttach.remove(img.id)}
+                        aria-label={t("agentManager.dialog.removeImage")}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
+                </For>
+              </div>
+            </Show>
             <div class="prompt-input-wrapper am-prompt-input-wrapper">
               <div class="prompt-input-ghost-wrapper am-prompt-input-ghost-wrapper">
                 <textarea
@@ -1799,19 +1855,22 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
                     setPrompt(e.currentTarget.value)
                     adjustHeight()
                   }}
+                  onPaste={(e) => imageAttach.handlePaste(e)}
                   rows={3}
                 />
               </div>
             </div>
             <div class="prompt-input-hint">
               <div class="prompt-input-hint-selectors">
-                <ModelSelectorBase
-                  value={model()}
-                  onSelect={(pid, mid) => setModel(pid && mid ? { providerID: pid, modelID: mid } : null)}
-                  placement="top-start"
-                  allowClear
-                  clearLabel="Default"
-                />
+                <Show when={!compareMode()}>
+                  <ModelSelectorBase
+                    value={model()}
+                    onSelect={(pid, mid) => setModel(pid && mid ? { providerID: pid, modelID: mid } : null)}
+                    placement="top-start"
+                    allowClear
+                    clearLabel="Default"
+                  />
+                </Show>
                 <Show when={session.agents().length > 1}>
                   <ModeSwitcherBase agents={session.agents()} value={agent()} onSelect={setAgent} />
                 </Show>
@@ -1952,25 +2011,63 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
             </div>
           </Show>
 
-          {/* Version selector + info */}
-          <div class="am-nv-version-bar">
-            <span class="am-nv-config-label">{t("agentManager.dialog.versions")}</span>
-            <div class="am-nv-pills">
-              {VERSION_OPTIONS.map((count) => (
+          {/* Version / compare mode selector */}
+          <Show
+            when={compareMode()}
+            fallback={
+              <div class="am-nv-version-bar">
+                <span class="am-nv-config-label">{t("agentManager.dialog.versions")}</span>
+                <div class="am-nv-pills">
+                  {VERSION_OPTIONS.map((count) => (
+                    <button
+                      class="am-nv-pill"
+                      classList={{ "am-nv-pill-active": versions() === count }}
+                      onClick={() => setVersions(count)}
+                      type="button"
+                    >
+                      {count}
+                    </button>
+                  ))}
+                  <button
+                    class="am-nv-pill am-nv-pill-compare"
+                    onClick={() => setCompareMode(true)}
+                    type="button"
+                    title={t("agentManager.dialog.compareModels")}
+                  >
+                    <Icon name="layers" size="small" />
+                  </button>
+                </div>
+                <Show when={versions() > 1}>
+                  <span class="am-nv-version-hint">{t("agentManager.dialog.versionHint", { count: versions() })}</span>
+                </Show>
+              </div>
+            }
+          >
+            <div class="am-nv-compare-section">
+              <div class="am-nv-version-bar">
+                <span class="am-nv-config-label">
+                  {t("agentManager.dialog.compareModels")}
+                  <Show when={totalAllocations(modelAllocations()) > 0}>
+                    <span class="am-nv-compare-count">
+                      {totalAllocations(modelAllocations())}/{MAX_MULTI_VERSIONS}
+                    </span>
+                  </Show>
+                </span>
                 <button
-                  class="am-nv-pill"
-                  classList={{ "am-nv-pill-active": versions() === count }}
-                  onClick={() => setVersions(count)}
+                  class="am-nv-pill-back"
+                  onClick={() => {
+                    setCompareMode(false)
+                    setModelAllocations(new Map())
+                  }}
                   type="button"
+                  title={t("agentManager.dialog.versions")}
                 >
-                  {count}
+                  <Icon name="close-small" size="small" />
                 </button>
-              ))}
+              </div>
+              <MultiModelSelector allocations={modelAllocations()} onChange={setModelAllocations} />
             </div>
-            <Show when={versions() > 1}>
-              <span class="am-nv-version-hint">{t("agentManager.dialog.versionHint", { count: versions() })}</span>
-            </Show>
-          </div>
+          </Show>
 
           {/* Submit button */}
           <Button variant="primary" size="large" class="am-nv-submit" onClick={handleSubmit} disabled={!canSubmit()}>

@@ -6,11 +6,14 @@
 
 import { Component, For, Show, createSignal, createEffect, createMemo, onCleanup, JSX } from "solid-js"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
+import { Button } from "@kilocode/kilo-ui/button"
+import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
 import { formatRelativeDate } from "../../utils/date"
 import { Message } from "./Message"
+import { CloudImportDialog } from "./CloudImportDialog"
 
 /** Inline working/retry indicator shown below messages while the agent is active. */
 const WorkingIndicator: Component = () => {
@@ -73,6 +76,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const session = useSession()
   const server = useServer()
   const language = useLanguage()
+  const dialog = useDialog()
 
   let containerRef: HTMLDivElement | undefined
   const [isAtBottom, setIsAtBottom] = createSignal(true)
@@ -181,6 +185,21 @@ export const MessageList: Component<MessageListProps> = (props) => {
                 </For>
               </div>
             </Show>
+            <Button
+              variant="ghost"
+              size="small"
+              onClick={() =>
+                dialog.show(() => (
+                  <CloudImportDialog
+                    onImport={(id) => {
+                      session.selectCloudSession(id)
+                    }}
+                  />
+                ))
+              }
+            >
+              {language.t("session.cloud.import")}
+            </Button>
           </div>
         </Show>
         <Show when={!session.loading()}>

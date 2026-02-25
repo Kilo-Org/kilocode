@@ -1,24 +1,12 @@
-# Code reviews (local and cloud workflows)
+# Code Reviews (Local and Cloud Workflows)
 
-- **What it is**: Automated AI review on PR open/update (cloud) plus a local “Review Mode”.
+**Priority:** P2
+**Status:** ❌ Not started
 
-## Review scopes (service scan)
+## Remaining Work
 
-- Uncommitted (working tree).
-- Branch vs base branch (main/master/develop detection).
-
-## Docs references
-
-- [`apps/kilocode-docs/pages/automate/code-reviews.md`](../../apps/kilocode-docs/pages/automate/code-reviews.md)
-
-## Suggested migration
-
-- **Kilo CLI availability**: Partial.
-- **Migration recommendation**:
-  - Keep Kilo's review-mode UX in the VS Code extension host.
-  - Optionally reuse Kilo CLI review templates/prompts server-side, but avoid depending on server UI that doesn't exist.
-- **Reimplementation required?**: Partial.
-
-## Primary implementation anchors
-
-- [`src/services/review/`](../../src/services/review/)
+- Local "Review Mode" for AI review of uncommitted changes
+- Branch vs base branch review (main/master/develop detection)
+- Automated AI review on PR open/update (cloud workflow)
+- VS Code review UX integration
+- Reuse CLI review templates/prompts where available
