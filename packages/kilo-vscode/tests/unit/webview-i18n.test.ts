@@ -21,12 +21,10 @@
 import { describe, it, expect } from "bun:test"
 import { Project, SyntaxKind, Node } from "ts-morph"
 import path from "node:path"
+import { globSync } from "glob"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
-const TSX_FILES = [
-  path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
-]
+const TSX_FILES = globSync("webview-ui/**/*.tsx", { cwd: ROOT, absolute: true })
 
 /**
  * Props whose string values are user-visible and must be localized.
@@ -321,10 +319,10 @@ function findTranslationShadowViolations(): ShadowViolation[] {
   return results
 }
 
-describe("Agent Manager i18n — no hardcoded strings", () => {
+describe("Webview i18n — no hardcoded strings", () => {
   const violations = findViolations()
 
-  it("should have no hardcoded user-facing strings in agent manager TSX files", () => {
+  it("should have no hardcoded user-facing strings in webview TSX files", () => {
     if (violations.length > 0) {
       const report = violations.map((v) => `  ${v.file}:${v.line} [${v.context}] "${v.text}"`).join("\n")
       expect(violations, `Found ${violations.length} hardcoded string(s):\n${report}`).toEqual([])
@@ -333,7 +331,7 @@ describe("Agent Manager i18n — no hardcoded strings", () => {
   })
 })
 
-describe("Agent Manager i18n — no t() shadowing", () => {
+describe("Webview i18n — no t() shadowing", () => {
   const shadows = findTranslationShadowViolations()
 
   it("should not shadow the t() translation function in callbacks", () => {
