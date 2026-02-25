@@ -75,18 +75,77 @@ export class AutocompleteModel {
       throw new Error(`CLI backend is not connected (state: ${state})`)
     }
 
-    const client = this.connectionService.getHttpClient()
+    // FIM uses SSE streaming — use direct fetch via server config
+    // (the SDK's kilo.fim() returns an SSE async iterable which doesn't match the onChunk callback pattern)
+    const serverConfig = this.connectionService.getServerConfig()
+    if (!serverConfig) {
+      throw new Error("Server config not available")
+    }
 
-    const result = await client.fimCompletion(prefix, suffix, onChunk, {
-      model: DEFAULT_MODEL,
-      maxTokens: 256,
-      temperature: 0.2,
+    const authHeader = `Basic ${Buffer.from(`kilo:${serverConfig.password}`).toString("base64")}`
+    const url = `${serverConfig.baseUrl}/kilo/fim`
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: authHeader,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        prefix,
+        suffix,
+        model: DEFAULT_MODEL,
+        maxTokens: 256,
+        temperature: 0.2,
+      }),
     })
 
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`FIM request failed: ${response.status} ${errorText}`)
+    }
+
+    if (!response.body) {
+      throw new Error("FIM response has no body")
+    }
+
+    let cost = 0
+    let inputTokens = 0
+    let outputTokens = 0
+
+    // Parse SSE stream
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ""
+
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split("\n")
+      buffer = lines.pop() ?? ""
+
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue
+        const json = line.slice(6).trim()
+        if (!json || json === "[DONE]") continue
+        try {
+          const chunk = JSON.parse(json) as Record<string, any>
+          if (chunk.content) onChunk(chunk.content)
+          if (chunk.inputTokens !== undefined) inputTokens = chunk.inputTokens
+          if (chunk.outputTokens !== undefined) outputTokens = chunk.outputTokens
+          if (chunk.cost !== undefined) cost = chunk.cost
+        } catch {
+          // skip malformed JSON
+        }
+      }
+    }
+
     return {
-      cost: result.cost,
-      inputTokens: result.inputTokens,
-      outputTokens: result.outputTokens,
+      cost,
+      inputTokens,
+      outputTokens,
       cacheWriteTokens: 0,
       cacheReadTokens: 0,
     }

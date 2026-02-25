@@ -1,5 +1,38 @@
 import type { SessionInfo, AgentInfo, Provider, SSEEvent } from "./services/cli-backend/types"
 
+/**
+ * Extract a human-readable error message from an unknown error value.
+ * Handles Error instances, strings, and SDK error objects (which are
+ * plain JSON objects thrown by the SDK when throwOnError is true).
+ *
+ * SDK error shapes from the server:
+ * - BadRequestError: { data: unknown, errors: [...], success: false }
+ * - NotFoundError: { name: "NotFoundError", data: { message: "..." } }
+ * - Plain string (raw text response)
+ */
+export function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message
+  if (typeof error === "string") return error
+  if (error && typeof error === "object") {
+    const obj = error as Record<string, any>
+    // Direct .message field
+    if (typeof obj.message === "string") return obj.message
+    // Direct .error field
+    if (typeof obj.error === "string") return obj.error
+    // NotFoundError shape: { data: { message: "..." } }
+    if (obj.data && typeof obj.data === "object" && typeof obj.data.message === "string") {
+      return obj.data.message
+    }
+    // BadRequestError shape: { errors: [{ message: "..." }] }
+    if (Array.isArray(obj.errors) && obj.errors.length > 0) {
+      const first = obj.errors[0]
+      if (typeof first === "string") return first
+      if (first && typeof first.message === "string") return first.message
+    }
+  }
+  return String(error)
+}
+
 export function sessionToWebview(session: SessionInfo) {
   return {
     id: session.id,

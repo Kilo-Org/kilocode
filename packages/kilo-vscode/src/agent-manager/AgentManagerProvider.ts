@@ -2,7 +2,9 @@ import * as vscode from "vscode"
 import * as cp from "child_process"
 import * as fs from "fs"
 import * as path from "path"
-import type { KiloConnectionService, SessionInfo, HttpClient } from "../services/cli-backend"
+import type { KiloClient } from "@kilocode/sdk/v2/client"
+import type { KiloConnectionService, SessionInfo } from "../services/cli-backend"
+import { getErrorMessage } from "../kilo-provider-utils"
 import { KiloProvider } from "../KiloProvider"
 import { buildWebviewHtml } from "../utils"
 import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
@@ -395,9 +397,9 @@ export class AgentManagerProvider implements vscode.Disposable {
     branch: string,
     worktreeId?: string,
   ): Promise<SessionInfo | null> {
-    let client: HttpClient
+    let client: KiloClient
     try {
-      client = this.connectionService.getHttpClient()
+      client = this.connectionService.getClient()
     } catch {
       this.postToWebview({
         type: "agentManager.worktreeSetup",
@@ -422,9 +424,13 @@ export class AgentManagerProvider implements vscode.Disposable {
     })
 
     try {
-      return await client.createSession(worktreePath, { platform: PLATFORM })
+      const { data: session } = await client.session.create(
+        { directory: worktreePath, platform: PLATFORM },
+        { throwOnError: true },
+      )
+      return session as unknown as SessionInfo
     } catch (error) {
-      const err = error instanceof Error ? error.message : String(error)
+      const err = getErrorMessage(error)
       this.postToWebview({
         type: "agentManager.worktreeSetup",
         status: "error",
@@ -547,9 +553,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 
   /** Add a new session to an existing worktree. */
   private async onAddSessionToWorktree(worktreeId: string): Promise<null> {
-    let client: HttpClient
+    let client: KiloClient
     try {
-      client = this.connectionService.getHttpClient()
+      client = this.connectionService.getClient()
     } catch {
       this.postToWebview({ type: "error", message: "Not connected to CLI backend" })
       return null
@@ -566,9 +572,13 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     let session: SessionInfo
     try {
-      session = await client.createSession(worktree.path, { platform: PLATFORM })
+      const { data } = await client.session.create(
+        { directory: worktree.path, platform: PLATFORM },
+        { throwOnError: true },
+      )
+      session = data as unknown as SessionInfo
     } catch (error) {
-      const err = error instanceof Error ? error.message : String(error)
+      const err = getErrorMessage(error)
       this.postToWebview({ type: "error", message: `Failed to create session: ${err}` })
       TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_SESSION_ERROR, {
         source: PLATFORM,

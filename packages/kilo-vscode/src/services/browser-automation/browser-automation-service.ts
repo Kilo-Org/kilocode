@@ -1,4 +1,5 @@
 import * as vscode from "vscode"
+import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { type KiloConnectionService, type McpStatus } from "../cli-backend"
 
 export type BrowserAutomationState = "disabled" | "registering" | "connected" | "failed" | "disconnected"
@@ -71,9 +72,9 @@ export class BrowserAutomationService implements vscode.Disposable {
   private async register(): Promise<void> {
     this.setState("registering")
 
-    const httpClient = this.getHttpClient()
-    if (!httpClient) {
-      console.error("[Kilo New] BrowserAutomationService: No HTTP client available")
+    const client = this.getClient()
+    if (!client) {
+      console.error("[Kilo New] BrowserAutomationService: No SDK client available")
       this.setState("failed")
       return
     }
@@ -93,18 +94,21 @@ export class BrowserAutomationService implements vscode.Disposable {
 
     try {
       const directory = this.getWorkspaceDirectory()
-      const status = await httpClient.addMcpServer(
-        BrowserAutomationService.MCP_SERVER_NAME,
+      const { data: status } = await client.mcp.add(
         {
-          type: "local",
-          command,
-          enabled: true,
-          timeout: 60000,
+          name: BrowserAutomationService.MCP_SERVER_NAME,
+          config: {
+            type: "local",
+            command,
+            enabled: true,
+            timeout: 60000,
+          } as any,
+          directory,
         },
-        directory,
+        { throwOnError: true },
       )
 
-      const serverStatus = status[BrowserAutomationService.MCP_SERVER_NAME]
+      const serverStatus = (status as any)[BrowserAutomationService.MCP_SERVER_NAME]
       if (serverStatus?.status === "connected") {
         this.setState("connected")
       } else if (serverStatus?.status === "failed") {
@@ -130,11 +134,14 @@ export class BrowserAutomationService implements vscode.Disposable {
       return
     }
 
-    const httpClient = this.getHttpClient()
-    if (httpClient) {
+    const client = this.getClient()
+    if (client) {
       try {
         const directory = this.getWorkspaceDirectory()
-        await httpClient.disconnectMcpServer(BrowserAutomationService.MCP_SERVER_NAME, directory)
+        await client.mcp.disconnect(
+          { name: BrowserAutomationService.MCP_SERVER_NAME, directory },
+          { throwOnError: true },
+        )
       } catch (error) {
         console.error("[Kilo New] BrowserAutomationService: Failed to disconnect MCP server:", error)
       }
@@ -147,23 +154,23 @@ export class BrowserAutomationService implements vscode.Disposable {
    * Get the current MCP server status from the CLI backend.
    */
   async getServerStatus(): Promise<McpStatus | null> {
-    const httpClient = this.getHttpClient()
-    if (!httpClient) {
+    const client = this.getClient()
+    if (!client) {
       return null
     }
 
     try {
       const directory = this.getWorkspaceDirectory()
-      const allStatus = await httpClient.getMcpStatus(directory)
-      return allStatus[BrowserAutomationService.MCP_SERVER_NAME] ?? null
+      const { data: allStatus } = await client.mcp.status({ directory }, { throwOnError: true })
+      return (allStatus as any)[BrowserAutomationService.MCP_SERVER_NAME] ?? null
     } catch {
       return null
     }
   }
 
-  private getHttpClient() {
+  private getClient(): KiloClient | null {
     try {
-      return this.connectionService.getHttpClient()
+      return this.connectionService.getClient()
     } catch {
       return null
     }
