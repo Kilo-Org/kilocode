@@ -21,7 +21,7 @@ The Control UI is a browser-based dashboard (built with Vite + Lit) served by th
 - **Debug** — Status, health, model snapshots, event log, and manual RPC calls.
 - **Update** — Run package updates and restart the gateway.
 
-For more details, please see the offical [OpenClaw documentation](https://docs.openclaw.ai/web/control-ui).
+For more details, please see the official [OpenClaw documentation](https://docs.openclaw.ai/web/control-ui).
 
 ## Authentication
 
