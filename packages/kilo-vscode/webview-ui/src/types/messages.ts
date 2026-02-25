@@ -180,6 +180,7 @@ export interface CommandInfo {
   description?: string
   source?: "command" | "mcp" | "skill"
   hints: string[]
+  workflowScope?: "project" | "global"
 }
 
 // Server info
@@ -846,6 +847,16 @@ export interface SendCommandRequest {
   agent?: string
 }
 
+export interface ImportAndSendCommandMessage {
+  type: "importAndSendCommand"
+  cloudSessionId: string
+  command: string
+  arguments: string
+  providerID?: string
+  modelID?: string
+  agent?: string
+}
+
 export interface AbortRequest {
   type: "abort"
   sessionID: string
@@ -929,16 +940,19 @@ export interface OpenFileRequest {
 export interface OpenWorkflowFileRequest {
   type: "openWorkflowFile"
   name: string
+  workflowScope?: "project" | "global"
 }
 
 export interface CreateWorkflowFileRequest {
   type: "createWorkflowFile"
   name: string
+  workflowScope?: "project" | "global"
 }
 
 export interface DeleteWorkflowFileRequest {
   type: "deleteWorkflowFile"
   name: string
+  workflowScope?: "project" | "global"
 }
 
 export interface CancelLoginRequest {
@@ -1243,6 +1257,7 @@ export interface RequestVariantsMessage {
 export type WebviewMessage =
   | SendMessageRequest
   | SendCommandRequest
+  | ImportAndSendCommandMessage
   | AbortRequest
   | PermissionResponseRequest
   | CreateSessionRequest

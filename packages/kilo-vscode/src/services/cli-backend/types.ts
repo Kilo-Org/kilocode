@@ -303,6 +303,7 @@ export interface CommandInfo {
   description?: string
   source?: "command" | "mcp" | "skill"
   hints: string[]
+  workflowScope?: "project" | "global"
 }
 
 /** Skills configuration */

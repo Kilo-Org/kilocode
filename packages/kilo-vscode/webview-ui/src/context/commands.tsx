@@ -30,15 +30,12 @@ export const CommandsProvider: ParentComponent = (props) => {
 
   onCleanup(unsubscribe)
 
-  let retries = 0
-  const maxRetries = 5
   const retryMs = 500
 
   vscode.postMessage({ type: "requestCommands" })
 
   const retryTimer = setInterval(() => {
-    retries++
-    if (!loading() || retries >= maxRetries) {
+    if (!loading()) {
       clearInterval(retryTimer)
       return
     }

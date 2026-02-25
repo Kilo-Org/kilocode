@@ -523,7 +523,7 @@ const AgentBehaviourTab: Component = () => {
   )
 
   const renderWorkflowsSubtab = () => {
-    const items = createMemo(() => commands().filter((cmd) => cmd.source === "command"))
+    const items = createMemo(() => commands().filter((cmd) => cmd.source === "command" && !!cmd.workflowScope))
 
     const createWorkflow = () => {
       const name = newWorkflowName()
@@ -531,7 +531,7 @@ const AgentBehaviourTab: Component = () => {
         .replace(/\.md$/, "")
         .replace(/[^a-zA-Z0-9_-]/g, "-")
       if (!name) return
-      vscode.postMessage({ type: "createWorkflowFile", name })
+      vscode.postMessage({ type: "createWorkflowFile", name, workflowScope: "project" })
       setNewWorkflowName("")
     }
 
@@ -624,13 +624,25 @@ const AgentBehaviourTab: Component = () => {
                       size="small"
                       variant="ghost"
                       icon="edit"
-                      onClick={() => vscode.postMessage({ type: "openWorkflowFile", name: cmd.name })}
+                      onClick={() =>
+                        vscode.postMessage({
+                          type: "openWorkflowFile",
+                          name: cmd.name,
+                          workflowScope: cmd.workflowScope,
+                        })
+                      }
                     />
                     <IconButton
                       size="small"
                       variant="ghost"
                       icon="close"
-                      onClick={() => vscode.postMessage({ type: "deleteWorkflowFile", name: cmd.name })}
+                      onClick={() =>
+                        vscode.postMessage({
+                          type: "deleteWorkflowFile",
+                          name: cmd.name,
+                          workflowScope: cmd.workflowScope,
+                        })
+                      }
                     />
                   </div>
                 </div>

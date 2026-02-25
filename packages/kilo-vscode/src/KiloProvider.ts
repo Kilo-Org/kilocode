@@ -1,5 +1,6 @@
 import * as path from "path"
 import * as fs from "fs"
+import * as os from "os"
 import * as vscode from "vscode"
 import { z } from "zod"
 import {
@@ -372,14 +373,24 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.agent,
           )
           break
+        case "importAndSendCommand":
+          await this.handleImportAndSendCommand(
+            message.cloudSessionId,
+            message.command,
+            message.arguments,
+            message.providerID,
+            message.modelID,
+            message.agent,
+          )
+          break
         case "openWorkflowFile":
-          await this.handleOpenWorkflowFile(message.name)
+          await this.handleOpenWorkflowFile(message.name, message.workflowScope)
           break
         case "createWorkflowFile":
-          await this.handleCreateWorkflowFile(message.name)
+          await this.handleCreateWorkflowFile(message.name, message.workflowScope)
           break
         case "deleteWorkflowFile":
-          await this.handleDeleteWorkflowFile(message.name)
+          await this.handleDeleteWorkflowFile(message.name, message.workflowScope)
           break
         case "requestProviders":
           this.fetchAndSendProviders().catch((e) => console.error("[Kilo New] fetchAndSendProviders failed:", e))
@@ -1016,14 +1027,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     try {
       const workspaceDir = this.getWorkspaceDirectory()
       const commands = await this.httpClient.listCommands(workspaceDir)
+      const enriched = await Promise.all(
+        commands.map(async (cmd) => ({
+          ...cmd,
+          workflowScope: await this.getWorkflowScope(cmd.name, cmd.source),
+        })),
+      )
 
       const message = {
         type: "commandsLoaded",
-        commands: commands.map((cmd) => ({
+        commands: enriched.map((cmd) => ({
           name: cmd.name,
           description: cmd.description,
           source: cmd.source,
           hints: cmd.hints,
+          workflowScope: cmd.workflowScope,
         })),
       }
       this.cachedCommandsMessage = message
@@ -1339,11 +1357,126 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /**
-   * Resolve the project-level workflows directory.
+   * Import a cloud session to local storage, then execute a command on it.
    */
-  private getWorkflowsDir(): string {
+  private async handleImportAndSendCommand(
+    cloudSessionId: string,
+    command: string,
+    args: string,
+    providerID?: string,
+    modelID?: string,
+    agent?: string,
+  ): Promise<void> {
+    if (!this.httpClient) {
+      this.postMessage({
+        type: "cloudSessionImportFailed",
+        cloudSessionId,
+        error: "Not connected to CLI backend",
+      })
+      return
+    }
+
     const workspaceDir = this.getWorkspaceDirectory()
-    return path.join(workspaceDir, ".kilocode", "workflows")
+    const session = await this.httpClient.importCloudSession(cloudSessionId, workspaceDir)
+    if (!session) {
+      this.postMessage({
+        type: "cloudSessionImportFailed",
+        cloudSessionId,
+        error: "Failed to import session from cloud",
+      })
+      return
+    }
+
+    this.currentSession = session
+    this.trackedSessionIds.add(session.id)
+
+    this.postMessage({
+      type: "cloudSessionImported",
+      cloudSessionId,
+      session: this.sessionToWebview(session),
+    })
+
+    try {
+      const model = providerID && modelID ? `${providerID}/${modelID}` : undefined
+      await this.httpClient.executeCommand(session.id, command, args, workspaceDir, { agent, model })
+    } catch (err) {
+      console.error("[Kilo New] Failed to execute command after cloud import:", err)
+      this.postMessage({
+        type: "error",
+        message: err instanceof Error ? err.message : "Failed to execute command after import",
+        sessionID: session.id,
+      })
+    }
+  }
+
+  private getProjectWorkflowsDir(): string {
+    return path.join(this.getWorkspaceDirectory(), ".kilocode", "workflows")
+  }
+
+  private getGlobalWorkflowsDir(): string {
+    const fromExtension = this.extensionContext?.globalStorageUri.fsPath
+    if (fromExtension) {
+      return path.join(fromExtension, "workflows")
+    }
+    return path.join(os.homedir(), ".kilocode", "workflows")
+  }
+
+  private async fileExists(filePath: string): Promise<boolean> {
+    return fs.promises
+      .access(filePath, fs.constants.F_OK)
+      .then(() => true)
+      .catch(() => false)
+  }
+
+  private getGlobalWorkflowCandidates(name: string): string[] {
+    const file = `${name}.md`
+    const globalStorage = this.extensionContext?.globalStorageUri.fsPath
+    const result = [path.join(os.homedir(), ".kilocode", "workflows", file)]
+    if (globalStorage) {
+      result.unshift(path.join(globalStorage, "workflows", file))
+    }
+    return result
+  }
+
+  private async getWorkflowScope(
+    name: string,
+    source?: "command" | "mcp" | "skill",
+  ): Promise<"project" | "global" | undefined> {
+    if (source !== "command") return undefined
+    const validated = this.validateWorkflowName(name)
+    if (!validated) return undefined
+
+    const projectPath = path.join(this.getProjectWorkflowsDir(), `${validated}.md`)
+    if (await this.fileExists(projectPath)) {
+      return "project"
+    }
+
+    const globalCandidates = this.getGlobalWorkflowCandidates(validated)
+    const exists = await Promise.all(globalCandidates.map((candidate) => this.fileExists(candidate)))
+    if (exists.some(Boolean)) {
+      return "global"
+    }
+
+    return undefined
+  }
+
+  private async resolveWorkflowFilePath(
+    name: string,
+    scope?: "project" | "global",
+  ): Promise<{ path: string; scope: "project" | "global" } | null> {
+    const projectPath = path.join(this.getProjectWorkflowsDir(), `${name}.md`)
+    if (!scope || scope === "project") {
+      return { path: projectPath, scope: "project" }
+    }
+
+    const candidates = this.getGlobalWorkflowCandidates(name)
+    const exists = await Promise.all(candidates.map((filePath) => this.fileExists(filePath)))
+    const index = exists.findIndex(Boolean)
+    if (index >= 0) {
+      return { path: candidates[index], scope: "global" }
+    }
+
+    return null
   }
 
   /**
@@ -1360,16 +1493,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /**
    * Open a workflow file in the editor.
    */
-  private async handleOpenWorkflowFile(name: string): Promise<void> {
+  private async handleOpenWorkflowFile(name: string, scope?: "project" | "global"): Promise<void> {
     const validated = this.validateWorkflowName(name)
     if (!validated) {
       this.postMessage({ type: "error", message: "Invalid workflow name" })
       return
     }
 
-    const filePath = path.join(this.getWorkflowsDir(), `${validated}.md`)
+    const workflow = await this.resolveWorkflowFilePath(validated, scope)
+    if (!workflow) {
+      this.postMessage({ type: "error", message: `Workflow \"${validated}\" file not found` })
+      return
+    }
+
     try {
-      const uri = vscode.Uri.file(filePath)
+      const uri = vscode.Uri.file(workflow.path)
       const doc = await vscode.workspace.openTextDocument(uri)
       await vscode.window.showTextDocument(doc)
     } catch (error) {
@@ -1384,14 +1522,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /**
    * Create a new workflow file and open it in the editor.
    */
-  private async handleCreateWorkflowFile(name: string): Promise<void> {
+  private async handleCreateWorkflowFile(name: string, scope?: "project" | "global"): Promise<void> {
     const validated = this.validateWorkflowName(name)
     if (!validated) {
       this.postMessage({ type: "error", message: "Invalid workflow name" })
       return
     }
 
-    const dir = this.getWorkflowsDir()
+    const dir =
+      scope === "global"
+        ? this.getGlobalWorkflowsDir()
+        : this.getProjectWorkflowsDir()
     const filePath = path.join(dir, `${validated}.md`)
 
     try {
@@ -1420,7 +1561,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /**
    * Delete a workflow file and refresh the commands list.
    */
-  private async handleDeleteWorkflowFile(name: string): Promise<void> {
+  private async handleDeleteWorkflowFile(name: string, scope?: "project" | "global"): Promise<void> {
     const validated = this.validateWorkflowName(name)
     if (!validated) {
       this.postMessage({ type: "error", message: "Invalid workflow name" })
@@ -1434,10 +1575,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     )
     if (confirmed !== "Delete") return
 
-    const filePath = path.join(this.getWorkflowsDir(), `${validated}.md`)
+    const workflow = await this.resolveWorkflowFilePath(validated, scope)
+    if (!workflow) {
+      this.postMessage({ type: "error", message: `Workflow \"${validated}\" file not found` })
+      return
+    }
 
     try {
-      await fs.promises.unlink(filePath)
+      await fs.promises.unlink(workflow.path)
       await this.fetchAndSendCommands()
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to delete workflow file:", error)

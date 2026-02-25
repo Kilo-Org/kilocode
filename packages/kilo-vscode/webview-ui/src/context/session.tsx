@@ -837,6 +837,21 @@ export const SessionProvider: ParentComponent = (props) => {
       return
     }
 
+    const preview = cloudPreviewId()
+    if (preview) {
+      const agent = selectedAgentName() !== defaultAgent() ? selectedAgentName() : undefined
+      vscode.postMessage({
+        type: "importAndSendCommand",
+        cloudSessionId: preview,
+        command,
+        arguments: args,
+        providerID,
+        modelID,
+        agent,
+      })
+      return
+    }
+
     const sid = currentSessionID()
     const agent = selectedAgentName() !== defaultAgent() ? selectedAgentName() : undefined
 
