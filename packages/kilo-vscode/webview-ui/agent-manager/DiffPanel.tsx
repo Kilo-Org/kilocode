@@ -65,6 +65,34 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   // so pierre's annotation cache doesn't invalidate and destroy the textarea
   let draftMeta: AnnotationMeta | null = null
 
+  // Ref to the scrollable container — used to preserve scroll position when
+  // annotation changes cause pierre to fully re-render diffs
+  let scroller: HTMLDivElement | undefined
+
+  // Run a callback while preserving the scroll position of the diff container.
+  // Pierre destroys and rebuilds the DOM on annotation changes (via innerHTML = ""),
+  // which resets scrollTop. We capture it before the update and restore it across
+  // two animation frames to account for the async shadow-DOM render of <diffs-container>.
+  const preserveScroll = (fn: () => void) => {
+    const el = scroller
+    if (!el) return fn()
+    const top = el.scrollTop
+    fn()
+    requestAnimationFrame(() => {
+      el.scrollTop = top
+      requestAnimationFrame(() => {
+        el.scrollTop = top
+      })
+    })
+  }
+
+  const cancelDraft = () => {
+    preserveScroll(() => {
+      setDraft(null)
+      draftMeta = null
+    })
+  }
+
   // Auto-open files when diffs arrive
   createEffect(
     on(
@@ -78,20 +106,26 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   // --- CRUD ---
 
   const addComment = (file: string, side: AnnotationSide, line: number, text: string, selectedText: string) => {
-    const id = `c-${++nextId}-${Date.now()}`
-    setComments((prev) => [...prev, { id, file, side, line, comment: text, selectedText }])
-    setDraft(null)
-    draftMeta = null
+    preserveScroll(() => {
+      const id = `c-${++nextId}-${Date.now()}`
+      setComments((prev) => [...prev, { id, file, side, line, comment: text, selectedText }])
+      setDraft(null)
+      draftMeta = null
+    })
   }
 
   const updateComment = (id: string, text: string) => {
-    setComments((prev) => prev.map((c) => (c.id === id ? { ...c, comment: text } : c)))
-    setEditing(null)
+    preserveScroll(() => {
+      setComments((prev) => prev.map((c) => (c.id === id ? { ...c, comment: text } : c)))
+      setEditing(null)
+    })
   }
 
   const deleteComment = (id: string) => {
-    setComments((prev) => prev.filter((c) => c.id !== id))
-    if (editing() === id) setEditing(null)
+    preserveScroll(() => {
+      setComments((prev) => prev.filter((c) => c.id !== id))
+      if (editing() === id) setEditing(null)
+    })
   }
 
   // --- Per-file memoized annotations ---
@@ -192,8 +226,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       }
       cancelBtn.addEventListener("click", (e) => {
         e.stopPropagation()
-        setDraft(null)
-        draftMeta = null
+        cancelDraft()
       })
       submitBtn.addEventListener("click", (e) => {
         e.stopPropagation()
@@ -202,8 +235,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       textarea.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
           e.preventDefault()
-          setDraft(null)
-          draftMeta = null
+          cancelDraft()
         }
         if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault()
@@ -347,7 +379,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     }
     const text = lines.join("\n")
     window.dispatchEvent(new MessageEvent("message", { data: { type: "appendChatBoxMessage", text } }))
-    setComments([])
+    preserveScroll(() => setComments([]))
   }
 
   return (
@@ -371,7 +403,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       </Show>
 
       <Show when={props.diffs.length > 0}>
-        <div class="am-diff-content" data-component="session-review">
+        <div class="am-diff-content" data-component="session-review" ref={scroller}>
           <Accordion multiple value={open()} onChange={setOpen}>
             <For each={props.diffs}>
               {(diff) => {
