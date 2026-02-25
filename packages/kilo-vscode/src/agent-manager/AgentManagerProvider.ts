@@ -1301,7 +1301,10 @@ export class AgentManagerProvider implements vscode.Disposable {
   private async onRequestWorktreeDiff(sessionId: string): Promise<void> {
     // Ensure state is loaded before resolving diff target — avoids race where
     // startDiffWatch arrives before initializeState() finishes loading state from disk.
-    if (this.stateReady) await this.stateReady
+    // Catch so a rejected stateReady doesn't permanently break diff polling.
+    if (this.stateReady) {
+      await this.stateReady.catch((err) => this.log("stateReady rejected, continuing diff resolve:", err))
+    }
 
     const target = this.resolveDiffTarget(sessionId)
     if (!target) return
