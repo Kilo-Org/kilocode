@@ -1,21 +1,23 @@
-# Custom command system
+# Custom Command System
 
-- **What it is**: Built-in + user-defined + project-defined reusable commands (often surfaced as slash commands).
+**Priority:** P2
+**Status:** ❌ Not started
 
-## Capabilities
+## What Exists
 
-- Project overrides global overrides built-in.
-- YAML frontmatter metadata.
-- Symlink-aware command discovery.
+- `CommandConfig` type in `types.ts` with `command` and `description` fields
 
-## Suggested migration
+## Remaining Work
 
-- **Kilo CLI availability**: Already.
-- **Migration recommendation**:
-  - Prefer Kilo CLI's custom command system for definition and execution.
-  - Keep VS Code UI entry points (command palette, menus) in the extension host as an adapter.
-- **Reimplementation required?**: Partial.
+- Slash command input handling in chat (detect `/` prefix, show command list)
+- Project-level command discovery (scan `.kilocode/commands/` or similar)
+- YAML frontmatter metadata support
+- Symlink-aware command discovery
+- VS Code command palette entry points
+- Wire to CLI's custom command system for execution
 
-## Primary implementation anchors
+## Primary Implementation Anchors (kilocode-legacy)
 
-- [`src/services/command/`](../../src/services/command/)
+These exist in the [kilocode-legacy](https://github.com/Kilo-Org/kilocode-legacy) repo, not in this extension:
+
+- `src/services/command/`

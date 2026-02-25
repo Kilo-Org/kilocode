@@ -35,7 +35,7 @@ class PriorityQueue {
     return this._heap.length
   }
   isEmpty() {
-    return this.size() == 0
+    return this.size() === 0
   }
   peek() {
     return this._heap[0]
@@ -395,10 +395,10 @@ class LlamaTokenizer {
     function testCase(inputString, expectedTokenIds) {
       const actualTokens = tokenizer.encode(inputString, true, true, true)
       if (!isEqual(actualTokens, expectedTokenIds)) {
-        throw `Test failed. LLaMA Tokenizer Encoder returned unexpected result: expected tokenize(${inputString}) === ${expectedTokenIds}, actual was: ${actualTokens}`
+        throw new Error(`Test failed. LLaMA Tokenizer Encoder returned unexpected result: expected tokenize(${inputString}) === ${expectedTokenIds}, actual was: ${actualTokens}`)
       }
       if (inputString !== tokenizer.decode(actualTokens)) {
-        throw `Test failed. LLaMA Tokenizer Decoder returned unexpected result: expected decode(${actualTokens}) === ${inputString}, actual was: ${decode(actualTokens)}`
+        throw new Error(`Test failed. LLaMA Tokenizer Decoder returned unexpected result: expected decode(${actualTokens}) === ${inputString}, actual was: ${decode(actualTokens)}`)
       }
     }
 

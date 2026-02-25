@@ -24,5 +24,6 @@ exclude = [
   '^https?://(app|console)\.requesty\.ai',
   '^https?://(cloud|console)\.google\.ai',
   'https://opencode.ai/pages/config',
-  '^localhost:3000/'
+  '^localhost:3000/',
+  'https://tbench.ai/'
 ]

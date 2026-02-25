@@ -447,6 +447,11 @@ export interface CloudSessionImportFailedMessage {
   error: string
 }
 
+export interface OpenCloudSessionMessage {
+  type: "openCloudSession"
+  sessionId: string
+}
+
 export interface ActionMessage {
   type: "action"
   action: string
@@ -783,6 +788,7 @@ export type ExtensionMessage =
   | CloudSessionDataLoadedMessage
   | CloudSessionImportedMessage
   | CloudSessionImportFailedMessage
+  | OpenCloudSessionMessage
   | AgentManagerBranchesMessage
   | AgentManagerExternalWorktreesMessage
   | AgentManagerImportResultMessage
