@@ -1,4 +1,6 @@
 import * as vscode from "vscode"
+import * as fs from "fs"
+import * as path from "path"
 import type { KiloConnectionService, SessionInfo, HttpClient } from "../services/cli-backend"
 import { KiloProvider } from "../KiloProvider"
 import { buildWebviewHtml } from "../utils"
@@ -1284,10 +1286,19 @@ export class AgentManagerProvider implements vscode.Disposable {
     if (!session?.worktreeId) return
     const worktree = state.getWorktree(session.worktreeId)
     if (!worktree) return
-    const root = vscode.Uri.file(worktree.path)
-    const uri = vscode.Uri.joinPath(root, relativePath)
-    // Guard against path traversal (e.g. "../../../etc/passwd")
-    if (!uri.fsPath.startsWith(root.fsPath)) return
+    // Resolve real paths to prevent symlink traversal and normalize for
+    // consistent comparison on both Unix and Windows.
+    let resolved: string
+    try {
+      const root = fs.realpathSync(worktree.path)
+      resolved = fs.realpathSync(path.resolve(worktree.path, relativePath))
+      // Directory-boundary check: append path.sep so "/foo/bar" won't match "/foo/bar2/..."
+      if (resolved !== root && !resolved.startsWith(root + path.sep)) return
+    } catch (err) {
+      console.error("[Kilo New] AgentManagerProvider: Cannot resolve file path:", err)
+      return
+    }
+    const uri = vscode.Uri.file(resolved)
     vscode.workspace.openTextDocument(uri).then(
       (doc) => vscode.window.showTextDocument(doc, { preview: true }),
       (err) => console.error("[Kilo New] AgentManagerProvider: Failed to open file:", uri.fsPath, err),
