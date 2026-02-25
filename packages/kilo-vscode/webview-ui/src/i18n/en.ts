@@ -1075,6 +1075,7 @@ export const dict = {
   "agentManager.dialog.advanced": "Advanced...",
 
   "agentManager.diff.toggle": "Toggle diff",
+  "agentManager.diff.openFile": "Open file",
   "agentManager.shortcuts.toggleDiff": "Toggle diff panel",
 
   "agentManager.import.pullRequest": "Pull Request",

@@ -1015,6 +1015,7 @@ export const dict = {
   "agentManager.dialog.advanced": "詳細...",
 
   "agentManager.diff.toggle": "差分を切り替え",
+  "agentManager.diff.openFile": "ファイルを開く",
   "agentManager.shortcuts.toggleDiff": "差分パネルを切り替え",
 
   "agentManager.import.pullRequest": "Pull Request",

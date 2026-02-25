@@ -1023,6 +1023,7 @@ export const dict = {
   "agentManager.dialog.advanced": "Дополнительно...",
 
   "agentManager.diff.toggle": "Переключить diff",
+  "agentManager.diff.openFile": "Открыть файл",
   "agentManager.shortcuts.toggleDiff": "Переключить панель diff",
 
   "agentManager.import.pullRequest": "Pull Request",

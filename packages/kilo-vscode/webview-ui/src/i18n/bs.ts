@@ -1046,6 +1046,7 @@ export const dict = {
   "agentManager.dialog.advanced": "Napredno...",
 
   "agentManager.diff.toggle": "Prebaci diff",
+  "agentManager.diff.openFile": "Otvori datoteku",
   "agentManager.shortcuts.toggleDiff": "Prebaci panel za diff",
 
   "agentManager.import.pullRequest": "Pull Request",

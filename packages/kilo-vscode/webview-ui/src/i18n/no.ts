@@ -1020,6 +1020,7 @@ export const dict = {
   "agentManager.dialog.advanced": "Avansert...",
 
   "agentManager.diff.toggle": "Veksle diff",
+  "agentManager.diff.openFile": "Åpne fil",
   "agentManager.shortcuts.toggleDiff": "Veksle diff-panel",
 
   "agentManager.import.pullRequest": "Pull Request",

@@ -1010,6 +1010,7 @@ export const dict = {
   "agentManager.dialog.advanced": "متقدم...",
 
   "agentManager.diff.toggle": "تبديل الفرق",
+  "agentManager.diff.openFile": "فتح الملف",
   "agentManager.shortcuts.toggleDiff": "تبديل لوحة الفرق",
 
   "agentManager.import.pullRequest": "Pull Request",
