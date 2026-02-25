@@ -135,9 +135,9 @@ export namespace Telemetry {
 
   // LLM
   export function trackLlmCompletion(properties: {
-    sessionId?: string
-    provider: string
-    model: string
+    taskId?: string
+    apiProvider: string
+    modelId: string
     inputTokens?: number
     outputTokens?: number
     cacheReadTokens?: number

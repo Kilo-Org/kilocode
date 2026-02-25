@@ -14,7 +14,7 @@
  * - OpenCode -> Kilo (product name in user-visible text)
  * - opencode upgrade -> kilo upgrade (CLI commands)
  * - npx opencode -> npx kilo (CLI invocation)
- * - anomalyco/opencode -> Kilo-Org/kilo (GitHub repo)
+ * - anomalyco/opencode -> Kilo-Org/kilocode (GitHub repo)
  *
  * Preserved (not replaced):
  * - opencode.json (actual config filename)
@@ -56,7 +56,7 @@ const I18N_REPLACEMENTS: StringReplacement[] = [
   },
   {
     pattern: /anomalyco\/opencode/g,
-    replacement: "Kilo-Org/kilo",
+    replacement: "Kilo-Org/kilocode",
     description: "GitHub repo reference",
   },
 

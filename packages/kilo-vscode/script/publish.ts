@@ -29,9 +29,9 @@ console.log(`\nFound ${vsixFiles.length} VSIX files`)
 for (const target of targets) {
   const vsixPath = join(outDir, `kilo-vscode-${target}.vsix`)
 
-  console.log(`\n🚀 Publishing ${target} to VS Code Marketplace...`)
-  await $`vsce publish --pre-release --packagePath ${vsixPath}`
-  console.log(`  ✅ Published ${target} to VS Code Marketplace`)
+  // console.log(`\n🚀 Publishing ${target} to VS Code Marketplace...`)
+  // await $`vsce publish --pre-release --packagePath ${vsixPath}`
+  // console.log(`  ✅ Published ${target} to VS Code Marketplace`)
 
   // Note: Open VSX publishing is commented out as it doesn't support prereleases
   // console.log(`\n📤 Publishing ${target} to Open VSX...`)

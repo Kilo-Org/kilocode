@@ -20,6 +20,8 @@ export interface Worktree {
   createdAt: string
   /** Shared identifier for worktrees created together via multi-version mode. */
   groupId?: string
+  /** User-provided display name for the worktree. */
+  label?: string
 }
 
 export interface ManagedSession {
@@ -109,7 +111,13 @@ export class WorktreeStateManager {
   // Mutations
   // ---------------------------------------------------------------------------
 
-  addWorktree(params: { branch: string; path: string; parentBranch: string; groupId?: string }): Worktree {
+  addWorktree(params: {
+    branch: string
+    path: string
+    parentBranch: string
+    groupId?: string
+    label?: string
+  }): Worktree {
     const id = generateId("wt")
     const wt: Worktree = {
       id,
@@ -119,10 +127,21 @@ export class WorktreeStateManager {
       createdAt: new Date().toISOString(),
     }
     if (params.groupId) wt.groupId = params.groupId
+    if (params.label) wt.label = params.label
     this.worktrees.set(id, wt)
-    this.log(`Added worktree ${id}: ${params.branch}${params.groupId ? ` (group=${params.groupId})` : ""}`)
+    this.log(
+      `Added worktree ${id}: ${params.branch}${params.label ? ` (label=${params.label})` : ""}${params.groupId ? ` (group=${params.groupId})` : ""}`,
+    )
     void this.save()
     return wt
+  }
+
+  updateWorktreeLabel(id: string, label: string): void {
+    const wt = this.worktrees.get(id)
+    if (!wt) return
+    wt.label = label || undefined
+    this.log(`Updated worktree ${id} label to "${label}"`)
+    void this.save()
   }
 
   removeWorktree(id: string): ManagedSession[] {
@@ -264,6 +283,9 @@ export class WorktreeStateManager {
     if (this.saving) {
       this.pendingSave = true
       await this.saving
+      // The in-flight save finished but our data may not have been written yet.
+      // If there's a new save already running (the pendingSave follow-up), wait for it.
+      if (this.saving) await this.saving
       return
     }
 
@@ -298,8 +320,17 @@ export class WorktreeStateManager {
       data.sessionsCollapsed = true
     }
 
-    const dir = path.dirname(this.file)
-    if (!fs.existsSync(dir)) await fs.promises.mkdir(dir, { recursive: true })
-    await fs.promises.writeFile(this.file, JSON.stringify(data, null, 2), "utf-8")
+    try {
+      const dir = path.dirname(this.file)
+      if (!fs.existsSync(dir)) await fs.promises.mkdir(dir, { recursive: true })
+      await fs.promises.writeFile(this.file, JSON.stringify(data, null, 2), "utf-8")
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code
+      if (code === "ENOENT") {
+        this.log("State directory was removed, skipping save")
+        return
+      }
+      throw error
+    }
   }
 }

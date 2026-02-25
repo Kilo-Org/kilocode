@@ -7,6 +7,7 @@ on:
 jobs:
   # kilocode_change start
   check-author:
+    if: false # kilocode_change - disabled: not needed in kilocode repo
     uses: ./.github/workflows/check-org-member.yml
     with:
       username: ${{ github.event.pull_request.user.login }}
@@ -16,7 +17,7 @@ jobs:
 
   check-standards:
     needs: check-author
-    if: needs.check-author.outputs['is-member'] == 'false'
+    if: false # kilocode_change - disabled: not needed in kilocode repo
     # kilocode_change end
     runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:

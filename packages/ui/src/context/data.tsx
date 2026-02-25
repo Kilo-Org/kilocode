@@ -7,11 +7,13 @@ import type {
   PermissionRequest,
   QuestionRequest,
   QuestionAnswer,
+  ProviderListResponse,
 } from "@kilocode/sdk/v2"
 import { createSimpleContext } from "./helper"
 import { PreloadMultiFileDiffResult } from "@pierre/diffs/ssr"
 
 type Data = {
+  provider?: ProviderListResponse
   session: Session[]
   session_status: {
     [sessionID: string]: SessionStatus
@@ -50,8 +52,6 @@ export type NavigateToSessionFn = (sessionID: string) => void
 
 export type SessionHrefFn = (sessionID: string) => string
 
-export type SyncSessionFn = (sessionID: string) => void | Promise<void>
-
 export type OpenFileFn = (filePath: string, line?: number, column?: number) => void // kilocode_change
 
 export const { use: useData, provider: DataProvider } = createSimpleContext({
@@ -64,7 +64,6 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
     onQuestionReject?: QuestionRejectFn
     onNavigateToSession?: NavigateToSessionFn
     onSessionHref?: SessionHrefFn
-    onSyncSession?: SyncSessionFn
     onOpenFile?: OpenFileFn // kilocode_change
   }) => {
     return {
@@ -79,7 +78,6 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
       rejectQuestion: props.onQuestionReject,
       navigateToSession: props.onNavigateToSession,
       sessionHref: props.onSessionHref,
-      syncSession: props.onSyncSession,
       openFile: props.onOpenFile, // kilocode_change
     }
   },

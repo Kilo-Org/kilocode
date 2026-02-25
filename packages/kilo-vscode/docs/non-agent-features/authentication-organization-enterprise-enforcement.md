@@ -1,21 +1,16 @@
-# Authentication / organization / enterprise enforcement
+# Authentication / Organization / Enterprise Enforcement
 
-- **What it is**: Cloud auth and organization-aware behavior.
+**Priority:** P1
+**Status:** 🔨 Partial
 
-## Capabilities
+## What Exists
 
-- Device-code style auth.
-- Org feature flags.
-- MDM policy enforcement.
+- Full device auth flow UI with QR code, verification code, countdown, copy/open actions in `DeviceAuthCard.tsx`
+- Profile page with user header, org switching via `setOrganization`, balance display, dashboard link, logout in `ProfileView.tsx`
+- Auth methods: `removeAuth()`, `oauthAuthorize()`, `oauthCallback()`, `getProfile()`, `setOrganization()`
 
-## Suggested migration
+## Remaining Work
 
-- **Kilo CLI availability**: Partial.
-- **Migration recommendation**:
-  - Split responsibilities: Kilo CLI handles its own auth/session for server APIs.
-  - The VS Code extension remains responsible for org/MDM enforcement and for supplying/mediating credentials as needed.
-- **Reimplementation required?**: Partial.
-
-## Primary implementation anchors
-
-Auth is handled via [`DeviceAuthCard.tsx`](../../webview-ui/src/components/DeviceAuthCard.tsx) for the device auth flow and [`ProfileView.tsx`](../../webview-ui/src/components/ProfileView.tsx) for login state display. The CLI backend manages the actual auth tokens. The old `src/services/kilocode/` and `src/services/mdm/` directories don't exist in the new extension.
+- Dropdown to choose between org or personal account, passing the selection via `kilo serve` to the backend when using the Kilo gateway
+- Organization feature flags (restrict features based on org plan/tier)
+- MDM policy enforcement (managed device policies, enterprise admin controls, restriction enforcement)

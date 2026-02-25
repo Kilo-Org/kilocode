@@ -1361,6 +1361,9 @@
                   },
                   "permission": {
                     "$ref": "#/components/schemas/PermissionRuleset"
+                  },
+                  "platform": {
+                    "type": "string"
                   }
                 }
               }
@@ -2429,6 +2432,32 @@
                   "variant": {
                     "type": "string"
                   },
+                  "editorContext": {
+                    "type": "object",
+                    "properties": {
+                      "visibleFiles": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "openTabs": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "activeFile": {
+                        "type": "string"
+                      },
+                      "shell": {
+                        "type": "string"
+                      },
+                      "timezone": {
+                        "type": "string"
+                      }
+                    }
+                  },
                   "parts": {
                     "type": "array",
                     "items": {
@@ -2807,6 +2836,32 @@
                   },
                   "variant": {
                     "type": "string"
+                  },
+                  "editorContext": {
+                    "type": "object",
+                    "properties": {
+                      "visibleFiles": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "openTabs": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "activeFile": {
+                        "type": "string"
+                      },
+                      "shell": {
+                        "type": "string"
+                      },
+                      "timezone": {
+                        "type": "string"
+                      }
+                    }
                   },
                   "parts": {
                     "type": "array",
@@ -4510,6 +4565,232 @@
           {
             "lang": "js",
             "source": "import { createOpencodeClient } from \"@kilocode/sdk\n\nconst client = createOpencodeClient()\nawait client.kilo.notifications({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilo/cloud/session/{id}": {
+      "get": {
+        "operationId": "kilo.cloud.session.get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "summary": "Get cloud session",
+        "description": "Fetch full session data from the Kilo cloud for preview",
+        "responses": {
+          "200": {
+            "description": "Cloud session data",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@kilocode/sdk\n\nconst client = createOpencodeClient()\nawait client.kilo.cloud.session.get({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilo/cloud/session/import": {
+      "post": {
+        "operationId": "kilo.cloud.session.import",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Import session from cloud",
+        "description": "Download a cloud-synced session and write it to local storage with fresh IDs.",
+        "responses": {
+          "200": {
+            "description": "Imported session info",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sessionId": {
+                    "type": "string"
+                  }
+                },
+                "required": ["sessionId"]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@kilocode/sdk\n\nconst client = createOpencodeClient()\nawait client.kilo.cloud.session.import({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilo/cloud-sessions": {
+      "get": {
+        "operationId": "kilo.cloudSessions",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "gitUrl",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Get cloud sessions",
+        "description": "Fetch cloud CLI sessions from Kilo API",
+        "responses": {
+          "200": {
+            "description": "Cloud sessions list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "cliSessions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "session_id": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "created_at": {
+                            "type": "string"
+                          },
+                          "updated_at": {
+                            "type": "string"
+                          },
+                          "version": {
+                            "type": "number"
+                          }
+                        },
+                        "required": ["session_id", "title", "created_at", "updated_at", "version"]
+                      }
+                    },
+                    "nextCursor": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": ["cliSessions", "nextCursor"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@kilocode/sdk\n\nconst client = createOpencodeClient()\nawait client.kilo.cloudSessions({\n  ...\n})"
           }
         ]
       }
@@ -6687,6 +6968,32 @@
           },
           "variant": {
             "type": "string"
+          },
+          "editorContext": {
+            "type": "object",
+            "properties": {
+              "visibleFiles": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "openTabs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "activeFile": {
+                "type": "string"
+              },
+              "shell": {
+                "type": "string"
+              },
+              "timezone": {
+                "type": "string"
+              }
+            }
           }
         },
         "required": ["id", "sessionID", "role", "time", "agent", "model"]
@@ -7804,12 +8111,40 @@
             "properties": {
               "part": {
                 "$ref": "#/components/schemas/Part"
+              }
+            },
+            "required": ["part"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.message.part.delta": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "message.part.delta"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string"
+              },
+              "messageID": {
+                "type": "string"
+              },
+              "partID": {
+                "type": "string"
+              },
+              "field": {
+                "type": "string"
               },
               "delta": {
                 "type": "string"
               }
             },
-            "required": ["part"]
+            "required": ["sessionID", "messageID", "partID", "field", "delta"]
           }
         },
         "required": ["type", "properties"]
@@ -8227,13 +8562,9 @@
           "priority": {
             "description": "Priority level of the task: high, medium, low",
             "type": "string"
-          },
-          "id": {
-            "description": "Unique identifier for the todo item",
-            "type": "string"
           }
         },
-        "required": ["content", "status", "priority", "id"]
+        "required": ["content", "status", "priority"]
       },
       "Event.todo.updated": {
         "type": "object",
@@ -8945,6 +9276,9 @@
           },
           {
             "$ref": "#/components/schemas/Event.message.part.updated"
+          },
+          {
+            "$ref": "#/components/schemas/Event.message.part.delta"
           },
           {
             "$ref": "#/components/schemas/Event.message.part.removed"
