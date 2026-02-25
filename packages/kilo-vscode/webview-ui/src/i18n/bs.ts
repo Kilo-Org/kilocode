@@ -1042,6 +1042,10 @@ export const dict = {
   "agentManager.dialog.createWorkspace": "Kreiraj radni prostor",
   "agentManager.dialog.removeImage": "Ukloni sliku",
   "agentManager.dialog.advanced": "Napredno...",
+
+  "agentManager.diff.toggle": "Prebaci diff",
+  "agentManager.shortcuts.toggleDiff": "Prebaci panel za diff",
+
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Zalijepite PR URL...",
   "agentManager.import.open": "Otvori",

@@ -1072,6 +1072,9 @@ export const dict = {
   "agentManager.dialog.removeImage": "Remove image",
   "agentManager.dialog.advanced": "Advanced...",
 
+  "agentManager.diff.toggle": "Toggle diff",
+  "agentManager.shortcuts.toggleDiff": "Toggle diff panel",
+
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Paste PR URL...",
   "agentManager.import.open": "Open",

@@ -1002,6 +1002,10 @@ export const dict = {
   "agentManager.dialog.createWorkspace": "建立工作區",
   "agentManager.dialog.removeImage": "移除圖片",
   "agentManager.dialog.advanced": "進階...",
+
+  "agentManager.diff.toggle": "切換差異",
+  "agentManager.shortcuts.toggleDiff": "切換差異面板",
+
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "貼上 PR URL...",
   "agentManager.import.open": "開啟",

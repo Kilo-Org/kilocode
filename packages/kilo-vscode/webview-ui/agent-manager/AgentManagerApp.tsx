@@ -208,7 +208,7 @@ function buildShortcutCategories(
       title: t("agentManager.shortcuts.category.terminal"),
       shortcuts: [
         { label: t("agentManager.shortcuts.toggleTerminal"), binding: bindings.showTerminal ?? "" },
-        { label: "Toggle diff panel", binding: bindings.toggleDiff ?? "" },
+        { label: t("agentManager.shortcuts.toggleDiff"), binding: bindings.toggleDiff ?? "" },
         { label: t("agentManager.shortcuts.focusPanel"), binding: bindings.focusPanel ?? "" },
       ],
     },
@@ -1516,12 +1516,16 @@ const AgentManagerContent: Component = () => {
               </TooltipKeybind>
               <div class="am-tab-actions">
                 <Show when={selection() !== LOCAL}>
-                  <TooltipKeybind title="Toggle diff" keybind={kb().toggleDiff ?? ""} placement="bottom">
+                  <TooltipKeybind
+                    title={t("agentManager.diff.toggle")}
+                    keybind={kb().toggleDiff ?? ""}
+                    placement="bottom"
+                  >
                     <IconButton
                       icon="layers"
                       size="small"
                       variant="ghost"
-                      label="Toggle diff"
+                      label={t("agentManager.diff.toggle")}
                       class={diffOpen() ? "am-tab-diff-btn-active" : ""}
                       onClick={() => setDiffOpen((prev) => !prev)}
                     />

@@ -714,10 +714,6 @@ button.am-section-toggle:hover .am-section-label {
   color: var(--text-weak);
 }
 
-.am-diff-review-header {
-  padding-left: 12px;
-}
-
 .am-diff-loading {
   display: flex;
   align-items: center;
@@ -745,7 +741,7 @@ button.am-section-toggle:hover .am-section-label {
 }
 
 /* Override session-review defaults that assume a 40px header slot.
-   session-review.css sets height:100%, contain:strict, scrollbar-width:none
+   The upstream styles set height:100%, contain:strict, scrollbar-width:none
    on [data-component="session-review"] and --sticky-accordion-top:40px on
    its sticky headers. We don't render the 40px title row so reset to 0. */
 .am-diff-content[data-component="session-review"] {
@@ -841,30 +837,11 @@ button.am-section-toggle:hover .am-section-label {
   min-width: 0;
 }
 
-.am-annotation-code {
-  font-family: var(--font-family-mono);
-  font-size: var(--font-size-small);
-  color: var(--text-weak);
-  background: var(--surface-strong);
-  padding: 4px 8px;
-  border-radius: 4px;
-  margin: 0 0 6px 0;
-  overflow-x: auto;
-  white-space: pre;
-  border: 1px solid var(--border-weak-base);
-}
-
 .am-annotation-comment-text {
   font-size: inherit;
   color: var(--text-base);
   line-height: 1.4;
   word-break: break-word;
-}
-
-.am-annotation-comment-meta {
-  font-size: var(--font-size-small);
-  color: var(--text-weaker);
-  margin-top: 2px;
 }
 
 .am-annotation-comment-actions {

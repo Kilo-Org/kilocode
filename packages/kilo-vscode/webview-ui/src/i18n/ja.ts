@@ -1011,6 +1011,10 @@ export const dict = {
   "agentManager.dialog.createWorkspace": "ワークスペースを作成",
   "agentManager.dialog.removeImage": "画像を削除",
   "agentManager.dialog.advanced": "詳細...",
+
+  "agentManager.diff.toggle": "差分を切り替え",
+  "agentManager.shortcuts.toggleDiff": "差分パネルを切り替え",
+
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "PR URLを貼り付け...",
   "agentManager.import.open": "開く",

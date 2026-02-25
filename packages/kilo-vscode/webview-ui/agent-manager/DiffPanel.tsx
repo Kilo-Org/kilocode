@@ -168,7 +168,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       const actions = document.createElement("div")
       actions.className = "am-annotation-actions"
       const cancelBtn = document.createElement("button")
-      cancelBtn.className = "am-annotation-btn am-annotation-btn-cancel"
+      cancelBtn.className = "am-annotation-btn"
       cancelBtn.textContent = "Cancel"
       const submitBtn = document.createElement("button")
       submitBtn.className = "am-annotation-btn am-annotation-btn-submit"
@@ -229,7 +229,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       const actions = document.createElement("div")
       actions.className = "am-annotation-actions"
       const cancelBtn = document.createElement("button")
-      cancelBtn.className = "am-annotation-btn am-annotation-btn-cancel"
+      cancelBtn.className = "am-annotation-btn"
       cancelBtn.textContent = "Cancel"
       const saveBtn = document.createElement("button")
       saveBtn.className = "am-annotation-btn am-annotation-btn-submit"

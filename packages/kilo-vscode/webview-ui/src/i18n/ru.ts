@@ -1019,6 +1019,10 @@ export const dict = {
   "agentManager.dialog.createWorkspace": "Создать рабочее пространство",
   "agentManager.dialog.removeImage": "Удалить изображение",
   "agentManager.dialog.advanced": "Дополнительно...",
+
+  "agentManager.diff.toggle": "Переключить diff",
+  "agentManager.shortcuts.toggleDiff": "Переключить панель diff",
+
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Вставьте URL PR...",
   "agentManager.import.open": "Открыть",

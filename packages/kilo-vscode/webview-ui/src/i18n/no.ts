@@ -1016,6 +1016,10 @@ export const dict = {
   "agentManager.dialog.createWorkspace": "Opprett arbeidsområde",
   "agentManager.dialog.removeImage": "Fjern bilde",
   "agentManager.dialog.advanced": "Avansert...",
+
+  "agentManager.diff.toggle": "Veksle diff",
+  "agentManager.shortcuts.toggleDiff": "Veksle diff-panel",
+
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Lim inn PR URL...",
   "agentManager.import.open": "Åpne",

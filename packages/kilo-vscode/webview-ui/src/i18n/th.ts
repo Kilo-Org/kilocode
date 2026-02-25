@@ -1004,6 +1004,10 @@ export const dict = {
   "agentManager.dialog.createWorkspace": "สร้าง Workspace",
   "agentManager.dialog.removeImage": "ลบรูปภาพ",
   "agentManager.dialog.advanced": "ขั้นสูง...",
+
+  "agentManager.diff.toggle": "สลับ diff",
+  "agentManager.shortcuts.toggleDiff": "สลับแผง diff",
+
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "วาง URL ของ PR...",
   "agentManager.import.open": "เปิด",
