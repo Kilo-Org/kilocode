@@ -16,35 +16,6 @@ Get started with Kilo Code by installing it on your preferred platform. Choose y
 
 {% partial file="install-vscode.md" /%}
 
-{% /tab %}
-{% tab label="JetBrains" %}
-
-## JetBrains IDEs
-
-{% partial file="install-jetbrains.md" /%}
-
-{% /tab %}
-{% tab label="CLI" %}
-
-## Command Line Interface
-
-{% partial file="install-cli.md" /%}
-
-{% /tab %}
-{% tab label="Slack" %}
-
-## Slack Integration
-
-{% partial file="install-slack.md" /%}
-
-{% /tab %}
-{% tab label="Other IDEs" %}
-
-{% partial file="install-other-ides.md" /%}
-
-{% /tab %}
-{% /tabs %}
-
 ## Pre-Release Extension
 
 {% callout type="info" %}
@@ -140,6 +111,35 @@ If you prefer to download and install the VSIX file directly:
   2. Under **System variables**, select **Path** → **Edit** → **New**
   3. Add: `C:\Windows\System32\WindowsPowerShell\v1.0\`
   4. Click **OK** and restart VS Code
+
+{% /tab %}
+{% tab label="JetBrains" %}
+
+## JetBrains IDEs
+
+{% partial file="install-jetbrains.md" /%}
+
+{% /tab %}
+{% tab label="CLI" %}
+
+## Command Line Interface
+
+{% partial file="install-cli.md" /%}
+
+{% /tab %}
+{% tab label="Slack" %}
+
+## Slack Integration
+
+{% partial file="install-slack.md" /%}
+
+{% /tab %}
+{% tab label="Other IDEs" %}
+
+{% partial file="install-other-ides.md" /%}
+
+{% /tab %}
+{% /tabs %}
 
 ## Next Steps
 
