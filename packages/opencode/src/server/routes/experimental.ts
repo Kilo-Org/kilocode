@@ -13,6 +13,7 @@ import { $ } from "bun" // kilocode_change
 import path from "path" // kilocode_change
 import { Snapshot } from "../../snapshot" // kilocode_change
 import { Review } from "../../kilocode/review/review" // kilocode_change
+import { Log } from "../../util/log" // kilocode_change
 
 export const ExperimentalRoutes = lazy(() =>
   new Hono()
@@ -208,12 +209,23 @@ export const ExperimentalRoutes = lazy(() =>
         },
       }),
       async (c) => {
+        const log = Log.create({ service: "worktree-diff" })
         const base = c.req.query("base") || (await Review.getBaseBranch())
         const dir = Instance.directory
+        log.info("computing diff", { dir, base })
 
         const mergeBaseResult = await $`git merge-base HEAD ${base}`.cwd(dir).quiet().nothrow()
-        if (mergeBaseResult.exitCode !== 0) return c.json([])
+        if (mergeBaseResult.exitCode !== 0) {
+          log.warn("git merge-base failed", {
+            exitCode: mergeBaseResult.exitCode,
+            stderr: mergeBaseResult.stderr.toString().trim(),
+            dir,
+            base,
+          })
+          return c.json([])
+        }
         const ancestor = mergeBaseResult.stdout.toString().trim()
+        log.info("merge-base resolved", { ancestor: ancestor.slice(0, 12) })
 
         const nameStatus = await $`git -c core.quotepath=false diff --name-status --no-renames ${ancestor}`
           .cwd(dir)
@@ -285,7 +297,11 @@ export const ExperimentalRoutes = lazy(() =>
         // viewer shows all working-tree changes, not just tracked ones.
         const untrackedResult = await $`git ls-files --others --exclude-standard`.cwd(dir).quiet().nothrow()
         if (untrackedResult.exitCode === 0) {
-          for (const file of untrackedResult.stdout.toString().trim().split("\n")) {
+          const untrackedFiles = untrackedResult.stdout.toString().trim()
+          if (untrackedFiles) {
+            log.info("untracked files found", { count: untrackedFiles.split("\n").length })
+          }
+          for (const file of untrackedFiles.split("\n")) {
             if (!file || seen.has(file)) continue
             const f = Bun.file(path.join(dir, file))
             if (!(await f.exists())) continue
@@ -300,8 +316,14 @@ export const ExperimentalRoutes = lazy(() =>
               status: "added",
             })
           }
+        } else {
+          log.warn("git ls-files failed", {
+            exitCode: untrackedResult.exitCode,
+            stderr: untrackedResult.stderr.toString().trim(),
+          })
         }
 
+        log.info("diff complete", { totalFiles: diffs.length })
         return c.json(diffs)
       },
     )
