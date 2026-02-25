@@ -15,7 +15,7 @@ import { ServerProvider, useServer } from "./context/server"
 import { ProviderProvider, useProvider } from "./context/provider"
 import { ConfigProvider } from "./context/config"
 import { SessionProvider, useSession } from "./context/session"
-import { LanguageProvider } from "./context/language"
+import { LanguageProvider, useLanguage } from "./context/language"
 import { ChatView } from "./components/chat"
 import { KiloNotifications } from "./components/chat/KiloNotifications"
 import SessionList from "./components/history/SessionList"
@@ -128,6 +128,7 @@ const AppContent: Component = () => {
   const [currentView, setCurrentView] = createSignal<ViewType>("newTask")
   const session = useSession()
   const server = useServer()
+  const language = useLanguage()
 
   const handleViewAction = (action: string) => {
     switch (action) {
@@ -189,7 +190,7 @@ const AppContent: Component = () => {
           <ChatView onSelectSession={handleSelectSession} />
         </Match>
         <Match when={currentView() === "marketplace"}>
-          <DummyView title="Marketplace" />
+          <DummyView title={language.t("nav.marketplace")} />
         </Match>
         <Match when={currentView() === "history"}>
           <SessionList onSelectSession={handleSelectSession} />

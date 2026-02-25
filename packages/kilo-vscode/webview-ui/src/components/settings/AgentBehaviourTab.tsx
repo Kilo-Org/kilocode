@@ -205,7 +205,7 @@ const AgentBehaviourTab: Component = () => {
           >
             <TextField
               value={currentAgentConfig().model ?? ""}
-              placeholder="e.g. anthropic/claude-sonnet-4-20250514"
+              placeholder={language.t("settings.agentBehaviour.modelOverride.placeholder")}
               onChange={(val) =>
                 updateAgentConfig(selectedAgent(), {
                   model: val.trim() || undefined,
@@ -221,7 +221,7 @@ const AgentBehaviourTab: Component = () => {
           >
             <TextField
               value={currentAgentConfig().prompt ?? ""}
-              placeholder="Custom instructions…"
+              placeholder={language.t("settings.agentBehaviour.prompt.placeholder")}
               multiline
               onChange={(val) =>
                 updateAgentConfig(selectedAgent(), {
@@ -321,11 +321,11 @@ const AgentBehaviourTab: Component = () => {
                   >
                     <Show when={mcp.command}>
                       <div>
-                        command: {mcp.command} {(mcp.args ?? []).join(" ")}
+                        {language.t("settings.agentBehaviour.mcpCommandLabel")}: {mcp.command} {(mcp.args ?? []).join(" ")}
                       </div>
                     </Show>
                     <Show when={mcp.url}>
-                      <div>url: {mcp.url}</div>
+                      <div>{language.t("settings.agentBehaviour.mcpUrlLabel")}: {mcp.url}</div>
                     </Show>
                   </div>
                 </div>
@@ -354,7 +354,7 @@ const AgentBehaviourTab: Component = () => {
           <div style={{ flex: 1 }}>
             <TextField
               value={newSkillPath()}
-              placeholder="e.g. ./skills"
+              placeholder={language.t("settings.agentBehaviour.skillPaths.placeholder")}
               onChange={(val) => setNewSkillPath(val)}
               onKeyDown={(e: KeyboardEvent) => {
                 if (e.key === "Enter") addSkillPath()
@@ -405,7 +405,7 @@ const AgentBehaviourTab: Component = () => {
           <div style={{ flex: 1 }}>
             <TextField
               value={newSkillUrl()}
-              placeholder="e.g. https://example.com/skills"
+              placeholder={language.t("settings.agentBehaviour.skillUrls.placeholder")}
               onChange={(val) => setNewSkillUrl(val)}
               onKeyDown={(e: KeyboardEvent) => {
                 if (e.key === "Enter") addSkillUrl()
@@ -477,7 +477,7 @@ const AgentBehaviourTab: Component = () => {
           <div style={{ flex: 1 }}>
             <TextField
               value={newInstruction()}
-              placeholder="e.g. ./INSTRUCTIONS.md"
+              placeholder={language.t("settings.agentBehaviour.instructionFiles.placeholder")}
               onChange={(val) => setNewInstruction(val)}
               onKeyDown={(e: KeyboardEvent) => {
                 if (e.key === "Enter") addInstruction()
