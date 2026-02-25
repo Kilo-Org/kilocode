@@ -1381,7 +1381,13 @@ export class AgentManagerProvider implements vscode.Disposable {
     const root = this.getWorkspaceRoot()
     if (!state || !root) return
 
-    const orphaned = await state.validate(root)
+    let orphaned
+    try {
+      orphaned = await state.validate(root)
+    } catch (error) {
+      this.log("Worktree validation failed:", error)
+      return
+    }
     if (orphaned.length === 0) return
 
     for (const s of orphaned) {
