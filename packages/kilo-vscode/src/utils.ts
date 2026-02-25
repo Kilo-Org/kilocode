@@ -44,7 +44,7 @@ export function buildWebviewHtml(
       overflow: hidden;
     }
     body {
-      background-color: var(--vscode-editor-background);
+      background-color: var(--vscode-sideBar-background, var(--vscode-editor-background));
       color: var(--vscode-foreground);
       font-family: var(--vscode-font-family);
     }
