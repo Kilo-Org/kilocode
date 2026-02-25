@@ -1,4 +1,4 @@
-import { createOpencodeClient } from "@kilocode/sdk/v2/client"
+import { createKiloClient } from "@kilocode/sdk/v2/client"
 import { base64Encode } from "@opencode-ai/util/encode"
 
 export const serverHost = process.env.PLAYWRIGHT_SERVER_HOST ?? "127.0.0.1"
@@ -11,7 +11,7 @@ export const modKey = process.platform === "darwin" ? "Meta" : "Control"
 export const terminalToggleKey = "Control+Backquote"
 
 export function createSdk(directory?: string) {
-  return createOpencodeClient({ baseUrl: serverUrl, directory, throwOnError: true })
+  return createKiloClient({ baseUrl: serverUrl, directory, throwOnError: true })
 }
 
 export async function getWorktree() {

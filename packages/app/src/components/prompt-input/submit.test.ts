@@ -45,7 +45,7 @@ beforeAll(async () => {
   // kilocode_change start
   mock.module("@kilocode/sdk/v2/client", () => ({
     // kilocode_change end
-    createOpencodeClient: (input: { directory: string }) => {
+    createKiloClient: (input: { directory: string }) => {
       createdClients.push(input.directory)
       return clientFor(input.directory)
     },
