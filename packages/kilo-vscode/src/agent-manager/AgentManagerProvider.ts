@@ -1284,7 +1284,10 @@ export class AgentManagerProvider implements vscode.Disposable {
     if (!session?.worktreeId) return
     const worktree = state.getWorktree(session.worktreeId)
     if (!worktree) return
-    const uri = vscode.Uri.joinPath(vscode.Uri.file(worktree.path), relativePath)
+    const root = vscode.Uri.file(worktree.path)
+    const uri = vscode.Uri.joinPath(root, relativePath)
+    // Guard against path traversal (e.g. "../../../etc/passwd")
+    if (!uri.fsPath.startsWith(root.fsPath)) return
     vscode.workspace.openTextDocument(uri).then(
       (doc) => vscode.window.showTextDocument(doc, { preview: true }),
       (err) => console.error("[Kilo New] AgentManagerProvider: Failed to open file:", uri.fsPath, err),
