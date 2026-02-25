@@ -411,7 +411,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                             <Show when={!isAdded() && !isDeleted()}>
                               <DiffChanges changes={diff} />
                             </Show>
-                            <Show when={props.onOpenFile}>
+                            <Show when={props.onOpenFile && !isDeleted()}>
                               <IconButton
                                 icon="open-file"
                                 size="small"
