@@ -259,18 +259,18 @@ export class WorktreeStateManager {
     }
   }
 
-  /** Remove worktrees whose directories no longer exist on disk. */
-  async validate(root: string): Promise<void> {
-    let changed = false
+  /** Remove worktrees whose directories no longer exist on disk. Returns orphaned sessions. */
+  async validate(root: string): Promise<ManagedSession[]> {
+    const orphaned: ManagedSession[] = []
     for (const wt of [...this.worktrees.values()]) {
       const resolved = path.isAbsolute(wt.path) ? wt.path : path.join(root, wt.path)
       if (!fs.existsSync(resolved)) {
         this.log(`Worktree ${wt.id} directory missing (${resolved}), removing`)
-        this.removeWorktree(wt.id)
-        changed = true
+        orphaned.push(...this.removeWorktree(wt.id))
       }
     }
-    if (changed) await this.save()
+    if (orphaned.length > 0) await this.save()
+    return orphaned
   }
 
   /** Wait for any in-flight save to complete without triggering a new one. */
