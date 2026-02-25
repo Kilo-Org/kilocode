@@ -53,6 +53,57 @@ const model: Provider.Model = {
   release_date: "2026-01-01",
 }
 
+const geminiModel: Provider.Model = {
+  id: "gemini-3.1-pro-preview",
+  providerID: "google",
+  api: {
+    id: "gemini-3.1-pro-preview",
+    url: "https://generativelanguage.googleapis.com",
+    npm: "@ai-sdk/google",
+  },
+  name: "Gemini 3.1 Pro Preview",
+  capabilities: {
+    temperature: true,
+    reasoning: false,
+    attachment: false,
+    toolcall: true,
+    input: {
+      text: true,
+      audio: false,
+      image: false,
+      video: false,
+      pdf: false,
+    },
+    output: {
+      text: true,
+      audio: false,
+      image: false,
+      video: false,
+      pdf: false,
+    },
+    interleaved: false,
+  },
+  cost: {
+    input: 0,
+    output: 0,
+    cache: {
+      read: 0,
+      write: 0,
+    },
+  },
+  limit: {
+    context: 0,
+    input: 0,
+    output: 0,
+  },
+  status: "active",
+  options: {},
+  headers: {},
+  release_date: "2026-01-01",
+}
+
+const geminiThoughtSignature = { google: { thoughtSignature: "opaque-test-sig==" } }
+
 function userInfo(id: string): MessageV2.User {
   return {
     id,
@@ -780,6 +831,114 @@ describe("session.message-v2.toModelMessage", () => {
             toolName: "read",
             output: { type: "error-text", value: "[Tool execution was interrupted]" },
           },
+        ],
+      },
+    ])
+  })
+
+  test("preserves Gemini thoughtSignature metadata for same-model tool call", () => {
+    const userID = "m-user"
+    const assistantID = "m-assistant"
+
+    const input: MessageV2.WithParts[] = [
+      {
+        info: userInfo(userID),
+        parts: [
+          {
+            ...basePart(userID, "u1"),
+            type: "text",
+            text: "run tool",
+          },
+        ] as MessageV2.Part[],
+      },
+      {
+        info: assistantInfo(assistantID, userID, undefined, { providerID: "google", modelID: "gemini-3.1-pro-preview" }),
+        parts: [
+          {
+            ...basePart(assistantID, "a1"),
+            type: "tool",
+            callID: "call-1",
+            tool: "bash",
+            state: {
+              status: "completed",
+              input: { cmd: "ls" },
+              output: "ok",
+              title: "Bash",
+              metadata: {},
+              time: { start: 0, end: 1 },
+            },
+            metadata: geminiThoughtSignature,
+          },
+        ] as MessageV2.Part[],
+      },
+    ]
+
+    expect(MessageV2.toModelMessages(input, geminiModel)).toStrictEqual([
+      {
+        role: "user",
+        content: [{ type: "text", text: "run tool" }],
+      },
+      {
+        role: "assistant",
+        content: [
+          {
+            type: "tool-call",
+            toolCallId: "call-1",
+            toolName: "bash",
+            input: { cmd: "ls" },
+            providerExecuted: undefined,
+            providerOptions: { google: { thoughtSignature: "opaque-test-sig==" } },
+          },
+        ],
+      },
+      {
+        role: "tool",
+        content: [
+          {
+            type: "tool-result",
+            toolCallId: "call-1",
+            toolName: "bash",
+            output: { type: "text", value: "ok" },
+            providerOptions: { google: { thoughtSignature: "opaque-test-sig==" } },
+          },
+        ],
+      },
+    ])
+  })
+
+  test("preserves Gemini thoughtSignature metadata for same-model reasoning part", () => {
+    const assistantID = "m-assistant"
+
+    const input: MessageV2.WithParts[] = [
+      {
+        info: assistantInfo(assistantID, "m-parent", undefined, { providerID: "google", modelID: "gemini-3.1-pro-preview" }),
+        parts: [
+          {
+            ...basePart(assistantID, "a1"),
+            type: "reasoning",
+            text: "thinking about it",
+            metadata: geminiThoughtSignature,
+            time: { start: 0, end: 1 },
+          },
+          {
+            ...basePart(assistantID, "a2"),
+            type: "text",
+            text: "done thinking",
+          },
+        ] as MessageV2.Part[],
+      },
+    ]
+
+    expect(MessageV2.toModelMessages(input, geminiModel)).toStrictEqual([
+      {
+        role: "assistant",
+        content: [
+          {
+            type: "reasoning",
+            text: "thinking about it",
+            providerOptions: { google: { thoughtSignature: "opaque-test-sig==" } },
+          },
+          { type: "text", text: "done thinking" },
         ],
       },
     ])
