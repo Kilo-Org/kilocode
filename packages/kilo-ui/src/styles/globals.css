@@ -57,6 +57,12 @@
 /* ===== VS Code extension: inherit native styling ===== */
 
 html[data-theme="kilo-vscode"] {
+  code {
+    background-color: transparent;
+    padding: 0;
+    border-radius: 0;
+  }
+
   --font-family-sans: var(--vscode-font-family);
   --font-family-mono: var(--vscode-editor-font-family, Menlo, Monaco, "Courier New", monospace);
   font-family: var(--vscode-font-family);

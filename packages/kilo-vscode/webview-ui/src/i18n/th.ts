@@ -1006,10 +1006,16 @@ export const dict = {
   "agentManager.dialog.branchBadge.remote": "ระยะไกล",
   "agentManager.dialog.versions": "เวอร์ชัน",
   "agentManager.dialog.versionHint": "{{count}} Worktrees จะทำงานพร้อมกัน",
+  "agentManager.dialog.compareModels": "เปรียบเทียบโมเดล",
+  "agentManager.dialog.compareModels.searchModels": "ค้นหาโมเดล...",
   "agentManager.dialog.creating": "กำลังสร้าง...",
   "agentManager.dialog.createWorkspace": "สร้าง Workspace",
   "agentManager.dialog.removeImage": "ลบรูปภาพ",
   "agentManager.dialog.advanced": "ขั้นสูง...",
+
+  "agentManager.diff.toggle": "สลับ diff",
+  "agentManager.shortcuts.toggleDiff": "สลับแผง diff",
+
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "วาง URL ของ PR...",
   "agentManager.import.open": "เปิด",
@@ -1021,4 +1027,7 @@ export const dict = {
   "agentManager.import.noBranchesFound": "ไม่พบ Branch",
   "agentManager.import.noBranchesHint": "วาง URL ของ PR ด้านบนหรือสร้าง Worktree ใหม่",
   "agentManager.import.failed": "นำเข้าล้มเหลว",
+
+  "question.summary": "{{n}} จาก {{total}} คำถาม",
+  "common.review": "ตรวจสอบ",
 }

@@ -17,6 +17,8 @@ const CSS_FILE = path.join(ROOT, "webview-ui/agent-manager/agent-manager.css")
 const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/DiffPanel.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/MultiModelSelector.tsx"),
 ]
 const TSX_FILE = TSX_FILES[0]
 const PROVIDER_FILE = path.join(ROOT, "src/agent-manager/AgentManagerProvider.ts")
@@ -41,8 +43,9 @@ describe("Agent Manager CSS Prefix", () => {
     const matches = [...css.matchAll(/--([a-z][a-z0-9-]*)\s*:/gi)]
     const names = [...new Set(matches.map((m) => m[1]))]
 
-    // Allow kilo-ui design tokens and vscode theme variables used as fallbacks
-    const allowed = ["am-", "vscode-", "surface-", "text-", "border-"]
+    // Allow kilo-ui design tokens, vscode theme variables, and third-party
+    // library tokens (@pierre/diffs, kilo-ui sticky-accordion) used as fallbacks
+    const allowed = ["am-", "vscode-", "surface-", "text-", "border-", "diffs-", "sticky-", "syntax-"]
     const invalid = names.filter((n) => !allowed.some((p) => n!.startsWith(p)))
 
     expect(invalid, `CSS properties missing allowed prefix: ${invalid.join(", ")}`).toEqual([])

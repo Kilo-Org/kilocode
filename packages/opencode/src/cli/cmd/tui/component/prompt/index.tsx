@@ -149,26 +149,24 @@ export function Prompt(props: PromptProps) {
     ),
   )
 
-  // Initialize agent/model/variant from last user message when session changes
-  let syncedSessionID: string | undefined
+  // kilocode_change start - sync local agent/model whenever newest user message changes
+  let syncedKey: string | undefined
   createEffect(() => {
     const sessionID = props.sessionID
     const msg = lastUserMessage()
+    if (!sessionID || !msg) return
 
-    if (sessionID !== syncedSessionID) {
-      if (!sessionID || !msg) return
+    const key = [sessionID, msg.id].join(":")
+    if (key === syncedKey) return
+    syncedKey = key
 
-      syncedSessionID = sessionID
-
-      // Only set agent if it's a primary agent (not a subagent)
-      const isPrimaryAgent = local.agent.list().some((x) => x.name === msg.agent)
-      if (msg.agent && isPrimaryAgent) {
-        local.agent.set(msg.agent)
-        if (msg.model) local.model.set(msg.model)
-        if (msg.variant) local.model.variant.set(msg.variant)
-      }
-    }
+    const isPrimaryAgent = local.agent.list().some((x) => x.name === msg.agent)
+    if (!msg.agent || !isPrimaryAgent) return
+    local.agent.set(msg.agent)
+    if (msg.model) local.model.set(msg.model)
+    if (msg.variant) local.model.variant.set(msg.variant)
   })
+  // kilocode_change end
 
   command.register(() => {
     return [

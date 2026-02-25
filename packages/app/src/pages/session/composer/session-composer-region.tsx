@@ -16,6 +16,7 @@ export function SessionComposerRegion(props: {
   newSessionWorktree: string
   onNewSessionWorktreeReset: () => void
   onSubmit: () => void
+  onResponseSubmit: () => void
   setPromptDockRef: (el: HTMLDivElement) => void
   onModeAction?: (input: { mode: string; text: string; description?: string }) => void // kilocode_change
 }) {
@@ -59,7 +60,11 @@ export function SessionComposerRegion(props: {
           {(request) => (
             <div>
               {/* kilocode_change: add onModeAction */}
-              <SessionQuestionDock request={request} onModeAction={props.onModeAction} />
+              <SessionQuestionDock
+                request={request}
+                onSubmit={props.onResponseSubmit}
+                onModeAction={props.onModeAction}
+              />
             </div>
           )}
         </Show>
@@ -70,7 +75,10 @@ export function SessionComposerRegion(props: {
               <SessionPermissionDock
                 request={request}
                 responding={props.state.permissionResponding()}
-                onDecide={props.state.decide}
+                onDecide={(response) => {
+                  props.onResponseSubmit()
+                  props.state.decide(response)
+                }}
               />
             </div>
           )}

@@ -10,6 +10,7 @@ import { SetupScriptRunner } from "./SetupScriptRunner"
 import { SessionTerminalManager } from "./SessionTerminalManager"
 import { formatKeybinding } from "./format-keybinding"
 import { TelemetryProxy, TelemetryEventName } from "../services/telemetry"
+import { MAX_MULTI_VERSIONS } from "./constants"
 
 /**
  * AgentManagerProvider opens the Agent Manager panel.
@@ -33,6 +34,9 @@ export class AgentManagerProvider implements vscode.Disposable {
   private terminalManager: SessionTerminalManager
   private stateReady: Promise<void> | undefined
   private importing = false
+  private diffInterval: ReturnType<typeof setInterval> | undefined
+  private diffSessionId: string | undefined
+  private lastDiffHash: string | undefined
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -235,6 +239,19 @@ export class AgentManagerProvider implements vscode.Disposable {
     }
     if (type === "agentManager.importAllExternalWorktrees") {
       void this.onImportAllExternalWorktrees()
+      return null
+    }
+
+    if (type === "agentManager.requestWorktreeDiff" && typeof msg.sessionId === "string") {
+      void this.onRequestWorktreeDiff(msg.sessionId)
+      return null
+    }
+    if (type === "agentManager.startDiffWatch" && typeof msg.sessionId === "string") {
+      this.startDiffPolling(msg.sessionId)
+      return null
+    }
+    if (type === "agentManager.stopDiffWatch") {
+      this.stopDiffPolling()
       return null
     }
 
@@ -568,20 +585,41 @@ export class AgentManagerProvider implements vscode.Disposable {
   private async onCreateMultiVersion(msg: Record<string, unknown>): Promise<null> {
     const text = (msg.text as string | undefined)?.trim() || undefined
 
-    const versions = Math.min(Math.max(Number(msg.versions) || 1, 1), 4)
     const worktreeName = (msg.name as string | undefined)?.trim() || undefined
-    const providerID = msg.providerID as string | undefined
-    const modelID = msg.modelID as string | undefined
     const agent = msg.agent as string | undefined
     const files = msg.files as Array<{ mime: string; url: string }> | undefined
     const baseBranch = msg.baseBranch as string | undefined
     const branchName = (msg.branchName as string | undefined)?.trim() || undefined
 
+    // Expand model allocations into per-version model assignments
+    const rawAllocations = msg.modelAllocations as
+      | Array<{ providerID: string; modelID: string; count: number }>
+      | undefined
+    const perVersionModels: Array<{ providerID: string; modelID: string } | undefined> = []
+    if (rawAllocations && rawAllocations.length > 0) {
+      for (const alloc of rawAllocations) {
+        const clamped = Math.min(Math.max(Math.floor(alloc.count) || 0, 0), MAX_MULTI_VERSIONS)
+        for (let c = 0; c < clamped; c++) {
+          perVersionModels.push({ providerID: alloc.providerID, modelID: alloc.modelID })
+        }
+        if (perVersionModels.length >= MAX_MULTI_VERSIONS) break
+      }
+    }
+
+    const versions =
+      perVersionModels.length > 0
+        ? Math.min(perVersionModels.length, MAX_MULTI_VERSIONS)
+        : Math.min(Math.max(Number(msg.versions) || 1, 1), MAX_MULTI_VERSIONS)
+
+    // Fall back to single model when not in compare mode
+    const providerID = perVersionModels.length > 0 ? undefined : (msg.providerID as string | undefined)
+    const modelID = perVersionModels.length > 0 ? undefined : (msg.modelID as string | undefined)
+
     // Generate a shared group ID for multi-version worktrees
     const groupId = versions > 1 ? `grp-${Date.now()}` : undefined
 
     this.log(
-      `Creating ${versions} worktrees${text ? ` for: ${text.slice(0, 60)}` : ""}${groupId ? ` (group=${groupId})` : ""}`,
+      `Creating ${versions} worktrees${perVersionModels.length > 0 ? " (model comparison)" : ""}${text ? ` for: ${text.slice(0, 60)}` : ""}${groupId ? ` (group=${groupId})` : ""}`,
     )
 
     // Notify webview that multi-version creation has started
@@ -600,6 +638,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       path: string
       branch: string
       parentBranch: string
+      versionIndex: number
     }> = []
 
     for (let i = 0; i < versions; i++) {
@@ -635,12 +674,28 @@ export class AgentManagerProvider implements vscode.Disposable {
       this.registerWorktreeSession(session.id, wt.result.path)
       this.notifyWorktreeReady(session.id, wt.result)
 
+      // Set the per-version model immediately so the UI selector reflects
+      // the correct model as soon as the worktree appears, before Phase 2.
+      // Uses a dedicated message type to avoid clearing the busy state.
+      const versionModel = perVersionModels[i]
+      const earlyProviderID = versionModel?.providerID ?? providerID
+      const earlyModelID = versionModel?.modelID ?? modelID
+      if (earlyProviderID && earlyModelID) {
+        this.postToWebview({
+          type: "agentManager.setSessionModel",
+          sessionId: session.id,
+          providerID: earlyProviderID,
+          modelID: earlyModelID,
+        })
+      }
+
       created.push({
         worktreeId: wt.worktree.id,
         sessionId: session.id,
         path: wt.result.path,
         branch: wt.result.branch,
         parentBranch: wt.result.parentBranch,
+        versionIndex: i,
       })
 
       TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_SESSION_STARTED, {
@@ -665,18 +720,26 @@ export class AgentManagerProvider implements vscode.Disposable {
       })
     }
 
-    // Phase 2: Send the initial prompt to all sessions, or clear busy state if no text
+    // Phase 2: Send the initial prompt to all sessions, or clear busy state if no text.
+    // Always include per-version model so the UI selector reflects the correct model.
     for (let i = 0; i < created.length; i++) {
       const entry = created[i]!
+      // Use the original version index to match the correct model from perVersionModels,
+      // since `created` may have gaps if earlier worktree creations failed.
+      const versionModel = perVersionModels[entry.versionIndex]
+      const versionProviderID = versionModel?.providerID ?? providerID
+      const versionModelID = versionModel?.modelID ?? modelID
       if (text) {
-        this.log(`Sending initial message to version ${i + 1} (session=${entry.sessionId})`)
+        this.log(
+          `Sending initial message to version ${i + 1} (session=${entry.sessionId}${versionModel ? `, model=${versionProviderID}/${versionModelID}` : ""})`,
+        )
         this.postToWebview({
           type: "agentManager.sendInitialMessage",
           sessionId: entry.sessionId,
           worktreeId: entry.worktreeId,
           text,
-          providerID,
-          modelID,
+          providerID: versionProviderID,
+          modelID: versionModelID,
           agent,
           files,
         })
@@ -684,11 +747,13 @@ export class AgentManagerProvider implements vscode.Disposable {
           await new Promise((resolve) => setTimeout(resolve, 300))
         }
       } else {
-        // No prompt — just clear the busy state for this worktree
+        // No prompt — still include model info so the UI selector is correct
         this.postToWebview({
           type: "agentManager.sendInitialMessage",
           sessionId: entry.sessionId,
           worktreeId: entry.worktreeId,
+          providerID: versionProviderID,
+          modelID: versionModelID,
         })
       }
     }
@@ -1055,6 +1120,12 @@ export class AgentManagerProvider implements vscode.Disposable {
       }
     }
 
+    // Ensure toggleDiff binding is always present (may be missing from
+    // cached packageJSON if the extension hasn't been fully reloaded)
+    if (!bindings.toggleDiff) {
+      bindings.toggleDiff = formatKeybinding(mac ? "cmd+d" : "ctrl+d", mac)
+    }
+
     this.postToWebview({ type: "agentManager.keybindings", bindings })
   }
 
@@ -1196,6 +1267,86 @@ export class AgentManagerProvider implements vscode.Disposable {
   // Helpers
   // ---------------------------------------------------------------------------
 
+  // ---------------------------------------------------------------------------
+  // Diff polling
+  // ---------------------------------------------------------------------------
+
+  /** Resolve worktree path + parentBranch for a session, or undefined if not applicable. */
+  private resolveDiffTarget(sessionId: string): { directory: string; baseBranch: string } | undefined {
+    const state = this.getStateManager()
+    if (!state) return undefined
+    const session = state.getSession(sessionId)
+    if (!session?.worktreeId) return undefined
+    const worktree = state.getWorktree(session.worktreeId)
+    if (!worktree) return undefined
+    return { directory: worktree.path, baseBranch: worktree.parentBranch }
+  }
+
+  /** One-shot diff fetch with loading indicators. Used by requestWorktreeDiff. */
+  private async onRequestWorktreeDiff(sessionId: string): Promise<void> {
+    const target = this.resolveDiffTarget(sessionId)
+    if (!target) return
+
+    this.postToWebview({ type: "agentManager.worktreeDiffLoading", sessionId, loading: true })
+    try {
+      const client = this.connectionService.getHttpClient()
+      const diffs = await client.getWorktreeDiff(target.directory, target.baseBranch)
+
+      const hash = diffs.map((d) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`).join("|")
+      this.lastDiffHash = hash
+      this.diffSessionId = sessionId
+
+      this.postToWebview({ type: "agentManager.worktreeDiff", sessionId, diffs })
+    } catch (err) {
+      this.log("Failed to fetch worktree diff:", err)
+    } finally {
+      this.postToWebview({ type: "agentManager.worktreeDiffLoading", sessionId, loading: false })
+    }
+  }
+
+  /** Polling diff fetch — no loading state, only pushes when hash changes. */
+  private async pollDiff(sessionId: string): Promise<void> {
+    const target = this.resolveDiffTarget(sessionId)
+    if (!target) return
+
+    try {
+      const client = this.connectionService.getHttpClient()
+      const diffs = await client.getWorktreeDiff(target.directory, target.baseBranch)
+
+      const hash = diffs.map((d) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`).join("|")
+      if (hash === this.lastDiffHash && this.diffSessionId === sessionId) return
+      this.lastDiffHash = hash
+      this.diffSessionId = sessionId
+
+      this.postToWebview({ type: "agentManager.worktreeDiff", sessionId, diffs })
+    } catch (err) {
+      this.log("Failed to poll worktree diff:", err)
+    }
+  }
+
+  private startDiffPolling(sessionId: string): void {
+    this.stopDiffPolling()
+    this.diffSessionId = sessionId
+    this.lastDiffHash = undefined
+
+    // Initial fetch with loading state
+    void this.onRequestWorktreeDiff(sessionId)
+
+    // Subsequent polls without loading state
+    this.diffInterval = setInterval(() => {
+      void this.pollDiff(sessionId)
+    }, 2500)
+  }
+
+  private stopDiffPolling(): void {
+    if (this.diffInterval) {
+      clearInterval(this.diffInterval)
+      this.diffInterval = undefined
+    }
+    this.diffSessionId = undefined
+    this.lastDiffHash = undefined
+  }
+
   private postToWebview(message: Record<string, unknown>): void {
     if (this.panel?.webview) void this.panel.webview.postMessage(message)
   }
@@ -1236,6 +1387,7 @@ export class AgentManagerProvider implements vscode.Disposable {
   }
 
   public dispose(): void {
+    this.stopDiffPolling()
     this.terminalManager.dispose()
     this.provider?.dispose()
     this.panel?.dispose()

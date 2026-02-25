@@ -21,6 +21,9 @@ import type {
   AgentManagerSendInitialMessage,
   AgentManagerBranchesMessage,
   AgentManagerImportResultMessage,
+  AgentManagerWorktreeDiffMessage,
+  AgentManagerWorktreeDiffLoadingMessage,
+  WorktreeFileDiff,
   WorktreeState,
   ManagedSessionState,
   SessionInfo,
@@ -56,6 +59,13 @@ import { WorktreeModeProvider } from "../src/context/worktree-mode"
 import { ChatView } from "../src/components/chat"
 import { ModelSelectorBase } from "../src/components/chat/ModelSelector"
 import { ModeSwitcherBase } from "../src/components/chat/ModeSwitcher"
+import {
+  MultiModelSelector,
+  type ModelAllocations,
+  MAX_MULTI_VERSIONS,
+  totalAllocations,
+  allocationsToArray,
+} from "./MultiModelSelector"
 import { LanguageBridge, DataBridge } from "../src/App"
 import { useLanguage } from "../src/context/language"
 import { formatRelativeDate } from "../src/utils/date"
@@ -63,6 +73,7 @@ import { useImageAttachments } from "../src/hooks/useImageAttachments"
 import { validateLocalSession, nextSelectionAfterDelete, adjacentHint, LOCAL } from "./navigate"
 import { reorderTabs, applyTabOrder, firstOrderedTitle } from "./tab-order"
 import { ConstrainDragYAxis, SortableTab } from "./sortable-tab"
+import { DiffPanel } from "./DiffPanel"
 import "./agent-manager.css"
 
 interface SetupState {
@@ -205,6 +216,7 @@ function buildShortcutCategories(
       title: t("agentManager.shortcuts.category.terminal"),
       shortcuts: [
         { label: t("agentManager.shortcuts.toggleTerminal"), binding: bindings.showTerminal ?? "" },
+        { label: t("agentManager.shortcuts.toggleDiff"), binding: bindings.toggleDiff ?? "" },
         { label: t("agentManager.shortcuts.focusPanel"), binding: bindings.focusPanel ?? "" },
       ],
     },
@@ -268,6 +280,12 @@ const AgentManagerContent: Component = () => {
   const [localSessionIDs, setLocalSessionIDs] = createSignal<string[]>(persisted?.localSessionIDs ?? [])
   const [sidebarWidth, setSidebarWidth] = createSignal(persisted?.sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH)
   const [sessionsCollapsed, setSessionsCollapsed] = createSignal(false)
+
+  // Diff panel state
+  const [diffOpen, setDiffOpen] = createSignal(false)
+  const [diffDatas, setDiffDatas] = createSignal<Record<string, WorktreeFileDiff[]>>({})
+  const [diffLoading, setDiffLoading] = createSignal(false)
+  const [diffWidth, setDiffWidth] = createSignal(Math.round(window.innerWidth * 0.5))
 
   // Pending local tab counter for generating unique IDs
   let pendingCounter = 0
@@ -556,6 +574,8 @@ const AgentManagerContent: Component = () => {
       else if (msg.action === "showTerminal") {
         const id = session.currentSessionID()
         if (id) vscode.postMessage({ type: "agentManager.showTerminal", sessionId: id })
+      } else if (msg.action === "toggleDiff") {
+        setDiffOpen((prev) => !prev)
       } else if (msg.action === "newTab") handleNewTabForCurrentSelection()
       else if (msg.action === "closeTab") closeActiveTab()
       else if (msg.action === "newWorktree") handleNewWorktreeOrPromote()
@@ -571,8 +591,8 @@ const AgentManagerContent: Component = () => {
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
         e.preventDefault()
       }
-      // Prevent browser defaults for our shortcuts (new tab, close tab, new window)
-      if (["t", "w", "n"].includes(e.key.toLowerCase()) && !e.shiftKey) {
+      // Prevent browser defaults for our shortcuts (new tab, close tab, new window, toggle diff)
+      if (["t", "w", "n", "d"].includes(e.key.toLowerCase()) && !e.shiftKey) {
         e.preventDefault()
       }
       // Prevent defaults for shift variants (close worktree, advanced new worktree)
@@ -725,6 +745,14 @@ const AgentManagerContent: Component = () => {
         }
       }
 
+      // Set per-session model selection without clearing busy state.
+      // Used during Phase 1 of multi-version creation so the UI selector
+      // reflects the correct model as soon as the worktree appears.
+      if ((msg as { type: string }).type === "agentManager.setSessionModel") {
+        const ev = msg as { type: string; sessionId: string; providerID: string; modelID: string }
+        session.setSessionModel(ev.sessionId, ev.providerID, ev.modelID)
+      }
+
       // Handle initial message send for multi-version sessions.
       // The extension creates the worktrees/sessions, then asks the webview
       // to send the prompt through the normal KiloProvider sendMessage path.
@@ -762,6 +790,16 @@ const AgentManagerContent: Component = () => {
           })
         }
       }
+
+      if (msg.type === "agentManager.worktreeDiff") {
+        const ev = msg as AgentManagerWorktreeDiffMessage
+        setDiffDatas((prev) => ({ ...prev, [ev.sessionId]: ev.diffs }))
+      }
+
+      if (msg.type === "agentManager.worktreeDiffLoading") {
+        const ev = msg as AgentManagerWorktreeDiffLoadingMessage
+        setDiffLoading(ev.loading)
+      }
     })
 
     onCleanup(() => {
@@ -783,6 +821,28 @@ const AgentManagerContent: Component = () => {
     // Open a pending "New Session" tab if there are no persisted local sessions
     if (localSessionIDs().length === 0) {
       addPendingTab()
+    }
+  })
+
+  // Start/stop diff watch when panel opens/closes or session changes
+  createEffect(() => {
+    const open = diffOpen()
+    const id = session.currentSessionID()
+    if (open && id) {
+      const ms = managedSessions().find((s) => s.id === id)
+      if (ms?.worktreeId) {
+        vscode.postMessage({ type: "agentManager.startDiffWatch", sessionId: id })
+      } else {
+        vscode.postMessage({ type: "agentManager.stopDiffWatch" })
+      }
+    } else {
+      vscode.postMessage({ type: "agentManager.stopDiffWatch" })
+    }
+  })
+
+  onCleanup(() => {
+    if (diffOpen()) {
+      vscode.postMessage({ type: "agentManager.stopDiffWatch" })
     }
   })
 
@@ -1061,7 +1121,7 @@ const AgentManagerContent: Component = () => {
             <span class="am-section-label">{t("agentManager.section.worktrees")}</span>
             <Show when={isGitRepo()}>
               <div class="am-section-actions">
-                <DropdownMenu>
+                <DropdownMenu gutter={4} placement="bottom-end">
                   <DropdownMenu.Trigger
                     as={IconButton}
                     icon="settings-gear"
@@ -1070,7 +1130,7 @@ const AgentManagerContent: Component = () => {
                     label={t("agentManager.worktree.settings")}
                   />
                   <DropdownMenu.Portal>
-                    <DropdownMenu.Content>
+                    <DropdownMenu.Content class="am-split-menu">
                       <DropdownMenu.Item onSelect={handleShowKeyboardShortcuts}>
                         <DropdownMenu.ItemLabel>{t("agentManager.shortcuts.title")}</DropdownMenu.ItemLabel>
                       </DropdownMenu.Item>
@@ -1472,7 +1532,23 @@ const AgentManagerContent: Component = () => {
                   onClick={handleAddSession}
                 />
               </TooltipKeybind>
-              <div class="am-tab-terminal">
+              <div class="am-tab-actions">
+                <Show when={selection() !== LOCAL}>
+                  <TooltipKeybind
+                    title={t("agentManager.diff.toggle")}
+                    keybind={kb().toggleDiff ?? ""}
+                    placement="bottom"
+                  >
+                    <IconButton
+                      icon="layers"
+                      size="small"
+                      variant="ghost"
+                      label={t("agentManager.diff.toggle")}
+                      class={diffOpen() ? "am-tab-diff-btn-active" : ""}
+                      onClick={() => setDiffOpen((prev) => !prev)}
+                    />
+                  </TooltipKeybind>
+                </Show>
                 <TooltipKeybind
                   title={t("agentManager.tab.terminal")}
                   keybind={kb().showTerminal ?? ""}
@@ -1560,28 +1636,47 @@ const AgentManagerContent: Component = () => {
           )
         })()}
         <Show when={!contextEmpty()}>
-          <div class="am-chat-wrapper">
-            <ChatView
-              onSelectSession={(id) => {
-                // If on local and selecting a different session, keep local context
-                session.selectSession(id)
-              }}
-              readonly={readOnly()}
-            />
-            <Show when={readOnly()}>
-              <div class="am-readonly-banner">
-                <Icon name="branch" size="small" />
-                <span class="am-readonly-text">{t("agentManager.session.readonly")}</span>
-                <Button
-                  variant="primary"
-                  size="small"
-                  onClick={() => {
-                    const sid = session.currentSessionID()
-                    if (sid) vscode.postMessage({ type: "agentManager.promoteSession", sessionId: sid })
-                  }}
-                >
-                  {t("agentManager.session.openInWorktree")}
-                </Button>
+          <div class={`am-detail-content ${diffOpen() ? "am-detail-split" : ""}`}>
+            <div class="am-chat-wrapper">
+              <ChatView
+                onSelectSession={(id) => {
+                  // If on local and selecting a different session, keep local context
+                  session.selectSession(id)
+                }}
+                readonly={readOnly()}
+              />
+              <Show when={readOnly()}>
+                <div class="am-readonly-banner">
+                  <Icon name="branch" size="small" />
+                  <span class="am-readonly-text">{t("agentManager.session.readonly")}</span>
+                  <Button
+                    variant="primary"
+                    size="small"
+                    onClick={() => {
+                      const sid = session.currentSessionID()
+                      if (sid) vscode.postMessage({ type: "agentManager.promoteSession", sessionId: sid })
+                    }}
+                  >
+                    {t("agentManager.session.openInWorktree")}
+                  </Button>
+                </div>
+              </Show>
+            </div>
+            <Show when={diffOpen()}>
+              <ResizeHandle
+                direction="horizontal"
+                edge="end"
+                size={diffWidth()}
+                min={200}
+                max={Math.round(window.innerWidth * 0.8)}
+                onResize={(w) => setDiffWidth(Math.max(200, Math.min(w, window.innerWidth * 0.8)))}
+              />
+              <div class="am-diff-panel-wrapper" style={{ width: `${diffWidth()}px`, "flex-shrink": "0" }}>
+                <DiffPanel
+                  diffs={diffDatas()[session.currentSessionID() ?? ""] ?? []}
+                  loading={diffLoading()}
+                  onClose={() => setDiffOpen(false)}
+                />
               </div>
             </Show>
           </div>
@@ -1640,6 +1735,8 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
   const [prompt, setPrompt] = createSignal("")
   const [versions, setVersions] = createSignal<VersionCount>(1)
   const [model, setModel] = createSignal<{ providerID: string; modelID: string } | null>(null)
+  const [compareMode, setCompareMode] = createSignal(false)
+  const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(new Map())
   const [agent, setAgent] = createSignal(session.selectedAgent())
   const [starting, setStarting] = createSignal(false)
   const [showAdvanced, setShowAdvanced] = createSignal(false)
@@ -1670,21 +1767,28 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
     return branches().filter((b) => b.name.toLowerCase().includes(search))
   })
 
-  const canSubmit = () => !starting()
+  const canSubmit = () => {
+    if (starting()) return false
+    if (compareMode() && totalAllocations(modelAllocations()) === 0) return false
+    return true
+  }
 
   const handleSubmit = () => {
-    if (starting()) return
+    if (!canSubmit()) return
     setStarting(true)
 
     const text = prompt().trim() || undefined
-    const count = versions()
-    const sel = model()
     const defaultAgent = session.agents()[0]?.name
     const selectedAgent = agent() !== defaultAgent ? agent() : undefined
     const advanced = showAdvanced()
     const customBranch = advanced ? branchName().trim() || undefined : undefined
     const imgs = imageAttach.images()
     const imgFiles = imgs.length > 0 ? imgs.map((img) => ({ mime: img.mime, url: img.dataUrl })) : undefined
+
+    const isCompare = compareMode()
+    const allocations = isCompare ? allocationsToArray(modelAllocations()) : undefined
+    const count = isCompare ? totalAllocations(modelAllocations()) : versions()
+    const sel = isCompare ? null : model()
 
     vscode.postMessage({
       type: "agentManager.createMultiVersion",
@@ -1696,6 +1800,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
       agent: selectedAgent,
       baseBranch: advanced ? (baseBranch() ?? undefined) : undefined,
       branchName: customBranch,
+      modelAllocations: allocations,
       files: imgFiles,
     })
 
@@ -1838,13 +1943,15 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
             </div>
             <div class="prompt-input-hint">
               <div class="prompt-input-hint-selectors">
-                <ModelSelectorBase
-                  value={model()}
-                  onSelect={(pid, mid) => setModel(pid && mid ? { providerID: pid, modelID: mid } : null)}
-                  placement="top-start"
-                  allowClear
-                  clearLabel="Default"
-                />
+                <Show when={!compareMode()}>
+                  <ModelSelectorBase
+                    value={model()}
+                    onSelect={(pid, mid) => setModel(pid && mid ? { providerID: pid, modelID: mid } : null)}
+                    placement="top-start"
+                    allowClear
+                    clearLabel="Default"
+                  />
+                </Show>
                 <Show when={session.agents().length > 1}>
                   <ModeSwitcherBase agents={session.agents()} value={agent()} onSelect={setAgent} />
                 </Show>
@@ -1985,25 +2092,63 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
             </div>
           </Show>
 
-          {/* Version selector + info */}
-          <div class="am-nv-version-bar">
-            <span class="am-nv-config-label">{t("agentManager.dialog.versions")}</span>
-            <div class="am-nv-pills">
-              {VERSION_OPTIONS.map((count) => (
+          {/* Version / compare mode selector */}
+          <Show
+            when={compareMode()}
+            fallback={
+              <div class="am-nv-version-bar">
+                <span class="am-nv-config-label">{t("agentManager.dialog.versions")}</span>
+                <div class="am-nv-pills">
+                  {VERSION_OPTIONS.map((count) => (
+                    <button
+                      class="am-nv-pill"
+                      classList={{ "am-nv-pill-active": versions() === count }}
+                      onClick={() => setVersions(count)}
+                      type="button"
+                    >
+                      {count}
+                    </button>
+                  ))}
+                  <button
+                    class="am-nv-pill am-nv-pill-compare"
+                    onClick={() => setCompareMode(true)}
+                    type="button"
+                    title={t("agentManager.dialog.compareModels")}
+                  >
+                    <Icon name="layers" size="small" />
+                  </button>
+                </div>
+                <Show when={versions() > 1}>
+                  <span class="am-nv-version-hint">{t("agentManager.dialog.versionHint", { count: versions() })}</span>
+                </Show>
+              </div>
+            }
+          >
+            <div class="am-nv-compare-section">
+              <div class="am-nv-version-bar">
+                <span class="am-nv-config-label">
+                  {t("agentManager.dialog.compareModels")}
+                  <Show when={totalAllocations(modelAllocations()) > 0}>
+                    <span class="am-nv-compare-count">
+                      {totalAllocations(modelAllocations())}/{MAX_MULTI_VERSIONS}
+                    </span>
+                  </Show>
+                </span>
                 <button
-                  class="am-nv-pill"
-                  classList={{ "am-nv-pill-active": versions() === count }}
-                  onClick={() => setVersions(count)}
+                  class="am-nv-pill-back"
+                  onClick={() => {
+                    setCompareMode(false)
+                    setModelAllocations(new Map())
+                  }}
                   type="button"
+                  title={t("agentManager.dialog.versions")}
                 >
-                  {count}
+                  <Icon name="close-small" size="small" />
                 </button>
-              ))}
+              </div>
+              <MultiModelSelector allocations={modelAllocations()} onChange={setModelAllocations} />
             </div>
-            <Show when={versions() > 1}>
-              <span class="am-nv-version-hint">{t("agentManager.dialog.versionHint", { count: versions() })}</span>
-            </Show>
-          </div>
+          </Show>
 
           {/* Submit button */}
           <Button variant="primary" size="large" class="am-nv-submit" onClick={handleSubmit} disabled={!canSubmit()}>

@@ -9,6 +9,10 @@ import { MCP } from "../../mcp"
 import { zodToJsonSchema } from "zod-to-json-schema"
 import { errors } from "../error"
 import { lazy } from "../../util/lazy"
+import { $ } from "bun" // kilocode_change
+import path from "path" // kilocode_change
+import { Snapshot } from "../../snapshot" // kilocode_change
+import { Review } from "../../kilocode/review/review" // kilocode_change
 
 export const ExperimentalRoutes = lazy(() =>
   new Hono()
@@ -184,6 +188,124 @@ export const ExperimentalRoutes = lazy(() =>
         return c.json(true)
       },
     )
+    // kilocode_change start - worktree diff endpoint for agent manager
+    .get(
+      "/worktree/diff",
+      describeRoute({
+        summary: "Get worktree diff",
+        description: "Get file diffs for a worktree compared to its base branch. Includes uncommitted changes.",
+        operationId: "worktree.diff",
+        responses: {
+          200: {
+            description: "File diffs",
+            content: {
+              "application/json": {
+                schema: resolver(z.array(Snapshot.FileDiff)),
+              },
+            },
+          },
+          ...errors(400),
+        },
+      }),
+      async (c) => {
+        const base = c.req.query("base") || (await Review.getBaseBranch())
+        const dir = Instance.directory
+
+        const mergeBaseResult = await $`git merge-base HEAD ${base}`.cwd(dir).quiet().nothrow()
+        if (mergeBaseResult.exitCode !== 0) return c.json([])
+        const ancestor = mergeBaseResult.stdout.toString().trim()
+
+        const nameStatus = await $`git -c core.quotepath=false diff --name-status --no-renames ${ancestor}`
+          .cwd(dir)
+          .quiet()
+          .nothrow()
+        if (nameStatus.exitCode !== 0) return c.json([])
+
+        const numstat = await $`git -c core.quotepath=false diff --numstat --no-renames ${ancestor}`
+          .cwd(dir)
+          .quiet()
+          .nothrow()
+        const stats = new Map<string, { additions: number; deletions: number }>()
+        if (numstat.exitCode === 0) {
+          for (const line of numstat.stdout.toString().trim().split("\n")) {
+            if (!line) continue
+            const parts = line.split("\t")
+            const add = parts[0]
+            const del = parts[1]
+            const file = parts.slice(2).join("\t")
+            if (file)
+              stats.set(file, {
+                additions: add === "-" ? 0 : parseInt(add!, 10),
+                deletions: del === "-" ? 0 : parseInt(del!, 10),
+              })
+          }
+        }
+
+        const diffs: Snapshot.FileDiff[] = []
+        const seen = new Set<string>()
+        for (const line of nameStatus.stdout.toString().trim().split("\n")) {
+          if (!line) continue
+          const parts = line.split("\t")
+          const statusChar = parts[0]
+          const file = parts.slice(1).join("\t")
+          if (!file || !statusChar) continue
+
+          seen.add(file)
+          const status =
+            statusChar === "A" ? ("added" as const) : statusChar === "D" ? ("deleted" as const) : ("modified" as const)
+
+          const before =
+            status === "added"
+              ? ""
+              : await (async () => {
+                  const result = await $`git show ${ancestor}:${file}`.cwd(dir).quiet().nothrow()
+                  return result.exitCode === 0 ? result.stdout.toString() : ""
+                })()
+
+          const after =
+            status === "deleted"
+              ? ""
+              : await (async () => {
+                  const f = Bun.file(path.join(dir, file))
+                  return (await f.exists()) ? await f.text() : ""
+                })()
+
+          const stat = stats.get(file) ?? { additions: 0, deletions: 0 }
+          diffs.push({
+            file,
+            before,
+            after,
+            additions: stat.additions,
+            deletions: stat.deletions,
+            status,
+          })
+        }
+
+        // Include untracked files (new files never staged) so the diff
+        // viewer shows all working-tree changes, not just tracked ones.
+        const untrackedResult = await $`git ls-files --others --exclude-standard`.cwd(dir).quiet().nothrow()
+        if (untrackedResult.exitCode === 0) {
+          for (const file of untrackedResult.stdout.toString().trim().split("\n")) {
+            if (!file || seen.has(file)) continue
+            const f = Bun.file(path.join(dir, file))
+            if (!(await f.exists())) continue
+            const content = await f.text()
+            const lines = content.endsWith("\n") ? content.split("\n").length - 1 : content.split("\n").length
+            diffs.push({
+              file,
+              before: "",
+              after: content,
+              additions: lines,
+              deletions: 0,
+              status: "added",
+            })
+          }
+        }
+
+        return c.json(diffs)
+      },
+    )
+    // kilocode_change end
     .get(
       "/resource",
       describeRoute({

@@ -555,9 +555,11 @@ button.am-section-toggle:hover .am-section-label {
   align-self: center;
 }
 
-.am-tab-terminal {
+.am-tab-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
   flex-shrink: 0;
-  align-self: center;
   margin-left: auto;
   padding-right: 4px;
 }
@@ -613,6 +615,298 @@ button.am-section-toggle:hover .am-section-label {
 
 .am-readonly-text {
   font-size: var(--font-size-base);
+  color: var(--text-weak);
+}
+
+/* Diff Panel */
+
+.am-tab-diff-btn-active {
+  background: var(--surface-interactive-base) !important;
+  color: var(--text-base) !important;
+}
+
+.am-detail-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.am-detail-split {
+  flex-direction: row;
+}
+
+.am-detail-split .am-chat-wrapper {
+  flex: 1;
+  min-width: 0;
+  border-right: 1px solid var(--border-weak-base);
+}
+
+.am-diff-panel-wrapper {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.am-diff-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  /* Pierre diffs needs --diffs-light-bg/--diffs-dark-bg for the color-mix()
+     calculations that produce red/green line backgrounds. Without a Shiki
+     worker pool these are never set by the theme layer, so we provide
+     fallbacks mapped to VS Code's editor background. */
+  --diffs-light-bg: var(--vscode-editor-background, #1e1e1e);
+  --diffs-dark-bg: var(--vscode-editor-background, #1e1e1e);
+  /* The unsafeCSS in @opencode-ai/ui uses 98%/92% mix ratios for line
+     backgrounds — only 2-8% tint, nearly invisible. Override via the
+     *-override custom properties that the unsafeCSS checks first.
+     These inherit across the Shadow DOM boundary. */
+  --diffs-bg-addition-override: color-mix(
+    in lab,
+    var(--vscode-editor-background, #1e1e1e) 82%,
+    var(--syntax-diff-add, #318430)
+  );
+  --diffs-bg-addition-number-override: color-mix(
+    in lab,
+    var(--vscode-editor-background, #1e1e1e) 72%,
+    var(--syntax-diff-add, #318430)
+  );
+  --diffs-bg-addition-emphasis-override: color-mix(
+    in lab,
+    var(--vscode-editor-background, #1e1e1e) 60%,
+    var(--syntax-diff-add, #318430)
+  );
+  --diffs-bg-deletion-override: color-mix(
+    in lab,
+    var(--vscode-editor-background, #1e1e1e) 82%,
+    var(--syntax-diff-delete, #da3319)
+  );
+  --diffs-bg-deletion-number-override: color-mix(
+    in lab,
+    var(--vscode-editor-background, #1e1e1e) 72%,
+    var(--syntax-diff-delete, #da3319)
+  );
+  --diffs-bg-deletion-emphasis-override: color-mix(
+    in lab,
+    var(--vscode-editor-background, #1e1e1e) 60%,
+    var(--syntax-diff-delete, #da3319)
+  );
+}
+
+.am-diff-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 4px 4px 12px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-weak-base);
+  position: relative;
+  z-index: 20;
+  background: var(--surface-base);
+}
+
+.am-diff-header-title {
+  font-size: var(--font-size-small);
+  font-weight: 500;
+  color: var(--text-weak);
+}
+
+.am-diff-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 40px 16px;
+  color: var(--text-weak);
+  font-size: var(--font-size-base);
+}
+
+.am-diff-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+  color: var(--text-weaker);
+  font-size: var(--font-size-base);
+}
+
+.am-diff-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  cursor: pointer;
+}
+
+/* Override session-review defaults that assume a 40px header slot.
+   The upstream styles set height:100%, contain:strict, scrollbar-width:none
+   on [data-component="session-review"] and --sticky-accordion-top:40px on
+   its sticky headers. We don't render the 40px title row so reset to 0. */
+.am-diff-content[data-component="session-review"] {
+  height: auto;
+  contain: none;
+  scrollbar-width: auto;
+}
+
+.am-diff-content[data-component="session-review"] [data-component="sticky-accordion-header"] {
+  --sticky-accordion-top: 0px;
+}
+
+/* Inline annotations (pierre renderAnnotation) */
+
+.am-annotation {
+  padding: 6px 10px;
+  border: 1px solid var(--border-weak-base);
+  border-left: 3px solid var(--surface-interactive-strong);
+  border-radius: 0 6px 6px 0;
+  margin: 4px 8px;
+  background: var(--surface-base);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--vscode-editor-font-size, 13px);
+}
+
+.am-annotation-draft {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.am-annotation-header {
+  font-size: inherit;
+  color: var(--text-weak);
+  font-weight: 500;
+}
+
+.am-annotation-textarea {
+  width: 100%;
+  padding: 4px 6px;
+  font-size: inherit;
+  font-family: var(--vscode-editor-font-family, monospace);
+  color: var(--text-base);
+  background: var(--surface-strong);
+  border: 1px solid var(--border-base);
+  border-radius: 4px;
+  resize: vertical;
+  outline: none;
+  min-height: 48px;
+  box-sizing: border-box;
+}
+
+.am-annotation-textarea:focus {
+  border-color: var(--border-strong-base);
+}
+
+.am-annotation-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.am-annotation-btn {
+  padding: 2px 10px;
+  font-size: inherit;
+  font-family: inherit;
+  border-radius: 4px;
+  border: 1px solid var(--border-base);
+  cursor: pointer;
+  background: var(--surface-base);
+  color: var(--text-base);
+}
+
+.am-annotation-btn:hover {
+  background: var(--surface-interactive-base);
+}
+
+.am-annotation-btn-submit {
+  background: var(--surface-interactive-strong, var(--vscode-button-background, #0078d4));
+  color: var(--text-on-fill, var(--vscode-button-foreground, #fff));
+  border-color: transparent;
+  font-weight: 500;
+}
+
+.am-annotation-btn-submit:hover {
+  background: var(--surface-interactive-strong-hover, var(--vscode-button-hoverBackground, #0066b8));
+}
+
+.am-annotation-comment {
+  flex: 1;
+  min-width: 0;
+}
+
+.am-annotation-comment-text {
+  font-size: inherit;
+  color: var(--text-base);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.am-annotation-comment-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.am-annotation-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: none;
+  color: var(--text-weak);
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 0;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+.am-annotation-icon-btn svg {
+  display: block;
+}
+
+.am-annotation-icon-btn:hover {
+  background: var(--surface-interactive-base);
+  color: var(--text-base);
+}
+
+/* File comment count badge */
+
+.am-diff-file-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 9px;
+  background: var(--surface-interactive-strong);
+  color: var(--text-on-fill);
+  margin-left: 6px;
+  flex-shrink: 0;
+}
+
+/* Comments footer bar */
+
+.am-diff-comments-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border-weak-base);
+  flex-shrink: 0;
+}
+
+.am-diff-comments-count {
+  font-size: var(--font-size-small);
   color: var(--text-weak);
 }
 
@@ -795,12 +1089,14 @@ button.am-section-toggle:hover .am-section-label {
   min-width: 460px;
 }
 
-/* Allow dropdowns to escape the dialog bounds */
+/* Allow dropdowns to escape the dialog bounds, but scroll when content is tall */
 [data-component="dialog"]:has(.am-nv-dialog) [data-slot="dialog-content"] {
   overflow: visible;
+  max-height: 85vh;
 }
 [data-component="dialog"]:has(.am-nv-dialog) [data-slot="dialog-body"] {
-  overflow: visible;
+  overflow-x: visible;
+  overflow-y: auto;
 }
 
 .am-nv-name-input {
@@ -910,6 +1206,162 @@ button.am-section-toggle:hover .am-section-label {
 .am-nv-version-hint {
   font-size: 12px;
   color: var(--text-weaker);
+}
+
+/* Compare mode pill in the version bar */
+
+.am-nv-pill-compare {
+  margin-left: 4px;
+  width: 28px;
+  opacity: 0.6;
+}
+
+.am-nv-pill-compare:hover {
+  opacity: 1;
+}
+
+/* Compare mode section */
+
+.am-nv-compare-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.am-nv-compare-count {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-weaker);
+  margin-left: 6px;
+}
+
+.am-nv-pill-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--surface-base);
+  color: var(--text-weak);
+  cursor: pointer;
+  transition: all 100ms;
+}
+
+.am-nv-pill-back:hover {
+  background: var(--surface-inset-base-hover);
+  color: var(--text-base);
+}
+
+/* Multi-model selector */
+
+.am-mm-wrapper {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.am-mm-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-base);
+  color: var(--text-weaker);
+}
+
+.am-mm-search-input {
+  flex: 1;
+  border: none;
+  background: none;
+  color: var(--text-base);
+  font-size: 12px;
+  outline: none;
+}
+
+.am-mm-search-input::placeholder {
+  color: var(--text-weaker);
+}
+
+.am-mm-list {
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.am-mm-group-label {
+  padding: 6px 10px 2px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--text-weaker);
+}
+
+.am-mm-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px;
+  min-height: 30px;
+  transition: background 80ms;
+}
+
+.am-mm-item:hover {
+  background: var(--surface-inset-base-hover);
+}
+
+.am-mm-item-checked {
+  background: var(--surface-inset-base-hover);
+}
+
+.am-mm-item-disabled {
+  opacity: 0.4;
+}
+
+.am-mm-item-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.am-mm-checkbox {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  accent-color: var(--border-focus);
+  cursor: pointer;
+}
+
+.am-mm-item-name {
+  font-size: 12px;
+  color: var(--text-base);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.am-mm-count-select {
+  flex-shrink: 0;
+  padding: 2px 4px;
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-sm);
+  background: var(--surface-base);
+  color: var(--text-base);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+}
+
+.am-mm-count-select:focus {
+  border-color: var(--border-focus);
 }
 
 .am-nv-spinner {

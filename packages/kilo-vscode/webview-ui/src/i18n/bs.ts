@@ -1044,10 +1044,16 @@ export const dict = {
   "agentManager.dialog.branchBadge.remote": "udaljeno",
   "agentManager.dialog.versions": "Verzije",
   "agentManager.dialog.versionHint": "{{count}} worktree-ova će se pokrenuti paralelno",
+  "agentManager.dialog.compareModels": "Uporedi modele",
+  "agentManager.dialog.compareModels.searchModels": "Pretraži modele...",
   "agentManager.dialog.creating": "Kreiranje...",
   "agentManager.dialog.createWorkspace": "Kreiraj radni prostor",
   "agentManager.dialog.removeImage": "Ukloni sliku",
   "agentManager.dialog.advanced": "Napredno...",
+
+  "agentManager.diff.toggle": "Prebaci diff",
+  "agentManager.shortcuts.toggleDiff": "Prebaci panel za diff",
+
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Zalijepite PR URL...",
   "agentManager.import.open": "Otvori",
@@ -1059,4 +1065,7 @@ export const dict = {
   "agentManager.import.noBranchesFound": "Nisu pronađeni branchevi.",
   "agentManager.import.noBranchesHint": "Zalijepite PR URL iznad ili kreirajte novi Worktree.",
   "agentManager.import.failed": "Uvoz neuspješan",
+
+  "question.summary": "{{n}} od {{total}} pitanja",
+  "common.review": "Pregled",
 }

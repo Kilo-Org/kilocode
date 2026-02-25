@@ -1021,10 +1021,16 @@ export const dict = {
   "agentManager.dialog.branchBadge.remote": "удалённая",
   "agentManager.dialog.versions": "Версии",
   "agentManager.dialog.versionHint": "{{count}} Worktree будут выполняться параллельно",
+  "agentManager.dialog.compareModels": "Сравнить модели",
+  "agentManager.dialog.compareModels.searchModels": "Поиск моделей...",
   "agentManager.dialog.creating": "Создание...",
   "agentManager.dialog.createWorkspace": "Создать рабочее пространство",
   "agentManager.dialog.removeImage": "Удалить изображение",
   "agentManager.dialog.advanced": "Дополнительно...",
+
+  "agentManager.diff.toggle": "Переключить diff",
+  "agentManager.shortcuts.toggleDiff": "Переключить панель diff",
+
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Вставьте URL PR...",
   "agentManager.import.open": "Открыть",
@@ -1036,4 +1042,7 @@ export const dict = {
   "agentManager.import.noBranchesFound": "Ветки не найдены.",
   "agentManager.import.noBranchesHint": "Вставьте URL PR выше или создайте новый Worktree.",
   "agentManager.import.failed": "Ошибка импорта",
+
+  "question.summary": "{{n}} из {{total}} вопросов",
+  "common.review": "Просмотр",
 }

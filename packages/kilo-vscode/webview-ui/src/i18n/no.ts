@@ -1018,10 +1018,16 @@ export const dict = {
   "agentManager.dialog.branchBadge.remote": "fjern",
   "agentManager.dialog.versions": "Versjoner",
   "agentManager.dialog.versionHint": "{{count}} worktrees vil kjøre parallelt",
+  "agentManager.dialog.compareModels": "Sammenlign modeller",
+  "agentManager.dialog.compareModels.searchModels": "Søk modeller...",
   "agentManager.dialog.creating": "Oppretter...",
   "agentManager.dialog.createWorkspace": "Opprett arbeidsområde",
   "agentManager.dialog.removeImage": "Fjern bilde",
   "agentManager.dialog.advanced": "Avansert...",
+
+  "agentManager.diff.toggle": "Veksle diff",
+  "agentManager.shortcuts.toggleDiff": "Veksle diff-panel",
+
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Lim inn PR URL...",
   "agentManager.import.open": "Åpne",
@@ -1033,4 +1039,7 @@ export const dict = {
   "agentManager.import.noBranchesFound": "Ingen branches funnet.",
   "agentManager.import.noBranchesHint": "Lim inn en PR URL ovenfor eller opprett et nytt Worktree.",
   "agentManager.import.failed": "Import mislyktes",
+
+  "question.summary": "{{n}} av {{total}} spørsmål",
+  "common.review": "Gjennomgå",
 } satisfies Partial<Record<Keys, string>>

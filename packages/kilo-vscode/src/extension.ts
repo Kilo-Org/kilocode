@@ -88,6 +88,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.agentManager.showTerminal", () => {
       agentManagerProvider.showTerminalForCurrentSession()
     }),
+    vscode.commands.registerCommand("kilo-code.new.agentManager.toggleDiff", () => {
+      agentManagerProvider.postMessage({ type: "action", action: "toggleDiff" })
+    }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.focusPanel", () => {
       agentManagerProvider.focusPanel()
     }),

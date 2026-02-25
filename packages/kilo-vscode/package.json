@@ -2,7 +2,7 @@
   "name": "kilo-code",
   "displayName": "Kilo Code: AI Coding Agent, Copilot, and Autocomplete",
   "description": "Open Source AI coding agent that generates code from natural language, automates tasks, and runs terminal commands. Features inline autocomplete, browser automation, automated refactoring, and custom modes for planning, coding, and debugging. Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM.",
-  "version": "7.0.27",
+  "version": "7.0.29",
   "icon": "assets/icons/logo-outline-black.png",
   "publisher": "kilocode",
   "repository": {
@@ -112,6 +112,12 @@
         "title": "Agent Manager: Focus Terminal",
         "category": "Kilo Code",
         "icon": "$(terminal)"
+      },
+      {
+        "command": "kilo-code.new.agentManager.toggleDiff",
+        "title": "Agent Manager: Toggle Diff Panel",
+        "category": "Kilo Code",
+        "icon": "$(diff)"
       },
       {
         "command": "kilo-code.new.agentManager.focusPanel",
@@ -346,6 +352,12 @@
         "command": "kilo-code.new.agentManager.showTerminal",
         "key": "ctrl+/",
         "mac": "cmd+/",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.agentManager.toggleDiff",
+        "key": "ctrl+d",
+        "mac": "cmd+d",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {

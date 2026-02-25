@@ -1017,10 +1017,16 @@ export const dict = {
   "agentManager.dialog.branchBadge.remote": "fjern",
   "agentManager.dialog.versions": "Versioner",
   "agentManager.dialog.versionHint": "{{count}} worktrees vil køre parallelt",
+  "agentManager.dialog.compareModels": "Sammenlign modeller",
+  "agentManager.dialog.compareModels.searchModels": "Søg modeller...",
   "agentManager.dialog.creating": "Opretter...",
   "agentManager.dialog.createWorkspace": "Opret Workspace",
   "agentManager.dialog.removeImage": "Fjern billede",
   "agentManager.dialog.advanced": "Avanceret...",
+
+  "agentManager.diff.toggle": "Skift diff",
+  "agentManager.shortcuts.toggleDiff": "Skift diff-panel",
+
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Indsæt PR URL...",
   "agentManager.import.open": "Åbn",
@@ -1032,4 +1038,7 @@ export const dict = {
   "agentManager.import.noBranchesFound": "Ingen branches fundet.",
   "agentManager.import.noBranchesHint": "Indsæt en PR URL ovenfor eller opret et nyt Worktree.",
   "agentManager.import.failed": "Import mislykkedes",
+
+  "question.summary": "{{n}} af {{total}} spørgsmål",
+  "common.review": "Gennemgå",
 }

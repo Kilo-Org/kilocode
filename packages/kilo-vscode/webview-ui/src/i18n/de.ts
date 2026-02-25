@@ -1031,10 +1031,16 @@ export const dict = {
   "agentManager.dialog.branchBadge.remote": "Remote",
   "agentManager.dialog.versions": "Versionen",
   "agentManager.dialog.versionHint": "{{count}} Worktrees werden parallel ausgeführt",
+  "agentManager.dialog.compareModels": "Modelle vergleichen",
+  "agentManager.dialog.compareModels.searchModels": "Modelle suchen...",
   "agentManager.dialog.creating": "Wird erstellt...",
   "agentManager.dialog.createWorkspace": "Arbeitsbereich erstellen",
   "agentManager.dialog.removeImage": "Bild entfernen",
   "agentManager.dialog.advanced": "Erweitert...",
+
+  "agentManager.diff.toggle": "Diff umschalten",
+  "agentManager.shortcuts.toggleDiff": "Diff-Panel umschalten",
+
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "PR-URL einfügen...",
   "agentManager.import.open": "Öffnen",
@@ -1046,4 +1052,7 @@ export const dict = {
   "agentManager.import.noBranchesFound": "Keine Branches gefunden.",
   "agentManager.import.noBranchesHint": "Fügen Sie oben eine PR-URL ein oder erstellen Sie einen neuen Worktree.",
   "agentManager.import.failed": "Import fehlgeschlagen",
+
+  "question.summary": "{{n}} von {{total}} Fragen",
+  "common.review": "Überprüfen",
 } satisfies Partial<Record<Keys, string>>

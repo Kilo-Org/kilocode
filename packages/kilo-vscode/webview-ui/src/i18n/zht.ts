@@ -1004,10 +1004,16 @@ export const dict = {
   "agentManager.dialog.branchBadge.remote": "遠端",
   "agentManager.dialog.versions": "版本",
   "agentManager.dialog.versionHint": "{{count}} 個 Worktree 將並行執行",
+  "agentManager.dialog.compareModels": "比較模型",
+  "agentManager.dialog.compareModels.searchModels": "搜尋模型...",
   "agentManager.dialog.creating": "建立中...",
   "agentManager.dialog.createWorkspace": "建立工作區",
   "agentManager.dialog.removeImage": "移除圖片",
   "agentManager.dialog.advanced": "進階...",
+
+  "agentManager.diff.toggle": "切換差異",
+  "agentManager.shortcuts.toggleDiff": "切換差異面板",
+
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "貼上 PR URL...",
   "agentManager.import.open": "開啟",
@@ -1019,4 +1025,7 @@ export const dict = {
   "agentManager.import.noBranchesFound": "找不到分支。",
   "agentManager.import.noBranchesHint": "在上方貼上 PR URL 或建立新的 Worktree。",
   "agentManager.import.failed": "匯入失敗",
+
+  "question.summary": "第 {{n}} / {{total}} 個問題",
+  "common.review": "審查",
 } satisfies Partial<Record<Keys, string>>

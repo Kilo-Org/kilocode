@@ -1020,10 +1020,16 @@ export const dict = {
   "agentManager.dialog.branchBadge.remote": "zdalny",
   "agentManager.dialog.versions": "Wersje",
   "agentManager.dialog.versionHint": "{{count}} worktree będą działać równolegle",
+  "agentManager.dialog.compareModels": "Porównaj modele",
+  "agentManager.dialog.compareModels.searchModels": "Szukaj modeli...",
   "agentManager.dialog.creating": "Tworzenie...",
   "agentManager.dialog.createWorkspace": "Utwórz Workspace",
   "agentManager.dialog.removeImage": "Usuń obraz",
   "agentManager.dialog.advanced": "Zaawansowane...",
+
+  "agentManager.diff.toggle": "Przełącz diff",
+  "agentManager.shortcuts.toggleDiff": "Przełącz panel diff",
+
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Wklej URL PR...",
   "agentManager.import.open": "Otwórz",
@@ -1035,4 +1041,7 @@ export const dict = {
   "agentManager.import.noBranchesFound": "Nie znaleziono branchy.",
   "agentManager.import.noBranchesHint": "Wklej URL PR powyżej lub utwórz nowy Worktree.",
   "agentManager.import.failed": "Import nie powiódł się",
+
+  "question.summary": "{{n}} z {{total}} pytań",
+  "common.review": "Przejrzyj",
 }

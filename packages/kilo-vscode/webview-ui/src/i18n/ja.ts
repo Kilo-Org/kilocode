@@ -1013,10 +1013,16 @@ export const dict = {
   "agentManager.dialog.branchBadge.remote": "リモート",
   "agentManager.dialog.versions": "バージョン",
   "agentManager.dialog.versionHint": "{{count}}個のWorktreeが並行して実行されます",
+  "agentManager.dialog.compareModels": "モデルを比較",
+  "agentManager.dialog.compareModels.searchModels": "モデルを検索...",
   "agentManager.dialog.creating": "作成中...",
   "agentManager.dialog.createWorkspace": "ワークスペースを作成",
   "agentManager.dialog.removeImage": "画像を削除",
   "agentManager.dialog.advanced": "詳細...",
+
+  "agentManager.diff.toggle": "差分を切り替え",
+  "agentManager.shortcuts.toggleDiff": "差分パネルを切り替え",
+
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "PR URLを貼り付け...",
   "agentManager.import.open": "開く",
@@ -1028,4 +1034,7 @@ export const dict = {
   "agentManager.import.noBranchesFound": "ブランチが見つかりません。",
   "agentManager.import.noBranchesHint": "上にPR URLを貼り付けるか、新しいWorktreeを作成してください。",
   "agentManager.import.failed": "インポートに失敗しました",
+
+  "question.summary": "{{total}} 問中 {{n}} 問目",
+  "common.review": "確認",
 }

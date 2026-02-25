@@ -1008,10 +1008,16 @@ export const dict = {
   "agentManager.dialog.branchBadge.remote": "بعيد",
   "agentManager.dialog.versions": "النسخ",
   "agentManager.dialog.versionHint": "{{count}} Worktrees ستعمل بالتوازي",
+  "agentManager.dialog.compareModels": "مقارنة النماذج",
+  "agentManager.dialog.compareModels.searchModels": "البحث عن النماذج...",
   "agentManager.dialog.creating": "جارٍ الإنشاء...",
   "agentManager.dialog.createWorkspace": "إنشاء مساحة عمل",
   "agentManager.dialog.removeImage": "إزالة الصورة",
   "agentManager.dialog.advanced": "متقدم...",
+
+  "agentManager.diff.toggle": "تبديل الفرق",
+  "agentManager.shortcuts.toggleDiff": "تبديل لوحة الفرق",
+
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "الصق رابط PR...",
   "agentManager.import.open": "فتح",
@@ -1023,4 +1029,7 @@ export const dict = {
   "agentManager.import.noBranchesFound": "لم يتم العثور على فروع.",
   "agentManager.import.noBranchesHint": "الصق رابط PR أعلاه أو أنشئ Worktree جديدًا.",
   "agentManager.import.failed": "فشل الاستيراد",
+
+  "question.summary": "{{n}} من {{total}} أسئلة",
+  "common.review": "مراجعة",
 }

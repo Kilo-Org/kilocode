@@ -1073,10 +1073,15 @@ export const dict = {
   "agentManager.dialog.branchBadge.remote": "remote",
   "agentManager.dialog.versions": "Versions",
   "agentManager.dialog.versionHint": "{{count}} worktrees will run in parallel",
+  "agentManager.dialog.compareModels": "Compare Models",
+  "agentManager.dialog.compareModels.searchModels": "Search models...",
   "agentManager.dialog.creating": "Creating...",
   "agentManager.dialog.createWorkspace": "Create Workspace",
   "agentManager.dialog.removeImage": "Remove image",
   "agentManager.dialog.advanced": "Advanced...",
+
+  "agentManager.diff.toggle": "Toggle diff",
+  "agentManager.shortcuts.toggleDiff": "Toggle diff panel",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Paste PR URL...",
@@ -1089,4 +1094,7 @@ export const dict = {
   "agentManager.import.noBranchesFound": "No branches found.",
   "agentManager.import.noBranchesHint": "Paste a PR URL above or create a new worktree.",
   "agentManager.import.failed": "Import failed",
+
+  "question.summary": "{{n}} of {{total}} questions",
+  "common.review": "Review",
 }

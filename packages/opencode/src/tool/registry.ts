@@ -117,7 +117,8 @@ export namespace ToolRegistry {
       ApplyPatchTool,
       ...(Flag.KILO_EXPERIMENTAL_LSP_TOOL ? [LspTool] : []),
       ...(config.experimental?.batch_tool === true ? [BatchTool] : []),
-      ...(Flag.KILO_EXPERIMENTAL_PLAN_MODE && Flag.KILO_CLIENT === "cli" ? [PlanExitTool, PlanEnterTool] : []),
+      PlanExitTool, // kilocode_change - always registered; gated by agent permission instead
+      ...(Flag.KILO_EXPERIMENTAL_PLAN_MODE && Flag.KILO_CLIENT === "cli" ? [PlanEnterTool] : []),
       ...custom,
     ]
   }
