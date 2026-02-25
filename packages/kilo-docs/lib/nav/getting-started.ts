@@ -64,10 +64,6 @@ export const GettingStartedNav: NavSection[] = [
             href: "/getting-started/troubleshooting/troubleshooting-extension",
             children: "Extension Troubleshooting",
           },
-          {
-            href: "/getting-started/troubleshooting/jetbrains",
-            children: "JetBrains Troubleshooting",
-          },
         ],
       },
       {
