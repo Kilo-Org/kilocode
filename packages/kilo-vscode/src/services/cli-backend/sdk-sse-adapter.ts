@@ -138,7 +138,8 @@ export class SdkSSEAdapter {
 					const globalEvent = event as GlobalEvent
 					const payload = globalEvent.payload ?? event
 					const typedPayload = payload as Event
-					console.log("[Kilo New] SSE: 📦 Event type:", typedPayload.type)
+					console.log("[Kilo New] SSE: 📨 Received message event:", JSON.stringify(event))
+					console.log("[Kilo New] SSE: 📦 Parsed event type:", typedPayload.type)
 					this.notifyEvent(typedPayload)
 				}
 
