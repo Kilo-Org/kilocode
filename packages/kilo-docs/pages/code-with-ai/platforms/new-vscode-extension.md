@@ -6,7 +6,7 @@ description: "The new Kilo Code VS Code extension, now available in beta"
 # New VS Code Extension (Beta)
 
 The new Kilo Code VS Code extension is now available in beta.
-You can install it directly from the Marketplace.
+You can install it directly from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=kilocode.kilo-code).
 
 {% callout type="warning" title="Early Release" %}
 This is an early release — features and behavior may change frequently as we iterate toward GA.
