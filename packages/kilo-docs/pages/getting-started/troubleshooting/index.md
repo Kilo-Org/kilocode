@@ -10,3 +10,4 @@ This section contains guides for diagnosing and resolving common issues with Kil
 ## Guides
 
 - [**Extension Troubleshooting**](/docs/getting-started/troubleshooting/troubleshooting-extension) - How to capture console logs and report issues with the Kilo Code extension
+- [**JetBrains Troubleshooting**](/docs/getting-started/troubleshooting/jetbrains) - Common issues and solutions when running Kilo Code in JetBrains IDEs

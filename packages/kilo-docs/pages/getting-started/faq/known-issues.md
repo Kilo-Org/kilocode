@@ -91,3 +91,77 @@ where powershell
 ```
 
 If PowerShell is missing or blocked, system policies or security tools may need to be reviewed.
+
+## JetBrains
+
+### Cascade not visible (JCEF errors)
+
+#### Symptoms
+
+- Cascade panel doesn't render or appears blank
+- Errors such as `JCEF is not supported in this environment or failed to initialize`
+- `Internal JCEF not supported, trying external JCEF`
+
+#### Cause
+
+Cascade depends on **JCEF (JetBrains Chromium Embedded Framework)** to display its interface. If the bundled Java runtime doesn't include JCEF, or JCEF is disabled, the panel cannot render.
+
+#### Resolution
+
+1. Go to **Help → Find Action → Choose Boot Java Runtime**
+2. Select a runtime that includes **JCEF**
+3. If JCEF is already bundled, confirm it's enabled:
+   Open **Help → Edit Custom Properties** and add:
+   ```
+   ide.browser.jcef.enabled=true
+   ```
+4. Restart your IDE
+
+For more details, see the full [JetBrains Troubleshooting](/docs/getting-started/troubleshooting/jetbrains#cascade-not-visible) guide.
+
+### TLS / Certificate errors
+
+#### Symptoms
+
+- `Failed to fetch extension base URL`
+- `PKIX path building failed`
+- `unable to find valid certification path to requested target`
+
+#### Cause
+
+The IDE cannot validate the TLS certificate used by the Kilo Code endpoint or a network proxy. Common causes include untrusted root certificates, corporate proxies intercepting HTTPS traffic, or missing intermediate certificates.
+
+#### Resolution
+
+- Install the **root certificate** in your OS trust store
+- Ensure the **complete certificate chain** is presented by the server
+- If managed internally, contact your IT/admin team
+
+JetBrains IDEs rely on the **system certificate store**, so resolving trust at the OS level usually fixes the issue.
+
+{% callout type="note" %}
+**JetBrains 2024.3 note:** Some builds may fail to recognize OS certificates. Workarounds include downgrading to a previous version, upgrading to **2024.3.1 or later**, or adding the JVM option `-Djavax.net.ssl.trustStoreType=Windows-ROOT`.
+{% /callout %}
+
+For more details, see the full [JetBrains Troubleshooting](/docs/getting-started/troubleshooting/jetbrains#tls--certificate-errors) guide.
+
+### Custom workspace required
+
+#### Symptoms
+
+- `Cascade cannot access paths without an active workspace`
+
+#### Cause
+
+Kilo Code requires an explicit workspace configuration to access project files in JetBrains IDEs.
+
+#### Resolution
+
+1. Open **Settings / Preferences**
+2. Navigate to **Tools → Kilo Code**
+3. Locate **Custom Workspaces**
+4. Click **Add Workspace**
+5. Select your project folder
+6. Apply changes and restart the IDE
+
+For more details, see the full [JetBrains Troubleshooting](/docs/getting-started/troubleshooting/jetbrains#custom-workspace-required) guide.
