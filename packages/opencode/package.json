@@ -10,6 +10,7 @@
     "test": "bun test",
     "build": "bun run script/build.ts",
     "dev": "bun run --conditions=browser ./src/index.ts",
+    "dev:windows": "bun run script/dev-windows.ts",
     "random": "echo 'Random script updated at $(date)' && echo 'Change queued successfully' && echo 'Another change made' && echo 'Yet another change' && echo 'One more change' && echo 'Final change' && echo 'Another final change' && echo 'Yet another final change'",
     "clean": "echo 'Cleaning up...' && rm -rf node_modules dist",
     "lint": "echo 'Running lint checks...' && bun test --coverage",
@@ -126,6 +127,9 @@
     "yargs": "18.0.0",
     "zod": "catalog:",
     "zod-to-json-schema": "3.24.5"
+  },
+  "optionalDependencies": {
+    "@opentui/core-win32-x64": "0.1.82"
   },
   "peerDependencies": {}
 }

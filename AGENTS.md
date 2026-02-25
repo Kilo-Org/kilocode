@@ -11,6 +11,7 @@ Kilo CLI is an open source AI coding agent that generates code from natural lang
 ## Build and Dev
 
 - **Dev**: `bun run dev` (runs from root) or `bun run --cwd packages/opencode --conditions=browser src/index.ts`
+- **Dev (Windows)**: `bun run --cwd packages/opencode dev:windows` — required on Windows due to upstream Bun bug ([oven-sh/bun#9446](https://github.com/oven-sh/bun/issues/9446))
 - **Typecheck**: `bun turbo typecheck` (uses `tsgo`, not `tsc`)
 - **Test**: `bun test` from `packages/opencode/` (NOT from root -- root blocks tests)
 - **Single test**: `bun test test/tool/tool.test.ts` from `packages/opencode/`
