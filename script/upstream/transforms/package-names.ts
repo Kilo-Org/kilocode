@@ -51,6 +51,16 @@ const PACKAGE_PATTERNS = [
   { pattern: /npx opencode-ai/g, replacement: "npx @kilocode/cli" },
   { pattern: /npm install opencode-ai/g, replacement: "npm install @kilocode/cli" },
   { pattern: /bun add opencode-ai/g, replacement: "bun add @kilocode/cli" },
+
+  // SDK public API renames (Opencode → Kilo)
+  // Order matters: longer names first to avoid partial matches
+  { pattern: /OpencodeClientConfig/g, replacement: "KiloClientConfig" },
+  { pattern: /createOpencodeClient/g, replacement: "createKiloClient" },
+  { pattern: /createOpencodeServer/g, replacement: "createKiloServer" },
+  { pattern: /createOpencodeTui/g, replacement: "createKiloTui" },
+  { pattern: /OpencodeClient/g, replacement: "KiloClient" },
+  // createOpencode (without suffix) needs negative lookahead to avoid matching createOpencodeClient
+  { pattern: /\bcreateOpencode\b(?!Client|Server|Tui)/g, replacement: "createKilo" },
 ]
 
 /**
