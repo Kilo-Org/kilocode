@@ -11,6 +11,7 @@ import { useSDK } from "@/context/sdk"
 // kilocode_change start - add onModeAction prop for mode-switching support
 export const SessionQuestionDock: Component<{
   request: QuestionRequest
+  onSubmit: () => void
   onModeAction?: (input: { mode: string; text: string; description?: string }) => void
 }> = (props) => {
   // kilocode_change end
@@ -120,6 +121,7 @@ export const SessionQuestionDock: Component<{
   const reply = async (answers: QuestionAnswer[]) => {
     if (store.sending) return
 
+    props.onSubmit()
     setStore("sending", true)
     try {
       await sdk.client.question.reply({ requestID: props.request.id, answers })
@@ -133,6 +135,7 @@ export const SessionQuestionDock: Component<{
   const reject = async () => {
     if (store.sending) return
 
+    props.onSubmit()
     setStore("sending", true)
     try {
       await sdk.client.question.reject({ requestID: props.request.id })
