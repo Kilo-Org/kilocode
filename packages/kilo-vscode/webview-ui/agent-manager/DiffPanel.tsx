@@ -1,4 +1,4 @@
-import { type Component, createSignal, createMemo, For, Show, createEffect, on } from "solid-js"
+import { type Component, createSignal, createMemo, For, Show, createEffect, on, onMount, onCleanup } from "solid-js"
 import { Diff } from "@kilocode/kilo-ui/diff"
 import { Accordion } from "@kilocode/kilo-ui/accordion"
 import { StickyAccordionHeader } from "@kilocode/kilo-ui/sticky-accordion-header"
@@ -173,8 +173,14 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       const submitBtn = document.createElement("button")
       submitBtn.className = "am-annotation-btn am-annotation-btn-submit"
       submitBtn.textContent = "Comment"
+      const sendBtn = document.createElement("button")
+      sendBtn.className = "am-annotation-btn am-annotation-btn-send"
+      sendBtn.title = "Send directly to LLM"
+      sendBtn.innerHTML =
+        'Send <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M1 1l14 7-14 7V9l10-1L1 7z"/></svg>'
       actions.appendChild(cancelBtn)
       actions.appendChild(submitBtn)
+      actions.appendChild(sendBtn)
       wrapper.appendChild(header)
       wrapper.appendChild(textarea)
       wrapper.appendChild(actions)
@@ -190,6 +196,19 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
         const selected = extractLines(content, meta.line, meta.line)
         addComment(meta.file, meta.side, meta.line, text, selected)
       }
+      // Send this comment directly to the LLM without saving as a review comment
+      const sendDirect = () => {
+        const text = textarea.value.trim()
+        if (!text) return
+        const diff = props.diffs.find((d) => d.file === meta.file)
+        const content = meta.side === "deletions" ? (diff?.before ?? "") : (diff?.after ?? "")
+        const selected = extractLines(content, meta.line, meta.line)
+        const quote = selected ? `\n\`\`\`\n${selected}\n\`\`\`\n` : "\n"
+        const msg = `**${meta.file}** (line ${meta.line}):${quote}${text}`
+        window.dispatchEvent(new MessageEvent("message", { data: { type: "triggerTask", text: msg } }))
+        setDraft(null)
+        draftMeta = null
+      }
       cancelBtn.addEventListener("click", (e) => {
         e.stopPropagation()
         setDraft(null)
@@ -199,11 +218,22 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
         e.stopPropagation()
         submit()
       })
+      sendBtn.addEventListener("click", (e) => {
+        e.stopPropagation()
+        sendDirect()
+      })
       textarea.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
           e.preventDefault()
           setDraft(null)
           draftMeta = null
+        }
+        // Cmd/Ctrl+Enter submits the comment (stops propagation so global handler doesn't fire)
+        if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+          e.preventDefault()
+          e.stopPropagation()
+          submit()
+          return
         }
         if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault()
@@ -255,6 +285,14 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
         if (e.key === "Escape") {
           e.preventDefault()
           setEditing(null)
+        }
+        // Cmd/Ctrl+Enter saves the edit (stops propagation so global handler doesn't fire)
+        if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+          e.preventDefault()
+          e.stopPropagation()
+          const text = textarea.value.trim()
+          if (text) updateComment(c.id, text)
+          return
         }
         if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault()
@@ -330,10 +368,11 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     setDraft({ file, side: result.side, line: result.lineNumber })
   }
 
-  // --- Send all ---
-  const sendAllToChat = () => {
+  // --- Format helpers ---
+
+  const formatAllComments = (): string => {
     const all = comments()
-    if (all.length === 0) return
+    if (all.length === 0) return ""
     const lines = ["## Review Comments", ""]
     for (const c of all) {
       lines.push(`**${c.file}** (line ${c.line}):`)
@@ -345,10 +384,36 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       lines.push(c.comment)
       lines.push("")
     }
-    const text = lines.join("\n")
+    return lines.join("\n")
+  }
+
+  // --- Send all ---
+  const sendAllToChat = () => {
+    const text = formatAllComments()
+    if (!text) return
     window.dispatchEvent(new MessageEvent("message", { data: { type: "appendChatBoxMessage", text } }))
     setComments([])
   }
+
+  // Send all comments directly to the LLM (auto-send via triggerTask)
+  const sendAllDirectly = () => {
+    const text = formatAllComments()
+    if (!text) return
+    window.dispatchEvent(new MessageEvent("message", { data: { type: "triggerTask", text } }))
+    setComments([])
+  }
+
+  // Global Cmd/Ctrl+Enter handler: when no textarea is focused, send all comments to LLM
+  const handleGlobalKeydown = (e: KeyboardEvent) => {
+    if (!(e.metaKey || e.ctrlKey) || e.key !== "Enter") return
+    if (document.activeElement?.tagName === "TEXTAREA") return
+    if (comments().length === 0) return
+    e.preventDefault()
+    sendAllDirectly()
+  }
+
+  onMount(() => window.addEventListener("keydown", handleGlobalKeydown))
+  onCleanup(() => window.removeEventListener("keydown", handleGlobalKeydown))
 
   return (
     <div class="am-diff-panel">

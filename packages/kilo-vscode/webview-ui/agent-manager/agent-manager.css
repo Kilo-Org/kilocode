@@ -832,6 +832,24 @@ button.am-section-toggle:hover .am-section-label {
   background: var(--surface-interactive-strong-hover, var(--vscode-button-hoverBackground, #0066b8));
 }
 
+.am-annotation-btn-send {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface-interactive-strong, var(--vscode-button-background, #0078d4));
+  color: var(--text-on-fill, var(--vscode-button-foreground, #fff));
+  border-color: transparent;
+  font-weight: 500;
+}
+
+.am-annotation-btn-send:hover {
+  background: var(--surface-interactive-strong-hover, var(--vscode-button-hoverBackground, #0066b8));
+}
+
+.am-annotation-btn-send svg {
+  flex-shrink: 0;
+}
+
 .am-annotation-comment {
   flex: 1;
   min-width: 0;
