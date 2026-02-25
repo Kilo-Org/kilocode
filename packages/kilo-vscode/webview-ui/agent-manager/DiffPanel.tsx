@@ -8,6 +8,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
 
@@ -412,16 +413,18 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                               <DiffChanges changes={diff} />
                             </Show>
                             <Show when={props.onOpenFile && !isDeleted()}>
-                              <IconButton
-                                icon="open-file"
-                                size="small"
-                                variant="ghost"
-                                label="Open file"
-                                onClick={(e: MouseEvent) => {
-                                  e.stopPropagation()
-                                  props.onOpenFile?.(diff.file)
-                                }}
-                              />
+                              <Tooltip value="Open file" placement="top">
+                                <IconButton
+                                  icon="go-to-file"
+                                  size="small"
+                                  variant="ghost"
+                                  label="Open file"
+                                  onClick={(e: MouseEvent) => {
+                                    e.stopPropagation()
+                                    props.onOpenFile?.(diff.file)
+                                  }}
+                                />
+                              </Tooltip>
                             </Show>
                             <span data-slot="session-review-diff-chevron">
                               <Icon name="chevron-down" size="small" />
