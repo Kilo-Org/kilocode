@@ -1434,16 +1434,19 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     this.postToWebview({ type: "agentManager.worktreeDiffLoading", sessionId, loading: true })
     try {
-      const client = this.connectionService.getHttpClient()
+      const client = this.connectionService.getClient()
       this.log(`Fetching worktree diff for session ${sessionId}: dir=${target.directory}, base=${target.baseBranch}`)
-      const diffs = await client.getWorktreeDiff(target.directory, target.baseBranch)
+      const { data: diffs } = await client.worktree.diff(
+        { directory: target.directory },
+        { throwOnError: true },
+      )
       this.log(`Worktree diff returned ${diffs.length} file(s) for session ${sessionId}`)
 
-      const hash = diffs.map((d) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`).join("|")
+      const hash = (diffs as any[]).map((d: any) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`).join("|")
       this.lastDiffHash = hash
       this.diffSessionId = sessionId
 
-      this.postToWebview({ type: "agentManager.worktreeDiff", sessionId, diffs })
+      this.postToWebview({ type: "agentManager.worktreeDiff", sessionId, diffs: diffs as any })
     } catch (err) {
       this.log("Failed to fetch worktree diff:", err)
     } finally {
@@ -1457,15 +1460,18 @@ export class AgentManagerProvider implements vscode.Disposable {
     if (!target) return
 
     try {
-      const client = this.connectionService.getHttpClient()
-      const diffs = await client.getWorktreeDiff(target.directory, target.baseBranch)
+      const client = this.connectionService.getClient()
+      const { data: diffs } = await client.worktree.diff(
+        { directory: target.directory },
+        { throwOnError: true },
+      )
 
-      const hash = diffs.map((d) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`).join("|")
+      const hash = (diffs as any[]).map((d: any) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`).join("|")
       if (hash === this.lastDiffHash && this.diffSessionId === sessionId) return
       this.lastDiffHash = hash
       this.diffSessionId = sessionId
 
-      this.postToWebview({ type: "agentManager.worktreeDiff", sessionId, diffs })
+      this.postToWebview({ type: "agentManager.worktreeDiff", sessionId, diffs: diffs as any })
     } catch (err) {
       this.log("Failed to poll worktree diff:", err)
     }

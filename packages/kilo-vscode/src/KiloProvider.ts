@@ -6,7 +6,7 @@ import {
   type KiloConnectionService,
   type KilocodeNotification,
 } from "./services/cli-backend"
-import type { EditorContext } from "./services/cli-backend/types"
+import type { EditorContext, CloudSessionData } from "./services/cli-backend/types"
 import { FileIgnoreController } from "./services/autocomplete/shims/FileIgnoreController"
 import { handleChatCompletionRequest } from "./services/autocomplete/chat-autocomplete/handleChatCompletionRequest"
 import { handleChatCompletionAccepted } from "./services/autocomplete/chat-autocomplete/handleChatCompletionAccepted"
@@ -1025,7 +1025,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     limit?: number
     gitUrl?: string
   }): Promise<void> {
-    if (!this.httpClient) {
+    if (!this.client) {
       this.postMessage({
         type: "error",
         message: "Not connected to CLI backend",
@@ -1034,16 +1034,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     try {
-      const result = await this.httpClient.getCloudSessions({
+      const result = await this.client.kilo.cloudSessions({
         cursor: message.cursor,
         limit: message.limit,
         gitUrl: message.gitUrl,
       })
 
+      const data = result.data as { cliSessions?: unknown[]; nextCursor?: string | null } | undefined
       this.postMessage({
         type: "cloudSessionsLoaded",
-        sessions: result?.cliSessions ?? [],
-        nextCursor: result?.nextCursor ?? null,
+        sessions: data?.cliSessions ?? [],
+        nextCursor: data?.nextCursor ?? null,
       })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to fetch cloud sessions:", error)
@@ -1059,7 +1060,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Transforms the export data into webview message format and sends it back.
    */
   private async handleRequestCloudSessionData(sessionId: string): Promise<void> {
-    if (!this.httpClient) {
+    if (!this.client) {
       this.postMessage({
         type: "cloudSessionImportFailed",
         cloudSessionId: sessionId,
@@ -1069,7 +1070,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     try {
-      const data = await this.httpClient.getCloudSession(sessionId)
+      const result = await this.client.kilo.cloud.session.get({ id: sessionId })
+      const data = result.data as CloudSessionData | undefined
       if (!data) {
         this.postMessage({
           type: "cloudSessionImportFailed",
@@ -1080,8 +1082,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
 
       const messages = (data.messages ?? [])
-        .filter((m) => m.info)
-        .map((m) => ({
+        .filter((m: any) => m.info)
+        .map((m: any) => ({
           id: m.info.id,
           sessionID: m.info.sessionID,
           role: m.info.role as "user" | "assistant",
@@ -1121,7 +1123,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     variant?: string,
     files?: Array<{ mime: string; url: string }>,
   ): Promise<void> {
-    if (!this.httpClient) {
+    if (!this.client) {
       this.postMessage({
         type: "cloudSessionImportFailed",
         cloudSessionId,
@@ -1133,7 +1135,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const workspaceDir = this.getWorkspaceDirectory()
 
     // Step 1: Import the cloud session with fresh IDs
-    const session = await this.httpClient.importCloudSession(cloudSessionId, workspaceDir)
+    const importResult = await this.client.kilo.cloud.session.import({ sessionId: cloudSessionId, directory: workspaceDir })
+    const session = importResult.data as Session | undefined
     if (!session) {
       this.postMessage({
         type: "cloudSessionImportFailed",
@@ -1168,13 +1171,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     try {
       const editorContext = await this.gatherEditorContext()
 
-      await this.httpClient.sendMessage(session.id, parts, workspaceDir, {
-        providerID,
-        modelID,
-        agent,
-        variant,
-        editorContext,
-      })
+      await this.client.session.prompt(
+        {
+          sessionID: session.id,
+          directory: workspaceDir,
+          parts: parts as any,
+          model: providerID && modelID ? { providerID, modelID } : undefined,
+          agent,
+          variant,
+          editorContext: editorContext as any,
+        },
+        { throwOnError: true },
+      )
     } catch (err) {
       console.error("[Kilo New] Failed to send message after cloud import:", err)
       this.postMessage({
