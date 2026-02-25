@@ -41,10 +41,13 @@ export class SdkSSEAdapter {
 	 */
 	connect(): void {
 		if (this.abortController) {
+			console.log("[Kilo New] SSE: ⚠️ Already connected, skipping")
 			return
 		}
 
+		console.log("[Kilo New] SSE: 🔌 connect() called")
 		this.abortController = new AbortController()
+		console.log('[Kilo New] SSE: 🔄 Setting state to "connecting"')
 		this.notifyState("connecting")
 		void this.consumeLoop(this.abortController.signal)
 	}
@@ -53,6 +56,7 @@ export class SdkSSEAdapter {
 	 * Stop consuming the SSE stream and abort any in-flight request.
 	 */
 	disconnect(): void {
+		console.log("[Kilo New] SSE: 🔌 disconnect() called")
 		this.abortController?.abort()
 		this.abortController = null
 		this.clearHeartbeat()
@@ -106,16 +110,19 @@ export class SdkSSEAdapter {
 			signal.addEventListener("abort", onAbort)
 
 			try {
+				console.log("[Kilo New] SSE: 🎬 Calling SDK global.event()...")
 				const events = await this.client.global.event({
 					signal: attempt.signal,
 					onSseError: (error) => {
 						if (signal.aborted) {
 							return
 						}
+						console.error("[Kilo New] SSE: ❌ SDK SSE error callback:", error)
 						this.notifyError(error instanceof Error ? error : new Error(String(error)))
 					},
 				})
 
+				console.log("[Kilo New] SSE: ✅ Stream opened successfully")
 				this.notifyState("connected")
 				this.resetHeartbeat(attempt)
 
@@ -130,10 +137,15 @@ export class SdkSSEAdapter {
 					// Extract `payload` (the actual Event) — equivalent to the old `unwrapSSEPayload()`.
 					const globalEvent = event as GlobalEvent
 					const payload = globalEvent.payload ?? event
-					this.notifyEvent(payload as Event)
+					const typedPayload = payload as Event
+					console.log("[Kilo New] SSE: 📦 Event type:", typedPayload.type)
+					this.notifyEvent(typedPayload)
 				}
+
+				console.log("[Kilo New] SSE: 📭 Stream ended normally")
 			} catch (error) {
 				if (!signal.aborted) {
+					console.error("[Kilo New] SSE: ❌ Stream error:", error)
 					this.notifyError(error instanceof Error ? error : new Error(String(error)))
 				}
 			} finally {
@@ -145,6 +157,9 @@ export class SdkSSEAdapter {
 				break
 			}
 
+			console.log(
+				`[Kilo New] SSE: 🔄 Reconnecting in ${SdkSSEAdapter.RECONNECT_DELAY_MS}ms...`,
+			)
 			this.notifyState("connecting")
 			await new Promise((resolve) => setTimeout(resolve, SdkSSEAdapter.RECONNECT_DELAY_MS))
 		}
@@ -160,6 +175,7 @@ export class SdkSSEAdapter {
 	private resetHeartbeat(attempt: AbortController): void {
 		this.clearHeartbeat()
 		this.heartbeatTimer = setTimeout(() => {
+			console.log("[Kilo New] SSE: ⏰ Heartbeat timeout — aborting stale connection")
 			attempt.abort()
 		}, SdkSSEAdapter.HEARTBEAT_TIMEOUT_MS)
 	}
@@ -178,7 +194,7 @@ export class SdkSSEAdapter {
 			try {
 				handler(event)
 			} catch (error) {
-				console.error("[Kilo] SdkSSEAdapter: Error in event handler:", error)
+				console.error("[Kilo New] SSE: Error in event handler:", error)
 			}
 		}
 	}
@@ -188,7 +204,7 @@ export class SdkSSEAdapter {
 			try {
 				handler(error)
 			} catch (err) {
-				console.error("[Kilo] SdkSSEAdapter: Error in error handler:", err)
+				console.error("[Kilo New] SSE: Error in error handler:", err)
 			}
 		}
 	}
@@ -198,7 +214,7 @@ export class SdkSSEAdapter {
 			try {
 				handler(state)
 			} catch (error) {
-				console.error("[Kilo] SdkSSEAdapter: Error in state handler:", error)
+				console.error("[Kilo New] SSE: Error in state handler:", error)
 			}
 		}
 	}
