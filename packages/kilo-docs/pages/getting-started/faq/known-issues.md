@@ -104,7 +104,7 @@ If PowerShell is missing or blocked, system policies or security tools may need 
 
 #### Cause
 
-Cascade depends on **JCEF (JetBrains Chromium Embedded Framework)** to display its interface. If the bundled Java runtime doesn't include JCEF, or JCEF is disabled, the panel cannot render.
+Kilo Code depends on **JCEF (JetBrains Chromium Embedded Framework)** to display its interface. If the bundled Java runtime doesn't include JCEF, or JCEF is disabled, the panel cannot render.
 
 #### Resolution
 
