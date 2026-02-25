@@ -22,7 +22,7 @@ interface ModelGroup {
   models: EnrichedModel[]
 }
 
-const COUNT_OPTIONS = [1, 2, 3, 4] as const
+const COUNT_OPTIONS = Array.from({ length: MAX_MULTI_VERSIONS }, (_, i) => i + 1)
 
 export const MultiModelSelector: Component<{
   allocations: ModelAllocations

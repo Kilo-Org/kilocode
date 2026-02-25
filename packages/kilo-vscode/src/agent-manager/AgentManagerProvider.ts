@@ -582,9 +582,11 @@ export class AgentManagerProvider implements vscode.Disposable {
     const perVersionModels: Array<{ providerID: string; modelID: string } | undefined> = []
     if (rawAllocations && rawAllocations.length > 0) {
       for (const alloc of rawAllocations) {
-        for (let c = 0; c < alloc.count; c++) {
+        const clamped = Math.min(Math.max(Math.floor(alloc.count) || 0, 0), MAX_MULTI_VERSIONS)
+        for (let c = 0; c < clamped; c++) {
           perVersionModels.push({ providerID: alloc.providerID, modelID: alloc.modelID })
         }
+        if (perVersionModels.length >= MAX_MULTI_VERSIONS) break
       }
     }
 
