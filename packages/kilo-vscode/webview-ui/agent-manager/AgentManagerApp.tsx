@@ -1675,6 +1675,10 @@ const AgentManagerContent: Component = () => {
                   diffs={diffDatas()[session.currentSessionID() ?? ""] ?? []}
                   loading={diffLoading()}
                   onClose={() => setDiffOpen(false)}
+                  onOpenFile={(file) => {
+                    const id = session.currentSessionID()
+                    if (id) vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file })
+                  }}
                 />
               </div>
             </Show>

@@ -35,6 +35,7 @@ interface DiffPanelProps {
   diffs: WorktreeFileDiff[]
   loading: boolean
   onClose: () => void
+  onOpenFile?: (relativePath: string) => void
 }
 
 function getDirectory(path: string): string {
@@ -409,6 +410,18 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                             </Show>
                             <Show when={!isAdded() && !isDeleted()}>
                               <DiffChanges changes={diff} />
+                            </Show>
+                            <Show when={props.onOpenFile}>
+                              <IconButton
+                                icon="open-file"
+                                size="small"
+                                variant="ghost"
+                                label="Open file"
+                                onClick={(e: MouseEvent) => {
+                                  e.stopPropagation()
+                                  props.onOpenFile?.(diff.file)
+                                }}
+                              />
                             </Show>
                             <span data-slot="session-review-diff-chevron">
                               <Icon name="chevron-down" size="small" />

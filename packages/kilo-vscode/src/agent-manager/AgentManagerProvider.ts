@@ -255,6 +255,11 @@ export class AgentManagerProvider implements vscode.Disposable {
       return null
     }
 
+    if (type === "agentManager.openFile" && typeof msg.sessionId === "string" && typeof msg.filePath === "string") {
+      this.openWorktreeFile(msg.sessionId, msg.filePath)
+      return null
+    }
+
     // When switching sessions, show existing terminal if one is open
     if (type === "loadMessages" && typeof msg.sessionID === "string") {
       this.terminalManager.showExisting(msg.sessionID)
@@ -1270,6 +1275,21 @@ export class AgentManagerProvider implements vscode.Disposable {
   // ---------------------------------------------------------------------------
   // Diff polling
   // ---------------------------------------------------------------------------
+
+  /** Open a file from a worktree session in the VS Code editor. */
+  private openWorktreeFile(sessionId: string, relativePath: string): void {
+    const state = this.getStateManager()
+    if (!state) return
+    const session = state.getSession(sessionId)
+    if (!session?.worktreeId) return
+    const worktree = state.getWorktree(session.worktreeId)
+    if (!worktree) return
+    const uri = vscode.Uri.joinPath(vscode.Uri.file(worktree.path), relativePath)
+    vscode.workspace.openTextDocument(uri).then(
+      (doc) => vscode.window.showTextDocument(doc, { preview: true }),
+      (err) => console.error("[Kilo New] AgentManagerProvider: Failed to open file:", uri.fsPath, err),
+    )
+  }
 
   /** Resolve worktree path + parentBranch for a session, or undefined if not applicable. */
   private resolveDiffTarget(sessionId: string): { directory: string; baseBranch: string } | undefined {
