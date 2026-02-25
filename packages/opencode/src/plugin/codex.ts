@@ -391,7 +391,7 @@ export async function CodexAuthPlugin(input: PluginInput): Promise<Hooks> {
               interleaved: false,
             },
             cost: { input: 0, output: 0, cache: { read: 0, write: 0 } },
-            limit: { context: 400_000, input: 272_000, output: 128_000 },
+            limit: { context: 272_000, input: 272_000, output: 128_000 },
             status: "active" as const,
             options: {},
             headers: {},
