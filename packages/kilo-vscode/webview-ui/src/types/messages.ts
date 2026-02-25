@@ -697,6 +697,30 @@ export interface AgentManagerImportResultMessage {
   message: string
 }
 
+// Shared FileDiff shape (matches Snapshot.FileDiff from CLI backend)
+export interface WorktreeFileDiff {
+  file: string
+  before: string
+  after: string
+  additions: number
+  deletions: number
+  status?: "added" | "deleted" | "modified"
+}
+
+// Agent Manager: Diff data push (extension → webview)
+export interface AgentManagerWorktreeDiffMessage {
+  type: "agentManager.worktreeDiff"
+  sessionId: string
+  diffs: WorktreeFileDiff[]
+}
+
+// Agent Manager: Diff loading state (extension → webview)
+export interface AgentManagerWorktreeDiffLoadingMessage {
+  type: "agentManager.worktreeDiffLoading"
+  sessionId: string
+  loading: boolean
+}
+
 // Request webview to send initial prompt to a newly created session (extension → webview)
 export interface AgentManagerSendInitialMessage {
   type: "agentManager.sendInitialMessage"
@@ -762,6 +786,8 @@ export type ExtensionMessage =
   | AgentManagerBranchesMessage
   | AgentManagerExternalWorktreesMessage
   | AgentManagerImportResultMessage
+  | AgentManagerWorktreeDiffMessage
+  | AgentManagerWorktreeDiffLoadingMessage
 
 // ============================================
 // Messages FROM webview TO extension
@@ -1111,6 +1137,24 @@ export interface ImportExternalWorktreeRequest {
 export interface ImportAllExternalWorktreesRequest {
   type: "agentManager.importAllExternalWorktrees"
 }
+
+// Agent Manager: Request one-shot diff fetch (webview → extension)
+export interface RequestWorktreeDiffMessage {
+  type: "agentManager.requestWorktreeDiff"
+  sessionId: string
+}
+
+// Agent Manager: Start polling for live diff updates (webview → extension)
+export interface StartDiffWatchMessage {
+  type: "agentManager.startDiffWatch"
+  sessionId: string
+}
+
+// Agent Manager: Stop polling for diff updates (webview → extension)
+export interface StopDiffWatchMessage {
+  type: "agentManager.stopDiffWatch"
+}
+
 // Variant persistence (webview → extension)
 export interface PersistVariantRequest {
   type: "persistVariant"
@@ -1188,6 +1232,9 @@ export type WebviewMessage =
   | ImportFromPRRequest
   | ImportExternalWorktreeRequest
   | ImportAllExternalWorktreesRequest
+  | RequestWorktreeDiffMessage
+  | StartDiffWatchMessage
+  | StopDiffWatchMessage
 
 // ============================================
 // VS Code API type

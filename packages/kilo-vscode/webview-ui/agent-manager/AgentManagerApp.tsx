@@ -21,6 +21,9 @@ import type {
   AgentManagerSendInitialMessage,
   AgentManagerBranchesMessage,
   AgentManagerImportResultMessage,
+  AgentManagerWorktreeDiffMessage,
+  AgentManagerWorktreeDiffLoadingMessage,
+  WorktreeFileDiff,
   WorktreeState,
   ManagedSessionState,
   SessionInfo,
@@ -62,6 +65,7 @@ import { useImageAttachments } from "../src/hooks/useImageAttachments"
 import { validateLocalSession, nextSelectionAfterDelete, adjacentHint, LOCAL } from "./navigate"
 import { reorderTabs, applyTabOrder, firstOrderedTitle } from "./tab-order"
 import { ConstrainDragYAxis, SortableTab } from "./sortable-tab"
+import { DiffPanel } from "./DiffPanel"
 import "./agent-manager.css"
 
 interface SetupState {
@@ -204,6 +208,7 @@ function buildShortcutCategories(
       title: t("agentManager.shortcuts.category.terminal"),
       shortcuts: [
         { label: t("agentManager.shortcuts.toggleTerminal"), binding: bindings.showTerminal ?? "" },
+        { label: "Toggle diff panel", binding: bindings.toggleDiff ?? "" },
         { label: t("agentManager.shortcuts.focusPanel"), binding: bindings.focusPanel ?? "" },
       ],
     },
@@ -267,6 +272,12 @@ const AgentManagerContent: Component = () => {
   const [localSessionIDs, setLocalSessionIDs] = createSignal<string[]>(persisted?.localSessionIDs ?? [])
   const [sidebarWidth, setSidebarWidth] = createSignal(persisted?.sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH)
   const [sessionsCollapsed, setSessionsCollapsed] = createSignal(false)
+
+  // Diff panel state
+  const [diffOpen, setDiffOpen] = createSignal(false)
+  const [diffDatas, setDiffDatas] = createSignal<Record<string, WorktreeFileDiff[]>>({})
+  const [diffLoading, setDiffLoading] = createSignal(false)
+  const [diffWidth, setDiffWidth] = createSignal(Math.round(window.innerWidth * 0.5))
 
   // Pending local tab counter for generating unique IDs
   let pendingCounter = 0
@@ -555,6 +566,8 @@ const AgentManagerContent: Component = () => {
       else if (msg.action === "showTerminal") {
         const id = session.currentSessionID()
         if (id) vscode.postMessage({ type: "agentManager.showTerminal", sessionId: id })
+      } else if (msg.action === "toggleDiff") {
+        setDiffOpen((prev) => !prev)
       } else if (msg.action === "newTab") handleNewTabForCurrentSelection()
       else if (msg.action === "closeTab") closeActiveTab()
       else if (msg.action === "newWorktree") handleNewWorktreeOrPromote()
@@ -570,8 +583,8 @@ const AgentManagerContent: Component = () => {
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
         e.preventDefault()
       }
-      // Prevent browser defaults for our shortcuts (new tab, close tab, new window)
-      if (["t", "w", "n"].includes(e.key.toLowerCase()) && !e.shiftKey) {
+      // Prevent browser defaults for our shortcuts (new tab, close tab, new window, toggle diff)
+      if (["t", "w", "n", "d"].includes(e.key.toLowerCase()) && !e.shiftKey) {
         e.preventDefault()
       }
       // Prevent defaults for shift variants (close worktree, advanced new worktree)
@@ -761,6 +774,16 @@ const AgentManagerContent: Component = () => {
           })
         }
       }
+
+      if (msg.type === "agentManager.worktreeDiff") {
+        const ev = msg as AgentManagerWorktreeDiffMessage
+        setDiffDatas((prev) => ({ ...prev, [ev.sessionId]: ev.diffs }))
+      }
+
+      if (msg.type === "agentManager.worktreeDiffLoading") {
+        const ev = msg as AgentManagerWorktreeDiffLoadingMessage
+        setDiffLoading(ev.loading)
+      }
     })
 
     onCleanup(() => {
@@ -782,6 +805,26 @@ const AgentManagerContent: Component = () => {
     // Open a pending "New Session" tab if there are no persisted local sessions
     if (localSessionIDs().length === 0) {
       addPendingTab()
+    }
+  })
+
+  // Start/stop diff watch when panel opens/closes or session changes
+  createEffect(() => {
+    const open = diffOpen()
+    const id = session.currentSessionID()
+    if (open && id) {
+      const ms = managedSessions().find((s) => s.id === id)
+      if (ms?.worktreeId) {
+        vscode.postMessage({ type: "agentManager.startDiffWatch", sessionId: id })
+      }
+    } else if (!open) {
+      vscode.postMessage({ type: "agentManager.stopDiffWatch" })
+    }
+  })
+
+  onCleanup(() => {
+    if (diffOpen()) {
+      vscode.postMessage({ type: "agentManager.stopDiffWatch" })
     }
   })
 
@@ -1471,7 +1514,19 @@ const AgentManagerContent: Component = () => {
                   onClick={handleAddSession}
                 />
               </TooltipKeybind>
-              <div class="am-tab-terminal">
+              <div class="am-tab-actions">
+                <Show when={selection() !== LOCAL}>
+                  <TooltipKeybind title="Toggle diff" keybind={kb().toggleDiff ?? ""} placement="bottom">
+                    <IconButton
+                      icon="layers"
+                      size="small"
+                      variant="ghost"
+                      label="Toggle diff"
+                      class={diffOpen() ? "am-tab-diff-btn-active" : ""}
+                      onClick={() => setDiffOpen((prev) => !prev)}
+                    />
+                  </TooltipKeybind>
+                </Show>
                 <TooltipKeybind
                   title={t("agentManager.tab.terminal")}
                   keybind={kb().showTerminal ?? ""}
@@ -1559,28 +1614,47 @@ const AgentManagerContent: Component = () => {
           )
         })()}
         <Show when={!contextEmpty()}>
-          <div class="am-chat-wrapper">
-            <ChatView
-              onSelectSession={(id) => {
-                // If on local and selecting a different session, keep local context
-                session.selectSession(id)
-              }}
-              readonly={readOnly()}
-            />
-            <Show when={readOnly()}>
-              <div class="am-readonly-banner">
-                <Icon name="branch" size="small" />
-                <span class="am-readonly-text">{t("agentManager.session.readonly")}</span>
-                <Button
-                  variant="primary"
-                  size="small"
-                  onClick={() => {
-                    const sid = session.currentSessionID()
-                    if (sid) vscode.postMessage({ type: "agentManager.promoteSession", sessionId: sid })
-                  }}
-                >
-                  {t("agentManager.session.openInWorktree")}
-                </Button>
+          <div class={`am-detail-content ${diffOpen() ? "am-detail-split" : ""}`}>
+            <div class="am-chat-wrapper">
+              <ChatView
+                onSelectSession={(id) => {
+                  // If on local and selecting a different session, keep local context
+                  session.selectSession(id)
+                }}
+                readonly={readOnly()}
+              />
+              <Show when={readOnly()}>
+                <div class="am-readonly-banner">
+                  <Icon name="branch" size="small" />
+                  <span class="am-readonly-text">{t("agentManager.session.readonly")}</span>
+                  <Button
+                    variant="primary"
+                    size="small"
+                    onClick={() => {
+                      const sid = session.currentSessionID()
+                      if (sid) vscode.postMessage({ type: "agentManager.promoteSession", sessionId: sid })
+                    }}
+                  >
+                    {t("agentManager.session.openInWorktree")}
+                  </Button>
+                </div>
+              </Show>
+            </div>
+            <Show when={diffOpen()}>
+              <ResizeHandle
+                direction="horizontal"
+                edge="end"
+                size={diffWidth()}
+                min={200}
+                max={Math.round(window.innerWidth * 0.8)}
+                onResize={(w) => setDiffWidth(Math.max(200, Math.min(w, window.innerWidth * 0.8)))}
+              />
+              <div class="am-diff-panel-wrapper" style={{ width: `${diffWidth()}px`, "flex-shrink": "0" }}>
+                <DiffPanel
+                  diffs={diffDatas()[session.currentSessionID() ?? ""] ?? []}
+                  loading={diffLoading()}
+                  onClose={() => setDiffOpen(false)}
+                />
               </div>
             </Show>
           </div>

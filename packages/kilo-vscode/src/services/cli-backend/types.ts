@@ -392,6 +392,15 @@ export interface CloudSessionData {
 }
 
 /** VS Code editor context sent alongside messages to the CLI backend */
+export interface WorktreeFileDiff {
+  file: string
+  before: string
+  after: string
+  additions: number
+  deletions: number
+  status?: "added" | "deleted" | "modified"
+}
+
 export interface EditorContext {
   /** Workspace-relative paths of currently visible editors */
   visibleFiles?: string[]

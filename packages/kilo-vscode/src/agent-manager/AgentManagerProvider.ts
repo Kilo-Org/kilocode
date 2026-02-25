@@ -33,6 +33,9 @@ export class AgentManagerProvider implements vscode.Disposable {
   private terminalManager: SessionTerminalManager
   private stateReady: Promise<void> | undefined
   private importing = false
+  private diffInterval: ReturnType<typeof setInterval> | undefined
+  private diffSessionId: string | undefined
+  private lastDiffHash: string | undefined
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -235,6 +238,19 @@ export class AgentManagerProvider implements vscode.Disposable {
     }
     if (type === "agentManager.importAllExternalWorktrees") {
       void this.onImportAllExternalWorktrees()
+      return null
+    }
+
+    if (type === "agentManager.requestWorktreeDiff" && typeof msg.sessionId === "string") {
+      void this.onRequestWorktreeDiff(msg.sessionId)
+      return null
+    }
+    if (type === "agentManager.startDiffWatch" && typeof msg.sessionId === "string") {
+      this.startDiffPolling(msg.sessionId)
+      return null
+    }
+    if (type === "agentManager.stopDiffWatch") {
+      this.stopDiffPolling()
       return null
     }
 
@@ -1055,6 +1071,12 @@ export class AgentManagerProvider implements vscode.Disposable {
       }
     }
 
+    // Ensure toggleDiff binding is always present (may be missing from
+    // cached packageJSON if the extension hasn't been fully reloaded)
+    if (!bindings.toggleDiff) {
+      bindings.toggleDiff = formatKeybinding(mac ? "cmd+d" : "ctrl+d", mac)
+    }
+
     this.postToWebview({ type: "agentManager.keybindings", bindings })
   }
 
@@ -1196,6 +1218,86 @@ export class AgentManagerProvider implements vscode.Disposable {
   // Helpers
   // ---------------------------------------------------------------------------
 
+  // ---------------------------------------------------------------------------
+  // Diff polling
+  // ---------------------------------------------------------------------------
+
+  /** Resolve worktree path + parentBranch for a session, or undefined if not applicable. */
+  private resolveDiffTarget(sessionId: string): { directory: string; baseBranch: string } | undefined {
+    const state = this.getStateManager()
+    if (!state) return undefined
+    const session = state.getSession(sessionId)
+    if (!session?.worktreeId) return undefined
+    const worktree = state.getWorktree(session.worktreeId)
+    if (!worktree) return undefined
+    return { directory: worktree.path, baseBranch: worktree.parentBranch }
+  }
+
+  /** One-shot diff fetch with loading indicators. Used by requestWorktreeDiff. */
+  private async onRequestWorktreeDiff(sessionId: string): Promise<void> {
+    const target = this.resolveDiffTarget(sessionId)
+    if (!target) return
+
+    this.postToWebview({ type: "agentManager.worktreeDiffLoading", sessionId, loading: true })
+    try {
+      const client = this.connectionService.getHttpClient()
+      const diffs = await client.getWorktreeDiff(target.directory, target.baseBranch)
+
+      const hash = diffs.map((d) => `${d.file}:${d.status}:${d.additions}:${d.deletions}`).join("|")
+      this.lastDiffHash = hash
+      this.diffSessionId = sessionId
+
+      this.postToWebview({ type: "agentManager.worktreeDiff", sessionId, diffs })
+    } catch (err) {
+      this.log("Failed to fetch worktree diff:", err)
+    } finally {
+      this.postToWebview({ type: "agentManager.worktreeDiffLoading", sessionId, loading: false })
+    }
+  }
+
+  /** Polling diff fetch — no loading state, only pushes when hash changes. */
+  private async pollDiff(sessionId: string): Promise<void> {
+    const target = this.resolveDiffTarget(sessionId)
+    if (!target) return
+
+    try {
+      const client = this.connectionService.getHttpClient()
+      const diffs = await client.getWorktreeDiff(target.directory, target.baseBranch)
+
+      const hash = diffs.map((d) => `${d.file}:${d.status}:${d.additions}:${d.deletions}`).join("|")
+      if (hash === this.lastDiffHash && this.diffSessionId === sessionId) return
+      this.lastDiffHash = hash
+      this.diffSessionId = sessionId
+
+      this.postToWebview({ type: "agentManager.worktreeDiff", sessionId, diffs })
+    } catch (err) {
+      this.log("Failed to poll worktree diff:", err)
+    }
+  }
+
+  private startDiffPolling(sessionId: string): void {
+    this.stopDiffPolling()
+    this.diffSessionId = sessionId
+    this.lastDiffHash = undefined
+
+    // Initial fetch with loading state
+    void this.onRequestWorktreeDiff(sessionId)
+
+    // Subsequent polls without loading state
+    this.diffInterval = setInterval(() => {
+      void this.pollDiff(sessionId)
+    }, 2500)
+  }
+
+  private stopDiffPolling(): void {
+    if (this.diffInterval) {
+      clearInterval(this.diffInterval)
+      this.diffInterval = undefined
+    }
+    this.diffSessionId = undefined
+    this.lastDiffHash = undefined
+  }
+
   private postToWebview(message: Record<string, unknown>): void {
     if (this.panel?.webview) void this.panel.webview.postMessage(message)
   }
@@ -1236,6 +1338,7 @@ export class AgentManagerProvider implements vscode.Disposable {
   }
 
   public dispose(): void {
+    this.stopDiffPolling()
     this.terminalManager.dispose()
     this.provider?.dispose()
     this.panel?.dispose()
