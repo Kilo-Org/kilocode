@@ -145,7 +145,7 @@ JetBrains IDEs rely on the **system certificate store**, so resolving trust at t
 
 #### Symptoms
 
-- `Cascade cannot access paths without an active workspace`
+- `Kilo Code cannot access paths without an active workspace`
 
 #### Cause
 
