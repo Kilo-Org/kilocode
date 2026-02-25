@@ -10,6 +10,10 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
+import { useLanguage } from "../src/context/language"
+
+const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
+const modEnter = isMac ? "⌘↩" : "Ctrl+Enter"
 
 // --- Data model ---
 
@@ -55,6 +59,7 @@ function extractLines(content: string, start: number, end: number): string {
 }
 
 export const DiffPanel: Component<DiffPanelProps> = (props) => {
+  const { t } = useLanguage()
   const [comments, setComments] = createSignal<ReviewComment[]>([])
   const [open, setOpen] = createSignal<string[]>([])
   const [draft, setDraft] = createSignal<{ file: string; side: AnnotationSide; line: number } | null>(null)
@@ -160,24 +165,24 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       wrapper.className = "am-annotation am-annotation-draft"
       const header = document.createElement("div")
       header.className = "am-annotation-header"
-      header.textContent = `Comment on line ${meta.line}`
+      header.textContent = t("agentManager.diff.commentOnLine", { line: meta.line })
       const textarea = document.createElement("textarea")
       textarea.className = "am-annotation-textarea"
       textarea.rows = 3
-      textarea.placeholder = "Leave a comment..."
+      textarea.placeholder = t("agentManager.diff.placeholder")
       const actions = document.createElement("div")
       actions.className = "am-annotation-actions"
       const cancelBtn = document.createElement("button")
       cancelBtn.className = "am-annotation-btn"
-      cancelBtn.textContent = "Cancel"
+      cancelBtn.textContent = t("agentManager.diff.cancel")
       const submitBtn = document.createElement("button")
       submitBtn.className = "am-annotation-btn am-annotation-btn-submit"
-      submitBtn.textContent = "Comment"
+      submitBtn.textContent = t("agentManager.diff.comment")
+      submitBtn.title = t("agentManager.diff.commentTooltip", { shortcut: modEnter })
       const sendBtn = document.createElement("button")
       sendBtn.className = "am-annotation-btn am-annotation-btn-send"
-      sendBtn.title = "Send directly to LLM"
-      sendBtn.innerHTML =
-        'Send <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M1 1l14 7-14 7V9l10-1L1 7z"/></svg>'
+      sendBtn.title = t("agentManager.diff.sendTooltip", { shortcut: modEnter })
+      sendBtn.innerHTML = `${t("agentManager.diff.send")} <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M1 1l14 7-14 7V9l10-1L1 7z"/></svg>`
       actions.appendChild(cancelBtn)
       actions.appendChild(submitBtn)
       actions.appendChild(sendBtn)
@@ -251,7 +256,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       wrapper.className = "am-annotation am-annotation-draft"
       const header = document.createElement("div")
       header.className = "am-annotation-header"
-      header.textContent = `Edit comment on line ${c.line}`
+      header.textContent = t("agentManager.diff.editCommentOnLine", { line: c.line })
       const textarea = document.createElement("textarea")
       textarea.className = "am-annotation-textarea"
       textarea.rows = 3
@@ -260,10 +265,10 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       actions.className = "am-annotation-actions"
       const cancelBtn = document.createElement("button")
       cancelBtn.className = "am-annotation-btn"
-      cancelBtn.textContent = "Cancel"
+      cancelBtn.textContent = t("agentManager.diff.cancel")
       const saveBtn = document.createElement("button")
       saveBtn.className = "am-annotation-btn am-annotation-btn-submit"
-      saveBtn.textContent = "Save"
+      saveBtn.textContent = t("agentManager.diff.save")
       actions.appendChild(cancelBtn)
       actions.appendChild(saveBtn)
       wrapper.appendChild(header)
@@ -331,7 +336,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
 
     btns.appendChild(
       makeBtn(
-        "Send to chat",
+        t("agentManager.diff.sendToChat"),
         '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M1 1l14 7-14 7V9l10-1L1 7z"/></svg>',
         () => {
           const quote = c.selectedText ? `\n> \`\`\`\n> ${c.selectedText.split("\n").join("\n> ")}\n> \`\`\`\n` : ""
@@ -343,14 +348,14 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     )
     btns.appendChild(
       makeBtn(
-        "Edit",
+        t("agentManager.diff.edit"),
         '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M13.2 1.1l1.7 1.7-1.1 1.1-1.7-1.7zM1 11.5V13.2h1.7l7.8-7.8-1.7-1.7z"/></svg>',
         () => setEditing(c.id),
       ),
     )
     btns.appendChild(
       makeBtn(
-        "Delete",
+        t("agentManager.diff.delete"),
         '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm3.1 9.3l-.8.8L8 8.8l-2.3 2.3-.8-.8L7.2 8 4.9 5.7l.8-.8L8 7.2l2.3-2.3.8.8L8.8 8z"/></svg>',
         () => deleteComment(c.id),
       ),
@@ -403,10 +408,16 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     setComments([])
   }
 
-  // Global Cmd/Ctrl+Enter handler: when no textarea is focused, send all comments to LLM
+  // Global Cmd/Ctrl+Enter handler: when no editable element is focused, send all comments to LLM
   const handleGlobalKeydown = (e: KeyboardEvent) => {
     if (!(e.metaKey || e.ctrlKey) || e.key !== "Enter") return
-    if (document.activeElement?.tagName === "TEXTAREA") return
+    const el = document.activeElement
+    if (
+      el instanceof HTMLTextAreaElement ||
+      el instanceof HTMLInputElement ||
+      (el instanceof HTMLElement && el.isContentEditable)
+    )
+      return
     if (comments().length === 0) return
     e.preventDefault()
     sendAllDirectly()
@@ -418,20 +429,26 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   return (
     <div class="am-diff-panel">
       <div class="am-diff-header">
-        <span class="am-diff-header-title">Changes</span>
-        <IconButton icon="close" size="small" variant="ghost" label="Close" onClick={props.onClose} />
+        <span class="am-diff-header-title">{t("agentManager.diff.changes")}</span>
+        <IconButton
+          icon="close"
+          size="small"
+          variant="ghost"
+          label={t("agentManager.diff.close")}
+          onClick={props.onClose}
+        />
       </div>
 
       <Show when={props.loading && props.diffs.length === 0}>
         <div class="am-diff-loading">
           <Spinner />
-          <span>Computing diff...</span>
+          <span>{t("agentManager.diff.loading")}</span>
         </div>
       </Show>
 
       <Show when={!props.loading && props.diffs.length === 0}>
         <div class="am-diff-empty">
-          <span>No changes detected</span>
+          <span>{t("agentManager.diff.empty")}</span>
         </div>
       </Show>
 
@@ -464,12 +481,12 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                           <div data-slot="session-review-trigger-actions">
                             <Show when={isAdded()}>
                               <span data-slot="session-review-change" data-type="added">
-                                Added
+                                {t("agentManager.diff.added")}
                               </span>
                             </Show>
                             <Show when={isDeleted()}>
                               <span data-slot="session-review-change" data-type="removed">
-                                Removed
+                                {t("agentManager.diff.removed")}
                               </span>
                             </Show>
                             <Show when={!isAdded() && !isDeleted()}>
@@ -505,10 +522,12 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
         <Show when={comments().length > 0}>
           <div class="am-diff-comments-footer">
             <span class="am-diff-comments-count">
-              {comments().length} comment{comments().length !== 1 ? "s" : ""}
+              {comments().length !== 1
+                ? t("agentManager.diff.commentsCountPlural", { count: comments().length })
+                : t("agentManager.diff.commentsCount", { count: comments().length })}
             </span>
             <Button variant="primary" size="small" onClick={sendAllToChat}>
-              Send all to chat
+              {t("agentManager.diff.sendAllToChat")}
             </Button>
           </div>
         </Show>
