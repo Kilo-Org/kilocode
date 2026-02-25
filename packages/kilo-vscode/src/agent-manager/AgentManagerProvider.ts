@@ -1,4 +1,5 @@
 import * as vscode from "vscode"
+import * as cp from "child_process"
 import type { KiloConnectionService, SessionInfo, HttpClient } from "../services/cli-backend"
 import { KiloProvider } from "../KiloProvider"
 import { buildWebviewHtml } from "../utils"
@@ -21,6 +22,7 @@ import { MAX_MULTI_VERSIONS } from "./constants"
  * SESSIONS (bottom) with unassociated workspace sessions.
  */
 const PLATFORM = "agent-manager" as const
+const LOCAL_DIFF_ID = "local" as const
 
 export class AgentManagerProvider implements vscode.Disposable {
   public static readonly viewType = "kilo-code.new.AgentManagerPanel"
@@ -1273,6 +1275,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
   /** Resolve worktree path + parentBranch for a session, or undefined if not applicable. */
   private resolveDiffTarget(sessionId: string): { directory: string; baseBranch: string } | undefined {
+    if (sessionId === LOCAL_DIFF_ID) return this.resolveLocalDiffTarget()
     const state = this.getStateManager()
     if (!state) return undefined
     const session = state.getSession(sessionId)
@@ -1280,6 +1283,43 @@ export class AgentManagerProvider implements vscode.Disposable {
     const worktree = state.getWorktree(session.worktreeId)
     if (!worktree) return undefined
     return { directory: worktree.path, baseBranch: worktree.parentBranch }
+  }
+
+  /** Resolve diff target for the local workspace — diffs against the remote tracking branch. */
+  private resolveLocalDiffTarget(): { directory: string; baseBranch: string } | undefined {
+    const root = this.getWorkspaceRoot()
+    if (!root) return undefined
+    const tracking = this.getRemoteTrackingBranch(root)
+    if (!tracking) {
+      this.log("Local diff: no remote tracking branch found")
+      return undefined
+    }
+    return { directory: root, baseBranch: tracking }
+  }
+
+  /** Detect the remote tracking branch for the current branch in the given directory. */
+  private getRemoteTrackingBranch(cwd: string): string | undefined {
+    // Try configured upstream tracking branch first (e.g. origin/feature-x)
+    const upstream = this.gitSync(cwd, ["rev-parse", "--abbrev-ref", "@{upstream}"])
+    if (upstream) return upstream
+
+    // No upstream configured — construct origin/<current-branch>
+    const branch = this.gitSync(cwd, ["rev-parse", "--abbrev-ref", "HEAD"])
+    if (!branch || branch === "HEAD") return undefined
+    const ref = `origin/${branch}`
+    const resolved = this.gitSync(cwd, ["rev-parse", "--verify", ref])
+    if (resolved) return ref
+
+    return undefined
+  }
+
+  /** Run a git command synchronously and return trimmed stdout, or undefined on failure. */
+  private gitSync(cwd: string, args: string[]): string | undefined {
+    try {
+      return cp.execFileSync("git", args, { cwd, encoding: "utf-8", timeout: 5000 }).trim() || undefined
+    } catch {
+      return undefined
+    }
   }
 
   /** One-shot diff fetch with loading indicators. Used by requestWorktreeDiff. */
