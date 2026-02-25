@@ -1007,6 +1007,8 @@ export const dict = {
   "agentManager.dialog.branchBadge.remote": "リモート",
   "agentManager.dialog.versions": "バージョン",
   "agentManager.dialog.versionHint": "{{count}}個のWorktreeが並行して実行されます",
+  "agentManager.dialog.compareModels": "モデルを比較",
+  "agentManager.dialog.compareModels.searchModels": "モデルを検索...",
   "agentManager.dialog.creating": "作成中...",
   "agentManager.dialog.createWorkspace": "ワークスペースを作成",
   "agentManager.dialog.removeImage": "画像を削除",

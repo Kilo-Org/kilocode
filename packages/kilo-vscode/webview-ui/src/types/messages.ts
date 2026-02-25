@@ -1090,6 +1090,19 @@ export interface ShowTerminalRequest {
   sessionId: string
 }
 
+/**
+ * Maximum number of parallel worktree versions for multi-version mode.
+ * Keep in sync with MAX_MULTI_VERSIONS in src/agent-manager/constants.ts.
+ */
+export const MAX_MULTI_VERSIONS = 4
+
+// Per-version model allocation for multi-model comparison mode
+export interface ModelAllocation {
+  providerID: string
+  modelID: string
+  count: number
+}
+
 // Create multiple worktree sessions for the same prompt (multi-version mode)
 export interface CreateMultiVersionRequest {
   type: "agentManager.createMultiVersion"
@@ -1101,6 +1114,10 @@ export interface CreateMultiVersionRequest {
   files?: FileAttachment[]
   baseBranch?: string
   branchName?: string
+  // Per-version model allocations for multi-model comparison mode.
+  // When set, each entry expands to `count` versions with that model.
+  // Overrides `versions`, `providerID`, and `modelID`.
+  modelAllocations?: ModelAllocation[]
 }
 
 // Persist tab order for a context (worktree ID or "local")

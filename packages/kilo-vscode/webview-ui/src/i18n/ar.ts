@@ -1002,6 +1002,8 @@ export const dict = {
   "agentManager.dialog.branchBadge.remote": "بعيد",
   "agentManager.dialog.versions": "النسخ",
   "agentManager.dialog.versionHint": "{{count}} Worktrees ستعمل بالتوازي",
+  "agentManager.dialog.compareModels": "مقارنة النماذج",
+  "agentManager.dialog.compareModels.searchModels": "البحث عن النماذج...",
   "agentManager.dialog.creating": "جارٍ الإنشاء...",
   "agentManager.dialog.createWorkspace": "إنشاء مساحة عمل",
   "agentManager.dialog.removeImage": "إزالة الصورة",

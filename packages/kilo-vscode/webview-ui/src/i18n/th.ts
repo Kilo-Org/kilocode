@@ -1000,6 +1000,8 @@ export const dict = {
   "agentManager.dialog.branchBadge.remote": "ระยะไกล",
   "agentManager.dialog.versions": "เวอร์ชัน",
   "agentManager.dialog.versionHint": "{{count}} Worktrees จะทำงานพร้อมกัน",
+  "agentManager.dialog.compareModels": "เปรียบเทียบโมเดล",
+  "agentManager.dialog.compareModels.searchModels": "ค้นหาโมเดล...",
   "agentManager.dialog.creating": "กำลังสร้าง...",
   "agentManager.dialog.createWorkspace": "สร้าง Workspace",
   "agentManager.dialog.removeImage": "ลบรูปภาพ",

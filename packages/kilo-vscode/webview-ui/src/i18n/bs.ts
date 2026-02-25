@@ -1038,6 +1038,8 @@ export const dict = {
   "agentManager.dialog.branchBadge.remote": "udaljeno",
   "agentManager.dialog.versions": "Verzije",
   "agentManager.dialog.versionHint": "{{count}} worktree-ova će se pokrenuti paralelno",
+  "agentManager.dialog.compareModels": "Uporedi modele",
+  "agentManager.dialog.compareModels.searchModels": "Pretraži modele...",
   "agentManager.dialog.creating": "Kreiranje...",
   "agentManager.dialog.createWorkspace": "Kreiraj radni prostor",
   "agentManager.dialog.removeImage": "Ukloni sliku",
