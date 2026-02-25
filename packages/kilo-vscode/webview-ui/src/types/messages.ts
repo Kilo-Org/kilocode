@@ -342,6 +342,12 @@ export interface ReadyMessage {
   extensionVersion?: string
   vscodeLanguage?: string
   languageOverride?: string
+  workspaceDirectory?: string
+}
+
+export interface WorkspaceDirectoryChangedMessage {
+  type: "workspaceDirectoryChanged"
+  directory: string
 }
 
 export interface ConnectionStateMessage {
@@ -792,6 +798,7 @@ export type ExtensionMessage =
   | AgentManagerBranchesMessage
   | AgentManagerExternalWorktreesMessage
   | AgentManagerImportResultMessage
+  | WorkspaceDirectoryChangedMessage
   | AgentManagerWorktreeDiffMessage
   | AgentManagerWorktreeDiffLoadingMessage
 

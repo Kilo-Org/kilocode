@@ -1023,4 +1023,7 @@ export const dict = {
   "agentManager.import.noBranchesFound": "لم يتم العثور على فروع.",
   "agentManager.import.noBranchesHint": "الصق رابط PR أعلاه أو أنشئ Worktree جديدًا.",
   "agentManager.import.failed": "فشل الاستيراد",
+
+  "question.summary": "{{n}} من {{total}} أسئلة",
+  "common.review": "مراجعة",
 }

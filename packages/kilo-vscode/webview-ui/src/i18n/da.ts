@@ -1032,4 +1032,7 @@ export const dict = {
   "agentManager.import.noBranchesFound": "Ingen branches fundet.",
   "agentManager.import.noBranchesHint": "Indsæt en PR URL ovenfor eller opret et nyt Worktree.",
   "agentManager.import.failed": "Import mislykkedes",
+
+  "question.summary": "{{n}} af {{total}} spørgsmål",
+  "common.review": "Gennemgå",
 }

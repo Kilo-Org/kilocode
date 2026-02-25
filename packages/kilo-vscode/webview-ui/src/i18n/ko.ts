@@ -1028,4 +1028,7 @@ export const dict = {
   "agentManager.import.noBranchesFound": "브랜치를 찾을 수 없습니다.",
   "agentManager.import.noBranchesHint": "위에 PR URL을 붙여넣거나 새 Worktree를 만드세요.",
   "agentManager.import.failed": "가져오기 실패",
+
+  "question.summary": "{{total}}개 질문 중 {{n}}번째",
+  "common.review": "검토",
 }

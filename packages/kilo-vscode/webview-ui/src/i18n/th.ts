@@ -1021,4 +1021,7 @@ export const dict = {
   "agentManager.import.noBranchesFound": "ไม่พบ Branch",
   "agentManager.import.noBranchesHint": "วาง URL ของ PR ด้านบนหรือสร้าง Worktree ใหม่",
   "agentManager.import.failed": "นำเข้าล้มเหลว",
+
+  "question.summary": "{{n}} จาก {{total}} คำถาม",
+  "common.review": "ตรวจสอบ",
 }

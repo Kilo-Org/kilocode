@@ -1033,4 +1033,7 @@ export const dict = {
   "agentManager.import.noBranchesFound": "Ingen branches funnet.",
   "agentManager.import.noBranchesHint": "Lim inn en PR URL ovenfor eller opprett et nytt Worktree.",
   "agentManager.import.failed": "Import mislyktes",
+
+  "question.summary": "{{n}} av {{total}} spørsmål",
+  "common.review": "Gjennomgå",
 } satisfies Partial<Record<Keys, string>>

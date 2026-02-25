@@ -1036,4 +1036,7 @@ export const dict = {
   "agentManager.import.noBranchesFound": "Ветки не найдены.",
   "agentManager.import.noBranchesHint": "Вставьте URL PR выше или создайте новый Worktree.",
   "agentManager.import.failed": "Ошибка импорта",
+
+  "question.summary": "{{n}} из {{total}} вопросов",
+  "common.review": "Просмотр",
 }

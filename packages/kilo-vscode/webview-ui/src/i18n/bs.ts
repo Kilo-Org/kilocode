@@ -1059,4 +1059,7 @@ export const dict = {
   "agentManager.import.noBranchesFound": "Nisu pronađeni branchevi.",
   "agentManager.import.noBranchesHint": "Zalijepite PR URL iznad ili kreirajte novi Worktree.",
   "agentManager.import.failed": "Uvoz neuspješan",
+
+  "question.summary": "{{n}} od {{total}} pitanja",
+  "common.review": "Pregled",
 }

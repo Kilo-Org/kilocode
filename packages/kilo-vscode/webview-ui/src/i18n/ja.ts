@@ -1028,4 +1028,7 @@ export const dict = {
   "agentManager.import.noBranchesFound": "ブランチが見つかりません。",
   "agentManager.import.noBranchesHint": "上にPR URLを貼り付けるか、新しいWorktreeを作成してください。",
   "agentManager.import.failed": "インポートに失敗しました",
+
+  "question.summary": "{{total}} 問中 {{n}} 問目",
+  "common.review": "確認",
 }

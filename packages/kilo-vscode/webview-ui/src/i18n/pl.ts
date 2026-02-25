@@ -1035,4 +1035,7 @@ export const dict = {
   "agentManager.import.noBranchesFound": "Nie znaleziono branchy.",
   "agentManager.import.noBranchesHint": "Wklej URL PR powyżej lub utwórz nowy Worktree.",
   "agentManager.import.failed": "Import nie powiódł się",
+
+  "question.summary": "{{n}} z {{total}} pytań",
+  "common.review": "Przejrzyj",
 }

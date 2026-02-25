@@ -2909,6 +2909,33 @@ export type WorktreeResetResponses = {
 
 export type WorktreeResetResponse = WorktreeResetResponses[keyof WorktreeResetResponses]
 
+export type WorktreeDiffData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/experimental/worktree/diff"
+}
+
+export type WorktreeDiffErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type WorktreeDiffError = WorktreeDiffErrors[keyof WorktreeDiffErrors]
+
+export type WorktreeDiffResponses = {
+  /**
+   * File diffs
+   */
+  200: Array<FileDiff>
+}
+
+export type WorktreeDiffResponse = WorktreeDiffResponses[keyof WorktreeDiffResponses]
+
 export type ExperimentalResourceListData = {
   body?: never
   path?: never

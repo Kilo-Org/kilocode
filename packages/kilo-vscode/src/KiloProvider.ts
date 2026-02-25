@@ -127,6 +127,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         extensionVersion: this.extensionVersion,
         vscodeLanguage: vscode.env.language,
         languageOverride: langConfig.get<string>("language"),
+        workspaceDirectory: this.getWorkspaceDirectory(this.currentSession?.id),
       })
     }
 
@@ -581,6 +582,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           extensionVersion: this.extensionVersion,
           vscodeLanguage: vscode.env.language,
           languageOverride: langConfig.get<string>("language"),
+          workspaceDirectory: this.getWorkspaceDirectory(this.currentSession?.id),
         })
       }
 
@@ -685,6 +687,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           }
         })
         .catch((err) => console.warn("[Kilo New] KiloProvider: getSession failed (non-critical):", err))
+
+      this.postMessage({
+        type: "workspaceDirectoryChanged",
+        directory: this.getWorkspaceDirectory(sessionID),
+      })
 
       // Fetch current session status so the webview has the correct busy/idle
       // state after switching tabs (SSE events may have been missed).

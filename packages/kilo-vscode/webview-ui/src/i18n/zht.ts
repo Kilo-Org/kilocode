@@ -1019,4 +1019,7 @@ export const dict = {
   "agentManager.import.noBranchesFound": "找不到分支。",
   "agentManager.import.noBranchesHint": "在上方貼上 PR URL 或建立新的 Worktree。",
   "agentManager.import.failed": "匯入失敗",
+
+  "question.summary": "第 {{n}} / {{total}} 個問題",
+  "common.review": "審查",
 } satisfies Partial<Record<Keys, string>>
