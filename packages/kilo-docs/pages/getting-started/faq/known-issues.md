@@ -117,8 +117,6 @@ Cascade depends on **JCEF (JetBrains Chromium Embedded Framework)** to display i
    ```
 4. Restart your IDE
 
-For more details, see the full [JetBrains Troubleshooting](/docs/getting-started/troubleshooting/jetbrains#cascade-not-visible) guide.
-
 ### TLS / Certificate errors
 
 #### Symptoms
@@ -143,8 +141,6 @@ JetBrains IDEs rely on the **system certificate store**, so resolving trust at t
 **JetBrains 2024.3 note:** Some builds may fail to recognize OS certificates. Workarounds include downgrading to a previous version, upgrading to **2024.3.1 or later**, or adding the JVM option `-Djavax.net.ssl.trustStoreType=Windows-ROOT`.
 {% /callout %}
 
-For more details, see the full [JetBrains Troubleshooting](/docs/getting-started/troubleshooting/jetbrains#tls--certificate-errors) guide.
-
 ### Custom workspace required
 
 #### Symptoms
@@ -164,4 +160,3 @@ Kilo Code requires an explicit workspace configuration to access project files i
 5. Select your project folder
 6. Apply changes and restart the IDE
 
-For more details, see the full [JetBrains Troubleshooting](/docs/getting-started/troubleshooting/jetbrains#custom-workspace-required) guide.
