@@ -1,10 +1,12 @@
 import * as vscode from "vscode"
+import * as cp from "child_process"
 import type { KiloConnectionService, SessionInfo, HttpClient } from "../services/cli-backend"
 import { KiloProvider } from "../KiloProvider"
 import { buildWebviewHtml } from "../utils"
 import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
 import { WorktreeStateManager } from "./WorktreeStateManager"
 import { versionedName } from "./branch-name"
+import { normalizePath } from "./git-import"
 import { SetupScriptService } from "./SetupScriptService"
 import { SetupScriptRunner } from "./SetupScriptRunner"
 import { SessionTerminalManager } from "./SessionTerminalManager"
@@ -21,6 +23,7 @@ import { MAX_MULTI_VERSIONS } from "./constants"
  * SESSIONS (bottom) with unassociated workspace sessions.
  */
 const PLATFORM = "agent-manager" as const
+const LOCAL_DIFF_ID = "local" as const
 
 export class AgentManagerProvider implements vscode.Disposable {
   public static readonly viewType = "kilo-code.new.AgentManagerPanel"
@@ -37,6 +40,7 @@ export class AgentManagerProvider implements vscode.Disposable {
   private diffInterval: ReturnType<typeof setInterval> | undefined
   private diffSessionId: string | undefined
   private lastDiffHash: string | undefined
+  private cachedDiffTarget: { directory: string; baseBranch: string } | undefined
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -975,7 +979,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     let worktree: ReturnType<typeof state.addWorktree> | undefined
     try {
       const externals = await manager.listExternalWorktrees(new Set(state.getWorktrees().map((wt) => wt.path)))
-      if (!externals.some((e) => e.path === wtPath)) {
+      if (!externals.some((e) => normalizePath(e.path) === normalizePath(wtPath))) {
         this.postToWebview({
           type: "agentManager.importResult",
           success: false,
@@ -1272,25 +1276,93 @@ export class AgentManagerProvider implements vscode.Disposable {
   // ---------------------------------------------------------------------------
 
   /** Resolve worktree path + parentBranch for a session, or undefined if not applicable. */
-  private resolveDiffTarget(sessionId: string): { directory: string; baseBranch: string } | undefined {
+  private async resolveDiffTarget(sessionId: string): Promise<{ directory: string; baseBranch: string } | undefined> {
+    if (sessionId === LOCAL_DIFF_ID) return await this.resolveLocalDiffTarget()
     const state = this.getStateManager()
-    if (!state) return undefined
+    if (!state) {
+      this.log(`resolveDiffTarget: no state manager for session ${sessionId}`)
+      return undefined
+    }
     const session = state.getSession(sessionId)
-    if (!session?.worktreeId) return undefined
+    if (!session) {
+      this.log(
+        `resolveDiffTarget: session ${sessionId} not found in state (${state.getSessions().length} total sessions)`,
+      )
+      return undefined
+    }
+    if (!session.worktreeId) {
+      this.log(`resolveDiffTarget: session ${sessionId} has no worktreeId (local session)`)
+      return undefined
+    }
     const worktree = state.getWorktree(session.worktreeId)
-    if (!worktree) return undefined
+    if (!worktree) {
+      this.log(`resolveDiffTarget: worktree ${session.worktreeId} not found for session ${sessionId}`)
+      return undefined
+    }
     return { directory: worktree.path, baseBranch: worktree.parentBranch }
   }
 
-  /** One-shot diff fetch with loading indicators. Used by requestWorktreeDiff. */
+  /** Resolve diff target for the local workspace — diffs against the remote tracking branch. */
+  private async resolveLocalDiffTarget(): Promise<{ directory: string; baseBranch: string } | undefined> {
+    const root = this.getWorkspaceRoot()
+    if (!root) return undefined
+    const tracking = await this.getRemoteTrackingBranch(root)
+    if (!tracking) {
+      this.log("Local diff: no remote tracking branch found")
+      return undefined
+    }
+    return { directory: root, baseBranch: tracking }
+  }
+
+  /** Detect the remote tracking branch for the current branch in the given directory. */
+  private async getRemoteTrackingBranch(cwd: string): Promise<string | undefined> {
+    // Try configured upstream tracking branch first (e.g. origin/feature-x)
+    const upstream = await this.git(cwd, ["rev-parse", "--abbrev-ref", "@{upstream}"])
+    if (upstream) return upstream
+
+    // No upstream configured — construct origin/<current-branch>
+    const branch = await this.git(cwd, ["rev-parse", "--abbrev-ref", "HEAD"])
+    if (!branch || branch === "HEAD") return undefined
+    const ref = `origin/${branch}`
+    const resolved = await this.git(cwd, ["rev-parse", "--verify", ref])
+    if (resolved) return ref
+
+    return undefined
+  }
+
+  /** Run a git command asynchronously and return trimmed stdout, or undefined on failure. */
+  private git(cwd: string, args: string[]): Promise<string | undefined> {
+    return new Promise((resolve) => {
+      cp.execFile("git", args, { cwd, encoding: "utf-8", timeout: 5000 }, (err, stdout) => {
+        if (err) resolve(undefined)
+        else resolve(stdout.trim() || undefined)
+      })
+    })
+  }
+
+  /** One-shot diff fetch with loading indicators. Resolves target async, then fetches. */
   private async onRequestWorktreeDiff(sessionId: string): Promise<void> {
-    const target = this.resolveDiffTarget(sessionId)
+    // Ensure state is loaded before resolving diff target — avoids race where
+    // startDiffWatch arrives before initializeState() finishes loading state from disk.
+    // The .catch() is required: this method is called via `void` (fire-and-forget),
+    // so an uncaught rejection would become an unhandled promise rejection. On failure
+    // we log and fall through to resolveDiffTarget which logs the specific reason.
+    if (this.stateReady) {
+      await this.stateReady.catch((err) => this.log("stateReady rejected, continuing diff resolve:", err))
+    }
+
+    const target = await this.resolveDiffTarget(sessionId)
     if (!target) return
+
+    // Cache the resolved target so subsequent polls skip resolution entirely
+    this.cachedDiffTarget = target
 
     this.postToWebview({ type: "agentManager.worktreeDiffLoading", sessionId, loading: true })
     try {
       const client = this.connectionService.getHttpClient()
+      this.log(`Fetching worktree diff for session ${sessionId}: dir=${target.directory}, base=${target.baseBranch}`)
       const diffs = await client.getWorktreeDiff(target.directory, target.baseBranch)
+      this.log(`Worktree diff returned ${diffs.length} file(s) for session ${sessionId}`)
 
       const hash = diffs.map((d) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`).join("|")
       this.lastDiffHash = hash
@@ -1304,9 +1376,9 @@ export class AgentManagerProvider implements vscode.Disposable {
     }
   }
 
-  /** Polling diff fetch — no loading state, only pushes when hash changes. */
+  /** Polling diff fetch — uses cached target, no loading state, only pushes when hash changes. */
   private async pollDiff(sessionId: string): Promise<void> {
-    const target = this.resolveDiffTarget(sessionId)
+    const target = this.cachedDiffTarget
     if (!target) return
 
     try {
@@ -1328,14 +1400,16 @@ export class AgentManagerProvider implements vscode.Disposable {
     this.stopDiffPolling()
     this.diffSessionId = sessionId
     this.lastDiffHash = undefined
+    this.log(`Starting diff polling for session ${sessionId}`)
 
-    // Initial fetch with loading state
-    void this.onRequestWorktreeDiff(sessionId)
-
-    // Subsequent polls without loading state
-    this.diffInterval = setInterval(() => {
-      void this.pollDiff(sessionId)
-    }, 2500)
+    // Initial fetch resolves + caches the diff target, then starts interval polling
+    void this.onRequestWorktreeDiff(sessionId).then(() => {
+      // Only start interval if still watching the same session (may have been stopped)
+      if (this.diffSessionId !== sessionId) return
+      this.diffInterval = setInterval(() => {
+        void this.pollDiff(sessionId)
+      }, 2500)
+    })
   }
 
   private stopDiffPolling(): void {
@@ -1345,6 +1419,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     }
     this.diffSessionId = undefined
     this.lastDiffHash = undefined
+    this.cachedDiffTarget = undefined
   }
 
   private postToWebview(message: Record<string, unknown>): void {

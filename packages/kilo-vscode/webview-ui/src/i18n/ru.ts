@@ -1000,7 +1000,7 @@ export const dict = {
   "agentManager.dialog.deleteWorktree.messagePost": "? Это удалит Worktree с диска и отключит все сессии.",
   "agentManager.dialog.deleteWorktree.cancel": "Отмена",
   "agentManager.dialog.deleteWorktree.confirm": "Удалить",
-  "agentManager.dialog.openWorktree": "Открыть worktree",
+  "agentManager.dialog.openWorktree": "Новый worktree",
   "agentManager.dialog.tab.new": "Новый",
   "agentManager.dialog.tab.import": "Импорт",
   "agentManager.dialog.namePlaceholder": "Имя Worktree (необязательно)",
@@ -1018,7 +1018,7 @@ export const dict = {
   "agentManager.dialog.compareModels": "Сравнить модели",
   "agentManager.dialog.compareModels.searchModels": "Поиск моделей...",
   "agentManager.dialog.creating": "Создание...",
-  "agentManager.dialog.createWorkspace": "Создать рабочее пространство",
+  "agentManager.dialog.createWorkspace": "Создать worktree",
   "agentManager.dialog.removeImage": "Удалить изображение",
   "agentManager.dialog.advanced": "Дополнительно...",
 

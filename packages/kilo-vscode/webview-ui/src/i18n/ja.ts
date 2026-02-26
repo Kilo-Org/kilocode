@@ -992,7 +992,7 @@ export const dict = {
     "？ ディスクからWorktreeを削除し、すべてのセッションの関連付けを解除します。",
   "agentManager.dialog.deleteWorktree.cancel": "キャンセル",
   "agentManager.dialog.deleteWorktree.confirm": "削除",
-  "agentManager.dialog.openWorktree": "ワークツリーを開く",
+  "agentManager.dialog.openWorktree": "新規ワークツリー",
   "agentManager.dialog.tab.new": "新規",
   "agentManager.dialog.tab.import": "インポート",
   "agentManager.dialog.namePlaceholder": "Worktree名（任意）",
@@ -1010,7 +1010,7 @@ export const dict = {
   "agentManager.dialog.compareModels": "モデルを比較",
   "agentManager.dialog.compareModels.searchModels": "モデルを検索...",
   "agentManager.dialog.creating": "作成中...",
-  "agentManager.dialog.createWorkspace": "ワークスペースを作成",
+  "agentManager.dialog.createWorkspace": "ワークツリーを作成",
   "agentManager.dialog.removeImage": "画像を削除",
   "agentManager.dialog.advanced": "詳細...",
 

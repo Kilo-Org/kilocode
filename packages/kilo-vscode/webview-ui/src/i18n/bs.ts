@@ -1023,7 +1023,7 @@ export const dict = {
   "agentManager.dialog.deleteWorktree.messagePost": "? Ovo uklanja Worktree sa diska i odvezuje sve sesije.",
   "agentManager.dialog.deleteWorktree.cancel": "Otkaži",
   "agentManager.dialog.deleteWorktree.confirm": "Obriši",
-  "agentManager.dialog.openWorktree": "Otvori worktree",
+  "agentManager.dialog.openWorktree": "Novi worktree",
   "agentManager.dialog.tab.new": "Novo",
   "agentManager.dialog.tab.import": "Uvezi",
   "agentManager.dialog.namePlaceholder": "Naziv Worktree-a (opcionalno)",
@@ -1041,7 +1041,7 @@ export const dict = {
   "agentManager.dialog.compareModels": "Uporedi modele",
   "agentManager.dialog.compareModels.searchModels": "Pretraži modele...",
   "agentManager.dialog.creating": "Kreiranje...",
-  "agentManager.dialog.createWorkspace": "Kreiraj radni prostor",
+  "agentManager.dialog.createWorkspace": "Kreiraj worktree",
   "agentManager.dialog.removeImage": "Ukloni sliku",
   "agentManager.dialog.advanced": "Napredno...",
 

@@ -11,6 +11,7 @@
 
 import * as path from "path"
 import * as fs from "fs"
+import { normalizePath } from "./git-import"
 
 export interface Worktree {
   id: string
@@ -75,8 +76,9 @@ export class WorktreeStateManager {
 
   /** Find worktree by its filesystem path. */
   findWorktreeByPath(wtPath: string): Worktree | undefined {
+    const target = normalizePath(wtPath)
     for (const wt of this.worktrees.values()) {
-      if (wt.path === wtPath) return wt
+      if (normalizePath(wt.path) === target) return wt
     }
     return undefined
   }

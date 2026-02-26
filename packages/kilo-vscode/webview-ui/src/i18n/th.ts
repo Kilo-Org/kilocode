@@ -985,7 +985,7 @@ export const dict = {
     "? การดำเนินการนี้จะลบ Worktree ออกจากดิสก์และยกเลิกการเชื่อมโยงเซสชันทั้งหมด",
   "agentManager.dialog.deleteWorktree.cancel": "ยกเลิก",
   "agentManager.dialog.deleteWorktree.confirm": "ลบ",
-  "agentManager.dialog.openWorktree": "เปิด Worktree",
+  "agentManager.dialog.openWorktree": "Worktree ใหม่",
   "agentManager.dialog.tab.new": "ใหม่",
   "agentManager.dialog.tab.import": "นำเข้า",
   "agentManager.dialog.namePlaceholder": "ชื่อ Worktree (ไม่บังคับ)",
@@ -1003,7 +1003,7 @@ export const dict = {
   "agentManager.dialog.compareModels": "เปรียบเทียบโมเดล",
   "agentManager.dialog.compareModels.searchModels": "ค้นหาโมเดล...",
   "agentManager.dialog.creating": "กำลังสร้าง...",
-  "agentManager.dialog.createWorkspace": "สร้าง Workspace",
+  "agentManager.dialog.createWorkspace": "สร้าง Worktree",
   "agentManager.dialog.removeImage": "ลบรูปภาพ",
   "agentManager.dialog.advanced": "ขั้นสูง...",
 
