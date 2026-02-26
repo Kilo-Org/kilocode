@@ -132,6 +132,17 @@ export function validateGitRef(value: string, label: string): void {
   }
 }
 
+/**
+ * Normalize a filesystem path for cross-platform comparison.
+ * Converts backslashes to forward slashes, strips trailing slashes,
+ * and lowercases Windows drive-letter paths (case-insensitive filesystem).
+ */
+export function normalizePath(p: string): string {
+  const normalized = p.replace(/\\/g, "/").replace(/\/+$/, "")
+  if (/^[A-Za-z]:/.test(normalized)) return normalized.toLowerCase()
+  return normalized
+}
+
 export function classifyPRError(msg: string): PRErrorKind {
   if (msg.includes("command not found") || msg.includes("ENOENT") || msg.includes("is not recognized"))
     return "gh_missing"

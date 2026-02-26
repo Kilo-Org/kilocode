@@ -1,6 +1,7 @@
 import { Log } from "../util/log"
 import path from "path"
-import { pathToFileURL } from "url"
+import { pathToFileURL, fileURLToPath } from "url"
+import { createRequire } from "module"
 import os from "os"
 import z from "zod"
 import { Filesystem } from "../util/filesystem"
@@ -378,10 +379,9 @@ export namespace Config {
     }))
     json.dependencies = {
       ...json.dependencies,
-      "@opencode-ai/plugin": targetVersion,
+      "@kilocode/plugin": targetVersion, // kilocode_change
     }
     await Filesystem.writeJson(pkg, json)
-    await new Promise((resolve) => setTimeout(resolve, 3000))
 
     const gitignore = path.join(dir, ".gitignore")
     const hasGitIgnore = await Filesystem.exists(gitignore)
@@ -394,10 +394,12 @@ export namespace Config {
       [
         "install",
         // TODO: get rid of this case (see: https://github.com/oven-sh/bun/issues/19936)
-        ...(proxied() ? ["--no-cache"] : []),
+        ...(proxied() || process.env.CI ? ["--no-cache"] : []),
       ],
       { cwd: dir },
-    ).catch(() => {})
+    ).catch((err) => {
+      log.warn("failed to install dependencies", { dir, error: err })
+    })
   }
 
   async function isWritable(dir: string) {
@@ -427,28 +429,31 @@ export namespace Config {
 
     const parsed = await Filesystem.readJson<{ dependencies?: Record<string, string> }>(pkg).catch(() => null)
     const dependencies = parsed?.dependencies ?? {}
-    const depVersion = dependencies["@opencode-ai/plugin"]
+    // kilocode_change start
+    const depVersion = dependencies["@kilocode/plugin"]
     if (!depVersion) return true
 
     const targetVersion = Installation.isLocal() ? "latest" : Installation.VERSION
     if (targetVersion === "latest") {
-      const isOutdated = await PackageRegistry.isOutdated("@opencode-ai/plugin", depVersion, dir)
+      const isOutdated = await PackageRegistry.isOutdated("@kilocode/plugin", depVersion, dir)
       if (!isOutdated) return false
       log.info("Cached version is outdated, proceeding with install", {
-        pkg: "@opencode-ai/plugin",
+        pkg: "@kilocode/plugin",
         cachedVersion: depVersion,
       })
       return true
     }
+    // kilocode_change end
     if (depVersion === targetVersion) return false
     return true
   }
 
   function rel(item: string, patterns: string[]) {
+    const normalizedItem = item.replaceAll("\\", "/")
     for (const pattern of patterns) {
-      const index = item.indexOf(pattern)
+      const index = normalizedItem.indexOf(pattern)
       if (index === -1) continue
-      return item.slice(index + pattern.length)
+      return normalizedItem.slice(index + pattern.length)
     }
   }
 
@@ -1460,7 +1465,16 @@ export namespace Config {
           const plugin = data.plugin[i]
           try {
             data.plugin[i] = import.meta.resolve!(plugin, options.path)
-          } catch (err) {}
+          } catch (e) {
+            try {
+              // import.meta.resolve sometimes fails with newly created node_modules
+              const require = createRequire(options.path)
+              const resolvedPath = require.resolve(plugin)
+              data.plugin[i] = pathToFileURL(resolvedPath).href
+            } catch {
+              // Ignore, plugin might be a generic string identifier like "mcp-server"
+            }
+          }
         }
       }
       return data

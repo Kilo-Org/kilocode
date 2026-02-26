@@ -1011,6 +1011,8 @@ export const dict = {
   "agentManager.hoverCard.branch": "BRANCH",
   "agentManager.hoverCard.base": "Base",
   "agentManager.hoverCard.sessions": "Sessions",
+  "agentManager.hoverCard.changes": "Changes",
+  "agentManager.hoverCard.commits": "Commits",
 
   "agentManager.session.new": "New session",
   "agentManager.session.untitled": "Untitled",
@@ -1052,7 +1054,7 @@ export const dict = {
   "agentManager.dialog.deleteWorktree.cancel": "Cancel",
   "agentManager.dialog.deleteWorktree.confirm": "Delete",
 
-  "agentManager.dialog.openWorktree": "Open Worktree",
+  "agentManager.dialog.openWorktree": "New Worktree",
   "agentManager.dialog.tab.new": "New",
   "agentManager.dialog.tab.import": "Import",
   "agentManager.dialog.namePlaceholder": "Worktree name (optional)",
@@ -1067,10 +1069,18 @@ export const dict = {
   "agentManager.dialog.branchBadge.remote": "remote",
   "agentManager.dialog.versions": "Versions",
   "agentManager.dialog.versionHint": "{{count}} worktrees will run in parallel",
+  "agentManager.dialog.compareModels": "Compare Models",
+  "agentManager.dialog.compareModels.searchModels": "Search models...",
   "agentManager.dialog.creating": "Creating...",
-  "agentManager.dialog.createWorkspace": "Create Workspace",
+  "agentManager.dialog.createWorkspace": "Create Worktree",
   "agentManager.dialog.removeImage": "Remove image",
   "agentManager.dialog.advanced": "Advanced...",
+
+  "agentManager.diff.toggle": "Toggle diff",
+  "agentManager.diff.openFile": "Open file",
+  "agentManager.shortcuts.toggleDiff": "Toggle diff panel",
+  "agentManager.shortcuts.category.quickSwitch": "Quick Switch",
+  "agentManager.shortcuts.jumpToItem": "Jump to item 1\u20139",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Paste PR URL...",
@@ -1083,4 +1093,7 @@ export const dict = {
   "agentManager.import.noBranchesFound": "No branches found.",
   "agentManager.import.noBranchesHint": "Paste a PR URL above or create a new worktree.",
   "agentManager.import.failed": "Import failed",
+
+  "question.summary": "{{n}} of {{total}} questions",
+  "common.review": "Review",
 }

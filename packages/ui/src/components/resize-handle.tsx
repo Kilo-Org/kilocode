@@ -32,8 +32,12 @@ export function ResizeHandle(props: ResizeHandleProps) {
     const startSize = local.size
     let current = startSize
 
+    // kilocode_change start - set resize cursor on body during drag
+    const cursor = local.direction === "horizontal" ? "col-resize" : "row-resize"
+    // kilocode_change end
     document.body.style.userSelect = "none"
     document.body.style.overflow = "hidden"
+    document.body.style.cursor = cursor // kilocode_change
 
     const onMouseMove = (moveEvent: MouseEvent) => {
       const pos = local.direction === "horizontal" ? moveEvent.clientX : moveEvent.clientY
@@ -53,6 +57,7 @@ export function ResizeHandle(props: ResizeHandleProps) {
     const onMouseUp = () => {
       document.body.style.userSelect = ""
       document.body.style.overflow = ""
+      document.body.style.cursor = "" // kilocode_change
       document.removeEventListener("mousemove", onMouseMove)
       document.removeEventListener("mouseup", onMouseUp)
 

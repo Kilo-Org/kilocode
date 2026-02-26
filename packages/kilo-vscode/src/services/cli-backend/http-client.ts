@@ -15,6 +15,7 @@ import type {
   CloudSessionsResponse,
   CloudSessionData,
   EditorContext,
+  WorktreeFileDiff,
 } from "./types"
 import { extractHttpErrorMessage, parseSSEDataLine } from "./http-utils"
 
@@ -579,5 +580,24 @@ export class HttpClient {
    */
   async disconnectMcpServer(name: string, directory: string): Promise<boolean> {
     return this.request<boolean>("POST", `/mcp/${encodeURIComponent(name)}/disconnect`, undefined, { directory })
+  }
+
+  // ============================================
+  // Worktree Diff Methods
+  // ============================================
+
+  /**
+   * Get file diffs for a worktree compared to its base branch.
+   * Returns full before/after file contents for each changed file.
+   */
+  async getWorktreeDiff(directory: string, baseBranch: string): Promise<WorktreeFileDiff[]> {
+    const params = new URLSearchParams({ base: baseBranch })
+    return (
+      (await this.request<WorktreeFileDiff[]>("GET", `/experimental/worktree/diff?${params.toString()}`, undefined, {
+        directory,
+        allowEmpty: true,
+        silent: true,
+      })) ?? []
+    )
   }
 }

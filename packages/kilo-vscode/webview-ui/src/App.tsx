@@ -52,26 +52,28 @@ export const DataBridge: Component<{ children: any }> = (props) => {
   const session = useSession()
   const vscode = useVSCode()
   const prov = useProvider()
+  const server = useServer()
 
   const data = createMemo(() => {
     const id = session.currentSessionID()
     const perms = id ? session.permissions().filter((p) => p.sessionID === id) : []
-    const qs = id ? session.questions() : []
+    const allParts = session.allParts()
     return {
       session: session.sessions().map((s) => ({ ...s, id: s.id, role: "user" as const })) as unknown as any[],
-      session_status: {} as Record<string, any>,
+      session_status: session.allStatusMap() as unknown as Record<string, any>,
       session_diff: {} as Record<string, any[]>,
       message: id ? { [id]: session.messages() as unknown as SDKMessage[] } : {},
       part: id
         ? Object.fromEntries(
-            session
-              .messages()
-              .map((msg) => [msg.id, session.getParts(msg.id) as unknown as SDKPart[]])
-              .filter(([, parts]) => (parts as SDKPart[]).length > 0),
+            Object.entries(allParts)
+              .filter(([, parts]) => (parts as SDKPart[]).length > 0)
+              .map(([msgId, parts]) => [msgId, parts as unknown as SDKPart[]]),
           )
         : {},
       permission: id ? { [id]: perms as unknown as any[] } : {},
-      question: id ? { [id]: qs as unknown as any[] } : {},
+      // Questions are handled directly by QuestionDock via session.questions(),
+      // not through DataProvider. The DataProvider's question field is unused here.
+      question: {},
       provider: {
         all: Object.values(prov.providers()) as unknown as any[],
         connected: prov.connected(),
@@ -96,10 +98,16 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     vscode.postMessage({ type: "openFile", filePath, line, column })
   }
 
+  const directory = () => {
+    const dir = server.workspaceDirectory()
+    if (!dir) return ""
+    return dir.endsWith("/") || dir.endsWith("\\") ? dir : dir + "/"
+  }
+
   return (
     <DataProvider
       data={data()}
-      directory=""
+      directory={directory()}
       onPermissionRespond={respond}
       onQuestionReply={reply}
       onQuestionReject={reject}

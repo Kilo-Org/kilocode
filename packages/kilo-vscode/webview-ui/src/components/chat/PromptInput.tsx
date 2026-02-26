@@ -88,6 +88,20 @@ export const PromptInput: Component = () => {
       }
     }
 
+    if (message.type === "appendChatBoxMessage") {
+      const current = text()
+      const separator = current && !current.endsWith("\n") ? "\n\n" : ""
+      const next = current + separator + message.text
+      setText(next)
+      setGhostText("")
+      if (textareaRef) {
+        textareaRef.value = next
+        adjustHeight()
+        textareaRef.focus()
+        textareaRef.scrollTop = textareaRef.scrollHeight
+      }
+    }
+
     if (message.type === "triggerTask") {
       if (isBusy() || isDisabled()) return
       const sel = session.selected()

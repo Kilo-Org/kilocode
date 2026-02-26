@@ -71,11 +71,17 @@ interface SessionContextValue {
   // Messages for current session
   messages: Accessor<Message[]>
 
+  // User messages for current session (role === "user")
+  userMessages: Accessor<Message[]>
+
   // All messages keyed by sessionID (includes child sessions)
   allMessages: () => Record<string, Message[]>
 
   // All parts keyed by messageID (includes child sessions)
   allParts: () => Record<string, Part[]>
+
+  // All session statuses keyed by sessionID (for DataBridge)
+  allStatusMap: () => Record<string, SessionStatusInfo>
 
   // Parts for a specific message
   getParts: (messageID: string) => Part[]
@@ -147,10 +153,12 @@ export const SessionProvider: ParentComponent = (props) => {
   const [statusMap, setStatusMap] = createStore<Record<string, SessionStatusInfo>>({})
   const [busySinceMap, setBusySinceMap] = createStore<Record<string, number>>({})
 
+  const idle: SessionStatusInfo = { type: "idle" }
+
   // Derived accessors for the current session (backwards compatible)
   const statusInfo = () => {
     const id = currentSessionID()
-    return id ? (statusMap[id] ?? { type: "idle" }) : { type: "idle" }
+    return id ? (statusMap[id] ?? idle) : idle
   }
   const status = () => statusInfo().type as SessionStatus
   const busySince = () => {
@@ -727,13 +735,13 @@ export const SessionProvider: ParentComponent = (props) => {
       // (e.g. store.parts["<cloud-msg-id>"] = [...]). When the import completes
       // we carry cloudMessages into the new local session (above) so the UI
       // renders immediately without a loading flash. Those carried-over message
-      // objects still hold their original cloud IDs, so every <Message> component
+      // objects still hold their original cloud IDs, so every SessionTurn
       // calls getParts("<cloud-msg-id>") — which means the parts must remain in
       // the store for now.
       //
       // If we deleted them here, every message would temporarily render with no
-      // parts (parts().length === 0), showing only the WorkingIndicator spinner
-      // until the real data arrives.
+      // parts (parts().length === 0), showing only a loading shimmer until the
+      // real data arrives.
       //
       // Instead, right after this batch we dispatch a "loadMessages" request
       // (below). When the extension responds with the "messagesLoaded" event,
@@ -993,6 +1001,10 @@ export const SessionProvider: ParentComponent = (props) => {
 
   const allParts = () => store.parts
 
+  const allStatusMap = () => statusMap as Record<string, SessionStatusInfo>
+
+  const userMessages = createMemo(() => messages().filter((m) => m.role === "user"))
+
   function syncSession(sessionID: string) {
     vscode.postMessage({ type: "syncSession", sessionID })
   }
@@ -1050,6 +1062,7 @@ export const SessionProvider: ParentComponent = (props) => {
     busySince,
     loading,
     messages,
+    userMessages,
     getParts,
     todos,
     permissions,
@@ -1072,6 +1085,7 @@ export const SessionProvider: ParentComponent = (props) => {
     },
     allMessages,
     allParts,
+    allStatusMap,
     variantList,
     currentVariant,
     selectVariant,

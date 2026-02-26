@@ -88,6 +88,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.agentManager.showTerminal", () => {
       agentManagerProvider.showTerminalForCurrentSession()
     }),
+    vscode.commands.registerCommand("kilo-code.new.agentManager.toggleDiff", () => {
+      agentManagerProvider.postMessage({ type: "action", action: "toggleDiff" })
+    }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.focusPanel", () => {
       agentManagerProvider.focusPanel()
     }),
@@ -106,6 +109,11 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.agentManager.advancedWorktree", () => {
       agentManagerProvider.postMessage({ type: "action", action: "advancedWorktree" })
     }),
+    ...Array.from({ length: 9 }, (_, i) =>
+      vscode.commands.registerCommand(`kilo-code.new.agentManager.jumpTo${i + 1}`, () => {
+        agentManagerProvider.postMessage({ type: "action", action: `jumpTo${i + 1}` })
+      }),
+    ),
   )
 
   // Register URI handler for session imports (vscode://kilocode.kilo-code/kilocode/s/{sessionId})

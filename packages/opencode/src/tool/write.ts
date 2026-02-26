@@ -12,6 +12,7 @@ import { Filesystem } from "../util/filesystem"
 import { Instance } from "../project/instance"
 import { trimDiff } from "./edit"
 import { assertExternalDirectory } from "./external-directory"
+import { filterDiagnostics } from "./diagnostics" // kilocode_change
 
 const MAX_DIAGNOSTICS_PER_FILE = 20
 const MAX_PROJECT_DIAGNOSTICS_FILES = 5
@@ -74,7 +75,7 @@ export const WriteTool = Tool.define("write", {
     return {
       title: path.relative(Instance.worktree, filepath),
       metadata: {
-        diagnostics,
+        diagnostics: filterDiagnostics(diagnostics, [normalizedFilepath]), // kilocode_change
         filepath,
         exists: exists,
       },

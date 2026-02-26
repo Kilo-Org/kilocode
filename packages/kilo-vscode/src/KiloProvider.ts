@@ -127,6 +127,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         extensionVersion: this.extensionVersion,
         vscodeLanguage: vscode.env.language,
         languageOverride: langConfig.get<string>("language"),
+        workspaceDirectory: this.getWorkspaceDirectory(this.currentSession?.id),
       })
     }
 
@@ -315,6 +316,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "clearSession":
           this.currentSession = null
           this.trackedSessionIds.clear()
+          this.syncedChildSessions.clear()
           break
         case "loadMessages":
           // Don't await: allow parallel loads so rapid session switching
@@ -580,6 +582,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           extensionVersion: this.extensionVersion,
           vscodeLanguage: vscode.env.language,
           languageOverride: langConfig.get<string>("language"),
+          workspaceDirectory: this.getWorkspaceDirectory(this.currentSession?.id),
         })
       }
 
@@ -684,6 +687,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           }
         })
         .catch((err) => console.warn("[Kilo New] KiloProvider: getSession failed (non-critical):", err))
+
+      this.postMessage({
+        type: "workspaceDirectoryChanged",
+        directory: this.getWorkspaceDirectory(sessionID),
+      })
 
       // Fetch current session status so the webview has the correct busy/idle
       // state after switching tabs (SSE events may have been missed).
@@ -826,6 +834,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const workspaceDir = this.getWorkspaceDirectory(sessionID)
       await this.httpClient.deleteSession(sessionID, workspaceDir)
       this.trackedSessionIds.delete(sessionID)
+      this.syncedChildSessions.delete(sessionID)
       this.sessionDirectories.delete(sessionID)
       if (this.currentSession?.id === sessionID) {
         this.currentSession = null
@@ -1847,6 +1856,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.unsubscribeNotificationDismiss?.()
     this.webviewMessageDisposable?.dispose()
     this.trackedSessionIds.clear()
+    this.syncedChildSessions.clear()
     this.sessionDirectories.clear()
     this.ignoreController?.dispose()
   }

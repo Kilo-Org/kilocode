@@ -8,7 +8,6 @@ import { Identifier } from "../id/id"
 import { Provider } from "../provider/provider"
 import { Instance } from "../project/instance"
 import EXIT_DESCRIPTION from "./plan-exit.txt"
-import ENTER_DESCRIPTION from "./plan-enter.txt"
 
 async function getLastModel(sessionID: string) {
   for await (const item of MessageV2.stream(sessionID)) {
@@ -17,65 +16,23 @@ async function getLastModel(sessionID: string) {
   return Provider.defaultModel()
 }
 
+// kilocode_change start - simplified plan_exit: readiness signal only, no user prompt
 export const PlanExitTool = Tool.define("plan_exit", {
   description: EXIT_DESCRIPTION,
   parameters: z.object({}),
   async execute(_params, ctx) {
     const session = await Session.get(ctx.sessionID)
     const plan = path.relative(Instance.worktree, Session.plan(session))
-    const answers = await Question.ask({
-      sessionID: ctx.sessionID,
-      questions: [
-        {
-          // kilocode_change start
-          question: `Plan at ${plan} is complete. Would you like to switch to the code agent and start implementing?`,
-          header: "Code Agent",
-          custom: false,
-          options: [
-            { label: "Yes", description: "Switch to code agent and start implementing the plan" },
-            { label: "No", description: "Stay with plan agent to continue refining the plan" },
-          ],
-          // kilocode_change end
-        },
-      ],
-      tool: ctx.callID ? { messageID: ctx.messageID, callID: ctx.callID } : undefined,
-    })
-
-    const answer = answers[0]?.[0]
-    if (answer === "No") throw new Question.RejectedError()
-
-    const model = await getLastModel(ctx.sessionID)
-
-    const userMsg: MessageV2.User = {
-      id: Identifier.ascending("message"),
-      sessionID: ctx.sessionID,
-      role: "user",
-      time: {
-        created: Date.now(),
-      },
-      agent: "code", // kilocode_change - renamed from "build" to "code"
-      model,
-    }
-    await Session.updateMessage(userMsg)
-    await Session.updatePart({
-      id: Identifier.ascending("part"),
-      messageID: userMsg.id,
-      sessionID: ctx.sessionID,
-      type: "text",
-      text: `The plan at ${plan} has been approved, you can now edit files. Execute the plan`,
-      synthetic: true,
-    } satisfies MessageV2.TextPart)
-
-    // kilocode_change start
     return {
-      title: "Switching to code agent",
-      output: "User approved switching to code agent. Wait for further instructions.",
-      metadata: {},
+      title: "Planning complete",
+      output: `Plan is ready at ${plan}. Ending planning turn.`,
+      metadata: { plan },
     }
-    // kilocode_change end
   },
 })
+// kilocode_change end
 
+/*
 export const PlanEnterTool = Tool.define("plan_enter", {
   description: ENTER_DESCRIPTION,
   parameters: z.object({}),
@@ -132,3 +89,4 @@ export const PlanEnterTool = Tool.define("plan_enter", {
     }
   },
 })
+*/

@@ -7,6 +7,7 @@
 
 /* Per-component Kilo overrides */
 @import "../components/accordion.css";
+@import "../components/basic-tool.css";
 @import "../components/auto-approve-bar.css";
 @import "../components/button.css";
 @import "../components/card.css";

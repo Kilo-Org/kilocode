@@ -34,6 +34,12 @@ export namespace SystemPrompt {
     if (model.api.id.includes("gemini-")) return [PROMPT_GEMINI]
     if (model.api.id.includes("claude")) return [PROMPT_ANTHROPIC]
     if (model.api.id.toLowerCase().includes("trinity")) return [PROMPT_TRINITY]
+
+    // kilocode_change start
+    // automodel is currently anthropic models
+    if (model.api.id == "kilo/auto") return [PROMPT_ANTHROPIC]
+    // kilocode_change end
+
     return [PROMPT_ANTHROPIC_WITHOUT_TODO]
   }
 
