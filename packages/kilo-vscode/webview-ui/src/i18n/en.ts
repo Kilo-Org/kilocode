@@ -1052,7 +1052,7 @@ export const dict = {
   "agentManager.dialog.deleteWorktree.cancel": "Cancel",
   "agentManager.dialog.deleteWorktree.confirm": "Delete",
 
-  "agentManager.dialog.openWorktree": "Open Worktree",
+  "agentManager.dialog.openWorktree": "New Worktree",
   "agentManager.dialog.tab.new": "New",
   "agentManager.dialog.tab.import": "Import",
   "agentManager.dialog.namePlaceholder": "Worktree name (optional)",
@@ -1070,7 +1070,7 @@ export const dict = {
   "agentManager.dialog.compareModels": "Compare Models",
   "agentManager.dialog.compareModels.searchModels": "Search models...",
   "agentManager.dialog.creating": "Creating...",
-  "agentManager.dialog.createWorkspace": "Create Workspace",
+  "agentManager.dialog.createWorkspace": "Create Worktree",
   "agentManager.dialog.removeImage": "Remove image",
   "agentManager.dialog.advanced": "Advanced...",
 

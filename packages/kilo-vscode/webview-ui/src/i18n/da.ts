@@ -996,7 +996,7 @@ export const dict = {
   "agentManager.dialog.deleteWorktree.messagePost": "? Dette fjerner Worktree fra disken og afkobler alle sessioner.",
   "agentManager.dialog.deleteWorktree.cancel": "Annuller",
   "agentManager.dialog.deleteWorktree.confirm": "Slet",
-  "agentManager.dialog.openWorktree": "Åbn Worktree",
+  "agentManager.dialog.openWorktree": "Ny Worktree",
   "agentManager.dialog.tab.new": "Ny",
   "agentManager.dialog.tab.import": "Importér",
   "agentManager.dialog.namePlaceholder": "Worktree-navn (valgfrit)",
@@ -1014,7 +1014,7 @@ export const dict = {
   "agentManager.dialog.compareModels": "Sammenlign modeller",
   "agentManager.dialog.compareModels.searchModels": "Søg modeller...",
   "agentManager.dialog.creating": "Opretter...",
-  "agentManager.dialog.createWorkspace": "Opret Workspace",
+  "agentManager.dialog.createWorkspace": "Opret Worktree",
   "agentManager.dialog.removeImage": "Fjern billede",
   "agentManager.dialog.advanced": "Avanceret...",
 

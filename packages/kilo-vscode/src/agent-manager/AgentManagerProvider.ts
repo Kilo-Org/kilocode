@@ -1308,23 +1308,49 @@ export class AgentManagerProvider implements vscode.Disposable {
   /** Resolve worktree path + parentBranch for a session, or undefined if not applicable. */
   private resolveDiffTarget(sessionId: string): { directory: string; baseBranch: string } | undefined {
     const state = this.getStateManager()
-    if (!state) return undefined
+    if (!state) {
+      this.log(`resolveDiffTarget: no state manager for session ${sessionId}`)
+      return undefined
+    }
     const session = state.getSession(sessionId)
-    if (!session?.worktreeId) return undefined
+    if (!session) {
+      this.log(
+        `resolveDiffTarget: session ${sessionId} not found in state (${state.getSessions().length} total sessions)`,
+      )
+      return undefined
+    }
+    if (!session.worktreeId) {
+      this.log(`resolveDiffTarget: session ${sessionId} has no worktreeId (local session)`)
+      return undefined
+    }
     const worktree = state.getWorktree(session.worktreeId)
-    if (!worktree) return undefined
+    if (!worktree) {
+      this.log(`resolveDiffTarget: worktree ${session.worktreeId} not found for session ${sessionId}`)
+      return undefined
+    }
     return { directory: worktree.path, baseBranch: worktree.parentBranch }
   }
 
   /** One-shot diff fetch with loading indicators. Used by requestWorktreeDiff. */
   private async onRequestWorktreeDiff(sessionId: string): Promise<void> {
+    // Ensure state is loaded before resolving diff target — avoids race where
+    // startDiffWatch arrives before initializeState() finishes loading state from disk.
+    // The .catch() is required: this method is called via `void` (fire-and-forget),
+    // so an uncaught rejection would become an unhandled promise rejection. On failure
+    // we log and fall through to resolveDiffTarget which logs the specific reason.
+    if (this.stateReady) {
+      await this.stateReady.catch((err) => this.log("stateReady rejected, continuing diff resolve:", err))
+    }
+
     const target = this.resolveDiffTarget(sessionId)
     if (!target) return
 
     this.postToWebview({ type: "agentManager.worktreeDiffLoading", sessionId, loading: true })
     try {
       const client = this.connectionService.getHttpClient()
+      this.log(`Fetching worktree diff for session ${sessionId}: dir=${target.directory}, base=${target.baseBranch}`)
       const diffs = await client.getWorktreeDiff(target.directory, target.baseBranch)
+      this.log(`Worktree diff returned ${diffs.length} file(s) for session ${sessionId}`)
 
       const hash = diffs.map((d) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`).join("|")
       this.lastDiffHash = hash
@@ -1362,6 +1388,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     this.stopDiffPolling()
     this.diffSessionId = sessionId
     this.lastDiffHash = undefined
+    this.log(`Starting diff polling for session ${sessionId}`)
 
     // Initial fetch with loading state
     void this.onRequestWorktreeDiff(sessionId)

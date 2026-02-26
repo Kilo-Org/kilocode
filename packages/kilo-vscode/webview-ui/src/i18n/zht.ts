@@ -983,7 +983,7 @@ export const dict = {
   "agentManager.dialog.deleteWorktree.messagePost": "？這將從磁碟中移除 Worktree 並取消所有工作階段的關聯。",
   "agentManager.dialog.deleteWorktree.cancel": "取消",
   "agentManager.dialog.deleteWorktree.confirm": "刪除",
-  "agentManager.dialog.openWorktree": "開啟工作樹",
+  "agentManager.dialog.openWorktree": "新建工作樹",
   "agentManager.dialog.tab.new": "新建",
   "agentManager.dialog.tab.import": "匯入",
   "agentManager.dialog.namePlaceholder": "Worktree 名稱（選填）",
@@ -1001,7 +1001,7 @@ export const dict = {
   "agentManager.dialog.compareModels": "比較模型",
   "agentManager.dialog.compareModels.searchModels": "搜尋模型...",
   "agentManager.dialog.creating": "建立中...",
-  "agentManager.dialog.createWorkspace": "建立工作區",
+  "agentManager.dialog.createWorkspace": "建立工作樹",
   "agentManager.dialog.removeImage": "移除圖片",
   "agentManager.dialog.advanced": "進階...",
 
