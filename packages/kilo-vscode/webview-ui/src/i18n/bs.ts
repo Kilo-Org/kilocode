@@ -1051,6 +1051,11 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "Pošalji sve u chat ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.commentOnLine": "Komentar na liniji {{line}}",
+  "agentManager.review.editCommentOnLine": "Uredi komentar na liniji {{line}}",
+  "agentManager.review.commentPlaceholder": "Ostavi komentar...",
+  "agentManager.review.commentAction": "Komentariši",
+  "agentManager.review.sendToChat": "Pošalji u chat",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Zalijepite PR URL...",

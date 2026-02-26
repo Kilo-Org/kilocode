@@ -1020,6 +1020,11 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "모두 채팅으로 보내기 ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.commentOnLine": "{{line}}줄에 댓글",
+  "agentManager.review.editCommentOnLine": "{{line}}줄 댓글 편집",
+  "agentManager.review.commentPlaceholder": "댓글을 남기세요...",
+  "agentManager.review.commentAction": "댓글",
+  "agentManager.review.sendToChat": "채팅으로 보내기",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "PR URL 붙여넣기...",

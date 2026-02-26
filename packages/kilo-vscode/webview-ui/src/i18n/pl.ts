@@ -1027,6 +1027,11 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "Wyślij wszystko do czatu ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.commentOnLine": "Skomentuj linię {{line}}",
+  "agentManager.review.editCommentOnLine": "Edytuj komentarz do linii {{line}}",
+  "agentManager.review.commentPlaceholder": "Zostaw komentarz...",
+  "agentManager.review.commentAction": "Komentuj",
+  "agentManager.review.sendToChat": "Wyślij do czatu",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Wklej URL PR...",

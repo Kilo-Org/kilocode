@@ -1013,6 +1013,11 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "ส่งทั้งหมดไปยังแชท ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.commentOnLine": "แสดงความคิดเห็นที่บรรทัด {{line}}",
+  "agentManager.review.editCommentOnLine": "แก้ไขความคิดเห็นที่บรรทัด {{line}}",
+  "agentManager.review.commentPlaceholder": "แสดงความคิดเห็น...",
+  "agentManager.review.commentAction": "แสดงความคิดเห็น",
+  "agentManager.review.sendToChat": "ส่งไปยังแชท",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "วาง URL ของ PR...",

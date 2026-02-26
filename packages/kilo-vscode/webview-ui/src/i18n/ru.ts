@@ -1028,6 +1028,11 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "Отправить всё в чат ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.commentOnLine": "Комментарий к строке {{line}}",
+  "agentManager.review.editCommentOnLine": "Редактировать комментарий к строке {{line}}",
+  "agentManager.review.commentPlaceholder": "Оставьте комментарий...",
+  "agentManager.review.commentAction": "Комментировать",
+  "agentManager.review.sendToChat": "Отправить в чат",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Вставьте URL PR...",

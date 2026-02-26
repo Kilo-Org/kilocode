@@ -1011,6 +1011,11 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "全部傳送到聊天 ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.commentOnLine": "在第 {{line}} 行留言",
+  "agentManager.review.editCommentOnLine": "編輯第 {{line}} 行留言",
+  "agentManager.review.commentPlaceholder": "留下留言...",
+  "agentManager.review.commentAction": "留言",
+  "agentManager.review.sendToChat": "傳送到聊天",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "貼上 PR URL...",

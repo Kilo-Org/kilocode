@@ -1020,6 +1020,11 @@ export const dict = {
   "agentManager.review.sendAllToChatWithCount": "すべてをチャットに送信 ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
+  "agentManager.review.commentOnLine": "{{line}} 行目にコメント",
+  "agentManager.review.editCommentOnLine": "{{line}} 行目のコメントを編集",
+  "agentManager.review.commentPlaceholder": "コメントを入力...",
+  "agentManager.review.commentAction": "コメント",
+  "agentManager.review.sendToChat": "チャットに送信",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "PR URLを貼り付け...",
