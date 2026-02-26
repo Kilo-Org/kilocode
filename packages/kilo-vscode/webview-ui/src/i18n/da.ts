@@ -1020,6 +1020,8 @@ export const dict = {
 
   "agentManager.diff.toggle": "Skift diff",
   "agentManager.shortcuts.toggleDiff": "Skift diff-panel",
+  "agentManager.shortcuts.category.quickSwitch": "Hurtigskift",
+  "agentManager.shortcuts.jumpToItem": "Hop til element 1\u20139",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Indsæt PR URL...",

@@ -1023,6 +1023,8 @@ export const dict = {
 
   "agentManager.diff.toggle": "Przełącz diff",
   "agentManager.shortcuts.toggleDiff": "Przełącz panel diff",
+  "agentManager.shortcuts.category.quickSwitch": "Szybkie przełączanie",
+  "agentManager.shortcuts.jumpToItem": "Przejdź do elementu 1\u20139",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Wklej URL PR...",
