@@ -50,7 +50,7 @@ The KiloClaw dashboard gives you full control over your instance.
 
 - **Start Machine** — Boot a stopped instance (up to 60 seconds)
 - **Restart OpenClaw** — Quick restart of just the OpenClaw process; the machine stays up
-- **Redeploy** — Update and restart the whole machine; all your files and data are preserved
+- **Redeploy** — This will stop the machine, apply any pending image or config updates, and restart it. The machine will be briefly offline.
 - **OpenClaw Doctor** — Run diagnostics and auto-fix common issues
 
 For full details on each control and when to use them, see the [Dashboard Reference](/docs/automate/kiloclaw/dashboard).
