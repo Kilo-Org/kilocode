@@ -65,7 +65,7 @@ export function registerCommitMessageService(
             { path, selectedFiles: undefined, previousMessage },
             { throwOnError: true },
           )
-          const message = (data as any).message as string
+          const message = data.message
           repository.inputBox.value = message
           lastGeneratedMessage = message
           lastWorkspacePath = path
