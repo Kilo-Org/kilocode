@@ -38,7 +38,7 @@ KiloClaw is powered by KiloCode. The API key is platform-managed, so you never n
 5. Optionally configure chat channels (Telegram, Discord, Slack) — you can also do this later from [Settings](/docs/automate/kiloclaw/dashboard#settings)
 6. Click **Create & Provision**
 
-Your instance will be provisioned in seconds. Each instance runs on a dedicated machine with 2 shared vCPUs, 4 GB RAM, and a 20 GB persistent SSD. Once created in a region, your instance always runs there.
+Your instance will be provisioned in seconds. Each instance runs on a dedicated machine with 2 shared vCPUs, 3 GB RAM, and a 10 GB persistent SSD. Once created in a region, your instance always runs there.
 
 ## Managing Your Instance
 
