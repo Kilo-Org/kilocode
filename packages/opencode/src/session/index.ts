@@ -688,6 +688,9 @@ export namespace Session {
       const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
       await KiloSessions.remove(sessionID).catch(() => {}) // kilocode_change
       platformOverrides.delete(sessionID) // kilocode_change - clean up platform override
+      // kilocode_change start - cancel running processor before deleting to avoid FK constraint errors
+      SessionPrompt.cancel(sessionID)
+      // kilocode_change end
       // CASCADE delete handles messages and parts automatically
       Database.use((db) => {
         db.delete(SessionTable).where(eq(SessionTable.id, sessionID)).run()
@@ -705,22 +708,32 @@ export namespace Session {
   export const updateMessage = fn(MessageV2.Info, async (msg) => {
     const time_created = msg.time.created
     const { id, sessionID, ...data } = msg
-    Database.use((db) => {
-      db.insert(MessageTable)
-        .values({
-          id,
-          session_id: sessionID,
-          time_created,
-          data,
-        })
-        .onConflictDoUpdate({ target: MessageTable.id, set: { data } })
-        .run()
-      Database.effect(() =>
-        Bus.publish(MessageV2.Event.Updated, {
-          info: msg,
-        }),
-      )
-    })
+    // kilocode_change start - ignore FK errors when session was deleted while processor was still running
+    try {
+      Database.use((db) => {
+        db.insert(MessageTable)
+          .values({
+            id,
+            session_id: sessionID,
+            time_created,
+            data,
+          })
+          .onConflictDoUpdate({ target: MessageTable.id, set: { data } })
+          .run()
+        Database.effect(() =>
+          Bus.publish(MessageV2.Event.Updated, {
+            info: msg,
+          }),
+        )
+      })
+    } catch (e: any) {
+      if (e?.code === "SQLITE_CONSTRAINT_FOREIGNKEY") {
+        log.warn("skipping message update for deleted session", { id: msg.id, sessionID: msg.sessionID })
+      } else {
+        throw e
+      }
+    }
+    // kilocode_change end
     return msg
   })
 
@@ -774,23 +787,33 @@ export namespace Session {
   export const updatePart = fn(UpdatePartInput, async (part) => {
     const { id, messageID, sessionID, ...data } = part
     const time = Date.now()
-    Database.use((db) => {
-      db.insert(PartTable)
-        .values({
-          id,
-          message_id: messageID,
-          session_id: sessionID,
-          time_created: time,
-          data,
-        })
-        .onConflictDoUpdate({ target: PartTable.id, set: { data } })
-        .run()
-      Database.effect(() =>
-        Bus.publish(MessageV2.Event.PartUpdated, {
-          part,
-        }),
-      )
-    })
+    // kilocode_change start - ignore FK errors when session was deleted while processor was still running
+    try {
+      Database.use((db) => {
+        db.insert(PartTable)
+          .values({
+            id,
+            message_id: messageID,
+            session_id: sessionID,
+            time_created: time,
+            data,
+          })
+          .onConflictDoUpdate({ target: PartTable.id, set: { data } })
+          .run()
+        Database.effect(() =>
+          Bus.publish(MessageV2.Event.PartUpdated, {
+            part,
+          }),
+        )
+      })
+    } catch (e: any) {
+      if (e?.code === "SQLITE_CONSTRAINT_FOREIGNKEY") {
+        log.warn("skipping part update for deleted session", { id: part.id, sessionID: part.sessionID })
+      } else {
+        throw e
+      }
+    }
+    // kilocode_change end
     return part
   })
 
