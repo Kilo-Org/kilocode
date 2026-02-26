@@ -56,7 +56,7 @@ Several models are available at no cost, subject to rate limits:
 
 | Model ID                              | Description               |
 | ------------------------------------- | ------------------------- |
-| `minimax/minimax-m2.1:free`           | MiniMax M2.1              |
+| `kilo/auto-free`                      | Kilo Auto Free            |
 | `z-ai/glm-5:free`                     | Z.AI GLM-5                |
 | `giga-potato`                         | Community model           |
 | `corethink:free`                      | CoreThink reasoning model |

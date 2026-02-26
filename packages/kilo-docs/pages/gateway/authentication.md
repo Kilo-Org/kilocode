@@ -70,7 +70,7 @@ Organization tokens are scoped with a 15-minute expiry and enforce the organizat
 
 The gateway allows unauthenticated access for free models only. Anonymous requests are identified by IP address and are subject to rate limiting (200 requests per hour per IP).
 
-Free models include models tagged with `:free` in their model ID, such as `minimax/minimax-m2.1:free` and `z-ai/glm-5:free`.
+Free models include models tagged with `:free` in their model ID, such as `kilo/auto-free` and `z-ai/glm-5:free`.
 
 ## Bring Your Own Key (BYOK)
 
