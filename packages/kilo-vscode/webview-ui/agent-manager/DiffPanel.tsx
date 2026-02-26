@@ -9,7 +9,7 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { RadioGroup } from "@kilocode/kilo-ui/radio-group"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
-import { Tooltip } from "@kilocode/kilo-ui/tooltip"
+import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type { DiffLineAnnotation, AnnotationSide } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
 import { useLanguage } from "../src/context/language"
@@ -54,7 +54,22 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
 
   // Ref to the scrollable container — used to preserve scroll position when
   // annotation changes cause pierre to fully re-render diffs
+  let rootRef: HTMLDivElement | undefined
   let scroller: HTMLDivElement | undefined
+
+  const focusRoot = () => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        rootRef?.focus()
+      })
+    })
+  }
+
+  const keepNativeFocus = (target: EventTarget | null) => {
+    if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) return true
+    if (target instanceof HTMLElement && target.isContentEditable) return true
+    return false
+  }
 
   // Run a callback while preserving the scroll position of the diff container.
   // Pierre destroys and rebuilds the DOM on annotation changes (via innerHTML = ""),
@@ -78,6 +93,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       setDraft(null)
       draftMeta = null
     })
+    focusRoot()
   }
 
   // Auto-open files when diffs arrive
@@ -104,6 +120,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       setDraft(null)
       draftMeta = null
     })
+    focusRoot()
   }
 
   const updateComment = (id: string, text: string) => {
@@ -111,6 +128,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       updateComments((prev) => prev.map((c) => (c.id === id ? { ...c, comment: text } : c)))
       setEditing(null)
     })
+    focusRoot()
   }
 
   const deleteComment = (id: string) => {
@@ -118,6 +136,12 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       updateComments((prev) => prev.filter((c) => c.id !== id))
       if (editing() === id) setEditing(null)
     })
+    focusRoot()
+  }
+
+  const setEditState = (id: string | null) => {
+    preserveScroll(() => setEditing(id))
+    if (id === null) focusRoot()
   }
 
   createEffect(
@@ -187,12 +211,17 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     return buildReviewAnnotation(annotation, {
       diffs: props.diffs,
       editing: editing(),
-      setEditing: (id) => preserveScroll(() => setEditing(id)),
+      setEditing: setEditState,
       addComment,
       updateComment,
       deleteComment,
       cancelDraft,
     })
+  }
+
+  const handleRootMouseDown = (e: MouseEvent) => {
+    if (keepNativeFocus(e.target)) return
+    focusRoot()
   }
 
   // --- Gutter utility click ---
@@ -218,8 +247,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     if (e.key !== "Enter") return
     if (!(e.metaKey || e.ctrlKey)) return
     const target = e.target
-    if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) return
-    if (target instanceof HTMLElement && target.isContentEditable) return
+    if (keepNativeFocus(target)) return
     if (comments().length === 0) return
     e.preventDefault()
     e.stopPropagation()
@@ -233,7 +261,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   }))
 
   return (
-    <div class="am-diff-panel" onKeyDown={handleKeyDown}>
+    <div class="am-diff-panel" onKeyDown={handleKeyDown} onMouseDown={handleRootMouseDown} tabIndex={-1} ref={rootRef}>
       <div class="am-diff-header">
         <div class="am-diff-header-main">
           <span class="am-diff-header-title">Changes</span>
@@ -361,9 +389,11 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
             <span class="am-diff-comments-count">
               {comments().length} comment{comments().length !== 1 ? "s" : ""}
             </span>
-            <Button variant="primary" size="small" onClick={sendAllToChat}>
-              Send all to chat
-            </Button>
+            <TooltipKeybind title="Send all to chat" keybind="Cmd/Ctrl+Enter" placement="top">
+              <Button variant="primary" size="small" onClick={sendAllToChat}>
+                Send all to chat
+              </Button>
+            </TooltipKeybind>
           </div>
         </Show>
       </Show>

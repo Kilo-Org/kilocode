@@ -10,6 +10,7 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { ResizeHandle } from "@kilocode/kilo-ui/resize-handle"
+import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type { DiffLineAnnotation, AnnotationSide } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
 import { FileTree } from "./FileTree"
@@ -53,7 +54,17 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   const updateComments = (updater: (prev: ReviewComment[]) => ReviewComment[]) => setComments(updater(comments()))
 
   const focusRoot = () => {
-    requestAnimationFrame(() => rootRef?.focus())
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        rootRef?.focus()
+      })
+    })
+  }
+
+  const keepNativeFocus = (target: EventTarget | null) => {
+    if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) return true
+    if (target instanceof HTMLElement && target.isContentEditable) return true
+    return false
   }
 
   const preserveScroll = (fn: () => void) => {
@@ -131,6 +142,11 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   const setEditState = (id: string | null) => {
     preserveScroll(() => setEditing(id))
     if (id === null) focusRoot()
+  }
+
+  const handleRootMouseDown = (e: MouseEvent) => {
+    if (keepNativeFocus(e.target)) return
+    focusRoot()
   }
 
   createEffect(
@@ -227,8 +243,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     if (e.key !== "Enter") return
     if (!(e.metaKey || e.ctrlKey)) return
     const target = e.target
-    if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) return
-    if (target instanceof HTMLElement && target.isContentEditable) return
+    if (keepNativeFocus(target)) return
     if (comments().length === 0) return
     e.preventDefault()
     e.stopPropagation()
@@ -315,7 +330,13 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   }))
 
   return (
-    <div class="am-review-layout" onKeyDown={handleKeyDown} tabIndex={-1} ref={rootRef}>
+    <div
+      class="am-review-layout"
+      onKeyDown={handleKeyDown}
+      onMouseDown={handleRootMouseDown}
+      tabIndex={-1}
+      ref={rootRef}
+    >
       {/* Toolbar */}
       <div class="am-review-toolbar">
         <div class="am-review-toolbar-left">
@@ -343,9 +364,11 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
             {open().length === props.diffs.length ? "Collapse all" : "Expand all"}
           </Button>
           <Show when={comments().length > 0}>
-            <Button variant="primary" size="small" onClick={sendAllToChat}>
-              Send all to chat ({comments().length})
-            </Button>
+            <TooltipKeybind title="Send all to chat" keybind="Cmd/Ctrl+Enter" placement="bottom">
+              <Button variant="primary" size="small" onClick={sendAllToChat}>
+                Send all to chat ({comments().length})
+              </Button>
+            </TooltipKeybind>
           </Show>
           <IconButton icon="close" size="small" variant="ghost" label="Close review" onClick={props.onClose} />
         </div>
