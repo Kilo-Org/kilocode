@@ -1010,6 +1010,7 @@ export const dict = {
   "agentManager.dialog.advanced": "ขั้นสูง...",
 
   "agentManager.diff.toggle": "สลับ diff",
+  "agentManager.diff.openFile": "เปิดไฟล์",
   "agentManager.shortcuts.toggleDiff": "สลับแผง diff",
   "agentManager.shortcuts.category.quickSwitch": "สลับด่วน",
   "agentManager.shortcuts.jumpToItem": "ข้ามไปยังรายการ 1\u20139",

@@ -1024,6 +1024,7 @@ export const dict = {
   "agentManager.dialog.advanced": "Zaawansowane...",
 
   "agentManager.diff.toggle": "Przełącz diff",
+  "agentManager.diff.openFile": "Otwórz plik",
   "agentManager.shortcuts.toggleDiff": "Przełącz panel diff",
   "agentManager.shortcuts.category.quickSwitch": "Szybkie przełączanie",
   "agentManager.shortcuts.jumpToItem": "Przejdź do elementu 1\u20139",

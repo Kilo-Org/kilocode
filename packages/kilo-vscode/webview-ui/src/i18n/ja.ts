@@ -1017,6 +1017,7 @@ export const dict = {
   "agentManager.dialog.advanced": "詳細...",
 
   "agentManager.diff.toggle": "差分を切り替え",
+  "agentManager.diff.openFile": "ファイルを開く",
   "agentManager.shortcuts.toggleDiff": "差分パネルを切り替え",
   "agentManager.shortcuts.category.quickSwitch": "クイック切り替え",
   "agentManager.shortcuts.jumpToItem": "項目 1\u20139 に移動",

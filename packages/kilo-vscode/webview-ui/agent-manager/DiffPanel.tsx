@@ -34,6 +34,7 @@ interface DiffPanelProps {
   onSendAll?: () => void
   onClose: () => void
   onExpand?: () => void
+  onOpenFile?: (relativePath: string) => void
 }
 
 export const DiffPanel: Component<DiffPanelProps> = (props) => {
@@ -371,6 +372,20 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                             </Show>
                             <Show when={!isAdded() && !isDeleted()}>
                               <DiffChanges changes={diff} />
+                            </Show>
+                            <Show when={props.onOpenFile && !isDeleted()}>
+                              <Tooltip value={t("agentManager.diff.openFile")} placement="top">
+                                <IconButton
+                                  icon="go-to-file"
+                                  size="small"
+                                  variant="ghost"
+                                  label={t("agentManager.diff.openFile")}
+                                  onClick={(e: MouseEvent) => {
+                                    e.stopPropagation()
+                                    props.onOpenFile?.(diff.file)
+                                  }}
+                                />
+                              </Tooltip>
                             </Show>
                             <span data-slot="session-review-diff-chevron">
                               <Icon name="chevron-down" size="small" />

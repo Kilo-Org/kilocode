@@ -1012,6 +1012,7 @@ export const dict = {
   "agentManager.dialog.advanced": "高级...",
 
   "agentManager.diff.toggle": "切换差异",
+  "agentManager.diff.openFile": "打开文件",
   "agentManager.shortcuts.toggleDiff": "切换差异面板",
   "agentManager.shortcuts.category.quickSwitch": "快速切换",
   "agentManager.shortcuts.jumpToItem": "跳转到项目 1\u20139",

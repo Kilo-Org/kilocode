@@ -1,5 +1,7 @@
 import * as vscode from "vscode"
 import * as cp from "child_process"
+import * as fs from "fs"
+import * as path from "path"
 import type { KiloConnectionService, SessionInfo, HttpClient } from "../services/cli-backend"
 import { KiloProvider } from "../KiloProvider"
 import { buildWebviewHtml } from "../utils"
@@ -272,6 +274,11 @@ export class AgentManagerProvider implements vscode.Disposable {
     }
     if (type === "agentManager.stopDiffWatch") {
       this.stopDiffPolling()
+      return null
+    }
+
+    if (type === "agentManager.openFile" && typeof msg.sessionId === "string" && typeof msg.filePath === "string") {
+      this.openWorktreeFile(msg.sessionId, msg.filePath)
       return null
     }
 
@@ -1296,6 +1303,33 @@ export class AgentManagerProvider implements vscode.Disposable {
   // ---------------------------------------------------------------------------
   // Diff polling
   // ---------------------------------------------------------------------------
+
+  /** Open a file from a worktree session in the VS Code editor. */
+  private openWorktreeFile(sessionId: string, relativePath: string): void {
+    const state = this.getStateManager()
+    if (!state) return
+    const session = state.getSession(sessionId)
+    if (!session?.worktreeId) return
+    const worktree = state.getWorktree(session.worktreeId)
+    if (!worktree) return
+    // Resolve real paths to prevent symlink traversal and normalize for
+    // consistent comparison on both Unix and Windows.
+    let resolved: string
+    try {
+      const root = fs.realpathSync(worktree.path)
+      resolved = fs.realpathSync(path.resolve(worktree.path, relativePath))
+      // Directory-boundary check: append path.sep so "/foo/bar" won't match "/foo/bar2/..."
+      if (resolved !== root && !resolved.startsWith(root + path.sep)) return
+    } catch (err) {
+      console.error("[Kilo New] AgentManagerProvider: Cannot resolve file path:", err)
+      return
+    }
+    const uri = vscode.Uri.file(resolved)
+    vscode.workspace.openTextDocument(uri).then(
+      (doc) => vscode.window.showTextDocument(doc, { preview: true }),
+      (err) => console.error("[Kilo New] AgentManagerProvider: Failed to open file:", uri.fsPath, err),
+    )
+  }
 
   /** Resolve worktree path + parentBranch for a session, or undefined if not applicable. */
   private async resolveDiffTarget(sessionId: string): Promise<{ directory: string; baseBranch: string } | undefined> {
