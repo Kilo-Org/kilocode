@@ -1012,6 +1012,8 @@ export const dict = {
   "agentManager.diff.toggle": "تبديل الفرق",
   "agentManager.diff.openFile": "فتح الملف",
   "agentManager.shortcuts.toggleDiff": "تبديل لوحة الفرق",
+  "agentManager.shortcuts.category.quickSwitch": "التبديل السريع",
+  "agentManager.shortcuts.jumpToItem": "الانتقال إلى العنصر 1\u20139",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "الصق رابط PR...",

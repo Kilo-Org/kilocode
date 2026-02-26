@@ -1022,6 +1022,8 @@ export const dict = {
   "agentManager.diff.toggle": "Veksle diff",
   "agentManager.diff.openFile": "Åpne fil",
   "agentManager.shortcuts.toggleDiff": "Veksle diff-panel",
+  "agentManager.shortcuts.category.quickSwitch": "Hurtigbytte",
+  "agentManager.shortcuts.jumpToItem": "Hopp til element 1\u20139",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Lim inn PR URL...",

@@ -1077,6 +1077,8 @@ export const dict = {
   "agentManager.diff.toggle": "Toggle diff",
   "agentManager.diff.openFile": "Open file",
   "agentManager.shortcuts.toggleDiff": "Toggle diff panel",
+  "agentManager.shortcuts.category.quickSwitch": "Quick Switch",
+  "agentManager.shortcuts.jumpToItem": "Jump to item 1\u20139",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Paste PR URL...",

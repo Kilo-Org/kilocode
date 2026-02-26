@@ -95,6 +95,8 @@ type SidebarSelection = typeof LOCAL | string | null
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 
 // Fallback keybindings before extension sends resolved ones
+const MAX_JUMP_INDEX = 9
+
 const defaultBindings: Record<string, string> = {
   previousSession: isMac ? "⌘↑" : "Ctrl+↑",
   nextSession: isMac ? "⌘↓" : "Ctrl+↓",
@@ -108,6 +110,9 @@ const defaultBindings: Record<string, string> = {
   closeWorktree: isMac ? "⌘⇧W" : "Ctrl+Shift+W",
   agentManagerOpen: isMac ? "⌘⇧M" : "Ctrl+Shift+M",
   focusPanel: isMac ? "⌘." : "Ctrl+.",
+  ...Object.fromEntries(
+    Array.from({ length: MAX_JUMP_INDEX }, (_, i) => [`jumpTo${i + 1}`, isMac ? `⌘${i + 1}` : `Ctrl+${i + 1}`]),
+  ),
 }
 
 /** Manages horizontal scroll for the tab list: hides the scrollbar, converts
@@ -192,6 +197,19 @@ function buildShortcutCategories(
   t: (key: string, params?: Record<string, string | number>) => string,
 ): ShortcutCategory[] {
   return [
+    {
+      title: t("agentManager.shortcuts.category.quickSwitch"),
+      shortcuts: [
+        {
+          label: t("agentManager.shortcuts.jumpToItem"),
+          binding: (() => {
+            const first = bindings.jumpTo1 ?? ""
+            const prefix = first.replace(/\d+$/, "")
+            return prefix ? `${prefix}1-9` : ""
+          })(),
+        },
+      ],
+    },
     {
       title: t("agentManager.shortcuts.category.sidebar"),
       shortcuts: [
@@ -507,6 +525,22 @@ const AgentManagerContent: Component = () => {
     if (el instanceof HTMLElement) scrollIntoView(el)
   }
 
+  // Jump to sidebar item by 1-based index (⌘1 = LOCAL, ⌘2 = first worktree, etc.)
+  const jumpToItem = (index: number) => {
+    if (index === 0) {
+      selectLocal()
+      const el = document.querySelector(`[data-sidebar-id="local"]`)
+      if (el instanceof HTMLElement) scrollIntoView(el)
+      return
+    }
+    const wts = sortedWorktrees()
+    const wt = wts[index - 1]
+    if (!wt) return
+    selectWorktree(wt.id)
+    const el = document.querySelector(`[data-sidebar-id="${wt.id}"]`)
+    if (el instanceof HTMLElement) scrollIntoView(el)
+  }
+
   // Navigate tabs with Cmd+Left/Right
   const navigateTab = (direction: "left" | "right") => {
     const tabs = activeTabs()
@@ -581,10 +615,15 @@ const AgentManagerContent: Component = () => {
       else if (msg.action === "advancedWorktree") showAdvancedWorktreeDialog()
       else if (msg.action === "closeWorktree") closeSelectedWorktree()
       else if (msg.action === "focusInput") window.dispatchEvent(new Event("focusPrompt"))
+      else {
+        // Handle jumpTo1 through jumpTo9
+        const match = /^jumpTo([1-9])$/.exec(msg.action ?? "")
+        if (match) jumpToItem(parseInt(match[1]!) - 1)
+      }
     }
     window.addEventListener("message", handler)
 
-    // Prevent Cmd+Arrow/T/W/N from triggering native browser actions
+    // Prevent Cmd+Arrow/T/W/N/digit from triggering native browser actions
     const preventDefaults = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
@@ -596,6 +635,10 @@ const AgentManagerContent: Component = () => {
       }
       // Prevent defaults for shift variants (close worktree, advanced new worktree)
       if (["w", "n"].includes(e.key.toLowerCase()) && e.shiftKey) {
+        e.preventDefault()
+      }
+      // Prevent defaults for jump-to shortcuts (Cmd/Ctrl+1-9)
+      if (/^[1-9]$/.test(e.key)) {
         e.preventDefault()
       }
     }
@@ -1120,6 +1163,7 @@ const AgentManagerContent: Component = () => {
               <span class="am-local-branch">{repoBranch()}</span>
             </Show>
           </div>
+          <span class="am-shortcut-badge">{isMac ? "⌘" : "Ctrl+"}1</span>
         </button>
 
         {/* WORKTREES section */}
@@ -1332,6 +1376,17 @@ const AgentManagerContent: Component = () => {
                                       }
                                     />
                                   </Show>
+                                  {(() => {
+                                    const num = idx() + 2
+                                    return (
+                                      <Show when={num <= MAX_JUMP_INDEX}>
+                                        <span class="am-shortcut-badge">
+                                          {isMac ? "⌘" : "Ctrl+"}
+                                          {num}
+                                        </span>
+                                      </Show>
+                                    )
+                                  })()}
                                   <Show when={!busyWorktrees().has(wt.id)}>
                                     <div
                                       class="am-worktree-close"

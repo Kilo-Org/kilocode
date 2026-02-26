@@ -1010,6 +1010,8 @@ export const dict = {
   "agentManager.diff.toggle": "สลับ diff",
   "agentManager.diff.openFile": "เปิดไฟล์",
   "agentManager.shortcuts.toggleDiff": "สลับแผง diff",
+  "agentManager.shortcuts.category.quickSwitch": "สลับด่วน",
+  "agentManager.shortcuts.jumpToItem": "ข้ามไปยังรายการ 1\u20139",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "วาง URL ของ PR...",
