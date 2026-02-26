@@ -269,7 +269,8 @@ export class WorktreeStateManager {
         orphaned.push(...this.removeWorktree(wt.id))
       }
     }
-    if (orphaned.length > 0) await this.save()
+    // removeWorktree() already queues a save per call — just wait for completion
+    if (orphaned.length > 0) await this.flush()
     return orphaned
   }
 

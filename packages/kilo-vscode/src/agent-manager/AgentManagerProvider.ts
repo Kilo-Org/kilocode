@@ -38,6 +38,7 @@ export class AgentManagerProvider implements vscode.Disposable {
   private diffSessionId: string | undefined
   private lastDiffHash: string | undefined
   private validationInterval: ReturnType<typeof setInterval> | undefined
+  private validating = false
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -1404,29 +1405,31 @@ export class AgentManagerProvider implements vscode.Disposable {
   }
 
   private async validateWorktrees(): Promise<void> {
-    const state = this.getStateManager()
-    const root = this.getWorkspaceRoot()
-    if (!state || !root) return
-
-    let orphaned
+    if (this.validating) return
+    this.validating = true
     try {
-      orphaned = await state.validate(root)
+      const state = this.getStateManager()
+      const root = this.getWorkspaceRoot()
+      if (!state || !root) return
+
+      const orphaned = await state.validate(root)
+      if (orphaned.length === 0) return
+
+      for (const s of orphaned) {
+        this.provider?.clearSessionDirectory(s.id)
+      }
+
+      // Stop diff polling if it targets an orphaned session
+      if (this.diffSessionId && orphaned.some((s) => s.id === this.diffSessionId)) {
+        this.stopDiffPolling()
+      }
+
+      this.pushState()
     } catch (error) {
       this.log("Worktree validation failed:", error)
-      return
+    } finally {
+      this.validating = false
     }
-    if (orphaned.length === 0) return
-
-    for (const s of orphaned) {
-      this.provider?.clearSessionDirectory(s.id)
-    }
-
-    // Stop diff polling if it targets an orphaned session
-    if (this.diffSessionId && orphaned.some((s) => s.id === this.diffSessionId)) {
-      this.stopDiffPolling()
-    }
-
-    this.pushState()
   }
 
   private postToWebview(message: Record<string, unknown>): void {
