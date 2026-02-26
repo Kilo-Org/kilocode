@@ -34,7 +34,7 @@ The beta currently includes:
 - Core chat and agent behavior
 - Kilo Auto mode
 - Model and gateway selection
-- AutoComplete
+- Autocomplete
 - Checkpoints
 - Agent Manager
 
