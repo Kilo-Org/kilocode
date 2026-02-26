@@ -141,7 +141,7 @@ Each instance runs on a dedicated machine — there is no shared infrastructure 
 | ------- | -------------------- |
 | CPU     | 2 shared vCPUs       |
 | Memory  | 3 GB RAM             |
-| Storage | 20 GB persistent SSD |
+| Storage | 10 GB persistent SSD |
 
 Your storage is region-pinned — once your instance is created in a region (e.g., DFW), it always runs there. OpenClaw config lives at `/root/.openclaw` and the workspace at `/root/clawd`.
 

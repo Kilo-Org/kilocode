@@ -10,7 +10,7 @@ The Control UI is a browser-based dashboard (built with Vite + Lit) served by th
 ## Features
 
 - **Chat** — Send messages, stream responses with live tool-call output, view history, and abort runs.
-- **Channels** — View the status of connected messaging platforms (WhatsApp, Telegram, Discord, Slack, etc.), scan QR codes for login, and edit per-channel config.
+- **Channels** — View the status of connected messaging platforms, scan QR codes for login, and edit per-channel config.
 - **Sessions** — List active sessions with thinking and verbose overrides.
 - **Cron Jobs** — Create, edit, enable/disable, run, and view history of scheduled tasks.
 - **Skills** — View status, enable/disable, install, and manage API keys for skills.
@@ -76,7 +76,6 @@ Example patterns:
 ```
 
 Each entry tracks last-used metadata (timestamp, command, resolved path) so you can audit and keep the list tidy.
-
 
 ### Approval Flow
 
