@@ -666,6 +666,7 @@ export interface AgentManagerStateMessage {
   sessions: ManagedSessionState[]
   tabOrder?: Record<string, string[]>
   sessionsCollapsed?: boolean
+  reviewDiffStyle?: "unified" | "split"
   isGitRepo?: boolean
 }
 
@@ -746,6 +747,20 @@ export interface AgentManagerWorktreeDiffLoadingMessage {
   loading: boolean
 }
 
+// Per-worktree git stats: diff additions/deletions and commits missing from origin
+export interface WorktreeGitStats {
+  worktreeId: string
+  additions: number
+  deletions: number
+  commits: number
+}
+
+// Agent Manager: Worktree git stats push (extension → webview)
+export interface AgentManagerWorktreeStatsMessage {
+  type: "agentManager.worktreeStats"
+  stats: WorktreeGitStats[]
+}
+
 // Request webview to send initial prompt to a newly created session (extension → webview)
 export interface AgentManagerSendInitialMessage {
   type: "agentManager.sendInitialMessage"
@@ -816,6 +831,7 @@ export type ExtensionMessage =
   | WorkspaceDirectoryChangedMessage
   | AgentManagerWorktreeDiffMessage
   | AgentManagerWorktreeDiffLoadingMessage
+  | AgentManagerWorktreeStatsMessage
 
 // ============================================
 // Messages FROM webview TO extension
@@ -1154,6 +1170,16 @@ export interface ShowTerminalRequest {
   sessionId: string
 }
 
+// Show terminal for the local workspace (when no session is active)
+export interface ShowLocalTerminalRequest {
+  type: "agentManager.showLocalTerminal"
+}
+
+// Show existing local terminal when switching to local context (no-op if none exists)
+export interface ShowExistingLocalTerminalRequest {
+  type: "agentManager.showExistingLocalTerminal"
+}
+
 /**
  * Maximum number of parallel worktree versions for multi-version mode.
  * Keep in sync with MAX_MULTI_VERSIONS in src/agent-manager/constants.ts.
@@ -1195,6 +1221,12 @@ export interface SetTabOrderRequest {
 export interface SetSessionsCollapsedRequest {
   type: "agentManager.setSessionsCollapsed"
   collapsed: boolean
+}
+
+// Persist review diff style preference
+export interface SetReviewDiffStyleRequest {
+  type: "agentManager.setReviewDiffStyle"
+  style: "unified" | "split"
 }
 
 export interface RequestBranchesMessage {
@@ -1312,9 +1344,12 @@ export type WebviewMessage =
   | RequestStateMessage
   | ConfigureSetupScriptRequest
   | ShowTerminalRequest
+  | ShowLocalTerminalRequest
+  | ShowExistingLocalTerminalRequest
   | CreateMultiVersionRequest
   | SetTabOrderRequest
   | SetSessionsCollapsedRequest
+  | SetReviewDiffStyleRequest
   | PersistVariantRequest
   | RequestVariantsMessage
   | RequestCloudSessionDataMessage

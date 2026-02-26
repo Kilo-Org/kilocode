@@ -5,19 +5,20 @@ description: "One-click deployment of your personal AI agent with OpenClaw"
 
 # KiloClaw 🦀
 
-KiloClaw is Kilo's hosted [OpenClaw](https://openclaw.ai) service—a one-click deployment that gives you a personal AI agent without the complexity of self-hosting. OpenClaw is an open source AI agent that connects to chat platforms like WhatsApp, Telegram, and Discord.
+KiloClaw is Kilo's hosted [OpenClaw](https://openclaw.ai) service — a one-click deployment that gives you a personal AI agent without the complexity of self-hosting. OpenClaw is an open source AI agent that connects to chat platforms like Telegram, Discord, and Slack.
+
+KiloClaw is powered by KiloCode. The API key is platform-managed, so you never need to bring your own. KiloClaw is currently in **Beta**.
 
 ## Why KiloClaw?
 
 - **No infrastructure setup** — Skip Docker, servers, and configuration files
 - **Instant provisioning** — Your agent is ready in seconds
+- **Powered by KiloCode** — API key is automatically generated and refreshed
 - **Uses existing credits** — Runs on your Kilo Gateway balance
 - **Multiple free models** — Choose from several models at no additional cost
-- **Web UI included** — Access your agent's web interface from the instance dashboard
+- **Web UI included** — Access your agent's web interface directly from the dashboard
 
 ## Prerequisites
-
-Before creating an instance:
 
 - **Kilo account** — Sign up at [kilo.ai](https://kilo.ai) if you haven't already
 - **Gateway credits** — KiloClaw uses your existing [Gateway credits](/docs/gateway/usage-and-billing) for model inference
@@ -34,91 +35,54 @@ Before creating an instance:
 
 {% image src="/docs/img/kiloclaw/create-instance.png" alt="Create instance modal with model selection" width="600" caption="Model selection during instance creation" /%}
 
-5. Click **Create & Provision**
+5. Optionally configure chat channels (Telegram, Discord, Slack) — you can also do this later from [Settings](/docs/automate/kiloclaw/dashboard#settings)
+6. Click **Create & Provision**
 
-Your instance will be provisioned and ready within seconds.
+Your instance will be provisioned in seconds. Each instance runs on a dedicated machine with 2 shared vCPUs, 3 GB RAM, and a 10 GB persistent SSD. Once created in a region, your instance always runs there.
 
 ## Managing Your Instance
 
-Once created, you can control your instance from the dashboard.
+The KiloClaw dashboard gives you full control over your instance.
 
 {% image src="/docs/img/kiloclaw/instance-dashboard.png" alt="Instance dashboard with controls and status" width="800" caption="Instance management dashboard" /%}
 
-### Instance Controls
+### Controls
 
-- **Start** — Boot up a stopped instance
-- **Stop** — Shut down the instance (preserves configuration)
-- **Restart** — Stop and start the instance
+- **Start Machine** — Boot a stopped instance (up to 60 seconds)
+- **Restart OpenClaw** — Quick restart of just the OpenClaw process; the machine stays up
+- **Redeploy** — This will stop the machine, apply any pending image or config updates, and restart it. The machine will be briefly offline.
+- **OpenClaw Doctor** — Run diagnostics and auto-fix common issues
 
-### Dashboard Tabs
-
-| Tab          | Purpose                                         |
-| ------------ | ----------------------------------------------- |
-| **Overview** | Instance status, uptime, and resource usage     |
-| **Settings** | Model configuration and instance parameters     |
-| **Actions**  | Quick actions and connected platform management |
+For full details on each control and when to use them, see the [Dashboard Reference](/docs/automate/kiloclaw/dashboard).
 
 ### Changelog
 
-Your instance page includes a changelog with recent KiloClaw platform updates.
+The dashboard shows recent platform updates. Some updates include a deploy hint — either **Redeploy Required** or **Redeploy Suggested** — to let you know when to redeploy your instance.
 
-Each changelog entry is labeled by update type:
+### Pairing Requests
 
-- **Feature** — New capability or enhancement
-- **Bug** — Fix for incorrect or broken behavior
-
-Some entries also include a redeploy label:
-
-- **Redeploy required** — You must redeploy your instance to fully take advantage of the change
-- **Redeploy suggested** — Redeploy is optional and only needed if you want to use the new behavior
-
-For example, if you manually configured a channel such as Telegram, and would prefer to have KiloClaw manage the channel for you, you would need to redeploy.
+When you initialize a new channel for the first time, or a new device connects to the Control UI, you'll see a pairing request on the dashboard that you need to approve. See [Pairing Requests](/docs/automate/kiloclaw/chat-platforms#pairing-requests) for details.
 
 ## Accessing Your Agent
 
-To connect to your agent's web interface:
-
-1. Click **Get Access Code** from your instance dashboard
-2. Copy the one-time access code (expires in 10 minutes)
+1. Click **Access Code** to get a one-time code (expires in 10 minutes)
 
 {% image src="/docs/img/kiloclaw/access-code-modal.png" alt="Access code modal showing one-time code" width="500" caption="One-time access code with 10-minute expiration" /%}
 
-3. Click the **Open Claw** button in the top-right corner of your instance dashboard
-4. Enter your access code to authenticate
+2. Click **Open** to launch the OpenClaw web interface
+3. Enter your access code to authenticate
 
 {% image src="/docs/img/kiloclaw/openclaw-dashboard.png" alt="OpenClaw web interface" width="800" caption="OpenClaw web UI" /%}
-
-## Connecting Chat Platforms
-
-OpenClaw supports integration with popular messaging platforms:
-
-- WhatsApp
-- Telegram
-- Discord
-- Slack
-- And more
-
-For platform-specific setup instructions, refer to the [OpenClaw documentation](https://docs.openclaw.ai).
 
 ## Using your OpenClaw Agent
 
 OpenClaw lets you customize your own AI assistant that can actually take action — check your email, manage your calendar, control smart devices, browse the web, and message you on Telegram or Discord when something needs attention. It's like having a personal assistant that runs 24/7, with the skills and access you choose to give it.
 
-For more information on use cases for OpenClaw, see:
+For more information on use cases:
 
 - [OpenClaw Showcase](https://docs.openclaw.ai/start/showcase)
 - [100 hours of OpenClaw in 35 Minutes](https://www.youtube.com/watch?v=_kZCoW-Qxnc)
 - [Clawhub](https://clawhub.ai/): search for skills
-
-## Pricing
-
-KiloClaw uses your existing Kilo Gateway credits—there's no separate billing or subscription:
-
-- **Instance hosting** — Free for 7 days during beta
-- **Model inference** — Charged against your Gateway credit balance
-- **Free models** — Several models are available at no cost. See the [Kilo Leaderboard](https://kilo.ai/leaderboard#all-models) for current availability.
-
-See [Gateway Usage and Billing](/docs/gateway/usage-and-billing) for credit pricing details.
 
 ## Limitations
 
@@ -135,6 +99,10 @@ Have feedback or running into issues? Join the [Kilo Discord](https://kilo.ai/di
 
 ## Related
 
+- [Dashboard Reference](/docs/automate/kiloclaw/dashboard)
+- [Connecting Chat Platforms](/docs/automate/kiloclaw/chat-platforms)
+- [Troubleshooting](/docs/automate/kiloclaw/troubleshooting)
+- [KiloClaw Pricing](/docs/automate/kiloclaw/pricing)
 - [Gateway Usage and Billing](/docs/gateway/usage-and-billing)
 - [Agent Manager](/docs/automate/agent-manager)
 - [OpenClaw Documentation](https://docs.openclaw.ai)

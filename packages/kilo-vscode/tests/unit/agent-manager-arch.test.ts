@@ -18,6 +18,9 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DiffPanel.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/FullScreenDiffView.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/FileTree.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/review-annotations.ts"),
   path.join(ROOT, "webview-ui/agent-manager/MultiModelSelector.tsx"),
 ]
 const TSX_FILE = TSX_FILES[0]
@@ -158,6 +161,8 @@ describe("Agent Manager Provider — onMessage routing", () => {
       "agentManager.closeSession",
       "agentManager.configureSetupScript",
       "agentManager.showTerminal",
+      "agentManager.showLocalTerminal",
+      "agentManager.showExistingLocalTerminal",
       "agentManager.requestRepoInfo",
       "agentManager.requestState",
       "agentManager.setTabOrder",

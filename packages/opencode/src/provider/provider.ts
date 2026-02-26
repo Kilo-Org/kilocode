@@ -7,7 +7,10 @@ import { NoSuchModelError, type Provider as SDK } from "ai"
 import { Log } from "../util/log"
 import { BunProc } from "../bun"
 import { Plugin } from "../plugin"
-import { ModelsDev } from "./models"
+import {
+  ModelsDev,
+  Prompt, // kilocode_change
+} from "./models"
 import { NamedError } from "@opencode-ai/util/error"
 import { Auth } from "../auth"
 import { Env } from "../env"
@@ -663,8 +666,11 @@ export namespace Provider {
       headers: z.record(z.string(), z.string()),
       release_date: z.string(),
       variants: z.record(z.string(), z.record(z.string(), z.any())).optional(),
-      recommended: z.boolean().optional(), // kilocode_change
-      recommendedIndex: z.number().optional(), // kilocode_change
+
+      // kilocode_change start
+      recommendedIndex: z.number().optional(),
+      prompt: Prompt.optional().catch(undefined),
+      // kilocode_change end
     })
     .meta({
       ref: "Model",
@@ -745,9 +751,12 @@ export namespace Provider {
         interleaved: model.interleaved ?? false,
       },
       release_date: model.release_date,
-      variants: {},
-      recommended: model.recommended, // kilocode_change
-      recommendedIndex: model.recommendedIndex, // kilocode_change
+
+      // kilocode_change start
+      variants: provider.id === "kilo" ? (model.variants ?? {}) : {},
+      recommendedIndex: model.recommendedIndex,
+      prompt: model.prompt,
+      // kilocode_change end
     }
 
     m.variants = mapValues(ProviderTransform.variants(m), (v) => v)
@@ -891,8 +900,11 @@ export namespace Provider {
           family: model.family ?? existingModel?.family ?? "",
           release_date: model.release_date ?? existingModel?.release_date ?? "",
           variants: {},
-          recommended: model.recommended ?? existingModel?.recommended, // kilocode_change
-          recommendedIndex: model.recommendedIndex ?? existingModel?.recommendedIndex, // kilocode_change
+
+          // kilocode_change start
+          recommendedIndex: model.recommendedIndex ?? existingModel?.recommendedIndex,
+          prompt: model.prompt ?? existingModel?.prompt,
+          // kilocode_change end
         }
         const merged = mergeDeep(ProviderTransform.variants(parsedModel), model.variants ?? {})
         parsedModel.variants = mapValues(
