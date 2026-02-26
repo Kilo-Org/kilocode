@@ -144,6 +144,7 @@ test("blocked question flow unblocks after submit", async ({ page, sdk, gotoSess
           {
             header: "Need input",
             question: "Pick one option",
+            multiple: true, // kilocode_change
             options: [
               { label: "Continue", description: "Continue now" },
               { label: "Stop", description: "Stop here" },
@@ -269,6 +270,7 @@ test("child session question request blocks parent dock and unblocks after submi
             {
               header: "Child input",
               question: "Pick one child option",
+              multiple: true, // kilocode_change
               options: [
                 { label: "Continue", description: "Continue child" },
                 { label: "Stop", description: "Stop child" },
