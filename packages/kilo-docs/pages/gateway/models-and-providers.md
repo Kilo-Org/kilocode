@@ -62,7 +62,7 @@ Several models are available at no cost, subject to rate limits:
 | `corethink:free`                      | CoreThink reasoning model |
 | `arcee-ai/trinity-large-preview:free` | Arcee Trinity             |
 
-Free models are available to both authenticated and anonymous users. Anonymous users are rate-limited to 200 requests per hour per IP address.
+Several models are available at no cost to both authenticated and anonymous users. Anonymous users are rate-limited to 200 requests per hour per IP address.
 
 ## The `kilo/auto` model
 
