@@ -1016,6 +1016,8 @@ export const dict = {
 
   "agentManager.diff.toggle": "差分を切り替え",
   "agentManager.shortcuts.toggleDiff": "差分パネルを切り替え",
+  "agentManager.shortcuts.category.quickSwitch": "クイック切り替え",
+  "agentManager.shortcuts.jumpToItem": "項目 1\u20139 に移動",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "PR URLを貼り付け...",

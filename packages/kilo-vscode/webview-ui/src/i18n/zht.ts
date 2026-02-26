@@ -1007,6 +1007,8 @@ export const dict = {
 
   "agentManager.diff.toggle": "切換差異",
   "agentManager.shortcuts.toggleDiff": "切換差異面板",
+  "agentManager.shortcuts.category.quickSwitch": "快速切換",
+  "agentManager.shortcuts.jumpToItem": "跳至項目 1\u20139",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "貼上 PR URL...",

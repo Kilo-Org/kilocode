@@ -25,6 +25,7 @@
 /* Fixed local workspace item */
 
 .am-local-item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -224,6 +225,50 @@ button.am-section-toggle:hover .am-section-label {
   outline: none;
 }
 
+/* Shortcut badge — hover-reveal index badge (⌘1, ⌘2, etc.) matching Superset style */
+
+.am-shortcut-badge {
+  position: absolute;
+  right: 30px;
+  opacity: 0;
+  transition: opacity 150ms ease;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-weaker);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.am-local-item .am-shortcut-badge {
+  right: 8px;
+}
+
+.am-local-item:hover .am-shortcut-badge,
+.am-worktree-item:hover .am-shortcut-badge {
+  opacity: 1;
+}
+
+.am-local-item:hover .am-local-branch {
+  mask-image: linear-gradient(to right, black calc(100% - 40px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 40px), transparent 100%);
+}
+
+.am-worktree-item-active .am-shortcut-badge {
+  color: color-mix(in srgb, var(--text-on-interactive-base) 60%, transparent);
+}
+
+.am-worktree-item-active:hover .am-shortcut-badge {
+  opacity: 0.8;
+}
+
+.am-local-item-active .am-shortcut-badge {
+  color: var(--text-weak);
+}
+
+.am-worktree-item:has(.am-worktree-rename-input) .am-shortcut-badge {
+  opacity: 0;
+}
+
 .am-worktree-close {
   position: absolute;
   right: 4px;
@@ -232,8 +277,8 @@ button.am-section-toggle:hover .am-section-label {
 }
 
 .am-worktree-item:hover .am-worktree-branch {
-  mask-image: linear-gradient(to right, black calc(100% - 48px), transparent calc(100% - 16px));
-  -webkit-mask-image: linear-gradient(to right, black calc(100% - 48px), transparent calc(100% - 16px));
+  mask-image: linear-gradient(to right, black calc(100% - 72px), transparent calc(100% - 36px));
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 72px), transparent calc(100% - 36px));
 }
 
 .am-worktree-item:hover .am-worktree-close {

@@ -179,6 +179,51 @@
         "category": "Kilo Code"
       },
       {
+        "command": "kilo-code.new.agentManager.jumpTo1",
+        "title": "Agent Manager: Jump to Item 1",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.agentManager.jumpTo2",
+        "title": "Agent Manager: Jump to Item 2",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.agentManager.jumpTo3",
+        "title": "Agent Manager: Jump to Item 3",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.agentManager.jumpTo4",
+        "title": "Agent Manager: Jump to Item 4",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.agentManager.jumpTo5",
+        "title": "Agent Manager: Jump to Item 5",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.agentManager.jumpTo6",
+        "title": "Agent Manager: Jump to Item 6",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.agentManager.jumpTo7",
+        "title": "Agent Manager: Jump to Item 7",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.agentManager.jumpTo8",
+        "title": "Agent Manager: Jump to Item 8",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.agentManager.jumpTo9",
+        "title": "Agent Manager: Jump to Item 9",
+        "category": "Kilo Code"
+      },
+      {
         "command": "kilo-code.new.generateCommitMessage",
         "title": "Generate Commit Message",
         "category": "Kilo Code (NEW)",
@@ -422,6 +467,60 @@
         "command": "kilo-code.new.agentManager.advancedWorktree",
         "key": "ctrl+shift+n",
         "mac": "cmd+shift+n",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.agentManager.jumpTo1",
+        "key": "ctrl+1",
+        "mac": "cmd+1",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.agentManager.jumpTo2",
+        "key": "ctrl+2",
+        "mac": "cmd+2",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.agentManager.jumpTo3",
+        "key": "ctrl+3",
+        "mac": "cmd+3",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.agentManager.jumpTo4",
+        "key": "ctrl+4",
+        "mac": "cmd+4",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.agentManager.jumpTo5",
+        "key": "ctrl+5",
+        "mac": "cmd+5",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.agentManager.jumpTo6",
+        "key": "ctrl+6",
+        "mac": "cmd+6",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.agentManager.jumpTo7",
+        "key": "ctrl+7",
+        "mac": "cmd+7",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.agentManager.jumpTo8",
+        "key": "ctrl+8",
+        "mac": "cmd+8",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.agentManager.jumpTo9",
+        "key": "ctrl+9",
+        "mac": "cmd+9",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       }
     ],

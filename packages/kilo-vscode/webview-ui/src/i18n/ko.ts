@@ -1016,6 +1016,8 @@ export const dict = {
 
   "agentManager.diff.toggle": "차이점 전환",
   "agentManager.shortcuts.toggleDiff": "차이점 패널 전환",
+  "agentManager.shortcuts.category.quickSwitch": "빠른 전환",
+  "agentManager.shortcuts.jumpToItem": "항목 1\u20139(으)로 이동",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "PR URL 붙여넣기...",
