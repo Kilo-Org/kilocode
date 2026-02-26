@@ -23,3 +23,5 @@ When a new session is created, the model selector is pre-populated with the defa
 ## Model Selector in Chat Input
 
 Changing the model in the chat input changes it only for the current session. It has no effect on future sessions. The default in Settings remains unchanged.
+
+Maybe we do need a shortcut after the changing of the model to make it the default more easily? Like a "Make default" button?
