@@ -61,7 +61,7 @@ The dashboard shows recent platform updates. Some updates include a deploy hint 
 
 ### Pairing Requests
 
-When someone messages your bot for the first time, or a new device connects to the Control UI, you'll see a pairing request on the dashboard that you need to approve. See [Pairing Requests](/docs/automate/kiloclaw/chat-platforms#pairing-requests) for details.
+When you initialize a new channel for the first time, or a new device connects to the Control UI, you'll see a pairing request on the dashboard that you need to approve. See [Pairing Requests](/docs/automate/kiloclaw/chat-platforms#pairing-requests) for details.
 
 ## Accessing Your Agent
 
