@@ -256,7 +256,9 @@ export const PromptInput: Component = () => {
       const parts = message.slice(1).split(/\s+/)
       const command = parts[0]
       const args = parts.slice(1).join(" ")
-      if (command) {
+      // kilocode_change start
+      const known = commands().some((cmd) => cmd.name === command)
+      if (command && known) {
         const sel = session.selected()
         session.sendCommand(command, args, sel?.providerID, sel?.modelID)
         requestCounter++
@@ -270,6 +272,7 @@ export const PromptInput: Component = () => {
         if (textareaRef) textareaRef.style.height = "auto"
         return
       }
+      // kilocode_change end
     }
 
     const mentionFiles = mention.parseFileAttachments(message)
