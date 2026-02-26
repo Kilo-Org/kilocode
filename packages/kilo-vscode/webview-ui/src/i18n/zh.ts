@@ -1011,6 +1011,10 @@ export const dict = {
 
   "agentManager.diff.toggle": "切换差异",
   "agentManager.shortcuts.toggleDiff": "切换差异面板",
+  "agentManager.review.sendAllToChat": "全部发送到聊天",
+  "agentManager.review.sendAllToChatWithCount": "全部发送到聊天 ({{count}})",
+  "agentManager.review.sendAllShortcut.mac": "⌘Enter",
+  "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "粘贴 PR URL...",

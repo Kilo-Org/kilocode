@@ -1024,6 +1024,10 @@ export const dict = {
 
   "agentManager.diff.toggle": "Переключить diff",
   "agentManager.shortcuts.toggleDiff": "Переключить панель diff",
+  "agentManager.review.sendAllToChat": "Отправить всё в чат",
+  "agentManager.review.sendAllToChatWithCount": "Отправить всё в чат ({{count}})",
+  "agentManager.review.sendAllShortcut.mac": "⌘Enter",
+  "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Вставьте URL PR...",

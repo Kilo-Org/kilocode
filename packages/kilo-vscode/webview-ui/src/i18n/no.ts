@@ -1021,6 +1021,10 @@ export const dict = {
 
   "agentManager.diff.toggle": "Veksle diff",
   "agentManager.shortcuts.toggleDiff": "Veksle diff-panel",
+  "agentManager.review.sendAllToChat": "Send alt til chat",
+  "agentManager.review.sendAllToChatWithCount": "Send alt til chat ({{count}})",
+  "agentManager.review.sendAllShortcut.mac": "⌘Enter",
+  "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Lim inn PR URL...",

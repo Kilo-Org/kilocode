@@ -1016,6 +1016,10 @@ export const dict = {
 
   "agentManager.diff.toggle": "差分を切り替え",
   "agentManager.shortcuts.toggleDiff": "差分パネルを切り替え",
+  "agentManager.review.sendAllToChat": "すべてをチャットに送信",
+  "agentManager.review.sendAllToChatWithCount": "すべてをチャットに送信 ({{count}})",
+  "agentManager.review.sendAllShortcut.mac": "⌘Enter",
+  "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "PR URLを貼り付け...",
