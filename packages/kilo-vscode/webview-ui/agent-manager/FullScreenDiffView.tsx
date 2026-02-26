@@ -1,19 +1,20 @@
-import { type Component, createSignal, createMemo, For, Show, createEffect, on } from "solid-js"
+import { type Component, createSignal, createMemo, createEffect, on, onCleanup, For, Show } from "solid-js"
 import { Diff } from "@kilocode/kilo-ui/diff"
 import { Accordion } from "@kilocode/kilo-ui/accordion"
 import { StickyAccordionHeader } from "@kilocode/kilo-ui/sticky-accordion-header"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
 import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
+import { RadioGroup } from "@kilocode/kilo-ui/radio-group"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
-import { Tooltip } from "@kilocode/kilo-ui/tooltip"
+import { ResizeHandle } from "@kilocode/kilo-ui/resize-handle"
 import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
-import { useLanguage } from "../src/context/language"
+import { FileTree } from "./FileTree"
 
-// --- Data model ---
+// --- Shared data model (same as DiffPanel) ---
 
 interface ReviewComment {
   id: string
@@ -24,7 +25,6 @@ interface ReviewComment {
   selectedText: string
 }
 
-// Annotation metadata — kept as stable references for pierre's cache
 interface AnnotationMeta {
   type: "comment" | "draft"
   comment: ReviewComment | null
@@ -33,12 +33,14 @@ interface AnnotationMeta {
   line: number
 }
 
-interface DiffPanelProps {
+type DiffStyle = "unified" | "split"
+
+interface FullScreenDiffViewProps {
   diffs: WorktreeFileDiff[]
   loading: boolean
-  diffStyle?: "unified" | "split"
+  diffStyle: DiffStyle
+  onDiffStyleChange: (style: DiffStyle) => void
   onClose: () => void
-  onExpand?: () => void
 }
 
 function getDirectory(path: string): string {
@@ -58,24 +60,32 @@ function extractLines(content: string, start: number, end: number): string {
     .join("\n")
 }
 
-export const DiffPanel: Component<DiffPanelProps> = (props) => {
-  const { t } = useLanguage()
+export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) => {
   const [comments, setComments] = createSignal<ReviewComment[]>([])
   const [open, setOpen] = createSignal<string[]>([])
   const [draft, setDraft] = createSignal<{ file: string; side: AnnotationSide; line: number } | null>(null)
   const [editing, setEditing] = createSignal<string | null>(null)
+  const [activeFile, setActiveFile] = createSignal<string | null>(null)
+  const [treeWidth, setTreeWidth] = createSignal(240)
   let nextId = 0
-
-  // Stable draft metadata ref — avoids recreating the object on every signal read
-  // so pierre's annotation cache doesn't invalidate and destroy the textarea
   let draftMeta: AnnotationMeta | null = null
+  let scrollRef: HTMLDivElement | undefined
+  let syncFrame: number | undefined
 
   // Auto-open files when diffs arrive
   createEffect(
     on(
       () => props.diffs,
       (diffs) => {
+        if (diffs.length === 0) {
+          setActiveFile(null)
+          return
+        }
         if (diffs.length <= 15) setOpen(diffs.map((d) => d.file))
+        const current = activeFile()
+        if (!current || !diffs.some((d) => d.file === current)) {
+          setActiveFile(diffs[0]!.file)
+        }
       },
     ),
   )
@@ -121,7 +131,6 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
 
     const d = draft()
     if (d && d.file === file) {
-      // Reuse stable reference for draft to prevent pierre cache invalidation
       if (!draftMeta || draftMeta.file !== d.file || draftMeta.side !== d.side || draftMeta.line !== d.line) {
         draftMeta = { type: "draft", comment: null, file: d.file, side: d.side, line: d.line }
       }
@@ -130,7 +139,6 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     return result
   }
 
-  // Compute commentedLines ranges for visual highlights on lines with comments
   const commentedLinesForFile = (file: string): SelectedLineRange[] => {
     const fileComments = commentsByFile().get(file) ?? []
     return fileComments.map((c) => ({
@@ -140,7 +148,6 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     }))
   }
 
-  // Focus a textarea once it's connected to the DOM (pierre renders async via slots)
   const focusWhenConnected = (el: HTMLTextAreaElement) => {
     let attempts = 0
     const tick = () => {
@@ -189,7 +196,6 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       const submit = () => {
         const text = textarea.value.trim()
         if (!text) return
-        // Extract selected text from the diff content
         const diff = props.diffs.find((d) => d.file === meta.file)
         const content = meta.side === "deletions" ? (diff?.before ?? "") : (diff?.after ?? "")
         const selected = extractLines(content, meta.line, meta.line)
@@ -218,7 +224,6 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       return wrapper
     }
 
-    // Existing comment — check if in edit mode
     const c = meta.comment!
     const isEditing = editing() === c.id
 
@@ -270,17 +275,13 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       return wrapper
     }
 
-    // Read-only comment — no code quote or line label since the annotation
-    // is visually anchored right below the relevant line
     wrapper.className = "am-annotation"
     const body = document.createElement("div")
     body.className = "am-annotation-comment"
-
     const text = document.createElement("div")
     text.className = "am-annotation-comment-text"
     text.textContent = c.comment
     body.appendChild(text)
-
     const btns = document.createElement("div")
     btns.className = "am-annotation-comment-actions"
 
@@ -328,14 +329,11 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     return wrapper
   }
 
-  // --- Gutter utility click ---
   const handleGutterClick = (file: string, result: { lineNumber: number; side: AnnotationSide }) => {
-    // Don't open a second draft while one is active
     if (draft()) return
     setDraft({ file, side: result.side, line: result.lineNumber })
   }
 
-  // --- Send all ---
   const sendAllToChat = () => {
     const all = comments()
     if (all.length === 0) return
@@ -355,118 +353,221 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     setComments([])
   }
 
+  const handleFileSelect = (path: string) => {
+    setActiveFile(path)
+    // Ensure the accordion is open for this file
+    if (!open().includes(path)) {
+      setOpen((prev) => [...prev, path])
+    }
+    // Scroll to the file in the diff viewer
+    requestAnimationFrame(() => {
+      const el = scrollRef?.querySelector(`[data-slot="accordion-item"][data-file-path="${CSS.escape(path)}"]`)
+      if (el instanceof HTMLElement) {
+        el.scrollIntoView({ block: "start", behavior: "smooth" })
+      }
+    })
+  }
+
+  const handleExpandAll = () => {
+    const allOpen = open().length === props.diffs.length
+    setOpen(allOpen ? [] : props.diffs.map((d) => d.file))
+  }
+
+  const syncActiveFileFromScroll = () => {
+    const container = scrollRef
+    if (!container) return
+    const headers = Array.from(container.querySelectorAll<HTMLElement>('[data-slot="accordion-item"][data-file-path]'))
+    if (headers.length === 0) return
+
+    const top = container.getBoundingClientRect().top + 1
+    const first = headers[0]?.dataset.filePath
+    const selected = headers.reduce<string | undefined>((carry, header) => {
+      const path = header.dataset.filePath
+      if (!path) return carry
+      if (header.getBoundingClientRect().top <= top) return path
+      return carry
+    }, first)
+
+    if (selected) setActiveFile(selected)
+  }
+
+  const scheduleSyncActiveFile = () => {
+    if (syncFrame !== undefined) cancelAnimationFrame(syncFrame)
+    syncFrame = requestAnimationFrame(() => {
+      syncFrame = undefined
+      syncActiveFileFromScroll()
+    })
+  }
+
+  // Keep file tree selection in sync with viewport during scroll in both directions.
+  createEffect(() => {
+    const container = scrollRef
+    if (!container) return
+    const onScroll = () => scheduleSyncActiveFile()
+    const resize = new ResizeObserver(() => scheduleSyncActiveFile())
+    container.addEventListener("scroll", onScroll, { passive: true })
+    resize.observe(container)
+    scheduleSyncActiveFile()
+
+    onCleanup(() => {
+      container.removeEventListener("scroll", onScroll)
+      resize.disconnect()
+      if (syncFrame !== undefined) {
+        cancelAnimationFrame(syncFrame)
+        syncFrame = undefined
+      }
+    })
+  })
+
+  createEffect(
+    on(
+      () => [props.diffs, open()] as const,
+      () => scheduleSyncActiveFile(),
+    ),
+  )
+
+  const totals = createMemo(() => ({
+    files: props.diffs.length,
+    additions: props.diffs.reduce((s, d) => s + d.additions, 0),
+    deletions: props.diffs.reduce((s, d) => s + d.deletions, 0),
+  }))
+
   return (
-    <div class="am-diff-panel">
-      <div class="am-diff-header">
-        <span class="am-diff-header-title">Changes</span>
-        <div class="am-diff-header-actions">
-          <Show when={props.onExpand}>
-            <Tooltip title={t("command.review.toggle")} placement="bottom">
-              <IconButton
-                icon="expand"
-                size="small"
-                variant="ghost"
-                label={t("command.review.toggle")}
-                onClick={() => props.onExpand?.()}
-              />
-            </Tooltip>
+    <div class="am-review-layout">
+      {/* Toolbar */}
+      <div class="am-review-toolbar">
+        <div class="am-review-toolbar-left">
+          <RadioGroup
+            options={["unified", "split"] as const}
+            current={props.diffStyle}
+            size="small"
+            value={(style) => style}
+            label={(style) => (style === "unified" ? "Unified" : "Split")}
+            onSelect={(style) => {
+              if (style) props.onDiffStyleChange(style)
+            }}
+          />
+          <span class="am-review-toolbar-stats">
+            <span>
+              {totals().files} file{totals().files !== 1 ? "s" : ""}
+            </span>
+            <span class="am-review-toolbar-adds">+{totals().additions}</span>
+            <span class="am-review-toolbar-dels">-{totals().deletions}</span>
+          </span>
+        </div>
+        <div class="am-review-toolbar-right">
+          <Button size="small" variant="ghost" onClick={handleExpandAll}>
+            <Icon name="chevron-grabber-vertical" size="small" />
+            {open().length === props.diffs.length ? "Collapse all" : "Expand all"}
+          </Button>
+          <Show when={comments().length > 0}>
+            <Button variant="primary" size="small" onClick={sendAllToChat}>
+              Send all to chat ({comments().length})
+            </Button>
           </Show>
-          <IconButton icon="close" size="small" variant="ghost" label="Close" onClick={props.onClose} />
+          <IconButton icon="close" size="small" variant="ghost" label="Close review" onClick={props.onClose} />
         </div>
       </div>
 
-      <Show when={props.loading && props.diffs.length === 0}>
-        <div class="am-diff-loading">
-          <Spinner />
-          <span>Computing diff...</span>
-        </div>
-      </Show>
-
-      <Show when={!props.loading && props.diffs.length === 0}>
-        <div class="am-diff-empty">
-          <span>No changes detected</span>
-        </div>
-      </Show>
-
-      <Show when={props.diffs.length > 0}>
-        <div class="am-diff-content" data-component="session-review">
-          <Accordion multiple value={open()} onChange={setOpen}>
-            <For each={props.diffs}>
-              {(diff) => {
-                const isAdded = () => diff.status === "added"
-                const isDeleted = () => diff.status === "deleted"
-                const fileCommentCount = () => (commentsByFile().get(diff.file) ?? []).length
-
-                return (
-                  <Accordion.Item value={diff.file} data-slot="session-review-accordion-item">
-                    <StickyAccordionHeader>
-                      <Accordion.Trigger>
-                        <div data-slot="session-review-trigger-content">
-                          <div data-slot="session-review-file-info">
-                            <FileIcon node={{ path: diff.file, type: "file" }} />
-                            <div data-slot="session-review-file-name-container">
-                              <Show when={diff.file.includes("/")}>
-                                <span data-slot="session-review-directory">{`\u202A${getDirectory(diff.file)}\u202C`}</span>
-                              </Show>
-                              <span data-slot="session-review-filename">{getFilename(diff.file)}</span>
-                              <Show when={fileCommentCount() > 0}>
-                                <span class="am-diff-file-badge">{fileCommentCount()}</span>
-                              </Show>
-                            </div>
-                          </div>
-                          <div data-slot="session-review-trigger-actions">
-                            <Show when={isAdded()}>
-                              <span data-slot="session-review-change" data-type="added">
-                                Added
-                              </span>
-                            </Show>
-                            <Show when={isDeleted()}>
-                              <span data-slot="session-review-change" data-type="removed">
-                                Removed
-                              </span>
-                            </Show>
-                            <Show when={!isAdded() && !isDeleted()}>
-                              <DiffChanges changes={diff} />
-                            </Show>
-                            <span data-slot="session-review-diff-chevron">
-                              <Icon name="chevron-down" size="small" />
-                            </span>
-                          </div>
-                        </div>
-                      </Accordion.Trigger>
-                    </StickyAccordionHeader>
-                    <Accordion.Content>
-                      <Show when={open().includes(diff.file)}>
-                        <Diff<AnnotationMeta>
-                          before={{ name: diff.file, contents: diff.before }}
-                          after={{ name: diff.file, contents: diff.after }}
-                          diffStyle={props.diffStyle ?? "unified"}
-                          annotations={annotationsForFile(diff.file)}
-                          commentedLines={commentedLinesForFile(diff.file)}
-                          renderAnnotation={buildAnnotation}
-                          enableGutterUtility={true}
-                          onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
-                        />
-                      </Show>
-                    </Accordion.Content>
-                  </Accordion.Item>
-                )
-              }}
-            </For>
-          </Accordion>
-        </div>
-
-        <Show when={comments().length > 0}>
-          <div class="am-diff-comments-footer">
-            <span class="am-diff-comments-count">
-              {comments().length} comment{comments().length !== 1 ? "s" : ""}
-            </span>
-            <Button variant="primary" size="small" onClick={sendAllToChat}>
-              Send all to chat
-            </Button>
+      {/* Body: file tree + diff viewer */}
+      <div class="am-review-body">
+        <div class="am-review-tree-resize" style={{ width: `${treeWidth()}px` }}>
+          <div class="am-review-tree-wrapper">
+            <FileTree diffs={props.diffs} activeFile={activeFile()} onFileSelect={handleFileSelect} />
           </div>
-        </Show>
-      </Show>
+          <ResizeHandle
+            direction="horizontal"
+            edge="end"
+            size={treeWidth()}
+            min={160}
+            max={400}
+            onResize={(w) => setTreeWidth(Math.max(160, Math.min(w, 400)))}
+          />
+        </div>
+        <div class="am-review-diff" ref={scrollRef}>
+          <Show when={props.loading && props.diffs.length === 0}>
+            <div class="am-diff-loading">
+              <Spinner />
+              <span>Computing diff...</span>
+            </div>
+          </Show>
+
+          <Show when={!props.loading && props.diffs.length === 0}>
+            <div class="am-diff-empty">
+              <span>No changes detected</span>
+            </div>
+          </Show>
+
+          <Show when={props.diffs.length > 0}>
+            <div class="am-review-diff-content" data-component="session-review">
+              <Accordion multiple value={open()} onChange={setOpen}>
+                <For each={props.diffs}>
+                  {(diff) => {
+                    const isAdded = () => diff.status === "added"
+                    const isDeleted = () => diff.status === "deleted"
+                    const fileCommentCount = () => (commentsByFile().get(diff.file) ?? []).length
+
+                    return (
+                      <Accordion.Item value={diff.file} data-file-path={diff.file}>
+                        <StickyAccordionHeader>
+                          <Accordion.Trigger>
+                            <div data-slot="session-review-trigger-content">
+                              <div data-slot="session-review-file-info">
+                                <FileIcon node={{ path: diff.file, type: "file" }} />
+                                <div data-slot="session-review-file-name-container">
+                                  <Show when={diff.file.includes("/")}>
+                                    <span data-slot="session-review-directory">{`\u202A${getDirectory(diff.file)}\u202C`}</span>
+                                  </Show>
+                                  <span data-slot="session-review-filename">{getFilename(diff.file)}</span>
+                                  <Show when={fileCommentCount() > 0}>
+                                    <span class="am-diff-file-badge">{fileCommentCount()}</span>
+                                  </Show>
+                                </div>
+                              </div>
+                              <div data-slot="session-review-trigger-actions">
+                                <Show when={isAdded()}>
+                                  <span data-slot="session-review-change" data-type="added">
+                                    Added
+                                  </span>
+                                </Show>
+                                <Show when={isDeleted()}>
+                                  <span data-slot="session-review-change" data-type="removed">
+                                    Removed
+                                  </span>
+                                </Show>
+                                <Show when={!isAdded() && !isDeleted()}>
+                                  <DiffChanges changes={diff} />
+                                </Show>
+                                <span data-slot="session-review-diff-chevron">
+                                  <Icon name="chevron-down" size="small" />
+                                </span>
+                              </div>
+                            </div>
+                          </Accordion.Trigger>
+                        </StickyAccordionHeader>
+                        <Accordion.Content>
+                          <Show when={open().includes(diff.file)}>
+                            <Diff<AnnotationMeta>
+                              before={{ name: diff.file, contents: diff.before }}
+                              after={{ name: diff.file, contents: diff.after }}
+                              diffStyle={props.diffStyle}
+                              annotations={annotationsForFile(diff.file)}
+                              commentedLines={commentedLinesForFile(diff.file)}
+                              renderAnnotation={buildAnnotation}
+                              enableGutterUtility={true}
+                              onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
+                            />
+                          </Show>
+                        </Accordion.Content>
+                      </Accordion.Item>
+                    )
+                  }}
+                </For>
+              </Accordion>
+            </div>
+          </Show>
+        </div>
+      </div>
     </div>
   )
 }

@@ -216,6 +216,10 @@ export class AgentManagerProvider implements vscode.Disposable {
       this.state?.setSessionsCollapsed(msg.collapsed)
       return null
     }
+    if (type === "agentManager.setReviewDiffStyle" && (msg.style === "unified" || msg.style === "split")) {
+      this.state?.setReviewDiffStyle(msg.style)
+      return null
+    }
 
     if (type === "agentManager.requestExternalWorktrees") {
       void this.onRequestExternalWorktrees()
@@ -1206,6 +1210,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       sessions: state.getSessions(),
       tabOrder: state.getTabOrder(),
       sessionsCollapsed: state.getSessionsCollapsed(),
+      reviewDiffStyle: state.getReviewDiffStyle(),
       isGitRepo: true,
     })
   }
@@ -1216,6 +1221,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       type: "agentManager.state",
       worktrees: [],
       sessions: [],
+      reviewDiffStyle: "unified",
       isGitRepo: false,
     })
   }

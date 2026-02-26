@@ -35,6 +35,7 @@ interface StateFile {
   sessions: Record<string, Omit<ManagedSession, "id">>
   tabOrder?: Record<string, string[]>
   sessionsCollapsed?: boolean
+  reviewDiffStyle?: "unified" | "split"
 }
 
 const STATE_FILE = "agent-manager.json"
@@ -52,6 +53,7 @@ export class WorktreeStateManager {
   private sessions = new Map<string, ManagedSession>()
   private tabOrder: Record<string, string[]> = {}
   private collapsed = false
+  private reviewDiffStyle: "unified" | "split" = "unified"
   private readonly log: (msg: string) => void
   private saving: Promise<void> | undefined
   private pendingSave = false
@@ -229,6 +231,19 @@ export class WorktreeStateManager {
   }
 
   // ---------------------------------------------------------------------------
+  // Review diff style
+  // ---------------------------------------------------------------------------
+
+  getReviewDiffStyle(): "unified" | "split" {
+    return this.reviewDiffStyle
+  }
+
+  setReviewDiffStyle(value: "unified" | "split"): void {
+    this.reviewDiffStyle = value
+    void this.save()
+  }
+
+  // ---------------------------------------------------------------------------
   // Persistence
   // ---------------------------------------------------------------------------
 
@@ -239,6 +254,7 @@ export class WorktreeStateManager {
       this.worktrees.clear()
       this.sessions.clear()
       this.tabOrder = {}
+      this.reviewDiffStyle = "unified"
 
       for (const [id, wt] of Object.entries(data.worktrees ?? {})) {
         this.worktrees.set(id, { id, ...wt })
@@ -250,6 +266,9 @@ export class WorktreeStateManager {
         this.tabOrder = data.tabOrder
       }
       this.collapsed = data.sessionsCollapsed ?? false
+      if (data.reviewDiffStyle === "split") {
+        this.reviewDiffStyle = "split"
+      }
       this.log(`Loaded state: ${this.worktrees.size} worktrees, ${this.sessions.size} sessions`)
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code
@@ -318,6 +337,9 @@ export class WorktreeStateManager {
     }
     if (this.collapsed) {
       data.sessionsCollapsed = true
+    }
+    if (this.reviewDiffStyle === "split") {
+      data.reviewDiffStyle = "split"
     }
 
     try {
