@@ -1635,7 +1635,7 @@ export namespace Config {
           stop: Instance.worktree,
         }),
       )
-      for (const dir of opencodeDirs.toReversed()) {
+      for (const dir of opencodeDirs) {
         for (const file of CONFIG_FILES_OPENCODE) {
           const filepath = path.join(dir, file)
           if (await hasMcpDefinition(filepath, mcpName)) {
@@ -1731,7 +1731,7 @@ export namespace Config {
         stop: Instance.worktree,
       }),
     )
-    for (const dir of opencodeDirs.toReversed()) {
+    for (const dir of opencodeDirs) {
       for (const file of CONFIG_FILES_OPENCODE) {
         const filepath = path.join(dir, file)
         if (existsSync(filepath)) {
