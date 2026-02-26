@@ -1049,6 +1049,8 @@ export const dict = {
 
   "agentManager.diff.toggle": "Prebaci diff",
   "agentManager.shortcuts.toggleDiff": "Prebaci panel za diff",
+  "agentManager.shortcuts.category.quickSwitch": "Brzo prebacivanje",
+  "agentManager.shortcuts.jumpToItem": "Idi na stavku 1\u20139",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Zalijepite PR URL...",
