@@ -5,6 +5,7 @@ import { KiloProvider } from "../KiloProvider"
 import { buildWebviewHtml } from "../utils"
 import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
 import { WorktreeStateManager } from "./WorktreeStateManager"
+import { WorktreeStatsPoller } from "./WorktreeStatsPoller"
 import { versionedName } from "./branch-name"
 import { normalizePath } from "./git-import"
 import { SetupScriptService } from "./SetupScriptService"
@@ -40,12 +41,7 @@ export class AgentManagerProvider implements vscode.Disposable {
   private diffInterval: ReturnType<typeof setInterval> | undefined
   private diffSessionId: string | undefined
   private lastDiffHash: string | undefined
-  private statsInterval: ReturnType<typeof setTimeout> | undefined
-  private statsActive = false
-  private statsBusy = false
-  private lastStatsHash: string | undefined
-  private lastStats: Record<string, { additions: number; deletions: number; commits: number }> = {}
-  private lastFetch = new Map<string, number>()
+  private statsPoller: WorktreeStatsPoller
   private cachedDiffTarget: { directory: string; baseBranch: string } | undefined
 
   constructor(
@@ -56,6 +52,14 @@ export class AgentManagerProvider implements vscode.Disposable {
     this.terminalManager = new SessionTerminalManager((msg) =>
       this.outputChannel.appendLine(`[SessionTerminal] ${msg}`),
     )
+    this.statsPoller = new WorktreeStatsPoller({
+      getWorktrees: () => this.state?.getWorktrees() ?? [],
+      getHttpClient: () => this.connectionService.getHttpClient(),
+      onStats: (stats) => {
+        this.postToWebview({ type: "agentManager.worktreeStats", stats })
+      },
+      log: (...args) => this.log(...args),
+    })
   }
 
   private log(...args: unknown[]) {
@@ -101,7 +105,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     this.panel.onDidDispose(() => {
       this.log("Panel disposed")
-      this.stopStatsPolling()
+      this.statsPoller.stop()
       this.stopDiffPolling()
       this.provider?.dispose()
       this.provider = undefined
@@ -141,11 +145,6 @@ export class AgentManagerProvider implements vscode.Disposable {
     // Refresh sessions so worktree sessions appear in the list
     if (state.getSessions().length > 0) {
       this.provider?.refreshSessions()
-    }
-
-    // Start polling git stats for all worktrees
-    if (state.getWorktrees().length > 0) {
-      this.startStatsPolling()
     }
   }
 
@@ -1228,11 +1227,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     // Keep stats polling in sync with worktree count
     const worktrees = state.getWorktrees()
-    if (worktrees.length > 0 && !this.statsActive) {
-      this.startStatsPolling()
-    } else if (worktrees.length === 0 && this.statsActive) {
-      this.stopStatsPolling()
-    }
+    this.statsPoller.setEnabled(worktrees.length > 0)
   }
 
   /** Push empty state when the workspace is not a git repo or has no workspace folder. */
@@ -1443,164 +1438,6 @@ export class AgentManagerProvider implements vscode.Disposable {
     this.cachedDiffTarget = undefined
   }
 
-  // ---------------------------------------------------------------------------
-  // Worktree git stats polling (diff stats + commits missing from origin)
-  // ---------------------------------------------------------------------------
-
-  private gitExec(args: string[], cwd: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-      cp.execFile("git", args, { cwd, timeout: 10000 }, (err, stdout) => {
-        if (err) reject(err)
-        else resolve(stdout.trim())
-      })
-    })
-  }
-
-  private hasRemoteRef(cwd: string, ref: string): Promise<boolean> {
-    return this.gitExec(["rev-parse", "--verify", "--quiet", `refs/remotes/${ref}`], cwd)
-      .then(() => true)
-      .catch(() => false)
-  }
-
-  private async refreshRemote(cwd: string): Promise<void> {
-    const common = await this.gitExec(["rev-parse", "--git-common-dir"], cwd).catch(() => cwd)
-    const prev = this.lastFetch.get(common) ?? 0
-    const now = Date.now()
-    if (now - prev < 120000) return
-    this.lastFetch.set(common, now)
-
-    const list = await this.gitExec(["remote"], cwd).catch(() => "")
-    const remote = list
-      .split("\n")
-      .map((item) => item.trim())
-      .find(Boolean)
-    if (!remote) return
-
-    await this.gitExec(["fetch", "--quiet", "--no-tags", remote], cwd).catch((err) => {
-      this.log(`Failed to refresh remote refs for ${cwd}:`, err)
-    })
-  }
-
-  private async countMissingOriginCommits(cwd: string, parentBranch: string): Promise<number> {
-    await this.refreshRemote(cwd)
-
-    const upstream = await this.gitExec(
-      ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"],
-      cwd,
-    ).catch(() => "")
-    if (upstream) {
-      const count = await this.gitExec(["rev-list", "--count", `${upstream}..HEAD`], cwd).catch(() => "0")
-      return parseInt(count, 10) || 0
-    }
-
-    const branch = await this.gitExec(["branch", "--show-current"], cwd).catch(() => "")
-    const originBranch = branch ? `origin/${branch}` : ""
-    const hasOriginBranch = originBranch ? await this.hasRemoteRef(cwd, originBranch) : false
-
-    const originParent = `origin/${parentBranch}`
-    const hasOriginParent = await this.hasRemoteRef(cwd, originParent)
-
-    const ref = hasOriginBranch ? originBranch : hasOriginParent ? originParent : parentBranch
-    const count = await this.gitExec(["rev-list", "--count", `${ref}..HEAD`], cwd).catch(() => "0")
-    return parseInt(count, 10) || 0
-  }
-
-  private async fetchWorktreeStats(): Promise<void> {
-    const state = this.state
-    if (!state) return
-    const worktrees = state.getWorktrees()
-    if (worktrees.length === 0) return
-
-    const client = (() => {
-      try {
-        return this.connectionService.getHttpClient()
-      } catch (err) {
-        this.log("Failed to get HTTP client for worktree stats:", err)
-        return undefined
-      }
-    })()
-    if (!client) return
-
-    const stats = (
-      await Promise.all(
-        worktrees.map(async (wt) => {
-          try {
-            // Use the same backend endpoint as the diff viewer to keep stats deterministic.
-            const diffs = await client.getWorktreeDiff(wt.path, wt.parentBranch)
-            const additions = diffs.reduce((sum, diff) => sum + diff.additions, 0)
-            const deletions = diffs.reduce((sum, diff) => sum + diff.deletions, 0)
-            const commits = await this.countMissingOriginCommits(wt.path, wt.parentBranch)
-            return { worktreeId: wt.id, additions, deletions, commits }
-          } catch (err) {
-            this.log(`Failed to fetch worktree stats for ${wt.branch} (${wt.path}):`, err)
-            const prev = this.lastStats[wt.id]
-            if (!prev) return undefined
-            return {
-              worktreeId: wt.id,
-              additions: prev.additions,
-              deletions: prev.deletions,
-              commits: prev.commits,
-            }
-          }
-        }),
-      )
-    ).filter((item): item is { worktreeId: string; additions: number; deletions: number; commits: number } => !!item)
-
-    if (stats.length === 0) return
-
-    const hash = stats.map((s) => `${s.worktreeId}:${s.additions}:${s.deletions}:${s.commits}`).join("|")
-    if (hash === this.lastStatsHash) return
-    this.lastStatsHash = hash
-    this.lastStats = stats.reduce(
-      (acc, item) => {
-        acc[item.worktreeId] = {
-          additions: item.additions,
-          deletions: item.deletions,
-          commits: item.commits,
-        }
-        return acc
-      },
-      {} as Record<string, { additions: number; deletions: number; commits: number }>,
-    )
-
-    this.postToWebview({ type: "agentManager.worktreeStats", stats })
-  }
-
-  private scheduleStatsPoll(delay: number): void {
-    if (!this.statsActive) return
-    this.statsInterval = setTimeout(() => {
-      void this.pollStats()
-    }, delay)
-  }
-
-  private startStatsPolling(): void {
-    this.stopStatsPolling()
-    this.statsActive = true
-    // Initial fetch
-    void this.pollStats()
-  }
-
-  private pollStats(): Promise<void> {
-    if (!this.statsActive) return Promise.resolve()
-    if (this.statsBusy) return Promise.resolve()
-    this.statsBusy = true
-    return this.fetchWorktreeStats().finally(() => {
-      this.statsBusy = false
-      this.scheduleStatsPoll(5000)
-    })
-  }
-
-  private stopStatsPolling(): void {
-    this.statsActive = false
-    if (this.statsInterval) {
-      clearTimeout(this.statsInterval)
-      this.statsInterval = undefined
-    }
-    this.statsBusy = false
-    this.lastStatsHash = undefined
-    this.lastStats = {}
-  }
-
   private postToWebview(message: Record<string, unknown>): void {
     if (this.panel?.webview) void this.panel.webview.postMessage(message)
   }
@@ -1642,7 +1479,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
   public dispose(): void {
     this.stopDiffPolling()
-    this.stopStatsPolling()
+    this.statsPoller.stop()
     this.terminalManager.dispose()
     this.provider?.dispose()
     this.panel?.dispose()

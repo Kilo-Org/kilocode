@@ -1670,38 +1670,36 @@ const AgentManagerContent: Component = () => {
                 />
               </TooltipKeybind>
               <div class="am-tab-actions">
-                <Show when={selection() !== LOCAL}>
-                  {(() => {
-                    const sel = () => selection()
-                    const stats = () =>
-                      typeof sel() === "string" && sel() !== LOCAL ? worktreeStats()[sel() as string] : undefined
-                    const hasChanges = () => {
-                      const s = stats()
-                      return s && (s.additions > 0 || s.deletions > 0)
-                    }
-                    return (
-                      <TooltipKeybind
+                {(() => {
+                  const sel = () => selection()
+                  const stats = () =>
+                    typeof sel() === "string" && sel() !== LOCAL ? worktreeStats()[sel() as string] : undefined
+                  const hasChanges = () => {
+                    const s = stats()
+                    return s && (s.additions > 0 || s.deletions > 0)
+                  }
+                  return (
+                    <TooltipKeybind
+                      title={t("agentManager.diff.toggle")}
+                      keybind={kb().toggleDiff ?? ""}
+                      placement="bottom"
+                    >
+                      <button
+                        class={`am-diff-toggle-btn ${diffOpen() ? "am-tab-diff-btn-active" : ""} ${hasChanges() ? "am-diff-toggle-has-changes" : ""}`}
+                        onClick={() => setDiffOpen((prev) => !prev)}
                         title={t("agentManager.diff.toggle")}
-                        keybind={kb().toggleDiff ?? ""}
-                        placement="bottom"
                       >
-                        <button
-                          class={`am-diff-toggle-btn ${diffOpen() ? "am-tab-diff-btn-active" : ""} ${hasChanges() ? "am-diff-toggle-has-changes" : ""}`}
-                          onClick={() => setDiffOpen((prev) => !prev)}
-                          title={t("agentManager.diff.toggle")}
-                        >
-                          <Icon name="layers" size="small" />
-                          <Show when={hasChanges()}>
-                            <span class="am-diff-toggle-stats">
-                              <span class="am-stat-additions">+{stats()!.additions}</span>
-                              <span class="am-stat-deletions">−{stats()!.deletions}</span>
-                            </span>
-                          </Show>
-                        </button>
-                      </TooltipKeybind>
-                    )
-                  })()}
-                </Show>
+                        <Icon name="layers" size="small" />
+                        <Show when={hasChanges()}>
+                          <span class="am-diff-toggle-stats">
+                            <span class="am-stat-additions">+{stats()!.additions}</span>
+                            <span class="am-stat-deletions">−{stats()!.deletions}</span>
+                          </span>
+                        </Show>
+                      </button>
+                    </TooltipKeybind>
+                  )
+                })()}
                 <TooltipKeybind
                   title={t("agentManager.tab.terminal")}
                   keybind={kb().showTerminal ?? ""}
