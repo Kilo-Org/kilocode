@@ -1,6 +1,16 @@
 # Default Model
 
-**Issue:** [#6074](https://github.com/Kilo-Org/kilocode/issues/6074)
+A user should be able to indicate the model they want to use. To this end a user can
+indicate what the default model should be.
+
+But sometimes the user either
+
+- changed their opinion, and wants to use a new default model
+- wants to use a different model for a specific session
+
+These two usecases look very similar for a user using only one agent at the time. They change their default model, start the next session, and then change the model again perhaps.
+
+But for using using many concurrent agents, it is important to be able to change the model for a specific session without changing the default model, as they would still expect starting a new session will be predictable and not affected by some other unrelated session.
 
 ## Settings
 
