@@ -5,6 +5,7 @@ import { KiloProvider } from "../KiloProvider"
 import { buildWebviewHtml } from "../utils"
 import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
 import { WorktreeStateManager } from "./WorktreeStateManager"
+import { WorktreeStatsPoller } from "./WorktreeStatsPoller"
 import { versionedName } from "./branch-name"
 import { normalizePath } from "./git-import"
 import { SetupScriptService } from "./SetupScriptService"
@@ -40,6 +41,7 @@ export class AgentManagerProvider implements vscode.Disposable {
   private diffInterval: ReturnType<typeof setInterval> | undefined
   private diffSessionId: string | undefined
   private lastDiffHash: string | undefined
+  private statsPoller: WorktreeStatsPoller
   private cachedDiffTarget: { directory: string; baseBranch: string } | undefined
 
   constructor(
@@ -50,6 +52,14 @@ export class AgentManagerProvider implements vscode.Disposable {
     this.terminalManager = new SessionTerminalManager((msg) =>
       this.outputChannel.appendLine(`[SessionTerminal] ${msg}`),
     )
+    this.statsPoller = new WorktreeStatsPoller({
+      getWorktrees: () => this.state?.getWorktrees() ?? [],
+      getHttpClient: () => this.connectionService.getHttpClient(),
+      onStats: (stats) => {
+        this.postToWebview({ type: "agentManager.worktreeStats", stats })
+      },
+      log: (...args) => this.log(...args),
+    })
   }
 
   private log(...args: unknown[]) {
@@ -95,6 +105,8 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     this.panel.onDidDispose(() => {
       this.log("Panel disposed")
+      this.statsPoller.stop()
+      this.stopDiffPolling()
       this.provider?.dispose()
       this.provider = undefined
       this.panel = undefined
@@ -1217,6 +1229,10 @@ export class AgentManagerProvider implements vscode.Disposable {
       reviewDiffStyle: state.getReviewDiffStyle(),
       isGitRepo: true,
     })
+
+    // Keep stats polling in sync with worktree count
+    const worktrees = state.getWorktrees()
+    this.statsPoller.setEnabled(worktrees.length > 0)
   }
 
   /** Push empty state when the workspace is not a git repo or has no workspace folder. */
@@ -1469,6 +1485,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
   public dispose(): void {
     this.stopDiffPolling()
+    this.statsPoller.stop()
     this.terminalManager.dispose()
     this.provider?.dispose()
     this.panel?.dispose()

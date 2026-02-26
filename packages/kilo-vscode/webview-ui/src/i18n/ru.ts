@@ -966,6 +966,8 @@ export const dict = {
   "agentManager.hoverCard.branch": "ВЕТКА",
   "agentManager.hoverCard.base": "Основа",
   "agentManager.hoverCard.sessions": "Сессии",
+  "agentManager.hoverCard.changes": "Изменения",
+  "agentManager.hoverCard.commits": "Коммиты",
   "agentManager.session.new": "Новая сессия",
   "agentManager.session.untitled": "Без названия",
   "agentManager.session.newSession": "Новая сессия",
