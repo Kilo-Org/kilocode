@@ -144,8 +144,9 @@ export class AgentManagerProvider implements vscode.Disposable {
       this.provider?.refreshSessions()
     }
 
-    // Poll for externally deleted worktrees while the panel is open
-    this.startWorktreeValidation()
+    // Poll for externally deleted worktrees while the panel is open.
+    // Guard against panel being disposed while initializeState() was awaiting.
+    if (this.panel) this.startWorktreeValidation()
   }
 
   // ---------------------------------------------------------------------------
