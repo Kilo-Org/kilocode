@@ -23,7 +23,9 @@ import type {
   AgentManagerImportResultMessage,
   AgentManagerWorktreeDiffMessage,
   AgentManagerWorktreeDiffLoadingMessage,
+  AgentManagerWorktreeStatsMessage,
   WorktreeFileDiff,
+  WorktreeGitStats,
   WorktreeState,
   ManagedSessionState,
   SessionInfo,
@@ -303,6 +305,9 @@ const AgentManagerContent: Component = () => {
   const [diffDatas, setDiffDatas] = createSignal<Record<string, WorktreeFileDiff[]>>({})
   const [diffLoading, setDiffLoading] = createSignal(false)
   const [diffWidth, setDiffWidth] = createSignal(Math.round(window.innerWidth * 0.5))
+
+  // Per-worktree git stats (diff additions/deletions, commits missing from origin)
+  const [worktreeStats, setWorktreeStats] = createSignal<Record<string, WorktreeGitStats>>({})
 
   // Pending local tab counter for generating unique IDs
   let pendingCounter = 0
@@ -845,6 +850,13 @@ const AgentManagerContent: Component = () => {
         const ev = msg as AgentManagerWorktreeDiffLoadingMessage
         setDiffLoading(ev.loading)
       }
+
+      if (msg.type === "agentManager.worktreeStats") {
+        const ev = msg as AgentManagerWorktreeStatsMessage
+        const map: Record<string, WorktreeGitStats> = {}
+        for (const s of ev.stats) map[s.worktreeId] = s
+        setWorktreeStats(map)
+      }
     })
 
     onCleanup(() => {
@@ -1381,13 +1393,38 @@ const AgentManagerContent: Component = () => {
                                   </Show>
                                   {(() => {
                                     const num = idx() + 2
+                                    const stats = () => worktreeStats()[wt.id]
                                     return (
-                                      <Show when={num <= MAX_JUMP_INDEX}>
-                                        <span class="am-shortcut-badge">
-                                          {isMac ? "⌘" : "Ctrl+"}
-                                          {num}
-                                        </span>
-                                      </Show>
+                                      <>
+                                        <Show when={num <= MAX_JUMP_INDEX}>
+                                          <span class="am-shortcut-badge">
+                                            {isMac ? "⌘" : "Ctrl+"}
+                                            {num}
+                                          </span>
+                                        </Show>
+                                        <Show
+                                          when={
+                                            stats() &&
+                                            (stats()!.additions > 0 || stats()!.deletions > 0 || stats()!.commits > 0)
+                                          }
+                                        >
+                                          <div class="am-worktree-stats">
+                                            <Show when={stats()!.additions > 0 || stats()!.deletions > 0}>
+                                              <span class="am-worktree-diff-stats">
+                                                <Show when={stats()!.additions > 0}>
+                                                  <span class="am-stat-additions">+{stats()!.additions}</span>
+                                                </Show>
+                                                <Show when={stats()!.deletions > 0}>
+                                                  <span class="am-stat-deletions">−{stats()!.deletions}</span>
+                                                </Show>
+                                              </span>
+                                            </Show>
+                                            <Show when={stats()!.commits > 0}>
+                                              <span class="am-worktree-commits">↑{stats()!.commits}</span>
+                                            </Show>
+                                          </div>
+                                        </Show>
+                                      </>
                                     )
                                   })()}
                                   <Show when={!busyWorktrees().has(wt.id)}>
@@ -1437,6 +1474,44 @@ const AgentManagerContent: Component = () => {
                                   <span class="am-hover-card-row-label">{t("agentManager.hoverCard.sessions")}</span>
                                   <span class="am-hover-card-row-value">{sessions().length}</span>
                                 </div>
+                                {(() => {
+                                  const hoverStats = () => worktreeStats()[wt.id]
+                                  return (
+                                    <Show
+                                      when={
+                                        hoverStats() &&
+                                        (hoverStats()!.additions > 0 ||
+                                          hoverStats()!.deletions > 0 ||
+                                          hoverStats()!.commits > 0)
+                                      }
+                                    >
+                                      <div class="am-hover-card-divider" />
+                                      <Show when={hoverStats()!.additions > 0 || hoverStats()!.deletions > 0}>
+                                        <div class="am-hover-card-row">
+                                          <span class="am-hover-card-row-label">
+                                            {t("agentManager.hoverCard.changes")}
+                                          </span>
+                                          <span class="am-hover-card-row-value am-hover-card-diff-stats">
+                                            <Show when={hoverStats()!.additions > 0}>
+                                              <span class="am-stat-additions">+{hoverStats()!.additions}</span>
+                                            </Show>
+                                            <Show when={hoverStats()!.deletions > 0}>
+                                              <span class="am-stat-deletions">−{hoverStats()!.deletions}</span>
+                                            </Show>
+                                          </span>
+                                        </div>
+                                      </Show>
+                                      <Show when={hoverStats()!.commits > 0}>
+                                        <div class="am-hover-card-row">
+                                          <span class="am-hover-card-row-label">
+                                            {t("agentManager.hoverCard.commits")}
+                                          </span>
+                                          <span class="am-hover-card-row-value">{hoverStats()!.commits}</span>
+                                        </div>
+                                      </Show>
+                                    </Show>
+                                  )
+                                })()}
                               </div>
                             </HoverCard>
                           </>
@@ -1598,20 +1673,36 @@ const AgentManagerContent: Component = () => {
                 />
               </TooltipKeybind>
               <div class="am-tab-actions">
-                <TooltipKeybind
-                  title={t("agentManager.diff.toggle")}
-                  keybind={kb().toggleDiff ?? ""}
-                  placement="bottom"
-                >
-                  <IconButton
-                    icon="layers"
-                    size="small"
-                    variant="ghost"
-                    label={t("agentManager.diff.toggle")}
-                    class={diffOpen() ? "am-tab-diff-btn-active" : ""}
-                    onClick={() => setDiffOpen((prev) => !prev)}
-                  />
-                </TooltipKeybind>
+                {(() => {
+                  const sel = () => selection()
+                  const stats = () =>
+                    typeof sel() === "string" && sel() !== LOCAL ? worktreeStats()[sel() as string] : undefined
+                  const hasChanges = () => {
+                    const s = stats()
+                    return s && (s.additions > 0 || s.deletions > 0)
+                  }
+                  return (
+                    <TooltipKeybind
+                      title={t("agentManager.diff.toggle")}
+                      keybind={kb().toggleDiff ?? ""}
+                      placement="bottom"
+                    >
+                      <button
+                        class={`am-diff-toggle-btn ${diffOpen() ? "am-tab-diff-btn-active" : ""} ${hasChanges() ? "am-diff-toggle-has-changes" : ""}`}
+                        onClick={() => setDiffOpen((prev) => !prev)}
+                        title={t("agentManager.diff.toggle")}
+                      >
+                        <Icon name="layers" size="small" />
+                        <Show when={hasChanges()}>
+                          <span class="am-diff-toggle-stats">
+                            <span class="am-stat-additions">+{stats()!.additions}</span>
+                            <span class="am-stat-deletions">−{stats()!.deletions}</span>
+                          </span>
+                        </Show>
+                      </button>
+                    </TooltipKeybind>
+                  )
+                })()}
                 <TooltipKeybind
                   title={t("agentManager.tab.terminal")}
                   keybind={kb().showTerminal ?? ""}
@@ -1740,6 +1831,10 @@ const AgentManagerContent: Component = () => {
                   diffs={diffDatas()[selection() === LOCAL ? LOCAL : (session.currentSessionID() ?? "")] ?? []}
                   loading={diffLoading()}
                   onClose={() => setDiffOpen(false)}
+                  onOpenFile={(file) => {
+                    const id = session.currentSessionID()
+                    if (id) vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file })
+                  }}
                 />
               </div>
             </Show>
@@ -2044,94 +2139,110 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
               </div>
               <div class="am-advanced-field">
                 <span class="am-nv-config-label">{t("agentManager.dialog.baseBranch")}</span>
-                <div class="am-branch-selector-wrapper">
-                  <button
-                    class="am-branch-selector-trigger"
-                    onClick={() => setBaseBranchOpen(!baseBranchOpen())}
-                    type="button"
+                <div class="am-selector-wrapper">
+                  <Popover
+                    open={baseBranchOpen()}
+                    onOpenChange={(open) => {
+                      setBaseBranchOpen(open)
+                      if (!open) {
+                        setBranchSearch("")
+                        setHighlightedIndex(0)
+                      }
+                    }}
+                    placement="bottom-start"
+                    sameWidth
+                    class="am-dropdown"
+                    trigger={
+                      <button class="am-selector-trigger" type="button">
+                        <span class="am-selector-left">
+                          <Icon name="branch" size="small" />
+                          <span class="am-selector-value" style={{ color: "var(--text-base)" }}>
+                            {effectiveBaseBranch()}
+                          </span>
+                          <Show when={!baseBranch()}>
+                            <span class="am-branch-badge">{t("agentManager.dialog.branchBadge.default")}</span>
+                          </Show>
+                        </span>
+                        <span class="am-selector-right">
+                          <Icon name="selector" size="small" />
+                        </span>
+                      </button>
+                    }
                   >
-                    <Icon name="branch" size="small" />
-                    <span class="am-branch-selector-value">{effectiveBaseBranch()}</span>
-                    <Show when={!baseBranch()}>
-                      <span class="am-branch-badge">{t("agentManager.dialog.branchBadge.default")}</span>
-                    </Show>
-                    <Icon name="selector" size="small" />
-                  </button>
-                  <Show when={baseBranchOpen()}>
-                    <div class="am-branch-dropdown" onWheel={(e) => e.stopPropagation()}>
-                      <div class="am-branch-search">
-                        <Icon name="magnifying-glass" size="small" />
-                        <input
-                          class="am-branch-search-input"
-                          type="text"
-                          placeholder={t("agentManager.dialog.searchBranches")}
-                          value={branchSearch()}
-                          ref={(el) => requestAnimationFrame(() => el.focus())}
-                          onInput={(e) => {
-                            setBranchSearch(e.currentTarget.value)
-                            setHighlightedIndex(0)
-                          }}
-                          onKeyDown={(e) => {
-                            const items = filteredBranches()
-                            if (e.key === "ArrowDown") {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              const next = Math.min(highlightedIndex() + 1, items.length - 1)
-                              setHighlightedIndex(next)
-                              requestAnimationFrame(() => {
-                                document
-                                  .querySelector(`.am-branch-item[data-index="${next}"]`)
-                                  ?.scrollIntoView({ block: "nearest" })
-                              })
-                            } else if (e.key === "ArrowUp") {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              const prev = Math.max(highlightedIndex() - 1, 0)
-                              setHighlightedIndex(prev)
-                              requestAnimationFrame(() => {
-                                document
-                                  .querySelector(`.am-branch-item[data-index="${prev}"]`)
-                                  ?.scrollIntoView({ block: "nearest" })
-                              })
-                            } else if (e.key === "Enter") {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              const selected = items[highlightedIndex()]
-                              if (selected) {
-                                setBaseBranch(selected.name)
-                                setBaseBranchOpen(false)
-                                setBranchSearch("")
-                                setHighlightedIndex(0)
-                              }
-                            } else if (e.key === "Escape") {
-                              e.preventDefault()
-                              e.stopPropagation()
+                    <div class="am-dropdown-search">
+                      <Icon name="magnifying-glass" size="small" />
+                      <input
+                        class="am-dropdown-search-input"
+                        type="text"
+                        placeholder={t("agentManager.dialog.searchBranches")}
+                        value={branchSearch()}
+                        autofocus
+                        onInput={(e) => {
+                          setBranchSearch(e.currentTarget.value)
+                          setHighlightedIndex(0)
+                        }}
+                        onKeyDown={(e) => {
+                          const items = filteredBranches()
+                          if (e.key === "ArrowDown") {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            const next = Math.min(highlightedIndex() + 1, items.length - 1)
+                            setHighlightedIndex(next)
+                            requestAnimationFrame(() => {
+                              document
+                                .querySelector(`.am-branch-item[data-index="${next}"]`)
+                                ?.scrollIntoView({ block: "nearest" })
+                            })
+                          } else if (e.key === "ArrowUp") {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            const prev = Math.max(highlightedIndex() - 1, 0)
+                            setHighlightedIndex(prev)
+                            requestAnimationFrame(() => {
+                              document
+                                .querySelector(`.am-branch-item[data-index="${prev}"]`)
+                                ?.scrollIntoView({ block: "nearest" })
+                            })
+                          } else if (e.key === "Enter") {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            const selected = items[highlightedIndex()]
+                            if (selected) {
+                              setBaseBranch(selected.name)
                               setBaseBranchOpen(false)
                               setBranchSearch("")
                               setHighlightedIndex(0)
                             }
-                          }}
-                        />
-                      </div>
-                      <div class="am-branch-list">
-                        <For each={filteredBranches()}>
-                          {(branch, index) => (
-                            <button
-                              class="am-branch-item"
-                              classList={{
-                                "am-branch-item-active": effectiveBaseBranch() === branch.name,
-                                "am-branch-item-highlighted": highlightedIndex() === index(),
-                              }}
-                              data-index={index()}
-                              onClick={() => {
-                                setBaseBranch(branch.name)
-                                setBaseBranchOpen(false)
-                                setBranchSearch("")
-                                setHighlightedIndex(0)
-                              }}
-                              onMouseEnter={() => setHighlightedIndex(index())}
-                              type="button"
-                            >
+                          } else if (e.key === "Escape") {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            setBaseBranchOpen(false)
+                            setBranchSearch("")
+                            setHighlightedIndex(0)
+                          }
+                        }}
+                      />
+                    </div>
+                    <div class="am-dropdown-list">
+                      <For each={filteredBranches()}>
+                        {(branch, index) => (
+                          <button
+                            class="am-branch-item"
+                            classList={{
+                              "am-branch-item-active": effectiveBaseBranch() === branch.name,
+                              "am-branch-item-highlighted": highlightedIndex() === index(),
+                            }}
+                            data-index={index()}
+                            onClick={() => {
+                              setBaseBranch(branch.name)
+                              setBaseBranchOpen(false)
+                              setBranchSearch("")
+                              setHighlightedIndex(0)
+                            }}
+                            onMouseEnter={() => setHighlightedIndex(index())}
+                            type="button"
+                          >
+                            <span class="am-branch-item-left">
                               <Icon name="branch" size="small" />
                               <span class="am-branch-item-name">{branch.name}</span>
                               <Show when={branch.isDefault}>
@@ -2142,15 +2253,15 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
                                   {t("agentManager.dialog.branchBadge.remote")}
                                 </span>
                               </Show>
-                              <Show when={branch.lastCommitDate}>
-                                <span class="am-branch-item-time">{formatRelativeDate(branch.lastCommitDate!)}</span>
-                              </Show>
-                            </button>
-                          )}
-                        </For>
-                      </div>
+                            </span>
+                            <Show when={branch.lastCommitDate}>
+                              <span class="am-branch-item-time">{formatRelativeDate(branch.lastCommitDate!)}</span>
+                            </Show>
+                          </button>
+                        )}
+                      </For>
                     </div>
-                  </Show>
+                  </Popover>
                 </div>
               </div>
             </div>

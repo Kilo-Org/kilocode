@@ -989,6 +989,8 @@ export const dict = {
   "agentManager.hoverCard.branch": "BRANCH",
   "agentManager.hoverCard.base": "Baza",
   "agentManager.hoverCard.sessions": "Sesije",
+  "agentManager.hoverCard.changes": "Promjene",
+  "agentManager.hoverCard.commits": "Commiti",
   "agentManager.session.new": "Nova sesija",
   "agentManager.session.untitled": "Bez naslova",
   "agentManager.session.newSession": "Nova sesija",
@@ -1046,6 +1048,7 @@ export const dict = {
   "agentManager.dialog.advanced": "Napredno...",
 
   "agentManager.diff.toggle": "Prebaci diff",
+  "agentManager.diff.openFile": "Otvori datoteku",
   "agentManager.shortcuts.toggleDiff": "Prebaci panel za diff",
   "agentManager.shortcuts.category.quickSwitch": "Brzo prebacivanje",
   "agentManager.shortcuts.jumpToItem": "Idi na stavku 1\u20139",

@@ -963,6 +963,8 @@ export const dict = {
   "agentManager.hoverCard.branch": "BRANCH",
   "agentManager.hoverCard.base": "Base",
   "agentManager.hoverCard.sessions": "Økter",
+  "agentManager.hoverCard.changes": "Endringer",
+  "agentManager.hoverCard.commits": "Commits",
   "agentManager.session.new": "Ny økt",
   "agentManager.session.untitled": "Uten tittel",
   "agentManager.session.newSession": "Ny økt",
@@ -1020,6 +1022,7 @@ export const dict = {
   "agentManager.dialog.advanced": "Avansert...",
 
   "agentManager.diff.toggle": "Veksle diff",
+  "agentManager.diff.openFile": "Åpne fil",
   "agentManager.shortcuts.toggleDiff": "Veksle diff-panel",
   "agentManager.shortcuts.category.quickSwitch": "Hurtigbytte",
   "agentManager.shortcuts.jumpToItem": "Hopp til element 1\u20139",

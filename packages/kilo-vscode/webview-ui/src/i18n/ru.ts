@@ -966,6 +966,8 @@ export const dict = {
   "agentManager.hoverCard.branch": "ВЕТКА",
   "agentManager.hoverCard.base": "Основа",
   "agentManager.hoverCard.sessions": "Сессии",
+  "agentManager.hoverCard.changes": "Изменения",
+  "agentManager.hoverCard.commits": "Коммиты",
   "agentManager.session.new": "Новая сессия",
   "agentManager.session.untitled": "Без названия",
   "agentManager.session.newSession": "Новая сессия",
@@ -1023,6 +1025,7 @@ export const dict = {
   "agentManager.dialog.advanced": "Дополнительно...",
 
   "agentManager.diff.toggle": "Переключить diff",
+  "agentManager.diff.openFile": "Открыть файл",
   "agentManager.shortcuts.toggleDiff": "Переключить панель diff",
   "agentManager.shortcuts.category.quickSwitch": "Быстрое переключение",
   "agentManager.shortcuts.jumpToItem": "Перейти к элементу 1\u20139",

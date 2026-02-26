@@ -949,6 +949,8 @@ export const dict = {
   "agentManager.hoverCard.branch": "分支",
   "agentManager.hoverCard.base": "基底",
   "agentManager.hoverCard.sessions": "工作階段",
+  "agentManager.hoverCard.changes": "變更",
+  "agentManager.hoverCard.commits": "提交",
   "agentManager.session.new": "新建工作階段",
   "agentManager.session.untitled": "未命名",
   "agentManager.session.newSession": "新建工作階段",
@@ -1006,6 +1008,7 @@ export const dict = {
   "agentManager.dialog.advanced": "進階...",
 
   "agentManager.diff.toggle": "切換差異",
+  "agentManager.diff.openFile": "開啟檔案",
   "agentManager.shortcuts.toggleDiff": "切換差異面板",
   "agentManager.shortcuts.category.quickSwitch": "快速切換",
   "agentManager.shortcuts.jumpToItem": "跳至項目 1\u20139",

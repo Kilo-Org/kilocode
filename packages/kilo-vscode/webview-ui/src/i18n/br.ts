@@ -967,6 +967,8 @@ export const dict = {
   "agentManager.hoverCard.branch": "BRANCH",
   "agentManager.hoverCard.base": "Base",
   "agentManager.hoverCard.sessions": "Sessões",
+  "agentManager.hoverCard.changes": "Alterações",
+  "agentManager.hoverCard.commits": "Commits",
   "agentManager.session.new": "Nova sessão",
   "agentManager.session.untitled": "Sem título",
   "agentManager.session.newSession": "Nova Sessão",
@@ -1024,6 +1026,7 @@ export const dict = {
   "agentManager.dialog.advanced": "Avançado...",
 
   "agentManager.diff.toggle": "Alternar diff",
+  "agentManager.diff.openFile": "Abrir arquivo",
   "agentManager.shortcuts.toggleDiff": "Alternar painel de diff",
   "agentManager.shortcuts.category.quickSwitch": "Troca rápida",
   "agentManager.shortcuts.jumpToItem": "Ir para o item 1\u20139",

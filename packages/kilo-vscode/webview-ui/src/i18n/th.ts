@@ -950,6 +950,8 @@ export const dict = {
   "agentManager.hoverCard.branch": "BRANCH",
   "agentManager.hoverCard.base": "ฐาน",
   "agentManager.hoverCard.sessions": "เซสชัน",
+  "agentManager.hoverCard.changes": "การเปลี่ยนแปลง",
+  "agentManager.hoverCard.commits": "คอมมิต",
   "agentManager.session.new": "เซสชันใหม่",
   "agentManager.session.untitled": "ไม่มีชื่อ",
   "agentManager.session.newSession": "เซสชันใหม่",
@@ -1008,6 +1010,7 @@ export const dict = {
   "agentManager.dialog.advanced": "ขั้นสูง...",
 
   "agentManager.diff.toggle": "สลับ diff",
+  "agentManager.diff.openFile": "เปิดไฟล์",
   "agentManager.shortcuts.toggleDiff": "สลับแผง diff",
   "agentManager.shortcuts.category.quickSwitch": "สลับด่วน",
   "agentManager.shortcuts.jumpToItem": "ข้ามไปยังรายการ 1\u20139",

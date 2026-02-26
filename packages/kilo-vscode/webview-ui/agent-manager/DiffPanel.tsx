@@ -8,8 +8,10 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
+import { useLanguage } from "../src/context/language"
 
 // --- Data model ---
 
@@ -35,6 +37,7 @@ interface DiffPanelProps {
   diffs: WorktreeFileDiff[]
   loading: boolean
   onClose: () => void
+  onOpenFile?: (relativePath: string) => void
 }
 
 function getDirectory(path: string): string {
@@ -55,6 +58,7 @@ function extractLines(content: string, start: number, end: number): string {
 }
 
 export const DiffPanel: Component<DiffPanelProps> = (props) => {
+  const { t } = useLanguage()
   const [comments, setComments] = createSignal<ReviewComment[]>([])
   const [open, setOpen] = createSignal<string[]>([])
   const [draft, setDraft] = createSignal<{ file: string; side: AnnotationSide; line: number } | null>(null)
@@ -441,6 +445,20 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                             </Show>
                             <Show when={!isAdded() && !isDeleted()}>
                               <DiffChanges changes={diff} />
+                            </Show>
+                            <Show when={props.onOpenFile && !isDeleted()}>
+                              <Tooltip value={t("agentManager.diff.openFile")} placement="top">
+                                <IconButton
+                                  icon="go-to-file"
+                                  size="small"
+                                  variant="ghost"
+                                  label={t("agentManager.diff.openFile")}
+                                  onClick={(e: MouseEvent) => {
+                                    e.stopPropagation()
+                                    props.onOpenFile?.(diff.file)
+                                  }}
+                                />
+                              </Tooltip>
                             </Show>
                             <span data-slot="session-review-diff-chevron">
                               <Icon name="chevron-down" size="small" />

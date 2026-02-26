@@ -958,6 +958,8 @@ export const dict = {
   "agentManager.hoverCard.branch": "브랜치",
   "agentManager.hoverCard.base": "베이스",
   "agentManager.hoverCard.sessions": "세션",
+  "agentManager.hoverCard.changes": "변경 사항",
+  "agentManager.hoverCard.commits": "커밋",
   "agentManager.session.new": "새 세션",
   "agentManager.session.untitled": "제목 없음",
   "agentManager.session.newSession": "새 세션",
@@ -1015,6 +1017,7 @@ export const dict = {
   "agentManager.dialog.advanced": "고급...",
 
   "agentManager.diff.toggle": "차이점 전환",
+  "agentManager.diff.openFile": "파일 열기",
   "agentManager.shortcuts.toggleDiff": "차이점 패널 전환",
   "agentManager.shortcuts.category.quickSwitch": "빠른 전환",
   "agentManager.shortcuts.jumpToItem": "항목 1\u20139(으)로 이동",
