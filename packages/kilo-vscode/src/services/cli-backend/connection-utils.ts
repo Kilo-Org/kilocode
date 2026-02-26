@@ -32,6 +32,8 @@ export function resolveEventSessionId(
       }
       return lookupMessageSessionId(part.messageID)
     }
+    case "message.part.delta":
+      return event.properties.sessionID
     case "permission.asked":
     case "permission.replied":
     case "question.asked":

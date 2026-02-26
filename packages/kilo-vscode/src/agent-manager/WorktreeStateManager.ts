@@ -11,6 +11,7 @@
 
 import * as path from "path"
 import * as fs from "fs"
+import { normalizePath } from "./git-import"
 
 export interface Worktree {
   id: string
@@ -75,8 +76,9 @@ export class WorktreeStateManager {
 
   /** Find worktree by its filesystem path. */
   findWorktreeByPath(wtPath: string): Worktree | undefined {
+    const target = normalizePath(wtPath)
     for (const wt of this.worktrees.values()) {
-      if (wt.path === wtPath) return wt
+      if (normalizePath(wt.path) === target) return wt
     }
     return undefined
   }
@@ -320,8 +322,17 @@ export class WorktreeStateManager {
       data.sessionsCollapsed = true
     }
 
-    const dir = path.dirname(this.file)
-    if (!fs.existsSync(dir)) await fs.promises.mkdir(dir, { recursive: true })
-    await fs.promises.writeFile(this.file, JSON.stringify(data, null, 2), "utf-8")
+    try {
+      const dir = path.dirname(this.file)
+      if (!fs.existsSync(dir)) await fs.promises.mkdir(dir, { recursive: true })
+      await fs.promises.writeFile(this.file, JSON.stringify(data, null, 2), "utf-8")
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code
+      if (code === "ENOENT") {
+        this.log("State directory was removed, skipping save")
+        return
+      }
+      throw error
+    }
   }
 }

@@ -37,4 +37,4 @@ logs/
 
 # Telemetry ID
 telemetry-id
-.cocoindex_code/
+tsconfig.tsbuildinfo

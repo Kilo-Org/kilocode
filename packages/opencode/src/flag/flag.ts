@@ -28,6 +28,7 @@ export namespace Flag {
   export declare const KILO_CLIENT: string
   export const KILO_SERVER_PASSWORD = process.env["KILO_SERVER_PASSWORD"]
   export const KILO_SERVER_USERNAME = process.env["KILO_SERVER_USERNAME"]
+  export const KILO_ENABLE_QUESTION_TOOL = truthy("KILO_ENABLE_QUESTION_TOOL")
 
   // Experimental
   export const KILO_EXPERIMENTAL = truthy("KILO_EXPERIMENTAL")

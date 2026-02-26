@@ -1,6 +1,8 @@
 import { BoxRenderable, TextareaRenderable, MouseEvent, PasteEvent, t, dim, fg } from "@opentui/core"
 import { createEffect, createMemo, type JSX, onMount, createSignal, onCleanup, on, Show, Switch, Match } from "solid-js"
 import "opentui-spinner/solid"
+import path from "path"
+import { Filesystem } from "@/util/filesystem"
 import { useLocal } from "@tui/context/local"
 import { useTheme } from "@tui/context/theme"
 import { EmptyBorder } from "@tui/component/border"
@@ -147,26 +149,24 @@ export function Prompt(props: PromptProps) {
     ),
   )
 
-  // Initialize agent/model/variant from last user message when session changes
-  let syncedSessionID: string | undefined
+  // kilocode_change start - sync local agent/model whenever newest user message changes
+  let syncedKey: string | undefined
   createEffect(() => {
     const sessionID = props.sessionID
     const msg = lastUserMessage()
+    if (!sessionID || !msg) return
 
-    if (sessionID !== syncedSessionID) {
-      if (!sessionID || !msg) return
+    const key = [sessionID, msg.id].join(":")
+    if (key === syncedKey) return
+    syncedKey = key
 
-      syncedSessionID = sessionID
-
-      // Only set agent if it's a primary agent (not a subagent)
-      const isPrimaryAgent = local.agent.list().some((x) => x.name === msg.agent)
-      if (msg.agent && isPrimaryAgent) {
-        local.agent.set(msg.agent)
-        if (msg.model) local.model.set(msg.model)
-        if (msg.variant) local.model.variant.set(msg.variant)
-      }
-    }
+    const isPrimaryAgent = local.agent.list().some((x) => x.name === msg.agent)
+    if (!msg.agent || !isPrimaryAgent) return
+    local.agent.set(msg.agent)
+    if (msg.model) local.model.set(msg.model)
+    if (msg.variant) local.model.variant.set(msg.variant)
   })
+  // kilocode_change end
 
   command.register(() => {
     return [
@@ -696,7 +696,7 @@ export function Prompt(props: PromptProps) {
   async function pasteImage(file: { filename?: string; content: string; mime: string }) {
     const currentOffset = input.visualCursor.offset
     const extmarkStart = currentOffset
-    const count = store.prompt.parts.filter((x) => x.type === "file").length
+    const count = store.prompt.parts.filter((x) => x.type === "file" && x.mime.startsWith("image/")).length
     const virtualText = `[Image ${count + 1}]`
     const extmarkEnd = extmarkStart + virtualText.length
     const textToInsert = virtualText + " "
@@ -948,26 +948,26 @@ export function Prompt(props: PromptProps) {
                 const isUrl = /^(https?):\/\//.test(filepath)
                 if (!isUrl) {
                   try {
-                    const file = Bun.file(filepath)
+                    const mime = Filesystem.mimeType(filepath)
+                    const filename = path.basename(filepath)
                     // Handle SVG as raw text content, not as base64 image
-                    if (file.type === "image/svg+xml") {
+                    if (mime === "image/svg+xml") {
                       event.preventDefault()
-                      const content = await file.text().catch(() => {})
+                      const content = await Filesystem.readText(filepath).catch(() => {})
                       if (content) {
-                        pasteText(content, `[SVG: ${file.name ?? "image"}]`)
+                        pasteText(content, `[SVG: ${filename ?? "image"}]`)
                         return
                       }
                     }
-                    if (file.type.startsWith("image/")) {
+                    if (mime.startsWith("image/")) {
                       event.preventDefault()
-                      const content = await file
-                        .arrayBuffer()
+                      const content = await Filesystem.readArrayBuffer(filepath)
                         .then((buffer) => Buffer.from(buffer).toString("base64"))
                         .catch(() => {})
                       if (content) {
                         await pasteImage({
-                          filename: file.name,
-                          mime: file.type,
+                          filename,
+                          mime,
                           content,
                         })
                         return

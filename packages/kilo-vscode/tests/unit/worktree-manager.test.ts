@@ -3,7 +3,7 @@ import os from "node:os"
 import path from "node:path"
 import fs from "node:fs/promises"
 import { WorktreeManager } from "../../src/agent-manager/WorktreeManager"
-import { generateBranchName, versionedName } from "../../src/agent-manager/branch-name"
+import { generateBranchName, sanitizeBranchName, versionedName } from "../../src/agent-manager/branch-name"
 import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
 import simpleGit from "simple-git"
 
@@ -87,6 +87,50 @@ describe("generateBranchName", () => {
   it("handles a clean custom name", () => {
     const name = generateBranchName("auth-refactor")
     expect(name).toMatch(/^auth-refactor-\d+$/)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// sanitizeBranchName
+// ---------------------------------------------------------------------------
+
+describe("sanitizeBranchName", () => {
+  it("replaces spaces with hyphens", () => {
+    expect(sanitizeBranchName("model comparison")).toBe("model-comparison")
+  })
+
+  it("lowercases input", () => {
+    expect(sanitizeBranchName("My Feature")).toBe("my-feature")
+  })
+
+  it("strips special characters", () => {
+    expect(sanitizeBranchName("fix bug #123 & add feature!")).toBe("fix-bug-123-add-feature")
+  })
+
+  it("collapses consecutive hyphens", () => {
+    expect(sanitizeBranchName("one   two   three")).toBe("one-two-three")
+  })
+
+  it("strips leading and trailing hyphens", () => {
+    expect(sanitizeBranchName("---hello---")).toBe("hello")
+  })
+
+  it("truncates to maxLength", () => {
+    const result = sanitizeBranchName("a".repeat(100))
+    expect(result.length).toBeLessThanOrEqual(50)
+  })
+
+  it("returns empty string for whitespace-only input", () => {
+    expect(sanitizeBranchName("   ")).toBe("")
+  })
+
+  it("returns empty string for empty input", () => {
+    expect(sanitizeBranchName("")).toBe("")
+  })
+
+  it("handles custom maxLength", () => {
+    const result = sanitizeBranchName("abcdefghij", 5)
+    expect(result).toBe("abcde")
   })
 })
 
@@ -543,5 +587,82 @@ describe("WorktreeManager.removeWorktree safety", () => {
       .then(() => true)
       .catch(() => false)
     expect(exists).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// WorktreeManager -- listBranches
+// ---------------------------------------------------------------------------
+
+describe("WorktreeManager.listBranches", () => {
+  it("returns the current branch", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    const { branches, defaultBranch } = await mgr.listBranches()
+
+    const names = branches.map((b) => b.name)
+    const git = simpleGit(root)
+    const current = (await git.revparse(["--abbrev-ref", "HEAD"])).trim()
+    expect(names).toContain(current)
+    expect(defaultBranch).toBeTruthy()
+  })
+
+  it("includes branches created after init", async () => {
+    const root = await createTempRepo()
+    const git = simpleGit(root)
+    await git.branch(["feature-test"])
+
+    const mgr = createManager(root)
+    const { branches } = await mgr.listBranches()
+
+    expect(branches.map((b) => b.name)).toContain("feature-test")
+  })
+
+  it("marks local branches as isLocal", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    const { branches } = await mgr.listBranches()
+    for (const b of branches) {
+      expect(b.isLocal).toBe(true)
+    }
+  })
+})
+
+// ---------------------------------------------------------------------------
+// WorktreeManager -- checkedOutBranches
+// ---------------------------------------------------------------------------
+
+describe("WorktreeManager.checkedOutBranches", () => {
+  it("includes the main branch", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    const checked = await mgr.checkedOutBranches()
+    const git = simpleGit(root)
+    const current = (await git.revparse(["--abbrev-ref", "HEAD"])).trim()
+    expect(checked.has(current)).toBe(true)
+  })
+
+  it("includes worktree branches", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    const wt = await mgr.createWorktree({ prompt: "checked-out-test" })
+    const checked = await mgr.checkedOutBranches()
+
+    expect(checked.has(wt.branch)).toBe(true)
+  })
+
+  it("excludes branches after worktree removal", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    const wt = await mgr.createWorktree({ prompt: "removal-test" })
+    await mgr.removeWorktree(wt.path)
+
+    const checked = await mgr.checkedOutBranches()
+    expect(checked.has(wt.branch)).toBe(false)
   })
 })

@@ -6,9 +6,9 @@ export interface EditorContext {
   timezone?: string
 }
 
-function formatTime(timezone?: string): string[] {
+function formatDate(timezone?: string): string[] {
   const now = new Date()
-  const lines = [`  Current time: ${now.toISOString()}`]
+  const lines = [`  Today's date: ${now.toDateString()}`]
   if (timezone) {
     const offset = -now.getTimezoneOffset()
     const sign = offset >= 0 ? "+" : "-"
@@ -24,7 +24,7 @@ function formatTime(timezone?: string): string[] {
  * Returns an array of pre-formatted `  key: value` strings.
  */
 export function editorContextEnvLines(ctx?: EditorContext): string[] {
-  const lines = formatTime(ctx?.timezone)
+  const lines = formatDate(ctx?.timezone)
   if (ctx?.shell) {
     lines.push(`  Default shell: ${ctx.shell}`)
   }

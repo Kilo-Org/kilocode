@@ -1,15 +1,10 @@
-# Settings Sync integration
+# Settings Sync Integration
 
-- **What it is**: Registers an allowlist of extension state/settings for VS Code settings sync.
+**Priority:** P3
+**Status:** ❌ Not started
 
-## Suggested migration
+## Remaining Work
 
-- **Kilo CLI availability**: Not present.
-- **Migration recommendation**:
-  - Keep Settings Sync integration in the VS Code extension host (VS Code Settings Sync APIs).
-  - Optionally mirror a subset of settings into Kilo CLI config, but do not require server support.
-- **Reimplementation required?**: Yes.
-
-## Primary implementation anchors
-
-- [`src/services/settings-sync/`](../../src/services/settings-sync/)
+- Register allowlist of extension state/settings for VS Code Settings Sync
+- Determine which settings should sync (extension settings in `settings.json` vs CLI config)
+- Optionally mirror a subset of settings into CLI config
