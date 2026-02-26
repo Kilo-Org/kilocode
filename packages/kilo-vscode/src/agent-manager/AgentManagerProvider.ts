@@ -43,8 +43,6 @@ export class AgentManagerProvider implements vscode.Disposable {
   private diffInterval: ReturnType<typeof setInterval> | undefined
   private diffSessionId: string | undefined
   private lastDiffHash: string | undefined
-  private validationInterval: ReturnType<typeof setInterval> | undefined
-  private validating = false
   private statsPoller: WorktreeStatsPoller
   private cachedDiffTarget: { directory: string; baseBranch: string } | undefined
 
@@ -109,7 +107,6 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     this.panel.onDidDispose(() => {
       this.log("Panel disposed")
-      this.stopWorktreeValidation()
       this.statsPoller.stop()
       this.stopDiffPolling()
       this.provider?.dispose()
@@ -134,12 +131,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     // Validate worktree directories still exist (handles manual deletion)
     const root = this.getWorkspaceRoot()
-    if (root) {
-      const orphaned = await state.validate(root)
-      for (const s of orphaned) {
-        this.provider?.clearSessionDirectory(s.id)
-      }
-    }
+    if (root) await state.validate(root)
 
     // Register all worktree sessions with KiloProvider
     for (const worktree of state.getWorktrees()) {
@@ -156,10 +148,6 @@ export class AgentManagerProvider implements vscode.Disposable {
     if (state.getSessions().length > 0) {
       this.provider?.refreshSessions()
     }
-
-    // Poll for externally deleted worktrees while the panel is open.
-    // Guard against panel being disposed while initializeState() was awaiting.
-    if (this.panel) this.startWorktreeValidation()
   }
 
   // ---------------------------------------------------------------------------
@@ -1498,52 +1486,6 @@ export class AgentManagerProvider implements vscode.Disposable {
     this.cachedDiffTarget = undefined
   }
 
-  // ---------------------------------------------------------------------------
-  // Worktree validation polling
-  // ---------------------------------------------------------------------------
-
-  private startWorktreeValidation(): void {
-    this.stopWorktreeValidation()
-    this.validationInterval = setInterval(() => {
-      void this.validateWorktrees()
-    }, 10_000)
-  }
-
-  private stopWorktreeValidation(): void {
-    if (this.validationInterval) {
-      clearInterval(this.validationInterval)
-      this.validationInterval = undefined
-    }
-  }
-
-  private async validateWorktrees(): Promise<void> {
-    if (this.validating) return
-    this.validating = true
-    try {
-      const state = this.getStateManager()
-      const root = this.getWorkspaceRoot()
-      if (!state || !root) return
-
-      const orphaned = await state.validate(root)
-      if (orphaned.length === 0) return
-
-      for (const s of orphaned) {
-        this.provider?.clearSessionDirectory(s.id)
-      }
-
-      // Stop diff polling if it targets an orphaned session
-      if (this.diffSessionId && orphaned.some((s) => s.id === this.diffSessionId)) {
-        this.stopDiffPolling()
-      }
-
-      this.pushState()
-    } catch (error) {
-      this.log("Worktree validation failed:", error)
-    } finally {
-      this.validating = false
-    }
-  }
-
   private postToWebview(message: Record<string, unknown>): void {
     if (this.panel?.webview) void this.panel.webview.postMessage(message)
   }
@@ -1584,7 +1526,6 @@ export class AgentManagerProvider implements vscode.Disposable {
   }
 
   public dispose(): void {
-    this.stopWorktreeValidation()
     this.stopDiffPolling()
     this.statsPoller.stop()
     this.terminalManager.dispose()
