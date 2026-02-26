@@ -93,6 +93,7 @@ export {
   HEADER_FEATURE,
   DEFAULT_EDITOR_NAME,
   ENV_EDITOR_NAME,
+  ENV_EDITOR_VERSION, // kilocode_change
   TESTER_SUPPRESS_VALUE,
   ENV_FEATURE,
 } from "./api/constants.js"
