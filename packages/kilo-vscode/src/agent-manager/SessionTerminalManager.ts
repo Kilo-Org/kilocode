@@ -57,9 +57,10 @@ export class SessionTerminalManager {
    * Show (or create) a terminal for the local workspace (no session required).
    * Used when the user triggers a terminal in local mode without an active session.
    */
+  private static readonly LOCAL_KEY = "__local__"
+
   showLocalTerminal(): void {
-    const key = "__local__"
-    if (this.showExisting(key, false)) return
+    if (this.showExisting(SessionTerminalManager.LOCAL_KEY, false)) return
 
     const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
     if (!cwd) {
@@ -68,7 +69,14 @@ export class SessionTerminalManager {
       return
     }
 
-    this.showOrCreate(key, cwd, "Agent: local")
+    this.showOrCreate(SessionTerminalManager.LOCAL_KEY, cwd, "Agent: local")
+  }
+
+  /**
+   * Show the existing local terminal if one was previously created (used on context switch).
+   */
+  showExistingLocal(): boolean {
+    return this.showExisting(SessionTerminalManager.LOCAL_KEY)
   }
 
   /**
