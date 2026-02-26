@@ -22,7 +22,7 @@ import {
   sanitizeReviewComments,
   type ReviewComment,
 } from "./review-comments"
-import { buildReviewAnnotation, type AnnotationMeta } from "./review-annotations"
+import { buildReviewAnnotation, type AnnotationLabels, type AnnotationMeta } from "./review-annotations"
 
 type DiffStyle = "unified" | "split"
 
@@ -42,6 +42,17 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
   const sendAllKeybind = () =>
     isMac ? t("agentManager.review.sendAllShortcut.mac") : t("agentManager.review.sendAllShortcut.other")
+  const labels = (): AnnotationLabels => ({
+    commentOnLine: (line) => t("agentManager.review.commentOnLine", { line }),
+    editCommentOnLine: (line) => t("agentManager.review.editCommentOnLine", { line }),
+    placeholder: t("agentManager.review.commentPlaceholder"),
+    cancel: t("common.cancel"),
+    comment: t("agentManager.review.commentAction"),
+    save: t("common.save"),
+    sendToChat: t("agentManager.review.sendToChat"),
+    edit: t("common.edit"),
+    delete: t("common.delete"),
+  })
   const [open, setOpen] = createSignal<string[]>([])
   const [openInit, setOpenInit] = createSignal(false)
   const [draft, setDraft] = createSignal<{ file: string; side: AnnotationSide; line: number } | null>(null)
@@ -225,6 +236,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
       updateComment,
       deleteComment,
       cancelDraft,
+      labels: labels(),
     })
   }
 
@@ -350,15 +362,15 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
             current={props.diffStyle}
             size="small"
             value={(style) => style}
-            label={(style) => (style === "unified" ? "Unified" : "Split")}
+            label={(style) =>
+              style === "unified" ? t("ui.sessionReview.diffStyle.unified") : t("ui.sessionReview.diffStyle.split")
+            }
             onSelect={(style) => {
               if (style) props.onDiffStyleChange(style)
             }}
           />
           <span class="am-review-toolbar-stats">
-            <span>
-              {totals().files} file{totals().files !== 1 ? "s" : ""}
-            </span>
+            <span>{t("session.review.filesChanged", { count: totals().files })}</span>
             <span class="am-review-toolbar-adds">+{totals().additions}</span>
             <span class="am-review-toolbar-dels">-{totals().deletions}</span>
           </span>
@@ -366,7 +378,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
         <div class="am-review-toolbar-right">
           <Button size="small" variant="ghost" onClick={handleExpandAll}>
             <Icon name="chevron-grabber-vertical" size="small" />
-            {open().length === props.diffs.length ? "Collapse all" : "Expand all"}
+            {open().length === props.diffs.length ? t("ui.sessionReview.collapseAll") : t("ui.sessionReview.expandAll")}
           </Button>
           <Show when={comments().length > 0}>
             <TooltipKeybind
@@ -379,7 +391,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
               </Button>
             </TooltipKeybind>
           </Show>
-          <IconButton icon="close" size="small" variant="ghost" label="Close review" onClick={props.onClose} />
+          <IconButton icon="close" size="small" variant="ghost" label={t("common.close")} onClick={props.onClose} />
         </div>
       </div>
 
@@ -402,13 +414,13 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
           <Show when={props.loading && props.diffs.length === 0}>
             <div class="am-diff-loading">
               <Spinner />
-              <span>Computing diff...</span>
+              <span>{t("session.review.loadingChanges")}</span>
             </div>
           </Show>
 
           <Show when={!props.loading && props.diffs.length === 0}>
             <div class="am-diff-empty">
-              <span>No changes detected</span>
+              <span>{t("session.review.noChanges")}</span>
             </div>
           </Show>
 
@@ -441,12 +453,12 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                               <div data-slot="session-review-trigger-actions">
                                 <Show when={isAdded()}>
                                   <span data-slot="session-review-change" data-type="added">
-                                    Added
+                                    {t("ui.sessionReview.change.added")}
                                   </span>
                                 </Show>
                                 <Show when={isDeleted()}>
                                   <span data-slot="session-review-change" data-type="removed">
-                                    Removed
+                                    {t("ui.sessionReview.change.removed")}
                                   </span>
                                 </Show>
                                 <Show when={!isAdded() && !isDeleted()}>

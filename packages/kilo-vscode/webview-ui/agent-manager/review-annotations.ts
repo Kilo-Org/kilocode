@@ -1,6 +1,18 @@
 import type { AnnotationSide, DiffLineAnnotation } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
-import { extractLines, type ReviewComment } from "./review-comments"
+import { extractLines, formatReviewCommentMarkdown, type ReviewComment } from "./review-comments"
+
+export interface AnnotationLabels {
+  commentOnLine: (line: number) => string
+  editCommentOnLine: (line: number) => string
+  placeholder: string
+  cancel: string
+  comment: string
+  save: string
+  sendToChat: string
+  edit: string
+  delete: string
+}
 
 export interface AnnotationMeta {
   type: "comment" | "draft"
@@ -18,6 +30,7 @@ interface AnnotationHandlers {
   updateComment: (id: string, text: string) => void
   deleteComment: (id: string) => void
   cancelDraft: () => void
+  labels: AnnotationLabels
 }
 
 function focusWhenConnected(el: HTMLTextAreaElement): void {
@@ -33,11 +46,24 @@ function focusWhenConnected(el: HTMLTextAreaElement): void {
   requestAnimationFrame(tick)
 }
 
-function makeActionButton(title: string, svg: string, action: () => void): HTMLButtonElement {
+function makeIcon(pathData: string): SVGSVGElement {
+  const ns = "http://www.w3.org/2000/svg"
+  const svg = document.createElementNS(ns, "svg")
+  svg.setAttribute("width", "14")
+  svg.setAttribute("height", "14")
+  svg.setAttribute("viewBox", "0 0 16 16")
+  svg.setAttribute("fill", "currentColor")
+  const path = document.createElementNS(ns, "path")
+  path.setAttribute("d", pathData)
+  svg.appendChild(path)
+  return svg
+}
+
+function makeActionButton(title: string, icon: SVGSVGElement, action: () => void): HTMLButtonElement {
   const button = document.createElement("button")
   button.className = "am-annotation-icon-btn"
   button.title = title
-  button.innerHTML = svg
+  button.appendChild(icon)
   button.addEventListener("click", (event) => {
     event.stopPropagation()
     action()
@@ -59,23 +85,23 @@ export function buildReviewAnnotation(
 
     const header = document.createElement("div")
     header.className = "am-annotation-header"
-    header.textContent = `Comment on line ${meta.line}`
+    header.textContent = handlers.labels.commentOnLine(meta.line)
 
     const textarea = document.createElement("textarea")
     textarea.className = "am-annotation-textarea"
     textarea.rows = 3
-    textarea.placeholder = "Leave a comment..."
+    textarea.placeholder = handlers.labels.placeholder
 
     const actions = document.createElement("div")
     actions.className = "am-annotation-actions"
 
     const cancelButton = document.createElement("button")
     cancelButton.className = "am-annotation-btn"
-    cancelButton.textContent = "Cancel"
+    cancelButton.textContent = handlers.labels.cancel
 
     const submitButton = document.createElement("button")
     submitButton.className = "am-annotation-btn am-annotation-btn-submit"
-    submitButton.textContent = "Comment"
+    submitButton.textContent = handlers.labels.comment
 
     actions.appendChild(cancelButton)
     actions.appendChild(submitButton)
@@ -125,7 +151,7 @@ export function buildReviewAnnotation(
 
     const header = document.createElement("div")
     header.className = "am-annotation-header"
-    header.textContent = `Edit comment on line ${comment.line}`
+    header.textContent = handlers.labels.editCommentOnLine(comment.line)
 
     const textarea = document.createElement("textarea")
     textarea.className = "am-annotation-textarea"
@@ -137,11 +163,11 @@ export function buildReviewAnnotation(
 
     const cancelButton = document.createElement("button")
     cancelButton.className = "am-annotation-btn"
-    cancelButton.textContent = "Cancel"
+    cancelButton.textContent = handlers.labels.cancel
 
     const saveButton = document.createElement("button")
     saveButton.className = "am-annotation-btn am-annotation-btn-submit"
-    saveButton.textContent = "Save"
+    saveButton.textContent = handlers.labels.save
 
     actions.appendChild(cancelButton)
     actions.appendChild(saveButton)
@@ -194,32 +220,27 @@ export function buildReviewAnnotation(
   actions.className = "am-annotation-comment-actions"
 
   actions.appendChild(
-    makeActionButton(
-      "Send to chat",
-      '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M1 1l14 7-14 7V9l10-1L1 7z"/></svg>',
-      () => {
-        const quote = comment.selectedText
-          ? `\n> \`\`\`\n> ${comment.selectedText.split("\n").join("\n> ")}\n> \`\`\`\n`
-          : ""
-        const msg = `**${comment.file}** (line ${comment.line}):${quote}\n${comment.comment}`
-        window.dispatchEvent(new MessageEvent("message", { data: { type: "appendChatBoxMessage", text: msg } }))
-        handlers.deleteComment(comment.id)
-      },
-    ),
+    makeActionButton(handlers.labels.sendToChat, makeIcon("M1 1l14 7-14 7V9l10-1L1 7z"), () => {
+      const msg = formatReviewCommentMarkdown(comment)
+      window.dispatchEvent(new MessageEvent("message", { data: { type: "appendChatBoxMessage", text: msg } }))
+      handlers.deleteComment(comment.id)
+    }),
   )
 
   actions.appendChild(
     makeActionButton(
-      "Edit",
-      '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M13.2 1.1l1.7 1.7-1.1 1.1-1.7-1.7zM1 11.5V13.2h1.7l7.8-7.8-1.7-1.7z"/></svg>',
+      handlers.labels.edit,
+      makeIcon("M13.2 1.1l1.7 1.7-1.1 1.1-1.7-1.7zM1 11.5V13.2h1.7l7.8-7.8-1.7-1.7z"),
       () => handlers.setEditing(comment.id),
     ),
   )
 
   actions.appendChild(
     makeActionButton(
-      "Delete",
-      '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm3.1 9.3l-.8.8L8 8.8l-2.3 2.3-.8-.8L7.2 8 4.9 5.7l.8-.8L8 7.2l2.3-2.3.8.8L8.8 8z"/></svg>',
+      handlers.labels.delete,
+      makeIcon(
+        "M8 1a7 7 0 100 14A7 7 0 008 1zm3.1 9.3l-.8.8L8 8.8l-2.3 2.3-.8-.8L7.2 8 4.9 5.7l.8-.8L8 7.2l2.3-2.3.8.8L8.8 8z",
+      ),
       () => handlers.deleteComment(comment.id),
     ),
   )

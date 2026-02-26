@@ -20,7 +20,7 @@ import {
   sanitizeReviewComments,
   type ReviewComment,
 } from "./review-comments"
-import { buildReviewAnnotation, type AnnotationMeta } from "./review-annotations"
+import { buildReviewAnnotation, type AnnotationLabels, type AnnotationMeta } from "./review-annotations"
 
 // --- Data model ---
 
@@ -41,6 +41,17 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
   const sendAllKeybind = () =>
     isMac ? t("agentManager.review.sendAllShortcut.mac") : t("agentManager.review.sendAllShortcut.other")
+  const labels = (): AnnotationLabels => ({
+    commentOnLine: (line) => t("agentManager.review.commentOnLine", { line }),
+    editCommentOnLine: (line) => t("agentManager.review.editCommentOnLine", { line }),
+    placeholder: t("agentManager.review.commentPlaceholder"),
+    cancel: t("common.cancel"),
+    comment: t("agentManager.review.commentAction"),
+    save: t("common.save"),
+    sendToChat: t("agentManager.review.sendToChat"),
+    edit: t("common.edit"),
+    delete: t("common.delete"),
+  })
   const [open, setOpen] = createSignal<string[]>([])
   const [openInit, setOpenInit] = createSignal(false)
   const [draft, setDraft] = createSignal<{ file: string; side: AnnotationSide; line: number } | null>(null)
@@ -219,6 +230,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       updateComment,
       deleteComment,
       cancelDraft,
+      labels: labels(),
     })
   }
 
@@ -282,9 +294,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                 }}
               />
               <span class="am-diff-header-stats">
-                <span>
-                  {totals().files} file{totals().files !== 1 ? "s" : ""}
-                </span>
+                <span>{t("session.review.filesChanged", { count: totals().files })}</span>
                 <span class="am-diff-header-adds">+{totals().additions}</span>
                 <span class="am-diff-header-dels">-{totals().deletions}</span>
               </span>
