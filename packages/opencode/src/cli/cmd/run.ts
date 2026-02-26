@@ -639,7 +639,7 @@ export const RunCommand = cmd({
         const request = new Request(input, init)
         return Server.App().fetch(request)
       }) as typeof globalThis.fetch
-      const sdk = createKiloClient({ baseUrl: "http://opencode.internal", fetch: fetchFn })
+      const sdk = createKiloClient({ baseUrl: "http://kilo.internal", fetch: fetchFn })
       await execute(sdk)
     })
   },

@@ -54,6 +54,9 @@ const PACKAGE_PATTERNS = [
   { pattern: /require\(["']@opencode-ai\/sdk(\/[^"']*)?["']\)/g, replacement: 'require("@kilocode/sdk$1")' },
   { pattern: /require\(["']@opencode-ai\/plugin(\/[^"']*)?["']\)/g, replacement: 'require("@kilocode/plugin$1")' },
 
+  // Internal placeholder hostname used for in-process RPC (never resolved by DNS)
+  { pattern: /opencode\.internal/g, replacement: "kilo.internal" },
+
   // In npx/npm commands
   { pattern: /npx opencode-ai/g, replacement: "npx @kilocode/cli" },
   { pattern: /npm install opencode-ai/g, replacement: "npm install @kilocode/cli" },
