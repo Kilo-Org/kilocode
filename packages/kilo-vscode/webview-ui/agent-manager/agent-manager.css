@@ -2209,12 +2209,6 @@ button.am-section-toggle:hover .am-section-label {
 
 /* Review tab in tab bar */
 
-.am-tab-review-wrapper {
-  display: flex;
-  align-items: stretch;
-  flex-shrink: 0;
-}
-
 .am-tab-review {
   display: flex;
   align-items: center;
@@ -2293,6 +2287,19 @@ button.am-section-toggle:hover .am-section-label {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.am-review-toolbar [data-component="radio-group"],
+.am-review-toolbar [data-component="radio-group"] [data-slot="radio-group-item-label"],
+.am-review-toolbar [data-component="radio-group"] [data-slot="radio-group-item-control"] {
+  cursor: pointer;
+}
+
+.am-review-toolbar
+  [data-component="radio-group"]
+  [data-slot="radio-group-item-label"]:active
+  [data-slot="radio-group-item-control"] {
+  transform: translateY(1px);
 }
 
 .am-review-toolbar-stats {
@@ -2485,6 +2492,10 @@ button.am-section-toggle:hover .am-section-label {
 
 .am-file-tree-status-deleted .am-file-tree-name {
   color: var(--syntax-diff-delete, #da3319);
+}
+
+.am-file-tree-status-modified .am-file-tree-name {
+  color: var(--text-base);
 }
 
 /* Compact +N -N stats pushed to the right */

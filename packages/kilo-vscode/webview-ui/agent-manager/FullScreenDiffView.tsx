@@ -13,17 +13,9 @@ import { ResizeHandle } from "@kilocode/kilo-ui/resize-handle"
 import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
 import { FileTree } from "./FileTree"
+import { sanitizeReviewComments, type ReviewComment } from "./review-comments"
 
 // --- Shared data model (same as DiffPanel) ---
-
-interface ReviewComment {
-  id: string
-  file: string
-  side: AnnotationSide
-  line: number
-  comment: string
-  selectedText: string
-}
 
 interface AnnotationMeta {
   type: "comment" | "draft"
@@ -38,6 +30,9 @@ type DiffStyle = "unified" | "split"
 interface FullScreenDiffViewProps {
   diffs: WorktreeFileDiff[]
   loading: boolean
+  comments: ReviewComment[]
+  onCommentsChange: (comments: ReviewComment[]) => void
+  onSendAll?: () => void
   diffStyle: DiffStyle
   onDiffStyleChange: (style: DiffStyle) => void
   onClose: () => void
@@ -61,7 +56,6 @@ function extractLines(content: string, start: number, end: number): string {
 }
 
 export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) => {
-  const [comments, setComments] = createSignal<ReviewComment[]>([])
   const [open, setOpen] = createSignal<string[]>([])
   const [draft, setDraft] = createSignal<{ file: string; side: AnnotationSide; line: number } | null>(null)
   const [editing, setEditing] = createSignal<string | null>(null)
@@ -71,6 +65,10 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   let draftMeta: AnnotationMeta | null = null
   let scrollRef: HTMLDivElement | undefined
   let syncFrame: number | undefined
+
+  const comments = () => props.comments
+  const setComments = (next: ReviewComment[]) => props.onCommentsChange(next)
+  const updateComments = (updater: (prev: ReviewComment[]) => ReviewComment[]) => setComments(updater(comments()))
 
   // Auto-open files when diffs arrive
   createEffect(
@@ -94,20 +92,52 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
 
   const addComment = (file: string, side: AnnotationSide, line: number, text: string, selectedText: string) => {
     const id = `c-${++nextId}-${Date.now()}`
-    setComments((prev) => [...prev, { id, file, side, line, comment: text, selectedText }])
+    updateComments((prev) => [...prev, { id, file, side, line, comment: text, selectedText }])
     setDraft(null)
     draftMeta = null
   }
 
   const updateComment = (id: string, text: string) => {
-    setComments((prev) => prev.map((c) => (c.id === id ? { ...c, comment: text } : c)))
+    updateComments((prev) => prev.map((c) => (c.id === id ? { ...c, comment: text } : c)))
     setEditing(null)
   }
 
   const deleteComment = (id: string) => {
-    setComments((prev) => prev.filter((c) => c.id !== id))
+    updateComments((prev) => prev.filter((c) => c.id !== id))
     if (editing() === id) setEditing(null)
   }
+
+  createEffect(
+    on(
+      () => [props.diffs, comments()] as const,
+      ([diffs, current]) => {
+        const valid = sanitizeReviewComments(current, diffs)
+        if (valid.length !== current.length) {
+          setComments(valid)
+        }
+
+        const edit = editing()
+        if (edit && !valid.some((comment) => comment.id === edit)) {
+          setEditing(null)
+        }
+
+        const currentDraft = draft()
+        if (!currentDraft) return
+        const diff = diffs.find((item) => item.file === currentDraft.file)
+        if (!diff) {
+          setDraft(null)
+          draftMeta = null
+          return
+        }
+        const content = currentDraft.side === "deletions" ? diff.before : diff.after
+        const max = content.length === 0 ? 0 : content.split("\n").length
+        if (currentDraft.line < 1 || currentDraft.line > max) {
+          setDraft(null)
+          draftMeta = null
+        }
+      },
+    ),
+  )
 
   // --- Per-file memoized annotations ---
 
@@ -351,6 +381,19 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     const text = lines.join("\n")
     window.dispatchEvent(new MessageEvent("message", { data: { type: "appendChatBoxMessage", text } }))
     setComments([])
+    props.onSendAll?.()
+  }
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key !== "Enter") return
+    if (!(e.metaKey || e.ctrlKey)) return
+    const target = e.target
+    if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) return
+    if (target instanceof HTMLElement && target.isContentEditable) return
+    if (comments().length === 0) return
+    e.preventDefault()
+    e.stopPropagation()
+    sendAllToChat()
   }
 
   const handleFileSelect = (path: string) => {
@@ -433,7 +476,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   }))
 
   return (
-    <div class="am-review-layout">
+    <div class="am-review-layout" onKeyDown={handleKeyDown}>
       {/* Toolbar */}
       <div class="am-review-toolbar">
         <div class="am-review-toolbar-left">

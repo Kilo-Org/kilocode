@@ -74,6 +74,7 @@ import { reorderTabs, applyTabOrder, firstOrderedTitle } from "./tab-order"
 import { ConstrainDragYAxis, SortableReviewTab, SortableTab } from "./sortable-tab"
 import { DiffPanel } from "./DiffPanel"
 import { FullScreenDiffView } from "./FullScreenDiffView"
+import type { ReviewComment } from "./review-comments"
 import "./agent-manager.css"
 
 const REVIEW_TAB_ID = "review"
@@ -289,11 +290,12 @@ const AgentManagerContent: Component = () => {
   const [diffLoading, setDiffLoading] = createSignal(false)
   const [diffWidth, setDiffWidth] = createSignal(Math.round(window.innerWidth * 0.5))
 
-  // Full-screen review tab state (per-worktree)
-  const [reviewOpen, setReviewOpen] = createSignal(false)
+  // Full-screen review state (in-memory, per worktree)
+  const [reviewOpenByWorktree, setReviewOpenByWorktree] = createSignal<Record<string, boolean>>({})
+  const [reviewCommentsByWorktree, setReviewCommentsByWorktree] = createSignal<Record<string, ReviewComment[]>>({})
   const [reviewActive, setReviewActive] = createSignal(false)
   const [reviewDiffStyle, setReviewDiffStyle] = createSignal<"unified" | "split">("unified")
-  // reviewOpen controls tab presence, reviewActive controls visible content.
+  // reviewOpen (memo below) controls tab presence for selected worktree.
 
   // Pending local tab counter for generating unique IDs
   let pendingCounter = 0
@@ -302,6 +304,37 @@ const AgentManagerContent: Component = () => {
 
   // Per-context tab memory: maps sidebar selection key -> last active session/pending ID
   const [tabMemory, setTabMemory] = createSignal<Record<string, string>>({})
+
+  const reviewOpen = createMemo(() => {
+    const sel = selection()
+    if (!sel || sel === LOCAL) return false
+    return reviewOpenByWorktree()[sel] === true
+  })
+
+  const setReviewOpenForWorktree = (worktreeId: string, open: boolean) => {
+    setReviewOpenByWorktree((prev) => {
+      if (prev[worktreeId] === open) return prev
+      return { ...prev, [worktreeId]: open }
+    })
+  }
+
+  const setReviewOpenForSelection = (open: boolean) => {
+    const sel = selection()
+    if (!sel || sel === LOCAL) return
+    setReviewOpenForWorktree(sel, open)
+  }
+
+  const reviewComments = createMemo(() => {
+    const sel = selection()
+    if (!sel || sel === LOCAL) return [] as ReviewComment[]
+    return reviewCommentsByWorktree()[sel] ?? []
+  })
+
+  const setReviewCommentsForSelection = (comments: ReviewComment[]) => {
+    const sel = selection()
+    if (!sel || sel === LOCAL) return
+    setReviewCommentsByWorktree((prev) => ({ ...prev, [sel]: comments }))
+  }
 
   const isPending = (id: string) => id.startsWith(PENDING_PREFIX)
 
@@ -331,7 +364,7 @@ const AgentManagerContent: Component = () => {
     const sel = selection()
     if (sel === null) return
     const key = sel === LOCAL ? LOCAL : sel
-    const active = session.currentSessionID() ?? activePendingId()
+    const active = reviewActive() ? REVIEW_TAB_ID : (session.currentSessionID() ?? activePendingId())
     if (active) {
       setTabMemory((prev) => (prev[key] === active ? prev : { ...prev, [key]: active }))
     }
@@ -346,6 +379,23 @@ const AgentManagerContent: Component = () => {
     if (valid.length !== localSessionIDs().length) {
       setLocalSessionIDs(valid)
     }
+  })
+
+  // Drop in-memory review state for worktrees that no longer exist.
+  createEffect(() => {
+    const ids = new Set(worktrees().map((wt) => wt.id))
+
+    setReviewOpenByWorktree((prev) => {
+      const next = Object.fromEntries(Object.entries(prev).filter(([id]) => ids.has(id)))
+      if (Object.keys(next).length === Object.keys(prev).length) return prev
+      return next
+    })
+
+    setReviewCommentsByWorktree((prev) => {
+      const next = Object.fromEntries(Object.entries(prev).filter(([id]) => ids.has(id)))
+      if (Object.keys(next).length === Object.keys(prev).length) return prev
+      return next
+    })
   })
 
   const worktreeSessionIds = createMemo(
@@ -411,6 +461,17 @@ const AgentManagerContent: Component = () => {
     if (sel === LOCAL) return localSessionIDs().length === 0
     if (sel) return activeWorktreeSessions().length === 0
     return false
+  })
+
+  createEffect(() => {
+    const sel = selection()
+    if (!sel || sel === LOCAL) {
+      if (reviewActive()) setReviewActive(false)
+      return
+    }
+    if (reviewActive() && !reviewOpen()) {
+      setReviewActive(false)
+    }
   })
 
   // Read-only mode: viewing an unassigned session (not in a worktree or local)
@@ -511,6 +572,7 @@ const AgentManagerContent: Component = () => {
     } else {
       saveTabMemory()
       setSelection(null)
+      setReviewActive(false)
       session.selectSession(item.id)
     }
 
@@ -529,7 +591,7 @@ const AgentManagerContent: Component = () => {
     if (next < 0 || next >= ids.length) return
     const targetId = ids[next]!
     if (targetId === REVIEW_TAB_ID) {
-      if (!reviewOpen()) setReviewOpen(true)
+      if (!reviewOpen()) setReviewOpenForSelection(true)
       setReviewActive(true)
       return
     }
@@ -547,7 +609,6 @@ const AgentManagerContent: Component = () => {
 
   const selectLocal = () => {
     saveTabMemory()
-    setReviewOpen(false)
     setReviewActive(false)
     setSelection(LOCAL)
     vscode.postMessage({ type: "agentManager.requestRepoInfo" })
@@ -569,8 +630,6 @@ const AgentManagerContent: Component = () => {
 
   const selectWorktree = (worktreeId: string) => {
     saveTabMemory()
-    setReviewOpen(false)
-    setReviewActive(false)
     setSelection(worktreeId)
     const managed = managedSessions().filter((ms) => ms.worktreeId === worktreeId)
     const ids = new Set(managed.map((ms) => ms.id))
@@ -583,6 +642,7 @@ const AgentManagerContent: Component = () => {
     } else {
       session.setCurrentSessionID(undefined)
     }
+    setReviewActive(remembered === REVIEW_TAB_ID && reviewOpenByWorktree()[worktreeId] === true)
   }
 
   onMount(() => {
@@ -628,6 +688,22 @@ const AgentManagerContent: Component = () => {
       }
     }
     window.addEventListener("keydown", preventDefaults)
+
+    const sendReviewCommentsShortcut = (e: KeyboardEvent) => {
+      if (e.key !== "Enter") return
+      if (!(e.metaKey || e.ctrlKey)) return
+      if (!(reviewActive() || diffOpen())) return
+      const sel = selection()
+      if (!sel || sel === LOCAL) return
+      const target = e.target
+      if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) return
+      if (target instanceof HTMLElement && target.isContentEditable) return
+      if (reviewComments().length === 0) return
+      e.preventDefault()
+      e.stopPropagation()
+      sendReviewCommentsToChat()
+    }
+    window.addEventListener("keydown", sendReviewCommentsShortcut)
 
     // When the panel regains focus (e.g. returning from terminal), focus the prompt
     // and clear any stale body styles left by Kobalte modal overlays (dropdowns/dialogs
@@ -835,6 +911,7 @@ const AgentManagerContent: Component = () => {
     onCleanup(() => {
       window.removeEventListener("message", handler)
       window.removeEventListener("keydown", preventDefaults)
+      window.removeEventListener("keydown", sendReviewCommentsShortcut)
       window.removeEventListener("focus", onWindowFocus)
       unsubCreate()
       unsubSessions()
@@ -898,8 +975,10 @@ const AgentManagerContent: Component = () => {
   })
 
   const openReviewTab = () => {
+    const sel = selection()
+    if (!sel || sel === LOCAL) return
     setDiffOpen(false)
-    setReviewOpen(true)
+    setReviewOpenForWorktree(sel, true)
     setReviewActive(true)
   }
 
@@ -908,7 +987,7 @@ const AgentManagerContent: Component = () => {
   // and chat view are already visible before that work runs.
   const closeReviewTab = () => {
     setReviewActive(false)
-    setReviewOpen(false)
+    setReviewOpenForSelection(false)
   }
 
   // Data for the review tab: use current session's diff data, or first available for the worktree
@@ -934,6 +1013,26 @@ const AgentManagerContent: Component = () => {
     if (reviewDiffStyle() === style) return
     setReviewDiffStyle(style)
     vscode.postMessage({ type: "agentManager.setReviewDiffStyle", style })
+  }
+
+  const sendReviewCommentsToChat = () => {
+    const all = reviewComments()
+    if (all.length === 0) return
+    const lines = ["## Review Comments", ""]
+    for (const c of all) {
+      lines.push(`**${c.file}** (line ${c.line}):`)
+      if (c.selectedText) {
+        lines.push("```")
+        lines.push(c.selectedText)
+        lines.push("```")
+      }
+      lines.push(c.comment)
+      lines.push("")
+    }
+    const text = lines.join("\n")
+    window.dispatchEvent(new MessageEvent("message", { data: { type: "appendChatBoxMessage", text } }))
+    setReviewCommentsForSelection([])
+    if (reviewActive()) closeReviewTab()
   }
 
   const handleConfigureSetupScript = () => {
@@ -1553,6 +1652,7 @@ const AgentManagerContent: Component = () => {
                       onClick={() => {
                         saveTabMemory()
                         setSelection(null)
+                        setReviewActive(false)
                         session.selectSession(s.id)
                       }}
                     >
@@ -1846,6 +1946,8 @@ const AgentManagerContent: Component = () => {
                     diffs={diffDatas()[selection() === LOCAL ? LOCAL : (session.currentSessionID() ?? "")] ?? []}
                     loading={diffLoading()}
                     diffStyle={reviewDiffStyle()}
+                    comments={reviewComments()}
+                    onCommentsChange={setReviewCommentsForSelection}
                     onClose={() => setDiffOpen(false)}
                     onExpand={selection() !== LOCAL ? openReviewTab : undefined}
                   />
@@ -1859,6 +1961,9 @@ const AgentManagerContent: Component = () => {
               <FullScreenDiffView
                 diffs={reviewDiffs()}
                 loading={diffLoading()}
+                comments={reviewComments()}
+                onCommentsChange={setReviewCommentsForSelection}
+                onSendAll={closeReviewTab}
                 diffStyle={reviewDiffStyle()}
                 onDiffStyleChange={setSharedDiffStyle}
                 onClose={closeReviewTab}

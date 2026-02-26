@@ -9,20 +9,12 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
-import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pierre/diffs"
+import type { DiffLineAnnotation, AnnotationSide } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
 import { useLanguage } from "../src/context/language"
+import { sanitizeReviewComments, type ReviewComment } from "./review-comments"
 
 // --- Data model ---
-
-interface ReviewComment {
-  id: string
-  file: string
-  side: AnnotationSide
-  line: number
-  comment: string
-  selectedText: string
-}
 
 // Annotation metadata — kept as stable references for pierre's cache
 interface AnnotationMeta {
@@ -37,6 +29,9 @@ interface DiffPanelProps {
   diffs: WorktreeFileDiff[]
   loading: boolean
   diffStyle?: "unified" | "split"
+  comments: ReviewComment[]
+  onCommentsChange: (comments: ReviewComment[]) => void
+  onSendAll?: () => void
   onClose: () => void
   onExpand?: () => void
 }
@@ -60,11 +55,14 @@ function extractLines(content: string, start: number, end: number): string {
 
 export const DiffPanel: Component<DiffPanelProps> = (props) => {
   const { t } = useLanguage()
-  const [comments, setComments] = createSignal<ReviewComment[]>([])
   const [open, setOpen] = createSignal<string[]>([])
   const [draft, setDraft] = createSignal<{ file: string; side: AnnotationSide; line: number } | null>(null)
   const [editing, setEditing] = createSignal<string | null>(null)
   let nextId = 0
+
+  const comments = () => props.comments
+  const setComments = (next: ReviewComment[]) => props.onCommentsChange(next)
+  const updateComments = (updater: (prev: ReviewComment[]) => ReviewComment[]) => setComments(updater(comments()))
 
   // Stable draft metadata ref — avoids recreating the object on every signal read
   // so pierre's annotation cache doesn't invalidate and destroy the textarea
@@ -113,7 +111,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   const addComment = (file: string, side: AnnotationSide, line: number, text: string, selectedText: string) => {
     preserveScroll(() => {
       const id = `c-${++nextId}-${Date.now()}`
-      setComments((prev) => [...prev, { id, file, side, line, comment: text, selectedText }])
+      updateComments((prev) => [...prev, { id, file, side, line, comment: text, selectedText }])
       setDraft(null)
       draftMeta = null
     })
@@ -121,17 +119,49 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
 
   const updateComment = (id: string, text: string) => {
     preserveScroll(() => {
-      setComments((prev) => prev.map((c) => (c.id === id ? { ...c, comment: text } : c)))
+      updateComments((prev) => prev.map((c) => (c.id === id ? { ...c, comment: text } : c)))
       setEditing(null)
     })
   }
 
   const deleteComment = (id: string) => {
     preserveScroll(() => {
-      setComments((prev) => prev.filter((c) => c.id !== id))
+      updateComments((prev) => prev.filter((c) => c.id !== id))
       if (editing() === id) setEditing(null)
     })
   }
+
+  createEffect(
+    on(
+      () => [props.diffs, comments()] as const,
+      ([diffs, current]) => {
+        const valid = sanitizeReviewComments(current, diffs)
+        if (valid.length !== current.length) {
+          setComments(valid)
+        }
+
+        const edit = editing()
+        if (edit && !valid.some((comment) => comment.id === edit)) {
+          setEditing(null)
+        }
+
+        const currentDraft = draft()
+        if (!currentDraft) return
+        const diff = diffs.find((item) => item.file === currentDraft.file)
+        if (!diff) {
+          setDraft(null)
+          draftMeta = null
+          return
+        }
+        const content = currentDraft.side === "deletions" ? diff.before : diff.after
+        const max = content.length === 0 ? 0 : content.split("\n").length
+        if (currentDraft.line < 1 || currentDraft.line > max) {
+          setDraft(null)
+          draftMeta = null
+        }
+      },
+    ),
+  )
 
   // --- Per-file memoized annotations ---
 
@@ -162,16 +192,6 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       result.push({ side: d.side, lineNumber: d.line, metadata: draftMeta })
     }
     return result
-  }
-
-  // Compute commentedLines ranges for visual highlights on lines with comments
-  const commentedLinesForFile = (file: string): SelectedLineRange[] => {
-    const fileComments = commentsByFile().get(file) ?? []
-    return fileComments.map((c) => ({
-      start: c.line,
-      end: c.line,
-      side: c.side,
-    }))
   }
 
   // Focus a textarea once it's connected to the DOM (pierre renders async via slots)
@@ -385,15 +405,28 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     const text = lines.join("\n")
     window.dispatchEvent(new MessageEvent("message", { data: { type: "appendChatBoxMessage", text } }))
     preserveScroll(() => setComments([]))
+    props.onSendAll?.()
+  }
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key !== "Enter") return
+    if (!(e.metaKey || e.ctrlKey)) return
+    const target = e.target
+    if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) return
+    if (target instanceof HTMLElement && target.isContentEditable) return
+    if (comments().length === 0) return
+    e.preventDefault()
+    e.stopPropagation()
+    sendAllToChat()
   }
 
   return (
-    <div class="am-diff-panel">
+    <div class="am-diff-panel" onKeyDown={handleKeyDown}>
       <div class="am-diff-header">
         <span class="am-diff-header-title">Changes</span>
         <div class="am-diff-header-actions">
           <Show when={props.onExpand}>
-            <Tooltip title={t("command.review.toggle")} placement="bottom">
+            <Tooltip value={t("command.review.toggle")} placement="bottom">
               <IconButton
                 icon="expand"
                 size="small"
@@ -474,7 +507,6 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                           after={{ name: diff.file, contents: diff.after }}
                           diffStyle={props.diffStyle ?? "unified"}
                           annotations={annotationsForFile(diff.file)}
-                          commentedLines={commentedLinesForFile(diff.file)}
                           renderAnnotation={buildAnnotation}
                           enableGutterUtility={true}
                           onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
