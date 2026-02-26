@@ -171,7 +171,7 @@ export class WorktreeManager {
 
     // Git doesn't know about this directory — remove it directly
     if (fs.existsSync(worktreePath)) {
-      if (!normalizePath(worktreePath).startsWith(normalizePath(this.dir))) {
+      if (!this.isManagedPath(worktreePath)) {
         this.log(`Refusing to remove path outside worktrees directory: ${worktreePath}`)
         return
       }
@@ -255,6 +255,20 @@ export class WorktreeManager {
     } catch (error) {
       this.log(`Warning: Failed to update git exclude for worktree: ${error}`)
     }
+  }
+
+  /**
+   * Returns true when target is strictly inside the managed worktrees directory.
+   * Prevents sibling-prefix confusion such as "/worktrees-evil".
+   */
+  private isManagedPath(target: string): boolean {
+    const root = path.resolve(this.dir)
+    const child = path.resolve(target)
+    const rel = normalizePath(path.relative(root, child))
+    if (!rel || rel === ".") return false
+    if (rel.startsWith("../")) return false
+    if (path.isAbsolute(rel)) return false
+    return true
   }
 
   private async addExcludeEntry(excludePath: string, entry: string, comment: string): Promise<void> {
