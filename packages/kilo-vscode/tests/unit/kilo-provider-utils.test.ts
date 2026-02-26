@@ -8,7 +8,7 @@ import {
 } from "../../src/kilo-provider-utils"
 import type { Session, Agent, Provider, Event } from "@kilocode/sdk/v2/client"
 
-function makeSession(overrides: Record<string, unknown> = {}): Session {
+function makeSession(overrides: Partial<Session> = {}): Session {
   return {
     id: "sess-1",
     title: "Test Session",
@@ -22,12 +22,12 @@ function makeProvider(id: string): Provider {
   return { id, name: id.toUpperCase(), models: {} } as unknown as Provider
 }
 
-function makeAgent(overrides: Record<string, unknown> = {}): Agent {
+function makeAgent(overrides: Partial<Agent> = {}): Agent {
   return { name: "code", mode: "primary", ...overrides } as unknown as Agent
 }
 
 /** Helper to create a partial Event for testing — only the fields accessed by the function under test matter. */
-function makeEvent(partial: Record<string, unknown>): Event {
+function makeEvent(partial: Partial<Event>): Event {
   return partial as unknown as Event
 }
 

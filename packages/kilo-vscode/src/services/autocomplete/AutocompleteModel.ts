@@ -136,8 +136,8 @@ export class AutocompleteModel {
           if (chunk.inputTokens !== undefined) inputTokens = chunk.inputTokens
           if (chunk.outputTokens !== undefined) outputTokens = chunk.outputTokens
           if (chunk.cost !== undefined) cost = chunk.cost
-        } catch {
-          // skip malformed JSON
+        } catch (e) {
+          console.warn("[AutocompleteModel] Malformed JSON in FIM SSE chunk:", json, e)
         }
       }
     }
