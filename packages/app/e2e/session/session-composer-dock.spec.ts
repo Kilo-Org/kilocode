@@ -134,6 +134,7 @@ test("default dock shows prompt input", async ({ page, sdk, gotoSession }) => {
 })
 
 test("blocked question flow unblocks after submit", async ({ page, sdk, gotoSession }) => {
+  test.skip(process.platform === "win32", "Skipping on Windows due interaction issues") // kilocode_change
   await withDockSession(sdk, "e2e composer dock question", async (session) => {
     await withDockSeed(sdk, session.id, async () => {
       await gotoSession(session.id)
@@ -251,6 +252,7 @@ test("child session question request blocks parent dock and unblocks after submi
   sdk,
   gotoSession,
 }) => {
+  test.skip(process.platform === "win32", "Skipping on Windows due interaction issues") // kilocode_change
   await withDockSession(sdk, "e2e composer dock child question parent", async (session) => {
     await gotoSession(session.id)
 
@@ -377,6 +379,7 @@ test("todo dock transitions and collapse behavior", async ({ page, sdk, gotoSess
 })
 
 test("keyboard focus stays off prompt while blocked", async ({ page, sdk, gotoSession }) => {
+  test.skip(process.platform === "win32", "Skipping on Windows due interaction issues") // kilocode_change
   await withDockSession(sdk, "e2e composer dock keyboard", async (session) => {
     await withDockSeed(sdk, session.id, async () => {
       await gotoSession(session.id)
