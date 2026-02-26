@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "1.2.15",
-  "name": "opencode",
+  "version": "7.0.30",
+  "name": "@kilocode/cli",
   "type": "module",
   "license": "MIT",
   "private": true,
@@ -73,7 +73,7 @@
     "@ai-sdk/provider-utils": "3.0.21",
     "@ai-sdk/togetherai": "1.0.34",
     "@ai-sdk/vercel": "1.0.33",
-    "@ai-sdk/xai": "2.0.51",
+    "@ai-sdk/xai": "2.0.56",
     "@aws-sdk/credential-providers": "3.993.0",
     "@clack/prompts": "1.0.0-alpha.1",
     "@gitlab/gitlab-ai-provider": "3.6.0",
@@ -84,9 +84,9 @@
     "@octokit/graphql": "9.0.2",
     "@octokit/rest": "catalog:",
     "@openauthjs/openauth": "catalog:",
-    "@opencode-ai/plugin": "workspace:*",
+    "@kilocode/plugin": "workspace:*",
     "@opencode-ai/script": "workspace:*",
-    "@opencode-ai/sdk": "workspace:*",
+    "@kilocode/sdk": "workspace:*",
     "@opencode-ai/util": "workspace:*",
     "@openrouter/ai-sdk-provider": "1.5.4",
     "@opentui/core": "0.1.81",
@@ -130,9 +130,13 @@
     "xdg-basedir": "5.1.0",
     "yargs": "18.0.0",
     "zod": "catalog:",
-    "zod-to-json-schema": "3.24.5"
+    "zod-to-json-schema": "3.24.5",
+    "@kilocode/kilo-gateway": "workspace:*",
+    "@kilocode/kilo-telemetry": "workspace:*",
+    "simple-git": "3.31.1"
   },
   "overrides": {
     "drizzle-orm": "1.0.0-beta.12-a5629fb"
-  }
+  },
+  "peerDependencies": {}
 }

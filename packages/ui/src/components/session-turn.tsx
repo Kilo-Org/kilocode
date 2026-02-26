@@ -1,4 +1,4 @@
-import { AssistantMessage, type FileDiff, Message as MessageType, Part as PartType } from "@opencode-ai/sdk/v2/client"
+import { AssistantMessage, type FileDiff, Message as MessageType, Part as PartType } from "@kilocode/sdk/v2/client"
 import { useData } from "../context"
 import { useDiffComponent } from "../context/diff"
 

@@ -1,4 +1,4 @@
-import type { Todo } from "@opencode-ai/sdk/v2"
+import type { Todo } from "@kilocode/sdk/v2"
 import { Checkbox } from "@opencode-ai/ui/checkbox"
 import { DockTray } from "@opencode-ai/ui/dock-surface"
 import { IconButton } from "@opencode-ai/ui/icon-button"

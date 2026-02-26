@@ -1,5 +1,5 @@
 import type { Argv } from "yargs"
-import type { Session as SDKSession, Message, Part } from "@opencode-ai/sdk/v2"
+import type { Session as SDKSession, Message, Part } from "@kilocode/sdk/v2"
 import { Session } from "../../session"
 import { cmd } from "./cmd"
 import { bootstrap } from "../bootstrap"

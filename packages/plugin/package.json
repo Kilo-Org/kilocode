@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "name": "@opencode-ai/plugin",
-  "version": "1.2.15",
+  "name": "@kilocode/plugin",
+  "version": "7.0.30",
   "type": "module",
   "license": "MIT",
   "scripts": {
@@ -16,7 +16,7 @@
     "dist"
   ],
   "dependencies": {
-    "@opencode-ai/sdk": "workspace:*",
+    "@kilocode/sdk": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {
@@ -24,5 +24,6 @@
     "@types/node": "catalog:",
     "typescript": "catalog:",
     "@typescript/native-preview": "catalog:"
-  }
+  },
+  "peerDependencies": {}
 }
