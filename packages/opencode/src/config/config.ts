@@ -45,7 +45,7 @@ import { RulesMigrator } from "../kilocode/rules-migrator" // kilocode_change
 import { WorkflowsMigrator } from "../kilocode/workflows-migrator" // kilocode_change
 
 export namespace Config {
-  const CONFIG_FILES_OPENCODE = ["opencode.json", "opencode.jsonc"] as const
+  const CONFIG_FILES_OPENCODE = ["opencode.jsonc", "opencode.json"] as const
   const CONFIG_FILES_KILO_PROJECT = ["kilo.json", "kilo.jsonc", ...CONFIG_FILES_OPENCODE] as const
   const CONFIG_FILES_KILO_GLOBAL = ["kilo.json", "kilo.jsonc", "config.json", ...CONFIG_FILES_OPENCODE] as const
 
@@ -1609,7 +1609,7 @@ export namespace Config {
 
     // Check KILO_CONFIG_DIR
     if (Flag.KILO_CONFIG_DIR) {
-      for (const file of CONFIG_FILES_OPENCODE) {
+      for (const file of CONFIG_FILES_KILO_PROJECT) {
         const filepath = path.join(Flag.KILO_CONFIG_DIR, file)
         if (await hasMcpDefinition(filepath, mcpName)) {
           return filepath
@@ -1691,11 +1691,6 @@ export namespace Config {
       return Flag.KILO_CONFIG
     }
 
-    // Check if project config is disabled
-    if (Flag.KILO_DISABLE_PROJECT_CONFIG) {
-      return globalConfigFile()
-    }
-
     // Check KILO_CONFIG_DIR (higher precedence than ~/.opencode/)
     if (Flag.KILO_CONFIG_DIR) {
       for (const file of CONFIG_FILES_OPENCODE) {
@@ -1708,6 +1703,11 @@ export namespace Config {
       if (existsSync(Flag.KILO_CONFIG_DIR)) {
         return path.join(Flag.KILO_CONFIG_DIR, "opencode.jsonc")
       }
+    }
+
+    // Check if project config is disabled
+    if (Flag.KILO_DISABLE_PROJECT_CONFIG) {
+      return globalConfigFile()
     }
 
     // Check ~/.opencode/ (user home directory config)
