@@ -29,6 +29,7 @@ type DiffStyle = "unified" | "split"
 interface FullScreenDiffViewProps {
   diffs: WorktreeFileDiff[]
   loading: boolean
+  sessionKey?: string
   comments: ReviewComment[]
   onCommentsChange: (comments: ReviewComment[]) => void
   onSendAll?: () => void
@@ -103,6 +104,17 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     })
     focusRoot()
   }
+
+  // Reset auto-open state when switching sessions so diffs expand for the new session
+  createEffect(
+    on(
+      () => props.sessionKey,
+      () => {
+        setOpenInit(false)
+      },
+      { defer: true },
+    ),
+  )
 
   // Auto-open files when diffs arrive
   createEffect(

@@ -27,6 +27,7 @@ import { buildReviewAnnotation, type AnnotationLabels, type AnnotationMeta } fro
 interface DiffPanelProps {
   diffs: WorktreeFileDiff[]
   loading: boolean
+  sessionKey?: string
   diffStyle?: "unified" | "split"
   onDiffStyleChange?: (style: "unified" | "split") => void
   comments: ReviewComment[]
@@ -110,6 +111,17 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     })
     focusRoot()
   }
+
+  // Reset auto-open state when switching sessions so diffs expand for the new session
+  createEffect(
+    on(
+      () => props.sessionKey,
+      () => {
+        setOpenInit(false)
+      },
+      { defer: true },
+    ),
+  )
 
   // Auto-open files when diffs arrive
   createEffect(
