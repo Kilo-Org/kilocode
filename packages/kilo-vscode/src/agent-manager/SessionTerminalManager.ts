@@ -64,6 +64,7 @@ export class SessionTerminalManager {
     const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
     if (!cwd) {
       this.log("showLocalTerminal: no workspace folder open")
+      vscode.window.showWarningMessage("Open a folder to use the local terminal")
       return
     }
 
