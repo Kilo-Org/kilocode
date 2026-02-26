@@ -1,49 +1,27 @@
-# Default Model Selection
+# Default Model
 
-**Priority:** P1
-**Status:** ❌ Not started
 **Issue:** [#6074](https://github.com/Kilo-Org/kilocode/issues/6074)
 
-## Problem
+## Desired Behavior
 
-When a new chat session is started, the model selector always shows `kilo/auto` regardless of:
+The **default model** configured in Settings should be used as the starting model for every new session. The model selector in the chat input only affects the current session — it does not change the default.
 
-- The user's configured default model (set in the CLI/backend)
-- The model the user last used in a previous session
+### Settings
 
-This means users who have a preferred model (e.g. Claude Opus) must re-select it every time they start a new session. The `kilo/auto` model is hardcoded as the default in the VS Code extension, bypassing the default model logic that already exists in the CLI backend.
+The Settings tab has a "Default model" picker (currently wired to the CLI backend config `model` field). Whatever model is selected there is the default for all new sessions.
 
-## Expected Behavior (Mark's View)
+### New Session
 
-The model used when starting a new session should follow this priority order:
+When a new session is created, the model selector is pre-populated with the default model from Settings. It is never hardcoded to `kilo/auto`.
 
-1. **Last used model** — if the user previously selected a model in the extension, use that
-2. **Backend default model** — if no last-used model is stored, fetch the default from the CLI backend (which already implements default model logic shared with the CLI and Roo-based extension)
-3. **`kilo/auto`** — fall back to this only if neither of the above is available
+### Model Selector in Chat Input
 
-The current behavior skips steps 1 and 2 entirely and always falls back to step 3.
+Changing the model in the chat input changes it **only for the current session**. It has no effect on future sessions. The default in Settings remains unchanged.
 
-## Scope
+### No Persistence of Last-Used Model
 
-This spec covers two related but distinct issues:
+The model selector does not remember the last-used model across sessions. Each new session starts fresh with the Settings default. (This is distinct from #6211, which proposes remembering last-used — that is out of scope here.)
 
-1. **#6074 — Use correct default model**: The extension ignores the backend's configured default model and always starts with `kilo/auto`.
-2. **#6211 — Remember last model choice**: The extension does not persist the user's last selected model across sessions.
+## Current Behavior (Bug)
 
-Both must be fixed together to deliver correct behavior.
-
-## Remaining Work
-
-- Read the default model from the CLI backend when starting a new session instead of hardcoding `kilo/auto`
-- When the user changes the model in the chat input, persist the choice to `vscode.ExtensionContext.globalState`
-- When creating a new session, pre-populate the model selector with the last-used model (from `globalState`), falling back to the backend default, falling back to `kilo/auto`
-- Existing in-progress sessions are unaffected — they keep their current model
-- If the stored model is no longer available (provider disabled, model removed), fall back gracefully to the backend default
-
-## Implementation Notes
-
-- The backend already has correct default model logic — the extension just needs to query it rather than override it
-- Model selection state is managed in the webview; persisting it requires a message from the webview to the extension host on each change
-- On model change: webview posts a message → extension saves to `globalState.update('lastModel', modelId)`
-- On new session: extension reads `globalState.get('lastModel')` and passes it as the initial model, or queries the backend default endpoint if not set
-- The backend default can be retrieved from the existing providers/models API — check how the CLI and Roo extension resolve the default to replicate the same logic
+The extension hardcodes `kilo/auto` as the default and ignores the Settings default model entirely. The VS Code settings `kilo-code.new.model.providerID` / `kilo-code.new.model.modelID` exist but are not exposed in any UI. The CLI backend config `model` field (shown in the Settings tab) is also ignored for this purpose.
