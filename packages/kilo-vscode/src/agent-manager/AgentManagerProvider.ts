@@ -7,7 +7,7 @@ import { KiloProvider } from "../KiloProvider"
 import { buildWebviewHtml } from "../utils"
 import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
 import { WorktreeStateManager } from "./WorktreeStateManager"
-import { WorktreeStatsPoller } from "./WorktreeStatsPoller"
+import { GitStatsPoller } from "./GitStatsPoller"
 import { versionedName } from "./branch-name"
 import { normalizePath } from "./git-import"
 import { SetupScriptService } from "./SetupScriptService"
@@ -43,7 +43,7 @@ export class AgentManagerProvider implements vscode.Disposable {
   private diffInterval: ReturnType<typeof setInterval> | undefined
   private diffSessionId: string | undefined
   private lastDiffHash: string | undefined
-  private statsPoller: WorktreeStatsPoller
+  private statsPoller: GitStatsPoller
   private cachedDiffTarget: { directory: string; baseBranch: string } | undefined
 
   constructor(
@@ -54,11 +54,15 @@ export class AgentManagerProvider implements vscode.Disposable {
     this.terminalManager = new SessionTerminalManager((msg) =>
       this.outputChannel.appendLine(`[SessionTerminal] ${msg}`),
     )
-    this.statsPoller = new WorktreeStatsPoller({
+    this.statsPoller = new GitStatsPoller({
       getWorktrees: () => this.state?.getWorktrees() ?? [],
+      getWorkspaceRoot: () => this.getWorkspaceRoot(),
       getHttpClient: () => this.connectionService.getHttpClient(),
       onStats: (stats) => {
         this.postToWebview({ type: "agentManager.worktreeStats", stats })
+      },
+      onLocalStats: (stats) => {
+        this.postToWebview({ type: "agentManager.localStats", stats })
       },
       log: (...args) => this.log(...args),
     })
@@ -1245,9 +1249,8 @@ export class AgentManagerProvider implements vscode.Disposable {
       isGitRepo: true,
     })
 
-    // Keep stats polling in sync with worktree count
-    const worktrees = state.getWorktrees()
-    this.statsPoller.setEnabled(worktrees.length > 0)
+    // Always poll — local workspace stats are always relevant, even without worktrees
+    this.statsPoller.setEnabled(true)
   }
 
   /** Push empty state when the workspace is not a git repo or has no workspace folder. */

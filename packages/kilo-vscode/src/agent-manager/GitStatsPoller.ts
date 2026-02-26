@@ -10,21 +10,31 @@ export interface WorktreeStats {
   commits: number
 }
 
-interface WorktreeStatsPollerOptions {
+export interface LocalStats {
+  branch: string
+  additions: number
+  deletions: number
+  commits: number
+}
+
+interface GitStatsPollerOptions {
   getWorktrees: () => Worktree[]
+  getWorkspaceRoot: () => string | undefined
   getHttpClient: () => HttpClient
   onStats: (stats: WorktreeStats[]) => void
+  onLocalStats: (stats: LocalStats) => void
   log: (...args: unknown[]) => void
   intervalMs?: number
   refreshMs?: number
   runGit?: (args: string[], cwd: string) => Promise<string>
 }
 
-export class WorktreeStatsPoller {
+export class GitStatsPoller {
   private timer: ReturnType<typeof setTimeout> | undefined
   private active = false
   private busy = false
   private lastHash: string | undefined
+  private lastLocalHash: string | undefined
   private lastStats: Record<string, { additions: number; deletions: number; commits: number }> = {}
   private lastFetch = new Map<string, number>()
   private inflightFetch = new Map<string, Promise<void>>()
@@ -32,7 +42,7 @@ export class WorktreeStatsPoller {
   private readonly refreshMs: number
   private readonly runGit: (args: string[], cwd: string) => Promise<string>
 
-  constructor(private readonly options: WorktreeStatsPollerOptions) {
+  constructor(private readonly options: GitStatsPollerOptions) {
     this.intervalMs = options.intervalMs ?? 5000
     this.refreshMs = options.refreshMs ?? 120000
     this.runGit =
@@ -63,6 +73,7 @@ export class WorktreeStatsPoller {
     }
     this.busy = false
     this.lastHash = undefined
+    this.lastLocalHash = undefined
     this.lastStats = {}
   }
 
@@ -90,17 +101,21 @@ export class WorktreeStatsPoller {
   }
 
   private async fetch(): Promise<void> {
-    const worktrees = this.options.getWorktrees()
-    if (worktrees.length === 0) return
-
     const client = (() => {
       try {
         return this.options.getHttpClient()
       } catch (err) {
-        this.options.log("Failed to get HTTP client for worktree stats:", err)
+        this.options.log("Failed to get HTTP client for stats:", err)
         return undefined
       }
     })()
+
+    await Promise.all([this.fetchWorktreeStats(client), this.fetchLocalStats(client)])
+  }
+
+  private async fetchWorktreeStats(client: HttpClient | undefined): Promise<void> {
+    const worktrees = this.options.getWorktrees()
+    if (worktrees.length === 0) return
     if (!client) return
 
     const stats = (
@@ -145,6 +160,52 @@ export class WorktreeStatsPoller {
     )
 
     this.options.onStats(stats)
+  }
+
+  private async fetchLocalStats(client: HttpClient | undefined): Promise<void> {
+    const root = this.options.getWorkspaceRoot()
+    if (!root) return
+
+    try {
+      const branch = await this.gitExec(["rev-parse", "--abbrev-ref", "HEAD"], root).catch(() => "")
+      if (!branch || branch === "HEAD") return
+
+      const tracking = await this.resolveTrackingBranch(root, branch)
+
+      const [additions, deletions, commits] = await (async () => {
+        if (!tracking || !client) return [0, 0, 0] as const
+        try {
+          const diffs = await client.getWorktreeDiff(root, tracking)
+          return [
+            diffs.reduce((sum, d) => sum + d.additions, 0),
+            diffs.reduce((sum, d) => sum + d.deletions, 0),
+            await this.countMissingOriginCommits(root, tracking),
+          ] as const
+        } catch (err) {
+          this.options.log("Failed to fetch local diff stats:", err)
+          return [0, 0, 0] as const
+        }
+      })()
+
+      const hash = `local:${branch}:${additions}:${deletions}:${commits}`
+      if (hash === this.lastLocalHash) return
+      this.lastLocalHash = hash
+
+      this.options.onLocalStats({ branch, additions, deletions, commits })
+    } catch (err) {
+      this.options.log("Failed to fetch local stats:", err)
+    }
+  }
+
+  private async resolveTrackingBranch(cwd: string, branch: string): Promise<string | undefined> {
+    const upstream = await this.gitExec(["rev-parse", "--abbrev-ref", "@{upstream}"], cwd).catch(() => "")
+    if (upstream) return upstream
+
+    const ref = `origin/${branch}`
+    const resolved = await this.gitExec(["rev-parse", "--verify", ref], cwd).catch(() => "")
+    if (resolved) return ref
+
+    return undefined
   }
 
   private gitExec(args: string[], cwd: string): Promise<string> {

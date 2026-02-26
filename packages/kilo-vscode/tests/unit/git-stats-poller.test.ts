@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test"
 import type { HttpClient } from "../../src/services/cli-backend"
-import { WorktreeStatsPoller } from "../../src/agent-manager/WorktreeStatsPoller"
+import { GitStatsPoller } from "../../src/agent-manager/GitStatsPoller"
 import type { Worktree } from "../../src/agent-manager/WorktreeStateManager"
 
 function sleep(ms: number): Promise<void> {
@@ -29,7 +29,7 @@ function diff(additions: number, deletions: number) {
   return [{ file: "file.ts", before: "", after: "", additions, deletions, status: "modified" as const }]
 }
 
-describe("WorktreeStatsPoller", () => {
+describe("GitStatsPoller", () => {
   it("does not overlap polling runs", async () => {
     let running = 0
     let max = 0
@@ -46,10 +46,12 @@ describe("WorktreeStatsPoller", () => {
       },
     } as unknown as HttpClient
 
-    const poller = new WorktreeStatsPoller({
+    const poller = new GitStatsPoller({
       getWorktrees: () => [worktree("a")],
+      getWorkspaceRoot: () => undefined,
       getHttpClient: () => client,
       onStats: () => undefined,
+      onLocalStats: () => undefined,
       log: () => undefined,
       intervalMs: 5,
       runGit: async (args) => {
@@ -80,10 +82,12 @@ describe("WorktreeStatsPoller", () => {
       },
     } as unknown as HttpClient
 
-    const poller = new WorktreeStatsPoller({
+    const poller = new GitStatsPoller({
       getWorktrees: () => [worktree("a")],
+      getWorkspaceRoot: () => undefined,
       getHttpClient: () => client,
       onStats: (stats) => emitted.push(stats),
+      onLocalStats: () => undefined,
       log: () => undefined,
       intervalMs: 5,
       runGit: async (args) => {
@@ -117,10 +121,12 @@ describe("WorktreeStatsPoller", () => {
       getWorktreeDiff: async () => diff(0, 0),
     } as unknown as HttpClient
 
-    const poller = new WorktreeStatsPoller({
+    const poller = new GitStatsPoller({
       getWorktrees: () => [worktree("a"), worktree("b")],
+      getWorkspaceRoot: () => undefined,
       getHttpClient: () => client,
       onStats: (stats) => emitted.push(stats),
+      onLocalStats: () => undefined,
       log: () => undefined,
       intervalMs: 500,
       runGit: async (args) => {
