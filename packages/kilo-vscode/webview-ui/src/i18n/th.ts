@@ -950,6 +950,8 @@ export const dict = {
   "agentManager.hoverCard.branch": "BRANCH",
   "agentManager.hoverCard.base": "ฐาน",
   "agentManager.hoverCard.sessions": "เซสชัน",
+  "agentManager.hoverCard.changes": "การเปลี่ยนแปลง",
+  "agentManager.hoverCard.commits": "คอมมิต",
   "agentManager.session.new": "เซสชันใหม่",
   "agentManager.session.untitled": "ไม่มีชื่อ",
   "agentManager.session.newSession": "เซสชันใหม่",

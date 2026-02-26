@@ -1424,7 +1424,9 @@ const AgentManagerContent: Component = () => {
                                       <div class="am-hover-card-divider" />
                                       <Show when={hoverStats()!.additions > 0 || hoverStats()!.deletions > 0}>
                                         <div class="am-hover-card-row">
-                                          <span class="am-hover-card-row-label">Changes</span>
+                                          <span class="am-hover-card-row-label">
+                                            {t("agentManager.hoverCard.changes")}
+                                          </span>
                                           <span class="am-hover-card-row-value am-hover-card-diff-stats">
                                             <Show when={hoverStats()!.additions > 0}>
                                               <span class="am-stat-additions">+{hoverStats()!.additions}</span>
@@ -1437,7 +1439,9 @@ const AgentManagerContent: Component = () => {
                                       </Show>
                                       <Show when={hoverStats()!.commits > 0}>
                                         <div class="am-hover-card-row">
-                                          <span class="am-hover-card-row-label">Commits</span>
+                                          <span class="am-hover-card-row-label">
+                                            {t("agentManager.hoverCard.commits")}
+                                          </span>
                                           <span class="am-hover-card-row-value">{hoverStats()!.commits}</span>
                                         </div>
                                       </Show>

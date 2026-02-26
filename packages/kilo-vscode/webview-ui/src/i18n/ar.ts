@@ -953,6 +953,8 @@ export const dict = {
   "agentManager.hoverCard.branch": "الفرع",
   "agentManager.hoverCard.base": "الأساس",
   "agentManager.hoverCard.sessions": "الجلسات",
+  "agentManager.hoverCard.changes": "التغييرات",
+  "agentManager.hoverCard.commits": "عمليات الالتزام",
   "agentManager.session.new": "جلسة جديدة",
   "agentManager.session.untitled": "بدون عنوان",
   "agentManager.session.newSession": "جلسة جديدة",

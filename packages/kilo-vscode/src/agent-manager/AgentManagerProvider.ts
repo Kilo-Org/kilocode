@@ -39,6 +39,7 @@ export class AgentManagerProvider implements vscode.Disposable {
   private diffSessionId: string | undefined
   private lastDiffHash: string | undefined
   private statsInterval: ReturnType<typeof setInterval> | undefined
+  private statsBusy = false
   private lastStatsHash: string | undefined
 
   constructor(
@@ -1475,11 +1476,19 @@ export class AgentManagerProvider implements vscode.Disposable {
   private startStatsPolling(): void {
     this.stopStatsPolling()
     // Initial fetch
-    void this.fetchWorktreeStats()
+    void this.pollStats()
     // Poll every 5 seconds
     this.statsInterval = setInterval(() => {
-      void this.fetchWorktreeStats()
+      void this.pollStats()
     }, 5000)
+  }
+
+  private pollStats(): Promise<void> {
+    if (this.statsBusy) return Promise.resolve()
+    this.statsBusy = true
+    return this.fetchWorktreeStats().finally(() => {
+      this.statsBusy = false
+    })
   }
 
   private stopStatsPolling(): void {
@@ -1487,6 +1496,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       clearInterval(this.statsInterval)
       this.statsInterval = undefined
     }
+    this.statsBusy = false
     this.lastStatsHash = undefined
   }
 
