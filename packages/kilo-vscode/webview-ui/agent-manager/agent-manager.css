@@ -296,6 +296,60 @@ button.am-section-toggle:hover .am-section-label {
   flex-shrink: 0;
 }
 
+/* Per-worktree git stats (diff lines + commits missing from origin) */
+
+.am-worktree-stats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.am-worktree-diff-stats {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-inset-base);
+}
+
+.am-worktree-item-active .am-worktree-diff-stats {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.am-stat-additions {
+  color: #34d399;
+}
+
+.am-stat-deletions {
+  color: #f87171;
+}
+
+.am-worktree-item-active .am-stat-additions {
+  color: #6ee7b7;
+}
+
+.am-worktree-item-active .am-stat-deletions {
+  color: #fca5a5;
+}
+
+.am-worktree-commits {
+  color: #34d399;
+}
+
+.am-worktree-item-active .am-worktree-commits {
+  color: #6ee7b7;
+}
+
+.am-worktree-item:hover .am-worktree-stats {
+  opacity: 0;
+}
+
 /* Grouped worktrees — visual grouping with header and left accent */
 
 .am-wt-group-header {
@@ -664,6 +718,51 @@ button.am-section-toggle:hover .am-section-label {
 }
 
 /* Diff Panel */
+
+.am-diff-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  background: transparent;
+  color: var(--text-weak);
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.am-diff-toggle-btn:hover {
+  background: var(--surface-inset-base-hover);
+  color: var(--text-base);
+}
+
+.am-diff-toggle-btn.am-tab-diff-btn-active {
+  background: var(--surface-interactive-base) !important;
+  color: var(--text-base) !important;
+}
+
+.am-diff-toggle-btn.am-diff-toggle-has-changes {
+  color: var(--text-base);
+}
+
+.am-diff-toggle-stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.am-diff-toggle-btn.am-tab-diff-btn-active .am-stat-additions {
+  color: #6ee7b7;
+}
+
+.am-diff-toggle-btn.am-tab-diff-btn-active .am-stat-deletions {
+  color: #fca5a5;
+}
 
 .am-tab-diff-btn-active {
   background: var(--surface-interactive-base) !important;
@@ -1718,6 +1817,14 @@ button.am-section-toggle:hover .am-section-label {
   font-size: 12px;
   font-weight: 500;
   color: var(--text-base);
+}
+
+.am-hover-card-diff-stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono, monospace);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Keyboard shortcuts dialog */

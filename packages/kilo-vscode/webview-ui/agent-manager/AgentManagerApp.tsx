@@ -23,7 +23,9 @@ import type {
   AgentManagerImportResultMessage,
   AgentManagerWorktreeDiffMessage,
   AgentManagerWorktreeDiffLoadingMessage,
+  AgentManagerWorktreeStatsMessage,
   WorktreeFileDiff,
+  WorktreeGitStats,
   WorktreeState,
   ManagedSessionState,
   SessionInfo,
@@ -303,6 +305,9 @@ const AgentManagerContent: Component = () => {
   const [diffDatas, setDiffDatas] = createSignal<Record<string, WorktreeFileDiff[]>>({})
   const [diffLoading, setDiffLoading] = createSignal(false)
   const [diffWidth, setDiffWidth] = createSignal(Math.round(window.innerWidth * 0.5))
+
+  // Per-worktree git stats (diff additions/deletions, commits missing from origin)
+  const [worktreeStats, setWorktreeStats] = createSignal<Record<string, WorktreeGitStats>>({})
 
   // Pending local tab counter for generating unique IDs
   let pendingCounter = 0
@@ -842,6 +847,13 @@ const AgentManagerContent: Component = () => {
         const ev = msg as AgentManagerWorktreeDiffLoadingMessage
         setDiffLoading(ev.loading)
       }
+
+      if (msg.type === "agentManager.worktreeStats") {
+        const ev = msg as AgentManagerWorktreeStatsMessage
+        const map: Record<string, WorktreeGitStats> = {}
+        for (const s of ev.stats) map[s.worktreeId] = s
+        setWorktreeStats(map)
+      }
     })
 
     onCleanup(() => {
@@ -1378,13 +1390,38 @@ const AgentManagerContent: Component = () => {
                                   </Show>
                                   {(() => {
                                     const num = idx() + 2
+                                    const stats = () => worktreeStats()[wt.id]
                                     return (
-                                      <Show when={num <= MAX_JUMP_INDEX}>
-                                        <span class="am-shortcut-badge">
-                                          {isMac ? "⌘" : "Ctrl+"}
-                                          {num}
-                                        </span>
-                                      </Show>
+                                      <>
+                                        <Show when={num <= MAX_JUMP_INDEX}>
+                                          <span class="am-shortcut-badge">
+                                            {isMac ? "⌘" : "Ctrl+"}
+                                            {num}
+                                          </span>
+                                        </Show>
+                                        <Show
+                                          when={
+                                            stats() &&
+                                            (stats()!.additions > 0 || stats()!.deletions > 0 || stats()!.commits > 0)
+                                          }
+                                        >
+                                          <div class="am-worktree-stats">
+                                            <Show when={stats()!.additions > 0 || stats()!.deletions > 0}>
+                                              <span class="am-worktree-diff-stats">
+                                                <Show when={stats()!.additions > 0}>
+                                                  <span class="am-stat-additions">+{stats()!.additions}</span>
+                                                </Show>
+                                                <Show when={stats()!.deletions > 0}>
+                                                  <span class="am-stat-deletions">−{stats()!.deletions}</span>
+                                                </Show>
+                                              </span>
+                                            </Show>
+                                            <Show when={stats()!.commits > 0}>
+                                              <span class="am-worktree-commits">↑{stats()!.commits}</span>
+                                            </Show>
+                                          </div>
+                                        </Show>
+                                      </>
                                     )
                                   })()}
                                   <Show when={!busyWorktrees().has(wt.id)}>
@@ -1434,6 +1471,44 @@ const AgentManagerContent: Component = () => {
                                   <span class="am-hover-card-row-label">{t("agentManager.hoverCard.sessions")}</span>
                                   <span class="am-hover-card-row-value">{sessions().length}</span>
                                 </div>
+                                {(() => {
+                                  const hoverStats = () => worktreeStats()[wt.id]
+                                  return (
+                                    <Show
+                                      when={
+                                        hoverStats() &&
+                                        (hoverStats()!.additions > 0 ||
+                                          hoverStats()!.deletions > 0 ||
+                                          hoverStats()!.commits > 0)
+                                      }
+                                    >
+                                      <div class="am-hover-card-divider" />
+                                      <Show when={hoverStats()!.additions > 0 || hoverStats()!.deletions > 0}>
+                                        <div class="am-hover-card-row">
+                                          <span class="am-hover-card-row-label">
+                                            {t("agentManager.hoverCard.changes")}
+                                          </span>
+                                          <span class="am-hover-card-row-value am-hover-card-diff-stats">
+                                            <Show when={hoverStats()!.additions > 0}>
+                                              <span class="am-stat-additions">+{hoverStats()!.additions}</span>
+                                            </Show>
+                                            <Show when={hoverStats()!.deletions > 0}>
+                                              <span class="am-stat-deletions">−{hoverStats()!.deletions}</span>
+                                            </Show>
+                                          </span>
+                                        </div>
+                                      </Show>
+                                      <Show when={hoverStats()!.commits > 0}>
+                                        <div class="am-hover-card-row">
+                                          <span class="am-hover-card-row-label">
+                                            {t("agentManager.hoverCard.commits")}
+                                          </span>
+                                          <span class="am-hover-card-row-value">{hoverStats()!.commits}</span>
+                                        </div>
+                                      </Show>
+                                    </Show>
+                                  )
+                                })()}
                               </div>
                             </HoverCard>
                           </>
@@ -1595,20 +1670,36 @@ const AgentManagerContent: Component = () => {
                 />
               </TooltipKeybind>
               <div class="am-tab-actions">
-                <TooltipKeybind
-                  title={t("agentManager.diff.toggle")}
-                  keybind={kb().toggleDiff ?? ""}
-                  placement="bottom"
-                >
-                  <IconButton
-                    icon="layers"
-                    size="small"
-                    variant="ghost"
-                    label={t("agentManager.diff.toggle")}
-                    class={diffOpen() ? "am-tab-diff-btn-active" : ""}
-                    onClick={() => setDiffOpen((prev) => !prev)}
-                  />
-                </TooltipKeybind>
+                {(() => {
+                  const sel = () => selection()
+                  const stats = () =>
+                    typeof sel() === "string" && sel() !== LOCAL ? worktreeStats()[sel() as string] : undefined
+                  const hasChanges = () => {
+                    const s = stats()
+                    return s && (s.additions > 0 || s.deletions > 0)
+                  }
+                  return (
+                    <TooltipKeybind
+                      title={t("agentManager.diff.toggle")}
+                      keybind={kb().toggleDiff ?? ""}
+                      placement="bottom"
+                    >
+                      <button
+                        class={`am-diff-toggle-btn ${diffOpen() ? "am-tab-diff-btn-active" : ""} ${hasChanges() ? "am-diff-toggle-has-changes" : ""}`}
+                        onClick={() => setDiffOpen((prev) => !prev)}
+                        title={t("agentManager.diff.toggle")}
+                      >
+                        <Icon name="layers" size="small" />
+                        <Show when={hasChanges()}>
+                          <span class="am-diff-toggle-stats">
+                            <span class="am-stat-additions">+{stats()!.additions}</span>
+                            <span class="am-stat-deletions">−{stats()!.deletions}</span>
+                          </span>
+                        </Show>
+                      </button>
+                    </TooltipKeybind>
+                  )
+                })()}
                 <TooltipKeybind
                   title={t("agentManager.tab.terminal")}
                   keybind={kb().showTerminal ?? ""}

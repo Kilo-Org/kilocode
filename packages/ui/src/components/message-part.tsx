@@ -1519,6 +1519,7 @@ ToolRegistry.register({
     return (
       <BasicTool
         {...props}
+        defaultOpen // kilocode_change
         icon="console"
         trigger={{
           title: i18n.t("ui.tool.shell"),
