@@ -5,6 +5,7 @@ import { buildWebviewHtml } from "../utils"
 import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
 import { WorktreeStateManager } from "./WorktreeStateManager"
 import { versionedName } from "./branch-name"
+import { normalizePath } from "./git-import"
 import { SetupScriptService } from "./SetupScriptService"
 import { SetupScriptRunner } from "./SetupScriptRunner"
 import { SessionTerminalManager } from "./SessionTerminalManager"
@@ -975,7 +976,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     let worktree: ReturnType<typeof state.addWorktree> | undefined
     try {
       const externals = await manager.listExternalWorktrees(new Set(state.getWorktrees().map((wt) => wt.path)))
-      if (!externals.some((e) => e.path === wtPath)) {
+      if (!externals.some((e) => normalizePath(e.path) === normalizePath(wtPath))) {
         this.postToWebview({
           type: "agentManager.importResult",
           success: false,

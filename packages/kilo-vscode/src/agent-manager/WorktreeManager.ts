@@ -20,6 +20,7 @@ import {
   checkedOutBranchesFromWorktreeList,
   classifyPRError,
   validateGitRef,
+  normalizePath,
   type PRInfo,
   type BranchListItem,
 } from "./git-import"
@@ -170,7 +171,7 @@ export class WorktreeManager {
 
     // Git doesn't know about this directory — remove it directly
     if (fs.existsSync(worktreePath)) {
-      if (!worktreePath.startsWith(this.dir)) {
+      if (!normalizePath(worktreePath).startsWith(normalizePath(this.dir))) {
         this.log(`Refusing to remove path outside worktrees directory: ${worktreePath}`)
         return
       }
@@ -390,8 +391,12 @@ export class WorktreeManager {
   async listExternalWorktrees(managedPaths: Set<string>): Promise<ExternalWorktreeItem[]> {
     try {
       const raw = await this.git.raw(["worktree", "list", "--porcelain"])
+      const normalizedRoot = normalizePath(this.root)
+      const normalizedManaged = new Set([...managedPaths].map(normalizePath))
       return parseWorktreeList(raw)
-        .filter((e) => !e.bare && e.path !== this.root && !managedPaths.has(e.path))
+        .filter(
+          (e) => !e.bare && normalizePath(e.path) !== normalizedRoot && !normalizedManaged.has(normalizePath(e.path)),
+        )
         .map((e) => ({ path: e.path, branch: e.branch }))
     } catch (error) {
       this.log(`Failed to list external worktrees: ${error}`)
