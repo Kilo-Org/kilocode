@@ -73,9 +73,6 @@ Example patterns:
 
 Each entry tracks last-used metadata (timestamp, command, resolved path) so you can audit and keep the list tidy.
 
-### Safe Bins
-
-A small set of stdin-only binaries (`jq`, `cut`, `uniq`, `head`, `tail`, `tr`, `wc`) are allowed in `allowlist` mode without explicit entries. These enforce strict stdin-only behavior — positional file arguments, path-like tokens, shell expansion, and redirections are all rejected.
 
 ### Approval Flow
 
