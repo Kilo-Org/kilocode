@@ -23,7 +23,7 @@ No. Redeploy does **not** delete your files, git repos, or cron jobs. It stops t
 
 ### When should I use Restart OpenClaw vs Redeploy?
 
-- **Restart OpenClaw** — Restarts just the OpenClaw process. The machine stays up. Use this for quick recovery from a process-level issue.
+- **Restart OpenClaw** — Restarts just the OpenClaw process. The machine stays up. Use this for quick recovery from a process-level issue or when you want to apply openclaw config changes.
 - **Redeploy** — Stops and restarts the entire machine with the latest image and config. Use this when the changelog shows a redeploy hint, or after changing channel tokens or secrets.
 
 ### My bot isn't responding on Telegram/Discord/Slack
