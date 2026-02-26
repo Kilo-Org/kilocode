@@ -72,6 +72,23 @@ export namespace ProviderTransform {
         .filter((msg): msg is ModelMessage => msg !== undefined && msg.content !== "")
     }
 
+    if (model.api.id.includes("claude")) {
+      return msgs.map((msg) => {
+        if ((msg.role === "assistant" || msg.role === "tool") && Array.isArray(msg.content)) {
+          msg.content = msg.content.map((part) => {
+            if ((part.type === "tool-call" || part.type === "tool-result") && "toolCallId" in part) {
+              return {
+                ...part,
+                toolCallId: part.toolCallId.replace(/[^a-zA-Z0-9_-]/g, "_"),
+              }
+            }
+            return part
+          })
+        }
+        return msg
+      })
+    }
+
     if (
       model.providerID === "mistral" ||
       model.api.id.toLowerCase().includes("mistral") ||
@@ -346,6 +363,12 @@ export namespace ProviderTransform {
   const OPENAI_EFFORTS = ["none", "minimal", ...WIDELY_SUPPORTED_EFFORTS, "xhigh"]
 
   export function variants(model: Provider.Model): Record<string, Record<string, any>> {
+    // kilocode_change start
+    if (model.api.npm === "@kilocode/kilo-gateway" && model.variants && Object.keys(model.variants).length > 0) {
+      return model.variants
+    }
+    // kilocode_change end
+
     if (!model.capabilities.reasoning) return {}
 
     const id = model.id.toLowerCase()
@@ -381,26 +404,10 @@ export namespace ProviderTransform {
     if (id.includes("grok")) return {}
 
     switch (model.api.npm) {
+      case "@kilocode/kilo-gateway": // kilocode_change
       case "@openrouter/ai-sdk-provider":
         if (!model.id.includes("gpt") && !model.id.includes("gemini-3") && !model.id.includes("claude")) return {}
         return Object.fromEntries(OPENAI_EFFORTS.map((effort) => [effort, { reasoning: { effort } }]))
-
-      // kilocode_change start
-      case "@kilocode/kilo-gateway":
-        if (model.id.includes("claude")) {
-          // for models that support adaptive thinking, effort is ignored
-          // for models that don't support adaptive thinking, effort is translated into a token budget
-          return {
-            none: { reasoning: { enabled: false } },
-            low: { reasoning: { enabled: true, effort: "low" }, verbosity: "low" },
-            medium: { reasoning: { enabled: true, effort: "medium" }, verbosity: "medium" },
-            high: { reasoning: { enabled: true, effort: "high" }, verbosity: "high" },
-            max: { reasoning: { enabled: true, effort: "xhigh" }, verbosity: "max" },
-          }
-        }
-        if (!model.id.includes("gpt") && !model.id.includes("gemini-3")) return {}
-        return Object.fromEntries(OPENAI_EFFORTS.map((effort) => [effort, { reasoning: { effort } }]))
-      // kilocode_change end
 
       // TODO: YOU CANNOT SET max_tokens if this is set!!!
       case "@ai-sdk/gateway":

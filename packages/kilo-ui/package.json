@@ -1,6 +1,6 @@
 {
   "name": "@kilocode/kilo-ui",
-  "version": "7.0.29",
+  "version": "7.0.30",
   "type": "module",
   "license": "MIT",
   "exports": {
@@ -54,6 +54,7 @@
     "./diff-ssr": "./src/components/diff-ssr.tsx",
     "./dock-prompt": "./src/components/dock-prompt.tsx",
     "./dock-surface": "./src/components/dock-surface.tsx",
+    "./scroll-view": "./src/components/scroll-view.tsx",
     "./context": "./src/context/index.ts",
     "./context/code": "./src/context/code.tsx",
     "./context/data": "./src/context/data.tsx",
