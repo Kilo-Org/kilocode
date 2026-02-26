@@ -1,5 +1,11 @@
 module.exports = [
   {
+    source: "/docs/features/custom-modes",
+    destination: "/docs/customize/custom-modes",
+    basePath: false,
+    permanent: true,
+  },
+  {
     source: "/docs/features/system-notifications",
     destination: "/docs/getting-started/settings/system-notifications",
     basePath: false,

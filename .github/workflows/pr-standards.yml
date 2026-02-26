@@ -7,6 +7,7 @@ on:
 jobs:
   # kilocode_change start
   check-author:
+    if: false # kilocode_change - disabled: not needed in kilocode repo
     uses: ./.github/workflows/check-org-member.yml
     with:
       username: ${{ github.event.pull_request.user.login }}
@@ -16,7 +17,7 @@ jobs:
 
   check-standards:
     needs: check-author
-    if: needs.check-author.outputs['is-member'] == 'false'
+    if: false # kilocode_change - disabled: not needed in kilocode repo
     # kilocode_change end
     runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
@@ -89,7 +90,7 @@ jobs:
 
             Where \`scope\` is the package name (e.g., \`app\`, \`desktop\`, \`kilo\`).
 
-            See [CONTRIBUTING.md](../blob/dev/CONTRIBUTING.md#pr-titles) for details.`);
+            See [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md#pr-titles) for details.`);
               return;
             }
 
@@ -132,7 +133,7 @@ jobs:
             1. Open an issue describing the bug/feature (if one doesn't exist)
             2. Add \`Fixes #<number>\` or \`Closes #<number>\` to this PR description
 
-            See [CONTRIBUTING.md](../blob/dev/CONTRIBUTING.md#issue-first-policy) for details.`);
+            See [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md#issue-first-policy) for details.`);
               return;
             }
 

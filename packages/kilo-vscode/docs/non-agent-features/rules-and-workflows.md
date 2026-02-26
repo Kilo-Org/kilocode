@@ -1,29 +1,16 @@
 # Rules & Workflows
 
-**GitHub Issue:** [#173](https://github.com/Kilo-Org/kilo/issues/173)
 **Priority:** P3
-**Status:** ❌ Not started
+**Status:** 🔨 Partial
 
-## Description
+## What Exists
 
-Support for rules and workflows. Rules define constraints and guidelines for the AI agent. Workflows define multi-step automated processes.
+- Rules subtab in AgentBehaviour settings allows managing instruction file paths (add/remove paths like `./INSTRUCTIONS.md`), persisted to `config.instructions`
 
-## Requirements
+## Remaining Work
 
-- View and manage rules (project-level, user-level, global)
-- Create/edit/delete rules via the extension UI
-- View and manage workflows
-- Rules are applied to agent sessions automatically
+- Workflow management UI (currently a `<Placeholder>` stub in AgentBehaviour settings)
+- Workflow definition and execution format
 - UI for browsing `.kilocode/rules/` and similar rule sources
-
-## Current State
-
-No rules or workflow UI exists. The CLI backend supports rules (AGENTS.md, .kilocode/rules/).
-
-## Gaps
-
-- No rules management UI
-- No workflow definition or execution UI
-- Need to determine CLI endpoints for rules CRUD
-- Need to determine workflow format and execution model
+- Determine CLI endpoints for workflow CRUD
 - Related to [Custom Commands](custom-command-system.md) and [Skills System](skills-system.md)

@@ -1,30 +1,18 @@
 # Cloud Task Support
 
-**GitHub Issue:** [#168](https://github.com/Kilo-Org/kilo/issues/168)
 **Priority:** P2
-**Status:** ❌ Not started
+**Status:** 🔨 Partial
 
-## Description
+## What Exists
 
-Support for persisting tasks to the Kilo cloud, and restoring sessions that were saved to the Kilo cloud but started on other devices or clients.
+- Read-only cloud session retrieval: `getCloudSessions()`, `getCloudSession()`, `importCloudSession()` HTTP methods
+- `CloudSessionList` component showing paginated cloud sessions grouped by date with repo filtering
+- Cloud session preview (read-only message display)
+- Cloud session import (one-way import into local storage)
+- "Cloud History" toolbar button in sidebar
 
-## Requirements
+## Remaining Work
 
-- Save task state to Kilo cloud storage
-- Restore/resume tasks that were started on other devices or clients
-- Sync task history across devices
-- Handle conflict resolution when tasks are modified on multiple devices
-- Require Kilo authentication for cloud features
-
-## Current State
-
-No cloud task support exists. Tasks are stored locally by the CLI.
-
-## Gaps
-
-- No cloud sync infrastructure
-- No API endpoints for cloud task storage (may need backend work)
-- No conflict resolution strategy
-- No UI for cloud task browsing/restoring
-- Depends on [Task History](task-history.md) being implemented first
-- Depends on [Authentication](authentication-organization-enterprise-enforcement.md) for Kilo cloud access
+- Upload/sync local sessions to cloud
+- Real-time sync between devices
+- Conflict resolution when sessions are modified on multiple devices

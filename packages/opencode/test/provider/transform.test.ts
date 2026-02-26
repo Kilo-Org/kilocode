@@ -175,6 +175,204 @@ describe("ProviderTransform.options - gpt-5 textVerbosity", () => {
   })
 })
 
+describe("ProviderTransform.options - gateway", () => {
+  const sessionID = "test-session-123"
+
+  const createModel = (id: string) =>
+    ({
+      id,
+      providerID: "vercel",
+      api: {
+        id,
+        url: "https://ai-gateway.vercel.sh/v3/ai",
+        npm: "@ai-sdk/gateway",
+      },
+      name: id,
+      capabilities: {
+        temperature: true,
+        reasoning: true,
+        attachment: true,
+        toolcall: true,
+        input: { text: true, audio: false, image: true, video: false, pdf: true },
+        output: { text: true, audio: false, image: false, video: false, pdf: false },
+        interleaved: false,
+      },
+      cost: {
+        input: 0.001,
+        output: 0.002,
+        cache: { read: 0.0001, write: 0.0002 },
+      },
+      limit: {
+        context: 200_000,
+        output: 8192,
+      },
+      status: "active",
+      options: {},
+      headers: {},
+      release_date: "2024-01-01",
+    }) as any
+
+  test("puts gateway defaults under gateway key", () => {
+    const model = createModel("anthropic/claude-sonnet-4")
+    const result = ProviderTransform.options({ model, sessionID, providerOptions: {} })
+    expect(result).toEqual({
+      gateway: {
+        caching: "auto",
+      },
+    })
+  })
+})
+
+describe("ProviderTransform.providerOptions", () => {
+  const createModel = (overrides: Partial<any> = {}) =>
+    ({
+      id: "test/test-model",
+      providerID: "test",
+      api: {
+        id: "test-model",
+        url: "https://api.test.com",
+        npm: "@ai-sdk/openai",
+      },
+      name: "Test Model",
+      capabilities: {
+        temperature: true,
+        reasoning: true,
+        attachment: true,
+        toolcall: true,
+        input: { text: true, audio: false, image: true, video: false, pdf: false },
+        output: { text: true, audio: false, image: false, video: false, pdf: false },
+        interleaved: false,
+      },
+      cost: {
+        input: 0.001,
+        output: 0.002,
+        cache: { read: 0.0001, write: 0.0002 },
+      },
+      limit: {
+        context: 200_000,
+        output: 64_000,
+      },
+      status: "active",
+      options: {},
+      headers: {},
+      release_date: "2024-01-01",
+      ...overrides,
+    }) as any
+
+  test("uses sdk key for non-gateway models", () => {
+    const model = createModel({
+      providerID: "my-bedrock",
+      api: {
+        id: "anthropic.claude-sonnet-4",
+        url: "https://bedrock.aws",
+        npm: "@ai-sdk/amazon-bedrock",
+      },
+    })
+
+    expect(ProviderTransform.providerOptions(model, { cachePoint: { type: "default" } })).toEqual({
+      bedrock: { cachePoint: { type: "default" } },
+    })
+  })
+
+  test("uses gateway model provider slug for gateway models", () => {
+    const model = createModel({
+      providerID: "vercel",
+      api: {
+        id: "anthropic/claude-sonnet-4",
+        url: "https://ai-gateway.vercel.sh/v3/ai",
+        npm: "@ai-sdk/gateway",
+      },
+    })
+
+    expect(ProviderTransform.providerOptions(model, { thinking: { type: "enabled", budgetTokens: 12_000 } })).toEqual({
+      anthropic: { thinking: { type: "enabled", budgetTokens: 12_000 } },
+    })
+  })
+
+  test("falls back to gateway key when gateway api id is unscoped", () => {
+    const model = createModel({
+      id: "anthropic/claude-sonnet-4",
+      providerID: "vercel",
+      api: {
+        id: "claude-sonnet-4",
+        url: "https://ai-gateway.vercel.sh/v3/ai",
+        npm: "@ai-sdk/gateway",
+      },
+    })
+
+    expect(ProviderTransform.providerOptions(model, { thinking: { type: "enabled", budgetTokens: 12_000 } })).toEqual({
+      gateway: { thinking: { type: "enabled", budgetTokens: 12_000 } },
+    })
+  })
+
+  test("splits gateway routing options from provider-specific options", () => {
+    const model = createModel({
+      providerID: "vercel",
+      api: {
+        id: "anthropic/claude-sonnet-4",
+        url: "https://ai-gateway.vercel.sh/v3/ai",
+        npm: "@ai-sdk/gateway",
+      },
+    })
+
+    expect(
+      ProviderTransform.providerOptions(model, {
+        gateway: { order: ["vertex", "anthropic"] },
+        thinking: { type: "enabled", budgetTokens: 12_000 },
+      }),
+    ).toEqual({
+      gateway: { order: ["vertex", "anthropic"] },
+      anthropic: { thinking: { type: "enabled", budgetTokens: 12_000 } },
+    } as any)
+  })
+
+  test("falls back to gateway key when model id has no provider slug", () => {
+    const model = createModel({
+      id: "claude-sonnet-4",
+      providerID: "vercel",
+      api: {
+        id: "claude-sonnet-4",
+        url: "https://ai-gateway.vercel.sh/v3/ai",
+        npm: "@ai-sdk/gateway",
+      },
+    })
+
+    expect(ProviderTransform.providerOptions(model, { reasoningEffort: "high" })).toEqual({
+      gateway: { reasoningEffort: "high" },
+    })
+  })
+
+  test("maps amazon slug to bedrock for provider options", () => {
+    const model = createModel({
+      providerID: "vercel",
+      api: {
+        id: "amazon/nova-2-lite",
+        url: "https://ai-gateway.vercel.sh/v3/ai",
+        npm: "@ai-sdk/gateway",
+      },
+    })
+
+    expect(ProviderTransform.providerOptions(model, { reasoningConfig: { type: "enabled" } })).toEqual({
+      bedrock: { reasoningConfig: { type: "enabled" } },
+    })
+  })
+
+  test("uses groq slug for groq models", () => {
+    const model = createModel({
+      providerID: "vercel",
+      api: {
+        id: "groq/llama-3.3-70b-versatile",
+        url: "https://ai-gateway.vercel.sh/v3/ai",
+        npm: "@ai-sdk/gateway",
+      },
+    })
+
+    expect(ProviderTransform.providerOptions(model, { reasoningFormat: "parsed" })).toEqual({
+      groq: { reasoningFormat: "parsed" },
+    })
+  })
+})
+
 describe("ProviderTransform.schema - gemini array items", () => {
   test("adds missing items for array properties", () => {
     const geminiModel = {
@@ -824,79 +1022,6 @@ describe("ProviderTransform.message - anthropic empty content filtering", () => 
   })
 })
 
-describe("ProviderTransform.message - OpenRouter/Kilo Gateway thinking stripping", () => {
-  const claudeViaGateway = {
-    id: "openrouter/anthropic/claude-3-5-sonnet",
-    providerID: "openrouter",
-    api: {
-      id: "anthropic/claude-3-5-sonnet",
-      url: "https://openrouter.ai",
-      npm: "@kilocode/kilo-gateway",
-    },
-    name: "Claude 3.5 Sonnet (Gateway)",
-    capabilities: {
-      temperature: true,
-      reasoning: true,
-      attachment: true,
-      toolcall: true,
-      input: { text: true, audio: false, image: true, video: false, pdf: true },
-      output: { text: true, audio: false, image: false, video: false, pdf: false },
-      interleaved: false,
-    },
-    cost: {
-      input: 0,
-      output: 0,
-      cache: { read: 0, write: 0 },
-    },
-    limit: {
-      context: 200000,
-      output: 8192,
-    },
-    status: "active",
-    options: {},
-    headers: {},
-  } as any
-
-  test("drops messages that become empty after stripping thinking/reasoning", () => {
-    const msgs = [
-      { role: "user", content: "Hello" },
-      {
-        role: "assistant",
-        content: [{ type: "thinking", text: "..." }, { type: "reasoning", text: "..." }, { type: "redacted_thinking" }],
-      },
-      { role: "user", content: "World" },
-    ] as any[]
-
-    const result = ProviderTransform.message(msgs, claudeViaGateway, {})
-
-    expect(result).toHaveLength(2)
-    expect(result[0].content).toBe("Hello")
-    expect(result[1].content).toBe("World")
-  })
-
-  test("keeps messages that still contain supported parts after stripping", () => {
-    const msgs = [
-      {
-        role: "assistant",
-        content: [
-          { type: "thinking", text: "..." },
-          { type: "text", text: "Answer" },
-        ],
-      },
-    ] as any[]
-
-    const result = ProviderTransform.message(msgs, claudeViaGateway, {})
-
-    expect(result).toHaveLength(1)
-    expect(result[0].content).toHaveLength(1)
-    // applyCaching adds providerOptions because model.api.id includes "anthropic"
-    const part = result[0].content[0] as any
-    expect(part.type).toEqual("text")
-    expect(part.text).toEqual("Answer")
-    expect(part.providerOptions?.openrouter?.cacheControl).toEqual({ type: "ephemeral" })
-  })
-})
-
 describe("ProviderTransform.message - strip openai metadata when store=false", () => {
   const openaiModel = {
     id: "openai/gpt-5",
@@ -1305,42 +1430,140 @@ describe("ProviderTransform.message - claude w/bedrock custom inference profile"
   })
 })
 
-// Helper function moved to top level for reuse across test suites
-const createMockModel = (overrides: Partial<any> = {}): any => ({
-  id: "test/test-model",
-  providerID: "test",
-  api: {
-    id: "test-model",
-    url: "https://api.test.com",
-    npm: "@ai-sdk/openai",
-  },
-  name: "Test Model",
-  capabilities: {
-    temperature: true,
-    reasoning: true,
-    attachment: true,
-    toolcall: true,
-    input: { text: true, audio: false, image: true, video: false, pdf: false },
-    output: { text: true, audio: false, image: false, video: false, pdf: false },
-    interleaved: false,
-  },
-  cost: {
-    input: 0.001,
-    output: 0.002,
-    cache: { read: 0.0001, write: 0.0002 },
-  },
-  limit: {
-    context: 200_000,
-    output: 64_000,
-  },
-  status: "active",
-  options: {},
-  headers: {},
-  release_date: "2024-01-01",
-  ...overrides,
+describe("ProviderTransform.message - cache control on gateway", () => {
+  const createModel = (overrides: Partial<any> = {}) =>
+    ({
+      id: "anthropic/claude-sonnet-4",
+      providerID: "vercel",
+      api: {
+        id: "anthropic/claude-sonnet-4",
+        url: "https://ai-gateway.vercel.sh/v3/ai",
+        npm: "@ai-sdk/gateway",
+      },
+      name: "Claude Sonnet 4",
+      capabilities: {
+        temperature: true,
+        reasoning: true,
+        attachment: true,
+        toolcall: true,
+        input: { text: true, audio: false, image: true, video: false, pdf: true },
+        output: { text: true, audio: false, image: false, video: false, pdf: false },
+        interleaved: false,
+      },
+      cost: { input: 0.001, output: 0.002, cache: { read: 0.0001, write: 0.0002 } },
+      limit: { context: 200_000, output: 8192 },
+      status: "active",
+      options: {},
+      headers: {},
+      ...overrides,
+    }) as any
+
+  test("gateway does not set cache control for anthropic models", () => {
+    const model = createModel()
+    const msgs = [
+      {
+        role: "system",
+        content: [{ type: "text", text: "You are a helpful assistant" }],
+      },
+      {
+        role: "user",
+        content: "Hello",
+      },
+    ] as any[]
+
+    const result = ProviderTransform.message(msgs, model, {}) as any[]
+
+    expect(result[0].content[0].providerOptions).toBeUndefined()
+    expect(result[0].providerOptions).toBeUndefined()
+  })
+
+  test("non-gateway anthropic keeps existing cache control behavior", () => {
+    const model = createModel({
+      providerID: "anthropic",
+      api: {
+        id: "claude-sonnet-4",
+        url: "https://api.anthropic.com",
+        npm: "@ai-sdk/anthropic",
+      },
+    })
+    const msgs = [
+      {
+        role: "system",
+        content: "You are a helpful assistant",
+      },
+      {
+        role: "user",
+        content: "Hello",
+      },
+    ] as any[]
+
+    const result = ProviderTransform.message(msgs, model, {}) as any[]
+
+    expect(result[0].providerOptions).toEqual({
+      anthropic: {
+        cacheControl: {
+          type: "ephemeral",
+        },
+      },
+      openrouter: {
+        cacheControl: {
+          type: "ephemeral",
+        },
+      },
+      bedrock: {
+        cachePoint: {
+          type: "default",
+        },
+      },
+      openaiCompatible: {
+        cache_control: {
+          type: "ephemeral",
+        },
+      },
+      copilot: {
+        copilot_cache_control: {
+          type: "ephemeral",
+        },
+      },
+    })
+  })
 })
 
 describe("ProviderTransform.variants", () => {
+  const createMockModel = (overrides: Partial<any> = {}): any => ({
+    id: "test/test-model",
+    providerID: "test",
+    api: {
+      id: "test-model",
+      url: "https://api.test.com",
+      npm: "@ai-sdk/openai",
+    },
+    name: "Test Model",
+    capabilities: {
+      temperature: true,
+      reasoning: true,
+      attachment: true,
+      toolcall: true,
+      input: { text: true, audio: false, image: true, video: false, pdf: false },
+      output: { text: true, audio: false, image: false, video: false, pdf: false },
+      interleaved: false,
+    },
+    cost: {
+      input: 0.001,
+      output: 0.002,
+      cache: { read: 0.0001, write: 0.0002 },
+    },
+    limit: {
+      context: 200_000,
+      output: 64_000,
+    },
+    status: "active",
+    options: {},
+    headers: {},
+    release_date: "2024-01-01",
+    ...overrides,
+  })
+
   test("returns empty object when model has no reasoning capabilities", () => {
     const model = createMockModel({
       capabilities: { reasoning: false },
@@ -1594,6 +1817,92 @@ describe("ProviderTransform.variants", () => {
   // kilocode_change end
 
   describe("@ai-sdk/gateway", () => {
+    test("anthropic sonnet 4.6 models return adaptive thinking options", () => {
+      const model = createMockModel({
+        id: "anthropic/claude-sonnet-4-6",
+        providerID: "gateway",
+        api: {
+          id: "anthropic/claude-sonnet-4-6",
+          url: "https://gateway.ai",
+          npm: "@ai-sdk/gateway",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["low", "medium", "high", "max"])
+      expect(result.medium).toEqual({
+        thinking: {
+          type: "adaptive",
+        },
+        effort: "medium",
+      })
+    })
+
+    test("anthropic sonnet 4.6 dot-format models return adaptive thinking options", () => {
+      const model = createMockModel({
+        id: "anthropic/claude-sonnet-4-6",
+        providerID: "gateway",
+        api: {
+          id: "anthropic/claude-sonnet-4.6",
+          url: "https://gateway.ai",
+          npm: "@ai-sdk/gateway",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["low", "medium", "high", "max"])
+      expect(result.medium).toEqual({
+        thinking: {
+          type: "adaptive",
+        },
+        effort: "medium",
+      })
+    })
+
+    test("anthropic opus 4.6 dot-format models return adaptive thinking options", () => {
+      const model = createMockModel({
+        id: "anthropic/claude-opus-4-6",
+        providerID: "gateway",
+        api: {
+          id: "anthropic/claude-opus-4.6",
+          url: "https://gateway.ai",
+          npm: "@ai-sdk/gateway",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["low", "medium", "high", "max"])
+      expect(result.high).toEqual({
+        thinking: {
+          type: "adaptive",
+        },
+        effort: "high",
+      })
+    })
+
+    test("anthropic models return anthropic thinking options", () => {
+      const model = createMockModel({
+        id: "anthropic/claude-sonnet-4",
+        providerID: "gateway",
+        api: {
+          id: "anthropic/claude-sonnet-4",
+          url: "https://gateway.ai",
+          npm: "@ai-sdk/gateway",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["high", "max"])
+      expect(result.high).toEqual({
+        thinking: {
+          type: "enabled",
+          budgetTokens: 16000,
+        },
+      })
+      expect(result.max).toEqual({
+        thinking: {
+          type: "enabled",
+          budgetTokens: 31999,
+        },
+      })
+    })
+
     test("returns OPENAI_EFFORTS with reasoningEffort", () => {
       const model = createMockModel({
         id: "gateway/gateway-model",
@@ -1927,6 +2236,26 @@ describe("ProviderTransform.variants", () => {
   })
 
   describe("@ai-sdk/anthropic", () => {
+    test("sonnet 4.6 returns adaptive thinking options", () => {
+      const model = createMockModel({
+        id: "anthropic/claude-sonnet-4-6",
+        providerID: "anthropic",
+        api: {
+          id: "claude-sonnet-4-6",
+          url: "https://api.anthropic.com",
+          npm: "@ai-sdk/anthropic",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["low", "medium", "high", "max"])
+      expect(result.high).toEqual({
+        thinking: {
+          type: "adaptive",
+        },
+        effort: "high",
+      })
+    })
+
     test("returns high and max with thinking config", () => {
       const model = createMockModel({
         id: "anthropic/claude-4",
@@ -1955,6 +2284,26 @@ describe("ProviderTransform.variants", () => {
   })
 
   describe("@ai-sdk/amazon-bedrock", () => {
+    test("anthropic sonnet 4.6 returns adaptive reasoning options", () => {
+      const model = createMockModel({
+        id: "bedrock/anthropic-claude-sonnet-4-6",
+        providerID: "bedrock",
+        api: {
+          id: "anthropic.claude-sonnet-4-6",
+          url: "https://bedrock.amazonaws.com",
+          npm: "@ai-sdk/amazon-bedrock",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["low", "medium", "high", "max"])
+      expect(result.max).toEqual({
+        reasoningConfig: {
+          type: "adaptive",
+          maxReasoningEffort: "max",
+        },
+      })
+    })
+
     test("returns WIDELY_SUPPORTED_EFFORTS with reasoningConfig", () => {
       const model = createMockModel({
         id: "bedrock/llama-4",
@@ -2016,12 +2365,16 @@ describe("ProviderTransform.variants", () => {
       const result = ProviderTransform.variants(model)
       expect(Object.keys(result)).toEqual(["low", "high"])
       expect(result.low).toEqual({
-        includeThoughts: true,
-        thinkingLevel: "low",
+        thinkingConfig: {
+          includeThoughts: true,
+          thinkingLevel: "low",
+        },
       })
       expect(result.high).toEqual({
-        includeThoughts: true,
-        thinkingLevel: "high",
+        thinkingConfig: {
+          includeThoughts: true,
+          thinkingLevel: "high",
+        },
       })
     })
   })
@@ -2086,12 +2439,10 @@ describe("ProviderTransform.variants", () => {
       const result = ProviderTransform.variants(model)
       expect(Object.keys(result)).toEqual(["none", "low", "medium", "high"])
       expect(result.none).toEqual({
-        includeThoughts: true,
-        thinkingLevel: "none",
+        reasoningEffort: "none",
       })
       expect(result.low).toEqual({
-        includeThoughts: true,
-        thinkingLevel: "low",
+        reasoningEffort: "low",
       })
     })
   })
@@ -2111,51 +2462,89 @@ describe("ProviderTransform.variants", () => {
       expect(result).toEqual({})
     })
   })
-})
 
-// kilocode_change start
-describe("ProviderTransform.smallOptions", () => {
-  describe("@kilocode/kilo-gateway", () => {
-    test("claude models return reasoningEffort minimal", () => {
-      const model = createMockModel({
-        id: "kilo/anthropic/claude-sonnet-4",
-        providerID: "kilo",
-        api: {
-          id: "anthropic/claude-sonnet-4",
-          url: "https://gateway.kilo.ai",
-          npm: "@kilocode/kilo-gateway",
-        },
+  // kilocode_change start
+  describe("ProviderTransform.smallOptions", () => {
+    describe("@kilocode/kilo-gateway", () => {
+      test("claude models return reasoningEffort minimal", () => {
+        const model = createMockModel({
+          id: "kilo/anthropic/claude-sonnet-4",
+          providerID: "kilo",
+          api: {
+            id: "anthropic/claude-sonnet-4",
+            url: "https://gateway.kilo.ai",
+            npm: "@kilocode/kilo-gateway",
+          },
+        })
+        const result = ProviderTransform.smallOptions(model)
+        expect(result).toEqual({ reasoningEffort: "minimal" })
       })
-      const result = ProviderTransform.smallOptions(model)
-      expect(result).toEqual({ reasoningEffort: "minimal" })
+
+      test("non-claude models use reasoningEffort format", () => {
+        const model = createMockModel({
+          id: "kilo/openai/gpt-4",
+          providerID: "kilo",
+          api: {
+            id: "openai/gpt-4",
+            url: "https://gateway.kilo.ai",
+            npm: "@kilocode/kilo-gateway",
+          },
+        })
+        const result = ProviderTransform.smallOptions(model)
+        expect(result).toEqual({ reasoningEffort: "minimal" })
+      })
+
+      test("google models disable reasoning", () => {
+        const model = createMockModel({
+          id: "kilo/google/gemini-2.0-flash",
+          providerID: "kilo",
+          api: {
+            id: "google/gemini-2.0-flash",
+            url: "https://gateway.kilo.ai",
+            npm: "@kilocode/kilo-gateway",
+          },
+        })
+        const result = ProviderTransform.smallOptions(model)
+        expect(result).toEqual({ reasoning: { enabled: false } })
+      })
     })
+  })
 
-    test("non-claude models use reasoningEffort format", () => {
+  describe("@ai-sdk/groq", () => {
+    test("returns none and WIDELY_SUPPORTED_EFFORTS with thinkingLevel", () => {
       const model = createMockModel({
-        id: "kilo/openai/gpt-4",
-        providerID: "kilo",
+        id: "groq/llama-4",
+        providerID: "groq",
         api: {
-          id: "openai/gpt-4",
-          url: "https://gateway.kilo.ai",
-          npm: "@kilocode/kilo-gateway",
+          id: "llama-4-sc",
+          url: "https://api.groq.com",
+          npm: "@ai-sdk/groq",
         },
       })
-      const result = ProviderTransform.smallOptions(model)
-      expect(result).toEqual({ reasoningEffort: "minimal" })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["none", "low", "medium", "high"])
+      expect(result.none).toEqual({
+        reasoningEffort: "none",
+      })
+      expect(result.low).toEqual({
+        reasoningEffort: "low",
+      })
     })
+  })
 
-    test("google models disable reasoning", () => {
+  describe("@ai-sdk/perplexity", () => {
+    test("returns empty object", () => {
       const model = createMockModel({
-        id: "kilo/google/gemini-2.0-flash",
-        providerID: "kilo",
+        id: "perplexity/sonar-plus",
+        providerID: "perplexity",
         api: {
-          id: "google/gemini-2.0-flash",
-          url: "https://gateway.kilo.ai",
-          npm: "@kilocode/kilo-gateway",
+          id: "sonar-plus",
+          url: "https://api.perplexity.ai",
+          npm: "@ai-sdk/perplexity",
         },
       })
-      const result = ProviderTransform.smallOptions(model)
-      expect(result).toEqual({ reasoning: { enabled: false } })
+      const result = ProviderTransform.variants(model)
+      expect(result).toEqual({})
     })
   })
 })

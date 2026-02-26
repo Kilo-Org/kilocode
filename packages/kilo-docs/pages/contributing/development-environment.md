@@ -6,10 +6,8 @@ description: "Set up your development environment for contributing"
 # Development Environment
 
 {% callout type="info" %}
-**New versions of the VS Code extension and CLI are being developed in [Kilo-Org/Kilo](https://github.com/Kilo-Org/Kilo)** (extension at `packages/kilo-vscode`, CLI at `packages/opencode`). For extension and CLI development, please head over to that repository.
+**New versions of the VS Code extension and CLI are being developed in [Kilo-Org/kilocode](https://github.com/Kilo-Org/kilocode)** (extension at `packages/kilo-vscode`, CLI at `packages/opencode`). For extension and CLI development, please head over to that repository.
 {% /callout %}
-
-<!-- Please refer to the [DEVELOPMENT.md](https://github.com/Kilo-Org/kilocode/blob/main/DEVELOPMENT.md) guide in the main repository for detailed instructions on setting up the development environment. -->
 
 This document will help you set up your development environment and understand how to work with the codebase. Whether you're fixing bugs, adding features, or just exploring the code, this guide will get you started.
 
@@ -18,7 +16,7 @@ This document will help you set up your development environment and understand h
 Before you begin, make sure you have the following installed:
 
 1. **Git** - For version control
-2. **Node.js** (version [v20.18.1](https://github.com/Kilo-Org/kilocode/blob/main/.nvmrc) or higher recommended) and npm
+2. **Node.js** (version v20.18.1 (See `.nvmrc` for latest) or higher recommended) and npm
 3. **Visual Studio Code** - Our recommended IDE for development
 
 ## Getting Started
@@ -52,7 +50,7 @@ While not strictly necessary for running the extension, these extensions are rec
 - [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) - Integrates ESLint into VS Code.
 - [Prettier - Code formatter](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) - Integrates Prettier into VS Code.
 
-The full list of recommended extensions is [here](https://github.com/Kilo-Org/kilocode/blob/main/.vscode/extensions.json)
+The full list of recommended extensions is in `.vscode/extensions.json`
 
 ### Project Structure
 
@@ -151,7 +149,7 @@ E2E tests verify the extension works correctly within VSCode:
    npm run test:integration
    ```
 
-For more details on E2E tests, see [e2e/VSCODE_INTEGRATION_TESTS.md](https://github.com/Kilo-Org/kilocode/blob/main/e2e/VSCODE_INTEGRATION_TESTS.md).
+For more details on E2E tests, see e2e/VSCODE_INTEGRATION_TESTS
 
 ## Linting and Type Checking
 

@@ -88,6 +88,20 @@ export const PromptInput: Component = () => {
       }
     }
 
+    if (message.type === "appendChatBoxMessage") {
+      const current = text()
+      const separator = current && !current.endsWith("\n") ? "\n\n" : ""
+      const next = current + separator + message.text
+      setText(next)
+      setGhostText("")
+      if (textareaRef) {
+        textareaRef.value = next
+        adjustHeight()
+        textareaRef.focus()
+        textareaRef.scrollTop = textareaRef.scrollHeight
+      }
+    }
+
     if (message.type === "triggerTask") {
       if (isBusy() || isDisabled()) return
       const sel = session.selected()
@@ -150,6 +164,17 @@ export const PromptInput: Component = () => {
     if (!textareaRef) return
     textareaRef.style.height = "auto"
     textareaRef.style.height = `${Math.min(textareaRef.scrollHeight, 200)}px`
+  }
+
+  const handlePaste = (e: ClipboardEvent) => {
+    imageAttach.handlePaste(e)
+    // After pasting text, the textarea content changes but the layout may not
+    // have reflowed yet, causing the caret position to be visually out of sync.
+    // Defer height recalculation to after the browser completes the reflow.
+    requestAnimationFrame(() => {
+      adjustHeight()
+      syncHighlightScroll()
+    })
   }
 
   const handleInput = (e: InputEvent) => {
@@ -304,7 +329,7 @@ export const PromptInput: Component = () => {
             value={text()}
             onInput={handleInput}
             onKeyDown={handleKeyDown}
-            onPaste={imageAttach.handlePaste}
+            onPaste={handlePaste}
             onScroll={syncHighlightScroll}
             disabled={isDisabled()}
             rows={1}

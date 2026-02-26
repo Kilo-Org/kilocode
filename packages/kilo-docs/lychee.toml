@@ -1,0 +1,29 @@
+root_dir = "."
+fallback_extensions = ["md"]
+remap = ["kilo-docs/docs kilo-docs/pages"]
+
+format = "detailed"
+max_redirects = 2
+exclude_path = ["node_modules"]
+
+accept = [
+  "200", 
+  "403", 
+  "429",
+  "301",
+  "307",
+]
+
+exclude = [
+  '\.png$',
+  'https://synthetic.new/user-settings/api',
+  'https://platform.slack-edge.com/img/add_to_slack.png',
+  'https://console.groq.com/pages/models',
+  'https://glama.ai/settings/gateway/api-keys',
+  '^https?://(api|console)\.mistral\.ai',
+  '^https?://(app|console)\.requesty\.ai',
+  '^https?://(cloud|console)\.google\.ai',
+  'https://opencode.ai/pages/config',
+  '^localhost:3000/',
+  'https://tbench.ai/'
+]

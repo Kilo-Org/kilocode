@@ -41,7 +41,7 @@ Every task is automatically classified into one of these categories:
 
 #### Understanding Task Completion
 
-A task is considered "completed" when Kilo Code uses the [`attempt_completion`](/automate/tools/attempt-completion) tool to formally mark it as finished. Tasks without this completion marker are classified as incomplete, even if you consider them done. This distinction helps clean up abandoned or experimental tasks more aggressively.
+A task is considered "completed" when Kilo Code uses the [`attempt_completion`](/docs/automate/tools/attempt-completion) tool to formally mark it as finished. Tasks without this completion marker are classified as incomplete, even if you consider them done. This distinction helps clean up abandoned or experimental tasks more aggressively.
 
 ### Cleanup Process
 
@@ -102,7 +102,7 @@ Default: 30 days
 Minimum: 1 day
 ```
 
-Tasks successfully completed via the [`attempt_completion`](/automate/tools/attempt-completion) tool are retained for this period. These tasks typically represent finished work that may still be useful for reference.
+Tasks successfully completed via the [`attempt_completion`](/docs/automate/tools/attempt-completion) tool are retained for this period. These tasks typically represent finished work that may still be useful for reference.
 
 #### Incomplete Tasks
 
@@ -240,9 +240,9 @@ Task data is stored in your VS Code global storage location:
 
 ## Related Features
 
-- [**Checkpoints**](/code-with-ai/features/checkpoints): Version control for tasks that can be restored
-- [**Settings Management**](/getting-started/settings): Export/import settings including cleanup configuration
-- [**Task History**](/code-with-ai/agents/chat-interface): Managing and organizing your task history
+- [**Checkpoints**](/docs/code-with-ai/features/checkpoints): Version control for tasks that can be restored
+- [**Settings Management**](/docs/getting-started/settings): Export/import settings including cleanup configuration
+- [**Task History**](/docs/code-with-ai/agents/chat-interface): Managing and organizing your task history
 
 ## Frequently Asked Questions
 

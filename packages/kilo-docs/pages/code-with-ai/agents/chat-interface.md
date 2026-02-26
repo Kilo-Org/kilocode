@@ -10,7 +10,7 @@ description: "Learn how to use the Kilo Code chat interface effectively"
 {% /callout %}
 
 {% callout type="note" title="Prefer quick completions?" %}
-If you're typing code in the editor and want AI to finish your line or block, check out [Autocomplete](/docs/basic-usage/autocomplete) instead. Chat is best for larger tasks, explanations, and multi-file changes.
+If you're typing code in the editor and want AI to finish your line or block, check out [Autocomplete](/docs/code-with-ai/features/autocomplete) instead. Chat is best for larger tasks, explanations, and multi-file changes.
 {% /callout %}
 
 ## Quick Setup
@@ -41,7 +41,7 @@ Find the Kilo Code icon ({% kilo-code-icon /%}) in VS Code's Primary Side Bar. C
 {% callout type="info" title="Chat vs Autocomplete" %}
 **Use chat** when you need to describe what you want, ask questions, or make changes across multiple files.
 
-**Use [autocomplete](/docs/basic-usage/autocomplete)** when you're already typing code and want the AI to finish your thought inline.
+**Use [autocomplete](/docs/code-with-ai/features/autocomplete)** when you're already typing code and want the AI to finish your thought inline.
 {% /callout %}
 
 ## The Chat Interface
@@ -73,19 +73,19 @@ Find the Kilo Code icon ({% kilo-code-icon /%}) in VS Code's Primary Side Bar. C
 
 ## Common Mistakes to Avoid
 
-| Instead of this...                | Try this                                                                  |
-| --------------------------------- | ------------------------------------------------------------------------- |
-| "Fix the code"                    | "Fix the bug in `calculateTotal` that returns incorrect results"          |
-| Assuming Kilo knows context       | Use `@` to reference specific files                                       |
-| Multiple unrelated tasks          | Submit one focused request at a time                                      |
-| Technical jargon overload         | Clear, straightforward language works best                                |
-| Using chat for tiny code changes. | Use [autocomplete](/docs/basic-usage/autocomplete) for inline completions |
+| Instead of this...                | Try this                                                                            |
+| --------------------------------- | ----------------------------------------------------------------------------------- |
+| "Fix the code"                    | "Fix the bug in `calculateTotal` that returns incorrect results"                    |
+| Assuming Kilo knows context       | Use `@` to reference specific files                                                 |
+| Multiple unrelated tasks          | Submit one focused request at a time                                                |
+| Technical jargon overload         | Clear, straightforward language works best                                          |
+| Using chat for tiny code changes. | Use [autocomplete](/docs/code-with-ai/features/autocomplete) for inline completions |
 
 **Why it matters:** Kilo Code works best when you communicate like you're talking to a smart teammate who needs clear direction.
 
 ## Suggested Responses
 
-When Kilo Code needs more information to complete a task, it uses the [`ask_followup_question`](/docs/features/tools/ask-followup-question) tool. To make responding easier and faster, Kilo Code often provides suggested answers alongside the question.
+When Kilo Code needs more information to complete a task, it uses the [`ask_followup_question`](/docs/automate/tools/ask-followup-question) tool. To make responding easier and faster, Kilo Code often provides suggested answers alongside the question.
 
 {% image src="/docs/img/suggested-responses/suggested-responses.png" alt="Example of Kilo Code asking a question with suggested response buttons below it" width="800" caption="Suggested responses appear as clickable buttons below questions" /%}
 

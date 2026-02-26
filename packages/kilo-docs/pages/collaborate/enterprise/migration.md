@@ -57,7 +57,7 @@ Switch to **Kilo Teams** or **Kilo Enterprise** from other AI coding tools and e
 
 **Step 2: Kilo Setup**
 
-1. **Create organization** at [app.kilocode.com](https://app.kilocode.com)
+1. **Create organization** at [app.kilo.ai](https://app.kilo.ai)
 2. **Subscribe to Teams ($15/user/month)** or **Enterprise ([Contact Sales](https://kilo.ai/contact-sales))**
 3. **Configure team settings** and usage policies
 4. **Purchase initial AI credits** based on usage estimates
@@ -355,7 +355,7 @@ Kilo Code also supports mode-specific rules (`.kilocode/rules-{mode}/`), which C
 - **Discord:** Join our migration support channel
 - **Consultation:** Schedule free migration planning call
 - **Documentation:**
-  - [Business migration guide](/docs/plans/migration) (this page)
+  - [Business migration guide](/docs/collaborate/enterprise/migration) (this page)
   - [Technical migration guide](/docs/getting-started/migrating) (rules and configurations)
 
 ## Success Stories
@@ -383,9 +383,9 @@ Kilo Code also supports mode-specific rules (`.kilocode/rules-{mode}/`), which C
 
 ## Next Steps
 
-- [Get started with your team](/docs/plans/getting-started)
-- [Explore team management features](/docs/plans/team-management)
-- [Understand billing and pricing](/docs/plans/billing)
+- [Get started with your team](/docs/collaborate/teams/getting-started)
+- [Explore team management features](/docs/collaborate/teams/team-management)
+- [Understand billing and pricing](/docs/collaborate/teams/billing)
 - [Migrate your rules and configurations](/docs/getting-started/migrating) (technical guide)
 
 Ready to make the switch? Contact our migration team at migrations@kilo.ai to plan your transition to transparent AI coding.

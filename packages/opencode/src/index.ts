@@ -6,6 +6,8 @@ import { UI } from "./cli/ui"
 import { Installation } from "./installation"
 import { NamedError } from "@opencode-ai/util/error"
 import { FormatError } from "./cli/error"
+import type { ResolveMessage } from "bun" // kilocode_change
+import { Filesystem } from "./util/filesystem"
 // import { GithubCommand } from "./cli/cmd/github" // kilocode_change
 import { EOL } from "os"
 // kilocode_change start - Import telemetry, instance disposal, and legacy migration

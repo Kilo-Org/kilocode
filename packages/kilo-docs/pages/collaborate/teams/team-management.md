@@ -11,7 +11,7 @@ Owners have full administrative oversight including billing, seat allocation, an
 
 Only Owners can conduct team management activities.
 
-Members can use the Kilo Code extension and see data on the team's usage in the [usage dashboard](/docs/plans/analytics).
+Members can use the Kilo Code extension and see data on the team's usage in the [usage dashboard](/docs/collaborate/teams/analytics).
 
 ## Adding Team Members
 
@@ -53,8 +53,8 @@ The Organization tab shows:
 
 ## Next Steps
 
-- [Understand billing and credits](/docs/plans/billing)
-- [Explore usage analytics](/docs/plans/analytics)
-- [Learn about team roles and permissions](/docs/plans/team-management)
+- [Understand billing and credits](/docs/collaborate/teams/billing)
+- [Explore usage analytics](/docs/collaborate/teams/analytics)
+- [Learn about team roles and permissions](/docs/collaborate/teams/team-management)
 
 Effective team management ensures your organization maximizes the benefits of AI-assisted development while maintaining cost control and security.

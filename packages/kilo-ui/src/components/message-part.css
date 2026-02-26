@@ -10,3 +10,47 @@
     display: none;
   }
 }
+
+/* Prevent long title/path from hiding the collapsible expand arrow */
+[data-component="edit-trigger"],
+[data-component="write-trigger"] {
+  [data-slot="message-part-title"] {
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  [data-slot="message-part-title-filename"] {
+    margin-right: 8px;
+  }
+
+  [data-slot="message-part-title-text"] {
+    flex-shrink: 0;
+  }
+}
+
+html[data-theme="kilo-vscode"] [data-component="bash-output"] {
+  background: var(--vscode-terminal-background, var(--vscode-panel-background));
+
+  [data-slot="bash-pre"] code {
+    color: var(--vscode-terminal-foreground, var(--vscode-editor-foreground));
+  }
+
+  [data-slot="bash-scroll"] {
+    scrollbar-width: thin;
+    scrollbar-color: var(--vscode-scrollbarSlider-background) transparent;
+
+    &::-webkit-scrollbar-thumb {
+      background: var(--vscode-scrollbarSlider-background);
+      border-radius: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+      background: var(--vscode-scrollbarSlider-hoverBackground);
+    }
+  }
+
+  [data-slot="bash-copy"] [data-component="icon-button"][data-variant="secondary"] {
+    background: var(--vscode-terminal-background, var(--vscode-panel-background));
+  }
+}

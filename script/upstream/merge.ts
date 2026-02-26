@@ -10,7 +10,7 @@
  * Options:
  *   --version <version>  Target upstream version (e.g., v1.1.49)
  *   --commit <hash>      Target upstream commit hash
- *   --base-branch <name> Base branch to merge into (default: dev)
+ *   --base-branch <name> Base branch to merge into (default: main)
  *   --dry-run            Preview changes without applying them
  *   --no-push            Don't push branches to remote
  *   --report-only        Only generate conflict report, don't merge

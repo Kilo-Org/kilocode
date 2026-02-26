@@ -1,19 +1,48 @@
 {
   "name": "kilo-code",
-  "displayName": "Kilo Code",
-  "description": "Kilo Code AI Agent & Autocomplete",
-  "version": "7.0.24",
+  "displayName": "Kilo Code: AI Coding Agent, Copilot, and Autocomplete",
+  "description": "Open Source AI coding agent that generates code from natural language, automates tasks, and runs terminal commands. Features inline autocomplete, browser automation, automated refactoring, and custom modes for planning, coding, and debugging. Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM.",
+  "version": "7.0.30",
+  "icon": "assets/icons/logo-outline-black.png",
+  "galleryBanner": {
+    "color": "#FFFFFF",
+    "theme": "light"
+  },
   "publisher": "kilocode",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Kilo-Org/kilo.git",
+    "url": "https://github.com/Kilo-Org/kilocode.git",
     "directory": "packages/kilo-vscode"
   },
   "engines": {
     "vscode": "^1.108.0"
   },
+  "author": {
+    "name": "Kilo Code"
+  },
   "categories": [
-    "Other"
+    "AI",
+    "Chat",
+    "Programming Languages",
+    "Education",
+    "Snippets",
+    "Testing"
+  ],
+  "keywords": [
+    "kilo",
+    "claude",
+    "dev",
+    "mcp",
+    "openrouter",
+    "coding",
+    "agent",
+    "autonomous",
+    "chatgpt",
+    "sonnet",
+    "ai",
+    "llama",
+    "Kilo Code",
+    "kilocode"
   ],
   "activationEvents": [],
   "main": "./dist/extension.js",
@@ -57,6 +86,11 @@
         "command": "kilo-code.new.historyButtonClicked",
         "title": "History",
         "icon": "$(history)"
+      },
+      {
+        "command": "kilo-code.new.cloudHistoryButtonClicked",
+        "title": "Cloud History",
+        "icon": "$(cloud)"
       },
       {
         "command": "kilo-code.new.profileButtonClicked",
@@ -108,6 +142,12 @@
         "icon": "$(terminal)"
       },
       {
+        "command": "kilo-code.new.agentManager.toggleDiff",
+        "title": "Agent Manager: Toggle Diff Panel",
+        "category": "Kilo Code",
+        "icon": "$(diff)"
+      },
+      {
         "command": "kilo-code.new.agentManager.focusPanel",
         "title": "Agent Manager: Focus Panel",
         "category": "Kilo Code",
@@ -131,6 +171,11 @@
       {
         "command": "kilo-code.new.agentManager.closeWorktree",
         "title": "Agent Manager: Close Worktree",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.agentManager.advancedWorktree",
+        "title": "Agent Manager: Advanced New Worktree",
         "category": "Kilo Code"
       },
       {
@@ -211,18 +256,23 @@
           "when": "view == kilo-code.new.sidebarView"
         },
         {
-          "command": "kilo-code.new.historyButtonClicked",
+          "command": "kilo-code.new.cloudHistoryButtonClicked",
           "group": "navigation@3",
           "when": "view == kilo-code.new.sidebarView"
         },
         {
-          "command": "kilo-code.new.profileButtonClicked",
+          "command": "kilo-code.new.historyButtonClicked",
           "group": "navigation@4",
           "when": "view == kilo-code.new.sidebarView"
         },
         {
-          "command": "kilo-code.new.settingsButtonClicked",
+          "command": "kilo-code.new.profileButtonClicked",
           "group": "navigation@5",
+          "when": "view == kilo-code.new.sidebarView"
+        },
+        {
+          "command": "kilo-code.new.settingsButtonClicked",
+          "group": "navigation@6",
           "when": "view == kilo-code.new.sidebarView"
         }
       ],
@@ -333,6 +383,12 @@
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {
+        "command": "kilo-code.new.agentManager.toggleDiff",
+        "key": "ctrl+d",
+        "mac": "cmd+d",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
         "command": "kilo-code.new.agentManager.focusPanel",
         "key": "ctrl+.",
         "mac": "cmd+.",
@@ -360,6 +416,12 @@
         "command": "kilo-code.new.agentManager.closeWorktree",
         "key": "ctrl+shift+w",
         "mac": "cmd+shift+w",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.agentManager.advancedWorktree",
+        "key": "ctrl+shift+n",
+        "mac": "cmd+shift+n",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       }
     ],
