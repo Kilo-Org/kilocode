@@ -6,6 +6,7 @@ import { FileIcon } from "@kilocode/kilo-ui/file-icon"
 import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Button } from "@kilocode/kilo-ui/button"
+import { RadioGroup } from "@kilocode/kilo-ui/radio-group"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
@@ -29,6 +30,7 @@ interface DiffPanelProps {
   diffs: WorktreeFileDiff[]
   loading: boolean
   diffStyle?: "unified" | "split"
+  onDiffStyleChange?: (style: "unified" | "split") => void
   comments: ReviewComment[]
   onCommentsChange: (comments: ReviewComment[]) => void
   onSendAll?: () => void
@@ -420,10 +422,40 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     sendAllToChat()
   }
 
+  const totals = createMemo(() => ({
+    files: props.diffs.length,
+    additions: props.diffs.reduce((sum, diff) => sum + diff.additions, 0),
+    deletions: props.diffs.reduce((sum, diff) => sum + diff.deletions, 0),
+  }))
+
   return (
     <div class="am-diff-panel" onKeyDown={handleKeyDown}>
       <div class="am-diff-header">
-        <span class="am-diff-header-title">Changes</span>
+        <div class="am-diff-header-main">
+          <span class="am-diff-header-title">Changes</span>
+          <Show when={props.diffs.length > 0}>
+            <>
+              <RadioGroup
+                options={["unified", "split"] as const}
+                current={props.diffStyle ?? "unified"}
+                size="small"
+                value={(style) => style}
+                label={(style) => (style === "unified" ? "Unified" : "Split")}
+                onSelect={(style) => {
+                  if (!style) return
+                  props.onDiffStyleChange?.(style)
+                }}
+              />
+              <span class="am-diff-header-stats">
+                <span>
+                  {totals().files} file{totals().files !== 1 ? "s" : ""}
+                </span>
+                <span class="am-diff-header-adds">+{totals().additions}</span>
+                <span class="am-diff-header-dels">-{totals().deletions}</span>
+              </span>
+            </>
+          </Show>
+        </div>
         <div class="am-diff-header-actions">
           <Show when={props.onExpand}>
             <Tooltip value={t("command.review.toggle")} placement="bottom">

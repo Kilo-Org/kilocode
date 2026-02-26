@@ -731,6 +731,38 @@ button.am-section-toggle:hover .am-section-label {
   color: var(--text-weak);
 }
 
+.am-diff-header-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.am-diff-header-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-size-small);
+  color: var(--text-weak);
+  white-space: nowrap;
+}
+
+.am-diff-header-adds {
+  color: var(--syntax-diff-add, #318430);
+  font-weight: 500;
+}
+
+.am-diff-header-dels {
+  color: var(--syntax-diff-delete, #da3319);
+  font-weight: 500;
+}
+
+.am-diff-header [data-component="radio-group"],
+.am-diff-header [data-component="radio-group"] [data-slot="radio-group-item-label"],
+.am-diff-header [data-component="radio-group"] [data-slot="radio-group-item-control"] {
+  cursor: pointer;
+}
+
 .am-diff-loading {
   display: flex;
   align-items: center;

@@ -10,7 +10,7 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { ResizeHandle } from "@kilocode/kilo-ui/resize-handle"
-import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pierre/diffs"
+import type { DiffLineAnnotation, AnnotationSide } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
 import { FileTree } from "./FileTree"
 import { sanitizeReviewComments, type ReviewComment } from "./review-comments"
@@ -167,15 +167,6 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
       result.push({ side: d.side, lineNumber: d.line, metadata: draftMeta })
     }
     return result
-  }
-
-  const commentedLinesForFile = (file: string): SelectedLineRange[] => {
-    const fileComments = commentsByFile().get(file) ?? []
-    return fileComments.map((c) => ({
-      start: c.line,
-      end: c.line,
-      side: c.side,
-    }))
   }
 
   const focusWhenConnected = (el: HTMLTextAreaElement) => {
@@ -595,7 +586,6 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                               after={{ name: diff.file, contents: diff.after }}
                               diffStyle={props.diffStyle}
                               annotations={annotationsForFile(diff.file)}
-                              commentedLines={commentedLinesForFile(diff.file)}
                               renderAnnotation={buildAnnotation}
                               enableGutterUtility={true}
                               onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}

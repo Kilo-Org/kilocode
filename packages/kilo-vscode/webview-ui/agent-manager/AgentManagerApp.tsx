@@ -1946,6 +1946,7 @@ const AgentManagerContent: Component = () => {
                     diffs={diffDatas()[selection() === LOCAL ? LOCAL : (session.currentSessionID() ?? "")] ?? []}
                     loading={diffLoading()}
                     diffStyle={reviewDiffStyle()}
+                    onDiffStyleChange={setSharedDiffStyle}
                     comments={reviewComments()}
                     onCommentsChange={setReviewCommentsForSelection}
                     onClose={() => setDiffOpen(false)}
