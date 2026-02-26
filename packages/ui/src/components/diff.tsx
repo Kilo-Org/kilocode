@@ -64,10 +64,6 @@ export function Diff<T>(props: DiffProps<T>) {
   let dragMoved = false
   let lastSelection: SelectedLineRange | null = null
   let pendingSelectionEnd = false
-  // kilocode_change start
-  let lastCommentedPass = 0
-  let lastCommentedKey = ""
-  // kilocode_change end
 
   const [local, others] = splitProps(props, [
     "before",
@@ -599,17 +595,8 @@ export function Diff<T>(props: DiffProps<T>) {
   })
 
   createEffect(() => {
-    // kilocode_change start
-    const pass = rendered()
-    if (pass === 0) return
+    rendered()
     const ranges = local.commentedLines ?? []
-    const key = ranges
-      .map((range) => `${range.start}:${range.end}:${range.side ?? ""}:${range.endSide ?? ""}`)
-      .join("|")
-    if (lastCommentedPass === pass && lastCommentedKey === key) return
-    lastCommentedPass = pass
-    lastCommentedKey = key
-    // kilocode_change end
     requestAnimationFrame(() => applyCommentedLines(ranges))
   })
 

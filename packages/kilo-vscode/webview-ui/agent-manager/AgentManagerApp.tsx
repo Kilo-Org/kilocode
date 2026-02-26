@@ -689,22 +689,6 @@ const AgentManagerContent: Component = () => {
     }
     window.addEventListener("keydown", preventDefaults)
 
-    const sendReviewCommentsShortcut = (e: KeyboardEvent) => {
-      if (e.key !== "Enter") return
-      if (!(e.metaKey || e.ctrlKey)) return
-      if (!(reviewActive() || diffOpen())) return
-      const sel = selection()
-      if (!sel || sel === LOCAL) return
-      const target = e.target
-      if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) return
-      if (target instanceof HTMLElement && target.isContentEditable) return
-      if (reviewComments().length === 0) return
-      e.preventDefault()
-      e.stopPropagation()
-      sendReviewCommentsToChat()
-    }
-    window.addEventListener("keydown", sendReviewCommentsShortcut)
-
     // When the panel regains focus (e.g. returning from terminal), focus the prompt
     // and clear any stale body styles left by Kobalte modal overlays (dropdowns/dialogs
     // set pointer-events:none and overflow:hidden on body, but cleanup never runs if
@@ -911,7 +895,6 @@ const AgentManagerContent: Component = () => {
     onCleanup(() => {
       window.removeEventListener("message", handler)
       window.removeEventListener("keydown", preventDefaults)
-      window.removeEventListener("keydown", sendReviewCommentsShortcut)
       window.removeEventListener("focus", onWindowFocus)
       unsubCreate()
       unsubSessions()
@@ -1013,26 +996,6 @@ const AgentManagerContent: Component = () => {
     if (reviewDiffStyle() === style) return
     setReviewDiffStyle(style)
     vscode.postMessage({ type: "agentManager.setReviewDiffStyle", style })
-  }
-
-  const sendReviewCommentsToChat = () => {
-    const all = reviewComments()
-    if (all.length === 0) return
-    const lines = ["## Review Comments", ""]
-    for (const c of all) {
-      lines.push(`**${c.file}** (line ${c.line}):`)
-      if (c.selectedText) {
-        lines.push("```")
-        lines.push(c.selectedText)
-        lines.push("```")
-      }
-      lines.push(c.comment)
-      lines.push("")
-    }
-    const text = lines.join("\n")
-    window.dispatchEvent(new MessageEvent("message", { data: { type: "appendChatBoxMessage", text } }))
-    setReviewCommentsForSelection([])
-    if (reviewActive()) closeReviewTab()
   }
 
   const handleConfigureSetupScript = () => {
@@ -1234,7 +1197,7 @@ const AgentManagerContent: Component = () => {
       return
     }
     if (sel) {
-      const order = tabIds()
+      const order = tabIds().filter((id) => id !== REVIEW_TAB_ID)
       if (order.length > 0) vscode.postMessage({ type: "agentManager.setTabOrder", key: sel, order })
     }
   }

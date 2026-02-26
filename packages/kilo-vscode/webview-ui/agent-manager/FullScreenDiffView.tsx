@@ -71,6 +71,26 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   const setComments = (next: ReviewComment[]) => props.onCommentsChange(next)
   const updateComments = (updater: (prev: ReviewComment[]) => ReviewComment[]) => setComments(updater(comments()))
 
+  const preserveScroll = (fn: () => void) => {
+    const el = scrollRef
+    if (!el) return fn()
+    const top = el.scrollTop
+    fn()
+    requestAnimationFrame(() => {
+      el.scrollTop = top
+      requestAnimationFrame(() => {
+        el.scrollTop = top
+      })
+    })
+  }
+
+  const cancelDraft = () => {
+    preserveScroll(() => {
+      setDraft(null)
+      draftMeta = null
+    })
+  }
+
   // Auto-open files when diffs arrive
   createEffect(
     on(
@@ -97,20 +117,26 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   // --- CRUD ---
 
   const addComment = (file: string, side: AnnotationSide, line: number, text: string, selectedText: string) => {
-    const id = `c-${++nextId}-${Date.now()}`
-    updateComments((prev) => [...prev, { id, file, side, line, comment: text, selectedText }])
-    setDraft(null)
-    draftMeta = null
+    preserveScroll(() => {
+      const id = `c-${++nextId}-${Date.now()}`
+      updateComments((prev) => [...prev, { id, file, side, line, comment: text, selectedText }])
+      setDraft(null)
+      draftMeta = null
+    })
   }
 
   const updateComment = (id: string, text: string) => {
-    updateComments((prev) => prev.map((c) => (c.id === id ? { ...c, comment: text } : c)))
-    setEditing(null)
+    preserveScroll(() => {
+      updateComments((prev) => prev.map((c) => (c.id === id ? { ...c, comment: text } : c)))
+      setEditing(null)
+    })
   }
 
   const deleteComment = (id: string) => {
-    updateComments((prev) => prev.filter((c) => c.id !== id))
-    if (editing() === id) setEditing(null)
+    preserveScroll(() => {
+      updateComments((prev) => prev.filter((c) => c.id !== id))
+      if (editing() === id) setEditing(null)
+    })
   }
 
   createEffect(
@@ -230,8 +256,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
       }
       cancelBtn.addEventListener("click", (e) => {
         e.stopPropagation()
-        setDraft(null)
-        draftMeta = null
+        cancelDraft()
       })
       submitBtn.addEventListener("click", (e) => {
         e.stopPropagation()
@@ -240,8 +265,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
       textarea.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
           e.preventDefault()
-          setDraft(null)
-          draftMeta = null
+          cancelDraft()
         }
         if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault()
@@ -281,7 +305,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
 
       cancelBtn.addEventListener("click", (e) => {
         e.stopPropagation()
-        setEditing(null)
+        preserveScroll(() => setEditing(null))
       })
       saveBtn.addEventListener("click", (e) => {
         e.stopPropagation()
@@ -291,7 +315,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
       textarea.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
           e.preventDefault()
-          setEditing(null)
+          preserveScroll(() => setEditing(null))
         }
         if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault()
@@ -377,7 +401,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     }
     const text = lines.join("\n")
     window.dispatchEvent(new MessageEvent("message", { data: { type: "appendChatBoxMessage", text } }))
-    setComments([])
+    preserveScroll(() => setComments([]))
     props.onSendAll?.()
   }
 
