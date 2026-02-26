@@ -54,6 +54,32 @@ export class SessionTerminalManager {
   }
 
   /**
+   * Show (or create) a terminal for the local workspace (no session required).
+   * Used when the user triggers a terminal in local mode without an active session.
+   */
+  private static readonly LOCAL_KEY = "__local__"
+
+  showLocalTerminal(): void {
+    if (this.showExisting(SessionTerminalManager.LOCAL_KEY, false)) return
+
+    const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+    if (!cwd) {
+      this.log("showLocalTerminal: no workspace folder open")
+      vscode.window.showWarningMessage("Open a folder to use the local terminal")
+      return
+    }
+
+    this.showOrCreate(SessionTerminalManager.LOCAL_KEY, cwd, "Agent: local")
+  }
+
+  /**
+   * Show the existing local terminal if one was previously created (used on context switch).
+   */
+  showExistingLocal(): boolean {
+    return this.showExisting(SessionTerminalManager.LOCAL_KEY)
+  }
+
+  /**
    * Show the terminal for a session if it already exists (used when switching sessions).
    * Returns true if the terminal was shown, false if no terminal exists for the session.
    * Pass preserveFocus=true to keep focus on the current editor (default for session switching).

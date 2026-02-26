@@ -13,6 +13,7 @@ permissions:
 
 jobs:
   close-non-compliant:
+    if: false # kilocode_change - disabled: not needed in kilocode repo
     runs-on: ubuntu-latest
     steps:
       - name: Close non-compliant issues and PRs after 2 hours
@@ -64,6 +65,15 @@ jobs:
                 issue_number: item.number,
                 body: closeMessage,
               });
+
+              try {
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: item.number,
+                  name: 'needs:compliance',
+                });
+              } catch (e) {}
 
               if (isPR) {
                 await github.rest.pulls.update({

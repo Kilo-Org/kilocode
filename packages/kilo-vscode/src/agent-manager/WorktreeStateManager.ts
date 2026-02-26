@@ -11,6 +11,7 @@
 
 import * as path from "path"
 import * as fs from "fs"
+import { normalizePath } from "./git-import"
 
 export interface Worktree {
   id: string
@@ -35,6 +36,7 @@ interface StateFile {
   sessions: Record<string, Omit<ManagedSession, "id">>
   tabOrder?: Record<string, string[]>
   sessionsCollapsed?: boolean
+  reviewDiffStyle?: "unified" | "split"
 }
 
 const STATE_FILE = "agent-manager.json"
@@ -52,6 +54,7 @@ export class WorktreeStateManager {
   private sessions = new Map<string, ManagedSession>()
   private tabOrder: Record<string, string[]> = {}
   private collapsed = false
+  private reviewDiffStyle: "unified" | "split" = "unified"
   private readonly log: (msg: string) => void
   private saving: Promise<void> | undefined
   private pendingSave = false
@@ -75,8 +78,9 @@ export class WorktreeStateManager {
 
   /** Find worktree by its filesystem path. */
   findWorktreeByPath(wtPath: string): Worktree | undefined {
+    const target = normalizePath(wtPath)
     for (const wt of this.worktrees.values()) {
-      if (wt.path === wtPath) return wt
+      if (normalizePath(wt.path) === target) return wt
     }
     return undefined
   }
@@ -229,6 +233,19 @@ export class WorktreeStateManager {
   }
 
   // ---------------------------------------------------------------------------
+  // Review diff style
+  // ---------------------------------------------------------------------------
+
+  getReviewDiffStyle(): "unified" | "split" {
+    return this.reviewDiffStyle
+  }
+
+  setReviewDiffStyle(value: "unified" | "split"): void {
+    this.reviewDiffStyle = value
+    void this.save()
+  }
+
+  // ---------------------------------------------------------------------------
   // Persistence
   // ---------------------------------------------------------------------------
 
@@ -239,6 +256,7 @@ export class WorktreeStateManager {
       this.worktrees.clear()
       this.sessions.clear()
       this.tabOrder = {}
+      this.reviewDiffStyle = "unified"
 
       for (const [id, wt] of Object.entries(data.worktrees ?? {})) {
         this.worktrees.set(id, { id, ...wt })
@@ -250,6 +268,9 @@ export class WorktreeStateManager {
         this.tabOrder = data.tabOrder
       }
       this.collapsed = data.sessionsCollapsed ?? false
+      if (data.reviewDiffStyle === "split") {
+        this.reviewDiffStyle = "split"
+      }
       this.log(`Loaded state: ${this.worktrees.size} worktrees, ${this.sessions.size} sessions`)
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code
@@ -319,9 +340,21 @@ export class WorktreeStateManager {
     if (this.collapsed) {
       data.sessionsCollapsed = true
     }
+    if (this.reviewDiffStyle === "split") {
+      data.reviewDiffStyle = "split"
+    }
 
-    const dir = path.dirname(this.file)
-    if (!fs.existsSync(dir)) await fs.promises.mkdir(dir, { recursive: true })
-    await fs.promises.writeFile(this.file, JSON.stringify(data, null, 2), "utf-8")
+    try {
+      const dir = path.dirname(this.file)
+      if (!fs.existsSync(dir)) await fs.promises.mkdir(dir, { recursive: true })
+      await fs.promises.writeFile(this.file, JSON.stringify(data, null, 2), "utf-8")
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code
+      if (code === "ENOENT") {
+        this.log("State directory was removed, skipping save")
+        return
+      }
+      throw error
+    }
   }
 }

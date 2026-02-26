@@ -1,6 +1,7 @@
 import { Component, Show, createSignal, createMemo, createEffect, onMount } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Card } from "@kilocode/kilo-ui/card"
+import { Icon } from "@kilocode/kilo-ui/icon"
 import { Select } from "@kilocode/kilo-ui/select"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useVSCode } from "../context/vscode"
@@ -14,6 +15,7 @@ export interface ProfileViewProps {
   profileData: ProfileData | null | undefined
   deviceAuth: DeviceAuthState
   onLogin: () => void
+  onBack?: () => void
 }
 
 const formatBalance = (amount: number): string => {
@@ -97,26 +99,24 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
   }
 
   return (
-    <div style={{ padding: "16px" }}>
-      <h2
-        style={{
-          "font-size": "16px",
-          "font-weight": "600",
-          "margin-top": "0",
-          "margin-bottom": "12px",
-          color: "var(--vscode-foreground)",
-        }}
-      >
-        {language.t("profile.title")}
-      </h2>
-
+    <div style={{ display: "flex", "flex-direction": "column", height: "100%" }}>
       <div
         style={{
-          height: "1px",
-          background: "var(--vscode-panel-border)",
-          "margin-bottom": "16px",
+          padding: "12px 16px",
+          "border-bottom": "1px solid var(--border-weak-base)",
+          display: "flex",
+          "align-items": "center",
+          gap: "8px",
         }}
-      />
+      >
+        <Tooltip value={language.t("common.goBack")} placement="bottom">
+          <Button variant="ghost" size="small" onClick={() => props.onBack?.()}>
+            <Icon name="arrow-left" />
+          </Button>
+        </Tooltip>
+        <h2 style={{ "font-size": "16px", "font-weight": "600", margin: 0 }}>{language.t("profile.title")}</h2>
+      </div>
+      <div style={{ padding: "16px" }}>
 
       <Show
         when={props.profileData}
@@ -265,6 +265,7 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
           </div>
         )}
       </Show>
+      </div>
     </div>
   )
 }

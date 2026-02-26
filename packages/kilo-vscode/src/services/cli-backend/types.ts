@@ -35,7 +35,15 @@ export interface MessageInfo {
     created: number
     completed?: number
   }
-  // Present on assistant messages
+  agent?: string
+  providerID?: string
+  modelID?: string
+  model?: { providerID: string; modelID: string }
+  mode?: string
+  parentID?: string
+  path?: { cwd: string; root: string }
+  error?: { name: string; data?: Record<string, unknown> }
+  summary?: { title?: string; body?: string; diffs?: unknown[] } | boolean
   cost?: number
   tokens?: TokenUsage
 }
@@ -76,6 +84,10 @@ export type SSEEvent =
   | { type: "session.idle"; properties: { sessionID: string } }
   | { type: "message.updated"; properties: { info: MessageInfo } }
   | { type: "message.part.updated"; properties: { part: MessagePart; delta?: string } }
+  | {
+      type: "message.part.delta"
+      properties: { sessionID: string; messageID: string; partID: string; field: string; delta: string }
+    }
   | { type: "permission.asked"; properties: PermissionRequest }
   | {
       type: "permission.replied"
@@ -337,7 +349,58 @@ export interface Config {
   experimental?: ExperimentalConfig
 }
 
+// Cloud session from the Kilo cloud API (cli_sessions_v2)
+export interface CloudSessionInfo {
+  session_id: string
+  title: string | null
+  created_at: string
+  updated_at: string
+  version: number
+}
+
+export interface CloudSessionsResponse {
+  cliSessions: CloudSessionInfo[]
+  nextCursor: string | null
+}
+
+// Full cloud session data for preview (from /kilo/cloud/session/:id)
+export interface CloudSessionData {
+  info: {
+    id: string
+    title: string
+    time: { created: number; updated: number }
+    [key: string]: unknown
+  }
+  messages: Array<{
+    info: {
+      id: string
+      sessionID: string
+      role: "user" | "assistant"
+      time: { created: number; completed?: number }
+      cost?: { input: number; output: number; reasoning?: number; cache?: { read: number; write: number } }
+      tokens?: { input: number; output: number; reasoning?: number; cache?: { read: number; write: number } }
+      [key: string]: unknown
+    }
+    parts: Array<{
+      id: string
+      sessionID: string
+      messageID: string
+      type: string
+      [key: string]: unknown
+    }>
+  }>
+}
+
 /** VS Code editor context sent alongside messages to the CLI backend */
+export interface WorktreeFileDiff {
+  file: string
+  before: string
+  after: string
+  additions: number
+  deletions: number
+  status?: "added" | "deleted" | "modified"
+}
+
 export interface EditorContext {
   /** Workspace-relative paths of currently visible editors */
   visibleFiles?: string[]

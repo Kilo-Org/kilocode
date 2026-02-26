@@ -12,7 +12,10 @@ import type {
   McpConfig,
   Config,
   KilocodeNotification,
+  CloudSessionsResponse,
+  CloudSessionData,
   EditorContext,
+  WorktreeFileDiff,
 } from "./types"
 import { extractHttpErrorMessage, parseSSEDataLine } from "./http-utils"
 
@@ -218,7 +221,13 @@ export class HttpClient {
     sessionId: string,
     parts: Array<{ type: "text"; text: string } | { type: "file"; mime: string; url: string }>,
     directory: string,
-    options?: { providerID?: string; modelID?: string; agent?: string; variant?: string; editorContext?: EditorContext },
+    options?: {
+      providerID?: string
+      modelID?: string
+      agent?: string
+      variant?: string
+      editorContext?: EditorContext
+    },
   ): Promise<void> {
     const body: Record<string, unknown> = { parts }
     if (options?.providerID && options?.modelID) {
@@ -344,6 +353,54 @@ export class HttpClient {
     } catch (err) {
       console.warn("[Kilo] Failed to fetch notifications:", err)
       return []
+    }
+  }
+
+  /**
+   * Fetch cloud CLI sessions from the Kilo cloud API.
+   * Returns null if not logged in or if the request fails.
+   */
+  async getCloudSessions(params?: {
+    cursor?: string
+    limit?: number
+    gitUrl?: string
+  }): Promise<CloudSessionsResponse | null> {
+    try {
+      const query = new URLSearchParams()
+      if (params?.cursor) query.set("cursor", params.cursor)
+      if (params?.limit) query.set("limit", String(params.limit))
+      if (params?.gitUrl) query.set("gitUrl", params.gitUrl)
+      const qs = query.toString()
+      return await this.request<CloudSessionsResponse>("GET", `/kilo/cloud-sessions${qs ? `?${qs}` : ""}`)
+    } catch (err) {
+      console.warn("[Kilo] Failed to fetch cloud sessions:", err)
+      return null
+    }
+  }
+
+  /**
+   * Fetch full cloud session data for read-only preview.
+   * Returns null if the session is not found or the request fails.
+   */
+  async getCloudSession(sessionId: string): Promise<CloudSessionData | null> {
+    try {
+      return await this.request<CloudSessionData>("GET", `/kilo/cloud/session/${sessionId}`)
+    } catch (err) {
+      console.warn("[Kilo] Failed to fetch cloud session:", err)
+      return null
+    }
+  }
+
+  /**
+   * Import a cloud session into local storage with fresh IDs.
+   * Returns the imported session info, or null on failure.
+   */
+  async importCloudSession(sessionId: string, directory: string): Promise<SessionInfo | null> {
+    try {
+      return await this.request<SessionInfo>("POST", "/kilo/cloud/session/import", { sessionId }, { directory })
+    } catch (err) {
+      console.warn("[Kilo] Failed to import cloud session:", err)
+      return null
     }
   }
 
@@ -523,5 +580,24 @@ export class HttpClient {
    */
   async disconnectMcpServer(name: string, directory: string): Promise<boolean> {
     return this.request<boolean>("POST", `/mcp/${encodeURIComponent(name)}/disconnect`, undefined, { directory })
+  }
+
+  // ============================================
+  // Worktree Diff Methods
+  // ============================================
+
+  /**
+   * Get file diffs for a worktree compared to its base branch.
+   * Returns full before/after file contents for each changed file.
+   */
+  async getWorktreeDiff(directory: string, baseBranch: string): Promise<WorktreeFileDiff[]> {
+    const params = new URLSearchParams({ base: baseBranch })
+    return (
+      (await this.request<WorktreeFileDiff[]>("GET", `/experimental/worktree/diff?${params.toString()}`, undefined, {
+        directory,
+        allowEmpty: true,
+        silent: true,
+      })) ?? []
+    )
   }
 }

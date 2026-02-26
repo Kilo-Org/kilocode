@@ -54,9 +54,6 @@
   height: 100%;
   overflow-y: auto;
   padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
 }
 
 .message-list-loading {
@@ -68,6 +65,13 @@
   color: var(--vscode-descriptionForeground);
   gap: 12px;
   font-size: 13px;
+}
+
+.message-list-content-empty {
+  display: flex;
+  min-height: 100%;
+  align-items: center;
+  justify-content: center;
 }
 
 .message-list-empty {
@@ -274,7 +278,7 @@
   flex: 1;
   min-height: 54px;
   max-height: 200px;
-  padding: 8px;
+  padding: 8px 8px calc(8px + 1.4em);
   color: transparent;
   caret-color: var(--vscode-input-foreground);
   font-family: var(--vscode-font-family);
@@ -305,6 +309,7 @@
 }
 
 .prompt-input-ghost-wrapper .prompt-input {
+  display: block;
   position: relative;
   z-index: 1;
   background: transparent;
@@ -319,7 +324,7 @@
   right: 0;
   bottom: 0;
   pointer-events: none;
-  padding: 8px;
+  padding: 8px 8px calc(8px + 1.4em);
   font-family: var(--vscode-font-family);
   font-size: 13px;
   line-height: 1.4;
@@ -764,6 +769,27 @@
   white-space: nowrap;
 }
 
+/* Cloud Session List */
+.cloud-session-list {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.cloud-session-filters {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.cloud-session-load-more {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  padding: 8px;
+}
+
 /* ============================================
    Kilo Notifications
    ============================================ */
@@ -853,4 +879,187 @@
   color: var(--vscode-descriptionForeground);
   white-space: nowrap;
   padding: 0 4px;
+}
+
+/* ============================================
+   SessionTurn layout classes
+   ============================================ */
+
+[data-component="session-turn"].session-turn-root {
+  width: 100%;
+  min-width: 0;
+  height: auto;
+}
+
+[data-slot="session-turn-content"].session-turn-content {
+  height: auto !important;
+  overflow: visible !important;
+}
+
+.session-turn-container {
+  width: 100%;
+  padding: 0 4px;
+}
+
+/* ============================================
+   Question Prompt
+   ============================================ */
+
+[data-component="question-prompt"] {
+  [data-slot="question-header"] {
+    padding: 0;
+  }
+
+  [data-slot="question-progress-nav"] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--icon-base);
+    cursor: pointer;
+    transition:
+      color 0.15s ease,
+      background-color 0.15s ease;
+
+    &:hover:not(:disabled) {
+      color: var(--icon-strong-base);
+      background: var(--surface-base-hover);
+    }
+
+    &:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+  }
+
+  [data-slot="question-footer"] {
+    padding: 8px;
+    padding-top: 8px;
+    margin-top: 0;
+  }
+
+  [data-slot="question-footer"] > [data-component="button"][data-variant="ghost"] {
+    border: none;
+    box-shadow: none;
+  }
+
+  [data-slot="question-footer-actions"] > [data-component="button"][data-variant="primary"] {
+    color: var(--vscode-button-foreground);
+    background-color: var(--vscode-button-background);
+    border: 1px solid var(--vscode-button-border, transparent);
+
+    &:hover:not(:disabled) {
+      background-color: var(--vscode-button-hoverBackground);
+    }
+  }
+
+  [data-slot="option-description"][data-placeholder="true"] {
+    color: var(--text-weaker);
+  }
+
+  [data-slot="question-text"] {
+    font-size: var(--font-size-base);
+    padding: 0 2px;
+  }
+
+  [data-slot="question-hint"] {
+    font-size: var(--font-size-small);
+    padding: 0 2px;
+  }
+
+  [data-slot="question-options"] {
+    margin-top: 8px;
+    gap: 4px;
+    padding: 1px 1px 4px;
+  }
+
+  [data-slot="question-option"] {
+    padding: 6px 8px;
+    border-radius: var(--radius-lg);
+    gap: 8px;
+  }
+
+  [data-slot="option-label"] {
+    font-size: var(--font-size-base);
+  }
+
+  [data-slot="option-description"] {
+    font-size: var(--font-size-small);
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  [data-slot="question-review"] {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 4px 2px;
+  }
+
+  [data-slot="review-title"] {
+    font-family: var(--font-family-sans);
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+    color: var(--text-strong);
+  }
+
+  [data-slot="review-item"] {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  [data-slot="review-label"] {
+    font-family: var(--font-family-sans);
+    font-size: var(--font-size-small);
+    color: var(--text-weak);
+  }
+
+  [data-slot="review-value"] {
+    font-family: var(--font-family-sans);
+    font-size: var(--font-size-base);
+    color: var(--text-strong);
+
+    &[data-answered="false"] {
+      color: var(--text-weaker);
+      font-style: italic;
+    }
+  }
+
+  [data-slot="custom-input-form"] {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    background-color: var(--surface-raised-stronger-non-alpha);
+    border: 1px solid var(--border-weak-base);
+    border-radius: var(--radius-lg);
+  }
+
+  [data-slot="custom-input"] {
+    flex: 1;
+    min-width: 0;
+    padding: 2px 4px;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-family: var(--font-family-sans);
+    font-size: var(--font-size-base);
+    color: var(--text-base);
+    line-height: var(--line-height-large);
+
+    &::placeholder {
+      color: var(--text-weak);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+    }
+  }
 }

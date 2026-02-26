@@ -343,6 +343,7 @@ export namespace KiloSessions {
     const session = await Session.get(sessionId)
     const diffs = await Session.diff(sessionId)
     const messages = await Array.fromAsync(MessageV2.stream(sessionId))
+    messages.reverse()
     const models = await Promise.all(
       messages
         .filter((m) => m.info.role === "user")

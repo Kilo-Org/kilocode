@@ -1,15 +1,15 @@
-# Skills system
+# Skills System
 
-- **What it is**: Discovery and management of local skills (instruction packs) with override and hot reload behavior.
+**Priority:** P2
+**Status:** 🔨 Partial
 
-## Suggested migration
+## What Exists
 
-- **Kilo CLI availability**: Already.
-- **Migration recommendation**:
-  - Prefer Kilo CLI skills as the execution/runtime mechanism.
-  - Keep packaging/shipping of Kilo-specific skills and any VS Code UI around them in the extension host.
-- **Reimplementation required?**: Partial.
+- AgentBehaviour settings "skills" subtab manages skill paths (local directories) and skill URLs (remote endpoints), persisted to `config.skills.paths` and `config.skills.urls`
 
-## Primary implementation anchors
+## Remaining Work
 
-- [`src/services/skills/`](../../src/services/skills/)
+- Skill execution runtime integration in the extension
+- Skill discovery (browse available skills)
+- Hot-reload when skill files change
+- CLI has the skills runtime — extension needs UI beyond config management

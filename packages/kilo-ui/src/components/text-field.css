@@ -6,7 +6,8 @@
     border-radius: 2px;
 
     &:focus-within:not(:has([data-readonly])) {
-      box-shadow: 0 0 0 1px var(--border-focus);
+      border-color: var(--border-focus);
+      box-shadow: none;
     }
   }
 
