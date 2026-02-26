@@ -122,7 +122,14 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
       () => props.diffs,
       (diffs) => {
         const files = diffs.map((d) => d.file)
-        setOpen((prev) => prev.filter((file) => files.includes(file)))
+        const fileSet = new Set(files)
+        // Only update open state when the file list actually changed to avoid
+        // unnecessary re-renders that reset scroll position during polling
+        setOpen((prev) => {
+          const filtered = prev.filter((file) => fileSet.has(file))
+          if (filtered.length === prev.length && prev.every((f) => fileSet.has(f))) return prev
+          return filtered
+        })
         if (diffs.length === 0) {
           setActiveFile(null)
           return
