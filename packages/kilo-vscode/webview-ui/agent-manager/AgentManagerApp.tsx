@@ -2072,7 +2072,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
                     <div class="am-dropdown-list">
                       <For each={filteredBranches()}>
                         {(branch, index) => (
-                          <div
+                          <button
                             class="am-branch-item"
                             classList={{
                               "am-branch-item-active": effectiveBaseBranch() === branch.name,
@@ -2086,6 +2086,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
                               setHighlightedIndex(0)
                             }}
                             onMouseEnter={() => setHighlightedIndex(index())}
+                            type="button"
                           >
                             <span class="am-branch-item-left">
                               <Icon name="branch" size="small" />
@@ -2102,7 +2103,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
                             <Show when={branch.lastCommitDate}>
                               <span class="am-branch-item-time">{formatRelativeDate(branch.lastCommitDate!)}</span>
                             </Show>
-                          </div>
+                          </button>
                         )}
                       </For>
                     </div>
