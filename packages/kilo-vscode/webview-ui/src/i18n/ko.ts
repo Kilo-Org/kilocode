@@ -1016,6 +1016,8 @@ export const dict = {
 
   "agentManager.diff.toggle": "차이점 전환",
   "agentManager.shortcuts.toggleDiff": "차이점 패널 전환",
+  "agentManager.shortcuts.category.quickSwitch": "빠른 전환",
+  "agentManager.shortcuts.jumpToItem": "항목 1\u20139(으)로 이동",
   "agentManager.review.sendAllToChat": "모두 채팅으로 보내기",
   "agentManager.review.sendAllToChatWithCount": "모두 채팅으로 보내기 ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",

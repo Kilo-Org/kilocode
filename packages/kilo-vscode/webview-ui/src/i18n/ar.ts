@@ -1011,6 +1011,8 @@ export const dict = {
 
   "agentManager.diff.toggle": "تبديل الفرق",
   "agentManager.shortcuts.toggleDiff": "تبديل لوحة الفرق",
+  "agentManager.shortcuts.category.quickSwitch": "التبديل السريع",
+  "agentManager.shortcuts.jumpToItem": "الانتقال إلى العنصر 1\u20139",
   "agentManager.review.sendAllToChat": "إرسال الكل إلى الدردشة",
   "agentManager.review.sendAllToChatWithCount": "إرسال الكل إلى الدردشة ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",

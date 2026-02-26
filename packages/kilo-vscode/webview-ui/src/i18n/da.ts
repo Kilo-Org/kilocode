@@ -1020,6 +1020,8 @@ export const dict = {
 
   "agentManager.diff.toggle": "Skift diff",
   "agentManager.shortcuts.toggleDiff": "Skift diff-panel",
+  "agentManager.shortcuts.category.quickSwitch": "Hurtigskift",
+  "agentManager.shortcuts.jumpToItem": "Hop til element 1\u20139",
   "agentManager.review.sendAllToChat": "Send alt til chat",
   "agentManager.review.sendAllToChatWithCount": "Send alt til chat ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",

@@ -2,6 +2,7 @@ import { type Component, createSignal, createMemo, For, Show } from "solid-js"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import type { WorktreeFileDiff } from "../src/types/messages"
+import { useLanguage } from "../src/context/language"
 import { buildFileTree, flatten, type FileTreeNode } from "./file-tree-utils"
 
 export type { FileTreeNode } from "./file-tree-utils"
@@ -107,6 +108,7 @@ const FileNode: Component<{
 }
 
 export const FileTree: Component<FileTreeProps> = (props) => {
+  const { t } = useLanguage()
   const tree = createMemo(() => flatten(buildFileTree(props.diffs)))
   const totals = createMemo(() => {
     const adds = props.diffs.reduce((s, d) => s + d.additions, 0)
@@ -131,9 +133,7 @@ export const FileTree: Component<FileTreeProps> = (props) => {
         </For>
       </div>
       <div class="am-file-tree-summary">
-        <span>
-          {totals().files} file{totals().files !== 1 ? "s" : ""}
-        </span>
+        <span>{t("session.review.filesChanged", { count: totals().files })}</span>
         <span class="am-file-tree-summary-adds">+{totals().additions}</span>
         <span class="am-file-tree-summary-dels">-{totals().deletions}</span>
       </div>

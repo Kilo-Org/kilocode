@@ -1007,6 +1007,8 @@ export const dict = {
 
   "agentManager.diff.toggle": "切換差異",
   "agentManager.shortcuts.toggleDiff": "切換差異面板",
+  "agentManager.shortcuts.category.quickSwitch": "快速切換",
+  "agentManager.shortcuts.jumpToItem": "跳至項目 1\u20139",
   "agentManager.review.sendAllToChat": "全部傳送到聊天",
   "agentManager.review.sendAllToChatWithCount": "全部傳送到聊天 ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",

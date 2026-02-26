@@ -279,7 +279,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     <div class="am-diff-panel" onKeyDown={handleKeyDown} onMouseDown={handleRootMouseDown} tabIndex={-1} ref={rootRef}>
       <div class="am-diff-header">
         <div class="am-diff-header-main">
-          <span class="am-diff-header-title">Changes</span>
+          <span class="am-diff-header-title">{t("session.review.change.other")}</span>
           <Show when={props.diffs.length > 0}>
             <>
               <RadioGroup
@@ -287,7 +287,9 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                 current={props.diffStyle ?? "unified"}
                 size="small"
                 value={(style) => style}
-                label={(style) => (style === "unified" ? "Unified" : "Split")}
+                label={(style) =>
+                  style === "unified" ? t("ui.sessionReview.diffStyle.unified") : t("ui.sessionReview.diffStyle.split")
+                }
                 onSelect={(style) => {
                   if (!style) return
                   props.onDiffStyleChange?.(style)
@@ -313,20 +315,20 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
               />
             </Tooltip>
           </Show>
-          <IconButton icon="close" size="small" variant="ghost" label="Close" onClick={props.onClose} />
+          <IconButton icon="close" size="small" variant="ghost" label={t("common.close")} onClick={props.onClose} />
         </div>
       </div>
 
       <Show when={props.loading && props.diffs.length === 0}>
         <div class="am-diff-loading">
           <Spinner />
-          <span>Computing diff...</span>
+          <span>{t("session.review.loadingChanges")}</span>
         </div>
       </Show>
 
       <Show when={!props.loading && props.diffs.length === 0}>
         <div class="am-diff-empty">
-          <span>No changes detected</span>
+          <span>{t("session.review.noChanges")}</span>
         </div>
       </Show>
 
@@ -359,12 +361,12 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                           <div data-slot="session-review-trigger-actions">
                             <Show when={isAdded()}>
                               <span data-slot="session-review-change" data-type="added">
-                                Added
+                                {t("ui.sessionReview.change.added")}
                               </span>
                             </Show>
                             <Show when={isDeleted()}>
                               <span data-slot="session-review-change" data-type="removed">
-                                Removed
+                                {t("ui.sessionReview.change.removed")}
                               </span>
                             </Show>
                             <Show when={!isAdded() && !isDeleted()}>

@@ -1047,6 +1047,8 @@ export const dict = {
 
   "agentManager.diff.toggle": "Prebaci diff",
   "agentManager.shortcuts.toggleDiff": "Prebaci panel za diff",
+  "agentManager.shortcuts.category.quickSwitch": "Brzo prebacivanje",
+  "agentManager.shortcuts.jumpToItem": "Idi na stavku 1\u20139",
   "agentManager.review.sendAllToChat": "Pošalji sve u chat",
   "agentManager.review.sendAllToChatWithCount": "Pošalji sve u chat ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",

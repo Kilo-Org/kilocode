@@ -1021,6 +1021,8 @@ export const dict = {
 
   "agentManager.diff.toggle": "Veksle diff",
   "agentManager.shortcuts.toggleDiff": "Veksle diff-panel",
+  "agentManager.shortcuts.category.quickSwitch": "Hurtigbytte",
+  "agentManager.shortcuts.jumpToItem": "Hopp til element 1\u20139",
   "agentManager.review.sendAllToChat": "Send alt til chat",
   "agentManager.review.sendAllToChatWithCount": "Send alt til chat ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",

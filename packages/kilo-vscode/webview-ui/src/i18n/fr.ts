@@ -1036,6 +1036,8 @@ export const dict = {
 
   "agentManager.diff.toggle": "Basculer le diff",
   "agentManager.shortcuts.toggleDiff": "Basculer le panneau de diff",
+  "agentManager.shortcuts.category.quickSwitch": "Changement rapide",
+  "agentManager.shortcuts.jumpToItem": "Aller à l'élément 1\u20139",
   "agentManager.review.sendAllToChat": "Tout envoyer au chat",
   "agentManager.review.sendAllToChatWithCount": "Tout envoyer au chat ({{count}})",
   "agentManager.review.sendAllShortcut.mac": "⌘Enter",
