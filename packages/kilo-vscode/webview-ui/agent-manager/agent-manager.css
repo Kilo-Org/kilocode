@@ -643,10 +643,15 @@ button.am-section-toggle:hover .am-section-label {
 }
 
 .am-diff-panel-wrapper {
+  position: relative;
   min-width: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.am-diff-panel-wrapper > [data-component="resize-handle"]::after {
+  background: var(--surface-interactive-base);
 }
 
 .am-diff-panel {

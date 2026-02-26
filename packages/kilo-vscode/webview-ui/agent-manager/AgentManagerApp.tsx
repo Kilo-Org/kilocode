@@ -1662,15 +1662,15 @@ const AgentManagerContent: Component = () => {
               </Show>
             </div>
             <Show when={diffOpen()}>
-              <ResizeHandle
-                direction="horizontal"
-                edge="end"
-                size={diffWidth()}
-                min={200}
-                max={Math.round(window.innerWidth * 0.8)}
-                onResize={(w) => setDiffWidth(Math.max(200, Math.min(w, window.innerWidth * 0.8)))}
-              />
               <div class="am-diff-panel-wrapper" style={{ width: `${diffWidth()}px`, "flex-shrink": "0" }}>
+                <ResizeHandle
+                  direction="horizontal"
+                  edge="start"
+                  size={diffWidth()}
+                  min={200}
+                  max={Math.round(window.innerWidth * 0.8)}
+                  onResize={(w) => setDiffWidth(Math.max(200, Math.min(w, window.innerWidth * 0.8)))}
+                />
                 <DiffPanel
                   diffs={diffDatas()[session.currentSessionID() ?? ""] ?? []}
                   loading={diffLoading()}
