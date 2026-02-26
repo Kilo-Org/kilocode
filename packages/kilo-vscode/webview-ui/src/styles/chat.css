@@ -309,6 +309,7 @@
 }
 
 .prompt-input-ghost-wrapper .prompt-input {
+  display: block;
   position: relative;
   z-index: 1;
   background: transparent;
