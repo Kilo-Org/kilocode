@@ -1,6 +1,6 @@
 {
   "name": "@opencode-ai/ui",
-  "version": "1.0.25",
+  "version": "7.0.30",
   "type": "module",
   "license": "MIT",
   "exports": {
@@ -52,6 +52,9 @@
     "./basic-tool": "./src/components/basic-tool.tsx",
     "./diff-changes": "./src/components/diff-changes.tsx",
     "./diff-ssr": "./src/components/diff-ssr.tsx",
+    "./dock-prompt": "./src/components/dock-prompt.tsx",
+    "./dock-surface": "./src/components/dock-surface.tsx",
+    "./scroll-view": "./src/components/scroll-view.tsx",
     "./context": "./src/context/index.ts",
     "./context/code": "./src/context/code.tsx",
     "./context/data": "./src/context/data.tsx",

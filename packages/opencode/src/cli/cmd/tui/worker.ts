@@ -137,8 +137,17 @@ export const rpc = {
   async shutdown() {
     Log.Default.info("worker shutting down")
     if (eventStream.abort) eventStream.abort.abort()
-    await Instance.disposeAll()
+    await Promise.race([
+      Instance.disposeAll(),
+      new Promise((resolve) => {
+        setTimeout(resolve, 5000).unref()
+      }),
+    ])
     if (server) server.stop(true)
+    // Clear the Rpc message channel so the worker's event loop can drain and
+    // exit naturally. Without this, the active onmessage handle keeps the
+    // worker alive even after all async work is done.
+    onmessage = null
   },
 }
 

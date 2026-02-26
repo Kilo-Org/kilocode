@@ -37,3 +37,4 @@ logs/
 
 # Telemetry ID
 telemetry-id
+tsconfig.tsbuildinfo

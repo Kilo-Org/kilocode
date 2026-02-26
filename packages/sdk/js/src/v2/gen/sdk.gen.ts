@@ -27,6 +27,7 @@ import type {
   EventTuiSessionSelect,
   EventTuiToastShow,
   ExperimentalResourceListResponses,
+  ExperimentalSessionListResponses,
   FileListResponses,
   FilePartInput,
   FilePartSource,
@@ -43,6 +44,12 @@ import type {
   GlobalEventResponses,
   GlobalHealthResponses,
   InstanceDisposeResponses,
+  KiloCloudSessionGetErrors,
+  KiloCloudSessionGetResponses,
+  KiloCloudSessionImportErrors,
+  KiloCloudSessionImportResponses,
+  KiloCloudSessionsErrors,
+  KiloCloudSessionsResponses,
   KiloFimErrors,
   KiloFimResponses,
   KiloNotificationsErrors,
@@ -116,6 +123,8 @@ import type {
   SessionCreateErrors,
   SessionCreateResponses,
   SessionDeleteErrors,
+  SessionDeleteMessageErrors,
+  SessionDeleteMessageResponses,
   SessionDeleteResponses,
   SessionDiffResponses,
   SessionForkResponses,
@@ -179,6 +188,8 @@ import type {
   WorktreeCreateErrors,
   WorktreeCreateInput,
   WorktreeCreateResponses,
+  WorktreeDiffErrors,
+  WorktreeDiffResponses,
   WorktreeListResponses,
   WorktreeRemoveErrors,
   WorktreeRemoveInput,
@@ -908,6 +919,67 @@ export class Worktree extends HeyApiClient {
       },
     })
   }
+
+  /**
+   * Get worktree diff
+   *
+   * Get file diffs for a worktree compared to its base branch. Includes uncommitted changes.
+   */
+  public diff<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "directory" }] }])
+    return (options?.client ?? this.client).get<WorktreeDiffResponses, WorktreeDiffErrors, ThrowOnError>({
+      url: "/experimental/worktree/diff",
+      ...options,
+      ...params,
+    })
+  }
+}
+
+export class Session extends HeyApiClient {
+  /**
+   * List sessions
+   *
+   * Get a list of all OpenCode sessions across projects, sorted by most recently updated. Archived sessions are excluded by default.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      roots?: boolean
+      start?: number
+      cursor?: number
+      search?: string
+      limit?: number
+      archived?: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "roots" },
+            { in: "query", key: "start" },
+            { in: "query", key: "cursor" },
+            { in: "query", key: "search" },
+            { in: "query", key: "limit" },
+            { in: "query", key: "archived" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<ExperimentalSessionListResponses, unknown, ThrowOnError>({
+      url: "/experimental/session",
+      ...options,
+      ...params,
+    })
+  }
 }
 
 export class Resource extends HeyApiClient {
@@ -932,13 +1004,18 @@ export class Resource extends HeyApiClient {
 }
 
 export class Experimental extends HeyApiClient {
+  private _session?: Session
+  get session(): Session {
+    return (this._session ??= new Session({ client: this.client }))
+  }
+
   private _resource?: Resource
   get resource(): Resource {
     return (this._resource ??= new Resource({ client: this.client }))
   }
 }
 
-export class Session extends HeyApiClient {
+export class Session2 extends HeyApiClient {
   /**
    * List sessions
    *
@@ -986,6 +1063,7 @@ export class Session extends HeyApiClient {
       parentID?: string
       title?: string
       permission?: PermissionRuleset
+      platform?: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -998,6 +1076,7 @@ export class Session extends HeyApiClient {
             { in: "body", key: "parentID" },
             { in: "body", key: "title" },
             { in: "body", key: "permission" },
+            { in: "body", key: "platform" },
           ],
         },
       ],
@@ -1489,6 +1568,13 @@ export class Session extends HeyApiClient {
       format?: OutputFormat
       system?: string
       variant?: string
+      editorContext?: {
+        visibleFiles?: Array<string>
+        openTabs?: Array<string>
+        activeFile?: string
+        shell?: string
+        timezone?: string
+      }
       parts?: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
     },
     options?: Options<never, ThrowOnError>,
@@ -1508,6 +1594,7 @@ export class Session extends HeyApiClient {
             { in: "body", key: "format" },
             { in: "body", key: "system" },
             { in: "body", key: "variant" },
+            { in: "body", key: "editorContext" },
             { in: "body", key: "parts" },
           ],
         },
@@ -1522,6 +1609,42 @@ export class Session extends HeyApiClient {
         ...options?.headers,
         ...params.headers,
       },
+    })
+  }
+
+  /**
+   * Delete message
+   *
+   * Permanently delete a specific message (and all of its parts) from a session. This does not revert any file changes that may have been made while processing the message.
+   */
+  public deleteMessage<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      messageID: string
+      directory?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "path", key: "messageID" },
+            { in: "query", key: "directory" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).delete<
+      SessionDeleteMessageResponses,
+      SessionDeleteMessageErrors,
+      ThrowOnError
+    >({
+      url: "/session/{sessionID}/message/{messageID}",
+      ...options,
+      ...params,
     })
   }
 
@@ -1579,6 +1702,13 @@ export class Session extends HeyApiClient {
       format?: OutputFormat
       system?: string
       variant?: string
+      editorContext?: {
+        visibleFiles?: Array<string>
+        openTabs?: Array<string>
+        activeFile?: string
+        shell?: string
+        timezone?: string
+      }
       parts?: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
     },
     options?: Options<never, ThrowOnError>,
@@ -1598,6 +1728,7 @@ export class Session extends HeyApiClient {
             { in: "body", key: "format" },
             { in: "body", key: "system" },
             { in: "body", key: "variant" },
+            { in: "body", key: "editorContext" },
             { in: "body", key: "parts" },
           ],
         },
@@ -2303,6 +2434,84 @@ export class Organization extends HeyApiClient {
   }
 }
 
+export class Session3 extends HeyApiClient {
+  /**
+   * Get cloud session
+   *
+   * Fetch full session data from the Kilo cloud for preview
+   */
+  public get<ThrowOnError extends boolean = false>(
+    parameters: {
+      id: string
+      directory?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "id" },
+            { in: "query", key: "directory" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<KiloCloudSessionGetResponses, KiloCloudSessionGetErrors, ThrowOnError>({
+      url: "/kilo/cloud/session/{id}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Import session from cloud
+   *
+   * Download a cloud-synced session and write it to local storage with fresh IDs.
+   */
+  public import<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      sessionId?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "body", key: "sessionId" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KiloCloudSessionImportResponses,
+      KiloCloudSessionImportErrors,
+      ThrowOnError
+    >({
+      url: "/kilo/cloud/session/import",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
+export class Cloud extends HeyApiClient {
+  private _session?: Session3
+  get session(): Session3 {
+    return (this._session ??= new Session3({ client: this.client }))
+  }
+}
+
 export class Kilo extends HeyApiClient {
   /**
    * Get Kilo Gateway profile
@@ -2385,9 +2594,48 @@ export class Kilo extends HeyApiClient {
     })
   }
 
+  /**
+   * Get cloud sessions
+   *
+   * Fetch cloud CLI sessions from Kilo API
+   */
+  public cloudSessions<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      cursor?: string
+      limit?: number
+      gitUrl?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "cursor" },
+            { in: "query", key: "limit" },
+            { in: "query", key: "gitUrl" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<KiloCloudSessionsResponses, KiloCloudSessionsErrors, ThrowOnError>({
+      url: "/kilo/cloud-sessions",
+      ...options,
+      ...params,
+    })
+  }
+
   private _organization?: Organization
   get organization(): Organization {
     return (this._organization ??= new Organization({ client: this.client }))
+  }
+
+  private _cloud?: Cloud
+  get cloud(): Cloud {
+    return (this._cloud ??= new Cloud({ client: this.client }))
   }
 }
 
@@ -3456,9 +3704,9 @@ export class OpencodeClient extends HeyApiClient {
     return (this._experimental ??= new Experimental({ client: this.client }))
   }
 
-  private _session?: Session
-  get session(): Session {
-    return (this._session ??= new Session({ client: this.client }))
+  private _session?: Session2
+  get session(): Session2 {
+    return (this._session ??= new Session2({ client: this.client }))
   }
 
   private _part?: Part

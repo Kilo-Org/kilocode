@@ -12,19 +12,20 @@ import Settings from "./components/Settings"
 import ProfileView from "./components/ProfileView"
 import { VSCodeProvider, useVSCode } from "./context/vscode"
 import { ServerProvider, useServer } from "./context/server"
-import { ProviderProvider } from "./context/provider"
+import { ProviderProvider, useProvider } from "./context/provider"
 import { ConfigProvider } from "./context/config"
 import { SessionProvider, useSession } from "./context/session"
 import { LanguageProvider } from "./context/language"
 import { ChatView } from "./components/chat"
 import { KiloNotifications } from "./components/chat/KiloNotifications"
 import SessionList from "./components/history/SessionList"
+import CloudSessionList from "./components/history/CloudSessionList"
 import { NotificationsProvider } from "./context/notifications"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
 import "./styles/chat.css"
 
-type ViewType = "newTask" | "marketplace" | "history" | "profile" | "settings"
-const VALID_VIEWS = new Set<string>(["newTask", "marketplace", "history", "profile", "settings"])
+type ViewType = "newTask" | "marketplace" | "history" | "cloudHistory" | "profile" | "settings"
+const VALID_VIEWS = new Set<string>(["newTask", "marketplace", "history", "cloudHistory", "profile", "settings"])
 
 const DummyView: Component<{ title: string }> = (props) => {
   return (
@@ -50,24 +51,34 @@ const DummyView: Component<{ title: string }> = (props) => {
 export const DataBridge: Component<{ children: any }> = (props) => {
   const session = useSession()
   const vscode = useVSCode()
+  const prov = useProvider()
+  const server = useServer()
 
   const data = createMemo(() => {
     const id = session.currentSessionID()
     const perms = id ? session.permissions().filter((p) => p.sessionID === id) : []
+    const allParts = session.allParts()
     return {
       session: session.sessions().map((s) => ({ ...s, id: s.id, role: "user" as const })) as unknown as any[],
-      session_status: {} as Record<string, any>,
+      session_status: session.allStatusMap() as unknown as Record<string, any>,
       session_diff: {} as Record<string, any[]>,
       message: id ? { [id]: session.messages() as unknown as SDKMessage[] } : {},
       part: id
         ? Object.fromEntries(
-            session
-              .messages()
-              .map((msg) => [msg.id, session.getParts(msg.id) as unknown as SDKPart[]])
-              .filter(([, parts]) => (parts as SDKPart[]).length > 0),
+            Object.entries(allParts)
+              .filter(([, parts]) => (parts as SDKPart[]).length > 0)
+              .map(([msgId, parts]) => [msgId, parts as unknown as SDKPart[]]),
           )
         : {},
       permission: id ? { [id]: perms as unknown as any[] } : {},
+      // Questions are handled directly by QuestionDock via session.questions(),
+      // not through DataProvider. The DataProvider's question field is unused here.
+      question: {},
+      provider: {
+        all: Object.values(prov.providers()) as unknown as any[],
+        connected: prov.connected(),
+        default: prov.defaults(),
+      } as unknown as any,
     }
   })
 
@@ -75,16 +86,33 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     session.respondToPermission(input.permissionID, input.response)
   }
 
-  const sync = (sessionID: string) => {
-    session.syncSession(sessionID)
+  const reply = (input: { requestID: string; answers: string[][] }) => {
+    session.replyToQuestion(input.requestID, input.answers)
+  }
+
+  const reject = (input: { requestID: string }) => {
+    session.rejectQuestion(input.requestID)
   }
 
   const open = (filePath: string, line?: number, column?: number) => {
     vscode.postMessage({ type: "openFile", filePath, line, column })
   }
 
+  const directory = () => {
+    const dir = server.workspaceDirectory()
+    if (!dir) return ""
+    return dir.endsWith("/") || dir.endsWith("\\") ? dir : dir + "/"
+  }
+
   return (
-    <DataProvider data={data()} directory="" onPermissionRespond={respond} onSyncSession={sync} onOpenFile={open}>
+    <DataProvider
+      data={data()}
+      directory={directory()}
+      onPermissionRespond={respond}
+      onQuestionReply={reply}
+      onQuestionReject={reject}
+      onOpenFile={open}
+    >
       {props.children}
     </DataProvider>
   )
@@ -121,6 +149,9 @@ const AppContent: Component = () => {
       case "historyButtonClicked":
         setCurrentView("history")
         break
+      case "cloudHistoryButtonClicked":
+        setCurrentView("cloudHistory")
+        break
       case "profileButtonClicked":
         setCurrentView("profile")
         break
@@ -140,6 +171,11 @@ const AppContent: Component = () => {
       if (message?.type === "navigate" && message.view && VALID_VIEWS.has(message.view)) {
         console.log("[Kilo New] App: 🧭 navigate:", message.view)
         setCurrentView(message.view as ViewType)
+      }
+      if (message?.type === "openCloudSession" && message.sessionId) {
+        console.log("[Kilo New] App: ☁️ openCloudSession:", message.sessionId)
+        session.selectCloudSession(message.sessionId)
+        setCurrentView("newTask")
       }
     }
     window.addEventListener("message", handler)
@@ -165,6 +201,14 @@ const AppContent: Component = () => {
         </Match>
         <Match when={currentView() === "history"}>
           <SessionList onSelectSession={handleSelectSession} />
+        </Match>
+        <Match when={currentView() === "cloudHistory"}>
+          <CloudSessionList
+            onSelectSession={(cloudSessionId) => {
+              session.selectCloudSession(cloudSessionId)
+              setCurrentView("newTask")
+            }}
+          />
         </Match>
         <Match when={currentView() === "profile"}>
           <ProfileView
