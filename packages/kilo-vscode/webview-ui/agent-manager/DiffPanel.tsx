@@ -13,18 +13,16 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type { DiffLineAnnotation, AnnotationSide } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
 import { useLanguage } from "../src/context/language"
-import { sanitizeReviewComments, type ReviewComment } from "./review-comments"
+import {
+  formatReviewCommentsMarkdown,
+  getDirectory,
+  getFilename,
+  sanitizeReviewComments,
+  type ReviewComment,
+} from "./review-comments"
+import { buildReviewAnnotation, type AnnotationMeta } from "./review-annotations"
 
 // --- Data model ---
-
-// Annotation metadata — kept as stable references for pierre's cache
-interface AnnotationMeta {
-  type: "comment" | "draft"
-  comment: ReviewComment | null
-  file: string
-  side: AnnotationSide
-  line: number
-}
 
 interface DiffPanelProps {
   diffs: WorktreeFileDiff[]
@@ -36,23 +34,6 @@ interface DiffPanelProps {
   onSendAll?: () => void
   onClose: () => void
   onExpand?: () => void
-}
-
-function getDirectory(path: string): string {
-  const idx = path.lastIndexOf("/")
-  return idx === -1 ? "" : path.slice(0, idx + 1)
-}
-
-function getFilename(path: string): string {
-  const idx = path.lastIndexOf("/")
-  return idx === -1 ? path : path.slice(idx + 1)
-}
-
-function extractLines(content: string, start: number, end: number): string {
-  return content
-    .split("\n")
-    .slice(start - 1, end)
-    .join("\n")
 }
 
 export const DiffPanel: Component<DiffPanelProps> = (props) => {
@@ -202,215 +183,32 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     return result
   }
 
-  // Focus a textarea once it's connected to the DOM (pierre renders async via slots)
-  const focusWhenConnected = (el: HTMLTextAreaElement) => {
-    let attempts = 0
-    const tick = () => {
-      if (el.isConnected) {
-        el.focus()
-        return
-      }
-      if (++attempts < 20) requestAnimationFrame(tick)
-    }
-    requestAnimationFrame(tick)
-  }
-
-  // --- renderAnnotation (vanilla DOM — called by pierre) ---
-
   const buildAnnotation = (annotation: DiffLineAnnotation<AnnotationMeta>): HTMLElement | undefined => {
-    const meta = annotation.metadata
-    if (!meta) return undefined
-
-    const wrapper = document.createElement("div")
-
-    if (meta.type === "draft") {
-      wrapper.className = "am-annotation am-annotation-draft"
-      const header = document.createElement("div")
-      header.className = "am-annotation-header"
-      header.textContent = `Comment on line ${meta.line}`
-      const textarea = document.createElement("textarea")
-      textarea.className = "am-annotation-textarea"
-      textarea.rows = 3
-      textarea.placeholder = "Leave a comment..."
-      const actions = document.createElement("div")
-      actions.className = "am-annotation-actions"
-      const cancelBtn = document.createElement("button")
-      cancelBtn.className = "am-annotation-btn"
-      cancelBtn.textContent = "Cancel"
-      const submitBtn = document.createElement("button")
-      submitBtn.className = "am-annotation-btn am-annotation-btn-submit"
-      submitBtn.textContent = "Comment"
-      actions.appendChild(cancelBtn)
-      actions.appendChild(submitBtn)
-      wrapper.appendChild(header)
-      wrapper.appendChild(textarea)
-      wrapper.appendChild(actions)
-
-      focusWhenConnected(textarea)
-
-      const submit = () => {
-        const text = textarea.value.trim()
-        if (!text) return
-        // Extract selected text from the diff content
-        const diff = props.diffs.find((d) => d.file === meta.file)
-        const content = meta.side === "deletions" ? (diff?.before ?? "") : (diff?.after ?? "")
-        const selected = extractLines(content, meta.line, meta.line)
-        addComment(meta.file, meta.side, meta.line, text, selected)
-      }
-      cancelBtn.addEventListener("click", (e) => {
-        e.stopPropagation()
-        cancelDraft()
-      })
-      submitBtn.addEventListener("click", (e) => {
-        e.stopPropagation()
-        submit()
-      })
-      textarea.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") {
-          e.preventDefault()
-          cancelDraft()
-        }
-        if (e.key === "Enter" && !e.shiftKey) {
-          e.preventDefault()
-          submit()
-        }
-      })
-      return wrapper
-    }
-
-    // Existing comment — check if in edit mode
-    const c = meta.comment!
-    const isEditing = editing() === c.id
-
-    if (isEditing) {
-      wrapper.className = "am-annotation am-annotation-draft"
-      const header = document.createElement("div")
-      header.className = "am-annotation-header"
-      header.textContent = `Edit comment on line ${c.line}`
-      const textarea = document.createElement("textarea")
-      textarea.className = "am-annotation-textarea"
-      textarea.rows = 3
-      textarea.value = c.comment
-      const actions = document.createElement("div")
-      actions.className = "am-annotation-actions"
-      const cancelBtn = document.createElement("button")
-      cancelBtn.className = "am-annotation-btn"
-      cancelBtn.textContent = "Cancel"
-      const saveBtn = document.createElement("button")
-      saveBtn.className = "am-annotation-btn am-annotation-btn-submit"
-      saveBtn.textContent = "Save"
-      actions.appendChild(cancelBtn)
-      actions.appendChild(saveBtn)
-      wrapper.appendChild(header)
-      wrapper.appendChild(textarea)
-      wrapper.appendChild(actions)
-
-      focusWhenConnected(textarea)
-
-      cancelBtn.addEventListener("click", (e) => {
-        e.stopPropagation()
-        setEditing(null)
-      })
-      saveBtn.addEventListener("click", (e) => {
-        e.stopPropagation()
-        const text = textarea.value.trim()
-        if (text) updateComment(c.id, text)
-      })
-      textarea.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") {
-          e.preventDefault()
-          setEditing(null)
-        }
-        if (e.key === "Enter" && !e.shiftKey) {
-          e.preventDefault()
-          const text = textarea.value.trim()
-          if (text) updateComment(c.id, text)
-        }
-      })
-      return wrapper
-    }
-
-    // Read-only comment — no code quote or line label since the annotation
-    // is visually anchored right below the relevant line
-    wrapper.className = "am-annotation"
-    const body = document.createElement("div")
-    body.className = "am-annotation-comment"
-
-    const text = document.createElement("div")
-    text.className = "am-annotation-comment-text"
-    text.textContent = c.comment
-    body.appendChild(text)
-
-    const btns = document.createElement("div")
-    btns.className = "am-annotation-comment-actions"
-
-    const makeBtn = (title: string, svg: string, action: () => void) => {
-      const btn = document.createElement("button")
-      btn.className = "am-annotation-icon-btn"
-      btn.title = title
-      btn.innerHTML = svg
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation()
-        action()
-      })
-      return btn
-    }
-
-    btns.appendChild(
-      makeBtn(
-        "Send to chat",
-        '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M1 1l14 7-14 7V9l10-1L1 7z"/></svg>',
-        () => {
-          const quote = c.selectedText ? `\n> \`\`\`\n> ${c.selectedText.split("\n").join("\n> ")}\n> \`\`\`\n` : ""
-          const msg = `**${c.file}** (line ${c.line}):${quote}\n${c.comment}`
-          window.dispatchEvent(new MessageEvent("message", { data: { type: "appendChatBoxMessage", text: msg } }))
-          deleteComment(c.id)
-        },
-      ),
-    )
-    btns.appendChild(
-      makeBtn(
-        "Edit",
-        '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M13.2 1.1l1.7 1.7-1.1 1.1-1.7-1.7zM1 11.5V13.2h1.7l7.8-7.8-1.7-1.7z"/></svg>',
-        () => setEditing(c.id),
-      ),
-    )
-    btns.appendChild(
-      makeBtn(
-        "Delete",
-        '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm3.1 9.3l-.8.8L8 8.8l-2.3 2.3-.8-.8L7.2 8 4.9 5.7l.8-.8L8 7.2l2.3-2.3.8.8L8.8 8z"/></svg>',
-        () => deleteComment(c.id),
-      ),
-    )
-
-    wrapper.appendChild(body)
-    wrapper.appendChild(btns)
-    return wrapper
+    return buildReviewAnnotation(annotation, {
+      diffs: props.diffs,
+      editing: editing(),
+      setEditing: (id) => preserveScroll(() => setEditing(id)),
+      addComment,
+      updateComment,
+      deleteComment,
+      cancelDraft,
+    })
   }
 
   // --- Gutter utility click ---
   const handleGutterClick = (file: string, result: { lineNumber: number; side: AnnotationSide }) => {
     // Don't open a second draft while one is active
     if (draft()) return
-    setDraft({ file, side: result.side, line: result.lineNumber })
+    preserveScroll(() => {
+      setDraft({ file, side: result.side, line: result.lineNumber })
+    })
   }
 
   // --- Send all ---
   const sendAllToChat = () => {
     const all = comments()
     if (all.length === 0) return
-    const lines = ["## Review Comments", ""]
-    for (const c of all) {
-      lines.push(`**${c.file}** (line ${c.line}):`)
-      if (c.selectedText) {
-        lines.push("```")
-        lines.push(c.selectedText)
-        lines.push("```")
-      }
-      lines.push(c.comment)
-      lines.push("")
-    }
-    const text = lines.join("\n")
+    const text = formatReviewCommentsMarkdown(all)
     window.dispatchEvent(new MessageEvent("message", { data: { type: "appendChatBoxMessage", text } }))
     preserveScroll(() => setComments([]))
     props.onSendAll?.()
@@ -509,7 +307,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                             <FileIcon node={{ path: diff.file, type: "file" }} />
                             <div data-slot="session-review-file-name-container">
                               <Show when={diff.file.includes("/")}>
-                                <span data-slot="session-review-directory">{`\u202A${getDirectory(diff.file)}\u202C`}</span>
+                                <span data-slot="session-review-directory">{getDirectory(diff.file)}</span>
                               </Show>
                               <span data-slot="session-review-filename">{getFilename(diff.file)}</span>
                               <Show when={fileCommentCount() > 0}>

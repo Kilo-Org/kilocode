@@ -13,17 +13,14 @@ import { ResizeHandle } from "@kilocode/kilo-ui/resize-handle"
 import type { DiffLineAnnotation, AnnotationSide } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
 import { FileTree } from "./FileTree"
-import { sanitizeReviewComments, type ReviewComment } from "./review-comments"
-
-// --- Shared data model (same as DiffPanel) ---
-
-interface AnnotationMeta {
-  type: "comment" | "draft"
-  comment: ReviewComment | null
-  file: string
-  side: AnnotationSide
-  line: number
-}
+import {
+  formatReviewCommentsMarkdown,
+  getDirectory,
+  getFilename,
+  sanitizeReviewComments,
+  type ReviewComment,
+} from "./review-comments"
+import { buildReviewAnnotation, type AnnotationMeta } from "./review-annotations"
 
 type DiffStyle = "unified" | "split"
 
@@ -38,23 +35,6 @@ interface FullScreenDiffViewProps {
   onClose: () => void
 }
 
-function getDirectory(path: string): string {
-  const idx = path.lastIndexOf("/")
-  return idx === -1 ? "" : path.slice(0, idx + 1)
-}
-
-function getFilename(path: string): string {
-  const idx = path.lastIndexOf("/")
-  return idx === -1 ? path : path.slice(idx + 1)
-}
-
-function extractLines(content: string, start: number, end: number): string {
-  return content
-    .split("\n")
-    .slice(start - 1, end)
-    .join("\n")
-}
-
 export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) => {
   const [open, setOpen] = createSignal<string[]>([])
   const [openInit, setOpenInit] = createSignal(false)
@@ -64,12 +44,17 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   const [treeWidth, setTreeWidth] = createSignal(240)
   let nextId = 0
   let draftMeta: AnnotationMeta | null = null
+  let rootRef: HTMLDivElement | undefined
   let scrollRef: HTMLDivElement | undefined
   let syncFrame: number | undefined
 
   const comments = () => props.comments
   const setComments = (next: ReviewComment[]) => props.onCommentsChange(next)
   const updateComments = (updater: (prev: ReviewComment[]) => ReviewComment[]) => setComments(updater(comments()))
+
+  const focusRoot = () => {
+    requestAnimationFrame(() => rootRef?.focus())
+  }
 
   const preserveScroll = (fn: () => void) => {
     const el = scrollRef
@@ -89,6 +74,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
       setDraft(null)
       draftMeta = null
     })
+    focusRoot()
   }
 
   // Auto-open files when diffs arrive
@@ -123,6 +109,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
       setDraft(null)
       draftMeta = null
     })
+    focusRoot()
   }
 
   const updateComment = (id: string, text: string) => {
@@ -130,6 +117,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
       updateComments((prev) => prev.map((c) => (c.id === id ? { ...c, comment: text } : c)))
       setEditing(null)
     })
+    focusRoot()
   }
 
   const deleteComment = (id: string) => {
@@ -137,6 +125,12 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
       updateComments((prev) => prev.filter((c) => c.id !== id))
       if (editing() === id) setEditing(null)
     })
+    focusRoot()
+  }
+
+  const setEditState = (id: string | null) => {
+    preserveScroll(() => setEditing(id))
+    if (id === null) focusRoot()
   }
 
   createEffect(
@@ -201,205 +195,29 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     return result
   }
 
-  const focusWhenConnected = (el: HTMLTextAreaElement) => {
-    let attempts = 0
-    const tick = () => {
-      if (el.isConnected) {
-        el.focus()
-        return
-      }
-      if (++attempts < 20) requestAnimationFrame(tick)
-    }
-    requestAnimationFrame(tick)
-  }
-
-  // --- renderAnnotation (vanilla DOM — called by pierre) ---
-
   const buildAnnotation = (annotation: DiffLineAnnotation<AnnotationMeta>): HTMLElement | undefined => {
-    const meta = annotation.metadata
-    if (!meta) return undefined
-
-    const wrapper = document.createElement("div")
-
-    if (meta.type === "draft") {
-      wrapper.className = "am-annotation am-annotation-draft"
-      const header = document.createElement("div")
-      header.className = "am-annotation-header"
-      header.textContent = `Comment on line ${meta.line}`
-      const textarea = document.createElement("textarea")
-      textarea.className = "am-annotation-textarea"
-      textarea.rows = 3
-      textarea.placeholder = "Leave a comment..."
-      const actions = document.createElement("div")
-      actions.className = "am-annotation-actions"
-      const cancelBtn = document.createElement("button")
-      cancelBtn.className = "am-annotation-btn"
-      cancelBtn.textContent = "Cancel"
-      const submitBtn = document.createElement("button")
-      submitBtn.className = "am-annotation-btn am-annotation-btn-submit"
-      submitBtn.textContent = "Comment"
-      actions.appendChild(cancelBtn)
-      actions.appendChild(submitBtn)
-      wrapper.appendChild(header)
-      wrapper.appendChild(textarea)
-      wrapper.appendChild(actions)
-
-      focusWhenConnected(textarea)
-
-      const submit = () => {
-        const text = textarea.value.trim()
-        if (!text) return
-        const diff = props.diffs.find((d) => d.file === meta.file)
-        const content = meta.side === "deletions" ? (diff?.before ?? "") : (diff?.after ?? "")
-        const selected = extractLines(content, meta.line, meta.line)
-        addComment(meta.file, meta.side, meta.line, text, selected)
-      }
-      cancelBtn.addEventListener("click", (e) => {
-        e.stopPropagation()
-        cancelDraft()
-      })
-      submitBtn.addEventListener("click", (e) => {
-        e.stopPropagation()
-        submit()
-      })
-      textarea.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") {
-          e.preventDefault()
-          cancelDraft()
-        }
-        if (e.key === "Enter" && !e.shiftKey) {
-          e.preventDefault()
-          submit()
-        }
-      })
-      return wrapper
-    }
-
-    const c = meta.comment!
-    const isEditing = editing() === c.id
-
-    if (isEditing) {
-      wrapper.className = "am-annotation am-annotation-draft"
-      const header = document.createElement("div")
-      header.className = "am-annotation-header"
-      header.textContent = `Edit comment on line ${c.line}`
-      const textarea = document.createElement("textarea")
-      textarea.className = "am-annotation-textarea"
-      textarea.rows = 3
-      textarea.value = c.comment
-      const actions = document.createElement("div")
-      actions.className = "am-annotation-actions"
-      const cancelBtn = document.createElement("button")
-      cancelBtn.className = "am-annotation-btn"
-      cancelBtn.textContent = "Cancel"
-      const saveBtn = document.createElement("button")
-      saveBtn.className = "am-annotation-btn am-annotation-btn-submit"
-      saveBtn.textContent = "Save"
-      actions.appendChild(cancelBtn)
-      actions.appendChild(saveBtn)
-      wrapper.appendChild(header)
-      wrapper.appendChild(textarea)
-      wrapper.appendChild(actions)
-
-      focusWhenConnected(textarea)
-
-      cancelBtn.addEventListener("click", (e) => {
-        e.stopPropagation()
-        preserveScroll(() => setEditing(null))
-      })
-      saveBtn.addEventListener("click", (e) => {
-        e.stopPropagation()
-        const text = textarea.value.trim()
-        if (text) updateComment(c.id, text)
-      })
-      textarea.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") {
-          e.preventDefault()
-          preserveScroll(() => setEditing(null))
-        }
-        if (e.key === "Enter" && !e.shiftKey) {
-          e.preventDefault()
-          const text = textarea.value.trim()
-          if (text) updateComment(c.id, text)
-        }
-      })
-      return wrapper
-    }
-
-    wrapper.className = "am-annotation"
-    const body = document.createElement("div")
-    body.className = "am-annotation-comment"
-    const text = document.createElement("div")
-    text.className = "am-annotation-comment-text"
-    text.textContent = c.comment
-    body.appendChild(text)
-    const btns = document.createElement("div")
-    btns.className = "am-annotation-comment-actions"
-
-    const makeBtn = (title: string, svg: string, action: () => void) => {
-      const btn = document.createElement("button")
-      btn.className = "am-annotation-icon-btn"
-      btn.title = title
-      btn.innerHTML = svg
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation()
-        action()
-      })
-      return btn
-    }
-
-    btns.appendChild(
-      makeBtn(
-        "Send to chat",
-        '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M1 1l14 7-14 7V9l10-1L1 7z"/></svg>',
-        () => {
-          const quote = c.selectedText ? `\n> \`\`\`\n> ${c.selectedText.split("\n").join("\n> ")}\n> \`\`\`\n` : ""
-          const msg = `**${c.file}** (line ${c.line}):${quote}\n${c.comment}`
-          window.dispatchEvent(new MessageEvent("message", { data: { type: "appendChatBoxMessage", text: msg } }))
-          deleteComment(c.id)
-        },
-      ),
-    )
-    btns.appendChild(
-      makeBtn(
-        "Edit",
-        '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M13.2 1.1l1.7 1.7-1.1 1.1-1.7-1.7zM1 11.5V13.2h1.7l7.8-7.8-1.7-1.7z"/></svg>',
-        () => setEditing(c.id),
-      ),
-    )
-    btns.appendChild(
-      makeBtn(
-        "Delete",
-        '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm3.1 9.3l-.8.8L8 8.8l-2.3 2.3-.8-.8L7.2 8 4.9 5.7l.8-.8L8 7.2l2.3-2.3.8.8L8.8 8z"/></svg>',
-        () => deleteComment(c.id),
-      ),
-    )
-
-    wrapper.appendChild(body)
-    wrapper.appendChild(btns)
-    return wrapper
+    return buildReviewAnnotation(annotation, {
+      diffs: props.diffs,
+      editing: editing(),
+      setEditing: setEditState,
+      addComment,
+      updateComment,
+      deleteComment,
+      cancelDraft,
+    })
   }
 
   const handleGutterClick = (file: string, result: { lineNumber: number; side: AnnotationSide }) => {
     if (draft()) return
-    setDraft({ file, side: result.side, line: result.lineNumber })
+    preserveScroll(() => {
+      setDraft({ file, side: result.side, line: result.lineNumber })
+    })
   }
 
   const sendAllToChat = () => {
     const all = comments()
     if (all.length === 0) return
-    const lines = ["## Review Comments", ""]
-    for (const c of all) {
-      lines.push(`**${c.file}** (line ${c.line}):`)
-      if (c.selectedText) {
-        lines.push("```")
-        lines.push(c.selectedText)
-        lines.push("```")
-      }
-      lines.push(c.comment)
-      lines.push("")
-    }
-    const text = lines.join("\n")
+    const text = formatReviewCommentsMarkdown(all)
     window.dispatchEvent(new MessageEvent("message", { data: { type: "appendChatBoxMessage", text } }))
     preserveScroll(() => setComments([]))
     props.onSendAll?.()
@@ -497,7 +315,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   }))
 
   return (
-    <div class="am-review-layout" onKeyDown={handleKeyDown}>
+    <div class="am-review-layout" onKeyDown={handleKeyDown} tabIndex={-1} ref={rootRef}>
       {/* Toolbar */}
       <div class="am-review-toolbar">
         <div class="am-review-toolbar-left">

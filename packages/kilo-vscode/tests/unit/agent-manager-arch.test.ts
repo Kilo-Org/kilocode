@@ -20,6 +20,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/DiffPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/FullScreenDiffView.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/FileTree.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/review-annotations.ts"),
   path.join(ROOT, "webview-ui/agent-manager/MultiModelSelector.tsx"),
 ]
 const TSX_FILE = TSX_FILES[0]

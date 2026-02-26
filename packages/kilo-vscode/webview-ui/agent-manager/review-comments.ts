@@ -15,6 +15,38 @@ function lineCount(text: string): number {
   return text.split("\n").length
 }
 
+export function getDirectory(path: string): string {
+  const idx = path.lastIndexOf("/")
+  return idx === -1 ? "" : path.slice(0, idx + 1)
+}
+
+export function getFilename(path: string): string {
+  const idx = path.lastIndexOf("/")
+  return idx === -1 ? path : path.slice(idx + 1)
+}
+
+export function extractLines(content: string, start: number, end: number): string {
+  return content
+    .split("\n")
+    .slice(start - 1, end)
+    .join("\n")
+}
+
+export function formatReviewCommentsMarkdown(comments: ReviewComment[]): string {
+  const lines = ["## Review Comments", ""]
+  for (const comment of comments) {
+    lines.push(`**${comment.file}** (line ${comment.line}):`)
+    if (comment.selectedText) {
+      lines.push("```")
+      lines.push(comment.selectedText)
+      lines.push("```")
+    }
+    lines.push(comment.comment)
+    lines.push("")
+  }
+  return lines.join("\n")
+}
+
 export function sanitizeReviewComments(comments: ReviewComment[], diffs: WorktreeFileDiff[]): ReviewComment[] {
   const map = new Map(diffs.map((diff) => [diff.file, diff]))
   return comments.filter((comment) => {

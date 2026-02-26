@@ -1154,9 +1154,10 @@ const AgentManagerContent: Component = () => {
   const tabIds = createMemo(() => {
     const ids = activeTabs().map((s) => s.id)
     const sel = selection()
-    if (!sel || sel === LOCAL || !reviewOpen()) return ids
+    if (!sel || sel === LOCAL) return ids
+    const current = reviewOpen() ? [...ids, REVIEW_TAB_ID] : ids
     return applyTabOrder(
-      [...ids, REVIEW_TAB_ID].map((id) => ({ id })),
+      current.map((id) => ({ id })),
       worktreeTabOrder()[sel],
     ).map((item) => item.id)
   })
