@@ -1360,12 +1360,12 @@ const AgentManagerContent: Component = () => {
                                                 <span class="am-stat-additions">+{stats()!.additions}</span>
                                               </Show>
                                               <Show when={stats()!.deletions > 0}>
-                                                <span class="am-stat-deletions">&minus;{stats()!.deletions}</span>
+                                                <span class="am-stat-deletions">−{stats()!.deletions}</span>
                                               </Show>
                                             </span>
                                           </Show>
                                           <Show when={stats()!.commits > 0}>
-                                            <span class="am-worktree-commits">&uarr;{stats()!.commits}</span>
+                                            <span class="am-worktree-commits">↑{stats()!.commits}</span>
                                           </Show>
                                         </div>
                                       </Show>
@@ -1440,7 +1440,7 @@ const AgentManagerContent: Component = () => {
                                               <span class="am-stat-additions">+{hoverStats()!.additions}</span>
                                             </Show>
                                             <Show when={hoverStats()!.deletions > 0}>
-                                              <span class="am-stat-deletions">&minus;{hoverStats()!.deletions}</span>
+                                              <span class="am-stat-deletions">−{hoverStats()!.deletions}</span>
                                             </Show>
                                           </span>
                                         </div>
@@ -1641,7 +1641,7 @@ const AgentManagerContent: Component = () => {
                           <Show when={hasChanges()}>
                             <span class="am-diff-toggle-stats">
                               <span class="am-stat-additions">+{stats()!.additions}</span>
-                              <span class="am-stat-deletions">&minus;{stats()!.deletions}</span>
+                              <span class="am-stat-deletions">−{stats()!.deletions}</span>
                             </span>
                           </Show>
                         </button>

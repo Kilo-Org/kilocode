@@ -40,9 +40,12 @@ export class AgentManagerProvider implements vscode.Disposable {
   private diffInterval: ReturnType<typeof setInterval> | undefined
   private diffSessionId: string | undefined
   private lastDiffHash: string | undefined
-  private statsInterval: ReturnType<typeof setInterval> | undefined
+  private statsInterval: ReturnType<typeof setTimeout> | undefined
+  private statsActive = false
   private statsBusy = false
   private lastStatsHash: string | undefined
+  private lastStats: Record<string, { additions: number; deletions: number; commits: number }> = {}
+  private lastFetch = new Map<string, number>()
   private cachedDiffTarget: { directory: string; baseBranch: string } | undefined
 
   constructor(
@@ -1225,9 +1228,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     // Keep stats polling in sync with worktree count
     const worktrees = state.getWorktrees()
-    if (worktrees.length > 0 && !this.statsInterval) {
+    if (worktrees.length > 0 && !this.statsActive) {
       this.startStatsPolling()
-    } else if (worktrees.length === 0 && this.statsInterval) {
+    } else if (worktrees.length === 0 && this.statsActive) {
       this.stopStatsPolling()
     }
   }
@@ -1459,7 +1462,28 @@ export class AgentManagerProvider implements vscode.Disposable {
       .catch(() => false)
   }
 
+  private async refreshRemote(cwd: string): Promise<void> {
+    const common = await this.gitExec(["rev-parse", "--git-common-dir"], cwd).catch(() => cwd)
+    const prev = this.lastFetch.get(common) ?? 0
+    const now = Date.now()
+    if (now - prev < 120000) return
+    this.lastFetch.set(common, now)
+
+    const list = await this.gitExec(["remote"], cwd).catch(() => "")
+    const remote = list
+      .split("\n")
+      .map((item) => item.trim())
+      .find(Boolean)
+    if (!remote) return
+
+    await this.gitExec(["fetch", "--quiet", "--no-tags", remote], cwd).catch((err) => {
+      this.log(`Failed to refresh remote refs for ${cwd}:`, err)
+    })
+  }
+
   private async countMissingOriginCommits(cwd: string, parentBranch: string): Promise<number> {
+    await this.refreshRemote(cwd)
+
     const upstream = await this.gitExec(
       ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"],
       cwd,
@@ -1497,54 +1521,84 @@ export class AgentManagerProvider implements vscode.Disposable {
     })()
     if (!client) return
 
-    const stats: Array<{ worktreeId: string; additions: number; deletions: number; commits: number }> = []
+    const stats = (
+      await Promise.all(
+        worktrees.map(async (wt) => {
+          try {
+            // Use the same backend endpoint as the diff viewer to keep stats deterministic.
+            const diffs = await client.getWorktreeDiff(wt.path, wt.parentBranch)
+            const additions = diffs.reduce((sum, diff) => sum + diff.additions, 0)
+            const deletions = diffs.reduce((sum, diff) => sum + diff.deletions, 0)
+            const commits = await this.countMissingOriginCommits(wt.path, wt.parentBranch)
+            return { worktreeId: wt.id, additions, deletions, commits }
+          } catch (err) {
+            this.log(`Failed to fetch worktree stats for ${wt.branch} (${wt.path}):`, err)
+            const prev = this.lastStats[wt.id]
+            if (!prev) return undefined
+            return {
+              worktreeId: wt.id,
+              additions: prev.additions,
+              deletions: prev.deletions,
+              commits: prev.commits,
+            }
+          }
+        }),
+      )
+    ).filter((item): item is { worktreeId: string; additions: number; deletions: number; commits: number } => !!item)
 
-    for (const wt of worktrees) {
-      try {
-        // Use the same backend endpoint as the diff viewer to keep stats deterministic.
-        const diffs = await client.getWorktreeDiff(wt.path, wt.parentBranch)
-        const additions = diffs.reduce((sum, diff) => sum + diff.additions, 0)
-        const deletions = diffs.reduce((sum, diff) => sum + diff.deletions, 0)
-        const commits = await this.countMissingOriginCommits(wt.path, wt.parentBranch)
-        stats.push({ worktreeId: wt.id, additions, deletions, commits })
-      } catch (err) {
-        this.log(`Failed to fetch worktree stats for ${wt.branch} (${wt.path}):`, err)
-        stats.push({ worktreeId: wt.id, additions: 0, deletions: 0, commits: 0 })
-      }
-    }
+    if (stats.length === 0) return
 
     const hash = stats.map((s) => `${s.worktreeId}:${s.additions}:${s.deletions}:${s.commits}`).join("|")
     if (hash === this.lastStatsHash) return
     this.lastStatsHash = hash
+    this.lastStats = stats.reduce(
+      (acc, item) => {
+        acc[item.worktreeId] = {
+          additions: item.additions,
+          deletions: item.deletions,
+          commits: item.commits,
+        }
+        return acc
+      },
+      {} as Record<string, { additions: number; deletions: number; commits: number }>,
+    )
 
     this.postToWebview({ type: "agentManager.worktreeStats", stats })
   }
 
+  private scheduleStatsPoll(delay: number): void {
+    if (!this.statsActive) return
+    this.statsInterval = setTimeout(() => {
+      void this.pollStats()
+    }, delay)
+  }
+
   private startStatsPolling(): void {
     this.stopStatsPolling()
+    this.statsActive = true
     // Initial fetch
     void this.pollStats()
-    // Poll every 5 seconds
-    this.statsInterval = setInterval(() => {
-      void this.pollStats()
-    }, 5000)
   }
 
   private pollStats(): Promise<void> {
+    if (!this.statsActive) return Promise.resolve()
     if (this.statsBusy) return Promise.resolve()
     this.statsBusy = true
     return this.fetchWorktreeStats().finally(() => {
       this.statsBusy = false
+      this.scheduleStatsPoll(5000)
     })
   }
 
   private stopStatsPolling(): void {
+    this.statsActive = false
     if (this.statsInterval) {
-      clearInterval(this.statsInterval)
+      clearTimeout(this.statsInterval)
       this.statsInterval = undefined
     }
     this.statsBusy = false
     this.lastStatsHash = undefined
+    this.lastStats = {}
   }
 
   private postToWebview(message: Record<string, unknown>): void {
