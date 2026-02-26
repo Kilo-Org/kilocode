@@ -1076,6 +1076,10 @@ export const dict = {
 
   "agentManager.diff.toggle": "Toggle diff",
   "agentManager.shortcuts.toggleDiff": "Toggle diff panel",
+  "agentManager.review.sendAllToChat": "Send all to chat",
+  "agentManager.review.sendAllToChatWithCount": "Send all to chat ({{count}})",
+  "agentManager.review.sendAllShortcut.mac": "⌘Enter",
+  "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Paste PR URL...",

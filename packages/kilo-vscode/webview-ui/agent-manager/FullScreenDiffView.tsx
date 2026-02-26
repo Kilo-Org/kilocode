@@ -13,6 +13,7 @@ import { ResizeHandle } from "@kilocode/kilo-ui/resize-handle"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type { DiffLineAnnotation, AnnotationSide } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
+import { useLanguage } from "../src/context/language"
 import { FileTree } from "./FileTree"
 import {
   formatReviewCommentsMarkdown,
@@ -37,6 +38,10 @@ interface FullScreenDiffViewProps {
 }
 
 export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) => {
+  const { t } = useLanguage()
+  const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
+  const sendAllKeybind = () =>
+    isMac ? t("agentManager.review.sendAllShortcut.mac") : t("agentManager.review.sendAllShortcut.other")
   const [open, setOpen] = createSignal<string[]>([])
   const [openInit, setOpenInit] = createSignal(false)
   const [draft, setDraft] = createSignal<{ file: string; side: AnnotationSide; line: number } | null>(null)
@@ -364,9 +369,13 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
             {open().length === props.diffs.length ? "Collapse all" : "Expand all"}
           </Button>
           <Show when={comments().length > 0}>
-            <TooltipKeybind title="Send all to chat" keybind="Cmd/Ctrl+Enter" placement="bottom">
+            <TooltipKeybind
+              title={t("agentManager.review.sendAllToChat")}
+              keybind={sendAllKeybind()}
+              placement="bottom"
+            >
               <Button variant="primary" size="small" onClick={sendAllToChat}>
-                Send all to chat ({comments().length})
+                {t("agentManager.review.sendAllToChatWithCount", { count: comments().length })}
               </Button>
             </TooltipKeybind>
           </Show>

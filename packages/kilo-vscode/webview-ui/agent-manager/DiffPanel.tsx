@@ -38,6 +38,9 @@ interface DiffPanelProps {
 
 export const DiffPanel: Component<DiffPanelProps> = (props) => {
   const { t } = useLanguage()
+  const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
+  const sendAllKeybind = () =>
+    isMac ? t("agentManager.review.sendAllShortcut.mac") : t("agentManager.review.sendAllShortcut.other")
   const [open, setOpen] = createSignal<string[]>([])
   const [openInit, setOpenInit] = createSignal(false)
   const [draft, setDraft] = createSignal<{ file: string; side: AnnotationSide; line: number } | null>(null)
@@ -389,9 +392,9 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
             <span class="am-diff-comments-count">
               {comments().length} comment{comments().length !== 1 ? "s" : ""}
             </span>
-            <TooltipKeybind title="Send all to chat" keybind="Cmd/Ctrl+Enter" placement="top">
+            <TooltipKeybind title={t("agentManager.review.sendAllToChat")} keybind={sendAllKeybind()} placement="top">
               <Button variant="primary" size="small" onClick={sendAllToChat}>
-                Send all to chat
+                {t("agentManager.review.sendAllToChat")}
               </Button>
             </TooltipKeybind>
           </div>

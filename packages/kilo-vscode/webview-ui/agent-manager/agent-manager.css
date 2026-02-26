@@ -716,6 +716,11 @@ button.am-section-toggle:hover .am-section-label {
   --am-diff-count-size: 12px;
 }
 
+.am-diff-panel:focus,
+.am-review-layout:focus {
+  outline: none;
+}
+
 .am-diff-header {
   display: flex;
   align-items: center;
