@@ -732,6 +732,20 @@ export interface AgentManagerWorktreeDiffLoadingMessage {
   loading: boolean
 }
 
+// Per-worktree git stats: diff additions/deletions and commits missing from origin
+export interface WorktreeGitStats {
+  worktreeId: string
+  additions: number
+  deletions: number
+  commits: number
+}
+
+// Agent Manager: Worktree git stats push (extension → webview)
+export interface AgentManagerWorktreeStatsMessage {
+  type: "agentManager.worktreeStats"
+  stats: WorktreeGitStats[]
+}
+
 // Request webview to send initial prompt to a newly created session (extension → webview)
 export interface AgentManagerSendInitialMessage {
   type: "agentManager.sendInitialMessage"
@@ -801,6 +815,7 @@ export type ExtensionMessage =
   | WorkspaceDirectoryChangedMessage
   | AgentManagerWorktreeDiffMessage
   | AgentManagerWorktreeDiffLoadingMessage
+  | AgentManagerWorktreeStatsMessage
 
 // ============================================
 // Messages FROM webview TO extension
