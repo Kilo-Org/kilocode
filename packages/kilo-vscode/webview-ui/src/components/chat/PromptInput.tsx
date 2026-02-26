@@ -39,6 +39,7 @@ export const PromptInput: Component = () => {
 
   let textareaRef: HTMLTextAreaElement | undefined
   let highlightRef: HTMLDivElement | undefined
+  let ghostRef: HTMLDivElement | undefined
   let dropdownRef: HTMLDivElement | undefined
   let debounceTimer: ReturnType<typeof setTimeout> | undefined
   let requestCounter = 0
@@ -157,6 +158,9 @@ export const PromptInput: Component = () => {
   const syncHighlightScroll = () => {
     if (highlightRef && textareaRef) {
       highlightRef.scrollTop = textareaRef.scrollTop
+    }
+    if (ghostRef && textareaRef) {
+      ghostRef.scrollTop = textareaRef.scrollTop
     }
   }
 
@@ -316,10 +320,13 @@ export const PromptInput: Component = () => {
                 </Show>
               )}
             </Index>
-            <Show when={ghostText()}>
-              <span class="prompt-input-ghost-text">{ghostText()}</span>
-            </Show>
           </div>
+          <Show when={ghostText()}>
+            <div class="prompt-input-ghost-overlay" ref={ghostRef} aria-hidden="true">
+              <span class="prompt-input-ghost-hidden">{text()}</span>
+              <span class="prompt-input-ghost-text">{ghostText()}</span>
+            </div>
+          </Show>
           <textarea
             ref={textareaRef}
             class="prompt-input"

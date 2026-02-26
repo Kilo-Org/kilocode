@@ -339,6 +339,27 @@
   color: var(--vscode-textLink-foreground, #3794ff);
 }
 
+.prompt-input-ghost-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  padding: 8px;
+  font-family: var(--vscode-font-family);
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.prompt-input-ghost-hidden {
+  visibility: hidden;
+}
+
 .prompt-input-ghost-text {
   color: var(--vscode-editorGhostText-foreground, rgba(255, 255, 255, 0.35));
 }
