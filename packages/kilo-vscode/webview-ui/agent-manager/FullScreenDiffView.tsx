@@ -57,6 +57,7 @@ function extractLines(content: string, start: number, end: number): string {
 
 export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) => {
   const [open, setOpen] = createSignal<string[]>([])
+  const [openInit, setOpenInit] = createSignal(false)
   const [draft, setDraft] = createSignal<{ file: string; side: AnnotationSide; line: number } | null>(null)
   const [editing, setEditing] = createSignal<string | null>(null)
   const [activeFile, setActiveFile] = createSignal<string | null>(null)
@@ -75,11 +76,16 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     on(
       () => props.diffs,
       (diffs) => {
+        const files = diffs.map((d) => d.file)
+        setOpen((prev) => prev.filter((file) => files.includes(file)))
         if (diffs.length === 0) {
           setActiveFile(null)
           return
         }
-        if (diffs.length <= 15) setOpen(diffs.map((d) => d.file))
+        if (!openInit()) {
+          if (diffs.length <= 15) setOpen(files)
+          setOpenInit(true)
+        }
         const current = activeFile()
         if (!current || !diffs.some((d) => d.file === current)) {
           setActiveFile(diffs[0]!.file)

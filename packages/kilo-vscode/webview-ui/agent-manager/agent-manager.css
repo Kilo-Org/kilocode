@@ -655,6 +655,8 @@ button.am-section-toggle:hover .am-section-label {
 
 .am-diff-panel-wrapper {
   position: relative;
+  flex: 1;
+  width: 100%;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -669,6 +671,7 @@ button.am-section-toggle:hover .am-section-label {
   display: flex;
   flex-direction: column;
   flex: 1;
+  width: 100%;
   min-height: 0;
   /* Pierre diffs needs --diffs-light-bg/--diffs-dark-bg for the color-mix()
      calculations that produce red/green line backgrounds. Without a Shiki

@@ -58,6 +58,7 @@ function extractLines(content: string, start: number, end: number): string {
 export const DiffPanel: Component<DiffPanelProps> = (props) => {
   const { t } = useLanguage()
   const [open, setOpen] = createSignal<string[]>([])
+  const [openInit, setOpenInit] = createSignal(false)
   const [draft, setDraft] = createSignal<{ file: string; side: AnnotationSide; line: number } | null>(null)
   const [editing, setEditing] = createSignal<string | null>(null)
   let nextId = 0
@@ -103,7 +104,12 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     on(
       () => props.diffs,
       (diffs) => {
-        if (diffs.length <= 15) setOpen(diffs.map((d) => d.file))
+        const files = diffs.map((d) => d.file)
+        setOpen((prev) => prev.filter((file) => files.includes(file)))
+        if (openInit()) return
+        if (diffs.length === 0) return
+        if (diffs.length <= 15) setOpen(files)
+        setOpenInit(true)
       },
     ),
   )
