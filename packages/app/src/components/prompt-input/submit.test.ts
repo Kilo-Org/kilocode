@@ -42,9 +42,7 @@ beforeAll(async () => {
     useParams: () => ({}),
   }))
 
-  // kilocode_change start
   mock.module("@kilocode/sdk/v2/client", () => ({
-    // kilocode_change end
     createKiloClient: (input: { directory: string }) => {
       createdClients.push(input.directory)
       return clientFor(input.directory)
