@@ -826,11 +826,19 @@ const AgentManagerContent: Component = () => {
   // Start/stop diff watch when panel opens/closes or session changes
   createEffect(() => {
     const open = diffOpen()
+    const sel = selection()
     const id = session.currentSessionID()
-    if (open && id) {
-      const ms = managedSessions().find((s) => s.id === id)
-      if (ms?.worktreeId) {
-        vscode.postMessage({ type: "agentManager.startDiffWatch", sessionId: id })
+    if (open) {
+      if (sel === LOCAL) {
+        // For local tab, diff against unpushed changes using LOCAL sentinel
+        vscode.postMessage({ type: "agentManager.startDiffWatch", sessionId: LOCAL })
+      } else if (id) {
+        const ms = managedSessions().find((s) => s.id === id)
+        if (ms?.worktreeId) {
+          vscode.postMessage({ type: "agentManager.startDiffWatch", sessionId: id })
+        } else {
+          vscode.postMessage({ type: "agentManager.stopDiffWatch" })
+        }
       } else {
         vscode.postMessage({ type: "agentManager.stopDiffWatch" })
       }
@@ -1532,22 +1540,20 @@ const AgentManagerContent: Component = () => {
                 />
               </TooltipKeybind>
               <div class="am-tab-actions">
-                <Show when={selection() !== LOCAL}>
-                  <TooltipKeybind
-                    title={t("agentManager.diff.toggle")}
-                    keybind={kb().toggleDiff ?? ""}
-                    placement="bottom"
-                  >
-                    <IconButton
-                      icon="layers"
-                      size="small"
-                      variant="ghost"
-                      label={t("agentManager.diff.toggle")}
-                      class={diffOpen() ? "am-tab-diff-btn-active" : ""}
-                      onClick={() => setDiffOpen((prev) => !prev)}
-                    />
-                  </TooltipKeybind>
-                </Show>
+                <TooltipKeybind
+                  title={t("agentManager.diff.toggle")}
+                  keybind={kb().toggleDiff ?? ""}
+                  placement="bottom"
+                >
+                  <IconButton
+                    icon="layers"
+                    size="small"
+                    variant="ghost"
+                    label={t("agentManager.diff.toggle")}
+                    class={diffOpen() ? "am-tab-diff-btn-active" : ""}
+                    onClick={() => setDiffOpen((prev) => !prev)}
+                  />
+                </TooltipKeybind>
                 <TooltipKeybind
                   title={t("agentManager.tab.terminal")}
                   keybind={kb().showTerminal ?? ""}
@@ -1662,17 +1668,17 @@ const AgentManagerContent: Component = () => {
               </Show>
             </div>
             <Show when={diffOpen()}>
-              <ResizeHandle
-                direction="horizontal"
-                edge="end"
-                size={diffWidth()}
-                min={200}
-                max={Math.round(window.innerWidth * 0.8)}
-                onResize={(w) => setDiffWidth(Math.max(200, Math.min(w, window.innerWidth * 0.8)))}
-              />
               <div class="am-diff-panel-wrapper" style={{ width: `${diffWidth()}px`, "flex-shrink": "0" }}>
+                <ResizeHandle
+                  direction="horizontal"
+                  edge="start"
+                  size={diffWidth()}
+                  min={200}
+                  max={Math.round(window.innerWidth * 0.8)}
+                  onResize={(w) => setDiffWidth(Math.max(200, Math.min(w, window.innerWidth * 0.8)))}
+                />
                 <DiffPanel
-                  diffs={diffDatas()[session.currentSessionID() ?? ""] ?? []}
+                  diffs={diffDatas()[selection() === LOCAL ? LOCAL : (session.currentSessionID() ?? "")] ?? []}
                   loading={diffLoading()}
                   onClose={() => setDiffOpen(false)}
                 />
