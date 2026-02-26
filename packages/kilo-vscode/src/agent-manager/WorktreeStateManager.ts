@@ -279,7 +279,7 @@ export class WorktreeStateManager {
   /** Wait for all in-flight and queued saves to complete without triggering a new one. */
   async flush(): Promise<void> {
     while (this.saving || this.pendingSave) {
-      if (this.saving) await this.saving
+      await (this.saving ?? Promise.resolve())
     }
   }
 
