@@ -102,6 +102,10 @@ When your instance is running you can access the [OpenClaw Control UI](/docs/aut
 
 See the [Control UI reference](/docs/automate/kiloclaw/control-ui) for a full overview of its capabilities.
 
+{% callout type="warning" %}
+Do not use the **Update** feature in the OpenClaw Control UI to update KiloClaw. Use **Redeploy** from the KiloClaw Dashboard instead. Updating via the Control UI will not apply the correct KiloClaw platform image and may break your instance.
+{% /callout %}
+
 ## Pairing Requests
 
 When your instance is running, the dashboard shows any pending pairing requests. These appear when:

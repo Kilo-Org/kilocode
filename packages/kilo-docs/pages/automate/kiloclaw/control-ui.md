@@ -23,6 +23,10 @@ The Control UI is a browser-based dashboard (built with Vite + Lit) served by th
 
 For more details, please see the official [OpenClaw documentation](https://docs.openclaw.ai/web/control-ui).
 
+{% callout type="warning" %}
+Do not use the **Update** feature in the Control UI to update KiloClaw. Use **Redeploy** from the [KiloClaw Dashboard](/docs/automate/kiloclaw/dashboard#redeploy) instead. Updating via the Control UI will not apply the correct KiloClaw platform image and may break your instance.
+{% /callout %}
+
 ## Authentication
 
 Auth is handled via token or password on the WebSocket handshake. We use the one time "access code" from your KiloClaw Dashboard to pair your device. Other remote connections require one-time device pairing — the pairing request appears on the [KiloClaw Dashboard](/docs/automate/kiloclaw/dashboard#pairing-requests) or in the Control UI itself.
