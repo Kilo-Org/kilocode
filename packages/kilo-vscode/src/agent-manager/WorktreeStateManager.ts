@@ -11,6 +11,7 @@
 
 import * as path from "path"
 import * as fs from "fs"
+import { normalizePath } from "./git-import"
 
 export interface Worktree {
   id: string
@@ -35,6 +36,7 @@ interface StateFile {
   sessions: Record<string, Omit<ManagedSession, "id">>
   tabOrder?: Record<string, string[]>
   sessionsCollapsed?: boolean
+  reviewDiffStyle?: "unified" | "split"
 }
 
 const STATE_FILE = "agent-manager.json"
@@ -52,6 +54,7 @@ export class WorktreeStateManager {
   private sessions = new Map<string, ManagedSession>()
   private tabOrder: Record<string, string[]> = {}
   private collapsed = false
+  private reviewDiffStyle: "unified" | "split" = "unified"
   private readonly log: (msg: string) => void
   private saving: Promise<void> | undefined
   private pendingSave = false
@@ -75,8 +78,9 @@ export class WorktreeStateManager {
 
   /** Find worktree by its filesystem path. */
   findWorktreeByPath(wtPath: string): Worktree | undefined {
+    const target = normalizePath(wtPath)
     for (const wt of this.worktrees.values()) {
-      if (wt.path === wtPath) return wt
+      if (normalizePath(wt.path) === target) return wt
     }
     return undefined
   }
@@ -229,6 +233,19 @@ export class WorktreeStateManager {
   }
 
   // ---------------------------------------------------------------------------
+  // Review diff style
+  // ---------------------------------------------------------------------------
+
+  getReviewDiffStyle(): "unified" | "split" {
+    return this.reviewDiffStyle
+  }
+
+  setReviewDiffStyle(value: "unified" | "split"): void {
+    this.reviewDiffStyle = value
+    void this.save()
+  }
+
+  // ---------------------------------------------------------------------------
   // Persistence
   // ---------------------------------------------------------------------------
 
@@ -239,6 +256,7 @@ export class WorktreeStateManager {
       this.worktrees.clear()
       this.sessions.clear()
       this.tabOrder = {}
+      this.reviewDiffStyle = "unified"
 
       for (const [id, wt] of Object.entries(data.worktrees ?? {})) {
         this.worktrees.set(id, { id, ...wt })
@@ -250,6 +268,9 @@ export class WorktreeStateManager {
         this.tabOrder = data.tabOrder
       }
       this.collapsed = data.sessionsCollapsed ?? false
+      if (data.reviewDiffStyle === "split") {
+        this.reviewDiffStyle = "split"
+      }
       this.log(`Loaded state: ${this.worktrees.size} worktrees, ${this.sessions.size} sessions`)
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code
@@ -259,23 +280,26 @@ export class WorktreeStateManager {
     }
   }
 
-  /** Remove worktrees whose directories no longer exist on disk. */
-  async validate(root: string): Promise<void> {
-    let changed = false
+  /** Remove worktrees whose directories no longer exist on disk. Returns orphaned sessions. */
+  async validate(root: string): Promise<ManagedSession[]> {
+    const orphaned: ManagedSession[] = []
     for (const wt of [...this.worktrees.values()]) {
       const resolved = path.isAbsolute(wt.path) ? wt.path : path.join(root, wt.path)
       if (!fs.existsSync(resolved)) {
         this.log(`Worktree ${wt.id} directory missing (${resolved}), removing`)
-        this.removeWorktree(wt.id)
-        changed = true
+        orphaned.push(...this.removeWorktree(wt.id))
       }
     }
-    if (changed) await this.save()
+    // removeWorktree() already queues a save per call — just wait for completion
+    if (orphaned.length > 0) await this.flush()
+    return orphaned
   }
 
-  /** Wait for any in-flight save to complete without triggering a new one. */
+  /** Wait for all in-flight and queued saves to complete without triggering a new one. */
   async flush(): Promise<void> {
-    if (this.saving) await this.saving
+    while (this.saving || this.pendingSave) {
+      await (this.saving ?? Promise.resolve())
+    }
   }
 
   async save(): Promise<void> {
@@ -318,6 +342,9 @@ export class WorktreeStateManager {
     }
     if (this.collapsed) {
       data.sessionsCollapsed = true
+    }
+    if (this.reviewDiffStyle === "split") {
+      data.reviewDiffStyle = "split"
     }
 
     try {

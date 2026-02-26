@@ -86,7 +86,7 @@ export function DialogModel(props: { providerID?: string }) {
               : undefined,
             // kilocode_change start
             category: connected()
-              ? provider.id === "kilo" && info.recommended
+              ? provider.id === "kilo" && info.recommendedIndex !== undefined
                 ? "Recommended"
                 : provider.name
               : undefined,
