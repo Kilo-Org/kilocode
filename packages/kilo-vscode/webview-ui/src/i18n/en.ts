@@ -1088,7 +1088,7 @@ export const dict = {
   "agentManager.diff.comment": "Comment",
   "agentManager.diff.save": "Save",
   "agentManager.diff.send": "Send",
-  "agentManager.diff.sendTooltip": "Send directly to LLM ({{shortcut}})",
+  "agentManager.diff.sendTooltip": "Send directly to LLM",
   "agentManager.diff.commentTooltip": "Save comment ({{shortcut}})",
   "agentManager.diff.sendToChat": "Send to chat",
   "agentManager.diff.edit": "Edit",

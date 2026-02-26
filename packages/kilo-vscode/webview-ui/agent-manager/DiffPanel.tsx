@@ -181,7 +181,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       submitBtn.title = t("agentManager.diff.commentTooltip", { shortcut: modEnter })
       const sendBtn = document.createElement("button")
       sendBtn.className = "am-annotation-btn am-annotation-btn-send"
-      sendBtn.title = t("agentManager.diff.sendTooltip", { shortcut: modEnter })
+      sendBtn.title = t("agentManager.diff.sendTooltip")
       sendBtn.textContent = t("agentManager.diff.send")
       const sendIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg")
       sendIcon.setAttribute("width", "12")
