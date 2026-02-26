@@ -1554,15 +1554,23 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       await sdkClient.kilo.organization.set({ organizationId }, { throwOnError: true })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to switch organization:", error)
-      // Re-fetch current profile to reset webview state (clears switching indicator)
-      const profileResult = await sdkClient.kilo.profile()
-      this.postMessage({ type: "profileData", data: profileResult.data ?? null })
+      // Re-fetch current profile to reset webview state (clears switching indicator) — best-effort
+      try {
+        const profileResult = await sdkClient.kilo.profile()
+        this.postMessage({ type: "profileData", data: profileResult.data ?? null })
+      } catch (profileError) {
+        console.error("[Kilo New] KiloProvider: Failed to refresh profile after org switch error:", profileError)
+      }
       return
     }
 
     // Org switch succeeded — refresh profile and providers independently (best-effort)
-    const profileResult = await sdkClient.kilo.profile()
-    this.postMessage({ type: "profileData", data: profileResult.data ?? null })
+    try {
+      const profileResult = await sdkClient.kilo.profile()
+      this.postMessage({ type: "profileData", data: profileResult.data ?? null })
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to refresh profile after org switch:", error)
+    }
     try {
       await this.fetchAndSendProviders()
     } catch (error) {
