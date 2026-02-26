@@ -1985,94 +1985,109 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
               </div>
               <div class="am-advanced-field">
                 <span class="am-nv-config-label">{t("agentManager.dialog.baseBranch")}</span>
-                <div class="am-branch-selector-wrapper">
-                  <button
-                    class="am-branch-selector-trigger"
-                    onClick={() => setBaseBranchOpen(!baseBranchOpen())}
-                    type="button"
+                <div class="am-selector-wrapper">
+                  <Popover
+                    open={baseBranchOpen()}
+                    onOpenChange={(open) => {
+                      setBaseBranchOpen(open)
+                      if (!open) {
+                        setBranchSearch("")
+                        setHighlightedIndex(0)
+                      }
+                    }}
+                    placement="bottom-start"
+                    sameWidth
+                    class="am-dropdown"
+                    trigger={
+                      <button class="am-selector-trigger" type="button">
+                        <span class="am-selector-left">
+                          <Icon name="branch" size="small" />
+                          <span class="am-selector-value" style={{ color: "var(--text-base)" }}>
+                            {effectiveBaseBranch()}
+                          </span>
+                          <Show when={!baseBranch()}>
+                            <span class="am-branch-badge">{t("agentManager.dialog.branchBadge.default")}</span>
+                          </Show>
+                        </span>
+                        <span class="am-selector-right">
+                          <Icon name="selector" size="small" />
+                        </span>
+                      </button>
+                    }
                   >
-                    <Icon name="branch" size="small" />
-                    <span class="am-branch-selector-value">{effectiveBaseBranch()}</span>
-                    <Show when={!baseBranch()}>
-                      <span class="am-branch-badge">{t("agentManager.dialog.branchBadge.default")}</span>
-                    </Show>
-                    <Icon name="selector" size="small" />
-                  </button>
-                  <Show when={baseBranchOpen()}>
-                    <div class="am-branch-dropdown" onWheel={(e) => e.stopPropagation()}>
-                      <div class="am-branch-search">
-                        <Icon name="magnifying-glass" size="small" />
-                        <input
-                          class="am-branch-search-input"
-                          type="text"
-                          placeholder={t("agentManager.dialog.searchBranches")}
-                          value={branchSearch()}
-                          ref={(el) => requestAnimationFrame(() => el.focus())}
-                          onInput={(e) => {
-                            setBranchSearch(e.currentTarget.value)
-                            setHighlightedIndex(0)
-                          }}
-                          onKeyDown={(e) => {
-                            const items = filteredBranches()
-                            if (e.key === "ArrowDown") {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              const next = Math.min(highlightedIndex() + 1, items.length - 1)
-                              setHighlightedIndex(next)
-                              requestAnimationFrame(() => {
-                                document
-                                  .querySelector(`.am-branch-item[data-index="${next}"]`)
-                                  ?.scrollIntoView({ block: "nearest" })
-                              })
-                            } else if (e.key === "ArrowUp") {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              const prev = Math.max(highlightedIndex() - 1, 0)
-                              setHighlightedIndex(prev)
-                              requestAnimationFrame(() => {
-                                document
-                                  .querySelector(`.am-branch-item[data-index="${prev}"]`)
-                                  ?.scrollIntoView({ block: "nearest" })
-                              })
-                            } else if (e.key === "Enter") {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              const selected = items[highlightedIndex()]
-                              if (selected) {
-                                setBaseBranch(selected.name)
-                                setBaseBranchOpen(false)
-                                setBranchSearch("")
-                                setHighlightedIndex(0)
-                              }
-                            } else if (e.key === "Escape") {
-                              e.preventDefault()
-                              e.stopPropagation()
+                    <div class="am-dropdown-search">
+                      <Icon name="magnifying-glass" size="small" />
+                      <input
+                        class="am-dropdown-search-input"
+                        type="text"
+                        placeholder={t("agentManager.dialog.searchBranches")}
+                        value={branchSearch()}
+                        autofocus
+                        onInput={(e) => {
+                          setBranchSearch(e.currentTarget.value)
+                          setHighlightedIndex(0)
+                        }}
+                        onKeyDown={(e) => {
+                          const items = filteredBranches()
+                          if (e.key === "ArrowDown") {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            const next = Math.min(highlightedIndex() + 1, items.length - 1)
+                            setHighlightedIndex(next)
+                            requestAnimationFrame(() => {
+                              document
+                                .querySelector(`.am-branch-item[data-index="${next}"]`)
+                                ?.scrollIntoView({ block: "nearest" })
+                            })
+                          } else if (e.key === "ArrowUp") {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            const prev = Math.max(highlightedIndex() - 1, 0)
+                            setHighlightedIndex(prev)
+                            requestAnimationFrame(() => {
+                              document
+                                .querySelector(`.am-branch-item[data-index="${prev}"]`)
+                                ?.scrollIntoView({ block: "nearest" })
+                            })
+                          } else if (e.key === "Enter") {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            const selected = items[highlightedIndex()]
+                            if (selected) {
+                              setBaseBranch(selected.name)
                               setBaseBranchOpen(false)
                               setBranchSearch("")
                               setHighlightedIndex(0)
                             }
-                          }}
-                        />
-                      </div>
-                      <div class="am-branch-list">
-                        <For each={filteredBranches()}>
-                          {(branch, index) => (
-                            <button
-                              class="am-branch-item"
-                              classList={{
-                                "am-branch-item-active": effectiveBaseBranch() === branch.name,
-                                "am-branch-item-highlighted": highlightedIndex() === index(),
-                              }}
-                              data-index={index()}
-                              onClick={() => {
-                                setBaseBranch(branch.name)
-                                setBaseBranchOpen(false)
-                                setBranchSearch("")
-                                setHighlightedIndex(0)
-                              }}
-                              onMouseEnter={() => setHighlightedIndex(index())}
-                              type="button"
-                            >
+                          } else if (e.key === "Escape") {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            setBaseBranchOpen(false)
+                            setBranchSearch("")
+                            setHighlightedIndex(0)
+                          }
+                        }}
+                      />
+                    </div>
+                    <div class="am-dropdown-list">
+                      <For each={filteredBranches()}>
+                        {(branch, index) => (
+                          <div
+                            class="am-branch-item"
+                            classList={{
+                              "am-branch-item-active": effectiveBaseBranch() === branch.name,
+                              "am-branch-item-highlighted": highlightedIndex() === index(),
+                            }}
+                            data-index={index()}
+                            onClick={() => {
+                              setBaseBranch(branch.name)
+                              setBaseBranchOpen(false)
+                              setBranchSearch("")
+                              setHighlightedIndex(0)
+                            }}
+                            onMouseEnter={() => setHighlightedIndex(index())}
+                          >
+                            <span class="am-branch-item-left">
                               <Icon name="branch" size="small" />
                               <span class="am-branch-item-name">{branch.name}</span>
                               <Show when={branch.isDefault}>
@@ -2083,15 +2098,15 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
                                   {t("agentManager.dialog.branchBadge.remote")}
                                 </span>
                               </Show>
-                              <Show when={branch.lastCommitDate}>
-                                <span class="am-branch-item-time">{formatRelativeDate(branch.lastCommitDate!)}</span>
-                              </Show>
-                            </button>
-                          )}
-                        </For>
-                      </div>
+                            </span>
+                            <Show when={branch.lastCommitDate}>
+                              <span class="am-branch-item-time">{formatRelativeDate(branch.lastCommitDate!)}</span>
+                            </Show>
+                          </div>
+                        )}
+                      </For>
                     </div>
-                  </Show>
+                  </Popover>
                 </div>
               </div>
             </div>
