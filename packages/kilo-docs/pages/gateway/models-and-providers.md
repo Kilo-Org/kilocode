@@ -57,7 +57,6 @@ Several models are available at no cost, subject to rate limits:
 | Model ID                              | Description               |
 | ------------------------------------- | ------------------------- |
 | `minimax/minimax-m2.1:free`           | MiniMax M2.1              |
-| `z-ai/glm-5:free`                     | Z.AI GLM-5                |
 | `giga-potato`                         | Community model           |
 | `corethink:free`                      | CoreThink reasoning model |
 | `arcee-ai/trinity-large-preview:free` | Arcee Trinity             |
@@ -90,6 +89,49 @@ curl -X POST "https://api.kilo.ai/api/gateway/chat/completions" \
   -H "Content-Type: application/json" \
   -d '{"model": "kilo/auto", "messages": [{"role": "user", "content": "Design a database schema"}]}'
 ```
+
+## The `kilo/auto-free` model
+
+The `kilo/auto-free` virtual model (also shown as **Auto: Free**) automatically routes requests to the best available free model. It requires no credits and is the default for unauthenticated users.
+
+Unlike `kilo/auto`, which routes to different paid models per mode, `kilo/auto-free` may use a single model for all modes — because the breadth of the free model pool may not justify per-mode splitting.
+
+### Current free model pool
+
+The pool is managed server-side and changes over time as provider promotions come and go:
+
+| Model ID                              | Name                           |
+| ------------------------------------- | ------------------------------ |
+| `minimax/minimax-m2.1:free`           | MiniMax M2.1                   |
+| `giga-potato`                         | Giga Potato                    |
+| `corethink:free`                      | CoreThink                      |
+| `arcee-ai/trinity-large-preview:free` | Arcee AI Trinity Large Preview |
+
+When a free model becomes unavailable, routing silently falls back to the next-best option. A model unavailability error is only surfaced if all free options are exhausted.
+
+### Usage
+
+```json
+{
+  "model": "kilo/auto-free",
+  "messages": [{ "role": "user", "content": "Help me write a function" }]
+}
+```
+
+The `x-kilocode-mode` header is still accepted but may not affect model selection in the free tier:
+
+```bash
+curl -X POST "https://api.kilo.ai/api/gateway/chat/completions" \
+  -H "x-kilocode-mode: code" \
+  -H "Content-Type: application/json" \
+  -d '{"model": "kilo/auto-free", "messages": [{"role": "user", "content": "Help me write a function"}]}'
+```
+
+### Data handling
+
+Free tier models may have different data handling and privacy policies compared to frontier models. Frontier models (`kilo/auto`) route through Anthropic, which does not train on user data. Check the individual provider's terms for the free models listed above.
+
+---
 
 ## Providers
 
