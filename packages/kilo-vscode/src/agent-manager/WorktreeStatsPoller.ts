@@ -1,6 +1,6 @@
 import * as cp from "child_process"
 import * as nodePath from "path"
-import type { HttpClient } from "../services/cli-backend"
+import type { KiloClient } from "@kilocode/sdk/v2/client"
 import type { Worktree } from "./WorktreeStateManager"
 
 export interface WorktreeStats {
@@ -12,7 +12,7 @@ export interface WorktreeStats {
 
 interface WorktreeStatsPollerOptions {
   getWorktrees: () => Worktree[]
-  getHttpClient: () => HttpClient
+  getClient: () => KiloClient
   onStats: (stats: WorktreeStats[]) => void
   log: (...args: unknown[]) => void
   intervalMs?: number
@@ -95,9 +95,9 @@ export class WorktreeStatsPoller {
 
     const client = (() => {
       try {
-        return this.options.getHttpClient()
+        return this.options.getClient()
       } catch (err) {
-        this.options.log("Failed to get HTTP client for worktree stats:", err)
+        this.options.log("Failed to get SDK client for worktree stats:", err)
         return undefined
       }
     })()
@@ -107,9 +107,9 @@ export class WorktreeStatsPoller {
       await Promise.all(
         worktrees.map(async (wt) => {
           try {
-            const diffs = await client.getWorktreeDiff(wt.path, wt.parentBranch)
-            const additions = diffs.reduce((sum, diff) => sum + diff.additions, 0)
-            const deletions = diffs.reduce((sum, diff) => sum + diff.deletions, 0)
+            const { data: diffs } = await client.worktree.diff({ directory: wt.path }, { throwOnError: true })
+            const additions = diffs.reduce((sum: number, diff) => sum + diff.additions, 0)
+            const deletions = diffs.reduce((sum: number, diff) => sum + diff.deletions, 0)
             const commits = await this.countMissingOriginCommits(wt.path, wt.parentBranch)
             return { worktreeId: wt.id, additions, deletions, commits }
           } catch (err) {

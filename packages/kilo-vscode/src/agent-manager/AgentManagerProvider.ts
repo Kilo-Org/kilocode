@@ -59,7 +59,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     )
     this.statsPoller = new WorktreeStatsPoller({
       getWorktrees: () => this.state?.getWorktrees() ?? [],
-      getHttpClient: () => this.connectionService.getHttpClient(),
+      getClient: () => this.connectionService.getClient(),
       onStats: (stats) => {
         this.postToWebview({ type: "agentManager.worktreeStats", stats })
       },

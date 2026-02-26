@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test"
-import type { HttpClient } from "../../src/services/cli-backend"
+import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { WorktreeStatsPoller } from "../../src/agent-manager/WorktreeStatsPoller"
 import type { Worktree } from "../../src/agent-manager/WorktreeStateManager"
 
@@ -36,19 +36,21 @@ describe("WorktreeStatsPoller", () => {
     let calls = 0
 
     const client = {
-      getWorktreeDiff: async () => {
-        calls += 1
-        running += 1
-        max = Math.max(max, running)
-        await sleep(40)
-        running -= 1
-        return diff(2, 1)
+      worktree: {
+        diff: async () => {
+          calls += 1
+          running += 1
+          max = Math.max(max, running)
+          await sleep(40)
+          running -= 1
+          return { data: diff(2, 1) }
+        },
       },
-    } as unknown as HttpClient
+    } as unknown as KiloClient
 
     const poller = new WorktreeStatsPoller({
       getWorktrees: () => [worktree("a")],
-      getHttpClient: () => client,
+      getClient: () => client,
       onStats: () => undefined,
       log: () => undefined,
       intervalMs: 5,
@@ -73,16 +75,18 @@ describe("WorktreeStatsPoller", () => {
     const emitted: Array<Array<{ worktreeId: string; additions: number; deletions: number; commits: number }>> = []
 
     const client = {
-      getWorktreeDiff: async () => {
-        calls += 1
-        if (calls === 1) return diff(7, 3)
-        throw new Error("transient backend failure")
+      worktree: {
+        diff: async () => {
+          calls += 1
+          if (calls === 1) return { data: diff(7, 3) }
+          throw new Error("transient backend failure")
+        },
       },
-    } as unknown as HttpClient
+    } as unknown as KiloClient
 
     const poller = new WorktreeStatsPoller({
       getWorktrees: () => [worktree("a")],
-      getHttpClient: () => client,
+      getClient: () => client,
       onStats: (stats) => emitted.push(stats),
       log: () => undefined,
       intervalMs: 5,
@@ -114,12 +118,14 @@ describe("WorktreeStatsPoller", () => {
     const emitted: Array<Array<{ worktreeId: string; additions: number; deletions: number; commits: number }>> = []
 
     const client = {
-      getWorktreeDiff: async () => diff(0, 0),
-    } as unknown as HttpClient
+      worktree: {
+        diff: async () => ({ data: diff(0, 0) }),
+      },
+    } as unknown as KiloClient
 
     const poller = new WorktreeStatsPoller({
       getWorktrees: () => [worktree("a"), worktree("b")],
-      getHttpClient: () => client,
+      getClient: () => client,
       onStats: (stats) => emitted.push(stats),
       log: () => undefined,
       intervalMs: 500,
