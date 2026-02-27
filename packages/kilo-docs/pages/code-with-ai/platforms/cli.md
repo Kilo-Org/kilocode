@@ -8,7 +8,7 @@ This documentation applies only to Kilo version 1.0 and later. Users running ver
 {% /callout %}
 
 {% callout type="danger" title="Bug in CLI v7.0.32" %}
-CLI version 7.0.32 has a bug that causes a startup error: `SyntaxError: Identifier 'scriptPath' has already been declared`. If you are affected, update manually to **version 7.0.33** by following the [CLI install instructions](/docs/getting-started/installing) for the install method of your choice. For npm users: `npm install -g @kilocode/cli`
+CLI version 7.0.32 contains a bug that causes the startup error: `SyntaxError: Identifier 'scriptPath' has already been declared`. If you are affected, update manually to **version 7.0.33 or beyond** by following the [install instructions](/docs/getting-started/installing#cli) for the installation method of your choice. For npm users: `npm install -g @kilocode/cli`.
 {% /callout %}
 
 # Kilo CLI
