@@ -30,6 +30,33 @@
 - Install CLI: `npm install -g @kilocode/cli`
 - [Official Kilo.ai Home page](https://kilo.ai) (learn more)
 
+
+## Choosing the right Release Asset
+
+If you download from the Releases page and see many files, use this quick guide:
+
+- **darwin** = macOS
+- **linux** = Linux
+- **windows** = Windows
+- **arm64 / aarch64** = ARM CPUs (Apple Silicon, ARM servers, some Windows ARM)
+- **x64 / amd64** = Intel/AMD 64-bit CPUs (most Windows PCs)
+- **vsix** = VS Code extension package (for manual extension install), not a standalone CLI
+- **source code (.zip/.tar.gz)** = source snapshot for developers, not required for normal install
+
+### Which file should I pick?
+
+- **Windows (most users):** choose `windows-x64`
+- **Windows ARM device:** choose `windows-arm64`
+- **macOS Intel:** choose `darwin-x64`
+- **macOS Apple Silicon (M1/M2/M3...):** choose `darwin-arm64`
+- **Linux x64 server:** choose `linux-x64`
+
+If you're unsure, check your OS and CPU architecture first:
+
+- Windows: `Settings -> System -> About`
+- macOS: `About This Mac`
+- Linux: `uname -m`
+
 ## Key Features
 
 - **Code Generation:** Kilo can generate code using natural language.
