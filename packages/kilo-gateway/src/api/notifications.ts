@@ -58,10 +58,7 @@ export async function fetchKilocodeNotifications(options: {
     if (!result.success) return []
 
     // Filter to show notifications meant for CLI (or no specific target)
-    // Accept "cli", "extension", or no showIn field (matches old Kilo CLI behavior)
-    return result.data.notifications.filter(
-      ({ showIn }) => !showIn || showIn.includes("cli") || showIn.includes("extension"),
-    )
+    return result.data.notifications.filter(({ showIn }) => !showIn || showIn.includes("cli"))
   } catch {
     return []
   }
