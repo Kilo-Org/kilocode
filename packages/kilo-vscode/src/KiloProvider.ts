@@ -1688,7 +1688,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     console.log("[Kilo New] KiloProvider: 🔄 Refreshing profile...")
-    const profileResult = await this.client.kilo.profile()
+    const profileResult = await this.client.kilo.profile().catch(() => ({ data: null }))
     this.postMessage({
       type: "profileData",
       data: profileResult.data ?? null,
