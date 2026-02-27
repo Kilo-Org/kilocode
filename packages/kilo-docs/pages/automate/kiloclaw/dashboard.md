@@ -94,6 +94,7 @@ At the bottom of Settings:
 
 - **Stop Instance** — Shuts down the machine. All your data is preserved and you can start it again later.
 - **Destroy Instance** — Permanently deletes your instance and all its data, including files, configuration, and workspace. This cannot be undone.
+- **Restore Config** — Restores your original `openclaw.json` in your instance. The existing `openclaw.json` is backed up to `/root/.openclaw` before the restore takes place.
 
 ## Accessing the Control UI
 
