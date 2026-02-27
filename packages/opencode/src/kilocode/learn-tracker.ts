@@ -60,7 +60,7 @@ export namespace LearnTracker {
     const now = Date.now()
     const check: Check = {
       ...input.check,
-      id: `chk_${now.toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+      id: `chk_${crypto.randomUUID()}`,
       timestamp: now,
     }
     current.checks.push(check)
@@ -91,14 +91,27 @@ export namespace LearnTracker {
   }
 
   export function summary(state: State) {
-    const understood = state.checks.filter((c) => c.quality === "correct").flatMap((c) => c.concepts)
-    const skipped = state.checks.filter((c) => c.quality === "skipped").flatMap((c) => c.concepts)
-    const gaps = state.checks.filter((c) => c.quality === "wrong" || c.quality === "partial").flatMap((c) => c.concepts)
+    // Use the most recent quality for each concept to avoid a concept
+    // appearing in both "understood" and "gaps" simultaneously.
+    const latest = new Map<string, z.infer<typeof Quality>>()
+    for (const check of state.checks) {
+      for (const concept of check.concepts) {
+        latest.set(concept, check.quality)
+      }
+    }
+    const understood: string[] = []
+    const skipped: string[] = []
+    const gaps: string[] = []
+    for (const [concept, quality] of latest) {
+      if (quality === "correct") understood.push(concept)
+      else if (quality === "skipped") skipped.push(concept)
+      else gaps.push(concept)
+    }
 
     return {
-      understood: [...new Set(understood)],
-      skipped: [...new Set(skipped)],
-      gaps: [...new Set(gaps)],
+      understood,
+      skipped,
+      gaps,
       total: state.checks.length,
       level: state.level,
     }

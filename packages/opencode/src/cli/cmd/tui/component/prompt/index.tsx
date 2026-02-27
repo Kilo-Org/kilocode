@@ -1030,14 +1030,20 @@ export function Prompt(props: PromptProps) {
                   {/* kilocode_change start */}
                   <Show
                     when={
-                      local.agent.current().name === "learn" && props.sessionID && sync.data.learn[props.sessionID!]
+                      local.agent.current().name === "learn" && props.sessionID
+                        ? sync.data.learn[props.sessionID]
+                        : undefined
                     }
+                    keyed
                   >
-                    <text fg={theme.textMuted}>·</text>
-                    <text fg={highlight()}>
-                      {sync.data.learn[props.sessionID!].level} · {sync.data.learn[props.sessionID!].checks.length}{" "}
-                      checks
-                    </text>
+                    {(learnState) => (
+                      <>
+                        <text fg={theme.textMuted}>·</text>
+                        <text fg={highlight()}>
+                          {learnState.level} · {learnState.checks.length} checks
+                        </text>
+                      </>
+                    )}
                   </Show>
                   {/* kilocode_change end */}
                 </box>
