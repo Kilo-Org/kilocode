@@ -98,14 +98,7 @@ Unlike `kilo/auto`, which routes to different paid models per mode, `kilo/auto-f
 
 ### Current free model pool
 
-The pool is managed server-side and changes over time as provider promotions come and go:
-
-| Model ID                              | Name                           |
-| ------------------------------------- | ------------------------------ |
-| `minimax/minimax-m2.5:free`           | MiniMax M2.5                   |
-| `giga-potato`                         | Giga Potato                    |
-| `corethink:free`                      | CoreThink                      |
-| `arcee-ai/trinity-large-preview:free` | Arcee AI Trinity Large Preview |
+The pool is managed server-side and changes over time as provider promotions come and go. It includes the free models listed in [Free models](#free-models).
 
 When a free model becomes unavailable, routing silently falls back to the next-best option. A model unavailability error is only surfaced if all free options are exhausted.
 
