@@ -21,6 +21,7 @@ import {
   buildSettingPath,
   mapSSEEventToWebviewMessage,
 } from "./kilo-provider-utils"
+import { isEventFromForeignProject } from "./services/cli-backend/sse-utils"
 
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "kilo-code.new.sidebarView"
@@ -45,6 +46,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private syncedChildSessions: Set<string> = new Set()
   /** Per-session directory overrides (e.g., worktree paths registered by AgentManagerProvider). */
   private sessionDirectories = new Map<string, string>()
+  /** Project ID for the current workspace, used to filter out sessions from other repositories. */
+  private projectID: string | undefined
   /** Abort controller for the current loadMessages request; aborted when a new session is selected. */
   private loadMessagesAbort: AbortController | null = null
   private unsubscribeEvent: (() => void) | null = null
@@ -788,7 +791,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const workspaceDir = this.getWorkspaceDirectory()
       const sessions = await this.httpClient.listSessions(workspaceDir)
 
-      // Also fetch sessions from worktree directories so they appear in the list
+      // The primary fetch already returns all sessions for this project (scoped
+      // by project_id on the backend). Worktree directories share the same
+      // project_id so their sessions are included. We still fetch from worktree
+      // directories in case a worktree resolved to a separate Instance, then
+      // filter the merged results to the workspace project to prevent sessions
+      // from other repositories from leaking in.
+      const projectID = sessions[0]?.projectID
       const worktreeDirs = new Set(this.sessionDirectories.values())
       const extra = await Promise.all(
         [...worktreeDirs].map((dir) =>
@@ -801,12 +810,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const seen = new Set(sessions.map((s) => s.id))
       for (const batch of extra) {
         for (const s of batch) {
-          if (!seen.has(s.id)) {
+          if (!seen.has(s.id) && (!projectID || s.projectID === projectID)) {
             sessions.push(s)
             seen.add(s.id)
           }
         }
       }
+      // Update project ID when sessions are available; keep previous value when
+      // the list is empty (empty ≠ different project — the workspace hasn't changed).
+      const resolved = sessions[0]?.projectID
+      if (resolved) this.projectID = resolved
 
       this.postMessage({
         type: "sessionsLoaded",
@@ -1651,9 +1664,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /**
    * Handle SSE events from the CLI backend.
-   * Filters events by tracked session IDs so each webview only sees its own sessions.
+   * Filters events by project ID and tracked session IDs so each webview only sees its own sessions.
    */
   private handleSSEEvent(event: SSEEvent): void {
+    // Drop session events from other projects before any tracking logic.
+    // This must come first: the trackedSessionIds guard below would otherwise
+    // let a foreign session through if it was accidentally tracked.
+    if (isEventFromForeignProject(event, this.projectID)) return
+
     // Extract sessionID from the event
     const sessionID = this.extractSessionID(event)
 
