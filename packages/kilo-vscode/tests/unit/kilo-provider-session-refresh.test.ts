@@ -6,6 +6,16 @@ const kind = (value: string) => ({
 })
 
 const mockVscode = {
+  Uri: {
+    joinPath: (...args: unknown[]) => ({ fsPath: args.join("/") }),
+    file: (p: string) => ({ fsPath: p }),
+  },
+  Disposable: class {
+    constructor(public callOnDispose: () => void) {}
+    dispose() {
+      this.callOnDispose()
+    }
+  },
   extensions: {
     getExtension: () => ({
       packageJSON: { version: "test" },
@@ -63,7 +73,7 @@ function createClient() {
       },
     },
     provider: {
-      list: async () => ({ data: { all: {}, connected: {}, default: {} } }),
+      list: async () => ({ data: { all: [], connected: {}, default: {} } }),
     },
     app: {
       agents: async () => ({ data: [] }),
