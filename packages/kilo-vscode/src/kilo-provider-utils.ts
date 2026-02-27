@@ -45,7 +45,7 @@ export function sessionToWebview(session: Session) {
   }
 }
 
-export function normalizeProviders(all: ProviderInfo[]): Record<string, ProviderInfo> {
+export function indexProvidersById(all: ProviderInfo[]): Record<string, ProviderInfo> {
   const normalized: Record<string, ProviderInfo> = {}
   for (const provider of all) {
     normalized[provider.id] = provider

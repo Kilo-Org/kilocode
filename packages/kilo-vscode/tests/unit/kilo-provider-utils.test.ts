@@ -1,7 +1,7 @@
 import { describe, it, expect } from "bun:test"
 import {
   sessionToWebview,
-  normalizeProviders,
+  indexProvidersById,
   filterVisibleAgents,
   buildSettingPath,
   mapSSEEventToWebviewMessage,
@@ -109,20 +109,20 @@ describe("sessionToWebview", () => {
   })
 })
 
-describe("normalizeProviders", () => {
+describe("indexProvidersById", () => {
   it("indexes providers by id", () => {
-    const result = normalizeProviders([makeProvider("openai"), makeProvider("anthropic")])
+    const result = indexProvidersById([makeProvider("openai"), makeProvider("anthropic")])
     expect(result["openai"]).toBeDefined()
     expect(result["anthropic"]).toBeDefined()
   })
 
   it("handles empty input", () => {
-    expect(normalizeProviders([])).toEqual({})
+    expect(indexProvidersById([])).toEqual({})
   })
 
   it("preserves provider data", () => {
     const p = makeProvider("openai")
-    const result = normalizeProviders([p])
+    const result = indexProvidersById([p])
     expect(result["openai"]).toEqual(p)
   })
 })

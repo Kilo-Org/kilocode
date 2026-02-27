@@ -14,7 +14,7 @@ import { buildWebviewHtml } from "./utils"
 import { TelemetryProxy, type TelemetryPropertiesProvider } from "./services/telemetry"
 import {
   sessionToWebview,
-  normalizeProviders,
+  indexProvidersById,
   filterVisibleAgents,
   buildSettingPath,
   mapSSEEventToWebviewMessage,
@@ -907,7 +907,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const workspaceDir = this.getWorkspaceDirectory()
       const { data: response } = await this.client.provider.list({ directory: workspaceDir }, { throwOnError: true })
 
-      const normalized = normalizeProviders(response.all)
+      const normalized = indexProvidersById(response.all)
 
       const config = vscode.workspace.getConfiguration("kilo-code.new.model")
       const providerID = config.get<string>("providerID", "kilo")
