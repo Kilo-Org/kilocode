@@ -1,6 +1,7 @@
 import { describe, it, expect } from "bun:test"
 import type { HttpClient } from "../../src/services/cli-backend"
 import { GitStatsPoller } from "../../src/agent-manager/GitStatsPoller"
+import { GitOps } from "../../src/agent-manager/GitOps"
 import type { Worktree } from "../../src/agent-manager/WorktreeStateManager"
 
 function sleep(ms: number): Promise<void> {
@@ -29,6 +30,10 @@ function diff(additions: number, deletions: number) {
   return [{ file: "file.ts", before: "", after: "", additions, deletions, status: "modified" as const }]
 }
 
+function gitOps(handler: (args: string[], cwd: string) => Promise<string>): GitOps {
+  return new GitOps({ log: () => undefined, runGit: handler })
+}
+
 describe("GitStatsPoller", () => {
   it("does not overlap polling runs", async () => {
     let running = 0
@@ -54,13 +59,13 @@ describe("GitStatsPoller", () => {
       onLocalStats: () => undefined,
       log: () => undefined,
       intervalMs: 5,
-      runGit: async (args) => {
+      git: gitOps(async (args) => {
         if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
         if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "origin/main"
         if (args[0] === "fetch") return ""
         if (args[0] === "rev-list") return "1"
         return ""
-      },
+      }),
     })
 
     poller.setEnabled(true)
@@ -90,13 +95,13 @@ describe("GitStatsPoller", () => {
       onLocalStats: () => undefined,
       log: () => undefined,
       intervalMs: 5,
-      runGit: async (args) => {
+      git: gitOps(async (args) => {
         if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
         if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "origin/main"
         if (args[0] === "fetch") return ""
         if (args[0] === "rev-list") return "2"
         return ""
-      },
+      }),
     })
 
     poller.setEnabled(true)
@@ -133,7 +138,7 @@ describe("GitStatsPoller", () => {
       onLocalStats: (stats) => emitted.push(stats),
       log: () => undefined,
       intervalMs: 5,
-      runGit: async (args) => {
+      git: gitOps(async (args) => {
         if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "HEAD") return "feature"
         if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "@{upstream}") return "origin/feature"
         if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
@@ -142,17 +147,15 @@ describe("GitStatsPoller", () => {
         if (args[0] === "branch") return "feature"
         if (args[0] === "config") return "origin"
         return ""
-      },
+      }),
     })
 
     poller.setEnabled(true)
     await waitFor(() => diffCalls >= 2)
     poller.stop()
 
-    // First poll should emit real stats
     expect(emitted.length).toBeGreaterThan(0)
     expect(emitted[0]).toEqual({ branch: "feature", additions: 5, deletions: 2, commits: 3 })
-    // Second poll should NOT emit zeros — it should preserve by returning early
     expect(emitted.length).toBe(1)
   })
 
@@ -171,15 +174,12 @@ describe("GitStatsPoller", () => {
       onLocalStats: (stats) => emitted.push(stats),
       log: () => undefined,
       intervalMs: 500,
-      runGit: async (args) => {
-        // No upstream configured
+      git: gitOps(async (args) => {
         if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "HEAD") return "my-feature"
         if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "@{upstream}")
           throw new Error("no upstream")
-        // No origin/my-feature ref
         if (args[0] === "rev-parse" && args[1] === "--verify" && args[2] === "origin/my-feature")
           throw new Error("no ref")
-        // origin/HEAD resolves to the repo's default branch
         if (args[0] === "symbolic-ref") return "origin/develop"
         if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
         if (args[0] === "fetch") return ""
@@ -187,7 +187,7 @@ describe("GitStatsPoller", () => {
         if (args[0] === "branch") return "my-feature"
         if (args[0] === "config") return "origin"
         return ""
-      },
+      }),
     })
 
     poller.setEnabled(true)
@@ -212,17 +212,16 @@ describe("GitStatsPoller", () => {
       onLocalStats: (stats) => emitted.push(stats),
       log: () => undefined,
       intervalMs: 500,
-      runGit: async (args) => {
+      git: gitOps(async (args) => {
         if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "HEAD") return "orphan-branch"
         if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "@{upstream}")
           throw new Error("no upstream")
         if (args[0] === "rev-parse" && args[1] === "--verify" && args[2] === "origin/orphan-branch")
           throw new Error("no ref")
         if (args[0] === "symbolic-ref") throw new Error("no symbolic ref")
-        // No origin/main or origin/master
         if (args[0] === "rev-parse" && args[1] === "--verify" && args[2] === "--quiet") throw new Error("no ref")
         return ""
-      },
+      }),
     })
 
     poller.setEnabled(true)
@@ -248,7 +247,7 @@ describe("GitStatsPoller", () => {
       onLocalStats: () => undefined,
       log: () => undefined,
       intervalMs: 500,
-      runGit: async (args) => {
+      git: gitOps(async (args) => {
         commands.push(args)
         if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return "/repo/.git"
         if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "upstream/main"
@@ -257,7 +256,7 @@ describe("GitStatsPoller", () => {
         if (args[0] === "fetch") return ""
         if (args[0] === "rev-list") return "0"
         return ""
-      },
+      }),
     })
 
     poller.setEnabled(true)

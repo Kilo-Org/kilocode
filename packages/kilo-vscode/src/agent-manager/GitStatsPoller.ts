@@ -1,6 +1,6 @@
 import type { HttpClient } from "../services/cli-backend"
 import type { Worktree } from "./WorktreeStateManager"
-import { GitOps } from "./GitOps"
+import type { GitOps } from "./GitOps"
 
 export interface WorktreeStats {
   worktreeId: string
@@ -20,13 +20,11 @@ interface GitStatsPollerOptions {
   getWorktrees: () => Worktree[]
   getWorkspaceRoot: () => string | undefined
   getHttpClient: () => HttpClient
+  git: GitOps
   onStats: (stats: WorktreeStats[]) => void
   onLocalStats: (stats: LocalStats) => void
   log: (...args: unknown[]) => void
   intervalMs?: number
-  git?: GitOps
-  refreshMs?: number
-  runGit?: (args: string[], cwd: string) => Promise<string>
 }
 
 export class GitStatsPoller {
@@ -38,17 +36,11 @@ export class GitStatsPoller {
   private lastLocalStats: LocalStats | undefined
   private lastStats: Record<string, { additions: number; deletions: number; commits: number }> = {}
   private readonly intervalMs: number
-  readonly git: GitOps
+  private readonly git: GitOps
 
   constructor(private readonly options: GitStatsPollerOptions) {
     this.intervalMs = options.intervalMs ?? 5000
-    this.git =
-      options.git ??
-      new GitOps({
-        log: options.log,
-        refreshMs: options.refreshMs,
-        runGit: options.runGit,
-      })
+    this.git = options.git
   }
 
   setEnabled(enabled: boolean): void {
