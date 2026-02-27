@@ -6,4 +6,78 @@
     min-width: 0;
     overflow: hidden;
   }
+
+  [data-slot="basic-tool-tool-info"] {
+    font-size: 12px;
+  }
+
+  [data-slot="message-part-title"] {
+    align-items: baseline;
+  }
+
+  [data-slot="message-part-title-area"] {
+    align-items: baseline;
+  }
+
+  [data-slot="basic-tool-tool-info-main"] {
+    align-items: baseline;
+  }
+
+  [data-slot="basic-tool-icon"] {
+    display: none;
+  }
+
+  [data-slot="basic-tool-tool-subtitle"] {
+    font-size: 12px;
+  }
+
+  [data-slot="basic-tool-tool-title"] {
+    font-size: 14px;
+  }
+
+  [data-slot="message-part-title-text"] {
+    font-size: 14px;
+  }
+
+  [data-slot="message-part-title-filename"] {
+    font-size: 12px;
+  }
+}
+
+/* Tool icon in trigger: visible in VS Code theme */
+html[data-theme="kilo-vscode"] [data-component="tool-trigger"] {
+  [data-slot="basic-tool-icon"] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--icon-base);
+
+    [data-component="icon"] {
+      display: flex;
+    }
+  }
+}
+
+/* Card styling for tool calls in the VS Code sidebar theme */
+html[data-theme="kilo-vscode"] [data-component="tool-part-wrapper"] {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-weak-base, var(--vscode-panel-border));
+  overflow: hidden;
+
+  /* Header trigger — add bottom border when the collapsible is open */
+  [data-component="collapsible"].tool-collapsible {
+    gap: 0px;
+    border-radius: 0;
+
+    [data-slot="collapsible-trigger"] {
+      padding: 0 8px;
+      height: 36px;
+      background-color: var(--surface-inset-base, var(--vscode-sideBar-background));
+    }
+
+    [data-slot="collapsible-trigger"][aria-expanded="true"] {
+      border-bottom: 1px solid var(--border-weak-base, var(--vscode-panel-border));
+    }
+  }
 }

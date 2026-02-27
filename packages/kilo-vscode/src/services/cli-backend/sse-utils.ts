@@ -14,3 +14,16 @@ export function unwrapSSEPayload(raw: unknown): SSEEvent | null {
   }
   return event
 }
+
+/**
+ * Check whether an SSE event belongs to a different project and should be dropped.
+ * Returns true when the event carries a projectID that does not match the expected one.
+ * When expectedProjectID is undefined (not yet resolved), nothing is filtered.
+ */
+export function isEventFromForeignProject(event: SSEEvent, expectedProjectID: string | undefined): boolean {
+  if (!expectedProjectID) return false
+  if (event.type === "session.created" || event.type === "session.updated") {
+    return event.properties.info.projectID !== expectedProjectID
+  }
+  return false
+}

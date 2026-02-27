@@ -181,7 +181,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       return null
     }
     if (type === "agentManager.showExistingLocalTerminal") {
-      this.terminalManager.showExistingLocal()
+      this.terminalManager.syncLocalOnSessionSwitch()
       return null
     }
     if (type === "agentManager.requestRepoInfo") {
@@ -292,7 +292,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     // When switching sessions, show existing terminal if one is open
     if (type === "loadMessages" && typeof msg.sessionID === "string") {
-      this.terminalManager.showExisting(msg.sessionID)
+      this.terminalManager.syncOnSessionSwitch(msg.sessionID)
     }
 
     // After clearSession, re-register worktree sessions so SSE events keep flowing
