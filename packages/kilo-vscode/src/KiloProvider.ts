@@ -1418,9 +1418,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       console.error("[Kilo New] KiloProvider: Failed to execute command:", error)
       const session = sessionID || this.currentSession?.id
       const base = error instanceof Error ? error.message : "Failed to execute command"
+      // kilocode_change: include sessionID property so the webview error handler
+      // can match the correct session instead of always matching the current one
       this.postMessage({
         type: "error",
         message: session ? `[sessionID:${session}] ${base}` : base,
+        sessionID: session,
       })
     }
   }
