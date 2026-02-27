@@ -23,7 +23,7 @@ try {
   await $`bun run check-types`.cwd(root)
   await $`bun run lint`.cwd(root)
   await $`node ${join(root, "esbuild.js")} --production`.cwd(root)
-  await $`bunx @vscode/vsce package --no-dependencies --skip-license -o ${outDir}/`.cwd(root)
+  await $`bunx vsce package --no-dependencies --skip-license -o ${outDir}/`.cwd(root)
 } finally {
   await Bun.write(pkgPath, JSON.stringify(pkg, null, 2) + "\n")
 }

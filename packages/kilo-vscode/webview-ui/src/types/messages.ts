@@ -747,6 +747,20 @@ export interface AgentManagerWorktreeStatsMessage {
   stats: WorktreeGitStats[]
 }
 
+// Per-local-workspace git stats: branch name, diff additions/deletions, commits missing from origin
+export interface LocalGitStats {
+  branch: string
+  additions: number
+  deletions: number
+  commits: number
+}
+
+// Agent Manager: Local workspace git stats push (extension → webview)
+export interface AgentManagerLocalStatsMessage {
+  type: "agentManager.localStats"
+  stats: LocalGitStats
+}
+
 // Request webview to send initial prompt to a newly created session (extension → webview)
 export interface AgentManagerSendInitialMessage {
   type: "agentManager.sendInitialMessage"
@@ -880,6 +894,7 @@ export type ExtensionMessage =
   | AgentManagerWorktreeDiffMessage
   | AgentManagerWorktreeDiffLoadingMessage
   | AgentManagerWorktreeStatsMessage
+  | AgentManagerLocalStatsMessage
   | BenchProgressMessage
   | BenchResultsMessage
   | BenchConfigMessage

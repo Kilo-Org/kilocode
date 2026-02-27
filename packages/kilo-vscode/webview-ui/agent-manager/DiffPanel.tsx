@@ -21,6 +21,8 @@ import {
   type ReviewComment,
 } from "./review-comments"
 import { buildReviewAnnotation, type AnnotationLabels, type AnnotationMeta } from "./review-annotations"
+import { LONG_DIFF_MARKER_FILE_COUNT, initialOpenFiles, isLargeDiffFile } from "./diff-open-policy"
+import { DiffEndMarker } from "./DiffEndMarker"
 
 // --- Data model ---
 
@@ -55,10 +57,13 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     delete: t("common.delete"),
   })
   const [open, setOpen] = createSignal<string[]>([])
-  const [openInit, setOpenInit] = createSignal(false)
   const [draft, setDraft] = createSignal<{ file: string; side: AnnotationSide; line: number } | null>(null)
   const [editing, setEditing] = createSignal<string | null>(null)
   let nextId = 0
+  // Tracks the session key for which auto-open has already run. When the
+  // key changes (different worktree) we re-expand. Within the same key,
+  // only pruning happens so the user's manual collapse state is preserved.
+  let initializedKey: string | undefined
 
   const comments = () => props.comments
   const setComments = (next: ReviewComment[]) => props.onCommentsChange(next)
@@ -112,35 +117,36 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     focusRoot()
   }
 
-  // Reset auto-open state when switching sessions so diffs expand for the new session
+  // Unified auto-open effect: tracks both sessionKey and diffs in a single effect
+  // to eliminate the race condition between the old separate sessionKey-reset and
+  // diffs-watch effects. Uses the session key to decide when auto-expand is needed
+  // vs when we just prune stale entries from the open list.
   createEffect(
     on(
-      () => props.sessionKey,
-      () => {
-        setOpenInit(false)
-      },
-      { defer: true },
-    ),
-  )
+      () => [props.sessionKey, props.diffs] as const,
+      ([key, diffs]) => {
+        // No diffs yet (async fetch in progress) — don't mark as initialized
+        // so auto-open runs when data arrives.
+        // Important: do not prune on empty, otherwise transient empty updates
+        // collapse all files and they stay collapsed for the same key.
+        if (diffs.length === 0) return
 
-  // Auto-open files when diffs arrive
-  createEffect(
-    on(
-      () => props.diffs,
-      (diffs) => {
-        const files = diffs.map((d) => d.file)
-        const fileSet = new Set(files)
-        // Only update open state when the file list actually changed to avoid
-        // unnecessary re-renders that reset scroll position during polling
+        const fileSet = new Set(diffs.map((diff) => diff.file))
+
+        // New context: initialize open state from the diff policy.
+        if (key !== initializedKey) {
+          initializedKey = key
+          setOpen(initialOpenFiles(diffs))
+          return
+        }
+
+        // Already initialized for this key — preserve manual expand/collapse,
+        // only prune files that no longer exist (e.g. deleted during session)
         setOpen((prev) => {
           const filtered = prev.filter((file) => fileSet.has(file))
           if (filtered.length === prev.length && prev.every((f) => fileSet.has(f))) return prev
           return filtered
         })
-        if (openInit()) return
-        if (diffs.length === 0) return
-        if (diffs.length <= 15) setOpen(files)
-        setOpenInit(true)
       },
     ),
   )
@@ -293,6 +299,8 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     files: props.diffs.length,
     additions: props.diffs.reduce((sum, diff) => sum + diff.additions, 0),
     deletions: props.diffs.reduce((sum, diff) => sum + diff.deletions, 0),
+    large: props.diffs.filter((diff) => isLargeDiffFile(diff)).length,
+    collapsed: Math.max(props.diffs.length - open().length, 0),
   }))
 
   return (
@@ -319,6 +327,16 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                 <span>{t("session.review.filesChanged", { count: totals().files })}</span>
                 <span class="am-diff-header-adds">+{totals().additions}</span>
                 <span class="am-diff-header-dels">-{totals().deletions}</span>
+                <Show when={totals().collapsed > 0}>
+                  <span class="am-diff-header-collapsed">
+                    {totals().large > 0
+                      ? t("agentManager.review.collapsedWithLarge", {
+                          collapsed: totals().collapsed,
+                          large: totals().large,
+                        })
+                      : t("agentManager.review.collapsedOnly", { count: totals().collapsed })}
+                  </span>
+                </Show>
               </span>
             </>
           </Show>
@@ -359,6 +377,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
               {(diff) => {
                 const isAdded = () => diff.status === "added"
                 const isDeleted = () => diff.status === "deleted"
+                const isLargeCollapsed = () => isLargeDiffFile(diff) && !open().includes(diff.file)
                 const fileCommentCount = () => (commentsByFile().get(diff.file) ?? []).length
 
                 return (
@@ -389,8 +408,9 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                                 {t("ui.sessionReview.change.removed")}
                               </span>
                             </Show>
-                            <Show when={!isAdded() && !isDeleted()}>
-                              <DiffChanges changes={diff} />
+                            <DiffChanges changes={diff} />
+                            <Show when={isLargeCollapsed()}>
+                              <span class="am-diff-large-pill">{t("agentManager.review.largeFileCollapsed")}</span>
                             </Show>
                             <Show when={props.onOpenFile && !isDeleted()}>
                               <Tooltip value={t("agentManager.diff.openFile")} placement="top">
@@ -431,6 +451,9 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
               }}
             </For>
           </Accordion>
+          <Show when={props.diffs.length > LONG_DIFF_MARKER_FILE_COUNT}>
+            <DiffEndMarker />
+          </Show>
         </div>
 
         <Show when={comments().length > 0}>

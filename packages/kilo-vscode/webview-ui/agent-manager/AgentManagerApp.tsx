@@ -24,8 +24,10 @@ import type {
   AgentManagerWorktreeDiffMessage,
   AgentManagerWorktreeDiffLoadingMessage,
   AgentManagerWorktreeStatsMessage,
+  AgentManagerLocalStatsMessage,
   WorktreeFileDiff,
   WorktreeGitStats,
+  LocalGitStats,
   WorktreeState,
   ManagedSessionState,
   SessionInfo,
@@ -58,8 +60,8 @@ import { ConfigProvider } from "../src/context/config"
 import { SessionProvider, useSession } from "../src/context/session"
 import { WorktreeModeProvider } from "../src/context/worktree-mode"
 import { ChatView } from "../src/components/chat"
-import { ModelSelectorBase } from "../src/components/chat/ModelSelector"
-import { ModeSwitcherBase } from "../src/components/chat/ModeSwitcher"
+import { ModelSelectorBase } from "../src/components/shared/ModelSelector"
+import { ModeSwitcherBase } from "../src/components/shared/ModeSwitcher"
 import {
   MultiModelSelector,
   type ModelAllocations,
@@ -319,6 +321,9 @@ const AgentManagerContent: Component = () => {
 
   // Per-worktree git stats (diff additions/deletions, commits missing from origin)
   const [worktreeStats, setWorktreeStats] = createSignal<Record<string, WorktreeGitStats>>({})
+
+  // Local workspace git stats (branch name, diff additions/deletions, commits)
+  const [localStats, setLocalStats] = createSignal<LocalGitStats | undefined>()
 
   // Pending local tab counter for generating unique IDs
   let pendingCounter = 0
@@ -719,14 +724,14 @@ const AgentManagerContent: Component = () => {
     }
     window.addEventListener("message", handler)
 
-    // Prevent Cmd+Arrow/T/W/N/digit from triggering native browser actions
+    // Prevent Cmd/Ctrl shortcuts from triggering native browser actions
     const preventDefaults = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
         e.preventDefault()
       }
-      // Prevent browser defaults for our shortcuts (new tab, close tab, new window, toggle diff)
-      if (["t", "w", "n", "d"].includes(e.key.toLowerCase()) && !e.shiftKey) {
+      // Prevent browser defaults for our shortcuts (new tab, close tab, new window, toggle diff, find)
+      if (["t", "w", "n", "d", "f"].includes(e.key.toLowerCase()) && !e.shiftKey) {
         e.preventDefault()
       }
       // Prevent defaults for shift variants (close worktree, advanced new worktree)
@@ -738,7 +743,7 @@ const AgentManagerContent: Component = () => {
         e.preventDefault()
       }
     }
-    window.addEventListener("keydown", preventDefaults)
+    window.addEventListener("keydown", preventDefaults, true)
 
     // When the panel regains focus (e.g. returning from terminal), focus the prompt
     // and clear any stale body styles left by Kobalte modal overlays (dropdowns/dialogs
@@ -965,11 +970,17 @@ const AgentManagerContent: Component = () => {
         for (const s of ev.stats) map[s.worktreeId] = s
         setWorktreeStats(map)
       }
+
+      if (msg.type === "agentManager.localStats") {
+        const ev = msg as AgentManagerLocalStatsMessage
+        setLocalStats(ev.stats)
+        setRepoBranch(ev.stats.branch)
+      }
     })
 
     onCleanup(() => {
       window.removeEventListener("message", handler)
-      window.removeEventListener("keydown", preventDefaults)
+      window.removeEventListener("keydown", preventDefaults, true)
       window.removeEventListener("focus", onWindowFocus)
       unsubCreate()
       unsubSessions()
@@ -1040,6 +1051,14 @@ const AgentManagerContent: Component = () => {
     setReviewActive(true)
   }
 
+  const toggleReviewTab = () => {
+    if (reviewActive()) {
+      closeReviewTab()
+      return
+    }
+    openReviewTab()
+  }
+
   // Deferred close: flip signal immediately for instant UI feedback,
   // the <Show> unmount triggers heavy FileDiff cleanup but the tab bar
   // and chat view are already visible before that work runs.
@@ -1065,6 +1084,13 @@ const AgentManagerContent: Component = () => {
       if (data[sid]) return data[sid]!
     }
     return []
+  })
+
+  const diffSessionKey = createMemo(() => {
+    const sel = selection()
+    if (sel === LOCAL) return `local:${LOCAL}`
+    if (sel === null) return `session:${session.currentSessionID() ?? ""}`
+    return `worktree:${sel}`
   })
 
   const setSharedDiffStyle = (style: "unified" | "split") => {
@@ -1365,6 +1391,33 @@ const AgentManagerContent: Component = () => {
               <span class="am-local-branch">{repoBranch()}</span>
             </Show>
           </div>
+          <Show
+            when={
+              localStats() && (localStats()!.additions > 0 || localStats()!.deletions > 0 || localStats()!.commits > 0)
+            }
+          >
+            <div class="am-worktree-stats">
+              <Show when={localStats()!.additions > 0 || localStats()!.deletions > 0}>
+                <span class="am-worktree-diff-stats">
+                  <Show when={localStats()!.additions > 0}>
+                    <span class="am-stat-additions">+{localStats()!.additions}</span>
+                  </Show>
+                  <Show when={localStats()!.deletions > 0}>
+                    <span class="am-stat-deletions">
+                      {"\u2212"}
+                      {localStats()!.deletions}
+                    </span>
+                  </Show>
+                </span>
+              </Show>
+              <Show when={localStats()!.commits > 0}>
+                <span class="am-worktree-commits">
+                  {"↑"}
+                  {localStats()!.commits}
+                </span>
+              </Show>
+            </div>
+          </Show>
           <span class="am-shortcut-badge">{isMac ? "⌘" : "Ctrl+"}1</span>
         </button>
 
@@ -1897,8 +1950,10 @@ const AgentManagerContent: Component = () => {
               <div class="am-tab-actions">
                 {(() => {
                   const sel = () => selection()
-                  const stats = () =>
-                    typeof sel() === "string" && sel() !== LOCAL ? worktreeStats()[sel() as string] : undefined
+                  const stats = () => {
+                    if (sel() === LOCAL) return localStats()
+                    return typeof sel() === "string" ? worktreeStats()[sel() as string] : undefined
+                  }
                   const hasChanges = () => {
                     const s = stats()
                     return s && (s.additions > 0 || s.deletions > 0)
@@ -1940,7 +1995,7 @@ const AgentManagerContent: Component = () => {
                       variant="ghost"
                       label={t("command.review.toggle")}
                       class={reviewActive() ? "am-tab-diff-btn-active" : ""}
-                      onClick={openReviewTab}
+                      onClick={toggleReviewTab}
                     />
                   </Tooltip>
                 </Show>
@@ -2076,7 +2131,7 @@ const AgentManagerContent: Component = () => {
                   <DiffPanel
                     diffs={diffDatas()[selection() === LOCAL ? LOCAL : (session.currentSessionID() ?? "")] ?? []}
                     loading={diffLoading()}
-                    sessionKey={selection() === LOCAL ? LOCAL : (session.currentSessionID() ?? "")}
+                    sessionKey={diffSessionKey()}
                     diffStyle={reviewDiffStyle()}
                     onDiffStyleChange={setSharedDiffStyle}
                     comments={reviewComments()}
@@ -2098,12 +2153,16 @@ const AgentManagerContent: Component = () => {
               <FullScreenDiffView
                 diffs={reviewDiffs()}
                 loading={diffLoading()}
-                sessionKey={selection() === LOCAL ? LOCAL : (session.currentSessionID() ?? "")}
+                sessionKey={diffSessionKey()}
                 comments={reviewComments()}
                 onCommentsChange={setReviewCommentsForSelection}
                 onSendAll={closeReviewTab}
                 diffStyle={reviewDiffStyle()}
                 onDiffStyleChange={setSharedDiffStyle}
+                onOpenFile={(file) => {
+                  const id = session.currentSessionID()
+                  if (id) vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file })
+                }}
                 onClose={closeReviewTab}
               />
             </div>
