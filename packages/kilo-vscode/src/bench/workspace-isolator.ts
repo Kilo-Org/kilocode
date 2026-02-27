@@ -80,7 +80,8 @@ async function createWorktreeIsolator(
 	}
 
 	const git = simpleGit(repoRoot)
-	const baseBranch = (await git.revparse(["--abbrev-ref", "HEAD"])).trim()
+	const ref = (await git.revparse(["--abbrev-ref", "HEAD"])).trim()
+	const baseBranch = ref === "HEAD" ? (await git.revparse(["HEAD"])).trim() : ref
 	const safeName = label.replace(/[^a-zA-Z0-9_-]/g, "-")
 	const uid = crypto.randomBytes(3).toString("hex")
 	const branchName = `kilo-bench/${safeName}-${uid}`

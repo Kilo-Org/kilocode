@@ -163,8 +163,9 @@ export function createBenchApiHandler(
 				)
 
 				const targetModel = modelId || defaultModelId
+				const hasExplicitModel = targetModel.length > 0 && targetModel !== "default"
 				const targetProvider = defaultProviderId
-				console.log(`[Kilo Bench] Sending message to ${targetModel || "(user default)"} (prompt length: ${userPrompt.length})`)
+				console.log(`[Kilo Bench] Sending message to ${hasExplicitModel ? targetModel : "(user default)"} (prompt length: ${userPrompt.length})`)
 
 				const sendOptions: {
 					providerID?: string
@@ -176,7 +177,7 @@ export function createBenchApiHandler(
 				if (textOnly) {
 					sendOptions.tools = { "*": false }
 				}
-				if (targetModel) {
+				if (hasExplicitModel) {
 					sendOptions.providerID = targetProvider
 					sendOptions.modelID = targetModel
 				}

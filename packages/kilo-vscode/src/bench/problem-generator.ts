@@ -105,7 +105,7 @@ async function readWorkspaceSummary(cwd: string): Promise<{
 			const content = await fs.readFile(file, "utf-8")
 			const relativePath = path.relative(cwd, file)
 			keyFiles.push(relativePath)
-			summaryParts.push(`--- ${relativePath} ---\n${content.slice(0, 3000)}`)
+			summaryParts.push(`--- ${relativePath} ---\n${redactText(content.slice(0, 3000))}`)
 		} catch {
 			// ignore
 		}
@@ -331,12 +331,13 @@ function buildProblemSet(parsed: any, cwd: string, language: string, modelId: st
 	}
 
 	const problems: BenchProblem[] = parsed.problems
-		.filter(
-			(p: any) =>
-				p != null &&
-				typeof p.id === "string" &&
-				p.id.length > 0 &&
-				typeof p.prompt === "string" &&
+			.filter(
+				(p: any) =>
+					p !== null &&
+					p !== undefined &&
+					typeof p.id === "string" &&
+					p.id.length > 0 &&
+					typeof p.prompt === "string" &&
 				p.prompt.length > 0,
 		)
 		.map(

@@ -26,17 +26,17 @@ import { BenchCreditError } from "./bench/types.js"
 
 const BenchModeSchema = z.enum(["architect", "code", "debug", "ask", "orchestrator"])
 const BenchConfigUpdateSchema = z.object({
-  problemsPerMode: z.number().optional(),
+  problemsPerMode: z.number().int().min(1).max(10).optional(),
   activeModes: z.array(BenchModeSchema).optional(),
   generatorModel: z.string().optional(),
   evaluatorModel: z.string().optional(),
-  maxParallelModels: z.number().optional(),
-  temperature: z.number().optional(),
+  maxParallelModels: z.number().int().min(1).max(10).optional(),
+  temperature: z.number().min(0).max(2).optional(),
   weights: z.object({
-    quality: z.number().optional(),
-    relevance: z.number().optional(),
-    speed: z.number().optional(),
-    cost: z.number().optional(),
+    quality: z.number().min(0).max(1).optional(),
+    relevance: z.number().min(0).max(1).optional(),
+    speed: z.number().min(0).max(1).optional(),
+    cost: z.number().min(0).max(1).optional(),
   }).strict().optional(),
 }).strict()
 
@@ -551,7 +551,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             const apiHandler = createBenchApiHandler(
               this.connectionService,
               this.getWorkspaceDirectory(),
-              "",
+              "default",
               "kilo",
             )
             const benchService = new BenchService(this.getWorkspaceDirectory(), apiHandler, this.connectionService, "kilo")
@@ -586,7 +586,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             const apiHandler = createBenchApiHandler(
               this.connectionService,
               this.getWorkspaceDirectory(),
-              "",
+              "default",
               "kilo",
             )
             const benchService = new BenchService(this.getWorkspaceDirectory(), apiHandler, this.connectionService, "kilo")
@@ -687,7 +687,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             const apiHandler = createBenchApiHandler(
               this.connectionService,
               this.getWorkspaceDirectory(),
-              "",
+              "default",
               "kilo",
             )
             const benchService = new BenchService(this.getWorkspaceDirectory(), apiHandler, this.connectionService, "kilo")

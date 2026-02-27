@@ -62,7 +62,10 @@ export class BenchService {
 	}
 
 	async generate(onProgress: ProgressCallback): Promise<BenchProblemSet> {
-		this.abortController = new AbortController()
+		const abortController = this.abortController && !this.abortController.signal.aborted
+			? this.abortController
+			: new AbortController()
+		this.abortController = abortController
 
 		onProgress({
 			phase: "generating",
@@ -75,7 +78,7 @@ export class BenchService {
 			this.cwd,
 			config,
 			this.apiHandler,
-			this.abortController.signal,
+			abortController.signal,
 		)
 
 		await storage.saveProblems(this.cwd, problems)
@@ -156,9 +159,8 @@ export class BenchService {
 					: "Starting benchmark run...",
 			})
 
-			let modelsCompleted = 0
-
-			for (const modelId of models) {
+			for (const [index, modelId] of models.entries()) {
+				const modelsCompleted = index
 				if (this.abortController?.signal.aborted) {
 					throw new Error("Benchmark cancelled")
 				}
@@ -168,7 +170,6 @@ export class BenchService {
 					(p) => !completedKeys.has(`${modelId}::${p.id}`),
 				)
 				if (modelProblems.length === 0) {
-					modelsCompleted++
 					continue
 				}
 
@@ -253,8 +254,6 @@ export class BenchService {
 						}
 					}
 				}
-
-				modelsCompleted++
 			}
 		}
 
@@ -270,6 +269,7 @@ export class BenchService {
 		})
 
 		const unevaluatedResponses = rawResponses.filter((r) => !evaluations.has(`${r.modelId}::${r.problemId}`))
+		let pendingEvalCheckpoint: Promise<void> = Promise.resolve()
 
 		try {
 			const newEvaluations = await evaluateAllResponses(
@@ -285,16 +285,20 @@ export class BenchService {
 					})
 
 					// Checkpoint during evaluation too
-					void this.saveCheckpointQuietly(runId, startedAt, models, problems, config, rawResponses, evaluations, "evaluating")
+					pendingEvalCheckpoint = pendingEvalCheckpoint.then(() =>
+						this.saveCheckpointQuietly(runId, startedAt, models, problems, config, rawResponses, evaluations, "evaluating"),
+					)
 				},
 				this.abortController!.signal,
 			)
+			await pendingEvalCheckpoint
 
 			// Merge new evaluations
 			for (const [key, val] of newEvaluations) {
 				evaluations.set(key, val)
 			}
 		} catch (error) {
+			await pendingEvalCheckpoint
 			if (error instanceof BenchCreditError || (this.abortController && !this.abortController.signal.aborted)) {
 				await this.saveCheckpointQuietly(
 					runId, startedAt, models, problems, config, rawResponses, evaluations, "evaluating",
