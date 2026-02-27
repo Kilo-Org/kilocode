@@ -43,12 +43,12 @@ Stops the machine, applies your current configuration (environment variables, se
 - **Redeploy** — Redeploys using the same platform version your instance was originally set up with. Use this when you only need to apply configuration changes without changing the underlying platform.
 - **Upgrade & Redeploy** — Upgrades your instance to the latest supported platform version, then redeploys. Use this to pick up new features and fixes from the changelog.
 
-**Your files, git repos, cron jobs, and everything on your persistent volume are preserved.** Redeploy is not a factory reset — think of it as "update and restart."
+**Your files, git repos, cron jobs, and everything on your persistent volume are preserved.** Redeploy is not a factory reset — think of it as "apply config and restart" (or "upgrade and restart" if you choose **Upgrade & Redeploy**).
 
 You should redeploy when:
 
 - The changelog shows "Redeploy Required" or "Redeploy Suggested" (use **Upgrade & Redeploy**)
-- You've changed channel tokens or secrets in Settings
+- You've changed channel tokens or secrets in Settings (use **Redeploy**)
 - You want to pick up the latest platform updates (use **Upgrade & Redeploy**)
 
 Available when the instance is **running**.
