@@ -17,7 +17,7 @@ export function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message
   if (typeof error === "string") return error
   if (error && typeof error === "object") {
-    const obj = error as Record<string, any>
+    const obj = error as Record<string, unknown>
     // Direct .message field
     if (typeof obj.message === "string") return obj.message
     // Direct .error field

@@ -217,7 +217,7 @@ export class KiloConnectionService {
       },
     })
 
-    this.sseClient = new SdkSSEAdapter(this.client!)
+    this.sseClient = new SdkSSEAdapter(this.client)
 
     // Wait until SSE actually reaches a terminal state before resolving connect().
     let resolveConnected: (() => void) | null = null
