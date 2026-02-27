@@ -24,6 +24,7 @@ import { Clipboard } from "../../util/clipboard"
 import type { FilePart } from "@kilocode/sdk/v2"
 import { TuiEvent } from "../../event"
 import { iife } from "@/util/iife"
+import { Paste } from "@/kilocode/paste" // kilocode_change
 import { Locale } from "@/util/locale"
 import { formatDuration } from "@/util/format"
 import { createColors, createFrames } from "../../ui/spinner.ts"
@@ -976,15 +977,13 @@ export function Prompt(props: PromptProps) {
                   } catch {}
                 }
 
-                const lineCount = (pastedContent.match(/\n/g)?.length ?? 0) + 1
-                if (
-                  (lineCount >= 3 || pastedContent.length > 150) &&
-                  !sync.data.config.experimental?.disable_paste_summary
-                ) {
+                // kilocode_change start
+                if (Paste.shouldSummarize(pastedContent) && !sync.data.config.experimental?.disable_paste_summary) {
                   event.preventDefault()
-                  pasteText(pastedContent, `[Pasted ~${lineCount} lines]`)
+                  pasteText(pastedContent, Paste.summary(pastedContent))
                   return
                 }
+                // kilocode_change end
 
                 // Force layout update and render for the pasted content
                 setTimeout(() => {
