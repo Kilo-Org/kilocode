@@ -51,7 +51,7 @@ export namespace LearnTracker {
   export async function get(sessionID: string): Promise<State> {
     return Storage.read<State>(["learn", sessionID])
       .then((x) => x || empty())
-      .catch(() => empty())
+      .catch((err) => { log.warn("learn state read failed", { sessionID, err }); return empty() })
   }
 
   export async function record(input: { sessionID: string; check: Omit<Check, "id" | "timestamp"> }) {
