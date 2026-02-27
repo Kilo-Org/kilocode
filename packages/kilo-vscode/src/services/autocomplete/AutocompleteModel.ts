@@ -58,7 +58,7 @@ export class AutocompleteModel {
 
   /**
    * Generate a FIM (Fill-in-the-Middle) completion via the CLI backend.
-   * The CLI backend handles auth using the stored kilo OAuth token.
+   * Uses the SDK's kilo.fim() SSE endpoint which handles auth and streaming.
    */
   public async generateFimResponse(
     prefix: string,
@@ -75,78 +75,33 @@ export class AutocompleteModel {
       throw new Error(`CLI backend is not connected (state: ${state})`)
     }
 
-    // FIM uses SSE streaming — use direct fetch via server config
-    // (the SDK's kilo.fim() returns an SSE async iterable which doesn't match the onChunk callback pattern)
-    const serverConfig = this.connectionService.getServerConfig()
-    if (!serverConfig) {
-      throw new Error("Server config not available")
-    }
-
-    const authHeader = `Basic ${Buffer.from(`kilo:${serverConfig.password}`).toString("base64")}`
-    const url = `${serverConfig.baseUrl}/kilo/fim`
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: authHeader,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        prefix,
-        suffix,
-        model: DEFAULT_MODEL,
-        maxTokens: 256,
-        temperature: 0.2,
-      }),
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`FIM request failed: ${response.status} ${errorText}`)
-    }
-
-    if (!response.body) {
-      throw new Error("FIM response has no body")
-    }
+    const client = this.connectionService.getClient()
 
     let cost = 0
     let inputTokens = 0
     let outputTokens = 0
 
-    // Parse SSE stream
-    const reader = response.body.getReader()
-    const decoder = new TextDecoder()
-    let buffer = ""
+    const { stream } = await client.kilo.fim({
+      prefix,
+      suffix,
+      model: DEFAULT_MODEL,
+      maxTokens: 256,
+      temperature: 0.2,
+    })
 
-    for (;;) {
-      const { done, value } = await reader.read()
-      if (done) break
-
-      buffer += decoder.decode(value, { stream: true })
-      const lines = buffer.split("\n")
-      buffer = lines.pop() ?? ""
-
-      for (const line of lines) {
-        if (!line.startsWith("data: ")) continue
-        const json = line.slice(6).trim()
-        if (!json || json === "[DONE]") continue
-        try {
-          const chunk = JSON.parse(json) as {
-            choices?: Array<{ delta?: { content?: string } }>
-            usage?: { prompt_tokens?: number; completion_tokens?: number }
-            cost?: number
-          }
-          const content = chunk.choices?.[0]?.delta?.content
-          if (content) onChunk(content)
-          if (chunk.usage) {
-            inputTokens = chunk.usage.prompt_tokens ?? 0
-            outputTokens = chunk.usage.completion_tokens ?? 0
-          }
-          if (chunk.cost !== undefined) cost = chunk.cost
-        } catch (e) {
-          console.warn("[AutocompleteModel] Malformed JSON in FIM SSE chunk:", json, e)
-        }
+    for await (const chunk of stream) {
+      const event = chunk as {
+        choices?: Array<{ delta?: { content?: string } }>
+        usage?: { prompt_tokens?: number; completion_tokens?: number }
+        cost?: number
       }
+      const content = event.choices?.[0]?.delta?.content
+      if (content) onChunk(content)
+      if (event.usage) {
+        inputTokens = event.usage.prompt_tokens ?? 0
+        outputTokens = event.usage.completion_tokens ?? 0
+      }
+      if (event.cost !== undefined) cost = event.cost
     }
 
     return {
