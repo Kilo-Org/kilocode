@@ -27,7 +27,7 @@ import { BenchCreditError } from "./bench/types.js"
 const BenchModeSchema = z.enum(["architect", "code", "debug", "ask", "orchestrator"])
 const BenchConfigUpdateSchema = z.object({
   problemsPerMode: z.number().int().min(1).max(10).optional(),
-  activeModes: z.array(BenchModeSchema).optional(),
+  activeModes: z.array(BenchModeSchema).min(1).optional(),
   generatorModel: z.string().optional(),
   evaluatorModel: z.string().optional(),
   maxParallelModels: z.number().int().min(1).max(10).optional(),
@@ -556,10 +556,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             )
             const benchService = new BenchService(this.getWorkspaceDirectory(), apiHandler, this.connectionService, "kilo")
             this.activeBenchService = benchService
-            const result = await benchService.startBenchmark(models, async (progress: any) => {
-              this.postMessage({ type: "benchProgress", benchProgress: progress })
-            })
-            this.postMessage({ type: "benchResults", benchResults: result })
+            try {
+              const result = await benchService.startBenchmark(models, async (progress: any) => {
+                this.postMessage({ type: "benchProgress", benchProgress: progress })
+              })
+              this.postMessage({ type: "benchResults", benchResults: result })
+            } finally {
+              if (this.activeBenchService === benchService) {
+                this.activeBenchService = null
+              }
+            }
           } catch (error: unknown) {
             const isCreditError = error instanceof BenchCreditError
             this.postMessage({
@@ -569,8 +575,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
                 : (error instanceof Error ? error.message : "Benchmark failed"),
               benchIsCreditError: isCreditError,
             })
-          } finally {
-            this.activeBenchService = null
           }
           break
         }
@@ -591,10 +595,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             )
             const benchService = new BenchService(this.getWorkspaceDirectory(), apiHandler, this.connectionService, "kilo")
             this.activeBenchService = benchService
-            const result = await benchService.resumeBenchmark(async (progress: any) => {
-              this.postMessage({ type: "benchProgress", benchProgress: progress })
-            })
-            this.postMessage({ type: "benchResults", benchResults: result })
+            try {
+              const result = await benchService.resumeBenchmark(async (progress: any) => {
+                this.postMessage({ type: "benchProgress", benchProgress: progress })
+              })
+              this.postMessage({ type: "benchResults", benchResults: result })
+            } finally {
+              if (this.activeBenchService === benchService) {
+                this.activeBenchService = null
+              }
+            }
           } catch (error: unknown) {
             const isCreditError = error instanceof BenchCreditError
             this.postMessage({
@@ -604,8 +614,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
                 : (error instanceof Error ? error.message : "Resume failed"),
               benchIsCreditError: isCreditError,
             })
-          } finally {
-            this.activeBenchService = null
           }
           break
         }
@@ -692,14 +700,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             )
             const benchService = new BenchService(this.getWorkspaceDirectory(), apiHandler, this.connectionService, "kilo")
             this.activeBenchService = benchService
-            const problems = await benchService.generate((progress: any) => {
-              this.postMessage({ type: "benchProgress", benchProgress: progress })
-            })
-            this.postMessage({ type: "benchProblems", benchProblems: problems })
+            try {
+              const problems = await benchService.generate((progress: any) => {
+                this.postMessage({ type: "benchProgress", benchProgress: progress })
+              })
+              this.postMessage({ type: "benchProblems", benchProblems: problems })
+            } finally {
+              if (this.activeBenchService === benchService) {
+                this.activeBenchService = null
+              }
+            }
           } catch (error: unknown) {
             this.postMessage({ type: "benchError", benchError: error instanceof Error ? error.message : "Failed to regenerate problems" })
-          } finally {
-            this.activeBenchService = null
           }
           break
         }

@@ -1,6 +1,7 @@
 import * as fs from "fs/promises"
 import * as path from "path"
 
+import { BENCH_MODES } from "./types.js"
 import type { BenchApiHandler, BenchConfig, BenchMode, BenchProblem, BenchProblemSet } from "./types.js"
 
 const SENSITIVE_KEYS = new Set([
@@ -231,8 +232,10 @@ export async function generateProblems(
 	abortSignal?: AbortSignal,
 ): Promise<BenchProblemSet> {
 	const { language, summary } = await readWorkspaceSummary(cwd)
+	const activeModes = config.activeModes.length > 0 ? config.activeModes : [...BENCH_MODES]
+	const problemsPerMode = Math.max(1, Math.min(10, config.problemsPerMode))
 
-	const prompt = buildGeneratorPrompt(language, summary, config.activeModes, config.problemsPerMode)
+	const prompt = buildGeneratorPrompt(language, summary, activeModes, problemsPerMode)
 	const modelId = apiHandler.getModelId()
 
 	const stream = apiHandler.createMessage(
@@ -271,10 +274,10 @@ export async function generateProblems(
 			const preview = (retryText || responseText).slice(0, 200) || "(empty response)"
 			throw new Error(`Generator model did not return valid JSON after retry. Response preview: ${preview}`)
 		}
-		return buildProblemSet(retryParsed, cwd, language, modelId)
+		return buildProblemSet(retryParsed, language, modelId)
 	}
 
-	return buildProblemSet(parsed, cwd, language, modelId)
+	return buildProblemSet(parsed, language, modelId)
 }
 
 /** Try multiple strategies to extract JSON from model output */
@@ -325,19 +328,19 @@ function extractJSON(text: string): any | null {
 	return null
 }
 
-function buildProblemSet(parsed: any, cwd: string, language: string, modelId: string): BenchProblemSet {
+function buildProblemSet(parsed: any, language: string, modelId: string): BenchProblemSet {
 	if (!parsed.problems || !Array.isArray(parsed.problems)) {
 		throw new Error("Generator model response missing 'problems' array")
 	}
 
 	const problems: BenchProblem[] = parsed.problems
-			.filter(
-				(p: any) =>
-					p !== null &&
-					p !== undefined &&
-					typeof p.id === "string" &&
-					p.id.length > 0 &&
-					typeof p.prompt === "string" &&
+		.filter(
+			(p: any) =>
+				p !== null &&
+				p !== undefined &&
+				typeof p.id === "string" &&
+				p.id.length > 0 &&
+				typeof p.prompt === "string" &&
 				p.prompt.length > 0,
 		)
 		.map(
@@ -351,7 +354,7 @@ function buildProblemSet(parsed: any, cwd: string, language: string, modelId: st
 				difficulty?: string
 			}) => ({
 				id: p.id,
-				mode: (p.mode as BenchMode) || "code",
+				mode: BENCH_MODES.includes(p.mode as BenchMode) ? (p.mode as BenchMode) : "code",
 				title: p.title || p.id,
 				prompt: p.prompt,
 				contextFiles: p.context_files || [],

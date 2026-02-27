@@ -51,6 +51,7 @@ export function BenchSettings(props: BenchSettingsProps) {
     const modes = current.activeModes.includes(mode)
       ? current.activeModes.filter((m) => m !== mode)
       : [...current.activeModes, mode]
+    if (modes.length === 0) return
     updateConfig({ activeModes: modes })
   }
 
@@ -90,7 +91,7 @@ export function BenchSettings(props: BenchSettingsProps) {
             <input
               type="range"
               min={1}
-              max={5}
+              max={10}
               step={1}
               value={cfg().problemsPerMode}
               onInput={(e) => updateConfig({ problemsPerMode: parseInt(e.currentTarget.value) })}

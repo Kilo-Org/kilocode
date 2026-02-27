@@ -92,6 +92,9 @@ export class BenchService {
 	}
 
 	async startBenchmark(models: string[], onProgress: ProgressCallback): Promise<BenchRunResult> {
+		if (models.length === 0) {
+			throw new Error("No models selected")
+		}
 		this.abortController = new AbortController()
 		const runId = Date.now().toString(36)
 		const startedAt = new Date().toISOString()
@@ -140,6 +143,12 @@ export class BenchService {
 	): Promise<BenchRunResult> {
 		const rawResponses = [...existingResponses]
 		const evaluations = new Map(Object.entries(existingEvaluations))
+		if (models.length === 0) {
+			throw new Error("No models selected")
+		}
+		if (problems.problems.length === 0) {
+			throw new Error("Problem set contains no benchmark problems")
+		}
 
 		// Figure out what's already done
 		const completedKeys = new Set(rawResponses.map((r) => `${r.modelId}::${r.problemId}`))
@@ -237,12 +246,10 @@ export class BenchService {
 						}
 					}
 
-					if (error instanceof BenchCreditError || (this.abortController && !this.abortController.signal.aborted)) {
-						await this.saveCheckpointQuietly(
-							runId, startedAt, models, problems, config, rawResponses, evaluations, "running",
-							error instanceof BenchCreditError ? error.message : (error instanceof Error ? error.message : "Unknown error"),
-						)
-					}
+					await this.saveCheckpointQuietly(
+						runId, startedAt, models, problems, config, rawResponses, evaluations, "running",
+						error instanceof BenchCreditError ? error.message : (error instanceof Error ? error.message : "Unknown error"),
+					)
 					throw error
 				} finally {
 					// Clean up isolation for this model
@@ -299,12 +306,10 @@ export class BenchService {
 			}
 		} catch (error) {
 			await pendingEvalCheckpoint
-			if (error instanceof BenchCreditError || (this.abortController && !this.abortController.signal.aborted)) {
-				await this.saveCheckpointQuietly(
-					runId, startedAt, models, problems, config, rawResponses, evaluations, "evaluating",
-					error instanceof BenchCreditError ? error.message : (error instanceof Error ? error.message : "Unknown error"),
-				)
-			}
+			await this.saveCheckpointQuietly(
+				runId, startedAt, models, problems, config, rawResponses, evaluations, "evaluating",
+				error instanceof BenchCreditError ? error.message : (error instanceof Error ? error.message : "Unknown error"),
+			)
 			throw error
 		}
 
@@ -394,6 +399,5 @@ export class BenchService {
 
 	cancel(): void {
 		this.abortController?.abort()
-		this.abortController = null
 	}
 }

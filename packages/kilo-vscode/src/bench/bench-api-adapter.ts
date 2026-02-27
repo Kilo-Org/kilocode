@@ -51,6 +51,8 @@ export function createBenchApiHandler(
 				let messageSent = false
 				let receivedAnyEvent = false
 				let totalTextChunks = 0
+				let lastEventAt = Date.now()
+				const maxInactivityMs = 3 * 60 * 1000
 
 				const clearIdleTimer = () => {
 					if (!idleTimer) return
@@ -88,6 +90,7 @@ export function createBenchApiHandler(
 						if (closed) {
 							return
 						}
+						lastEventAt = Date.now()
 						console.log(`[Kilo Bench] SSE event: ${event.type} (session: ${sessionId}, messageSent: ${messageSent})`)
 
 						if (event.type === "message.part.delta") {
@@ -192,6 +195,7 @@ export function createBenchApiHandler(
 					sendOptions,
 				)
 				messageSent = true
+				lastEventAt = Date.now()
 				console.log(`[Kilo Bench] Message sent successfully`)
 
 				try {
@@ -211,6 +215,10 @@ export function createBenchApiHandler(
 								resolve()
 							}
 							waitTimer = setTimeout(() => {
+								if (Date.now() - lastEventAt >= maxInactivityMs) {
+									done = true
+									messageError = "Timed out waiting for model response"
+								}
 								if (resolveWaiting) {
 									resolveWaiting()
 									return
