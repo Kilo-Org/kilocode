@@ -1652,13 +1652,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
-    console.log("[Kilo New] KiloProvider: 🚪 Logging out...")
-    await this.client.auth.remove({ providerID: "kilo" }, { throwOnError: true })
-    console.log("[Kilo New] KiloProvider: 🚪 Logged out successfully")
-    this.postMessage({
-      type: "profileData",
-      data: null,
-    })
+    try {
+      console.log("[Kilo New] KiloProvider: 🚪 Logging out...")
+      await this.client.auth.remove({ providerID: "kilo" }, { throwOnError: true })
+      console.log("[Kilo New] KiloProvider: 🚪 Logged out successfully")
+      this.postMessage({
+        type: "profileData",
+        data: null,
+      })
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: ❌ Logout failed:", error)
+      this.postMessage({
+        type: "error",
+        message: getErrorMessage(error) || "Failed to logout",
+      })
+    }
   }
 
   /**
