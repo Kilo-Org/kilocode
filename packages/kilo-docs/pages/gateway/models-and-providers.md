@@ -54,12 +54,12 @@ This returns model information including pricing, context window, and supported 
 
 Several models are available at no cost, subject to rate limits:
 
-| Model ID                              | Description               |
-| ------------------------------------- | ------------------------- |
-| `minimax/minimax-m2.5:free`           | MiniMax M2.5              |
-| `giga-potato`                         | Community model           |
-| `corethink:free`                      | CoreThink reasoning model |
-| `arcee-ai/trinity-large-preview:free` | Arcee Trinity             |
+| Model ID                              | Description                    |
+| ------------------------------------- | ------------------------------ |
+| `minimax/minimax-m2.5:free`           | MiniMax M2.5                   |
+| `giga-potato`                         | Giga Potato                    |
+| `corethink:free`                      | CoreThink                      |
+| `arcee-ai/trinity-large-preview:free` | Arcee AI Trinity Large Preview |
 
 Free models are available to both authenticated and anonymous users. Anonymous users are rate-limited to 200 requests per hour per IP address.
 
