@@ -1,6 +1,6 @@
 import type { KiloConnectionService } from "../services/cli-backend/index.js"
 import { createBenchApiHandler } from "./bench-api-adapter.js"
-import { runModelBenchmark } from "./benchmark-runner.js"
+import { getBenchPartialResults, runModelBenchmark } from "./benchmark-runner.js"
 import { evaluateAllResponses } from "./evaluator.js"
 import { generateProblems } from "./problem-generator.js"
 import { buildEvaluation, calculateAggregateScore, calculateModeScores } from "./score-calculator.js"
@@ -132,7 +132,7 @@ export class BenchService {
 		existingEvaluations: Record<string, { qualityScore: number; relevanceScore: number; qualityRationale: string; relevanceRationale: string }>,
 		onProgress: ProgressCallback,
 	): Promise<BenchRunResult> {
-		let rawResponses = [...existingResponses]
+		const rawResponses = [...existingResponses]
 		const evaluations = new Map(Object.entries(existingEvaluations))
 
 		// Figure out what's already done
@@ -200,30 +200,39 @@ export class BenchService {
 				}
 
 				try {
-					await runModelBenchmark(
-						modelProblems,
-						modelId,
-						execHandler,
-						isolator,
-						(update) => {
-							onProgress({
-								phase: "running",
-								currentModel: update.currentModel,
-								currentProblem: update.currentProblem,
-								totalProblems: update.totalProblems,
-								modelsCompleted,
-								totalModels: models.length,
-								message: update.message,
-							})
-						},
-						this.abortController!.signal,
-						(result) => {
-							rawResponses.push(result)
-							completedKeys.add(`${result.modelId}::${result.problemId}`)
-							return this.saveCheckpointQuietly(runId, models, problems, config, rawResponses, evaluations, "running")
-						},
-					)
+						await runModelBenchmark(
+							modelProblems,
+							modelId,
+							execHandler,
+							isolator,
+							(update) => {
+								onProgress({
+									phase: "running",
+									currentModel: update.currentModel,
+									currentProblem: update.currentProblem,
+									totalProblems: update.totalProblems,
+									modelsCompleted,
+									totalModels: models.length,
+									message: update.message,
+								})
+							},
+							this.abortController!.signal,
+							(result) => {
+								rawResponses.push(result)
+								completedKeys.add(`${result.modelId}::${result.problemId}`)
+								return this.saveCheckpointQuietly(runId, models, problems, config, rawResponses, evaluations, "running")
+							},
+						)
 				} catch (error) {
+					const partial = getBenchPartialResults(error)
+					for (const result of partial) {
+						const key = `${result.modelId}::${result.problemId}`
+						if (!completedKeys.has(key)) {
+								rawResponses.push(result)
+								completedKeys.add(key)
+							}
+						}
+
 					if (error instanceof BenchCreditError || (this.abortController && !this.abortController.signal.aborted)) {
 						await this.saveCheckpointQuietly(
 							runId, models, problems, config, rawResponses, evaluations, "running",
@@ -232,15 +241,15 @@ export class BenchService {
 					}
 					throw error
 				} finally {
-					// Clean up isolation for this model
-					if (isolator) {
-						try {
-							await isolator.cleanup()
-						} catch (err) {
-							console.warn(`[Kilo Bench] Isolation cleanup failed for ${modelId}: ${err}`)
+						// Clean up isolation for this model
+						if (isolator) {
+							try {
+								await isolator.cleanup()
+							} catch (err) {
+								console.warn(`[Kilo Bench] Isolation cleanup failed for ${modelId}: ${err}`)
+							}
 						}
 					}
-				}
 
 				modelsCompleted++
 			}
@@ -370,8 +379,8 @@ export class BenchService {
 				completedEvaluations: Object.fromEntries(evaluations),
 				interruptReason: interruptReason || "",
 			})
-		} catch {
-			// Best-effort checkpointing
+		} catch (err) {
+			console.warn("[Kilo Bench] Checkpoint save failed:", err)
 		}
 	}
 

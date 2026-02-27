@@ -36,7 +36,6 @@ export function createBenchApiHandler(
 				throw new Error("CLI backend not connected")
 			}
 
-			// Create a temporary session for this bench call
 			const session = await httpClient.createSession(workspaceDir)
 			const sessionId = session.id
 			console.log(`[Kilo Bench] Created session ${sessionId} (textOnly: ${textOnly})`)
@@ -44,10 +43,33 @@ export function createBenchApiHandler(
 			try {
 				const chunks: BenchStreamChunk[] = []
 				let resolveWaiting: (() => void) | null = null
+				let idleTimer: ReturnType<typeof setTimeout> | null = null
+				let waitTimer: ReturnType<typeof setTimeout> | null = null
 				let done = false
+				let closed = false
 				let messageError: string | null = null
 				let messageSent = false
 				let receivedAnyEvent = false
+				let totalTextChunks = 0
+
+				const clearIdleTimer = () => {
+					if (!idleTimer) return
+					clearTimeout(idleTimer)
+					idleTimer = null
+				}
+
+				const clearWaitTimer = () => {
+					if (!waitTimer) return
+					clearTimeout(waitTimer)
+					waitTimer = null
+				}
+
+				const wake = () => {
+					const fn = resolveWaiting
+					resolveWaiting = null
+					clearWaitTimer()
+					fn?.()
+				}
 
 				const unsubscribe = connectionService.onEventFiltered(
 					(event: SSEEvent) => {
@@ -63,16 +85,25 @@ export function createBenchApiHandler(
 						return false
 					},
 					(event: SSEEvent) => {
+						if (closed) {
+							return
+						}
 						console.log(`[Kilo Bench] SSE event: ${event.type} (session: ${sessionId}, messageSent: ${messageSent})`)
 
 						if (event.type === "message.part.delta") {
 							receivedAnyEvent = true
+							clearIdleTimer()
 							if (event.properties.field === "text") {
+								totalTextChunks++
 								chunks.push({ type: "text", text: event.properties.delta })
-								resolveWaiting?.()
+								wake()
 							}
-						} else if (event.type === "message.updated") {
+							return
+						}
+
+						if (event.type === "message.updated") {
 							receivedAnyEvent = true
+							clearIdleTimer()
 							const info = event.properties.info
 							console.log(`[Kilo Bench] message.updated: role=${info.role}, hasTokens=${!!info.tokens}, hasError=${!!info.error}`)
 							if (info.role === "assistant" && info.tokens) {
@@ -101,72 +132,67 @@ export function createBenchApiHandler(
 								} else {
 									messageError = errMsg
 								}
-								// An error is also a terminal event
 								done = true
-								resolveWaiting?.()
+								wake()
 							}
-						} else if (event.type === "session.idle") {
-							// Only treat session.idle as "done" if we've already sent the message
-							// AND received at least one message event (or the message has had time to process)
+							return
+						}
+
+						if (event.type === "session.idle") {
 							if (messageSent && receivedAnyEvent) {
 								console.log(`[Kilo Bench] session.idle — marking done (received events)`)
 								done = true
-								resolveWaiting?.()
-							} else if (messageSent) {
-								// Got idle but no events yet — could be a race. Wait a bit and check again.
+								wake()
+								return
+							}
+							if (messageSent) {
 								console.log(`[Kilo Bench] session.idle but no events yet — delaying`)
-								setTimeout(() => {
-									if (!receivedAnyEvent && messageSent) {
+								clearIdleTimer()
+								idleTimer = setTimeout(() => {
+									if (!closed && !receivedAnyEvent && messageSent) {
 										console.log(`[Kilo Bench] Still no events after delay — marking done (backend returned nothing)`)
 										done = true
-										resolveWaiting?.()
+										wake()
 									}
 								}, 2000)
-							} else {
-								console.log(`[Kilo Bench] session.idle before message sent — ignoring`)
+								return
 							}
+							console.log(`[Kilo Bench] session.idle before message sent — ignoring`)
 						}
 					},
 				)
 
-				// Send the message (system prompt prepended to user prompt)
-				const fullPrompt = systemPrompt
-					? `[System: ${systemPrompt}]\n\n${userPrompt}`
-					: userPrompt
-
 				const targetModel = modelId || defaultModelId
 				const targetProvider = defaultProviderId
-
-				console.log(`[Kilo Bench] Sending message to ${targetModel || "(user default)"} (prompt length: ${fullPrompt.length})`)
+				console.log(`[Kilo Bench] Sending message to ${targetModel || "(user default)"} (prompt length: ${userPrompt.length})`)
 
 				const sendOptions: {
 					providerID?: string
 					modelID?: string
+					system?: string
 					tools?: Record<string, boolean>
 				} = {}
 
-				// In text-only mode, disable all tools so the model can't
-				// execute agent actions (file I/O, bash, etc.)
 				if (textOnly) {
 					sendOptions.tools = { "*": false }
 				}
-
 				if (targetModel) {
 					sendOptions.providerID = targetProvider
 					sendOptions.modelID = targetModel
 				}
+				if (systemPrompt) {
+					sendOptions.system = systemPrompt
+				}
 
 				await httpClient.sendMessage(
 					sessionId,
-					[{ type: "text", text: fullPrompt }],
+					[{ type: "text", text: userPrompt }],
 					workspaceDir,
 					sendOptions,
 				)
-
 				messageSent = true
 				console.log(`[Kilo Bench] Message sent successfully`)
 
-				// Yield chunks as they arrive
 				try {
 					while (!done) {
 						if (chunks.length > 0) {
@@ -174,40 +200,51 @@ export function createBenchApiHandler(
 							for (const chunk of batch) {
 								yield chunk
 							}
-						} else {
-							await new Promise<void>((resolve) => {
-								resolveWaiting = resolve
-								setTimeout(() => {
-									resolveWaiting = null
-									resolve()
-								}, 60000)
-							})
+							continue
 						}
+
+						await new Promise<void>((resolve) => {
+							resolveWaiting = () => {
+								resolveWaiting = null
+								clearWaitTimer()
+								resolve()
+							}
+							waitTimer = setTimeout(() => {
+								if (resolveWaiting) {
+									resolveWaiting()
+									return
+								}
+								resolve()
+							}, 60000)
+						})
 					}
 
-					// Flush remaining chunks
 					for (const chunk of chunks) {
 						yield chunk
 					}
 
-					if (messageError) {
-						const errStr = messageError as string
-						if (errStr.startsWith("CREDIT_ERROR:")) {
-							throw new BenchCreditError(errStr.slice("CREDIT_ERROR:".length))
+					const err = messageError as string | null
+					if (err) {
+						if (err.startsWith("CREDIT_ERROR:")) {
+							throw new BenchCreditError(err.slice("CREDIT_ERROR:".length))
 						}
-						throw new Error(errStr)
+						throw new Error(err)
 					}
 
-					console.log(`[Kilo Bench] Stream complete. Total text chunks: ${chunks.length}`)
+					console.log(`[Kilo Bench] Stream complete. Total text chunks: ${totalTextChunks}`)
 				} finally {
+					closed = true
+					done = true
+					clearIdleTimer()
+					wake()
 					unsubscribe()
 				}
 			} finally {
 				try {
 					await httpClient.deleteSession(sessionId, workspaceDir)
 					console.log(`[Kilo Bench] Cleaned up session ${sessionId}`)
-				} catch {
-					// Best effort cleanup
+				} catch (err) {
+					console.warn(`[Kilo Bench] Failed to clean up session ${sessionId}:`, err)
 				}
 			}
 		},

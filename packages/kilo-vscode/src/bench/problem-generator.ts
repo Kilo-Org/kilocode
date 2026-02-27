@@ -3,6 +3,61 @@ import * as path from "path"
 
 import type { BenchApiHandler, BenchConfig, BenchMode, BenchProblem, BenchProblemSet } from "./types.js"
 
+const SENSITIVE_KEYS = new Set([
+	"token",
+	"secret",
+	"password",
+	"apikey",
+	"api_key",
+	"auth",
+	"authorization",
+	"scripts",
+	"publishconfig",
+	"env",
+	"environment",
+])
+
+function redactText(value: string): string {
+	const withRedactedAuth = value.replace(/https?:\/\/[^/\s:@]+:[^@\s/]+@/g, "https://[REDACTED]@")
+	return withRedactedAuth.replace(/(ghp_[a-zA-Z0-9]{20,}|sk-[a-zA-Z0-9]{20,}|AIza[0-9A-Za-z_-]{20,})/g, "[REDACTED]")
+}
+
+function redactJsonValue(value: unknown): unknown {
+	if (Array.isArray(value)) {
+		return value.map((entry) => redactJsonValue(entry))
+	}
+	if (value && typeof value === "object") {
+		const out: Record<string, unknown> = {}
+		for (const [k, v] of Object.entries(value)) {
+			const lower = k.toLowerCase()
+			const isSensitive = SENSITIVE_KEYS.has(lower) ||
+				lower.includes("token") ||
+				lower.includes("secret") ||
+				lower.includes("password")
+			out[k] = isSensitive ? "[REDACTED]" : redactJsonValue(v)
+		}
+		return out
+	}
+	if (typeof value === "string") {
+		return redactText(value)
+	}
+	return value
+}
+
+function sanitizeSummaryFile(file: string, content: string): string {
+	const isJson = file.endsWith(".json")
+	if (!isJson) {
+		return redactText(content).slice(0, 2000)
+	}
+	try {
+		const parsed = JSON.parse(content) as unknown
+		const redacted = redactJsonValue(parsed)
+		return JSON.stringify(redacted, null, 2).slice(0, 2000)
+	} catch {
+		return redactText(content).slice(0, 2000)
+	}
+}
+
 async function readWorkspaceSummary(cwd: string): Promise<{
 	language: string
 	summary: string
@@ -30,7 +85,7 @@ async function readWorkspaceSummary(cwd: string): Promise<{
 			language = lang
 			try {
 				const content = await fs.readFile(path.join(cwd, file), "utf-8")
-				summaryParts.push(`--- ${file} ---\n${content.slice(0, 2000)}`)
+				summaryParts.push(`--- ${file} ---\n${sanitizeSummaryFile(file, content)}`)
 			} catch {
 				// ignore read errors
 			}

@@ -7,7 +7,7 @@ import { BenchModelSelector } from "./BenchModelSelector"
 import { BenchProgressView } from "./BenchProgress"
 import { BenchDashboard } from "./BenchDashboard"
 import { BenchSettings } from "./BenchSettings"
-import type { BenchProgress } from "../../types/messages"
+import type { BenchProgress, BenchRunResult } from "../../types/messages"
 
 type BenchSubView = "empty" | "modelSelect" | "running" | "results" | "settings"
 
@@ -25,10 +25,10 @@ export default function BenchView(props: BenchViewProps) {
   const vscode = useVSCode()
   const [subView, setSubView] = createSignal<BenchSubView>("empty")
   const [progress, setProgress] = createSignal<BenchProgress | null>(null)
-  const [results, setResults] = createSignal<any>(null)
+  const [results, setResults] = createSignal<BenchRunResult | null>(null)
   const [checkpoint, setCheckpoint] = createSignal<CheckpointInfo | null>(null)
   const [isCreditError, setIsCreditError] = createSignal(false)
-  let returnFromSettings: BenchSubView = "empty"
+  const [returnFromSettings, setReturnFromSettings] = createSignal<BenchSubView>("empty")
 
   onMount(() => {
     vscode.postMessage({ type: "benchLoadResults" } as any)
@@ -106,7 +106,7 @@ export default function BenchView(props: BenchViewProps) {
             variant="ghost"
             size="small"
             onClick={() => {
-              returnFromSettings = subView()
+              setReturnFromSettings(subView())
               setSubView("settings")
             }}
           >
@@ -157,7 +157,7 @@ export default function BenchView(props: BenchViewProps) {
             />
           </Match>
           <Match when={subView() === "settings"}>
-            <BenchSettings onClose={() => setSubView(returnFromSettings)} />
+            <BenchSettings onClose={() => setSubView(returnFromSettings())} />
           </Match>
         </Switch>
       </div>

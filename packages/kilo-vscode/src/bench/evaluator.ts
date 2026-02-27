@@ -1,3 +1,4 @@
+import { BenchCreditError } from "./types.js"
 import type { BenchApiHandler, BenchProblem, BenchRawResponse } from "./types.js"
 
 function extractEvalJSON(text: string): any | null {
@@ -115,7 +116,7 @@ export async function evaluateResponse(
 			relevanceRationale: String(parsed.relevanceRationale || ""),
 		}
 	} catch (error) {
-		if (abortSignal?.aborted) {
+		if (abortSignal?.aborted || error instanceof BenchCreditError) {
 			throw error
 		}
 		return {
@@ -151,22 +152,22 @@ export async function evaluateAllResponses(
 		const problem = problemMap.get(raw.problemId)
 		if (!problem) continue
 
-		try {
-			const evalResult = await evaluateResponse(problem, raw, apiHandler, abortSignal)
-			evaluations.set(`${raw.modelId}::${raw.problemId}`, evalResult)
-		} catch (error) {
-			if (abortSignal?.aborted) {
-				throw error
+			try {
+				const evalResult = await evaluateResponse(problem, raw, apiHandler, abortSignal)
+				evaluations.set(`${raw.modelId}::${raw.problemId}`, evalResult)
+			} catch (error) {
+				if (abortSignal?.aborted || error instanceof BenchCreditError) {
+					throw error
+				}
+				evaluations.set(`${raw.modelId}::${raw.problemId}`, {
+					qualityScore: 0,
+					relevanceScore: 0,
+					qualityRationale: `Evaluation error: ${error instanceof Error ? error.message : String(error)}`,
+					relevanceRationale: `Evaluation error: ${error instanceof Error ? error.message : String(error)}`,
+				})
 			}
-			evaluations.set(`${raw.modelId}::${raw.problemId}`, {
-				qualityScore: 0,
-				relevanceScore: 0,
-				qualityRationale: `Evaluation error: ${error instanceof Error ? error.message : String(error)}`,
-				relevanceRationale: `Evaluation error: ${error instanceof Error ? error.message : String(error)}`,
-			})
+			onProgress(i + 1, rawResponses.length)
 		}
-		onProgress(i + 1, rawResponses.length)
-	}
 
 	return evaluations
 }

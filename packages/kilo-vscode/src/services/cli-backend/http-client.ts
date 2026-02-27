@@ -225,6 +225,7 @@ export class HttpClient {
       providerID?: string
       modelID?: string
       agent?: string
+      system?: string
       variant?: string
       editorContext?: EditorContext
       tools?: Record<string, boolean>
@@ -237,6 +238,9 @@ export class HttpClient {
     }
     if (options?.agent) {
       body.agent = options.agent
+    }
+    if (options?.system) {
+      body.system = options.system
     }
     if (options?.variant) {
       body.variant = options.variant

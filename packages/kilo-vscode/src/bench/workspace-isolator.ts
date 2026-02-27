@@ -69,7 +69,7 @@ async function createWorktreeIsolator(
 		const tmpBase = path.join(os.tmpdir(), "kilo-bench")
 		await fs.mkdir(tmpBase, { recursive: true })
 		tempRepoDir = path.join(tmpBase, `repo-${Date.now()}`)
-		await fs.cp(cwd, tempRepoDir, { recursive: true })
+		await fs.cp(cwd, tempRepoDir, { recursive: true, filter: createCopyFilter(cwd) })
 
 		const tmpGit = simpleGit(tempRepoDir)
 		await tmpGit.init()
@@ -85,8 +85,9 @@ async function createWorktreeIsolator(
 	const uid = crypto.randomBytes(3).toString("hex")
 	const branchName = `kilo-bench/${safeName}-${uid}`
 
-	const worktreeDir = path.join(repoRoot, ".kilocode", "bench-worktrees", safeName)
-	await fs.mkdir(path.dirname(worktreeDir), { recursive: true })
+	const worktreeBase = path.join(os.tmpdir(), "kilo-bench", "worktrees")
+	await fs.mkdir(worktreeBase, { recursive: true })
+	const worktreeDir = path.join(worktreeBase, `${safeName}-${uid}`)
 
 	// Clean up leftover from prior crash
 	if (await exists(worktreeDir)) {
@@ -177,8 +178,8 @@ async function createFsCopyIsolator(
 	const snapshotDir = path.join(tmpBase, `snapshot-${safeName}-${uid}`)
 	const workDir = path.join(tmpBase, `work-${safeName}-${uid}`)
 
-	await fs.cp(cwd, snapshotDir, { recursive: true })
-	await fs.cp(cwd, workDir, { recursive: true })
+	await fs.cp(cwd, snapshotDir, { recursive: true, filter: createCopyFilter(cwd) })
+	await fs.cp(cwd, workDir, { recursive: true, filter: createCopyFilter(cwd) })
 	log(`[Kilo Bench] Created fs-copy isolation at ${workDir}`)
 
 	return new FsCopyIsolatorImpl(workDir, snapshotDir, log)
@@ -202,7 +203,10 @@ class FsCopyIsolatorImpl implements WorkspaceIsolator {
 
 	async reset(): Promise<void> {
 		await fs.rm(this.isolatedDir, { recursive: true, force: true })
-		await fs.cp(this.snapshotDir, this.isolatedDir, { recursive: true })
+		await fs.cp(this.snapshotDir, this.isolatedDir, {
+			recursive: true,
+			filter: createCopyFilter(this.snapshotDir),
+		})
 	}
 
 	async cleanup(): Promise<void> {
@@ -229,6 +233,16 @@ const IGNORE_DIRS = new Set([
 	"node_modules", ".git", ".kilocode", "dist", "build",
 	"__pycache__", ".next", ".vscode", "coverage", "vendor", "target",
 ])
+
+function createCopyFilter(root: string): (source: string) => boolean {
+	return (source: string) => {
+		const rel = path.relative(root, source)
+		if (!rel || rel === ".") {
+			return true
+		}
+		return !rel.split(path.sep).some((segment) => IGNORE_DIRS.has(segment))
+	}
+}
 
 async function collectFiles(dir: string, base: string): Promise<Map<string, string>> {
 	const files = new Map<string, string>()

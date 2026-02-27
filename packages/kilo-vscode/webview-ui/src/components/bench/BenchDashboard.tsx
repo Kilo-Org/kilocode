@@ -7,11 +7,12 @@ import { BenchModeBreakdown } from "./BenchModeBreakdown"
 import { BenchHeadToHead } from "./BenchHeadToHead"
 import { BenchCostOptimizer } from "./BenchCostOptimizer"
 import { BenchSettings } from "./BenchSettings"
+import type { BenchRunResult } from "../../types/messages"
 
 type DashboardSection = "overview" | "headToHead" | "cost" | "settings"
 
 interface BenchDashboardProps {
-  result: any
+  result: BenchRunResult
   onNewBenchmark: () => void
 }
 
@@ -19,15 +20,15 @@ export function BenchDashboard(props: BenchDashboardProps) {
   const [section, setSection] = createSignal<DashboardSection>("overview")
 
   const radarSeries = createMemo(() => {
-    return props.result.results.map((model: any, mi: number) => {
+    return props.result.results.map((model, mi) => {
       const avgQuality =
-        model.problems.reduce((s: number, p: any) => s + p.evaluation.qualityScore, 0) / (model.problems.length || 1)
+        model.problems.reduce((s, p) => s + p.evaluation.qualityScore, 0) / (model.problems.length || 1)
       const avgRelevance =
-        model.problems.reduce((s: number, p: any) => s + p.evaluation.relevanceScore, 0) / (model.problems.length || 1)
+        model.problems.reduce((s, p) => s + p.evaluation.relevanceScore, 0) / (model.problems.length || 1)
       const avgSpeed =
-        model.problems.reduce((s: number, p: any) => s + p.evaluation.speedScore, 0) / (model.problems.length || 1)
+        model.problems.reduce((s, p) => s + p.evaluation.speedScore, 0) / (model.problems.length || 1)
       const avgCost =
-        model.problems.reduce((s: number, p: any) => s + p.evaluation.costScore, 0) / (model.problems.length || 1)
+        model.problems.reduce((s, p) => s + p.evaluation.costScore, 0) / (model.problems.length || 1)
 
       return {
         modelName: model.modelName,

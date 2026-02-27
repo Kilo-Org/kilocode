@@ -802,6 +802,68 @@ export interface BenchConfig {
   }
 }
 
+export interface BenchEvaluation {
+  qualityScore: number
+  relevanceScore: number
+  qualityRationale: string
+  relevanceRationale: string
+  speedScore: number
+  costScore: number
+  compositeScore: number
+}
+
+export interface BenchProblemResult {
+  problemId: string
+  mode: string
+  responseContent: string
+  ttft: number
+  totalTime: number
+  inputTokens: number
+  outputTokens: number
+  cost: number
+  evaluation: BenchEvaluation
+}
+
+export interface BenchModelResult {
+  modelId: string
+  modelName: string
+  problems: BenchProblemResult[]
+  aggregateScore: number
+  modeScores: Record<string, number>
+  totalCost: number
+  totalInputTokens: number
+  totalOutputTokens: number
+  totalTime: number
+}
+
+export interface BenchProblem {
+  id: string
+  mode: string
+  title: string
+  prompt: string
+  contextFiles: string[]
+  evaluationCriteria: string[]
+  difficulty: "easy" | "medium" | "hard"
+}
+
+export interface BenchProblemSet {
+  version: string
+  generatedAt: string
+  generatorModel: string
+  workspacePath: string
+  workspaceSummary: string
+  problems: BenchProblem[]
+}
+
+export interface BenchRunResult {
+  id: string
+  runAt: string
+  problemSet: BenchProblemSet
+  models: string[]
+  config: BenchConfig
+  results: BenchModelResult[]
+}
+
 export interface BenchProgressMessage {
   type: "benchProgress"
   benchProgress: BenchProgress
@@ -809,7 +871,7 @@ export interface BenchProgressMessage {
 
 export interface BenchResultsMessage {
   type: "benchResults"
-  benchResults: any
+  benchResults: BenchRunResult
 }
 
 export interface BenchConfigMessage {

@@ -11,6 +11,16 @@ export type RunnerProgressCallback = (update: {
 
 export type RunnerResultCallback = (result: BenchRawResponse) => void | Promise<void>
 
+const PARTIAL_RESULTS = Symbol.for("kilo.bench.partialResults")
+
+export function getBenchPartialResults(error: unknown): BenchRawResponse[] {
+	if (!error || typeof error !== "object") {
+		return []
+	}
+	const partial = (error as { [PARTIAL_RESULTS]?: unknown })[PARTIAL_RESULTS]
+	return Array.isArray(partial) ? partial as BenchRawResponse[] : []
+}
+
 /** System prompts for text-only mode (no tool access) */
 const TEXT_SYSTEM_PROMPTS: Record<string, string> = {
 	architect:
@@ -49,38 +59,48 @@ export async function runModelBenchmark(
 	const results: BenchRawResponse[] = []
 	const prompts = isolator ? EXEC_SYSTEM_PROMPTS : TEXT_SYSTEM_PROMPTS
 
-	for (let pi = 0; pi < problems.length; pi++) {
-		if (abortSignal?.aborted) {
-			throw new Error("Benchmark cancelled")
-		}
-
-		const problem = problems[pi]
-
-		onProgress({
-			currentModel: modelId,
-			currentProblem: pi + 1,
-			totalProblems: problems.length,
-			message: `[${modelId}] Running problem ${pi + 1}/${problems.length}: ${problem.title}`,
-		})
-
-		const result = await runSingleProblem(modelId, problem, apiHandler, prompts, abortSignal)
-
-		// Capture diff and reset workspace between problems
-		if (isolator) {
-			try {
-				result.diff = await isolator.captureDiff()
-			} catch (err) {
-				result.diff = `(diff capture failed: ${err instanceof Error ? err.message : String(err)})`
+	try {
+		for (let pi = 0; pi < problems.length; pi++) {
+			if (abortSignal?.aborted) {
+				throw new Error("Benchmark cancelled")
 			}
-			try {
-				await isolator.reset()
-			} catch (err) {
-				console.warn(`[Kilo Bench] Workspace reset failed: ${err}`)
-			}
-		}
 
-		results.push(result)
-		await onResult?.(result)
+			const problem = problems[pi]
+
+			onProgress({
+				currentModel: modelId,
+				currentProblem: pi + 1,
+				totalProblems: problems.length,
+				message: `[${modelId}] Running problem ${pi + 1}/${problems.length}: ${problem.title}`,
+			})
+
+			const result = await runSingleProblem(modelId, problem, apiHandler, prompts, abortSignal)
+
+			// Capture diff and reset workspace between problems
+			if (isolator) {
+				try {
+					result.diff = await isolator.captureDiff()
+				} catch (err) {
+					result.diff = `(diff capture failed: ${err instanceof Error ? err.message : String(err)})`
+				}
+				try {
+					await isolator.reset()
+				} catch (err) {
+					console.warn(`[Kilo Bench] Workspace reset failed: ${err}`)
+				}
+			}
+
+			results.push(result)
+			await onResult?.(result)
+		}
+	} catch (error) {
+		if (abortSignal?.aborted || error instanceof BenchCreditError) {
+			if (error && typeof error === "object") {
+				;(error as { [PARTIAL_RESULTS]?: BenchRawResponse[] })[PARTIAL_RESULTS] = [...results]
+			}
+			throw error
+		}
+		throw error
 	}
 
 	return results

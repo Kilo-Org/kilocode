@@ -22,6 +22,23 @@ import {
   mapSSEEventToWebviewMessage,
 } from "./kilo-provider-utils"
 import { isEventFromForeignProject } from "./services/cli-backend/sse-utils"
+import { BenchCreditError } from "./bench/types.js"
+
+const BenchModeSchema = z.enum(["architect", "code", "debug", "ask", "orchestrator"])
+const BenchConfigUpdateSchema = z.object({
+  problemsPerMode: z.number().optional(),
+  activeModes: z.array(BenchModeSchema).optional(),
+  generatorModel: z.string().optional(),
+  evaluatorModel: z.string().optional(),
+  maxParallelModels: z.number().optional(),
+  temperature: z.number().optional(),
+  weights: z.object({
+    quality: z.number().optional(),
+    relevance: z.number().optional(),
+    speed: z.number().optional(),
+    cost: z.number().optional(),
+  }).strict().optional(),
+}).strict()
 
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "kilo-code.new.sidebarView"
@@ -517,15 +534,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         // Bench message handlers
         // ============================================
         case "benchStartRun": {
-          const models = (message as any).benchModels || []
+          const parsedModels = z.array(z.string().min(1)).safeParse((message as { benchModels?: unknown }).benchModels)
+          const models = parsedModels.success ? parsedModels.data : []
           if (this.activeBenchService) {
             this.postMessage({ type: "benchError", benchError: "Benchmark already running" })
+            break
+          }
+          if (models.length === 0) {
+            this.postMessage({ type: "benchError", benchError: "No models selected" })
             break
           }
           try {
             const { BenchService } = await import("./bench/BenchService.js")
             const { createBenchApiHandler } = await import("./bench/bench-api-adapter.js")
-            const { BenchCreditError } = await import("./bench/types.js")
 
             const apiHandler = createBenchApiHandler(
               this.connectionService,
@@ -539,13 +560,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               this.postMessage({ type: "benchProgress", benchProgress: progress })
             })
             this.postMessage({ type: "benchResults", benchResults: result })
-          } catch (error: any) {
-            const isCreditError = error.name === "BenchCreditError"
+          } catch (error: unknown) {
+            const isCreditError = error instanceof BenchCreditError
             this.postMessage({
               type: "benchError",
               benchError: isCreditError
                 ? "Your credits have run out. Your progress has been saved — you can resume the benchmark after adding credits."
-                : (error.message || "Benchmark failed"),
+                : (error instanceof Error ? error.message : "Benchmark failed"),
               benchIsCreditError: isCreditError,
             })
           } finally {
@@ -574,13 +595,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               this.postMessage({ type: "benchProgress", benchProgress: progress })
             })
             this.postMessage({ type: "benchResults", benchResults: result })
-          } catch (error: any) {
-            const isCreditError = error.name === "BenchCreditError"
+          } catch (error: unknown) {
+            const isCreditError = error instanceof BenchCreditError
             this.postMessage({
               type: "benchError",
               benchError: isCreditError
                 ? "Your credits have run out again. Progress has been saved — resume when you have more credits."
-                : (error.message || "Resume failed"),
+                : (error instanceof Error ? error.message : "Resume failed"),
               benchIsCreditError: isCreditError,
             })
           } finally {
@@ -623,8 +644,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             const { clearCheckpoint } = await import("./bench/storage.js")
             await clearCheckpoint(this.getWorkspaceDirectory())
             this.postMessage({ type: "benchCheckpoint", benchHasCheckpoint: false })
-          } catch {
-            // Best effort
+          } catch (err) {
+            console.warn("[Kilo Bench] Failed to clear checkpoint:", err)
           }
           break
         }
@@ -633,7 +654,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             const { loadConfig, saveConfig } = await import("./bench/storage.js")
             const workspaceDir = this.getWorkspaceDirectory()
             const current = await loadConfig(workspaceDir)
-            const updates = (message as any).benchConfig || {}
+            const updates = BenchConfigUpdateSchema.parse((message as { benchConfig?: unknown }).benchConfig || {})
             const merged = {
               ...current,
               ...updates,
