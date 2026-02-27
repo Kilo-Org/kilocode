@@ -74,6 +74,7 @@ export namespace LearnTracker {
   }
 
   export async function clear(sessionID: string) {
+    using _ = await Lock.write(`learn:${sessionID}`)
     const state = empty()
     await Storage.write(["learn", sessionID], state)
     Bus.publish(Event.Updated, { sessionID, state })
@@ -149,6 +150,7 @@ export namespace LearnTracker {
   }
 
   export async function clearAggregate() {
+    using _ = await Lock.write("learn:aggregate")
     const state = emptyAggregate()
     await Storage.write(aggregateKey(), state)
     return state
