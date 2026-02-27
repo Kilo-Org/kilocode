@@ -25,5 +25,7 @@ exclude = [
   '^https?://(cloud|console)\.google\.ai',
   'https://opencode.ai/pages/config',
   '^localhost:3000/',
-  'https://tbench.ai/'
+  'https://tbench.ai/',
+  # GitHub URLs cause persistent HTTP/2 protocol errors when checked from GitHub Actions runners
+  '^https?://github\.com/',
 ]

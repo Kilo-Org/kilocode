@@ -1,5 +1,6 @@
 import { describe, it, expect } from "bun:test"
-import { unwrapSSEPayload } from "../../src/services/cli-backend/sse-utils"
+import { unwrapSSEPayload, isEventFromForeignProject } from "../../src/services/cli-backend/sse-utils"
+import type { SSEEvent } from "../../src/services/cli-backend/types"
 
 describe("unwrapSSEPayload", () => {
   it("unwraps global endpoint payload wrapper", () => {
@@ -60,5 +61,56 @@ describe("unwrapSSEPayload", () => {
     }
     const event = unwrapSSEPayload(raw)
     expect(event?.type).toBe("message.updated")
+  })
+})
+
+describe("isEventFromForeignProject", () => {
+  const session = (projectID: string) =>
+    ({
+      id: "s1",
+      projectID,
+      title: "test",
+      directory: "/workspace",
+      time: { created: 0, updated: 0 },
+    }) as const
+
+  it("drops session.created from a different project", () => {
+    const event: SSEEvent = { type: "session.created", properties: { info: session("project-B") } }
+    expect(isEventFromForeignProject(event, "project-A")).toBe(true)
+  })
+
+  it("drops session.updated from a different project", () => {
+    const event: SSEEvent = { type: "session.updated", properties: { info: session("project-B") } }
+    expect(isEventFromForeignProject(event, "project-A")).toBe(true)
+  })
+
+  it("accepts session.created from the same project", () => {
+    const event: SSEEvent = { type: "session.created", properties: { info: session("project-A") } }
+    expect(isEventFromForeignProject(event, "project-A")).toBe(false)
+  })
+
+  it("accepts session.updated from the same project", () => {
+    const event: SSEEvent = { type: "session.updated", properties: { info: session("project-A") } }
+    expect(isEventFromForeignProject(event, "project-A")).toBe(false)
+  })
+
+  it("accepts all events when expectedProjectID is undefined (not yet resolved)", () => {
+    const event: SSEEvent = { type: "session.created", properties: { info: session("project-B") } }
+    expect(isEventFromForeignProject(event, undefined)).toBe(false)
+  })
+
+  it("does not filter non-session events regardless of project", () => {
+    const heartbeat: SSEEvent = { type: "server.heartbeat", properties: {} as Record<string, never> }
+    const connected: SSEEvent = { type: "server.connected", properties: {} as Record<string, never> }
+    expect(isEventFromForeignProject(heartbeat, "project-A")).toBe(false)
+    expect(isEventFromForeignProject(connected, "project-A")).toBe(false)
+  })
+
+  it("does not filter message events (they have no projectID)", () => {
+    const event: SSEEvent = {
+      type: "message.part.delta",
+      properties: { sessionID: "s1", messageID: "m1", partID: "p1", field: "text", delta: "hello" },
+    }
+    expect(isEventFromForeignProject(event, "project-A")).toBe(false)
   })
 })

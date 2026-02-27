@@ -3,10 +3,10 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { showToast } from "@kilocode/kilo-ui/toast"
-import { useVSCode } from "../context/vscode"
-import { useLanguage } from "../context/language"
-import { generateQRCode } from "../utils/qrcode"
-import type { DeviceAuthStatus } from "../types/messages"
+import { useVSCode } from "../../context/vscode"
+import { useLanguage } from "../../context/language"
+import { generateQRCode } from "../../utils/qrcode"
+import type { DeviceAuthStatus } from "../../types/messages"
 
 interface DeviceAuthCardProps {
   status: DeviceAuthStatus
