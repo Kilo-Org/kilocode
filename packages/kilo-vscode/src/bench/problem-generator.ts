@@ -367,7 +367,7 @@ function buildProblemSet(parsed: any, cwd: string, language: string, modelId: st
 		version: "1.0.0",
 		generatedAt: new Date().toISOString(),
 		generatorModel: modelId,
-		workspacePath: cwd,
+		workspacePath: ".",
 		workspaceSummary: `${language} codebase`,
 		problems,
 	}

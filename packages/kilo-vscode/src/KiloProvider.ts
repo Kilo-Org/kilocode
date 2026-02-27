@@ -634,8 +634,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             } else {
               this.postMessage({ type: "benchCheckpoint", benchHasCheckpoint: false })
             }
-          } catch (error: any) {
-            this.postMessage({ type: "benchError", benchError: error.message || "Failed to load results" })
+          } catch (error: unknown) {
+            this.postMessage({ type: "benchError", benchError: error instanceof Error ? error.message : "Failed to load results" })
           }
           break
         }
@@ -662,8 +662,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             }
             await saveConfig(workspaceDir, merged)
             this.postMessage({ type: "benchConfig", benchConfig: merged })
-          } catch (error: any) {
-            this.postMessage({ type: "benchError", benchError: error.message || "Failed to update config" })
+          } catch (error: unknown) {
+            this.postMessage({ type: "benchError", benchError: error instanceof Error ? error.message : "Failed to update config" })
           }
           break
         }
@@ -696,8 +696,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               this.postMessage({ type: "benchProgress", benchProgress: progress })
             })
             this.postMessage({ type: "benchProblems", benchProblems: problems })
-          } catch (error: any) {
-            this.postMessage({ type: "benchError", benchError: error.message || "Failed to regenerate problems" })
+          } catch (error: unknown) {
+            this.postMessage({ type: "benchError", benchError: error instanceof Error ? error.message : "Failed to regenerate problems" })
           } finally {
             this.activeBenchService = null
           }

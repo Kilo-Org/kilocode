@@ -1,7 +1,7 @@
 import type { BenchConfig, BenchEvaluation, BenchRawResponse } from "./types.js"
 
 function calculateSpeedScore(ttftMs: number): number {
-	if (ttftMs <= 0) return 5
+	if (ttftMs <= 0) return 10
 	const score = 10 - Math.log2(ttftMs / 200) * 1.5
 	return Math.max(0, Math.min(10, score))
 }

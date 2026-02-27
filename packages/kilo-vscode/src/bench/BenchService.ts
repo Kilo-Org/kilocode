@@ -91,12 +91,13 @@ export class BenchService {
 	async startBenchmark(models: string[], onProgress: ProgressCallback): Promise<BenchRunResult> {
 		this.abortController = new AbortController()
 		const runId = Date.now().toString(36)
+		const startedAt = new Date().toISOString()
 
 		// Phase 1: Generate problems
 		const problems = await this.generate(onProgress)
 		const config = await this.loadConfig()
 
-		return this.runFromPhase(runId, models, problems, config, [], {}, onProgress)
+		return this.runFromPhase(runId, startedAt, models, problems, config, [], {}, onProgress)
 	}
 
 	async resumeBenchmark(onProgress: ProgressCallback): Promise<BenchRunResult> {
@@ -114,6 +115,7 @@ export class BenchService {
 
 		return this.runFromPhase(
 			checkpoint.runId,
+			checkpoint.startedAt,
 			checkpoint.models,
 			checkpoint.problemSet,
 			checkpoint.config,
@@ -125,6 +127,7 @@ export class BenchService {
 
 	private async runFromPhase(
 		runId: string,
+		startedAt: string,
 		models: string[],
 		problems: BenchProblemSet,
 		config: BenchConfig,
@@ -200,63 +203,63 @@ export class BenchService {
 				}
 
 				try {
-						await runModelBenchmark(
-							modelProblems,
-							modelId,
-							execHandler,
-							isolator,
-							(update) => {
-								onProgress({
-									phase: "running",
-									currentModel: update.currentModel,
-									currentProblem: update.currentProblem,
-									totalProblems: update.totalProblems,
-									modelsCompleted,
-									totalModels: models.length,
-									message: update.message,
-								})
-							},
-							this.abortController!.signal,
-							(result) => {
-								rawResponses.push(result)
-								completedKeys.add(`${result.modelId}::${result.problemId}`)
-								return this.saveCheckpointQuietly(runId, models, problems, config, rawResponses, evaluations, "running")
-							},
-						)
+					await runModelBenchmark(
+						modelProblems,
+						modelId,
+						execHandler,
+						isolator,
+						(update) => {
+							onProgress({
+								phase: "running",
+								currentModel: update.currentModel,
+								currentProblem: update.currentProblem,
+								totalProblems: update.totalProblems,
+								modelsCompleted,
+								totalModels: models.length,
+								message: update.message,
+							})
+						},
+						this.abortController!.signal,
+						(result) => {
+							rawResponses.push(result)
+							completedKeys.add(`${result.modelId}::${result.problemId}`)
+							return this.saveCheckpointQuietly(runId, startedAt, models, problems, config, rawResponses, evaluations, "running")
+						},
+					)
 				} catch (error) {
 					const partial = getBenchPartialResults(error)
 					for (const result of partial) {
 						const key = `${result.modelId}::${result.problemId}`
 						if (!completedKeys.has(key)) {
-								rawResponses.push(result)
-								completedKeys.add(key)
-							}
+							rawResponses.push(result)
+							completedKeys.add(key)
 						}
+					}
 
 					if (error instanceof BenchCreditError || (this.abortController && !this.abortController.signal.aborted)) {
 						await this.saveCheckpointQuietly(
-							runId, models, problems, config, rawResponses, evaluations, "running",
+							runId, startedAt, models, problems, config, rawResponses, evaluations, "running",
 							error instanceof BenchCreditError ? error.message : (error instanceof Error ? error.message : "Unknown error"),
 						)
 					}
 					throw error
 				} finally {
-						// Clean up isolation for this model
-						if (isolator) {
-							try {
-								await isolator.cleanup()
-							} catch (err) {
-								console.warn(`[Kilo Bench] Isolation cleanup failed for ${modelId}: ${err}`)
-							}
+					// Clean up isolation for this model
+					if (isolator) {
+						try {
+							await isolator.cleanup()
+						} catch (err) {
+							console.warn(`[Kilo Bench] Isolation cleanup failed for ${modelId}: ${err}`)
 						}
 					}
+				}
 
 				modelsCompleted++
 			}
 		}
 
 		// Save checkpoint at transition to eval phase
-		await this.saveCheckpointQuietly(runId, models, problems, config, rawResponses, evaluations, "evaluating")
+		await this.saveCheckpointQuietly(runId, startedAt, models, problems, config, rawResponses, evaluations, "evaluating")
 
 		// Phase 3: Evaluate (skip already-evaluated pairs)
 		onProgress({
@@ -282,7 +285,7 @@ export class BenchService {
 					})
 
 					// Checkpoint during evaluation too
-					void this.saveCheckpointQuietly(runId, models, problems, config, rawResponses, evaluations, "evaluating")
+					void this.saveCheckpointQuietly(runId, startedAt, models, problems, config, rawResponses, evaluations, "evaluating")
 				},
 				this.abortController!.signal,
 			)
@@ -294,7 +297,7 @@ export class BenchService {
 		} catch (error) {
 			if (error instanceof BenchCreditError || (this.abortController && !this.abortController.signal.aborted)) {
 				await this.saveCheckpointQuietly(
-					runId, models, problems, config, rawResponses, evaluations, "evaluating",
+					runId, startedAt, models, problems, config, rawResponses, evaluations, "evaluating",
 					error instanceof BenchCreditError ? error.message : (error instanceof Error ? error.message : "Unknown error"),
 				)
 			}
@@ -359,6 +362,7 @@ export class BenchService {
 
 	private async saveCheckpointQuietly(
 		runId: string,
+		startedAt: string,
 		models: string[],
 		problemSet: BenchProblemSet,
 		config: BenchConfig,
@@ -370,7 +374,7 @@ export class BenchService {
 		try {
 			await storage.saveCheckpoint(this.cwd, {
 				runId,
-				startedAt: new Date().toISOString(),
+				startedAt,
 				models,
 				problemSet,
 				config,
