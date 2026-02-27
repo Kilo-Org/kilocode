@@ -97,7 +97,7 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.committer.outputs.token }}
         run: |
-          BRANCH="docs/sync-contributing-${GITHUB_RUN_ID}"
+          BRANCH="docs/sync-contributing-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           git checkout -b "$BRANCH"
           git add CONTRIBUTING.md
           git commit -m "docs: sync CONTRIBUTING.md with issue templates and workflow changes"

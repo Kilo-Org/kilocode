@@ -163,18 +163,18 @@ function extractComplianceHours(raw: string): number {
   )
 }
 
-/** Extract DAYS_BEFORE_STALE and DAYS_BEFORE_CLOSE from stale-issues.yml */
+/** Extract DAYS_BEFORE_ISSUE_CLOSE and days-before-issue-close from stale-issues.yml */
 function extractStaleDays(raw: string): { staleDays: number; closeDays: number } {
-  const staleMatch = raw.match(/DAYS_BEFORE_STALE:\s*(\d+)/)
-  const closeMatch = raw.match(/DAYS_BEFORE_CLOSE:\s*(\d+)/)
+  const staleMatch = raw.match(/DAYS_BEFORE_ISSUE_CLOSE:\s*(\d+)/)
+  const closeMatch = raw.match(/days-before-issue-close:\s*(\d+)/)
 
   if (!staleMatch)
     throw new Error(
-      "Could not parse DAYS_BEFORE_STALE from stale-issues.yml — update the regex if the file format changed",
+      "Could not parse DAYS_BEFORE_ISSUE_CLOSE from stale-issues.yml — update the regex if the file format changed",
     )
   if (!closeMatch)
     throw new Error(
-      "Could not parse DAYS_BEFORE_CLOSE from stale-issues.yml — update the regex if the file format changed",
+      "Could not parse days-before-issue-close from stale-issues.yml — update the regex if the file format changed",
     )
 
   return {
