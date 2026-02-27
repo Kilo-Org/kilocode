@@ -1503,10 +1503,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       })
     } catch (err) {
       console.error("[Kilo New] Failed to execute command after cloud import:", err)
+      // kilocode_change: the import already succeeded — send a regular error so the
+      // webview keeps the imported session instead of discarding it via cloudSessionImportFailed
+      const base = err instanceof Error ? err.message : "Failed to execute command after import"
       this.postMessage({
-        type: "cloudSessionImportFailed",
-        cloudSessionId,
-        error: err instanceof Error ? err.message : "Failed to execute command after import",
+        type: "error",
+        message: `[sessionID:${session.id}] ${base}`,
         sessionID: session.id,
       })
     }

@@ -457,13 +457,16 @@ export const SessionProvider: ParentComponent = (props) => {
 
       // kilocode_change start
       // Transfer optimistic messages from the pending session key (created before
-      // the real session ID was known) to the real session ID.
+      // the real session ID was known) to the real session ID, then clean up the
+      // stale pending entry to avoid a memory leak.
       const pendingKey = pendingSessionKey()
       if (pendingKey) {
         const pendingMessages = store.messages[pendingKey] ?? []
         if (pendingMessages.length > 0) {
           setStore("messages", session.id, pendingMessages)
         }
+        // Remove the stale pending entry from the store
+        setStore("messages", { [pendingKey]: undefined })
         setPendingSessionKey(null)
       }
       // kilocode_change end
