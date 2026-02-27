@@ -1583,6 +1583,11 @@ ToolRegistry.register({
               <div data-slot="message-part-title-area">
                 <div data-slot="message-part-title">
                   <span data-slot="message-part-title-text">
+                    <Show when={pending()} fallback={i18n.t("ui.messagePart.title.edit")}>
+                      <TextShimmer text={i18n.t("ui.messagePart.title.edit")} />
+                    </Show>
+                  </span>
+                  <Show when={!pending()}>
                     {/* kilocode_change start */}
                     <span
                       data-slot="message-part-title-filename"
@@ -1592,12 +1597,6 @@ ToolRegistry.register({
                       {filename()}
                     </span>
                     {/* kilocode_change end */}
-                    <Show when={pending()} fallback={i18n.t("ui.messagePart.title.edit")}>
-                      <TextShimmer text={i18n.t("ui.messagePart.title.edit")} />
-                    </Show>
-                  </span>
-                  <Show when={!pending()}>
-                    <span data-slot="message-part-title-filename">{filename()}</span>
                   </Show>
                 </div>
                 <Show when={!pending() && props.input.filePath?.includes("/")}>

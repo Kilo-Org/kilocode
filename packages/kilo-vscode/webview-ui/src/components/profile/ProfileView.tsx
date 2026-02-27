@@ -4,10 +4,10 @@ import { Card } from "@kilocode/kilo-ui/card"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Select } from "@kilocode/kilo-ui/select"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
-import { useVSCode } from "../context/vscode"
-import { useLanguage } from "../context/language"
+import { useVSCode } from "../../context/vscode"
+import { useLanguage } from "../../context/language"
 import DeviceAuthCard from "./DeviceAuthCard"
-import type { ProfileData, DeviceAuthState } from "../types/messages"
+import type { ProfileData, DeviceAuthState } from "../../types/messages"
 
 export type { ProfileData }
 
