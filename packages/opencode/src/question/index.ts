@@ -40,6 +40,7 @@ export namespace Question {
       id: Identifier.schema("question"),
       sessionID: Identifier.schema("session"),
       questions: z.array(Info).describe("Questions to ask"),
+      blocking: z.boolean().optional().describe("Whether this question blocks prompt input (default: true)"), // kilocode_change
       tool: z
         .object({
           messageID: z.string(),
@@ -101,6 +102,7 @@ export namespace Question {
   export async function ask(input: {
     sessionID: string
     questions: Info[]
+    blocking?: boolean // kilocode_change
     tool?: { messageID: string; callID: string }
   }): Promise<Answer[]> {
     const s = await state()
@@ -113,6 +115,7 @@ export namespace Question {
         id,
         sessionID: input.sessionID,
         questions: input.questions,
+        blocking: input.blocking, // kilocode_change
         tool: input.tool,
       }
       s.pending[id] = {

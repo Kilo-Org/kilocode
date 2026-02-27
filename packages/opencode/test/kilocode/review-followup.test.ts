@@ -114,6 +114,7 @@ describe("review follow-up", () => {
 
       const list = await Question.list()
       expect(list).toHaveLength(1)
+      expect(list[0]?.blocking).toBe(false)
       await Question.reject(list[0].id)
 
       await expect(pending).resolves.toBe("break")
@@ -136,6 +137,7 @@ describe("review follow-up", () => {
       })
 
       const list = await Question.list()
+      expect(list[0]?.blocking).toBe(false)
       await Question.reply({
         requestID: list[0].id,
         answers: [[ReviewFollowup.ANSWER_START]],

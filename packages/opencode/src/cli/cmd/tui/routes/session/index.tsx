@@ -134,6 +134,9 @@ export function Session() {
     if (session()?.parentID) return []
     return children().flatMap((x) => sync.data.question[x.id] ?? [])
   })
+  const blockingQuestions = createMemo(() => questions().filter((q) => q.blocking !== false)) // kilocode_change
+  const nonBlockingQuestions = createMemo(() => questions().filter((q) => q.blocking === false)) // kilocode_change
+  const question = createMemo(() => blockingQuestions()[0] ?? nonBlockingQuestions()[0]) // kilocode_change
 
   const pending = createMemo(() => {
     return messages().findLast((x) => x.role === "assistant" && !x.time.completed)?.id
@@ -1118,11 +1121,17 @@ export function Session() {
               <Show when={permissions().length > 0}>
                 <PermissionPrompt request={permissions()[0]} />
               </Show>
-              <Show when={permissions().length === 0 && questions().length > 0}>
-                <QuestionPrompt request={questions()[0]} />
+              <Show when={permissions().length === 0 && question()} keyed>
+                {(request) => (
+                  <QuestionPrompt
+                    request={request}
+                    nonBlocking={request.blocking === false}
+                    inputFocused={() => prompt?.focused ?? false}
+                  />
+                )}
               </Show>
               <Prompt
-                visible={!session()?.parentID && permissions().length === 0 && questions().length === 0}
+                visible={!session()?.parentID && permissions().length === 0 && blockingQuestions().length === 0}
                 ref={(r) => {
                   prompt = r
                   promptRef.set(r)
@@ -1131,7 +1140,7 @@ export function Session() {
                     r.set(route.initialPrompt)
                   }
                 }}
-                disabled={permissions().length > 0 || questions().length > 0}
+                disabled={permissions().length > 0 || blockingQuestions().length > 0}
                 onSubmit={() => {
                   toBottom()
                 }}

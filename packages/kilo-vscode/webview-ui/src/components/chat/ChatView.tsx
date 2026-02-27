@@ -24,11 +24,13 @@ export const ChatView: Component<ChatViewProps> = (props) => {
 
   const id = () => session.currentSessionID()
   const sessionQuestions = () => session.questions().filter((q) => q.sessionID === id())
+  const blockingQuestions = () => sessionQuestions().filter((q) => q.blocking !== false)
+  const nonBlockingQuestions = () => sessionQuestions().filter((q) => q.blocking === false)
   const sessionPermissions = () => session.permissions().filter((p) => p.sessionID === id())
 
-  const questionRequest = () => sessionQuestions()[0]
+  const questionRequest = () => blockingQuestions()[0] ?? nonBlockingQuestions()[0]
   const permissionRequest = () => sessionPermissions().find((p) => !p.tool)
-  const blocked = () => sessionPermissions().length > 0 || sessionQuestions().length > 0
+  const blocked = () => sessionPermissions().length > 0 || blockingQuestions().length > 0
 
   const [responding, setResponding] = createSignal(false)
 

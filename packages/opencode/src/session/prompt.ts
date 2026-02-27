@@ -76,29 +76,55 @@ export namespace SessionPrompt {
 
   const reviewTools = new Set(["edit", "write", "multiedit", "apply_patch", "task"]) // kilocode_change
 
+  // kilocode_change start - ask review follow-up only after first implementation turn per session
+  function reviewTurns(messages: MessageV2.WithParts[]) {
+    const ordered = messages.toSorted((a, b) => (a.info.id < b.info.id ? -1 : a.info.id > b.info.id ? 1 : 0))
+
+    const users = ordered.flatMap((msg, index) =>
+      msg.info.role === "user"
+        ? [
+            {
+              index,
+              user: msg.info as MessageV2.User,
+            },
+          ]
+        : [],
+    )
+
+    return users.map((item, index) => ({
+      user: item.user,
+      turn: ordered.slice(item.index + 1, users[index + 1]?.index ?? ordered.length),
+    }))
+  }
+
+  function isImplementationTurn(input: { user: MessageV2.User; turn: MessageV2.WithParts[] }) {
+    if (!["code", "orchestrator"].includes(input.user.agent)) return false
+
+    const hasPlanExit = input.turn.some((msg) =>
+      msg.parts.some((part) => part.type === "tool" && part.tool === "plan_exit" && part.state.status === "completed"),
+    )
+    if (hasPlanExit) return false
+
+    return input.turn.some((msg) =>
+      msg.parts.some((part) => part.type === "tool" && part.state.status === "completed" && reviewTools.has(part.tool)),
+    )
+  }
+  // kilocode_change end
+
   // kilocode_change start - share review follow-up trigger logic with tests
   export function shouldAskReviewFollowup(input: { messages: MessageV2.WithParts[]; abort: AbortSignal }) {
     if (input.abort.aborted) return false
     if (!["cli", "vscode"].includes(Flag.KILO_CLIENT)) return false
 
-    const lastUserIdx = input.messages.findLastIndex((m) => m.info.role === "user")
-    if (lastUserIdx === -1) return false
+    const turns = reviewTurns(input.messages)
+    const latest = turns.at(-1)
+    if (!latest) return false
+    if (!isImplementationTurn(latest)) return false
 
-    const lastUser = input.messages[lastUserIdx]?.info
-    if (!lastUser || lastUser.role !== "user") return false
-    if (!["code", "orchestrator"].includes(lastUser.agent)) return false
+    const alreadyImplemented = turns.slice(0, -1).some(isImplementationTurn)
+    if (alreadyImplemented) return false
 
-    const turn = input.messages.slice(lastUserIdx + 1)
-    const hasPlanExit = turn.some((msg) =>
-      msg.parts.some((p) => p.type === "tool" && p.tool === "plan_exit" && p.state.status === "completed"),
-    )
-    if (hasPlanExit) return false
-
-    if (lastUser.agent === "orchestrator") return turn.some((msg) => msg.info.role === "assistant")
-
-    return turn.some((msg) =>
-      msg.parts.some((p) => p.type === "tool" && p.state.status === "completed" && reviewTools.has(p.tool)),
-    )
+    return true
   }
   // kilocode_change end
   // kilocode_change end

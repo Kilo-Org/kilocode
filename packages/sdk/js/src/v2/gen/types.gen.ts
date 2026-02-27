@@ -658,6 +658,10 @@ export type QuestionRequest = {
    * Questions to ask
    */
   questions: Array<QuestionInfo>
+  /**
+   * Whether this question blocks prompt input (default: true)
+   */
+  blocking?: boolean
   tool?: {
     messageID: string
     callID: string

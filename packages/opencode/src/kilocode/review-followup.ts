@@ -32,6 +32,7 @@ export namespace ReviewFollowup {
   function prompt(input: { sessionID: string; abort: AbortSignal }) {
     const promise = Question.ask({
       sessionID: input.sessionID,
+      blocking: false,
       questions: [
         {
           question: "Start an immediate review of uncommitted changes?",
