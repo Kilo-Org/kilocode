@@ -920,7 +920,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (this.currentSession?.id === sessionID) {
         this.currentSession = updated
       }
-      this.postMessage({ type: "sessionUpdated", session: this.sessionToWebview(this.currentSession!) })
+      this.postMessage({ type: "sessionUpdated", session: this.sessionToWebview(updated) })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to rename session:", error)
       this.postMessage({
@@ -1084,11 +1084,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         gitUrl: message.gitUrl,
       })
 
-      const data = result.data as { cliSessions?: unknown[]; nextCursor?: string | null } | undefined
       this.postMessage({
         type: "cloudSessionsLoaded",
-        sessions: data?.cliSessions ?? [],
-        nextCursor: data?.nextCursor ?? null,
+        sessions: result.data?.cliSessions ?? [],
+        nextCursor: result.data?.nextCursor ?? null,
       })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to fetch cloud sessions:", error)

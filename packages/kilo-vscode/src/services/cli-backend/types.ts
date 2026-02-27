@@ -64,11 +64,6 @@ export interface CloudSessionInfo {
   version: number
 }
 
-export interface CloudSessionsResponse {
-  cliSessions: CloudSessionInfo[]
-  nextCursor: string | null
-}
-
 // Full cloud session data for preview (from /kilo/cloud/session/:id)
 export interface CloudSessionData {
   info: {
