@@ -587,6 +587,7 @@ export interface ConfigUpdatedMessage {
 export interface CommandsLoadedMessage {
   type: "commandsLoaded"
   commands: CommandInfo[]
+  error?: string
 }
 
 export interface NotificationSettingsLoadedMessage {

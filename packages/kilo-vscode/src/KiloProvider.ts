@@ -1103,6 +1103,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const message = {
         type: "commandsLoaded",
         commands: [],
+        error: error instanceof Error ? error.message : "Failed to fetch commands",
       }
       this.cachedCommandsMessage = message
       this.postMessage(message)
@@ -1386,7 +1387,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const workspaceDir = this.getWorkspaceDirectory(sessionID || this.currentSession?.id)
-      const validated = await this.validateCommandName(command, workspaceDir)
+      const validated = this.validateCommandName(command)
       if (!validated) {
         throw new Error("Invalid command")
       }
@@ -1439,7 +1440,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     const workspaceDir = this.getWorkspaceDirectory()
-    const validated = await this.validateCommandName(command, workspaceDir)
+    const validated = this.validateCommandName(command)
     if (!validated) {
       this.postMessage({
         type: "cloudSessionImportFailed",
@@ -1485,8 +1486,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     } catch (err) {
       console.error("[Kilo New] Failed to execute command after cloud import:", err)
       this.postMessage({
-        type: "error",
-        message: err instanceof Error ? err.message : "Failed to execute command after import",
+        type: "cloudSessionImportFailed",
+        cloudSessionId,
+        error: err instanceof Error ? err.message : "Failed to execute command after import",
         sessionID: session.id,
       })
     }
@@ -1521,13 +1523,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return result
   }
 
-  private async validateCommandName(name: string, directory: string): Promise<string | null> {
+  private validateCommandName(name: string): string | null {
     const command = typeof name === "string" ? name.trim() : ""
     if (!command) return null
     if (!/^[a-zA-Z0-9_-]+$/.test(command)) return null
-    if (!this.httpClient) return null
-    const commands = await this.httpClient.listCommands(directory)
-    if (!commands.some((item) => item.name === command)) return null
     return command
   }
 
@@ -1558,11 +1557,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     scope?: "project" | "global",
   ): Promise<{ path: string; scope: "project" | "global" } | null> {
     const projectPath = path.join(this.getProjectWorkflowsDir(), `${name}.md`)
-    if (!scope || scope === "project") {
+    if (scope === "project") {
       if (await this.fileExists(projectPath)) {
         return { path: projectPath, scope: "project" }
       }
       return null
+    }
+
+    if (!scope) {
+      if (await this.fileExists(projectPath)) {
+        return { path: projectPath, scope: "project" }
+      }
     }
 
     const candidates = this.getGlobalWorkflowCandidates(name)

@@ -16,6 +16,7 @@ import type {
   CloudSessionData,
   EditorContext,
   CommandInfo,
+  WorktreeFileDiff,
 } from "./types"
 import { extractHttpErrorMessage, parseSSEDataLine } from "./http-utils"
 

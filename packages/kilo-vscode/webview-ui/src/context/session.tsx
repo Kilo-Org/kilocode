@@ -403,8 +403,26 @@ export const SessionProvider: ParentComponent = (props) => {
           break
 
         case "cloudSessionImportFailed":
+          const key = `cloud:${message.cloudSessionId}`
+          const all = store.messages[key] ?? []
+          const ids = new Set(all.filter((m) => m.id.startsWith("optimistic-")).map((m) => m.id))
+          const next = all.filter((m) => !ids.has(m.id))
+          if (ids.size > 0) {
+            setStore("messages", key, next)
+            setStore(
+              "parts",
+              produce((parts) => {
+                for (const id of ids) {
+                  delete parts[id]
+                }
+              }),
+            )
+          }
+          const active = currentSessionID()
           setCloudPreviewId(null)
-          setCurrentSessionID(undefined)
+          if (!message.sessionID || active === key) {
+            setCurrentSessionID(undefined)
+          }
           setLoading(false)
           showToast({
             variant: "error",
@@ -851,6 +869,22 @@ export const SessionProvider: ParentComponent = (props) => {
 
     const preview = cloudPreviewId()
     if (preview) {
+      const sid = currentSessionID()
+      const text = args.trim() ? `/${command} ${args}` : `/${command}`
+      if (sid) {
+        const tempId = `optimistic-${crypto.randomUUID()}`
+        const now = Date.now()
+        const temp: Message = {
+          id: tempId,
+          sessionID: sid,
+          role: "user",
+          createdAt: new Date(now).toISOString(),
+          time: { created: now },
+        }
+        setStore("messages", sid, (msgs = []) => [...msgs, temp])
+        setStore("parts", tempId, [{ type: "text" as const, id: `${tempId}-text`, text }])
+      }
+
       const agent = selectedAgentName() !== defaultAgent() ? selectedAgentName() : undefined
       vscode.postMessage({
         type: "importAndSendCommand",
