@@ -2455,6 +2455,7 @@ button.am-section-toggle:hover .am-section-label {
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  min-width: 0;
   --am-diff-count-size: 12px;
   /* Inherit pierre diffs CSS vars from am-diff-panel */
   --diffs-light-bg: var(--vscode-editor-background, #1e1e1e);
@@ -2496,9 +2497,10 @@ button.am-section-toggle:hover .am-section-label {
 .am-review-toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   padding: 4px 8px;
   flex-shrink: 0;
+  min-width: 0;
   border-bottom: 1px solid var(--border-weak-base);
   background: var(--surface-base);
   gap: 8px;
@@ -2518,6 +2520,7 @@ button.am-section-toggle:hover .am-section-label {
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .am-review-toolbar-right > * {
@@ -2540,6 +2543,7 @@ button.am-section-toggle:hover .am-section-label {
 .am-review-toolbar-stats {
   display: flex;
   align-items: center;
+  flex: 1 1 auto;
   gap: 8px;
   font-size: var(--font-size-small);
   color: var(--text-weak);
@@ -2565,6 +2569,7 @@ button.am-section-toggle:hover .am-section-label {
   display: flex;
   flex: 1;
   min-height: 0;
+  min-width: 0;
   overflow: hidden;
 }
 
@@ -2572,6 +2577,8 @@ button.am-section-toggle:hover .am-section-label {
   display: flex;
   flex: 1;
   min-height: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .am-review-tree-resize {
@@ -2595,6 +2602,7 @@ button.am-section-toggle:hover .am-section-label {
 
 .am-review-diff {
   flex: 1;
+  width: 0;
   min-width: 0;
   overflow-y: auto;
   overflow-x: hidden;
@@ -2605,6 +2613,7 @@ button.am-section-toggle:hover .am-section-label {
   contain: none;
   scrollbar-width: auto;
   width: 100%;
+  min-width: 0;
 }
 
 .am-review-diff-content[data-component="session-review"] [data-component="sticky-accordion-header"] {
