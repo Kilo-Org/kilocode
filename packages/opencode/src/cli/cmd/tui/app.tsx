@@ -334,7 +334,7 @@ function App() {
   // kilocode_change start - auto-resume session if restarted within 60 seconds
   let resumed = false
   createEffect(() => {
-    if (resumed || sync.status === "loading") return
+    if (resumed || sync.status !== "complete") return
     if (args.continue || args.sessionID || args.prompt || args.agent || args.model) return
     const recent = sync.data.session
       .toSorted((a, b) => b.time.updated - a.time.updated)
