@@ -2997,10 +2997,6 @@ export type SessionLearnErrors = {
    * Bad request
    */
   400: BadRequestError
-  /**
-   * Not found
-   */
-  404: NotFoundError
 }
 
 export type SessionLearnError = SessionLearnErrors[keyof SessionLearnErrors]
