@@ -2469,12 +2469,16 @@ button.am-section-toggle:hover .am-section-label {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .am-review-toolbar-right {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
 }
 
 .am-review-toolbar [data-component="radio-group"],
@@ -2496,6 +2500,10 @@ button.am-section-toggle:hover .am-section-label {
   gap: 8px;
   font-size: var(--font-size-small);
   color: var(--text-weak);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .am-review-toolbar-adds {
