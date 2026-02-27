@@ -1067,6 +1067,13 @@ const AgentManagerContent: Component = () => {
     return []
   })
 
+  const diffSessionKey = createMemo(() => {
+    const sel = selection()
+    if (sel === LOCAL) return `local:${LOCAL}`
+    if (sel === null) return `session:${session.currentSessionID() ?? ""}`
+    return `worktree:${sel}`
+  })
+
   const setSharedDiffStyle = (style: "unified" | "split") => {
     if (reviewDiffStyle() === style) return
     setReviewDiffStyle(style)
@@ -2076,7 +2083,7 @@ const AgentManagerContent: Component = () => {
                   <DiffPanel
                     diffs={diffDatas()[selection() === LOCAL ? LOCAL : (session.currentSessionID() ?? "")] ?? []}
                     loading={diffLoading()}
-                    sessionKey={selection() === LOCAL ? LOCAL : (session.currentSessionID() ?? "")}
+                    sessionKey={diffSessionKey()}
                     diffStyle={reviewDiffStyle()}
                     onDiffStyleChange={setSharedDiffStyle}
                     comments={reviewComments()}
@@ -2098,12 +2105,16 @@ const AgentManagerContent: Component = () => {
               <FullScreenDiffView
                 diffs={reviewDiffs()}
                 loading={diffLoading()}
-                sessionKey={selection() === LOCAL ? LOCAL : (session.currentSessionID() ?? "")}
+                sessionKey={diffSessionKey()}
                 comments={reviewComments()}
                 onCommentsChange={setReviewCommentsForSelection}
                 onSendAll={closeReviewTab}
                 diffStyle={reviewDiffStyle()}
                 onDiffStyleChange={setSharedDiffStyle}
+                onOpenFile={(file) => {
+                  const id = session.currentSessionID()
+                  if (id) vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file })
+                }}
                 onClose={closeReviewTab}
               />
             </div>

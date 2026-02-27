@@ -1025,6 +1025,8 @@ export const dict = {
   "agentManager.review.commentPlaceholder": "留下评论...",
   "agentManager.review.commentAction": "评论",
   "agentManager.review.sendToChat": "发送到聊天",
+  "agentManager.review.collapsedOnly": "{{count}} 个已折叠",
+  "agentManager.review.collapsedWithLarge": "{{collapsed}} 个已折叠，{{large}} 个过大",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "粘贴 PR URL...",

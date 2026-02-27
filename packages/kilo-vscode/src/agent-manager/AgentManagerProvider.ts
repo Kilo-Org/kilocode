@@ -1461,6 +1461,13 @@ export class AgentManagerProvider implements vscode.Disposable {
   }
 
   private startDiffPolling(sessionId: string): void {
+    // If already polling the same session, keep the existing interval and cache
+    // to avoid an unnecessary stop→restart cycle that clears lastDiffHash and
+    // cachedDiffTarget, creating a flash of empty diff data in the webview.
+    if (this.diffSessionId === sessionId && this.diffInterval) {
+      this.log(`Already polling session ${sessionId}, skipping restart`)
+      return
+    }
     this.stopDiffPolling()
     this.diffSessionId = sessionId
     this.lastDiffHash = undefined
