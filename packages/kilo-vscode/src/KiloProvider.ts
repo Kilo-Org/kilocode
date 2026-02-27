@@ -45,6 +45,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private syncedChildSessions: Set<string> = new Set()
   /** Per-session directory overrides (e.g., worktree paths registered by AgentManagerProvider). */
   private sessionDirectories = new Map<string, string>()
+  /** Project ID for the current workspace, used to filter out sessions from other repositories. */ // kilocode_change
+  private projectID: string | undefined
   /** Abort controller for the current loadMessages request; aborted when a new session is selected. */
   private loadMessagesAbort: AbortController | null = null
   private unsubscribeEvent: (() => void) | null = null
@@ -788,7 +790,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const workspaceDir = this.getWorkspaceDirectory()
       const sessions = await this.httpClient.listSessions(workspaceDir)
 
-      // Also fetch sessions from worktree directories so they appear in the list
+      // The primary fetch already returns all sessions for this project (scoped
+      // by project_id on the backend). Worktree directories share the same
+      // project_id so their sessions are included. We still fetch from worktree
+      // directories in case a worktree resolved to a separate Instance, then
+      // filter the merged results to the workspace project to prevent sessions
+      // from other repositories from leaking in.
+      const projectID = sessions[0]?.projectID
+      if (projectID) this.projectID = projectID // kilocode_change
       const worktreeDirs = new Set(this.sessionDirectories.values())
       const extra = await Promise.all(
         [...worktreeDirs].map((dir) =>
@@ -801,7 +810,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const seen = new Set(sessions.map((s) => s.id))
       for (const batch of extra) {
         for (const s of batch) {
-          if (!seen.has(s.id)) {
+          if (!seen.has(s.id) && (!projectID || s.projectID === projectID)) {
             sessions.push(s)
             seen.add(s.id)
           }
@@ -1669,10 +1678,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     // Forward relevant events to webview
     // Side effects that must happen before the webview message is sent
-    if (event.type === "session.created" && !this.currentSession) {
-      this.currentSession = event.properties.info
-      this.trackedSessionIds.add(event.properties.info.id)
+    // kilocode_change start — filter session.created by projectID to prevent cross-repo leaks
+    if (event.type === "session.created") {
+      if (this.projectID && event.properties.info.projectID !== this.projectID) return
+      if (!this.currentSession) {
+        this.currentSession = event.properties.info
+        this.trackedSessionIds.add(event.properties.info.id)
+      }
     }
+    // kilocode_change end
     if (event.type === "session.updated" && this.currentSession?.id === event.properties.info.id) {
       this.currentSession = event.properties.info
     }
