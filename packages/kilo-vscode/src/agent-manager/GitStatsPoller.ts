@@ -35,6 +35,7 @@ export class GitStatsPoller {
   private busy = false
   private lastHash: string | undefined
   private lastLocalHash: string | undefined
+  private lastLocalStats: LocalStats | undefined
   private lastStats: Record<string, { additions: number; deletions: number; commits: number }> = {}
   private lastFetch = new Map<string, number>()
   private inflightFetch = new Map<string, Promise<void>>()
@@ -74,6 +75,7 @@ export class GitStatsPoller {
     this.busy = false
     this.lastHash = undefined
     this.lastLocalHash = undefined
+    this.lastLocalStats = undefined
     this.lastStats = {}
   }
 
@@ -172,26 +174,39 @@ export class GitStatsPoller {
 
       const tracking = await this.resolveTrackingBranch(root, branch)
 
-      const [additions, deletions, commits] = await (async () => {
-        if (!tracking || !client) return [0, 0, 0] as const
-        try {
-          const diffs = await client.getWorktreeDiff(root, tracking)
-          return [
-            diffs.reduce((sum, d) => sum + d.additions, 0),
-            diffs.reduce((sum, d) => sum + d.deletions, 0),
-            await this.countMissingOriginCommits(root, tracking),
-          ] as const
-        } catch (err) {
-          this.options.log("Failed to fetch local diff stats:", err)
-          return [0, 0, 0] as const
-        }
-      })()
+      // When the HTTP client or tracking branch is unavailable, preserve last-known
+      // stats rather than emitting zeros (which would falsely indicate a clean state).
+      if (!tracking || !client) {
+        if (this.lastLocalStats && this.lastLocalStats.branch === branch) return
+        const stats: LocalStats = { branch, additions: 0, deletions: 0, commits: 0 }
+        const hash = `local:${branch}:0:0:0`
+        if (hash === this.lastLocalHash) return
+        this.lastLocalHash = hash
+        this.lastLocalStats = stats
+        this.options.onLocalStats(stats)
+        return
+      }
+
+      let additions: number
+      let deletions: number
+      let commits: number
+      try {
+        const diffs = await client.getWorktreeDiff(root, tracking)
+        additions = diffs.reduce((sum, d) => sum + d.additions, 0)
+        deletions = diffs.reduce((sum, d) => sum + d.deletions, 0)
+        commits = await this.countMissingOriginCommits(root, tracking)
+      } catch (err) {
+        this.options.log("Failed to fetch local diff stats:", err)
+        return
+      }
 
       const hash = `local:${branch}:${additions}:${deletions}:${commits}`
       if (hash === this.lastLocalHash) return
       this.lastLocalHash = hash
 
-      this.options.onLocalStats({ branch, additions, deletions, commits })
+      const stats: LocalStats = { branch, additions, deletions, commits }
+      this.lastLocalStats = stats
+      this.options.onLocalStats(stats)
     } catch (err) {
       this.options.log("Failed to fetch local stats:", err)
     }

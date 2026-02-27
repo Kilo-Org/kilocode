@@ -1249,8 +1249,8 @@ export class AgentManagerProvider implements vscode.Disposable {
       isGitRepo: true,
     })
 
-    // Always poll — local workspace stats are always relevant, even without worktrees
-    this.statsPoller.setEnabled(true)
+    const worktrees = state.getWorktrees()
+    this.statsPoller.setEnabled(worktrees.length > 0 || this.panel !== undefined)
   }
 
   /** Push empty state when the workspace is not a git repo or has no workspace folder. */
