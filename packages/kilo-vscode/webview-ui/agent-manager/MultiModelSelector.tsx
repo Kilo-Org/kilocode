@@ -3,7 +3,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { useProvider } from "../src/context/provider"
 import type { EnrichedModel } from "../src/context/provider"
 import { useLanguage } from "../src/context/language"
-import { KILO_GATEWAY_ID, providerSortKey } from "../src/components/chat/model-selector-utils"
+import { KILO_GATEWAY_ID, providerSortKey } from "../src/components/shared/model-selector-utils"
 import {
   type ModelAllocations,
   MAX_MULTI_VERSIONS,

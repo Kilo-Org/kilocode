@@ -2,6 +2,8 @@
 /* Kilo Message Part overrides */
 
 [data-component="text-part"] {
+  margin-top: 8px;
+
   [data-slot="text-part-body"] {
     margin-top: 0;
   }
@@ -29,6 +31,47 @@
   }
 }
 
+/* Task tool child-session tool list (v1.0.25 style) */
+[data-component="task-tools"] {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  [data-slot="task-tool-item"] {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-weak);
+
+    [data-slot="icon-svg"] {
+      flex-shrink: 0;
+      color: var(--icon-weak);
+    }
+  }
+
+  [data-slot="task-tool-title"] {
+    font-family: var(--font-family-sans);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-large);
+    color: var(--text-weak);
+    flex-shrink: 0;
+  }
+
+  [data-slot="task-tool-subtitle"] {
+    font-family: var(--font-family-sans);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-large);
+    color: var(--text-weaker);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+}
+
 html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   background: var(--vscode-terminal-background, var(--vscode-panel-background));
 
@@ -36,21 +79,38 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
     color: var(--vscode-terminal-foreground, var(--vscode-editor-foreground));
   }
 
-  [data-slot="bash-scroll"] {
-    scrollbar-width: thin;
-    scrollbar-color: var(--vscode-scrollbarSlider-background) transparent;
-
-    &::-webkit-scrollbar-thumb {
-      background: var(--vscode-scrollbarSlider-background);
-      border-radius: 4px;
-    }
-
-    &::-webkit-scrollbar-thumb:hover {
-      background: var(--vscode-scrollbarSlider-hoverBackground);
-    }
-  }
-
   [data-slot="bash-copy"] [data-component="icon-button"][data-variant="secondary"] {
     background: var(--vscode-terminal-background, var(--vscode-panel-background));
   }
+}
+
+[data-component="tool-output"] {
+  margin-bottom: 0px;
+}
+
+/* Remove the empty space below user message bubbles.
+ * The upstream copy wrapper is a normal-flow block with min-height + margin,
+ * so it reserves ~28px even when invisible. Override it to be absolutely
+ * positioned over the bottom-right corner of the bubble — zero layout impact
+ * when hidden, overlays on hover exactly like the text-part copy button. */
+[data-component="user-message"] {
+  position: relative;
+
+  [data-slot="user-message-copy-wrapper"] {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    bottom: auto;
+    min-height: unset;
+    margin-top: 0;
+    width: auto;
+    /* hide meta text; only the icon-button matters in the sidebar */
+    [data-slot="user-message-meta-wrap"] {
+      display: none;
+    }
+  }
+}
+
+[data-component="question-answers"] {
+  padding: 8px;
 }
