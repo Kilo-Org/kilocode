@@ -899,6 +899,21 @@ export const SessionProvider: ParentComponent = (props) => {
     }
 
     const sid = currentSessionID()
+    const text = args.trim() ? `/${command} ${args}` : `/${command}`
+    if (sid) {
+      const tempId = `optimistic-${crypto.randomUUID()}`
+      const now = Date.now()
+      const temp: Message = {
+        id: tempId,
+        sessionID: sid,
+        role: "user",
+        createdAt: new Date(now).toISOString(),
+        time: { created: now },
+      }
+      setStore("messages", sid, (msgs = []) => [...msgs, temp])
+      setStore("parts", tempId, [{ type: "text" as const, id: `${tempId}-text`, text }])
+    }
+
     const agent = selectedAgentName() !== defaultAgent() ? selectedAgentName() : undefined
 
     vscode.postMessage({

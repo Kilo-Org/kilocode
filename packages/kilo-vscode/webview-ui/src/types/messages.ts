@@ -460,6 +460,7 @@ export interface CloudSessionImportFailedMessage {
   type: "cloudSessionImportFailed"
   cloudSessionId: string
   error: string
+  sessionID?: string
 }
 
 export interface OpenCloudSessionMessage {
