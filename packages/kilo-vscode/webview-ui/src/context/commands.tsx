@@ -43,15 +43,33 @@ export const CommandsProvider: ParentComponent = (props) => {
 
   const baseMs = 500
   const maxMs = 5000
-  const tick = (delay: number) =>
-    setTimeout(() => {
+  const maxRetries = 12 // kilocode_change
+  // kilocode_change start
+  const timeouts = new Set<number>()
+  const tick = (delay: number, retry: number) => {
+    const timeout = setTimeout(() => {
+      timeouts.delete(timeout)
       if (!loading()) {
         return
       }
+      if (retry >= maxRetries) {
+        const message = "Timed out loading commands"
+        setError(message)
+        setLoading(false)
+        showToast({
+          variant: "error",
+          title: "Failed to load commands",
+          description: message,
+        })
+        return
+      }
       vscode.postMessage({ type: "requestCommands" })
-      timeouts.push(tick(Math.min(delay * 2, maxMs)))
+      tick(Math.min(delay * 2, maxMs), retry + 1)
     }, delay)
-  const timeouts = [tick(baseMs)]
+    timeouts.add(timeout)
+  }
+  tick(baseMs, 1)
+  // kilocode_change end
 
   vscode.postMessage({ type: "requestCommands" })
 
@@ -59,6 +77,7 @@ export const CommandsProvider: ParentComponent = (props) => {
     for (const timeout of timeouts) {
       clearTimeout(timeout)
     }
+    timeouts.clear() // kilocode_change
   })
 
   const value: CommandsContextValue = {
