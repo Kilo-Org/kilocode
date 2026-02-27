@@ -1,6 +1,7 @@
 import * as vscode from "vscode"
 import type { KiloProvider } from "../../KiloProvider"
 import { createPrompt } from "./support-prompt"
+import { t } from "../../i18n"
 
 function getTerminalSelection(): string {
   const terminal = vscode.window.activeTerminal
@@ -17,7 +18,7 @@ export function registerTerminalActions(context: vscode.ExtensionContext, provid
     vscode.commands.registerCommand("kilo-code.new.terminalAddToContext", () => {
       const content = getTerminalSelection()
       if (!content) {
-        vscode.window.showInformationMessage("No terminal content available. Select text in the terminal first.")
+        vscode.window.showInformationMessage(t("terminal.noContent"))
         return
       }
       const prompt = createPrompt("TERMINAL_ADD_TO_CONTEXT", {
@@ -31,7 +32,7 @@ export function registerTerminalActions(context: vscode.ExtensionContext, provid
     vscode.commands.registerCommand("kilo-code.new.terminalFixCommand", () => {
       const content = getTerminalSelection()
       if (!content) {
-        vscode.window.showInformationMessage("No terminal content available. Select text in the terminal first.")
+        vscode.window.showInformationMessage(t("terminal.noContent"))
         return
       }
       const prompt = createPrompt("TERMINAL_FIX", {
@@ -44,7 +45,7 @@ export function registerTerminalActions(context: vscode.ExtensionContext, provid
     vscode.commands.registerCommand("kilo-code.new.terminalExplainCommand", () => {
       const content = getTerminalSelection()
       if (!content) {
-        vscode.window.showInformationMessage("No terminal content available. Select text in the terminal first.")
+        vscode.window.showInformationMessage(t("terminal.noContent"))
         return
       }
       const prompt = createPrompt("TERMINAL_EXPLAIN", {

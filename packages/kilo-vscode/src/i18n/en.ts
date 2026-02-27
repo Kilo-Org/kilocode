@@ -43,4 +43,20 @@ export const dict = {
     "The Kilo Code Autocomplete is being blocked by a conflict with GitHub Copilot. To fix this, you must disable Copilot's inline suggestions.",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "Disable Copilot",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "Disable Autocomplete",
+
+  // Git commit messages
+  "git.commitMessage.noExtension": "Git extension not found",
+  "git.commitMessage.noRepository": "No Git repository found",
+  "git.commitMessage.notConnected": "Kilo backend is not connected. Please wait for the connection to establish.",
+  "git.commitMessage.failed": "Failed to generate commit message: {{message}}",
+
+  // Terminal actions
+  "terminal.noContent": "No terminal content available. Select text in the terminal first.",
+
+  // Agent manager / worktrees
+  "worktree.noGitRepo": "Open a folder that contains a git repository to use worktrees",
+  "worktree.createFailed": "Failed to create any of the {{count}} multi-version worktrees.",
+
+  // Settings
+  "settings.reset.confirm": "Reset all Kilo Code extension settings to defaults?",
 }

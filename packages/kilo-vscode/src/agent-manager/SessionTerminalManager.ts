@@ -1,5 +1,6 @@
 import * as vscode from "vscode"
 import type { WorktreeStateManager } from "./WorktreeStateManager"
+import { t } from "../i18n"
 
 /**
  * Manages VS Code terminals for agent manager sessions.
@@ -65,7 +66,7 @@ export class SessionTerminalManager {
 
     if (!cwd) {
       this.log(`showTerminal: no cwd resolved for session ${sessionId}`)
-      vscode.window.showWarningMessage("Open a folder that contains a git repository to use worktrees")
+      vscode.window.showWarningMessage(t("worktree.noGitRepo"))
       return
     }
 
