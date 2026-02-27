@@ -7,6 +7,10 @@ description: "Using Kilo Code from the command line"
 This documentation applies only to Kilo version 1.0 and later. Users running versions below 1.0 should upgrade before proceeding.
 {% /callout %}
 
+{% callout type="danger" title="Bug in CLI v7.0.32" %}
+CLI version 7.0.32 has a bug that causes a startup error: `SyntaxError: Identifier 'scriptPath' has already been declared`. If you are affected, update manually to **version 7.0.33** by following the [CLI install instructions](/docs/getting-started/installing) for the install method of your choice. For npm users: `npm install -g @kilocode/cli`
+{% /callout %}
+
 # Kilo CLI
 
 Orchestrate agents from your terminal. Plan, debug, and code fast with keyboard-first navigation on the command line.
