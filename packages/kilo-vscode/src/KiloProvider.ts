@@ -1,14 +1,12 @@
 import * as path from "path"
 import * as vscode from "vscode"
 import { z } from "zod"
+import type { KiloClient, Session, SessionStatus, Event, TextPartInput, FilePartInput, Config } from "@kilocode/sdk/v2/client"
 import {
-  type HttpClient,
-  type SessionInfo,
-  type SSEEvent,
   type KiloConnectionService,
   type KilocodeNotification,
 } from "./services/cli-backend"
-import type { EditorContext } from "./services/cli-backend/types"
+import type { EditorContext, CloudSessionData } from "./services/cli-backend/types"
 import { FileIgnoreController } from "./services/autocomplete/shims/FileIgnoreController"
 import { handleChatCompletionRequest } from "./services/autocomplete/chat-autocomplete/handleChatCompletionRequest"
 import { handleChatCompletionAccepted } from "./services/autocomplete/chat-autocomplete/handleChatCompletionAccepted"
@@ -16,28 +14,29 @@ import { buildWebviewHtml } from "./utils"
 import { TelemetryProxy, type TelemetryPropertiesProvider } from "./services/telemetry"
 import {
   sessionToWebview,
-  normalizeProviders,
+  indexProvidersById,
   filterVisibleAgents,
   buildSettingPath,
   mapSSEEventToWebviewMessage,
+  getErrorMessage,
+  isEventFromForeignProject,
 } from "./kilo-provider-utils"
-import { isEventFromForeignProject } from "./services/cli-backend/sse-utils"
 
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "kilo-code.new.sidebarView"
 
   private webview: vscode.Webview | null = null
-  private currentSession: SessionInfo | null = null
+  private currentSession: Session | null = null
   private connectionState: "connecting" | "connected" | "disconnected" | "error" = "connecting"
   private loginAttempt = 0
   private isWebviewReady = false
   private readonly extensionVersion =
     vscode.extensions.getExtension("kilocode.kilo-code")?.packageJSON?.version ?? "unknown"
-  /** Cached providersLoaded payload so requestProviders can be served before httpClient is ready */
+  /** Cached providersLoaded payload so requestProviders can be served before client is ready */
   private cachedProvidersMessage: unknown = null
-  /** Cached agentsLoaded payload so requestAgents can be served before httpClient is ready */
+  /** Cached agentsLoaded payload so requestAgents can be served before client is ready */
   private cachedAgentsMessage: unknown = null
-  /** Cached configLoaded payload so requestConfig can be served before httpClient is ready */
+  /** Cached configLoaded payload so requestConfig can be served before client is ready */
   private cachedConfigMessage: unknown = null
   /** Cached notificationsLoaded payload */
   private cachedNotificationsMessage: unknown = null
@@ -50,7 +49,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private projectID: string | undefined
   /** Abort controller for the current loadMessages request; aborted when a new session is selected. */
   private loadMessagesAbort: AbortController | null = null
-  /** Set when refreshSessions() is called before the HTTP client is ready.
+  /** Set when refreshSessions() is called before the client is ready.
    *  Cleared and retried once the connection transitions to "connected". */
   private pendingSessionRefresh = false
   private unsubscribeEvent: (() => void) | null = null
@@ -87,12 +86,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /**
-   * Convenience getter that returns the shared HttpClient or null if not yet connected.
+   * Convenience getter that returns the shared SDK KiloClient or null if not yet connected.
    * Preserves the existing null-check pattern used throughout handler methods.
    */
-  private get httpClient(): HttpClient | null {
+  private get client(): KiloClient | null {
     try {
-      return this.connectionService.getHttpClient()
+      return this.connectionService.getClient()
     } catch {
       return null
     }
@@ -109,7 +108,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       reason,
       isWebviewReady: this.isWebviewReady,
       connectionState: this.connectionState,
-      hasHttpClient: !!this.httpClient,
+      hasClient: !!this.client,
       hasServerInfo: !!serverInfo,
     })
 
@@ -138,18 +137,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     // Always attempt to fetch+push profile when connected.
-    if (this.connectionState === "connected" && this.httpClient) {
+    // Profile returns 401 when user isn't logged into Kilo Gateway — that's expected.
+    // Use fire-and-forget (no throwOnError) to match old getProfile() which returned null on error.
+    if (this.connectionState === "connected" && this.client) {
       console.log("[Kilo New] KiloProvider: 👤 syncWebviewState fetching profile...")
-      try {
-        const profileData = await this.httpClient.getProfile()
-        console.log("[Kilo New] KiloProvider: 👤 syncWebviewState profile:", profileData ? "received" : "null")
-        this.postMessage({
-          type: "profileData",
-          data: profileData,
-        })
-      } catch (error) {
-        console.error("[Kilo New] KiloProvider: ❌ syncWebviewState failed to fetch profile:", error)
-      }
+      const profileResult = await this.client.kilo.profile()
+      const profileData = profileResult.data ?? null
+      console.log("[Kilo New] KiloProvider: 👤 syncWebviewState profile:", profileData ? "received" : "null")
+      this.postMessage({
+        type: "profileData",
+        data: profileData,
+      })
     }
   }
 
@@ -203,7 +201,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Register a session created externally (e.g., worktree sessions from AgentManagerProvider).
    * Sets currentSession, adds to trackedSessionIds, and notifies the webview.
    */
-  public registerSession(session: SessionInfo): void {
+  public registerSession(session: Session): void {
     this.currentSession = session
     this.trackedSessionIds.add(session.id)
     this.postMessage({
@@ -416,15 +414,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           )
           break
         case "requestFileSearch": {
-          const client = this.httpClient
-          if (client) {
+          const sdkClient = this.client
+          if (sdkClient) {
             const dir = this.getWorkspaceDirectory(this.currentSession?.id)
-            void client
-              .findFiles(message.query, dir)
-              .then((paths) => {
+            void sdkClient.find
+              .files({ query: message.query, directory: dir }, { throwOnError: true })
+              .then(({ data: paths }) => {
                 this.postMessage({ type: "fileSearchResult", paths, dir, requestId: message.requestId })
               })
-              .catch((error) => {
+              .catch((error: unknown) => {
                 console.error("[Kilo New] File search failed:", error)
                 this.postMessage({ type: "fileSearchResult", paths: [], dir, requestId: message.requestId })
               })
@@ -544,7 +542,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           return this.trackedSessionIds.has(sessionId)
         },
         (event) => {
-          this.handleSSEEvent(event)
+          this.handleEvent(event)
         },
       )
 
@@ -555,10 +553,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
         if (state === "connected") {
           try {
-            const client = this.httpClient
-            if (client) {
-              const profileData = await client.getProfile()
-              this.postMessage({ type: "profileData", data: profileData })
+            // Profile fetch is best-effort — returns 401 when user isn't logged into gateway.
+            const sdkClient = this.client
+            if (sdkClient) {
+              const profileResult = await sdkClient.kilo.profile()
+              this.postMessage({ type: "profileData", data: profileResult.data ?? null })
             }
             await this.syncWebviewState("sse-connected")
             await this.flushPendingSessionRefresh("sse-connected")
@@ -566,7 +565,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             console.error("[Kilo New] KiloProvider: ❌ Failed during connected state handling:", error)
             this.postMessage({
               type: "error",
-              message: error instanceof Error ? error.message : "Failed to sync after connecting",
+              message: getErrorMessage(error) || "Failed to sync after connecting",
             })
           }
         }
@@ -613,12 +612,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage({
         type: "connectionState",
         state: "error",
-        error: error instanceof Error ? error.message : "Failed to connect to CLI backend",
+        error: getErrorMessage(error) || "Failed to connect to CLI backend",
       })
     }
   }
 
-  private sessionToWebview(session: SessionInfo) {
+  private sessionToWebview(session: Session) {
     return sessionToWebview(session)
   }
 
@@ -626,7 +625,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Handle creating a new session.
    */
   private async handleCreateSession(): Promise<void> {
-    if (!this.httpClient) {
+    if (!this.client) {
       this.postMessage({
         type: "error",
         message: "Not connected to CLI backend",
@@ -636,20 +635,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const workspaceDir = this.getWorkspaceDirectory()
-      const session = await this.httpClient.createSession(workspaceDir)
+      const { data: session } = await this.client.session.create({ directory: workspaceDir }, { throwOnError: true })
       this.currentSession = session
       this.trackedSessionIds.add(session.id)
 
       // Notify webview of the new session
       this.postMessage({
         type: "sessionCreated",
-        session: this.sessionToWebview(session),
+        session: this.sessionToWebview(this.currentSession!),
       })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to create session:", error)
       this.postMessage({
         type: "error",
-        message: error instanceof Error ? error.message : "Failed to create session",
+        message: getErrorMessage(error) || "Failed to create session",
       })
     }
   }
@@ -661,7 +660,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Track the session so we receive its SSE events
     this.trackedSessionIds.add(sessionID)
 
-    if (!this.httpClient) {
+    if (!this.client) {
       this.postMessage({
         type: "error",
         message: "Not connected to CLI backend",
@@ -678,7 +677,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const workspaceDir = this.getWorkspaceDirectory(sessionID)
-      const messagesData = await this.httpClient.getMessages(sessionID, workspaceDir, abort.signal)
+      const { data: messagesData } = await this.client.session.messages(
+        { sessionID, directory: workspaceDir },
+        { throwOnError: true, signal: abort.signal },
+      )
 
       // If this request was aborted while awaiting, skip posting stale results
       if (abort.signal.aborted) return
@@ -687,14 +689,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // references the correct session after switching to a historical session.
       // Non-blocking: don't let a failure here prevent messages from loading.
       // 404s are expected for cross-worktree sessions — use silent to suppress HTTP error logs.
-      this.httpClient
-        .getSession(sessionID, workspaceDir, true)
-        .then((session) => {
-          if (!this.currentSession || this.currentSession.id === sessionID) {
-            this.currentSession = session
+      this.client.session
+        .get({ sessionID, directory: workspaceDir })
+        .then((result) => {
+          if (result.data && (!this.currentSession || this.currentSession.id === sessionID)) {
+            this.currentSession = result.data
           }
         })
-        .catch((err) => console.warn("[Kilo New] KiloProvider: getSession failed (non-critical):", err))
+        .catch((err: unknown) => console.warn("[Kilo New] KiloProvider: getSession failed (non-critical):", err))
 
       this.postMessage({
         type: "workspaceDirectoryChanged",
@@ -703,10 +705,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       // Fetch current session status so the webview has the correct busy/idle
       // state after switching tabs (SSE events may have been missed).
-      this.httpClient
-        .getSessionStatuses(workspaceDir)
-        .then((statuses) => {
-          for (const [sid, info] of Object.entries(statuses)) {
+      this.client.session
+        .status({ directory: workspaceDir })
+        .then((result) => {
+          if (!result.data) return
+          for (const [sid, info] of Object.entries(result.data) as [string, SessionStatus][]) {
             if (!this.trackedSessionIds.has(sid)) continue
             this.postMessage({
               type: "sessionStatus",
@@ -716,7 +719,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             })
           }
         })
-        .catch((err) => console.error("[Kilo New] KiloProvider: Failed to fetch session statuses:", err))
+        .catch((err: unknown) => console.error("[Kilo New] KiloProvider: Failed to fetch session statuses:", err))
 
       const messages = messagesData.map((m) => ({
         ...m.info,
@@ -739,7 +742,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       console.error("[Kilo New] KiloProvider: Failed to load messages:", error)
       this.postMessage({
         type: "error",
-        message: error instanceof Error ? error.message : "Failed to load messages",
+        message: getErrorMessage(error) || "Failed to load messages",
         sessionID,
       })
     }
@@ -750,7 +753,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Tracks the session for SSE events and fetches its messages.
    */
   private async handleSyncSession(sessionID: string): Promise<void> {
-    if (!this.httpClient) return
+    if (!this.client) return
     if (this.syncedChildSessions.has(sessionID)) return
 
     this.syncedChildSessions.add(sessionID)
@@ -758,7 +761,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const workspaceDir = this.getWorkspaceDirectory(sessionID)
-      const messagesData = await this.httpClient.getMessages(sessionID, workspaceDir)
+      const { data: messagesData } = await this.client.session.messages(
+        { sessionID, directory: workspaceDir },
+        { throwOnError: true },
+      )
 
       const messages = messagesData.map((m) => ({
         ...m.info,
@@ -781,25 +787,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /**
-   * Retry a deferred sessions refresh once the HTTP client is ready.
+   * Retry a deferred sessions refresh once the client is ready.
    */
   private async flushPendingSessionRefresh(reason: string): Promise<void> {
-    if (!this.pendingSessionRefresh) {
-      return
-    }
-
-    if (!this.httpClient) {
-      if (this.connectionState === "connecting") {
-        return
-      }
-
+    if (!this.pendingSessionRefresh) return
+    if (!this.client) {
+      if (this.connectionState === "connecting") return
       this.postMessage({
         type: "error",
         message: "Not connected to CLI backend",
       })
       return
     }
-
     console.log("[Kilo New] KiloProvider: 🔄 Flushing deferred sessions refresh", { reason })
     await this.handleLoadSessions()
   }
@@ -808,13 +807,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Handle loading all sessions.
    */
   private async handleLoadSessions(): Promise<void> {
-    const client = this.httpClient
+    const client = this.client
     if (!client) {
-      // HTTP client isn't ready yet — mark for retry once connected.
+      // Client isn't ready yet — mark for retry once connected.
       // This avoids silently dropping the request when initializeState()
       // calls refreshSessions() before the CLI server has started.
       this.pendingSessionRefresh = true
-
       if (this.connectionState !== "connecting") {
         this.postMessage({
           type: "error",
@@ -828,7 +826,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const workspaceDir = this.getWorkspaceDirectory()
-      const sessions = await client.listSessions(workspaceDir)
+      const { data: sessions } = await client.session.list({ directory: workspaceDir }, { throwOnError: true })
 
       // The primary fetch already returns all sessions for this project (scoped
       // by project_id on the backend). Worktree directories share the same
@@ -840,10 +838,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const worktreeDirs = new Set(this.sessionDirectories.values())
       const extra = await Promise.all(
         [...worktreeDirs].map((dir) =>
-          client.listSessions(dir).catch((err) => {
-            console.error(`[Kilo New] KiloProvider: Failed to list sessions for ${dir}:`, err)
-            return [] as SessionInfo[]
-          }),
+          client.session
+            .list({ directory: dir }, { throwOnError: true })
+            .then(({ data }) => data)
+            .catch((err: unknown) => {
+              console.error(`[Kilo New] KiloProvider: Failed to list sessions for ${dir}:`, err)
+              return [] as Session[]
+            }),
         ),
       )
       const seen = new Set(sessions.map((s) => s.id))
@@ -868,7 +869,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       console.error("[Kilo New] KiloProvider: Failed to load sessions:", error)
       this.postMessage({
         type: "error",
-        message: error instanceof Error ? error.message : "Failed to load sessions",
+        message: getErrorMessage(error) || "Failed to load sessions",
       })
     }
   }
@@ -877,14 +878,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Handle deleting a session.
    */
   private async handleDeleteSession(sessionID: string): Promise<void> {
-    if (!this.httpClient) {
+    if (!this.client) {
       this.postMessage({ type: "error", message: "Not connected to CLI backend" })
       return
     }
 
     try {
       const workspaceDir = this.getWorkspaceDirectory(sessionID)
-      await this.httpClient.deleteSession(sessionID, workspaceDir)
+      await this.client.session.delete({ sessionID, directory: workspaceDir }, { throwOnError: true })
       this.trackedSessionIds.delete(sessionID)
       this.syncedChildSessions.delete(sessionID)
       this.sessionDirectories.delete(sessionID)
@@ -896,7 +897,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       console.error("[Kilo New] KiloProvider: Failed to delete session:", error)
       this.postMessage({
         type: "error",
-        message: error instanceof Error ? error.message : "Failed to delete session",
+        message: getErrorMessage(error) || "Failed to delete session",
       })
     }
   }
@@ -905,14 +906,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Handle renaming a session.
    */
   private async handleRenameSession(sessionID: string, title: string): Promise<void> {
-    if (!this.httpClient) {
+    if (!this.client) {
       this.postMessage({ type: "error", message: "Not connected to CLI backend" })
       return
     }
 
     try {
       const workspaceDir = this.getWorkspaceDirectory(sessionID)
-      const updated = await this.httpClient.updateSession(sessionID, { title }, workspaceDir)
+      const { data: updated } = await this.client.session.update(
+        { sessionID, directory: workspaceDir, title },
+        { throwOnError: true },
+      )
       if (this.currentSession?.id === sessionID) {
         this.currentSession = updated
       }
@@ -921,7 +925,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       console.error("[Kilo New] KiloProvider: Failed to rename session:", error)
       this.postMessage({
         type: "error",
-        message: error instanceof Error ? error.message : "Failed to rename session",
+        message: getErrorMessage(error) || "Failed to rename session",
       })
     }
   }
@@ -935,8 +939,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * the map here so the rest of the code can use provider.id everywhere.
    */
   private async fetchAndSendProviders(): Promise<void> {
-    if (!this.httpClient) {
-      // httpClient not ready — serve from cache if available
+    if (!this.client) {
+      // client not ready — serve from cache if available
       if (this.cachedProvidersMessage) {
         this.postMessage(this.cachedProvidersMessage)
       }
@@ -945,9 +949,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const workspaceDir = this.getWorkspaceDirectory()
-      const response = await this.httpClient.listProviders(workspaceDir)
+      const { data: response } = await this.client.provider.list({ directory: workspaceDir }, { throwOnError: true })
 
-      const normalized = normalizeProviders(response.all)
+      const normalized = indexProvidersById(response.all)
 
       const config = vscode.workspace.getConfiguration("kilo-code.new.model")
       const providerID = config.get<string>("providerID", "kilo")
@@ -971,7 +975,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Fetch agents (modes) from the backend and send to webview.
    */
   private async fetchAndSendAgents(): Promise<void> {
-    if (!this.httpClient) {
+    if (!this.client) {
       if (this.cachedAgentsMessage) {
         this.postMessage(this.cachedAgentsMessage)
       }
@@ -980,7 +984,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const workspaceDir = this.getWorkspaceDirectory()
-      const agents = await this.httpClient.listAgents(workspaceDir)
+      const { data: agents } = await this.client.app.agents({ directory: workspaceDir }, { throwOnError: true })
 
       const { visible, defaultAgent } = filterVisibleAgents(agents)
 
@@ -1006,7 +1010,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Fetch backend config and send to webview.
    */
   private async fetchAndSendConfig(): Promise<void> {
-    if (!this.httpClient) {
+    if (!this.client) {
       if (this.cachedConfigMessage) {
         this.postMessage(this.cachedConfigMessage)
       }
@@ -1015,7 +1019,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const workspaceDir = this.getWorkspaceDirectory()
-      const config = await this.httpClient.getConfig(workspaceDir)
+      const { data: config } = await this.client.config.get({ directory: workspaceDir }, { throwOnError: true })
 
       const message = {
         type: "configLoaded",
@@ -1033,7 +1037,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Uses the cached message pattern so the webview gets data immediately on refresh.
    */
   private async fetchAndSendNotifications(): Promise<void> {
-    if (!this.httpClient) {
+    if (!this.client) {
       if (this.cachedNotificationsMessage) {
         this.postMessage(this.cachedNotificationsMessage)
       }
@@ -1041,7 +1045,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     try {
-      const notifications = await this.httpClient.getNotifications()
+      const { data: notifications } = await this.client.kilo.notifications(undefined, { throwOnError: true })
       const existing = this.extensionContext?.globalState.get<string[]>("kilo.dismissedNotificationIds", []) ?? []
       const active = new Set(notifications.map((n) => n.id))
       const dismissedIds = existing.filter((id) => active.has(id))
@@ -1065,7 +1069,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     limit?: number
     gitUrl?: string
   }): Promise<void> {
-    if (!this.httpClient) {
+    if (!this.client) {
       this.postMessage({
         type: "error",
         message: "Not connected to CLI backend",
@@ -1074,7 +1078,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     try {
-      const result = await this.httpClient.getCloudSessions({
+      const result = await this.client.kilo.cloudSessions({
         cursor: message.cursor,
         limit: message.limit,
         gitUrl: message.gitUrl,
@@ -1082,8 +1086,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       this.postMessage({
         type: "cloudSessionsLoaded",
-        sessions: result?.cliSessions ?? [],
-        nextCursor: result?.nextCursor ?? null,
+        sessions: result.data?.cliSessions ?? [],
+        nextCursor: result.data?.nextCursor ?? null,
       })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to fetch cloud sessions:", error)
@@ -1099,7 +1103,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Transforms the export data into webview message format and sends it back.
    */
   private async handleRequestCloudSessionData(sessionId: string): Promise<void> {
-    if (!this.httpClient) {
+    if (!this.client) {
       this.postMessage({
         type: "cloudSessionImportFailed",
         cloudSessionId: sessionId,
@@ -1109,7 +1113,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     try {
-      const data = await this.httpClient.getCloudSession(sessionId)
+      const result = await this.client.kilo.cloud.session.get({ id: sessionId })
+      const data = result.data as CloudSessionData | undefined
       if (!data) {
         this.postMessage({
           type: "cloudSessionImportFailed",
@@ -1161,7 +1166,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     variant?: string,
     files?: Array<{ mime: string; url: string }>,
   ): Promise<void> {
-    if (!this.httpClient) {
+    if (!this.client) {
       this.postMessage({
         type: "cloudSessionImportFailed",
         cloudSessionId,
@@ -1173,7 +1178,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const workspaceDir = this.getWorkspaceDirectory()
 
     // Step 1: Import the cloud session with fresh IDs
-    const session = await this.httpClient.importCloudSession(cloudSessionId, workspaceDir)
+    let session: Session | undefined
+    try {
+      const importResult = await this.client.kilo.cloud.session.import({ sessionId: cloudSessionId, directory: workspaceDir })
+      session = importResult.data as Session | undefined
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: ❌ Cloud session import failed:", error)
+      this.postMessage({
+        type: "cloudSessionImportFailed",
+        cloudSessionId,
+        error: getErrorMessage(error) || "Failed to import session from cloud",
+      })
+      return
+    }
     if (!session) {
       this.postMessage({
         type: "cloudSessionImportFailed",
@@ -1195,7 +1212,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
 
     // Step 2: Send the user's message on the new local session
-    const parts: Array<{ type: "text"; text: string } | { type: "file"; mime: string; url: string }> = []
+    const parts: Array<TextPartInput | FilePartInput> = []
 
     if (files) {
       for (const f of files) {
@@ -1208,13 +1225,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     try {
       const editorContext = await this.gatherEditorContext()
 
-      await this.httpClient.sendMessage(session.id, parts, workspaceDir, {
-        providerID,
-        modelID,
-        agent,
-        variant,
-        editorContext,
-      })
+      await this.client.session.prompt(
+        {
+          sessionID: session.id,
+          directory: workspaceDir,
+          parts,
+          model: providerID && modelID ? { providerID, modelID } : undefined,
+          agent,
+          variant,
+          editorContext,
+        },
+        { throwOnError: true },
+      )
     } catch (err) {
       console.error("[Kilo New] Failed to send message after cloud import:", err)
       this.postMessage({
@@ -1262,14 +1284,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Applies a partial config update via the global config endpoint, then pushes
    * the full merged config back to the webview.
    */
-  private async handleUpdateConfig(partial: Record<string, unknown>): Promise<void> {
-    if (!this.httpClient) {
+  private async handleUpdateConfig(partial: Partial<Config>): Promise<void> {
+    if (!this.client) {
       this.postMessage({ type: "error", message: "Not connected to CLI backend" })
       return
     }
 
     try {
-      const updated = await this.httpClient.updateConfig(partial)
+      const { data: updated } = await this.client.global.config.update(
+        { config: partial },
+        { throwOnError: true },
+      )
 
       const message = {
         type: "configUpdated",
@@ -1281,7 +1306,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       console.error("[Kilo New] KiloProvider: Failed to update config:", error)
       this.postMessage({
         type: "error",
-        message: error instanceof Error ? error.message : "Failed to update config",
+        message: getErrorMessage(error) || "Failed to update config",
       })
     }
   }
@@ -1298,7 +1323,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     variant?: string,
     files?: Array<{ mime: string; url: string }>,
   ): Promise<void> {
-    if (!this.httpClient) {
+    if (!this.client) {
       this.postMessage({
         type: "error",
         message: "Not connected to CLI backend",
@@ -1311,7 +1336,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       // Create session if needed
       if (!sessionID && !this.currentSession) {
-        this.currentSession = await this.httpClient.createSession(workspaceDir)
+        const { data: newSession } = await this.client.session.create(
+          { directory: workspaceDir },
+          { throwOnError: true },
+        )
+        this.currentSession = newSession
         this.trackedSessionIds.add(this.currentSession.id)
         // Notify webview of the new session
         this.postMessage({
@@ -1326,7 +1355,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
 
       // Build parts array with file context and user text
-      const parts: Array<{ type: "text"; text: string } | { type: "file"; mime: string; url: string }> = []
+      const parts: Array<TextPartInput | FilePartInput> = []
 
       // Add any explicitly attached files from the webview
       if (files) {
@@ -1339,18 +1368,23 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       const editorContext = await this.gatherEditorContext()
 
-      await this.httpClient.sendMessage(targetSessionID, parts, workspaceDir, {
-        providerID,
-        modelID,
-        agent,
-        variant,
-        editorContext,
-      })
+      await this.client.session.prompt(
+        {
+          sessionID: targetSessionID,
+          directory: workspaceDir,
+          parts,
+          model: providerID && modelID ? { providerID, modelID } : undefined,
+          agent,
+          variant,
+          editorContext,
+        },
+        { throwOnError: true },
+      )
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to send message:", error)
       this.postMessage({
         type: "error",
-        message: error instanceof Error ? error.message : "Failed to send message",
+        message: getErrorMessage(error) || "Failed to send message",
       })
     }
   }
@@ -1359,7 +1393,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Handle abort request from the webview.
    */
   private async handleAbort(sessionID?: string): Promise<void> {
-    if (!this.httpClient) {
+    if (!this.client) {
       return
     }
 
@@ -1370,7 +1404,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const workspaceDir = this.getWorkspaceDirectory(targetSessionID)
-      await this.httpClient.abortSession(targetSessionID, workspaceDir)
+      await this.client.session.abort({ sessionID: targetSessionID, directory: workspaceDir }, { throwOnError: true })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to abort session:", error)
     }
@@ -1380,7 +1414,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Handle compact (context summarization) request from the webview.
    */
   private async handleCompact(sessionID?: string, providerID?: string, modelID?: string): Promise<void> {
-    if (!this.httpClient) {
+    if (!this.client) {
       this.postMessage({
         type: "error",
         message: "Not connected to CLI backend",
@@ -1405,12 +1439,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const workspaceDir = this.getWorkspaceDirectory(target)
-      await this.httpClient.summarize(target, providerID, modelID, workspaceDir)
+      await this.client.session.summarize(
+        { sessionID: target, directory: workspaceDir, providerID, modelID },
+        { throwOnError: true },
+      )
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to compact session:", error)
       this.postMessage({
         type: "error",
-        message: error instanceof Error ? error.message : "Failed to compact session",
+        message: getErrorMessage(error) || "Failed to compact session",
       })
     }
   }
@@ -1423,7 +1460,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     sessionID: string,
     response: "once" | "always" | "reject",
   ): Promise<void> {
-    if (!this.httpClient) {
+    if (!this.client) {
       return
     }
 
@@ -1435,7 +1472,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const workspaceDir = this.getWorkspaceDirectory(targetSessionID)
-      await this.httpClient.respondToPermission(targetSessionID, permissionId, response, workspaceDir)
+      await this.client.permission.respond(
+        { sessionID: targetSessionID, permissionID: permissionId, response, directory: workspaceDir },
+        { throwOnError: true },
+      )
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to respond to permission:", error)
     }
@@ -1445,13 +1485,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Handle question reply from the webview.
    */
   private async handleQuestionReply(requestID: string, answers: string[][]): Promise<void> {
-    if (!this.httpClient) {
+    if (!this.client) {
       this.postMessage({ type: "questionError", requestID })
       return
     }
 
     try {
-      await this.httpClient.replyToQuestion(requestID, answers, this.getWorkspaceDirectory(this.currentSession?.id))
+      await this.client.question.reply(
+        { requestID, answers, directory: this.getWorkspaceDirectory(this.currentSession?.id) },
+        { throwOnError: true },
+      )
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to reply to question:", error)
       this.postMessage({ type: "questionError", requestID })
@@ -1462,13 +1505,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Handle question reject (dismiss) from the webview.
    */
   private async handleQuestionReject(requestID: string): Promise<void> {
-    if (!this.httpClient) {
+    if (!this.client) {
       this.postMessage({ type: "questionError", requestID })
       return
     }
 
     try {
-      await this.httpClient.rejectQuestion(requestID, this.getWorkspaceDirectory(this.currentSession?.id))
+      await this.client.question.reject(
+        { requestID, directory: this.getWorkspaceDirectory(this.currentSession?.id) },
+        { throwOnError: true },
+      )
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to reject question:", error)
       this.postMessage({ type: "questionError", requestID })
@@ -1481,7 +1527,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Sends device auth messages so the webview can display a QR code, verification code, and timer.
    */
   private async handleLogin(): Promise<void> {
-    if (!this.httpClient) {
+    if (!this.client) {
       return
     }
 
@@ -1493,7 +1539,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const workspaceDir = this.getWorkspaceDirectory()
 
       // Step 1: Initiate OAuth authorization
-      const auth = await this.httpClient.oauthAuthorize("kilo", 0, workspaceDir)
+      const { data: auth } = await this.client.provider.oauth.authorize(
+        { providerID: "kilo", method: 0, directory: workspaceDir },
+        { throwOnError: true },
+      )
       console.log("[Kilo New] KiloProvider: 🔐 Got auth URL:", auth.url)
 
       // Parse code from instructions (format: "Open URL and enter code: ABCD-1234")
@@ -1512,7 +1561,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       })
 
       // Step 3: Wait for callback (blocks until polling completes)
-      await this.httpClient.oauthCallback("kilo", 0, workspaceDir)
+      await this.client.provider.oauth.callback(
+        { providerID: "kilo", method: 0, directory: workspaceDir },
+        { throwOnError: true },
+      )
 
       // Check if this attempt was cancelled
       if (attempt !== this.loginAttempt) {
@@ -1522,12 +1574,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       console.log("[Kilo New] KiloProvider: 🔐 Login successful")
 
       // Step 4: Fetch profile and push to webview
-      const profileData = await this.httpClient.getProfile()
+      const { data: profileData } = await this.client.kilo.profile(undefined, { throwOnError: true })
       this.postMessage({ type: "profileData", data: profileData })
       this.postMessage({ type: "deviceAuthComplete" })
 
       // Step 5: If user has organizations, navigate to profile view so they can pick one
-      if (profileData?.profile.organizations && profileData.profile.organizations.length > 0) {
+      if (profileData?.profile?.organizations && profileData.profile.organizations.length > 0) {
         this.postMessage({ type: "navigate", view: "profile" })
       }
     } catch (error) {
@@ -1536,7 +1588,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
       this.postMessage({
         type: "deviceAuthFailed",
-        error: error instanceof Error ? error.message : "Login failed",
+        error: getErrorMessage(error) || "Login failed",
       })
     }
   }
@@ -1546,26 +1598,30 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Persists the selection and refreshes profile + providers since both change with org context.
    */
   private async handleSetOrganization(organizationId: string | null): Promise<void> {
-    const client = this.httpClient
-    if (!client) {
+    const sdkClient = this.client
+    if (!sdkClient) {
       return
     }
 
     console.log("[Kilo New] KiloProvider: Switching organization:", organizationId ?? "personal")
     try {
-      await client.setOrganization(organizationId)
+      await sdkClient.kilo.organization.set({ organizationId }, { throwOnError: true })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to switch organization:", error)
-      // Re-fetch current profile to reset webview state (clears switching indicator)
-      const profileData = await client.getProfile()
-      this.postMessage({ type: "profileData", data: profileData })
+      // Re-fetch current profile to reset webview state (clears switching indicator) — best-effort
+      try {
+        const profileResult = await sdkClient.kilo.profile()
+        this.postMessage({ type: "profileData", data: profileResult.data ?? null })
+      } catch (profileError) {
+        console.error("[Kilo New] KiloProvider: Failed to refresh profile after org switch error:", profileError)
+      }
       return
     }
 
     // Org switch succeeded — refresh profile and providers independently (best-effort)
     try {
-      const profileData = await client.getProfile()
-      this.postMessage({ type: "profileData", data: profileData })
+      const profileResult = await sdkClient.kilo.profile()
+      this.postMessage({ type: "profileData", data: profileResult.data ?? null })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to refresh profile after org switch:", error)
     }
@@ -1602,32 +1658,40 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Handle logout request from the webview.
    */
   private async handleLogout(): Promise<void> {
-    if (!this.httpClient) {
+    if (!this.client) {
       return
     }
 
-    console.log("[Kilo New] KiloProvider: 🚪 Logging out...")
-    await this.httpClient.removeAuth("kilo")
-    console.log("[Kilo New] KiloProvider: 🚪 Logged out successfully")
-    this.postMessage({
-      type: "profileData",
-      data: null,
-    })
+    try {
+      console.log("[Kilo New] KiloProvider: 🚪 Logging out...")
+      await this.client.auth.remove({ providerID: "kilo" }, { throwOnError: true })
+      console.log("[Kilo New] KiloProvider: 🚪 Logged out successfully")
+      this.postMessage({
+        type: "profileData",
+        data: null,
+      })
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: ❌ Logout failed:", error)
+      this.postMessage({
+        type: "error",
+        message: getErrorMessage(error) || "Failed to logout",
+      })
+    }
   }
 
   /**
    * Handle profile refresh request from the webview.
    */
   private async handleRefreshProfile(): Promise<void> {
-    if (!this.httpClient) {
+    if (!this.client) {
       return
     }
 
     console.log("[Kilo New] KiloProvider: 🔄 Refreshing profile...")
-    const profileData = await this.httpClient.getProfile()
+    const profileResult = await this.client.kilo.profile().catch(() => ({ data: null }))
     this.postMessage({
       type: "profileData",
-      data: profileData,
+      data: profileResult.data ?? null,
     })
   }
 
@@ -1697,7 +1761,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Extract sessionID from an SSE event, if applicable.
    * Returns undefined for global events (server.connected, server.heartbeat).
    */
-  private extractSessionID(event: SSEEvent): string | undefined {
+  private extractSessionID(event: Event): string | undefined {
     return this.connectionService.resolveEventSessionId(event)
   }
 
@@ -1705,7 +1769,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Handle SSE events from the CLI backend.
    * Filters events by project ID and tracked session IDs so each webview only sees its own sessions.
    */
-  private handleSSEEvent(event: SSEEvent): void {
+  private handleEvent(event: Event): void {
     // Drop session events from other projects before any tracking logic.
     // This must come first: the trackedSessionIds guard below would otherwise
     // let a foreign session through if it was accidentally tracked.

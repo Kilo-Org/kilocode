@@ -58,13 +58,15 @@ export class AutocompleteModel {
 
   /**
    * Generate a FIM (Fill-in-the-Middle) completion via the CLI backend.
-   * The CLI backend handles auth using the stored kilo OAuth token.
+   * Uses the SDK's kilo.fim() SSE endpoint which handles auth and streaming.
+   *
+   * @param signal - Optional AbortSignal to cancel the SSE stream early (e.g. when the user types again)
    */
   public async generateFimResponse(
     prefix: string,
     suffix: string,
     onChunk: (text: string) => void,
-    _taskId?: string,
+    signal?: AbortSignal,
   ): Promise<ResponseMetaData> {
     if (!this.connectionService) {
       throw new Error("Connection service is not available")
@@ -75,18 +77,42 @@ export class AutocompleteModel {
       throw new Error(`CLI backend is not connected (state: ${state})`)
     }
 
-    const client = this.connectionService.getHttpClient()
+    const client = this.connectionService.getClient()
 
-    const result = await client.fimCompletion(prefix, suffix, onChunk, {
-      model: DEFAULT_MODEL,
-      maxTokens: 256,
-      temperature: 0.2,
-    })
+    let cost = 0
+    let inputTokens = 0
+    let outputTokens = 0
+
+    const { stream } = await client.kilo.fim(
+      {
+        prefix,
+        suffix,
+        model: DEFAULT_MODEL,
+        maxTokens: 256,
+        temperature: 0.2,
+      },
+      { signal },
+    )
+
+    for await (const chunk of stream) {
+      const event = chunk as {
+        choices?: Array<{ delta?: { content?: string } }>
+        usage?: { prompt_tokens?: number; completion_tokens?: number }
+        cost?: number
+      }
+      const content = event.choices?.[0]?.delta?.content
+      if (content) onChunk(content)
+      if (event.usage) {
+        inputTokens = event.usage.prompt_tokens ?? 0
+        outputTokens = event.usage.completion_tokens ?? 0
+      }
+      if (event.cost !== undefined) cost = event.cost
+    }
 
     return {
-      cost: result.cost,
-      inputTokens: result.inputTokens,
-      outputTokens: result.outputTokens,
+      cost,
+      inputTokens,
+      outputTokens,
       cacheWriteTokens: 0,
       cacheReadTokens: 0,
     }

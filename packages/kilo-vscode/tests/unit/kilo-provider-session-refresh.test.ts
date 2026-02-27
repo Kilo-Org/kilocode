@@ -6,6 +6,16 @@ const kind = (value: string) => ({
 })
 
 const mockVscode = {
+  Uri: {
+    joinPath: (...args: unknown[]) => ({ fsPath: args.join("/") }),
+    file: (p: string) => ({ fsPath: p }),
+  },
+  Disposable: class {
+    constructor(public callOnDispose: () => void) {}
+    dispose() {
+      this.callOnDispose()
+    }
+  },
   extensions: {
     getExtension: () => ({
       packageJSON: { version: "test" },
@@ -56,19 +66,25 @@ function createClient() {
   const calls: string[] = []
   return {
     calls,
-    listSessions: async (dir: string) => {
-      calls.push(dir)
-      return []
+    session: {
+      list: async (params: { directory: string }) => {
+        calls.push(params.directory)
+        return { data: [] }
+      },
     },
-    listProviders: async () => ({
-      all: {},
-      connected: {},
-      default: {},
-    }),
-    listAgents: async () => [],
-    getConfig: async () => ({}),
-    getNotifications: async () => [],
-    getProfile: async () => ({}),
+    provider: {
+      list: async () => ({ data: { all: [], connected: {}, default: {} } }),
+    },
+    app: {
+      agents: async () => ({ data: [] }),
+    },
+    config: {
+      get: async () => ({ data: {} }),
+    },
+    kilo: {
+      notifications: async () => ({ data: [] }),
+      profile: async () => ({ data: {} }),
+    },
   }
 }
 
@@ -78,7 +94,7 @@ function createConnection(client: ReturnType<typeof createClient>) {
     connect: async () => {
       current = client
     },
-    getHttpClient: () => {
+    getClient: () => {
       if (!current) {
         throw new Error("Not connected")
       }

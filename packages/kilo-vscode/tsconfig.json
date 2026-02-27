@@ -1,11 +1,13 @@
 {
   "compilerOptions": {
-    "module": "Node16",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "target": "ES2022",
     "lib": ["ES2022"],
     "sourceMap": true,
     "rootDir": "src",
     "strict": true /* enable all strict type-checking options */,
+    "skipLibCheck": true /* skip type-checking .d.ts from dependencies — @kilocode/sdk emits DOM types (HeadersInit) not in our lib */,
     "types": ["node", "vscode", "mocha"]
     /* Additional Checks */
     // "noImplicitReturns": true, /* Report error when not all code paths in function return a value. */

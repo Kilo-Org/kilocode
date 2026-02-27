@@ -47,6 +47,9 @@ for (const dir of [binDir, distDir, outDir]) {
 mkdirSync(outDir, { recursive: true })
 mkdirSync(distDir, { recursive: true })
 
+console.log("\n🔄 Rebuilding SDK types (ensures dist/ is in sync with server API)...")
+await $`bun run --cwd ${join(import.meta.dir, "..", "..", "sdk", "js")} build`
+
 console.log("\n📦 Compiling extension...")
 await $`bun run check-types`
 await $`bun run lint`

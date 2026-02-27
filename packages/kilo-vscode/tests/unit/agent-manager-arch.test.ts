@@ -337,11 +337,11 @@ describe("KiloProvider — pending session refresh on reconnect", () => {
    * it when httpClient is unavailable, and both initializeConnection()
    * and the "connected" state handler flush the pending refresh.
    */
-  it("handleLoadSessions sets pendingSessionRefresh when httpClient is null", () => {
+  it("handleLoadSessions sets pendingSessionRefresh when client is null", () => {
     const start = provider.indexOf("private async handleLoadSessions()")
     expect(start, "handleLoadSessions must exist").toBeGreaterThan(-1)
     const snippet = provider.slice(start, start + 700)
-    expect(snippet, "must read httpClient before loading sessions").toContain("const client = this.httpClient")
+    expect(snippet, "must read client before loading sessions").toContain("const client = this.client")
     expect(snippet, "must set pendingSessionRefresh when httpClient missing").toContain(
       "this.pendingSessionRefresh = true",
     )
