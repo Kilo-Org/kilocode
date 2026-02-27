@@ -1048,6 +1048,7 @@ export namespace Config {
       tips_toggle: z.string().optional().default("<leader>h").describe("Toggle tips on home screen"),
       news_toggle: z.string().optional().default("none").describe("Toggle news on home screen"), // kilocode_change
       display_thinking: z.string().optional().default("none").describe("Toggle thinking blocks visibility"),
+      cheat_sheet: z.string().optional().default("<leader>?").describe("Show keyboard shortcut cheat sheet"), // kilocode_change
     })
     .strict()
     .meta({

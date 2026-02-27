@@ -125,6 +125,17 @@ export function Home() {
         </box>
         {/* kilocode_change - KiloNews added */}
         <box width="100%" maxWidth={75} alignItems="center" paddingTop={2} gap={1}>
+          {/* kilocode_change start */}
+          <Show when={isFirstTimeUser()}>
+            <box flexDirection="row">
+              <text fg={theme.textMuted}>Press </text>
+              <text fg={theme.text}>{keybind.print("cheat_sheet")}</text>
+              <text fg={theme.textMuted}> or type </text>
+              <text fg={theme.text}>/shortcuts</text>
+              <text fg={theme.textMuted}> to view keyboard shortcuts</text>
+            </box>
+          </Show>
+          {/* kilocode_change end */}
           <Show when={!newsHidden()}>
             <KiloNews />
           </Show>
