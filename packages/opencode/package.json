@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "7.0.30",
+  "version": "7.0.31",
   "name": "@kilocode/cli",
   "type": "module",
   "license": "MIT",

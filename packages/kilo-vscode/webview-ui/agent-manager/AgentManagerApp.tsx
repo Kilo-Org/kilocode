@@ -939,7 +939,24 @@ const AgentManagerContent: Component = () => {
 
       if (msg.type === "agentManager.worktreeDiff") {
         const ev = msg as AgentManagerWorktreeDiffMessage
-        setDiffDatas((prev) => ({ ...prev, [ev.sessionId]: ev.diffs }))
+        setDiffDatas((prev) => {
+          const existing = prev[ev.sessionId]
+          // Reuse previous array reference when content is unchanged to prevent
+          // <For> from tearing down / rebuilding <Diff> components (which resets scroll)
+          if (existing && existing.length === ev.diffs.length) {
+            const same = existing.every((old, i) => {
+              const next = ev.diffs[i]!
+              return (
+                old.file === next.file &&
+                old.before === next.before &&
+                old.after === next.after &&
+                old.status === next.status
+              )
+            })
+            if (same) return prev
+          }
+          return { ...prev, [ev.sessionId]: ev.diffs }
+        })
       }
 
       if (msg.type === "agentManager.worktreeDiffLoading") {
@@ -2099,6 +2116,7 @@ const AgentManagerContent: Component = () => {
                   <DiffPanel
                     diffs={diffDatas()[selection() === LOCAL ? LOCAL : (session.currentSessionID() ?? "")] ?? []}
                     loading={diffLoading()}
+                    sessionKey={selection() === LOCAL ? LOCAL : (session.currentSessionID() ?? "")}
                     diffStyle={reviewDiffStyle()}
                     onDiffStyleChange={setSharedDiffStyle}
                     comments={reviewComments()}
@@ -2120,6 +2138,7 @@ const AgentManagerContent: Component = () => {
               <FullScreenDiffView
                 diffs={reviewDiffs()}
                 loading={diffLoading()}
+                sessionKey={selection() === LOCAL ? LOCAL : (session.currentSessionID() ?? "")}
                 comments={reviewComments()}
                 onCommentsChange={setReviewCommentsForSelection}
                 onSendAll={closeReviewTab}

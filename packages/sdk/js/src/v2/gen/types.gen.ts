@@ -1578,8 +1578,8 @@ export type ProviderConfig = {
         input: Array<"text" | "audio" | "image" | "video" | "pdf">
         output: Array<"text" | "audio" | "image" | "video" | "pdf">
       }
-      recommended?: boolean
       recommendedIndex?: number
+      prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo"
       experimental?: boolean
       status?: "alpha" | "beta" | "deprecated"
       options?: {
@@ -2033,8 +2033,8 @@ export type Model = {
       [key: string]: unknown
     }
   }
-  recommended?: boolean
   recommendedIndex?: number
+  prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo"
 }
 
 export type Provider = {
@@ -4271,8 +4271,8 @@ export type ProviderListResponses = {
             input: Array<"text" | "audio" | "image" | "video" | "pdf">
             output: Array<"text" | "audio" | "image" | "video" | "pdf">
           }
-          recommended?: boolean
           recommendedIndex?: number
+          prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo"
           experimental?: boolean
           status?: "alpha" | "beta" | "deprecated"
           options: {

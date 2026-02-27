@@ -8,7 +8,7 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "version": "7.0.30",
+  "version": "7.0.31",
   "dependencies": {},
   "peerDependencies": {}
 }

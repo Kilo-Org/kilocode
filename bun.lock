@@ -25,7 +25,7 @@
     },
     "packages/app": {
       "name": "@opencode-ai/app",
-      "version": "7.0.30",
+      "version": "7.0.31",
       "dependencies": {
         "@kilocode/kilo-i18n": "workspace:*",
         "@kilocode/kilo-ui": "workspace:*",
@@ -77,7 +77,7 @@
     },
     "packages/desktop": {
       "name": "@opencode-ai/desktop",
-      "version": "7.0.30",
+      "version": "7.0.31",
       "dependencies": {
         "@opencode-ai/app": "workspace:*",
         "@opencode-ai/ui": "workspace:*",
@@ -110,7 +110,7 @@
     },
     "packages/kilo-docs": {
       "name": "@kilocode/kilo-docs",
-      "version": "7.0.30",
+      "version": "7.0.31",
       "dependencies": {
         "@docsearch/css": "^4",
         "@docsearch/js": "^4",
@@ -138,12 +138,12 @@
     },
     "packages/kilo-gateway": {
       "name": "@kilocode/kilo-gateway",
-      "version": "7.0.30",
+      "version": "7.0.31",
       "dependencies": {
         "@clack/prompts": "1.0.0-alpha.1",
         "@kilocode/plugin": "workspace:*",
         "@kilocode/sdk": "workspace:*",
-        "@openrouter/ai-sdk-provider": "1.5.2",
+        "@openrouter/ai-sdk-provider": "1.5.4",
         "ai": "catalog:",
         "open": "10.1.2",
         "zod": "catalog:",
@@ -170,7 +170,7 @@
     },
     "packages/kilo-i18n": {
       "name": "@kilocode/kilo-i18n",
-      "version": "7.0.30",
+      "version": "7.0.31",
       "devDependencies": {
         "@tsconfig/node22": "catalog:",
         "@types/bun": "catalog:",
@@ -180,7 +180,7 @@
     },
     "packages/kilo-telemetry": {
       "name": "@kilocode/kilo-telemetry",
-      "version": "7.0.30",
+      "version": "7.0.31",
       "dependencies": {
         "@kilocode/kilo-gateway": "workspace:*",
         "@opentelemetry/api": "1.9.0",
@@ -200,7 +200,7 @@
     },
     "packages/kilo-ui": {
       "name": "@kilocode/kilo-ui",
-      "version": "7.0.30",
+      "version": "7.0.31",
       "dependencies": {
         "@kobalte/core": "0.13.11",
       },
@@ -223,7 +223,7 @@
     },
     "packages/kilo-vscode": {
       "name": "kilo-code",
-      "version": "7.0.30",
+      "version": "7.0.31",
       "dependencies": {
         "@anthropic-ai/sdk": "^0.39.0",
         "@kilocode/kilo-i18n": "workspace:*",
@@ -267,7 +267,7 @@
     },
     "packages/opencode": {
       "name": "@kilocode/cli",
-      "version": "7.0.30",
+      "version": "7.0.31",
       "bin": {
         "opencode": "./bin/opencode",
       },
@@ -384,7 +384,7 @@
     },
     "packages/plugin": {
       "name": "@kilocode/plugin",
-      "version": "7.0.30",
+      "version": "7.0.31",
       "dependencies": {
         "@kilocode/sdk": "workspace:*",
         "zod": "catalog:",
@@ -398,14 +398,14 @@
     },
     "packages/script": {
       "name": "@opencode-ai/script",
-      "version": "7.0.30",
+      "version": "7.0.31",
       "devDependencies": {
         "@types/bun": "catalog:",
       },
     },
     "packages/sdk/js": {
       "name": "@kilocode/sdk",
-      "version": "7.0.30",
+      "version": "7.0.31",
       "devDependencies": {
         "@hey-api/openapi-ts": "0.90.10",
         "@tsconfig/node22": "catalog:",
@@ -416,7 +416,7 @@
     },
     "packages/ui": {
       "name": "@opencode-ai/ui",
-      "version": "7.0.30",
+      "version": "7.0.31",
       "dependencies": {
         "@kilocode/sdk": "workspace:*",
         "@kobalte/core": "catalog:",
@@ -458,7 +458,7 @@
     },
     "packages/util": {
       "name": "@opencode-ai/util",
-      "version": "7.0.30",
+      "version": "7.0.31",
       "dependencies": {
         "zod": "catalog:",
       },
@@ -3671,8 +3671,6 @@
     "@jimp/types/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
 
     "@kilocode/kilo-docs/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
-
-    "@kilocode/kilo-gateway/@openrouter/ai-sdk-provider": ["@openrouter/ai-sdk-provider@1.5.2", "", { "dependencies": { "@openrouter/sdk": "^0.1.27" }, "peerDependencies": { "@toon-format/toon": "^2.0.0", "ai": "^5.0.0", "zod": "^3.24.1 || ^v4" }, "optionalPeers": ["@toon-format/toon"] }, "sha512-3Th0vmJ9pjnwcPc2H1f59Mb0LFvwaREZAScfOQIpUxAHjZ7ZawVKDP27qgsteZPmMYqccNMy4r4Y3kgUnNcKAg=="],
 
     "@kilocode/kilo-gateway/@opentui/core": ["@opentui/core@0.1.75", "", { "dependencies": { "bun-ffi-structs": "0.1.2", "diff": "8.0.2", "jimp": "1.6.0", "marked": "17.0.1", "yoga-layout": "3.2.1" }, "optionalDependencies": { "@dimforge/rapier2d-simd-compat": "^0.17.3", "@opentui/core-darwin-arm64": "0.1.75", "@opentui/core-darwin-x64": "0.1.75", "@opentui/core-linux-arm64": "0.1.75", "@opentui/core-linux-x64": "0.1.75", "@opentui/core-win32-arm64": "0.1.75", "@opentui/core-win32-x64": "0.1.75", "bun-webgpu": "0.1.4", "planck": "^1.4.2", "three": "0.177.0" }, "peerDependencies": { "web-tree-sitter": "0.25.10" } }, "sha512-8ARRZxSG+BXkJmEVtM2DQ4se7DAF1ZCKD07d+AklgTr2mxCzmdxxPbOwRzboSQ6FM7qGuTVPVbV4O2W9DpUmoA=="],
 

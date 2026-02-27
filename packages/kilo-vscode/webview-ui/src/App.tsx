@@ -215,6 +215,7 @@ const AppContent: Component = () => {
             profileData={server.profileData()}
             deviceAuth={server.deviceAuth()}
             onLogin={server.startLogin}
+            onBack={() => setCurrentView("newTask")}
           />
         </Match>
         <Match when={currentView() === "settings"}>

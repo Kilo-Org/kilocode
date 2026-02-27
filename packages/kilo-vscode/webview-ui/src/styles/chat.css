@@ -278,7 +278,7 @@
   flex: 1;
   min-height: 54px;
   max-height: 200px;
-  padding: 8px;
+  padding: 8px 8px calc(8px + 1.4em);
   color: transparent;
   caret-color: var(--vscode-input-foreground);
   font-family: var(--vscode-font-family);
@@ -309,6 +309,7 @@
 }
 
 .prompt-input-ghost-wrapper .prompt-input {
+  display: block;
   position: relative;
   z-index: 1;
   background: transparent;
@@ -323,7 +324,7 @@
   right: 0;
   bottom: 0;
   pointer-events: none;
-  padding: 8px;
+  padding: 8px 8px calc(8px + 1.4em);
   font-family: var(--vscode-font-family);
   font-size: 13px;
   line-height: 1.4;
