@@ -1,7 +1,7 @@
 import * as path from "path"
 import * as vscode from "vscode"
 import { z } from "zod"
-import type { KiloClient, Session, SessionStatus, Event } from "@kilocode/sdk/v2/client"
+import type { KiloClient, Session, SessionStatus, Event, TextPartInput, FilePartInput, Config } from "@kilocode/sdk/v2/client"
 import {
   type KiloConnectionService,
   type KilocodeNotification,
@@ -907,7 +907,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const workspaceDir = this.getWorkspaceDirectory()
       const { data: response } = await this.client.provider.list({ directory: workspaceDir }, { throwOnError: true })
 
-      const normalized = normalizeProviders(response.all as any)
+      const normalized = normalizeProviders(response.all)
 
       const config = vscode.workspace.getConfiguration("kilo-code.new.model")
       const providerID = config.get<string>("providerID", "kilo")
@@ -1082,8 +1082,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
 
       const messages = (data.messages ?? [])
-        .filter((m: any) => m.info)
-        .map((m: any) => ({
+        .filter((m) => m.info)
+        .map((m) => ({
           id: m.info.id,
           sessionID: m.info.sessionID,
           role: m.info.role as "user" | "assistant",
@@ -1158,7 +1158,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
 
     // Step 2: Send the user's message on the new local session
-    const parts: Array<{ type: "text"; text: string } | { type: "file"; mime: string; url: string }> = []
+    const parts: Array<TextPartInput | FilePartInput> = []
 
     if (files) {
       for (const f of files) {
@@ -1175,11 +1175,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         {
           sessionID: session.id,
           directory: workspaceDir,
-          parts: parts as any,
+          parts,
           model: providerID && modelID ? { providerID, modelID } : undefined,
           agent,
           variant,
-          editorContext: editorContext as any,
+          editorContext,
         },
         { throwOnError: true },
       )
@@ -1230,7 +1230,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Applies a partial config update via the global config endpoint, then pushes
    * the full merged config back to the webview.
    */
-  private async handleUpdateConfig(partial: Record<string, unknown>): Promise<void> {
+  private async handleUpdateConfig(partial: Partial<Config>): Promise<void> {
     if (!this.client) {
       this.postMessage({ type: "error", message: "Not connected to CLI backend" })
       return
@@ -1238,7 +1238,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const { data: updated } = await this.client.global.config.update(
-        { config: partial as any },
+        { config: partial },
         { throwOnError: true },
       )
 
@@ -1301,7 +1301,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
 
       // Build parts array with file context and user text
-      const parts: Array<{ type: "text"; text: string } | { type: "file"; mime: string; url: string }> = []
+      const parts: Array<TextPartInput | FilePartInput> = []
 
       // Add any explicitly attached files from the webview
       if (files) {
@@ -1318,11 +1318,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         {
           sessionID: targetSessionID,
           directory: workspaceDir,
-          parts: parts as any,
+          parts,
           model: providerID && modelID ? { providerID, modelID } : undefined,
           agent,
           variant,
-          editorContext: editorContext as any,
+          editorContext,
         },
         { throwOnError: true },
       )
