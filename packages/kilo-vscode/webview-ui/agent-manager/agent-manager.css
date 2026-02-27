@@ -1053,6 +1053,41 @@ button.am-section-toggle:hover .am-section-label {
   min-width: 0;
 }
 
+.am-diff-content [data-slot="session-review-file-info"],
+.am-review-diff-content [data-slot="session-review-file-info"] {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.am-diff-content [data-slot="session-review-file-name-container"],
+.am-review-diff-content [data-slot="session-review-file-name-container"] {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.am-diff-content [data-slot="session-review-directory"],
+.am-review-diff-content [data-slot="session-review-directory"] {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.am-diff-content [data-slot="session-review-filename"],
+.am-review-diff-content [data-slot="session-review-filename"] {
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.am-diff-content [data-slot="session-review-trigger-actions"],
+.am-review-diff-content [data-slot="session-review-trigger-actions"] {
+  flex-shrink: 0;
+  min-width: max-content;
+  gap: 8px;
+}
+
 /* Keep +N/-N indicators at consistent size across side/fullscreen views */
 .am-diff-panel [data-component="diff-changes"] [data-slot="diff-changes-additions"],
 .am-diff-panel [data-component="diff-changes"] [data-slot="diff-changes-deletions"],
@@ -2395,6 +2430,10 @@ button.am-section-toggle:hover .am-section-label {
   gap: 2px;
 }
 
+.am-diff-header-actions > * {
+  flex-shrink: 0;
+}
+
 /* Review tab in tab bar */
 
 .am-tab-review {
@@ -2478,6 +2517,10 @@ button.am-section-toggle:hover .am-section-label {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
+}
+
+.am-review-toolbar-right > * {
   flex-shrink: 0;
 }
 
