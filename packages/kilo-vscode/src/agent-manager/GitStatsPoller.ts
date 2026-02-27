@@ -1,7 +1,6 @@
-import * as cp from "child_process"
-import * as nodePath from "path"
 import type { HttpClient } from "../services/cli-backend"
 import type { Worktree } from "./WorktreeStateManager"
+import { GitOps } from "./GitOps"
 
 export interface WorktreeStats {
   worktreeId: string
@@ -25,6 +24,7 @@ interface GitStatsPollerOptions {
   onLocalStats: (stats: LocalStats) => void
   log: (...args: unknown[]) => void
   intervalMs?: number
+  git?: GitOps
   refreshMs?: number
   runGit?: (args: string[], cwd: string) => Promise<string>
 }
@@ -37,24 +37,18 @@ export class GitStatsPoller {
   private lastLocalHash: string | undefined
   private lastLocalStats: LocalStats | undefined
   private lastStats: Record<string, { additions: number; deletions: number; commits: number }> = {}
-  private lastFetch = new Map<string, number>()
-  private inflightFetch = new Map<string, Promise<void>>()
   private readonly intervalMs: number
-  private readonly refreshMs: number
-  private readonly runGit: (args: string[], cwd: string) => Promise<string>
+  readonly git: GitOps
 
   constructor(private readonly options: GitStatsPollerOptions) {
     this.intervalMs = options.intervalMs ?? 5000
-    this.refreshMs = options.refreshMs ?? 120000
-    this.runGit =
-      options.runGit ??
-      ((args, cwd) =>
-        new Promise((resolve, reject) => {
-          cp.execFile("git", args, { cwd, timeout: 10000 }, (err, stdout) => {
-            if (err) reject(err)
-            else resolve(stdout.trim())
-          })
-        }))
+    this.git =
+      options.git ??
+      new GitOps({
+        log: options.log,
+        refreshMs: options.refreshMs,
+        runGit: options.runGit,
+      })
   }
 
   setEnabled(enabled: boolean): void {
@@ -127,7 +121,7 @@ export class GitStatsPoller {
             const diffs = await client.getWorktreeDiff(wt.path, wt.parentBranch)
             const additions = diffs.reduce((sum, diff) => sum + diff.additions, 0)
             const deletions = diffs.reduce((sum, diff) => sum + diff.deletions, 0)
-            const commits = await this.countMissingOriginCommits(wt.path, wt.parentBranch)
+            const commits = await this.git.countMissingOriginCommits(wt.path, wt.parentBranch)
             return { worktreeId: wt.id, additions, deletions, commits }
           } catch (err) {
             this.options.log(`Failed to fetch worktree stats for ${wt.branch} (${wt.path}):`, err)
@@ -169,14 +163,14 @@ export class GitStatsPoller {
     if (!root) return
 
     try {
-      const branch = await this.gitExec(["rev-parse", "--abbrev-ref", "HEAD"], root).catch(() => "")
+      const branch = await this.git.currentBranch(root)
       if (!branch || branch === "HEAD") return
 
-      const tracking = await this.resolveTrackingBranch(root, branch)
+      const tracking = await this.git.resolveTrackingBranch(root, branch)
 
-      // When the HTTP client or tracking branch is unavailable, preserve last-known
-      // stats rather than emitting zeros (which would falsely indicate a clean state).
-      if (!tracking || !client) {
+      // When the HTTP client is unavailable, preserve last-known stats rather
+      // than emitting zeros (which would falsely indicate a clean state).
+      if (!client) {
         if (this.lastLocalStats && this.lastLocalStats.branch === branch) return
         const stats: LocalStats = { branch, additions: 0, deletions: 0, commits: 0 }
         const hash = `local:${branch}:0:0:0`
@@ -187,16 +181,28 @@ export class GitStatsPoller {
         return
       }
 
+      // When no tracking branch exists (e.g. new local branch with no upstream
+      // and no origin/<branch> ref), compute diff+commit stats against the
+      // repo's default branch so the UI still shows meaningful numbers.
+      const base = tracking ?? (await this.git.resolveDefaultBranch(root))
+
       let additions: number
       let deletions: number
       let commits: number
       try {
-        const diffs = await client.getWorktreeDiff(root, tracking)
-        additions = diffs.reduce((sum, d) => sum + d.additions, 0)
-        deletions = diffs.reduce((sum, d) => sum + d.deletions, 0)
-        commits = await this.countMissingOriginCommits(root, tracking)
+        if (base) {
+          const diffs = await client.getWorktreeDiff(root, base)
+          additions = diffs.reduce((sum, d) => sum + d.additions, 0)
+          deletions = diffs.reduce((sum, d) => sum + d.deletions, 0)
+          commits = await this.git.countMissingOriginCommits(root, base)
+        } else {
+          additions = 0
+          deletions = 0
+          commits = 0
+        }
       } catch (err) {
         this.options.log("Failed to fetch local diff stats:", err)
+        if (this.lastLocalStats && this.lastLocalStats.branch === branch) return
         return
       }
 
@@ -210,81 +216,5 @@ export class GitStatsPoller {
     } catch (err) {
       this.options.log("Failed to fetch local stats:", err)
     }
-  }
-
-  private async resolveTrackingBranch(cwd: string, branch: string): Promise<string | undefined> {
-    const upstream = await this.gitExec(["rev-parse", "--abbrev-ref", "@{upstream}"], cwd).catch(() => "")
-    if (upstream) return upstream
-
-    const ref = `origin/${branch}`
-    const resolved = await this.gitExec(["rev-parse", "--verify", ref], cwd).catch(() => "")
-    if (resolved) return ref
-
-    return undefined
-  }
-
-  private gitExec(args: string[], cwd: string): Promise<string> {
-    return this.runGit(args, cwd)
-  }
-
-  private hasRemoteRef(cwd: string, ref: string): Promise<boolean> {
-    return this.gitExec(["rev-parse", "--verify", "--quiet", `refs/remotes/${ref}`], cwd)
-      .then(() => true)
-      .catch(() => false)
-  }
-
-  private async refreshRemote(cwd: string, remote: string): Promise<void> {
-    if (!remote) return
-
-    const commonRaw = await this.gitExec(["rev-parse", "--git-common-dir"], cwd).catch(() => cwd)
-    const common = nodePath.isAbsolute(commonRaw) ? commonRaw : nodePath.resolve(cwd, commonRaw)
-    const key = `${common}:${remote}`
-
-    const existing = this.inflightFetch.get(key)
-    if (existing) return existing
-
-    const prev = this.lastFetch.get(key) ?? 0
-    const now = Date.now()
-    if (now - prev < this.refreshMs) return
-    this.lastFetch.set(key, now)
-
-    const job = this.gitExec(["fetch", "--quiet", "--no-tags", remote], cwd)
-      .catch((err) => {
-        this.options.log(`Failed to refresh remote refs for ${cwd}:`, err)
-      })
-      .then(() => undefined)
-      .finally(() => {
-        this.inflightFetch.delete(key)
-      })
-    this.inflightFetch.set(key, job)
-    return job
-  }
-
-  private async countMissingOriginCommits(cwd: string, parentBranch: string): Promise<number> {
-    const upstream = await this.gitExec(
-      ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"],
-      cwd,
-    ).catch(() => "")
-
-    const branch = await this.gitExec(["branch", "--show-current"], cwd).catch(() => "")
-    const branchRemote = branch ? await this.gitExec(["config", `branch.${branch}.remote`], cwd).catch(() => "") : ""
-    const upstreamRemote = upstream.includes("/") ? upstream.split("/")[0] : ""
-    const remote = upstreamRemote || branchRemote || "origin"
-    await this.refreshRemote(cwd, remote)
-
-    if (upstream) {
-      const count = await this.gitExec(["rev-list", "--count", `${upstream}..HEAD`], cwd).catch(() => "0")
-      return parseInt(count, 10) || 0
-    }
-
-    const remoteBranch = branch ? `${remote}/${branch}` : ""
-    const hasRemoteBranch = remoteBranch ? await this.hasRemoteRef(cwd, remoteBranch) : false
-
-    const remoteParent = `${remote}/${parentBranch}`
-    const hasRemoteParent = await this.hasRemoteRef(cwd, remoteParent)
-
-    const ref = hasRemoteBranch ? remoteBranch : hasRemoteParent ? remoteParent : parentBranch
-    const count = await this.gitExec(["rev-list", "--count", `${ref}..HEAD`], cwd).catch(() => "0")
-    return parseInt(count, 10) || 0
   }
 }

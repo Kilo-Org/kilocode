@@ -113,6 +113,125 @@ describe("GitStatsPoller", () => {
     expect(hasZeros).toBe(false)
   })
 
+  it("preserves local stats when HTTP client fails after initial success", async () => {
+    let diffCalls = 0
+    const emitted: Array<{ branch: string; additions: number; deletions: number; commits: number }> = []
+
+    const client = {
+      getWorktreeDiff: async () => {
+        diffCalls += 1
+        if (diffCalls === 1) return diff(5, 2)
+        throw new Error("transient backend failure")
+      },
+    } as unknown as HttpClient
+
+    const poller = new GitStatsPoller({
+      getWorktrees: () => [],
+      getWorkspaceRoot: () => "/workspace",
+      getHttpClient: () => client,
+      onStats: () => undefined,
+      onLocalStats: (stats) => emitted.push(stats),
+      log: () => undefined,
+      intervalMs: 5,
+      runGit: async (args) => {
+        if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "HEAD") return "feature"
+        if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "@{upstream}") return "origin/feature"
+        if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
+        if (args[0] === "fetch") return ""
+        if (args[0] === "rev-list") return "3"
+        if (args[0] === "branch") return "feature"
+        if (args[0] === "config") return "origin"
+        return ""
+      },
+    })
+
+    poller.setEnabled(true)
+    await waitFor(() => diffCalls >= 2)
+    poller.stop()
+
+    // First poll should emit real stats
+    expect(emitted.length).toBeGreaterThan(0)
+    expect(emitted[0]).toEqual({ branch: "feature", additions: 5, deletions: 2, commits: 3 })
+    // Second poll should NOT emit zeros — it should preserve by returning early
+    expect(emitted.length).toBe(1)
+  })
+
+  it("falls back to origin/HEAD when no upstream and no origin/<branch>", async () => {
+    const emitted: Array<{ branch: string; additions: number; deletions: number; commits: number }> = []
+
+    const client = {
+      getWorktreeDiff: async () => diff(10, 4),
+    } as unknown as HttpClient
+
+    const poller = new GitStatsPoller({
+      getWorktrees: () => [],
+      getWorkspaceRoot: () => "/workspace",
+      getHttpClient: () => client,
+      onStats: () => undefined,
+      onLocalStats: (stats) => emitted.push(stats),
+      log: () => undefined,
+      intervalMs: 500,
+      runGit: async (args) => {
+        // No upstream configured
+        if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "HEAD") return "my-feature"
+        if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "@{upstream}")
+          throw new Error("no upstream")
+        // No origin/my-feature ref
+        if (args[0] === "rev-parse" && args[1] === "--verify" && args[2] === "origin/my-feature")
+          throw new Error("no ref")
+        // origin/HEAD resolves to the repo's default branch
+        if (args[0] === "symbolic-ref") return "origin/develop"
+        if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
+        if (args[0] === "fetch") return ""
+        if (args[0] === "rev-list") return "5"
+        if (args[0] === "branch") return "my-feature"
+        if (args[0] === "config") return "origin"
+        return ""
+      },
+    })
+
+    poller.setEnabled(true)
+    await waitFor(() => emitted.length >= 1)
+    poller.stop()
+
+    expect(emitted[0]).toEqual({ branch: "my-feature", additions: 10, deletions: 4, commits: 5 })
+  })
+
+  it("emits zeros when no tracking, no default branch, and no remote refs exist", async () => {
+    const emitted: Array<{ branch: string; additions: number; deletions: number; commits: number }> = []
+
+    const client = {
+      getWorktreeDiff: async () => diff(0, 0),
+    } as unknown as HttpClient
+
+    const poller = new GitStatsPoller({
+      getWorktrees: () => [],
+      getWorkspaceRoot: () => "/workspace",
+      getHttpClient: () => client,
+      onStats: () => undefined,
+      onLocalStats: (stats) => emitted.push(stats),
+      log: () => undefined,
+      intervalMs: 500,
+      runGit: async (args) => {
+        if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "HEAD") return "orphan-branch"
+        if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "@{upstream}")
+          throw new Error("no upstream")
+        if (args[0] === "rev-parse" && args[1] === "--verify" && args[2] === "origin/orphan-branch")
+          throw new Error("no ref")
+        if (args[0] === "symbolic-ref") throw new Error("no symbolic ref")
+        // No origin/main or origin/master
+        if (args[0] === "rev-parse" && args[1] === "--verify" && args[2] === "--quiet") throw new Error("no ref")
+        return ""
+      },
+    })
+
+    poller.setEnabled(true)
+    await waitFor(() => emitted.length >= 1)
+    poller.stop()
+
+    expect(emitted[0]).toEqual({ branch: "orphan-branch", additions: 0, deletions: 0, commits: 0 })
+  })
+
   it("refreshes upstream remote once for concurrent worktrees", async () => {
     const commands: string[][] = []
     const emitted: Array<Array<{ worktreeId: string; additions: number; deletions: number; commits: number }>> = []
