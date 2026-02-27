@@ -11,6 +11,7 @@ import * as fs from "fs"
 import * as cp from "child_process"
 import simpleGit, { type SimpleGit } from "simple-git"
 import { generateBranchName, sanitizeBranchName } from "./branch-name"
+import type { GitOps } from "./GitOps"
 import {
   parsePRUrl,
   localBranchName,
@@ -55,12 +56,14 @@ export class WorktreeManager {
   private readonly root: string
   private readonly dir: string
   private readonly git: SimpleGit
+  private readonly ops: GitOps | undefined
   private readonly log: (msg: string) => void
 
-  constructor(root: string, log: (msg: string) => void) {
+  constructor(root: string, log: (msg: string) => void, ops?: GitOps) {
     this.root = root
     this.dir = path.join(root, KILOCODE_DIR, "worktrees")
     this.git = simpleGit(root)
+    this.ops = ops
     this.log = log
   }
 
@@ -341,6 +344,11 @@ export class WorktreeManager {
   }
 
   async currentBranch(): Promise<string> {
+    if (this.ops) {
+      const branch = await this.ops.currentBranch(this.root)
+      if (!branch) throw new Error("Failed to determine current branch")
+      return branch
+    }
     return (await this.git.revparse(["--abbrev-ref", "HEAD"])).trim()
   }
 
@@ -354,11 +362,20 @@ export class WorktreeManager {
   }
 
   async defaultBranch(): Promise<string> {
-    try {
-      const head = await this.git.raw(["symbolic-ref", "refs/remotes/origin/HEAD"])
-      const match = head.trim().match(/refs\/remotes\/origin\/(.+)$/)
-      if (match) return match[1]
-    } catch {}
+    if (this.ops) {
+      const remote = await this.ops.resolveRemote(this.root)
+      const resolved = await this.ops.resolveDefaultBranch(this.root)
+      if (resolved) {
+        const prefix = `${remote}/`
+        return resolved.startsWith(prefix) ? resolved.slice(prefix.length) : resolved
+      }
+    } else {
+      try {
+        const head = await this.git.raw(["symbolic-ref", "refs/remotes/origin/HEAD"])
+        const match = head.trim().match(/refs\/remotes\/origin\/(.+)$/)
+        if (match) return match[1]
+      } catch {}
+    }
 
     try {
       const branches = await this.git.branch()

@@ -24,8 +24,10 @@ import type {
   AgentManagerWorktreeDiffMessage,
   AgentManagerWorktreeDiffLoadingMessage,
   AgentManagerWorktreeStatsMessage,
+  AgentManagerLocalStatsMessage,
   WorktreeFileDiff,
   WorktreeGitStats,
+  LocalGitStats,
   WorktreeState,
   ManagedSessionState,
   SessionInfo,
@@ -319,6 +321,9 @@ const AgentManagerContent: Component = () => {
 
   // Per-worktree git stats (diff additions/deletions, commits missing from origin)
   const [worktreeStats, setWorktreeStats] = createSignal<Record<string, WorktreeGitStats>>({})
+
+  // Local workspace git stats (branch name, diff additions/deletions, commits)
+  const [localStats, setLocalStats] = createSignal<LocalGitStats | undefined>()
 
   // Pending local tab counter for generating unique IDs
   let pendingCounter = 0
@@ -965,6 +970,12 @@ const AgentManagerContent: Component = () => {
         for (const s of ev.stats) map[s.worktreeId] = s
         setWorktreeStats(map)
       }
+
+      if (msg.type === "agentManager.localStats") {
+        const ev = msg as AgentManagerLocalStatsMessage
+        setLocalStats(ev.stats)
+        setRepoBranch(ev.stats.branch)
+      }
     })
 
     onCleanup(() => {
@@ -1373,6 +1384,33 @@ const AgentManagerContent: Component = () => {
               <span class="am-local-branch">{repoBranch()}</span>
             </Show>
           </div>
+          <Show
+            when={
+              localStats() && (localStats()!.additions > 0 || localStats()!.deletions > 0 || localStats()!.commits > 0)
+            }
+          >
+            <div class="am-worktree-stats">
+              <Show when={localStats()!.additions > 0 || localStats()!.deletions > 0}>
+                <span class="am-worktree-diff-stats">
+                  <Show when={localStats()!.additions > 0}>
+                    <span class="am-stat-additions">+{localStats()!.additions}</span>
+                  </Show>
+                  <Show when={localStats()!.deletions > 0}>
+                    <span class="am-stat-deletions">
+                      {"\u2212"}
+                      {localStats()!.deletions}
+                    </span>
+                  </Show>
+                </span>
+              </Show>
+              <Show when={localStats()!.commits > 0}>
+                <span class="am-worktree-commits">
+                  {"↑"}
+                  {localStats()!.commits}
+                </span>
+              </Show>
+            </div>
+          </Show>
           <span class="am-shortcut-badge">{isMac ? "⌘" : "Ctrl+"}1</span>
         </button>
 
@@ -1905,8 +1943,10 @@ const AgentManagerContent: Component = () => {
               <div class="am-tab-actions">
                 {(() => {
                   const sel = () => selection()
-                  const stats = () =>
-                    typeof sel() === "string" && sel() !== LOCAL ? worktreeStats()[sel() as string] : undefined
+                  const stats = () => {
+                    if (sel() === LOCAL) return localStats()
+                    return typeof sel() === "string" ? worktreeStats()[sel() as string] : undefined
+                  }
                   const hasChanges = () => {
                     const s = stats()
                     return s && (s.additions > 0 || s.deletions > 0)

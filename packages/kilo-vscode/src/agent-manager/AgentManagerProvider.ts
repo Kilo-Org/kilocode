@@ -1,5 +1,4 @@
 import * as vscode from "vscode"
-import * as cp from "child_process"
 import * as fs from "fs"
 import * as path from "path"
 import type { KiloConnectionService, SessionInfo, HttpClient } from "../services/cli-backend"
@@ -7,7 +6,8 @@ import { KiloProvider } from "../KiloProvider"
 import { buildWebviewHtml } from "../utils"
 import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
 import { WorktreeStateManager } from "./WorktreeStateManager"
-import { WorktreeStatsPoller } from "./WorktreeStatsPoller"
+import { GitStatsPoller } from "./GitStatsPoller"
+import { GitOps } from "./GitOps"
 import { versionedName } from "./branch-name"
 import { normalizePath } from "./git-import"
 import { SetupScriptService } from "./SetupScriptService"
@@ -43,7 +43,8 @@ export class AgentManagerProvider implements vscode.Disposable {
   private diffInterval: ReturnType<typeof setInterval> | undefined
   private diffSessionId: string | undefined
   private lastDiffHash: string | undefined
-  private statsPoller: WorktreeStatsPoller
+  private statsPoller: GitStatsPoller
+  private gitOps: GitOps
   private cachedDiffTarget: { directory: string; baseBranch: string } | undefined
 
   constructor(
@@ -54,13 +55,19 @@ export class AgentManagerProvider implements vscode.Disposable {
     this.terminalManager = new SessionTerminalManager((msg) =>
       this.outputChannel.appendLine(`[SessionTerminal] ${msg}`),
     )
-    this.statsPoller = new WorktreeStatsPoller({
+    this.gitOps = new GitOps({ log: (...args) => this.log(...args) })
+    this.statsPoller = new GitStatsPoller({
       getWorktrees: () => this.state?.getWorktrees() ?? [],
+      getWorkspaceRoot: () => this.getWorkspaceRoot(),
       getHttpClient: () => this.connectionService.getHttpClient(),
       onStats: (stats) => {
         this.postToWebview({ type: "agentManager.worktreeStats", stats })
       },
+      onLocalStats: (stats) => {
+        this.postToWebview({ type: "agentManager.localStats", stats })
+      },
       log: (...args) => this.log(...args),
+      git: this.gitOps,
     })
   }
 
@@ -1245,9 +1252,8 @@ export class AgentManagerProvider implements vscode.Disposable {
       isGitRepo: true,
     })
 
-    // Keep stats polling in sync with worktree count
     const worktrees = state.getWorktrees()
-    this.statsPoller.setEnabled(worktrees.length > 0)
+    this.statsPoller.setEnabled(worktrees.length > 0 || this.panel !== undefined)
   }
 
   /** Push empty state when the workspace is not a git repo or has no workspace folder. */
@@ -1278,7 +1284,11 @@ export class AgentManagerProvider implements vscode.Disposable {
       this.log("getWorktreeManager: no workspace folder available")
       return undefined
     }
-    this.worktrees = new WorktreeManager(root, (msg) => this.outputChannel.appendLine(`[WorktreeManager] ${msg}`))
+    this.worktrees = new WorktreeManager(
+      root,
+      (msg) => this.outputChannel.appendLine(`[WorktreeManager] ${msg}`),
+      this.gitOps,
+    )
     return this.worktrees
   }
 
@@ -1370,38 +1380,14 @@ export class AgentManagerProvider implements vscode.Disposable {
   private async resolveLocalDiffTarget(): Promise<{ directory: string; baseBranch: string } | undefined> {
     const root = this.getWorkspaceRoot()
     if (!root) return undefined
-    const tracking = await this.getRemoteTrackingBranch(root)
+    const branch = await this.gitOps.currentBranch(root)
+    if (!branch || branch === "HEAD") return undefined
+    const tracking = await this.gitOps.resolveTrackingBranch(root, branch)
     if (!tracking) {
       this.log("Local diff: no remote tracking branch found")
       return undefined
     }
     return { directory: root, baseBranch: tracking }
-  }
-
-  /** Detect the remote tracking branch for the current branch in the given directory. */
-  private async getRemoteTrackingBranch(cwd: string): Promise<string | undefined> {
-    // Try configured upstream tracking branch first (e.g. origin/feature-x)
-    const upstream = await this.git(cwd, ["rev-parse", "--abbrev-ref", "@{upstream}"])
-    if (upstream) return upstream
-
-    // No upstream configured — construct origin/<current-branch>
-    const branch = await this.git(cwd, ["rev-parse", "--abbrev-ref", "HEAD"])
-    if (!branch || branch === "HEAD") return undefined
-    const ref = `origin/${branch}`
-    const resolved = await this.git(cwd, ["rev-parse", "--verify", ref])
-    if (resolved) return ref
-
-    return undefined
-  }
-
-  /** Run a git command asynchronously and return trimmed stdout, or undefined on failure. */
-  private git(cwd: string, args: string[]): Promise<string | undefined> {
-    return new Promise((resolve) => {
-      cp.execFile("git", args, { cwd, encoding: "utf-8", timeout: 5000 }, (err, stdout) => {
-        if (err) resolve(undefined)
-        else resolve(stdout.trim() || undefined)
-      })
-    })
   }
 
   /** One-shot diff fetch with loading indicators. Resolves target async, then fetches. */
