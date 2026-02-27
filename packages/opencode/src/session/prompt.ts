@@ -46,6 +46,7 @@ import { iife } from "@/util/iife"
 import { Shell } from "@/shell/shell"
 import { Truncate } from "@/tool/truncation"
 import { PlanFollowup } from "@/kilocode/plan-followup" // kilocode_change
+import { ReviewFollowup } from "@/kilocode/review-followup" // kilocode_change
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -72,6 +73,34 @@ export namespace SessionPrompt {
         msg.parts.some((p) => p.type === "tool" && p.tool === "plan_exit" && p.state.status === "completed"),
       )
   }
+
+  const reviewTools = new Set(["edit", "write", "multiedit", "apply_patch", "task"]) // kilocode_change
+
+  // kilocode_change start - share review follow-up trigger logic with tests
+  export function shouldAskReviewFollowup(input: { messages: MessageV2.WithParts[]; abort: AbortSignal }) {
+    if (input.abort.aborted) return false
+    if (!["cli", "vscode"].includes(Flag.KILO_CLIENT)) return false
+
+    const lastUserIdx = input.messages.findLastIndex((m) => m.info.role === "user")
+    if (lastUserIdx === -1) return false
+
+    const lastUser = input.messages[lastUserIdx]?.info
+    if (!lastUser || lastUser.role !== "user") return false
+    if (!["code", "orchestrator"].includes(lastUser.agent)) return false
+
+    const turn = input.messages.slice(lastUserIdx + 1)
+    const hasPlanExit = turn.some((msg) =>
+      msg.parts.some((p) => p.type === "tool" && p.tool === "plan_exit" && p.state.status === "completed"),
+    )
+    if (hasPlanExit) return false
+
+    if (lastUser.agent === "orchestrator") return turn.some((msg) => msg.info.role === "assistant")
+
+    return turn.some((msg) =>
+      msg.parts.some((p) => p.type === "tool" && p.state.status === "completed" && reviewTools.has(p.tool)),
+    )
+  }
+  // kilocode_change end
   // kilocode_change end
 
   const log = Log.create({ service: "session.prompt" })
@@ -364,6 +393,12 @@ export namespace SessionPrompt {
           const action = await PlanFollowup.ask({ sessionID, messages: msgs, abort })
           if (action === "continue") continue
         }
+        // kilocode_change start - ask review follow-up after implementation turns
+        if (shouldAskReviewFollowup({ messages: msgs, abort })) {
+          const action = await ReviewFollowup.ask({ sessionID, messages: msgs, abort })
+          if (action === "continue") continue
+        }
+        // kilocode_change end
         // kilocode_change end
         log.info("exiting loop", { sessionID })
         break
