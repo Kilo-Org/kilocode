@@ -175,7 +175,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
   it("onMessage handles loadMessages for terminal switching", () => {
     const text = body("onMessage")
     expect(text).toContain("loadMessages")
-    expect(text).toContain("showExisting")
+    expect(text).toContain("syncOnSessionSwitch")
   })
 
   it("onMessage handles clearSession for SSE re-registration", () => {

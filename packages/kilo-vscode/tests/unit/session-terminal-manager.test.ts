@@ -75,4 +75,16 @@ describe("SessionTerminalManager structure", () => {
     expect(contextIdx).toBeGreaterThan(-1)
     expect(showIdx, "show must precede updateContextKey").toBeLessThan(contextIdx)
   })
+
+  it("syncOnSessionSwitch only switches when panel is open", () => {
+    const text = body("syncOnSessionSwitch")
+    expect(text).toContain("if (!this.panelOpen)")
+    expect(text).toContain("this.showExisting(sessionId)")
+  })
+
+  it("syncLocalOnSessionSwitch only switches when panel is open", () => {
+    const text = body("syncLocalOnSessionSwitch")
+    expect(text).toContain("if (!this.panelOpen)")
+    expect(text).toContain("this.showExistingLocal()")
+  })
 })

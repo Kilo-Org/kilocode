@@ -58,8 +58,8 @@ import { ConfigProvider } from "../src/context/config"
 import { SessionProvider, useSession } from "../src/context/session"
 import { WorktreeModeProvider } from "../src/context/worktree-mode"
 import { ChatView } from "../src/components/chat"
-import { ModelSelectorBase } from "../src/components/chat/ModelSelector"
-import { ModeSwitcherBase } from "../src/components/chat/ModeSwitcher"
+import { ModelSelectorBase } from "../src/components/shared/ModelSelector"
+import { ModeSwitcherBase } from "../src/components/shared/ModeSwitcher"
 import {
   MultiModelSelector,
   type ModelAllocations,
