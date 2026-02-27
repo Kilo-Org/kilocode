@@ -139,14 +139,10 @@ export class SdkSSEAdapter {
 
 					this.resetHeartbeat(attempt)
 
-					// The SDK yields GlobalEvent = { directory, payload }.
-					// Extract `payload` (the actual Event) — equivalent to the old `unwrapSSEPayload()`.
+					// The SDK yields GlobalEvent = { directory, payload: Event }.
 					const globalEvent = event as GlobalEvent
-					const payload = globalEvent.payload ?? event
-					const typedPayload = payload as Event
-					console.log("[Kilo New] SSE: 📨 Received message event:", JSON.stringify(event))
-					console.log("[Kilo New] SSE: 📦 Parsed event type:", typedPayload.type)
-					this.notifyEvent(typedPayload)
+					console.log("[Kilo New] SSE: 📨 Event:", globalEvent.payload.type)
+					this.notifyEvent(globalEvent.payload)
 				}
 
 				console.log("[Kilo New] SSE: 📭 Stream ended normally")
