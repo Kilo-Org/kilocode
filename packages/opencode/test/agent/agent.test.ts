@@ -748,6 +748,7 @@ test("defaultAgent throws when all primary agents are disabled", async () => {
         debug: { disable: true },
         orchestrator: { disable: true },
         ask: { disable: true },
+        learn: { disable: true },
         // kilocode_change end
       },
     },

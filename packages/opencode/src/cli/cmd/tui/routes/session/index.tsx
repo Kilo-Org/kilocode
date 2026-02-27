@@ -241,12 +241,12 @@ export function Session() {
     // kilocode_change end
   })
 
-  // kilocode_change start - double ctrl+c to exit for child sessions
+  // kilocode_change start - double ctrl+c/ctrl+d to exit for child sessions
   const [exitPress, setExitPress] = createSignal(0)
   useKeyboard((evt) => {
     if (!session()?.parentID) return
     if (keybind.match("app_exit", evt)) {
-      if (evt.ctrl && evt.name === "c") {
+      if (evt.ctrl && (evt.name === "c" || evt.name === "d")) {
         evt.preventDefault()
         setExitPress(exitPress() + 1)
         setTimeout(() => setExitPress(0), 1000)
