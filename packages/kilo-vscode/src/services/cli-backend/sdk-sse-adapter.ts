@@ -55,7 +55,10 @@ export class SdkSSEAdapter {
 		this.abortController = new AbortController()
 		console.log('[Kilo New] SSE: 🔄 Setting state to "connecting"')
 		this.notifyState("connecting")
-		void this.consumeLoop(this.abortController.signal)
+		void this.consumeLoop(this.abortController.signal).catch((err) => {
+			console.error("[Kilo New] SSE: Unhandled error in consumeLoop:", err)
+			this.notifyError(err instanceof Error ? err : new Error(String(err)))
+		})
 	}
 
 	/**
