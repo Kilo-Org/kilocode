@@ -1179,8 +1179,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const workspaceDir = this.getWorkspaceDirectory()
 
     // Step 1: Import the cloud session with fresh IDs
-    const importResult = await this.client.kilo.cloud.session.import({ sessionId: cloudSessionId, directory: workspaceDir })
-    const session = importResult.data as Session | undefined
+    let session: Session | undefined
+    try {
+      const importResult = await this.client.kilo.cloud.session.import({ sessionId: cloudSessionId, directory: workspaceDir })
+      session = importResult.data as Session | undefined
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: ❌ Cloud session import failed:", error)
+      this.postMessage({
+        type: "cloudSessionImportFailed",
+        cloudSessionId,
+        error: getErrorMessage(error) || "Failed to import session from cloud",
+      })
+      return
+    }
     if (!session) {
       this.postMessage({
         type: "cloudSessionImportFailed",
