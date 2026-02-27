@@ -129,6 +129,11 @@ describe("WordBoundaryFzf", () => {
     expect(result[0].item).toBe("gpt-5")
   })
 
+  it("does not treat separator-only queries as empty search", () => {
+    const result = finder.find("-")
+    expect(result).toHaveLength(0)
+  })
+
   it("requires matches to start at word boundaries", () => {
     const result = finder.find("aude")
     expect(result).toHaveLength(0)

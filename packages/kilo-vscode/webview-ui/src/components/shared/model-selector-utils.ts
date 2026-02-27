@@ -84,7 +84,7 @@ export class WordBoundaryFzf<T> {
       .split(WORD_BOUNDARY_REGEX)
       .filter((word) => word.length > 0)
     if (queryWords.length === 0) {
-      return this.items.map((item) => ({ item, positions: new Set<number>() }))
+      return []
     }
 
     const results: SearchResult<T>[] = []
