@@ -67,4 +67,26 @@ export namespace State {
     disposalFinished = true
     log.info("state disposal completed", { key })
   }
+
+  export async function disposeEntry(key: string, init: () => unknown) {
+    const entries = recordsByKey.get(key)
+    if (!entries) return
+
+    const entry = entries.get(init)
+    if (!entry) return
+
+    if (entry.dispose) {
+      const label = typeof init === "function" ? init.name : String(init)
+      await Promise.resolve(entry.state)
+        .then((state) => entry.dispose!(state))
+        .catch((error) => {
+          log.error("Error while disposing state entry:", { error, key, init: label })
+        })
+    }
+
+    entries.delete(init)
+    if (entries.size === 0) {
+      recordsByKey.delete(key)
+    }
+  }
 }
