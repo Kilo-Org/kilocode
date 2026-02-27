@@ -5,6 +5,7 @@ import {
   filterVisibleAgents,
   buildSettingPath,
   mapSSEEventToWebviewMessage,
+  type ProviderInfo,
 } from "../../src/kilo-provider-utils"
 import type {
   Session,
@@ -40,13 +41,11 @@ function makeSession(overrides: Partial<Session> = {}): Session {
   }
 }
 
-function makeProvider(id: string): Provider {
+function makeProvider(id: string): ProviderInfo {
   return {
     id,
     name: id.toUpperCase(),
-    source: "config",
     env: [],
-    options: {},
     models: {},
   }
 }
@@ -111,28 +110,19 @@ describe("sessionToWebview", () => {
 })
 
 describe("normalizeProviders", () => {
-  it("re-keys providers from numeric indices to provider.id", () => {
-    const input = { "0": makeProvider("openai"), "1": makeProvider("anthropic") }
-    const result = normalizeProviders(input as Record<string, Provider>)
+  it("indexes providers by id", () => {
+    const result = normalizeProviders([makeProvider("openai"), makeProvider("anthropic")])
     expect(result["openai"]).toBeDefined()
     expect(result["anthropic"]).toBeDefined()
-    expect(result["0"]).toBeUndefined()
-    expect(result["1"]).toBeUndefined()
   })
 
   it("handles empty input", () => {
-    expect(normalizeProviders({})).toEqual({})
+    expect(normalizeProviders([])).toEqual({})
   })
 
   it("preserves provider data", () => {
     const p = makeProvider("openai")
-    const result = normalizeProviders({ "0": p })
-    expect(result["openai"]).toEqual(p)
-  })
-
-  it("handles already-keyed-by-id input (idempotent)", () => {
-    const p = makeProvider("openai")
-    const result = normalizeProviders({ openai: p })
+    const result = normalizeProviders([p])
     expect(result["openai"]).toEqual(p)
   })
 })

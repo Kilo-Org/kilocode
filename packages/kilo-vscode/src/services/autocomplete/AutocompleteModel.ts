@@ -131,7 +131,8 @@ export class AutocompleteModel {
         const json = line.slice(6).trim()
         if (!json || json === "[DONE]") continue
         try {
-          const chunk = JSON.parse(json) as Record<string, any>
+          const chunk: { content?: string; inputTokens?: number; outputTokens?: number; cost?: number } =
+            JSON.parse(json)
           if (chunk.content) onChunk(chunk.content)
           if (chunk.inputTokens !== undefined) inputTokens = chunk.inputTokens
           if (chunk.outputTokens !== undefined) outputTokens = chunk.outputTokens

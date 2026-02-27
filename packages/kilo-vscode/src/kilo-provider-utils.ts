@@ -1,4 +1,7 @@
-import type { Session, Agent, Provider, Event } from "@kilocode/sdk/v2/client"
+import type { Session, Agent, Provider, Event, ProviderListResponse } from "@kilocode/sdk/v2/client"
+
+/** A single provider entry as returned by the /provider list endpoint. */
+export type ProviderInfo = ProviderListResponse["all"][number]
 
 /**
  * Extract a human-readable error message from an unknown error value.
@@ -42,9 +45,9 @@ export function sessionToWebview(session: Session) {
   }
 }
 
-export function normalizeProviders(all: Record<string, Provider>): Record<string, Provider> {
-  const normalized: Record<string, Provider> = {}
-  for (const provider of Object.values(all)) {
+export function normalizeProviders(all: ProviderInfo[]): Record<string, ProviderInfo> {
+  const normalized: Record<string, ProviderInfo> = {}
+  for (const provider of all) {
     normalized[provider.id] = provider
   }
   return normalized

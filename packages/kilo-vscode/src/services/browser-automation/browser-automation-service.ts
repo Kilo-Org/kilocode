@@ -102,7 +102,7 @@ export class BrowserAutomationService implements vscode.Disposable {
             command,
             enabled: true,
             timeout: 60000,
-          } as any,
+          },
           directory,
         },
         { throwOnError: true },
