@@ -2,8 +2,7 @@ import * as vscode from "vscode"
 import * as cp from "child_process"
 import * as fs from "fs"
 import * as path from "path"
-import type { KiloClient } from "@kilocode/sdk/v2/client"
-import type { Session } from "@kilocode/sdk/v2/client"
+import type { KiloClient, Session, FileDiff } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { getErrorMessage } from "../kilo-provider-utils"
 import { KiloProvider } from "../KiloProvider"
@@ -429,7 +428,7 @@ export class AgentManagerProvider implements vscode.Disposable {
         { directory: worktreePath, platform: PLATFORM },
         { throwOnError: true },
       )
-      return session as unknown as Session
+      return session
     } catch (error) {
       const err = getErrorMessage(error)
       this.postToWebview({
@@ -577,7 +576,7 @@ export class AgentManagerProvider implements vscode.Disposable {
         { directory: worktree.path, platform: PLATFORM },
         { throwOnError: true },
       )
-      session = data as unknown as Session
+      session = data
     } catch (error) {
       const err = getErrorMessage(error)
       this.postToWebview({ type: "error", message: `Failed to create session: ${err}` })
@@ -1442,11 +1441,11 @@ export class AgentManagerProvider implements vscode.Disposable {
       )
       this.log(`Worktree diff returned ${diffs.length} file(s) for session ${sessionId}`)
 
-      const hash = (diffs as any[]).map((d: any) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`).join("|")
+      const hash = diffs.map((d: FileDiff) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`).join("|")
       this.lastDiffHash = hash
       this.diffSessionId = sessionId
 
-      this.postToWebview({ type: "agentManager.worktreeDiff", sessionId, diffs: diffs as any })
+      this.postToWebview({ type: "agentManager.worktreeDiff", sessionId, diffs })
     } catch (err) {
       this.log("Failed to fetch worktree diff:", err)
     } finally {
@@ -1466,12 +1465,12 @@ export class AgentManagerProvider implements vscode.Disposable {
         { throwOnError: true },
       )
 
-      const hash = (diffs as any[]).map((d: any) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`).join("|")
+      const hash = diffs.map((d: FileDiff) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`).join("|")
       if (hash === this.lastDiffHash && this.diffSessionId === sessionId) return
       this.lastDiffHash = hash
       this.diffSessionId = sessionId
 
-      this.postToWebview({ type: "agentManager.worktreeDiff", sessionId, diffs: diffs as any })
+      this.postToWebview({ type: "agentManager.worktreeDiff", sessionId, diffs })
     } catch (err) {
       this.log("Failed to poll worktree diff:", err)
     }
