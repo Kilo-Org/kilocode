@@ -1416,9 +1416,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       await this.httpClient.executeCommand(target, validated, validatedArgs, workspaceDir, { agent, model })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to execute command:", error)
+      const session = sessionID || this.currentSession?.id
+      const base = error instanceof Error ? error.message : "Failed to execute command"
       this.postMessage({
         type: "error",
-        message: error instanceof Error ? error.message : "Failed to execute command",
+        message: session ? `[sessionID:${session}] ${base}` : base,
       })
     }
   }
