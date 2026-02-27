@@ -363,10 +363,11 @@ export class WorktreeManager {
 
   async defaultBranch(): Promise<string> {
     if (this.ops) {
+      const remote = await this.ops.resolveRemote(this.root)
       const resolved = await this.ops.resolveDefaultBranch(this.root)
       if (resolved) {
-        const match = resolved.match(/^origin\/(.+)$/)
-        return match ? match[1] : resolved
+        const prefix = `${remote}/`
+        return resolved.startsWith(prefix) ? resolved.slice(prefix.length) : resolved
       }
     } else {
       try {
