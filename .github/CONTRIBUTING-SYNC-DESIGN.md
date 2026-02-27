@@ -423,7 +423,9 @@ every draft PR. The sync happens after merge, which is the correct time.
 If two pushes to `dev` both touch source files within seconds, two sync PRs
 could be opened simultaneously.
 
-**Mitigation:** Both PRs will have different branch names (using `$GITHUB_RUN_ID`).
+**Mitigation:** Both PRs will have different branch names (using
+`$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT`). The `$GITHUB_RUN_ATTEMPT` suffix also
+ensures workflow re-runs don't collide with a branch from the first attempt.
 A maintainer can close the older one. This is an acceptable edge case given the
 low frequency of template changes.
 
