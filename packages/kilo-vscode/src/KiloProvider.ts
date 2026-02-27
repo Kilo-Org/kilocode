@@ -713,7 +713,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         })
         .catch((err: unknown) => console.error("[Kilo New] KiloProvider: Failed to fetch session statuses:", err))
 
-      const messages = messagesData.map((m: any) => ({
+      const messages = messagesData.map((m) => ({
         ...m.info,
         parts: m.parts,
         createdAt: new Date(m.info.time.created).toISOString(),
@@ -758,7 +758,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         { throwOnError: true },
       )
 
-      const messages = messagesData.map((m: any) => ({
+      const messages = messagesData.map((m) => ({
         ...m.info,
         parts: m.parts,
         createdAt: new Date(m.info.time.created).toISOString(),
@@ -807,9 +807,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             }),
         ),
       )
-      const seen = new Set(sessions.map((s: any) => s.id))
+      const seen = new Set(sessions.map((s) => s.id))
       for (const batch of extra) {
-        for (const s of batch as any[]) {
+        for (const s of batch) {
           if (!seen.has(s.id)) {
             sessions.push(s)
             seen.add(s.id)
@@ -819,7 +819,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       this.postMessage({
         type: "sessionsLoaded",
-        sessions: sessions.map((s: any) => this.sessionToWebview(s)),
+        sessions: sessions.map((s) => this.sessionToWebview(s)),
       })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to load sessions:", error)
@@ -1003,7 +1003,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     try {
       const { data: notifications } = await this.client.kilo.notifications(undefined, { throwOnError: true })
       const existing = this.extensionContext?.globalState.get<string[]>("kilo.dismissedNotificationIds", []) ?? []
-      const active = new Set((notifications as any[]).map((n: any) => n.id))
+      const active = new Set(notifications.map((n) => n.id))
       const dismissedIds = existing.filter((id) => active.has(id))
       if (dismissedIds.length !== existing.length) {
         await this.extensionContext?.globalState.update("kilo.dismissedNotificationIds", dismissedIds)
@@ -1525,7 +1525,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage({ type: "deviceAuthComplete" })
 
       // Step 5: If user has organizations, navigate to profile view so they can pick one
-      if ((profileData as any)?.profile?.organizations && (profileData as any).profile.organizations.length > 0) {
+      if (profileData?.profile?.organizations && profileData.profile.organizations.length > 0) {
         this.postMessage({ type: "navigate", view: "profile" })
       }
     } catch (error) {

@@ -108,7 +108,7 @@ export class BrowserAutomationService implements vscode.Disposable {
         { throwOnError: true },
       )
 
-      const serverStatus = (status as any)[BrowserAutomationService.MCP_SERVER_NAME]
+      const serverStatus = status[BrowserAutomationService.MCP_SERVER_NAME]
       if (serverStatus?.status === "connected") {
         this.setState("connected")
       } else if (serverStatus?.status === "failed") {
@@ -162,7 +162,7 @@ export class BrowserAutomationService implements vscode.Disposable {
     try {
       const directory = this.getWorkspaceDirectory()
       const { data: allStatus } = await client.mcp.status({ directory }, { throwOnError: true })
-      return (allStatus as any)[BrowserAutomationService.MCP_SERVER_NAME] ?? null
+      return allStatus[BrowserAutomationService.MCP_SERVER_NAME] ?? null
     } catch {
       return null
     }
