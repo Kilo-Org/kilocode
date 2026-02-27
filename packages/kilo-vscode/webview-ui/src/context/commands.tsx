@@ -41,20 +41,17 @@ export const CommandsProvider: ParentComponent = (props) => {
 
   onCleanup(unsubscribe)
 
-  const maxRetries = 6
   const baseMs = 500
-  const retries = Array.from({ length: maxRetries }, (_, i) => i)
-  const timeouts = retries.map((i) =>
-    setTimeout(
-      () => {
-        if (!loading()) {
-          return
-        }
-        vscode.postMessage({ type: "requestCommands" })
-      },
-      baseMs * Math.pow(2, i),
-    ),
-  )
+  const maxMs = 5000
+  const tick = (delay: number) =>
+    setTimeout(() => {
+      if (!loading()) {
+        return
+      }
+      vscode.postMessage({ type: "requestCommands" })
+      timeouts.push(tick(Math.min(delay * 2, maxMs)))
+    }, delay)
+  const timeouts = [tick(baseMs)]
 
   vscode.postMessage({ type: "requestCommands" })
 

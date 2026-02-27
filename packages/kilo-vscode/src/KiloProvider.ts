@@ -1374,7 +1374,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    */
   private async handleSendCommand(
     command: string,
-    args: string,
+    args: unknown,
     sessionID?: string,
     providerID?: string,
     modelID?: string,
@@ -1390,6 +1390,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const validated = this.validateCommandName(command)
       if (!validated) {
         throw new Error("Invalid command")
+      }
+      const validatedArgs = this.validateCommandArgs(args)
+      if (validatedArgs === null) {
+        throw new Error("Invalid command arguments")
       }
 
       // Create session if needed
@@ -1409,7 +1413,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       const model = providerID && modelID ? `${providerID}/${modelID}` : undefined
 
-      await this.httpClient.executeCommand(target, validated, args, workspaceDir, { agent, model })
+      await this.httpClient.executeCommand(target, validated, validatedArgs, workspaceDir, { agent, model })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to execute command:", error)
       this.postMessage({
@@ -1425,7 +1429,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private async handleImportAndSendCommand(
     cloudSessionId: string,
     command: string,
-    args: string,
+    args: unknown,
     providerID?: string,
     modelID?: string,
     agent?: string,
@@ -1446,6 +1450,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         type: "cloudSessionImportFailed",
         cloudSessionId,
         error: "Invalid command",
+      })
+      return
+    }
+    const validatedArgs = this.validateCommandArgs(args)
+    if (validatedArgs === null) {
+      this.postMessage({
+        type: "cloudSessionImportFailed",
+        cloudSessionId,
+        error: "Invalid command arguments",
       })
       return
     }
@@ -1482,7 +1495,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const model = providerID && modelID ? `${providerID}/${modelID}` : undefined
-      await this.httpClient.executeCommand(session.id, validated, args, workspaceDir, { agent, model })
+      await this.httpClient.executeCommand(session.id, validated, validatedArgs, workspaceDir, {
+        agent,
+        model,
+      })
     } catch (err) {
       console.error("[Kilo New] Failed to execute command after cloud import:", err)
       this.postMessage({
@@ -1530,6 +1546,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return command
   }
 
+  private validateCommandArgs(args: unknown): string | null {
+    if (typeof args !== "string") return null
+    if (args.length > 100_000) return null
+    return args
+  }
+
   private async getWorkflowScope(
     name: string,
     source?: "command" | "mcp" | "skill",
@@ -1556,27 +1578,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     name: string,
     scope?: "project" | "global",
   ): Promise<{ path: string; scope: "project" | "global" } | null> {
-    const projectPath = path.join(this.getProjectWorkflowsDir(), `${name}.md`)
-    if (scope === "project") {
-      if (await this.fileExists(projectPath)) {
-        return { path: projectPath, scope: "project" }
+    const project = path.join(this.getProjectWorkflowsDir(), `${name}.md`)
+    const globals = this.getGlobalWorkflowCandidates(name)
+    const targets =
+      scope === "project"
+        ? [{ path: project, scope: "project" as const }]
+        : scope === "global"
+          ? globals.map((filePath) => ({ path: filePath, scope: "global" as const }))
+          : [{ path: project, scope: "project" as const }, ...globals.map((filePath) => ({ path: filePath, scope: "global" as const }))]
+
+    for (const target of targets) {
+      if (!(await this.fileExists(target.path))) {
+        continue
       }
-      return null
+      return target
     }
-
-    if (!scope) {
-      if (await this.fileExists(projectPath)) {
-        return { path: projectPath, scope: "project" }
-      }
-    }
-
-    const candidates = this.getGlobalWorkflowCandidates(name)
-    const exists = await Promise.all(candidates.map((filePath) => this.fileExists(filePath)))
-    const index = exists.findIndex(Boolean)
-    if (index >= 0) {
-      return { path: candidates[index], scope: "global" }
-    }
-
     return null
   }
 
@@ -1630,8 +1646,31 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
+    const existing = await this.resolveWorkflowFilePath(validated, scope)
+    if (existing) {
+      this.postMessage({
+        type: "error",
+        message: `Workflow \"${validated}\" already exists in ${existing.scope} scope`,
+      })
+      return
+    }
+
+    const selected =
+      scope ??
+      (await vscode.window.showQuickPick(
+        [
+          { label: "Project", value: "project" as const },
+          { label: "Global", value: "global" as const },
+        ],
+        {
+          placeHolder: `Choose scope for new workflow \"${validated}\"`,
+          ignoreFocusOut: true,
+        },
+      ))?.value
+    if (!selected) return
+
     const dir =
-      scope === "global"
+      selected === "global"
         ? this.getGlobalWorkflowsDir()
         : this.getProjectWorkflowsDir()
     const filePath = path.join(dir, `${validated}.md`)

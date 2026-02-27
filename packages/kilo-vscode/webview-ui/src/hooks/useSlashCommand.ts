@@ -80,7 +80,12 @@ export function useSlashCommand(commands: Accessor<CommandInfo[]>): SlashCommand
 
     if (e.key === "ArrowDown") {
       e.preventDefault()
-      setIndex((i) => (filtered().length === 0 ? 0 : Math.min(i + 1, filtered().length - 1)))
+      const list = filtered()
+      if (list.length === 0) {
+        setIndex(0)
+        return true
+      }
+      setIndex((i) => Math.min(i + 1, list.length - 1))
       return true
     }
     if (e.key === "ArrowUp") {

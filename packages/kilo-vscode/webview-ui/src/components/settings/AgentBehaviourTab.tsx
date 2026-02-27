@@ -528,8 +528,8 @@ const AgentBehaviourTab: Component = () => {
     const createWorkflow = () => {
       const name = newWorkflowName()
         .trim()
-        .replace(/\.md$/, "")
-        .replace(/[^a-zA-Z0-9_-]/g, "-")
+        .replace(/\.md$/i, "")
+        .replace(/[^a-zA-Z0-9_-]+/g, "-")
         .replace(/-+/g, "-")
         .replace(/^-+/, "")
         .replace(/-+$/, "")

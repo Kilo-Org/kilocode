@@ -249,11 +249,13 @@ export const PromptInput: Component = () => {
   }
 
   const handleSend = () => {
-    const message = text().trim()
+    const raw = text().trim()
+    const escaped = raw.startsWith("\\/") ? raw.slice(1) : raw
+    const message = escaped
     const imgs = imageAttach.images()
     if ((!message && imgs.length === 0) || isBusy() || isDisabled()) return
 
-    if (message.startsWith("/")) {
+    if (!raw.startsWith("\\/") && message.startsWith("/")) {
       const parts = message.slice(1).split(/\s+/)
       const command = parts[0]
       const args = parts.slice(1).join(" ")
@@ -262,24 +264,26 @@ export const PromptInput: Component = () => {
       if (command && known) {
         if (imgs.length > 0) {
           showToast({
-            variant: "error",
-            title: "Remove image attachments before running a slash command",
-            description: "Slash commands do not support image attachments yet.",
+            variant: "warning",
+            title: "Slash command sent as regular message",
+            description:
+              "Slash commands do not support image attachments yet, so this input was sent as plain text to preserve attached images.",
           })
+        }
+        if (imgs.length === 0) {
+          const sel = session.selected()
+          session.sendCommand(command, args, sel?.providerID, sel?.modelID)
+          requestCounter++
+          setText("")
+          setGhostText("")
+          imageAttach.clear()
+          if (debounceTimer) clearTimeout(debounceTimer)
+          slash.close()
+          mention.closeMention()
+          drafts.delete(sessionKey())
+          if (textareaRef) textareaRef.style.height = "auto"
           return
         }
-        const sel = session.selected()
-        session.sendCommand(command, args, sel?.providerID, sel?.modelID)
-        requestCounter++
-        setText("")
-        setGhostText("")
-        imageAttach.clear()
-        if (debounceTimer) clearTimeout(debounceTimer)
-        slash.close()
-        mention.closeMention()
-        drafts.delete(sessionKey())
-        if (textareaRef) textareaRef.style.height = "auto"
-        return
       }
       // kilocode_change end
     }

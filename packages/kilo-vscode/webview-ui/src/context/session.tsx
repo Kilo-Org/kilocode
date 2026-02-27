@@ -876,7 +876,7 @@ export const SessionProvider: ParentComponent = (props) => {
     const preview = cloudPreviewId()
     if (preview) {
       setLoading(true) // kilocode_change
-      const sid = currentSessionID()
+      const sid = `cloud:${preview}`
       const text = args.trim() ? `/${command} ${args}` : `/${command}`
       if (sid) {
         const tempId = `optimistic-${crypto.randomUUID()}`
