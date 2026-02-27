@@ -1,6 +1,7 @@
 // Session types from @kilocode/cli
 export interface SessionInfo {
   id: string
+  projectID: string
   title: string
   directory: string
   parentID?: string

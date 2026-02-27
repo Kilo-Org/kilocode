@@ -1056,6 +1056,8 @@ export const dict = {
   "agentManager.review.commentPlaceholder": "Laisser un commentaire...",
   "agentManager.review.commentAction": "Commenter",
   "agentManager.review.sendToChat": "Envoyer au chat",
+  "agentManager.review.collapsedOnly": "{{count}} repliés",
+  "agentManager.review.collapsedWithLarge": "{{collapsed}} repliés, {{large}} volumineux",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Coller l'URL du PR...",
