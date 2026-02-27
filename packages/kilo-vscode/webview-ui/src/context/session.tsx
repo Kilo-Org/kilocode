@@ -192,6 +192,11 @@ export const SessionProvider: ParentComponent = (props) => {
   // Cloud session preview state
   const [cloudPreviewId, setCloudPreviewId] = createSignal<string | null>(null)
 
+  // kilocode_change start
+  // Temporary session key used for optimistic messages before a real session is created
+  const [pendingSessionKey, setPendingSessionKey] = createSignal<string | null>(null)
+  // kilocode_change end
+
   // Store for sessions, messages, parts, todos, modelSelections, agentSelections
   const [store, setStore] = createStore<SessionStore>({
     sessions: {},
@@ -446,6 +451,19 @@ export const SessionProvider: ParentComponent = (props) => {
   function handleSessionCreated(session: SessionInfo) {
     batch(() => {
       setStore("sessions", session.id, session)
+
+      // kilocode_change start
+      // Transfer optimistic messages from the pending session key (created before
+      // the real session ID was known) to the real session ID.
+      const pendingKey = pendingSessionKey()
+      if (pendingKey) {
+        const pendingMessages = store.messages[pendingKey] ?? []
+        if (pendingMessages.length > 0) {
+          setStore("messages", session.id, pendingMessages)
+        }
+        setPendingSessionKey(null)
+      }
+      // kilocode_change end
 
       // Only initialize messages if none exist yet — a cloud session import
       // (handleCloudSessionImported) may have already populated messages for
@@ -906,19 +924,28 @@ export const SessionProvider: ParentComponent = (props) => {
     const sid = currentSessionID()
     setLoading(true) // kilocode_change
     const text = args.trim() ? `/${command} ${args}` : `/${command}`
-    if (sid) {
-      const tempId = `optimistic-${crypto.randomUUID()}`
-      const now = Date.now()
-      const temp: Message = {
-        id: tempId,
-        sessionID: sid,
-        role: "user",
-        createdAt: new Date(now).toISOString(),
-        time: { created: now },
-      }
-      setStore("messages", sid, (msgs = []) => [...msgs, temp])
-      setStore("parts", tempId, [{ type: "text" as const, id: `${tempId}-text`, text }])
+    // kilocode_change start
+    // Create an optimistic message immediately so the user sees their command in the
+    // chat without waiting for the server. When there is no session yet, use a
+    // temporary pending key; handleSessionCreated will transfer the messages once
+    // the real session ID is known.
+    const targetSid = sid ?? `pending:${crypto.randomUUID()}`
+    if (!sid) {
+      setPendingSessionKey(targetSid)
+      setCurrentSessionID(targetSid)
     }
+    const tempId = `optimistic-${crypto.randomUUID()}`
+    const now = Date.now()
+    const temp: Message = {
+      id: tempId,
+      sessionID: targetSid,
+      role: "user",
+      createdAt: new Date(now).toISOString(),
+      time: { created: now },
+    }
+    setStore("messages", targetSid, (msgs = []) => [...msgs, temp])
+    setStore("parts", tempId, [{ type: "text" as const, id: `${tempId}-text`, text }])
+    // kilocode_change end
 
     const agent = selectedAgentName() !== defaultAgent() ? selectedAgentName() : undefined
 
