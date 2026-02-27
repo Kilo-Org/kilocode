@@ -88,7 +88,7 @@ You can connect Telegram, Discord, and Slack by entering bot tokens in the Setti
 After saving channel tokens, you need to **Redeploy** or **Restart OpenClaw** for the changes to take effect.
 {% /callout %}
 
-### Stop and Destroy
+### Stop, Destroy & Restore
 
 At the bottom of Settings:
 
