@@ -144,7 +144,7 @@ export namespace LearnTracker {
   export async function getAggregate(): Promise<Aggregate> {
     return Storage.read<Aggregate>(aggregateKey())
       .then((x) => x || emptyAggregate())
-      .catch(() => emptyAggregate())
+      .catch((err) => { log.warn("aggregate read failed", { err }); return emptyAggregate() })
   }
 
   const MAX_AGGREGATE_CHECKS = 500
