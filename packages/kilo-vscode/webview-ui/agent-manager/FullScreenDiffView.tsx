@@ -29,7 +29,6 @@ type DiffStyle = "unified" | "split"
 interface FullScreenDiffViewProps {
   diffs: WorktreeFileDiff[]
   loading: boolean
-  sessionKey?: string
   comments: ReviewComment[]
   onCommentsChange: (comments: ReviewComment[]) => void
   onSendAll?: () => void
@@ -105,31 +104,13 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     focusRoot()
   }
 
-  // Reset auto-open state when switching sessions so diffs expand for the new session
-  createEffect(
-    on(
-      () => props.sessionKey,
-      () => {
-        setOpenInit(false)
-      },
-      { defer: true },
-    ),
-  )
-
   // Auto-open files when diffs arrive
   createEffect(
     on(
       () => props.diffs,
       (diffs) => {
         const files = diffs.map((d) => d.file)
-        const fileSet = new Set(files)
-        // Only update open state when the file list actually changed to avoid
-        // unnecessary re-renders that reset scroll position during polling
-        setOpen((prev) => {
-          const filtered = prev.filter((file) => fileSet.has(file))
-          if (filtered.length === prev.length && prev.every((f) => fileSet.has(f))) return prev
-          return filtered
-        })
+        setOpen((prev) => prev.filter((file) => files.includes(file)))
         if (diffs.length === 0) {
           setActiveFile(null)
           return
