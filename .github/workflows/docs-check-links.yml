@@ -2,7 +2,7 @@ name: Check Links
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main]
   pull_request:
   schedule:
     # Run daily at 9am UTC
@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Link Checker
-        uses: lycheeverse/lychee-action@v2
+        uses: Kilo-Org/lychee-action@8646ba30535128ac92d33dfc9133794bfdd9b411
         with:
           args: "**/*.md"
           workingDirectory: packages/kilo-docs

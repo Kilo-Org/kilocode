@@ -22,6 +22,15 @@ if (envPath) {
   run(envPath)
 }
 
+const scriptPath = fs.realpathSync(__filename)
+const scriptDir = path.dirname(scriptPath)
+
+//
+const cached = path.join(scriptDir, ".kilo")
+if (fs.existsSync(cached)) {
+  run(cached)
+}
+
 const platformMap = {
   darwin: "darwin",
   linux: "linux",

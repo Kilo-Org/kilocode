@@ -11,9 +11,9 @@ import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
-import { ModelSelector } from "./ModelSelector"
-import { ModeSwitcher } from "./ModeSwitcher"
-import { ThinkingSelector } from "./ThinkingSelector"
+import { ModelSelector } from "../shared/ModelSelector"
+import { ModeSwitcher } from "../shared/ModeSwitcher"
+import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
 import { useImageAttachments } from "../../hooks/useImageAttachments"
 import { fileName, dirName, buildHighlightSegments } from "./prompt-input-utils"
@@ -85,6 +85,20 @@ export const PromptInput: Component = () => {
       if (textareaRef) {
         textareaRef.value = message.text
         adjustHeight()
+      }
+    }
+
+    if (message.type === "appendChatBoxMessage") {
+      const current = text()
+      const separator = current && !current.endsWith("\n") ? "\n\n" : ""
+      const next = current + separator + message.text
+      setText(next)
+      setGhostText("")
+      if (textareaRef) {
+        textareaRef.value = next
+        adjustHeight()
+        textareaRef.focus()
+        textareaRef.scrollTop = textareaRef.scrollHeight
       }
     }
 

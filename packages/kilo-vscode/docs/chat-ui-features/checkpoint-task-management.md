@@ -1,21 +1,26 @@
 # Checkpoint & Task Management
 
-Checkpoint restore/navigation and task-level UX actions.
+**Priority:** P1
+**Status:** 🔨 Partial
 
-## Location
+## What Exists
 
-- Various checkpoint components
+- `CheckpointsTab` settings toggle to enable/disable snapshot creation before file edits (`config.snapshot`)
 
-## Interactions
+## Remaining Work
+
+### Backend / Service
+
+- Checkpoint service with shadow git repo for per-task snapshots
+- Restore files only vs restore files + task state
+- Safety checks to avoid problematic paths/nested repos
+- Evaluate whether CLI session undo/redo/revert maps to Kilo's checkpoint model or if extension needs its own git-based implementation
+
+### Chat UI
 
 - Checkpoint restore dialogs
-- Checkpoint navigation menu
+- Checkpoint navigation menu / timeline
+- Diff viewing between checkpoints
 - "See New Changes" buttons to view git diffs for completed tasks
-
-## Suggested migration
-
-**Reimplement?** Partial.
-
-- If “checkpoints” are implemented as Kilo-side git snapshots, they can remain a VS Code integration owned by the extension host (still valid under the new architecture).
-- If you want to align with Kilo CLI-native session operations (undo/redo/fork/diff), implement adapter support that maps those Kilo CLI session controls into existing Kilo UI affordances (or add new controls).
-- Kilo CLI references: session-level undo/redo/fork appear as first-class concepts in the app UI (see command labels in [`packages/app/src/i18n/en.ts`](https://github.com/Kilo-Org/kilo/blob/main/packages/app/src/i18n/en.ts:1)) and diff rendering in [`packages/ui/src/components/session-turn.tsx`](https://github.com/Kilo-Org/kilo/blob/main/packages/ui/src/components/session-turn.tsx:1).
+- Integration with CLI session undo/redo/fork operations
+- Consider reusing kilo-ui's `MessageNav` component (used by the desktop app but not yet by this extension)

@@ -17,6 +17,8 @@ vsc-extension-quickstart.md
 **/.vscode-test.*
 AGENTS.md
 .prettierignore
+.env
+.env.*
 
 # Include dist/ directory for compiled extension (production)
 !dist/**

@@ -138,6 +138,13 @@ export type UserMessage = {
     [key: string]: boolean
   }
   variant?: string
+  editorContext?: {
+    visibleFiles?: Array<string>
+    openTabs?: Array<string>
+    activeFile?: string
+    shell?: string
+    timezone?: string
+  }
 }
 
 export type ProviderAuthError = {
@@ -525,7 +532,17 @@ export type EventMessagePartUpdated = {
   type: "message.part.updated"
   properties: {
     part: Part
-    delta?: string
+  }
+}
+
+export type EventMessagePartDelta = {
+  type: "message.part.delta"
+  properties: {
+    sessionID: string
+    messageID: string
+    partID: string
+    field: string
+    delta: string
   }
 }
 
@@ -699,10 +716,6 @@ export type Todo = {
    * Priority level of the task: high, medium, low
    */
   priority: string
-  /**
-   * Unique identifier for the todo item
-   */
-  id: string
 }
 
 export type EventTodoUpdated = {
@@ -967,6 +980,7 @@ export type Event =
   | EventMessageUpdated
   | EventMessageRemoved
   | EventMessagePartUpdated
+  | EventMessagePartDelta
   | EventMessagePartRemoved
   | EventPermissionAsked
   | EventPermissionReplied
@@ -1564,8 +1578,8 @@ export type ProviderConfig = {
         input: Array<"text" | "audio" | "image" | "video" | "pdf">
         output: Array<"text" | "audio" | "image" | "video" | "pdf">
       }
-      recommended?: boolean
       recommendedIndex?: number
+      prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo"
       experimental?: boolean
       status?: "alpha" | "beta" | "deprecated"
       options?: {
@@ -2019,8 +2033,8 @@ export type Model = {
       [key: string]: unknown
     }
   }
-  recommended?: boolean
   recommendedIndex?: number
+  prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo"
 }
 
 export type Provider = {
@@ -2067,6 +2081,45 @@ export type WorktreeRemoveInput = {
 
 export type WorktreeResetInput = {
   directory: string
+}
+
+export type ProjectSummary = {
+  id: string
+  name?: string
+  worktree: string
+}
+
+export type GlobalSession = {
+  id: string
+  slug: string
+  projectID: string
+  directory: string
+  parentID?: string
+  summary?: {
+    additions: number
+    deletions: number
+    files: number
+    diffs?: Array<FileDiff>
+  }
+  share?: {
+    url: string
+  }
+  title: string
+  version: string
+  time: {
+    created: number
+    updated: number
+    compacting?: number
+    archived?: number
+  }
+  permission?: PermissionRuleset
+  revert?: {
+    messageID: string
+    partID?: string
+    snapshot?: string
+    diff?: string
+  }
+  project: ProjectSummary | null
 }
 
 export type McpResource = {
@@ -2895,6 +2948,78 @@ export type WorktreeResetResponses = {
 
 export type WorktreeResetResponse = WorktreeResetResponses[keyof WorktreeResetResponses]
 
+export type WorktreeDiffData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/experimental/worktree/diff"
+}
+
+export type WorktreeDiffErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type WorktreeDiffError = WorktreeDiffErrors[keyof WorktreeDiffErrors]
+
+export type WorktreeDiffResponses = {
+  /**
+   * File diffs
+   */
+  200: Array<FileDiff>
+}
+
+export type WorktreeDiffResponse = WorktreeDiffResponses[keyof WorktreeDiffResponses]
+
+export type ExperimentalSessionListData = {
+  body?: never
+  path?: never
+  query?: {
+    /**
+     * Filter sessions by project directory
+     */
+    directory?: string
+    /**
+     * Only return root sessions (no parentID)
+     */
+    roots?: boolean
+    /**
+     * Filter sessions updated on or after this timestamp (milliseconds since epoch)
+     */
+    start?: number
+    /**
+     * Return sessions updated before this timestamp (milliseconds since epoch)
+     */
+    cursor?: number
+    /**
+     * Filter sessions by title (case-insensitive)
+     */
+    search?: string
+    /**
+     * Maximum number of sessions to return
+     */
+    limit?: number
+    /**
+     * Include archived sessions (default false)
+     */
+    archived?: boolean
+  }
+  url: "/experimental/session"
+}
+
+export type ExperimentalSessionListResponses = {
+  /**
+   * List of sessions
+   */
+  200: Array<GlobalSession>
+}
+
+export type ExperimentalSessionListResponse = ExperimentalSessionListResponses[keyof ExperimentalSessionListResponses]
+
 export type ExperimentalResourceListData = {
   body?: never
   path?: never
@@ -2958,6 +3083,7 @@ export type SessionCreateData = {
     parentID?: string
     title?: string
     permission?: PermissionRuleset
+    platform?: string
   }
   path?: never
   query?: {
@@ -3466,6 +3592,13 @@ export type SessionPromptData = {
     format?: OutputFormat
     system?: string
     variant?: string
+    editorContext?: {
+      visibleFiles?: Array<string>
+      openTabs?: Array<string>
+      activeFile?: string
+      shell?: string
+      timezone?: string
+    }
     parts: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
   }
   path: {
@@ -3504,6 +3637,46 @@ export type SessionPromptResponses = {
 }
 
 export type SessionPromptResponse = SessionPromptResponses[keyof SessionPromptResponses]
+
+export type SessionDeleteMessageData = {
+  body?: never
+  path: {
+    /**
+     * Session ID
+     */
+    sessionID: string
+    /**
+     * Message ID
+     */
+    messageID: string
+  }
+  query?: {
+    directory?: string
+  }
+  url: "/session/{sessionID}/message/{messageID}"
+}
+
+export type SessionDeleteMessageErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type SessionDeleteMessageError = SessionDeleteMessageErrors[keyof SessionDeleteMessageErrors]
+
+export type SessionDeleteMessageResponses = {
+  /**
+   * Successfully deleted message
+   */
+  200: boolean
+}
+
+export type SessionDeleteMessageResponse = SessionDeleteMessageResponses[keyof SessionDeleteMessageResponses]
 
 export type SessionMessageData = {
   body?: never
@@ -3654,6 +3827,13 @@ export type SessionPromptAsyncData = {
     format?: OutputFormat
     system?: string
     variant?: string
+    editorContext?: {
+      visibleFiles?: Array<string>
+      openTabs?: Array<string>
+      activeFile?: string
+      shell?: string
+      timezone?: string
+    }
     parts: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
   }
   path: {
@@ -4091,8 +4271,8 @@ export type ProviderListResponses = {
             input: Array<"text" | "audio" | "image" | "video" | "pdf">
             output: Array<"text" | "audio" | "image" | "video" | "pdf">
           }
-          recommended?: boolean
           recommendedIndex?: number
+          prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo"
           experimental?: boolean
           status?: "alpha" | "beta" | "deprecated"
           options: {
@@ -4436,6 +4616,103 @@ export type KiloNotificationsResponses = {
 }
 
 export type KiloNotificationsResponse = KiloNotificationsResponses[keyof KiloNotificationsResponses]
+
+export type KiloCloudSessionGetData = {
+  body?: never
+  path: {
+    id: string
+  }
+  query?: {
+    directory?: string
+  }
+  url: "/kilo/cloud/session/{id}"
+}
+
+export type KiloCloudSessionGetErrors = {
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type KiloCloudSessionGetError = KiloCloudSessionGetErrors[keyof KiloCloudSessionGetErrors]
+
+export type KiloCloudSessionGetResponses = {
+  /**
+   * Cloud session data
+   */
+  200: unknown
+}
+
+export type KiloCloudSessionImportData = {
+  body?: {
+    sessionId: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/kilo/cloud/session/import"
+}
+
+export type KiloCloudSessionImportErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type KiloCloudSessionImportError = KiloCloudSessionImportErrors[keyof KiloCloudSessionImportErrors]
+
+export type KiloCloudSessionImportResponses = {
+  /**
+   * Imported session info
+   */
+  200: unknown
+}
+
+export type KiloCloudSessionsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    cursor?: string
+    limit?: number
+    gitUrl?: string
+  }
+  url: "/kilo/cloud-sessions"
+}
+
+export type KiloCloudSessionsErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KiloCloudSessionsError = KiloCloudSessionsErrors[keyof KiloCloudSessionsErrors]
+
+export type KiloCloudSessionsResponses = {
+  /**
+   * Cloud sessions list
+   */
+  200: {
+    cliSessions: Array<{
+      session_id: string
+      title: string | null
+      created_at: string
+      updated_at: string
+      version: number
+    }>
+    nextCursor: string | null
+  }
+}
+
+export type KiloCloudSessionsResponse = KiloCloudSessionsResponses[keyof KiloCloudSessionsResponses]
 
 export type FindTextData = {
   body?: never

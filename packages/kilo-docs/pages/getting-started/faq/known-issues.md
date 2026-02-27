@@ -1,6 +1,6 @@
 ---
 title: "Known Issues"
-description: "Known issues and limitations of Kilo Code"
+description: "Known issues and limitations of Kilo Code."
 tocDepth: 2
 ---
 
@@ -86,8 +86,51 @@ In these cases, PowerShell may not be available, and the command must be replace
 
 Verify that PowerShell is installed and accessible by running:
 
-```
-where powershell
-```
+## JetBrains
 
-If PowerShell is missing or blocked, system policies or security tools may need to be reviewed.
+### Kilo Code not visible (JCEF errors)
+
+#### Symptoms
+
+- Kilo Code panel doesn't render or appears blank
+- Errors such as `JCEF is not supported in this environment or failed to initialize`
+- `Internal JCEF not supported, trying external JCEF`
+
+#### Cause
+
+Kilo Code depends on **JCEF (JetBrains Chromium Embedded Framework)** to display its interface. If the bundled Java runtime doesn't include JCEF, or JCEF is disabled, the panel cannot render.
+
+#### Resolution
+
+1. Go to **Help → Find Action → Choose Boot Java Runtime**
+2. Select a runtime that includes **JCEF**
+3. If JCEF is already bundled, confirm it's enabled:
+   Open **Help → Edit Custom Properties** and add:
+   ```
+   ide.browser.jcef.enabled=true
+   ```
+4. Restart your IDE
+
+### TLS / Certificate errors
+
+#### Symptoms
+
+- `Failed to fetch extension base URL`
+- `PKIX path building failed`
+- `unable to find valid certification path to requested target`
+
+#### Cause
+
+The IDE cannot validate the TLS certificate used by the Kilo Code endpoint or a network proxy. Common causes include untrusted root certificates, corporate proxies intercepting HTTPS traffic, or missing intermediate certificates.
+
+#### Resolution
+
+- Install the **root certificate** in your OS trust store
+- Ensure the **complete certificate chain** is presented by the server
+- If managed internally, contact your IT/admin team
+
+JetBrains IDEs rely on the **system certificate store**, so resolving trust at the OS level usually fixes the issue.
+
+{% callout type="note" %}
+**JetBrains 2024.3 note:** Some builds may fail to recognize OS certificates. Workarounds include downgrading to a previous version, upgrading to **2024.3.1 or later**, or adding the JVM option `-Djavax.net.ssl.trustStoreType=Windows-ROOT`.
+{% /callout %}
