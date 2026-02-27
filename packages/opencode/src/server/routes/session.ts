@@ -109,6 +109,12 @@ export const SessionRoutes = lazy(() =>
           ...errors(400),
         },
       }),
+      validator(
+        "query",
+        z.object({
+          directory: z.string().optional(),
+        }),
+      ),
       async (c) => {
         const aggregate = await LearnTracker.getAggregate()
         return c.json(aggregate)
