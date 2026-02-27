@@ -13,7 +13,7 @@ import type { Provider } from "@/provider/provider"
 
 // kilocode_change start
 import SOUL from "../kilocode/soul.txt"
-import { editorContextEnvLines, type EditorContext } from "../kilocode/editor-context"
+import { staticEnvLines, type EditorContext } from "../kilocode/editor-context"
 // kilocode_change end
 
 export namespace SystemPrompt {
@@ -67,7 +67,7 @@ export namespace SystemPrompt {
         `  Working directory: ${Instance.directory}`,
         `  Is directory a git repo: ${project.vcs === "git" ? "yes" : "no"}`,
         `  Platform: ${process.platform}`,
-        ...editorContextEnvLines(editorContext), // kilocode_change
+        ...staticEnvLines(editorContext), // kilocode_change
         `</env>`,
         `<directories>`,
         `  ${
@@ -79,6 +79,10 @@ export namespace SystemPrompt {
             : ""
         }`,
         `</directories>`,
+        // kilocode_change start
+        ``,
+        `At the end of each user message, you may receive <environment_details> with information about the user's currently active file, visible editors, and open tabs. This is auto-generated context — use it to understand which files the user is working with.`,
+        // kilocode_change end
       ].join("\n"),
     ]
   }

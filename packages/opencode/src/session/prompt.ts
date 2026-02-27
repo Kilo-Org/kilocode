@@ -46,6 +46,7 @@ import { iife } from "@/util/iife"
 import { Shell } from "@/shell/shell"
 import { Truncate } from "@/tool/truncation"
 import { PlanFollowup } from "@/kilocode/plan-followup" // kilocode_change
+import { environmentDetails } from "@/kilocode/editor-context" // kilocode_change
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -1349,6 +1350,20 @@ export namespace SessionPrompt {
         ]
       }),
     ).then((x) => x.flat().map(assign))
+
+    // kilocode_change start — inject dynamic editor context into user message
+    const envBlock = environmentDetails(input.editorContext)
+    if (envBlock) {
+      parts.push({
+        id: Identifier.ascending("part"),
+        messageID: info.id,
+        sessionID: input.sessionID,
+        type: "text",
+        text: envBlock,
+        synthetic: true,
+      })
+    }
+    // kilocode_change end
 
     await Plugin.trigger(
       "chat.message",
