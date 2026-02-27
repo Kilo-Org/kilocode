@@ -68,6 +68,7 @@ export const CommandsProvider: ParentComponent = (props) => {
 
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type === "commandsLoaded") {
+      clearTimeouts()
       setCommands(message.commands)
       setError(message.error)
       setLoading(false)

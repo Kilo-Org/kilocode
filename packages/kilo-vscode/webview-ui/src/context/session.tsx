@@ -397,7 +397,10 @@ export const SessionProvider: ParentComponent = (props) => {
           // Only clear loading if the error is for the current session
           // (or has no sessionID for backwards compatibility)
           clearOptimisticMessages(message.sessionID ?? currentSessionID()) // kilocode_change
-          if (!message.sessionID || message.sessionID === currentSessionID()) setLoading(false)
+          if (!message.sessionID || message.sessionID === currentSessionID()) {
+            setLoading(false)
+            setPendingSessionKey(null) // kilocode_change: reset stale pending key on error
+          }
           break
 
         case "cloudSessionDataLoaded":
@@ -921,16 +924,20 @@ export const SessionProvider: ParentComponent = (props) => {
       return
     }
 
-    const sid = currentSessionID()
+    // kilocode_change start
+    // A pending:* key means a session is being created but hasn't been confirmed yet.
+    // Treat it as "no real session" so we don't send a synthetic key to the backend.
+    const rawSid = currentSessionID()
+    const sid = rawSid?.startsWith("pending:") ? undefined : rawSid
     setLoading(true) // kilocode_change
     const text = args.trim() ? `/${command} ${args}` : `/${command}`
-    // kilocode_change start
     // Create an optimistic message immediately so the user sees their command in the
     // chat without waiting for the server. When there is no session yet, use a
     // temporary pending key; handleSessionCreated will transfer the messages once
     // the real session ID is known.
-    const targetSid = sid ?? `pending:${crypto.randomUUID()}`
-    if (!sid) {
+    const existingPending = pendingSessionKey()
+    const targetSid = sid ?? existingPending ?? `pending:${crypto.randomUUID()}`
+    if (!sid && !existingPending) {
       setPendingSessionKey(targetSid)
       setCurrentSessionID(targetSid)
     }
