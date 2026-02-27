@@ -144,6 +144,8 @@ export namespace ToolRegistry {
           }
           // kilocode_change end
 
+          if ((t.id === "learnwrite" || t.id === "learnread") && agent?.name !== "learn") return false // kilocode_change
+
           // use apply tool in same format as codex
           const usePatch =
             model.modelID.includes("gpt-") && !model.modelID.includes("oss") && !model.modelID.includes("gpt-4")
