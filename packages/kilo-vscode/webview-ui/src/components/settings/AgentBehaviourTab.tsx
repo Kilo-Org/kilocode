@@ -530,6 +530,9 @@ const AgentBehaviourTab: Component = () => {
         .trim()
         .replace(/\.md$/, "")
         .replace(/[^a-zA-Z0-9_-]/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-+/, "")
+        .replace(/-+$/, "")
       if (!name) return
       vscode.postMessage({ type: "createWorkflowFile", name, workflowScope: "project" })
       setNewWorkflowName("")

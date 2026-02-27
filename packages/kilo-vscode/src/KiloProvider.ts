@@ -1100,6 +1100,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage(message)
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to fetch commands:", error)
+      const message = {
+        type: "commandsLoaded",
+        commands: [],
+      }
+      this.cachedCommandsMessage = message
+      this.postMessage(message)
     }
   }
 
@@ -1380,6 +1386,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const workspaceDir = this.getWorkspaceDirectory(sessionID || this.currentSession?.id)
+      const validated = await this.validateCommandName(command, workspaceDir)
+      if (!validated) {
+        throw new Error("Invalid command")
+      }
 
       // Create session if needed
       if (!sessionID && !this.currentSession) {
@@ -1398,7 +1408,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       const model = providerID && modelID ? `${providerID}/${modelID}` : undefined
 
-      await this.httpClient.executeCommand(target, command, args, workspaceDir, { agent, model })
+      await this.httpClient.executeCommand(target, validated, args, workspaceDir, { agent, model })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to execute command:", error)
       this.postMessage({
@@ -1429,6 +1439,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     const workspaceDir = this.getWorkspaceDirectory()
+    const validated = await this.validateCommandName(command, workspaceDir)
+    if (!validated) {
+      this.postMessage({
+        type: "cloudSessionImportFailed",
+        cloudSessionId,
+        error: "Invalid command",
+      })
+      return
+    }
+
     let session: Awaited<ReturnType<typeof this.httpClient.importCloudSession>>
     try {
       session = await this.httpClient.importCloudSession(cloudSessionId, workspaceDir)
@@ -1461,7 +1481,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const model = providerID && modelID ? `${providerID}/${modelID}` : undefined
-      await this.httpClient.executeCommand(session.id, command, args, workspaceDir, { agent, model })
+      await this.httpClient.executeCommand(session.id, validated, args, workspaceDir, { agent, model })
     } catch (err) {
       console.error("[Kilo New] Failed to execute command after cloud import:", err)
       this.postMessage({
@@ -1499,6 +1519,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       result.unshift(path.join(globalStorage, "workflows", file))
     }
     return result
+  }
+
+  private async validateCommandName(name: string, directory: string): Promise<string | null> {
+    const command = typeof name === "string" ? name.trim() : ""
+    if (!command) return null
+    if (!/^[a-zA-Z0-9_-]+$/.test(command)) return null
+    if (!this.httpClient) return null
+    const commands = await this.httpClient.listCommands(directory)
+    if (!commands.some((item) => item.name === command)) return null
+    return command
   }
 
   private async getWorkflowScope(
