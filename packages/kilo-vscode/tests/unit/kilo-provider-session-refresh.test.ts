@@ -1,5 +1,10 @@
 import { describe, it, expect, mock } from "bun:test"
 
+const kind = (value: string) => ({
+  value,
+  append: (part: string) => kind(`${value}.${part}`),
+})
+
 const mockVscode = {
   extensions: {
     getExtension: () => ({
@@ -19,34 +24,21 @@ const mockVscode = {
       get: <T>(_key: string, value?: T) => value,
     }),
   },
+  CodeAction: class {
+    command?: { command: string; title: string }
+    isPreferred?: boolean
+    constructor(
+      public title: string,
+      public kind: { value: string },
+    ) {}
+  },
+  CodeActionKind: {
+    QuickFix: kind("quickfix"),
+    RefactorRewrite: kind("refactor.rewrite"),
+  },
 }
 
 mock.module("vscode", () => mockVscode)
-
-mock.module("../../src/services/autocomplete/shims/FileIgnoreController", () => ({
-  FileIgnoreController: class {
-    dispose(): void {}
-  },
-}))
-
-mock.module("../../src/services/autocomplete/chat-autocomplete/handleChatCompletionRequest", () => ({
-  handleChatCompletionRequest: async () => undefined,
-}))
-
-mock.module("../../src/services/autocomplete/chat-autocomplete/handleChatCompletionAccepted", () => ({
-  handleChatCompletionAccepted: async () => undefined,
-}))
-
-const telemetry = {
-  setProvider: () => undefined,
-  capture: () => undefined,
-}
-
-mock.module("../../src/services/telemetry", () => ({
-  TelemetryProxy: {
-    getInstance: () => telemetry,
-  },
-}))
 
 const { KiloProvider } = await import("../../src/KiloProvider")
 
