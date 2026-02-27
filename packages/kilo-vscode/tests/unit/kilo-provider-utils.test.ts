@@ -5,6 +5,7 @@ import {
   filterVisibleAgents,
   buildSettingPath,
   mapSSEEventToWebviewMessage,
+  isEventFromForeignProject,
   type ProviderInfo,
 } from "../../src/kilo-provider-utils"
 import type {
@@ -382,5 +383,41 @@ describe("mapSSEEventToWebviewMessage", () => {
   it("returns null for unhandled event types (Like global.disposed)", () => {
     const event: Event = { type: "global.disposed", properties: {} }
     expect(mapSSEEventToWebviewMessage(event, undefined)).toBeNull()
+  })
+})
+
+describe("isEventFromForeignProject", () => {
+  const session = (projectID: string) =>
+    ({
+      id: "s1",
+      projectID,
+      title: "test",
+      directory: "/workspace",
+      time: { created: 0, updated: 0 },
+    }) as unknown as Session
+
+  it("drops session.created from a different project", () => {
+    const event: Event = { type: "session.created", properties: { info: session("project-B") } }
+    expect(isEventFromForeignProject(event, "project-A")).toBe(true)
+  })
+
+  it("drops session.updated from a different project", () => {
+    const event: Event = { type: "session.updated", properties: { info: session("project-B") } }
+    expect(isEventFromForeignProject(event, "project-A")).toBe(true)
+  })
+
+  it("keeps session.created from the same project", () => {
+    const event: Event = { type: "session.created", properties: { info: session("project-A") } }
+    expect(isEventFromForeignProject(event, "project-A")).toBe(false)
+  })
+
+  it("keeps all events when expectedProjectID is undefined", () => {
+    const event: Event = { type: "session.created", properties: { info: session("project-B") } }
+    expect(isEventFromForeignProject(event, undefined)).toBe(false)
+  })
+
+  it("keeps non-session events regardless of project", () => {
+    const event = { type: "server.heartbeat", properties: {} } as unknown as Event
+    expect(isEventFromForeignProject(event, "project-A")).toBe(false)
   })
 })
