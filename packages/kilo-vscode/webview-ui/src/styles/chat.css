@@ -694,22 +694,6 @@
   word-break: break-all;
 }
 
-/* ============================================
-   Text Part Copy Button Fix
-   In the sidebar, the text-part copy button overflows into the
-   element above because the gap between messages is smaller.
-   Position it inside the text body instead of above it.
-   ============================================ */
-
-[data-component="text-part"] [data-slot="text-part-body"] {
-  margin-top: 8px;
-}
-
-[data-component="text-part"] [data-slot="text-part-copy-wrapper"] {
-  top: 4px;
-  right: 4px;
-}
-
 /* Dialog Confirmation */
 .dialog-confirm-body {
   display: flex;
@@ -882,23 +866,40 @@
 }
 
 /* ============================================
-   SessionTurn layout classes
+   VscodeSessionTurn layout
    ============================================ */
 
-[data-component="session-turn"].session-turn-root {
+.vscode-session-turn {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   width: 100%;
   min-width: 0;
-  height: auto;
-}
-
-[data-slot="session-turn-content"].session-turn-content {
-  height: auto !important;
-  overflow: visible !important;
-}
-
-.session-turn-container {
-  width: 100%;
   padding: 0 4px;
+}
+
+.vscode-session-turn-user {
+  width: 100%;
+}
+
+.vscode-session-turn-assistant {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.vscode-session-turn-diffs {
+  width: 100%;
+}
+
+/* ============================================
+   Task Tool (sub-agent, v1.0.25 style)
+   tool-output scrollable container size override
+   ============================================ */
+
+[data-component="tool-output"][data-scrollable]:has([data-component="task-tools"]) {
+  max-height: 200px;
 }
 
 /* ============================================

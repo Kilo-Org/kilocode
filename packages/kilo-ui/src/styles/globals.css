@@ -54,6 +54,72 @@
   height: 0;
 }
 
+/*
+ * Scrollbar utility class + universal scrollable-element styling.
+ *
+ * `.kilo-scrollbar` — explicit opt-in class for any scrollable element.
+ * `[data-scrollable]` — data attribute used by kilo-ui components internally.
+ *
+ * Both selectors receive identical thin, token-aware scrollbar styling.
+ * In the VS Code theme the colors resolve to native VS Code scrollbar tokens.
+ *
+ * Usage (class):     <div class="kilo-scrollbar" style="overflow-y: auto">
+ * Usage (attribute): <div data-scrollable style="overflow-y: auto">
+ */
+:is(.kilo-scrollbar, [data-scrollable]) {
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(121, 121, 121, 0.4) transparent;
+
+  /* WebKit */
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(121, 121, 121, 0.4);
+    border-radius: 4px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 100, 100, 0.7);
+  }
+
+  &::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+}
+
+/* VS Code theme: use native VS Code scrollbar color tokens */
+html[data-theme="kilo-vscode"] :is(.kilo-scrollbar, [data-scrollable]) {
+  scrollbar-color: var(--vscode-scrollbarSlider-background) transparent;
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--vscode-scrollbarSlider-background);
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--vscode-scrollbarSlider-hoverBackground);
+  }
+
+  &::-webkit-scrollbar-thumb:active {
+    background: var(--vscode-scrollbarSlider-activeBackground);
+  }
+}
+
 /* ===== VS Code extension: inherit native styling ===== */
 
 html[data-theme="kilo-vscode"] {
