@@ -12,6 +12,11 @@ interface WordToken {
   index: number
 }
 
+interface MatchResult {
+  positions: Set<number>
+  nextWordIndex: number
+}
+
 export interface SearchResult<T> {
   item: T
   positions: Set<number>
@@ -94,11 +99,13 @@ export class WordBoundaryFzf<T> {
       const tokens = this.tokenize(text)
 
       if (queryWords.length > 1) {
+        let startWordIndex = 0
         const allPositions = new Set<number>()
         const allMatch = queryWords.every((word) => {
-          const positions = this.matchAcronym(tokens, word)
-          if (!positions) return false
-          positions.forEach((position) => allPositions.add(position))
+          const match = this.matchAcronym(tokens, word, startWordIndex)
+          if (!match) return false
+          startWordIndex = match.nextWordIndex
+          match.positions.forEach((position) => allPositions.add(position))
           return true
         })
 
@@ -106,9 +113,9 @@ export class WordBoundaryFzf<T> {
           results.push({ item, positions: allPositions })
         }
       } else {
-        const positions = this.matchAcronym(tokens, queryWords[0])
-        if (positions) {
-          results.push({ item, positions })
+        const match = this.matchAcronym(tokens, queryWords[0], 0)
+        if (match) {
+          results.push({ item, positions: match.positions })
         }
       }
     }
@@ -133,14 +140,27 @@ export class WordBoundaryFzf<T> {
     return tokens
   }
 
-  private matchAcronym(tokens: WordToken[], query: string): Set<number> | null {
+  private matchAcronym(tokens: WordToken[], query: string, startWordIndex: number): MatchResult | null {
     const lowerWords = tokens.map((token) => token.word.toLowerCase())
+    const failed = new Set<string>()
 
-    const tryMatch = (wordIndex: number, queryIndex: number, currentPositions: Set<number>): Set<number> | null => {
+    const tryMatch = (
+      wordIndex: number,
+      queryIndex: number,
+      currentPositions: Set<number>,
+    ): MatchResult | null => {
       if (queryIndex === query.length) {
-        return currentPositions
+        return {
+          positions: currentPositions,
+          nextWordIndex: wordIndex,
+        }
       }
       if (wordIndex >= lowerWords.length) {
+        return null
+      }
+
+      const state = `${wordIndex}:${queryIndex}`
+      if (failed.has(state)) {
         return null
       }
 
@@ -168,10 +188,15 @@ export class WordBoundaryFzf<T> {
         }
       }
 
-      return tryMatch(wordIndex + 1, queryIndex, currentPositions)
+      const skipped = tryMatch(wordIndex + 1, queryIndex, currentPositions)
+      if (skipped) {
+        return skipped
+      }
+      failed.add(state)
+      return null
     }
 
-    return tryMatch(0, 0, new Set<number>())
+    return tryMatch(startWordIndex, 0, new Set<number>())
   }
 }
 

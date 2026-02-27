@@ -143,6 +143,18 @@ describe("WordBoundaryFzf", () => {
     const result = finder.find("claude flash")
     expect(result).toHaveLength(0)
   })
+
+  it("does not allow multi-word queries to reuse the same token", () => {
+    const result = finder.find("so so")
+    expect(result).toHaveLength(0)
+  })
+
+  it("allows repeated multi-word queries when distinct tokens exist", () => {
+    const repeatedFinder = new WordBoundaryFzf(["So So"], (item) => item)
+    const result = repeatedFinder.find("so so")
+    expect(result).toHaveLength(1)
+    expect(result[0].item).toBe("So So")
+  })
 })
 
 describe("buildMatchSegments", () => {
