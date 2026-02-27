@@ -719,14 +719,14 @@ const AgentManagerContent: Component = () => {
     }
     window.addEventListener("message", handler)
 
-    // Prevent Cmd+Arrow/T/W/N/digit from triggering native browser actions
+    // Prevent Cmd/Ctrl shortcuts from triggering native browser actions
     const preventDefaults = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
         e.preventDefault()
       }
-      // Prevent browser defaults for our shortcuts (new tab, close tab, new window, toggle diff)
-      if (["t", "w", "n", "d"].includes(e.key.toLowerCase()) && !e.shiftKey) {
+      // Prevent browser defaults for our shortcuts (new tab, close tab, new window, toggle diff, find)
+      if (["t", "w", "n", "d", "f"].includes(e.key.toLowerCase()) && !e.shiftKey) {
         e.preventDefault()
       }
       // Prevent defaults for shift variants (close worktree, advanced new worktree)
@@ -738,7 +738,7 @@ const AgentManagerContent: Component = () => {
         e.preventDefault()
       }
     }
-    window.addEventListener("keydown", preventDefaults)
+    window.addEventListener("keydown", preventDefaults, true)
 
     // When the panel regains focus (e.g. returning from terminal), focus the prompt
     // and clear any stale body styles left by Kobalte modal overlays (dropdowns/dialogs
@@ -969,7 +969,7 @@ const AgentManagerContent: Component = () => {
 
     onCleanup(() => {
       window.removeEventListener("message", handler)
-      window.removeEventListener("keydown", preventDefaults)
+      window.removeEventListener("keydown", preventDefaults, true)
       window.removeEventListener("focus", onWindowFocus)
       unsubCreate()
       unsubSessions()
