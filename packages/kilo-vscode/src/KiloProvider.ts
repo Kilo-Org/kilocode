@@ -21,6 +21,7 @@ import {
   buildSettingPath,
   mapSSEEventToWebviewMessage,
 } from "./kilo-provider-utils"
+import { isEventFromForeignProject } from "./services/cli-backend/sse-utils"
 
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "kilo-code.new.sidebarView"
@@ -815,8 +816,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           }
         }
       }
-      // Derive project ID from any returned session (primary or worktree fetches)
-      this.projectID = sessions[0]?.projectID
+      // Update project ID when sessions are available; keep previous value when
+      // the list is empty (empty ≠ different project — the workspace hasn't changed).
+      const resolved = sessions[0]?.projectID
+      if (resolved) this.projectID = resolved
 
       this.postMessage({
         type: "sessionsLoaded",
@@ -1661,9 +1664,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /**
    * Handle SSE events from the CLI backend.
-   * Filters events by tracked session IDs so each webview only sees its own sessions.
+   * Filters events by project ID and tracked session IDs so each webview only sees its own sessions.
    */
   private handleSSEEvent(event: SSEEvent): void {
+    // Drop session events from other projects before any tracking logic.
+    // This must come first: the trackedSessionIds guard below would otherwise
+    // let a foreign session through if it was accidentally tracked.
+    if (isEventFromForeignProject(event, this.projectID)) return
+
     // Extract sessionID from the event
     const sessionID = this.extractSessionID(event)
 
@@ -1679,13 +1687,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     // Forward relevant events to webview
     // Side effects that must happen before the webview message is sent
-    // Filter session.created by projectID to prevent cross-repo session leaks
-    if (event.type === "session.created") {
-      if (this.projectID && event.properties.info.projectID !== this.projectID) return
-      if (!this.currentSession) {
-        this.currentSession = event.properties.info
-        this.trackedSessionIds.add(event.properties.info.id)
-      }
+    if (event.type === "session.created" && !this.currentSession) {
+      this.currentSession = event.properties.info
+      this.trackedSessionIds.add(event.properties.info.id)
     }
     if (event.type === "session.updated" && this.currentSession?.id === event.properties.info.id) {
       this.currentSession = event.properties.info
