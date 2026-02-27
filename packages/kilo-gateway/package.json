@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@kilocode/kilo-gateway",
-  "version": "7.0.30",
+  "version": "7.0.31",
   "type": "module",
   "license": "MIT",
   "description": "Unified Kilo Gateway package for OpenCode - authentication, provider, and API integration",
