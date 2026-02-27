@@ -1429,7 +1429,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     const workspaceDir = this.getWorkspaceDirectory()
-    const session = await this.httpClient.importCloudSession(cloudSessionId, workspaceDir)
+    let session: Awaited<ReturnType<typeof this.httpClient.importCloudSession>>
+    try {
+      session = await this.httpClient.importCloudSession(cloudSessionId, workspaceDir)
+    } catch (err) {
+      this.postMessage({
+        type: "cloudSessionImportFailed",
+        cloudSessionId,
+        error: err instanceof Error ? err.message : "Failed to import session from cloud",
+      })
+      return
+    }
+
     if (!session) {
       this.postMessage({
         type: "cloudSessionImportFailed",
@@ -1518,7 +1529,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   ): Promise<{ path: string; scope: "project" | "global" } | null> {
     const projectPath = path.join(this.getProjectWorkflowsDir(), `${name}.md`)
     if (!scope || scope === "project") {
-      return { path: projectPath, scope: "project" }
+      if (await this.fileExists(projectPath)) {
+        return { path: projectPath, scope: "project" }
+      }
+      return null
     }
 
     const candidates = this.getGlobalWorkflowCandidates(name)
