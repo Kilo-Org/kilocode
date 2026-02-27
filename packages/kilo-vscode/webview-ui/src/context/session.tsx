@@ -391,6 +391,7 @@ export const SessionProvider: ParentComponent = (props) => {
         case "error":
           // Only clear loading if the error is for the current session
           // (or has no sessionID for backwards compatibility)
+          clearOptimisticMessages(message.sessionID ?? currentSessionID()) // kilocode_change
           if (!message.sessionID || message.sessionID === currentSessionID()) setLoading(false)
           break
 
@@ -404,20 +405,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
         case "cloudSessionImportFailed":
           const key = `cloud:${message.cloudSessionId}`
-          const all = store.messages[key] ?? []
-          const ids = new Set(all.filter((m) => m.id.startsWith("optimistic-")).map((m) => m.id))
-          const next = all.filter((m) => !ids.has(m.id))
-          if (ids.size > 0) {
-            setStore("messages", key, next)
-            setStore(
-              "parts",
-              produce((parts) => {
-                for (const id of ids) {
-                  delete parts[id]
-                }
-              }),
-            )
-          }
+          clearOptimisticMessages(key)
           const active = currentSessionID()
           setCloudPreviewId(null)
           if (!message.sessionID || active === key) {
@@ -436,6 +424,23 @@ export const SessionProvider: ParentComponent = (props) => {
 
     onCleanup(unsubscribe)
   })
+
+  function clearOptimisticMessages(sessionID: string | undefined) {
+    if (!sessionID) return
+    const all = store.messages[sessionID] ?? []
+    const ids = new Set(all.filter((m) => m.id.startsWith("optimistic-")).map((m) => m.id))
+    if (ids.size === 0) return
+    const next = all.filter((m) => !ids.has(m.id))
+    setStore("messages", sessionID, next)
+    setStore(
+      "parts",
+      produce((parts) => {
+        for (const id of ids) {
+          delete parts[id]
+        }
+      }),
+    )
+  }
 
   // Event handlers
   function handleSessionCreated(session: SessionInfo) {
@@ -818,6 +823,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
     const preview = cloudPreviewId()
     if (preview) {
+      setLoading(true) // kilocode_change
       const agent = selectedAgentName() !== defaultAgent() ? selectedAgentName() : undefined
       vscode.postMessage({
         type: "importAndSend",
@@ -869,6 +875,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
     const preview = cloudPreviewId()
     if (preview) {
+      setLoading(true) // kilocode_change
       const sid = currentSessionID()
       const text = args.trim() ? `/${command} ${args}` : `/${command}`
       if (sid) {
@@ -899,6 +906,7 @@ export const SessionProvider: ParentComponent = (props) => {
     }
 
     const sid = currentSessionID()
+    setLoading(true) // kilocode_change
     const text = args.trim() ? `/${command} ${args}` : `/${command}`
     if (sid) {
       const tempId = `optimistic-${crypto.randomUUID()}`
