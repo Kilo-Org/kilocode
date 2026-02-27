@@ -1,5 +1,11 @@
 module.exports = [
   {
+    source: "/docs/automate/kiloclaw",
+    destination: "/docs/automate/kiloclaw/overview",
+    basePath: false,
+    permanent: true,
+  },
+  {
     source: "/docs/features/custom-modes",
     destination: "/docs/customize/custom-modes",
     basePath: false,

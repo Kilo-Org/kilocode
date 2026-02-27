@@ -11,6 +11,7 @@ import * as fs from "fs"
 import * as cp from "child_process"
 import simpleGit, { type SimpleGit } from "simple-git"
 import { generateBranchName, sanitizeBranchName } from "./branch-name"
+import type { GitOps } from "./GitOps"
 import {
   parsePRUrl,
   localBranchName,
@@ -20,6 +21,7 @@ import {
   checkedOutBranchesFromWorktreeList,
   classifyPRError,
   validateGitRef,
+  normalizePath,
   type PRInfo,
   type BranchListItem,
 } from "./git-import"
@@ -54,12 +56,14 @@ export class WorktreeManager {
   private readonly root: string
   private readonly dir: string
   private readonly git: SimpleGit
+  private readonly ops: GitOps | undefined
   private readonly log: (msg: string) => void
 
-  constructor(root: string, log: (msg: string) => void) {
+  constructor(root: string, log: (msg: string) => void, ops?: GitOps) {
     this.root = root
     this.dir = path.join(root, KILOCODE_DIR, "worktrees")
     this.git = simpleGit(root)
+    this.ops = ops
     this.log = log
   }
 
@@ -170,7 +174,7 @@ export class WorktreeManager {
 
     // Git doesn't know about this directory — remove it directly
     if (fs.existsSync(worktreePath)) {
-      if (!worktreePath.startsWith(this.dir)) {
+      if (!this.isManagedPath(worktreePath)) {
         this.log(`Refusing to remove path outside worktrees directory: ${worktreePath}`)
         return
       }
@@ -256,6 +260,20 @@ export class WorktreeManager {
     }
   }
 
+  /**
+   * Returns true when target is strictly inside the managed worktrees directory.
+   * Prevents sibling-prefix confusion such as "/worktrees-evil".
+   */
+  private isManagedPath(target: string): boolean {
+    const root = path.resolve(this.dir)
+    const child = path.resolve(target)
+    const rel = normalizePath(path.relative(root, child))
+    if (!rel || rel === ".") return false
+    if (rel.startsWith("../")) return false
+    if (path.isAbsolute(rel)) return false
+    return true
+  }
+
   private async addExcludeEntry(excludePath: string, entry: string, comment: string): Promise<void> {
     const infoDir = path.dirname(excludePath)
     if (!fs.existsSync(infoDir)) await fs.promises.mkdir(infoDir, { recursive: true })
@@ -326,6 +344,11 @@ export class WorktreeManager {
   }
 
   async currentBranch(): Promise<string> {
+    if (this.ops) {
+      const branch = await this.ops.currentBranch(this.root)
+      if (!branch) throw new Error("Failed to determine current branch")
+      return branch
+    }
     return (await this.git.revparse(["--abbrev-ref", "HEAD"])).trim()
   }
 
@@ -339,11 +362,20 @@ export class WorktreeManager {
   }
 
   async defaultBranch(): Promise<string> {
-    try {
-      const head = await this.git.raw(["symbolic-ref", "refs/remotes/origin/HEAD"])
-      const match = head.trim().match(/refs\/remotes\/origin\/(.+)$/)
-      if (match) return match[1]
-    } catch {}
+    if (this.ops) {
+      const remote = await this.ops.resolveRemote(this.root)
+      const resolved = await this.ops.resolveDefaultBranch(this.root)
+      if (resolved) {
+        const prefix = `${remote}/`
+        return resolved.startsWith(prefix) ? resolved.slice(prefix.length) : resolved
+      }
+    } else {
+      try {
+        const head = await this.git.raw(["symbolic-ref", "refs/remotes/origin/HEAD"])
+        const match = head.trim().match(/refs\/remotes\/origin\/(.+)$/)
+        if (match) return match[1]
+      } catch {}
+    }
 
     try {
       const branches = await this.git.branch()
@@ -390,8 +422,12 @@ export class WorktreeManager {
   async listExternalWorktrees(managedPaths: Set<string>): Promise<ExternalWorktreeItem[]> {
     try {
       const raw = await this.git.raw(["worktree", "list", "--porcelain"])
+      const normalizedRoot = normalizePath(this.root)
+      const normalizedManaged = new Set([...managedPaths].map(normalizePath))
       return parseWorktreeList(raw)
-        .filter((e) => !e.bare && e.path !== this.root && !managedPaths.has(e.path))
+        .filter(
+          (e) => !e.bare && normalizePath(e.path) !== normalizedRoot && !normalizedManaged.has(normalizePath(e.path)),
+        )
         .map((e) => ({ path: e.path, branch: e.branch }))
     } catch (error) {
       this.log(`Failed to list external worktrees: ${error}`)

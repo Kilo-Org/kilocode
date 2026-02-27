@@ -7,6 +7,7 @@ import { Installation } from "./installation"
 import { NamedError } from "@opencode-ai/util/error"
 import { FormatError } from "./cli/error"
 import type { ResolveMessage } from "bun" // kilocode_change
+import { WorkspaceServeCommand } from "./cli/cmd/workspace-serve"
 import { Filesystem } from "./util/filesystem"
 // import { GithubCommand } from "./cli/cmd/github" // kilocode_change
 import { EOL } from "os"
@@ -40,7 +41,7 @@ process.on("uncaughtException", (e) => {
   })
 })
 
-const cli = yargs(hideBin(process.argv))
+let cli = yargs(hideBin(process.argv))
   .parserConfiguration({ "populate--": true })
   .scriptName("kilo") // kilocode_change
   .wrap(100)
@@ -109,6 +110,10 @@ for (const command of commands) {
 }
 // kilocode_change end
 // .command(GithubCommand) // kilocode_change (Disabled until backend is ready)
+
+if (Installation.isLocal()) {
+  cli = cli.command(WorkspaceServeCommand as any)
+}
 
 cli
   .fail((msg, err) => {
