@@ -70,6 +70,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.settingsButtonClicked", () => {
       provider.postMessage({ type: "action", action: "settingsButtonClicked" })
     }),
+    vscode.commands.registerCommand("kilo-code.new.benchButtonClicked", () => {
+      provider.postMessage({ type: "action", action: "benchButtonClicked" })
+    }),
     vscode.commands.registerCommand("kilo-code.new.openInTab", () => {
       return openKiloInNewTab(context, connectionService)
     }),

@@ -22,10 +22,11 @@ import SessionList from "./components/history/SessionList"
 import CloudSessionList from "./components/history/CloudSessionList"
 import { NotificationsProvider } from "./context/notifications"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
+import { BenchView } from "./components/bench"
 import "./styles/chat.css"
 
-type ViewType = "newTask" | "marketplace" | "history" | "cloudHistory" | "profile" | "settings"
-const VALID_VIEWS = new Set<string>(["newTask", "marketplace", "history", "cloudHistory", "profile", "settings"])
+type ViewType = "newTask" | "marketplace" | "history" | "cloudHistory" | "profile" | "settings" | "bench"
+const VALID_VIEWS = new Set<string>(["newTask", "marketplace", "history", "cloudHistory", "profile", "settings", "bench"])
 
 const DummyView: Component<{ title: string }> = (props) => {
   return (
@@ -158,6 +159,9 @@ const AppContent: Component = () => {
       case "settingsButtonClicked":
         setCurrentView("settings")
         break
+      case "benchButtonClicked":
+        setCurrentView("bench")
+        break
     }
   }
 
@@ -220,6 +224,9 @@ const AppContent: Component = () => {
         </Match>
         <Match when={currentView() === "settings"}>
           <Settings onBack={() => setCurrentView("newTask")} />
+        </Match>
+        <Match when={currentView() === "bench"}>
+          <BenchView onDone={() => setCurrentView("newTask")} />
         </Match>
       </Switch>
     </div>
