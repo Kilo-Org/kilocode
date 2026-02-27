@@ -62,7 +62,7 @@ Or use npm:
 
 {% partial file="cli-commands-table.md" /%}
 
-For detailed help on every command and subcommand, see the [CLI Command Reference](/code-with-ai/platforms/cli-reference).
+For detailed help on every command and subcommand, see the [CLI Command Reference](/docs/code-with-ai/platforms/cli-reference).
 
 ### Global Options
 
