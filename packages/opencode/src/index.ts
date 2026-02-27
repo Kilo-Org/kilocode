@@ -21,6 +21,8 @@ import { McpCommand } from "./cli/cmd/mcp"
 // import { GithubCommand } from "./cli/cmd/github" // kilocode_change
 import { ExportCommand } from "./cli/cmd/export"
 import { ImportCommand } from "./cli/cmd/import"
+// kilocode_change - import VS Code session import command
+import { VSCodeCommand } from "./cli/cmd/import-vscode"
 import { AttachCommand } from "./cli/cmd/tui/attach"
 import { TuiThreadCommand } from "./cli/cmd/tui/thread"
 import { AcpCommand } from "./cli/cmd/acp"
@@ -178,6 +180,8 @@ let cli = yargs(hideBin(process.argv))
   .command(StatsCommand)
   .command(ExportCommand)
   .command(ImportCommand)
+  // kilocode_change - register VS Code session import command
+  .command(VSCodeCommand)
   // .command(GithubCommand) // kilocode_change (Disabled until backend is ready)
   .command(PrCommand)
   .command(SessionCommand)
