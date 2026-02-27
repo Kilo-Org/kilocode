@@ -67,7 +67,7 @@ export namespace LearnTracker {
     current.level = calibrate(current.checks)
     await Storage.write(["learn", input.sessionID], current)
     await appendAggregate({ sessionID: input.sessionID, check }).catch((err) => {
-      log.info("aggregate write skipped", { err })
+      log.warn("aggregate write skipped", { err })
     })
     Bus.publish(Event.Updated, { sessionID: input.sessionID, state: current })
     return current
