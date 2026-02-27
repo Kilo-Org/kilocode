@@ -1,7 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" width="512" height="512"><svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="512" height="512" fill="#131010"></rect>
-<path d="M320 224V352H192V224H320Z" fill="#5A5858"></path>
-<path fill-rule="evenodd" clip-rule="evenodd" d="M384 416H128V96H384V416ZM320 160H192V352H320V160Z" fill="white"></path>
-</svg><style>@media (prefers-color-scheme: light) { :root { filter: none; } }
-@media (prefers-color-scheme: dark) { :root { filter: none; } }
-</style></svg>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 32 32">
+  <rect width="32" height="32" fill="oklch(95% 0.15 108)"/>
+  <g fill="#000000">
+    <path d="M23,26v-2h3v-5l-2-2h-4v2h-3v5l2,2h4ZM20,20h3v3h-3v-3Z"/>
+    <rect x="12" y="17" width="3" height="3"/>
+    <polygon points="26 12 23 12 23 9 20 6 17 6 17 9 20 9 20 12 17 12 17 15 26 15 26 12"/>
+    <path d="M0,0v32h32V0H0ZM29,29H3V3h26v26Z"/>
+    <polygon points="15 26 15 23 9 23 9 17 6 17 6 23.1875 8.8125 26 15 26"/>
+    <rect x="12" y="6" width="3" height="3"/>
+    <polygon points="9 12 12 12 12 15 15 15 15 12 12 9 9 9 9 6 6 6 6 15 9 15 9 12"/>
+  </g>
+</svg>

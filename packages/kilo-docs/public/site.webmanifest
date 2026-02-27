@@ -3,16 +3,14 @@
   "short_name": "Kilo",
   "icons": [
     {
-      "src": "/docs/favicon/web-app-manifest-192x192.png",
+      "src": "/docs/favicon/android-chrome-192x192.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
+      "type": "image/png"
     },
     {
-      "src": "/docs/favicon/web-app-manifest-512x512.png",
+      "src": "/docs/favicon/android-chrome-512x512.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
+      "type": "image/png"
     }
   ],
   "theme_color": "#617A91",
