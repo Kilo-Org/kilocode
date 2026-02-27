@@ -14,11 +14,22 @@ import { useProvider, EnrichedModel } from "../../context/provider"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { ModelSelection } from "../../types/messages"
-import { KILO_GATEWAY_ID, providerSortKey, isFree, buildTriggerLabel } from "./model-selector-utils"
+import {
+  KILO_GATEWAY_ID,
+  providerSortKey,
+  isFree,
+  buildTriggerLabel,
+  WordBoundaryFzf,
+  buildMatchSegments,
+} from "./model-selector-utils"
 
 interface ModelGroup {
   providerName: string
-  models: EnrichedModel[]
+  models: FilteredModel[]
+}
+
+interface FilteredModel extends EnrichedModel {
+  matchingPositions?: Set<number>
 }
 
 // ---------------------------------------------------------------------------
@@ -59,15 +70,36 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   const hasProviders = () => visibleModels().length > 0
 
   // Flat filtered list for keyboard navigation
-  const filtered = createMemo(() => {
-    const q = search().toLowerCase()
-    if (!q) {
-      return visibleModels()
+  const filtered = createMemo<FilteredModel[]>(() => {
+    const query = search().trim()
+    if (!query) {
+      return visibleModels().map((model) => ({ ...model, matchingPositions: new Set<number>() }))
     }
-    return visibleModels().filter(
-      (m) =>
-        m.name.toLowerCase().includes(q) || m.providerName.toLowerCase().includes(q) || m.id.toLowerCase().includes(q),
+
+    const finder = new WordBoundaryFzf(visibleModels(), (model) => model.name)
+    const nameMatches = finder.find(query)
+    const nameMatchesByKey = new Map(
+      nameMatches.map(({ item, positions }) => [`${item.providerID}/${item.id}`, positions] as const),
     )
+    const normalized = query.toLowerCase()
+
+    return visibleModels().reduce<FilteredModel[]>((result, model) => {
+      const key = `${model.providerID}/${model.id}`
+      const positions = nameMatchesByKey.get(key)
+
+      if (positions) {
+        result.push({ ...model, matchingPositions: positions })
+        return result
+      }
+
+      const fallbackMatch =
+        model.providerName.toLowerCase().includes(normalized) || model.id.toLowerCase().includes(normalized)
+      if (fallbackMatch) {
+        result.push({ ...model, matchingPositions: new Set<number>() })
+      }
+
+      return result
+    }, [])
   })
 
   // Grouped for rendering
@@ -106,7 +138,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     }
   })
 
-  function pick(model: EnrichedModel) {
+  function pick(model: FilteredModel) {
     props.onSelect(model.providerID, model.id)
     setOpen(false)
   }
@@ -159,13 +191,13 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     })
   }
 
-  function isSelected(model: EnrichedModel): boolean {
+  function isSelected(model: FilteredModel): boolean {
     const sel = selectedModel()
     return sel !== undefined && sel.providerID === model.providerID && sel.id === model.id
   }
 
   // Track flat index across groups for active highlighting
-  function flatIndex(model: EnrichedModel): number {
+  function flatIndex(model: FilteredModel): number {
     return flatFiltered().indexOf(model) + clearOffset()
   }
 
@@ -249,7 +281,15 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                       onClick={() => pick(model)}
                       onMouseEnter={() => setActiveIndex(flatIndex(model))}
                     >
-                      <span class="model-selector-item-name">{model.name}</span>
+                      <span class="model-selector-item-name">
+                        <For each={buildMatchSegments(model.name, model.matchingPositions)}>
+                          {(segment) => (
+                            <span classList={{ "model-selector-item-name-highlight": segment.highlight }}>
+                              {segment.text}
+                            </span>
+                          )}
+                        </For>
+                      </span>
                       <Show when={isFree(model)}>
                         <span class="model-selector-tag">{language.t("model.tag.free")}</span>
                       </Show>

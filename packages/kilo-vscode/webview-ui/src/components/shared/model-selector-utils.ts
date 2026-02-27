@@ -5,6 +5,23 @@ export const KILO_GATEWAY_ID = "kilo"
 
 export const PROVIDER_ORDER = [KILO_GATEWAY_ID, "anthropic", "openai", "google"]
 
+const WORD_BOUNDARY_REGEX = /(?=[A-Z])|[[\]_.:\s/\\(){}-]+/
+
+interface WordToken {
+  word: string
+  index: number
+}
+
+export interface SearchResult<T> {
+  item: T
+  positions: Set<number>
+}
+
+export interface HighlightSegment {
+  text: string
+  highlight: boolean
+}
+
 export function providerSortKey(providerID: string, order = PROVIDER_ORDER): number {
   const idx = order.indexOf(providerID.toLowerCase())
   return idx >= 0 ? idx : order.length
@@ -12,6 +29,137 @@ export function providerSortKey(providerID: string, order = PROVIDER_ORDER): num
 
 export function isFree(model: Pick<EnrichedModel, "inputPrice">): boolean {
   return model.inputPrice === 0
+}
+
+export class WordBoundaryFzf<T> {
+  constructor(
+    private readonly items: T[],
+    private readonly selector: (item: T) => string,
+  ) {}
+
+  find(query: string): SearchResult<T>[] {
+    if (!query || query.trim() === "") {
+      return this.items.map((item) => ({ item, positions: new Set<number>() }))
+    }
+
+    const queryWords = query
+      .toLowerCase()
+      .trim()
+      .split(WORD_BOUNDARY_REGEX)
+      .filter((word) => word.length > 0)
+    if (queryWords.length === 0) {
+      return this.items.map((item) => ({ item, positions: new Set<number>() }))
+    }
+
+    const results: SearchResult<T>[] = []
+
+    for (const item of this.items) {
+      const text = this.selector(item)
+      const tokens = this.tokenize(text)
+
+      if (queryWords.length > 1) {
+        const allPositions = new Set<number>()
+        const allMatch = queryWords.every((word) => {
+          const positions = this.matchAcronym(tokens, word)
+          if (!positions) return false
+          positions.forEach((position) => allPositions.add(position))
+          return true
+        })
+
+        if (allMatch) {
+          results.push({ item, positions: allPositions })
+        }
+      } else {
+        const positions = this.matchAcronym(tokens, queryWords[0])
+        if (positions) {
+          results.push({ item, positions })
+        }
+      }
+    }
+
+    return results
+  }
+
+  private tokenize(text: string): WordToken[] {
+    const tokens: WordToken[] = []
+    let currentIndex = 0
+    const words = text.split(WORD_BOUNDARY_REGEX).filter((word) => word.length > 0)
+
+    for (const word of words) {
+      const index = text.indexOf(word, currentIndex)
+      if (index !== -1) {
+        tokens.push({ word, index })
+        currentIndex = index + word.length
+      }
+    }
+
+    return tokens
+  }
+
+  private matchAcronym(tokens: WordToken[], query: string): Set<number> | null {
+    const lowerWords = tokens.map((token) => token.word.toLowerCase())
+
+    const tryMatch = (wordIndex: number, queryIndex: number, currentPositions: Set<number>): Set<number> | null => {
+      if (queryIndex === query.length) {
+        return currentPositions
+      }
+      if (wordIndex >= lowerWords.length) {
+        return null
+      }
+
+      const word = lowerWords[wordIndex]
+      const token = tokens[wordIndex]
+      const nextPositions = new Set(currentPositions)
+      let matchedInWord = 0
+
+      while (
+        queryIndex + matchedInWord < query.length &&
+        matchedInWord < word.length &&
+        word[matchedInWord] === query[queryIndex + matchedInWord]
+      ) {
+        nextPositions.add(token.index + matchedInWord)
+        matchedInWord++
+      }
+
+      if (matchedInWord > 0) {
+        const continued = tryMatch(wordIndex + 1, queryIndex + matchedInWord, nextPositions)
+        if (continued) {
+          return continued
+        }
+      }
+
+      return tryMatch(wordIndex + 1, queryIndex, currentPositions)
+    }
+
+    return tryMatch(0, 0, new Set<number>())
+  }
+}
+
+export function buildMatchSegments(text: string, matchingPositions?: Set<number>): HighlightSegment[] {
+  if (!matchingPositions || matchingPositions.size === 0) {
+    return [{ text, highlight: false }]
+  }
+
+  const segments: HighlightSegment[] = []
+  let lastIndex = 0
+
+  for (let index = 0; index < text.length; index++) {
+    const isMatch = matchingPositions.has(index)
+    const wasMatch = index > 0 && matchingPositions.has(index - 1)
+
+    if (isMatch !== wasMatch) {
+      if (index > lastIndex) {
+        segments.push({ text: text.slice(lastIndex, index), highlight: wasMatch })
+      }
+      lastIndex = index
+    }
+  }
+
+  if (lastIndex < text.length) {
+    segments.push({ text: text.slice(lastIndex), highlight: matchingPositions.has(text.length - 1) })
+  }
+
+  return segments
 }
 
 export function buildTriggerLabel(

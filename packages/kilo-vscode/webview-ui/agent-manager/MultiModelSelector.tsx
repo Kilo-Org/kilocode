@@ -3,7 +3,12 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { useProvider } from "../src/context/provider"
 import type { EnrichedModel } from "../src/context/provider"
 import { useLanguage } from "../src/context/language"
-import { KILO_GATEWAY_ID, providerSortKey } from "../src/components/shared/model-selector-utils"
+import {
+  KILO_GATEWAY_ID,
+  providerSortKey,
+  WordBoundaryFzf,
+  buildMatchSegments,
+} from "../src/components/shared/model-selector-utils"
 import {
   type ModelAllocations,
   MAX_MULTI_VERSIONS,
@@ -19,7 +24,11 @@ export { MAX_MULTI_VERSIONS, totalAllocations, allocationsToArray } from "./mult
 
 interface ModelGroup {
   providerName: string
-  models: EnrichedModel[]
+  models: FilteredModel[]
+}
+
+interface FilteredModel extends EnrichedModel {
+  matchingPositions?: Set<number>
 }
 
 const COUNT_OPTIONS = Array.from({ length: MAX_MULTI_VERSIONS }, (_, i) => i + 1)
@@ -38,13 +47,36 @@ export const MultiModelSelector: Component<{
     return models().filter((m) => m.providerID === KILO_GATEWAY_ID || c.includes(m.providerID))
   })
 
-  const filtered = createMemo(() => {
-    const q = search().toLowerCase()
-    if (!q) return visibleModels()
-    return visibleModels().filter(
-      (m) =>
-        m.name.toLowerCase().includes(q) || m.providerName.toLowerCase().includes(q) || m.id.toLowerCase().includes(q),
+  const filtered = createMemo<FilteredModel[]>(() => {
+    const query = search().trim()
+    if (!query) {
+      return visibleModels().map((model) => ({ ...model, matchingPositions: new Set<number>() }))
+    }
+
+    const finder = new WordBoundaryFzf(visibleModels(), (model) => model.name)
+    const nameMatches = finder.find(query)
+    const nameMatchesByKey = new Map(
+      nameMatches.map(({ item, positions }) => [`${item.providerID}/${item.id}`, positions] as const),
     )
+    const normalized = query.toLowerCase()
+
+    return visibleModels().reduce<FilteredModel[]>((result, model) => {
+      const key = `${model.providerID}/${model.id}`
+      const positions = nameMatchesByKey.get(key)
+
+      if (positions) {
+        result.push({ ...model, matchingPositions: positions })
+        return result
+      }
+
+      const fallbackMatch =
+        model.providerName.toLowerCase().includes(normalized) || model.id.toLowerCase().includes(normalized)
+      if (fallbackMatch) {
+        result.push({ ...model, matchingPositions: new Set<number>() })
+      }
+
+      return result
+    }, [])
   })
 
   const groups = createMemo<ModelGroup[]>(() => {
@@ -106,7 +138,13 @@ export const MultiModelSelector: Component<{
                             props.onChange(toggleModel(props.allocations, model.providerID, model.id, model.name))
                           }
                         />
-                        <span class="am-mm-item-name">{model.name}</span>
+                        <span class="am-mm-item-name">
+                          <For each={buildMatchSegments(model.name, model.matchingPositions)}>
+                            {(segment) => (
+                              <span classList={{ "am-mm-item-name-highlight": segment.highlight }}>{segment.text}</span>
+                            )}
+                          </For>
+                        </span>
                       </label>
                       <Show when={checked()}>
                         <select

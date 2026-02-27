@@ -1705,6 +1705,11 @@ button.am-section-toggle:hover .am-section-label {
   white-space: nowrap;
 }
 
+.am-mm-item-name-highlight {
+  font-weight: 700;
+  color: var(--vscode-textLink-foreground, var(--text-link, var(--text-base)));
+}
+
 .am-mm-count-select {
   flex-shrink: 0;
   padding: 2px 4px;
