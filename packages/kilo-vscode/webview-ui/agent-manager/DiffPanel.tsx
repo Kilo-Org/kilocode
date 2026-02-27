@@ -27,6 +27,7 @@ import { buildReviewAnnotation, type AnnotationLabels, type AnnotationMeta } fro
 interface DiffPanelProps {
   diffs: WorktreeFileDiff[]
   loading: boolean
+  sessionKey?: string
   diffStyle?: "unified" | "split"
   onDiffStyleChange?: (style: "unified" | "split") => void
   comments: ReviewComment[]
@@ -111,13 +112,31 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     focusRoot()
   }
 
+  // Reset auto-open state when switching sessions so diffs expand for the new session
+  createEffect(
+    on(
+      () => props.sessionKey,
+      () => {
+        setOpenInit(false)
+      },
+      { defer: true },
+    ),
+  )
+
   // Auto-open files when diffs arrive
   createEffect(
     on(
       () => props.diffs,
       (diffs) => {
         const files = diffs.map((d) => d.file)
-        setOpen((prev) => prev.filter((file) => files.includes(file)))
+        const fileSet = new Set(files)
+        // Only update open state when the file list actually changed to avoid
+        // unnecessary re-renders that reset scroll position during polling
+        setOpen((prev) => {
+          const filtered = prev.filter((file) => fileSet.has(file))
+          if (filtered.length === prev.length && prev.every((f) => fileSet.has(f))) return prev
+          return filtered
+        })
         if (openInit()) return
         if (diffs.length === 0) return
         if (diffs.length <= 15) setOpen(files)
