@@ -2076,7 +2076,6 @@ const AgentManagerContent: Component = () => {
                   <DiffPanel
                     diffs={diffDatas()[selection() === LOCAL ? LOCAL : (session.currentSessionID() ?? "")] ?? []}
                     loading={diffLoading()}
-                    sessionKey={selection() === LOCAL ? LOCAL : (session.currentSessionID() ?? "")}
                     diffStyle={reviewDiffStyle()}
                     onDiffStyleChange={setSharedDiffStyle}
                     comments={reviewComments()}
@@ -2098,7 +2097,6 @@ const AgentManagerContent: Component = () => {
               <FullScreenDiffView
                 diffs={reviewDiffs()}
                 loading={diffLoading()}
-                sessionKey={selection() === LOCAL ? LOCAL : (session.currentSessionID() ?? "")}
                 comments={reviewComments()}
                 onCommentsChange={setReviewCommentsForSelection}
                 onSendAll={closeReviewTab}
