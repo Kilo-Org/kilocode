@@ -56,7 +56,7 @@ Several models are available at no cost, subject to rate limits:
 
 | Model ID                              | Description               |
 | ------------------------------------- | ------------------------- |
-| `minimax/minimax-m2.1:free`           | MiniMax M2.1              |
+| `minimax/minimax-m2.5:free`           | MiniMax M2.5              |
 | `giga-potato`                         | Community model           |
 | `corethink:free`                      | CoreThink reasoning model |
 | `arcee-ai/trinity-large-preview:free` | Arcee Trinity             |
@@ -102,7 +102,7 @@ The pool is managed server-side and changes over time as provider promotions com
 
 | Model ID                              | Name                           |
 | ------------------------------------- | ------------------------------ |
-| `minimax/minimax-m2.1:free`           | MiniMax M2.1                   |
+| `minimax/minimax-m2.5:free`           | MiniMax M2.5                   |
 | `giga-potato`                         | Giga Potato                    |
 | `corethink:free`                      | CoreThink                      |
 | `arcee-ai/trinity-large-preview:free` | Arcee AI Trinity Large Preview |

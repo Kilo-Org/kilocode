@@ -31,7 +31,7 @@ The exact model you get is determined server-side. The pool currently includes:
 
 | Model ID                              | Name                           |
 | ------------------------------------- | ------------------------------ |
-| `minimax/minimax-m2.1:free`           | MiniMax M2.1                   |
+| `minimax/minimax-m2.5:free`           | MiniMax M2.5                   |
 | `giga-potato`                         | Giga Potato                    |
 | `corethink:free`                      | CoreThink                      |
 | `arcee-ai/trinity-large-preview:free` | Arcee AI Trinity Large Preview |
