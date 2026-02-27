@@ -200,7 +200,7 @@ export class BenchService {
 				}
 
 				try {
-					const modelResponses = await runModelBenchmark(
+					await runModelBenchmark(
 						modelProblems,
 						modelId,
 						execHandler,
@@ -215,13 +215,14 @@ export class BenchService {
 								totalModels: models.length,
 								message: update.message,
 							})
-
-							// Save checkpoint after each response
-							void this.saveCheckpointQuietly(runId, models, problems, config, rawResponses, evaluations, "running")
 						},
 						this.abortController!.signal,
+						(result) => {
+							rawResponses.push(result)
+							completedKeys.add(`${result.modelId}::${result.problemId}`)
+							return this.saveCheckpointQuietly(runId, models, problems, config, rawResponses, evaluations, "running")
+						},
 					)
-					rawResponses.push(...modelResponses)
 				} catch (error) {
 					if (error instanceof BenchCreditError || (this.abortController && !this.abortController.signal.aborted)) {
 						await this.saveCheckpointQuietly(

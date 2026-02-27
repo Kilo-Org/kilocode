@@ -9,6 +9,8 @@ export type RunnerProgressCallback = (update: {
 	message: string
 }) => void
 
+export type RunnerResultCallback = (result: BenchRawResponse) => void | Promise<void>
+
 /** System prompts for text-only mode (no tool access) */
 const TEXT_SYSTEM_PROMPTS: Record<string, string> = {
 	architect:
@@ -42,6 +44,7 @@ export async function runModelBenchmark(
 	isolator: WorkspaceIsolator | null,
 	onProgress: RunnerProgressCallback,
 	abortSignal?: AbortSignal,
+	onResult?: RunnerResultCallback,
 ): Promise<BenchRawResponse[]> {
 	const results: BenchRawResponse[] = []
 	const prompts = isolator ? EXEC_SYSTEM_PROMPTS : TEXT_SYSTEM_PROMPTS
@@ -77,6 +80,7 @@ export async function runModelBenchmark(
 		}
 
 		results.push(result)
+		await onResult?.(result)
 	}
 
 	return results
