@@ -27,6 +27,45 @@ describe("GitOps", () => {
     })
   })
 
+  describe("resolveRemote", () => {
+    it("uses upstream remote when upstream is configured", async () => {
+      const git = ops(async (args) => {
+        if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "upstream/main"
+        return ""
+      })
+      expect(await git.resolveRemote("/repo", "feature")).toBe("upstream")
+    })
+
+    it("uses branch config remote when no upstream", async () => {
+      const git = ops(async (args) => {
+        if (args[0] === "rev-parse" && args[3] === "@{upstream}") throw new Error("no upstream")
+        if (args[0] === "config" && args[1] === "branch.feature.remote") return "myfork"
+        return ""
+      })
+      expect(await git.resolveRemote("/repo", "feature")).toBe("myfork")
+    })
+
+    it("resolves branch from HEAD when no branch arg provided", async () => {
+      const git = ops(async (args) => {
+        if (args[0] === "rev-parse" && args[3] === "@{upstream}") throw new Error("no upstream")
+        if (args[0] === "branch") return "feature"
+        if (args[0] === "config" && args[1] === "branch.feature.remote") return "myfork"
+        return ""
+      })
+      expect(await git.resolveRemote("/repo")).toBe("myfork")
+    })
+
+    it("falls back to origin when nothing is configured", async () => {
+      const git = ops(async (args) => {
+        if (args[0] === "rev-parse") throw new Error("no upstream")
+        if (args[0] === "branch") return "feature"
+        if (args[0] === "config") throw new Error("no config")
+        return ""
+      })
+      expect(await git.resolveRemote("/repo", "feature")).toBe("origin")
+    })
+  })
+
   describe("resolveTrackingBranch", () => {
     it("returns configured upstream", async () => {
       const git = ops(async (args) => {
@@ -36,9 +75,28 @@ describe("GitOps", () => {
       expect(await git.resolveTrackingBranch("/repo", "feature")).toBe("origin/feature")
     })
 
-    it("falls back to origin/<branch> when no upstream", async () => {
+    it("falls back to <remote>/<branch> when no upstream", async () => {
       const git = ops(async (args) => {
-        if (args[0] === "rev-parse" && args[2] === "@{upstream}") throw new Error("no upstream")
+        // resolveTrackingBranch: no upstream
+        if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "@{upstream}")
+          throw new Error("no upstream")
+        // resolveRemote: no upstream, config says "myfork"
+        if (args[0] === "rev-parse" && args[3] === "@{upstream}") throw new Error("no upstream")
+        if (args[0] === "config" && args[1] === "branch.feature.remote") return "myfork"
+        // verify myfork/feature exists
+        if (args[0] === "rev-parse" && args[1] === "--verify" && args[2] === "myfork/feature") return "abc123"
+        return ""
+      })
+      expect(await git.resolveTrackingBranch("/repo", "feature")).toBe("myfork/feature")
+    })
+
+    it("falls back to origin/<branch> when no branch config", async () => {
+      const git = ops(async (args) => {
+        if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "@{upstream}")
+          throw new Error("no upstream")
+        if (args[0] === "rev-parse" && args[3] === "@{upstream}") throw new Error("no upstream")
+        if (args[0] === "config") throw new Error("no config")
+        if (args[0] === "branch") return "feature"
         if (args[0] === "rev-parse" && args[1] === "--verify" && args[2] === "origin/feature") return "abc123"
         return ""
       })
@@ -48,6 +106,8 @@ describe("GitOps", () => {
     it("returns undefined when no upstream and no remote ref", async () => {
       const git = ops(async (args) => {
         if (args[0] === "rev-parse") throw new Error("no ref")
+        if (args[0] === "config") throw new Error("no config")
+        if (args[0] === "branch") return ""
         return ""
       })
       expect(await git.resolveTrackingBranch("/repo", "feature")).toBeUndefined()
@@ -55,17 +115,35 @@ describe("GitOps", () => {
   })
 
   describe("resolveDefaultBranch", () => {
-    it("returns origin/HEAD symbolic ref", async () => {
+    it("returns <remote>/HEAD symbolic ref", async () => {
       const git = ops(async (args) => {
-        if (args[0] === "symbolic-ref") return "origin/develop"
+        // resolveRemote: upstream is configured
+        if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "upstream/main"
+        // symbolic-ref for upstream/HEAD
+        if (args[0] === "symbolic-ref" && args[2] === "refs/remotes/upstream/HEAD") return "upstream/develop"
         return ""
       })
-      expect(await git.resolveDefaultBranch("/repo")).toBe("origin/develop")
+      expect(await git.resolveDefaultBranch("/repo", "feature")).toBe("upstream/develop")
     })
 
-    it("returns undefined when origin/HEAD is not set", async () => {
-      const git = ops(async () => {
-        throw new Error("no symbolic ref")
+    it("falls back to origin/HEAD when remote is origin", async () => {
+      const git = ops(async (args) => {
+        if (args[0] === "rev-parse" && args[3] === "@{upstream}") throw new Error("no upstream")
+        if (args[0] === "config") throw new Error("no config")
+        if (args[0] === "branch") return "feature"
+        if (args[0] === "symbolic-ref" && args[2] === "refs/remotes/origin/HEAD") return "origin/main"
+        return ""
+      })
+      expect(await git.resolveDefaultBranch("/repo", "feature")).toBe("origin/main")
+    })
+
+    it("returns undefined when <remote>/HEAD is not set", async () => {
+      const git = ops(async (args) => {
+        if (args[0] === "rev-parse") throw new Error("no upstream")
+        if (args[0] === "config") throw new Error("no config")
+        if (args[0] === "branch") return ""
+        if (args[0] === "symbolic-ref") throw new Error("no symbolic ref")
+        return ""
       })
       expect(await git.resolveDefaultBranch("/repo")).toBeUndefined()
     })
@@ -146,6 +224,7 @@ describe("GitOps", () => {
   describe("countMissingOriginCommits", () => {
     it("counts commits ahead of upstream", async () => {
       const git = ops(async (args) => {
+        if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "@{upstream}") return "origin/main"
         if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "origin/main"
         if (args[0] === "branch") return "feature"
         if (args[0] === "config") return "origin"
@@ -157,30 +236,39 @@ describe("GitOps", () => {
       expect(await git.countMissingOriginCommits("/repo", "main")).toBe(3)
     })
 
-    it("falls back to remote/branch when no upstream", async () => {
+    it("uses resolved remote for non-origin setups", async () => {
       const commands: string[][] = []
       const git = ops(async (args) => {
         commands.push(args)
+        // no upstream configured
+        if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "@{upstream}")
+          throw new Error("no upstream")
         if (args[0] === "rev-parse" && args[3] === "@{upstream}") throw new Error("no upstream")
         if (args[0] === "branch") return "feature"
-        if (args[0] === "config") return "origin"
+        // branch.feature.remote = myfork
+        if (args[0] === "config" && args[1] === "branch.feature.remote") return "myfork"
         if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
+        // myfork/feature exists
         if (
           args[0] === "rev-parse" &&
           args[1] === "--verify" &&
           args[2] === "--quiet" &&
-          args[3] === "refs/remotes/origin/feature"
+          args[3] === "refs/remotes/myfork/feature"
         )
           return "abc"
         if (args[0] === "fetch") return ""
-        if (args[0] === "rev-list") return "7"
+        if (args[0] === "rev-list") return "4"
         return ""
       })
-      expect(await git.countMissingOriginCommits("/repo", "main")).toBe(7)
+      expect(await git.countMissingOriginCommits("/repo", "main")).toBe(4)
+      const fetches = commands.filter((c) => c[0] === "fetch")
+      expect(fetches[0][3]).toBe("myfork")
     })
 
     it("falls back to remote/parentBranch when no upstream and no remote branch", async () => {
       const git = ops(async (args) => {
+        if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "@{upstream}")
+          throw new Error("no upstream")
         if (args[0] === "rev-parse" && args[3] === "@{upstream}") throw new Error("no upstream")
         if (args[0] === "branch") return "feature"
         if (args[0] === "config") return "origin"
@@ -208,6 +296,7 @@ describe("GitOps", () => {
 
     it("returns zero when rev-list fails", async () => {
       const git = ops(async (args) => {
+        if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "@{upstream}") return "origin/main"
         if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "origin/main"
         if (args[0] === "branch") return "feature"
         if (args[0] === "config") return "origin"

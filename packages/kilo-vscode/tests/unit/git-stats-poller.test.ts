@@ -159,7 +159,7 @@ describe("GitStatsPoller", () => {
     expect(emitted.length).toBe(1)
   })
 
-  it("falls back to origin/HEAD when no upstream and no origin/<branch>", async () => {
+  it("falls back to <remote>/HEAD when no upstream and no <remote>/<branch>", async () => {
     const emitted: Array<{ branch: string; additions: number; deletions: number; commits: number }> = []
 
     const client = {
@@ -176,16 +176,21 @@ describe("GitStatsPoller", () => {
       intervalMs: 500,
       git: gitOps(async (args) => {
         if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "HEAD") return "my-feature"
+        // no upstream configured (used by resolveTrackingBranch and resolveRemote)
         if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "@{upstream}")
           throw new Error("no upstream")
-        if (args[0] === "rev-parse" && args[1] === "--verify" && args[2] === "origin/my-feature")
+        if (args[0] === "rev-parse" && args[3] === "@{upstream}") throw new Error("no upstream")
+        // branch.my-feature.remote = myfork
+        if (args[0] === "config" && args[1] === "branch.my-feature.remote") return "myfork"
+        // myfork/my-feature does not exist
+        if (args[0] === "rev-parse" && args[1] === "--verify" && args[2] === "myfork/my-feature")
           throw new Error("no ref")
-        if (args[0] === "symbolic-ref") return "origin/develop"
+        // myfork/HEAD resolves to the default branch
+        if (args[0] === "symbolic-ref" && args[2] === "refs/remotes/myfork/HEAD") return "myfork/develop"
+        if (args[0] === "branch") return "my-feature"
         if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
         if (args[0] === "fetch") return ""
         if (args[0] === "rev-list") return "5"
-        if (args[0] === "branch") return "my-feature"
-        if (args[0] === "config") return "origin"
         return ""
       }),
     })

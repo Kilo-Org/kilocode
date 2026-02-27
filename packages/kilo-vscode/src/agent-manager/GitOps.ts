@@ -34,20 +34,43 @@ export class GitOps {
     return this.raw(["rev-parse", "--abbrev-ref", "HEAD"], cwd).catch(() => "")
   }
 
+  /**
+   * Resolve the remote name for a branch. Checks (in order):
+   * 1. The configured upstream's remote (e.g. upstream from `upstream/main`)
+   * 2. `branch.<name>.remote` config
+   * 3. Falls back to `origin`
+   */
+  async resolveRemote(cwd: string, branch?: string): Promise<string> {
+    const upstream = await this.raw(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"], cwd).catch(
+      () => "",
+    )
+    if (upstream.includes("/")) return upstream.split("/")[0]
+
+    const name = branch || (await this.raw(["branch", "--show-current"], cwd).catch(() => ""))
+    if (name) {
+      const configured = await this.raw(["config", `branch.${name}.remote`], cwd).catch(() => "")
+      if (configured) return configured
+    }
+
+    return "origin"
+  }
+
   async resolveTrackingBranch(cwd: string, branch: string): Promise<string | undefined> {
     const upstream = await this.raw(["rev-parse", "--abbrev-ref", "@{upstream}"], cwd).catch(() => "")
     if (upstream) return upstream
 
-    const ref = `origin/${branch}`
+    const remote = await this.resolveRemote(cwd, branch)
+    const ref = `${remote}/${branch}`
     const resolved = await this.raw(["rev-parse", "--verify", ref], cwd).catch(() => "")
     if (resolved) return ref
 
     return undefined
   }
 
-  /** Resolve the repo's default branch via origin/HEAD. */
-  async resolveDefaultBranch(cwd: string): Promise<string | undefined> {
-    const head = await this.raw(["symbolic-ref", "--short", "refs/remotes/origin/HEAD"], cwd).catch(() => "")
+  /** Resolve the repo's default branch via <remote>/HEAD. */
+  async resolveDefaultBranch(cwd: string, branch?: string): Promise<string | undefined> {
+    const remote = await this.resolveRemote(cwd, branch)
+    const head = await this.raw(["symbolic-ref", "--short", `refs/remotes/${remote}/HEAD`], cwd).catch(() => "")
     return head || undefined
   }
 
@@ -85,14 +108,9 @@ export class GitOps {
   }
 
   async countMissingOriginCommits(cwd: string, parentBranch: string): Promise<number> {
-    const upstream = await this.raw(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"], cwd).catch(
-      () => "",
-    )
-
+    const upstream = await this.raw(["rev-parse", "--abbrev-ref", "@{upstream}"], cwd).catch(() => "")
     const branch = await this.raw(["branch", "--show-current"], cwd).catch(() => "")
-    const branchRemote = branch ? await this.raw(["config", `branch.${branch}.remote`], cwd).catch(() => "") : ""
-    const upstreamRemote = upstream.includes("/") ? upstream.split("/")[0] : ""
-    const remote = upstreamRemote || branchRemote || "origin"
+    const remote = await this.resolveRemote(cwd, branch)
     await this.refreshRemote(cwd, remote)
 
     if (upstream) {

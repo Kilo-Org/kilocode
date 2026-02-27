@@ -176,7 +176,7 @@ export class GitStatsPoller {
       // When no tracking branch exists (e.g. new local branch with no upstream
       // and no origin/<branch> ref), compute diff+commit stats against the
       // repo's default branch so the UI still shows meaningful numbers.
-      const base = tracking ?? (await this.git.resolveDefaultBranch(root))
+      const base = tracking ?? (await this.git.resolveDefaultBranch(root, branch))
 
       let additions: number
       let deletions: number
