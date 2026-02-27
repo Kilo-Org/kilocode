@@ -7,6 +7,7 @@ import { Component, createSignal, createEffect, on, For, Index, onCleanup, Show,
 import { Button } from "@kilocode/kilo-ui/button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
+import { showToast } from "@kilocode/kilo-ui/toast"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
@@ -259,6 +260,14 @@ export const PromptInput: Component = () => {
       // kilocode_change start
       const known = commands().some((cmd) => cmd.name === command)
       if (command && known) {
+        if (imgs.length > 0) {
+          showToast({
+            variant: "error",
+            title: "Remove image attachments before running a slash command",
+            description: "Slash commands do not support image attachments yet.",
+          })
+          return
+        }
         const sel = session.selected()
         session.sendCommand(command, args, sel?.providerID, sel?.modelID)
         requestCounter++
