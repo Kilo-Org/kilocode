@@ -1090,6 +1090,10 @@ export const dict = {
   "agentManager.review.commentPlaceholder": "Leave a comment...",
   "agentManager.review.commentAction": "Comment",
   "agentManager.review.sendToChat": "Send to chat",
+  "agentManager.review.collapsedOnly": "{{count}} collapsed",
+  "agentManager.review.collapsedWithLarge": "{{collapsed}} collapsed, {{large}} large",
+  "agentManager.review.largeFileCollapsed": "Large file (collapsed)",
+  "agentManager.review.endOfLongDiff": "You made it to the end!",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Paste PR URL...",

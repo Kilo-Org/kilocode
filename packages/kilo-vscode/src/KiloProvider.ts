@@ -1749,7 +1749,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /**
    * Handle SSE events from the CLI backend.
-   * Filters events by tracked session IDs so each webview only sees its own sessions.
+   * Filters events by project ID and tracked session IDs so each webview only sees its own sessions.
    */
   private handleEvent(event: Event): void {
     // Drop session events from other projects before any tracking logic.

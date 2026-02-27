@@ -10,11 +10,11 @@
   h4,
   h5,
   h6 {
-    margin-top: 1rem;
+    margin-top: 0;
   }
 
   hr {
-    margin: 1rem 0;
+    margin: 0;
   }
 
   pre {
@@ -43,5 +43,10 @@
         background: var(--border-strong-base);
       }
     }
+  }
+
+  [data-component="markdown-code"] {
+    background: var(--background-stronger);
+    margin-bottom: 1rem;
   }
 }
