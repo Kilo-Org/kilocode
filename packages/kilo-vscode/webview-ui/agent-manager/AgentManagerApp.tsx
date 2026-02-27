@@ -1040,6 +1040,14 @@ const AgentManagerContent: Component = () => {
     setReviewActive(true)
   }
 
+  const toggleReviewTab = () => {
+    if (reviewActive()) {
+      closeReviewTab()
+      return
+    }
+    openReviewTab()
+  }
+
   // Deferred close: flip signal immediately for instant UI feedback,
   // the <Show> unmount triggers heavy FileDiff cleanup but the tab bar
   // and chat view are already visible before that work runs.
@@ -1940,7 +1948,7 @@ const AgentManagerContent: Component = () => {
                       variant="ghost"
                       label={t("command.review.toggle")}
                       class={reviewActive() ? "am-tab-diff-btn-active" : ""}
-                      onClick={openReviewTab}
+                      onClick={toggleReviewTab}
                     />
                   </Tooltip>
                 </Show>
