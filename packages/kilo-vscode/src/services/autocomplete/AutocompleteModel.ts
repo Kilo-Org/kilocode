@@ -131,11 +131,17 @@ export class AutocompleteModel {
         const json = line.slice(6).trim()
         if (!json || json === "[DONE]") continue
         try {
-          const chunk: { content?: string; inputTokens?: number; outputTokens?: number; cost?: number } =
-            JSON.parse(json)
-          if (chunk.content) onChunk(chunk.content)
-          if (chunk.inputTokens !== undefined) inputTokens = chunk.inputTokens
-          if (chunk.outputTokens !== undefined) outputTokens = chunk.outputTokens
+          const chunk = JSON.parse(json) as {
+            choices?: Array<{ delta?: { content?: string } }>
+            usage?: { prompt_tokens?: number; completion_tokens?: number }
+            cost?: number
+          }
+          const content = chunk.choices?.[0]?.delta?.content
+          if (content) onChunk(content)
+          if (chunk.usage) {
+            inputTokens = chunk.usage.prompt_tokens ?? 0
+            outputTokens = chunk.usage.completion_tokens ?? 0
+          }
           if (chunk.cost !== undefined) cost = chunk.cost
         } catch (e) {
           console.warn("[AutocompleteModel] Malformed JSON in FIM SSE chunk:", json, e)
