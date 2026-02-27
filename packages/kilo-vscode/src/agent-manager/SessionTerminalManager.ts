@@ -7,8 +7,13 @@ import type { WorktreeStateManager } from "./WorktreeStateManager"
  * or the main workspace folder for local sessions.
  */
 export class SessionTerminalManager {
+  private static readonly LOCAL_KEY = "__local__"
+
   private terminals = new Map<string, { terminal: vscode.Terminal; cwd: string }>()
   private disposables: vscode.Disposable[] = []
+  private commandHandlers = new Map<string, (...args: unknown[]) => Promise<unknown>>()
+  private commandDisposables = new Map<string, vscode.Disposable>()
+  private panelOpen = false
 
   constructor(private log: (msg: string) => void) {
     this.disposables.push(
@@ -23,9 +28,27 @@ export class SessionTerminalManager {
       }),
       vscode.window.onDidChangeActiveTerminal((terminal) => {
         const managed = terminal ? this.isManaged(terminal) : false
-        vscode.commands.executeCommand("setContext", "kilo-code.agentTerminalFocus", managed)
+        if (terminal) this.panelOpen = true
+        void vscode.commands.executeCommand("setContext", "kilo-code.agentTerminalFocus", managed)
       }),
     )
+
+    this.registerPanelCommand("workbench.action.togglePanel", () => {
+      this.panelOpen = !this.panelOpen
+      this.log(`panel visibility toggled via command (open=${this.panelOpen})`)
+    })
+    this.registerPanelCommand("workbench.action.closePanel", () => {
+      this.panelOpen = false
+      this.log("panel hidden via command")
+    })
+    this.registerPanelCommand("workbench.action.focusPanel", () => {
+      this.panelOpen = true
+      this.log("panel focused via command")
+    })
+    this.registerPanelCommand("workbench.action.terminal.focus", () => {
+      this.panelOpen = true
+      this.log("terminal focused via command")
+    })
   }
 
   /**
@@ -57,8 +80,6 @@ export class SessionTerminalManager {
    * Show (or create) a terminal for the local workspace (no session required).
    * Used when the user triggers a terminal in local mode without an active session.
    */
-  private static readonly LOCAL_KEY = "__local__"
-
   showLocalTerminal(): void {
     if (this.showExisting(SessionTerminalManager.LOCAL_KEY, false)) return
 
@@ -80,6 +101,30 @@ export class SessionTerminalManager {
   }
 
   /**
+   * Sync terminal on session switch: only switch terminals when panel is open.
+   */
+  syncOnSessionSwitch(sessionId: string): boolean {
+    if (!this.panelOpen) {
+      this.log(`syncOnSessionSwitch: panel hidden, skipping session ${sessionId}`)
+      return false
+    }
+
+    return this.showExisting(sessionId)
+  }
+
+  /**
+   * Sync local terminal on context switch: only switch when panel is open.
+   */
+  syncLocalOnSessionSwitch(): boolean {
+    if (!this.panelOpen) {
+      this.log("syncLocalOnSessionSwitch: panel hidden, skipping")
+      return false
+    }
+
+    return this.showExistingLocal()
+  }
+
+  /**
    * Show the terminal for a session if it already exists (used when switching sessions).
    * Returns true if the terminal was shown, false if no terminal exists for the session.
    * Pass preserveFocus=true to keep focus on the current editor (default for session switching).
@@ -95,6 +140,7 @@ export class SessionTerminalManager {
     }
 
     entry.terminal.show(preserveFocus)
+    this.panelOpen = true
     this.log(`showExisting: revealed terminal for session ${sessionId}`)
     return true
   }
@@ -108,10 +154,41 @@ export class SessionTerminalManager {
   }
 
   dispose(): void {
-    vscode.commands.executeCommand("setContext", "kilo-code.agentTerminalFocus", false)
+    void vscode.commands.executeCommand("setContext", "kilo-code.agentTerminalFocus", false)
     for (const entry of this.terminals.values()) entry.terminal.dispose()
     this.terminals.clear()
+    for (const d of this.commandDisposables.values()) d.dispose()
+    this.commandDisposables.clear()
+    this.commandHandlers.clear()
     for (const d of this.disposables) d.dispose()
+  }
+
+  private registerPanelCommand(id: string, onAfterRun: () => void): void {
+    const handler = async (...args: unknown[]) => {
+      const result = await this.runOriginalCommand(id, args)
+      onAfterRun()
+      return result
+    }
+
+    this.commandHandlers.set(id, handler)
+    this.commandDisposables.set(id, vscode.commands.registerCommand(id, handler))
+  }
+
+  private async runOriginalCommand(id: string, args: unknown[]): Promise<unknown> {
+    const disposable = this.commandDisposables.get(id)
+    if (!disposable) return vscode.commands.executeCommand(id, ...args)
+
+    disposable.dispose()
+    this.commandDisposables.delete(id)
+
+    try {
+      return await vscode.commands.executeCommand(id, ...args)
+    } finally {
+      const handler = this.commandHandlers.get(id)
+      if (!handler) return
+      const replacement = vscode.commands.registerCommand(id, handler)
+      this.commandDisposables.set(id, replacement)
+    }
   }
 
   private isManaged(terminal: vscode.Terminal): boolean {
@@ -124,7 +201,8 @@ export class SessionTerminalManager {
   private updateContextKey(): void {
     const active = vscode.window.activeTerminal
     const managed = active ? this.isManaged(active) : false
-    vscode.commands.executeCommand("setContext", "kilo-code.agentTerminalFocus", managed)
+    if (active) this.panelOpen = true
+    void vscode.commands.executeCommand("setContext", "kilo-code.agentTerminalFocus", managed)
   }
 
   private showOrCreate(sessionId: string, cwd: string, name: string): void {
@@ -156,6 +234,7 @@ export class SessionTerminalManager {
     }
 
     entry.terminal.show(false)
+    this.panelOpen = true
     this.updateContextKey()
   }
 }
