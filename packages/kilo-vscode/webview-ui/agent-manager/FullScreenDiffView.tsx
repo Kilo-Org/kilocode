@@ -10,7 +10,7 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { ResizeHandle } from "@kilocode/kilo-ui/resize-handle"
-import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
+import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type { DiffLineAnnotation, AnnotationSide } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
 import { useLanguage } from "../src/context/language"
@@ -23,6 +23,8 @@ import {
   type ReviewComment,
 } from "./review-comments"
 import { buildReviewAnnotation, type AnnotationLabels, type AnnotationMeta } from "./review-annotations"
+import { LONG_DIFF_MARKER_FILE_COUNT, initialOpenFiles, isLargeDiffFile } from "./diff-open-policy"
+import { DiffEndMarker } from "./DiffEndMarker"
 
 type DiffStyle = "unified" | "split"
 
@@ -35,6 +37,7 @@ interface FullScreenDiffViewProps {
   onSendAll?: () => void
   diffStyle: DiffStyle
   onDiffStyleChange: (style: DiffStyle) => void
+  onOpenFile?: (relativePath: string) => void
   onClose: () => void
 }
 
@@ -55,13 +58,16 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     delete: t("common.delete"),
   })
   const [open, setOpen] = createSignal<string[]>([])
-  const [openInit, setOpenInit] = createSignal(false)
   const [draft, setDraft] = createSignal<{ file: string; side: AnnotationSide; line: number } | null>(null)
   const [editing, setEditing] = createSignal<string | null>(null)
   const [activeFile, setActiveFile] = createSignal<string | null>(null)
   const [treeWidth, setTreeWidth] = createSignal(240)
   let nextId = 0
   let draftMeta: AnnotationMeta | null = null
+  // Tracks the session key for which auto-open has already run. When the
+  // key changes (different worktree) we re-expand. Within the same key,
+  // only pruning happens so the user's manual collapse state is preserved.
+  let initializedKey: string | undefined
   let rootRef: HTMLDivElement | undefined
   let scrollRef: HTMLDivElement | undefined
   let syncFrame: number | undefined
@@ -105,43 +111,43 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     focusRoot()
   }
 
-  // Reset auto-open state when switching sessions so diffs expand for the new session
+  // Unified auto-open effect: tracks both sessionKey and diffs in a single effect
+  // to eliminate the race condition between the old separate sessionKey-reset and
+  // diffs-watch effects. Uses the session key to decide when auto-expand is needed
+  // vs when we just prune stale entries from the open list.
   createEffect(
     on(
-      () => props.sessionKey,
-      () => {
-        setOpenInit(false)
-      },
-      { defer: true },
-    ),
-  )
+      () => [props.sessionKey, props.diffs] as const,
+      ([key, diffs]) => {
+        if (diffs.length === 0) {
+          // No diffs yet — clear active file only for a new key; keep current
+          // selection for transient empty updates in the same key.
+          if (key !== initializedKey) setActiveFile(null)
+          return
+        }
 
-  // Auto-open files when diffs arrive
-  createEffect(
-    on(
-      () => props.diffs,
-      (diffs) => {
-        const files = diffs.map((d) => d.file)
-        const fileSet = new Set(files)
-        // Only update open state when the file list actually changed to avoid
-        // unnecessary re-renders that reset scroll position during polling
+        const fileSet = new Set(diffs.map((diff) => diff.file))
+
+        // Keep active file in sync — pick first if current is stale
+        const current = activeFile()
+        if (!current || !diffs.some((d) => d.file === current)) {
+          setActiveFile(diffs[0]!.file)
+        }
+
+        // New context: initialize open state from the diff policy.
+        if (key !== initializedKey) {
+          initializedKey = key
+          setOpen(initialOpenFiles(diffs))
+          return
+        }
+
+        // Already initialized for this key — preserve manual expand/collapse,
+        // only prune files that no longer exist (e.g. deleted during session)
         setOpen((prev) => {
           const filtered = prev.filter((file) => fileSet.has(file))
           if (filtered.length === prev.length && prev.every((f) => fileSet.has(f))) return prev
           return filtered
         })
-        if (diffs.length === 0) {
-          setActiveFile(null)
-          return
-        }
-        if (!openInit()) {
-          if (diffs.length <= 15) setOpen(files)
-          setOpenInit(true)
-        }
-        const current = activeFile()
-        if (!current || !diffs.some((d) => d.file === current)) {
-          setActiveFile(diffs[0]!.file)
-        }
       },
     ),
   )
@@ -363,6 +369,8 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     files: props.diffs.length,
     additions: props.diffs.reduce((s, d) => s + d.additions, 0),
     deletions: props.diffs.reduce((s, d) => s + d.deletions, 0),
+    large: props.diffs.filter((diff) => isLargeDiffFile(diff)).length,
+    collapsed: Math.max(props.diffs.length - open().length, 0),
   }))
 
   return (
@@ -392,6 +400,16 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
             <span>{t("session.review.filesChanged", { count: totals().files })}</span>
             <span class="am-review-toolbar-adds">+{totals().additions}</span>
             <span class="am-review-toolbar-dels">-{totals().deletions}</span>
+            <Show when={totals().collapsed > 0}>
+              <span class="am-review-toolbar-collapsed">
+                {totals().large > 0
+                  ? t("agentManager.review.collapsedWithLarge", {
+                      collapsed: totals().collapsed,
+                      large: totals().large,
+                    })
+                  : t("agentManager.review.collapsedOnly", { count: totals().collapsed })}
+              </span>
+            </Show>
           </span>
         </div>
         <div class="am-review-toolbar-right">
@@ -418,7 +436,12 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
       <div class="am-review-body">
         <div class="am-review-tree-resize" style={{ width: `${treeWidth()}px` }}>
           <div class="am-review-tree-wrapper">
-            <FileTree diffs={props.diffs} activeFile={activeFile()} onFileSelect={handleFileSelect} />
+            <FileTree
+              diffs={props.diffs}
+              activeFile={activeFile()}
+              onFileSelect={handleFileSelect}
+              comments={comments()}
+            />
           </div>
           <ResizeHandle
             direction="horizontal"
@@ -450,6 +473,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                   {(diff) => {
                     const isAdded = () => diff.status === "added"
                     const isDeleted = () => diff.status === "deleted"
+                    const isLargeCollapsed = () => isLargeDiffFile(diff) && !open().includes(diff.file)
                     const fileCommentCount = () => (commentsByFile().get(diff.file) ?? []).length
 
                     return (
@@ -480,8 +504,23 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                                     {t("ui.sessionReview.change.removed")}
                                   </span>
                                 </Show>
-                                <Show when={!isAdded() && !isDeleted()}>
-                                  <DiffChanges changes={diff} />
+                                <DiffChanges changes={diff} />
+                                <Show when={isLargeCollapsed()}>
+                                  <span class="am-diff-large-pill">{t("agentManager.review.largeFileCollapsed")}</span>
+                                </Show>
+                                <Show when={props.onOpenFile && !isDeleted()}>
+                                  <Tooltip value={t("agentManager.diff.openFile")} placement="top">
+                                    <IconButton
+                                      icon="go-to-file"
+                                      size="small"
+                                      variant="ghost"
+                                      label={t("agentManager.diff.openFile")}
+                                      onClick={(e: MouseEvent) => {
+                                        e.stopPropagation()
+                                        props.onOpenFile?.(diff.file)
+                                      }}
+                                    />
+                                  </Tooltip>
                                 </Show>
                                 <span data-slot="session-review-diff-chevron">
                                   <Icon name="chevron-down" size="small" />
@@ -508,6 +547,9 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                   }}
                 </For>
               </Accordion>
+              <Show when={props.diffs.length > LONG_DIFF_MARKER_FILE_COUNT}>
+                <DiffEndMarker />
+              </Show>
             </div>
           </Show>
         </div>

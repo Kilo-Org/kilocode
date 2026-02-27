@@ -21,6 +21,7 @@ import {
   buildSettingPath,
   mapSSEEventToWebviewMessage,
 } from "./kilo-provider-utils"
+import { isEventFromForeignProject } from "./services/cli-backend/sse-utils"
 
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "kilo-code.new.sidebarView"
@@ -45,8 +46,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private syncedChildSessions: Set<string> = new Set()
   /** Per-session directory overrides (e.g., worktree paths registered by AgentManagerProvider). */
   private sessionDirectories = new Map<string, string>()
+  /** Project ID for the current workspace, used to filter out sessions from other repositories. */
+  private projectID: string | undefined
   /** Abort controller for the current loadMessages request; aborted when a new session is selected. */
   private loadMessagesAbort: AbortController | null = null
+  /** Set when refreshSessions() is called before the HTTP client is ready.
+   *  Cleared and retried once the connection transitions to "connected". */
+  private pendingSessionRefresh = false
   private unsubscribeEvent: (() => void) | null = null
   private unsubscribeState: (() => void) | null = null
   private unsubscribeNotificationDismiss: (() => void) | null = null
@@ -555,6 +561,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               this.postMessage({ type: "profileData", data: profileData })
             }
             await this.syncWebviewState("sse-connected")
+            await this.flushPendingSessionRefresh("sse-connected")
           } catch (error) {
             console.error("[Kilo New] KiloProvider: ❌ Failed during connected state handling:", error)
             this.postMessage({
@@ -588,6 +595,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       this.postMessage({ type: "connectionState", state: this.connectionState })
       await this.syncWebviewState("initializeConnection")
+      await this.flushPendingSessionRefresh("initializeConnection")
 
       // Fetch providers, agents, config, and notifications in parallel
       await Promise.all([
@@ -773,10 +781,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /**
-   * Handle loading all sessions.
+   * Retry a deferred sessions refresh once the HTTP client is ready.
    */
-  private async handleLoadSessions(): Promise<void> {
+  private async flushPendingSessionRefresh(reason: string): Promise<void> {
+    if (!this.pendingSessionRefresh) {
+      return
+    }
+
     if (!this.httpClient) {
+      if (this.connectionState === "connecting") {
+        return
+      }
+
       this.postMessage({
         type: "error",
         message: "Not connected to CLI backend",
@@ -784,15 +800,47 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
+    console.log("[Kilo New] KiloProvider: 🔄 Flushing deferred sessions refresh", { reason })
+    await this.handleLoadSessions()
+  }
+
+  /**
+   * Handle loading all sessions.
+   */
+  private async handleLoadSessions(): Promise<void> {
+    const client = this.httpClient
+    if (!client) {
+      // HTTP client isn't ready yet — mark for retry once connected.
+      // This avoids silently dropping the request when initializeState()
+      // calls refreshSessions() before the CLI server has started.
+      this.pendingSessionRefresh = true
+
+      if (this.connectionState !== "connecting") {
+        this.postMessage({
+          type: "error",
+          message: "Not connected to CLI backend",
+        })
+      }
+      return
+    }
+
+    this.pendingSessionRefresh = false
+
     try {
       const workspaceDir = this.getWorkspaceDirectory()
-      const sessions = await this.httpClient.listSessions(workspaceDir)
+      const sessions = await client.listSessions(workspaceDir)
 
-      // Also fetch sessions from worktree directories so they appear in the list
+      // The primary fetch already returns all sessions for this project (scoped
+      // by project_id on the backend). Worktree directories share the same
+      // project_id so their sessions are included. We still fetch from worktree
+      // directories in case a worktree resolved to a separate Instance, then
+      // filter the merged results to the workspace project to prevent sessions
+      // from other repositories from leaking in.
+      const projectID = sessions[0]?.projectID
       const worktreeDirs = new Set(this.sessionDirectories.values())
       const extra = await Promise.all(
         [...worktreeDirs].map((dir) =>
-          this.httpClient!.listSessions(dir).catch((err) => {
+          client.listSessions(dir).catch((err) => {
             console.error(`[Kilo New] KiloProvider: Failed to list sessions for ${dir}:`, err)
             return [] as SessionInfo[]
           }),
@@ -801,12 +849,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const seen = new Set(sessions.map((s) => s.id))
       for (const batch of extra) {
         for (const s of batch) {
-          if (!seen.has(s.id)) {
+          if (!seen.has(s.id) && (!projectID || s.projectID === projectID)) {
             sessions.push(s)
             seen.add(s.id)
           }
         }
       }
+      // Update project ID when sessions are available; keep previous value when
+      // the list is empty (empty ≠ different project — the workspace hasn't changed).
+      const resolved = sessions[0]?.projectID
+      if (resolved) this.projectID = resolved
 
       this.postMessage({
         type: "sessionsLoaded",
@@ -1651,9 +1703,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /**
    * Handle SSE events from the CLI backend.
-   * Filters events by tracked session IDs so each webview only sees its own sessions.
+   * Filters events by project ID and tracked session IDs so each webview only sees its own sessions.
    */
   private handleSSEEvent(event: SSEEvent): void {
+    // Drop session events from other projects before any tracking logic.
+    // This must come first: the trackedSessionIds guard below would otherwise
+    // let a foreign session through if it was accidentally tracked.
+    if (isEventFromForeignProject(event, this.projectID)) return
+
     // Extract sessionID from the event
     const sessionID = this.extractSessionID(event)
 
