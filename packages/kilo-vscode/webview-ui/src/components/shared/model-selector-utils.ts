@@ -22,6 +22,10 @@ export interface HighlightSegment {
   highlight: boolean
 }
 
+export interface FilteredModel extends EnrichedModel {
+  matchingPositions?: Set<number>
+}
+
 export function providerSortKey(providerID: string, order = PROVIDER_ORDER): number {
   const idx = order.indexOf(providerID.toLowerCase())
   return idx >= 0 ? idx : order.length
@@ -29,6 +33,38 @@ export function providerSortKey(providerID: string, order = PROVIDER_ORDER): num
 
 export function isFree(model: Pick<EnrichedModel, "inputPrice">): boolean {
   return model.inputPrice === 0
+}
+
+export function filterModels(models: EnrichedModel[], query: string): FilteredModel[] {
+  const text = query.trim()
+  if (!text) {
+    return models as FilteredModel[]
+  }
+
+  const finder = new WordBoundaryFzf(models, (model) => model.name)
+  const nameMatches = finder.find(text)
+  const nameMatchesByKey = new Map(
+    nameMatches.map(({ item, positions }) => [`${item.providerID}/${item.id}`, positions] as const),
+  )
+  const normalized = text.toLowerCase()
+
+  return models.reduce<FilteredModel[]>((result, model) => {
+    const key = `${model.providerID}/${model.id}`
+    const positions = nameMatchesByKey.get(key)
+
+    if (positions) {
+      result.push({ ...model, matchingPositions: positions })
+      return result
+    }
+
+    const fallbackMatch =
+      model.providerName.toLowerCase().includes(normalized) || model.id.toLowerCase().includes(normalized)
+    if (fallbackMatch) {
+      result.push(model)
+    }
+
+    return result
+  }, [])
 }
 
 export class WordBoundaryFzf<T> {
@@ -87,10 +123,11 @@ export class WordBoundaryFzf<T> {
 
     for (const word of words) {
       const index = text.indexOf(word, currentIndex)
-      if (index !== -1) {
-        tokens.push({ word, index })
-        currentIndex = index + word.length
+      if (index === -1) {
+        throw new Error(`Failed to tokenize "${text}" at "${word}" from index ${currentIndex}`)
       }
+      tokens.push({ word, index })
+      currentIndex = index + word.length
     }
 
     return tokens
@@ -109,7 +146,7 @@ export class WordBoundaryFzf<T> {
 
       const word = lowerWords[wordIndex]
       const token = tokens[wordIndex]
-      const nextPositions = new Set(currentPositions)
+      let nextPositions: Set<number> | undefined
       let matchedInWord = 0
 
       while (
@@ -117,11 +154,14 @@ export class WordBoundaryFzf<T> {
         matchedInWord < word.length &&
         word[matchedInWord] === query[queryIndex + matchedInWord]
       ) {
+        if (!nextPositions) {
+          nextPositions = new Set(currentPositions)
+        }
         nextPositions.add(token.index + matchedInWord)
         matchedInWord++
       }
 
-      if (matchedInWord > 0) {
+      if (matchedInWord > 0 && nextPositions) {
         const continued = tryMatch(wordIndex + 1, queryIndex + matchedInWord, nextPositions)
         if (continued) {
           return continued

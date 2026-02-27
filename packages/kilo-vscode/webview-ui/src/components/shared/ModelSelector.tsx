@@ -10,7 +10,7 @@
 import { Component, createSignal, createMemo, createEffect, For, Show } from "solid-js"
 import { Popover } from "@kilocode/kilo-ui/popover"
 import { Button } from "@kilocode/kilo-ui/button"
-import { useProvider, EnrichedModel } from "../../context/provider"
+import { useProvider } from "../../context/provider"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { ModelSelection } from "../../types/messages"
@@ -19,17 +19,14 @@ import {
   providerSortKey,
   isFree,
   buildTriggerLabel,
-  WordBoundaryFzf,
+  filterModels,
+  type FilteredModel,
   buildMatchSegments,
 } from "./model-selector-utils"
 
 interface ModelGroup {
   providerName: string
   models: FilteredModel[]
-}
-
-interface FilteredModel extends EnrichedModel {
-  matchingPositions?: Set<number>
 }
 
 // ---------------------------------------------------------------------------
@@ -70,37 +67,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   const hasProviders = () => visibleModels().length > 0
 
   // Flat filtered list for keyboard navigation
-  const filtered = createMemo<FilteredModel[]>(() => {
-    const query = search().trim()
-    if (!query) {
-      return visibleModels().map((model) => ({ ...model, matchingPositions: new Set<number>() }))
-    }
-
-    const finder = new WordBoundaryFzf(visibleModels(), (model) => model.name)
-    const nameMatches = finder.find(query)
-    const nameMatchesByKey = new Map(
-      nameMatches.map(({ item, positions }) => [`${item.providerID}/${item.id}`, positions] as const),
-    )
-    const normalized = query.toLowerCase()
-
-    return visibleModels().reduce<FilteredModel[]>((result, model) => {
-      const key = `${model.providerID}/${model.id}`
-      const positions = nameMatchesByKey.get(key)
-
-      if (positions) {
-        result.push({ ...model, matchingPositions: positions })
-        return result
-      }
-
-      const fallbackMatch =
-        model.providerName.toLowerCase().includes(normalized) || model.id.toLowerCase().includes(normalized)
-      if (fallbackMatch) {
-        result.push({ ...model, matchingPositions: new Set<number>() })
-      }
-
-      return result
-    }, [])
-  })
+  const filtered = createMemo(() => filterModels(visibleModels(), search()))
 
   // Grouped for rendering
   const groups = createMemo<ModelGroup[]>(() => {

@@ -1,12 +1,12 @@
 import { type Component, createSignal, createMemo, For, Show, onMount } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { useProvider } from "../src/context/provider"
-import type { EnrichedModel } from "../src/context/provider"
 import { useLanguage } from "../src/context/language"
 import {
   KILO_GATEWAY_ID,
   providerSortKey,
-  WordBoundaryFzf,
+  filterModels,
+  type FilteredModel,
   buildMatchSegments,
 } from "../src/components/shared/model-selector-utils"
 import {
@@ -27,10 +27,6 @@ interface ModelGroup {
   models: FilteredModel[]
 }
 
-interface FilteredModel extends EnrichedModel {
-  matchingPositions?: Set<number>
-}
-
 const COUNT_OPTIONS = Array.from({ length: MAX_MULTI_VERSIONS }, (_, i) => i + 1)
 
 export const MultiModelSelector: Component<{
@@ -47,37 +43,7 @@ export const MultiModelSelector: Component<{
     return models().filter((m) => m.providerID === KILO_GATEWAY_ID || c.includes(m.providerID))
   })
 
-  const filtered = createMemo<FilteredModel[]>(() => {
-    const query = search().trim()
-    if (!query) {
-      return visibleModels().map((model) => ({ ...model, matchingPositions: new Set<number>() }))
-    }
-
-    const finder = new WordBoundaryFzf(visibleModels(), (model) => model.name)
-    const nameMatches = finder.find(query)
-    const nameMatchesByKey = new Map(
-      nameMatches.map(({ item, positions }) => [`${item.providerID}/${item.id}`, positions] as const),
-    )
-    const normalized = query.toLowerCase()
-
-    return visibleModels().reduce<FilteredModel[]>((result, model) => {
-      const key = `${model.providerID}/${model.id}`
-      const positions = nameMatchesByKey.get(key)
-
-      if (positions) {
-        result.push({ ...model, matchingPositions: positions })
-        return result
-      }
-
-      const fallbackMatch =
-        model.providerName.toLowerCase().includes(normalized) || model.id.toLowerCase().includes(normalized)
-      if (fallbackMatch) {
-        result.push({ ...model, matchingPositions: new Set<number>() })
-      }
-
-      return result
-    }, [])
-  })
+  const filtered = createMemo(() => filterModels(visibleModels(), search()))
 
   const groups = createMemo<ModelGroup[]>(() => {
     const map = new Map<string, ModelGroup>()
