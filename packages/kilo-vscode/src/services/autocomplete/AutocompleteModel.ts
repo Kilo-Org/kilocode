@@ -59,12 +59,14 @@ export class AutocompleteModel {
   /**
    * Generate a FIM (Fill-in-the-Middle) completion via the CLI backend.
    * Uses the SDK's kilo.fim() SSE endpoint which handles auth and streaming.
+   *
+   * @param signal - Optional AbortSignal to cancel the SSE stream early (e.g. when the user types again)
    */
   public async generateFimResponse(
     prefix: string,
     suffix: string,
     onChunk: (text: string) => void,
-    _taskId?: string,
+    signal?: AbortSignal,
   ): Promise<ResponseMetaData> {
     if (!this.connectionService) {
       throw new Error("Connection service is not available")
@@ -81,13 +83,16 @@ export class AutocompleteModel {
     let inputTokens = 0
     let outputTokens = 0
 
-    const { stream } = await client.kilo.fim({
-      prefix,
-      suffix,
-      model: DEFAULT_MODEL,
-      maxTokens: 256,
-      temperature: 0.2,
-    })
+    const { stream } = await client.kilo.fim(
+      {
+        prefix,
+        suffix,
+        model: DEFAULT_MODEL,
+        maxTokens: 256,
+        temperature: 0.2,
+      },
+      { signal },
+    )
 
     for await (const chunk of stream) {
       const event = chunk as {

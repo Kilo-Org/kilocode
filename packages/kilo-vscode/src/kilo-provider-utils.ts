@@ -23,8 +23,9 @@ export function getErrorMessage(error: unknown): string {
     // Direct .error field
     if (typeof obj.error === "string") return obj.error
     // NotFoundError shape: { data: { message: "..." } }
-    if (obj.data && typeof obj.data === "object" && typeof obj.data.message === "string") {
-      return obj.data.message
+    if (obj.data && typeof obj.data === "object") {
+      const data = obj.data as Record<string, unknown>
+      if (typeof data.message === "string") return data.message
     }
     // BadRequestError shape: { errors: [{ message: "..." }] }
     if (Array.isArray(obj.errors) && obj.errors.length > 0) {
