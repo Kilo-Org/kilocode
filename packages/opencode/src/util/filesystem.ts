@@ -8,12 +8,12 @@ import { pipeline } from "stream/promises"
 import { Glob } from "./glob"
 
 export namespace Filesystem {
-  // Fast sync version for metadata checks
-  export async function exists(p: string): Promise<boolean> {
+  // Fast sync version for metadata checks // kilocode_change
+  export function exists(p: string): boolean {
     return existsSync(p)
   }
 
-  export async function isDir(p: string): Promise<boolean> {
+  export function isDir(p: string): boolean {
     try {
       return statSync(p).isDirectory()
     } catch {
