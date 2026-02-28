@@ -107,15 +107,9 @@ Options:
 ```
 attach to a running kilo server
 
-Positionals:
-  url  http://localhost:4096  [string]
-
 Options:
-      --help      Show help  [boolean]
-      --version   Show version number  [boolean]
-      --dir       directory to run in  [string]
-  -s, --session   session id to continue  [string]
-  -p, --password  basic auth password (defaults to KILO_SERVER_PASSWORD)  [string]
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ## kilo run
@@ -140,6 +134,7 @@ Options:
   -f, --file      file(s) to attach to message  [array]
       --title     title for the session (uses truncated prompt if no value provided)  [string]
       --attach    attach to a running opencode server (e.g., http://localhost:4096)  [string]
+      --dir       directory to run in, path on remote server if attaching  [string]
       --port      port for the local server (defaults to random port if no value provided)  [number]
       --variant   model variant (provider-specific reasoning effort, e.g., high, max, minimal)  [string]
       --thinking  show thinking blocks  [boolean] [default: false]
@@ -514,7 +509,8 @@ Options:
 manage sessions
 
 Commands:
-  kilo session list  list sessions
+  kilo session list                list sessions
+  kilo session delete <sessionID>  delete a session
 
 Options:
   --help     Show help  [boolean]
@@ -531,6 +527,58 @@ Options:
       --version    Show version number  [boolean]
   -n, --max-count  limit to N most recent sessions  [number]
       --format     output format  [string] [choices: "table", "json"] [default: "table"]
+```
+
+### kilo session delete
+
+```
+delete a session
+
+Positionals:
+  sessionID  session ID to delete  [string]
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+```
+
+## kilo db
+
+```
+database tools
+
+Commands:
+  kilo db [query]     open an interactive sqlite3 shell or run a query  [default]
+  kilo db path        print the database path
+  kilo db migrate     migrate JSON data to SQLite (merges with existing data)
+
+Positionals:
+  query  SQL query to execute  [string]
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+  --format   Output format  [string] [choices: "json", "tsv"] [default: "tsv"]
+```
+
+### kilo db path
+
+```
+print the database path
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+```
+
+### kilo db migrate
+
+```
+migrate JSON data to SQLite (merges with existing data)
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ## kilo help
