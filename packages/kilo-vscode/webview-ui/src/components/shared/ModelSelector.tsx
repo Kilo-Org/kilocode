@@ -11,6 +11,7 @@ import { Component, createSignal, createMemo, createEffect, For, Show } from "so
 import { Popover } from "@kilocode/kilo-ui/popover"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useProvider } from "../../context/provider"
+import type { EnrichedModel } from "../../context/provider"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { ModelSelection } from "../../types/messages"
@@ -20,13 +21,14 @@ import {
   isFree,
   buildTriggerLabel,
   filterModels,
-  type FilteredModel,
+  modelKey,
+  WordBoundaryFzf,
   buildMatchSegments,
 } from "./model-selector-utils"
 
 interface ModelGroup {
   providerName: string
-  models: FilteredModel[]
+  models: EnrichedModel[]
 }
 
 // ---------------------------------------------------------------------------
@@ -66,13 +68,15 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
 
   const hasProviders = () => visibleModels().length > 0
 
+  const finder = createMemo(() => new WordBoundaryFzf(visibleModels(), (model) => model.name))
+
   // Flat filtered list for keyboard navigation
-  const filtered = createMemo(() => filterModels(visibleModels(), search()))
+  const filtered = createMemo(() => filterModels(visibleModels(), search(), finder()))
 
   // Grouped for rendering
   const groups = createMemo<ModelGroup[]>(() => {
     const map = new Map<string, ModelGroup>()
-    for (const m of filtered()) {
+    for (const m of filtered().models) {
       let group = map.get(m.providerID)
       if (!group) {
         group = { providerName: m.providerName, models: [] }
@@ -105,7 +109,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     }
   })
 
-  function pick(model: FilteredModel) {
+  function pick(model: EnrichedModel) {
     props.onSelect(model.providerID, model.id)
     setOpen(false)
   }
@@ -158,13 +162,13 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     })
   }
 
-  function isSelected(model: FilteredModel): boolean {
+  function isSelected(model: EnrichedModel): boolean {
     const sel = selectedModel()
     return sel !== undefined && sel.providerID === model.providerID && sel.id === model.id
   }
 
   // Track flat index across groups for active highlighting
-  function flatIndex(model: FilteredModel): number {
+  function flatIndex(model: EnrichedModel): number {
     return flatFiltered().indexOf(model) + clearOffset()
   }
 
@@ -249,7 +253,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                       onMouseEnter={() => setActiveIndex(flatIndex(model))}
                     >
                       <span class="model-selector-item-name">
-                        <For each={buildMatchSegments(model.name, model.matchingPositions)}>
+                        <For each={buildMatchSegments(model.name, filtered().positions.get(modelKey(model)))}>
                           {(segment) => (
                             <span classList={{ "model-selector-item-name-highlight": segment.highlight }}>
                               {segment.text}

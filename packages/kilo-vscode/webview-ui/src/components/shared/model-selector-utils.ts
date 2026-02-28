@@ -27,8 +27,13 @@ export interface HighlightSegment {
   highlight: boolean
 }
 
-export interface FilteredModel extends EnrichedModel {
-  matchingPositions?: Set<number>
+export interface FilterResult {
+  models: EnrichedModel[]
+  positions: Map<string, Set<number>>
+}
+
+export function modelKey(model: Pick<EnrichedModel, "providerID" | "id">): string {
+  return `${model.providerID}/${model.id}`
 }
 
 export function providerSortKey(providerID: string, order = PROVIDER_ORDER): number {
@@ -40,25 +45,31 @@ export function isFree(model: Pick<EnrichedModel, "inputPrice">): boolean {
   return model.inputPrice === 0
 }
 
-export function filterModels(models: EnrichedModel[], query: string): FilteredModel[] {
+export function filterModels(
+  models: EnrichedModel[],
+  query: string,
+  finder = new WordBoundaryFzf(models, (model) => model.name),
+): FilterResult {
   const text = query.trim()
   if (!text) {
-    return models as FilteredModel[]
+    return {
+      models,
+      positions: new Map<string, Set<number>>(),
+    }
   }
 
-  const finder = new WordBoundaryFzf(models, (model) => model.name)
   const nameMatches = finder.find(text)
-  const nameMatchesByKey = new Map(
-    nameMatches.map(({ item, positions }) => [`${item.providerID}/${item.id}`, positions] as const),
-  )
+  const nameMatchesByKey = new Map(nameMatches.map(({ item, positions }) => [modelKey(item), positions] as const))
   const normalized = text.toLowerCase()
+  const positions = new Map<string, Set<number>>()
 
-  return models.reduce<FilteredModel[]>((result, model) => {
-    const key = `${model.providerID}/${model.id}`
-    const positions = nameMatchesByKey.get(key)
+  const filtered = models.reduce<EnrichedModel[]>((result, model) => {
+    const key = modelKey(model)
+    const match = nameMatchesByKey.get(key)
 
-    if (positions) {
-      result.push({ ...model, matchingPositions: positions })
+    if (match) {
+      positions.set(key, match)
+      result.push(model)
       return result
     }
 
@@ -70,6 +81,11 @@ export function filterModels(models: EnrichedModel[], query: string): FilteredMo
 
     return result
   }, [])
+
+  return {
+    models: filtered,
+    positions,
+  }
 }
 
 export class WordBoundaryFzf<T> {
@@ -97,12 +113,14 @@ export class WordBoundaryFzf<T> {
     for (const item of this.items) {
       const text = this.selector(item)
       const tokens = this.tokenize(text)
+      const lowerWords = tokens.map((token) => token.word.toLowerCase())
 
       if (queryWords.length > 1) {
+        // Multi-word queries must match in order and consume distinct tokens.
         let startWordIndex = 0
         const allPositions = new Set<number>()
         const allMatch = queryWords.every((word) => {
-          const match = this.matchAcronym(tokens, word, startWordIndex)
+          const match = this.matchAcronym(tokens, lowerWords, word, startWordIndex)
           if (!match) return false
           startWordIndex = match.nextWordIndex
           match.positions.forEach((position) => allPositions.add(position))
@@ -113,7 +131,7 @@ export class WordBoundaryFzf<T> {
           results.push({ item, positions: allPositions })
         }
       } else {
-        const match = this.matchAcronym(tokens, queryWords[0], 0)
+        const match = this.matchAcronym(tokens, lowerWords, queryWords[0], 0)
         if (match) {
           results.push({ item, positions: match.positions })
         }
@@ -140,8 +158,12 @@ export class WordBoundaryFzf<T> {
     return tokens
   }
 
-  private matchAcronym(tokens: WordToken[], query: string, startWordIndex: number): MatchResult | null {
-    const lowerWords = tokens.map((token) => token.word.toLowerCase())
+  private matchAcronym(
+    tokens: WordToken[],
+    lowerWords: string[],
+    query: string,
+    startWordIndex: number,
+  ): MatchResult | null {
     const failed = new Set<string>()
 
     const tryMatch = (

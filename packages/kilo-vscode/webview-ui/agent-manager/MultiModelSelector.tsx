@@ -1,12 +1,14 @@
 import { type Component, createSignal, createMemo, For, Show, onMount } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { useProvider } from "../src/context/provider"
+import type { EnrichedModel } from "../src/context/provider"
 import { useLanguage } from "../src/context/language"
 import {
   KILO_GATEWAY_ID,
   providerSortKey,
   filterModels,
-  type FilteredModel,
+  modelKey,
+  WordBoundaryFzf,
   buildMatchSegments,
 } from "../src/components/shared/model-selector-utils"
 import {
@@ -24,7 +26,7 @@ export { MAX_MULTI_VERSIONS, totalAllocations, allocationsToArray } from "./mult
 
 interface ModelGroup {
   providerName: string
-  models: FilteredModel[]
+  models: EnrichedModel[]
 }
 
 const COUNT_OPTIONS = Array.from({ length: MAX_MULTI_VERSIONS }, (_, i) => i + 1)
@@ -43,11 +45,13 @@ export const MultiModelSelector: Component<{
     return models().filter((m) => m.providerID === KILO_GATEWAY_ID || c.includes(m.providerID))
   })
 
-  const filtered = createMemo(() => filterModels(visibleModels(), search()))
+  const finder = createMemo(() => new WordBoundaryFzf(visibleModels(), (model) => model.name))
+
+  const filtered = createMemo(() => filterModels(visibleModels(), search(), finder()))
 
   const groups = createMemo<ModelGroup[]>(() => {
     const map = new Map<string, ModelGroup>()
-    for (const m of filtered()) {
+    for (const m of filtered().models) {
       let group = map.get(m.providerID)
       if (!group) {
         group = { providerName: m.providerName, models: [] }
@@ -105,7 +109,7 @@ export const MultiModelSelector: Component<{
                           }
                         />
                         <span class="am-mm-item-name">
-                          <For each={buildMatchSegments(model.name, model.matchingPositions)}>
+                          <For each={buildMatchSegments(model.name, filtered().positions.get(modelKey(model)))}>
                             {(segment) => (
                               <span classList={{ "am-mm-item-name-highlight": segment.highlight }}>{segment.text}</span>
                             )}
