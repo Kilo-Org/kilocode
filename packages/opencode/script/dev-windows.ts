@@ -6,7 +6,7 @@
 // SolidJS JSX via Babel. Since Bun.build() plugins work correctly, this script
 // bundles the app first, then runs the output.
 
-import solidPlugin from "@opentui/solid/scripts/solid-plugin"
+import solidPlugin from "../node_modules/@opentui/solid/scripts/solid-plugin"
 import path from "path"
 
 const dir = path.resolve(import.meta.dir, "..")
