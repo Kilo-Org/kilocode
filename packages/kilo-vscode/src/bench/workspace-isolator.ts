@@ -92,7 +92,7 @@ async function createWorktreeIsolator(
 
 	// Clean up leftover from prior crash
 	if (await exists(worktreeDir)) {
-		await git.raw(["worktree", "remove", "--force", worktreeDir]).catch(() => {})
+		await git.raw(["worktree", "remove", "--force", worktreeDir]).catch((err) => console.warn(`[Kilo Bench] Failed to remove leftover worktree: ${err}`))
 		await fs.rm(worktreeDir, { recursive: true, force: true }).catch(() => {})
 	}
 
