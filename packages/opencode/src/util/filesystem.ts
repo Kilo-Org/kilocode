@@ -47,7 +47,8 @@ export namespace Filesystem {
     return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer
   }
 
-  function isEnoent(e: unknown): e is { code: "ENOENT" } {
+  export function isEnoent(e: unknown): e is { code: "ENOENT" } {
+    // kilocode_change: export for reuse
     return typeof e === "object" && e !== null && "code" in e && (e as { code: string }).code === "ENOENT"
   }
 
