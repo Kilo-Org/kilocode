@@ -167,6 +167,72 @@ export namespace ModelsDev {
       }
     }
 
+    // kilocode_change start - Inject avian provider with hardcoded models
+    if (!providers["avian"]) {
+      providers["avian"] = {
+        id: "avian",
+        name: "Avian",
+        env: ["AVIAN_API_KEY"],
+        api: "https://api.avian.io/v1/",
+        npm: "@ai-sdk/openai-compatible",
+        models: {
+          "deepseek/deepseek-v3.2": {
+            id: "deepseek/deepseek-v3.2",
+            name: "DeepSeek V3.2",
+            family: "deepseek",
+            release_date: "2025-06-01",
+            attachment: false,
+            reasoning: false,
+            temperature: true,
+            tool_call: true,
+            limit: { context: 163840, output: 65536 },
+            modalities: { input: ["text"], output: ["text"] },
+            options: {},
+          },
+          "moonshotai/kimi-k2.5": {
+            id: "moonshotai/kimi-k2.5",
+            name: "Kimi K2.5",
+            family: "kimi",
+            release_date: "2025-07-01",
+            attachment: false,
+            reasoning: false,
+            temperature: true,
+            tool_call: true,
+            limit: { context: 131072, output: 8192 },
+            modalities: { input: ["text"], output: ["text"] },
+            options: {},
+          },
+          "z-ai/glm-5": {
+            id: "z-ai/glm-5",
+            name: "GLM-5",
+            family: "glm",
+            release_date: "2025-07-01",
+            attachment: false,
+            reasoning: false,
+            temperature: true,
+            tool_call: true,
+            limit: { context: 131072, output: 16384 },
+            modalities: { input: ["text"], output: ["text"] },
+            options: {},
+          },
+          "minimax/minimax-m2.5": {
+            id: "minimax/minimax-m2.5",
+            name: "MiniMax M2.5",
+            family: "minimax",
+            release_date: "2025-07-01",
+            attachment: false,
+            reasoning: false,
+            temperature: true,
+            tool_call: true,
+            limit: { context: 1000000, output: 1000000 },
+            modalities: { input: ["text"], output: ["text"] },
+            options: {},
+          },
+        },
+      }
+    }
+    // kilocode_change end
+
     return providers
     // kilocode_change end
   }
