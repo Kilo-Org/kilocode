@@ -1,9 +1,9 @@
 /**
  * PromptInput component
- * Text input with send/abort buttons, ghost-text autocomplete, and @ file mention support
+ * Text input with send/abort buttons, ghost-text autocomplete, @ file mentions, and / command picker
  */
 
-import { Component, createSignal, createEffect, on, For, Index, onCleanup, Show, untrack } from "solid-js"
+import { Component, createSignal, createEffect, createMemo, on, For, Index, onCleanup, Show, untrack } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
@@ -17,6 +17,7 @@ import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
 import { useImageAttachments } from "../../hooks/useImageAttachments"
 import { fileName, dirName, buildHighlightSegments } from "./prompt-input-utils"
+import { parseSlashQuery, filterSlashCommands } from "./slash-command-utils"
 
 const AUTOCOMPLETE_DEBOUNCE_MS = 500
 const MIN_TEXT_LENGTH = 3
@@ -36,12 +37,18 @@ export const PromptInput: Component = () => {
 
   const [text, setText] = createSignal("")
   const [ghostText, setGhostText] = createSignal("")
+  const [slashQuery, setSlashQuery] = createSignal<string | null>(null)
+  const [slashIndex, setSlashIndex] = createSignal(0)
 
   let textareaRef: HTMLTextAreaElement | undefined
   let highlightRef: HTMLDivElement | undefined
   let dropdownRef: HTMLDivElement | undefined
+  let slashDropdownRef: HTMLDivElement | undefined
   let debounceTimer: ReturnType<typeof setTimeout> | undefined
   let requestCounter = 0
+  const showSlash = () => slashQuery() !== null
+  const closeSlash = () => setSlashQuery(null)
+  const slashResults = createMemo(() => filterSlashCommands(session.commands(), slashQuery()))
   // Save/restore input text when switching sessions.
   // Uses `on()` to track only sessionKey — avoids re-running on every keystroke.
   createEffect(
@@ -52,6 +59,7 @@ export const PromptInput: Component = () => {
       const draft = drafts.get(key) ?? ""
       setText(draft)
       setGhostText("")
+      closeSlash()
       if (textareaRef) {
         textareaRef.value = draft
         // Reset height then adjust
@@ -82,6 +90,7 @@ export const PromptInput: Component = () => {
     if (message.type === "setChatBoxMessage") {
       setText(message.text)
       setGhostText("")
+      closeSlash()
       if (textareaRef) {
         textareaRef.value = message.text
         adjustHeight()
@@ -94,6 +103,7 @@ export const PromptInput: Component = () => {
       const next = current + separator + message.text
       setText(next)
       setGhostText("")
+      closeSlash()
       if (textareaRef) {
         textareaRef.value = next
         adjustHeight()
@@ -154,6 +164,13 @@ export const PromptInput: Component = () => {
     if (active) active.scrollIntoView({ block: "nearest" })
   }
 
+  const scrollToActiveSlashItem = () => {
+    if (!slashDropdownRef) return
+    const items = slashDropdownRef.querySelectorAll(".slash-command-item")
+    const active = items[slashIndex()] as HTMLElement | undefined
+    if (active) active.scrollIntoView({ block: "nearest" })
+  }
+
   const syncHighlightScroll = () => {
     if (highlightRef && textareaRef) {
       highlightRef.scrollTop = textareaRef.scrollTop
@@ -188,20 +205,77 @@ export const PromptInput: Component = () => {
     mention.onInput(val, target.selectionStart ?? val.length)
 
     if (mention.showMention()) {
+      closeSlash()
       setGhostText("")
       if (debounceTimer) clearTimeout(debounceTimer)
       return
     }
 
+    const slash = parseSlashQuery(val)
+    if (slash !== undefined) {
+      setSlashQuery(slash)
+      setSlashIndex(0)
+      setGhostText("")
+      if (debounceTimer) clearTimeout(debounceTimer)
+      return
+    }
+
+    closeSlash()
+
     if (debounceTimer) clearTimeout(debounceTimer)
     debounceTimer = setTimeout(() => requestAutocomplete(val), AUTOCOMPLETE_DEBOUNCE_MS)
   }
 
+  const selectSlash = () => {
+    const item = slashResults()[slashIndex()]
+    if (!item) {
+      closeSlash()
+      return
+    }
+    const next = `/${item.name} `
+    setText(next)
+    closeSlash()
+    if (textareaRef) {
+      textareaRef.value = next
+      adjustHeight()
+      const cursor = next.length
+      textareaRef.setSelectionRange(cursor, cursor)
+      textareaRef.focus()
+    }
+  }
+
   const handleKeyDown = (e: KeyboardEvent) => {
     if (mention.onKeyDown(e, textareaRef, setText, adjustHeight)) {
+      closeSlash()
       setGhostText("")
       queueMicrotask(scrollToActiveItem)
       return
+    }
+
+    if (showSlash()) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault()
+        setSlashIndex((i) => Math.min(i + 1, slashResults().length - 1))
+        queueMicrotask(scrollToActiveSlashItem)
+        return
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault()
+        setSlashIndex((i) => Math.max(i - 1, 0))
+        queueMicrotask(scrollToActiveSlashItem)
+        return
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault()
+        selectSlash()
+        return
+      }
+      if (e.key === "Escape") {
+        e.preventDefault()
+        e.stopPropagation()
+        closeSlash()
+        return
+      }
     }
 
     if ((e.key === "Tab" || e.key === "ArrowRight") && ghostText()) {
@@ -224,6 +298,7 @@ export const PromptInput: Component = () => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
       dismissSuggestion()
+      closeSlash()
       handleSend()
     }
   }
@@ -248,6 +323,7 @@ export const PromptInput: Component = () => {
     imageAttach.clear()
     if (debounceTimer) clearTimeout(debounceTimer)
     mention.closeMention()
+    closeSlash()
     drafts.delete(sessionKey())
 
     if (textareaRef) textareaRef.style.height = "auto"
@@ -281,6 +357,43 @@ export const PromptInput: Component = () => {
                   <FileIcon node={{ path, type: "file" }} class="file-mention-icon" />
                   <span class="file-mention-name">{fileName(path)}</span>
                   <span class="file-mention-dir">{dirName(path)}</span>
+                </div>
+              )}
+            </For>
+          </Show>
+        </div>
+      </Show>
+      <Show when={showSlash() && !mention.showMention()}>
+        <div class="slash-command-dropdown" ref={slashDropdownRef}>
+          <Show
+            when={slashResults().length > 0}
+            fallback={<div class="slash-command-empty">{language.t("prompt.popover.emptyCommands")}</div>}
+          >
+            <For each={slashResults()}>
+              {(item, index) => (
+                <div
+                  class="slash-command-item"
+                  classList={{ "slash-command-item--active": index() === slashIndex() }}
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    setSlashIndex(index())
+                    selectSlash()
+                  }}
+                  onMouseEnter={() => setSlashIndex(index())}
+                >
+                  <span class="slash-command-name">/{item.name}</span>
+                  <Show when={item.description}>
+                    <span class="slash-command-description">{item.description}</span>
+                  </Show>
+                  <Show when={item.source && item.source !== "command"}>
+                    <span class="slash-command-badge">
+                      {item.source === "skill"
+                        ? language.t("prompt.slash.badge.skill")
+                        : item.source === "mcp"
+                          ? language.t("prompt.slash.badge.mcp")
+                          : language.t("prompt.slash.badge.custom")}
+                    </span>
+                  </Show>
                 </div>
               )}
             </For>

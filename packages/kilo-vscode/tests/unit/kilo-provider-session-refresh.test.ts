@@ -6,6 +6,12 @@ const kind = (value: string) => ({
 })
 
 const mockVscode = {
+  Uri: {
+    file: (fsPath: string) => ({ fsPath }),
+    joinPath: (base: { fsPath?: string }, ...parts: string[]) => ({
+      fsPath: [base.fsPath ?? "", ...parts].filter(Boolean).join("/"),
+    }),
+  },
   extensions: {
     getExtension: () => ({
       packageJSON: { version: "test" },
@@ -41,6 +47,7 @@ const mockVscode = {
 mock.module("vscode", () => mockVscode)
 
 const { KiloProvider } = await import("../../src/KiloProvider")
+const vscode = (await import("vscode")) as Record<string, unknown>
 
 type State = "connecting" | "connected" | "disconnected" | "error"
 
@@ -50,6 +57,12 @@ type ProviderInternals = {
   webview: { postMessage: (message: unknown) => Promise<unknown> } | null
   initializeConnection: () => Promise<void>
   handleLoadSessions: () => Promise<void>
+}
+
+function ensureVscodeShape() {
+  if (!vscode.Uri) {
+    vscode.Uri = mockVscode.Uri as unknown
+  }
 }
 
 function createClient() {
@@ -65,6 +78,7 @@ function createClient() {
       connected: {},
       default: {},
     }),
+    listCommands: async () => [],
     listAgents: async () => [],
     getConfig: async () => ({}),
     getNotifications: async () => [],
@@ -97,6 +111,7 @@ function createConnection(client: ReturnType<typeof createClient>) {
 
 describe("KiloProvider pending session refresh", () => {
   it("flushes deferred refresh in initializeConnection without relying on connected event callback", async () => {
+    ensureVscodeShape()
     const client = createClient()
     const connection = createConnection(client)
     const provider = new KiloProvider({} as never, connection as never)
@@ -114,6 +129,7 @@ describe("KiloProvider pending session refresh", () => {
   })
 
   it("does not post not-connected errors while still connecting", async () => {
+    ensureVscodeShape()
     const client = createClient()
     const connection = createConnection(client)
     const provider = new KiloProvider({} as never, connection as never)

@@ -10,6 +10,30 @@ const QuickFix = makeKind("quickfix")
 const RefactorRewrite = makeKind("refactor.rewrite")
 
 const mockVscode = {
+  Uri: {
+    file: (fsPath: string) => ({ fsPath }),
+    joinPath: (base: { fsPath?: string }, ...parts: string[]) => ({
+      fsPath: [base.fsPath ?? "", ...parts].filter(Boolean).join("/"),
+    }),
+  },
+  extensions: {
+    getExtension: () => ({
+      packageJSON: { version: "test" },
+    }),
+  },
+  env: {
+    appName: "VS Code",
+    language: "en",
+    machineId: "machine",
+    isTelemetryEnabled: false,
+  },
+  version: "1.0.0",
+  workspace: {
+    workspaceFolders: [{ uri: { fsPath: "/repo" } }],
+    getConfiguration: () => ({
+      get: <T>(_key: string, value?: T) => value,
+    }),
+  },
   CodeAction: class {
     command?: { command: string; title: string }
     isPreferred?: boolean
