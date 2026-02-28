@@ -17,6 +17,7 @@ import { ExportCommand } from "../../src/cli/cmd/export"
 import { ImportCommand } from "../../src/cli/cmd/import"
 import { PrCommand } from "../../src/cli/cmd/pr"
 import { SessionCommand } from "../../src/cli/cmd/session"
+import { DbCommand } from "../../src/cli/cmd/db"
 import { HelpCommand } from "../../src/kilocode/help-command"
 
 // Stand-in for TuiThreadCommand — the real one imports @opentui/solid which
@@ -54,6 +55,7 @@ const commands = [
   ImportCommand,
   PrCommand,
   SessionCommand,
+  DbCommand,
   HelpCommand,
 ] as any[]
 
