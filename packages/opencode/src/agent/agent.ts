@@ -47,6 +47,14 @@ export namespace Agent {
       prompt: z.string().optional(),
       options: z.record(z.string(), z.any()),
       steps: z.number().int().positive().optional(),
+      // kilocode_change: agent-scoped MCP tool filtering (#555)
+      mcpToolPrefixes: z
+        .array(z.string().min(1))
+        .optional()
+        .describe(
+          "List of MCP tool key prefixes this agent can access. When set, only MCP tools whose key matches one of these prefixes (boundary-safe) are visible to the agent. When unset, all MCP tools are available.",
+        ),
+      // end kilocode_change
     })
     .meta({
       ref: "Agent",
@@ -317,6 +325,7 @@ export namespace Agent {
       item.hidden = value.hidden ?? item.hidden
       item.name = value.name ?? item.name
       item.steps = value.steps ?? item.steps
+      item.mcpToolPrefixes = value.mcpToolPrefixes ?? item.mcpToolPrefixes // kilocode_change (#555)
       item.options = mergeDeep(item.options, value.options ?? {})
       item.permission = PermissionNext.merge(item.permission, PermissionNext.fromConfig(value.permission ?? {}))
     }

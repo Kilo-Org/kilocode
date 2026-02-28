@@ -882,7 +882,20 @@ export namespace SessionPrompt {
       })
     }
 
+    // kilocode_change: agent-scoped MCP tool filtering (#555)
+    const mcpToolPrefixes = input.agent.mcpToolPrefixes
+    const sanitizedPrefixes = mcpToolPrefixes?.map((p) => p.replace(/[^a-zA-Z0-9_-]/g, "_"))
     for (const [key, item] of Object.entries(await MCP.tools())) {
+      // Boundary-safe prefix matching: 'foo' matches 'foo' and 'foo_bar' but not 'foobar'
+      if (
+        sanitizedPrefixes &&
+        sanitizedPrefixes.length > 0 &&
+        !sanitizedPrefixes.some((prefix) => key === prefix || key.startsWith(prefix + "_"))
+      ) {
+        continue
+      }
+      // end kilocode_change
+
       const execute = item.execute
       if (!execute) continue
 

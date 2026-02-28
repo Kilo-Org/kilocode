@@ -840,6 +840,14 @@ export namespace Config {
         .describe("Maximum number of agentic iterations before forcing text-only response"),
       maxSteps: z.number().int().positive().optional().describe("@deprecated Use 'steps' field instead."),
       permission: Permission.optional(),
+      // kilocode_change: agent-scoped MCP tool filtering (#555)
+      mcpToolPrefixes: z
+        .array(z.string().min(1))
+        .optional()
+        .describe(
+          "List of MCP tool key prefixes this agent can access. Boundary-safe: prefix 'foo' matches 'foo_bar' but not 'foobar'. When unset, all MCP tools are available. Example: ['governor_serper', 'governor_context7'] to restrict to specific backend servers within a multiplexer.",
+        ),
+      // end kilocode_change
     })
     .catchall(z.any())
     .transform((agent, ctx) => {
@@ -860,6 +868,7 @@ export namespace Config {
         "permission",
         "disable",
         "tools",
+        "mcpToolPrefixes", // kilocode_change (#555)
       ])
 
       // Extract unknown properties into options
