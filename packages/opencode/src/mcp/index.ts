@@ -10,6 +10,9 @@ import {
   ToolListChangedNotificationSchema,
 } from "@modelcontextprotocol/sdk/types.js"
 import { Config } from "../config/config"
+import { Filesystem } from "../util/filesystem"
+import path from "path"
+import { mergeDeep } from "remeda"
 import { Log } from "../util/log"
 import { NamedError } from "@opencode-ai/util/error"
 import z from "zod/v4"
@@ -512,6 +515,44 @@ export namespace MCP {
     return state().then((state) => state.clients)
   }
 
+  // kilocode_change start: write MCP config without triggering Instance.dispose()
+  // Serialize all config writes to prevent lost-update races when concurrent
+  // persistMcp calls read-modify-write the same config file.
+  const writeQueue = { tail: Promise.resolve() as Promise<void> }
+
+  function persistMcp(name: string, patch: Record<string, unknown>): Promise<void> {
+    const work = async () => {
+      const filepath = path.join(Instance.directory, "config.json")
+      // Narrow catch to ENOENT only — other I/O errors (permissions, disk fault,
+      // concurrent corrupt write) must not silently overwrite the whole config file.
+      const existing = await Filesystem.readJson<Record<string, unknown>>(filepath).catch((err: unknown) => {
+        if (Filesystem.isEnoent(err)) return {} as Record<string, unknown>
+        throw err
+      })
+      const updated = mergeDeep(existing, { mcp: { [name]: patch } })
+      // Re-throw on write failure so callers know persistence failed and can warn
+      // the user that the toggle won't survive a restart.
+      await Filesystem.writeJson(filepath, updated).catch((err) => {
+        log.error("Failed to persist MCP config", { name, error: err })
+        throw err
+      })
+      // Sync in-memory config cache so Config.get() reflects the new enabled state
+      // for the remainder of this instance lifecycle. We cannot call Config.update()
+      // here because it calls Instance.dispose(), which tears down all MCP clients.
+      const cached = await Config.state()
+      const entry = cached.config.mcp?.[name]
+      if (entry) Object.assign(entry, patch)
+    }
+    const next = writeQueue.tail.then(work)
+    // Keep tail settled so subsequent queued writes always run regardless of
+    // whether this call fails. Error propagates to the caller through `next`.
+    writeQueue.tail = next.catch((_err) => {
+      /* queue drain — caller receives error via next */
+    })
+    return next
+  }
+  // kilocode_change end
+
   export async function connect(name: string) {
     const cfg = await Config.get()
     const config = cfg.mcp ?? {}
@@ -549,6 +590,17 @@ export namespace MCP {
       }
       s.clients[name] = result.mcpClient
     }
+
+    // kilocode_change: persist enabled state to config (only on successful connection)
+    // Uses persistMcp() instead of Config.update() to avoid Instance.dispose()
+    // which would tear down all MCP clients and force a full reconnection cycle.
+    // Fire-and-forget: connection already succeeded in-memory; a disk write failure
+    // must not make a successful connect appear to have failed to the caller.
+    if (result.mcpClient) {
+      persistMcp(name, { enabled: true }).catch((err) => {
+        log.error("Failed to persist MCP enabled state after connect", { name, error: err })
+      })
+    }
   }
 
   export async function disconnect(name: string) {
@@ -561,6 +613,13 @@ export namespace MCP {
       delete s.clients[name]
     }
     s.status[name] = { status: "disabled" }
+
+    // kilocode_change: persist disabled state to config
+    // Fire-and-forget: in-memory state is already correct above; a disk write
+    // failure must not interrupt the caller after disconnect has succeeded.
+    persistMcp(name, { enabled: false }).catch((err) => {
+      log.error("Failed to persist MCP disabled state after disconnect", { name, error: err })
+    })
   }
 
   export async function tools() {
