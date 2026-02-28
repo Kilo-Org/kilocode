@@ -92,6 +92,7 @@ export namespace SessionCompaction {
         if (part.state.status === "completed") {
           part.state.time.compacted = Date.now()
           part.state.output = "" // kilocode_change: clear output from DB to prevent unbounded memory re-hydration
+          part.state.attachments = [] // kilocode_change: also clear attachments (images/PDFs) from DB
           await Session.updatePart(part)
         }
       }
