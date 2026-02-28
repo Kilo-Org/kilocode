@@ -39,6 +39,24 @@ function parseBenchRunResult(data: string): BenchRunResult | null {
 	return isBenchRunResult(parsed) ? parsed : null
 }
 
+function isBenchCheckpoint(v: unknown): v is BenchCheckpoint {
+	if (!isObject(v)) return false
+	if (typeof v.runId !== "string" || v.runId.length === 0) return false
+	if (typeof v.startedAt !== "string" || v.startedAt.length === 0) return false
+	if (!isStringArray(v.models)) return false
+	if (!isObject(v.problemSet) || !Array.isArray(v.problemSet.problems)) return false
+	if (!isObject(v.config)) return false
+	if (v.phase !== "running" && v.phase !== "evaluating") return false
+	if (!Array.isArray(v.completedResponses)) return false
+	if (!isObject(v.completedEvaluations)) return false
+	return typeof v.interruptReason === "string"
+}
+
+function parseBenchCheckpoint(data: string): BenchCheckpoint | null {
+	const parsed = JSON.parse(data) as unknown
+	return isBenchCheckpoint(parsed) ? parsed : null
+}
+
 export async function loadConfig(cwd: string): Promise<BenchConfig> {
 	const configPath = path.join(getBenchDir(cwd), "config.json")
 	try {
@@ -123,7 +141,7 @@ export async function loadCheckpoint(cwd: string): Promise<BenchCheckpoint | nul
 	const checkpointPath = path.join(getBenchDir(cwd), "checkpoint.json")
 	try {
 		const data = await fs.readFile(checkpointPath, "utf-8")
-		return JSON.parse(data)
+		return parseBenchCheckpoint(data)
 	} catch {
 		return null
 	}

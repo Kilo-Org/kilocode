@@ -1,7 +1,5 @@
 import { createSignal, createMemo, For, Show } from "solid-js"
-import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
-import { useVSCode } from "../../context/vscode"
 
 interface ModelResult {
   modelId: string
@@ -21,7 +19,6 @@ interface BenchLeaderboardProps {
 type SortKey = "score" | "cost" | "time"
 
 export function BenchLeaderboard(props: BenchLeaderboardProps) {
-  const vscode = useVSCode()
   const [sortKey, setSortKey] = createSignal<SortKey>("score")
   const [sortAsc, setSortAsc] = createSignal(false)
 
@@ -50,10 +47,6 @@ export function BenchLeaderboard(props: BenchLeaderboardProps) {
       setSortKey(key)
       setSortAsc(key === "cost" || key === "time")
     }
-  }
-
-  const handleUseModel = (modelId: string) => {
-    vscode.postMessage({ type: "benchSetActiveModel", benchModelId: modelId } as any)
   }
 
   const thStyle = {
@@ -102,7 +95,6 @@ export function BenchLeaderboard(props: BenchLeaderboardProps) {
                 Time {sortKey() === "time" ? (sortAsc() ? "↑" : "↓") : ""}
               </th>
               <th style={{ ...thStyle, "text-align": "right", cursor: "default" }}>Tokens</th>
-              <th style={{ ...thStyle, cursor: "default", width: "50px" }} />
             </tr>
           </thead>
           <tbody>
@@ -136,12 +128,6 @@ export function BenchLeaderboard(props: BenchLeaderboardProps) {
                   </td>
                   <td style={{ ...tdStyle, "text-align": "right", "font-family": "monospace", color: "var(--vscode-descriptionForeground)" }}>
                     {((model.totalInputTokens + model.totalOutputTokens) / 1000).toFixed(1)}k
-                  </td>
-                  <td style={{ ...tdStyle, padding: "4px 8px" }}>
-                    <Button variant="ghost" size="small" onClick={() => handleUseModel(model.modelId)}>
-                      <Icon name="check" />
-                      Use
-                    </Button>
                   </td>
                 </tr>
               )}

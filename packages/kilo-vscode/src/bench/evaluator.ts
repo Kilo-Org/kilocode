@@ -22,8 +22,19 @@ function extractEvalJSON(text: string): any | null {
 	return null
 }
 
+function truncateWithNotice(text: string, limit: number, label: "response" | "diff"): string {
+	if (text.length <= limit) {
+		return text
+	}
+	return `${text.slice(0, limit)}\n\n[TRUNCATED - original ${label} was ${text.length} characters]`
+}
+
 function buildEvaluationPrompt(problem: BenchProblem, response: string, diff?: string): string {
-	const hasDiff = diff && diff !== "(no changes detected)"
+	const responseText = truncateWithNotice(response, 8000, "response")
+	const diffText = typeof diff === "string" && diff !== "(no changes detected)"
+		? truncateWithNotice(diff, 6000, "diff")
+		: ""
+	const hasDiff = diffText.length > 0
 
 	let prompt = `You are an expert AI evaluator judging the quality of a coding assistant's response.
 
@@ -33,21 +44,21 @@ function buildEvaluationPrompt(problem: BenchProblem, response: string, diff?: s
 **Prompt:** ${problem.prompt}
 **Difficulty:** ${problem.difficulty}
 
-## Evaluation Criteria
-The response should address these specific criteria:
-${problem.evaluationCriteria.map((c, i) => `${i + 1}. ${c}`).join("\n")}
+	## Evaluation Criteria
+	The response should address these specific criteria:
+	${problem.evaluationCriteria.map((c, i) => `${i + 1}. ${c}`).join("\n")}
 
-## Response to Evaluate
-${response.slice(0, 8000)}`
+	## Response to Evaluate
+	${responseText}`
 
 	if (hasDiff) {
 		prompt += `
 
-## Code Changes (git diff)
-The model was given an isolated copy of the workspace and produced the following file changes:
-\`\`\`diff
-${diff!.slice(0, 6000)}
-\`\`\`
+	## Code Changes (git diff)
+	The model was given an isolated copy of the workspace and produced the following file changes:
+	\`\`\`diff
+	${diffText}
+	\`\`\`
 
 When evaluating, consider both the textual response AND the actual code changes.
 A model that produced correct, working code changes should score higher than one that only described what to do.`

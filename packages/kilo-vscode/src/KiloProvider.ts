@@ -22,7 +22,6 @@ import {
   mapSSEEventToWebviewMessage,
 } from "./kilo-provider-utils"
 import { isEventFromForeignProject } from "./services/cli-backend/sse-utils"
-import { BenchCreditError } from "./bench/types.js"
 
 const BenchModeSchema = z.enum(["architect", "code", "debug", "ask", "orchestrator"])
 const BenchConfigUpdateSchema = z.object({
@@ -39,6 +38,14 @@ const BenchConfigUpdateSchema = z.object({
     cost: z.number().min(0).max(1).optional(),
   }).strict().optional(),
 }).strict()
+
+function isBenchCreditError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false
+  }
+  const name = (error as { name?: unknown }).name
+  return typeof name === "string" && name === "BenchCreditError"
+}
 
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "kilo-code.new.sidebarView"
@@ -567,7 +574,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               }
             }
           } catch (error: unknown) {
-            const isCreditError = error instanceof BenchCreditError
+            const isCreditError = isBenchCreditError(error)
             this.postMessage({
               type: "benchError",
               benchError: isCreditError
@@ -606,7 +613,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               }
             }
           } catch (error: unknown) {
-            const isCreditError = error instanceof BenchCreditError
+            const isCreditError = isBenchCreditError(error)
             this.postMessage({
               type: "benchError",
               benchError: isCreditError
@@ -676,10 +683,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         }
         case "benchSetActiveModel": {
-          // TODO: Integrate with upstream's model selection system
-          const modelId = (message as any).benchModelId
-          if (modelId) {
-            console.log("[Kilo Bench] Set active model:", modelId)
+          const modelId = (message as { benchModelId?: unknown }).benchModelId
+          if (typeof modelId === "string" && modelId.length > 0) {
+            this.postMessage({
+              type: "benchError",
+              benchError: "Selecting an active model from the leaderboard is not supported yet.",
+            })
           }
           break
         }

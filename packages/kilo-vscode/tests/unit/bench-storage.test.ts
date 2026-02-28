@@ -3,8 +3,8 @@ import * as os from "os"
 import * as path from "path"
 import { describe, expect, it } from "bun:test"
 
-import { loadAllResults, loadLatestResult, saveRunResult } from "../../src/bench/storage"
-import type { BenchRunResult } from "../../src/bench/types"
+import { loadAllResults, loadCheckpoint, loadLatestResult, saveCheckpoint, saveRunResult } from "../../src/bench/storage"
+import type { BenchCheckpoint, BenchRunResult } from "../../src/bench/types"
 
 function makeResult(id: string, runAt: string): BenchRunResult {
   return {
@@ -79,6 +79,50 @@ function makeResult(id: string, runAt: string): BenchRunResult {
   }
 }
 
+function makeCheckpoint(): BenchCheckpoint {
+  return {
+    runId: "run-1",
+    startedAt: "2026-01-01T00:00:00.000Z",
+    models: ["model-a"],
+    problemSet: {
+      version: "1.0.0",
+      generatedAt: "2026-01-01T00:00:00.000Z",
+      generatorModel: "gen",
+      workspacePath: ".",
+      workspaceSummary: "summary",
+      problems: [
+        {
+          id: "p1",
+          mode: "code",
+          title: "title",
+          prompt: "prompt",
+          contextFiles: [],
+          evaluationCriteria: [],
+          difficulty: "medium",
+        },
+      ],
+    },
+    config: {
+      problemsPerMode: 1,
+      activeModes: ["code"],
+      generatorModel: "gen",
+      evaluatorModel: "eval",
+      maxParallelModels: 1,
+      temperature: 0,
+      weights: {
+        quality: 0.5,
+        relevance: 0.2,
+        speed: 0.15,
+        cost: 0.15,
+      },
+    },
+    phase: "running",
+    completedResponses: [],
+    completedEvaluations: {},
+    interruptReason: "test",
+  }
+}
+
 async function withTempDir(fn: (cwd: string) => Promise<void>) {
   const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-bench-storage-"))
   try {
@@ -125,6 +169,32 @@ describe("bench storage", () => {
       const all = await loadAllResults(cwd)
       expect(all).toHaveLength(1)
       expect(all[0]?.id).toBe("good")
+    })
+  })
+
+  it("returns null for malformed checkpoint data", async () => {
+    await withTempDir(async (cwd) => {
+      const dir = path.join(cwd, ".kilocode", "bench")
+      await fs.mkdir(dir, { recursive: true })
+      await fs.writeFile(
+        path.join(dir, "checkpoint.json"),
+        JSON.stringify({ runId: "bad", models: "not-an-array" }),
+        "utf-8",
+      )
+
+      const checkpoint = await loadCheckpoint(cwd)
+      expect(checkpoint).toBeNull()
+    })
+  })
+
+  it("loads a valid checkpoint", async () => {
+    await withTempDir(async (cwd) => {
+      const checkpoint = makeCheckpoint()
+      await saveCheckpoint(cwd, checkpoint)
+      const loaded = await loadCheckpoint(cwd)
+      expect(loaded?.runId).toBe(checkpoint.runId)
+      expect(loaded?.phase).toBe("running")
+      expect(loaded?.models).toEqual(["model-a"])
     })
   })
 })
