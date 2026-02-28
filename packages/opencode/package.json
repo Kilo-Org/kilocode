@@ -130,7 +130,7 @@
     "zod-to-json-schema": "3.24.5"
   },
   "optionalDependencies": {
-    "@opentui/core-win32-x64": "0.1.82"
+    "@opentui/core-win32-x64": "0.1.81"
   },
   "overrides": {
     "drizzle-orm": "1.0.0-beta.12-a5629fb"

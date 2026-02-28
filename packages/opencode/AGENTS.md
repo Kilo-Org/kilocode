@@ -68,6 +68,6 @@ Uses the **Vercel AI SDK** as the abstraction layer. Providers are loaded from a
 
 ## Windows dev
 
-`bun run dev` does not work on Windows (or any platform) due to an upstream Bun bug ([oven-sh/bun#9446](https://github.com/oven-sh/bun/issues/9446)) where runtime `plugin.onLoad()` hooks never fire. The `@opentui/solid` preload plugin relies on `onLoad` to transform SolidJS JSX via Babel, so the app crashes with `"Export named 'jsxDEV' not found"`.
+`bun run dev` does not work on Windows due to an upstream Bun bug ([oven-sh/bun#9446](https://github.com/oven-sh/bun/issues/9446)) where runtime `plugin.onLoad()` hooks never fire. The `@opentui/solid` preload plugin relies on `onLoad` to transform SolidJS JSX via Babel, so the app crashes with `"Export named 'jsxDEV' not found"`.
 
 **Workaround**: Use `bun run dev:windows` instead. This runs `script/dev-windows.ts`, which uses `Bun.build()` (where plugins work correctly) to bundle the app into `dist-dev/`, then executes the output. All CLI arguments are forwarded.

@@ -6,13 +6,10 @@
 // SolidJS JSX via Babel. Since Bun.build() plugins work correctly, this script
 // bundles the app first, then runs the output.
 
-import solidPlugin from "../node_modules/@opentui/solid/scripts/solid-plugin"
+import solidPlugin from "@opentui/solid/scripts/solid-plugin"
 import path from "path"
-import { fileURLToPath } from "url"
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-const dir = path.resolve(__dirname, "..")
+const dir = path.resolve(import.meta.dir, "..")
 
 process.chdir(dir)
 
@@ -42,8 +39,7 @@ const args = process.argv.slice(2)
 const child = Bun.spawn(["bun", "run", entry, ...args], {
   cwd: dir,
   stdio: ["inherit", "inherit", "inherit"],
-  env: { ...process.env },
 })
 
 const code = await child.exited
-process.exit(code)
+process.exit(code ?? 0)
