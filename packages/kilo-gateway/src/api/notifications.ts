@@ -30,7 +30,7 @@ const NOTIFICATIONS_TIMEOUT_MS = 5000
  * Fetch notifications from Kilo API
  *
  * @param options - Configuration with token and optional organization ID
- * @returns Array of notifications filtered for CLI display
+ * @returns Array of notifications from the Kilo API (clients filter by showIn)
  */
 export async function fetchKilocodeNotifications(options: {
   kilocodeToken?: string
@@ -57,11 +57,7 @@ export async function fetchKilocodeNotifications(options: {
 
     if (!result.success) return []
 
-    // Filter to show notifications meant for CLI (or no specific target)
-    // Accept "cli", "extension", or no showIn field (matches old Kilo CLI behavior)
-    return result.data.notifications.filter(
-      ({ showIn }) => !showIn || showIn.includes("cli") || showIn.includes("extension"),
-    )
+    return result.data.notifications
   } catch {
     return []
   }

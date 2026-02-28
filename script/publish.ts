@@ -62,7 +62,7 @@ if (Script.release) {
     await $`git commit -am "release: v${Script.version}"`
     await $`git tag v${Script.version}`
     await $`git fetch origin`
-    await $`git cherry-pick HEAD..origin/dev`.nothrow()
+    await $`git cherry-pick HEAD..origin/main`.nothrow() // kilocode_change
     await $`git push origin HEAD --tags --no-verify --force-with-lease`
     await new Promise((resolve) => setTimeout(resolve, 5_000))
   }
@@ -78,6 +78,11 @@ await import(`../packages/sdk/js/script/publish.ts`)
 
 console.log("\n=== plugin ===\n")
 await import(`../packages/plugin/script/publish.ts`)
+
+// kilocode_change start
+console.log("\n=== vscode ===\n")
+await import(`../packages/kilo-vscode/script/publish.ts`)
+// kilocode_change end
 
 const dir = fileURLToPath(new URL("..", import.meta.url))
 process.chdir(dir)

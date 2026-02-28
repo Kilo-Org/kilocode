@@ -42,7 +42,7 @@ export function KiloNews() {
         if (!isKiloConnected()) return
 
         const result = await sdk.client.kilo.notifications()
-        const items = result.data
+        const items = result.data?.filter(({ showIn }) => !showIn || showIn.includes("cli"))
         if (items && items.length > 0) {
           setNotifications(items)
         }
