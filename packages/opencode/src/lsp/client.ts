@@ -239,7 +239,16 @@ export namespace LSPClient {
         l.info("shutting down")
         connection.end()
         connection.dispose()
-        input.server.process.kill()
+        const pid = input.server.process.pid
+        if (process.platform === "win32" && pid) {
+          // On Windows, kill() is unreliable — use taskkill /F /T to force-kill the entire process tree
+          const result = Bun.spawnSync(["taskkill", "/F", "/T", "/PID", String(pid)], { stderr: "pipe", stdout: "pipe" })
+          if (result.exitCode !== 0) {
+            l.warn("taskkill failed", { pid, exitCode: result.exitCode })
+          }
+        } else {
+          input.server.process.kill()
+        }
         l.info("shutdown")
       },
     }
