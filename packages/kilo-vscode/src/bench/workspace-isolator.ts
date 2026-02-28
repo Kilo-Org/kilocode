@@ -241,7 +241,11 @@ function createCopyFilter(root: string): (source: string) => boolean {
 		if (!rel || rel === ".") {
 			return true
 		}
-		return !rel.split(path.sep).some((segment) => IGNORE_DIRS.has(segment))
+		if (rel.split(path.sep).some((segment) => IGNORE_DIRS.has(segment))) {
+			return false
+		}
+		const name = path.basename(rel).toLowerCase()
+		return !name.startsWith(".env")
 	}
 }
 

@@ -881,7 +881,7 @@ export interface BenchConfigMessage {
 
 export interface BenchProblemsMessage {
   type: "benchProblems"
-  benchProblems: any
+  benchProblems: BenchProblemSet
 }
 
 export interface BenchErrorMessage {

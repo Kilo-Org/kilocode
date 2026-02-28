@@ -15,6 +15,30 @@ async function ensureDirExists(dirPath: string): Promise<void> {
 	await fs.mkdir(dirPath, { recursive: true })
 }
 
+function isObject(v: unknown): v is Record<string, unknown> {
+	return !!v && typeof v === "object"
+}
+
+function isStringArray(v: unknown): v is string[] {
+	return Array.isArray(v) && v.every((item) => typeof item === "string")
+}
+
+function isBenchRunResult(v: unknown): v is BenchRunResult {
+	if (!isObject(v)) return false
+	if (typeof v.id !== "string" || v.id.length === 0) return false
+	if (typeof v.runAt !== "string" || v.runAt.length === 0) return false
+	if (!isStringArray(v.models)) return false
+	if (!Array.isArray(v.results)) return false
+	if (!isObject(v.config)) return false
+	if (!isObject(v.problemSet)) return false
+	return Array.isArray(v.problemSet.problems)
+}
+
+function parseBenchRunResult(data: string): BenchRunResult | null {
+	const parsed = JSON.parse(data) as unknown
+	return isBenchRunResult(parsed) ? parsed : null
+}
+
 export async function loadConfig(cwd: string): Promise<BenchConfig> {
 	const configPath = path.join(getBenchDir(cwd), "config.json")
 	try {
@@ -58,7 +82,8 @@ export async function loadProblems(cwd: string): Promise<BenchProblemSet | null>
 export async function saveRunResult(cwd: string, result: BenchRunResult): Promise<void> {
 	const dir = getResultsDir(cwd)
 	await ensureDirExists(dir)
-	const filename = `${result.runAt.replace(/[:.]/g, "-")}.json`
+	const safeId = result.id.replace(/[^a-zA-Z0-9_-]/g, "-") || "run"
+	const filename = `${result.runAt.replace(/[:.]/g, "-")}-${safeId}.json`
 	await fs.writeFile(path.join(dir, filename), JSON.stringify(result, null, 2), "utf-8")
 }
 
@@ -71,8 +96,18 @@ export async function loadLatestResult(cwd: string): Promise<BenchRunResult | nu
 			.sort()
 			.reverse()
 		if (jsonFiles.length === 0) return null
-		const data = await fs.readFile(path.join(dir, jsonFiles[0]), "utf-8")
-		return JSON.parse(data)
+		for (const file of jsonFiles) {
+			try {
+				const data = await fs.readFile(path.join(dir, file), "utf-8")
+				const parsed = parseBenchRunResult(data)
+				if (parsed) {
+					return parsed
+				}
+			} catch {
+				// Try next file
+			}
+		}
+		return null
 	} catch {
 		return null
 	}
@@ -115,7 +150,10 @@ export async function loadAllResults(cwd: string): Promise<BenchRunResult[]> {
 		for (const file of jsonFiles) {
 			try {
 				const data = await fs.readFile(path.join(dir, file), "utf-8")
-				results.push(JSON.parse(data))
+				const parsed = parseBenchRunResult(data)
+				if (parsed) {
+					results.push(parsed)
+				}
 			} catch {
 				// Skip corrupted result files
 			}

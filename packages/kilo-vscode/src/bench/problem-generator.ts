@@ -343,25 +343,31 @@ function buildProblemSet(parsed: any, language: string, modelId: string): BenchP
 				typeof p.prompt === "string" &&
 				p.prompt.length > 0,
 		)
-		.map(
-			(p: {
-				id: string
-				mode: string
-				title: string
-				prompt: string
-				context_files?: string[]
-				evaluation_criteria?: string[]
-				difficulty?: string
-			}) => ({
-				id: p.id,
-				mode: BENCH_MODES.includes(p.mode as BenchMode) ? (p.mode as BenchMode) : "code",
-				title: p.title || p.id,
-				prompt: p.prompt,
-				contextFiles: p.context_files || [],
-				evaluationCriteria: p.evaluation_criteria || [],
-				difficulty: (p.difficulty as "easy" | "medium" | "hard") || "medium",
-			}),
-		)
+			.map(
+				(p: {
+					id: string
+					mode: string
+					title: string
+					prompt: string
+					context_files?: string[]
+					evaluation_criteria?: string[]
+					difficulty?: string
+				}) => ({
+					id: p.id,
+					mode: BENCH_MODES.includes(p.mode as BenchMode) ? (p.mode as BenchMode) : "code",
+					title: p.title || p.id,
+					prompt: p.prompt,
+					contextFiles: Array.isArray(p.context_files)
+						? p.context_files.filter((f): f is string => typeof f === "string")
+						: [],
+					evaluationCriteria: Array.isArray(p.evaluation_criteria)
+						? p.evaluation_criteria.filter((c): c is string => typeof c === "string")
+						: [],
+					difficulty: p.difficulty === "easy" || p.difficulty === "medium" || p.difficulty === "hard"
+						? p.difficulty
+						: "medium",
+				}),
+			)
 
 	if (problems.length === 0) {
 		throw new Error("Generator model produced no valid problems")
