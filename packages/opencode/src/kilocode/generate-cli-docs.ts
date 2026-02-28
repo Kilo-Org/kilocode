@@ -1,6 +1,7 @@
 import { generateHelp, generateCommandTable } from "./help"
+import path from "path"
 
-const root = new URL("../../../../", import.meta.url).pathname
+const root = path.resolve(import.meta.dir, "../../../..") + "/"
 
 const TABLE_PATH = root + "packages/kilo-docs/markdoc/partials/cli-commands-table.md"
 const REFERENCE_PATH = root + "packages/kilo-docs/pages/code-with-ai/platforms/cli-reference.md"

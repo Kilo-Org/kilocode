@@ -1,5 +1,6 @@
 import yargs from "yargs"
 import type { CommandModule } from "yargs"
+import { Log } from "../util/log"
 
 type Cmd = CommandModule<any, any>
 
@@ -72,7 +73,7 @@ async function getSubcommands(name: string, cmd: Cmd): Promise<Array<{ name: str
       })
     }
   } catch (err) {
-    console.warn("failed to extract subcommands via yargs internals", err)
+    Log.Default.warn("failed to extract subcommands via yargs internals", { err })
   }
 
   return result

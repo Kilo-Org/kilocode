@@ -22,9 +22,14 @@ export const HelpCommand = cmd({
         default: "md" as const,
       }),
   async handler(args) {
+    if (!args.command && !args.all) {
+      process.stdout.write("Usage: kilo help --all           Show full CLI reference\n")
+      process.stdout.write("       kilo help <command>       Show help for a specific command\n")
+      return
+    }
     const output = await generateHelp({
       command: args.command,
-      all: args.all || !args.command,
+      all: args.all,
       format: args.format as "md" | "text",
     })
     process.stdout.write(output + "\n")
