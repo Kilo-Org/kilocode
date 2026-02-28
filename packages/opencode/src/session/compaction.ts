@@ -91,6 +91,7 @@ export namespace SessionCompaction {
       for (const part of toPrune) {
         if (part.state.status === "completed") {
           part.state.time.compacted = Date.now()
+          part.state.output = "" // kilocode_change: clear output from DB to prevent unbounded memory re-hydration
           await Session.updatePart(part)
         }
       }

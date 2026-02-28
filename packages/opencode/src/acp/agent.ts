@@ -336,6 +336,8 @@ export namespace ACP {
               case "completed": {
                 this.toolStarts.delete(part.callID)
                 this.bashSnapshots.delete(part.callID)
+                // kilocode_change: skip re-reporting compacted parts (output was cleared from DB)
+                if (part.state.time.compacted) return
                 const kind = toToolKind(part.tool)
                 const content: ToolCallContent[] = [
                   {
@@ -851,6 +853,8 @@ export namespace ACP {
             case "completed":
               this.toolStarts.delete(part.callID)
               this.bashSnapshots.delete(part.callID)
+              // kilocode_change: skip compacted parts (output was cleared from DB)
+              if (part.state.time.compacted) break
               const kind = toToolKind(part.tool)
               const content: ToolCallContent[] = [
                 {
