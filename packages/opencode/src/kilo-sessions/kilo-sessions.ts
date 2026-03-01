@@ -107,20 +107,25 @@ export namespace KiloSessions {
     })
   }
 
+  const shareDisabled = process.env["KILO_DISABLE_SHARE"] === "true" || process.env["KILO_DISABLE_SHARE"] === "1"
+  const ingestDisabled =
+    process.env["KILO_DISABLE_SESSION_INGEST"] === "true" || process.env["KILO_DISABLE_SESSION_INGEST"] === "1"
+  const debugIngest =
+    process.env["KILO_DEBUG_SESSION_INGEST"] === "true" || process.env["KILO_DEBUG_SESSION_INGEST"] === "1"
+
   const ingest = IngestQueue.create({
     getShare: async (sessionId) => get(sessionId).catch(() => undefined),
     getClient,
-    log,
+    log: {
+      ...(debugIngest ? { info: log.info.bind(log) } : {}),
+      error: log.error.bind(log),
+    },
     onAuthError: () => {
       // Non-retryable until credentials are fixed.
       // Clearing caches prevents repeated use of a now-invalid token/client.
       clearCache()
     },
   })
-
-  const shareDisabled = process.env["KILO_DISABLE_SHARE"] === "true" || process.env["KILO_DISABLE_SHARE"] === "1"
-  const ingestDisabled =
-    process.env["KILO_DISABLE_SESSION_INGEST"] === "true" || process.env["KILO_DISABLE_SESSION_INGEST"] === "1"
 
   export async function init() {
     if (ingestDisabled) return
