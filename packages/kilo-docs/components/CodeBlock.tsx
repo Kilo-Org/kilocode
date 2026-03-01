@@ -3,14 +3,84 @@ import Prism from "prismjs"
 import * as React from "react"
 import { Codicon } from "./Codicon"
 
+let mermaidInitialized = false
+
+function MermaidBlock({ children }) {
+  const ref = React.useRef(null)
+  const [svg, setSvg] = React.useState("")
+  const [error, setError] = React.useState(false)
+
+  React.useEffect(() => {
+    const code = typeof children === "string" ? children : ref.current?.textContent || ""
+    if (!code.trim()) return
+    const id = `mermaid-${Math.random().toString(36).slice(2, 9)}`
+
+    import("mermaid").then((mod) => {
+      const mermaid = mod.default
+      if (!mermaidInitialized) {
+        mermaid.initialize({
+          startOnLoad: false,
+          theme: "base",
+          themeVariables: {
+            primaryColor: "#33332d",
+            primaryTextColor: "#e9e9e9",
+            primaryBorderColor: "#555",
+            lineColor: "#a3a3a2",
+            secondaryColor: "#2a2a24",
+            tertiaryColor: "#1a1a18",
+            background: "#1a1a18",
+            mainBkg: "#33332d",
+            nodeBorder: "#555",
+            clusterBkg: "#2a2a24",
+            clusterBorder: "#444",
+            titleColor: "#e9e9e9",
+            edgeLabelBackground: "#1a1a18",
+          },
+          securityLevel: "strict",
+          fontFamily: "inherit",
+        })
+        mermaidInitialized = true
+      }
+      mermaid
+        .render(id, code.trim())
+        .then(({ svg }) => setSvg(svg))
+        .catch((err) => {
+          console.error(err)
+          setError(true)
+        })
+    })
+  }, [children])
+
+  if (error) {
+    return <pre className="language-mermaid">{children}</pre>
+  }
+
+  if (svg) {
+    return (
+      <div
+        className="mermaid-diagram"
+        dangerouslySetInnerHTML={{ __html: svg }}
+        style={{ display: "flex", justifyContent: "center", padding: "1rem 0" }}
+      />
+    )
+  }
+
+  return (
+    <pre ref={ref} style={{ visibility: "hidden", height: 0, overflow: "hidden" }}>
+      {children}
+    </pre>
+  )
+}
+
 export function CodeBlock({ children, "data-language": language }) {
   const ref = React.useRef(null)
   const timeoutRef = React.useRef(null)
   const [copied, setCopied] = React.useState(false)
 
   React.useEffect(() => {
+    if (language === "mermaid") return
     if (ref.current) Prism.highlightElement(ref.current, false)
-  }, [children])
+  }, [children, language])
 
   React.useEffect(() => {
     return () => {
@@ -19,6 +89,10 @@ export function CodeBlock({ children, "data-language": language }) {
       }
     }
   }, [])
+
+  if (language === "mermaid") {
+    return <MermaidBlock>{children}</MermaidBlock>
+  }
 
   const handleCopy = async () => {
     const code = ref.current?.textContent || ""
