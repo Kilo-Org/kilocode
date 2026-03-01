@@ -773,6 +773,131 @@ export interface AgentManagerSendInitialMessage {
   files?: Array<{ mime: string; url: string }>
 }
 
+// ============================================
+// Bench messages (extension → webview)
+// ============================================
+
+export interface BenchProgress {
+  phase: "generating" | "running" | "evaluating" | "complete" | "error"
+  currentModel?: string
+  currentProblem?: number
+  totalProblems?: number
+  modelsCompleted?: number
+  totalModels?: number
+  message?: string
+}
+
+export interface BenchConfig {
+  problemsPerMode: number
+  activeModes: string[]
+  generatorModel: string
+  evaluatorModel: string
+  maxParallelModels: number
+  temperature: number
+  weights: {
+    quality: number
+    relevance: number
+    speed: number
+    cost: number
+  }
+}
+
+export interface BenchEvaluation {
+  qualityScore: number
+  relevanceScore: number
+  qualityRationale: string
+  relevanceRationale: string
+  speedScore: number
+  costScore: number
+  compositeScore: number
+}
+
+export interface BenchProblemResult {
+  problemId: string
+  mode: string
+  responseContent: string
+  ttft: number
+  totalTime: number
+  inputTokens: number
+  outputTokens: number
+  cost: number
+  evaluation: BenchEvaluation
+}
+
+export interface BenchModelResult {
+  modelId: string
+  modelName: string
+  problems: BenchProblemResult[]
+  aggregateScore: number
+  modeScores: Record<string, number>
+  totalCost: number
+  totalInputTokens: number
+  totalOutputTokens: number
+  totalTime: number
+}
+
+export interface BenchProblem {
+  id: string
+  mode: string
+  title: string
+  prompt: string
+  contextFiles: string[]
+  evaluationCriteria: string[]
+  difficulty: "easy" | "medium" | "hard"
+}
+
+export interface BenchProblemSet {
+  version: string
+  generatedAt: string
+  generatorModel: string
+  workspacePath: string
+  workspaceSummary: string
+  problems: BenchProblem[]
+}
+
+export interface BenchRunResult {
+  id: string
+  runAt: string
+  problemSet: BenchProblemSet
+  models: string[]
+  config: BenchConfig
+  results: BenchModelResult[]
+}
+
+export interface BenchProgressMessage {
+  type: "benchProgress"
+  benchProgress: BenchProgress
+}
+
+export interface BenchResultsMessage {
+  type: "benchResults"
+  benchResults: BenchRunResult
+}
+
+export interface BenchConfigMessage {
+  type: "benchConfig"
+  benchConfig: BenchConfig
+}
+
+export interface BenchProblemsMessage {
+  type: "benchProblems"
+  benchProblems: BenchProblemSet
+}
+
+export interface BenchErrorMessage {
+  type: "benchError"
+  benchError: string
+  benchIsCreditError?: boolean
+}
+
+export interface BenchCheckpointMessage {
+  type: "benchCheckpoint"
+  benchHasCheckpoint: boolean
+  benchCheckpointModels?: string[]
+  benchCheckpointPhase?: string
+  benchCheckpointProgress?: string
+}
+
 export type ExtensionMessage =
   | ReadyMessage
   | ConnectionStateMessage
@@ -832,6 +957,12 @@ export type ExtensionMessage =
   | AgentManagerWorktreeDiffLoadingMessage
   | AgentManagerWorktreeStatsMessage
   | AgentManagerLocalStatsMessage
+  | BenchProgressMessage
+  | BenchResultsMessage
+  | BenchConfigMessage
+  | BenchProblemsMessage
+  | BenchErrorMessage
+  | BenchCheckpointMessage
 
 // ============================================
 // Messages FROM webview TO extension
@@ -1232,6 +1363,45 @@ export interface StopDiffWatchMessage {
   type: "agentManager.stopDiffWatch"
 }
 
+// ============================================
+// Bench messages (webview → extension)
+// ============================================
+
+export interface BenchStartRunRequest {
+  type: "benchStartRun"
+  benchModels: string[]
+}
+
+export interface BenchLoadResultsRequest {
+  type: "benchLoadResults"
+}
+
+export interface BenchUpdateConfigRequest {
+  type: "benchUpdateConfig"
+  benchConfig: Partial<BenchConfig>
+}
+
+export interface BenchSetActiveModelRequest {
+  type: "benchSetActiveModel"
+  benchModelId: string
+}
+
+export interface BenchRegenerateProblemsRequest {
+  type: "benchRegenerateProblems"
+}
+
+export interface BenchCancelRunRequest {
+  type: "benchCancelRun"
+}
+
+export interface BenchResumeRunRequest {
+  type: "benchResumeRun"
+}
+
+export interface BenchClearCheckpointRequest {
+  type: "benchClearCheckpoint"
+}
+
 // Variant persistence (webview → extension)
 export interface PersistVariantRequest {
   type: "persistVariant"
@@ -1315,6 +1485,14 @@ export type WebviewMessage =
   | RequestWorktreeDiffMessage
   | StartDiffWatchMessage
   | StopDiffWatchMessage
+  | BenchStartRunRequest
+  | BenchLoadResultsRequest
+  | BenchUpdateConfigRequest
+  | BenchSetActiveModelRequest
+  | BenchRegenerateProblemsRequest
+  | BenchCancelRunRequest
+  | BenchResumeRunRequest
+  | BenchClearCheckpointRequest
 
 // ============================================
 // VS Code API type

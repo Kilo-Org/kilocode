@@ -23,6 +23,30 @@ import {
 } from "./kilo-provider-utils"
 import { isEventFromForeignProject } from "./services/cli-backend/sse-utils"
 
+const BenchModeSchema = z.enum(["architect", "code", "debug", "ask", "orchestrator"])
+const BenchConfigUpdateSchema = z.object({
+  problemsPerMode: z.number().int().min(1).max(10).optional(),
+  activeModes: z.array(BenchModeSchema).min(1).optional(),
+  generatorModel: z.string().optional(),
+  evaluatorModel: z.string().optional(),
+  maxParallelModels: z.number().int().min(1).max(10).optional(),
+  temperature: z.number().min(0).max(2).optional(),
+  weights: z.object({
+    quality: z.number().min(0).max(1).optional(),
+    relevance: z.number().min(0).max(1).optional(),
+    speed: z.number().min(0).max(1).optional(),
+    cost: z.number().min(0).max(1).optional(),
+  }).strict().optional(),
+}).strict()
+
+function isBenchCreditError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false
+  }
+  const name = (error as { name?: unknown }).name
+  return typeof name === "string" && name === "BenchCreditError"
+}
+
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "kilo-code.new.sidebarView"
 
@@ -57,6 +81,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private unsubscribeState: (() => void) | null = null
   private unsubscribeNotificationDismiss: (() => void) | null = null
   private webviewMessageDisposable: vscode.Disposable | null = null
+
+  /** Active bench service instance (null when no benchmark is running) */
+  private activeBenchService: { cancel: () => void } | null = null
 
   /** Lazily initialized ignore controller for .kilocodeignore filtering */
   private ignoreController: FileIgnoreController | null = null
@@ -507,6 +534,199 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestVariants": {
           const variants = this.extensionContext?.globalState.get<Record<string, string>>("variantSelections") ?? {}
           this.postMessage({ type: "variantsLoaded", variants })
+          break
+        }
+
+        // ============================================
+        // Bench message handlers
+        // ============================================
+        case "benchStartRun": {
+          const parsedModels = z.array(z.string().min(1)).safeParse((message as { benchModels?: unknown }).benchModels)
+          const models = parsedModels.success ? parsedModels.data : []
+          if (this.activeBenchService) {
+            this.postMessage({ type: "benchError", benchError: "Benchmark already running" })
+            break
+          }
+          if (models.length === 0) {
+            this.postMessage({ type: "benchError", benchError: "No models selected" })
+            break
+          }
+          try {
+            const { BenchService } = await import("./bench/BenchService.js")
+            const { createBenchApiHandler } = await import("./bench/bench-api-adapter.js")
+
+            const apiHandler = createBenchApiHandler(
+              this.connectionService,
+              this.getWorkspaceDirectory(),
+              "default",
+              "kilo",
+            )
+            const benchService = new BenchService(this.getWorkspaceDirectory(), apiHandler, this.connectionService, "kilo")
+            this.activeBenchService = benchService
+            try {
+              const result = await benchService.startBenchmark(models, async (progress: any) => {
+                this.postMessage({ type: "benchProgress", benchProgress: progress })
+              })
+              this.postMessage({ type: "benchResults", benchResults: result })
+            } finally {
+              if (this.activeBenchService === benchService) {
+                this.activeBenchService = null
+              }
+            }
+          } catch (error: unknown) {
+            const isCreditError = isBenchCreditError(error)
+            this.postMessage({
+              type: "benchError",
+              benchError: isCreditError
+                ? "Your credits have run out. Your progress has been saved — you can resume the benchmark after adding credits."
+                : (error instanceof Error ? error.message : "Benchmark failed"),
+              benchIsCreditError: isCreditError,
+            })
+          }
+          break
+        }
+        case "benchResumeRun": {
+          if (this.activeBenchService) {
+            this.postMessage({ type: "benchError", benchError: "Benchmark already running" })
+            break
+          }
+          try {
+            const { BenchService } = await import("./bench/BenchService.js")
+            const { createBenchApiHandler } = await import("./bench/bench-api-adapter.js")
+
+            const apiHandler = createBenchApiHandler(
+              this.connectionService,
+              this.getWorkspaceDirectory(),
+              "default",
+              "kilo",
+            )
+            const benchService = new BenchService(this.getWorkspaceDirectory(), apiHandler, this.connectionService, "kilo")
+            this.activeBenchService = benchService
+            try {
+              const result = await benchService.resumeBenchmark(async (progress: any) => {
+                this.postMessage({ type: "benchProgress", benchProgress: progress })
+              })
+              this.postMessage({ type: "benchResults", benchResults: result })
+            } finally {
+              if (this.activeBenchService === benchService) {
+                this.activeBenchService = null
+              }
+            }
+          } catch (error: unknown) {
+            const isCreditError = isBenchCreditError(error)
+            this.postMessage({
+              type: "benchError",
+              benchError: isCreditError
+                ? "Your credits have run out again. Progress has been saved — resume when you have more credits."
+                : (error instanceof Error ? error.message : "Resume failed"),
+              benchIsCreditError: isCreditError,
+            })
+          }
+          break
+        }
+        case "benchLoadResults": {
+          try {
+            const { loadConfig, loadLatestResult, loadCheckpoint } = await import("./bench/storage.js")
+            const workspaceDir = this.getWorkspaceDirectory()
+            const config = await loadConfig(workspaceDir)
+            this.postMessage({ type: "benchConfig", benchConfig: config })
+            const result = await loadLatestResult(workspaceDir)
+            if (result) {
+              this.postMessage({ type: "benchResults", benchResults: result })
+            }
+            // Check for resumable checkpoint
+            const checkpoint = await loadCheckpoint(workspaceDir)
+            if (checkpoint) {
+              const total = checkpoint.models.length * checkpoint.problemSet.problems.length
+              const done = checkpoint.completedResponses.length
+              this.postMessage({
+                type: "benchCheckpoint",
+                benchHasCheckpoint: true,
+                benchCheckpointModels: checkpoint.models,
+                benchCheckpointPhase: checkpoint.phase,
+                benchCheckpointProgress: `${done}/${total} responses completed`,
+              })
+            } else {
+              this.postMessage({ type: "benchCheckpoint", benchHasCheckpoint: false })
+            }
+          } catch (error: unknown) {
+            this.postMessage({ type: "benchError", benchError: error instanceof Error ? error.message : "Failed to load results" })
+          }
+          break
+        }
+        case "benchClearCheckpoint": {
+          try {
+            const { clearCheckpoint } = await import("./bench/storage.js")
+            await clearCheckpoint(this.getWorkspaceDirectory())
+            this.postMessage({ type: "benchCheckpoint", benchHasCheckpoint: false })
+          } catch (err) {
+            console.warn("[Kilo Bench] Failed to clear checkpoint:", err)
+          }
+          break
+        }
+        case "benchUpdateConfig": {
+          try {
+            const { loadConfig, saveConfig } = await import("./bench/storage.js")
+            const workspaceDir = this.getWorkspaceDirectory()
+            const current = await loadConfig(workspaceDir)
+            const updates = BenchConfigUpdateSchema.parse((message as { benchConfig?: unknown }).benchConfig || {})
+            const merged = {
+              ...current,
+              ...updates,
+              weights: { ...current.weights, ...(updates.weights || {}) },
+            }
+            await saveConfig(workspaceDir, merged)
+            this.postMessage({ type: "benchConfig", benchConfig: merged })
+          } catch (error: unknown) {
+            this.postMessage({ type: "benchError", benchError: error instanceof Error ? error.message : "Failed to update config" })
+          }
+          break
+        }
+        case "benchSetActiveModel": {
+          const modelId = (message as { benchModelId?: unknown }).benchModelId
+          if (typeof modelId === "string" && modelId.length > 0) {
+            this.postMessage({
+              type: "benchError",
+              benchError: "Selecting an active model from the leaderboard is not supported yet.",
+            })
+          }
+          break
+        }
+        case "benchRegenerateProblems": {
+          try {
+            if (this.activeBenchService) {
+              this.postMessage({ type: "benchError", benchError: "Benchmark is currently running" })
+              break
+            }
+            const { BenchService } = await import("./bench/BenchService.js")
+            const { createBenchApiHandler } = await import("./bench/bench-api-adapter.js")
+
+            const apiHandler = createBenchApiHandler(
+              this.connectionService,
+              this.getWorkspaceDirectory(),
+              "default",
+              "kilo",
+            )
+            const benchService = new BenchService(this.getWorkspaceDirectory(), apiHandler, this.connectionService, "kilo")
+            this.activeBenchService = benchService
+            try {
+              const problems = await benchService.generate((progress: any) => {
+                this.postMessage({ type: "benchProgress", benchProgress: progress })
+              })
+              this.postMessage({ type: "benchProblems", benchProblems: problems })
+            } finally {
+              if (this.activeBenchService === benchService) {
+                this.activeBenchService = null
+              }
+            }
+          } catch (error: unknown) {
+            this.postMessage({ type: "benchError", benchError: error instanceof Error ? error.message : "Failed to regenerate problems" })
+          }
+          break
+        }
+        case "benchCancelRun": {
+          this.activeBenchService?.cancel()
+          this.activeBenchService = null
           break
         }
       }

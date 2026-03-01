@@ -225,8 +225,10 @@ export class HttpClient {
       providerID?: string
       modelID?: string
       agent?: string
+      system?: string
       variant?: string
       editorContext?: EditorContext
+      tools?: Record<string, boolean>
     },
   ): Promise<void> {
     const body: Record<string, unknown> = { parts }
@@ -237,11 +239,17 @@ export class HttpClient {
     if (options?.agent) {
       body.agent = options.agent
     }
+    if (options?.system) {
+      body.system = options.system
+    }
     if (options?.variant) {
       body.variant = options.variant
     }
     if (options?.editorContext) {
       body.editorContext = options.editorContext
+    }
+    if (options?.tools) {
+      body.tools = options.tools
     }
 
     await this.request<void>("POST", `/session/${sessionId}/message`, body, { directory, allowEmpty: true })
