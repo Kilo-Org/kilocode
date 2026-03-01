@@ -116,17 +116,51 @@ export namespace MCP {
     })
   }
 
+  // Recursively anchor regex patterns in JSON schemas.
+  // Some providers (e.g. llama.cpp) require patterns to start with ^ and end with $.
+  function anchorPatterns(schema: JSONSchema7): JSONSchema7 {
+    if (!schema || typeof schema !== "object") return schema
+    const result = { ...schema }
+
+    if (typeof result.pattern === "string") {
+      if (!result.pattern.startsWith("^")) result.pattern = "^" + result.pattern
+      if (!result.pattern.endsWith("$")) result.pattern = result.pattern + "$"
+    }
+
+    if (result.properties) {
+      const props: Record<string, JSONSchema7> = {}
+      for (const [key, value] of Object.entries(result.properties)) {
+        props[key] = anchorPatterns(value as JSONSchema7)
+      }
+      result.properties = props
+    }
+
+    if (result.items) {
+      result.items = Array.isArray(result.items)
+        ? result.items.map((item) => anchorPatterns(item as JSONSchema7))
+        : anchorPatterns(result.items as JSONSchema7)
+    }
+
+    for (const key of ["anyOf", "oneOf", "allOf"] as const) {
+      if (Array.isArray(result[key])) {
+        ;(result as any)[key] = (result[key] as JSONSchema7[]).map((s) => anchorPatterns(s))
+      }
+    }
+
+    return result
+  }
+
   // Convert MCP tool definition to AI SDK Tool type
   async function convertMcpTool(mcpTool: MCPToolDef, client: MCPClient, timeout?: number): Promise<Tool> {
     const inputSchema = mcpTool.inputSchema
 
     // Spread first, then override type to ensure it's always "object"
-    const schema: JSONSchema7 = {
+    const schema: JSONSchema7 = anchorPatterns({
       ...(inputSchema as JSONSchema7),
       type: "object",
       properties: (inputSchema.properties ?? {}) as JSONSchema7["properties"],
       additionalProperties: false,
-    }
+    })
 
     return dynamicTool({
       description: mcpTool.description ?? "",
