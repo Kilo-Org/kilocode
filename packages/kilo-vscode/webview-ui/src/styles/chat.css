@@ -637,6 +637,11 @@
   text-transform: capitalize;
 }
 
+.mode-switcher-popover {
+  width: 280px;
+  max-width: 280px;
+}
+
 .mode-switcher-list {
   max-height: 280px;
   overflow-y: auto;
