@@ -1,6 +1,6 @@
 import { marked } from "marked"
 import markedKatex from "marked-katex-extension"
-import markedShiki from "marked-shiki"
+
 import katex from "katex"
 import { bundledLanguages, type BundledLanguage } from "shiki"
 import { createSimpleContext } from "./helper"
@@ -423,6 +423,8 @@ function renderMathExpressions(html: string): string {
     .join("")
 }
 
+// Used only by the native parser path (props.nativeParser) — not the JS parser.
+// The JS parser uses deferredHighlight() instead for non-blocking rendering.
 async function highlightCodeBlocks(html: string): Promise<string> {
   const codeBlockRegex = /<pre><code(?:\s+class="language-([^"]*)")?>([\s\S]*?)<\/code><\/pre>/g
   const matches = [...html.matchAll(codeBlockRegex)]
@@ -481,10 +483,160 @@ function parseFilePath(text: string): { path: string; line?: number; column?: nu
 }
 // kilocode_change end
 
+// kilocode_change start: highlight cache for deferred highlighting
+
+/** FNV-1a hash — lightweight alternative to storing full source code in DOM attributes. */
+export function fnv1a(s: string): string {
+  let h = 0x811c9dc5
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i)
+    h = Math.imul(h, 0x01000193)
+  }
+  return (h >>> 0).toString(36)
+}
+
+const cache = new Map<string, string>()
+const CACHE_LIMIT = 500
+
+// Normalize common language aliases before sanitizing, so e.g. "c++" → "cpp"
+// rather than stripping to "c" (which would highlight as the wrong language).
+const LANG_ALIASES: Record<string, string> = {
+  "c++": "cpp",
+  "c#": "csharp",
+  "f#": "fsharp",
+  "objective-c++": "objective-cpp",
+}
+
+function touchHighlightCache(key: string, value: string) {
+  cache.delete(key)
+  cache.set(key, value)
+  if (cache.size <= CACHE_LIMIT) return
+  const first = cache.keys().next().value
+  if (!first) return
+  cache.delete(first)
+}
+
+function replaceWithHighlighted(block: Element, html: string, sourceHash: string) {
+  const pre = block.parentElement
+  if (!pre || !pre.isConnected) return
+  const temp = document.createElement("div")
+  temp.innerHTML = html
+  const highlighted = temp.firstElementChild
+  if (!highlighted) return
+  // Store a hash of the source code so the morphdom guard in Markdown can detect
+  // mid-stream content changes without keeping the full source in the DOM.
+  highlighted.setAttribute("data-source-hash", sourceHash)
+  // Preserve any wrapper structure (e.g., markdown-code wrapper with copy button)
+  const wrapper = pre.parentElement
+  if (wrapper?.getAttribute("data-component") === "markdown-code") {
+    wrapper.replaceChild(highlighted, pre)
+    return
+  }
+  pre.replaceWith(highlighted)
+}
+
+/**
+ * Progressively highlight unhighlighted <pre><code> blocks inside a container.
+ * Each block is highlighted via setTimeout(0) to yield back to the main thread
+ * between blocks, keeping the UI responsive.
+ *
+ * Blocks marked with data-highlighted are skipped (already processed).
+ * After highlighting, blocks are marked to survive morphdom re-runs during streaming.
+ *
+ * Returns a callback to re-run setupCodeCopy after highlighting completes,
+ * since highlight replaces DOM nodes that may have copy button wrappers.
+ */
+export async function deferredHighlight(
+  container: HTMLElement,
+  onComplete?: () => void,
+  signal?: { aborted: boolean },
+): Promise<void> {
+  const blocks = Array.from(
+    container.querySelectorAll("pre > code[data-lang]:not([data-highlighted])"),
+  )
+  if (blocks.length === 0) {
+    onComplete?.()
+    return
+  }
+
+  const highlighter = await getSharedHighlighter({ themes: ["Kilo"], langs: [] })
+
+  for (const block of blocks) {
+    // Short-circuit if the container is unmounted or the caller cancelled this run
+    // (e.g., a newer streaming token triggered a fresh deferredHighlight call).
+    if (!container.isConnected || signal?.aborted) break
+
+    const lang = block.getAttribute("data-lang") || "text"
+    const code = block.textContent ?? ""
+    if (!code) continue
+
+    const cacheKey = `${lang}\0${code}`
+    const codeHash = fnv1a(code)
+    const cached = cache.get(cacheKey)
+    if (cached) {
+      touchHighlightCache(cacheKey, cached) // refresh LRU position on hit
+      replaceWithHighlighted(block, cached, codeHash)
+      continue
+    }
+
+    await new Promise<void>((resolve) => {
+      setTimeout(() => {
+        if (!block.isConnected) {
+          resolve()
+          return
+        }
+        try {
+          const language = lang in bundledLanguages ? lang : "text"
+          const highlight = () => {
+            // kilocode_change: re-check after async loadLanguage — block may have
+            // been removed from DOM while the language bundle was being fetched.
+            if (!block.isConnected) {
+              resolve()
+              return
+            }
+            const html = highlighter.codeToHtml(code, { lang: language, theme: "Kilo", tabindex: false })
+            touchHighlightCache(cacheKey, html)
+            // Note: data-highlighted is NOT set on `block` here because
+            // replaceWithHighlighted replaces the parent <pre> entirely — the
+            // original <code> element leaves the DOM immediately after this call.
+            // The new highlighted <pre class="shiki"> from Shiki has no
+            // code[data-lang] child, so the querySelectorAll selector won't
+            // pick it up on subsequent deferredHighlight passes.
+            replaceWithHighlighted(block, html, codeHash)
+            resolve()
+          }
+          if (!highlighter.getLoadedLanguages().includes(language)) {
+            highlighter.loadLanguage(language as BundledLanguage).then(highlight).catch((err) => {
+              console.warn("Failed to load language for highlighting", language, err)
+              resolve()
+            })
+            return
+          }
+          highlight()
+        } catch (err) {
+          console.warn("Deferred highlight failed", lang, err)
+          resolve()
+        }
+      }, 0)
+    })
+  }
+
+  // Only fire onComplete if the container is still mounted and the run wasn't
+  // cancelled — avoids calling setupCodeCopy on a disconnected DOM tree.
+  if (container.isConnected && !signal?.aborted) {
+    onComplete?.()
+  }
+}
+// kilocode_change end
+
 export const { use: useMarked, provider: MarkedProvider } = createSimpleContext({
   name: "Marked",
   init: (props: { nativeParser?: NativeMarkdownParser }) => {
-    const jsParser = marked.use(
+    // kilocode_change start: two-pass parser — first pass skips Shiki highlighting
+    // to avoid blocking the main thread with Oniguruma WASM regex (issue #6221).
+    // Code blocks render as plain <pre><code data-lang="..."> immediately.
+    // The Markdown component calls deferredHighlight() after DOM paint.
+    const parser = marked.use(
       {
         renderer: {
           link({ href, title, text }) {
@@ -501,6 +653,20 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
             }
             return `<code>${text}</code>`
           },
+          code({ text, lang }) {
+            const escaped = text
+              .replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;")
+              .replace(/"/g, "&quot;")
+              .replace(/'/g, "&#39;")
+            // Normalize aliases (e.g. "c++" → "cpp") before stripping special
+            // chars, so "c++" doesn't become "c" (wrong language highlight).
+            const normalized = lang ? (LANG_ALIASES[lang] ?? lang) : ""
+            const safe = normalized ? normalized.replace(/[^a-zA-Z0-9_-]/g, "") : ""
+            const attr = safe ? ` class="language-${safe}" data-lang="${safe}"` : ' data-lang="text"'
+            return `<pre><code${attr}>${escaped}</code></pre>`
+          },
           // kilocode_change end
         },
       },
@@ -508,23 +674,8 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
         throwOnError: false,
         nonStandard: true,
       }),
-      markedShiki({
-        async highlight(code, lang) {
-          const highlighter = await getSharedHighlighter({ themes: ["Kilo"], langs: [] })
-          if (!(lang in bundledLanguages)) {
-            lang = "text"
-          }
-          if (!highlighter.getLoadedLanguages().includes(lang)) {
-            await highlighter.loadLanguage(lang as BundledLanguage)
-          }
-          return highlighter.codeToHtml(code, {
-            lang: lang || "text",
-            theme: "Kilo",
-            tabindex: false,
-          })
-        },
-      }),
     )
+    // kilocode_change end
 
     if (props.nativeParser) {
       const nativeParser = props.nativeParser
@@ -537,6 +688,6 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
       }
     }
 
-    return jsParser
+    return parser
   },
 })
