@@ -1403,6 +1403,10 @@ export type KeybindsConfig = {
    * Toggle thinking blocks visibility
    */
   display_thinking?: string
+  /**
+   * Show keyboard shortcut cheat sheet
+   */
+  cheat_sheet?: string
 }
 
 /**
