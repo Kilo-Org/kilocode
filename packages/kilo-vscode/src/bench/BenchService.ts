@@ -96,7 +96,8 @@ export class BenchService {
 			throw new Error("No models selected")
 		}
 		this.abortController = new AbortController()
-		const runId = `${Date.now().toString(36)}-${crypto.randomBytes(3).toString("hex")}`
+		const { randomBytes } = await import("crypto")
+		const runId = `${Date.now().toString(36)}-${randomBytes(3).toString("hex")}`
 		const startedAt = new Date().toISOString()
 
 		// Phase 1: Generate problems
