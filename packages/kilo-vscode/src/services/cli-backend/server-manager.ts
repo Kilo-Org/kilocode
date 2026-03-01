@@ -14,6 +14,14 @@ export interface ServerInstance {
 export class ServerManager {
   private instance: ServerInstance | null = null
   private startupPromise: Promise<ServerInstance> | null = null
+  private _output: vscode.OutputChannel | undefined
+
+  private get output(): vscode.OutputChannel {
+    if (!this._output) {
+      this._output = vscode.window.createOutputChannel("Kilo CLI")
+    }
+    return this._output
+  }
 
   constructor(private readonly context: vscode.ExtensionContext) {}
 
@@ -38,6 +46,18 @@ export class ServerManager {
       this.instance = await this.startupPromise
       console.log("[Kilo New] ServerManager: ✅ Server started successfully:", { port: this.instance.port })
       return this.instance
+    } catch (error) {
+      const raw = error instanceof Error ? error.message : String(error)
+      const summary = (raw.length > 200 ? `${raw.slice(0, 200)}…` : raw).replace(/\n/g, " ")
+      this.output.appendLine(`[ERROR] CLI failed to start: ${raw}`)
+      void Promise.resolve(vscode.window.showErrorMessage(`Kilo: CLI failed to start. ${summary}`, "Show Output"))
+        .then((action) => {
+          if (action === "Show Output") {
+            this.output.show()
+          }
+        })
+        .catch((e: unknown) => console.error("[Kilo New] ServerManager: showErrorMessage failed:", e))
+      throw error
     } finally {
       this.startupPromise = null
     }
@@ -68,7 +88,7 @@ export class ServerManager {
           KILO_SERVER_PASSWORD: password,
           KILO_CLIENT: "vscode",
           KILO_ENABLE_QUESTION_TOOL: "true",
-          KILOCODE_FEATURE: "vscode-extension", // kilocode_change - feature tracking
+          KILOCODE_FEATURE: "vscode-extension",
           KILO_TELEMETRY_LEVEL: vscode.env.isTelemetryEnabled ? "all" : "off",
           KILO_APP_NAME: "kilo-code",
           KILO_EDITOR_NAME: vscode.env.appName,
@@ -82,10 +102,14 @@ export class ServerManager {
       console.log("[Kilo New] ServerManager: 📦 Process spawned with PID:", serverProcess.pid)
 
       let resolved = false
+      const errors: string[] = []
+      let stderrChars = 0
+      const MAX_STDERR_CHARS = 65536
 
       serverProcess.stdout?.on("data", (data: Buffer) => {
         const output = data.toString()
         console.log("[Kilo New] ServerManager: 📥 CLI Server stdout:", output)
+        this.output.append(output)
 
         const port = parseServerPort(output)
         if (port !== null && !resolved) {
@@ -98,11 +122,17 @@ export class ServerManager {
       serverProcess.stderr?.on("data", (data: Buffer) => {
         const errorOutput = data.toString()
         console.error("[Kilo New] ServerManager: ⚠️ CLI Server stderr:", errorOutput)
+        if (stderrChars < MAX_STDERR_CHARS) {
+          errors.push(errorOutput)
+          stderrChars += errorOutput.length
+        }
+        this.output.append(`[stderr] ${errorOutput}`)
       })
 
       serverProcess.on("error", (error) => {
         console.error("[Kilo New] ServerManager: ❌ Process error:", error)
         if (!resolved) {
+          resolved = true
           reject(error)
         }
       })
@@ -113,16 +143,22 @@ export class ServerManager {
           this.instance = null
         }
         if (!resolved) {
-          reject(new Error(`CLI process exited with code ${code} before server started`))
+          resolved = true
+          const stderr = errors.join("").trim()
+          const detail = stderr ? `\n${stderr}` : ""
+          reject(new Error(`CLI process exited with code ${code} before server started${detail}`))
         }
       })
 
       // Timeout after 30 seconds
       setTimeout(() => {
         if (!resolved) {
+          resolved = true
           console.error("[Kilo New] ServerManager: ⏰ Server startup timeout (30s)")
           serverProcess.kill()
-          reject(new Error("Server startup timeout"))
+          const stderr = errors.join("").trim()
+          const detail = stderr ? `\n${stderr}` : ""
+          reject(new Error(`Server startup timeout${detail}`))
         }
       }, 30000)
     })
@@ -130,7 +166,7 @@ export class ServerManager {
 
   private getCliPath(): string {
     // Always use the bundled binary from the extension directory
-    const binName = process.platform === "win32" ? "kilo.exe" : "kilo" // kilocode_change
+    const binName = process.platform === "win32" ? "kilo.exe" : "kilo"
     const cliPath = path.join(this.context.extensionPath, "bin", binName)
     console.log("[Kilo New] ServerManager: 📦 Using CLI path:", cliPath)
     return cliPath
@@ -141,5 +177,7 @@ export class ServerManager {
       this.instance.process.kill("SIGTERM")
       this.instance = null
     }
+    this._output?.dispose()
+    this._output = undefined
   }
 }
