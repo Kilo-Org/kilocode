@@ -42,7 +42,7 @@ jobs:
 
       - name: Capture source files changed by triggering push
         run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
             git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" -- \
               .github/ISSUE_TEMPLATE/ \
               .github/workflows/duplicate-issues.yml \

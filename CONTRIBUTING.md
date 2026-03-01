@@ -128,7 +128,7 @@ All pull requests must reference an existing issue. Before opening a PR:
 3. Wait for maintainer acknowledgment before investing significant effort
 4. Reference the issue in your PR with `Fixes #N` or `Closes #N`
 
-**Exceptions:** PRs with `docs:` or `refactor:` prefixes are exempt from this requirement.
+**Exceptions:** PRs with `feat:`, `docs:`, or `refactor:` prefixes are exempt from this requirement.
 
 This policy ensures changes are discussed and aligned with project direction before implementation work begins.
 
@@ -136,8 +136,8 @@ This policy ensures changes are discussed and aligned with project direction bef
 
 To keep the issue tracker manageable:
 
-- **Issues** go stale after **90 days** of inactivity and are closed after **97 days** total (7 days after the stale warning)
-- **Pull Requests** are closed after **60 days** of inactivity
+- **Issues** go stale after **90 days** of inactivity and are **closed immediately** when marked stale
+- **Pull Requests** go stale after **30 days** of inactivity and are **closed immediately** when marked stale
 
 To prevent an issue or PR from going stale, leave a comment with an update. If you believe a stale issue is still relevant, comment to reopen the discussion.
 

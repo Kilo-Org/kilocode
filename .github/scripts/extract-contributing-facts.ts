@@ -163,7 +163,10 @@ function extractComplianceHours(raw: string): number {
   )
 }
 
-/** Extract DAYS_BEFORE_ISSUE_CLOSE and days-before-issue-close from stale-issues.yml */
+/** Extract stale and close day counts from stale-issues.yml.
+ * Note: The env var DAYS_BEFORE_ISSUE_CLOSE is confusingly named — it's actually
+ * used as `days-before-issue-stale` in the workflow. closeDays (from `days-before-issue-close`)
+ * is the grace period after the stale label; 0 means "close immediately when stale". */
 function extractStaleDays(raw: string): { staleDays: number; closeDays: number } {
   const staleMatch = raw.match(/DAYS_BEFORE_ISSUE_CLOSE:\s*(\d+)/)
   const closeMatch = raw.match(/days-before-issue-close:\s*(\d+)/)
@@ -239,6 +242,7 @@ async function readFileSafe(path: string): Promise<string | null> {
   try {
     return await Bun.file(path).text()
   } catch (err) {
+    console.warn(`Could not read optional file ${path}:`, err)
     return null
   }
 }
