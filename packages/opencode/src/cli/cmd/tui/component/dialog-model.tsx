@@ -6,7 +6,8 @@ import { DialogSelect } from "@tui/ui/dialog-select"
 import { useDialog } from "@tui/ui/dialog"
 import { createDialogProviderOptions, DialogProvider } from "./dialog-provider"
 import { useKeybind } from "../context/keybind"
-import * as fuzzysort from "fuzzysort"
+// kilocode_change - use enhanced fuzzy search for typo/transposition tolerance
+import { search as fuzzySearch } from "@/kilocode/fuzzy-search"
 
 export function useConnected() {
   const sync = useSync()
@@ -135,9 +136,10 @@ export function DialogModel(props: { providerID?: string }) {
       : []
 
     if (needle) {
-      const filteredProviders = fuzzysort.go(needle, providerOptions, { keys: ["title", "category"] }).map((x) => x.obj)
-      const filteredPopular = fuzzysort.go(needle, popularProviders, { keys: ["title"] }).map((x) => x.obj)
-      // kilocode_change start - Partition Kilo Gateway results first (preserves fuzzysort order)
+      // kilocode_change start - Use enhanced fuzzy search for typo/transposition tolerance
+      const filteredProviders = fuzzySearch(needle, providerOptions)
+      const filteredPopular = fuzzySearch(needle, popularProviders)
+      // Partition Kilo Gateway results first (preserves fuzzy ranking order)
       const kilo = filteredProviders.filter((x) => x.value.providerID === "kilo")
       const rest = filteredProviders.filter((x) => x.value.providerID !== "kilo")
       return [...kilo, ...rest, ...filteredPopular]
