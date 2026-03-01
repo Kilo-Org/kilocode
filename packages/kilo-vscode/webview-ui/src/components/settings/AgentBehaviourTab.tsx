@@ -8,7 +8,9 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { useConfig } from "../../context/config"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
-import type { AgentConfig } from "../../types/messages"
+import { useProvider } from "../../context/provider"
+import { ModelSelectorBase } from "../chat/ModelSelector"
+import type { AgentConfig, ModelSelection } from "../../types/messages"
 
 type SubtabId = "agents" | "mcpServers" | "rules" | "workflows" | "skills"
 
@@ -51,6 +53,7 @@ const AgentBehaviourTab: Component = () => {
   const language = useLanguage()
   const { config, updateConfig } = useConfig()
   const session = useSession()
+  const { models } = useProvider()
   const [activeSubtab, setActiveSubtab] = createSignal<SubtabId>("agents")
   const [selectedAgent, setSelectedAgent] = createSignal<string>("")
   const [newSkillPath, setNewSkillPath] = createSignal("")
@@ -96,6 +99,27 @@ const AgentBehaviourTab: Component = () => {
         [name]: { ...current, ...partial },
       },
     })
+  }
+
+  const configModelToSelection = (model: string | undefined): ModelSelection | null => {
+    if (!model) return null
+    const all = models()
+    const exact = all.find((m) => m.id === model)
+    if (exact) return { providerID: exact.providerID, modelID: exact.id }
+    const slash = model.indexOf("/")
+    if (slash > 0) {
+      const pid = model.slice(0, slash)
+      const mid = model.slice(slash + 1)
+      const match = all.find((m) => m.providerID === pid && m.id === mid)
+      if (match) return { providerID: match.providerID, modelID: match.id }
+      return { providerID: pid, modelID: mid }
+    }
+    return { providerID: "", modelID: model }
+  }
+
+  const selectionToConfigModel = (providerID: string, modelID: string): string | undefined => {
+    if (!providerID && !modelID) return undefined
+    return `${providerID}/${modelID}`
   }
 
   const instructions = () => config().instructions ?? []
@@ -187,6 +211,7 @@ const AgentBehaviourTab: Component = () => {
         <Select
           options={agentSelectorOptions()}
           current={agentSelectorOptions().find((o) => o.value === selectedAgent())}
+          placeholder={language.t("settings.agentBehaviour.selectAgent")}
           value={(o) => o.value}
           label={(o) => o.label}
           onSelect={(o) => o && setSelectedAgent(o.value)}
@@ -203,14 +228,16 @@ const AgentBehaviourTab: Component = () => {
             title={language.t("settings.agentBehaviour.modelOverride.title")}
             description={language.t("settings.agentBehaviour.modelOverride.description")}
           >
-            <TextField
-              value={currentAgentConfig().model ?? ""}
-              placeholder="e.g. anthropic/claude-sonnet-4-20250514"
-              onChange={(val) =>
+            <ModelSelectorBase
+              value={configModelToSelection(currentAgentConfig().model)}
+              onSelect={(providerID, modelID) =>
                 updateAgentConfig(selectedAgent(), {
-                  model: val.trim() || undefined,
+                  model: selectionToConfigModel(providerID, modelID),
                 })
               }
+              placement="bottom-start"
+              allowClear
+              clearLabel={language.t("common.default")}
             />
           </SettingsRow>
 
