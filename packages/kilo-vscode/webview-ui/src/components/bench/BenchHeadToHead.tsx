@@ -120,7 +120,7 @@ export function BenchHeadToHead(props: BenchHeadToHeadProps) {
                   {(pa) => {
                     const pb = () => resultB()?.problems.find((p) => p.problemId === pa.problemId)
                     const scoreA = () => pa.evaluation.compositeScore
-                    const scoreB = () => pb()?.evaluation.compositeScore || 0
+                    const scoreB = () => pb()?.evaluation.compositeScore ?? 0
                     const winner = () => (scoreA() > scoreB() ? "A" : scoreB() > scoreA() ? "B" : "tie")
 
                     return (
