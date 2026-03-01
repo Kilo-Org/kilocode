@@ -376,7 +376,7 @@ console.log("Facts written to .github/scripts/contributing-facts.json")
   "prStandards": {
     "titleRegex": "^(feat|fix|docs|chore|refactor|test)\\s*(\\([a-zA-Z0-9-]+\\))?\\s*:",
     "conventionalPrefixes": ["feat", "fix", "docs", "chore", "refactor", "test"],
-    "skipIssueLinkPrefixes": ["docs", "refactor"]
+    "skipIssueLinkPrefixes": ["docs", "refactor", "feat"]
   }
 }
 ```
@@ -445,9 +445,9 @@ The sync PR itself must follow the `pr-standards.yml` title regex. The title
 the `docs:` prefix requirement and is exempt from the linked-issue check
 (see 6.7).
 
-### 6.7 `docs` and `refactor` PRs skip the linked-issue check
+### 6.7 `feat`, `docs`, and `refactor` PRs skip the linked-issue check
 
-Per `pr-standards.yml`, PRs with `docs:` or `refactor:` prefixes skip the
+Per `pr-standards.yml`, PRs with `feat:`, `docs:`, or `refactor:` prefixes skip the
 linked-issue requirement. The sync PR uses `docs:` so it is automatically
 exempt — no linked issue is needed.
 
