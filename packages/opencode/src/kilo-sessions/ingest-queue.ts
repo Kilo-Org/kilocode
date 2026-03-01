@@ -227,8 +227,7 @@ export namespace IngestQueue {
 
           const delay = backoff(count)
           retry.set(sessionId, { count, until: now() + delay })
-          options.log.info?.("ingest flush retry", { sessionId, attempt: count, delayMs: delay })
-          options.log.error("share sync failed", { sessionId, error: "network", retryInMs: delay })
+          options.log.error("share sync failed", { sessionId, error: "network", attempt: count, retryInMs: delay })
           enqueue(sessionId, items, "fill", now() + delay)
           return
         }
@@ -272,11 +271,11 @@ export namespace IngestQueue {
 
         const delay = backoff(count)
         retry.set(sessionId, { count, until: now() + delay })
-        options.log.info?.("ingest flush retry", { sessionId, attempt: count, delayMs: delay })
         options.log.error("share sync failed", {
           sessionId,
           status: response.status,
           statusText: response.statusText,
+          attempt: count,
           retryInMs: delay,
         })
         enqueue(sessionId, items, "fill", now() + delay)
