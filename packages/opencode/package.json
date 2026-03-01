@@ -84,7 +84,7 @@
     "@kilocode/kilo-telemetry": "workspace:*",
     "@kilocode/plugin": "workspace:*",
     "@kilocode/sdk": "workspace:*",
-    "@modelcontextprotocol/sdk": "1.25.2",
+    "@modelcontextprotocol/sdk": "1.26.0",
     "@octokit/graphql": "9.0.2",
     "@octokit/rest": "catalog:",
     "@openauthjs/openauth": "catalog:",
