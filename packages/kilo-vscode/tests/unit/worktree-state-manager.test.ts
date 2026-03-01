@@ -168,6 +168,7 @@ describe("WorktreeStateManager", () => {
       const fresh = path.join(root, "subdir")
       const mgr = new WorktreeStateManager(fresh, () => {})
       mgr.addWorktree({ branch: "test", path: "/tmp/test", parentBranch: "main" })
+      await mgr.flush()
       await mgr.save()
 
       expect(fs.existsSync(path.join(fresh, ".kilocode", "agent-manager.json"))).toBe(true)

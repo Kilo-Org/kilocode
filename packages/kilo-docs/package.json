@@ -1,6 +1,6 @@
 {
   "name": "@kilocode/kilo-docs",
-  "version": "1.0.25",
+  "version": "7.0.33",
   "private": true,
   "scripts": {
     "dev": "next dev --webpack --port 3002",
@@ -15,6 +15,7 @@
     "@markdoc/next.js": "^0.5.0",
     "js-yaml": "^4.1.0",
     "@vscode/codicons": "^0.0.44",
+    "mermaid": "11.12.3",
     "next": "^16.1.5",
     "posthog-js": "^1.335.3",
     "prismjs": "^1.30.0",

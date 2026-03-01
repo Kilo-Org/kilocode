@@ -1,21 +1,16 @@
-# Marketplace (installable Modes, MCP servers, Skills)
+# Marketplace (Installable Modes, MCP Servers, Skills)
 
-- **What it is**: A catalog-driven install system for extending Kilo Code via remote configs.
+**Priority:** P2
+**Status:** ❌ Not started
 
-## Installs
+## What Exists
 
-- Modes (behavior packages).
-- MCP servers (tool servers).
-- Skills (reusable instruction packs).
+- Toolbar button registered (`kilo-code.new.marketplaceButtonClicked`) with `$(extensions)` icon
+- Renders `<DummyView title="Marketplace" />` — a placeholder with no functionality
 
-## Suggested migration
+## Remaining Work
 
-- **Kilo CLI availability**: Not present.
-- **Migration recommendation**:
-  - Keep the Marketplace feature in the VS Code extension host (install/update UX and IDE integration).
-  - Reimplement server-side support only if Kilo CLI introduces a marketplace concept later.
-- **Reimplementation required?**: Yes.
-
-## Primary implementation anchors
-
-No marketplace service directory exists in the new extension. The marketplace feature needs to be built from scratch.
+- Catalog browsing (Modes, MCP servers, Skills)
+- Install/uninstall/update capabilities
+- Marketplace API endpoints (may need backend work)
+- Search and filtering within the catalog

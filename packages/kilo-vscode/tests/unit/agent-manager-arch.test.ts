@@ -13,10 +13,17 @@ import path from "node:path"
 import { Project, SyntaxKind } from "ts-morph"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
+const KILO_PROVIDER_FILE = path.join(ROOT, "src/KiloProvider.ts")
 const CSS_FILE = path.join(ROOT, "webview-ui/agent-manager/agent-manager.css")
 const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/DiffPanel.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/FullScreenDiffView.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/DiffEndMarker.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/FileTree.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/review-annotations.ts"),
+  path.join(ROOT, "webview-ui/agent-manager/MultiModelSelector.tsx"),
 ]
 const TSX_FILE = TSX_FILES[0]
 const PROVIDER_FILE = path.join(ROOT, "src/agent-manager/AgentManagerProvider.ts")
@@ -41,8 +48,9 @@ describe("Agent Manager CSS Prefix", () => {
     const matches = [...css.matchAll(/--([a-z][a-z0-9-]*)\s*:/gi)]
     const names = [...new Set(matches.map((m) => m[1]))]
 
-    // Allow kilo-ui design tokens and vscode theme variables used as fallbacks
-    const allowed = ["am-", "vscode-", "surface-", "text-", "border-"]
+    // Allow kilo-ui design tokens, vscode theme variables, and third-party
+    // library tokens (@pierre/diffs, kilo-ui sticky-accordion) used as fallbacks
+    const allowed = ["am-", "vscode-", "surface-", "text-", "border-", "diffs-", "sticky-", "syntax-"]
     const invalid = names.filter((n) => !allowed.some((p) => n!.startsWith(p)))
 
     expect(invalid, `CSS properties missing allowed prefix: ${invalid.join(", ")}`).toEqual([])
@@ -155,6 +163,8 @@ describe("Agent Manager Provider — onMessage routing", () => {
       "agentManager.closeSession",
       "agentManager.configureSetupScript",
       "agentManager.showTerminal",
+      "agentManager.showLocalTerminal",
+      "agentManager.showExistingLocalTerminal",
       "agentManager.requestRepoInfo",
       "agentManager.requestState",
       "agentManager.setTabOrder",
@@ -167,7 +177,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
   it("onMessage handles loadMessages for terminal switching", () => {
     const text = body("onMessage")
     expect(text).toContain("loadMessages")
-    expect(text).toContain("showExisting")
+    expect(text).toContain("syncOnSessionSwitch")
   })
 
   it("onMessage handles clearSession for SSE re-registration", () => {
@@ -255,5 +265,114 @@ describe("Agent Manager Provider — onMessage routing", () => {
     expect(pushIdx, "pushState must come before worktreeSetup").toBeLessThan(readyIdx)
     // Must also send sessionMeta so the webview knows the branch/path
     expect(text).toContain("agentManager.sessionMeta")
+  })
+
+  // -- agentManager.requestState in non-git workspace -------------------------
+
+  /**
+   * Regression: when the workspace is not a git repo, this.state is undefined.
+   * pushState() silently returns in that case, so requestState must explicitly
+   * call pushEmptyState() instead — otherwise the webview stays stuck on
+   * loading skeletons forever.
+   */
+  it("requestState handler calls pushEmptyState when this.state is falsy", () => {
+    const text = body("onMessage")
+    // Extract the requestState branch
+    const start = text.indexOf('"agentManager.requestState"')
+    expect(start, "requestState branch must exist").toBeGreaterThan(-1)
+    // Grab a reasonable window after the match
+    const snippet = text.slice(start, start + 600)
+    expect(snippet, "must call pushEmptyState when state is absent").toContain("pushEmptyState")
+    expect(snippet, "must guard on this.state being falsy").toMatch(/!this\.state/)
+  })
+
+  it("requestState handler calls pushState when this.state is truthy", () => {
+    const text = body("onMessage")
+    const start = text.indexOf('"agentManager.requestState"')
+    const snippet = text.slice(start, start + 600)
+    expect(snippet, "must call pushState for the normal path").toContain("this.pushState()")
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Webview — non-git skeleton fix
+// ---------------------------------------------------------------------------
+
+describe("Agent Manager Webview — non-git sessionsLoaded fix", () => {
+  const tsx = readAllTsx()
+
+  /**
+   * Regression: when isGitRepo is false, the Kilo server never sends a
+   * "sessionsLoaded" message, so the skeleton was stuck forever.
+   * The fix must set sessionsLoaded(true) when receiving a state message
+   * with isGitRepo === false.
+   */
+  it("sets sessionsLoaded when agentManager.state arrives with isGitRepo false", () => {
+    // Find the agentManager.state handler block
+    const start = tsx.indexOf('"agentManager.state"')
+    expect(start, "agentManager.state handler must exist").toBeGreaterThan(-1)
+    const snippet = tsx.slice(start, start + 800)
+    expect(snippet, "must call setSessionsLoaded in the non-git branch").toContain("setSessionsLoaded")
+    expect(snippet, "must check isGitRepo === false before setting sessionsLoaded").toMatch(
+      /isGitRepo.*false|false.*isGitRepo/,
+    )
+  })
+})
+
+// ---------------------------------------------------------------------------
+// KiloProvider — pendingSessionRefresh race condition fix
+// ---------------------------------------------------------------------------
+
+describe("KiloProvider — pending session refresh on reconnect", () => {
+  const provider = fs.readFileSync(KILO_PROVIDER_FILE, "utf-8")
+
+  /**
+   * Regression: when the Agent Manager opens its panel, initializeState()
+   * calls refreshSessions() before the CLI server has started. Because
+   * httpClient is null at that point, handleLoadSessions() used to bail
+   * with an error message and never send "sessionsLoaded" to the webview.
+   * The worktree would show up in the sidebar but display "No sessions open".
+   *
+   * The fix uses a pendingSessionRefresh flag: handleLoadSessions() sets
+   * it when httpClient is unavailable, and both initializeConnection()
+   * and the "connected" state handler flush the pending refresh.
+   */
+  it("handleLoadSessions sets pendingSessionRefresh when httpClient is null", () => {
+    const start = provider.indexOf("private async handleLoadSessions()")
+    expect(start, "handleLoadSessions must exist").toBeGreaterThan(-1)
+    const snippet = provider.slice(start, start + 700)
+    expect(snippet, "must read httpClient before loading sessions").toContain("const client = this.httpClient")
+    expect(snippet, "must set pendingSessionRefresh when httpClient missing").toContain(
+      "this.pendingSessionRefresh = true",
+    )
+    expect(snippet, "must avoid noisy errors while still connecting").toContain('this.connectionState !== "connecting"')
+    expect(snippet, "must clear pendingSessionRefresh on successful entry").toContain(
+      "this.pendingSessionRefresh = false",
+    )
+  })
+
+  it("connected state handler flushes deferred session refresh", () => {
+    // Find the onStateChange callback that handles "connected"
+    const connectedIdx = provider.indexOf('state === "connected"')
+    expect(connectedIdx, '"connected" state handler must exist').toBeGreaterThan(-1)
+    const snippet = provider.slice(connectedIdx, connectedIdx + 800)
+    expect(snippet, "must call flushPendingSessionRefresh from connected handler").toContain(
+      'this.flushPendingSessionRefresh("sse-connected")',
+    )
+  })
+
+  it("initializeConnection flushes deferred refresh for missed connected events", () => {
+    const initIdx = provider.indexOf('this.syncWebviewState("initializeConnection")')
+    expect(initIdx, "initializeConnection sync call must exist").toBeGreaterThan(-1)
+    const snippet = provider.slice(initIdx, initIdx + 220)
+    expect(snippet, "must flush deferred session refresh in initializeConnection").toContain(
+      'this.flushPendingSessionRefresh("initializeConnection")',
+    )
+  })
+
+  it("pendingSessionRefresh is declared as a class field", () => {
+    expect(provider, "pendingSessionRefresh field must be declared").toMatch(
+      /private\s+pendingSessionRefresh\s*=\s*false/,
+    )
   })
 })

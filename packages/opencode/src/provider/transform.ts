@@ -72,6 +72,23 @@ export namespace ProviderTransform {
         .filter((msg): msg is ModelMessage => msg !== undefined && msg.content !== "")
     }
 
+    if (model.api.id.includes("claude")) {
+      return msgs.map((msg) => {
+        if ((msg.role === "assistant" || msg.role === "tool") && Array.isArray(msg.content)) {
+          msg.content = msg.content.map((part) => {
+            if ((part.type === "tool-call" || part.type === "tool-result") && "toolCallId" in part) {
+              return {
+                ...part,
+                toolCallId: part.toolCallId.replace(/[^a-zA-Z0-9_-]/g, "_"),
+              }
+            }
+            return part
+          })
+        }
+        return msg
+      })
+    }
+
     if (
       model.providerID === "mistral" ||
       model.api.id.toLowerCase().includes("mistral") ||
@@ -314,8 +331,8 @@ export namespace ProviderTransform {
     if (id.includes("glm-4.7")) return 1.0
     if (id.includes("minimax-m2")) return 1.0
     if (id.includes("kimi-k2")) {
-      // kimi-k2-thinking & kimi-k2.5 && kimi-k2p5
-      if (id.includes("thinking") || id.includes("k2.") || id.includes("k2p")) {
+      // kimi-k2-thinking & kimi-k2.5 && kimi-k2p5 && kimi-k2-5
+      if (["thinking", "k2.", "k2p", "k2-5"].some((s) => id.includes(s))) {
         return 1.0
       }
       return 0.6
@@ -326,7 +343,7 @@ export namespace ProviderTransform {
   export function topP(model: Provider.Model) {
     const id = model.id.toLowerCase()
     if (id.includes("qwen")) return 1
-    if (id.includes("minimax-m2") || id.includes("kimi-k2.5") || id.includes("kimi-k2p5") || id.includes("gemini")) {
+    if (["minimax-m2", "gemini", "kimi-k2.5", "kimi-k2p5", "kimi-k2-5"].some((s) => id.includes(s))) {
       return 0.95
     }
     return undefined
@@ -335,7 +352,7 @@ export namespace ProviderTransform {
   export function topK(model: Provider.Model) {
     const id = model.id.toLowerCase()
     if (id.includes("minimax-m2")) {
-      if (id.includes("m2.1")) return 40
+      if (["m2.", "m25", "m21"].some((s) => id.includes(s))) return 40
       return 20
     }
     if (id.includes("gemini")) return 64
@@ -346,9 +363,19 @@ export namespace ProviderTransform {
   const OPENAI_EFFORTS = ["none", "minimal", ...WIDELY_SUPPORTED_EFFORTS, "xhigh"]
 
   export function variants(model: Provider.Model): Record<string, Record<string, any>> {
+    // kilocode_change start
+    if (model.api.npm === "@kilocode/kilo-gateway" && model.variants && Object.keys(model.variants).length > 0) {
+      return model.variants
+    }
+    // kilocode_change end
+
     if (!model.capabilities.reasoning) return {}
 
     const id = model.id.toLowerCase()
+    const isAnthropicAdaptive = ["opus-4-6", "opus-4.6", "sonnet-4-6", "sonnet-4.6"].some((v) =>
+      model.api.id.includes(v),
+    )
+    const adaptiveEfforts = ["low", "medium", "high", "max"]
     if (
       id.includes("deepseek") ||
       id.includes("minimax") ||
@@ -377,30 +404,27 @@ export namespace ProviderTransform {
     if (id.includes("grok")) return {}
 
     switch (model.api.npm) {
+      case "@kilocode/kilo-gateway": // kilocode_change
       case "@openrouter/ai-sdk-provider":
-        if (!model.id.includes("gpt") && !model.id.includes("gemini-3")) return {}
+        if (!model.id.includes("gpt") && !model.id.includes("gemini-3") && !model.id.includes("claude")) return {}
         return Object.fromEntries(OPENAI_EFFORTS.map((effort) => [effort, { reasoning: { effort } }]))
-
-      // kilocode_change start
-      case "@kilocode/kilo-gateway":
-        if (model.id.includes("claude")) {
-          // for models that support adaptive thinking, effort is ignored
-          // for models that don't support adaptive thinking, effort is translated into a token budget
-          return {
-            none: { reasoning: { enabled: false } },
-            low: { reasoning: { enabled: true, effort: "low" }, verbosity: "low" },
-            medium: { reasoning: { enabled: true, effort: "medium" }, verbosity: "medium" },
-            high: { reasoning: { enabled: true, effort: "high" }, verbosity: "high" },
-            max: { reasoning: { enabled: true, effort: "xhigh" }, verbosity: "max" },
-          }
-        }
-        if (!model.id.includes("gpt") && !model.id.includes("gemini-3")) return {}
-        return Object.fromEntries(OPENAI_EFFORTS.map((effort) => [effort, { reasoning: { effort } }]))
-      // kilocode_change end
 
       // TODO: YOU CANNOT SET max_tokens if this is set!!!
       case "@ai-sdk/gateway":
         if (model.id.includes("anthropic")) {
+          if (isAnthropicAdaptive) {
+            return Object.fromEntries(
+              adaptiveEfforts.map((effort) => [
+                effort,
+                {
+                  thinking: {
+                    type: "adaptive",
+                  },
+                  effort,
+                },
+              ]),
+            )
+          }
           return {
             high: {
               thinking: {
@@ -537,10 +561,9 @@ export namespace ProviderTransform {
       case "@ai-sdk/google-vertex/anthropic":
         // https://v5.ai-sdk.dev/providers/ai-sdk-providers/google-vertex#anthropic-provider
 
-        if (model.api.id.includes("opus-4-6") || model.api.id.includes("opus-4.6")) {
-          const efforts = ["low", "medium", "high", "max"]
+        if (isAnthropicAdaptive) {
           return Object.fromEntries(
-            efforts.map((effort) => [
+            adaptiveEfforts.map((effort) => [
               effort,
               {
                 thinking: {
@@ -569,10 +592,9 @@ export namespace ProviderTransform {
 
       case "@ai-sdk/amazon-bedrock":
         // https://v5.ai-sdk.dev/providers/ai-sdk-providers/amazon-bedrock
-        if (model.api.id.includes("opus-4-6") || model.api.id.includes("opus-4.6")) {
-          const efforts = ["low", "medium", "high", "max"]
+        if (isAnthropicAdaptive) {
           return Object.fromEntries(
-            efforts.map((effort) => [
+            adaptiveEfforts.map((effort) => [
               effort,
               {
                 reasoningConfig: {
@@ -634,12 +656,19 @@ export namespace ProviderTransform {
             },
           }
         }
+        let levels = ["low", "high"]
+        if (id.includes("3.1")) {
+          levels = ["low", "medium", "high"]
+        }
+
         return Object.fromEntries(
-          ["low", "high"].map((effort) => [
+          levels.map((effort) => [
             effort,
             {
-              includeThoughts: true,
-              thinkingLevel: effort,
+              thinkingConfig: {
+                includeThoughts: true,
+                thinkingLevel: effort,
+              },
             },
           ]),
         )
@@ -659,8 +688,7 @@ export namespace ProviderTransform {
           groqEffort.map((effort) => [
             effort,
             {
-              includeThoughts: true,
-              thinkingLevel: effort,
+              reasoningEffort: effort,
             },
           ]),
         )
@@ -799,6 +827,9 @@ export namespace ProviderTransform {
       result["promptCacheKey"] = input.sessionID
     }
 
+    if (input.model.providerID === "openrouter") {
+      result["prompt_cache_key"] = input.sessionID
+    }
     if (input.model.api.npm === "@ai-sdk/gateway") {
       result["gateway"] = {
         caching: "auto",
@@ -837,18 +868,30 @@ export namespace ProviderTransform {
       // Other models use reasoningEffort (AI SDK format)
       return { reasoningEffort: "minimal" }
     }
+
+    if (model.providerID === "venice") {
+      return { veniceParameters: { disableThinking: true } }
+    }
+
     return {}
+  }
+
+  // Maps model ID prefix to provider slug used in providerOptions.
+  // Example: "amazon/nova-2-lite" → "bedrock"
+  const SLUG_OVERRIDES: Record<string, string> = {
+    amazon: "bedrock",
   }
 
   export function providerOptions(model: Provider.Model, options: { [x: string]: any }) {
     if (model.api.npm === "@ai-sdk/gateway") {
       // Gateway providerOptions are split across two namespaces:
-      // - `gateway`: gateway-native routing/caching controls
+      // - `gateway`: gateway-native routing/caching controls (order, only, byok, etc.)
       // - `<upstream slug>`: provider-specific model options (anthropic/openai/...)
       // We keep `gateway` as-is and route every other top-level option under the
-      // model-derived upstream slug so variants/options can stay flat internally.
+      // model-derived upstream slug.
       const i = model.api.id.indexOf("/")
-      const slug = i > 0 ? model.api.id.slice(0, i) : undefined
+      const rawSlug = i > 0 ? model.api.id.slice(0, i) : undefined
+      const slug = rawSlug ? (SLUG_OVERRIDES[rawSlug] ?? rawSlug) : undefined
       const gateway = options.gateway
       const rest = Object.fromEntries(Object.entries(options).filter(([k]) => k !== "gateway"))
       const has = Object.keys(rest).length > 0
@@ -858,6 +901,7 @@ export namespace ProviderTransform {
 
       if (has) {
         if (slug) {
+          // Route model-specific options under the provider slug
           result[slug] = rest
         } else if (gateway && typeof gateway === "object" && !Array.isArray(gateway)) {
           result.gateway = { ...gateway, ...rest }

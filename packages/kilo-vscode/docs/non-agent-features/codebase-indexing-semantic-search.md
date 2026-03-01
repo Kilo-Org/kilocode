@@ -1,26 +1,18 @@
-# Codebase indexing & semantic search (Code Index)
+# Codebase Indexing & Semantic Search
 
-- **What it is**: Vector-based indexing and semantic search over the repository.
+**Priority:** P2
+**Status:** ❌ Not started
 
-## Capabilities
+## Remaining Work
 
-- Local indexing (embeddings + local/remote vector DB).
-- Managed indexing (cloud).
-- Incremental updates via file watchers and hashing.
-- Multiple embedding providers and storage backends.
+- Vector-based indexing with embeddings (local and/or cloud)
+- Semantic search over the repository
+- Incremental updates via file watchers and hashing
+- Multiple embedding providers and storage backends
+- Integration with existing CLI grep/glob for hybrid search
 
-## Docs references
+## Primary Implementation Anchors (kilocode-legacy)
 
-- [`apps/kilocode-docs/pages/customize/context/codebase-indexing.md`](../../apps/kilocode-docs/pages/customize/context/codebase-indexing.md)
+These exist in the [kilocode-legacy](https://github.com/Kilo-Org/kilocode-legacy) repo, not in this extension:
 
-## Suggested migration
-
-- **Kilo CLI availability**: Partial.
-- **Migration recommendation**:
-  - Use Kilo CLI server grep/glob/search endpoints for basic repo scanning.
-  - Keep Kilo code-index + semantic search locally for now, or plan a server-side semantic indexing equivalent.
-- **Reimplementation required?**: Partial.
-
-## Primary implementation anchors
-
-- [`src/services/code-index/`](../../src/services/code-index/)
+- `src/services/code-index/`
