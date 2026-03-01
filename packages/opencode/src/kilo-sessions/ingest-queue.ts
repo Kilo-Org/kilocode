@@ -199,13 +199,15 @@ export namespace IngestQueue {
         const client = await options.getClient()
         if (!client) return
 
-        const types = items.map((d) => d.type).join(",")
-        options.log.info?.("ingest flush", {
-          sessionId,
-          url: `${client.url}${share.ingestPath}?v=1`,
-          items: items.length,
-          types,
-        })
+        if (options.log.info) {
+          const types = items.map((d) => d.type).join(",")
+          options.log.info("ingest flush", {
+            sessionId,
+            url: `${client.url}${share.ingestPath}?v=1`,
+            items: items.length,
+            types,
+          })
+        }
 
         const response = await client
           .fetch(`${client.url}${share.ingestPath}?v=1`, {
@@ -293,8 +295,10 @@ export namespace IngestQueue {
       const client = await options.getClient()
       if (!client) return
 
-      const types = data.map((d) => d.type).join(",")
-      options.log.info?.("ingest sync", { sessionId, types })
+      if (options.log.info) {
+        const types = data.map((d) => d.type).join(",")
+        options.log.info("ingest sync", { sessionId, types })
+      }
 
       const until = retry.get(sessionId)?.until ?? 0
       const base = queue.get(sessionId)?.due ?? now() + 1000
