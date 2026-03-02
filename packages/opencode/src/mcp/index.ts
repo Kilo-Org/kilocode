@@ -123,8 +123,9 @@ export namespace MCP {
     const result = { ...schema }
 
     if (typeof result.pattern === "string") {
+      // Guard against escaped \$ or \^ being mistaken for anchors
       if (!result.pattern.startsWith("^")) result.pattern = "^" + result.pattern
-      if (!result.pattern.endsWith("$")) result.pattern = result.pattern + "$"
+      if (!/(^|[^\\])\$$/.test(result.pattern)) result.pattern = result.pattern + "$"
     }
 
     if (result.properties) {
@@ -135,15 +136,52 @@ export namespace MCP {
       result.properties = props
     }
 
+    if (result.patternProperties) {
+      const pp: Record<string, JSONSchema7> = {}
+      for (const [key, value] of Object.entries(result.patternProperties)) {
+        pp[key] = anchorPatterns(value as JSONSchema7)
+      }
+      result.patternProperties = pp
+    }
+
+    if (typeof result.additionalProperties === "object" && result.additionalProperties !== null) {
+      result.additionalProperties = anchorPatterns(result.additionalProperties as JSONSchema7)
+    }
+
     if (result.items) {
       result.items = Array.isArray(result.items)
         ? result.items.map((item) => anchorPatterns(item as JSONSchema7))
         : anchorPatterns(result.items as JSONSchema7)
     }
 
+    if (typeof result.contains === "object" && result.contains !== null) {
+      result.contains = anchorPatterns(result.contains as JSONSchema7)
+    }
+
+    if (typeof result.not === "object" && result.not !== null) {
+      result.not = anchorPatterns(result.not as JSONSchema7)
+    }
+
     for (const key of ["anyOf", "oneOf", "allOf"] as const) {
       if (Array.isArray(result[key])) {
         ;(result as any)[key] = (result[key] as JSONSchema7[]).map((s) => anchorPatterns(s))
+      }
+    }
+
+    for (const key of ["if", "then", "else"] as const) {
+      if (typeof (result as any)[key] === "object" && (result as any)[key] !== null) {
+        ;(result as any)[key] = anchorPatterns((result as any)[key] as JSONSchema7)
+      }
+    }
+
+    for (const key of ["definitions", "$defs"] as const) {
+      const defs = (result as any)[key]
+      if (typeof defs === "object" && defs !== null) {
+        const out: Record<string, JSONSchema7> = {}
+        for (const [k, v] of Object.entries(defs)) {
+          out[k] = anchorPatterns(v as JSONSchema7)
+        }
+        ;(result as any)[key] = out
       }
     }
 
