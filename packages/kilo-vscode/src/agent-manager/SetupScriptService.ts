@@ -18,6 +18,7 @@ const SETUP_SCRIPT_BAT_FILENAME = "setup-script.bat"
 const KILOCODE_DIR = ".kilocode"
 
 export type SetupScriptKind = "posix" | "powershell" | "cmd"
+type SetupScriptDefaultKind = Exclude<SetupScriptKind, "cmd">
 
 export interface SetupScriptInfo {
   path: string
@@ -27,6 +28,11 @@ export interface SetupScriptInfo {
 interface SetupScriptCandidate {
   name: string
   kind: SetupScriptKind
+}
+
+interface SetupScriptDefaultCandidate {
+  name: string
+  kind: SetupScriptDefaultKind
 }
 
 export class SetupScriptService {
@@ -80,7 +86,7 @@ export class SetupScriptService {
     }
     const script = this.defaultCandidate(platform)
     const scriptPath = path.join(this.dir, script.name)
-    const content = script.kind === "powershell" ? SETUP_SCRIPT_TEMPLATE_POWERSHELL : SETUP_SCRIPT_TEMPLATE
+    const content = this.defaultTemplate(script.kind)
     await fs.promises.writeFile(scriptPath, content, "utf-8")
   }
 
@@ -111,11 +117,16 @@ export class SetupScriptService {
     ]
   }
 
-  private defaultCandidate(platform: NodeJS.Platform): SetupScriptCandidate {
+  private defaultCandidate(platform: NodeJS.Platform): SetupScriptDefaultCandidate {
     if (platform === "win32") {
       return { name: SETUP_SCRIPT_POWERSHELL_FILENAME, kind: "powershell" }
     }
     return { name: SETUP_SCRIPT_FILENAME, kind: "posix" }
+  }
+
+  private defaultTemplate(kind: SetupScriptDefaultKind): string {
+    if (kind === "powershell") return SETUP_SCRIPT_TEMPLATE_POWERSHELL
+    return SETUP_SCRIPT_TEMPLATE
   }
 
   private log(message: string): void {

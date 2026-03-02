@@ -20,7 +20,10 @@ interface SetupTaskCommand {
   args: string[]
 }
 
-function quoteCmdPath(value: string): string {
+const TASK_END_GRACE_MS = 250
+const TASK_TIMEOUT_MS = 5 * 60 * 1000
+
+function quoteCmdArg(value: string): string {
   return `"${value.replaceAll('"', '""')}"`
 }
 
@@ -34,7 +37,7 @@ function buildSetupTaskCommand(script: SetupScriptInfo): SetupTaskCommand {
   if (script.kind === "cmd") {
     return {
       command: "cmd.exe",
-      args: ["/d", "/s", "/c", quoteCmdPath(script.path)],
+      args: ["/d", "/s", "/c", quoteCmdArg(script.path)],
     }
   }
   return {
@@ -115,14 +118,18 @@ export class SetupScriptRunner {
     return new Promise((resolve, reject) => {
       const state = {
         done: false,
-        timer: undefined as NodeJS.Timeout | undefined,
+        grace: undefined as ReturnType<typeof setTimeout> | undefined,
+        timeout: undefined as ReturnType<typeof setTimeout> | undefined,
       }
 
       const finish = (error?: Error) => {
         if (state.done) return
         state.done = true
-        if (state.timer) {
-          clearTimeout(state.timer)
+        if (state.grace) {
+          clearTimeout(state.grace)
+        }
+        if (state.timeout) {
+          clearTimeout(state.timeout)
         }
         processListener.dispose()
         endListener.dispose()
@@ -146,11 +153,16 @@ export class SetupScriptRunner {
       const endListener = vscode.tasks.onDidEndTask((event) => {
         if (event.execution !== execution) return
         if (state.done) return
-        state.timer = setTimeout(() => {
+        state.grace = setTimeout(() => {
           this.log("Setup script finished without process exit event")
           finish()
-        }, 250)
+        }, TASK_END_GRACE_MS)
       })
+
+      state.timeout = setTimeout(() => {
+        this.log("Setup script timed out waiting for task completion")
+        finish(new Error("Setup script timed out after 5 minutes"))
+      }, TASK_TIMEOUT_MS)
     })
   }
 
