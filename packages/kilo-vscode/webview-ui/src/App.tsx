@@ -8,23 +8,32 @@ import { Code } from "@kilocode/kilo-ui/code"
 import { Diff } from "@kilocode/kilo-ui/diff"
 import { DataProvider } from "@kilocode/kilo-ui/context/data"
 import { Toast } from "@kilocode/kilo-ui/toast"
-import Settings from "./components/Settings"
-import ProfileView from "./components/ProfileView"
+import Settings from "./components/settings/Settings"
+import ProfileView from "./components/profile/ProfileView"
 import { VSCodeProvider, useVSCode } from "./context/vscode"
 import { ServerProvider, useServer } from "./context/server"
-import { ProviderProvider } from "./context/provider"
+import { ProviderProvider, useProvider } from "./context/provider"
 import { ConfigProvider } from "./context/config"
 import { SessionProvider, useSession } from "./context/session"
-import { LanguageProvider } from "./context/language"
+import { LanguageProvider, useLanguage } from "./context/language"
 import { ChatView } from "./components/chat"
 import { KiloNotifications } from "./components/chat/KiloNotifications"
+import { registerExpandedTaskTool } from "./components/chat/TaskToolExpanded"
+import { registerVscodeToolOverrides } from "./components/chat/VscodeToolOverrides"
+
+// Override the upstream "task" tool renderer with the fully-expanded version
+// that shows child session parts inline in the VS Code sidebar.
+registerExpandedTaskTool()
+// Apply VS Code sidebar preferences to other tools (e.g. bash expanded by default).
+registerVscodeToolOverrides()
 import SessionList from "./components/history/SessionList"
+import CloudSessionList from "./components/history/CloudSessionList"
 import { NotificationsProvider } from "./context/notifications"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
 import "./styles/chat.css"
 
-type ViewType = "newTask" | "marketplace" | "history" | "profile" | "settings"
-const VALID_VIEWS = new Set<string>(["newTask", "marketplace", "history", "profile", "settings"])
+type ViewType = "newTask" | "marketplace" | "history" | "cloudHistory" | "profile" | "settings"
+const VALID_VIEWS = new Set<string>(["newTask", "marketplace", "history", "cloudHistory", "profile", "settings"])
 
 const DummyView: Component<{ title: string }> = (props) => {
   return (
@@ -50,24 +59,47 @@ const DummyView: Component<{ title: string }> = (props) => {
 export const DataBridge: Component<{ children: any }> = (props) => {
   const session = useSession()
   const vscode = useVSCode()
+  const prov = useProvider()
+  const server = useServer()
 
   const data = createMemo(() => {
     const id = session.currentSessionID()
-    const perms = id ? session.permissions().filter((p) => p.sessionID === id) : []
+    const allParts = session.allParts()
+    // Expose ALL session messages (including child sessions from sub-agents),
+    // not just the current session. This lets VscodeSessionTurn and
+    // TaskToolExpanded read child session data from the DataProvider store.
+    const allMessages = Object.fromEntries(
+      Object.entries(session.allMessages() as Record<string, SDKMessage[]>)
+        .filter(([, msgs]) => (msgs as SDKMessage[]).length > 0)
+        .map(([sid, msgs]) => [sid, msgs as SDKMessage[]]),
+    )
     return {
       session: session.sessions().map((s) => ({ ...s, id: s.id, role: "user" as const })) as unknown as any[],
-      session_status: {} as Record<string, any>,
+      session_status: session.allStatusMap() as unknown as Record<string, any>,
       session_diff: {} as Record<string, any[]>,
-      message: id ? { [id]: session.messages() as unknown as SDKMessage[] } : {},
-      part: id
-        ? Object.fromEntries(
-            session
-              .messages()
-              .map((msg) => [msg.id, session.getParts(msg.id) as unknown as SDKPart[]])
-              .filter(([, parts]) => (parts as SDKPart[]).length > 0),
-          )
-        : {},
-      permission: id ? { [id]: perms as unknown as any[] } : {},
+      message: allMessages,
+      part: Object.fromEntries(
+        Object.entries(allParts)
+          .filter(([, parts]) => (parts as SDKPart[]).length > 0)
+          .map(([msgId, parts]) => [msgId, parts as unknown as SDKPart[]]),
+      ),
+      permission: (() => {
+        const grouped: Record<string, any[]> = {}
+        for (const p of session.permissions()) {
+          const sid = p.sessionID
+          if (!sid) continue
+          ;(grouped[sid] ??= []).push(p)
+        }
+        return grouped
+      })(),
+      // Questions are handled directly by QuestionDock via session.questions(),
+      // not through DataProvider. The DataProvider's question field is unused here.
+      question: {},
+      provider: {
+        all: Object.values(prov.providers()) as unknown as any[],
+        connected: prov.connected(),
+        default: prov.defaults(),
+      } as unknown as any,
     }
   })
 
@@ -75,16 +107,33 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     session.respondToPermission(input.permissionID, input.response)
   }
 
-  const sync = (sessionID: string) => {
-    session.syncSession(sessionID)
+  const reply = (input: { requestID: string; answers: string[][] }) => {
+    session.replyToQuestion(input.requestID, input.answers)
+  }
+
+  const reject = (input: { requestID: string }) => {
+    session.rejectQuestion(input.requestID)
   }
 
   const open = (filePath: string, line?: number, column?: number) => {
     vscode.postMessage({ type: "openFile", filePath, line, column })
   }
 
+  const directory = () => {
+    const dir = server.workspaceDirectory()
+    if (!dir) return ""
+    return dir.endsWith("/") || dir.endsWith("\\") ? dir : dir + "/"
+  }
+
   return (
-    <DataProvider data={data()} directory="" onPermissionRespond={respond} onSyncSession={sync} onOpenFile={open}>
+    <DataProvider
+      data={data()}
+      directory={directory()}
+      onPermissionRespond={respond}
+      onQuestionReply={reply}
+      onQuestionReject={reject}
+      onOpenFile={open}
+    >
       {props.children}
     </DataProvider>
   )
@@ -108,6 +157,7 @@ const AppContent: Component = () => {
   const [currentView, setCurrentView] = createSignal<ViewType>("newTask")
   const session = useSession()
   const server = useServer()
+  const language = useLanguage()
 
   const handleViewAction = (action: string) => {
     switch (action) {
@@ -120,6 +170,9 @@ const AppContent: Component = () => {
         break
       case "historyButtonClicked":
         setCurrentView("history")
+        break
+      case "cloudHistoryButtonClicked":
+        setCurrentView("cloudHistory")
         break
       case "profileButtonClicked":
         setCurrentView("profile")
@@ -141,6 +194,11 @@ const AppContent: Component = () => {
         console.log("[Kilo New] App: 🧭 navigate:", message.view)
         setCurrentView(message.view as ViewType)
       }
+      if (message?.type === "openCloudSession" && message.sessionId) {
+        console.log("[Kilo New] App: ☁️ openCloudSession:", message.sessionId)
+        session.selectCloudSession(message.sessionId)
+        setCurrentView("newTask")
+      }
     }
     window.addEventListener("message", handler)
     onCleanup(() => window.removeEventListener("message", handler))
@@ -161,16 +219,25 @@ const AppContent: Component = () => {
           <ChatView onSelectSession={handleSelectSession} />
         </Match>
         <Match when={currentView() === "marketplace"}>
-          <DummyView title="Marketplace" />
+          <DummyView title={language.t("nav.marketplace")} />
         </Match>
         <Match when={currentView() === "history"}>
           <SessionList onSelectSession={handleSelectSession} />
+        </Match>
+        <Match when={currentView() === "cloudHistory"}>
+          <CloudSessionList
+            onSelectSession={(cloudSessionId) => {
+              session.selectCloudSession(cloudSessionId)
+              setCurrentView("newTask")
+            }}
+          />
         </Match>
         <Match when={currentView() === "profile"}>
           <ProfileView
             profileData={server.profileData()}
             deviceAuth={server.deviceAuth()}
             onLogin={server.startLogin}
+            onBack={() => setCurrentView("newTask")}
           />
         </Match>
         <Match when={currentView() === "settings"}>

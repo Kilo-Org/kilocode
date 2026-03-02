@@ -11,9 +11,9 @@ import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
-import { ModelSelector } from "./ModelSelector"
-import { ModeSwitcher } from "./ModeSwitcher"
-import { ThinkingSelector } from "./ThinkingSelector"
+import { ModelSelector } from "../shared/ModelSelector"
+import { ModeSwitcher } from "../shared/ModeSwitcher"
+import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
 import { useImageAttachments } from "../../hooks/useImageAttachments"
 import { fileName, dirName, buildHighlightSegments } from "./prompt-input-utils"
@@ -85,6 +85,20 @@ export const PromptInput: Component = () => {
       if (textareaRef) {
         textareaRef.value = message.text
         adjustHeight()
+      }
+    }
+
+    if (message.type === "appendChatBoxMessage") {
+      const current = text()
+      const separator = current && !current.endsWith("\n") ? "\n\n" : ""
+      const next = current + separator + message.text
+      setText(next)
+      setGhostText("")
+      if (textareaRef) {
+        textareaRef.value = next
+        adjustHeight()
+        textareaRef.focus()
+        textareaRef.scrollTop = textareaRef.scrollHeight
       }
     }
 
@@ -251,7 +265,7 @@ export const PromptInput: Component = () => {
         <div class="file-mention-dropdown" ref={dropdownRef}>
           <Show
             when={mention.mentionResults().length > 0}
-            fallback={<div class="file-mention-empty">No files found</div>}
+            fallback={<div class="file-mention-empty">{language.t("prompt.fileMention.empty")}</div>}
           >
             <For each={mention.mentionResults()}>
               {(path, index) => (
@@ -283,7 +297,7 @@ export const PromptInput: Component = () => {
                   type="button"
                   class="image-attachment-remove"
                   onClick={() => imageAttach.remove(img.id)}
-                  aria-label="Remove image"
+                  aria-label={language.t("prompt.image.remove")}
                 >
                   ×
                 </button>

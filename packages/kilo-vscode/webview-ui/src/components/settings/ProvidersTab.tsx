@@ -6,7 +6,7 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { useConfig } from "../../context/config"
 import { useProvider } from "../../context/provider"
 import { useLanguage } from "../../context/language"
-import { ModelSelectorBase } from "../chat/ModelSelector"
+import { ModelSelectorBase } from "../shared/ModelSelector"
 import type { ModelSelection } from "../../types/messages"
 import SettingsRow from "./SettingsRow"
 
@@ -131,7 +131,7 @@ const ProvidersTab: Component = () => {
               variant="secondary"
               size="small"
               triggerVariant="settings"
-              placeholder="Select provider…"
+              placeholder={language.t("settings.providers.selectProvider")}
             />
           </div>
           <Button
@@ -202,7 +202,7 @@ const ProvidersTab: Component = () => {
               variant="secondary"
               size="small"
               triggerVariant="settings"
-              placeholder="Select provider…"
+              placeholder={language.t("settings.providers.selectProvider")}
             />
           </div>
           <Button

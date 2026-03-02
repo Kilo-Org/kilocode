@@ -72,14 +72,7 @@ export namespace ProviderTransform {
         .filter((msg): msg is ModelMessage => msg !== undefined && msg.content !== "")
     }
 
-    // kilocode_change - skip toolCallId normalization for OpenRouter/Kilo Gateway
-    // OpenRouter handles tool call IDs differently and modifying messages can break
-    // thinking/redacted_thinking blocks which must remain unchanged per Anthropic API
-    if (
-      model.api.id.includes("claude") &&
-      model.api.npm !== "@openrouter/ai-sdk-provider" &&
-      model.api.npm !== "@kilocode/kilo-gateway"
-    ) {
+    if (model.api.id.includes("claude")) {
       return msgs.map((msg) => {
         if ((msg.role === "assistant" || msg.role === "tool") && Array.isArray(msg.content)) {
           msg.content = msg.content.map((part) => {
@@ -95,6 +88,7 @@ export namespace ProviderTransform {
         return msg
       })
     }
+
     if (
       model.providerID === "mistral" ||
       model.api.id.toLowerCase().includes("mistral") ||
@@ -179,7 +173,7 @@ export namespace ProviderTransform {
     return msgs
   }
 
-  function applyCaching(msgs: ModelMessage[], providerID: string): ModelMessage[] {
+  function applyCaching(msgs: ModelMessage[], model: Provider.Model): ModelMessage[] {
     const system = msgs.filter((msg) => msg.role === "system").slice(0, 2)
     const final = msgs.filter((msg) => msg.role !== "system").slice(-2)
 
@@ -202,7 +196,7 @@ export namespace ProviderTransform {
     }
 
     for (const msg of unique([...system, ...final])) {
-      const useMessageLevelOptions = providerID === "anthropic" || providerID.includes("bedrock")
+      const useMessageLevelOptions = model.providerID === "anthropic" || model.providerID.includes("bedrock")
       const shouldUseContentOptions = !useMessageLevelOptions && Array.isArray(msg.content) && msg.content.length > 0
 
       if (shouldUseContentOptions) {
@@ -257,92 +251,50 @@ export namespace ProviderTransform {
     })
   }
 
+  // kilocode_change - function added
+  function fixDuplicateReasoning(msgs: ModelMessage[]) {
+    for (const msg of msgs) {
+      if (!Array.isArray(msg.content)) {
+        continue
+      }
+      let isFirstToolCall = true
+      for (const part of msg.content) {
+        if (part.type === "reasoning") {
+          // this entry is corrupt
+          delete part.providerOptions?.openrouter?.reasoning_details
+        }
+        if (part.type === "tool-call" && isFirstToolCall) {
+          isFirstToolCall = false
+          continue
+        }
+        if (part.type === "tool-call") {
+          // this is a duplicate entry
+          delete part.providerOptions?.openrouter?.reasoning_details
+        }
+      }
+    }
+  }
+
   export function message(msgs: ModelMessage[], model: Provider.Model, options: Record<string, unknown>) {
     msgs = unsupportedParts(msgs, model)
     msgs = normalizeMessages(msgs, model, options)
 
-    // kilocode_change - identify OpenRouter/Kilo Gateway for thinking block stripping
-    const isOpenRouterOrKilo =
-      model.api.npm === "@openrouter/ai-sdk-provider" || model.api.npm === "@kilocode/kilo-gateway"
-
-    // kilocode_change - strip thinking/reasoning blocks for OpenRouter/Kilo Gateway
-    // Anthropic's API requires thinking blocks to be EXACTLY unchanged, but our storage
-    // reconstructs them which counts as modification. Stripping them is safe because
-    // the reasoning was already shown to the user and doesn't need to be sent back.
-    if (isOpenRouterOrKilo) {
-      // Helper to strip reasoning-related data from provider options/metadata
-      const stripReasoningData = (opts: Record<string, any> | undefined) => {
-        if (!opts) return undefined // Return undefined instead of empty object to clean up
-        const result = { ...opts }
-        // Strip from openrouter namespace
-        if (result.openrouter) {
-          result.openrouter = { ...result.openrouter }
-          delete result.openrouter.reasoning_details
-          delete result.openrouter.reasoning
-          delete result.openrouter.thinking
-        }
-        // Strip from kilo namespace
-        if (result.kilo) {
-          result.kilo = { ...result.kilo }
-          delete result.kilo.reasoning_details
-          delete result.kilo.reasoning
-          delete result.kilo.thinking
-        }
-        // Strip from anthropic namespace
-        if (result.anthropic) {
-          result.anthropic = { ...result.anthropic }
-          delete result.anthropic.thinking
-          delete result.anthropic.reasoning
-        }
-        return result
-      }
-
-      msgs = msgs.flatMap((msg): ModelMessage[] => {
-        // Handle string content (just strip metadata)
-        if (!Array.isArray(msg.content)) {
-          const result = { ...msg, providerOptions: stripReasoningData(msg.providerOptions) }
-          if ("experimental_providerMetadata" in msg) {
-            ;(result as any).experimental_providerMetadata = stripReasoningData(
-              (msg as any).experimental_providerMetadata,
-            )
-          }
-          return [result]
-        }
-        // Filter out reasoning parts from content and strip metadata from remaining parts
-        const filtered = msg.content
-          .filter(
-            (part: any) => part.type !== "thinking" && part.type !== "redacted_thinking" && part.type !== "reasoning",
-          )
-          .map((part: any) => ({
-            ...part,
-            providerOptions: stripReasoningData(part.providerOptions),
-            providerMetadata: stripReasoningData(part.providerMetadata),
-            experimental_providerMetadata: stripReasoningData(part.experimental_providerMetadata),
-          }))
-
-        // Providers may reject empty array content; drop empty messages.
-        if (filtered.length === 0) return []
-
-        // Also strip from message-level options/metadata
-        const result = { ...msg, content: filtered, providerOptions: stripReasoningData(msg.providerOptions) }
-        if ("experimental_providerMetadata" in msg) {
-          ;(result as any).experimental_providerMetadata = stripReasoningData(
-            (msg as any).experimental_providerMetadata,
-          )
-        }
-        return [result as ModelMessage]
-      })
+    // kilocode_change - workaround for @openrouter/ai-sdk-provider v1 duplicating reasoning
+    // fixed in https://github.com/OpenRouterTeam/ai-sdk-provider/pull/344/
+    if (model.api.npm === "@kilocode/kilo-gateway") {
+      fixDuplicateReasoning(msgs)
     }
 
     if (
-      model.providerID === "anthropic" ||
-      model.api.id.includes("anthropic") ||
-      model.api.id.includes("claude") ||
-      model.id.includes("anthropic") ||
-      model.id.includes("claude") ||
-      model.api.npm === "@ai-sdk/anthropic"
+      (model.providerID === "anthropic" ||
+        model.api.id.includes("anthropic") ||
+        model.api.id.includes("claude") ||
+        model.id.includes("anthropic") ||
+        model.id.includes("claude") ||
+        model.api.npm === "@ai-sdk/anthropic") &&
+      model.api.npm !== "@ai-sdk/gateway"
     ) {
-      msgs = applyCaching(msgs, model.providerID)
+      msgs = applyCaching(msgs, model)
     }
 
     // Remap providerOptions keys from stored providerID to expected SDK key
@@ -379,8 +331,8 @@ export namespace ProviderTransform {
     if (id.includes("glm-4.7")) return 1.0
     if (id.includes("minimax-m2")) return 1.0
     if (id.includes("kimi-k2")) {
-      // kimi-k2-thinking & kimi-k2.5 && kimi-k2p5
-      if (id.includes("thinking") || id.includes("k2.") || id.includes("k2p")) {
+      // kimi-k2-thinking & kimi-k2.5 && kimi-k2p5 && kimi-k2-5
+      if (["thinking", "k2.", "k2p", "k2-5"].some((s) => id.includes(s))) {
         return 1.0
       }
       return 0.6
@@ -391,7 +343,7 @@ export namespace ProviderTransform {
   export function topP(model: Provider.Model) {
     const id = model.id.toLowerCase()
     if (id.includes("qwen")) return 1
-    if (id.includes("minimax-m2") || id.includes("kimi-k2.5") || id.includes("kimi-k2p5") || id.includes("gemini")) {
+    if (["minimax-m2", "gemini", "kimi-k2.5", "kimi-k2p5", "kimi-k2-5"].some((s) => id.includes(s))) {
       return 0.95
     }
     return undefined
@@ -400,7 +352,7 @@ export namespace ProviderTransform {
   export function topK(model: Provider.Model) {
     const id = model.id.toLowerCase()
     if (id.includes("minimax-m2")) {
-      if (id.includes("m2.1")) return 40
+      if (["m2.", "m25", "m21"].some((s) => id.includes(s))) return 40
       return 20
     }
     if (id.includes("gemini")) return 64
@@ -411,9 +363,19 @@ export namespace ProviderTransform {
   const OPENAI_EFFORTS = ["none", "minimal", ...WIDELY_SUPPORTED_EFFORTS, "xhigh"]
 
   export function variants(model: Provider.Model): Record<string, Record<string, any>> {
+    // kilocode_change start
+    if (model.api.npm === "@kilocode/kilo-gateway" && model.variants && Object.keys(model.variants).length > 0) {
+      return model.variants
+    }
+    // kilocode_change end
+
     if (!model.capabilities.reasoning) return {}
 
     const id = model.id.toLowerCase()
+    const isAnthropicAdaptive = ["opus-4-6", "opus-4.6", "sonnet-4-6", "sonnet-4.6"].some((v) =>
+      model.api.id.includes(v),
+    )
+    const adaptiveEfforts = ["low", "medium", "high", "max"]
     if (
       id.includes("deepseek") ||
       id.includes("minimax") ||
@@ -442,67 +404,69 @@ export namespace ProviderTransform {
     if (id.includes("grok")) return {}
 
     switch (model.api.npm) {
+      case "@kilocode/kilo-gateway": // kilocode_change
       case "@openrouter/ai-sdk-provider":
-        if (!model.id.includes("gpt") && !model.id.includes("gemini-3")) return {}
+        if (!model.id.includes("gpt") && !model.id.includes("gemini-3") && !model.id.includes("claude")) return {}
         return Object.fromEntries(OPENAI_EFFORTS.map((effort) => [effort, { reasoning: { effort } }]))
-
-      // kilocode_change start
-      case "@kilocode/kilo-gateway":
-        // kilocode_change - adaptive thinking with effort levels
-        // TODO: Enable when @ai-sdk/anthropic supports thinking.type: "adaptive"
-        const ADAPTIVE_THINKING_ENABLED = false
-        if (ADAPTIVE_THINKING_ENABLED && id.includes("claude-opus-4-6")) {
-          return {
-            low: {
-              thinking: { type: "adaptive" },
-              output_config: { effort: "low" },
-            },
-            medium: {
-              thinking: { type: "adaptive" },
-              output_config: { effort: "medium" },
-            },
-            high: {
-              thinking: { type: "adaptive" },
-              output_config: { effort: "high" },
-            },
-            max: {
-              thinking: { type: "adaptive" },
-              output_config: { effort: "max" },
-            },
-          }
-        }
-        // kilocode_change - Claude models via Kilo Gateway: no reasoning variants
-        // (reasoning is broken due to OpenRouter SDK duplicating reasoning_details)
-        if (
-          model.id.includes("claude") ||
-          model.id.includes("anthropic") ||
-          model.api.id.includes("claude") ||
-          model.api.id.includes("anthropic")
-        ) {
-          return {}
-        }
-        // GPT models via Kilo need encrypted reasoning content to avoid org_id mismatch
-        if (!model.id.includes("gpt") && !model.id.includes("gemini-3")) return {}
-        // kilocode_change - Codex models use object-based reasoning format for OpenRouter
-        // OpenRouter expects { reasoning: { effort: "high" } } format
-        // See: https://openrouter.ai/docs/api/api-reference/chat/send-chat-completion-request#request.body.reasoning
-        if (model.id.includes("codex")) {
-          return Object.fromEntries(OPENAI_EFFORTS.map((effort) => [effort, { reasoning: { effort } }]))
-        }
-        return Object.fromEntries(
-          OPENAI_EFFORTS.map((effort) => [
-            effort,
-            {
-              reasoningEffort: effort,
-              reasoningSummary: "auto",
-              include: ["reasoning.encrypted_content"],
-            },
-          ]),
-        )
-      // kilocode_change end
 
       // TODO: YOU CANNOT SET max_tokens if this is set!!!
       case "@ai-sdk/gateway":
+        if (model.id.includes("anthropic")) {
+          if (isAnthropicAdaptive) {
+            return Object.fromEntries(
+              adaptiveEfforts.map((effort) => [
+                effort,
+                {
+                  thinking: {
+                    type: "adaptive",
+                  },
+                  effort,
+                },
+              ]),
+            )
+          }
+          return {
+            high: {
+              thinking: {
+                type: "enabled",
+                budgetTokens: 16000,
+              },
+            },
+            max: {
+              thinking: {
+                type: "enabled",
+                budgetTokens: 31999,
+              },
+            },
+          }
+        }
+        if (model.id.includes("google")) {
+          if (id.includes("2.5")) {
+            return {
+              high: {
+                thinkingConfig: {
+                  includeThoughts: true,
+                  thinkingBudget: 16000,
+                },
+              },
+              max: {
+                thinkingConfig: {
+                  includeThoughts: true,
+                  thinkingBudget: 24576,
+                },
+              },
+            }
+          }
+          return Object.fromEntries(
+            ["low", "high"].map((effort) => [
+              effort,
+              {
+                includeThoughts: true,
+                thinkingLevel: effort,
+              },
+            ]),
+          )
+        }
         return Object.fromEntries(OPENAI_EFFORTS.map((effort) => [effort, { reasoningEffort: effort }]))
 
       case "@ai-sdk/github-copilot":
@@ -596,30 +560,21 @@ export namespace ProviderTransform {
       // https://v5.ai-sdk.dev/providers/ai-sdk-providers/anthropic
       case "@ai-sdk/google-vertex/anthropic":
         // https://v5.ai-sdk.dev/providers/ai-sdk-providers/google-vertex#anthropic-provider
-        // kilocode_change start
-        // TODO: Enable when @ai-sdk/anthropic supports thinking.type: "adaptive"
-        const ADAPTIVE_THINKING_ENABLED_ANTHROPIC = false
-        if (ADAPTIVE_THINKING_ENABLED_ANTHROPIC && id.includes("claude-opus-4-6")) {
-          return {
-            low: {
-              thinking: { type: "adaptive" },
-              output_config: { effort: "low" },
-            },
-            medium: {
-              thinking: { type: "adaptive" },
-              output_config: { effort: "medium" },
-            },
-            high: {
-              thinking: { type: "adaptive" },
-              output_config: { effort: "high" },
-            },
-            max: {
-              thinking: { type: "adaptive" },
-              output_config: { effort: "max" },
-            },
-          }
+
+        if (isAnthropicAdaptive) {
+          return Object.fromEntries(
+            adaptiveEfforts.map((effort) => [
+              effort,
+              {
+                thinking: {
+                  type: "adaptive",
+                },
+                effort,
+              },
+            ]),
+          )
         }
-        // kilocode_change end
+
         return {
           high: {
             thinking: {
@@ -637,6 +592,19 @@ export namespace ProviderTransform {
 
       case "@ai-sdk/amazon-bedrock":
         // https://v5.ai-sdk.dev/providers/ai-sdk-providers/amazon-bedrock
+        if (isAnthropicAdaptive) {
+          return Object.fromEntries(
+            adaptiveEfforts.map((effort) => [
+              effort,
+              {
+                reasoningConfig: {
+                  type: "adaptive",
+                  maxReasoningEffort: effort,
+                },
+              },
+            ]),
+          )
+        }
         // For Anthropic models on Bedrock, use reasoningConfig with budgetTokens
         if (model.api.id.includes("anthropic")) {
           return {
@@ -688,12 +656,19 @@ export namespace ProviderTransform {
             },
           }
         }
+        let levels = ["low", "high"]
+        if (id.includes("3.1")) {
+          levels = ["low", "medium", "high"]
+        }
+
         return Object.fromEntries(
-          ["low", "high"].map((effort) => [
+          levels.map((effort) => [
             effort,
             {
-              includeThoughts: true,
-              thinkingLevel: effort,
+              thinkingConfig: {
+                includeThoughts: true,
+                thinkingLevel: effort,
+              },
             },
           ]),
         )
@@ -713,8 +688,7 @@ export namespace ProviderTransform {
           groqEffort.map((effort) => [
             effort,
             {
-              includeThoughts: true,
-              thinkingLevel: effort,
+              reasoningEffort: effort,
             },
           ]),
         )
@@ -842,8 +816,7 @@ export namespace ProviderTransform {
         result["textVerbosity"] = "low"
       }
 
-      // kilocode_change - include kilo provider for encrypted reasoning content
-      if (input.model.providerID.startsWith("opencode") || input.model.api.npm === "@kilocode/kilo-gateway") {
+      if (input.model.providerID.startsWith("opencode")) {
         result["promptCacheKey"] = input.sessionID
         result["include"] = ["reasoning.encrypted_content"]
         result["reasoningSummary"] = "auto"
@@ -852,6 +825,15 @@ export namespace ProviderTransform {
 
     if (input.model.providerID === "venice") {
       result["promptCacheKey"] = input.sessionID
+    }
+
+    if (input.model.providerID === "openrouter") {
+      result["prompt_cache_key"] = input.sessionID
+    }
+    if (input.model.api.npm === "@ai-sdk/gateway") {
+      result["gateway"] = {
+        caching: "auto",
+      }
     }
 
     return result
@@ -886,10 +868,51 @@ export namespace ProviderTransform {
       // Other models use reasoningEffort (AI SDK format)
       return { reasoningEffort: "minimal" }
     }
+
+    if (model.providerID === "venice") {
+      return { veniceParameters: { disableThinking: true } }
+    }
+
     return {}
   }
 
+  // Maps model ID prefix to provider slug used in providerOptions.
+  // Example: "amazon/nova-2-lite" → "bedrock"
+  const SLUG_OVERRIDES: Record<string, string> = {
+    amazon: "bedrock",
+  }
+
   export function providerOptions(model: Provider.Model, options: { [x: string]: any }) {
+    if (model.api.npm === "@ai-sdk/gateway") {
+      // Gateway providerOptions are split across two namespaces:
+      // - `gateway`: gateway-native routing/caching controls (order, only, byok, etc.)
+      // - `<upstream slug>`: provider-specific model options (anthropic/openai/...)
+      // We keep `gateway` as-is and route every other top-level option under the
+      // model-derived upstream slug.
+      const i = model.api.id.indexOf("/")
+      const rawSlug = i > 0 ? model.api.id.slice(0, i) : undefined
+      const slug = rawSlug ? (SLUG_OVERRIDES[rawSlug] ?? rawSlug) : undefined
+      const gateway = options.gateway
+      const rest = Object.fromEntries(Object.entries(options).filter(([k]) => k !== "gateway"))
+      const has = Object.keys(rest).length > 0
+
+      const result: Record<string, any> = {}
+      if (gateway !== undefined) result.gateway = gateway
+
+      if (has) {
+        if (slug) {
+          // Route model-specific options under the provider slug
+          result[slug] = rest
+        } else if (gateway && typeof gateway === "object" && !Array.isArray(gateway)) {
+          result.gateway = { ...gateway, ...rest }
+        } else {
+          result.gateway = rest
+        }
+      }
+
+      return result
+    }
+
     const key = sdkKey(model.api.npm) ?? model.providerID
     return { [key]: options }
   }

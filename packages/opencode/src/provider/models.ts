@@ -9,6 +9,7 @@ import { Config } from "../config/config" // kilocode_change
 import { ModelCache } from "./model-cache" // kilocode_change
 import { Auth } from "../auth" // kilocode_change
 import { KILO_OPENROUTER_BASE } from "@kilocode/kilo-gateway" // kilocode_change
+import { Filesystem } from "../util/filesystem"
 
 // Try to import bundled snapshot (generated at build time)
 // Falls back to undefined in dev mode when snapshot doesn't exist
@@ -26,7 +27,10 @@ const normalizeKiloBaseURL = (baseURL: string | undefined, orgId: string | undef
   if (trimmed.includes("/openrouter")) return trimmed
   if (trimmed.endsWith("/api")) return `${trimmed}/openrouter`
   return `${trimmed}/api/openrouter`
-} // kilocode_change end
+}
+
+export const Prompt = z.enum(["codex", "gemini", "beast", "anthropic", "trinity", "anthropic_without_todo"])
+// kilocode_change end
 
 export namespace ModelsDev {
   const log = Log.create({ service: "models.dev" })
@@ -78,8 +82,12 @@ export namespace ModelsDev {
         output: z.array(z.enum(["text", "audio", "image", "video", "pdf"])),
       })
       .optional(),
-    recommended: z.boolean().optional(), // kilocode_change
-    recommendedIndex: z.number().optional(), // kilocode_change
+
+    // kilocode_change start
+    recommendedIndex: z.number().optional(),
+    prompt: Prompt.optional().catch(undefined),
+    // kilocode_change end
+
     experimental: z.boolean().optional(),
     status: z.enum(["alpha", "beta", "deprecated"]).optional(),
     options: z.record(z.string(), z.any()),
@@ -105,8 +113,7 @@ export namespace ModelsDev {
   }
 
   export const Data = lazy(async () => {
-    const file = Bun.file(Flag.KILO_MODELS_PATH ?? filepath)
-    const result = await file.json().catch(() => {})
+    const result = await Filesystem.readJson(Flag.KILO_MODELS_PATH ?? filepath).catch(() => {})
     if (result) return result
     // @ts-ignore
     const snapshot = await import("./models-snapshot")
@@ -165,7 +172,6 @@ export namespace ModelsDev {
   }
 
   export async function refresh() {
-    const file = Bun.file(filepath)
     const result = await fetch(`${url()}/api.json`, {
       headers: {
         "User-Agent": Installation.USER_AGENT,
@@ -177,13 +183,13 @@ export namespace ModelsDev {
       })
     })
     if (result && result.ok) {
-      await Bun.write(file, await result.text())
+      await Filesystem.write(filepath, await result.text())
       ModelsDev.Data.reset()
     }
   }
 }
 
-if (!Flag.KILO_DISABLE_MODELS_FETCH) {
+if (!Flag.KILO_DISABLE_MODELS_FETCH && !process.argv.includes("--get-yargs-completions")) {
   ModelsDev.refresh()
   setInterval(
     async () => {

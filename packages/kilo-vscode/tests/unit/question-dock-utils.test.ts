@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test"
-import { toggleAnswer, buildSubtitleText } from "../../webview-ui/src/components/chat/question-dock-utils"
+import { toggleAnswer } from "../../webview-ui/src/components/chat/question-dock-utils"
 
 describe("toggleAnswer", () => {
   it("adds answer when not present", () => {
@@ -34,30 +34,5 @@ describe("toggleAnswer", () => {
   it("only removes the first occurrence (deduplication edge case)", () => {
     const result = toggleAnswer(["a", "a"], "a")
     expect(result).toEqual(["a"])
-  })
-})
-
-describe("buildSubtitleText", () => {
-  it("returns empty string for count of 0", () => {
-    expect(buildSubtitleText(0, "question", "questions")).toBe("")
-  })
-
-  it("uses singular form for count of 1", () => {
-    expect(buildSubtitleText(1, "question", "questions")).toBe("1 question")
-  })
-
-  it("uses plural form for count of 2", () => {
-    expect(buildSubtitleText(2, "question", "questions")).toBe("2 questions")
-  })
-
-  it("uses plural form for large counts", () => {
-    expect(buildSubtitleText(10, "question", "questions")).toBe("10 questions")
-  })
-
-  it("works with i18n-style translation strings", () => {
-    expect(buildSubtitleText(1, "ui.common.question.one", "ui.common.question.other")).toBe("1 ui.common.question.one")
-    expect(buildSubtitleText(3, "ui.common.question.one", "ui.common.question.other")).toBe(
-      "3 ui.common.question.other",
-    )
   })
 })

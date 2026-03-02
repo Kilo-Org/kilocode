@@ -7,6 +7,7 @@ on:
 jobs:
   # kilocode_change start
   check-author:
+    if: false # kilocode_change - disabled: not needed in kilocode repo
     uses: ./.github/workflows/check-org-member.yml
     with:
       username: ${{ github.event.pull_request.user.login }}
@@ -16,7 +17,7 @@ jobs:
 
   check-duplicates:
     needs: check-author
-    if: needs.check-author.outputs['is-member'] == 'false'
+    if: false # kilocode_change - disabled: not needed in kilocode repo
     # kilocode_change end
     runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
@@ -28,10 +29,23 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Check team membership
+        id: team-check
+        run: |
+          LOGIN="${{ github.event.pull_request.user.login }}"
+          if [ "$LOGIN" = "opencode-agent[bot]" ] || grep -qxF "$LOGIN" .github/TEAM_MEMBERS; then
+            echo "is_team=true" >> "$GITHUB_OUTPUT"
+            echo "Skipping: $LOGIN is a team member or bot"
+          else
+            echo "is_team=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Setup Bun
+        if: steps.team-check.outputs.is_team != 'true'
         uses: ./.github/actions/setup-bun
 
       - name: Install dependencies
+        if: steps.team-check.outputs.is_team != 'true'
         run: bun install
 
       # kilocode_change start
@@ -40,6 +54,7 @@ jobs:
       # kilocode_change end
 
       - name: Build prompt
+        if: steps.team-check.outputs.is_team != 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -56,6 +71,7 @@ jobs:
           } > pr_info.txt
 
       - name: Check for duplicate PRs
+        if: steps.team-check.outputs.is_team != 'true'
         env:
           # kilocode_change start
           KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
@@ -73,6 +89,7 @@ jobs:
           fi
 
   add-contributor-label:
+    if: false # kilocode_change - disabled: not needed in kilocode repo
     runs-on: blacksmith-2vcpu-ubuntu-2404 # kilocode_change
     permissions:
       pull-requests: write

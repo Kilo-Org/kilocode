@@ -30,6 +30,10 @@ inputs:
     description: "Comma-separated list of trigger phrases (case-insensitive). Defaults to '/kilo,/kc'"
     required: false
 
+  variant:
+    description: "Model variant for provider-specific reasoning effort (e.g., high, max, minimal)"
+    required: false
+
   oidc_base_url:
     description: "Base URL for OIDC token exchange API. Only required when running a custom GitHub App install. Defaults to https://api.kilo.ai"
     required: false
@@ -49,7 +53,7 @@ runs:
       id: version
       shell: bash
       run: |
-        VERSION=$(curl -sf https://api.github.com/repos/Kilo-Org/kilo/releases/latest | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)
+        VERSION=$(curl -sf https://api.github.com/repos/Kilo-Org/kilocode/releases/latest | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)
         echo "version=${VERSION:-latest}" >> $GITHUB_OUTPUT
 
     - name: Cache Kilo
@@ -79,6 +83,7 @@ runs:
         PROMPT: ${{ inputs.prompt }}
         USE_GITHUB_TOKEN: ${{ inputs.use_github_token }}
         MENTIONS: ${{ inputs.mentions }}
+        VARIANT: ${{ inputs.variant }}
         OIDC_BASE_URL: ${{ inputs.oidc_base_url }}
         KILO_API_KEY: ${{ inputs.kilo_api_key }}
         KILO_ORG_ID: ${{ inputs.kilo_org_id }}

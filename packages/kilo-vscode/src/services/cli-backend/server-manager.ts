@@ -67,6 +67,7 @@ export class ServerManager {
           ...process.env,
           KILO_SERVER_PASSWORD: password,
           KILO_CLIENT: "vscode",
+          KILO_ENABLE_QUESTION_TOOL: "true",
           KILOCODE_FEATURE: "vscode-extension", // kilocode_change - feature tracking
           KILO_TELEMETRY_LEVEL: vscode.env.isTelemetryEnabled ? "all" : "off",
           KILO_APP_NAME: "kilo-code",

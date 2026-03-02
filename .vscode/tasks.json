@@ -99,6 +99,24 @@
       "label": "VSCode - Tests (Composite)",
       "dependsOn": ["VSCode - Watch", "VSCode - Tests"],
       "problemMatcher": []
+    },
+    {
+      "label": "install-dev-extension",
+      "type": "shell",
+      "command": "bun script/install-dev-extension.ts",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/packages/kilo-vscode"
+      },
+      "problemMatcher": []
     }
   ]
 }

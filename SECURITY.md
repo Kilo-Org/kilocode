@@ -1,5 +1,11 @@
 # Security
 
+## IMPORTANT
+
+We do not accept AI generated security reports. We receive a large number of
+these and we absolutely do not have the resources to review them all. If you
+submit one that will be an automatic ban from the project.
+
 ## Threat Model
 
 ### Overview
@@ -32,7 +38,7 @@ Server mode is opt-in only. When enabled, set `KILO_SERVER_PASSWORD` to require 
 
 We appreciate your efforts to responsibly disclose your findings, and will make every effort to acknowledge your contributions.
 
-To report a security issue, please use the GitHub Security Advisory ["Report a Vulnerability"](https://github.com/Kilo-Org/kilo/security/advisories/new) tab.
+To report a security issue, please use the GitHub Security Advisory ["Report a Vulnerability"](https://github.com/Kilo-Org/kilocode/security/advisories/new) tab.
 
 The team will send a response indicating the next steps in handling your report. After the initial reply to your report, the security team will keep you informed of the progress towards a fix and full announcement, and may ask for additional information or guidance.
 

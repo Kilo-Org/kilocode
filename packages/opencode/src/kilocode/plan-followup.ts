@@ -1,3 +1,4 @@
+import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Agent } from "@/agent/agent"
 import { Bus } from "@/bus"
 import { TuiEvent } from "@/cli/cmd/tui/event"
@@ -109,6 +110,30 @@ export namespace PlanFollowup {
 
   export const ANSWER_NEW_SESSION = "Start new session"
   export const ANSWER_CONTINUE = "Continue here"
+
+  async function resolvePlan(input: { assistant?: MessageV2.WithParts; messages: MessageV2.WithParts[]; sessionID: string }) {
+    // Fast path: check the last assistant message's text first (avoids array scanning)
+    if (input.assistant) {
+      const text = toText(input.assistant)
+      if (text) return text
+    }
+
+    // Fallback: scan all assistant messages after the last user message (handles
+    // cases where plan text is on an earlier assistant and the last one is empty)
+    const lastUserIdx = input.messages.findLastIndex((m) => m.info.role === "user")
+    const assistantMessages = input.messages
+      .slice(lastUserIdx + 1)
+      .filter((m) => m.info.role === "assistant")
+
+    const text = assistantMessages.map(toText).filter(Boolean).join("\n\n").trim()
+    if (text) return text
+
+    // Fall back to plan file on disk
+    const session = await Session.get(input.sessionID)
+    const file = Bun.file(Session.plan(session))
+    const plan = await file.text().catch(() => "")
+    return plan.trim()
+  }
 
   async function inject(input: {
     sessionID: string
@@ -230,19 +255,26 @@ export namespace PlanFollowup {
     const assistant = latest.find((msg) => msg.info.role === "assistant")
     if (!assistant) return "break"
 
-    const plan = toText(assistant)
+    const plan = await resolvePlan({ assistant, messages: input.messages, sessionID: input.sessionID })
     if (!plan) return "break"
 
     const user = latest.find((msg) => msg.info.role === "user")?.info
     if (!user || user.role !== "user" || !user.model) return "break"
 
     const answers = await prompt({ sessionID: input.sessionID, abort: input.abort })
-    if (!answers) return "break"
+    if (!answers) {
+      Telemetry.trackPlanFollowup(input.sessionID, "dismissed")
+      return "break"
+    }
 
     const answer = answers[0]?.[0]?.trim()
-    if (!answer) return "break"
+    if (!answer) {
+      Telemetry.trackPlanFollowup(input.sessionID, "dismissed")
+      return "break"
+    }
 
     if (answer === ANSWER_NEW_SESSION) {
+      Telemetry.trackPlanFollowup(input.sessionID, "new_session")
       await startNew({
         sessionID: input.sessionID,
         plan,
@@ -254,6 +286,7 @@ export namespace PlanFollowup {
     }
 
     if (answer === ANSWER_CONTINUE) {
+      Telemetry.trackPlanFollowup(input.sessionID, "continue")
       await inject({
         sessionID: input.sessionID,
         agent: "code",
@@ -263,6 +296,7 @@ export namespace PlanFollowup {
       return "continue"
     }
 
+    Telemetry.trackPlanFollowup(input.sessionID, "custom")
     await inject({
       sessionID: input.sessionID,
       agent: "plan",

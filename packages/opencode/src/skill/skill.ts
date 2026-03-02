@@ -12,6 +12,7 @@ import { Flag } from "@/flag/flag"
 import { Bus } from "@/bus"
 import { Session } from "@/session"
 import { Discovery } from "./discovery"
+import { Glob } from "../util/glob"
 
 import { KilocodePaths } from "../kilocode/paths" // kilocode_change
 
@@ -46,10 +47,9 @@ export namespace Skill {
   // External skill directories to search for (project-level and global)
   // These follow the directory layout used by Claude Code and other agents.
   const EXTERNAL_DIRS = [".claude", ".agents"]
-  const EXTERNAL_SKILL_GLOB = new Bun.Glob("skills/**/SKILL.md")
-
-  const KILO_SKILL_GLOB = new Bun.Glob("{skill,skills}/**/SKILL.md")
-  const SKILL_GLOB = new Bun.Glob("**/SKILL.md")
+  const EXTERNAL_SKILL_PATTERN = "skills/**/SKILL.md"
+  const KILO_SKILL_PATTERN = "{skill,skills}/**/SKILL.md"
+  const SKILL_PATTERN = "**/SKILL.md"
 
   export const state = Instance.state(async () => {
     const skills: Record<string, Info> = {}
@@ -90,15 +90,13 @@ export namespace Skill {
     }
 
     const scanExternal = async (root: string, scope: "global" | "project") => {
-      return Array.fromAsync(
-        EXTERNAL_SKILL_GLOB.scan({
-          cwd: root,
-          absolute: true,
-          onlyFiles: true,
-          followSymlinks: true,
-          dot: true,
-        }),
-      )
+      return Glob.scan(EXTERNAL_SKILL_PATTERN, {
+        cwd: root,
+        absolute: true,
+        include: "file",
+        dot: true,
+        symlink: true,
+      })
         .then((matches) => Promise.all(matches.map(addSkill)))
         .catch((error) => {
           log.error(`failed to scan ${scope} skills`, { dir: root, error })
@@ -131,12 +129,11 @@ export namespace Skill {
     })
     for (const dir of kilocodeSkillDirs) {
       const matches = await Array.fromAsync(
-        KILO_SKILL_GLOB.scan({
+        await Glob.scan(KILO_SKILL_PATTERN, {
           cwd: dir,
           absolute: true,
-          onlyFiles: true,
-          followSymlinks: true,
-          dot: true,
+          include: "file",
+          symlink: true,
         }),
       ).catch((error) => {
         log.error("failed .kilocode directory scan for skills", { dir, error })
@@ -151,12 +148,13 @@ export namespace Skill {
 
     // Scan .opencode/skill/ directories
     for (const dir of await Config.directories()) {
-      for await (const match of KILO_SKILL_GLOB.scan({
+      const matches = await Glob.scan(KILO_SKILL_PATTERN, {
         cwd: dir,
         absolute: true,
-        onlyFiles: true,
-        followSymlinks: true,
-      })) {
+        include: "file",
+        symlink: true,
+      })
+      for (const match of matches) {
         await addSkill(match)
       }
     }
@@ -170,12 +168,13 @@ export namespace Skill {
         log.warn("skill path not found", { path: resolved })
         continue
       }
-      for await (const match of SKILL_GLOB.scan({
+      const matches = await Glob.scan(SKILL_PATTERN, {
         cwd: resolved,
         absolute: true,
-        onlyFiles: true,
-        followSymlinks: true,
-      })) {
+        include: "file",
+        symlink: true,
+      })
+      for (const match of matches) {
         await addSkill(match)
       }
     }
@@ -185,12 +184,13 @@ export namespace Skill {
       const list = await Discovery.pull(url)
       for (const dir of list) {
         dirs.add(dir)
-        for await (const match of SKILL_GLOB.scan({
+        const matches = await Glob.scan(SKILL_PATTERN, {
           cwd: dir,
           absolute: true,
-          onlyFiles: true,
-          followSymlinks: true,
-        })) {
+          include: "file",
+          symlink: true,
+        })
+        for (const match of matches) {
           await addSkill(match)
         }
       }
