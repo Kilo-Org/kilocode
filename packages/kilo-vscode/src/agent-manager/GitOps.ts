@@ -164,7 +164,9 @@ export class GitOps {
     const tmp = await fs.mkdtemp(nodePath.join(os.tmpdir(), "kilo-apply-"))
     const index = nodePath.join(tmp, "index")
     const env = { ...process.env, GIT_INDEX_FILE: index }
-    const files = (selectedFiles ?? []).map((file) => file.trim()).filter((file) => file.length > 0)
+    const files = (selectedFiles ?? [])
+      .map((file) => file.trim())
+      .filter((file) => file.length > 0 && !nodePath.isAbsolute(file) && !file.split(/[\\/]/).includes(".."))
     const pathspec = files.length > 0 ? files : ["."]
 
     try {
@@ -256,7 +258,8 @@ export class GitOps {
         continue
       }
 
-      const fileReason = /^error:\s+(.+?):\s+(.+)$/i.exec(line)
+      const fileReason =
+        /^error:\s+(.+?):\s+(does not match index|patch does not apply|cannot read the current contents.*)$/i.exec(line)
       if (fileReason) {
         const file = fileReason[1]!
         const reason = fileReason[2]!
@@ -298,7 +301,11 @@ export class GitOps {
       )
 
       if (options?.stdin !== undefined) {
-        child.stdin?.end(options.stdin)
+        if (!child.stdin) {
+          resolve({ code: 1, stdout: "", stderr: "stdin not available for git process" })
+          return
+        }
+        child.stdin.end(options.stdin)
       }
     })
   }
