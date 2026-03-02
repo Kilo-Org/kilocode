@@ -6,6 +6,7 @@ const kind = (value: string) => ({
 })
 
 const mockVscode = {
+  Uri: { file: (p: string) => ({ fsPath: p, scheme: "file" }), parse: (u: string) => ({ fsPath: u }) },
   extensions: {
     getExtension: () => ({
       packageJSON: { version: "test" },
