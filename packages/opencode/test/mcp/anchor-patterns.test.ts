@@ -166,11 +166,23 @@ describe("anchorPatterns", () => {
     expect(result.pattern).toBe("^(?:error|warn|info)$")
   })
 
-  test("does not wrap alternation when already anchored", () => {
+  test("does not modify alternation when already fully anchored", () => {
     const schema: JSONSchema7 = { pattern: "^foo|bar$" }
     const result = anchorPatterns(schema)
-    // Only missing end anchor, so no group wrapping needed
+    // Both anchors detected (hasStart=true, hasEnd=true), so no modification needed
     expect(result.pattern).toBe("^foo|bar$")
+  })
+
+  test("wraps partially-anchored alternation with start anchor only", () => {
+    const schema: JSONSchema7 = { pattern: "^foo|bar" }
+    const result = anchorPatterns(schema)
+    expect(result.pattern).toBe("^(?:foo|bar)$")
+  })
+
+  test("wraps partially-anchored alternation with end anchor only", () => {
+    const schema: JSONSchema7 = { pattern: "foo|bar$" }
+    const result = anchorPatterns(schema)
+    expect(result.pattern).toBe("^(?:foo|bar)$")
   })
 
   test("skips additionalProperties when boolean", () => {

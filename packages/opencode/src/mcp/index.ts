@@ -128,10 +128,12 @@ export namespace MCP {
       // Account for even-length backslash sequences (e.g. \\$ is a real anchor, \$ is not).
       const hasStart = /^\^/.test(result.pattern)
       const hasEnd = /(^|[^\\])(\\\\)*\$$/.test(result.pattern)
-      if (!hasStart && !hasEnd && result.pattern.includes("|")) {
-        // Wrap in non-capturing group to preserve alternation semantics
-        // e.g. "foo|bar" → "^(?:foo|bar)$" not "^foo|bar$"
-        result.pattern = "^(?:" + result.pattern + ")$"
+      if (result.pattern.includes("|") && (!hasStart || !hasEnd)) {
+        // Wrap in non-capturing group to preserve alternation semantics.
+        // Applies to unanchored ("foo|bar"), and partially-anchored ("^foo|bar", "foo|bar$")
+        // patterns — naively prepending/appending anchors would change regex semantics.
+        const inner = result.pattern.replace(/^\^/, "").replace(/(^|[^\\])(\\\\)*\$$/, "$1$2")
+        result.pattern = "^(?:" + inner + ")$"
       } else {
         if (!hasStart) result.pattern = "^" + result.pattern
         if (!hasEnd) result.pattern = result.pattern + "$"
