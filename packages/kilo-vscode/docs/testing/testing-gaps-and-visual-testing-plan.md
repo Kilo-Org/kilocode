@@ -19,17 +19,30 @@ automated tests currently catch regression in this chain.
 
 ## Current Test Coverage Summary
 
-### What IS tested
+### CI Workflows
 
-| Area | Tests | Location |
-|------|-------|----------|
-| Extension host logic (TypeScript) | Unit tests with bun | `packages/kilo-vscode/tests/unit/` |
-| Message contract (extension ↔ webview) | Static analysis tests reading source files | `tests/unit/message-contract.test.ts` |
-| Worktree / git operations | Unit tests | `tests/unit/worktree-manager.test.ts` |
-| Autocomplete | Unit + integration tests | `tests/unit/autocomplete-*.test.ts` |
-| Web app (packages/app) | Playwright e2e | `packages/app/e2e/` |
-| opencode CLI logic | bun unit tests | `packages/opencode/test/` |
-| UI components (manual only) | Storybook stories | `packages/kilo-ui/src/stories/` |
+| Workflow | Trigger | What it runs |
+|----------|---------|--------------|
+| `test.yml` – unit | Every PR + push to `main` | `bun turbo test` → only `packages/opencode` + `packages/app` unit tests |
+| `test.yml` – e2e | Every PR + push to `main` (after unit) | Playwright e2e against `packages/app` |
+| `test-vscode.yml` – unit | PRs touching `packages/kilo-vscode/**` only; pushes to `dev` | `bun run test:unit` in `packages/kilo-vscode` |
+| `typecheck.yml` | (separate workflow) | `bun turbo typecheck` across all packages |
+
+**Critical gap:** `test-vscode.yml` only triggers when `packages/kilo-vscode` files change.
+A PR that only modifies `packages/ui` or `packages/kilo-ui` (e.g. an upstream merge) does **not**
+run the vscode unit tests at all.
+
+### What IS tested (and where it runs in CI)
+
+| Area | Tests | CI Coverage |
+|------|-------|-------------|
+| Extension host logic (TypeScript) | 45+ bun unit tests in `tests/unit/` | ✅ `test-vscode.yml` — but only on kilo-vscode PRs |
+| Message contract (extension ↔ webview) | Static analysis in `message-contract.test.ts` | ✅ `test-vscode.yml` — same caveat |
+| Worktree / git operations | `worktree-manager.test.ts` | ✅ `test-vscode.yml` — same caveat |
+| Autocomplete | `autocomplete-*.test.ts` | ✅ `test-vscode.yml` — same caveat |
+| Web app (packages/app) | Playwright e2e + unit tests | ✅ `test.yml` — runs on every PR |
+| opencode CLI logic | bun unit tests in `packages/opencode/test/` | ✅ `test.yml` — runs on every PR |
+| UI components | Storybook stories (50 stories) | ❌ Manual only — never runs in CI |
 
 ### What IS NOT tested
 
@@ -37,6 +50,7 @@ automated tests currently catch regression in this chain.
 |------|-----|------|
 | `packages/ui` component rendering | Zero automated rendering tests | **Critical** – upstream merges silently break UI |
 | `packages/kilo-ui` CSS overrides | No visual/snapshot tests | CSS classes can vanish after a merge |
+| kilo-vscode tests on UI-only PRs | `test-vscode.yml` does not trigger on `packages/ui` or `packages/kilo-ui` changes | **upstream merge PRs skip all extension tests** |
 | Webview UI react to messages | No rendering tests for the chatview | Tool renderers, message display can break entirely |
 | `ToolRegistry` registrations in `message-part.tsx` | No test that all expected tools are registered after a merge | An upstream rename/removal goes undetected |
 | `getToolInfo()` return values | No contract test | Upstream may change tool output shape |
@@ -107,6 +121,29 @@ snapshot pipeline.
 ---
 
 ## Plan: Testing Strategy
+
+### Phase 0 – Fix CI Trigger (Zero code, very high value)
+
+The `test-vscode.yml` workflow only runs when `packages/kilo-vscode/**` changes.
+This means upstream merge PRs (which touch `packages/ui` and `packages/kilo-ui`) bypass
+all extension tests.
+
+**Fix:** Add `packages/ui/**` and `packages/kilo-ui/**` to the `paths` filter in
+[`.github/workflows/test-vscode.yml`](../../../../.github/workflows/test-vscode.yml):
+
+```yaml
+on:
+  pull_request:
+    paths:
+      - "packages/kilo-vscode/**"
+      - "packages/ui/**"         # add this
+      - "packages/kilo-ui/**"    # add this
+```
+
+This ensures the unit tests in `packages/kilo-vscode` run whenever upstream UI changes land,
+catching contract breaks before merge.
+
+---
 
 ### Phase 1 – Static Contract Tests (Low effort, high value)
 
@@ -332,6 +369,7 @@ Until full automation is in place, create a merge checklist:
 
 | Priority | Action | Effort | Benefit |
 |----------|--------|--------|---------|
+| 🔴 P0 | Fix `test-vscode.yml` trigger to include `packages/ui/**` and `packages/kilo-ui/**` | 5 min | Upstream merge PRs now run extension tests |
 | 🔴 P0 | `kilocode_change` preservation test | 1 hour | Immediately catches merge regressions |
 | 🔴 P0 | `ToolRegistry` contract test | 1 hour | Catches tool name renames/removals |
 | 🔴 P0 | `DataProvider` props contract test | 30 min | Guards `onOpenFile` kilocode_change |
