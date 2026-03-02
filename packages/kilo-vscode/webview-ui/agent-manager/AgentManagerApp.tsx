@@ -639,6 +639,9 @@ const AgentManagerContent: Component = () => {
       if (Object.keys(next).length === Object.keys(prev).length) return prev
       return next
     })
+
+    const target = applyTarget()
+    if (target && !ids.has(target)) closeApplyDialog()
   })
 
   const worktreeSessionIds = createMemo(

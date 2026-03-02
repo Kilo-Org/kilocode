@@ -24,6 +24,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/FileTree.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/review-annotations.ts"),
   path.join(ROOT, "webview-ui/agent-manager/MultiModelSelector.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ApplyDialog.tsx"),
 ]
 const TSX_FILE = TSX_FILES[0]
 const PROVIDER_FILE = path.join(ROOT, "src/agent-manager/AgentManagerProvider.ts")

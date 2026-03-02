@@ -382,4 +382,60 @@ describe("GitOps", () => {
       })
     })
   })
+
+  describe("checkApplyPatch", () => {
+    it("returns ok for a clean patch", async () => {
+      await withRepo(async (cwd) => {
+        const git = new GitOps({ log: () => undefined })
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "one\n", "utf8")
+        runGit(cwd, ["add", "-A"])
+        runGit(cwd, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "init"])
+
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "two\n", "utf8")
+        const branch = runGit(cwd, ["branch", "--show-current"]) || "HEAD"
+        const patch = await git.buildWorktreePatch(cwd, branch)
+
+        // Reset the file so the patch can apply cleanly to the original state
+        runGit(cwd, ["checkout", "--", "a.txt"])
+        const result = await git.checkApplyPatch(cwd, patch)
+        expect(result.ok).toBe(true)
+      })
+    })
+
+    it("returns not-ok for an empty patch", async () => {
+      const git = new GitOps({ log: () => undefined })
+      const result = await git.checkApplyPatch("/tmp", "")
+      expect(result.ok).toBe(true)
+      expect(result.message).toBe("No changes to apply")
+    })
+  })
+
+  describe("applyPatch", () => {
+    it("applies changes to the working tree", async () => {
+      await withRepo(async (cwd) => {
+        const git = new GitOps({ log: () => undefined })
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "one\n", "utf8")
+        runGit(cwd, ["add", "-A"])
+        runGit(cwd, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "init"])
+
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "two\n", "utf8")
+        const branch = runGit(cwd, ["branch", "--show-current"]) || "HEAD"
+        const patch = await git.buildWorktreePatch(cwd, branch)
+
+        runGit(cwd, ["checkout", "--", "a.txt"])
+        const result = await git.applyPatch(cwd, patch)
+        expect(result.ok).toBe(true)
+
+        const content = await fs.readFile(nodePath.join(cwd, "a.txt"), "utf8")
+        expect(content).toBe("two\n")
+      })
+    })
+
+    it("returns empty patch as success", async () => {
+      const git = new GitOps({ log: () => undefined })
+      const result = await git.applyPatch("/tmp", "")
+      expect(result.ok).toBe(true)
+      expect(result.message).toBe("No changes to apply")
+    })
+  })
 })
