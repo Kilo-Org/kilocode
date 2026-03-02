@@ -1,60 +1,19 @@
-import { describe, it, expect, mock } from "bun:test"
+import { describe, it, expect } from "bun:test"
+import { loadSessions, flushPendingSessionRefresh, type SessionRefreshContext } from "../../src/kilo-provider-utils"
 
-const kind = (value: string) => ({
-  value,
-  append: (part: string) => kind(`${value}.${part}`),
-})
-
-const mockVscode = {
-  Uri: { file: (p: string) => ({ fsPath: p, scheme: "file" }), parse: (u: string) => ({ fsPath: u }) },
-  extensions: {
-    getExtension: () => ({
-      packageJSON: { version: "test" },
-    }),
-  },
-  env: {
-    appName: "VS Code",
-    language: "en",
-    machineId: "machine",
-    isTelemetryEnabled: false,
-  },
-  version: "1.0.0",
-  workspace: {
-    workspaceFolders: [{ uri: { fsPath: "/repo" } }],
-    getConfiguration: () => ({
-      get: <T>(_key: string, value?: T) => value,
-    }),
-  },
-  CodeAction: class {
-    command?: { command: string; title: string }
-    isPreferred?: boolean
-    constructor(
-      public title: string,
-      public kind: { value: string },
-    ) {}
-  },
-  CodeActionKind: {
-    QuickFix: kind("quickfix"),
-    RefactorRewrite: kind("refactor.rewrite"),
-  },
+function createContext(overrides?: Partial<SessionRefreshContext>): SessionRefreshContext & { sent: unknown[] } {
+  const sent: unknown[] = []
+  return {
+    pendingSessionRefresh: false,
+    connectionState: "connecting",
+    httpClient: null,
+    sessionDirectories: new Map(),
+    workspaceDirectory: "/repo",
+    postMessage: (msg: unknown) => sent.push(msg),
+    sent,
+    ...overrides,
+  }
 }
-
-mock.module("vscode", () => mockVscode)
-
-const { KiloProvider } = await import("../../src/KiloProvider")
-
-type State = "connecting" | "connected" | "disconnected" | "error"
-
-type ProviderInternals = {
-  connectionState: State
-  pendingSessionRefresh: boolean
-  webview: { postMessage: (message: unknown) => Promise<unknown> } | null
-  flushPendingSessionRefresh: (reason: string) => Promise<void>
-  handleLoadSessions: () => Promise<void>
-}
-
-/** Minimal stub satisfying the extensionUri constructor parameter. */
-const extensionUri = { fsPath: "/ext", scheme: "file" }
 
 function createClient() {
   const calls: string[] = []
@@ -67,73 +26,34 @@ function createClient() {
   }
 }
 
-function createConnection(client: ReturnType<typeof createClient>) {
-  let current: ReturnType<typeof createClient> | null = null
-  return {
-    connect: async () => {
-      current = client
-    },
-    getHttpClient: () => {
-      if (!current) {
-        throw new Error("Not connected")
-      }
-      return current
-    },
-    onEventFiltered: () => () => undefined,
-    onStateChange: (_listener: (state: State) => void) => () => undefined,
-    onNotificationDismissed: () => () => undefined,
-    getServerInfo: () => ({ port: 12345 }),
-    getConnectionState: () => "connected" as const,
-    resolveEventSessionId: () => undefined,
-    recordMessageSessionId: () => undefined,
-    notifyNotificationDismissed: () => undefined,
-  }
-}
-
 describe("KiloProvider pending session refresh", () => {
   it("flushes deferred refresh via flushPendingSessionRefresh", async () => {
     const client = createClient()
-    const connection = createConnection(client)
-    const provider = new KiloProvider(extensionUri as never, connection as never)
-    const internal = provider as unknown as ProviderInternals
+    const ctx = createContext()
+    ctx.sessionDirectories.set("ses_1", "/worktree")
 
-    provider.setSessionDirectory("ses_1", "/worktree")
-
-    // httpClient is null → handleLoadSessions sets pendingSessionRefresh
-    await internal.handleLoadSessions()
-    expect(internal.pendingSessionRefresh).toBe(true)
+    // httpClient is null → loadSessions sets pendingSessionRefresh
+    await loadSessions(ctx)
+    expect(ctx.pendingSessionRefresh).toBe(true)
 
     // Make the httpClient available
-    await connection.connect()
+    ctx.httpClient = client
+    ctx.connectionState = "connected"
 
-    // flushPendingSessionRefresh retries handleLoadSessions when pending
-    await internal.flushPendingSessionRefresh("test")
+    // flushPendingSessionRefresh retries loadSessions when pending
+    await flushPendingSessionRefresh(ctx)
 
     expect(client.calls).toEqual(["/repo", "/worktree"])
-    expect(internal.pendingSessionRefresh).toBe(false)
+    expect(ctx.pendingSessionRefresh).toBe(false)
   })
 
   it("does not post not-connected errors while still connecting", async () => {
-    const client = createClient()
-    const connection = createConnection(client)
-    const provider = new KiloProvider(extensionUri as never, connection as never)
-    const internal = provider as unknown as ProviderInternals
-    const sent: unknown[] = []
+    const ctx = createContext({ connectionState: "connecting" })
 
-    internal.webview = {
-      postMessage: async (message: unknown) => {
-        sent.push(message)
-      },
-    }
+    await loadSessions(ctx)
 
-    internal.connectionState = "connecting"
-    await internal.handleLoadSessions()
-
-    const errors = sent.filter((msg) => {
-      if (typeof msg !== "object" || !msg) {
-        return false
-      }
-
+    const errors = ctx.sent.filter((msg) => {
+      if (typeof msg !== "object" || !msg) return false
       return "type" in msg && (msg as { type?: unknown }).type === "error"
     })
 

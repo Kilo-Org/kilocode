@@ -23,6 +23,72 @@ export function filterVisibleAgents(agents: AgentInfo[]): { visible: AgentInfo[]
   return { visible, defaultAgent }
 }
 
+/**
+ * Shared interface for the subset of KiloProvider state needed by session-refresh helpers.
+ * Extracted here so the logic can be tested without importing KiloProvider (and vscode).
+ */
+export interface SessionRefreshContext {
+  pendingSessionRefresh: boolean
+  connectionState: "connecting" | "connected" | "disconnected" | "error"
+  httpClient: { listSessions(dir: string): Promise<SessionInfo[]> } | null
+  sessionDirectories: Map<string, string>
+  workspaceDirectory: string
+  postMessage(message: unknown): void
+}
+
+/**
+ * Load sessions from the workspace and all registered worktree directories.
+ * Sets pendingSessionRefresh when the HTTP client isn't ready yet.
+ */
+export async function loadSessions(ctx: SessionRefreshContext): Promise<void> {
+  const client = ctx.httpClient
+  if (!client) {
+    ctx.pendingSessionRefresh = true
+    if (ctx.connectionState !== "connecting") {
+      ctx.postMessage({ type: "error", message: "Not connected to CLI backend" })
+    }
+    return
+  }
+
+  ctx.pendingSessionRefresh = false
+
+  const sessions = await client.listSessions(ctx.workspaceDirectory)
+  const projectID = sessions[0]?.projectID
+  const worktreeDirs = new Set(ctx.sessionDirectories.values())
+  const extra = await Promise.all(
+    [...worktreeDirs].map((dir) => client.listSessions(dir).catch(() => [] as SessionInfo[])),
+  )
+  const seen = new Set(sessions.map((s) => s.id))
+  for (const batch of extra) {
+    for (const s of batch) {
+      if (!seen.has(s.id) && (!projectID || s.projectID === projectID)) {
+        sessions.push(s)
+        seen.add(s.id)
+      }
+    }
+  }
+
+  ctx.postMessage({
+    type: "sessionsLoaded",
+    sessions: sessions.map((s) => sessionToWebview(s)),
+  })
+}
+
+/**
+ * Flush a deferred session refresh when the HTTP client becomes available.
+ */
+export async function flushPendingSessionRefresh(ctx: SessionRefreshContext): Promise<void> {
+  if (!ctx.pendingSessionRefresh) return
+
+  if (!ctx.httpClient) {
+    if (ctx.connectionState === "connecting") return
+    ctx.postMessage({ type: "error", message: "Not connected to CLI backend" })
+    return
+  }
+
+  await loadSessions(ctx)
+}
+
 export function buildSettingPath(key: string): { section: string; leaf: string } {
   const parts = key.split(".")
   const section = parts.slice(0, -1).join(".")
