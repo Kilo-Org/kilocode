@@ -167,7 +167,7 @@ export namespace ModelsDev {
       }
     }
 
-    // neuralwatt_change start - inject Neuralwatt energy-measured provider
+    // kilocode_change start - inject Neuralwatt energy-measured provider
     if (!providers["neuralwatt"]) {
       providers["neuralwatt"] = {
         id: "neuralwatt",
@@ -227,7 +227,7 @@ export namespace ModelsDev {
         },
       }
     }
-    // neuralwatt_change end
+    // kilocode_change end
 
     return providers
     // kilocode_change end

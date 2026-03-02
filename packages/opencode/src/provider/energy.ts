@@ -52,7 +52,9 @@ export function parseGreenPT(impact: Record<string, unknown>): Energy {
 		raw: impact,
 	}
 
-	const impactEnergy = impact.energy as { total?: number; unit?: string } | undefined
+	const impactEnergy = typeof impact.energy === "object" && impact.energy !== null
+		? (impact.energy as { total?: number; unit?: string })
+		: undefined
 	if (impactEnergy?.total !== undefined) {
 		if (impactEnergy.unit === "Wms") {
 			// Watt-milliseconds
