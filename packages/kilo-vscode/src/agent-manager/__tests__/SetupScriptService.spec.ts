@@ -78,6 +78,20 @@ describe("SetupScriptService", () => {
     }
   })
 
+  it("does not resolve POSIX setup scripts on Windows", () => {
+    const root = setupRoot()
+    try {
+      writeScript(root, "setup-script")
+      writeScript(root, "setup-script.sh")
+      const service = new SetupScriptService(root)
+      const resolved = service.resolveScript("win32")
+      expect(resolved).toBeUndefined()
+      expect(service.hasScript("win32")).toBe(false)
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   it("creates default PowerShell script on Windows", async () => {
     const root = setupRoot()
     try {

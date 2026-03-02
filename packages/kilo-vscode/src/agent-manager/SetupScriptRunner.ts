@@ -143,8 +143,13 @@ export class SetupScriptRunner {
       const processListener = vscode.tasks.onDidEndTaskProcess((event) => {
         if (event.execution !== execution) return
         this.log(`Setup script exited with code ${event.exitCode ?? "unknown"}`)
-        if (typeof event.exitCode === "number" && event.exitCode !== 0) {
-          finish(new Error(`Setup script exited with code ${event.exitCode}`))
+        const code = event.exitCode
+        if (typeof code !== "number") {
+          finish(new Error("Setup script exited without a valid exit code"))
+          return
+        }
+        if (code !== 0) {
+          finish(new Error(`Setup script exited with code ${code}`))
           return
         }
         finish()

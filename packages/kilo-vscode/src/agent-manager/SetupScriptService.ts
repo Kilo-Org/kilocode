@@ -107,8 +107,6 @@ export class SetupScriptService {
         { name: SETUP_SCRIPT_POWERSHELL_FILENAME, kind: "powershell" },
         { name: SETUP_SCRIPT_CMD_FILENAME, kind: "cmd" },
         { name: SETUP_SCRIPT_BAT_FILENAME, kind: "cmd" },
-        { name: SETUP_SCRIPT_FILENAME, kind: "posix" },
-        { name: SETUP_SCRIPT_SHELL_FILENAME, kind: "posix" },
       ]
     }
     return [
