@@ -48,9 +48,12 @@ type ProviderInternals = {
   connectionState: State
   pendingSessionRefresh: boolean
   webview: { postMessage: (message: unknown) => Promise<unknown> } | null
-  initializeConnection: () => Promise<void>
+  flushPendingSessionRefresh: (reason: string) => Promise<void>
   handleLoadSessions: () => Promise<void>
 }
+
+/** Minimal stub satisfying the extensionUri constructor parameter. */
+const extensionUri = { fsPath: "/ext", scheme: "file" }
 
 function createClient() {
   const calls: string[] = []
@@ -60,15 +63,6 @@ function createClient() {
       calls.push(dir)
       return []
     },
-    listProviders: async () => ({
-      all: {},
-      connected: {},
-      default: {},
-    }),
-    listAgents: async () => [],
-    getConfig: async () => ({}),
-    getNotifications: async () => [],
-    getProfile: async () => ({}),
   }
 }
 
@@ -96,18 +90,23 @@ function createConnection(client: ReturnType<typeof createClient>) {
 }
 
 describe("KiloProvider pending session refresh", () => {
-  it("flushes deferred refresh in initializeConnection", async () => {
+  it("flushes deferred refresh via flushPendingSessionRefresh", async () => {
     const client = createClient()
     const connection = createConnection(client)
-    const provider = new KiloProvider({} as never, connection as never)
+    const provider = new KiloProvider(extensionUri as never, connection as never)
     const internal = provider as unknown as ProviderInternals
 
     provider.setSessionDirectory("ses_1", "/worktree")
 
+    // httpClient is null → handleLoadSessions sets pendingSessionRefresh
     await internal.handleLoadSessions()
     expect(internal.pendingSessionRefresh).toBe(true)
 
-    await internal.initializeConnection()
+    // Make the httpClient available
+    await connection.connect()
+
+    // flushPendingSessionRefresh retries handleLoadSessions when pending
+    await internal.flushPendingSessionRefresh("test")
 
     expect(client.calls).toEqual(["/repo", "/worktree"])
     expect(internal.pendingSessionRefresh).toBe(false)
@@ -116,7 +115,7 @@ describe("KiloProvider pending session refresh", () => {
   it("does not post not-connected errors while still connecting", async () => {
     const client = createClient()
     const connection = createConnection(client)
-    const provider = new KiloProvider({} as never, connection as never)
+    const provider = new KiloProvider(extensionUri as never, connection as never)
     const internal = provider as unknown as ProviderInternals
     const sent: unknown[] = []
 
