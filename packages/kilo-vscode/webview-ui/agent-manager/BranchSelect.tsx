@@ -7,6 +7,7 @@ interface AutoOption {
   label: string
   hint?: string
   active: boolean
+  highlighted?: boolean
   onSelect: () => void
 }
 
@@ -55,7 +56,12 @@ export const BranchSelect: Component<BranchSelectProps> = (props) => {
           {(option) => (
             <button
               class="am-branch-item"
-              classList={{ "am-branch-item-active": option().active }}
+              classList={{
+                "am-branch-item-active": option().active,
+                "am-branch-item-highlighted": option().highlighted === true,
+              }}
+              data-index={-1}
+              data-role="auto-option"
               onClick={option().onSelect}
               type="button"
             >

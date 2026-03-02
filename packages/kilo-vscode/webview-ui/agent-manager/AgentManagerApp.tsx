@@ -293,6 +293,7 @@ const AgentManagerContent: Component = () => {
   const [managedSessions, setManagedSessions] = createSignal<ManagedSessionState[]>([])
   const [selection, setSelection] = createSignal<SidebarSelection>(LOCAL)
   const [repoBranch, setRepoBranch] = createSignal<string | undefined>()
+  const [repoDetectedBranch, setRepoDetectedBranch] = createSignal<string>("main")
   const [repoDefaultBranch, setRepoDefaultBranch] = createSignal<string>("main")
   const [hasConfiguredBranch, setHasConfiguredBranch] = createSignal(false)
   const [busyWorktrees, setBusyWorktrees] = createSignal<Map<string, WorktreeBusyState>>(new Map())
@@ -786,7 +787,10 @@ const AgentManagerContent: Component = () => {
       if (msg.type === "agentManager.repoInfo") {
         const info = msg as AgentManagerRepoInfoMessage
         setRepoBranch(info.branch)
-        if (info.defaultBranch && !hasConfiguredBranch()) setRepoDefaultBranch(info.defaultBranch)
+        if (info.defaultBranch) {
+          setRepoDetectedBranch(info.defaultBranch)
+          if (!hasConfiguredBranch()) setRepoDefaultBranch(info.defaultBranch)
+        }
       }
 
       if (msg.type === "agentManager.worktreeSetup") {
@@ -862,6 +866,9 @@ const AgentManagerContent: Component = () => {
         if (state.defaultBaseBranch) {
           setRepoDefaultBranch(state.defaultBaseBranch)
           setHasConfiguredBranch(true)
+        } else {
+          setHasConfiguredBranch(false)
+          setRepoDefaultBranch(repoDetectedBranch())
         }
         const current = session.currentSessionID()
         if (current) {
@@ -1131,13 +1138,15 @@ const AgentManagerContent: Component = () => {
     const [branches, setBranches] = createSignal<BranchInfo[]>([])
     const [loading, setLoading] = createSignal(true)
     const [search, setSearch] = createSignal("")
-    const [detected, setDetected] = createSignal(repoDefaultBranch())
+    const [detected, setDetected] = createSignal(repoDetectedBranch())
+    const [highlighted, setHighlighted] = createSignal(-1)
 
     const unsub = vscode.onMessage((msg) => {
       if (msg.type === "agentManager.branches") {
         const ev = msg as AgentManagerBranchesMessage
         setBranches(ev.branches)
         setDetected(ev.defaultBranch)
+        setRepoDetectedBranch(ev.defaultBranch)
         setLoading(false)
       }
     })
@@ -1148,6 +1157,14 @@ const AgentManagerContent: Component = () => {
       if (!q) return branches()
       return branches().filter((b) => b.name.toLowerCase().includes(q))
     })
+
+    const scrollHighlighted = (index: number) => {
+      if (index < 0) {
+        document.querySelector('[data-role="auto-option"]')?.scrollIntoView({ block: "nearest" })
+        return
+      }
+      document.querySelector(`.am-branch-item[data-index="${index}"]`)?.scrollIntoView({ block: "nearest" })
+    }
 
     const select = (branch: string | undefined) => {
       vscode.postMessage({ type: "agentManager.setDefaultBaseBranch", branch: branch || "" })
@@ -1166,10 +1183,55 @@ const AgentManagerContent: Component = () => {
               branches={filtered()}
               loading={loading()}
               search={search()}
-              onSearch={setSearch}
-              onSelect={(branch) => select(branch.name)}
+              onSearch={(value) => {
+                setSearch(value)
+                setHighlighted(-1)
+              }}
+              onSearchKeyDown={(e) => {
+                const items = filtered()
+                if (e.key === "ArrowDown") {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  if (items.length === 0) return
+                  const next = highlighted() < 0 ? 0 : Math.min(highlighted() + 1, items.length - 1)
+                  setHighlighted(next)
+                  requestAnimationFrame(() => scrollHighlighted(next))
+                  return
+                }
+                if (e.key === "ArrowUp") {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  const prev = highlighted() <= 0 ? -1 : highlighted() - 1
+                  setHighlighted(prev)
+                  requestAnimationFrame(() => scrollHighlighted(prev))
+                  return
+                }
+                if (e.key === "Enter") {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  if (highlighted() < 0) {
+                    select(undefined)
+                    return
+                  }
+                  const selected = items[highlighted()]
+                  if (!selected) return
+                  select(selected.name)
+                  return
+                }
+                if (e.key !== "Escape") return
+                e.preventDefault()
+                e.stopPropagation()
+                unsub()
+                dialog.close()
+              }}
+              onSelect={(branch) => {
+                setHighlighted(-1)
+                select(branch.name)
+              }}
               selected={hasConfiguredBranch() ? repoDefaultBranch() : undefined}
               defaultName={hasConfiguredBranch() ? repoDefaultBranch() : undefined}
+              highlighted={highlighted()}
+              onHighlight={setHighlighted}
               searchPlaceholder={t("agentManager.dialog.searchBranches")}
               loadingLabel={t("agentManager.import.loadingBranches")}
               emptyLabel={t("agentManager.import.noMatchingBranches")}
@@ -1179,7 +1241,11 @@ const AgentManagerContent: Component = () => {
                 label: t("agentManager.worktree.defaultBaseBranchAuto"),
                 hint: `(${detected()})`,
                 active: !hasConfiguredBranch(),
-                onSelect: () => select(undefined),
+                highlighted: highlighted() < 0,
+                onSelect: () => {
+                  setHighlighted(-1)
+                  select(undefined)
+                },
               }}
             />
           </div>

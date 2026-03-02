@@ -378,10 +378,31 @@ export class AgentManagerProvider implements vscode.Disposable {
       worktreeId: id,
     })
 
-    // Use the user's configured default base branch when none is explicitly provided
-    const baseBranch = opts?.baseBranch || state.getDefaultBaseBranch()
+    // Use the user's configured default base branch when none is explicitly provided.
+    // If the configured branch is stale, clear it and fall back to auto-detection.
+    const explicit = opts?.baseBranch ?? undefined
+    const configured = state.getDefaultBaseBranch()
+    const baseBranch = await (async () => {
+      if (explicit !== undefined) return explicit
+      if (!configured) return undefined
+      const exists = await manager.branchExists(configured)
+      if (exists) return configured
 
-    // Forward progress from WorktreeManager to the webview
+      this.log(`Configured default base branch "${configured}" no longer exists. Falling back to auto-detect.`)
+      state.setDefaultBaseBranch(undefined)
+      this.pushState()
+      this.postToWebview({
+        type: "agentManager.worktreeSetup",
+        status: "verifying",
+        message: "Preparing worktree...",
+        detail: `Configured default base branch "${configured}" no longer exists. Using auto-detected default branch.`,
+        worktreeId: id,
+      })
+      return undefined
+    })()
+
+    // Keep the primary caption stable to avoid flicker while still
+    // surfacing granular progress in the detail line.
     const onProgress = (step: WorktreeProgressStep, message: string, detail?: string) => {
       const stable = step === "creating" ? message : "Preparing worktree..."
       const extra = step === "creating" ? detail : (detail ?? message)
@@ -953,12 +974,19 @@ export class AgentManagerProvider implements vscode.Disposable {
 
   private async onRequestBranches(): Promise<void> {
     const manager = this.getWorktreeManager()
+    const state = this.getStateManager()
     if (!manager) {
       this.postToWebview({ type: "agentManager.branches", branches: [], defaultBranch: "main" })
       return
     }
     try {
       const result = await manager.listBranches()
+      const configured = state?.getDefaultBaseBranch()
+      if (configured && !result.branches.some((branch) => branch.name === configured)) {
+        this.log(`Configured default base branch "${configured}" is missing from refs. Clearing stale setting.`)
+        state?.setDefaultBaseBranch(undefined)
+        this.pushState()
+      }
       this.postToWebview({
         type: "agentManager.branches",
         branches: result.branches,
