@@ -60,27 +60,9 @@ Or use npm:
 
 ### Top-Level CLI Commands
 
-| Command                   | Description                                |
-| ------------------------- | ------------------------------------------ |
-| `kilo [project]`          | Start the TUI (Terminal User Interface)    |
-| `kilo run [message..]`    | Run with a message (non-interactive mode)  |
-| `kilo attach <url>`       | Attach to a running kilo server            |
-| `kilo serve`              | Start a headless server                    |
-| `kilo web`                | Start server and open web interface        |
-| `kilo auth`               | Manage credentials (login, logout, list)   |
-| `kilo agent`              | Manage agents (create, list)               |
-| `kilo mcp`                | Manage MCP servers (list, add, auth)       |
-| `kilo models [provider]`  | List available models                      |
-| `kilo stats`              | Show token usage and cost statistics       |
-| `kilo session`            | Manage sessions (list)                     |
-| `kilo export [sessionID]` | Export session data as JSON                |
-| `kilo import <file>`      | Import session data from JSON file or URL  |
-| `kilo upgrade [target]`   | Upgrade kilo to latest or specific version |
-| `kilo uninstall`          | Uninstall kilo and remove related files    |
-| `kilo pr <number>`        | Fetch and checkout a GitHub PR branch      |
-| `kilo github`             | Manage GitHub agent (install, run)         |
-| `kilo debug`              | Debugging and troubleshooting tools        |
-| `kilo completion`         | Generate shell completion script           |
+{% partial file="cli-commands-table.md" /%}
+
+For detailed help on every command and subcommand, see the [CLI Command Reference](/docs/code-with-ai/platforms/cli-reference).
 
 ### Global Options
 
