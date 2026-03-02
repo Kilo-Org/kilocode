@@ -182,13 +182,18 @@ export class GitStatsPoller {
       return { worktrees: [], degraded: true }
     }
 
-    const worktreeStatuses = worktrees.map((wt) => {
-      const abs = path.isAbsolute(wt.path) ? wt.path : path.join(root, wt.path)
-      const normalized = normalizePath(abs)
-      const exists = fs.existsSync(abs)
-      const missing = !exists || !tracked.has(normalized)
-      return { worktreeId: wt.id, missing }
-    })
+    const worktreeStatuses = await Promise.all(
+      worktrees.map(async (wt) => {
+        const abs = path.isAbsolute(wt.path) ? wt.path : path.join(root, wt.path)
+        const normalized = normalizePath(abs)
+        const exists = await fs.promises.access(abs).then(
+          () => true,
+          () => false,
+        )
+        const missing = !exists || !tracked.has(normalized)
+        return { worktreeId: wt.id, missing }
+      }),
+    )
 
     return { worktrees: worktreeStatuses, degraded: false }
   }
