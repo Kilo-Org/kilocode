@@ -1285,10 +1285,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     const worktrees = state.getWorktrees()
     const ids = new Set(worktrees.map((wt) => wt.id))
-    for (const id of [...this.staleWorktreeIds]) {
-      if (ids.has(id)) continue
-      this.staleWorktreeIds.delete(id)
-    }
+    this.pruneStaleWorktreeIds(ids)
 
     if (result.degraded) {
       this.log("Skipping stale worktree update: degraded worktree probe")
@@ -1314,11 +1311,15 @@ export class AgentManagerProvider implements vscode.Disposable {
 
   private staleWorktreesForState(worktrees: ReturnType<WorktreeStateManager["getWorktrees"]>): string[] {
     const ids = new Set(worktrees.map((wt) => wt.id))
+    this.pruneStaleWorktreeIds(ids)
+    return worktrees.filter((wt) => this.staleWorktreeIds.has(wt.id)).map((wt) => wt.id)
+  }
+
+  private pruneStaleWorktreeIds(ids: Set<string>): void {
     for (const id of [...this.staleWorktreeIds]) {
       if (ids.has(id)) continue
       this.staleWorktreeIds.delete(id)
     }
-    return worktrees.filter((wt) => this.staleWorktreeIds.has(wt.id)).map((wt) => wt.id)
   }
 
   private pushState(): void {

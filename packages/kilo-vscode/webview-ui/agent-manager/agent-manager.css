@@ -297,12 +297,12 @@ button.am-section-toggle:hover .am-section-label {
   width: 14px;
   height: 14px;
   margin-right: 2px;
-  color: #f59e0b;
+  color: var(--text-warning, #f59e0b);
   flex-shrink: 0;
 }
 
 .am-worktree-item-active .am-worktree-stale-badge {
-  color: #fbbf24;
+  color: color-mix(in oklab, var(--text-warning, #f59e0b) 90%, var(--text-base));
 }
 
 .am-worktree-stale-badge [data-component="icon"] {
@@ -1988,7 +1988,7 @@ button.am-section-toggle:hover .am-section-label {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #f59e0b;
+  color: var(--text-warning, #f59e0b);
   font-weight: 600;
 }
 

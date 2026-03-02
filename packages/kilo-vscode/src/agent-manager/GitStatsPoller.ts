@@ -120,9 +120,7 @@ export class GitStatsPoller {
     if (worktrees.length === 0) return
 
     const presence = await this.probeWorktreePresence(worktrees)
-    if (presence) {
-      this.options.onWorktreePresence?.(presence)
-    }
+    this.options.onWorktreePresence?.(presence)
 
     if (!client) return
 
@@ -170,7 +168,7 @@ export class GitStatsPoller {
     this.options.onStats(stats)
   }
 
-  private async probeWorktreePresence(worktrees: Worktree[]): Promise<WorktreePresenceResult | undefined> {
+  private async probeWorktreePresence(worktrees: Worktree[]): Promise<WorktreePresenceResult> {
     const root = this.options.getWorkspaceRoot()
     if (!root) {
       return { worktrees: [], degraded: true }
