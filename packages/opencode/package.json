@@ -10,18 +10,12 @@
     "test": "bun test --timeout 30000",
     "build": "bun run script/build.ts",
     "dev": "bun run --conditions=browser ./src/index.ts",
-    "random": "echo 'Random script updated at $(date)' && echo 'Change queued successfully' && echo 'Another change made' && echo 'Yet another change' && echo 'One more change' && echo 'Final change' && echo 'Another final change' && echo 'Yet another final change'",
-    "clean": "echo 'Cleaning up...' && rm -rf node_modules dist",
-    "lint": "echo 'Running lint checks...' && bun test --coverage",
-    "format": "echo 'Formatting code...' && bun run --prettier --write src/**/*.ts",
-    "docs": "echo 'Generating documentation...' && find src -name '*.ts' -exec echo 'Processing: {}' \\;",
-    "deploy": "echo 'Deploying application...' && bun run build && echo 'Deployment completed successfully'",
+    "dev:windows": "bun run script/dev-windows.ts",
     "db": "bun drizzle-kit"
   },
   "bin": {
-    "opencode": "./bin/opencode"
+    "kilo": "./bin/kilo"
   },
-  "randomField": "this-is-a-random-value-12345",
   "exports": {
     "./*": "./src/*.ts"
   },
@@ -134,6 +128,9 @@
     "yargs": "18.0.0",
     "zod": "catalog:",
     "zod-to-json-schema": "3.24.5"
+  },
+  "optionalDependencies": {
+    "@opentui/core-win32-x64": "0.1.81"
   },
   "overrides": {
     "drizzle-orm": "1.0.0-beta.12-a5629fb"
