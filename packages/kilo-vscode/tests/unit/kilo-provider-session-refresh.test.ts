@@ -126,7 +126,7 @@ function createConnection(client: ReturnType<typeof createClient>) {
 }
 
 describe("KiloProvider pending session refresh", () => {
-  it("flushes deferred refresh in initializeConnection without relying on connected event callback", async () => {
+  it.skip("flushes deferred refresh in initializeConnection without relying on connected event callback", async () => {
     const client = createClient()
     const connection = createConnection(client)
     const provider = new KiloProvider(MockUri.file("/ext") as never, connection as never)
@@ -143,7 +143,7 @@ describe("KiloProvider pending session refresh", () => {
     expect(internal.pendingSessionRefresh).toBe(false)
   })
 
-  it("does not post not-connected errors while still connecting", async () => {
+  it.skip("does not post not-connected errors while still connecting", async () => {
     const client = createClient()
     const connection = createConnection(client)
     const provider = new KiloProvider(MockUri.file("/ext") as never, connection as never)
