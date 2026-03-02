@@ -48,6 +48,7 @@ type ProviderInternals = {
   connectionState: State
   pendingSessionRefresh: boolean
   webview: { postMessage: (message: unknown) => Promise<unknown> } | null
+  initializeConnection: () => Promise<void>
   handleLoadSessions: () => Promise<void>
 }
 
@@ -59,6 +60,15 @@ function createClient() {
       calls.push(dir)
       return []
     },
+    listProviders: async () => ({
+      all: {},
+      connected: {},
+      default: {},
+    }),
+    listAgents: async () => [],
+    getConfig: async () => ({}),
+    getNotifications: async () => [],
+    getProfile: async () => ({}),
   }
 }
 
@@ -86,7 +96,7 @@ function createConnection(client: ReturnType<typeof createClient>) {
 }
 
 describe("KiloProvider pending session refresh", () => {
-  it("defers then flushes session refresh once connected", async () => {
+  it("flushes deferred refresh in initializeConnection", async () => {
     const client = createClient()
     const connection = createConnection(client)
     const provider = new KiloProvider({} as never, connection as never)
@@ -94,15 +104,10 @@ describe("KiloProvider pending session refresh", () => {
 
     provider.setSessionDirectory("ses_1", "/worktree")
 
-    // httpClient is null → handleLoadSessions sets pendingSessionRefresh
     await internal.handleLoadSessions()
     expect(internal.pendingSessionRefresh).toBe(true)
 
-    // Simulate the connection becoming available (what initializeConnection.connect does)
-    await connection.connect()
-
-    // Retry the load — mirrors what flushPendingSessionRefresh does
-    await internal.handleLoadSessions()
+    await internal.initializeConnection()
 
     expect(client.calls).toEqual(["/repo", "/worktree"])
     expect(internal.pendingSessionRefresh).toBe(false)
