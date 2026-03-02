@@ -2822,3 +2822,48 @@ button.am-section-toggle:hover .am-section-label {
 .am-file-tree-summary-dels {
   color: var(--syntax-diff-delete, #da3319);
 }
+
+/* Default base branch picker dialog */
+
+.am-default-base-branch {
+  min-width: 360px;
+}
+
+.am-default-base-branch .am-dropdown-list {
+  max-height: 320px;
+}
+
+.am-branch-hint {
+  margin-left: auto;
+  color: var(--text-weaker);
+  font-size: 11px;
+}
+
+/* Setup overlay detail + cancel */
+
+.am-setup-detail {
+  color: var(--text-weaker);
+  font-size: 11px;
+  text-align: center;
+  max-width: 300px;
+  line-height: 1.4;
+}
+
+.am-setup-cancel {
+  margin-top: 4px;
+  padding: 4px 12px;
+  border: 1px solid var(--border-base);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-weaker);
+  font-size: 11px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.am-setup-cancel:hover {
+  background: var(--surface-raised-base);
+  color: var(--text-base);
+}

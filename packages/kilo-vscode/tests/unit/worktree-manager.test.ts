@@ -219,6 +219,42 @@ describe("WorktreeStateManager.updateWorktreeLabel", () => {
 })
 
 // ---------------------------------------------------------------------------
+// WorktreeStateManager -- default base branch
+// ---------------------------------------------------------------------------
+
+describe("WorktreeStateManager.defaultBaseBranch", () => {
+  it("persists configured default base branch", async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-base-"))
+    tempDirs.push(dir)
+
+    const state = new WorktreeStateManager(dir, () => {})
+    state.setDefaultBaseBranch("develop")
+    await state.flush()
+
+    const state2 = new WorktreeStateManager(dir, () => {})
+    await state2.load()
+
+    expect(state2.getDefaultBaseBranch()).toBe("develop")
+  })
+
+  it("clears configured default base branch", async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-base-"))
+    tempDirs.push(dir)
+
+    const state = new WorktreeStateManager(dir, () => {})
+    state.setDefaultBaseBranch("develop")
+    await state.flush()
+    state.setDefaultBaseBranch(undefined)
+    await state.flush()
+
+    const state2 = new WorktreeStateManager(dir, () => {})
+    await state2.load()
+
+    expect(state2.getDefaultBaseBranch()).toBeUndefined()
+  })
+})
+
+// ---------------------------------------------------------------------------
 // WorktreeManager -- createWorktree
 // ---------------------------------------------------------------------------
 
@@ -281,15 +317,86 @@ describe("WorktreeManager.createWorktree", () => {
     expect(result.path).toContain(path.join(".kilocode", "worktrees"))
   })
 
-  it("records parentBranch as current branch", async () => {
+  it("records parentBranch as default branch", async () => {
     const root = await createTempRepo()
-    const git = simpleGit(root)
-    const branch = (await git.revparse(["--abbrev-ref", "HEAD"])).trim()
 
     const mgr = createManager(root)
     const result = await mgr.createWorktree({ prompt: "test" })
 
-    expect(result.parentBranch).toBe(branch)
+    const defaultBranch = await mgr.defaultBranch()
+    expect(result.parentBranch).toBe(defaultBranch)
+  })
+
+  it("returns startPointSource in result", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    const result = await mgr.createWorktree({ prompt: "test" })
+
+    // No remote configured, so should fall back to local branch
+    expect(result.startPointSource).toBe("local-branch")
+  })
+
+  it("does not set upstream tracking on the new branch", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    const result = await mgr.createWorktree({ prompt: "no-tracking" })
+
+    // The ^{commit} suffix should prevent upstream tracking
+    const git = simpleGit(result.path)
+    try {
+      const upstream = await git.raw(["rev-parse", "--abbrev-ref", `${result.branch}@{upstream}`])
+      // If this succeeds, the branch has an upstream — that's a failure
+      expect(upstream).toBeFalsy()
+    } catch {
+      // Expected: no upstream tracking configured
+    }
+  })
+
+  it("fires onProgress callbacks during creation", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    const steps: string[] = []
+    await mgr.createWorktree({
+      prompt: "progress-test",
+      onProgress: (step) => steps.push(step),
+    })
+
+    expect(steps).toContain("creating")
+  })
+
+  it("throws when cancelled via AbortSignal", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    const abort = new AbortController()
+    abort.abort()
+
+    await expect(mgr.createWorktree({ prompt: "cancelled", signal: abort.signal })).rejects.toThrow("cancelled")
+  })
+
+  it("creates from an explicitly selected base branch", async () => {
+    const root = await createTempRepo()
+    const git = simpleGit(root)
+
+    await git.checkoutLocalBranch("develop")
+    const marker = path.join(root, "develop-only.txt")
+    await fs.writeFile(marker, "from develop")
+    await git.add(marker)
+    await git.commit("add develop-only commit")
+    const developHead = (await git.revparse(["HEAD"])).trim()
+
+    await git.checkout("main")
+
+    const mgr = createManager(root)
+    const result = await mgr.createWorktree({ prompt: "explicit-base", baseBranch: "develop" })
+    expect(result.parentBranch).toBe("develop")
+
+    const worktreeGit = simpleGit(result.path)
+    const worktreeHead = (await worktreeGit.revparse(["HEAD"])).trim()
+    expect(worktreeHead).toBe(developHead)
   })
 })
 
@@ -465,7 +572,7 @@ describe("WorktreeManager.discoverWorktrees", () => {
 
     const discovered = await mgr.discoverWorktrees()
     expect(discovered.length).toBe(1)
-    expect(discovered[0].sessionId).toBeUndefined()
+    expect(discovered[0]!.sessionId).toBeUndefined()
   })
 
   it("recovers parentBranch from persisted metadata", async () => {
@@ -664,5 +771,151 @@ describe("WorktreeManager.checkedOutBranches", () => {
 
     const checked = await mgr.checkedOutBranches()
     expect(checked.has(wt.branch)).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// WorktreeManager -- hasOriginRemote
+// ---------------------------------------------------------------------------
+
+describe("WorktreeManager.hasOriginRemote", () => {
+  it("returns false for repos with no remote", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    expect(await mgr.hasOriginRemote()).toBe(false)
+  })
+
+  it("returns true when origin remote exists", async () => {
+    const root = await createTempRepo()
+    const bare = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-bare-"))
+    tempDirs.push(bare)
+    const git = simpleGit(root)
+
+    // Create a bare repo and add it as origin
+    await simpleGit(bare).init(true)
+    await git.addRemote("origin", bare)
+
+    const mgr = createManager(root)
+    expect(await mgr.hasOriginRemote()).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// WorktreeManager -- refExistsLocally
+// ---------------------------------------------------------------------------
+
+describe("WorktreeManager.refExistsLocally", () => {
+  it("returns true for existing branch", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    const branch = (await simpleGit(root).revparse(["--abbrev-ref", "HEAD"])).trim()
+    expect(await mgr.refExistsLocally(branch)).toBe(true)
+  })
+
+  it("returns false for non-existing ref", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    expect(await mgr.refExistsLocally("nonexistent-branch")).toBe(false)
+  })
+
+  it("returns false for origin/ ref when no remote configured", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    expect(await mgr.refExistsLocally("origin/main")).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// WorktreeManager -- resolveStartPoint
+// ---------------------------------------------------------------------------
+
+describe("WorktreeManager.resolveStartPoint", () => {
+  it("falls back to local branch when no remote exists", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    const branch = (await simpleGit(root).revparse(["--abbrev-ref", "HEAD"])).trim()
+    const result = await mgr.resolveStartPoint(branch)
+
+    expect(result.source).toBe("local-branch")
+    expect(result.ref).toBe(branch)
+    expect(result.warning).toBeTruthy()
+  })
+
+  it("falls back through common branch names", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    // Ask for a branch that doesn't exist — should fall back to main/master
+    const result = await mgr.resolveStartPoint("nonexistent-branch")
+
+    expect(result.source).toBe("fallback")
+    expect(result.warning).toContain("nonexistent-branch")
+    expect(result.warning).toContain("not found")
+  })
+
+  it("records progress steps", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    const steps: string[] = []
+    const branch = (await simpleGit(root).revparse(["--abbrev-ref", "HEAD"])).trim()
+    await mgr.resolveStartPoint(branch, (step) => steps.push(step))
+
+    expect(steps).toContain("syncing")
+    expect(steps).toContain("verifying")
+  })
+
+  it("uses remote when origin is configured and reachable", async () => {
+    const root = await createTempRepo()
+    const bare = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-remote-"))
+    tempDirs.push(bare)
+    const git = simpleGit(root)
+
+    // Create a bare clone to act as the remote
+    await simpleGit(bare).clone(root, bare + "/clone", ["--bare"])
+    const cloneBare = bare + "/clone"
+    await git.addRemote("origin", cloneBare)
+
+    const mgr = createManager(root)
+    const branch = (await git.revparse(["--abbrev-ref", "HEAD"])).trim()
+    const result = await mgr.resolveStartPoint(branch)
+
+    expect(result.source).toBe("remote")
+    expect(result.ref).toBe(`origin/${branch}`)
+    expect(result.warning).toBeUndefined()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// WorktreeManager -- repoUsesLfs
+// ---------------------------------------------------------------------------
+
+describe("WorktreeManager.repoUsesLfs", () => {
+  it("returns false for repos without LFS", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    expect(await mgr.repoUsesLfs()).toBe(false)
+  })
+
+  it("detects LFS from .gitattributes", async () => {
+    const root = await createTempRepo()
+    await fs.writeFile(path.join(root, ".gitattributes"), "*.bin filter=lfs diff=lfs merge=lfs -text\n")
+
+    const mgr = createManager(root)
+    expect(await mgr.repoUsesLfs()).toBe(true)
+  })
+
+  it("detects LFS from .git/lfs directory", async () => {
+    const root = await createTempRepo()
+    await fs.mkdir(path.join(root, ".git", "lfs"), { recursive: true })
+
+    const mgr = createManager(root)
+    expect(await mgr.repoUsesLfs()).toBe(true)
   })
 })

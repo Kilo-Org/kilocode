@@ -607,13 +607,16 @@ export interface AgentManagerSessionMetaMessage {
 export interface AgentManagerRepoInfoMessage {
   type: "agentManager.repoInfo"
   branch: string
+  defaultBranch?: string
 }
 
 // Agent Manager worktree setup progress
 export interface AgentManagerWorktreeSetupMessage {
   type: "agentManager.worktreeSetup"
-  status: "creating" | "starting" | "ready" | "error"
+  status: "syncing" | "verifying" | "fetching" | "creating" | "starting" | "ready" | "error" | "cancelled"
   message: string
+  /** Secondary explanation (e.g. why a fallback ref was used) */
+  detail?: string
   sessionId?: string
   branch?: string
   worktreeId?: string
@@ -653,6 +656,7 @@ export interface AgentManagerStateMessage {
   tabOrder?: Record<string, string[]>
   sessionsCollapsed?: boolean
   reviewDiffStyle?: "unified" | "split"
+  defaultBaseBranch?: string
   isGitRepo?: boolean
 }
 
@@ -1187,6 +1191,16 @@ export interface SetReviewDiffStyleRequest {
   style: "unified" | "split"
 }
 
+export interface SetDefaultBaseBranchRequest {
+  type: "agentManager.setDefaultBaseBranch"
+  branch: string
+}
+
+export interface CancelWorktreeSetupRequest {
+  type: "agentManager.cancelWorktreeSetup"
+  worktreeId: string
+}
+
 export interface RequestBranchesMessage {
   type: "agentManager.requestBranches"
 }
@@ -1302,6 +1316,8 @@ export type WebviewMessage =
   | SetTabOrderRequest
   | SetSessionsCollapsedRequest
   | SetReviewDiffStyleRequest
+  | SetDefaultBaseBranchRequest
+  | CancelWorktreeSetupRequest
   | PersistVariantRequest
   | RequestVariantsMessage
   | RequestCloudSessionDataMessage

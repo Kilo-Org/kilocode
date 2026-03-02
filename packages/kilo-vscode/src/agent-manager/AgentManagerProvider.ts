@@ -4,7 +4,7 @@ import * as path from "path"
 import type { KiloConnectionService, SessionInfo, HttpClient } from "../services/cli-backend"
 import { KiloProvider } from "../KiloProvider"
 import { buildWebviewHtml } from "../utils"
-import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
+import { WorktreeManager, type CreateWorktreeResult, type WorktreeProgressStep } from "./WorktreeManager"
 import { WorktreeStateManager } from "./WorktreeStateManager"
 import { GitStatsPoller } from "./GitStatsPoller"
 import { GitOps } from "./GitOps"
@@ -46,6 +46,7 @@ export class AgentManagerProvider implements vscode.Disposable {
   private statsPoller: GitStatsPoller
   private gitOps: GitOps
   private cachedDiffTarget: { directory: string; baseBranch: string } | undefined
+  private creationAborts = new Map<string, AbortController>()
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -253,6 +254,19 @@ export class AgentManagerProvider implements vscode.Disposable {
       this.state?.setReviewDiffStyle(msg.style)
       return null
     }
+    if (type === "agentManager.setDefaultBaseBranch" && typeof msg.branch === "string") {
+      this.state?.setDefaultBaseBranch(msg.branch || undefined)
+      this.pushState()
+      return null
+    }
+    if (type === "agentManager.cancelWorktreeSetup" && typeof msg.worktreeId === "string") {
+      const abort = this.creationAborts.get(msg.worktreeId)
+      if (abort) {
+        this.log(`Cancelling worktree setup for ${msg.worktreeId}`)
+        abort.abort()
+      }
+      return null
+    }
 
     if (type === "agentManager.requestExternalWorktrees") {
       void this.onRequestExternalWorktrees()
@@ -335,6 +349,9 @@ export class AgentManagerProvider implements vscode.Disposable {
     existingBranch?: string
     name?: string
     label?: string
+    signal?: AbortSignal
+    /** Stable ID for progress messages. Lets the webview show a cancel button from the start. */
+    creationId?: string
   }): Promise<{
     worktree: ReturnType<WorktreeStateManager["addWorktree"]>
     result: CreateWorktreeResult
@@ -350,22 +367,59 @@ export class AgentManagerProvider implements vscode.Disposable {
       return null
     }
 
-    this.postToWebview({ type: "agentManager.worktreeSetup", status: "creating", message: "Creating git worktree..." })
+    // Use creationId as worktreeId in all progress messages so the cancel
+    // button is available from the very first status update.
+    const id = opts?.creationId
+
+    this.postToWebview({
+      type: "agentManager.worktreeSetup",
+      status: "syncing",
+      message: "Preparing worktree...",
+      worktreeId: id,
+    })
+
+    // Use the user's configured default base branch when none is explicitly provided
+    const baseBranch = opts?.baseBranch || state.getDefaultBaseBranch()
+
+    // Forward progress from WorktreeManager to the webview
+    const onProgress = (step: WorktreeProgressStep, message: string, detail?: string) => {
+      const stable = step === "creating" ? message : "Preparing worktree..."
+      const extra = step === "creating" ? detail : (detail ?? message)
+      this.postToWebview({
+        type: "agentManager.worktreeSetup",
+        status: step,
+        message: stable,
+        detail: extra,
+        worktreeId: id,
+      })
+    }
 
     let result: CreateWorktreeResult
     try {
       result = await manager.createWorktree({
         prompt: opts?.name || "kilo",
-        baseBranch: opts?.baseBranch,
+        baseBranch,
         branchName: opts?.branchName,
         existingBranch: opts?.existingBranch,
+        onProgress,
+        signal: opts?.signal,
       })
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
+      if (opts?.signal?.aborted) {
+        this.postToWebview({
+          type: "agentManager.worktreeSetup",
+          status: "cancelled",
+          message: "Worktree creation cancelled",
+          worktreeId: id,
+        })
+        return null
+      }
       this.postToWebview({
         type: "agentManager.worktreeSetup",
         status: "error",
         message: msg,
+        worktreeId: id,
       })
       TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_SESSION_ERROR, {
         source: PLATFORM,
@@ -389,6 +443,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       type: "agentManager.worktreeSetup",
       status: "creating",
       message: "Setting up workspace...",
+      detail: result.startPointWarning,
       branch: result.branch,
       worktreeId: worktree.id,
     })
@@ -474,21 +529,60 @@ export class AgentManagerProvider implements vscode.Disposable {
 
   /** Create a new worktree with an auto-created first session. */
   private async onCreateWorktree(baseBranch?: string, branchName?: string): Promise<null> {
-    const created = await this.createWorktreeOnDisk({ baseBranch, branchName })
+    const abort = new AbortController()
+    // Generate a stable creation ID so progress messages carry a worktreeId
+    // from the start, enabling the cancel button during fetch/resolve phases.
+    const creationId = `pending-${Date.now()}`
+    this.creationAborts.set(creationId, abort)
+
+    const created = await this.createWorktreeOnDisk({ baseBranch, branchName, signal: abort.signal, creationId })
+    this.creationAborts.delete(creationId)
     if (!created) return null
 
-    // Run setup script for new worktree (blocks until complete, shows in overlay)
-    await this.runSetupScriptForWorktree(created.result.path, created.result.branch, created.worktree.id)
+    // Re-register abort under the real worktree ID so the webview can cancel
+    this.creationAborts.set(created.worktree.id, abort)
 
-    const session = await this.createSessionInWorktree(created.result.path, created.result.branch, created.worktree.id)
-    if (!session) {
+    const cleanup = async () => {
+      this.creationAborts.delete(created.worktree.id)
       const state = this.getStateManager()
       const manager = this.getWorktreeManager()
       state?.removeWorktree(created.worktree.id)
       await manager?.removeWorktree(created.result.path)
       this.pushState()
+    }
+
+    if (abort.signal.aborted) {
+      await cleanup()
+      this.postToWebview({
+        type: "agentManager.worktreeSetup",
+        status: "cancelled",
+        message: "Worktree creation cancelled",
+        worktreeId: created.worktree.id,
+      })
       return null
     }
+
+    // Run setup script for new worktree (blocks until complete, shows in overlay)
+    await this.runSetupScriptForWorktree(created.result.path, created.result.branch, created.worktree.id)
+
+    if (abort.signal.aborted) {
+      await cleanup()
+      this.postToWebview({
+        type: "agentManager.worktreeSetup",
+        status: "cancelled",
+        message: "Worktree creation cancelled",
+        worktreeId: created.worktree.id,
+      })
+      return null
+    }
+
+    const session = await this.createSessionInWorktree(created.result.path, created.result.branch, created.worktree.id)
+    if (!session) {
+      await cleanup()
+      return null
+    }
+
+    this.creationAborts.delete(created.worktree.id)
 
     const state = this.getStateManager()!
     state.addSession(session.id, created.worktree.id)
@@ -660,6 +754,9 @@ export class AgentManagerProvider implements vscode.Disposable {
     // Generate a shared group ID for multi-version worktrees
     const groupId = versions > 1 ? `grp-${Date.now()}` : undefined
 
+    // Shared abort controller for the entire multi-version batch
+    const abort = new AbortController()
+
     this.log(
       `Creating ${versions} worktrees${perVersionModels.length > 0 ? " (model comparison)" : ""}${text ? ` for: ${text.slice(0, 60)}` : ""}${groupId ? ` (group=${groupId})` : ""}`,
     )
@@ -684,22 +781,52 @@ export class AgentManagerProvider implements vscode.Disposable {
     }> = []
 
     for (let i = 0; i < versions; i++) {
+      if (abort.signal.aborted) {
+        this.log(`Multi-version creation cancelled at version ${i + 1}/${versions}`)
+        break
+      }
+
       this.log(`Creating worktree ${i + 1}/${versions}`)
 
       const version = versionedName(branchName || worktreeName, i, versions)
+      const versionCreationId = `pending-mv-${Date.now()}-${i}`
+      this.creationAborts.set(versionCreationId, abort)
+
       const wt = await this.createWorktreeOnDisk({
         groupId,
         baseBranch,
         branchName: version.branch,
         name: version.branch,
         label: version.label,
+        signal: abort.signal,
+        creationId: versionCreationId,
       })
+      this.creationAborts.delete(versionCreationId)
       if (!wt) {
         this.log(`Failed to create worktree for version ${i + 1}`)
         continue
       }
 
+      // Register abort under the worktree ID so the webview can cancel
+      this.creationAborts.set(wt.worktree.id, abort)
+
       await this.runSetupScriptForWorktree(wt.result.path, wt.result.branch)
+
+      if (abort.signal.aborted) {
+        const state = this.getStateManager()
+        const manager = this.getWorktreeManager()
+        state?.removeWorktree(wt.worktree.id)
+        await manager?.removeWorktree(wt.result.path)
+        this.creationAborts.delete(wt.worktree.id)
+        this.pushState()
+        this.postToWebview({
+          type: "agentManager.worktreeSetup",
+          status: "cancelled",
+          message: "Worktree creation cancelled",
+          worktreeId: wt.worktree.id,
+        })
+        break
+      }
 
       const session = await this.createSessionInWorktree(wt.result.path, wt.result.branch)
       if (!session) {
@@ -707,9 +834,12 @@ export class AgentManagerProvider implements vscode.Disposable {
         const manager = this.getWorktreeManager()
         state?.removeWorktree(wt.worktree.id)
         await manager?.removeWorktree(wt.result.path)
+        this.creationAborts.delete(wt.worktree.id)
         this.log(`Failed to create session for version ${i + 1}`)
         continue
       }
+
+      this.creationAborts.delete(wt.worktree.id)
 
       const state = this.getStateManager()!
       state.addSession(session.id, wt.worktree.id)
@@ -829,11 +959,9 @@ export class AgentManagerProvider implements vscode.Disposable {
     }
     try {
       const result = await manager.listBranches()
-      const checkedOut = await manager.checkedOutBranches()
-      const filtered = result.branches.filter((b) => !checkedOut.has(b.name))
       this.postToWebview({
         type: "agentManager.branches",
-        branches: filtered,
+        branches: result.branches,
         defaultBranch: result.defaultBranch,
       })
     } catch (error) {
@@ -1223,7 +1351,8 @@ export class AgentManagerProvider implements vscode.Disposable {
     if (!manager) return
     try {
       const branch = await manager.currentBranch()
-      this.postToWebview({ type: "agentManager.repoInfo", branch })
+      const defaultBranch = await manager.defaultBranch()
+      this.postToWebview({ type: "agentManager.repoInfo", branch, defaultBranch })
     } catch (error) {
       this.log(`Failed to get current branch: ${error}`)
     }
@@ -1249,6 +1378,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       tabOrder: state.getTabOrder(),
       sessionsCollapsed: state.getSessionsCollapsed(),
       reviewDiffStyle: state.getReviewDiffStyle(),
+      defaultBaseBranch: state.getDefaultBaseBranch(),
       isGitRepo: true,
     })
 
