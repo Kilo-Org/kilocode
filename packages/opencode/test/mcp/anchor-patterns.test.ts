@@ -154,6 +154,36 @@ describe("anchorPatterns", () => {
     expect(deep.pattern).toBe("^[0-9a-f]+$")
   })
 
+  test("wraps top-level alternation in non-capturing group", () => {
+    const schema: JSONSchema7 = { pattern: "foo|bar" }
+    const result = anchorPatterns(schema)
+    expect(result.pattern).toBe("^(?:foo|bar)$")
+  })
+
+  test("wraps complex alternation in non-capturing group", () => {
+    const schema: JSONSchema7 = { pattern: "error|warn|info" }
+    const result = anchorPatterns(schema)
+    expect(result.pattern).toBe("^(?:error|warn|info)$")
+  })
+
+  test("does not wrap alternation when already anchored", () => {
+    const schema: JSONSchema7 = { pattern: "^foo|bar$" }
+    const result = anchorPatterns(schema)
+    // Only missing end anchor, so no group wrapping needed
+    expect(result.pattern).toBe("^foo|bar$")
+  })
+
+  test("skips additionalProperties when boolean", () => {
+    const schema: JSONSchema7 = {
+      type: "object",
+      properties: { name: { type: "string", pattern: "[a-z]+" } },
+      additionalProperties: false,
+    }
+    const result = anchorPatterns(schema)
+    expect(result.additionalProperties).toBe(false)
+    expect((result.properties!.name as JSONSchema7).pattern).toBe("^[a-z]+$")
+  })
+
   test("does not mutate original schema", () => {
     const original: JSONSchema7 = { type: "string", pattern: "[a-z]+" }
     anchorPatterns(original)

@@ -126,8 +126,16 @@ export namespace MCP {
     if (typeof result.pattern === "string") {
       // Guard against escaped \^ or \$ being mistaken for anchors.
       // Account for even-length backslash sequences (e.g. \\$ is a real anchor, \$ is not).
-      if (!/^\^/.test(result.pattern)) result.pattern = "^" + result.pattern
-      if (!/(^|[^\\])(\\\\)*\$$/.test(result.pattern)) result.pattern = result.pattern + "$"
+      const hasStart = /^\^/.test(result.pattern)
+      const hasEnd = /(^|[^\\])(\\\\)*\$$/.test(result.pattern)
+      if (!hasStart && !hasEnd && result.pattern.includes("|")) {
+        // Wrap in non-capturing group to preserve alternation semantics
+        // e.g. "foo|bar" → "^(?:foo|bar)$" not "^foo|bar$"
+        result.pattern = "^(?:" + result.pattern + ")$"
+      } else {
+        if (!hasStart) result.pattern = "^" + result.pattern
+        if (!hasEnd) result.pattern = result.pattern + "$"
+      }
     }
 
     if (result.properties) {
