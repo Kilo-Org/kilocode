@@ -175,7 +175,7 @@ export const DEFAULT_THEMES: Record<string, ThemeJson> = {
   vercel,
   zenburn,
   carbonfox,
-  colorblind,
+  colorblind, // kilocode_change
 }
 
 function resolveTheme(theme: ThemeJson, mode: "dark" | "light") {
