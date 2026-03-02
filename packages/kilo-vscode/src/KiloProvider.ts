@@ -1,4 +1,5 @@
 import * as path from "path"
+import fs from "fs/promises"
 import * as vscode from "vscode"
 import { z } from "zod"
 import {
@@ -22,6 +23,7 @@ import {
   mapSSEEventToWebviewMessage,
 } from "./kilo-provider-utils"
 import { isEventFromForeignProject } from "./services/cli-backend/sse-utils"
+import { discoverRuleFiles, discoverWorkflowFiles } from "./services/kilocode-files"
 
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "kilo-code.new.sidebarView"
@@ -39,6 +41,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private cachedAgentsMessage: unknown = null
   /** Cached configLoaded payload so requestConfig can be served before httpClient is ready */
   private cachedConfigMessage: unknown = null
+  /** Cached commandsLoaded payload so requestCommands can be served before httpClient is ready */
+  private cachedCommandsMessage: unknown = null
   /** Cached notificationsLoaded payload */
   private cachedNotificationsMessage: unknown = null
 
@@ -374,6 +378,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestAgents":
           this.fetchAndSendAgents().catch((e) => console.error("[Kilo New] fetchAndSendAgents failed:", e))
           break
+        case "requestCommands":
+          this.fetchAndSendCommands().catch((e) => console.error("[Kilo New] fetchAndSendCommands failed:", e))
+          break
         case "questionReply":
           await this.handleQuestionReply(message.requestID, message.answers)
           break
@@ -382,6 +389,23 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "requestConfig":
           this.fetchAndSendConfig().catch((e) => console.error("[Kilo New] fetchAndSendConfig failed:", e))
+          break
+        case "requestRuleFiles":
+          await this.handleRequestRuleFiles()
+          break
+        case "requestWorkflowFiles":
+          await this.handleRequestWorkflowFiles()
+          break
+        case "createRuleFile":
+          if (typeof message.name === "string") {
+            const mode = typeof message.mode === "string" ? message.mode : undefined
+            await this.handleCreateRuleFile(message.name, mode)
+          }
+          break
+        case "createWorkflowFile":
+          if (typeof message.name === "string") {
+            await this.handleCreateWorkflowFile(message.name)
+          }
           break
         case "updateConfig":
           await this.handleUpdateConfig(message.config)
@@ -597,10 +621,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       await this.syncWebviewState("initializeConnection")
       await this.flushPendingSessionRefresh("initializeConnection")
 
-      // Fetch providers, agents, config, and notifications in parallel
+      // Fetch providers, agents, commands, config, and notifications in parallel
       await Promise.all([
         this.fetchAndSendProviders(),
         this.fetchAndSendAgents(),
+        this.fetchAndSendCommands(),
         this.fetchAndSendConfig(),
         this.fetchAndSendNotifications(),
       ])
@@ -1003,6 +1028,58 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /**
+   * Fetch slash commands from the backend and send to webview.
+   */
+  private async fetchAndSendCommands(): Promise<void> {
+    if (!this.httpClient) {
+      if (this.cachedCommandsMessage) {
+        this.postMessage(this.cachedCommandsMessage)
+      }
+      return
+    }
+
+    try {
+      const workspaceDir = this.getWorkspaceDirectory()
+      const commands = await this.httpClient.listCommands(workspaceDir)
+      const message = {
+        type: "commandsLoaded",
+        commands: commands.map((item) => ({
+          name: item.name,
+          description: item.description,
+          source: item.source,
+        })),
+      }
+      this.cachedCommandsMessage = message
+      this.postMessage(message)
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to fetch commands:", error)
+    }
+  }
+
+  private cachedCommands(): Array<{ name: string; description?: string; source?: "command" | "mcp" | "skill" }> {
+    if (!this.cachedCommandsMessage) return []
+    const value = this.cachedCommandsMessage as {
+      type?: string
+      commands?: Array<{ name: string; description?: string; source?: "command" | "mcp" | "skill" }>
+    }
+    return value.type === "commandsLoaded" && value.commands ? value.commands : []
+  }
+
+  private async loadCommands(directory: string) {
+    const cached = this.cachedCommands()
+    if (cached.length > 0) return cached
+    if (!this.httpClient) return []
+    const commands = await this.httpClient.listCommands(directory)
+    const result = commands.map((item) => ({
+      name: item.name,
+      description: item.description,
+      source: item.source,
+    }))
+    this.cachedCommandsMessage = { type: "commandsLoaded", commands: result }
+    return result
+  }
+
+  /**
    * Fetch backend config and send to webview.
    */
   private async fetchAndSendConfig(): Promise<void> {
@@ -1026,6 +1103,78 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to fetch config:", error)
     }
+  }
+
+  private async handleRequestRuleFiles(): Promise<void> {
+    try {
+      const files = await discoverRuleFiles(this.getWorkspaceDirectory())
+      this.postMessage({ type: "ruleFilesLoaded", files })
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to load rule files:", error)
+      this.postMessage({ type: "ruleFilesLoaded", files: [] })
+    }
+  }
+
+  private async handleRequestWorkflowFiles(): Promise<void> {
+    const globalStorage = this.extensionContext?.globalStorageUri?.fsPath ?? ""
+    try {
+      const files = await discoverWorkflowFiles({
+        workspace: this.getWorkspaceDirectory(),
+        globalStorage,
+      })
+      this.postMessage({ type: "workflowFilesLoaded", files })
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to load workflow files:", error)
+      this.postMessage({ type: "workflowFilesLoaded", files: [] })
+    }
+  }
+
+  private normalizeFileName(value: string, fallback: string): string {
+    const clean = value
+      .trim()
+      .replace(/[^a-zA-Z0-9._-]+/g, "-")
+      .replace(/^-+/, "")
+      .replace(/-+$/, "")
+    return clean || fallback
+  }
+
+  private async createTextFile(pathname: string, content: string): Promise<boolean> {
+    const exists = await fs
+      .stat(pathname)
+      .then((x) => x.isFile())
+      .catch(() => false)
+    if (exists) return false
+    await fs.mkdir(path.dirname(pathname), { recursive: true })
+    await fs.writeFile(pathname, content, "utf-8")
+    return true
+  }
+
+  private async handleCreateRuleFile(name: string, mode?: string): Promise<void> {
+    const value = this.normalizeFileName(name, "rules")
+    const file = value.endsWith(".md") ? value : `${value}.md`
+    const root = this.getWorkspaceDirectory()
+    const targetDir = mode ? path.join(root, ".kilocode", `rules-${mode}`) : path.join(root, ".kilocode", "rules")
+    const target = path.join(targetDir, file)
+    const created = await this.createTextFile(target, `# ${value}\n\nAdd your project rules here.\n`).catch(() => false)
+    if (!created) {
+      this.postMessage({ type: "error", message: "Could not create rule file." })
+      return
+    }
+    await this.handleRequestRuleFiles()
+    this.handleOpenFile(target)
+  }
+
+  private async handleCreateWorkflowFile(name: string): Promise<void> {
+    const value = this.normalizeFileName(name, "workflow")
+    const file = value.endsWith(".md") ? value : `${value}.md`
+    const target = path.join(this.getWorkspaceDirectory(), ".kilocode", "workflows", file)
+    const created = await this.createTextFile(target, `# ${value}\n\nDescribe this workflow.\n`).catch(() => false)
+    if (!created) {
+      this.postMessage({ type: "error", message: "Could not create workflow file." })
+      return
+    }
+    await this.handleRequestWorkflowFiles()
+    this.handleOpenFile(target)
   }
 
   /**
@@ -1324,6 +1473,26 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const targetSessionID = sessionID || this.currentSession?.id
       if (!targetSessionID) {
         throw new Error("No session available")
+      }
+
+      const slash = text.trim().match(/^\/(\S+)(?:\s+([\s\S]*))?$/)
+      if (slash) {
+        const command = slash[1]
+        const argumentsText = slash[2] ?? ""
+        const commands = await this.loadCommands(workspaceDir)
+        const exists = commands.some((item) => item.name === command)
+        if (exists) {
+          const model = providerID && modelID ? `${providerID}/${modelID}` : undefined
+          await this.httpClient.sendCommand(targetSessionID, workspaceDir, {
+            command,
+            arguments: argumentsText,
+            agent,
+            model,
+            variant,
+            parts: files?.map((item) => ({ type: "file" as const, mime: item.mime, url: item.url })),
+          })
+          return
+        }
       }
 
       // Build parts array with file context and user text

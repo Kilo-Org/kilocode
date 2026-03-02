@@ -285,6 +285,26 @@ export interface CommandConfig {
   description?: string
 }
 
+export interface CommandInfo {
+  name: string
+  description?: string
+  source?: "command" | "mcp" | "skill"
+}
+
+export interface RuleFileInfo {
+  path: string
+  name: string
+  source: "project" | "global" | "legacy"
+  mode?: string
+}
+
+export interface WorkflowFileInfo {
+  path: string
+  name: string
+  source: "project" | "global"
+  description?: string
+}
+
 export interface SkillsConfig {
   paths?: string[]
   urls?: string[]
@@ -517,6 +537,11 @@ export interface AgentsLoadedMessage {
   defaultAgent: string
 }
 
+export interface CommandsLoadedMessage {
+  type: "commandsLoaded"
+  commands: CommandInfo[]
+}
+
 export interface AutocompleteSettingsLoadedMessage {
   type: "autocompleteSettingsLoaded"
   settings: {
@@ -568,6 +593,16 @@ export interface BrowserSettingsLoadedMessage {
 export interface ConfigLoadedMessage {
   type: "configLoaded"
   config: Config
+}
+
+export interface RuleFilesLoadedMessage {
+  type: "ruleFilesLoaded"
+  files: RuleFileInfo[]
+}
+
+export interface WorkflowFilesLoadedMessage {
+  type: "workflowFilesLoaded"
+  files: WorkflowFileInfo[]
 }
 
 export interface ConfigUpdatedMessage {
@@ -798,6 +833,7 @@ export type ExtensionMessage =
   | NavigateMessage
   | ProvidersLoadedMessage
   | AgentsLoadedMessage
+  | CommandsLoadedMessage
   | AutocompleteSettingsLoadedMessage
   | ChatCompletionResultMessage
   | FileSearchResultMessage
@@ -806,6 +842,8 @@ export type ExtensionMessage =
   | QuestionErrorMessage
   | BrowserSettingsLoadedMessage
   | ConfigLoadedMessage
+  | RuleFilesLoadedMessage
+  | WorkflowFilesLoadedMessage
   | ConfigUpdatedMessage
   | NotificationSettingsLoadedMessage
   | NotificationsLoadedMessage
@@ -961,6 +999,10 @@ export interface RequestAgentsMessage {
   type: "requestAgents"
 }
 
+export interface RequestCommandsMessage {
+  type: "requestCommands"
+}
+
 export interface SetLanguageRequest {
   type: "setLanguage"
   locale: string
@@ -1026,6 +1068,25 @@ export interface RequestBrowserSettingsMessage {
 
 export interface RequestConfigMessage {
   type: "requestConfig"
+}
+
+export interface RequestRuleFilesMessage {
+  type: "requestRuleFiles"
+}
+
+export interface RequestWorkflowFilesMessage {
+  type: "requestWorkflowFiles"
+}
+
+export interface CreateRuleFileMessage {
+  type: "createRuleFile"
+  name: string
+  mode?: string
+}
+
+export interface CreateWorkflowFileMessage {
+  type: "createWorkflowFile"
+  name: string
 }
 
 export interface UpdateConfigMessage {
@@ -1265,6 +1326,7 @@ export type WebviewMessage =
   | RequestProvidersMessage
   | CompactRequest
   | RequestAgentsMessage
+  | RequestCommandsMessage
   | SetLanguageRequest
   | QuestionReplyRequest
   | QuestionRejectRequest
@@ -1278,6 +1340,10 @@ export type WebviewMessage =
   | UpdateSettingRequest
   | RequestBrowserSettingsMessage
   | RequestConfigMessage
+  | RequestRuleFilesMessage
+  | RequestWorkflowFilesMessage
+  | CreateRuleFileMessage
+  | CreateWorkflowFileMessage
   | UpdateConfigMessage
   | RequestNotificationSettingsMessage
   | ResetAllSettingsRequest

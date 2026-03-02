@@ -8,6 +8,7 @@ import type {
   ProfileData,
   ProviderAuthAuthorization,
   ProviderListResponse,
+  CommandInfo,
   McpStatus,
   McpConfig,
   Config,
@@ -178,6 +179,13 @@ export class HttpClient {
     return this.request<ProviderListResponse>("GET", "/provider", undefined, { directory })
   }
 
+  /**
+   * List all available slash commands.
+   */
+  async listCommands(directory: string): Promise<CommandInfo[]> {
+    return this.request<CommandInfo[]>("GET", "/command", undefined, { directory })
+  }
+
   // ============================================
   // Agent/Mode Methods
   // ============================================
@@ -245,6 +253,24 @@ export class HttpClient {
     }
 
     await this.request<void>("POST", `/session/${sessionId}/message`, body, { directory, allowEmpty: true })
+  }
+
+  /**
+   * Execute a slash command in a session.
+   */
+  async sendCommand(
+    sessionId: string,
+    directory: string,
+    input: {
+      command: string
+      arguments: string
+      agent?: string
+      model?: string
+      variant?: string
+      parts?: Array<{ type: "file"; mime: string; url: string }>
+    },
+  ): Promise<void> {
+    await this.request<void>("POST", `/session/${sessionId}/command`, input, { directory, allowEmpty: true })
   }
 
   /**
