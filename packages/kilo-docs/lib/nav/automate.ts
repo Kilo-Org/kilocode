@@ -24,6 +24,10 @@ export const AutomateNav: NavSection[] = [
           { href: "/automate/kiloclaw/dashboard", children: "Dashboard" },
           { href: "/automate/kiloclaw/control-ui", children: "Control UI" },
           {
+            href: "/automate/kiloclaw/exec-approvals",
+            children: "Exec Approvals",
+          },
+          {
             href: "/automate/kiloclaw/chat-platforms",
             children: "Chat Platforms",
           },
