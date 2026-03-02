@@ -103,6 +103,11 @@
         "icon": "$(settings-gear)"
       },
       {
+        "command": "kilo-code.new.benchButtonClicked",
+        "title": "Bench",
+        "icon": "$(graph)"
+      },
+      {
         "command": "kilo-code.new.openInTab",
         "title": "Kilo Code (NEW)",
         "icon": {
@@ -318,6 +323,11 @@
         {
           "command": "kilo-code.new.settingsButtonClicked",
           "group": "navigation@6",
+          "when": "view == kilo-code.new.sidebarView"
+        },
+        {
+          "command": "kilo-code.new.benchButtonClicked",
+          "group": "navigation@7",
           "when": "view == kilo-code.new.sidebarView"
         }
       ],
