@@ -135,8 +135,11 @@ export namespace ModelsDev {
     }
 
     // Inject kilo provider with dynamic model fetching
-    if (!providers["kilo"]) {
-      const config = await Config.get()
+    const config = await Config.get()
+    const disabled = new Set(config.disabled_providers ?? [])
+
+    // Skip kilo provider injection if it's disabled
+    if (!providers["kilo"] && !disabled.has("kilo")) {
       const kiloOptions = config.provider?.kilo?.options
       // kilocode_change start - resolve org ID from auth (OAuth accountId) not just config
       const kiloAuth = await Auth.get("kilo")
