@@ -106,10 +106,10 @@ const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigat
 const MAX_JUMP_INDEX = 9
 
 const defaultBindings: Record<string, string> = {
-  previousSession: isMac ? "⌘↑" : "Ctrl+↑",
-  nextSession: isMac ? "⌘↓" : "Ctrl+↓",
-  previousTab: isMac ? "⌘←" : "Ctrl+←",
-  nextTab: isMac ? "⌘→" : "Ctrl+→",
+  previousSession: isMac ? "⌘⌥↑" : "Ctrl+Alt+↑",
+  nextSession: isMac ? "⌘⌥↓" : "Ctrl+Alt+↓",
+  previousTab: isMac ? "⌘⌥←" : "Ctrl+Alt+←",
+  nextTab: isMac ? "⌘⌥→" : "Ctrl+Alt+→",
   showTerminal: isMac ? "⌘/" : "Ctrl+/",
   newTab: isMac ? "⌘T" : "Ctrl+T",
   closeTab: isMac ? "⌘W" : "Ctrl+W",
@@ -624,7 +624,7 @@ const AgentManagerContent: Component = () => {
     if (el instanceof HTMLElement) scrollIntoView(el)
   }
 
-  // Navigate tabs with Cmd+Left/Right
+  // Navigate tabs with Cmd+Alt+Left/Right
   const navigateTab = (direction: "left" | "right") => {
     const ids = tabIds()
     if (ids.length === 0) return
@@ -727,7 +727,8 @@ const AgentManagerContent: Component = () => {
     // Prevent Cmd/Ctrl shortcuts from triggering native browser actions
     const preventDefaults = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return
-      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+      // Arrow navigation requires Alt modifier (Cmd+Alt+Arrow for tabs/sessions)
+      if (e.altKey && ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
         e.preventDefault()
       }
       // Prevent browser defaults for our shortcuts (new tab, close tab, new window, toggle diff, find)

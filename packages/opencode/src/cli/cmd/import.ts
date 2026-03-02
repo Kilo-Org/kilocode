@@ -1,6 +1,7 @@
 import type { Argv } from "yargs"
 import type { Session as SDKSession, Message, Part } from "@kilocode/sdk/v2"
 import { Session } from "../../session"
+import { Bus } from "../../bus"
 import { cmd } from "./cmd"
 import { bootstrap } from "../bootstrap"
 import { Database } from "../../storage/db"
@@ -131,7 +132,10 @@ export const ImportCommand = cmd({
         return
       }
 
-      Database.use((db) => db.insert(SessionTable).values(Session.toRow(exportData.info)).onConflictDoNothing().run())
+      Database.use((db) => {
+        db.insert(SessionTable).values(Session.toRow(exportData.info)).onConflictDoNothing().run()
+        Database.effect(() => Bus.publish(Session.Event.Created, { info: exportData.info }))
+      })
 
       for (const msg of exportData.messages) {
         Database.use((db) =>
