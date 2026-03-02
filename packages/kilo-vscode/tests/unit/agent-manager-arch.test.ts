@@ -27,6 +27,7 @@ const TSX_FILES = [
 ]
 const TSX_FILE = TSX_FILES[0]
 const PROVIDER_FILE = path.join(ROOT, "src/agent-manager/AgentManagerProvider.ts")
+const SETUP_SCRIPT_RUNNER_FILE = path.join(ROOT, "src/agent-manager/SetupScriptRunner.ts")
 
 function readAllTsx(): string {
   return TSX_FILES.map((f) => fs.readFileSync(f, "utf-8")).join("\n")
@@ -374,5 +375,27 @@ describe("KiloProvider — pending session refresh on reconnect", () => {
     expect(provider, "pendingSessionRefresh field must be declared").toMatch(
       /private\s+pendingSessionRefresh\s*=\s*false/,
     )
+  })
+})
+
+describe("SetupScriptRunner — task execution model", () => {
+  const runner = fs.readFileSync(SETUP_SCRIPT_RUNNER_FILE, "utf-8")
+
+  it("uses VS Code tasks API for setup execution", () => {
+    expect(runner).toContain("vscode.tasks.executeTask")
+    expect(runner).toContain("onDidEndTaskProcess")
+    expect(runner).toContain("onDidEndTask")
+  })
+
+  it("uses process-based task execution with env options", () => {
+    expect(runner).toContain("new vscode.ProcessExecution")
+    expect(runner).toContain("WORKTREE_PATH")
+    expect(runner).toContain("REPO_PATH")
+  })
+
+  it("does not use manual terminal command injection", () => {
+    expect(runner).not.toContain("createTerminal")
+    expect(runner).not.toContain("sendText")
+    expect(runner).not.toContain("buildSetupCommand")
   })
 })

@@ -399,26 +399,26 @@
       },
       {
         "command": "kilo-code.new.agentManager.previousSession",
-        "key": "ctrl+up",
-        "mac": "cmd+up",
+        "key": "ctrl+alt+up",
+        "mac": "cmd+alt+up",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {
         "command": "kilo-code.new.agentManager.nextSession",
-        "key": "ctrl+down",
-        "mac": "cmd+down",
+        "key": "ctrl+alt+down",
+        "mac": "cmd+alt+down",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {
         "command": "kilo-code.new.agentManager.previousTab",
-        "key": "ctrl+left",
-        "mac": "cmd+left",
+        "key": "ctrl+alt+left",
+        "mac": "cmd+alt+left",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {
         "command": "kilo-code.new.agentManager.nextTab",
-        "key": "ctrl+right",
-        "mac": "cmd+right",
+        "key": "ctrl+alt+right",
+        "mac": "cmd+alt+right",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {
