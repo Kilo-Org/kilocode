@@ -10,6 +10,24 @@ const QuickFix = makeKind("quickfix")
 const RefactorRewrite = makeKind("refactor.rewrite")
 
 const mockVscode = {
+  extensions: {
+    getExtension: () => ({
+      packageJSON: { version: "test" },
+    }),
+  },
+  env: {
+    appName: "VS Code",
+    language: "en",
+    machineId: "machine",
+    isTelemetryEnabled: false,
+  },
+  version: "1.0.0",
+  workspace: {
+    workspaceFolders: [{ uri: { fsPath: "/repo" } }],
+    getConfiguration: () => ({
+      get: <T>(_key: string, value?: T) => value,
+    }),
+  },
   CodeAction: class {
     command?: { command: string; title: string }
     isPreferred?: boolean
