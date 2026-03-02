@@ -975,6 +975,7 @@ export const dict = {
   "agentManager.hoverCard.branch": "BRANCH",
   "agentManager.hoverCard.base": "Basis",
   "agentManager.hoverCard.sessions": "Sitzungen",
+  "agentManager.hoverCard.files": "Dateien",
   "agentManager.hoverCard.changes": "Änderungen",
   "agentManager.hoverCard.commits": "Commits",
   "agentManager.session.new": "Neue Sitzung",

@@ -1394,10 +1394,18 @@ const AgentManagerContent: Component = () => {
           </div>
           <Show
             when={
-              localStats() && (localStats()!.additions > 0 || localStats()!.deletions > 0 || localStats()!.commits > 0)
+              localStats() &&
+              (localStats()!.files > 0 ||
+                localStats()!.additions > 0 ||
+                localStats()!.deletions > 0 ||
+                localStats()!.ahead > 0 ||
+                localStats()!.behind > 0)
             }
           >
             <div class="am-worktree-stats">
+              <Show when={localStats()!.files > 0}>
+                <span class="am-stat-files">{localStats()!.files}f</span>
+              </Show>
               <Show when={localStats()!.additions > 0 || localStats()!.deletions > 0}>
                 <span class="am-worktree-diff-stats">
                   <Show when={localStats()!.additions > 0}>
@@ -1411,10 +1419,16 @@ const AgentManagerContent: Component = () => {
                   </Show>
                 </span>
               </Show>
-              <Show when={localStats()!.commits > 0}>
+              <Show when={localStats()!.ahead > 0}>
                 <span class="am-worktree-commits">
                   {"↑"}
-                  {localStats()!.commits}
+                  {localStats()!.ahead}
+                </span>
+              </Show>
+              <Show when={localStats()!.behind > 0}>
+                <span class="am-worktree-behind">
+                  {"↓"}
+                  {localStats()!.behind}
                 </span>
               </Show>
             </div>
@@ -1646,10 +1660,17 @@ const AgentManagerContent: Component = () => {
                                         <Show
                                           when={
                                             stats() &&
-                                            (stats()!.additions > 0 || stats()!.deletions > 0 || stats()!.commits > 0)
+                                            (stats()!.files > 0 ||
+                                              stats()!.additions > 0 ||
+                                              stats()!.deletions > 0 ||
+                                              stats()!.ahead > 0 ||
+                                              stats()!.behind > 0)
                                           }
                                         >
                                           <div class="am-worktree-stats">
+                                            <Show when={stats()!.files > 0}>
+                                              <span class="am-stat-files">{stats()!.files}f</span>
+                                            </Show>
                                             <Show when={stats()!.additions > 0 || stats()!.deletions > 0}>
                                               <span class="am-worktree-diff-stats">
                                                 <Show when={stats()!.additions > 0}>
@@ -1660,8 +1681,11 @@ const AgentManagerContent: Component = () => {
                                                 </Show>
                                               </span>
                                             </Show>
-                                            <Show when={stats()!.commits > 0}>
-                                              <span class="am-worktree-commits">↑{stats()!.commits}</span>
+                                            <Show when={stats()!.ahead > 0}>
+                                              <span class="am-worktree-commits">↑{stats()!.ahead}</span>
+                                            </Show>
+                                            <Show when={stats()!.behind > 0}>
+                                              <span class="am-worktree-behind">↓{stats()!.behind}</span>
                                             </Show>
                                           </div>
                                         </Show>
@@ -1721,12 +1745,22 @@ const AgentManagerContent: Component = () => {
                                     <Show
                                       when={
                                         hoverStats() &&
-                                        (hoverStats()!.additions > 0 ||
+                                        (hoverStats()!.files > 0 ||
+                                          hoverStats()!.additions > 0 ||
                                           hoverStats()!.deletions > 0 ||
-                                          hoverStats()!.commits > 0)
+                                          hoverStats()!.ahead > 0 ||
+                                          hoverStats()!.behind > 0)
                                       }
                                     >
                                       <div class="am-hover-card-divider" />
+                                      <Show when={hoverStats()!.files > 0}>
+                                        <div class="am-hover-card-row">
+                                          <span class="am-hover-card-row-label">
+                                            {t("agentManager.hoverCard.files")}
+                                          </span>
+                                          <span class="am-hover-card-row-value">{hoverStats()!.files}</span>
+                                        </div>
+                                      </Show>
                                       <Show when={hoverStats()!.additions > 0 || hoverStats()!.deletions > 0}>
                                         <div class="am-hover-card-row">
                                           <span class="am-hover-card-row-label">
@@ -1742,12 +1776,19 @@ const AgentManagerContent: Component = () => {
                                           </span>
                                         </div>
                                       </Show>
-                                      <Show when={hoverStats()!.commits > 0}>
+                                      <Show when={hoverStats()!.ahead > 0 || hoverStats()!.behind > 0}>
                                         <div class="am-hover-card-row">
                                           <span class="am-hover-card-row-label">
                                             {t("agentManager.hoverCard.commits")}
                                           </span>
-                                          <span class="am-hover-card-row-value">{hoverStats()!.commits}</span>
+                                          <span class="am-hover-card-row-value am-hover-card-diff-stats">
+                                            <Show when={hoverStats()!.ahead > 0}>
+                                              <span class="am-worktree-commits">↑{hoverStats()!.ahead}</span>
+                                            </Show>
+                                            <Show when={hoverStats()!.behind > 0}>
+                                              <span class="am-worktree-behind">↓{hoverStats()!.behind}</span>
+                                            </Show>
+                                          </span>
                                         </div>
                                       </Show>
                                     </Show>
@@ -1980,6 +2021,9 @@ const AgentManagerContent: Component = () => {
                         <Icon name="layers" size="small" />
                         <Show when={hasChanges()}>
                           <span class="am-diff-toggle-stats">
+                            <Show when={stats()!.files > 0}>
+                              <span class="am-stat-files">{stats()!.files}f</span>
+                            </Show>
                             <span class="am-stat-additions">+{stats()!.additions}</span>
                             <span class="am-stat-deletions">−{stats()!.deletions}</span>
                           </span>
