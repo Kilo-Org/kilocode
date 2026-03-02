@@ -40,6 +40,9 @@ export default function Custom404() {
           <div className="message-section">
             <h1 className="message-title">Page not found</h1>
             <p className="message-subtitle">The page you requested does not exist or has been moved.</p>
+            <p className="message-subtitle">
+              That link is dead, and may have ridden off into the sunset on a pink pony 🦄
+            </p>
           </div>
 
           {/* Actions */}
