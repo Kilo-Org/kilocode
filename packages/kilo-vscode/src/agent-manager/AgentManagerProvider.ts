@@ -27,8 +27,6 @@ import { MAX_MULTI_VERSIONS } from "./constants"
  */
 const PLATFORM = "agent-manager" as const
 const LOCAL_DIFF_ID = "local" as const
-const STALE_WORKTREE_MISS_THRESHOLD = 2
-const STALE_WORKTREE_ALL_MISSING_POLL_THRESHOLD = 2
 
 export class AgentManagerProvider implements vscode.Disposable {
   public static readonly viewType = "kilo-code.new.AgentManagerPanel"
@@ -48,9 +46,7 @@ export class AgentManagerProvider implements vscode.Disposable {
   private statsPoller: GitStatsPoller
   private gitOps: GitOps
   private cachedDiffTarget: { directory: string; baseBranch: string } | undefined
-  private staleMisses = new Map<string, number>()
   private staleWorktreeIds = new Set<string>()
-  private allMissingPolls = 0
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -1289,17 +1285,12 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     const worktrees = state.getWorktrees()
     const ids = new Set(worktrees.map((wt) => wt.id))
-    for (const id of [...this.staleMisses.keys()]) {
-      if (ids.has(id)) continue
-      this.staleMisses.delete(id)
-    }
     for (const id of [...this.staleWorktreeIds]) {
       if (ids.has(id)) continue
       this.staleWorktreeIds.delete(id)
     }
 
     if (result.degraded) {
-      this.allMissingPolls = 0
       this.log("Skipping stale worktree update: degraded worktree probe")
       return
     }
@@ -1307,41 +1298,10 @@ export class AgentManagerProvider implements vscode.Disposable {
     const entries = result.worktrees.filter((item) => ids.has(item.worktreeId))
     if (entries.length === 0) return
 
-    const missing = entries.filter((item) => item.missing)
-    const allMissing = entries.length > 1 && missing.length === entries.length
-    if (allMissing) {
-      this.allMissingPolls += 1
-      if (this.allMissingPolls < STALE_WORKTREE_ALL_MISSING_POLL_THRESHOLD) {
-        for (const entry of entries) {
-          const misses = (this.staleMisses.get(entry.worktreeId) ?? 0) + 1
-          this.staleMisses.set(entry.worktreeId, misses)
-        }
-        this.log(
-          `Deferring stale worktree update: all missing ${missing.length}/${entries.length} (${this.allMissingPolls}/${STALE_WORKTREE_ALL_MISSING_POLL_THRESHOLD})`,
-        )
-        return
-      }
-      this.log(`Applying stale worktree update after persistent all-missing polls (${this.allMissingPolls})`)
-    }
-
-    if (!allMissing) {
-      this.allMissingPolls = 0
-    }
-
-    const changed = entries.reduce((dirty, entry) => {
-      if (entry.missing) {
-        const misses = (this.staleMisses.get(entry.worktreeId) ?? 0) + 1
-        this.staleMisses.set(entry.worktreeId, misses)
-        if (misses < STALE_WORKTREE_MISS_THRESHOLD) return dirty
-        if (this.staleWorktreeIds.has(entry.worktreeId)) return dirty
-        this.staleWorktreeIds.add(entry.worktreeId)
-        return true
-      }
-
-      this.staleMisses.delete(entry.worktreeId)
-      if (!this.staleWorktreeIds.delete(entry.worktreeId)) return dirty
-      return true
-    }, false)
+    const next = new Set(entries.filter((entry) => entry.missing).map((entry) => entry.worktreeId))
+    const changed =
+      next.size !== this.staleWorktreeIds.size || [...next].some((worktreeId) => !this.staleWorktreeIds.has(worktreeId))
+    this.staleWorktreeIds = next
 
     if (changed) {
       this.pushState()
@@ -1349,16 +1309,11 @@ export class AgentManagerProvider implements vscode.Disposable {
   }
 
   private clearStaleTracking(worktreeId: string): void {
-    this.staleMisses.delete(worktreeId)
     this.staleWorktreeIds.delete(worktreeId)
   }
 
   private staleWorktreesForState(worktrees: ReturnType<WorktreeStateManager["getWorktrees"]>): string[] {
     const ids = new Set(worktrees.map((wt) => wt.id))
-    for (const id of [...this.staleMisses.keys()]) {
-      if (ids.has(id)) continue
-      this.staleMisses.delete(id)
-    }
     for (const id of [...this.staleWorktreeIds]) {
       if (ids.has(id)) continue
       this.staleWorktreeIds.delete(id)
@@ -1387,9 +1342,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
   /** Push empty state when the workspace is not a git repo or has no workspace folder. */
   private pushEmptyState(): void {
-    this.staleMisses.clear()
     this.staleWorktreeIds.clear()
-    this.allMissingPolls = 0
     this.postToWebview({
       type: "agentManager.state",
       worktrees: [],
