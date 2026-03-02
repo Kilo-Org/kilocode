@@ -733,6 +733,21 @@ export interface AgentManagerWorktreeDiffLoadingMessage {
   loading: boolean
 }
 
+export type AgentManagerApplyWorktreeDiffStatus = "checking" | "applying" | "success" | "conflict" | "error"
+
+export interface AgentManagerApplyWorktreeDiffConflict {
+  file?: string
+  reason: string
+}
+
+export interface AgentManagerApplyWorktreeDiffResultMessage {
+  type: "agentManager.applyWorktreeDiffResult"
+  worktreeId: string
+  status: AgentManagerApplyWorktreeDiffStatus
+  message: string
+  conflicts?: AgentManagerApplyWorktreeDiffConflict[]
+}
+
 // Per-worktree git stats: diff additions/deletions and commits missing from origin
 export interface WorktreeGitStats {
   worktreeId: string
@@ -830,6 +845,7 @@ export type ExtensionMessage =
   | WorkspaceDirectoryChangedMessage
   | AgentManagerWorktreeDiffMessage
   | AgentManagerWorktreeDiffLoadingMessage
+  | AgentManagerApplyWorktreeDiffResultMessage
   | AgentManagerWorktreeStatsMessage
   | AgentManagerLocalStatsMessage
 
@@ -1232,6 +1248,12 @@ export interface StopDiffWatchMessage {
   type: "agentManager.stopDiffWatch"
 }
 
+export interface ApplyWorktreeDiffMessage {
+  type: "agentManager.applyWorktreeDiff"
+  worktreeId: string
+  selectedFiles?: string[]
+}
+
 // Variant persistence (webview → extension)
 export interface PersistVariantRequest {
   type: "persistVariant"
@@ -1315,6 +1337,7 @@ export type WebviewMessage =
   | RequestWorktreeDiffMessage
   | StartDiffWatchMessage
   | StopDiffWatchMessage
+  | ApplyWorktreeDiffMessage
 
 // ============================================
 // VS Code API type

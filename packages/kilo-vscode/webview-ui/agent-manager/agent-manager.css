@@ -887,6 +887,7 @@ button.am-section-toggle:hover .am-section-label {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex: 1;
   min-width: 0;
 }
 
@@ -2427,10 +2428,124 @@ button.am-section-toggle:hover .am-section-label {
 .am-diff-header-actions {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 6px;
+  margin-left: 8px;
+  min-width: 0;
 }
 
 .am-diff-header-actions > * {
+  flex-shrink: 0;
+}
+
+.am-apply-spinner {
+  width: 12px;
+  height: 12px;
+}
+
+.am-apply-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0 20px 20px 20px;
+  box-sizing: border-box;
+}
+
+.am-apply-dialog-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.am-apply-dialog-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-weak);
+  font-variant-numeric: tabular-nums;
+}
+
+.am-apply-dialog-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.am-apply-dialog-tree {
+  flex: 1;
+  min-height: 0;
+  border: 1px solid var(--border-weak-base);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.am-apply-dialog-tree .am-file-tree {
+  height: 100%;
+}
+
+.am-apply-conflicts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid color-mix(in oklab, var(--border-weak-base) 55%, var(--syntax-diff-delete, #da3319));
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklab, var(--surface-inset-base) 90%, var(--syntax-diff-delete, #da3319));
+}
+
+.am-apply-conflicts-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-base);
+}
+
+.am-apply-conflict {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.am-apply-conflict-file {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--text-base);
+}
+
+.am-apply-conflict-reason {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  line-height: 1.3;
+  white-space: normal;
+  word-break: break-word;
+  font-size: 10px;
+  color: var(--text-weaker);
+}
+
+.am-apply-alert {
+  font-size: 11px;
+  color: var(--syntax-diff-delete, #da3319);
+  line-height: 1.35;
+}
+
+.am-apply-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid var(--border-weak-base);
+  padding-top: 10px;
   flex-shrink: 0;
 }
 
@@ -2743,6 +2858,34 @@ button.am-section-toggle:hover .am-section-label {
 
 .am-file-tree-status-modified .am-file-tree-name {
   color: var(--text-base);
+}
+
+.am-file-tree-check {
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--border-weak-base);
+  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: transparent;
+  background: var(--surface-base);
+}
+
+.am-file-tree-check-on {
+  border-color: var(--surface-interactive-strong);
+  background: color-mix(in oklab, var(--surface-interactive-strong) 18%, var(--surface-base));
+  color: var(--surface-interactive-strong);
+}
+
+.am-file-tree-check [data-component="icon"] {
+  width: 10px;
+  height: 10px;
+}
+
+.am-file-tree-selected {
+  background: color-mix(in oklab, var(--surface-base-active, rgba(128, 128, 128, 0.15)) 72%, transparent);
 }
 
 /* Compact +N -N stats pushed to the right */

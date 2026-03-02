@@ -7,7 +7,7 @@ import { buildWebviewHtml } from "../utils"
 import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
 import { WorktreeStateManager } from "./WorktreeStateManager"
 import { GitStatsPoller } from "./GitStatsPoller"
-import { GitOps } from "./GitOps"
+import { GitOps, type ApplyConflict } from "./GitOps"
 import { versionedName } from "./branch-name"
 import { normalizePath } from "./git-import"
 import { SetupScriptService } from "./SetupScriptService"
@@ -46,6 +46,7 @@ export class AgentManagerProvider implements vscode.Disposable {
   private statsPoller: GitStatsPoller
   private gitOps: GitOps
   private cachedDiffTarget: { directory: string; baseBranch: string } | undefined
+  private applyingWorktreeId: string | undefined
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -281,6 +282,17 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     if (type === "agentManager.requestWorktreeDiff" && typeof msg.sessionId === "string") {
       void this.onRequestWorktreeDiff(msg.sessionId)
+      return null
+    }
+    if (type === "agentManager.applyWorktreeDiff" && typeof msg.worktreeId === "string") {
+      const selectedFiles = Array.isArray(msg.selectedFiles)
+        ? [
+            ...new Set(
+              msg.selectedFiles.filter((file): file is string => typeof file === "string").map((file) => file.trim()),
+            ),
+          ].filter((file) => file.length > 0)
+        : undefined
+      void this.onApplyWorktreeDiff(msg.worktreeId, selectedFiles)
       return null
     }
     if (type === "agentManager.startDiffWatch" && typeof msg.sessionId === "string") {
@@ -1317,6 +1329,81 @@ export class AgentManagerProvider implements vscode.Disposable {
   // ---------------------------------------------------------------------------
   // Helpers
   // ---------------------------------------------------------------------------
+
+  private postApplyResult(
+    worktreeId: string,
+    status: "checking" | "applying" | "success" | "conflict" | "error",
+    message: string,
+    conflicts?: ApplyConflict[],
+  ): void {
+    this.postToWebview({
+      type: "agentManager.applyWorktreeDiffResult",
+      worktreeId,
+      status,
+      message,
+      conflicts,
+    })
+  }
+
+  private async onApplyWorktreeDiff(worktreeId: string, selectedFiles?: string[]): Promise<void> {
+    if (this.applyingWorktreeId) {
+      this.postApplyResult(worktreeId, "error", "Another apply operation is already in progress")
+      return
+    }
+
+    if (selectedFiles && selectedFiles.length === 0) {
+      this.postApplyResult(worktreeId, "error", "Select at least one file to apply")
+      return
+    }
+
+    const state = this.getStateManager()
+    const root = this.getWorkspaceRoot()
+    if (!state || !root) {
+      this.postApplyResult(worktreeId, "error", "Open a git workspace to apply changes")
+      return
+    }
+
+    const worktree = state.getWorktree(worktreeId)
+    if (!worktree) {
+      this.postApplyResult(worktreeId, "error", "Worktree not found")
+      return
+    }
+
+    this.applyingWorktreeId = worktreeId
+
+    try {
+      this.postApplyResult(worktreeId, "checking", "Checking for conflicts...")
+      const patch = await this.gitOps.buildWorktreePatch(worktree.path, worktree.parentBranch, selectedFiles)
+
+      if (!patch.trim()) {
+        this.postApplyResult(worktreeId, "success", "No changes to apply")
+        return
+      }
+
+      const check = await this.gitOps.checkApplyPatch(root, patch)
+      if (!check.ok) {
+        this.postApplyResult(worktreeId, "conflict", check.message, check.conflicts)
+        return
+      }
+
+      this.postApplyResult(worktreeId, "applying", "Applying changes to local branch...")
+      const applied = await this.gitOps.applyPatch(root, patch)
+      if (!applied.ok) {
+        const conflict = applied.conflicts.length > 0
+        const status = conflict ? "conflict" : "error"
+        this.postApplyResult(worktreeId, status, applied.message, applied.conflicts)
+        return
+      }
+
+      this.postApplyResult(worktreeId, "success", "Applied worktree changes to local branch")
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      this.log("Failed to apply worktree diff:", message)
+      this.postApplyResult(worktreeId, "error", message)
+    } finally {
+      this.applyingWorktreeId = undefined
+    }
+  }
 
   // ---------------------------------------------------------------------------
   // Diff polling
