@@ -139,7 +139,7 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
     if (!tool) return {}
     const parts = sync.data.part[tool.messageID] ?? []
     for (const part of parts) {
-      if (part.type === "tool" && part.callID === tool.callID && part.state.status !== "pending") {
+      if (part.type === "tool" && part.callID === tool.callID) {
         return part.state.input ?? {}
       }
     }
