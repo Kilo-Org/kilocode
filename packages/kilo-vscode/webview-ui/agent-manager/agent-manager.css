@@ -309,6 +309,11 @@ button.am-section-toggle:hover .am-section-label {
   color: currentColor;
 }
 
+.am-tooltip-wrap {
+  max-width: 240px;
+  white-space: normal;
+}
+
 .am-worktree-spinner {
   width: 16px;
   height: 16px;

@@ -189,6 +189,63 @@ describe("GitStatsPoller", () => {
     expect(presence[0]).toEqual({ worktrees: [], degraded: true })
   })
 
+  it("skips stats fetch for missing worktrees detected by presence probe", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gsp-skip-missing-"))
+    const wtAPath = path.join(root, "wt-a")
+    const wtBPath = path.join(root, "wt-b")
+    fs.mkdirSync(wtAPath, { recursive: true })
+
+    const calls: string[] = []
+    const emitted: Array<Array<{ worktreeId: string; additions: number; deletions: number; commits: number }>> = []
+    const presence: Array<{ worktrees: Array<{ worktreeId: string; missing: boolean }>; degraded: boolean }> = []
+
+    const client = {
+      getWorktreeDiff: async (cwd: string) => {
+        calls.push(cwd)
+        return diff(1, 1)
+      },
+    } as unknown as HttpClient
+
+    const poller = new GitStatsPoller({
+      getWorktrees: () => [
+        { ...worktree("a"), path: wtAPath },
+        { ...worktree("b"), path: wtBPath },
+      ],
+      getWorkspaceRoot: () => root,
+      getHttpClient: () => client,
+      onStats: (stats) => emitted.push(stats),
+      onLocalStats: () => undefined,
+      onWorktreePresence: (result) => presence.push(result),
+      log: () => undefined,
+      intervalMs: 5,
+      git: gitOps(async (args) => {
+        if (args[0] === "worktree") {
+          return `worktree ${wtAPath}\nbranch refs/heads/branch-a\n`
+        }
+        if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
+        if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "origin/main"
+        if (args[0] === "fetch") return ""
+        if (args[0] === "rev-list") return "1"
+        return ""
+      }),
+    })
+
+    poller.setEnabled(true)
+    await waitFor(() => calls.length >= 1)
+    poller.stop()
+    fs.rmSync(root, { recursive: true, force: true })
+
+    expect(calls.some((cwd) => cwd === wtBPath)).toBe(false)
+    expect(presence[0]).toEqual({
+      worktrees: [
+        { worktreeId: "a", missing: false },
+        { worktreeId: "b", missing: true },
+      ],
+      degraded: false,
+    })
+    expect(emitted[0]?.map((item) => item.worktreeId)).toEqual(["a"])
+  })
+
   it("preserves local stats when HTTP client fails after initial success", async () => {
     let diffCalls = 0
     const emitted: Array<{ branch: string; additions: number; deletions: number; commits: number }> = []

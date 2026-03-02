@@ -124,9 +124,21 @@ export class GitStatsPoller {
 
     if (!client) return
 
+    const missing = new Set(
+      presence.degraded ? [] : presence.worktrees.filter((item) => item.missing).map((item) => item.worktreeId),
+    )
+    const active = worktrees.filter((wt) => !missing.has(wt.id))
+    if (active.length === 0) {
+      if (this.lastHash === "") return
+      this.lastHash = ""
+      this.lastStats = {}
+      this.options.onStats([])
+      return
+    }
+
     const stats = (
       await Promise.all(
-        worktrees.map(async (wt) => {
+        active.map(async (wt) => {
           try {
             const diffs = await client.getWorktreeDiff(wt.path, wt.parentBranch)
             const additions = diffs.reduce((sum, diff) => sum + diff.additions, 0)

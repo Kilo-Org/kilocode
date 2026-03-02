@@ -180,7 +180,6 @@ export const dict = {
   "common.submit": "Submit",
   "common.save": "Save",
   "common.saving": "Saving...",
-  "common.default": "Default",
   "common.attachment": "attachment",
 
   "prompt.placeholder.shell": "Enter shell command...",
@@ -871,6 +870,7 @@ export const dict = {
   "settings.language.current": "Current:",
 
   "common.add": "Add",
+  "common.default": "Default",
   "common.choose": "Choose…",
 
   "settings.notImplemented": "This section is not implemented yet.",
