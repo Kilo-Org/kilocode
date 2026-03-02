@@ -116,16 +116,18 @@ export namespace MCP {
     })
   }
 
+  // kilocode_change start - Anchor regex patterns for providers that require ^/$ (e.g. llama.cpp)
   // Recursively anchor regex patterns in JSON schemas.
   // Some providers (e.g. llama.cpp) require patterns to start with ^ and end with $.
-  function anchorPatterns(schema: JSONSchema7): JSONSchema7 {
+  export function anchorPatterns(schema: JSONSchema7): JSONSchema7 {
     if (!schema || typeof schema !== "object") return schema
     const result = { ...schema }
 
     if (typeof result.pattern === "string") {
-      // Guard against escaped \$ or \^ being mistaken for anchors
-      if (!result.pattern.startsWith("^")) result.pattern = "^" + result.pattern
-      if (!/(^|[^\\])\$$/.test(result.pattern)) result.pattern = result.pattern + "$"
+      // Guard against escaped \^ or \$ being mistaken for anchors.
+      // Account for even-length backslash sequences (e.g. \\$ is a real anchor, \$ is not).
+      if (!/^\^/.test(result.pattern)) result.pattern = "^" + result.pattern
+      if (!/(^|[^\\])(\\\\)*\$$/.test(result.pattern)) result.pattern = result.pattern + "$"
     }
 
     if (result.properties) {
@@ -187,13 +189,14 @@ export namespace MCP {
 
     return result
   }
+  // kilocode_change end
 
   // Convert MCP tool definition to AI SDK Tool type
   async function convertMcpTool(mcpTool: MCPToolDef, client: MCPClient, timeout?: number): Promise<Tool> {
     const inputSchema = mcpTool.inputSchema
 
     // Spread first, then override type to ensure it's always "object"
-    const schema: JSONSchema7 = anchorPatterns({
+    const schema: JSONSchema7 = anchorPatterns({ // kilocode_change - anchor patterns for llama.cpp compatibility
       ...(inputSchema as JSONSchema7),
       type: "object",
       properties: (inputSchema.properties ?? {}) as JSONSchema7["properties"],
