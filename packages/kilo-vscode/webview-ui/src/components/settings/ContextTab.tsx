@@ -91,7 +91,7 @@ const ContextTab: Component = () => {
           <div style={{ flex: 1 }}>
             <TextField
               value={newPattern()}
-              placeholder="e.g. **/node_modules/**"
+              placeholder={language.t("settings.context.watcherPatterns.placeholder")}
               onChange={(val) => setNewPattern(val)}
               onKeyDown={(e: KeyboardEvent) => {
                 if (e.key === "Enter") addPattern()

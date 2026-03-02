@@ -190,7 +190,7 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
                       margin: "0 0 8px 0",
                     }}
                   >
-                    Account
+                    {language.t("profile.account")}
                   </p>
                   <Select
                     options={orgOptions()}

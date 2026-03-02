@@ -1039,6 +1039,8 @@ export const dict = {
   "agentManager.review.commentPlaceholder": "Deixe um comentário...",
   "agentManager.review.commentAction": "Comentar",
   "agentManager.review.sendToChat": "Enviar para o chat",
+  "agentManager.review.commentCount": "{{count}} comment",
+  "agentManager.review.commentCountPlural": "{{count}} comments",
   "agentManager.review.collapsedOnly": "{{count}} recolhidos",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} recolhidos, {{large}} grandes",
 
@@ -1056,4 +1058,29 @@ export const dict = {
 
   "question.summary": "{{n}} de {{total}} perguntas",
   "common.review": "Revisar",
+
+  "notifications.dismiss": "Dismiss",
+  "notifications.previous": "Previous",
+  "notifications.next": "Next",
+
+  "settings.display.username.placeholder": "User",
+
+  "settings.agentBehaviour.modelOverride.placeholder": "e.g. anthropic/claude-sonnet-4-20250514",
+  "settings.agentBehaviour.prompt.placeholder": "Custom instructions…",
+  "settings.agentBehaviour.mcp.command": "command",
+  "settings.agentBehaviour.mcp.url": "url",
+  "settings.agentBehaviour.skillPaths.placeholder": "e.g. ./skills",
+  "settings.agentBehaviour.skillUrls.placeholder": "e.g. https://example.com/skills",
+  "settings.agentBehaviour.instructions.placeholder": "e.g. ./INSTRUCTIONS.md",
+
+  "prompt.fileMention.empty": "No files found",
+  "prompt.image.remove": "Remove image",
+
+  "settings.providers.selectProvider": "Select provider…",
+
+  "nav.marketplace": "Marketplace",
+
+  "profile.account": "Account",
+
+  "settings.context.watcherPatterns.placeholder": "e.g. **/node_modules/**",
 }

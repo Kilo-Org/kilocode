@@ -1,7 +1,7 @@
 /**
- * Localization lint: Agent Manager
+ * Localization lint: All Webview TSX files
  *
- * Ensures all user-visible strings in the Agent Manager webview go through
+ * Ensures all user-visible strings in the webview go through
  * the i18n `t()` function rather than being hardcoded in English.
  *
  * Detects:
@@ -16,6 +16,8 @@
  *   - Numbers, single characters, punctuation-only strings
  *   - Template expressions `{...}` (assumed to use t())
  *   - Strings that are clearly programmatic (IDs, prefixes, selectors)
+ *   - Brand names used as link text (GitHub, Reddit, Discord)
+ *   - URL strings used as link text
  */
 
 import { describe, it, expect } from "bun:test"
@@ -23,10 +25,8 @@ import { Project, SyntaxKind, Node } from "ts-morph"
 import path from "node:path"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
-const TSX_FILES = [
-  path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
-]
+const glob = new Bun.Glob("webview-ui/**/*.tsx")
+const TSX_FILES = Array.from(glob.scanSync({ cwd: ROOT, absolute: true }))
 
 /**
  * Props whose string values are user-visible and must be localized.
@@ -85,6 +85,12 @@ function isProgrammatic(text: string): boolean {
   if (/^\[Kilo/.test(trimmed)) return true
   // Platform-specific modifier display (already keybinding tokens)
   if (/^(Ctrl\+|⌘|⇧|⌃|⌥)/.test(trimmed) && trimmed.length <= 6) return true
+  // Brand names used as link text — not translatable proper nouns
+  if (/^(GitHub|Reddit|Discord)$/.test(trimmed)) return true
+  // URL-like strings used as link text (e.g. "kilo.ai/support")
+  if (/^[\w.-]+\.\w+\//.test(trimmed)) return true
+  // Known agent/mode names used as display labels — product identifiers, not UI copy
+  if (/^(Code)$/.test(trimmed)) return true
   return false
 }
 
@@ -321,10 +327,10 @@ function findTranslationShadowViolations(): ShadowViolation[] {
   return results
 }
 
-describe("Agent Manager i18n — no hardcoded strings", () => {
+describe("Webview i18n — no hardcoded strings", () => {
   const violations = findViolations()
 
-  it("should have no hardcoded user-facing strings in agent manager TSX files", () => {
+  it("should have no hardcoded user-facing strings in webview TSX files", () => {
     if (violations.length > 0) {
       const report = violations.map((v) => `  ${v.file}:${v.line} [${v.context}] "${v.text}"`).join("\n")
       expect(violations, `Found ${violations.length} hardcoded string(s):\n${report}`).toEqual([])
@@ -333,7 +339,7 @@ describe("Agent Manager i18n — no hardcoded strings", () => {
   })
 })
 
-describe("Agent Manager i18n — no t() shadowing", () => {
+describe("Webview i18n — no t() shadowing", () => {
   const shadows = findTranslationShadowViolations()
 
   it("should not shadow the t() translation function in callbacks", () => {

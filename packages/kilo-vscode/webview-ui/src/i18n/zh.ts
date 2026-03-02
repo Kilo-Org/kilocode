@@ -1025,6 +1025,8 @@ export const dict = {
   "agentManager.review.commentPlaceholder": "留下评论...",
   "agentManager.review.commentAction": "评论",
   "agentManager.review.sendToChat": "发送到聊天",
+  "agentManager.review.commentCount": "{{count}} comment",
+  "agentManager.review.commentCountPlural": "{{count}} comments",
   "agentManager.review.collapsedOnly": "{{count}} 个已折叠",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} 个已折叠，{{large}} 个过大",
 
@@ -1042,4 +1044,29 @@ export const dict = {
 
   "question.summary": "第 {{n}} / {{total}} 个问题",
   "common.review": "审查",
-} satisfies Partial<Record<Keys, string>>
+
+  "notifications.dismiss": "Dismiss",
+  "notifications.previous": "Previous",
+  "notifications.next": "Next",
+
+  "settings.display.username.placeholder": "User",
+
+  "settings.agentBehaviour.modelOverride.placeholder": "e.g. anthropic/claude-sonnet-4-20250514",
+  "settings.agentBehaviour.prompt.placeholder": "Custom instructions…",
+  "settings.agentBehaviour.mcp.command": "command",
+  "settings.agentBehaviour.mcp.url": "url",
+  "settings.agentBehaviour.skillPaths.placeholder": "e.g. ./skills",
+  "settings.agentBehaviour.skillUrls.placeholder": "e.g. https://example.com/skills",
+  "settings.agentBehaviour.instructions.placeholder": "e.g. ./INSTRUCTIONS.md",
+
+  "prompt.fileMention.empty": "No files found",
+  "prompt.image.remove": "Remove image",
+
+  "settings.providers.selectProvider": "Select provider…",
+
+  "nav.marketplace": "Marketplace",
+
+  "profile.account": "Account",
+
+  "settings.context.watcherPatterns.placeholder": "e.g. **/node_modules/**",
+}

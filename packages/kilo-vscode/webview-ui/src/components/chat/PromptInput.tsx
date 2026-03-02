@@ -265,7 +265,7 @@ export const PromptInput: Component = () => {
         <div class="file-mention-dropdown" ref={dropdownRef}>
           <Show
             when={mention.mentionResults().length > 0}
-            fallback={<div class="file-mention-empty">No files found</div>}
+            fallback={<div class="file-mention-empty">{language.t("prompt.fileMention.empty")}</div>}
           >
             <For each={mention.mentionResults()}>
               {(path, index) => (
@@ -297,7 +297,7 @@ export const PromptInput: Component = () => {
                   type="button"
                   class="image-attachment-remove"
                   onClick={() => imageAttach.remove(img.id)}
-                  aria-label="Remove image"
+                  aria-label={language.t("prompt.image.remove")}
                 >
                   ×
                 </button>

@@ -131,7 +131,7 @@ const ProvidersTab: Component = () => {
               variant="secondary"
               size="small"
               triggerVariant="settings"
-              placeholder="Select provider…"
+              placeholder={language.t("settings.providers.selectProvider")}
             />
           </div>
           <Button
@@ -202,7 +202,7 @@ const ProvidersTab: Component = () => {
               variant="secondary"
               size="small"
               triggerVariant="settings"
-              placeholder="Select provider…"
+              placeholder={language.t("settings.providers.selectProvider")}
             />
           </div>
           <Button
