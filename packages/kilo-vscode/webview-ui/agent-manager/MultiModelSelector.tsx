@@ -3,7 +3,14 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { useProvider } from "../src/context/provider"
 import type { EnrichedModel } from "../src/context/provider"
 import { useLanguage } from "../src/context/language"
-import { KILO_GATEWAY_ID, providerSortKey } from "../src/components/shared/model-selector-utils"
+import {
+  KILO_GATEWAY_ID,
+  providerSortKey,
+  filterModels,
+  modelKey,
+  WordBoundaryFzf,
+  buildMatchSegments,
+} from "../src/components/shared/model-selector-utils"
 import {
   type ModelAllocations,
   MAX_MULTI_VERSIONS,
@@ -38,18 +45,13 @@ export const MultiModelSelector: Component<{
     return models().filter((m) => m.providerID === KILO_GATEWAY_ID || c.includes(m.providerID))
   })
 
-  const filtered = createMemo(() => {
-    const q = search().toLowerCase()
-    if (!q) return visibleModels()
-    return visibleModels().filter(
-      (m) =>
-        m.name.toLowerCase().includes(q) || m.providerName.toLowerCase().includes(q) || m.id.toLowerCase().includes(q),
-    )
-  })
+  const finder = createMemo(() => new WordBoundaryFzf(visibleModels(), (model) => model.name))
+
+  const filtered = createMemo(() => filterModels(visibleModels(), search(), finder()))
 
   const groups = createMemo<ModelGroup[]>(() => {
     const map = new Map<string, ModelGroup>()
-    for (const m of filtered()) {
+    for (const m of filtered().models) {
       let group = map.get(m.providerID)
       if (!group) {
         group = { providerName: m.providerName, models: [] }
@@ -106,7 +108,13 @@ export const MultiModelSelector: Component<{
                             props.onChange(toggleModel(props.allocations, model.providerID, model.id, model.name))
                           }
                         />
-                        <span class="am-mm-item-name">{model.name}</span>
+                        <span class="am-mm-item-name">
+                          <For each={buildMatchSegments(model.name, filtered().positions.get(modelKey(model)))}>
+                            {(segment) => (
+                              <span classList={{ "am-mm-item-name-highlight": segment.highlight }}>{segment.text}</span>
+                            )}
+                          </For>
+                        </span>
                       </label>
                       <Show when={checked()}>
                         <select
