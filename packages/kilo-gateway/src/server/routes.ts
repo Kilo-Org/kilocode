@@ -233,10 +233,10 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
         const endpoint = new URL("fim/completions", baseApiUrl)
 
         const headers = {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-            ...buildKiloHeaders(undefined, { kilocodeOrganizationId: organizationId }),
-            [HEADER_FEATURE]: "autocomplete",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          ...buildKiloHeaders(undefined, { kilocodeOrganizationId: organizationId }),
+          [HEADER_FEATURE]: "autocomplete",
         }
 
         const response = await fetch(endpoint, {
