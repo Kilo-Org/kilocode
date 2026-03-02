@@ -11,6 +11,7 @@ on:
 
 jobs:
   link-checker:
+    if: github.repository == 'Kilo-Org/kilocode'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

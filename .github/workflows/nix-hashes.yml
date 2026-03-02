@@ -21,6 +21,7 @@ jobs:
   # Native runners required: bun install cross-compilation flags (--os/--cpu)
   # do not produce byte-identical node_modules as native installs.
   compute-hash:
+    if: github.repository == 'Kilo-Org/kilocode'
     strategy:
       fail-fast: false
       matrix:
