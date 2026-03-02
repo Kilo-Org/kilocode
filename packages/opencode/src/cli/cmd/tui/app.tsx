@@ -42,6 +42,7 @@ import { writeHeapSnapshot } from "v8"
 import { PromptRefProvider, usePromptRef } from "./context/prompt"
 import { registerKiloCommands } from "@/kilocode/kilo-commands" // kilocode_change
 import { initializeTUIDependencies } from "@kilocode/kilo-gateway/tui" // kilocode_change
+import { DialogCheatSheet } from "@/kilocode/components/dialog-cheat-sheet" // kilocode_change
 
 async function getTerminalBackgroundColor(): Promise<"dark" | "light"> {
   // can't set raw mode if not a TTY
@@ -358,6 +359,21 @@ function App() {
     ),
   )
 
+  // kilocode_change start - Show cheat sheet on first launch
+  createEffect(
+    on(
+      () => sync.status === "complete" && kv.ready,
+      (ready, wasReady) => {
+        if (!ready || wasReady) return
+        if (kv.get("cheat_sheet_seen")) return
+        if (sync.data.provider.length === 0) return
+        kv.set("cheat_sheet_seen", true)
+        dialog.replace(() => <DialogCheatSheet />)
+      },
+    ),
+  )
+  // kilocode_change end
+
   const connected = useConnected()
   command.register(() => [
     {
@@ -557,6 +573,21 @@ function App() {
       },
       category: "System",
     },
+    // kilocode_change start
+    {
+      title: "Keyboard shortcuts",
+      value: "cheat_sheet.show",
+      keybind: "cheat_sheet",
+      slash: {
+        name: "shortcuts",
+        aliases: ["keys", "keybindings"],
+      },
+      onSelect: () => {
+        dialog.replace(() => <DialogCheatSheet />)
+      },
+      category: "System",
+    },
+    // kilocode_change end
     {
       title: "Open docs",
       value: "docs.open",
