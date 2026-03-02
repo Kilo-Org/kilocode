@@ -1291,7 +1291,7 @@ const AgentManagerContent: Component = () => {
 
   // Advanced worktree dialog — opens a full dialog with prompt, versions, model, mode
   const showAdvancedWorktreeDialog = () => {
-    const branch = hasConfiguredBranch() ? repoDefaultBranch() : undefined
+    const branch = repoDefaultBranch()
     dialog.show(() => <NewWorktreeDialog onClose={() => dialog.close()} defaultBaseBranch={branch} />)
   }
 
@@ -2390,7 +2390,7 @@ function sanitizeBranchName(name: string): string {
     .join("/")
 }
 
-const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBranch?: string }> = (props) => {
+const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBranch: string }> = (props) => {
   const { t } = useLanguage()
   const vscode = useVSCode()
   const session = useSession()
@@ -2400,7 +2400,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBranch?: st
   // --- Shared branch data (used by both New tab's base branch selector and Import tab) ---
   const [branches, setBranches] = createSignal<BranchInfo[]>([])
   const [branchesLoading, setBranchesLoading] = createSignal(false)
-  const [defaultBranch, setDefaultBranch] = createSignal(props.defaultBaseBranch || "main")
+  const [defaultBranch, setDefaultBranch] = createSignal(props.defaultBaseBranch)
   const [branchSearch, setBranchSearch] = createSignal("")
 
   // --- New tab state ---
