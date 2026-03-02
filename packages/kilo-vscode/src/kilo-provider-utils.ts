@@ -39,8 +39,9 @@ export interface SessionRefreshContext {
 /**
  * Load sessions from the workspace and all registered worktree directories.
  * Sets pendingSessionRefresh when the HTTP client isn't ready yet.
+ * Returns the resolved projectID (if any) so the caller can update its own state.
  */
-export async function loadSessions(ctx: SessionRefreshContext): Promise<void> {
+export async function loadSessions(ctx: SessionRefreshContext): Promise<string | undefined> {
   const client = ctx.httpClient
   if (!client) {
     ctx.pendingSessionRefresh = true
@@ -56,7 +57,12 @@ export async function loadSessions(ctx: SessionRefreshContext): Promise<void> {
   const projectID = sessions[0]?.projectID
   const worktreeDirs = new Set(ctx.sessionDirectories.values())
   const extra = await Promise.all(
-    [...worktreeDirs].map((dir) => client.listSessions(dir).catch(() => [] as SessionInfo[])),
+    [...worktreeDirs].map((dir) =>
+      client.listSessions(dir).catch((err) => {
+        console.error(`[Kilo] Failed to list sessions for ${dir}:`, err)
+        return [] as SessionInfo[]
+      }),
+    ),
   )
   const seen = new Set(sessions.map((s) => s.id))
   for (const batch of extra) {
@@ -72,6 +78,8 @@ export async function loadSessions(ctx: SessionRefreshContext): Promise<void> {
     type: "sessionsLoaded",
     sessions: sessions.map((s) => sessionToWebview(s)),
   })
+
+  return sessions[0]?.projectID
 }
 
 /**

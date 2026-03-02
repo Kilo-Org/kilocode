@@ -814,7 +814,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private async handleLoadSessions(): Promise<void> {
     const ctx = this.sessionRefreshContext
     try {
-      await loadSessionsUtil(ctx)
+      const resolved = await loadSessionsUtil(ctx)
+      if (resolved) this.projectID = resolved
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to load sessions:", error)
       this.postMessage({
@@ -823,8 +824,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       })
     }
     this.pendingSessionRefresh = ctx.pendingSessionRefresh
-    // Update project ID when sessions are available
-    // (handled inside loadSessionsUtil via postMessage)
   }
 
   /**
