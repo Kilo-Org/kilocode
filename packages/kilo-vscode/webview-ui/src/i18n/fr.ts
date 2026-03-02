@@ -971,6 +971,9 @@ export const dict = {
   "agentManager.worktree.new": "Nouveau Worktree",
   "agentManager.worktree.setupScript": "Script de configuration du Worktree",
   "agentManager.worktree.delete": "Supprimer le Worktree",
+  "agentManager.worktree.stale": "Obsolète",
+  "agentManager.worktree.staleTooltip": "Absent du disque ou n'est plus suivi par git worktree",
+  "agentManager.worktree.removeStale": "Supprimer le Worktree obsolète",
   "agentManager.worktree.doubleClickRename": "Double-cliquez pour renommer",
   "agentManager.worktree.versions": "{{count}} versions",
   "agentManager.worktree.advancedOptions": "Options avancées du Worktree",
@@ -1014,6 +1017,14 @@ export const dict = {
     " ? Cela supprime le Worktree du disque et dissocie toutes les sessions.",
   "agentManager.dialog.deleteWorktree.cancel": "Annuler",
   "agentManager.dialog.deleteWorktree.confirm": "Supprimer",
+
+  "agentManager.dialog.removeStaleWorktree.title": "Supprimer le Worktree obsolète",
+  "agentManager.dialog.removeStaleWorktree.messagePre": "Supprimer le Worktree obsolète ",
+  "agentManager.dialog.removeStaleWorktree.messagePost":
+    " ? Cela supprime uniquement l'association dans Agent Manager et laisse les fichiers du disque inchangés.",
+  "agentManager.dialog.removeStaleWorktree.cancel": "Annuler",
+  "agentManager.dialog.removeStaleWorktree.confirm": "Supprimer le Worktree obsolète",
+
   "agentManager.dialog.openWorktree": "Nouveau worktree",
   "agentManager.dialog.tab.new": "Nouveau",
   "agentManager.dialog.tab.import": "Importer",

@@ -961,6 +961,9 @@ export const dict = {
   "agentManager.worktree.new": "Novo Worktree",
   "agentManager.worktree.setupScript": "Script de configuração do Worktree",
   "agentManager.worktree.delete": "Excluir Worktree",
+  "agentManager.worktree.stale": "Obsoleto",
+  "agentManager.worktree.staleTooltip": "Ausente no disco ou não é mais rastreado pelo git worktree",
+  "agentManager.worktree.removeStale": "Remover Worktree obsoleto",
   "agentManager.worktree.doubleClickRename": "Clique duplo para renomear",
   "agentManager.worktree.versions": "{{count}} versões",
   "agentManager.worktree.advancedOptions": "Opções avançadas de Worktree",
@@ -1003,6 +1006,14 @@ export const dict = {
   "agentManager.dialog.deleteWorktree.messagePost": "? Isso remove o Worktree do disco e desassocia todas as sessões.",
   "agentManager.dialog.deleteWorktree.cancel": "Cancelar",
   "agentManager.dialog.deleteWorktree.confirm": "Excluir",
+
+  "agentManager.dialog.removeStaleWorktree.title": "Remover Worktree obsoleto",
+  "agentManager.dialog.removeStaleWorktree.messagePre": "Remover Worktree obsoleto ",
+  "agentManager.dialog.removeStaleWorktree.messagePost":
+    "? Isso remove apenas o mapeamento no Agent Manager e não altera os arquivos no disco.",
+  "agentManager.dialog.removeStaleWorktree.cancel": "Cancelar",
+  "agentManager.dialog.removeStaleWorktree.confirm": "Remover Worktree obsoleto",
+
   "agentManager.dialog.openWorktree": "Novo Worktree",
   "agentManager.dialog.tab.new": "Novo",
   "agentManager.dialog.tab.import": "Importar",

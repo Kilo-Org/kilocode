@@ -871,7 +871,6 @@ export const dict = {
   "settings.language.current": "Current:",
 
   "common.add": "Add",
-  "common.default": "Default",
   "common.choose": "Choose…",
 
   "settings.notImplemented": "This section is not implemented yet.",
@@ -1004,6 +1003,9 @@ export const dict = {
   "agentManager.worktree.new": "New Worktree",
   "agentManager.worktree.setupScript": "Worktree Setup Script",
   "agentManager.worktree.delete": "Delete worktree",
+  "agentManager.worktree.stale": "Stale",
+  "agentManager.worktree.staleTooltip": "Missing on disk or no longer tracked by git worktree",
+  "agentManager.worktree.removeStale": "Remove stale worktree",
   "agentManager.worktree.doubleClickRename": "Double-click to rename",
   "agentManager.worktree.versions": "{{count}} versions",
   "agentManager.worktree.advancedOptions": "Advanced worktree options",
@@ -1053,6 +1055,13 @@ export const dict = {
     "? This removes the worktree from disk and dissociates all sessions.",
   "agentManager.dialog.deleteWorktree.cancel": "Cancel",
   "agentManager.dialog.deleteWorktree.confirm": "Delete",
+
+  "agentManager.dialog.removeStaleWorktree.title": "Remove Stale Worktree",
+  "agentManager.dialog.removeStaleWorktree.messagePre": "Remove stale worktree ",
+  "agentManager.dialog.removeStaleWorktree.messagePost":
+    "? This only removes the Agent Manager mapping and leaves files on disk untouched.",
+  "agentManager.dialog.removeStaleWorktree.cancel": "Cancel",
+  "agentManager.dialog.removeStaleWorktree.confirm": "Remove stale worktree",
 
   "agentManager.dialog.openWorktree": "New Worktree",
   "agentManager.dialog.tab.new": "New",

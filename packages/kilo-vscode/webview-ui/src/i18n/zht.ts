@@ -943,6 +943,9 @@ export const dict = {
   "agentManager.worktree.new": "新建 Worktree",
   "agentManager.worktree.setupScript": "Worktree 設定指令碼",
   "agentManager.worktree.delete": "刪除 Worktree",
+  "agentManager.worktree.stale": "已失效",
+  "agentManager.worktree.staleTooltip": "磁碟上不存在，或不再由 git worktree 追蹤",
+  "agentManager.worktree.removeStale": "移除失效 Worktree",
   "agentManager.worktree.doubleClickRename": "按兩下以重新命名",
   "agentManager.worktree.versions": "{{count}} 個版本",
   "agentManager.worktree.advancedOptions": "Worktree 進階選項",
@@ -985,6 +988,13 @@ export const dict = {
   "agentManager.dialog.deleteWorktree.messagePost": "？這將從磁碟中移除 Worktree 並取消所有工作階段的關聯。",
   "agentManager.dialog.deleteWorktree.cancel": "取消",
   "agentManager.dialog.deleteWorktree.confirm": "刪除",
+
+  "agentManager.dialog.removeStaleWorktree.title": "移除失效 Worktree",
+  "agentManager.dialog.removeStaleWorktree.messagePre": "移除失效 Worktree ",
+  "agentManager.dialog.removeStaleWorktree.messagePost": "？這只會移除 Agent Manager 對應，不會變更磁碟上的檔案。",
+  "agentManager.dialog.removeStaleWorktree.cancel": "取消",
+  "agentManager.dialog.removeStaleWorktree.confirm": "移除失效 Worktree",
+
   "agentManager.dialog.openWorktree": "新建工作樹",
   "agentManager.dialog.tab.new": "新建",
   "agentManager.dialog.tab.import": "匯入",

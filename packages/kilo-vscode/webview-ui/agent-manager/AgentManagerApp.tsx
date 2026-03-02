@@ -292,6 +292,7 @@ const AgentManagerContent: Component = () => {
   const [selection, setSelection] = createSignal<SidebarSelection>(LOCAL)
   const [repoBranch, setRepoBranch] = createSignal<string | undefined>()
   const [busyWorktrees, setBusyWorktrees] = createSignal<Map<string, WorktreeBusyState>>(new Map())
+  const [staleWorktreeIds, setStaleWorktreeIds] = createSignal<Set<string>>(new Set())
   const [worktreesLoaded, setWorktreesLoaded] = createSignal(false)
   const [sessionsLoaded, setSessionsLoaded] = createSignal(false)
   const [isGitRepo, setIsGitRepo] = createSignal(true)
@@ -519,6 +520,8 @@ const AgentManagerContent: Component = () => {
     const sessions = session.sessions().filter((s) => ids.has(s.id))
     return firstOrderedTitle(sessions, worktreeTabOrder()[wt.id], wt.branch)
   }
+
+  const isStaleWorktree = (worktreeId: string): boolean => staleWorktreeIds().has(worktreeId)
 
   /** Worktrees sorted so that grouped items are always adjacent, ordered by creation time. */
   const sortedWorktrees = createMemo(() => {
@@ -830,6 +833,7 @@ const AgentManagerContent: Component = () => {
         const state = msg as AgentManagerStateMessage
         setWorktrees(state.worktrees)
         setManagedSessions(state.sessions)
+        setStaleWorktreeIds(new Set(state.staleWorktreeIds ?? []))
         if (state.isGitRepo !== undefined) setIsGitRepo(state.isGitRepo)
         if (!worktreesLoaded()) setWorktreesLoaded(true)
         // When not a git repo, also mark sessions as loaded since the Kilo
@@ -1182,6 +1186,54 @@ const AgentManagerContent: Component = () => {
             </Button>
             <Button variant="primary" size="large" class="am-confirm-delete" onClick={doDelete} autofocus>
               {t("agentManager.dialog.deleteWorktree.confirm")}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+    ))
+  }
+
+  const confirmRemoveStaleWorktree = (worktreeId: string) => {
+    const wt = worktrees().find((w) => w.id === worktreeId)
+    if (!wt) return
+
+    const remove = () => {
+      vscode.postMessage({ type: "agentManager.removeStaleWorktree", worktreeId: wt.id })
+      if (selection() === wt.id) {
+        const next = nextSelectionAfterDelete(
+          wt.id,
+          worktrees().map((w) => w.id),
+        )
+        if (next === LOCAL) selectLocal()
+        if (next !== LOCAL) selectWorktree(next)
+      }
+      dialog.close()
+    }
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        remove()
+      }
+    }
+
+    dialog.show(() => (
+      <Dialog title={t("agentManager.dialog.removeStaleWorktree.title")} fit>
+        <div class="am-confirm" onKeyDown={onKeyDown}>
+          <div class="am-confirm-message">
+            <Icon name="warning" size="small" />
+            <span>
+              {t("agentManager.dialog.removeStaleWorktree.messagePre")}
+              <code class="am-confirm-branch">{wt.branch}</code>
+              {t("agentManager.dialog.removeStaleWorktree.messagePost")}
+            </span>
+          </div>
+          <div class="am-confirm-actions">
+            <Button variant="ghost" size="large" onClick={() => dialog.close()}>
+              {t("agentManager.dialog.removeStaleWorktree.cancel")}
+            </Button>
+            <Button variant="primary" size="large" class="am-confirm-delete" onClick={remove} autofocus>
+              {t("agentManager.dialog.removeStaleWorktree.confirm")}
             </Button>
           </div>
         </div>
@@ -1592,6 +1644,17 @@ const AgentManagerContent: Component = () => {
                                   >
                                     <Icon name="branch" size="small" />
                                   </Show>
+                                  <Show when={isStaleWorktree(wt.id)}>
+                                    <Tooltip
+                                      value={t("agentManager.worktree.staleTooltip")}
+                                      placement="top"
+                                      contentClass="am-tooltip-wrap"
+                                    >
+                                      <span class="am-worktree-stale-badge">
+                                        <Icon name="warning" size="small" />
+                                      </span>
+                                    </Tooltip>
+                                  </Show>
                                   <Show
                                     when={renamingWt() === wt.id}
                                     fallback={
@@ -1714,6 +1777,29 @@ const AgentManagerContent: Component = () => {
                                   <span class="am-hover-card-row-label">{t("agentManager.hoverCard.sessions")}</span>
                                   <span class="am-hover-card-row-value">{sessions().length}</span>
                                 </div>
+                                <Show when={isStaleWorktree(wt.id)}>
+                                  <div class="am-hover-card-divider" />
+                                  <div class="am-hover-card-row am-hover-card-row-stale">
+                                    <span class="am-hover-card-row-label">{t("agentManager.worktree.stale")}</span>
+                                    <span class="am-hover-card-row-value am-hover-card-stale-pill">
+                                      <Icon name="warning" size="small" />
+                                      {t("agentManager.worktree.stale")}
+                                    </span>
+                                  </div>
+                                  <div class="am-hover-card-note">{t("agentManager.worktree.staleTooltip")}</div>
+                                  <div class="am-hover-card-actions">
+                                    <Button
+                                      variant="ghost"
+                                      size="small"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        confirmRemoveStaleWorktree(wt.id)
+                                      }}
+                                    >
+                                      {t("agentManager.worktree.removeStale")}
+                                    </Button>
+                                  </div>
+                                </Show>
                                 {(() => {
                                   const hoverStats = () => worktreeStats()[wt.id]
                                   return (

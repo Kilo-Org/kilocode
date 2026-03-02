@@ -960,6 +960,9 @@ export const dict = {
   "agentManager.worktree.new": "Новый Worktree",
   "agentManager.worktree.setupScript": "Скрипт настройки Worktree",
   "agentManager.worktree.delete": "Удалить Worktree",
+  "agentManager.worktree.stale": "Устаревший",
+  "agentManager.worktree.staleTooltip": "Отсутствует на диске или больше не отслеживается git worktree",
+  "agentManager.worktree.removeStale": "Удалить устаревший Worktree",
   "agentManager.worktree.doubleClickRename": "Двойной клик для переименования",
   "agentManager.worktree.versions": "{{count}} версий",
   "agentManager.worktree.advancedOptions": "Расширенные настройки Worktree",
@@ -1002,6 +1005,14 @@ export const dict = {
   "agentManager.dialog.deleteWorktree.messagePost": "? Это удалит Worktree с диска и отключит все сессии.",
   "agentManager.dialog.deleteWorktree.cancel": "Отмена",
   "agentManager.dialog.deleteWorktree.confirm": "Удалить",
+
+  "agentManager.dialog.removeStaleWorktree.title": "Удалить устаревший Worktree",
+  "agentManager.dialog.removeStaleWorktree.messagePre": "Удалить устаревший Worktree ",
+  "agentManager.dialog.removeStaleWorktree.messagePost":
+    "? Это удалит только привязку в Agent Manager и не затронет файлы на диске.",
+  "agentManager.dialog.removeStaleWorktree.cancel": "Отмена",
+  "agentManager.dialog.removeStaleWorktree.confirm": "Удалить устаревший Worktree",
+
   "agentManager.dialog.openWorktree": "Новый worktree",
   "agentManager.dialog.tab.new": "Новый",
   "agentManager.dialog.tab.import": "Импорт",

@@ -952,6 +952,9 @@ export const dict = {
   "agentManager.worktree.new": "새 Worktree",
   "agentManager.worktree.setupScript": "Worktree 설정 스크립트",
   "agentManager.worktree.delete": "Worktree 삭제",
+  "agentManager.worktree.stale": "오래됨",
+  "agentManager.worktree.staleTooltip": "디스크에 없거나 더 이상 git worktree에서 추적되지 않습니다",
+  "agentManager.worktree.removeStale": "오래된 Worktree 제거",
   "agentManager.worktree.doubleClickRename": "더블 클릭하여 이름 변경",
   "agentManager.worktree.versions": "{{count}}개 버전",
   "agentManager.worktree.advancedOptions": "Worktree 고급 옵션",
@@ -994,6 +997,14 @@ export const dict = {
   "agentManager.dialog.deleteWorktree.messagePost": "? 디스크에서 Worktree를 제거하고 모든 세션의 연결을 해제합니다.",
   "agentManager.dialog.deleteWorktree.cancel": "취소",
   "agentManager.dialog.deleteWorktree.confirm": "삭제",
+
+  "agentManager.dialog.removeStaleWorktree.title": "오래된 Worktree 제거",
+  "agentManager.dialog.removeStaleWorktree.messagePre": "오래된 Worktree 제거 ",
+  "agentManager.dialog.removeStaleWorktree.messagePost":
+    "? 이 작업은 Agent Manager 매핑만 제거하며 디스크의 파일은 변경하지 않습니다.",
+  "agentManager.dialog.removeStaleWorktree.cancel": "취소",
+  "agentManager.dialog.removeStaleWorktree.confirm": "오래된 Worktree 제거",
+
   "agentManager.dialog.openWorktree": "새 워크트리",
   "agentManager.dialog.tab.new": "새로 만들기",
   "agentManager.dialog.tab.import": "가져오기",

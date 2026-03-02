@@ -951,6 +951,9 @@ export const dict = {
   "agentManager.worktree.new": "新しいWorktree",
   "agentManager.worktree.setupScript": "Worktreeセットアップスクリプト",
   "agentManager.worktree.delete": "Worktreeを削除",
+  "agentManager.worktree.stale": "無効",
+  "agentManager.worktree.staleTooltip": "ディスク上に存在しないか、git worktree で追跡されていません",
+  "agentManager.worktree.removeStale": "無効な Worktree を削除",
   "agentManager.worktree.doubleClickRename": "ダブルクリックで名前を変更",
   "agentManager.worktree.versions": "{{count}}バージョン",
   "agentManager.worktree.advancedOptions": "Worktreeの詳細オプション",
@@ -994,6 +997,14 @@ export const dict = {
     "？ ディスクからWorktreeを削除し、すべてのセッションの関連付けを解除します。",
   "agentManager.dialog.deleteWorktree.cancel": "キャンセル",
   "agentManager.dialog.deleteWorktree.confirm": "削除",
+
+  "agentManager.dialog.removeStaleWorktree.title": "無効な Worktree を削除",
+  "agentManager.dialog.removeStaleWorktree.messagePre": "無効な Worktree を削除 ",
+  "agentManager.dialog.removeStaleWorktree.messagePost":
+    "？ これは Agent Manager の関連付けのみを削除し、ディスク上のファイルは変更しません。",
+  "agentManager.dialog.removeStaleWorktree.cancel": "キャンセル",
+  "agentManager.dialog.removeStaleWorktree.confirm": "無効な Worktree を削除",
+
   "agentManager.dialog.openWorktree": "新規ワークツリー",
   "agentManager.dialog.tab.new": "新規",
   "agentManager.dialog.tab.import": "インポート",

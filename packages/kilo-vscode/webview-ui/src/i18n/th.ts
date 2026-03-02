@@ -944,6 +944,9 @@ export const dict = {
   "agentManager.worktree.new": "Worktree ใหม่",
   "agentManager.worktree.setupScript": "สคริปต์ตั้งค่า Worktree",
   "agentManager.worktree.delete": "ลบ Worktree",
+  "agentManager.worktree.stale": "ล้าสมัย",
+  "agentManager.worktree.staleTooltip": "ไม่พบบนดิสก์หรือไม่ได้ถูกติดตามโดย git worktree อีกต่อไป",
+  "agentManager.worktree.removeStale": "ลบ Worktree ที่ล้าสมัย",
   "agentManager.worktree.doubleClickRename": "ดับเบิลคลิกเพื่อเปลี่ยนชื่อ",
   "agentManager.worktree.versions": "{{count}} เวอร์ชัน",
   "agentManager.worktree.advancedOptions": "ตัวเลือก Worktree ขั้นสูง",
@@ -987,6 +990,14 @@ export const dict = {
     "? การดำเนินการนี้จะลบ Worktree ออกจากดิสก์และยกเลิกการเชื่อมโยงเซสชันทั้งหมด",
   "agentManager.dialog.deleteWorktree.cancel": "ยกเลิก",
   "agentManager.dialog.deleteWorktree.confirm": "ลบ",
+
+  "agentManager.dialog.removeStaleWorktree.title": "ลบ Worktree ที่ล้าสมัย",
+  "agentManager.dialog.removeStaleWorktree.messagePre": "ลบ Worktree ที่ล้าสมัย ",
+  "agentManager.dialog.removeStaleWorktree.messagePost":
+    "? การดำเนินการนี้จะลบเฉพาะการแมปใน Agent Manager และจะไม่แตะไฟล์บนดิสก์",
+  "agentManager.dialog.removeStaleWorktree.cancel": "ยกเลิก",
+  "agentManager.dialog.removeStaleWorktree.confirm": "ลบ Worktree ที่ล้าสมัย",
+
   "agentManager.dialog.openWorktree": "Worktree ใหม่",
   "agentManager.dialog.tab.new": "ใหม่",
   "agentManager.dialog.tab.import": "นำเข้า",

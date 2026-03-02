@@ -969,6 +969,9 @@ export const dict = {
   "agentManager.worktree.new": "Neuer Worktree",
   "agentManager.worktree.setupScript": "Worktree-Einrichtungsskript",
   "agentManager.worktree.delete": "Worktree löschen",
+  "agentManager.worktree.stale": "Veraltet",
+  "agentManager.worktree.staleTooltip": "Fehlt auf der Festplatte oder wird nicht mehr von git worktree verfolgt",
+  "agentManager.worktree.removeStale": "Veralteten Worktree entfernen",
   "agentManager.worktree.doubleClickRename": "Doppelklick zum Umbenennen",
   "agentManager.worktree.versions": "{{count}} Versionen",
   "agentManager.worktree.advancedOptions": "Erweiterte Worktree-Optionen",
@@ -1012,6 +1015,14 @@ export const dict = {
     "? Dies entfernt den Worktree von der Festplatte und trennt alle Sitzungen.",
   "agentManager.dialog.deleteWorktree.cancel": "Abbrechen",
   "agentManager.dialog.deleteWorktree.confirm": "Löschen",
+
+  "agentManager.dialog.removeStaleWorktree.title": "Veralteten Worktree entfernen",
+  "agentManager.dialog.removeStaleWorktree.messagePre": "Veralteten Worktree entfernen ",
+  "agentManager.dialog.removeStaleWorktree.messagePost":
+    "? Dies entfernt nur die Zuordnung im Agent Manager und lässt die Dateien auf der Festplatte unberührt.",
+  "agentManager.dialog.removeStaleWorktree.cancel": "Abbrechen",
+  "agentManager.dialog.removeStaleWorktree.confirm": "Veralteten Worktree entfernen",
+
   "agentManager.dialog.openWorktree": "Neuer Worktree",
   "agentManager.dialog.tab.new": "Neu",
   "agentManager.dialog.tab.import": "Importieren",

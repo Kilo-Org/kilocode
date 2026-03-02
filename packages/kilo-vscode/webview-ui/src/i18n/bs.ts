@@ -983,6 +983,9 @@ export const dict = {
   "agentManager.worktree.new": "Novi Worktree",
   "agentManager.worktree.setupScript": "Skripta za postavljanje Worktree-a",
   "agentManager.worktree.delete": "Obriši Worktree",
+  "agentManager.worktree.stale": "Zastario",
+  "agentManager.worktree.staleTooltip": "Nedostaje na disku ili ga git worktree više ne prati",
+  "agentManager.worktree.removeStale": "Ukloni zastarjeli Worktree",
   "agentManager.worktree.doubleClickRename": "Dvostruki klik za preimenovanje",
   "agentManager.worktree.versions": "{{count}} verzija",
   "agentManager.worktree.advancedOptions": "Napredne opcije Worktree-a",
@@ -1025,6 +1028,14 @@ export const dict = {
   "agentManager.dialog.deleteWorktree.messagePost": "? Ovo uklanja Worktree sa diska i odvezuje sve sesije.",
   "agentManager.dialog.deleteWorktree.cancel": "Otkaži",
   "agentManager.dialog.deleteWorktree.confirm": "Obriši",
+
+  "agentManager.dialog.removeStaleWorktree.title": "Ukloni zastarjeli Worktree",
+  "agentManager.dialog.removeStaleWorktree.messagePre": "Ukloni zastarjeli Worktree ",
+  "agentManager.dialog.removeStaleWorktree.messagePost":
+    "? Ovo uklanja samo mapiranje u Agent Manageru i ne dira datoteke na disku.",
+  "agentManager.dialog.removeStaleWorktree.cancel": "Otkaži",
+  "agentManager.dialog.removeStaleWorktree.confirm": "Ukloni zastarjeli Worktree",
+
   "agentManager.dialog.openWorktree": "Novi worktree",
   "agentManager.dialog.tab.new": "Novo",
   "agentManager.dialog.tab.import": "Uvezi",

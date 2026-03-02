@@ -947,6 +947,9 @@ export const dict = {
   "agentManager.worktree.new": "Worktree جديد",
   "agentManager.worktree.setupScript": "سكربت إعداد Worktree",
   "agentManager.worktree.delete": "حذف Worktree",
+  "agentManager.worktree.stale": "قديم",
+  "agentManager.worktree.staleTooltip": "مفقود على القرص أو لم يعد git worktree يتتبعه",
+  "agentManager.worktree.removeStale": "إزالة Worktree القديم",
   "agentManager.worktree.doubleClickRename": "انقر مرتين لإعادة التسمية",
   "agentManager.worktree.versions": "{{count}} نسخ",
   "agentManager.worktree.advancedOptions": "خيارات Worktree متقدمة",
@@ -989,6 +992,14 @@ export const dict = {
   "agentManager.dialog.deleteWorktree.messagePost": "؟ سيؤدي هذا إلى إزالة Worktree من القرص وفصل جميع الجلسات.",
   "agentManager.dialog.deleteWorktree.cancel": "إلغاء",
   "agentManager.dialog.deleteWorktree.confirm": "حذف",
+
+  "agentManager.dialog.removeStaleWorktree.title": "إزالة Worktree القديم",
+  "agentManager.dialog.removeStaleWorktree.messagePre": "إزالة Worktree القديم ",
+  "agentManager.dialog.removeStaleWorktree.messagePost":
+    "؟ سيؤدي هذا إلى إزالة الربط في Agent Manager فقط وترك الملفات على القرص دون تغيير.",
+  "agentManager.dialog.removeStaleWorktree.cancel": "إلغاء",
+  "agentManager.dialog.removeStaleWorktree.confirm": "إزالة Worktree القديم",
+
   "agentManager.dialog.openWorktree": "شجرة عمل جديدة",
   "agentManager.dialog.tab.new": "جديد",
   "agentManager.dialog.tab.import": "استيراد",

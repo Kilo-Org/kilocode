@@ -957,6 +957,9 @@ export const dict = {
   "agentManager.worktree.new": "Nytt Worktree",
   "agentManager.worktree.setupScript": "Worktree-oppsettskript",
   "agentManager.worktree.delete": "Slett Worktree",
+  "agentManager.worktree.stale": "Utdatert",
+  "agentManager.worktree.staleTooltip": "Mangler på disken eller spores ikke lenger av git worktree",
+  "agentManager.worktree.removeStale": "Fjern utdatert Worktree",
   "agentManager.worktree.doubleClickRename": "Dobbeltklikk for å gi nytt navn",
   "agentManager.worktree.versions": "{{count}} versjoner",
   "agentManager.worktree.advancedOptions": "Avanserte Worktree-alternativer",
@@ -999,6 +1002,14 @@ export const dict = {
   "agentManager.dialog.deleteWorktree.messagePost": "? Dette fjerner Worktree fra disken og kobler fra alle økter.",
   "agentManager.dialog.deleteWorktree.cancel": "Avbryt",
   "agentManager.dialog.deleteWorktree.confirm": "Slett",
+
+  "agentManager.dialog.removeStaleWorktree.title": "Fjern utdatert Worktree",
+  "agentManager.dialog.removeStaleWorktree.messagePre": "Fjern utdatert Worktree ",
+  "agentManager.dialog.removeStaleWorktree.messagePost":
+    "? Dette fjerner bare koblingen i Agent Manager og lar filene på disken være urørt.",
+  "agentManager.dialog.removeStaleWorktree.cancel": "Avbryt",
+  "agentManager.dialog.removeStaleWorktree.confirm": "Fjern utdatert Worktree",
+
   "agentManager.dialog.openWorktree": "Ny worktree",
   "agentManager.dialog.tab.new": "Ny",
   "agentManager.dialog.tab.import": "Importer",

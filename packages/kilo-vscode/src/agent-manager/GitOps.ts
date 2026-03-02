@@ -1,5 +1,6 @@
 import * as nodePath from "path"
 import simpleGit from "simple-git"
+import { parseWorktreeList, normalizePath } from "./git-import"
 
 export interface GitOpsOptions {
   log: (...args: unknown[]) => void
@@ -105,6 +106,16 @@ export class GitOps {
       })
     this.inflightFetch.set(key, job)
     return job
+  }
+
+  async listWorktreePaths(cwd: string): Promise<Set<string>> {
+    const raw = await this.raw(["worktree", "list", "--porcelain"], cwd)
+    const paths = new Set<string>()
+    for (const entry of parseWorktreeList(raw)) {
+      if (entry.bare) continue
+      paths.add(normalizePath(entry.path))
+    }
+    return paths
   }
 
   async countMissingOriginCommits(cwd: string, parentBranch: string): Promise<number> {
