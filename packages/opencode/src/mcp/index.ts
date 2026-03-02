@@ -117,6 +117,28 @@ export namespace MCP {
   }
 
   // kilocode_change start - Anchor regex patterns for providers that require ^/$ (e.g. llama.cpp)
+  // Check for unescaped `|` at the top level of a regex pattern (not inside [...] or (...)).
+  function hasTopLevelAlternation(pattern: string): boolean {
+    let inCharClass = false
+    let depth = 0
+    for (let i = 0; i < pattern.length; i++) {
+      const ch = pattern[i]
+      if (ch === "\\") {
+        i++
+        continue
+      }
+      if (inCharClass) {
+        if (ch === "]") inCharClass = false
+        continue
+      }
+      if (ch === "[") inCharClass = true
+      else if (ch === "(") depth++
+      else if (ch === ")" && depth > 0) depth--
+      else if (ch === "|" && depth === 0) return true
+    }
+    return false
+  }
+
   // Recursively anchor regex patterns in JSON schemas.
   // Some providers (e.g. llama.cpp) require patterns to start with ^ and end with $.
   export function anchorPatterns(schema: JSONSchema7): JSONSchema7 {
@@ -128,7 +150,7 @@ export namespace MCP {
       // Account for even-length backslash sequences (e.g. \\$ is a real anchor, \$ is not).
       const hasStart = /^\^/.test(result.pattern)
       const hasEnd = /(^|[^\\])(\\\\)*\$$/.test(result.pattern)
-      if (result.pattern.includes("|") && (!hasStart || !hasEnd)) {
+      if (hasTopLevelAlternation(result.pattern) && (!hasStart || !hasEnd)) {
         // Wrap in non-capturing group to preserve alternation semantics.
         // Applies to unanchored ("foo|bar"), and partially-anchored ("^foo|bar", "foo|bar$")
         // patterns — naively prepending/appending anchors would change regex semantics.

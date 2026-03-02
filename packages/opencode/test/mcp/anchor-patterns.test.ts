@@ -196,6 +196,30 @@ describe("anchorPatterns", () => {
     expect((result.properties!.name as JSONSchema7).pattern).toBe("^[a-z]+$")
   })
 
+  test("does not wrap pipe inside character class", () => {
+    const schema: JSONSchema7 = { pattern: "[a|b]+" }
+    const result = anchorPatterns(schema)
+    expect(result.pattern).toBe("^[a|b]+$")
+  })
+
+  test("does not wrap alternation fully inside a group", () => {
+    const schema: JSONSchema7 = { pattern: "(foo|bar)" }
+    const result = anchorPatterns(schema)
+    expect(result.pattern).toBe("^(foo|bar)$")
+  })
+
+  test("wraps when top-level alternation exists alongside groups", () => {
+    const schema: JSONSchema7 = { pattern: "(foo|bar)|baz" }
+    const result = anchorPatterns(schema)
+    expect(result.pattern).toBe("^(?:(foo|bar)|baz)$")
+  })
+
+  test("does not wrap escaped pipe", () => {
+    const schema: JSONSchema7 = { pattern: "foo\\|bar" }
+    const result = anchorPatterns(schema)
+    expect(result.pattern).toBe("^foo\\|bar$")
+  })
+
   test("does not mutate original schema", () => {
     const original: JSONSchema7 = { type: "string", pattern: "[a-z]+" }
     anchorPatterns(original)
