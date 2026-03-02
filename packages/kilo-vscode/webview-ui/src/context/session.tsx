@@ -35,6 +35,7 @@ import type {
   ModelSelection,
   ContextUsage,
   AgentInfo,
+  CommandInfo,
   ExtensionMessage,
   FileAttachment,
 } from "../types/messages"
@@ -106,6 +107,7 @@ interface SessionContextValue {
 
   // Agent/mode selection (per-session)
   agents: Accessor<AgentInfo[]>
+  commands: Accessor<CommandInfo[]>
   selectedAgent: Accessor<string>
   selectAgent: (name: string) => void
   getSessionAgent: (sessionID: string) => string
@@ -183,6 +185,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Agents (modes) loaded from the CLI backend
   const [agents, setAgents] = createSignal<AgentInfo[]>([])
+  const [commands, setCommands] = createSignal<CommandInfo[]>([])
   const [defaultAgent, setDefaultAgent] = createSignal("code")
 
   // Pending agent selection for before a session exists (mirrors pendingModelSelection)
@@ -289,6 +292,33 @@ export const SessionProvider: ParentComponent = (props) => {
   onCleanup(() => {
     unsubAgents()
     clearInterval(agentRetryTimer)
+  })
+
+  const unsubCommands = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type !== "commandsLoaded") {
+      return
+    }
+    setCommands(message.commands)
+  })
+
+  let commandRetries = 0
+  const commandMaxRetries = 5
+  const commandRetryMs = 500
+
+  vscode.postMessage({ type: "requestCommands" })
+
+  const commandRetryTimer = setInterval(() => {
+    commandRetries++
+    if (commands().length > 0 || commandRetries >= commandMaxRetries) {
+      clearInterval(commandRetryTimer)
+      return
+    }
+    vscode.postMessage({ type: "requestCommands" })
+  }, commandRetryMs)
+
+  onCleanup(() => {
+    unsubCommands()
+    clearInterval(commandRetryTimer)
   })
 
   // Variant (thinking effort) selection — keyed by "providerID/modelID"
@@ -1085,6 +1115,7 @@ export const SessionProvider: ParentComponent = (props) => {
     totalCost,
     contextUsage,
     agents,
+    commands,
     selectedAgent: selectedAgentName,
     selectAgent,
     getSessionAgent: (sessionID: string) => store.agentSelections[sessionID] ?? defaultAgent(),

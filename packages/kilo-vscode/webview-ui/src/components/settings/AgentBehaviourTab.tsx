@@ -1,4 +1,4 @@
-import { Component, createSignal, createMemo, For, Show } from "solid-js"
+import { Component, createSignal, createMemo, For, Show, onCleanup } from "solid-js"
 import { Select } from "@kilocode/kilo-ui/select"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { Card } from "@kilocode/kilo-ui/card"
@@ -8,7 +8,8 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { useConfig } from "../../context/config"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
-import type { AgentConfig } from "../../types/messages"
+import { useVSCode } from "../../context/vscode"
+import type { AgentConfig, CommandInfo, RuleFileInfo, WorkflowFileInfo } from "../../types/messages"
 
 type SubtabId = "agents" | "mcpServers" | "rules" | "workflows" | "skills"
 
@@ -32,30 +33,46 @@ interface SelectOption {
 
 import SettingsRow from "./SettingsRow"
 
-const Placeholder: Component<{ text: string }> = (props) => (
-  <Card>
-    <p
-      style={{
-        "font-size": "12px",
-        color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
-        margin: 0,
-        "line-height": "1.5",
-      }}
-    >
-      <strong>{useLanguage().t("settings.agentBehaviour.notImplemented")}</strong> {props.text}
-    </p>
-  </Card>
-)
-
 const AgentBehaviourTab: Component = () => {
   const language = useLanguage()
   const { config, updateConfig } = useConfig()
   const session = useSession()
+  const vscode = useVSCode()
   const [activeSubtab, setActiveSubtab] = createSignal<SubtabId>("agents")
   const [selectedAgent, setSelectedAgent] = createSignal<string>("")
   const [newSkillPath, setNewSkillPath] = createSignal("")
   const [newSkillUrl, setNewSkillUrl] = createSignal("")
   const [newInstruction, setNewInstruction] = createSignal("")
+  const [newRule, setNewRule] = createSignal("")
+  const [newWorkflow, setNewWorkflow] = createSignal("")
+  const [ruleFiles, setRuleFiles] = createSignal<RuleFileInfo[]>([])
+  const [workflowFiles, setWorkflowFiles] = createSignal<WorkflowFileInfo[]>([])
+  const refreshCommands = () => vscode.postMessage({ type: "requestCommands" })
+  const commands = () => session.commands()
+  const slashCommands = createMemo<CommandInfo[]>(() =>
+    [...commands()].sort((a, b) => {
+      if (a.name === b.name) return 0
+      return a.name.localeCompare(b.name)
+    }),
+  )
+
+  const refreshRuleFiles = () => vscode.postMessage({ type: "requestRuleFiles" })
+  const refreshWorkflowFiles = () => vscode.postMessage({ type: "requestWorkflowFiles" })
+
+  const unsubscribe = vscode.onMessage((message) => {
+    if (message.type === "ruleFilesLoaded") {
+      setRuleFiles(message.files)
+      return
+    }
+    if (message.type === "workflowFilesLoaded") {
+      setWorkflowFiles(message.files)
+    }
+  })
+
+  onCleanup(unsubscribe)
+  refreshRuleFiles()
+  refreshWorkflowFiles()
+  refreshCommands()
 
   const agentNames = createMemo(() => {
     const names = session.agents().map((a) => a.name)
@@ -158,6 +175,24 @@ const AgentBehaviourTab: Component = () => {
     const current = [...skillUrls()]
     current.splice(index, 1)
     updateConfig({ skills: { ...config().skills, urls: current } })
+  }
+
+  const openPath = (value: string) => {
+    vscode.postMessage({ type: "openFile", filePath: value })
+  }
+
+  const createRuleFile = () => {
+    const name = newRule().trim()
+    if (!name) return
+    vscode.postMessage({ type: "createRuleFile", name })
+    setNewRule("")
+  }
+
+  const createWorkflowFile = () => {
+    const name = newWorkflow().trim()
+    if (!name) return
+    vscode.postMessage({ type: "createWorkflowFile", name })
+    setNewWorkflow("")
   }
 
   const renderAgentsSubtab = () => (
@@ -445,6 +480,78 @@ const AgentBehaviourTab: Component = () => {
 
   const renderRulesSubtab = () => (
     <div>
+      <Card style={{ "margin-bottom": "16px" }}>
+        <div style={{ "font-weight": "500", "padding-bottom": "8px" }}>
+          {language.t("settings.agentBehaviour.ruleFiles.title")}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            gap: "8px",
+            "align-items": "center",
+            padding: "8px 0",
+            "border-top": "1px solid var(--border-weak-base)",
+            "border-bottom": ruleFiles().length > 0 ? "1px solid var(--border-weak-base)" : "none",
+          }}
+        >
+          <div style={{ flex: 1 }}>
+            <TextField
+              value={newRule()}
+              placeholder="e.g. coding"
+              onChange={(val) => setNewRule(val)}
+              onKeyDown={(e: KeyboardEvent) => {
+                if (e.key === "Enter") createRuleFile()
+              }}
+            />
+          </div>
+          <Button size="small" onClick={createRuleFile}>
+            {language.t("common.add")}
+          </Button>
+        </div>
+        <Show
+          when={ruleFiles().length > 0}
+          fallback={
+            <div
+              style={{
+                padding: "8px 0",
+                "font-size": "12px",
+                color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+              }}
+            >
+              {language.t("settings.agentBehaviour.ruleFiles.empty")}
+            </div>
+          }
+        >
+          <For each={ruleFiles()}>
+            {(item, index) => (
+              <div
+                style={{
+                  display: "flex",
+                  "align-items": "center",
+                  "justify-content": "space-between",
+                  gap: "8px",
+                  padding: "6px 0",
+                  "border-bottom": index() < ruleFiles().length - 1 ? "1px solid var(--border-weak-base)" : "none",
+                }}
+              >
+                <div style={{ "min-width": 0 }}>
+                  <div style={{ "font-size": "12px", "font-family": "var(--vscode-editor-font-family, monospace)" }}>
+                    {item.path}
+                  </div>
+                  <div style={{ "font-size": "11px", color: "var(--vscode-descriptionForeground)" }}>
+                    {item.source}
+                    <Show when={item.mode}> · {item.mode}</Show>
+                  </div>
+                </div>
+                <Button size="small" variant="ghost" onClick={() => openPath(item.path)}>
+                  {language.t("common.open")}
+                </Button>
+              </div>
+            )}
+          </For>
+        </Show>
+      </Card>
+
       <Card>
         <div
           style={{
@@ -464,7 +571,6 @@ const AgentBehaviourTab: Component = () => {
           </div>
         </div>
 
-        {/* Add new instruction path */}
         <div
           style={{
             display: "flex",
@@ -489,7 +595,6 @@ const AgentBehaviourTab: Component = () => {
           </Button>
         </div>
 
-        {/* Instructions list */}
         <For each={instructions()}>
           {(path, index) => (
             <div
@@ -517,6 +622,147 @@ const AgentBehaviourTab: Component = () => {
     </div>
   )
 
+  const renderWorkflowsSubtab = () => (
+    <div>
+      <Card style={{ "margin-bottom": "12px" }}>
+        <div style={{ "font-weight": "500", "padding-bottom": "8px" }}>
+          {language.t("settings.agentBehaviour.workflowFiles.title")}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            gap: "8px",
+            "align-items": "center",
+            padding: "8px 0",
+            "border-top": "1px solid var(--border-weak-base)",
+            "border-bottom": workflowFiles().length > 0 ? "1px solid var(--border-weak-base)" : "none",
+          }}
+        >
+          <div style={{ flex: 1 }}>
+            <TextField
+              value={newWorkflow()}
+              placeholder="e.g. code-review"
+              onChange={(val) => setNewWorkflow(val)}
+              onKeyDown={(e: KeyboardEvent) => {
+                if (e.key === "Enter") createWorkflowFile()
+              }}
+            />
+          </div>
+          <Button size="small" onClick={createWorkflowFile}>
+            {language.t("common.add")}
+          </Button>
+        </div>
+        <Show
+          when={workflowFiles().length > 0}
+          fallback={
+            <div
+              style={{
+                padding: "8px 0",
+                "font-size": "12px",
+                color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+              }}
+            >
+              {language.t("settings.agentBehaviour.workflowFiles.empty")}
+            </div>
+          }
+        >
+          <For each={workflowFiles()}>
+            {(item, index) => (
+              <div
+                style={{
+                  display: "flex",
+                  "align-items": "center",
+                  "justify-content": "space-between",
+                  gap: "8px",
+                  padding: "6px 0",
+                  "border-bottom":
+                    index() < workflowFiles().length - 1 ? "1px solid var(--border-weak-base)" : "none",
+                }}
+              >
+                <div style={{ "min-width": 0 }}>
+                  <div style={{ "font-size": "12px", "font-family": "var(--vscode-editor-font-family, monospace)" }}>
+                    {item.path}
+                  </div>
+                  <Show when={item.description}>
+                    <div style={{ "font-size": "11px", color: "var(--vscode-descriptionForeground)" }}>
+                      {item.description}
+                    </div>
+                  </Show>
+                </div>
+                <Button size="small" variant="ghost" onClick={() => openPath(item.path)}>
+                  {language.t("common.open")}
+                </Button>
+              </div>
+            )}
+          </For>
+        </Show>
+      </Card>
+
+      <Card>
+        <div
+          style={{
+            "font-weight": "500",
+            "padding-bottom": "8px",
+          }}
+        >
+          {language.t("settings.agentBehaviour.workflowCommands.title")}
+        </div>
+        <Show
+          when={slashCommands().length > 0}
+          fallback={
+            <div
+              style={{
+                "font-size": "12px",
+                color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+              }}
+            >
+              {language.t("settings.agentBehaviour.workflowCommands.empty")}
+            </div>
+          }
+        >
+          <div style={{ "border-top": "1px solid var(--border-weak-base)" }}>
+            <For each={slashCommands()}>
+              {(item, index) => (
+                <div
+                  style={{
+                    display: "flex",
+                    "align-items": "center",
+                    gap: "8px",
+                    padding: "6px 0",
+                    "border-bottom":
+                      index() < slashCommands().length - 1 ? "1px solid var(--border-weak-base)" : "none",
+                  }}
+                >
+                  <div style={{ "min-width": 0, flex: 1 }}>
+                    <div style={{ "font-size": "12px", "font-family": "var(--vscode-editor-font-family, monospace)" }}>
+                      /{item.name}
+                    </div>
+                    <Show when={item.description}>
+                      <div style={{ "font-size": "11px", color: "var(--vscode-descriptionForeground)" }}>
+                        {item.description}
+                      </div>
+                    </Show>
+                  </div>
+                  <span
+                    style={{
+                      "font-size": "11px",
+                      color: "var(--vscode-descriptionForeground)",
+                      border: "1px solid var(--border-weak-base)",
+                      "border-radius": "999px",
+                      padding: "2px 6px",
+                    }}
+                  >
+                    {item.source ?? "command"}
+                  </span>
+                </div>
+              )}
+            </For>
+          </div>
+        </Show>
+      </Card>
+    </div>
+  )
+
   const renderSubtabContent = () => {
     switch (activeSubtab()) {
       case "agents":
@@ -526,7 +772,7 @@ const AgentBehaviourTab: Component = () => {
       case "rules":
         return renderRulesSubtab()
       case "workflows":
-        return <Placeholder text={language.t("settings.agentBehaviour.workflowsPlaceholder")} />
+        return renderWorkflowsSubtab()
       case "skills":
         return renderSkillsSubtab()
       default:
@@ -548,7 +794,14 @@ const AgentBehaviourTab: Component = () => {
         <For each={subtabs}>
           {(subtab) => (
             <button
-              onClick={() => setActiveSubtab(subtab.id)}
+              onClick={() => {
+                setActiveSubtab(subtab.id)
+                if (subtab.id === "rules") refreshRuleFiles()
+                if (subtab.id === "workflows") {
+                  refreshWorkflowFiles()
+                  refreshCommands()
+                }
+              }}
               style={{
                 padding: "8px 16px",
                 border: "none",

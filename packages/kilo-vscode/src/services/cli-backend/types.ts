@@ -298,6 +298,34 @@ export interface CommandConfig {
   description?: string
 }
 
+/** Runtime command info from /command endpoint */
+export interface CommandInfo {
+  name: string
+  description?: string
+  agent?: string
+  model?: string
+  source?: "command" | "mcp" | "skill"
+  template?: string
+  subtask?: boolean
+  hints: string[]
+}
+
+/** Rule file info used by rules/workflows settings UI */
+export interface RuleFileInfo {
+  path: string
+  name: string
+  source: "project" | "global" | "legacy"
+  mode?: string
+}
+
+/** Workflow file info used by rules/workflows settings UI */
+export interface WorkflowFileInfo {
+  path: string
+  name: string
+  source: "project" | "global"
+  description?: string
+}
+
 /** Skills configuration */
 export interface SkillsConfig {
   paths?: string[]
