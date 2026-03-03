@@ -4,6 +4,7 @@ import * as path from "path"
 import os from "os"
 import { Config } from "../config/config"
 import { KilocodePaths } from "./paths"
+import { Global } from "../global"
 
 export namespace ModesMigrator {
   // Kilocode mode structure
@@ -129,6 +130,10 @@ export namespace ModesMigrator {
       // 2. CLI global settings (fallback/alternative location)
       const cliGlobalPath = path.join(os.homedir(), ".kilocode", "cli", "global", "settings", "custom_modes.yaml")
       allModes.push(...(await readModesFile(cliGlobalPath)))
+
+      // 2b. XDG config directory (~/.config/kilo/custom_modes.yaml)
+      const xdgConfigPath = path.join(Global.Path.config, "custom_modes.yaml")
+      allModes.push(...(await readModesFile(xdgConfigPath)))
 
       // 3. Home directory .kilocodemodes
       const homeModesPath = path.join(os.homedir(), ".kilocodemodes")
