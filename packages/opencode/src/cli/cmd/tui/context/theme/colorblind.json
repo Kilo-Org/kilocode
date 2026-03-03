@@ -86,6 +86,10 @@
       "light": "#CED4DA"
       "dark": "darkBorder",
       "light": "lightBorder"
+    "borderSubtle": {
+      "dark": "darkBorder",
+      "light": "lightBorder"
+    },
     "diffAdded": {
       "dark": "teal",
       "light": "teal"
