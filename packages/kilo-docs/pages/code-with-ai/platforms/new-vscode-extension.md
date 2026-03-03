@@ -32,7 +32,7 @@ If you encounter any issues, please report them on GitHub:
 The beta currently includes:
 
 - Core chat and agent behavior
-- Kilo Auto mode
+- Kilo Auto model
 - Model and gateway selection
 - Autocomplete
 - Checkpoints
