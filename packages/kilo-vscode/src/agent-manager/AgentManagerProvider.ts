@@ -1322,20 +1322,20 @@ export class AgentManagerProvider implements vscode.Disposable {
   // Diff polling
   // ---------------------------------------------------------------------------
 
-  /** Open a file from a worktree session in the VS Code editor. */
+  /** Open a file from a worktree or local session in the VS Code editor. */
   private openWorktreeFile(sessionId: string, relativePath: string): void {
     const state = this.getStateManager()
     if (!state) return
     const session = state.getSession(sessionId)
-    if (!session?.worktreeId) return
-    const worktree = state.getWorktree(session.worktreeId)
-    if (!worktree) return
+    if (!session) return
+    const base = session.worktreeId ? state.getWorktree(session.worktreeId)?.path : this.getWorkspaceRoot()
+    if (!base) return
     // Resolve real paths to prevent symlink traversal and normalize for
     // consistent comparison on both Unix and Windows.
     let resolved: string
     try {
-      const root = fs.realpathSync(worktree.path)
-      resolved = fs.realpathSync(path.resolve(worktree.path, relativePath))
+      const root = fs.realpathSync(base)
+      resolved = fs.realpathSync(path.resolve(base, relativePath))
       // Directory-boundary check: append path.sep so "/foo/bar" won't match "/foo/bar2/..."
       if (resolved !== root && !resolved.startsWith(root + path.sep)) return
     } catch (err) {
