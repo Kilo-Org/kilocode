@@ -6,7 +6,7 @@ function createContext(overrides?: Partial<SessionRefreshContext>): SessionRefre
   return {
     pendingSessionRefresh: false,
     connectionState: "connecting",
-    httpClient: null,
+    listSessions: null,
     sessionDirectories: new Map(),
     workspaceDirectory: "/repo",
     postMessage: (msg: unknown) => sent.push(msg),
@@ -15,35 +15,33 @@ function createContext(overrides?: Partial<SessionRefreshContext>): SessionRefre
   }
 }
 
-function createClient() {
+function createListSessions() {
   const calls: string[] = []
-  return {
-    calls,
-    listSessions: async (dir: string) => {
-      calls.push(dir)
-      return []
-    },
+  const fn = async (dir: string) => {
+    calls.push(dir)
+    return []
   }
+  return { calls, fn }
 }
 
 describe("KiloProvider pending session refresh", () => {
   it("flushes deferred refresh via flushPendingSessionRefresh", async () => {
-    const client = createClient()
+    const { calls, fn } = createListSessions()
     const ctx = createContext()
     ctx.sessionDirectories.set("ses_1", "/worktree")
 
-    // httpClient is null → loadSessions sets pendingSessionRefresh
+    // listSessions is null → loadSessions sets pendingSessionRefresh
     await loadSessions(ctx)
     expect(ctx.pendingSessionRefresh).toBe(true)
 
-    // Make the httpClient available
-    ctx.httpClient = client
+    // Make the client available
+    ctx.listSessions = fn
     ctx.connectionState = "connected"
 
     // flushPendingSessionRefresh retries loadSessions when pending
     await flushPendingSessionRefresh(ctx)
 
-    expect(client.calls).toEqual(["/repo", "/worktree"])
+    expect(calls).toEqual(["/repo", "/worktree"])
     expect(ctx.pendingSessionRefresh).toBe(false)
   })
 

@@ -340,13 +340,11 @@ describe("KiloProvider — pending session refresh on reconnect", () => {
    * both initializeConnection() and the "connected" state handler flush
    * the pending refresh.
    */
-  it("loadSessions sets pendingSessionRefresh when httpClient is null", () => {
+  it("loadSessions sets pendingSessionRefresh when client is null", () => {
     const start = utils.indexOf("export async function loadSessions")
     expect(start, "loadSessions must exist in kilo-provider-utils").toBeGreaterThan(-1)
     const snippet = utils.slice(start, start + 700)
-    expect(snippet, "must set pendingSessionRefresh when httpClient missing").toContain(
-      "ctx.pendingSessionRefresh = true",
-    )
+    expect(snippet, "must set pendingSessionRefresh when client missing").toContain("ctx.pendingSessionRefresh = true")
     expect(snippet, "must avoid noisy errors while still connecting").toContain('ctx.connectionState !== "connecting"')
     expect(snippet, "must clear pendingSessionRefresh on successful entry").toContain(
       "ctx.pendingSessionRefresh = false",
