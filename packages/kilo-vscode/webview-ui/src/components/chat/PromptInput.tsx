@@ -3,7 +3,7 @@
  * Text input with send/abort buttons, ghost-text autocomplete, and @ file mention support
  */
 
-import { Component, createSignal, createEffect, on, For, Index, onCleanup, Show, untrack } from "solid-js"
+import { Component, createSignal, createEffect, on, For, Index, onCleanup, onMount, Show, untrack } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
@@ -36,6 +36,7 @@ export const PromptInput: Component = () => {
 
   const [text, setText] = createSignal("")
   const [ghostText, setGhostText] = createSignal("")
+  const [chatAutocompleteEnabled, setChatAutocompleteEnabled] = createSignal(false)
 
   let textareaRef: HTMLTextAreaElement | undefined
   let highlightRef: HTMLDivElement | undefined
@@ -79,6 +80,10 @@ export const PromptInput: Component = () => {
       }
     }
 
+    if (message.type === "autocompleteSettingsLoaded") {
+      setChatAutocompleteEnabled(message.settings.enableChatAutocomplete)
+    }
+
     if (message.type === "setChatBoxMessage") {
       setText(message.text)
       setGhostText("")
@@ -113,6 +118,10 @@ export const PromptInput: Component = () => {
     }
   })
 
+  onMount(() => {
+    vscode.postMessage({ type: "requestAutocompleteSettings" })
+  })
+
   onCleanup(() => {
     // Persist current draft before unmounting
     const current = text()
@@ -122,7 +131,7 @@ export const PromptInput: Component = () => {
   })
 
   const requestAutocomplete = (val: string) => {
-    if (val.length < MIN_TEXT_LENGTH || isDisabled()) {
+    if (val.length < MIN_TEXT_LENGTH || isDisabled() || !chatAutocompleteEnabled()) {
       setGhostText("")
       return
     }
