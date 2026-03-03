@@ -1,4 +1,7 @@
 import { describe, it, expect } from "bun:test"
+import * as fs from "fs/promises"
+import * as os from "os"
+import * as nodePath from "path"
 import { GitOps } from "../../src/agent-manager/GitOps"
 
 function sleep(ms: number): Promise<void> {
@@ -7,6 +10,33 @@ function sleep(ms: number): Promise<void> {
 
 function ops(handler: (args: string[], cwd: string) => Promise<string>): GitOps {
   return new GitOps({ log: () => undefined, refreshMs: 120000, runGit: handler })
+}
+
+function runGit(cwd: string, args: string[]): string {
+  const result = Bun.spawnSync({
+    cmd: ["git", ...args],
+    cwd,
+    stderr: "pipe",
+    stdout: "pipe",
+    env: {
+      ...process.env,
+      GIT_TERMINAL_PROMPT: "0",
+    },
+  })
+  if (result.exitCode !== 0) {
+    throw new Error(Buffer.from(result.stderr).toString("utf8") || Buffer.from(result.stdout).toString("utf8"))
+  }
+  return Buffer.from(result.stdout).toString("utf8").trim()
+}
+
+async function withRepo(run: (cwd: string) => Promise<void>): Promise<void> {
+  const cwd = await fs.mkdtemp(nodePath.join(os.tmpdir(), "kilo-gitops-test-"))
+  try {
+    runGit(cwd, ["init"])
+    await run(cwd)
+  } finally {
+    await fs.rm(cwd, { recursive: true, force: true })
+  }
 }
 
 describe("GitOps", () => {
@@ -174,7 +204,7 @@ describe("GitOps", () => {
       await git.refreshRemote("/repo", "origin")
       const fetches = commands.filter((c) => c[0] === "fetch")
       expect(fetches.length).toBe(1)
-      expect(fetches[0][3]).toBe("origin")
+      expect(fetches[0]![3]).toBe("origin")
     })
 
     it("skips empty remote name", async () => {
@@ -262,7 +292,7 @@ describe("GitOps", () => {
       })
       expect(await git.countMissingOriginCommits("/repo", "main")).toBe(4)
       const fetches = commands.filter((c) => c[0] === "fetch")
-      expect(fetches[0][3]).toBe("myfork")
+      expect(fetches[0]![3]).toBe("myfork")
     })
 
     it("falls back to remote/parentBranch when no upstream and no remote branch", async () => {
@@ -306,6 +336,106 @@ describe("GitOps", () => {
         return ""
       })
       expect(await git.countMissingOriginCommits("/repo", "main")).toBe(0)
+    })
+  })
+
+  describe("buildWorktreePatch", () => {
+    it("includes tracked and untracked changes", async () => {
+      await withRepo(async (cwd) => {
+        const git = new GitOps({ log: () => undefined })
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "one\n", "utf8")
+        await fs.writeFile(nodePath.join(cwd, "b.txt"), "one\n", "utf8")
+        runGit(cwd, ["add", "-A"])
+        runGit(cwd, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "init"])
+
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "two\n", "utf8")
+        await fs.writeFile(nodePath.join(cwd, "b.txt"), "two\n", "utf8")
+        await fs.writeFile(nodePath.join(cwd, "c.txt"), "new\n", "utf8")
+
+        const branch = runGit(cwd, ["branch", "--show-current"]) || "HEAD"
+        const patch = await git.buildWorktreePatch(cwd, branch)
+
+        expect(patch).toContain("a/a.txt")
+        expect(patch).toContain("a/b.txt")
+        expect(patch).toContain("a/c.txt")
+      })
+    })
+
+    it("limits patch to selected files", async () => {
+      await withRepo(async (cwd) => {
+        const git = new GitOps({ log: () => undefined })
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "one\n", "utf8")
+        await fs.writeFile(nodePath.join(cwd, "b.txt"), "one\n", "utf8")
+        runGit(cwd, ["add", "-A"])
+        runGit(cwd, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "init"])
+
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "two\n", "utf8")
+        await fs.writeFile(nodePath.join(cwd, "b.txt"), "two\n", "utf8")
+        await fs.writeFile(nodePath.join(cwd, "c.txt"), "new\n", "utf8")
+
+        const branch = runGit(cwd, ["branch", "--show-current"]) || "HEAD"
+        const patch = await git.buildWorktreePatch(cwd, branch, ["a.txt", "c.txt"])
+
+        expect(patch).toContain("a/a.txt")
+        expect(patch).toContain("a/c.txt")
+        expect(patch).not.toContain("a/b.txt")
+      })
+    })
+  })
+
+  describe("checkApplyPatch", () => {
+    it("returns ok for a clean patch", async () => {
+      await withRepo(async (cwd) => {
+        const git = new GitOps({ log: () => undefined })
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "one\n", "utf8")
+        runGit(cwd, ["add", "-A"])
+        runGit(cwd, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "init"])
+
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "two\n", "utf8")
+        const branch = runGit(cwd, ["branch", "--show-current"]) || "HEAD"
+        const patch = await git.buildWorktreePatch(cwd, branch)
+
+        // Reset the file so the patch can apply cleanly to the original state
+        runGit(cwd, ["checkout", "--", "a.txt"])
+        const result = await git.checkApplyPatch(cwd, patch)
+        expect(result.ok).toBe(true)
+      })
+    })
+
+    it("returns not-ok for an empty patch", async () => {
+      const git = new GitOps({ log: () => undefined })
+      const result = await git.checkApplyPatch("/tmp", "")
+      expect(result.ok).toBe(true)
+      expect(result.message).toBe("No changes to apply")
+    })
+  })
+
+  describe("applyPatch", () => {
+    it("applies changes to the working tree", async () => {
+      await withRepo(async (cwd) => {
+        const git = new GitOps({ log: () => undefined })
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "one\n", "utf8")
+        runGit(cwd, ["add", "-A"])
+        runGit(cwd, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "init"])
+
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "two\n", "utf8")
+        const branch = runGit(cwd, ["branch", "--show-current"]) || "HEAD"
+        const patch = await git.buildWorktreePatch(cwd, branch)
+
+        runGit(cwd, ["checkout", "--", "a.txt"])
+        const result = await git.applyPatch(cwd, patch)
+        expect(result.ok).toBe(true)
+
+        const content = await fs.readFile(nodePath.join(cwd, "a.txt"), "utf8")
+        expect(content).toBe("two\n")
+      })
+    })
+
+    it("returns empty patch as success", async () => {
+      const git = new GitOps({ log: () => undefined })
+      const result = await git.applyPatch("/tmp", "")
+      expect(result.ok).toBe(true)
+      expect(result.message).toBe("No changes to apply")
     })
   })
 })

@@ -7,6 +7,7 @@ import {
   createSignal,
   createMemo,
   createEffect,
+  on,
   onMount,
   onCleanup,
   type Accessor,
@@ -23,6 +24,9 @@ import type {
   AgentManagerImportResultMessage,
   AgentManagerWorktreeDiffMessage,
   AgentManagerWorktreeDiffLoadingMessage,
+  AgentManagerApplyWorktreeDiffResultMessage,
+  AgentManagerApplyWorktreeDiffStatus,
+  AgentManagerApplyWorktreeDiffConflict,
   AgentManagerWorktreeStatsMessage,
   AgentManagerLocalStatsMessage,
   WorktreeFileDiff,
@@ -78,6 +82,8 @@ import { reorderTabs, applyTabOrder, firstOrderedTitle } from "./tab-order"
 import { ConstrainDragYAxis, SortableReviewTab, SortableTab } from "./sortable-tab"
 import { DiffPanel } from "./DiffPanel"
 import { FullScreenDiffView } from "./FullScreenDiffView"
+import { ApplyDialog } from "./ApplyDialog"
+import { groupApplyConflicts } from "./apply-conflicts"
 import type { ReviewComment } from "./review-comments"
 import "./agent-manager.css"
 
@@ -95,6 +101,12 @@ interface WorktreeBusyState {
   reason: "setting-up" | "deleting"
   message?: string
   branch?: string
+}
+
+interface ApplyState {
+  status: AgentManagerApplyWorktreeDiffStatus
+  message: string
+  conflicts: AgentManagerApplyWorktreeDiffConflict[]
 }
 
 /** Sidebar selection: LOCAL for workspace, worktree ID for a worktree, or null for an unassigned session. */
@@ -325,6 +337,12 @@ const AgentManagerContent: Component = () => {
   // Local workspace git stats (branch name, diff additions/deletions, commits)
   const [localStats, setLocalStats] = createSignal<LocalGitStats | undefined>()
 
+  // Per-worktree apply-to-local status
+  const [applyStates, setApplyStates] = createSignal<Record<string, ApplyState>>({})
+  const [applyTarget, setApplyTarget] = createSignal<string | undefined>()
+  const [applySelectedFiles, setApplySelectedFiles] = createSignal<string[]>([])
+  const [applySelectionTouched, setApplySelectionTouched] = createSignal(false)
+
   // Pending local tab counter for generating unique IDs
   let pendingCounter = 0
   const PENDING_PREFIX = "pending:"
@@ -363,6 +381,197 @@ const AgentManagerContent: Component = () => {
     if (!sel || sel === LOCAL) return
     setReviewCommentsByWorktree((prev) => ({ ...prev, [sel]: comments }))
   }
+
+  const applyStateForSelection = createMemo(() => {
+    const sel = selection()
+    if (!sel || sel === LOCAL) return undefined
+    return applyStates()[sel]
+  })
+
+  const resolveWorktreeSessionId = (worktreeId: string) => {
+    const id = session.currentSessionID()
+    if (id) {
+      const current = managedSessions().find((entry) => entry.id === id)
+      if (current?.worktreeId === worktreeId) return id
+    }
+    return managedSessions().find((entry) => entry.worktreeId === worktreeId)?.id
+  }
+
+  const applyTargetSessionId = createMemo(() => {
+    const target = applyTarget()
+    if (!target) return undefined
+    return resolveWorktreeSessionId(target)
+  })
+
+  const applyDiffs = createMemo(() => {
+    const target = applyTarget()
+    if (!target) return [] as WorktreeFileDiff[]
+    const data = diffDatas()
+    const current = applyTargetSessionId()
+    if (current && data[current]) return data[current]!
+    const ids = managedSessions()
+      .filter((entry) => entry.worktreeId === target)
+      .map((entry) => entry.id)
+    for (const id of ids) {
+      if (data[id]) return data[id]!
+    }
+    return [] as WorktreeFileDiff[]
+  })
+
+  const applyStateForTarget = createMemo(() => {
+    const target = applyTarget()
+    if (!target) return undefined
+    return applyStates()[target]
+  })
+
+  const applyBusyForTarget = createMemo(() => {
+    const state = applyStateForTarget()
+    if (!state) return false
+    return state.status === "checking" || state.status === "applying"
+  })
+
+  const applySelectedSet = createMemo(() => new Set(applySelectedFiles()))
+
+  const applySelectionStats = createMemo(() => {
+    const set = applySelectedSet()
+    const selected = applyDiffs().filter((diff) => set.has(diff.file))
+    const additions = selected.reduce((sum, diff) => sum + diff.additions, 0)
+    const deletions = selected.reduce((sum, diff) => sum + diff.deletions, 0)
+    return {
+      total: applyDiffs().length,
+      selected: selected.length,
+      additions,
+      deletions,
+    }
+  })
+
+  const applyHasSelection = createMemo(() => applySelectionStats().selected > 0)
+
+  const applyConflictRows = createMemo(() => groupApplyConflicts(applyStateForTarget()?.conflicts ?? []))
+
+  const applyToLocal = (worktreeId: string, selectedFiles: string[]) => {
+    setApplyStates((prev) => ({
+      ...prev,
+      [worktreeId]: {
+        status: "checking",
+        message: t("agentManager.apply.checking"),
+        conflicts: [],
+      },
+    }))
+    vscode.postMessage({ type: "agentManager.applyWorktreeDiff", worktreeId, selectedFiles })
+  }
+
+  const resetApplyDialog = () => {
+    setApplyTarget(undefined)
+    setApplySelectedFiles([])
+    setApplySelectionTouched(false)
+  }
+
+  const closeApplyDialog = () => {
+    resetApplyDialog()
+    dialog.close()
+  }
+
+  const applySelectAll = () => {
+    setApplySelectionTouched(true)
+    setApplySelectedFiles(applyDiffs().map((diff) => diff.file))
+  }
+
+  const applySelectNone = () => {
+    setApplySelectionTouched(true)
+    setApplySelectedFiles([])
+  }
+
+  const applyToggleFile = (file: string, checked: boolean) => {
+    setApplySelectionTouched(true)
+    setApplySelectedFiles((prev) => {
+      if (checked) {
+        if (prev.includes(file)) return prev
+        const set = new Set(prev)
+        set.add(file)
+        return applyDiffs()
+          .map((diff) => diff.file)
+          .filter((path) => set.has(path))
+      }
+      if (!prev.includes(file)) return prev
+      return prev.filter((path) => path !== file)
+    })
+  }
+
+  const triggerApply = () => {
+    const target = applyTarget()
+    if (!target) return
+    if (!applyHasSelection()) return
+    if (applyBusyForTarget()) return
+    applyToLocal(target, applySelectedFiles())
+  }
+
+  const openApplyDialog = () => {
+    const sel = selection()
+    if (!sel || sel === LOCAL) return
+    setApplyStates((prev) => {
+      if (!prev[sel]) return prev
+      const next = { ...prev }
+      delete next[sel]
+      return next
+    })
+    setApplyTarget(sel)
+    setApplySelectionTouched(false)
+    setApplySelectedFiles([])
+    const sid = resolveWorktreeSessionId(sel)
+    if (sid) vscode.postMessage({ type: "agentManager.requestWorktreeDiff", sessionId: sid })
+
+    setApplySelectedFiles(applyDiffs().map((diff) => diff.file))
+
+    dialog.show(
+      () => (
+        <ApplyDialog
+          diffs={applyDiffs()}
+          loading={diffLoading()}
+          selectedFiles={applySelectedSet()}
+          selectedCount={applySelectionStats().selected}
+          additions={applySelectionStats().additions}
+          deletions={applySelectionStats().deletions}
+          busy={applyBusyForTarget()}
+          hasSelection={applyHasSelection()}
+          status={applyStateForTarget()?.status}
+          message={applyStateForTarget()?.message}
+          conflictRows={applyConflictRows()}
+          onSelectAll={applySelectAll}
+          onSelectNone={applySelectNone}
+          onToggleFile={applyToggleFile}
+          onApply={triggerApply}
+          onClose={closeApplyDialog}
+        />
+      ),
+      resetApplyDialog,
+    )
+  }
+
+  createEffect(
+    on(
+      () => [applyTarget(), applyDiffs(), applySelectionTouched()] as const,
+      ([target, diffs, touched]) => {
+        if (!target) return
+        const files = diffs.map((diff) => diff.file)
+        if (files.length === 0) {
+          if (!touched) setApplySelectedFiles([])
+          return
+        }
+
+        if (!touched) {
+          setApplySelectedFiles(files)
+          return
+        }
+
+        const current = applySelectedFiles()
+        const set = new Set(current)
+        const next = files.filter((file) => set.has(file))
+        const same = next.length === current.length && next.every((file, index) => file === current[index])
+        if (!same) setApplySelectedFiles(next)
+      },
+    ),
+  )
 
   const isPending = (id: string) => id.startsWith(PENDING_PREFIX)
 
@@ -424,6 +633,15 @@ const AgentManagerContent: Component = () => {
       if (Object.keys(next).length === Object.keys(prev).length) return prev
       return next
     })
+
+    setApplyStates((prev) => {
+      const next = Object.fromEntries(Object.entries(prev).filter(([id]) => ids.has(id)))
+      if (Object.keys(next).length === Object.keys(prev).length) return prev
+      return next
+    })
+
+    const target = applyTarget()
+    if (target && !ids.has(target)) closeApplyDialog()
   })
 
   const worktreeSessionIds = createMemo(
@@ -963,6 +1181,33 @@ const AgentManagerContent: Component = () => {
       if (msg.type === "agentManager.worktreeDiffLoading") {
         const ev = msg as AgentManagerWorktreeDiffLoadingMessage
         setDiffLoading(ev.loading)
+      }
+
+      if (msg.type === "agentManager.applyWorktreeDiffResult") {
+        const ev = msg as AgentManagerApplyWorktreeDiffResultMessage
+        const files = new Set((ev.conflicts ?? []).map((entry) => entry.file).filter(Boolean)).size
+        const count = ev.conflicts?.length ?? 0
+        setApplyStates((prev) => ({
+          ...prev,
+          [ev.worktreeId]: {
+            status: ev.status,
+            message: ev.message,
+            conflicts: ev.conflicts ?? [],
+          },
+        }))
+
+        if (ev.status === "success") {
+          showToast({ variant: "success", title: t("agentManager.apply.success"), description: ev.message })
+          if (applyTarget() === ev.worktreeId) closeApplyDialog()
+        }
+        if (ev.status === "conflict") {
+          const summary =
+            count > 0 ? t("agentManager.apply.conflictToast", { count, files: Math.max(files, 1) }) : ev.message
+          showToast({ variant: "error", title: t("agentManager.apply.conflict"), description: summary })
+        }
+        if (ev.status === "error") {
+          showToast({ variant: "error", title: t("agentManager.apply.error"), description: ev.message })
+        }
       }
 
       if (msg.type === "agentManager.worktreeStats") {
@@ -1951,6 +2196,7 @@ const AgentManagerContent: Component = () => {
               <div class="am-tab-actions">
                 {(() => {
                   const sel = () => selection()
+                  const isWorktree = () => typeof sel() === "string" && sel() !== LOCAL
                   const stats = () => {
                     if (sel() === LOCAL) return localStats()
                     return typeof sel() === "string" ? worktreeStats()[sel() as string] : undefined
@@ -1959,33 +2205,55 @@ const AgentManagerContent: Component = () => {
                     const s = stats()
                     return s && (s.additions > 0 || s.deletions > 0)
                   }
+                  const applyBusy = () => {
+                    const state = applyStateForSelection()
+                    if (!state) return false
+                    return state.status === "checking" || state.status === "applying"
+                  }
                   return (
-                    <TooltipKeybind
-                      title={t("agentManager.diff.toggle")}
-                      keybind={kb().toggleDiff ?? ""}
-                      placement="bottom"
-                    >
-                      <button
-                        class={`am-diff-toggle-btn ${diffOpen() && !reviewActive() ? "am-tab-diff-btn-active" : ""} ${hasChanges() ? "am-diff-toggle-has-changes" : ""}`}
-                        onClick={() => {
-                          if (reviewActive()) {
-                            closeReviewTab()
-                            setDiffOpen(true)
-                            return
-                          }
-                          setDiffOpen((prev) => !prev)
-                        }}
+                    <>
+                      <Show when={isWorktree()}>
+                        <Tooltip value={t("agentManager.apply.tooltip")} placement="bottom">
+                          <Button
+                            size="small"
+                            variant="ghost"
+                            onClick={openApplyDialog}
+                            disabled={!hasChanges() || applyBusy()}
+                          >
+                            <Show when={applyBusy()}>
+                              <Spinner class="am-apply-spinner" />
+                            </Show>
+                            {t("agentManager.apply.globalButton")}
+                          </Button>
+                        </Tooltip>
+                      </Show>
+                      <TooltipKeybind
                         title={t("agentManager.diff.toggle")}
+                        keybind={kb().toggleDiff ?? ""}
+                        placement="bottom"
                       >
-                        <Icon name="layers" size="small" />
-                        <Show when={hasChanges()}>
-                          <span class="am-diff-toggle-stats">
-                            <span class="am-stat-additions">+{stats()!.additions}</span>
-                            <span class="am-stat-deletions">−{stats()!.deletions}</span>
-                          </span>
-                        </Show>
-                      </button>
-                    </TooltipKeybind>
+                        <button
+                          class={`am-diff-toggle-btn ${diffOpen() && !reviewActive() ? "am-tab-diff-btn-active" : ""} ${hasChanges() ? "am-diff-toggle-has-changes" : ""}`}
+                          onClick={() => {
+                            if (reviewActive()) {
+                              closeReviewTab()
+                              setDiffOpen(true)
+                              return
+                            }
+                            setDiffOpen((prev) => !prev)
+                          }}
+                          title={t("agentManager.diff.toggle")}
+                        >
+                          <Icon name="layers" size="small" />
+                          <Show when={hasChanges()}>
+                            <span class="am-diff-toggle-stats">
+                              <span class="am-stat-additions">+{stats()!.additions}</span>
+                              <span class="am-stat-deletions">−{stats()!.deletions}</span>
+                            </span>
+                          </Show>
+                        </button>
+                      </TooltipKeybind>
+                    </>
                   )
                 })()}
                 <Show when={selection() !== LOCAL}>
