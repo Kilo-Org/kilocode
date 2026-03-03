@@ -80,7 +80,7 @@ beforeAll(async () => {
   mockLlm = startMockLlm()
   password = crypto.randomBytes(32).toString("hex")
 
-  const cliPath = path.resolve(import.meta.dir, "../../../../opencode/dist/kilo")
+  const cliPath = process.env.KILO_CLI_PATH || path.resolve(import.meta.dir, "../../bin/kilo")
 
   // Configure kilo serve to use our mock provider via environment
   const config = JSON.stringify({

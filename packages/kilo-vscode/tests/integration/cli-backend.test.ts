@@ -33,7 +33,7 @@ function waitForPort(proc: ChildProcess, timeout = 30_000): Promise<number> {
 beforeAll(async () => {
   password = crypto.randomBytes(32).toString("hex")
 
-  const cliPath = path.resolve(import.meta.dir, "../../../../opencode/dist/kilo")
+  const cliPath = process.env.KILO_CLI_PATH || path.resolve(import.meta.dir, "../../bin/kilo")
 
   server = spawn(cliPath, ["serve", "--port", "0"], {
     env: {
