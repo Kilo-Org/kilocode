@@ -4071,6 +4071,40 @@ export type CommitMessageGenerateResponses = {
 
 export type CommitMessageGenerateResponse = CommitMessageGenerateResponses[keyof CommitMessageGenerateResponses]
 
+export type EnhancePromptEnhanceData = {
+  body?: {
+    /**
+     * The user's draft prompt to enhance
+     */
+    text: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/enhance-prompt"
+}
+
+export type EnhancePromptEnhanceErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type EnhancePromptEnhanceError = EnhancePromptEnhanceErrors[keyof EnhancePromptEnhanceErrors]
+
+export type EnhancePromptEnhanceResponses = {
+  /**
+   * Enhanced prompt text
+   */
+  200: {
+    text: string
+  }
+}
+
+export type EnhancePromptEnhanceResponse = EnhancePromptEnhanceResponses[keyof EnhancePromptEnhanceResponses]
+
 export type KiloProfileData = {
   body?: never
   path?: never

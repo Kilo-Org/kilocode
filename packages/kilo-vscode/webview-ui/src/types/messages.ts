@@ -792,6 +792,20 @@ export interface AgentManagerSendInitialMessage {
   files?: Array<{ mime: string; url: string }>
 }
 
+// Enhance prompt result (extension → webview)
+export interface EnhancePromptResultMessage {
+  type: "enhancePromptResult"
+  text: string
+  requestId: string
+}
+
+// Enhance prompt error (extension → webview)
+export interface EnhancePromptErrorMessage {
+  type: "enhancePromptError"
+  error: string
+  requestId: string
+}
+
 export type ExtensionMessage =
   | ReadyMessage
   | ConnectionStateMessage
@@ -852,6 +866,8 @@ export type ExtensionMessage =
   | AgentManagerApplyWorktreeDiffResultMessage
   | AgentManagerWorktreeStatsMessage
   | AgentManagerLocalStatsMessage
+  | EnhancePromptResultMessage
+  | EnhancePromptErrorMessage
 
 // ============================================
 // Messages FROM webview TO extension
@@ -1270,6 +1286,13 @@ export interface RequestVariantsMessage {
   type: "requestVariants"
 }
 
+// Enhance prompt request (webview → extension)
+export interface EnhancePromptRequest {
+  type: "enhancePrompt"
+  text: string
+  requestId: string
+}
+
 export type WebviewMessage =
   | SendMessageRequest
   | AbortRequest
@@ -1342,6 +1365,7 @@ export type WebviewMessage =
   | StartDiffWatchMessage
   | StopDiffWatchMessage
   | ApplyWorktreeDiffMessage
+  | EnhancePromptRequest
 
 // ============================================
 // VS Code API type

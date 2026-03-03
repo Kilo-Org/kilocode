@@ -225,6 +225,9 @@ export const dict = {
   "prompt.attachment.remove": "첨부 파일 제거",
   "prompt.action.send": "전송",
   "prompt.action.stop": "중지",
+  "prompt.action.enhance": "프롬프트 개선",
+  "prompt.action.enhanceDescription":
+    "'프롬프트 향상' 버튼은 추가 컨텍스트, 명확화 또는 재구성을 제공하여 요청을 개선합니다. 여기에 요청을 입력한 다음 버튼을 다시 클릭하여 작동 방식을 확인해보세요.",
 
   "prompt.toast.pasteUnsupported.title": "지원되지 않는 붙여넣기",
   "prompt.toast.pasteUnsupported.description": "이미지나 PDF만 붙여넣을 수 있습니다.",
