@@ -156,9 +156,11 @@ describe("Full E2E with mock LLM", () => {
       // Poll for messages — the assistant response may take a moment
       const deadline = Date.now() + 30_000
       let found = false
+      let last: unknown
 
       while (Date.now() < deadline && !found) {
         const messages = await client.session.messages({ sessionID: id })
+        last = messages
         const data = messages.data as Array<{ role: string }> | undefined
         if (data?.some((m) => m.role === "assistant")) {
           found = true
@@ -167,6 +169,9 @@ describe("Full E2E with mock LLM", () => {
         await Bun.sleep(1000)
       }
 
+      if (!found) {
+        console.error("[mock-llm] last messages response:", JSON.stringify(last, null, 2)?.slice(0, 2000))
+      }
       expect(found).toBe(true)
     },
     { timeout: 60_000 },
