@@ -154,24 +154,21 @@ describe("Full E2E with mock LLM", () => {
       console.log("[mock-llm] prompt response status:", prompt.response?.status)
 
       // Poll for messages — the assistant response may take a moment
+      // Messages are returned as an array of message objects with `parts` containing the content
       const deadline = Date.now() + 30_000
       let found = false
-      let last: unknown
 
       while (Date.now() < deadline && !found) {
         const messages = await client.session.messages({ sessionID: id })
-        last = messages
-        const data = messages.data as Array<{ role: string }> | undefined
-        if (data?.some((m) => m.role === "assistant")) {
+        const data = messages.data as Array<{ parts?: Array<{ type: string; text?: string }> }> | undefined
+        const hasText = data?.some((m) => m.parts?.some((p) => p.type === "text" && p.text))
+        if (hasText) {
           found = true
           break
         }
         await Bun.sleep(1000)
       }
 
-      if (!found) {
-        console.error("[mock-llm] last messages response:", JSON.stringify(last, null, 2)?.slice(0, 2000))
-      }
       expect(found).toBe(true)
     },
     { timeout: 60_000 },
