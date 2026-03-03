@@ -1,5 +1,5 @@
 /* kilocode_change - new file */
-/* Kilo Button overrides – sized to match @vscode/webview-ui-toolkit */
+/* Kilo Button overrides – matches Figma design system */
 
 [data-component="button"] {
   font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
@@ -7,57 +7,94 @@
   line-height: normal;
   border-radius: 2px;
   cursor: pointer;
+  border: none;
+  box-shadow: none;
 
-  &:active:not([data-disabled]) {
-    opacity: 0.8;
-  }
-
+  /* --- Primary --- */
   &[data-variant="primary"] {
-    background-color: var(--surface-interactive-base);
-    color: var(--text-on-interactive-base, white);
+    background-color: var(--button-primary-base, var(--surface-brand-base));
+    color: white;
     border-color: transparent;
     box-shadow: none;
-    font-weight: 500;
 
-    &:hover:not([data-disabled]) {
-      background-color: var(--surface-interactive-hover);
+    &:hover:not([data-disabled]):not(:disabled) {
+      background-color: var(--button-primary-hover, var(--surface-brand-hover));
     }
+
+    &:disabled,
+    &[data-disabled] {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  /* --- Secondary --- */
+  &[data-variant="secondary"] {
+    background-color: var(--button-secondary-base);
+    color: white;
+    border: none;
+    box-shadow: none;
+
+    &:hover:not([data-disabled]):not(:disabled) {
+      background-color: var(--button-secondary-hover);
+    }
+
+    &:disabled,
+    &[data-disabled] {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  /* --- Ghost (Tertiary) --- */
+  &[data-variant="ghost"] {
+    background: transparent;
+    color: white;
+    box-shadow: none;
+
+    &:hover:not([data-disabled]):not(:disabled) {
+      background-color: var(--button-ghost-hover, var(--surface-base-hover));
+    }
+
+    &:disabled,
+    &[data-disabled] {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  /* --- Size: Normal (default) — matches input height (34px outer) --- */
+  &[data-size="normal"] {
+    height: auto;
+    padding: 6px 16px;
+    line-height: 20px;
+    font-size: 13px;
+    gap: 6px;
+    box-sizing: border-box;
+  }
+
+  /* --- Size: Large --- */
+  &[data-size="large"] {
+    height: auto;
+    padding: 8px 16px;
+    line-height: 20px;
+    font-size: 13px;
+    gap: 6px;
+    box-sizing: border-box;
+  }
+
+  /* --- Size: Small --- */
+  &[data-size="small"] {
+    height: auto;
+    padding: 4px 12px;
+    line-height: 16px;
+    font-size: 12px;
+    gap: 4px;
+    box-sizing: border-box;
   }
 
   /* Full-width variant for "Start New Task" style buttons */
   &[data-full-width="true"] {
     width: 100%;
-  }
-
-  &[data-variant="secondary"] {
-    box-shadow: none;
-    border: 1px solid var(--border-weak-base);
-  }
-
-  &[data-variant="ghost"] {
-    background: transparent;
-    box-shadow: none;
-
-    &:hover:not(:disabled) {
-      background-color: rgba(255, 255, 255, 0.03);
-    }
-  }
-
-  &[data-size="normal"] {
-    height: 26px;
-    padding: 4px 11px;
-    font-size: 13px;
-  }
-
-  &[data-size="large"] {
-    height: 30px;
-    padding: 6px 11px;
-    font-size: 13px;
-  }
-
-  &[data-size="small"] {
-    height: 22px;
-    padding: 2px 8px;
-    font-size: 11px;
   }
 }
