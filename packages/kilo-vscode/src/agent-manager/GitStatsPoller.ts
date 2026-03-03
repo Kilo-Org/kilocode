@@ -1,6 +1,6 @@
 import * as fs from "fs"
 import * as path from "path"
-import type { HttpClient } from "../services/cli-backend"
+import type { KiloClient, FileDiff } from "@kilocode/sdk/v2/client"
 import type { Worktree } from "./WorktreeStateManager"
 import type { GitOps } from "./GitOps"
 import { normalizePath } from "./git-import"
@@ -32,7 +32,7 @@ export interface WorktreePresenceResult {
 interface GitStatsPollerOptions {
   getWorktrees: () => Worktree[]
   getWorkspaceRoot: () => string | undefined
-  getHttpClient: () => HttpClient
+  getClient: () => KiloClient
   git: GitOps
   onStats: (stats: WorktreeStats[]) => void
   onLocalStats: (stats: LocalStats) => void
@@ -105,9 +105,9 @@ export class GitStatsPoller {
   private async fetch(): Promise<void> {
     const client = (() => {
       try {
-        return this.options.getHttpClient()
+        return this.options.getClient()
       } catch (err) {
-        this.options.log("Failed to get HTTP client for stats:", err)
+        this.options.log("Failed to get client for stats:", err)
         return undefined
       }
     })()
@@ -115,7 +115,7 @@ export class GitStatsPoller {
     await Promise.all([this.fetchWorktreeStats(client), this.fetchLocalStats(client)])
   }
 
-  private async fetchWorktreeStats(client: HttpClient | undefined): Promise<void> {
+  private async fetchWorktreeStats(client: KiloClient | undefined): Promise<void> {
     const worktrees = this.options.getWorktrees()
     if (worktrees.length === 0) return
 
@@ -140,9 +140,9 @@ export class GitStatsPoller {
       await Promise.all(
         active.map(async (wt) => {
           try {
-            const diffs = await client.getWorktreeDiff(wt.path, wt.parentBranch)
-            const additions = diffs.reduce((sum, diff) => sum + diff.additions, 0)
-            const deletions = diffs.reduce((sum, diff) => sum + diff.deletions, 0)
+            const { data: diffs } = await client.worktree.diff({ directory: wt.path }, { throwOnError: true })
+            const additions = diffs.reduce((sum: number, diff: FileDiff) => sum + diff.additions, 0)
+            const deletions = diffs.reduce((sum: number, diff: FileDiff) => sum + diff.deletions, 0)
             const commits = await this.git.countMissingOriginCommits(wt.path, wt.parentBranch)
             return { worktreeId: wt.id, additions, deletions, commits }
           } catch (err) {
@@ -210,7 +210,7 @@ export class GitStatsPoller {
     return { worktrees: worktreeStatuses, degraded: false }
   }
 
-  private async fetchLocalStats(client: HttpClient | undefined): Promise<void> {
+  private async fetchLocalStats(client: KiloClient | undefined): Promise<void> {
     const root = this.options.getWorkspaceRoot()
     if (!root) return
 
@@ -220,7 +220,7 @@ export class GitStatsPoller {
 
       const tracking = await this.git.resolveTrackingBranch(root, branch)
 
-      // When the HTTP client is unavailable, preserve last-known stats rather
+      // When the client is unavailable, preserve last-known stats rather
       // than emitting zeros (which would falsely indicate a clean state).
       if (!client) {
         if (this.lastLocalStats && this.lastLocalStats.branch === branch) return
@@ -243,9 +243,9 @@ export class GitStatsPoller {
       let commits: number
       try {
         if (base) {
-          const diffs = await client.getWorktreeDiff(root, base)
-          additions = diffs.reduce((sum, d) => sum + d.additions, 0)
-          deletions = diffs.reduce((sum, d) => sum + d.deletions, 0)
+          const { data: diffs } = await client.worktree.diff({ directory: root }, { throwOnError: true })
+          additions = diffs.reduce((sum: number, d: FileDiff) => sum + d.additions, 0)
+          deletions = diffs.reduce((sum: number, d: FileDiff) => sum + d.deletions, 0)
           commits = await this.git.countMissingOriginCommits(root, base)
         } else {
           additions = 0

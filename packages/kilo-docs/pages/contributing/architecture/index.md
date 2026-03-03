@@ -24,7 +24,7 @@ graph LR
     gateway["Kilo Gateway"]
     cloudagent["Cloud Agent"]
     bot["Kilo Bot"]
-    claw["Kilo Claw"]
+    claw["KiloClaw"]
     review["Code Review"]
     triage["Auto Triage"]
     appbuilder["App Builder"]
@@ -111,7 +111,7 @@ A Cloudflare Worker within Kilo Cloud that runs the Kilo CLI in isolated sandbox
 
 The GitHub/GitLab bot that responds to issue comments and PR mentions. It dispatches work to the Cloud Agent, enabling users to trigger AI coding tasks directly from their repositories.
 
-### Kilo Claw
+### KiloClaw
 
 A multi-tenant compute platform running on Fly.io, orchestrated by a Cloudflare Worker. Each user gets a dedicated persistent machine running an OpenClaw gateway, coordinated via Durable Objects for state management and self-healing reconciliation.
 
@@ -229,10 +229,10 @@ The project uses:
 
 ## Repositories
 
-| Repository                                                | Contents                                                                                                              |
-| --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| [Kilo-Org/kilocode](https://github.com/Kilo-Org/kilocode) | CLI engine, VS Code extension, SDK, gateway client, telemetry, docs, UI components                                    |
-| Cloud (private)                                           | Web dashboard, Cloud Agent, Kilo Bot, Kilo Claw, code review, auto triage, billing, and supporting Cloudflare Workers |
+| Repository                                                | Contents                                                                                                             |
+| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| [Kilo-Org/kilocode](https://github.com/Kilo-Org/kilocode) | CLI engine, VS Code extension, SDK, gateway client, telemetry, docs, UI components                                   |
+| Cloud (private)                                           | Web dashboard, Cloud Agent, Kilo Bot, KiloClaw, code review, auto triage, billing, and supporting Cloudflare Workers |
 
 ## Further Reading
 
