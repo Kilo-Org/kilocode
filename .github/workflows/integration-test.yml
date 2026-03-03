@@ -43,7 +43,7 @@ jobs:
         working-directory: packages/kilo-vscode
 
       - name: Extension activation tests
-        run: xvfb-run -a npx vscode-test
+        run: xvfb-run -a ./node_modules/.bin/vscode-test
         working-directory: packages/kilo-vscode
 
       # Levels 2 + 3: CLI backend + mock LLM (standalone bun tests)
