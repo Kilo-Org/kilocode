@@ -38,7 +38,7 @@ If you encounter any issues, please report them on GitHub:
 The pre-release currently includes:
 
 - Core chat and agent behavior
-- Kilo Auto model
+- Auto Model
 - Kilo Gateway support
 - Autocomplete
 - Agent Manager
@@ -53,7 +53,7 @@ Because this extension runs on the new runtime, there are a few important differ
 
 **Sessions do not migrate**
 Existing sessions from the previous extension will not appear.
-The new extension uses CLI 1.0 session storage.
+The new extension uses Kilo CLI 1.0 session storage.
 
 **Settings do not carry over**
 You'll need to reconfigure any preferences or providers.
