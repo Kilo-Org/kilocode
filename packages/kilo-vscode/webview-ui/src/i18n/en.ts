@@ -180,6 +180,7 @@ export const dict = {
   "common.submit": "Submit",
   "common.save": "Save",
   "common.saving": "Saving...",
+  "common.default": "Default",
   "common.attachment": "attachment",
 
   "prompt.placeholder.shell": "Enter shell command...",

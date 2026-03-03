@@ -87,7 +87,7 @@ describe("KiloCodeActionProvider", () => {
       it("Fix action uses QuickFix kind", () => {
         const result = provider.provideCodeActions({} as never, makeRange(false) as never, makeContext(1) as never)
         const fix = result.find((a) => a.title === "Fix with Kilo Code")
-        expect(fix?.kind?.value).toBe("quickfix")
+        expect(fix?.kind.value).toBe("quickfix")
       })
 
       it("uses correct Fix command ID", () => {
