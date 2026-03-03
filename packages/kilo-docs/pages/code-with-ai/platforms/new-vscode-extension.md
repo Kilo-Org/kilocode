@@ -35,7 +35,6 @@ The beta currently includes:
 - Kilo Auto model
 - Kilo Gateway support
 - Autocomplete
-- Checkpoints
 - Agent Manager
 
 *(This list will expand as additional capabilities are enabled.)*
