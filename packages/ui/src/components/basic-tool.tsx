@@ -1,6 +1,6 @@
 import { createEffect, createSignal, For, Match, on, onCleanup, Show, Switch, type JSX } from "solid-js"
 import { Collapsible } from "./collapsible"
-import type { IconProps } from "./icon"
+import { Icon, type IconProps } from "./icon" // kilocode_change: added Icon
 import { TextShimmer } from "./text-shimmer"
 
 export type TriggerTitle = {
@@ -84,6 +84,11 @@ export function BasicTool(props: BasicToolProps) {
       <Collapsible.Trigger>
         <div data-component="tool-trigger">
           <div data-slot="basic-tool-tool-trigger-content">
+            {/* kilocode_change start */}
+            <span data-slot="basic-tool-icon">
+              <Icon name={props.icon} size="small" />
+            </span>
+            {/* kilocode_change end */}
             <div data-slot="basic-tool-tool-info">
               <Switch>
                 <Match when={isTriggerTitle(props.trigger) && props.trigger}>

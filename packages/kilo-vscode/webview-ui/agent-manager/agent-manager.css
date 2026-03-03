@@ -909,6 +909,12 @@ button.am-section-toggle:hover .am-section-label {
   font-weight: 500;
 }
 
+.am-diff-header-collapsed,
+.am-review-toolbar-collapsed {
+  color: var(--text-weaker);
+  font-variant-numeric: tabular-nums;
+}
+
 .am-diff-header [data-component="radio-group"],
 .am-diff-header [data-component="radio-group"] [data-slot="radio-group-item-label"],
 .am-diff-header [data-component="radio-group"] [data-slot="radio-group-item-control"] {
@@ -932,6 +938,56 @@ button.am-section-toggle:hover .am-section-label {
   padding: 40px 16px;
   color: var(--text-weaker);
   font-size: var(--font-size-base);
+}
+
+.am-diff-end-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 28px 16px 34px;
+  color: var(--text-weaker);
+  pointer-events: none;
+  user-select: none;
+}
+
+.am-diff-end-mascot-wrap {
+  filter: drop-shadow(0 6px 12px color-mix(in oklab, var(--surface-base) 45%, black));
+}
+
+.am-diff-end-mascot {
+  image-rendering: pixelated;
+}
+
+.am-kiloman-upper {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: am-kiloman-idle 520ms linear infinite;
+}
+
+.am-diff-end-text {
+  margin: 0;
+  font-size: var(--font-size-base);
+  color: var(--text-weak);
+}
+
+@keyframes am-kiloman-idle {
+  0% {
+    transform: translateY(0px);
+  }
+  25% {
+    transform: translateY(1px);
+  }
+  50% {
+    transform: translateY(0px);
+  }
+  75% {
+    transform: translateY(-1px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
 }
 
 .am-diff-content {
@@ -995,6 +1051,41 @@ button.am-section-toggle:hover .am-section-label {
 .am-review-diff-content [data-slot="session-review-trigger-content"] {
   width: 100%;
   min-width: 0;
+}
+
+.am-diff-content [data-slot="session-review-file-info"],
+.am-review-diff-content [data-slot="session-review-file-info"] {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.am-diff-content [data-slot="session-review-file-name-container"],
+.am-review-diff-content [data-slot="session-review-file-name-container"] {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.am-diff-content [data-slot="session-review-directory"],
+.am-review-diff-content [data-slot="session-review-directory"] {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.am-diff-content [data-slot="session-review-filename"],
+.am-review-diff-content [data-slot="session-review-filename"] {
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.am-diff-content [data-slot="session-review-trigger-actions"],
+.am-review-diff-content [data-slot="session-review-trigger-actions"] {
+  flex-shrink: 0;
+  min-width: max-content;
+  gap: 8px;
 }
 
 /* Keep +N/-N indicators at consistent size across side/fullscreen views */
@@ -1143,6 +1234,21 @@ button.am-section-toggle:hover .am-section-label {
   background: var(--surface-interactive-strong);
   color: var(--text-on-fill);
   margin-left: 6px;
+  flex-shrink: 0;
+}
+
+.am-diff-large-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  height: 18px;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 600;
+  color: color-mix(in oklab, var(--text-warning, #a15c00) 85%, var(--text-base));
+  background: color-mix(in oklab, var(--surface-warning, rgba(245, 158, 11, 0.16)) 65%, transparent);
+  border: 1px solid color-mix(in oklab, var(--border-warning, rgba(245, 158, 11, 0.45)) 75%, transparent);
+  white-space: nowrap;
   flex-shrink: 0;
 }
 
@@ -2324,6 +2430,10 @@ button.am-section-toggle:hover .am-section-label {
   gap: 2px;
 }
 
+.am-diff-header-actions > * {
+  flex-shrink: 0;
+}
+
 /* Review tab in tab bar */
 
 .am-tab-review {
@@ -2345,6 +2455,7 @@ button.am-section-toggle:hover .am-section-label {
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  min-width: 0;
   --am-diff-count-size: 12px;
   /* Inherit pierre diffs CSS vars from am-diff-panel */
   --diffs-light-bg: var(--vscode-editor-background, #1e1e1e);
@@ -2386,9 +2497,10 @@ button.am-section-toggle:hover .am-section-label {
 .am-review-toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   padding: 4px 8px;
   flex-shrink: 0;
+  min-width: 0;
   border-bottom: 1px solid var(--border-weak-base);
   background: var(--surface-base);
   gap: 8px;
@@ -2398,12 +2510,21 @@ button.am-section-toggle:hover .am-section-label {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .am-review-toolbar-right {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.am-review-toolbar-right > * {
+  flex-shrink: 0;
 }
 
 .am-review-toolbar [data-component="radio-group"],
@@ -2422,9 +2543,14 @@ button.am-section-toggle:hover .am-section-label {
 .am-review-toolbar-stats {
   display: flex;
   align-items: center;
+  flex: 1 1 auto;
   gap: 8px;
   font-size: var(--font-size-small);
   color: var(--text-weak);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .am-review-toolbar-adds {
@@ -2443,6 +2569,7 @@ button.am-section-toggle:hover .am-section-label {
   display: flex;
   flex: 1;
   min-height: 0;
+  min-width: 0;
   overflow: hidden;
 }
 
@@ -2450,6 +2577,8 @@ button.am-section-toggle:hover .am-section-label {
   display: flex;
   flex: 1;
   min-height: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .am-review-tree-resize {
@@ -2473,6 +2602,7 @@ button.am-section-toggle:hover .am-section-label {
 
 .am-review-diff {
   flex: 1;
+  width: 0;
   min-width: 0;
   overflow-y: auto;
   overflow-x: hidden;
@@ -2483,6 +2613,7 @@ button.am-section-toggle:hover .am-section-label {
   contain: none;
   scrollbar-width: auto;
   width: 100%;
+  min-width: 0;
 }
 
 .am-review-diff-content[data-component="session-review"] [data-component="sticky-accordion-header"] {
@@ -2643,6 +2774,23 @@ button.am-section-toggle:hover .am-section-label {
   border-radius: 4px;
   background: color-mix(in lab, var(--syntax-diff-add, #318430) 15%, transparent);
   color: var(--syntax-diff-add, #318430);
+}
+
+.am-file-tree-comment-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--surface-interactive-strong);
+  color: var(--text-on-fill);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  margin-left: 6px;
+  flex-shrink: 0;
 }
 
 .am-file-tree-badge-deleted {

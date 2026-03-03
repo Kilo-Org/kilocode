@@ -1023,6 +1023,8 @@ export const dict = {
   "agentManager.review.commentPlaceholder": "แสดงความคิดเห็น...",
   "agentManager.review.commentAction": "แสดงความคิดเห็น",
   "agentManager.review.sendToChat": "ส่งไปยังแชท",
+  "agentManager.review.collapsedOnly": "ยุบ {{count}} รายการ",
+  "agentManager.review.collapsedWithLarge": "ยุบ {{collapsed}} รายการ, ขนาดใหญ่ {{large}} รายการ",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "วาง URL ของ PR...",

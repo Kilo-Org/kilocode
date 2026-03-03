@@ -1030,6 +1030,8 @@ export const dict = {
   "agentManager.review.commentPlaceholder": "コメントを入力...",
   "agentManager.review.commentAction": "コメント",
   "agentManager.review.sendToChat": "チャットに送信",
+  "agentManager.review.collapsedOnly": "{{count}} 件折りたたみ",
+  "agentManager.review.collapsedWithLarge": "{{collapsed}} 件折りたたみ、{{large}} 件がサイズ大",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "PR URLを貼り付け...",

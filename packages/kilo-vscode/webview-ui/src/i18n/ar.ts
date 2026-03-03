@@ -1025,6 +1025,8 @@ export const dict = {
   "agentManager.review.commentPlaceholder": "اترك تعليقًا...",
   "agentManager.review.commentAction": "تعليق",
   "agentManager.review.sendToChat": "إرسال إلى الدردشة",
+  "agentManager.review.collapsedOnly": "{{count}} مطوي",
+  "agentManager.review.collapsedWithLarge": "{{collapsed}} مطوي، {{large}} كبير",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "الصق رابط PR...",

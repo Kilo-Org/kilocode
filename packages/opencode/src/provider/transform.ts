@@ -72,6 +72,23 @@ export namespace ProviderTransform {
         .filter((msg): msg is ModelMessage => msg !== undefined && msg.content !== "")
     }
 
+    if (model.api.id.includes("claude")) {
+      return msgs.map((msg) => {
+        if ((msg.role === "assistant" || msg.role === "tool") && Array.isArray(msg.content)) {
+          msg.content = msg.content.map((part) => {
+            if ((part.type === "tool-call" || part.type === "tool-result") && "toolCallId" in part) {
+              return {
+                ...part,
+                toolCallId: part.toolCallId.replace(/[^a-zA-Z0-9_-]/g, "_"),
+              }
+            }
+            return part
+          })
+        }
+        return msg
+      })
+    }
+
     if (
       model.providerID === "mistral" ||
       model.api.id.toLowerCase().includes("mistral") ||

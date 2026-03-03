@@ -1,29 +1,93 @@
 import { describe, it, expect } from "bun:test"
 import {
   sessionToWebview,
-  normalizeProviders,
+  indexProvidersById,
   filterVisibleAgents,
   buildSettingPath,
   mapSSEEventToWebviewMessage,
+  isEventFromForeignProject,
+  type ProviderInfo,
 } from "../../src/kilo-provider-utils"
-import type { SessionInfo, AgentInfo, Provider, SSEEvent } from "../../src/services/cli-backend/types"
+import type {
+  Session,
+  Agent,
+  Provider,
+  Event,
+  EventMessagePartUpdated,
+  EventMessageUpdated,
+  EventSessionStatus,
+  EventPermissionAsked,
+  EventTodoUpdated,
+  EventQuestionAsked,
+  EventQuestionReplied,
+  EventQuestionRejected,
+  EventSessionCreated,
+  EventSessionUpdated,
+  EventServerConnected,
+  TextPart,
+  AssistantMessage,
+} from "@kilocode/sdk/v2/client"
 
-function makeSession(overrides: Partial<SessionInfo> = {}): SessionInfo {
+function makeSession(overrides: Partial<Session> = {}): Session {
   return {
     id: "sess-1",
-    title: "Test Session",
+    slug: "test-session",
+    projectID: "proj-1",
     directory: "/tmp",
+    title: "Test Session",
+    version: "1",
     time: { created: 1700000000000, updated: 1700001000000 },
+    permission: [],
     ...overrides,
   }
 }
 
-function makeProvider(id: string): Provider {
-  return { id, name: id.toUpperCase(), models: {} }
+function makeProvider(id: string): ProviderInfo {
+  return {
+    id,
+    name: id.toUpperCase(),
+    env: [],
+    models: {},
+  }
 }
 
-function makeAgent(overrides: Partial<AgentInfo> = {}): AgentInfo {
-  return { name: "code", mode: "primary", ...overrides }
+function makeAgent(overrides: Partial<Agent> = {}): Agent {
+  return {
+    name: "code",
+    mode: "primary",
+    permission: [],
+    options: {},
+    ...overrides,
+  }
+}
+
+function makeTextPart(overrides: Partial<TextPart> = {}): TextPart {
+  return {
+    id: "p1",
+    sessionID: "sess-1",
+    messageID: "m1",
+    type: "text",
+    text: "",
+    ...overrides,
+  }
+}
+
+function makeAssistantMessage(overrides: Partial<AssistantMessage> = {}): AssistantMessage {
+  return {
+    id: "msg-1",
+    sessionID: "sess-1",
+    role: "assistant",
+    time: { created: 1700000000000 },
+    parentID: "parent-1",
+    modelID: "model-1",
+    providerID: "provider-1",
+    mode: "primary",
+    agent: "code",
+    path: { cwd: "/tmp", root: "/tmp" },
+    cost: 0,
+    tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+    ...overrides,
+  }
 }
 
 describe("sessionToWebview", () => {
@@ -46,29 +110,20 @@ describe("sessionToWebview", () => {
   })
 })
 
-describe("normalizeProviders", () => {
-  it("re-keys providers from numeric indices to provider.id", () => {
-    const input = { "0": makeProvider("openai"), "1": makeProvider("anthropic") }
-    const result = normalizeProviders(input as Record<string, Provider>)
+describe("indexProvidersById", () => {
+  it("indexes providers by id", () => {
+    const result = indexProvidersById([makeProvider("openai"), makeProvider("anthropic")])
     expect(result["openai"]).toBeDefined()
     expect(result["anthropic"]).toBeDefined()
-    expect(result["0"]).toBeUndefined()
-    expect(result["1"]).toBeUndefined()
   })
 
   it("handles empty input", () => {
-    expect(normalizeProviders({})).toEqual({})
+    expect(indexProvidersById([])).toEqual({})
   })
 
   it("preserves provider data", () => {
     const p = makeProvider("openai")
-    const result = normalizeProviders({ "0": p })
-    expect(result["openai"]).toEqual(p)
-  })
-
-  it("handles already-keyed-by-id input (idempotent)", () => {
-    const p = makeProvider("openai")
-    const result = normalizeProviders({ openai: p })
+    const result = indexProvidersById([p])
     expect(result["openai"]).toEqual(p)
   })
 })
@@ -141,11 +196,10 @@ describe("buildSettingPath", () => {
 
 describe("mapSSEEventToWebviewMessage", () => {
   it("maps message.part.updated to partUpdated", () => {
-    const event: SSEEvent = {
+    const event: EventMessagePartUpdated = {
       type: "message.part.updated",
       properties: {
-        part: { type: "text", id: "p1", text: "hello", messageID: "m1" },
-        delta: "hello",
+        part: makeTextPart({ text: "hello" }),
       },
     }
     const msg = mapSSEEventToWebviewMessage(event, "sess-1")
@@ -153,29 +207,22 @@ describe("mapSSEEventToWebviewMessage", () => {
     if (msg?.type === "partUpdated") {
       expect(msg.sessionID).toBe("sess-1")
       expect(msg.messageID).toBe("m1")
-      expect(msg.delta).toEqual({ type: "text-delta", textDelta: "hello" })
     }
   })
 
   it("returns null for message.part.updated when sessionID is undefined", () => {
-    const event: SSEEvent = {
+    const event: EventMessagePartUpdated = {
       type: "message.part.updated",
-      properties: { part: { type: "text", id: "p1", text: "" } },
+      properties: { part: makeTextPart({ text: "" }) },
     }
     expect(mapSSEEventToWebviewMessage(event, undefined)).toBeNull()
   })
 
   it("maps message.updated to messageCreated with ISO date", () => {
-    const event: SSEEvent = {
+    const event: EventMessageUpdated = {
       type: "message.updated",
       properties: {
-        info: {
-          id: "msg-1",
-          sessionID: "sess-1",
-          role: "assistant",
-          time: { created: 1700000000000 },
-          cost: 0.001,
-        },
+        info: makeAssistantMessage({ cost: 0.001 }),
       },
     }
     const msg = mapSSEEventToWebviewMessage(event, "sess-1")
@@ -187,7 +234,7 @@ describe("mapSSEEventToWebviewMessage", () => {
   })
 
   it("maps session.status idle to sessionStatus", () => {
-    const event: SSEEvent = {
+    const event: EventSessionStatus = {
       type: "session.status",
       properties: { sessionID: "sess-1", status: { type: "idle" } },
     }
@@ -200,7 +247,7 @@ describe("mapSSEEventToWebviewMessage", () => {
   })
 
   it("maps session.status retry with attempt/message/next", () => {
-    const event: SSEEvent = {
+    const event: EventSessionStatus = {
       type: "session.status",
       properties: {
         sessionID: "sess-1",
@@ -216,7 +263,7 @@ describe("mapSSEEventToWebviewMessage", () => {
   })
 
   it("maps permission.asked to permissionRequest", () => {
-    const event: SSEEvent = {
+    const event: EventPermissionAsked = {
       type: "permission.asked",
       properties: {
         id: "perm-1",
@@ -238,12 +285,13 @@ describe("mapSSEEventToWebviewMessage", () => {
   })
 
   it("defaults patterns to [] when not provided in permission.asked", () => {
-    const event = {
-      type: "permission.asked" as const,
+    const event: EventPermissionAsked = {
+      type: "permission.asked",
       properties: {
         id: "p1",
         sessionID: "s1",
         permission: "write_file",
+        patterns: [],
         metadata: {},
         always: [],
       },
@@ -255,11 +303,11 @@ describe("mapSSEEventToWebviewMessage", () => {
   })
 
   it("maps todo.updated to todoUpdated", () => {
-    const event: SSEEvent = {
+    const event: EventTodoUpdated = {
       type: "todo.updated",
       properties: {
         sessionID: "sess-1",
-        items: [{ id: "t1", content: "do something", status: "pending" }],
+        todos: [{ content: "do something", status: "pending", priority: "medium" }],
       },
     }
     const msg = mapSSEEventToWebviewMessage(event, "sess-1")
@@ -270,7 +318,7 @@ describe("mapSSEEventToWebviewMessage", () => {
   })
 
   it("maps question.asked to questionRequest", () => {
-    const event: SSEEvent = {
+    const event: EventQuestionAsked = {
       type: "question.asked",
       properties: {
         id: "q1",
@@ -283,7 +331,7 @@ describe("mapSSEEventToWebviewMessage", () => {
   })
 
   it("maps question.replied to questionResolved", () => {
-    const event: SSEEvent = {
+    const event: EventQuestionReplied = {
       type: "question.replied",
       properties: { sessionID: "sess-1", requestID: "req-1", answers: [] },
     }
@@ -295,7 +343,7 @@ describe("mapSSEEventToWebviewMessage", () => {
   })
 
   it("maps question.rejected to questionResolved", () => {
-    const event: SSEEvent = {
+    const event: EventQuestionRejected = {
       type: "question.rejected",
       properties: { sessionID: "sess-1", requestID: "req-2" },
     }
@@ -307,7 +355,7 @@ describe("mapSSEEventToWebviewMessage", () => {
   })
 
   it("maps session.created to sessionCreated with ISO dates", () => {
-    const event: SSEEvent = {
+    const event: EventSessionCreated = {
       type: "session.created",
       properties: { info: makeSession() },
     }
@@ -319,7 +367,7 @@ describe("mapSSEEventToWebviewMessage", () => {
   })
 
   it("maps session.updated to sessionUpdated with ISO dates", () => {
-    const event: SSEEvent = {
+    const event: EventSessionUpdated = {
       type: "session.updated",
       properties: { info: makeSession({ id: "sess-2" }) },
     }
@@ -328,12 +376,48 @@ describe("mapSSEEventToWebviewMessage", () => {
   })
 
   it("returns null for server.connected (no webview message)", () => {
-    const event: SSEEvent = { type: "server.connected", properties: {} }
+    const event: EventServerConnected = { type: "server.connected", properties: {} }
     expect(mapSSEEventToWebviewMessage(event, undefined)).toBeNull()
   })
 
-  it("returns null for server.heartbeat", () => {
-    const event: SSEEvent = { type: "server.heartbeat", properties: {} }
+  it("returns null for unhandled event types (Like global.disposed)", () => {
+    const event: Event = { type: "global.disposed", properties: {} }
     expect(mapSSEEventToWebviewMessage(event, undefined)).toBeNull()
+  })
+})
+
+describe("isEventFromForeignProject", () => {
+  const session = (projectID: string) =>
+    ({
+      id: "s1",
+      projectID,
+      title: "test",
+      directory: "/workspace",
+      time: { created: 0, updated: 0 },
+    }) as unknown as Session
+
+  it("drops session.created from a different project", () => {
+    const event: Event = { type: "session.created", properties: { info: session("project-B") } }
+    expect(isEventFromForeignProject(event, "project-A")).toBe(true)
+  })
+
+  it("drops session.updated from a different project", () => {
+    const event: Event = { type: "session.updated", properties: { info: session("project-B") } }
+    expect(isEventFromForeignProject(event, "project-A")).toBe(true)
+  })
+
+  it("keeps session.created from the same project", () => {
+    const event: Event = { type: "session.created", properties: { info: session("project-A") } }
+    expect(isEventFromForeignProject(event, "project-A")).toBe(false)
+  })
+
+  it("keeps all events when expectedProjectID is undefined", () => {
+    const event: Event = { type: "session.created", properties: { info: session("project-B") } }
+    expect(isEventFromForeignProject(event, undefined)).toBe(false)
+  })
+
+  it("keeps non-session events regardless of project", () => {
+    const event = { type: "server.heartbeat", properties: {} } as unknown as Event
+    expect(isEventFromForeignProject(event, "project-A")).toBe(false)
   })
 })

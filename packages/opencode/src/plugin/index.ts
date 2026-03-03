@@ -2,7 +2,7 @@ import type { Hooks, PluginInput, Plugin as PluginInstance } from "@kilocode/plu
 import { Config } from "../config/config"
 import { Bus } from "../bus"
 import { Log } from "../util/log"
-import { createOpencodeClient } from "@kilocode/sdk"
+import { createKiloClient } from "@kilocode/sdk"
 import { Server } from "../server/server"
 import { BunProc } from "../bun"
 import { Instance } from "../project/instance"
@@ -30,7 +30,7 @@ export namespace Plugin {
   ] // kilocode_change end
 
   const state = Instance.state(async () => {
-    const client = createOpencodeClient({
+    const client = createKiloClient({
       baseUrl: "http://localhost:4096",
       directory: Instance.directory,
       // @ts-ignore - fetch type incompatibility

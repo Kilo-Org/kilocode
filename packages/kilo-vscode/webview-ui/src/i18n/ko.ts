@@ -1030,6 +1030,8 @@ export const dict = {
   "agentManager.review.commentPlaceholder": "댓글을 남기세요...",
   "agentManager.review.commentAction": "댓글",
   "agentManager.review.sendToChat": "채팅으로 보내기",
+  "agentManager.review.collapsedOnly": "{{count}}개 접힘",
+  "agentManager.review.collapsedWithLarge": "{{collapsed}}개 접힘, {{large}}개 대용량",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "PR URL 붙여넣기...",

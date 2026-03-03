@@ -1061,6 +1061,8 @@ export const dict = {
   "agentManager.review.commentPlaceholder": "Ostavi komentar...",
   "agentManager.review.commentAction": "Komentariši",
   "agentManager.review.sendToChat": "Pošalji u chat",
+  "agentManager.review.collapsedOnly": "{{count}} sažeto",
+  "agentManager.review.collapsedWithLarge": "{{collapsed}} sažeto, {{large}} velikih",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Zalijepite PR URL...",
