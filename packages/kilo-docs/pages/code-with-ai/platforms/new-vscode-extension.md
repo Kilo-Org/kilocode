@@ -1,11 +1,11 @@
 ---
-title: "New VS Code Extension (Beta)"
-description: "The new Kilo Code VS Code extension, now available in beta"
+title: "New VS Code Extension (Pre-Release)"
+description: "The new Kilo Code VS Code extension, now available in pre-Release.
 ---
 
-# New VS Code Extension (Beta)
+# New VS Code Extension (Pre-Release)
 
-The new Kilo Code VS Code extension is now available in beta.
+The new Kilo Code VS Code extension is now available in pre-Release.
 You can install the pre-release version from the [VS Code Marketplace](https://kilo.ai/docs/getting-started/installing#vs-code-preview).
 
 :::info
@@ -25,7 +25,7 @@ This is an early release — features and behavior may change frequently as we i
 The new extension is built on top of the Kilo CLI 1.0 architecture, which powers a more consistent and scalable agent runtime across environments.
 
 - **Built on the new CLI foundation**
-- **Actively in beta** — improvements and features are being shipped frequently
+- **Actively in pre-Release** — improvements and features are being shipped frequently
 - **Designed to align the IDE experience** with the CLI and future platform capabilities
 
 If you encounter any issues, please report them on GitHub:
@@ -64,7 +64,7 @@ We plan to support Settings migration ahead of general availability.
 
 ## Feedback
 
-Your feedback is extremely valuable during beta.
+Your feedback is extremely valuable during pre-Release.
 If something feels broken, confusing, or missing, please let us know so we can improve it quickly.
 
 Report issues here:
