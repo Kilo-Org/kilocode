@@ -336,6 +336,340 @@ Until full automation is in place, create a merge checklist:
 
 ---
 
+## Phase 6 – Pre-release Integration Tests (High effort, high value)
+
+Full end-to-end integration tests that exercise the complete stack: extension activation →
+CLI backend → SDK communication → LLM interaction (mocked). These run pre-release or
+nightly, not on every PR (budget: ~30 min).
+
+### Architecture
+
+The extension stack has three distinct layers that can be tested independently:
+
+```
+┌────────────────────────────────────────────┐
+│  Level 1: VS Code Extension Host           │  @vscode/test-electron
+│  - Extension activates                     │  xvfb-run on Linux CI
+│  - Commands registered                     │
+│  - Sidebar view provider loads             │
+├────────────────────────────────────────────┤
+│  Level 2: CLI Backend + SDK                │  Standalone bun test
+│  - kilo serve spawns correctly             │  (no VS Code needed)
+│  - SDK connects and lists sessions         │
+│  - SDK creates session                     │
+├────────────────────────────────────────────┤
+│  Level 3: Full E2E with Mock LLM           │  Standalone bun test
+│  - Mock OpenAI-compatible HTTP server      │  + kilo serve
+│  - Send message via SDK                    │  + KILO_CONFIG_CONTENT
+│  - Verify response streams back            │
+└────────────────────────────────────────────┘
+```
+
+### Level 1: Extension Activation Tests
+
+Uses [`@vscode/test-electron`](../../package.json) (already a dependency) and the existing
+[`.vscode-test.mjs`](../../.vscode-test.mjs) config. Tests run inside a headless VS Code
+instance using `xvfb-run` on Ubuntu.
+
+**File:** `packages/kilo-vscode/tests/integration/activation.test.ts`
+
+```ts
+import * as vscode from "vscode"
+import { suite, test } from "mocha"
+import assert from "assert"
+
+suite("Extension Activation", () => {
+  test("extension activates successfully", async () => {
+    const ext = vscode.extensions.getExtension("kilocode.kilo-code")
+    assert.ok(ext, "Extension not found")
+    await ext.activate()
+    assert.ok(ext.isActive, "Extension failed to activate")
+  })
+
+  test("expected commands are registered", async () => {
+    const commands = await vscode.commands.getCommands(true)
+    const expected = [
+      "kilo-code.new.plusButtonClicked",
+      "kilo-code.new.agentManagerOpen",
+      "kilo-code.new.settingsButtonClicked",
+      "kilo-code.new.openInTab",
+    ]
+    for (const cmd of expected) {
+      assert.ok(commands.includes(cmd), `Command ${cmd} not registered`)
+    }
+  })
+
+  test("sidebar view provider is registered", async () => {
+    // KiloProvider registers as "kilo-code.new.SidebarProvider"
+    // Verify by trying to show the view
+    await vscode.commands.executeCommand("kilo-code.new.SidebarProvider.focus")
+    // If it doesn't throw, the view provider is registered
+  })
+})
+```
+
+**CI setup** (in `.github/workflows/integration-test.yml`):
+```yaml
+- name: Run extension activation tests
+  run: xvfb-run -a bun run test
+  working-directory: packages/kilo-vscode
+```
+
+### Level 2: CLI Backend + SDK Integration Tests
+
+Doesn't need VS Code — spawns `kilo serve` directly (like
+[`ServerManager`](../../src/services/cli-backend/server-manager.ts:14) does) and uses
+[`@kilocode/sdk`](../../../sdk/js/) to communicate.
+
+**File:** `packages/kilo-vscode/tests/integration/cli-backend.test.ts`
+
+```ts
+import { describe, it, expect, beforeAll, afterAll } from "bun:test"
+import { spawn, type ChildProcess } from "child_process"
+import { createClient } from "@kilocode/sdk/v2/client"
+import crypto from "crypto"
+
+let server: ChildProcess
+let port: number
+let password: string
+let client: ReturnType<typeof createClient>
+
+beforeAll(async () => {
+  password = crypto.randomBytes(32).toString("hex")
+
+  // Build CLI first (or use pre-built binary)
+  const cliPath = "packages/opencode/dist/kilo" // adjust for CI
+
+  server = spawn(cliPath, ["serve", "--port", "0"], {
+    env: { ...process.env, KILO_SERVER_PASSWORD: password },
+    stdio: ["ignore", "pipe", "pipe"],
+  })
+
+  // Wait for port on stdout
+  port = await new Promise<number>((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error("Server start timeout")), 30_000)
+    server.stdout?.on("data", (data: Buffer) => {
+      const match = data.toString().match(/listening on.*:(\d+)/)
+      if (match) {
+        clearTimeout(timeout)
+        resolve(parseInt(match[1]))
+      }
+    })
+    server.on("error", reject)
+  })
+
+  client = createClient({ baseUrl: `http://localhost:${port}`, password })
+})
+
+afterAll(() => {
+  server?.kill()
+})
+
+describe("CLI backend integration", () => {
+  it("server health check responds", async () => {
+    const res = await fetch(`http://localhost:${port}/health`)
+    expect(res.ok).toBe(true)
+  })
+
+  it("can list sessions via SDK", async () => {
+    const sessions = await client.session.list()
+    expect(Array.isArray(sessions)).toBe(true)
+  })
+
+  it("can create a session via SDK", async () => {
+    const session = await client.session.create({})
+    expect(session.id).toBeDefined()
+  })
+})
+```
+
+### Level 3: Full E2E with Mock LLM
+
+The most valuable test: verifies the complete message flow from SDK → CLI → provider → response.
+Uses a mock OpenAI-compatible HTTP server that returns canned completions.
+
+**File:** `packages/kilo-vscode/tests/integration/e2e-mock-llm.test.ts`
+
+```ts
+import { describe, it, expect, beforeAll, afterAll } from "bun:test"
+import { spawn, type ChildProcess } from "child_process"
+import { createClient } from "@kilocode/sdk/v2/client"
+import crypto from "crypto"
+
+let mockLlm: ReturnType<typeof Bun.serve>
+let server: ChildProcess
+let port: number
+let password: string
+
+// Mock OpenAI-compatible server
+function startMockLlm(): ReturnType<typeof Bun.serve> {
+  return Bun.serve({
+    port: 0,
+    fetch(req) {
+      const url = new URL(req.url)
+
+      if (url.pathname === "/v1/models") {
+        return Response.json({
+          data: [{ id: "mock-model", object: "model", owned_by: "test" }],
+        })
+      }
+
+      if (url.pathname === "/v1/chat/completions") {
+        // Return a streaming response
+        const encoder = new TextEncoder()
+        const stream = new ReadableStream({
+          start(controller) {
+            const chunk = {
+              choices: [{
+                delta: { content: "Hello from mock LLM!" },
+                finish_reason: null,
+              }],
+            }
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`))
+
+            const done = {
+              choices: [{ delta: {}, finish_reason: "stop" }],
+              usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+            }
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(done)}\n\n`))
+            controller.enqueue(encoder.encode("data: [DONE]\n\n"))
+            controller.close()
+          },
+        })
+        return new Response(stream, {
+          headers: { "Content-Type": "text/event-stream" },
+        })
+      }
+
+      return new Response("Not found", { status: 404 })
+    },
+  })
+}
+
+beforeAll(async () => {
+  mockLlm = startMockLlm()
+  password = crypto.randomBytes(32).toString("hex")
+
+  // Configure kilo serve to use our mock provider
+  const config = JSON.stringify({
+    provider: {
+      "mock": {
+        models: {
+          "mock-model": {
+            name: "Mock Model",
+            attachment: false,
+            tool_call: true,
+            cost: { input: 0, output: 0 },
+            limit: { context: 128000, output: 4096 },
+          },
+        },
+        options: {
+          apiKey: "test-key",
+          baseURL: `http://localhost:${mockLlm.port}/v1`,
+        },
+      },
+    },
+    model: "mock/mock-model",
+  })
+
+  const cliPath = "packages/opencode/dist/kilo"
+  server = spawn(cliPath, ["serve", "--port", "0"], {
+    env: {
+      ...process.env,
+      KILO_SERVER_PASSWORD: password,
+      KILO_CONFIG_CONTENT: config,
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+  })
+
+  port = await new Promise<number>((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error("Server start timeout")), 30_000)
+    server.stdout?.on("data", (data: Buffer) => {
+      const match = data.toString().match(/listening on.*:(\d+)/)
+      if (match) {
+        clearTimeout(timeout)
+        resolve(parseInt(match[1]))
+      }
+    })
+    server.on("error", reject)
+  })
+})
+
+afterAll(() => {
+  server?.kill()
+  mockLlm?.stop()
+})
+
+describe("Full E2E with mock LLM", () => {
+  it("can send a message and receive a streamed response", async () => {
+    const client = createClient({
+      baseUrl: `http://localhost:${port}`,
+      password,
+    })
+
+    const session = await client.session.create({})
+    expect(session.id).toBeDefined()
+
+    // Send a message and wait for a response
+    await client.session.chat({ sessionID: session.id, content: "Hello!" })
+
+    // Poll for response (SSE subscription is better but this is simpler for a test)
+    const messages = await client.session.messages({ sessionID: session.id })
+    const assistant = messages.find(m => m.role === "assistant")
+    expect(assistant).toBeDefined()
+  })
+})
+```
+
+### CI Workflow
+
+**File:** `.github/workflows/integration-test.yml`
+
+```yaml
+name: integration-test
+
+on:
+  workflow_dispatch:  # manual trigger for pre-release
+  schedule:
+    - cron: "0 3 * * 1-5"  # weekday nightlies at 03:00 UTC
+
+jobs:
+  integration:
+    name: integration tests
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-bun
+
+      # Build the CLI binary (needed for Levels 2 and 3)
+      - name: Build CLI
+        run: bun run build
+        working-directory: packages/opencode
+
+      # Level 1: Extension activation in real VS Code
+      - name: Extension activation tests
+        run: xvfb-run -a bun run test
+        working-directory: packages/kilo-vscode
+
+      # Levels 2 + 3: CLI backend + mock LLM
+      - name: CLI integration tests
+        run: bun test tests/integration/
+        working-directory: packages/kilo-vscode
+```
+
+### Why This Approach
+
+| Consideration | Decision |
+|--------------|----------|
+| **Webview DOM access** | Not possible from `@vscode/test-electron` — VS Code isolates webview content. Covered separately by Storybook/Chromatic (Phase 2). |
+| **Mock LLM vs real API** | Mock is free, deterministic, and doesn't require secrets. Use `KILO_CONFIG_CONTENT` to inject a custom provider pointing to localhost. |
+| **`@vscode/test-electron` vs standalone** | Level 1 needs VS Code APIs. Levels 2+3 don't — standalone bun tests are faster and more debuggable. |
+| **Cost** | ~30 min total: extension activation (~2 min), CLI build (~5 min), integration tests (~5 min), margin for startup/teardown. |
+| **When to run** | Not on every PR (too slow). Run on `workflow_dispatch` (pre-release) + weekday nightly schedule. |
+
+---
+
 ## Priority Order
 
 | Priority | Action | Effort | Status |
@@ -348,6 +682,7 @@ Until full automation is in place, create a merge checklist:
 | 🟠 P1 | Add kilo-specific Storybook stories | 1 day | TODO |
 | 🟡 P2 | Extract + test webview util functions | 2 hours | TODO |
 | 🟡 P2 | Storybook play tests for kilocode_changes | Half day | TODO |
+| 🟠 P1 | Pre-release integration tests (Levels 1-3) | 2-3 days | TODO |
 | 🟢 P3 | Upstream merge checklist doc | 30 min | TODO |
 
 ---
