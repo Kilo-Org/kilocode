@@ -25,6 +25,9 @@ import {
   mapSSEEventToWebviewMessage,
   getErrorMessage,
   isEventFromForeignProject,
+  loadSessions as loadSessionsUtil,
+  flushPendingSessionRefresh as flushPendingSessionRefreshUtil,
+  type SessionRefreshContext,
 } from "./kilo-provider-utils"
 
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
@@ -815,84 +818,46 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /**
+   * Build the context object used by the extracted session-refresh helpers.
+   */
+  private get sessionRefreshContext(): SessionRefreshContext {
+    const client = this.client
+    return {
+      pendingSessionRefresh: this.pendingSessionRefresh,
+      connectionState: this.connectionState,
+      listSessions: client
+        ? (dir: string) => client.session.list({ directory: dir }, { throwOnError: true }).then(({ data }) => data)
+        : null,
+      sessionDirectories: this.sessionDirectories,
+      workspaceDirectory: this.getWorkspaceDirectory(),
+      postMessage: (msg: unknown) => this.postMessage(msg),
+    }
+  }
+
+  /**
    * Retry a deferred sessions refresh once the client is ready.
    */
   private async flushPendingSessionRefresh(reason: string): Promise<void> {
     if (!this.pendingSessionRefresh) return
-    if (!this.client) {
-      if (this.connectionState === "connecting") return
-      this.postMessage({
-        type: "error",
-        message: "Not connected to CLI backend",
-      })
-      return
-    }
     console.log("[Kilo New] KiloProvider: 🔄 Flushing deferred sessions refresh", { reason })
-    await this.handleLoadSessions()
+    const ctx = this.sessionRefreshContext
+    try {
+      const resolved = await flushPendingSessionRefreshUtil(ctx)
+      if (resolved) this.projectID = resolved
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to flush session refresh:", error)
+    }
+    this.pendingSessionRefresh = ctx.pendingSessionRefresh
   }
 
   /**
    * Handle loading all sessions.
    */
   private async handleLoadSessions(): Promise<void> {
-    const client = this.client
-    if (!client) {
-      // Client isn't ready yet — mark for retry once connected.
-      // This avoids silently dropping the request when initializeState()
-      // calls refreshSessions() before the CLI server has started.
-      this.pendingSessionRefresh = true
-      if (this.connectionState !== "connecting") {
-        this.postMessage({
-          type: "error",
-          message: "Not connected to CLI backend",
-        })
-      }
-      return
-    }
-
-    this.pendingSessionRefresh = false
-
+    const ctx = this.sessionRefreshContext
     try {
-      const workspaceDir = this.getWorkspaceDirectory()
-      const { data: sessions } = await client.session.list({ directory: workspaceDir }, { throwOnError: true })
-
-      // The primary fetch already returns all sessions for this project (scoped
-      // by project_id on the backend). Worktree directories share the same
-      // project_id so their sessions are included. We still fetch from worktree
-      // directories in case a worktree resolved to a separate Instance, then
-      // filter the merged results to the workspace project to prevent sessions
-      // from other repositories from leaking in.
-      const projectID = sessions[0]?.projectID
-      const worktreeDirs = new Set(this.sessionDirectories.values())
-      const extra = await Promise.all(
-        [...worktreeDirs].map((dir) =>
-          client.session
-            .list({ directory: dir }, { throwOnError: true })
-            .then(({ data }) => data)
-            .catch((err: unknown) => {
-              console.error(`[Kilo New] KiloProvider: Failed to list sessions for ${dir}:`, err)
-              return [] as Session[]
-            }),
-        ),
-      )
-      const seen = new Set(sessions.map((s) => s.id))
-      for (const batch of extra) {
-        for (const s of batch) {
-          if (!seen.has(s.id) && (!projectID || s.projectID === projectID)) {
-            sessions.push(s)
-            seen.add(s.id)
-          }
-        }
-      }
-      // Update project ID when sessions are available; keep previous value when
-      // the list is empty (empty ≠ different project — the workspace hasn't changed).
-      const resolved = sessions[0]?.projectID
+      const resolved = await loadSessionsUtil(ctx)
       if (resolved) this.projectID = resolved
-
-      this.postMessage({
-        type: "sessionsLoaded",
-        sessions: sessions.map((s) => this.sessionToWebview(s)),
-      })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to load sessions:", error)
       this.postMessage({
@@ -900,6 +865,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         message: getErrorMessage(error) || "Failed to load sessions",
       })
     }
+    this.pendingSessionRefresh = ctx.pendingSessionRefresh
   }
 
   /**

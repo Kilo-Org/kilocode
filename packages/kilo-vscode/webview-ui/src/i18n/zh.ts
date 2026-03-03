@@ -958,6 +958,7 @@ export const dict = {
   "agentManager.hoverCard.branch": "分支",
   "agentManager.hoverCard.base": "基础",
   "agentManager.hoverCard.sessions": "会话",
+  "agentManager.hoverCard.files": "文件",
   "agentManager.hoverCard.changes": "更改",
   "agentManager.hoverCard.commits": "提交",
   "agentManager.session.new": "新建会话",

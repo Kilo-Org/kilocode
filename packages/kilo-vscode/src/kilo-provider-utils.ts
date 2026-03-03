@@ -60,6 +60,80 @@ export function filterVisibleAgents(agents: Agent[]): { visible: Agent[]; defaul
   return { visible, defaultAgent }
 }
 
+/**
+ * Shared interface for the subset of KiloProvider state needed by session-refresh helpers.
+ * Extracted here so the logic can be tested without importing KiloProvider (and vscode).
+ */
+export interface SessionRefreshContext {
+  pendingSessionRefresh: boolean
+  connectionState: "connecting" | "connected" | "disconnected" | "error"
+  listSessions: ((dir: string) => Promise<Session[]>) | null
+  sessionDirectories: Map<string, string>
+  workspaceDirectory: string
+  postMessage(message: unknown): void
+}
+
+/**
+ * Load sessions from the workspace and all registered worktree directories.
+ * Sets pendingSessionRefresh when the HTTP client isn't ready yet.
+ * Returns the resolved projectID (if any) so the caller can update its own state.
+ */
+export async function loadSessions(ctx: SessionRefreshContext): Promise<string | undefined> {
+  const list = ctx.listSessions
+  if (!list) {
+    ctx.pendingSessionRefresh = true
+    if (ctx.connectionState !== "connecting") {
+      ctx.postMessage({ type: "error", message: "Not connected to CLI backend" })
+    }
+    return
+  }
+
+  ctx.pendingSessionRefresh = false
+
+  const sessions = await list(ctx.workspaceDirectory)
+  const projectID = sessions[0]?.projectID
+  const worktreeDirs = new Set(ctx.sessionDirectories.values())
+  const extra = await Promise.all(
+    [...worktreeDirs].map((dir) =>
+      list(dir).catch((err: unknown) => {
+        console.error(`[Kilo] Failed to list sessions for ${dir}:`, err)
+        return [] as Session[]
+      }),
+    ),
+  )
+  const seen = new Set(sessions.map((s) => s.id))
+  for (const batch of extra) {
+    for (const s of batch) {
+      if (!seen.has(s.id) && (!projectID || s.projectID === projectID)) {
+        sessions.push(s)
+        seen.add(s.id)
+      }
+    }
+  }
+
+  ctx.postMessage({
+    type: "sessionsLoaded",
+    sessions: sessions.map((s) => sessionToWebview(s)),
+  })
+
+  return sessions[0]?.projectID
+}
+
+/**
+ * Flush a deferred session refresh when the HTTP client becomes available.
+ */
+export async function flushPendingSessionRefresh(ctx: SessionRefreshContext): Promise<string | undefined> {
+  if (!ctx.pendingSessionRefresh) return
+
+  if (!ctx.listSessions) {
+    if (ctx.connectionState === "connecting") return
+    ctx.postMessage({ type: "error", message: "Not connected to CLI backend" })
+    return
+  }
+
+  return loadSessions(ctx)
+}
+
 export function buildSettingPath(key: string): { section: string; leaf: string } {
   const parts = key.split(".")
   const section = parts.slice(0, -1).join(".")

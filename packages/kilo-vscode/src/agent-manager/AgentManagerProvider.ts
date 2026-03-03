@@ -49,6 +49,8 @@ export class AgentManagerProvider implements vscode.Disposable {
   private gitOps: GitOps
   private cachedDiffTarget: { directory: string; baseBranch: string } | undefined
   private staleWorktreeIds = new Set<string>()
+  private cachedWorktreeStats: Record<string, unknown> | undefined
+  private cachedLocalStats: Record<string, unknown> | undefined
   private applyingWorktreeId: string | undefined
 
   constructor(
@@ -65,10 +67,14 @@ export class AgentManagerProvider implements vscode.Disposable {
       getWorkspaceRoot: () => this.getWorkspaceRoot(),
       getClient: () => this.connectionService.getClient(),
       onStats: (stats) => {
-        this.postToWebview({ type: "agentManager.worktreeStats", stats })
+        const msg = { type: "agentManager.worktreeStats", stats }
+        this.cachedWorktreeStats = msg
+        this.postToWebview(msg)
       },
       onLocalStats: (stats) => {
-        this.postToWebview({ type: "agentManager.localStats", stats })
+        const msg = { type: "agentManager.localStats", stats }
+        this.cachedLocalStats = msg
+        this.postToWebview(msg)
       },
       onWorktreePresence: (presence) => {
         this.onWorktreePresence(presence)
@@ -226,6 +232,10 @@ export class AgentManagerProvider implements vscode.Disposable {
             return
           }
           this.pushState()
+          // Re-send cached stats so the webview gets them even if the poller
+          // already emitted before the webview was ready to receive messages.
+          if (this.cachedWorktreeStats) this.postToWebview(this.cachedWorktreeStats)
+          if (this.cachedLocalStats) this.postToWebview(this.cachedLocalStats)
           // Refresh sessions after pushState so the webview's sessionsLoaded
           // handler is guaranteed to be registered (requestState fires from
           // onMount). Without this, the initial refreshSessions() in
@@ -1560,18 +1570,27 @@ export class AgentManagerProvider implements vscode.Disposable {
     return { directory: worktree.path, baseBranch: worktree.parentBranch }
   }
 
-  /** Resolve diff target for the local workspace — diffs against the remote tracking branch. */
+  /** Resolve diff target for the local workspace — diffs against the remote tracking
+   *  branch, falling back to the repo's default branch, and ultimately to HEAD so
+   *  local-only repos (no remote) still show working-tree changes in the diff panel. */
   private async resolveLocalDiffTarget(): Promise<{ directory: string; baseBranch: string } | undefined> {
     const root = this.getWorkspaceRoot()
-    if (!root) return undefined
-    const branch = await this.gitOps.currentBranch(root)
-    if (!branch || branch === "HEAD") return undefined
-    const tracking = await this.gitOps.resolveTrackingBranch(root, branch)
-    if (!tracking) {
-      this.log("Local diff: no remote tracking branch found")
+    if (!root) {
+      this.log("Local diff: no workspace root")
       return undefined
     }
-    return { directory: root, baseBranch: tracking }
+    const branch = await this.gitOps.currentBranch(root)
+    if (!branch || branch === "HEAD") {
+      this.log("Local diff: detached HEAD or no branch")
+      return undefined
+    }
+    const tracking = await this.gitOps.resolveTrackingBranch(root, branch)
+    const defaultBranch = tracking ? undefined : await this.gitOps.resolveDefaultBranch(root, branch)
+    const base = tracking ?? defaultBranch ?? "HEAD"
+    this.log(
+      `Local diff: branch=${branch} tracking=${tracking ?? "none"} default=${defaultBranch ?? "none"} base=${base}`,
+    )
+    return { directory: root, baseBranch: base }
   }
 
   /** One-shot diff fetch with loading indicators. Resolves target async, then fetches. */

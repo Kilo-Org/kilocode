@@ -963,6 +963,7 @@ export const dict = {
   "agentManager.hoverCard.branch": "브랜치",
   "agentManager.hoverCard.base": "베이스",
   "agentManager.hoverCard.sessions": "세션",
+  "agentManager.hoverCard.files": "파일",
   "agentManager.hoverCard.changes": "변경 사항",
   "agentManager.hoverCard.commits": "커밋",
   "agentManager.session.new": "새 세션",

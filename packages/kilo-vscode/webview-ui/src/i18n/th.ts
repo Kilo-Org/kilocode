@@ -955,6 +955,7 @@ export const dict = {
   "agentManager.hoverCard.branch": "BRANCH",
   "agentManager.hoverCard.base": "ฐาน",
   "agentManager.hoverCard.sessions": "เซสชัน",
+  "agentManager.hoverCard.files": "ไฟล์",
   "agentManager.hoverCard.changes": "การเปลี่ยนแปลง",
   "agentManager.hoverCard.commits": "คอมมิต",
   "agentManager.session.new": "เซสชันใหม่",

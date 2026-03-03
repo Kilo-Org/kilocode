@@ -251,8 +251,8 @@ describe("GitOps", () => {
     })
   })
 
-  describe("countMissingOriginCommits", () => {
-    it("counts commits ahead of upstream", async () => {
+  describe("aheadBehind", () => {
+    it("counts commits ahead and behind upstream", async () => {
       const git = ops(async (args) => {
         if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "@{upstream}") return "origin/main"
         if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "origin/main"
@@ -260,10 +260,10 @@ describe("GitOps", () => {
         if (args[0] === "config") return "origin"
         if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
         if (args[0] === "fetch") return ""
-        if (args[0] === "rev-list") return "3"
+        if (args[0] === "rev-list" && args[1] === "--left-right") return "1\t3"
         return ""
       })
-      expect(await git.countMissingOriginCommits("/repo", "main")).toBe(3)
+      expect(await git.aheadBehind("/repo", "main")).toEqual({ ahead: 3, behind: 1 })
     })
 
     it("uses resolved remote for non-origin setups", async () => {
@@ -287,10 +287,10 @@ describe("GitOps", () => {
         )
           return "abc"
         if (args[0] === "fetch") return ""
-        if (args[0] === "rev-list") return "4"
+        if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t4"
         return ""
       })
-      expect(await git.countMissingOriginCommits("/repo", "main")).toBe(4)
+      expect(await git.aheadBehind("/repo", "main")).toEqual({ ahead: 4, behind: 0 })
       const fetches = commands.filter((c) => c[0] === "fetch")
       expect(fetches[0]![3]).toBe("myfork")
     })
@@ -318,13 +318,13 @@ describe("GitOps", () => {
         )
           return "abc"
         if (args[0] === "fetch") return ""
-        if (args[0] === "rev-list") return "2"
+        if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t2"
         return ""
       })
-      expect(await git.countMissingOriginCommits("/repo", "main")).toBe(2)
+      expect(await git.aheadBehind("/repo", "main")).toEqual({ ahead: 2, behind: 0 })
     })
 
-    it("returns zero when rev-list fails", async () => {
+    it("returns zeros when rev-list fails", async () => {
       const git = ops(async (args) => {
         if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "@{upstream}") return "origin/main"
         if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "origin/main"
@@ -335,7 +335,7 @@ describe("GitOps", () => {
         if (args[0] === "rev-list") throw new Error("fatal")
         return ""
       })
-      expect(await git.countMissingOriginCommits("/repo", "main")).toBe(0)
+      expect(await git.aheadBehind("/repo", "main")).toEqual({ ahead: 0, behind: 0 })
     })
   })
 

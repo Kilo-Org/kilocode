@@ -983,6 +983,7 @@ export const dict = {
   "agentManager.hoverCard.branch": "分支",
   "agentManager.hoverCard.base": "基底",
   "agentManager.hoverCard.sessions": "工作階段",
+  "agentManager.hoverCard.files": "檔案",
   "agentManager.hoverCard.changes": "變更",
   "agentManager.hoverCard.commits": "提交",
   "agentManager.session.new": "新建工作階段",
