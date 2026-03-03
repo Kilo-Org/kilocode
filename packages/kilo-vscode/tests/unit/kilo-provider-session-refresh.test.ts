@@ -1,75 +1,6 @@
-import { describe, it, expect, mock } from "bun:test"
+import { describe, it, expect } from "bun:test"
 
-const kind = (value: string) => ({
-  value,
-  append: (part: string) => kind(`${value}.${part}`),
-})
-
-class MockUri {
-  constructor(
-    public readonly scheme: string,
-    public readonly fsPath: string,
-    public readonly path: string,
-  ) {}
-  static parse(value: string) {
-    return new MockUri("file", value, value)
-  }
-  static file(p: string) {
-    return new MockUri("file", p, p)
-  }
-  static joinPath(base: MockUri, ...parts: string[]) {
-    return new MockUri(base.scheme, [base.fsPath, ...parts].join("/"), [base.path, ...parts].join("/"))
-  }
-}
-
-const mockVscode = {
-  Uri: MockUri,
-  Disposable: class {
-    constructor(public callOnDispose: () => void) {}
-    dispose() {
-      this.callOnDispose()
-    }
-  },
-  EventEmitter: class {
-    event = () => ({ dispose: () => {} })
-    fire() {}
-    dispose() {}
-  },
-  WebviewViewProvider: {},
-  extensions: {
-    getExtension: () => ({
-      packageJSON: { version: "test" },
-    }),
-  },
-  env: {
-    appName: "VS Code",
-    language: "en",
-    machineId: "machine",
-    isTelemetryEnabled: false,
-  },
-  version: "1.0.0",
-  workspace: {
-    workspaceFolders: [{ uri: { fsPath: "/repo" } }],
-    getConfiguration: () => ({
-      get: <T>(_key: string, value?: T) => value,
-    }),
-  },
-  CodeAction: class {
-    command?: { command: string; title: string }
-    isPreferred?: boolean
-    constructor(
-      public title: string,
-      public kind: { value: string },
-    ) {}
-  },
-  CodeActionKind: {
-    QuickFix: kind("quickfix"),
-    RefactorRewrite: kind("refactor.rewrite"),
-  },
-}
-
-mock.module("vscode", () => mockVscode)
-
+// vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
 const { KiloProvider } = await import("../../src/KiloProvider")
 
 type State = "connecting" | "connected" | "disconnected" | "error"
@@ -132,10 +63,10 @@ function createConnection(client: ReturnType<typeof createClient>) {
 }
 
 describe("KiloProvider pending session refresh", () => {
-  it.skip("flushes deferred refresh in initializeConnection without relying on connected event callback", async () => {
+  it("flushes deferred refresh in initializeConnection without relying on connected event callback", async () => {
     const client = createClient()
     const connection = createConnection(client)
-    const provider = new KiloProvider(MockUri.file("/ext") as never, connection as never)
+    const provider = new KiloProvider({} as never, connection as never)
     const internal = provider as unknown as ProviderInternals
 
     provider.setSessionDirectory("ses_1", "/worktree")
@@ -149,10 +80,10 @@ describe("KiloProvider pending session refresh", () => {
     expect(internal.pendingSessionRefresh).toBe(false)
   })
 
-  it.skip("does not post not-connected errors while still connecting", async () => {
+  it("does not post not-connected errors while still connecting", async () => {
     const client = createClient()
     const connection = createConnection(client)
-    const provider = new KiloProvider(MockUri.file("/ext") as never, connection as never)
+    const provider = new KiloProvider({} as never, connection as never)
     const internal = provider as unknown as ProviderInternals
     const sent: unknown[] = []
 

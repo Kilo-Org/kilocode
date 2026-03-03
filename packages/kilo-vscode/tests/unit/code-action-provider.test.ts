@@ -1,49 +1,6 @@
-import { describe, it, expect, mock } from "bun:test"
+import { describe, it, expect } from "bun:test"
 
-const makeAction = (title: string, kind: string) => ({ title, kind })
-const makeKind = (value: string) => ({
-  value,
-  append: (v: string) => makeKind(`${value}.${v}`),
-})
-
-const QuickFix = makeKind("quickfix")
-const RefactorRewrite = makeKind("refactor.rewrite")
-
-const mockVscode = {
-  extensions: {
-    getExtension: () => ({
-      packageJSON: { version: "test" },
-    }),
-  },
-  env: {
-    appName: "VS Code",
-    language: "en",
-    machineId: "machine",
-    isTelemetryEnabled: false,
-  },
-  version: "1.0.0",
-  workspace: {
-    workspaceFolders: [{ uri: { fsPath: "/repo" } }],
-    getConfiguration: () => ({
-      get: <T>(_key: string, value?: T) => value,
-    }),
-  },
-  CodeAction: class {
-    command?: { command: string; title: string }
-    isPreferred?: boolean
-    constructor(
-      public title: string,
-      public kind: { value: string },
-    ) {}
-  },
-  CodeActionKind: {
-    QuickFix,
-    RefactorRewrite,
-  },
-}
-
-mock.module("vscode", () => mockVscode)
-
+// vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
 const { KiloCodeActionProvider } = await import("../../src/services/code-actions/code-action-provider")
 
 const provider = new KiloCodeActionProvider()
@@ -130,7 +87,7 @@ describe("KiloCodeActionProvider", () => {
       it("Fix action uses QuickFix kind", () => {
         const result = provider.provideCodeActions({} as never, makeRange(false) as never, makeContext(1) as never)
         const fix = result.find((a) => a.title === "Fix with Kilo Code")
-        expect(fix?.kind.value).toBe("quickfix")
+        expect(fix?.kind?.value).toBe("quickfix")
       })
 
       it("uses correct Fix command ID", () => {
