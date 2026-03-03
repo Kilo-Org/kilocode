@@ -4,6 +4,9 @@ on:
   workflow_dispatch: # manual trigger for pre-release
   schedule:
     - cron: "0 3 * * 1-5" # weekday nightlies at 03:00 UTC
+  push:
+    branches:
+      - mark/integration-tests # TODO: remove after initial validation
 
 jobs:
   integration:
