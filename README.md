@@ -41,6 +41,8 @@ If you download from the [Releases page](https://github.com/Kilo-Org/kilocode/re
 - **arm64 / aarch64** = ARM CPUs (Apple Silicon, ARM servers, some Windows ARM)
 - **x64 / amd64** = Intel/AMD 64-bit CPUs (most Windows PCs)
 - **vsix** = VS Code extension package (for manual extension install), not a standalone CLI
+- **baseline** = compatibility build for older CPUs (use if the default build crashes or fails to start)
+- **musl** = statically linked Linux build (best for Alpine or minimal Docker images without glibc)
 - **source code (.zip/.tar.gz)** = source snapshot for developers, not required for normal install
 
 ### Which file should I pick?
@@ -51,6 +53,7 @@ If you download from the [Releases page](https://github.com/Kilo-Org/kilocode/re
 - **macOS Apple Silicon (M1/M2/M3...):** choose `darwin-arm64`
 - **Linux x64 server:** choose `linux-x64`
 - **Linux ARM64 server/device:** choose `linux-arm64`
+- **Alpine/minimal Docker images:** prefer the matching `*-musl` build
 
 If you're unsure, check your OS and CPU architecture first:
 
