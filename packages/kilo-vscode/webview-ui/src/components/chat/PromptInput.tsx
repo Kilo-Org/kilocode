@@ -16,6 +16,7 @@ import { ModeSwitcher } from "../shared/ModeSwitcher"
 import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
 import { useImageAttachments } from "../../hooks/useImageAttachments"
+import { WandSparkles } from "@kilocode/kilo-ui/lucide"
 import { fileName, dirName, buildHighlightSegments } from "./prompt-input-utils"
 
 const AUTOCOMPLETE_DEBOUNCE_MS = 500
@@ -37,6 +38,9 @@ export const PromptInput: Component = () => {
   const [text, setText] = createSignal("")
   const [ghostText, setGhostText] = createSignal("")
   const [chatAutocompleteEnabled, setChatAutocompleteEnabled] = createSignal(false)
+  const [enhancing, setEnhancing] = createSignal(false)
+  let enhanceCounter = 0
+  let preEnhanceText: string | null = null
 
   let textareaRef: HTMLTextAreaElement | undefined
   let highlightRef: HTMLDivElement | undefined
@@ -116,6 +120,27 @@ export const PromptInput: Component = () => {
     if (message.type === "action" && message.action === "focusInput") {
       textareaRef?.focus()
     }
+
+    if (message.type === "enhancePromptResult") {
+      const result = message as import("../../types/messages").EnhancePromptResultMessage
+      if (result.requestId === `enhance-${enhanceCounter}`) {
+        setText(result.text)
+        setGhostText("")
+        setEnhancing(false)
+        if (textareaRef) {
+          textareaRef.value = result.text
+          adjustHeight()
+          textareaRef.focus()
+        }
+      }
+    }
+
+    if (message.type === "enhancePromptError") {
+      const result = message as import("../../types/messages").EnhancePromptErrorMessage
+      if (result.requestId === `enhance-${enhanceCounter}`) {
+        setEnhancing(false)
+      }
+    }
   })
 
   onMount(() => {
@@ -190,6 +215,7 @@ export const PromptInput: Component = () => {
     const target = e.target as HTMLTextAreaElement
     const val = target.value
     setText(val)
+    preEnhanceText = null
     adjustHeight()
     setGhostText("")
     syncHighlightScroll()
@@ -207,6 +233,20 @@ export const PromptInput: Component = () => {
   }
 
   const handleKeyDown = (e: KeyboardEvent) => {
+    // Undo enhanced prompt with Ctrl+Z / ⌘Z
+    if (e.key === "z" && (e.metaKey || e.ctrlKey) && !e.shiftKey && preEnhanceText !== null) {
+      e.preventDefault()
+      const restored = preEnhanceText
+      preEnhanceText = null
+      setText(restored)
+      setGhostText("")
+      if (textareaRef) {
+        textareaRef.value = restored
+        adjustHeight()
+      }
+      return
+    }
+
     if (mention.onKeyDown(e, textareaRef, setText, adjustHeight)) {
       setGhostText("")
       queueMicrotask(scrollToActiveItem)
@@ -235,6 +275,28 @@ export const PromptInput: Component = () => {
       dismissSuggestion()
       handleSend()
     }
+  }
+
+  const canEnhance = () => !isBusy() && !isDisabled() && !enhancing()
+
+  const handleEnhance = () => {
+    if (isDisabled() || enhancing() || isBusy()) return
+    const draft = text().trim()
+    if (!draft) {
+      const description = language.t("prompt.action.enhanceDescription")
+      setText(description)
+      setGhostText("")
+      if (textareaRef) {
+        textareaRef.value = description
+        adjustHeight()
+        textareaRef.focus()
+      }
+      return
+    }
+    preEnhanceText = text()
+    enhanceCounter++
+    setEnhancing(true)
+    vscode.postMessage({ type: "enhancePrompt", text: draft, requestId: `enhance-${enhanceCounter}` })
   }
 
   const handleSend = () => {
@@ -352,6 +414,17 @@ export const PromptInput: Component = () => {
           <ThinkingSelector />
         </div>
         <div class="prompt-input-hint-actions">
+          <Tooltip value={language.t("prompt.action.enhance")} placement="top">
+            <Button
+              variant="ghost"
+              size="small"
+              onClick={handleEnhance}
+              disabled={!canEnhance()}
+              aria-label={language.t("prompt.action.enhance")}
+            >
+              <WandSparkles size={16} class={enhancing() ? "enhance-spinner" : ""} />
+            </Button>
+          </Tooltip>
           <Show
             when={isBusy()}
             fallback={

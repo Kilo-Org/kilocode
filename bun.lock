@@ -204,6 +204,7 @@
       "version": "7.0.35",
       "dependencies": {
         "@kobalte/core": "0.13.11",
+        "lucide-solid": "0.576.0",
       },
       "devDependencies": {
         "@playwright/test": "1.58.2",
@@ -2865,6 +2866,8 @@
     "lru-cache": ["lru-cache@11.2.5", "", {}, "sha512-vFrFJkWtJvJnD5hg+hJvVE8Lh/TcMzKnTgCWmtBipwI5yLX/iX+5UB2tfuyODF5E7k9xEzMdYgGqaSb1c0c5Yw=="],
 
     "lru_map": ["lru_map@0.4.1", "", {}, "sha512-I+lBvqMMFfqaV8CJCISjI3wbjmwVu/VyOoU7+qtu9d7ioW5klMgsTTiUOUp+DJvfTTzKXoPbyC6YfgkNcyPSOg=="],
+
+    "lucide-solid": ["lucide-solid@0.576.0", "", { "peerDependencies": { "solid-js": "^1.4.7" } }, "sha512-WX1JQJXCE8k4YWfj6pLx57i6AyzmH1LRyGP6LUDzIPgPIki9Pk4sIhSfTfF+jCBj8qRcp5aIz+tUURLJrzGAFw=="],
 
     "luxon": ["luxon@3.6.1", "", {}, "sha512-tJLxrKJhO2ukZ5z0gyjY1zPh3Rh88Ej9P7jNrZiHMUXHae1yvI2imgOZtL1TO8TW6biMMKfTtAOoEJANgtWBMQ=="],
 
