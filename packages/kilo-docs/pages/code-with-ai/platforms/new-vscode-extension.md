@@ -52,7 +52,7 @@ The new extension uses CLI 1.0 session storage.
 **Settings do not carry over**
 You'll need to reconfigure any preferences or providers.
 
-We're actively exploring migration options ahead of general availability.
+We plan to support Settings migration ahead of general availability.
 
 ---
 
