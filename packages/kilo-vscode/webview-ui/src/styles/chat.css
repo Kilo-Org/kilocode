@@ -578,6 +578,11 @@
   flex: 1;
 }
 
+.model-selector-item-name-highlight {
+  font-weight: 700;
+  color: var(--vscode-textLink-foreground, var(--text-link, var(--text-base)));
+}
+
 .model-selector-tag {
   flex-shrink: 0;
   padding: 1px 5px;

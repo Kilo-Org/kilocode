@@ -10,11 +10,21 @@
 import { Component, createSignal, createMemo, createEffect, For, Show } from "solid-js"
 import { Popover } from "@kilocode/kilo-ui/popover"
 import { Button } from "@kilocode/kilo-ui/button"
-import { useProvider, EnrichedModel } from "../../context/provider"
+import { useProvider } from "../../context/provider"
+import type { EnrichedModel } from "../../context/provider"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { ModelSelection } from "../../types/messages"
-import { KILO_GATEWAY_ID, providerSortKey, isFree, buildTriggerLabel } from "./model-selector-utils"
+import {
+  KILO_GATEWAY_ID,
+  providerSortKey,
+  isFree,
+  buildTriggerLabel,
+  filterModels,
+  modelKey,
+  WordBoundaryFzf,
+  buildMatchSegments,
+} from "./model-selector-utils"
 
 interface ModelGroup {
   providerName: string
@@ -58,22 +68,15 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
 
   const hasProviders = () => visibleModels().length > 0
 
+  const finder = createMemo(() => new WordBoundaryFzf(visibleModels(), (model) => model.name))
+
   // Flat filtered list for keyboard navigation
-  const filtered = createMemo(() => {
-    const q = search().toLowerCase()
-    if (!q) {
-      return visibleModels()
-    }
-    return visibleModels().filter(
-      (m) =>
-        m.name.toLowerCase().includes(q) || m.providerName.toLowerCase().includes(q) || m.id.toLowerCase().includes(q),
-    )
-  })
+  const filtered = createMemo(() => filterModels(visibleModels(), search(), finder()))
 
   // Grouped for rendering
   const groups = createMemo<ModelGroup[]>(() => {
     const map = new Map<string, ModelGroup>()
-    for (const m of filtered()) {
+    for (const m of filtered().models) {
       let group = map.get(m.providerID)
       if (!group) {
         group = { providerName: m.providerName, models: [] }
@@ -249,7 +252,15 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                       onClick={() => pick(model)}
                       onMouseEnter={() => setActiveIndex(flatIndex(model))}
                     >
-                      <span class="model-selector-item-name">{model.name}</span>
+                      <span class="model-selector-item-name">
+                        <For each={buildMatchSegments(model.name, filtered().positions.get(modelKey(model)))}>
+                          {(segment) => (
+                            <span classList={{ "model-selector-item-name-highlight": segment.highlight }}>
+                              {segment.text}
+                            </span>
+                          )}
+                        </For>
+                      </span>
                       <Show when={isFree(model)}>
                         <span class="model-selector-tag">{language.t("model.tag.free")}</span>
                       </Show>
