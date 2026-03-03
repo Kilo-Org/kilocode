@@ -13,8 +13,7 @@
   /* --- Primary --- */
   &[data-variant="primary"] {
     background-color: var(--button-primary-base, var(--surface-brand-base));
-    color: white;
-    border-color: transparent;
+    color: var(--text-on-interactive-base, white);
     box-shadow: none;
 
     &:hover:not([data-disabled]):not(:disabled) {
@@ -31,8 +30,7 @@
   /* --- Secondary --- */
   &[data-variant="secondary"] {
     background-color: var(--button-secondary-base);
-    color: white;
-    border: none;
+    color: var(--text-strong, white);
     box-shadow: none;
 
     &:hover:not([data-disabled]):not(:disabled) {
@@ -49,7 +47,7 @@
   /* --- Ghost (Tertiary) --- */
   &[data-variant="ghost"] {
     background: transparent;
-    color: white;
+    color: var(--text-strong, white);
     box-shadow: none;
 
     &:hover:not([data-disabled]):not(:disabled) {
@@ -63,7 +61,7 @@
     }
   }
 
-  /* --- Size: Normal (default) — matches input height (34px outer) --- */
+  /* --- Size: Normal (default) — 32px outer height --- */
   &[data-size="normal"] {
     height: auto;
     padding: 6px 16px;
