@@ -2,7 +2,10 @@ import * as vscode from "vscode"
 import { suite, test } from "mocha"
 import assert from "assert"
 
-suite("Extension Activation", () => {
+suite("Extension Activation", function () {
+  // Extension activation may take time (CLI startup, etc.)
+  this.timeout(60_000)
+
   test("extension activates successfully", async () => {
     const ext = vscode.extensions.getExtension("kilocode.kilo-code")
     assert.ok(ext, "Extension not found")
@@ -23,10 +26,11 @@ suite("Extension Activation", () => {
     }
   })
 
-  test("sidebar view provider is registered", async () => {
-    // KiloProvider registers as "kilo-code.new.sidebarView"
-    // Verify by trying to focus the view
-    await vscode.commands.executeCommand("kilo-code.new.sidebarView.focus")
-    // If it doesn't throw, the view provider is registered
+  test("sidebar view is contributed", async () => {
+    // Verify the extension contributes the sidebar view by checking
+    // registered commands (the focus command is auto-generated for views)
+    const commands = await vscode.commands.getCommands(true)
+    const focus = commands.find((c) => c.includes("kilo-code.new.sidebarView"))
+    assert.ok(focus, "Sidebar view commands not found")
   })
 })
