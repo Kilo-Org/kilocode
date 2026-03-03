@@ -1508,7 +1508,10 @@ export class AgentManagerProvider implements vscode.Disposable {
     try {
       const client = this.connectionService.getClient()
       this.log(`Fetching worktree diff for session ${sessionId}: dir=${target.directory}, base=${target.baseBranch}`)
-      const { data: diffs } = await client.worktree.diff({ directory: target.directory }, { throwOnError: true })
+      const { data: diffs } = await client.worktree.diff(
+        { directory: target.directory, base: target.baseBranch },
+        { throwOnError: true },
+      )
       this.log(`Worktree diff returned ${diffs.length} file(s) for session ${sessionId}`)
 
       const hash = diffs
@@ -1532,7 +1535,10 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     try {
       const client = this.connectionService.getClient()
-      const { data: diffs } = await client.worktree.diff({ directory: target.directory }, { throwOnError: true })
+      const { data: diffs } = await client.worktree.diff(
+        { directory: target.directory, base: target.baseBranch },
+        { throwOnError: true },
+      )
 
       const hash = diffs
         .map((d: FileDiff) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`)

@@ -110,7 +110,10 @@ export class GitStatsPoller {
       await Promise.all(
         worktrees.map(async (wt) => {
           try {
-            const { data: diffs } = await client.worktree.diff({ directory: wt.path }, { throwOnError: true })
+            const { data: diffs } = await client.worktree.diff(
+              { directory: wt.path, base: wt.parentBranch },
+              { throwOnError: true },
+            )
             const additions = diffs.reduce((sum: number, diff: FileDiff) => sum + diff.additions, 0)
             const deletions = diffs.reduce((sum: number, diff: FileDiff) => sum + diff.deletions, 0)
             const commits = await this.git.countMissingOriginCommits(wt.path, wt.parentBranch)
@@ -183,7 +186,7 @@ export class GitStatsPoller {
       let commits: number
       try {
         if (base) {
-          const { data: diffs } = await client.worktree.diff({ directory: root }, { throwOnError: true })
+          const { data: diffs } = await client.worktree.diff({ directory: root, base }, { throwOnError: true })
           additions = diffs.reduce((sum: number, d: FileDiff) => sum + d.additions, 0)
           deletions = diffs.reduce((sum: number, d: FileDiff) => sum + d.deletions, 0)
           commits = await this.git.countMissingOriginCommits(root, base)
