@@ -5,17 +5,37 @@ const kind = (value: string) => ({
   append: (part: string) => kind(`${value}.${part}`),
 })
 
+class MockUri {
+  constructor(
+    public readonly scheme: string,
+    public readonly fsPath: string,
+    public readonly path: string,
+  ) {}
+  static parse(value: string) {
+    return new MockUri("file", value, value)
+  }
+  static file(p: string) {
+    return new MockUri("file", p, p)
+  }
+  static joinPath(base: MockUri, ...parts: string[]) {
+    return new MockUri(base.scheme, [base.fsPath, ...parts].join("/"), [base.path, ...parts].join("/"))
+  }
+}
+
 const mockVscode = {
-  Uri: {
-    joinPath: (...args: unknown[]) => ({ fsPath: args.join("/") }),
-    file: (p: string) => ({ fsPath: p }),
-  },
+  Uri: MockUri,
   Disposable: class {
     constructor(public callOnDispose: () => void) {}
     dispose() {
       this.callOnDispose()
     }
   },
+  EventEmitter: class {
+    event = () => ({ dispose: () => {} })
+    fire() {}
+    dispose() {}
+  },
+  WebviewViewProvider: {},
   extensions: {
     getExtension: () => ({
       packageJSON: { version: "test" },
@@ -115,7 +135,7 @@ describe("KiloProvider pending session refresh", () => {
   it.skip("flushes deferred refresh in initializeConnection without relying on connected event callback", async () => {
     const client = createClient()
     const connection = createConnection(client)
-    const provider = new KiloProvider({} as never, connection as never)
+    const provider = new KiloProvider(MockUri.file("/ext") as never, connection as never)
     const internal = provider as unknown as ProviderInternals
 
     provider.setSessionDirectory("ses_1", "/worktree")
@@ -132,7 +152,7 @@ describe("KiloProvider pending session refresh", () => {
   it.skip("does not post not-connected errors while still connecting", async () => {
     const client = createClient()
     const connection = createConnection(client)
-    const provider = new KiloProvider({} as never, connection as never)
+    const provider = new KiloProvider(MockUri.file("/ext") as never, connection as never)
     const internal = provider as unknown as ProviderInternals
     const sent: unknown[] = []
 

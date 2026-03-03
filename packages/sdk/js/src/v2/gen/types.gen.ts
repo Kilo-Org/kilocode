@@ -2540,6 +2540,10 @@ export type WorktreeDiffData = {
   path?: never
   query?: {
     directory?: string
+    /**
+     * Base branch or ref to diff against
+     */
+    base?: string
   }
   url: "/experimental/worktree/diff"
 }
