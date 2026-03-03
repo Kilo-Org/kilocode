@@ -84,7 +84,8 @@
     "borderSubtle": {
       "dark": "#1F4068",
       "light": "#CED4DA"
-    },
+      "dark": "darkBorder",
+      "light": "lightBorder"
     "diffAdded": {
       "dark": "teal",
       "light": "teal"
