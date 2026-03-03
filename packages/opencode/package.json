@@ -132,8 +132,5 @@
   "optionalDependencies": {
     "@opentui/core-win32-x64": "0.1.81"
   },
-  "overrides": {
-    "drizzle-orm": "1.0.0-beta.12-a5629fb"
-  },
   "peerDependencies": {}
 }

@@ -42,4 +42,4 @@ const child = Bun.spawn(["bun", "run", entry, ...args], {
 })
 
 const code = await child.exited
-process.exit(code ?? 0)
+process.exit(code ?? 1)
