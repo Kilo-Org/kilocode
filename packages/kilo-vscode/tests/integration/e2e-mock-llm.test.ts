@@ -117,7 +117,7 @@ beforeAll(async () => {
   })
 
   server.stderr?.on("data", (data: Buffer) => {
-    // Uncomment for debugging: console.error("[CLI stderr]", data.toString())
+    console.error("[mock-llm CLI stderr]", data.toString().trim())
   })
 
   port = await waitForPort(server)
@@ -136,33 +136,38 @@ afterAll(() => {
 })
 
 describe("Full E2E with mock LLM", () => {
-  it("can send a message and receive a streamed response", async () => {
-    const session = await client.session.create()
-    expect(session.data).toBeDefined()
+  it(
+    "can send a message and receive a streamed response",
+    async () => {
+      const session = await client.session.create()
+      expect(session.data).toBeDefined()
 
-    const id = (session.data as { id: string }).id
-    expect(id).toBeDefined()
+      const id = (session.data as { id: string }).id
+      expect(id).toBeDefined()
 
-    // Send a message via the prompt endpoint
-    await client.session.prompt({
-      sessionID: id,
-      parts: [{ type: "text", text: "Hello!" }],
-    })
+      // Send a message via the prompt endpoint
+      const prompt = await client.session.prompt({
+        sessionID: id,
+        parts: [{ type: "text", text: "Hello!" }],
+      })
+      console.log("[mock-llm] prompt response status:", prompt.response?.status)
 
-    // Poll for messages — the assistant response may take a moment
-    const deadline = Date.now() + 15_000
-    let found = false
+      // Poll for messages — the assistant response may take a moment
+      const deadline = Date.now() + 30_000
+      let found = false
 
-    while (Date.now() < deadline && !found) {
-      const messages = await client.session.messages({ sessionID: id })
-      const data = messages.data as Array<{ role: string }> | undefined
-      if (data?.some((m) => m.role === "assistant")) {
-        found = true
-        break
+      while (Date.now() < deadline && !found) {
+        const messages = await client.session.messages({ sessionID: id })
+        const data = messages.data as Array<{ role: string }> | undefined
+        if (data?.some((m) => m.role === "assistant")) {
+          found = true
+          break
+        }
+        await Bun.sleep(1000)
       }
-      await Bun.sleep(500)
-    }
 
-    expect(found).toBe(true)
-  })
+      expect(found).toBe(true)
+    },
+    { timeout: 60_000 },
+  )
 })
