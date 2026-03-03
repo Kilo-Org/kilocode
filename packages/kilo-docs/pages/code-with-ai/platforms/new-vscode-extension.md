@@ -8,6 +8,12 @@ description: "The new Kilo Code VS Code extension, now available in beta"
 The new Kilo Code VS Code extension is now available in beta.
 You can install the pre-release version from the [VS Code Marketplace](https://kilo.ai/docs/getting-started/installing#vs-code-preview).
 
+:::info
+
+We're rebuilding Kilo Code from the ground up on the new Kilo CLI. The pre-release extension is available for users who want to try the latest architecture and provide feedback, and don't mind some missing features and rough edges.
+
+:::
+
 {% callout type="warning" title="Early Release" %}
 This is an early release — features and behavior may change frequently as we iterate toward GA.
 {% /callout %}
