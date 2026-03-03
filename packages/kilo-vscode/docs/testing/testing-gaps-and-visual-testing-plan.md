@@ -6,14 +6,13 @@ The kilo-vscode extension has a layered UI architecture:
 
 ```
 packages/ui/           ← upstream opencode UI (SolidJS components, forked)
-packages/kilo-ui/      ← kilo-specific UI layer (re-exports packages/ui + kilo-only CSS overrides)
+packages/kilo-ui/      ← kilo-specific UI layer (~89 re-export stubs + ~33 CSS overrides)
 packages/kilo-vscode/webview-ui/  ← extension webview (SolidJS app consuming kilo-ui)
 packages/kilo-vscode/src/         ← extension host (TypeScript, VS Code API)
 ```
 
 When opencode upstream merges land, `packages/ui` is the blast radius. Changes there ripple
-through `packages/kilo-ui` (which re-exports everything) into the webview at runtime. No
-automated tests currently catch regression in this chain.
+through `packages/kilo-ui` (which re-exports everything) into the webview at runtime.
 
 ---
 
@@ -23,26 +22,23 @@ automated tests currently catch regression in this chain.
 
 | Workflow | Trigger | What it runs |
 |----------|---------|--------------|
-| `test.yml` – unit | Every PR + push to `main` | `bun turbo test` → only `packages/opencode` + `packages/app` unit tests |
-| `test.yml` – e2e | Every PR + push to `main` (after unit) | Playwright e2e against `packages/app` |
-| `test-vscode.yml` – unit | PRs touching `packages/kilo-vscode/**` only; pushes to `dev` | `bun run test:unit` in `packages/kilo-vscode` |
-| `typecheck.yml` | (separate workflow) | `bun turbo typecheck` across all packages |
-
-**Critical gap:** `test-vscode.yml` only triggers when `packages/kilo-vscode` files change.
-A PR that only modifies `packages/ui` or `packages/kilo-ui` (e.g. an upstream merge) does **not**
-run the vscode unit tests at all.
+| `test.yml` – unit | Every PR + push to `main` | `bun turbo test` → `packages/opencode` + `packages/app` unit tests |
+| `test.yml` – e2e | ~~Every PR~~ **Disabled** (`if: false`) | Playwright e2e against `packages/app` — disabled because packages/app is not actively maintained |
+| `test-vscode.yml` – unit | PRs touching `packages/kilo-vscode/**`, `packages/ui/**`, or `packages/kilo-ui/**`; pushes to `dev` | `bun run test:unit` in `packages/kilo-vscode` |
+| `typecheck.yml` | Every PR + push to `main` | `bun typecheck` across all packages |
 
 ### What IS tested (and where it runs in CI)
 
 | Area | Tests | CI Coverage |
 |------|-------|-------------|
-| Extension host logic (TypeScript) | 45+ bun unit tests in `tests/unit/` | ✅ `test-vscode.yml` — but only on kilo-vscode PRs |
-| Message contract (extension ↔ webview) | Static analysis in `message-contract.test.ts` | ✅ `test-vscode.yml` — same caveat |
-| Worktree / git operations | `worktree-manager.test.ts` | ✅ `test-vscode.yml` — same caveat |
-| Autocomplete | `autocomplete-*.test.ts` | ✅ `test-vscode.yml` — same caveat |
-| Web app (packages/app) | Playwright e2e + unit tests | ✅ `test.yml` — runs on every PR |
-| opencode CLI logic | bun unit tests in `packages/opencode/test/` | ✅ `test.yml` — runs on every PR |
-| UI components | Storybook stories (50 stories) | ❌ Manual only — never runs in CI |
+| Extension host logic (TypeScript) | 48 bun unit tests in `tests/unit/` | ✅ `test-vscode.yml` |
+| Message contract (extension ↔ webview) | `message-contract.test.ts` | ✅ `test-vscode.yml` |
+| UI contract (kilo-ui ↔ upstream) | `kilo-ui-contract.test.ts` – runtime ToolRegistry, getToolInfo, DataProvider checks | ✅ `test-vscode.yml` |
+| Worktree / git operations | `worktree-manager.test.ts` | ✅ `test-vscode.yml` |
+| Autocomplete | `autocomplete-*.test.ts` | ✅ `test-vscode.yml` |
+| Web app (packages/app) | Unit tests | ✅ `test.yml` |
+| opencode CLI logic | bun unit tests in `packages/opencode/test/` | ✅ `test.yml` |
+| UI components | Storybook stories (48 stories) | ❌ Manual only — never runs in CI |
 
 ### What IS NOT tested
 
@@ -50,12 +46,9 @@ run the vscode unit tests at all.
 |------|-----|------|
 | `packages/ui` component rendering | Zero automated rendering tests | **Critical** – upstream merges silently break UI |
 | `packages/kilo-ui` CSS overrides | No visual/snapshot tests | CSS classes can vanish after a merge |
-| kilo-vscode tests on UI-only PRs | `test-vscode.yml` does not trigger on `packages/ui` or `packages/kilo-ui` changes | **upstream merge PRs skip all extension tests** |
-| Webview UI react to messages | No rendering tests for the chatview | Tool renderers, message display can break entirely |
-| `ToolRegistry` registrations in `message-part.tsx` | No test that all expected tools are registered after a merge | An upstream rename/removal goes undetected |
-| `getToolInfo()` return values | No contract test | Upstream may change tool output shape |
-| `kilocode_change` preservations | No automated check that markers weren't reverted | Merges silently trample kilocode customizations |
-| VSCode-specific overrides (`VscodeToolOverrides`) | No test that the overrides actually register | `bash` defaultOpen behavior can silently break |
+| Webview UI message rendering | No rendering tests for the chatview | Tool renderers, message display can break entirely |
+| `kilocode_change` marker preservation | No comprehensive automated check that markers weren't reverted | Merges can silently trample kilocode customizations |
+| VSCode-specific overrides (`VscodeToolOverrides`) | No rendering test that the overrides actually work | `bash` defaultOpen behavior can silently break |
 | `TaskToolExpanded` component | No test | Child session rendering logic can break |
 | `VscodeSessionTurn` component | No test | Core chat rendering, zero coverage |
 | Theme / CSS variable integrity | No visual regression | Color and spacing regressions after merges |
@@ -66,24 +59,28 @@ run the vscode unit tests at all.
 
 ### 1. `packages/ui` – Zero Rendering Tests
 
-`packages/ui` has 50+ SolidJS components and a massive `message-part.tsx` (2000+ lines). The
+`packages/ui` has 50+ SolidJS components and a large [`message-part.tsx`](../../../ui/src/components/message-part.tsx) (~1980 lines). The
 only existing test mechanism is Storybook stories in `packages/kilo-ui/src/stories/`, which are
 **manual only** — they require a human to open a browser and look.
 
-When upstream opencode merges land, components like [`Message()`](../../../ui/src/components/message-part.tsx:480),
-[`UserMessageDisplay()`](../../../ui/src/components/message-part.tsx:668),
-[`AssistantMessageDisplay()`](../../../ui/src/components/message-part.tsx:506) may have their
+When upstream opencode merges land, components like [`Message()`](../../../ui/src/components/message-part.tsx:477),
+[`UserMessageDisplay()`](../../../ui/src/components/message-part.tsx:665),
+[`AssistantMessageDisplay()`](../../../ui/src/components/message-part.tsx:503) may have their
 props, data-attributes, or DOM structure changed. There is nothing to catch this.
 
 **Key coupling points that need monitoring:**
-- [`ToolRegistry`](../../../ui/src/components/message-part.tsx:911) – tool registrations could be renamed or removed
-- [`getToolInfo()`](../../../ui/src/components/message-part.tsx:172) – return shape can change; `VscodeSessionTurn` depends on it
-- [`PART_MAPPING`](../../../ui/src/components/message-part.tsx:113) – part renderers could change
-- [`DataProvider`](../../../ui/src/context/data.tsx:55) props – the `onOpenFile` kilocode_change could be removed
+- [`ToolRegistry`](../../../ui/src/components/message-part.tsx:908) – tool registrations could be renamed or removed
+- [`getToolInfo()`](../../../ui/src/components/message-part.tsx:169) – return shape can change; `VscodeSessionTurn` depends on it
+- [`PART_MAPPING`](../../../ui/src/components/message-part.tsx:110) – part renderers could change
+- [`DataProvider`](../../../ui/src/context/data.tsx:31) props – the `onOpenFile` kilocode_change could be removed
+
+> **Note:** [`kilo-ui-contract.test.ts`](../../tests/unit/kilo-ui-contract.test.ts) now covers runtime checks
+> for `ToolRegistry`, `getToolInfo`, and `DataProvider` exports. These are static contract tests,
+> not rendering tests — they cannot catch DOM structure or CSS breakage.
 
 ### 2. `packages/kilo-ui` – CSS Overrides Untested
 
-`packages/kilo-ui` overrides CSS for every upstream component. Examples:
+`packages/kilo-ui` has 33 CSS override files for upstream components. Examples:
 - [`packages/kilo-ui/src/components/message-part.css`](../../../kilo-ui/src/components/message-part.css) – 116 lines
 - [`packages/kilo-ui/src/components/markdown.css`](../../../kilo-ui/src/components/markdown.css) – custom markdown styling
 - Component-specific overrides for `basic-tool`, `chat-input`, `prompt-input`, etc.
@@ -91,17 +88,18 @@ props, data-attributes, or DOM structure changed. There is nothing to catch this
 After a merge, upstream CSS can add new class names or change `data-*` attributes that
 selector-based kilo overrides depended on. Nothing catches this.
 
-### 3. `kilocode_change` Markers – No Regression Guard
+### 3. `kilocode_change` Markers – No Comprehensive Regression Guard
 
 There are 55 `kilocode_change` markers in `packages/ui`. Any upstream merge can silently
-overwrite them. There is no test that verifies they still exist.
+overwrite them. The existing [`kilo-ui-contract.test.ts`](../../tests/unit/kilo-ui-contract.test.ts)
+checks for `onOpenFile`/`OpenFileFn` in `DataProvider`, but does not verify all 55 markers.
 
 Key changes that must survive merges:
-- [`data.tsx:55`](../../../ui/src/context/data.tsx:55) – `OpenFileFn` type (enables click-to-open in VS Code)
-- [`data.tsx:67`](../../../ui/src/context/data.tsx:67) – `onOpenFile` prop on DataProvider
+- [`data.tsx:29`](../../../ui/src/context/data.tsx:29) – `OpenFileFn` type (enables click-to-open in VS Code)
+- [`data.tsx:38`](../../../ui/src/context/data.tsx:38) – `onOpenFile` prop on DataProvider
 - [`marked.tsx:464`](../../../ui/src/context/marked.tsx:464) – custom markdown link handling
-- [`message-part.tsx:1276`](../../../ui/src/components/message-part.tsx:1276) – `classList={{ clickable }}` on file paths
-- [`message-part.tsx:1522`](../../../ui/src/components/message-part.tsx:1522) – `defaultOpen` on bash tool
+- [`message-part.tsx:1196`](../../../ui/src/components/message-part.tsx:1196) – `classList={{ clickable }}` on file paths
+- [`message-part.tsx:1442`](../../../ui/src/components/message-part.tsx:1442) – `defaultOpen` on bash tool
 
 ### 4. Webview Chat Components – No Tests
 
@@ -114,104 +112,80 @@ They are VS Code-specific overrides of upstream rendering logic:
 
 ### 5. Storybook Stories Exist But Are Unused in CI
 
-`packages/kilo-ui` has 50 Storybook stories covering all UI components. They serve as a
-development aid but are never built or checked in CI. There is no Chromatic, Backstop, or
+`packages/kilo-ui` has 48 Storybook stories (Storybook 10) covering all UI components. They serve
+as a development aid but are never built or checked in CI. There is no Chromatic, Backstop, or
 snapshot pipeline.
 
 ---
 
-## Plan: Testing Strategy
+## What's Already Been Done
 
-### Phase 0 – Fix CI Trigger (Zero code, very high value)
+The following items from the original plan have been completed:
 
-The `test-vscode.yml` workflow only runs when `packages/kilo-vscode/**` changes.
-This means upstream merge PRs (which touch `packages/ui` and `packages/kilo-ui`) bypass
-all extension tests.
+### ✅ Phase 0 – CI Trigger Fix (DONE)
 
-**Fix:** Add `packages/ui/**` and `packages/kilo-ui/**` to the `paths` filter in
-[`.github/workflows/test-vscode.yml`](../../../../.github/workflows/test-vscode.yml):
+The `test-vscode.yml` workflow now includes `packages/ui/**` and `packages/kilo-ui/**` in the
+`paths` filter, so upstream merge PRs run the extension unit tests. This was merged to `main`
+in commit `1a7294ff7`.
 
-```yaml
-on:
-  pull_request:
-    paths:
-      - "packages/kilo-vscode/**"
-      - "packages/ui/**"         # add this
-      - "packages/kilo-ui/**"    # add this
-```
+### ✅ Phase 1.2, 1.3, 1.4 – Contract Tests (DONE)
 
-This ensures the unit tests in `packages/kilo-vscode` run whenever upstream UI changes land,
-catching contract breaks before merge.
+[`kilo-ui-contract.test.ts`](../../tests/unit/kilo-ui-contract.test.ts) implements runtime
+contract tests that go beyond the original plan's source-analysis approach:
+
+| Test | What it checks | Method |
+|------|---------------|--------|
+| ToolRegistry tool names | All 7 tool names (`bash`, `task`, `read`, `write`, `glob`, `edit`, `todowrite`) are registered | Runtime — imports `ToolRegistry` via `Bun.spawnSync` in kilo-ui context and calls `ToolRegistry.render(name)` |
+| `getToolInfo` export | Function exists and is exported | Runtime import check |
+| `ToolInfo` type shape | `icon` and `title` fields present | Source regex on `message-part.tsx` |
+| `DataProvider` + `useData` | Both are exported functions | Runtime import check |
+| `onOpenFile` + `OpenFileFn` | Props still present in DataProvider source | Source analysis on `data.tsx` |
 
 ---
 
-### Phase 1 – Static Contract Tests (Low effort, high value)
+## Plan: Remaining Work
 
-These are pure TypeScript/text analysis tests similar to the existing
-[`message-contract.test.ts`](../../tests/unit/message-contract.test.ts).
-
-#### 1.1 – `kilocode_change` Preservation Test
+### Phase 1 – `kilocode_change` Preservation Test (Low effort, high value)
 
 **File:** `packages/kilo-vscode/tests/unit/kilocode-changes-preserved.test.ts`
 
-Test that all critical `kilocode_change` positions in `packages/ui` still exist after a merge.
-For each tracked change, verify the marker comment is present in the source.
+The existing `kilo-ui-contract.test.ts` covers `DataProvider` markers, but does not verify the
+other ~50 markers. A comprehensive test should scan all `kilocode_change` positions.
 
 ```ts
-// Example approach:
-it("onOpenFile prop is still present in DataProvider", () => {
-  const src = readFileSync("packages/ui/src/context/data.tsx", "utf-8")
-  expect(src).toContain("onOpenFile")
-  expect(src).toContain("kilocode_change")
-})
-```
+import { describe, it, expect } from "bun:test"
+import fs from "node:fs"
+import path from "node:path"
 
-This is cheap to write and immediately catches merge regressions.
+const UI_SRC = path.resolve(import.meta.dir, "../../../../packages/ui/src")
 
-#### 1.2 – `ToolRegistry` Tool Name Contract Test
+// Critical kilocode_change markers that must survive upstream merges
+const CRITICAL_MARKERS = [
+  { file: "context/data.tsx", contains: ["onOpenFile", "OpenFileFn"] },
+  { file: "context/marked.tsx", contains: ["kilocode_change"] },
+  { file: "components/message-part.tsx", contains: ["defaultOpen // kilocode_change", "classList={{ clickable"] },
+]
 
-**File:** `packages/kilo-vscode/tests/unit/tool-registry-contract.test.ts`
+describe("kilocode_change markers preserved in packages/ui", () => {
+  it("has expected marker count (alerts on large drops)", () => {
+    const count = fs.readdirSync(UI_SRC, { recursive: true })
+      .filter(f => f.toString().endsWith(".tsx") || f.toString().endsWith(".ts"))
+      .reduce((n, f) => {
+        const src = fs.readFileSync(path.join(UI_SRC, f.toString()), "utf-8")
+        return n + (src.match(/kilocode_change/g) || []).length
+      }, 0)
+    // Current count: 55. If this drops significantly, something got clobbered.
+    expect(count).toBeGreaterThanOrEqual(50)
+  })
 
-The webview overrides specific tool names (`"bash"`, `"task"`) in
-[`VscodeToolOverrides.tsx`](../../webview-ui/src/components/chat/VscodeToolOverrides.tsx) and
-[`TaskToolExpanded.tsx`](../../webview-ui/src/components/chat/TaskToolExpanded.tsx).
-
-Test that the tool names those files reference are still registered in upstream `message-part.tsx`.
-
-```ts
-const TOOL_NAMES_WE_DEPEND_ON = ["bash", "task", "read", "write", "glob", "edit", "todowrite"]
-
-it("all tools overridden or used by kilo are still registered in ToolRegistry", () => {
-  const src = readFileSync("packages/ui/src/components/message-part.tsx", "utf-8")
-  for (const name of TOOL_NAMES_WE_DEPEND_ON) {
-    expect(src, `Tool "${name}" no longer registered`).toContain(`name: "${name}"`)
+  for (const marker of CRITICAL_MARKERS) {
+    it(`${marker.file} still has critical markers`, () => {
+      const src = fs.readFileSync(path.join(UI_SRC, marker.file), "utf-8")
+      for (const text of marker.contains) {
+        expect(src, `Missing "${text}" in ${marker.file}`).toContain(text)
+      }
+    })
   }
-})
-```
-
-#### 1.3 – `getToolInfo()` Return Shape Contract
-
-`VscodeSessionTurn` calls `getToolInfo()` from `@kilocode/kilo-ui/message-part`. Test that its
-return type still has the fields the webview depends on (`icon`, `title`, `description`).
-
-```ts
-it("getToolInfo still exports expected shape fields", () => {
-  const src = readFileSync("packages/ui/src/components/message-part.tsx", "utf-8")
-  // ToolInfo interface must still have these fields
-  expect(src).toMatch(/icon\s*:/)
-  expect(src).toMatch(/title\s*:/)
-})
-```
-
-#### 1.4 – `DataProvider` Props Contract Test
-
-Verify the `onOpenFile` kilocode prop still exists in `DataProvider`:
-
-```ts
-it("DataProvider still accepts onOpenFile prop", () => {
-  const src = readFileSync("packages/ui/src/context/data.tsx", "utf-8")
-  expect(src).toContain("onOpenFile")
-  expect(src).toContain("OpenFileFn")
 })
 ```
 
@@ -220,10 +194,8 @@ it("DataProvider still accepts onOpenFile prop", () => {
 ### Phase 2 – Storybook Snapshot Testing (Medium effort)
 
 Add snapshot (screenshot) testing to the existing Storybook setup in `packages/kilo-ui` using
-**Storybook's built-in `@storybook/addon-storyshots`** approach or `storycap` + image diffing.
-
-The recommended tool given the existing setup is **[Chromatic](https://www.chromatic.com/)** –
-it integrates directly with Storybook and requires minimal setup.
+**[Chromatic](https://www.chromatic.com/)** – it integrates directly with Storybook and requires
+minimal setup.
 
 #### 2.1 – Setup Chromatic
 
@@ -291,9 +263,9 @@ Several helper functions in the webview are untested despite having pure busines
 #### 3.1 – `VscodeSessionTurn` helpers
 
 [`VscodeSessionTurn.tsx`](../../webview-ui/src/components/chat/VscodeSessionTurn.tsx) contains:
-- `getDirectory(path)` – path splitting utility
-- `getFilename(path)` – path splitting utility
-- `unwrapError(message)` – JSON error unwrapping logic
+- [`getDirectory(path)`](../../webview-ui/src/components/chat/VscodeSessionTurn.tsx:31) – path splitting utility
+- [`getFilename(path)`](../../webview-ui/src/components/chat/VscodeSessionTurn.tsx:37) – path splitting utility
+- [`unwrapError(message)`](../../webview-ui/src/components/chat/VscodeSessionTurn.tsx:43) – JSON error unwrapping logic
 
 These are pure functions. Extract them to a util file and add unit tests.
 
@@ -312,9 +284,8 @@ Extract and test with mock store shapes.
 
 ### Phase 4 – Storybook-Based Rendering Tests (Medium effort)
 
-Use **`@storybook/test`** (built into Storybook 8+, included in the current `storybook@10`) to
-add interaction/render assertions to stories. This is distinct from visual snapshots — it checks
-DOM structure.
+Use **`@storybook/test`** (built into Storybook 10) to add interaction/render assertions
+to stories. This is distinct from visual snapshots — it checks DOM structure.
 
 **Example for `message-part.stories.tsx`:**
 ```tsx
@@ -367,17 +338,17 @@ Until full automation is in place, create a merge checklist:
 
 ## Priority Order
 
-| Priority | Action | Effort | Benefit |
-|----------|--------|--------|---------|
-| 🔴 P0 | Fix `test-vscode.yml` trigger to include `packages/ui/**` and `packages/kilo-ui/**` | 5 min | Upstream merge PRs now run extension tests |
-| 🔴 P0 | `kilocode_change` preservation test | 1 hour | Immediately catches merge regressions |
-| 🔴 P0 | `ToolRegistry` contract test | 1 hour | Catches tool name renames/removals |
-| 🔴 P0 | `DataProvider` props contract test | 30 min | Guards `onOpenFile` kilocode_change |
-| 🟠 P1 | Add Chromatic to CI | Half day | Visual diff on every upstream merge |
-| 🟠 P1 | Add kilo-specific Storybook stories | 1 day | Fills coverage of kilo overrides |
-| 🟡 P2 | Extract + test webview util functions | 2 hours | Prevents logic regressions |
-| 🟡 P2 | Storybook play tests for kilocode_changes | Half day | Runtime verification of custom behavior |
-| 🟢 P3 | Upstream merge checklist doc | 30 min | Process safety net |
+| Priority | Action | Effort | Status |
+|----------|--------|--------|--------|
+| ~~🔴 P0~~ | ~~Fix `test-vscode.yml` trigger to include `packages/ui/**` and `packages/kilo-ui/**`~~ | ~~5 min~~ | ✅ Done |
+| ~~🔴 P0~~ | ~~`ToolRegistry` contract test~~ | ~~1 hour~~ | ✅ Done (`kilo-ui-contract.test.ts`) |
+| ~~🔴 P0~~ | ~~`DataProvider` props contract test~~ | ~~30 min~~ | ✅ Done (`kilo-ui-contract.test.ts`) |
+| 🔴 P0 | `kilocode_change` preservation test | 1 hour | TODO |
+| 🟠 P1 | Add Chromatic to CI | Half day | TODO |
+| 🟠 P1 | Add kilo-specific Storybook stories | 1 day | TODO |
+| 🟡 P2 | Extract + test webview util functions | 2 hours | TODO |
+| 🟡 P2 | Storybook play tests for kilocode_changes | Half day | TODO |
+| 🟢 P3 | Upstream merge checklist doc | 30 min | TODO |
 
 ---
 
