@@ -28,6 +28,7 @@ const TSX_FILES = [
 ]
 const TSX_FILE = TSX_FILES[0]
 const PROVIDER_FILE = path.join(ROOT, "src/agent-manager/AgentManagerProvider.ts")
+const SETUP_SCRIPT_RUNNER_FILE = path.join(ROOT, "src/agent-manager/SetupScriptRunner.ts")
 
 function readAllTsx(): string {
   return TSX_FILES.map((f) => fs.readFileSync(f, "utf-8")).join("\n")
@@ -338,11 +339,11 @@ describe("KiloProvider — pending session refresh on reconnect", () => {
    * it when httpClient is unavailable, and both initializeConnection()
    * and the "connected" state handler flush the pending refresh.
    */
-  it("handleLoadSessions sets pendingSessionRefresh when httpClient is null", () => {
+  it("handleLoadSessions sets pendingSessionRefresh when client is null", () => {
     const start = provider.indexOf("private async handleLoadSessions()")
     expect(start, "handleLoadSessions must exist").toBeGreaterThan(-1)
     const snippet = provider.slice(start, start + 700)
-    expect(snippet, "must read httpClient before loading sessions").toContain("const client = this.httpClient")
+    expect(snippet, "must read client before loading sessions").toContain("const client = this.client")
     expect(snippet, "must set pendingSessionRefresh when httpClient missing").toContain(
       "this.pendingSessionRefresh = true",
     )
@@ -375,5 +376,27 @@ describe("KiloProvider — pending session refresh on reconnect", () => {
     expect(provider, "pendingSessionRefresh field must be declared").toMatch(
       /private\s+pendingSessionRefresh\s*=\s*false/,
     )
+  })
+})
+
+describe("SetupScriptRunner — task execution model", () => {
+  const runner = fs.readFileSync(SETUP_SCRIPT_RUNNER_FILE, "utf-8")
+
+  it("uses VS Code tasks API for setup execution", () => {
+    expect(runner).toContain("vscode.tasks.executeTask")
+    expect(runner).toContain("onDidEndTaskProcess")
+    expect(runner).toContain("onDidEndTask")
+  })
+
+  it("uses process-based task execution with env options", () => {
+    expect(runner).toContain("new vscode.ProcessExecution")
+    expect(runner).toContain("WORKTREE_PATH")
+    expect(runner).toContain("REPO_PATH")
+  })
+
+  it("does not use manual terminal command injection", () => {
+    expect(runner).not.toContain("createTerminal")
+    expect(runner).not.toContain("sendText")
+    expect(runner).not.toContain("buildSetupCommand")
   })
 })

@@ -657,12 +657,12 @@
   },
   "scripts": {
     "prepare:cli-binary": "bun script/local-bin.ts",
-    "compile": "bun run prepare:cli-binary && bun run check-types && bun run lint && node esbuild.js",
-    "watch": "bun run --parallel watch:esbuild watch:tsc",
+    "compile": "bun run prepare:cli-binary && bun run rebuild-sdk && bun run check-types && bun run lint && node esbuild.js",
+    "watch": "bun run rebuild-sdk && bun run --parallel watch:esbuild watch:tsc",
     "watch:esbuild": "bun run prepare:cli-binary && node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
     "watch:cli": "bun script/watch-cli.ts",
-    "package": "bun run prepare:cli-binary && bun run check-types && bun run lint && node esbuild.js --production",
+    "package": "bun run prepare:cli-binary && bun run rebuild-sdk && bun run check-types && bun run lint && node esbuild.js --production",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "bun run compile-tests && bun run compile && bun run lint",
@@ -671,7 +671,8 @@
     "format:check": "prettier --check .",
     "lint": "eslint src",
     "test": "vscode-test",
-    "test:unit": "bun test tests/unit/"
+    "test:unit": "bun test tests/unit/",
+    "rebuild-sdk": "bun run --cwd ../sdk/js build"
   },
   "devDependencies": {
     "@types/diff": "^6.0.0",
@@ -701,7 +702,6 @@
     "@thisbeyond/solid-dnd": "0.7.5",
     "diff": "^7.0.0",
     "dotenv": "^16.4.7",
-    "eventsource": "^2.0.2",
     "fastest-levenshtein": "^1.0.16",
     "ignore": "^7.0.3",
     "js-tiktoken": "^1.0.18",
