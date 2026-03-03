@@ -198,8 +198,25 @@ export namespace KiloSessions {
   }
 
   export async function create(sessionId: string) {
+    const result = await bootstrap(sessionId)
+    if (!result) return { id: "", ingestPath: "" }
+
+    void fullSync(sessionId).catch((error) => log.error("share full sync failed", { sessionId, error }))
+
+    return result
+  }
+
+  export async function bootstrap(sessionId: string) {
+    if (ingestDisabled) {
+      log.info("session bootstrap skipped: ingest disabled", { sessionId })
+      return
+    }
+
     const client = await getClient()
-    if (!client) return { id: "", ingestPath: "" }
+    if (!client) {
+      log.info("session bootstrap skipped: no client", { sessionId })
+      return
+    }
 
     log.info("creating session", { sessionId })
 
@@ -216,7 +233,7 @@ export namespace KiloSessions {
 
     await Storage.write(["session_share", sessionId], result)
 
-    void fullSync(sessionId).catch((error) => log.error("share full sync failed", { sessionId, error }))
+    log.info("session bootstrap completed", { sessionId })
 
     return result
   }
