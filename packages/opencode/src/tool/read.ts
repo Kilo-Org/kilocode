@@ -87,7 +87,7 @@ export const ReadTool = Tool.define("read", {
       )
       entries.sort((a, b) => a.localeCompare(b))
 
-      const limit = params.limit ?? DEFAULT_READ_LIMIT
+      const limit = Math.max(1, params.limit ?? DEFAULT_READ_LIMIT)
       const offset = params.offset ?? 1
       const start = offset - 1
       const sliced = entries.slice(start, start + limit)
@@ -152,7 +152,7 @@ export const ReadTool = Tool.define("read", {
       crlfDelay: Infinity,
     })
 
-    const limit = params.limit ?? DEFAULT_READ_LIMIT
+    const limit = Math.max(1, params.limit ?? DEFAULT_READ_LIMIT)
     const offset = params.offset ?? 1
     const start = offset - 1
     const raw: string[] = []
