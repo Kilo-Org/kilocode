@@ -82,11 +82,6 @@
       "light": "blue"
     },
     "borderSubtle": {
-      "dark": "#1F4068",
-      "light": "#CED4DA"
-      "dark": "darkBorder",
-      "light": "lightBorder"
-    "borderSubtle": {
       "dark": "darkBorder",
       "light": "lightBorder"
     },
