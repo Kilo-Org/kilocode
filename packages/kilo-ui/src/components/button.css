@@ -14,15 +14,25 @@
   &[data-variant="primary"] {
     background-color: var(--button-primary-base, var(--surface-brand-base));
     color: var(--text-on-interactive-base, white);
-    box-shadow: none;
 
     &:hover:not([data-disabled]):not(:disabled) {
       background-color: var(--button-primary-hover, var(--surface-brand-hover));
     }
 
+    &:focus-visible:not(:disabled) {
+      background-color: var(--button-primary-hover, var(--surface-brand-hover));
+      outline: 2px solid var(--border-focus, var(--vscode-focusBorder));
+      outline-offset: 1px;
+    }
+
+    &:active:not([data-disabled]):not(:disabled) {
+      background-color: var(--icon-strong-active, var(--button-primary-hover));
+    }
+
     &:disabled,
     &[data-disabled] {
-      opacity: 0.5;
+      background-color: var(--icon-strong-disabled, var(--button-primary-base));
+      color: var(--text-on-interactive-base, white);
       cursor: not-allowed;
     }
   }
@@ -31,15 +41,25 @@
   &[data-variant="secondary"] {
     background-color: var(--button-secondary-base);
     color: var(--text-strong, white);
-    box-shadow: none;
 
     &:hover:not([data-disabled]):not(:disabled) {
       background-color: var(--button-secondary-hover);
     }
 
+    &:focus-visible:not(:disabled) {
+      background-color: var(--button-secondary-base);
+      outline: 2px solid var(--border-focus, var(--vscode-focusBorder));
+      outline-offset: 1px;
+    }
+
+    &:active:not([data-disabled]):not(:disabled) {
+      background-color: var(--button-secondary-base);
+    }
+
     &:disabled,
     &[data-disabled] {
-      opacity: 0.5;
+      background-color: var(--button-secondary-base);
+      color: var(--text-weak);
       cursor: not-allowed;
     }
   }
@@ -48,15 +68,24 @@
   &[data-variant="ghost"] {
     background: transparent;
     color: var(--text-strong, white);
-    box-shadow: none;
 
     &:hover:not([data-disabled]):not(:disabled) {
       background-color: var(--button-ghost-hover, var(--surface-base-hover));
     }
 
+    &:focus-visible:not(:disabled) {
+      background-color: var(--surface-base-hover);
+      outline: 2px solid var(--border-focus, var(--vscode-focusBorder));
+      outline-offset: 1px;
+    }
+
+    &:active:not([data-disabled]):not(:disabled) {
+      background-color: var(--surface-base-active);
+    }
+
     &:disabled,
     &[data-disabled] {
-      opacity: 0.5;
+      color: var(--text-weak);
       cursor: not-allowed;
     }
   }
