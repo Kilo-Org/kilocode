@@ -6,9 +6,13 @@ on:
       - dev
     paths:
       - "packages/kilo-vscode/**"
+      - "packages/ui/**"
+      - "packages/kilo-ui/**"
   pull_request:
     paths:
       - "packages/kilo-vscode/**"
+      - "packages/ui/**"
+      - "packages/kilo-ui/**"
   workflow_dispatch:
 
 jobs:

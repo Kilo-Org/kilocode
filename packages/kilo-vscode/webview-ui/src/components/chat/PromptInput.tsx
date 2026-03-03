@@ -3,7 +3,7 @@
  * Text input with send/abort buttons, ghost-text autocomplete, and @ file mention support
  */
 
-import { Component, createSignal, createEffect, on, For, Index, onCleanup, Show, untrack } from "solid-js"
+import { Component, createSignal, createEffect, on, For, Index, onCleanup, onMount, Show, untrack } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
@@ -16,6 +16,7 @@ import { ModeSwitcher } from "../shared/ModeSwitcher"
 import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
 import { useImageAttachments } from "../../hooks/useImageAttachments"
+import { WandSparkles } from "@kilocode/kilo-ui/lucide"
 import { fileName, dirName, buildHighlightSegments } from "./prompt-input-utils"
 
 const AUTOCOMPLETE_DEBOUNCE_MS = 500
@@ -36,6 +37,10 @@ export const PromptInput: Component = () => {
 
   const [text, setText] = createSignal("")
   const [ghostText, setGhostText] = createSignal("")
+  const [chatAutocompleteEnabled, setChatAutocompleteEnabled] = createSignal(false)
+  const [enhancing, setEnhancing] = createSignal(false)
+  let enhanceCounter = 0
+  let preEnhanceText: string | null = null
 
   let textareaRef: HTMLTextAreaElement | undefined
   let highlightRef: HTMLDivElement | undefined
@@ -79,6 +84,10 @@ export const PromptInput: Component = () => {
       }
     }
 
+    if (message.type === "autocompleteSettingsLoaded") {
+      setChatAutocompleteEnabled(message.settings.enableChatAutocomplete)
+    }
+
     if (message.type === "setChatBoxMessage") {
       setText(message.text)
       setGhostText("")
@@ -111,6 +120,31 @@ export const PromptInput: Component = () => {
     if (message.type === "action" && message.action === "focusInput") {
       textareaRef?.focus()
     }
+
+    if (message.type === "enhancePromptResult") {
+      const result = message as import("../../types/messages").EnhancePromptResultMessage
+      if (result.requestId === `enhance-${enhanceCounter}`) {
+        setText(result.text)
+        setGhostText("")
+        setEnhancing(false)
+        if (textareaRef) {
+          textareaRef.value = result.text
+          adjustHeight()
+          textareaRef.focus()
+        }
+      }
+    }
+
+    if (message.type === "enhancePromptError") {
+      const result = message as import("../../types/messages").EnhancePromptErrorMessage
+      if (result.requestId === `enhance-${enhanceCounter}`) {
+        setEnhancing(false)
+      }
+    }
+  })
+
+  onMount(() => {
+    vscode.postMessage({ type: "requestAutocompleteSettings" })
   })
 
   onCleanup(() => {
@@ -122,7 +156,7 @@ export const PromptInput: Component = () => {
   })
 
   const requestAutocomplete = (val: string) => {
-    if (val.length < MIN_TEXT_LENGTH || isDisabled()) {
+    if (val.length < MIN_TEXT_LENGTH || isDisabled() || !chatAutocompleteEnabled()) {
       setGhostText("")
       return
     }
@@ -181,6 +215,7 @@ export const PromptInput: Component = () => {
     const target = e.target as HTMLTextAreaElement
     const val = target.value
     setText(val)
+    preEnhanceText = null
     adjustHeight()
     setGhostText("")
     syncHighlightScroll()
@@ -198,6 +233,20 @@ export const PromptInput: Component = () => {
   }
 
   const handleKeyDown = (e: KeyboardEvent) => {
+    // Undo enhanced prompt with Ctrl+Z / ⌘Z
+    if (e.key === "z" && (e.metaKey || e.ctrlKey) && !e.shiftKey && preEnhanceText !== null) {
+      e.preventDefault()
+      const restored = preEnhanceText
+      preEnhanceText = null
+      setText(restored)
+      setGhostText("")
+      if (textareaRef) {
+        textareaRef.value = restored
+        adjustHeight()
+      }
+      return
+    }
+
     if (mention.onKeyDown(e, textareaRef, setText, adjustHeight)) {
       setGhostText("")
       queueMicrotask(scrollToActiveItem)
@@ -226,6 +275,28 @@ export const PromptInput: Component = () => {
       dismissSuggestion()
       handleSend()
     }
+  }
+
+  const canEnhance = () => !isBusy() && !isDisabled() && !enhancing()
+
+  const handleEnhance = () => {
+    if (isDisabled() || enhancing() || isBusy()) return
+    const draft = text().trim()
+    if (!draft) {
+      const description = language.t("prompt.action.enhanceDescription")
+      setText(description)
+      setGhostText("")
+      if (textareaRef) {
+        textareaRef.value = description
+        adjustHeight()
+        textareaRef.focus()
+      }
+      return
+    }
+    preEnhanceText = text()
+    enhanceCounter++
+    setEnhancing(true)
+    vscode.postMessage({ type: "enhancePrompt", text: draft, requestId: `enhance-${enhanceCounter}` })
   }
 
   const handleSend = () => {
@@ -343,6 +414,17 @@ export const PromptInput: Component = () => {
           <ThinkingSelector />
         </div>
         <div class="prompt-input-hint-actions">
+          <Tooltip value={language.t("prompt.action.enhance")} placement="top">
+            <Button
+              variant="ghost"
+              size="small"
+              onClick={handleEnhance}
+              disabled={!canEnhance()}
+              aria-label={language.t("prompt.action.enhance")}
+            >
+              <WandSparkles size={16} class={enhancing() ? "enhance-spinner" : ""} />
+            </Button>
+          </Tooltip>
           <Show
             when={isBusy()}
             fallback={

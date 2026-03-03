@@ -96,6 +96,27 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
     currentOrgId: z.string().nullable(),
   })
 
+  const FimStreamChunk = z.object({
+    choices: z
+      .array(
+        z.object({
+          delta: z
+            .object({
+              content: z.string().optional(),
+            })
+            .optional(),
+        }),
+      )
+      .optional(),
+    usage: z
+      .object({
+        prompt_tokens: z.number().optional(),
+        completion_tokens: z.number().optional(),
+      })
+      .optional(),
+    cost: z.number().optional(),
+  })
+
   return new Hono()
     .get(
       "/profile",
@@ -193,7 +214,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
             description: "Streaming FIM completion response",
             content: {
               "text/event-stream": {
-                schema: resolver(z.any()),
+                schema: resolver(FimStreamChunk),
               },
             },
           },
@@ -233,10 +254,10 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
         const endpoint = new URL("fim/completions", baseApiUrl)
 
         const headers = {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-            ...buildKiloHeaders(undefined, { kilocodeOrganizationId: organizationId }),
-            [HEADER_FEATURE]: "autocomplete",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          ...buildKiloHeaders(undefined, { kilocodeOrganizationId: organizationId }),
+          [HEADER_FEATURE]: "autocomplete",
         }
 
         const response = await fetch(endpoint, {

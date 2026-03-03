@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
+    paths:
+      - "packages/kilo-docs/**"
+      - ".github/workflows/docs-check-links.yml"
   schedule:
     # Run daily at 9am UTC
     - cron: "0 9 * * *"

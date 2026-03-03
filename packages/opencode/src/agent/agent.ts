@@ -173,6 +173,7 @@ export namespace Agent {
         options: {},
         permission: PermissionNext.merge(
           defaults,
+          user, // kilocode_change: user before ask-specific so ask's deny+allowlist wins
           PermissionNext.fromConfig({
             "*": "deny",
             read: {
@@ -192,7 +193,6 @@ export namespace Agent {
               [Truncate.GLOB]: "allow",
             },
           }),
-          user,
         ),
         mode: "primary",
         native: true,

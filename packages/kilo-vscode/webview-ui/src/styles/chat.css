@@ -345,6 +345,7 @@
 
 .prompt-input-hint {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
@@ -355,6 +356,7 @@
 
 .prompt-input-hint-selectors {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
 
   [data-component="button"] {
@@ -692,6 +694,33 @@
   font-family: var(--vscode-editor-font-family, monospace);
   color: var(--vscode-foreground);
   word-break: break-all;
+}
+
+/* Permission Prompt (inline with tool cards) */
+[data-component="tool-part-wrapper"][data-permission="true"] {
+  /* When wrapping a Part + permission, the outer wrapper provides the card border.
+     Remove the inner Part's tool-part-wrapper border so we don't get double borders. */
+  > [data-component="tool-part-wrapper"] {
+    border: none;
+    border-radius: 0;
+  }
+}
+
+[data-component="permission-prompt"] {
+  border-top: 1px solid var(--border-weak-base, var(--vscode-panel-border));
+  padding: 8px 12px;
+}
+
+[data-component="permission-prompt"] [data-slot="permission-actions"] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+[data-component="permission-prompt"] [data-slot="permission-hint"] {
+  font-size: 11px;
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  margin: 4px 0 0;
 }
 
 /* Dialog Confirmation */
@@ -1063,4 +1092,21 @@
       opacity: 0.6;
     }
   }
+}
+
+/* ============================================
+   Enhance Prompt Spinner
+   ============================================ */
+
+@keyframes enhance-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.enhance-spinner {
+  animation: enhance-spin 1s linear infinite;
 }
