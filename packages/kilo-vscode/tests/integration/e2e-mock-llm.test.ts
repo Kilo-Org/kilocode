@@ -8,6 +8,7 @@ let mockLlm: ReturnType<typeof Bun.serve>
 let server: ChildProcess
 let port: number
 let password: string
+let authHeader: string
 let client: ReturnType<typeof createKiloClient>
 
 function startMockLlm(): ReturnType<typeof Bun.serve> {
@@ -79,6 +80,7 @@ function waitForPort(proc: ChildProcess, timeout = 30_000): Promise<number> {
 beforeAll(async () => {
   mockLlm = startMockLlm()
   password = crypto.randomBytes(32).toString("hex")
+  authHeader = `Basic ${Buffer.from(`kilo:${password}`).toString("base64")}`
 
   const cliPath = process.env.KILO_CLI_PATH || path.resolve(import.meta.dir, "../../bin/kilo")
 
@@ -123,7 +125,7 @@ beforeAll(async () => {
   client = createKiloClient({
     baseUrl: `http://localhost:${port}`,
     headers: {
-      Authorization: `Bearer ${password}`,
+      Authorization: authHeader,
     },
   })
 })

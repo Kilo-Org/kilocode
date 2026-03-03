@@ -7,6 +7,7 @@ import path from "path"
 let server: ChildProcess
 let port: number
 let password: string
+let authHeader: string
 let client: ReturnType<typeof createKiloClient>
 
 function waitForPort(proc: ChildProcess, timeout = 30_000): Promise<number> {
@@ -32,6 +33,7 @@ function waitForPort(proc: ChildProcess, timeout = 30_000): Promise<number> {
 
 beforeAll(async () => {
   password = crypto.randomBytes(32).toString("hex")
+  authHeader = `Basic ${Buffer.from(`kilo:${password}`).toString("base64")}`
 
   const cliPath = process.env.KILO_CLI_PATH || path.resolve(import.meta.dir, "../../bin/kilo")
 
@@ -53,7 +55,7 @@ beforeAll(async () => {
   client = createKiloClient({
     baseUrl: `http://localhost:${port}`,
     headers: {
-      Authorization: `Bearer ${password}`,
+      Authorization: authHeader,
     },
   })
 })
@@ -65,7 +67,7 @@ afterAll(() => {
 describe("CLI backend integration", () => {
   it("server health check responds", async () => {
     const res = await fetch(`http://localhost:${port}/global/health`, {
-      headers: { Authorization: `Bearer ${password}` },
+      headers: { Authorization: authHeader },
     })
     expect(res.ok).toBe(true)
   })
