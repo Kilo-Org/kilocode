@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "sourceMap": true,
+    "rootDir": ".",
+    "outDir": "out",
+    "strict": true,
+    "types": ["node", "vscode", "mocha"]
+  },
+  "include": ["src/test/**/*"]
+}

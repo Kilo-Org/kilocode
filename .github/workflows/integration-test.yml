@@ -1,0 +1,42 @@
+name: integration-test
+
+on:
+  workflow_dispatch: # manual trigger for pre-release
+  schedule:
+    - cron: "0 3 * * 1-5" # weekday nightlies at 03:00 UTC
+
+jobs:
+  integration:
+    name: integration tests
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      # Build the CLI binary (needed for Levels 2 and 3)
+      - name: Build CLI
+        run: bun run build
+        working-directory: packages/opencode
+
+      # Level 1: Extension activation in real VS Code
+      - name: Compile extension activation tests
+        run: bun run compile-tests
+        working-directory: packages/kilo-vscode
+
+      - name: Extension activation tests
+        run: xvfb-run -a bun run test
+        working-directory: packages/kilo-vscode
+
+      # Levels 2 + 3: CLI backend + mock LLM
+      - name: CLI integration tests
+        run: bun test tests/integration/
+        working-directory: packages/kilo-vscode
