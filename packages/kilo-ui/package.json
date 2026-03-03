@@ -1,6 +1,6 @@
 {
   "name": "@kilocode/kilo-ui",
-  "version": "7.0.29",
+  "version": "7.0.36",
   "type": "module",
   "license": "MIT",
   "exports": {
@@ -54,6 +54,7 @@
     "./diff-ssr": "./src/components/diff-ssr.tsx",
     "./dock-prompt": "./src/components/dock-prompt.tsx",
     "./dock-surface": "./src/components/dock-surface.tsx",
+    "./scroll-view": "./src/components/scroll-view.tsx",
     "./context": "./src/context/index.ts",
     "./context/code": "./src/context/code.tsx",
     "./context/data": "./src/context/data.tsx",
@@ -72,6 +73,7 @@
     "./theme": "./src/theme/index.ts",
     "./theme/*": "./src/theme/*.ts",
     "./theme/context": "./src/theme/context.tsx",
+    "./lucide": "./src/lucide.ts",
     "./icons/provider": "./src/components/provider-icons/types.ts",
     "./icons/file-type": "./src/components/file-icons/types.ts",
     "./icons/app": "./src/components/app-icons/types.ts",
@@ -83,6 +85,7 @@
     "solid-js": "catalog:"
   },
   "devDependencies": {
+    "@playwright/test": "1.58.2",
     "@storybook/addon-a11y": "10.2.10",
     "@storybook/addon-docs": "10.2.10",
     "@storybook/addon-themes": "10.2.10",
@@ -96,9 +99,12 @@
   },
   "scripts": {
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "test:visual": "playwright test",
+    "test:visual:update": "playwright test --update-snapshots"
   },
   "dependencies": {
-    "@kobalte/core": "0.13.11"
+    "@kobalte/core": "0.13.11",
+    "lucide-solid": "0.576.0"
   }
 }

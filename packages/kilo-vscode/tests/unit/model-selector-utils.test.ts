@@ -5,7 +5,7 @@ import {
   buildTriggerLabel,
   KILO_GATEWAY_ID,
   PROVIDER_ORDER,
-} from "../../webview-ui/src/components/chat/model-selector-utils"
+} from "../../webview-ui/src/components/shared/model-selector-utils"
 
 const labels = { select: "Select model", noProviders: "No providers", notSet: "Not set" }
 

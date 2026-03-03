@@ -27,7 +27,10 @@ const normalizeKiloBaseURL = (baseURL: string | undefined, orgId: string | undef
   if (trimmed.includes("/openrouter")) return trimmed
   if (trimmed.endsWith("/api")) return `${trimmed}/openrouter`
   return `${trimmed}/api/openrouter`
-} // kilocode_change end
+}
+
+export const Prompt = z.enum(["codex", "gemini", "beast", "anthropic", "trinity", "anthropic_without_todo"])
+// kilocode_change end
 
 export namespace ModelsDev {
   const log = Log.create({ service: "models.dev" })
@@ -79,8 +82,12 @@ export namespace ModelsDev {
         output: z.array(z.enum(["text", "audio", "image", "video", "pdf"])),
       })
       .optional(),
-    recommended: z.boolean().optional(), // kilocode_change
-    recommendedIndex: z.number().optional(), // kilocode_change
+
+    // kilocode_change start
+    recommendedIndex: z.number().optional(),
+    prompt: Prompt.optional().catch(undefined),
+    // kilocode_change end
+
     experimental: z.boolean().optional(),
     status: z.enum(["alpha", "beta", "deprecated"]).optional(),
     options: z.record(z.string(), z.any()),

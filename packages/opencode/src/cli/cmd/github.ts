@@ -459,6 +459,7 @@ export const GithubRunCommand = cmd({
       const isWorkflowDispatchEvent = context.eventName === "workflow_dispatch"
 
       const { providerID, modelID } = normalizeModel()
+      const variant = process.env["VARIANT"] || undefined
       const runId = normalizeRunId()
       const share = normalizeShare()
       const oidcBaseUrl = normalizeOidcBaseUrl()
@@ -921,6 +922,7 @@ export const GithubRunCommand = cmd({
         const result = await SessionPrompt.prompt({
           sessionID: session.id,
           messageID: Identifier.ascending("message"),
+          variant,
           model: {
             providerID,
             modelID,
@@ -974,6 +976,7 @@ export const GithubRunCommand = cmd({
         const summary = await SessionPrompt.prompt({
           sessionID: session.id,
           messageID: Identifier.ascending("message"),
+          variant,
           model: {
             providerID,
             modelID,

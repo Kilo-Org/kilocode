@@ -8,7 +8,6 @@ import { Identifier } from "../id/id"
 import { Provider } from "../provider/provider"
 import { Instance } from "../project/instance"
 import EXIT_DESCRIPTION from "./plan-exit.txt"
-import ENTER_DESCRIPTION from "./plan-enter.txt"
 
 async function getLastModel(sessionID: string) {
   for await (const item of MessageV2.stream(sessionID)) {
@@ -33,6 +32,7 @@ export const PlanExitTool = Tool.define("plan_exit", {
 })
 // kilocode_change end
 
+/*
 export const PlanEnterTool = Tool.define("plan_enter", {
   description: ENTER_DESCRIPTION,
   parameters: z.object({}),
@@ -89,3 +89,4 @@ export const PlanEnterTool = Tool.define("plan_enter", {
     }
   },
 })
+*/

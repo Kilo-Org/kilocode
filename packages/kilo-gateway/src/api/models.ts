@@ -30,6 +30,16 @@ const openRouterModelSchema = z.object({
   top_provider: z.object({ max_completion_tokens: z.number().nullish() }).optional(),
   supported_parameters: z.array(z.string()).optional(),
   preferredIndex: z.number().optional(),
+  opencode: z
+    .object({
+      family: z.string().optional(),
+      prompt: z
+        .enum(["codex", "gemini", "beast", "anthropic", "trinity", "anthropic_without_todo"])
+        .optional()
+        .catch(undefined),
+      variants: z.record(z.string(), z.record(z.string(), z.any())).optional(),
+    })
+    .optional(),
 })
 
 const openRouterModelsResponseSchema = z.object({
@@ -143,11 +153,14 @@ function transformToModelDevFormat(model: OpenRouterModel): any {
   return {
     id: model.id,
     name: model.name,
-    family: model.id === "kilo/auto" ? "kilo/auto" : extractFamily(model.id), // kilocode_change
+    family: model.opencode?.family ?? extractFamily(model.id),
     release_date: new Date().toISOString().split("T")[0], // Default to today
     attachment: supportsImages,
     reasoning: supportsReasoning,
     temperature: supportsTemperature,
+    recommendedIndex: model.preferredIndex,
+    variants: model.opencode?.variants,
+    prompt: model.opencode?.prompt,
     tool_call: supportsTools,
     ...(inputPrice !== undefined &&
       outputPrice !== undefined && {
@@ -167,10 +180,6 @@ function transformToModelDevFormat(model: OpenRouterModel): any {
         input: mapModalities(inputModalities),
         output: mapModalities(outputModalities),
       },
-    }),
-    ...(model.preferredIndex !== undefined && {
-      recommended: true,
-      recommendedIndex: model.preferredIndex,
     }),
     options: {
       ...(model.description && { description: model.description }),

@@ -12,6 +12,8 @@ import { Filesystem } from "@/util/filesystem"
 import type { Event } from "@kilocode/sdk/v2"
 import type { EventSource } from "./context/sdk"
 import { win32DisableProcessedInput, win32InstallCtrlCGuard } from "./win32"
+import { TuiConfig } from "@/config/tui"
+import { Instance } from "@/project/instance"
 
 declare global {
   const KILO_WORKER_PATH: string // kilocode_change
@@ -83,6 +85,10 @@ export const TuiThreadCommand = cmd({
     // Keep ENABLE_PROCESSED_INPUT cleared even if other code flips it.
     // (Important when running under `bun run` wrappers on Windows.)
     const unguard = win32InstallCtrlCGuard()
+    const shutdown = {
+      pending: undefined as Promise<void> | undefined,
+      exiting: false,
+    }
     try {
       // Must be the very first thing — disables CTRL_C_EVENT before any Worker
       // spawn or async work so the OS cannot kill the process group.
@@ -130,17 +136,108 @@ export const TuiThreadCommand = cmd({
         await client.call("reload", undefined)
       })
       // kilocode_change start - graceful shutdown on external signals
-      const shutdown = async () => {
-        await client.call("shutdown", undefined).catch(() => {})
+      // The worker's postMessage for the RPC result may never be delivered
+      // after shutdown because the worker's event loop drains. Send the
+      // shutdown request without awaiting the response, wait for the worker
+      // to exit naturally or force-terminate after a timeout.
+      // Guard against multiple invocations (SIGHUP + SIGTERM + onExit).
+      const terminateWorker = () => {
+        if (shutdown.pending) return shutdown.pending
+        const state = {
+          closed: false,
+        }
+        const result = new Promise<void>((resolve) => {
+          worker.addEventListener(
+            "close",
+            () => {
+              state.closed = true
+              resolve()
+            },
+            { once: true },
+          )
+          setTimeout(resolve, 5000).unref()
+          client.call("shutdown", undefined).catch((error) => {
+            Log.Default.debug("worker shutdown RPC failed", { error })
+          })
+        }).then(async () => {
+          if (state.closed) return
+          await Promise.resolve()
+            .then(() => worker.terminate())
+            .catch((error) => {
+              shutdown.pending = undefined
+              Log.Default.debug("worker terminate failed", { error })
+            })
+        })
+        shutdown.pending = result
+        return result
       }
-      process.on("SIGHUP", shutdown)
-      process.on("SIGTERM", shutdown)
+      const shutdownAndExit = (input: { reason: string; code: number; signal?: NodeJS.Signals }) => {
+        if (shutdown.exiting) return
+        shutdown.exiting = true
+        Log.Default.info("shutting down tui thread", {
+          reason: input.reason,
+          signal: input.signal,
+          code: input.code,
+          pid: process.pid,
+          ppid: process.ppid,
+        })
+        terminateWorker()
+          .catch((error) => {
+            Log.Default.error("failed to terminate worker during shutdown", {
+              reason: input.reason,
+              signal: input.signal,
+              error,
+            })
+          })
+          .finally(() => {
+            unguard?.()
+            process.exit(input.code)
+          })
+      }
+      process.once("SIGHUP", () => shutdownAndExit({ reason: "signal", signal: "SIGHUP", code: 129 }))
+      process.once("SIGTERM", () => shutdownAndExit({ reason: "signal", signal: "SIGTERM", code: 143 }))
+      // In some terminal/tab-close paths the parent shell is terminated without
+      // forwarding a signal to this process, leaving the TUI orphaned. Detect
+      // parent PID re-parenting and exit explicitly.
+      const parent = process.ppid
+      const orphanWatch = setInterval(() => {
+        const orphaned = (() => {
+          if (process.ppid !== parent) return true
+          if (parent === 1) return false
+          try {
+            process.kill(parent, 0)
+            return false
+          } catch (error) {
+            const code = (error as NodeJS.ErrnoException).code
+            if (code !== "ESRCH") {
+              Log.Default.debug("parent liveness check failed", {
+                parent,
+                code,
+                error,
+              })
+              return false
+            }
+            Log.Default.debug("detected dead parent process", {
+              parent,
+              error,
+            })
+            return true
+          }
+        })()
+        if (!orphaned) return
+        shutdownAndExit({ reason: "parent-exit", code: 0 })
+      }, 1000)
+      orphanWatch.unref()
       // kilocode_change end
 
       const prompt = await iife(async () => {
         const piped = !process.stdin.isTTY ? await Bun.stdin.text() : undefined
         if (!args.prompt) return piped
         return piped ? piped + "\n" + args.prompt : args.prompt
+      })
+      const config = await Instance.provide({
+        directory: cwd,
+        fn: () => TuiConfig.get(),
       })
 
       // Check if server should be started (port or hostname explicitly set in CLI or config)
@@ -163,13 +260,15 @@ export const TuiThreadCommand = cmd({
         url = server.url
       } else {
         // Use direct RPC communication (no HTTP)
-        url = "http://opencode.internal"
+        url = "http://kilo.internal"
         customFetch = createWorkerFetch(client)
         events = createEventSource(client)
       }
 
       const tuiPromise = tui({
         url,
+        config,
+        directory: cwd,
         fetch: customFetch,
         events,
         args: {
@@ -180,9 +279,7 @@ export const TuiThreadCommand = cmd({
           prompt,
           fork: args.fork,
         },
-        onExit: async () => {
-          await client.call("shutdown", undefined)
-        },
+        onExit: () => terminateWorker(),
       })
 
       setTimeout(() => {
@@ -193,6 +290,7 @@ export const TuiThreadCommand = cmd({
     } finally {
       unguard?.()
     }
+    if (shutdown.exiting) return
     process.exit(0)
   },
 })

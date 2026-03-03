@@ -604,6 +604,18 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function handleSessionsLoaded(loaded: SessionInfo[]) {
     batch(() => {
+      // Reconcile: remove sessions not in the loaded list to prevent stale
+      // entries from other projects accumulating in the store.
+      const ids = new Set(loaded.map((s) => s.id))
+      setStore(
+        "sessions",
+        produce((sessions) => {
+          for (const id of Object.keys(sessions)) {
+            if (id.startsWith("cloud:")) continue
+            if (!ids.has(id)) delete sessions[id]
+          }
+        }),
+      )
       for (const s of loaded) {
         setStore("sessions", s.id, s)
       }
