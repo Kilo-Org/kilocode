@@ -187,7 +187,15 @@ export const ReadTool = Tool.define("read", {
     }
 
     if (lines < offset && !(lines === 0 && offset === 1)) {
-      throw new Error(`Offset ${offset} is out of range for this file (${lines} lines)`)
+      const lastSectionOffset = Math.max(1, lines - limit + 1)
+      const suggestion = lines > 0
+        ? lastSectionOffset > 1
+          ? ` Use offset=1 to read from the beginning or offset=${lastSectionOffset} to read the last section.`
+          : ` Use offset=1 to read from the beginning.`
+        : ""
+      throw new Error(
+        `Offset ${offset} is beyond the end of file (file has ${lines} line${lines === 1 ? "" : "s"}).${suggestion}`,
+      )
     }
 
     const content = raw.map((line, index) => {
