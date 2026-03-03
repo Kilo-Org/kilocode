@@ -294,22 +294,22 @@ export const SessionProvider: ParentComponent = (props) => {
   // Variant (thinking effort) selection — keyed by "providerID/modelID"
   const variantKey = (sel: ModelSelection) => `${sel.providerID}/${sel.modelID}`
 
-  const variantList = () => {
+  const variantList = createMemo(() => {
     const sel = selected()
     if (!sel) return []
     const model = provider.findModel(sel)
     if (!model?.variants) return []
     return Object.keys(model.variants)
-  }
+  })
 
-  const currentVariant = () => {
+  const currentVariant = createMemo(() => {
     const sel = selected()
     if (!sel) return undefined
     const list = variantList()
     if (list.length === 0) return undefined
     const stored = store.variantSelections[variantKey(sel)]
     return stored && list.includes(stored) ? stored : list[0]
-  }
+  })
 
   const selectVariant = (value: string) => {
     const sel = selected()
