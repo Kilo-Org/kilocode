@@ -1,7 +1,6 @@
 import type { Argv } from "yargs"
 import type { Session as SDKSession, Message, Part } from "@kilocode/sdk/v2"
 import { Session } from "../../session"
-import { Bus } from "../../bus"
 import { cmd } from "./cmd"
 import { bootstrap } from "../bootstrap"
 import { Database } from "../../storage/db"
@@ -10,6 +9,9 @@ import { Instance } from "../../project/instance"
 import { ShareNext } from "../../share/share-next"
 import { EOL } from "os"
 import { Filesystem } from "../../util/filesystem"
+import { Log } from "../../util/log"
+
+const log = Log.create({ service: "import-command" })
 
 /** Discriminated union returned by the ShareNext API (GET /api/share/:id/data) */
 export type ShareData =
@@ -64,6 +66,44 @@ export function transformShareData(shareData: ShareData[]): {
     })),
   }
 }
+
+// kilocode_change start
+export function ingestBootstrapWarning(sessionId: string, error: unknown) {
+  const details = error instanceof Error ? error.message : String(error)
+  return `Warning: imported session ${sessionId} locally, but ingest bootstrap failed: ${details}`
+}
+
+async function ingestBootstrap(sessionId: string) {
+  const { KiloSessions } = await import("../../kilo-sessions/kilo-sessions")
+  return KiloSessions.bootstrap(sessionId)
+}
+
+export async function bootstrapImportedSessionIngest(
+  sessionId: string,
+  input?: {
+    bootstrap?: (sessionId: string) => Promise<unknown>
+    warn?: (message: string) => void
+  },
+) {
+  const run = input?.bootstrap ?? ingestBootstrap
+  const warn =
+    input?.warn ??
+    ((message: string) => {
+      process.stderr.write(message)
+      process.stderr.write(EOL)
+    })
+
+  log.info("ingest bootstrap started", { sessionId })
+  await run(sessionId)
+    .then(() => {
+      log.info("ingest bootstrap completed", { sessionId })
+    })
+    .catch((error) => {
+      log.error("ingest bootstrap failed", { sessionId, error })
+      warn(ingestBootstrapWarning(sessionId, error))
+    })
+}
+// kilocode_change end
 
 export const ImportCommand = cmd({
   command: "import <file>",
@@ -134,7 +174,6 @@ export const ImportCommand = cmd({
 
       Database.use((db) => {
         db.insert(SessionTable).values(Session.toRow(exportData.info)).onConflictDoNothing().run()
-        Database.effect(() => Bus.publish(Session.Event.Created, { info: exportData.info }))
       })
 
       for (const msg of exportData.messages) {
@@ -166,6 +205,10 @@ export const ImportCommand = cmd({
           )
         }
       }
+
+      // kilocode_change start
+      await bootstrapImportedSessionIngest(exportData.info.id)
+      // kilocode_change end
 
       process.stdout.write(`Imported session: ${exportData.info.id}`)
       process.stdout.write(EOL)
