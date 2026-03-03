@@ -118,7 +118,7 @@ export class GitStatsPoller {
         worktrees.map(async (wt) => {
           try {
             const [{ data: diffs }, ab] = await Promise.all([
-              client.worktree.diff({ directory: wt.path }, { throwOnError: true }),
+              client.worktree.diff({ directory: wt.path, base: wt.parentBranch }, { throwOnError: true }),
               this.git.aheadBehind(wt.path, wt.parentBranch),
             ])
             const files = diffs.length
@@ -189,7 +189,7 @@ export class GitStatsPoller {
         if (base && client) {
           this.options.log(`Local stats: using HTTP client with base=${base}`)
           const [{ data: diffs }, ab] = await Promise.all([
-            client.worktree.diff({ directory: root }, { throwOnError: true }),
+            client.worktree.diff({ directory: root, base }, { throwOnError: true }),
             this.git.aheadBehind(root, base),
           ])
           files = diffs.length
