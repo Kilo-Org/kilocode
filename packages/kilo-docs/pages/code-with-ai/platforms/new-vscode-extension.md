@@ -29,7 +29,7 @@ If you encounter any issues, please report them on GitHub:
 
 ## Available Features
 
-The beta currently includes:
+The pre-release currently includes:
 
 - Core chat and agent behavior
 - Kilo Auto model
