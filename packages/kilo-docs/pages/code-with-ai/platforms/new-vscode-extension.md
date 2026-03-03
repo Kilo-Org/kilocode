@@ -1,5 +1,5 @@
 ---
-title: "New VS Code Extension (Pre-release)"
+title: "New VS Code Extension (Beta)"
 description: "The new Kilo Code VS Code extension, now available in beta"
 ---
 
