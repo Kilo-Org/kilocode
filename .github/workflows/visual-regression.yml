@@ -25,6 +25,7 @@ jobs:
           lfs: true
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ github.head_ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -77,6 +78,7 @@ jobs:
 
       - name: Commit and push new baselines (if any)
         id: commit-baselines
+        if: github.event.pull_request.head.repo.full_name == github.repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -91,11 +93,20 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Fail if baselines changed
+      - name: Fail if baselines changed (same-repo PR)
         if: steps.commit-baselines.outputs.changed == 'true'
         run: |
           echo "::error::Visual regression baselines changed. New baselines have been committed to the branch. Please pull and review."
           exit 1
+
+      - name: Fail if baselines changed (fork PR)
+        if: github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          git add packages/kilo-ui/tests/visual-regression.spec.ts-snapshots/
+          if ! git diff --cached --quiet; then
+            echo "::error::Visual regression baselines need updating. Please run 'bun run test:visual:update' locally and commit the changes."
+            exit 1
+          fi
 
       - name: Upload test results on failure
         if: failure()
@@ -117,6 +128,7 @@ jobs:
           lfs: true
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ github.head_ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -169,6 +181,7 @@ jobs:
 
       - name: Commit and push new baselines (if any)
         id: commit-baselines-vscode
+        if: github.event.pull_request.head.repo.full_name == github.repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -183,11 +196,20 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Fail if baselines changed
+      - name: Fail if baselines changed (same-repo PR)
         if: steps.commit-baselines-vscode.outputs.changed == 'true'
         run: |
           echo "::error::Visual regression baselines changed. New baselines have been committed to the branch. Please pull and review."
           exit 1
+
+      - name: Fail if baselines changed (fork PR)
+        if: github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          git add packages/kilo-vscode/tests/visual-regression.spec.ts-snapshots/
+          if ! git diff --cached --quiet; then
+            echo "::error::Visual regression baselines need updating. Please run 'bun run test:visual:update' locally and commit the changes."
+            exit 1
+          fi
 
       - name: Upload test results on failure
         if: failure()
