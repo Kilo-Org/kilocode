@@ -33,7 +33,7 @@
 
 ## Choosing the right Release Asset
 
-If you download from the Releases page and see many files, use this quick guide:
+If you download from the [Releases page](https://github.com/Kilo-Org/kilocode/releases) and see many files, use this quick guide:
 
 - **darwin** = macOS
 - **linux** = Linux
@@ -46,10 +46,11 @@ If you download from the Releases page and see many files, use this quick guide:
 ### Which file should I pick?
 
 - **Windows (most users):** choose `windows-x64`
-- **Windows ARM device:** choose `windows-arm64`
+- **Windows ARM device:** no dedicated ARM asset yet — use x64 emulation or install via npm (`npm install -g @kilocode/cli`)
 - **macOS Intel:** choose `darwin-x64`
 - **macOS Apple Silicon (M1/M2/M3...):** choose `darwin-arm64`
 - **Linux x64 server:** choose `linux-x64`
+- **Linux ARM64 server/device:** choose `linux-arm64`
 
 If you're unsure, check your OS and CPU architecture first:
 
