@@ -15,7 +15,7 @@ html[data-theme="kilo-vscode"] {
   color-scheme: normal;
 
   /* ===== Backgrounds ===== */
-  --background-base: var(--vscode-editor-background);
+  --background-base: var(--vscode-sideBar-background, var(--vscode-editor-background));
   --background-weak: var(--vscode-sideBar-background, var(--vscode-editor-background));
   --background-strong: var(--vscode-editor-background);
   --background-stronger: var(--vscode-editorGroupHeader-tabsBackground, var(--vscode-editor-background));
