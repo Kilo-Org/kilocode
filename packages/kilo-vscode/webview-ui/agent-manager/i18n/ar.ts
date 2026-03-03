@@ -127,6 +127,8 @@ export const dict = {
   "agentManager.review.sendToChat": "إرسال إلى الدردشة",
   "agentManager.review.collapsedOnly": "{{count}} مطوي",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} مطوي، {{large}} كبير",
+  "agentManager.review.largeFileCollapsed": "ملف كبير (مطوي)",
+  "agentManager.review.endOfLongDiff": "لقد وصلت إلى النهاية!",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "الصق رابط PR...",

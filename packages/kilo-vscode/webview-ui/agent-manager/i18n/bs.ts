@@ -127,6 +127,8 @@ export const dict = {
   "agentManager.review.sendToChat": "Pošalji u chat",
   "agentManager.review.collapsedOnly": "{{count}} sažeto",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} sažeto, {{large}} velikih",
+  "agentManager.review.largeFileCollapsed": "Velika datoteka (sažeto)",
+  "agentManager.review.endOfLongDiff": "Stigli ste do kraja!",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Zalijepite PR URL...",

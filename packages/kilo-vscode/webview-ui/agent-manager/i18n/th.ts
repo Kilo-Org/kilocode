@@ -128,6 +128,8 @@ export const dict = {
   "agentManager.review.sendToChat": "ส่งไปยังแชท",
   "agentManager.review.collapsedOnly": "ยุบ {{count}} รายการ",
   "agentManager.review.collapsedWithLarge": "ยุบ {{collapsed}} รายการ, ขนาดใหญ่ {{large}} รายการ",
+  "agentManager.review.largeFileCollapsed": "ไฟล์ขนาดใหญ่ (ย่อไว้)",
+  "agentManager.review.endOfLongDiff": "คุณมาถึงส่วนสุดท้ายแล้ว!",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "วาง URL ของ PR...",

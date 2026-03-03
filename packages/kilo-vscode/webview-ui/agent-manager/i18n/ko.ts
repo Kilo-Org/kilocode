@@ -128,6 +128,8 @@ export const dict = {
   "agentManager.review.sendToChat": "채팅으로 보내기",
   "agentManager.review.collapsedOnly": "{{count}}개 접힘",
   "agentManager.review.collapsedWithLarge": "{{collapsed}}개 접힘, {{large}}개 대용량",
+  "agentManager.review.largeFileCollapsed": "큰 파일 (접힘)",
+  "agentManager.review.endOfLongDiff": "마지막에 도달했습니다!",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "PR URL 붙여넣기...",

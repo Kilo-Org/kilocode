@@ -129,6 +129,8 @@ export const dict = {
   "agentManager.review.sendToChat": "Envoyer au chat",
   "agentManager.review.collapsedOnly": "{{count}} repliés",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} repliés, {{large}} volumineux",
+  "agentManager.review.largeFileCollapsed": "Fichier volumineux (réduit)",
+  "agentManager.review.endOfLongDiff": "Vous êtes arrivé à la fin !",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Coller l'URL du PR...",
