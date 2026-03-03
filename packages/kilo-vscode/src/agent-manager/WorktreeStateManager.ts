@@ -300,27 +300,23 @@ export class WorktreeStateManager {
   }
 
   async save(): Promise<void> {
-    // Serialize concurrent saves — if a save is in-flight, queue one follow-up
+    this.pendingSave = true
     if (this.saving) {
-      this.pendingSave = true
       await this.saving
-      // The in-flight save finished but our data may not have been written yet.
-      // If there's a new save already running (the pendingSave follow-up), wait for it.
-      if (this.saving) await this.saving
       return
     }
 
-    this.saving = this.writeToDisk()
+    this.saving = (async () => {
+      while (this.pendingSave) {
+        this.pendingSave = false
+        await this.writeToDisk()
+      }
+    })()
+
     try {
       await this.saving
     } finally {
       this.saving = undefined
-    }
-
-    // If another save was requested while we were writing, flush it now
-    if (this.pendingSave) {
-      this.pendingSave = false
-      await this.save()
     }
   }
 
@@ -344,11 +340,16 @@ export class WorktreeStateManager {
       data.reviewDiffStyle = "split"
     }
 
+    const dir = path.dirname(this.file)
+
     try {
-      const dir = path.dirname(this.file)
       if (!fs.existsSync(dir)) await fs.promises.mkdir(dir, { recursive: true })
       await fs.promises.writeFile(this.file, JSON.stringify(data, null, 2), "utf-8")
     } catch (error) {
+      if (!fs.existsSync(dir)) {
+        this.log("State directory was removed, skipping save")
+        return
+      }
       const code = (error as NodeJS.ErrnoException).code
       if (code === "ENOENT") {
         this.log("State directory was removed, skipping save")

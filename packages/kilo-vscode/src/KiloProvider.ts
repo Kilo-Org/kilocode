@@ -819,7 +819,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     console.log("[Kilo New] KiloProvider: 🔄 Flushing deferred sessions refresh", { reason })
     const ctx = this.sessionRefreshContext
     try {
-      await flushPendingSessionRefreshUtil(ctx)
+      const resolved = await flushPendingSessionRefreshUtil(ctx)
+      if (resolved) this.projectID = resolved
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to flush session refresh:", error)
     }

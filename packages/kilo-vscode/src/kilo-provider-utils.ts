@@ -122,7 +122,7 @@ export async function loadSessions(ctx: SessionRefreshContext): Promise<string |
 /**
  * Flush a deferred session refresh when the HTTP client becomes available.
  */
-export async function flushPendingSessionRefresh(ctx: SessionRefreshContext): Promise<void> {
+export async function flushPendingSessionRefresh(ctx: SessionRefreshContext): Promise<string | undefined> {
   if (!ctx.pendingSessionRefresh) return
 
   if (!ctx.listSessions) {
@@ -131,7 +131,7 @@ export async function flushPendingSessionRefresh(ctx: SessionRefreshContext): Pr
     return
   }
 
-  await loadSessions(ctx)
+  return loadSessions(ctx)
 }
 
 export function buildSettingPath(key: string): { section: string; leaf: string } {
