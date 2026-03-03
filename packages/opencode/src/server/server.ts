@@ -1,53 +1,53 @@
-import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
-import { Log } from "../util/log"
-import { describeRoute, generateSpecs, validator, resolver, openAPIRouteHandler } from "hono-openapi"
-import { Hono } from "hono"
-import { cors } from "hono/cors"
-import { streamSSE } from "hono/streaming"
-import { proxy } from "hono/proxy"
-import { basicAuth } from "hono/basic-auth"
-import z from "zod"
-import { Provider } from "../provider/provider"
+import { BusEvent } from "@/bus/bus-event"
+import { createKiloRoutes } from "@kilocode/kilo-gateway" // kilocode_change
 import { NamedError } from "@opencode-ai/util/error"
-import { LSP } from "../lsp"
+import { Hono } from "hono"
+import { describeRoute, generateSpecs, openAPIRouteHandler, resolver, validator } from "hono-openapi"
+import { basicAuth } from "hono/basic-auth"
+import { websocket } from "hono/bun"
+import { cors } from "hono/cors"
+import { HTTPException } from "hono/http-exception"
+import { proxy } from "hono/proxy"
+import { streamSSE } from "hono/streaming"
+import type { ContentfulStatusCode } from "hono/utils/http-status"
+import z from "zod"
+import { Agent } from "../agent/agent"
+import { Auth } from "../auth"
+import { Command } from "../command"
+import { NoChangesError } from "../commit-message/generate" // kilocode_change
+import { Flag } from "../flag/flag"
 import { Format } from "../format"
-import { TuiRoutes } from "./routes/tui"
+import { Global } from "../global"
+import { Identifier } from "../id/id" // kilocode_change
+import { LSP } from "../lsp"
+import { InstanceBootstrap } from "../project/bootstrap"
 import { Instance } from "../project/instance"
 import { Vcs } from "../project/vcs"
-import { Agent } from "../agent/agent"
-import { Skill } from "../skill/skill"
-import { Auth } from "../auth"
-import { Flag } from "../flag/flag"
-import { Command } from "../command"
-import { Global } from "../global"
-import { ProjectRoutes } from "./routes/project"
-import { SessionRoutes } from "./routes/session"
-import { PtyRoutes } from "./routes/pty"
-import { McpRoutes } from "./routes/mcp"
-import { FileRoutes } from "./routes/file"
-import { ConfigRoutes } from "./routes/config"
-import { ExperimentalRoutes } from "./routes/experimental"
-import { TelemetryRoutes } from "./routes/telemetry" // kilocode_change
-import { ProviderRoutes } from "./routes/provider"
-import { createKiloRoutes } from "@kilocode/kilo-gateway" // kilocode_change
-import { Database } from "../storage/db" // kilocode_change
+import { Provider } from "../provider/provider"
 import { Session } from "../session" // kilocode_change
-import { Identifier } from "../id/id" // kilocode_change
-import { SessionTable, MessageTable, PartTable } from "../session/session.sql" // kilocode_change
+import { MessageTable, PartTable, SessionTable } from "../session/session.sql" // kilocode_change
+import { Skill } from "../skill/skill"
+import { Database, NotFoundError } from "../storage/db" // kilocode_change
 import { lazy } from "../util/lazy"
-import { InstanceBootstrap } from "../project/bootstrap"
-import { NotFoundError } from "../storage/db"
-import type { ContentfulStatusCode } from "hono/utils/http-status"
-import { websocket } from "hono/bun"
-import { HTTPException } from "hono/http-exception"
+import { Log } from "../util/log"
 import { errors } from "./error"
-import { CommitMessageRoutes } from "./routes/commit-message"
-import { EnhancePromptRoutes } from "./routes/enhance-prompt" // kilocode_change
-import { QuestionRoutes } from "./routes/question"
-import { PermissionRoutes } from "./routes/permission"
-import { GlobalRoutes } from "./routes/global"
 import { MDNS } from "./mdns"
+import { CommitMessageRoutes } from "./routes/commit-message"
+import { ConfigRoutes } from "./routes/config"
+import { EnhancePromptRoutes } from "./routes/enhance-prompt" // kilocode_change
+import { ExperimentalRoutes } from "./routes/experimental"
+import { FileRoutes } from "./routes/file"
+import { GlobalRoutes } from "./routes/global"
+import { McpRoutes } from "./routes/mcp"
+import { PermissionRoutes } from "./routes/permission"
+import { ProjectRoutes } from "./routes/project"
+import { ProviderRoutes } from "./routes/provider"
+import { PtyRoutes } from "./routes/pty"
+import { QuestionRoutes } from "./routes/question"
+import { SessionRoutes } from "./routes/session"
+import { TelemetryRoutes } from "./routes/telemetry" // kilocode_change
+import { TuiRoutes } from "./routes/tui"
 
 // @ts-ignore This global is needed to prevent ai-sdk from logging warnings to stdout https://github.com/vercel/ai/blob/2dc67e0ef538307f21368db32d5a12345d98831b/packages/ai/src/logger/log-warnings.ts#L85
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -76,6 +76,7 @@ export namespace Server {
             if (err instanceof NotFoundError) status = 404
             else if (err instanceof Provider.ModelNotFoundError) status = 400
             else if (err.name.startsWith("Worktree")) status = 400
+            else if (err instanceof NoChangesError) status = 400
             else status = 500
             return c.json(err.toObject(), { status })
           }
