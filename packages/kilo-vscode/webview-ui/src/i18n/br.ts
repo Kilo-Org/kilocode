@@ -222,6 +222,9 @@ export const dict = {
   "prompt.attachment.remove": "Remover anexo",
   "prompt.action.send": "Enviar",
   "prompt.action.stop": "Parar",
+  "prompt.action.enhance": "Melhorar prompt",
+  "prompt.action.enhanceDescription":
+    "O botão 'Aprimorar prompt' ajuda a melhorar seu pedido fornecendo contexto adicional, esclarecimentos ou reformulações. Tente digitar um pedido aqui e clique no botão novamente para ver como funciona.",
 
   "prompt.toast.pasteUnsupported.title": "Colagem não suportada",
   "prompt.toast.pasteUnsupported.description": "Somente imagens ou PDFs podem ser colados aqui.",
@@ -966,6 +969,7 @@ export const dict = {
   "agentManager.hoverCard.branch": "BRANCH",
   "agentManager.hoverCard.base": "Base",
   "agentManager.hoverCard.sessions": "Sessões",
+  "agentManager.hoverCard.files": "Arquivos",
   "agentManager.hoverCard.changes": "Alterações",
   "agentManager.hoverCard.commits": "Commits",
   "agentManager.session.new": "Nova sessão",

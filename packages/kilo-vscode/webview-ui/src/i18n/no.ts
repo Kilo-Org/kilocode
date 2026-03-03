@@ -225,6 +225,9 @@ export const dict = {
   "prompt.attachment.remove": "Fjern vedlegg",
   "prompt.action.send": "Send",
   "prompt.action.stop": "Stopp",
+  "prompt.action.enhance": "Forbedre prompt",
+  "prompt.action.enhanceDescription":
+    "Knappen 'Forbedre prompt' hjelper med å forbedre forespørselen din ved å gi ekstra kontekst, avklaring eller omformulering. Prøv å skrive en forespørsel her og klikk på knappen igjen for å se hvordan det fungerer.",
 
   "prompt.toast.pasteUnsupported.title": "Liming ikke støttet",
   "prompt.toast.pasteUnsupported.description": "Kun bilder eller PDF-er kan limes inn her.",
@@ -962,6 +965,7 @@ export const dict = {
   "agentManager.hoverCard.branch": "BRANCH",
   "agentManager.hoverCard.base": "Base",
   "agentManager.hoverCard.sessions": "Økter",
+  "agentManager.hoverCard.files": "Filer",
   "agentManager.hoverCard.changes": "Endringer",
   "agentManager.hoverCard.commits": "Commits",
   "agentManager.session.new": "Ny økt",

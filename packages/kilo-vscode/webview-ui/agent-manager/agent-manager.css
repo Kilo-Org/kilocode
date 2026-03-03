@@ -61,6 +61,10 @@
   color: var(--text-weak);
 }
 
+.am-local-item-active .am-stat-files {
+  color: rgba(255, 255, 255, 0.7);
+}
+
 .am-local-icon {
   width: 18px;
   height: 18px;
@@ -73,6 +77,7 @@
   flex-direction: column;
   min-width: 0;
   gap: 0;
+  flex: 1;
 }
 
 .am-local-label {
@@ -322,12 +327,20 @@ button.am-section-toggle:hover .am-section-label {
   background: rgba(255, 255, 255, 0.12);
 }
 
+.am-stat-files {
+  color: var(--text-muted);
+}
+
 .am-stat-additions {
   color: #34d399;
 }
 
 .am-stat-deletions {
   color: #f87171;
+}
+
+.am-worktree-item-active .am-stat-files {
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .am-worktree-item-active .am-stat-additions {
@@ -342,11 +355,24 @@ button.am-section-toggle:hover .am-section-label {
   color: #34d399;
 }
 
+.am-worktree-behind {
+  color: #f87171;
+}
+
 .am-worktree-item-active .am-worktree-commits {
   color: #6ee7b7;
 }
 
-.am-worktree-item:hover .am-worktree-stats {
+.am-worktree-item-active .am-worktree-behind {
+  color: #fca5a5;
+}
+
+.am-local-item-active .am-worktree-behind {
+  color: #fca5a5;
+}
+
+.am-worktree-item:hover .am-worktree-stats,
+.am-local-item:hover .am-worktree-stats {
   opacity: 0;
 }
 
@@ -754,6 +780,10 @@ button.am-section-toggle:hover .am-section-label {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+}
+
+.am-diff-toggle-btn.am-tab-diff-btn-active .am-stat-files {
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .am-diff-toggle-btn.am-tab-diff-btn-active .am-stat-additions {

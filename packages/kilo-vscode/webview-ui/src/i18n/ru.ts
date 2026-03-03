@@ -222,6 +222,9 @@ export const dict = {
   "prompt.attachment.remove": "Удалить вложение",
   "prompt.action.send": "Отправить",
   "prompt.action.stop": "Остановить",
+  "prompt.action.enhance": "Улучшить промпт",
+  "prompt.action.enhanceDescription":
+    "Кнопка 'Улучшить запрос' помогает сделать ваш запрос лучше, предоставляя дополнительный контекст, уточнения или переформулировку. Попробуйте ввести запрос и снова нажать кнопку, чтобы увидеть, как это работает.",
 
   "prompt.toast.pasteUnsupported.title": "Неподдерживаемая вставка",
   "prompt.toast.pasteUnsupported.description": "Сюда можно вставлять только изображения или PDF.",
@@ -965,6 +968,7 @@ export const dict = {
   "agentManager.hoverCard.branch": "ВЕТКА",
   "agentManager.hoverCard.base": "Основа",
   "agentManager.hoverCard.sessions": "Сессии",
+  "agentManager.hoverCard.files": "Файлы",
   "agentManager.hoverCard.changes": "Изменения",
   "agentManager.hoverCard.commits": "Коммиты",
   "agentManager.session.new": "Новая сессия",

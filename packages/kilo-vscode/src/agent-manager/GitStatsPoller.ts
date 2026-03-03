@@ -4,16 +4,20 @@ import type { GitOps } from "./GitOps"
 
 export interface WorktreeStats {
   worktreeId: string
+  files: number
   additions: number
   deletions: number
-  commits: number
+  ahead: number
+  behind: number
 }
 
 export interface LocalStats {
   branch: string
+  files: number
   additions: number
   deletions: number
-  commits: number
+  ahead: number
+  behind: number
 }
 
 interface GitStatsPollerOptions {
@@ -34,7 +38,10 @@ export class GitStatsPoller {
   private lastHash: string | undefined
   private lastLocalHash: string | undefined
   private lastLocalStats: LocalStats | undefined
-  private lastStats: Record<string, { additions: number; deletions: number; commits: number }> = {}
+  private lastStats: Record<
+    string,
+    { files: number; additions: number; deletions: number; ahead: number; behind: number }
+  > = {}
   private readonly intervalMs: number
   private readonly git: GitOps
 
@@ -110,23 +117,25 @@ export class GitStatsPoller {
       await Promise.all(
         worktrees.map(async (wt) => {
           try {
-            const { data: diffs } = await client.worktree.diff(
-              { directory: wt.path, base: wt.parentBranch },
-              { throwOnError: true },
-            )
+            const [{ data: diffs }, ab] = await Promise.all([
+              client.worktree.diff({ directory: wt.path, base: wt.parentBranch }, { throwOnError: true }),
+              this.git.aheadBehind(wt.path, wt.parentBranch),
+            ])
+            const files = diffs.length
             const additions = diffs.reduce((sum: number, diff: FileDiff) => sum + diff.additions, 0)
             const deletions = diffs.reduce((sum: number, diff: FileDiff) => sum + diff.deletions, 0)
-            const commits = await this.git.countMissingOriginCommits(wt.path, wt.parentBranch)
-            return { worktreeId: wt.id, additions, deletions, commits }
+            return { worktreeId: wt.id, files, additions, deletions, ahead: ab.ahead, behind: ab.behind }
           } catch (err) {
             this.options.log(`Failed to fetch worktree stats for ${wt.branch} (${wt.path}):`, err)
             const prev = this.lastStats[wt.id]
             if (!prev) return undefined
             return {
               worktreeId: wt.id,
+              files: prev.files,
               additions: prev.additions,
               deletions: prev.deletions,
-              commits: prev.commits,
+              ahead: prev.ahead,
+              behind: prev.behind,
             }
           }
         }),
@@ -135,19 +144,25 @@ export class GitStatsPoller {
 
     if (stats.length === 0) return
 
-    const hash = stats.map((item) => `${item.worktreeId}:${item.additions}:${item.deletions}:${item.commits}`).join("|")
+    const hash = stats
+      .map(
+        (item) => `${item.worktreeId}:${item.files}:${item.additions}:${item.deletions}:${item.ahead}:${item.behind}`,
+      )
+      .join("|")
     if (hash === this.lastHash) return
     this.lastHash = hash
     this.lastStats = stats.reduce(
       (acc, item) => {
         acc[item.worktreeId] = {
+          files: item.files,
           additions: item.additions,
           deletions: item.deletions,
-          commits: item.commits,
+          ahead: item.ahead,
+          behind: item.behind,
         }
         return acc
       },
-      {} as Record<string, { additions: number; deletions: number; commits: number }>,
+      {} as Record<string, { files: number; additions: number; deletions: number; ahead: number; behind: number }>,
     )
 
     this.options.onStats(stats)
@@ -163,37 +178,33 @@ export class GitStatsPoller {
 
       const tracking = await this.git.resolveTrackingBranch(root, branch)
 
-      // When the client is unavailable, preserve last-known stats rather
-      // than emitting zeros (which would falsely indicate a clean state).
-      if (!client) {
-        if (this.lastLocalStats && this.lastLocalStats.branch === branch) return
-        const stats: LocalStats = { branch, additions: 0, deletions: 0, commits: 0 }
-        const hash = `local:${branch}:0:0:0`
-        if (hash === this.lastLocalHash) return
-        this.lastLocalHash = hash
-        this.lastLocalStats = stats
-        this.options.onLocalStats(stats)
-        return
-      }
-
-      // When no tracking branch exists (e.g. new local branch with no upstream
-      // and no origin/<branch> ref), compute diff+commit stats against the
-      // repo's default branch so the UI still shows meaningful numbers.
       const base = tracking ?? (await this.git.resolveDefaultBranch(root, branch))
 
+      let files: number
       let additions: number
       let deletions: number
-      let commits: number
+      let ahead: number
+      let behind: number
       try {
-        if (base) {
-          const { data: diffs } = await client.worktree.diff({ directory: root, base }, { throwOnError: true })
+        if (base && client) {
+          this.options.log(`Local stats: using HTTP client with base=${base}`)
+          const [{ data: diffs }, ab] = await Promise.all([
+            client.worktree.diff({ directory: root, base }, { throwOnError: true }),
+            this.git.aheadBehind(root, base),
+          ])
+          files = diffs.length
           additions = diffs.reduce((sum: number, d: FileDiff) => sum + d.additions, 0)
           deletions = diffs.reduce((sum: number, d: FileDiff) => sum + d.deletions, 0)
-          commits = await this.git.countMissingOriginCommits(root, base)
+          ahead = ab.ahead
+          behind = ab.behind
         } else {
-          additions = 0
-          deletions = 0
-          commits = 0
+          this.options.log(`Local stats: fallback to workingTreeStats (base=${base ?? "none"} client=${!!client})`)
+          const wt = await this.git.workingTreeStats(root)
+          files = wt.files
+          additions = wt.additions
+          deletions = wt.deletions
+          ahead = 0
+          behind = 0
         }
       } catch (err) {
         this.options.log("Failed to fetch local diff stats:", err)
@@ -201,11 +212,15 @@ export class GitStatsPoller {
         return
       }
 
-      const hash = `local:${branch}:${additions}:${deletions}:${commits}`
-      if (hash === this.lastLocalHash) return
+      const hash = `local:${branch}:${files}:${additions}:${deletions}:${ahead}:${behind}`
+      if (hash === this.lastLocalHash) {
+        this.options.log(`Local stats: unchanged (${hash})`)
+        return
+      }
       this.lastLocalHash = hash
 
-      const stats: LocalStats = { branch, additions, deletions, commits }
+      this.options.log(`Local stats: emitting files=${files} +${additions} -${deletions} ↑${ahead} ↓${behind}`)
+      const stats: LocalStats = { branch, files, additions, deletions, ahead, behind }
       this.lastLocalStats = stats
       this.options.onLocalStats(stats)
     } catch (err) {

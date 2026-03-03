@@ -1,11 +1,16 @@
 import * as path from "path"
 import * as vscode from "vscode"
 import { z } from "zod"
-import type { KiloClient, Session, SessionStatus, Event, TextPartInput, FilePartInput, Config } from "@kilocode/sdk/v2/client"
-import {
-  type KiloConnectionService,
-  type KilocodeNotification,
-} from "./services/cli-backend"
+import type {
+  KiloClient,
+  Session,
+  SessionStatus,
+  Event,
+  TextPartInput,
+  FilePartInput,
+  Config,
+} from "@kilocode/sdk/v2/client"
+import { type KiloConnectionService, type KilocodeNotification } from "./services/cli-backend"
 import type { EditorContext, CloudSessionData } from "./services/cli-backend/types"
 import { FileIgnoreController } from "./services/autocomplete/shims/FileIgnoreController"
 import { handleChatCompletionRequest } from "./services/autocomplete/chat-autocomplete/handleChatCompletionRequest"
@@ -505,6 +510,29 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestVariants": {
           const variants = this.extensionContext?.globalState.get<Record<string, string>>("variantSelections") ?? {}
           this.postMessage({ type: "variantsLoaded", variants })
+          break
+        }
+        case "enhancePrompt": {
+          const sdkClient = this.client
+          if (!sdkClient) {
+            this.postMessage({ type: "enhancePromptError", error: "Not connected to CLI backend", requestId: message.requestId })
+            break
+          }
+          void sdkClient.enhancePrompt
+            .enhance({ text: message.text }, { throwOnError: true })
+            .then(({ data }) => {
+              this.postMessage({ type: "enhancePromptResult", text: data.text, requestId: message.requestId })
+            })
+            .catch((err: unknown) => {
+              const msg = getErrorMessage(err) || "Failed to enhance prompt"
+              console.error("[Kilo New] KiloProvider: Failed to enhance prompt:", err)
+              vscode.window.showErrorMessage(`Enhance prompt failed: ${msg}`)
+              this.postMessage({
+                type: "enhancePromptError",
+                error: msg,
+                requestId: message.requestId,
+              })
+            })
           break
         }
       }
@@ -1181,7 +1209,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Step 1: Import the cloud session with fresh IDs
     let session: Session | undefined
     try {
-      const importResult = await this.client.kilo.cloud.session.import({ sessionId: cloudSessionId, directory: workspaceDir })
+      const importResult = await this.client.kilo.cloud.session.import({
+        sessionId: cloudSessionId,
+        directory: workspaceDir,
+      })
       session = importResult.data as Session | undefined
     } catch (error) {
       console.error("[Kilo New] KiloProvider: ❌ Cloud session import failed:", error)
@@ -1292,10 +1323,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     try {
-      const { data: updated } = await this.client.global.config.update(
-        { config: partial },
-        { throwOnError: true },
-      )
+      const { data: updated } = await this.client.global.config.update({ config: partial }, { throwOnError: true })
 
       const message = {
         type: "configUpdated",

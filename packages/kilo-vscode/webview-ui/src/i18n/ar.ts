@@ -221,6 +221,9 @@ export const dict = {
   "prompt.attachment.remove": "إزالة المرفق",
   "prompt.action.send": "إرسال",
   "prompt.action.stop": "توقف",
+  "prompt.action.enhance": "تحسين النص",
+  "prompt.action.enhanceDescription":
+    "زر «حسّن الموجه» يطوّر موجهك بإضافة سياق أو توضيح أو إعادة صياغة. جرّب اكتب موجه هنا ثم اضغط الزر مرة ثانية وشوف النتيجة.",
 
   "prompt.toast.pasteUnsupported.title": "لصق غير مدعوم",
   "prompt.toast.pasteUnsupported.description": "يمكن لصق الصور أو ملفات PDF فقط هنا.",
@@ -952,6 +955,7 @@ export const dict = {
   "agentManager.hoverCard.branch": "الفرع",
   "agentManager.hoverCard.base": "الأساس",
   "agentManager.hoverCard.sessions": "الجلسات",
+  "agentManager.hoverCard.files": "الملفات",
   "agentManager.hoverCard.changes": "التغييرات",
   "agentManager.hoverCard.commits": "عمليات الالتزام",
   "agentManager.session.new": "جلسة جديدة",

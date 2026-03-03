@@ -138,26 +138,96 @@ export class GitOps {
     return job
   }
 
-  async countMissingOriginCommits(cwd: string, parentBranch: string): Promise<number> {
+  /**
+   * Compute working-tree stats (staged + unstaged + untracked) without requiring
+   * a remote or base branch — mirrors the superset approach of running
+   * `git diff --numstat` and `git ls-files --others`.
+   */
+  async workingTreeStats(cwd: string): Promise<{ files: number; additions: number; deletions: number }> {
+    // Staged + unstaged changes relative to HEAD (like superset's dual
+    // git diff --cached --numstat + git diff --numstat, combined).
+    const [numstat, untracked] = await Promise.all([
+      this.raw(["diff", "HEAD", "--numstat"], cwd).catch(() => ""),
+      this.raw(["ls-files", "--others", "--exclude-standard"], cwd).catch(() => ""),
+    ])
+
+    const tracked = numstat
+      ? numstat.split("\n").reduce(
+          (acc, line) => {
+            if (!line.trim()) return acc
+            const parts = line.split("\t")
+            return {
+              files: acc.files + 1,
+              additions: acc.additions + (parts[0] !== "-" ? parseInt(parts[0], 10) || 0 : 0),
+              deletions: acc.deletions + (parts[1] !== "-" ? parseInt(parts[1], 10) || 0 : 0),
+            }
+          },
+          { files: 0, additions: 0, deletions: 0 },
+        )
+      : { files: 0, additions: 0, deletions: 0 }
+
+    // Count lines in untracked files as additions (like superset's
+    // applyUntrackedLineCount). Cap at 1MB to avoid reading huge binaries.
+    if (!untracked) return tracked
+
+    const paths = untracked.split("\n").filter((line) => line.trim())
+    const counts = await Promise.all(
+      paths.map(async (p) => {
+        try {
+          const full = nodePath.resolve(cwd, p)
+          const stat = await fs.stat(full)
+          if (stat.size > 1_000_000) return 0
+          const content = await fs.readFile(full, "utf-8")
+          return content.split("\n").length
+        } catch (err) {
+          this.log(`Failed to read untracked file ${p}:`, err)
+          return 0
+        }
+      }),
+    )
+
+    return {
+      files: tracked.files + paths.length,
+      additions: tracked.additions + counts.reduce((sum, count) => sum + count, 0),
+      deletions: tracked.deletions,
+    }
+  }
+
+  /**
+   * Count commits ahead and behind in a single `rev-list --left-right --count`
+   * call (like superset's approach). Falls back through upstream → remote/branch
+   * → remote/parentBranch → parentBranch.
+   */
+  async aheadBehind(cwd: string, parentBranch: string): Promise<{ ahead: number; behind: number }> {
     const upstream = await this.raw(["rev-parse", "--abbrev-ref", "@{upstream}"], cwd).catch(() => "")
     const branch = await this.raw(["branch", "--show-current"], cwd).catch(() => "")
     const remote = await this.resolveRemote(cwd, branch)
     await this.refreshRemote(cwd, remote)
 
-    if (upstream) {
-      const count = await this.raw(["rev-list", "--count", `${upstream}..HEAD`], cwd).catch(() => "0")
-      return parseInt(count, 10) || 0
+    const ref = (() => {
+      if (upstream) return upstream
+      const remoteBranch = branch ? `${remote}/${branch}` : ""
+      // hasRemoteRef is async, so we can't use it inline — resolve below
+      return { remoteBranch, remoteParent: `${remote}/${parentBranch}`, parentBranch }
+    })()
+
+    if (typeof ref === "string") {
+      return this.parseLeftRight(cwd, ref)
     }
 
-    const remoteBranch = branch ? `${remote}/${branch}` : ""
-    const hasRemoteBranch = remoteBranch ? await this.hasRemoteRef(cwd, remoteBranch) : false
+    if (ref.remoteBranch && (await this.hasRemoteRef(cwd, ref.remoteBranch))) {
+      return this.parseLeftRight(cwd, ref.remoteBranch)
+    }
+    if (await this.hasRemoteRef(cwd, ref.remoteParent)) {
+      return this.parseLeftRight(cwd, ref.remoteParent)
+    }
+    return this.parseLeftRight(cwd, ref.parentBranch)
+  }
 
-    const remoteParent = `${remote}/${parentBranch}`
-    const hasRemoteParent = await this.hasRemoteRef(cwd, remoteParent)
-
-    const ref = hasRemoteBranch ? remoteBranch : hasRemoteParent ? remoteParent : parentBranch
-    const count = await this.raw(["rev-list", "--count", `${ref}..HEAD`], cwd).catch(() => "0")
-    return parseInt(count, 10) || 0
+  private async parseLeftRight(cwd: string, ref: string): Promise<{ ahead: number; behind: number }> {
+    const out = await this.raw(["rev-list", "--left-right", "--count", `${ref}...HEAD`], cwd).catch(() => "0\t0")
+    const [behind, ahead] = out.split(/\s+/).map((s) => parseInt(s, 10) || 0)
+    return { ahead, behind }
   }
 
   async buildWorktreePatch(sourcePath: string, baseBranch: string, selectedFiles?: string[]): Promise<string> {
