@@ -146,45 +146,51 @@ export class GitOps {
   async workingTreeStats(cwd: string): Promise<{ files: number; additions: number; deletions: number }> {
     // Staged + unstaged changes relative to HEAD (like superset's dual
     // git diff --cached --numstat + git diff --numstat, combined).
-    const numstat = await this.raw(["diff", "HEAD", "--numstat"], cwd).catch(() => "")
-    const untracked = await this.raw(["ls-files", "--others", "--exclude-standard"], cwd).catch(() => "")
+    const [numstat, untracked] = await Promise.all([
+      this.raw(["diff", "HEAD", "--numstat"], cwd).catch(() => ""),
+      this.raw(["ls-files", "--others", "--exclude-standard"], cwd).catch(() => ""),
+    ])
 
-    let files = 0
-    let additions = 0
-    let deletions = 0
-
-    if (numstat) {
-      for (const line of numstat.split("\n")) {
-        if (!line.trim()) continue
-        const parts = line.split("\t")
-        files++
-        if (parts[0] !== "-") additions += parseInt(parts[0], 10) || 0
-        if (parts[1] !== "-") deletions += parseInt(parts[1], 10) || 0
-      }
-    }
+    const tracked = numstat
+      ? numstat.split("\n").reduce(
+          (acc, line) => {
+            if (!line.trim()) return acc
+            const parts = line.split("\t")
+            return {
+              files: acc.files + 1,
+              additions: acc.additions + (parts[0] !== "-" ? parseInt(parts[0], 10) || 0 : 0),
+              deletions: acc.deletions + (parts[1] !== "-" ? parseInt(parts[1], 10) || 0 : 0),
+            }
+          },
+          { files: 0, additions: 0, deletions: 0 },
+        )
+      : { files: 0, additions: 0, deletions: 0 }
 
     // Count lines in untracked files as additions (like superset's
     // applyUntrackedLineCount). Cap at 1MB to avoid reading huge binaries.
-    if (untracked) {
-      const paths = untracked.split("\n").filter((l) => l.trim())
-      files += paths.length
-      const fs = await import("fs/promises")
-      await Promise.all(
-        paths.map(async (p) => {
-          try {
-            const full = nodePath.resolve(cwd, p)
-            const stat = await fs.stat(full)
-            if (stat.size > 1_000_000) return
-            const content = await fs.readFile(full, "utf-8")
-            additions += content.split("\n").length
-          } catch (err) {
-            this.log(`Failed to read untracked file ${p}:`, err)
-          }
-        }),
-      )
-    }
+    if (!untracked) return tracked
 
-    return { files, additions, deletions }
+    const paths = untracked.split("\n").filter((line) => line.trim())
+    const counts = await Promise.all(
+      paths.map(async (p) => {
+        try {
+          const full = nodePath.resolve(cwd, p)
+          const stat = await fs.stat(full)
+          if (stat.size > 1_000_000) return 0
+          const content = await fs.readFile(full, "utf-8")
+          return content.split("\n").length
+        } catch (err) {
+          this.log(`Failed to read untracked file ${p}:`, err)
+          return 0
+        }
+      }),
+    )
+
+    return {
+      files: tracked.files + paths.length,
+      additions: tracked.additions + counts.reduce((sum, count) => sum + count, 0),
+      deletions: tracked.deletions,
+    }
   }
 
   /**
