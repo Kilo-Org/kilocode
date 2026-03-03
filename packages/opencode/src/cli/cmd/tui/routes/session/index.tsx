@@ -1139,6 +1139,9 @@ export function Session() {
                 onSubmit={() => {
                   toBottom()
                 }}
+                onScroll={(direction) => {
+                  scroll.scrollBy(direction === "up" ? -3 : 3)
+                }}
                 sessionID={route.sessionID}
               />
             </box>
