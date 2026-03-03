@@ -928,10 +928,21 @@ export class Worktree extends HeyApiClient {
   public diff<ThrowOnError extends boolean = false>(
     parameters?: {
       directory?: string
+      base?: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
-    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "directory" }] }])
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "base" },
+          ],
+        },
+      ],
+    )
     return (options?.client ?? this.client).get<WorktreeDiffResponses, WorktreeDiffErrors, ThrowOnError>({
       url: "/experimental/worktree/diff",
       ...options,

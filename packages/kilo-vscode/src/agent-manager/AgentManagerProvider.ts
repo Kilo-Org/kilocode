@@ -1507,14 +1507,16 @@ export class AgentManagerProvider implements vscode.Disposable {
     this.postToWebview({ type: "agentManager.worktreeDiffLoading", sessionId, loading: true })
     try {
       const client = this.connectionService.getClient()
-      this.log(`Fetching worktree diff for session ${sessionId}: dir=${target.directory}, base=${target.baseBranch}`)
       const { data: diffs } = await client.worktree.diff(
-        { directory: target.directory },
+        { directory: target.directory, base: target.baseBranch },
         { throwOnError: true },
       )
+
       this.log(`Worktree diff returned ${diffs.length} file(s) for session ${sessionId}`)
 
-      const hash = diffs.map((d: FileDiff) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`).join("|")
+      const hash = diffs
+        .map((d: FileDiff) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`)
+        .join("|")
       this.lastDiffHash = hash
       this.diffSessionId = sessionId
 
@@ -1534,11 +1536,13 @@ export class AgentManagerProvider implements vscode.Disposable {
     try {
       const client = this.connectionService.getClient()
       const { data: diffs } = await client.worktree.diff(
-        { directory: target.directory },
+        { directory: target.directory, base: target.baseBranch },
         { throwOnError: true },
       )
 
-      const hash = diffs.map((d: FileDiff) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`).join("|")
+      const hash = diffs
+        .map((d: FileDiff) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`)
+        .join("|")
       if (hash === this.lastDiffHash && this.diffSessionId === sessionId) return
       this.lastDiffHash = hash
       this.diffSessionId = sessionId
