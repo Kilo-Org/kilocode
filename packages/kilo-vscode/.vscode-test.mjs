@@ -8,8 +8,9 @@ export default defineConfig({
 	launchArgs: [
 		"--disable-gpu",
 		"--disable-workspace-trust",
-		// Prevent VS Code from marking the extension host as unresponsive
-		// during heavy initialization (WASM loading, etc.)
-		"--extensions-unresponsive-timeout", "300000",
+		// Disable all built-in extensions to speed up startup and prevent
+		// the extension host from becoming unresponsive during activation.
+		// The extension under development is still loaded.
+		"--disable-extensions",
 	],
 })

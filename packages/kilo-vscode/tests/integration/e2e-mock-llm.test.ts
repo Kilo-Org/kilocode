@@ -145,9 +145,10 @@ describe("Full E2E with mock LLM", () => {
       const id = (session.data as { id: string }).id
       expect(id).toBeDefined()
 
-      // Send a message via the prompt endpoint
+      // Send a message via the prompt endpoint with explicit model
       const prompt = await client.session.prompt({
         sessionID: id,
+        model: { providerID: "mock", modelID: "mock-model" },
         parts: [{ type: "text", text: "Hello!" }],
       })
       console.log("[mock-llm] prompt response status:", prompt.response?.status)
