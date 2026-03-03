@@ -73,9 +73,32 @@ export function registerCommitMessageService(
         },
       )
       .then(undefined, (error: unknown) => {
-        const msg = getErrorMessage(error)
-        console.error("[Kilo New] Failed to generate commit message:", msg)
-        vscode.window.showErrorMessage(`Failed to generate commit message: ${msg}`)
+        console.error("[Kilo New] Failed to generate commit message:", error)
+
+        let msg: string
+        if (error instanceof Error) {
+          msg = error.message
+        } else if (typeof error === "string") {
+          msg = error
+        } else if (error && typeof error === "object") {
+          const obj = error as Record<string, unknown>
+          if (obj.name === "ProviderModelNotFoundError" && obj.data && typeof obj.data === "object") {
+            const data = obj.data as { providerID?: string; modelID?: string }
+            msg = `Model "${data.modelID}" not found on provider "${data.providerID}". Check your small model configuration in Settings > Providers.`
+          } else {
+            msg = (obj.message as string) ?? (obj.error as string) ?? JSON.stringify(error)
+          }
+        } else {
+          msg = String(error)
+        }
+
+        if (msg.includes("No changes found")) {
+          vscode.window.showInformationMessage(
+            "No staged or unstaged changes found. Stage some changes first to generate a commit message.",
+          )
+        } else {
+          vscode.window.showErrorMessage(`Failed to generate commit message: ${msg}`)
+        }
       })
   })
 
