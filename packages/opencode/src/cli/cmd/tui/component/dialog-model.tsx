@@ -7,6 +7,8 @@ import { useDialog } from "@tui/ui/dialog"
 import { createDialogProviderOptions, DialogProvider } from "./dialog-provider"
 import { useKeybind } from "../context/keybind"
 import * as fuzzysort from "fuzzysort"
+// kilocode_change
+import { formatPricing } from "@/kilocode/pricing"
 
 export function useConnected() {
   const sync = useSync()
@@ -48,7 +50,8 @@ export function DialogModel(props: { providerID?: string }) {
             description: provider.name,
             category,
             disabled: provider.id === "opencode" && model.id.includes("-nano"),
-            footer: model.cost?.input === 0 && provider.id === "opencode" ? "Free" : undefined,
+            // kilocode_change - show pricing in model picker
+            footer: model.cost?.input === 0 && provider.id === "opencode" ? "Free" : formatPricing(model.cost),
             onSelect: () => {
               dialog.clear()
               local.model.set({ providerID: provider.id, modelID: model.id }, { recent: true })
@@ -92,7 +95,8 @@ export function DialogModel(props: { providerID?: string }) {
               : undefined,
             // kilocode_change end
             disabled: provider.id === "opencode" && model.includes("-nano"),
-            footer: info.cost?.input === 0 && provider.id === "opencode" ? "Free" : undefined,
+            // kilocode_change - show pricing in model picker
+            footer: info.cost?.input === 0 && provider.id === "opencode" ? "Free" : formatPricing(info.cost),
             onSelect() {
               dialog.clear()
               local.model.set({ providerID: provider.id, modelID: model }, { recent: true })
