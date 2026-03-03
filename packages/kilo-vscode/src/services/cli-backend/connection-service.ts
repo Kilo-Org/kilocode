@@ -1,24 +1,24 @@
 import * as vscode from "vscode"
 import { ServerManager } from "./server-manager"
-import { HttpClient } from "./http-client"
-import { SSEClient } from "./sse-client"
-import type { ServerConfig, SSEEvent } from "./types"
+import { createKiloClient, type KiloClient, type Event } from "@kilocode/sdk/v2/client"
+import { SdkSSEAdapter } from "./sdk-sse-adapter"
+import type { ServerConfig } from "./types"
 import { resolveEventSessionId as resolveEventSessionIdPure } from "./connection-utils"
 
 export type ConnectionState = "connecting" | "connected" | "disconnected" | "error"
-type SSEEventListener = (event: SSEEvent) => void
+type SSEEventListener = (event: Event) => void
 type StateListener = (state: ConnectionState) => void
-type SSEEventFilter = (event: SSEEvent) => boolean
+type SSEEventFilter = (event: Event) => boolean
 type NotificationDismissListener = (notificationId: string) => void
 
 /**
- * Shared connection service that owns the single ServerManager, HttpClient, and SSEClient.
+ * Shared connection service that owns the single ServerManager, KiloClient (SDK), and SdkSSEAdapter.
  * Multiple KiloProvider instances subscribe to it for SSE events and state changes.
  */
 export class KiloConnectionService {
   private readonly serverManager: ServerManager
-  private client: HttpClient | null = null
-  private sseClient: SSEClient | null = null
+  private client: KiloClient | null = null
+  private sseClient: SdkSSEAdapter | null = null
   private info: { port: number } | null = null
   private config: ServerConfig | null = null
   private state: ConnectionState = "disconnected"
@@ -65,9 +65,9 @@ export class KiloConnectionService {
   }
 
   /**
-   * Get the shared HttpClient. Throws if not connected.
+   * Get the shared SDK client. Throws if not connected.
    */
-  getHttpClient(): HttpClient {
+  getClient(): KiloClient {
     if (!this.client) {
       throw new Error("Not connected — call connect() first")
     }
@@ -133,7 +133,7 @@ export class KiloConnectionService {
    * Best-effort sessionID extraction for an SSE event.
    * Returns undefined for global events.
    */
-  resolveEventSessionId(event: SSEEvent): string | undefined {
+  resolveEventSessionId(event: Event): string | undefined {
     return resolveEventSessionIdPure(
       event,
       (messageId) => this.messageSessionIdsByMessageId.get(messageId),
@@ -207,8 +207,17 @@ export class KiloConnectionService {
     }
 
     this.config = config
-    this.client = new HttpClient(config)
-    this.sseClient = new SSEClient(config)
+
+    // Create SDK client with Basic Auth header
+    const authHeader = `Basic ${Buffer.from(`kilo:${server.password}`).toString("base64")}`
+    this.client = createKiloClient({
+      baseUrl: config.baseUrl,
+      headers: {
+        Authorization: authHeader,
+      },
+    })
+
+    this.sseClient = new SdkSSEAdapter(this.client)
 
     // Wait until SSE actually reaches a terminal state before resolving connect().
     let resolveConnected: (() => void) | null = null
@@ -253,7 +262,7 @@ export class KiloConnectionService {
       }
     })
 
-    this.sseClient.connect(workspaceDir)
+    this.sseClient.connect()
 
     await connectedPromise
   }

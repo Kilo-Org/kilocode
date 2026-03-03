@@ -129,6 +129,8 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
   private debounceTimer: NodeJS.Timeout | null = null
   private isFirstCall: boolean = true
   private ignoreController: Promise<FileIgnoreController>
+  /** Abort controller for the current in-flight FIM request */
+  private fimAbortController: AbortController | null = null
   private acceptedCommand: vscode.Disposable | null = null
   private debounceDelayMs: number = INITIAL_DEBOUNCE_DELAY_MS
   private latencyHistory: number[] = []
@@ -279,6 +281,8 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
       clearTimeout(this.debounceTimer)
       this.debounceTimer = null
     }
+    this.fimAbortController?.abort()
+    this.fimAbortController = null
     this.telemetry?.dispose()
     this.recentlyVisitedRangesService.dispose()
     this.recentlyEditedTracker.dispose()
@@ -504,6 +508,11 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     suffix: string,
     languageId: string,
   ): Promise<void> {
+    // Abort any previous in-flight FIM request before starting a new one
+    this.fimAbortController?.abort()
+    const controller = new AbortController()
+    this.fimAbortController = controller
+
     const startTime = performance.now()
 
     // Build telemetry context for this request
@@ -528,7 +537,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
 
       const result =
         prompt.strategy === "fim"
-          ? await this.fimPromptBuilder.getFromFIM(this.model, prompt, curriedProcessSuggestion)
+          ? await this.fimPromptBuilder.getFromFIM(this.model, prompt, curriedProcessSuggestion, controller.signal)
           : await this.holeFiller.getFromChat(this.model, prompt, curriedProcessSuggestion)
 
       const latencyMs = performance.now() - startTime
@@ -551,6 +560,9 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
       // Always update suggestions, even if text is empty (for caching)
       this.updateSuggestions(result.suggestion)
     } catch (error) {
+      // Aborted requests are expected (user typed again) — don't report as failures
+      if (controller.signal.aborted) return
+
       const latencyMs = performance.now() - startTime
       this.telemetry?.captureLlmRequestFailed(
         {

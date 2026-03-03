@@ -1,7 +1,9 @@
 import * as vscode from "vscode"
 import * as fs from "fs"
 import * as path from "path"
-import type { KiloConnectionService, SessionInfo, HttpClient } from "../services/cli-backend"
+import type { KiloClient, Session, FileDiff } from "@kilocode/sdk/v2/client"
+import type { KiloConnectionService } from "../services/cli-backend"
+import { getErrorMessage } from "../kilo-provider-utils"
 import { KiloProvider } from "../KiloProvider"
 import { buildWebviewHtml } from "../utils"
 import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
@@ -61,7 +63,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     this.statsPoller = new GitStatsPoller({
       getWorktrees: () => this.state?.getWorktrees() ?? [],
       getWorkspaceRoot: () => this.getWorkspaceRoot(),
-      getHttpClient: () => this.connectionService.getHttpClient(),
+      getClient: () => this.connectionService.getClient(),
       onStats: (stats) => {
         const msg = { type: "agentManager.worktreeStats", stats }
         this.cachedWorktreeStats = msg
@@ -411,10 +413,10 @@ export class AgentManagerProvider implements vscode.Disposable {
     worktreePath: string,
     branch: string,
     worktreeId?: string,
-  ): Promise<SessionInfo | null> {
-    let client: HttpClient
+  ): Promise<Session | null> {
+    let client: KiloClient
     try {
-      client = this.connectionService.getHttpClient()
+      client = this.connectionService.getClient()
     } catch {
       this.postToWebview({
         type: "agentManager.worktreeSetup",
@@ -439,9 +441,13 @@ export class AgentManagerProvider implements vscode.Disposable {
     })
 
     try {
-      return await client.createSession(worktreePath, { platform: PLATFORM })
+      const { data: session } = await client.session.create(
+        { directory: worktreePath, platform: PLATFORM },
+        { throwOnError: true },
+      )
+      return session
     } catch (error) {
-      const err = error instanceof Error ? error.message : String(error)
+      const err = getErrorMessage(error)
       this.postToWebview({
         type: "agentManager.worktreeSetup",
         status: "error",
@@ -564,9 +570,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 
   /** Add a new session to an existing worktree. */
   private async onAddSessionToWorktree(worktreeId: string): Promise<null> {
-    let client: HttpClient
+    let client: KiloClient
     try {
-      client = this.connectionService.getHttpClient()
+      client = this.connectionService.getClient()
     } catch {
       this.postToWebview({ type: "error", message: "Not connected to CLI backend" })
       return null
@@ -581,11 +587,15 @@ export class AgentManagerProvider implements vscode.Disposable {
       return null
     }
 
-    let session: SessionInfo
+    let session: Session
     try {
-      session = await client.createSession(worktree.path, { platform: PLATFORM })
+      const { data } = await client.session.create(
+        { directory: worktree.path, platform: PLATFORM },
+        { throwOnError: true },
+      )
+      session = data
     } catch (error) {
-      const err = error instanceof Error ? error.message : String(error)
+      const err = getErrorMessage(error)
       this.postToWebview({ type: "error", message: `Failed to create session: ${err}` })
       TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_SESSION_ERROR, {
         source: PLATFORM,
@@ -1428,12 +1438,15 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     this.postToWebview({ type: "agentManager.worktreeDiffLoading", sessionId, loading: true })
     try {
-      const client = this.connectionService.getHttpClient()
+      const client = this.connectionService.getClient()
       this.log(`Fetching worktree diff for session ${sessionId}: dir=${target.directory}, base=${target.baseBranch}`)
-      const diffs = await client.getWorktreeDiff(target.directory, target.baseBranch)
+      const { data: diffs } = await client.worktree.diff(
+        { directory: target.directory },
+        { throwOnError: true },
+      )
       this.log(`Worktree diff returned ${diffs.length} file(s) for session ${sessionId}`)
 
-      const hash = diffs.map((d) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`).join("|")
+      const hash = diffs.map((d: FileDiff) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`).join("|")
       this.lastDiffHash = hash
       this.diffSessionId = sessionId
 
@@ -1451,10 +1464,13 @@ export class AgentManagerProvider implements vscode.Disposable {
     if (!target) return
 
     try {
-      const client = this.connectionService.getHttpClient()
-      const diffs = await client.getWorktreeDiff(target.directory, target.baseBranch)
+      const client = this.connectionService.getClient()
+      const { data: diffs } = await client.worktree.diff(
+        { directory: target.directory },
+        { throwOnError: true },
+      )
 
-      const hash = diffs.map((d) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`).join("|")
+      const hash = diffs.map((d: FileDiff) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`).join("|")
       if (hash === this.lastDiffHash && this.diffSessionId === sessionId) return
       this.lastDiffHash = hash
       this.diffSessionId = sessionId
