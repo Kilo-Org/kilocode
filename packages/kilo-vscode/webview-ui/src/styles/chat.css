@@ -345,6 +345,7 @@
 
 .prompt-input-hint {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
@@ -355,6 +356,7 @@
 
 .prompt-input-hint-selectors {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
 
   [data-component="button"] {

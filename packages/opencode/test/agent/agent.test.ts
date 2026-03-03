@@ -78,6 +78,35 @@ test("ask agent has correct default properties", async () => {
     },
   })
 })
+test("ask agent denies edit/write/bash even when user config adds a specific edit allow", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      permission: {
+        edit: { "src/output.log": "allow" },
+      },
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const ask = await Agent.get("ask")
+      expect(ask).toBeDefined()
+      // user config must not leak edit capability into ask mode — even for the
+      // specific path the user allowed, ask mode must still deny it
+      expect(PermissionNext.evaluate("edit", "src/output.log", ask!.permission).action).toBe("deny")
+      expect(evalPerm(ask, "bash")).toBe("deny")
+      expect(evalPerm(ask, "task")).toBe("deny")
+      // safe tools still work
+      expect(evalPerm(ask, "read")).toBe("allow")
+      expect(evalPerm(ask, "grep")).toBe("allow")
+      // disabled() must also reflect the deny (tools hidden from LLM)
+      const disabled = PermissionNext.disabled(["edit", "write", "bash"], ask!.permission)
+      expect(disabled.has("edit")).toBe(true)
+      expect(disabled.has("write")).toBe(true)
+      expect(disabled.has("bash")).toBe(true)
+    },
+  })
+})
 // kilocode_change end
 
 test("plan agent denies edits except .opencode/plans/*", async () => {

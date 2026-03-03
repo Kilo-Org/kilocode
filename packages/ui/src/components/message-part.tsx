@@ -1114,7 +1114,16 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
           <Markdown text={throttledText()} cacheKey={part.id} onClick={handleMarkdownClick} /> {/* kilocode_change */}
         </div>
         <Show when={showCopy()}>
-          <div data-slot="text-part-copy-wrapper" data-interrupted={interrupted() ? "" : undefined}>
+          {/* kilocode_change: data-is-turn-copy makes the copy button always visible for the final response */}
+          <div
+            data-slot="text-part-copy-wrapper"
+            data-interrupted={interrupted() ? "" : undefined}
+            data-is-turn-copy={
+              typeof props.showAssistantCopyPartID === "string" && props.showAssistantCopyPartID === part.id
+                ? ""
+                : undefined
+            }
+          >
             <Tooltip
               value={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyResponse")}
               placement="top"

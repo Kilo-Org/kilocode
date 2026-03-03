@@ -11,6 +11,10 @@
   [data-slot="text-part-copy-wrapper"] {
     display: none;
   }
+
+  [data-slot="text-part-copy-wrapper"][data-is-turn-copy] {
+    display: block;
+  }
 }
 
 /* Prevent long title/path from hiding the collapsible expand arrow */
