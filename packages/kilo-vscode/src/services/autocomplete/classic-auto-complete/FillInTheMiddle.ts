@@ -83,7 +83,12 @@ export class FimPromptBuilder {
       response += text
     }
     logtime("prep fim")
-    const usageInfo = await model.generateFimResponse(formattedPrefix, prunedSuffix, onChunk, signal)
+    const usageInfo = await model.generateFimResponse(
+      formattedPrefix,
+      prunedSuffix,
+      onChunk,
+      signal,
+    )
     logtime("fim network")
     console.log("[FIM] response:", response)
 
