@@ -1,4 +1,3 @@
-// kilocode_change - new file
 // Kilo-specific translations and overrides
 // Keys here will override any matching keys from upstream translations
 export const dict = {

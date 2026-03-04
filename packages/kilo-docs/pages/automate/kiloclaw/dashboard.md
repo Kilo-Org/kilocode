@@ -38,15 +38,18 @@ Available when the instance is **running**.
 
 ### ↩️ Redeploy
 
-Stops the machine, applies the latest platform image and your current configuration (environment variables, secrets, channel tokens), and starts it again.
+Stops the machine, applies your current configuration (environment variables, secrets, channel tokens), and starts it again. When redeploying, you have two options:
 
-**Your files, git repos, cron jobs, and everything on your persistent volume are preserved.** Redeploy is not a factory reset — think of it as "update and restart."
+- **Redeploy** — Redeploys using the same platform version your instance was originally set up with. Use this when you only need to apply configuration changes without changing the underlying platform.
+- **Upgrade & Redeploy** — Upgrades your instance to the latest supported platform version, then redeploys. Use this to pick up new features and fixes from the changelog.
+
+**Your files, git repos, cron jobs, and everything on your persistent volume are preserved.** Redeploy is not a factory reset — think of it as "apply config and restart" (or "upgrade and restart" if you choose **Upgrade & Redeploy**).
 
 You should redeploy when:
 
-- The changelog shows "Redeploy Required" or "Redeploy Suggested"
-- You've changed channel tokens or secrets in Settings
-- You want to pick up the latest platform updates
+- The changelog shows "Redeploy Required" or "Redeploy Suggested" (use **Upgrade & Redeploy**)
+- You've changed channel tokens or secrets in Settings (use **Redeploy**)
+- You want to pick up the latest platform updates (use **Upgrade & Redeploy**)
 
 Available when the instance is **running**.
 
@@ -85,12 +88,13 @@ You can connect Telegram, Discord, and Slack by entering bot tokens in the Setti
 After saving channel tokens, you need to **Redeploy** or **Restart OpenClaw** for the changes to take effect.
 {% /callout %}
 
-### Stop and Destroy
+### Stop, Destroy & Restore
 
 At the bottom of Settings:
 
 - **Stop Instance** — Shuts down the machine. All your data is preserved and you can start it again later.
 - **Destroy Instance** — Permanently deletes your instance and all its data, including files, configuration, and workspace. This cannot be undone.
+- **Restore Config** — Restores your original `openclaw.json` in your instance. The existing `openclaw.json` is backed up to `/root/.openclaw` before the restore takes place.
 
 ## Accessing the Control UI
 
@@ -124,14 +128,14 @@ The dashboard shows recent KiloClaw platform updates. Each entry is tagged as a 
 
 ## Instance Lifecycle
 
-| Action                 | What Happens                                                          | Data Preserved? |
-| ---------------------- | --------------------------------------------------------------------- | --------------- |
-| **Create & Provision** | Allocates storage in the best region available and saves your config. | N/A             |
-| **Start Machine**      | Boots the machine and starts OpenClaw.                                | Yes             |
-| **Stop Instance**      | Shuts down the machine.                                               | Yes             |
-| **Restart OpenClaw**   | Restarts the OpenClaw process. Machine stays up.                      | Yes             |
-| **Redeploy**           | Stops, updates, and restarts the machine.                             | Yes             |
-| **Destroy Instance**   | Permanently deletes everything.                                       | No              |
+| Action                 | What Happens                                                                | Data Preserved? |
+| ---------------------- | --------------------------------------------------------------------------- | --------------- |
+| **Create & Provision** | Allocates storage in the best region available and saves your config.       | N/A             |
+| **Start Machine**      | Boots the machine and starts OpenClaw.                                      | Yes             |
+| **Stop Instance**      | Shuts down the machine.                                                     | Yes             |
+| **Restart OpenClaw**   | Restarts the OpenClaw process. Machine stays up.                            | Yes             |
+| **Redeploy**           | Stops, applies config, and restarts the machine (same version or upgraded). | Yes             |
+| **Destroy Instance**   | Permanently deletes everything.                                             | No              |
 
 ## Machine Specs
 

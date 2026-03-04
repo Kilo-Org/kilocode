@@ -1,4 +1,3 @@
-// kilocode_change - Kilo Gateway server routes
 /**
  * Kilo Gateway specific routes
  * Handles profile fetching and organization management for Kilo Gateway provider
@@ -8,10 +7,10 @@
 
 import { fetchProfile, fetchBalance } from "../api/profile.js"
 import { fetchKilocodeNotifications, KilocodeNotificationSchema } from "../api/notifications.js"
-import { KILO_API_BASE, HEADER_FEATURE } from "../api/constants.js" // kilocode_change - added HEADER_FEATURE
-import { buildKiloHeaders } from "../headers.js" // kilocode_change
-import type { ImportDeps, DrizzleDb } from "../cloud-sessions.js" // kilocode_change
-import { fetchCloudSession, fetchCloudSessionForImport, importSessionToDb } from "../cloud-sessions.js" // kilocode_change
+import { KILO_API_BASE, HEADER_FEATURE } from "../api/constants.js"
+import { buildKiloHeaders } from "../headers.js"
+import type { ImportDeps, DrizzleDb } from "../cloud-sessions.js"
+import { fetchCloudSession, fetchCloudSessionForImport, importSessionToDb } from "../cloud-sessions.js"
 
 // Type definitions for OpenCode dependencies (injected at runtime)
 type Hono = any
@@ -95,6 +94,27 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
     profile: Profile,
     balance: Balance.nullable(),
     currentOrgId: z.string().nullable(),
+  })
+
+  const FimStreamChunk = z.object({
+    choices: z
+      .array(
+        z.object({
+          delta: z
+            .object({
+              content: z.string().optional(),
+            })
+            .optional(),
+        }),
+      )
+      .optional(),
+    usage: z
+      .object({
+        prompt_tokens: z.number().optional(),
+        completion_tokens: z.number().optional(),
+      })
+      .optional(),
+    cost: z.number().optional(),
   })
 
   return new Hono()
@@ -194,7 +214,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
             description: "Streaming FIM completion response",
             content: {
               "text/event-stream": {
-                schema: resolver(z.any()),
+                schema: resolver(FimStreamChunk),
               },
             },
           },
@@ -223,6 +243,8 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
           return c.json({ error: "No valid token found" }, 401)
         }
 
+        const organizationId = auth.type === "oauth" ? auth.accountId : undefined
+
         const { prefix, suffix, model, maxTokens, temperature } = c.req.valid("json")
         const fimModel = model ?? "mistralai/codestral-2501"
         const fimMaxTokens = maxTokens ?? 256
@@ -231,16 +253,16 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
         const baseApiUrl = KILO_API_BASE + "/api/"
         const endpoint = new URL("fim/completions", baseApiUrl)
 
+        const headers = {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          ...buildKiloHeaders(undefined, { kilocodeOrganizationId: organizationId }),
+          [HEADER_FEATURE]: "autocomplete",
+        }
+
         const response = await fetch(endpoint, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-            // kilocode_change start - include kilo headers with autocomplete feature override
-            ...buildKiloHeaders(),
-            [HEADER_FEATURE]: "autocomplete",
-            // kilocode_change end
-          },
+          headers,
           body: JSON.stringify({
             model: fimModel,
             prompt: prefix,

@@ -162,7 +162,8 @@
               unzip
               gnutar
               gzip
-	      ripgrep
+              patchelf
+              ripgrep
               kilo-dev
               kilo-install-bin
               kilo-bin

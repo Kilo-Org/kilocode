@@ -36,6 +36,13 @@
   box-sizing: border-box;
 }
 
+.scrollbar-none {
+  scrollbar-width: none; /* Firefox */
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge */
+}
+
 html,
 body {
   overflow-x: hidden;

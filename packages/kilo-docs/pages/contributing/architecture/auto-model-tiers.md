@@ -85,10 +85,10 @@ Extend Kilo Auto into four tiers.
 
 **Model options for Auto: Small**:
 
-| Model | Cost | Capability | Notes |
-| ----- | ---- | ---------- | ----- |
+| Model       | Cost                         | Capability                                                             | Notes                                                                |
+| ----------- | ---------------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | gpt-oss-20b | ~50% cheaper than GPT-5 Nano | Lower — suitable for simple background tasks like titles and summaries | Open-weight, cost-optimized option for high-volume lightweight tasks |
-| GPT-5 Nano | Higher than gpt-oss-20b | Higher — better instruction following and output quality | Preferred when credits are available and task quality matters |
+| GPT-5 Nano  | Higher than gpt-oss-20b      | Higher — better instruction following and output quality               | Preferred when credits are available and task quality matters        |
 
 Auto: Small should prefer **gpt-oss-20b** when minimizing cost (e.g., free users, high-volume background tasks) and **GPT-5 Nano** when credits are available and higher output quality is desired.
 
