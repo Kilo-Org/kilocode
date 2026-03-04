@@ -23,6 +23,7 @@
 ## Quick Links
 
 - [VS Code Marketplace](https://kilo.ai/vscode-marketplace?utm_source=Readme) (download)
+- [VS Code Extension Documentation](./packages/kilo-vscode/README.md) — setup, features, and development guide for the Kilo VS Code extension
 - Install CLI: `npm install -g @kilocode/cli`
 - [Official Kilo.ai Home page](https://kilo.ai) (learn more)
 
@@ -56,6 +57,7 @@ npx @kilocode/cli
 Then run `kilo` in any project directory to start.
 
 <!-- kilocode_change start -->
+
 ### npm Install Note: Hidden `.kilo` File
 
 On some systems and npm versions, installing `@kilocode/cli` can create a hidden `.kilo` file near the installed `kilo` command (for example in a global npm bin directory). This file is an npm-generated launcher helper, not project data.
