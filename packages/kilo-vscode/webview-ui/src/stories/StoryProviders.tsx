@@ -70,7 +70,12 @@ export function mockSessionValue(overrides?: {
 
   return {
     currentSessionID: () => id,
-    currentSession: () => ({ id, title: "Story session", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }),
+    currentSession: () => ({
+      id,
+      title: "Story session",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }),
     setCurrentSessionID: noop,
     sessions: () => [],
     status: () => status,
@@ -172,6 +177,7 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
               </LanguageContext.Provider>
             </DialogProvider>
           </ProviderProvider>
+        </ConfigProvider>
       </ServerProvider>
     </VSCodeProvider>
   )
