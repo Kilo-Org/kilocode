@@ -80,32 +80,6 @@ export const ChatViewIdle: Story = {
   ),
 }
 
-export const ChatViewWithQuestion: Story = {
-  name: "ChatView — with QuestionDock",
-  render: () => (
-    <StoryProviders sessionID={SESSION_ID} questions={[singleQuestion]}>
-      <div style={{ width: "420px", height: "600px", display: "flex", "flex-direction": "column" }}>
-        <ChatView />
-      </div>
-    </StoryProviders>
-  ),
-}
-
-// ---------------------------------------------------------------------------
-// MessageList stories
-// ---------------------------------------------------------------------------
-
-export const MessageListEmpty: Story = {
-  name: "MessageList — empty",
-  render: () => (
-    <StoryProviders sessionID={SESSION_ID}>
-      <div style={{ width: "420px", height: "500px" }}>
-        <MessageList />
-      </div>
-    </StoryProviders>
-  ),
-}
-
 // ---------------------------------------------------------------------------
 // QuestionDock stories
 // ---------------------------------------------------------------------------

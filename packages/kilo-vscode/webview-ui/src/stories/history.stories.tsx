@@ -138,7 +138,7 @@ const WithSessions: ParentComponent<{ sessions?: typeof mockSessions }> = (props
 
 const meta: Meta = {
   title: "History/SessionList",
-  parameters: { layout: "padded" },
+  parameters: { layout: "fullscreen" },
 }
 export default meta
 type Story = StoryObj
@@ -147,7 +147,7 @@ export const WithItems: Story = {
   name: "With sessions",
   render: () => (
     <WithSessions sessions={mockSessions as any}>
-      <div style={{ width: "420px", height: "500px" }}>
+      <div style={{ height: "500px" }}>
         <SessionList onSelectSession={noop} />
       </div>
     </WithSessions>

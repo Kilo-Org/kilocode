@@ -107,25 +107,6 @@ export const DiffPanelWithDiffs: Story = {
 // FullScreenDiffView
 // ---------------------------------------------------------------------------
 
-export const FullScreenDiffLoading: Story = {
-  name: "FullScreenDiffView — loading",
-  render: () => (
-    <StoryProviders>
-      <div style={{ width: "420px", height: "700px", display: "flex" }}>
-        <FullScreenDiffView
-          diffs={[]}
-          loading
-          diffStyle="unified"
-          onDiffStyleChange={() => {}}
-          comments={[]}
-          onCommentsChange={() => {}}
-          onClose={() => {}}
-        />
-      </div>
-    </StoryProviders>
-  ),
-}
-
 export const FullScreenDiffWithChanges: Story = {
   name: "FullScreenDiffView — with changes",
   render: () => (
