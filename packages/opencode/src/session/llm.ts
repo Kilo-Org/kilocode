@@ -280,12 +280,13 @@ export namespace LLM {
 
   async function resolveTools(input: Pick<StreamInput, "tools" | "agent" | "user">) {
     const disabled = PermissionNext.disabled(Object.keys(input.tools), input.agent.permission)
-    for (const tool of Object.keys(input.tools)) {
+    const tools = { ...input.tools }
+    for (const tool of Object.keys(tools)) {
       if (input.user.tools?.[tool] === false || disabled.has(tool)) {
-        delete input.tools[tool]
+        delete tools[tool]
       }
     }
-    return input.tools
+    return tools
   }
 
   // Check if messages contain any tool-call content
