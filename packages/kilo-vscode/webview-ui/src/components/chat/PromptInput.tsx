@@ -22,7 +22,8 @@ import { useFileMention } from "../../hooks/useFileMention"
 import { useImageAttachments } from "../../hooks/useImageAttachments"
 import { WandSparkles } from "@kilocode/kilo-ui/lucide"
 import { fileName, dirName, buildHighlightSegments } from "./prompt-input-utils"
-import { formatReviewCommentsMarkdown, type ReviewComment } from "../../../agent-manager/review-comments"
+import type { ReviewComment } from "../../types/messages"
+import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
 
 const AUTOCOMPLETE_DEBOUNCE_MS = 500
 const MIN_TEXT_LENGTH = 3
@@ -89,7 +90,8 @@ export const PromptInput: Component = () => {
     dialog.close()
   }
 
-  const reviewChipTitle = (item: ReviewComment) => `${fileName(item.file)} +${item.line}`
+  const side = (item: ReviewComment) => (item.side === "deletions" ? "-" : "+")
+  const reviewChipTitle = (item: ReviewComment) => `${fileName(item.file)} ${side(item)}${item.line}`
 
   const showReviewCommentDialog = (item: ReviewComment) => {
     dialog.show(() => (
@@ -465,7 +467,10 @@ export const PromptInput: Component = () => {
                     <span class="prompt-review-chip-copy">
                       <span class="prompt-review-chip-main">
                         <span class="prompt-review-chip-title">{fileName(item.file)}</span>
-                        <span class="prompt-review-chip-line">+{item.line}</span>
+                        <span class="prompt-review-chip-line">
+                          {side(item)}
+                          {item.line}
+                        </span>
                       </span>
                     </span>
                   </button>
