@@ -48,6 +48,7 @@ export const dict = {
   "agentManager.shortcuts.toggleTerminal": "ターミナルの切り替え",
   "agentManager.shortcuts.focusPanel": "パネルにフォーカス",
   "agentManager.shortcuts.openAgentManager": "Agent Managerを開く",
+  "agentManager.shortcuts.showShortcuts": "キーボードショートカットを表示",
   "agentManager.dialog.deleteWorktree.title": "Worktreeを削除",
   "agentManager.dialog.deleteWorktree.messagePre": "Worktreeを削除 ",
   "agentManager.dialog.deleteWorktree.messagePost":

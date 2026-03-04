@@ -153,6 +153,12 @@
         "icon": "$(diff)"
       },
       {
+        "command": "kilo-code.new.agentManager.showShortcuts",
+        "title": "Agent Manager: Show Keyboard Shortcuts",
+        "category": "Kilo Code",
+        "icon": "$(keyboard)"
+      },
+      {
         "command": "kilo-code.new.agentManager.focusPanel",
         "title": "Agent Manager: Focus Panel",
         "category": "Kilo Code",
@@ -436,6 +442,12 @@
         "command": "kilo-code.new.agentManager.toggleDiff",
         "key": "ctrl+d",
         "mac": "cmd+d",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.agentManager.showShortcuts",
+        "key": "ctrl+shift+/",
+        "mac": "cmd+shift+/",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {

@@ -48,6 +48,7 @@ export const dict = {
   "agentManager.shortcuts.toggleTerminal": "切换终端",
   "agentManager.shortcuts.focusPanel": "聚焦面板",
   "agentManager.shortcuts.openAgentManager": "打开 Agent Manager",
+  "agentManager.shortcuts.showShortcuts": "显示键盘快捷键",
   "agentManager.dialog.deleteWorktree.title": "删除 Worktree",
   "agentManager.dialog.deleteWorktree.messagePre": "删除 Worktree ",
   "agentManager.dialog.deleteWorktree.messagePost": "？这将从磁盘中移除 Worktree 并取消所有会话的关联。",

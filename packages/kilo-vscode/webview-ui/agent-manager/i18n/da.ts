@@ -48,6 +48,7 @@ export const dict = {
   "agentManager.shortcuts.toggleTerminal": "Skift terminal",
   "agentManager.shortcuts.focusPanel": "Fokuser panel",
   "agentManager.shortcuts.openAgentManager": "Åbn Agent Manager",
+  "agentManager.shortcuts.showShortcuts": "Vis tastaturgenveje",
   "agentManager.dialog.deleteWorktree.title": "Slet Worktree",
   "agentManager.dialog.deleteWorktree.messagePre": "Slet Worktree ",
   "agentManager.dialog.deleteWorktree.messagePost": "? Dette fjerner Worktree fra disken og afkobler alle sessioner.",

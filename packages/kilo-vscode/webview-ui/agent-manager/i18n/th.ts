@@ -48,6 +48,7 @@ export const dict = {
   "agentManager.shortcuts.toggleTerminal": "สลับเทอร์มินัล",
   "agentManager.shortcuts.focusPanel": "โฟกัสแผง",
   "agentManager.shortcuts.openAgentManager": "เปิด Agent Manager",
+  "agentManager.shortcuts.showShortcuts": "แสดงปุ่มลัดแป้นพิมพ์",
   "agentManager.dialog.deleteWorktree.title": "ลบ Worktree",
   "agentManager.dialog.deleteWorktree.messagePre": "ลบ Worktree ",
   "agentManager.dialog.deleteWorktree.messagePost":

@@ -48,6 +48,7 @@ export const dict = {
   "agentManager.shortcuts.toggleTerminal": "Prebaci terminal",
   "agentManager.shortcuts.focusPanel": "Fokusiraj panel",
   "agentManager.shortcuts.openAgentManager": "Otvori Agent Manager",
+  "agentManager.shortcuts.showShortcuts": "Prikaži prečice na tastaturi",
   "agentManager.dialog.deleteWorktree.title": "Obriši Worktree",
   "agentManager.dialog.deleteWorktree.messagePre": "Obriši Worktree ",
   "agentManager.dialog.deleteWorktree.messagePost": "? Ovo uklanja Worktree sa diska i odvezuje sve sesije.",

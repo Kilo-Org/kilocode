@@ -48,6 +48,7 @@ export const dict = {
   "agentManager.shortcuts.toggleTerminal": "Basculer le terminal",
   "agentManager.shortcuts.focusPanel": "Focaliser le panneau",
   "agentManager.shortcuts.openAgentManager": "Ouvrir Agent Manager",
+  "agentManager.shortcuts.showShortcuts": "Afficher les raccourcis clavier",
   "agentManager.dialog.deleteWorktree.title": "Supprimer le Worktree",
   "agentManager.dialog.deleteWorktree.messagePre": "Supprimer le Worktree ",
   "agentManager.dialog.deleteWorktree.messagePost":

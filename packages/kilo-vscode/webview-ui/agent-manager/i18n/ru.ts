@@ -48,6 +48,7 @@ export const dict = {
   "agentManager.shortcuts.toggleTerminal": "Переключить терминал",
   "agentManager.shortcuts.focusPanel": "Фокус на панели",
   "agentManager.shortcuts.openAgentManager": "Открыть Agent Manager",
+  "agentManager.shortcuts.showShortcuts": "Показать сочетания клавиш",
   "agentManager.dialog.deleteWorktree.title": "Удалить Worktree",
   "agentManager.dialog.deleteWorktree.messagePre": "Удалить Worktree ",
   "agentManager.dialog.deleteWorktree.messagePost": "? Это удалит Worktree с диска и отключит все сессии.",

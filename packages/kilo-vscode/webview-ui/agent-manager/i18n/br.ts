@@ -48,6 +48,7 @@ export const dict = {
   "agentManager.shortcuts.toggleTerminal": "Alternar terminal",
   "agentManager.shortcuts.focusPanel": "Focar painel",
   "agentManager.shortcuts.openAgentManager": "Abrir Agent Manager",
+  "agentManager.shortcuts.showShortcuts": "Mostrar atalhos de teclado",
   "agentManager.dialog.deleteWorktree.title": "Excluir Worktree",
   "agentManager.dialog.deleteWorktree.messagePre": "Excluir Worktree ",
   "agentManager.dialog.deleteWorktree.messagePost": "? Isso remove o Worktree do disco e desassocia todas as sessões.",

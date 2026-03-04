@@ -48,6 +48,7 @@ export const dict = {
   "agentManager.shortcuts.toggleTerminal": "تبديل الطرفية",
   "agentManager.shortcuts.focusPanel": "تركيز اللوحة",
   "agentManager.shortcuts.openAgentManager": "فتح Agent Manager",
+  "agentManager.shortcuts.showShortcuts": "إظهار اختصارات لوحة المفاتيح",
   "agentManager.dialog.deleteWorktree.title": "حذف Worktree",
   "agentManager.dialog.deleteWorktree.messagePre": "حذف Worktree ",
   "agentManager.dialog.deleteWorktree.messagePost": "؟ سيؤدي هذا إلى إزالة Worktree من القرص وفصل جميع الجلسات.",

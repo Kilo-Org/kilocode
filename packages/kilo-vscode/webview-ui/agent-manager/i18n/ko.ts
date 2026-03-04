@@ -48,6 +48,7 @@ export const dict = {
   "agentManager.shortcuts.toggleTerminal": "터미널 전환",
   "agentManager.shortcuts.focusPanel": "패널 포커스",
   "agentManager.shortcuts.openAgentManager": "Agent Manager 열기",
+  "agentManager.shortcuts.showShortcuts": "키보드 단축키 표시",
   "agentManager.dialog.deleteWorktree.title": "Worktree 삭제",
   "agentManager.dialog.deleteWorktree.messagePre": "Worktree 삭제 ",
   "agentManager.dialog.deleteWorktree.messagePost": "? 디스크에서 Worktree를 제거하고 모든 세션의 연결을 해제합니다.",

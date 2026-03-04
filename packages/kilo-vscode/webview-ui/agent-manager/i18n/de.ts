@@ -48,6 +48,7 @@ export const dict = {
   "agentManager.shortcuts.toggleTerminal": "Terminal umschalten",
   "agentManager.shortcuts.focusPanel": "Panel fokussieren",
   "agentManager.shortcuts.openAgentManager": "Agent Manager öffnen",
+  "agentManager.shortcuts.showShortcuts": "Tastenkürzel anzeigen",
   "agentManager.dialog.deleteWorktree.title": "Worktree löschen",
   "agentManager.dialog.deleteWorktree.messagePre": "Worktree löschen ",
   "agentManager.dialog.deleteWorktree.messagePost":

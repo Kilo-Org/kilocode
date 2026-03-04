@@ -48,6 +48,7 @@ export const dict = {
   "agentManager.shortcuts.toggleTerminal": "切換終端機",
   "agentManager.shortcuts.focusPanel": "聚焦面板",
   "agentManager.shortcuts.openAgentManager": "開啟 Agent Manager",
+  "agentManager.shortcuts.showShortcuts": "顯示鍵盤快捷鍵",
   "agentManager.dialog.deleteWorktree.title": "刪除 Worktree",
   "agentManager.dialog.deleteWorktree.messagePre": "刪除 Worktree ",
   "agentManager.dialog.deleteWorktree.messagePost": "？這將從磁碟中移除 Worktree 並取消所有工作階段的關聯。",
