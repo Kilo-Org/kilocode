@@ -237,11 +237,11 @@ export namespace Config {
           filesByDir.set(dir, existing)
         }
       }
-      // Sort by directory depth (deepest/closest first)
+      // Sort by directory depth (shallowest/farthest first)
       const sortedDirs = Array.from(filesByDir.entries()).sort(
-        ([a], [b]) => b.split(path.sep).length - a.split(path.sep).length,
+        ([a], [b]) => a.split(path.sep).length - b.split(path.sep).length,
       )
-      // Process directories closest first, files in precedence order within each
+      // Process directories farthest first so closest is processed last and wins
       for (const [, files] of sortedDirs) {
         for (const file of CONFIG_FILES_KILO_PROJECT) {
           const filepath = files.find((f) => path.basename(f) === file)
