@@ -9,7 +9,11 @@ export const ERROR_NAMES = {
   NOT_FOUND: "NotFoundError",
 } as const
 
-export type CommitErrorType = "noChanges" | string
+export const COMMIT_ERROR_TYPES = {
+  NO_CHANGES: "noChanges",
+} as const
+
+export type CommitErrorType = (typeof COMMIT_ERROR_TYPES)[keyof typeof COMMIT_ERROR_TYPES]
 
 /**
  * Extract a human-readable error message from an unknown error value.
@@ -49,7 +53,7 @@ export function getErrorMessage(error: unknown): string {
 
 export function getCommitErrorType(error: unknown): CommitErrorType | null {
   if (error && typeof error === "object" && "name" in error) {
-    if (error.name === ERROR_NAMES.COMMIT_MESSAGE_NO_CHANGES) return "noChanges"
+    if (error.name === ERROR_NAMES.COMMIT_MESSAGE_NO_CHANGES) return COMMIT_ERROR_TYPES.NO_CHANGES
   }
   return null
 }
