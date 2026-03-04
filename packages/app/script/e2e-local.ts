@@ -146,6 +146,7 @@ try {
     Object.assign(process.env, serverEnv)
     process.env.AGENT = "1"
     process.env.OPENCODE = "1"
+    process.env.KILO_PID = String(process.pid)
 
     const log = await import("../../opencode/src/util/log")
     const install = await import("../../opencode/src/installation")
