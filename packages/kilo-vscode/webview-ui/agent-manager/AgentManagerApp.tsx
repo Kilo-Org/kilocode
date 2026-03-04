@@ -1331,7 +1331,7 @@ const AgentManagerContent: Component = () => {
     if (sel === LOCAL) return data[LOCAL] ?? []
     if (id && data[id]) {
       const current = managedSessions().find((s) => s.id === id)
-      if (sel && sel !== LOCAL && current?.worktreeId === sel) return data[id]!
+      if (sel && current?.worktreeId === sel) return data[id]!
     }
     if (!sel) return []
     const ids = managedSessions()
