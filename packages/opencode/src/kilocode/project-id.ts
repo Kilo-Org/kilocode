@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import { Instance } from "@/project/instance"
 import path from "path"
 import { $ } from "bun"

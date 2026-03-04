@@ -22,6 +22,7 @@ import { useServer } from "../../context/server"
 
 export interface SettingsProps {
   onBack?: () => void
+  onMigrateClick?: () => void // legacy-migration
 }
 
 const Settings: Component<SettingsProps> = (props) => {
@@ -167,6 +168,7 @@ const Settings: Component<SettingsProps> = (props) => {
             port={server.serverInfo()?.port ?? null}
             connectionState={server.connectionState()}
             extensionVersion={server.extensionVersion()}
+            onMigrateClick={props.onMigrateClick}
           />
         </Tabs.Content>
       </Tabs>

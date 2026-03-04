@@ -7,6 +7,9 @@ on:
       - "packages/ui/**"
       - "packages/util/**"
       - "packages/sdk/js/**"
+      - "packages/kilo-vscode/webview-ui/**"
+      - "packages/kilo-vscode/.storybook/**"
+      - "packages/kilo-vscode/tests/visual-regression*"
       - ".github/workflows/visual-regression.yml"
 
 jobs:
@@ -100,4 +103,96 @@ jobs:
         with:
           name: visual-regression-results
           path: packages/kilo-ui/test-results/
+          retention-days: 7
+
+  visual-regression-vscode:
+    name: Visual Regression (kilo-vscode webview)
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.head_ref }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache Bun modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ hashFiles('bun.lock') }}
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Cache Playwright browsers
+        id: playwright-cache-vscode
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-vscode-${{ hashFiles('packages/kilo-vscode/package.json') }}
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache-vscode.outputs.cache-hit != 'true'
+        run: bunx playwright install chromium
+        working-directory: packages/kilo-vscode
+
+      - name: Install Playwright system deps
+        run: bunx playwright install-deps chromium
+        working-directory: packages/kilo-vscode
+
+      - name: Cache Storybook build
+        id: storybook-cache-vscode
+        uses: actions/cache@v4
+        with:
+          path: packages/kilo-vscode/storybook-static
+          key: storybook-vscode-${{ hashFiles('packages/kilo-vscode/webview-ui/src/**', 'packages/kilo-vscode/.storybook/**', 'packages/kilo-ui/src/**', 'packages/ui/src/**', 'packages/kilo-vscode/package.json') }}
+
+      - name: Build Storybook
+        if: steps.storybook-cache-vscode.outputs.cache-hit != 'true'
+        run: bun run build-storybook
+        working-directory: packages/kilo-vscode
+
+      - name: Generate baselines for new/missing stories
+        run: bun run test:visual:update
+        working-directory: packages/kilo-vscode
+        env:
+          CI: true
+          PLAYWRIGHT_WORKERS: "4"
+
+      - name: Commit and push new baselines (if any)
+        id: commit-baselines-vscode
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add packages/kilo-vscode/tests/visual-regression.spec.ts-snapshots/
+          if git diff --cached --quiet; then
+            echo "No new baselines — nothing to commit."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "chore: update kilo-vscode visual regression baselines"
+            git lfs push --all origin
+            git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fail if baselines changed
+        if: steps.commit-baselines-vscode.outputs.changed == 'true'
+        run: |
+          echo "::error::Visual regression baselines changed. New baselines have been committed to the branch. Please pull and review."
+          exit 1
+
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-regression-vscode-results
+          path: packages/kilo-vscode/test-results/
           retention-days: 7

@@ -1,4 +1,3 @@
-/* kilocode_change - new file */
 /* Kilo Message Part overrides */
 
 [data-component="text-part"] {
@@ -10,6 +9,10 @@
 
   [data-slot="text-part-copy-wrapper"] {
     display: none;
+  }
+
+  [data-slot="text-part-copy-wrapper"][data-is-turn-copy] {
+    display: block;
   }
 }
 

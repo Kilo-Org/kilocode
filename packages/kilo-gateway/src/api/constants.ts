@@ -58,13 +58,14 @@ export const DEFAULT_EDITOR_NAME = "Kilo CLI"
 /** Environment variable name for custom editor name */
 export const ENV_EDITOR_NAME = "KILOCODE_EDITOR_NAME"
 
+/** Environment variable name for version (set by CLI at startup) */
+export const ENV_VERSION = "KILOCODE_VERSION"
+
 /** Tester header value for suppressing warnings */
 export const TESTER_SUPPRESS_VALUE = "SUPPRESS"
 
-// kilocode_change start
 /** Header name for feature tracking */
 export const HEADER_FEATURE = "X-KILOCODE-FEATURE"
 
 /** Environment variable name for feature override */
 export const ENV_FEATURE = "KILOCODE_FEATURE"
-// kilocode_change end

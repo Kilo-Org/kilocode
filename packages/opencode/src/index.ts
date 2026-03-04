@@ -31,7 +31,7 @@ import { SessionCommand } from "./cli/cmd/session"
 // kilocode_change start - Import telemetry, instance disposal, and legacy migration
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Instance } from "./project/instance" // kilocode_change
-import { migrateLegacyKiloAuth, ENV_FEATURE } from "@kilocode/kilo-gateway"
+import { migrateLegacyKiloAuth, ENV_FEATURE, ENV_VERSION } from "@kilocode/kilo-gateway"
 
 // kilocode_change - set feature for tracking. 'serve' is spawned by other services
 // (extension, cloud) which set their own KILOCODE_FEATURE env var. Direct CLI use
@@ -40,6 +40,11 @@ import { migrateLegacyKiloAuth, ENV_FEATURE } from "@kilocode/kilo-gateway"
 if (!process.env[ENV_FEATURE]) {
   const isServe = process.argv.includes("serve")
   process.env[ENV_FEATURE] = isServe ? "unknown" : "cli"
+}
+
+// kilocode_change - set version so kilo-gateway can include it in the editor name header
+if (!process.env[ENV_VERSION]) {
+  process.env[ENV_VERSION] = Installation.VERSION
 }
 import { Config } from "./config/config"
 import { Auth } from "./auth"

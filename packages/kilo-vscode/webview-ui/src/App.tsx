@@ -28,12 +28,21 @@ registerExpandedTaskTool()
 registerVscodeToolOverrides()
 import SessionList from "./components/history/SessionList"
 import CloudSessionList from "./components/history/CloudSessionList"
+import { MigrationWizard } from "./components/migration" // legacy-migration
 import { NotificationsProvider } from "./context/notifications"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
 import "./styles/chat.css"
 
-type ViewType = "newTask" | "marketplace" | "history" | "cloudHistory" | "profile" | "settings"
-const VALID_VIEWS = new Set<string>(["newTask", "marketplace", "history", "cloudHistory", "profile", "settings"])
+type ViewType = "newTask" | "marketplace" | "history" | "cloudHistory" | "profile" | "settings" | "migration" // legacy-migration
+const VALID_VIEWS = new Set<string>([
+  "newTask",
+  "marketplace",
+  "history",
+  "cloudHistory",
+  "profile",
+  "settings",
+  "migration",
+]) // legacy-migration
 
 const DummyView: Component<{ title: string }> = (props) => {
   return (
@@ -240,8 +249,14 @@ const AppContent: Component = () => {
           />
         </Match>
         <Match when={currentView() === "settings"}>
-          <Settings onBack={() => setCurrentView("newTask")} />
+          <Settings onBack={() => setCurrentView("newTask")} onMigrateClick={() => setCurrentView("migration")} />
+          {/* legacy-migration */}
         </Match>
+        {/* legacy-migration start */}
+        <Match when={currentView() === "migration"}>
+          <MigrationWizard onBack={() => setCurrentView("newTask")} onComplete={() => setCurrentView("newTask")} />
+        </Match>
+        {/* legacy-migration end */}
       </Switch>
     </div>
   )

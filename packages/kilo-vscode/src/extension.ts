@@ -70,6 +70,11 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.settingsButtonClicked", () => {
       provider.postMessage({ type: "action", action: "settingsButtonClicked" })
     }),
+    // legacy-migration start
+    vscode.commands.registerCommand("kilo-code.new.openMigrationWizard", () => {
+      provider.postMessage({ type: "navigate", view: "migration" })
+    }),
+    // legacy-migration end
     vscode.commands.registerCommand("kilo-code.new.openInTab", () => {
       return openKiloInNewTab(context, connectionService)
     }),

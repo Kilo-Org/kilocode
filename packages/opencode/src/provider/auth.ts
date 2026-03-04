@@ -7,6 +7,8 @@ import type { AuthOuathResult, Hooks } from "@kilocode/plugin"
 import { NamedError } from "@opencode-ai/util/error"
 import { Auth } from "@/auth"
 import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
+import { ModelCache } from "./model-cache" // kilocode_change
+import { scheduleDisposeAll } from "../kilocode/dispose" // kilocode_change
 
 export namespace ProviderAuth {
   const state = Instance.state(async () => {
@@ -121,6 +123,11 @@ export namespace ProviderAuth {
         Telemetry.trackAuthSuccess(input.providerID)
         // kilocode_change end
 
+        // kilocode_change start - invalidate provider/model cache after auth change
+        ModelCache.clear(input.providerID)
+        scheduleDisposeAll()
+        // kilocode_change end
+
         return
       }
 
@@ -138,6 +145,10 @@ export namespace ProviderAuth {
         type: "api",
         key: input.key,
       })
+      // kilocode_change start - invalidate provider/model cache after auth change
+      ModelCache.clear(input.providerID)
+      scheduleDisposeAll()
+      // kilocode_change end
     },
   )
 
