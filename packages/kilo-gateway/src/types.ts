@@ -1,4 +1,3 @@
-// kilocode_change - Kilo Gateway types
 import type { Provider as SDK } from "ai"
 import type { LanguageModelV2 } from "@openrouter/ai-sdk-provider"
 

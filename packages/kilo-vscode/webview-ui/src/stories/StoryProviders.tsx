@@ -64,7 +64,12 @@ export function mockSessionValue(overrides?: {
 
   return {
     currentSessionID: () => id,
-    currentSession: () => ({ id, title: "Story session", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }),
+    currentSession: () => ({
+      id,
+      title: "Story session",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }),
     setCurrentSessionID: noop,
     sessions: () => [],
     status: () => status,
@@ -124,6 +129,8 @@ interface StoryProvidersProps {
   questions?: QuestionRequest[]
   status?: string
   sessionID?: string
+  /** When true, renders children without the default 12px padding wrapper */
+  noPadding?: boolean
 }
 
 export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
@@ -152,7 +159,7 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
               <DiffComponentProvider component={Diff}>
                 <CodeComponentProvider component={Code}>
                   <MarkedProvider>
-                    <div style={{ padding: "12px" }}>{props.children}</div>
+                    {props.noPadding ? props.children : <div style={{ padding: "12px" }}>{props.children}</div>}
                   </MarkedProvider>
                 </CodeComponentProvider>
               </DiffComponentProvider>

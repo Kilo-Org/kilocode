@@ -133,8 +133,10 @@ export const dict = {
   "agentManager.review.metaComment": "Brugerkommentar",
   "agentManager.review.collapsedOnly": "{{count}} foldet sammen",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} foldet sammen, {{large}} store",
+  "agentManager.review.largeFileCollapsed": "Stor fil (kollapset)",
+  "agentManager.review.endOfLongDiff": "Du er nået til slutningen!",
 
-  "agentManager.import.pullRequest": "Pull Request",
+  "agentManager.import.pullRequest": "Fletteanmodning",
   "agentManager.import.pastePrUrl": "Indsæt PR URL...",
   "agentManager.import.open": "Åbn",
   "agentManager.import.branches": "Branches",

@@ -135,8 +135,10 @@ export const dict = {
   "agentManager.review.metaComment": "Commentaire de l'utilisateur",
   "agentManager.review.collapsedOnly": "{{count}} repliés",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} repliés, {{large}} volumineux",
+  "agentManager.review.largeFileCollapsed": "Fichier volumineux (réduit)",
+  "agentManager.review.endOfLongDiff": "Vous êtes arrivé à la fin !",
 
-  "agentManager.import.pullRequest": "Pull Request",
+  "agentManager.import.pullRequest": "Demande d'extraction",
   "agentManager.import.pastePrUrl": "Coller l'URL du PR...",
   "agentManager.import.open": "Ouvrir",
   "agentManager.import.branches": "Branches",

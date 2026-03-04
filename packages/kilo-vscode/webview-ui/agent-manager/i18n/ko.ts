@@ -134,8 +134,10 @@ export const dict = {
   "agentManager.review.metaComment": "사용자 코멘트",
   "agentManager.review.collapsedOnly": "{{count}}개 접힘",
   "agentManager.review.collapsedWithLarge": "{{collapsed}}개 접힘, {{large}}개 대용량",
+  "agentManager.review.largeFileCollapsed": "큰 파일 (접힘)",
+  "agentManager.review.endOfLongDiff": "끝까지 확인하셨습니다!",
 
-  "agentManager.import.pullRequest": "Pull Request",
+  "agentManager.import.pullRequest": "풀 리퀘스트",
   "agentManager.import.pastePrUrl": "PR URL 붙여넣기...",
   "agentManager.import.open": "열기",
   "agentManager.import.branches": "브랜치",

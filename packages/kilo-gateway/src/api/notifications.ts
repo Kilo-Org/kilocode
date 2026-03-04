@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import { z } from "zod"
 import { KILO_API_BASE } from "./constants.js"
 

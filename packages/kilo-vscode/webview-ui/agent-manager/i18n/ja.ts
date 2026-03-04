@@ -135,8 +135,10 @@ export const dict = {
   "agentManager.review.metaComment": "ユーザーコメント",
   "agentManager.review.collapsedOnly": "{{count}} 件折りたたみ",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} 件折りたたみ、{{large}} 件がサイズ大",
+  "agentManager.review.largeFileCollapsed": "大きなファイル (折りたたみ済み)",
+  "agentManager.review.endOfLongDiff": "最後まで到達しました！",
 
-  "agentManager.import.pullRequest": "Pull Request",
+  "agentManager.import.pullRequest": "プルリクエスト",
   "agentManager.import.pastePrUrl": "PR URLを貼り付け...",
   "agentManager.import.open": "開く",
   "agentManager.import.branches": "ブランチ",

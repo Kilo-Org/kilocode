@@ -133,8 +133,10 @@ export const dict = {
   "agentManager.review.metaComment": "تعليق المستخدم",
   "agentManager.review.collapsedOnly": "{{count}} مطوي",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} مطوي، {{large}} كبير",
+  "agentManager.review.largeFileCollapsed": "ملف كبير (مطوي)",
+  "agentManager.review.endOfLongDiff": "لقد وصلت إلى النهاية!",
 
-  "agentManager.import.pullRequest": "Pull Request",
+  "agentManager.import.pullRequest": "طلب سحب",
   "agentManager.import.pastePrUrl": "الصق رابط PR...",
   "agentManager.import.open": "فتح",
   "agentManager.import.branches": "الفروع",

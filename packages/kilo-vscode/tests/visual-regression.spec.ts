@@ -61,6 +61,11 @@ test.describe("Visual Regression", () => {
   test("all stories", async ({ page }) => {
     if (IS_DARWIN) return
     for (const story of stories) {
+      // Narrow stories (IDs ending in "-200") use a 200px viewport
+      // The "-200" suffix comes from the export name convention (e.g. Default200, WithThinking200)
+      const narrow = story.id.endsWith("-200")
+      await page.setViewportSize({ width: narrow ? 200 : 420, height: 720 })
+
       // Use kilo-vscode theme by default (matched to the preview initialGlobals)
       await page.goto(
         `/iframe.html?id=${story.id}&viewMode=story&globals=colorScheme:dark;theme:kilo-vscode;vscodeTheme:dark-modern`,
