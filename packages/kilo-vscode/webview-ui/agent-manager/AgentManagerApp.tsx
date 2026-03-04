@@ -1746,44 +1746,6 @@ const AgentManagerContent: Component = () => {
             <span class="am-section-label">{t("agentManager.section.worktrees")}</span>
             <Show when={isGitRepo()}>
               <div class="am-section-actions">
-                <TooltipKeybind
-                  title={t("agentManager.shortcuts.title")}
-                  keybind={kb().showShortcuts ?? ""}
-                  placement="bottom"
-                >
-                  <IconButton
-                    icon="keyboard"
-                    size="small"
-                    variant="ghost"
-                    label={t("agentManager.shortcuts.title")}
-                    onClick={handleShowKeyboardShortcuts}
-                  />
-                </TooltipKeybind>
-                <DropdownMenu gutter={4} placement="bottom-end">
-                  <DropdownMenu.Trigger
-                    as={IconButton}
-                    icon="settings-gear"
-                    size="small"
-                    variant="ghost"
-                    label={t("agentManager.worktree.settings")}
-                  />
-                  <DropdownMenu.Portal>
-                    <DropdownMenu.Content class="am-split-menu">
-                      <DropdownMenu.Item onSelect={handleShowKeyboardShortcuts}>
-                        <DropdownMenu.ItemLabel>{t("agentManager.shortcuts.title")}</DropdownMenu.ItemLabel>
-                        <span class="am-menu-shortcut">
-                          {parseBindingTokens(kb().showShortcuts ?? "").map((token) => (
-                            <kbd class="am-menu-key">{token}</kbd>
-                          ))}
-                        </span>
-                      </DropdownMenu.Item>
-                      <DropdownMenu.Separator />
-                      <DropdownMenu.Item onSelect={handleConfigureSetupScript}>
-                        <DropdownMenu.ItemLabel>{t("agentManager.worktree.setupScript")}</DropdownMenu.ItemLabel>
-                      </DropdownMenu.Item>
-                    </DropdownMenu.Content>
-                  </DropdownMenu.Portal>
-                </DropdownMenu>
                 <div class="am-split-button">
                   <IconButton
                     icon="plus"
@@ -1823,6 +1785,35 @@ const AgentManagerContent: Component = () => {
                     </DropdownMenu.Portal>
                   </DropdownMenu>
                 </div>
+                <TooltipKeybind
+                  title={t("agentManager.shortcuts.title")}
+                  keybind={kb().showShortcuts ?? ""}
+                  placement="bottom"
+                >
+                  <IconButton
+                    icon="keyboard"
+                    size="small"
+                    variant="ghost"
+                    label={t("agentManager.shortcuts.title")}
+                    onClick={handleShowKeyboardShortcuts}
+                  />
+                </TooltipKeybind>
+                <DropdownMenu gutter={4} placement="bottom-end">
+                  <DropdownMenu.Trigger
+                    as={IconButton}
+                    icon="settings-gear"
+                    size="small"
+                    variant="ghost"
+                    label={t("agentManager.worktree.settings")}
+                  />
+                  <DropdownMenu.Portal>
+                    <DropdownMenu.Content class="am-split-menu">
+                      <DropdownMenu.Item onSelect={handleConfigureSetupScript}>
+                        <DropdownMenu.ItemLabel>{t("agentManager.worktree.setupScript")}</DropdownMenu.ItemLabel>
+                      </DropdownMenu.Item>
+                    </DropdownMenu.Content>
+                  </DropdownMenu.Portal>
+                </DropdownMenu>
               </div>
             </Show>
           </div>
