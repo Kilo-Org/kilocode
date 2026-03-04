@@ -80,17 +80,6 @@ export const ChatViewIdle: Story = {
   ),
 }
 
-export const ChatViewReadonly: Story = {
-  name: "ChatView — readonly",
-  render: () => (
-    <StoryProviders sessionID={SESSION_ID} status="idle">
-      <div style={{ width: "420px", height: "600px", display: "flex", "flex-direction": "column" }}>
-        <ChatView readonly />
-      </div>
-    </StoryProviders>
-  ),
-}
-
 export const ChatViewWithQuestion: Story = {
   name: "ChatView — with QuestionDock",
   render: () => (
@@ -115,24 +104,6 @@ export const MessageListEmpty: Story = {
       </div>
     </StoryProviders>
   ),
-}
-
-export const MessageListLoading: Story = {
-  name: "MessageList — loading",
-  render: () => {
-    const loadingSession = {
-      loading: () => true,
-    }
-    // Render empty state — the real "loading" state requires overriding session.loading()
-    // which we approximate here: the component will show its empty-state logo instead.
-    return (
-      <StoryProviders sessionID={SESSION_ID}>
-        <div style={{ width: "420px", height: "500px" }}>
-          <MessageList />
-        </div>
-      </StoryProviders>
-    )
-  },
 }
 
 // ---------------------------------------------------------------------------

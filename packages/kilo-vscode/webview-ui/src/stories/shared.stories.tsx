@@ -6,7 +6,7 @@
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import { StoryProviders } from "./StoryProviders"
 import { ModelSelectorBase } from "../components/shared/ModelSelector"
-import { ModeSwitcherBase, ModeSwitcher } from "../components/shared/ModeSwitcher"
+import { ModeSwitcherBase } from "../components/shared/ModeSwitcher"
 
 const agents = [
   { name: "code", description: "Write, edit and review code", mode: "primary" as const },
@@ -62,19 +62,6 @@ export const ModelSelectorAllowClear: Story = {
 // ModeSwitcher
 // ---------------------------------------------------------------------------
 
-export const ModeSwitcherSingle: Story = {
-  name: "ModeSwitcherBase — single agent (hidden)",
-  render: () => (
-    <StoryProviders>
-      <ModeSwitcherBase
-        agents={[{ name: "code", description: "Code mode", mode: "primary" as const }]}
-        value="code"
-        onSelect={() => {}}
-      />
-    </StoryProviders>
-  ),
-}
-
 export const ModeSwitcherMultiple: Story = {
   name: "ModeSwitcherBase — multiple agents",
   render: () => (
@@ -89,15 +76,6 @@ export const ModeSwitcherAskSelected: Story = {
   render: () => (
     <StoryProviders>
       <ModeSwitcherBase agents={agents} value="ask" onSelect={() => {}} />
-    </StoryProviders>
-  ),
-}
-
-export const ModeSwitcherFromSession: Story = {
-  name: "ModeSwitcher — wired to session context",
-  render: () => (
-    <StoryProviders>
-      <ModeSwitcher />
     </StoryProviders>
   ),
 }

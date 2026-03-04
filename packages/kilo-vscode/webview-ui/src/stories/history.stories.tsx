@@ -143,17 +143,6 @@ const meta: Meta = {
 export default meta
 type Story = StoryObj
 
-export const Empty: Story = {
-  name: "Empty list",
-  render: () => (
-    <WithSessions sessions={[]}>
-      <div style={{ width: "420px", height: "500px" }}>
-        <SessionList onSelectSession={noop} />
-      </div>
-    </WithSessions>
-  ),
-}
-
 export const WithItems: Story = {
   name: "With sessions",
   render: () => (

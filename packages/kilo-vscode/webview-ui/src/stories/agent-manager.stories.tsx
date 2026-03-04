@@ -1,16 +1,11 @@
 /** @jsxImportSource solid-js */
 /**
  * Stories for Agent Manager components:
- * AgentManagerApp, FileTree, DiffPanel, FullScreenDiffView
- *
- * FileTree, DiffPanel, and FullScreenDiffView accept data-only props and only
- * require a LanguageContext, so they are storied with StoryProviders.
- * AgentManagerApp sets up its own full provider chain and is rendered directly.
+ * FileTree, DiffPanel, FullScreenDiffView
  */
 
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import { StoryProviders } from "./StoryProviders"
-import { AgentManagerApp } from "../../agent-manager/AgentManagerApp"
 import { FileTree } from "../../agent-manager/FileTree"
 import { DiffPanel } from "../../agent-manager/DiffPanel"
 import { FullScreenDiffView } from "../../agent-manager/FullScreenDiffView"
@@ -88,17 +83,6 @@ export const FileTreeEmpty: Story = {
 // DiffPanel
 // ---------------------------------------------------------------------------
 
-export const DiffPanelLoading: Story = {
-  name: "DiffPanel — loading",
-  render: () => (
-    <StoryProviders>
-      <div style={{ width: "420px", height: "500px", display: "flex", "flex-direction": "column" }}>
-        <DiffPanel diffs={[]} loading comments={[]} onCommentsChange={() => {}} onClose={() => {}} />
-      </div>
-    </StoryProviders>
-  ),
-}
-
 export const DiffPanelWithDiffs: Story = {
   name: "DiffPanel — with diffs (unified)",
   render: () => (
@@ -164,14 +148,3 @@ export const FullScreenDiffWithChanges: Story = {
 // ---------------------------------------------------------------------------
 // AgentManagerApp
 // ---------------------------------------------------------------------------
-
-export const AgentManagerRoot: Story = {
-  name: "AgentManagerApp — initial connecting state",
-  render: () => (
-    // AgentManagerApp sets up its own VSCodeProvider + ThemeProvider + layout.
-    // In Storybook it renders its empty/connecting state (no extension host).
-    <div style={{ width: "420px", height: "600px" }}>
-      <AgentManagerApp />
-    </div>
-  ),
-}
