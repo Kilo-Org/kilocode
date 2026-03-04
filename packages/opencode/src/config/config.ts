@@ -1450,10 +1450,7 @@ export namespace Config {
 
     const file = Bun.file(configPath)
 
-    let text = "{}"
-    if (await file.exists()) {
-      text = await file.text()
-    }
+    const text = (await file.exists()) ? await file.text() : "{}"
 
     // kilocode_change: Check if value is already the same to avoid unnecessary writes (inside lock to prevent race)
     const data = parseJsonc(text, [], { allowTrailingComma: true })
@@ -1612,8 +1609,8 @@ export namespace Config {
     }
 
     // MCP not found in any existing file - fall back to default resolution.
-    // This creates a new entry in the highest-priority writable location,
-    // which shadows any managed config definition (user config overrides system config).
+    // Note: persistMcpToggle will return early since the MCP entry doesn't exist,
+    // so this fallback results in a silent no-op.
     return resolveConfigPath()
   }
 
