@@ -11,6 +11,15 @@ runs:
         restore-keys: |
           ${{ runner.os }}-bun-
 
+    - name: Cache node_modules
+      id: cache-node-modules
+      uses: actions/cache@v4
+      with:
+        path: |
+          node_modules
+          packages/*/node_modules
+        key: ${{ runner.os }}-node-modules-${{ hashFiles('**/bun.lockb') }}
+
     - name: Get baseline download URL
       id: bun-url
       shell: bash
@@ -32,5 +41,6 @@ runs:
         bun-download-url: ${{ steps.bun-url.outputs.url }}
 
     - name: Install dependencies
+      if: steps.cache-node-modules.outputs.cache-hit != 'true'
       run: bun install
       shell: bash
