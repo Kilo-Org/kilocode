@@ -11,4 +11,7 @@ export const dict = {
   // Provider dialog translations
   "dialog.provider.group.recommended": "موصى به",
   "dialog.provider.kilo.note": "الوصول إلى أكثر من 500 نموذج ذكاء اصطناعي",
+
+  // Reasoning block label
+  "ui.reasoning.label": "الاستدلال",
 }
