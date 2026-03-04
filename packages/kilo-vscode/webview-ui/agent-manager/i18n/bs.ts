@@ -39,6 +39,7 @@ export const dict = {
   "agentManager.shortcuts.previousItem": "Prethodni element",
   "agentManager.shortcuts.nextItem": "Sljedeći element",
   "agentManager.shortcuts.newWorktree": "Novi Worktree",
+  "agentManager.shortcuts.openWorktree": "Otvori worktree",
   "agentManager.shortcuts.advancedWorktree": "Napredni Worktree",
   "agentManager.shortcuts.deleteWorktree": "Obriši Worktree",
   "agentManager.shortcuts.previousTab": "Prethodna kartica",
@@ -85,6 +86,8 @@ export const dict = {
 
   "agentManager.diff.toggle": "Prebaci diff",
   "agentManager.diff.openFile": "Otvori datoteku",
+  "agentManager.open.button": "Otvori",
+  "agentManager.open.tooltip": "Otvori ovaj worktree u VS Code-u",
   "agentManager.apply.button": "Primijeni lokalno",
   "agentManager.apply.globalButton": "Primijeni",
   "agentManager.apply.tooltip": "Primijeni promjene odabranog radnog stabla na lokalnu granu",

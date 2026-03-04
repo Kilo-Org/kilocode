@@ -128,6 +128,7 @@ const defaultBindings: Record<string, string> = {
   newWorktree: isMac ? "⌘N" : "Ctrl+N",
   advancedWorktree: isMac ? "⌘⇧N" : "Ctrl+Shift+N",
   closeWorktree: isMac ? "⌘⇧W" : "Ctrl+Shift+W",
+  openWorktree: isMac ? "⌘⇧O" : "Ctrl+Shift+O",
   agentManagerOpen: isMac ? "⌘⇧M" : "Ctrl+Shift+M",
   focusPanel: isMac ? "⌘." : "Ctrl+.",
   ...Object.fromEntries(
@@ -238,6 +239,7 @@ function buildShortcutCategories(
         { label: t("agentManager.shortcuts.newWorktree"), binding: bindings.newWorktree ?? "" },
         { label: t("agentManager.shortcuts.advancedWorktree"), binding: bindings.advancedWorktree ?? "" },
         { label: t("agentManager.shortcuts.deleteWorktree"), binding: bindings.closeWorktree ?? "" },
+        { label: t("agentManager.shortcuts.openWorktree"), binding: bindings.openWorktree ?? "" },
       ],
     },
     {
@@ -547,6 +549,12 @@ const AgentManagerContent: Component = () => {
       ),
       resetApplyDialog,
     )
+  }
+
+  const openWorktreeDirectory = () => {
+    const sel = selection()
+    if (!sel || sel === LOCAL) return
+    vscode.postMessage({ type: "agentManager.openWorktree", worktreeId: sel })
   }
 
   createEffect(
@@ -934,6 +942,7 @@ const AgentManagerContent: Component = () => {
       } else if (msg.action === "newTab") handleNewTabForCurrentSelection()
       else if (msg.action === "closeTab") closeActiveTab()
       else if (msg.action === "newWorktree") handleNewWorktreeOrPromote()
+      else if (msg.action === "openWorktree") openWorktreeDirectory()
       else if (msg.action === "advancedWorktree") showAdvancedWorktreeDialog()
       else if (msg.action === "closeWorktree") closeSelectedWorktree()
       else if (msg.action === "focusInput") window.dispatchEvent(new Event("focusPrompt"))
@@ -956,8 +965,8 @@ const AgentManagerContent: Component = () => {
       if (["t", "w", "n", "d", "f"].includes(e.key.toLowerCase()) && !e.shiftKey) {
         e.preventDefault()
       }
-      // Prevent defaults for shift variants (close worktree, advanced new worktree)
-      if (["w", "n"].includes(e.key.toLowerCase()) && e.shiftKey) {
+      // Prevent defaults for shift variants (close worktree, advanced/new open worktree)
+      if (["w", "n", "o"].includes(e.key.toLowerCase()) && e.shiftKey) {
         e.preventDefault()
       }
       // Prevent defaults for jump-to shortcuts (Cmd/Ctrl+1-9)
@@ -2340,19 +2349,26 @@ const AgentManagerContent: Component = () => {
                   return (
                     <>
                       <Show when={isWorktree()}>
-                        <Tooltip value={t("agentManager.apply.tooltip")} placement="bottom">
-                          <Button
-                            size="small"
-                            variant="ghost"
-                            onClick={openApplyDialog}
-                            disabled={!hasChanges() || applyBusy()}
-                          >
-                            <Show when={applyBusy()}>
-                              <Spinner class="am-apply-spinner" />
-                            </Show>
-                            {t("agentManager.apply.globalButton")}
-                          </Button>
-                        </Tooltip>
+                        <>
+                          <Tooltip value={t("agentManager.open.tooltip")} placement="bottom">
+                            <Button size="small" variant="ghost" icon="folder" onClick={openWorktreeDirectory}>
+                              {t("agentManager.open.button")}
+                            </Button>
+                          </Tooltip>
+                          <Tooltip value={t("agentManager.apply.tooltip")} placement="bottom">
+                            <Button
+                              size="small"
+                              variant="ghost"
+                              onClick={openApplyDialog}
+                              disabled={!hasChanges() || applyBusy()}
+                            >
+                              <Show when={applyBusy()}>
+                                <Spinner class="am-apply-spinner" />
+                              </Show>
+                              {t("agentManager.apply.globalButton")}
+                            </Button>
+                          </Tooltip>
+                        </>
                       </Show>
                       <TooltipKeybind
                         title={t("agentManager.diff.toggle")}

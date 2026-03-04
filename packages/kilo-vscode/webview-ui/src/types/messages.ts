@@ -1290,6 +1290,12 @@ export interface ShowLocalTerminalRequest {
   type: "agentManager.showLocalTerminal"
 }
 
+// Open a worktree directory in VS Code
+export interface OpenWorktreeRequest {
+  type: "agentManager.openWorktree"
+  worktreeId: string
+}
+
 // Show existing local terminal when switching to local context (no-op if none exists)
 export interface ShowExistingLocalTerminalRequest {
   type: "agentManager.showExistingLocalTerminal"
@@ -1468,6 +1474,7 @@ export type WebviewMessage =
   | ConfigureSetupScriptRequest
   | ShowTerminalRequest
   | ShowLocalTerminalRequest
+  | OpenWorktreeRequest
   | ShowExistingLocalTerminalRequest
   | CreateMultiVersionRequest
   | SetTabOrderRequest

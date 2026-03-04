@@ -39,6 +39,7 @@ export const dict = {
   "agentManager.shortcuts.previousItem": "前の項目",
   "agentManager.shortcuts.nextItem": "次の項目",
   "agentManager.shortcuts.newWorktree": "新しいWorktree",
+  "agentManager.shortcuts.openWorktree": "Worktreeを開く",
   "agentManager.shortcuts.advancedWorktree": "詳細Worktree",
   "agentManager.shortcuts.deleteWorktree": "Worktreeを削除",
   "agentManager.shortcuts.previousTab": "前のタブ",
@@ -86,6 +87,8 @@ export const dict = {
 
   "agentManager.diff.toggle": "差分を切り替え",
   "agentManager.diff.openFile": "ファイルを開く",
+  "agentManager.open.button": "開く",
+  "agentManager.open.tooltip": "このWorktreeをVS Codeで開く",
   "agentManager.apply.button": "ローカルに適用",
   "agentManager.apply.globalButton": "適用",
   "agentManager.apply.tooltip": "選択したワークツリーの変更をローカルブランチに適用",

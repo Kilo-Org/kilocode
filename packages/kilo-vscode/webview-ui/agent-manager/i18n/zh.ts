@@ -39,6 +39,7 @@ export const dict = {
   "agentManager.shortcuts.previousItem": "上一项",
   "agentManager.shortcuts.nextItem": "下一项",
   "agentManager.shortcuts.newWorktree": "新建 Worktree",
+  "agentManager.shortcuts.openWorktree": "打开 Worktree",
   "agentManager.shortcuts.advancedWorktree": "高级 Worktree",
   "agentManager.shortcuts.deleteWorktree": "删除 Worktree",
   "agentManager.shortcuts.previousTab": "上一个标签页",
@@ -84,6 +85,8 @@ export const dict = {
 
   "agentManager.diff.toggle": "切换差异",
   "agentManager.diff.openFile": "打开文件",
+  "agentManager.open.button": "打开",
+  "agentManager.open.tooltip": "在 VS Code 中打开此 Worktree",
   "agentManager.apply.button": "应用到本地",
   "agentManager.apply.globalButton": "应用",
   "agentManager.apply.tooltip": "将所选工作树的更改应用到本地分支",

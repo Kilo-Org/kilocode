@@ -174,6 +174,11 @@
         "category": "Kilo Code"
       },
       {
+        "command": "kilo-code.new.agentManager.openWorktree",
+        "title": "Agent Manager: Open Worktree",
+        "category": "Kilo Code"
+      },
+      {
         "command": "kilo-code.new.agentManager.closeWorktree",
         "title": "Agent Manager: Close Worktree",
         "category": "Kilo Code"
@@ -460,6 +465,12 @@
         "command": "kilo-code.new.agentManager.newWorktree",
         "key": "ctrl+n",
         "mac": "cmd+n",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.agentManager.openWorktree",
+        "key": "ctrl+shift+o",
+        "mac": "cmd+shift+o",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {

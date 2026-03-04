@@ -108,6 +108,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.agentManager.newWorktree", () => {
       agentManagerProvider.postMessage({ type: "action", action: "newWorktree" })
     }),
+    vscode.commands.registerCommand("kilo-code.new.agentManager.openWorktree", () => {
+      agentManagerProvider.postMessage({ type: "action", action: "openWorktree" })
+    }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.closeWorktree", () => {
       agentManagerProvider.postMessage({ type: "action", action: "closeWorktree" })
     }),

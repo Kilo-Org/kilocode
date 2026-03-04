@@ -39,6 +39,7 @@ export const dict = {
   "agentManager.shortcuts.previousItem": "이전 항목",
   "agentManager.shortcuts.nextItem": "다음 항목",
   "agentManager.shortcuts.newWorktree": "새 Worktree",
+  "agentManager.shortcuts.openWorktree": "Worktree 열기",
   "agentManager.shortcuts.advancedWorktree": "고급 Worktree",
   "agentManager.shortcuts.deleteWorktree": "Worktree 삭제",
   "agentManager.shortcuts.previousTab": "이전 탭",
@@ -85,6 +86,8 @@ export const dict = {
 
   "agentManager.diff.toggle": "차이점 전환",
   "agentManager.diff.openFile": "파일 열기",
+  "agentManager.open.button": "열기",
+  "agentManager.open.tooltip": "이 Worktree를 VS Code에서 열기",
   "agentManager.apply.button": "로컬에 적용",
   "agentManager.apply.globalButton": "적용",
   "agentManager.apply.tooltip": "선택한 워크트리 변경사항을 로컬 브랜치에 적용",

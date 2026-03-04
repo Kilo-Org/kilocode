@@ -45,6 +45,7 @@ export const dict = {
   "agentManager.shortcuts.previousItem": "Previous item",
   "agentManager.shortcuts.nextItem": "Next item",
   "agentManager.shortcuts.newWorktree": "New worktree",
+  "agentManager.shortcuts.openWorktree": "Open worktree",
   "agentManager.shortcuts.advancedWorktree": "Advanced worktree",
   "agentManager.shortcuts.deleteWorktree": "Delete worktree",
   "agentManager.shortcuts.previousTab": "Previous tab",
@@ -93,6 +94,8 @@ export const dict = {
 
   "agentManager.diff.toggle": "Toggle diff",
   "agentManager.diff.openFile": "Open file",
+  "agentManager.open.button": "Open",
+  "agentManager.open.tooltip": "Open this worktree in VS Code",
   "agentManager.apply.button": "Apply to local",
   "agentManager.apply.globalButton": "Apply",
   "agentManager.apply.tooltip": "Apply selected worktree changes to local branch",

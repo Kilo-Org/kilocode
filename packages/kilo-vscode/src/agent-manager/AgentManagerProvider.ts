@@ -201,6 +201,10 @@ export class AgentManagerProvider implements vscode.Disposable {
       this.terminalManager.showLocalTerminal()
       return null
     }
+    if (type === "agentManager.openWorktree" && typeof msg.worktreeId === "string") {
+      this.openWorktreeDirectory(msg.worktreeId)
+      return null
+    }
     if (type === "agentManager.showExistingLocalTerminal") {
       this.terminalManager.syncLocalOnSessionSwitch()
       return null
@@ -1515,6 +1519,22 @@ export class AgentManagerProvider implements vscode.Disposable {
   // ---------------------------------------------------------------------------
   // Diff polling
   // ---------------------------------------------------------------------------
+
+  /** Open a worktree directory directly in VS Code. */
+  private openWorktreeDirectory(worktreeId: string): void {
+    const state = this.getStateManager()
+    if (!state) return
+    const worktree = state.getWorktree(worktreeId)
+    if (!worktree) return
+    const target = path.normalize(worktree.path)
+    if (!fs.existsSync(target)) {
+      this.log(`openWorktreeDirectory: missing path ${target}`)
+      void vscode.window.showErrorMessage("Worktree folder does not exist on disk.")
+      return
+    }
+    const uri = vscode.Uri.file(target)
+    void vscode.commands.executeCommand("vscode.openFolder", uri, true)
+  }
 
   /** Open a file from a worktree or local session in the VS Code editor. */
   private openWorktreeFile(sessionId: string, relativePath: string): void {
