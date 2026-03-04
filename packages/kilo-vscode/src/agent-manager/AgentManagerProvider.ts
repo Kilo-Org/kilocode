@@ -501,12 +501,19 @@ export class AgentManagerProvider implements vscode.Disposable {
     })
   }
 
+  private async waitForStateReady(context: string): Promise<void> {
+    if (!this.stateReady) return
+    await this.stateReady.catch((err) => this.log(`${context}: stateReady rejected, continuing:`, err))
+  }
+
   // ---------------------------------------------------------------------------
   // Worktree actions
   // ---------------------------------------------------------------------------
 
   /** Create a new worktree with an auto-created first session. */
   private async onCreateWorktree(baseBranch?: string, branchName?: string): Promise<null> {
+    await this.waitForStateReady("onCreateWorktree")
+
     const created = await this.createWorktreeOnDisk({ baseBranch, branchName })
     if (!created) return null
 
@@ -526,6 +533,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     const state = this.getStateManager()!
     state.addSession(session.id, created.worktree.id)
     this.registerWorktreeSession(session.id, created.result.path)
+    this.provider?.registerSession(session)
     this.notifyWorktreeReady(session.id, created.result, created.worktree.id)
     TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_SESSION_STARTED, {
       source: PLATFORM,
