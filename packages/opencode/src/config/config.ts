@@ -226,14 +226,29 @@ export namespace Config {
 
     // Project config overrides global and remote config.
     if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
-      // kilocode_change start
+      // kilocode_change start: Collect files by directory, then process closest first
+      const filesByDir = new Map<string, string[]>()
       for (const file of CONFIG_FILES_KILO_PROJECT) {
         const found = await Filesystem.findUp(file, Instance.directory, Instance.worktree)
-        for (const resolved of found.toReversed()) {
-          result = mergeConfigConcatArrays(result, await loadFile(resolved))
+        for (const filepath of found) {
+          const dir = path.dirname(filepath)
+          const existing = filesByDir.get(dir) ?? []
+          existing.push(filepath)
+          filesByDir.set(dir, existing)
         }
-        // kilocode_change end
       }
+      // Sort by directory depth (deepest/closest first)
+      const sortedDirs = Array.from(filesByDir.entries()).sort(
+        ([a], [b]) => b.split(path.sep).length - a.split(path.sep).length,
+      )
+      // Process directories closest first, files in precedence order within each
+      for (const [, files] of sortedDirs) {
+        for (const file of CONFIG_FILES_KILO_PROJECT) {
+          const filepath = files.find((f) => path.basename(f) === file)
+          if (filepath) result = mergeConfigConcatArrays(result, await loadFile(filepath))
+        }
+      }
+      // kilocode_change end
     }
 
     result.agent = result.agent || {}
@@ -1443,6 +1458,8 @@ export namespace Config {
     // kilocode_change: Check if value is already the same to avoid unnecessary writes (inside lock to prevent race)
     const data = parseJsonc(text, [], { allowTrailingComma: true })
     const mcpEntry = data?.mcp?.[name]
+    // kilocode_change: Don't create orphan entries for MCPs not defined in config
+    if (mcpEntry === undefined) return
     const currentEnabled = typeof mcpEntry === "object" && mcpEntry !== null ? mcpEntry.enabled : undefined
     if (currentEnabled === enabled) return
 
@@ -1602,9 +1619,13 @@ export namespace Config {
 
   async function hasMcpDefinition(filepath: string, mcpName: string): Promise<boolean> {
     if (!existsSync(filepath)) return false
-    const text = await Bun.file(filepath).text()
-    const data = parseJsonc(text, [], { allowTrailingComma: true })
-    return data?.mcp?.[mcpName] !== undefined
+    try {
+      const text = await Bun.file(filepath).text()
+      const data = parseJsonc(text, [], { allowTrailingComma: true })
+      return data?.mcp?.[mcpName] !== undefined
+    } catch {
+      return false
+    }
   }
 
   async function resolveConfigPath() {
