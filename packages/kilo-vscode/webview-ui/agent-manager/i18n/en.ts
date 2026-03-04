@@ -7,6 +7,8 @@ export const dict = {
   "agentManager.worktree.settings": "Worktree settings",
   "agentManager.worktree.new": "New Worktree",
   "agentManager.worktree.setupScript": "Worktree Setup Script",
+  "agentManager.worktree.defaultBaseBranch": "Default Base Branch",
+  "agentManager.worktree.defaultBaseBranchAuto": "Auto-detect",
   "agentManager.worktree.delete": "Delete worktree",
   "agentManager.worktree.stale": "Stale",
   "agentManager.worktree.staleTooltip": "Missing on disk or no longer tracked by git worktree",
@@ -36,6 +38,8 @@ export const dict = {
 
   "agentManager.setup.failed": "Workspace setup failed",
   "agentManager.setup.settingUp": "Setting up workspace",
+  "agentManager.setup.cancelled": "Cancelled",
+  "agentManager.setup.cancel": "Cancel",
 
   "agentManager.shortcuts.title": "Keyboard Shortcuts",
   "agentManager.shortcuts.category.sidebar": "Sidebar",

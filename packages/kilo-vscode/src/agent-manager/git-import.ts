@@ -3,6 +3,7 @@ export interface BranchListItem {
   isLocal: boolean
   isRemote: boolean
   isDefault: boolean
+  isCheckedOut?: boolean
   lastCommitDate?: string
 }
 

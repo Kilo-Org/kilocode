@@ -75,8 +75,8 @@ import {
 } from "./MultiModelSelector"
 import { LanguageBridge, DataBridge } from "../src/App"
 import { useLanguage } from "../src/context/language"
-import { formatRelativeDate } from "../src/utils/date"
 import { useImageAttachments } from "../src/hooks/useImageAttachments"
+import { formatRelativeDate } from "../src/utils/date"
 import { validateLocalSession, nextSelectionAfterDelete, adjacentHint, LOCAL } from "./navigate"
 import { reorderTabs, applyTabOrder, firstOrderedTitle } from "./tab-order"
 import { ConstrainDragYAxis, SortableReviewTab, SortableTab } from "./sortable-tab"
@@ -84,6 +84,7 @@ import { DiffPanel } from "./DiffPanel"
 import { FullScreenDiffView } from "./FullScreenDiffView"
 import { ApplyDialog } from "./ApplyDialog"
 import { groupApplyConflicts } from "./apply-conflicts"
+import { BranchSelect } from "./BranchSelect"
 import type { ReviewComment } from "./review-comments"
 import "./agent-manager.css"
 
@@ -92,8 +93,10 @@ const REVIEW_TAB_ID = "review"
 interface SetupState {
   active: boolean
   message: string
+  detail?: string
   branch?: string
   error?: boolean
+  cancelled?: boolean
   worktreeId?: string
 }
 
@@ -303,6 +306,9 @@ const AgentManagerContent: Component = () => {
   const [managedSessions, setManagedSessions] = createSignal<ManagedSessionState[]>([])
   const [selection, setSelection] = createSignal<SidebarSelection>(LOCAL)
   const [repoBranch, setRepoBranch] = createSignal<string | undefined>()
+  const [repoDetectedBranch, setRepoDetectedBranch] = createSignal<string>("main")
+  const [repoDefaultBranch, setRepoDefaultBranch] = createSignal<string>("main")
+  const [hasConfiguredBranch, setHasConfiguredBranch] = createSignal(false)
   const [busyWorktrees, setBusyWorktrees] = createSignal<Map<string, WorktreeBusyState>>(new Map())
   const [staleWorktreeIds, setStaleWorktreeIds] = createSignal<Set<string>>(new Set())
   const [worktreesLoaded, setWorktreesLoaded] = createSignal(false)
@@ -1003,12 +1009,17 @@ const AgentManagerContent: Component = () => {
       if (msg.type === "agentManager.repoInfo") {
         const info = msg as AgentManagerRepoInfoMessage
         setRepoBranch(info.branch)
+        if (info.defaultBranch) {
+          setRepoDetectedBranch(info.defaultBranch)
+          if (!hasConfiguredBranch()) setRepoDefaultBranch(info.defaultBranch)
+        }
       }
 
       if (msg.type === "agentManager.worktreeSetup") {
         const ev = msg as AgentManagerWorktreeSetupMessage
-        if (ev.status === "ready" || ev.status === "error") {
+        if (ev.status === "ready" || ev.status === "error" || ev.status === "cancelled") {
           const error = ev.status === "error"
+          const cancelled = ev.status === "cancelled"
           // Remove from busy map
           if (ev.worktreeId) {
             setBusyWorktrees((prev) => {
@@ -1017,9 +1028,16 @@ const AgentManagerContent: Component = () => {
               return next
             })
           }
-          setSetup({ active: true, message: ev.message, branch: ev.branch, error, worktreeId: ev.worktreeId })
-          globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 500)
-          if (!error && ev.sessionId) {
+          setSetup({
+            active: true,
+            message: ev.message,
+            branch: ev.branch,
+            error,
+            cancelled,
+            worktreeId: ev.worktreeId,
+          })
+          globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : cancelled ? 1500 : 500)
+          if (!error && !cancelled && ev.sessionId) {
             session.selectSession(ev.sessionId)
             // Auto-switch sidebar to the worktree containing this session
             const ms = managedSessions().find((s) => s.id === ev.sessionId)
@@ -1034,7 +1052,13 @@ const AgentManagerContent: Component = () => {
             )
             setSelection(ev.worktreeId)
           }
-          setSetup({ active: true, message: ev.message, branch: ev.branch, worktreeId: ev.worktreeId })
+          setSetup({
+            active: true,
+            message: ev.message,
+            detail: ev.detail,
+            branch: ev.branch,
+            worktreeId: ev.worktreeId,
+          })
         }
       }
 
@@ -1061,6 +1085,13 @@ const AgentManagerContent: Component = () => {
         if (state.tabOrder) setWorktreeTabOrder(state.tabOrder)
         if (state.reviewDiffStyle === "split" || state.reviewDiffStyle === "unified") {
           setReviewDiffStyle(state.reviewDiffStyle)
+        }
+        if (state.defaultBaseBranch) {
+          setRepoDefaultBranch(state.defaultBaseBranch)
+          setHasConfiguredBranch(true)
+        } else {
+          setHasConfiguredBranch(false)
+          setRepoDefaultBranch(repoDetectedBranch())
         }
         const current = session.currentSessionID()
         if (current) {
@@ -1353,6 +1384,126 @@ const AgentManagerContent: Component = () => {
     vscode.postMessage({ type: "agentManager.configureSetupScript" })
   }
 
+  const handleChangeDefaultBaseBranch = () => {
+    const [branches, setBranches] = createSignal<BranchInfo[]>([])
+    const [loading, setLoading] = createSignal(true)
+    const [search, setSearch] = createSignal("")
+    const [detected, setDetected] = createSignal(repoDetectedBranch())
+    const [highlighted, setHighlighted] = createSignal(-1)
+
+    const unsub = vscode.onMessage((msg) => {
+      if (msg.type === "agentManager.branches") {
+        const ev = msg as AgentManagerBranchesMessage
+        setBranches(ev.branches)
+        setDetected(ev.defaultBranch)
+        setRepoDetectedBranch(ev.defaultBranch)
+        setLoading(false)
+      }
+    })
+    vscode.postMessage({ type: "agentManager.requestBranches" })
+
+    const filtered = createMemo(() => {
+      const q = search().toLowerCase()
+      if (!q) return branches()
+      return branches().filter((b) => b.name.toLowerCase().includes(q))
+    })
+
+    const scrollHighlighted = (index: number) => {
+      if (index < 0) {
+        document.querySelector('[data-role="auto-option"]')?.scrollIntoView({ block: "nearest" })
+        return
+      }
+      document.querySelector(`.am-branch-item[data-index="${index}"]`)?.scrollIntoView({ block: "nearest" })
+    }
+
+    const select = (branch: string | undefined) => {
+      vscode.postMessage({ type: "agentManager.setDefaultBaseBranch", branch: branch || "" })
+      setRepoDefaultBranch(branch || detected())
+      setHasConfiguredBranch(!!branch)
+      unsub()
+      dialog.close()
+    }
+
+    dialog.show(() => {
+      onCleanup(() => unsub())
+      return (
+        <Dialog title={t("agentManager.worktree.defaultBaseBranch")} fit>
+          <div class="am-default-base-branch">
+            <BranchSelect
+              branches={filtered()}
+              loading={loading()}
+              search={search()}
+              onSearch={(value) => {
+                setSearch(value)
+                setHighlighted(-1)
+              }}
+              onSearchKeyDown={(e) => {
+                const items = filtered()
+                if (e.key === "ArrowDown") {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  if (items.length === 0) return
+                  const next = highlighted() < 0 ? 0 : Math.min(highlighted() + 1, items.length - 1)
+                  setHighlighted(next)
+                  requestAnimationFrame(() => scrollHighlighted(next))
+                  return
+                }
+                if (e.key === "ArrowUp") {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  const prev = highlighted() <= 0 ? -1 : highlighted() - 1
+                  setHighlighted(prev)
+                  requestAnimationFrame(() => scrollHighlighted(prev))
+                  return
+                }
+                if (e.key === "Enter") {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  if (highlighted() < 0) {
+                    select(undefined)
+                    return
+                  }
+                  const selected = items[highlighted()]
+                  if (!selected) return
+                  select(selected.name)
+                  return
+                }
+                if (e.key !== "Escape") return
+                e.preventDefault()
+                e.stopPropagation()
+                unsub()
+                dialog.close()
+              }}
+              onSelect={(branch) => {
+                setHighlighted(-1)
+                select(branch.name)
+              }}
+              selected={hasConfiguredBranch() ? repoDefaultBranch() : undefined}
+              defaultName={hasConfiguredBranch() ? repoDefaultBranch() : undefined}
+              highlighted={highlighted()}
+              onHighlight={setHighlighted}
+              searchPlaceholder={t("agentManager.dialog.searchBranches")}
+              loadingLabel={t("agentManager.import.loadingBranches")}
+              emptyLabel={t("agentManager.import.noMatchingBranches")}
+              defaultLabel={t("agentManager.dialog.branchBadge.default")}
+              remoteLabel={t("agentManager.dialog.branchBadge.remote")}
+              autoOption={{
+                label: t("agentManager.worktree.defaultBaseBranchAuto"),
+                hint: `(${detected()})`,
+                active: !hasConfiguredBranch(),
+                highlighted: highlighted() < 0,
+                onSelect: () => {
+                  setHighlighted(-1)
+                  select(undefined)
+                },
+              }}
+            />
+          </div>
+        </Dialog>
+      )
+    })
+  }
+
   const handleShowKeyboardShortcuts = () => {
     const categories = buildShortcutCategories(kb(), t)
     dialog.show(() => (
@@ -1390,7 +1541,8 @@ const AgentManagerContent: Component = () => {
 
   // Advanced worktree dialog — opens a full dialog with prompt, versions, model, mode
   const showAdvancedWorktreeDialog = () => {
-    dialog.show(() => <NewWorktreeDialog onClose={() => dialog.close()} />)
+    const branch = repoDefaultBranch()
+    dialog.show(() => <NewWorktreeDialog onClose={() => dialog.close()} defaultBaseBranch={branch} />)
   }
 
   const confirmDeleteWorktree = (worktreeId: string) => {
@@ -1756,17 +1908,28 @@ const AgentManagerContent: Component = () => {
                       <DropdownMenu.Item onSelect={handleConfigureSetupScript}>
                         <DropdownMenu.ItemLabel>{t("agentManager.worktree.setupScript")}</DropdownMenu.ItemLabel>
                       </DropdownMenu.Item>
+                      <DropdownMenu.Item onSelect={handleChangeDefaultBaseBranch}>
+                        <DropdownMenu.ItemLabel>
+                          {t("agentManager.worktree.defaultBaseBranch")}: {repoDefaultBranch()}
+                        </DropdownMenu.ItemLabel>
+                      </DropdownMenu.Item>
                     </DropdownMenu.Content>
                   </DropdownMenu.Portal>
                 </DropdownMenu>
                 <div class="am-split-button">
-                  <IconButton
-                    icon="plus"
-                    size="small"
-                    variant="ghost"
-                    label={t("agentManager.worktree.new")}
-                    onClick={handleCreateWorktree}
-                  />
+                  <TooltipKeybind
+                    title={`${t("agentManager.worktree.new")} (from ${repoDefaultBranch()})`}
+                    keybind={kb().newWorktree ?? ""}
+                    placement="bottom"
+                  >
+                    <IconButton
+                      icon="plus"
+                      size="small"
+                      variant="ghost"
+                      label={t("agentManager.worktree.new")}
+                      onClick={handleCreateWorktree}
+                    />
+                  </TooltipKeybind>
                   <DropdownMenu gutter={4} placement="bottom-end">
                     <DropdownMenu.Trigger
                       class="am-split-arrow"
@@ -2134,10 +2297,12 @@ const AgentManagerContent: Component = () => {
                   )
                 })()}
                 <Show when={worktrees().length === 0}>
-                  <button class="am-worktree-create" onClick={handleCreateWorktree}>
-                    <Icon name="plus" size="small" />
-                    <span>{t("agentManager.worktree.new")}</span>
-                  </button>
+                  <Tooltip value={`${t("agentManager.worktree.new")} (from ${repoDefaultBranch()})`} placement="bottom">
+                    <button class="am-worktree-create" onClick={handleCreateWorktree}>
+                      <Icon name="plus" size="small" />
+                      <span>{t("agentManager.worktree.new")}</span>
+                    </button>
+                  </Tooltip>
                 </Show>
               </Show>
             </Show>
@@ -2456,7 +2621,7 @@ const AgentManagerContent: Component = () => {
               const busy = busyWorktrees().get(sel)
               if (busy?.reason === "setting-up") {
                 const wt = worktrees().find((w) => w.id === sel)
-                return { active: true, message: busy.message, branch: busy.branch ?? wt?.branch }
+                return { active: true, message: busy.message, branch: busy.branch ?? wt?.branch, worktreeId: sel }
               }
             }
             return null
@@ -2468,17 +2633,38 @@ const AgentManagerContent: Component = () => {
                   <div class="am-setup-card">
                     <Icon name="branch" size="large" />
                     <div class="am-setup-title">
-                      {state().error ? t("agentManager.setup.failed") : t("agentManager.setup.settingUp")}
+                      {state().error
+                        ? t("agentManager.setup.failed")
+                        : state().cancelled
+                          ? t("agentManager.setup.cancelled")
+                          : t("agentManager.setup.settingUp")}
                     </div>
                     <Show when={state().branch}>
                       <div class="am-setup-branch">{state().branch}</div>
                     </Show>
                     <div class="am-setup-status">
-                      <Show when={!state().error} fallback={<Icon name="circle-x" size="small" />}>
+                      <Show
+                        when={!state().error && !state().cancelled}
+                        fallback={<Icon name="circle-x" size="small" />}
+                      >
                         <Spinner class="am-setup-spinner" />
                       </Show>
                       <span>{state().message}</span>
                     </div>
+                    <Show when={state().detail}>
+                      <div class="am-setup-detail">{state().detail}</div>
+                    </Show>
+                    <Show when={!state().error && !state().cancelled && state().worktreeId}>
+                      <button
+                        class="am-setup-cancel"
+                        onClick={() => {
+                          const id = state().worktreeId
+                          if (id) vscode.postMessage({ type: "agentManager.cancelWorktreeSetup", worktreeId: id })
+                        }}
+                      >
+                        {t("agentManager.setup.cancel")}
+                      </button>
+                    </Show>
                   </div>
                 </div>
               )}
@@ -2603,7 +2789,7 @@ function sanitizeBranchName(name: string): string {
     .join("/")
 }
 
-const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
+const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBranch: string }> = (props) => {
   const { t } = useLanguage()
   const vscode = useVSCode()
   const session = useSession()
@@ -2613,7 +2799,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
   // --- Shared branch data (used by both New tab's base branch selector and Import tab) ---
   const [branches, setBranches] = createSignal<BranchInfo[]>([])
   const [branchesLoading, setBranchesLoading] = createSignal(false)
-  const [defaultBranch, setDefaultBranch] = createSignal("main")
+  const [defaultBranch, setDefaultBranch] = createSignal(props.defaultBaseBranch)
   const [branchSearch, setBranchSearch] = createSignal("")
 
   // --- New tab state ---
@@ -2646,11 +2832,20 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
   })
 
   const effectiveBaseBranch = () => baseBranch() ?? defaultBranch()
+  const markerBranch = () => props.defaultBaseBranch || defaultBranch()
 
   const filteredBranches = createMemo(() => {
     const search = branchSearch().toLowerCase()
     if (!search) return branches()
     return branches().filter((b) => b.name.toLowerCase().includes(search))
+  })
+
+  const importBranches = createMemo(() => branches().filter((b) => !b.isCheckedOut))
+
+  const filteredImportBranches = createMemo(() => {
+    const search = branchSearch().toLowerCase()
+    if (!search) return importBranches()
+    return importBranches().filter((b) => b.name.toLowerCase().includes(search))
   })
 
   const canSubmit = () => {
@@ -2719,7 +2914,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
     if (msg.type === "agentManager.branches") {
       const ev = msg as AgentManagerBranchesMessage
       setBranches(ev.branches)
-      setDefaultBranch(ev.defaultBranch)
+      setDefaultBranch(props.defaultBaseBranch || ev.defaultBranch)
       setBranchesLoading(false)
     }
     if (msg.type === "agentManager.importResult") {
@@ -2896,98 +3091,74 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
                       </button>
                     }
                   >
-                    <div class="am-dropdown-search">
-                      <Icon name="magnifying-glass" size="small" />
-                      <input
-                        class="am-dropdown-search-input"
-                        type="text"
-                        placeholder={t("agentManager.dialog.searchBranches")}
-                        value={branchSearch()}
-                        autofocus
-                        onInput={(e) => {
-                          setBranchSearch(e.currentTarget.value)
+                    <BranchSelect
+                      branches={filteredBranches()}
+                      loading={branchesLoading()}
+                      search={branchSearch()}
+                      onSearch={(value) => {
+                        setBranchSearch(value)
+                        setHighlightedIndex(0)
+                      }}
+                      onSearchKeyDown={(e) => {
+                        const items = filteredBranches()
+                        if (e.key === "ArrowDown") {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          const next = Math.min(highlightedIndex() + 1, items.length - 1)
+                          setHighlightedIndex(next)
+                          requestAnimationFrame(() => {
+                            document.querySelector(`.am-branch-item[data-index="${next}"]`)?.scrollIntoView({
+                              block: "nearest",
+                            })
+                          })
+                          return
+                        }
+                        if (e.key === "ArrowUp") {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          const prev = Math.max(highlightedIndex() - 1, 0)
+                          setHighlightedIndex(prev)
+                          requestAnimationFrame(() => {
+                            document.querySelector(`.am-branch-item[data-index="${prev}"]`)?.scrollIntoView({
+                              block: "nearest",
+                            })
+                          })
+                          return
+                        }
+                        if (e.key === "Enter") {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          const selected = items[highlightedIndex()]
+                          if (!selected) return
+                          setBaseBranch(selected.name)
+                          setBaseBranchOpen(false)
+                          setBranchSearch("")
                           setHighlightedIndex(0)
-                        }}
-                        onKeyDown={(e) => {
-                          const items = filteredBranches()
-                          if (e.key === "ArrowDown") {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            const next = Math.min(highlightedIndex() + 1, items.length - 1)
-                            setHighlightedIndex(next)
-                            requestAnimationFrame(() => {
-                              document
-                                .querySelector(`.am-branch-item[data-index="${next}"]`)
-                                ?.scrollIntoView({ block: "nearest" })
-                            })
-                          } else if (e.key === "ArrowUp") {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            const prev = Math.max(highlightedIndex() - 1, 0)
-                            setHighlightedIndex(prev)
-                            requestAnimationFrame(() => {
-                              document
-                                .querySelector(`.am-branch-item[data-index="${prev}"]`)
-                                ?.scrollIntoView({ block: "nearest" })
-                            })
-                          } else if (e.key === "Enter") {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            const selected = items[highlightedIndex()]
-                            if (selected) {
-                              setBaseBranch(selected.name)
-                              setBaseBranchOpen(false)
-                              setBranchSearch("")
-                              setHighlightedIndex(0)
-                            }
-                          } else if (e.key === "Escape") {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            setBaseBranchOpen(false)
-                            setBranchSearch("")
-                            setHighlightedIndex(0)
-                          }
-                        }}
-                      />
-                    </div>
-                    <div class="am-dropdown-list">
-                      <For each={filteredBranches()}>
-                        {(branch, index) => (
-                          <button
-                            class="am-branch-item"
-                            classList={{
-                              "am-branch-item-active": effectiveBaseBranch() === branch.name,
-                              "am-branch-item-highlighted": highlightedIndex() === index(),
-                            }}
-                            data-index={index()}
-                            onClick={() => {
-                              setBaseBranch(branch.name)
-                              setBaseBranchOpen(false)
-                              setBranchSearch("")
-                              setHighlightedIndex(0)
-                            }}
-                            onMouseEnter={() => setHighlightedIndex(index())}
-                            type="button"
-                          >
-                            <span class="am-branch-item-left">
-                              <Icon name="branch" size="small" />
-                              <span class="am-branch-item-name">{branch.name}</span>
-                              <Show when={branch.isDefault}>
-                                <span class="am-branch-badge">{t("agentManager.dialog.branchBadge.default")}</span>
-                              </Show>
-                              <Show when={!branch.isLocal && branch.isRemote}>
-                                <span class="am-branch-badge am-branch-badge-remote">
-                                  {t("agentManager.dialog.branchBadge.remote")}
-                                </span>
-                              </Show>
-                            </span>
-                            <Show when={branch.lastCommitDate}>
-                              <span class="am-branch-item-time">{formatRelativeDate(branch.lastCommitDate!)}</span>
-                            </Show>
-                          </button>
-                        )}
-                      </For>
-                    </div>
+                          return
+                        }
+                        if (e.key !== "Escape") return
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setBaseBranchOpen(false)
+                        setBranchSearch("")
+                        setHighlightedIndex(0)
+                      }}
+                      onSelect={(branch) => {
+                        setBaseBranch(branch.name)
+                        setBaseBranchOpen(false)
+                        setBranchSearch("")
+                        setHighlightedIndex(0)
+                      }}
+                      selected={effectiveBaseBranch()}
+                      defaultName={markerBranch()}
+                      highlighted={highlightedIndex()}
+                      onHighlight={setHighlightedIndex}
+                      searchPlaceholder={t("agentManager.dialog.searchBranches")}
+                      loadingLabel={t("agentManager.import.loadingBranches")}
+                      emptyLabel={t("agentManager.import.noMatchingBranches")}
+                      defaultLabel={t("agentManager.dialog.branchBadge.default")}
+                      remoteLabel={t("agentManager.dialog.branchBadge.remote")}
+                    />
                   </Popover>
                 </div>
               </div>
@@ -3132,55 +3303,25 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
                   </button>
                 }
               >
-                <div class="am-dropdown-search">
-                  <Icon name="magnifying-glass" size="small" />
-                  <input
-                    class="am-dropdown-search-input"
-                    type="text"
-                    placeholder={t("agentManager.dialog.searchBranches")}
-                    value={branchSearch()}
-                    onInput={(e) => setBranchSearch(e.currentTarget.value)}
-                    autofocus
-                  />
-                </div>
-                <div class="am-dropdown-list">
-                  <Show
-                    when={filteredBranches().length > 0}
-                    fallback={
-                      <div class="am-dropdown-empty">
-                        {branchesLoading()
-                          ? t("agentManager.import.loadingBranches")
-                          : t("agentManager.import.noMatchingBranches")}
-                      </div>
-                    }
-                  >
-                    <For each={filteredBranches()}>
-                      {(branch) => (
-                        <div class="am-branch-item" onClick={() => handleBranchSelect(branch.name)}>
-                          <span class="am-branch-item-left">
-                            <Icon name="branch" size="small" />
-                            <span class="am-branch-item-name">{branch.name}</span>
-                            <Show when={branch.isDefault}>
-                              <span class="am-branch-badge">{t("agentManager.dialog.branchBadge.default")}</span>
-                            </Show>
-                            <Show when={!branch.isLocal && branch.isRemote}>
-                              <span class="am-branch-badge">{t("agentManager.dialog.branchBadge.remote")}</span>
-                            </Show>
-                          </span>
-                          <Show when={branch.lastCommitDate}>
-                            <span class="am-branch-item-time">{formatRelativeDate(branch.lastCommitDate!)}</span>
-                          </Show>
-                        </div>
-                      )}
-                    </For>
-                  </Show>
-                </div>
+                <BranchSelect
+                  branches={filteredImportBranches()}
+                  loading={branchesLoading()}
+                  search={branchSearch()}
+                  onSearch={setBranchSearch}
+                  onSelect={(branch) => handleBranchSelect(branch.name)}
+                  defaultName={defaultBranch()}
+                  searchPlaceholder={t("agentManager.dialog.searchBranches")}
+                  loadingLabel={t("agentManager.import.loadingBranches")}
+                  emptyLabel={t("agentManager.import.noMatchingBranches")}
+                  defaultLabel={t("agentManager.dialog.branchBadge.default")}
+                  remoteLabel={t("agentManager.dialog.branchBadge.remote")}
+                />
               </Popover>
             </div>
           </div>
 
           {/* Empty state when no branches are available */}
-          <Show when={!branchesLoading() && branches().length === 0}>
+          <Show when={!branchesLoading() && importBranches().length === 0}>
             <div class="am-import-empty">
               {t("agentManager.import.noBranchesFound")}
               <br />

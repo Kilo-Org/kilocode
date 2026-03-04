@@ -22,6 +22,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/FullScreenDiffView.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DiffEndMarker.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/FileTree.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/BranchSelect.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/review-annotations.ts"),
   path.join(ROOT, "webview-ui/agent-manager/MultiModelSelector.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ApplyDialog.tsx"),
@@ -170,6 +171,8 @@ describe("Agent Manager Provider — onMessage routing", () => {
       "agentManager.requestRepoInfo",
       "agentManager.requestState",
       "agentManager.setTabOrder",
+      "agentManager.setDefaultBaseBranch",
+      "agentManager.cancelWorktreeSetup",
     ]
     for (const msg of expected) {
       expect(text, `onMessage should handle "${msg}"`).toContain(msg)

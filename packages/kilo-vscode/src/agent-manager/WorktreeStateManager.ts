@@ -37,6 +37,7 @@ interface StateFile {
   tabOrder?: Record<string, string[]>
   sessionsCollapsed?: boolean
   reviewDiffStyle?: "unified" | "split"
+  defaultBaseBranch?: string
 }
 
 const STATE_FILE = "agent-manager.json"
@@ -55,6 +56,7 @@ export class WorktreeStateManager {
   private tabOrder: Record<string, string[]> = {}
   private collapsed = false
   private reviewDiffStyle: "unified" | "split" = "unified"
+  private defaultBaseBranch: string | undefined
   private readonly log: (msg: string) => void
   private saving: Promise<void> | undefined
   private pendingSave = false
@@ -246,6 +248,19 @@ export class WorktreeStateManager {
   }
 
   // ---------------------------------------------------------------------------
+  // Default base branch
+  // ---------------------------------------------------------------------------
+
+  getDefaultBaseBranch(): string | undefined {
+    return this.defaultBaseBranch
+  }
+
+  setDefaultBaseBranch(value: string | undefined): void {
+    this.defaultBaseBranch = value
+    void this.save()
+  }
+
+  // ---------------------------------------------------------------------------
   // Persistence
   // ---------------------------------------------------------------------------
 
@@ -257,6 +272,7 @@ export class WorktreeStateManager {
       this.sessions.clear()
       this.tabOrder = {}
       this.reviewDiffStyle = "unified"
+      this.defaultBaseBranch = undefined
 
       for (const [id, wt] of Object.entries(data.worktrees ?? {})) {
         this.worktrees.set(id, { id, ...wt })
@@ -270,6 +286,9 @@ export class WorktreeStateManager {
       this.collapsed = data.sessionsCollapsed ?? false
       if (data.reviewDiffStyle === "split") {
         this.reviewDiffStyle = "split"
+      }
+      if (data.defaultBaseBranch) {
+        this.defaultBaseBranch = data.defaultBaseBranch
       }
       this.log(`Loaded state: ${this.worktrees.size} worktrees, ${this.sessions.size} sessions`)
     } catch (error) {
@@ -342,6 +361,9 @@ export class WorktreeStateManager {
     }
     if (this.reviewDiffStyle === "split") {
       data.reviewDiffStyle = "split"
+    }
+    if (this.defaultBaseBranch) {
+      data.defaultBaseBranch = this.defaultBaseBranch
     }
 
     try {

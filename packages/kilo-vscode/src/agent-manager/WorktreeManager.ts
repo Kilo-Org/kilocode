@@ -37,11 +37,24 @@ export interface WorktreeInfo {
   sessionId?: string
 }
 
+export type StartPointSource = "remote" | "local-tracking" | "local-branch" | "fallback"
+
+export interface StartPointResult {
+  ref: string
+  branch: string
+  source: StartPointSource
+  warning?: string
+}
+
 export interface CreateWorktreeResult {
   branch: string
   path: string
   parentBranch: string
+  startPointSource: StartPointSource
+  startPointWarning?: string
 }
+
+export type WorktreeProgressStep = "syncing" | "verifying" | "fetching" | "creating"
 
 export interface ExternalWorktreeItem {
   path: string
@@ -72,6 +85,8 @@ export class WorktreeManager {
     existingBranch?: string
     baseBranch?: string
     branchName?: string
+    onProgress?: (step: WorktreeProgressStep, message: string, detail?: string) => void
+    signal?: AbortSignal
   }): Promise<CreateWorktreeResult> {
     const repo = await this.git.checkIsRepo()
     if (!repo)
@@ -79,21 +94,49 @@ export class WorktreeManager {
         "This folder is not a git repository. Initialize a repository or open a git project to use worktrees.",
       )
 
+    const progress = params.onProgress ?? (() => {})
+    const checkCancelled = () => {
+      if (params.signal?.aborted) throw new Error("Worktree creation was cancelled")
+    }
+
+    // LFS check — fail early before creating anything on disk
+    if (await this.repoUsesLfs()) {
+      if (!(await this.checkLfsAvailable())) {
+        throw new Error(
+          "This repository uses Git LFS, but git-lfs was not found. " +
+            "Install git-lfs (e.g., 'brew install git-lfs') and run 'git lfs install'.",
+        )
+      }
+    }
+
+    checkCancelled()
+
     await this.ensureDir()
     await this.ensureGitExclude()
 
-    const parent = params.baseBranch || (await this.currentBranch())
+    const parent = params.baseBranch || (await this.defaultBranch())
 
     // Validate baseBranch exists if explicitly provided
     if (params.baseBranch) {
       const exists = await this.branchExists(params.baseBranch)
       if (!exists) throw new Error(`Base branch "${params.baseBranch}" does not exist`)
-      // Check if the base branch is a remote-only branch and fetch it
-      const branches = await this.git.branch()
-      if (!branches.all.includes(params.baseBranch) && branches.all.includes(`remotes/origin/${params.baseBranch}`)) {
-        await this.git.fetch("origin", params.baseBranch)
+    }
+
+    checkCancelled()
+
+    const explicitBase = params.baseBranch !== undefined
+
+    // Resolve the start point — fetch from remote or fall back through local refs
+    let resolved: StartPointResult = { ref: parent, branch: parent, source: "local-branch" }
+    if (!params.existingBranch) {
+      resolved = await this.resolveStartPoint(parent, progress, { allowFallback: !explicitBase })
+      if (resolved.warning) {
+        this.log(`Start point warning: ${resolved.warning}`)
       }
     }
+
+    checkCancelled()
+    progress("creating", "Creating git worktree...")
 
     const sanitized = params.branchName ? sanitizeBranchName(params.branchName) : undefined
     let branch = params.existingBranch ?? (sanitized || undefined) ?? generateBranchName(params.prompt || "agent-task")
@@ -111,17 +154,18 @@ export class WorktreeManager {
       await this.removeWorktree(worktreePath)
     }
 
+    // Append ^{commit} to dereference to a raw commit SHA, preventing the
+    // new branch from implicitly tracking the remote branch as upstream.
+    const startRef = params.existingBranch ? undefined : `${resolved.ref}^{commit}`
+
     try {
       const args = params.existingBranch
         ? ["worktree", "add", worktreePath, branch]
-        : params.baseBranch
-          ? ["worktree", "add", "-b", branch, worktreePath, params.baseBranch]
-          : ["worktree", "add", "-b", branch, worktreePath]
+        : ["worktree", "add", "-b", branch, worktreePath, startRef!]
       await this.git.raw(args)
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
       if (msg.includes("already checked out")) {
-        // Extract worktree path from error like "fatal: 'branch' is already checked out at '/path'"
         const match = msg.match(/already checked out at '([^']+)'/)
         const loc = match ? match[1] : "another worktree"
         throw new Error(`Branch "${branch}" is already checked out in worktree at: ${loc}`)
@@ -133,14 +177,23 @@ export class WorktreeManager {
       branch = `${branch}-${Date.now()}`
       const retryDir = branch.replace(/\//g, "-")
       worktreePath = path.join(this.dir, retryDir)
-      const retryArgs = params.baseBranch
-        ? ["worktree", "add", "-b", branch, worktreePath, params.baseBranch]
-        : ["worktree", "add", "-b", branch, worktreePath]
-      await this.git.raw(retryArgs)
+      await this.git.raw(["worktree", "add", "-b", branch, worktreePath, startRef!])
     }
 
-    this.log(`Created worktree: ${worktreePath} (branch: ${branch}, base: ${parent})`)
-    return { branch, path: worktreePath, parentBranch: parent }
+    const parentBranch = params.existingBranch ? parent : this.branchFromStartRef(resolved.ref, parent)
+    this.log(`Created worktree: ${worktreePath} (branch: ${branch}, base: ${parentBranch}, source: ${resolved.source})`)
+    return {
+      branch,
+      path: worktreePath,
+      parentBranch,
+      startPointSource: resolved.source,
+      startPointWarning: resolved.warning,
+    }
+  }
+
+  private branchFromStartRef(ref: string, fallback: string): string {
+    if (ref.startsWith("origin/")) return ref.slice("origin/".length)
+    return ref || fallback
   }
 
   /**
@@ -378,16 +431,195 @@ export class WorktreeManager {
         const head = await this.git.raw(["symbolic-ref", "refs/remotes/origin/HEAD"])
         const match = head.trim().match(/refs\/remotes\/origin\/(.+)$/)
         if (match) return match[1]
-      } catch {}
+      } catch (err) {
+        this.log(`Failed to resolve origin/HEAD symbolic ref: ${err}`)
+      }
     }
 
-    try {
-      const branches = await this.git.branch()
-      if (branches.all.includes("main")) return "main"
-      if (branches.all.includes("master")) return "master"
-    } catch {}
+    const current = await this.currentBranch().catch((err) => {
+      this.log(`Failed to resolve current branch for default branch detection: ${err}`)
+      return ""
+    })
+    if (current && current !== "HEAD") return current
 
-    return "main"
+    const local = await this.git
+      .branchLocal()
+      .then((branches) => branches.all.find((name) => !!name && name !== "HEAD"))
+      .catch((err) => {
+        this.log(`Failed to list local branches for default branch detection: ${err}`)
+        return undefined
+      })
+    if (local) return local
+
+    throw new Error("Unable to derive default branch from repository metadata")
+  }
+
+  private async derivedFallbackBranches(requested: string): Promise<string[]> {
+    const names = new Set<string>()
+    const add = (name: string | undefined) => {
+      if (!name) return
+      if (name === "HEAD") return
+      if (name === requested) return
+      names.add(name)
+    }
+
+    const derived = await this.defaultBranch().catch((err) => {
+      this.log(`Failed to derive fallback from default branch: ${err}`)
+      return undefined
+    })
+    add(derived)
+
+    return [...names]
+  }
+
+  // ---------------------------------------------------------------------------
+  // Start-point resolution
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Resolve the best git ref to use as the start point for a new worktree.
+   *
+   * Priority:
+   * 1. Fetch from origin and use origin/<branch> (freshest remote state)
+   * 2. Use local origin/<branch> tracking ref (stale but usable when offline)
+   * 3. Use local <branch> (may contain local-only commits)
+   * 4. Fall back to repository-derived branch candidates
+   */
+  async resolveStartPoint(
+    branch: string,
+    onProgress?: (step: WorktreeProgressStep, message: string, detail?: string) => void,
+    opts?: { allowFallback?: boolean },
+  ): Promise<StartPointResult> {
+    const progress = onProgress ?? (() => {})
+    const allowFallback = opts?.allowFallback ?? true
+
+    progress("syncing", "Checking remote...")
+    const hasRemote = await this.hasOriginRemote()
+
+    if (hasRemote) {
+      progress("fetching", "Fetching latest changes...")
+      try {
+        await this.git.fetch("origin", branch)
+        return { ref: `origin/${branch}`, branch, source: "remote" }
+      } catch (err) {
+        this.log(`Fetch from origin failed for "${branch}": ${err}`)
+      }
+
+      // Fetch failed — try the local tracking ref (may be stale but usable)
+      progress("verifying", "Using local reference (remote unavailable)")
+      if (await this.refExistsLocally(`origin/${branch}`)) {
+        this.log(`Using stale local tracking ref origin/${branch}`)
+        return {
+          ref: `origin/${branch}`,
+          branch,
+          source: "local-tracking",
+          warning: `Could not fetch from remote. Using cached version of ${branch} which may be outdated.`,
+        }
+      }
+    } else {
+      progress("verifying", "No remote configured, using local reference")
+    }
+
+    // No remote or tracking ref unavailable — try local branch
+    if (await this.refExistsLocally(branch)) {
+      const reason = hasRemote ? "Remote unavailable" : "No remote configured"
+      this.log(`${reason}, using local branch ${branch}`)
+      return {
+        ref: branch,
+        branch,
+        source: "local-branch",
+        warning: `${reason}. Using local branch "${branch}" which may contain changes not on the remote.`,
+      }
+    }
+
+    if (allowFallback) {
+      // Last resort: try branch names derived from repository metadata.
+      const fallbacks = await this.derivedFallbackBranches(branch)
+      for (const name of fallbacks) {
+        if (name === branch) continue
+        if (hasRemote && (await this.refExistsLocally(`origin/${name}`))) {
+          this.log(`Falling back to origin/${name}`)
+          return {
+            ref: `origin/${name}`,
+            branch: name,
+            source: "fallback",
+            warning: `Branch "${branch}" not found. Using "${name}" instead.`,
+          }
+        }
+        if (await this.refExistsLocally(name)) {
+          this.log(`Falling back to local branch ${name}`)
+          return {
+            ref: name,
+            branch: name,
+            source: "fallback",
+            warning: `Branch "${branch}" not found. Using local "${name}" instead.`,
+          }
+        }
+      }
+    }
+
+    // Nothing found — return the original branch name and let git fail with a clear error
+    this.log(`No usable ref found for "${branch}", proceeding with local name`)
+    return {
+      ref: branch,
+      branch,
+      source: "local-branch",
+      warning: `Could not find branch "${branch}" locally or on remote.`,
+    }
+  }
+
+  async hasOriginRemote(): Promise<boolean> {
+    try {
+      const remotes = await this.git.getRemotes()
+      return remotes.some((r) => r.name === "origin")
+    } catch (err) {
+      this.log(`Failed to list remotes: ${err}`)
+      return false
+    }
+  }
+
+  async refExistsLocally(ref: string): Promise<boolean> {
+    try {
+      const result = await this.git.raw(["rev-parse", "--verify", `${ref}^{commit}`])
+      return result.trim().length > 0
+    } catch {
+      return false
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // LFS detection
+  // ---------------------------------------------------------------------------
+
+  async repoUsesLfs(): Promise<boolean> {
+    try {
+      // Check for .git/lfs/ directory
+      const gitDir = await this.resolveGitDir()
+      if (fs.existsSync(path.join(gitDir, "lfs"))) return true
+
+      // Check .gitattributes for filter=lfs
+      const attrs = path.join(this.root, ".gitattributes")
+      if (fs.existsSync(attrs)) {
+        const content = await fs.promises.readFile(attrs, "utf-8")
+        if (content.includes("filter=lfs")) return true
+      }
+
+      // Check .git/info/attributes
+      const infoAttrs = path.join(gitDir, "info", "attributes")
+      if (fs.existsSync(infoAttrs)) {
+        const content = await fs.promises.readFile(infoAttrs, "utf-8")
+        if (content.includes("filter=lfs")) return true
+      }
+    } catch (err) {
+      this.log(`Failed to check LFS usage: ${err}`)
+    }
+    return false
+  }
+
+  async checkLfsAvailable(): Promise<boolean> {
+    return new Promise((resolve) => {
+      cp.execFile("git", ["lfs", "version"], { timeout: 5000 }, (err) => resolve(!err))
+    })
   }
 
   // ---------------------------------------------------------------------------
