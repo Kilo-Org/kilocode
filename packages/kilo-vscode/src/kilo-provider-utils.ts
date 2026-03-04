@@ -6,7 +6,6 @@ export type ProviderInfo = ProviderListResponse["all"][number]
 export const ERROR_NAMES = {
   COMMIT_MESSAGE_NO_CHANGES: "CommitMessageNoChangesError",
   PROVIDER_MODEL_NOT_FOUND: "ProviderModelNotFoundError",
-  NOT_FOUND: "NotFoundError",
 } as const
 
 export const COMMIT_ERROR_TYPES = {
