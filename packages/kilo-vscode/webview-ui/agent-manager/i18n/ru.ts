@@ -127,8 +127,10 @@ export const dict = {
   "agentManager.review.sendToChat": "Отправить в чат",
   "agentManager.review.collapsedOnly": "{{count}} свернуто",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} свернуто, {{large}} больших",
+  "agentManager.review.largeFileCollapsed": "Большой файл (свернут)",
+  "agentManager.review.endOfLongDiff": "Вы дошли до конца!",
 
-  "agentManager.import.pullRequest": "Pull Request",
+  "agentManager.import.pullRequest": "Запрос на слияние",
   "agentManager.import.pastePrUrl": "Вставьте URL PR...",
   "agentManager.import.open": "Открыть",
   "agentManager.import.branches": "Ветки",
