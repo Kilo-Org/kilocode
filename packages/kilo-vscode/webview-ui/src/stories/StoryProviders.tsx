@@ -4,10 +4,16 @@
  *
  * Instead of instantiating the full VSCodeProvider → ServerProvider → SessionProvider
  * chain (which requires a real extension host / SSE connection), we provide mock
- * context values directly.
+ * context values directly. Where a real provider is safe to instantiate without an
+ * extension host (VSCodeProvider, ServerProvider, ProviderProvider), we use the real
+ * thing so components that call useVSCode()/useServer()/useProvider() don't throw.
  */
 
 import { createSignal, type ParentComponent } from "solid-js"
+import { VSCodeProvider } from "../context/vscode"
+import { ServerProvider } from "../context/server"
+import { ProviderProvider } from "../context/provider"
+import { ConfigProvider } from "../context/config"
 import { DataProvider } from "@kilocode/kilo-ui/context/data"
 import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff"
 import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
@@ -64,7 +70,12 @@ export function mockSessionValue(overrides?: {
 
   return {
     currentSessionID: () => id,
-    currentSession: () => ({ id, title: "Story session", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }),
+    currentSession: () => ({
+      id,
+      title: "Story session",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }),
     setCurrentSessionID: noop,
     sessions: () => [],
     status: () => status,
@@ -124,6 +135,8 @@ interface StoryProvidersProps {
   questions?: QuestionRequest[]
   status?: string
   sessionID?: string
+  /** When true, renders children without the default 12px padding wrapper */
+  noPadding?: boolean
 }
 
 export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
@@ -137,29 +150,37 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
   const [locale] = createSignal<"en">("en")
 
   return (
-    <DialogProvider>
-      <LanguageContext.Provider
-        value={{
-          locale,
-          setLocale: noop,
-          userOverride: () => "" as any,
-          t,
-        }}
-      >
-        <I18nProvider value={{ locale: () => "en", t }}>
-          <SessionContext.Provider value={session as any}>
-            <DataProvider data={data()} directory="/project/">
-              <DiffComponentProvider component={Diff}>
-                <CodeComponentProvider component={Code}>
-                  <MarkedProvider>
-                    <div style={{ padding: "12px" }}>{props.children}</div>
-                  </MarkedProvider>
-                </CodeComponentProvider>
-              </DiffComponentProvider>
-            </DataProvider>
-          </SessionContext.Provider>
-        </I18nProvider>
-      </LanguageContext.Provider>
-    </DialogProvider>
+    <VSCodeProvider>
+      <ServerProvider>
+        <ConfigProvider>
+          <ProviderProvider>
+            <DialogProvider>
+              <LanguageContext.Provider
+                value={{
+                  locale,
+                  setLocale: noop,
+                  userOverride: () => "" as any,
+                  t,
+                }}
+              >
+                <I18nProvider value={{ locale: () => "en", t }}>
+                  <SessionContext.Provider value={session as any}>
+                    <DataProvider data={data()} directory="/project/">
+                      <DiffComponentProvider component={Diff}>
+                        <CodeComponentProvider component={Code}>
+                          <MarkedProvider>
+                            {props.noPadding ? props.children : <div style={{ padding: "12px" }}>{props.children}</div>}
+                          </MarkedProvider>
+                        </CodeComponentProvider>
+                      </DiffComponentProvider>
+                    </DataProvider>
+                  </SessionContext.Provider>
+                </I18nProvider>
+              </LanguageContext.Provider>
+            </DialogProvider>
+          </ProviderProvider>
+        </ConfigProvider>
+      </ServerProvider>
+    </VSCodeProvider>
   )
 }

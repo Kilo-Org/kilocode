@@ -442,10 +442,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           const sdkClient = this.client
           if (sdkClient) {
             const dir = this.getWorkspaceDirectory(this.currentSession?.id)
+            const openPaths = dir ? await this.getOpenTabPaths(dir) : new Set<string>()
             void sdkClient.find
               .files({ query: message.query, directory: dir }, { throwOnError: true })
               .then(({ data: paths }) => {
-                this.postMessage({ type: "fileSearchResult", paths, dir, requestId: message.requestId })
+                // Prioritize open files: open tabs first, then the rest
+                const open = paths.filter((p) => openPaths.has(p))
+                const rest = paths.filter((p) => !openPaths.has(p))
+                this.postMessage({
+                  type: "fileSearchResult",
+                  paths: [...open, ...rest],
+                  dir,
+                  requestId: message.requestId,
+                })
               })
               .catch((error: unknown) => {
                 console.error("[Kilo New] File search failed:", error)
@@ -549,7 +558,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "enhancePrompt": {
           const sdkClient = this.client
           if (!sdkClient) {
-            this.postMessage({ type: "enhancePromptError", error: "Not connected to CLI backend", requestId: message.requestId })
+            this.postMessage({
+              type: "enhancePromptError",
+              error: "Not connected to CLI backend",
+              requestId: message.requestId,
+            })
             break
           }
           void sdkClient.enhancePrompt
@@ -1738,7 +1751,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * settings from the previous version of the extension which shares the same
    * extension ID and "kilo-code.*" namespace.
    */
-  // kilocode_change start
   private async handleResetAllSettings(): Promise<void> {
     const confirmed = await vscode.window.showWarningMessage(
       "Reset all Kilo Code extension settings to defaults?",
@@ -1766,7 +1778,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.sendBrowserSettings()
     this.sendNotificationSettings()
   }
-  // kilocode_change end
 
   /**
    * Read the current browser automation settings and push them to the webview.
@@ -1898,6 +1909,29 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Gather VS Code editor context to send alongside messages to the CLI backend.
    */
   /**
+   * Return the set of relative paths for all open text-editor tabs within the
+   * given directory, filtered through .kilocodeignore.
+   */
+  private async getOpenTabPaths(dir: string): Promise<Set<string>> {
+    const controller = await this.getIgnoreController(dir)
+    const result = new Set<string>()
+    for (const group of vscode.window.tabGroups.all) {
+      for (const tab of group.tabs) {
+        if (tab.input instanceof vscode.TabInputText) {
+          const uri = tab.input.uri
+          if (uri.scheme === "file") {
+            const rel = path.relative(dir, uri.fsPath)
+            if (!rel.startsWith("..") && controller.validateAccess(uri.fsPath)) {
+              result.add(rel.replaceAll("\\", "/"))
+            }
+          }
+        }
+      }
+    }
+    return result
+  }
+
+  /**
    * Get or create a FileIgnoreController for the current workspace directory.
    * Reinitializes if the workspace directory has changed.
    */
@@ -1936,21 +1970,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       .slice(0, 200)
 
     // Open tabs — use instanceof TabInputText to exclude notebooks, diffs, custom editors
-    const openTabSet = new Set<string>()
-    for (const group of vscode.window.tabGroups.all) {
-      for (const tab of group.tabs) {
-        if (tab.input instanceof vscode.TabInputText) {
-          const uri = tab.input.uri
-          if (uri.scheme === "file") {
-            const rel = toRelative(uri.fsPath)
-            if (rel && controller.validateAccess(uri.fsPath)) {
-              openTabSet.add(rel)
-            }
-          }
-        }
-      }
-    }
-    const openTabs = [...openTabSet].slice(0, 20)
+    const openTabs = [...(await this.getOpenTabPaths(workspaceDir))].slice(0, 20)
 
     // Active file (also filtered through .kilocodeignore)
     const activeEditor = vscode.window.activeTextEditor

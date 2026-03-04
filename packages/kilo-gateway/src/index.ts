@@ -9,7 +9,7 @@ export { KiloAuthPlugin, default } from "./plugin.js"
 export { createKilo } from "./provider.js"
 export { createKiloDebug } from "./provider-debug.js"
 export { kiloCustomLoader } from "./loader.js"
-export { buildKiloHeaders, getEditorNameHeader, getFeatureHeader, DEFAULT_HEADERS } from "./headers.js" // kilocode_change - added getFeatureHeader
+export { buildKiloHeaders, getEditorNameHeader, getFeatureHeader, DEFAULT_HEADERS } from "./headers.js"
 
 // ============================================================================
 // Auth

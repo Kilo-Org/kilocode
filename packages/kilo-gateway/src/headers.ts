@@ -12,7 +12,7 @@ import {
   ENV_EDITOR_NAME,
   ENV_VERSION,
   TESTER_SUPPRESS_VALUE,
-  ENV_FEATURE, // kilocode_change
+  ENV_FEATURE,
 } from "./api/constants.js"
 
 /**
@@ -66,13 +66,11 @@ export function buildKiloHeaders(
     machineId?: string
   },
 ): Record<string, string> {
-  // kilocode_change start
   const feature = getFeatureHeader()
   const headers: Record<string, string> = {
     [X_KILOCODE_EDITORNAME]: getEditorNameHeader(),
     ...(feature ? { [X_KILOCODE_FEATURE]: feature } : {}),
   }
-  // kilocode_change end
 
   if (metadata?.taskId) {
     headers[X_KILOCODE_TASKID] = metadata.taskId

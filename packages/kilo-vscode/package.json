@@ -153,6 +153,12 @@
         "icon": "$(diff)"
       },
       {
+        "command": "kilo-code.new.agentManager.showShortcuts",
+        "title": "Agent Manager: Show Keyboard Shortcuts",
+        "category": "Kilo Code",
+        "icon": "$(keyboard)"
+      },
+      {
         "command": "kilo-code.new.agentManager.focusPanel",
         "title": "Agent Manager: Focus Panel",
         "category": "Kilo Code",
@@ -171,6 +177,11 @@
       {
         "command": "kilo-code.new.agentManager.newWorktree",
         "title": "Agent Manager: New Worktree",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.agentManager.openWorktree",
+        "title": "Agent Manager: Open Worktree",
         "category": "Kilo Code"
       },
       {
@@ -439,6 +450,12 @@
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {
+        "command": "kilo-code.new.agentManager.showShortcuts",
+        "key": "ctrl+shift+/",
+        "mac": "cmd+shift+/",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
         "command": "kilo-code.new.agentManager.focusPanel",
         "key": "ctrl+.",
         "mac": "cmd+.",
@@ -460,6 +477,12 @@
         "command": "kilo-code.new.agentManager.newWorktree",
         "key": "ctrl+n",
         "mac": "cmd+n",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.agentManager.openWorktree",
+        "key": "ctrl+shift+o",
+        "mac": "cmd+shift+o",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {

@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import { describe, it, expect, afterEach } from "bun:test"
 import { buildKiloHeaders, getFeatureHeader, getEditorNameHeader } from "@kilocode/kilo-gateway"
 import { HEADER_FEATURE, ENV_FEATURE, ENV_VERSION, DEFAULT_EDITOR_NAME } from "@kilocode/kilo-gateway"

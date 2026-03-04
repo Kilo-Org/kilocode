@@ -64,10 +64,8 @@ export const ENV_VERSION = "KILOCODE_VERSION"
 /** Tester header value for suppressing warnings */
 export const TESTER_SUPPRESS_VALUE = "SUPPRESS"
 
-// kilocode_change start
 /** Header name for feature tracking */
 export const HEADER_FEATURE = "X-KILOCODE-FEATURE"
 
 /** Environment variable name for feature override */
 export const ENV_FEATURE = "KILOCODE_FEATURE"
-// kilocode_change end

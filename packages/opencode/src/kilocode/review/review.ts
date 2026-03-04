@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import { $ } from "bun"
 import { Log } from "@/util/log"
 import { Instance } from "@/project/instance"
