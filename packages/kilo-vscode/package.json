@@ -2,7 +2,7 @@
   "name": "kilo-code",
   "displayName": "Kilo Code: AI Coding Agent, Copilot, and Autocomplete",
   "description": "Open Source AI coding agent that generates code from natural language, automates tasks, and runs terminal commands. Features inline autocomplete, browser automation, automated refactoring, and custom modes for planning, coding, and debugging. Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM.",
-  "version": "7.0.36",
+  "version": "7.0.37",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
@@ -109,6 +109,11 @@
           "light": "assets/icons/kilo-light.svg",
           "dark": "assets/icons/kilo-dark.svg"
         }
+      },
+      {
+        "command": "kilo-code.new.openMigrationWizard",
+        "title": "Migrate Settings from Legacy Version",
+        "category": "Kilo Code"
       },
       {
         "command": "kilo-code.new.autocomplete.generateSuggestions",
@@ -672,9 +677,15 @@
     "lint": "eslint src",
     "test": "vscode-test",
     "test:unit": "bun test tests/unit/",
-    "rebuild-sdk": "bun run --cwd ../sdk/js build"
+    "rebuild-sdk": "bun run --cwd ../sdk/js build",
+    "storybook": "storybook dev -p 6007",
+    "build-storybook": "storybook build -o storybook-static",
+    "test:visual": "playwright test",
+    "test:visual:update": "playwright test --update-snapshots"
   },
   "devDependencies": {
+    "@playwright/test": "1.58.2",
+    "@storybook/addon-docs": "10.2.10",
     "@types/diff": "^6.0.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
@@ -688,9 +699,13 @@
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.8.1",
     "qrcode": "^1.5.4",
+    "storybook": "10.2.10",
+    "storybook-solidjs-vite": "10.0.9",
     "ts-morph": "27.0.2",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.54.0",
+    "vite": "7.3.1",
+    "vite-plugin-solid": "2.11.10",
     "@vscode/vsce": "^3.7.1"
   },
   "dependencies": {

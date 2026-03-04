@@ -970,4 +970,56 @@ export const dict = {
 
   "question.summary": "{{n}} sur {{total}} questions",
   "common.review": "Réviser",
+
+  // legacy-migration start
+  "settings.legacyMigration.link": "Migrer depuis l'ancienne version",
+  "settings.aboutKiloCode.legacyMigration.title": "Migration de l'ancienne version",
+  "settings.aboutKiloCode.legacyMigration.description":
+    "Migrer les paramètres d'une précédente installation de Kilo Code, y compris les clés d'API des fournisseurs et le modèle par défaut.",
+  "migration.welcome.title": "Bienvenue dans le nouveau Kilo Code",
+  "migration.welcome.detected": "Nous avons détecté des paramètres d'une précédente installation de Kilo Code.",
+  "migration.welcome.sessionsInfo":
+    "Les sessions de discussion et l'historique ne peuvent pas être migrés — la nouvelle version utilise une architecture différente.",
+  "migration.welcome.canMigrate": "Les paramètres suivants peuvent être migrés vers la nouvelle version :",
+  "migration.welcome.start": "Démarrer la migration",
+  "migration.welcome.skip": "Ignorer la migration",
+  "migration.steps.title": "Migrer vos paramètres",
+  "migration.steps.subtitle":
+    "Nous avons trouvé des paramètres de votre précédente installation de Kilo Code. Choisissez ce que vous souhaitez transférer.",
+  "migration.select.providers": "Clés d'API des fournisseurs",
+  "migration.select.mcpServers": "Serveurs MCP",
+  "migration.select.customModes": "Modes personnalisés / Agents",
+  "migration.select.defaultModel": "Modèle par défaut",
+  "migration.select.unsupported": "Non pris en charge dans la nouvelle version",
+  "migration.select.nothingToMigrate": "Rien à migrer n'a été trouvé dans les anciens paramètres.",
+  "migration.select.settings": "Paramètres",
+  "migration.select.autoApproval": "Approbation automatique",
+  "migration.select.autoApproval.commandRules": "Règles de commande",
+  "migration.select.autoApproval.commandRulesDesc": "Bascule principale et listes de commandes autorisées/refusées",
+  "migration.select.autoApproval.readPermission": "Autorisation de lecture",
+  "migration.select.autoApproval.readPermissionDesc":
+    "Accès en lecture aux fichiers à l'intérieur et à l'extérieur de l'espace de travail",
+  "migration.select.autoApproval.writePermission": "Autorisation d'écriture",
+  "migration.select.autoApproval.writePermissionDesc": "Accès en écriture et modification de fichiers",
+  "migration.select.autoApproval.executePermission": "Autorisation d'exécution",
+  "migration.select.autoApproval.executePermissionDesc": "Exécution de commandes dans le terminal",
+  "migration.select.autoApproval.mcpPermission": "Autorisation MCP",
+  "migration.select.autoApproval.mcpPermissionDesc": "Utilisation d'outils MCP",
+  "migration.select.autoApproval.taskPermission": "Autorisation de tâche",
+  "migration.select.autoApproval.taskPermissionDesc": "Changement de mode et création de sous-tâches",
+  "migration.select.language": "Langue de l'interface",
+  "migration.select.languageDesc": "Votre préférence de langue sera appliquée à la nouvelle extension",
+  "migration.select.autocomplete": "Paramètres de saisie semi-automatique",
+  "migration.select.autocompleteDesc":
+    "Préférences de déclenchement automatique, de raccourcis clavier et de saisie semi-automatique du chat",
+  "migration.select.continue": "Continuer",
+  "migration.select.back": "Retour",
+  "migration.progress.title": "Migration de vos paramètres…",
+  "migration.progress.done": "Continuer",
+  "migration.complete.summary": "{{success}} éléments sur {{total}} migrés avec succès.",
+  "migration.complete.cleanup": "Supprimer les données des anciens paramètres",
+  "migration.complete.cleanupDescription":
+    "Cela supprime les anciens paramètres du stockage de VS Code. Vous ne pourrez pas réexécuter cette migration.",
+  "migration.complete.done": "Terminé",
+  // legacy-migration end
 }

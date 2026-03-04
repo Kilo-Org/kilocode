@@ -1,0 +1,443 @@
+/* legacy-migration - Scoped styles for the migration wizard. */
+
+.migration-wizard {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  font-size: 13px;
+  color: var(--vscode-foreground);
+}
+
+/* Header */
+.migration-wizard__header {
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid var(--vscode-panel-border, var(--border-weak-base));
+  flex-shrink: 0;
+}
+
+.migration-wizard__title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.migration-wizard__header-subtitle {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  margin: 0 0 12px;
+  line-height: 1.4;
+}
+
+/* Body */
+.migration-wizard__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 16px 20px;
+  gap: 12px;
+}
+
+/* Welcome screen — centered hero layout */
+.migration-wizard__welcome {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  overflow-y: auto;
+  padding: 28px 8px 8px;
+  gap: 0;
+  min-height: 0;
+}
+
+.migration-wizard__welcome-logo {
+  width: 52px;
+  height: 52px;
+  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+
+.migration-wizard__welcome-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.migration-wizard__welcome-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 8px;
+  color: var(--vscode-foreground);
+}
+
+.migration-wizard__welcome-subtitle {
+  margin: 0 0 20px;
+  text-align: center;
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+}
+
+.migration-wizard__welcome-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+}
+
+/* Step indicator */
+.migration-wizard__steps {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-shrink: 0;
+}
+
+.migration-wizard__step {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+/* Connector line rendered as a sibling <span> element in the JSX */
+.migration-wizard__step-connector {
+  width: 28px;
+  height: 2px;
+  background: var(--vscode-panel-border);
+  flex-shrink: 0;
+  margin: 0 2px;
+  transition: background 0.2s ease;
+}
+
+.migration-wizard__step-connector--done {
+  background: var(--vscode-testing-iconPassed, #89d185);
+}
+
+.migration-wizard__step--upcoming {
+  background: var(--vscode-input-background);
+  border: 1px solid var(--vscode-panel-border);
+  color: var(--vscode-descriptionForeground);
+}
+
+.migration-wizard__step--current {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--vscode-button-background) 40%, transparent),
+    0 0 0 4px var(--vscode-editor-background, var(--vscode-sideBar-background));
+}
+
+.migration-wizard__step--done {
+  background: var(--vscode-testing-iconPassed, #89d185);
+  color: #fff;
+}
+
+/* Scrollable content area */
+.migration-wizard__content {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+/* Lead paragraph */
+.migration-wizard__lead {
+  margin: 0 0 8px;
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* Info cards */
+.migration-wizard__info-card {
+  background: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+  padding: 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--vscode-descriptionForeground);
+}
+
+.migration-wizard__info-card--warning {
+  border-color: var(--vscode-inputValidation-warningBorder, #cca700);
+  background: var(--vscode-inputValidation-warningBackground, rgba(204, 167, 0, 0.1));
+  color: var(--vscode-foreground);
+}
+
+.migration-wizard__info-card--success {
+  border-color: var(--vscode-testing-iconPassed, #89d185);
+  background: rgba(137, 209, 133, 0.08);
+  color: var(--vscode-foreground);
+}
+
+.migration-wizard__list {
+  margin: 8px 0 0 0;
+  padding-left: 20px;
+}
+
+.migration-wizard__list li {
+  margin-bottom: 4px;
+}
+
+/* Section groups */
+.migration-wizard__section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.migration-wizard__section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--vscode-descriptionForeground);
+  margin: 0 0 4px 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.migration-wizard__section-subtitle {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--vscode-descriptionForeground);
+  margin: 8px 0 2px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+}
+
+/* Checkbox items */
+.migration-wizard__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 4px;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.migration-wizard__item:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.migration-wizard__item--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.migration-wizard__item input[type="checkbox"] {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.migration-wizard__item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.migration-wizard__item-name {
+  font-size: 12px;
+  color: var(--vscode-foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.migration-wizard__item-meta {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.migration-wizard__item-tag {
+  display: inline-block;
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 10px;
+  margin-top: 2px;
+}
+
+.migration-wizard__item-tag--warn {
+  background: rgba(204, 167, 0, 0.15);
+  color: var(--vscode-testing-iconQueued, #cca700);
+  border: 1px solid var(--vscode-inputValidation-warningBorder, #cca700);
+}
+
+.migration-wizard__empty {
+  margin: 0;
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+}
+
+/* Approval settings info note */
+.migration-wizard__note {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 0 2px;
+  margin-top: 4px;
+}
+
+.migration-wizard__note-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.migration-wizard__note-text {
+  margin: 0;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  line-height: 1.4;
+}
+
+/* Progress card wrapper */
+.migration-wizard__progress-card {
+  background: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+  padding: 12px;
+}
+
+/* Progress list */
+.migration-wizard__progress-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.migration-wizard__progress-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.migration-wizard__progress-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.migration-wizard__progress-name {
+  color: var(--vscode-foreground);
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.migration-wizard__progress-msg {
+  color: var(--vscode-descriptionForeground);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.migration-wizard__progress-label {
+  font-size: 11px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* Cleanup checkbox on completion screen */
+.migration-wizard__cleanup {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px;
+  background: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.migration-wizard__cleanup:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.migration-wizard__cleanup input[type="checkbox"] {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.migration-wizard__cleanup-label {
+  display: block;
+  font-size: 12px;
+  color: var(--vscode-foreground);
+  font-weight: 500;
+}
+
+.migration-wizard__cleanup-desc {
+  display: block;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+/* Footer with action buttons */
+.migration-wizard__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--vscode-panel-border);
+}
+
+/* Buttons */
+.migration-wizard__btn {
+  padding: 6px 14px;
+  font-size: 12px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-family: var(--vscode-font-family);
+  font-weight: 500;
+  transition: opacity 0.1s;
+}
+
+.migration-wizard__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.migration-wizard__btn--primary {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+
+.migration-wizard__btn--primary:not(:disabled):hover {
+  background: var(--vscode-button-hoverBackground);
+}
+
+.migration-wizard__btn--ghost {
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+}
+
+.migration-wizard__btn--ghost:hover {
+  background: var(--vscode-list-hoverBackground);
+  color: var(--vscode-foreground);
+}

@@ -957,4 +957,56 @@ export const dict = {
 
   "question.summary": "{{n}} z {{total}} pytań",
   "common.review": "Przejrzyj",
+
+  // legacy-migration start
+  "settings.legacyMigration.link": "Migracja ze starszej wersji",
+  "settings.aboutKiloCode.legacyMigration.title": "Migracja starszej wersji",
+  "settings.aboutKiloCode.legacyMigration.description":
+    "Migruj ustawienia z poprzedniej instalacji Kilo Code, w tym klucze API dostawców i domyślny model.",
+  "migration.welcome.title": "Witamy w nowym Kilo Code",
+  "migration.welcome.detected": "Wykryliśmy ustawienia z poprzedniej instalacji Kilo Code.",
+  "migration.welcome.sessionsInfo":
+    "Sesje czatu i historia nie mogą zostać zmigrowane — nowa wersja wykorzystuje inną architekturę.",
+  "migration.welcome.canMigrate": "Następujące ustawienia mogą zostać zmigrowane do nowej wersji:",
+  "migration.welcome.start": "Rozpocznij migrację",
+  "migration.welcome.skip": "Pomiń migrację",
+  "migration.steps.title": "Migruj swoje ustawienia",
+  "migration.steps.subtitle":
+    "Znaleźliśmy ustawienia z poprzedniej instalacji Kilo Code. Wybierz, co chcesz przenieść.",
+  "migration.select.providers": "Klucze API dostawców",
+  "migration.select.mcpServers": "Serwery MCP",
+  "migration.select.customModes": "Niestandardowe tryby / Agenci",
+  "migration.select.defaultModel": "Domyślny model",
+  "migration.select.unsupported": "Nieobsługiwane w nowej wersji",
+  "migration.select.nothingToMigrate": "W starszych ustawieniach nie znaleziono niczego do zmigrowania.",
+  "migration.select.settings": "Ustawienia",
+  "migration.select.autoApproval": "Automatyczne zatwierdzanie",
+  "migration.select.autoApproval.commandRules": "Reguły poleceń",
+  "migration.select.autoApproval.commandRulesDesc": "Główny przełącznik oraz listy dozwolonych/zabronionych poleceń",
+  "migration.select.autoApproval.readPermission": "Uprawnienia odczytu",
+  "migration.select.autoApproval.readPermissionDesc":
+    "Dostęp do odczytu plików wewnątrz i na zewnątrz obszaru roboczego",
+  "migration.select.autoApproval.writePermission": "Uprawnienia zapisu",
+  "migration.select.autoApproval.writePermissionDesc": "Dostęp do zapisu i edycji plików",
+  "migration.select.autoApproval.executePermission": "Uprawnienia wykonywania",
+  "migration.select.autoApproval.executePermissionDesc": "Wykonywanie poleceń terminala",
+  "migration.select.autoApproval.mcpPermission": "Uprawnienia MCP",
+  "migration.select.autoApproval.mcpPermissionDesc": "Korzystanie z narzędzi MCP",
+  "migration.select.autoApproval.taskPermission": "Uprawnienia zadań",
+  "migration.select.autoApproval.taskPermissionDesc": "Przełączanie trybów i tworzenie podzadań",
+  "migration.select.language": "Język interfejsu",
+  "migration.select.languageDesc": "Twoje preferencje językowe zostaną zastosowane w nowym rozszerzeniu",
+  "migration.select.autocomplete": "Ustawienia autouzupełniania",
+  "migration.select.autocompleteDesc":
+    "Preferencje automatycznego wyzwalania, skrótów klawiszowych i autouzupełniania na czacie",
+  "migration.select.continue": "Kontynuuj",
+  "migration.select.back": "Wstecz",
+  "migration.progress.title": "Migrowanie Twoich ustawień…",
+  "migration.progress.done": "Kontynuuj",
+  "migration.complete.summary": "Pomyślnie zmigrowano {{success}} z {{total}} elementów.",
+  "migration.complete.cleanup": "Usuń dane starszych ustawień",
+  "migration.complete.cleanupDescription":
+    "Spowoduje to usunięcie starych ustawień z magazynu VS Code. Nie będzie można ponownie uruchomić tej migracji.",
+  "migration.complete.done": "Gotowe",
+  // legacy-migration end
 }

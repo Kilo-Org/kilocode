@@ -20,10 +20,12 @@ import { Flag } from "../flag/flag"
 import { Format } from "../format"
 import { Global } from "../global"
 import { Identifier } from "../id/id" // kilocode_change
+import { scheduleDisposeAll } from "../kilocode/dispose" // kilocode_change
 import { LSP } from "../lsp"
 import { InstanceBootstrap } from "../project/bootstrap"
 import { Instance } from "../project/instance"
 import { Vcs } from "../project/vcs"
+import { ModelCache } from "../provider/model-cache" // kilocode_change
 import { Provider } from "../provider/provider"
 import { Session } from "../session" // kilocode_change
 import { MessageTable, PartTable, SessionTable } from "../session/session.sql" // kilocode_change
@@ -168,6 +170,10 @@ export namespace Server {
             const providerID = c.req.valid("param").providerID
             const info = c.req.valid("json")
             await Auth.set(providerID, info)
+            // kilocode_change start - invalidate provider/model cache after auth change
+            ModelCache.clear(providerID)
+            scheduleDisposeAll()
+            // kilocode_change end
             return c.json(true)
           },
         )
@@ -198,6 +204,10 @@ export namespace Server {
           async (c) => {
             const providerID = c.req.valid("param").providerID
             await Auth.remove(providerID)
+            // kilocode_change start - invalidate provider/model cache after auth removal
+            ModelCache.clear(providerID)
+            scheduleDisposeAll()
+            // kilocode_change end
             return c.json(true)
           },
         )

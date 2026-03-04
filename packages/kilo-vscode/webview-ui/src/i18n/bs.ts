@@ -982,4 +982,55 @@ export const dict = {
 
   "question.summary": "{{n}} od {{total}} pitanja",
   "common.review": "Pregled",
+
+  // legacy-migration start
+  "settings.legacyMigration.link": "Migriraj sa prethodne verzije",
+  "settings.aboutKiloCode.legacyMigration.title": "Migracija sa prethodne verzije",
+  "settings.aboutKiloCode.legacyMigration.description":
+    "Migrirajte postavke iz prethodne instalacije Kilo Code, uključujući API ključeve provajdera i podrazumijevani model.",
+  "migration.welcome.title": "Dobrodošli u novi Kilo Code",
+  "migration.welcome.detected": "Otkrili smo postavke iz prethodne instalacije Kilo Code.",
+  "migration.welcome.sessionsInfo":
+    "Sesije razgovora i historija se ne mogu migrirati — nova verzija koristi drugačiju arhitekturu.",
+  "migration.welcome.canMigrate": "Sljedeće postavke se mogu migrirati na novu verziju:",
+  "migration.welcome.start": "Započni migraciju",
+  "migration.welcome.skip": "Preskoči migraciju",
+  "migration.steps.title": "Migrirajte svoje postavke",
+  "migration.steps.subtitle":
+    "Pronašli smo postavke iz vaše prethodne instalacije Kilo Code. Odaberite šta želite prenijeti.",
+  "migration.select.providers": "API ključevi provajdera",
+  "migration.select.mcpServers": "MCP serveri",
+  "migration.select.customModes": "Prilagođeni režimi / Agenti",
+  "migration.select.defaultModel": "Podrazumijevani model",
+  "migration.select.unsupported": "Nije podržano u novoj verziji",
+  "migration.select.nothingToMigrate": "U starim postavkama nije pronađeno ništa za migraciju.",
+  "migration.select.settings": "Postavke",
+  "migration.select.autoApproval": "Automatsko odobravanje",
+  "migration.select.autoApproval.commandRules": "Pravila za komande",
+  "migration.select.autoApproval.commandRulesDesc": "Glavni prekidač i liste dozvoljenih/odbijenih komandi",
+  "migration.select.autoApproval.readPermission": "Dozvola za čitanje",
+  "migration.select.autoApproval.readPermissionDesc": "Pristup čitanju datoteka unutar i izvan radnog prostora",
+  "migration.select.autoApproval.writePermission": "Dozvola za pisanje",
+  "migration.select.autoApproval.writePermissionDesc": "Pristup za pisanje i uređivanje datoteka",
+  "migration.select.autoApproval.executePermission": "Dozvola za izvršavanje",
+  "migration.select.autoApproval.executePermissionDesc": "Izvršavanje komandi u terminalu",
+  "migration.select.autoApproval.mcpPermission": "MCP dozvola",
+  "migration.select.autoApproval.mcpPermissionDesc": "Korištenje MCP alata",
+  "migration.select.autoApproval.taskPermission": "Dozvola za zadatke",
+  "migration.select.autoApproval.taskPermissionDesc": "Mijenjanje režima i kreiranje podzadataka",
+  "migration.select.language": "Jezik korisničkog interfejsa",
+  "migration.select.languageDesc": "Vaše željene postavke jezika će biti primijenjene na novu ekstenziju",
+  "migration.select.autocomplete": "Postavke automatskog dovršavanja",
+  "migration.select.autocompleteDesc":
+    "Postavke automatskog pokretanja, prečica na tastaturi i automatskog dovršavanja u chatu",
+  "migration.select.continue": "Nastavi",
+  "migration.select.back": "Nazad",
+  "migration.progress.title": "Migriranje vaših postavki…",
+  "migration.progress.done": "Nastavi",
+  "migration.complete.summary": "Uspješno migrirano {{success}} od {{total}} stavki.",
+  "migration.complete.cleanup": "Ukloni stare podatke postavki",
+  "migration.complete.cleanupDescription":
+    "Ovo uklanja stare postavke iz VS Code pohrane. Nećete moći ponovo pokrenuti ovu migraciju.",
+  "migration.complete.done": "Završeno",
+  // legacy-migration end
 }

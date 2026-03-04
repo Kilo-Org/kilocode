@@ -959,4 +959,55 @@ export const dict = {
 
   "question.summary": "{{n}} из {{total}} вопросов",
   "common.review": "Просмотр",
+
+  // legacy-migration start
+  "settings.legacyMigration.link": "Миграция с устаревшей версии",
+  "settings.aboutKiloCode.legacyMigration.title": "Миграция с устаревшей версии",
+  "settings.aboutKiloCode.legacyMigration.description":
+    "Перенос настроек из предыдущей установки Kilo Code, включая API-ключи провайдеров и модель по умолчанию.",
+  "migration.welcome.title": "Добро пожаловать в новый Kilo Code",
+  "migration.welcome.detected": "Мы обнаружили настройки от предыдущей установки Kilo Code.",
+  "migration.welcome.sessionsInfo":
+    "Сессии чата и история не могут быть перенесены — новая версия использует другую архитектуру.",
+  "migration.welcome.canMigrate": "В новую версию можно перенести следующие настройки:",
+  "migration.welcome.start": "Начать миграцию",
+  "migration.welcome.skip": "Пропустить миграцию",
+  "migration.steps.title": "Перенос ваших настроек",
+  "migration.steps.subtitle":
+    "Мы нашли настройки от вашей предыдущей установки Kilo Code. Выберите, что нужно перенести.",
+  "migration.select.providers": "API-ключи провайдеров",
+  "migration.select.mcpServers": "Серверы MCP",
+  "migration.select.customModes": "Пользовательские режимы / Агенты",
+  "migration.select.defaultModel": "Модель по умолчанию",
+  "migration.select.unsupported": "Не поддерживается в новой версии",
+  "migration.select.nothingToMigrate": "В старых настройках не найдено данных для переноса.",
+  "migration.select.settings": "Настройки",
+  "migration.select.autoApproval": "Автоматическое подтверждение",
+  "migration.select.autoApproval.commandRules": "Правила команд",
+  "migration.select.autoApproval.commandRulesDesc": "Главный переключатель и списки разрешенных/запрещенных команд",
+  "migration.select.autoApproval.readPermission": "Разрешение на чтение",
+  "migration.select.autoApproval.readPermissionDesc": "Доступ к чтению файлов внутри и вне рабочей области",
+  "migration.select.autoApproval.writePermission": "Разрешение на запись",
+  "migration.select.autoApproval.writePermissionDesc": "Доступ к записи и редактированию файлов",
+  "migration.select.autoApproval.executePermission": "Разрешение на выполнение",
+  "migration.select.autoApproval.executePermissionDesc": "Выполнение команд в терминале",
+  "migration.select.autoApproval.mcpPermission": "Разрешение MCP",
+  "migration.select.autoApproval.mcpPermissionDesc": "Использование инструментов MCP",
+  "migration.select.autoApproval.taskPermission": "Разрешение на задачи",
+  "migration.select.autoApproval.taskPermissionDesc": "Переключение режимов и создание подзадач",
+  "migration.select.language": "Язык интерфейса",
+  "migration.select.languageDesc": "Ваши языковые настройки будут применены к новому расширению",
+  "migration.select.autocomplete": "Настройки автодополнения",
+  "migration.select.autocompleteDesc":
+    "Параметры автоматического срабатывания, горячие клавиши и автодополнение в чате",
+  "migration.select.continue": "Продолжить",
+  "migration.select.back": "Назад",
+  "migration.progress.title": "Перенос ваших настроек…",
+  "migration.progress.done": "Продолжить",
+  "migration.complete.summary": "Успешно перенесено: {{success}} из {{total}} элементов.",
+  "migration.complete.cleanup": "Удалить данные старых настроек",
+  "migration.complete.cleanupDescription":
+    "Это удалит старые настройки из хранилища VS Code. Вы не сможете запустить эту миграцию повторно.",
+  "migration.complete.done": "Готово",
+  // legacy-migration end
 }

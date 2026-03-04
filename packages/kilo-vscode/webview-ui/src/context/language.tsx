@@ -193,7 +193,7 @@ interface LanguageContextValue {
   t: (key: string, params?: UiI18nParams) => string
 }
 
-const LanguageContext = createContext<LanguageContextValue>()
+export const LanguageContext = createContext<LanguageContextValue>()
 
 export function useLanguage() {
   const ctx = useContext(LanguageContext)

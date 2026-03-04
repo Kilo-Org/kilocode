@@ -968,4 +968,55 @@ export const dict = {
 
   "question.summary": "{{n}} von {{total}} Fragen",
   "common.review": "Überprüfen",
+
+  // legacy-migration start
+  "settings.legacyMigration.link": "Von der Legacy-Version migrieren",
+  "settings.aboutKiloCode.legacyMigration.title": "Legacy-Migration",
+  "settings.aboutKiloCode.legacyMigration.description":
+    "Migrieren Sie Einstellungen von einer früheren Installation von Kilo Code, einschließlich Anbieter-API-Schlüsseln und dem Standardmodell.",
+  "migration.welcome.title": "Willkommen beim neuen Kilo Code",
+  "migration.welcome.detected": "Wir haben Einstellungen aus einer früheren Installation von Kilo Code erkannt.",
+  "migration.welcome.sessionsInfo":
+    "Chat-Sitzungen und Verlauf können nicht migriert werden — die neue Version verwendet eine andere Architektur.",
+  "migration.welcome.canMigrate": "Die folgenden Einstellungen können in die neue Version migriert werden:",
+  "migration.welcome.start": "Migration starten",
+  "migration.welcome.skip": "Migration überspringen",
+  "migration.steps.title": "Ihre Einstellungen migrieren",
+  "migration.steps.subtitle":
+    "Wir haben Einstellungen aus Ihrer vorherigen Kilo Code-Installation gefunden. Wählen Sie aus, was übernommen werden soll.",
+  "migration.select.providers": "Anbieter-API-Schlüssel",
+  "migration.select.mcpServers": "MCP-Server",
+  "migration.select.customModes": "Benutzerdefinierte Modi / Agenten",
+  "migration.select.defaultModel": "Standardmodell",
+  "migration.select.unsupported": "Wird in der neuen Version nicht unterstützt",
+  "migration.select.nothingToMigrate": "In den Legacy-Einstellungen wurde nichts gefunden, was migriert werden könnte.",
+  "migration.select.settings": "Einstellungen",
+  "migration.select.autoApproval": "Automatische Genehmigung",
+  "migration.select.autoApproval.commandRules": "Befehlsregeln",
+  "migration.select.autoApproval.commandRulesDesc": "Hauptschalter und Listen für erlaubte/verweigerte Befehle",
+  "migration.select.autoApproval.readPermission": "Leseberechtigung",
+  "migration.select.autoApproval.readPermissionDesc": "Dateilesezugriff innerhalb und außerhalb des Arbeitsbereichs",
+  "migration.select.autoApproval.writePermission": "Schreibberechtigung",
+  "migration.select.autoApproval.writePermissionDesc": "Dateischreib- und Bearbeitungszugriff",
+  "migration.select.autoApproval.executePermission": "Ausführungsberechtigung",
+  "migration.select.autoApproval.executePermissionDesc": "Ausführung von Terminalbefehlen",
+  "migration.select.autoApproval.mcpPermission": "MCP-Berechtigung",
+  "migration.select.autoApproval.mcpPermissionDesc": "Nutzung von MCP-Tools",
+  "migration.select.autoApproval.taskPermission": "Aufgabenberechtigung",
+  "migration.select.autoApproval.taskPermissionDesc": "Wechsel des Modus und Erstellung von Teilaufgaben",
+  "migration.select.language": "UI-Sprache",
+  "migration.select.languageDesc": "Ihre Spracheinstellung wird auf die neue Erweiterung angewendet",
+  "migration.select.autocomplete": "Einstellungen für Autovervollständigung",
+  "migration.select.autocompleteDesc":
+    "Einstellungen für automatische Auslösung, Tastenkombinationen und Chat-Autovervollständigung",
+  "migration.select.continue": "Weiter",
+  "migration.select.back": "Zurück",
+  "migration.progress.title": "Ihre Einstellungen werden migriert…",
+  "migration.progress.done": "Weiter",
+  "migration.complete.summary": "{{success}} von {{total}} Elementen erfolgreich migriert.",
+  "migration.complete.cleanup": "Legacy-Einstellungsdaten entfernen",
+  "migration.complete.cleanupDescription":
+    "Dadurch werden die alten Einstellungen aus dem VS Code-Speicher entfernt. Sie können diese Migration danach nicht erneut ausführen.",
+  "migration.complete.done": "Fertig",
+  // legacy-migration end
 } satisfies Partial<Record<Keys, string>>

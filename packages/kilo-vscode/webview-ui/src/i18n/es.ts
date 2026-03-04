@@ -962,4 +962,56 @@ export const dict = {
 
   "question.summary": "{{n}} de {{total}} preguntas",
   "common.review": "Revisar",
+
+  // legacy-migration start
+  "settings.legacyMigration.link": "Migrar desde la versión heredada",
+  "settings.aboutKiloCode.legacyMigration.title": "Migración heredada",
+  "settings.aboutKiloCode.legacyMigration.description":
+    "Migra la configuración de una instalación anterior de Kilo Code, incluyendo las claves API de proveedores y el modelo predeterminado.",
+  "migration.welcome.title": "Bienvenido al nuevo Kilo Code",
+  "migration.welcome.detected": "Hemos detectado una configuración de una instalación anterior de Kilo Code.",
+  "migration.welcome.sessionsInfo":
+    "Las sesiones de chat y el historial no se pueden migrar — la nueva versión utiliza una arquitectura diferente.",
+  "migration.welcome.canMigrate": "Las siguientes configuraciones se pueden migrar a la nueva versión:",
+  "migration.welcome.start": "Iniciar migración",
+  "migration.welcome.skip": "Omitir migración",
+  "migration.steps.title": "Migra tu configuración",
+  "migration.steps.subtitle":
+    "Encontramos configuraciones de tu instalación anterior de Kilo Code. Elige qué deseas transferir.",
+  "migration.select.providers": "Claves API de proveedores",
+  "migration.select.mcpServers": "Servidores MCP",
+  "migration.select.customModes": "Modos personalizados / Agentes",
+  "migration.select.defaultModel": "Modelo predeterminado",
+  "migration.select.unsupported": "No compatible con la nueva versión",
+  "migration.select.nothingToMigrate": "No se encontró nada para migrar en la configuración heredada.",
+  "migration.select.settings": "Configuración",
+  "migration.select.autoApproval": "Aprobación automática",
+  "migration.select.autoApproval.commandRules": "Reglas de comandos",
+  "migration.select.autoApproval.commandRulesDesc": "Interruptor principal y listas de comandos permitidos/denegados",
+  "migration.select.autoApproval.readPermission": "Permiso de lectura",
+  "migration.select.autoApproval.readPermissionDesc":
+    "Acceso de lectura de archivos dentro y fuera del espacio de trabajo",
+  "migration.select.autoApproval.writePermission": "Permiso de escritura",
+  "migration.select.autoApproval.writePermissionDesc": "Acceso de escritura y edición de archivos",
+  "migration.select.autoApproval.executePermission": "Permiso de ejecución",
+  "migration.select.autoApproval.executePermissionDesc": "Ejecución de comandos en terminal",
+  "migration.select.autoApproval.mcpPermission": "Permiso MCP",
+  "migration.select.autoApproval.mcpPermissionDesc": "Uso de herramientas MCP",
+  "migration.select.autoApproval.taskPermission": "Permiso de tareas",
+  "migration.select.autoApproval.taskPermissionDesc": "Cambio de modos y creación de subtareas",
+  "migration.select.language": "Idioma de la interfaz",
+  "migration.select.languageDesc": "Tu preferencia de idioma se aplicará a la nueva extensión",
+  "migration.select.autocomplete": "Configuración de autocompletado",
+  "migration.select.autocompleteDesc":
+    "Preferencias de activación automática, atajos de teclado y autocompletado del chat",
+  "migration.select.continue": "Continuar",
+  "migration.select.back": "Atrás",
+  "migration.progress.title": "Migrando tu configuración…",
+  "migration.progress.done": "Continuar",
+  "migration.complete.summary": "{{success}} de {{total}} elementos migrados con éxito.",
+  "migration.complete.cleanup": "Eliminar datos de la configuración heredada",
+  "migration.complete.cleanupDescription":
+    "Esto elimina la configuración antigua del almacenamiento de VS Code. No podrás volver a ejecutar esta migración.",
+  "migration.complete.done": "Hecho",
+  // legacy-migration end
 }

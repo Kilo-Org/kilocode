@@ -17,6 +17,9 @@ import { handleChatCompletionRequest } from "./services/autocomplete/chat-autoco
 import { handleChatCompletionAccepted } from "./services/autocomplete/chat-autocomplete/handleChatCompletionAccepted"
 import { buildWebviewHtml } from "./utils"
 import { TelemetryProxy, type TelemetryPropertiesProvider } from "./services/telemetry"
+// legacy-migration start
+import * as MigrationService from "./legacy-migration/migration-service"
+// legacy-migration end
 import {
   sessionToWebview,
   indexProvidersById,
@@ -62,6 +65,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private pendingSessionRefresh = false
   private unsubscribeEvent: (() => void) | null = null
   private unsubscribeState: (() => void) | null = null
+  /** Cached legacy migration data so migrate() doesn't re-read from disk/SecretStorage. */ // legacy-migration
+  private cachedLegacyData: import("./legacy-migration/legacy-types").LegacyMigrationData | null = null // legacy-migration
+  /** Guard to prevent checkAndShowMigrationWizard running concurrently. */ // legacy-migration
+  private migrationCheckInFlight = false // legacy-migration
   private unsubscribeNotificationDismiss: (() => void) | null = null
   private webviewMessageDisposable: vscode.Disposable | null = null
 
@@ -157,6 +164,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         data: profileData,
       })
     }
+
+    // legacy-migration start
+    // Only show the migration wizard once the CLI connection is established so the
+    // webview has finished loading providers/agents before we navigate to the wizard.
+    if (reason === "webviewReady" && this.connectionState === "connected") {
+      void this.checkAndShowMigrationWizard()
+    } else if (reason === "sse-connected") {
+      void this.checkAndShowMigrationWizard()
+    }
+    // legacy-migration end
   }
 
   public resolveWebviewView(
@@ -515,6 +532,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.postMessage({ type: "variantsLoaded", variants })
           break
         }
+        // legacy-migration start
+        case "requestLegacyMigrationData":
+          void this.handleRequestLegacyMigrationData()
+          break
+        case "startLegacyMigration":
+          void this.handleStartLegacyMigration(message.selections)
+          break
+        case "skipLegacyMigration":
+          void this.handleSkipLegacyMigration()
+          break
+        case "clearLegacyData":
+          void this.handleClearLegacyData()
+          break
+        // legacy-migration end
         case "enhancePrompt": {
           const sdkClient = this.client
           if (!sdkClient) {
@@ -1783,6 +1814,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
+    // Refresh provider and agent lists when the server signals a state disposal
+    if (event.type === "server.instance.disposed" || event.type === "global.disposed") {
+      void this.fetchAndSendProviders()
+      void this.fetchAndSendAgents()
+      return
+    }
+
     // Forward relevant events to webview
     // Side effects that must happen before the webview message is sent
     if (event.type === "session.created" && !this.currentSession) {
@@ -1961,6 +1999,113 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       extraStyles: `.container { height: 100%; display: flex; flex-direction: column; height: 100vh; }`,
     })
   }
+
+  // legacy-migration start -------------------------------------------------------
+
+  /**
+   * Checks for legacy data on first run and auto-navigates to the migration wizard
+   * if the user has not yet been prompted.
+   */
+  private async checkAndShowMigrationWizard(): Promise<void> {
+    if (!this.extensionContext) return
+    if (this.migrationCheckInFlight) return
+    const status = MigrationService.getMigrationStatus(this.extensionContext)
+    if (status) return // already prompted (skipped or completed)
+
+    this.migrationCheckInFlight = true
+    const data = await MigrationService.detectLegacyData(this.extensionContext)
+    this.migrationCheckInFlight = false
+
+    if (!data.hasData) return
+
+    // Cache so migrate() doesn't re-read from SecretStorage/disk
+    this.cachedLegacyData = data
+
+    console.log("[Kilo New] KiloProvider: 🔄 Legacy data detected, showing migration wizard")
+    this.postMessage({ type: "navigate", view: "migration" })
+    this.postMessage({
+      type: "legacyMigrationData",
+      data: {
+        providers: data.providers,
+        mcpServers: data.mcpServers,
+        customModes: data.customModes,
+        defaultModel: data.defaultModel,
+        settings: data.settings,
+      },
+    })
+  }
+
+  /** Sends the detected legacy data to the webview on explicit request. */
+  private async handleRequestLegacyMigrationData(): Promise<void> {
+    if (!this.extensionContext) return
+    const data = await MigrationService.detectLegacyData(this.extensionContext)
+    // Cache so migrate() doesn't re-read from SecretStorage/disk
+    this.cachedLegacyData = data
+    this.postMessage({
+      type: "legacyMigrationData",
+      data: {
+        providers: data.providers,
+        mcpServers: data.mcpServers,
+        customModes: data.customModes,
+        defaultModel: data.defaultModel,
+        settings: data.settings,
+      },
+    })
+  }
+
+  /** Runs the migration for the selected items. */
+  private async handleStartLegacyMigration(
+    selections: import("./legacy-migration/legacy-types").MigrationSelections,
+  ): Promise<void> {
+    if (!this.extensionContext || !this.client) return
+    try {
+      const results = await MigrationService.migrate(
+        this.extensionContext,
+        this.client,
+        selections,
+        (item, status, message) => {
+          this.postMessage({ type: "legacyMigrationProgress", item, status, message })
+        },
+        this.cachedLegacyData?.settings,
+      )
+      // Only mark as completed if at least one item succeeded — if everything failed
+      // the user can still re-run migration via Settings → About.
+      const anySuccess = results.some((r) => r.status === "success")
+      if (anySuccess) {
+        await MigrationService.setMigrationStatus(this.extensionContext, "completed")
+      }
+      // Refresh providers so webview immediately sees the newly-migrated API keys
+      await this.fetchAndSendProviders()
+      this.postMessage({ type: "legacyMigrationComplete", results })
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: ❌ Migration failed", error)
+      this.postMessage({
+        type: "legacyMigrationComplete",
+        results: [
+          {
+            item: "Migration",
+            category: "settings",
+            status: "error",
+            message: error instanceof Error ? error.message : String(error),
+          },
+        ],
+      })
+    }
+  }
+
+  /** Records that the user skipped migration. */
+  private async handleSkipLegacyMigration(): Promise<void> {
+    if (!this.extensionContext) return
+    await MigrationService.setMigrationStatus(this.extensionContext, "skipped")
+  }
+
+  /** Clears legacy data from SecretStorage and globalState after user opts in. */
+  private async handleClearLegacyData(): Promise<void> {
+    if (!this.extensionContext) return
+    await MigrationService.clearLegacyData(this.extensionContext)
+  }
+
+  // legacy-migration end ---------------------------------------------------------
 
   /**
    * Dispose of the provider and clean up subscriptions.
