@@ -1509,7 +1509,7 @@ export namespace Config {
     // Skip: Flag.KILO_CONFIG_CONTENT is read-only
     if (Flag.KILO_CONFIG_CONTENT) {
       try {
-        const inlineConfig = JSON.parse(Flag.KILO_CONFIG_CONTENT)
+        const inlineConfig = parseJsonc(Flag.KILO_CONFIG_CONTENT)
         if (inlineConfig?.mcp?.[mcpName]) {
           log.warn("MCP server is defined in KILO_CONFIG_CONTENT (read-only), toggle will be written to user config", {
             mcp: mcpName,
@@ -1623,7 +1623,8 @@ export namespace Config {
       const text = await Bun.file(filepath).text()
       const data = parseJsonc(text, [], { allowTrailingComma: true })
       return data?.mcp?.[mcpName] !== undefined
-    } catch {
+    } catch (err) {
+      log.debug("failed to read MCP definition", { filepath, mcpName, error: err })
       return false
     }
   }
