@@ -119,6 +119,7 @@
     "mime-types": "3.0.2",
     "minimatch": "10.0.3",
     "open": "10.1.2",
+    "openid-client": "^6.8.1",
     "opentui-spinner": "0.0.6",
     "partial-json": "0.1.7",
     "remeda": "catalog:",
