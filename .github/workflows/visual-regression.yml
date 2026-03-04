@@ -172,7 +172,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add packages/kilo-vscode/tests/visual-regression.spec.mts-snapshots/
+          git add packages/kilo-vscode/tests/visual-regression.spec.ts-snapshots/
           if git diff --cached --quiet; then
             echo "No new baselines — nothing to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"
