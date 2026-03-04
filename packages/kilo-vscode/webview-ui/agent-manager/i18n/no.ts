@@ -127,8 +127,10 @@ export const dict = {
   "agentManager.review.sendToChat": "Send til chat",
   "agentManager.review.collapsedOnly": "{{count}} kollapset",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} kollapset, {{large}} store",
+  "agentManager.review.largeFileCollapsed": "Stor fil (kollapset)",
+  "agentManager.review.endOfLongDiff": "Du har nådd slutten!",
 
-  "agentManager.import.pullRequest": "Pull Request",
+  "agentManager.import.pullRequest": "Fletteforespørsel",
   "agentManager.import.pastePrUrl": "Lim inn PR URL...",
   "agentManager.import.open": "Åpne",
   "agentManager.import.branches": "Branches",

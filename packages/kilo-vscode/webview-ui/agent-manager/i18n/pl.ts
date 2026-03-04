@@ -128,8 +128,10 @@ export const dict = {
   "agentManager.review.sendToChat": "Wyślij do czatu",
   "agentManager.review.collapsedOnly": "{{count}} zwiniętych",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} zwiniętych, {{large}} dużych",
+  "agentManager.review.largeFileCollapsed": "Duży plik (zwinięty)",
+  "agentManager.review.endOfLongDiff": "Dotarłeś do końca!",
 
-  "agentManager.import.pullRequest": "Pull Request",
+  "agentManager.import.pullRequest": "Prośba o scalenie",
   "agentManager.import.pastePrUrl": "Wklej URL PR...",
   "agentManager.import.open": "Otwórz",
   "agentManager.import.branches": "Branche",

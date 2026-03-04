@@ -10,6 +10,7 @@ import {
   CONTENT_TYPE,
   DEFAULT_EDITOR_NAME,
   ENV_EDITOR_NAME,
+  ENV_VERSION,
   TESTER_SUPPRESS_VALUE,
   ENV_FEATURE, // kilocode_change
 } from "./api/constants.js"
@@ -45,10 +46,13 @@ export const DEFAULT_HEADERS = {
 
 /**
  * Get editor name header value
- * Defaults to "opencode" but can be customized
+ * Defaults to "Kilo CLI" but can be customized via KILOCODE_EDITOR_NAME.
+ * Appends the version from KILOCODE_VERSION when available.
  */
 export function getEditorNameHeader(): string {
-  return process.env[ENV_EDITOR_NAME] ?? DEFAULT_EDITOR_NAME
+  const name = process.env[ENV_EDITOR_NAME] ?? DEFAULT_EDITOR_NAME
+  const version = process.env[ENV_VERSION]
+  return version ? `${name} ${version}` : name
 }
 
 /**

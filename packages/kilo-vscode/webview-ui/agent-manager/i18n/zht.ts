@@ -126,8 +126,10 @@ export const dict = {
   "agentManager.review.sendToChat": "傳送到聊天",
   "agentManager.review.collapsedOnly": "{{count}} 個已摺疊",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} 個已摺疊，{{large}} 個過大",
+  "agentManager.review.largeFileCollapsed": "大檔案（已摺疊）",
+  "agentManager.review.endOfLongDiff": "您已到達底部！",
 
-  "agentManager.import.pullRequest": "Pull Request",
+  "agentManager.import.pullRequest": "拉取請求",
   "agentManager.import.pastePrUrl": "貼上 PR URL...",
   "agentManager.import.open": "開啟",
   "agentManager.import.branches": "分支",
