@@ -75,6 +75,11 @@ export namespace State {
     const entry = entries.get(init)
     if (!entry) return
 
+    entries.delete(init)
+    if (entries.size === 0) {
+      recordsByKey.delete(key)
+    }
+
     if (entry.dispose) {
       const label = typeof init === "function" ? init.name : String(init)
       await Promise.resolve(entry.state)
@@ -82,11 +87,6 @@ export namespace State {
         .catch((error) => {
           log.error("Error while disposing state entry:", { error, key, init: label })
         })
-    }
-
-    entries.delete(init)
-    if (entries.size === 0) {
-      recordsByKey.delete(key)
     }
   }
 }

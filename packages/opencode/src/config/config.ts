@@ -1719,6 +1719,7 @@ export namespace Config {
 
   export async function update(config: Info) {
     const filepath = path.join(Instance.directory, "config.json")
+    using _lock = await Lock.write(filepath)
     const existing = await loadFile(filepath)
     await Bun.write(filepath, JSON.stringify(mergeDeep(existing, config), null, 2))
     // kilocode_change: Dispose only the Config state, not the entire instance (preserves MCP connections)
