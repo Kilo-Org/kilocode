@@ -182,6 +182,11 @@ export const dict = {
   "common.saving": "Saving...",
   "common.default": "Default",
   "common.attachment": "attachment",
+  "common.modeName.code": "Code",
+  "common.comment": "comment",
+  "common.comments": "comments",
+  "common.marketplace": "Marketplace",
+  "common.review": "Review",
 
   "prompt.placeholder.shell": "Enter shell command...",
   "prompt.placeholder.normal": 'Ask anything... "{{example}}"',
@@ -228,6 +233,8 @@ export const dict = {
   "prompt.context.removeFile": "Remove file from context",
   "prompt.action.attachFile": "Attach file",
   "prompt.attachment.remove": "Remove attachment",
+  "prompt.noFilesFound": "No files found",
+  "prompt.removeImage": "Remove image",
   "prompt.action.send": "Send",
   "prompt.action.stop": "Stop",
   "prompt.action.enhance": "Enhance prompt",
@@ -438,6 +445,9 @@ export const dict = {
   "notification.session.responseReady.title": "Response ready",
   "notification.session.error.title": "Session error",
   "notification.session.error.fallbackDescription": "An error occurred",
+  "notifications.dismiss": "Dismiss",
+  "notifications.previous": "Previous",
+  "notifications.next": "Next",
 
   "home.recentProjects": "Recent projects",
   "home.empty.title": "No recent projects",
@@ -500,6 +510,7 @@ export const dict = {
   "session.share.action.view": "View",
   "session.share.copy.copied": "Copied",
   "session.share.copy.copyLink": "Copy link",
+  "question.summary": "{{n}} of {{total}} questions",
 
   "lsp.tooltip.none": "No LSP servers",
   "lsp.label.connected": "{{count}} LSP",
@@ -790,6 +801,7 @@ export const dict = {
   "profile.balance.refresh": "Refresh balance",
   "profile.action.dashboard": "Dashboard",
   "profile.action.logout": "Log Out",
+  "profile.account": "Account",
 
   "settings.section.configuration": "Configuration",
   "settings.agentBehaviour.title": "Agent Behaviour",
@@ -943,6 +955,13 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty": "No MCP servers configured. Edit the opencode config file to add MCP servers.",
   "settings.agentBehaviour.workflowsPlaceholder": "Workflows are managed via workflow files in your workspace.",
   "settings.agentBehaviour.notImplemented": "Not yet implemented.",
+  "settings.agentBehaviour.mcpCommandLabel": "command:",
+  "settings.agentBehaviour.mcpUrlLabel": "url:",
+  "settings.agentBehaviour.modelIdPlaceholder": "e.g. anthropic/claude-sonnet-4-20250514",
+  "settings.agentBehaviour.promptPlaceholder": "Custom instructions…",
+  "settings.agentBehaviour.skillsDirPlaceholder": "e.g. ./skills",
+  "settings.agentBehaviour.skillsUrlPlaceholder": "e.g. https://example.com/skills",
+  "settings.agentBehaviour.instructionsFilePlaceholder": "e.g. ./INSTRUCTIONS.md",
 
   "settings.autoApprove.setAll": "Set all permissions",
   "settings.autoApprove.level.allow": "Allow",
@@ -974,6 +993,7 @@ export const dict = {
   "settings.context.prune.description": "Remove old tool outputs during compaction",
   "settings.context.watcherPatterns": "File Watcher Ignore Patterns",
   "settings.context.watcherPatterns.description": "Glob patterns for files the watcher should ignore",
+  "settings.context.ignorePatternPlaceholder": "e.g. **/node_modules/**",
 
   "settings.display.username.title": "Username",
   "settings.display.username.description": "Custom username displayed in conversations",
@@ -981,6 +1001,7 @@ export const dict = {
   "settings.display.layout.description": "Layout mode for the chat interface",
   "settings.display.layout.auto": "Auto",
   "settings.display.layout.stretch": "Stretch",
+  "settings.display.usernamePlaceholder": "User",
 
   "settings.providers.defaultModel.title": "Default Model",
   "settings.providers.defaultModel.description": "Primary model for conversations",
@@ -991,16 +1012,13 @@ export const dict = {
   "settings.providers.enabled": "Enabled Providers (Allowlist)",
   "settings.providers.enabled.description": "If set, only these providers will be available (exclusive allowlist)",
   "settings.providers.notSet": "Not set (use server default)",
+  "settings.providers.selectProvider": "Select provider…",
 
   "dialog.model.notSet": "Not set",
 
   "profile.personalAccount": "Personal Account",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/en.ts
-
-
-  "question.summary": "{{n}} of {{total}} questions",
-  "common.review": "Review",
 
   // legacy-migration start
   "settings.legacyMigration.link": "Migrate from Legacy Version",
@@ -1049,5 +1067,6 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "This removes the old settings from VS Code storage. You will not be able to re-run this migration.",
   "migration.complete.done": "Done",
+  "migration.provider.noApiKey": "No API key",
   // legacy-migration end
 }

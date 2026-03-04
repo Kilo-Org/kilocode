@@ -967,7 +967,6 @@ export const dict = {
   "profile.personalAccount": "Compte personnel",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/fr.ts
 
-
   "question.summary": "{{n}} sur {{total}} questions",
   "common.review": "Réviser",
 
