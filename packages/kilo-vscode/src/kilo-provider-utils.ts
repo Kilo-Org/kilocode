@@ -3,6 +3,14 @@ import type { Session, Agent, Event, ProviderListResponse } from "@kilocode/sdk/
 /** A single provider entry as returned by the /provider list endpoint. */
 export type ProviderInfo = ProviderListResponse["all"][number]
 
+export const ERROR_NAMES = {
+  COMMIT_MESSAGE_NO_CHANGES: "CommitMessageNoChangesError",
+  PROVIDER_MODEL_NOT_FOUND: "ProviderModelNotFoundError",
+  NOT_FOUND: "NotFoundError",
+} as const
+
+export type CommitErrorType = "noChanges" | string
+
 /**
  * Extract a human-readable error message from an unknown error value.
  * Handles Error instances, strings, and SDK error objects (which are
@@ -11,6 +19,8 @@ export type ProviderInfo = ProviderListResponse["all"][number]
  * SDK error shapes from the server:
  * - BadRequestError: { data: unknown, errors: [...], success: false }
  * - NotFoundError: { name: "NotFoundError", data: { message: "..." } }
+ * - CommitMessageNoChangesError: { name: "CommitMessageNoChangesError", data: {} }
+ * - ProviderModelNotFoundError: { name: "ProviderModelNotFoundError", data: { providerID, modelID } }
  * - Plain string (raw text response)
  */
 export function getErrorMessage(error: unknown): string {
@@ -35,6 +45,30 @@ export function getErrorMessage(error: unknown): string {
     }
   }
   return String(error)
+}
+
+export function getCommitErrorType(error: unknown): CommitErrorType | null {
+  if (error && typeof error === "object" && "name" in error) {
+    if (error.name === ERROR_NAMES.COMMIT_MESSAGE_NO_CHANGES) return "noChanges"
+  }
+  return null
+}
+
+export function formatCommitError(error: unknown): string {
+  if (error && typeof error === "object" && "name" in error) {
+    if (
+      error.name === ERROR_NAMES.PROVIDER_MODEL_NOT_FOUND &&
+      "data" in error &&
+      error.data &&
+      typeof error.data === "object"
+    ) {
+      const data = error.data
+      const modelID = "modelID" in data ? String(data.modelID) : "unknown"
+      const providerID = "providerID" in data ? String(data.providerID) : "unknown"
+      return `Model "${modelID}" not found on provider "${providerID}". Check your small model configuration in Settings > Providers.`
+    }
+  }
+  return getErrorMessage(error)
 }
 
 export function sessionToWebview(session: Session) {

@@ -1,33 +1,10 @@
 import * as vscode from "vscode"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../cli-backend/connection-service"
-import { getErrorMessage } from "../../kilo-provider-utils"
+import { formatCommitError, getCommitErrorType } from "../../kilo-provider-utils"
 
 let lastGeneratedMessage: string | undefined
 let lastWorkspacePath: string | undefined
-
-const NO_CHANGES_MESSAGE = "NO_CHANGES"
-
-function formatCommitError(error: unknown): string | typeof NO_CHANGES_MESSAGE {
-  if (error && typeof error === "object") {
-    if ("name" in error && error.name === "CommitMessageNoChangesError") {
-      return NO_CHANGES_MESSAGE
-    }
-    if (
-      "name" in error &&
-      error.name === "ProviderModelNotFoundError" &&
-      "data" in error &&
-      error.data &&
-      typeof error.data === "object"
-    ) {
-      const data = error.data
-      const modelID = "modelID" in data ? String(data.modelID) : "unknown"
-      const providerID = "providerID" in data ? String(data.providerID) : "unknown"
-      return `Model "${modelID}" not found on provider "${providerID}". Check your small model configuration in Settings > Providers.`
-    }
-  }
-  return getErrorMessage(error)
-}
 
 interface GitRepository {
   inputBox: { value: string }
@@ -98,14 +75,13 @@ export function registerCommitMessageService(
       .then(undefined, (error: unknown) => {
         console.error("[Kilo New] Failed to generate commit message:", error)
 
-        const msg = formatCommitError(error)
-
-        if (msg === NO_CHANGES_MESSAGE) {
+        const errorType = getCommitErrorType(error)
+        if (errorType === "noChanges") {
           vscode.window.showInformationMessage(
             "No staged or unstaged changes found. Stage some changes first to generate a commit message.",
           )
         } else {
-          vscode.window.showErrorMessage(`Failed to generate commit message: ${msg}`)
+          vscode.window.showErrorMessage(`Failed to generate commit message: ${formatCommitError(error)}`)
         }
       })
   })
