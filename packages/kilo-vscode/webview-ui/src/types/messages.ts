@@ -468,6 +468,25 @@ export interface SetChatBoxMessage {
   text: string
 }
 
+export interface AppendChatBoxMessage {
+  type: "appendChatBoxMessage"
+  text: string
+}
+
+export interface InlineReviewComment {
+  id: string
+  file: string
+  side: "additions" | "deletions"
+  line: number
+  comment: string
+  selectedText: string
+}
+
+export interface AppendReviewCommentsMessage {
+  type: "appendReviewComments"
+  comments: InlineReviewComment[]
+}
+
 export interface TriggerTaskMessage {
   type: "triggerTask"
   text: string
@@ -961,6 +980,8 @@ export type ExtensionMessage =
   | AgentManagerMultiVersionProgressMessage
   | AgentManagerSendInitialMessage
   | SetChatBoxMessage
+  | AppendChatBoxMessage
+  | AppendReviewCommentsMessage
   | TriggerTaskMessage
   | VariantsLoadedMessage
   | CloudSessionDataLoadedMessage
@@ -1295,6 +1316,13 @@ export interface ShowExistingLocalTerminalRequest {
   type: "agentManager.showExistingLocalTerminal"
 }
 
+// Open a file in the selected worktree for a specific session
+export interface AgentManagerOpenFileRequest {
+  type: "agentManager.openFile"
+  sessionId: string
+  filePath: string
+}
+
 /**
  * Maximum number of parallel worktree versions for multi-version mode.
  * Keep in sync with MAX_MULTI_VERSIONS in src/agent-manager/constants.ts.
@@ -1469,6 +1497,7 @@ export type WebviewMessage =
   | ShowTerminalRequest
   | ShowLocalTerminalRequest
   | ShowExistingLocalTerminalRequest
+  | AgentManagerOpenFileRequest
   | CreateMultiVersionRequest
   | SetTabOrderRequest
   | SetSessionsCollapsedRequest
