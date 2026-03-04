@@ -81,7 +81,7 @@ export const PromptInput: Component = () => {
   const openReviewFile = (item: ReviewComment) => {
     const id = session.currentSessionID()
     if (worktree && id) {
-      vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: item.file })
+      vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: item.file, line: item.line })
       dialog.close()
       return
     }

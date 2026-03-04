@@ -1,14 +1,6 @@
-import type { AnnotationSide } from "@pierre/diffs"
-import type { WorktreeFileDiff } from "../src/types/messages"
+import type { ReviewComment, WorktreeFileDiff } from "../src/types/messages"
 
-export interface ReviewComment {
-  id: string
-  file: string
-  side: AnnotationSide
-  line: number
-  comment: string
-  selectedText: string
-}
+export type { ReviewComment }
 
 function lineCount(text: string): number {
   if (text.length === 0) return 0

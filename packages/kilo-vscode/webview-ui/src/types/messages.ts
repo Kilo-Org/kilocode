@@ -473,7 +473,7 @@ export interface AppendChatBoxMessage {
   text: string
 }
 
-export interface InlineReviewComment {
+export interface ReviewComment {
   id: string
   file: string
   side: "additions" | "deletions"
@@ -484,7 +484,7 @@ export interface InlineReviewComment {
 
 export interface AppendReviewCommentsMessage {
   type: "appendReviewComments"
-  comments: InlineReviewComment[]
+  comments: ReviewComment[]
 }
 
 export interface TriggerTaskMessage {
@@ -1321,6 +1321,7 @@ export interface AgentManagerOpenFileRequest {
   type: "agentManager.openFile"
   sessionId: string
   filePath: string
+  line?: number
 }
 
 /**

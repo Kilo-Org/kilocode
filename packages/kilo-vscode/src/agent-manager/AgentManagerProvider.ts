@@ -322,7 +322,8 @@ export class AgentManagerProvider implements vscode.Disposable {
     }
 
     if (type === "agentManager.openFile" && typeof msg.sessionId === "string" && typeof msg.filePath === "string") {
-      this.openWorktreeFile(msg.sessionId, msg.filePath)
+      const line = typeof msg.line === "number" ? msg.line : undefined
+      this.openWorktreeFile(msg.sessionId, msg.filePath, line)
       return null
     }
 
@@ -1517,7 +1518,7 @@ export class AgentManagerProvider implements vscode.Disposable {
   // ---------------------------------------------------------------------------
 
   /** Open a file from a worktree or local session in the VS Code editor. */
-  private openWorktreeFile(sessionId: string, relativePath: string): void {
+  private openWorktreeFile(sessionId: string, relativePath: string, line?: number): void {
     const state = this.getStateManager()
     if (!state) return
     const session = state.getSession(sessionId)
@@ -1537,8 +1538,11 @@ export class AgentManagerProvider implements vscode.Disposable {
       return
     }
     const uri = vscode.Uri.file(resolved)
+    const target = Math.max(1, Math.floor(line ?? 1))
+    const pos = new vscode.Position(target - 1, 0)
+    const selection = new vscode.Range(pos, pos)
     vscode.workspace.openTextDocument(uri).then(
-      (doc) => vscode.window.showTextDocument(doc, { preview: true }),
+      (doc) => vscode.window.showTextDocument(doc, { preview: true, selection }),
       (err) => console.error("[Kilo New] AgentManagerProvider: Failed to open file:", uri.fsPath, err),
     )
   }
