@@ -516,7 +516,9 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
                           </span>
                         </Show>
                         <Show when={provider.supported && !provider.hasApiKey}>
-                          <span class="migration-wizard__item-tag migration-wizard__item-tag--warn">No API key</span>
+                          <span class="migration-wizard__item-tag migration-wizard__item-tag--warn">
+                            {language.t("migration.provider.noApiKey")}
+                          </span>
                         </Show>
                       </div>
                     </label>

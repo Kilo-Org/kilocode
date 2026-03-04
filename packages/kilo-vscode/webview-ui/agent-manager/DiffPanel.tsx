@@ -459,7 +459,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
         <Show when={comments().length > 0}>
           <div class="am-diff-comments-footer">
             <span class="am-diff-comments-count">
-              {comments().length} comment{comments().length !== 1 ? "s" : ""}
+              {comments().length} {comments().length !== 1 ? t("common.comments") : t("common.comment")}
             </span>
             <TooltipKeybind title={t("agentManager.review.sendAllToChat")} keybind={sendAllKeybind()} placement="top">
               <Button variant="primary" size="small" onClick={sendAllToChat}>

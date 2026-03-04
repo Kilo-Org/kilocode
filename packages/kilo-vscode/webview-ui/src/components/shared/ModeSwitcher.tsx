@@ -11,6 +11,7 @@ import { Component, createSignal, For, Show } from "solid-js"
 import { Popover } from "@kilocode/kilo-ui/popover"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useSession } from "../../context/session"
+import { useLanguage } from "../../context/language"
 import type { AgentInfo } from "../../types/messages"
 
 // ---------------------------------------------------------------------------
@@ -28,6 +29,7 @@ export interface ModeSwitcherBaseProps {
 
 export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
   const [open, setOpen] = createSignal(false)
+  const { t } = useLanguage()
 
   const hasAgents = () => props.agents.length > 1
 
@@ -41,7 +43,7 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
     if (agent) {
       return agent.name.charAt(0).toUpperCase() + agent.name.slice(1)
     }
-    return props.value || "Code"
+    return props.value || t("common.modeName.code")
   }
 
   return (

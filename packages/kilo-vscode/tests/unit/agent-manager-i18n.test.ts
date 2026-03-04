@@ -1,7 +1,7 @@
 /**
- * Localization lint: Agent Manager
+ * Localization lint: Webview i18n
  *
- * Ensures all user-visible strings in the Agent Manager webview go through
+ * Ensures all user-visible strings in webview TSX files go through
  * the i18n `t()` function rather than being hardcoded in English.
  *
  * Detects:
@@ -19,14 +19,27 @@
  */
 
 import { describe, it, expect } from "bun:test"
+import { Glob } from "bun"
 import { Project, SyntaxKind, Node } from "ts-morph"
 import path from "node:path"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
-const TSX_FILES = [
-  path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
-]
+const glob = new Glob("webview-ui/**/*.tsx")
+// Exclude Storybook files — they contain hardcoded mock/demo data, not production strings
+const TSX_FILES = Array.from(glob.scanSync({ cwd: ROOT, absolute: true })).filter(
+  (f) => !f.includes("/stories/") && !f.endsWith(".stories.tsx"),
+)
+
+const TS_MORPH_OPTIONS = {
+  compilerOptions: {
+    jsx: 4, // JsxEmit.Preserve
+    jsxImportSource: "solid-js",
+    allowJs: true,
+    strict: false,
+    noEmit: true,
+  },
+  skipAddingFilesFromTsConfig: true,
+} as const
 
 /**
  * Props whose string values are user-visible and must be localized.
@@ -47,6 +60,12 @@ function isProgrammatic(text: string): boolean {
   if (/^[^a-zA-Z]*$/.test(trimmed)) return true
   // CSS class names
   if (/^am-/.test(trimmed)) return true
+  if (/^(kilo-|prompt-|settings-|file-mention|image-attachment)/.test(trimmed)) return true
+  // URLs and domain-like display strings
+  if (/^https?:\/\//.test(trimmed)) return true
+  if (/^[\w.-]+\.(ai|com|io|org|net|dev|app)\//.test(trimmed)) return true
+  // Brand names / proper nouns — do not translate
+  if (/^(GitHub|Reddit|Discord|Twitter|YouTube|LinkedIn)$/.test(trimmed)) return true
   // Message type strings (e.g. "agentManager.createWorktree", "sendMessage")
   if (/^agentManager\./.test(trimmed)) return true
   if (
@@ -57,6 +76,9 @@ function isProgrammatic(text: string): boolean {
     return true
   // Known programmatic identifiers and config values
   if (/^(local|pending:|kilo-vscode|data-theme|use:sortable)/.test(trimmed)) return true
+  // Internal sentinel/default tokens (not user-facing copy)
+  if (/^__\w+__$/.test(trimmed)) return true
+  if (/^(allow|ask|deny|manual|auto|disabled|modified|unified|split)$/.test(trimmed)) return true
   // navigator/platform detection strings
   if (/^(Mac|iPhone|iPad)/.test(trimmed)) return true
   // Keyboard modifier symbols
@@ -96,16 +118,7 @@ interface Violation {
 }
 
 function findViolations(): Violation[] {
-  const project = new Project({
-    compilerOptions: {
-      jsx: 4, // JsxEmit.Preserve
-      jsxImportSource: "solid-js",
-      allowJs: true,
-      strict: false,
-      noEmit: true,
-    },
-    skipAddingFilesFromTsConfig: true,
-  })
+  const project = new Project(TS_MORPH_OPTIONS)
 
   const violations: Violation[] = []
 
@@ -153,22 +166,22 @@ function findViolations(): Violation[] {
       }
     })
 
-    // 3. Check string literals used as UI fallbacks (e.g. || "Untitled", title: "New Session")
+    // 3. Check string literals used as UI fallbacks (e.g. || "Untitled", ?? "Untitled", title: "New Session")
     //    in object literals inside function bodies (buildShortcutCategories, pending tab creation, etc.)
     source.getDescendantsOfKind(SyntaxKind.StringLiteral).forEach((node) => {
       const text = node.getLiteralText()
       if (isProgrammatic(text)) return
 
-      // Check for `|| "string"` pattern — a common fallback for display text
+      // Check for `|| "string"` or `?? "string"` — common fallbacks for display text
       const parent = node.getParent()
       if (parent && Node.isBinaryExpression(parent)) {
         const op = parent.getOperatorToken().getText()
-        if (op === "||" && parent.getRight() === node) {
+        if ((op === "||" || op === "??") && parent.getRight() === node) {
           violations.push({
             file: basename,
             line: node.getStartLineNumber(),
             text,
-            context: 'fallback string (|| "...")',
+            context: `fallback string (${op} "...")`,
           })
           return
         }
@@ -179,7 +192,7 @@ function findViolations(): Violation[] {
       if (parent && Node.isPropertyAssignment(parent)) {
         const propName = parent.getName()
         if ((propName === "label" || propName === "title") && parent.getInitializer() === node) {
-          // Skip if this is inside a JSX attribute (already handled)
+          // Only flag when inside an object literal (JSX attributes are caught above)
           const grandParent = parent.getParent()
           if (grandParent && Node.isObjectLiteralExpression(grandParent)) {
             violations.push({
@@ -231,26 +244,10 @@ function findViolations(): Violation[] {
  *   .map((token) => <kbd>{t}</kbd>)   — renders the i18n function, not `token`
  *   .map((t) => <kbd>{t}</kbd>)       — shadows outer `t`, works by accident
  */
-interface ShadowViolation {
-  file: string
-  line: number
-  text: string
-  context: string
-}
+function findTranslationShadowViolations(): Violation[] {
+  const project = new Project(TS_MORPH_OPTIONS)
 
-function findTranslationShadowViolations(): ShadowViolation[] {
-  const project = new Project({
-    compilerOptions: {
-      jsx: 4, // JsxEmit.Preserve
-      jsxImportSource: "solid-js",
-      allowJs: true,
-      strict: false,
-      noEmit: true,
-    },
-    skipAddingFilesFromTsConfig: true,
-  })
-
-  const results: ShadowViolation[] = []
+  const results: Violation[] = []
 
   for (const filePath of TSX_FILES) {
     const source = project.addSourceFileAtPath(filePath)
@@ -321,26 +318,20 @@ function findTranslationShadowViolations(): ShadowViolation[] {
   return results
 }
 
-describe("Agent Manager i18n — no hardcoded strings", () => {
+describe("Webview i18n — no hardcoded strings", () => {
   const violations = findViolations()
 
-  it("should have no hardcoded user-facing strings in agent manager TSX files", () => {
-    if (violations.length > 0) {
-      const report = violations.map((v) => `  ${v.file}:${v.line} [${v.context}] "${v.text}"`).join("\n")
-      expect(violations, `Found ${violations.length} hardcoded string(s):\n${report}`).toEqual([])
-    }
-    expect(violations).toEqual([])
+  it("should have no hardcoded user-facing strings in webview TSX files", () => {
+    const report = violations.map((v) => `  ${v.file}:${v.line} [${v.context}] "${v.text}"`).join("\n")
+    expect(violations, `Found ${violations.length} hardcoded string(s):\n${report}`).toEqual([])
   })
 })
 
-describe("Agent Manager i18n — no t() shadowing", () => {
+describe("Webview i18n — no t() shadowing", () => {
   const shadows = findTranslationShadowViolations()
 
   it("should not shadow the t() translation function in callbacks", () => {
-    if (shadows.length > 0) {
-      const report = shadows.map((v) => `  ${v.file}:${v.line} [${v.context}] ${v.text}`).join("\n")
-      expect(shadows, `Found ${shadows.length} t() shadow/misuse(s):\n${report}`).toEqual([])
-    }
-    expect(shadows).toEqual([])
+    const report = shadows.map((v) => `  ${v.file}:${v.line} [${v.context}] ${v.text}`).join("\n")
+    expect(shadows, `Found ${shadows.length} t() shadow/misuse(s):\n${report}`).toEqual([])
   })
 })

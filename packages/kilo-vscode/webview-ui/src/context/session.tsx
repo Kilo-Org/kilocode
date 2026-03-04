@@ -407,7 +407,7 @@ export const SessionProvider: ParentComponent = (props) => {
           setLoading(false)
           showToast({
             variant: "error",
-            title: language.t("session.cloud.import.failed") ?? "Failed to import cloud session",
+            title: language.t("session.cloud.import.failed"),
             description: message.error,
           })
           console.error("[Kilo New] Cloud session import failed:", message.error)
