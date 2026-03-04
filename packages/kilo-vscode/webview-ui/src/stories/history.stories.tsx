@@ -22,7 +22,7 @@ import { LanguageContext } from "../context/language"
 import { dict as uiEn } from "@kilocode/kilo-ui/i18n/en"
 import { dict as appEn } from "../i18n/en"
 import { dict as kiloEn } from "@kilocode/kilo-i18n/en"
-import { SessionList } from "../components/history/SessionList"
+import SessionList from "../components/history/SessionList"
 
 const dict: Record<string, string> = { ...appEn, ...uiEn, ...kiloEn }
 function t(key: string) {
