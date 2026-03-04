@@ -1,8 +1,12 @@
 /**
  * WorktreeStateManager - Centralized persistent state for agent manager worktrees and sessions.
  *
- * Persists to `.kilocode/agent-manager.json`. Decouples worktrees from sessions
- * (many sessions per worktree) and provides CRUD operations for both.
+ * Persists to the global agent manager directory at:
+ *   ~/.local/share/kilo/agent-manager/{repoSlug}/agent-manager.json
+ *
+ * Decouples worktrees from sessions (many sessions per worktree) and provides
+ * CRUD operations for both. Migrates from the legacy in-repo location
+ * (.kilocode/agent-manager.json) on first load.
  *
  * Data model:
  * - Worktree: a git worktree with branch, path, parentBranch
@@ -12,6 +16,7 @@
 import * as path from "path"
 import * as fs from "fs"
 import { normalizePath } from "./git-import"
+import { stateFile, legacyStateFile } from "./globalPaths"
 
 export interface Worktree {
   id: string
@@ -39,9 +44,6 @@ interface StateFile {
   reviewDiffStyle?: "unified" | "split"
 }
 
-const STATE_FILE = "agent-manager.json"
-const KILOCODE_DIR = ".kilocode"
-
 let counter = 0
 
 function generateId(prefix: string): string {
@@ -50,6 +52,7 @@ function generateId(prefix: string): string {
 
 export class WorktreeStateManager {
   private readonly file: string
+  private readonly legacyFile: string
   private worktrees = new Map<string, Worktree>()
   private sessions = new Map<string, ManagedSession>()
   private tabOrder: Record<string, string[]> = {}
@@ -60,7 +63,8 @@ export class WorktreeStateManager {
   private pendingSave = false
 
   constructor(root: string, log: (msg: string) => void) {
-    this.file = path.join(root, KILOCODE_DIR, STATE_FILE)
+    this.file = stateFile(root)
+    this.legacyFile = legacyStateFile(root)
     this.log = log
   }
 
@@ -250,8 +254,24 @@ export class WorktreeStateManager {
   // ---------------------------------------------------------------------------
 
   async load(): Promise<void> {
+    // Try global location first, then migrate from legacy in-repo location
+    const loaded = await this.loadFrom(this.file)
+    if (loaded) return
+
+    // No global state — check for legacy in-repo state and migrate
+    const migrated = await this.loadFrom(this.legacyFile)
+    if (migrated) {
+      this.log(`Migrated state from legacy location: ${this.legacyFile}`)
+      // Save to global location immediately
+      await this.save()
+      // Remove legacy file so future loads go straight to global
+      await fs.promises.unlink(this.legacyFile).catch(() => {})
+    }
+  }
+
+  private async loadFrom(file: string): Promise<boolean> {
     try {
-      const content = await fs.promises.readFile(this.file, "utf-8")
+      const content = await fs.promises.readFile(file, "utf-8")
       const data = JSON.parse(content) as StateFile
       this.worktrees.clear()
       this.sessions.clear()
@@ -271,12 +291,14 @@ export class WorktreeStateManager {
       if (data.reviewDiffStyle === "split") {
         this.reviewDiffStyle = "split"
       }
-      this.log(`Loaded state: ${this.worktrees.size} worktrees, ${this.sessions.size} sessions`)
+      this.log(`Loaded state from ${file}: ${this.worktrees.size} worktrees, ${this.sessions.size} sessions`)
+      return true
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code
       if (code !== "ENOENT") {
-        this.log(`Failed to load state: ${error}`)
+        this.log(`Failed to load state from ${file}: ${error}`)
       }
+      return false
     }
   }
 

@@ -152,19 +152,21 @@ The Agent Manager is a feature within this extension (not a separate product). I
 
 ### How It Differs From the Sidebar
 
-| Aspect        | Sidebar                    | Agent Manager                                           |
-| ------------- | -------------------------- | ------------------------------------------------------- |
-| Location      | Activity bar sidebar panel | Editor tab (full panel)                                 |
-| Sessions      | Single session at a time   | Multiple parallel sessions with tabbed UI               |
-| Git isolation | Uses workspace root        | Each session can get its own worktree branch            |
-| State         | No dedicated state file    | `.kilocode/agent-manager.json`                          |
-| Terminals     | None                       | Dedicated VS Code terminal per session                  |
-| Setup scripts | None                       | Configurable `.kilocode/setup-script` runs per worktree |
-| Multi-version | Not supported              | Up to 4 parallel worktrees with the same prompt         |
+| Aspect        | Sidebar                    | Agent Manager                                                     |
+| ------------- | -------------------------- | ----------------------------------------------------------------- |
+| Location      | Activity bar sidebar panel | Editor tab (full panel)                                           |
+| Sessions      | Single session at a time   | Multiple parallel sessions with tabbed UI                         |
+| Git isolation | Uses workspace root        | Each session can get its own worktree branch                      |
+| State         | No dedicated state file    | `~/.local/share/kilo/agent-manager/{repoSlug}/agent-manager.json` |
+| Terminals     | None                       | Dedicated VS Code terminal per session                            |
+| Setup scripts | None                       | Configurable `.kilocode/setup-script` runs per worktree           |
+| Multi-version | Not supported              | Up to 4 parallel worktrees with the same prompt                   |
 
 ### Architecture
 
 All Agent Manager sessions share the **single `kilo serve` process** managed by `KiloConnectionService`. No separate server is spawned per session. Session isolation comes from directory scoping — worktree sessions pass the worktree path to the CLI backend, which creates a session scoped to that directory.
+
+Agent Manager worktrees and state live in the global Kilo data directory under `~/.local/share/kilo/agent-manager/{repoSlug}/`. Only `.kilocode/setup-script*` remains repo-local because setup scripts are project-specific and user-editable.
 
 Extension-side code lives in `src/agent-manager/`, webview code in `webview-ui/agent-manager/`. The webview reuses the sidebar's provider chain and `ChatView` component, adding a `WorktreeModeProvider` and a split layout.
 

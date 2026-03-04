@@ -23,7 +23,7 @@ import { MAX_MULTI_VERSIONS } from "./constants"
  * AgentManagerProvider opens the Agent Manager panel.
  *
  * Uses WorktreeStateManager for centralized state persistence. Worktrees and
- * sessions are stored in `.kilocode/agent-manager.json`. The UI shows two
+ * sessions are stored globally in `~/.local/share/kilo/agent-manager/`. The UI shows two
  * sections: WORKTREES (top) with managed worktrees + their sessions, and
  * SESSIONS (bottom) with unassociated workspace sessions.
  */
@@ -151,6 +151,8 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     // Do not auto-remove stale worktrees on load.
     // Presence checks run in the shared poller and require explicit user cleanup.
+
+    await Promise.all(state.getWorktrees().map((worktree) => manager.prepareWorktree(worktree.path)))
 
     // Register all worktree sessions with KiloProvider
     for (const worktree of state.getWorktrees()) {
@@ -457,6 +459,8 @@ export class AgentManagerProvider implements vscode.Disposable {
       worktreeId,
     })
 
+    await this.getWorktreeManager()?.prepareWorktree(worktreePath)
+
     try {
       const { data: session } = await client.session.create(
         { directory: worktreePath, platform: PLATFORM },
@@ -638,6 +642,8 @@ export class AgentManagerProvider implements vscode.Disposable {
       this.log(`Worktree ${worktreeId} not found`)
       return null
     }
+
+    await this.getWorktreeManager()?.prepareWorktree(worktree.path)
 
     let session: Session
     try {
@@ -1613,11 +1619,11 @@ export class AgentManagerProvider implements vscode.Disposable {
     this.postToWebview({ type: "agentManager.worktreeDiffLoading", sessionId, loading: true })
     try {
       const client = this.connectionService.getClient()
+      this.log(`Fetching worktree diff for session ${sessionId}: dir=${target.directory}, base=${target.baseBranch}`)
       const { data: diffs } = await client.worktree.diff(
         { directory: target.directory, base: target.baseBranch },
         { throwOnError: true },
       )
-
       this.log(`Worktree diff returned ${diffs.length} file(s) for session ${sessionId}`)
 
       const hash = diffs
