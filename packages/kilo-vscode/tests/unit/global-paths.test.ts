@@ -1,6 +1,7 @@
 import { describe, it, expect } from "bun:test"
 import path from "node:path"
 import os from "node:os"
+import fs from "node:fs/promises"
 import {
   agentManagerDir,
   worktreeDir,
@@ -39,5 +40,21 @@ describe("agent-manager global paths", () => {
 
     expect(legacyStateFile(root)).toBe(path.join(root, ".kilocode", "agent-manager.json"))
     expect(legacyWorktreeDir(root)).toBe(path.join(root, ".kilocode", "worktrees"))
+  })
+
+  it("uses canonical paths for existing directories", async () => {
+    const base = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-path-canonical-"))
+    const root = path.join(base, "repo")
+    const link = path.join(base, "repo-link")
+
+    await fs.mkdir(root, { recursive: true })
+    const kind: "dir" | "junction" = process.platform === "win32" ? "junction" : "dir"
+    await fs.symlink(root, link, kind)
+
+    try {
+      expect(agentManagerDir(root)).toBe(agentManagerDir(link))
+    } finally {
+      await fs.rm(base, { recursive: true, force: true })
+    }
   })
 })

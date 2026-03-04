@@ -152,10 +152,17 @@ export class AgentManagerProvider implements vscode.Disposable {
     // Do not auto-remove stale worktrees on load.
     // Presence checks run in the shared poller and require explicit user cleanup.
 
-    await Promise.all(state.getWorktrees().map((worktree) => manager.prepareWorktree(worktree.path)))
+    const worktrees = state.getWorktrees()
+    const prepared = await Promise.allSettled(worktrees.map((worktree) => manager.prepareWorktree(worktree.path)))
+    for (const [index, result] of prepared.entries()) {
+      if (result.status === "fulfilled") continue
+      const worktree = worktrees[index]
+      if (!worktree) continue
+      this.log(`Failed to prepare worktree ${worktree.id} (${worktree.path}):`, result.reason)
+    }
 
     // Register all worktree sessions with KiloProvider
-    for (const worktree of state.getWorktrees()) {
+    for (const worktree of worktrees) {
       for (const session of state.getSessions(worktree.id)) {
         this.provider?.setSessionDirectory(session.id, worktree.path)
         this.provider?.trackSession(session.id)

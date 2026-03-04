@@ -54,7 +54,7 @@ Parallel Mode runs the agent in an isolated Git worktree branch, keeping your ma
 
 ### Worktree Location
 
-Worktrees are created in Kilo's global data directory, not inside your project. On macOS and Linux they live under `~/.local/share/kilo/agent-manager/{repoSlug}/worktrees/`; on Windows they live under `%LOCALAPPDATA%\\kilo\\agent-manager\\{repoSlug}\\worktrees\\`.
+Worktrees are created in Kilo's global data directory, not inside your project. On macOS and Linux they live under `~/.local/share/kilo/agent-manager/{repoSlug}/worktrees/`; on Windows they live under `%LOCALAPPDATA%\kilo\agent-manager\{repoSlug}\worktrees\`.
 
 ```
 ~/.local/share/kilo/

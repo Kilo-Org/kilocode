@@ -14,6 +14,7 @@
 import * as path from "path"
 import * as os from "os"
 import * as crypto from "crypto"
+import * as fs from "fs"
 
 const APP = "kilo"
 const AGENT_MANAGER = "agent-manager"
@@ -21,11 +22,11 @@ const AGENT_MANAGER = "agent-manager"
 /**
  * XDG_DATA_HOME or platform default:
  * - Linux/macOS: ~/.local/share
- * - Windows: %LOCALAPPDATA% (falls back to ~/.local/share)
+ * - Windows: %LOCALAPPDATA% (falls back to ~/AppData/Local)
  */
 function xdgData(): string {
   if (process.env.XDG_DATA_HOME) return process.env.XDG_DATA_HOME
-  if (process.platform === "win32") return process.env.LOCALAPPDATA || path.join(os.homedir(), ".local", "share")
+  if (process.platform === "win32") return process.env.LOCALAPPDATA || path.join(os.homedir(), "AppData", "Local")
   return path.join(os.homedir(), ".local", "share")
 }
 
@@ -35,13 +36,14 @@ function xdgData(): string {
  */
 function repoSlug(root: string): string {
   const normalized = path.resolve(root)
+  const canonical = fs.existsSync(normalized) ? fs.realpathSync.native(normalized) : normalized
   const name =
     path
-      .basename(normalized)
+      .basename(canonical)
       .toLowerCase()
       .replace(/[^a-z0-9]/g, "-")
       .replace(/^-+|-+$/g, "") || "repo"
-  const hash = crypto.createHash("sha256").update(normalized).digest("hex").slice(0, 8)
+  const hash = crypto.createHash("sha256").update(canonical).digest("hex").slice(0, 8)
   return `${name}-${hash}`
 }
 
