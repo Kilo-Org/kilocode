@@ -95,7 +95,7 @@ export namespace Config {
 
   const managedDir = managedConfigDir()
 
-  // kilocode_change: Export the init function so it can be used for targeted state disposal
+  // kilocode_change: Expose the init function so it can be used for targeted state disposal
   async function initConfigState() {
     const auth = await Auth.all()
 
@@ -1634,11 +1634,11 @@ export namespace Config {
     // Resolution order follows loading precedence (high to low):
     // 1. KILO_CONFIG (explicit flag, highest priority)
     // 2. KILO_CONFIG_DIR (if set)
-    // 3. ~/.kilo/ (legacy Kilocode config)
-    // 4. ~/.opencode/
-    // 5. Project .kilo/ directories (closest first, legacy)
-    // 6. Project .opencode/ directories (closest first)
-    // 7. Project config files (kilo.json{,c}/opencode.json{,c} in project root)
+    // 3. Project .kilo/ directories (closest first, legacy)
+    // 4. Project .opencode/ directories (closest first)
+    // 5. Project config files (kilo.json{,c}/opencode.json{,c} in project root)
+    // 6. ~/.kilo/ (legacy Kilocode config)
+    // 7. ~/.opencode/
     // 8. Global config (fallback)
 
     // Check if custom config path is set via flag
