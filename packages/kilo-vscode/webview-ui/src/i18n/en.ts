@@ -440,14 +440,15 @@ export const dict = {
   "notification.permission.description": "{{sessionTitle}} in {{projectName}} needs permission",
   "notification.question.title": "Question",
   "notification.question.description": "{{sessionTitle}} in {{projectName}} has a question",
+  "question.summary": "{{n}} of {{total}} questions",
   "notification.action.goToSession": "Go to session",
 
   "notification.session.responseReady.title": "Response ready",
   "notification.session.error.title": "Session error",
   "notification.session.error.fallbackDescription": "An error occurred",
-  "notifications.dismiss": "Dismiss",
-  "notifications.previous": "Previous",
-  "notifications.next": "Next",
+  "notification.dismiss": "Dismiss",
+  "notification.previous": "Previous",
+  "notification.next": "Next",
 
   "home.recentProjects": "Recent projects",
   "home.empty.title": "No recent projects",
@@ -510,7 +511,6 @@ export const dict = {
   "session.share.action.view": "View",
   "session.share.copy.copied": "Copied",
   "session.share.copy.copyLink": "Copy link",
-  "question.summary": "{{n}} of {{total}} questions",
 
   "lsp.tooltip.none": "No LSP servers",
   "lsp.label.connected": "{{count}} LSP",

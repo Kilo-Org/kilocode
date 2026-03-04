@@ -42,20 +42,20 @@ export const KiloNotifications: Component = () => {
               variant="ghost"
               icon="close"
               onClick={handleDismiss}
-              title={t("notifications.dismiss")}
+              title={t("notification.dismiss")}
             />
           </div>
           <p class="kilo-notifications-message">{current()?.message}</p>
           <div class="kilo-notifications-footer">
             <Show when={total() > 1}>
               <div class="kilo-notifications-nav">
-                <button class="kilo-notifications-nav-btn" onClick={prev} title={t("notifications.previous")}>
+                <button class="kilo-notifications-nav-btn" onClick={prev} title={t("notification.previous")}>
                   <Icon name="arrow-left" size="small" />
                 </button>
                 <span class="kilo-notifications-nav-count">
                   {safeIndex() + 1} / {total()}
                 </span>
-                <button class="kilo-notifications-nav-btn" onClick={next} title={t("notifications.next")}>
+                <button class="kilo-notifications-nav-btn" onClick={next} title={t("notification.next")}>
                   <Icon name="arrow-right" size="small" />
                 </button>
               </div>
