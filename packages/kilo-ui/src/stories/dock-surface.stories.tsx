@@ -12,34 +12,45 @@ type Story = StoryObj
 export const Shell: Story = {
   name: "DockShell",
   render: () => (
-    <DockShell style={{ padding: "12px", border: "1px solid var(--border-base)", "border-radius": "8px" }}>
-      <p style={{ margin: 0, "font-size": "13px" }}>DockShell — main container body for the dock surface.</p>
-    </DockShell>
+    <div style={{ width: "420px" }}>
+      <DockShell style={{ padding: "12px", border: "1px solid var(--border-base)", "border-radius": "8px" }}>
+        <p style={{ margin: 0, "font-size": "13px" }}>DockShell — main container body for the dock surface.</p>
+      </DockShell>
+    </div>
   ),
 }
 
 export const Tray: Story = {
   name: "DockTray",
   render: () => (
-    <DockTray style={{ padding: "8px 12px", background: "var(--background-surface)", "border-radius": "0 0 8px 8px" }}>
-      <p style={{ margin: 0, "font-size": "13px" }}>DockTray — footer tray area (attach=none).</p>
-    </DockTray>
+    <div style={{ width: "420px" }}>
+      <DockTray
+        style={{ padding: "8px 12px", background: "var(--background-surface)", "border-radius": "0 0 8px 8px" }}
+      >
+        <p style={{ margin: 0, "font-size": "13px" }}>DockTray — footer tray area (attach=none).</p>
+      </DockTray>
+    </div>
   ),
 }
 
 export const TrayAttachTop: Story = {
   name: "DockTray attach=top",
   render: () => (
-    <DockTray attach="top" style={{ padding: "8px 12px", background: "var(--background-surface)", "border-radius": "8px 8px 0 0" }}>
-      <p style={{ margin: 0, "font-size": "13px" }}>DockTray — header tray area (attach=top).</p>
-    </DockTray>
+    <div style={{ width: "420px" }}>
+      <DockTray
+        attach="top"
+        style={{ padding: "8px 12px", background: "var(--background-surface)", "border-radius": "8px 8px 0 0" }}
+      >
+        <p style={{ margin: 0, "font-size": "13px" }}>DockTray — header tray area (attach=top).</p>
+      </DockTray>
+    </div>
   ),
 }
 
 export const ShellWithTray: Story = {
   name: "DockShell + DockTray",
   render: () => (
-    <div style={{ border: "1px solid var(--border-base)", "border-radius": "8px", overflow: "hidden" }}>
+    <div style={{ width: "420px", border: "1px solid var(--border-base)", "border-radius": "8px", overflow: "hidden" }}>
       <DockShell style={{ padding: "12px" }}>
         <p style={{ margin: 0, "font-size": "13px" }}>Body content goes here inside DockShell.</p>
       </DockShell>
@@ -53,8 +64,10 @@ export const ShellWithTray: Story = {
 export const ShellForm: Story = {
   name: "DockShellForm",
   render: () => (
-    <DockShellForm style={{ padding: "12px", border: "1px solid var(--border-base)", "border-radius": "8px" }}>
-      <p style={{ margin: 0, "font-size": "13px" }}>DockShellForm — shell variant using a form element.</p>
-    </DockShellForm>
+    <div style={{ width: "420px" }}>
+      <DockShellForm style={{ padding: "12px", border: "1px solid var(--border-base)", "border-radius": "8px" }}>
+        <p style={{ margin: 0, "font-size": "13px" }}>DockShellForm — shell variant using a form element.</p>
+      </DockShellForm>
+    </div>
   ),
 }

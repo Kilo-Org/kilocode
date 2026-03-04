@@ -25,7 +25,9 @@ import { dict as kiloEn } from "@kilocode/kilo-i18n/en"
 import { SessionList } from "../components/history/SessionList"
 
 const dict: Record<string, string> = { ...appEn, ...uiEn, ...kiloEn }
-function t(key: string) { return dict[key] ?? key }
+function t(key: string) {
+  return dict[key] ?? key
+}
 function noop() {}
 
 const now = new Date().toISOString()
@@ -102,7 +104,19 @@ const WithSessions: ParentComponent<{ sessions?: typeof mockSessions }> = (props
               <LanguageContext.Provider value={{ locale, setLocale: noop, userOverride: () => "" as any, t }}>
                 <I18nProvider value={{ locale: () => "en", t }}>
                   <SessionContext.Provider value={session as any}>
-                    <DataProvider data={{ session: sessions, session_status: {}, session_diff: {}, message: {}, part: {}, permission: {}, question: {}, provider: { all: [], connected: false, default: {} } }} directory="/project/">
+                    <DataProvider
+                      data={{
+                        session: sessions,
+                        session_status: {},
+                        session_diff: {},
+                        message: {},
+                        part: {},
+                        permission: {},
+                        question: {},
+                        provider: { all: [], connected: false, default: {} },
+                      }}
+                      directory="/project/"
+                    >
                       <DiffComponentProvider component={Diff}>
                         <CodeComponentProvider component={Code}>
                           <MarkedProvider>
@@ -133,7 +147,7 @@ export const Empty: Story = {
   name: "Empty list",
   render: () => (
     <WithSessions sessions={[]}>
-      <div style={{ width: "320px", height: "500px" }}>
+      <div style={{ width: "420px", height: "500px" }}>
         <SessionList onSelectSession={noop} />
       </div>
     </WithSessions>
@@ -144,7 +158,7 @@ export const WithItems: Story = {
   name: "With sessions",
   render: () => (
     <WithSessions sessions={mockSessions as any}>
-      <div style={{ width: "320px", height: "500px" }}>
+      <div style={{ width: "420px", height: "500px" }}>
         <SessionList onSelectSession={noop} />
       </div>
     </WithSessions>

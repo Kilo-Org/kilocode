@@ -66,13 +66,8 @@ export const FileTreeWithChanges: Story = {
   name: "FileTree — with modifications and additions",
   render: () => (
     <StoryProviders>
-      <div style={{ width: "280px", height: "400px", overflow: "auto" }}>
-        <FileTree
-          diffs={mockDiffs}
-          activeFile="src/components/chat/ChatView.tsx"
-          onFileSelect={() => {}}
-          showSummary
-        />
+      <div style={{ width: "420px", height: "400px", overflow: "auto" }}>
+        <FileTree diffs={mockDiffs} activeFile="src/components/chat/ChatView.tsx" onFileSelect={() => {}} showSummary />
       </div>
     </StoryProviders>
   ),
@@ -82,7 +77,7 @@ export const FileTreeEmpty: Story = {
   name: "FileTree — no changes",
   render: () => (
     <StoryProviders>
-      <div style={{ width: "280px", height: "400px" }}>
+      <div style={{ width: "420px", height: "400px" }}>
         <FileTree diffs={[]} activeFile={null} onFileSelect={() => {}} />
       </div>
     </StoryProviders>
@@ -97,14 +92,8 @@ export const DiffPanelLoading: Story = {
   name: "DiffPanel — loading",
   render: () => (
     <StoryProviders>
-      <div style={{ width: "600px", height: "500px", display: "flex", "flex-direction": "column" }}>
-        <DiffPanel
-          diffs={[]}
-          loading
-          comments={[]}
-          onCommentsChange={() => {}}
-          onClose={() => {}}
-        />
+      <div style={{ width: "420px", height: "500px", display: "flex", "flex-direction": "column" }}>
+        <DiffPanel diffs={[]} loading comments={[]} onCommentsChange={() => {}} onClose={() => {}} />
       </div>
     </StoryProviders>
   ),
@@ -114,7 +103,7 @@ export const DiffPanelWithDiffs: Story = {
   name: "DiffPanel — with diffs (unified)",
   render: () => (
     <StoryProviders>
-      <div style={{ width: "600px", height: "500px", display: "flex", "flex-direction": "column" }}>
+      <div style={{ width: "420px", height: "500px", display: "flex", "flex-direction": "column" }}>
         <DiffPanel
           diffs={mockDiffs}
           loading={false}
@@ -138,7 +127,7 @@ export const FullScreenDiffLoading: Story = {
   name: "FullScreenDiffView — loading",
   render: () => (
     <StoryProviders>
-      <div style={{ width: "1024px", height: "700px", display: "flex" }}>
+      <div style={{ width: "420px", height: "700px", display: "flex" }}>
         <FullScreenDiffView
           diffs={[]}
           loading
@@ -157,7 +146,7 @@ export const FullScreenDiffWithChanges: Story = {
   name: "FullScreenDiffView — with changes",
   render: () => (
     <StoryProviders>
-      <div style={{ width: "1024px", height: "700px", display: "flex" }}>
+      <div style={{ width: "420px", height: "700px", display: "flex" }}>
         <FullScreenDiffView
           diffs={mockDiffs}
           loading={false}
@@ -181,7 +170,7 @@ export const AgentManagerRoot: Story = {
   render: () => (
     // AgentManagerApp sets up its own VSCodeProvider + ThemeProvider + layout.
     // In Storybook it renders its empty/connecting state (no extension host).
-    <div style={{ width: "900px", height: "600px" }}>
+    <div style={{ width: "420px", height: "600px" }}>
       <AgentManagerApp />
     </div>
   ),

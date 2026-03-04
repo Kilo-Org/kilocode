@@ -73,7 +73,7 @@ export const ChatViewIdle: Story = {
   name: "ChatView — idle (empty)",
   render: () => (
     <StoryProviders sessionID={SESSION_ID} status="idle">
-      <div style={{ width: "400px", height: "600px", display: "flex", "flex-direction": "column" }}>
+      <div style={{ width: "420px", height: "600px", display: "flex", "flex-direction": "column" }}>
         <ChatView />
       </div>
     </StoryProviders>
@@ -84,7 +84,7 @@ export const ChatViewReadonly: Story = {
   name: "ChatView — readonly",
   render: () => (
     <StoryProviders sessionID={SESSION_ID} status="idle">
-      <div style={{ width: "400px", height: "600px", display: "flex", "flex-direction": "column" }}>
+      <div style={{ width: "420px", height: "600px", display: "flex", "flex-direction": "column" }}>
         <ChatView readonly />
       </div>
     </StoryProviders>
@@ -95,7 +95,7 @@ export const ChatViewWithQuestion: Story = {
   name: "ChatView — with QuestionDock",
   render: () => (
     <StoryProviders sessionID={SESSION_ID} questions={[singleQuestion]}>
-      <div style={{ width: "400px", height: "600px", display: "flex", "flex-direction": "column" }}>
+      <div style={{ width: "420px", height: "600px", display: "flex", "flex-direction": "column" }}>
         <ChatView />
       </div>
     </StoryProviders>
@@ -110,7 +110,7 @@ export const MessageListEmpty: Story = {
   name: "MessageList — empty",
   render: () => (
     <StoryProviders sessionID={SESSION_ID}>
-      <div style={{ width: "400px", height: "500px" }}>
+      <div style={{ width: "420px", height: "500px" }}>
         <MessageList />
       </div>
     </StoryProviders>
@@ -127,7 +127,7 @@ export const MessageListLoading: Story = {
     // which we approximate here: the component will show its empty-state logo instead.
     return (
       <StoryProviders sessionID={SESSION_ID}>
-        <div style={{ width: "400px", height: "500px" }}>
+        <div style={{ width: "420px", height: "500px" }}>
           <MessageList />
         </div>
       </StoryProviders>

@@ -19,7 +19,7 @@ export const SettingsPanel: Story = {
   name: "Settings — full panel",
   render: () => (
     <StoryProviders>
-      <div style={{ width: "560px", height: "700px", display: "flex", "flex-direction": "column" }}>
+      <div style={{ width: "420px", height: "700px", display: "flex", "flex-direction": "column" }}>
         <Settings onBack={() => {}} />
       </div>
     </StoryProviders>
@@ -30,7 +30,7 @@ export const ProvidersConfigure: Story = {
   name: "ProvidersTab — no providers configured",
   render: () => (
     <StoryProviders>
-      <div style={{ width: "560px", "max-height": "700px", overflow: "auto" }}>
+      <div style={{ width: "420px", "max-height": "700px", overflow: "auto" }}>
         <ProvidersTab />
       </div>
     </StoryProviders>
