@@ -8,7 +8,7 @@
  * tool call rather than in the bottom dock.
  */
 
-import { Component, For, Show, createMemo, createSignal } from "solid-js"
+import { Component, For, Show, Switch, Match, createMemo, createSignal } from "solid-js"
 import { Part, PART_MAPPING } from "@kilocode/kilo-ui/message-part"
 import { Button } from "@kilocode/kilo-ui/button"
 import type { AssistantMessage as SDKAssistantMessage, Part as SDKPart, Message as SDKMessage } from "@kilocode/sdk/v2"
@@ -16,6 +16,7 @@ import { useData } from "@kilocode/kilo-ui/context/data"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import { QuestionDock } from "./QuestionDock"
+import type { PermissionRequest } from "../../types/messages"
 
 const HIDDEN_TOOLS = new Set(["todowrite", "todoread"])
 
@@ -86,44 +87,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                   turnDurationMs={props.turnDurationMs}
                 />
                 <Show when={perm()} keyed>
-                  {(p) => (
-                    <div data-component="permission-prompt" onClick={(e: MouseEvent) => e.stopPropagation()}>
-                      <Show when={p.patterns.length > 0}>
-                        <div class="permission-dock-patterns">
-                          <For each={p.patterns}>
-                            {(pattern) => <code class="permission-dock-pattern">{pattern}</code>}
-                          </For>
-                        </div>
-                      </Show>
-                      <div data-slot="permission-actions">
-                        <Button
-                          variant="ghost"
-                          size="small"
-                          onClick={() => decide(p.id, "reject")}
-                          disabled={responding()}
-                        >
-                          {language.t("ui.permission.deny")}
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          size="small"
-                          onClick={() => decide(p.id, "always")}
-                          disabled={responding()}
-                        >
-                          {language.t("ui.permission.allowAlways")}
-                        </Button>
-                        <Button
-                          variant="primary"
-                          size="small"
-                          onClick={() => decide(p.id, "once")}
-                          disabled={responding()}
-                        >
-                          {language.t("ui.permission.allowOnce")}
-                        </Button>
-                      </div>
-                      <p data-slot="permission-hint">{language.t("ui.permission.sessionHint")}</p>
-                    </div>
-                  )}
+                  {(p) => <InlinePermissionPrompt permission={p} responding={responding()} onDecide={decide} />}
                 </Show>
               </div>
             </Show>
@@ -134,5 +98,79 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
         {(req) => <QuestionDock request={req} />}
       </Show>
     </>
+  )
+}
+
+function InlinePermissionPrompt(props: {
+  permission: PermissionRequest
+  responding: boolean
+  onDecide: (id: string, response: "once" | "always" | "reject") => void
+}) {
+  const language = useLanguage()
+  const [stage, setStage] = createSignal<"permission" | "always">("permission")
+
+  const hasRules = () =>
+    props.permission.always.length > 0 && !(props.permission.always.length === 1 && props.permission.always[0] === "*")
+
+  return (
+    <div data-component="permission-prompt" onClick={(e: MouseEvent) => e.stopPropagation()}>
+      <Switch>
+        <Match when={stage() === "permission"}>
+          <Show when={props.permission.patterns.length > 0}>
+            <div class="permission-dock-patterns">
+              <For each={props.permission.patterns}>
+                {(pattern) => <code class="permission-dock-pattern">{pattern}</code>}
+              </For>
+            </div>
+          </Show>
+          <div data-slot="permission-actions">
+            <Button
+              variant="ghost"
+              size="small"
+              onClick={() => props.onDecide(props.permission.id, "reject")}
+              disabled={props.responding}
+            >
+              {language.t("ui.permission.deny")}
+            </Button>
+            <Button
+              variant="secondary"
+              size="small"
+              onClick={() => (hasRules() ? setStage("always") : props.onDecide(props.permission.id, "always"))}
+              disabled={props.responding}
+            >
+              {language.t("ui.permission.allowAlways")}
+            </Button>
+            <Button
+              variant="primary"
+              size="small"
+              onClick={() => props.onDecide(props.permission.id, "once")}
+              disabled={props.responding}
+            >
+              {language.t("ui.permission.allowOnce")}
+            </Button>
+          </div>
+          <p data-slot="permission-hint">{language.t("ui.permission.sessionHint")}</p>
+        </Match>
+        <Match when={stage() === "always"}>
+          <div class="permission-dock-patterns">
+            <For each={props.permission.always}>{(rule) => <code class="permission-dock-pattern">{rule}</code>}</For>
+          </div>
+          <div data-slot="permission-actions">
+            <Button variant="ghost" size="small" onClick={() => setStage("permission")} disabled={props.responding}>
+              {language.t("ui.common.cancel")}
+            </Button>
+            <Button
+              variant="primary"
+              size="small"
+              onClick={() => props.onDecide(props.permission.id, "always")}
+              disabled={props.responding}
+            >
+              {language.t("ui.common.confirm")}
+            </Button>
+          </div>
+          <p data-slot="permission-hint">This rule will be saved to your global settings.</p>
+        </Match>
+      </Switch>
+    </div>
   )
 }
