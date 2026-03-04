@@ -325,12 +325,12 @@ const AgentManagerContent: Component = () => {
   const [diffLoading, setDiffLoading] = createSignal(false)
   const [diffWidth, setDiffWidth] = createSignal(Math.round(window.innerWidth * 0.5))
 
-  // Full-screen review state (in-memory, per worktree)
-  const [reviewOpenByWorktree, setReviewOpenByWorktree] = createSignal<Record<string, boolean>>({})
-  const [reviewCommentsByWorktree, setReviewCommentsByWorktree] = createSignal<Record<string, ReviewComment[]>>({})
+  // Full-screen review state (in-memory, per sidebar context: local/worktree)
+  const [reviewOpenByContext, setReviewOpenByContext] = createSignal<Record<string, boolean>>({})
+  const [reviewCommentsByContext, setReviewCommentsByContext] = createSignal<Record<string, ReviewComment[]>>({})
   const [reviewActive, setReviewActive] = createSignal(false)
   const [reviewDiffStyle, setReviewDiffStyle] = createSignal<"unified" | "split">("unified")
-  // reviewOpen (memo below) controls tab presence for selected worktree.
+  // reviewOpen (memo below) controls tab presence for selected context.
 
   // Per-worktree git stats (diff additions/deletions, commits missing from origin)
   const [worktreeStats, setWorktreeStats] = createSignal<Record<string, WorktreeGitStats>>({})
@@ -354,33 +354,33 @@ const AgentManagerContent: Component = () => {
 
   const reviewOpen = createMemo(() => {
     const sel = selection()
-    if (!sel || sel === LOCAL) return false
-    return reviewOpenByWorktree()[sel] === true
+    if (sel === null) return false
+    return reviewOpenByContext()[sel] === true
   })
 
-  const setReviewOpenForWorktree = (worktreeId: string, open: boolean) => {
-    setReviewOpenByWorktree((prev) => {
-      if (prev[worktreeId] === open) return prev
-      return { ...prev, [worktreeId]: open }
+  const setReviewOpenForContext = (context: string, open: boolean) => {
+    setReviewOpenByContext((prev) => {
+      if (prev[context] === open) return prev
+      return { ...prev, [context]: open }
     })
   }
 
   const setReviewOpenForSelection = (open: boolean) => {
     const sel = selection()
-    if (!sel || sel === LOCAL) return
-    setReviewOpenForWorktree(sel, open)
+    if (sel === null) return
+    setReviewOpenForContext(sel, open)
   }
 
   const reviewComments = createMemo(() => {
     const sel = selection()
-    if (!sel || sel === LOCAL) return [] as ReviewComment[]
-    return reviewCommentsByWorktree()[sel] ?? []
+    if (sel === null) return [] as ReviewComment[]
+    return reviewCommentsByContext()[sel] ?? []
   })
 
   const setReviewCommentsForSelection = (comments: ReviewComment[]) => {
     const sel = selection()
-    if (!sel || sel === LOCAL) return
-    setReviewCommentsByWorktree((prev) => ({ ...prev, [sel]: comments }))
+    if (sel === null) return
+    setReviewCommentsByContext((prev) => ({ ...prev, [sel]: comments }))
   }
 
   const applyStateForSelection = createMemo(() => {
@@ -623,14 +623,14 @@ const AgentManagerContent: Component = () => {
   createEffect(() => {
     const ids = new Set(worktrees().map((wt) => wt.id))
 
-    setReviewOpenByWorktree((prev) => {
-      const next = Object.fromEntries(Object.entries(prev).filter(([id]) => ids.has(id)))
+    setReviewOpenByContext((prev) => {
+      const next = Object.fromEntries(Object.entries(prev).filter(([id]) => id === LOCAL || ids.has(id)))
       if (Object.keys(next).length === Object.keys(prev).length) return prev
       return next
     })
 
-    setReviewCommentsByWorktree((prev) => {
-      const next = Object.fromEntries(Object.entries(prev).filter(([id]) => ids.has(id)))
+    setReviewCommentsByContext((prev) => {
+      const next = Object.fromEntries(Object.entries(prev).filter(([id]) => id === LOCAL || ids.has(id)))
       if (Object.keys(next).length === Object.keys(prev).length) return prev
       return next
     })
@@ -712,7 +712,7 @@ const AgentManagerContent: Component = () => {
 
   createEffect(() => {
     const sel = selection()
-    if (!sel || sel === LOCAL) {
+    if (sel === null) {
       if (reviewActive()) setReviewActive(false)
       return
     }
@@ -893,6 +893,7 @@ const AgentManagerContent: Component = () => {
       session.clearCurrentSession()
       vscode.postMessage({ type: "agentManager.showExistingLocalTerminal" })
     }
+    setReviewActive(remembered === REVIEW_TAB_ID && reviewOpenByContext()[LOCAL] === true)
   }
 
   const selectWorktree = (worktreeId: string) => {
@@ -909,7 +910,7 @@ const AgentManagerContent: Component = () => {
     } else {
       session.setCurrentSessionID(undefined)
     }
-    setReviewActive(remembered === REVIEW_TAB_ID && reviewOpenByWorktree()[worktreeId] === true)
+    setReviewActive(remembered === REVIEW_TAB_ID && reviewOpenByContext()[worktreeId] === true)
   }
 
   onMount(() => {
@@ -1272,9 +1273,13 @@ const AgentManagerContent: Component = () => {
       return
     }
     if (review) {
-      // Review tab is open but no specific session — try using any session in the worktree
-      const sel = selection()
-      if (sel && sel !== LOCAL) {
+      // Review tab is open but no specific session — use local sentinel for local,
+      // or any session in the selected worktree.
+      if (sel === LOCAL) {
+        vscode.postMessage({ type: "agentManager.startDiffWatch", sessionId: LOCAL })
+        return
+      }
+      if (sel) {
         const managed = managedSessions().find((ms) => ms.worktreeId === sel)
         if (managed) {
           vscode.postMessage({ type: "agentManager.startDiffWatch", sessionId: managed.id })
@@ -1295,9 +1300,9 @@ const AgentManagerContent: Component = () => {
 
   const openReviewTab = () => {
     const sel = selection()
-    if (!sel || sel === LOCAL) return
+    if (sel === null) return
     setDiffOpen(false)
-    setReviewOpenForWorktree(sel, true)
+    setReviewOpenForContext(sel, true)
     setReviewActive(true)
   }
 
@@ -1317,16 +1322,18 @@ const AgentManagerContent: Component = () => {
     setReviewOpenForSelection(false)
   }
 
-  // Data for the review tab: use current session's diff data, or first available for the worktree
+  // Data for the review tab: use local diff data for local context,
+  // current session for selected worktree context, or first available in that worktree.
   const reviewDiffs = createMemo(() => {
     const data = diffDatas()
     const sel = selection()
     const id = session.currentSessionID()
+    if (sel === LOCAL) return data[LOCAL] ?? []
     if (id && data[id]) {
       const current = managedSessions().find((s) => s.id === id)
       if (sel && sel !== LOCAL && current?.worktreeId === sel) return data[id]!
     }
-    if (!sel || sel === LOCAL) return []
+    if (!sel) return []
     const ids = managedSessions()
       .filter((s) => s.worktreeId === sel)
       .map((s) => s.id)
@@ -1553,8 +1560,9 @@ const AgentManagerContent: Component = () => {
   const tabIds = createMemo(() => {
     const ids = activeTabs().map((s) => s.id)
     const sel = selection()
-    if (!sel || sel === LOCAL) return ids
+    if (sel === null) return ids
     const current = reviewOpen() ? [...ids, REVIEW_TAB_ID] : ids
+    if (sel === LOCAL) return current
     return applyTabOrder(
       current.map((id) => ({ id })),
       worktreeTabOrder()[sel],
@@ -1572,7 +1580,12 @@ const AgentManagerContent: Component = () => {
     if (typeof from !== "string" || typeof to !== "string") return
     const sel = selection()
     if (sel === LOCAL) {
-      setLocalSessionIDs((prev) => reorderTabs(prev, from, to) ?? prev)
+      setLocalSessionIDs((prev) => {
+        const ids = reviewOpen() ? [...prev, REVIEW_TAB_ID] : prev
+        const reordered = reorderTabs(ids, from, to)
+        if (!reordered) return prev
+        return reordered.filter((id) => id !== REVIEW_TAB_ID)
+      })
       return
     }
     if (sel) {
@@ -2386,7 +2399,7 @@ const AgentManagerContent: Component = () => {
                     </>
                   )
                 })()}
-                <Show when={selection() !== LOCAL}>
+                <Show when={selection() !== null}>
                   <Tooltip value={t("command.review.toggle")} placement="bottom">
                     <IconButton
                       icon="expand"
@@ -2536,7 +2549,7 @@ const AgentManagerContent: Component = () => {
                     comments={reviewComments()}
                     onCommentsChange={setReviewCommentsForSelection}
                     onClose={() => setDiffOpen(false)}
-                    onExpand={selection() !== LOCAL ? openReviewTab : undefined}
+                    onExpand={selection() !== null ? openReviewTab : undefined}
                     onOpenFile={(file) => {
                       const id = session.currentSessionID()
                       if (id) vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file })
