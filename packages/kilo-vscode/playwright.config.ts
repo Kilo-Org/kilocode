@@ -3,6 +3,7 @@ import { defineConfig, devices } from "@playwright/test"
 export default defineConfig({
   testDir: "./tests",
   testMatch: "**/*.spec.ts",
+  tsconfig: "./tsconfig.test.json",
   fullyParallel: true,
   forbidOnly: !!process.env["CI"],
   retries: process.env["CI"] ? 1 : 0,
@@ -24,8 +25,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command:
-      "bunx storybook build -o ./storybook-static && bunx http-server ./storybook-static -p 6007 --silent",
+    command: "bunx storybook build -o ./storybook-static && bunx http-server ./storybook-static -p 6007 --silent",
     url: "http://localhost:6007",
     reuseExistingServer: !process.env["CI"],
     timeout: 300_000,
