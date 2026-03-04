@@ -1496,7 +1496,7 @@ export namespace Config {
       for (const file of CONFIG_FILES_KILO_GLOBAL) {
         const filepath = path.join(managedDir, file)
         if (await hasMcpDefinition(filepath, mcpName)) {
-          log.warn("MCP server is defined in managed config (read-only), toggle will be written to user config", {
+          log.warn("MCP server is defined in managed config (read-only), toggle may not be persisted", {
             mcp: mcpName,
             managedConfig: filepath,
           })
@@ -1511,7 +1511,7 @@ export namespace Config {
       try {
         const inlineConfig = parseJsonc(Flag.KILO_CONFIG_CONTENT)
         if (inlineConfig?.mcp?.[mcpName]) {
-          log.warn("MCP server is defined in KILO_CONFIG_CONTENT (read-only), toggle will be written to user config", {
+          log.warn("MCP server is defined in KILO_CONFIG_CONTENT (read-only), toggle may not be persisted", {
             mcp: mcpName,
           })
         }
@@ -1537,21 +1537,22 @@ export namespace Config {
       }
     }
 
-    // Check ~/.kilo/ directory (legacy Kilocode config location)
-    const homeKiloDir = path.join(Global.Path.home, ".kilo")
-    for (const file of CONFIG_FILES_KILO_PROJECT) {
-      const filepath = path.join(homeKiloDir, file)
-      if (await hasMcpDefinition(filepath, mcpName)) {
-        return filepath
-      }
-    }
-
-    // Check ~/.opencode/
-    const homeOpencodeDir = path.join(Global.Path.home, ".opencode")
-    for (const file of CONFIG_FILES_KILO_PROJECT) {
-      const filepath = path.join(homeOpencodeDir, file)
-      if (await hasMcpDefinition(filepath, mcpName)) {
-        return filepath
+    // Check project .opencode directories (closest first) - higher precedence than .kilo
+    if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
+      const opencodeDirs = await Array.fromAsync(
+        Filesystem.up({
+          targets: [".opencode"],
+          start: Instance.directory,
+          stop: Instance.worktree,
+        }),
+      )
+      for (const dir of opencodeDirs) {
+        for (const file of CONFIG_FILES_KILO_PROJECT) {
+          const filepath = path.join(dir, file)
+          if (await hasMcpDefinition(filepath, mcpName)) {
+            return filepath
+          }
+        }
       }
     }
 
@@ -1574,25 +1575,6 @@ export namespace Config {
       }
     }
 
-    // Check project .opencode directories (closest first)
-    if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
-      const opencodeDirs = await Array.fromAsync(
-        Filesystem.up({
-          targets: [".opencode"],
-          start: Instance.directory,
-          stop: Instance.worktree,
-        }),
-      )
-      for (const dir of opencodeDirs) {
-        for (const file of CONFIG_FILES_KILO_PROJECT) {
-          const filepath = path.join(dir, file)
-          if (await hasMcpDefinition(filepath, mcpName)) {
-            return filepath
-          }
-        }
-      }
-    }
-
     // Check project config files (kilo.jsonc/kilo.json/opencode.jsonc/opencode.json in project root)
     if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
       for (const file of CONFIG_FILES_KILO_PROJECT) {
@@ -1602,6 +1584,24 @@ export namespace Config {
             return filepath
           }
         }
+      }
+    }
+
+    // Check ~/.opencode/ - lower precedence than project directories
+    const homeOpencodeDir = path.join(Global.Path.home, ".opencode")
+    for (const file of CONFIG_FILES_KILO_PROJECT) {
+      const filepath = path.join(homeOpencodeDir, file)
+      if (await hasMcpDefinition(filepath, mcpName)) {
+        return filepath
+      }
+    }
+
+    // Check ~/.kilo/ directory (legacy Kilocode config location) - lowest precedence
+    const homeKiloDir = path.join(Global.Path.home, ".kilo")
+    for (const file of CONFIG_FILES_KILO_PROJECT) {
+      const filepath = path.join(homeKiloDir, file)
+      if (await hasMcpDefinition(filepath, mcpName)) {
+        return filepath
       }
     }
 
