@@ -6,6 +6,29 @@ import { getErrorMessage } from "../../kilo-provider-utils"
 let lastGeneratedMessage: string | undefined
 let lastWorkspacePath: string | undefined
 
+const NO_CHANGES_MESSAGE = "NO_CHANGES"
+
+function formatCommitError(error: unknown): string | typeof NO_CHANGES_MESSAGE {
+  if (error && typeof error === "object") {
+    if ("name" in error && error.name === "CommitMessageNoChangesError") {
+      return NO_CHANGES_MESSAGE
+    }
+    if (
+      "name" in error &&
+      error.name === "ProviderModelNotFoundError" &&
+      "data" in error &&
+      error.data &&
+      typeof error.data === "object"
+    ) {
+      const data = error.data
+      const modelID = "modelID" in data ? String(data.modelID) : "unknown"
+      const providerID = "providerID" in data ? String(data.providerID) : "unknown"
+      return `Model "${modelID}" not found on provider "${providerID}". Check your small model configuration in Settings > Providers.`
+    }
+  }
+  return getErrorMessage(error)
+}
+
 interface GitRepository {
   inputBox: { value: string }
   rootUri: vscode.Uri
@@ -75,21 +98,9 @@ export function registerCommitMessageService(
       .then(undefined, (error: unknown) => {
         console.error("[Kilo New] Failed to generate commit message:", error)
 
-        const msg = (() => {
-          if (error && typeof error === "object") {
-            const obj = error as Record<string, unknown>
-            if (obj.name === "CommitMessageNoChangesError") {
-              return null // Signal to show informational message
-            }
-            if (obj.name === "ProviderModelNotFoundError" && obj.data && typeof obj.data === "object") {
-              const data = obj.data as { providerID?: string; modelID?: string }
-              return `Model "${data.modelID}" not found on provider "${data.providerID}". Check your small model configuration in Settings > Providers.`
-            }
-          }
-          return getErrorMessage(error)
-        })()
+        const msg = formatCommitError(error)
 
-        if (msg === null) {
+        if (msg === NO_CHANGES_MESSAGE) {
           vscode.window.showInformationMessage(
             "No staged or unstaged changes found. Stage some changes first to generate a commit message.",
           )
