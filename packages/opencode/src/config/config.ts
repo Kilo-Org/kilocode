@@ -93,9 +93,6 @@ export namespace Config {
     return merged
   }
 
-  // kilocode_change: Export merge function for config merging
-  const merge = mergeConfigConcatArrays
-
   const managedDir = managedConfigDir()
 
   // kilocode_change: Export the init function so it can be used for targeted state disposal
@@ -1443,9 +1440,11 @@ export namespace Config {
       text = await file.text()
     }
 
-    // kilocode_change: Check if value is already the same to avoid unnecessary writes
+    // kilocode_change: Check if value is already the same to avoid unnecessary writes (inside lock to prevent race)
     const data = parseJsonc(text, [], { allowTrailingComma: true })
-    if (data?.mcp?.[name]?.enabled === enabled) return
+    const mcpEntry = data?.mcp?.[name]
+    const currentEnabled = typeof mcpEntry === "object" && mcpEntry !== null ? mcpEntry.enabled : undefined
+    if (currentEnabled === enabled) return
 
     const edits = modify(text, ["mcp", name, "enabled"], enabled, {
       formattingOptions: { tabSize: 2, insertSpaces: true },
@@ -1511,7 +1510,7 @@ export namespace Config {
       }
     }
 
-    // Check KILO_CONFIG_DIR
+    // Check KILO_CONFIG_DIR (searches both kilo.json and opencode.json files)
     if (Flag.KILO_CONFIG_DIR) {
       for (const file of CONFIG_FILES_KILO_PROJECT) {
         const filepath = path.join(Flag.KILO_CONFIG_DIR, file)
@@ -1521,12 +1520,40 @@ export namespace Config {
       }
     }
 
+    // Check ~/.kilo/ directory (legacy Kilocode config location)
+    const homeKiloDir = path.join(Global.Path.home, ".kilo")
+    for (const file of CONFIG_FILES_KILO_PROJECT) {
+      const filepath = path.join(homeKiloDir, file)
+      if (await hasMcpDefinition(filepath, mcpName)) {
+        return filepath
+      }
+    }
+
     // Check ~/.opencode/
     const homeOpencodeDir = path.join(Global.Path.home, ".opencode")
-    for (const file of CONFIG_FILES_OPENCODE) {
+    for (const file of CONFIG_FILES_KILO_PROJECT) {
       const filepath = path.join(homeOpencodeDir, file)
       if (await hasMcpDefinition(filepath, mcpName)) {
         return filepath
+      }
+    }
+
+    // Check project .kilo directories (legacy, closest first)
+    if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
+      const kiloDirs = await Array.fromAsync(
+        Filesystem.up({
+          targets: [".kilo"],
+          start: Instance.directory,
+          stop: Instance.worktree,
+        }),
+      )
+      for (const dir of kiloDirs) {
+        for (const file of CONFIG_FILES_KILO_PROJECT) {
+          const filepath = path.join(dir, file)
+          if (await hasMcpDefinition(filepath, mcpName)) {
+            return filepath
+          }
+        }
       }
     }
 
@@ -1540,7 +1567,7 @@ export namespace Config {
         }),
       )
       for (const dir of opencodeDirs) {
-        for (const file of CONFIG_FILES_OPENCODE) {
+        for (const file of CONFIG_FILES_KILO_PROJECT) {
           const filepath = path.join(dir, file)
           if (await hasMcpDefinition(filepath, mcpName)) {
             return filepath
@@ -1549,9 +1576,9 @@ export namespace Config {
       }
     }
 
-    // Check project config files (opencode.jsonc/json in project root)
+    // Check project config files (kilo.jsonc/kilo.json/opencode.jsonc/opencode.json in project root)
     if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
-      for (const file of CONFIG_FILES_OPENCODE) {
+      for (const file of CONFIG_FILES_KILO_PROJECT) {
         const found = await Filesystem.findUp(file, Instance.directory, Instance.worktree)
         for (const filepath of found) {
           if (await hasMcpDefinition(filepath, mcpName)) {
@@ -1561,7 +1588,7 @@ export namespace Config {
       }
     }
 
-    // Check global config
+    // Check global config (returns first existing from kilo.json, kilo.jsonc, config.json, opencode.json, opencode.jsonc)
     const globalPath = globalConfigFile()
     if (await hasMcpDefinition(globalPath, mcpName)) {
       return globalPath
@@ -1585,10 +1612,12 @@ export namespace Config {
     // Resolution order follows loading precedence (high to low):
     // 1. KILO_CONFIG (explicit flag, highest priority)
     // 2. KILO_CONFIG_DIR (if set)
-    // 3. ~/.opencode/
-    // 4. Project .opencode/ directories (closest first)
-    // 5. Project config files (opencode.jsonc/json in project root)
-    // 6. Global config (fallback)
+    // 3. ~/.kilo/ (legacy Kilocode config)
+    // 4. ~/.opencode/
+    // 5. Project .kilo/ directories (closest first, legacy)
+    // 6. Project .opencode/ directories (closest first)
+    // 7. Project config files (kilo.json{,c}/opencode.json{,c} in project root)
+    // 8. Global config (fallback)
 
     // Check if custom config path is set via flag
     if (Flag.KILO_CONFIG) {
@@ -1597,7 +1626,7 @@ export namespace Config {
 
     // Check KILO_CONFIG_DIR (higher precedence than ~/.opencode/)
     if (Flag.KILO_CONFIG_DIR) {
-      for (const file of CONFIG_FILES_OPENCODE) {
+      for (const file of CONFIG_FILES_KILO_PROJECT) {
         const filepath = path.join(Flag.KILO_CONFIG_DIR, file)
         if (existsSync(filepath)) {
           return filepath
@@ -1614,9 +1643,18 @@ export namespace Config {
       return globalConfigFile()
     }
 
+    // Check ~/.kilo/ (legacy Kilocode config location)
+    const homeKiloDir = path.join(Global.Path.home, ".kilo")
+    for (const file of CONFIG_FILES_KILO_PROJECT) {
+      const filepath = path.join(homeKiloDir, file)
+      if (existsSync(filepath)) {
+        return filepath
+      }
+    }
+
     // Check ~/.opencode/ (user home directory config)
     const homeOpencodeDir = path.join(Global.Path.home, ".opencode")
-    for (const file of CONFIG_FILES_OPENCODE) {
+    for (const file of CONFIG_FILES_KILO_PROJECT) {
       const filepath = path.join(homeOpencodeDir, file)
       if (existsSync(filepath)) {
         return filepath
@@ -1625,6 +1663,25 @@ export namespace Config {
     // ~/.opencode/ exists but no config file - create new file here
     if (existsSync(homeOpencodeDir)) {
       return path.join(homeOpencodeDir, "opencode.jsonc")
+    }
+
+    // Check .kilo directories (legacy, scanned from closest to project root)
+    const kiloDirs = await Array.fromAsync(
+      Filesystem.up({
+        targets: [".kilo"],
+        start: Instance.directory,
+        stop: Instance.worktree,
+      }),
+    )
+    for (const dir of kiloDirs) {
+      for (const file of CONFIG_FILES_KILO_PROJECT) {
+        const filepath = path.join(dir, file)
+        if (existsSync(filepath)) {
+          return filepath
+        }
+      }
+      // .kilo/ directory exists but no config file - create new file here
+      return path.join(dir, "opencode.jsonc")
     }
 
     // Check .opencode directories (scanned from closest to project root)
@@ -1636,7 +1693,7 @@ export namespace Config {
       }),
     )
     for (const dir of opencodeDirs) {
-      for (const file of CONFIG_FILES_OPENCODE) {
+      for (const file of CONFIG_FILES_KILO_PROJECT) {
         const filepath = path.join(dir, file)
         if (existsSync(filepath)) {
           return filepath
@@ -1646,8 +1703,8 @@ export namespace Config {
       return path.join(dir, "opencode.jsonc")
     }
 
-    // Find project config using same priority as loading (jsonc first, then json)
-    for (const file of CONFIG_FILES_OPENCODE) {
+    // Find project config using same priority as loading (kilo.json{,c} first, then opencode.json{,c})
+    for (const file of CONFIG_FILES_KILO_PROJECT) {
       const found = await Filesystem.findUp(file, Instance.directory, Instance.worktree)
       if (found.length > 0) {
         // Use the closest file (first in array, which is highest priority)
