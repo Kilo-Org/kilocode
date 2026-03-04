@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { createEffect, createMemo, createSignal, onCleanup } from "solid-js"
-import type { Todo } from "@opencode-ai/sdk/v2"
+import type { Todo } from "@kilocode/sdk/v2"
 import { useGlobalSync } from "@/context/global-sync"
 import { SessionComposerRegion, createSessionComposerState } from "@/pages/session/composer"
 

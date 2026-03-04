@@ -25,5 +25,6 @@
     "storybook-solidjs-vite": "^10.0.9",
     "typescript": "catalog:",
     "vite": "catalog:"
-  }
+  },
+  "version": "7.0.37"
 }
