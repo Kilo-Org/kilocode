@@ -337,7 +337,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           await this.handleAbort(message.sessionID)
           break
         case "permissionResponse":
-          await this.handlePermissionResponse(message.permissionId, message.sessionID, message.response)
+          await this.handlePermissionResponse(
+            message.permissionId,
+            message.sessionID,
+            message.response,
+            message.toolName,
+            message.always,
+          )
           break
         case "createSession":
           await this.handleCreateSession()
@@ -1499,6 +1505,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     permissionId: string,
     sessionID: string,
     response: "once" | "always" | "reject",
+    toolName?: string,
+    always?: string[],
   ): Promise<void> {
     if (!this.client) {
       return
@@ -1516,8 +1524,29 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         { sessionID: targetSessionID, permissionID: permissionId, response, directory: workspaceDir },
         { throwOnError: true },
       )
+
+      if (response === "always" && toolName && always?.length) {
+        await this.persistPermissionRules(toolName, always)
+      }
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to respond to permission:", error)
+    }
+  }
+
+  private async persistPermissionRules(toolName: string, patterns: string[]): Promise<void> {
+    if (!this.client) return
+    try {
+      const rules: Record<string, string> = {}
+      for (const pattern of patterns) {
+        rules[pattern] = "allow"
+      }
+      const permission = { [toolName]: rules }
+      await this.client.global.config.update(
+        { config: { permission: permission as Config["permission"] } },
+        { throwOnError: true },
+      )
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to persist permission rules:", error)
     }
   }
 

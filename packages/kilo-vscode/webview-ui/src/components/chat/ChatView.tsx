@@ -148,7 +148,7 @@ function DockPermissionPrompt(props: { permission: PermissionRequest }) {
                 {language.t("ui.permission.allowOnce")}
               </Button>
             </div>
-            <p data-slot="permission-hint">{language.t("ui.permission.sessionHint")}</p>
+            <p data-slot="permission-hint">"Allow always" will be saved to your global settings.</p>
           </div>
         </Match>
         <Match when={stage() === "always"}>
