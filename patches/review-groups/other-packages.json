@@ -1,0 +1,9 @@
+[
+  {
+    "filename": "packages/kilo-i18n/src/tr.ts",
+    "status": "added",
+    "additions": 21,
+    "deletions": 0,
+    "patch": "@@ -0,0 +1,21 @@\n+// kilocode_change - new file\n+export const dict = {\n+  // Kilo Gateway provider translations\n+  \"provider.connect.kiloGateway.line1\":\n+    \"Kilo Gateway, kodlama ajanları için optimize edilmiş güvenilir modellere erişim sağlar.\",\n+  \"provider.connect.kiloGateway.line2\":\n+    \"Tek bir API anahtarıyla Claude, GPT, Gemini, GLM ve daha fazlası gibi modellere erişebilirsiniz.\",\n+  \"provider.connect.kiloGateway.visit.prefix\": \"API anahtarınızı almak için \",\n+  \"provider.connect.kiloGateway.visit.link\": \"kilo.ai\",\n+  \"provider.connect.kiloGateway.visit.suffix\": \" adresini ziyaret edin.\",\n+\n+  // Provider dialog translations\n+  \"dialog.provider.group.recommended\": \"Önerilen\",\n+  \"dialog.provider.kilo.note\": \"500+ AI modeline erişim\",\n+\n+  // Desktop translations\n+  \"desktop.menu.reloadWebview\": \"Webview'ı yeniden yükle\",\n+  \"desktop.updater.installFailed.message\": \"Güncelleme yüklenemedi\",\n+  \"desktop.cli.installed.message\":\n+    \"CLI {{path}} konumuna yüklendi\\n\\n'kilo' komutunu kullanmak için terminali yeniden başlatın.\",\n+}"
+  }
+]

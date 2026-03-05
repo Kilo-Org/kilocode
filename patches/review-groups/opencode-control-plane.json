@@ -1,0 +1,79 @@
+[
+  {
+    "filename": "packages/opencode/src/control-plane/adaptors/index.ts",
+    "status": "added",
+    "additions": 10,
+    "deletions": 0,
+    "patch": "@@ -0,0 +1,10 @@\n+import { WorktreeAdaptor } from \"./worktree\"\n+import type { Config } from \"../config\"\n+import type { Adaptor } from \"./types\"\n+\n+export function getAdaptor(config: Config): Adaptor {\n+  switch (config.type) {\n+    case \"worktree\":\n+      return WorktreeAdaptor\n+  }\n+}"
+  },
+  {
+    "filename": "packages/opencode/src/control-plane/adaptors/types.ts",
+    "status": "added",
+    "additions": 7,
+    "deletions": 0,
+    "patch": "@@ -0,0 +1,7 @@\n+import type { Config } from \"../config\"\n+\n+export type Adaptor<T extends Config = Config> = {\n+  create(from: T, branch?: string | null): Promise<{ config: T; init: () => Promise<void> }>\n+  remove(from: T): Promise<void>\n+  request(from: T, method: string, url: string, data?: BodyInit, signal?: AbortSignal): Promise<Response | undefined>\n+}"
+  },
+  {
+    "filename": "packages/opencode/src/control-plane/adaptors/worktree.ts",
+    "status": "added",
+    "additions": 26,
+    "deletions": 0,
+    "patch": "@@ -0,0 +1,26 @@\n+import { Worktree } from \"@/worktree\"\n+import type { Config } from \"../config\"\n+import type { Adaptor } from \"./types\"\n+\n+type WorktreeConfig = Extract<Config, { type: \"worktree\" }>\n+\n+export const WorktreeAdaptor: Adaptor<WorktreeConfig> = {\n+  async create(_from: WorktreeConfig, _branch: string) {\n+    const next = await Worktree.create(undefined)\n+    return {\n+      config: {\n+        type: \"worktree\",\n+        directory: next.directory,\n+      },\n+      // Hack for now: `Worktree.create` puts all its async code in a\n+      // `setTimeout` so it doesn't use this, but we should change that\n+      init: async () => {},\n+    }\n+  },\n+  async remove(config: WorktreeConfig) {\n+    await Worktree.remove({ directory: config.directory })\n+  },\n+  async request(_from: WorktreeConfig, _method: string, _url: string, _data?: BodyInit, _signal?: AbortSignal) {\n+    throw new Error(\"worktree does not support request\")\n+  },\n+}"
+  },
+  {
+    "filename": "packages/opencode/src/control-plane/config.ts",
+    "status": "added",
+    "additions": 10,
+    "deletions": 0,
+    "patch": "@@ -0,0 +1,10 @@\n+import z from \"zod\"\n+\n+export const Config = z.discriminatedUnion(\"type\", [\n+  z.object({\n+    directory: z.string(),\n+    type: z.literal(\"worktree\"),\n+  }),\n+])\n+\n+export type Config = z.infer<typeof Config>"
+  },
+  {
+    "filename": "packages/opencode/src/control-plane/session-proxy-middleware.ts",
+    "status": "added",
+    "additions": 46,
+    "deletions": 0,
+    "patch": "@@ -0,0 +1,46 @@\n+import { Instance } from \"@/project/instance\"\n+import type { MiddlewareHandler } from \"hono\"\n+import { Installation } from \"../installation\"\n+import { getAdaptor } from \"./adaptors\"\n+import { Workspace } from \"./workspace\"\n+\n+// This middleware forwards all non-GET requests if the workspace is a\n+// remote. The remote workspace needs to handle session mutations\n+async function proxySessionRequest(req: Request) {\n+  if (req.method === \"GET\") return\n+  if (!Instance.directory.startsWith(\"wrk_\")) return\n+\n+  const workspace = await Workspace.get(Instance.directory)\n+  if (!workspace) {\n+    return new Response(`Workspace not found: ${Instance.directory}`, {\n+      status: 500,\n+      headers: {\n+        \"content-type\": \"text/plain; charset=utf-8\",\n+      },\n+    })\n+  }\n+  if (workspace.config.type === \"worktree\") return\n+\n+  const url = new URL(req.url)\n+  const body = req.method === \"HEAD\" ? undefined : await req.arrayBuffer()\n+  return getAdaptor(workspace.config).request(\n+    workspace.config,\n+    req.method,\n+    `${url.pathname}${url.search}`,\n+    body,\n+    req.signal,\n+  )\n+}\n+\n+export const SessionProxyMiddleware: MiddlewareHandler = async (c, next) => {\n+  // Only available in development for now\n+  if (!Installation.isLocal()) {\n+    return next()\n+  }\n+\n+  const response = await proxySessionRequest(c.req.raw)\n+  if (response) {\n+    return response\n+  }\n+  return next()\n+}"
+  },
+  {
+    "filename": "packages/opencode/src/control-plane/sse.ts",
+    "status": "added",
+    "additions": 66,
+    "deletions": 0,
+    "patch": "@@ -0,0 +1,66 @@\n+export async function parseSSE(\n+  body: ReadableStream<Uint8Array>,\n+  signal: AbortSignal,\n+  onEvent: (event: unknown) => void,\n+) {\n+  const reader = body.getReader()\n+  const decoder = new TextDecoder()\n+  let buf = \"\"\n+  let last = \"\"\n+  let retry = 1000\n+\n+  const abort = () => {\n+    void reader.cancel().catch(() => undefined)\n+  }\n+\n+  signal.addEventListener(\"abort\", abort)\n+\n+  try {\n+    while (!signal.aborted) {\n+      const chunk = await reader.read().catch(() => ({ done: true, value: undefined as Uint8Array | undefined }))\n+      if (chunk.done) break\n+\n+      buf += decoder.decode(chunk.value, { stream: true })\n+      buf = buf.replace(/\\r\\n/g, \"\\n\").replace(/\\r/g, \"\\n\")\n+\n+      const chunks = buf.split(\"\\n\\n\")\n+      buf = chunks.pop() ?? \"\"\n+\n+      chunks.forEach((chunk) => {\n+        const data: string[] = []\n+        chunk.split(\"\\n\").forEach((line) => {\n+          if (line.startsWith(\"data:\")) {\n+            data.push(line.replace(/^data:\\s*/, \"\"))\n+            return\n+          }\n+          if (line.startsWith(\"id:\")) {\n+            last = line.replace(/^id:\\s*/, \"\")\n+            return\n+          }\n+          if (line.startsWith(\"retry:\")) {\n+            const parsed = Number.parseInt(line.replace(/^retry:\\s*/, \"\"), 10)\n+            if (!Number.isNaN(parsed)) retry = parsed\n+          }\n+        })\n+\n+        if (!data.length) return\n+        const raw = data.join(\"\\n\")\n+        try {\n+          onEvent(JSON.parse(raw))\n+        } catch {\n+          onEvent({\n+            type: \"sse.message\",\n+            properties: {\n+              data: raw,\n+              id: last || undefined,\n+              retry,\n+            },\n+          })\n+        }\n+      })\n+    }\n+  } finally {\n+    signal.removeEventListener(\"abort\", abort)\n+    reader.releaseLock()\n+  }\n+}"
+  },
+  {
+    "filename": "packages/opencode/src/control-plane/workspace-context.ts",
+    "status": "added",
+    "additions": 23,
+    "deletions": 0,
+    "patch": "@@ -0,0 +1,23 @@\n+import { Context } from \"../util/context\"\n+\n+interface Context {\n+  workspaceID?: string\n+}\n+\n+const context = Context.create<Context>(\"workspace\")\n+\n+export const WorkspaceContext = {\n+  async provide<R>(input: { workspaceID?: string; fn: () => R }): Promise<R> {\n+    return context.provide({ workspaceID: input.workspaceID }, async () => {\n+      return input.fn()\n+    })\n+  },\n+\n+  get workspaceID() {\n+    try {\n+      return context.use().workspaceID\n+    } catch (e) {\n+      return undefined\n+    }\n+  },\n+}"
+  },
+  {
+    "filename": "packages/opencode/src/control-plane/workspace-server/routes.ts",
+    "status": "added",
+    "additions": 33,
+    "deletions": 0,
+    "patch": "@@ -0,0 +1,33 @@\n+import { GlobalBus } from \"../../bus/global\"\n+import { Hono } from \"hono\"\n+import { streamSSE } from \"hono/streaming\"\n+\n+export function WorkspaceServerRoutes() {\n+  return new Hono().get(\"/event\", async (c) => {\n+    c.header(\"X-Accel-Buffering\", \"no\")\n+    c.header(\"X-Content-Type-Options\", \"nosniff\")\n+    return streamSSE(c, async (stream) => {\n+      const send = async (event: unknown) => {\n+        await stream.writeSSE({\n+          data: JSON.stringify(event),\n+        })\n+      }\n+      const handler = async (event: { directory?: string; payload: unknown }) => {\n+        await send(event.payload)\n+      }\n+      GlobalBus.on(\"event\", handler)\n+      await send({ type: \"server.connected\", properties: {} })\n+      const heartbeat = setInterval(() => {\n+        void send({ type: \"server.heartbeat\", properties: {} })\n+      }, 10_000)\n+\n+      await new Promise<void>((resolve) => {\n+        stream.onAbort(() => {\n+          clearInterval(heartbeat)\n+          GlobalBus.off(\"event\", handler)\n+          resolve()\n+        })\n+      })\n+    })\n+  })\n+}"
+  },
+  {
+    "filename": "packages/opencode/src/control-plane/workspace-server/server.ts",
+    "status": "added",
+    "additions": 24,
+    "deletions": 0,
+    "patch": "@@ -0,0 +1,24 @@\n+import { Hono } from \"hono\"\n+import { SessionRoutes } from \"../../server/routes/session\"\n+import { WorkspaceServerRoutes } from \"./routes\"\n+\n+export namespace WorkspaceServer {\n+  export function App() {\n+    const session = new Hono()\n+      .use(\"*\", async (c, next) => {\n+        if (c.req.method === \"GET\") return c.notFound()\n+        await next()\n+      })\n+      .route(\"/\", SessionRoutes())\n+\n+    return new Hono().route(\"/session\", session).route(\"/\", WorkspaceServerRoutes())\n+  }\n+\n+  export function Listen(opts: { hostname: string; port: number }) {\n+    return Bun.serve({\n+      hostname: opts.hostname,\n+      port: opts.port,\n+      fetch: App().fetch,\n+    })\n+  }\n+}"
+  },
+  {
+    "filename": "packages/opencode/src/control-plane/workspace.sql.ts",
+    "status": "added",
+    "additions": 12,
+    "deletions": 0,
+    "patch": "@@ -0,0 +1,12 @@\n+import { sqliteTable, text } from \"drizzle-orm/sqlite-core\"\n+import { ProjectTable } from \"@/project/project.sql\"\n+import type { Config } from \"./config\"\n+\n+export const WorkspaceTable = sqliteTable(\"workspace\", {\n+  id: text().primaryKey(),\n+  branch: text(),\n+  project_id: text()\n+    .notNull()\n+    .references(() => ProjectTable.id, { onDelete: \"cascade\" }),\n+  config: text({ mode: \"json\" }).notNull().$type<Config>(),\n+})"
+  },
+  {
+    "filename": "packages/opencode/src/control-plane/workspace.ts",
+    "status": "added",
+    "additions": 160,
+    "deletions": 0,
+    "patch": "@@ -0,0 +1,160 @@\n+import z from \"zod\"\n+import { Identifier } from \"@/id/id\"\n+import { fn } from \"@/util/fn\"\n+import { Database, eq } from \"@/storage/db\"\n+import { Project } from \"@/project/project\"\n+import { BusEvent } from \"@/bus/bus-event\"\n+import { GlobalBus } from \"@/bus/global\"\n+import { Log } from \"@/util/log\"\n+import { WorkspaceTable } from \"./workspace.sql\"\n+import { Config } from \"./config\"\n+import { getAdaptor } from \"./adaptors\"\n+import { parseSSE } from \"./sse\"\n+\n+export namespace Workspace {\n+  export const Event = {\n+    Ready: BusEvent.define(\n+      \"workspace.ready\",\n+      z.object({\n+        name: z.string(),\n+      }),\n+    ),\n+    Failed: BusEvent.define(\n+      \"workspace.failed\",\n+      z.object({\n+        message: z.string(),\n+      }),\n+    ),\n+  }\n+\n+  export const Info = z\n+    .object({\n+      id: Identifier.schema(\"workspace\"),\n+      branch: z.string().nullable(),\n+      projectID: z.string(),\n+      config: Config,\n+    })\n+    .meta({\n+      ref: \"Workspace\",\n+    })\n+  export type Info = z.infer<typeof Info>\n+\n+  function fromRow(row: typeof WorkspaceTable.$inferSelect): Info {\n+    return {\n+      id: row.id,\n+      branch: row.branch,\n+      projectID: row.project_id,\n+      config: row.config,\n+    }\n+  }\n+\n+  export const create = fn(\n+    z.object({\n+      id: Identifier.schema(\"workspace\").optional(),\n+      projectID: Info.shape.projectID,\n+      branch: Info.shape.branch,\n+      config: Info.shape.config,\n+    }),\n+    async (input) => {\n+      const id = Identifier.ascending(\"workspace\", input.id)\n+\n+      const { config, init } = await getAdaptor(input.config).create(input.config, input.branch)\n+\n+      const info: Info = {\n+        id,\n+        projectID: input.projectID,\n+        branch: input.branch,\n+        config,\n+      }\n+\n+      setTimeout(async () => {\n+        await init()\n+\n+        Database.use((db) => {\n+          db.insert(WorkspaceTable)\n+            .values({\n+              id: info.id,\n+              branch: info.branch,\n+              project_id: info.projectID,\n+              config: info.config,\n+            })\n+            .run()\n+        })\n+\n+        GlobalBus.emit(\"event\", {\n+          directory: id,\n+          payload: {\n+            type: Event.Ready.type,\n+            properties: {},\n+          },\n+        })\n+      }, 0)\n+\n+      return info\n+    },\n+  )\n+\n+  export function list(project: Project.Info) {\n+    const rows = Database.use((db) =>\n+      db.select().from(WorkspaceTable).where(eq(WorkspaceTable.project_id, project.id)).all(),\n+    )\n+    return rows.map(fromRow).sort((a, b) => a.id.localeCompare(b.id))\n+  }\n+\n+  export const get = fn(Identifier.schema(\"workspace\"), async (id) => {\n+    const row = Database.use((db) => db.select().from(WorkspaceTable).where(eq(WorkspaceTable.id, id)).get())\n+    if (!row) return\n+    return fromRow(row)\n+  })\n+\n+  export const remove = fn(Identifier.schema(\"workspace\"), async (id) => {\n+    const row = Database.use((db) => db.select().from(WorkspaceTable).where(eq(WorkspaceTable.id, id)).get())\n+    if (row) {\n+      const info = fromRow(row)\n+      await getAdaptor(info.config).remove(info.config)\n+      Database.use((db) => db.delete(WorkspaceTable).where(eq(WorkspaceTable.id, id)).run())\n+      return info\n+    }\n+  })\n+  const log = Log.create({ service: \"workspace-sync\" })\n+\n+  async function workspaceEventLoop(space: Info, stop: AbortSignal) {\n+    while (!stop.aborted) {\n+      const res = await getAdaptor(space.config)\n+        .request(space.config, \"GET\", \"/event\", undefined, stop)\n+        .catch(() => undefined)\n+      if (!res || !res.ok || !res.body) {\n+        await Bun.sleep(1000)\n+        continue\n+      }\n+      await parseSSE(res.body, stop, (event) => {\n+        GlobalBus.emit(\"event\", {\n+          directory: space.id,\n+          payload: event,\n+        })\n+      })\n+      // Wait 250ms and retry if SSE connection fails\n+      await Bun.sleep(250)\n+    }\n+  }\n+\n+  export function startSyncing(project: Project.Info) {\n+    const stop = new AbortController()\n+    const spaces = list(project).filter((space) => space.config.type !== \"worktree\")\n+\n+    spaces.forEach((space) => {\n+      void workspaceEventLoop(space, stop.signal).catch((error) => {\n+        log.warn(\"workspace sync listener failed\", {\n+          workspaceID: space.id,\n+          error,\n+        })\n+      })\n+    })\n+\n+    return {\n+      async stop() {\n+        stop.abort()\n+      },\n+    }\n+  }\n+}"
+  }
+]

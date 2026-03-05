@@ -1,0 +1,58 @@
+[
+  {
+    "filename": "packages/kilo-ui/package.json",
+    "status": "modified",
+    "additions": 7,
+    "deletions": 0,
+    "patch": "@@ -55,11 +55,18 @@\n     \"./dock-prompt\": \"./src/components/dock-prompt.tsx\",\n     \"./dock-surface\": \"./src/components/dock-surface.tsx\",\n     \"./scroll-view\": \"./src/components/scroll-view.tsx\",\n+    \"./file\": \"./src/components/file.tsx\",\n+    \"./animated-number\": \"./src/components/animated-number.tsx\",\n+    \"./line-comment-annotations\": \"./src/components/line-comment-annotations.tsx\",\n+    \"./motion-spring\": \"./src/components/motion-spring.tsx\",\n+    \"./text-reveal\": \"./src/components/text-reveal.tsx\",\n+    \"./text-strikethrough\": \"./src/components/text-strikethrough.tsx\",\n     \"./context\": \"./src/context/index.ts\",\n     \"./context/code\": \"./src/context/code.tsx\",\n     \"./context/data\": \"./src/context/data.tsx\",\n     \"./context/dialog\": \"./src/context/dialog.tsx\",\n     \"./context/diff\": \"./src/context/diff.tsx\",\n+    \"./context/file\": \"./src/context/file.tsx\",\n     \"./context/helper\": \"./src/context/helper.tsx\",\n     \"./context/i18n\": \"./src/context/i18n.tsx\",\n     \"./context/marked\": \"./src/context/marked.tsx\","
+  },
+  {
+    "filename": "packages/kilo-ui/src/components/animated-number.tsx",
+    "status": "added",
+    "additions": 2,
+    "deletions": 0,
+    "patch": "@@ -0,0 +1,2 @@\n+// kilocode_change - new file\n+export * from \"@opencode-ai/ui/animated-number\""
+  },
+  {
+    "filename": "packages/kilo-ui/src/components/file.tsx",
+    "status": "added",
+    "additions": 2,
+    "deletions": 0,
+    "patch": "@@ -0,0 +1,2 @@\n+// kilocode_change - new file\n+export * from \"@opencode-ai/ui/file\""
+  },
+  {
+    "filename": "packages/kilo-ui/src/components/line-comment-annotations.tsx",
+    "status": "added",
+    "additions": 2,
+    "deletions": 0,
+    "patch": "@@ -0,0 +1,2 @@\n+// kilocode_change - new file\n+export * from \"@opencode-ai/ui/line-comment-annotations\""
+  },
+  {
+    "filename": "packages/kilo-ui/src/components/motion-spring.tsx",
+    "status": "added",
+    "additions": 2,
+    "deletions": 0,
+    "patch": "@@ -0,0 +1,2 @@\n+// kilocode_change - new file\n+export * from \"@opencode-ai/ui/motion-spring\""
+  },
+  {
+    "filename": "packages/kilo-ui/src/components/text-reveal.tsx",
+    "status": "added",
+    "additions": 2,
+    "deletions": 0,
+    "patch": "@@ -0,0 +1,2 @@\n+// kilocode_change - new file\n+export * from \"@opencode-ai/ui/text-reveal\""
+  },
+  {
+    "filename": "packages/kilo-ui/src/components/text-strikethrough.tsx",
+    "status": "added",
+    "additions": 2,
+    "deletions": 0,
+    "patch": "@@ -0,0 +1,2 @@\n+// kilocode_change - new file\n+export * from \"@opencode-ai/ui/text-strikethrough\""
+  },
+  {
+    "filename": "packages/kilo-ui/src/context/file.tsx",
+    "status": "added",
+    "additions": 2,
+    "deletions": 0,
+    "patch": "@@ -0,0 +1,2 @@\n+// kilocode_change - new file\n+export * from \"@opencode-ai/ui/context/file\""
+  }
+]
