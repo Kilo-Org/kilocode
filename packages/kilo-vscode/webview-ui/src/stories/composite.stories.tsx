@@ -244,9 +244,7 @@ function dataWith(parts: any[], permissions?: PermissionRequest[]) {
     part: {
       [ASST_MSG_ID]: parts,
     },
-    permission: permissions
-      ? { [SESSION_ID]: permissions }
-      : {},
+    permission: permissions ? { [SESSION_ID]: permissions } : {},
   }
 }
 
@@ -318,9 +316,7 @@ export const PermissionDock: Story = {
           >
             <Show when={perm.patterns.length > 0}>
               <div class="permission-dock-patterns">
-                <For each={perm.patterns}>
-                  {(pattern) => <code class="permission-dock-pattern">{pattern}</code>}
-                </For>
+                <For each={perm.patterns}>{(pattern) => <code class="permission-dock-pattern">{pattern}</code>}</For>
               </div>
             </Show>
           </BasicTool>

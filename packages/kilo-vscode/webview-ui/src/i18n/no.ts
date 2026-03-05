@@ -46,6 +46,7 @@ export const dict = {
   "command.language.set": "Bruk språk: {{language}}",
 
   "command.session.new": "Ny sesjon",
+  "command.session.new.task": "Ny oppgave",
   "command.file.open": "Åpne fil",
   "command.tab.close": "Lukk fane",
   "command.context.addSelection": "Legg til markering i kontekst",
@@ -980,7 +981,6 @@ export const dict = {
   "dialog.model.notSet": "Ikke angitt",
   "profile.personalAccount": "Personlig konto",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/no.ts
-
 
   "question.summary": "{{n}} av {{total}} spørsmål",
   "common.review": "Gjennomgå",

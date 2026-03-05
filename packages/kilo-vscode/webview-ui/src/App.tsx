@@ -170,7 +170,7 @@ const AppContent: Component = () => {
   const handleViewAction = (action: string) => {
     switch (action) {
       case "plusButtonClicked":
-        session.clearCurrentSession()
+        window.dispatchEvent(new CustomEvent("newTaskRequest"))
         setCurrentView("newTask")
         break
       case "marketplaceButtonClicked":

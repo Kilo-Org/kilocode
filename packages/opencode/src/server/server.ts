@@ -273,6 +273,7 @@ export namespace Server {
             Bus, // kilocode_change
             SessionCreatedEvent: Session.Event.Created, // kilocode_change
             Identifier, // kilocode_change
+            ModelCache, // kilocode_change
           }),
         )
         // kilocode_change end

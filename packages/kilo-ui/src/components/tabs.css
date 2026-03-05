@@ -4,6 +4,25 @@
   font-size: 13px;
   line-height: normal;
 
+  [data-slot="tabs-list"] {
+    padding: 8px;
+  }
+
+  [data-slot="tabs-trigger-wrapper"] {
+    padding: 8px;
+    border-radius: 2px;
+
+    &:has([data-selected]) {
+      background-color: var(--input-base);
+    }
+  }
+
+  [data-slot="tabs-trigger"] {
+    font-size: 12px;
+    line-height: normal;
+    padding: 0px;
+  }
+
   /* Pill variant: closest to legacy tab style */
   &[data-variant="pill"] [data-slot="tabs-list"] {
     background: var(--input-base);
@@ -17,23 +36,39 @@
     font-size: 13px;
   }
 
-  /* Default/alt variant adjustments */
-  [data-slot="tabs-trigger"] {
-    height: 48px;
-    padding: 4px 0;
-    font-size: 13px;
-    line-height: normal;
-  }
+  &[data-variant="settings"] {
+    container-type: inline-size;
 
-  /* Settings variant: content area padding and header styling */
-  &[data-variant="settings"] [data-slot="tabs-content"] {
-    padding: 16px 20px;
+    [data-slot="tabs-list"] {
+      width: 180px;
+      min-width: 180px;
+    }
 
-    > h3 {
-      font-size: 18px;
-      font-weight: 600;
-      margin: 0 0 16px 0;
-      color: var(--vscode-foreground, var(--text-strong));
+    @container (max-width: 500px) {
+      [data-slot="tabs-list"] {
+        width: auto;
+        min-width: auto;
+      }
+      [data-slot="tabs-trigger"] .label {
+        display: none;
+      }
+    }
+
+    [data-slot="tabs-content"] {
+      background-color: var(--background-base);
+      padding: 8px 16px;
+
+      > h3 {
+        font-size: 16px;
+        font-weight: 400;
+        margin: 16px 0;
+        color: var(--vscode-foreground, var(--text-strong));
+      }
+
+      [data-component="card"] {
+        padding: 0;
+        border: none;
+      }
     }
   }
 }

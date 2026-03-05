@@ -2037,7 +2037,7 @@ const AgentManagerContent: Component = () => {
                                         placement="top"
                                       >
                                         <IconButton
-                                          icon="close-small"
+                                          icon="trash"
                                           size="small"
                                           variant="ghost"
                                           label={t("agentManager.worktree.delete")}

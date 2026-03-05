@@ -47,6 +47,7 @@ export const dict = {
   "command.language.set": "使用语言：{{language}}",
 
   "command.session.new": "新建会话",
+  "command.session.new.task": "新建任务",
   "command.file.open": "打开文件",
   "command.tab.close": "关闭标签页",
   "command.context.addSelection": "将所选内容添加到上下文",
@@ -966,7 +967,6 @@ export const dict = {
   "dialog.model.notSet": "未设置",
   "profile.personalAccount": "个人账户",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/zh.ts
-
 
   "question.summary": "第 {{n}} / {{total}} 个问题",
   "common.review": "审查",

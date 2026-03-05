@@ -72,6 +72,16 @@ export const PromptInput: Component = () => {
   window.addEventListener("focusPrompt", onFocusPrompt)
   onCleanup(() => window.removeEventListener("focusPrompt", onFocusPrompt))
 
+  // Start a new task, carrying over the current prompt text (without auto-sending it)
+  const onNewTaskRequest = () => {
+    const prompt = text().trim()
+    // Pre-populate the draft for the new (empty) session so the effect restores it
+    if (prompt) drafts.set("__new__", prompt)
+    session.clearCurrentSession()
+  }
+  window.addEventListener("newTaskRequest", onNewTaskRequest)
+  onCleanup(() => window.removeEventListener("newTaskRequest", onNewTaskRequest))
+
   const isBusy = () => session.status() === "busy"
   const isDisabled = () => !server.isConnected()
   const canSend = () => (text().trim().length > 0 || imageAttach.images().length > 0) && !isBusy() && !isDisabled()
@@ -430,7 +440,7 @@ export const PromptInput: Component = () => {
             fallback={
               <Tooltip value={language.t("prompt.action.send")} placement="top">
                 <Button
-                  variant="primary"
+                  variant="ghost"
                   size="small"
                   onClick={handleSend}
                   disabled={!canSend()}

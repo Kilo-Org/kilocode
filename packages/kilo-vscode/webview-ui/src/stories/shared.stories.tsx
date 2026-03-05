@@ -9,7 +9,7 @@ import { ModelSelectorBase } from "../components/shared/ModelSelector"
 
 const meta: Meta = {
   title: "Shared",
-  parameters: { layout: "padded" },
+  parameters: { layout: "fullscreen" },
 }
 export default meta
 type Story = StoryObj

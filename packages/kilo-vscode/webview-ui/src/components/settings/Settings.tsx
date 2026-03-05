@@ -54,59 +54,59 @@ const Settings: Component<SettingsProps> = (props) => {
         <Tabs.List>
           <Tabs.Trigger value="providers">
             <Icon name="providers" />
-            {language.t("settings.providers.title")}
+            <span class="label">{language.t("settings.providers.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="agentBehaviour">
             <Icon name="brain" />
-            {language.t("settings.agentBehaviour.title")}
+            <span class="label">{language.t("settings.agentBehaviour.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="autoApprove">
             <Icon name="checklist" />
-            {language.t("settings.autoApprove.title")}
+            <span class="label">{language.t("settings.autoApprove.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="browser">
             <Icon name="window-cursor" />
-            {language.t("settings.browser.title")}
+            <span class="label">{language.t("settings.browser.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="checkpoints">
             <Icon name="branch" />
-            {language.t("settings.checkpoints.title")}
+            <span class="label">{language.t("settings.checkpoints.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="display">
             <Icon name="eye" />
-            {language.t("settings.display.title")}
+            <span class="label">{language.t("settings.display.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="autocomplete">
             <Icon name="code-lines" />
-            {language.t("settings.autocomplete.title")}
+            <span class="label">{language.t("settings.autocomplete.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="notifications">
             <Icon name="circle-check" />
-            {language.t("settings.notifications.title")}
+            <span class="label">{language.t("settings.notifications.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="context">
             <Icon name="server" />
-            {language.t("settings.context.title")}
+            <span class="label">{language.t("settings.context.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="terminal">
             <Icon name="console" />
-            {language.t("settings.terminal.title")}
+            <span class="label">{language.t("settings.terminal.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="prompts">
             <Icon name="comment" />
-            {language.t("settings.prompts.title")}
+            <span class="label">{language.t("settings.prompts.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="experimental">
             <Icon name="settings-gear" />
-            {language.t("settings.experimental.title")}
+            <span class="label">{language.t("settings.experimental.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="language">
             <Icon name="speech-bubble" />
-            {language.t("settings.language.title")}
+            <span class="label">{language.t("settings.language.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="aboutKiloCode">
             <Icon name="help" />
-            {language.t("settings.aboutKiloCode.title")}
+            <span class="label">{language.t("settings.aboutKiloCode.title")}</span>
           </Tabs.Trigger>
         </Tabs.List>
 

@@ -2,18 +2,33 @@ name: Visual Regression Tests
 
 on:
   pull_request:
-    paths:
-      - "packages/kilo-ui/**"
-      - "packages/ui/**"
-      - "packages/util/**"
-      - "packages/sdk/js/**"
-      - "packages/kilo-vscode/webview-ui/**"
-      - "packages/kilo-vscode/.storybook/**"
-      - "packages/kilo-vscode/tests/visual-regression*"
-      - ".github/workflows/visual-regression.yml"
+    types: [opened, synchronize, reopened]
 
 jobs:
+  check-paths:
+    name: Check changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      matched: ${{ steps.filter.outputs.matched }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Kilo-Org/paths-filter@master
+        id: filter
+        with:
+          filters: |
+            matched:
+              - "packages/kilo-ui/**"
+              - "packages/ui/**"
+              - "packages/util/**"
+              - "packages/sdk/js/**"
+              - "packages/kilo-vscode/webview-ui/**"
+              - "packages/kilo-vscode/.storybook/**"
+              - "packages/kilo-vscode/tests/visual-regression*"
+              - ".github/workflows/visual-regression.yml"
+
   visual-regression:
+    needs: check-paths
+    if: needs.check-paths.outputs.matched == 'true'
     name: Visual Regression (kilo-ui)
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
@@ -106,6 +121,8 @@ jobs:
           retention-days: 7
 
   visual-regression-vscode:
+    needs: check-paths
+    if: needs.check-paths.outputs.matched == 'true'
     name: Visual Regression (kilo-vscode webview)
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15

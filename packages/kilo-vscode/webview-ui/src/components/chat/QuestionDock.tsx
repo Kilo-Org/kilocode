@@ -148,7 +148,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
   }
 
   return (
-    <div data-component="tool-part-wrapper" data-question="true">
+    <div data-component="tool-part-wrapper" data-question="true" onClick={(e: MouseEvent) => e.stopPropagation()}>
       <div data-component="question-prompt">
         <div data-slot="question-body">
           <div data-slot="question-header">
