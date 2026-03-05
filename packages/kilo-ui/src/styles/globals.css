@@ -152,3 +152,12 @@ html[data-theme="kilo-vscode"] {
     background: var(--vscode-scrollbarSlider-activeBackground);
   }
 }
+
+/* Fix cursor for all interactive triggers in kilo-vscode (fixes #6255) */
+html[data-theme="kilo-vscode"] [data-slot="collapsible-trigger"]:not([data-disabled]) {
+  cursor: pointer;
+}
+
+html[data-theme="kilo-vscode"] [data-slot="accordion-trigger"]:not([data-disabled]) {
+  cursor: pointer;
+}
