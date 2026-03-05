@@ -9,4 +9,7 @@ export const dict = {
   // Provider dialog translations
   "dialog.provider.group.recommended": "推荐",
   "dialog.provider.kilo.note": "访问 500+ AI 模型",
+
+  // Reasoning block label
+  "ui.reasoning.label": "推理",
 }

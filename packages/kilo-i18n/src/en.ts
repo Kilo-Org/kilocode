@@ -14,6 +14,9 @@ export const dict = {
   "dialog.provider.group.recommended": "Recommended",
   "dialog.provider.kilo.note": "Access 500+ AI models",
 
+  // Reasoning block label
+  "ui.reasoning.label": "Reasoning",
+
   // Add any upstream overrides below this line
   // Example: "some.upstream.key": "Kilo-specific override value",
 }

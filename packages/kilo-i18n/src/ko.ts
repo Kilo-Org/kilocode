@@ -10,4 +10,7 @@ export const dict = {
   // Provider dialog translations
   "dialog.provider.group.recommended": "추천",
   "dialog.provider.kilo.note": "500개 이상의 AI 모델 이용 가능",
+
+  // Reasoning block label
+  "ui.reasoning.label": "추론",
 }

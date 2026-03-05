@@ -7,6 +7,9 @@ import "../../kilo-ui/.storybook/fonts.css"
 import "@kilocode/kilo-ui/styles"
 import "../webview-ui/src/styles/chat.css"
 
+// Make the Kilo logo available in Storybook (normally injected by the extension host)
+;(window as { ICONS_BASE_URI?: string }).ICONS_BASE_URI = "/icons"
+
 const themeDecorator: DecoratorFunction<SolidRenderer> = (Story, context) => {
   const themeId = (context.globals["theme"] as string) ?? "kilo-vscode"
   const vscodeThemeId = (context.globals["vscodeTheme"] as string) ?? "dark-modern"

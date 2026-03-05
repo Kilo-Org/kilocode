@@ -924,7 +924,8 @@ export const dict = {
 
   "settings.agentBehaviour.defaultAgent.title": "Default Agent",
   "settings.agentBehaviour.defaultAgent.description": "Agent to use when none is specified",
-  "settings.agentBehaviour.selectAgent": "Select an agent to configure…",
+  "settings.agentBehaviour.selectAgent.title": "Agent",
+  "settings.agentBehaviour.selectAgent.description": "Select an agent to configure…",
   "settings.agentBehaviour.modelOverride.title": "Model Override",
   "settings.agentBehaviour.modelOverride.description": "Override the default model for this agent",
   "settings.agentBehaviour.prompt.title": "Custom Prompt",
@@ -997,7 +998,6 @@ export const dict = {
   "profile.personalAccount": "Personal Account",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/en.ts
-
 
   "question.summary": "{{n}} of {{total}} questions",
   "common.review": "Review",

@@ -2,7 +2,7 @@
   "name": "kilo-code",
   "displayName": "Kilo Code: AI Coding Agent, Copilot, and Autocomplete",
   "description": "Open Source AI coding agent that generates code from natural language, automates tasks, and runs terminal commands. Features inline autocomplete, browser automation, automated refactoring, and custom modes for planning, coding, and debugging. Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM.",
-  "version": "7.0.37",
+  "version": "7.0.38",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
@@ -153,6 +153,12 @@
         "icon": "$(diff)"
       },
       {
+        "command": "kilo-code.new.agentManager.showShortcuts",
+        "title": "Agent Manager: Show Keyboard Shortcuts",
+        "category": "Kilo Code",
+        "icon": "$(keyboard)"
+      },
+      {
         "command": "kilo-code.new.agentManager.focusPanel",
         "title": "Agent Manager: Focus Panel",
         "category": "Kilo Code",
@@ -171,6 +177,11 @@
       {
         "command": "kilo-code.new.agentManager.newWorktree",
         "title": "Agent Manager: New Worktree",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.agentManager.openWorktree",
+        "title": "Agent Manager: Open Worktree",
         "category": "Kilo Code"
       },
       {
@@ -439,6 +450,12 @@
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {
+        "command": "kilo-code.new.agentManager.showShortcuts",
+        "key": "ctrl+shift+/",
+        "mac": "cmd+shift+/",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
         "command": "kilo-code.new.agentManager.focusPanel",
         "key": "ctrl+.",
         "mac": "cmd+.",
@@ -460,6 +477,12 @@
         "command": "kilo-code.new.agentManager.newWorktree",
         "key": "ctrl+n",
         "mac": "cmd+n",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.agentManager.openWorktree",
+        "key": "ctrl+shift+o",
+        "mac": "cmd+shift+o",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {

@@ -123,11 +123,13 @@ const defaultBindings: Record<string, string> = {
   previousTab: isMac ? "⌘⌥←" : "Ctrl+Alt+←",
   nextTab: isMac ? "⌘⌥→" : "Ctrl+Alt+→",
   showTerminal: isMac ? "⌘/" : "Ctrl+/",
+  showShortcuts: isMac ? "⌘⇧/" : "Ctrl+Shift+/",
   newTab: isMac ? "⌘T" : "Ctrl+T",
   closeTab: isMac ? "⌘W" : "Ctrl+W",
   newWorktree: isMac ? "⌘N" : "Ctrl+N",
   advancedWorktree: isMac ? "⌘⇧N" : "Ctrl+Shift+N",
   closeWorktree: isMac ? "⌘⇧W" : "Ctrl+Shift+W",
+  openWorktree: isMac ? "⌘⇧O" : "Ctrl+Shift+O",
   agentManagerOpen: isMac ? "⌘⇧M" : "Ctrl+Shift+M",
   focusPanel: isMac ? "⌘." : "Ctrl+.",
   ...Object.fromEntries(
@@ -238,6 +240,7 @@ function buildShortcutCategories(
         { label: t("agentManager.shortcuts.newWorktree"), binding: bindings.newWorktree ?? "" },
         { label: t("agentManager.shortcuts.advancedWorktree"), binding: bindings.advancedWorktree ?? "" },
         { label: t("agentManager.shortcuts.deleteWorktree"), binding: bindings.closeWorktree ?? "" },
+        { label: t("agentManager.shortcuts.openWorktree"), binding: bindings.openWorktree ?? "" },
       ],
     },
     {
@@ -261,6 +264,7 @@ function buildShortcutCategories(
       title: t("agentManager.shortcuts.category.global"),
       shortcuts: [
         { label: t("agentManager.shortcuts.openAgentManager"), binding: bindings.agentManagerOpen ?? "" },
+        { label: t("agentManager.shortcuts.showShortcuts"), binding: bindings.showShortcuts ?? "" },
       ].filter((s) => s.binding),
     },
   ].filter((c) => c.shortcuts.length > 0)
@@ -547,6 +551,12 @@ const AgentManagerContent: Component = () => {
       ),
       resetApplyDialog,
     )
+  }
+
+  const openWorktreeDirectory = () => {
+    const sel = selection()
+    if (!sel || sel === LOCAL) return
+    vscode.postMessage({ type: "agentManager.openWorktree", worktreeId: sel })
   }
 
   createEffect(
@@ -934,8 +944,10 @@ const AgentManagerContent: Component = () => {
       } else if (msg.action === "newTab") handleNewTabForCurrentSelection()
       else if (msg.action === "closeTab") closeActiveTab()
       else if (msg.action === "newWorktree") handleNewWorktreeOrPromote()
+      else if (msg.action === "openWorktree") openWorktreeDirectory()
       else if (msg.action === "advancedWorktree") showAdvancedWorktreeDialog()
       else if (msg.action === "closeWorktree") closeSelectedWorktree()
+      else if (msg.action === "showShortcuts") handleShowKeyboardShortcuts()
       else if (msg.action === "focusInput") window.dispatchEvent(new Event("focusPrompt"))
       else {
         // Handle jumpTo1 through jumpTo9
@@ -956,8 +968,12 @@ const AgentManagerContent: Component = () => {
       if (["t", "w", "n", "d", "f"].includes(e.key.toLowerCase()) && !e.shiftKey) {
         e.preventDefault()
       }
-      // Prevent defaults for shift variants (close worktree, advanced new worktree)
-      if (["w", "n"].includes(e.key.toLowerCase()) && e.shiftKey) {
+      // Prevent defaults for shift variants (close worktree, advanced/new open worktree)
+      if (["w", "n", "o"].includes(e.key.toLowerCase()) && e.shiftKey) {
+        e.preventDefault()
+      }
+      // Prevent browser defaults for shortcuts help (Cmd/Ctrl+Shift+/)
+      if (["/", "?"].includes(e.key) && e.shiftKey) {
         e.preventDefault()
       }
       // Prevent defaults for jump-to shortcuts (Cmd/Ctrl+1-9)
@@ -1739,26 +1755,6 @@ const AgentManagerContent: Component = () => {
             <span class="am-section-label">{t("agentManager.section.worktrees")}</span>
             <Show when={isGitRepo()}>
               <div class="am-section-actions">
-                <DropdownMenu gutter={4} placement="bottom-end">
-                  <DropdownMenu.Trigger
-                    as={IconButton}
-                    icon="settings-gear"
-                    size="small"
-                    variant="ghost"
-                    label={t("agentManager.worktree.settings")}
-                  />
-                  <DropdownMenu.Portal>
-                    <DropdownMenu.Content class="am-split-menu">
-                      <DropdownMenu.Item onSelect={handleShowKeyboardShortcuts}>
-                        <DropdownMenu.ItemLabel>{t("agentManager.shortcuts.title")}</DropdownMenu.ItemLabel>
-                      </DropdownMenu.Item>
-                      <DropdownMenu.Separator />
-                      <DropdownMenu.Item onSelect={handleConfigureSetupScript}>
-                        <DropdownMenu.ItemLabel>{t("agentManager.worktree.setupScript")}</DropdownMenu.ItemLabel>
-                      </DropdownMenu.Item>
-                    </DropdownMenu.Content>
-                  </DropdownMenu.Portal>
-                </DropdownMenu>
                 <div class="am-split-button">
                   <IconButton
                     icon="plus"
@@ -1798,6 +1794,35 @@ const AgentManagerContent: Component = () => {
                     </DropdownMenu.Portal>
                   </DropdownMenu>
                 </div>
+                <TooltipKeybind
+                  title={t("agentManager.shortcuts.title")}
+                  keybind={kb().showShortcuts ?? ""}
+                  placement="bottom"
+                >
+                  <IconButton
+                    icon="keyboard"
+                    size="small"
+                    variant="ghost"
+                    label={t("agentManager.shortcuts.title")}
+                    onClick={handleShowKeyboardShortcuts}
+                  />
+                </TooltipKeybind>
+                <DropdownMenu gutter={4} placement="bottom-end">
+                  <DropdownMenu.Trigger
+                    as={IconButton}
+                    icon="settings-gear"
+                    size="small"
+                    variant="ghost"
+                    label={t("agentManager.worktree.settings")}
+                  />
+                  <DropdownMenu.Portal>
+                    <DropdownMenu.Content class="am-split-menu">
+                      <DropdownMenu.Item onSelect={handleConfigureSetupScript}>
+                        <DropdownMenu.ItemLabel>{t("agentManager.worktree.setupScript")}</DropdownMenu.ItemLabel>
+                      </DropdownMenu.Item>
+                    </DropdownMenu.Content>
+                  </DropdownMenu.Portal>
+                </DropdownMenu>
               </div>
             </Show>
           </div>
@@ -2340,19 +2365,26 @@ const AgentManagerContent: Component = () => {
                   return (
                     <>
                       <Show when={isWorktree()}>
-                        <Tooltip value={t("agentManager.apply.tooltip")} placement="bottom">
-                          <Button
-                            size="small"
-                            variant="ghost"
-                            onClick={openApplyDialog}
-                            disabled={!hasChanges() || applyBusy()}
-                          >
-                            <Show when={applyBusy()}>
-                              <Spinner class="am-apply-spinner" />
-                            </Show>
-                            {t("agentManager.apply.globalButton")}
-                          </Button>
-                        </Tooltip>
+                        <>
+                          <Tooltip value={t("agentManager.open.tooltip")} placement="bottom">
+                            <Button size="small" variant="ghost" icon="folder" onClick={openWorktreeDirectory}>
+                              {t("agentManager.open.button")}
+                            </Button>
+                          </Tooltip>
+                          <Tooltip value={t("agentManager.apply.tooltip")} placement="bottom">
+                            <Button
+                              size="small"
+                              variant="ghost"
+                              onClick={openApplyDialog}
+                              disabled={!hasChanges() || applyBusy()}
+                            >
+                              <Show when={applyBusy()}>
+                                <Spinner class="am-apply-spinner" />
+                              </Show>
+                              {t("agentManager.apply.globalButton")}
+                            </Button>
+                          </Tooltip>
+                        </>
                       </Show>
                       <TooltipKeybind
                         title={t("agentManager.diff.toggle")}
