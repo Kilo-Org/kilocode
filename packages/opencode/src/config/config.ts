@@ -307,7 +307,7 @@ export namespace Config {
     // This way it only loads config file and not skills/plugins/commands
     if (existsSync(managedDir)) {
       // kilocode_change start
-      for (const file of CONFIG_FILES_KILO_PROJECT) {
+      for (const file of CONFIG_FILES_KILO_GLOBAL) {
         // kilocode_change end
         result = mergeConfigConcatArrays(result, await loadFile(path.join(managedDir, file)))
       }
@@ -1457,7 +1457,9 @@ export namespace Config {
     const mcpEntry = data?.mcp?.[name]
     // kilocode_change: Don't create orphan entries for MCPs not defined in config
     if (mcpEntry === undefined) return
-    const currentEnabled = typeof mcpEntry === "object" && mcpEntry !== null ? mcpEntry.enabled : undefined
+    // kilocode_change: MCP entry must be an object to have an enabled field
+    if (typeof mcpEntry !== "object" || mcpEntry === null) return
+    const currentEnabled = mcpEntry.enabled
     if (currentEnabled === enabled) return
 
     const edits = modify(text, ["mcp", name, "enabled"], enabled, {
@@ -1627,23 +1629,17 @@ export namespace Config {
   }
 
   async function resolveConfigPath() {
-    // kilocode_change: Use same resolution logic as loading to ensure we write to the same file
-    // Resolution order follows loading precedence (high to low):
-    // 1. KILO_CONFIG (explicit flag, highest priority)
-    // 2. KILO_CONFIG_DIR (if set)
-    // 3. Project .kilo/ directories (closest first, legacy)
-    // 4. Project .opencode/ directories (closest first)
-    // 5. Project config files (kilo.json{,c}/opencode.json{,c} in project root)
-    // 6. ~/.kilo/ (legacy Kilocode config)
-    // 7. ~/.opencode/
-    // 8. Global config (fallback)
+    // kilocode_change: Find highest-priority writable config location
+    // Order: explicit flags > project directories > home directories > global
+    // Note: This is used as a fallback when MCP is not found in any config file,
+    // and persistMcpToggle will return early in that case, making this a no-op.
 
-    // Check if custom config path is set via flag
+    // Check if custom config path is set via flag (highest priority)
     if (Flag.KILO_CONFIG) {
       return Flag.KILO_CONFIG
     }
 
-    // Check KILO_CONFIG_DIR (higher precedence than ~/.opencode/)
+    // Check KILO_CONFIG_DIR (explicit directory flag)
     if (Flag.KILO_CONFIG_DIR) {
       for (const file of CONFIG_FILES_KILO_PROJECT) {
         const filepath = path.join(Flag.KILO_CONFIG_DIR, file)
@@ -1653,7 +1649,7 @@ export namespace Config {
       }
       // Directory exists but no config file - create new file here
       if (existsSync(Flag.KILO_CONFIG_DIR)) {
-        return path.join(Flag.KILO_CONFIG_DIR, "opencode.jsonc")
+        return path.join(Flag.KILO_CONFIG_DIR, "opencode.json")
       }
     }
 
@@ -1662,48 +1658,7 @@ export namespace Config {
       return globalConfigFile()
     }
 
-    // Check ~/.kilo/ (legacy Kilocode config location)
-    const homeKiloDir = path.join(Global.Path.home, ".kilo")
-    for (const file of CONFIG_FILES_KILO_PROJECT) {
-      const filepath = path.join(homeKiloDir, file)
-      if (existsSync(filepath)) {
-        return filepath
-      }
-    }
-
-    // Check ~/.opencode/ (user home directory config)
-    const homeOpencodeDir = path.join(Global.Path.home, ".opencode")
-    for (const file of CONFIG_FILES_KILO_PROJECT) {
-      const filepath = path.join(homeOpencodeDir, file)
-      if (existsSync(filepath)) {
-        return filepath
-      }
-    }
-    // ~/.opencode/ exists but no config file - create new file here
-    if (existsSync(homeOpencodeDir)) {
-      return path.join(homeOpencodeDir, "opencode.jsonc")
-    }
-
-    // Check .kilo directories (legacy, scanned from closest to project root)
-    const kiloDirs = await Array.fromAsync(
-      Filesystem.up({
-        targets: [".kilo"],
-        start: Instance.directory,
-        stop: Instance.worktree,
-      }),
-    )
-    for (const dir of kiloDirs) {
-      for (const file of CONFIG_FILES_KILO_PROJECT) {
-        const filepath = path.join(dir, file)
-        if (existsSync(filepath)) {
-          return filepath
-        }
-      }
-      // .kilo/ directory exists but no config file - create new file here
-      return path.join(dir, "opencode.jsonc")
-    }
-
-    // Check .opencode directories (scanned from closest to project root)
+    // Check .opencode directories (highest precedence project-level)
     const opencodeDirs = await Array.fromAsync(
       Filesystem.up({
         targets: [".opencode"],
@@ -1719,15 +1674,58 @@ export namespace Config {
         }
       }
       // .opencode/ directory exists but no config file - create new file here
-      return path.join(dir, "opencode.jsonc")
+      if (existsSync(dir)) {
+        return path.join(dir, "opencode.json")
+      }
     }
 
-    // Find project config using same priority as loading (kilo.json{,c} first, then opencode.json{,c})
+    // Check .kilo directories (legacy project-level)
+    const kiloDirs = await Array.fromAsync(
+      Filesystem.up({
+        targets: [".kilo"],
+        start: Instance.directory,
+        stop: Instance.worktree,
+      }),
+    )
+    for (const dir of kiloDirs) {
+      for (const file of CONFIG_FILES_KILO_PROJECT) {
+        const filepath = path.join(dir, file)
+        if (existsSync(filepath)) {
+          return filepath
+        }
+      }
+      // .kilo/ directory exists but no config file - create new file here
+      if (existsSync(dir)) {
+        return path.join(dir, "opencode.json")
+      }
+    }
+
+    // Find project config files (closest first)
     for (const file of CONFIG_FILES_KILO_PROJECT) {
       const found = await Filesystem.findUp(file, Instance.directory, Instance.worktree)
       if (found.length > 0) {
-        // Use the closest file (first in array, which is highest priority)
         return found[0]
+      }
+    }
+
+    // Check ~/.opencode/ (user home directory config)
+    const homeOpencodeDir = path.join(Global.Path.home, ".opencode")
+    for (const file of CONFIG_FILES_KILO_PROJECT) {
+      const filepath = path.join(homeOpencodeDir, file)
+      if (existsSync(filepath)) {
+        return filepath
+      }
+    }
+    if (existsSync(homeOpencodeDir)) {
+      return path.join(homeOpencodeDir, "opencode.json")
+    }
+
+    // Check ~/.kilo/ (legacy Kilocode config location)
+    const homeKiloDir = path.join(Global.Path.home, ".kilo")
+    for (const file of CONFIG_FILES_KILO_PROJECT) {
+      const filepath = path.join(homeKiloDir, file)
+      if (existsSync(filepath)) {
+        return filepath
       }
     }
 

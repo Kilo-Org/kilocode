@@ -75,6 +75,7 @@ export namespace State {
     const entry = entries.get(init)
     if (!entry) return
 
+    // Delete from map immediately so concurrent create() calls will create new entry
     entries.delete(init)
     if (entries.size === 0) {
       recordsByKey.delete(key)
