@@ -1,0 +1,5 @@
+List managed agent sessions with optional filters.
+
+Use this tool to monitor progress across parallel delegated sessions.
+
+Supports filtering by groupID and status, plus cursor-based pagination.

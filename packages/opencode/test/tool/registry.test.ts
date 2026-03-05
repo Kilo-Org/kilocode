@@ -28,6 +28,21 @@ describe("tool.registry", () => {
   })
   // kilocode_change end
 
+  test("managed session tools are registered", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const ids = await ToolRegistry.ids()
+        expect(ids).toContain("agent_session_create")
+        expect(ids).toContain("agent_session_list")
+        expect(ids).toContain("agent_session_status")
+        expect(ids).toContain("agent_session_cancel")
+        expect(ids).toContain("agent_session_diff")
+      },
+    })
+  }, 15000)
+
   test("loads tools from .opencode/tool (singular)", async () => {
     await using tmp = await tmpdir({
       init: async (dir) => {

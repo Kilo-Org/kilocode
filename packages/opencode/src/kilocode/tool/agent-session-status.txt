@@ -1,0 +1,3 @@
+Get detailed status for a single managed agent session.
+
+Returns session metadata and recent messages so you can inspect progress.

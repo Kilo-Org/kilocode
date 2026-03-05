@@ -4321,6 +4321,342 @@
         ]
       }
     },
+    "/agent-manager/session": {
+      "post": {
+        "operationId": "agentManager.create",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Create managed sessions",
+        "description": "Create one or more managed agent sessions on isolated git worktrees and start each session asynchronously.",
+        "responses": {
+          "200": {
+            "description": "Created managed sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentManagerCreateOutput"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentManagerCreateInput"
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.agentManager.create({\n  ...\n})"
+          }
+        ]
+      },
+      "get": {
+        "operationId": "agentManager.list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "groupID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": ["idle", "busy", "error"]
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "List managed sessions",
+        "description": "List managed sessions with optional group, status, and cursor filters.",
+        "responses": {
+          "200": {
+            "description": "Managed sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentManagerListOutput"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.agentManager.list({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/agent-manager/session/{sessionID}": {
+      "get": {
+        "operationId": "agentManager.get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "sessionID",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "summary": "Get managed session detail",
+        "description": "Get details for one managed session, including recent messages.",
+        "responses": {
+          "200": {
+            "description": "Managed session detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentManagerDetailOutput"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.agentManager.get({\n  ...\n})"
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "agentManager.cancel",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "sessionID",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "summary": "Cancel managed session",
+        "description": "Abort a managed session and remove its worktree.",
+        "responses": {
+          "200": {
+            "description": "Cancelled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.agentManager.cancel({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/agent-manager/session/{sessionID}/diff": {
+      "get": {
+        "operationId": "agentManager.diff",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "sessionID",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "includePatch",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "summary": "Get managed session diff",
+        "description": "Get a paginated diff for one managed session.",
+        "responses": {
+          "200": {
+            "description": "Diff page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentManagerDiffOutput"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.agentManager.diff({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/telemetry/capture": {
       "post": {
         "operationId": "telemetry.capture",
@@ -8904,6 +9240,117 @@
         },
         "required": ["type", "properties"]
       },
+      "Event.vcs.branch.updated": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "vcs.branch.updated"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "branch": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.worktree.ready": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "worktree.ready"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "branch": {
+                "type": "string"
+              }
+            },
+            "required": ["name", "branch"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.worktree.failed": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "worktree.failed"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": ["message"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "AgentManagerWorktree": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "branch": {
+            "type": "string"
+          },
+          "baseBranch": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "path", "branch", "baseBranch"]
+      },
+      "AgentManagerSessionCreatedEvent": {
+        "type": "object",
+        "properties": {
+          "sessionID": {
+            "type": "string"
+          },
+          "groupID": {
+            "type": "string"
+          },
+          "worktree": {
+            "$ref": "#/components/schemas/AgentManagerWorktree"
+          },
+          "model": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          }
+        },
+        "required": ["sessionID", "worktree"]
+      },
+      "Event.agent-manager.session.created": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "agent-manager.session.created"
+          },
+          "properties": {
+            "$ref": "#/components/schemas/AgentManagerSessionCreatedEvent"
+          }
+        },
+        "required": ["type", "properties"]
+      },
       "Event.tui.prompt.append": {
         "type": "object",
         "properties": {
@@ -9380,24 +9827,6 @@
         },
         "required": ["type", "properties"]
       },
-      "Event.vcs.branch.updated": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "vcs.branch.updated"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "branch": {
-                "type": "string"
-              }
-            }
-          }
-        },
-        "required": ["type", "properties"]
-      },
       "Pty": {
         "type": "object",
         "properties": {
@@ -9511,47 +9940,6 @@
         },
         "required": ["type", "properties"]
       },
-      "Event.worktree.ready": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "worktree.ready"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "name": {
-                "type": "string"
-              },
-              "branch": {
-                "type": "string"
-              }
-            },
-            "required": ["name", "branch"]
-          }
-        },
-        "required": ["type", "properties"]
-      },
-      "Event.worktree.failed": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "worktree.failed"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "message": {
-                "type": "string"
-              }
-            },
-            "required": ["message"]
-          }
-        },
-        "required": ["type", "properties"]
-      },
       "Event": {
         "anyOf": [
           {
@@ -9627,6 +10015,18 @@
             "$ref": "#/components/schemas/Event.todo.updated"
           },
           {
+            "$ref": "#/components/schemas/Event.vcs.branch.updated"
+          },
+          {
+            "$ref": "#/components/schemas/Event.worktree.ready"
+          },
+          {
+            "$ref": "#/components/schemas/Event.worktree.failed"
+          },
+          {
+            "$ref": "#/components/schemas/Event.agent-manager.session.created"
+          },
+          {
             "$ref": "#/components/schemas/Event.tui.prompt.append"
           },
           {
@@ -9669,9 +10069,6 @@
             "$ref": "#/components/schemas/Event.session.turn.close"
           },
           {
-            "$ref": "#/components/schemas/Event.vcs.branch.updated"
-          },
-          {
             "$ref": "#/components/schemas/Event.pty.created"
           },
           {
@@ -9682,12 +10079,6 @@
           },
           {
             "$ref": "#/components/schemas/Event.pty.deleted"
-          },
-          {
-            "$ref": "#/components/schemas/Event.worktree.ready"
-          },
-          {
-            "$ref": "#/components/schemas/Event.worktree.failed"
           }
         ]
       },
@@ -11126,6 +11517,10 @@
           "name": {
             "type": "string"
           },
+          "baseBranch": {
+            "description": "Base branch or ref to create the worktree branch from (defaults to current HEAD)",
+            "type": "string"
+          },
           "startCommand": {
             "description": "Additional startup script to run after the project's start command",
             "type": "string"
@@ -11476,6 +11871,256 @@
           }
         },
         "required": ["url", "method", "instructions"]
+      },
+      "AgentManagerSession": {
+        "type": "object",
+        "properties": {
+          "sessionID": {
+            "type": "string"
+          },
+          "groupID": {
+            "type": "string"
+          },
+          "worktree": {
+            "$ref": "#/components/schemas/AgentManagerWorktree"
+          },
+          "title": {
+            "type": "string"
+          },
+          "agent": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["idle", "busy", "error"]
+          },
+          "summary": {
+            "type": "object",
+            "properties": {
+              "additions": {
+                "type": "number"
+              },
+              "deletions": {
+                "type": "number"
+              },
+              "files": {
+                "type": "number"
+              }
+            },
+            "required": ["additions", "deletions", "files"]
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "created": {
+                "type": "number"
+              },
+              "updated": {
+                "type": "number"
+              }
+            },
+            "required": ["created", "updated"]
+          }
+        },
+        "required": ["sessionID", "worktree", "agent", "status", "time"]
+      },
+      "AgentManagerCreateOutput": {
+        "type": "object",
+        "properties": {
+          "groupID": {
+            "type": "string"
+          },
+          "sessions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentManagerSession"
+            }
+          }
+        },
+        "required": ["sessions"]
+      },
+      "AgentManagerModel": {
+        "type": "object",
+        "properties": {
+          "providerID": {
+            "type": "string"
+          },
+          "modelID": {
+            "type": "string"
+          }
+        },
+        "required": ["providerID", "modelID"]
+      },
+      "AgentManagerModelInput": {
+        "anyOf": [
+          {
+            "description": "Model in provider/model format",
+            "type": "string"
+          },
+          {
+            "$ref": "#/components/schemas/AgentManagerModel"
+          }
+        ]
+      },
+      "AgentManagerVersion": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "description": "Display label for this variant",
+            "type": "string"
+          },
+          "name": {
+            "description": "Optional branch/worktree name hint for this variant",
+            "type": "string"
+          },
+          "prompt": {
+            "description": "Optional prompt override for this variant",
+            "type": "string"
+          },
+          "agent": {
+            "description": "Optional agent override for this variant",
+            "type": "string"
+          },
+          "model": {
+            "$ref": "#/components/schemas/AgentManagerModelInput"
+          }
+        }
+      },
+      "AgentManagerCreateInput": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "Optional base name used when creating branches/worktrees",
+            "type": "string"
+          },
+          "prompt": {
+            "description": "Initial prompt applied to all variants unless overridden",
+            "type": "string"
+          },
+          "baseBranch": {
+            "description": "Base branch or ref to branch from",
+            "type": "string"
+          },
+          "agent": {
+            "description": "Default agent for all variants",
+            "type": "string"
+          },
+          "model": {
+            "$ref": "#/components/schemas/AgentManagerModelInput"
+          },
+          "versions": {
+            "description": "Optional per-variant configuration",
+            "minItems": 1,
+            "maxItems": 4,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentManagerVersion"
+            }
+          }
+        }
+      },
+      "AgentManagerListOutput": {
+        "type": "object",
+        "properties": {
+          "sessions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentManagerSession"
+            }
+          },
+          "cursor": {
+            "type": "string"
+          }
+        },
+        "required": ["sessions"]
+      },
+      "AgentManagerDetailOutput": {
+        "type": "object",
+        "properties": {
+          "session": {
+            "$ref": "#/components/schemas/AgentManagerSession"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "info": {
+                  "$ref": "#/components/schemas/Message"
+                },
+                "parts": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Part"
+                  }
+                }
+              },
+              "required": ["info", "parts"]
+            }
+          }
+        },
+        "required": ["session", "messages"]
+      },
+      "AgentManagerDiffFile": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["added", "modified", "deleted"]
+          },
+          "additions": {
+            "type": "number"
+          },
+          "deletions": {
+            "type": "number"
+          },
+          "patch": {
+            "type": "string"
+          },
+          "patchTruncated": {
+            "type": "boolean"
+          }
+        },
+        "required": ["path", "status", "additions", "deletions"]
+      },
+      "AgentManagerDiffOutput": {
+        "type": "object",
+        "properties": {
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentManagerDiffFile"
+            }
+          },
+          "summary": {
+            "type": "object",
+            "properties": {
+              "totalFiles": {
+                "type": "number"
+              },
+              "totalAdditions": {
+                "type": "number"
+              },
+              "totalDeletions": {
+                "type": "number"
+              }
+            },
+            "required": ["totalFiles", "totalAdditions", "totalDeletions"]
+          },
+          "cursor": {
+            "type": "string"
+          }
+        },
+        "required": ["files", "summary"]
       },
       "Symbol": {
         "type": "object",

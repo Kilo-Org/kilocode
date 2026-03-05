@@ -61,6 +61,13 @@ export namespace Agent {
     const defaults = PermissionNext.fromConfig({
       "*": "allow",
       doom_loop: "ask",
+      // kilocode_change start - managed session tools are orchestrator-only by default
+      agent_session_create: "deny",
+      agent_session_list: "deny",
+      agent_session_status: "deny",
+      agent_session_cancel: "deny",
+      agent_session_diff: "deny",
+      // kilocode_change end
       external_directory: {
         "*": "ask",
         ...Object.fromEntries(whitelistedDirs.map((dir) => [dir, "allow"])),
@@ -154,6 +161,13 @@ export namespace Agent {
             task: "allow",
             todoread: "allow",
             todowrite: "allow",
+            // kilocode_change start - allow orchestrator to manage parallel agent sessions
+            agent_session_create: "allow",
+            agent_session_list: "allow",
+            agent_session_status: "allow",
+            agent_session_cancel: "allow",
+            agent_session_diff: "allow",
+            // kilocode_change end
             webfetch: "allow",
             websearch: "allow",
             codesearch: "allow",

@@ -1,0 +1,3 @@
+Cancel a managed agent session and clean up its worktree.
+
+Use this when a delegated run is no longer needed.

@@ -30,6 +30,13 @@ import { Truncate } from "./truncation"
 import { ApplyPatchTool } from "./apply_patch"
 import { Glob } from "../util/glob"
 import { pathToFileURL } from "url"
+import {
+  AgentSessionCancelTool,
+  AgentSessionCreateTool,
+  AgentSessionDiffTool,
+  AgentSessionListTool,
+  AgentSessionStatusTool,
+} from "@/kilocode/tool/agent-session" // kilocode_change
 
 export namespace ToolRegistry {
   const log = Log.create({ service: "tool.registry" })
@@ -117,6 +124,13 @@ export namespace ToolRegistry {
       CodeSearchTool,
       SkillTool,
       ApplyPatchTool,
+      // kilocode_change start - native managed agent session tools
+      AgentSessionCreateTool,
+      AgentSessionListTool,
+      AgentSessionStatusTool,
+      AgentSessionCancelTool,
+      AgentSessionDiffTool,
+      // kilocode_change end
       ...(Flag.KILO_EXPERIMENTAL_LSP_TOOL ? [LspTool] : []),
       ...(config.experimental?.batch_tool === true ? [BatchTool] : []),
       ...(Flag.KILO_EXPERIMENTAL_PLAN_MODE && Flag.KILO_CLIENT === "cli" ? [PlanExitTool] : []),

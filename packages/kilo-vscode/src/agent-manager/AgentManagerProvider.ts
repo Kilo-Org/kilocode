@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 import * as fs from "fs"
 import * as path from "path"
-import type { KiloClient, Session, FileDiff } from "@kilocode/sdk/v2/client"
+import type { KiloClient, Session, FileDiff, Event } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { getErrorMessage } from "../kilo-provider-utils"
 import { KiloProvider } from "../KiloProvider"
@@ -52,6 +52,7 @@ export class AgentManagerProvider implements vscode.Disposable {
   private cachedWorktreeStats: Record<string, unknown> | undefined
   private cachedLocalStats: Record<string, unknown> | undefined
   private applyingWorktreeId: string | undefined
+  private unsubscribeServerEvent: (() => void) | undefined
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -81,6 +82,9 @@ export class AgentManagerProvider implements vscode.Disposable {
       },
       log: (...args) => this.log(...args),
       git: this.gitOps,
+    })
+    this.unsubscribeServerEvent = this.connectionService.onEvent((event) => {
+      void this.onManagedSessionEvent(event)
     })
   }
 
@@ -149,6 +153,8 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     await state.load()
 
+    await this.syncManagedSessionsFromServer()
+
     // Do not auto-remove stale worktrees on load.
     // Presence checks run in the shared poller and require explicit user cleanup.
 
@@ -167,6 +173,190 @@ export class AgentManagerProvider implements vscode.Disposable {
     if (state.getSessions().length > 0) {
       this.provider?.refreshSessions()
     }
+  }
+
+  private adoptManagedSession(input: {
+    sessionID: string
+    groupID?: string
+    label?: string
+    worktree: {
+      path: string
+      branch: string
+      baseBranch: string
+    }
+  }) {
+    const state = this.getStateManager()
+    if (!state) return false
+
+    const existingWorktree = state.findWorktreeByPath(input.worktree.path)
+    const worktree =
+      existingWorktree ??
+      state.addWorktree({
+        branch: input.worktree.branch,
+        path: input.worktree.path,
+        parentBranch: input.worktree.baseBranch,
+        groupId: input.groupID,
+        label: input.label,
+      })
+
+    if (input.label && worktree.label !== input.label) {
+      state.updateWorktreeLabel(worktree.id, input.label)
+    }
+
+    const existingSession = state.getSession(input.sessionID)
+    if (!existingSession) {
+      state.addSession(input.sessionID, worktree.id)
+    }
+
+    this.registerWorktreeSession(input.sessionID, worktree.path)
+    return !existingWorktree || !existingSession
+  }
+
+  private async syncManagedSessionsFromServer(): Promise<void> {
+    const root = this.getWorkspaceRoot()
+    if (!root) return
+
+    let client: KiloClient
+    try {
+      client = this.connectionService.getClient()
+    } catch {
+      return
+    }
+
+    const api = (
+      client as unknown as {
+        agentManager?: {
+          list?: (
+            input: { directory?: string },
+            opts?: { throwOnError?: boolean },
+          ) => Promise<{
+            data?: {
+              sessions?: Array<{
+                sessionID: string
+                groupID?: string
+                label?: string
+                worktree?: {
+                  path?: string
+                  branch?: string
+                  baseBranch?: string
+                }
+              }>
+            }
+          }>
+        }
+      }
+    ).agentManager
+
+    const fromSdk = async () => {
+      if (!api?.list) return undefined
+      const result = await api
+        .list(
+          {
+            directory: root,
+          },
+          { throwOnError: true },
+        )
+        .catch(() => undefined)
+      return result?.data?.sessions
+    }
+
+    const fromHttp = async () => {
+      const cfg = this.connectionService.getServerConfig()
+      if (!cfg) return []
+      const url = new URL("/agent-manager/session", cfg.baseUrl)
+      url.searchParams.set("directory", root)
+      const auth = `Basic ${Buffer.from(`kilo:${cfg.password}`).toString("base64")}`
+      const response = await fetch(url.toString(), {
+        method: "GET",
+        headers: {
+          Authorization: auth,
+        },
+      }).catch(() => undefined)
+      if (!response?.ok) return []
+      const body = (await response.json().catch(() => undefined)) as
+        | {
+            sessions?: Array<{
+              sessionID: string
+              groupID?: string
+              label?: string
+              worktree?: {
+                path?: string
+                branch?: string
+                baseBranch?: string
+              }
+            }>
+          }
+        | undefined
+      return body?.sessions ?? []
+    }
+
+    const sessions = (await fromSdk()) ?? (await fromHttp())
+    if (sessions.length === 0) return
+
+    const changed = sessions.some((session) => {
+      const worktree = session.worktree
+      if (!worktree?.path || !worktree?.branch || !worktree?.baseBranch) return false
+      return this.adoptManagedSession({
+        sessionID: session.sessionID,
+        groupID: session.groupID,
+        label: session.label,
+        worktree: {
+          path: worktree.path,
+          branch: worktree.branch,
+          baseBranch: worktree.baseBranch,
+        },
+      })
+    })
+
+    if (!changed) return
+    this.pushState()
+    this.provider?.refreshSessions()
+  }
+
+  private async onManagedSessionEvent(event: Event): Promise<void> {
+    const raw = event as unknown as {
+      type?: string
+      properties?: {
+        sessionID?: string
+        groupID?: string
+        label?: string
+        worktree?: {
+          path?: string
+          branch?: string
+          baseBranch?: string
+        }
+      }
+    }
+    if (raw.type !== "agent-manager.session.created") return
+
+    const sessionID = raw.properties?.sessionID
+    const worktree = raw.properties?.worktree
+    if (!sessionID || !worktree?.path || !worktree.branch || !worktree.baseBranch) return
+
+    if (!this.panel) {
+      this.openPanel()
+    }
+
+    if (this.stateReady) {
+      await this.stateReady.catch((err) => {
+        this.log("stateReady rejected while adopting managed session:", err)
+      })
+    }
+
+    const changed = this.adoptManagedSession({
+      sessionID,
+      groupID: raw.properties?.groupID,
+      label: raw.properties?.label,
+      worktree: {
+        path: worktree.path,
+        branch: worktree.branch,
+        baseBranch: worktree.baseBranch,
+      },
+    })
+
+    if (!changed) return
+    this.pushState()
+    this.provider?.refreshSessions()
   }
 
   // ---------------------------------------------------------------------------
@@ -1763,6 +1953,7 @@ export class AgentManagerProvider implements vscode.Disposable {
   }
 
   public dispose(): void {
+    this.unsubscribeServerEvent?.()
     this.stopDiffPolling()
     this.statsPoller.stop()
     this.terminalManager.dispose()

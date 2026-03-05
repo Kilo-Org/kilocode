@@ -48,6 +48,12 @@ export namespace Worktree {
   export const CreateInput = z
     .object({
       name: z.string().optional(),
+      // kilocode_change start - allow creating worktree from a specific base branch
+      baseBranch: z
+        .string()
+        .optional()
+        .describe("Base branch or ref to create the worktree branch from (defaults to current HEAD)"),
+      // kilocode_change end
       startCommand: z
         .string()
         .optional()
@@ -342,10 +348,16 @@ export namespace Worktree {
     const base = input?.name ? slug(input.name) : ""
     const info = await candidate(root, base || undefined)
 
-    const created = await $`git worktree add --no-checkout -b ${info.branch} ${info.directory}`
+    // kilocode_change start - support optional base branch for worktree creation
+    const created = await (
+      input?.baseBranch
+        ? $`git worktree add --no-checkout -b ${info.branch} ${info.directory} ${input.baseBranch}`
+        : $`git worktree add --no-checkout -b ${info.branch} ${info.directory}`
+    )
       .quiet()
       .nothrow()
       .cwd(Instance.worktree)
+    // kilocode_change end
     if (created.exitCode !== 0) {
       throw new CreateFailedError({ message: errorText(created) || "Failed to create git worktree" })
     }
