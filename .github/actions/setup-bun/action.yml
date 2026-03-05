@@ -7,7 +7,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: ~/.bun/install/cache
-        key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+        key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
         restore-keys: |
           ${{ runner.os }}-bun-
 
@@ -17,8 +17,10 @@ runs:
       with:
         path: |
           node_modules
-          packages/*/node_modules
-        key: ${{ runner.os }}-node-modules-${{ hashFiles('**/bun.lockb') }}
+          packages/**/node_modules
+        key: ${{ runner.os }}-node-modules-${{ hashFiles('**/bun.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-node-modules-
 
     - name: Get baseline download URL
       id: bun-url
