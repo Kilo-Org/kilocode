@@ -358,6 +358,8 @@
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+  min-width: 0;
+  overflow: hidden;
 
   [data-component="button"] {
     height: auto !important;
@@ -395,6 +397,8 @@
 .prompt-input-hint-actions {
   display: flex;
   gap: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
 
   [data-component="button"] {
     background: transparent;
