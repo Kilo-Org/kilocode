@@ -96,14 +96,7 @@ If you want to restrict your agent's capabilities, you can change the tool profi
 
 1. Open your agent's Control UI (via **OpenClaw** on the dashboard)
 2. Navigate to **Settings** → **Config** → **Tools** → **Tool Profile**
-3. Select a different profile:
-
-| Profile       | What's included                                             |
-| ------------- | ----------------------------------------------------------- |
-| **full**      | All tools, no restrictions (KiloClaw default)               |
-| **coding**    | Filesystem, exec, memory, sessions, sub-agents, cron, image |
-| **messaging** | Session management and messaging only                       |
-| **minimal**   | Session status only                                         |
+3. Select a different profile.
 
 Your choice persists across restarts — KiloClaw won't overwrite a customized profile.
 
