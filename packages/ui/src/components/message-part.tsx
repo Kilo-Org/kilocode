@@ -964,22 +964,29 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
 
   const render = ToolRegistry.render(part.tool) ?? GenericTool
 
+  const dismissed = createMemo(
+    () =>
+      part.tool === "question" &&
+      part.state.status === "error" &&
+      typeof part.state.error === "string" &&
+      part.state.error.includes("dismissed this question"),
+  )
+
   return (
     <Show when={!hideQuestion()}>
+      <Show when={dismissed()}>
+        <div style="width: 100%; display: flex; justify-content: flex-end; padding: 4px 8px 4px 0;">
+          <span class="text-13-regular text-text-weak cursor-default">
+            {i18n.t("ui.tool.questions")} dismissed
+          </span>
+        </div>
+      </Show>
+      <Show when={!dismissed()}>
       <div data-component="tool-part-wrapper">
         <Switch>
           <Match when={part.state.status === "error" && part.state.error}>
             {(error) => {
               const cleaned = error().replace("Error: ", "")
-              if (part.tool === "question" && cleaned.includes("dismissed this question")) {
-                return (
-                  <div style="width: 100%; display: flex; justify-content: flex-end;">
-                    <span class="text-13-regular text-text-weak cursor-default">
-                      {i18n.t("ui.tool.questions")} dismissed
-                    </span>
-                  </div>
-                )
-              }
               const [title, ...rest] = cleaned.split(": ")
               return (
                 <Card variant="error">
@@ -1016,6 +1023,7 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
           </Match>
         </Switch>
       </div>
+      </Show>
     </Show>
   )
 }

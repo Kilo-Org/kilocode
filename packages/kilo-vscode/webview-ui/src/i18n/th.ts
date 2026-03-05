@@ -43,6 +43,7 @@ export const dict = {
   "command.language.set": "ใช้ภาษา: {{language}}",
 
   "command.session.new": "เซสชันใหม่",
+  "command.session.new.task": "งานใหม่",
   "command.file.open": "เปิดไฟล์",
   "command.tab.close": "ปิดแท็บ",
   "command.context.addSelection": "เพิ่มส่วนที่เลือกไปยังบริบท",
@@ -971,7 +972,6 @@ export const dict = {
   "dialog.model.notSet": "ไม่ได้ตั้งค่า",
   "profile.personalAccount": "บัญชีส่วนตัว",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/th.ts
-
 
   "question.summary": "{{n}} จาก {{total}} คำถาม",
   "common.review": "ตรวจสอบ",

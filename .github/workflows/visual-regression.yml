@@ -2,18 +2,33 @@ name: Visual Regression Tests
 
 on:
   pull_request:
-    paths:
-      - "packages/kilo-ui/**"
-      - "packages/ui/**"
-      - "packages/util/**"
-      - "packages/sdk/js/**"
-      - "packages/kilo-vscode/webview-ui/**"
-      - "packages/kilo-vscode/.storybook/**"
-      - "packages/kilo-vscode/tests/visual-regression*"
-      - ".github/workflows/visual-regression.yml"
+    types: [opened, synchronize, reopened]
 
 jobs:
+  check-paths:
+    name: Check changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      matched: ${{ steps.filter.outputs.matched }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Kilo-Org/paths-filter@master
+        id: filter
+        with:
+          filters: |
+            matched:
+              - "packages/kilo-ui/**"
+              - "packages/ui/**"
+              - "packages/util/**"
+              - "packages/sdk/js/**"
+              - "packages/kilo-vscode/webview-ui/**"
+              - "packages/kilo-vscode/.storybook/**"
+              - "packages/kilo-vscode/tests/visual-regression*"
+              - ".github/workflows/visual-regression.yml"
+
   visual-regression:
+    needs: check-paths
+    if: needs.check-paths.outputs.matched == 'true'
     name: Visual Regression (kilo-ui)
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
@@ -23,7 +38,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           lfs: true
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.BOT_PAT }}
           ref: ${{ github.head_ref }}
 
       - name: Setup Bun
@@ -77,6 +92,8 @@ jobs:
 
       - name: Commit and push new baselines (if any)
         id: commit-baselines
+        env:
+          GH_TOKEN: ${{ secrets.BOT_PAT }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -106,6 +123,8 @@ jobs:
           retention-days: 7
 
   visual-regression-vscode:
+    needs: check-paths
+    if: needs.check-paths.outputs.matched == 'true'
     name: Visual Regression (kilo-vscode webview)
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
@@ -115,7 +134,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           lfs: true
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.BOT_PAT }}
           ref: ${{ github.head_ref }}
 
       - name: Setup Bun
@@ -169,6 +188,8 @@ jobs:
 
       - name: Commit and push new baselines (if any)
         id: commit-baselines-vscode
+        env:
+          GH_TOKEN: ${{ secrets.BOT_PAT }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"

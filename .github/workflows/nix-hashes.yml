@@ -21,6 +21,7 @@ jobs:
   # Native runners required: bun install cross-compilation flags (--os/--cpu)
   # do not produce byte-identical node_modules as native installs.
   compute-hash:
+    if: github.repository == 'Kilo-Org/kilocode'
     strategy:
       fail-fast: false
       matrix:
@@ -76,7 +77,7 @@ jobs:
 
   update-hashes:
     needs: compute-hash
-    if: github.event_name != 'pull_request'
+    if: github.repository == 'Kilo-Org/kilocode' && github.event_name != 'pull_request'
     runs-on: blacksmith-4vcpu-ubuntu-2404
 
     steps:

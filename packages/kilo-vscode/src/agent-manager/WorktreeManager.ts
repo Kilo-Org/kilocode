@@ -67,7 +67,41 @@ export class WorktreeManager {
     this.log = log
   }
 
+  // ---------------------------------------------------------------------------
+  // Per-project git operation mutex
+  // ---------------------------------------------------------------------------
+
+  // Serializes git-writing operations per repository root so concurrent
+  // callers (e.g. multi-version worktree creation) don't hit index.lock
+  // conflicts. Operations on different repositories proceed in parallel.
+  private static locks = new Map<string, Promise<void>>()
+
+  private withGitLock<T>(fn: () => Promise<T>): Promise<T> {
+    const key = this.root
+    const prev = WorktreeManager.locks.get(key) ?? Promise.resolve()
+    const result = prev.then(fn)
+    const barrier = result.then(
+      () => {},
+      () => {},
+    )
+    WorktreeManager.locks.set(key, barrier)
+    return result
+  }
+
+  // ---------------------------------------------------------------------------
+  // Public API (acquires git lock)
+  // ---------------------------------------------------------------------------
+
   async createWorktree(params: {
+    prompt?: string
+    existingBranch?: string
+    baseBranch?: string
+    branchName?: string
+  }): Promise<CreateWorktreeResult> {
+    return this.withGitLock(() => this.createWorktreeImpl(params))
+  }
+
+  private async createWorktreeImpl(params: {
     prompt?: string
     existingBranch?: string
     baseBranch?: string
@@ -108,7 +142,7 @@ export class WorktreeManager {
 
     if (fs.existsSync(worktreePath)) {
       this.log(`Worktree directory exists, cleaning up before re-creation: ${worktreePath}`)
-      await this.removeWorktree(worktreePath)
+      await this.removeWorktreeImpl(worktreePath)
     }
 
     try {
@@ -154,6 +188,10 @@ export class WorktreeManager {
    * that git doesn't know about.
    */
   async removeWorktree(worktreePath: string): Promise<void> {
+    return this.withGitLock(() => this.removeWorktreeImpl(worktreePath))
+  }
+
+  private async removeWorktreeImpl(worktreePath: string): Promise<void> {
     const clean = await this.git.raw(["worktree", "remove", worktreePath]).then(
       () => true,
       () => false,
@@ -440,6 +478,10 @@ export class WorktreeManager {
   }
 
   async createFromPR(url: string): Promise<CreateWorktreeResult> {
+    return this.withGitLock(() => this.createFromPRImpl(url))
+  }
+
+  private async createFromPRImpl(url: string): Promise<CreateWorktreeResult> {
     const parsed = parsePRUrl(url)
     if (!parsed) throw new Error("Invalid PR URL. Expected: https://github.com/owner/repo/pull/123")
 
@@ -462,7 +504,7 @@ export class WorktreeManager {
       await this.git.raw(["branch", branch, `${forkOwner}/${info.headRefName}`])
     }
 
-    return this.createWorktree({ existingBranch: branch })
+    return this.createWorktreeImpl({ existingBranch: branch })
   }
 
   private async fetchPRInfo(parsed: { owner: string; repo: string; number: number }): Promise<PRInfo> {

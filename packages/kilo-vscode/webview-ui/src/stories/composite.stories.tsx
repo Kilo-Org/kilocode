@@ -231,6 +231,23 @@ const questionToolPart: ToolPart = {
   },
 }
 
+const questionDismissedPart: ToolPart = {
+  id: "part-question-dismissed-001",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-question-dismissed-001",
+  tool: "question",
+  state: {
+    status: "error",
+    input: { question: "Which testing framework?", options: [] },
+    error: "Error: User dismissed this question",
+    title: "Question dismissed",
+    metadata: {},
+    time: { start: now - 2000, end: now - 1500 },
+  },
+}
+
 // ---------------------------------------------------------------------------
 // Data helpers
 // ---------------------------------------------------------------------------
@@ -244,9 +261,7 @@ function dataWith(parts: any[], permissions?: PermissionRequest[]) {
     part: {
       [ASST_MSG_ID]: parts,
     },
-    permission: permissions
-      ? { [SESSION_ID]: permissions }
-      : {},
+    permission: permissions ? { [SESSION_ID]: permissions } : {},
   }
 }
 
@@ -318,9 +333,7 @@ export const PermissionDock: Story = {
           >
             <Show when={perm.patterns.length > 0}>
               <div class="permission-dock-patterns">
-                <For each={perm.patterns}>
-                  {(pattern) => <code class="permission-dock-pattern">{pattern}</code>}
-                </For>
+                <For each={perm.patterns}>{(pattern) => <code class="permission-dock-pattern">{pattern}</code>}</For>
               </div>
             </Show>
           </BasicTool>
@@ -456,6 +469,22 @@ export const InlineQuestion: Story = {
     const data = dataWith([textPart, questionToolPart])
     return (
       <StoryProviders data={data} questions={qs} sessionID={SESSION_ID}>
+        <AssistantMessage message={baseAssistantMessage} />
+      </StoryProviders>
+    )
+  },
+}
+
+// ---------------------------------------------------------------------------
+// 9. Dismissed question (right-aligned "Questions dismissed" text)
+// ---------------------------------------------------------------------------
+
+export const QuestionDismissed: Story = {
+  name: "Question Dismissed",
+  render: () => {
+    const data = dataWith([textPart, questionDismissedPart])
+    return (
+      <StoryProviders data={data} sessionID={SESSION_ID}>
         <AssistantMessage message={baseAssistantMessage} />
       </StoryProviders>
     )

@@ -131,9 +131,9 @@ export const dict = {
   "agentManager.review.collapsedOnly": "{{count}} 个已折叠",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} 个已折叠，{{large}} 个过大",
   "agentManager.review.largeFileCollapsed": "大文件（已折叠）",
-  "agentManager.review.endOfLongDiff": "您已到达末尾！",
+  "agentManager.review.endOfLongDiff": "你已经到末尾了！",
 
-  "agentManager.import.pullRequest": "拉取请求",
+  "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "粘贴 PR URL...",
   "agentManager.import.open": "打开",
   "agentManager.import.branches": "分支",

@@ -43,6 +43,7 @@ export const dict = {
   "command.language.set": "Use language: {{language}}",
 
   "command.session.new": "New session",
+  "command.session.new.task": "New task",
   "command.file.open": "Open file",
   "command.tab.close": "Close tab",
   "command.context.addSelection": "Add selection to context",
