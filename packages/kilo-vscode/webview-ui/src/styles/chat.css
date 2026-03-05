@@ -698,6 +698,8 @@
 
 /* Permission Prompt (inline with tool cards) */
 [data-component="tool-part-wrapper"][data-permission="true"] {
+  border-color: var(--border-warning-base, var(--vscode-charts-yellow));
+
   /* When wrapping a Part + permission, the outer wrapper provides the card border.
      Remove the inner Part's tool-part-wrapper border so we don't get double borders. */
   > [data-component="tool-part-wrapper"] {
