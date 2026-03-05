@@ -60,8 +60,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   }
 
   // Questions linked to this message (rendered after the last part)
-  const questionForMessage = () =>
-    questions().find((q) => q.tool!.messageID === props.message.id)
+  const questionForMessage = () => questions().find((q) => q.tool!.messageID === props.message.id)
 
   const [responding, setResponding] = createSignal(false)
 
@@ -79,7 +78,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
           const perm = () => permissionForPart(part)
           return (
             <Show when={PART_MAPPING[part.type]}>
-              <div data-component="tool-part-wrapper" data-permission={!!perm()}>
+              <div data-component="tool-part-wrapper" data-permission={!!perm()} data-part-type={part.type}>
                 <Part
                   part={part}
                   message={props.message as SDKMessage}
@@ -97,13 +96,28 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                         </div>
                       </Show>
                       <div data-slot="permission-actions">
-                        <Button variant="ghost" size="small" onClick={() => decide(p.id, "reject")} disabled={responding()}>
+                        <Button
+                          variant="ghost"
+                          size="small"
+                          onClick={() => decide(p.id, "reject")}
+                          disabled={responding()}
+                        >
                           {language.t("ui.permission.deny")}
                         </Button>
-                        <Button variant="secondary" size="small" onClick={() => decide(p.id, "always")} disabled={responding()}>
+                        <Button
+                          variant="secondary"
+                          size="small"
+                          onClick={() => decide(p.id, "always")}
+                          disabled={responding()}
+                        >
                           {language.t("ui.permission.allowAlways")}
                         </Button>
-                        <Button variant="primary" size="small" onClick={() => decide(p.id, "once")} disabled={responding()}>
+                        <Button
+                          variant="primary"
+                          size="small"
+                          onClick={() => decide(p.id, "once")}
+                          disabled={responding()}
+                        >
                           {language.t("ui.permission.allowOnce")}
                         </Button>
                       </div>
