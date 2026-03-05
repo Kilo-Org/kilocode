@@ -991,22 +991,74 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       const normalized = indexProvidersById(response.all)
 
-      const config = vscode.workspace.getConfiguration("kilo-code.new.model")
-      const providerID = config.get<string>("providerID", "kilo")
-      const modelID = config.get<string>("modelID", "kilo/auto")
+      const defaultSelection = await this.resolveDefaultModel(response.connected, response.default)
 
       const message = {
         type: "providersLoaded",
         providers: normalized,
         connected: response.connected,
         defaults: response.default,
-        defaultSelection: { providerID, modelID },
+        defaultSelection,
       }
       this.cachedProvidersMessage = message
       this.postMessage(message)
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to fetch providers:", error)
     }
+  }
+
+  /**
+   * Resolve the default model selection using the same logic as the CLI:
+   * 1. Explicit VS Code user/workspace setting override
+   * 2. Backend config `model` field (user's kilo config file)
+   * 3. First connected provider's sorted default model
+   */
+  private async resolveDefaultModel(
+    connected: string[],
+    defaults: Record<string, string>,
+  ): Promise<{ providerID: string; modelID: string }> {
+    // 1. Check if the user explicitly set VS Code settings (not just package.json defaults)
+    const config = vscode.workspace.getConfiguration("kilo-code.new.model")
+    const providerInspect = config.inspect<string>("providerID")
+    const modelInspect = config.inspect<string>("modelID")
+    const hasUserOverride =
+      providerInspect?.globalValue !== undefined ||
+      providerInspect?.workspaceValue !== undefined ||
+      providerInspect?.workspaceFolderValue !== undefined ||
+      modelInspect?.globalValue !== undefined ||
+      modelInspect?.workspaceValue !== undefined ||
+      modelInspect?.workspaceFolderValue !== undefined
+    if (hasUserOverride) {
+      return {
+        providerID: config.get<string>("providerID", "kilo"),
+        modelID: config.get<string>("modelID", "kilo/auto"),
+      }
+    }
+
+    // 2. Check backend config for an explicit model setting
+    if (this.client) {
+      try {
+        const workspaceDir = this.getWorkspaceDirectory()
+        const { data: cfg } = await this.client.config.get({ directory: workspaceDir }, { throwOnError: true })
+        if (cfg.model) {
+          const [providerID, ...rest] = cfg.model.split("/")
+          return { providerID, modelID: rest.join("/") }
+        }
+      } catch {
+        console.error("[Kilo New] KiloProvider: Failed to fetch config for default model resolution")
+      }
+    }
+
+    // 3. Fall back to the first connected provider's sorted default model
+    for (const providerID of connected) {
+      const modelID = defaults[providerID]
+      if (modelID) {
+        return { providerID, modelID }
+      }
+    }
+
+    // Final fallback
+    return { providerID: "kilo", modelID: "kilo/auto" }
   }
 
   /**

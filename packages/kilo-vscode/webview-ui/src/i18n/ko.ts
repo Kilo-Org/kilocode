@@ -976,7 +976,6 @@ export const dict = {
   "profile.personalAccount": "개인 계정",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/ko.ts
 
-
   "question.summary": "{{total}}개 질문 중 {{n}}번째",
   "common.review": "검토",
 

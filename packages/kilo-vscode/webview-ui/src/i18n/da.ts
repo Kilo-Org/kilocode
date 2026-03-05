@@ -980,7 +980,6 @@ export const dict = {
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/da.ts
 
-
   "question.summary": "{{n}} af {{total}} spørgsmål",
   "common.review": "Gennemgå",
 

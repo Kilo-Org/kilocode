@@ -28,7 +28,11 @@ const mockVscode = {
   extensions: {
     getExtension: (id: string) => {
       if (id === "vscode.git") return undefined
-      return { packageJSON: { version: "test", contributes: { configuration: { properties: {} } } }, isActive: true, exports: undefined }
+      return {
+        packageJSON: { version: "test", contributes: { configuration: { properties: {} } } },
+        isActive: true,
+        exports: undefined,
+      }
     },
   },
   env: {
@@ -63,7 +67,10 @@ const mockVscode = {
   CodeAction: class {
     command?: { command: string; title: string }
     isPreferred?: boolean
-    constructor(public title: string, public kind: { value: string }) {}
+    constructor(
+      public title: string,
+      public kind: { value: string },
+    ) {}
   },
   CodeActionKind: {
     QuickFix: kind("quickfix"),
@@ -78,10 +85,16 @@ const mockVscode = {
     constructor(public uri: { scheme: string; fsPath: string }) {}
   },
   Position: class {
-    constructor(public line: number, public character: number) {}
+    constructor(
+      public line: number,
+      public character: number,
+    ) {}
   },
   Range: class {
-    constructor(public start: { line: number; character: number }, public end: { line: number; character: number }) {}
+    constructor(
+      public start: { line: number; character: number },
+      public end: { line: number; character: number },
+    ) {}
   },
   Disposable: class {
     constructor(private callback: () => void = noop) {}
