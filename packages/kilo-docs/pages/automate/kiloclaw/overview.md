@@ -94,7 +94,7 @@ Shell commands are still gated by an **allowlist** — unknown commands trigger 
 
 If you want to restrict your agent's capabilities, you can change the tool profile from the OpenClaw Control UI:
 
-1. Open your agent's Control UI (via **Open Claw** on the dashboard)
+1. Open your agent's Control UI (via **OpenClaw** on the dashboard)
 2. Navigate to **Settings** → **Config** → **Tools** → **Tool Profile**
 3. Select a different profile:
 
