@@ -430,7 +430,7 @@ export const PromptInput: Component = () => {
             fallback={
               <Tooltip value={language.t("prompt.action.send")} placement="top">
                 <Button
-                  variant="primary"
+                  variant="ghost"
                   size="small"
                   onClick={handleSend}
                   disabled={!canSend()}

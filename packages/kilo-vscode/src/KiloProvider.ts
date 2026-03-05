@@ -2016,7 +2016,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       iconsBaseUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "assets", "icons")),
       title: "Kilo Code",
       port: this.connectionService.getServerInfo()?.port,
-      extraStyles: `.container { height: 100%; display: flex; flex-direction: column; height: 100vh; }`,
+      extraStyles: `.container { height: 100%; display: flex; flex-direction: column; height: 100vh; border-right: 1px solid var(--border-weak-base); }`,
     })
   }
 
