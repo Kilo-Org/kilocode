@@ -40,15 +40,6 @@ interface DisplaySession {
   createdAt: string
 }
 
-function toDisplay(s: CloudSessionInfo): DisplaySession {
-  return {
-    id: s.session_id,
-    title: s.title ?? "Untitled",
-    updatedAt: s.updated_at,
-    createdAt: s.created_at,
-  }
-}
-
 interface CloudSessionListProps {
   onSelectSession?: (id: string) => void
 }
@@ -70,7 +61,14 @@ const CloudSessionList: Component<CloudSessionListProps> = (props) => {
   const unsub = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type === "cloudSessionsLoaded") {
       if (activeGen !== loadGen) return
-      const incoming = message.sessions.map(toDisplay)
+      const incoming = message.sessions.map(
+        (s): DisplaySession => ({
+          id: s.session_id,
+          title: s.title ?? language.t("session.untitled"),
+          updatedAt: s.updated_at,
+          createdAt: s.created_at,
+        }),
+      )
       const cursor = nextCursor()
       if (cursor && incoming.length > 0) {
         setSessions((prev) => {
@@ -128,7 +126,7 @@ const CloudSessionList: Component<CloudSessionListProps> = (props) => {
     <div class="session-list cloud-session-list">
       <div class="cloud-session-filters">
         <Checkbox checked={repoOnly()} onChange={setRepoOnly}>
-          {language.t("session.cloud.repoOnly") ?? "Only this repository"}
+          {language.t("session.cloud.repoOnly")}
         </Checkbox>
       </div>
       <List<DisplaySession>
@@ -140,7 +138,9 @@ const CloudSessionList: Component<CloudSessionListProps> = (props) => {
         }}
         search={{ placeholder: language.t("session.search.placeholder"), autofocus: false }}
         emptyMessage={
-          loading() ? (language.t("common.loading") ?? "Loading...") : (language.t("session.empty") ?? "No sessions")
+          loading()
+            ? `${language.t("common.loading")}${language.t("common.loading.ellipsis")}`
+            : language.t("session.empty")
         }
         groupBy={(s) => language.t(dateGroupKey(s.updatedAt))}
         sortGroupsBy={(a, b) => {
@@ -158,7 +158,7 @@ const CloudSessionList: Component<CloudSessionListProps> = (props) => {
       <Show when={nextCursor() && !loading()}>
         <div class="cloud-session-load-more">
           <Button variant="ghost" size="small" onClick={loadMore}>
-            {language.t("common.loadMore") ?? "Load more"}
+            {language.t("common.loadMore")}
           </Button>
         </div>
       </Show>
