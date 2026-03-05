@@ -5,6 +5,15 @@ Please analyze this codebase and create an AGENTS.md file containing:
 The file you create will be given to agentic coding agents (such as yourself) that operate in this repository. Make it about 150 lines long.
 If there are Cursor rules (in .cursor/rules/ or .cursorrules) or Copilot rules (in .github/copilot-instructions.md), make sure to include them.
 
+Check whether this repository has pre-commit secret scanning configured. Look for:
+- A .pre-commit-config.yaml file containing secret scanning hooks (e.g. detect-secrets, gitleaks, trufflehog)
+- A .git/hooks/pre-commit file that performs secret scanning
+- A .secrets.baseline file (detect-secrets)
+- Secret scanning configured via husky, lint-staged, or lefthook
+
+If secret scanning IS configured, document the existing setup in AGENTS.md so agents know not to bypass it.
+If secret scanning is NOT configured, add a section to AGENTS.md recommending that the project set up a pre-commit secret scanning hook. Suggest detect-secrets (https://github.com/Yelp/detect-secrets) or gitleaks (https://github.com/gitleaks/gitleaks) as options, and briefly explain why this is important for preventing accidental secret leaks.
+
 If there's already an AGENTS.md, improve it if it's located in ${path}
 
 $ARGUMENTS
