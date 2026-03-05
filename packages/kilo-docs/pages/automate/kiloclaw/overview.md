@@ -107,7 +107,7 @@ If you want to restrict your agent's capabilities, you can change the tool profi
 
 Your choice persists across restarts — KiloClaw won't overwrite a customized profile.
 
-For complete and up to date tool configuration reference, see the [OpenClaw Tools documentation](https://docs.openclaw.ai/tools#tools-openclaw).
+For a complete and up-to-date tool configuration reference, see the [OpenClaw Tools documentation](https://docs.openclaw.ai/tools#tools-openclaw).
 
 ## Limitations
 
