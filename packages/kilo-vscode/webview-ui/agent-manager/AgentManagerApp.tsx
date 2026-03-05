@@ -2150,6 +2150,11 @@ const AgentManagerContent: Component = () => {
                                     </Show>
                                   )
                                 })()}
+                                <div class="am-hover-card-divider" />
+                                <div class="am-hover-card-hint">
+                                  <Icon name="edit" size="small" />
+                                  <span>{t("agentManager.worktree.doubleClickRename")}</span>
+                                </div>
                               </div>
                             </HoverCard>
                           </>

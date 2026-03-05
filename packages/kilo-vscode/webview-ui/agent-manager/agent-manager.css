@@ -2042,6 +2042,18 @@ button.am-section-toggle:hover .am-section-label {
   justify-content: flex-start;
 }
 
+.am-hover-card-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-weaker);
+  font-size: 11px;
+}
+
+.am-hover-card-hint [data-component="icon"] {
+  opacity: 0.8;
+}
+
 /* Keyboard shortcuts dialog */
 
 .am-shortcuts {
