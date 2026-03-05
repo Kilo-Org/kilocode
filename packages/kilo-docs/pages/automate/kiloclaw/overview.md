@@ -88,7 +88,7 @@ For more information on use cases:
 
 KiloClaw deploys with the **full** tool profile, giving your agent unrestricted access to all available tools — filesystem operations (read, write, edit), shell execution, web search, messaging, memory, sub-agents, and more.
 
-Shell commands are still gated by an **allowlist** — unknown commands trigger an approval prompt in the Control UI, while common dev tools are pre-approved.
+Shell commands are still gated by an **allowlist** — unknown commands trigger an approval prompt in the Control UI.
 
 ### Changing the Tool Profile
 
