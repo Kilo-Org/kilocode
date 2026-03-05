@@ -585,12 +585,28 @@ export namespace Provider {
       }
 
       // Build options from KILO_* env vars
-      const options: Record<string, string> = {}
+      const options: Record<string, any> = {}
       if (env.KILO_ORG_ID) {
         options.kilocodeOrganizationId = env.KILO_ORG_ID
       }
       if (!hasKey) {
         options.apiKey = "anonymous"
+      }
+
+      // Provide a dynamic fetch function that reads auth on every request,
+      // so login/logout changes are picked up without restarting the server.
+      const kiloId = input.id
+      options.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+        const auth = await Auth.get(kiloId)
+        const token = auth?.type === "oauth" ? auth.access : auth?.type === "api" ? auth.key : undefined
+        const headers = new Headers(init?.headers)
+        if (token) {
+          headers.set("Authorization", `Bearer ${token}`)
+        } else {
+          // Remove any stale token header when logged out
+          headers.delete("Authorization")
+        }
+        return fetch(input, { ...init, headers })
       }
 
       return {
