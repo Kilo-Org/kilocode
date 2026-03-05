@@ -870,7 +870,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       pendingSessionRefresh: this.pendingSessionRefresh,
       connectionState: this.connectionState,
       listSessions: client
-        ? (dir: string) => client.session.list({ directory: dir }, { throwOnError: true }).then(({ data }) => data)
+        ? (dir: string) =>
+            client.session.list({ directory: dir, roots: true }, { throwOnError: true }).then(({ data }) => data)
         : null,
       sessionDirectories: this.sessionDirectories,
       workspaceDirectory: this.getWorkspaceDirectory(),
