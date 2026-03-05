@@ -149,7 +149,7 @@ function InlinePermissionPrompt(props: {
               {language.t("ui.permission.allowOnce")}
             </Button>
           </div>
-          <p data-slot="permission-hint">{language.t("ui.permission.sessionHint")}</p>
+          <p data-slot="permission-hint">"Allow always" will be saved to your global settings.</p>
         </Match>
         <Match when={stage() === "always"}>
           <div class="permission-dock-patterns">
