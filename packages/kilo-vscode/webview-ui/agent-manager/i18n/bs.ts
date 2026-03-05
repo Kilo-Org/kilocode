@@ -131,10 +131,10 @@ export const dict = {
   "agentManager.review.sendToChat": "Pošalji u chat",
   "agentManager.review.collapsedOnly": "{{count}} sažeto",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} sažeto, {{large}} velikih",
-  "agentManager.review.largeFileCollapsed": "Velika datoteka (skupljeno)",
-  "agentManager.review.endOfLongDiff": "Stigli ste do kraja!",
+  "agentManager.review.largeFileCollapsed": "Velika datoteka (sažeto)",
+  "agentManager.review.endOfLongDiff": "Došli ste do kraja!",
 
-  "agentManager.import.pullRequest": "Zahtjev za povlačenje",
+  "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Zalijepite PR URL...",
   "agentManager.import.open": "Otvori",
   "agentManager.import.branches": "Branchevi",
