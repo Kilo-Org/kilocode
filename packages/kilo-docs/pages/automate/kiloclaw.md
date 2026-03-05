@@ -110,6 +110,31 @@ For more information on use cases for OpenClaw, see:
 - [100 hours of OpenClaw in 35 Minutes](https://www.youtube.com/watch?v=_kZCoW-Qxnc)
 - [Clawhub](https://clawhub.ai/): search for skills
 
+## Tool Configuration
+
+KiloClaw deploys with the **full** tool profile, giving your agent unrestricted access to all available tools — filesystem operations (read, write, edit), shell execution, web search, messaging, memory, sub-agents, and more.
+
+Shell commands are still gated by an **allowlist** — unknown commands trigger an approval prompt in the Control UI, while common dev tools are pre-approved.
+
+### Changing the Tool Profile
+
+If you want to restrict your agent's capabilities, you can change the tool profile from the OpenClaw Control UI:
+
+1. Open your agent's Control UI (via **Open Claw** on the dashboard)
+2. Navigate to **Settings** → **Config** → **Tools** → **Tool Profile**
+3. Select a different profile:
+
+| Profile       | What's included                                             |
+| ------------- | ----------------------------------------------------------- |
+| **full**      | All tools, no restrictions (KiloClaw default)               |
+| **coding**    | Filesystem, exec, memory, sessions, sub-agents, cron, image |
+| **messaging** | Session management and messaging only                       |
+| **minimal**   | Session status only                                         |
+
+Your choice persists across restarts — KiloClaw won't overwrite a customized profile.
+
+For complete and up to date tool configuration reference, see the [OpenClaw Tools documentation](https://docs.openclaw.ai/tools#tools-openclaw).
+
 ## Pricing
 
 KiloClaw uses your existing Kilo Gateway credits—there's no separate billing or subscription:
