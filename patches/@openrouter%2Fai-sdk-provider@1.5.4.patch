@@ -1,8 +1,96 @@
+diff --git a/node_modules/@openrouter/ai-sdk-provider/.bun-tag-7dac70da4266b9c0 b/.bun-tag-7dac70da4266b9c0
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 diff --git a/dist/index.js b/dist/index.js
-index f33510a50d11a2cb92a90ea70cc0ac84c89f29b9..e887a60352c0c08ab794b1e6821854dfeefd20cc 100644
+index f33510a50d11a2cb92a90ea70cc0ac84c89f29b9..325ee5d5bededc0324506c587f55d7e9de15c490 100644
 --- a/dist/index.js
 +++ b/dist/index.js
-@@ -2110,7 +2110,12 @@ var OpenRouterChatLanguageModel = class {
+@@ -1031,6 +1031,7 @@ var OpenRouterProviderMetadataSchema = import_v43.z.object({
+   provider: import_v43.z.string(),
+   reasoning_details: import_v43.z.array(ReasoningDetailUnionSchema).optional(),
+   annotations: import_v43.z.array(FileAnnotationSchema).optional(),
++  phase: import_v43.z.string().nullable().optional(),
+   usage: import_v43.z.object({
+     promptTokens: import_v43.z.number(),
+     promptTokensDetails: import_v43.z.object({
+@@ -1050,7 +1051,8 @@ var OpenRouterProviderMetadataSchema = import_v43.z.object({
+ var OpenRouterProviderOptionsSchema = import_v43.z.object({
+   openrouter: import_v43.z.object({
+     reasoning_details: import_v43.z.array(ReasoningDetailUnionSchema).optional(),
+-    annotations: import_v43.z.array(FileAnnotationSchema).optional()
++    annotations: import_v43.z.array(FileAnnotationSchema).optional(),
++    phase: import_v43.z.string().nullable().optional()
+   }).optional()
+ }).optional();
+ 
+@@ -1200,7 +1202,7 @@ function getCacheControl(providerMetadata) {
+   return (_c = (_b = (_a15 = openrouter2 == null ? void 0 : openrouter2.cacheControl) != null ? _a15 : openrouter2 == null ? void 0 : openrouter2.cache_control) != null ? _b : anthropic == null ? void 0 : anthropic.cacheControl) != null ? _c : anthropic == null ? void 0 : anthropic.cache_control;
+ }
+ function convertToOpenRouterChatMessages(prompt) {
+-  var _a15, _b, _c, _d, _e, _f, _g, _h, _i, _j;
++  var _a15, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
+   const messages = [];
+   for (const { role, content, providerOptions } of prompt) {
+     switch (role) {
+@@ -1355,6 +1357,7 @@ function convertToOpenRouterChatMessages(prompt) {
+         const parsedProviderOptions = OpenRouterProviderOptionsSchema.safeParse(providerOptions);
+         const messageReasoningDetails = parsedProviderOptions.success ? (_g = (_f = parsedProviderOptions.data) == null ? void 0 : _f.openrouter) == null ? void 0 : _g.reasoning_details : void 0;
+         const messageAnnotations = parsedProviderOptions.success ? (_i = (_h = parsedProviderOptions.data) == null ? void 0 : _h.openrouter) == null ? void 0 : _i.annotations : void 0;
++        const messagePhase = parsedProviderOptions.success ? (_k = (_j = parsedProviderOptions.data) == null ? void 0 : _j.openrouter) == null ? void 0 : _k.phase : void 0;
+         const finalReasoningDetails = messageReasoningDetails && Array.isArray(messageReasoningDetails) && messageReasoningDetails.length > 0 ? messageReasoningDetails : accumulatedReasoningDetails.length > 0 ? accumulatedReasoningDetails : void 0;
+         messages.push({
+           role: "assistant",
+@@ -1363,6 +1366,7 @@ function convertToOpenRouterChatMessages(prompt) {
+           reasoning: reasoning || void 0,
+           reasoning_details: finalReasoningDetails,
+           annotations: messageAnnotations,
++          phase: messagePhase,
+           cache_control: getCacheControl(providerOptions)
+         });
+         break;
+@@ -1518,9 +1522,10 @@ var OpenRouterNonStreamChatCompletionResponseSchema = import_v46.z.union([
+                     }).passthrough()
+                   ).optional()
+                 }).passthrough()
+-              }).passthrough()
++               }).passthrough()
+             ])
+-          ).nullish()
++          ).nullish(),
++          phase: import_v46.z.string().nullable().optional()
+         }).passthrough(),
+         index: import_v46.z.number().nullish(),
+         logprobs: import_v46.z.object({
+@@ -1601,9 +1606,10 @@ var OpenRouterStreamChatCompletionChunkSchema = import_v46.z.union([
+                     }).passthrough()
+                   ).optional()
+                 }).passthrough()
+-              }).passthrough()
++               }).passthrough()
+             ])
+-          ).nullish()
++          ).nullish(),
++          phase: import_v46.z.string().nullable().optional()
+         }).passthrough().nullish(),
+         logprobs: import_v46.z.object({
+           content: import_v46.z.array(
+@@ -1900,6 +1906,7 @@ var OpenRouterChatLanguageModel = class {
+           provider: (_l = response.provider) != null ? _l : "",
+           reasoning_details: (_m = choice.message.reasoning_details) != null ? _m : [],
+           annotations: fileAnnotations && fileAnnotations.length > 0 ? fileAnnotations : void 0,
++          phase: choice.message.phase,
+           usage: __spreadValues(__spreadValues(__spreadValues({
+             promptTokens: (_n = usageInfo.inputTokens) != null ? _n : 0,
+             completionTokens: (_o = usageInfo.outputTokens) != null ? _o : 0,
+@@ -1971,6 +1978,7 @@ var OpenRouterChatLanguageModel = class {
+     let reasoningId;
+     let openrouterResponseId;
+     let provider;
++    let phase;
+     return {
+       stream: response.pipeThrough(
+         new TransformStream({
+@@ -2110,7 +2118,12 @@ var OpenRouterChatLanguageModel = class {
                if (reasoningStarted && !textStarted) {
                  controller.enqueue({
                    type: "reasoning-end",
@@ -16,7 +104,17 @@ index f33510a50d11a2cb92a90ea70cc0ac84c89f29b9..e887a60352c0c08ab794b1e6821854df
                  });
                  reasoningStarted = false;
                }
-@@ -2307,7 +2312,12 @@ var OpenRouterChatLanguageModel = class {
+@@ -2128,6 +2141,9 @@ var OpenRouterChatLanguageModel = class {
+                 id: textId || generateId()
+               });
+             }
++            if (delta.phase != null) {
++              phase = delta.phase;
++            }
+             if (delta.annotations) {
+               for (const annotation of delta.annotations) {
+                 if (annotation.type === "url_citation") {
+@@ -2307,7 +2323,12 @@ var OpenRouterChatLanguageModel = class {
              if (reasoningStarted) {
                controller.enqueue({
                  type: "reasoning-end",
@@ -30,11 +128,104 @@ index f33510a50d11a2cb92a90ea70cc0ac84c89f29b9..e887a60352c0c08ab794b1e6821854df
                });
              }
              if (textStarted) {
+@@ -2328,6 +2349,9 @@ var OpenRouterChatLanguageModel = class {
+             if (accumulatedFileAnnotations.length > 0) {
+               openrouterMetadata.annotations = accumulatedFileAnnotations;
+             }
++            if (phase !== void 0) {
++              openrouterMetadata.phase = phase;
++            }
+             controller.enqueue({
+               type: "finish",
+               finishReason,
 diff --git a/dist/index.mjs b/dist/index.mjs
-index 8a688331b88b4af738ee4ca8062b5f24124d3d81..6310cb8b7c8d0a728d86e1eed09906c6b4c91ae2 100644
+index 8a688331b88b4af738ee4ca8062b5f24124d3d81..fe15dfce98425e0f44043cf698afbf5d8ae5355e 100644
 --- a/dist/index.mjs
 +++ b/dist/index.mjs
-@@ -2075,7 +2075,12 @@ var OpenRouterChatLanguageModel = class {
+@@ -996,6 +996,7 @@ var OpenRouterProviderMetadataSchema = z3.object({
+   provider: z3.string(),
+   reasoning_details: z3.array(ReasoningDetailUnionSchema).optional(),
+   annotations: z3.array(FileAnnotationSchema).optional(),
++  phase: z3.string().nullable().optional(),
+   usage: z3.object({
+     promptTokens: z3.number(),
+     promptTokensDetails: z3.object({
+@@ -1015,7 +1016,8 @@ var OpenRouterProviderMetadataSchema = z3.object({
+ var OpenRouterProviderOptionsSchema = z3.object({
+   openrouter: z3.object({
+     reasoning_details: z3.array(ReasoningDetailUnionSchema).optional(),
+-    annotations: z3.array(FileAnnotationSchema).optional()
++    annotations: z3.array(FileAnnotationSchema).optional(),
++    phase: z3.string().nullable().optional()
+   }).optional()
+ }).optional();
+ 
+@@ -1165,7 +1167,7 @@ function getCacheControl(providerMetadata) {
+   return (_c = (_b = (_a15 = openrouter2 == null ? void 0 : openrouter2.cacheControl) != null ? _a15 : openrouter2 == null ? void 0 : openrouter2.cache_control) != null ? _b : anthropic == null ? void 0 : anthropic.cacheControl) != null ? _c : anthropic == null ? void 0 : anthropic.cache_control;
+ }
+ function convertToOpenRouterChatMessages(prompt) {
+-  var _a15, _b, _c, _d, _e, _f, _g, _h, _i, _j;
++  var _a15, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
+   const messages = [];
+   for (const { role, content, providerOptions } of prompt) {
+     switch (role) {
+@@ -1320,6 +1322,7 @@ function convertToOpenRouterChatMessages(prompt) {
+         const parsedProviderOptions = OpenRouterProviderOptionsSchema.safeParse(providerOptions);
+         const messageReasoningDetails = parsedProviderOptions.success ? (_g = (_f = parsedProviderOptions.data) == null ? void 0 : _f.openrouter) == null ? void 0 : _g.reasoning_details : void 0;
+         const messageAnnotations = parsedProviderOptions.success ? (_i = (_h = parsedProviderOptions.data) == null ? void 0 : _h.openrouter) == null ? void 0 : _i.annotations : void 0;
++        const messagePhase = parsedProviderOptions.success ? (_k = (_j = parsedProviderOptions.data) == null ? void 0 : _j.openrouter) == null ? void 0 : _k.phase : void 0;
+         const finalReasoningDetails = messageReasoningDetails && Array.isArray(messageReasoningDetails) && messageReasoningDetails.length > 0 ? messageReasoningDetails : accumulatedReasoningDetails.length > 0 ? accumulatedReasoningDetails : void 0;
+         messages.push({
+           role: "assistant",
+@@ -1328,6 +1331,7 @@ function convertToOpenRouterChatMessages(prompt) {
+           reasoning: reasoning || void 0,
+           reasoning_details: finalReasoningDetails,
+           annotations: messageAnnotations,
++          phase: messagePhase,
+           cache_control: getCacheControl(providerOptions)
+         });
+         break;
+@@ -1484,8 +1488,9 @@ var OpenRouterNonStreamChatCompletionResponseSchema = z7.union([
+                   ).optional()
+                 }).passthrough()
+               }).passthrough()
+-            ])
+-          ).nullish()
++                         ])
++          ).nullish(),
++          phase: z7.string().nullable().optional()
+         }).passthrough(),
+         index: z7.number().nullish(),
+         logprobs: z7.object({
+@@ -1567,8 +1572,9 @@ var OpenRouterStreamChatCompletionChunkSchema = z7.union([
+                   ).optional()
+                 }).passthrough()
+               }).passthrough()
+-            ])
+-          ).nullish()
++             ])
++          ).nullish(),
++          phase: z7.string().nullable().optional()
+         }).passthrough().nullish(),
+         logprobs: z7.object({
+           content: z7.array(
+@@ -1865,6 +1871,7 @@ var OpenRouterChatLanguageModel = class {
+           provider: (_l = response.provider) != null ? _l : "",
+           reasoning_details: (_m = choice.message.reasoning_details) != null ? _m : [],
+           annotations: fileAnnotations && fileAnnotations.length > 0 ? fileAnnotations : void 0,
++          phase: choice.message.phase,
+           usage: __spreadValues(__spreadValues(__spreadValues({
+             promptTokens: (_n = usageInfo.inputTokens) != null ? _n : 0,
+             completionTokens: (_o = usageInfo.outputTokens) != null ? _o : 0,
+@@ -1936,6 +1943,7 @@ var OpenRouterChatLanguageModel = class {
+     let reasoningId;
+     let openrouterResponseId;
+     let provider;
++    let phase;
+     return {
+       stream: response.pipeThrough(
+         new TransformStream({
+@@ -2075,7 +2083,12 @@ var OpenRouterChatLanguageModel = class {
                if (reasoningStarted && !textStarted) {
                  controller.enqueue({
                    type: "reasoning-end",
@@ -48,7 +239,17 @@ index 8a688331b88b4af738ee4ca8062b5f24124d3d81..6310cb8b7c8d0a728d86e1eed09906c6
                  });
                  reasoningStarted = false;
                }
-@@ -2272,7 +2277,12 @@ var OpenRouterChatLanguageModel = class {
+@@ -2093,6 +2106,9 @@ var OpenRouterChatLanguageModel = class {
+                 id: textId || generateId()
+               });
+             }
++            if (delta.phase != null) {
++              phase = delta.phase;
++            }
+             if (delta.annotations) {
+               for (const annotation of delta.annotations) {
+                 if (annotation.type === "url_citation") {
+@@ -2272,7 +2288,12 @@ var OpenRouterChatLanguageModel = class {
              if (reasoningStarted) {
                controller.enqueue({
                  type: "reasoning-end",
@@ -62,11 +263,106 @@ index 8a688331b88b4af738ee4ca8062b5f24124d3d81..6310cb8b7c8d0a728d86e1eed09906c6
                });
              }
              if (textStarted) {
+@@ -2293,6 +2314,9 @@ var OpenRouterChatLanguageModel = class {
+             if (accumulatedFileAnnotations.length > 0) {
+               openrouterMetadata.annotations = accumulatedFileAnnotations;
+             }
++            if (phase !== void 0) {
++              openrouterMetadata.phase = phase;
++            }
+             controller.enqueue({
+               type: "finish",
+               finishReason,
 diff --git a/dist/internal/index.js b/dist/internal/index.js
-index d40fa66125941155ac13a4619503caba24d89f8a..8dd86d1b473f2fa31c1acd9881d72945b294a197 100644
+index d40fa66125941155ac13a4619503caba24d89f8a..518a4d91fe277a29a48dad5707463f048c1fc0b9 100644
 --- a/dist/internal/index.js
 +++ b/dist/internal/index.js
-@@ -2064,7 +2064,12 @@ var OpenRouterChatLanguageModel = class {
+@@ -985,6 +985,7 @@ var OpenRouterProviderMetadataSchema = import_v43.z.object({
+   provider: import_v43.z.string(),
+   reasoning_details: import_v43.z.array(ReasoningDetailUnionSchema).optional(),
+   annotations: import_v43.z.array(FileAnnotationSchema).optional(),
++  phase: import_v43.z.string().nullable().optional(),
+   usage: import_v43.z.object({
+     promptTokens: import_v43.z.number(),
+     promptTokensDetails: import_v43.z.object({
+@@ -1004,7 +1005,8 @@ var OpenRouterProviderMetadataSchema = import_v43.z.object({
+ var OpenRouterProviderOptionsSchema = import_v43.z.object({
+   openrouter: import_v43.z.object({
+     reasoning_details: import_v43.z.array(ReasoningDetailUnionSchema).optional(),
+-    annotations: import_v43.z.array(FileAnnotationSchema).optional()
++    annotations: import_v43.z.array(FileAnnotationSchema).optional(),
++    phase: import_v43.z.string().nullable().optional()
+   }).optional()
+ }).optional();
+ 
+@@ -1154,7 +1156,7 @@ function getCacheControl(providerMetadata) {
+   return (_c = (_b = (_a15 = openrouter == null ? void 0 : openrouter.cacheControl) != null ? _a15 : openrouter == null ? void 0 : openrouter.cache_control) != null ? _b : anthropic == null ? void 0 : anthropic.cacheControl) != null ? _c : anthropic == null ? void 0 : anthropic.cache_control;
+ }
+ function convertToOpenRouterChatMessages(prompt) {
+-  var _a15, _b, _c, _d, _e, _f, _g, _h, _i, _j;
++  var _a15, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
+   const messages = [];
+   for (const { role, content, providerOptions } of prompt) {
+     switch (role) {
+@@ -1309,6 +1311,7 @@ function convertToOpenRouterChatMessages(prompt) {
+         const parsedProviderOptions = OpenRouterProviderOptionsSchema.safeParse(providerOptions);
+         const messageReasoningDetails = parsedProviderOptions.success ? (_g = (_f = parsedProviderOptions.data) == null ? void 0 : _f.openrouter) == null ? void 0 : _g.reasoning_details : void 0;
+         const messageAnnotations = parsedProviderOptions.success ? (_i = (_h = parsedProviderOptions.data) == null ? void 0 : _h.openrouter) == null ? void 0 : _i.annotations : void 0;
++        const messagePhase = parsedProviderOptions.success ? (_k = (_j = parsedProviderOptions.data) == null ? void 0 : _j.openrouter) == null ? void 0 : _k.phase : void 0;
+         const finalReasoningDetails = messageReasoningDetails && Array.isArray(messageReasoningDetails) && messageReasoningDetails.length > 0 ? messageReasoningDetails : accumulatedReasoningDetails.length > 0 ? accumulatedReasoningDetails : void 0;
+         messages.push({
+           role: "assistant",
+@@ -1317,6 +1320,7 @@ function convertToOpenRouterChatMessages(prompt) {
+           reasoning: reasoning || void 0,
+           reasoning_details: finalReasoningDetails,
+           annotations: messageAnnotations,
++          phase: messagePhase,
+           cache_control: getCacheControl(providerOptions)
+         });
+         break;
+@@ -1472,9 +1476,10 @@ var OpenRouterNonStreamChatCompletionResponseSchema = import_v46.z.union([
+                     }).passthrough()
+                   ).optional()
+                 }).passthrough()
+-              }).passthrough()
++                             }).passthrough()
+             ])
+-          ).nullish()
++          ).nullish(),
++          phase: import_v46.z.string().nullable().optional()
+         }).passthrough(),
+         index: import_v46.z.number().nullish(),
+         logprobs: import_v46.z.object({
+@@ -1555,9 +1560,10 @@ var OpenRouterStreamChatCompletionChunkSchema = import_v46.z.union([
+                     }).passthrough()
+                   ).optional()
+                 }).passthrough()
+-              }).passthrough()
++               }).passthrough()
+             ])
+-          ).nullish()
++          ).nullish(),
++          phase: import_v46.z.string().nullable().optional()
+         }).passthrough().nullish(),
+         logprobs: import_v46.z.object({
+           content: import_v46.z.array(
+@@ -1854,6 +1860,7 @@ var OpenRouterChatLanguageModel = class {
+           provider: (_l = response.provider) != null ? _l : "",
+           reasoning_details: (_m = choice.message.reasoning_details) != null ? _m : [],
+           annotations: fileAnnotations && fileAnnotations.length > 0 ? fileAnnotations : void 0,
++          phase: choice.message.phase,
+           usage: __spreadValues(__spreadValues(__spreadValues({
+             promptTokens: (_n = usageInfo.inputTokens) != null ? _n : 0,
+             completionTokens: (_o = usageInfo.outputTokens) != null ? _o : 0,
+@@ -1925,6 +1932,7 @@ var OpenRouterChatLanguageModel = class {
+     let reasoningId;
+     let openrouterResponseId;
+     let provider;
++    let phase;
+     return {
+       stream: response.pipeThrough(
+         new TransformStream({
+@@ -2064,7 +2072,12 @@ var OpenRouterChatLanguageModel = class {
                if (reasoningStarted && !textStarted) {
                  controller.enqueue({
                    type: "reasoning-end",
@@ -80,7 +376,17 @@ index d40fa66125941155ac13a4619503caba24d89f8a..8dd86d1b473f2fa31c1acd9881d72945
                  });
                  reasoningStarted = false;
                }
-@@ -2261,7 +2266,12 @@ var OpenRouterChatLanguageModel = class {
+@@ -2082,6 +2095,9 @@ var OpenRouterChatLanguageModel = class {
+                 id: textId || generateId()
+               });
+             }
++            if (delta.phase != null) {
++              phase = delta.phase;
++            }
+             if (delta.annotations) {
+               for (const annotation of delta.annotations) {
+                 if (annotation.type === "url_citation") {
+@@ -2261,7 +2277,12 @@ var OpenRouterChatLanguageModel = class {
              if (reasoningStarted) {
                controller.enqueue({
                  type: "reasoning-end",
@@ -94,11 +400,104 @@ index d40fa66125941155ac13a4619503caba24d89f8a..8dd86d1b473f2fa31c1acd9881d72945
                });
              }
              if (textStarted) {
+@@ -2282,6 +2303,9 @@ var OpenRouterChatLanguageModel = class {
+             if (accumulatedFileAnnotations.length > 0) {
+               openrouterMetadata.annotations = accumulatedFileAnnotations;
+             }
++            if (phase !== void 0) {
++              openrouterMetadata.phase = phase;
++            }
+             controller.enqueue({
+               type: "finish",
+               finishReason,
 diff --git a/dist/internal/index.mjs b/dist/internal/index.mjs
-index b0ed9d113549c5c55ea3b1e08abb3db6f92ae5a7..5695930a8e038facc071d58a4179a369a29be9c7 100644
+index b0ed9d113549c5c55ea3b1e08abb3db6f92ae5a7..b4d7d0f5cfa029339ab665245cdbb45f65e17b26 100644
 --- a/dist/internal/index.mjs
 +++ b/dist/internal/index.mjs
-@@ -2030,7 +2030,12 @@ var OpenRouterChatLanguageModel = class {
+@@ -951,6 +951,7 @@ var OpenRouterProviderMetadataSchema = z3.object({
+   provider: z3.string(),
+   reasoning_details: z3.array(ReasoningDetailUnionSchema).optional(),
+   annotations: z3.array(FileAnnotationSchema).optional(),
++  phase: z3.string().nullable().optional(),
+   usage: z3.object({
+     promptTokens: z3.number(),
+     promptTokensDetails: z3.object({
+@@ -970,7 +971,8 @@ var OpenRouterProviderMetadataSchema = z3.object({
+ var OpenRouterProviderOptionsSchema = z3.object({
+   openrouter: z3.object({
+     reasoning_details: z3.array(ReasoningDetailUnionSchema).optional(),
+-    annotations: z3.array(FileAnnotationSchema).optional()
++    annotations: z3.array(FileAnnotationSchema).optional(),
++    phase: z3.string().nullable().optional()
+   }).optional()
+ }).optional();
+ 
+@@ -1120,7 +1122,7 @@ function getCacheControl(providerMetadata) {
+   return (_c = (_b = (_a15 = openrouter == null ? void 0 : openrouter.cacheControl) != null ? _a15 : openrouter == null ? void 0 : openrouter.cache_control) != null ? _b : anthropic == null ? void 0 : anthropic.cacheControl) != null ? _c : anthropic == null ? void 0 : anthropic.cache_control;
+ }
+ function convertToOpenRouterChatMessages(prompt) {
+-  var _a15, _b, _c, _d, _e, _f, _g, _h, _i, _j;
++  var _a15, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
+   const messages = [];
+   for (const { role, content, providerOptions } of prompt) {
+     switch (role) {
+@@ -1275,6 +1277,7 @@ function convertToOpenRouterChatMessages(prompt) {
+         const parsedProviderOptions = OpenRouterProviderOptionsSchema.safeParse(providerOptions);
+         const messageReasoningDetails = parsedProviderOptions.success ? (_g = (_f = parsedProviderOptions.data) == null ? void 0 : _f.openrouter) == null ? void 0 : _g.reasoning_details : void 0;
+         const messageAnnotations = parsedProviderOptions.success ? (_i = (_h = parsedProviderOptions.data) == null ? void 0 : _h.openrouter) == null ? void 0 : _i.annotations : void 0;
++        const messagePhase = parsedProviderOptions.success ? (_k = (_j = parsedProviderOptions.data) == null ? void 0 : _j.openrouter) == null ? void 0 : _k.phase : void 0;
+         const finalReasoningDetails = messageReasoningDetails && Array.isArray(messageReasoningDetails) && messageReasoningDetails.length > 0 ? messageReasoningDetails : accumulatedReasoningDetails.length > 0 ? accumulatedReasoningDetails : void 0;
+         messages.push({
+           role: "assistant",
+@@ -1283,6 +1286,7 @@ function convertToOpenRouterChatMessages(prompt) {
+           reasoning: reasoning || void 0,
+           reasoning_details: finalReasoningDetails,
+           annotations: messageAnnotations,
++          phase: messagePhase,
+           cache_control: getCacheControl(providerOptions)
+         });
+         break;
+@@ -1439,8 +1443,9 @@ var OpenRouterNonStreamChatCompletionResponseSchema = z7.union([
+                   ).optional()
+                 }).passthrough()
+               }).passthrough()
+-            ])
+-          ).nullish()
++             ])
++          ).nullish(),
++          phase: z7.string().nullable().optional()
+         }).passthrough(),
+         index: z7.number().nullish(),
+         logprobs: z7.object({
+@@ -1522,8 +1527,9 @@ var OpenRouterStreamChatCompletionChunkSchema = z7.union([
+                   ).optional()
+                 }).passthrough()
+               }).passthrough()
+-            ])
+-          ).nullish()
++             ])
++          ).nullish(),
++          phase: z7.string().nullable().optional()
+         }).passthrough().nullish(),
+         logprobs: z7.object({
+           content: z7.array(
+@@ -1820,6 +1826,7 @@ var OpenRouterChatLanguageModel = class {
+           provider: (_l = response.provider) != null ? _l : "",
+           reasoning_details: (_m = choice.message.reasoning_details) != null ? _m : [],
+           annotations: fileAnnotations && fileAnnotations.length > 0 ? fileAnnotations : void 0,
++          phase: choice.message.phase,
+           usage: __spreadValues(__spreadValues(__spreadValues({
+             promptTokens: (_n = usageInfo.inputTokens) != null ? _n : 0,
+             completionTokens: (_o = usageInfo.outputTokens) != null ? _o : 0,
+@@ -1891,6 +1898,7 @@ var OpenRouterChatLanguageModel = class {
+     let reasoningId;
+     let openrouterResponseId;
+     let provider;
++    let phase;
+     return {
+       stream: response.pipeThrough(
+         new TransformStream({
+@@ -2030,7 +2038,12 @@ var OpenRouterChatLanguageModel = class {
                if (reasoningStarted && !textStarted) {
                  controller.enqueue({
                    type: "reasoning-end",
@@ -112,7 +511,17 @@ index b0ed9d113549c5c55ea3b1e08abb3db6f92ae5a7..5695930a8e038facc071d58a4179a369
                  });
                  reasoningStarted = false;
                }
-@@ -2227,7 +2232,12 @@ var OpenRouterChatLanguageModel = class {
+@@ -2048,6 +2061,9 @@ var OpenRouterChatLanguageModel = class {
+                 id: textId || generateId()
+               });
+             }
++            if (delta.phase != null) {
++              phase = delta.phase;
++            }
+             if (delta.annotations) {
+               for (const annotation of delta.annotations) {
+                 if (annotation.type === "url_citation") {
+@@ -2227,7 +2243,12 @@ var OpenRouterChatLanguageModel = class {
              if (reasoningStarted) {
                controller.enqueue({
                  type: "reasoning-end",
@@ -126,3 +535,13 @@ index b0ed9d113549c5c55ea3b1e08abb3db6f92ae5a7..5695930a8e038facc071d58a4179a369
                });
              }
              if (textStarted) {
+@@ -2248,6 +2269,9 @@ var OpenRouterChatLanguageModel = class {
+             if (accumulatedFileAnnotations.length > 0) {
+               openrouterMetadata.annotations = accumulatedFileAnnotations;
+             }
++            if (phase !== void 0) {
++              openrouterMetadata.phase = phase;
++            }
+             controller.enqueue({
+               type: "finish",
+               finishReason,
