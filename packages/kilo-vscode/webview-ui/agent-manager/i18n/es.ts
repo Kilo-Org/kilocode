@@ -39,6 +39,7 @@ export const dict = {
   "agentManager.shortcuts.previousItem": "Elemento anterior",
   "agentManager.shortcuts.nextItem": "Siguiente elemento",
   "agentManager.shortcuts.newWorktree": "Nuevo Worktree",
+  "agentManager.shortcuts.openWorktree": "Abrir Worktree",
   "agentManager.shortcuts.advancedWorktree": "Worktree avanzado",
   "agentManager.shortcuts.deleteWorktree": "Eliminar Worktree",
   "agentManager.shortcuts.previousTab": "Pestaña anterior",
@@ -48,6 +49,7 @@ export const dict = {
   "agentManager.shortcuts.toggleTerminal": "Alternar terminal",
   "agentManager.shortcuts.focusPanel": "Enfocar panel",
   "agentManager.shortcuts.openAgentManager": "Abrir Agent Manager",
+  "agentManager.shortcuts.showShortcuts": "Mostrar atajos de teclado",
   "agentManager.dialog.deleteWorktree.title": "Eliminar Worktree",
   "agentManager.dialog.deleteWorktree.messagePre": "¿Eliminar Worktree ",
   "agentManager.dialog.deleteWorktree.messagePost":
@@ -86,6 +88,8 @@ export const dict = {
 
   "agentManager.diff.toggle": "Alternar diff",
   "agentManager.diff.openFile": "Abrir archivo",
+  "agentManager.open.button": "Abrir",
+  "agentManager.open.tooltip": "Abrir este Worktree en VS Code",
   "agentManager.apply.button": "Aplicar en local",
   "agentManager.apply.globalButton": "Aplicar",
   "agentManager.apply.tooltip": "Aplicar los cambios del worktree seleccionado a la rama local",
@@ -128,8 +132,10 @@ export const dict = {
   "agentManager.review.sendToChat": "Enviar al chat",
   "agentManager.review.collapsedOnly": "{{count}} contraídos",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} contraídos, {{large}} grandes",
+  "agentManager.review.largeFileCollapsed": "Archivo grande (contraído)",
+  "agentManager.review.endOfLongDiff": "¡Has llegado al final!",
 
-  "agentManager.import.pullRequest": "Pull Request",
+  "agentManager.import.pullRequest": "Solicitud de extracción",
   "agentManager.import.pastePrUrl": "Pegar URL del PR...",
   "agentManager.import.open": "Abrir",
   "agentManager.import.branches": "Branches",

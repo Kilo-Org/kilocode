@@ -39,6 +39,7 @@ export const dict = {
   "agentManager.shortcuts.previousItem": "Vorheriges Element",
   "agentManager.shortcuts.nextItem": "Nächstes Element",
   "agentManager.shortcuts.newWorktree": "Neuer Worktree",
+  "agentManager.shortcuts.openWorktree": "Worktree öffnen",
   "agentManager.shortcuts.advancedWorktree": "Erweiterter Worktree",
   "agentManager.shortcuts.deleteWorktree": "Worktree löschen",
   "agentManager.shortcuts.previousTab": "Vorheriger Tab",
@@ -48,6 +49,7 @@ export const dict = {
   "agentManager.shortcuts.toggleTerminal": "Terminal umschalten",
   "agentManager.shortcuts.focusPanel": "Panel fokussieren",
   "agentManager.shortcuts.openAgentManager": "Agent Manager öffnen",
+  "agentManager.shortcuts.showShortcuts": "Tastenkürzel anzeigen",
   "agentManager.dialog.deleteWorktree.title": "Worktree löschen",
   "agentManager.dialog.deleteWorktree.messagePre": "Worktree löschen ",
   "agentManager.dialog.deleteWorktree.messagePost":
@@ -86,6 +88,8 @@ export const dict = {
 
   "agentManager.diff.toggle": "Diff umschalten",
   "agentManager.diff.openFile": "Datei öffnen",
+  "agentManager.open.button": "Öffnen",
+  "agentManager.open.tooltip": "Dieses Worktree in VS Code öffnen",
   "agentManager.apply.button": "Lokal anwenden",
   "agentManager.apply.globalButton": "Anwenden",
   "agentManager.apply.tooltip": "Ausgewählte Worktree-Änderungen auf den lokalen Branch anwenden",
@@ -128,8 +132,10 @@ export const dict = {
   "agentManager.review.sendToChat": "An Chat senden",
   "agentManager.review.collapsedOnly": "{{count}} eingeklappt",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} eingeklappt, {{large}} groß",
+  "agentManager.review.largeFileCollapsed": "Große Datei (zugeklappt)",
+  "agentManager.review.endOfLongDiff": "Du hast das Ende erreicht!",
 
-  "agentManager.import.pullRequest": "Pull Request",
+  "agentManager.import.pullRequest": "Zusammenführungsanfrage",
   "agentManager.import.pastePrUrl": "PR-URL einfügen...",
   "agentManager.import.open": "Öffnen",
   "agentManager.import.branches": "Branches",

@@ -39,6 +39,7 @@ export const dict = {
   "agentManager.shortcuts.previousItem": "前の項目",
   "agentManager.shortcuts.nextItem": "次の項目",
   "agentManager.shortcuts.newWorktree": "新しいWorktree",
+  "agentManager.shortcuts.openWorktree": "Worktreeを開く",
   "agentManager.shortcuts.advancedWorktree": "詳細Worktree",
   "agentManager.shortcuts.deleteWorktree": "Worktreeを削除",
   "agentManager.shortcuts.previousTab": "前のタブ",
@@ -48,6 +49,7 @@ export const dict = {
   "agentManager.shortcuts.toggleTerminal": "ターミナルの切り替え",
   "agentManager.shortcuts.focusPanel": "パネルにフォーカス",
   "agentManager.shortcuts.openAgentManager": "Agent Managerを開く",
+  "agentManager.shortcuts.showShortcuts": "キーボードショートカットを表示",
   "agentManager.dialog.deleteWorktree.title": "Worktreeを削除",
   "agentManager.dialog.deleteWorktree.messagePre": "Worktreeを削除 ",
   "agentManager.dialog.deleteWorktree.messagePost":
@@ -86,6 +88,8 @@ export const dict = {
 
   "agentManager.diff.toggle": "差分を切り替え",
   "agentManager.diff.openFile": "ファイルを開く",
+  "agentManager.open.button": "開く",
+  "agentManager.open.tooltip": "このWorktreeをVS Codeで開く",
   "agentManager.apply.button": "ローカルに適用",
   "agentManager.apply.globalButton": "適用",
   "agentManager.apply.tooltip": "選択したワークツリーの変更をローカルブランチに適用",
@@ -129,8 +133,10 @@ export const dict = {
   "agentManager.review.sendToChat": "チャットに送信",
   "agentManager.review.collapsedOnly": "{{count}} 件折りたたみ",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} 件折りたたみ、{{large}} 件がサイズ大",
+  "agentManager.review.largeFileCollapsed": "大きなファイル (折りたたみ済み)",
+  "agentManager.review.endOfLongDiff": "最後まで到達しました！",
 
-  "agentManager.import.pullRequest": "Pull Request",
+  "agentManager.import.pullRequest": "プルリクエスト",
   "agentManager.import.pastePrUrl": "PR URLを貼り付け...",
   "agentManager.import.open": "開く",
   "agentManager.import.branches": "ブランチ",

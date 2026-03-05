@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import { Provider } from "@/provider/provider"
 import { LLM } from "@/session/llm"
 import { Agent } from "@/agent/agent"

@@ -1,4 +1,3 @@
-// kilocode_change - new file
 // Regression test: OAuth accountId must flow into model fetch as kilocodeOrganizationId
 // When a user logs in via OAuth and selects an enterprise organization, the model fetch
 // should use the organization-specific endpoint, not the personal endpoint.

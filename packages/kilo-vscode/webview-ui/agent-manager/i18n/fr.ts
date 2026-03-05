@@ -39,6 +39,7 @@ export const dict = {
   "agentManager.shortcuts.previousItem": "Élément précédent",
   "agentManager.shortcuts.nextItem": "Élément suivant",
   "agentManager.shortcuts.newWorktree": "Nouveau Worktree",
+  "agentManager.shortcuts.openWorktree": "Ouvrir le worktree",
   "agentManager.shortcuts.advancedWorktree": "Worktree avancé",
   "agentManager.shortcuts.deleteWorktree": "Supprimer le Worktree",
   "agentManager.shortcuts.previousTab": "Onglet précédent",
@@ -48,6 +49,7 @@ export const dict = {
   "agentManager.shortcuts.toggleTerminal": "Basculer le terminal",
   "agentManager.shortcuts.focusPanel": "Focaliser le panneau",
   "agentManager.shortcuts.openAgentManager": "Ouvrir Agent Manager",
+  "agentManager.shortcuts.showShortcuts": "Afficher les raccourcis clavier",
   "agentManager.dialog.deleteWorktree.title": "Supprimer le Worktree",
   "agentManager.dialog.deleteWorktree.messagePre": "Supprimer le Worktree ",
   "agentManager.dialog.deleteWorktree.messagePost":
@@ -86,6 +88,8 @@ export const dict = {
 
   "agentManager.diff.toggle": "Basculer le diff",
   "agentManager.diff.openFile": "Ouvrir le fichier",
+  "agentManager.open.button": "Ouvrir",
+  "agentManager.open.tooltip": "Ouvrir ce worktree dans VS Code",
   "agentManager.apply.button": "Appliquer en local",
   "agentManager.apply.globalButton": "Appliquer",
   "agentManager.apply.tooltip": "Appliquer les modifications du worktree sélectionné à la branche locale",
@@ -129,8 +133,10 @@ export const dict = {
   "agentManager.review.sendToChat": "Envoyer au chat",
   "agentManager.review.collapsedOnly": "{{count}} repliés",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} repliés, {{large}} volumineux",
+  "agentManager.review.largeFileCollapsed": "Fichier volumineux (réduit)",
+  "agentManager.review.endOfLongDiff": "Vous êtes arrivé à la fin !",
 
-  "agentManager.import.pullRequest": "Pull Request",
+  "agentManager.import.pullRequest": "Demande d'extraction",
   "agentManager.import.pastePrUrl": "Coller l'URL du PR...",
   "agentManager.import.open": "Ouvrir",
   "agentManager.import.branches": "Branches",

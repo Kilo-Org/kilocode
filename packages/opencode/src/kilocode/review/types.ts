@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import z from "zod"
 
 export const DiffHunk = z.object({

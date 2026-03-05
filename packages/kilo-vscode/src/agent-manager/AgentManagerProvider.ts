@@ -201,6 +201,10 @@ export class AgentManagerProvider implements vscode.Disposable {
       this.terminalManager.showLocalTerminal()
       return null
     }
+    if (type === "agentManager.openWorktree" && typeof msg.worktreeId === "string") {
+      this.openWorktreeDirectory(msg.worktreeId)
+      return null
+    }
     if (type === "agentManager.showExistingLocalTerminal") {
       this.terminalManager.syncLocalOnSessionSwitch()
       return null
@@ -501,12 +505,19 @@ export class AgentManagerProvider implements vscode.Disposable {
     })
   }
 
+  private async waitForStateReady(context: string): Promise<void> {
+    if (!this.stateReady) return
+    await this.stateReady.catch((err) => this.log(`${context}: stateReady rejected, continuing:`, err))
+  }
+
   // ---------------------------------------------------------------------------
   // Worktree actions
   // ---------------------------------------------------------------------------
 
   /** Create a new worktree with an auto-created first session. */
   private async onCreateWorktree(baseBranch?: string, branchName?: string): Promise<null> {
+    await this.waitForStateReady("onCreateWorktree")
+
     const created = await this.createWorktreeOnDisk({ baseBranch, branchName })
     if (!created) return null
 
@@ -526,6 +537,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     const state = this.getStateManager()!
     state.addSession(session.id, created.worktree.id)
     this.registerWorktreeSession(session.id, created.result.path)
+    this.provider?.registerSession(session)
     this.notifyWorktreeReady(session.id, created.result, created.worktree.id)
     TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_SESSION_STARTED, {
       source: PLATFORM,
@@ -1239,6 +1251,9 @@ export class AgentManagerProvider implements vscode.Disposable {
     if (!bindings.toggleDiff) {
       bindings.toggleDiff = formatKeybinding(mac ? "cmd+d" : "ctrl+d", mac)
     }
+    if (!bindings.showShortcuts) {
+      bindings.showShortcuts = formatKeybinding(mac ? "cmd+shift+/" : "ctrl+shift+/", mac)
+    }
 
     this.postToWebview({ type: "agentManager.keybindings", bindings })
   }
@@ -1515,6 +1530,22 @@ export class AgentManagerProvider implements vscode.Disposable {
   // ---------------------------------------------------------------------------
   // Diff polling
   // ---------------------------------------------------------------------------
+
+  /** Open a worktree directory directly in VS Code. */
+  private openWorktreeDirectory(worktreeId: string): void {
+    const state = this.getStateManager()
+    if (!state) return
+    const worktree = state.getWorktree(worktreeId)
+    if (!worktree) return
+    const target = path.normalize(worktree.path)
+    if (!fs.existsSync(target)) {
+      this.log(`openWorktreeDirectory: missing path ${target}`)
+      void vscode.window.showErrorMessage("Worktree folder does not exist on disk.")
+      return
+    }
+    const uri = vscode.Uri.file(target)
+    void vscode.commands.executeCommand("vscode.openFolder", uri, true)
+  }
 
   /** Open a file from a worktree or local session in the VS Code editor. */
   private openWorktreeFile(sessionId: string, relativePath: string): void {

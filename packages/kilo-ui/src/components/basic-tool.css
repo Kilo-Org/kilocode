@@ -1,4 +1,3 @@
-/* kilocode_change - new file */
 /* Prevent tool-trigger content from pushing the collapsible arrow off-screen */
 [data-component="tool-trigger"] {
   [data-slot="basic-tool-tool-trigger-content"] {
