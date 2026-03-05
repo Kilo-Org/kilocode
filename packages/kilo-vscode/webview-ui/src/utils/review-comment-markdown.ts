@@ -27,8 +27,7 @@ export function formatReviewCommentMarkdown(comment: ReviewComment): string {
 export function formatReviewCommentsMarkdown(comments: ReviewComment[]): string {
   const lines = ["## Review Comments", ""]
   for (const item of comments) {
-    lines.push(formatReviewCommentMarkdown(item))
-    lines.push("")
+    lines.push(formatReviewCommentMarkdown(item), "")
   }
-  return lines.join("\n")
+  return lines.join("\n").trimEnd()
 }

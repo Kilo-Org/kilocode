@@ -34,14 +34,11 @@ const reviewDrafts = new Map<string, ReviewComment[]>()
 
 function mergeReviewComments(current: ReviewComment[], incoming: ReviewComment[]): ReviewComment[] {
   if (incoming.length === 0) return current
-  const seen = new Set(current.map((item) => item.id))
-  const next = [...current]
+  const map = new Map(current.map((item) => [item.id, item]))
   for (const item of incoming) {
-    if (seen.has(item.id)) continue
-    seen.add(item.id)
-    next.push(item)
+    map.set(item.id, item)
   }
-  return next
+  return [...map.values()]
 }
 
 export const PromptInput: Component = () => {
