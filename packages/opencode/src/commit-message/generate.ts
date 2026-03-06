@@ -2,10 +2,14 @@ import { Provider } from "@/provider/provider"
 import { LLM } from "@/session/llm"
 import { Agent } from "@/agent/agent"
 import { Log } from "@/util/log"
+import { NamedError } from "@opencode-ai/util/error"
+import { z } from "zod"
 import type { CommitMessageRequest, CommitMessageResponse, GitContext } from "./types"
 import { getGitContext } from "./git-context"
 
 const log = Log.create({ service: "commit-message" })
+
+export const NoChangesError = NamedError.create("CommitMessageNoChangesError", z.object({}))
 
 const SYSTEM_PROMPT = `You are an expert Git commit message generator that creates conventional commit messages based on staged changes. Analyze the provided git diff output and generate an appropriate conventional commit message following the specification.
 
@@ -113,7 +117,7 @@ function clean(text: string): string {
 export async function generateCommitMessage(request: CommitMessageRequest): Promise<CommitMessageResponse> {
   const ctx = await getGitContext(request.path, request.selectedFiles)
   if (ctx.files.length === 0) {
-    throw new Error("No changes found to generate a commit message for")
+    throw new NoChangesError({})
   }
 
   log.info("generating", {
