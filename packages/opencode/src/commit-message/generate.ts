@@ -5,6 +5,7 @@ import { LLM } from "@/session/llm"
 import { Filesystem } from "@/util/filesystem"
 import { Log } from "@/util/log"
 import { join, dirname } from "path"
+import { normalize } from "path"
 import { getGitContext } from "./git-context"
 import type { CommitMessageRequest, CommitMessageResponse, GitContext } from "./types"
 
@@ -61,13 +62,18 @@ async function loadInstructionsFromAgentsMd(repoPath: string): Promise<{ instruc
 
   // Also check parent directories (walk up from repoPath), but stay within git root
   const gitRoot = await getGitRoot(repoPath)
-  const searchRoot = gitRoot && gitRoot.length < repoPath.length ? dirname(repoPath) : repoPath
+  const normalizedRepoPath = normalize(repoPath)
+  const normalizedGitRoot = gitRoot ? normalize(gitRoot) : null
+  const searchRoot =
+    normalizedGitRoot && normalizedGitRoot.length < normalizedRepoPath.length
+      ? dirname(normalizedRepoPath)
+      : normalizedRepoPath
 
   for (const file of FILES) {
     const parentFiles = await Filesystem.findUp(file, searchRoot).catch(() => [])
     for (const p of parentFiles) {
       // Stop at git root to avoid escaping to unrelated parent directories
-      if (gitRoot && !p.startsWith(gitRoot)) break
+      if (normalizedGitRoot && !p.startsWith(normalizedGitRoot)) break
 
       const content = await Filesystem.readText(p).catch(() => "")
       const section = extractSection(content, SECTION_HEADING)
@@ -214,7 +220,7 @@ export async function generateCommitMessage(request: CommitMessageRequest): Prom
     (await Provider.getModel(defaultModel.providerID, defaultModel.modelID))
 
   const loaded = request.instructions
-    ? { instructions: request.instructions, found: true }
+    ? { instructions: request.instructions, found: false }
     : await loadInstructions(request.path)
   const prompt = loaded.instructions
     ? `${SYSTEM_PROMPT}\n\n## Custom Instructions\n${loaded.instructions}`
