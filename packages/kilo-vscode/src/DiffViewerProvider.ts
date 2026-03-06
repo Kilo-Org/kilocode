@@ -54,8 +54,8 @@ export class DiffViewerProvider implements vscode.Disposable {
       dark: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-dark.svg"),
     }
 
-    this.panel.webview.html = this.getHtml(this.panel.webview)
     this.panel.webview.onDidReceiveMessage((msg) => this.onMessage(msg), undefined, [])
+    this.panel.webview.html = this.getHtml(this.panel.webview)
 
     this.panel.onDidDispose(() => {
       this.log("Panel disposed")
@@ -68,6 +68,12 @@ export class DiffViewerProvider implements vscode.Disposable {
     const type = msg.type as string
 
     if (type === "webviewReady") {
+      this.post({
+        type: "ready",
+        vscodeLanguage: vscode.env.language,
+        languageOverride: vscode.workspace.getConfiguration("kilo-code.new").get<string>("language"),
+        workspaceDirectory: this.getWorkspaceRoot(),
+      })
       this.startDiffPolling()
       return
     }
