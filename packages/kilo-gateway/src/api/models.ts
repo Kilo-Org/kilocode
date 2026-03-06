@@ -88,6 +88,8 @@ export async function fetchKiloModels(options?: {
   // Construct models endpoint
   const modelsURL = `${finalBaseURL}/models`
 
+  const models: Record<string, any> = {}
+
   try {
     // Fetch models with timeout
     const response = await fetch(modelsURL, {
@@ -109,11 +111,11 @@ export async function fetchKiloModels(options?: {
 
     if (!result.success) {
       console.error("Kilo models response validation failed:", result.error.format())
-      return {}
+      ensureAutoRoutingModels(models)
+      return models
     }
 
     // Transform models to ModelsDev.Model format
-    const models: Record<string, any> = {}
 
     for (const model of result.data.data) {
       // Skip image generation models
@@ -130,7 +132,8 @@ export async function fetchKiloModels(options?: {
     return models
   } catch (error) {
     console.error("Error fetching Kilo models:", error)
-    return {}
+    ensureAutoRoutingModels(models)
+    return models
   }
 }
 
