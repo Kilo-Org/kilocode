@@ -231,6 +231,7 @@ export const dict = {
   "prompt.action.send": "Enviar",
   "prompt.action.stop": "Detener",
   "prompt.action.enhance": "Mejorar prompt",
+  "prompt.action.resetModel": "Restablecer modelo al predeterminado",
   "prompt.action.enhanceDescription":
     "El botón 'Mejorar el mensaje' ayuda a mejorar tu petición proporcionando contexto adicional, aclaraciones o reformulaciones. Intenta escribir una petición aquí y haz clic en el botón nuevamente para ver cómo funciona.",
 
@@ -407,6 +408,15 @@ export const dict = {
     "Elemento raíz no encontrado. ¿Olvidaste añadirlo a tu index.html? ¿O tal vez el atributo id está mal escrito?",
 
   "error.globalSync.connectFailed": "No se pudo conectar al servidor. ¿Hay un servidor ejecutándose en `{{url}}`?",
+
+  "error.paidModel.title": "Necesitas iniciar sesión para usar este modelo",
+  "error.paidModel.description":
+    "Inicia sesión o crea una cuenta para acceder a más de 500 modelos, usar créditos a precio de coste o traer tu propia clave.",
+  "error.paidModel.action": "Iniciar sesión",
+  "error.promotionLimit.title": "Necesitas registrarte para continuar",
+  "error.promotionLimit.description":
+    "Regístrate gratis para continuar y explorar más de 500 modelos. Solo 2 minutos, sin tarjeta de crédito. O vuelve más tarde.",
+  "error.promotionLimit.action": "Registrarse",
 
   "error.chain.unknown": "Error desconocido",
   "error.chain.causedBy": "Causado por:",
@@ -996,46 +1006,51 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "Migración heredada",
   "settings.aboutKiloCode.legacyMigration.description":
     "Migra la configuración de una instalación anterior de Kilo Code, incluyendo las claves API de proveedores y el modelo predeterminado.",
-  "migration.welcome.title": "Bienvenido al nuevo Kilo Code",
-  "migration.welcome.detected": "Hemos detectado una configuración de una instalación anterior de Kilo Code.",
-  "migration.welcome.sessionsInfo":
-    "Las sesiones de chat y el historial no se pueden migrar — la nueva versión utiliza una arquitectura diferente.",
-  "migration.welcome.canMigrate": "Las siguientes configuraciones se pueden migrar a la nueva versión:",
-  "migration.welcome.start": "Iniciar migración",
-  "migration.welcome.skip": "Omitir migración",
-  "migration.steps.title": "Migra tu configuración",
-  "migration.steps.subtitle":
-    "Encontramos configuraciones de tu instalación anterior de Kilo Code. Elige qué deseas transferir.",
+
+  // Screen 1 — What's New
+  "migration.whatsNew.title": "Novedades en Kilo Code",
+  "migration.whatsNew.badge": "Beta",
+  "migration.whatsNew.subtitle": "Hemos reconstruido la extensión sobre una base más rápida y eficiente.",
+  "migration.whatsNew.features.performance.title": "Rendimiento de agente más rápido",
+  "migration.whatsNew.features.performance.detail":
+    "Las llamadas a herramientas en paralelo y los subagentes permiten que tu agente aborde más a la vez — así pasas menos tiempo esperando y más tiempo entregando.",
+  "migration.whatsNew.features.interface.title": "Interfaz optimizada",
+  "migration.whatsNew.features.interface.detail": "Menos distracciones, más fácil y rápido de leer.",
+  "migration.whatsNew.features.agentManager.title": "Agent Manager",
+  "migration.whatsNew.features.agentManager.detail":
+    "Una interfaz unificada para ejecutar múltiples agentes en paralelo, cada uno en su propio worktree — supervisa el progreso, cambia de contexto y revisa cambios en un solo lugar.",
+  "migration.whatsNew.features.foundation.title": "Base compartida",
+  "migration.whatsNew.features.foundation.detail":
+    "Un núcleo pequeño y eficiente en todos los productos Kilo. Una experiencia familiar sin importar cómo elijas trabajar.",
+  "migration.whatsNew.blogLink": "Leer el anuncio completo",
+  "migration.whatsNew.continue": "Continuar",
+
+  // Screen 2 — Migrate Settings
+  "migration.migrate.title": "Migra tu configuración",
+  "migration.migrate.subtitle":
+    "Encontramos configuraciones de tu instalación anterior. Esto es lo que podemos transferir.",
+  "migration.migrate.selectLabel": "Selecciona qué migrar",
+  "migration.migrate.cannotMigrate": "No se puede migrar",
+  "migration.migrate.chatHistory": "Sesiones de chat e historial",
+  "migration.migrate.chatHistoryDesc": "Incompatible con la nueva arquitectura",
+  "migration.migrate.button": "Migrar configuración",
+  "migration.migrate.skip": "Omitir",
+  "migration.migrate.back": "Atrás",
+  "migration.migrate.keysDetected": "{{count}} claves detectadas",
+  "migration.migrate.serversConfigured": "{{count}} servidor(es) configurado(s)",
+  "migration.migrate.modesFound": "{{count}} modo(s) encontrado(s)",
+  "migration.migrate.nothingToMigrate": "No se encontró nada para migrar en la configuración heredada.",
+
+  // Migrate — item labels (reused from old select keys)
   "migration.select.providers": "Claves API de proveedores",
   "migration.select.mcpServers": "Servidores MCP",
   "migration.select.customModes": "Modos personalizados / Agentes",
   "migration.select.defaultModel": "Modelo predeterminado",
-  "migration.select.unsupported": "No compatible con la nueva versión",
-  "migration.select.nothingToMigrate": "No se encontró nada para migrar en la configuración heredada.",
-  "migration.select.settings": "Configuración",
   "migration.select.autoApproval": "Aprobación automática",
-  "migration.select.autoApproval.commandRules": "Reglas de comandos",
-  "migration.select.autoApproval.commandRulesDesc": "Interruptor principal y listas de comandos permitidos/denegados",
-  "migration.select.autoApproval.readPermission": "Permiso de lectura",
-  "migration.select.autoApproval.readPermissionDesc":
-    "Acceso de lectura de archivos dentro y fuera del espacio de trabajo",
-  "migration.select.autoApproval.writePermission": "Permiso de escritura",
-  "migration.select.autoApproval.writePermissionDesc": "Acceso de escritura y edición de archivos",
-  "migration.select.autoApproval.executePermission": "Permiso de ejecución",
-  "migration.select.autoApproval.executePermissionDesc": "Ejecución de comandos en terminal",
-  "migration.select.autoApproval.mcpPermission": "Permiso MCP",
-  "migration.select.autoApproval.mcpPermissionDesc": "Uso de herramientas MCP",
-  "migration.select.autoApproval.taskPermission": "Permiso de tareas",
-  "migration.select.autoApproval.taskPermissionDesc": "Cambio de modos y creación de subtareas",
   "migration.select.language": "Idioma de la interfaz",
-  "migration.select.languageDesc": "Tu preferencia de idioma se aplicará a la nueva extensión",
   "migration.select.autocomplete": "Configuración de autocompletado",
-  "migration.select.autocompleteDesc":
-    "Preferencias de activación automática, atajos de teclado y autocompletado del chat",
-  "migration.select.continue": "Continuar",
-  "migration.select.back": "Atrás",
-  "migration.progress.title": "Migrando tu configuración…",
-  "migration.progress.done": "Continuar",
+
+  // Migrate — completion
   "migration.complete.summary": "{{success}} de {{total}} elementos migrados con éxito.",
   "migration.complete.cleanup": "Eliminar datos de la configuración heredada",
   "migration.complete.cleanupDescription":

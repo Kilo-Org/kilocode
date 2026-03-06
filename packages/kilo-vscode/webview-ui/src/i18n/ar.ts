@@ -230,6 +230,7 @@ export const dict = {
   "prompt.action.send": "إرسال",
   "prompt.action.stop": "توقف",
   "prompt.action.enhance": "تحسين النص",
+  "prompt.action.resetModel": "إعادة تعيين النموذج إلى الافتراضي",
   "prompt.action.enhanceDescription":
     "زر «حسّن الموجه» يطوّر موجهك بإضافة سياق أو توضيح أو إعادة صياغة. جرّب اكتب موجه هنا ثم اضغط الزر مرة ثانية وشوف النتيجة.",
 
@@ -404,6 +405,15 @@ export const dict = {
     "لم يتم العثور على العنصر الجذري. هل نسيت إضافته إلى index.html؟ أو ربما تمت كتابة سمة id بشكل خاطئ؟",
 
   "error.globalSync.connectFailed": "تعذر الاتصال بالخادم. هل هناك خادم يعمل في `{{url}}`؟",
+
+  "error.paidModel.title": "يجب عليك تسجيل الدخول لاستخدام هذا النموذج",
+  "error.paidModel.description":
+    "سجّل الدخول أو أنشئ حسابًا للوصول إلى أكثر من 500 نموذج، واستخدم الرصيد بسعر التكلفة، أو استخدم مفتاحك الخاص.",
+  "error.paidModel.action": "تسجيل الدخول",
+  "error.promotionLimit.title": "يجب عليك التسجيل للمتابعة",
+  "error.promotionLimit.description":
+    "سجّل مجانًا للمتابعة واستكشاف أكثر من 500 نموذج. يستغرق دقيقتين، بدون بطاقة ائتمان. أو عُد لاحقًا.",
+  "error.promotionLimit.action": "التسجيل",
 
   "error.chain.unknown": "خطأ غير معروف",
   "error.chain.causedBy": "بسبب:",
@@ -980,42 +990,50 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "ترحيل الإصدار القديم",
   "settings.aboutKiloCode.legacyMigration.description":
     "ترحيل الإعدادات من تثبيت سابق لـ Kilo Code، بما في ذلك مفاتيح API لمقدمي الخدمة والنموذج الافتراضي.",
-  "migration.welcome.title": "مرحبًا بك في Kilo Code الجديد",
-  "migration.welcome.detected": "لقد اكتشفنا إعدادات من تثبيت سابق لـ Kilo Code.",
-  "migration.welcome.sessionsInfo": "لا يمكن ترحيل جلسات الدردشة والسجل — الإصدار الجديد يستخدم بنية مختلفة.",
-  "migration.welcome.canMigrate": "يمكن ترحيل الإعدادات التالية إلى الإصدار الجديد:",
-  "migration.welcome.start": "بدء الترحيل",
-  "migration.welcome.skip": "تخطي الترحيل",
-  "migration.steps.title": "ترحيل إعداداتك",
-  "migration.steps.subtitle": "لقد وجدنا إعدادات من تثبيت Kilo Code السابق. اختر ما تريد نقله.",
+
+  // Screen 1 — What's New
+  "migration.whatsNew.title": "ما الجديد في Kilo Code",
+  "migration.whatsNew.badge": "Beta",
+  "migration.whatsNew.subtitle": "لقد أعدنا بناء الإضافة على أساس أسرع وأكثر كفاءة.",
+  "migration.whatsNew.features.performance.title": "أداء أسرع للوكيل",
+  "migration.whatsNew.features.performance.detail":
+    "استدعاءات الأدوات المتوازية والوكلاء الفرعيون يتيحون لوكيلك إنجاز المزيد في وقت واحد — فتقضي وقتًا أقل في الانتظار ووقتًا أكثر في الإنجاز.",
+  "migration.whatsNew.features.interface.title": "واجهة مبسّطة",
+  "migration.whatsNew.features.interface.detail": "أقل تشتيتًا، أسهل وأسرع في القراءة.",
+  "migration.whatsNew.features.agentManager.title": "Agent Manager",
+  "migration.whatsNew.features.agentManager.detail":
+    "واجهة موحدة لتشغيل عدة وكلاء بالتوازي، كل منهم في شجرة عمل خاصة — راقب التقدم، وبدّل السياق، وراجع التغييرات في مكان واحد.",
+  "migration.whatsNew.features.foundation.title": "أساس مشترك",
+  "migration.whatsNew.features.foundation.detail":
+    "نواة صغيرة وفعالة واحدة عبر كل منتجات Kilo. تجربة مألوفة بغض النظر عن طريقة عملك.",
+  "migration.whatsNew.blogLink": "اقرأ الإعلان الكامل",
+  "migration.whatsNew.continue": "متابعة",
+
+  // Screen 2 — Migrate Settings
+  "migration.migrate.title": "ترحيل إعداداتك",
+  "migration.migrate.subtitle": "لقد وجدنا إعدادات من تثبيتك السابق. إليك ما يمكننا نقله.",
+  "migration.migrate.selectLabel": "اختر ما تريد ترحيله",
+  "migration.migrate.cannotMigrate": "لا يمكن ترحيله",
+  "migration.migrate.chatHistory": "جلسات الدردشة والسجل",
+  "migration.migrate.chatHistoryDesc": "غير متوافق مع البنية الجديدة",
+  "migration.migrate.button": "ترحيل الإعدادات",
+  "migration.migrate.skip": "تخطي",
+  "migration.migrate.back": "رجوع",
+  "migration.migrate.keysDetected": "تم اكتشاف {{count}} مفاتيح",
+  "migration.migrate.serversConfigured": "تم تكوين {{count}} خادم(خوادم)",
+  "migration.migrate.modesFound": "تم العثور على {{count}} وضع(أوضاع)",
+  "migration.migrate.nothingToMigrate": "لم يتم العثور على أي شيء لترحيله في الإعدادات القديمة.",
+
+  // Migrate — item labels (reused from old select keys)
   "migration.select.providers": "مفاتيح API لمقدمي الخدمة",
   "migration.select.mcpServers": "خوادم MCP",
   "migration.select.customModes": "الأوضاع المخصصة / الوكلاء",
   "migration.select.defaultModel": "النموذج الافتراضي",
-  "migration.select.unsupported": "غير مدعوم في الإصدار الجديد",
-  "migration.select.nothingToMigrate": "لم يتم العثور على أي شيء لترحيله في الإعدادات القديمة.",
-  "migration.select.settings": "الإعدادات",
   "migration.select.autoApproval": "الموافقة التلقائية",
-  "migration.select.autoApproval.commandRules": "قواعد الأوامر",
-  "migration.select.autoApproval.commandRulesDesc": "مفتاح التبديل الرئيسي وقوائم الأوامر المسموح بها/المرفوضة",
-  "migration.select.autoApproval.readPermission": "صلاحية القراءة",
-  "migration.select.autoApproval.readPermissionDesc": "الوصول لقراءة الملفات داخل وخارج مساحة العمل",
-  "migration.select.autoApproval.writePermission": "صلاحية الكتابة",
-  "migration.select.autoApproval.writePermissionDesc": "الوصول لكتابة وتعديل الملفات",
-  "migration.select.autoApproval.executePermission": "صلاحية التنفيذ",
-  "migration.select.autoApproval.executePermissionDesc": "تنفيذ أوامر الوحدة الطرفية",
-  "migration.select.autoApproval.mcpPermission": "صلاحية MCP",
-  "migration.select.autoApproval.mcpPermissionDesc": "استخدام أدوات MCP",
-  "migration.select.autoApproval.taskPermission": "صلاحية المهام",
-  "migration.select.autoApproval.taskPermissionDesc": "تبديل الوضع وإنشاء المهام الفرعية",
   "migration.select.language": "لغة واجهة المستخدم",
-  "migration.select.languageDesc": "سيتم تطبيق لغتك المفضلة على الإضافة الجديدة",
   "migration.select.autocomplete": "إعدادات الإكمال التلقائي",
-  "migration.select.autocompleteDesc": "تفضيلات التشغيل التلقائي، واختصارات لوحة المفاتيح، والإكمال التلقائي للدردشة",
-  "migration.select.continue": "متابعة",
-  "migration.select.back": "رجوع",
-  "migration.progress.title": "جاري ترحيل إعداداتك…",
-  "migration.progress.done": "متابعة",
+
+  // Migrate — completion
   "migration.complete.summary": "تم ترحيل {{success}} من {{total}} عناصر بنجاح.",
   "migration.complete.cleanup": "إزالة بيانات الإعدادات القديمة",
   "migration.complete.cleanupDescription":

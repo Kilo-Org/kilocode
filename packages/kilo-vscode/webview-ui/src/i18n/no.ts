@@ -234,6 +234,7 @@ export const dict = {
   "prompt.action.send": "Send",
   "prompt.action.stop": "Stopp",
   "prompt.action.enhance": "Forbedre prompt",
+  "prompt.action.resetModel": "Tilbakestill modell til standard",
   "prompt.action.enhanceDescription":
     "Knappen 'Forbedre prompt' hjelper med å forbedre forespørselen din ved å gi ekstra kontekst, avklaring eller omformulering. Prøv å skrive en forespørsel her og klikk på knappen igjen for å se hvordan det fungerer.",
 
@@ -408,6 +409,15 @@ export const dict = {
     "Rotelement ikke funnet. Glemte du å legge det til i index.html? Eller kanskje id-attributten er feilstavet?",
 
   "error.globalSync.connectFailed": "Kunne ikke koble til server. Kjører det en server på `{{url}}`?",
+
+  "error.paidModel.title": "Du må logge inn for å bruke denne modellen",
+  "error.paidModel.description":
+    "Logg inn eller opprett en konto for å få tilgang til over 500 modeller, bruk kreditter til kostpris, eller ta med din egen nøkkel.",
+  "error.paidModel.action": "Logg inn",
+  "error.promotionLimit.title": "Du må registrere deg for å fortsette",
+  "error.promotionLimit.description":
+    "Registrer deg gratis for å fortsette og utforske over 500 modeller. Tar 2 minutter, ingen kredittkort nødvendig. Eller kom tilbake senere.",
+  "error.promotionLimit.action": "Registrer deg",
 
   "error.chain.unknown": "Ukjent feil",
   "error.chain.causedBy": "Forårsaket av:",
@@ -990,44 +1000,50 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "Migrering fra eldre versjon",
   "settings.aboutKiloCode.legacyMigration.description":
     "Migrer innstillinger fra en tidligere installasjon av Kilo Code, inkludert API-nøkler for leverandører og standardmodell.",
-  "migration.welcome.title": "Velkommen til nye Kilo Code",
-  "migration.welcome.detected": "Vi oppdaget innstillinger fra en tidligere installasjon av Kilo Code.",
-  "migration.welcome.sessionsInfo":
-    "Chatøkter og historikk kan ikke migreres — den nye versjonen bruker en annen arkitektur.",
-  "migration.welcome.canMigrate": "Følgende innstillinger kan migreres til den nye versjonen:",
-  "migration.welcome.start": "Start migrering",
-  "migration.welcome.skip": "Hopp over migrering",
-  "migration.steps.title": "Migrer innstillingene dine",
-  "migration.steps.subtitle":
-    "Vi fant innstillinger fra din tidligere Kilo Code-installasjon. Velg hva du vil ta med over.",
+
+  // Screen 1 — What's New
+  "migration.whatsNew.title": "Hva er nytt i Kilo Code",
+  "migration.whatsNew.badge": "Beta",
+  "migration.whatsNew.subtitle": "Vi har bygget utvidelsen på nytt med et raskere og mer effektivt grunnlag.",
+  "migration.whatsNew.features.performance.title": "Raskere agentytelse",
+  "migration.whatsNew.features.performance.detail":
+    "Parallelle verktøykall og underagenter lar agenten din håndtere mer samtidig — slik at du bruker mindre tid på å vente og mer tid på å levere.",
+  "migration.whatsNew.features.interface.title": "Strømlinjeformet grensesnitt",
+  "migration.whatsNew.features.interface.detail": "Færre forstyrrelser, enklere og raskere å lese.",
+  "migration.whatsNew.features.agentManager.title": "Agent Manager",
+  "migration.whatsNew.features.agentManager.detail":
+    "Et samlet grensesnitt for å kjøre flere agenter parallelt, hver på sitt eget worktree — overvåk fremdrift, bytt kontekst og gjennomgå endringer på ett sted.",
+  "migration.whatsNew.features.foundation.title": "Delt grunnlag",
+  "migration.whatsNew.features.foundation.detail":
+    "Én liten, effektiv kjerne på tvers av alle Kilo-produkter. En kjent opplevelse uansett hvordan du velger å jobbe.",
+  "migration.whatsNew.blogLink": "Les hele kunngjøringen",
+  "migration.whatsNew.continue": "Fortsett",
+
+  // Screen 2 — Migrate Settings
+  "migration.migrate.title": "Migrer innstillingene dine",
+  "migration.migrate.subtitle": "Vi fant innstillinger fra din tidligere installasjon. Her er hva vi kan ta med over.",
+  "migration.migrate.selectLabel": "Velg hva som skal migreres",
+  "migration.migrate.cannotMigrate": "Kan ikke migreres",
+  "migration.migrate.chatHistory": "Chatøkter og historikk",
+  "migration.migrate.chatHistoryDesc": "Ikke kompatibel med den nye arkitekturen",
+  "migration.migrate.button": "Migrer innstillinger",
+  "migration.migrate.skip": "Hopp over",
+  "migration.migrate.back": "Tilbake",
+  "migration.migrate.keysDetected": "{{count}} nøkler oppdaget",
+  "migration.migrate.serversConfigured": "{{count}} server(e) konfigurert",
+  "migration.migrate.modesFound": "{{count}} modus(er) funnet",
+  "migration.migrate.nothingToMigrate": "Ingenting å migrere ble funnet i de eldre innstillingene.",
+
+  // Migrate — item labels (reused from old select keys)
   "migration.select.providers": "API-nøkler for leverandører",
   "migration.select.mcpServers": "MCP-servere",
   "migration.select.customModes": "Egendefinerte moduser / Agenter",
   "migration.select.defaultModel": "Standardmodell",
-  "migration.select.unsupported": "Støttes ikke i ny versjon",
-  "migration.select.nothingToMigrate": "Ingenting å migrere ble funnet i de eldre innstillingene.",
-  "migration.select.settings": "Innstillinger",
   "migration.select.autoApproval": "Automatisk godkjenning",
-  "migration.select.autoApproval.commandRules": "Kommandoregler",
-  "migration.select.autoApproval.commandRulesDesc": "Hovedbryter og lister for tillatte/avviste kommandoer",
-  "migration.select.autoApproval.readPermission": "Lesetillatelse",
-  "migration.select.autoApproval.readPermissionDesc": "Lesetilgang for filer i og utenfor arbeidsområdet",
-  "migration.select.autoApproval.writePermission": "Skrivetillatelse",
-  "migration.select.autoApproval.writePermissionDesc": "Skrive- og redigeringstilgang for filer",
-  "migration.select.autoApproval.executePermission": "Utførelsestillatelse",
-  "migration.select.autoApproval.executePermissionDesc": "Kjøring av terminalkommandoer",
-  "migration.select.autoApproval.mcpPermission": "MCP-tillatelse",
-  "migration.select.autoApproval.mcpPermissionDesc": "Bruk av MCP-verktøy",
-  "migration.select.autoApproval.taskPermission": "Oppgavetillatelse",
-  "migration.select.autoApproval.taskPermissionDesc": "Modusbytte og opprettelse av underoppgaver",
   "migration.select.language": "UI-språk",
-  "migration.select.languageDesc": "Din språkpreferanse vil bli brukt i den nye utvidelsen",
   "migration.select.autocomplete": "Innstillinger for autofullføring",
-  "migration.select.autocompleteDesc": "Preferanser for autoutløsing, hurtigtaster og autofullføring i chat",
-  "migration.select.continue": "Fortsett",
-  "migration.select.back": "Tilbake",
-  "migration.progress.title": "Migrerer innstillingene dine…",
-  "migration.progress.done": "Fortsett",
+
+  // Migrate — completion
   "migration.complete.summary": "{{success}} av {{total}} elementer ble migrert.",
   "migration.complete.cleanup": "Fjern eldre innstillingsdata",
   "migration.complete.cleanupDescription":

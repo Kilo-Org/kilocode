@@ -1083,7 +1083,7 @@ export type PermissionConfig =
   | PermissionActionConfig
 
 export type AgentConfig = {
-  model?: string
+  model?: string | null
   /**
    * Default model variant for this agent (applies only when using the agent's configured model).
    */
@@ -1125,6 +1125,8 @@ export type AgentConfig = {
   permission?: PermissionConfig
   [key: string]:
     | unknown
+    | string
+    | null
     | string
     | number
     | {
@@ -1375,11 +1377,11 @@ export type Config = {
   /**
    * Model to use in the format of provider/model, eg anthropic/claude-2
    */
-  model?: string
+  model?: string | null
   /**
    * Small model to use for tasks like title generation in the format of provider/model
    */
-  small_model?: string
+  small_model?: string | null
   /**
    * Default agent to use when none is specified. Must be a primary agent. Falls back to 'code' if not set or if the specified agent is invalid.
    */

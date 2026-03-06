@@ -27,14 +27,16 @@ import { SessionContext } from "../context/session"
 import { LanguageContext } from "../context/language"
 import { dict as uiEn } from "@kilocode/kilo-ui/i18n/en"
 import { dict as appEn } from "../i18n/en"
+import { dict as amEn } from "../../agent-manager/i18n/en"
 import { dict as kiloEn } from "@kilocode/kilo-i18n/en"
+import { resolveTemplate } from "../context/language-utils"
 import type { PermissionRequest, QuestionRequest } from "../types/messages"
 
 // Merged English dictionary (same merge order as the real LanguageProvider)
-const dict: Record<string, string> = { ...appEn, ...uiEn, ...kiloEn }
+const dict: Record<string, string> = { ...appEn, ...amEn, ...uiEn, ...kiloEn }
 
-function t(key: string) {
-  return dict[key] ?? key
+function t(key: string, params?: Record<string, string | number | boolean | undefined>) {
+  return resolveTemplate(dict[key] ?? key, params)
 }
 
 // ---------------------------------------------------------------------------
@@ -134,6 +136,8 @@ export function mockSessionValue(overrides?: {
     questionErrors: () => new Set<string>(),
     selected: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     selectModel: noop,
+    hasModelOverride: () => false,
+    clearModelOverride: noop,
     totalCost: () => 0,
     contextUsage: () => undefined,
     agents: () => [{ name: "code", description: "Code mode", mode: "primary" as const }],

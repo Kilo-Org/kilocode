@@ -6,6 +6,7 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { useConfig } from "../../context/config"
 import { useProvider } from "../../context/provider"
 import { useLanguage } from "../../context/language"
+import { useSession } from "../../context/session"
 import { ModelSelectorBase } from "../shared/ModelSelector"
 import type { ModelSelection } from "../../types/messages"
 import SettingsRow from "./SettingsRow"
@@ -31,6 +32,7 @@ const ProvidersTab: Component = () => {
   const { config, updateConfig } = useConfig()
   const provider = useProvider()
   const language = useLanguage()
+  const session = useSession()
 
   const providerOptions = createMemo<ProviderOption[]>(() =>
     Object.keys(provider.providers())
@@ -61,9 +63,21 @@ const ProvidersTab: Component = () => {
   function handleModelSelect(configKey: "model" | "small_model") {
     return (providerID: string, modelID: string) => {
       if (!providerID || !modelID) {
-        updateConfig({ [configKey]: undefined })
+        updateConfig({ [configKey]: null })
       } else {
         updateConfig({ [configKey]: `${providerID}/${modelID}` })
+      }
+    }
+  }
+
+  const allAgents = createMemo(() => session.agents())
+
+  function handleModeModelSelect(agentName: string) {
+    return (providerID: string, modelID: string) => {
+      if (!providerID || !modelID) {
+        updateConfig({ agent: { [agentName]: { model: null } } })
+      } else {
+        updateConfig({ agent: { [agentName]: { model: `${providerID}/${modelID}` } } })
       }
     }
   }
@@ -97,6 +111,27 @@ const ProvidersTab: Component = () => {
             clearLabel={language.t("settings.providers.notSet")}
           />
         </SettingsRow>
+      </Card>
+
+      {/* Model per Mode */}
+      <h4 style={{ "margin-top": "24px", "margin-bottom": "8px" }}>{language.t("settings.providers.modeModels")}</h4>
+      <Card>
+        <For each={allAgents()}>
+          {(agent, index) => (
+            <SettingsRow
+              title={agent.name.charAt(0).toUpperCase() + agent.name.slice(1)}
+              last={index() === allAgents().length - 1}
+            >
+              <ModelSelectorBase
+                value={parseModelConfig(config().agent?.[agent.name]?.model ?? undefined)}
+                onSelect={handleModeModelSelect(agent.name)}
+                placement="bottom-start"
+                allowClear
+                clearLabel={language.t("settings.providers.notSet")}
+              />
+            </SettingsRow>
+          )}
+        </For>
       </Card>
 
       {/* Disabled providers */}

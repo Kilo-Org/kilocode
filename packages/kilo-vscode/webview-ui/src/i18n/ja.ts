@@ -230,6 +230,7 @@ export const dict = {
   "prompt.action.send": "送信",
   "prompt.action.stop": "停止",
   "prompt.action.enhance": "プロンプトを改善",
+  "prompt.action.resetModel": "モデルをデフォルトにリセット",
   "prompt.action.enhanceDescription":
     "「プロンプトを強化」ボタンは、追加コンテキスト、説明、または言い換えを提供することで、リクエストを改善します。ここにリクエストを入力し、ボタンを再度クリックして動作を確認してください。",
 
@@ -404,6 +405,15 @@ export const dict = {
     "ルート要素が見つかりません。index.htmlに追加するのを忘れていませんか？またはid属性のスペルが間違っていませんか？",
 
   "error.globalSync.connectFailed": "サーバーに接続できませんでした。`{{url}}`でサーバーが実行されていますか？",
+
+  "error.paidModel.title": "このモデルを使用するにはサインインが必要です",
+  "error.paidModel.description":
+    "サインインまたはアカウントを作成して、500以上のモデルにアクセスし、原価でクレジットを使用するか、独自のキーを持ち込みましょう。",
+  "error.paidModel.action": "サインイン",
+  "error.promotionLimit.title": "続けるにはサインアップが必要です",
+  "error.promotionLimit.description":
+    "無料でサインアップして、500以上のモデルを探索しましょう。2分で完了、クレジットカード不要。または後でお戻りください。",
+  "error.promotionLimit.action": "サインアップ",
 
   "error.chain.unknown": "不明なエラー",
   "error.chain.causedBy": "原因:",
@@ -988,43 +998,50 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "レガシー移行",
   "settings.aboutKiloCode.legacyMigration.description":
     "プロバイダーのAPIキーやデフォルトモデルなど、以前にインストールしたKilo Codeから設定を移行します。",
-  "migration.welcome.title": "新しいKilo Codeへようこそ",
-  "migration.welcome.detected": "以前にインストールされたKilo Codeの設定を検出しました。",
-  "migration.welcome.sessionsInfo":
-    "チャットセッションと履歴は移行できません — 新しいバージョンでは異なるアーキテクチャが使用されています。",
-  "migration.welcome.canMigrate": "以下の設定を新しいバージョンに移行できます：",
-  "migration.welcome.start": "移行を開始",
-  "migration.welcome.skip": "移行をスキップ",
-  "migration.steps.title": "設定の移行",
-  "migration.steps.subtitle": "以前のKilo Codeインストールの設定が見つかりました。引き継ぐ項目を選択してください。",
+
+  // Screen 1 — What's New
+  "migration.whatsNew.title": "Kilo Codeの新機能",
+  "migration.whatsNew.badge": "Beta",
+  "migration.whatsNew.subtitle": "より高速で効率的な基盤上に拡張機能を再構築しました。",
+  "migration.whatsNew.features.performance.title": "高速なエージェントパフォーマンス",
+  "migration.whatsNew.features.performance.detail":
+    "並列ツール呼び出しとサブエージェントにより、エージェントがより多くのタスクを同時に処理できます — 待ち時間が減り、作業効率が向上します。",
+  "migration.whatsNew.features.interface.title": "洗練されたインターフェース",
+  "migration.whatsNew.features.interface.detail": "不要な要素を排除し、より読みやすく素早く操作できます。",
+  "migration.whatsNew.features.agentManager.title": "Agent Manager",
+  "migration.whatsNew.features.agentManager.detail":
+    "複数のエージェントを並列実行するための統合インターフェース。それぞれ独自のワークツリー上で動作し、進捗の確認、コンテキストの切り替え、変更のレビューを一箇所で行えます。",
+  "migration.whatsNew.features.foundation.title": "共通基盤",
+  "migration.whatsNew.features.foundation.detail":
+    "すべてのKilo製品で共有される小さく効率的なコア。どのような作業スタイルでも馴染みのある体験を提供します。",
+  "migration.whatsNew.blogLink": "完全なアナウンスを読む",
+  "migration.whatsNew.continue": "続行",
+
+  // Screen 2 — Migrate Settings
+  "migration.migrate.title": "設定の移行",
+  "migration.migrate.subtitle": "以前のインストールから設定が見つかりました。移行可能な項目は以下の通りです。",
+  "migration.migrate.selectLabel": "移行する項目を選択",
+  "migration.migrate.cannotMigrate": "移行できません",
+  "migration.migrate.chatHistory": "チャットセッションと履歴",
+  "migration.migrate.chatHistoryDesc": "新しいアーキテクチャと互換性がありません",
+  "migration.migrate.button": "設定を移行",
+  "migration.migrate.skip": "スキップ",
+  "migration.migrate.back": "戻る",
+  "migration.migrate.keysDetected": "{{count}}個のキーを検出",
+  "migration.migrate.serversConfigured": "{{count}}個のサーバーが設定済み",
+  "migration.migrate.modesFound": "{{count}}個のモードが見つかりました",
+  "migration.migrate.nothingToMigrate": "レガシー設定に移行する項目が見つかりませんでした。",
+
+  // Migrate — item labels (reused from old select keys)
   "migration.select.providers": "プロバイダーのAPIキー",
   "migration.select.mcpServers": "MCPサーバー",
   "migration.select.customModes": "カスタムモード / エージェント",
   "migration.select.defaultModel": "デフォルトモデル",
-  "migration.select.unsupported": "新しいバージョンではサポートされていません",
-  "migration.select.nothingToMigrate": "レガシー設定に移行する項目が見つかりませんでした。",
-  "migration.select.settings": "設定",
   "migration.select.autoApproval": "自動承認",
-  "migration.select.autoApproval.commandRules": "コマンドルール",
-  "migration.select.autoApproval.commandRulesDesc": "マスタートグルと許可/拒否されたコマンドリスト",
-  "migration.select.autoApproval.readPermission": "読み取り権限",
-  "migration.select.autoApproval.readPermissionDesc": "ワークスペース内外のファイル読み取りアクセス",
-  "migration.select.autoApproval.writePermission": "書き込み権限",
-  "migration.select.autoApproval.writePermissionDesc": "ファイルの書き込みと編集アクセス",
-  "migration.select.autoApproval.executePermission": "実行権限",
-  "migration.select.autoApproval.executePermissionDesc": "ターミナルコマンドの実行",
-  "migration.select.autoApproval.mcpPermission": "MCP権限",
-  "migration.select.autoApproval.mcpPermissionDesc": "MCPツールの使用",
-  "migration.select.autoApproval.taskPermission": "タスク権限",
-  "migration.select.autoApproval.taskPermissionDesc": "モードの切り替えとサブタスクの作成",
   "migration.select.language": "UI言語",
-  "migration.select.languageDesc": "言語設定は新しい拡張機能に適用されます",
   "migration.select.autocomplete": "オートコンプリート設定",
-  "migration.select.autocompleteDesc": "自動トリガー、キーバインド、およびチャットのオートコンプリート設定",
-  "migration.select.continue": "続行",
-  "migration.select.back": "戻る",
-  "migration.progress.title": "設定を移行しています…",
-  "migration.progress.done": "続行",
+
+  // Migrate — completion
   "migration.complete.summary": "{{total}}個中{{success}}個の項目が正常に移行されました。",
   "migration.complete.cleanup": "レガシー設定データを削除する",
   "migration.complete.cleanupDescription":

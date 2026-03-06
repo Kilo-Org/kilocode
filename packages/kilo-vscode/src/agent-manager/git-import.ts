@@ -4,6 +4,7 @@ export interface BranchListItem {
   isRemote: boolean
   isDefault: boolean
   lastCommitDate?: string
+  isCheckedOut?: boolean
 }
 
 export interface PRUrlParts {
