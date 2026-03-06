@@ -4,7 +4,7 @@ import { InstructionPrompt } from "@/session/instruction"
 import { LLM } from "@/session/llm"
 import { Filesystem } from "@/util/filesystem"
 import { Log } from "@/util/log"
-import { join } from "path"
+import { join, dirname } from "path"
 import { getGitContext } from "./git-context"
 import type { CommitMessageRequest, CommitMessageResponse, GitContext } from "./types"
 
@@ -32,28 +32,51 @@ function extractSection(content: string, heading: string): string | undefined {
   return section || undefined
 }
 
-async function loadInstructionsFromAgentsMd(repoPath: string): Promise<string | undefined> {
-  const paths = await InstructionPrompt.systemPaths()
-  for (const p of paths) {
-    if (p.startsWith(repoPath)) {
-      const content = await Filesystem.readText(p).catch(() => "")
+async function loadInstructionsFromAgentsMd(repoPath: string): Promise<{ instructions?: string; found: boolean }> {
+  // Search for AGENTS.md relative to repoPath
+  const FILES = ["AGENTS.md", "CLAUDE.md", "CONTEXT.md"]
+
+  for (const file of FILES) {
+    const filepath = join(repoPath, file)
+    const exists = await Filesystem.exists(filepath)
+
+    if (exists) {
+      const content = await Filesystem.readText(filepath).catch(() => "")
       const section = extractSection(content, SECTION_HEADING)
       if (section) {
-        log.info("loaded commit instructions from", { file: p })
-        return section
+        log.info("loaded commit instructions from", { file: filepath })
+        return { instructions: section, found: true }
       }
     }
   }
-  return undefined
+
+  // Also check parent directories (walk up from repoPath)
+  for (const file of FILES) {
+    const parentFiles = await Filesystem.findUp(file, dirname(repoPath)).catch(() => [])
+    for (const p of parentFiles) {
+      const content = await Filesystem.readText(p).catch(() => "")
+      const section = extractSection(content, SECTION_HEADING)
+      if (section) {
+        log.info("loaded commit instructions from parent", { file: p })
+        return { instructions: section, found: true }
+      }
+    }
+  }
+
+  return { found: false }
 }
 
-async function loadInstructions(repoPath: string): Promise<string | undefined> {
+async function loadInstructions(repoPath: string): Promise<{ instructions?: string; found: boolean }> {
   const fromAgents = await loadInstructionsFromAgentsMd(repoPath)
-  if (fromAgents) return fromAgents
+  if (fromAgents.found) return fromAgents
 
   const filepath = join(repoPath, ".kilocode", "commit-instructions.md")
   const content = await Filesystem.readText(filepath).catch(() => "")
-  return content.trim() || undefined
+  const trimmed = content.trim()
+  if (trimmed) {
+    return { instructions: trimmed, found: true }
+  }
+  return { found: false }
 }
 
 const SYSTEM_PROMPT = `You are an expert Git commit message generator that creates conventional commit messages based on staged changes. Analyze the provided git diff output and generate an appropriate conventional commit message following the specification.
@@ -175,8 +198,12 @@ export async function generateCommitMessage(request: CommitMessageRequest): Prom
     (await Provider.getSmallModel(defaultModel.providerID)) ??
     (await Provider.getModel(defaultModel.providerID, defaultModel.modelID))
 
-  const instructions = request.instructions ?? (await loadInstructions(request.path))
-  const prompt = instructions ? `${SYSTEM_PROMPT}\n\n## Custom Instructions\n${instructions}` : SYSTEM_PROMPT
+  const loaded = request.instructions
+    ? { instructions: request.instructions, found: true }
+    : await loadInstructions(request.path)
+  const prompt = loaded.instructions
+    ? `${SYSTEM_PROMPT}\n\n## Custom Instructions\n${loaded.instructions}`
+    : SYSTEM_PROMPT
 
   const agent: Agent.Info = {
     name: "commit-message",
@@ -226,5 +253,5 @@ export async function generateCommitMessage(request: CommitMessageRequest): Prom
   const result = await stream.text
   log.info("generated", { message: result })
 
-  return { message: clean(result) }
+  return { message: clean(result), instructionsFound: loaded.found }
 }

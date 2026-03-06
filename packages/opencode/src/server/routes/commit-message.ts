@@ -17,7 +17,12 @@ export const CommitMessageRoutes = lazy(() =>
           description: "Generated commit message",
           content: {
             "application/json": {
-              schema: resolver(z.object({ message: z.string() })),
+              schema: resolver(
+                z.object({
+                  message: z.string(),
+                  instructionsFound: z.boolean().meta({ description: "Whether custom instructions were found" }),
+                }),
+              ),
             },
           },
         },
@@ -39,7 +44,7 @@ export const CommitMessageRoutes = lazy(() =>
     async (c) => {
       const body = c.req.valid("json")
       const result = await generateCommitMessage(body)
-      return c.json({ message: result.message })
+      return c.json({ message: result.message, instructionsFound: result.instructionsFound })
     },
   ),
 )
