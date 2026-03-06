@@ -742,11 +742,28 @@ export interface WorktreeFileDiff {
   status?: "added" | "deleted" | "modified"
 }
 
+// Generated file entry (stats only, no content)
+export interface GeneratedFileEntry {
+  file: string
+  status: "added" | "deleted" | "modified"
+  additions: number
+  deletions: number
+}
+
+// Summary of generated/vendor files excluded from full diffs
+export interface GeneratedSummary {
+  files: number
+  additions: number
+  deletions: number
+  entries: GeneratedFileEntry[]
+}
+
 // Agent Manager: Diff data push (extension → webview)
 export interface AgentManagerWorktreeDiffMessage {
   type: "agentManager.worktreeDiff"
   sessionId: string
   diffs: WorktreeFileDiff[]
+  generated: GeneratedSummary
 }
 
 // Agent Manager: Diff loading state (extension → webview)

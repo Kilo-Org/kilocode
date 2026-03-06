@@ -925,12 +925,13 @@ export class Worktree extends HeyApiClient {
   /**
    * Get worktree diff
    *
-   * Get file diffs for a worktree compared to its base branch. Includes uncommitted changes.
+   * Get file diffs for a worktree compared to its base branch. Includes uncommitted changes. By default, generated/vendor files (node_modules, dist, etc.) are excluded from full diffs and returned as a lightweight summary. Pass exclude=none to get all files.
    */
   public diff<ThrowOnError extends boolean = false>(
     parameters?: {
       directory?: string
       base?: string
+      exclude?: "generated" | "none"
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -941,6 +942,7 @@ export class Worktree extends HeyApiClient {
           args: [
             { in: "query", key: "directory" },
             { in: "query", key: "base" },
+            { in: "query", key: "exclude" },
           ],
         },
       ],

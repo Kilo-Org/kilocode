@@ -11,7 +11,7 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type { DiffLineAnnotation, AnnotationSide } from "@pierre/diffs"
-import type { WorktreeFileDiff } from "../src/types/messages"
+import type { WorktreeFileDiff, GeneratedSummary } from "../src/types/messages"
 import { useLanguage } from "../src/context/language"
 import { getDirectory, getFilename, sanitizeReviewComments, type ReviewComment } from "./review-comments"
 import { buildReviewAnnotation, type AnnotationLabels, type AnnotationMeta } from "./review-annotations"
@@ -22,6 +22,7 @@ import { DiffEndMarker } from "./DiffEndMarker"
 
 interface DiffPanelProps {
   diffs: WorktreeFileDiff[]
+  generated?: GeneratedSummary
   loading: boolean
   sessionKey?: string
   diffStyle?: "unified" | "split"
@@ -330,6 +331,11 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                       : t("agentManager.review.collapsedOnly", { count: totals().collapsed })}
                   </span>
                 </Show>
+                <Show when={props.generated && props.generated.files > 0}>
+                  <span class="am-diff-header-generated">
+                    ({props.generated!.files} generated {props.generated!.files === 1 ? "file" : "files"} hidden)
+                  </span>
+                </Show>
               </span>
             </>
           </Show>
@@ -446,6 +452,18 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
           </Accordion>
           <Show when={props.diffs.length > LONG_DIFF_MARKER_FILE_COUNT}>
             <DiffEndMarker />
+          </Show>
+          <Show when={props.generated && props.generated.files > 0}>
+            <div class="am-diff-generated-summary">
+              <div class="am-diff-generated-header">
+                <Icon name="archive" size="small" />
+                <span>
+                  {props.generated!.files} generated {props.generated!.files === 1 ? "file" : "files"} hidden
+                </span>
+                <span class="am-diff-header-adds">+{props.generated!.additions}</span>
+                <span class="am-diff-header-dels">-{props.generated!.deletions}</span>
+              </div>
+            </div>
           </Show>
         </div>
 

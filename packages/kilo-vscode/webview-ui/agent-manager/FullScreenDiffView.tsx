@@ -12,7 +12,7 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { ResizeHandle } from "@kilocode/kilo-ui/resize-handle"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type { DiffLineAnnotation, AnnotationSide } from "@pierre/diffs"
-import type { WorktreeFileDiff } from "../src/types/messages"
+import type { WorktreeFileDiff, GeneratedSummary } from "../src/types/messages"
 import { useLanguage } from "../src/context/language"
 import { FileTree } from "./FileTree"
 import { getDirectory, getFilename, sanitizeReviewComments, type ReviewComment } from "./review-comments"
@@ -24,6 +24,7 @@ type DiffStyle = "unified" | "split"
 
 interface FullScreenDiffViewProps {
   diffs: WorktreeFileDiff[]
+  generated?: GeneratedSummary
   loading: boolean
   sessionKey?: string
   comments: ReviewComment[]
@@ -403,6 +404,11 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                   : t("agentManager.review.collapsedOnly", { count: totals().collapsed })}
               </span>
             </Show>
+            <Show when={props.generated && props.generated.files > 0}>
+              <span class="am-diff-header-generated">
+                ({props.generated!.files} generated {props.generated!.files === 1 ? "file" : "files"} hidden)
+              </span>
+            </Show>
           </span>
         </div>
         <div class="am-review-toolbar-right">
@@ -431,6 +437,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
           <div class="am-review-tree-wrapper">
             <FileTree
               diffs={props.diffs}
+              generated={props.generated}
               activeFile={activeFile()}
               onFileSelect={handleFileSelect}
               comments={comments()}
@@ -542,6 +549,18 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
               </Accordion>
               <Show when={props.diffs.length > LONG_DIFF_MARKER_FILE_COUNT}>
                 <DiffEndMarker />
+              </Show>
+              <Show when={props.generated && props.generated.files > 0}>
+                <div class="am-diff-generated-summary">
+                  <div class="am-diff-generated-header">
+                    <Icon name="archive" size="small" />
+                    <span>
+                      {props.generated!.files} generated {props.generated!.files === 1 ? "file" : "files"} hidden
+                    </span>
+                    <span class="am-review-toolbar-adds">+{props.generated!.additions}</span>
+                    <span class="am-review-toolbar-dels">-{props.generated!.deletions}</span>
+                  </div>
+                </div>
               </Show>
             </div>
           </Show>

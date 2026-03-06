@@ -79,4 +79,78 @@ export namespace FileIgnore {
 
     return false
   }
+
+  // kilocode_change start - diff-specific generated file detection
+
+  // Strict subset of FOLDERS for diff filtering. Excludes ambiguous entries
+  // like "bin" (could be project scripts), "desktop" (could be a product dir).
+  const DIFF_FOLDERS = new Set([
+    // Package managers / dependencies
+    "node_modules",
+    "bower_components",
+    ".pnpm-store",
+    ".npm",
+    "vendor",
+    // Build output
+    "dist",
+    "build",
+    "out",
+    ".next",
+    ".output",
+    "target",
+    "obj",
+    // Caches
+    ".turbo",
+    ".cache",
+    ".webkit-cache",
+    // Python
+    "__pycache__",
+    ".pytest_cache",
+    "mypy_cache",
+    // Java
+    ".gradle",
+    // VCS
+    ".git",
+    ".svn",
+    ".hg",
+    // IDE
+    ".vscode",
+    ".idea",
+    ".history",
+  ])
+
+  /** Test whether a file path is a generated/vendor file for diff filtering purposes. */
+  export function generated(filepath: string): boolean {
+    const parts = filepath.split(/[/\\]/)
+    for (const part of parts) {
+      if (DIFF_FOLDERS.has(part)) return true
+    }
+    for (const pattern of FILES) {
+      if (Glob.match(pattern, filepath)) return true
+    }
+    return false
+  }
+
+  /**
+   * Parse .gitattributes content and return a matcher that checks for
+   * linguist-generated=true. Returns a function that tests file paths.
+   */
+  export function parseGitattributes(content: string): (filepath: string) => boolean {
+    const patterns: string[] = []
+    for (const line of content.split("\n")) {
+      const trimmed = line.trim()
+      if (!trimmed || trimmed.startsWith("#")) continue
+      if (!trimmed.includes("linguist-generated")) continue
+      // format: <pattern> <attr1> <attr2> ...
+      // linguist-generated=true or linguist-generated
+      const parts = trimmed.split(/\s+/)
+      const pattern = parts[0]
+      if (!pattern) continue
+      const has = parts.some((p) => p === "linguist-generated" || p === "linguist-generated=true")
+      if (has) patterns.push(pattern)
+    }
+    if (patterns.length === 0) return () => false
+    return (filepath: string) => patterns.some((p) => Glob.match(p, filepath))
+  }
+  // kilocode_change end
 }

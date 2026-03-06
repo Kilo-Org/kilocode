@@ -1672,6 +1672,25 @@ export type WorktreeResetInput = {
   directory: string
 }
 
+export type GeneratedEntry = {
+  file: string
+  status: "added" | "deleted" | "modified"
+  additions: number
+  deletions: number
+}
+
+export type GeneratedSummary = {
+  files: number
+  additions: number
+  deletions: number
+  entries: Array<GeneratedEntry>
+}
+
+export type WorktreeDiffResponse = {
+  diffs: Array<FileDiff>
+  generated: GeneratedSummary
+}
+
 export type ProjectSummary = {
   id: string
   name?: string
@@ -2546,6 +2565,10 @@ export type WorktreeDiffData = {
      * Base branch or ref to diff against
      */
     base?: string
+    /**
+     * Filter mode: 'generated' (default) excludes vendor/build files, 'none' returns all
+     */
+    exclude?: "generated" | "none"
   }
   url: "/experimental/worktree/diff"
 }
@@ -2561,12 +2584,12 @@ export type WorktreeDiffError = WorktreeDiffErrors[keyof WorktreeDiffErrors]
 
 export type WorktreeDiffResponses = {
   /**
-   * File diffs
+   * File diffs with generated file summary
    */
-  200: Array<FileDiff>
+  200: WorktreeDiffResponse
 }
 
-export type WorktreeDiffResponse = WorktreeDiffResponses[keyof WorktreeDiffResponses]
+export type WorktreeDiffResponse2 = WorktreeDiffResponses[keyof WorktreeDiffResponses]
 
 export type ExperimentalSessionListData = {
   body?: never

@@ -1722,6 +1722,30 @@ export class AgentManagerProvider implements vscode.Disposable {
     return { directory: root, baseBranch: base }
   }
 
+  // Handle both old (FileDiff[]) and new ({ diffs, generated }) response shapes
+  // for backward compat during SDK regen transition.
+  private parseDiffResponse(raw: unknown): {
+    diffs: FileDiff[]
+    generated: {
+      files: number
+      additions: number
+      deletions: number
+      entries: Array<{ file: string; status: string; additions: number; deletions: number }>
+    }
+  } {
+    if (Array.isArray(raw)) return { diffs: raw, generated: { files: 0, additions: 0, deletions: 0, entries: [] } }
+    const typed = raw as {
+      diffs: FileDiff[]
+      generated: {
+        files: number
+        additions: number
+        deletions: number
+        entries: Array<{ file: string; status: string; additions: number; deletions: number }>
+      }
+    }
+    return typed
+  }
+
   /** One-shot diff fetch with loading indicators. Resolves target async, then fetches. */
   private async onRequestWorktreeDiff(sessionId: string): Promise<void> {
     // Ensure state is loaded before resolving diff target — avoids race where
@@ -1742,20 +1766,28 @@ export class AgentManagerProvider implements vscode.Disposable {
     this.postToWebview({ type: "agentManager.worktreeDiffLoading", sessionId, loading: true })
     try {
       const client = this.connectionService.getClient()
-      const { data: diffs } = await client.worktree.diff(
+      const { data: raw } = await client.worktree.diff(
         { directory: target.directory, base: target.baseBranch },
         { throwOnError: true },
       )
+      const response = this.parseDiffResponse(raw)
 
-      this.log(`Worktree diff returned ${diffs.length} file(s) for session ${sessionId}`)
+      this.log(
+        `Worktree diff returned ${response.diffs.length} reviewable, ${response.generated.files} generated file(s) for session ${sessionId}`,
+      )
 
-      const hash = diffs
+      const hash = response.diffs
         .map((d: FileDiff) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`)
         .join("|")
       this.lastDiffHash = hash
       this.diffSessionId = sessionId
 
-      this.postToWebview({ type: "agentManager.worktreeDiff", sessionId, diffs })
+      this.postToWebview({
+        type: "agentManager.worktreeDiff",
+        sessionId,
+        diffs: response.diffs,
+        generated: response.generated,
+      })
     } catch (err) {
       this.log("Failed to fetch worktree diff:", err)
     } finally {
@@ -1770,19 +1802,25 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     try {
       const client = this.connectionService.getClient()
-      const { data: diffs } = await client.worktree.diff(
+      const { data: raw } = await client.worktree.diff(
         { directory: target.directory, base: target.baseBranch },
         { throwOnError: true },
       )
+      const response = this.parseDiffResponse(raw)
 
-      const hash = diffs
+      const hash = response.diffs
         .map((d: FileDiff) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`)
         .join("|")
       if (hash === this.lastDiffHash && this.diffSessionId === sessionId) return
       this.lastDiffHash = hash
       this.diffSessionId = sessionId
 
-      this.postToWebview({ type: "agentManager.worktreeDiff", sessionId, diffs })
+      this.postToWebview({
+        type: "agentManager.worktreeDiff",
+        sessionId,
+        diffs: response.diffs,
+        generated: response.generated,
+      })
     } catch (err) {
       this.log("Failed to poll worktree diff:", err)
     }
