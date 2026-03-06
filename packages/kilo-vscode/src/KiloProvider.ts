@@ -1545,10 +1545,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private async persistPermissionRules(toolName: string, patterns: string[]): Promise<void> {
     if (!this.client) return
     try {
+      const { data: config } = await this.client.global.config.get({ throwOnError: true })
+      const existing = config?.permission
+      const current =
+        typeof existing === "object" && existing !== null ? (existing as Record<string, unknown>)[toolName] : undefined
+
       const rules: Record<string, string> = {}
+      // Preserve existing default action (e.g., "ask") as a wildcard rule
+      if (typeof current === "string") {
+        rules["*"] = current
+      }
       for (const pattern of patterns) {
         rules[pattern] = "allow"
       }
+
       const permission = { [toolName]: rules }
       await this.client.global.config.update(
         { config: { permission: permission as Config["permission"] }, reload: "false" },
