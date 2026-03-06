@@ -1,11 +1,9 @@
 import { Agent } from "@/agent/agent"
 import { Provider } from "@/provider/provider"
-import { InstructionPrompt } from "@/session/instruction"
 import { LLM } from "@/session/llm"
 import { Filesystem } from "@/util/filesystem"
 import { Log } from "@/util/log"
-import { join, dirname } from "path"
-import { normalize } from "path"
+import { dirname, join, normalize } from "path"
 import { getGitContext } from "./git-context"
 import type { CommitMessageRequest, CommitMessageResponse, GitContext } from "./types"
 
@@ -219,9 +217,7 @@ export async function generateCommitMessage(request: CommitMessageRequest): Prom
     (await Provider.getSmallModel(defaultModel.providerID)) ??
     (await Provider.getModel(defaultModel.providerID, defaultModel.modelID))
 
-  const loaded = request.instructions
-    ? { instructions: request.instructions, found: false }
-    : await loadInstructions(request.path)
+  const loaded = await loadInstructions(request.path)
   const prompt = loaded.instructions
     ? `${SYSTEM_PROMPT}\n\n## Custom Instructions\n${loaded.instructions}`
     : SYSTEM_PROMPT
