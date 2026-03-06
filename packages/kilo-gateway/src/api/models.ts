@@ -54,6 +54,17 @@ const openRouterModelsResponseSchema = z.object({
 
 type OpenRouterModel = z.infer<typeof openRouterModelSchema>
 
+type KiloFetchStatus = "success" | "fallback"
+
+function markFetchStatus(models: Record<string, any>, status: KiloFetchStatus) {
+  Object.defineProperty(models, "__kiloFetchStatus", {
+    value: status,
+    enumerable: false,
+    configurable: true,
+    writable: false,
+  })
+}
+
 /**
  * Parse API price string to number (e.g. "0.00001" -> 0.00001)
  */
@@ -112,6 +123,7 @@ export async function fetchKiloModels(options?: {
     if (!result.success) {
       console.error("Kilo models response validation failed:", result.error.format())
       ensureAutoRoutingModels(models)
+      markFetchStatus(models, "fallback")
       return models
     }
 
@@ -128,11 +140,13 @@ export async function fetchKiloModels(options?: {
     }
 
     ensureAutoRoutingModels(models)
+    markFetchStatus(models, "success")
 
     return models
   } catch (error) {
     console.error("Error fetching Kilo models:", error)
     ensureAutoRoutingModels(models)
+    markFetchStatus(models, "fallback")
     return models
   }
 }
