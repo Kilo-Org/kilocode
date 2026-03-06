@@ -232,6 +232,7 @@ export const dict = {
   "prompt.action.send": "Send",
   "prompt.action.stop": "Stop",
   "prompt.action.enhance": "Enhance prompt",
+  "prompt.action.resetModel": "Reset model to default",
   "prompt.action.enhanceDescription":
     "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.",
 
@@ -408,6 +409,15 @@ export const dict = {
     "Root element not found. Did you forget to add it to your index.html? Or maybe the id attribute got misspelled?",
 
   "error.globalSync.connectFailed": "Could not connect to server. Is there a server running at `{{url}}`?",
+
+  "error.paidModel.title": "You need to sign in to use this model",
+  "error.paidModel.description":
+    "Sign in or create an account to access over 500 models, use credits at cost, or bring your own key.",
+  "error.paidModel.action": "Sign In",
+  "error.promotionLimit.title": "You need to sign up to keep going",
+  "error.promotionLimit.description":
+    "Sign up for free to continue and explore 500 other models. Takes 2 minutes, no credit card required. Or come back later.",
+  "error.promotionLimit.action": "Sign Up",
 
   "error.chain.unknown": "Unknown error",
   "error.chain.causedBy": "Caused by:",
@@ -988,6 +998,8 @@ export const dict = {
   "settings.providers.defaultModel.description": "Primary model for conversations",
   "settings.providers.smallModel.title": "Small Model",
   "settings.providers.smallModel.description": "Lightweight model for title generation and other quick tasks",
+  "settings.providers.modeModels": "Model per Mode",
+  "settings.providers.modeModels.description": "Override the default model for specific modes. If not set, the global default model is used.",
   "settings.providers.disabled": "Disabled Providers",
   "settings.providers.disabled.description": "Providers to hide from the provider list",
   "settings.providers.enabled": "Enabled Providers (Allowlist)",
@@ -1008,47 +1020,56 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "Legacy Migration",
   "settings.aboutKiloCode.legacyMigration.description":
     "Migrate settings from a previous installation of Kilo Code, including provider API keys and default model.",
-  "migration.welcome.title": "Welcome to the New Kilo Code",
-  "migration.welcome.detected": "We detected settings from a previous installation of Kilo Code.",
-  "migration.welcome.sessionsInfo":
-    "Chat sessions and history cannot be migrated — the new version uses a different architecture.",
-  "migration.welcome.canMigrate": "The following settings can be migrated to the new version:",
-  "migration.welcome.start": "Start Migration",
-  "migration.welcome.skip": "Skip Migration",
-  "migration.steps.title": "Migrate your settings",
-  "migration.steps.subtitle": "We found settings from your previous Kilo Code installation. Choose what to bring over.",
+
+  // Screen 1 — What's New
+  "migration.whatsNew.title": "What's New in Kilo Code",
+  "migration.whatsNew.badge": "Beta",
+  "migration.whatsNew.subtitle": "We've rebuilt the extension on a faster, more efficient foundation.",
+  "migration.whatsNew.features.performance.title": "Faster Agent Performance",
+  "migration.whatsNew.features.performance.detail":
+    "Parallel tool calls and subagents let your agent tackle more at once — so you spend less time watching and more time shipping.",
+  "migration.whatsNew.features.interface.title": "Streamlined Interface",
+  "migration.whatsNew.features.interface.detail": "Fewer distractions, easier and quicker to read.",
+  "migration.whatsNew.features.agentManager.title": "Agent Manager",
+  "migration.whatsNew.features.agentManager.detail":
+    "A unified interface for running multiple agents in parallel, each on its own worktree — monitor progress, switch context, and review changes in one place.",
+  "migration.whatsNew.features.foundation.title": "Shared Foundation",
+  "migration.whatsNew.features.foundation.detail":
+    "One small, efficient core across every Kilo product. A familiar experience however you choose to work.",
+  "migration.whatsNew.blogLink": "Read the full announcement",
+  "migration.whatsNew.continue": "Continue",
+
+  // Screen 2 — Migrate Settings
+  "migration.migrate.title": "Migrate Your Settings",
+  "migration.migrate.subtitle": "We found settings from your previous installation. Here's what we can bring over.",
+  "migration.migrate.selectLabel": "Select what to migrate",
+  "migration.migrate.cannotMigrate": "Cannot be migrated",
+  "migration.migrate.chatHistory": "Chat Sessions & History",
+  "migration.migrate.chatHistoryDesc": "Incompatible with the new architecture",
+  "migration.migrate.button": "Migrate Settings",
+  "migration.migrate.skip": "Skip",
+  "migration.migrate.back": "Back",
+  "migration.migrate.keysDetected": "{{count}} keys detected",
+  "migration.migrate.serversConfigured": "{{count}} server(s) configured",
+  "migration.migrate.modesFound": "{{count}} mode(s) found",
+  "migration.migrate.nothingToMigrate": "Nothing to migrate was found in the legacy settings.",
+
+  // Migrate — item labels (reused from old select keys)
   "migration.select.providers": "Provider API Keys",
   "migration.select.mcpServers": "MCP Servers",
   "migration.select.customModes": "Custom Modes / Agents",
   "migration.select.defaultModel": "Default Model",
-  "migration.select.unsupported": "Not supported in new version",
-  "migration.select.nothingToMigrate": "Nothing to migrate was found in the legacy settings.",
-  "migration.select.settings": "Settings",
   "migration.select.autoApproval": "Auto-Approval",
-  "migration.select.autoApproval.commandRules": "Command Rules",
-  "migration.select.autoApproval.commandRulesDesc": "Master toggle and allowed/denied command lists",
-  "migration.select.autoApproval.readPermission": "Read Permission",
-  "migration.select.autoApproval.readPermissionDesc": "File read access inside and outside workspace",
-  "migration.select.autoApproval.writePermission": "Write Permission",
-  "migration.select.autoApproval.writePermissionDesc": "File write and edit access",
-  "migration.select.autoApproval.executePermission": "Execute Permission",
-  "migration.select.autoApproval.executePermissionDesc": "Terminal command execution",
-  "migration.select.autoApproval.mcpPermission": "MCP Permission",
-  "migration.select.autoApproval.mcpPermissionDesc": "MCP tool usage",
-  "migration.select.autoApproval.taskPermission": "Task Permission",
-  "migration.select.autoApproval.taskPermissionDesc": "Mode switching and subtask creation",
   "migration.select.language": "UI Language",
-  "migration.select.languageDesc": "Your language preference will be applied to the new extension",
   "migration.select.autocomplete": "Autocomplete Settings",
-  "migration.select.autocompleteDesc": "Auto-trigger, keybinding, and chat autocomplete preferences",
-  "migration.select.continue": "Continue",
-  "migration.select.back": "Back",
-  "migration.progress.title": "Migrating your settings…",
-  "migration.progress.done": "Continue",
+
+  // Migrate — completion
   "migration.complete.summary": "{{success}} of {{total}} items migrated successfully.",
   "migration.complete.cleanup": "Remove legacy settings data",
   "migration.complete.cleanupDescription":
     "This removes the old settings from VS Code storage. You will not be able to re-run this migration.",
   "migration.complete.done": "Done",
   // legacy-migration end
+
+  "error.details.show": "Details",
 }

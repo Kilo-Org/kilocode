@@ -257,7 +257,7 @@ export type PermissionLevel = "allow" | "ask" | "deny"
 export type PermissionConfig = Partial<Record<string, PermissionLevel>>
 
 export interface AgentConfig {
-  model?: string
+  model?: string | null
   prompt?: string
   temperature?: number
   top_p?: number
@@ -309,8 +309,8 @@ export interface ExperimentalConfig {
 
 export interface Config {
   permission?: PermissionConfig
-  model?: string
-  small_model?: string
+  model?: string | null
+  small_model?: string | null
   default_agent?: string
   agent?: Record<string, AgentConfig>
   provider?: Record<string, ProviderConfig>
