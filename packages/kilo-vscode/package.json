@@ -605,7 +605,7 @@
         },
         "kilo-code.new.model.modelID": {
           "type": "string",
-          "default": "kilo/auto",
+          "default": "kilo-auto/frontier",
           "description": "Default model ID for new sessions"
         },
         "kilo-code.new.autocomplete.enableAutoTrigger": {

@@ -238,7 +238,7 @@ export const SessionProvider: ParentComponent = (props) => {
   })
 
   // Global model selection per agent/mode
-  // Precedence: user override > per-mode config > global default > kilo/auto
+  // Precedence: user override > per-mode config > global default > kilo-auto/frontier
   const selected = createMemo<ModelSelection | null>(() => {
     const agentName = selectedAgentName()
     const override = store.modelSelections[agentName]
