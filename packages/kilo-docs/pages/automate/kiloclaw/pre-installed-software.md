@@ -5,7 +5,7 @@ description: "Default system utilities, languages, and CLI tools included in the
 
 # Pre-installed Software
 
-Every KiloClaw instance ships with a curated set of system utilities, language runtimes, package managers, and CLI tools. This page documents everything that comes pre-installed in the KiloClaw Docker image so you know what's available out of the box.
+Every KiloClaw instance ships with a curated set of system utilities, language runtimes, package managers, and CLI tools. This page documents everything that comes pre-installed in the KiloClaw Docker image so you know what's available out of the box. Pinned versions listed below are as of March 2026 and may change with future image updates.
 
 ## Base Image
 
@@ -41,43 +41,54 @@ The following packages are installed via `apt` on top of the base image:
 
 ## Languages & Runtimes
 
-| Language / Runtime        | Version        | Install Method                   |
-| ------------------------- | -------------- | -------------------------------- |
-| Node.js                   | 22.13.1        | Binary tarball (primary runtime) |
-| Go                        | 1.26.0         | Binary tarball                   |
-| Python 3                  | System default | `apt` (Debian Bookworm)          |
-| Rust (`rustup` + `cargo`) | Latest stable  | `rustup` installer               |
+| Language / Runtime | Version        | Install Method                   |
+| ------------------ | -------------- | -------------------------------- |
+| Node.js            | 22.13.1        | Binary tarball (primary runtime) |
+| Go                 | 1.26.0         | Binary tarball                   |
+| Bun                | 1.2.4          | Install script                   |
+| Python 3           | System default | `apt` (Debian Bookworm)          |
 
 ## Package Managers
 
 These package managers are available for installing libraries and dependencies:
 
-| Manager | Included Via                     |
-| ------- | -------------------------------- |
-| `npm`   | Bundled with Node.js             |
-| `pip3`  | Bundled with Python 3            |
-| `cargo` | Installed with Rust via `rustup` |
+| Manager | Included Via         |
+| ------- | -------------------- |
+| `npm`   | Bundled with Node.js |
+| `pnpm`  | Installed via `npm`  |
 
-## CLI Tools & Utilities
+## CLI Tools
 
-A broad set of CLI tools is pre-installed for cloud operations, infrastructure management, and DevOps workflows:
+| Tool                 | Version / Source            |
+| -------------------- | --------------------------- |
+| GitHub CLI (`gh`)    | Latest from GitHub apt repo |
+| 1Password CLI (`op`) | 2.32.1 from 1Password repo  |
 
-| Tool                 | Version / Source                   |
-| -------------------- | ---------------------------------- |
-| GitHub CLI (`gh`)    | Latest from GitHub apt repo        |
-| GitLab CLI (`glab`)  | Latest from GitLab apt repo        |
-| AWS CLI v2           | Latest installer                   |
-| `kubectl`            | Latest stable                      |
-| Helm                 | Latest via `get-helm-3` script     |
-| Terraform            | Latest from HashiCorp apt repo     |
-| OpenTofu             | Latest from OpenTofu apt repo      |
-| Docker CLI + Buildx  | Latest from Docker apt repo        |
-| Trivy                | Latest from Aqua Security apt repo |
-| 1Password CLI (`op`) | Latest from 1Password apt repo     |
-| Rclone               | Latest via `rclone` install script |
+## npm Global Packages
+
+The following packages are installed globally via `npm`:
+
+| Package                 | Version  |
+| ----------------------- | -------- |
+| OpenClaw (`openclaw`)   | 2026.3.2 |
+| ClawHub CLI (`clawhub`) | Latest   |
+| mcporter                | 0.7.3    |
+| `@steipete/summarize`   | 0.11.1   |
+
+## Go Tools
+
+These tools are pre-installed via `go install` and available on `$PATH`:
+
+| Tool          | Version |
+| ------------- | ------- |
+| `gog`         | 0.11.0  |
+| `goplaces`    | 0.3.0   |
+| `blogwatcher` | 0.0.2   |
+| `xurl`        | 1.0.3   |
+| `gifgrep`     | 0.2.3   |
 
 {% callout type="tip" %}
-Most of these tools receive updates when you **Upgrade & Redeploy** your instance from the [KiloClaw Dashboard](/docs/automate/kiloclaw/dashboard#redeploy). Check the changelog for image update announcements.
+These tools receive updates when you **Upgrade & Redeploy** your instance from the [KiloClaw Dashboard](/docs/automate/kiloclaw/dashboard#redeploy). Check the changelog for image update announcements.
 {% /callout %}
 
 ## Related
