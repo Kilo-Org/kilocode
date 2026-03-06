@@ -296,7 +296,7 @@ describe("tool.read truncation", () => {
         const read = await ReadTool.init()
         await expect(
           read.execute({ filePath: path.join(tmp.path, "short.txt"), offset: 4, limit: 5 }, ctx),
-        ).rejects.toThrow("Offset 4 is out of range for this file (3 lines)")
+        ).rejects.toThrow("Offset 4 is beyond the end of file (file has 3 lines).")
       },
     })
   })
@@ -329,7 +329,7 @@ describe("tool.read truncation", () => {
       fn: async () => {
         const read = await ReadTool.init()
         await expect(read.execute({ filePath: path.join(tmp.path, "empty.txt"), offset: 2 }, ctx)).rejects.toThrow(
-          "Offset 2 is out of range for this file (0 lines)",
+          "Offset 2 is beyond the end of file (file has 0 lines).",
         )
       },
     })
