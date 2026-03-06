@@ -1,11 +1,60 @@
-import { Provider } from "@/provider/provider"
-import { LLM } from "@/session/llm"
 import { Agent } from "@/agent/agent"
+import { Provider } from "@/provider/provider"
+import { InstructionPrompt } from "@/session/instruction"
+import { LLM } from "@/session/llm"
+import { Filesystem } from "@/util/filesystem"
 import { Log } from "@/util/log"
-import type { CommitMessageRequest, CommitMessageResponse, GitContext } from "./types"
+import { join } from "path"
 import { getGitContext } from "./git-context"
+import type { CommitMessageRequest, CommitMessageResponse, GitContext } from "./types"
 
 const log = Log.create({ service: "commit-message" })
+
+const SECTION_HEADING = "## Commit Message"
+
+function extractSection(content: string, heading: string): string | undefined {
+  const lines = content.split("\n")
+  const start = lines.findIndex((l) => l.trim() === heading)
+  if (start === -1) return undefined
+
+  let end = lines.length
+  for (let i = start + 1; i < lines.length; i++) {
+    if (lines[i].startsWith("## ") && !lines[i].startsWith("### ")) {
+      end = i
+      break
+    }
+  }
+
+  const section = lines
+    .slice(start + 1, end)
+    .join("\n")
+    .trim()
+  return section || undefined
+}
+
+async function loadInstructionsFromAgentsMd(repoPath: string): Promise<string | undefined> {
+  const paths = await InstructionPrompt.systemPaths()
+  for (const p of paths) {
+    if (p.startsWith(repoPath)) {
+      const content = await Filesystem.readText(p).catch(() => "")
+      const section = extractSection(content, SECTION_HEADING)
+      if (section) {
+        log.info("loaded commit instructions from", { file: p })
+        return section
+      }
+    }
+  }
+  return undefined
+}
+
+async function loadInstructions(repoPath: string): Promise<string | undefined> {
+  const fromAgents = await loadInstructionsFromAgentsMd(repoPath)
+  if (fromAgents) return fromAgents
+
+  const filepath = join(repoPath, ".kilocode", "commit-instructions.md")
+  const content = await Filesystem.readText(filepath).catch(() => "")
+  return content.trim() || undefined
+}
 
 const SYSTEM_PROMPT = `You are an expert Git commit message generator that creates conventional commit messages based on staged changes. Analyze the provided git diff output and generate an appropriate conventional commit message following the specification.
 
@@ -126,13 +175,16 @@ export async function generateCommitMessage(request: CommitMessageRequest): Prom
     (await Provider.getSmallModel(defaultModel.providerID)) ??
     (await Provider.getModel(defaultModel.providerID, defaultModel.modelID))
 
+  const instructions = request.instructions ?? (await loadInstructions(request.path))
+  const prompt = instructions ? `${SYSTEM_PROMPT}\n\n## Custom Instructions\n${instructions}` : SYSTEM_PROMPT
+
   const agent: Agent.Info = {
     name: "commit-message",
     mode: "primary",
     hidden: true,
     options: {},
     permission: [],
-    prompt: SYSTEM_PROMPT,
+    prompt,
     temperature: 0.3,
   }
 

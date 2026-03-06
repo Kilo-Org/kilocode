@@ -5,6 +5,8 @@ export interface CommitMessageRequest {
   selectedFiles?: string[]
   /** Previously generated message — when set, the LLM is asked to produce a different one */
   previousMessage?: string
+  /** Custom instructions for commit message style (read from .kilocode/commit-instructions.md) */
+  instructions?: string
 }
 
 export interface CommitMessageResponse {

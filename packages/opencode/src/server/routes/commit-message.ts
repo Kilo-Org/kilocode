@@ -33,6 +33,7 @@ export const CommitMessageRoutes = lazy(() =>
           .string()
           .optional()
           .meta({ description: "Previously generated message — triggers regeneration with a different result" }),
+        instructions: z.string().optional().meta({ description: "Custom instructions for commit message style" }),
       }),
     ),
     async (c) => {
