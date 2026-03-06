@@ -1,0 +1,121 @@
+name: release-changelog
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  changelog-pr:
+    runs-on: ubuntu-24.04
+    if: github.repository == 'Kilo-Org/kilocode' && !github.event.release.prerelease
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Git Committer
+        id: committer
+        uses: ./.github/actions/setup-git-committer
+        with:
+          kilo-maintainer-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
+          kilo-maintainer-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
+
+      - name: Get release info
+        id: release
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          BODY: ${{ github.event.release.body }}
+        run: |
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          # Write body to a temp file to avoid shell escaping issues
+          printf '%s' "$BODY" > /tmp/release-body.md
+
+      - name: Update CHANGELOG.md
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          DATE=$(date -u +%Y-%m-%d)
+          BODY=$(cat /tmp/release-body.md)
+
+          # Build the new entry
+          ENTRY=$(printf '## [%s] - %s\n\n%s\n' "$TAG" "$DATE" "$BODY")
+
+          if [ -f CHANGELOG.md ]; then
+            # Insert after the header block (first blank line after the opening lines)
+            # Find line number of first "## " heading or end of header
+            INSERT_LINE=$(grep -n "^## \[" CHANGELOG.md | head -1 | cut -d: -f1)
+
+            if [ -n "$INSERT_LINE" ]; then
+              # Insert before the first existing version heading
+              {
+                head -n $((INSERT_LINE - 1)) CHANGELOG.md
+                printf '\n%s\n\n' "$ENTRY"
+                tail -n +$INSERT_LINE CHANGELOG.md
+              } > CHANGELOG.md.tmp
+            else
+              # No existing entries - append after the file content
+              {
+                cat CHANGELOG.md
+                printf '\n%s\n' "$ENTRY"
+              } > CHANGELOG.md.tmp
+            fi
+            mv CHANGELOG.md.tmp CHANGELOG.md
+          else
+            # Create fresh
+            printf '# Changelog\n\nAll notable changes to Kilo Code are documented here and on the [docs changelog page](https://kilo.ai/docs/community/changelog).\n\n%s\n' "$ENTRY" > CHANGELOG.md
+          fi
+
+      - name: Update docs changelog
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          DOCS_CHANGELOG="packages/kilo-docs/pages/community/changelog.md"
+          DATE=$(date -u +%Y-%m-%d)
+          BODY=$(cat /tmp/release-body.md)
+
+          ENTRY=$(printf '## [%s] - %s\n\n%s\n' "$TAG" "$DATE" "$BODY")
+
+          if [ -f "$DOCS_CHANGELOG" ]; then
+            INSERT_LINE=$(grep -n "^## \[" "$DOCS_CHANGELOG" | head -1 | cut -d: -f1)
+
+            if [ -n "$INSERT_LINE" ]; then
+              {
+                head -n $((INSERT_LINE - 1)) "$DOCS_CHANGELOG"
+                printf '\n%s\n\n' "$ENTRY"
+                tail -n +$INSERT_LINE "$DOCS_CHANGELOG"
+              } > "${DOCS_CHANGELOG}.tmp"
+            else
+              {
+                cat "$DOCS_CHANGELOG"
+                printf '\n%s\n' "$ENTRY"
+              } > "${DOCS_CHANGELOG}.tmp"
+            fi
+            mv "${DOCS_CHANGELOG}.tmp" "$DOCS_CHANGELOG"
+          else
+            printf -- '---\ntitle: "Changelog"\ndescription: "Release notes for Kilo Code"\n---\n\n# Changelog\n\nThis page is automatically updated when a new version of Kilo Code is released.\n\n%s\n' "$ENTRY" > "$DOCS_CHANGELOG"
+          fi
+
+      - name: Create PR
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+          GH_TOKEN: ${{ steps.committer.outputs.token }}
+        run: |
+          BRANCH="changelog/$TAG"
+          git checkout -b "$BRANCH"
+          git add CHANGELOG.md packages/kilo-docs/pages/community/changelog.md
+          git commit -m "docs: add $TAG release notes to changelog"
+          git push origin "$BRANCH"
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "docs: add $TAG release notes to changelog" \
+            --body "Automated PR to add release notes from [$TAG](https://github.com/${{ github.repository }}/releases/tag/$TAG) to the changelog.
+
+          Updates:
+          - \`CHANGELOG.md\` (root)
+          - \`packages/kilo-docs/pages/community/changelog.md\` (docs site)"

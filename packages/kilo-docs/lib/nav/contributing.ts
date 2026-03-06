@@ -82,4 +82,10 @@ export const ContributingNav: NavSection[] = [
       },
     ],
   },
+  {
+    title: "Resources",
+    links: [
+      { href: "/community/changelog", children: "Changelog" },
+    ],
+  },
 ]

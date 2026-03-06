@@ -14,6 +14,7 @@ const sectionNavItems: SectionNav = {
   automate: Nav.AutomateNav,
   "deploy-secure": Nav.DeploySecureNav,
   contributing: Nav.ContributingNav,
+  community: Nav.ContributingNav, // kilocode_change - community pages share the contributing nav
   "ai-providers": Nav.AiProvidersNav,
   gateway: Nav.GatewayNav,
 }
