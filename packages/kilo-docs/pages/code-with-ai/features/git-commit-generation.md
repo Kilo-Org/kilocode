@@ -85,13 +85,12 @@ You can define commit message instructions in a markdown file with a `## Commit 
 The generator searches for instructions in this order:
 
 1. **Project root files**: `AGENTS.md`, `CLAUDE.md`, or `CONTEXT.md`
-2. **Parent directories**: Walks up from your project looking for the same files
-3. **Fallback**: `.kilocode/commit-instructions.md` in your project root
+2. **Fallback**: `.kilocode/commit-instructions.md` in your project root
 
 The first file with a `## Commit Message` section wins.
 
 {% callout type="info" %}
-Place your file at the **project root** (same level as package.json). Parent directory search is useful for monorepos where a shared AGENTS.md lives above individual packages.
+Place your file at the **project root** (same level as package.json).
 {% /callout %}
 
 This approach is useful for:

@@ -3,7 +3,7 @@ import { Provider } from "@/provider/provider"
 import { LLM } from "@/session/llm"
 import { Filesystem } from "@/util/filesystem"
 import { Log } from "@/util/log"
-import { dirname, join, normalize } from "path"
+import { join } from "path"
 import { getGitContext } from "./git-context"
 import type { CommitMessageRequest, CommitMessageResponse, GitContext } from "./types"
 
@@ -31,17 +31,8 @@ function extractSection(content: string, heading: string): string | undefined {
   return section || undefined
 }
 
-async function getGitRoot(repoPath: string): Promise<string | undefined> {
-  const result = Bun.spawnSync(["git", "rev-parse", "--show-toplevel"], {
-    cwd: repoPath,
-    stdout: "pipe",
-    stderr: "pipe",
-  })
-  return result.stdout.toString().trimEnd() || undefined
-}
-
 async function loadInstructionsFromAgentsMd(repoPath: string): Promise<{ instructions?: string; found: boolean }> {
-  // Search for AGENTS.md relative to repoPath
+  // Only check at repository level — commit instructions are project-specific
   const FILES = ["AGENTS.md", "CLAUDE.md", "CONTEXT.md"]
 
   for (const file of FILES) {
@@ -55,27 +46,6 @@ async function loadInstructionsFromAgentsMd(repoPath: string): Promise<{ instruc
         log.info("loaded commit instructions from", { file: filepath })
         return { instructions: section, found: true }
       }
-    }
-  }
-
-  // Also check parent directories (walk up from repoPath), but stay within git root
-  const gitRoot = await getGitRoot(repoPath)
-  const normalizedRepoPath = normalize(repoPath)
-  const normalizedGitRoot = gitRoot ? normalize(gitRoot) : null
-  const searchRoot =
-    normalizedGitRoot && normalizedGitRoot.length < normalizedRepoPath.length
-      ? dirname(normalizedRepoPath)
-      : normalizedRepoPath
-
-  for await (const p of Filesystem.up({ targets: FILES, start: searchRoot })) {
-    // Stop at git root to avoid escaping to unrelated parent directories
-    if (normalizedGitRoot && !p.startsWith(normalizedGitRoot)) break
-
-    const content = await Filesystem.readText(p).catch(() => "")
-    const section = extractSection(content, SECTION_HEADING)
-    if (section) {
-      log.info("loaded commit instructions from parent", { file: p })
-      return { instructions: section, found: true }
     }
   }
 
