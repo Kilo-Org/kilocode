@@ -10,7 +10,7 @@ describe("getShellEnvironment", () => {
     const env = await getShellEnvironment()
     expect(env).toBeDefined()
     expect(typeof env.PATH).toBe("string")
-    expect(env.PATH.length).toBeGreaterThan(0)
+    expect(env.PATH!.length).toBeGreaterThan(0)
   })
 
   it("returns HOME", async () => {
@@ -30,6 +30,14 @@ describe("getShellEnvironment", () => {
     const second = await getShellEnvironment()
     expect(second.PATH).not.toBe("/mutated")
   })
+
+  it("handles multiline env values without corrupting PATH", async () => {
+    // PATH should never contain newlines — verify it parses correctly
+    // even if other env vars have multiline values (e.g. BASH_FUNC_*)
+    const env = await getShellEnvironment()
+    expect(env.PATH).toBeDefined()
+    expect(env.PATH).not.toContain("\n")
+  })
 })
 
 describe("execWithShellEnv", () => {
@@ -46,6 +54,13 @@ describe("execWithShellEnv", () => {
 
   it("throws on non-ENOENT errors", async () => {
     await expect(execWithShellEnv("ls", ["--nonexistent-flag-that-fails"])).rejects.toThrow()
+  })
+
+  it("concurrent calls don't reject prematurely", async () => {
+    // Both calls should succeed — neither should throw due to a race
+    const [a, b] = await Promise.all([execWithShellEnv("echo", ["first"]), execWithShellEnv("echo", ["second"])])
+    expect(a.stdout.trim()).toBe("first")
+    expect(b.stdout.trim()).toBe("second")
   })
 })
 

@@ -17,14 +17,45 @@ import { promisify } from "util"
 
 const run = promisify(execFile)
 
+// Environment variable keys match: letters, digits, underscores, starting with a non-digit.
+const ENV_KEY_RE = /^[A-Za-z_][A-Za-z0-9_]*=/
+
 let cached: Record<string, string> | null = null
 let cacheTime = 0
-let fallback = false
+let wasFallback = false
 const TTL = 60_000
 const FALLBACK_TTL = 10_000
 
-let fixAttempted = false
-let fixSucceeded = false
+/** In-flight fix promise so concurrent ENOENT callers wait on the same resolution. */
+let fixing: Promise<boolean> | null = null
+let fixed = false
+
+/**
+ * Parse `env` output, handling multiline variable values correctly.
+ *
+ * A new entry starts when a line matches `KEY=value` (KEY is a valid
+ * environment variable name). Lines that don't match are continuations
+ * of the previous value.
+ */
+function parseEnvOutput(stdout: string): Record<string, string> {
+  const env: Record<string, string> = {}
+  let key: string | null = null
+  let value = ""
+
+  for (const line of stdout.split("\n")) {
+    const match = ENV_KEY_RE.exec(line)
+    if (match) {
+      if (key) env[key] = value
+      const idx = match[0].length - 1 // position of '='
+      key = line.substring(0, idx)
+      value = line.substring(idx + 1)
+    } else if (key) {
+      value += "\n" + line
+    }
+  }
+  if (key) env[key] = value
+  return env
+}
 
 /**
  * Spawn the user's login shell to capture environment variables (primarily PATH).
@@ -33,7 +64,7 @@ let fixSucceeded = false
  */
 export async function getShellEnvironment(): Promise<Record<string, string>> {
   const now = Date.now()
-  const ttl = fallback ? FALLBACK_TTL : TTL
+  const ttl = wasFallback ? FALLBACK_TTL : TTL
   if (cached && now - cacheTime < ttl) return { ...cached }
 
   const shell = process.env.SHELL || (process.platform === "darwin" ? "/bin/zsh" : "/bin/bash")
@@ -44,17 +75,10 @@ export async function getShellEnvironment(): Promise<Record<string, string>> {
       env: { ...process.env, HOME: os.homedir() },
     })
 
-    const env: Record<string, string> = {}
-    for (const line of stdout.split("\n")) {
-      const idx = line.indexOf("=")
-      if (idx > 0) {
-        env[line.substring(0, idx)] = line.substring(idx + 1)
-      }
-    }
-
+    const env = parseEnvOutput(stdout)
     cached = env
     cacheTime = now
-    fallback = false
+    wasFallback = false
     return { ...env }
   } catch (error) {
     console.warn(`[shell-env] Failed to get shell environment: ${error}. Falling back to process.env`)
@@ -64,9 +88,26 @@ export async function getShellEnvironment(): Promise<Record<string, string>> {
     }
     cached = env
     cacheTime = now
-    fallback = true
+    wasFallback = true
     return { ...env }
   }
+}
+
+/**
+ * Attempt to resolve the shell environment and patch process.env.PATH.
+ * Returns true if PATH was actually changed, false otherwise.
+ */
+async function resolvePath(): Promise<boolean> {
+  const original = process.env.PATH
+  const env = await getShellEnvironment()
+
+  if (env.PATH && env.PATH !== original) {
+    process.env.PATH = env.PATH
+    console.log("[shell-env] Patched process.env.PATH for GUI app")
+    return true
+  }
+  // Shell env was a fallback or PATH didn't change — resolution didn't help
+  return false
 }
 
 /**
@@ -76,6 +117,9 @@ export async function getShellEnvironment(): Promise<Record<string, string>> {
  * on the inherited PATH. When the first exec fails with ENOENT (command not
  * found), this function resolves the user's login shell environment, patches
  * process.env.PATH permanently, and retries the command.
+ *
+ * Concurrent callers that hit ENOENT share a single resolution promise so
+ * none are rejected prematurely.
  */
 export async function execWithShellEnv(
   cmd: string,
@@ -87,8 +131,6 @@ export async function execWithShellEnv(
   } catch (error) {
     if (
       process.platform !== "darwin" ||
-      fixSucceeded ||
-      fixAttempted ||
       !(error instanceof Error) ||
       !("code" in error) ||
       (error as NodeJS.ErrnoException).code !== "ENOENT"
@@ -96,26 +138,28 @@ export async function execWithShellEnv(
       throw error
     }
 
-    fixAttempted = true
+    // Already resolved and PATH was actually changed — no point retrying resolution.
+    // Just retry with the (already-patched) process.env.
+    if (fixed) {
+      return await run(cmd, args, { ...options, encoding: "utf8" })
+    }
+
+    // If another caller is already resolving, wait for it then retry.
+    if (fixing) {
+      await fixing
+      return await run(cmd, args, { ...options, encoding: "utf8" })
+    }
+
     console.log(`[shell-env] "${cmd}" not found, resolving shell environment`)
 
+    fixing = resolvePath()
     try {
-      const env = await getShellEnvironment()
-
-      if (env.PATH) {
-        process.env.PATH = env.PATH
-        fixSucceeded = true
-        console.log("[shell-env] Patched process.env.PATH for GUI app")
-      }
-
-      const retry = env.PATH ? { ...env, ...options?.env, PATH: env.PATH } : { ...env, ...options?.env }
-
-      return await run(cmd, args, { ...options, encoding: "utf8", env: retry })
-    } catch (retryError) {
-      fixAttempted = false
-      console.error("[shell-env] Retry failed:", retryError)
-      throw retryError
+      fixed = await fixing
+    } finally {
+      fixing = null
     }
+
+    return await run(cmd, args, { ...options, encoding: "utf8" })
   }
 }
 
@@ -123,7 +167,7 @@ export async function execWithShellEnv(
 export function clearShellEnvCache(): void {
   cached = null
   cacheTime = 0
-  fallback = false
-  fixAttempted = false
-  fixSucceeded = false
+  wasFallback = false
+  fixing = null
+  fixed = false
 }
