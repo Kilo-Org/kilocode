@@ -224,7 +224,7 @@ export namespace ModelsDev {
             reasoning: false,
             temperature: true,
             tool_call: true,
-            limit: { context: 1000000, output: 1000000 },
+            limit: { context: 196608, output: 196608 },
             modalities: { input: ["text"], output: ["text"] },
             options: {},
           },
