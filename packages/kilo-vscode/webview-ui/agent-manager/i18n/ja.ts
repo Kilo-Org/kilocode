@@ -7,6 +7,7 @@ export const dict = {
   "agentManager.worktree.new": "新しいWorktree",
   "agentManager.worktree.setupScript": "Worktreeセットアップスクリプト",
   "agentManager.worktree.delete": "Worktreeを削除",
+  "agentManager.worktree.confirmDelete": "Delete?",
   "agentManager.worktree.stale": "無効",
   "agentManager.worktree.staleTooltip": "ディスク上に存在しないか、git worktree で追跡されていません",
   "agentManager.worktree.removeStale": "無効な Worktree を削除",
@@ -52,13 +53,6 @@ export const dict = {
   "agentManager.shortcuts.focusPanel": "パネルにフォーカス",
   "agentManager.shortcuts.openAgentManager": "Agent Managerを開く",
   "agentManager.shortcuts.showShortcuts": "キーボードショートカットを表示",
-  "agentManager.dialog.deleteWorktree.title": "Worktreeを削除",
-  "agentManager.dialog.deleteWorktree.messagePre": "Worktreeを削除 ",
-  "agentManager.dialog.deleteWorktree.messagePost":
-    "？ ディスクからWorktreeを削除し、すべてのセッションの関連付けを解除します。",
-  "agentManager.dialog.deleteWorktree.cancel": "キャンセル",
-  "agentManager.dialog.deleteWorktree.confirm": "削除",
-
   "agentManager.dialog.removeStaleWorktree.title": "無効な Worktree を削除",
   "agentManager.dialog.removeStaleWorktree.messagePre": "無効な Worktree を削除 ",
   "agentManager.dialog.removeStaleWorktree.messagePost":
@@ -83,6 +77,7 @@ export const dict = {
   "agentManager.dialog.versionHint": "{{count}}個のWorktreeが並行して実行されます",
   "agentManager.dialog.compareModels": "モデルを比較",
   "agentManager.dialog.compareModels.searchModels": "モデルを検索...",
+  "agentManager.dialog.compareModels.selectModels": "モデルを選択...",
   "agentManager.dialog.creating": "作成中...",
   "agentManager.dialog.createWorkspace": "ワークツリーを作成",
   "agentManager.dialog.removeImage": "画像を削除",
