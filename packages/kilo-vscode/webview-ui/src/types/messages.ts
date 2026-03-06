@@ -1331,6 +1331,7 @@ export interface AgentManagerOpenFileRequest {
   sessionId: string
   filePath: string
   line?: number
+  column?: number
 }
 
 /**

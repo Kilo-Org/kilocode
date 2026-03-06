@@ -43,6 +43,7 @@ import { Checkbox } from "./checkbox"
 import { DiffChanges } from "./diff-changes"
 import { Markdown } from "./markdown"
 import { ImagePreview } from "./image-preview"
+import { extractFilePathFromHref } from "../file-path" // kilocode_change
 import { getDirectory as _getDirectory, getFilename } from "@opencode-ai/util/path"
 import { checksum } from "@opencode-ai/util/encode"
 import { Tooltip } from "./tooltip"
@@ -976,53 +977,51 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
     <Show when={!hideQuestion()}>
       <Show when={dismissed()}>
         <div style="width: 100%; display: flex; justify-content: flex-end; padding: 4px 8px 4px 0;">
-          <span class="text-13-regular text-text-weak cursor-default">
-            {i18n.t("ui.tool.questions")} dismissed
-          </span>
+          <span class="text-13-regular text-text-weak cursor-default">{i18n.t("ui.tool.questions")} dismissed</span>
         </div>
       </Show>
       <Show when={!dismissed()}>
-      <div data-component="tool-part-wrapper">
-        <Switch>
-          <Match when={part.state.status === "error" && part.state.error}>
-            {(error) => {
-              const cleaned = error().replace("Error: ", "")
-              const [title, ...rest] = cleaned.split(": ")
-              return (
-                <Card variant="error">
-                  <div data-component="tool-error">
-                    <Icon name="circle-ban-sign" size="small" />
-                    <Switch>
-                      <Match when={title && title.length < 30}>
-                        <div data-slot="message-part-tool-error-content">
-                          <div data-slot="message-part-tool-error-title">{title}</div>
-                          <span data-slot="message-part-tool-error-message">{rest.join(": ")}</span>
-                        </div>
-                      </Match>
-                      <Match when={true}>
-                        <span data-slot="message-part-tool-error-message">{cleaned}</span>
-                      </Match>
-                    </Switch>
-                  </div>
-                </Card>
-              )
-            }}
-          </Match>
-          <Match when={true}>
-            <Dynamic
-              component={render}
-              input={input()}
-              tool={part.tool}
-              metadata={partMetadata()}
-              // @ts-expect-error
-              output={part.state.output}
-              status={part.state.status}
-              hideDetails={props.hideDetails}
-              defaultOpen={props.defaultOpen}
-            />
-          </Match>
-        </Switch>
-      </div>
+        <div data-component="tool-part-wrapper">
+          <Switch>
+            <Match when={part.state.status === "error" && part.state.error}>
+              {(error) => {
+                const cleaned = error().replace("Error: ", "")
+                const [title, ...rest] = cleaned.split(": ")
+                return (
+                  <Card variant="error">
+                    <div data-component="tool-error">
+                      <Icon name="circle-ban-sign" size="small" />
+                      <Switch>
+                        <Match when={title && title.length < 30}>
+                          <div data-slot="message-part-tool-error-content">
+                            <div data-slot="message-part-tool-error-title">{title}</div>
+                            <span data-slot="message-part-tool-error-message">{rest.join(": ")}</span>
+                          </div>
+                        </Match>
+                        <Match when={true}>
+                          <span data-slot="message-part-tool-error-message">{cleaned}</span>
+                        </Match>
+                      </Switch>
+                    </div>
+                  </Card>
+                )
+              }}
+            </Match>
+            <Match when={true}>
+              <Dynamic
+                component={render}
+                input={input()}
+                tool={part.tool}
+                metadata={partMetadata()}
+                // @ts-expect-error
+                output={part.state.output}
+                status={part.state.status}
+                hideDetails={props.hideDetails}
+                defaultOpen={props.defaultOpen}
+              />
+            </Match>
+          </Switch>
+        </div>
       </Show>
     </Show>
   )
@@ -1103,15 +1102,29 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     if (!data.openFile) return
     const target = e.target
     if (!(target instanceof HTMLElement)) return
-    const link = target.closest(".file-link[data-file-path]")
-    if (!link) return
-    const path = link.getAttribute("data-file-path")
-    if (!path) return
-    const lineAttr = link.getAttribute("data-file-line")
-    const colAttr = link.getAttribute("data-file-col")
-    const line = lineAttr ? parseInt(lineAttr, 10) : undefined
-    const column = colAttr ? parseInt(colAttr, 10) : undefined
-    data.openFile(path, line, column)
+    // Handle .file-link code spans (e.g. `src/foo.ts:42`)
+    const fileLink = target.closest(".file-link[data-file-path]")
+    if (fileLink) {
+      const path = fileLink.getAttribute("data-file-path")
+      if (!path) return
+      const lineAttr = fileLink.getAttribute("data-file-line")
+      const colAttr = fileLink.getAttribute("data-file-col")
+      const line = lineAttr ? parseInt(lineAttr, 10) : undefined
+      const column = colAttr ? parseInt(colAttr, 10) : undefined
+      data.openFile(path, line, column)
+      return
+    }
+    // Handle markdown links whose href looks like a relative file path
+    // (e.g. [AGENTS.md](AGENTS.md) or [src/foo.ts](src/foo.ts))
+    const anchor = target.closest("a.external-link") as HTMLAnchorElement | null
+    if (anchor) {
+      const href = anchor.getAttribute("href")
+      if (!href) return
+      const filePath = extractFilePathFromHref(href)
+      if (!filePath) return
+      e.preventDefault()
+      data.openFile(filePath)
+    }
   }
   // kilocode_change end
 
