@@ -1,7 +1,13 @@
 import { z } from "zod"
 import { getKiloUrlFromToken } from "../auth/token.js"
 import { DEFAULT_HEADERS } from "../headers.js"
-import { KILO_API_BASE, KILO_OPENROUTER_BASE, MODELS_FETCH_TIMEOUT_MS } from "./constants.js"
+import {
+  DEFAULT_FREE_MODEL,
+  DEFAULT_MODEL,
+  KILO_API_BASE,
+  KILO_OPENROUTER_BASE,
+  MODELS_FETCH_TIMEOUT_MS,
+} from "./constants.js"
 
 /**
  * OpenRouter model schema
@@ -119,10 +125,50 @@ export async function fetchKiloModels(options?: {
       models[model.id] = transformedModel
     }
 
+    ensureAutoRoutingModels(models)
+
     return models
   } catch (error) {
     console.error("Error fetching Kilo models:", error)
     return {}
+  }
+}
+
+function ensureAutoRoutingModels(models: Record<string, any>) {
+  const today = new Date().toISOString().split("T")[0]
+
+  if (!models[DEFAULT_MODEL]) {
+    models[DEFAULT_MODEL] = {
+      id: DEFAULT_MODEL,
+      name: "Kilo: Auto",
+      family: "kilo",
+      release_date: today,
+      attachment: true,
+      reasoning: true,
+      temperature: true,
+      tool_call: true,
+      cost: { input: 0.000005, output: 0.000025 },
+      limit: { context: 1000000, output: 128000 },
+      modalities: { input: ["text", "image"], output: ["text"] },
+      options: { description: "Automatically routes to the best model for the task" },
+    }
+  }
+
+  if (!models[DEFAULT_FREE_MODEL]) {
+    models[DEFAULT_FREE_MODEL] = {
+      id: DEFAULT_FREE_MODEL,
+      name: "Kilo: Auto Free",
+      family: "kilo",
+      release_date: today,
+      attachment: false,
+      reasoning: true,
+      temperature: true,
+      tool_call: true,
+      cost: { input: 0, output: 0 },
+      limit: { context: 204800, output: 131072 },
+      modalities: { input: ["text"], output: ["text"] },
+      options: { description: "Automatically routes to the best free model" },
+    }
   }
 }
 
