@@ -7,6 +7,7 @@ export const dict = {
   "agentManager.worktree.new": "Worktree جديد",
   "agentManager.worktree.setupScript": "سكربت إعداد Worktree",
   "agentManager.worktree.delete": "حذف Worktree",
+  "agentManager.worktree.confirmDelete": "Delete?",
   "agentManager.worktree.stale": "قديم",
   "agentManager.worktree.staleTooltip": "مفقود على القرص أو لم يعد git worktree يتتبعه",
   "agentManager.worktree.removeStale": "إزالة Worktree القديم",
@@ -50,12 +51,6 @@ export const dict = {
   "agentManager.shortcuts.focusPanel": "تركيز اللوحة",
   "agentManager.shortcuts.openAgentManager": "فتح Agent Manager",
   "agentManager.shortcuts.showShortcuts": "إظهار اختصارات لوحة المفاتيح",
-  "agentManager.dialog.deleteWorktree.title": "حذف Worktree",
-  "agentManager.dialog.deleteWorktree.messagePre": "حذف Worktree ",
-  "agentManager.dialog.deleteWorktree.messagePost": "؟ سيؤدي هذا إلى إزالة Worktree من القرص وفصل جميع الجلسات.",
-  "agentManager.dialog.deleteWorktree.cancel": "إلغاء",
-  "agentManager.dialog.deleteWorktree.confirm": "حذف",
-
   "agentManager.dialog.removeStaleWorktree.title": "إزالة Worktree القديم",
   "agentManager.dialog.removeStaleWorktree.messagePre": "إزالة Worktree القديم ",
   "agentManager.dialog.removeStaleWorktree.messagePost":
@@ -80,6 +75,7 @@ export const dict = {
   "agentManager.dialog.versionHint": "{{count}} Worktrees ستعمل بالتوازي",
   "agentManager.dialog.compareModels": "مقارنة النماذج",
   "agentManager.dialog.compareModels.searchModels": "البحث عن النماذج...",
+  "agentManager.dialog.compareModels.selectModels": "اختر النماذج...",
   "agentManager.dialog.creating": "جارٍ الإنشاء...",
   "agentManager.dialog.createWorkspace": "إنشاء شجرة العمل",
   "agentManager.dialog.removeImage": "إزالة الصورة",

@@ -7,6 +7,7 @@ export const dict = {
   "agentManager.worktree.new": "Nytt Worktree",
   "agentManager.worktree.setupScript": "Worktree-oppsettskript",
   "agentManager.worktree.delete": "Slett Worktree",
+  "agentManager.worktree.confirmDelete": "Delete?",
   "agentManager.worktree.stale": "Utdatert",
   "agentManager.worktree.staleTooltip": "Mangler på disken eller spores ikke lenger av git worktree",
   "agentManager.worktree.removeStale": "Fjern utdatert Worktree",
@@ -50,12 +51,6 @@ export const dict = {
   "agentManager.shortcuts.focusPanel": "Fokuser panel",
   "agentManager.shortcuts.openAgentManager": "Åpne Agent Manager",
   "agentManager.shortcuts.showShortcuts": "Vis tastatursnarveier",
-  "agentManager.dialog.deleteWorktree.title": "Slett Worktree",
-  "agentManager.dialog.deleteWorktree.messagePre": "Slett Worktree ",
-  "agentManager.dialog.deleteWorktree.messagePost": "? Dette fjerner Worktree fra disken og kobler fra alle økter.",
-  "agentManager.dialog.deleteWorktree.cancel": "Avbryt",
-  "agentManager.dialog.deleteWorktree.confirm": "Slett",
-
   "agentManager.dialog.removeStaleWorktree.title": "Fjern utdatert Worktree",
   "agentManager.dialog.removeStaleWorktree.messagePre": "Fjern utdatert Worktree ",
   "agentManager.dialog.removeStaleWorktree.messagePost":
@@ -80,6 +75,7 @@ export const dict = {
   "agentManager.dialog.versionHint": "{{count}} worktrees vil kjøre parallelt",
   "agentManager.dialog.compareModels": "Sammenlign modeller",
   "agentManager.dialog.compareModels.searchModels": "Søk modeller...",
+  "agentManager.dialog.compareModels.selectModels": "Velg modeller...",
   "agentManager.dialog.creating": "Oppretter...",
   "agentManager.dialog.createWorkspace": "Opprett worktree",
   "agentManager.dialog.removeImage": "Fjern bilde",

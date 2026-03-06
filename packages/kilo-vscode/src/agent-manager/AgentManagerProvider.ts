@@ -1553,8 +1553,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     const state = this.getStateManager()
     if (!state) return
     const session = state.getSession(sessionId)
-    if (!session) return
-    const base = session.worktreeId ? state.getWorktree(session.worktreeId)?.path : this.getWorkspaceRoot()
+    const base = session?.worktreeId ? state.getWorktree(session.worktreeId)?.path : this.getWorkspaceRoot()
     if (!base) return
     // Resolve real paths to prevent symlink traversal and normalize for
     // consistent comparison on both Unix and Windows.
