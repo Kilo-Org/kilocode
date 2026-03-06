@@ -125,16 +125,6 @@
             }
           }
         },
-        "parameters": [
-          {
-            "in": "query",
-            "name": "reload",
-            "schema": {
-              "type": "string",
-              "enum": ["true", "false"]
-            }
-          }
-        ],
         "x-codeSamples": [
           {
             "lang": "js",

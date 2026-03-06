@@ -1499,8 +1499,7 @@ export namespace Config {
     })
   }
 
-  // kilocode_change - add optional reload param to skip instance disposal
-  export async function updateGlobal(config: Info, opts?: { reload?: boolean }) {
+  export async function updateGlobal(config: Info) {
     const filepath = globalConfigFile()
     const before = await Filesystem.readText(filepath).catch((err: any) => {
       if (err.code === "ENOENT") return "{}"
@@ -1521,23 +1520,19 @@ export namespace Config {
       return merged
     })()
 
-    // kilocode_change start - skip disposal when reload is false
-    if (opts?.reload !== false) {
-      // kilocode_change end
-      global.reset()
+    global.reset()
 
-      void Instance.disposeAll()
-        .catch(() => undefined)
-        .finally(() => {
-          GlobalBus.emit("event", {
-            directory: "global",
-            payload: {
-              type: Event.Disposed.type,
-              properties: {},
-            },
-          })
+    void Instance.disposeAll()
+      .catch(() => undefined)
+      .finally(() => {
+        GlobalBus.emit("event", {
+          directory: "global",
+          payload: {
+            type: Event.Disposed.type,
+            properties: {},
+          },
         })
-    } // kilocode_change
+      })
 
     return next
   }

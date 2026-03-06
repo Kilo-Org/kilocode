@@ -1965,9 +1965,7 @@ export type GlobalConfigGetResponse = GlobalConfigGetResponses[keyof GlobalConfi
 export type GlobalConfigUpdateData = {
   body?: Config
   path?: never
-  query?: {
-    reload?: "true" | "false"
-  }
+  query?: never
   url: "/global/config"
 }
 

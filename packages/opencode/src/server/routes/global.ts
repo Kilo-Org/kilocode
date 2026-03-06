@@ -147,15 +147,11 @@ export const GlobalRoutes = lazy(() =>
         },
       }),
       validator("json", Config.Info),
-      // kilocode_change start - add reload query param to skip instance disposal
-      validator("query", z.object({ reload: z.enum(["true", "false"]).optional() })),
       async (c) => {
         const config = c.req.valid("json")
-        const reload = c.req.valid("query").reload !== "false"
-        const next = await Config.updateGlobal(config, { reload })
+        const next = await Config.updateGlobal(config)
         return c.json(next)
       },
-      // kilocode_change end
     )
     // kilocode_change start - write config file without restarting instances
     .patch(
