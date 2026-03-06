@@ -104,7 +104,7 @@ const ProvidersTab: Component = () => {
       <Card>
         <div
           style={{
-            "font-size": "11px",
+            "font-size": "12px",
             color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
             "padding-bottom": "8px",
             "border-bottom": "1px solid var(--border-weak-base)",
@@ -129,13 +129,12 @@ const ProvidersTab: Component = () => {
               label={(o) => o.label}
               onSelect={(o) => setNewDisabled(o)}
               variant="secondary"
-              size="small"
               triggerVariant="settings"
               placeholder="Select provider…"
             />
           </div>
           <Button
-            size="small"
+            variant="secondary"
             onClick={() => {
               if (newDisabled()) {
                 addToList("disabled_providers", newDisabled()!.value)
@@ -159,12 +158,7 @@ const ProvidersTab: Component = () => {
               }}
             >
               <span style={{ "font-size": "12px" }}>{id}</span>
-              <IconButton
-                size="small"
-                variant="ghost"
-                icon="close"
-                onClick={() => removeFromList("disabled_providers", index())}
-              />
+              <IconButton variant="ghost" icon="close" onClick={() => removeFromList("disabled_providers", index())} />
             </div>
           )}
         </For>
@@ -175,7 +169,7 @@ const ProvidersTab: Component = () => {
       <Card>
         <div
           style={{
-            "font-size": "11px",
+            "font-size": "12px",
             color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
             "padding-bottom": "8px",
             "border-bottom": "1px solid var(--border-weak-base)",
@@ -200,13 +194,12 @@ const ProvidersTab: Component = () => {
               label={(o) => o.label}
               onSelect={(o) => setNewEnabled(o)}
               variant="secondary"
-              size="small"
               triggerVariant="settings"
               placeholder="Select provider…"
             />
           </div>
           <Button
-            size="small"
+            variant="secondary"
             onClick={() => {
               if (newEnabled()) {
                 addToList("enabled_providers", newEnabled()!.value)
@@ -229,12 +222,7 @@ const ProvidersTab: Component = () => {
               }}
             >
               <span style={{ "font-size": "12px" }}>{id}</span>
-              <IconButton
-                size="small"
-                variant="ghost"
-                icon="close"
-                onClick={() => removeFromList("enabled_providers", index())}
-              />
+              <IconButton variant="ghost" icon="close" onClick={() => removeFromList("enabled_providers", index())} />
             </div>
           )}
         </For>

@@ -1,55 +1,7 @@
-import { describe, it, expect, mock } from "bun:test"
+import { describe, it, expect } from "bun:test"
+import { loadSessions, flushPendingSessionRefresh, type SessionRefreshContext } from "../../src/kilo-provider-utils"
 
-const kind = (value: string) => ({
-  value,
-  append: (part: string) => kind(`${value}.${part}`),
-})
-
-const mockVscode = {
-  Uri: {
-    joinPath: (...args: unknown[]) => ({ fsPath: args.join("/") }),
-    file: (p: string) => ({ fsPath: p }),
-  },
-  Disposable: class {
-    constructor(public callOnDispose: () => void) {}
-    dispose() {
-      this.callOnDispose()
-    }
-  },
-  extensions: {
-    getExtension: () => ({
-      packageJSON: { version: "test" },
-    }),
-  },
-  env: {
-    appName: "VS Code",
-    language: "en",
-    machineId: "machine",
-    isTelemetryEnabled: false,
-  },
-  version: "1.0.0",
-  workspace: {
-    workspaceFolders: [{ uri: { fsPath: "/repo" } }],
-    getConfiguration: () => ({
-      get: <T>(_key: string, value?: T) => value,
-    }),
-  },
-  CodeAction: class {
-    command?: { command: string; title: string }
-    isPreferred?: boolean
-    constructor(
-      public title: string,
-      public kind: { value: string },
-    ) {}
-  },
-  CodeActionKind: {
-    QuickFix: kind("quickfix"),
-    RefactorRewrite: kind("refactor.rewrite"),
-  },
-}
-
-mock.module("vscode", () => mockVscode)
-
+// vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
 const { KiloProvider } = await import("../../src/KiloProvider")
 
 type State = "connecting" | "connected" | "disconnected" | "error"
@@ -60,6 +12,29 @@ type ProviderInternals = {
   webview: { postMessage: (message: unknown) => Promise<unknown> } | null
   initializeConnection: () => Promise<void>
   handleLoadSessions: () => Promise<void>
+}
+
+function createContext(overrides?: Partial<SessionRefreshContext>): SessionRefreshContext & { sent: unknown[] } {
+  const sent: unknown[] = []
+  return {
+    pendingSessionRefresh: false,
+    connectionState: "connecting",
+    listSessions: null,
+    sessionDirectories: new Map(),
+    workspaceDirectory: "/repo",
+    postMessage: (msg: unknown) => sent.push(msg),
+    sent,
+    ...overrides,
+  }
+}
+
+function createListSessions() {
+  const calls: string[] = []
+  const fn = async (dir: string) => {
+    calls.push(dir)
+    return []
+  }
+  return { calls, fn }
 }
 
 function createClient() {
@@ -112,7 +87,24 @@ function createConnection(client: ReturnType<typeof createClient>) {
 }
 
 describe("KiloProvider pending session refresh", () => {
-  it.skip("flushes deferred refresh in initializeConnection without relying on connected event callback", async () => {
+  it("flushes deferred refresh via flushPendingSessionRefresh", async () => {
+    const { calls, fn } = createListSessions()
+    const ctx = createContext()
+    ctx.sessionDirectories.set("ses_1", "/worktree")
+
+    await loadSessions(ctx)
+    expect(ctx.pendingSessionRefresh).toBe(true)
+
+    ctx.listSessions = fn
+    ctx.connectionState = "connected"
+
+    await flushPendingSessionRefresh(ctx)
+
+    expect(calls).toEqual(["/repo", "/worktree"])
+    expect(ctx.pendingSessionRefresh).toBe(false)
+  })
+
+  it("flushes deferred refresh in initializeConnection without relying on connected event callback", async () => {
     const client = createClient()
     const connection = createConnection(client)
     const provider = new KiloProvider({} as never, connection as never)
@@ -129,7 +121,7 @@ describe("KiloProvider pending session refresh", () => {
     expect(internal.pendingSessionRefresh).toBe(false)
   })
 
-  it.skip("does not post not-connected errors while still connecting", async () => {
+  it("does not post not-connected errors while still connecting", async () => {
     const client = createClient()
     const connection = createConnection(client)
     const provider = new KiloProvider({} as never, connection as never)

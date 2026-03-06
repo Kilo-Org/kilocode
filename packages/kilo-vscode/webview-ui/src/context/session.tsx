@@ -138,7 +138,7 @@ interface SessionContextValue {
   selectCloudSession: (cloudSessionId: string) => void
 }
 
-const SessionContext = createContext<SessionContextValue>()
+export const SessionContext = createContext<SessionContextValue>()
 
 export const SessionProvider: ParentComponent = (props) => {
   const vscode = useVSCode()

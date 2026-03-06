@@ -102,13 +102,14 @@ const AutoApproveTab: Component = () => {
                   style={{
                     "font-family": "var(--vscode-editor-font-family, monospace)",
                     "font-size": "12px",
+                    "text-transform": "capitalize",
                   }}
                 >
                   {tool}
                 </div>
                 <div
                   style={{
-                    "font-size": "11px",
+                    "font-size": "12px",
                     color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
                     "margin-top": "2px",
                   }}

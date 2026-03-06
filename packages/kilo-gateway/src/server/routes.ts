@@ -19,6 +19,7 @@ type Validator = any
 type Resolver = any
 type Errors = any
 type Auth = any
+type ModelCache = { clear: (providerID: string) => void }
 type Z = any
 
 interface KiloRoutesDeps extends ImportDeps {
@@ -28,6 +29,7 @@ interface KiloRoutesDeps extends ImportDeps {
   resolver: Resolver
   errors: Errors
   Auth: Auth
+  ModelCache: ModelCache
   z: Z
 }
 
@@ -72,6 +74,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
     Bus,
     SessionCreatedEvent,
     Identifier,
+    ModelCache,
   } = deps
 
   const Organization = z.object({
@@ -199,6 +202,8 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
           expires: auth.expires,
           ...(organizationId && { accountId: organizationId }),
         })
+
+        ModelCache.clear("kilo")
 
         return c.json(true)
       },

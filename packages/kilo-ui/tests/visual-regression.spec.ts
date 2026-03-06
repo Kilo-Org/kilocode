@@ -1,4 +1,14 @@
 import { test, expect, type Page } from "@playwright/test"
+import { platform } from "node:os"
+
+const IS_DARWIN = platform() === "darwin"
+
+// Screenshot baselines are captured on Linux CI — font rendering and anti-aliasing
+// differ on macOS, which causes false-positive diffs.  Skip the entire suite there.
+if (IS_DARWIN) {
+  console.warn("Visual regression tests must be run on CI, skipping on local macOS.")
+  test.skip()
+}
 
 type Story = {
   id: string
@@ -15,9 +25,7 @@ const STORYBOOK_URL = "http://localhost:6006"
 
 // Fetched once per worker process — cheap HTTP call to the already-running Storybook
 async function fetchStories(): Promise<Story[]> {
-  const res = await fetch(`${STORYBOOK_URL}/index.json`).catch(() =>
-    fetch(`${STORYBOOK_URL}/stories.json`),
-  )
+  const res = await fetch(`${STORYBOOK_URL}/index.json`).catch(() => fetch(`${STORYBOOK_URL}/stories.json`))
   if (!res.ok) throw new Error(`Storybook index fetch failed: ${res.status} ${res.statusText}`)
   const data = (await res.json()) as StoriesIndex
   const map = data.entries ?? data.stories ?? {}
@@ -53,14 +61,14 @@ const SKIP = new Set([
 
 // Generate one test() per story so Playwright's scheduler can distribute
 // them freely across workers — no manual sharding needed.
-const stories = (await fetchStories()).filter((s) => !SKIP.has(s.id))
+// Skip fetching stories on macOS since test.skip() above already marks the file skipped.
+const stories = IS_DARWIN ? [] : (await fetchStories()).filter((s) => !SKIP.has(s.id))
 
 for (const story of stories) {
   test(`${story.title} / ${story.name}`, async ({ page }) => {
-    await page.goto(
-      `/iframe.html?id=${story.id}&viewMode=story&globals=colorScheme:dark;theme:kilo`,
-      { waitUntil: "load" },
-    )
+    await page.goto(`/iframe.html?id=${story.id}&viewMode=story&globals=colorScheme:dark;theme:kilo`, {
+      waitUntil: "load",
+    })
     await disableAnimations(page)
     // Wait for Kobalte/SolidJS to finish hydrating interactive components
     await page.waitForSelector("#storybook-root *", { state: "attached" })
