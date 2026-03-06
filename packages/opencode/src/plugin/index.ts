@@ -11,6 +11,7 @@ import { CodexAuthPlugin } from "./codex"
 import { Session } from "../session"
 import { NamedError } from "@opencode-ai/util/error"
 import { CopilotAuthPlugin } from "./copilot"
+import { OcaAuthPlugin } from "./oca" // kilocode_change
 import { gitlabAuthPlugin as GitlabAuthPlugin } from "@gitlab/opencode-gitlab-auth"
 
 import { KiloAuthPlugin } from "@kilocode/kilo-gateway" // kilocode_change
@@ -26,6 +27,7 @@ export namespace Plugin {
     KiloAuthPlugin,
     CodexAuthPlugin,
     CopilotAuthPlugin,
+    OcaAuthPlugin, // kilocode_change
     GitlabAuthPlugin as unknown as PluginInstance,
   ] // kilocode_change end
 

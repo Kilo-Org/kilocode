@@ -167,6 +167,29 @@ export namespace ModelsDev {
       }
     }
 
+    // kilocode_change start - Inject OCA provider with dynamic model fetching
+    if (!providers["oca"]) {
+      const ocaAuth = await Auth.get("oca")
+      const ocaBaseUrl = process.env.OCA_API_BASE ?? "https://code-internal.aiservice.us-chicago-1.oci.oraclecloud.com"
+      const ocaFetchOptions = {
+        ...(ocaAuth?.type === "oauth" ? { accessToken: ocaAuth.access } : {}),
+        baseUrl: ocaBaseUrl,
+      }
+      const ocaModels = ocaAuth ? await ModelCache.fetch("oca", ocaFetchOptions).catch(() => ({})) : {}
+      providers["oca"] = {
+        id: "oca",
+        name: "Oracle Code Assist",
+        env: ["OCA_ACCESS_TOKEN"],
+        api: `${ocaBaseUrl}/v1`,
+        npm: "@ai-sdk/openai",
+        models: ocaModels,
+      }
+      if (ocaAuth && Object.keys(ocaModels).length === 0) {
+        ModelCache.refresh("oca", ocaFetchOptions).catch(() => {})
+      }
+    }
+    // kilocode_change end
+
     return providers
     // kilocode_change end
   }
