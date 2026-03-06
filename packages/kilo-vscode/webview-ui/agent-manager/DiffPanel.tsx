@@ -364,10 +364,14 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
         </div>
       </Show>
 
-      <Show when={!props.loading && props.diffs.length === 0}>
+      <Show when={!props.loading && props.diffs.length === 0 && !(props.generated && props.generated.files > 0)}>
         <div class="am-diff-empty">
           <span>{t("session.review.noChanges")}</span>
         </div>
+      </Show>
+
+      <Show when={!props.loading && props.diffs.length === 0 && props.generated && props.generated.files > 0}>
+        <GeneratedSummaryFooter generated={props.generated!} />
       </Show>
 
       <Show when={props.diffs.length > 0}>

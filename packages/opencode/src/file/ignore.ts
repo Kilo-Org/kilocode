@@ -114,7 +114,14 @@ export namespace FileIgnore {
       if (has) patterns.push(pattern)
     }
     if (patterns.length === 0) return () => false
-    return (filepath: string) => patterns.some((p) => Glob.match(p, filepath))
+    return (filepath: string) => {
+      const basename = filepath.split(/[/\\]/).pop() ?? filepath
+      return patterns.some((p) => {
+        // Git attributes: slashless patterns match any basename in the tree
+        if (!p.includes("/")) return Glob.match(p, basename)
+        return Glob.match(p, filepath)
+      })
+    }
   }
   // kilocode_change end
 }

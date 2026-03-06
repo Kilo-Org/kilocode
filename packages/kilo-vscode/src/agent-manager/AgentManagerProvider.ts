@@ -1785,9 +1785,10 @@ export class AgentManagerProvider implements vscode.Disposable {
       )
       const response = parseDiffResponse(raw)
 
-      const hash = response.diffs
+      const fileHash = response.diffs
         .map((d: FileDiff) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`)
         .join("|")
+      const hash = `${fileHash}|gen:${response.generated.files}:${response.generated.additions}:${response.generated.deletions}`
       if (hash === this.lastDiffHash && this.diffSessionId === sessionId) return
       this.lastDiffHash = hash
       this.diffSessionId = sessionId

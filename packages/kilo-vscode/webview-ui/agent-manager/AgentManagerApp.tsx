@@ -1241,11 +1241,9 @@ const AgentManagerContent: Component = () => {
           }
           return { ...prev, [ev.sessionId]: ev.diffs }
         })
-        // Store generated file summary (defaults to empty for backward compat)
+        // Store generated file summary — always update so it clears when files disappear
         const gen = ev.generated ?? { files: 0, additions: 0, deletions: 0, entries: [] }
-        if (gen.files > 0) {
-          setDiffGenerated((prev) => ({ ...prev, [ev.sessionId]: gen }))
-        }
+        setDiffGenerated((prev) => ({ ...prev, [ev.sessionId]: gen }))
       }
 
       if (msg.type === "agentManager.worktreeDiffLoading") {
