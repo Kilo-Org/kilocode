@@ -566,6 +566,27 @@ export namespace Provider {
         },
       }
     },
+    // kilocode_change start - Avian provider (OpenAI-compatible)
+    avian: async (input) => {
+      const env = Env.all()
+      const hasKey = await (async () => {
+        if (input.env.some((item) => env[item])) return true
+        if (await Auth.get(input.id)) return true
+        const config = await Config.get()
+        if (config.provider?.["avian"]?.options?.apiKey) return true
+        return false
+      })()
+
+      if (!hasKey) {
+        return { autoload: false }
+      }
+
+      return {
+        autoload: Object.keys(input.models).length > 0,
+        options: {},
+      }
+    },
+    // kilocode_change end
     // kilocode_change start
     kilo: async (input) => {
       const env = Env.all()
