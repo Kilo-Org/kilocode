@@ -1,0 +1,13 @@
+Create one or more managed agent sessions on isolated git worktrees.
+
+Use this tool when delegating implementation work to parallel agents.
+
+Supports two modes:
+1. Single session with one prompt.
+2. Multi-version launch using `versions[]`. Each version can override `prompt`, `model`, and `agent`. Use for parallel subtasks with different prompts or model comparisons with the same prompt.
+
+A top-level `prompt` acts as the default; per-version `prompt` overrides it. Either the top-level or every version must supply a prompt.
+
+The call returns immediately after sessions are created and started asynchronously.
+
+Use `agent_session_list` and `agent_session_status` to monitor progress.

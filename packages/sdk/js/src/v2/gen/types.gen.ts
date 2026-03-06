@@ -726,6 +726,48 @@ export type EventTodoUpdated = {
   }
 }
 
+export type EventVcsBranchUpdated = {
+  type: "vcs.branch.updated"
+  properties: {
+    branch?: string
+  }
+}
+
+export type EventWorktreeReady = {
+  type: "worktree.ready"
+  properties: {
+    name: string
+    branch: string
+  }
+}
+
+export type EventWorktreeFailed = {
+  type: "worktree.failed"
+  properties: {
+    message: string
+  }
+}
+
+export type AgentManagerWorktree = {
+  id: string
+  path: string
+  branch: string
+  baseBranch: string
+}
+
+export type AgentManagerSessionCreatedEvent = {
+  sessionID: string
+  groupID?: string
+  worktree: AgentManagerWorktree
+  model?: string
+  label?: string
+}
+
+export type EventAgentManagerSessionCreated = {
+  type: "agent-manager.session.created"
+  properties: AgentManagerSessionCreatedEvent
+}
+
 export type EventTuiPromptAppend = {
   type: "tui.prompt.append"
   properties: {
@@ -906,13 +948,6 @@ export type EventSessionTurnClose = {
   }
 }
 
-export type EventVcsBranchUpdated = {
-  type: "vcs.branch.updated"
-  properties: {
-    branch?: string
-  }
-}
-
 export type Pty = {
   id: string
   title: string
@@ -952,21 +987,6 @@ export type EventPtyDeleted = {
   }
 }
 
-export type EventWorktreeReady = {
-  type: "worktree.ready"
-  properties: {
-    name: string
-    branch: string
-  }
-}
-
-export type EventWorktreeFailed = {
-  type: "worktree.failed"
-  properties: {
-    message: string
-  }
-}
-
 export type Event =
   | EventInstallationUpdated
   | EventInstallationUpdateAvailable
@@ -992,6 +1012,10 @@ export type Event =
   | EventSessionCompacted
   | EventFileWatcherUpdated
   | EventTodoUpdated
+  | EventVcsBranchUpdated
+  | EventWorktreeReady
+  | EventWorktreeFailed
+  | EventAgentManagerSessionCreated
   | EventTuiPromptAppend
   | EventTuiCommandExecute
   | EventTuiToastShow
@@ -1006,13 +1030,10 @@ export type Event =
   | EventSessionError
   | EventSessionTurnOpen
   | EventSessionTurnClose
-  | EventVcsBranchUpdated
   | EventPtyCreated
   | EventPtyUpdated
   | EventPtyExited
   | EventPtyDeleted
-  | EventWorktreeReady
-  | EventWorktreeFailed
 
 export type GlobalEvent = {
   directory: string
@@ -1657,6 +1678,10 @@ export type Worktree = {
 export type WorktreeCreateInput = {
   name?: string
   /**
+   * Base branch or ref to create the worktree branch from (defaults to current HEAD)
+   */
+  baseBranch?: string
+  /**
    * Additional startup script to run after the project's start command
    */
   startCommand?: string
@@ -1774,6 +1799,114 @@ export type ProviderAuthAuthorization = {
   url: string
   method: "auto" | "code"
   instructions: string
+}
+
+export type AgentManagerSession = {
+  sessionID: string
+  groupID?: string
+  worktree: AgentManagerWorktree
+  title?: string
+  agent: string
+  model?: string
+  label?: string
+  status: "idle" | "busy" | "error"
+  summary?: {
+    additions: number
+    deletions: number
+    files: number
+  }
+  time: {
+    created: number
+    updated: number
+  }
+}
+
+export type AgentManagerCreateOutput = {
+  groupID?: string
+  sessions: Array<AgentManagerSession>
+}
+
+export type AgentManagerModel = {
+  providerID: string
+  modelID: string
+}
+
+export type AgentManagerModelInput = string | AgentManagerModel
+
+export type AgentManagerVersion = {
+  /**
+   * Display label for this variant
+   */
+  label?: string
+  /**
+   * Optional branch/worktree name hint for this variant
+   */
+  name?: string
+  /**
+   * Optional prompt override for this variant
+   */
+  prompt?: string
+  /**
+   * Optional agent override for this variant
+   */
+  agent?: string
+  model?: AgentManagerModelInput
+}
+
+export type AgentManagerCreateInput = {
+  /**
+   * Optional base name used when creating branches/worktrees
+   */
+  name?: string
+  /**
+   * Initial prompt applied to all variants unless overridden
+   */
+  prompt?: string
+  /**
+   * Base branch or ref to branch from
+   */
+  baseBranch?: string
+  /**
+   * Default agent for all variants
+   */
+  agent?: string
+  model?: AgentManagerModelInput
+  /**
+   * Optional per-variant configuration
+   */
+  versions?: Array<AgentManagerVersion>
+}
+
+export type AgentManagerListOutput = {
+  sessions: Array<AgentManagerSession>
+  cursor?: string
+}
+
+export type AgentManagerDetailOutput = {
+  session: AgentManagerSession
+  messages: Array<{
+    info: Message
+    parts: Array<Part>
+  }>
+}
+
+export type AgentManagerDiffFile = {
+  path: string
+  status: "added" | "modified" | "deleted"
+  additions: number
+  deletions: number
+  patch?: string
+  patchTruncated?: boolean
+}
+
+export type AgentManagerDiffOutput = {
+  files: Array<AgentManagerDiffFile>
+  summary: {
+    totalFiles: number
+    totalAdditions: number
+    totalDeletions: number
+  }
+  cursor?: string
 }
 
 export type Symbol = {
@@ -3990,6 +4123,167 @@ export type ProviderOauthCallbackResponses = {
 }
 
 export type ProviderOauthCallbackResponse = ProviderOauthCallbackResponses[keyof ProviderOauthCallbackResponses]
+
+export type AgentManagerListData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    groupID?: string
+    status?: "idle" | "busy" | "error"
+    limit?: number
+    cursor?: string
+  }
+  url: "/agent-manager/session"
+}
+
+export type AgentManagerListErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type AgentManagerListError = AgentManagerListErrors[keyof AgentManagerListErrors]
+
+export type AgentManagerListResponses = {
+  /**
+   * Managed sessions
+   */
+  200: AgentManagerListOutput
+}
+
+export type AgentManagerListResponse = AgentManagerListResponses[keyof AgentManagerListResponses]
+
+export type AgentManagerCreateData = {
+  body?: AgentManagerCreateInput
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/agent-manager/session"
+}
+
+export type AgentManagerCreateErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type AgentManagerCreateError = AgentManagerCreateErrors[keyof AgentManagerCreateErrors]
+
+export type AgentManagerCreateResponses = {
+  /**
+   * Created managed sessions
+   */
+  200: AgentManagerCreateOutput
+}
+
+export type AgentManagerCreateResponse = AgentManagerCreateResponses[keyof AgentManagerCreateResponses]
+
+export type AgentManagerCancelData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+  }
+  url: "/agent-manager/session/{sessionID}"
+}
+
+export type AgentManagerCancelErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type AgentManagerCancelError = AgentManagerCancelErrors[keyof AgentManagerCancelErrors]
+
+export type AgentManagerCancelResponses = {
+  /**
+   * Cancelled
+   */
+  200: boolean
+}
+
+export type AgentManagerCancelResponse = AgentManagerCancelResponses[keyof AgentManagerCancelResponses]
+
+export type AgentManagerGetData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    limit?: number
+  }
+  url: "/agent-manager/session/{sessionID}"
+}
+
+export type AgentManagerGetErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type AgentManagerGetError = AgentManagerGetErrors[keyof AgentManagerGetErrors]
+
+export type AgentManagerGetResponses = {
+  /**
+   * Managed session detail
+   */
+  200: AgentManagerDetailOutput
+}
+
+export type AgentManagerGetResponse = AgentManagerGetResponses[keyof AgentManagerGetResponses]
+
+export type AgentManagerDiffData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    cursor?: string
+    limit?: number
+    includePatch?: boolean
+  }
+  url: "/agent-manager/session/{sessionID}/diff"
+}
+
+export type AgentManagerDiffErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type AgentManagerDiffError = AgentManagerDiffErrors[keyof AgentManagerDiffErrors]
+
+export type AgentManagerDiffResponses = {
+  /**
+   * Diff page
+   */
+  200: AgentManagerDiffOutput
+}
+
+export type AgentManagerDiffResponse = AgentManagerDiffResponses[keyof AgentManagerDiffResponses]
 
 export type TelemetryCaptureData = {
   body?: {

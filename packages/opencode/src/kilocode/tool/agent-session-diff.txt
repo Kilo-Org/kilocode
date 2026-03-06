@@ -1,0 +1,5 @@
+Get a paginated diff for a managed agent session.
+
+Default response is lightweight file metadata. Set `includePatch=true` only when needed to inspect exact hunks.
+
+Use cursor pagination to avoid overloading context windows.

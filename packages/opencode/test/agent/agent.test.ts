@@ -78,6 +78,30 @@ test("ask agent has correct default properties", async () => {
     },
   })
 })
+
+test("orchestrator allows managed session tools", async () => {
+  await using tmp = await tmpdir()
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const code = await Agent.get("code")
+      const orchestrator = await Agent.get("orchestrator")
+      expect(code).toBeDefined()
+      expect(orchestrator).toBeDefined()
+      expect(evalPerm(code, "agent_session_create")).toBe("deny")
+      expect(evalPerm(code, "agent_session_list")).toBe("deny")
+      expect(evalPerm(code, "agent_session_status")).toBe("deny")
+      expect(evalPerm(code, "agent_session_cancel")).toBe("deny")
+      expect(evalPerm(code, "agent_session_diff")).toBe("deny")
+      expect(evalPerm(orchestrator, "agent_session_create")).toBe("allow")
+      expect(evalPerm(orchestrator, "agent_session_list")).toBe("allow")
+      expect(evalPerm(orchestrator, "agent_session_status")).toBe("allow")
+      expect(evalPerm(orchestrator, "agent_session_cancel")).toBe("allow")
+      expect(evalPerm(orchestrator, "agent_session_diff")).toBe("allow")
+    },
+  })
+})
+
 test("ask agent denies edit/write/bash even when user config adds a specific edit allow", async () => {
   await using tmp = await tmpdir({
     config: {

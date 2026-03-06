@@ -3,6 +3,17 @@
 import { client } from "./client.gen.js"
 import { buildClientParams, type Client, type Options as Options2, type TDataShape } from "./client/index.js"
 import type {
+  AgentManagerCancelErrors,
+  AgentManagerCancelResponses,
+  AgentManagerCreateErrors,
+  AgentManagerCreateInput,
+  AgentManagerCreateResponses,
+  AgentManagerDiffErrors,
+  AgentManagerDiffResponses,
+  AgentManagerGetErrors,
+  AgentManagerGetResponses,
+  AgentManagerListErrors,
+  AgentManagerListResponses,
   AgentPartInput,
   AppAgentsResponses,
   AppLogErrors,
@@ -2322,6 +2333,179 @@ export class Provider extends HeyApiClient {
   }
 }
 
+export class AgentManager extends HeyApiClient {
+  /**
+   * List managed sessions
+   *
+   * List managed sessions with optional group, status, and cursor filters.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      groupID?: string
+      status?: "idle" | "busy" | "error"
+      limit?: number
+      cursor?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "groupID" },
+            { in: "query", key: "status" },
+            { in: "query", key: "limit" },
+            { in: "query", key: "cursor" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<AgentManagerListResponses, AgentManagerListErrors, ThrowOnError>({
+      url: "/agent-manager/session",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Create managed sessions
+   *
+   * Create one or more managed agent sessions on isolated git worktrees and start each session asynchronously.
+   */
+  public create<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      agentManagerCreateInput?: AgentManagerCreateInput
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { key: "agentManagerCreateInput", map: "body" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<AgentManagerCreateResponses, AgentManagerCreateErrors, ThrowOnError>({
+      url: "/agent-manager/session",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Cancel managed session
+   *
+   * Abort a managed session and remove its worktree.
+   */
+  public cancel<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).delete<AgentManagerCancelResponses, AgentManagerCancelErrors, ThrowOnError>(
+      {
+        url: "/agent-manager/session/{sessionID}",
+        ...options,
+        ...params,
+      },
+    )
+  }
+
+  /**
+   * Get managed session detail
+   *
+   * Get details for one managed session, including recent messages.
+   */
+  public get<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+      limit?: number
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "limit" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<AgentManagerGetResponses, AgentManagerGetErrors, ThrowOnError>({
+      url: "/agent-manager/session/{sessionID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get managed session diff
+   *
+   * Get a paginated diff for one managed session.
+   */
+  public diff<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+      cursor?: string
+      limit?: number
+      includePatch?: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "cursor" },
+            { in: "query", key: "limit" },
+            { in: "query", key: "includePatch" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<AgentManagerDiffResponses, AgentManagerDiffErrors, ThrowOnError>({
+      url: "/agent-manager/session/{sessionID}/diff",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class Telemetry extends HeyApiClient {
   /**
    * Capture telemetry event
@@ -3781,6 +3965,11 @@ export class KiloClient extends HeyApiClient {
   private _provider?: Provider
   get provider(): Provider {
     return (this._provider ??= new Provider({ client: this.client }))
+  }
+
+  private _agentManager?: AgentManager
+  get agentManager(): AgentManager {
+    return (this._agentManager ??= new AgentManager({ client: this.client }))
   }
 
   private _telemetry?: Telemetry
