@@ -1445,7 +1445,6 @@ const AgentManagerContent: Component = () => {
     const selectBranch = (name: string | undefined) => {
       vscode.postMessage({ type: "agentManager.setDefaultBaseBranch", branch: name })
       setDefaultBaseBranch(name)
-      unsub()
       dialog.close()
     }
 
@@ -1474,44 +1473,46 @@ const AgentManagerContent: Component = () => {
       } else if (e.key === "Escape") {
         e.preventDefault()
         e.stopPropagation()
-        unsub()
         dialog.close()
       }
     }
 
-    dialog.show(() => (
-      <Dialog title={t("agentManager.worktree.defaultBaseBranch")} fit>
-        <div class="am-default-base-branch">
-          <BranchSelect
-            branches={filtered()}
-            loading={loading()}
-            search={search()}
-            onSearch={(v) => {
-              setSearch(v)
-              setHighlighted(-1)
-            }}
-            onSelect={(b) => selectBranch(b.name)}
-            onSearchKeyDown={handleKeyDown}
-            selected={defaultBaseBranch()}
-            highlighted={highlighted()}
-            onHighlight={setHighlighted}
-            searchPlaceholder={t("agentManager.dialog.searchBranches")}
-            emptyLabel={t("agentManager.import.noMatchingBranches")}
-            loadingLabel={t("agentManager.import.loadingBranches")}
-            defaultLabel={t("agentManager.dialog.branchBadge.default")}
-            remoteLabel={t("agentManager.dialog.branchBadge.remote")}
-            defaultName={defaultBaseBranch()}
-            autoOption={{
-              label: t("agentManager.worktree.defaultBaseBranchAuto"),
-              hint: repoDetectedBranch(),
-              active: !hasConfiguredBranch(),
-              highlighted: highlighted() === -1,
-              onSelect: () => selectBranch(undefined),
-            }}
-          />
-        </div>
-      </Dialog>
-    ))
+    dialog.show(() => {
+      onCleanup(unsub)
+      return (
+        <Dialog title={t("agentManager.worktree.defaultBaseBranch")} fit>
+          <div class="am-default-base-branch">
+            <BranchSelect
+              branches={filtered()}
+              loading={loading()}
+              search={search()}
+              onSearch={(v) => {
+                setSearch(v)
+                setHighlighted(-1)
+              }}
+              onSelect={(b) => selectBranch(b.name)}
+              onSearchKeyDown={handleKeyDown}
+              selected={defaultBaseBranch()}
+              highlighted={highlighted()}
+              onHighlight={setHighlighted}
+              searchPlaceholder={t("agentManager.dialog.searchBranches")}
+              emptyLabel={t("agentManager.import.noMatchingBranches")}
+              loadingLabel={t("agentManager.import.loadingBranches")}
+              defaultLabel={t("agentManager.dialog.branchBadge.default")}
+              remoteLabel={t("agentManager.dialog.branchBadge.remote")}
+              defaultName={defaultBaseBranch()}
+              autoOption={{
+                label: t("agentManager.worktree.defaultBaseBranchAuto"),
+                hint: repoDetectedBranch(),
+                active: !hasConfiguredBranch(),
+                highlighted: highlighted() === -1,
+                onSelect: () => selectBranch(undefined),
+              }}
+            />
+          </div>
+        </Dialog>
+      )
+    })
   }
 
   const handleShowKeyboardShortcuts = () => {
