@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-![kilo-code-logo](https://github.com/user-attachments/assets/bdb0c174-b9fd-40ad-a47b-f3aab9b54e8d)
+ <img width="250" alt="kilo-code-logo" src="https://github.com/user-attachments/assets/bdb0c174-b9fd-40ad-a47b-f3aab9b54e8d" />
 </p>
 
 
