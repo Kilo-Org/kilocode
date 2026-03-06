@@ -107,11 +107,16 @@ export class DiffViewerProvider implements vscode.Disposable {
   }
 
   private async initialFetch(): Promise<void> {
+    this.post({ type: "diffViewer.loading", loading: true })
+
     const target = await this.resolveLocalDiffTarget()
-    if (!target) return
+    if (!target) {
+      this.post({ type: "diffViewer.diffs", diffs: [] })
+      this.post({ type: "diffViewer.loading", loading: false })
+      return
+    }
 
     this.cachedDiffTarget = target
-    this.post({ type: "diffViewer.loading", loading: true })
 
     try {
       const client = this.connectionService.getClient()
@@ -133,7 +138,10 @@ export class DiffViewerProvider implements vscode.Disposable {
 
   private async pollDiff(): Promise<void> {
     const target = this.cachedDiffTarget
-    if (!target) return
+    if (!target) {
+      await this.initialFetch()
+      return
+    }
 
     try {
       const client = this.connectionService.getClient()
