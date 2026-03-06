@@ -14,6 +14,8 @@ export const dict = {
   "agentManager.worktree.doubleClickRename": "Dobbeltklikk for å gi nytt navn",
   "agentManager.worktree.versions": "{{count}} versjoner",
   "agentManager.worktree.advancedOptions": "Avanserte Worktree-alternativer",
+  "agentManager.worktree.defaultBaseBranch": "Standard basisgren",
+  "agentManager.worktree.defaultBaseBranchAuto": "Automatisk gjenkjenning",
   "agentManager.hoverCard.branch": "BRANCH",
   "agentManager.hoverCard.base": "Base",
   "agentManager.hoverCard.sessions": "Økter",

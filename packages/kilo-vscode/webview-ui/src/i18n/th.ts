@@ -232,6 +232,7 @@ export const dict = {
   "prompt.action.send": "ส่ง",
   "prompt.action.stop": "หยุด",
   "prompt.action.enhance": "ปรับปรุงพรอมต์",
+  "prompt.action.resetModel": "รีเซ็ตโมเดลเป็นค่าเริ่มต้น",
   "prompt.action.enhanceDescription":
     "ปุ่ม 'ปรับปรุงพรอมต์' ช่วยปรับปรุงพรอมต์ของคุณโดยให้บริบทเพิ่มเติม ชี้แจง หรือเขียนใหม่ ลองพิมพ์พรอมต์ที่นี่และคลิกปุ่มอีกครั้งเพื่อดูว่ามันทำงานอย่างไร",
 
@@ -406,6 +407,15 @@ export const dict = {
   "error.dev.rootNotFound": "ไม่พบองค์ประกอบรูท คุณลืมเพิ่มใน index.html หรือบางทีแอตทริบิวต์ id อาจสะกดผิด?",
 
   "error.globalSync.connectFailed": "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ มีเซิร์ฟเวอร์ทำงานอยู่ที่ `{{url}}` หรือไม่?",
+
+  "error.paidModel.title": "คุณต้องเข้าสู่ระบบเพื่อใช้โมเดลนี้",
+  "error.paidModel.description":
+    "เข้าสู่ระบบหรือสร้างบัญชีเพื่อเข้าถึงโมเดลกว่า 500 รายการ ใช้เครดิตในราคาทุน หรือใช้คีย์ของคุณเอง",
+  "error.paidModel.action": "เข้าสู่ระบบ",
+  "error.promotionLimit.title": "คุณต้องสมัครสมาชิกเพื่อดำเนินการต่อ",
+  "error.promotionLimit.description":
+    "สมัครฟรีเพื่อดำเนินการต่อและสำรวจโมเดลกว่า 500 รายการ ใช้เวลา 2 นาที ไม่ต้องใช้บัตรเครดิต หรือกลับมาทีหลัง",
+  "error.promotionLimit.action": "สมัครสมาชิก",
 
   "error.chain.unknown": "ข้อผิดพลาดที่ไม่รู้จัก",
   "error.chain.causedBy": "สาเหตุ:",
@@ -982,47 +992,54 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "การย้ายข้อมูลจากเวอร์ชันดั้งเดิม",
   "settings.aboutKiloCode.legacyMigration.description":
     "ย้ายการตั้งค่าจากการติดตั้ง Kilo Code ก่อนหน้านี้ รวมถึงคีย์ API ของผู้ให้บริการและโมเดลเริ่มต้น",
-  "migration.welcome.title": "ยินดีต้อนรับสู่ Kilo Code โฉมใหม่",
-  "migration.welcome.detected": "เราตรวจพบการตั้งค่าจากการติดตั้ง Kilo Code ก่อนหน้านี้",
-  "migration.welcome.sessionsInfo": "ไม่สามารถย้ายเซสชันการแชทและประวัติได้ — เวอร์ชันใหม่ใช้สถาปัตยกรรมที่แตกต่างกัน",
-  "migration.welcome.canMigrate": "การตั้งค่าต่อไปนี้สามารถย้ายไปยังเวอร์ชันใหม่ได้:",
-  "migration.welcome.start": "เริ่มการย้ายข้อมูล",
-  "migration.welcome.skip": "ข้ามการย้ายข้อมูล",
-  "migration.steps.title": "ย้ายการตั้งค่าของคุณ",
-  "migration.steps.subtitle": "เราพบการตั้งค่าจากการติดตั้ง Kilo Code ก่อนหน้านี้ของคุณ เลือกสิ่งที่จะนำเข้ามาด้วย",
+
+  // Screen 1 — What's New
+  "migration.whatsNew.title": "มีอะไรใหม่ใน Kilo Code",
+  "migration.whatsNew.badge": "Beta",
+  "migration.whatsNew.subtitle": "เราได้สร้างส่วนขยายใหม่บนรากฐานที่เร็วและมีประสิทธิภาพมากขึ้น",
+  "migration.whatsNew.features.performance.title": "ประสิทธิภาพเอเจนต์ที่เร็วขึ้น",
+  "migration.whatsNew.features.performance.detail":
+    "การเรียกเครื่องมือแบบขนานและเอเจนต์ย่อยช่วยให้เอเจนต์ของคุณจัดการได้มากขึ้นในครั้งเดียว — คุณจึงใช้เวลารอน้อยลงและส่งงานได้มากขึ้น",
+  "migration.whatsNew.features.interface.title": "อินเทอร์เฟซที่กระชับ",
+  "migration.whatsNew.features.interface.detail": "สิ่งรบกวนน้อยลง อ่านง่ายและรวดเร็วขึ้น",
+  "migration.whatsNew.features.agentManager.title": "Agent Manager",
+  "migration.whatsNew.features.agentManager.detail":
+    "อินเทอร์เฟซรวมสำหรับการเรียกใช้เอเจนต์หลายตัวพร้อมกัน แต่ละตัวบน worktree ของตัวเอง — ติดตามความคืบหน้า สลับบริบท และตรวจสอบการเปลี่ยนแปลงได้ในที่เดียว",
+  "migration.whatsNew.features.foundation.title": "รากฐานที่ใช้ร่วมกัน",
+  "migration.whatsNew.features.foundation.detail":
+    "แกนหลักขนาดเล็กและมีประสิทธิภาพเดียวกันในทุกผลิตภัณฑ์ Kilo ประสบการณ์ที่คุ้นเคยไม่ว่าคุณจะเลือกทำงานอย่างไร",
+  "migration.whatsNew.blogLink": "อ่านประกาศฉบับเต็ม",
+  "migration.whatsNew.continue": "ดำเนินการต่อ",
+
+  // Screen 2 — Migrate Settings
+  "migration.migrate.title": "ย้ายการตั้งค่าของคุณ",
+  "migration.migrate.subtitle": "เราพบการตั้งค่าจากการติดตั้งก่อนหน้านี้ของคุณ นี่คือสิ่งที่เราสามารถนำมาได้",
+  "migration.migrate.selectLabel": "เลือกสิ่งที่จะย้าย",
+  "migration.migrate.cannotMigrate": "ไม่สามารถย้ายได้",
+  "migration.migrate.chatHistory": "เซสชันแชทและประวัติ",
+  "migration.migrate.chatHistoryDesc": "เข้ากันไม่ได้กับสถาปัตยกรรมใหม่",
+  "migration.migrate.button": "ย้ายการตั้งค่า",
+  "migration.migrate.skip": "ข้าม",
+  "migration.migrate.back": "ย้อนกลับ",
+  "migration.migrate.keysDetected": "ตรวจพบ {{count}} คีย์",
+  "migration.migrate.serversConfigured": "กำหนดค่า {{count}} เซิร์ฟเวอร์",
+  "migration.migrate.modesFound": "พบ {{count}} โหมด",
+  "migration.migrate.nothingToMigrate": "ไม่พบสิ่งที่จะย้ายในการตั้งค่าดั้งเดิม",
+
+  // Migrate — item labels (reused from old select keys)
   "migration.select.providers": "คีย์ API ของผู้ให้บริการ",
   "migration.select.mcpServers": "เซิร์ฟเวอร์ MCP",
-  "migration.select.customModes": "โหมดกำหนดเอง / Agents",
+  "migration.select.customModes": "โหมดที่กำหนดเอง / เอเจนต์",
   "migration.select.defaultModel": "โมเดลเริ่มต้น",
-  "migration.select.unsupported": "ไม่รองรับในเวอร์ชันใหม่",
-  "migration.select.nothingToMigrate": "ไม่พบสิ่งที่จะย้ายในการตั้งค่าดั้งเดิม",
-  "migration.select.settings": "การตั้งค่า",
   "migration.select.autoApproval": "การอนุมัติอัตโนมัติ",
-  "migration.select.autoApproval.commandRules": "กฎคำสั่ง",
-  "migration.select.autoApproval.commandRulesDesc": "สวิตช์หลักและรายการคำสั่งที่อนุญาต/ปฏิเสธ",
-  "migration.select.autoApproval.readPermission": "สิทธิ์การอ่าน",
-  "migration.select.autoApproval.readPermissionDesc": "การเข้าถึงการอ่านไฟล์ภายในและภายนอกเวิร์กสเปซ",
-  "migration.select.autoApproval.writePermission": "สิทธิ์การเขียน",
-  "migration.select.autoApproval.writePermissionDesc": "การเข้าถึงการเขียนและแก้ไขไฟล์",
-  "migration.select.autoApproval.executePermission": "สิทธิ์การดำเนินการ",
-  "migration.select.autoApproval.executePermissionDesc": "การเรียกใช้งานคำสั่ง Terminal",
-  "migration.select.autoApproval.mcpPermission": "สิทธิ์ MCP",
-  "migration.select.autoApproval.mcpPermissionDesc": "การใช้งานเครื่องมือ MCP",
-  "migration.select.autoApproval.taskPermission": "สิทธิ์งาน",
-  "migration.select.autoApproval.taskPermissionDesc": "การสลับโหมดและการสร้างงานย่อย",
-  "migration.select.language": "ภาษา UI",
-  "migration.select.languageDesc": "การตั้งค่าภาษาของคุณจะถูกนำไปใช้กับส่วนขยายใหม่",
-  "migration.select.autocomplete": "การตั้งค่าเติมข้อความอัตโนมัติ",
-  "migration.select.autocompleteDesc":
-    "การเรียกใช้อัตโนมัติ, การผูกแป้นพิมพ์ และการตั้งค่าการเติมข้อความอัตโนมัติในการแชท",
-  "migration.select.continue": "ดำเนินการต่อ",
-  "migration.select.back": "ย้อนกลับ",
-  "migration.progress.title": "กำลังย้ายการตั้งค่าของคุณ…",
-  "migration.progress.done": "ดำเนินการต่อ",
-  "migration.complete.summary": "ย้ายรายการสำเร็จ {{success}} จาก {{total}} รายการ",
-  "migration.complete.cleanup": "ลบข้อมูลการตั้งค่าดั้งเดิม",
+  "migration.select.language": "ภาษาของ UI",
+  "migration.select.autocomplete": "การตั้งค่าการเติมข้อความอัตโนมัติ",
+
+  // Migrate — completion
+  "migration.complete.summary": "ย้ายข้อมูลสำเร็จ {{success}} จาก {{total}} รายการ",
+  "migration.complete.cleanup": "ลบข้อมูลการตั้งค่าเดิม",
   "migration.complete.cleanupDescription":
-    "การดำเนินการนี้จะลบการตั้งค่าเก่าออกจากพื้นที่เก็บข้อมูลของ VS Code คุณจะไม่สามารถเรียกใช้การย้ายข้อมูลนี้ซ้ำได้อีก",
+    "การดำเนินการนี้จะลบการตั้งค่าเดิมจากที่เก็บข้อมูล VS Code คุณจะไม่สามารถเรียกใช้การย้ายข้อมูลนี้ได้อีก",
   "migration.complete.done": "เสร็จสิ้น",
   // legacy-migration end
 }

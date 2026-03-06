@@ -14,6 +14,8 @@ export const dict = {
   "agentManager.worktree.doubleClickRename": "ดับเบิลคลิกเพื่อเปลี่ยนชื่อ",
   "agentManager.worktree.versions": "{{count}} เวอร์ชัน",
   "agentManager.worktree.advancedOptions": "ตัวเลือก Worktree ขั้นสูง",
+  "agentManager.worktree.defaultBaseBranch": "สาขาฐานเริ่มต้น",
+  "agentManager.worktree.defaultBaseBranchAuto": "ตรวจจับอัตโนมัติ",
   "agentManager.hoverCard.branch": "BRANCH",
   "agentManager.hoverCard.base": "ฐาน",
   "agentManager.hoverCard.sessions": "เซสชัน",

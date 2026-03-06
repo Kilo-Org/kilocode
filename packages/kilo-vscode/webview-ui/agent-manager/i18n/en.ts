@@ -15,6 +15,8 @@ export const dict = {
   "agentManager.worktree.doubleClickRename": "Double-click to rename",
   "agentManager.worktree.versions": "{{count}} versions",
   "agentManager.worktree.advancedOptions": "Advanced worktree options",
+  "agentManager.worktree.defaultBaseBranch": "Default Base Branch",
+  "agentManager.worktree.defaultBaseBranchAuto": "Auto-detect",
 
   "agentManager.hoverCard.branch": "BRANCH",
   "agentManager.hoverCard.base": "Base",
@@ -37,7 +39,6 @@ export const dict = {
 
   "agentManager.setup.failed": "Workspace setup failed",
   "agentManager.setup.settingUp": "Setting up workspace",
-
   "agentManager.shortcuts.title": "Keyboard Shortcuts",
   "agentManager.shortcuts.category.sidebar": "Sidebar",
   "agentManager.shortcuts.category.tabs": "Tabs",

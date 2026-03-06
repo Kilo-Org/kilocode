@@ -1,6 +1,7 @@
 import * as path from "path"
 import * as vscode from "vscode"
 import { z } from "zod"
+import { isAbsolutePath } from "./path-utils"
 import type {
   KiloClient,
   Session,
@@ -253,6 +254,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   public clearSessionDirectory(sessionId: string): void {
     this.sessionDirectories.delete(sessionId)
+  }
+
+  /** Return the currently active session ID, if any. */
+  public getCurrentSessionId(): string | undefined {
+    return this.currentSession?.id ?? undefined
   }
 
   /**
@@ -764,13 +770,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (abort.signal.aborted) return
 
       // Update currentSession so fallback logic in handleSendMessage/handleAbort
-      // references the correct session after switching to a historical session.
+      // references the correct session after switching.  loadMessages is the
+      // canonical "user switched to this session" signal, so always update —
+      // the old guard `this.currentSession.id === sessionID` prevented updates
+      // when switching between different sessions.
       // Non-blocking: don't let a failure here prevent messages from loading.
       // 404s are expected for cross-worktree sessions — use silent to suppress HTTP error logs.
       this.client.session
         .get({ sessionID, directory: workspaceDir })
         .then((result) => {
-          if (result.data && (!this.currentSession || this.currentSession.id === sessionID)) {
+          if (result.data && !abort.signal.aborted) {
             this.currentSession = result.data
           }
         })
@@ -1685,12 +1694,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /**
    * Handle openFile request from the webview — open a file in the VS Code editor.
+   * Resolves relative paths against the current session's directory (which may be
+   * a worktree path registered via setSessionDirectory), falling back to workspace root.
+   * Absolute paths (Unix `/…` or Windows `C:\…`) are used as-is.
    */
   private handleOpenFile(filePath: string, line?: number, column?: number): void {
-    const absolute = /^(?:\/|[a-zA-Z]:[\\/])/.test(filePath)
-    const uri = absolute
+    const uri = isAbsolutePath(filePath)
       ? vscode.Uri.file(filePath)
-      : vscode.Uri.joinPath(vscode.Uri.file(this.getWorkspaceDirectory()), filePath)
+      : vscode.Uri.joinPath(vscode.Uri.file(this.getWorkspaceDirectory(this.currentSession?.id)), filePath)
     vscode.workspace.openTextDocument(uri).then(
       (doc) => {
         const options: vscode.TextDocumentShowOptions = { preview: true }
@@ -2118,14 +2129,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         },
         this.cachedLegacyData?.settings,
       )
+
+      // Dispose all instances after migration
+      // Reloading the data will be handled once the server replies with a global.disposed event
+      await this.client.global
+        .dispose()
+        .catch((e: unknown) => console.warn("[Kilo New] KiloProvider: global.dispose() after migration failed:", e))
+
       // Only mark as completed if at least one item succeeded — if everything failed
       // the user can still re-run migration via Settings → About.
       const anySuccess = results.some((r) => r.status === "success")
+
       if (anySuccess) {
         await MigrationService.setMigrationStatus(this.extensionContext, "completed")
       }
-      // Refresh providers so webview immediately sees the newly-migrated API keys
-      await this.fetchAndSendProviders()
+
       this.postMessage({ type: "legacyMigrationComplete", results })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: ❌ Migration failed", error)

@@ -235,6 +235,7 @@ export const dict = {
   "prompt.action.send": "전송",
   "prompt.action.stop": "중지",
   "prompt.action.enhance": "프롬프트 개선",
+  "prompt.action.resetModel": "모델을 기본값으로 재설정",
   "prompt.action.enhanceDescription":
     "'프롬프트 향상' 버튼은 추가 컨텍스트, 명확화 또는 재구성을 제공하여 요청을 개선합니다. 여기에 요청을 입력한 다음 버튼을 다시 클릭하여 작동 방식을 확인해보세요.",
 
@@ -409,6 +410,15 @@ export const dict = {
     "루트 요소를 찾을 수 없습니다. index.html에 추가하는 것을 잊으셨나요? 또는 id 속성의 철자가 틀렸을 수 있습니다.",
 
   "error.globalSync.connectFailed": "서버에 연결할 수 없습니다. `{{url}}`에서 서버가 실행 중인가요?",
+
+  "error.paidModel.title": "이 모델을 사용하려면 로그인이 필요합니다",
+  "error.paidModel.description":
+    "로그인하거나 계정을 만들어 500개 이상의 모델에 접근하고, 원가로 크레딧을 사용하거나, 자체 키를 가져오세요.",
+  "error.paidModel.action": "로그인",
+  "error.promotionLimit.title": "계속하려면 가입이 필요합니다",
+  "error.promotionLimit.description":
+    "무료로 가입하여 500개 이상의 모델을 탐색하세요. 2분이면 완료, 신용카드 불필요. 또는 나중에 다시 오세요.",
+  "error.promotionLimit.action": "가입하기",
 
   "error.chain.unknown": "알 수 없는 오류",
   "error.chain.causedBy": "원인:",
@@ -986,43 +996,50 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "레거시 마이그레이션",
   "settings.aboutKiloCode.legacyMigration.description":
     "공급자 API 키 및 기본 모델을 포함하여 이전 Kilo Code 설치에서 설정을 마이그레이션합니다.",
-  "migration.welcome.title": "새로운 Kilo Code에 오신 것을 환영합니다",
-  "migration.welcome.detected": "이전 Kilo Code 설치의 설정이 감지되었습니다.",
-  "migration.welcome.sessionsInfo":
-    "채팅 세션 및 기록은 마이그레이션할 수 없습니다 — 새 버전은 다른 아키텍처를 사용합니다.",
-  "migration.welcome.canMigrate": "다음 설정은 새 버전으로 마이그레이션할 수 있습니다:",
-  "migration.welcome.start": "마이그레이션 시작",
-  "migration.welcome.skip": "마이그레이션 건너뛰기",
-  "migration.steps.title": "설정 마이그레이션",
-  "migration.steps.subtitle": "이전 Kilo Code 설치에서 설정을 찾았습니다. 가져올 항목을 선택하세요.",
+
+  // Screen 1 — What's New
+  "migration.whatsNew.title": "Kilo Code의 새로운 기능",
+  "migration.whatsNew.badge": "Beta",
+  "migration.whatsNew.subtitle": "더 빠르고 효율적인 기반 위에 확장 프로그램을 재구축했습니다.",
+  "migration.whatsNew.features.performance.title": "더 빠른 에이전트 성능",
+  "migration.whatsNew.features.performance.detail":
+    "병렬 도구 호출과 하위 에이전트를 통해 에이전트가 더 많은 작업을 동시에 처리할 수 있습니다 — 대기 시간은 줄이고 작업 효율은 높입니다.",
+  "migration.whatsNew.features.interface.title": "간소화된 인터페이스",
+  "migration.whatsNew.features.interface.detail": "불필요한 요소를 줄여 더 쉽고 빠르게 읽을 수 있습니다.",
+  "migration.whatsNew.features.agentManager.title": "Agent Manager",
+  "migration.whatsNew.features.agentManager.detail":
+    "여러 에이전트를 각자의 작업 트리에서 병렬로 실행할 수 있는 통합 인터페이스 — 진행 상황 모니터링, 컨텍스트 전환, 변경 사항 검토를 한 곳에서 수행합니다.",
+  "migration.whatsNew.features.foundation.title": "공유 기반",
+  "migration.whatsNew.features.foundation.detail":
+    "모든 Kilo 제품에 걸쳐 하나의 작고 효율적인 코어. 어떤 방식으로 작업하든 익숙한 경험을 제공합니다.",
+  "migration.whatsNew.blogLink": "전체 공지 읽기",
+  "migration.whatsNew.continue": "계속",
+
+  // Screen 2 — Migrate Settings
+  "migration.migrate.title": "설정 마이그레이션",
+  "migration.migrate.subtitle": "이전 설치에서 설정을 찾았습니다. 가져올 수 있는 항목은 다음과 같습니다.",
+  "migration.migrate.selectLabel": "마이그레이션할 항목 선택",
+  "migration.migrate.cannotMigrate": "마이그레이션할 수 없음",
+  "migration.migrate.chatHistory": "채팅 세션 및 기록",
+  "migration.migrate.chatHistoryDesc": "새 아키텍처와 호환되지 않음",
+  "migration.migrate.button": "설정 마이그레이션",
+  "migration.migrate.skip": "건너뛰기",
+  "migration.migrate.back": "뒤로",
+  "migration.migrate.keysDetected": "{{count}}개의 키 감지됨",
+  "migration.migrate.serversConfigured": "{{count}}개의 서버 구성됨",
+  "migration.migrate.modesFound": "{{count}}개의 모드 발견됨",
+  "migration.migrate.nothingToMigrate": "레거시 설정에서 마이그레이션할 항목을 찾지 못했습니다.",
+
+  // Migrate — item labels (reused from old select keys)
   "migration.select.providers": "공급자 API 키",
   "migration.select.mcpServers": "MCP 서버",
   "migration.select.customModes": "사용자 지정 모드 / 에이전트",
   "migration.select.defaultModel": "기본 모델",
-  "migration.select.unsupported": "새 버전에서는 지원되지 않음",
-  "migration.select.nothingToMigrate": "레거시 설정에서 마이그레이션할 항목을 찾지 못했습니다.",
-  "migration.select.settings": "설정",
   "migration.select.autoApproval": "자동 승인",
-  "migration.select.autoApproval.commandRules": "명령 규칙",
-  "migration.select.autoApproval.commandRulesDesc": "마스터 토글 및 허용/거부된 명령 목록",
-  "migration.select.autoApproval.readPermission": "읽기 권한",
-  "migration.select.autoApproval.readPermissionDesc": "작업 공간 내부 및 외부의 파일 읽기 액세스",
-  "migration.select.autoApproval.writePermission": "쓰기 권한",
-  "migration.select.autoApproval.writePermissionDesc": "파일 쓰기 및 편집 액세스",
-  "migration.select.autoApproval.executePermission": "실행 권한",
-  "migration.select.autoApproval.executePermissionDesc": "터미널 명령 실행",
-  "migration.select.autoApproval.mcpPermission": "MCP 권한",
-  "migration.select.autoApproval.mcpPermissionDesc": "MCP 도구 사용",
-  "migration.select.autoApproval.taskPermission": "작업 권한",
-  "migration.select.autoApproval.taskPermissionDesc": "모드 전환 및 하위 작업 생성",
   "migration.select.language": "UI 언어",
-  "migration.select.languageDesc": "언어 기본 설정이 새 확장 프로그램에 적용됩니다",
   "migration.select.autocomplete": "자동 완성 설정",
-  "migration.select.autocompleteDesc": "자동 트리거, 키 바인딩 및 채팅 자동 완성 기본 설정",
-  "migration.select.continue": "계속",
-  "migration.select.back": "뒤로",
-  "migration.progress.title": "설정을 마이그레이션하는 중…",
-  "migration.progress.done": "계속",
+
+  // Migrate — completion
   "migration.complete.summary": "{{total}}개 중 {{success}}개 항목이 성공적으로 마이그레이션되었습니다.",
   "migration.complete.cleanup": "레거시 설정 데이터 제거",
   "migration.complete.cleanupDescription":

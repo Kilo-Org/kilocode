@@ -232,6 +232,7 @@ export const dict = {
   "prompt.action.send": "傳送",
   "prompt.action.stop": "停止",
   "prompt.action.enhance": "改善提示詞",
+  "prompt.action.resetModel": "重置模型為預設值",
   "prompt.action.enhanceDescription":
     "「強化提示詞」按鈕可透過提供額外內容、說明或改寫來協助改善提示詞。試著在這裡輸入提示詞，再點選一次按鈕以了解其運作方式。",
 
@@ -405,6 +406,13 @@ export const dict = {
   "error.dev.rootNotFound": "找不到根元素。你是不是忘了把它新增到 index.html? 或者 id 屬性拼錯了？",
 
   "error.globalSync.connectFailed": "無法連線到伺服器。是否有伺服器正在 `{{url}}` 執行？",
+
+  "error.paidModel.title": "您需要登入才能使用此模型",
+  "error.paidModel.description": "登入或建立帳戶以存取500多個模型，按成本使用點數，或使用您自己的金鑰。",
+  "error.paidModel.action": "登入",
+  "error.promotionLimit.title": "您需要註冊才能繼續",
+  "error.promotionLimit.description": "免費註冊以繼續探索500多個模型。只需2分鐘，無需信用卡。或稍後再來。",
+  "error.promotionLimit.action": "註冊",
 
   "error.chain.unknown": "未知錯誤",
   "error.chain.causedBy": "原因：",
@@ -974,49 +982,57 @@ export const dict = {
   "common.review": "審查",
 
   // legacy-migration start
-  "settings.legacyMigration.link": "從舊版轉移",
-  "settings.aboutKiloCode.legacyMigration.title": "舊版轉移",
+  "settings.legacyMigration.link": "從舊版遷移",
+  "settings.aboutKiloCode.legacyMigration.title": "舊版遷移",
   "settings.aboutKiloCode.legacyMigration.description":
-    "從先前安裝的 Kilo Code 轉移設定，包含供應商 API 金鑰與預設模型。",
-  "migration.welcome.title": "歡迎使用全新的 Kilo Code",
-  "migration.welcome.detected": "我們偵測到先前安裝的 Kilo Code 設定。",
-  "migration.welcome.sessionsInfo": "聊天對話與歷史紀錄無法轉移 — 新版本使用了不同的架構。",
-  "migration.welcome.canMigrate": "下列設定可以轉移至新版本：",
-  "migration.welcome.start": "開始轉移",
-  "migration.welcome.skip": "略過轉移",
-  "migration.steps.title": "轉移您的設定",
-  "migration.steps.subtitle": "我們找到了您先前 Kilo Code 安裝的設定。請選擇要保留的項目。",
+    "從舊版 Kilo Code 安裝遷移設定，包括供應商 API 金鑰和預設模型。",
+
+  // Screen 1 — What's New
+  "migration.whatsNew.title": "Kilo Code 新功能",
+  "migration.whatsNew.badge": "Beta",
+  "migration.whatsNew.subtitle": "我們在更快、更高效的基礎上重新建構了擴充功能。",
+  "migration.whatsNew.features.performance.title": "更快的 Agent 效能",
+  "migration.whatsNew.features.performance.detail":
+    "平行工具呼叫和子 Agent 讓你的 Agent 可以同時處理更多任務——減少等待時間，更快交付成果。",
+  "migration.whatsNew.features.interface.title": "簡潔的介面",
+  "migration.whatsNew.features.interface.detail": "更少干擾，更易閱讀，更快上手。",
+  "migration.whatsNew.features.agentManager.title": "Agent Manager",
+  "migration.whatsNew.features.agentManager.detail":
+    "一個統一的介面，可以平行執行多個 Agent，每個 Agent 各自使用獨立的 worktree——在同一個地方監控進度、切換上下文和審查變更。",
+  "migration.whatsNew.features.foundation.title": "共享基礎",
+  "migration.whatsNew.features.foundation.detail":
+    "所有 Kilo 產品共享一個小巧高效的核心。無論你選擇哪種方式工作，都能獲得熟悉的體驗。",
+  "migration.whatsNew.blogLink": "閱讀完整公告",
+  "migration.whatsNew.continue": "繼續",
+
+  // Screen 2 — Migrate Settings
+  "migration.migrate.title": "遷移你的設定",
+  "migration.migrate.subtitle": "我們發現了你之前安裝的設定。以下是可以遷移的內容。",
+  "migration.migrate.selectLabel": "選擇要遷移的內容",
+  "migration.migrate.cannotMigrate": "無法遷移",
+  "migration.migrate.chatHistory": "聊天工作階段與歷史紀錄",
+  "migration.migrate.chatHistoryDesc": "與新架構不相容",
+  "migration.migrate.button": "遷移設定",
+  "migration.migrate.skip": "略過",
+  "migration.migrate.back": "返回",
+  "migration.migrate.keysDetected": "偵測到 {{count}} 個金鑰",
+  "migration.migrate.serversConfigured": "已設定 {{count}} 個伺服器",
+  "migration.migrate.modesFound": "發現 {{count}} 個模式",
+  "migration.migrate.nothingToMigrate": "在舊版設定中找不到可遷移的項目。",
+
+  // Migrate — item labels (reused from old select keys)
   "migration.select.providers": "供應商 API 金鑰",
   "migration.select.mcpServers": "MCP 伺服器",
   "migration.select.customModes": "自訂模式 / 代理",
   "migration.select.defaultModel": "預設模型",
-  "migration.select.unsupported": "新版本不支援",
-  "migration.select.nothingToMigrate": "在舊版設定中找不到可轉移的項目。",
-  "migration.select.settings": "設定",
   "migration.select.autoApproval": "自動核准",
-  "migration.select.autoApproval.commandRules": "指令規則",
-  "migration.select.autoApproval.commandRulesDesc": "主要開關與允許/拒絕的指令清單",
-  "migration.select.autoApproval.readPermission": "讀取權限",
-  "migration.select.autoApproval.readPermissionDesc": "工作區內外的檔案讀取存取權",
-  "migration.select.autoApproval.writePermission": "寫入權限",
-  "migration.select.autoApproval.writePermissionDesc": "檔案寫入與編輯存取權",
-  "migration.select.autoApproval.executePermission": "執行權限",
-  "migration.select.autoApproval.executePermissionDesc": "終端機指令執行",
-  "migration.select.autoApproval.mcpPermission": "MCP 權限",
-  "migration.select.autoApproval.mcpPermissionDesc": "MCP 工具使用",
-  "migration.select.autoApproval.taskPermission": "任務權限",
-  "migration.select.autoApproval.taskPermissionDesc": "模式切換與子任務建立",
   "migration.select.language": "介面語言",
-  "migration.select.languageDesc": "您的語言偏好將會套用至新擴充功能",
-  "migration.select.autocomplete": "自動完成設定",
-  "migration.select.autocompleteDesc": "自動觸發、按鍵綁定與聊天自動完成偏好設定",
-  "migration.select.continue": "繼續",
-  "migration.select.back": "返回",
-  "migration.progress.title": "正在轉移您的設定…",
-  "migration.progress.done": "繼續",
-  "migration.complete.summary": "已成功轉移 {{total}} 個項目中的 {{success}} 個。",
-  "migration.complete.cleanup": "移除舊版設定資料",
-  "migration.complete.cleanupDescription": "這將從 VS Code 儲存空間移除舊的設定。您將無法重新執行此轉移程序。",
+  "migration.select.autocomplete": "自動補全設定",
+
+  // Migrate — completion
+  "migration.complete.summary": "成功遷移 {{success}}/{{total}} 項。",
+  "migration.complete.cleanup": "清除舊版設定資料",
+  "migration.complete.cleanupDescription": "此操作將從 VS Code 儲存中刪除舊版設定。您將無法再次執行此遷移。",
   "migration.complete.done": "完成",
   // legacy-migration end
 } satisfies Partial<Record<Keys, string>>

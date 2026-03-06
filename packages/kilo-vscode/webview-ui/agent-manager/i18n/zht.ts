@@ -14,6 +14,8 @@ export const dict = {
   "agentManager.worktree.doubleClickRename": "按兩下以重新命名",
   "agentManager.worktree.versions": "{{count}} 個版本",
   "agentManager.worktree.advancedOptions": "Worktree 進階選項",
+  "agentManager.worktree.defaultBaseBranch": "預設基礎分支",
+  "agentManager.worktree.defaultBaseBranchAuto": "自動偵測",
   "agentManager.hoverCard.branch": "分支",
   "agentManager.hoverCard.base": "基底",
   "agentManager.hoverCard.sessions": "工作階段",
