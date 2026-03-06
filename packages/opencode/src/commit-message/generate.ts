@@ -56,6 +56,7 @@ async function loadInstructions(repoPath: string): Promise<{ instructions?: stri
   const fromAgents = await loadInstructionsFromAgentsMd(repoPath)
   if (fromAgents.found) return fromAgents
 
+  // repoPath is always the git repository root (passed by extension), so this finds the correct file
   const filepath = join(repoPath, ".kilocode", "commit-instructions.md")
   const content = await Filesystem.readText(filepath).catch(() => "")
   const trimmed = content.trim()

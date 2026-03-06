@@ -2375,7 +2375,6 @@ export class CommitMessage extends HeyApiClient {
       path?: string
       selectedFiles?: Array<string>
       previousMessage?: string
-      instructions?: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -2388,7 +2387,6 @@ export class CommitMessage extends HeyApiClient {
             { in: "body", key: "path" },
             { in: "body", key: "selectedFiles" },
             { in: "body", key: "previousMessage" },
-            { in: "body", key: "instructions" },
           ],
         },
       ],

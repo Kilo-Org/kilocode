@@ -4045,10 +4045,6 @@ export type CommitMessageGenerateData = {
      * Previously generated message — triggers regeneration with a different result
      */
     previousMessage?: string
-    /**
-     * Custom instructions for commit message style
-     */
-    instructions?: string
   }
   path?: never
   query?: {

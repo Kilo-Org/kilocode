@@ -4455,10 +4455,6 @@
                   "previousMessage": {
                     "description": "Previously generated message — triggers regeneration with a different result",
                     "type": "string"
-                  },
-                  "instructions": {
-                    "description": "Custom instructions for commit message style",
-                    "type": "string"
                   }
                 },
                 "required": ["path"]
