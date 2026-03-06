@@ -119,6 +119,7 @@ export class DiffViewerProvider implements vscode.Disposable {
     this.cachedDiffTarget = target
 
     try {
+      await this.connectionService.connect(target.directory)
       const client = this.connectionService.getClient()
       const { data: diffs } = await client.worktree.diff(
         { directory: target.directory, base: target.baseBranch },

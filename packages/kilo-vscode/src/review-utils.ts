@@ -43,9 +43,7 @@ export async function resolveLocalDiffTarget(
 }
 
 export function hashFileDiffs(diffs: FileDiff[]): string {
-  return diffs
-    .map((diff) => `${diff.file}:${diff.status}:${diff.additions}:${diff.deletions}:${diff.after.length}`)
-    .join("|")
+  return diffs.map((diff) => `${diff.file}:${diff.status}:${diff.additions}:${diff.deletions}:${diff.after}`).join("|")
 }
 
 export function openFileInEditor(
