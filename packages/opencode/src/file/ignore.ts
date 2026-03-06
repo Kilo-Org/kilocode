@@ -100,27 +100,33 @@ export namespace FileIgnore {
    * linguist-generated=true. Returns a function that tests file paths.
    */
   export function parseGitattributes(content: string): (filepath: string) => boolean {
-    const patterns: string[] = []
+    // Collect rules in order — later rules override earlier ones (git semantics).
+    // positive = true means linguist-generated, false means opt-out.
+    const rules: Array<{ pattern: string; positive: boolean }> = []
     for (const line of content.split("\n")) {
       const trimmed = line.trim()
       if (!trimmed || trimmed.startsWith("#")) continue
       if (!trimmed.includes("linguist-generated")) continue
-      // format: <pattern> <attr1> <attr2> ...
-      // linguist-generated=true or linguist-generated
       const parts = trimmed.split(/\s+/)
       const pattern = parts[0]
       if (!pattern) continue
-      const has = parts.some((p) => p === "linguist-generated" || p === "linguist-generated=true")
-      if (has) patterns.push(pattern)
+      const negative = parts.some((p) => p === "-linguist-generated" || p === "linguist-generated=false")
+      const positive = parts.some((p) => p === "linguist-generated" || p === "linguist-generated=true")
+      if (negative) rules.push({ pattern, positive: false })
+      else if (positive) rules.push({ pattern, positive: true })
     }
-    if (patterns.length === 0) return () => false
+    if (rules.length === 0) return () => false
     return (filepath: string) => {
       const basename = filepath.split(/[/\\]/).pop() ?? filepath
-      return patterns.some((p) => {
-        // Git attributes: slashless patterns match any basename in the tree
-        if (!p.includes("/")) return Glob.match(p, basename)
-        return Glob.match(p, filepath)
-      })
+      // Last matching rule wins (git attribute semantics)
+      let result = false
+      for (const rule of rules) {
+        const matches = rule.pattern.includes("/")
+          ? Glob.match(rule.pattern, filepath)
+          : Glob.match(rule.pattern, basename)
+        if (matches) result = rule.positive
+      }
+      return result
     }
   }
   // kilocode_change end

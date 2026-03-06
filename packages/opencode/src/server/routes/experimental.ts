@@ -347,7 +347,7 @@ export const ExperimentalRoutes = lazy(() =>
               // to avoid reading content (the whole point of filtering).
               const f = Bun.file(path.join(dir, file))
               if (!(await f.exists())) continue
-              const lines = Math.max(1, Math.round(f.size / 40))
+              const lines = f.size === 0 ? 0 : Math.max(1, Math.round(f.size / 40))
               generated.push({ file, status: "added", additions: lines, deletions: 0 })
               continue
             }
