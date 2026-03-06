@@ -8,12 +8,15 @@ export const dict = {
   "agentManager.worktree.new": "New Worktree",
   "agentManager.worktree.setupScript": "Worktree Setup Script",
   "agentManager.worktree.delete": "Delete worktree",
+  "agentManager.worktree.confirmDelete": "Delete?",
   "agentManager.worktree.stale": "Stale",
   "agentManager.worktree.staleTooltip": "Missing on disk or no longer tracked by git worktree",
   "agentManager.worktree.removeStale": "Remove stale worktree",
   "agentManager.worktree.doubleClickRename": "Double-click to rename",
   "agentManager.worktree.versions": "{{count}} versions",
   "agentManager.worktree.advancedOptions": "Advanced worktree options",
+  "agentManager.worktree.defaultBaseBranch": "Default Base Branch",
+  "agentManager.worktree.defaultBaseBranchAuto": "Auto-detect",
 
   "agentManager.hoverCard.branch": "BRANCH",
   "agentManager.hoverCard.base": "Base",
@@ -36,7 +39,6 @@ export const dict = {
 
   "agentManager.setup.failed": "Workspace setup failed",
   "agentManager.setup.settingUp": "Setting up workspace",
-
   "agentManager.shortcuts.title": "Keyboard Shortcuts",
   "agentManager.shortcuts.category.sidebar": "Sidebar",
   "agentManager.shortcuts.category.tabs": "Tabs",
@@ -56,13 +58,6 @@ export const dict = {
   "agentManager.shortcuts.focusPanel": "Focus panel",
   "agentManager.shortcuts.openAgentManager": "Open Agent Manager",
   "agentManager.shortcuts.showShortcuts": "Show keyboard shortcuts",
-
-  "agentManager.dialog.deleteWorktree.title": "Delete Worktree",
-  "agentManager.dialog.deleteWorktree.messagePre": "Delete worktree ",
-  "agentManager.dialog.deleteWorktree.messagePost":
-    "? This removes the worktree from disk and dissociates all sessions.",
-  "agentManager.dialog.deleteWorktree.cancel": "Cancel",
-  "agentManager.dialog.deleteWorktree.confirm": "Delete",
 
   "agentManager.dialog.removeStaleWorktree.title": "Remove Stale Worktree",
   "agentManager.dialog.removeStaleWorktree.messagePre": "Remove stale worktree ",
@@ -88,6 +83,7 @@ export const dict = {
   "agentManager.dialog.versionHint": "{{count}} worktrees will run in parallel",
   "agentManager.dialog.compareModels": "Compare Models",
   "agentManager.dialog.compareModels.searchModels": "Search models...",
+  "agentManager.dialog.compareModels.selectModels": "Select models...",
   "agentManager.dialog.creating": "Creating...",
   "agentManager.dialog.createWorkspace": "Create Worktree",
   "agentManager.dialog.removeImage": "Remove image",

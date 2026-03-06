@@ -25,6 +25,8 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/review-annotations.ts"),
   path.join(ROOT, "webview-ui/agent-manager/MultiModelSelector.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ApplyDialog.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/BranchSelect.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/WorktreeItem.tsx"),
 ]
 const TSX_FILE = TSX_FILES[0]
 const PROVIDER_FILE = path.join(ROOT, "src/agent-manager/AgentManagerProvider.ts")
@@ -170,6 +172,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
       "agentManager.requestRepoInfo",
       "agentManager.requestState",
       "agentManager.setTabOrder",
+      "agentManager.setDefaultBaseBranch",
     ]
     for (const msg of expected) {
       expect(text, `onMessage should handle "${msg}"`).toContain(msg)
@@ -382,6 +385,50 @@ describe("KiloProvider — pending session refresh on reconnect", () => {
     expect(provider, "pendingSessionRefresh field must be declared").toMatch(
       /private\s+pendingSessionRefresh\s*=\s*false/,
     )
+  })
+})
+
+// ---------------------------------------------------------------------------
+// handleChangeDefaultBaseBranch — listener leak fix
+// ---------------------------------------------------------------------------
+
+describe("Agent Manager — dialog listener cleanup", () => {
+  const tsx = fs.readFileSync(TSX_FILE, "utf-8")
+
+  /**
+   * Regression: handleChangeDefaultBaseBranch subscribes to vscode.onMessage
+   * for branch data. Previously unsub() was only called inside selectBranch()
+   * and the Escape keydown handler. If the dialog closed via backdrop click or
+   * external dialog.close(), the listener leaked and stacked on every reopen.
+   *
+   * The fix ties unsub() to Solid's onCleanup inside the dialog.show() render
+   * function so it always disposes regardless of how the dialog closes.
+   */
+  it("handleChangeDefaultBaseBranch uses onCleanup(unsub) inside dialog.show", () => {
+    const fnStart = tsx.indexOf("const handleChangeDefaultBaseBranch")
+    expect(fnStart, "handleChangeDefaultBaseBranch must exist").toBeGreaterThan(-1)
+
+    // Grab the function body (enough to cover the dialog.show callback)
+    const snippet = tsx.slice(fnStart, fnStart + 2000)
+
+    // The dialog.show callback must register onCleanup(unsub)
+    const showIdx = snippet.indexOf("dialog.show(")
+    expect(showIdx, "dialog.show() call must exist").toBeGreaterThan(-1)
+    const afterShow = snippet.slice(showIdx)
+    expect(afterShow, "onCleanup(unsub) must be inside dialog.show callback").toContain("onCleanup(unsub)")
+  })
+
+  it("selectBranch does not manually call unsub (handled by onCleanup)", () => {
+    const fnStart = tsx.indexOf("const handleChangeDefaultBaseBranch")
+    const snippet = tsx.slice(fnStart, fnStart + 2000)
+
+    // Find the selectBranch function body
+    const selStart = snippet.indexOf("const selectBranch")
+    expect(selStart, "selectBranch must exist").toBeGreaterThan(-1)
+    const selEnd = snippet.indexOf("}", selStart + 50)
+    const selBody = snippet.slice(selStart, selEnd + 1)
+
+    expect(selBody, "selectBranch should not call unsub() directly").not.toContain("unsub()")
   })
 })
 

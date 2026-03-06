@@ -1285,6 +1285,40 @@
 }
 
 /* ============================================
+   Auth Prompt (sign in / sign up error displays)
+   ============================================ */
+
+[data-component="auth-prompt"] {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+[data-component="auth-prompt"] [data-slot="auth-prompt-header"] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+[data-component="auth-prompt"] [data-slot="auth-prompt-icon"] {
+  font-size: 16px;
+  line-height: 1;
+}
+
+[data-component="auth-prompt"] [data-slot="auth-prompt-title"] {
+  font-weight: 600;
+  color: var(--text-strong, var(--vscode-foreground));
+  font-size: 13px;
+}
+
+[data-component="auth-prompt"] [data-slot="auth-prompt-description"] {
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  font-size: 12px;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* ============================================
    Enhance Prompt Spinner
    ============================================ */
 

@@ -24,7 +24,7 @@ export const ModelSelectorNoProviders: Story = {
     <StoryProviders>
       <div style={{ display: "flex", "align-items": "center", gap: "8px" }}>
         <ModelSelectorBase
-          value={{ providerID: "kilo", modelID: "kilo/auto" }}
+          value={{ providerID: "kilo", modelID: "kilo-auto/frontier" }}
           onSelect={() => {}}
           placement="bottom-start"
         />
