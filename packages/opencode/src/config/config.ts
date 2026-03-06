@@ -1519,11 +1519,11 @@ export namespace Config {
       return merged
     })()
 
+    global.reset()
+
     // kilocode_change start - skip disposal when reload is false
     if (opts?.reload !== false) {
       // kilocode_change end
-      global.reset()
-
       void Instance.disposeAll()
         .catch(() => undefined)
         .finally(() => {

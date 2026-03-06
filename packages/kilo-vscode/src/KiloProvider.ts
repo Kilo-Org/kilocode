@@ -1556,6 +1556,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       )
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to persist permission rules:", error)
+      vscode.window.showWarningMessage(
+        "Failed to save permission rule to global settings. The rule will apply for this session only.",
+      )
     }
   }
 
