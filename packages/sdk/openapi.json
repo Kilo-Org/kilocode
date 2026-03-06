@@ -4413,9 +4413,13 @@
                   "properties": {
                     "message": {
                       "type": "string"
+                    },
+                    "instructionsFound": {
+                      "description": "Whether custom instructions were found",
+                      "type": "boolean"
                     }
                   },
-                  "required": ["message"]
+                  "required": ["message", "instructionsFound"]
                 }
               }
             }
@@ -4450,6 +4454,10 @@
                   },
                   "previousMessage": {
                     "description": "Previously generated message — triggers regeneration with a different result",
+                    "type": "string"
+                  },
+                  "instructions": {
+                    "description": "Custom instructions for commit message style",
                     "type": "string"
                   }
                 },
@@ -9839,7 +9847,14 @@
         "type": "object",
         "properties": {
           "model": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "variant": {
             "description": "Default model variant for this agent (applies only when using the agent's configured model).",
@@ -10400,11 +10415,25 @@
           },
           "model": {
             "description": "Model to use in the format of provider/model, eg anthropic/claude-2",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "small_model": {
             "description": "Small model to use for tasks like title generation in the format of provider/model",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "default_agent": {
             "description": "Default agent to use when none is specified. Must be a primary agent. Falls back to 'code' if not set or if the specified agent is invalid.",
