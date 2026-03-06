@@ -549,11 +549,21 @@ export namespace MCP {
       }
       s.clients[name] = result.mcpClient
     }
+
+    // kilocode_change start - Persist enabled: true to config only if connection succeeded
+    if (result.status.status === "connected") {
+      await Config.persistMcpToggle(name, true).catch((error) => {
+        log.error("Failed to persist MCP enabled state to config", { name, error })
+      })
+    }
+    // kilocode_change end
   }
 
   export async function disconnect(name: string) {
     const s = await state()
     const client = s.clients[name]
+
+    // Always disconnect the client if it exists, regardless of config state
     if (client) {
       await client.close().catch((error) => {
         log.error("Failed to close MCP client", { name, error })
@@ -561,6 +571,15 @@ export namespace MCP {
       delete s.clients[name]
     }
     s.status[name] = { status: "disabled" }
+
+    // kilocode_change start - Persist enabled: false to config only if MCP is defined in config
+    const cfg = await Config.get()
+    if (cfg.mcp?.[name]) {
+      await Config.persistMcpToggle(name, false).catch((error) => {
+        log.error("Failed to persist MCP disabled state to config", { name, error })
+      })
+    }
+    // kilocode_change end
   }
 
   export async function tools() {
