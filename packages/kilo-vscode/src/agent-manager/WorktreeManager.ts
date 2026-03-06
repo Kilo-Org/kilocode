@@ -8,10 +8,10 @@
 
 import * as path from "path"
 import * as fs from "fs"
-import * as cp from "child_process"
 import simpleGit, { type SimpleGit } from "simple-git"
 import { generateBranchName, sanitizeBranchName } from "./branch-name"
 import type { GitOps } from "./GitOps"
+import { execWithShellEnv } from "./shell-env"
 import {
   parsePRUrl,
   localBranchName,
@@ -561,13 +561,9 @@ export class WorktreeManager {
     }
   }
 
-  private exec(cmd: string, args: string[], timeout = 120000): Promise<string> {
-    return new Promise((resolve, reject) => {
-      cp.execFile(cmd, args, { cwd: this.root, timeout, encoding: "utf-8" }, (error, stdout) => {
-        if (error) reject(error)
-        else resolve(stdout)
-      })
-    })
+  private async exec(cmd: string, args: string[], timeout = 120000): Promise<string> {
+    const { stdout } = await execWithShellEnv(cmd, args, { cwd: this.root, timeout })
+    return stdout
   }
 
   private async gitExec(args: string[]): Promise<void> {
