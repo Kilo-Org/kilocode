@@ -1119,14 +1119,17 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     if (anchor) {
       const href = anchor.getAttribute("href")
       if (!href) return
-      // Skip actual URLs
-      if (href.includes("://")) return
-      // Skip anchors
+      // Skip actual URLs and non-file schemes (mailto:, tel:, etc.)
+      if (href.includes("://") || /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href)) return
+      // Skip pure anchors
       if (href.startsWith("#")) return
+      // Strip fragment and query before treating as file path
+      const cleaned = href.replace(/[#?].*$/, "")
+      if (!cleaned) return
       // Must look like a file path (has a dot for extension)
-      if (!href.includes(".")) return
+      if (!cleaned.includes(".")) return
       e.preventDefault()
-      data.openFile(href)
+      data.openFile(cleaned)
     }
   }
   // kilocode_change end

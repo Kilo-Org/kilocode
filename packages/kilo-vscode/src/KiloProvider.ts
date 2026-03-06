@@ -776,7 +776,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.client.session
         .get({ sessionID, directory: workspaceDir })
         .then((result) => {
-          if (result.data) {
+          if (result.data && !abort.signal.aborted) {
             this.currentSession = result.data
           }
         })
