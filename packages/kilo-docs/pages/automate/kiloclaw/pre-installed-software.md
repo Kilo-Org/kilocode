@@ -71,7 +71,6 @@ The following packages are installed globally via `npm`:
 
 | Package                 | Version  |
 | ----------------------- | -------- |
-| OpenClaw (`openclaw`)   | 2026.3.2 |
 | ClawHub CLI (`clawhub`) | Unpinned |
 | mcporter                | 0.7.3    |
 | `@steipete/summarize`   | 0.11.1   |
