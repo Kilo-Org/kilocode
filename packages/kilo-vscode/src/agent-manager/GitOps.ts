@@ -62,7 +62,7 @@ export class GitOps {
     return this.runGit(args, cwd)
   }
 
-  /** Return the name of the currently checked-out branch, or empty string if detached. */
+  /** Return the name of the currently checked-out branch, or `"HEAD"` if detached. */
   async currentBranch(cwd: string): Promise<string> {
     return this.raw(["rev-parse", "--abbrev-ref", "HEAD"], cwd).catch(() => "")
   }
