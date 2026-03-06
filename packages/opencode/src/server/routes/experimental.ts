@@ -237,10 +237,15 @@ export const ExperimentalRoutes = lazy(() =>
           return FileIgnore.parseGitattributes(await f.text())
         })()
 
-        const isGenerated = (filepath: string): boolean => {
-          if (exclude === "none") return false
-          if (attrMatcher?.(filepath)) return true
-          return FileIgnore.generated(filepath)
+        // Returns the generated folder prefix, or undefined if reviewable
+        const generatedFolder = (filepath: string): string | undefined => {
+          if (exclude === "none") return undefined
+          if (attrMatcher?.(filepath)) {
+            // gitattributes match — use first path segment as folder
+            const slash = filepath.indexOf("/")
+            return slash >= 0 ? filepath.slice(0, slash) : filepath
+          }
+          return FileIgnore.generatedFolder(filepath)
         }
 
         const mergeBaseResult = await $`git merge-base HEAD ${base}`.cwd(dir).quiet().nothrow()
@@ -299,8 +304,9 @@ export const ExperimentalRoutes = lazy(() =>
           const stat = stats.get(file) ?? { additions: 0, deletions: 0 }
 
           // Skip reading file content for generated files — only collect stats
-          if (isGenerated(file)) {
-            generated.push({ file, status, additions: stat.additions, deletions: stat.deletions })
+          const folder = generatedFolder(file)
+          if (folder !== undefined) {
+            generated.push({ file, folder, status, additions: stat.additions, deletions: stat.deletions })
             continue
           }
 
@@ -342,13 +348,14 @@ export const ExperimentalRoutes = lazy(() =>
           for (const file of untrackedFiles.split("\n")) {
             if (!file || seen.has(file)) continue
 
-            if (isGenerated(file)) {
+            const ufolder = generatedFolder(file)
+            if (ufolder !== undefined) {
               // For untracked generated files, estimate line count from file size
               // to avoid reading content (the whole point of filtering).
               const f = Bun.file(path.join(dir, file))
               if (!(await f.exists())) continue
               const lines = f.size === 0 ? 0 : Math.max(1, Math.round(f.size / 40))
-              generated.push({ file, status: "added", additions: lines, deletions: 0 })
+              generated.push({ file, folder: ufolder, status: "added", additions: lines, deletions: 0 })
               continue
             }
 

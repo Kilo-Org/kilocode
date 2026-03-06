@@ -27,43 +27,20 @@ interface GeneratedFolderGroup {
   deletions: number
 }
 
-// Find the generated folder prefix for grouping. For "packages/app/node_modules/react/index.js"
-// this returns "packages/app/node_modules" — the path up to and including the generated folder segment.
-function generatedPrefix(filepath: string): string {
-  const segments = filepath.split("/")
-  // Walk segments to find the first that looks like a generated/vendor directory.
-  // These are the most common names from our GENERATED_FOLDERS set — just enough
-  // to group correctly in the UI without importing the full server-side set.
-  const known = new Set([
-    "node_modules",
-    "bower_components",
-    ".pnpm-store",
-    ".yarn",
-    "vendor",
-    "Pods",
-    "dist",
-    "build",
-    "out",
-    ".next",
-    ".nuxt",
-    ".output",
-    ".svelte-kit",
-    "target",
-    "obj",
-    ".turbo",
-    ".cache",
-    ".parcel-cache",
-    "__pycache__",
-    ".pytest_cache",
-    ".gradle",
-    ".terraform",
-    "coverage",
-    ".venv",
-    "venv",
-  ])
-  for (let i = 0; i < segments.length; i++) {
-    if (known.has(segments[i]!)) return segments.slice(0, i + 1).join("/")
+function groupGeneratedByFolder(generated: GeneratedSummary): GeneratedFolderGroup[] {
+  const groups = new Map<string, { files: number; additions: number; deletions: number }>()
+  for (const entry of generated.entries) {
+    const key = entry.folder
+    const existing = groups.get(key) ?? { files: 0, additions: 0, deletions: 0 }
+    existing.files++
+    existing.additions += entry.additions
+    existing.deletions += entry.deletions
+    groups.set(key, existing)
   }
+  return Array.from(groups.entries())
+    .map(([folder, stats]) => ({ folder, ...stats }))
+    .sort((a, b) => b.files - a.files)
+}
   // Fallback: use first segment
   return segments[0] ?? filepath
 }

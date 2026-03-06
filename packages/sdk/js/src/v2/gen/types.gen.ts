@@ -1674,6 +1674,7 @@ export type WorktreeResetInput = {
 
 export type GeneratedEntry = {
   file: string
+  folder: string
   status: "added" | "deleted" | "modified"
   additions: number
   deletions: number

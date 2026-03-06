@@ -204,6 +204,7 @@ export namespace Snapshot {
   export const GeneratedEntry = z
     .object({
       file: z.string(),
+      folder: z.string(),
       status: z.enum(["added", "deleted", "modified"]),
       additions: z.number(),
       deletions: z.number(),

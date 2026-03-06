@@ -85,14 +85,26 @@ export namespace FileIgnore {
 
   /** Test whether a file path is a generated/vendor file for diff filtering purposes. */
   export function generated(filepath: string): boolean {
+    return generatedFolder(filepath) !== undefined
+  }
+
+  /**
+   * Return the generated folder prefix for a path, or undefined if not generated.
+   * For "packages/app/node_modules/react/index.js" returns "packages/app/node_modules".
+   */
+  export function generatedFolder(filepath: string): string | undefined {
     const parts = filepath.split(/[/\\]/)
-    for (const part of parts) {
-      if (GENERATED_FOLDERS.has(part)) return true
+    for (let i = 0; i < parts.length; i++) {
+      if (GENERATED_FOLDERS.has(parts[i]!)) return parts.slice(0, i + 1).join("/")
     }
     for (const pattern of FILES) {
-      if (Glob.match(pattern, filepath)) return true
+      if (Glob.match(pattern, filepath)) {
+        // File-level match — group by parent directory
+        const slash = filepath.lastIndexOf("/")
+        return slash >= 0 ? filepath.slice(0, slash) : filepath
+      }
     }
-    return false
+    return undefined
   }
 
   /**

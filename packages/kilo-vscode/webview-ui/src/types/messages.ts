@@ -745,6 +745,7 @@ export interface WorktreeFileDiff {
 // Generated file entry (stats only, no content)
 export interface GeneratedFileEntry {
   file: string
+  folder: string
   status: "added" | "deleted" | "modified"
   additions: number
   deletions: number
