@@ -238,6 +238,13 @@ export namespace MessageV2 {
   })
   export type StepStartPart = z.infer<typeof StepStartPart>
 
+  const EnergySchema = z.object({
+    wh: z.number().optional(),
+    gCO2e: z.number().optional(),
+    source: z.enum(["measured", "estimated"]).optional(),
+    provider: z.string().optional(),
+  })
+
   export const StepFinishPart = PartBase.extend({
     type: z.literal("step-finish"),
     reason: z.string(),
@@ -253,6 +260,7 @@ export namespace MessageV2 {
         write: z.number(),
       }),
     }),
+    energy: EnergySchema.optional(),
   }).meta({
     ref: "StepFinishPart",
   })
@@ -440,6 +448,7 @@ export namespace MessageV2 {
         write: z.number(),
       }),
     }),
+    energy: EnergySchema.optional(),
     structured: z.any().optional(),
     variant: z.string().optional(),
     finish: z.string().optional(),

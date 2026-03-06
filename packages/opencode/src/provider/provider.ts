@@ -20,6 +20,7 @@ import { iife } from "@/util/iife"
 import { Global } from "../global"
 import path from "path"
 import { Filesystem } from "../util/filesystem"
+import * as EnergyCapture from "./energy-capture"
 
 // Direct imports for bundled providers
 import { createAmazonBedrock, type AmazonBedrockProviderSettings } from "@ai-sdk/amazon-bedrock"
@@ -1129,11 +1130,16 @@ export namespace Provider {
           }
         }
 
-        return fetchFn(input, {
+        const response = await fetchFn(input, {
           ...opts,
           // @ts-ignore see here: https://github.com/oven-sh/bun/issues/16682
           timeout: false,
         })
+        const ct = response.headers.get("content-type") || ""
+        if (ct.includes("text/event-stream")) {
+          return EnergyCapture.wrapResponse(response)
+        }
+        return response
       }
 
       const bundledFn = BUNDLED_PROVIDERS[model.api.npm]

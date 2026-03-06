@@ -40,7 +40,7 @@ import type {
   FileAttachment,
 } from "../types/messages"
 import { removeSessionPermissions, upsertPermission } from "./permission-queue"
-import { computeStatus, calcTotalCost, calcContextUsage } from "./session-utils"
+import { computeStatus, calcTotalCost, calcTotalEnergy, calcContextUsage } from "./session-utils"
 
 // Store structure for messages and parts
 interface SessionStore {
@@ -103,8 +103,9 @@ interface SessionContextValue {
   hasModelOverride: Accessor<boolean>
   clearModelOverride: () => void
 
-  // Cost and context usage for the current session
+  // Cost, energy, and context usage for the current session
   totalCost: Accessor<number>
+  totalEnergy: Accessor<number>
   contextUsage: Accessor<ContextUsage | undefined>
 
   // Agent/mode selection (per-session)
@@ -1045,6 +1046,7 @@ export const SessionProvider: ParentComponent = (props) => {
   )
 
   const totalCost = createMemo(() => calcTotalCost(messages()))
+  const totalEnergy = createMemo(() => calcTotalEnergy(messages()))
 
   // Status text derived from last assistant message parts
   const statusText = createMemo<string | undefined>(() => {
@@ -1097,6 +1099,7 @@ export const SessionProvider: ParentComponent = (props) => {
     hasModelOverride,
     clearModelOverride,
     totalCost,
+    totalEnergy,
     contextUsage,
     agents,
     selectedAgent: selectedAgentName,
