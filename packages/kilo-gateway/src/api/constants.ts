@@ -19,10 +19,10 @@ export const KILO_OPENROUTER_BASE = `${KILO_API_BASE}/api/openrouter`
 export const POLL_INTERVAL_MS = 3000
 
 /** Default model for authenticated users */
-export const DEFAULT_MODEL = "kilo/auto"
+export const DEFAULT_MODEL = "kilo-auto/frontier"
 
 /** Default model for anonymous/free usage */
-export const DEFAULT_FREE_MODEL = "kilo/auto-free"
+export const DEFAULT_FREE_MODEL = "kilo-auto/free"
 
 /** Token expiration duration in milliseconds (1 year) */
 export const TOKEN_EXPIRATION_MS = 365 * 24 * 60 * 60 * 1000

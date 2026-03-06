@@ -1051,4 +1051,6 @@ export const dict = {
     "Dette fjerner de gamle indstillinger fra VS Code-lageret. Du vil ikke kunne køre denne migrering igen.",
   "migration.complete.done": "Færdig",
   // legacy-migration end
+
+  "error.details.show": "Detaljer",
 }

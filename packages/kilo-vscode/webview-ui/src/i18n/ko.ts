@@ -1046,4 +1046,6 @@ export const dict = {
     "이 작업은 VS Code 저장소에서 이전 설정을 제거합니다. 이 마이그레이션을 다시 실행할 수 없게 됩니다.",
   "migration.complete.done": "완료",
   // legacy-migration end
+
+  "error.details.show": "상세 정보",
 }

@@ -97,8 +97,8 @@ describe("buildTriggerLabel", () => {
   })
 
   it("returns modelID for kilo gateway raw selection", () => {
-    const raw = { providerID: "kilo", modelID: "kilo/auto" }
-    expect(buildTriggerLabel(undefined, undefined, raw, false, "", true, labels)).toBe("kilo/auto")
+    const raw = { providerID: "kilo", modelID: "kilo-auto/frontier" }
+    expect(buildTriggerLabel(undefined, undefined, raw, false, "", true, labels)).toBe("kilo-auto/frontier")
   })
 
   it("returns providerID / modelID for non-kilo raw selection", () => {

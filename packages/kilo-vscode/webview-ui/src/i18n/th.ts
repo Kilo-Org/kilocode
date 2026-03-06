@@ -1042,4 +1042,6 @@ export const dict = {
     "การดำเนินการนี้จะลบการตั้งค่าเดิมจากที่เก็บข้อมูล VS Code คุณจะไม่สามารถเรียกใช้การย้ายข้อมูลนี้ได้อีก",
   "migration.complete.done": "เสร็จสิ้น",
   // legacy-migration end
+
+  "error.details.show": "รายละเอียด",
 }

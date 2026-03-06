@@ -1069,4 +1069,6 @@ export const dict = {
     "Dadurch werden die alten Einstellungen aus dem VS Code-Speicher entfernt. Sie können diese Migration danach nicht erneut ausführen.",
   "migration.complete.done": "Fertig",
   // legacy-migration end
+
+  "error.details.show": "Details",
 } satisfies Partial<Record<Keys, string>>

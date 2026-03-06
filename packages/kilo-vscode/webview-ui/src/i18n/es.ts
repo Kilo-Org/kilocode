@@ -1058,4 +1058,6 @@ export const dict = {
     "Esto elimina la configuración antigua del almacenamiento de VS Code. No podrás volver a ejecutar esta migración.",
   "migration.complete.done": "Hecho",
   // legacy-migration end
+
+  "error.details.show": "Detalles",
 }
