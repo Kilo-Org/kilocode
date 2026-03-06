@@ -5,7 +5,7 @@ description: "Default system utilities, languages, and CLI tools included in the
 
 # Pre-installed Software
 
-Every KiloClaw instance ships with a curated set of system utilities, language runtimes, package managers, and CLI tools. This page documents everything that comes pre-installed in the KiloClaw Docker image so you know what's available out of the box. Pinned versions listed below are as of March 2026 and may change with future image updates.
+Every KiloClaw instance ships with a curated set of system utilities, language runtimes, package managers, and CLI tools. This page documents everything that comes pre-installed in the KiloClaw Docker image so you know what's available out of the box. Where a specific version is listed it reflects the pin in the Dockerfile as of March 2026. Entries marked **unpinned** install the latest available version at image build time and may differ between releases.
 
 ## Base Image
 
@@ -41,12 +41,12 @@ The following packages are installed via `apt` on top of the base image:
 
 ## Languages & Runtimes
 
-| Language / Runtime | Version        | Install Method                   |
-| ------------------ | -------------- | -------------------------------- |
-| Node.js            | 22.13.1        | Binary tarball (primary runtime) |
-| Go                 | 1.26.0         | Binary tarball                   |
-| Bun                | 1.2.4          | Install script                   |
-| Python 3           | System default | `apt` (Debian Bookworm)          |
+| Language / Runtime | Version                            | Install Method                   |
+| ------------------ | ---------------------------------- | -------------------------------- |
+| Node.js            | 22.13.1                            | Binary tarball (primary runtime) |
+| Go                 | 1.26.0                             | Binary tarball                   |
+| Bun                | 1.2.4                              | Install script                   |
+| Python 3           | Unpinned (Debian Bookworm default) | `apt`                            |
 
 ## Package Managers
 
@@ -56,13 +56,14 @@ These package managers are available for installing libraries and dependencies:
 | ------- | -------------------- |
 | `npm`   | Bundled with Node.js |
 | `pnpm`  | Installed via `npm`  |
+| `bun`   | Bundled with Bun     |
 
 ## CLI Tools
 
 | Tool                 | Version / Source            |
 | -------------------- | --------------------------- |
-| GitHub CLI (`gh`)    | Latest from GitHub apt repo |
-| 1Password CLI (`op`) | 2.32.1 from 1Password repo  |
+| GitHub CLI (`gh`)    | Unpinned (GitHub apt repo)  |
+| 1Password CLI (`op`) | 2.32.1 (1Password apt repo) |
 
 ## npm Global Packages
 
@@ -71,7 +72,7 @@ The following packages are installed globally via `npm`:
 | Package                 | Version  |
 | ----------------------- | -------- |
 | OpenClaw (`openclaw`)   | 2026.3.2 |
-| ClawHub CLI (`clawhub`) | Latest   |
+| ClawHub CLI (`clawhub`) | Unpinned |
 | mcporter                | 0.7.3    |
 | `@steipete/summarize`   | 0.11.1   |
 
