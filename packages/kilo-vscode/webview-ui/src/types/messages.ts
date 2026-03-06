@@ -254,7 +254,9 @@ export interface ModelSelection {
 
 export type PermissionLevel = "allow" | "ask" | "deny"
 
-export type PermissionConfig = Partial<Record<string, PermissionLevel>>
+export type PermissionRule = PermissionLevel | Record<string, PermissionLevel>
+
+export type PermissionConfig = Partial<Record<string, PermissionRule>>
 
 export interface AgentConfig {
   model?: string | null
