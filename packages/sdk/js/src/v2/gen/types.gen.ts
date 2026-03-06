@@ -1965,9 +1965,7 @@ export type GlobalConfigGetResponse = GlobalConfigGetResponses[keyof GlobalConfi
 export type GlobalConfigUpdateData = {
   body?: Config
   path?: never
-  query?: {
-    reload?: "true" | "false"
-  }
+  query?: never
   url: "/global/config"
 }
 
@@ -1988,6 +1986,31 @@ export type GlobalConfigUpdateResponses = {
 }
 
 export type GlobalConfigUpdateResponse = GlobalConfigUpdateResponses[keyof GlobalConfigUpdateResponses]
+
+export type GlobalConfigFileUpdateData = {
+  body?: Config
+  path?: never
+  query?: never
+  url: "/global/config/file"
+}
+
+export type GlobalConfigFileUpdateErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type GlobalConfigFileUpdateError = GlobalConfigFileUpdateErrors[keyof GlobalConfigFileUpdateErrors]
+
+export type GlobalConfigFileUpdateResponses = {
+  /**
+   * Successfully updated global config file
+   */
+  200: Config
+}
+
+export type GlobalConfigFileUpdateResponse = GlobalConfigFileUpdateResponses[keyof GlobalConfigFileUpdateResponses]
 
 export type GlobalDisposeData = {
   body?: never

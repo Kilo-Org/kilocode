@@ -147,16 +147,40 @@ export const GlobalRoutes = lazy(() =>
         },
       }),
       validator("json", Config.Info),
-      // kilocode_change start - add reload query param to skip instance disposal
-      validator("query", z.object({ reload: z.enum(["true", "false"]).optional() })),
       async (c) => {
         const config = c.req.valid("json")
-        const reload = c.req.valid("query").reload !== "false"
-        const next = await Config.updateGlobal(config, { reload })
+        const next = await Config.updateGlobal(config)
         return c.json(next)
       },
-      // kilocode_change end
     )
+    // kilocode_change start - write config file without restarting instances
+    .patch(
+      "/config/file",
+      describeRoute({
+        summary: "Update global configuration file",
+        description:
+          "Write to the global config file without restarting instances. Useful for persisting rules while a session is active.",
+        operationId: "global.config.file.update",
+        responses: {
+          200: {
+            description: "Successfully updated global config file",
+            content: {
+              "application/json": {
+                schema: resolver(Config.Info),
+              },
+            },
+          },
+          ...errors(400),
+        },
+      }),
+      validator("json", Config.Info),
+      async (c) => {
+        const config = c.req.valid("json")
+        const next = await Config.updateGlobalFile(config)
+        return c.json(next)
+      },
+    )
+    // kilocode_change end
     .post(
       "/dispose",
       describeRoute({
