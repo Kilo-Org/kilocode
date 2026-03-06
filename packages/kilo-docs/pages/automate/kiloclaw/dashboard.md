@@ -40,10 +40,10 @@ Available when the instance is **running**.
 
 Stops the machine, applies your current configuration (environment variables, secrets, channel tokens), and starts it again. When redeploying, you have two options:
 
-- **Redeploy** — Redeploys using the same platform version your instance was originally set up with. Use this when you only need to apply configuration changes without changing the underlying platform.
-- **Upgrade & Redeploy** — Upgrades your instance to the latest supported platform version, then redeploys. Use this to pick up new features and fixes from the changelog.
+- **Redeploy** — Redeploys using the same platform version your instance is currently running. Use this when you only need to apply configuration changes without changing the underlying platform.
+- **Upgrade & Redeploy** — Upgrades your instance to the latest platform version supported by Kilo, then redeploys. Use this to pick up new features and fixes from the changelog.
 
-If you have a [version pin](#version-pinning) set, both options will use your pinned version.
+If you have a [version pin](#version-pinning) set, both options will use your pinned version instead.
 
 **Your files, git repos, cron jobs, and everything on your persistent volume are preserved.** Redeploy is not a factory reset — think of it as "apply config and restart" (or "upgrade and restart" if you choose **Upgrade & Redeploy**).
 
