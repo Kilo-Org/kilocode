@@ -53,11 +53,12 @@
       min-width: 180px;
     }
 
-    @container (max-width: 500px) {
+    @container (max-width: 640px) {
       [data-slot="tabs-list"] {
-        width: auto;
-        min-width: auto;
+        width: 56px;
+        min-width: 56px;
       }
+
       [data-slot="tabs-trigger"] .label {
         display: none;
       }
