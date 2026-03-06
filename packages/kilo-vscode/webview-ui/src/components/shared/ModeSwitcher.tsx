@@ -52,6 +52,7 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
         onOpenChange={setOpen}
         triggerAs={Button}
         triggerProps={{ variant: "ghost", size: "small" }}
+        class="mode-switcher-popover"
         trigger={
           <>
             <span class="mode-switcher-trigger-label">{triggerLabel()}</span>
