@@ -181,6 +181,32 @@ async function main() {
     ],
   })
 
+  // Build Diff Viewer webview (SolidJS, reuses Agent Manager diff components)
+  const diffViewerCtx = await esbuild.context({
+    entryPoints: ["webview-ui/diff-viewer/index.tsx"],
+    bundle: true,
+    format: "iife",
+    minify: production,
+    sourcemap: !production,
+    sourcesContent: false,
+    platform: "browser",
+    outfile: "dist/diff-viewer.js",
+    logLevel: "silent",
+    loader: {
+      ".woff": "file",
+      ".woff2": "file",
+      ".ttf": "file",
+    },
+    plugins: [
+      solidDedupePlugin,
+      pierreWorkerStubPlugin,
+      svgSpritePlugin,
+      cssPackageResolvePlugin,
+      solidPlugin(),
+      esbuildProblemMatcherPlugin,
+    ],
+  })
+
   // Build webview
   const webviewCtx = await esbuild.context({
     entryPoints: ["webview-ui/src/index.tsx"],
@@ -208,10 +234,20 @@ async function main() {
   })
 
   if (watch) {
-    await Promise.all([extensionCtx.watch(), webviewCtx.watch(), agentManagerCtx.watch()])
+    await Promise.all([extensionCtx.watch(), webviewCtx.watch(), agentManagerCtx.watch(), diffViewerCtx.watch()])
   } else {
-    await Promise.all([extensionCtx.rebuild(), webviewCtx.rebuild(), agentManagerCtx.rebuild()])
-    await Promise.all([extensionCtx.dispose(), webviewCtx.dispose(), agentManagerCtx.dispose()])
+    await Promise.all([
+      extensionCtx.rebuild(),
+      webviewCtx.rebuild(),
+      agentManagerCtx.rebuild(),
+      diffViewerCtx.rebuild(),
+    ])
+    await Promise.all([
+      extensionCtx.dispose(),
+      webviewCtx.dispose(),
+      agentManagerCtx.dispose(),
+      diffViewerCtx.dispose(),
+    ])
   }
 }
 

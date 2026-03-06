@@ -383,6 +383,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             vscode.env.openExternal(vscode.Uri.parse(message.url))
           }
           break
+        case "openDiffViewer":
+          vscode.commands.executeCommand("kilo-code.new.showChanges")
+          break
         case "openFile":
           if (message.filePath) {
             this.handleOpenFile(message.filePath, message.line, message.column)
@@ -1613,9 +1616,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       console.log("[Kilo New] KiloProvider: 🔐 Login successful")
 
-      await this.client.global.dispose().catch((e: unknown) =>
-        console.warn("[Kilo New] KiloProvider: global.dispose() after login failed:", e),
-      )
+      await this.client.global
+        .dispose()
+        .catch((e: unknown) => console.warn("[Kilo New] KiloProvider: global.dispose() after login failed:", e))
 
       // Step 4: Fetch profile and push to webview
       const { data: profileData } = await this.client.kilo.profile(undefined, { throwOnError: true })
@@ -1662,9 +1665,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
-    await this.client.global.dispose().catch((e: unknown) =>
-      console.warn("[Kilo New] KiloProvider: global.dispose() after org switch failed:", e),
-    )
+    await this.client.global
+      .dispose()
+      .catch((e: unknown) => console.warn("[Kilo New] KiloProvider: global.dispose() after org switch failed:", e))
 
     // Org switch succeeded — refresh profile and providers independently (best-effort)
     try {
@@ -1719,10 +1722,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         data: null,
       })
 
-      await this.client.global.dispose().catch((e: unknown) =>
-        console.warn("[Kilo New] KiloProvider: global.dispose() after logout failed:", e),
-      )
-
+      await this.client.global
+        .dispose()
+        .catch((e: unknown) => console.warn("[Kilo New] KiloProvider: global.dispose() after logout failed:", e))
     } catch (error) {
       console.error("[Kilo New] KiloProvider: ❌ Logout failed:", error)
       this.postMessage({
@@ -1730,8 +1732,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         message: getErrorMessage(error) || "Failed to logout",
       })
     }
-
-
   }
 
   /**
@@ -1858,7 +1858,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     // Refresh provider and agent lists when the server signals a state disposal
     if (event.type === "server.instance.disposed" || event.type === "global.disposed") {
-      void this.reloadAfterAuthChange();
+      void this.reloadAfterAuthChange()
       return
     }
 

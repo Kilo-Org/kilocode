@@ -1449,6 +1449,11 @@ export interface EnhancePromptRequest {
   requestId: string
 }
 
+// Open the diff viewer panel from the sidebar
+export interface OpenDiffViewerRequest {
+  type: "openDiffViewer"
+}
+
 export type WebviewMessage =
   | SendMessageRequest
   | AbortRequest
@@ -1531,6 +1536,7 @@ export type WebviewMessage =
   // legacy-migration end
   | ApplyWorktreeDiffMessage
   | EnhancePromptRequest
+  | OpenDiffViewerRequest
 
 // ============================================
 // VS Code API type

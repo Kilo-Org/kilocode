@@ -111,6 +111,11 @@
         }
       },
       {
+        "command": "kilo-code.new.showChanges",
+        "title": "Show Changes",
+        "category": "Kilo Code"
+      },
+      {
         "command": "kilo-code.new.openMigrationWizard",
         "title": "Migrate Settings from Legacy Version",
         "category": "Kilo Code"
