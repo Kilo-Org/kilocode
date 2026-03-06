@@ -95,8 +95,8 @@ export const dict = {
   "ui.permission.allowAlways": "항상 허용",
   "ui.permission.allowOnce": "한 번만 허용",
   "ui.permission.sessionHint": '"항상 허용"은 현재 세션에만 적용됩니다. 전역 권한은 설정에서 변경하세요.',
-  "ui.permission.globalHint": '"Allow always" will be saved to your global settings.',
-  "ui.permission.confirmRuleHint": "This rule will be saved to your global settings.",
+  "ui.permission.globalHint": '"항상 허용"이 전역 설정에 저장됩니다.',
+  "ui.permission.confirmRuleHint": "이 규칙이 전역 설정에 저장됩니다.",
 
   "ui.message.expand": "메시지 펼치기",
   "ui.message.collapse": "메시지 접기",

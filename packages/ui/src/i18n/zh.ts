@@ -99,8 +99,8 @@ export const dict = {
   "ui.permission.allowAlways": "始终允许",
   "ui.permission.allowOnce": "允许一次",
   "ui.permission.sessionHint": '"始终允许" 仅适用于本次会话。如需全局权限设置，请使用设置。',
-  "ui.permission.globalHint": '"Allow always" will be saved to your global settings.',
-  "ui.permission.confirmRuleHint": "This rule will be saved to your global settings.",
+  "ui.permission.globalHint": '"始终允许" 将保存到您的全局设置中。',
+  "ui.permission.confirmRuleHint": "此规则将保存到您的全局设置中。",
 
   "ui.message.expand": "展开消息",
   "ui.message.collapse": "收起消息",

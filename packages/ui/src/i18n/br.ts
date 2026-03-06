@@ -96,8 +96,8 @@ export const dict = {
   "ui.permission.allowOnce": "Permitir uma vez",
   "ui.permission.sessionHint":
     '"Permitir sempre" aplica-se apenas a esta sessão. Use as configurações para permissões globais.',
-  "ui.permission.globalHint": '"Allow always" will be saved to your global settings.',
-  "ui.permission.confirmRuleHint": "This rule will be saved to your global settings.",
+  "ui.permission.globalHint": '"Permitir sempre" será salvo nas suas configurações globais.',
+  "ui.permission.confirmRuleHint": "Esta regra será salva nas suas configurações globais.",
 
   "ui.message.expand": "Expandir mensagem",
   "ui.message.collapse": "Recolher mensagem",

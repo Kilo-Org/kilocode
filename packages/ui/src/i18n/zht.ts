@@ -99,8 +99,8 @@ export const dict = {
   "ui.permission.allowAlways": "永遠允許",
   "ui.permission.allowOnce": "允許一次",
   "ui.permission.sessionHint": '"永遠允許" 僅適用於此工作階段。如需全域權限設定，請使用設定。',
-  "ui.permission.globalHint": '"Allow always" will be saved to your global settings.',
-  "ui.permission.confirmRuleHint": "This rule will be saved to your global settings.",
+  "ui.permission.globalHint": '"永遠允許" 將儲存至您的全域設定中。',
+  "ui.permission.confirmRuleHint": "此規則將儲存至您的全域設定中。",
 
   "ui.message.expand": "展開訊息",
   "ui.message.collapse": "收合訊息",

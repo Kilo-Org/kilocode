@@ -100,8 +100,8 @@ export const dict = {
   "ui.permission.allowOnce": "Dozvoli jednom",
   "ui.permission.sessionHint":
     '"Uvijek dozvoli" primjenjuje se samo na ovu sesiju. Koristite postavke za globalne dozvole.',
-  "ui.permission.globalHint": '"Allow always" will be saved to your global settings.',
-  "ui.permission.confirmRuleHint": "This rule will be saved to your global settings.",
+  "ui.permission.globalHint": '"Uvijek dozvoli" bit će sačuvano u vašim globalnim postavkama.',
+  "ui.permission.confirmRuleHint": "Ovo pravilo bit će sačuvano u vašim globalnim postavkama.",
 
   "ui.message.expand": "Proširi poruku",
   "ui.message.collapse": "Sažmi poruku",

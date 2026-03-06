@@ -99,8 +99,8 @@ export const dict: Record<Keys, string> = {
   "ui.permission.allowOnce": "Tillat én gang",
   "ui.permission.sessionHint":
     '"Tillat alltid" gjelder bare for denne økten. Bruk innstillinger for globale tillatelser.',
-  "ui.permission.globalHint": '"Allow always" will be saved to your global settings.',
-  "ui.permission.confirmRuleHint": "This rule will be saved to your global settings.",
+  "ui.permission.globalHint": '"Tillat alltid" lagres i dine globale innstillinger.',
+  "ui.permission.confirmRuleHint": "Denne regelen lagres i dine globale innstillinger.",
 
   "ui.message.expand": "Utvid melding",
   "ui.message.collapse": "Skjul melding",
