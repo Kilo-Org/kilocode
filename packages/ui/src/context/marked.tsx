@@ -3,6 +3,7 @@ import markedKatex from "marked-katex-extension"
 
 import katex from "katex"
 import { bundledLanguages, type BundledLanguage } from "shiki"
+import { parseFilePath } from "../file-path" // kilocode_change
 import { createSimpleContext } from "./helper"
 import { getSharedHighlighter, registerCustomTheme, ThemeRegistrationResolved } from "@pierre/diffs"
 
@@ -463,25 +464,7 @@ async function highlightCodeBlocks(html: string): Promise<string> {
 
 export type NativeMarkdownParser = (markdown: string) => Promise<string>
 
-// kilocode_change start
-// Matches text that looks like a file path: contains "/" and ends with a file extension,
-// or starts with "./" or "../" or "/". Supports optional :line or :line:col suffix.
-const FILE_PATH_RE =
-  /^((?:\/|\.\.?\/)?(?:[a-zA-Z0-9_@-][a-zA-Z0-9_@./-]*\/)*[a-zA-Z0-9_@.-]+\.[a-zA-Z0-9]+)(?::(\d+)(?::(\d+))?)?$/
-
-function parseFilePath(text: string): { path: string; line?: number; column?: number } | undefined {
-  if (text.includes("://")) return undefined
-  if (text.includes(" ")) return undefined
-  const match = FILE_PATH_RE.exec(text)
-  if (!match) return undefined
-  if (!match[1].includes("/")) return undefined
-  return {
-    path: match[1],
-    line: match[2] ? parseInt(match[2], 10) : undefined,
-    column: match[3] ? parseInt(match[3], 10) : undefined,
-  }
-}
-// kilocode_change end
+// kilocode_change: parseFilePath imported from ../file-path
 
 // kilocode_change start: highlight cache for deferred highlighting
 

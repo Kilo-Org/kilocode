@@ -468,6 +468,25 @@ export interface SetChatBoxMessage {
   text: string
 }
 
+export interface AppendChatBoxMessage {
+  type: "appendChatBoxMessage"
+  text: string
+}
+
+export interface ReviewComment {
+  id: string
+  file: string
+  side: "additions" | "deletions"
+  line: number
+  comment: string
+  selectedText: string
+}
+
+export interface AppendReviewCommentsMessage {
+  type: "appendReviewComments"
+  comments: ReviewComment[]
+}
+
 export interface TriggerTaskMessage {
   type: "triggerTask"
   text: string
@@ -607,6 +626,7 @@ export interface AgentManagerSessionMetaMessage {
 export interface AgentManagerRepoInfoMessage {
   type: "agentManager.repoInfo"
   branch: string
+  defaultBranch?: string
 }
 
 // Agent Manager worktree setup progress
@@ -655,6 +675,7 @@ export interface AgentManagerStateMessage {
   sessionsCollapsed?: boolean
   reviewDiffStyle?: "unified" | "split"
   isGitRepo?: boolean
+  defaultBaseBranch?: string
 }
 
 // Resolved keybindings for agent manager actions
@@ -684,6 +705,7 @@ export interface BranchInfo {
   isRemote: boolean
   isDefault: boolean
   lastCommitDate?: string
+  isCheckedOut?: boolean
 }
 
 export interface AgentManagerBranchesMessage {
@@ -961,6 +983,8 @@ export type ExtensionMessage =
   | AgentManagerMultiVersionProgressMessage
   | AgentManagerSendInitialMessage
   | SetChatBoxMessage
+  | AppendChatBoxMessage
+  | AppendReviewCommentsMessage
   | TriggerTaskMessage
   | VariantsLoadedMessage
   | CloudSessionDataLoadedMessage
@@ -1290,9 +1314,24 @@ export interface ShowLocalTerminalRequest {
   type: "agentManager.showLocalTerminal"
 }
 
+// Open a worktree directory in VS Code
+export interface OpenWorktreeRequest {
+  type: "agentManager.openWorktree"
+  worktreeId: string
+}
+
 // Show existing local terminal when switching to local context (no-op if none exists)
 export interface ShowExistingLocalTerminalRequest {
   type: "agentManager.showExistingLocalTerminal"
+}
+
+// Open a file in the selected worktree for a specific session
+export interface AgentManagerOpenFileRequest {
+  type: "agentManager.openFile"
+  sessionId: string
+  filePath: string
+  line?: number
+  column?: number
 }
 
 /**
@@ -1414,6 +1453,12 @@ export interface EnhancePromptRequest {
   requestId: string
 }
 
+// Set default base branch (webview → extension)
+export interface SetDefaultBaseBranchRequest {
+  type: "agentManager.setDefaultBaseBranch"
+  branch?: string
+}
+
 export type WebviewMessage =
   | SendMessageRequest
   | AbortRequest
@@ -1468,7 +1513,9 @@ export type WebviewMessage =
   | ConfigureSetupScriptRequest
   | ShowTerminalRequest
   | ShowLocalTerminalRequest
+  | OpenWorktreeRequest
   | ShowExistingLocalTerminalRequest
+  | AgentManagerOpenFileRequest
   | CreateMultiVersionRequest
   | SetTabOrderRequest
   | SetSessionsCollapsedRequest
@@ -1494,6 +1541,7 @@ export type WebviewMessage =
   // legacy-migration end
   | ApplyWorktreeDiffMessage
   | EnhancePromptRequest
+  | SetDefaultBaseBranchRequest
 
 // ============================================
 // VS Code API type

@@ -47,6 +47,7 @@ export const dict = {
   "command.language.set": "언어 사용: {{language}}",
 
   "command.session.new": "새 세션",
+  "command.session.new.task": "새 작업",
   "command.file.open": "파일 열기",
   "command.tab.close": "탭 닫기",
   "command.context.addSelection": "선택 영역을 컨텍스트에 추가",
@@ -975,7 +976,6 @@ export const dict = {
   "dialog.model.notSet": "설정되지 않음",
   "profile.personalAccount": "개인 계정",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/ko.ts
-
 
   "question.summary": "{{total}}개 질문 중 {{n}}번째",
   "common.review": "검토",

@@ -22,7 +22,7 @@ interface ProviderContextValue {
 
 const KILO_AUTO: ModelSelection = { providerID: "kilo", modelID: "kilo/auto" }
 
-const ProviderContext = createContext<ProviderContextValue>()
+export const ProviderContext = createContext<ProviderContextValue>()
 
 export const ProviderProvider: ParentComponent = (props) => {
   const vscode = useVSCode()

@@ -3,7 +3,7 @@
  * Main chat container that combines all chat components
  */
 
-import { Component, For, Show, createSignal, onCleanup, onMount } from "solid-js"
+import { Component, For, Show, createSignal, createEffect, on, onCleanup, onMount } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { BasicTool } from "@kilocode/kilo-ui/basic-tool"
 import { TaskHeader } from "./TaskHeader"
@@ -23,12 +23,25 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const language = useLanguage()
 
   const id = () => session.currentSessionID()
+  const hasMessages = () => session.messages().length > 0
+  const idle = () => session.status() !== "busy"
   const sessionQuestions = () => session.questions().filter((q) => q.sessionID === id())
   const sessionPermissions = () => session.permissions().filter((p) => p.sessionID === id())
 
   const questionRequest = () => sessionQuestions().find((q) => !q.tool)
   const permissionRequest = () => sessionPermissions().find((p) => !p.tool)
   const blocked = () => sessionPermissions().length > 0 || sessionQuestions().length > 0
+
+  // When a bottom-dock permission/question disappears while the session is busy,
+  // the scroll container grows taller. Dispatch a custom event so MessageList can
+  // resume auto-scroll.
+  createEffect(
+    on(blocked, (isBlocked, wasBlocked) => {
+      if (wasBlocked && !isBlocked && !idle()) {
+        window.dispatchEvent(new CustomEvent("resumeAutoScroll"))
+      }
+    }),
+  )
 
   const [responding, setResponding] = createSignal(false)
 
@@ -101,6 +114,19 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                 </div>
               </div>
             )}
+          </Show>
+          <Show when={hasMessages() && idle() && !blocked()}>
+            <div class="new-task-button-wrapper">
+              <Button
+                variant="secondary"
+                size="small"
+                data-full-width="true"
+                onClick={() => window.dispatchEvent(new CustomEvent("newTaskRequest"))}
+                aria-label={language.t("command.session.new.task")}
+              >
+                {language.t("command.session.new.task")}
+              </Button>
+            </div>
           </Show>
           <Show when={!blocked()}>
             <PromptInput />

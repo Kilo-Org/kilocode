@@ -1,6 +1,7 @@
 import * as path from "path"
 import * as vscode from "vscode"
 import { z } from "zod"
+import { isAbsolutePath } from "./path-utils"
 import type {
   KiloClient,
   Session,
@@ -253,6 +254,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   public clearSessionDirectory(sessionId: string): void {
     this.sessionDirectories.delete(sessionId)
+  }
+
+  /** Return the currently active session ID, if any. */
+  public getCurrentSessionId(): string | undefined {
+    return this.currentSession?.id ?? undefined
   }
 
   /**
@@ -761,13 +767,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (abort.signal.aborted) return
 
       // Update currentSession so fallback logic in handleSendMessage/handleAbort
-      // references the correct session after switching to a historical session.
+      // references the correct session after switching.  loadMessages is the
+      // canonical "user switched to this session" signal, so always update —
+      // the old guard `this.currentSession.id === sessionID` prevented updates
+      // when switching between different sessions.
       // Non-blocking: don't let a failure here prevent messages from loading.
       // 404s are expected for cross-worktree sessions — use silent to suppress HTTP error logs.
       this.client.session
         .get({ sessionID, directory: workspaceDir })
         .then((result) => {
-          if (result.data && (!this.currentSession || this.currentSession.id === sessionID)) {
+          if (result.data && !abort.signal.aborted) {
             this.currentSession = result.data
           }
         })
@@ -870,7 +879,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       pendingSessionRefresh: this.pendingSessionRefresh,
       connectionState: this.connectionState,
       listSessions: client
-        ? (dir: string) => client.session.list({ directory: dir }, { throwOnError: true }).then(({ data }) => data)
+        ? (dir: string) =>
+            client.session.list({ directory: dir, roots: true }, { throwOnError: true }).then(({ data }) => data)
         : null,
       sessionDirectories: this.sessionDirectories,
       workspaceDirectory: this.getWorkspaceDirectory(),
@@ -1612,6 +1622,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       console.log("[Kilo New] KiloProvider: 🔐 Login successful")
 
+      await this.client.global
+        .dispose()
+        .catch((e: unknown) => console.warn("[Kilo New] KiloProvider: global.dispose() after login failed:", e))
+
       // Step 4: Fetch profile and push to webview
       const { data: profileData } = await this.client.kilo.profile(undefined, { throwOnError: true })
       this.postMessage({ type: "profileData", data: profileData })
@@ -1657,6 +1671,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
+    await this.client.global
+      .dispose()
+      .catch((e: unknown) => console.warn("[Kilo New] KiloProvider: global.dispose() after org switch failed:", e))
+
     // Org switch succeeded — refresh profile and providers independently (best-effort)
     try {
       const profileResult = await sdkClient.kilo.profile()
@@ -1673,12 +1691,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /**
    * Handle openFile request from the webview — open a file in the VS Code editor.
+   * Resolves relative paths against the current session's directory (which may be
+   * a worktree path registered via setSessionDirectory), falling back to workspace root.
+   * Absolute paths (Unix `/…` or Windows `C:\…`) are used as-is.
    */
   private handleOpenFile(filePath: string, line?: number, column?: number): void {
-    const absolute = /^(?:\/|[a-zA-Z]:[\\/])/.test(filePath)
-    const uri = absolute
+    const uri = isAbsolutePath(filePath)
       ? vscode.Uri.file(filePath)
-      : vscode.Uri.joinPath(vscode.Uri.file(this.getWorkspaceDirectory()), filePath)
+      : vscode.Uri.joinPath(vscode.Uri.file(this.getWorkspaceDirectory(this.currentSession?.id)), filePath)
     vscode.workspace.openTextDocument(uri).then(
       (doc) => {
         const options: vscode.TextDocumentShowOptions = { preview: true }
@@ -1709,6 +1729,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         type: "profileData",
         data: null,
       })
+
+      await this.client.global
+        .dispose()
+        .catch((e: unknown) => console.warn("[Kilo New] KiloProvider: global.dispose() after logout failed:", e))
     } catch (error) {
       console.error("[Kilo New] KiloProvider: ❌ Logout failed:", error)
       this.postMessage({
@@ -1803,6 +1827,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /**
+   * Re-fetch all server-side state after an auth change (login/logout/org switch).
+   * After instance.dispose() clears the server cache, the next request to each
+   * endpoint will re-initialize with the current auth state.
+   * This mirrors the TUI's sync.bootstrap() pattern.
+   */
+  private async reloadAfterAuthChange(): Promise<void> {
+    await Promise.all([
+      this.fetchAndSendProviders(),
+      this.fetchAndSendAgents(),
+      this.fetchAndSendConfig(),
+      this.fetchAndSendNotifications(),
+    ])
+  }
+
+  /**
    * Handle SSE events from the CLI backend.
    * Filters events by project ID and tracked session IDs so each webview only sees its own sessions.
    */
@@ -1827,8 +1866,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     // Refresh provider and agent lists when the server signals a state disposal
     if (event.type === "server.instance.disposed" || event.type === "global.disposed") {
-      void this.fetchAndSendProviders()
-      void this.fetchAndSendAgents()
+      void this.reloadAfterAuthChange()
       return
     }
 
@@ -2016,7 +2054,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       iconsBaseUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "assets", "icons")),
       title: "Kilo Code",
       port: this.connectionService.getServerInfo()?.port,
-      extraStyles: `.container { height: 100%; display: flex; flex-direction: column; height: 100vh; }`,
+      extraStyles: `.container { height: 100%; display: flex; flex-direction: column; height: 100vh; border-right: 1px solid var(--border-weak-base); }`,
     })
   }
 

@@ -25,6 +25,8 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/review-annotations.ts"),
   path.join(ROOT, "webview-ui/agent-manager/MultiModelSelector.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ApplyDialog.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/BranchSelect.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/WorktreeItem.tsx"),
 ]
 const TSX_FILE = TSX_FILES[0]
 const PROVIDER_FILE = path.join(ROOT, "src/agent-manager/AgentManagerProvider.ts")
@@ -170,6 +172,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
       "agentManager.requestRepoInfo",
       "agentManager.requestState",
       "agentManager.setTabOrder",
+      "agentManager.setDefaultBaseBranch",
     ]
     for (const msg of expected) {
       expect(text, `onMessage should handle "${msg}"`).toContain(msg)

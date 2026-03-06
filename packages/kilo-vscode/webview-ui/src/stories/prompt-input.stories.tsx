@@ -15,17 +15,7 @@ import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import { type ParentComponent } from "solid-js"
 import { StoryProviders, mockSessionValue } from "./StoryProviders"
 import { SessionContext } from "../context/session"
-import { VSCodeProvider } from "../context/vscode"
-import { ServerProvider } from "../context/server"
-import { ConfigProvider } from "../context/config"
-import { ProviderProvider } from "../context/provider"
 import { PromptInput } from "../components/chat/PromptInput"
-
-// ---------------------------------------------------------------------------
-// Providers — wraps StoryProviders with the extra providers PromptInput needs
-// (VSCode/Server/Config/ProviderProvider are not in StoryProviders because
-//  composite stories only render display components that don't need them)
-// ---------------------------------------------------------------------------
 
 const agents = [
   { name: "code", description: "Write, edit and review code", mode: "primary" as const },
@@ -44,20 +34,12 @@ const PromptProviders: ParentComponent<{ variants?: boolean }> = (props) => {
   }
 
   return (
-    <VSCodeProvider>
-      <ServerProvider>
-        <ConfigProvider>
-          <ProviderProvider>
-            <StoryProviders noPadding>
-              {/* overflow:hidden prevents margin-collapse so top/bottom borders are captured in screenshots */}
-              <div style={{ overflow: "hidden" }}>
-                <SessionContext.Provider value={session as any}>{props.children}</SessionContext.Provider>
-              </div>
-            </StoryProviders>
-          </ProviderProvider>
-        </ConfigProvider>
-      </ServerProvider>
-    </VSCodeProvider>
+    <StoryProviders noPadding>
+      {/* overflow:hidden prevents margin-collapse so top/bottom borders are captured in screenshots */}
+      <div style={{ overflow: "hidden" }}>
+        <SessionContext.Provider value={session as any}>{props.children}</SessionContext.Provider>
+      </div>
+    </StoryProviders>
   )
 }
 
