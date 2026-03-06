@@ -3,16 +3,19 @@ import * as fs from "fs"
 import * as path from "path"
 import * as os from "os"
 import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
+import { stateFile, legacyStateFile, agentManagerDir } from "../../src/agent-manager/globalPaths"
 
 describe("WorktreeStateManager", () => {
   let root: string
+  let globalDir: string
   let manager: WorktreeStateManager
   const logs: string[] = []
 
   beforeEach(() => {
     root = fs.mkdtempSync(path.join(os.tmpdir(), "wtsm-test-"))
-    // Pre-create .kilocode dir so fire-and-forget saves don't race on mkdir
-    fs.mkdirSync(path.join(root, ".kilocode"), { recursive: true })
+    globalDir = agentManagerDir(root)
+    // Pre-create global dir so fire-and-forget saves don't race on mkdir
+    fs.mkdirSync(globalDir, { recursive: true })
     logs.length = 0
     manager = new WorktreeStateManager(root, (msg) => logs.push(msg))
   })
@@ -20,6 +23,7 @@ describe("WorktreeStateManager", () => {
   afterEach(async () => {
     await manager.flush()
     fs.rmSync(root, { recursive: true, force: true })
+    fs.rmSync(globalDir, { recursive: true, force: true })
   })
 
   describe("worktree CRUD", () => {
@@ -164,14 +168,17 @@ describe("WorktreeStateManager", () => {
       expect(manager.getSessions()).toHaveLength(0)
     })
 
-    it("creates .kilocode directory if missing", async () => {
+    it("creates global directory if missing", async () => {
       const fresh = path.join(root, "subdir")
       const mgr = new WorktreeStateManager(fresh, () => {})
       mgr.addWorktree({ branch: "test", path: "/tmp/test", parentBranch: "main" })
       await mgr.flush()
       await mgr.save()
 
-      expect(fs.existsSync(path.join(fresh, ".kilocode", "agent-manager.json"))).toBe(true)
+      const file = stateFile(fresh)
+      expect(fs.existsSync(file)).toBe(true)
+      // Cleanup the global dir for this subdir
+      fs.rmSync(agentManagerDir(fresh), { recursive: true, force: true })
     })
   })
 
@@ -244,7 +251,7 @@ describe("WorktreeStateManager", () => {
       await manager.flush()
       await manager.save()
 
-      const content = fs.readFileSync(path.join(root, ".kilocode", "agent-manager.json"), "utf-8")
+      const content = fs.readFileSync(stateFile(root), "utf-8")
       const data = JSON.parse(content)
       expect(data.tabOrder).toBeUndefined()
     })
@@ -278,7 +285,7 @@ describe("WorktreeStateManager", () => {
       await manager.flush()
       await manager.save()
 
-      const content = fs.readFileSync(path.join(root, ".kilocode", "agent-manager.json"), "utf-8")
+      const content = fs.readFileSync(stateFile(root), "utf-8")
       const data = JSON.parse(content)
       expect(data.sessionsCollapsed).toBeUndefined()
     })
@@ -302,7 +309,7 @@ describe("WorktreeStateManager", () => {
     })
 
     it("resolves relative paths against root", async () => {
-      const relative = ".kilocode/worktrees/test-branch"
+      const relative = "worktrees/test-branch"
       const absolute = path.join(root, relative)
       fs.mkdirSync(absolute, { recursive: true })
 
@@ -390,7 +397,7 @@ describe("WorktreeStateManager", () => {
 
   describe("load with corrupt data", () => {
     it("handles malformed JSON gracefully", async () => {
-      const file = path.join(root, ".kilocode", "agent-manager.json")
+      const file = stateFile(root)
       fs.writeFileSync(file, "not-valid-json{{{", "utf-8")
 
       await manager.load()
@@ -403,7 +410,7 @@ describe("WorktreeStateManager", () => {
     })
 
     it("handles partial data with missing sessions key", async () => {
-      const file = path.join(root, ".kilocode", "agent-manager.json")
+      const file = stateFile(root)
       fs.writeFileSync(
         file,
         JSON.stringify({
@@ -420,7 +427,7 @@ describe("WorktreeStateManager", () => {
     })
 
     it("handles partial data with missing worktrees key", async () => {
-      const file = path.join(root, ".kilocode", "agent-manager.json")
+      const file = stateFile(root)
       fs.writeFileSync(
         file,
         JSON.stringify({ sessions: { "s-1": { worktreeId: null, createdAt: new Date().toISOString() } } }),
@@ -431,6 +438,71 @@ describe("WorktreeStateManager", () => {
 
       expect(manager.getWorktrees()).toHaveLength(0)
       expect(manager.getSessions()).toHaveLength(1)
+    })
+  })
+
+  describe("migration from legacy location", () => {
+    it("migrates state from legacy in-repo location to global", async () => {
+      // Write state to legacy location
+      const legacy = legacyStateFile(root)
+      fs.mkdirSync(path.dirname(legacy), { recursive: true })
+      const data = {
+        worktrees: {
+          "wt-1": { branch: "fix", path: "/tmp/fix", parentBranch: "main", createdAt: new Date().toISOString() },
+        },
+        sessions: { "s-1": { worktreeId: "wt-1", createdAt: new Date().toISOString() } },
+      }
+      fs.writeFileSync(legacy, JSON.stringify(data), "utf-8")
+
+      // Ensure global file does not exist
+      const global = stateFile(root)
+      if (fs.existsSync(global)) fs.unlinkSync(global)
+
+      await manager.load()
+
+      expect(manager.getWorktrees()).toHaveLength(1)
+      expect(manager.getWorktrees()[0].branch).toBe("fix")
+      expect(manager.getSessions()).toHaveLength(1)
+
+      // Global file should now exist
+      expect(fs.existsSync(global)).toBe(true)
+      // Legacy file should be removed
+      expect(fs.existsSync(legacy)).toBe(false)
+    })
+
+    it("prefers global state over legacy when both exist", async () => {
+      // Write different data to both locations
+      const legacy = legacyStateFile(root)
+      fs.mkdirSync(path.dirname(legacy), { recursive: true })
+      fs.writeFileSync(
+        legacy,
+        JSON.stringify({
+          worktrees: {
+            "wt-old": { branch: "old", path: "/tmp/old", parentBranch: "main", createdAt: new Date().toISOString() },
+          },
+          sessions: {},
+        }),
+        "utf-8",
+      )
+
+      const global = stateFile(root)
+      fs.mkdirSync(path.dirname(global), { recursive: true })
+      fs.writeFileSync(
+        global,
+        JSON.stringify({
+          worktrees: {
+            "wt-new": { branch: "new", path: "/tmp/new", parentBranch: "main", createdAt: new Date().toISOString() },
+          },
+          sessions: {},
+        }),
+        "utf-8",
+      )
+
+      await manager.load()
+
+      // Should use the global state
+      expect(manager.getWorktrees()).toHaveLength(1)
+      expect(manager.getWorktrees()[0].branch).toBe("new")
     })
   })
 })

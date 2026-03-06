@@ -161,6 +161,42 @@ describe("GitStatsPoller", () => {
     expect(presence[0]).toEqual({ worktrees: [{ worktreeId: "a", missing: false }], degraded: false })
   })
 
+  it("treats absolute global worktree paths as present when tracked", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gsp-presence-root-"))
+    const globalBase = fs.mkdtempSync(path.join(os.tmpdir(), "gsp-presence-global-"))
+    const wtPath = path.join(globalBase, "worktrees", "wt-a")
+    fs.mkdirSync(wtPath, { recursive: true })
+
+    const presence: Array<{ worktrees: Array<{ worktreeId: string; missing: boolean }>; degraded: boolean }> = []
+
+    const poller = new GitStatsPoller({
+      getWorktrees: () => [{ ...worktree("a"), path: wtPath }],
+      getWorkspaceRoot: () => root,
+      getClient: () => {
+        throw new Error("backend unavailable")
+      },
+      onStats: () => undefined,
+      onLocalStats: () => undefined,
+      onWorktreePresence: (result) => presence.push(result),
+      log: () => undefined,
+      intervalMs: 5,
+      git: gitOps(async (args) => {
+        if (args[0] === "worktree") {
+          return `worktree ${wtPath}\nbranch refs/heads/branch-a\n`
+        }
+        return ""
+      }),
+    })
+
+    poller.setEnabled(true)
+    await waitFor(() => presence.length >= 1)
+    poller.stop()
+    fs.rmSync(root, { recursive: true, force: true })
+    fs.rmSync(globalBase, { recursive: true, force: true })
+
+    expect(presence[0]).toEqual({ worktrees: [{ worktreeId: "a", missing: false }], degraded: false })
+  })
+
   it("emits degraded probe when git worktree listing fails", async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "gsp-presence-fail-"))
     const wtPath = path.join(root, "wt-a")

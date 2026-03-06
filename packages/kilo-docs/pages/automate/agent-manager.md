@@ -54,18 +54,20 @@ Parallel Mode runs the agent in an isolated Git worktree branch, keeping your ma
 
 ### Worktree Location
 
-Worktrees are created in `.kilocode/worktrees/` within your project directory. This folder is automatically excluded from git via `.git/info/exclude` (a local-only ignore file that doesn't require a commit).
+Worktrees are created in Kilo's global data directory, not inside your project. On macOS and Linux they live under `~/.local/share/kilo/agent-manager/{repoSlug}/worktrees/`; on Windows they live under `%LOCALAPPDATA%\kilo\agent-manager\{repoSlug}\worktrees\`.
 
 ```
-your-project/
-├── .git/
-│   └── info/
-│       └── exclude   # local ignore rules (includes .kilocode/worktrees/)
-├── .kilocode/
-│   └── worktrees/
-│       └── feature-branch-1234567890/   # isolated working directory
-└── ...
+~/.local/share/kilo/
+└── agent-manager/
+    └── your-project-a3b2c1d4/
+        ├── agent-manager.json
+        └── worktrees/
+            └── feature-branch-1234567890/   # isolated working directory
 ```
+
+Only the optional project-specific setup script stays in the repo at `.kilocode/setup-script*`, and those setup script files are added to `.git/info/exclude` locally.
+
+Existing legacy `.kilocode/worktrees/` entries are still recognized during the migration window, but new worktrees are created in the global directory.
 
 ### While Running
 

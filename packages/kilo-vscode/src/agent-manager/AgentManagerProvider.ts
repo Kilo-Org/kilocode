@@ -23,7 +23,7 @@ import { MAX_MULTI_VERSIONS } from "./constants"
  * AgentManagerProvider opens the Agent Manager panel.
  *
  * Uses WorktreeStateManager for centralized state persistence. Worktrees and
- * sessions are stored in `.kilocode/agent-manager.json`. The UI shows two
+ * sessions are stored globally in `~/.local/share/kilo/agent-manager/`. The UI shows two
  * sections: WORKTREES (top) with managed worktrees + their sessions, and
  * SESSIONS (bottom) with unassociated workspace sessions.
  */
@@ -152,8 +152,17 @@ export class AgentManagerProvider implements vscode.Disposable {
     // Do not auto-remove stale worktrees on load.
     // Presence checks run in the shared poller and require explicit user cleanup.
 
+    const worktrees = state.getWorktrees()
+    const prepared = await Promise.allSettled(worktrees.map((worktree) => manager.prepareWorktree(worktree.path)))
+    for (const [index, result] of prepared.entries()) {
+      if (result.status === "fulfilled") continue
+      const worktree = worktrees[index]
+      if (!worktree) continue
+      this.log(`Failed to prepare worktree ${worktree.id} (${worktree.path}):`, result.reason)
+    }
+
     // Register all worktree sessions with KiloProvider
-    for (const worktree of state.getWorktrees()) {
+    for (const worktree of worktrees) {
       for (const session of state.getSessions(worktree.id)) {
         this.provider?.setSessionDirectory(session.id, worktree.path)
         this.provider?.trackSession(session.id)
@@ -462,6 +471,8 @@ export class AgentManagerProvider implements vscode.Disposable {
       worktreeId,
     })
 
+    await this.getWorktreeManager()?.prepareWorktree(worktreePath)
+
     try {
       const { data: session } = await client.session.create(
         { directory: worktreePath, platform: PLATFORM },
@@ -651,6 +662,8 @@ export class AgentManagerProvider implements vscode.Disposable {
       this.log(`Worktree ${worktreeId} not found`)
       return null
     }
+
+    await this.getWorktreeManager()?.prepareWorktree(worktree.path)
 
     let session: Session
     try {
@@ -1648,11 +1661,11 @@ export class AgentManagerProvider implements vscode.Disposable {
     this.postToWebview({ type: "agentManager.worktreeDiffLoading", sessionId, loading: true })
     try {
       const client = this.connectionService.getClient()
+      this.log(`Fetching worktree diff for session ${sessionId}: dir=${target.directory}, base=${target.baseBranch}`)
       const { data: diffs } = await client.worktree.diff(
         { directory: target.directory, base: target.baseBranch },
         { throwOnError: true },
       )
-
       this.log(`Worktree diff returned ${diffs.length} file(s) for session ${sessionId}`)
 
       const hash = diffs

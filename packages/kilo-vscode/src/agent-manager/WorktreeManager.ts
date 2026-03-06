@@ -2,8 +2,8 @@
  * WorktreeManager - Manages git worktrees for agent sessions.
  *
  * Ported from kilocode/src/core/kilocode/agent-manager/WorktreeManager.ts.
- * Handles creation, discovery, and cleanup of worktrees stored in
- * {projectRoot}/.kilocode/worktrees/
+ * Handles creation, discovery, and cleanup of worktrees stored globally in
+ * ~/.local/share/kilo/agent-manager/{repoSlug}/worktrees/
  */
 
 import * as path from "path"
@@ -25,6 +25,7 @@ import {
   type PRInfo,
   type BranchListItem,
 } from "./git-import"
+import { worktreeDir, legacyWorktreeDir } from "./globalPaths"
 
 export type { BranchListItem }
 export { generateBranchName }
@@ -55,13 +56,15 @@ const METADATA_FILE = "metadata.json"
 export class WorktreeManager {
   private readonly root: string
   private readonly dir: string
+  private readonly legacyDir: string
   private readonly git: SimpleGit
   private readonly ops: GitOps | undefined
   private readonly log: (msg: string) => void
 
   constructor(root: string, log: (msg: string) => void, ops?: GitOps) {
     this.root = root
-    this.dir = path.join(root, KILOCODE_DIR, "worktrees")
+    this.dir = worktreeDir(root)
+    this.legacyDir = legacyWorktreeDir(root)
     this.git = simpleGit(root)
     this.ops = ops
     this.log = log
@@ -173,6 +176,7 @@ export class WorktreeManager {
       await this.git.raw(retryArgs)
     }
 
+    await this.seedNodeModules(worktreePath)
     this.log(`Created worktree: ${worktreePath} (branch: ${branch}, base: ${parent})`)
     return { branch, path: worktreePath, parentBranch: parent }
   }
@@ -222,13 +226,31 @@ export class WorktreeManager {
   }
 
   async discoverWorktrees(): Promise<WorktreeInfo[]> {
-    if (!fs.existsSync(this.dir)) return []
+    const dirs = [this.dir, this.legacyDir]
+    const all: WorktreeInfo[] = []
+    for (const dir of dirs) {
+      if (!fs.existsSync(dir)) continue
+      const entries = await fs.promises.readdir(dir, { withFileTypes: true })
+      const results = await Promise.all(
+        entries.filter((e) => e.isDirectory()).map((e) => this.worktreeInfo(path.join(dir, e.name))),
+      )
+      for (const info of results) {
+        if (info) all.push(info)
+      }
+    }
+    return all
+  }
 
-    const entries = await fs.promises.readdir(this.dir, { withFileTypes: true })
-    const results = await Promise.all(
-      entries.filter((e) => e.isDirectory()).map((e) => this.worktreeInfo(path.join(this.dir, e.name))),
-    )
-    return results.filter((info): info is WorktreeInfo => info !== undefined)
+  /**
+   * Applies idempotent runtime prep for an existing worktree.
+   *
+   * When worktrees live outside the repository root, Node.js resolution from
+   * `.opencode/tool/*.ts` can no longer naturally reach `<repo>/node_modules`.
+   * This links `node_modules` into the worktree so custom tools can resolve
+   * packages like `@kilocode/plugin`.
+   */
+  async prepareWorktree(worktreePath: string): Promise<void> {
+    await this.seedNodeModules(worktreePath)
   }
 
   async writeMetadata(worktreePath: string, sessionId: string, parentBranch: string): Promise<void> {
@@ -275,8 +297,7 @@ export class WorktreeManager {
   async ensureGitExclude(): Promise<void> {
     const gitDir = await this.resolveGitDir()
     const excludePath = path.join(gitDir, "info", "exclude")
-    await this.addExcludeEntry(excludePath, ".kilocode/worktrees/", "Kilo Code agent worktrees")
-    await this.addExcludeEntry(excludePath, ".kilocode/agent-manager.json", "Kilo Agent Manager state")
+    // Worktrees and state are now stored globally — only the setup script remains in-repo
     await this.addExcludeEntry(excludePath, ".kilocode/setup-script", "Kilo Code worktree setup script")
     await this.addExcludeEntry(excludePath, ".kilocode/setup-script.sh", "Kilo Code worktree setup script")
     await this.addExcludeEntry(excludePath, ".kilocode/setup-script.ps1", "Kilo Code worktree setup script")
@@ -303,11 +324,15 @@ export class WorktreeManager {
   }
 
   /**
-   * Returns true when target is strictly inside the managed worktrees directory.
-   * Prevents sibling-prefix confusion such as "/worktrees-evil".
+   * Returns true when target is strictly inside the managed worktrees directory
+   * (global or legacy). Prevents sibling-prefix confusion such as "/worktrees-evil".
    */
   private isManagedPath(target: string): boolean {
-    const root = path.resolve(this.dir)
+    return this.isChildOf(this.dir, target) || this.isChildOf(this.legacyDir, target)
+  }
+
+  private isChildOf(parent: string, target: string): boolean {
+    const root = path.resolve(parent)
     const child = path.resolve(target)
     const rel = normalizePath(path.relative(root, child))
     if (!rel || rel === ".") return false
@@ -329,6 +354,35 @@ export class WorktreeManager {
     const pad = content.endsWith("\n") || content === "" ? "" : "\n"
     await fs.promises.appendFile(excludePath, `${pad}\n# ${comment}\n${entry}\n`)
     this.log(`Added ${entry} to ${excludePath}`)
+  }
+
+  /**
+   * Ensure worktree-local module resolution behaves like in-repo worktrees.
+   *
+   * Global worktrees sit outside the repo tree, so they do not see the root
+   * `node_modules` via parent-directory lookup. We create a symlink/junction
+   * to the repo root `node_modules`. This is safe to call repeatedly.
+   */
+  private async seedNodeModules(worktreePath: string): Promise<void> {
+    const source = path.join(this.root, "node_modules")
+    const stat = await fs.promises.lstat(source).catch(() => undefined)
+    if (!stat) return
+    if (!stat.isDirectory() && !stat.isSymbolicLink()) return
+
+    const target = path.join(worktreePath, "node_modules")
+    const exists = await fs.promises.lstat(target).then(
+      () => true,
+      () => false,
+    )
+    if (exists) return
+
+    const kind: fs.symlink.Type | undefined = process.platform === "win32" ? "junction" : "dir"
+    try {
+      await fs.promises.symlink(source, target, kind)
+      this.log(`Linked worktree node_modules: ${target} -> ${source}`)
+    } catch (error) {
+      this.log(`Warning: Failed to link node_modules into worktree: ${error}`)
+    }
   }
 
   // ---------------------------------------------------------------------------
