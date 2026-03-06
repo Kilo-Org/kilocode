@@ -32,6 +32,15 @@ function extractSection(content: string, heading: string): string | undefined {
   return section || undefined
 }
 
+async function getGitRoot(repoPath: string): Promise<string | undefined> {
+  const result = Bun.spawnSync(["git", "rev-parse", "--show-toplevel"], {
+    cwd: repoPath,
+    stdout: "pipe",
+    stderr: "pipe",
+  })
+  return result.stdout.toString().trimEnd() || undefined
+}
+
 async function loadInstructionsFromAgentsMd(repoPath: string): Promise<{ instructions?: string; found: boolean }> {
   // Search for AGENTS.md relative to repoPath
   const FILES = ["AGENTS.md", "CLAUDE.md", "CONTEXT.md"]
@@ -50,10 +59,16 @@ async function loadInstructionsFromAgentsMd(repoPath: string): Promise<{ instruc
     }
   }
 
-  // Also check parent directories (walk up from repoPath)
+  // Also check parent directories (walk up from repoPath), but stay within git root
+  const gitRoot = await getGitRoot(repoPath)
+  const searchRoot = gitRoot && gitRoot.length < repoPath.length ? dirname(repoPath) : repoPath
+
   for (const file of FILES) {
-    const parentFiles = await Filesystem.findUp(file, dirname(repoPath)).catch(() => [])
+    const parentFiles = await Filesystem.findUp(file, searchRoot).catch(() => [])
     for (const p of parentFiles) {
+      // Stop at git root to avoid escaping to unrelated parent directories
+      if (gitRoot && !p.startsWith(gitRoot)) break
+
       const content = await Filesystem.readText(p).catch(() => "")
       const section = extractSection(content, SECTION_HEADING)
       if (section) {

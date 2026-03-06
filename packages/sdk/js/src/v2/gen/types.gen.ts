@@ -4045,6 +4045,10 @@ export type CommitMessageGenerateData = {
      * Previously generated message — triggers regeneration with a different result
      */
     previousMessage?: string
+    /**
+     * Custom instructions for commit message style
+     */
+    instructions?: string
   }
   path?: never
   query?: {
@@ -4068,6 +4072,10 @@ export type CommitMessageGenerateResponses = {
    */
   200: {
     message: string
+    /**
+     * Whether custom instructions were found
+     */
+    instructionsFound: boolean
   }
 }
 
