@@ -11,13 +11,12 @@ import { Toast } from "@kilocode/kilo-ui/toast"
 import { FullScreenDiffView } from "../agent-manager/FullScreenDiffView"
 import { LanguageProvider } from "../src/context/language"
 import { ServerProvider, useServer } from "../src/context/server"
-import { VSCodeProvider, useVSCode } from "../src/context/vscode"
+import { getVSCodeAPI, VSCodeProvider, useVSCode } from "../src/context/vscode"
 import type { ReviewComment, WorktreeFileDiff } from "../src/types/messages"
 
 type DiffStyle = "unified" | "split"
 
-const vscodeApi = acquireVsCodeApi()
-const post = (message: Record<string, unknown>) => vscodeApi.postMessage(message as never)
+const post = (message: Record<string, unknown>) => getVSCodeAPI().postMessage(message as never)
 
 const DiffViewerContent: Component = () => {
   const vscode = useVSCode()
