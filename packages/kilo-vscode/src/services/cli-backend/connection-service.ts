@@ -11,6 +11,10 @@ type StateListener = (state: ConnectionState) => void
 type SSEEventFilter = (event: Event) => boolean
 type NotificationDismissListener = (notificationId: string) => void
 
+// Poll /global/health at the same interval as packages/app/src/context/server.tsx.
+// This provides a second detection channel for server death independent of the SSE heartbeat.
+const HEALTH_POLL_INTERVAL_MS = 10_000
+
 /**
  * Shared connection service that owns the single ServerManager, KiloClient (SDK), and SdkSSEAdapter.
  * Multiple KiloProvider instances subscribe to it for SSE events and state changes.
@@ -23,6 +27,7 @@ export class KiloConnectionService {
   private config: ServerConfig | null = null
   private state: ConnectionState = "disconnected"
   private connectPromise: Promise<void> | null = null
+  private healthPollTimer: ReturnType<typeof setInterval> | null = null
 
   private readonly eventListeners: Set<SSEEventListener> = new Set()
   private readonly stateListeners: Set<StateListener> = new Set()
@@ -174,6 +179,7 @@ export class KiloConnectionService {
    * Clean up everything: kill server, close SSE, clear listeners.
    */
   dispose(): void {
+    this.stopHealthPoll()
     this.sseClient?.dispose()
     this.serverManager.dispose()
     this.eventListeners.clear()
@@ -194,8 +200,56 @@ export class KiloConnectionService {
     }
   }
 
+  /**
+   * Start polling GET /global/health every 10 seconds.
+   * Ported from packages/app/src/context/server.tsx (HEALTH_POLL_INTERVAL_MS).
+   * Provides a second detection channel for server death independent of the SSE heartbeat.
+   * If the health check fails while we believe we are connected, the SSE client is
+   * disconnected so its reconnect loop kicks in immediately.
+   */
+  private startHealthPoll(baseUrl: string, password: string): void {
+    this.stopHealthPoll()
+
+    this.healthPollTimer = setInterval(async () => {
+      if (this.state !== "connected") {
+        return
+      }
+      const healthy = await this.checkHealth(baseUrl, password)
+      if (!healthy && this.state === "connected") {
+        console.warn("[Kilo New] ConnectionService: ❤️‍🩹 Health check failed — forcing SSE reconnect")
+        this.sseClient?.disconnect()
+      }
+    }, HEALTH_POLL_INTERVAL_MS)
+
+    // Don't keep the extension host alive just for the health poll
+    this.healthPollTimer.unref?.()
+  }
+
+  private stopHealthPoll(): void {
+    if (this.healthPollTimer) {
+      clearInterval(this.healthPollTimer)
+      this.healthPollTimer = null
+    }
+  }
+
+  private async checkHealth(baseUrl: string, password: string): Promise<boolean> {
+    try {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 3000)
+      const res = await fetch(`${baseUrl}/global/health`, {
+        headers: { Authorization: `Basic ${Buffer.from(`kilo:${password}`).toString("base64")}` },
+        signal: controller.signal,
+      })
+      clearTimeout(timer)
+      return res.ok
+    } catch {
+      return false
+    }
+  }
+
   private async doConnect(workspaceDir: string): Promise<void> {
     // If we reconnect, ensure the previous SSE connection is cleaned up first.
+    this.stopHealthPoll()
     this.sseClient?.dispose()
 
     const server = await this.serverManager.getServer()
@@ -265,5 +319,8 @@ export class KiloConnectionService {
     this.sseClient.connect()
 
     await connectedPromise
+
+    // Start the independent health poll once we are confirmed connected.
+    this.startHealthPoll(config.baseUrl, config.password)
   }
 }
