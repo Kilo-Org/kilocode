@@ -36,6 +36,15 @@
     font-size: 13px;
   }
 
+  /* Default/alt variant adjustments */
+  [data-slot="tabs-trigger"] {
+    height: 48px;
+    padding: 4px 0;
+    font-size: 13px;
+    line-height: normal;
+    cursor: pointer;
+  }
+
   &[data-variant="settings"] {
     container-type: inline-size;
 

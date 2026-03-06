@@ -12,7 +12,8 @@
 import { createSignal, type ParentComponent } from "solid-js"
 import { VSCodeProvider } from "../context/vscode"
 import { ServerProvider } from "../context/server"
-import { ProviderProvider } from "../context/provider"
+import { ProviderContext } from "../context/provider"
+import { flattenModels, findModel as _findModel } from "../context/provider-utils"
 import { ConfigProvider } from "../context/config"
 import { DataProvider } from "@kilocode/kilo-ui/context/data"
 import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff"
@@ -39,6 +40,44 @@ function t(key: string) {
 // ---------------------------------------------------------------------------
 // Default mock data (empty session)
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Mock providers — pre-loaded Kilo Gateway model for stories
+// ---------------------------------------------------------------------------
+
+const MOCK_PROVIDERS = {
+  kilo: {
+    id: "kilo",
+    name: "Kilo",
+    env: [] as string[],
+    models: {
+      "anthropic/claude-sonnet-4-6": {
+        id: "anthropic/claude-sonnet-4-6",
+        name: "Anthropic: Claude Sonnet 4.6",
+        inputPrice: 0.003,
+        outputPrice: 0.015,
+      },
+    },
+  },
+}
+
+const MOCK_MODELS = flattenModels(MOCK_PROVIDERS as any)
+
+/** A synchronous mock ProviderContext — provides models without waiting for a postMessage round-trip. */
+const MockProviderProvider: ParentComponent = (props) => {
+  const value = {
+    providers: () => MOCK_PROVIDERS as any,
+    connected: () => ["kilo"],
+    defaults: () => ({}),
+    defaultSelection: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
+    models: () => MOCK_MODELS,
+    findModel: (sel: any) => _findModel(MOCK_MODELS, sel),
+  }
+  return <ProviderContext.Provider value={value}>{props.children}</ProviderContext.Provider>
+}
+
+/** @deprecated use MockProviderProvider; kept for callers that still call dispatchMockProviders */
+export function dispatchMockProviders() {}
 
 export const defaultMockData = {
   session: [],
@@ -93,7 +132,7 @@ export function mockSessionValue(overrides?: {
     permissions: () => permissions,
     questions: () => qs,
     questionErrors: () => new Set<string>(),
-    selected: () => ({ providerID: "anthropic", modelID: "claude-sonnet-4-20250514" }),
+    selected: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     selectModel: noop,
     totalCost: () => 0,
     contextUsage: () => undefined,
@@ -101,7 +140,7 @@ export function mockSessionValue(overrides?: {
     selectedAgent: () => "code",
     selectAgent: noop,
     getSessionAgent: () => "code",
-    getSessionModel: () => ({ providerID: "anthropic", modelID: "claude-sonnet-4-20250514" }),
+    getSessionModel: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     setSessionModel: noop,
     setSessionAgent: noop,
     variantList: () => [],
@@ -153,7 +192,7 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
     <VSCodeProvider>
       <ServerProvider>
         <ConfigProvider>
-          <ProviderProvider>
+          <MockProviderProvider>
             <DialogProvider>
               <LanguageContext.Provider
                 value={{
@@ -178,7 +217,7 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
                 </I18nProvider>
               </LanguageContext.Provider>
             </DialogProvider>
-          </ProviderProvider>
+          </MockProviderProvider>
         </ConfigProvider>
       </ServerProvider>
     </VSCodeProvider>

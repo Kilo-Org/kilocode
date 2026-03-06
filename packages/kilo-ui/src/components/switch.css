@@ -1,6 +1,8 @@
 /* Kilo Switch overrides */
 
 [data-component="switch"] {
+  cursor: pointer;
+
   [data-slot="switch-label"] {
     font-size: 13px;
   }
