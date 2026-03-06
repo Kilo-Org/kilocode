@@ -67,18 +67,15 @@ async function loadInstructionsFromAgentsMd(repoPath: string): Promise<{ instruc
       ? dirname(normalizedRepoPath)
       : normalizedRepoPath
 
-  for (const file of FILES) {
-    const parentFiles = await Filesystem.findUp(file, searchRoot).catch(() => [])
-    for (const p of parentFiles) {
-      // Stop at git root to avoid escaping to unrelated parent directories
-      if (normalizedGitRoot && !p.startsWith(normalizedGitRoot)) break
+  for await (const p of Filesystem.up({ targets: FILES, start: searchRoot })) {
+    // Stop at git root to avoid escaping to unrelated parent directories
+    if (normalizedGitRoot && !p.startsWith(normalizedGitRoot)) break
 
-      const content = await Filesystem.readText(p).catch(() => "")
-      const section = extractSection(content, SECTION_HEADING)
-      if (section) {
-        log.info("loaded commit instructions from parent", { file: p })
-        return { instructions: section, found: true }
-      }
+    const content = await Filesystem.readText(p).catch(() => "")
+    const section = extractSection(content, SECTION_HEADING)
+    if (section) {
+      log.info("loaded commit instructions from parent", { file: p })
+      return { instructions: section, found: true }
     }
   }
 
@@ -217,6 +214,7 @@ export async function generateCommitMessage(request: CommitMessageRequest): Prom
     (await Provider.getSmallModel(defaultModel.providerID)) ??
     (await Provider.getModel(defaultModel.providerID, defaultModel.modelID))
 
+  // Callers never pass instructions — load from AGENTS.md, CLAUDE.md, CONTEXT.md, or .kilocode/commit-instructions.md
   const loaded = await loadInstructions(request.path)
   const prompt = loaded.instructions
     ? `${SYSTEM_PROMPT}\n\n## Custom Instructions\n${loaded.instructions}`
