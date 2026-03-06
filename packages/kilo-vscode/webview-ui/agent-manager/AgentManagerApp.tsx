@@ -731,6 +731,17 @@ const AgentManagerContent: Component = () => {
     }
   })
 
+  // Scroll the sidebar to the focused item whenever selection changes (covers keyboard
+  // navigation, new worktree creation, and any other programmatic selection change).
+  createEffect(() => {
+    const id = selection() ?? session.currentSessionID()
+    if (!id) return
+    requestAnimationFrame(() => {
+      const el = document.querySelector(`[data-sidebar-id="${id}"]`)
+      if (el instanceof HTMLElement) scrollIntoView(el)
+    })
+  })
+
   // Read-only mode: viewing an unassigned session (not in a worktree or local)
   const readOnly = createMemo(() => selection() === null && !!session.currentSessionID())
 
@@ -813,7 +824,7 @@ const AgentManagerContent: Component = () => {
   const navigate = (direction: "up" | "down") => {
     const flat: { type: typeof LOCAL | "wt" | "session"; id: string }[] = [
       { type: LOCAL, id: LOCAL },
-      ...worktrees().map((wt) => ({ type: "wt" as const, id: wt.id })),
+      ...sortedWorktrees().map((wt) => ({ type: "wt" as const, id: wt.id })),
       ...unassignedSessions().map((s) => ({ type: "session" as const, id: s.id })),
     ]
     if (flat.length === 0) return
