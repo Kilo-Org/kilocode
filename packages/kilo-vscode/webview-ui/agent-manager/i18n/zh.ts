@@ -13,6 +13,8 @@ export const dict = {
   "agentManager.worktree.doubleClickRename": "双击重命名",
   "agentManager.worktree.versions": "{{count}} 个版本",
   "agentManager.worktree.advancedOptions": "Worktree 高级选项",
+  "agentManager.worktree.defaultBaseBranch": "默认基础分支",
+  "agentManager.worktree.defaultBaseBranchAuto": "自动检测",
   "agentManager.hoverCard.branch": "分支",
   "agentManager.hoverCard.base": "基础",
   "agentManager.hoverCard.sessions": "会话",

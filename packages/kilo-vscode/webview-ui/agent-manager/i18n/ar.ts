@@ -13,6 +13,8 @@ export const dict = {
   "agentManager.worktree.doubleClickRename": "انقر مرتين لإعادة التسمية",
   "agentManager.worktree.versions": "{{count}} نسخ",
   "agentManager.worktree.advancedOptions": "خيارات Worktree متقدمة",
+  "agentManager.worktree.defaultBaseBranch": "الفرع الأساسي الافتراضي",
+  "agentManager.worktree.defaultBaseBranchAuto": "اكتشاف تلقائي",
   "agentManager.hoverCard.branch": "الفرع",
   "agentManager.hoverCard.base": "الأساس",
   "agentManager.hoverCard.sessions": "الجلسات",

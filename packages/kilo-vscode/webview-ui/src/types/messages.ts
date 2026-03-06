@@ -607,6 +607,7 @@ export interface AgentManagerSessionMetaMessage {
 export interface AgentManagerRepoInfoMessage {
   type: "agentManager.repoInfo"
   branch: string
+  defaultBranch?: string
 }
 
 // Agent Manager worktree setup progress
@@ -655,6 +656,7 @@ export interface AgentManagerStateMessage {
   sessionsCollapsed?: boolean
   reviewDiffStyle?: "unified" | "split"
   isGitRepo?: boolean
+  defaultBaseBranch?: string
 }
 
 // Resolved keybindings for agent manager actions
@@ -684,6 +686,7 @@ export interface BranchInfo {
   isRemote: boolean
   isDefault: boolean
   lastCommitDate?: string
+  isCheckedOut?: boolean
 }
 
 export interface AgentManagerBranchesMessage {
@@ -1420,6 +1423,12 @@ export interface EnhancePromptRequest {
   requestId: string
 }
 
+// Set default base branch (webview → extension)
+export interface SetDefaultBaseBranchRequest {
+  type: "agentManager.setDefaultBaseBranch"
+  branch?: string
+}
+
 export type WebviewMessage =
   | SendMessageRequest
   | AbortRequest
@@ -1501,6 +1510,7 @@ export type WebviewMessage =
   // legacy-migration end
   | ApplyWorktreeDiffMessage
   | EnhancePromptRequest
+  | SetDefaultBaseBranchRequest
 
 // ============================================
 // VS Code API type

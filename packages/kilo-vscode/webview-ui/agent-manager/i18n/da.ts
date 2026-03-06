@@ -13,6 +13,8 @@ export const dict = {
   "agentManager.worktree.doubleClickRename": "Dobbeltklik for at omdøbe",
   "agentManager.worktree.versions": "{{count}} versioner",
   "agentManager.worktree.advancedOptions": "Avancerede Worktree-indstillinger",
+  "agentManager.worktree.defaultBaseBranch": "Standard basisgren",
+  "agentManager.worktree.defaultBaseBranchAuto": "Automatisk registrering",
   "agentManager.hoverCard.branch": "BRANCH",
   "agentManager.hoverCard.base": "Base",
   "agentManager.hoverCard.sessions": "Sessioner",
