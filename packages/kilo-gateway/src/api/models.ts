@@ -1,7 +1,13 @@
 import { z } from "zod"
 import { getKiloUrlFromToken } from "../auth/token.js"
 import { DEFAULT_HEADERS } from "../headers.js"
-import { KILO_API_BASE, KILO_OPENROUTER_BASE, MODELS_FETCH_TIMEOUT_MS } from "./constants.js"
+import {
+  DEFAULT_FREE_MODEL,
+  DEFAULT_MODEL,
+  KILO_API_BASE,
+  KILO_OPENROUTER_BASE,
+  MODELS_FETCH_TIMEOUT_MS,
+} from "./constants.js"
 
 /**
  * OpenRouter model schema
@@ -48,6 +54,17 @@ const openRouterModelsResponseSchema = z.object({
 
 type OpenRouterModel = z.infer<typeof openRouterModelSchema>
 
+type KiloFetchStatus = "success" | "fallback"
+
+function markFetchStatus(models: Record<string, any>, status: KiloFetchStatus) {
+  Object.defineProperty(models, "__kiloFetchStatus", {
+    value: status,
+    enumerable: false,
+    configurable: true,
+    writable: false,
+  })
+}
+
 /**
  * Parse API price string to number (e.g. "0.00001" -> 0.00001)
  */
@@ -82,6 +99,8 @@ export async function fetchKiloModels(options?: {
   // Construct models endpoint
   const modelsURL = `${finalBaseURL}/models`
 
+  const models: Record<string, any> = {}
+
   try {
     // Fetch models with timeout
     const response = await fetch(modelsURL, {
@@ -103,11 +122,12 @@ export async function fetchKiloModels(options?: {
 
     if (!result.success) {
       console.error("Kilo models response validation failed:", result.error.format())
-      return {}
+      ensureAutoRoutingModels(models)
+      markFetchStatus(models, "fallback")
+      return models
     }
 
     // Transform models to ModelsDev.Model format
-    const models: Record<string, any> = {}
 
     for (const model of result.data.data) {
       // Skip image generation models
@@ -119,10 +139,53 @@ export async function fetchKiloModels(options?: {
       models[model.id] = transformedModel
     }
 
+    ensureAutoRoutingModels(models)
+    markFetchStatus(models, "success")
+
     return models
   } catch (error) {
     console.error("Error fetching Kilo models:", error)
-    return {}
+    ensureAutoRoutingModels(models)
+    markFetchStatus(models, "fallback")
+    return models
+  }
+}
+
+function ensureAutoRoutingModels(models: Record<string, any>) {
+  const today = new Date().toISOString().split("T")[0]
+
+  if (!models[DEFAULT_MODEL]) {
+    models[DEFAULT_MODEL] = {
+      id: DEFAULT_MODEL,
+      name: "Kilo: Auto",
+      family: "kilo",
+      release_date: today,
+      attachment: true,
+      reasoning: true,
+      temperature: true,
+      tool_call: true,
+      cost: { input: 0.000005, output: 0.000025 },
+      limit: { context: 1000000, output: 128000 },
+      modalities: { input: ["text", "image"], output: ["text"] },
+      options: { description: "Automatically routes to the best model for the task" },
+    }
+  }
+
+  if (!models[DEFAULT_FREE_MODEL]) {
+    models[DEFAULT_FREE_MODEL] = {
+      id: DEFAULT_FREE_MODEL,
+      name: "Kilo: Auto Free",
+      family: "kilo",
+      release_date: today,
+      attachment: false,
+      reasoning: true,
+      temperature: true,
+      tool_call: true,
+      cost: { input: 0, output: 0 },
+      limit: { context: 204800, output: 131072 },
+      modalities: { input: ["text"], output: ["text"] },
+      options: { description: "Automatically routes to the best free model" },
+    }
   }
 }
 
