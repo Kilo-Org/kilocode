@@ -49,12 +49,22 @@ export const KiloNotifications: Component = () => {
           <div class="kilo-notifications-footer">
             <Show when={total() > 1}>
               <div class="kilo-notifications-nav">
-                <button class="kilo-notifications-nav-btn" onClick={prev} title={language.t("notifications.previous")}>                  <Icon name="arrow-left" size="small" />
+                <button
+                  class="kilo-notifications-nav-btn"
+                  onClick={prev}
+                  title={language.t("notifications.previous")}
+                >
+                  <Icon name="arrow-left" size="small" />
                 </button>
                 <span class="kilo-notifications-nav-count">
                   {safeIndex() + 1} / {total()}
                 </span>
-                <button class="kilo-notifications-nav-btn" onClick={next} title={language.t("notifications.next")}>                  <Icon name="arrow-right" size="small" />
+                <button
+                  class="kilo-notifications-nav-btn"
+                  onClick={next}
+                  title={language.t("notifications.next")}
+                >
+                  <Icon name="arrow-right" size="small" />
                 </button>
               </div>
             </Show>
