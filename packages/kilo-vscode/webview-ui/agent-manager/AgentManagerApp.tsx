@@ -2590,6 +2590,7 @@ const AgentManagerContent: Component = () => {
                     onOpenFile={(file) => {
                       const id = session.currentSessionID()
                       if (id) vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file })
+                      else if (selection() === LOCAL) vscode.postMessage({ type: "openFile", filePath: file })
                     }}
                   />
                 </div>
@@ -2611,6 +2612,7 @@ const AgentManagerContent: Component = () => {
                 onOpenFile={(file) => {
                   const id = session.currentSessionID()
                   if (id) vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file })
+                  else if (selection() === LOCAL) vscode.postMessage({ type: "openFile", filePath: file })
                 }}
                 onClose={closeReviewTab}
               />
