@@ -3,6 +3,7 @@ import markedKatex from "marked-katex-extension"
 import markedShiki from "marked-shiki"
 import katex from "katex"
 import { bundledLanguages, type BundledLanguage } from "shiki"
+import { parseFilePath } from "../file-path" // kilocode_change
 import { createSimpleContext } from "./helper"
 import { getSharedHighlighter, registerCustomTheme, ThemeRegistrationResolved } from "@pierre/diffs"
 
@@ -461,28 +462,7 @@ async function highlightCodeBlocks(html: string): Promise<string> {
 
 export type NativeMarkdownParser = (markdown: string) => Promise<string>
 
-// kilocode_change start
-// Matches text that looks like a file path:
-// - Unix: /foo/bar.ts, ./foo.ts, ../foo.ts, foo.ts
-// - Windows drive: C:\foo\bar.ts, C:/foo/bar.ts
-// - Windows UNC: \\server\share\file.ts
-// Supports optional :line or :line:col suffix.
-const FILE_PATH_UNIX_RE =
-  /^((?:\/|\.\.?\/)?(?:[a-zA-Z0-9_@-][a-zA-Z0-9_@./-]*\/)*[a-zA-Z0-9_@.-]+\.[a-zA-Z0-9]+)(?::(\d+)(?::(\d+))?)?$/
-const FILE_PATH_WIN_RE = /^((?:[a-zA-Z]:[/\\]|\\\\)(?:[^\\/]+[/\\])*[^\\/]+\.[a-zA-Z0-9]+)(?::(\d+)(?::(\d+))?)?$/
-
-function parseFilePath(text: string): { path: string; line?: number; column?: number } | undefined {
-  if (text.includes("://")) return undefined
-  if (text.includes(" ")) return undefined
-  const match = FILE_PATH_UNIX_RE.exec(text) ?? FILE_PATH_WIN_RE.exec(text)
-  if (!match) return undefined
-  return {
-    path: match[1],
-    line: match[2] ? parseInt(match[2], 10) : undefined,
-    column: match[3] ? parseInt(match[3], 10) : undefined,
-  }
-}
-// kilocode_change end
+// kilocode_change: parseFilePath imported from ../file-path
 
 export const { use: useMarked, provider: MarkedProvider } = createSimpleContext({
   name: "Marked",

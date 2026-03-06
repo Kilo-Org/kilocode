@@ -43,6 +43,7 @@ import { Checkbox } from "./checkbox"
 import { DiffChanges } from "./diff-changes"
 import { Markdown } from "./markdown"
 import { ImagePreview } from "./image-preview"
+import { extractFilePathFromHref } from "../file-path" // kilocode_change
 import { getDirectory as _getDirectory, getFilename } from "@opencode-ai/util/path"
 import { checksum } from "@opencode-ai/util/encode"
 import { Tooltip } from "./tooltip"
@@ -1119,17 +1120,10 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     if (anchor) {
       const href = anchor.getAttribute("href")
       if (!href) return
-      // Skip actual URLs and non-file schemes (mailto:, tel:, etc.)
-      if (href.includes("://") || /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href)) return
-      // Skip pure anchors
-      if (href.startsWith("#")) return
-      // Strip fragment and query before treating as file path
-      const cleaned = href.replace(/[#?].*$/, "")
-      if (!cleaned) return
-      // Must look like a file path (has a dot for extension)
-      if (!cleaned.includes(".")) return
+      const filePath = extractFilePathFromHref(href)
+      if (!filePath) return
       e.preventDefault()
-      data.openFile(cleaned)
+      data.openFile(filePath)
     }
   }
   // kilocode_change end
