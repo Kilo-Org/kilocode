@@ -301,16 +301,14 @@ button.am-section-toggle:hover .am-section-label {
 
 /* Inline delete confirmation */
 
-.am-worktree-item.am-worktree-pending-delete {
-  background: color-mix(in srgb, var(--surface-critical-strong) 12%, transparent);
-}
-
-.am-worktree-item.am-worktree-pending-delete:hover {
+.am-worktree-item.am-worktree-pending-delete,
+.am-worktree-item.am-worktree-pending-delete.am-worktree-item-active {
   background: color-mix(in srgb, var(--surface-critical-strong) 18%, transparent);
 }
 
-.am-worktree-item.am-worktree-pending-delete.am-worktree-item-active {
-  background: color-mix(in srgb, var(--surface-critical-strong) 20%, var(--surface-interactive-base));
+.am-worktree-item.am-worktree-pending-delete:hover,
+.am-worktree-item.am-worktree-pending-delete.am-worktree-item-active:hover {
+  background: color-mix(in srgb, var(--surface-critical-strong) 25%, transparent);
 }
 
 .am-worktree-pending-delete .am-worktree-branch {
