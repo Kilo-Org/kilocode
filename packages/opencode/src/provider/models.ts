@@ -162,7 +162,11 @@ export namespace ModelsDev {
         npm: "@kilocode/kilo-gateway",
         models: kiloModels,
       }
-      if (Object.keys(kiloModels).length === 0) {
+      const fetchedModelIds = Object.keys(kiloModels).filter(
+        (id) => id !== "kilo/auto" && id !== "kilo/auto-free",
+      )
+
+      if (fetchedModelIds.length === 0) {
         ModelCache.refresh("kilo", kiloFetchOptions).catch(() => {})
       }
     }
