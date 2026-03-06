@@ -80,6 +80,7 @@ export const dict = {
   "agentManager.dialog.versionHint": "{{count}} worktree-ova će se pokrenuti paralelno",
   "agentManager.dialog.compareModels": "Uporedi modele",
   "agentManager.dialog.compareModels.searchModels": "Pretraži modele...",
+  "agentManager.dialog.compareModels.selectModels": "Odaberi modele...",
   "agentManager.dialog.creating": "Kreiranje...",
   "agentManager.dialog.createWorkspace": "Kreiraj worktree",
   "agentManager.dialog.removeImage": "Ukloni sliku",

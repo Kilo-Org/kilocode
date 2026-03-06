@@ -79,6 +79,7 @@ export const dict = {
   "agentManager.dialog.versionHint": "{{count}} 个 Worktree 将并行运行",
   "agentManager.dialog.compareModels": "比较模型",
   "agentManager.dialog.compareModels.searchModels": "搜索模型...",
+  "agentManager.dialog.compareModels.selectModels": "选择模型...",
   "agentManager.dialog.creating": "创建中...",
   "agentManager.dialog.createWorkspace": "创建工作树",
   "agentManager.dialog.removeImage": "移除图片",

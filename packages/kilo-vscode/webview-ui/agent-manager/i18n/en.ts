@@ -88,6 +88,7 @@ export const dict = {
   "agentManager.dialog.versionHint": "{{count}} worktrees will run in parallel",
   "agentManager.dialog.compareModels": "Compare Models",
   "agentManager.dialog.compareModels.searchModels": "Search models...",
+  "agentManager.dialog.compareModels.selectModels": "Select models...",
   "agentManager.dialog.creating": "Creating...",
   "agentManager.dialog.createWorkspace": "Create Worktree",
   "agentManager.dialog.removeImage": "Remove image",

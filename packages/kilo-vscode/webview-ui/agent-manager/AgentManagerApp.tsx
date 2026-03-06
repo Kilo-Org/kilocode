@@ -2679,6 +2679,7 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
   const [branchName, setBranchName] = createSignal("")
   const [baseBranch, setBaseBranch] = createSignal<string | null>(null)
   const [baseBranchOpen, setBaseBranchOpen] = createSignal(false)
+  const [compareOpen, setCompareOpen] = createSignal(false)
   const [highlightedIndex, setHighlightedIndex] = createSignal(0)
 
   const imageAttach = useImageAttachments()
@@ -2826,296 +2827,331 @@ const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
       {/* New tab */}
       <Show when={tab() === "new"}>
         <div class="am-nv-dialog" onKeyDown={handleKeyDown}>
-          <input
-            class="am-nv-name-input"
-            placeholder={t("agentManager.dialog.namePlaceholder")}
-            value={name()}
-            onInput={(e) => setName(e.currentTarget.value)}
-          />
-          {/* Prompt input — reuses the sidebar chat-input base classes for consistent styling */}
-          <div
-            class="prompt-input-container am-prompt-input-container"
-            classList={{ "prompt-input-container--dragging": imageAttach.dragging() }}
-            onDragOver={imageAttach.handleDragOver}
-            onDragLeave={imageAttach.handleDragLeave}
-            onDrop={imageAttach.handleDrop}
-          >
-            <Show when={imageAttach.images().length > 0}>
-              <div class="image-attachments">
-                <For each={imageAttach.images()}>
-                  {(img) => (
-                    <div class="image-attachment">
-                      <img src={img.dataUrl} alt={img.filename} title={img.filename} />
-                      <button
-                        type="button"
-                        class="image-attachment-remove"
-                        onClick={() => imageAttach.remove(img.id)}
-                        aria-label={t("agentManager.dialog.removeImage")}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  )}
-                </For>
-              </div>
-            </Show>
-            <div class="prompt-input-wrapper am-prompt-input-wrapper">
-              <div class="prompt-input-ghost-wrapper am-prompt-input-ghost-wrapper">
-                <textarea
-                  ref={textareaRef}
-                  class="prompt-input am-prompt-input"
-                  placeholder={t(
-                    isMac ? "agentManager.dialog.promptPlaceholder.mac" : "agentManager.dialog.promptPlaceholder.other",
-                  )}
-                  value={prompt()}
-                  onInput={(e) => {
-                    setPrompt(e.currentTarget.value)
-                    adjustHeight()
-                  }}
-                  onPaste={(e) => imageAttach.handlePaste(e)}
-                  rows={3}
-                />
-              </div>
-            </div>
-            <div class="prompt-input-hint">
-              <div class="prompt-input-hint-selectors">
-                <Show when={!compareMode()}>
-                  <ModelSelectorBase
-                    value={model()}
-                    onSelect={(pid, mid) => setModel(pid && mid ? { providerID: pid, modelID: mid } : null)}
-                    placement="top-start"
-                    allowClear
-                    clearLabel="Default"
-                  />
-                </Show>
-                <Show when={session.agents().length > 1}>
-                  <ModeSwitcherBase agents={session.agents()} value={agent()} onSelect={setAgent} />
-                </Show>
-              </div>
-              <div class="prompt-input-hint-actions" />
-            </div>
-          </div>
-
-          {/* Advanced options toggle */}
-          <button class="am-advanced-toggle" onClick={() => setShowAdvanced(!showAdvanced())} type="button">
-            <Icon name={showAdvanced() ? "chevron-down" : "chevron-right"} size="small" />
-            <span>{t("agentManager.dialog.advancedOptions")}</span>
-          </button>
-
-          <Show when={showAdvanced()}>
-            <div class="am-advanced-section">
-              <div class="am-advanced-field">
-                <span class="am-nv-config-label">{t("agentManager.dialog.branchName")}</span>
-                <input
-                  class="am-advanced-input"
-                  type="text"
-                  placeholder={t("agentManager.dialog.branchNamePlaceholder")}
-                  value={branchName()}
-                  onInput={(e) => setBranchName(sanitizeBranchName(e.currentTarget.value))}
-                />
-              </div>
-              <div class="am-advanced-field">
-                <span class="am-nv-config-label">{t("agentManager.dialog.baseBranch")}</span>
-                <div class="am-selector-wrapper">
-                  <Popover
-                    open={baseBranchOpen()}
-                    onOpenChange={(open) => {
-                      setBaseBranchOpen(open)
-                      if (!open) {
-                        setBranchSearch("")
-                        setHighlightedIndex(0)
-                      }
+          <div class="am-nv-dialog-content">
+            <input
+              class="am-nv-name-input"
+              placeholder={t("agentManager.dialog.namePlaceholder")}
+              value={name()}
+              onInput={(e) => setName(e.currentTarget.value)}
+            />
+            {/* Prompt input — reuses the sidebar chat-input base classes for consistent styling */}
+            <div
+              class="prompt-input-container am-prompt-input-container"
+              classList={{ "prompt-input-container--dragging": imageAttach.dragging() }}
+              onDragOver={imageAttach.handleDragOver}
+              onDragLeave={imageAttach.handleDragLeave}
+              onDrop={imageAttach.handleDrop}
+            >
+              <Show when={imageAttach.images().length > 0}>
+                <div class="image-attachments">
+                  <For each={imageAttach.images()}>
+                    {(img) => (
+                      <div class="image-attachment">
+                        <img src={img.dataUrl} alt={img.filename} title={img.filename} />
+                        <button
+                          type="button"
+                          class="image-attachment-remove"
+                          onClick={() => imageAttach.remove(img.id)}
+                          aria-label={t("agentManager.dialog.removeImage")}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    )}
+                  </For>
+                </div>
+              </Show>
+              <div class="prompt-input-wrapper am-prompt-input-wrapper">
+                <div class="prompt-input-ghost-wrapper am-prompt-input-ghost-wrapper">
+                  <textarea
+                    ref={textareaRef}
+                    class="prompt-input am-prompt-input"
+                    placeholder={t(
+                      isMac
+                        ? "agentManager.dialog.promptPlaceholder.mac"
+                        : "agentManager.dialog.promptPlaceholder.other",
+                    )}
+                    value={prompt()}
+                    onInput={(e) => {
+                      setPrompt(e.currentTarget.value)
+                      adjustHeight()
                     }}
-                    placement="bottom-start"
-                    sameWidth
-                    class="am-dropdown"
-                    trigger={
-                      <button class="am-selector-trigger" type="button">
-                        <span class="am-selector-left">
-                          <Icon name="branch" size="small" />
-                          <span class="am-selector-value" style={{ color: "var(--text-base)" }}>
-                            {effectiveBaseBranch()}
-                          </span>
-                          <Show when={!baseBranch()}>
-                            <span class="am-branch-badge">{t("agentManager.dialog.branchBadge.default")}</span>
-                          </Show>
-                        </span>
-                        <span class="am-selector-right">
-                          <Icon name="selector" size="small" />
-                        </span>
-                      </button>
-                    }
-                  >
-                    <div class="am-dropdown-search">
-                      <Icon name="magnifying-glass" size="small" />
-                      <input
-                        class="am-dropdown-search-input"
-                        type="text"
-                        placeholder={t("agentManager.dialog.searchBranches")}
-                        value={branchSearch()}
-                        autofocus
-                        onInput={(e) => {
-                          setBranchSearch(e.currentTarget.value)
+                    onPaste={(e) => imageAttach.handlePaste(e)}
+                    rows={3}
+                  />
+                </div>
+              </div>
+              <div class="prompt-input-hint">
+                <div class="prompt-input-hint-selectors">
+                  <Show when={!compareMode()}>
+                    <ModelSelectorBase
+                      value={model()}
+                      onSelect={(pid, mid) => setModel(pid && mid ? { providerID: pid, modelID: mid } : null)}
+                      placement="top-start"
+                      allowClear
+                      clearLabel="Default"
+                    />
+                  </Show>
+                  <Show when={session.agents().length > 1}>
+                    <ModeSwitcherBase agents={session.agents()} value={agent()} onSelect={setAgent} />
+                  </Show>
+                </div>
+                <div class="prompt-input-hint-actions" />
+              </div>
+            </div>
+
+            {/* Advanced options toggle */}
+            <button class="am-advanced-toggle" onClick={() => setShowAdvanced(!showAdvanced())} type="button">
+              <Icon name={showAdvanced() ? "chevron-down" : "chevron-right"} size="small" />
+              <span>{t("agentManager.dialog.advancedOptions")}</span>
+            </button>
+
+            <Show when={showAdvanced()}>
+              <div class="am-advanced-section">
+                <div class="am-advanced-field">
+                  <span class="am-nv-config-label">{t("agentManager.dialog.branchName")}</span>
+                  <input
+                    class="am-advanced-input"
+                    type="text"
+                    placeholder={t("agentManager.dialog.branchNamePlaceholder")}
+                    value={branchName()}
+                    onInput={(e) => setBranchName(sanitizeBranchName(e.currentTarget.value))}
+                  />
+                </div>
+                <div class="am-advanced-field">
+                  <span class="am-nv-config-label">{t("agentManager.dialog.baseBranch")}</span>
+                  <div class="am-selector-wrapper">
+                    <Popover
+                      open={baseBranchOpen()}
+                      onOpenChange={(open) => {
+                        setBaseBranchOpen(open)
+                        if (!open) {
+                          setBranchSearch("")
                           setHighlightedIndex(0)
-                        }}
-                        onKeyDown={(e) => {
-                          const items = filteredBranches()
-                          if (e.key === "ArrowDown") {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            const next = Math.min(highlightedIndex() + 1, items.length - 1)
-                            setHighlightedIndex(next)
-                            requestAnimationFrame(() => {
-                              document
-                                .querySelector(`.am-branch-item[data-index="${next}"]`)
-                                ?.scrollIntoView({ block: "nearest" })
-                            })
-                          } else if (e.key === "ArrowUp") {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            const prev = Math.max(highlightedIndex() - 1, 0)
-                            setHighlightedIndex(prev)
-                            requestAnimationFrame(() => {
-                              document
-                                .querySelector(`.am-branch-item[data-index="${prev}"]`)
-                                ?.scrollIntoView({ block: "nearest" })
-                            })
-                          } else if (e.key === "Enter") {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            const selected = items[highlightedIndex()]
-                            if (selected) {
-                              setBaseBranch(selected.name)
+                        }
+                      }}
+                      placement="bottom-start"
+                      sameWidth
+                      class="am-dropdown"
+                      trigger={
+                        <button class="am-selector-trigger" type="button">
+                          <span class="am-selector-left">
+                            <Icon name="branch" size="small" />
+                            <span class="am-selector-value">{effectiveBaseBranch()}</span>
+                            <Show when={!baseBranch()}>
+                              <span class="am-branch-badge">{t("agentManager.dialog.branchBadge.default")}</span>
+                            </Show>
+                          </span>
+                          <span class="am-selector-right">
+                            <Icon name="selector" size="small" />
+                          </span>
+                        </button>
+                      }
+                    >
+                      <div class="am-dropdown-search">
+                        <Icon name="magnifying-glass" size="small" />
+                        <input
+                          class="am-dropdown-search-input"
+                          type="text"
+                          placeholder={t("agentManager.dialog.searchBranches")}
+                          value={branchSearch()}
+                          autofocus
+                          onInput={(e) => {
+                            setBranchSearch(e.currentTarget.value)
+                            setHighlightedIndex(0)
+                          }}
+                          onKeyDown={(e) => {
+                            const items = filteredBranches()
+                            if (e.key === "ArrowDown") {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              const next = Math.min(highlightedIndex() + 1, items.length - 1)
+                              setHighlightedIndex(next)
+                              requestAnimationFrame(() => {
+                                document
+                                  .querySelector(`.am-branch-item[data-index="${next}"]`)
+                                  ?.scrollIntoView({ block: "nearest" })
+                              })
+                            } else if (e.key === "ArrowUp") {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              const prev = Math.max(highlightedIndex() - 1, 0)
+                              setHighlightedIndex(prev)
+                              requestAnimationFrame(() => {
+                                document
+                                  .querySelector(`.am-branch-item[data-index="${prev}"]`)
+                                  ?.scrollIntoView({ block: "nearest" })
+                              })
+                            } else if (e.key === "Enter") {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              const selected = items[highlightedIndex()]
+                              if (selected) {
+                                setBaseBranch(selected.name)
+                                setBaseBranchOpen(false)
+                                setBranchSearch("")
+                                setHighlightedIndex(0)
+                              }
+                            } else if (e.key === "Escape") {
+                              e.preventDefault()
+                              e.stopPropagation()
                               setBaseBranchOpen(false)
                               setBranchSearch("")
                               setHighlightedIndex(0)
                             }
-                          } else if (e.key === "Escape") {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            setBaseBranchOpen(false)
-                            setBranchSearch("")
-                            setHighlightedIndex(0)
-                          }
-                        }}
-                      />
-                    </div>
-                    <div class="am-dropdown-list">
-                      <For each={filteredBranches()}>
-                        {(branch, index) => (
-                          <button
-                            class="am-branch-item"
-                            classList={{
-                              "am-branch-item-active": effectiveBaseBranch() === branch.name,
-                              "am-branch-item-highlighted": highlightedIndex() === index(),
-                            }}
-                            data-index={index()}
-                            onClick={() => {
-                              setBaseBranch(branch.name)
-                              setBaseBranchOpen(false)
-                              setBranchSearch("")
-                              setHighlightedIndex(0)
-                            }}
-                            onMouseEnter={() => setHighlightedIndex(index())}
-                            type="button"
-                          >
-                            <span class="am-branch-item-left">
-                              <Icon name="branch" size="small" />
-                              <span class="am-branch-item-name">{branch.name}</span>
-                              <Show when={branch.isDefault}>
-                                <span class="am-branch-badge">{t("agentManager.dialog.branchBadge.default")}</span>
+                          }}
+                        />
+                      </div>
+                      <div class="am-dropdown-list">
+                        <For each={filteredBranches()}>
+                          {(branch, index) => (
+                            <button
+                              class="am-branch-item"
+                              classList={{
+                                "am-branch-item-active": effectiveBaseBranch() === branch.name,
+                                "am-branch-item-highlighted": highlightedIndex() === index(),
+                              }}
+                              data-index={index()}
+                              onClick={() => {
+                                setBaseBranch(branch.name)
+                                setBaseBranchOpen(false)
+                                setBranchSearch("")
+                                setHighlightedIndex(0)
+                              }}
+                              onMouseEnter={() => setHighlightedIndex(index())}
+                              type="button"
+                            >
+                              <span class="am-branch-item-left">
+                                <Icon name="branch" size="small" />
+                                <span class="am-branch-item-name">{branch.name}</span>
+                                <Show when={branch.isDefault}>
+                                  <span class="am-branch-badge">{t("agentManager.dialog.branchBadge.default")}</span>
+                                </Show>
+                                <Show when={!branch.isLocal && branch.isRemote}>
+                                  <span class="am-branch-badge am-branch-badge-remote">
+                                    {t("agentManager.dialog.branchBadge.remote")}
+                                  </span>
+                                </Show>
+                              </span>
+                              <Show when={branch.lastCommitDate}>
+                                <span class="am-branch-item-time">{formatRelativeDate(branch.lastCommitDate!)}</span>
                               </Show>
-                              <Show when={!branch.isLocal && branch.isRemote}>
-                                <span class="am-branch-badge am-branch-badge-remote">
-                                  {t("agentManager.dialog.branchBadge.remote")}
-                                </span>
-                              </Show>
-                            </span>
-                            <Show when={branch.lastCommitDate}>
-                              <span class="am-branch-item-time">{formatRelativeDate(branch.lastCommitDate!)}</span>
-                            </Show>
-                          </button>
-                        )}
-                      </For>
-                    </div>
-                  </Popover>
+                            </button>
+                          )}
+                        </For>
+                      </div>
+                    </Popover>
+                  </div>
                 </div>
               </div>
-            </div>
-          </Show>
+            </Show>
 
-          {/* Version / compare mode selector */}
-          <Show
-            when={compareMode()}
-            fallback={
-              <div class="am-nv-version-bar">
-                <span class="am-nv-config-label">{t("agentManager.dialog.versions")}</span>
-                <div class="am-nv-pills">
-                  {VERSION_OPTIONS.map((count) => (
+            {/* Version / compare mode selector */}
+            <Show
+              when={compareMode()}
+              fallback={
+                <div class="am-nv-version-bar">
+                  <span class="am-nv-config-label">{t("agentManager.dialog.versions")}</span>
+                  <div class="am-nv-pills">
+                    {VERSION_OPTIONS.map((count) => (
+                      <button
+                        class="am-nv-pill"
+                        classList={{ "am-nv-pill-active": versions() === count }}
+                        onClick={() => setVersions(count)}
+                        type="button"
+                      >
+                        {count}
+                      </button>
+                    ))}
                     <button
-                      class="am-nv-pill"
-                      classList={{ "am-nv-pill-active": versions() === count }}
-                      onClick={() => setVersions(count)}
+                      class="am-nv-pill am-nv-pill-compare"
+                      onClick={() => setCompareMode(true)}
                       type="button"
+                      title={t("agentManager.dialog.compareModels")}
                     >
-                      {count}
+                      <Icon name="layers" size="small" />
                     </button>
-                  ))}
-                  <button
-                    class="am-nv-pill am-nv-pill-compare"
-                    onClick={() => setCompareMode(true)}
-                    type="button"
-                    title={t("agentManager.dialog.compareModels")}
-                  >
-                    <Icon name="layers" size="small" />
-                  </button>
-                </div>
-                <Show when={versions() > 1}>
-                  <span class="am-nv-version-hint">{t("agentManager.dialog.versionHint", { count: versions() })}</span>
-                </Show>
-              </div>
-            }
-          >
-            <div class="am-nv-compare-section">
-              <div class="am-nv-version-bar">
-                <span class="am-nv-config-label">
-                  {t("agentManager.dialog.compareModels")}
-                  <Show when={totalAllocations(modelAllocations()) > 0}>
-                    <span class="am-nv-compare-count">
-                      {totalAllocations(modelAllocations())}/{MAX_MULTI_VERSIONS}
+                  </div>
+                  <Show when={versions() > 1}>
+                    <span class="am-nv-version-hint">
+                      {t("agentManager.dialog.versionHint", { count: versions() })}
                     </span>
                   </Show>
-                </span>
-                <button
-                  class="am-nv-pill-back"
-                  onClick={() => {
-                    setCompareMode(false)
-                    setModelAllocations(new Map())
-                  }}
-                  type="button"
-                  title={t("agentManager.dialog.versions")}
-                >
-                  <Icon name="close-small" size="small" />
-                </button>
-              </div>
-              <MultiModelSelector allocations={modelAllocations()} onChange={setModelAllocations} />
-            </div>
-          </Show>
-
-          {/* Submit button */}
-          <Button variant="primary" size="large" class="am-nv-submit" onClick={handleSubmit} disabled={!canSubmit()}>
-            <Show
-              when={!starting()}
-              fallback={
-                <>
-                  <Spinner class="am-nv-spinner" />
-                  <span>{t("agentManager.dialog.creating")}</span>
-                </>
+                </div>
               }
             >
-              {t("agentManager.dialog.createWorkspace")}
+              <div class="am-nv-compare-section">
+                <div class="am-nv-version-bar">
+                  <span class="am-nv-config-label">
+                    {t("agentManager.dialog.compareModels")}
+                    <Show when={totalAllocations(modelAllocations()) > 0}>
+                      <span class="am-nv-compare-count">
+                        {totalAllocations(modelAllocations())}/{MAX_MULTI_VERSIONS}
+                      </span>
+                    </Show>
+                  </span>
+                  <button
+                    class="am-nv-pill-back"
+                    onClick={() => {
+                      setCompareMode(false)
+                      setModelAllocations(new Map())
+                    }}
+                    type="button"
+                    title={t("agentManager.dialog.versions")}
+                  >
+                    <Icon name="close-small" size="small" />
+                  </button>
+                </div>
+                <Popover
+                  open={compareOpen()}
+                  onOpenChange={setCompareOpen}
+                  placement="bottom-start"
+                  sameWidth
+                  class="am-compare-popover"
+                  trigger={
+                    <button class="am-selector-trigger" type="button">
+                      <span class="am-selector-left">
+                        <Icon name="layers" size="small" />
+                        <Show
+                          when={modelAllocations().size > 0}
+                          fallback={
+                            <span class="am-selector-value am-selector-placeholder">
+                              {t("agentManager.dialog.compareModels.selectModels")}
+                            </span>
+                          }
+                        >
+                          <span class="am-selector-value">
+                            {[...modelAllocations().values()].map((e) => e.name).join(", ")}
+                          </span>
+                        </Show>
+                      </span>
+                      <span class="am-selector-right">
+                        <Icon name="selector" size="small" />
+                      </span>
+                    </button>
+                  }
+                >
+                  <MultiModelSelector allocations={modelAllocations()} onChange={setModelAllocations} />
+                </Popover>
+              </div>
             </Show>
-          </Button>
+          </div>
+          {/* Submit button — fixed footer, always visible */}
+          <div class="am-nv-dialog-footer">
+            <Button variant="primary" size="large" class="am-nv-submit" onClick={handleSubmit} disabled={!canSubmit()}>
+              <Show
+                when={!starting()}
+                fallback={
+                  <>
+                    <Spinner class="am-nv-spinner" />
+                    <span>{t("agentManager.dialog.creating")}</span>
+                  </>
+                }
+              >
+                {t("agentManager.dialog.createWorkspace")}
+              </Show>
+            </Button>
+          </div>
         </div>
       </Show>
 
