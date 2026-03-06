@@ -1,9 +1,15 @@
-import * as path from "path"
 import * as vscode from "vscode"
 import type { FileDiff } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "./services/cli-backend"
 import { buildWebviewHtml } from "./utils"
 import { GitOps } from "./agent-manager/GitOps"
+import {
+  appendOutput,
+  getWorkspaceRoot,
+  hashFileDiffs,
+  openWorkspaceRelativeFile,
+  resolveLocalDiffTarget,
+} from "./review-utils"
 
 /**
  * DiffViewerProvider opens a full-screen diff viewer in an editor tab.
@@ -29,8 +35,7 @@ export class DiffViewerProvider implements vscode.Disposable {
   }
 
   private log(...args: unknown[]) {
-    const msg = args.map((item) => (typeof item === "string" ? item : JSON.stringify(item))).join(" ")
-    this.outputChannel.appendLine(`${new Date().toISOString()} ${msg}`)
+    appendOutput(this.outputChannel, "DiffViewer", ...args)
   }
 
   public setCommentHandler(handler: (comments: unknown[]) => void): void {
@@ -72,7 +77,7 @@ export class DiffViewerProvider implements vscode.Disposable {
         type: "ready",
         vscodeLanguage: vscode.env.language,
         languageOverride: vscode.workspace.getConfiguration("kilo-code.new").get<string>("language"),
-        workspaceDirectory: this.getWorkspaceRoot(),
+        workspaceDirectory: getWorkspaceRoot(),
       })
       this.startDiffPolling()
       return
@@ -93,32 +98,12 @@ export class DiffViewerProvider implements vscode.Disposable {
     }
 
     if (type === "openFile" && typeof msg.filePath === "string") {
-      this.openFile(msg.filePath, typeof msg.line === "number" ? msg.line : undefined)
+      openWorkspaceRelativeFile(msg.filePath, typeof msg.line === "number" ? msg.line : undefined)
     }
   }
 
   private async resolveLocalDiffTarget(): Promise<{ directory: string; baseBranch: string } | undefined> {
-    const root = this.getWorkspaceRoot()
-    if (!root) {
-      this.log("Local diff: no workspace root")
-      return
-    }
-
-    const branch = await this.gitOps.currentBranch(root)
-    if (!branch || branch === "HEAD") {
-      this.log("Local diff: detached HEAD or no branch")
-      return
-    }
-
-    const tracking = await this.gitOps.resolveTrackingBranch(root, branch)
-    const defaultBranch = tracking ? undefined : await this.gitOps.resolveDefaultBranch(root, branch)
-    const base = tracking ?? defaultBranch ?? "HEAD"
-
-    this.log(
-      `Local diff: branch=${branch} tracking=${tracking ?? "none"} default=${defaultBranch ?? "none"} base=${base}`,
-    )
-
-    return { directory: root, baseBranch: base }
+    return await resolveLocalDiffTarget(this.gitOps, (...args) => this.log(...args))
   }
 
   private async initialFetch(): Promise<void> {
@@ -135,9 +120,7 @@ export class DiffViewerProvider implements vscode.Disposable {
         { throwOnError: true },
       )
 
-      this.lastDiffHash = diffs
-        .map((diff: FileDiff) => `${diff.file}:${diff.status}:${diff.additions}:${diff.deletions}:${diff.after.length}`)
-        .join("|")
+      this.lastDiffHash = hashFileDiffs(diffs)
 
       this.log(`Initial diff: ${diffs.length} file(s)`)
       this.post({ type: "diffViewer.diffs", diffs })
@@ -159,9 +142,7 @@ export class DiffViewerProvider implements vscode.Disposable {
         { throwOnError: true },
       )
 
-      const hash = diffs
-        .map((diff: FileDiff) => `${diff.file}:${diff.status}:${diff.additions}:${diff.deletions}:${diff.after.length}`)
-        .join("|")
+      const hash = hashFileDiffs(diffs)
 
       if (hash === this.lastDiffHash) return
       this.lastDiffHash = hash
@@ -192,28 +173,6 @@ export class DiffViewerProvider implements vscode.Disposable {
 
     this.lastDiffHash = undefined
     this.cachedDiffTarget = undefined
-  }
-
-  private openFile(relativePath: string, line?: number): void {
-    const root = this.getWorkspaceRoot()
-    if (!root) return
-
-    const resolved = path.resolve(root, relativePath)
-    const uri = vscode.Uri.file(resolved)
-    const target = Math.max(1, Math.floor(line ?? 1))
-    const pos = new vscode.Position(target - 1, 0)
-    const selection = new vscode.Range(pos, pos)
-
-    vscode.workspace.openTextDocument(uri).then(
-      (doc) => vscode.window.showTextDocument(doc, { viewColumn: vscode.ViewColumn.Beside, preview: true, selection }),
-      (err) => console.error("[Kilo New] DiffViewerProvider: Failed to open file:", uri.fsPath, err),
-    )
-  }
-
-  private getWorkspaceRoot(): string | undefined {
-    const folders = vscode.workspace.workspaceFolders
-    if (folders && folders.length > 0) return folders[0].uri.fsPath
-    return undefined
   }
 
   private post(message: Record<string, unknown>): void {

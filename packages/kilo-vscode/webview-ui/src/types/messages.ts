@@ -938,6 +938,16 @@ export interface EnhancePromptErrorMessage {
   requestId: string
 }
 
+export interface DiffViewerDiffsMessage {
+  type: "diffViewer.diffs"
+  diffs: WorktreeFileDiff[]
+}
+
+export interface DiffViewerLoadingMessage {
+  type: "diffViewer.loading"
+  loading: boolean
+}
+
 export type ExtensionMessage =
   | ReadyMessage
   | ConnectionStateMessage
@@ -1007,6 +1017,8 @@ export type ExtensionMessage =
   // legacy-migration end
   | EnhancePromptResultMessage
   | EnhancePromptErrorMessage
+  | DiffViewerDiffsMessage
+  | DiffViewerLoadingMessage
 
 // ============================================
 // Messages FROM webview TO extension

@@ -11,7 +11,7 @@ import { Toast } from "@kilocode/kilo-ui/toast"
 import { FullScreenDiffView } from "../agent-manager/FullScreenDiffView"
 import { LanguageProvider } from "../src/context/language"
 import { ServerProvider, useServer } from "../src/context/server"
-import { VSCodeProvider } from "../src/context/vscode"
+import { VSCodeProvider, useVSCode } from "../src/context/vscode"
 import type { ReviewComment, WorktreeFileDiff } from "../src/types/messages"
 
 type DiffStyle = "unified" | "split"
@@ -20,32 +20,35 @@ const vscodeApi = acquireVsCodeApi()
 const post = (message: Record<string, unknown>) => vscodeApi.postMessage(message as never)
 
 const DiffViewerContent: Component = () => {
+  const vscode = useVSCode()
   const [diffs, setDiffs] = createSignal<WorktreeFileDiff[]>([])
   const [loading, setLoading] = createSignal(true)
   const [comments, setComments] = createSignal<ReviewComment[]>([])
   const [diffStyle, setDiffStyle] = createSignal<DiffStyle>("unified")
 
-  const handler = (event: MessageEvent) => {
-    const msg = event.data
-    if (!msg || !msg.type) return
-
-    if (msg.type === "diffViewer.diffs" && Array.isArray(msg.diffs)) {
+  const unsubscribe = vscode.onMessage((msg) => {
+    if (msg.type === "diffViewer.diffs") {
       setDiffs(msg.diffs)
       return
     }
 
-    if (msg.type === "diffViewer.loading" && typeof msg.loading === "boolean") {
+    if (msg.type === "diffViewer.loading") {
       setLoading(msg.loading)
       return
     }
+  })
 
-    if (msg.type === "appendReviewComments" && Array.isArray(msg.comments)) {
-      post({ type: "diffViewer.sendComments", comments: msg.comments })
-    }
+  const handler = (event: MessageEvent) => {
+    const msg = event.data
+    if (msg?.type !== "appendReviewComments" || !Array.isArray(msg.comments)) return
+    post({ type: "diffViewer.sendComments", comments: msg.comments })
   }
 
   window.addEventListener("message", handler)
-  onCleanup(() => window.removeEventListener("message", handler))
+  onCleanup(() => {
+    unsubscribe()
+    window.removeEventListener("message", handler)
+  })
 
   return (
     <FullScreenDiffView
