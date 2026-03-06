@@ -1560,7 +1560,6 @@ export type WebviewMessage =
   | EnhancePromptRequest
   | OpenChangesRequest
   | SetDefaultBaseBranchRequest
-  | OpenChangesRequest
 
 // ============================================
 // VS Code API type

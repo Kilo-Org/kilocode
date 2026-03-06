@@ -206,6 +206,33 @@ export const SessionProvider: ParentComponent = (props) => {
     variantSelections: {},
   })
 
+  /** Parse a "provider/model" config string into a ModelSelection (or null). */
+  function getModeModel(agentName: string): ModelSelection | null {
+    const raw = config().agent?.[agentName]?.model
+    if (!raw) return null
+    const slash = raw.indexOf("/")
+    if (slash <= 0) return null
+    return { providerID: raw.slice(0, slash), modelID: raw.slice(slash + 1) }
+  }
+
+  // Per-session agent selection
+  const selectedAgentName = createMemo<string>(() => {
+    const sessionID = currentSessionID()
+    if (sessionID) {
+      return store.agentSelections[sessionID] ?? defaultAgent()
+    }
+    return pendingAgentSelection() ?? defaultAgent()
+  })
+
+  // Global model selection per agent/mode
+  // Precedence: user override > per-mode config > global default > kilo/auto
+  const selected = createMemo<ModelSelection | null>(() => {
+    const agentName = selectedAgentName()
+    const override = store.modelSelections[agentName]
+    if (override) return override
+    return getModeModel(agentName) ?? provider.defaultSelection()
+  })
+
   // Keep model selection in sync with provider/mode default until the user
   // explicitly overrides it.
   createEffect(() => {
@@ -217,33 +244,6 @@ export const SessionProvider: ParentComponent = (props) => {
     const modeModel = getModeModel(agentName)
     const sel = modeModel ?? def
     if (sel) setStore("modelSelections", agentName, sel)
-  })
-
-  /** Parse a "provider/model" config string into a ModelSelection (or null). */
-  function getModeModel(agentName: string): ModelSelection | null {
-    const raw = config().agent?.[agentName]?.model
-    if (!raw) return null
-    const slash = raw.indexOf("/")
-    if (slash <= 0) return null
-    return { providerID: raw.slice(0, slash), modelID: raw.slice(slash + 1) }
-  }
-
-  // Global model selection per agent/mode
-  // Precedence: user override > per-mode config > global default > kilo/auto
-  const selected = createMemo<ModelSelection | null>(() => {
-    const agentName = selectedAgentName()
-    const override = store.modelSelections[agentName]
-    if (override) return override
-    return getModeModel(agentName) ?? provider.defaultSelection()
-  })
-
-  // Per-session agent selection
-  const selectedAgentName = createMemo<string>(() => {
-    const sessionID = currentSessionID()
-    if (sessionID) {
-      return store.agentSelections[sessionID] ?? defaultAgent()
-    }
-    return pendingAgentSelection() ?? defaultAgent()
   })
 
   function selectModel(providerID: string, modelID: string) {
