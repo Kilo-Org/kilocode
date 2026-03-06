@@ -66,7 +66,6 @@ Or use npm:
 | `kilo run [message..]`    | Run with a message (non-interactive mode)  |
 | `kilo attach <url>`       | Attach to a running kilo server            |
 | `kilo serve`              | Start a headless server                    |
-| `kilo web`                | Start server and open web interface        |
 | `kilo auth`               | Manage credentials (login, logout, list)   |
 | `kilo agent`              | Manage agents (create, list)               |
 | `kilo mcp`                | Manage MCP servers (list, add, auth)       |
