@@ -7,6 +7,7 @@ export const dict = {
   "agentManager.worktree.new": "Worktree ใหม่",
   "agentManager.worktree.setupScript": "สคริปต์ตั้งค่า Worktree",
   "agentManager.worktree.delete": "ลบ Worktree",
+  "agentManager.worktree.confirmDelete": "Delete?",
   "agentManager.worktree.stale": "ล้าสมัย",
   "agentManager.worktree.staleTooltip": "ไม่พบบนดิสก์หรือไม่ได้ถูกติดตามโดย git worktree อีกต่อไป",
   "agentManager.worktree.removeStale": "ลบ Worktree ที่ล้าสมัย",
@@ -50,13 +51,6 @@ export const dict = {
   "agentManager.shortcuts.focusPanel": "โฟกัสแผง",
   "agentManager.shortcuts.openAgentManager": "เปิด Agent Manager",
   "agentManager.shortcuts.showShortcuts": "แสดงปุ่มลัดแป้นพิมพ์",
-  "agentManager.dialog.deleteWorktree.title": "ลบ Worktree",
-  "agentManager.dialog.deleteWorktree.messagePre": "ลบ Worktree ",
-  "agentManager.dialog.deleteWorktree.messagePost":
-    "? การดำเนินการนี้จะลบ Worktree ออกจากดิสก์และยกเลิกการเชื่อมโยงเซสชันทั้งหมด",
-  "agentManager.dialog.deleteWorktree.cancel": "ยกเลิก",
-  "agentManager.dialog.deleteWorktree.confirm": "ลบ",
-
   "agentManager.dialog.removeStaleWorktree.title": "ลบ Worktree ที่ล้าสมัย",
   "agentManager.dialog.removeStaleWorktree.messagePre": "ลบ Worktree ที่ล้าสมัย ",
   "agentManager.dialog.removeStaleWorktree.messagePost":

@@ -190,6 +190,7 @@ button.am-section-toggle:hover .am-section-label {
   color: var(--text-base);
   min-width: 0;
   width: 100%;
+  transition: background 200ms ease;
 }
 
 .am-worktree-item:hover {
@@ -296,6 +297,53 @@ button.am-section-toggle:hover .am-section-label {
 .am-worktree-item:has(.am-worktree-rename-input) .am-worktree-close {
   opacity: 0;
   pointer-events: none;
+}
+
+/* Inline delete confirmation */
+
+.am-worktree-item.am-worktree-pending-delete {
+  background: color-mix(in srgb, var(--surface-critical-strong) 12%, transparent);
+}
+
+.am-worktree-item.am-worktree-pending-delete:hover {
+  background: color-mix(in srgb, var(--surface-critical-strong) 18%, transparent);
+}
+
+.am-worktree-item.am-worktree-pending-delete.am-worktree-item-active {
+  background: color-mix(in srgb, var(--surface-critical-strong) 20%, var(--surface-interactive-base));
+}
+
+.am-worktree-pending-delete .am-worktree-branch {
+  opacity: 0.5;
+  transition: opacity 200ms ease;
+}
+
+.am-worktree-pending-delete .am-worktree-stats {
+  display: none;
+}
+
+.am-worktree-pending-delete .am-shortcut-badge {
+  opacity: 0 !important;
+}
+
+.am-worktree-delete-hint {
+  font-size: var(--font-size-small);
+  color: var(--icon-critical-base);
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding-right: 4px;
+  animation: am-hint-slide-in 200ms ease;
+}
+
+@keyframes am-hint-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .am-worktree-stale-badge {

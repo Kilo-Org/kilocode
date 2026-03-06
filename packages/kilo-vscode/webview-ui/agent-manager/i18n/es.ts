@@ -7,6 +7,7 @@ export const dict = {
   "agentManager.worktree.new": "Nuevo Worktree",
   "agentManager.worktree.setupScript": "Script de configuración de Worktree",
   "agentManager.worktree.delete": "Eliminar Worktree",
+  "agentManager.worktree.confirmDelete": "Delete?",
   "agentManager.worktree.stale": "Obsoleto",
   "agentManager.worktree.staleTooltip": "No está en disco o ya no está seguido por git worktree",
   "agentManager.worktree.removeStale": "Eliminar Worktree obsoleto",
@@ -50,13 +51,6 @@ export const dict = {
   "agentManager.shortcuts.focusPanel": "Enfocar panel",
   "agentManager.shortcuts.openAgentManager": "Abrir Agent Manager",
   "agentManager.shortcuts.showShortcuts": "Mostrar atajos de teclado",
-  "agentManager.dialog.deleteWorktree.title": "Eliminar Worktree",
-  "agentManager.dialog.deleteWorktree.messagePre": "¿Eliminar Worktree ",
-  "agentManager.dialog.deleteWorktree.messagePost":
-    "? Esto elimina el Worktree del disco y desasocia todas las sesiones.",
-  "agentManager.dialog.deleteWorktree.cancel": "Cancelar",
-  "agentManager.dialog.deleteWorktree.confirm": "Eliminar",
-
   "agentManager.dialog.removeStaleWorktree.title": "Eliminar Worktree obsoleto",
   "agentManager.dialog.removeStaleWorktree.messagePre": "¿Eliminar Worktree obsoleto ",
   "agentManager.dialog.removeStaleWorktree.messagePost":

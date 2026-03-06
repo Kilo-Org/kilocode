@@ -7,6 +7,7 @@ export const dict = {
   "agentManager.worktree.new": "Novi Worktree",
   "agentManager.worktree.setupScript": "Skripta za postavljanje Worktree-a",
   "agentManager.worktree.delete": "Obriši Worktree",
+  "agentManager.worktree.confirmDelete": "Delete?",
   "agentManager.worktree.stale": "Zastario",
   "agentManager.worktree.staleTooltip": "Nedostaje na disku ili ga git worktree više ne prati",
   "agentManager.worktree.removeStale": "Ukloni zastarjeli Worktree",
@@ -50,12 +51,6 @@ export const dict = {
   "agentManager.shortcuts.focusPanel": "Fokusiraj panel",
   "agentManager.shortcuts.openAgentManager": "Otvori Agent Manager",
   "agentManager.shortcuts.showShortcuts": "Prikaži prečice na tastaturi",
-  "agentManager.dialog.deleteWorktree.title": "Obriši Worktree",
-  "agentManager.dialog.deleteWorktree.messagePre": "Obriši Worktree ",
-  "agentManager.dialog.deleteWorktree.messagePost": "? Ovo uklanja Worktree sa diska i odvezuje sve sesije.",
-  "agentManager.dialog.deleteWorktree.cancel": "Otkaži",
-  "agentManager.dialog.deleteWorktree.confirm": "Obriši",
-
   "agentManager.dialog.removeStaleWorktree.title": "Ukloni zastarjeli Worktree",
   "agentManager.dialog.removeStaleWorktree.messagePre": "Ukloni zastarjeli Worktree ",
   "agentManager.dialog.removeStaleWorktree.messagePost":

@@ -85,6 +85,7 @@ import { FullScreenDiffView } from "./FullScreenDiffView"
 import { ApplyDialog } from "./ApplyDialog"
 import { groupApplyConflicts } from "./apply-conflicts"
 import type { ReviewComment } from "./review-comments"
+import { WorktreeItem } from "./WorktreeItem"
 import "./agent-manager.css"
 
 const REVIEW_TAB_ID = "review"
@@ -352,6 +353,16 @@ const AgentManagerContent: Component = () => {
   let pendingCounter = 0
   const PENDING_PREFIX = "pending:"
   const [activePendingId, setActivePendingId] = createSignal<string | undefined>()
+
+  // Inline delete confirmation: tracks which worktree is awaiting a second click/press
+  const [pendingDelete, setPendingDelete] = createSignal<string | null>(null)
+  let pendingDeleteTimer: ReturnType<typeof setTimeout> | undefined
+  const cancelPendingDelete = () => {
+    clearTimeout(pendingDeleteTimer)
+    setPendingDelete(null)
+  }
+  createEffect(on(selection, () => cancelPendingDelete(), { defer: true }))
+  onCleanup(() => clearTimeout(pendingDeleteTimer))
 
   // Per-context tab memory: maps sidebar selection key -> last active session/pending ID
   const [tabMemory, setTabMemory] = createSignal<Record<string, string>>({})
@@ -984,6 +995,19 @@ const AgentManagerContent: Component = () => {
     }
     window.addEventListener("keydown", preventDefaults, true)
 
+    // Delete/Backspace on a selected worktree triggers inline delete confirmation.
+    // Pressing the key twice in a row (within the 2500ms window) confirms the delete.
+    const deleteKeyHandler = (e: KeyboardEvent) => {
+      if (e.key !== "Delete" && e.key !== "Backspace") return
+      const tag = (e.target as HTMLElement)?.tagName
+      if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return
+      const sel = selection()
+      if (!sel || sel === LOCAL) return
+      e.preventDefault()
+      confirmDeleteWorktree(sel)
+    }
+    window.addEventListener("keydown", deleteKeyHandler)
+
     // When the panel regains focus (e.g. returning from terminal), focus the prompt
     // and clear any stale body styles left by Kobalte modal overlays (dropdowns/dialogs
     // set pointer-events:none and overflow:hidden on body, but cleanup never runs if
@@ -1248,6 +1272,7 @@ const AgentManagerContent: Component = () => {
     onCleanup(() => {
       window.removeEventListener("message", handler)
       window.removeEventListener("keydown", preventDefaults, true)
+      window.removeEventListener("keydown", deleteKeyHandler)
       window.removeEventListener("focus", onWindowFocus)
       unsubCreate()
       unsubSessions()
@@ -1419,7 +1444,10 @@ const AgentManagerContent: Component = () => {
   const confirmDeleteWorktree = (worktreeId: string) => {
     const wt = worktrees().find((w) => w.id === worktreeId)
     if (!wt) return
-    const doDelete = () => {
+
+    // Second press/click: execute the delete
+    if (pendingDelete() === worktreeId) {
+      cancelPendingDelete()
       setBusyWorktrees((prev) => new Map([...prev, [wt.id, { reason: "deleting" as const }]]))
       vscode.postMessage({ type: "agentManager.deleteWorktree", worktreeId: wt.id })
       if (selection() === wt.id) {
@@ -1430,36 +1458,13 @@ const AgentManagerContent: Component = () => {
         if (next === LOCAL) selectLocal()
         else selectWorktree(next)
       }
-      dialog.close()
+      return
     }
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault()
-        doDelete()
-      }
-    }
-    dialog.show(() => (
-      <Dialog title={t("agentManager.dialog.deleteWorktree.title")} fit>
-        <div class="am-confirm" onKeyDown={onKeyDown}>
-          <div class="am-confirm-message">
-            <Icon name="trash" size="small" />
-            <span>
-              {t("agentManager.dialog.deleteWorktree.messagePre")}
-              <code class="am-confirm-branch">{wt.branch}</code>
-              {t("agentManager.dialog.deleteWorktree.messagePost")}
-            </span>
-          </div>
-          <div class="am-confirm-actions">
-            <Button variant="ghost" size="large" onClick={() => dialog.close()}>
-              {t("agentManager.dialog.deleteWorktree.cancel")}
-            </Button>
-            <Button variant="primary" size="large" class="am-confirm-delete" onClick={doDelete} autofocus>
-              {t("agentManager.dialog.deleteWorktree.confirm")}
-            </Button>
-          </div>
-        </div>
-      </Dialog>
-    ))
+
+    // First press/click: enter pending-delete state
+    clearTimeout(pendingDeleteTimer)
+    setPendingDelete(worktreeId)
+    pendingDeleteTimer = setTimeout(() => setPendingDelete(null), 2500)
   }
 
   const confirmRemoveStaleWorktree = (worktreeId: string) => {
@@ -1859,8 +1864,6 @@ const AgentManagerContent: Component = () => {
               </Show>
               <Show when={isGitRepo()}>
                 {(() => {
-                  const [hoveredWt, setHoveredWt] = createSignal<string | null>(null)
-                  const [overClose, setOverClose] = createSignal(false)
                   const [renamingWt, setRenamingWt] = createSignal<string | null>(null)
                   const [renameValue, setRenameValue] = createSignal("")
 
@@ -1890,14 +1893,6 @@ const AgentManagerContent: Component = () => {
                   return (
                     <For each={sortedWorktrees()}>
                       {(wt, idx) => {
-                        const grouped = () => isGrouped(wt)
-                        const start = () => isGroupStart(wt, idx())
-                        const end = () => isGroupEnd(wt, idx())
-                        const busy = () => busyWorktrees().has(wt.id)
-                        const groupSize = () => {
-                          if (!wt.groupId) return 0
-                          return sortedWorktrees().filter((w) => w.groupId === wt.groupId).length
-                        }
                         const sessions = createMemo(() => managedSessions().filter((ms) => ms.worktreeId === wt.id))
                         const navHint = () => {
                           const flat = [
@@ -1908,269 +1903,40 @@ const AgentManagerContent: Component = () => {
                           const active = selection() ?? session.currentSessionID() ?? ""
                           return adjacentHint(wt.id, active, flat, kb().previousSession ?? "", kb().nextSession ?? "")
                         }
+                        const groupSize = () => {
+                          if (!wt.groupId) return 0
+                          return sortedWorktrees().filter((w) => w.groupId === wt.groupId).length
+                        }
                         return (
-                          <>
-                            <Show when={start()}>
-                              <div class="am-wt-group-header">
-                                <Icon name="layers" size="small" />
-                                <span class="am-wt-group-label">
-                                  {t("agentManager.worktree.versions", { count: groupSize() })}
-                                </span>
-                              </div>
-                            </Show>
-                            <HoverCard
-                              openDelay={100}
-                              closeDelay={100}
-                              placement="right-start"
-                              gutter={8}
-                              open={hoveredWt() === wt.id && !overClose()}
-                              onOpenChange={(open) => setHoveredWt(open ? wt.id : null)}
-                              trigger={
-                                <div
-                                  class="am-worktree-item"
-                                  classList={{
-                                    "am-worktree-item-active": selection() === wt.id,
-                                    "am-wt-grouped": grouped(),
-                                    "am-wt-group-end": end(),
-                                  }}
-                                  data-sidebar-id={wt.id}
-                                  onClick={() => selectWorktree(wt.id)}
-                                >
-                                  <Show
-                                    when={!busyWorktrees().has(wt.id)}
-                                    fallback={<Spinner class="am-worktree-spinner" />}
-                                  >
-                                    <Icon name="branch" size="small" />
-                                  </Show>
-                                  <Show when={isStaleWorktree(wt.id)}>
-                                    <Tooltip
-                                      value={t("agentManager.worktree.staleTooltip")}
-                                      placement="top"
-                                      contentClass="am-tooltip-wrap"
-                                    >
-                                      <span class="am-worktree-stale-badge">
-                                        <Icon name="warning" size="small" />
-                                      </span>
-                                    </Tooltip>
-                                  </Show>
-                                  <Show
-                                    when={renamingWt() === wt.id}
-                                    fallback={
-                                      <span
-                                        class="am-worktree-branch"
-                                        onDblClick={(e) => {
-                                          e.stopPropagation()
-                                          startRename(wt.id, worktreeLabel(wt))
-                                        }}
-                                        title={t("agentManager.worktree.doubleClickRename")}
-                                      >
-                                        {worktreeLabel(wt)}
-                                      </span>
-                                    }
-                                  >
-                                    <input
-                                      class="am-worktree-rename-input"
-                                      value={renameValue()}
-                                      onInput={(e) => setRenameValue(e.currentTarget.value)}
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Enter") {
-                                          e.preventDefault()
-                                          commitRename(wt.id)
-                                        }
-                                        if (e.key === "Escape") {
-                                          e.preventDefault()
-                                          cancelRename()
-                                        }
-                                      }}
-                                      onBlur={() => commitRename(wt.id)}
-                                      onClick={(e) => e.stopPropagation()}
-                                      ref={(el) =>
-                                        requestAnimationFrame(() => {
-                                          el.focus()
-                                          el.select()
-                                        })
-                                      }
-                                    />
-                                  </Show>
-                                  {(() => {
-                                    const num = idx() + 2
-                                    const stats = () => worktreeStats()[wt.id]
-                                    return (
-                                      <>
-                                        <Show when={num <= MAX_JUMP_INDEX}>
-                                          <span class="am-shortcut-badge">
-                                            {isMac ? "⌘" : "Ctrl+"}
-                                            {num}
-                                          </span>
-                                        </Show>
-                                        <Show
-                                          when={
-                                            stats() &&
-                                            (stats()!.files > 0 ||
-                                              stats()!.additions > 0 ||
-                                              stats()!.deletions > 0 ||
-                                              stats()!.ahead > 0 ||
-                                              stats()!.behind > 0)
-                                          }
-                                        >
-                                          <div class="am-worktree-stats">
-                                            <Show when={stats()!.files > 0}>
-                                              <span class="am-stat-files">{stats()!.files}f</span>
-                                            </Show>
-                                            <Show when={stats()!.additions > 0 || stats()!.deletions > 0}>
-                                              <span class="am-worktree-diff-stats">
-                                                <Show when={stats()!.additions > 0}>
-                                                  <span class="am-stat-additions">+{stats()!.additions}</span>
-                                                </Show>
-                                                <Show when={stats()!.deletions > 0}>
-                                                  <span class="am-stat-deletions">−{stats()!.deletions}</span>
-                                                </Show>
-                                              </span>
-                                            </Show>
-                                            <Show when={stats()!.ahead > 0}>
-                                              <span class="am-worktree-commits">↑{stats()!.ahead}</span>
-                                            </Show>
-                                            <Show when={stats()!.behind > 0}>
-                                              <span class="am-worktree-behind">↓{stats()!.behind}</span>
-                                            </Show>
-                                          </div>
-                                        </Show>
-                                      </>
-                                    )
-                                  })()}
-                                  <Show when={!busyWorktrees().has(wt.id)}>
-                                    <div
-                                      class="am-worktree-close"
-                                      onMouseEnter={() => setOverClose(true)}
-                                      onMouseLeave={() => setOverClose(false)}
-                                    >
-                                      <TooltipKeybind
-                                        title={t("agentManager.worktree.delete")}
-                                        keybind={kb().closeWorktree ?? ""}
-                                        placement="top"
-                                      >
-                                        <IconButton
-                                          icon="trash"
-                                          size="small"
-                                          variant="ghost"
-                                          label={t("agentManager.worktree.delete")}
-                                          onClick={(e: MouseEvent) => handleDeleteWorktree(wt.id, e)}
-                                        />
-                                      </TooltipKeybind>
-                                    </div>
-                                  </Show>
-                                </div>
-                              }
-                            >
-                              <div class="am-hover-card">
-                                <div class="am-hover-card-header">
-                                  <div>
-                                    <div class="am-hover-card-label">{t("agentManager.hoverCard.branch")}</div>
-                                    <div class="am-hover-card-branch">{wt.branch}</div>
-                                    <div class="am-hover-card-meta">{formatRelativeDate(wt.createdAt)}</div>
-                                  </div>
-                                  <Show when={navHint()}>
-                                    <span class="am-hover-card-keybind">{navHint()}</span>
-                                  </Show>
-                                </div>
-                                <Show when={wt.parentBranch}>
-                                  <div class="am-hover-card-divider" />
-                                  <div class="am-hover-card-row">
-                                    <span class="am-hover-card-row-label">{t("agentManager.hoverCard.base")}</span>
-                                    <span class="am-hover-card-row-value">{wt.parentBranch}</span>
-                                  </div>
-                                </Show>
-                                <div class="am-hover-card-divider" />
-                                <div class="am-hover-card-row">
-                                  <span class="am-hover-card-row-label">{t("agentManager.hoverCard.sessions")}</span>
-                                  <span class="am-hover-card-row-value">{sessions().length}</span>
-                                </div>
-                                <Show when={isStaleWorktree(wt.id)}>
-                                  <div class="am-hover-card-divider" />
-                                  <div class="am-hover-card-row am-hover-card-row-stale">
-                                    <span class="am-hover-card-row-label">{t("agentManager.worktree.stale")}</span>
-                                    <span class="am-hover-card-row-value am-hover-card-stale-pill">
-                                      <Icon name="warning" size="small" />
-                                      {t("agentManager.worktree.stale")}
-                                    </span>
-                                  </div>
-                                  <div class="am-hover-card-note">{t("agentManager.worktree.staleTooltip")}</div>
-                                  <div class="am-hover-card-actions">
-                                    <Button
-                                      variant="ghost"
-                                      size="small"
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        confirmRemoveStaleWorktree(wt.id)
-                                      }}
-                                    >
-                                      {t("agentManager.worktree.removeStale")}
-                                    </Button>
-                                  </div>
-                                </Show>
-                                {(() => {
-                                  const hoverStats = () => worktreeStats()[wt.id]
-                                  return (
-                                    <Show
-                                      when={
-                                        hoverStats() &&
-                                        (hoverStats()!.files > 0 ||
-                                          hoverStats()!.additions > 0 ||
-                                          hoverStats()!.deletions > 0 ||
-                                          hoverStats()!.ahead > 0 ||
-                                          hoverStats()!.behind > 0)
-                                      }
-                                    >
-                                      <div class="am-hover-card-divider" />
-                                      <Show when={hoverStats()!.files > 0}>
-                                        <div class="am-hover-card-row">
-                                          <span class="am-hover-card-row-label">
-                                            {t("agentManager.hoverCard.files")}
-                                          </span>
-                                          <span class="am-hover-card-row-value">{hoverStats()!.files}</span>
-                                        </div>
-                                      </Show>
-                                      <Show when={hoverStats()!.additions > 0 || hoverStats()!.deletions > 0}>
-                                        <div class="am-hover-card-row">
-                                          <span class="am-hover-card-row-label">
-                                            {t("agentManager.hoverCard.changes")}
-                                          </span>
-                                          <span class="am-hover-card-row-value am-hover-card-diff-stats">
-                                            <Show when={hoverStats()!.additions > 0}>
-                                              <span class="am-stat-additions">+{hoverStats()!.additions}</span>
-                                            </Show>
-                                            <Show when={hoverStats()!.deletions > 0}>
-                                              <span class="am-stat-deletions">−{hoverStats()!.deletions}</span>
-                                            </Show>
-                                          </span>
-                                        </div>
-                                      </Show>
-                                      <Show when={hoverStats()!.ahead > 0 || hoverStats()!.behind > 0}>
-                                        <div class="am-hover-card-row">
-                                          <span class="am-hover-card-row-label">
-                                            {t("agentManager.hoverCard.commits")}
-                                          </span>
-                                          <span class="am-hover-card-row-value am-hover-card-diff-stats">
-                                            <Show when={hoverStats()!.ahead > 0}>
-                                              <span class="am-worktree-commits">↑{hoverStats()!.ahead}</span>
-                                            </Show>
-                                            <Show when={hoverStats()!.behind > 0}>
-                                              <span class="am-worktree-behind">↓{hoverStats()!.behind}</span>
-                                            </Show>
-                                          </span>
-                                        </div>
-                                      </Show>
-                                    </Show>
-                                  )
-                                })()}
-                                <div class="am-hover-card-divider" />
-                                <div class="am-hover-card-hint">
-                                  <Icon name="edit" size="small" />
-                                  <span>{t("agentManager.worktree.doubleClickRename")}</span>
-                                </div>
-                              </div>
-                            </HoverCard>
-                          </>
+                          <WorktreeItem
+                            worktree={wt}
+                            label={worktreeLabel(wt)}
+                            active={selection() === wt.id}
+                            pendingDelete={pendingDelete() === wt.id}
+                            busy={busyWorktrees().has(wt.id)}
+                            stale={isStaleWorktree(wt.id)}
+                            shortcut={idx() + 2}
+                            stats={worktreeStats()[wt.id]}
+                            navHint={navHint()}
+                            sessions={sessions().length}
+                            grouped={isGrouped(wt)}
+                            groupStart={isGroupStart(wt, idx())}
+                            groupEnd={isGroupEnd(wt, idx())}
+                            groupSize={groupSize()}
+                            renaming={renamingWt() === wt.id}
+                            renameValue={renameValue()}
+                            closeKeybind={kb().closeWorktree ?? ""}
+                            onClick={() => {
+                              if (pendingDelete() === wt.id) cancelPendingDelete()
+                              selectWorktree(wt.id)
+                            }}
+                            onDelete={(e) => handleDeleteWorktree(wt.id, e)}
+                            onStartRename={(current) => startRename(wt.id, current)}
+                            onRenameInput={(v) => setRenameValue(v)}
+                            onCommitRename={() => commitRename(wt.id)}
+                            onCancelRename={cancelRename}
+                            onRemoveStale={() => confirmRemoveStaleWorktree(wt.id)}
+                          />
                         )
                       }}
                     </For>

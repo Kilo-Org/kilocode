@@ -7,6 +7,7 @@ export const dict = {
   "agentManager.worktree.new": "Nyt Worktree",
   "agentManager.worktree.setupScript": "Worktree-opsætningsscript",
   "agentManager.worktree.delete": "Slet Worktree",
+  "agentManager.worktree.confirmDelete": "Delete?",
   "agentManager.worktree.stale": "Forældet",
   "agentManager.worktree.staleTooltip": "Mangler på disken eller spores ikke længere af git worktree",
   "agentManager.worktree.removeStale": "Fjern forældet Worktree",
@@ -50,12 +51,6 @@ export const dict = {
   "agentManager.shortcuts.focusPanel": "Fokuser panel",
   "agentManager.shortcuts.openAgentManager": "Åbn Agent Manager",
   "agentManager.shortcuts.showShortcuts": "Vis tastaturgenveje",
-  "agentManager.dialog.deleteWorktree.title": "Slet Worktree",
-  "agentManager.dialog.deleteWorktree.messagePre": "Slet Worktree ",
-  "agentManager.dialog.deleteWorktree.messagePost": "? Dette fjerner Worktree fra disken og afkobler alle sessioner.",
-  "agentManager.dialog.deleteWorktree.cancel": "Annuller",
-  "agentManager.dialog.deleteWorktree.confirm": "Slet",
-
   "agentManager.dialog.removeStaleWorktree.title": "Fjern forældet Worktree",
   "agentManager.dialog.removeStaleWorktree.messagePre": "Fjern forældet Worktree ",
   "agentManager.dialog.removeStaleWorktree.messagePost":

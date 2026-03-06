@@ -7,6 +7,7 @@ export const dict = {
   "agentManager.worktree.new": "Новый Worktree",
   "agentManager.worktree.setupScript": "Скрипт настройки Worktree",
   "agentManager.worktree.delete": "Удалить Worktree",
+  "agentManager.worktree.confirmDelete": "Delete?",
   "agentManager.worktree.stale": "Устаревший",
   "agentManager.worktree.staleTooltip": "Отсутствует на диске или больше не отслеживается git worktree",
   "agentManager.worktree.removeStale": "Удалить устаревший Worktree",
@@ -50,12 +51,6 @@ export const dict = {
   "agentManager.shortcuts.focusPanel": "Фокус на панели",
   "agentManager.shortcuts.openAgentManager": "Открыть Agent Manager",
   "agentManager.shortcuts.showShortcuts": "Показать сочетания клавиш",
-  "agentManager.dialog.deleteWorktree.title": "Удалить Worktree",
-  "agentManager.dialog.deleteWorktree.messagePre": "Удалить Worktree ",
-  "agentManager.dialog.deleteWorktree.messagePost": "? Это удалит Worktree с диска и отключит все сессии.",
-  "agentManager.dialog.deleteWorktree.cancel": "Отмена",
-  "agentManager.dialog.deleteWorktree.confirm": "Удалить",
-
   "agentManager.dialog.removeStaleWorktree.title": "Удалить устаревший Worktree",
   "agentManager.dialog.removeStaleWorktree.messagePre": "Удалить устаревший Worktree ",
   "agentManager.dialog.removeStaleWorktree.messagePost":

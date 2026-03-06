@@ -7,6 +7,7 @@ export const dict = {
   "agentManager.worktree.new": "새 Worktree",
   "agentManager.worktree.setupScript": "Worktree 설정 스크립트",
   "agentManager.worktree.delete": "Worktree 삭제",
+  "agentManager.worktree.confirmDelete": "Delete?",
   "agentManager.worktree.stale": "오래됨",
   "agentManager.worktree.staleTooltip": "디스크에 없거나 더 이상 git worktree에서 추적되지 않습니다",
   "agentManager.worktree.removeStale": "오래된 Worktree 제거",
@@ -50,12 +51,6 @@ export const dict = {
   "agentManager.shortcuts.focusPanel": "패널 포커스",
   "agentManager.shortcuts.openAgentManager": "Agent Manager 열기",
   "agentManager.shortcuts.showShortcuts": "키보드 단축키 표시",
-  "agentManager.dialog.deleteWorktree.title": "Worktree 삭제",
-  "agentManager.dialog.deleteWorktree.messagePre": "Worktree 삭제 ",
-  "agentManager.dialog.deleteWorktree.messagePost": "? 디스크에서 Worktree를 제거하고 모든 세션의 연결을 해제합니다.",
-  "agentManager.dialog.deleteWorktree.cancel": "취소",
-  "agentManager.dialog.deleteWorktree.confirm": "삭제",
-
   "agentManager.dialog.removeStaleWorktree.title": "오래된 Worktree 제거",
   "agentManager.dialog.removeStaleWorktree.messagePre": "오래된 Worktree 제거 ",
   "agentManager.dialog.removeStaleWorktree.messagePost":
