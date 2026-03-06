@@ -17,6 +17,7 @@ import { getDirectory, getFilename, sanitizeReviewComments, type ReviewComment }
 import { buildReviewAnnotation, type AnnotationLabels, type AnnotationMeta } from "./review-annotations"
 import { LONG_DIFF_MARKER_FILE_COUNT, initialOpenFiles, isLargeDiffFile } from "./diff-open-policy"
 import { DiffEndMarker } from "./DiffEndMarker"
+import { GeneratedSummaryFooter } from "./GeneratedSummaryFooter"
 
 // --- Data model ---
 
@@ -454,16 +455,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
             <DiffEndMarker />
           </Show>
           <Show when={props.generated && props.generated.files > 0}>
-            <div class="am-diff-generated-summary">
-              <div class="am-diff-generated-header">
-                <Icon name="archive" size="small" />
-                <span>
-                  {props.generated!.files} generated {props.generated!.files === 1 ? "file" : "files"} hidden
-                </span>
-                <span class="am-diff-header-adds">+{props.generated!.additions}</span>
-                <span class="am-diff-header-dels">-{props.generated!.deletions}</span>
-              </div>
-            </div>
+            <GeneratedSummaryFooter generated={props.generated!} />
           </Show>
         </div>
 

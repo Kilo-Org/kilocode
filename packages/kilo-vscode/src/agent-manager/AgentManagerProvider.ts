@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 import * as fs from "fs"
 import * as path from "path"
 import type { KiloClient, Session, FileDiff } from "@kilocode/sdk/v2/client"
+import { parseDiffResponse } from "./diff-response"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { getErrorMessage } from "../kilo-provider-utils"
 import { isAbsolutePath } from "../path-utils"
@@ -1722,30 +1723,6 @@ export class AgentManagerProvider implements vscode.Disposable {
     return { directory: root, baseBranch: base }
   }
 
-  // Handle both old (FileDiff[]) and new ({ diffs, generated }) response shapes
-  // for backward compat during SDK regen transition.
-  private parseDiffResponse(raw: unknown): {
-    diffs: FileDiff[]
-    generated: {
-      files: number
-      additions: number
-      deletions: number
-      entries: Array<{ file: string; status: string; additions: number; deletions: number }>
-    }
-  } {
-    if (Array.isArray(raw)) return { diffs: raw, generated: { files: 0, additions: 0, deletions: 0, entries: [] } }
-    const typed = raw as {
-      diffs: FileDiff[]
-      generated: {
-        files: number
-        additions: number
-        deletions: number
-        entries: Array<{ file: string; status: string; additions: number; deletions: number }>
-      }
-    }
-    return typed
-  }
-
   /** One-shot diff fetch with loading indicators. Resolves target async, then fetches. */
   private async onRequestWorktreeDiff(sessionId: string): Promise<void> {
     // Ensure state is loaded before resolving diff target — avoids race where
@@ -1770,7 +1747,7 @@ export class AgentManagerProvider implements vscode.Disposable {
         { directory: target.directory, base: target.baseBranch },
         { throwOnError: true },
       )
-      const response = this.parseDiffResponse(raw)
+      const response = parseDiffResponse(raw)
 
       this.log(
         `Worktree diff returned ${response.diffs.length} reviewable, ${response.generated.files} generated file(s) for session ${sessionId}`,
@@ -1806,7 +1783,7 @@ export class AgentManagerProvider implements vscode.Disposable {
         { directory: target.directory, base: target.baseBranch },
         { throwOnError: true },
       )
-      const response = this.parseDiffResponse(raw)
+      const response = parseDiffResponse(raw)
 
       const hash = response.diffs
         .map((d: FileDiff) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`)

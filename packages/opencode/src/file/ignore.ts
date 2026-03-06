@@ -1,5 +1,6 @@
 import { sep } from "node:path"
 import { Glob } from "../util/glob"
+import { GENERATED_FOLDERS } from "../kilocode/generated-folders" // kilocode_change
 
 export namespace FileIgnore {
   const FOLDERS = new Set([
@@ -82,48 +83,11 @@ export namespace FileIgnore {
 
   // kilocode_change start - diff-specific generated file detection
 
-  // Strict subset of FOLDERS for diff filtering. Excludes ambiguous entries
-  // like "bin" (could be project scripts), "desktop" (could be a product dir).
-  const DIFF_FOLDERS = new Set([
-    // Package managers / dependencies
-    "node_modules",
-    "bower_components",
-    ".pnpm-store",
-    ".npm",
-    "vendor",
-    // Build output
-    "dist",
-    "build",
-    "out",
-    ".next",
-    ".output",
-    "target",
-    "obj",
-    // Caches
-    ".turbo",
-    ".cache",
-    ".webkit-cache",
-    // Python
-    "__pycache__",
-    ".pytest_cache",
-    "mypy_cache",
-    // Java
-    ".gradle",
-    // VCS
-    ".git",
-    ".svn",
-    ".hg",
-    // IDE
-    ".vscode",
-    ".idea",
-    ".history",
-  ])
-
   /** Test whether a file path is a generated/vendor file for diff filtering purposes. */
   export function generated(filepath: string): boolean {
     const parts = filepath.split(/[/\\]/)
     for (const part of parts) {
-      if (DIFF_FOLDERS.has(part)) return true
+      if (GENERATED_FOLDERS.has(part)) return true
     }
     for (const pattern of FILES) {
       if (Glob.match(pattern, filepath)) return true
