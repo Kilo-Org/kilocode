@@ -293,10 +293,14 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     }
     // Scroll to the file in the diff viewer
     requestAnimationFrame(() => {
-      const el = scrollRef?.querySelector(`[data-slot="accordion-item"][data-file-path="${CSS.escape(path)}"]`)
-      if (el instanceof HTMLElement) {
-        el.scrollIntoView({ block: "start", behavior: "smooth" })
-      }
+      const container = scrollRef
+      const el = container?.querySelector(`[data-slot="accordion-item"][data-file-path="${CSS.escape(path)}"]`)
+      if (!(container instanceof HTMLElement)) return
+      if (!(el instanceof HTMLElement)) return
+
+      const gap = 8
+      const top = container.scrollTop + el.getBoundingClientRect().top - container.getBoundingClientRect().top - gap
+      container.scrollTo({ top: Math.max(0, top), behavior: "smooth" })
     })
   }
 

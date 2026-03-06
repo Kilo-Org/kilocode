@@ -44,6 +44,7 @@ export const dict = {
 
   "command.session.new": "Nova sesija",
   "command.session.new.task": "Novi zadatak",
+  "command.session.show.changes": "Prikaži promjene",
   "command.file.open": "Otvori datoteku",
   "command.tab.close": "Zatvori karticu",
   "command.context.addSelection": "Dodaj odabir u kontekst",

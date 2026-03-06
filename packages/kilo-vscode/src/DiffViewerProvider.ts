@@ -7,8 +7,7 @@ import { GitOps } from "./agent-manager/GitOps"
 
 /**
  * DiffViewerProvider opens a full-screen diff viewer in an editor tab.
- * It shows the local workspace diff (same as the Agent Manager's "local" tab)
- * and supports review comments that are forwarded back to the sidebar chat.
+ * It shows the local workspace diff and forwards review comments back to the sidebar chat.
  */
 export class DiffViewerProvider implements vscode.Disposable {
   public static readonly viewType = "kilo-code.new.DiffViewerPanel"
@@ -16,11 +15,9 @@ export class DiffViewerProvider implements vscode.Disposable {
   private panel: vscode.WebviewPanel | undefined
   private diffInterval: ReturnType<typeof setInterval> | undefined
   private lastDiffHash: string | undefined
-  /** Cached diff target so subsequent polls skip the git resolution. */
   private cachedDiffTarget: { directory: string; baseBranch: string } | undefined
   private gitOps: GitOps
   private outputChannel: vscode.OutputChannel
-  /** Callback to forward review comments to the sidebar chat input. */
   private onSendComments: ((comments: unknown[]) => void) | undefined
 
   constructor(
@@ -32,11 +29,10 @@ export class DiffViewerProvider implements vscode.Disposable {
   }
 
   private log(...args: unknown[]) {
-    const msg = args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" ")
+    const msg = args.map((item) => (typeof item === "string" ? item : JSON.stringify(item))).join(" ")
     this.outputChannel.appendLine(`${new Date().toISOString()} ${msg}`)
   }
 
-  /** Register a callback invoked when the user sends review comments from the diff viewer. */
   public setCommentHandler(handler: (comments: unknown[]) => void): void {
     this.onSendComments = handler
   }
@@ -59,7 +55,6 @@ export class DiffViewerProvider implements vscode.Disposable {
     }
 
     this.panel.webview.html = this.getHtml(this.panel.webview)
-
     this.panel.webview.onDidReceiveMessage((msg) => this.onMessage(msg), undefined, [])
 
     this.panel.onDidDispose(() => {
@@ -68,10 +63,6 @@ export class DiffViewerProvider implements vscode.Disposable {
       this.panel = undefined
     })
   }
-
-  // ---------------------------------------------------------------------------
-  // Message handler
-  // ---------------------------------------------------------------------------
 
   private onMessage(msg: Record<string, unknown>): void {
     const type = msg.type as string
@@ -97,35 +88,33 @@ export class DiffViewerProvider implements vscode.Disposable {
 
     if (type === "openFile" && typeof msg.filePath === "string") {
       this.openFile(msg.filePath, typeof msg.line === "number" ? msg.line : undefined)
-      return
     }
   }
-
-  // ---------------------------------------------------------------------------
-  // Diff polling (mirrors AgentManagerProvider local diff logic)
-  // ---------------------------------------------------------------------------
 
   private async resolveLocalDiffTarget(): Promise<{ directory: string; baseBranch: string } | undefined> {
     const root = this.getWorkspaceRoot()
     if (!root) {
       this.log("Local diff: no workspace root")
-      return undefined
+      return
     }
+
     const branch = await this.gitOps.currentBranch(root)
     if (!branch || branch === "HEAD") {
       this.log("Local diff: detached HEAD or no branch")
-      return undefined
+      return
     }
+
     const tracking = await this.gitOps.resolveTrackingBranch(root, branch)
     const defaultBranch = tracking ? undefined : await this.gitOps.resolveDefaultBranch(root, branch)
     const base = tracking ?? defaultBranch ?? "HEAD"
+
     this.log(
       `Local diff: branch=${branch} tracking=${tracking ?? "none"} default=${defaultBranch ?? "none"} base=${base}`,
     )
+
     return { directory: root, baseBranch: base }
   }
 
-  /** Initial fetch: resolves the diff target, caches it, and pushes data. */
   private async initialFetch(): Promise<void> {
     const target = await this.resolveLocalDiffTarget()
     if (!target) return
@@ -141,7 +130,7 @@ export class DiffViewerProvider implements vscode.Disposable {
       )
 
       this.lastDiffHash = diffs
-        .map((d: FileDiff) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`)
+        .map((diff: FileDiff) => `${diff.file}:${diff.status}:${diff.additions}:${diff.deletions}:${diff.after.length}`)
         .join("|")
 
       this.log(`Initial diff: ${diffs.length} file(s)`)
@@ -153,7 +142,6 @@ export class DiffViewerProvider implements vscode.Disposable {
     }
   }
 
-  /** Polling fetch: uses cached target, only pushes when content changes. */
   private async pollDiff(): Promise<void> {
     const target = this.cachedDiffTarget
     if (!target) return
@@ -166,12 +154,11 @@ export class DiffViewerProvider implements vscode.Disposable {
       )
 
       const hash = diffs
-        .map((d: FileDiff) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`)
+        .map((diff: FileDiff) => `${diff.file}:${diff.status}:${diff.additions}:${diff.deletions}:${diff.after.length}`)
         .join("|")
 
       if (hash === this.lastDiffHash) return
       this.lastDiffHash = hash
-
       this.post({ type: "diffViewer.diffs", diffs })
     } catch (err) {
       this.log("Failed to poll diff:", err)
@@ -196,23 +183,21 @@ export class DiffViewerProvider implements vscode.Disposable {
       clearInterval(this.diffInterval)
       this.diffInterval = undefined
     }
+
     this.lastDiffHash = undefined
     this.cachedDiffTarget = undefined
   }
 
-  // ---------------------------------------------------------------------------
-  // Helpers
-  // ---------------------------------------------------------------------------
-
   private openFile(relativePath: string, line?: number): void {
     const root = this.getWorkspaceRoot()
     if (!root) return
+
     const resolved = path.resolve(root, relativePath)
     const uri = vscode.Uri.file(resolved)
     const target = Math.max(1, Math.floor(line ?? 1))
     const pos = new vscode.Position(target - 1, 0)
     const selection = new vscode.Range(pos, pos)
-    // Open beside the diff viewer so it stays visible
+
     vscode.workspace.openTextDocument(uri).then(
       (doc) => vscode.window.showTextDocument(doc, { viewColumn: vscode.ViewColumn.Beside, preview: true, selection }),
       (err) => console.error("[Kilo New] DiffViewerProvider: Failed to open file:", uri.fsPath, err),

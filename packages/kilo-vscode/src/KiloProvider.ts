@@ -383,7 +383,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             vscode.env.openExternal(vscode.Uri.parse(message.url))
           }
           break
-        case "openDiffViewer":
+        case "openChanges":
           vscode.commands.executeCommand("kilo-code.new.showChanges")
           break
         case "openFile":

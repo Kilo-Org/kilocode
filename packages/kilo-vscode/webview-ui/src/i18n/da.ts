@@ -44,6 +44,7 @@ export const dict = {
 
   "command.session.new": "Ny session",
   "command.session.new.task": "Ny opgave",
+  "command.session.show.changes": "Vis ændringer",
   "command.file.open": "Åbn fil",
   "command.tab.close": "Luk fane",
   "command.context.addSelection": "Tilføj markering til kontekst",

@@ -2888,6 +2888,7 @@ button.am-section-toggle:hover .am-section-label {
   min-width: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  scroll-padding-top: 8px;
 }
 
 .am-review-diff-content[data-component="session-review"] {

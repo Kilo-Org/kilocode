@@ -48,10 +48,9 @@ export function activate(context: vscode.ExtensionContext) {
   const agentManagerProvider = new AgentManagerProvider(context.extensionUri, connectionService)
   context.subscriptions.push(agentManagerProvider)
 
-  // Create Diff Viewer provider for the sidebar "Show Changes" button
+  // Create standalone diff viewer provider for the sidebar "Show Changes" action
   const diffViewerProvider = new DiffViewerProvider(context.extensionUri, connectionService)
   diffViewerProvider.setCommentHandler((comments) => {
-    // Forward review comments from the diff viewer to the sidebar chat input
     provider.postMessage({ type: "appendReviewComments", comments })
   })
   context.subscriptions.push(diffViewerProvider)

@@ -138,7 +138,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                   variant="ghost"
                   size="small"
                   data-full-width="true"
-                  onClick={() => vscode.postMessage({ type: "openDiffViewer" })}
+                  onClick={() => vscode.postMessage({ type: "openChanges" })}
                   aria-label={language.t("command.session.show.changes")}
                 >
                   <Icon name="file-tree" size="small" />

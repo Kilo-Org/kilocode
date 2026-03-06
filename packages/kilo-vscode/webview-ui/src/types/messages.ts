@@ -1449,9 +1449,9 @@ export interface EnhancePromptRequest {
   requestId: string
 }
 
-// Open the diff viewer panel from the sidebar
-export interface OpenDiffViewerRequest {
-  type: "openDiffViewer"
+// Open the standalone changes viewer tab from the sidebar
+export interface OpenChangesRequest {
+  type: "openChanges"
 }
 
 export type WebviewMessage =
@@ -1536,7 +1536,7 @@ export type WebviewMessage =
   // legacy-migration end
   | ApplyWorktreeDiffMessage
   | EnhancePromptRequest
-  | OpenDiffViewerRequest
+  | OpenChangesRequest
 
 // ============================================
 // VS Code API type

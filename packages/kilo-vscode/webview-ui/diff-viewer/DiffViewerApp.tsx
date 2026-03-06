@@ -1,9 +1,5 @@
-// Diff Viewer root component
-// Minimal wrapper around the Agent Manager's FullScreenDiffView.
-// Communicates with the DiffViewerProvider via postMessage.
-
-import { Component, createSignal, createMemo, onCleanup } from "solid-js"
-import { ThemeProvider } from "@kilocode/kilo-ui/theme"
+import { createMemo, createSignal, onCleanup } from "solid-js"
+import type { Component } from "solid-js"
 import { DialogProvider } from "@kilocode/kilo-ui/context/dialog"
 import { I18nProvider } from "@kilocode/kilo-ui/context"
 import type { UiI18nKey, UiI18nParams } from "@kilocode/kilo-ui/context"
@@ -12,28 +8,27 @@ import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff"
 import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
 import { Code } from "@kilocode/kilo-ui/code"
 import { Diff } from "@kilocode/kilo-ui/diff"
+import { ThemeProvider } from "@kilocode/kilo-ui/theme"
 import { Toast } from "@kilocode/kilo-ui/toast"
-import { dict as uiEn } from "@kilocode/kilo-ui/i18n/en"
-import { dict as appEn } from "../src/i18n/en"
-import { dict as amEn } from "../agent-manager/i18n/en"
 import { dict as kiloEn } from "@kilocode/kilo-i18n/en"
-import { LanguageContext } from "../src/context/language"
+import { dict as uiEn } from "@kilocode/kilo-ui/i18n/en"
 import { FullScreenDiffView } from "../agent-manager/FullScreenDiffView"
-import type { WorktreeFileDiff, ReviewComment } from "../src/types/messages"
+import { LanguageContext } from "../src/context/language"
+import { dict as amEn } from "../agent-manager/i18n/en"
+import { dict as appEn } from "../src/i18n/en"
+import type { ReviewComment, WorktreeFileDiff } from "../src/types/messages"
 
 type DiffStyle = "unified" | "split"
 
-// acquireVsCodeApi must be called exactly once at module scope
 const vscodeApi = acquireVsCodeApi()
-
-// Standalone English dict (covers all keys used by FullScreenDiffView)
 const dict = { ...appEn, ...uiEn, ...kiloEn, ...amEn }
+const post = (message: Record<string, unknown>) => vscodeApi.postMessage(message as never)
 
 function resolveTemplate(text: string, params?: Record<string, string | number | boolean | undefined>) {
   if (!params) return text
   return text.replace(/\{\{(\w+)\}\}/g, (_, key) => {
-    const val = params[key]
-    return val !== undefined ? String(val) : `{{${key}}}`
+    const value = params[key]
+    return value !== undefined ? String(value) : `{{${key}}}`
   })
 }
 
@@ -43,8 +38,6 @@ const DiffViewerContent: Component = () => {
   const [comments, setComments] = createSignal<ReviewComment[]>([])
   const [diffStyle, setDiffStyle] = createSignal<DiffStyle>("unified")
 
-  // Register the message listener immediately (not in onMount) so we
-  // never miss the initial data push from the extension.
   const handler = (event: MessageEvent) => {
     const msg = event.data
     if (!msg || !msg.type) return
@@ -59,20 +52,15 @@ const DiffViewerContent: Component = () => {
       return
     }
 
-    // Intercept the appendReviewComments window event dispatched by
-    // FullScreenDiffView and review-annotations.ts, and forward it
-    // to the extension which routes it to the sidebar chat input.
     if (msg.type === "appendReviewComments" && Array.isArray(msg.comments)) {
-      vscodeApi.postMessage({ type: "diffViewer.sendComments", comments: msg.comments })
-      return
+      post({ type: "diffViewer.sendComments", comments: msg.comments })
     }
   }
 
   window.addEventListener("message", handler)
   onCleanup(() => window.removeEventListener("message", handler))
 
-  // Signal readiness so the extension starts diff polling
-  vscodeApi.postMessage({ type: "webviewReady" })
+  post({ type: "webviewReady" })
 
   return (
     <FullScreenDiffView
@@ -81,21 +69,17 @@ const DiffViewerContent: Component = () => {
       sessionKey="local"
       comments={comments()}
       onCommentsChange={setComments}
-      onSendAll={() => {
-        // FullScreenDiffView dispatches appendReviewComments via window event
-        // before calling this callback. The handler above forwards them to
-        // the extension. Nothing extra needed here.
-      }}
+      onSendAll={() => {}}
       diffStyle={diffStyle()}
       onDiffStyleChange={(style) => {
         setDiffStyle(style)
-        vscodeApi.postMessage({ type: "diffViewer.setDiffStyle", style })
+        post({ type: "diffViewer.setDiffStyle", style })
       }}
       onOpenFile={(relativePath) => {
-        vscodeApi.postMessage({ type: "openFile", filePath: relativePath })
+        post({ type: "openFile", filePath: relativePath })
       }}
       onClose={() => {
-        vscodeApi.postMessage({ type: "diffViewer.close" })
+        post({ type: "diffViewer.close" })
       }}
     />
   )
