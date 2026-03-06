@@ -1927,7 +1927,10 @@ const AgentManagerContent: Component = () => {
                             renameValue={renameValue()}
                             closeKeybind={kb().closeWorktree ?? ""}
                             onClick={() => {
-                              if (pendingDelete() === wt.id) cancelPendingDelete()
+                              if (pendingDelete() === wt.id) {
+                                confirmDeleteWorktree(wt.id)
+                                return
+                              }
                               selectWorktree(wt.id)
                             }}
                             onDelete={(e) => handleDeleteWorktree(wt.id, e)}
