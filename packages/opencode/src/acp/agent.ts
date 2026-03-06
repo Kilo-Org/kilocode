@@ -272,6 +272,10 @@ export namespace ACP {
           const sessionId = session.id
 
           if (part.type === "tool") {
+            // kilocode_change: skip compacted parts entirely — toolStart emits a synthetic pending
+            // event for unseen IDs, so the guard must come before toolStart to avoid leaving
+            // ACP clients with a stuck pending tool call with no matching completed update
+            if (part.state.status === "completed" && part.state.time.compacted) return
             await this.toolStart(sessionId, part)
 
             switch (part.state.status) {
@@ -813,6 +817,9 @@ export namespace ACP {
 
       for (const part of message.parts) {
         if (part.type === "tool") {
+          // kilocode_change: skip compacted parts entirely before toolStart to avoid emitting
+          // a pending event that would never be resolved to completed in ACP history
+          if (part.state.status === "completed" && part.state.time.compacted) continue
           await this.toolStart(sessionId, part)
           switch (part.state.status) {
             case "pending":
