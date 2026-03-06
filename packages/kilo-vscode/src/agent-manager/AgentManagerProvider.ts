@@ -4,6 +4,7 @@ import * as path from "path"
 import type { KiloClient, Session, FileDiff } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { getErrorMessage } from "../kilo-provider-utils"
+import { isAbsolutePath } from "../path-utils"
 import { KiloProvider } from "../KiloProvider"
 import { buildWebviewHtml } from "../utils"
 import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
@@ -52,6 +53,10 @@ export class AgentManagerProvider implements vscode.Disposable {
   private cachedWorktreeStats: Record<string, unknown> | undefined
   private cachedLocalStats: Record<string, unknown> | undefined
   private applyingWorktreeId: string | undefined
+  /** Session ID most recently loaded via a `loadMessages` message from the webview.
+   *  Updated synchronously — unlike KiloProvider.currentSession which depends on
+   *  an async `session.get` round-trip and can be stale during rapid tab switches. */
+  private activeSessionId: string | undefined
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -327,17 +332,37 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     if (type === "agentManager.openFile" && typeof msg.sessionId === "string" && typeof msg.filePath === "string") {
       const line = typeof msg.line === "number" ? msg.line : undefined
-      this.openWorktreeFile(msg.sessionId, msg.filePath, line)
+      const column = typeof msg.column === "number" ? msg.column : undefined
+      this.openWorktreeFile(msg.sessionId, msg.filePath, line, column)
       return null
     }
 
-    // When switching sessions, show existing terminal if one is open
+    // Intercept generic "openFile" from DataBridge (markdown links, tool subtitle clicks)
+    // and route through worktree-aware resolution — but only for worktree sessions.
+    // Local sessions fall through to KiloProvider which resolves against workspace root.
+    // Uses activeSessionId (set synchronously by loadMessages) rather than
+    // KiloProvider.currentSession which can be stale during rapid tab switches.
+    if (type === "openFile" && typeof msg.filePath === "string") {
+      const sessionId = this.activeSessionId
+      const state = this.getStateManager()
+      if (sessionId && state?.directoryFor(sessionId)) {
+        const line = typeof msg.line === "number" ? msg.line : undefined
+        const column = typeof msg.column === "number" ? msg.column : undefined
+        this.openWorktreeFile(sessionId, msg.filePath, line, column)
+        return null
+      }
+    }
+
+    // Track the active session synchronously so worktree-aware file resolution
+    // uses the correct session even before KiloProvider's async session.get completes.
     if (type === "loadMessages" && typeof msg.sessionID === "string") {
+      this.activeSessionId = msg.sessionID
       this.terminalManager.syncOnSessionSwitch(msg.sessionID)
     }
 
-    // After clearSession, re-register worktree sessions so SSE events keep flowing
+    // After clearSession, clear active tracking and re-register worktree sessions
     if (type === "clearSession") {
+      this.activeSessionId = undefined
       void Promise.resolve().then(() => {
         if (!this.provider || !this.state) return
         for (const id of this.state.worktreeSessionIds()) {
@@ -1548,8 +1573,24 @@ export class AgentManagerProvider implements vscode.Disposable {
     void vscode.commands.executeCommand("vscode.openFolder", uri, true)
   }
 
-  /** Open a file from a worktree or local session in the VS Code editor. */
-  private openWorktreeFile(sessionId: string, relativePath: string, line?: number): void {
+  /** Open a file from a worktree or local session in the VS Code editor.
+   * Absolute paths (Unix `/…` or Windows `C:\…`) are opened directly.
+   * Relative paths are resolved against the session's worktree directory
+   * (or workspace root for local sessions) with symlink-traversal protection. */
+  private openWorktreeFile(sessionId: string, filePath: string, line?: number, column?: number): void {
+    if (isAbsolutePath(filePath)) {
+      const uri = vscode.Uri.file(filePath)
+      const options: vscode.TextDocumentShowOptions = { preview: true }
+      if (line !== undefined && line > 0) {
+        const col = column !== undefined && column > 0 ? column - 1 : 0
+        options.selection = new vscode.Range(new vscode.Position(line - 1, col), new vscode.Position(line - 1, col))
+      }
+      vscode.workspace.openTextDocument(uri).then(
+        (doc) => vscode.window.showTextDocument(doc, options),
+        (err) => console.error("[Kilo New] AgentManagerProvider: Failed to open file:", uri.fsPath, err),
+      )
+      return
+    }
     const state = this.getStateManager()
     if (!state) return
     const session = state.getSession(sessionId)
@@ -1561,7 +1602,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     let resolved: string
     try {
       const root = fs.realpathSync(base)
-      resolved = fs.realpathSync(path.resolve(base, relativePath))
+      resolved = fs.realpathSync(path.resolve(base, filePath))
       // Directory-boundary check: append path.sep so "/foo/bar" won't match "/foo/bar2/..."
       if (resolved !== root && !resolved.startsWith(root + path.sep)) return
     } catch (err) {
@@ -1569,11 +1610,13 @@ export class AgentManagerProvider implements vscode.Disposable {
       return
     }
     const uri = vscode.Uri.file(resolved)
+    const options: vscode.TextDocumentShowOptions = { preview: true }
     const target = Math.max(1, Math.floor(line ?? 1))
-    const pos = new vscode.Position(target - 1, 0)
-    const selection = new vscode.Range(pos, pos)
+    const col = column !== undefined && column > 0 ? column - 1 : 0
+    const pos = new vscode.Position(target - 1, col)
+    options.selection = new vscode.Range(pos, pos)
     vscode.workspace.openTextDocument(uri).then(
-      (doc) => vscode.window.showTextDocument(doc, { preview: true, selection }),
+      (doc) => vscode.window.showTextDocument(doc, options),
       (err) => console.error("[Kilo New] AgentManagerProvider: Failed to open file:", uri.fsPath, err),
     )
   }
