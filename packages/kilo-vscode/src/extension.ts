@@ -70,6 +70,11 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.settingsButtonClicked", () => {
       provider.postMessage({ type: "action", action: "settingsButtonClicked" })
     }),
+    // legacy-migration start
+    vscode.commands.registerCommand("kilo-code.new.openMigrationWizard", () => {
+      provider.postMessage({ type: "navigate", view: "migration" })
+    }),
+    // legacy-migration end
     vscode.commands.registerCommand("kilo-code.new.openInTab", () => {
       return openKiloInNewTab(context, connectionService)
     }),
@@ -91,6 +96,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.agentManager.toggleDiff", () => {
       agentManagerProvider.postMessage({ type: "action", action: "toggleDiff" })
     }),
+    vscode.commands.registerCommand("kilo-code.new.agentManager.showShortcuts", () => {
+      agentManagerProvider.postMessage({ type: "action", action: "showShortcuts" })
+    }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.focusPanel", () => {
       agentManagerProvider.focusPanel()
     }),
@@ -102,6 +110,9 @@ export function activate(context: vscode.ExtensionContext) {
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.newWorktree", () => {
       agentManagerProvider.postMessage({ type: "action", action: "newWorktree" })
+    }),
+    vscode.commands.registerCommand("kilo-code.new.agentManager.openWorktree", () => {
+      agentManagerProvider.postMessage({ type: "action", action: "openWorktree" })
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.closeWorktree", () => {
       agentManagerProvider.postMessage({ type: "action", action: "closeWorktree" })

@@ -25,7 +25,7 @@ await createClient({
     },
     {
       name: "@hey-api/sdk",
-      instance: "OpencodeClient",
+      instance: "KiloClient",
       exportFromIndex: false,
       auth: false,
       paramsStructure: "flat",
@@ -40,6 +40,6 @@ await createClient({
 
 await $`bun prettier --write src/gen`
 await $`bun prettier --write src/v2`
-await $`rm -rf dist`
+await $`rm -rf dist tsconfig.tsbuildinfo`
 await $`bun tsc`
 await $`rm openapi.json`

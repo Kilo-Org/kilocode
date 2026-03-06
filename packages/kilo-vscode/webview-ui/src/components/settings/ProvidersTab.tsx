@@ -6,6 +6,7 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { useConfig } from "../../context/config"
 import { useProvider } from "../../context/provider"
 import { useLanguage } from "../../context/language"
+import { useSession } from "../../context/session"
 import { ModelSelectorBase } from "../shared/ModelSelector"
 import type { ModelSelection } from "../../types/messages"
 import SettingsRow from "./SettingsRow"
@@ -31,6 +32,7 @@ const ProvidersTab: Component = () => {
   const { config, updateConfig } = useConfig()
   const provider = useProvider()
   const language = useLanguage()
+  const session = useSession()
 
   const providerOptions = createMemo<ProviderOption[]>(() =>
     Object.keys(provider.providers())
@@ -61,9 +63,21 @@ const ProvidersTab: Component = () => {
   function handleModelSelect(configKey: "model" | "small_model") {
     return (providerID: string, modelID: string) => {
       if (!providerID || !modelID) {
-        updateConfig({ [configKey]: undefined })
+        updateConfig({ [configKey]: null })
       } else {
         updateConfig({ [configKey]: `${providerID}/${modelID}` })
+      }
+    }
+  }
+
+  const allAgents = createMemo(() => session.agents())
+
+  function handleModeModelSelect(agentName: string) {
+    return (providerID: string, modelID: string) => {
+      if (!providerID || !modelID) {
+        updateConfig({ agent: { [agentName]: { model: null } } })
+      } else {
+        updateConfig({ agent: { [agentName]: { model: `${providerID}/${modelID}` } } })
       }
     }
   }
@@ -99,12 +113,33 @@ const ProvidersTab: Component = () => {
         </SettingsRow>
       </Card>
 
+      {/* Model per Mode */}
+      <h4 style={{ "margin-top": "24px", "margin-bottom": "8px" }}>{language.t("settings.providers.modeModels")}</h4>
+      <Card>
+        <For each={allAgents()}>
+          {(agent, index) => (
+            <SettingsRow
+              title={agent.name.charAt(0).toUpperCase() + agent.name.slice(1)}
+              last={index() === allAgents().length - 1}
+            >
+              <ModelSelectorBase
+                value={parseModelConfig(config().agent?.[agent.name]?.model ?? undefined)}
+                onSelect={handleModeModelSelect(agent.name)}
+                placement="bottom-start"
+                allowClear
+                clearLabel={language.t("settings.providers.notSet")}
+              />
+            </SettingsRow>
+          )}
+        </For>
+      </Card>
+
       {/* Disabled providers */}
       <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>{language.t("settings.providers.disabled")}</h4>
       <Card>
         <div
           style={{
-            "font-size": "11px",
+            "font-size": "12px",
             color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
             "padding-bottom": "8px",
             "border-bottom": "1px solid var(--border-weak-base)",
@@ -129,13 +164,12 @@ const ProvidersTab: Component = () => {
               label={(o) => o.label}
               onSelect={(o) => setNewDisabled(o)}
               variant="secondary"
-              size="small"
               triggerVariant="settings"
               placeholder="Select provider…"
             />
           </div>
           <Button
-            size="small"
+            variant="secondary"
             onClick={() => {
               if (newDisabled()) {
                 addToList("disabled_providers", newDisabled()!.value)
@@ -159,12 +193,7 @@ const ProvidersTab: Component = () => {
               }}
             >
               <span style={{ "font-size": "12px" }}>{id}</span>
-              <IconButton
-                size="small"
-                variant="ghost"
-                icon="close"
-                onClick={() => removeFromList("disabled_providers", index())}
-              />
+              <IconButton variant="ghost" icon="close" onClick={() => removeFromList("disabled_providers", index())} />
             </div>
           )}
         </For>
@@ -175,7 +204,7 @@ const ProvidersTab: Component = () => {
       <Card>
         <div
           style={{
-            "font-size": "11px",
+            "font-size": "12px",
             color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
             "padding-bottom": "8px",
             "border-bottom": "1px solid var(--border-weak-base)",
@@ -200,13 +229,12 @@ const ProvidersTab: Component = () => {
               label={(o) => o.label}
               onSelect={(o) => setNewEnabled(o)}
               variant="secondary"
-              size="small"
               triggerVariant="settings"
               placeholder="Select provider…"
             />
           </div>
           <Button
-            size="small"
+            variant="secondary"
             onClick={() => {
               if (newEnabled()) {
                 addToList("enabled_providers", newEnabled()!.value)
@@ -229,12 +257,7 @@ const ProvidersTab: Component = () => {
               }}
             >
               <span style={{ "font-size": "12px" }}>{id}</span>
-              <IconButton
-                size="small"
-                variant="ghost"
-                icon="close"
-                onClick={() => removeFromList("enabled_providers", index())}
-              />
+              <IconButton variant="ghost" icon="close" onClick={() => removeFromList("enabled_providers", index())} />
             </div>
           )}
         </For>

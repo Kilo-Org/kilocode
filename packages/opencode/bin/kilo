@@ -25,11 +25,20 @@ if (envPath) {
 const scriptPath = fs.realpathSync(__filename)
 const scriptDir = path.dirname(scriptPath)
 
-//
+// kilocode_change start - fall through to findBinary() if cached binary fails
 const cached = path.join(scriptDir, ".kilo")
 if (fs.existsSync(cached)) {
-  run(cached)
+  const result = childProcess.spawnSync(cached, process.argv.slice(2), {
+    stdio: "inherit",
+  })
+  if (!result.error) {
+    const code = typeof result.status === "number" ? result.status : 0
+    process.exit(code)
+  }
+  // cached binary failed (e.g. wrong platform/arch, missing dynamic linker),
+  // fall through to findBinary() which has better variant detection
 }
+// kilocode_change end
 
 const platformMap = {
   darwin: "darwin",
@@ -165,9 +174,6 @@ function findBinary(startDir) {
     current = parent
   }
 }
-
-const scriptPath = fs.realpathSync(__filename)
-const scriptDir = path.dirname(scriptPath)
 
 const resolved = findBinary(scriptDir)
 if (!resolved) {

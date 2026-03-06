@@ -188,6 +188,27 @@ for (const item of targets) {
     },
   })
 
+  // kilocode_change start - fix Nix-specific ELF interpreter paths for Linux binaries
+  if (item.os === "linux") {
+    const interpreters: Record<string, string> = {
+      x64: "/lib64/ld-linux-x86-64.so.2",
+      arm64: "/lib/ld-linux-aarch64.so.1",
+      "x64-musl": "/lib/ld-musl-x86_64.so.1",
+      "arm64-musl": "/lib/ld-musl-aarch64.so.1",
+    }
+    const key = item.abi === "musl" ? `${item.arch}-musl` : item.arch
+    const interpreter = interpreters[key]
+    if (interpreter) {
+      try {
+        await $`patchelf --set-interpreter ${interpreter} dist/${name}/bin/kilo`
+        console.log(`patched interpreter for ${name} -> ${interpreter}`)
+      } catch {
+        console.warn(`patchelf not available, skipping interpreter fix for ${name}`)
+      }
+    }
+  }
+  // kilocode_change end
+
   await $`rm -rf ./dist/${name}/bin/tui`
   await Bun.file(`dist/${name}/package.json`).write(
     JSON.stringify(
