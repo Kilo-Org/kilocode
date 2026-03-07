@@ -1,11 +1,93 @@
+import { Agent } from "@/agent/agent"
 import { Provider } from "@/provider/provider"
 import { LLM } from "@/session/llm"
-import { Agent } from "@/agent/agent"
+import { Filesystem } from "@/util/filesystem"
+import { git } from "@/util/git"
 import { Log } from "@/util/log"
-import type { CommitMessageRequest, CommitMessageResponse, GitContext } from "./types"
+import { join } from "path"
 import { getGitContext } from "./git-context"
+import type { CommitMessageRequest, CommitMessageResponse, GitContext } from "./types"
 
 const log = Log.create({ service: "commit-message" })
+
+const SECTION_HEADING = "## Commit Message"
+
+const FENCE_PATTERN = /^[ ]{0,3}`{3,}/
+
+function extractSection(content: string, heading: string): string | undefined {
+  const lines = content.split("\n")
+
+  let start = -1
+  let inCodeFence = false
+  for (let i = 0; i < lines.length; i++) {
+    if (FENCE_PATTERN.test(lines[i])) {
+      inCodeFence = !inCodeFence
+      continue
+    }
+    if (!inCodeFence && lines[i].trim() === heading) {
+      start = i
+      break
+    }
+  }
+  if (start === -1) return undefined
+
+  let end = lines.length
+  for (let i = start + 1; i < lines.length; i++) {
+    const line = lines[i]
+    if (FENCE_PATTERN.test(line)) {
+      inCodeFence = !inCodeFence
+      continue
+    }
+    if (!inCodeFence && /^#{1,2}[^#]/.test(line)) {
+      end = i
+      break
+    }
+  }
+
+  const section = lines
+    .slice(start + 1, end)
+    .join("\n")
+    .trim()
+  return section || undefined
+}
+
+async function loadInstructionsFromAgentsMd(repoPath: string): Promise<{ instructions?: string; found: boolean }> {
+  // Only check at repository level — commit instructions are project-specific
+  const FILES = ["AGENTS.md", "CLAUDE.md", "CONTEXT.md"]
+
+  for (const file of FILES) {
+    const filepath = join(repoPath, file)
+    const exists = await Filesystem.exists(filepath)
+
+    if (exists) {
+      const content = await Filesystem.readText(filepath).catch(() => "")
+      const section = extractSection(content, SECTION_HEADING)
+      if (section) {
+        log.info("loaded commit instructions from", { file: filepath })
+        return { instructions: section, found: true }
+      }
+    }
+  }
+
+  return { found: false }
+}
+
+async function loadInstructions(cwd: string): Promise<{ instructions?: string; found: boolean }> {
+  // Always resolve to the actual git root to handle nested paths correctly
+  const result = await git(["rev-parse", "--show-toplevel"], { cwd })
+  const repoPath = result.exitCode === 0 ? result.text().trim() : cwd
+
+  const fromAgents = await loadInstructionsFromAgentsMd(repoPath)
+  if (fromAgents.found) return fromAgents
+
+  const filepath = join(repoPath, ".kilocode", "commit-instructions.md")
+  const content = await Filesystem.readText(filepath).catch(() => "")
+  const trimmed = content.trim()
+  if (trimmed) {
+    return { instructions: trimmed, found: true }
+  }
+  return { found: false }
+}
 
 const SYSTEM_PROMPT = `You are an expert Git commit message generator that creates conventional commit messages based on staged changes. Analyze the provided git diff output and generate an appropriate conventional commit message following the specification.
 
@@ -126,13 +208,19 @@ export async function generateCommitMessage(request: CommitMessageRequest): Prom
     (await Provider.getSmallModel(defaultModel.providerID)) ??
     (await Provider.getModel(defaultModel.providerID, defaultModel.modelID))
 
+  // Callers never pass instructions — load from AGENTS.md, CLAUDE.md, CONTEXT.md, or .kilocode/commit-instructions.md
+  const loaded = await loadInstructions(request.path)
+  const prompt = loaded.instructions
+    ? `${SYSTEM_PROMPT}\n\n## Custom Instructions\n${loaded.instructions}`
+    : SYSTEM_PROMPT
+
   const agent: Agent.Info = {
     name: "commit-message",
     mode: "primary",
     hidden: true,
     options: {},
     permission: [],
-    prompt: SYSTEM_PROMPT,
+    prompt,
     temperature: 0.3,
   }
 
