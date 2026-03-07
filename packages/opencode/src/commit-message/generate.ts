@@ -2,6 +2,7 @@ import { Agent } from "@/agent/agent"
 import { Provider } from "@/provider/provider"
 import { LLM } from "@/session/llm"
 import { Filesystem } from "@/util/filesystem"
+import { git } from "@/util/git"
 import { Log } from "@/util/log"
 import { join } from "path"
 import { getGitContext } from "./git-context"
@@ -11,16 +12,29 @@ const log = Log.create({ service: "commit-message" })
 
 const SECTION_HEADING = "## Commit Message"
 
+const FENCE_PATTERN = /^[ ]{0,3}`{3,}/
+
 function extractSection(content: string, heading: string): string | undefined {
   const lines = content.split("\n")
-  const start = lines.findIndex((l) => l.trim() === heading)
+
+  let start = -1
+  let inCodeFence = false
+  for (let i = 0; i < lines.length; i++) {
+    if (FENCE_PATTERN.test(lines[i])) {
+      inCodeFence = !inCodeFence
+      continue
+    }
+    if (!inCodeFence && lines[i].trim() === heading) {
+      start = i
+      break
+    }
+  }
   if (start === -1) return undefined
 
   let end = lines.length
-  let inCodeFence = false
   for (let i = start + 1; i < lines.length; i++) {
     const line = lines[i]
-    if (line.startsWith("```")) {
+    if (FENCE_PATTERN.test(line)) {
       inCodeFence = !inCodeFence
       continue
     }
@@ -58,11 +72,14 @@ async function loadInstructionsFromAgentsMd(repoPath: string): Promise<{ instruc
   return { found: false }
 }
 
-async function loadInstructions(repoPath: string): Promise<{ instructions?: string; found: boolean }> {
+async function loadInstructions(cwd: string): Promise<{ instructions?: string; found: boolean }> {
+  // Always resolve to the actual git root to handle nested paths correctly
+  const result = await git(["rev-parse", "--show-toplevel"], { cwd })
+  const repoPath = result.exitCode === 0 ? result.text().trim() : cwd
+
   const fromAgents = await loadInstructionsFromAgentsMd(repoPath)
   if (fromAgents.found) return fromAgents
 
-  // repoPath is always the git repository root (passed by extension), so this finds the correct file
   const filepath = join(repoPath, ".kilocode", "commit-instructions.md")
   const content = await Filesystem.readText(filepath).catch(() => "")
   const trimmed = content.trim()
