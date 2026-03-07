@@ -498,20 +498,27 @@
   display: flex;
   gap: 8px;
   align-items: flex-end;
+  position: relative;
 }
 
 .prompt-input {
   flex: 1;
+  width: 100%;
   min-height: 54px;
   max-height: 200px;
   padding: 8px 8px calc(8px + 1.4em);
-  color: transparent;
+  color: var(--vscode-input-foreground);
   caret-color: var(--vscode-input-foreground);
   font-family: var(--vscode-font-family);
   font-size: 13px;
   line-height: 1.4;
   resize: none;
   outline: none;
+  display: block;
+  position: relative;
+  z-index: 1;
+  background: transparent;
+  box-sizing: border-box;
 }
 
 .prompt-input:focus {
@@ -527,23 +534,8 @@
   color: var(--vscode-input-placeholderForeground);
 }
 
-/* Input overlay (highlight + ghost text) */
-.prompt-input-ghost-wrapper {
-  position: relative;
-  flex: 1;
-  min-width: 0;
-}
-
-.prompt-input-ghost-wrapper .prompt-input {
-  display: block;
-  position: relative;
-  z-index: 1;
-  background: transparent;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.prompt-input-highlight-overlay {
+/* Input ghost text */
+.prompt-input-ghost-overlay {
   position: absolute;
   top: 0;
   left: 0;
@@ -559,11 +551,11 @@
   overflow-x: hidden;
   overflow-y: auto;
   z-index: 0;
-  color: var(--vscode-input-foreground);
+  color: transparent;
 }
 
-.prompt-input-file-mention {
-  color: var(--vscode-textLink-foreground, #3794ff);
+.prompt-input-ghost-padding {
+  color: transparent;
 }
 
 .prompt-input-ghost-text {

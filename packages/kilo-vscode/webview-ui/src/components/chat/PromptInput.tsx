@@ -3,7 +3,7 @@
  * Text input with send/abort buttons, ghost-text autocomplete, and @ file mention support
  */
 
-import { Component, createSignal, createEffect, on, For, Index, onCleanup, onMount, Show, untrack } from "solid-js"
+import { Component, createSignal, createEffect, on, For, onCleanup, onMount, Show, untrack } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -21,7 +21,7 @@ import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
 import { useImageAttachments } from "../../hooks/useImageAttachments"
 import { WandSparkles } from "@kilocode/kilo-ui/lucide"
-import { fileName, dirName, buildHighlightSegments } from "./prompt-input-utils"
+import { fileName, dirName } from "./prompt-input-utils"
 import type { ReviewComment } from "../../types/messages"
 import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
 
@@ -125,7 +125,7 @@ export const PromptInput: Component = () => {
   }
 
   let textareaRef: HTMLTextAreaElement | undefined
-  let highlightRef: HTMLDivElement | undefined
+  let ghostRef: HTMLDivElement | undefined
   let dropdownRef: HTMLDivElement | undefined
   let debounceTimer: ReturnType<typeof setTimeout> | undefined
   let requestCounter = 0
@@ -297,9 +297,9 @@ export const PromptInput: Component = () => {
     if (active) active.scrollIntoView({ block: "nearest" })
   }
 
-  const syncHighlightScroll = () => {
-    if (highlightRef && textareaRef) {
-      highlightRef.scrollTop = textareaRef.scrollTop
+  const syncGhostScroll = () => {
+    if (ghostRef && textareaRef) {
+      ghostRef.scrollTop = textareaRef.scrollTop
     }
   }
 
@@ -316,7 +316,7 @@ export const PromptInput: Component = () => {
     // Defer height recalculation to after the browser completes the reflow.
     requestAnimationFrame(() => {
       adjustHeight()
-      syncHighlightScroll()
+      syncGhostScroll()
     })
   }
 
@@ -327,7 +327,7 @@ export const PromptInput: Component = () => {
     preEnhanceText = null
     adjustHeight()
     setGhostText("")
-    syncHighlightScroll()
+    syncGhostScroll()
 
     mention.onInput(val, target.selectionStart ?? val.length)
 
@@ -541,34 +541,26 @@ export const PromptInput: Component = () => {
         </div>
       </Show>
       <div class="prompt-input-wrapper">
-        <div class="prompt-input-ghost-wrapper">
-          <div class="prompt-input-highlight-overlay" ref={highlightRef} aria-hidden="true">
-            <Index each={buildHighlightSegments(text(), mention.mentionedPaths())}>
-              {(seg) => (
-                <Show when={seg().highlight} fallback={<span>{seg().text}</span>}>
-                  <span class="prompt-input-file-mention">{seg().text}</span>
-                </Show>
-              )}
-            </Index>
-            <Show when={ghostText()}>
-              <span class="prompt-input-ghost-text">{ghostText()}</span>
-            </Show>
-          </div>
-          <textarea
-            ref={textareaRef}
-            class="prompt-input"
-            placeholder={
-              isDisabled() ? language.t("prompt.placeholder.connecting") : language.t("prompt.placeholder.default")
-            }
-            value={text()}
-            onInput={handleInput}
-            onKeyDown={handleKeyDown}
-            onPaste={handlePaste}
-            onScroll={syncHighlightScroll}
-            disabled={isDisabled()}
-            rows={1}
-          />
+        <div class="prompt-input-ghost-overlay" ref={ghostRef} aria-hidden="true">
+          <span class="prompt-input-ghost-padding">{text()}</span>
+          <Show when={ghostText()}>
+            <span class="prompt-input-ghost-text">{ghostText()}</span>
+          </Show>
         </div>
+        <textarea
+          ref={textareaRef}
+          class="prompt-input"
+          placeholder={
+            isDisabled() ? language.t("prompt.placeholder.connecting") : language.t("prompt.placeholder.default")
+          }
+          value={text()}
+          onInput={handleInput}
+          onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
+          onScroll={syncGhostScroll}
+          disabled={isDisabled()}
+          rows={1}
+        />
       </div>
       <div class="prompt-input-hint">
         <div class="prompt-input-hint-selectors">
