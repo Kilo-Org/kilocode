@@ -1048,4 +1048,6 @@ export const dict = {
     "VS Codeのストレージから古い設定を削除します。この移行を再度実行することはできなくなります。",
   "migration.complete.done": "完了",
   // legacy-migration end
+
+  "error.details.show": "詳細",
 }

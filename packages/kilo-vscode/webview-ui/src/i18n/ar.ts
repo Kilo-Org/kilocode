@@ -1040,4 +1040,6 @@ export const dict = {
     "هذا يزيل الإعدادات القديمة من مساحة تخزين VS Code. لن تتمكن من إعادة تشغيل هذا الترحيل.",
   "migration.complete.done": "تم",
   // legacy-migration end
+
+  "error.details.show": "التفاصيل",
 }

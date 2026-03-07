@@ -1053,4 +1053,6 @@ export const dict = {
     "Это удалит старые настройки из хранилища VS Code. Вы не сможете запустить эту миграцию повторно.",
   "migration.complete.done": "Готово",
   // legacy-migration end
+
+  "error.details.show": "Подробности",
 }

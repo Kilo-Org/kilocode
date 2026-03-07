@@ -1,5 +1,7 @@
 import { Component, createMemo, Switch, Match } from "solid-js"
 import { Card } from "@kilocode/kilo-ui/card"
+import { Collapsible } from "@kilocode/kilo-ui/collapsible"
+import { ErrorDetails } from "@kilocode/kilo-ui/error-details"
 import { Button } from "@kilocode/kilo-ui/button"
 import type { AssistantMessage } from "@kilocode/sdk/v2"
 import { useLanguage } from "../../context/language"
@@ -31,6 +33,15 @@ export const ErrorDisplay: Component<ErrorDisplayProps> = (props) => {
       fallback={
         <Card variant="error" class="error-card">
           {errorText()}
+          <Collapsible variant="ghost">
+            <Collapsible.Trigger class="error-details-trigger">
+              <span>{t("error.details.show")}</span>
+              <Collapsible.Arrow />
+            </Collapsible.Trigger>
+            <Collapsible.Content>
+              <ErrorDetails error={props.error} />
+            </Collapsible.Content>
+          </Collapsible>
         </Card>
       }
     >

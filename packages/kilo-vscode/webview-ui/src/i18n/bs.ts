@@ -1053,4 +1053,6 @@ export const dict = {
     "Ovo uklanja stare postavke iz VS Code pohrane. Nećete moći ponovo pokrenuti ovu migraciju.",
   "migration.complete.done": "Završeno",
   // legacy-migration end
+
+  "error.details.show": "Detalji",
 }

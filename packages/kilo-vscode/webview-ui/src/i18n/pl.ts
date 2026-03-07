@@ -1051,4 +1051,6 @@ export const dict = {
     "Spowoduje to usunięcie starych ustawień z magazynu VS Code. Nie będzie można ponownie uruchomić tej migracji.",
   "migration.complete.done": "Gotowe",
   // legacy-migration end
+
+  "error.details.show": "Szczegóły",
 }

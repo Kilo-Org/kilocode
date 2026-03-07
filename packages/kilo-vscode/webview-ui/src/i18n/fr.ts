@@ -1066,4 +1066,6 @@ export const dict = {
     "Cela supprime les anciens paramètres du stockage de VS Code. Vous ne pourrez pas réexécuter cette migration.",
   "migration.complete.done": "Terminé",
   // legacy-migration end
+
+  "error.details.show": "Détails",
 }
