@@ -726,6 +726,31 @@ export type EventTodoUpdated = {
   }
 }
 
+export type LearnCheck = {
+  id: string
+  question: string
+  category: "comprehension" | "reasoning" | "system" | "edge"
+  quality: "correct" | "partial" | "wrong" | "skipped"
+  /**
+   * Concepts or identifiers referenced in this check
+   */
+  concepts: Array<string>
+  timestamp: number
+}
+
+export type LearnState = {
+  checks: Array<LearnCheck>
+  level: "beginner" | "intermediate" | "advanced"
+}
+
+export type EventLearnUpdated = {
+  type: "learn.updated"
+  properties: {
+    sessionID: string
+    state: LearnState
+  }
+}
+
 export type EventTuiPromptAppend = {
   type: "tui.prompt.append"
   properties: {
@@ -992,6 +1017,7 @@ export type Event =
   | EventSessionCompacted
   | EventFileWatcherUpdated
   | EventTodoUpdated
+  | EventLearnUpdated
   | EventTuiPromptAppend
   | EventTuiCommandExecute
   | EventTuiToastShow
@@ -1717,6 +1743,28 @@ export type McpResource = {
   description?: string
   mimeType?: string
   client: string
+}
+
+export type LearnAggregateCheck = {
+  id: string
+  question: string
+  category: "comprehension" | "reasoning" | "system" | "edge"
+  quality: "correct" | "partial" | "wrong" | "skipped"
+  /**
+   * Concepts or identifiers referenced in this check
+   */
+  concepts: Array<string>
+  timestamp: number
+  sessionID: string
+}
+
+export type LearnAggregate = {
+  checks: Array<LearnAggregateCheck>
+  level: "beginner" | "intermediate" | "advanced"
+  /**
+   * Number of sessions with learn data
+   */
+  sessions: number
 }
 
 export type TextPartInput = {
@@ -2732,6 +2780,33 @@ export type SessionStatusResponses = {
 
 export type SessionStatusResponse = SessionStatusResponses[keyof SessionStatusResponses]
 
+export type SessionLearnAggregateData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/session/learn-aggregate"
+}
+
+export type SessionLearnAggregateErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type SessionLearnAggregateError = SessionLearnAggregateErrors[keyof SessionLearnAggregateErrors]
+
+export type SessionLearnAggregateResponses = {
+  /**
+   * Learn aggregate
+   */
+  200: LearnAggregate
+}
+
+export type SessionLearnAggregateResponse = SessionLearnAggregateResponses[keyof SessionLearnAggregateResponses]
+
 export type SessionDeleteData = {
   body?: never
   path: {
@@ -2904,6 +2979,38 @@ export type SessionTodoResponses = {
 }
 
 export type SessionTodoResponse = SessionTodoResponses[keyof SessionTodoResponses]
+
+export type SessionLearnData = {
+  body?: never
+  path: {
+    /**
+     * Session ID
+     */
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+  }
+  url: "/session/{sessionID}/learn"
+}
+
+export type SessionLearnErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type SessionLearnError = SessionLearnErrors[keyof SessionLearnErrors]
+
+export type SessionLearnResponses = {
+  /**
+   * Learn state
+   */
+  200: LearnState
+}
+
+export type SessionLearnResponse = SessionLearnResponses[keyof SessionLearnResponses]
 
 export type SessionInitData = {
   body?: {
