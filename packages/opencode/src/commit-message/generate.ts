@@ -17,8 +17,14 @@ function extractSection(content: string, heading: string): string | undefined {
   if (start === -1) return undefined
 
   let end = lines.length
+  let inCodeFence = false
   for (let i = start + 1; i < lines.length; i++) {
-    if (lines[i].startsWith("## ") && !lines[i].startsWith("### ")) {
+    const line = lines[i]
+    if (line.startsWith("```")) {
+      inCodeFence = !inCodeFence
+      continue
+    }
+    if (!inCodeFence && line.startsWith("## ") && !line.startsWith("### ")) {
       end = i
       break
     }
