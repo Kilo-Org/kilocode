@@ -1,7 +1,7 @@
 import { type Component, createSignal, createMemo, For, Show } from "solid-js"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
 import { Icon } from "@kilocode/kilo-ui/icon"
-import type { WorktreeFileDiff } from "../src/types/messages"
+import type { WorktreeFileDiff, GeneratedSummary } from "../src/types/messages"
 import { useLanguage } from "../src/context/language"
 import { buildFileTree, flatten, type FileTreeNode } from "./file-tree-utils"
 import type { ReviewComment } from "./review-comments"
@@ -11,12 +11,53 @@ export { buildFileTree, flatten, flattenChain } from "./file-tree-utils"
 
 interface FileTreeProps {
   diffs: WorktreeFileDiff[]
+  generated?: GeneratedSummary
   activeFile: string | null
   onFileSelect: (path: string) => void
   comments?: ReviewComment[]
   selectedFiles?: Set<string>
   onFileToggle?: (path: string, checked: boolean) => void
   showSummary?: boolean
+}
+
+interface GeneratedFolderGroup {
+  folder: string
+  files: number
+  additions: number
+  deletions: number
+}
+
+function groupGeneratedByFolder(generated: GeneratedSummary): GeneratedFolderGroup[] {
+  const groups = new Map<string, { files: number; additions: number; deletions: number }>()
+  for (const entry of generated.entries) {
+    const key = entry.folder
+    const existing = groups.get(key) ?? { files: 0, additions: 0, deletions: 0 }
+    existing.files++
+    existing.additions += entry.additions
+    existing.deletions += entry.deletions
+    groups.set(key, existing)
+  }
+  return Array.from(groups.entries())
+    .map(([folder, stats]) => ({ folder, ...stats }))
+    .sort((a, b) => b.files - a.files)
+}
+  // Fallback: use first segment
+  return segments[0] ?? filepath
+}
+
+function groupGeneratedByFolder(generated: GeneratedSummary): GeneratedFolderGroup[] {
+  const groups = new Map<string, { files: number; additions: number; deletions: number }>()
+  for (const entry of generated.entries) {
+    const folder = generatedPrefix(entry.file)
+    const existing = groups.get(folder) ?? { files: 0, additions: 0, deletions: 0 }
+    existing.files++
+    existing.additions += entry.additions
+    existing.deletions += entry.deletions
+    groups.set(folder, existing)
+  }
+  return Array.from(groups.entries())
+    .map(([folder, stats]) => ({ folder, ...stats }))
+    .sort((a, b) => b.files - a.files)
 }
 
 const DirectoryNode: Component<{
@@ -165,6 +206,11 @@ export const FileTree: Component<FileTreeProps> = (props) => {
     const dels = props.diffs.reduce((s, d) => s + d.deletions, 0)
     return { files: props.diffs.length, additions: adds, deletions: dels }
   })
+  const generatedGroups = createMemo(() => {
+    const gen = props.generated
+    if (!gen || gen.files === 0) return []
+    return groupGeneratedByFolder(gen)
+  })
 
   return (
     <div class="am-file-tree">
@@ -197,6 +243,20 @@ export const FileTree: Component<FileTreeProps> = (props) => {
             </Show>
           )}
         </For>
+        <Show when={generatedGroups().length > 0}>
+          <div class="am-file-tree-generated-divider" />
+          <For each={generatedGroups()}>
+            {(group) => (
+              <div class="am-file-tree-generated-row" style={{ "padding-left": "8px" }}>
+                <Icon name="folder" size="small" />
+                <span class="am-file-tree-name">{group.folder}/</span>
+                <span class="am-file-tree-generated-stats">
+                  <span class="am-file-tree-generated-count">{group.files}</span>
+                </span>
+              </div>
+            )}
+          </For>
+        </Show>
       </div>
       <Show when={props.showSummary !== false}>
         <div class="am-file-tree-summary">

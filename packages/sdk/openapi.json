@@ -1220,20 +1220,27 @@
               "type": "string"
             },
             "description": "Base branch or ref to diff against"
+          },
+          {
+            "in": "query",
+            "name": "exclude",
+            "schema": {
+              "default": "generated",
+              "type": "string",
+              "enum": ["generated", "none"]
+            },
+            "description": "Filter mode: 'generated' (default) excludes vendor/build files, 'none' returns all"
           }
         ],
         "summary": "Get worktree diff",
-        "description": "Get file diffs for a worktree compared to its base branch. Includes uncommitted changes.",
+        "description": "Get file diffs for a worktree compared to its base branch. Includes uncommitted changes. By default, generated/vendor files (node_modules, dist, etc.) are excluded from full diffs and returned as a lightweight summary. Pass exclude=none to get all files.",
         "responses": {
           "200": {
-            "description": "File diffs",
+            "description": "File diffs with generated file summary",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/FileDiff"
-                  }
+                  "$ref": "#/components/schemas/WorktreeDiffResponse"
                 }
               }
             }
@@ -9839,7 +9846,14 @@
         "type": "object",
         "properties": {
           "model": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "variant": {
             "description": "Default model variant for this agent (applies only when using the agent's configured model).",
@@ -10400,11 +10414,25 @@
           },
           "model": {
             "description": "Model to use in the format of provider/model, eg anthropic/claude-2",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "small_model": {
             "description": "Small model to use for tasks like title generation in the format of provider/model",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "default_agent": {
             "description": "Default agent to use when none is specified. Must be a primary agent. Falls back to 'code' if not set or if the specified agent is invalid.",
@@ -11149,6 +11177,64 @@
           }
         },
         "required": ["directory"]
+      },
+      "GeneratedEntry": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "folder": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["added", "deleted", "modified"]
+          },
+          "additions": {
+            "type": "number"
+          },
+          "deletions": {
+            "type": "number"
+          }
+        },
+        "required": ["file", "folder", "status", "additions", "deletions"]
+      },
+      "GeneratedSummary": {
+        "type": "object",
+        "properties": {
+          "files": {
+            "type": "number"
+          },
+          "additions": {
+            "type": "number"
+          },
+          "deletions": {
+            "type": "number"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeneratedEntry"
+            }
+          }
+        },
+        "required": ["files", "additions", "deletions", "entries"]
+      },
+      "WorktreeDiffResponse": {
+        "type": "object",
+        "properties": {
+          "diffs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FileDiff"
+            }
+          },
+          "generated": {
+            "$ref": "#/components/schemas/GeneratedSummary"
+          }
+        },
+        "required": ["diffs", "generated"]
       },
       "ProjectSummary": {
         "type": "object",

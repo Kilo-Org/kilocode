@@ -30,6 +30,7 @@ import type {
   AgentManagerWorktreeStatsMessage,
   AgentManagerLocalStatsMessage,
   WorktreeFileDiff,
+  GeneratedSummary,
   WorktreeGitStats,
   LocalGitStats,
   WorktreeState,
@@ -332,6 +333,7 @@ const AgentManagerContent: Component = () => {
   // Diff panel state
   const [diffOpen, setDiffOpen] = createSignal(false)
   const [diffDatas, setDiffDatas] = createSignal<Record<string, WorktreeFileDiff[]>>({})
+  const [diffGenerated, setDiffGenerated] = createSignal<Record<string, GeneratedSummary>>({})
   const [diffLoading, setDiffLoading] = createSignal(false)
   const [diffWidth, setDiffWidth] = createSignal(Math.round(window.innerWidth * 0.5))
 
@@ -1239,6 +1241,9 @@ const AgentManagerContent: Component = () => {
           }
           return { ...prev, [ev.sessionId]: ev.diffs }
         })
+        // Store generated file summary — always update so it clears when files disappear
+        const gen = ev.generated ?? { files: 0, additions: 0, deletions: 0, entries: [] }
+        setDiffGenerated((prev) => ({ ...prev, [ev.sessionId]: gen }))
       }
 
       if (msg.type === "agentManager.worktreeDiffLoading") {
@@ -1381,6 +1386,8 @@ const AgentManagerContent: Component = () => {
     setReviewOpenForSelection(false)
   }
 
+  const emptyGenerated: GeneratedSummary = { files: 0, additions: 0, deletions: 0, entries: [] }
+
   // Data for the review tab: use local diff data for local context,
   // current session for selected worktree context, or first available in that worktree.
   const reviewDiffs = createMemo(() => {
@@ -1400,6 +1407,23 @@ const AgentManagerContent: Component = () => {
       if (data[sid]) return data[sid]!
     }
     return []
+  })
+
+  // Generated summary for the current diff context
+  const currentGenerated = createMemo((): GeneratedSummary => {
+    const data = diffGenerated()
+    const sel = selection()
+    const id = session.currentSessionID()
+    if (sel === LOCAL) return data[LOCAL] ?? emptyGenerated
+    if (id && data[id]) return data[id]!
+    if (!sel) return emptyGenerated
+    const ids = managedSessions()
+      .filter((s) => s.worktreeId === sel)
+      .map((s) => s.id)
+    for (const sid of ids) {
+      if (data[sid]) return data[sid]!
+    }
+    return emptyGenerated
   })
 
   const diffSessionKey = createMemo(() => {
@@ -2468,6 +2492,7 @@ const AgentManagerContent: Component = () => {
                 <div class="am-diff-panel-wrapper">
                   <DiffPanel
                     diffs={diffDatas()[selection() === LOCAL ? LOCAL : (session.currentSessionID() ?? "")] ?? []}
+                    generated={currentGenerated()}
                     loading={diffLoading()}
                     sessionKey={diffSessionKey()}
                     diffStyle={reviewDiffStyle()}
@@ -2491,6 +2516,7 @@ const AgentManagerContent: Component = () => {
             <div class="am-review-host" style={{ display: reviewActive() ? undefined : "none" }}>
               <FullScreenDiffView
                 diffs={reviewDiffs()}
+                generated={currentGenerated()}
                 loading={diffLoading()}
                 sessionKey={diffSessionKey()}
                 comments={reviewComments()}

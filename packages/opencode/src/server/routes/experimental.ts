@@ -15,6 +15,7 @@ import path from "path" // kilocode_change
 import { Snapshot } from "../../snapshot" // kilocode_change
 import { Review } from "../../kilocode/review/review" // kilocode_change
 import { Log } from "../../util/log" // kilocode_change
+import { FileIgnore } from "../../file/ignore" // kilocode_change
 
 export const ExperimentalRoutes = lazy(() =>
   new Hono()
@@ -195,34 +196,57 @@ export const ExperimentalRoutes = lazy(() =>
       "/worktree/diff",
       describeRoute({
         summary: "Get worktree diff",
-        description: "Get file diffs for a worktree compared to its base branch. Includes uncommitted changes.",
+        description:
+          "Get file diffs for a worktree compared to its base branch. Includes uncommitted changes. " +
+          "By default, generated/vendor files (node_modules, dist, etc.) are excluded from full diffs " +
+          "and returned as a lightweight summary. Pass exclude=none to get all files.",
         operationId: "worktree.diff",
         responses: {
           200: {
-            description: "File diffs",
+            description: "File diffs with generated file summary",
             content: {
               "application/json": {
-                schema: resolver(z.array(Snapshot.FileDiff)),
+                schema: resolver(Snapshot.WorktreeDiffResponse),
               },
             },
           },
           ...errors(400),
         },
       }),
-      // kilocode_change start
       validator(
         "query",
         z.object({
           base: z.string().optional().meta({ description: "Base branch or ref to diff against" }),
+          exclude: z.enum(["generated", "none"]).optional().default("generated").meta({
+            description: "Filter mode: 'generated' (default) excludes vendor/build files, 'none' returns all",
+          }),
         }),
       ),
       async (c) => {
         const log = Log.create({ service: "worktree-diff" })
         const query = c.req.valid("query")
         const base = query.base || (await Review.getBaseBranch())
-        // kilocode_change end
+        const exclude = query.exclude ?? "generated"
         const dir = Instance.directory
-        log.info("computing diff", { dir, base })
+        log.info("computing diff", { dir, base, exclude })
+
+        // Build the generated-file classifier from .gitattributes (if present)
+        const attrMatcher = await (async () => {
+          const f = Bun.file(path.join(dir, ".gitattributes"))
+          if (!(await f.exists())) return undefined
+          return FileIgnore.parseGitattributes(await f.text())
+        })()
+
+        // Returns the generated folder prefix, or undefined if reviewable
+        const generatedFolder = (filepath: string): string | undefined => {
+          if (exclude === "none") return undefined
+          if (attrMatcher?.(filepath)) {
+            // gitattributes match — use first path segment as folder
+            const slash = filepath.indexOf("/")
+            return slash >= 0 ? filepath.slice(0, slash) : filepath
+          }
+          return FileIgnore.generatedFolder(filepath)
+        }
 
         const mergeBaseResult = await $`git merge-base HEAD ${base}`.cwd(dir).quiet().nothrow()
         if (mergeBaseResult.exitCode !== 0) {
@@ -232,7 +256,7 @@ export const ExperimentalRoutes = lazy(() =>
             dir,
             base,
           })
-          return c.json([])
+          return c.json({ diffs: [], generated: { files: 0, additions: 0, deletions: 0, entries: [] } })
         }
         const ancestor = mergeBaseResult.stdout.toString().trim()
         log.info("merge-base resolved", { ancestor: ancestor.slice(0, 12) })
@@ -241,7 +265,8 @@ export const ExperimentalRoutes = lazy(() =>
           .cwd(dir)
           .quiet()
           .nothrow()
-        if (nameStatus.exitCode !== 0) return c.json([])
+        if (nameStatus.exitCode !== 0)
+          return c.json({ diffs: [], generated: { files: 0, additions: 0, deletions: 0, entries: [] } })
 
         const numstat = await $`git -c core.quotepath=false diff --numstat --no-renames ${ancestor}`
           .cwd(dir)
@@ -264,6 +289,7 @@ export const ExperimentalRoutes = lazy(() =>
         }
 
         const diffs: Snapshot.FileDiff[] = []
+        const generated: Snapshot.GeneratedEntry[] = []
         const seen = new Set<string>()
         for (const line of nameStatus.stdout.toString().trim().split("\n")) {
           if (!line) continue
@@ -275,6 +301,14 @@ export const ExperimentalRoutes = lazy(() =>
           seen.add(file)
           const status =
             statusChar === "A" ? ("added" as const) : statusChar === "D" ? ("deleted" as const) : ("modified" as const)
+          const stat = stats.get(file) ?? { additions: 0, deletions: 0 }
+
+          // Skip reading file content for generated files — only collect stats
+          const folder = generatedFolder(file)
+          if (folder !== undefined) {
+            generated.push({ file, folder, status, additions: stat.additions, deletions: stat.deletions })
+            continue
+          }
 
           const before =
             status === "added"
@@ -292,7 +326,6 @@ export const ExperimentalRoutes = lazy(() =>
                   return (await f.exists()) ? await f.text() : ""
                 })()
 
-          const stat = stats.get(file) ?? { additions: 0, deletions: 0 }
           diffs.push({
             file,
             before,
@@ -305,6 +338,7 @@ export const ExperimentalRoutes = lazy(() =>
 
         // Include untracked files (new files never staged) so the diff
         // viewer shows all working-tree changes, not just tracked ones.
+        // Note: --exclude-standard already respects .gitignore for untracked files.
         const untrackedResult = await $`git ls-files --others --exclude-standard`.cwd(dir).quiet().nothrow()
         if (untrackedResult.exitCode === 0) {
           const untrackedFiles = untrackedResult.stdout.toString().trim()
@@ -313,6 +347,18 @@ export const ExperimentalRoutes = lazy(() =>
           }
           for (const file of untrackedFiles.split("\n")) {
             if (!file || seen.has(file)) continue
+
+            const ufolder = generatedFolder(file)
+            if (ufolder !== undefined) {
+              // For untracked generated files, estimate line count from file size
+              // to avoid reading content (the whole point of filtering).
+              const f = Bun.file(path.join(dir, file))
+              if (!(await f.exists())) continue
+              const lines = f.size === 0 ? 0 : Math.max(1, Math.round(f.size / 40))
+              generated.push({ file, folder: ufolder, status: "added", additions: lines, deletions: 0 })
+              continue
+            }
+
             const f = Bun.file(path.join(dir, file))
             if (!(await f.exists())) continue
             const content = await f.text()
@@ -333,8 +379,15 @@ export const ExperimentalRoutes = lazy(() =>
           })
         }
 
-        log.info("diff complete", { totalFiles: diffs.length })
-        return c.json(diffs)
+        const summary: Snapshot.GeneratedSummary = {
+          files: generated.length,
+          additions: generated.reduce((sum, entry) => sum + entry.additions, 0),
+          deletions: generated.reduce((sum, entry) => sum + entry.deletions, 0),
+          entries: generated,
+        }
+
+        log.info("diff complete", { reviewable: diffs.length, generated: generated.length })
+        return c.json({ diffs, generated: summary })
       },
     )
     // kilocode_change end
