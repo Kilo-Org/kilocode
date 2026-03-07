@@ -342,6 +342,13 @@ export namespace ProviderTransform {
     if (!model.capabilities.reasoning) return {}
 
     const id = model.id.toLowerCase()
+
+    // Inception Mercury-2 supports instant/low/medium/high reasoning effort
+    if (id.includes("mercury-2")) {
+      return Object.fromEntries(
+        ["instant", "low", "medium", "high"].map((effort) => [effort, { reasoningEffort: effort }]),
+      )
+    }
     const isAnthropicAdaptive = ["opus-4-6", "opus-4.6", "sonnet-4-6", "sonnet-4.6"].some((v) =>
       model.api.id.includes(v),
     )
