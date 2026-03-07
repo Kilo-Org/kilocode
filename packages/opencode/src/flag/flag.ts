@@ -30,6 +30,7 @@ export namespace Flag {
   export const KILO_SERVER_PASSWORD = process.env["KILO_SERVER_PASSWORD"]
   export const KILO_SERVER_USERNAME = process.env["KILO_SERVER_USERNAME"]
   export const KILO_ENABLE_QUESTION_TOOL = truthy("KILO_ENABLE_QUESTION_TOOL")
+  export const KILO_ENABLE_WARPGREP = truthy("KILO_ENABLE_WARPGREP") // kilocode_change
 
   // Experimental
   export const KILO_EXPERIMENTAL = truthy("KILO_EXPERIMENTAL")
