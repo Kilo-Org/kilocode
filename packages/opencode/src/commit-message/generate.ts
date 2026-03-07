@@ -245,5 +245,5 @@ export async function generateCommitMessage(request: CommitMessageRequest): Prom
   const result = await stream.text
   log.info("generated", { message: result })
 
-  return { message: clean(result), instructionsFound: loaded.found }
+  return { message: clean(result) }
 }

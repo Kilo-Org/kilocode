@@ -4068,10 +4068,6 @@ export type CommitMessageGenerateResponses = {
    */
   200: {
     message: string
-    /**
-     * Whether custom instructions were found
-     */
-    instructionsFound: boolean
   }
 }
 

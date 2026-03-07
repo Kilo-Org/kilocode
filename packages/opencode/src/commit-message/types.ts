@@ -10,8 +10,6 @@ export interface CommitMessageRequest {
 export interface CommitMessageResponse {
   /** The generated commit message */
   message: string
-  /** Whether custom instructions were found */
-  instructionsFound: boolean
 }
 
 export interface GitContext {
