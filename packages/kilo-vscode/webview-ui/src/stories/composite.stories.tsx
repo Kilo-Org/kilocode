@@ -171,6 +171,7 @@ const globPermission: PermissionRequest = {
   sessionID: SESSION_ID,
   toolName: "glob",
   patterns: ["**/*.md"],
+  always: ["*"],
   args: { pattern: "**/*.md" },
   tool: { messageID: ASST_MSG_ID, callID: "call-glob-001" },
 }
@@ -180,6 +181,7 @@ const bashPermission: PermissionRequest = {
   sessionID: SESSION_ID,
   toolName: "bash",
   patterns: ["bun test"],
+  always: ["bun *"],
   args: { command: "bun test" },
   tool: { messageID: ASST_MSG_ID, callID: "call-bash-001" },
 }
@@ -189,6 +191,7 @@ const dockPermission: PermissionRequest = {
   sessionID: SESSION_ID,
   toolName: "write",
   patterns: ["src/main.tsx", "src/utils.ts"],
+  always: ["*"],
   args: {},
   // No `tool` field — this is a non-tool (dock) permission
 }

@@ -95,6 +95,8 @@ export const dict = {
   "ui.permission.allowOnce": "Разрешить один раз",
   "ui.permission.sessionHint":
     "«Разрешить всегда» применяется только к текущей сессии. Для глобальных разрешений используйте настройки.",
+  "ui.permission.globalHint": "«Разрешить всегда» будет сохранено в глобальных настройках.",
+  "ui.permission.confirmRuleHint": "Это правило будет сохранено в глобальных настройках.",
 
   "ui.message.expand": "Развернуть сообщение",
   "ui.message.collapse": "Свернуть сообщение",

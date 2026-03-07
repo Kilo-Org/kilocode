@@ -95,6 +95,8 @@ export const dict = {
   "ui.permission.allowOnce": "Tillad én gang",
   "ui.permission.sessionHint":
     '"Tillad altid" gælder kun for denne session. Brug indstillinger til globale tilladelser.',
+  "ui.permission.globalHint": '"Tillad altid" gemmes i dine globale indstillinger.',
+  "ui.permission.confirmRuleHint": "Denne regel gemmes i dine globale indstillinger.",
 
   "ui.message.expand": "Udvid besked",
   "ui.message.collapse": "Skjul besked",

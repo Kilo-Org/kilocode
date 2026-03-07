@@ -40,6 +40,8 @@ import type {
   FindTextResponses,
   FormatterStatusResponses,
   GlobalConfigGetResponses,
+  GlobalConfigPersistErrors,
+  GlobalConfigPersistResponses,
   GlobalConfigUpdateErrors,
   GlobalConfigUpdateResponses,
   GlobalDisposeResponses,
@@ -271,6 +273,34 @@ export class Config extends HeyApiClient {
     const params = buildClientParams([parameters], [{ args: [{ key: "config", map: "body" }] }])
     return (options?.client ?? this.client).patch<GlobalConfigUpdateResponses, GlobalConfigUpdateErrors, ThrowOnError>({
       url: "/global/config",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Persist global configuration
+   *
+   * Write to the global config file without restarting instances. Useful for persisting rules while a session is active.
+   */
+  public persist<ThrowOnError extends boolean = false>(
+    parameters?: {
+      config?: Config3
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ key: "config", map: "body" }] }])
+    return (options?.client ?? this.client).patch<
+      GlobalConfigPersistResponses,
+      GlobalConfigPersistErrors,
+      ThrowOnError
+    >({
+      url: "/global/config/persist",
       ...options,
       ...params,
       headers: {

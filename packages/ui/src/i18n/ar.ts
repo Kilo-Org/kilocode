@@ -95,6 +95,8 @@ export const dict = {
   "ui.permission.allowAlways": "السماح دائمًا",
   "ui.permission.allowOnce": "السماح مرة واحدة",
   "ui.permission.sessionHint": '"السماح دائمًا" ينطبق على هذه الجلسة فقط. استخدم الإعدادات للأذونات العامة.',
+  "ui.permission.globalHint": '"السماح دائمًا" سيتم حفظه في إعداداتك العامة.',
+  "ui.permission.confirmRuleHint": "سيتم حفظ هذه القاعدة في إعداداتك العامة.",
 
   "ui.message.expand": "توسيع الرسالة",
   "ui.message.collapse": "طي الرسالة",

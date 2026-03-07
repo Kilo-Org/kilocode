@@ -96,6 +96,8 @@ export const dict = {
   "ui.permission.allowOnce": "Autoriser une fois",
   "ui.permission.sessionHint":
     '"Toujours autoriser" s\'applique uniquement à cette session. Utilisez les paramètres pour les autorisations globales.',
+  "ui.permission.globalHint": '"Toujours autoriser" sera enregistré dans vos paramètres globaux.',
+  "ui.permission.confirmRuleHint": "Cette règle sera enregistrée dans vos paramètres globaux.",
 
   "ui.message.expand": "Développer le message",
   "ui.message.collapse": "Réduire le message",

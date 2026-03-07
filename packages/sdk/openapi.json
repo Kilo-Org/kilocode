@@ -133,6 +133,50 @@
         ]
       }
     },
+    "/global/config/persist": {
+      "patch": {
+        "operationId": "global.config.persist",
+        "summary": "Persist global configuration",
+        "description": "Write to the global config file without restarting instances. Useful for persisting rules while a session is active.",
+        "responses": {
+          "200": {
+            "description": "Successfully persisted global config",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Config"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Config"
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.global.config.persist({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/global/dispose": {
       "post": {
         "operationId": "global.dispose",
@@ -9839,7 +9883,14 @@
         "type": "object",
         "properties": {
           "model": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "variant": {
             "description": "Default model variant for this agent (applies only when using the agent's configured model).",
@@ -10400,11 +10451,25 @@
           },
           "model": {
             "description": "Model to use in the format of provider/model, eg anthropic/claude-2",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "small_model": {
             "description": "Small model to use for tasks like title generation in the format of provider/model",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "default_agent": {
             "description": "Default agent to use when none is specified. Must be a primary agent. Falls back to 'code' if not set or if the specified agent is invalid.",
