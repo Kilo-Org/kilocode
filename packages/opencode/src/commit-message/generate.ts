@@ -24,7 +24,7 @@ function extractSection(content: string, heading: string): string | undefined {
       inCodeFence = !inCodeFence
       continue
     }
-    if (!inCodeFence && line.startsWith("## ") && !line.startsWith("### ")) {
+    if (!inCodeFence && /^#{1,2}[^#]/.test(line)) {
       end = i
       break
     }
