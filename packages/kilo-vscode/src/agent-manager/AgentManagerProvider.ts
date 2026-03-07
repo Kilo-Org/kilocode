@@ -20,6 +20,7 @@ import { SessionTerminalManager } from "./SessionTerminalManager"
 import { formatKeybinding } from "./format-keybinding"
 import { TelemetryProxy, TelemetryEventName } from "../services/telemetry"
 import { MAX_MULTI_VERSIONS } from "./constants"
+import { getWorkspaceRoot, hashFileDiffs, openFileInEditor, resolveLocalDiffTarget } from "../review-utils"
 
 /**
  * AgentManagerProvider opens the Agent Manager panel.
@@ -1484,9 +1485,7 @@ export class AgentManagerProvider implements vscode.Disposable {
   // ---------------------------------------------------------------------------
 
   private getWorkspaceRoot(): string | undefined {
-    const folders = vscode.workspace.workspaceFolders
-    if (folders && folders.length > 0) return folders[0].uri.fsPath
-    return undefined
+    return getWorkspaceRoot()
   }
 
   private getWorktreeManager(): WorktreeManager | undefined {
@@ -1632,15 +1631,7 @@ export class AgentManagerProvider implements vscode.Disposable {
   private openWorktreeFile(sessionId: string, filePath: string, line?: number, column?: number): void {
     if (isAbsolutePath(filePath)) {
       const uri = vscode.Uri.file(filePath)
-      const options: vscode.TextDocumentShowOptions = { preview: true }
-      if (line !== undefined && line > 0) {
-        const col = column !== undefined && column > 0 ? column - 1 : 0
-        options.selection = new vscode.Range(new vscode.Position(line - 1, col), new vscode.Position(line - 1, col))
-      }
-      vscode.workspace.openTextDocument(uri).then(
-        (doc) => vscode.window.showTextDocument(doc, options),
-        (err) => console.error("[Kilo New] AgentManagerProvider: Failed to open file:", uri.fsPath, err),
-      )
+      openFileInEditor(uri.fsPath, line, column, vscode.ViewColumn.Active, "AgentManagerProvider")
       return
     }
     const state = this.getStateManager()
@@ -1660,16 +1651,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       console.error("[Kilo New] AgentManagerProvider: Cannot resolve file path:", err)
       return
     }
-    const uri = vscode.Uri.file(resolved)
-    const options: vscode.TextDocumentShowOptions = { preview: true }
-    const target = Math.max(1, Math.floor(line ?? 1))
-    const col = column !== undefined && column > 0 ? column - 1 : 0
-    const pos = new vscode.Position(target - 1, col)
-    options.selection = new vscode.Range(pos, pos)
-    vscode.workspace.openTextDocument(uri).then(
-      (doc) => vscode.window.showTextDocument(doc, options),
-      (err) => console.error("[Kilo New] AgentManagerProvider: Failed to open file:", uri.fsPath, err),
-    )
+    openFileInEditor(resolved, line, column, vscode.ViewColumn.Active, "AgentManagerProvider")
   }
 
   /** Resolve worktree path + parentBranch for a session, or undefined if not applicable. */
@@ -1703,23 +1685,7 @@ export class AgentManagerProvider implements vscode.Disposable {
    *  branch, falling back to the repo's default branch, and ultimately to HEAD so
    *  local-only repos (no remote) still show working-tree changes in the diff panel. */
   private async resolveLocalDiffTarget(): Promise<{ directory: string; baseBranch: string } | undefined> {
-    const root = this.getWorkspaceRoot()
-    if (!root) {
-      this.log("Local diff: no workspace root")
-      return undefined
-    }
-    const branch = await this.gitOps.currentBranch(root)
-    if (!branch || branch === "HEAD") {
-      this.log("Local diff: detached HEAD or no branch")
-      return undefined
-    }
-    const tracking = await this.gitOps.resolveTrackingBranch(root, branch)
-    const defaultBranch = tracking ? undefined : await this.gitOps.resolveDefaultBranch(root, branch)
-    const base = tracking ?? defaultBranch ?? "HEAD"
-    this.log(
-      `Local diff: branch=${branch} tracking=${tracking ?? "none"} default=${defaultBranch ?? "none"} base=${base}`,
-    )
-    return { directory: root, baseBranch: base }
+    return await resolveLocalDiffTarget(this.gitOps, (...args) => this.log(...args))
   }
 
   /** One-shot diff fetch with loading indicators. Resolves target async, then fetches. */
@@ -1749,9 +1715,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
       this.log(`Worktree diff returned ${diffs.length} file(s) for session ${sessionId}`)
 
-      const hash = diffs
-        .map((d: FileDiff) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`)
-        .join("|")
+      const hash = hashFileDiffs(diffs)
       this.lastDiffHash = hash
       this.diffSessionId = sessionId
 
@@ -1775,9 +1739,7 @@ export class AgentManagerProvider implements vscode.Disposable {
         { throwOnError: true },
       )
 
-      const hash = diffs
-        .map((d: FileDiff) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`)
-        .join("|")
+      const hash = hashFileDiffs(diffs)
       if (hash === this.lastDiffHash && this.diffSessionId === sessionId) return
       this.lastDiffHash = hash
       this.diffSessionId = sessionId

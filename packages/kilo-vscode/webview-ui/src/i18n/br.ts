@@ -44,6 +44,7 @@ export const dict = {
 
   "command.session.new": "Nova sessão",
   "command.session.new.task": "Nova tarefa",
+  "command.session.show.changes": "Mostrar alterações",
   "command.file.open": "Abrir arquivo",
   "command.tab.close": "Fechar aba",
   "command.context.addSelection": "Adicionar seleção ao contexto",

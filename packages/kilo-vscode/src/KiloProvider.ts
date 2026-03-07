@@ -52,6 +52,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private cachedConfigMessage: unknown = null
   /** Cached notificationsLoaded payload */
   private cachedNotificationsMessage: unknown = null
+  private pendingReviewComments: unknown[][] = []
 
   private trackedSessionIds: Set<string> = new Set()
   private syncedChildSessions: Set<string> = new Set()
@@ -316,6 +317,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           console.log("[Kilo New] KiloProvider: ✅ webviewReady received")
           this.isWebviewReady = true
           await this.syncWebviewState("webviewReady")
+          this.flushPendingReviewComments()
           break
         case "sendMessage": {
           const files = z
@@ -388,6 +390,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           if (message.url) {
             vscode.env.openExternal(vscode.Uri.parse(message.url))
           }
+          break
+        case "openChanges":
+          vscode.commands.executeCommand("kilo-code.new.showChanges")
           break
         case "openFile":
           if (message.filePath) {
@@ -1921,6 +1926,27 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     void this.webview.postMessage(message).then(undefined, (error) => {
       console.error("[Kilo New] KiloProvider: ❌ postMessage failed", error)
     })
+  }
+
+  public async appendReviewComments(comments: unknown[]): Promise<void> {
+    this.pendingReviewComments.push(comments)
+
+    if (!this.webview) {
+      await vscode.commands.executeCommand(`${KiloProvider.viewType}.focus`)
+    }
+
+    this.flushPendingReviewComments()
+  }
+
+  private flushPendingReviewComments(): void {
+    if (!this.webview || !this.isWebviewReady || this.pendingReviewComments.length === 0) return
+
+    const pending = this.pendingReviewComments
+    this.pendingReviewComments = []
+
+    for (const comments of pending) {
+      this.postMessage({ type: "appendReviewComments", comments })
+    }
   }
 
   /**

@@ -48,6 +48,7 @@ export const dict = {
 
   "command.session.new": "新增工作階段",
   "command.session.new.task": "新增任務",
+  "command.session.show.changes": "顯示變更",
   "command.file.open": "開啟檔案",
   "command.tab.close": "關閉分頁",
   "command.context.addSelection": "將選取內容加入上下文",

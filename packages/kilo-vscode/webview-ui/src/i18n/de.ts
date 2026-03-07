@@ -48,6 +48,7 @@ export const dict = {
 
   "command.session.new": "Neue Sitzung",
   "command.session.new.task": "Neue Aufgabe",
+  "command.session.show.changes": "Änderungen anzeigen",
   "command.file.open": "Datei öffnen",
   "command.tab.close": "Tab schließen",
   "command.context.addSelection": "Auswahl zum Kontext hinzufügen",
