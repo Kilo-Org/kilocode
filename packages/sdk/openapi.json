@@ -133,14 +133,14 @@
         ]
       }
     },
-    "/global/config/file": {
+    "/global/config/persist": {
       "patch": {
-        "operationId": "global.config.file.update",
-        "summary": "Update global configuration file",
+        "operationId": "global.config.persist",
+        "summary": "Persist global configuration",
         "description": "Write to the global config file without restarting instances. Useful for persisting rules while a session is active.",
         "responses": {
           "200": {
-            "description": "Successfully updated global config file",
+            "description": "Successfully persisted global config",
             "content": {
               "application/json": {
                 "schema": {
@@ -172,7 +172,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.global.config.file.update({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.global.config.persist({\n  ...\n})"
           }
         ]
       }

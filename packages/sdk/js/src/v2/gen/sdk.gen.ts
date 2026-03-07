@@ -39,9 +39,9 @@ import type {
   FindSymbolsResponses,
   FindTextResponses,
   FormatterStatusResponses,
-  GlobalConfigFileUpdateErrors,
-  GlobalConfigFileUpdateResponses,
   GlobalConfigGetResponses,
+  GlobalConfigPersistErrors,
+  GlobalConfigPersistResponses,
   GlobalConfigUpdateErrors,
   GlobalConfigUpdateResponses,
   GlobalDisposeResponses,
@@ -246,36 +246,6 @@ class HeyApiRegistry<T> {
   }
 }
 
-export class File extends HeyApiClient {
-  /**
-   * Update global configuration file
-   *
-   * Write to the global config file without restarting instances. Useful for persisting rules while a session is active.
-   */
-  public update<ThrowOnError extends boolean = false>(
-    parameters?: {
-      config?: Config3
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams([parameters], [{ args: [{ key: "config", map: "body" }] }])
-    return (options?.client ?? this.client).patch<
-      GlobalConfigFileUpdateResponses,
-      GlobalConfigFileUpdateErrors,
-      ThrowOnError
-    >({
-      url: "/global/config/file",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-}
-
 export class Config extends HeyApiClient {
   /**
    * Get global configuration
@@ -313,9 +283,32 @@ export class Config extends HeyApiClient {
     })
   }
 
-  private _file?: File
-  get file(): File {
-    return (this._file ??= new File({ client: this.client }))
+  /**
+   * Persist global configuration
+   *
+   * Write to the global config file without restarting instances. Useful for persisting rules while a session is active.
+   */
+  public persist<ThrowOnError extends boolean = false>(
+    parameters?: {
+      config?: Config3
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ key: "config", map: "body" }] }])
+    return (options?.client ?? this.client).patch<
+      GlobalConfigPersistResponses,
+      GlobalConfigPersistErrors,
+      ThrowOnError
+    >({
+      url: "/global/config/persist",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
   }
 }
 
@@ -2828,7 +2821,7 @@ export class Find extends HeyApiClient {
   }
 }
 
-export class File2 extends HeyApiClient {
+export class File extends HeyApiClient {
   /**
    * List files
    *
@@ -3845,9 +3838,9 @@ export class KiloClient extends HeyApiClient {
     return (this._find ??= new Find({ client: this.client }))
   }
 
-  private _file?: File2
-  get file(): File2 {
-    return (this._file ??= new File2({ client: this.client }))
+  private _file?: File
+  get file(): File {
+    return (this._file ??= new File({ client: this.client }))
   }
 
   private _mcp?: Mcp

@@ -1560,7 +1560,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
 
       const permission = { [toolName]: rules }
-      await this.client.global.config.file.update(
+      await this.client.global.config.persist(
         { config: { permission: permission as Config["permission"] } },
         { throwOnError: true },
       )

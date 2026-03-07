@@ -1538,6 +1538,10 @@ export namespace Config {
   }
 
   // kilocode_change start - write global config file without restarting instances
+  // Note: uses globalConfigFile() which returns the first existing candidate file (kilo.jsonc,
+  // kilo.json, opencode.jsonc, opencode.json, config.json). This is consistent with updateGlobal.
+  // In the rare case a user has multiple global config files, the same read/write ordering
+  // limitation applies to updateGlobal — aligning them is a separate concern tracked elsewhere.
   export async function updateGlobalFile(config: Info) {
     const filepath = globalConfigFile()
     const before = await Filesystem.readText(filepath).catch((err: any) => {
@@ -1545,17 +1549,22 @@ export namespace Config {
       throw new JsonError({ path: filepath }, { cause: err })
     })
 
-    if (!filepath.endsWith(".jsonc")) {
-      const existing = parseConfig(before, filepath)
-      const merged = stripNulls(mergeDeep(existing, config) as Record<string, unknown>) as Info
-      await Filesystem.writeJson(filepath, merged)
-      return merged
-    }
+    const next = await (async () => {
+      if (!filepath.endsWith(".jsonc")) {
+        const existing = parseConfig(before, filepath)
+        const merged = stripNulls(mergeDeep(existing, config) as Record<string, unknown>) as Info
+        await Filesystem.writeJson(filepath, merged)
+        return merged
+      }
 
-    const updated = patchJsonc(before, config)
-    const merged = parseConfig(updated, filepath)
-    await Filesystem.write(filepath, updated)
-    return merged
+      const updated = patchJsonc(before, config)
+      const merged = parseConfig(updated, filepath)
+      await Filesystem.write(filepath, updated)
+      return merged
+    })()
+
+    global.reset()
+    return next
   }
   // kilocode_change end
 

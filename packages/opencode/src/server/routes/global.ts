@@ -155,15 +155,15 @@ export const GlobalRoutes = lazy(() =>
     )
     // kilocode_change start - write config file without restarting instances
     .patch(
-      "/config/file",
+      "/config/persist",
       describeRoute({
-        summary: "Update global configuration file",
+        summary: "Persist global configuration",
         description:
           "Write to the global config file without restarting instances. Useful for persisting rules while a session is active.",
-        operationId: "global.config.file.update",
+        operationId: "global.config.persist",
         responses: {
           200: {
-            description: "Successfully updated global config file",
+            description: "Successfully persisted global config",
             content: {
               "application/json": {
                 schema: resolver(Config.Info),
