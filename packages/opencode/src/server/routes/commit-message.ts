@@ -17,11 +17,7 @@ export const CommitMessageRoutes = lazy(() =>
           description: "Generated commit message",
           content: {
             "application/json": {
-              schema: resolver(
-                z.object({
-                  message: z.string(),
-                }),
-              ),
+              schema: resolver(z.object({ message: z.string() })),
             },
           },
         },

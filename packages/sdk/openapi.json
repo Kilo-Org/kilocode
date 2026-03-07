@@ -4413,13 +4413,9 @@
                   "properties": {
                     "message": {
                       "type": "string"
-                    },
-                    "instructionsFound": {
-                      "description": "Whether custom instructions were found",
-                      "type": "boolean"
                     }
                   },
-                  "required": ["message", "instructionsFound"]
+                  "required": ["message"]
                 }
               }
             }
@@ -9843,14 +9839,7 @@
         "type": "object",
         "properties": {
           "model": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string"
           },
           "variant": {
             "description": "Default model variant for this agent (applies only when using the agent's configured model).",
@@ -10411,25 +10400,11 @@
           },
           "model": {
             "description": "Model to use in the format of provider/model, eg anthropic/claude-2",
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string"
           },
           "small_model": {
             "description": "Small model to use for tasks like title generation in the format of provider/model",
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string"
           },
           "default_agent": {
             "description": "Default agent to use when none is specified. Must be a primary agent. Falls back to 'code' if not set or if the specified agent is invalid.",
