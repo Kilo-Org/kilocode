@@ -1551,15 +1551,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         typeof existing === "object" && existing !== null ? (existing as Record<string, unknown>)[toolName] : undefined
 
       const rules: Record<string, string> = {}
-      // Preserve existing rules for this tool
+      // Preserve existing default action (e.g., "ask") as a wildcard rule
       if (typeof current === "string") {
-        // e.g. "ask" → { "*": "ask" }
         rules["*"] = current
-      } else if (typeof current === "object" && current !== null) {
-        // e.g. { "*": "ask", "bun *": "allow" } — copy all existing rules
-        for (const [k, v] of Object.entries(current as Record<string, unknown>)) {
-          if (typeof v === "string") rules[k] = v
-        }
       }
       for (const pattern of patterns) {
         rules[pattern] = "allow"
