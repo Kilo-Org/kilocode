@@ -9,6 +9,7 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
+import { formatWh } from "../../context/session-utils"
 
 export const TaskHeader: Component = () => {
   const session = useSession()
@@ -26,6 +27,12 @@ export const TaskHeader: Component = () => {
       style: "currency",
       currency: "USD",
     }).format(total)
+  })
+
+  const energy = createMemo(() => {
+    const total = session.totalEnergy()
+    if (total === 0) return undefined
+    return formatWh(total)
   })
 
   const context = createMemo(() => {
@@ -47,6 +54,13 @@ export const TaskHeader: Component = () => {
             {(c) => (
               <Tooltip value={language.t("context.usage.sessionCost")} placement="bottom">
                 <span>{c()}</span>
+              </Tooltip>
+            )}
+          </Show>
+          <Show when={energy()}>
+            {(e) => (
+              <Tooltip value={language.t("context.usage.sessionEnergy")} placement="bottom">
+                <span>{e()}</span>
               </Tooltip>
             )}
           </Show>

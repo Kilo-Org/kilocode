@@ -831,6 +831,7 @@ export const dict = {
   "prompt.placeholder.default": "Type a message... (Enter to send, Shift+Enter for new line)",
 
   "context.usage.sessionCost": "Session cost",
+  "context.usage.sessionEnergy": "Session energy usage",
 
   "time.justNow": "just now",
   "time.minutesAgo": "{{count}} min ago",

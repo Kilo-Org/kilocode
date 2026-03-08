@@ -17,6 +17,7 @@ import { ProjectTable } from "../project/project.sql"
 import { Storage } from "@/storage/storage"
 import { Log } from "../util/log"
 import { MessageV2 } from "./message-v2"
+import * as EnergyCapture from "../provider/energy-capture"
 import { Instance } from "../project/instance"
 import { SessionPrompt } from "./prompt"
 import { fn } from "@/util/fn"
@@ -889,6 +890,10 @@ export namespace Session {
         },
       }
 
+      // Consume energy once before any return path to avoid double-consume risk
+      const energy = EnergyCapture.consume()
+      const energyResult = energy ? { wh: energy.wh, gCO2e: energy.gCO2e, source: energy.source, provider: energy.provider } : undefined
+
       // kilocode_change start - Use provider-reported cost when available for OpenRouter/Kilo
       // The OpenRouter AI SDK provider exposes cost at providerMetadata.openrouter.usage
       // Reference: https://openrouter.ai/docs/use-cases/usage-accounting
@@ -915,6 +920,7 @@ export namespace Session {
           return {
             cost: safe(providerCost),
             tokens,
+            energy: energyResult,
           }
         }
       }
@@ -937,6 +943,7 @@ export namespace Session {
             .toNumber(),
         ),
         tokens,
+        energy: energyResult,
       }
     },
   )

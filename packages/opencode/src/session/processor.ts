@@ -16,6 +16,7 @@ import { SessionCompaction } from "./compaction"
 import { PermissionNext } from "@/permission/next"
 import { Question } from "@/question"
 import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
+import * as EnergyCapture from "@/provider/energy-capture"
 
 export namespace SessionProcessor {
   const DOOM_LOOP_THRESHOLD = 3
@@ -273,6 +274,16 @@ export namespace SessionProcessor {
                   input.assistantMessage.finish = value.finishReason
                   input.assistantMessage.cost += usage.cost
                   input.assistantMessage.tokens = usage.tokens
+                  if (usage.energy) {
+                    if (!input.assistantMessage.energy) {
+                      input.assistantMessage.energy = { ...usage.energy }
+                    } else {
+                      input.assistantMessage.energy.wh = (input.assistantMessage.energy.wh ?? 0) + (usage.energy.wh ?? 0)
+                      input.assistantMessage.energy.gCO2e = (input.assistantMessage.energy.gCO2e ?? 0) + (usage.energy.gCO2e ?? 0)
+                      input.assistantMessage.energy.source = usage.energy.source
+                      input.assistantMessage.energy.provider = usage.energy.provider
+                    }
+                  }
                   await Session.updatePart({
                     id: Identifier.ascending("part"),
                     reason: value.finishReason,
@@ -282,6 +293,7 @@ export namespace SessionProcessor {
                     type: "step-finish",
                     tokens: usage.tokens,
                     cost: usage.cost,
+                    energy: usage.energy,
                   })
                   await Session.updateMessage(input.assistantMessage)
                   if (snapshot) {
@@ -371,6 +383,7 @@ export namespace SessionProcessor {
               if (needsCompaction) break
             }
           } catch (e: any) {
+            EnergyCapture.discard()
             log.error("process", {
               error: e,
               stack: JSON.stringify(e.stack),

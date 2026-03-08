@@ -167,6 +167,68 @@ export namespace ModelsDev {
       }
     }
 
+    // kilocode_change start - inject Neuralwatt energy-measured provider
+    if (!providers["neuralwatt"]) {
+      providers["neuralwatt"] = {
+        id: "neuralwatt",
+        name: "Neuralwatt",
+        env: ["NEURALWATT_API_KEY"],
+        api: "https://api.neuralwatt.com/v1",
+        npm: "@ai-sdk/openai-compatible",
+        models: {
+          "moonshotai/Kimi-K2.5": {
+            id: "moonshotai/Kimi-K2.5",
+            name: "Kimi K2.5",
+            release_date: "2025-07-01",
+            attachment: true,
+            reasoning: true,
+            temperature: false,
+            tool_call: true,
+            cost: { input: 0.2, output: 0.6 },
+            limit: { context: 262_144, output: 16_384 },
+            options: {},
+          },
+          "mistralai/Devstral-Small-2-24B-Instruct-2512": {
+            id: "mistralai/Devstral-Small-2-24B-Instruct-2512",
+            name: "Devstral Small 2 24B",
+            release_date: "2025-12-01",
+            attachment: false,
+            reasoning: false,
+            temperature: true,
+            tool_call: true,
+            cost: { input: 0.1, output: 0.3 },
+            limit: { context: 262_144, output: 16_384 },
+            options: {},
+          },
+          "deepseek-ai/deepseek-coder-33b-instruct": {
+            id: "deepseek-ai/deepseek-coder-33b-instruct",
+            name: "DeepSeek Coder 33B",
+            release_date: "2024-01-01",
+            attachment: false,
+            reasoning: false,
+            temperature: true,
+            tool_call: false,
+            cost: { input: 0.1, output: 0.2 },
+            limit: { context: 16_384, output: 16_384 },
+            options: {},
+          },
+          "openai/gpt-oss-20b": {
+            id: "openai/gpt-oss-20b",
+            name: "GPT-OSS 20B",
+            release_date: "2025-06-01",
+            attachment: false,
+            reasoning: false,
+            temperature: true,
+            tool_call: false,
+            cost: { input: 0.1, output: 0.5 },
+            limit: { context: 16_384, output: 16_384 },
+            options: {},
+          },
+        },
+      }
+    }
+    // kilocode_change end
+
     return providers
     // kilocode_change end
   }

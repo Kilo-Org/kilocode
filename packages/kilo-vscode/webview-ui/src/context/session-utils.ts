@@ -46,6 +46,25 @@ export function calcTotalCost(messages: Array<{ role: string; cost?: number }>):
 }
 
 /**
+ * Calculate total energy (Wh) across all assistant messages.
+ */
+export function calcTotalEnergy(messages: Array<{ role: string; energy?: { wh?: number } }>): number {
+  return messages.reduce((sum, m) => sum + (m.role === "assistant" ? (m.energy?.wh ?? 0) : 0), 0)
+}
+
+/**
+ * Format a watt-hour value with the appropriate metric prefix.
+ */
+export function formatWh(wh: number): string {
+  if (!Number.isFinite(wh) || wh < 0) return "\u2014"
+  if (wh === 0) return "0 Wh"
+  if (wh >= 1000) return (wh / 1000).toFixed(2) + " kWh"
+  if (wh >= 1) return wh.toFixed(2) + " Wh"
+  if (wh >= 0.001) return (wh * 1000).toFixed(1) + " mWh"
+  return (wh * 1_000_000).toFixed(1) + " μWh"
+}
+
+/**
  * Calculate context usage percentage given token counts and a context limit.
  */
 export function calcContextUsage(

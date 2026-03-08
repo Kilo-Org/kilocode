@@ -60,6 +60,12 @@ export interface StepFinishPart extends BasePart {
     reasoning?: number
     cache?: { read: number; write: number }
   }
+  energy?: {
+    wh?: number
+    gCO2e?: number
+    source?: "measured" | "estimated"
+    provider?: string
+  }
 }
 
 export type Part = TextPart | ToolPart | ReasoningPart | StepStartPart | StepFinishPart
@@ -104,6 +110,12 @@ export interface Message {
   summary?: { title?: string; body?: string; diffs?: unknown[] } | boolean
   cost?: number
   tokens?: TokenUsage
+  energy?: {
+    wh?: number
+    gCO2e?: number
+    source?: "measured" | "estimated"
+    provider?: string
+  }
 }
 
 // Session info (simplified for webview)
