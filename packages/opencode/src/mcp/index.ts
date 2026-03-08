@@ -122,9 +122,12 @@ export namespace MCP {
   const NON_STANDARD_KEYWORDS = new Set(["endsWith", "startsWith"])
 
   // JSON Schema keywords whose values are single schemas and need recursion.
+  // Covers draft-07 and draft 2020-12.
   const SCHEMA_VALUED_KEYWORDS = new Set([
     "additionalProperties",
     "additionalItems",
+    "unevaluatedItems",
+    "unevaluatedProperties",
     "not",
     "if",
     "then",
