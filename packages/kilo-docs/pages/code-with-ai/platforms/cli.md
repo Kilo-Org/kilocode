@@ -105,13 +105,26 @@ Kilo CLI supports the [Agent Client Protocol (ACP)](https://agentclientprotocol.
 npm install -g @kilocode/cli
 npm install -g acpx
 
-# Use immediately
-acpx opencode exec "help me fix this bug"
-acpx opencode sessions new --name backend-work
-acpx opencode --session backend-work "continue working on the API"
+# Use with Kilo CLI via --agent flag
+acpx --agent "kilo acp" exec "help me fix this bug"
+acpx --agent "kilo acp" sessions new --name backend-work
+acpx --agent "kilo acp" --session backend-work "continue working on the API"
 
 # Auto-approve permissions for CI/automation
-acpx opencode --approve-all exec "run the test suite and fix any failures"
+acpx --agent "kilo acp" --approve-all exec "run the test suite and fix any failures"
+```
+
+### Alternative: Use kx Alias (Optional)
+
+If you want to avoid typing `kilo acp` every time, you can create a shell alias:
+
+```bash
+# Add to your shell profile (.bashrc, .zshrc, etc.)
+alias kx='acpx --agent "kilo acp"'
+
+# Then use the shorter form
+kx exec "help me fix this bug"
+kx sessions new --name backend-work
 ```
 
 ### Supported ACP Clients
