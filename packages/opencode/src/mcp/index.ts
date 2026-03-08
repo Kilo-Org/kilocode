@@ -121,17 +121,23 @@ export namespace MCP {
   // failures in strict backends like llama.cpp.
   const NON_STANDARD_KEYWORDS = new Set(["endsWith", "startsWith"])
 
-  // JSON Schema keywords whose values are themselves schemas and need recursion.
+  // JSON Schema keywords whose values are single schemas and need recursion.
   const SCHEMA_VALUED_KEYWORDS = new Set([
     "additionalProperties",
     "not",
     "if",
     "then",
     "else",
-    "$defs",
-    "definitions",
     "contains",
     "propertyNames",
+  ])
+
+  // JSON Schema keywords whose values are maps of schemas (like properties).
+  // Each value in the map is a schema that needs recursive sanitization.
+  const SCHEMA_MAP_KEYWORDS = new Set([
+    "$defs",
+    "definitions",
+    "dependencies",
   ])
 
   /**
@@ -156,7 +162,14 @@ export namespace MCP {
         continue
       }
 
-      if ((key === "properties" || key === "patternProperties" || key === "dependentSchemas") && value && typeof value === "object" && !Array.isArray(value)) {
+      // properties, patternProperties, dependentSchemas, $defs, definitions, and
+      // dependencies are all maps whose values are schemas needing recursion.
+      if (
+        (key === "properties" || key === "patternProperties" || key === "dependentSchemas" || SCHEMA_MAP_KEYWORDS.has(key)) &&
+        value &&
+        typeof value === "object" &&
+        !Array.isArray(value)
+      ) {
         const props: Record<string, unknown> = {}
         for (const [propName, propSchema] of Object.entries(value as Record<string, unknown>)) {
           props[propName] =
