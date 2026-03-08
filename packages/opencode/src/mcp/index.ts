@@ -116,15 +116,78 @@ export namespace MCP {
     })
   }
 
+  // Non-standard JSON Schema keywords that some MCP servers emit (e.g. OpenAI
+  // extensions). These are not part of JSON Schema draft-07 and cause validation
+  // failures in strict backends like llama.cpp.
+  const NON_STANDARD_KEYWORDS = new Set(["endsWith", "startsWith"])
+
+  /**
+   * Recursively sanitize a JSON Schema object so it is safe for any LLM backend.
+   *
+   * - Strips non-standard keywords (endsWith, startsWith, …)
+   * - Anchors unanchored `pattern` values with `^…$` (required by some backends)
+   */
+  function sanitizeSchema(schema: Record<string, unknown>): Record<string, unknown> {
+    const result: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(schema)) {
+      if (NON_STANDARD_KEYWORDS.has(key)) continue
+
+      if (key === "pattern" && typeof value === "string") {
+        let anchored = value
+        if (!anchored.startsWith("^")) anchored = "^" + anchored
+        if (!anchored.endsWith("$")) anchored = anchored + "$"
+        result[key] = anchored
+        continue
+      }
+
+      if (key === "properties" && value && typeof value === "object" && !Array.isArray(value)) {
+        const props: Record<string, unknown> = {}
+        for (const [propName, propSchema] of Object.entries(value as Record<string, unknown>)) {
+          props[propName] =
+            propSchema && typeof propSchema === "object" && !Array.isArray(propSchema)
+              ? sanitizeSchema(propSchema as Record<string, unknown>)
+              : propSchema
+        }
+        result[key] = props
+        continue
+      }
+
+      if (key === "items" && value && typeof value === "object") {
+        result[key] = Array.isArray(value)
+          ? value.map((item) =>
+              item && typeof item === "object" && !Array.isArray(item)
+                ? sanitizeSchema(item as Record<string, unknown>)
+                : item,
+            )
+          : sanitizeSchema(value as Record<string, unknown>)
+        continue
+      }
+
+      if ((key === "allOf" || key === "anyOf" || key === "oneOf") && Array.isArray(value)) {
+        result[key] = value.map((item) =>
+          item && typeof item === "object" && !Array.isArray(item)
+            ? sanitizeSchema(item as Record<string, unknown>)
+            : item,
+        )
+        continue
+      }
+
+      result[key] = value
+    }
+    return result
+  }
+
   // Convert MCP tool definition to AI SDK Tool type
   async function convertMcpTool(mcpTool: MCPToolDef, client: MCPClient, timeout?: number): Promise<Tool> {
     const inputSchema = mcpTool.inputSchema
 
-    // Spread first, then override type to ensure it's always "object"
+    // Sanitize the schema to strip non-standard keywords and anchor patterns,
+    // then override type to ensure it's always "object".
+    const sanitized = sanitizeSchema(inputSchema as Record<string, unknown>)
     const schema: JSONSchema7 = {
-      ...(inputSchema as JSONSchema7),
+      ...sanitized,
       type: "object",
-      properties: (inputSchema.properties ?? {}) as JSONSchema7["properties"],
+      properties: (sanitized.properties ?? {}) as JSONSchema7["properties"],
       additionalProperties: false,
     }
 
