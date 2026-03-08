@@ -124,6 +124,7 @@ export namespace MCP {
   // JSON Schema keywords whose values are single schemas and need recursion.
   const SCHEMA_VALUED_KEYWORDS = new Set([
     "additionalProperties",
+    "additionalItems",
     "not",
     "if",
     "then",
@@ -181,7 +182,7 @@ export namespace MCP {
         continue
       }
 
-      if (key === "items" && value && typeof value === "object") {
+      if ((key === "items" || key === "prefixItems") && value && typeof value === "object") {
         result[key] = Array.isArray(value)
           ? value.map((item) =>
               item && typeof item === "object" && !Array.isArray(item)
