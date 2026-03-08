@@ -1415,14 +1415,18 @@ export namespace Config {
 
   function globalConfigFile() {
     // kilocode_change start
-    const candidates = ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json", "config.json"].map((file) =>
-      // kilocode_change end
+    // Order must match the read-merge order in Config.global (lines 1297-1303)
+    // so that writes go to the highest-precedence existing file.
+    const candidates = ["config.json", "kilo.json", "kilo.jsonc", "opencode.json", "opencode.jsonc"].map((file) =>
       path.join(Global.Path.config, file),
     )
-    for (const file of candidates) {
-      if (existsSync(file)) return file
+    // Return the last existing file (highest read precedence)
+    for (let i = candidates.length - 1; i >= 0; i--) {
+      if (existsSync(candidates[i])) return candidates[i]
     }
-    return candidates[0]
+    // kilocode_change end
+    // Default to kilo.jsonc for new installations
+    return path.join(Global.Path.config, "kilo.jsonc")
   }
 
   function isRecord(value: unknown): value is Record<string, unknown> {
