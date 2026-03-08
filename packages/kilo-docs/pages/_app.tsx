@@ -178,7 +178,7 @@ export default function MyApp({ Component, pageProps }: AppProps<MyAppProps>) {
           <SideNav isMobileOpen={isMobileMenuOpen} onMobileClose={handleMobileMenuClose} />
           <main className="main-content">
             <div className="content-wrapper">
-              <div className="article-content flex column mt-5">
+              <div className="article-content mt-5">
                 <Component {...pageProps} />
                 {markdoc && <PageFooter />}
               </div>
