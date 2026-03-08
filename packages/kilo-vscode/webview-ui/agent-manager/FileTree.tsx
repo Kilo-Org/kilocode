@@ -14,6 +14,9 @@ interface FileTreeProps {
   activeFile: string | null
   onFileSelect: (path: string) => void
   comments?: ReviewComment[]
+  selectedFiles?: Set<string>
+  onFileToggle?: (path: string, checked: boolean) => void
+  showSummary?: boolean
 }
 
 const DirectoryNode: Component<{
@@ -22,6 +25,8 @@ const DirectoryNode: Component<{
   onFileSelect: (path: string) => void
   depth: number
   commentsByFile?: Map<string, number>
+  selectedFiles?: Set<string>
+  onFileToggle?: (path: string, checked: boolean) => void
 }> = (props) => {
   const [expanded, setExpanded] = createSignal(true)
   const hasActiveDescendant = createMemo(() => {
@@ -52,6 +57,8 @@ const DirectoryNode: Component<{
                   onFileSelect={props.onFileSelect}
                   depth={props.depth + 1}
                   commentsByFile={props.commentsByFile}
+                  selectedFiles={props.selectedFiles}
+                  onFileToggle={props.onFileToggle}
                 />
               }
             >
@@ -61,6 +68,8 @@ const DirectoryNode: Component<{
                 onFileSelect={props.onFileSelect}
                 depth={props.depth + 1}
                 commentsByFile={props.commentsByFile}
+                selectedFiles={props.selectedFiles}
+                onFileToggle={props.onFileToggle}
               />
             </Show>
           )}
@@ -76,8 +85,12 @@ const FileNode: Component<{
   onFileSelect: (path: string) => void
   depth: number
   commentsByFile?: Map<string, number>
+  selectedFiles?: Set<string>
+  onFileToggle?: (path: string, checked: boolean) => void
 }> = (props) => {
   const active = () => props.activeFile === props.node.path
+  const checked = () => props.selectedFiles?.has(props.node.path) ?? false
+  const selectable = () => Boolean(props.onFileToggle)
   const status = () => props.node.diff?.status ?? "modified"
   const additions = () => props.node.diff?.additions ?? 0
   const deletions = () => props.node.diff?.deletions ?? 0
@@ -89,13 +102,27 @@ const FileNode: Component<{
     <button
       class={`am-file-tree-file ${active() ? "am-file-tree-active" : ""}`}
       classList={{
+        "am-file-tree-selected": selectable() && checked(),
         "am-file-tree-status-added": status() === "added",
         "am-file-tree-status-deleted": status() === "deleted",
         "am-file-tree-status-modified": status() === "modified",
       }}
       style={{ "padding-left": `${8 + props.depth * 12}px` }}
-      onClick={() => props.onFileSelect(props.node.path)}
+      onClick={() => {
+        if (props.onFileToggle) {
+          props.onFileToggle(props.node.path, !checked())
+          return
+        }
+        props.onFileSelect(props.node.path)
+      }}
     >
+      <Show when={selectable()}>
+        <span class={`am-file-tree-check ${checked() ? "am-file-tree-check-on" : ""}`}>
+          <Show when={checked()}>
+            <Icon name="check" size="small" />
+          </Show>
+        </span>
+      </Show>
       <FileIcon node={{ path: props.node.path, type: "file" }} />
       <span class="am-file-tree-name">{props.node.name}</span>
       <Show when={comments() > 0}>
@@ -153,6 +180,8 @@ export const FileTree: Component<FileTreeProps> = (props) => {
                   onFileSelect={props.onFileSelect}
                   depth={0}
                   commentsByFile={commentsByFile()}
+                  selectedFiles={props.selectedFiles}
+                  onFileToggle={props.onFileToggle}
                 />
               }
             >
@@ -162,16 +191,20 @@ export const FileTree: Component<FileTreeProps> = (props) => {
                 onFileSelect={props.onFileSelect}
                 depth={0}
                 commentsByFile={commentsByFile()}
+                selectedFiles={props.selectedFiles}
+                onFileToggle={props.onFileToggle}
               />
             </Show>
           )}
         </For>
       </div>
-      <div class="am-file-tree-summary">
-        <span>{t("session.review.filesChanged", { count: totals().files })}</span>
-        <span class="am-file-tree-summary-adds">+{totals().additions}</span>
-        <span class="am-file-tree-summary-dels">-{totals().deletions}</span>
-      </div>
+      <Show when={props.showSummary !== false}>
+        <div class="am-file-tree-summary">
+          <span>{t("session.review.filesChanged", { count: totals().files })}</span>
+          <span class="am-file-tree-summary-adds">+{totals().additions}</span>
+          <span class="am-file-tree-summary-dels">-{totals().deletions}</span>
+        </div>
+      </Show>
     </div>
   )
 }
