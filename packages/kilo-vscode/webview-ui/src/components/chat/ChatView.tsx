@@ -51,6 +51,15 @@ export const ChatView: Component<ChatViewProps> = (props) => {
         e.preventDefault()
         session.abort()
       }
+      if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        const perm = sessionPermissions()[0]
+        if (perm && !responding()) {
+          e.preventDefault()
+          setResponding(true)
+          session.respondToPermission(perm.id, "once")
+          setResponding(false)
+        }
+      }
     }
     document.addEventListener("keydown", handler)
     onCleanup(() => document.removeEventListener("keydown", handler))
