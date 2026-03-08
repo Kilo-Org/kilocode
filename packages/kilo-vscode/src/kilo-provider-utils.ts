@@ -33,6 +33,13 @@ export function getErrorMessage(error: unknown): string {
       if (typeof first === "string") return first
       if (first && typeof first.message === "string") return first.message
     }
+    // NamedError shape from server: { name: "SomeError", data: { field: "..." } }
+    if (typeof obj.name === "string" && obj.data && typeof obj.data === "object") {
+      const data = obj.data as Record<string, unknown>
+      const parts = Object.values(data).filter((v) => typeof v === "string")
+      if (parts.length > 0) return `${obj.name}: ${parts.join(", ")}`
+      return obj.name
+    }
   }
   return String(error)
 }
