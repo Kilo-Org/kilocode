@@ -131,19 +131,6 @@ kx exec "help me fix this bug"
 kx sessions new --name backend-work
 ```
 
-### Alternative: Use kx Alias (Optional)
-
-If you want to avoid typing `kilo acp` every time, you can create a shell alias:
-
-```bash
-# Add to your shell profile (.bashrc, .zshrc, etc.)
-alias kx='acpx --agent "kilo acp"'
-
-# Then use the shorter form
-kx exec "help me fix this bug"
-kx sessions new --name backend-work
-```
-
 ### Supported ACP Clients
 
 - **[acpx](https://github.com/openclaw/acpx)** - Headless CLI client for agent orchestration
