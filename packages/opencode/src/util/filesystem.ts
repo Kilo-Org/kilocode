@@ -2,7 +2,7 @@ import { chmod, mkdir, readFile, writeFile } from "fs/promises"
 import { createWriteStream, existsSync, statSync } from "fs"
 import { lookup } from "mime-types"
 import { realpathSync } from "fs"
-import { dirname, join, relative } from "path"
+import { dirname, isAbsolute, join, relative } from "path"
 import { Readable } from "stream"
 import { pipeline } from "stream/promises"
 import { Glob } from "./glob"
@@ -132,7 +132,11 @@ export namespace Filesystem {
   }
 
   export function contains(parent: string, child: string) {
-    return !relative(parent, child).startsWith("..")
+    const rel = relative(parent, child)
+    // On Windows, path.relative across drives returns an absolute path
+    // (e.g. "D:\other\file") instead of a ".." relative path. Treat
+    // absolute results as outside the parent.
+    return !isAbsolute(rel) && !rel.startsWith("..")
   }
 
   export async function findUp(target: string, start: string, stop?: string) {

@@ -29,6 +29,13 @@ describe("Filesystem.contains", () => {
     expect(Filesystem.contains("/project", "/project-other/file")).toBe(false)
     expect(Filesystem.contains("/project", "/projectfile")).toBe(false)
   })
+
+  test("blocks cross-drive paths on Windows", () => {
+    // On Windows, path.relative across drives returns an absolute path
+    // instead of a ".." relative path. This must still be treated as external.
+    expect(Filesystem.contains("C:\\Users\\project", "D:\\other\\file")).toBe(false)
+    expect(Filesystem.contains("C:\\workspace", "D:\\workspace\\file")).toBe(false)
+  })
 })
 
 /*
