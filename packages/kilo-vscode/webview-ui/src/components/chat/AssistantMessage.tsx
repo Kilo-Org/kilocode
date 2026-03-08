@@ -88,13 +88,12 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                 <Show when={perm()} keyed>
                   {(p) => (
                     <div data-component="permission-prompt" onClick={(e: MouseEvent) => e.stopPropagation()}>
-                      <Show when={p.patterns.length > 0}>
-                        <div class="permission-dock-patterns">
-                          <For each={p.patterns}>
-                            {(pattern) => <code class="permission-dock-pattern">{pattern}</code>}
-                          </For>
-                        </div>
-                      </Show>
+                      <div class="permission-dock-patterns">
+                        <span class="permission-dock-tool">{p.toolName}</span>
+                        <For each={p.patterns}>
+                          {(pattern) => <code class="permission-dock-pattern">{pattern}</code>}
+                        </For>
+                      </div>
                       <div data-slot="permission-actions">
                         <Button
                           variant="ghost"
