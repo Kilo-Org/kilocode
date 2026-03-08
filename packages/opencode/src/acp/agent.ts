@@ -572,7 +572,7 @@ export namespace ACP {
         const model = await defaultModel(this.config, directory)
 
         // Store ACP session state
-        const state = await this.sessionManager.create(params.cwd, params.mcpServers, model)
+        const state = await this.sessionManager.create(directory, params.mcpServers, model)
         const sessionId = state.id
 
         log.info("creating_session", { sessionId, mcpServers: params.mcpServers.length })
@@ -608,7 +608,7 @@ export namespace ACP {
         const model = await defaultModel(this.config, directory)
 
         // Store ACP session state
-        await this.sessionManager.load(sessionId, params.cwd, params.mcpServers, model)
+        await this.sessionManager.load(sessionId, directory, params.mcpServers, model)
 
         log.info("load_session", { sessionId, mcpServers: params.mcpServers.length })
 
