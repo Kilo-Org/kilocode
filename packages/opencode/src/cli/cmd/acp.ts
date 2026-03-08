@@ -53,10 +53,10 @@ export const AcpCommand = cmd({
       })
 
       const stream = ndJsonStream(input, output)
-      const agent = await ACP.init({ sdk })
+      const agent = await ACP.init({ sdk, defaultCwd: args.cwd })
 
       new AgentSideConnection((conn) => {
-        return agent.create(conn, { sdk })
+        return agent.create(conn, { sdk, defaultCwd: args.cwd })
       }, stream)
 
       log.info("setup connection")

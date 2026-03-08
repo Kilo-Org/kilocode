@@ -122,10 +122,10 @@ export namespace ACP {
       })
   }
 
-  export async function init({ sdk: _sdk }: { sdk: KiloClient }) {
+  export async function init({ sdk: _sdk, defaultCwd }: { sdk: KiloClient; defaultCwd?: string }) {
     return {
       create: (connection: AgentSideConnection, fullConfig: ACPConfig) => {
-        return new Agent(connection, fullConfig)
+        return new Agent(connection, { ...fullConfig, defaultCwd })
       },
     }
   }
@@ -567,7 +567,7 @@ export namespace ACP {
     }
 
     async newSession(params: NewSessionRequest) {
-      const directory = params.cwd
+      const directory = params.cwd ?? this.config.defaultCwd ?? process.cwd()
       try {
         const model = await defaultModel(this.config, directory)
 
@@ -601,7 +601,7 @@ export namespace ACP {
     }
 
     async loadSession(params: LoadSessionRequest) {
-      const directory = params.cwd
+      const directory = params.cwd ?? this.config.defaultCwd ?? process.cwd()
       const sessionId = params.sessionId
 
       try {
@@ -711,7 +711,7 @@ export namespace ACP {
     }
 
     async unstable_forkSession(params: ForkSessionRequest): Promise<ForkSessionResponse> {
-      const directory = params.cwd
+      const directory = params.cwd ?? this.config.defaultCwd ?? process.cwd()
       const mcpServers = params.mcpServers ?? []
 
       try {
@@ -776,7 +776,7 @@ export namespace ACP {
     }
 
     async unstable_resumeSession(params: ResumeSessionRequest): Promise<ResumeSessionResponse> {
-      const directory = params.cwd
+      const directory = params.cwd ?? this.config.defaultCwd ?? process.cwd()
       const sessionId = params.sessionId
       const mcpServers = params.mcpServers ?? []
 
@@ -1147,7 +1147,7 @@ export namespace ACP {
     }
 
     private async loadSessionMode(params: LoadSessionRequest) {
-      const directory = params.cwd
+      const directory = params.cwd ?? this.config.defaultCwd ?? process.cwd()
       const model = await defaultModel(this.config, directory)
       const sessionId = params.sessionId
 
