@@ -81,6 +81,7 @@ Or use npm:
 | `kilo github`             | Manage GitHub agent (install, run)         |
 | `kilo debug`              | Debugging and troubleshooting tools        |
 | `kilo completion`         | Generate shell completion script           |
+| `kilo acp`                | Start ACP (Agent Client Protocol) server   |
 
 ### Global Options
 
@@ -90,6 +91,48 @@ Or use npm:
 | `--version`, `-v` | Show version number                 |
 | `--print-logs`    | Print logs to stderr                |
 | `--log-level`     | Log level: DEBUG, INFO, WARN, ERROR |
+
+## ACP Integration
+
+Kilo CLI supports the [Agent Client Protocol (ACP)](https://agentclientprotocol.com/), enabling integration with any ACP-compatible client.
+
+### Quick Start with acpx
+
+[acpx](https://github.com/openclaw/acpx) is a headless CLI client for ACP agents that works perfectly with Kilo:
+
+```bash
+# Install both tools
+npm install -g @kilocode/cli
+npm install -g acpx
+
+# Use immediately
+acpx opencode exec "help me fix this bug"
+acpx opencode sessions new --name backend-work
+acpx opencode --session backend-work "continue working on the API"
+
+# Auto-approve permissions for CI/automation
+acpx opencode --approve-all exec "run the test suite and fix any failures"
+```
+
+### Supported ACP Clients
+
+- **[acpx](https://github.com/openclaw/acpx)** - Headless CLI client for agent orchestration
+- **Zed Editor** - Built-in ACP support for coding agents
+- **Any ACP v1 client** - Full protocol compliance
+
+### Manual ACP Server
+
+If you want to use Kilo with a custom ACP client, you can start the ACP server manually:
+
+```bash
+# Start ACP server on stdio
+kilo acp
+
+# With specific working directory
+kilo acp --cwd /path/to/project
+```
+
+For detailed technical information, see the [ACP Implementation README](https://github.com/Kilo-Org/kilocode/tree/main/packages/opencode/src/acp).
 
 ### Interactive Slash Commands
 
