@@ -110,8 +110,25 @@ acpx --agent "kilo acp" exec "help me fix this bug"
 acpx --agent "kilo acp" sessions new --name backend-work
 acpx --agent "kilo acp" --session backend-work "continue working on the API"
 
-# Auto-approve permissions for CI/automation
+# Auto-approve permissions for CI/automation (only use in trusted environments)
 acpx --agent "kilo acp" --approve-all exec "run the test suite and fix any failures"
+```
+
+{% callout type="warning" %}
+**Security Note:** The `--approve-all` flag auto-approves all permission requests including file writes and command execution. Only use this in trusted CI/automation environments where you control the input.
+{% /callout %}
+
+### Alternative: Use kx Alias (Optional)
+
+If you want to avoid typing `kilo acp` every time, you can create a personal shell alias (note: this is your own alias, not a shipped command):
+
+```bash
+# Add to your shell profile (.bashrc, .zshrc, etc.)
+alias kx='acpx --agent "kilo acp"'
+
+# Then use the shorter form
+kx exec "help me fix this bug"
+kx sessions new --name backend-work
 ```
 
 ### Alternative: Use kx Alias (Optional)
