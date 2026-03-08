@@ -669,11 +669,12 @@ export namespace ACP {
       try {
         const cursor = params.cursor ? Number(params.cursor) : undefined
         const limit = 100
+        const directory = params.cwd ?? this.config.defaultCwd ?? process.cwd()
 
         const sessions = await this.sdk.session
           .list(
             {
-              directory: params.cwd ?? undefined,
+              directory: directory,
               roots: true,
             },
             { throwOnError: true },
