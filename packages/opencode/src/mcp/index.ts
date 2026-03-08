@@ -156,7 +156,7 @@ export namespace MCP {
         continue
       }
 
-      if (key === "properties" && value && typeof value === "object" && !Array.isArray(value)) {
+      if ((key === "properties" || key === "patternProperties" || key === "dependentSchemas") && value && typeof value === "object" && !Array.isArray(value)) {
         const props: Record<string, unknown> = {}
         for (const [propName, propSchema] of Object.entries(value as Record<string, unknown>)) {
           props[propName] =
