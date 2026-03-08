@@ -21,7 +21,7 @@ export const AcpCommand = cmd({
   },
   handler: async (args) => {
     process.env.KILO_CLIENT = "acp"
-    await bootstrap(process.cwd(), async () => {
+    await bootstrap(args.cwd, async () => {
       const opts = await resolveNetworkOptions(args)
       const server = Server.listen(opts)
 
