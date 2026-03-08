@@ -9,6 +9,7 @@ import { withNetworkOptions, resolveNetworkOptions } from "../network"
 
 const log = Log.create({ service: "acp-command" })
 
+// kilocode_change start
 export const AcpCommand = cmd({
   command: "acp",
   describe: "start ACP (Agent Client Protocol) server",
@@ -58,6 +59,7 @@ export const AcpCommand = cmd({
       new AgentSideConnection((conn) => {
         return agent.create(conn, { sdk, defaultCwd: args.cwd })
       }, stream)
+      // kilocode_change end
 
       log.info("setup connection")
       process.stdin.resume()

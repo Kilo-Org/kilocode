@@ -20,5 +20,5 @@ export interface ACPConfig {
     providerID: string
     modelID: string
   }
-  defaultCwd?: string
+  defaultCwd?: string // kilocode_change
 }

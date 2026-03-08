@@ -122,6 +122,7 @@ export namespace ACP {
       })
   }
 
+  // kilocode_change start
   export async function init({ sdk: _sdk, defaultCwd }: { sdk: KiloClient; defaultCwd?: string }) {
     return {
       create: (connection: AgentSideConnection, fullConfig: ACPConfig) => {
@@ -129,6 +130,7 @@ export namespace ACP {
       },
     }
   }
+  // kilocode_change end
 
   export class Agent implements ACPAgent {
     private connection: AgentSideConnection
