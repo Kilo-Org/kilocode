@@ -121,6 +121,19 @@ export namespace MCP {
   // failures in strict backends like llama.cpp.
   const NON_STANDARD_KEYWORDS = new Set(["endsWith", "startsWith"])
 
+  // JSON Schema keywords whose values are themselves schemas and need recursion.
+  const SCHEMA_VALUED_KEYWORDS = new Set([
+    "additionalProperties",
+    "not",
+    "if",
+    "then",
+    "else",
+    "$defs",
+    "definitions",
+    "contains",
+    "propertyNames",
+  ])
+
   /**
    * Recursively sanitize a JSON Schema object so it is safe for any LLM backend.
    *
@@ -134,8 +147,11 @@ export namespace MCP {
 
       if (key === "pattern" && typeof value === "string") {
         let anchored = value
-        if (!anchored.startsWith("^")) anchored = "^" + anchored
-        if (!anchored.endsWith("$")) anchored = anchored + "$"
+        if (!anchored.startsWith("^") || !anchored.endsWith("$")) {
+          // Wrap in non-capturing group to preserve alternation semantics:
+          // "foo|bar" → "^(?:foo|bar)$" (not "^foo|bar$" which changes meaning)
+          anchored = `^(?:${value})$`
+        }
         result[key] = anchored
         continue
       }
@@ -169,6 +185,19 @@ export namespace MCP {
             ? sanitizeSchema(item as Record<string, unknown>)
             : item,
         )
+        continue
+      }
+
+      // Recurse into other schema-valued keywords (additionalProperties, not,
+      // if, then, else, $defs, etc.) so non-standard keywords are stripped
+      // regardless of where they appear.
+      if (
+        value &&
+        typeof value === "object" &&
+        !Array.isArray(value) &&
+        SCHEMA_VALUED_KEYWORDS.has(key)
+      ) {
+        result[key] = sanitizeSchema(value as Record<string, unknown>)
         continue
       }
 
