@@ -52,7 +52,7 @@ const AutoApproveTab: Component = () => {
   }
 
   const setAll = (level: PermissionLevel) => {
-    const updated: Record<string, PermissionLevel> = {}
+    const updated: Record<string, PermissionLevel> = { "*": level }
     for (const tool of TOOLS) {
       updated[tool] = level
     }
