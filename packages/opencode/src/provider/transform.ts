@@ -54,7 +54,8 @@ export namespace ProviderTransform {
     // empty string messages and remove empty text/reasoning parts from array content
     if (
       model.api.npm === "@ai-sdk/anthropic" ||
-      (model.api.npm === "@ai-sdk/amazon-bedrock" && model.api.id.includes("claude"))
+      (model.api.npm === "@ai-sdk/amazon-bedrock" &&
+        (model.api.id.includes("claude") || model.id.includes("claude")))
     ) {
       msgs = msgs
         .map((msg) => {

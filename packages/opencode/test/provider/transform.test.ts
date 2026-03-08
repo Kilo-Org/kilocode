@@ -1100,9 +1100,41 @@ describe("ProviderTransform.message - bedrock claude empty content filtering", (
     expect(result[1].content).toBe("World")
   })
 
+  test("filters empty text for bedrock claude custom inference profiles", () => {
+    const bedrockProfileModel = {
+      ...bedrockClaudeModel,
+      id: "amazon-bedrock/custom-claude-sonnet-4.5",
+      api: {
+        id: "arn:aws:bedrock:xxx:yyy:application-inference-profile/zzz",
+        url: "https://bedrock-runtime.us-east-1.amazonaws.com",
+        npm: "@ai-sdk/amazon-bedrock",
+      },
+    }
+
+    const msgs = [
+      { role: "user", content: "Hello" },
+      { role: "assistant", content: "" },
+      {
+        role: "assistant",
+        content: [
+          { type: "text", text: "" },
+          { type: "text", text: "Answer" },
+        ],
+      },
+    ] as any[]
+
+    const result = ProviderTransform.message(msgs, bedrockProfileModel, {})
+
+    expect(result).toHaveLength(2)
+    expect(result[0].content).toBe("Hello")
+    expect(result[1].content).toHaveLength(1)
+    expect(result[1].content[0]).toEqual({ type: "text", text: "Answer" })
+  })
+
   test("does not filter for non-claude bedrock models", () => {
     const bedrockNonClaudeModel = {
       ...bedrockClaudeModel,
+      id: "amazon-bedrock/amazon.titan-text-express-v1",
       api: {
         id: "amazon.titan-text-express-v1",
         url: "https://bedrock-runtime.us-east-1.amazonaws.com",
