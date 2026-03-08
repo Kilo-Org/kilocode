@@ -161,7 +161,8 @@ export function CopyPageButton({ className }: CopyPageButtonProps) {
           white-space: nowrap;
         }
 
-        .action-button:hover:not(:disabled) {
+        .page-actions:hover .action-button:not(:disabled),
+        .page-actions:hover .chevron-button {
           background: var(--bg-tertiary, var(--bg-secondary));
           color: var(--text-brand);
           border-color: var(--text-brand);
@@ -171,13 +172,15 @@ export function CopyPageButton({ className }: CopyPageButtonProps) {
           cursor: default;
         }
 
-        .action-button.copied {
+        .action-button.copied,
+        .page-actions:hover .action-button.copied {
           color: var(--success-color, #22c55e);
           border-color: var(--success-color, #22c55e);
           background: var(--success-bg, rgba(34, 197, 94, 0.1));
         }
 
-        .action-button.errored {
+        .action-button.errored,
+        .page-actions:hover .action-button.errored {
           color: var(--error-color, #ef4444);
           border-color: var(--error-color, #ef4444);
           background: var(--error-bg, rgba(239, 68, 68, 0.1));
@@ -196,12 +199,6 @@ export function CopyPageButton({ className }: CopyPageButtonProps) {
           border-radius: 0 0.5rem 0.5rem 0;
           cursor: pointer;
           transition: all 0.15s ease;
-        }
-
-        .chevron-button:hover {
-          background: var(--bg-tertiary, var(--bg-secondary));
-          color: var(--text-brand);
-          border-color: var(--text-brand);
         }
 
         .chevron-button.active {
