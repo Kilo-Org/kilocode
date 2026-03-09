@@ -15,7 +15,7 @@ import { formatRelativeDate } from "../src/utils/date"
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 
-export interface WorktreeItemProps {
+interface WorktreeItemProps {
   worktree: WorktreeState
   /** Display label (resolved from label, first session title, or branch). */
   label: string

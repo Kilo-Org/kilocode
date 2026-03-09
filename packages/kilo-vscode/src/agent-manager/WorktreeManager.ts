@@ -26,10 +26,7 @@ import {
   type BranchListItem,
 } from "./git-import"
 
-export type { BranchListItem }
-export { generateBranchName }
-
-export interface WorktreeInfo {
+interface WorktreeInfo {
   branch: string
   path: string
   /** Bare branch name (e.g. "main"), without remote prefix. */
@@ -42,7 +39,7 @@ export interface WorktreeInfo {
 
 export type StartPointSource = "remote" | "local-tracking" | "local-branch" | "fallback"
 
-export interface StartPointResult {
+interface StartPointResult {
   ref: string
   /** Bare branch name (e.g. "main"), without remote prefix. */
   branch: string
@@ -52,7 +49,7 @@ export interface StartPointResult {
   warning?: string
 }
 
-export type WorktreeProgressStep = "syncing" | "verifying" | "fetching" | "creating"
+type WorktreeProgressStep = "syncing" | "verifying" | "fetching" | "creating"
 
 export interface CreateWorktreeResult {
   branch: string
@@ -65,7 +62,7 @@ export interface CreateWorktreeResult {
   startPointWarning?: string
 }
 
-export interface ExternalWorktreeItem {
+interface ExternalWorktreeItem {
   path: string
   branch: string
 }

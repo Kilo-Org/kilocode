@@ -5,7 +5,7 @@ import * as fs from "fs/promises"
 import simpleGit from "simple-git"
 import { parseWorktreeList, normalizePath } from "./git-import"
 
-export interface GitOpsOptions {
+interface GitOpsOptions {
   log: (...args: unknown[]) => void
   refreshMs?: number
   /** Override git command execution for testing. */
@@ -17,13 +17,13 @@ export interface ApplyConflict {
   reason: string
 }
 
-export interface ApplyCheckResult {
+interface ApplyCheckResult {
   ok: boolean
   conflicts: ApplyConflict[]
   message: string
 }
 
-export interface ApplyPatchResult {
+interface ApplyPatchResult {
   ok: boolean
   conflicts: ApplyConflict[]
   message: string
