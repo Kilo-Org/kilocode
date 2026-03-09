@@ -6,7 +6,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { formatRelativeDate } from "../src/utils/date"
 
-export interface AutoOption {
+interface AutoOption {
   label: string
   hint?: string
   active: boolean
@@ -14,7 +14,7 @@ export interface AutoOption {
   onSelect: () => void
 }
 
-export interface BranchSelectProps {
+interface BranchSelectProps {
   branches: BranchInfo[]
   loading?: boolean
   search: string

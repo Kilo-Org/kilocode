@@ -697,6 +697,7 @@
     "check-types": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "knip": "knip",
     "lint": "eslint src",
     "test": "vscode-test",
     "test:unit": "bun test tests/unit/",
@@ -716,10 +717,12 @@
     "@types/vscode": "^1.108.0",
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.7.1",
     "esbuild": "^0.27.2",
     "esbuild-plugin-solid": "^0.6.0",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
+    "knip": "5.85.0",
     "prettier": "^3.8.1",
     "qrcode": "^1.5.4",
     "storybook": "10.2.10",
@@ -728,8 +731,7 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.54.0",
     "vite": "7.3.1",
-    "vite-plugin-solid": "2.11.10",
-    "@vscode/vsce": "^3.7.1"
+    "vite-plugin-solid": "2.11.10"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

@@ -13,7 +13,9 @@ const SettingsRow: Component<{ title: string; description?: string; last?: boole
     }}
   >
     <div data-slot="settings-row-label">
-      <div data-slot="settings-row-label-title" style={props.description == null ? { "margin-bottom": "0" } : {}}>{props.title}</div>
+      <div data-slot="settings-row-label-title" style={props.description == null ? { "margin-bottom": "0" } : {}}>
+        {props.title}
+      </div>
       {props.description != null && <div data-slot="settings-row-label-subtitle">{props.description}</div>}
     </div>
     <div data-slot="settings-row-input">{props.children}</div>

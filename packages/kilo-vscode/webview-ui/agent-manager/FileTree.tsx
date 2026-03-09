@@ -6,9 +6,6 @@ import { useLanguage } from "../src/context/language"
 import { buildFileTree, flatten, type FileTreeNode } from "./file-tree-utils"
 import type { ReviewComment } from "./review-comments"
 
-export type { FileTreeNode } from "./file-tree-utils"
-export { buildFileTree, flatten, flattenChain } from "./file-tree-utils"
-
 interface FileTreeProps {
   diffs: WorktreeFileDiff[]
   activeFile: string | null

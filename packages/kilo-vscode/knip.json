@@ -1,0 +1,11 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "src/extension.ts",
+    "webview-ui/agent-manager/index.tsx",
+    "webview-ui/src/index.tsx",
+    "src/agent-manager/__tests__/**/*.{ts,spec.ts}"
+  ],
+  "project": ["src/agent-manager/**/*.ts", "webview-ui/agent-manager/**/*.{ts,tsx}"],
+  "exclude": ["dependencies", "devDependencies", "optionalPeerDependencies", "unlisted", "unresolved"]
+}
