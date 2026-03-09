@@ -31,3 +31,20 @@ test("cliCommand falls back to execPath when argv[1] is missing", () => {
 
   expect(result).toEqual(["/usr/local/bin/kilo"])
 })
+
+test("cliCommand falls back to execPath for bun virtual script paths", () => {
+  const unix = cliCommand({
+    execPath: "/tmp/kilo",
+    argv: ["/tmp/kilo", "/$bunfs/root/src/index.js", "pr", "1"],
+    exists: () => true,
+  })
+
+  const win = cliCommand({
+    execPath: "C:/tmp/kilo.exe",
+    argv: ["C:/tmp/kilo.exe", "B:/~BUN/root/src/index.js", "pr", "1"],
+    exists: () => true,
+  })
+
+  expect(unix).toEqual(["/tmp/kilo"])
+  expect(win).toEqual(["C:/tmp/kilo.exe"])
+})

@@ -14,6 +14,8 @@ export function cliCommand(
   },
 ) {
   const script = input.argv[1]
+  if (script?.startsWith("/$bunfs/root/")) return [input.execPath]
+  if (script?.startsWith("B:/~BUN/root/")) return [input.execPath]
   if (script && input.exists(script)) return [input.execPath, script]
   return [input.execPath]
 }
