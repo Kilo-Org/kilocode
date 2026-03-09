@@ -102,6 +102,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       return
     }
     this.log("Opening Agent Manager panel")
+    vscode.commands.executeCommand("workbench.action.closeSidebar")
     TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_OPENED, { source: PLATFORM })
 
     this.panel = vscode.window.createWebviewPanel(
