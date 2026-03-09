@@ -457,9 +457,12 @@ export class WorktreeManager {
         (await (async () => {
           if (!meta?.parentBranch) return undefined
           if (meta.remote) return { branch: meta.parentBranch, remote: meta.remote }
+          // Backward compat: old metadata stored "origin/main" in parentBranch.
+          // Only split when the prefix is a known remote name (not a branch like "release/1.0").
           const split = stripRemotePrefix(meta.parentBranch)
-          if (split.remote && (await this.refExistsLocally(`${split.remote}/${split.branch}`))) {
-            return split
+          if (split.remote) {
+            const remotes = await this.git.getRemotes().catch(() => [])
+            if (remotes.some((r) => r.name === split.remote)) return split
           }
           return { branch: meta.parentBranch }
         })()) ?? (await this.resolveBaseBranch())
