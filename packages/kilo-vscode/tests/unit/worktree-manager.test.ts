@@ -813,3 +813,58 @@ describe("WorktreeManager.createWorktree advanced", () => {
     expect(headParams.latest?.hash).toBe(devParams.latest?.hash)
   })
 })
+
+// ---------------------------------------------------------------------------
+// WorktreeManager -- git lock serialization
+// ---------------------------------------------------------------------------
+
+describe("WorktreeManager git lock serialization", () => {
+  it("concurrent worktree creations both succeed", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    const [a, b] = await Promise.all([
+      mgr.createWorktree({ prompt: "concurrent-a" }),
+      mgr.createWorktree({ prompt: "concurrent-b" }),
+    ])
+
+    expect(a.branch).not.toBe(b.branch)
+
+    const statA = await fs.stat(path.join(a.path, ".git"))
+    const statB = await fs.stat(path.join(b.path, ".git"))
+    expect(statA.isFile()).toBe(true)
+    expect(statB.isFile()).toBe(true)
+  })
+
+  it("lock releases after error so subsequent operations succeed", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    // First operation fails (nonexistent branch)
+    const failing = mgr.createWorktree({ existingBranch: "nonexistent" }).catch((e: unknown) => e)
+    // Second operation queues behind the first and should succeed after lock release
+    const succeeding = mgr.createWorktree({ prompt: "after-error" })
+
+    const [err, result] = await Promise.all([failing, succeeding])
+    expect(err).toBeInstanceOf(Error)
+    expect(result.branch).toBeTruthy()
+
+    const stat = await fs.stat(path.join(result.path, ".git"))
+    expect(stat.isFile()).toBe(true)
+  })
+
+  it("concurrent remove and create on the same repo do not conflict", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    // Create a worktree first
+    const wt = await mgr.createWorktree({ prompt: "to-remove" })
+
+    // Concurrently remove and create
+    const [, created] = await Promise.all([mgr.removeWorktree(wt.path), mgr.createWorktree({ prompt: "new-one" })])
+
+    expect(created.branch).toBeTruthy()
+    const stat = await fs.stat(path.join(created.path, ".git"))
+    expect(stat.isFile()).toBe(true)
+  })
+})

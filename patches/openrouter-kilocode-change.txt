@@ -1,1 +1,0 @@
-In addition to the reasoning accumulation fixed from upstream, we also added support for OAI's phase field to the OpenRouter AI SDK provider.
