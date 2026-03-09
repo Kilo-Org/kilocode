@@ -556,7 +556,8 @@
   line-height: 1.4;
   white-space: pre-wrap;
   word-wrap: break-word;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   z-index: 0;
   color: var(--vscode-input-foreground);
 }

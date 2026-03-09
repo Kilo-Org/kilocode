@@ -486,7 +486,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
 
           <div class="migration-wizard__features">
             <div class="migration-wizard__feature">
-              <div class="migration-wizard__feature-icon migration-wizard__feature-icon--blue">
+              <div class="migration-wizard__feature-icon">
                 <BoltIcon />
               </div>
               <div class="migration-wizard__feature-text">
@@ -496,7 +496,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
             </div>
 
             <div class="migration-wizard__feature">
-              <div class="migration-wizard__feature-icon migration-wizard__feature-icon--purple">
+              <div class="migration-wizard__feature-icon">
                 <MonitorIcon />
               </div>
               <div class="migration-wizard__feature-text">
@@ -506,7 +506,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
             </div>
 
             <div class="migration-wizard__feature">
-              <div class="migration-wizard__feature-icon migration-wizard__feature-icon--cyan">
+              <div class="migration-wizard__feature-icon">
                 <UsersIcon />
               </div>
               <div class="migration-wizard__feature-text">
@@ -516,7 +516,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
             </div>
 
             <div class="migration-wizard__feature">
-              <div class="migration-wizard__feature-icon migration-wizard__feature-icon--orange">
+              <div class="migration-wizard__feature-icon">
                 <ServerIcon />
               </div>
               <div class="migration-wizard__feature-text">
