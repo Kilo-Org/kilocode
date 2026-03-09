@@ -106,12 +106,13 @@ export namespace Agent {
             question: "allow",
             plan_exit: "allow",
             external_directory: {
+              // kilocode_change - plans are always in global data dir
               [path.join(Global.Path.data, "plans", "*")]: "allow",
             },
             edit: {
               "*": "deny",
-              [path.join(".opencode", "plans", "*.md")]: "allow",
-              [path.relative(Instance.worktree, path.join(Global.Path.data, path.join("plans", "*.md")))]: "allow",
+              // kilocode_change - plans are always in global data dir
+              [path.join(Global.Path.data, "plans", "**", "*.md")]: "allow",
             },
           }),
           user,

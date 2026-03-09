@@ -22,7 +22,7 @@ export const PlanExitTool = Tool.define("plan_exit", {
   parameters: z.object({}),
   async execute(_params, ctx) {
     const session = await Session.get(ctx.sessionID)
-    const plan = path.relative(Instance.worktree, Session.plan(session))
+    const plan = Session.plan(session)
     return {
       title: "Planning complete",
       output: `Plan is ready at ${plan}. Ending planning turn.`,

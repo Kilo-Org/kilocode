@@ -122,7 +122,7 @@ describe("plan_exit detection", () => {
           {
             tool: "plan_exit",
             input: {},
-            output: "Plan is ready at .opencode/plans/plan.md. Ending planning turn.",
+            output: "Plan is ready at plans/plan.md. Ending planning turn.",
           },
         ],
       })

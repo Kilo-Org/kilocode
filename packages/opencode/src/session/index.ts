@@ -358,12 +358,12 @@ export namespace Session {
     return result
   }
 
+  // kilocode_change start - always store plans in global data dir to avoid polluting the worktree
   export function plan(input: { slug: string; time: { created: number } }) {
-    const base = Instance.project.vcs
-      ? path.join(Instance.worktree, ".opencode", "plans")
-      : path.join(Global.Path.data, "plans")
+    const base = path.join(Global.Path.data, "plans", Instance.project.id)
     return path.join(base, [input.time.created, input.slug].join("-") + ".md")
   }
+  // kilocode_change end
 
   export const get = fn(Identifier.schema("session"), async (id) => {
     const row = Database.use((db) => db.select().from(SessionTable).where(eq(SessionTable.id, id)).get())

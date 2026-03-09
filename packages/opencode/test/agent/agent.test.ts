@@ -109,7 +109,7 @@ test("ask agent denies edit/write/bash even when user config adds a specific edi
 })
 // kilocode_change end
 
-test("plan agent denies edits except .opencode/plans/*", async () => {
+test("plan agent denies edits except global data plans dir", async () => {
   await using tmp = await tmpdir()
   await Instance.provide({
     directory: tmp.path,
@@ -118,8 +118,10 @@ test("plan agent denies edits except .opencode/plans/*", async () => {
       expect(plan).toBeDefined()
       // Wildcard is denied
       expect(evalPerm(plan, "edit")).toBe("deny")
-      // But specific path is allowed
-      expect(PermissionNext.evaluate("edit", ".opencode/plans/foo.md", plan!.permission).action).toBe("allow")
+      // But plans in global data dir are allowed
+      const { Global } = await import("../../src/global/index")
+      const planPath = path.join(Global.Path.data, "plans", "test-project", "123-test.md")
+      expect(PermissionNext.evaluate("edit", planPath, plan!.permission).action).toBe("allow")
     },
   })
 })
