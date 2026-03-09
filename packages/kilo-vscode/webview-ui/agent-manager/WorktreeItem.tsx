@@ -229,7 +229,7 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
               <Button
                 variant="ghost"
                 size="small"
-                onClick={(e) => {
+                onClick={(e: MouseEvent) => {
                   e.stopPropagation()
                   props.onRemoveStale()
                 }}

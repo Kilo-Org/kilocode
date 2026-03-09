@@ -3,7 +3,7 @@ import eslintConfigPrettier from "eslint-config-prettier"
 
 export default [
   {
-    files: ["**/*.ts"],
+    files: ["**/*.ts", "**/*.tsx"],
   },
   {
     plugins: {

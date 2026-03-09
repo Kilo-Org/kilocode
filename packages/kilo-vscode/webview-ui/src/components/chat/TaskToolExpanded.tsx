@@ -68,6 +68,7 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
   const childPermission = createMemo(() => {
     const id = childSessionId()
     if (!id) return undefined
+    // @ts-expect-error — permission field is an extension-specific addition not yet in kilo-ui's Data type
     const perms = data.store.permission?.[id] as unknown[]
     return (perms as PermissionRequest[] | undefined)?.[0]
   })
@@ -86,7 +87,9 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
 
   const respond = (response: "once" | "always" | "reject") => {
     const perm = childPermission()
+    // @ts-expect-error — respondToPermission is an extension-specific addition not yet in kilo-ui's Data context
     if (!perm || !data.respondToPermission) return
+    // @ts-expect-error — respondToPermission is an extension-specific addition not yet in kilo-ui's Data context
     data.respondToPermission({
       sessionID: perm.sessionID,
       permissionID: perm.id,

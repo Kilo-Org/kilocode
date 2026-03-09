@@ -54,7 +54,7 @@ const baseAssistantMessage: SDKAssistantMessage = {
 // Tool parts
 // ---------------------------------------------------------------------------
 
-const globPending: ToolPart = {
+const globPending = {
   id: "part-glob-001",
   sessionID: SESSION_ID,
   messageID: ASST_MSG_ID,
@@ -64,7 +64,6 @@ const globPending: ToolPart = {
   state: {
     status: "pending",
     input: { pattern: "**/*.md", path: "." },
-    title: "Searching for files",
     metadata: {},
     time: { start: now - 3000 },
   },
@@ -138,7 +137,7 @@ const lsCompleted: ToolPart = {
   },
 }
 
-const bashPending: ToolPart = {
+const bashPending = {
   id: "part-bash-001",
   sessionID: SESSION_ID,
   messageID: ASST_MSG_ID,
@@ -148,7 +147,6 @@ const bashPending: ToolPart = {
   state: {
     status: "pending",
     input: { description: "Run tests", command: "bun test" },
-    title: "Execute command",
     metadata: {},
     time: { start: now - 2000 },
   },
@@ -242,7 +240,6 @@ const questionDismissedPart: ToolPart = {
     status: "error",
     input: { question: "Which testing framework?", options: [] },
     error: "Error: User dismissed this question",
-    title: "Question dismissed",
     metadata: {},
     time: { start: now - 2000, end: now - 1500 },
   },
