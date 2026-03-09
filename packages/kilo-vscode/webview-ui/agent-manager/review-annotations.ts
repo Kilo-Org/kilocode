@@ -1,6 +1,6 @@
 import type { AnnotationSide, DiffLineAnnotation } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
-import { extractLines, formatReviewCommentMarkdown, type ReviewComment } from "./review-comments"
+import { extractLines, type ReviewComment } from "./review-comments"
 
 export interface AnnotationLabels {
   commentOnLine: (line: number) => string
@@ -221,8 +221,7 @@ export function buildReviewAnnotation(
 
   actions.appendChild(
     makeActionButton(handlers.labels.sendToChat, makeIcon("M1 1l14 7-14 7V9l10-1L1 7z"), () => {
-      const msg = formatReviewCommentMarkdown(comment)
-      window.dispatchEvent(new MessageEvent("message", { data: { type: "appendChatBoxMessage", text: msg } }))
+      window.dispatchEvent(new MessageEvent("message", { data: { type: "appendReviewComments", comments: [comment] } }))
       handlers.deleteComment(comment.id)
     }),
   )

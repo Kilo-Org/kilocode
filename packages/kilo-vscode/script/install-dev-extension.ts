@@ -7,8 +7,8 @@ const root = join(import.meta.dir, "..")
 const outDir = join(root, "out")
 const pkgPath = join(root, "package.json")
 
-if (existsSync(outDir) && !statSync(outDir).isDirectory()) {
-  rmSync(outDir)
+if (existsSync(outDir)) {
+  rmSync(outDir, { recursive: true, force: true })
 }
 mkdirSync(outDir, { recursive: true })
 

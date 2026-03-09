@@ -1,0 +1,413 @@
+/* legacy-migration - Scoped styles for the migration wizard. */
+
+.migration-wizard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  font-size: 13px;
+  color: var(--vscode-foreground);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  padding: 16px;
+}
+
+.migration-wizard__container {
+  width: 520px;
+}
+
+/* Screen transitions */
+.migration-wizard__screen--hidden {
+  display: none;
+}
+
+.migration-wizard__screen--active {
+  display: block;
+  animation: mw-screen-enter 0.28s ease-out;
+}
+
+@keyframes mw-screen-enter {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Header */
+.migration-wizard__header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.migration-wizard__logo {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 20px;
+}
+
+.migration-wizard__logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.migration-wizard__header h1 {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  margin-bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  width: 100%;
+}
+
+.migration-wizard__badge {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--vscode-button-background) 15%, transparent);
+  color: var(--vscode-button-background);
+  vertical-align: middle;
+  text-transform: uppercase;
+}
+
+.migration-wizard__header p {
+  font-size: 13px;
+  color: var(--vscode-descriptionForeground);
+  line-height: 1.6;
+  max-width: 440px;
+  margin: 0 auto;
+}
+
+/* Feature cards — What's New */
+.migration-wizard__features {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.migration-wizard__feature {
+  background: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.migration-wizard__feature-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--vscode-button-background) 15%, transparent);
+  color: var(--vscode-button-background);
+}
+
+.migration-wizard__feature-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.migration-wizard__feature-text {
+  flex: 1;
+}
+
+.migration-wizard__feature-text .title {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-bottom: 3px;
+}
+
+.migration-wizard__feature-text .detail {
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground);
+  line-height: 1.45;
+}
+
+/* Blog link */
+.migration-wizard__blog-link {
+  text-align: center;
+  margin-top: 16px;
+}
+
+.migration-wizard__blog-link a {
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground);
+  opacity: 0.65;
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+
+.migration-wizard__blog-link a:hover {
+  opacity: 1;
+}
+
+.migration-wizard__blog-link a span {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Migration card */
+.migration-wizard__card {
+  background: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.migration-wizard__section-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 16px 20px 8px;
+  color: var(--vscode-descriptionForeground);
+  opacity: 0.6;
+}
+
+.migration-wizard__item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 20px;
+  border-top: 1px solid var(--vscode-panel-border);
+}
+
+.migration-wizard__item:first-child,
+.migration-wizard__section-label + .migration-wizard__item {
+  border-top: none;
+}
+
+/* Custom checkbox */
+.migration-wizard__checkbox {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.migration-wizard__checkbox input {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  margin: 0;
+}
+
+.migration-wizard__checkmark {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  border: 2px solid color-mix(in srgb, var(--vscode-foreground) 15%, transparent);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.migration-wizard__checkbox input:checked + .migration-wizard__checkmark {
+  background: var(--vscode-button-background);
+  border-color: var(--vscode-button-background);
+}
+
+.migration-wizard__checkmark svg {
+  width: 12px;
+  height: 12px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.migration-wizard__checkbox input:checked + .migration-wizard__checkmark svg {
+  opacity: 1;
+}
+
+/* Status indicators (during/after migration) */
+.migration-wizard__status-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.migration-wizard__status-icon--success {
+  background: rgba(52, 199, 89, 0.12);
+  color: var(--vscode-testing-iconPassed, #34c759);
+}
+
+.migration-wizard__status-icon--warning {
+  background: rgba(255, 159, 10, 0.12);
+  color: var(--vscode-testing-iconQueued, #ff9f0a);
+}
+
+.migration-wizard__status-icon--error {
+  background: rgba(241, 76, 76, 0.12);
+  color: var(--vscode-testing-iconFailed, #f14c4c);
+}
+
+.migration-wizard__status-icon--pending {
+  border: 2px solid color-mix(in srgb, var(--vscode-foreground) 10%, transparent);
+  background: transparent;
+}
+
+.migration-wizard__status-icon svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Spinner for migrating state */
+.migration-wizard__spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid color-mix(in srgb, var(--vscode-button-background) 30%, transparent);
+  border-top-color: var(--vscode-button-background);
+  border-radius: 50%;
+  animation: migration-spin 0.6s linear infinite;
+}
+
+@keyframes migration-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Item text */
+.migration-wizard__item-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.migration-wizard__item-text .label {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.migration-wizard__item-text .desc {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  line-height: 1.4;
+  margin-top: 1px;
+}
+
+/* Disabled items */
+.migration-wizard__item--disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.migration-wizard__item--disabled .migration-wizard__checkmark {
+  border-color: color-mix(in srgb, var(--vscode-foreground) 8%, transparent);
+}
+
+/* Clickable item (cleanup row) — text area triggers checkbox */
+.migration-wizard__item--clickable .migration-wizard__item-text {
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Divider */
+.migration-wizard__divider {
+  height: 1px;
+  background: var(--vscode-panel-border);
+}
+
+/* Summary badge */
+.migration-wizard__summary {
+  text-align: center;
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground);
+  padding: 12px 20px 4px;
+}
+
+.migration-wizard__summary--success {
+  color: var(--vscode-testing-iconPassed, #34c759);
+}
+
+/* Footer */
+.migration-wizard__footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 20px 0;
+  margin-top: 20px;
+}
+
+.migration-wizard__footer--space-between {
+  justify-content: space-between;
+}
+
+.migration-wizard__btn-group {
+  display: flex;
+  gap: 10px;
+}
+
+/* Buttons */
+.migration-wizard__btn {
+  font-family: var(--vscode-font-family);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 9px 20px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.migration-wizard__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.migration-wizard__btn--ghost {
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+}
+
+.migration-wizard__btn--ghost:hover {
+  color: var(--vscode-foreground);
+  background: color-mix(in srgb, var(--vscode-foreground) 5%, transparent);
+}
+
+.migration-wizard__btn--primary {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.migration-wizard__btn--primary:not(:disabled):hover {
+  background: var(--vscode-button-hoverBackground);
+  box-shadow:
+    0 2px 8px color-mix(in srgb, var(--vscode-button-background) 30%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Nothing to migrate */
+.migration-wizard__empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+  font-size: 12px;
+}

@@ -64,9 +64,9 @@ Several models are available at no cost, subject to rate limits:
 
 Free models are available to both authenticated and anonymous users. Anonymous users are rate-limited to 200 requests per hour per IP address.
 
-## The `kilo/auto` model
+## The `kilo-auto/frontier` model
 
-The `kilo/auto` virtual model automatically selects the best model based on the task type. The selection is controlled by the `x-kilocode-mode` request header:
+The `kilo-auto/frontier` virtual model automatically selects the best model based on the task type. The selection is controlled by the `x-kilocode-mode` request header:
 
 | Mode                                                           | Resolved Model                |
 | -------------------------------------------------------------- | ----------------------------- |
@@ -76,7 +76,7 @@ The `kilo/auto` virtual model automatically selects the best model based on the 
 
 ```json
 {
-  "model": "kilo/auto",
+  "model": "kilo-auto/frontier",
   "messages": [{ "role": "user", "content": "Help me design a database schema" }]
 }
 ```
@@ -88,7 +88,7 @@ curl -X POST "https://api.kilo.ai/api/gateway/chat/completions" \
   -H "Authorization: Bearer $KILO_API_KEY" \
   -H "x-kilocode-mode: plan" \
   -H "Content-Type: application/json" \
-  -d '{"model": "kilo/auto", "messages": [{"role": "user", "content": "Design a database schema"}]}'
+  -d '{"model": "kilo-auto/frontier", "messages": [{"role": "user", "content": "Design a database schema"}]}'
 ```
 
 ## Providers

@@ -1,6 +1,7 @@
 import * as vscode from "vscode"
+import type { KiloClient } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../cli-backend/connection-service"
-import type { HttpClient } from "../cli-backend/http-client"
+import { getErrorMessage } from "../../kilo-provider-utils"
 
 let lastGeneratedMessage: string | undefined
 let lastWorkspacePath: string | undefined
@@ -40,9 +41,9 @@ export function registerCommitMessageService(
       return
     }
 
-    let client: HttpClient | undefined
+    let client: KiloClient | undefined
     try {
-      client = connectionService.getHttpClient()
+      client = connectionService.getClient()
     } catch {
       vscode.window.showErrorMessage("Kilo backend is not connected. Please wait for the connection to establish.")
       return
@@ -60,7 +61,11 @@ export function registerCommitMessageService(
       .withProgress(
         { location: vscode.ProgressLocation.SourceControl, title: "Generating commit message..." },
         async () => {
-          const message = await client.generateCommitMessage(path, undefined, previousMessage)
+          const { data } = await client.commitMessage.generate(
+            { path, selectedFiles: undefined, previousMessage },
+            { throwOnError: true },
+          )
+          const message = data.message
           repository.inputBox.value = message
           lastGeneratedMessage = message
           lastWorkspacePath = path
@@ -68,7 +73,7 @@ export function registerCommitMessageService(
         },
       )
       .then(undefined, (error: unknown) => {
-        const msg = error instanceof Error ? error.message : String(error)
+        const msg = getErrorMessage(error)
         console.error("[Kilo New] Failed to generate commit message:", msg)
         vscode.window.showErrorMessage(`Failed to generate commit message: ${msg}`)
       })

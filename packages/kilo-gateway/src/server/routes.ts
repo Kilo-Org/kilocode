@@ -19,6 +19,7 @@ type Validator = any
 type Resolver = any
 type Errors = any
 type Auth = any
+type ModelCache = { clear: (providerID: string) => void }
 type Z = any
 
 interface KiloRoutesDeps extends ImportDeps {
@@ -28,6 +29,7 @@ interface KiloRoutesDeps extends ImportDeps {
   resolver: Resolver
   errors: Errors
   Auth: Auth
+  ModelCache: ModelCache
   z: Z
 }
 
@@ -72,6 +74,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
     Bus,
     SessionCreatedEvent,
     Identifier,
+    ModelCache,
   } = deps
 
   const Organization = z.object({
@@ -94,6 +97,27 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
     profile: Profile,
     balance: Balance.nullable(),
     currentOrgId: z.string().nullable(),
+  })
+
+  const FimStreamChunk = z.object({
+    choices: z
+      .array(
+        z.object({
+          delta: z
+            .object({
+              content: z.string().optional(),
+            })
+            .optional(),
+        }),
+      )
+      .optional(),
+    usage: z
+      .object({
+        prompt_tokens: z.number().optional(),
+        completion_tokens: z.number().optional(),
+      })
+      .optional(),
+    cost: z.number().optional(),
   })
 
   return new Hono()
@@ -179,6 +203,8 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
           ...(organizationId && { accountId: organizationId }),
         })
 
+        ModelCache.clear("kilo")
+
         return c.json(true)
       },
     )
@@ -193,7 +219,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
             description: "Streaming FIM completion response",
             content: {
               "text/event-stream": {
-                schema: resolver(z.any()),
+                schema: resolver(FimStreamChunk),
               },
             },
           },
@@ -233,10 +259,10 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
         const endpoint = new URL("fim/completions", baseApiUrl)
 
         const headers = {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-            ...buildKiloHeaders(undefined, { kilocodeOrganizationId: organizationId }),
-            [HEADER_FEATURE]: "autocomplete",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          ...buildKiloHeaders(undefined, { kilocodeOrganizationId: organizationId }),
+          [HEADER_FEATURE]: "autocomplete",
         }
 
         const response = await fetch(endpoint, {

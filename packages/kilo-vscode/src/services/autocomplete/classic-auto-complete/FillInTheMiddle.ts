@@ -61,6 +61,7 @@ export class FimPromptBuilder {
     model: AutocompleteModel,
     prompt: FimAutocompletePrompt,
     processSuggestion: (text: string) => FillInAtCursorSuggestion,
+    signal?: AbortSignal,
   ): Promise<FimCompletionResult> {
     const { formattedPrefix, prunedSuffix, autocompleteInput } = prompt
     let perflog = ""
@@ -82,12 +83,7 @@ export class FimPromptBuilder {
       response += text
     }
     logtime("prep fim")
-    const usageInfo = await model.generateFimResponse(
-      formattedPrefix,
-      prunedSuffix,
-      onChunk,
-      autocompleteInput.completionId, // Pass completionId as taskId for tracking
-    )
+    const usageInfo = await model.generateFimResponse(formattedPrefix, prunedSuffix, onChunk, signal)
     logtime("fim network")
     console.log("[FIM] response:", response)
 
