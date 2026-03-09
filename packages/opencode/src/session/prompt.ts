@@ -109,6 +109,31 @@ export namespace SessionPrompt {
       msg.parts.some((part) => part.type === "tool" && part.state.status === "completed" && reviewTools.has(part.tool)),
     )
   }
+
+  function hasPlanningContext(input: { turns: ReturnType<typeof reviewTurns>; messages: MessageV2.WithParts[] }) {
+    // Same-session plan → code: a prior turn contains a completed plan_exit
+    const priorHasPlanExit = input.turns
+      .slice(0, -1)
+      .some((t) =>
+        t.turn.some((msg) =>
+          msg.parts.some((p) => p.type === "tool" && p.tool === "plan_exit" && p.state.status === "completed"),
+        ),
+      )
+    if (priorHasPlanExit) return true
+
+    // Cross-session handover: first user message starts with the plan prefix
+    const first = input.messages.find((m) => m.info.role === "user")
+    if (first) {
+      const text = first.parts
+        .filter((p): p is MessageV2.TextPart => p.type === "text" && !p.synthetic)
+        .map((p) => p.text)
+        .join("\n")
+        .trimStart()
+      if (text.startsWith(PlanFollowup.PLAN_PREFIX)) return true
+    }
+
+    return false
+  }
   // kilocode_change end
 
   // kilocode_change start - share review follow-up trigger logic with tests
@@ -124,9 +149,10 @@ export namespace SessionPrompt {
     const alreadyImplemented = turns.slice(0, -1).some(isImplementationTurn)
     if (alreadyImplemented) return false
 
+    if (!hasPlanningContext({ turns, messages: input.messages })) return false
+
     return true
   }
-  // kilocode_change end
   // kilocode_change end
 
   const log = Log.create({ service: "session.prompt" })

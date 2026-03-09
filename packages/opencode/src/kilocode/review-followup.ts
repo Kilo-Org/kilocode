@@ -1,3 +1,4 @@
+import { Flag } from "@/flag/flag"
 import { Identifier } from "@/id/id"
 import { Question } from "@/question"
 import { Session } from "@/session"
@@ -6,6 +7,7 @@ import { Review } from "@/kilocode/review/review"
 
 export namespace ReviewFollowup {
   export const ANSWER_START = "Start code review"
+  export const ANSWER_SKIP = "Continue without review"
 
   async function inject(input: { sessionID: string; model: MessageV2.User["model"]; text: string }) {
     const msg: MessageV2.User = {
@@ -32,7 +34,7 @@ export namespace ReviewFollowup {
   function prompt(input: { sessionID: string; abort: AbortSignal }) {
     const promise = Question.ask({
       sessionID: input.sessionID,
-      blocking: false,
+      blocking: Flag.KILO_CLIENT !== "vscode",
       questions: [
         {
           question: "Start an immediate review of uncommitted changes?",
@@ -42,6 +44,10 @@ export namespace ReviewFollowup {
             {
               label: ANSWER_START,
               description: "Run a local review for current uncommitted changes",
+            },
+            {
+              label: ANSWER_SKIP,
+              description: "Dismiss the review suggestion and continue",
             },
           ],
         },

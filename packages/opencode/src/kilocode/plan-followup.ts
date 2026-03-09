@@ -108,6 +108,7 @@ export async function generateHandover(input: {
 export namespace PlanFollowup {
   const log = Log.create({ service: "plan.followup" })
 
+  export const PLAN_PREFIX = "Implement the following plan:"
   export const ANSWER_NEW_SESSION = "Start new session"
   export const ANSWER_CONTINUE = "Continue here"
 
@@ -216,7 +217,7 @@ export namespace PlanFollowup {
       Todo.get(input.sessionID),
     ])
 
-    const sections = [`Implement the following plan:\n\n${input.plan}`]
+    const sections = [`${PLAN_PREFIX}\n\n${input.plan}`]
 
     if (handover) {
       sections.push(`## Handover from Planning Session\n\n${handover}`)
