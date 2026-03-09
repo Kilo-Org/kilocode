@@ -7,7 +7,7 @@ export interface BranchListItem {
   isCheckedOut?: boolean
 }
 
-export interface PRUrlParts {
+interface PRUrlParts {
   owner: string
   repo: string
   number: number
@@ -20,14 +20,14 @@ export interface PRInfo {
   title: string
 }
 
-export interface WorktreeEntry {
+interface WorktreeEntry {
   path: string
   branch: string
   bare: boolean
   detached: boolean
 }
 
-export type PRErrorKind = "not_found" | "gh_missing" | "gh_auth" | "unknown"
+type PRErrorKind = "not_found" | "gh_missing" | "gh_auth" | "unknown"
 
 export function parsePRUrl(url: string): PRUrlParts | null {
   let normalized = url.trim()

@@ -216,12 +216,21 @@ export const SessionProvider: ParentComponent = (props) => {
   })
 
   /** Parse a "provider/model" config string into a ModelSelection (or null). */
-  function getModeModel(agentName: string): ModelSelection | null {
-    const raw = config().agent?.[agentName]?.model
+  function parseModel(raw: string | undefined | null): ModelSelection | null {
     if (!raw) return null
     const slash = raw.indexOf("/")
     if (slash <= 0) return null
     return { providerID: raw.slice(0, slash), modelID: raw.slice(slash + 1) }
+  }
+
+  /** Per-mode model from config (e.g. config.agent.code.model). */
+  function getModeModel(agentName: string): ModelSelection | null {
+    return parseModel(config().agent?.[agentName]?.model)
+  }
+
+  /** Global default model from config (config.model). */
+  function getGlobalModel(): ModelSelection | null {
+    return parseModel(config().model)
   }
 
   // Keep model selection in sync with provider/mode default until the user
@@ -231,19 +240,18 @@ export const SessionProvider: ParentComponent = (props) => {
     const agentName = selectedAgentName()
     if (userSetAgents()[agentName]) return
 
-    // Per-mode config takes priority over global default
-    const modeModel = getModeModel(agentName)
-    const sel = modeModel ?? def
+    // Per-mode config > global config model > VS Code default selection
+    const sel = getModeModel(agentName) ?? getGlobalModel() ?? def
     if (sel) setStore("modelSelections", agentName, sel)
   })
 
   // Global model selection per agent/mode
-  // Precedence: user override > per-mode config > global default > kilo-auto/frontier
+  // Precedence: user override > per-mode config > global config model > VS Code default > kilo-auto/frontier
   const selected = createMemo<ModelSelection | null>(() => {
     const agentName = selectedAgentName()
     const override = store.modelSelections[agentName]
     if (override) return override
-    return getModeModel(agentName) ?? provider.defaultSelection()
+    return getModeModel(agentName) ?? getGlobalModel() ?? provider.defaultSelection()
   })
 
   function selectModel(providerID: string, modelID: string) {
@@ -255,7 +263,7 @@ export const SessionProvider: ParentComponent = (props) => {
   /** The config/default model for the current mode (what settings says). */
   const configModel = createMemo<ModelSelection | null>(() => {
     const agentName = selectedAgentName()
-    return getModeModel(agentName) ?? provider.defaultSelection()
+    return getModeModel(agentName) ?? getGlobalModel() ?? provider.defaultSelection()
   })
 
   /** True when the active model differs from what the config dictates. */

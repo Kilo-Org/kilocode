@@ -34,7 +34,10 @@ export class SdkSSEAdapter {
   private abortController: AbortController | null = null
   private heartbeatTimer: ReturnType<typeof setTimeout> | null = null
 
-  private static readonly HEARTBEAT_TIMEOUT_MS = 90_000
+  // 15s matches packages/app/src/context/global-sdk.tsx — server sends heartbeats
+  // every 10s, so this gives a 5s grace window before forcing a reconnect.
+  // Reduced from 90s: with 90s a dead connection could linger for ~1.5 minutes.
+  private static readonly HEARTBEAT_TIMEOUT_MS = 15_000
   private static readonly RECONNECT_DELAY_MS = 250
 
   constructor(private readonly client: KiloClient) {}

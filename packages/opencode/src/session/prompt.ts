@@ -1993,7 +1993,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       tools: {},
       model,
       abort: new AbortController().signal,
-      sessionID: input.session.id,
+      sessionID: `title-${input.session.id}`, // kilocode_change - separate taskID to prevent small-model leak (#6552)
       retries: 2,
       messages: [
         {
