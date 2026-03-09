@@ -68,7 +68,7 @@ export class ServerManager {
           KILO_SERVER_PASSWORD: password,
           KILO_CLIENT: "vscode",
           KILO_ENABLE_QUESTION_TOOL: "true",
-          KILOCODE_FEATURE: "vscode-extension", // kilocode_change - feature tracking
+          KILOCODE_FEATURE: "vscode-extension",
           KILO_TELEMETRY_LEVEL: vscode.env.isTelemetryEnabled ? "all" : "off",
           KILO_APP_NAME: "kilo-code",
           KILO_EDITOR_NAME: vscode.env.appName,
@@ -78,6 +78,7 @@ export class ServerManager {
           KILO_VSCODE_VERSION: vscode.version,
         },
         stdio: ["ignore", "pipe", "pipe"],
+        detached: true,
       })
       console.log("[Kilo New] ServerManager: 📦 Process spawned with PID:", serverProcess.pid)
 
@@ -121,7 +122,7 @@ export class ServerManager {
       setTimeout(() => {
         if (!resolved) {
           console.error("[Kilo New] ServerManager: ⏰ Server startup timeout (30s)")
-          serverProcess.kill()
+          ServerManager.killProcess(serverProcess)
           reject(new Error("Server startup timeout"))
         }
       }, 30000)
@@ -130,16 +131,55 @@ export class ServerManager {
 
   private getCliPath(): string {
     // Always use the bundled binary from the extension directory
-    const binName = process.platform === "win32" ? "kilo.exe" : "kilo" // kilocode_change
+    const binName = process.platform === "win32" ? "kilo.exe" : "kilo"
     const cliPath = path.join(this.context.extensionPath, "bin", binName)
     console.log("[Kilo New] ServerManager: 📦 Using CLI path:", cliPath)
     return cliPath
   }
 
-  dispose(): void {
-    if (this.instance) {
-      this.instance.process.kill("SIGTERM")
-      this.instance = null
+  /**
+   * Kill a process and its entire process group.
+   * On Unix, we send the signal to -pid (negative) to reach the whole group,
+   * mirroring the desktop app's ProcessGroup::leader() + start_kill() pattern.
+   * On Windows, process.kill() on the child handle is sufficient.
+   */
+  private static killProcess(proc: ChildProcess, signal: NodeJS.Signals = "SIGTERM"): void {
+    if (proc.pid === undefined) {
+      return
     }
+    try {
+      if (process.platform !== "win32") {
+        // Negative PID targets the entire process group
+        process.kill(-proc.pid, signal)
+      } else {
+        proc.kill(signal)
+      }
+    } catch {
+      // Process already gone — ignore
+    }
+  }
+
+  dispose(): void {
+    if (!this.instance) {
+      return
+    }
+    const proc = this.instance.process
+    this.instance = null
+
+    console.log("[Kilo New] ServerManager: 🔴 Disposing — sending SIGTERM to process group, PID:", proc.pid)
+    ServerManager.killProcess(proc, "SIGTERM")
+
+    // SIGKILL fallback after 5s: mirrors the desktop app going straight to
+    // start_kill(). Ensures the process tree dies even if SIGTERM is ignored
+    // or Instance.disposeAll() hangs past the serve.ts shutdown timeout.
+    const timer = setTimeout(() => {
+      if (proc.exitCode === null) {
+        console.warn("[Kilo New] ServerManager: ⚠️ Process did not exit after SIGTERM, sending SIGKILL")
+        ServerManager.killProcess(proc, "SIGKILL")
+      }
+    }, 5000)
+    // unref so this timer doesn't prevent the extension host from exiting
+    timer.unref()
+    proc.on("exit", () => clearTimeout(timer))
   }
 }

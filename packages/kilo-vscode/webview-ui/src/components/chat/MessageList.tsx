@@ -7,7 +7,7 @@
  * Shows recent sessions in the empty state for quick resumption.
  */
 
-import { Component, For, Show, createEffect, createMemo, JSX } from "solid-js"
+import { Component, For, Show, createEffect, createMemo, onCleanup, JSX } from "solid-js"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
@@ -47,6 +47,11 @@ export const MessageList: Component<MessageListProps> = (props) => {
     working: () => session.status() !== "idle",
     overflowAnchor: "dynamic",
   })
+
+  // Resume auto-scroll when a bottom-dock permission/question is dismissed
+  const onResumeAutoScroll = () => autoScroll.resume()
+  window.addEventListener("resumeAutoScroll", onResumeAutoScroll)
+  onCleanup(() => window.removeEventListener("resumeAutoScroll", onResumeAutoScroll))
 
   let loaded = false
   createEffect(() => {

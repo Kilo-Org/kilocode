@@ -43,6 +43,7 @@ import { Checkbox } from "./checkbox"
 import { DiffChanges } from "./diff-changes"
 import { Markdown } from "./markdown"
 import { ImagePreview } from "./image-preview"
+import { extractFilePathFromHref } from "../file-path" // kilocode_change
 import { getDirectory as _getDirectory, getFilename } from "@opencode-ai/util/path"
 import { checksum } from "@opencode-ai/util/encode"
 import { Tooltip } from "./tooltip"
@@ -964,58 +965,64 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
 
   const render = ToolRegistry.render(part.tool) ?? GenericTool
 
+  const dismissed = createMemo(
+    () =>
+      part.tool === "question" &&
+      part.state.status === "error" &&
+      typeof part.state.error === "string" &&
+      part.state.error.includes("dismissed this question"),
+  )
+
   return (
     <Show when={!hideQuestion()}>
-      <div data-component="tool-part-wrapper">
-        <Switch>
-          <Match when={part.state.status === "error" && part.state.error}>
-            {(error) => {
-              const cleaned = error().replace("Error: ", "")
-              if (part.tool === "question" && cleaned.includes("dismissed this question")) {
+      <Show when={dismissed()}>
+        <div style="width: 100%; display: flex; justify-content: flex-end; padding: 4px 8px 4px 0;">
+          <span class="text-13-regular text-text-weak cursor-default">{i18n.t("ui.tool.questions")} dismissed</span>
+        </div>
+      </Show>
+      <Show when={!dismissed()}>
+        <div data-component="tool-part-wrapper">
+          <Switch>
+            <Match when={part.state.status === "error" && part.state.error}>
+              {(error) => {
+                const cleaned = error().replace("Error: ", "")
+                const [title, ...rest] = cleaned.split(": ")
                 return (
-                  <div style="width: 100%; display: flex; justify-content: flex-end;">
-                    <span class="text-13-regular text-text-weak cursor-default">
-                      {i18n.t("ui.tool.questions")} dismissed
-                    </span>
-                  </div>
+                  <Card variant="error">
+                    <div data-component="tool-error">
+                      <Icon name="circle-ban-sign" size="small" />
+                      <Switch>
+                        <Match when={title && title.length < 30}>
+                          <div data-slot="message-part-tool-error-content">
+                            <div data-slot="message-part-tool-error-title">{title}</div>
+                            <span data-slot="message-part-tool-error-message">{rest.join(": ")}</span>
+                          </div>
+                        </Match>
+                        <Match when={true}>
+                          <span data-slot="message-part-tool-error-message">{cleaned}</span>
+                        </Match>
+                      </Switch>
+                    </div>
+                  </Card>
                 )
-              }
-              const [title, ...rest] = cleaned.split(": ")
-              return (
-                <Card variant="error">
-                  <div data-component="tool-error">
-                    <Icon name="circle-ban-sign" size="small" />
-                    <Switch>
-                      <Match when={title && title.length < 30}>
-                        <div data-slot="message-part-tool-error-content">
-                          <div data-slot="message-part-tool-error-title">{title}</div>
-                          <span data-slot="message-part-tool-error-message">{rest.join(": ")}</span>
-                        </div>
-                      </Match>
-                      <Match when={true}>
-                        <span data-slot="message-part-tool-error-message">{cleaned}</span>
-                      </Match>
-                    </Switch>
-                  </div>
-                </Card>
-              )
-            }}
-          </Match>
-          <Match when={true}>
-            <Dynamic
-              component={render}
-              input={input()}
-              tool={part.tool}
-              metadata={partMetadata()}
-              // @ts-expect-error
-              output={part.state.output}
-              status={part.state.status}
-              hideDetails={props.hideDetails}
-              defaultOpen={props.defaultOpen}
-            />
-          </Match>
-        </Switch>
-      </div>
+              }}
+            </Match>
+            <Match when={true}>
+              <Dynamic
+                component={render}
+                input={input()}
+                tool={part.tool}
+                metadata={partMetadata()}
+                // @ts-expect-error
+                output={part.state.output}
+                status={part.state.status}
+                hideDetails={props.hideDetails}
+                defaultOpen={props.defaultOpen}
+              />
+            </Match>
+          </Switch>
+        </div>
+      </Show>
     </Show>
   )
 }
@@ -1095,15 +1102,29 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     if (!data.openFile) return
     const target = e.target
     if (!(target instanceof HTMLElement)) return
-    const link = target.closest(".file-link[data-file-path]")
-    if (!link) return
-    const path = link.getAttribute("data-file-path")
-    if (!path) return
-    const lineAttr = link.getAttribute("data-file-line")
-    const colAttr = link.getAttribute("data-file-col")
-    const line = lineAttr ? parseInt(lineAttr, 10) : undefined
-    const column = colAttr ? parseInt(colAttr, 10) : undefined
-    data.openFile(path, line, column)
+    // Handle .file-link code spans (e.g. `src/foo.ts:42`)
+    const fileLink = target.closest(".file-link[data-file-path]")
+    if (fileLink) {
+      const path = fileLink.getAttribute("data-file-path")
+      if (!path) return
+      const lineAttr = fileLink.getAttribute("data-file-line")
+      const colAttr = fileLink.getAttribute("data-file-col")
+      const line = lineAttr ? parseInt(lineAttr, 10) : undefined
+      const column = colAttr ? parseInt(colAttr, 10) : undefined
+      data.openFile(path, line, column)
+      return
+    }
+    // Handle markdown links whose href looks like a relative file path
+    // (e.g. [AGENTS.md](AGENTS.md) or [src/foo.ts](src/foo.ts))
+    const anchor = target.closest("a.external-link") as HTMLAnchorElement | null
+    if (anchor) {
+      const href = anchor.getAttribute("href")
+      if (!href) return
+      const filePath = extractFilePathFromHref(href)
+      if (!filePath) return
+      e.preventDefault()
+      data.openFile(filePath)
+    }
   }
   // kilocode_change end
 
@@ -1114,7 +1135,16 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
           <Markdown text={throttledText()} cacheKey={part.id} onClick={handleMarkdownClick} /> {/* kilocode_change */}
         </div>
         <Show when={showCopy()}>
-          <div data-slot="text-part-copy-wrapper" data-interrupted={interrupted() ? "" : undefined}>
+          {/* kilocode_change: data-is-turn-copy makes the copy button always visible for the final response */}
+          <div
+            data-slot="text-part-copy-wrapper"
+            data-interrupted={interrupted() ? "" : undefined}
+            data-is-turn-copy={
+              typeof props.showAssistantCopyPartID === "string" && props.showAssistantCopyPartID === part.id
+                ? ""
+                : undefined
+            }
+          >
             <Tooltip
               value={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyResponse")}
               placement="top"
@@ -1421,16 +1451,17 @@ ToolRegistry.register({
   name: "bash",
   render(props) {
     const i18n = useI18n()
-    const text = createMemo(() => {
-      const cmd = props.input.command ?? props.metadata.command ?? ""
-      const out = stripAnsi(props.output || props.metadata.output || "")
-      return `$ ${cmd}${out ? "\n\n" + out : ""}`
-    })
+    // kilocode_change start - separate cmd/output memos so copy excludes the "$ " display prefix
+    const cmd = createMemo(() => props.input.command ?? props.metadata.command ?? "")
+    const out = createMemo(() => stripAnsi(props.output || props.metadata.output || ""))
+    const text = createMemo(() => `$ ${cmd()}${out() ? "\n\n" + out() : ""}`)
+    // kilocode_change end
     const [copied, setCopied] = createSignal(false)
 
     const handleCopy = async () => {
-      const content = text()
-      if (!content) return
+      const command = cmd() // kilocode_change
+      if (!command) return
+      const content = out() ? `${command}\n\n${out()}` : command // kilocode_change
       await navigator.clipboard.writeText(content)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)

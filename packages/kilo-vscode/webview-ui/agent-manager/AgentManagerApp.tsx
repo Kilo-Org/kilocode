@@ -21,7 +21,6 @@ import type {
   AgentManagerMultiVersionProgressMessage,
   AgentManagerSendInitialMessage,
   AgentManagerBranchesMessage,
-  AgentManagerImportResultMessage,
   AgentManagerWorktreeDiffMessage,
   AgentManagerWorktreeDiffLoadingMessage,
   AgentManagerApplyWorktreeDiffResultMessage,
@@ -56,7 +55,6 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { Popover } from "@kilocode/kilo-ui/popover"
-import { HoverCard } from "@kilocode/kilo-ui/hover-card"
 import { VSCodeProvider, useVSCode } from "../src/context/vscode"
 import { ServerProvider } from "../src/context/server"
 import { ProviderProvider } from "../src/context/provider"
@@ -64,19 +62,10 @@ import { ConfigProvider } from "../src/context/config"
 import { SessionProvider, useSession } from "../src/context/session"
 import { WorktreeModeProvider } from "../src/context/worktree-mode"
 import { ChatView } from "../src/components/chat"
-import { ModelSelectorBase } from "../src/components/shared/ModelSelector"
-import { ModeSwitcherBase } from "../src/components/shared/ModeSwitcher"
-import {
-  MultiModelSelector,
-  type ModelAllocations,
-  MAX_MULTI_VERSIONS,
-  totalAllocations,
-  allocationsToArray,
-} from "./MultiModelSelector"
+import { NewWorktreeDialog } from "./NewWorktreeDialog"
 import { LanguageBridge, DataBridge } from "../src/App"
 import { useLanguage } from "../src/context/language"
 import { formatRelativeDate } from "../src/utils/date"
-import { useImageAttachments } from "../src/hooks/useImageAttachments"
 import { validateLocalSession, nextSelectionAfterDelete, adjacentHint, LOCAL } from "./navigate"
 import { reorderTabs, applyTabOrder, firstOrderedTitle } from "./tab-order"
 import { ConstrainDragYAxis, SortableReviewTab, SortableTab } from "./sortable-tab"
@@ -85,7 +74,10 @@ import { FullScreenDiffView } from "./FullScreenDiffView"
 import { ApplyDialog } from "./ApplyDialog"
 import { groupApplyConflicts } from "./apply-conflicts"
 import type { ReviewComment } from "./review-comments"
+import { BranchSelect } from "./BranchSelect"
+import { WorktreeItem } from "./WorktreeItem"
 import "./agent-manager.css"
+import "./agent-manager-review.css"
 
 const REVIEW_TAB_ID = "review"
 
@@ -123,11 +115,13 @@ const defaultBindings: Record<string, string> = {
   previousTab: isMac ? "⌘⌥←" : "Ctrl+Alt+←",
   nextTab: isMac ? "⌘⌥→" : "Ctrl+Alt+→",
   showTerminal: isMac ? "⌘/" : "Ctrl+/",
+  showShortcuts: isMac ? "⌘⇧/" : "Ctrl+Shift+/",
   newTab: isMac ? "⌘T" : "Ctrl+T",
   closeTab: isMac ? "⌘W" : "Ctrl+W",
   newWorktree: isMac ? "⌘N" : "Ctrl+N",
   advancedWorktree: isMac ? "⌘⇧N" : "Ctrl+Shift+N",
   closeWorktree: isMac ? "⌘⇧W" : "Ctrl+Shift+W",
+  openWorktree: isMac ? "⌘⇧O" : "Ctrl+Shift+O",
   agentManagerOpen: isMac ? "⌘⇧M" : "Ctrl+Shift+M",
   focusPanel: isMac ? "⌘." : "Ctrl+.",
   ...Object.fromEntries(
@@ -238,6 +232,7 @@ function buildShortcutCategories(
         { label: t("agentManager.shortcuts.newWorktree"), binding: bindings.newWorktree ?? "" },
         { label: t("agentManager.shortcuts.advancedWorktree"), binding: bindings.advancedWorktree ?? "" },
         { label: t("agentManager.shortcuts.deleteWorktree"), binding: bindings.closeWorktree ?? "" },
+        { label: t("agentManager.shortcuts.openWorktree"), binding: bindings.openWorktree ?? "" },
       ],
     },
     {
@@ -261,6 +256,7 @@ function buildShortcutCategories(
       title: t("agentManager.shortcuts.category.global"),
       shortcuts: [
         { label: t("agentManager.shortcuts.openAgentManager"), binding: bindings.agentManagerOpen ?? "" },
+        { label: t("agentManager.shortcuts.showShortcuts"), binding: bindings.showShortcuts ?? "" },
       ].filter((s) => s.binding),
     },
   ].filter((c) => c.shortcuts.length > 0)
@@ -304,9 +300,15 @@ const AgentManagerContent: Component = () => {
   const [selection, setSelection] = createSignal<SidebarSelection>(LOCAL)
   const [repoBranch, setRepoBranch] = createSignal<string | undefined>()
   const [busyWorktrees, setBusyWorktrees] = createSignal<Map<string, WorktreeBusyState>>(new Map())
+  const [staleWorktreeIds, setStaleWorktreeIds] = createSignal<Set<string>>(new Set())
   const [worktreesLoaded, setWorktreesLoaded] = createSignal(false)
   const [sessionsLoaded, setSessionsLoaded] = createSignal(false)
   const [isGitRepo, setIsGitRepo] = createSignal(true)
+  const [repoDetectedBranch, setRepoDetectedBranch] = createSignal<string | undefined>()
+  const [defaultBaseBranch, setDefaultBaseBranch] = createSignal<string | undefined>()
+
+  const repoDefaultBranch = () => defaultBaseBranch() ?? repoDetectedBranch() ?? "main"
+  const hasConfiguredBranch = () => !!defaultBaseBranch()
 
   const DEFAULT_SIDEBAR_WIDTH = 260
   const MIN_SIDEBAR_WIDTH = 200
@@ -324,12 +326,12 @@ const AgentManagerContent: Component = () => {
   const [diffLoading, setDiffLoading] = createSignal(false)
   const [diffWidth, setDiffWidth] = createSignal(Math.round(window.innerWidth * 0.5))
 
-  // Full-screen review state (in-memory, per worktree)
-  const [reviewOpenByWorktree, setReviewOpenByWorktree] = createSignal<Record<string, boolean>>({})
-  const [reviewCommentsByWorktree, setReviewCommentsByWorktree] = createSignal<Record<string, ReviewComment[]>>({})
+  // Full-screen review state (in-memory, per sidebar context: local/worktree)
+  const [reviewOpenByContext, setReviewOpenByContext] = createSignal<Record<string, boolean>>({})
+  const [reviewCommentsByContext, setReviewCommentsByContext] = createSignal<Record<string, ReviewComment[]>>({})
   const [reviewActive, setReviewActive] = createSignal(false)
   const [reviewDiffStyle, setReviewDiffStyle] = createSignal<"unified" | "split">("unified")
-  // reviewOpen (memo below) controls tab presence for selected worktree.
+  // reviewOpen (memo below) controls tab presence for selected context.
 
   // Per-worktree git stats (diff additions/deletions, commits missing from origin)
   const [worktreeStats, setWorktreeStats] = createSignal<Record<string, WorktreeGitStats>>({})
@@ -348,38 +350,48 @@ const AgentManagerContent: Component = () => {
   const PENDING_PREFIX = "pending:"
   const [activePendingId, setActivePendingId] = createSignal<string | undefined>()
 
+  // Inline delete confirmation: tracks which worktree is awaiting a second click/press
+  const [pendingDelete, setPendingDelete] = createSignal<string | null>(null)
+  let pendingDeleteTimer: ReturnType<typeof setTimeout> | undefined
+  const cancelPendingDelete = () => {
+    clearTimeout(pendingDeleteTimer)
+    setPendingDelete(null)
+  }
+  createEffect(on(selection, () => cancelPendingDelete(), { defer: true }))
+  onCleanup(() => clearTimeout(pendingDeleteTimer))
+
   // Per-context tab memory: maps sidebar selection key -> last active session/pending ID
   const [tabMemory, setTabMemory] = createSignal<Record<string, string>>({})
 
   const reviewOpen = createMemo(() => {
     const sel = selection()
-    if (!sel || sel === LOCAL) return false
-    return reviewOpenByWorktree()[sel] === true
+    if (sel === null) return false
+    return reviewOpenByContext()[sel] === true
   })
 
-  const setReviewOpenForWorktree = (worktreeId: string, open: boolean) => {
-    setReviewOpenByWorktree((prev) => {
-      if (prev[worktreeId] === open) return prev
-      return { ...prev, [worktreeId]: open }
+  const setReviewOpenForContext = (context: string, open: boolean) => {
+    setReviewOpenByContext((prev) => {
+      if (prev[context] === open) return prev
+      return { ...prev, [context]: open }
     })
   }
 
   const setReviewOpenForSelection = (open: boolean) => {
     const sel = selection()
-    if (!sel || sel === LOCAL) return
-    setReviewOpenForWorktree(sel, open)
+    if (sel === null) return
+    setReviewOpenForContext(sel, open)
   }
 
   const reviewComments = createMemo(() => {
     const sel = selection()
-    if (!sel || sel === LOCAL) return [] as ReviewComment[]
-    return reviewCommentsByWorktree()[sel] ?? []
+    if (sel === null) return [] as ReviewComment[]
+    return reviewCommentsByContext()[sel] ?? []
   })
 
   const setReviewCommentsForSelection = (comments: ReviewComment[]) => {
     const sel = selection()
-    if (!sel || sel === LOCAL) return
-    setReviewCommentsByWorktree((prev) => ({ ...prev, [sel]: comments }))
+    if (sel === null) return
+    setReviewCommentsByContext((prev) => ({ ...prev, [sel]: comments }))
   }
 
   const applyStateForSelection = createMemo(() => {
@@ -548,6 +560,12 @@ const AgentManagerContent: Component = () => {
     )
   }
 
+  const openWorktreeDirectory = () => {
+    const sel = selection()
+    if (!sel || sel === LOCAL) return
+    vscode.postMessage({ type: "agentManager.openWorktree", worktreeId: sel })
+  }
+
   createEffect(
     on(
       () => [applyTarget(), applyDiffs(), applySelectionTouched()] as const,
@@ -622,14 +640,14 @@ const AgentManagerContent: Component = () => {
   createEffect(() => {
     const ids = new Set(worktrees().map((wt) => wt.id))
 
-    setReviewOpenByWorktree((prev) => {
-      const next = Object.fromEntries(Object.entries(prev).filter(([id]) => ids.has(id)))
+    setReviewOpenByContext((prev) => {
+      const next = Object.fromEntries(Object.entries(prev).filter(([id]) => id === LOCAL || ids.has(id)))
       if (Object.keys(next).length === Object.keys(prev).length) return prev
       return next
     })
 
-    setReviewCommentsByWorktree((prev) => {
-      const next = Object.fromEntries(Object.entries(prev).filter(([id]) => ids.has(id)))
+    setReviewCommentsByContext((prev) => {
+      const next = Object.fromEntries(Object.entries(prev).filter(([id]) => id === LOCAL || ids.has(id)))
       if (Object.keys(next).length === Object.keys(prev).length) return prev
       return next
     })
@@ -711,13 +729,24 @@ const AgentManagerContent: Component = () => {
 
   createEffect(() => {
     const sel = selection()
-    if (!sel || sel === LOCAL) {
+    if (sel === null) {
       if (reviewActive()) setReviewActive(false)
       return
     }
     if (reviewActive() && !reviewOpen()) {
       setReviewActive(false)
     }
+  })
+
+  // Scroll the sidebar to the focused item whenever selection changes (covers keyboard
+  // navigation, new worktree creation, and any other programmatic selection change).
+  createEffect(() => {
+    const id = selection() ?? session.currentSessionID()
+    if (!id) return
+    requestAnimationFrame(() => {
+      const el = document.querySelector(`[data-sidebar-id="${id}"]`)
+      if (el instanceof HTMLElement) scrollIntoView(el)
+    })
   })
 
   // Read-only mode: viewing an unassigned session (not in a worktree or local)
@@ -737,6 +766,8 @@ const AgentManagerContent: Component = () => {
     const sessions = session.sessions().filter((s) => ids.has(s.id))
     return firstOrderedTitle(sessions, worktreeTabOrder()[wt.id], wt.branch)
   }
+
+  const isStaleWorktree = (worktreeId: string): boolean => staleWorktreeIds().has(worktreeId)
 
   /** Worktrees sorted so that grouped items are always adjacent, ordered by creation time. */
   const sortedWorktrees = createMemo(() => {
@@ -800,7 +831,7 @@ const AgentManagerContent: Component = () => {
   const navigate = (direction: "up" | "down") => {
     const flat: { type: typeof LOCAL | "wt" | "session"; id: string }[] = [
       { type: LOCAL, id: LOCAL },
-      ...worktrees().map((wt) => ({ type: "wt" as const, id: wt.id })),
+      ...sortedWorktrees().map((wt) => ({ type: "wt" as const, id: wt.id })),
       ...unassignedSessions().map((s) => ({ type: "session" as const, id: s.id })),
     ]
     if (flat.length === 0) return
@@ -890,6 +921,7 @@ const AgentManagerContent: Component = () => {
       session.clearCurrentSession()
       vscode.postMessage({ type: "agentManager.showExistingLocalTerminal" })
     }
+    setReviewActive(remembered === REVIEW_TAB_ID && reviewOpenByContext()[LOCAL] === true)
   }
 
   const selectWorktree = (worktreeId: string) => {
@@ -906,7 +938,7 @@ const AgentManagerContent: Component = () => {
     } else {
       session.setCurrentSessionID(undefined)
     }
-    setReviewActive(remembered === REVIEW_TAB_ID && reviewOpenByWorktree()[worktreeId] === true)
+    setReviewActive(remembered === REVIEW_TAB_ID && reviewOpenByContext()[worktreeId] === true)
   }
 
   onMount(() => {
@@ -931,8 +963,10 @@ const AgentManagerContent: Component = () => {
       } else if (msg.action === "newTab") handleNewTabForCurrentSelection()
       else if (msg.action === "closeTab") closeActiveTab()
       else if (msg.action === "newWorktree") handleNewWorktreeOrPromote()
+      else if (msg.action === "openWorktree") openWorktreeDirectory()
       else if (msg.action === "advancedWorktree") showAdvancedWorktreeDialog()
       else if (msg.action === "closeWorktree") closeSelectedWorktree()
+      else if (msg.action === "showShortcuts") handleShowKeyboardShortcuts()
       else if (msg.action === "focusInput") window.dispatchEvent(new Event("focusPrompt"))
       else {
         // Handle jumpTo1 through jumpTo9
@@ -953,8 +987,12 @@ const AgentManagerContent: Component = () => {
       if (["t", "w", "n", "d", "f"].includes(e.key.toLowerCase()) && !e.shiftKey) {
         e.preventDefault()
       }
-      // Prevent defaults for shift variants (close worktree, advanced new worktree)
-      if (["w", "n"].includes(e.key.toLowerCase()) && e.shiftKey) {
+      // Prevent defaults for shift variants (close worktree, advanced/new open worktree)
+      if (["w", "n", "o"].includes(e.key.toLowerCase()) && e.shiftKey) {
+        e.preventDefault()
+      }
+      // Prevent browser defaults for shortcuts help (Cmd/Ctrl+Shift+/)
+      if (["/", "?"].includes(e.key) && e.shiftKey) {
         e.preventDefault()
       }
       // Prevent defaults for jump-to shortcuts (Cmd/Ctrl+1-9)
@@ -963,6 +1001,19 @@ const AgentManagerContent: Component = () => {
       }
     }
     window.addEventListener("keydown", preventDefaults, true)
+
+    // Delete/Backspace on a selected worktree triggers inline delete confirmation.
+    // Pressing the key twice in a row (within the 2500ms window) confirms the delete.
+    const deleteKeyHandler = (e: KeyboardEvent) => {
+      if (e.key !== "Delete" && e.key !== "Backspace") return
+      const tag = (e.target as HTMLElement)?.tagName
+      if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return
+      const sel = selection()
+      if (!sel || sel === LOCAL) return
+      e.preventDefault()
+      confirmDeleteWorktree(sel)
+    }
+    window.addEventListener("keydown", deleteKeyHandler)
 
     // When the panel regains focus (e.g. returning from terminal), focus the prompt
     // and clear any stale body styles left by Kobalte modal overlays (dropdowns/dialogs
@@ -1000,6 +1051,7 @@ const AgentManagerContent: Component = () => {
       if (msg.type === "agentManager.repoInfo") {
         const info = msg as AgentManagerRepoInfoMessage
         setRepoBranch(info.branch)
+        if (info.defaultBranch) setRepoDetectedBranch(info.defaultBranch)
       }
 
       if (msg.type === "agentManager.worktreeSetup") {
@@ -1049,6 +1101,7 @@ const AgentManagerContent: Component = () => {
         const state = msg as AgentManagerStateMessage
         setWorktrees(state.worktrees)
         setManagedSessions(state.sessions)
+        setStaleWorktreeIds(new Set(state.staleWorktreeIds ?? []))
         if (state.isGitRepo !== undefined) setIsGitRepo(state.isGitRepo)
         if (!worktreesLoaded()) setWorktreesLoaded(true)
         // When not a git repo, also mark sessions as loaded since the Kilo
@@ -1058,6 +1111,7 @@ const AgentManagerContent: Component = () => {
         if (state.reviewDiffStyle === "split" || state.reviewDiffStyle === "unified") {
           setReviewDiffStyle(state.reviewDiffStyle)
         }
+        if ("defaultBaseBranch" in state) setDefaultBaseBranch(state.defaultBaseBranch || undefined)
         const current = session.currentSessionID()
         if (current) {
           const ms = state.sessions.find((s) => s.id === current)
@@ -1227,6 +1281,7 @@ const AgentManagerContent: Component = () => {
     onCleanup(() => {
       window.removeEventListener("message", handler)
       window.removeEventListener("keydown", preventDefaults, true)
+      window.removeEventListener("keydown", deleteKeyHandler)
       window.removeEventListener("focus", onWindowFocus)
       unsubCreate()
       unsubSessions()
@@ -1268,9 +1323,13 @@ const AgentManagerContent: Component = () => {
       return
     }
     if (review) {
-      // Review tab is open but no specific session — try using any session in the worktree
-      const sel = selection()
-      if (sel && sel !== LOCAL) {
+      // Review tab is open but no specific session — use local sentinel for local,
+      // or any session in the selected worktree.
+      if (sel === LOCAL) {
+        vscode.postMessage({ type: "agentManager.startDiffWatch", sessionId: LOCAL })
+        return
+      }
+      if (sel) {
         const managed = managedSessions().find((ms) => ms.worktreeId === sel)
         if (managed) {
           vscode.postMessage({ type: "agentManager.startDiffWatch", sessionId: managed.id })
@@ -1291,9 +1350,9 @@ const AgentManagerContent: Component = () => {
 
   const openReviewTab = () => {
     const sel = selection()
-    if (!sel || sel === LOCAL) return
+    if (sel === null) return
     setDiffOpen(false)
-    setReviewOpenForWorktree(sel, true)
+    setReviewOpenForContext(sel, true)
     setReviewActive(true)
   }
 
@@ -1313,16 +1372,18 @@ const AgentManagerContent: Component = () => {
     setReviewOpenForSelection(false)
   }
 
-  // Data for the review tab: use current session's diff data, or first available for the worktree
+  // Data for the review tab: use local diff data for local context,
+  // current session for selected worktree context, or first available in that worktree.
   const reviewDiffs = createMemo(() => {
     const data = diffDatas()
     const sel = selection()
     const id = session.currentSessionID()
+    if (sel === LOCAL) return data[LOCAL] ?? []
     if (id && data[id]) {
       const current = managedSessions().find((s) => s.id === id)
-      if (sel && sel !== LOCAL && current?.worktreeId === sel) return data[id]!
+      if (sel && current?.worktreeId === sel) return data[id]!
     }
-    if (!sel || sel === LOCAL) return []
+    if (!sel) return []
     const ids = managedSessions()
       .filter((s) => s.worktreeId === sel)
       .map((s) => s.id)
@@ -1347,6 +1408,102 @@ const AgentManagerContent: Component = () => {
 
   const handleConfigureSetupScript = () => {
     vscode.postMessage({ type: "agentManager.configureSetupScript" })
+  }
+
+  const handleChangeDefaultBaseBranch = () => {
+    const [search, setSearch] = createSignal("")
+    const [branches, setBranches] = createSignal<BranchInfo[]>([])
+    const [loading, setLoading] = createSignal(true)
+    const [highlighted, setHighlighted] = createSignal(-1)
+
+    const unsub = vscode.onMessage((msg) => {
+      if (msg.type === "agentManager.branches") {
+        const ev = msg as AgentManagerBranchesMessage
+        setBranches(ev.branches)
+        if (ev.defaultBranch) setRepoDetectedBranch(ev.defaultBranch)
+        setLoading(false)
+      }
+    })
+
+    vscode.postMessage({ type: "agentManager.requestBranches" })
+
+    const filtered = createMemo(() => {
+      const s = search().toLowerCase()
+      if (!s) return branches()
+      return branches().filter((b) => b.name.toLowerCase().includes(s))
+    })
+
+    const selectBranch = (name: string | undefined) => {
+      vscode.postMessage({ type: "agentManager.setDefaultBaseBranch", branch: name })
+      setDefaultBaseBranch(name)
+      dialog.close()
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const items = filtered()
+      // offset by 1 for auto-detect option (-1 = auto-detect)
+      const total = items.length + 1
+      if (e.key === "ArrowDown") {
+        e.preventDefault()
+        e.stopPropagation()
+        setHighlighted((prev) => Math.min(prev + 1, total - 2))
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault()
+        e.stopPropagation()
+        setHighlighted((prev) => Math.max(prev - 1, -1))
+      } else if (e.key === "Enter") {
+        e.preventDefault()
+        e.stopPropagation()
+        const idx = highlighted()
+        if (idx === -1) {
+          selectBranch(undefined)
+        } else {
+          const branch = items[idx]
+          if (branch) selectBranch(branch.name)
+        }
+      } else if (e.key === "Escape") {
+        e.preventDefault()
+        e.stopPropagation()
+        dialog.close()
+      }
+    }
+
+    dialog.show(() => {
+      onCleanup(unsub)
+      return (
+        <Dialog title={t("agentManager.worktree.defaultBaseBranch")} fit>
+          <div class="am-default-base-branch">
+            <BranchSelect
+              branches={filtered()}
+              loading={loading()}
+              search={search()}
+              onSearch={(v) => {
+                setSearch(v)
+                setHighlighted(-1)
+              }}
+              onSelect={(b) => selectBranch(b.name)}
+              onSearchKeyDown={handleKeyDown}
+              selected={defaultBaseBranch()}
+              highlighted={highlighted()}
+              onHighlight={setHighlighted}
+              searchPlaceholder={t("agentManager.dialog.searchBranches")}
+              emptyLabel={t("agentManager.import.noMatchingBranches")}
+              loadingLabel={t("agentManager.import.loadingBranches")}
+              defaultLabel={t("agentManager.dialog.branchBadge.default")}
+              remoteLabel={t("agentManager.dialog.branchBadge.remote")}
+              defaultName={defaultBaseBranch()}
+              autoOption={{
+                label: t("agentManager.worktree.defaultBaseBranchAuto"),
+                hint: repoDetectedBranch(),
+                active: !hasConfiguredBranch(),
+                highlighted: highlighted() === -1,
+                onSelect: () => selectBranch(undefined),
+              }}
+            />
+          </div>
+        </Dialog>
+      )
+    })
   }
 
   const handleShowKeyboardShortcuts = () => {
@@ -1386,13 +1543,16 @@ const AgentManagerContent: Component = () => {
 
   // Advanced worktree dialog — opens a full dialog with prompt, versions, model, mode
   const showAdvancedWorktreeDialog = () => {
-    dialog.show(() => <NewWorktreeDialog onClose={() => dialog.close()} />)
+    dialog.show(() => <NewWorktreeDialog onClose={() => dialog.close()} defaultBaseBranch={repoDefaultBranch()} />)
   }
 
   const confirmDeleteWorktree = (worktreeId: string) => {
     const wt = worktrees().find((w) => w.id === worktreeId)
     if (!wt) return
-    const doDelete = () => {
+
+    // Second press/click: execute the delete
+    if (pendingDelete() === worktreeId) {
+      cancelPendingDelete()
       setBusyWorktrees((prev) => new Map([...prev, [wt.id, { reason: "deleting" as const }]]))
       vscode.postMessage({ type: "agentManager.deleteWorktree", worktreeId: wt.id })
       if (selection() === wt.id) {
@@ -1403,31 +1563,56 @@ const AgentManagerContent: Component = () => {
         if (next === LOCAL) selectLocal()
         else selectWorktree(next)
       }
+      return
+    }
+
+    // First press/click: enter pending-delete state
+    clearTimeout(pendingDeleteTimer)
+    setPendingDelete(worktreeId)
+    pendingDeleteTimer = setTimeout(() => setPendingDelete(null), 2500)
+  }
+
+  const confirmRemoveStaleWorktree = (worktreeId: string) => {
+    const wt = worktrees().find((w) => w.id === worktreeId)
+    if (!wt) return
+
+    const remove = () => {
+      vscode.postMessage({ type: "agentManager.removeStaleWorktree", worktreeId: wt.id })
+      if (selection() === wt.id) {
+        const next = nextSelectionAfterDelete(
+          wt.id,
+          worktrees().map((w) => w.id),
+        )
+        if (next === LOCAL) selectLocal()
+        if (next !== LOCAL) selectWorktree(next)
+      }
       dialog.close()
     }
+
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault()
-        doDelete()
+        remove()
       }
     }
+
     dialog.show(() => (
-      <Dialog title={t("agentManager.dialog.deleteWorktree.title")} fit>
+      <Dialog title={t("agentManager.dialog.removeStaleWorktree.title")} fit>
         <div class="am-confirm" onKeyDown={onKeyDown}>
           <div class="am-confirm-message">
-            <Icon name="trash" size="small" />
+            <Icon name="warning" size="small" />
             <span>
-              {t("agentManager.dialog.deleteWorktree.messagePre")}
+              {t("agentManager.dialog.removeStaleWorktree.messagePre")}
               <code class="am-confirm-branch">{wt.branch}</code>
-              {t("agentManager.dialog.deleteWorktree.messagePost")}
+              {t("agentManager.dialog.removeStaleWorktree.messagePost")}
             </span>
           </div>
           <div class="am-confirm-actions">
             <Button variant="ghost" size="large" onClick={() => dialog.close()}>
-              {t("agentManager.dialog.deleteWorktree.cancel")}
+              {t("agentManager.dialog.removeStaleWorktree.cancel")}
             </Button>
-            <Button variant="primary" size="large" class="am-confirm-delete" onClick={doDelete} autofocus>
-              {t("agentManager.dialog.deleteWorktree.confirm")}
+            <Button variant="primary" size="large" class="am-confirm-delete" onClick={remove} autofocus>
+              {t("agentManager.dialog.removeStaleWorktree.confirm")}
             </Button>
           </div>
         </div>
@@ -1501,8 +1686,9 @@ const AgentManagerContent: Component = () => {
   const tabIds = createMemo(() => {
     const ids = activeTabs().map((s) => s.id)
     const sel = selection()
-    if (!sel || sel === LOCAL) return ids
+    if (sel === null) return ids
     const current = reviewOpen() ? [...ids, REVIEW_TAB_ID] : ids
+    if (sel === LOCAL) return current
     return applyTabOrder(
       current.map((id) => ({ id })),
       worktreeTabOrder()[sel],
@@ -1520,7 +1706,12 @@ const AgentManagerContent: Component = () => {
     if (typeof from !== "string" || typeof to !== "string") return
     const sel = selection()
     if (sel === LOCAL) {
-      setLocalSessionIDs((prev) => reorderTabs(prev, from, to) ?? prev)
+      setLocalSessionIDs((prev) => {
+        const ids = reviewOpen() ? [...prev, REVIEW_TAB_ID] : prev
+        const reordered = reorderTabs(ids, from, to)
+        if (!reordered) return prev
+        return reordered.filter((id) => id !== REVIEW_TAB_ID)
+      })
       return
     }
     if (sel) {
@@ -1639,10 +1830,18 @@ const AgentManagerContent: Component = () => {
           </div>
           <Show
             when={
-              localStats() && (localStats()!.additions > 0 || localStats()!.deletions > 0 || localStats()!.commits > 0)
+              localStats() &&
+              (localStats()!.files > 0 ||
+                localStats()!.additions > 0 ||
+                localStats()!.deletions > 0 ||
+                localStats()!.ahead > 0 ||
+                localStats()!.behind > 0)
             }
           >
             <div class="am-worktree-stats">
+              <Show when={localStats()!.files > 0}>
+                <span class="am-stat-files">{localStats()!.files}f</span>
+              </Show>
               <Show when={localStats()!.additions > 0 || localStats()!.deletions > 0}>
                 <span class="am-worktree-diff-stats">
                   <Show when={localStats()!.additions > 0}>
@@ -1656,10 +1855,16 @@ const AgentManagerContent: Component = () => {
                   </Show>
                 </span>
               </Show>
-              <Show when={localStats()!.commits > 0}>
+              <Show when={localStats()!.ahead > 0}>
                 <span class="am-worktree-commits">
                   {"↑"}
-                  {localStats()!.commits}
+                  {localStats()!.ahead}
+                </span>
+              </Show>
+              <Show when={localStats()!.behind > 0}>
+                <span class="am-worktree-behind">
+                  {"↓"}
+                  {localStats()!.behind}
                 </span>
               </Show>
             </div>
@@ -1673,26 +1878,6 @@ const AgentManagerContent: Component = () => {
             <span class="am-section-label">{t("agentManager.section.worktrees")}</span>
             <Show when={isGitRepo()}>
               <div class="am-section-actions">
-                <DropdownMenu gutter={4} placement="bottom-end">
-                  <DropdownMenu.Trigger
-                    as={IconButton}
-                    icon="settings-gear"
-                    size="small"
-                    variant="ghost"
-                    label={t("agentManager.worktree.settings")}
-                  />
-                  <DropdownMenu.Portal>
-                    <DropdownMenu.Content class="am-split-menu">
-                      <DropdownMenu.Item onSelect={handleShowKeyboardShortcuts}>
-                        <DropdownMenu.ItemLabel>{t("agentManager.shortcuts.title")}</DropdownMenu.ItemLabel>
-                      </DropdownMenu.Item>
-                      <DropdownMenu.Separator />
-                      <DropdownMenu.Item onSelect={handleConfigureSetupScript}>
-                        <DropdownMenu.ItemLabel>{t("agentManager.worktree.setupScript")}</DropdownMenu.ItemLabel>
-                      </DropdownMenu.Item>
-                    </DropdownMenu.Content>
-                  </DropdownMenu.Portal>
-                </DropdownMenu>
                 <div class="am-split-button">
                   <IconButton
                     icon="plus"
@@ -1732,6 +1917,41 @@ const AgentManagerContent: Component = () => {
                     </DropdownMenu.Portal>
                   </DropdownMenu>
                 </div>
+                <TooltipKeybind
+                  title={t("agentManager.shortcuts.title")}
+                  keybind={kb().showShortcuts ?? ""}
+                  placement="bottom"
+                >
+                  <IconButton
+                    icon="keyboard"
+                    size="small"
+                    variant="ghost"
+                    label={t("agentManager.shortcuts.title")}
+                    onClick={handleShowKeyboardShortcuts}
+                  />
+                </TooltipKeybind>
+                <DropdownMenu gutter={4} placement="bottom-end">
+                  <DropdownMenu.Trigger
+                    as={IconButton}
+                    icon="settings-gear"
+                    size="small"
+                    variant="ghost"
+                    label={t("agentManager.worktree.settings")}
+                  />
+                  <DropdownMenu.Portal>
+                    <DropdownMenu.Content class="am-split-menu">
+                      <DropdownMenu.Item onSelect={handleConfigureSetupScript}>
+                        <DropdownMenu.ItemLabel>{t("agentManager.worktree.setupScript")}</DropdownMenu.ItemLabel>
+                      </DropdownMenu.Item>
+                      <DropdownMenu.Separator />
+                      <DropdownMenu.Item onSelect={handleChangeDefaultBaseBranch}>
+                        <DropdownMenu.ItemLabel>
+                          {t("agentManager.worktree.defaultBaseBranch")}: {repoDefaultBranch()}
+                        </DropdownMenu.ItemLabel>
+                      </DropdownMenu.Item>
+                    </DropdownMenu.Content>
+                  </DropdownMenu.Portal>
+                </DropdownMenu>
               </div>
             </Show>
           </div>
@@ -1755,8 +1975,6 @@ const AgentManagerContent: Component = () => {
               </Show>
               <Show when={isGitRepo()}>
                 {(() => {
-                  const [hoveredWt, setHoveredWt] = createSignal<string | null>(null)
-                  const [overClose, setOverClose] = createSignal(false)
                   const [renamingWt, setRenamingWt] = createSignal<string | null>(null)
                   const [renameValue, setRenameValue] = createSignal("")
 
@@ -1786,14 +2004,6 @@ const AgentManagerContent: Component = () => {
                   return (
                     <For each={sortedWorktrees()}>
                       {(wt, idx) => {
-                        const grouped = () => isGrouped(wt)
-                        const start = () => isGroupStart(wt, idx())
-                        const end = () => isGroupEnd(wt, idx())
-                        const busy = () => busyWorktrees().has(wt.id)
-                        const groupSize = () => {
-                          if (!wt.groupId) return 0
-                          return sortedWorktrees().filter((w) => w.groupId === wt.groupId).length
-                        }
                         const sessions = createMemo(() => managedSessions().filter((ms) => ms.worktreeId === wt.id))
                         const navHint = () => {
                           const flat = [
@@ -1804,203 +2014,43 @@ const AgentManagerContent: Component = () => {
                           const active = selection() ?? session.currentSessionID() ?? ""
                           return adjacentHint(wt.id, active, flat, kb().previousSession ?? "", kb().nextSession ?? "")
                         }
+                        const groupSize = () => {
+                          if (!wt.groupId) return 0
+                          return sortedWorktrees().filter((w) => w.groupId === wt.groupId).length
+                        }
                         return (
-                          <>
-                            <Show when={start()}>
-                              <div class="am-wt-group-header">
-                                <Icon name="layers" size="small" />
-                                <span class="am-wt-group-label">
-                                  {t("agentManager.worktree.versions", { count: groupSize() })}
-                                </span>
-                              </div>
-                            </Show>
-                            <HoverCard
-                              openDelay={100}
-                              closeDelay={100}
-                              placement="right-start"
-                              gutter={8}
-                              open={hoveredWt() === wt.id && !overClose()}
-                              onOpenChange={(open) => setHoveredWt(open ? wt.id : null)}
-                              trigger={
-                                <div
-                                  class="am-worktree-item"
-                                  classList={{
-                                    "am-worktree-item-active": selection() === wt.id,
-                                    "am-wt-grouped": grouped(),
-                                    "am-wt-group-end": end(),
-                                  }}
-                                  data-sidebar-id={wt.id}
-                                  onClick={() => selectWorktree(wt.id)}
-                                >
-                                  <Show
-                                    when={!busyWorktrees().has(wt.id)}
-                                    fallback={<Spinner class="am-worktree-spinner" />}
-                                  >
-                                    <Icon name="branch" size="small" />
-                                  </Show>
-                                  <Show
-                                    when={renamingWt() === wt.id}
-                                    fallback={
-                                      <span
-                                        class="am-worktree-branch"
-                                        onDblClick={(e) => {
-                                          e.stopPropagation()
-                                          startRename(wt.id, worktreeLabel(wt))
-                                        }}
-                                        title={t("agentManager.worktree.doubleClickRename")}
-                                      >
-                                        {worktreeLabel(wt)}
-                                      </span>
-                                    }
-                                  >
-                                    <input
-                                      class="am-worktree-rename-input"
-                                      value={renameValue()}
-                                      onInput={(e) => setRenameValue(e.currentTarget.value)}
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Enter") {
-                                          e.preventDefault()
-                                          commitRename(wt.id)
-                                        }
-                                        if (e.key === "Escape") {
-                                          e.preventDefault()
-                                          cancelRename()
-                                        }
-                                      }}
-                                      onBlur={() => commitRename(wt.id)}
-                                      onClick={(e) => e.stopPropagation()}
-                                      ref={(el) =>
-                                        requestAnimationFrame(() => {
-                                          el.focus()
-                                          el.select()
-                                        })
-                                      }
-                                    />
-                                  </Show>
-                                  {(() => {
-                                    const num = idx() + 2
-                                    const stats = () => worktreeStats()[wt.id]
-                                    return (
-                                      <>
-                                        <Show when={num <= MAX_JUMP_INDEX}>
-                                          <span class="am-shortcut-badge">
-                                            {isMac ? "⌘" : "Ctrl+"}
-                                            {num}
-                                          </span>
-                                        </Show>
-                                        <Show
-                                          when={
-                                            stats() &&
-                                            (stats()!.additions > 0 || stats()!.deletions > 0 || stats()!.commits > 0)
-                                          }
-                                        >
-                                          <div class="am-worktree-stats">
-                                            <Show when={stats()!.additions > 0 || stats()!.deletions > 0}>
-                                              <span class="am-worktree-diff-stats">
-                                                <Show when={stats()!.additions > 0}>
-                                                  <span class="am-stat-additions">+{stats()!.additions}</span>
-                                                </Show>
-                                                <Show when={stats()!.deletions > 0}>
-                                                  <span class="am-stat-deletions">−{stats()!.deletions}</span>
-                                                </Show>
-                                              </span>
-                                            </Show>
-                                            <Show when={stats()!.commits > 0}>
-                                              <span class="am-worktree-commits">↑{stats()!.commits}</span>
-                                            </Show>
-                                          </div>
-                                        </Show>
-                                      </>
-                                    )
-                                  })()}
-                                  <Show when={!busyWorktrees().has(wt.id)}>
-                                    <div
-                                      class="am-worktree-close"
-                                      onMouseEnter={() => setOverClose(true)}
-                                      onMouseLeave={() => setOverClose(false)}
-                                    >
-                                      <TooltipKeybind
-                                        title={t("agentManager.worktree.delete")}
-                                        keybind={kb().closeWorktree ?? ""}
-                                        placement="top"
-                                      >
-                                        <IconButton
-                                          icon="close-small"
-                                          size="small"
-                                          variant="ghost"
-                                          label={t("agentManager.worktree.delete")}
-                                          onClick={(e: MouseEvent) => handleDeleteWorktree(wt.id, e)}
-                                        />
-                                      </TooltipKeybind>
-                                    </div>
-                                  </Show>
-                                </div>
+                          <WorktreeItem
+                            worktree={wt}
+                            label={worktreeLabel(wt)}
+                            active={selection() === wt.id}
+                            pendingDelete={pendingDelete() === wt.id}
+                            busy={busyWorktrees().has(wt.id)}
+                            stale={isStaleWorktree(wt.id)}
+                            shortcut={idx() + 2}
+                            stats={worktreeStats()[wt.id]}
+                            navHint={navHint()}
+                            sessions={sessions().length}
+                            grouped={isGrouped(wt)}
+                            groupStart={isGroupStart(wt, idx())}
+                            groupEnd={isGroupEnd(wt, idx())}
+                            groupSize={groupSize()}
+                            renaming={renamingWt() === wt.id}
+                            renameValue={renameValue()}
+                            closeKeybind={kb().closeWorktree ?? ""}
+                            onClick={() => {
+                              if (pendingDelete() === wt.id) {
+                                confirmDeleteWorktree(wt.id)
+                                return
                               }
-                            >
-                              <div class="am-hover-card">
-                                <div class="am-hover-card-header">
-                                  <div>
-                                    <div class="am-hover-card-label">{t("agentManager.hoverCard.branch")}</div>
-                                    <div class="am-hover-card-branch">{wt.branch}</div>
-                                    <div class="am-hover-card-meta">{formatRelativeDate(wt.createdAt)}</div>
-                                  </div>
-                                  <Show when={navHint()}>
-                                    <span class="am-hover-card-keybind">{navHint()}</span>
-                                  </Show>
-                                </div>
-                                <Show when={wt.parentBranch}>
-                                  <div class="am-hover-card-divider" />
-                                  <div class="am-hover-card-row">
-                                    <span class="am-hover-card-row-label">{t("agentManager.hoverCard.base")}</span>
-                                    <span class="am-hover-card-row-value">{wt.parentBranch}</span>
-                                  </div>
-                                </Show>
-                                <div class="am-hover-card-divider" />
-                                <div class="am-hover-card-row">
-                                  <span class="am-hover-card-row-label">{t("agentManager.hoverCard.sessions")}</span>
-                                  <span class="am-hover-card-row-value">{sessions().length}</span>
-                                </div>
-                                {(() => {
-                                  const hoverStats = () => worktreeStats()[wt.id]
-                                  return (
-                                    <Show
-                                      when={
-                                        hoverStats() &&
-                                        (hoverStats()!.additions > 0 ||
-                                          hoverStats()!.deletions > 0 ||
-                                          hoverStats()!.commits > 0)
-                                      }
-                                    >
-                                      <div class="am-hover-card-divider" />
-                                      <Show when={hoverStats()!.additions > 0 || hoverStats()!.deletions > 0}>
-                                        <div class="am-hover-card-row">
-                                          <span class="am-hover-card-row-label">
-                                            {t("agentManager.hoverCard.changes")}
-                                          </span>
-                                          <span class="am-hover-card-row-value am-hover-card-diff-stats">
-                                            <Show when={hoverStats()!.additions > 0}>
-                                              <span class="am-stat-additions">+{hoverStats()!.additions}</span>
-                                            </Show>
-                                            <Show when={hoverStats()!.deletions > 0}>
-                                              <span class="am-stat-deletions">−{hoverStats()!.deletions}</span>
-                                            </Show>
-                                          </span>
-                                        </div>
-                                      </Show>
-                                      <Show when={hoverStats()!.commits > 0}>
-                                        <div class="am-hover-card-row">
-                                          <span class="am-hover-card-row-label">
-                                            {t("agentManager.hoverCard.commits")}
-                                          </span>
-                                          <span class="am-hover-card-row-value">{hoverStats()!.commits}</span>
-                                        </div>
-                                      </Show>
-                                    </Show>
-                                  )
-                                })()}
-                              </div>
-                            </HoverCard>
-                          </>
+                              selectWorktree(wt.id)
+                            }}
+                            onDelete={(e) => handleDeleteWorktree(wt.id, e)}
+                            onStartRename={(current) => startRename(wt.id, current)}
+                            onRenameInput={(v) => setRenameValue(v)}
+                            onCommitRename={() => commitRename(wt.id)}
+                            onCancelRename={cancelRename}
+                            onRemoveStale={() => confirmRemoveStaleWorktree(wt.id)}
+                          />
                         )
                       }}
                     </For>
@@ -2203,7 +2253,7 @@ const AgentManagerContent: Component = () => {
                   }
                   const hasChanges = () => {
                     const s = stats()
-                    return s && (s.additions > 0 || s.deletions > 0)
+                    return s && (s.files > 0 || s.additions > 0 || s.deletions > 0)
                   }
                   const applyBusy = () => {
                     const state = applyStateForSelection()
@@ -2213,19 +2263,26 @@ const AgentManagerContent: Component = () => {
                   return (
                     <>
                       <Show when={isWorktree()}>
-                        <Tooltip value={t("agentManager.apply.tooltip")} placement="bottom">
-                          <Button
-                            size="small"
-                            variant="ghost"
-                            onClick={openApplyDialog}
-                            disabled={!hasChanges() || applyBusy()}
-                          >
-                            <Show when={applyBusy()}>
-                              <Spinner class="am-apply-spinner" />
-                            </Show>
-                            {t("agentManager.apply.globalButton")}
-                          </Button>
-                        </Tooltip>
+                        <>
+                          <Tooltip value={t("agentManager.open.tooltip")} placement="bottom">
+                            <Button size="small" variant="ghost" icon="folder" onClick={openWorktreeDirectory}>
+                              {t("agentManager.open.button")}
+                            </Button>
+                          </Tooltip>
+                          <Tooltip value={t("agentManager.apply.tooltip")} placement="bottom">
+                            <Button
+                              size="small"
+                              variant="ghost"
+                              onClick={openApplyDialog}
+                              disabled={!hasChanges() || applyBusy()}
+                            >
+                              <Show when={applyBusy()}>
+                                <Spinner class="am-apply-spinner" />
+                              </Show>
+                              {t("agentManager.apply.globalButton")}
+                            </Button>
+                          </Tooltip>
+                        </>
                       </Show>
                       <TooltipKeybind
                         title={t("agentManager.diff.toggle")}
@@ -2247,6 +2304,9 @@ const AgentManagerContent: Component = () => {
                           <Icon name="layers" size="small" />
                           <Show when={hasChanges()}>
                             <span class="am-diff-toggle-stats">
+                              <Show when={stats()!.files > 0}>
+                                <span class="am-stat-files">{stats()!.files}f</span>
+                              </Show>
                               <span class="am-stat-additions">+{stats()!.additions}</span>
                               <span class="am-stat-deletions">−{stats()!.deletions}</span>
                             </span>
@@ -2256,7 +2316,7 @@ const AgentManagerContent: Component = () => {
                     </>
                   )
                 })()}
-                <Show when={selection() !== LOCAL}>
+                <Show when={selection() !== null}>
                   <Tooltip value={t("command.review.toggle")} placement="bottom">
                     <IconButton
                       icon="expand"
@@ -2406,10 +2466,11 @@ const AgentManagerContent: Component = () => {
                     comments={reviewComments()}
                     onCommentsChange={setReviewCommentsForSelection}
                     onClose={() => setDiffOpen(false)}
-                    onExpand={selection() !== LOCAL ? openReviewTab : undefined}
+                    onExpand={selection() !== null ? openReviewTab : undefined}
                     onOpenFile={(file) => {
                       const id = session.currentSessionID()
                       if (id) vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file })
+                      else if (selection() === LOCAL) vscode.postMessage({ type: "openFile", filePath: file })
                     }}
                   />
                 </div>
@@ -2431,6 +2492,7 @@ const AgentManagerContent: Component = () => {
                 onOpenFile={(file) => {
                   const id = session.currentSessionID()
                   if (id) vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file })
+                  else if (selection() === LOCAL) vscode.postMessage({ type: "openFile", filePath: file })
                 }}
                 onClose={closeReviewTab}
               />
@@ -2439,627 +2501,6 @@ const AgentManagerContent: Component = () => {
         </Show>
       </div>
     </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Advanced "New Worktree" dialog — prompt, versions, model, mode, import tab
-// ---------------------------------------------------------------------------
-
-type VersionCount = 1 | 2 | 3 | 4
-const VERSION_OPTIONS: VersionCount[] = [1, 2, 3, 4]
-
-type DialogTab = "new" | "import"
-
-function sanitizeSegment(text: string, maxLength = 50): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9._+@-]/g, "")
-    .replace(/\.{2,}/g, ".")
-    .replace(/@\{/g, "@")
-    .replace(/-+/g, "-")
-    .replace(/^[-.]|[-.]+$/g, "")
-    .replace(/\.lock$/g, "")
-    .slice(0, maxLength)
-}
-
-function sanitizeBranchName(name: string): string {
-  return name
-    .split("/")
-    .map((s) => sanitizeSegment(s))
-    .filter(Boolean)
-    .join("/")
-}
-
-const NewWorktreeDialog: Component<{ onClose: () => void }> = (props) => {
-  const { t } = useLanguage()
-  const vscode = useVSCode()
-  const session = useSession()
-
-  const [tab, setTab] = createSignal<DialogTab>("new")
-
-  // --- Shared branch data (used by both New tab's base branch selector and Import tab) ---
-  const [branches, setBranches] = createSignal<BranchInfo[]>([])
-  const [branchesLoading, setBranchesLoading] = createSignal(false)
-  const [defaultBranch, setDefaultBranch] = createSignal("main")
-  const [branchSearch, setBranchSearch] = createSignal("")
-
-  // --- New tab state ---
-  const [name, setName] = createSignal("")
-  const [prompt, setPrompt] = createSignal("")
-  const [versions, setVersions] = createSignal<VersionCount>(1)
-  const [model, setModel] = createSignal<{ providerID: string; modelID: string } | null>(null)
-  const [compareMode, setCompareMode] = createSignal(false)
-  const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(new Map())
-  const [agent, setAgent] = createSignal(session.selectedAgent())
-  const [starting, setStarting] = createSignal(false)
-  const [showAdvanced, setShowAdvanced] = createSignal(false)
-  const [branchName, setBranchName] = createSignal("")
-  const [baseBranch, setBaseBranch] = createSignal<string | null>(null)
-  const [baseBranchOpen, setBaseBranchOpen] = createSignal(false)
-  const [highlightedIndex, setHighlightedIndex] = createSignal(0)
-
-  const imageAttach = useImageAttachments()
-
-  let textareaRef: HTMLTextAreaElement | undefined
-
-  onMount(() => {
-    requestAnimationFrame(() => {
-      if (!textareaRef) return
-      textareaRef.focus()
-      textareaRef.select()
-    })
-    setBranchesLoading(true)
-    vscode.postMessage({ type: "agentManager.requestBranches" })
-  })
-
-  const effectiveBaseBranch = () => baseBranch() ?? defaultBranch()
-
-  const filteredBranches = createMemo(() => {
-    const search = branchSearch().toLowerCase()
-    if (!search) return branches()
-    return branches().filter((b) => b.name.toLowerCase().includes(search))
-  })
-
-  const canSubmit = () => {
-    if (starting()) return false
-    if (compareMode() && totalAllocations(modelAllocations()) === 0) return false
-    return true
-  }
-
-  const handleSubmit = () => {
-    if (!canSubmit()) return
-    setStarting(true)
-
-    const text = prompt().trim() || undefined
-    const defaultAgent = session.agents()[0]?.name
-    const selectedAgent = agent() !== defaultAgent ? agent() : undefined
-    const advanced = showAdvanced()
-    const customBranch = advanced ? branchName().trim() || undefined : undefined
-    const imgs = imageAttach.images()
-    const imgFiles = imgs.length > 0 ? imgs.map((img) => ({ mime: img.mime, url: img.dataUrl })) : undefined
-
-    const isCompare = compareMode()
-    const allocations = isCompare ? allocationsToArray(modelAllocations()) : undefined
-    const count = isCompare ? totalAllocations(modelAllocations()) : versions()
-    const sel = isCompare ? null : model()
-
-    vscode.postMessage({
-      type: "agentManager.createMultiVersion",
-      text,
-      name: name().trim() || undefined,
-      versions: count,
-      providerID: sel?.providerID,
-      modelID: sel?.modelID,
-      agent: selectedAgent,
-      baseBranch: advanced ? (baseBranch() ?? undefined) : undefined,
-      branchName: customBranch,
-      modelAllocations: allocations,
-      files: imgFiles,
-    })
-
-    props.onClose()
-  }
-
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-      e.preventDefault()
-      handleSubmit()
-    }
-  }
-
-  const adjustHeight = () => {
-    if (!textareaRef) return
-    textareaRef.style.height = "auto"
-    textareaRef.style.height = `${Math.min(textareaRef.scrollHeight, 200)}px`
-  }
-
-  // --- Import tab state ---
-  const [prUrl, setPrUrl] = createSignal("")
-  const [prPending, setPrPending] = createSignal(false)
-  const [branchOpen, setBranchOpen] = createSignal(false)
-  const [importPending, setImportPending] = createSignal(false)
-
-  const isPending = () => prPending() || importPending()
-
-  // Listen for branch data + import results
-  const importUnsub = vscode.onMessage((msg) => {
-    if (msg.type === "agentManager.branches") {
-      const ev = msg as AgentManagerBranchesMessage
-      setBranches(ev.branches)
-      setDefaultBranch(ev.defaultBranch)
-      setBranchesLoading(false)
-    }
-    if (msg.type === "agentManager.importResult") {
-      const ev = msg as AgentManagerImportResultMessage
-      setPrPending(false)
-      setImportPending(false)
-      if (ev.success) {
-        props.onClose()
-      } else {
-        showToast({ variant: "error", title: t("agentManager.import.failed"), description: ev.message })
-      }
-    }
-  })
-
-  onCleanup(() => importUnsub())
-
-  const handlePRSubmit = () => {
-    const url = prUrl().trim()
-    if (!url || isPending()) return
-    setPrPending(true)
-    vscode.postMessage({ type: "agentManager.importFromPR", url })
-  }
-
-  const handleBranchSelect = (name: string) => {
-    if (isPending()) return
-    setImportPending(true)
-    setBranchOpen(false)
-    setBranchSearch("")
-    vscode.postMessage({ type: "agentManager.importFromBranch", branch: name })
-  }
-
-  return (
-    <Dialog title={t("agentManager.dialog.openWorktree")} fit>
-      {/* Tab switcher */}
-      <div class="am-tab-switcher">
-        <button
-          class="am-tab-switcher-pill"
-          classList={{ "am-tab-switcher-pill-active": tab() === "new" }}
-          onClick={() => setTab("new")}
-          type="button"
-        >
-          {t("agentManager.dialog.tab.new")}
-        </button>
-        <button
-          class="am-tab-switcher-pill"
-          classList={{ "am-tab-switcher-pill-active": tab() === "import" }}
-          onClick={() => setTab("import")}
-          type="button"
-        >
-          {t("agentManager.dialog.tab.import")}
-        </button>
-      </div>
-
-      {/* New tab */}
-      <Show when={tab() === "new"}>
-        <div class="am-nv-dialog" onKeyDown={handleKeyDown}>
-          <input
-            class="am-nv-name-input"
-            placeholder={t("agentManager.dialog.namePlaceholder")}
-            value={name()}
-            onInput={(e) => setName(e.currentTarget.value)}
-          />
-          {/* Prompt input — reuses the sidebar chat-input base classes for consistent styling */}
-          <div
-            class="prompt-input-container am-prompt-input-container"
-            classList={{ "prompt-input-container--dragging": imageAttach.dragging() }}
-            onDragOver={imageAttach.handleDragOver}
-            onDragLeave={imageAttach.handleDragLeave}
-            onDrop={imageAttach.handleDrop}
-          >
-            <Show when={imageAttach.images().length > 0}>
-              <div class="image-attachments">
-                <For each={imageAttach.images()}>
-                  {(img) => (
-                    <div class="image-attachment">
-                      <img src={img.dataUrl} alt={img.filename} title={img.filename} />
-                      <button
-                        type="button"
-                        class="image-attachment-remove"
-                        onClick={() => imageAttach.remove(img.id)}
-                        aria-label={t("agentManager.dialog.removeImage")}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  )}
-                </For>
-              </div>
-            </Show>
-            <div class="prompt-input-wrapper am-prompt-input-wrapper">
-              <div class="prompt-input-ghost-wrapper am-prompt-input-ghost-wrapper">
-                <textarea
-                  ref={textareaRef}
-                  class="prompt-input am-prompt-input"
-                  placeholder={t(
-                    isMac ? "agentManager.dialog.promptPlaceholder.mac" : "agentManager.dialog.promptPlaceholder.other",
-                  )}
-                  value={prompt()}
-                  onInput={(e) => {
-                    setPrompt(e.currentTarget.value)
-                    adjustHeight()
-                  }}
-                  onPaste={(e) => imageAttach.handlePaste(e)}
-                  rows={3}
-                />
-              </div>
-            </div>
-            <div class="prompt-input-hint">
-              <div class="prompt-input-hint-selectors">
-                <Show when={!compareMode()}>
-                  <ModelSelectorBase
-                    value={model()}
-                    onSelect={(pid, mid) => setModel(pid && mid ? { providerID: pid, modelID: mid } : null)}
-                    placement="top-start"
-                    allowClear
-                    clearLabel="Default"
-                  />
-                </Show>
-                <Show when={session.agents().length > 1}>
-                  <ModeSwitcherBase agents={session.agents()} value={agent()} onSelect={setAgent} />
-                </Show>
-              </div>
-              <div class="prompt-input-hint-actions" />
-            </div>
-          </div>
-
-          {/* Advanced options toggle */}
-          <button class="am-advanced-toggle" onClick={() => setShowAdvanced(!showAdvanced())} type="button">
-            <Icon name={showAdvanced() ? "chevron-down" : "chevron-right"} size="small" />
-            <span>{t("agentManager.dialog.advancedOptions")}</span>
-          </button>
-
-          <Show when={showAdvanced()}>
-            <div class="am-advanced-section">
-              <div class="am-advanced-field">
-                <span class="am-nv-config-label">{t("agentManager.dialog.branchName")}</span>
-                <input
-                  class="am-advanced-input"
-                  type="text"
-                  placeholder={t("agentManager.dialog.branchNamePlaceholder")}
-                  value={branchName()}
-                  onInput={(e) => setBranchName(sanitizeBranchName(e.currentTarget.value))}
-                />
-              </div>
-              <div class="am-advanced-field">
-                <span class="am-nv-config-label">{t("agentManager.dialog.baseBranch")}</span>
-                <div class="am-selector-wrapper">
-                  <Popover
-                    open={baseBranchOpen()}
-                    onOpenChange={(open) => {
-                      setBaseBranchOpen(open)
-                      if (!open) {
-                        setBranchSearch("")
-                        setHighlightedIndex(0)
-                      }
-                    }}
-                    placement="bottom-start"
-                    sameWidth
-                    class="am-dropdown"
-                    trigger={
-                      <button class="am-selector-trigger" type="button">
-                        <span class="am-selector-left">
-                          <Icon name="branch" size="small" />
-                          <span class="am-selector-value" style={{ color: "var(--text-base)" }}>
-                            {effectiveBaseBranch()}
-                          </span>
-                          <Show when={!baseBranch()}>
-                            <span class="am-branch-badge">{t("agentManager.dialog.branchBadge.default")}</span>
-                          </Show>
-                        </span>
-                        <span class="am-selector-right">
-                          <Icon name="selector" size="small" />
-                        </span>
-                      </button>
-                    }
-                  >
-                    <div class="am-dropdown-search">
-                      <Icon name="magnifying-glass" size="small" />
-                      <input
-                        class="am-dropdown-search-input"
-                        type="text"
-                        placeholder={t("agentManager.dialog.searchBranches")}
-                        value={branchSearch()}
-                        autofocus
-                        onInput={(e) => {
-                          setBranchSearch(e.currentTarget.value)
-                          setHighlightedIndex(0)
-                        }}
-                        onKeyDown={(e) => {
-                          const items = filteredBranches()
-                          if (e.key === "ArrowDown") {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            const next = Math.min(highlightedIndex() + 1, items.length - 1)
-                            setHighlightedIndex(next)
-                            requestAnimationFrame(() => {
-                              document
-                                .querySelector(`.am-branch-item[data-index="${next}"]`)
-                                ?.scrollIntoView({ block: "nearest" })
-                            })
-                          } else if (e.key === "ArrowUp") {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            const prev = Math.max(highlightedIndex() - 1, 0)
-                            setHighlightedIndex(prev)
-                            requestAnimationFrame(() => {
-                              document
-                                .querySelector(`.am-branch-item[data-index="${prev}"]`)
-                                ?.scrollIntoView({ block: "nearest" })
-                            })
-                          } else if (e.key === "Enter") {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            const selected = items[highlightedIndex()]
-                            if (selected) {
-                              setBaseBranch(selected.name)
-                              setBaseBranchOpen(false)
-                              setBranchSearch("")
-                              setHighlightedIndex(0)
-                            }
-                          } else if (e.key === "Escape") {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            setBaseBranchOpen(false)
-                            setBranchSearch("")
-                            setHighlightedIndex(0)
-                          }
-                        }}
-                      />
-                    </div>
-                    <div class="am-dropdown-list">
-                      <For each={filteredBranches()}>
-                        {(branch, index) => (
-                          <button
-                            class="am-branch-item"
-                            classList={{
-                              "am-branch-item-active": effectiveBaseBranch() === branch.name,
-                              "am-branch-item-highlighted": highlightedIndex() === index(),
-                            }}
-                            data-index={index()}
-                            onClick={() => {
-                              setBaseBranch(branch.name)
-                              setBaseBranchOpen(false)
-                              setBranchSearch("")
-                              setHighlightedIndex(0)
-                            }}
-                            onMouseEnter={() => setHighlightedIndex(index())}
-                            type="button"
-                          >
-                            <span class="am-branch-item-left">
-                              <Icon name="branch" size="small" />
-                              <span class="am-branch-item-name">{branch.name}</span>
-                              <Show when={branch.isDefault}>
-                                <span class="am-branch-badge">{t("agentManager.dialog.branchBadge.default")}</span>
-                              </Show>
-                              <Show when={!branch.isLocal && branch.isRemote}>
-                                <span class="am-branch-badge am-branch-badge-remote">
-                                  {t("agentManager.dialog.branchBadge.remote")}
-                                </span>
-                              </Show>
-                            </span>
-                            <Show when={branch.lastCommitDate}>
-                              <span class="am-branch-item-time">{formatRelativeDate(branch.lastCommitDate!)}</span>
-                            </Show>
-                          </button>
-                        )}
-                      </For>
-                    </div>
-                  </Popover>
-                </div>
-              </div>
-            </div>
-          </Show>
-
-          {/* Version / compare mode selector */}
-          <Show
-            when={compareMode()}
-            fallback={
-              <div class="am-nv-version-bar">
-                <span class="am-nv-config-label">{t("agentManager.dialog.versions")}</span>
-                <div class="am-nv-pills">
-                  {VERSION_OPTIONS.map((count) => (
-                    <button
-                      class="am-nv-pill"
-                      classList={{ "am-nv-pill-active": versions() === count }}
-                      onClick={() => setVersions(count)}
-                      type="button"
-                    >
-                      {count}
-                    </button>
-                  ))}
-                  <button
-                    class="am-nv-pill am-nv-pill-compare"
-                    onClick={() => setCompareMode(true)}
-                    type="button"
-                    title={t("agentManager.dialog.compareModels")}
-                  >
-                    <Icon name="layers" size="small" />
-                  </button>
-                </div>
-                <Show when={versions() > 1}>
-                  <span class="am-nv-version-hint">{t("agentManager.dialog.versionHint", { count: versions() })}</span>
-                </Show>
-              </div>
-            }
-          >
-            <div class="am-nv-compare-section">
-              <div class="am-nv-version-bar">
-                <span class="am-nv-config-label">
-                  {t("agentManager.dialog.compareModels")}
-                  <Show when={totalAllocations(modelAllocations()) > 0}>
-                    <span class="am-nv-compare-count">
-                      {totalAllocations(modelAllocations())}/{MAX_MULTI_VERSIONS}
-                    </span>
-                  </Show>
-                </span>
-                <button
-                  class="am-nv-pill-back"
-                  onClick={() => {
-                    setCompareMode(false)
-                    setModelAllocations(new Map())
-                  }}
-                  type="button"
-                  title={t("agentManager.dialog.versions")}
-                >
-                  <Icon name="close-small" size="small" />
-                </button>
-              </div>
-              <MultiModelSelector allocations={modelAllocations()} onChange={setModelAllocations} />
-            </div>
-          </Show>
-
-          {/* Submit button */}
-          <Button variant="primary" size="large" class="am-nv-submit" onClick={handleSubmit} disabled={!canSubmit()}>
-            <Show
-              when={!starting()}
-              fallback={
-                <>
-                  <Spinner class="am-nv-spinner" />
-                  <span>{t("agentManager.dialog.creating")}</span>
-                </>
-              }
-            >
-              {t("agentManager.dialog.createWorkspace")}
-            </Show>
-          </Button>
-        </div>
-      </Show>
-
-      {/* Import tab */}
-      <Show when={tab() === "import"}>
-        <div class="am-import-tab">
-          {/* Pull Request section */}
-          <div class="am-import-section">
-            <span class="am-nv-config-label">{t("agentManager.import.pullRequest")}</span>
-            <div class="am-pr-row">
-              <div class="am-pr-input-wrapper">
-                <Icon name="branch" size="small" />
-                <input
-                  class="am-pr-input"
-                  type="text"
-                  placeholder={t("agentManager.import.pastePrUrl")}
-                  value={prUrl()}
-                  onInput={(e) => setPrUrl(e.currentTarget.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault()
-                      handlePRSubmit()
-                    }
-                  }}
-                  disabled={isPending()}
-                />
-              </div>
-              <Button
-                variant="secondary"
-                size="small"
-                onClick={handlePRSubmit}
-                disabled={!prUrl().trim() || isPending()}
-              >
-                <Show when={prPending()} fallback={t("agentManager.import.open")}>
-                  <Spinner class="am-nv-spinner" />
-                </Show>
-              </Button>
-            </div>
-          </div>
-
-          <div class="am-import-divider" />
-
-          {/* Branches section */}
-          <div class="am-import-section">
-            <span class="am-nv-config-label">{t("agentManager.import.branches")}</span>
-            <div class="am-selector-wrapper">
-              <Popover
-                open={branchOpen()}
-                onOpenChange={setBranchOpen}
-                placement="bottom-start"
-                sameWidth
-                class="am-dropdown"
-                trigger={
-                  <button class="am-selector-trigger" disabled={isPending()} type="button">
-                    <span class="am-selector-left">
-                      <Icon name="branch" size="small" />
-                      <span class="am-selector-value">
-                        {branchesLoading() ? t("agentManager.import.loading") : t("agentManager.import.selectBranch")}
-                      </span>
-                    </span>
-                    <span class="am-selector-right">
-                      <Icon name="selector" size="small" />
-                    </span>
-                  </button>
-                }
-              >
-                <div class="am-dropdown-search">
-                  <Icon name="magnifying-glass" size="small" />
-                  <input
-                    class="am-dropdown-search-input"
-                    type="text"
-                    placeholder={t("agentManager.dialog.searchBranches")}
-                    value={branchSearch()}
-                    onInput={(e) => setBranchSearch(e.currentTarget.value)}
-                    autofocus
-                  />
-                </div>
-                <div class="am-dropdown-list">
-                  <Show
-                    when={filteredBranches().length > 0}
-                    fallback={
-                      <div class="am-dropdown-empty">
-                        {branchesLoading()
-                          ? t("agentManager.import.loadingBranches")
-                          : t("agentManager.import.noMatchingBranches")}
-                      </div>
-                    }
-                  >
-                    <For each={filteredBranches()}>
-                      {(branch) => (
-                        <div class="am-branch-item" onClick={() => handleBranchSelect(branch.name)}>
-                          <span class="am-branch-item-left">
-                            <Icon name="branch" size="small" />
-                            <span class="am-branch-item-name">{branch.name}</span>
-                            <Show when={branch.isDefault}>
-                              <span class="am-branch-badge">{t("agentManager.dialog.branchBadge.default")}</span>
-                            </Show>
-                            <Show when={!branch.isLocal && branch.isRemote}>
-                              <span class="am-branch-badge">{t("agentManager.dialog.branchBadge.remote")}</span>
-                            </Show>
-                          </span>
-                          <Show when={branch.lastCommitDate}>
-                            <span class="am-branch-item-time">{formatRelativeDate(branch.lastCommitDate!)}</span>
-                          </Show>
-                        </div>
-                      )}
-                    </For>
-                  </Show>
-                </div>
-              </Popover>
-            </div>
-          </div>
-
-          {/* Empty state when no branches are available */}
-          <Show when={!branchesLoading() && branches().length === 0}>
-            <div class="am-import-empty">
-              {t("agentManager.import.noBranchesFound")}
-              <br />
-              {t("agentManager.import.noBranchesHint")}
-            </div>
-          </Show>
-        </div>
-      </Show>
-    </Dialog>
   )
 }
 

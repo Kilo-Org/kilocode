@@ -1,6 +1,6 @@
 {
   "name": "@kilocode/kilo-ui",
-  "version": "7.0.34",
+  "version": "7.0.40",
   "type": "module",
   "license": "MIT",
   "exports": {
@@ -50,6 +50,7 @@
     "./session-review": "./src/components/session-review.tsx",
     "./session-turn": "./src/components/session-turn.tsx",
     "./basic-tool": "./src/components/basic-tool.tsx",
+    "./error-details": "./src/components/error-details.tsx",
     "./diff-changes": "./src/components/diff-changes.tsx",
     "./diff-ssr": "./src/components/diff-ssr.tsx",
     "./dock-prompt": "./src/components/dock-prompt.tsx",
@@ -73,6 +74,7 @@
     "./theme": "./src/theme/index.ts",
     "./theme/*": "./src/theme/*.ts",
     "./theme/context": "./src/theme/context.tsx",
+    "./lucide": "./src/lucide.ts",
     "./icons/provider": "./src/components/provider-icons/types.ts",
     "./icons/file-type": "./src/components/file-icons/types.ts",
     "./icons/app": "./src/components/app-icons/types.ts",
@@ -103,6 +105,7 @@
     "test:visual:update": "playwright test --update-snapshots"
   },
   "dependencies": {
-    "@kobalte/core": "0.13.11"
+    "@kobalte/core": "0.13.11",
+    "lucide-solid": "0.576.0"
   }
 }

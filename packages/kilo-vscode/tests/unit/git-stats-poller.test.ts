@@ -1,4 +1,7 @@
 import { describe, it, expect } from "bun:test"
+import * as fs from "fs"
+import * as os from "os"
+import * as path from "path"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { GitStatsPoller } from "../../src/agent-manager/GitStatsPoller"
 import { GitOps } from "../../src/agent-manager/GitOps"
@@ -65,7 +68,7 @@ describe("GitStatsPoller", () => {
         if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
         if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "origin/main"
         if (args[0] === "fetch") return ""
-        if (args[0] === "rev-list") return "1"
+        if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t1"
         return ""
       }),
     })
@@ -79,7 +82,9 @@ describe("GitStatsPoller", () => {
 
   it("keeps last-known stats when a later poll fails", async () => {
     let calls = 0
-    const emitted: Array<Array<{ worktreeId: string; additions: number; deletions: number; commits: number }>> = []
+    const emitted: Array<
+      Array<{ worktreeId: string; files: number; additions: number; deletions: number; ahead: number; behind: number }>
+    > = []
 
     const client = {
       worktree: {
@@ -103,7 +108,7 @@ describe("GitStatsPoller", () => {
         if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
         if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "origin/main"
         if (args[0] === "fetch") return ""
-        if (args[0] === "rev-list") return "2"
+        if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t2"
         return ""
       }),
     })
@@ -115,16 +120,150 @@ describe("GitStatsPoller", () => {
     expect(emitted.length).toBeGreaterThan(0)
     const first = emitted[0]
     if (!first) throw new Error("expected emitted stats")
-    expect(first[0]).toEqual({ worktreeId: "a", additions: 7, deletions: 3, commits: 2 })
+    expect(first[0]).toEqual({ worktreeId: "a", files: 1, additions: 7, deletions: 3, ahead: 2, behind: 0 })
     const hasZeros = emitted.some((batch) =>
-      batch.some((item) => item.additions === 0 && item.deletions === 0 && item.commits === 0),
+      batch.some((item) => item.additions === 0 && item.deletions === 0 && item.ahead === 0),
     )
     expect(hasZeros).toBe(false)
   })
 
+  it("emits present worktree probes on the poll loop", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gsp-presence-"))
+    const wtPath = path.join(root, "wt-a")
+    fs.mkdirSync(wtPath, { recursive: true })
+
+    const presence: Array<{ worktrees: Array<{ worktreeId: string; missing: boolean }>; degraded: boolean }> = []
+
+    const poller = new GitStatsPoller({
+      getWorktrees: () => [{ ...worktree("a"), path: wtPath }],
+      getWorkspaceRoot: () => root,
+      getClient: () => {
+        throw new Error("backend unavailable")
+      },
+      onStats: () => undefined,
+      onLocalStats: () => undefined,
+      onWorktreePresence: (result) => presence.push(result),
+      log: () => undefined,
+      intervalMs: 5,
+      git: gitOps(async (args) => {
+        if (args[0] === "worktree") {
+          return `worktree ${wtPath}\nbranch refs/heads/branch-a\n`
+        }
+        return ""
+      }),
+    })
+
+    poller.setEnabled(true)
+    await waitFor(() => presence.length >= 1)
+    poller.stop()
+    fs.rmSync(root, { recursive: true, force: true })
+
+    expect(presence[0]).toEqual({ worktrees: [{ worktreeId: "a", missing: false }], degraded: false })
+  })
+
+  it("emits degraded probe when git worktree listing fails", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gsp-presence-fail-"))
+    const wtPath = path.join(root, "wt-a")
+    fs.mkdirSync(wtPath, { recursive: true })
+
+    const presence: Array<{ worktrees: Array<{ worktreeId: string; missing: boolean }>; degraded: boolean }> = []
+
+    const poller = new GitStatsPoller({
+      getWorktrees: () => [{ ...worktree("a"), path: wtPath }],
+      getWorkspaceRoot: () => root,
+      getClient: () => {
+        throw new Error("backend unavailable")
+      },
+      onStats: () => undefined,
+      onLocalStats: () => undefined,
+      onWorktreePresence: (result) => presence.push(result),
+      log: () => undefined,
+      intervalMs: 5,
+      git: gitOps(async (args) => {
+        if (args[0] === "worktree") {
+          throw new Error("git worktree list failed")
+        }
+        return ""
+      }),
+    })
+
+    poller.setEnabled(true)
+    await waitFor(() => presence.length >= 1)
+    poller.stop()
+    fs.rmSync(root, { recursive: true, force: true })
+
+    expect(presence[0]).toEqual({ worktrees: [], degraded: true })
+  })
+
+  it("skips stats fetch for missing worktrees detected by presence probe", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gsp-skip-missing-"))
+    const wtAPath = path.join(root, "wt-a")
+    const wtBPath = path.join(root, "wt-b")
+    fs.mkdirSync(wtAPath, { recursive: true })
+
+    const calls: string[] = []
+    const emitted: Array<Array<{ worktreeId: string; additions: number; deletions: number; commits: number }>> = []
+    const presence: Array<{ worktrees: Array<{ worktreeId: string; missing: boolean }>; degraded: boolean }> = []
+
+    const client = {
+      worktree: {
+        diff: async ({ directory }: { directory: string }) => {
+          calls.push(directory)
+          return { data: diff(1, 1) }
+        },
+      },
+    } as unknown as KiloClient
+
+    const poller = new GitStatsPoller({
+      getWorktrees: () => [
+        { ...worktree("a"), path: wtAPath },
+        { ...worktree("b"), path: wtBPath },
+      ],
+      getWorkspaceRoot: () => root,
+      getClient: () => client,
+      onStats: (stats) => emitted.push(stats),
+      onLocalStats: () => undefined,
+      onWorktreePresence: (result) => presence.push(result),
+      log: () => undefined,
+      intervalMs: 5,
+      git: gitOps(async (args) => {
+        if (args[0] === "worktree") {
+          return `worktree ${wtAPath}\nbranch refs/heads/branch-a\n`
+        }
+        if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
+        if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "origin/main"
+        if (args[0] === "fetch") return ""
+        if (args[0] === "rev-list") return "1"
+        return ""
+      }),
+    })
+
+    poller.setEnabled(true)
+    await waitFor(() => calls.length >= 1)
+    poller.stop()
+    fs.rmSync(root, { recursive: true, force: true })
+
+    expect(calls.some((cwd) => cwd === wtBPath)).toBe(false)
+    expect(presence[0]).toEqual({
+      worktrees: [
+        { worktreeId: "a", missing: false },
+        { worktreeId: "b", missing: true },
+      ],
+      degraded: false,
+    })
+    expect(emitted[0]?.map((item) => item.worktreeId)).toEqual(["a"])
+  })
+
   it("preserves local stats when client fails after initial success", async () => {
     let diffCalls = 0
-    const emitted: Array<{ branch: string; additions: number; deletions: number; commits: number }> = []
+    const emitted: Array<{
+      branch: string
+      files: number
+      additions: number
+      deletions: number
+      ahead: number
+      behind: number
+    }> = []
 
     const client = {
       worktree: {
@@ -149,7 +288,7 @@ describe("GitStatsPoller", () => {
         if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "@{upstream}") return "origin/feature"
         if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
         if (args[0] === "fetch") return ""
-        if (args[0] === "rev-list") return "3"
+        if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t3"
         if (args[0] === "branch") return "feature"
         if (args[0] === "config") return "origin"
         return ""
@@ -161,12 +300,19 @@ describe("GitStatsPoller", () => {
     poller.stop()
 
     expect(emitted.length).toBeGreaterThan(0)
-    expect(emitted[0]).toEqual({ branch: "feature", additions: 5, deletions: 2, commits: 3 })
+    expect(emitted[0]).toEqual({ branch: "feature", files: 1, additions: 5, deletions: 2, ahead: 3, behind: 0 })
     expect(emitted.length).toBe(1)
   })
 
   it("falls back to <remote>/HEAD when no upstream and no <remote>/<branch>", async () => {
-    const emitted: Array<{ branch: string; additions: number; deletions: number; commits: number }> = []
+    const emitted: Array<{
+      branch: string
+      files: number
+      additions: number
+      deletions: number
+      ahead: number
+      behind: number
+    }> = []
 
     const client = {
       worktree: { diff: async () => ({ data: diff(10, 4) }) },
@@ -196,7 +342,7 @@ describe("GitStatsPoller", () => {
         if (args[0] === "branch") return "my-feature"
         if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
         if (args[0] === "fetch") return ""
-        if (args[0] === "rev-list") return "5"
+        if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t5"
         return ""
       }),
     })
@@ -205,11 +351,18 @@ describe("GitStatsPoller", () => {
     await waitFor(() => emitted.length >= 1)
     poller.stop()
 
-    expect(emitted[0]).toEqual({ branch: "my-feature", additions: 10, deletions: 4, commits: 5 })
+    expect(emitted[0]).toEqual({ branch: "my-feature", files: 1, additions: 10, deletions: 4, ahead: 5, behind: 0 })
   })
 
-  it("emits zeros when no tracking, no default branch, and no remote refs exist", async () => {
-    const emitted: Array<{ branch: string; additions: number; deletions: number; commits: number }> = []
+  it("falls back to workingTreeStats when no tracking, no default branch, and no remote refs exist", async () => {
+    const emitted: Array<{
+      branch: string
+      files: number
+      additions: number
+      deletions: number
+      ahead: number
+      behind: number
+    }> = []
 
     const client = {
       worktree: { diff: async () => ({ data: diff(0, 0) }) },
@@ -231,6 +384,9 @@ describe("GitStatsPoller", () => {
           throw new Error("no ref")
         if (args[0] === "symbolic-ref") throw new Error("no symbolic ref")
         if (args[0] === "rev-parse" && args[1] === "--verify" && args[2] === "--quiet") throw new Error("no ref")
+        // workingTreeStats fallback: no tracked changes, no untracked files
+        if (args[0] === "diff") return ""
+        if (args[0] === "ls-files") return ""
         return ""
       }),
     })
@@ -239,12 +395,21 @@ describe("GitStatsPoller", () => {
     await waitFor(() => emitted.length >= 1)
     poller.stop()
 
-    expect(emitted[0]).toEqual({ branch: "orphan-branch", additions: 0, deletions: 0, commits: 0 })
+    expect(emitted[0]).toEqual({
+      branch: "orphan-branch",
+      files: 0,
+      additions: 0,
+      deletions: 0,
+      ahead: 0,
+      behind: 0,
+    })
   })
 
   it("refreshes upstream remote once for concurrent worktrees", async () => {
     const commands: string[][] = []
-    const emitted: Array<Array<{ worktreeId: string; additions: number; deletions: number; commits: number }>> = []
+    const emitted: Array<
+      Array<{ worktreeId: string; files: number; additions: number; deletions: number; ahead: number; behind: number }>
+    > = []
 
     const client = {
       worktree: { diff: async () => ({ data: diff(0, 0) }) },
@@ -265,7 +430,7 @@ describe("GitStatsPoller", () => {
         if (args[0] === "branch") return "feature"
         if (args[0] === "config") return "origin"
         if (args[0] === "fetch") return ""
-        if (args[0] === "rev-list") return "0"
+        if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t0"
         return ""
       }),
     })

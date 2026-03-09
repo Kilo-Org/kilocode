@@ -1,4 +1,3 @@
-// kilocode_change - new file
 export type {
   DesktopTheme,
   ThemeSeedColors,

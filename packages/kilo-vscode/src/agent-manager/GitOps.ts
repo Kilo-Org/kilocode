@@ -3,8 +3,9 @@ import * as os from "os"
 import * as cp from "child_process"
 import * as fs from "fs/promises"
 import simpleGit from "simple-git"
+import { parseWorktreeList, normalizePath } from "./git-import"
 
-export interface GitOpsOptions {
+interface GitOpsOptions {
   log: (...args: unknown[]) => void
   refreshMs?: number
   /** Override git command execution for testing. */
@@ -16,13 +17,13 @@ export interface ApplyConflict {
   reason: string
 }
 
-export interface ApplyCheckResult {
+interface ApplyCheckResult {
   ok: boolean
   conflicts: ApplyConflict[]
   message: string
 }
 
-export interface ApplyPatchResult {
+interface ApplyPatchResult {
   ok: boolean
   conflicts: ApplyConflict[]
   message: string
@@ -61,6 +62,7 @@ export class GitOps {
     return this.runGit(args, cwd)
   }
 
+  /** Return the name of the currently checked-out branch, or `"HEAD"` if detached. */
   async currentBranch(cwd: string): Promise<string> {
     return this.raw(["rev-parse", "--abbrev-ref", "HEAD"], cwd).catch(() => "")
   }
@@ -86,6 +88,7 @@ export class GitOps {
     return "origin"
   }
 
+  /** Resolve the upstream tracking ref for `branch`, or `undefined` if none is set. Note: the `@{upstream}` check uses the current HEAD, not `branch`. */
   async resolveTrackingBranch(cwd: string, branch: string): Promise<string | undefined> {
     const upstream = await this.raw(["rev-parse", "--abbrev-ref", "@{upstream}"], cwd).catch(() => "")
     if (upstream) return upstream
@@ -138,28 +141,114 @@ export class GitOps {
     return job
   }
 
-  async countMissingOriginCommits(cwd: string, parentBranch: string): Promise<number> {
+  /** Return the set of worktree paths for the repo, excluding bare entries. */
+  async listWorktreePaths(cwd: string): Promise<Set<string>> {
+    const raw = await this.raw(["worktree", "list", "--porcelain"], cwd)
+    const paths = new Set<string>()
+    for (const entry of parseWorktreeList(raw)) {
+      if (entry.bare) continue
+      paths.add(normalizePath(entry.path))
+    }
+    return paths
+  }
+
+  /**
+   * Compute working-tree stats (staged + unstaged + untracked) without requiring
+   * a remote or base branch. Combines `git diff HEAD --numstat` for tracked
+   * changes with `git ls-files --others` for new files.
+   *
+   * Returns aggregate file count, additions, and deletions across the working tree.
+   */
+  async workingTreeStats(cwd: string): Promise<{ files: number; additions: number; deletions: number }> {
+    // Single diff against HEAD captures both staged and unstaged changes.
+    const [numstat, untracked] = await Promise.all([
+      this.raw(["diff", "HEAD", "--numstat"], cwd).catch(() => ""),
+      this.raw(["ls-files", "--others", "--exclude-standard"], cwd).catch(() => ""),
+    ])
+
+    const tracked = numstat
+      ? numstat.split("\n").reduce(
+          (acc, line) => {
+            if (!line.trim()) return acc
+            const parts = line.split("\t")
+            return {
+              files: acc.files + 1,
+              additions: acc.additions + (parts[0] !== "-" ? parseInt(parts[0], 10) || 0 : 0),
+              deletions: acc.deletions + (parts[1] !== "-" ? parseInt(parts[1], 10) || 0 : 0),
+            }
+          },
+          { files: 0, additions: 0, deletions: 0 },
+        )
+      : { files: 0, additions: 0, deletions: 0 }
+
+    // Count lines in untracked files as additions. Cap at 1MB to avoid
+    // reading large binary files into memory.
+    if (!untracked) return tracked
+
+    const paths = untracked.split("\n").filter((line) => line.trim())
+    const counts = await Promise.all(
+      paths.map(async (p) => {
+        try {
+          const full = nodePath.resolve(cwd, p)
+          const stat = await fs.stat(full)
+          if (stat.size > 1_000_000) return 0
+          const content = await fs.readFile(full, "utf-8")
+          return content.split("\n").length
+        } catch (err) {
+          this.log(`Failed to read untracked file ${p}:`, err)
+          return 0
+        }
+      }),
+    )
+
+    return {
+      files: tracked.files + paths.length,
+      additions: tracked.additions + counts.reduce((sum, count) => sum + count, 0),
+      deletions: tracked.deletions,
+    }
+  }
+
+  /**
+   * Count commits ahead and behind using `rev-list --left-right --count`.
+   * Tries the best available ref in order: upstream tracking branch →
+   * remote/branch → remote/parentBranch → local parentBranch.
+   */
+  async aheadBehind(cwd: string, parentBranch: string): Promise<{ ahead: number; behind: number }> {
     const upstream = await this.raw(["rev-parse", "--abbrev-ref", "@{upstream}"], cwd).catch(() => "")
     const branch = await this.raw(["branch", "--show-current"], cwd).catch(() => "")
     const remote = await this.resolveRemote(cwd, branch)
     await this.refreshRemote(cwd, remote)
 
-    if (upstream) {
-      const count = await this.raw(["rev-list", "--count", `${upstream}..HEAD`], cwd).catch(() => "0")
-      return parseInt(count, 10) || 0
+    const ref = (() => {
+      if (upstream) return upstream
+      const remoteBranch = branch ? `${remote}/${branch}` : ""
+      // hasRemoteRef is async, so we can't use it inline — resolve below
+      return { remoteBranch, remoteParent: `${remote}/${parentBranch}`, parentBranch }
+    })()
+
+    if (typeof ref === "string") {
+      return this.parseLeftRight(cwd, ref)
     }
 
-    const remoteBranch = branch ? `${remote}/${branch}` : ""
-    const hasRemoteBranch = remoteBranch ? await this.hasRemoteRef(cwd, remoteBranch) : false
-
-    const remoteParent = `${remote}/${parentBranch}`
-    const hasRemoteParent = await this.hasRemoteRef(cwd, remoteParent)
-
-    const ref = hasRemoteBranch ? remoteBranch : hasRemoteParent ? remoteParent : parentBranch
-    const count = await this.raw(["rev-list", "--count", `${ref}..HEAD`], cwd).catch(() => "0")
-    return parseInt(count, 10) || 0
+    if (ref.remoteBranch && (await this.hasRemoteRef(cwd, ref.remoteBranch))) {
+      return this.parseLeftRight(cwd, ref.remoteBranch)
+    }
+    if (await this.hasRemoteRef(cwd, ref.remoteParent)) {
+      return this.parseLeftRight(cwd, ref.remoteParent)
+    }
+    return this.parseLeftRight(cwd, ref.parentBranch)
   }
 
+  private async parseLeftRight(cwd: string, ref: string): Promise<{ ahead: number; behind: number }> {
+    const out = await this.raw(["rev-list", "--left-right", "--count", `${ref}...HEAD`], cwd).catch(() => "0\t0")
+    const [behind, ahead] = out.split(/\s+/).map((s) => parseInt(s, 10) || 0)
+    return { ahead, behind }
+  }
+
+  /**
+   * Build a binary-safe patch of all working-tree changes relative to the
+   * merge-base with `baseBranch`. Optionally scoped to `selectedFiles`.
+   */
   async buildWorktreePatch(sourcePath: string, baseBranch: string, selectedFiles?: string[]): Promise<string> {
     const tmp = await fs.mkdtemp(nodePath.join(os.tmpdir(), "kilo-apply-"))
     const index = nodePath.join(tmp, "index")

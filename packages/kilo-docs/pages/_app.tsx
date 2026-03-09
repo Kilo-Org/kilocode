@@ -3,7 +3,7 @@ import Head from "next/head"
 import { useRouter } from "next/router"
 import posthog from "posthog-js"
 
-import { CopyPageButton, SideNav, TableOfContents, TopNav } from "../components"
+import { CopyPageButton, PageFooter, SideNav, TableOfContents, TopNav } from "../components"
 
 import "prismjs"
 import "prismjs/components/prism-bash.min"
@@ -178,8 +178,9 @@ export default function MyApp({ Component, pageProps }: AppProps<MyAppProps>) {
           <SideNav isMobileOpen={isMobileMenuOpen} onMobileClose={handleMobileMenuClose} />
           <main className="main-content">
             <div className="content-wrapper">
-              <div className="article-content flex column mt-5">
+              <div className="article-content mt-5">
                 <Component {...pageProps} />
+                {markdoc && <PageFooter />}
               </div>
               <div className="right-sidebar" key={router.asPath}>
                 {markdoc && <CopyPageButton />}
