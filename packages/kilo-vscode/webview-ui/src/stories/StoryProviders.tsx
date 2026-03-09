@@ -136,6 +136,8 @@ export function mockSessionValue(overrides?: {
     questionErrors: () => new Set<string>(),
     selected: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     selectModel: noop,
+    hasModelOverride: () => false,
+    clearModelOverride: noop,
     totalCost: () => 0,
     contextUsage: () => undefined,
     agents: () => [{ name: "code", description: "Code mode", mode: "primary" as const }],

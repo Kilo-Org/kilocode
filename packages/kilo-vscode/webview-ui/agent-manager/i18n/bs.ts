@@ -14,6 +14,8 @@ export const dict = {
   "agentManager.worktree.doubleClickRename": "Dvostruki klik za preimenovanje",
   "agentManager.worktree.versions": "{{count}} verzija",
   "agentManager.worktree.advancedOptions": "Napredne opcije Worktree-a",
+  "agentManager.worktree.defaultBaseBranch": "Zadana bazna grana",
+  "agentManager.worktree.defaultBaseBranchAuto": "Automatsko otkrivanje",
   "agentManager.hoverCard.branch": "BRANCH",
   "agentManager.hoverCard.base": "Baza",
   "agentManager.hoverCard.sessions": "Sesije",

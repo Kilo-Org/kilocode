@@ -14,6 +14,8 @@ export const dict = {
   "agentManager.worktree.doubleClickRename": "더블 클릭하여 이름 변경",
   "agentManager.worktree.versions": "{{count}}개 버전",
   "agentManager.worktree.advancedOptions": "Worktree 고급 옵션",
+  "agentManager.worktree.defaultBaseBranch": "기본 베이스 브랜치",
+  "agentManager.worktree.defaultBaseBranchAuto": "자동 감지",
   "agentManager.hoverCard.branch": "브랜치",
   "agentManager.hoverCard.base": "베이스",
   "agentManager.hoverCard.sessions": "세션",

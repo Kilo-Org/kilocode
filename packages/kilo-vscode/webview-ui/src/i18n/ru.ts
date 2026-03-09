@@ -231,6 +231,7 @@ export const dict = {
   "prompt.action.send": "Отправить",
   "prompt.action.stop": "Остановить",
   "prompt.action.enhance": "Улучшить промпт",
+  "prompt.action.resetModel": "Сбросить модель на значение по умолчанию",
   "prompt.action.enhanceDescription":
     "Кнопка 'Улучшить запрос' помогает сделать ваш запрос лучше, предоставляя дополнительный контекст, уточнения или переформулировку. Попробуйте ввести запрос и снова нажать кнопку, чтобы увидеть, как это работает.",
 
@@ -407,6 +408,15 @@ export const dict = {
     "Корневой элемент не найден. Вы забыли добавить его в index.html? Или, может быть, атрибут id был написан неправильно?",
 
   "error.globalSync.connectFailed": "Не удалось подключиться к серверу. Запущен ли сервер по адресу `{{url}}`?",
+
+  "error.paidModel.title": "Для использования этой модели необходимо войти",
+  "error.paidModel.description":
+    "Войдите или создайте аккаунт для доступа к более чем 500 моделям, используйте кредиты по себестоимости или подключите свой ключ.",
+  "error.paidModel.action": "Войти",
+  "error.promotionLimit.title": "Для продолжения необходимо зарегистрироваться",
+  "error.promotionLimit.description":
+    "Зарегистрируйтесь бесплатно, чтобы продолжить и исследовать более 500 моделей. Займёт 2 минуты, кредитная карта не нужна. Или вернитесь позже.",
+  "error.promotionLimit.action": "Зарегистрироваться",
 
   "error.chain.unknown": "Неизвестная ошибка",
   "error.chain.causedBy": "Причина:",
@@ -993,49 +1003,56 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "Миграция с устаревшей версии",
   "settings.aboutKiloCode.legacyMigration.description":
     "Перенос настроек из предыдущей установки Kilo Code, включая API-ключи провайдеров и модель по умолчанию.",
-  "migration.welcome.title": "Добро пожаловать в новый Kilo Code",
-  "migration.welcome.detected": "Мы обнаружили настройки от предыдущей установки Kilo Code.",
-  "migration.welcome.sessionsInfo":
-    "Сессии чата и история не могут быть перенесены — новая версия использует другую архитектуру.",
-  "migration.welcome.canMigrate": "В новую версию можно перенести следующие настройки:",
-  "migration.welcome.start": "Начать миграцию",
-  "migration.welcome.skip": "Пропустить миграцию",
-  "migration.steps.title": "Перенос ваших настроек",
-  "migration.steps.subtitle":
-    "Мы нашли настройки от вашей предыдущей установки Kilo Code. Выберите, что нужно перенести.",
+
+  // Screen 1 — What's New
+  "migration.whatsNew.title": "Что нового в Kilo Code",
+  "migration.whatsNew.badge": "Beta",
+  "migration.whatsNew.subtitle": "Мы перестроили расширение на более быстрой и эффективной основе.",
+  "migration.whatsNew.features.performance.title": "Более быстрая работа агента",
+  "migration.whatsNew.features.performance.detail":
+    "Параллельные вызовы инструментов и подагенты позволяют вашему агенту делать больше одновременно — меньше ожидания, больше результатов.",
+  "migration.whatsNew.features.interface.title": "Упрощённый интерфейс",
+  "migration.whatsNew.features.interface.detail": "Меньше отвлекающих факторов, проще и быстрее для чтения.",
+  "migration.whatsNew.features.agentManager.title": "Agent Manager",
+  "migration.whatsNew.features.agentManager.detail":
+    "Единый интерфейс для запуска нескольких агентов параллельно, каждый в своём worktree — отслеживайте прогресс, переключайте контекст и просматривайте изменения в одном месте.",
+  "migration.whatsNew.features.foundation.title": "Общая основа",
+  "migration.whatsNew.features.foundation.detail":
+    "Одно компактное и эффективное ядро для всех продуктов Kilo. Знакомый опыт независимо от выбранного способа работы.",
+  "migration.whatsNew.blogLink": "Читать полный анонс",
+  "migration.whatsNew.continue": "Продолжить",
+
+  // Screen 2 — Migrate Settings
+  "migration.migrate.title": "Перенос ваших настроек",
+  "migration.migrate.subtitle": "Мы нашли настройки от вашей предыдущей установки. Вот что можно перенести.",
+  "migration.migrate.selectLabel": "Выберите, что перенести",
+  "migration.migrate.cannotMigrate": "Невозможно перенести",
+  "migration.migrate.chatHistory": "Сессии чата и история",
+  "migration.migrate.chatHistoryDesc": "Несовместимы с новой архитектурой",
+  "migration.migrate.button": "Перенести настройки",
+  "migration.migrate.skip": "Пропустить",
+  "migration.migrate.back": "Назад",
+  "migration.migrate.keysDetected": "Обнаружено ключей: {{count}}",
+  "migration.migrate.serversConfigured": "Настроено серверов: {{count}}",
+  "migration.migrate.modesFound": "Найдено режимов: {{count}}",
+  "migration.migrate.nothingToMigrate": "В старых настройках не найдено данных для переноса.",
+
+  // Migrate — item labels (reused from old select keys)
   "migration.select.providers": "API-ключи провайдеров",
   "migration.select.mcpServers": "Серверы MCP",
   "migration.select.customModes": "Пользовательские режимы / Агенты",
   "migration.select.defaultModel": "Модель по умолчанию",
-  "migration.select.unsupported": "Не поддерживается в новой версии",
-  "migration.select.nothingToMigrate": "В старых настройках не найдено данных для переноса.",
-  "migration.select.settings": "Настройки",
   "migration.select.autoApproval": "Автоматическое подтверждение",
-  "migration.select.autoApproval.commandRules": "Правила команд",
-  "migration.select.autoApproval.commandRulesDesc": "Главный переключатель и списки разрешенных/запрещенных команд",
-  "migration.select.autoApproval.readPermission": "Разрешение на чтение",
-  "migration.select.autoApproval.readPermissionDesc": "Доступ к чтению файлов внутри и вне рабочей области",
-  "migration.select.autoApproval.writePermission": "Разрешение на запись",
-  "migration.select.autoApproval.writePermissionDesc": "Доступ к записи и редактированию файлов",
-  "migration.select.autoApproval.executePermission": "Разрешение на выполнение",
-  "migration.select.autoApproval.executePermissionDesc": "Выполнение команд в терминале",
-  "migration.select.autoApproval.mcpPermission": "Разрешение MCP",
-  "migration.select.autoApproval.mcpPermissionDesc": "Использование инструментов MCP",
-  "migration.select.autoApproval.taskPermission": "Разрешение на задачи",
-  "migration.select.autoApproval.taskPermissionDesc": "Переключение режимов и создание подзадач",
   "migration.select.language": "Язык интерфейса",
-  "migration.select.languageDesc": "Ваши языковые настройки будут применены к новому расширению",
   "migration.select.autocomplete": "Настройки автодополнения",
-  "migration.select.autocompleteDesc":
-    "Параметры автоматического срабатывания, горячие клавиши и автодополнение в чате",
-  "migration.select.continue": "Продолжить",
-  "migration.select.back": "Назад",
-  "migration.progress.title": "Перенос ваших настроек…",
-  "migration.progress.done": "Продолжить",
+
+  // Migrate — completion
   "migration.complete.summary": "Успешно перенесено: {{success}} из {{total}} элементов.",
   "migration.complete.cleanup": "Удалить данные старых настроек",
   "migration.complete.cleanupDescription":
     "Это удалит старые настройки из хранилища VS Code. Вы не сможете запустить эту миграцию повторно.",
   "migration.complete.done": "Готово",
   // legacy-migration end
+
+  "error.details.show": "Подробности",
 }

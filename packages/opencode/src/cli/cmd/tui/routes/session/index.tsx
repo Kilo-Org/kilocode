@@ -56,6 +56,7 @@ import { TodoItem } from "../../component/todo-item"
 import { DialogMessage } from "./dialog-message"
 import type { PromptInfo } from "../../component/prompt/history"
 import { DialogConfirm } from "@tui/ui/dialog-confirm"
+import { KiloErrorBlock } from "@/kilocode/components/kilo-error-display" // kilocode_change
 import { DialogTimeline } from "./dialog-timeline"
 import { DialogForkFromTimeline } from "./dialog-fork-from-timeline"
 import { DialogSessionRename } from "../../component/dialog-session-rename"
@@ -1313,18 +1314,25 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
         }}
       </For>
       <Show when={props.message.error && props.message.error.name !== "MessageAbortedError"}>
-        <box
-          border={["left"]}
-          paddingTop={1}
-          paddingBottom={1}
-          paddingLeft={2}
-          marginTop={1}
-          backgroundColor={theme.backgroundPanel}
-          customBorderChars={SplitBorder.customBorderChars}
-          borderColor={theme.error}
-        >
-          <text fg={theme.textMuted}>{props.message.error?.data.message}</text>
-        </box>
+        {/* kilocode_change start - Kilo-specific error display */}
+        <KiloErrorBlock
+          error={props.message.error!}
+          fallback={
+            <box
+              border={["left"]}
+              paddingTop={1}
+              paddingBottom={1}
+              paddingLeft={2}
+              marginTop={1}
+              backgroundColor={theme.backgroundPanel}
+              customBorderChars={SplitBorder.customBorderChars}
+              borderColor={theme.error}
+            >
+              <text fg={theme.textMuted}>{props.message.error?.data.message}</text>
+            </box>
+          }
+        />
+        {/* kilocode_change end */}
       </Show>
       <Switch>
         <Match when={props.last || final() || props.message.error?.name === "MessageAbortedError"}>

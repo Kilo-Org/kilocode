@@ -9,6 +9,7 @@ import { KiloProvider } from "../KiloProvider"
 import { buildWebviewHtml } from "../utils"
 import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
 import { WorktreeStateManager } from "./WorktreeStateManager"
+import { chooseBaseBranch, normalizeBaseBranch } from "./base-branch"
 import { GitStatsPoller, type WorktreePresenceResult } from "./GitStatsPoller"
 import { GitOps, type ApplyConflict } from "./GitOps"
 import { versionedName } from "./branch-name"
@@ -281,6 +282,12 @@ export class AgentManagerProvider implements vscode.Disposable {
       return null
     }
 
+    if (type === "agentManager.setDefaultBaseBranch") {
+      const branch = normalizeBaseBranch(msg.branch as string | undefined)
+      this.state?.setDefaultBaseBranch(branch)
+      this.pushState()
+      return null
+    }
     if (type === "agentManager.requestExternalWorktrees") {
       void this.onRequestExternalWorktrees()
       return null
@@ -386,6 +393,31 @@ export class AgentManagerProvider implements vscode.Disposable {
   // Shared helpers
   // ---------------------------------------------------------------------------
 
+  /** Resolve the effective base branch using the configured default, explicit override, and existence check. */
+  private async resolveBaseBranch(
+    manager: WorktreeManager,
+    state: WorktreeStateManager,
+    explicit?: string,
+  ): Promise<string | undefined> {
+    const configured = state.getDefaultBaseBranch()
+    if (!configured && !explicit) return undefined
+
+    const configuredExists = configured ? await manager.branchExists(configured) : false
+    const result = chooseBaseBranch({ explicit, configured, configuredExists })
+
+    if (result.stale) {
+      this.clearStaleDefaultBaseBranch(state, result.stale)
+    }
+    return result.branch
+  }
+
+  /** Reset a stale default base branch and notify the webview. */
+  private clearStaleDefaultBaseBranch(state: WorktreeStateManager, stale: string): void {
+    this.log(`Default base branch "${stale}" no longer exists, clearing`)
+    state.setDefaultBaseBranch(undefined)
+    this.pushState()
+  }
+
   /** Create a git worktree on disk and register it in state. Returns null on failure. */
   private async createWorktreeOnDisk(opts?: {
     groupId?: string
@@ -411,11 +443,16 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     this.postToWebview({ type: "agentManager.worktreeSetup", status: "creating", message: "Creating git worktree..." })
 
+    // Resolve effective base branch using configured default
+    const effectiveBase = opts?.existingBranch
+      ? undefined
+      : await this.resolveBaseBranch(manager, state, opts?.baseBranch)
+
     let result: CreateWorktreeResult
     try {
       result = await manager.createWorktree({
         prompt: opts?.name || "kilo",
-        baseBranch: opts?.baseBranch,
+        baseBranch: effectiveBase ?? opts?.baseBranch,
         branchName: opts?.branchName,
         existingBranch: opts?.existingBranch,
       })
@@ -940,10 +977,23 @@ export class AgentManagerProvider implements vscode.Disposable {
     try {
       const result = await manager.listBranches()
       const checkedOut = await manager.checkedOutBranches()
-      const filtered = result.branches.filter((b) => !checkedOut.has(b.name))
+
+      // Include isCheckedOut flag on each branch — let the webview decide how to filter
+      const branches = result.branches.map((b) => ({
+        ...b,
+        isCheckedOut: checkedOut.has(b.name),
+      }))
+
+      // Validate configured default branch still exists
+      const state = this.getStateManager()
+      const configured = state?.getDefaultBaseBranch()
+      if (configured && !branches.some((b) => b.name === configured)) {
+        this.clearStaleDefaultBaseBranch(state!, configured)
+      }
+
       this.postToWebview({
         type: "agentManager.branches",
-        branches: filtered,
+        branches,
         defaultBranch: result.defaultBranch,
       })
     } catch (error) {
@@ -1336,7 +1386,8 @@ export class AgentManagerProvider implements vscode.Disposable {
     if (!manager) return
     try {
       const branch = await manager.currentBranch()
-      this.postToWebview({ type: "agentManager.repoInfo", branch })
+      const defaultBranch = await manager.defaultBranch()
+      this.postToWebview({ type: "agentManager.repoInfo", branch, defaultBranch })
     } catch (error) {
       this.log(`Failed to get current branch: ${error}`)
     }
@@ -1409,6 +1460,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       sessionsCollapsed: state.getSessionsCollapsed(),
       reviewDiffStyle: state.getReviewDiffStyle(),
       isGitRepo: true,
+      defaultBaseBranch: state.getDefaultBaseBranch(),
     })
 
     this.statsPoller.setEnabled(worktrees.length > 0 || this.panel !== undefined)

@@ -14,6 +14,8 @@ export const dict = {
   "agentManager.worktree.doubleClickRename": "Doble clic para renombrar",
   "agentManager.worktree.versions": "{{count}} versiones",
   "agentManager.worktree.advancedOptions": "Opciones avanzadas de Worktree",
+  "agentManager.worktree.defaultBaseBranch": "Rama base predeterminada",
+  "agentManager.worktree.defaultBaseBranchAuto": "Detección automática",
   "agentManager.hoverCard.branch": "BRANCH",
   "agentManager.hoverCard.base": "Base",
   "agentManager.hoverCard.sessions": "Sesiones",

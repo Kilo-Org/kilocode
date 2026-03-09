@@ -257,7 +257,7 @@ export type PermissionLevel = "allow" | "ask" | "deny"
 export type PermissionConfig = Partial<Record<string, PermissionLevel>>
 
 export interface AgentConfig {
-  model?: string
+  model?: string | null
   prompt?: string
   temperature?: number
   top_p?: number
@@ -309,8 +309,8 @@ export interface ExperimentalConfig {
 
 export interface Config {
   permission?: PermissionConfig
-  model?: string
-  small_model?: string
+  model?: string | null
+  small_model?: string | null
   default_agent?: string
   agent?: Record<string, AgentConfig>
   provider?: Record<string, ProviderConfig>
@@ -626,6 +626,7 @@ export interface AgentManagerSessionMetaMessage {
 export interface AgentManagerRepoInfoMessage {
   type: "agentManager.repoInfo"
   branch: string
+  defaultBranch?: string
 }
 
 // Agent Manager worktree setup progress
@@ -674,6 +675,7 @@ export interface AgentManagerStateMessage {
   sessionsCollapsed?: boolean
   reviewDiffStyle?: "unified" | "split"
   isGitRepo?: boolean
+  defaultBaseBranch?: string
 }
 
 // Resolved keybindings for agent manager actions
@@ -703,6 +705,7 @@ export interface BranchInfo {
   isRemote: boolean
   isDefault: boolean
   lastCommitDate?: string
+  isCheckedOut?: boolean
 }
 
 export interface AgentManagerBranchesMessage {
@@ -1450,6 +1453,12 @@ export interface EnhancePromptRequest {
   requestId: string
 }
 
+// Set default base branch (webview → extension)
+export interface SetDefaultBaseBranchRequest {
+  type: "agentManager.setDefaultBaseBranch"
+  branch?: string
+}
+
 export type WebviewMessage =
   | SendMessageRequest
   | AbortRequest
@@ -1532,6 +1541,7 @@ export type WebviewMessage =
   // legacy-migration end
   | ApplyWorktreeDiffMessage
   | EnhancePromptRequest
+  | SetDefaultBaseBranchRequest
 
 // ============================================
 // VS Code API type

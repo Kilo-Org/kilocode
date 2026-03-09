@@ -19,7 +19,6 @@ import { Agent } from "../agent/agent"
 import { Skill } from "../skill/skill"
 import { Auth } from "../auth"
 import { ModelCache } from "../provider/model-cache" // kilocode_change
-import { scheduleDisposeAll } from "../kilocode/dispose" // kilocode_change
 import { Flag } from "../flag/flag"
 import { Command } from "../command"
 import { Global } from "../global"
@@ -171,7 +170,6 @@ export namespace Server {
             await Auth.set(providerID, info)
             // kilocode_change start - invalidate provider/model cache after auth change
             ModelCache.clear(providerID)
-            scheduleDisposeAll()
             // kilocode_change end
             return c.json(true)
           },
@@ -205,7 +203,6 @@ export namespace Server {
             await Auth.remove(providerID)
             // kilocode_change start - invalidate provider/model cache after auth removal
             ModelCache.clear(providerID)
-            scheduleDisposeAll()
             // kilocode_change end
             return c.json(true)
           },

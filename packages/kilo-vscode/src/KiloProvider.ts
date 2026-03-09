@@ -1003,7 +1003,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       const config = vscode.workspace.getConfiguration("kilo-code.new.model")
       const providerID = config.get<string>("providerID", "kilo")
-      const modelID = config.get<string>("modelID", "kilo/auto")
+      const modelID = config.get<string>("modelID", "kilo-auto/frontier")
 
       const message = {
         type: "providersLoaded",
@@ -2126,14 +2126,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         },
         this.cachedLegacyData?.settings,
       )
+
+      // Dispose all instances after migration
+      // Reloading the data will be handled once the server replies with a global.disposed event
+      await this.client.global
+        .dispose()
+        .catch((e: unknown) => console.warn("[Kilo New] KiloProvider: global.dispose() after migration failed:", e))
+
       // Only mark as completed if at least one item succeeded — if everything failed
       // the user can still re-run migration via Settings → About.
       const anySuccess = results.some((r) => r.status === "success")
+
       if (anySuccess) {
         await MigrationService.setMigrationStatus(this.extensionContext, "completed")
       }
-      // Refresh providers so webview immediately sees the newly-migrated API keys
-      await this.fetchAndSendProviders()
+
       this.postMessage({ type: "legacyMigrationComplete", results })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: ❌ Migration failed", error)
