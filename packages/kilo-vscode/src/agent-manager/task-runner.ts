@@ -8,8 +8,8 @@ import type { SetupTaskConfig } from "./SetupScriptRunner"
 const GRACE_MS = 250
 const TIMEOUT_MS = 5 * 60 * 1000
 
-export function executeVscodeTask(config: SetupTaskConfig): Promise<number | undefined> {
-  const process = new vscode.ProcessExecution(config.command, config.args, {
+export async function executeVscodeTask(config: SetupTaskConfig): Promise<number | undefined> {
+  const proc = new vscode.ProcessExecution(config.command, config.args, {
     cwd: config.cwd,
     env: config.env,
   })
@@ -18,7 +18,7 @@ export function executeVscodeTask(config: SetupTaskConfig): Promise<number | und
     vscode.TaskScope.Workspace,
     "Worktree Setup",
     "Kilo Code",
-    process,
+    proc,
     [],
   )
   task.presentationOptions = {
@@ -28,8 +28,9 @@ export function executeVscodeTask(config: SetupTaskConfig): Promise<number | und
     showReuseMessage: false,
   }
 
-  return new Promise(async (resolve, reject) => {
-    const execution = await vscode.tasks.executeTask(task)
+  const execution = await vscode.tasks.executeTask(task)
+
+  return new Promise((resolve, reject) => {
     let done = false
     let grace: ReturnType<typeof setTimeout> | undefined
     let timeout: ReturnType<typeof setTimeout> | undefined
