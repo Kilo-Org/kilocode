@@ -8,6 +8,7 @@
  */
 
 import { Component, For, Show, createEffect, createMemo, onCleanup, JSX } from "solid-js"
+import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
@@ -144,7 +145,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
           onClick={() => autoScroll.resume()}
           aria-label={language.t("session.messages.scrollToBottom")}
         >
-          ↓
+          <Icon name="arrow-down-to-line" />
         </button>
       </Show>
     </div>
