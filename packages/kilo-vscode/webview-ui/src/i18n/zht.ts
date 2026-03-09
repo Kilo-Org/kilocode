@@ -912,6 +912,7 @@ export const dict = {
   "settings.experimental.toolToggles": "工具開關",
   "settings.agentBehaviour.defaultAgent.title": "預設 Agent",
   "settings.agentBehaviour.defaultAgent.description": "未指定時使用的 Agent",
+  "settings.agentBehaviour.selectAgent": "選擇要設定的 Agent…",
   "settings.agentBehaviour.selectAgent.title": "Agent",
   "settings.agentBehaviour.selectAgent.description": "選擇要設定的 Agent…",
   "settings.agentBehaviour.modelOverride.title": "模型覆寫",

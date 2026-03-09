@@ -926,6 +926,7 @@ export const dict = {
   "settings.experimental.toolToggles": "Verktøybrytere",
   "settings.agentBehaviour.defaultAgent.title": "Standardagent",
   "settings.agentBehaviour.defaultAgent.description": "Agent å bruke når ingen er angitt",
+  "settings.agentBehaviour.selectAgent": "Velg en agent å konfigurere…",
   "settings.agentBehaviour.selectAgent.title": "Agent",
   "settings.agentBehaviour.selectAgent.description": "Velg en agent å konfigurere…",
   "settings.agentBehaviour.modelOverride.title": "Modelloverstying",

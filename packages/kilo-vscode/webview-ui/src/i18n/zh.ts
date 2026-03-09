@@ -911,6 +911,7 @@ export const dict = {
   "settings.experimental.toolToggles": "工具开关",
   "settings.agentBehaviour.defaultAgent.title": "默认智能体",
   "settings.agentBehaviour.defaultAgent.description": "未指定时使用的智能体",
+  "settings.agentBehaviour.selectAgent": "选择要配置的智能体…",
   "settings.agentBehaviour.selectAgent.title": "智能体",
   "settings.agentBehaviour.selectAgent.description": "选择要配置的智能体…",
   "settings.agentBehaviour.modelOverride.title": "模型覆盖",
