@@ -41,6 +41,11 @@
   border-top: 1px solid var(--vscode-panel-border);
 }
 
+/* New Task Button */
+.new-task-button-wrapper {
+  padding: 8px 12px 0;
+}
+
 /* ============================================
    Message List
    ============================================ */
@@ -209,6 +214,227 @@
   }
 }
 
+.prompt-review-comments {
+  margin: 6px 6px 0;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 6px;
+  background: var(--vscode-editorWidget-background, var(--vscode-input-background));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+}
+
+.prompt-review-comments-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0;
+}
+
+.prompt-review-comments-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--vscode-foreground);
+}
+
+.prompt-review-comments-header [data-component="button"] {
+  min-height: 20px;
+  height: 20px;
+  padding: 0 6px;
+  font-size: 10px;
+}
+
+.prompt-review-chip-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 280px));
+  gap: 6px;
+  max-height: 124px;
+  overflow: auto;
+  align-content: start;
+  justify-content: start;
+  padding: 0;
+}
+
+.prompt-review-chip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+  border-radius: 6px;
+  background: var(--vscode-editor-background, rgba(127, 127, 127, 0.08));
+  min-width: 0;
+}
+
+.prompt-review-chip-body {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 6px;
+  cursor: pointer;
+}
+
+.prompt-review-chip:hover {
+  border-color: var(--border-focus, var(--vscode-focusBorder));
+}
+
+.prompt-review-chip-body:focus-visible {
+  outline: 1px solid var(--border-focus, var(--vscode-focusBorder));
+  border-radius: 6px;
+}
+
+.prompt-review-chip-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  background: var(--surface-inset-base, rgba(127, 127, 127, 0.12));
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.prompt-review-chip-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.prompt-review-chip-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.prompt-review-chip-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--vscode-foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.prompt-review-chip-line {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+}
+
+.prompt-review-chip-remove {
+  margin-right: 4px;
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 999px;
+  background: var(--surface-inset-base, rgba(127, 127, 127, 0.16));
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.prompt-review-chip-remove:hover {
+  color: var(--vscode-foreground);
+  background: var(--surface-inset-base-hover, rgba(127, 127, 127, 0.24));
+}
+
+.prompt-review-chip-remove:focus-visible {
+  outline: 1px solid var(--border-focus, var(--vscode-focusBorder));
+}
+
+.prompt-review-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 20px 10px;
+  min-width: 360px;
+  max-width: 600px;
+}
+
+.prompt-review-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.prompt-review-modal-headline {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--vscode-foreground);
+}
+
+.prompt-review-modal-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 12px;
+  align-items: flex-start;
+}
+
+.prompt-review-modal-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--text-weaker, var(--vscode-descriptionForeground));
+  white-space: nowrap;
+}
+
+.prompt-review-modal-value {
+  margin: 0;
+  min-width: 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--vscode-foreground);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.prompt-review-modal-grid code.prompt-review-modal-value {
+  font-family: var(--vscode-editor-font-family, var(--vscode-font-family));
+}
+
+.prompt-review-modal-snippet {
+  margin: 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--vscode-panel-border);
+  background: var(--vscode-textCodeBlock-background, rgba(127, 127, 127, 0.12));
+  font-family: var(--vscode-editor-font-family, var(--vscode-font-family));
+  font-size: 10px;
+  line-height: 1.35;
+  max-height: 120px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+@media (max-width: 700px) {
+  .prompt-review-chip-list {
+    grid-template-columns: 1fr;
+  }
+
+  .prompt-review-modal {
+    min-width: min(360px, calc(100vw - 32px));
+    max-width: calc(100vw - 24px);
+    padding: 0 16px 10px;
+  }
+}
+
 /* Image Attachments */
 .image-attachments {
   display: flex;
@@ -278,7 +504,7 @@
   flex: 1;
   min-height: 54px;
   max-height: 200px;
-  padding: 8px;
+  padding: 8px 8px calc(8px + 1.4em);
   color: transparent;
   caret-color: var(--vscode-input-foreground);
   font-family: var(--vscode-font-family);
@@ -309,6 +535,7 @@
 }
 
 .prompt-input-ghost-wrapper .prompt-input {
+  display: block;
   position: relative;
   z-index: 1;
   background: transparent;
@@ -323,13 +550,14 @@
   right: 0;
   bottom: 0;
   pointer-events: none;
-  padding: 8px;
+  padding: 8px 8px calc(8px + 1.4em);
   font-family: var(--vscode-font-family);
   font-size: 13px;
   line-height: 1.4;
   white-space: pre-wrap;
   word-wrap: break-word;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   z-index: 0;
   color: var(--vscode-input-foreground);
 }
@@ -344,8 +572,8 @@
 
 .prompt-input-hint {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-wrap: nowrap;
+  align-items: flex-start;
   gap: 8px;
   font-size: 11px;
   color: var(--vscode-descriptionForeground);
@@ -354,7 +582,10 @@
 
 .prompt-input-hint-selectors {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
+  flex: 1;
+  min-width: 0;
 
   [data-component="button"] {
     height: auto !important;
@@ -392,6 +623,8 @@
 .prompt-input-hint-actions {
   display: flex;
   gap: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
 
   [data-component="button"] {
     background: transparent;
@@ -693,20 +926,31 @@
   word-break: break-all;
 }
 
-/* ============================================
-   Text Part Copy Button Fix
-   In the sidebar, the text-part copy button overflows into the
-   element above because the gap between messages is smaller.
-   Position it inside the text body instead of above it.
-   ============================================ */
-
-[data-component="text-part"] [data-slot="text-part-body"] {
-  margin-top: 8px;
+/* Permission Prompt (inline with tool cards) */
+[data-component="tool-part-wrapper"][data-permission="true"] {
+  /* When wrapping a Part + permission, the outer wrapper provides the card border.
+     Remove the inner Part's tool-part-wrapper border so we don't get double borders. */
+  > [data-component="tool-part-wrapper"] {
+    border: none;
+    border-radius: 0;
+  }
 }
 
-[data-component="text-part"] [data-slot="text-part-copy-wrapper"] {
-  top: 4px;
-  right: 4px;
+[data-component="permission-prompt"] {
+  border-top: 1px solid var(--border-weak-base, var(--vscode-panel-border));
+  padding: 8px 12px;
+}
+
+[data-component="permission-prompt"] [data-slot="permission-actions"] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+[data-component="permission-prompt"] [data-slot="permission-hint"] {
+  font-size: 11px;
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  margin: 4px 0 0;
 }
 
 /* Dialog Confirmation */
@@ -881,34 +1125,51 @@
 }
 
 /* ============================================
-   SessionTurn layout classes
+   VscodeSessionTurn layout
    ============================================ */
 
-[data-component="session-turn"].session-turn-root {
+.vscode-session-turn {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   width: 100%;
   min-width: 0;
-  height: auto;
-}
-
-[data-slot="session-turn-content"].session-turn-content {
-  height: auto !important;
-  overflow: visible !important;
-}
-
-.session-turn-container {
-  width: 100%;
   padding: 0 4px;
 }
 
+.vscode-session-turn + .vscode-session-turn {
+  margin-top: 12px;
+}
+
+.vscode-session-turn-user {
+  width: 100%;
+}
+
+.vscode-session-turn-assistant {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.vscode-session-turn-diffs {
+  width: 100%;
+}
+
 /* ============================================
-   Question Prompt
+   Task Tool (sub-agent, v1.0.25 style)
+   tool-output scrollable container size override
    ============================================ */
 
-[data-component="question-prompt"] {
-  [data-slot="question-header"] {
-    padding: 0;
-  }
+[data-component="tool-output"][data-scrollable]:has([data-component="task-tools"]) {
+  max-height: 200px;
+}
 
+/* ============================================
+   Question Prompt (VS Code overrides)
+   ============================================ */
+
+[data-component="dock-prompt"][data-kind="question"] {
   [data-slot="question-progress-nav"] {
     display: inline-flex;
     align-items: center;
@@ -936,12 +1197,6 @@
     }
   }
 
-  [data-slot="question-footer"] {
-    padding: 8px;
-    padding-top: 8px;
-    margin-top: 0;
-  }
-
   [data-slot="question-footer"] > [data-component="button"][data-variant="ghost"] {
     border: none;
     box-shadow: none;
@@ -961,44 +1216,11 @@
     color: var(--text-weaker);
   }
 
-  [data-slot="question-text"] {
-    font-size: var(--font-size-base);
-    padding: 0 2px;
-  }
-
-  [data-slot="question-hint"] {
-    font-size: var(--font-size-small);
-    padding: 0 2px;
-  }
-
-  [data-slot="question-options"] {
-    margin-top: 8px;
-    gap: 4px;
-    padding: 1px 1px 4px;
-  }
-
-  [data-slot="question-option"] {
-    padding: 6px 8px;
-    border-radius: var(--radius-lg);
-    gap: 8px;
-  }
-
-  [data-slot="option-label"] {
-    font-size: var(--font-size-base);
-  }
-
-  [data-slot="option-description"] {
-    font-size: var(--font-size-small);
-    white-space: normal;
-    overflow: visible;
-    text-overflow: clip;
-  }
-
   [data-slot="question-review"] {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    padding: 4px 2px;
+    padding: 4px 10px;
   }
 
   [data-slot="review-title"] {
@@ -1059,6 +1281,91 @@
 
     &:disabled {
       opacity: 0.6;
+    }
+  }
+}
+
+/* ============================================
+   Auth Prompt (sign in / sign up error displays)
+   ============================================ */
+
+[data-component="auth-prompt"] {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+[data-component="auth-prompt"] [data-slot="auth-prompt-header"] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+[data-component="auth-prompt"] [data-slot="auth-prompt-icon"] {
+  font-size: 16px;
+  line-height: 1;
+}
+
+[data-component="auth-prompt"] [data-slot="auth-prompt-title"] {
+  font-weight: 600;
+  color: var(--text-strong, var(--vscode-foreground));
+  font-size: 13px;
+}
+
+[data-component="auth-prompt"] [data-slot="auth-prompt-description"] {
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  font-size: 12px;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* ============================================
+   Enhance Prompt Spinner
+   ============================================ */
+
+@keyframes enhance-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.enhance-spinner {
+  animation: enhance-spin 1s linear infinite;
+}
+
+[data-slot="settings-row"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+
+  [data-slot="settings-row-label"] {
+    flex: 1 1 0%;
+    min-width: 150px;
+
+    [data-slot="settings-row-label-title"] {
+      font-weight: 500;
+      min-height: 16px;
+      margin-bottom: 4px;
+    }
+
+    [data-slot="settings-row-label-subtitle"] {
+      font-size: 12px;
+      min-height: 14px;
+      color: var(--text-weak-base, var(--vscode-descriptionForeground));
+    }
+  }
+
+  [data-slot="settings-row-input"] {
+    flex: 0 0 auto;
+    max-width: 160px;
+
+    & > * {
+      max-width: 100%;
     }
   }
 }

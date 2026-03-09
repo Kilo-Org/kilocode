@@ -23,11 +23,9 @@ import {
   ToolPart,
   UserMessage,
   Todo,
-  QuestionRequest,
   QuestionAnswer,
   QuestionInfo,
 } from "@kilocode/sdk/v2"
-import { createStore } from "solid-js/store"
 import { useData } from "../context"
 import { useDiffComponent } from "../context/diff"
 import { useCodeComponent } from "../context/code"
@@ -37,7 +35,6 @@ import { BasicTool } from "./basic-tool"
 import { GenericTool } from "./basic-tool"
 import { Accordion } from "./accordion"
 import { StickyAccordionHeader } from "./sticky-accordion-header"
-import { Button } from "./button"
 import { Card } from "./card"
 import { Collapsible } from "./collapsible"
 import { FileIcon } from "./file-icon"
@@ -46,6 +43,7 @@ import { Checkbox } from "./checkbox"
 import { DiffChanges } from "./diff-changes"
 import { Markdown } from "./markdown"
 import { ImagePreview } from "./image-preview"
+import { extractFilePathFromHref } from "../file-path" // kilocode_change
 import { getDirectory as _getDirectory, getFilename } from "@opencode-ai/util/path"
 import { checksum } from "@opencode-ai/util/encode"
 import { Tooltip } from "./tooltip"
@@ -950,7 +948,6 @@ function ToolFileAccordion(props: { path: string; actions?: JSX.Element; childre
 }
 
 PART_MAPPING["tool"] = function ToolPartDisplay(props) {
-  const data = useData()
   const i18n = useI18n()
   const part = props.part as ToolPart
   if (part.tool === "todowrite" || part.tool === "todoread") return null
@@ -959,143 +956,73 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
     () => part.tool === "question" && (part.state.status === "pending" || part.state.status === "running"),
   )
 
-  const permission = createMemo(() => {
-    const next = data.store.permission?.[props.message.sessionID]?.[0]
-    if (!next || !next.tool) return undefined
-    if (next.tool!.callID !== part.callID) return undefined
-    return next
-  })
-
-  const questionRequest = createMemo(() => {
-    const next = data.store.question?.[props.message.sessionID]?.[0]
-    if (!next || !next.tool) return undefined
-    if (next.tool!.callID !== part.callID) return undefined
-    return next
-  })
-
-  const [showPermission, setShowPermission] = createSignal(false)
-  const [showQuestion, setShowQuestion] = createSignal(false)
-
-  createEffect(() => {
-    const perm = permission()
-    if (perm) {
-      const timeout = setTimeout(() => setShowPermission(true), 50)
-      onCleanup(() => clearTimeout(timeout))
-    } else {
-      setShowPermission(false)
-    }
-  })
-
-  createEffect(() => {
-    const question = questionRequest()
-    if (question) {
-      const timeout = setTimeout(() => setShowQuestion(true), 50)
-      onCleanup(() => clearTimeout(timeout))
-    } else {
-      setShowQuestion(false)
-    }
-  })
-
-  const [forceOpen, setForceOpen] = createSignal(false)
-  createEffect(() => {
-    if (permission() || questionRequest()) setForceOpen(true)
-  })
-
-  const respond = (response: "once" | "always" | "reject") => {
-    const perm = permission()
-    if (!perm || !data.respondToPermission) return
-    data.respondToPermission({
-      sessionID: perm.sessionID,
-      permissionID: perm.id,
-      response,
-    })
-  }
-
   const emptyInput: Record<string, any> = {}
   const emptyMetadata: Record<string, any> = {}
 
   const input = () => part.state?.input ?? emptyInput
   // @ts-expect-error
   const partMetadata = () => part.state?.metadata ?? emptyMetadata
-  const metadata = () => {
-    const perm = permission()
-    if (perm?.metadata) return { ...perm.metadata, ...partMetadata() }
-    return partMetadata()
-  }
 
   const render = ToolRegistry.render(part.tool) ?? GenericTool
 
+  const dismissed = createMemo(
+    () =>
+      part.tool === "question" &&
+      part.state.status === "error" &&
+      typeof part.state.error === "string" &&
+      part.state.error.includes("dismissed this question"),
+  )
+
   return (
     <Show when={!hideQuestion()}>
-      <div data-component="tool-part-wrapper" data-permission={showPermission()} data-question={showQuestion()}>
-        <Switch>
-          <Match when={part.state.status === "error" && part.state.error}>
-            {(error) => {
-              const cleaned = error().replace("Error: ", "")
-              if (part.tool === "question" && cleaned.includes("dismissed this question")) {
+      <Show when={dismissed()}>
+        <div style="width: 100%; display: flex; justify-content: flex-end; padding: 4px 8px 4px 0;">
+          <span class="text-13-regular text-text-weak cursor-default">{i18n.t("ui.tool.questions")} dismissed</span>
+        </div>
+      </Show>
+      <Show when={!dismissed()}>
+        <div data-component="tool-part-wrapper">
+          <Switch>
+            <Match when={part.state.status === "error" && part.state.error}>
+              {(error) => {
+                const cleaned = error().replace("Error: ", "")
+                const [title, ...rest] = cleaned.split(": ")
                 return (
-                  <div style="width: 100%; display: flex; justify-content: flex-end;">
-                    <span class="text-13-regular text-text-weak cursor-default">
-                      {i18n.t("ui.tool.questions")} dismissed
-                    </span>
-                  </div>
+                  <Card variant="error">
+                    <div data-component="tool-error">
+                      <Icon name="circle-ban-sign" size="small" />
+                      <Switch>
+                        <Match when={title && title.length < 30}>
+                          <div data-slot="message-part-tool-error-content">
+                            <div data-slot="message-part-tool-error-title">{title}</div>
+                            <span data-slot="message-part-tool-error-message">{rest.join(": ")}</span>
+                          </div>
+                        </Match>
+                        <Match when={true}>
+                          <span data-slot="message-part-tool-error-message">{cleaned}</span>
+                        </Match>
+                      </Switch>
+                    </div>
+                  </Card>
                 )
-              }
-              const [title, ...rest] = cleaned.split(": ")
-              return (
-                <Card variant="error">
-                  <div data-component="tool-error">
-                    <Icon name="circle-ban-sign" size="small" />
-                    <Switch>
-                      <Match when={title && title.length < 30}>
-                        <div data-slot="message-part-tool-error-content">
-                          <div data-slot="message-part-tool-error-title">{title}</div>
-                          <span data-slot="message-part-tool-error-message">{rest.join(": ")}</span>
-                        </div>
-                      </Match>
-                      <Match when={true}>
-                        <span data-slot="message-part-tool-error-message">{cleaned}</span>
-                      </Match>
-                    </Switch>
-                  </div>
-                </Card>
-              )
-            }}
-          </Match>
-          <Match when={true}>
-            <Dynamic
-              component={render}
-              input={input()}
-              tool={part.tool}
-              metadata={metadata()}
-              // @ts-expect-error
-              output={part.state.output}
-              status={part.state.status}
-              hideDetails={props.hideDetails}
-              forceOpen={forceOpen()}
-              locked={showPermission() || showQuestion()}
-              defaultOpen={props.defaultOpen}
-            />
-          </Match>
-        </Switch>
-        <Show when={showPermission() && permission()}>
-          <div data-component="permission-prompt">
-            <div data-slot="permission-actions">
-              <Button variant="ghost" size="normal" onClick={() => respond("reject")}>
-                {i18n.t("ui.permission.deny")}
-              </Button>
-              <Button variant="secondary" size="normal" onClick={() => respond("always")}>
-                {i18n.t("ui.permission.allowAlways")}
-              </Button>
-              <Button variant="primary" size="normal" onClick={() => respond("once")}>
-                {i18n.t("ui.permission.allowOnce")}
-              </Button>
-            </div>
-            <p data-slot="permission-hint">{i18n.t("ui.permission.sessionHint")}</p>
-          </div>
-        </Show>
-        <Show when={showQuestion() && questionRequest()}>{(request) => <QuestionPrompt request={request()} />}</Show>
-      </div>
+              }}
+            </Match>
+            <Match when={true}>
+              <Dynamic
+                component={render}
+                input={input()}
+                tool={part.tool}
+                metadata={partMetadata()}
+                // @ts-expect-error
+                output={part.state.output}
+                status={part.state.status}
+                hideDetails={props.hideDetails}
+                defaultOpen={props.defaultOpen}
+              />
+            </Match>
+          </Switch>
+        </div>
+      </Show>
     </Show>
   )
 }
@@ -1175,15 +1102,29 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     if (!data.openFile) return
     const target = e.target
     if (!(target instanceof HTMLElement)) return
-    const link = target.closest(".file-link[data-file-path]")
-    if (!link) return
-    const path = link.getAttribute("data-file-path")
-    if (!path) return
-    const lineAttr = link.getAttribute("data-file-line")
-    const colAttr = link.getAttribute("data-file-col")
-    const line = lineAttr ? parseInt(lineAttr, 10) : undefined
-    const column = colAttr ? parseInt(colAttr, 10) : undefined
-    data.openFile(path, line, column)
+    // Handle .file-link code spans (e.g. `src/foo.ts:42`)
+    const fileLink = target.closest(".file-link[data-file-path]")
+    if (fileLink) {
+      const path = fileLink.getAttribute("data-file-path")
+      if (!path) return
+      const lineAttr = fileLink.getAttribute("data-file-line")
+      const colAttr = fileLink.getAttribute("data-file-col")
+      const line = lineAttr ? parseInt(lineAttr, 10) : undefined
+      const column = colAttr ? parseInt(colAttr, 10) : undefined
+      data.openFile(path, line, column)
+      return
+    }
+    // Handle markdown links whose href looks like a relative file path
+    // (e.g. [AGENTS.md](AGENTS.md) or [src/foo.ts](src/foo.ts))
+    const anchor = target.closest("a.external-link") as HTMLAnchorElement | null
+    if (anchor) {
+      const href = anchor.getAttribute("href")
+      if (!href) return
+      const filePath = extractFilePathFromHref(href)
+      if (!filePath) return
+      e.preventDefault()
+      data.openFile(filePath)
+    }
   }
   // kilocode_change end
 
@@ -1194,7 +1135,16 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
           <Markdown text={throttledText()} cacheKey={part.id} onClick={handleMarkdownClick} /> {/* kilocode_change */}
         </div>
         <Show when={showCopy()}>
-          <div data-slot="text-part-copy-wrapper" data-interrupted={interrupted() ? "" : undefined}>
+          {/* kilocode_change: data-is-turn-copy makes the copy button always visible for the final response */}
+          <div
+            data-slot="text-part-copy-wrapper"
+            data-interrupted={interrupted() ? "" : undefined}
+            data-is-turn-copy={
+              typeof props.showAssistantCopyPartID === "string" && props.showAssistantCopyPartID === part.id
+                ? ""
+                : undefined
+            }
+          >
             <Tooltip
               value={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyResponse")}
               placement="top"
@@ -1501,16 +1451,17 @@ ToolRegistry.register({
   name: "bash",
   render(props) {
     const i18n = useI18n()
-    const text = createMemo(() => {
-      const cmd = props.input.command ?? props.metadata.command ?? ""
-      const out = stripAnsi(props.output || props.metadata.output || "")
-      return `$ ${cmd}${out ? "\n\n" + out : ""}`
-    })
+    // kilocode_change start - separate cmd/output memos so copy excludes the "$ " display prefix
+    const cmd = createMemo(() => props.input.command ?? props.metadata.command ?? "")
+    const out = createMemo(() => stripAnsi(props.output || props.metadata.output || ""))
+    const text = createMemo(() => `$ ${cmd()}${out() ? "\n\n" + out() : ""}`)
+    // kilocode_change end
     const [copied, setCopied] = createSignal(false)
 
     const handleCopy = async () => {
-      const content = text()
-      if (!content) return
+      const command = cmd() // kilocode_change
+      if (!command) return
+      const content = out() ? `${command}\n\n${out()}` : command // kilocode_change
       await navigator.clipboard.writeText(content)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
@@ -1583,6 +1534,11 @@ ToolRegistry.register({
               <div data-slot="message-part-title-area">
                 <div data-slot="message-part-title">
                   <span data-slot="message-part-title-text">
+                    <Show when={pending()} fallback={i18n.t("ui.messagePart.title.edit")}>
+                      <TextShimmer text={i18n.t("ui.messagePart.title.edit")} />
+                    </Show>
+                  </span>
+                  <Show when={!pending()}>
                     {/* kilocode_change start */}
                     <span
                       data-slot="message-part-title-filename"
@@ -1592,12 +1548,6 @@ ToolRegistry.register({
                       {filename()}
                     </span>
                     {/* kilocode_change end */}
-                    <Show when={pending()} fallback={i18n.t("ui.messagePart.title.edit")}>
-                      <TextShimmer text={i18n.t("ui.messagePart.title.edit")} />
-                    </Show>
-                  </span>
-                  <Show when={!pending()}>
-                    <span data-slot="message-part-title-filename">{filename()}</span>
                   </Show>
                 </div>
                 <Show when={!pending() && props.input.filePath?.includes("/")}>
@@ -2060,245 +2010,3 @@ ToolRegistry.register({
     )
   },
 })
-
-function QuestionPrompt(props: { request: QuestionRequest }) {
-  const data = useData()
-  const i18n = useI18n()
-  const questions = createMemo(() => props.request.questions)
-  const single = createMemo(() => questions().length === 1 && questions()[0]?.multiple !== true)
-
-  const [store, setStore] = createStore({
-    tab: 0,
-    answers: [] as QuestionAnswer[],
-    custom: [] as string[],
-    editing: false,
-  })
-
-  const question = createMemo(() => questions()[store.tab])
-  const confirm = createMemo(() => !single() && store.tab === questions().length)
-  const options = createMemo(() => question()?.options ?? [])
-  const input = createMemo(() => store.custom[store.tab] ?? "")
-  const multi = createMemo(() => question()?.multiple === true)
-  const customPicked = createMemo(() => {
-    const value = input()
-    if (!value) return false
-    return store.answers[store.tab]?.includes(value) ?? false
-  })
-
-  function submit() {
-    const answers = questions().map((_, i) => store.answers[i] ?? [])
-    data.replyToQuestion?.({
-      requestID: props.request.id,
-      answers,
-    })
-  }
-
-  function reject() {
-    data.rejectQuestion?.({
-      requestID: props.request.id,
-    })
-  }
-
-  function pick(answer: string, custom: boolean = false) {
-    const answers = [...store.answers]
-    answers[store.tab] = [answer]
-    setStore("answers", answers)
-    if (custom) {
-      const inputs = [...store.custom]
-      inputs[store.tab] = answer
-      setStore("custom", inputs)
-    }
-    if (single()) {
-      data.replyToQuestion?.({
-        requestID: props.request.id,
-        answers: [[answer]],
-      })
-      return
-    }
-    setStore("tab", store.tab + 1)
-  }
-
-  function toggle(answer: string) {
-    const existing = store.answers[store.tab] ?? []
-    const next = [...existing]
-    const index = next.indexOf(answer)
-    if (index === -1) next.push(answer)
-    if (index !== -1) next.splice(index, 1)
-    const answers = [...store.answers]
-    answers[store.tab] = next
-    setStore("answers", answers)
-  }
-
-  function selectTab(index: number) {
-    setStore("tab", index)
-    setStore("editing", false)
-  }
-
-  function selectOption(optIndex: number) {
-    if (optIndex === options().length) {
-      setStore("editing", true)
-      return
-    }
-    const opt = options()[optIndex]
-    if (!opt) return
-    if (multi()) {
-      toggle(opt.label)
-      return
-    }
-    pick(opt.label)
-  }
-
-  function handleCustomSubmit(e: Event) {
-    e.preventDefault()
-    const value = input().trim()
-    if (!value) {
-      setStore("editing", false)
-      return
-    }
-    if (multi()) {
-      const existing = store.answers[store.tab] ?? []
-      const next = [...existing]
-      if (!next.includes(value)) next.push(value)
-      const answers = [...store.answers]
-      answers[store.tab] = next
-      setStore("answers", answers)
-      setStore("editing", false)
-      return
-    }
-    pick(value, true)
-    setStore("editing", false)
-  }
-
-  return (
-    <div data-component="question-prompt">
-      <Show when={!single()}>
-        <div data-slot="question-tabs">
-          <For each={questions()}>
-            {(q, index) => {
-              const active = () => index() === store.tab
-              const answered = () => (store.answers[index()]?.length ?? 0) > 0
-              return (
-                <button
-                  data-slot="question-tab"
-                  data-active={active()}
-                  data-answered={answered()}
-                  onClick={() => selectTab(index())}
-                >
-                  {q.header}
-                </button>
-              )
-            }}
-          </For>
-          <button data-slot="question-tab" data-active={confirm()} onClick={() => selectTab(questions().length)}>
-            {i18n.t("ui.common.confirm")}
-          </button>
-        </div>
-      </Show>
-
-      <Show when={!confirm()}>
-        <div data-slot="question-content">
-          <div data-slot="question-text">
-            {question()?.question}
-            {multi() ? " " + i18n.t("ui.question.multiHint") : ""}
-          </div>
-          <div data-slot="question-options">
-            <For each={options()}>
-              {(opt, i) => {
-                const picked = () => store.answers[store.tab]?.includes(opt.label) ?? false
-                return (
-                  <button data-slot="question-option" data-picked={picked()} onClick={() => selectOption(i())}>
-                    <span data-slot="option-label">{opt.label}</span>
-                    <Show when={opt.description}>
-                      <span data-slot="option-description">{opt.description}</span>
-                    </Show>
-                    <Show when={picked()}>
-                      <Icon name="check-small" size="normal" />
-                    </Show>
-                  </button>
-                )
-              }}
-            </For>
-            <button
-              data-slot="question-option"
-              data-picked={customPicked()}
-              onClick={() => selectOption(options().length)}
-            >
-              <span data-slot="option-label">{i18n.t("ui.messagePart.option.typeOwnAnswer")}</span>
-              <Show when={!store.editing && input()}>
-                <span data-slot="option-description">{input()}</span>
-              </Show>
-              <Show when={customPicked()}>
-                <Icon name="check-small" size="normal" />
-              </Show>
-            </button>
-            <Show when={store.editing}>
-              <form data-slot="custom-input-form" onSubmit={handleCustomSubmit}>
-                <input
-                  ref={(el) => setTimeout(() => el.focus(), 0)}
-                  type="text"
-                  data-slot="custom-input"
-                  placeholder={i18n.t("ui.question.custom.placeholder")}
-                  value={input()}
-                  onInput={(e) => {
-                    const inputs = [...store.custom]
-                    inputs[store.tab] = e.currentTarget.value
-                    setStore("custom", inputs)
-                  }}
-                />
-                <Button type="submit" variant="primary" size="small">
-                  {multi() ? i18n.t("ui.common.add") : i18n.t("ui.common.submit")}
-                </Button>
-                <Button type="button" variant="ghost" size="small" onClick={() => setStore("editing", false)}>
-                  {i18n.t("ui.common.cancel")}
-                </Button>
-              </form>
-            </Show>
-          </div>
-        </div>
-      </Show>
-
-      <Show when={confirm()}>
-        <div data-slot="question-review">
-          <div data-slot="review-title">{i18n.t("ui.messagePart.review.title")}</div>
-          <For each={questions()}>
-            {(q, index) => {
-              const value = () => store.answers[index()]?.join(", ") ?? ""
-              const answered = () => Boolean(value())
-              return (
-                <div data-slot="review-item">
-                  <span data-slot="review-label">{q.question}</span>
-                  <span data-slot="review-value" data-answered={answered()}>
-                    {answered() ? value() : i18n.t("ui.question.review.notAnswered")}
-                  </span>
-                </div>
-              )
-            }}
-          </For>
-        </div>
-      </Show>
-
-      <div data-slot="question-actions">
-        <Button variant="ghost" size="small" onClick={reject}>
-          {i18n.t("ui.common.dismiss")}
-        </Button>
-        <Show when={!single()}>
-          <Show when={confirm()}>
-            <Button variant="primary" size="small" onClick={submit}>
-              {i18n.t("ui.common.submit")}
-            </Button>
-          </Show>
-          <Show when={!confirm() && multi()}>
-            <Button
-              variant="secondary"
-              size="small"
-              onClick={() => selectTab(store.tab + 1)}
-              disabled={(store.answers[store.tab]?.length ?? 0) === 0}
-            >
-              {i18n.t("ui.common.next")}
-            </Button>
-          </Show>
-        </Show>
-      </div>
-    </div>
-  )
-}

@@ -56,6 +56,7 @@ import { TodoItem } from "../../component/todo-item"
 import { DialogMessage } from "./dialog-message"
 import type { PromptInfo } from "../../component/prompt/history"
 import { DialogConfirm } from "@tui/ui/dialog-confirm"
+import { KiloErrorBlock } from "@/kilocode/components/kilo-error-display" // kilocode_change
 import { DialogTimeline } from "./dialog-timeline"
 import { DialogForkFromTimeline } from "./dialog-fork-from-timeline"
 import { DialogSessionRename } from "../../component/dialog-session-rename"
@@ -78,6 +79,7 @@ import { QuestionPrompt } from "./question"
 import { DialogExportOptions } from "../../ui/dialog-export-options"
 import { formatTranscript } from "../../util/transcript"
 import { UI } from "@/cli/ui.ts"
+import { useTuiConfig } from "../../context/tui-config"
 
 import { formatMarkdownTables } from "../../util/markdown" // kilocode_change
 
@@ -103,6 +105,7 @@ const context = createContext<{
   showGenericToolOutput: () => boolean
   diffWrapMode: () => "word" | "none"
   sync: ReturnType<typeof useSync>
+  tui: ReturnType<typeof useTuiConfig>
 }>()
 
 function use() {
@@ -115,6 +118,7 @@ export function Session() {
   const route = useRouteData("session")
   const { navigate } = useRoute()
   const sync = useSync()
+  const tuiConfig = useTuiConfig()
   const kv = useKV()
   const { theme } = useTheme()
   const promptRef = usePromptRef()
@@ -171,7 +175,7 @@ export function Session() {
   const contentWidth = createMemo(() => dimensions().width - (sidebarVisible() ? 42 : 0) - 4)
 
   const scrollAcceleration = createMemo(() => {
-    const tui = sync.data.config.tui
+    const tui = tuiConfig
     if (tui?.scroll_acceleration?.enabled) {
       return new MacOSScrollAccel()
     }
@@ -995,6 +999,7 @@ export function Session() {
         showGenericToolOutput,
         diffWrapMode,
         sync,
+        tui: tuiConfig,
       }}
     >
       <box flexDirection="row">
@@ -1318,18 +1323,25 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
         }}
       </For>
       <Show when={props.message.error && props.message.error.name !== "MessageAbortedError"}>
-        <box
-          border={["left"]}
-          paddingTop={1}
-          paddingBottom={1}
-          paddingLeft={2}
-          marginTop={1}
-          backgroundColor={theme.backgroundPanel}
-          customBorderChars={SplitBorder.customBorderChars}
-          borderColor={theme.error}
-        >
-          <text fg={theme.textMuted}>{props.message.error?.data.message}</text>
-        </box>
+        {/* kilocode_change start - Kilo-specific error display */}
+        <KiloErrorBlock
+          error={props.message.error!}
+          fallback={
+            <box
+              border={["left"]}
+              paddingTop={1}
+              paddingBottom={1}
+              paddingLeft={2}
+              marginTop={1}
+              backgroundColor={theme.backgroundPanel}
+              customBorderChars={SplitBorder.customBorderChars}
+              borderColor={theme.error}
+            >
+              <text fg={theme.textMuted}>{props.message.error?.data.message}</text>
+            </box>
+          }
+        />
+        {/* kilocode_change end */}
       </Show>
       <Switch>
         <Match when={props.last || final() || props.message.error?.name === "MessageAbortedError"}>
@@ -1965,7 +1977,7 @@ function Edit(props: ToolProps<typeof EditTool>) {
   const { theme, syntax } = useTheme()
 
   const view = createMemo(() => {
-    const diffStyle = ctx.sync.data.config.tui?.diff_style
+    const diffStyle = ctx.tui.diff_style
     if (diffStyle === "stacked") return "unified"
     // Default to "auto" behavior
     return ctx.width > 120 ? "split" : "unified"
@@ -2019,7 +2031,7 @@ function ApplyPatch(props: ToolProps<typeof ApplyPatchTool>) {
   const files = createMemo(() => props.metadata.files ?? [])
 
   const view = createMemo(() => {
-    const diffStyle = ctx.sync.data.config.tui?.diff_style
+    const diffStyle = ctx.tui.diff_style
     if (diffStyle === "stacked") return "unified"
     return ctx.width > 120 ? "split" : "unified"
   })

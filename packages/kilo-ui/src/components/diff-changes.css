@@ -1,0 +1,9 @@
+[data-component="diff-changes"] {
+  [data-slot="diff-changes-additions"] {
+    font-size: 12px;
+  }
+
+  [data-slot="diff-changes-deletions"] {
+    font-size: 12px;
+  }
+}

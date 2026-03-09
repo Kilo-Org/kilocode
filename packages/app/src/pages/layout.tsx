@@ -1075,13 +1075,18 @@ export default function Layout(props: ParentProps) {
   }
 
   function projectRoot(directory: string) {
+    const key = workspaceKey(directory)
     const project = layout.projects
       .list()
-      .find((item) => item.worktree === directory || item.sandboxes?.includes(directory))
+      .find(
+        (item) =>
+          workspaceKey(item.worktree) === key ||
+          (item.sandboxes ?? []).some((sandbox) => workspaceKey(sandbox) === key),
+      )
     if (project) return project.worktree
 
     const known = Object.entries(store.workspaceOrder).find(
-      ([root, dirs]) => root === directory || dirs.includes(directory),
+      ([root, dirs]) => workspaceKey(root) === key || dirs.some((dir) => workspaceKey(dir) === key),
     )
     if (known) return known[0]
 

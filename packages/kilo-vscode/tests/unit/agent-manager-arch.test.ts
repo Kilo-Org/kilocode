@@ -13,18 +13,24 @@ import path from "node:path"
 import { Project, SyntaxKind } from "ts-morph"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
+const KILO_PROVIDER_FILE = path.join(ROOT, "src/KiloProvider.ts")
 const CSS_FILE = path.join(ROOT, "webview-ui/agent-manager/agent-manager.css")
 const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DiffPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/FullScreenDiffView.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/DiffEndMarker.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/FileTree.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/review-annotations.ts"),
   path.join(ROOT, "webview-ui/agent-manager/MultiModelSelector.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ApplyDialog.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/BranchSelect.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/WorktreeItem.tsx"),
 ]
 const TSX_FILE = TSX_FILES[0]
 const PROVIDER_FILE = path.join(ROOT, "src/agent-manager/AgentManagerProvider.ts")
+const SETUP_SCRIPT_RUNNER_FILE = path.join(ROOT, "src/agent-manager/SetupScriptRunner.ts")
 
 function readAllTsx(): string {
   return TSX_FILES.map((f) => fs.readFileSync(f, "utf-8")).join("\n")
@@ -166,6 +172,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
       "agentManager.requestRepoInfo",
       "agentManager.requestState",
       "agentManager.setTabOrder",
+      "agentManager.setDefaultBaseBranch",
     ]
     for (const msg of expected) {
       expect(text, `onMessage should handle "${msg}"`).toContain(msg)
@@ -175,7 +182,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
   it("onMessage handles loadMessages for terminal switching", () => {
     const text = body("onMessage")
     expect(text).toContain("loadMessages")
-    expect(text).toContain("showExisting")
+    expect(text).toContain("syncOnSessionSwitch")
   })
 
   it("onMessage handles clearSession for SSE re-registration", () => {
@@ -314,5 +321,135 @@ describe("Agent Manager Webview — non-git sessionsLoaded fix", () => {
     expect(snippet, "must check isGitRepo === false before setting sessionsLoaded").toMatch(
       /isGitRepo.*false|false.*isGitRepo/,
     )
+  })
+})
+
+// ---------------------------------------------------------------------------
+// KiloProvider — pendingSessionRefresh race condition fix
+// ---------------------------------------------------------------------------
+
+describe("KiloProvider — pending session refresh on reconnect", () => {
+  const provider = fs.readFileSync(KILO_PROVIDER_FILE, "utf-8")
+  const utils = fs.readFileSync(path.join(ROOT, "src/kilo-provider-utils.ts"), "utf-8")
+
+  /**
+   * Regression: when the Agent Manager opens its panel, initializeState()
+   * calls refreshSessions() before the CLI server has started. Because
+   * httpClient is null at that point, handleLoadSessions() used to bail
+   * with an error message and never send "sessionsLoaded" to the webview.
+   * The worktree would show up in the sidebar but display "No sessions open".
+   *
+   * The fix uses a pendingSessionRefresh flag: loadSessions() (in
+   * kilo-provider-utils) sets it when httpClient is unavailable, and
+   * both initializeConnection() and the "connected" state handler flush
+   * the pending refresh.
+   */
+  it("loadSessions sets pendingSessionRefresh when client is null", () => {
+    const start = utils.indexOf("export async function loadSessions")
+    expect(start, "loadSessions must exist in kilo-provider-utils").toBeGreaterThan(-1)
+    const snippet = utils.slice(start, start + 700)
+    expect(snippet, "must set pendingSessionRefresh when client missing").toContain("ctx.pendingSessionRefresh = true")
+    expect(snippet, "must avoid noisy errors while still connecting").toContain('ctx.connectionState !== "connecting"')
+    expect(snippet, "must clear pendingSessionRefresh on successful entry").toContain(
+      "ctx.pendingSessionRefresh = false",
+    )
+  })
+
+  it("handleLoadSessions delegates to loadSessionsUtil", () => {
+    const start = provider.indexOf("private async handleLoadSessions()")
+    expect(start, "handleLoadSessions must exist").toBeGreaterThan(-1)
+    const snippet = provider.slice(start, start + 400)
+    expect(snippet, "must call loadSessionsUtil").toContain("loadSessionsUtil")
+  })
+
+  it("connected state handler flushes deferred session refresh", () => {
+    // Find the onStateChange callback that handles "connected"
+    const connectedIdx = provider.indexOf('state === "connected"')
+    expect(connectedIdx, '"connected" state handler must exist').toBeGreaterThan(-1)
+    const snippet = provider.slice(connectedIdx, connectedIdx + 800)
+    expect(snippet, "must call flushPendingSessionRefresh from connected handler").toContain(
+      'this.flushPendingSessionRefresh("sse-connected")',
+    )
+  })
+
+  it("initializeConnection flushes deferred refresh for missed connected events", () => {
+    const initIdx = provider.indexOf('this.syncWebviewState("initializeConnection")')
+    expect(initIdx, "initializeConnection sync call must exist").toBeGreaterThan(-1)
+    const snippet = provider.slice(initIdx, initIdx + 220)
+    expect(snippet, "must flush deferred session refresh in initializeConnection").toContain(
+      'this.flushPendingSessionRefresh("initializeConnection")',
+    )
+  })
+
+  it("pendingSessionRefresh is declared as a class field", () => {
+    expect(provider, "pendingSessionRefresh field must be declared").toMatch(
+      /private\s+pendingSessionRefresh\s*=\s*false/,
+    )
+  })
+})
+
+// ---------------------------------------------------------------------------
+// handleChangeDefaultBaseBranch — listener leak fix
+// ---------------------------------------------------------------------------
+
+describe("Agent Manager — dialog listener cleanup", () => {
+  const tsx = fs.readFileSync(TSX_FILE, "utf-8")
+
+  /**
+   * Regression: handleChangeDefaultBaseBranch subscribes to vscode.onMessage
+   * for branch data. Previously unsub() was only called inside selectBranch()
+   * and the Escape keydown handler. If the dialog closed via backdrop click or
+   * external dialog.close(), the listener leaked and stacked on every reopen.
+   *
+   * The fix ties unsub() to Solid's onCleanup inside the dialog.show() render
+   * function so it always disposes regardless of how the dialog closes.
+   */
+  it("handleChangeDefaultBaseBranch uses onCleanup(unsub) inside dialog.show", () => {
+    const fnStart = tsx.indexOf("const handleChangeDefaultBaseBranch")
+    expect(fnStart, "handleChangeDefaultBaseBranch must exist").toBeGreaterThan(-1)
+
+    // Grab the function body (enough to cover the dialog.show callback)
+    const snippet = tsx.slice(fnStart, fnStart + 2000)
+
+    // The dialog.show callback must register onCleanup(unsub)
+    const showIdx = snippet.indexOf("dialog.show(")
+    expect(showIdx, "dialog.show() call must exist").toBeGreaterThan(-1)
+    const afterShow = snippet.slice(showIdx)
+    expect(afterShow, "onCleanup(unsub) must be inside dialog.show callback").toContain("onCleanup(unsub)")
+  })
+
+  it("selectBranch does not manually call unsub (handled by onCleanup)", () => {
+    const fnStart = tsx.indexOf("const handleChangeDefaultBaseBranch")
+    const snippet = tsx.slice(fnStart, fnStart + 2000)
+
+    // Find the selectBranch function body
+    const selStart = snippet.indexOf("const selectBranch")
+    expect(selStart, "selectBranch must exist").toBeGreaterThan(-1)
+    const selEnd = snippet.indexOf("}", selStart + 50)
+    const selBody = snippet.slice(selStart, selEnd + 1)
+
+    expect(selBody, "selectBranch should not call unsub() directly").not.toContain("unsub()")
+  })
+})
+
+describe("SetupScriptRunner — task execution model", () => {
+  const runner = fs.readFileSync(SETUP_SCRIPT_RUNNER_FILE, "utf-8")
+
+  it("uses VS Code tasks API for setup execution", () => {
+    expect(runner).toContain("vscode.tasks.executeTask")
+    expect(runner).toContain("onDidEndTaskProcess")
+    expect(runner).toContain("onDidEndTask")
+  })
+
+  it("uses process-based task execution with env options", () => {
+    expect(runner).toContain("new vscode.ProcessExecution")
+    expect(runner).toContain("WORKTREE_PATH")
+    expect(runner).toContain("REPO_PATH")
+  })
+
+  it("does not use manual terminal command injection", () => {
+    expect(runner).not.toContain("createTerminal")
+    expect(runner).not.toContain("sendText")
+    expect(runner).not.toContain("buildSetupCommand")
   })
 })

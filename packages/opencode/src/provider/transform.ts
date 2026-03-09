@@ -72,6 +72,23 @@ export namespace ProviderTransform {
         .filter((msg): msg is ModelMessage => msg !== undefined && msg.content !== "")
     }
 
+    if (model.api.id.includes("claude")) {
+      return msgs.map((msg) => {
+        if ((msg.role === "assistant" || msg.role === "tool") && Array.isArray(msg.content)) {
+          msg.content = msg.content.map((part) => {
+            if ((part.type === "tool-call" || part.type === "tool-result") && "toolCallId" in part) {
+              return {
+                ...part,
+                toolCallId: part.toolCallId.replace(/[^a-zA-Z0-9_-]/g, "_"),
+              }
+            }
+            return part
+          })
+        }
+        return msg
+      })
+    }
+
     if (
       model.providerID === "mistral" ||
       model.api.id.toLowerCase().includes("mistral") ||
@@ -234,39 +251,9 @@ export namespace ProviderTransform {
     })
   }
 
-  // kilocode_change - function added
-  function fixDuplicateReasoning(msgs: ModelMessage[]) {
-    for (const msg of msgs) {
-      if (!Array.isArray(msg.content)) {
-        continue
-      }
-      let isFirstToolCall = true
-      for (const part of msg.content) {
-        if (part.type === "reasoning") {
-          // this entry is corrupt
-          delete part.providerOptions?.openrouter?.reasoning_details
-        }
-        if (part.type === "tool-call" && isFirstToolCall) {
-          isFirstToolCall = false
-          continue
-        }
-        if (part.type === "tool-call") {
-          // this is a duplicate entry
-          delete part.providerOptions?.openrouter?.reasoning_details
-        }
-      }
-    }
-  }
-
   export function message(msgs: ModelMessage[], model: Provider.Model, options: Record<string, unknown>) {
     msgs = unsupportedParts(msgs, model)
     msgs = normalizeMessages(msgs, model, options)
-
-    // kilocode_change - workaround for @openrouter/ai-sdk-provider v1 duplicating reasoning
-    // fixed in https://github.com/OpenRouterTeam/ai-sdk-provider/pull/344/
-    if (model.api.npm === "@kilocode/kilo-gateway") {
-      fixDuplicateReasoning(msgs)
-    }
 
     if (
       (model.providerID === "anthropic" ||

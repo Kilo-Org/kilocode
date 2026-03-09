@@ -829,7 +829,7 @@ export namespace SessionPrompt {
     SessionCompaction.prune({ sessionID })
     // kilocode_change start
     finished = true
-    // kilocode_change end
+    // Return the stored interrupted assistant turn before surfacing AbortError.
     for await (const item of MessageV2.stream(sessionID)) {
       if (item.info.role === "user") continue
       const queued = state()[sessionID]?.callbacks ?? []
@@ -838,6 +838,8 @@ export namespace SessionPrompt {
       }
       return item
     }
+    if (abort.aborted) abort.throwIfAborted()
+    // kilocode_change end
     throw new Error("Impossible")
   })
 

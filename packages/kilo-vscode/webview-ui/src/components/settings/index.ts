@@ -1,3 +1,4 @@
+export { default as Settings } from "./Settings"
 export { default as ProvidersTab } from "./ProvidersTab"
 export { default as AgentBehaviourTab } from "./AgentBehaviourTab"
 export { default as AutoApproveTab } from "./AutoApproveTab"

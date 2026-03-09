@@ -1,22 +1,24 @@
 /**
  * MessageList component
  * Scrollable turn-based message list.
- * Each user message is rendered as a SessionTurn which handles its assistant replies,
- * thinking shimmer, tool calls, and diff summary internally.
+ * Each user message is rendered as a VscodeSessionTurn — a custom component that
+ * renders all assistant parts as a flat, verbose list with no context grouping,
+ * and fully expands sub-agent (task tool) parts inline.
  * Shows recent sessions in the empty state for quick resumption.
  */
 
-import { Component, For, Show, createEffect, createMemo, JSX } from "solid-js"
+import { Component, For, Show, createEffect, createMemo, onCleanup, JSX } from "solid-js"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
-import { SessionTurn } from "@kilocode/kilo-ui/session-turn"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
 import { formatRelativeDate } from "../../utils/date"
 import { CloudImportDialog } from "./CloudImportDialog"
+import { VscodeSessionTurn } from "./VscodeSessionTurn"
+import { WorkingIndicator } from "../shared/WorkingIndicator"
 
 const KiloLogo = (): JSX.Element => {
   const iconsBaseUri = (window as { ICONS_BASE_URI?: string }).ICONS_BASE_URI || ""
@@ -45,6 +47,11 @@ export const MessageList: Component<MessageListProps> = (props) => {
     working: () => session.status() !== "idle",
     overflowAnchor: "dynamic",
   })
+
+  // Resume auto-scroll when a bottom-dock permission/question is dismissed
+  const onResumeAutoScroll = () => autoScroll.resume()
+  window.addEventListener("resumeAutoScroll", onResumeAutoScroll)
+  onCleanup(() => window.removeEventListener("resumeAutoScroll", onResumeAutoScroll))
 
   let loaded = false
   createEffect(() => {
@@ -119,18 +126,14 @@ export const MessageList: Component<MessageListProps> = (props) => {
           <Show when={!session.loading()}>
             <For each={userMessages()}>
               {(msg) => (
-                <SessionTurn
+                <VscodeSessionTurn
                   sessionID={session.currentSessionID() ?? ""}
                   messageID={msg.id}
                   lastUserMessageID={lastUserMessageID()}
-                  classes={{
-                    root: "session-turn-root",
-                    content: "session-turn-content",
-                    container: "session-turn-container",
-                  }}
                 />
               )}
             </For>
+            <WorkingIndicator />
           </Show>
         </div>
       </div>

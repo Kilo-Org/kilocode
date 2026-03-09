@@ -37,6 +37,7 @@ interface StateFile {
   tabOrder?: Record<string, string[]>
   sessionsCollapsed?: boolean
   reviewDiffStyle?: "unified" | "split"
+  defaultBaseBranch?: string
 }
 
 const STATE_FILE = "agent-manager.json"
@@ -55,6 +56,7 @@ export class WorktreeStateManager {
   private tabOrder: Record<string, string[]> = {}
   private collapsed = false
   private reviewDiffStyle: "unified" | "split" = "unified"
+  private defaultBase: string | undefined
   private readonly log: (msg: string) => void
   private saving: Promise<void> | undefined
   private pendingSave = false
@@ -246,6 +248,19 @@ export class WorktreeStateManager {
   }
 
   // ---------------------------------------------------------------------------
+  // Default base branch
+  // ---------------------------------------------------------------------------
+
+  getDefaultBaseBranch(): string | undefined {
+    return this.defaultBase
+  }
+
+  setDefaultBaseBranch(value: string | undefined): void {
+    this.defaultBase = value
+    void this.save()
+  }
+
+  // ---------------------------------------------------------------------------
   // Persistence
   // ---------------------------------------------------------------------------
 
@@ -271,6 +286,7 @@ export class WorktreeStateManager {
       if (data.reviewDiffStyle === "split") {
         this.reviewDiffStyle = "split"
       }
+      this.defaultBase = data.defaultBaseBranch
       this.log(`Loaded state: ${this.worktrees.size} worktrees, ${this.sessions.size} sessions`)
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code
@@ -342,6 +358,9 @@ export class WorktreeStateManager {
     }
     if (this.reviewDiffStyle === "split") {
       data.reviewDiffStyle = "split"
+    }
+    if (this.defaultBase) {
+      data.defaultBaseBranch = this.defaultBase
     }
 
     try {
