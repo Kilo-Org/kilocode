@@ -229,7 +229,7 @@ export interface LegacySettings {
 // Custom modes (stored on disk at <globalStorage>/settings/custom_modes.yaml)
 // ---------------------------------------------------------------------------
 
-export interface LegacyCustomModesFile {
+interface LegacyCustomModesFile {
   customModes: LegacyCustomMode[]
 }
 

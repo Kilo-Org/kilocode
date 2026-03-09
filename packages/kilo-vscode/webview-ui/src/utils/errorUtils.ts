@@ -42,7 +42,7 @@ export function unwrapError(message: string): string {
   return message
 }
 
-export const errorCodes = {
+const errorCodes = {
   PAID_MODEL_AUTH_REQUIRED: "PAID_MODEL_AUTH_REQUIRED",
   PROMOTION_MODEL_LIMIT_REACHED: "PROMOTION_MODEL_LIMIT_REACHED",
 } as const

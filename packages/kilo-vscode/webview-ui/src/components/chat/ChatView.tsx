@@ -11,10 +11,12 @@ import { TaskHeader } from "./TaskHeader"
 import { MessageList } from "./MessageList"
 import { PromptInput } from "./PromptInput"
 import { QuestionDock } from "./QuestionDock"
+import { UPSTREAM_SUPPRESSED_TOOLS } from "./AssistantMessage"
 import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import { useWorktreeMode } from "../../context/worktree-mode"
+import type { PermissionRequest } from "../../types/messages"
 
 interface ChatViewProps {
   onSelectSession?: (id: string) => void
@@ -37,7 +39,9 @@ export const ChatView: Component<ChatViewProps> = (props) => {
 
   const questionRequest = () => sessionQuestions().find((q) => !q.tool)
   const permissionRequest = () => sessionPermissions().find((p) => !p.tool)
-  const blocked = () => sessionPermissions().length > 0 || sessionQuestions().length > 0
+  // Only block the prompt when there's a non-todo permission (todo permissions are shown inline)
+  const isInlinePermission = (p: PermissionRequest) => p.tool && UPSTREAM_SUPPRESSED_TOOLS.has(p.toolName)
+  const blocked = () => sessionPermissions().some((p) => !isInlinePermission(p)) || sessionQuestions().length > 0
 
   // When a bottom-dock permission/question disappears while the session is busy,
   // the scroll container grows taller. Dispatch a custom event so MessageList can

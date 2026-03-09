@@ -588,6 +588,9 @@ button.am-section-toggle:hover .am-section-label {
   color: var(--text-weak);
   font-size: 12px;
   cursor: pointer;
+  transition:
+    background-color 120ms,
+    color 120ms;
 }
 
 .am-worktree-create:hover {
@@ -828,17 +831,20 @@ button.am-section-toggle:hover .am-section-label {
   background: transparent;
   color: var(--text-weak);
   cursor: pointer;
-  padding: 4px 6px;
-  border-radius: var(--radius-sm);
+  padding: 3px 6px;
+  border-radius: 5px;
   font-family: var(--font-mono, monospace);
   font-size: 10px;
   font-variant-numeric: tabular-nums;
   line-height: 1;
   white-space: nowrap;
+  transition:
+    background 120ms,
+    color 120ms;
 }
 
 .am-diff-toggle-btn:hover {
-  background: var(--surface-inset-base-hover);
+  background: var(--button-ghost-hover, var(--surface-base-hover));
   color: var(--text-base);
 }
 
@@ -1314,6 +1320,9 @@ button.am-section-toggle:hover .am-section-label {
   padding: 0;
   vertical-align: middle;
   line-height: 1;
+  transition:
+    background-color 120ms,
+    color 120ms;
 }
 
 .am-annotation-icon-btn svg {

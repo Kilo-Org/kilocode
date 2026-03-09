@@ -19,7 +19,9 @@ export const ServeCommand = cmd({
     const abort = new AbortController()
     const shutdown = async () => {
       try {
-        await Instance.disposeAll()
+        // Race disposeAll against a 5s timeout so hung MCP subprocesses
+        // cannot prevent the server from shutting down gracefully.
+        await Promise.race([Instance.disposeAll(), new Promise<void>((resolve) => setTimeout(resolve, 5000))])
         await server.stop(true)
       } finally {
         abort.abort()
@@ -28,7 +30,21 @@ export const ServeCommand = cmd({
     process.on("SIGTERM", shutdown)
     process.on("SIGINT", shutdown)
     process.on("SIGHUP", shutdown)
+    // Orphan detection: exit if the parent process (extension host) dies.
+    // Mirrors the pattern in tui/thread.ts to prevent zombie server processes
+    // accumulating across extension restarts.
+    const ppid = process.ppid
+    const orphanCheck = setInterval(() => {
+      try {
+        process.kill(ppid, 0)
+      } catch {
+        clearInterval(orphanCheck)
+        process.exit(143)
+      }
+    }, 1000)
+    orphanCheck.unref()
     await new Promise((resolve) => abort.signal.addEventListener("abort", resolve))
+    clearInterval(orphanCheck)
     // kilocode_change end
   },
 })

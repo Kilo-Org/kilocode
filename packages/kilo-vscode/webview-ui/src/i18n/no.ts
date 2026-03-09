@@ -1051,4 +1051,7 @@ export const dict = {
     "Dette fjerner de gamle innstillingene fra VS Code-lagringen. Du vil ikke kunne kjøre denne migreringen på nytt.",
   "migration.complete.done": "Ferdig",
   // legacy-migration end
+
+  "task.todos.progress": "{{done}}/{{total}} oppgaver fullført",
+  "task.todos.allDone": "{{count}} oppgaver fullført",
 } satisfies Partial<Record<Keys, string>>

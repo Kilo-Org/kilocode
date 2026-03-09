@@ -1,96 +1,8 @@
-diff --git a/node_modules/@openrouter/ai-sdk-provider/.bun-tag-62b23fbf246b82b3 b/.bun-tag-62b23fbf246b82b3
-new file mode 100644
-index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-diff --git a/node_modules/@openrouter/ai-sdk-provider/.bun-tag-7dac70da4266b9c0 b/.bun-tag-7dac70da4266b9c0
-new file mode 100644
-index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 diff --git a/dist/index.js b/dist/index.js
-index f33510a50d11a2cb92a90ea70cc0ac84c89f29b9..f63e3afa1c8b32b7a5d41448a4c1e0833446247b 100644
+index f33510a50d11a2cb92a90ea70cc0ac84c89f29b9..e887a60352c0c08ab794b1e6821854dfeefd20cc 100644
 --- a/dist/index.js
 +++ b/dist/index.js
-@@ -1050,7 +1050,8 @@ var OpenRouterProviderMetadataSchema = import_v43.z.object({
- var OpenRouterProviderOptionsSchema = import_v43.z.object({
-   openrouter: import_v43.z.object({
-     reasoning_details: import_v43.z.array(ReasoningDetailUnionSchema).optional(),
--    annotations: import_v43.z.array(FileAnnotationSchema).optional()
-+    annotations: import_v43.z.array(FileAnnotationSchema).optional(),
-+    phase: import_v43.z.string().optional()
-   }).optional()
- }).optional();
- 
-@@ -1310,12 +1311,17 @@ function convertToOpenRouterChatMessages(prompt) {
-       case "assistant": {
-         let text = "";
-         let reasoning = "";
-+        let partPhase;
-         const toolCalls = [];
-         const accumulatedReasoningDetails = [];
-         for (const part of content) {
-           switch (part.type) {
-             case "text": {
-               text += part.text;
-+              var _po = part.providerOptions;
-+              if (_po && _po.openrouter && _po.openrouter.phase) {
-+                partPhase = _po.openrouter.phase;
-+              }
-               break;
-             }
-             case "tool-call": {
-@@ -1355,6 +1361,7 @@ function convertToOpenRouterChatMessages(prompt) {
-         const parsedProviderOptions = OpenRouterProviderOptionsSchema.safeParse(providerOptions);
-         const messageReasoningDetails = parsedProviderOptions.success ? (_g = (_f = parsedProviderOptions.data) == null ? void 0 : _f.openrouter) == null ? void 0 : _g.reasoning_details : void 0;
-         const messageAnnotations = parsedProviderOptions.success ? (_i = (_h = parsedProviderOptions.data) == null ? void 0 : _h.openrouter) == null ? void 0 : _i.annotations : void 0;
-+        const messagePhase = parsedProviderOptions.success && parsedProviderOptions.data && parsedProviderOptions.data.openrouter ? parsedProviderOptions.data.openrouter.phase : void 0;
-         const finalReasoningDetails = messageReasoningDetails && Array.isArray(messageReasoningDetails) && messageReasoningDetails.length > 0 ? messageReasoningDetails : accumulatedReasoningDetails.length > 0 ? accumulatedReasoningDetails : void 0;
-         messages.push({
-           role: "assistant",
-@@ -1363,6 +1370,7 @@ function convertToOpenRouterChatMessages(prompt) {
-           reasoning: reasoning || void 0,
-           reasoning_details: finalReasoningDetails,
-           annotations: messageAnnotations,
-+          phase: partPhase || messagePhase,
-           cache_control: getCacheControl(providerOptions)
-         });
-         break;
-@@ -1836,7 +1844,10 @@ var OpenRouterChatLanguageModel = class {
-     if (choice.message.content) {
-       content.push({
-         type: "text",
--        text: choice.message.content
-+        text: choice.message.content,
-+        providerMetadata: choice.message.phase ? {
-+          openrouter: { phase: choice.message.phase }
-+        } : void 0
-       });
-     }
-     if (choice.message.tool_calls) {
-@@ -1900,6 +1911,7 @@ var OpenRouterChatLanguageModel = class {
-           provider: (_l = response.provider) != null ? _l : "",
-           reasoning_details: (_m = choice.message.reasoning_details) != null ? _m : [],
-           annotations: fileAnnotations && fileAnnotations.length > 0 ? fileAnnotations : void 0,
-+          phase: choice.message.phase || void 0,
-           usage: __spreadValues(__spreadValues(__spreadValues({
-             promptTokens: (_n = usageInfo.inputTokens) != null ? _n : 0,
-             completionTokens: (_o = usageInfo.outputTokens) != null ? _o : 0,
-@@ -1971,6 +1983,7 @@ var OpenRouterChatLanguageModel = class {
-     let reasoningId;
-     let openrouterResponseId;
-     let provider;
-+    let lastPhase;
-     return {
-       stream: response.pipeThrough(
-         new TransformStream({
-@@ -2040,6 +2053,9 @@ var OpenRouterChatLanguageModel = class {
-               return;
-             }
-             const delta = choice.delta;
-+            if (delta.phase) {
-+              lastPhase = delta.phase;
-+            }
-             const emitReasoningChunk = (chunkText, providerMetadata) => {
-               if (!reasoningStarted) {
-                 reasoningId = openrouterResponseId || generateId();
-@@ -2110,7 +2126,12 @@ var OpenRouterChatLanguageModel = class {
+@@ -2110,7 +2110,12 @@ var OpenRouterChatLanguageModel = class {
                if (reasoningStarted && !textStarted) {
                  controller.enqueue({
                    type: "reasoning-end",
@@ -104,7 +16,7 @@ index f33510a50d11a2cb92a90ea70cc0ac84c89f29b9..f63e3afa1c8b32b7a5d41448a4c1e083
                  });
                  reasoningStarted = false;
                }
-@@ -2307,13 +2328,21 @@ var OpenRouterChatLanguageModel = class {
+@@ -2307,7 +2312,12 @@ var OpenRouterChatLanguageModel = class {
              if (reasoningStarted) {
                controller.enqueue({
                  type: "reasoning-end",
@@ -118,113 +30,11 @@ index f33510a50d11a2cb92a90ea70cc0ac84c89f29b9..f63e3afa1c8b32b7a5d41448a4c1e083
                });
              }
              if (textStarted) {
-               controller.enqueue({
-                 type: "text-end",
--                id: textId || generateId()
-+                id: textId || generateId(),
-+                providerMetadata: lastPhase ? {
-+                  openrouter: { phase: lastPhase }
-+                } : void 0
-               });
-             }
-             const openrouterMetadata = {
-@@ -2328,6 +2357,9 @@ var OpenRouterChatLanguageModel = class {
-             if (accumulatedFileAnnotations.length > 0) {
-               openrouterMetadata.annotations = accumulatedFileAnnotations;
-             }
-+            if (lastPhase !== void 0) {
-+              openrouterMetadata.phase = lastPhase;
-+            }
-             controller.enqueue({
-               type: "finish",
-               finishReason,
 diff --git a/dist/index.mjs b/dist/index.mjs
-index 8a688331b88b4af738ee4ca8062b5f24124d3d81..4e510cd84efc2ac0dfd62ed22ad7e6d840c5528f 100644
+index 8a688331b88b4af738ee4ca8062b5f24124d3d81..6310cb8b7c8d0a728d86e1eed09906c6b4c91ae2 100644
 --- a/dist/index.mjs
 +++ b/dist/index.mjs
-@@ -1015,7 +1015,8 @@ var OpenRouterProviderMetadataSchema = z3.object({
- var OpenRouterProviderOptionsSchema = z3.object({
-   openrouter: z3.object({
-     reasoning_details: z3.array(ReasoningDetailUnionSchema).optional(),
--    annotations: z3.array(FileAnnotationSchema).optional()
-+    annotations: z3.array(FileAnnotationSchema).optional(),
-+    phase: z3.string().optional()
-   }).optional()
- }).optional();
- 
-@@ -1275,12 +1276,17 @@ function convertToOpenRouterChatMessages(prompt) {
-       case "assistant": {
-         let text = "";
-         let reasoning = "";
-+        let partPhase;
-         const toolCalls = [];
-         const accumulatedReasoningDetails = [];
-         for (const part of content) {
-           switch (part.type) {
-             case "text": {
-               text += part.text;
-+              var _po = part.providerOptions;
-+              if (_po && _po.openrouter && _po.openrouter.phase) {
-+                partPhase = _po.openrouter.phase;
-+              }
-               break;
-             }
-             case "tool-call": {
-@@ -1320,6 +1326,7 @@ function convertToOpenRouterChatMessages(prompt) {
-         const parsedProviderOptions = OpenRouterProviderOptionsSchema.safeParse(providerOptions);
-         const messageReasoningDetails = parsedProviderOptions.success ? (_g = (_f = parsedProviderOptions.data) == null ? void 0 : _f.openrouter) == null ? void 0 : _g.reasoning_details : void 0;
-         const messageAnnotations = parsedProviderOptions.success ? (_i = (_h = parsedProviderOptions.data) == null ? void 0 : _h.openrouter) == null ? void 0 : _i.annotations : void 0;
-+        const messagePhase = parsedProviderOptions.success && parsedProviderOptions.data && parsedProviderOptions.data.openrouter ? parsedProviderOptions.data.openrouter.phase : void 0;
-         const finalReasoningDetails = messageReasoningDetails && Array.isArray(messageReasoningDetails) && messageReasoningDetails.length > 0 ? messageReasoningDetails : accumulatedReasoningDetails.length > 0 ? accumulatedReasoningDetails : void 0;
-         messages.push({
-           role: "assistant",
-@@ -1328,6 +1335,7 @@ function convertToOpenRouterChatMessages(prompt) {
-           reasoning: reasoning || void 0,
-           reasoning_details: finalReasoningDetails,
-           annotations: messageAnnotations,
-+          phase: partPhase || messagePhase,
-           cache_control: getCacheControl(providerOptions)
-         });
-         break;
-@@ -1801,7 +1809,10 @@ var OpenRouterChatLanguageModel = class {
-     if (choice.message.content) {
-       content.push({
-         type: "text",
--        text: choice.message.content
-+        text: choice.message.content,
-+        providerMetadata: choice.message.phase ? {
-+          openrouter: { phase: choice.message.phase }
-+        } : void 0
-       });
-     }
-     if (choice.message.tool_calls) {
-@@ -1865,6 +1876,7 @@ var OpenRouterChatLanguageModel = class {
-           provider: (_l = response.provider) != null ? _l : "",
-           reasoning_details: (_m = choice.message.reasoning_details) != null ? _m : [],
-           annotations: fileAnnotations && fileAnnotations.length > 0 ? fileAnnotations : void 0,
-+          phase: choice.message.phase || void 0,
-           usage: __spreadValues(__spreadValues(__spreadValues({
-             promptTokens: (_n = usageInfo.inputTokens) != null ? _n : 0,
-             completionTokens: (_o = usageInfo.outputTokens) != null ? _o : 0,
-@@ -1936,6 +1948,7 @@ var OpenRouterChatLanguageModel = class {
-     let reasoningId;
-     let openrouterResponseId;
-     let provider;
-+    let lastPhase;
-     return {
-       stream: response.pipeThrough(
-         new TransformStream({
-@@ -2005,6 +2018,9 @@ var OpenRouterChatLanguageModel = class {
-               return;
-             }
-             const delta = choice.delta;
-+            if (delta.phase) {
-+              lastPhase = delta.phase;
-+            }
-             const emitReasoningChunk = (chunkText, providerMetadata) => {
-               if (!reasoningStarted) {
-                 reasoningId = openrouterResponseId || generateId();
-@@ -2075,7 +2091,12 @@ var OpenRouterChatLanguageModel = class {
+@@ -2075,7 +2075,12 @@ var OpenRouterChatLanguageModel = class {
                if (reasoningStarted && !textStarted) {
                  controller.enqueue({
                    type: "reasoning-end",
@@ -238,7 +48,7 @@ index 8a688331b88b4af738ee4ca8062b5f24124d3d81..4e510cd84efc2ac0dfd62ed22ad7e6d8
                  });
                  reasoningStarted = false;
                }
-@@ -2272,13 +2293,21 @@ var OpenRouterChatLanguageModel = class {
+@@ -2272,7 +2277,12 @@ var OpenRouterChatLanguageModel = class {
              if (reasoningStarted) {
                controller.enqueue({
                  type: "reasoning-end",
@@ -252,113 +62,11 @@ index 8a688331b88b4af738ee4ca8062b5f24124d3d81..4e510cd84efc2ac0dfd62ed22ad7e6d8
                });
              }
              if (textStarted) {
-               controller.enqueue({
-                 type: "text-end",
--                id: textId || generateId()
-+                id: textId || generateId(),
-+                providerMetadata: lastPhase ? {
-+                  openrouter: { phase: lastPhase }
-+                } : void 0
-               });
-             }
-             const openrouterMetadata = {
-@@ -2293,6 +2322,9 @@ var OpenRouterChatLanguageModel = class {
-             if (accumulatedFileAnnotations.length > 0) {
-               openrouterMetadata.annotations = accumulatedFileAnnotations;
-             }
-+            if (lastPhase !== void 0) {
-+              openrouterMetadata.phase = lastPhase;
-+            }
-             controller.enqueue({
-               type: "finish",
-               finishReason,
 diff --git a/dist/internal/index.js b/dist/internal/index.js
-index d40fa66125941155ac13a4619503caba24d89f8a..4f690d16b25c5b96125f69f9464189d3c7334885 100644
+index d40fa66125941155ac13a4619503caba24d89f8a..8dd86d1b473f2fa31c1acd9881d72945b294a197 100644
 --- a/dist/internal/index.js
 +++ b/dist/internal/index.js
-@@ -1004,7 +1004,8 @@ var OpenRouterProviderMetadataSchema = import_v43.z.object({
- var OpenRouterProviderOptionsSchema = import_v43.z.object({
-   openrouter: import_v43.z.object({
-     reasoning_details: import_v43.z.array(ReasoningDetailUnionSchema).optional(),
--    annotations: import_v43.z.array(FileAnnotationSchema).optional()
-+    annotations: import_v43.z.array(FileAnnotationSchema).optional(),
-+    phase: import_v43.z.string().optional()
-   }).optional()
- }).optional();
- 
-@@ -1264,12 +1265,17 @@ function convertToOpenRouterChatMessages(prompt) {
-       case "assistant": {
-         let text = "";
-         let reasoning = "";
-+        let partPhase;
-         const toolCalls = [];
-         const accumulatedReasoningDetails = [];
-         for (const part of content) {
-           switch (part.type) {
-             case "text": {
-               text += part.text;
-+              var _po = part.providerOptions;
-+              if (_po && _po.openrouter && _po.openrouter.phase) {
-+                partPhase = _po.openrouter.phase;
-+              }
-               break;
-             }
-             case "tool-call": {
-@@ -1309,6 +1315,7 @@ function convertToOpenRouterChatMessages(prompt) {
-         const parsedProviderOptions = OpenRouterProviderOptionsSchema.safeParse(providerOptions);
-         const messageReasoningDetails = parsedProviderOptions.success ? (_g = (_f = parsedProviderOptions.data) == null ? void 0 : _f.openrouter) == null ? void 0 : _g.reasoning_details : void 0;
-         const messageAnnotations = parsedProviderOptions.success ? (_i = (_h = parsedProviderOptions.data) == null ? void 0 : _h.openrouter) == null ? void 0 : _i.annotations : void 0;
-+        const messagePhase = parsedProviderOptions.success && parsedProviderOptions.data && parsedProviderOptions.data.openrouter ? parsedProviderOptions.data.openrouter.phase : void 0;
-         const finalReasoningDetails = messageReasoningDetails && Array.isArray(messageReasoningDetails) && messageReasoningDetails.length > 0 ? messageReasoningDetails : accumulatedReasoningDetails.length > 0 ? accumulatedReasoningDetails : void 0;
-         messages.push({
-           role: "assistant",
-@@ -1317,6 +1324,7 @@ function convertToOpenRouterChatMessages(prompt) {
-           reasoning: reasoning || void 0,
-           reasoning_details: finalReasoningDetails,
-           annotations: messageAnnotations,
-+          phase: partPhase || messagePhase,
-           cache_control: getCacheControl(providerOptions)
-         });
-         break;
-@@ -1790,7 +1798,10 @@ var OpenRouterChatLanguageModel = class {
-     if (choice.message.content) {
-       content.push({
-         type: "text",
--        text: choice.message.content
-+        text: choice.message.content,
-+        providerMetadata: choice.message.phase ? {
-+          openrouter: { phase: choice.message.phase }
-+        } : void 0
-       });
-     }
-     if (choice.message.tool_calls) {
-@@ -1854,6 +1865,7 @@ var OpenRouterChatLanguageModel = class {
-           provider: (_l = response.provider) != null ? _l : "",
-           reasoning_details: (_m = choice.message.reasoning_details) != null ? _m : [],
-           annotations: fileAnnotations && fileAnnotations.length > 0 ? fileAnnotations : void 0,
-+          phase: choice.message.phase || void 0,
-           usage: __spreadValues(__spreadValues(__spreadValues({
-             promptTokens: (_n = usageInfo.inputTokens) != null ? _n : 0,
-             completionTokens: (_o = usageInfo.outputTokens) != null ? _o : 0,
-@@ -1925,6 +1937,7 @@ var OpenRouterChatLanguageModel = class {
-     let reasoningId;
-     let openrouterResponseId;
-     let provider;
-+    let lastPhase;
-     return {
-       stream: response.pipeThrough(
-         new TransformStream({
-@@ -1994,6 +2007,9 @@ var OpenRouterChatLanguageModel = class {
-               return;
-             }
-             const delta = choice.delta;
-+            if (delta.phase) {
-+              lastPhase = delta.phase;
-+            }
-             const emitReasoningChunk = (chunkText, providerMetadata) => {
-               if (!reasoningStarted) {
-                 reasoningId = openrouterResponseId || generateId();
-@@ -2064,7 +2080,12 @@ var OpenRouterChatLanguageModel = class {
+@@ -2064,7 +2064,12 @@ var OpenRouterChatLanguageModel = class {
                if (reasoningStarted && !textStarted) {
                  controller.enqueue({
                    type: "reasoning-end",
@@ -372,7 +80,7 @@ index d40fa66125941155ac13a4619503caba24d89f8a..4f690d16b25c5b96125f69f9464189d3
                  });
                  reasoningStarted = false;
                }
-@@ -2261,13 +2282,21 @@ var OpenRouterChatLanguageModel = class {
+@@ -2261,7 +2266,12 @@ var OpenRouterChatLanguageModel = class {
              if (reasoningStarted) {
                controller.enqueue({
                  type: "reasoning-end",
@@ -386,113 +94,11 @@ index d40fa66125941155ac13a4619503caba24d89f8a..4f690d16b25c5b96125f69f9464189d3
                });
              }
              if (textStarted) {
-               controller.enqueue({
-                 type: "text-end",
--                id: textId || generateId()
-+                id: textId || generateId(),
-+                providerMetadata: lastPhase ? {
-+                  openrouter: { phase: lastPhase }
-+                } : void 0
-               });
-             }
-             const openrouterMetadata = {
-@@ -2282,6 +2311,9 @@ var OpenRouterChatLanguageModel = class {
-             if (accumulatedFileAnnotations.length > 0) {
-               openrouterMetadata.annotations = accumulatedFileAnnotations;
-             }
-+            if (lastPhase !== void 0) {
-+              openrouterMetadata.phase = lastPhase;
-+            }
-             controller.enqueue({
-               type: "finish",
-               finishReason,
 diff --git a/dist/internal/index.mjs b/dist/internal/index.mjs
-index b0ed9d113549c5c55ea3b1e08abb3db6f92ae5a7..88d17415432670dd65104dad998ca52db249cebc 100644
+index b0ed9d113549c5c55ea3b1e08abb3db6f92ae5a7..5695930a8e038facc071d58a4179a369a29be9c7 100644
 --- a/dist/internal/index.mjs
 +++ b/dist/internal/index.mjs
-@@ -970,7 +970,8 @@ var OpenRouterProviderMetadataSchema = z3.object({
- var OpenRouterProviderOptionsSchema = z3.object({
-   openrouter: z3.object({
-     reasoning_details: z3.array(ReasoningDetailUnionSchema).optional(),
--    annotations: z3.array(FileAnnotationSchema).optional()
-+    annotations: z3.array(FileAnnotationSchema).optional(),
-+    phase: z3.string().optional()
-   }).optional()
- }).optional();
- 
-@@ -1230,12 +1231,17 @@ function convertToOpenRouterChatMessages(prompt) {
-       case "assistant": {
-         let text = "";
-         let reasoning = "";
-+        let partPhase;
-         const toolCalls = [];
-         const accumulatedReasoningDetails = [];
-         for (const part of content) {
-           switch (part.type) {
-             case "text": {
-               text += part.text;
-+              var _po = part.providerOptions;
-+              if (_po && _po.openrouter && _po.openrouter.phase) {
-+                partPhase = _po.openrouter.phase;
-+              }
-               break;
-             }
-             case "tool-call": {
-@@ -1275,6 +1281,7 @@ function convertToOpenRouterChatMessages(prompt) {
-         const parsedProviderOptions = OpenRouterProviderOptionsSchema.safeParse(providerOptions);
-         const messageReasoningDetails = parsedProviderOptions.success ? (_g = (_f = parsedProviderOptions.data) == null ? void 0 : _f.openrouter) == null ? void 0 : _g.reasoning_details : void 0;
-         const messageAnnotations = parsedProviderOptions.success ? (_i = (_h = parsedProviderOptions.data) == null ? void 0 : _h.openrouter) == null ? void 0 : _i.annotations : void 0;
-+        const messagePhase = parsedProviderOptions.success && parsedProviderOptions.data && parsedProviderOptions.data.openrouter ? parsedProviderOptions.data.openrouter.phase : void 0;
-         const finalReasoningDetails = messageReasoningDetails && Array.isArray(messageReasoningDetails) && messageReasoningDetails.length > 0 ? messageReasoningDetails : accumulatedReasoningDetails.length > 0 ? accumulatedReasoningDetails : void 0;
-         messages.push({
-           role: "assistant",
-@@ -1283,6 +1290,7 @@ function convertToOpenRouterChatMessages(prompt) {
-           reasoning: reasoning || void 0,
-           reasoning_details: finalReasoningDetails,
-           annotations: messageAnnotations,
-+          phase: partPhase || messagePhase,
-           cache_control: getCacheControl(providerOptions)
-         });
-         break;
-@@ -1756,7 +1764,10 @@ var OpenRouterChatLanguageModel = class {
-     if (choice.message.content) {
-       content.push({
-         type: "text",
--        text: choice.message.content
-+        text: choice.message.content,
-+        providerMetadata: choice.message.phase ? {
-+          openrouter: { phase: choice.message.phase }
-+        } : void 0
-       });
-     }
-     if (choice.message.tool_calls) {
-@@ -1820,6 +1831,7 @@ var OpenRouterChatLanguageModel = class {
-           provider: (_l = response.provider) != null ? _l : "",
-           reasoning_details: (_m = choice.message.reasoning_details) != null ? _m : [],
-           annotations: fileAnnotations && fileAnnotations.length > 0 ? fileAnnotations : void 0,
-+          phase: choice.message.phase || void 0,
-           usage: __spreadValues(__spreadValues(__spreadValues({
-             promptTokens: (_n = usageInfo.inputTokens) != null ? _n : 0,
-             completionTokens: (_o = usageInfo.outputTokens) != null ? _o : 0,
-@@ -1891,6 +1903,7 @@ var OpenRouterChatLanguageModel = class {
-     let reasoningId;
-     let openrouterResponseId;
-     let provider;
-+    let lastPhase;
-     return {
-       stream: response.pipeThrough(
-         new TransformStream({
-@@ -1960,6 +1973,9 @@ var OpenRouterChatLanguageModel = class {
-               return;
-             }
-             const delta = choice.delta;
-+            if (delta.phase) {
-+              lastPhase = delta.phase;
-+            }
-             const emitReasoningChunk = (chunkText, providerMetadata) => {
-               if (!reasoningStarted) {
-                 reasoningId = openrouterResponseId || generateId();
-@@ -2030,7 +2046,12 @@ var OpenRouterChatLanguageModel = class {
+@@ -2030,7 +2030,12 @@ var OpenRouterChatLanguageModel = class {
                if (reasoningStarted && !textStarted) {
                  controller.enqueue({
                    type: "reasoning-end",
@@ -506,7 +112,7 @@ index b0ed9d113549c5c55ea3b1e08abb3db6f92ae5a7..88d17415432670dd65104dad998ca52d
                  });
                  reasoningStarted = false;
                }
-@@ -2227,13 +2248,21 @@ var OpenRouterChatLanguageModel = class {
+@@ -2227,7 +2232,12 @@ var OpenRouterChatLanguageModel = class {
              if (reasoningStarted) {
                controller.enqueue({
                  type: "reasoning-end",
@@ -520,23 +126,3 @@ index b0ed9d113549c5c55ea3b1e08abb3db6f92ae5a7..88d17415432670dd65104dad998ca52d
                });
              }
              if (textStarted) {
-               controller.enqueue({
-                 type: "text-end",
--                id: textId || generateId()
-+                id: textId || generateId(),
-+                providerMetadata: lastPhase ? {
-+                  openrouter: { phase: lastPhase }
-+                } : void 0
-               });
-             }
-             const openrouterMetadata = {
-@@ -2248,6 +2277,9 @@ var OpenRouterChatLanguageModel = class {
-             if (accumulatedFileAnnotations.length > 0) {
-               openrouterMetadata.annotations = accumulatedFileAnnotations;
-             }
-+            if (lastPhase !== void 0) {
-+              openrouterMetadata.phase = lastPhase;
-+            }
-             controller.enqueue({
-               type: "finish",
-               finishReason,

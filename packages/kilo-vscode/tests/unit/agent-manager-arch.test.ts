@@ -14,9 +14,13 @@ import { Project, SyntaxKind } from "ts-morph"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
 const KILO_PROVIDER_FILE = path.join(ROOT, "src/KiloProvider.ts")
-const CSS_FILE = path.join(ROOT, "webview-ui/agent-manager/agent-manager.css")
+const CSS_FILES = [
+  path.join(ROOT, "webview-ui/agent-manager/agent-manager.css"),
+  path.join(ROOT, "webview-ui/agent-manager/agent-manager-review.css"),
+]
 const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/NewWorktreeDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DiffPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/FullScreenDiffView.tsx"),
@@ -32,13 +36,17 @@ const TSX_FILE = TSX_FILES[0]
 const PROVIDER_FILE = path.join(ROOT, "src/agent-manager/AgentManagerProvider.ts")
 const SETUP_SCRIPT_RUNNER_FILE = path.join(ROOT, "src/agent-manager/SetupScriptRunner.ts")
 
+function readAllCss(): string {
+  return CSS_FILES.map((f) => fs.readFileSync(f, "utf-8")).join("\n")
+}
+
 function readAllTsx(): string {
   return TSX_FILES.map((f) => fs.readFileSync(f, "utf-8")).join("\n")
 }
 
 describe("Agent Manager CSS Prefix", () => {
   it("all class selectors should use am- prefix", () => {
-    const css = fs.readFileSync(CSS_FILE, "utf-8")
+    const css = readAllCss()
     const matches = [...css.matchAll(/\.([a-z][a-z0-9-]*)/gi)]
     const names = [...new Set(matches.map((m) => m[1]))]
 
@@ -48,7 +56,7 @@ describe("Agent Manager CSS Prefix", () => {
   })
 
   it("all CSS custom properties should use am- prefix", () => {
-    const css = fs.readFileSync(CSS_FILE, "utf-8")
+    const css = readAllCss()
     const matches = [...css.matchAll(/--([a-z][a-z0-9-]*)\s*:/gi)]
     const names = [...new Set(matches.map((m) => m[1]))]
 
@@ -61,7 +69,7 @@ describe("Agent Manager CSS Prefix", () => {
   })
 
   it("all @keyframes should use am- prefix", () => {
-    const css = fs.readFileSync(CSS_FILE, "utf-8")
+    const css = readAllCss()
     const matches = [...css.matchAll(/@keyframes\s+([a-z][a-z0-9-]*)/gi)]
     const names = matches.map((m) => m[1])
 
@@ -73,7 +81,7 @@ describe("Agent Manager CSS Prefix", () => {
 
 describe("Agent Manager CSS/TSX Consistency", () => {
   it("all classes used in TSX should be defined in CSS", () => {
-    const css = fs.readFileSync(CSS_FILE, "utf-8")
+    const css = readAllCss()
     const tsx = readAllTsx()
 
     // Extract am- classes defined in CSS
@@ -90,7 +98,7 @@ describe("Agent Manager CSS/TSX Consistency", () => {
   })
 
   it("all am- classes defined in CSS should be used in TSX", () => {
-    const css = fs.readFileSync(CSS_FILE, "utf-8")
+    const css = readAllCss()
     const tsx = readAllTsx()
 
     // Extract am- classes defined in CSS
@@ -434,22 +442,137 @@ describe("Agent Manager — dialog listener cleanup", () => {
 
 describe("SetupScriptRunner — task execution model", () => {
   const runner = fs.readFileSync(SETUP_SCRIPT_RUNNER_FILE, "utf-8")
+  const taskAdapter = fs.readFileSync(path.join(ROOT, "src/agent-manager/task-runner.ts"), "utf-8")
 
-  it("uses VS Code tasks API for setup execution", () => {
-    expect(runner).toContain("vscode.tasks.executeTask")
-    expect(runner).toContain("onDidEndTaskProcess")
-    expect(runner).toContain("onDidEndTask")
+  it("runner is vscode-free and delegates execution via RunTask callback", () => {
+    expect(runner).not.toContain("vscode")
+    expect(runner).toContain("RunTask")
+    expect(runner).toContain("buildSetupTaskCommand")
   })
 
-  it("uses process-based task execution with env options", () => {
-    expect(runner).toContain("new vscode.ProcessExecution")
+  it("runner still provides WORKTREE_PATH and REPO_PATH env vars", () => {
     expect(runner).toContain("WORKTREE_PATH")
     expect(runner).toContain("REPO_PATH")
+  })
+
+  it("task-runner adapter hosts the vscode task execution", () => {
+    expect(taskAdapter).toContain("vscode.tasks.executeTask")
+    expect(taskAdapter).toContain("onDidEndTaskProcess")
+    expect(taskAdapter).toContain("new vscode.ProcessExecution")
   })
 
   it("does not use manual terminal command injection", () => {
     expect(runner).not.toContain("createTerminal")
     expect(runner).not.toContain("sendText")
-    expect(runner).not.toContain("buildSetupCommand")
+  })
+})
+
+// ---------------------------------------------------------------------------
+// VS Code import boundary — layering enforcement
+//
+// The agent-manager is being decoupled from VS Code so it can eventually run
+// outside the extension host. These tests enforce the layering:
+//
+//   1. Only files on the VSCODE_ALLOWED list may import "vscode".
+//   2. Each allowed file has a maxLines cap — shrink it as logic is extracted.
+//
+// To improve the architecture:
+//   - Extract business logic from allowed files into vscode-free modules.
+//   - Lower maxLines once the extraction lands.
+//   - Remove entries from VSCODE_ALLOWED once they no longer need vscode.
+// ---------------------------------------------------------------------------
+
+const AGENT_MANAGER_DIR = path.join(ROOT, "src/agent-manager")
+
+/**
+ * Exception list: files currently allowed to import `vscode`.
+ *
+ * Each entry has a maxLines cap. The goal is to shrink these over time and
+ * eventually remove entries as logic moves into vscode-free modules.
+ *
+ * When you extract code out of one of these files, lower its maxLines to
+ * the new line count rounded up to the nearest 50.
+ */
+const VSCODE_ALLOWED: Record<string, { maxLines: number; note: string }> = {
+  // God class — decompose into WorktreeOrchestrator, DiffManager, ApplyManager, etc.
+  "AgentManagerProvider.ts": {
+    maxLines: 1900,
+    note: "primary extraction target: break into vscode-free orchestrators",
+  },
+  // Thin adapter: wraps vscode.window terminal APIs behind TerminalHost interface
+  "terminal-host.ts": {
+    maxLines: 60,
+    note: "vscode adapter for SessionTerminalManager",
+  },
+  // Thin adapter: wraps vscode.tasks API behind RunTask callback
+  "task-runner.ts": {
+    maxLines: 80,
+    note: "vscode adapter for SetupScriptRunner",
+  },
+}
+
+function importsVscode(content: string): boolean {
+  return /(?:from|require\()\s*["']vscode["']/.test(content)
+}
+
+function agentManagerSourceFiles(): string[] {
+  return fs
+    .readdirSync(AGENT_MANAGER_DIR)
+    .filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts") && !f.endsWith(".spec.ts"))
+}
+
+describe("Agent Manager — VS Code import boundary", () => {
+  it("only allowlisted files may import vscode", () => {
+    const violations: string[] = []
+    for (const file of agentManagerSourceFiles()) {
+      if (file in VSCODE_ALLOWED) continue
+      const content = fs.readFileSync(path.join(AGENT_MANAGER_DIR, file), "utf-8")
+      if (importsVscode(content)) violations.push(file)
+    }
+    expect(
+      violations,
+      `These files import "vscode" but are not on the exception list.\n` +
+        `Either extract the vscode dependency or add them to VSCODE_ALLOWED:\n` +
+        violations.map((v) => `  - ${v}`).join("\n"),
+    ).toEqual([])
+  })
+
+  it("allowlisted files stay within their maxLines cap", () => {
+    const overweight: string[] = []
+    for (const [file, { maxLines }] of Object.entries(VSCODE_ALLOWED)) {
+      const filepath = path.join(AGENT_MANAGER_DIR, file)
+      if (!fs.existsSync(filepath)) continue
+      const lines = fs.readFileSync(filepath, "utf-8").split("\n").length
+      if (lines > maxLines) overweight.push(`${file}: ${lines} lines (maxLines: ${maxLines})`)
+    }
+    expect(
+      overweight,
+      `These VS Code integration files exceed their maxLines cap.\n` +
+        `Extract business logic into vscode-free modules and lower maxLines:\n` +
+        overweight.map((o) => `  - ${o}`).join("\n"),
+    ).toEqual([])
+  })
+
+  it("every allowlisted file actually exists", () => {
+    const stale = Object.keys(VSCODE_ALLOWED).filter((f) => !fs.existsSync(path.join(AGENT_MANAGER_DIR, f)))
+    expect(
+      stale,
+      `These files are in VSCODE_ALLOWED but no longer exist — remove them:\n` +
+        stale.map((s) => `  - ${s}`).join("\n"),
+    ).toEqual([])
+  })
+
+  it("every allowlisted file actually imports vscode", () => {
+    const unnecessary: string[] = []
+    for (const file of Object.keys(VSCODE_ALLOWED)) {
+      const filepath = path.join(AGENT_MANAGER_DIR, file)
+      if (!fs.existsSync(filepath)) continue
+      if (!importsVscode(fs.readFileSync(filepath, "utf-8"))) unnecessary.push(file)
+    }
+    expect(
+      unnecessary,
+      `These files no longer import "vscode" — remove them from VSCODE_ALLOWED:\n` +
+        unnecessary.map((u) => `  - ${u}`).join("\n"),
+    ).toEqual([])
   })
 })

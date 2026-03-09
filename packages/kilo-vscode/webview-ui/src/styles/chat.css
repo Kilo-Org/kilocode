@@ -4,6 +4,66 @@
  */
 
 /* ============================================
+   Task Header Todos
+   ============================================ */
+
+[data-component="task-header-todos"] {
+  border-bottom: 1px solid var(--border-weak-base);
+  background-color: var(--background-base);
+  flex-shrink: 0;
+
+  [data-slot="task-header-todos-trigger"] {
+    all: unset;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 6px 16px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text-weak);
+    box-sizing: border-box;
+
+    &:hover {
+      color: var(--text-base);
+    }
+  }
+
+  [data-slot="task-header-todos-summary"] {
+    flex: 1;
+
+    &[data-all-done] {
+      color: var(--text-success, var(--vscode-testing-iconPassed, #5cb85c));
+    }
+  }
+
+  [data-slot="task-header-todos-arrow"] {
+    transition: transform 0.15s ease;
+
+    &[data-open] {
+      transform: rotate(180deg);
+    }
+  }
+
+  [data-slot="task-header-todos-list"] {
+    padding: 4px 16px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  [data-slot="task-header-todo-content"] {
+    font-size: 12px;
+    color: var(--text-base);
+
+    &[data-completed] {
+      text-decoration: line-through;
+      color: var(--text-weak);
+    }
+  }
+}
+
+/* ============================================
    Chat View Layout
    ============================================ */
 
@@ -556,7 +616,8 @@
   line-height: 1.4;
   white-space: pre-wrap;
   word-wrap: break-word;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   z-index: 0;
   color: var(--vscode-input-foreground);
 }
@@ -940,6 +1001,12 @@
   padding: 8px 12px;
 }
 
+[data-component="permission-prompt"] [data-slot="permission-description"] {
+  font-size: 12px;
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  margin: 0 0 8px;
+}
+
 [data-component="permission-prompt"] [data-slot="permission-actions"] {
   display: flex;
   align-items: center;
@@ -1153,6 +1220,15 @@
 
 .vscode-session-turn-diffs {
   width: 100%;
+}
+
+/* ============================================
+   Todo tool — align checkboxes with icon in header
+   The trigger has 8px left padding, 16px icon, 8px gap = 32px total offset.
+   ============================================ */
+
+[data-component="todos"] {
+  padding-left: 32px;
 }
 
 /* ============================================

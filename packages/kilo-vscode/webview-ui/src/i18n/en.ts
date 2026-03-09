@@ -1000,7 +1000,8 @@ export const dict = {
   "settings.providers.smallModel.title": "Small Model",
   "settings.providers.smallModel.description": "Lightweight model for title generation and other quick tasks",
   "settings.providers.modeModels": "Model per Mode",
-  "settings.providers.modeModels.description": "Override the default model for specific modes. If not set, the global default model is used.",
+  "settings.providers.modeModels.description":
+    "Override the default model for specific modes. If not set, the global default model is used.",
   "settings.providers.disabled": "Disabled Providers",
   "settings.providers.disabled.description": "Providers to hide from the provider list",
   "settings.providers.enabled": "Enabled Providers (Allowlist)",
@@ -1073,4 +1074,7 @@ export const dict = {
   // legacy-migration end
 
   "error.details.show": "Details",
+
+  "task.todos.progress": "{{done}}/{{total}} to-dos done",
+  "task.todos.allDone": "{{count}} to-dos done",
 }

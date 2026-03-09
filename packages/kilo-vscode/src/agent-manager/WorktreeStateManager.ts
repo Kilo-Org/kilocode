@@ -25,7 +25,7 @@ export interface Worktree {
   label?: string
 }
 
-export interface ManagedSession {
+interface ManagedSession {
   id: string
   worktreeId: string | null
   createdAt: string
