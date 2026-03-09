@@ -59,7 +59,11 @@ export namespace Installation {
   }
 
   export async function method() {
-    if (process.execPath.includes(path.join(".opencode", "bin"))) return "curl"
+    if (
+      process.execPath.includes(path.join(".kilo", "bin")) ||
+      process.execPath.includes(path.join(".opencode", "bin"))
+    )
+      return "curl" // kilocode_change
     if (process.execPath.includes(path.join(".local", "bin"))) return "curl"
     const exec = process.execPath.toLowerCase()
 

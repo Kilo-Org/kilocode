@@ -1,8 +1,81 @@
-/* kilocode_change - new file */
 /* Kilo Switch overrides */
 
 [data-component="switch"] {
+  cursor: pointer;
+
   [data-slot="switch-label"] {
     font-size: 13px;
+  }
+
+  [data-slot="switch-control"] {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    box-sizing: border-box;
+    width: 36px;
+    height: 20px;
+    padding: 2px;
+    border-radius: 9999px;
+    border: none;
+    background: var(--border-base);
+    transition: background-color 150ms;
+  }
+
+  [data-slot="switch-thumb"] {
+    width: 16px;
+    height: 16px;
+    box-sizing: border-box;
+    border-radius: 9999px;
+    border: none;
+    background: #ffffff;
+    box-shadow:
+      0px 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0px 4px 6px -2px rgba(0, 0, 0, 0.05);
+    transform: translateX(0);
+    transition: transform 150ms;
+  }
+
+  &:hover:not([data-disabled], [data-readonly]) [data-slot="switch-control"] {
+    border: none;
+    background-color: var(--border-hover);
+  }
+
+  &:not([data-readonly]) [data-slot="switch-input"]:focus-visible ~ [data-slot="switch-control"] {
+    border: none;
+    box-shadow: none;
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+  }
+
+  &[data-checked] [data-slot="switch-control"] {
+    box-sizing: border-box;
+    border: none;
+    background-color: var(--border-focus);
+  }
+
+  &[data-checked] [data-slot="switch-thumb"] {
+    border: none;
+    transform: translateX(16px);
+    background: #ffffff;
+  }
+
+  &[data-checked]:hover:not([data-disabled], [data-readonly]) [data-slot="switch-control"] {
+    border: none;
+    background-color: var(--border-focus);
+  }
+
+  &[data-disabled] [data-slot="switch-control"] {
+    border: none;
+    background-color: var(--border-base);
+    opacity: 0.5;
+  }
+
+  &[data-disabled] [data-slot="switch-thumb"] {
+    background: #ffffff;
+  }
+
+  &[data-invalid] [data-slot="switch-control"] {
+    border: none;
+    box-shadow: 0 0 0 1px var(--border-error);
   }
 }

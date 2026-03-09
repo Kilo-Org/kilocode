@@ -9,7 +9,7 @@
 # 🚀 Kilo
 
 > Kilo is the all-in-one agentic engineering platform. Build, ship, and iterate faster with the most popular open source coding agent.
-> #1 on OpenRouter. 1.5M+ Kilo Coders. 25T+ tokens processed
+> [#1 coding agent on OpenRouter](https://openrouter.ai/apps/category/coding). 1.5M+ Kilo Coders. 25T+ tokens processed
 
 - ✨ Generate code from natural language
 - ✅ Checks its own work
@@ -19,10 +19,6 @@
 - 🤖 Latest AI models
 - 🎁 API keys optional
 - 💡 **Get $20 in bonus credits when you top-up for the first time** Credits can be used with 500+ models like Gemini 3.1 Pro, Claude 4.6 Sonnet & Opus, and GPT-5.2
-
-<p align="center">
-  <img src="https://media.githubusercontent.com/media/Kilo-Org/kilocode/main/kilo.gif" width="100%" />
-</p>
 
 ## Quick Links
 
@@ -59,6 +55,37 @@ npx @kilocode/cli
 
 Then run `kilo` in any project directory to start.
 
+<!-- kilocode_change start -->
+### npm Install Note: Hidden `.kilo` File
+
+On some systems and npm versions, installing `@kilocode/cli` can create a hidden `.kilo` file near the installed `kilo` command (for example in a global npm bin directory). This file is an npm-generated launcher helper, not project data.
+
+- Why it exists: npm may create helper artifacts while wiring CLI executables.
+- Size caveat: size can vary by platform, npm version, and install mode (symlink vs copied launcher), so a strict fixed size is not guaranteed.
+- Safety: it is safe to leave in place. Do not edit it manually. Use your package manager's uninstall (`npm uninstall -g @kilocode/cli`) to remove install artifacts cleanly.
+<!-- kilocode_change end -->
+
+### Install from GitHub Releases (Optional)
+
+Download the latest binary or source code from the [Releases page](https://github.com/Kilo-Org/kilocode/releases), use this quick guide:
+
+- `kilo-<os>-<arch>.zip` is the CLI binary for your OS and CPU architecture on Windows and macOS. (`kilo-linux-<arch>.tar.gz` for Linux)
+- `darwin` means macOS.
+- `x64` is standard 64-bit Intel/AMD CPUs.
+- `x64-baseline` is a compatibility build for older x64 CPUs(do not support AVX Instruction).
+- `arm64` is ARM-based Linux/MacOS.
+- `musl` is statically linked Linux build for Alpine/minimal Docker without glibc. Alpine/minimal Docker users should prefer the matching *-musl asset.
+- `kilo-vscode-*.vsix` is the VS Code extension package and not the CLI binary.
+- `Source code` releases are for building from source, not normal installation.
+
+For most users:
+
+- **Windows (most PCs):** `kilo-windows-x64.zip`
+- **macOS Apple Silicon:** `kilo-darwin-arm64.zip`
+- **macOS Intel:** `kilo-darwin-x64.zip`
+- **Linux x64:** `kilo-linux-x64.tar,gz`
+- **Linux on ARM:** `kilo-linux-arm64.tar.gz`
+
 ### Autonomous Mode (CI/CD)
 
 Use the `--auto` flag with `kilo run` to enable fully autonomous operation without user interaction. This is ideal for CI/CD pipelines and automated workflows:
@@ -73,6 +100,8 @@ kilo run --auto "run tests and fix any failures"
 
 We welcome contributions from developers, writers, and enthusiasts!
 To get started, please read our [Contributing Guide](/CONTRIBUTING.md). It includes details on setting up your environment, coding standards, types of contribution and how to submit pull requests.
+
+See [RELEASING.md](RELEASING.md) for the release process.
 
 ## Code of Conduct
 

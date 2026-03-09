@@ -69,7 +69,7 @@ const ContextTab: Component = () => {
       <Card>
         <div
           style={{
-            "font-size": "11px",
+            "font-size": "12px",
             color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
             "padding-bottom": "8px",
             "border-bottom": patterns().length > 0 || newPattern() ? "1px solid var(--border-weak-base)" : "none",
@@ -98,7 +98,7 @@ const ContextTab: Component = () => {
               }}
             />
           </div>
-          <Button size="small" onClick={addPattern}>
+          <Button variant="secondary" onClick={addPattern}>
             {language.t("common.add")}
           </Button>
         </div>

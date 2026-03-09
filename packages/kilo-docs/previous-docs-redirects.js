@@ -218,6 +218,12 @@ module.exports = [
     basePath: false,
     permanent: true,
   },
+  {
+    source: "/docs/features/experimental/voice-transcription",
+    destination: "/docs/code-with-ai/features/speech-to-text",
+    basePath: false,
+    permanent: true,
+  },
 
   // ============================================
   // CUSTOMIZE - Context & Indexing
