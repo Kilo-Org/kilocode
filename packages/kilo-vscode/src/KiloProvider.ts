@@ -24,7 +24,7 @@ import * as MigrationService from "./legacy-migration/migration-service"
 import {
   sessionToWebview,
   indexProvidersById,
-  getProviderFallback,
+  getProviderSelection,
   filterVisibleAgents,
   buildSettingPath,
   mapSSEEventToWebviewMessage,
@@ -1006,7 +1006,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const { data: response } = await this.client.provider.list({ directory: workspaceDir }, { throwOnError: true })
 
       const normalized = indexProvidersById(response.all)
-      const selection = getProviderFallback(normalized, response.default)
+      const config = vscode.workspace.getConfiguration("kilo-code.new.model")
+      const selection = getProviderSelection(normalized, response.default, {
+        providerID: config.get<string>("providerID"),
+        modelID: config.get<string>("modelID"),
+      })
 
       const message = {
         type: "providersLoaded",

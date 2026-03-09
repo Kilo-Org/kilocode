@@ -1,5 +1,6 @@
 import { describe, it, expect } from "bun:test"
 import { loadSessions, flushPendingSessionRefresh, type SessionRefreshContext } from "../../src/kilo-provider-utils"
+import * as vscode from "vscode"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
 const { KiloProvider } = await import("../../src/KiloProvider")
@@ -142,6 +143,21 @@ function createConnection(client: ReturnType<typeof createClient>) {
   }
 }
 
+function setModelConfig(values?: { providerID?: string; modelID?: string }) {
+  const getConfiguration = vscode.workspace.getConfiguration as unknown as (section?: string) => {
+    get: <T>(key: string) => T | undefined
+  }
+  ;(vscode.workspace.getConfiguration as unknown as typeof getConfiguration) = (section?: string) => {
+    if (section !== "kilo-code.new.model") {
+      return getConfiguration(section)
+    }
+
+    return {
+      get: <T>(key: string) => values?.[key as "providerID" | "modelID"] as T | undefined,
+    }
+  }
+}
+
 describe("KiloProvider pending session refresh", () => {
   it("flushes deferred refresh via flushPendingSessionRefresh", async () => {
     const { calls, fn } = createListSessions()
@@ -205,6 +221,7 @@ describe("KiloProvider pending session refresh", () => {
   })
 
   it("uses backend provider defaults for fresh sessions", async () => {
+    setModelConfig()
     const client = createClient()
     const connection = createConnection(client)
     const provider = new KiloProvider({} as never, connection as never)
@@ -226,6 +243,7 @@ describe("KiloProvider pending session refresh", () => {
   })
 
   it("posts providersLoaded when defaults are missing", async () => {
+    setModelConfig()
     const client = createClient({
       all: [createProvider("openai", ["gpt-5"])],
       connected: [],
@@ -252,6 +270,7 @@ describe("KiloProvider pending session refresh", () => {
   })
 
   it("posts providersLoaded and falls back when defaults are stale", async () => {
+    setModelConfig()
     const client = createClient({
       all: [createProvider("openai", ["gpt-5"]), createProvider("anthropic", ["claude-sonnet-4"])],
       connected: [],
@@ -276,5 +295,57 @@ describe("KiloProvider pending session refresh", () => {
     expect(loaded?.providers.openai).toBeDefined()
     expect(loaded?.providers.anthropic).toBeDefined()
     expect(loaded?.defaultSelection).toEqual({ providerID: "anthropic", modelID: "claude-sonnet-4" })
+  })
+
+  it("uses valid VS Code model settings as the startup override", async () => {
+    setModelConfig({ providerID: "anthropic", modelID: "claude-sonnet-4" })
+    const client = createClient({
+      all: [createProvider("openai", ["gpt-5"]), createProvider("anthropic", ["claude-sonnet-4"])],
+      connected: [],
+      default: { openai: "gpt-5" },
+    })
+    const connection = createConnection(client)
+    const provider = new KiloProvider({} as never, connection as never)
+    const internal = provider as unknown as ProviderInternals
+    const sent: unknown[] = []
+
+    await internal.initializeConnection()
+    internal.postMessage = (message: unknown) => {
+      sent.push(message)
+    }
+
+    await internal.fetchAndSendProviders()
+
+    const loaded = sent.find((msg) => {
+      return typeof msg === "object" && !!msg && "type" in msg && (msg as { type?: unknown }).type === "providersLoaded"
+    }) as { defaultSelection: { providerID: string; modelID: string } } | undefined
+
+    expect(loaded?.defaultSelection).toEqual({ providerID: "anthropic", modelID: "claude-sonnet-4" })
+  })
+
+  it("falls back safely when VS Code model settings are invalid", async () => {
+    setModelConfig({ providerID: "missing", modelID: "missing-model" })
+    const client = createClient({
+      all: [createProvider("openai", ["gpt-5"]), createProvider("anthropic", ["claude-sonnet-4"])],
+      connected: [],
+      default: { openai: "gpt-5" },
+    })
+    const connection = createConnection(client)
+    const provider = new KiloProvider({} as never, connection as never)
+    const internal = provider as unknown as ProviderInternals
+    const sent: unknown[] = []
+
+    await internal.initializeConnection()
+    internal.postMessage = (message: unknown) => {
+      sent.push(message)
+    }
+
+    await internal.fetchAndSendProviders()
+
+    const loaded = sent.find((msg) => {
+      return typeof msg === "object" && !!msg && "type" in msg && (msg as { type?: unknown }).type === "providersLoaded"
+    }) as { defaultSelection: { providerID: string; modelID: string } } | undefined
+
+    expect(loaded?.defaultSelection).toEqual({ providerID: "openai", modelID: "gpt-5" })
   })
 })

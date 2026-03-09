@@ -90,6 +90,18 @@ export function getProviderFallback(
   return { providerID: "kilo", modelID: "kilo-auto/frontier" }
 }
 
+export function getProviderSelection(
+  providers: Record<string, ProviderInfo>,
+  defaults: Record<string, string>,
+  override?: { providerID?: string; modelID?: string },
+): { providerID: string; modelID: string } {
+  if (override?.providerID && override.modelID && providers[override.providerID]?.models?.[override.modelID]) {
+    return { providerID: override.providerID, modelID: override.modelID }
+  }
+
+  return getProviderFallback(providers, defaults)
+}
+
 export function filterVisibleAgents(agents: Agent[]): { visible: Agent[]; defaultAgent: string } {
   const visible = agents.filter((a) => a.mode !== "subagent" && !a.hidden)
   const defaultAgent = visible.length > 0 ? visible[0]!.name : "code"
