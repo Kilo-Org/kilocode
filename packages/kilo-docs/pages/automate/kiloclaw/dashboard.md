@@ -92,9 +92,39 @@ After saving channel tokens, you need to **Redeploy** or **Restart OpenClaw** fo
 
 At the bottom of Settings:
 
-- **Stop Instance** — Shuts down the machine. All your data is preserved and you can start it again later.
+- **Stop Instance** — Shuts down the machine. All your data is preserved and you can start it again later. See [Understanding Stop Instance](#understanding-stop-instance) for important details.
 - **Destroy Instance** — Permanently deletes your instance and all its data, including files, configuration, and workspace. This cannot be undone.
 - **Restore Config** — Restores your original `openclaw.json` in your instance. The existing `openclaw.json` is backed up to `/root/.openclaw` before the restore takes place.
+
+## Understanding Stop Instance
+
+When you click **Stop Instance**, the machine is fully shut down — no code runs, no CPU cycles are consumed, and billing for compute time stops. However, there are a few things to keep in mind:
+
+### What "Stopped" Means
+
+- The machine is **completely off** — not sleeping, not paused
+- The OpenClaw process is not running
+- No cron jobs will execute
+- No heartbeat checks will run
+- No messages will be processed
+
+### Cron Jobs and Heartbeats
+
+Your cron job definitions are preserved on the persistent volume, but they **do not run** while the machine is stopped. Cron jobs only execute when the machine is running and the OpenClaw gateway process is active.
+
+Similarly, heartbeat checks (periodic self-checks your agent may perform) only run when the gateway is active. A stopped machine cannot wake itself.
+
+{% callout type="info" %}
+If you want to temporarily disable scheduled tasks without stopping your entire instance, you can disable individual cron jobs from the [Control UI](/docs/automate/kiloclaw/control-ui) instead. This keeps your instance running but prevents specific jobs from executing.
+{% /callout %}
+
+### When to Stop vs Destroy
+
+| Goal                                        | Action              |
+| ------------------------------------------- | ------------------- |
+| Take a break, keep everything for later     | **Stop Instance**   |
+| Reduce costs when not using the agent       | **Stop Instance**   |
+| Permanently delete everything and start fresh | **Destroy Instance** |
 
 ## Accessing the Control UI
 
@@ -132,7 +162,7 @@ The dashboard shows recent KiloClaw platform updates. Each entry is tagged as a 
 | ---------------------- | --------------------------------------------------------------------------- | --------------- |
 | **Create & Provision** | Allocates storage in the best region available and saves your config.       | N/A             |
 | **Start Machine**      | Boots the machine and starts OpenClaw.                                      | Yes             |
-| **Stop Instance**      | Shuts down the machine.                                                     | Yes             |
+| **Stop Instance**      | Shuts down the machine. Cron jobs and heartbeats do not run while stopped.  | Yes             |
 | **Restart OpenClaw**   | Restarts the OpenClaw process. Machine stays up.                            | Yes             |
 | **Redeploy**           | Stops, applies config, and restarts the machine (same version or upgraded). | Yes             |
 | **Destroy Instance**   | Permanently deletes everything.                                             | No              |
