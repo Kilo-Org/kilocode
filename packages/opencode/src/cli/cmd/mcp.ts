@@ -385,7 +385,10 @@ async function resolveConfigPath(baseDir: string, global = false) {
   const candidates = [path.join(baseDir, "opencode.json"), path.join(baseDir, "opencode.jsonc")]
 
   if (!global) {
+    // kilocode_change start
+    candidates.push(path.join(baseDir, ".kilo", "kilo.json"), path.join(baseDir, ".kilo", "kilo.jsonc"))
     candidates.push(path.join(baseDir, ".opencode", "opencode.json"), path.join(baseDir, ".opencode", "opencode.jsonc"))
+    // kilocode_change end
   }
 
   for (const candidate of candidates) {
