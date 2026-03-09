@@ -644,7 +644,10 @@ export interface WorktreeState {
   id: string
   branch: string
   path: string
+  /** Bare branch name (e.g. "main"), without remote prefix. */
   parentBranch: string
+  /** Remote name (e.g. "origin"). */
+  remote?: string
   createdAt: string
   /** Shared identifier for worktrees created together via multi-version mode. */
   groupId?: string

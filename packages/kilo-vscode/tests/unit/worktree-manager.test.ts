@@ -37,6 +37,29 @@ function createManager(root: string): WorktreeManager {
   return new WorktreeManager(root, (msg) => logs.push(msg))
 }
 
+/** Create a temp repo with a bare origin remote so origin/<branch> refs exist. */
+async function createTempRepoWithOrigin(): Promise<{ bare: string; clone: string }> {
+  const bare = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-bare-"))
+  tempDirs.push(bare)
+  const bareGit = simpleGit(bare)
+  await bareGit.init(true)
+
+  const clone = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-clone-"))
+  tempDirs.push(clone)
+  const cloneGit = simpleGit(clone)
+  await cloneGit.clone(bare, clone, ["--no-hardlinks"])
+  await cloneGit.addConfig("user.email", "test@test.com")
+  await cloneGit.addConfig("user.name", "Test")
+
+  // Bare repo has no commits yet — push an initial one
+  await fs.writeFile(path.join(clone, "README.md"), "init")
+  await cloneGit.add(".")
+  await cloneGit.commit("initial commit")
+  await cloneGit.push("origin", "main")
+
+  return { bare, clone }
+}
+
 // ---------------------------------------------------------------------------
 // generateBranchName
 // ---------------------------------------------------------------------------
@@ -728,6 +751,44 @@ describe("WorktreeManager.resolveStartPoint", () => {
     expect(res.ref).toBe(head)
   })
 
+  it("returns bare branch + remote when remote exists", async () => {
+    const { clone } = await createTempRepoWithOrigin()
+    const mgr = createManager(clone)
+
+    const res = await mgr.resolveStartPoint("main")
+    expect(res.source).toBe("remote")
+    expect(res.ref).toBe("origin/main")
+    expect(res.branch).toBe("main")
+    expect(res.remote).toBe("origin")
+  })
+
+  it("returns bare branch + remote for stale tracking ref", async () => {
+    const { clone } = await createTempRepoWithOrigin()
+    const git = simpleGit(clone)
+    // Remove origin so fetch fails, but the local tracking ref remains
+    await git.removeRemote("origin")
+    const mgr = createManager(clone)
+
+    const res = await mgr.resolveStartPoint("main")
+    // After removing the remote, resolveRemote() returns undefined,
+    // so "origin/main" won't be tried as ${remote}/${branch}. Falls back to local.
+    expect(res.source).toBe("local-branch")
+    expect(res.branch).toBe("main")
+    expect(res.remote).toBeUndefined()
+  })
+
+  it("returns bare branch name for local-only source", async () => {
+    const root = await createTempRepo()
+    const git = simpleGit(root)
+    const head = (await git.revparse(["--abbrev-ref", "HEAD"])).trim()
+    const mgr = createManager(root)
+
+    const res = await mgr.resolveStartPoint(head)
+    expect(res.source).toBe("local-branch")
+    expect(res.branch).toBe(head)
+    expect(res.remote).toBeUndefined()
+  })
+
   it("falls back to default branch when requested does not exist", async () => {
     const root = await createTempRepo()
     const git = simpleGit(root)
@@ -747,6 +808,45 @@ describe("WorktreeManager.resolveStartPoint", () => {
     await expect(mgr.resolveStartPoint("nonexistent", undefined, { allowFallback: false })).rejects.toThrow(
       "Could not resolve start point",
     )
+  })
+})
+
+// ---------------------------------------------------------------------------
+// WorktreeManager -- resolveBaseBranch
+// ---------------------------------------------------------------------------
+
+describe("WorktreeManager.resolveBaseBranch", () => {
+  it("returns bare branch + remote when origin remote and tracking ref exist", async () => {
+    const { clone } = await createTempRepoWithOrigin()
+    const mgr = createManager(clone)
+
+    const result = await mgr.resolveBaseBranch()
+    expect(result).toEqual({ branch: "main", remote: "origin" })
+  })
+
+  it("returns bare branch without remote when no origin remote exists", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    const result = await mgr.resolveBaseBranch()
+    const git = simpleGit(root)
+    const head = (await git.revparse(["--abbrev-ref", "HEAD"])).trim()
+    expect(result).toEqual({ branch: head })
+    expect(result.remote).toBeUndefined()
+  })
+
+  it("returns bare branch without remote when origin exists but tracking ref does not", async () => {
+    const root = await createTempRepo()
+    const git = simpleGit(root)
+    // Add a remote that points nowhere — origin exists but origin/main ref doesn't
+    await git.addRemote("origin", "https://example.com/repo.git")
+    const mgr = createManager(root)
+
+    const result = await mgr.resolveBaseBranch()
+    const git2 = simpleGit(root)
+    const head = (await git2.revparse(["--abbrev-ref", "HEAD"])).trim()
+    expect(result).toEqual({ branch: head })
+    expect(result.remote).toBeUndefined()
   })
 })
 

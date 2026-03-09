@@ -210,33 +210,15 @@ export class GitOps {
 
   /**
    * Count commits ahead and behind using `rev-list --left-right --count`.
-   * Tries the best available ref in order: upstream tracking branch →
-   * remote/branch → remote/parentBranch → local parentBranch.
+   * Callers are expected to pass a fully-qualified ref (e.g. "origin/main").
+   * Refreshes the remote before counting so the tracking ref is up-to-date.
    */
-  async aheadBehind(cwd: string, parentBranch: string): Promise<{ ahead: number; behind: number }> {
-    const upstream = await this.raw(["rev-parse", "--abbrev-ref", "@{upstream}"], cwd).catch(() => "")
-    const branch = await this.raw(["branch", "--show-current"], cwd).catch(() => "")
-    const remote = await this.resolveRemote(cwd, branch)
-    await this.refreshRemote(cwd, remote)
-
-    const ref = (() => {
-      if (upstream) return upstream
-      const remoteBranch = branch ? `${remote}/${branch}` : ""
-      // hasRemoteRef is async, so we can't use it inline — resolve below
-      return { remoteBranch, remoteParent: `${remote}/${parentBranch}`, parentBranch }
-    })()
-
-    if (typeof ref === "string") {
-      return this.parseLeftRight(cwd, ref)
-    }
-
-    if (ref.remoteBranch && (await this.hasRemoteRef(cwd, ref.remoteBranch))) {
-      return this.parseLeftRight(cwd, ref.remoteBranch)
-    }
-    if (await this.hasRemoteRef(cwd, ref.remoteParent)) {
-      return this.parseLeftRight(cwd, ref.remoteParent)
-    }
-    return this.parseLeftRight(cwd, ref.parentBranch)
+  async aheadBehind(cwd: string, base: string): Promise<{ ahead: number; behind: number }> {
+    // Extract remote name from the ref (e.g. "origin" from "origin/main") for fetch
+    const slashIdx = base.indexOf("/")
+    const remote = slashIdx > 0 ? base.slice(0, slashIdx) : undefined
+    if (remote) await this.refreshRemote(cwd, remote)
+    return this.parseLeftRight(cwd, base)
   }
 
   private async parseLeftRight(cwd: string, ref: string): Promise<{ ahead: number; behind: number }> {

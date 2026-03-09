@@ -1,7 +1,7 @@
 import * as fs from "fs"
 import * as path from "path"
 import type { KiloClient, FileDiff } from "@kilocode/sdk/v2/client"
-import type { Worktree } from "./WorktreeStateManager"
+import { remoteRef, type Worktree } from "./WorktreeStateManager"
 import type { GitOps } from "./GitOps"
 import { normalizePath } from "./git-import"
 
@@ -147,9 +147,10 @@ export class GitStatsPoller {
       await Promise.all(
         active.map(async (wt) => {
           try {
+            const base = remoteRef(wt)
             const [{ data: diffs }, ab] = await Promise.all([
-              client.worktree.diff({ directory: wt.path, base: wt.parentBranch }, { throwOnError: true }),
-              this.git.aheadBehind(wt.path, wt.parentBranch),
+              client.worktree.diff({ directory: wt.path, base }, { throwOnError: true }),
+              this.git.aheadBehind(wt.path, base),
             ])
             const files = diffs.length
             const additions = diffs.reduce((sum: number, diff: FileDiff) => sum + diff.additions, 0)

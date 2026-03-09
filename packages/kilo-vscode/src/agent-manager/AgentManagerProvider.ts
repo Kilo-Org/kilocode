@@ -8,7 +8,7 @@ import { isAbsolutePath } from "../path-utils"
 import { KiloProvider } from "../KiloProvider"
 import { buildWebviewHtml } from "../utils"
 import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
-import { WorktreeStateManager } from "./WorktreeStateManager"
+import { WorktreeStateManager, remoteRef } from "./WorktreeStateManager"
 import { chooseBaseBranch, normalizeBaseBranch } from "./base-branch"
 import { GitStatsPoller, type WorktreePresenceResult } from "./GitStatsPoller"
 import { GitOps, type ApplyConflict } from "./GitOps"
@@ -475,6 +475,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       branch: result.branch,
       path: result.path,
       parentBranch: result.parentBranch,
+      remote: result.remote,
       groupId: opts?.groupId,
       label: opts?.label,
     })
@@ -1047,6 +1048,7 @@ export class AgentManagerProvider implements vscode.Disposable {
         branch: result.branch,
         path: result.path,
         parentBranch: result.parentBranch,
+        remote: result.remote,
       })
       this.pushState()
 
@@ -1112,6 +1114,7 @@ export class AgentManagerProvider implements vscode.Disposable {
         branch: result.branch,
         path: result.path,
         parentBranch: result.parentBranch,
+        remote: result.remote,
       })
       this.pushState()
 
@@ -1186,8 +1189,8 @@ export class AgentManagerProvider implements vscode.Disposable {
         return
       }
 
-      const parent = await manager.defaultBranch()
-      worktree = state.addWorktree({ branch, path: wtPath, parentBranch: parent })
+      const base = await manager.resolveBaseBranch()
+      worktree = state.addWorktree({ branch, path: wtPath, parentBranch: base.branch, remote: base.remote })
       this.pushState()
 
       const session = await this.createSessionInWorktree(wtPath, branch, worktree.id)
@@ -1215,7 +1218,7 @@ export class AgentManagerProvider implements vscode.Disposable {
         mode: "worktree",
         branch,
         path: wtPath,
-        parentBranch: parent,
+        parentBranch: base.branch,
       })
       this.postToWebview({ type: "agentManager.importResult", success: true, message: `Imported ${branch}` })
       this.log(`Imported external worktree ${wtPath} (${branch})`)
@@ -1261,10 +1264,15 @@ export class AgentManagerProvider implements vscode.Disposable {
       }
 
       let imported = 0
-      const parent = await manager.defaultBranch()
+      const base = await manager.resolveBaseBranch()
       for (const ext of externals) {
         try {
-          const worktree = state.addWorktree({ branch: ext.branch, path: ext.path, parentBranch: parent })
+          const worktree = state.addWorktree({
+            branch: ext.branch,
+            path: ext.path,
+            parentBranch: base.branch,
+            remote: base.remote,
+          })
           const session = await this.createSessionInWorktree(ext.path, ext.branch, worktree.id)
           if (session) {
             state.addSession(session.id, worktree.id)
@@ -1573,7 +1581,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     try {
       this.postApplyResult(worktreeId, "checking", "Checking for conflicts...")
-      const patch = await this.gitOps.buildWorktreePatch(worktree.path, worktree.parentBranch, selectedFiles)
+      const patch = await this.gitOps.buildWorktreePatch(worktree.path, remoteRef(worktree), selectedFiles)
 
       if (!patch.trim()) {
         this.postApplyResult(worktreeId, "success", "No changes to apply")
@@ -1696,7 +1704,8 @@ export class AgentManagerProvider implements vscode.Disposable {
       this.log(`resolveDiffTarget: worktree ${session.worktreeId} not found for session ${sessionId}`)
       return undefined
     }
-    return { directory: worktree.path, baseBranch: worktree.parentBranch }
+    // Always construct remote-prefixed ref for diff (e.g. "origin/main")
+    return { directory: worktree.path, baseBranch: remoteRef(worktree) }
   }
 
   /** Resolve diff target for the local workspace — diffs against the remote tracking
