@@ -114,6 +114,7 @@ export const dict = {
   "dialog.model.empty": "Ingen modellresultater",
   "dialog.model.manage": "Administrer modeller",
   "dialog.model.manage.description": "Tilpass hvilke modeller som vises i modellvelgeren.",
+  "dialog.model.manage.provider.toggle": "Veksle alle {{provider}}-modeller",
 
   "dialog.model.unpaid.freeModels.title": "Gratis modeller levert av Kilo",
   "dialog.model.unpaid.addMore.title": "Legg til flere modeller fra populære leverandører",
@@ -498,6 +499,7 @@ export const dict = {
   "session.review.loadingChanges": "Laster endringer...",
   "session.review.empty": "Ingen endringer i denne sesjonen ennå",
   "session.review.noChanges": "Ingen endringer",
+  "session.review.noVcs": "Ingen git VCS oppdaget, så øktendringer vil ikke bli oppdaget",
 
   "session.files.selectToOpen": "Velg en fil å åpne",
   "session.files.all": "Alle filer",
@@ -513,6 +515,11 @@ export const dict = {
   "session.todo.title": "Oppgaver",
   "session.todo.collapse": "Skjul",
   "session.todo.expand": "Utvid",
+
+  "session.modeSwitch.switching": "Bytter til {{mode}}-modus…",
+  "session.modeSwitch.waiting": "Venter på at gjeldende oppgave er ferdig",
+  "session.modeSwitch.notAvailable": "Agent ikke tilgjengelig",
+  "session.modeSwitch.fallback": '"{{requested}}" ikke funnet, bruker "{{actual}}"',
 
   "session.new.worktree.main": "Hovedgren",
   "session.new.worktree.mainWithBranch": "Hovedgren ({{branch}})",
@@ -613,6 +620,8 @@ export const dict = {
   "settings.general.row.theme.description": "Tilpass hvordan Kilo er tematisert.",
   "settings.general.row.font.title": "Skrift",
   "settings.general.row.font.description": "Tilpass mono-skriften som brukes i kodeblokker",
+  "settings.general.row.reasoningSummaries.title": "Vis resonneringssammendrag",
+  "settings.general.row.reasoningSummaries.description": "Vis modellressonneringssammendrag i tidslinjen",
 
   "settings.general.row.shellToolPartsExpanded.title": "Utvid shell-verktøydeler",
   "settings.general.row.shellToolPartsExpanded.description": "Vis shell-verktøydeler utvidet som standard i tidslinjen",
