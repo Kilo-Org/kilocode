@@ -6,6 +6,7 @@ import { ACP } from "@/acp/agent"
 import { Server } from "@/server/server"
 import { createKiloClient } from "@kilocode/sdk/v2"
 import { withNetworkOptions, resolveNetworkOptions } from "../network"
+import { Provider } from "@/provider/provider"
 
 const log = Log.create({ service: "acp-command" })
 
@@ -55,8 +56,10 @@ export const AcpCommand = cmd({
       const stream = ndJsonStream(input, output)
       const agent = await ACP.init({ sdk })
 
+      const defaultModel = await Provider.defaultModel()
+
       new AgentSideConnection((conn) => {
-        return agent.create(conn, { sdk })
+        return agent.create(conn, { sdk, defaultModel })
       }, stream)
 
       log.info("setup connection")
