@@ -16,9 +16,12 @@ import stripAnsi from "strip-ansi"
 // Windows CLI tools (e.g. winget) use \r to overwrite progress bars in-place.
 // Without this, every progress frame renders as a separate visual line.
 function processCarriageReturns(input: string): string {
-  return input
+  // Normalize \r\n to \n first so CRLF line endings aren't treated as overwrites
+  const normalized = input.replace(/\r\n/g, "\n")
+  return normalized
     .split("\n")
     .map((line) => {
+      if (!line.includes("\r")) return line
       const parts = line.split("\r")
       return parts[parts.length - 1]
     })
