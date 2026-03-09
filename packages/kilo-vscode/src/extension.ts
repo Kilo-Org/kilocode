@@ -4,6 +4,7 @@ import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { EXTENSION_DISPLAY_NAME } from "./constants"
 import { KiloConnectionService } from "./services/cli-backend"
 import { registerAutocompleteProvider } from "./services/autocomplete"
+import { AutocompleteServiceManager } from "./services/autocomplete/AutocompleteServiceManager"
 import { BrowserAutomationService } from "./services/browser-automation"
 import { TelemetryProxy } from "./services/telemetry"
 import { registerCommitMessageService } from "./services/commit-message"
@@ -21,7 +22,8 @@ export function activate(context: vscode.ExtensionContext) {
   const browserAutomationService = new BrowserAutomationService(connectionService)
   browserAutomationService.syncWithSettings()
 
-  // Re-register browser automation MCP server on CLI backend reconnect and configure telemetry
+  // Re-register browser automation MCP server on CLI backend reconnect, configure telemetry,
+  // and reload autocomplete so it picks up the now-available backend connection.
   const unsubscribeStateChange = connectionService.onStateChange((state) => {
     if (state === "connected") {
       browserAutomationService.reregisterIfEnabled()
@@ -29,6 +31,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (config) {
         telemetry.configure(config.baseUrl, config.password)
       }
+      AutocompleteServiceManager.getInstance()?.load()
     }
   })
 
@@ -143,6 +146,13 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Register autocomplete provider
   registerAutocompleteProvider(context, connectionService)
+
+  // Start the CLI backend server eagerly so autocomplete works without opening a Kilo tab.
+  // connectionService.connect() is idempotent — when a webview later calls connect(), it's a no-op.
+  const workspaceDir = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd()
+  connectionService.connect(workspaceDir).catch((error) => {
+    console.error("[Kilo New] Extension: Failed to eagerly start CLI backend:", error)
+  })
 
   // Register commit message generation
   registerCommitMessageService(context, connectionService)
