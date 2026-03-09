@@ -768,7 +768,7 @@ export namespace SessionPrompt {
     SessionCompaction.prune({ sessionID })
     // kilocode_change start
     finished = true
-    // kilocode_change end
+    // Return the stored interrupted assistant turn before surfacing AbortError.
     for await (const item of MessageV2.stream(sessionID)) {
       if (item.info.role === "user") continue
       const queued = state()[sessionID]?.callbacks ?? []
@@ -777,6 +777,8 @@ export namespace SessionPrompt {
       }
       return item
     }
+    if (abort.aborted) abort.throwIfAborted()
+    // kilocode_change end
     throw new Error("Impossible")
   })
 
@@ -1991,7 +1993,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       tools: {},
       model,
       abort: new AbortController().signal,
-      sessionID: input.session.id,
+      sessionID: `title-${input.session.id}`, // kilocode_change - separate taskID to prevent small-model leak (#6552)
       retries: 2,
       messages: [
         {

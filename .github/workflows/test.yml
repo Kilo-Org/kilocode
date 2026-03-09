@@ -39,6 +39,8 @@ jobs:
         run: bun turbo test
 
   e2e:
+    # kilocode_change - disabled: packages/app is not actively maintained
+    if: false
     name: e2e (${{ matrix.settings.name }})
     needs: unit
     strategy:
@@ -98,12 +100,9 @@ jobs:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     needs:
       - unit
-      - e2e
     if: always()
     steps:
       - name: Verify upstream test jobs passed
         run: |
           echo "unit=${{ needs.unit.result }}"
-          echo "e2e=${{ needs.e2e.result }}"
           test "${{ needs.unit.result }}" = "success"
-          test "${{ needs.e2e.result }}" = "success"

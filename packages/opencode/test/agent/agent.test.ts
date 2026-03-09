@@ -78,9 +78,39 @@ test("ask agent has correct default properties", async () => {
     },
   })
 })
+test("ask agent denies edit/write/bash even when user config adds a specific edit allow", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      permission: {
+        edit: { "src/output.log": "allow" },
+      },
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const ask = await Agent.get("ask")
+      expect(ask).toBeDefined()
+      // user config must not leak edit capability into ask mode — even for the
+      // specific path the user allowed, ask mode must still deny it
+      expect(PermissionNext.evaluate("edit", "src/output.log", ask!.permission).action).toBe("deny")
+      expect(evalPerm(ask, "bash")).toBe("deny")
+      expect(evalPerm(ask, "task")).toBe("deny")
+      // safe tools still work
+      expect(evalPerm(ask, "read")).toBe("allow")
+      expect(evalPerm(ask, "grep")).toBe("allow")
+      // disabled() must also reflect the deny (tools hidden from LLM)
+      const disabled = PermissionNext.disabled(["edit", "write", "bash"], ask!.permission)
+      expect(disabled.has("edit")).toBe(true)
+      expect(disabled.has("write")).toBe(true)
+      expect(disabled.has("bash")).toBe(true)
+    },
+  })
+})
 // kilocode_change end
 
-test("plan agent denies edits except .opencode/plans/*", async () => {
+// kilocode_change start
+test("plan agent denies edits except .kilo/plans/* and .opencode/plans/*", async () => {
   await using tmp = await tmpdir()
   await Instance.provide({
     directory: tmp.path,
@@ -89,11 +119,14 @@ test("plan agent denies edits except .opencode/plans/*", async () => {
       expect(plan).toBeDefined()
       // Wildcard is denied
       expect(evalPerm(plan, "edit")).toBe("deny")
-      // But specific path is allowed
+      // .kilo/plans/ is the primary allowed path
+      expect(PermissionNext.evaluate("edit", ".kilo/plans/foo.md", plan!.permission).action).toBe("allow")
+      // .opencode/plans/ is also allowed as backward compat fallback
       expect(PermissionNext.evaluate("edit", ".opencode/plans/foo.md", plan!.permission).action).toBe("allow")
     },
   })
 })
+// kilocode_change end
 
 test("explore agent denies edit and write", async () => {
   await using tmp = await tmpdir()
@@ -610,7 +643,7 @@ test("skill directories are allowed for external_directory", async () => {
   await using tmp = await tmpdir({
     git: true,
     init: async (dir) => {
-      const skillDir = path.join(dir, ".opencode", "skill", "perm-skill")
+      const skillDir = path.join(dir, ".kilo", "skill", "perm-skill") // kilocode_change: .kilo is primary
       await Bun.write(
         path.join(skillDir, "SKILL.md"),
         `---
@@ -632,7 +665,7 @@ description: Permission skill.
       directory: tmp.path,
       fn: async () => {
         const build = await Agent.get("build")
-        const skillDir = path.join(tmp.path, ".opencode", "skill", "perm-skill")
+        const skillDir = path.join(tmp.path, ".kilo", "skill", "perm-skill") // kilocode_change: .kilo is primary
         const target = path.join(skillDir, "reference", "notes.md")
         expect(PermissionNext.evaluate("external_directory", target, build!.permission).action).toBe("allow")
       },

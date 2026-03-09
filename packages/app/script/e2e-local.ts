@@ -72,7 +72,7 @@ const serverEnv = {
   KILO_E2E_PROJECT_DIR: repoDir,
   KILO_E2E_SESSION_TITLE: "E2E Session",
   KILO_E2E_MESSAGE: "Seeded for UI e2e",
-  KILO_E2E_MODEL: "kilo/kilo/auto", // kilocode_change
+  KILO_E2E_MODEL: "kilo/kilo-auto/frontier", // kilocode_change
   KILO_CLIENT: "app",
 } satisfies Record<string, string>
 
