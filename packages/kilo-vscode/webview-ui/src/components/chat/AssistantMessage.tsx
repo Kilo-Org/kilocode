@@ -17,7 +17,7 @@ import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import { QuestionDock } from "./QuestionDock"
 
-const HIDDEN_TOOLS = new Set(["todowrite", "todoread"])
+export const HIDDEN_TOOLS = new Set(["todowrite", "todoread"])
 
 function isRenderable(part: SDKPart): boolean {
   if (part.type === "tool") {

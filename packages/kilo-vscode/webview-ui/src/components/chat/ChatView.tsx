@@ -10,6 +10,7 @@ import { TaskHeader } from "./TaskHeader"
 import { MessageList } from "./MessageList"
 import { PromptInput } from "./PromptInput"
 import { QuestionDock } from "./QuestionDock"
+import { HIDDEN_TOOLS } from "./AssistantMessage"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 
@@ -29,7 +30,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const sessionPermissions = () => session.permissions().filter((p) => p.sessionID === id())
 
   const questionRequest = () => sessionQuestions().find((q) => !q.tool)
-  const permissionRequest = () => sessionPermissions().find((p) => !p.tool)
+  const permissionRequest = () => sessionPermissions().find((p) => !p.tool || HIDDEN_TOOLS.has(p.toolName))
   const blocked = () => sessionPermissions().length > 0 || sessionQuestions().length > 0
 
   // When a bottom-dock permission/question disappears while the session is busy,
