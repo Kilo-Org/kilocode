@@ -1068,4 +1068,7 @@ export const dict = {
   // legacy-migration end
 
   "error.details.show": "Détails",
+
+  "task.todos.progress": "{{done}}/{{total}} tâches terminées",
+  "task.todos.allDone": "{{count}} tâches terminées",
 }

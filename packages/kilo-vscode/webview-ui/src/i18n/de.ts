@@ -1072,4 +1072,7 @@ export const dict = {
   // legacy-migration end
 
   "error.details.show": "Details",
+
+  "task.todos.progress": "{{done}}/{{total}} Aufgaben erledigt",
+  "task.todos.allDone": "{{count}} Aufgaben erledigt",
 } satisfies Partial<Record<Keys, string>>

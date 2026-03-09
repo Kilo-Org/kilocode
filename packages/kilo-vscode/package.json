@@ -701,7 +701,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "knip": "knip",
-    "lint": "eslint src webview-ui/agent-manager webview-ui/src",
+    "lint": "eslint src webview-ui",
     "test": "vscode-test",
     "test:unit": "bun test tests/unit/",
     "rebuild-sdk": "bun run --cwd ../sdk/js build",
