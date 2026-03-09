@@ -92,6 +92,7 @@ interface SessionContextValue {
 
   // Pending permission requests
   permissions: Accessor<PermissionRequest[]>
+  respondingPermissions: Accessor<Set<string>>
 
   // Pending question requests
   questions: Accessor<QuestionRequest[]>
@@ -174,6 +175,9 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Pending permissions
   const [permissions, setPermissions] = createSignal<PermissionRequest[]>([])
+
+  // Permission IDs that have been responded to but not yet confirmed by the server
+  const [respondingPermissions, setRespondingPermissions] = createSignal<Set<string>>(new Set())
 
   // Pending questions
   const [questions, setQuestions] = createSignal<QuestionRequest[]>([])
@@ -395,6 +399,14 @@ export const SessionProvider: ParentComponent = (props) => {
           handlePermissionRequest(message.permission)
           break
 
+        case "permissionResolved":
+          handlePermissionResolved(message.permissionID)
+          break
+
+        case "permissionError":
+          handlePermissionError(message.permissionID)
+          break
+
         case "todoUpdated":
           handleTodoUpdated(message.sessionID, message.items)
           break
@@ -599,6 +611,30 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function handlePermissionRequest(permission: PermissionRequest) {
     setPermissions((prev) => upsertPermission(prev, permission))
+  }
+
+  function handlePermissionResolved(permissionID: string) {
+    setPermissions((prev) => prev.filter((p) => p.id !== permissionID))
+    setRespondingPermissions((prev) => {
+      if (!prev.has(permissionID)) return prev
+      const next = new Set(prev)
+      next.delete(permissionID)
+      return next
+    })
+  }
+
+  function handlePermissionError(permissionID: string) {
+    // Remove from responding set so buttons re-enable (permission prompt is still visible)
+    setRespondingPermissions((prev) => {
+      if (!prev.has(permissionID)) return prev
+      const next = new Set(prev)
+      next.delete(permissionID)
+      return next
+    })
+    showToast({
+      variant: "error",
+      title: language.t("settings.permissions.toast.updateFailed.title"),
+    })
   }
 
   function handleQuestionRequest(question: QuestionRequest) {
@@ -904,15 +940,16 @@ export const SessionProvider: ParentComponent = (props) => {
     const permission = permissions().find((p) => p.id === permissionId)
     const sessionID = permission?.sessionID ?? currentSessionID() ?? ""
 
+    // Mark as responding so the UI disables the buttons.
+    // The permission is removed when the server confirms via permission.replied SSE.
+    setRespondingPermissions((prev) => new Set(prev).add(permissionId))
+
     vscode.postMessage({
       type: "permissionResponse",
       permissionId,
       sessionID,
       response,
     })
-
-    // Remove from pending permissions
-    setPermissions((prev) => prev.filter((p) => p.id !== permissionId))
   }
 
   function clearQuestionError(requestID: string) {
@@ -957,6 +994,7 @@ export const SessionProvider: ParentComponent = (props) => {
     setCloudPreviewId(null)
     setLoading(false)
     setPermissions([])
+    setRespondingPermissions(new Set<string>())
     setQuestions([])
     setQuestionErrors(new Set<string>())
     setPendingAgentSelection(defaultAgent())
@@ -1097,6 +1135,7 @@ export const SessionProvider: ParentComponent = (props) => {
     getParts,
     todos,
     permissions,
+    respondingPermissions,
     questions,
     questionErrors,
     selected,

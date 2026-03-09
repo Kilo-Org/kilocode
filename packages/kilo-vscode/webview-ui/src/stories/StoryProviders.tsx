@@ -132,6 +132,7 @@ export function mockSessionValue(overrides?: {
     getParts: () => [],
     todos: () => [],
     permissions: () => permissions,
+    respondingPermissions: () => new Set<string>(),
     questions: () => qs,
     questionErrors: () => new Set<string>(),
     selected: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),

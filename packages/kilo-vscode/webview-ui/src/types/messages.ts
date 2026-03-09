@@ -386,6 +386,16 @@ export interface PermissionRequestMessage {
   permission: PermissionRequest
 }
 
+export interface PermissionResolvedMessage {
+  type: "permissionResolved"
+  permissionID: string
+}
+
+export interface PermissionErrorMessage {
+  type: "permissionError"
+  permissionID: string
+}
+
 export interface TodoUpdatedMessage {
   type: "todoUpdated"
   sessionID: string
@@ -955,6 +965,8 @@ export type ExtensionMessage =
   | PartUpdatedMessage
   | SessionStatusMessage
   | PermissionRequestMessage
+  | PermissionResolvedMessage
+  | PermissionErrorMessage
   | TodoUpdatedMessage
   | SessionCreatedMessage
   | SessionUpdatedMessage

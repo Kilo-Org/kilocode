@@ -3,7 +3,7 @@
  * Main chat container that combines all chat components
  */
 
-import { Component, For, Show, createSignal, createEffect, on, onCleanup, onMount } from "solid-js"
+import { Component, For, Show, createEffect, on, onCleanup, onMount } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { BasicTool } from "@kilocode/kilo-ui/basic-tool"
@@ -54,8 +54,6 @@ export const ChatView: Component<ChatViewProps> = (props) => {
     }),
   )
 
-  const [responding, setResponding] = createSignal(false)
-
   onMount(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape" && session.status() === "busy") {
@@ -69,10 +67,8 @@ export const ChatView: Component<ChatViewProps> = (props) => {
 
   const decide = (response: "once" | "always" | "reject") => {
     const perm = permissionRequest()
-    if (!perm || responding()) return
-    setResponding(true)
+    if (!perm || session.respondingPermissions().has(perm.id)) return
     session.respondToPermission(perm.id, response)
-    setResponding(false)
   }
 
   return (
@@ -111,13 +107,28 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                 </BasicTool>
                 <div data-component="permission-prompt">
                   <div data-slot="permission-actions">
-                    <Button variant="ghost" size="small" onClick={() => decide("reject")} disabled={responding()}>
+                    <Button
+                      variant="ghost"
+                      size="small"
+                      onClick={() => decide("reject")}
+                      disabled={session.respondingPermissions().has(perm.id)}
+                    >
                       {language.t("ui.permission.deny")}
                     </Button>
-                    <Button variant="secondary" size="small" onClick={() => decide("always")} disabled={responding()}>
+                    <Button
+                      variant="secondary"
+                      size="small"
+                      onClick={() => decide("always")}
+                      disabled={session.respondingPermissions().has(perm.id)}
+                    >
                       {language.t("ui.permission.allowAlways")}
                     </Button>
-                    <Button variant="primary" size="small" onClick={() => decide("once")} disabled={responding()}>
+                    <Button
+                      variant="primary"
+                      size="small"
+                      onClick={() => decide("once")}
+                      disabled={session.respondingPermissions().has(perm.id)}
+                    >
                       {language.t("ui.permission.allowOnce")}
                     </Button>
                   </div>

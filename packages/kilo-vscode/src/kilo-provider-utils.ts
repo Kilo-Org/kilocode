@@ -169,6 +169,8 @@ export type WebviewMessage =
   | { type: "todoUpdated"; sessionID: string; items: unknown[] }
   | { type: "questionRequest"; question: { id: string; sessionID: string; questions: unknown[]; tool?: unknown } }
   | { type: "questionResolved"; requestID: string }
+  | { type: "permissionResolved"; permissionID: string }
+  | { type: "permissionError"; permissionID: string }
   | { type: "sessionCreated"; session: ReturnType<typeof sessionToWebview> }
   | { type: "sessionUpdated"; session: ReturnType<typeof sessionToWebview> }
   | null
@@ -227,6 +229,11 @@ export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | un
           message: `Permission required: ${event.properties.permission}`,
           tool: event.properties.tool,
         },
+      }
+    case "permission.replied":
+      return {
+        type: "permissionResolved",
+        permissionID: event.properties.requestID,
       }
     case "todo.updated":
       return {

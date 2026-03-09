@@ -78,7 +78,6 @@ export const MessageList: Component<MessageListProps> = (props) => {
       <div
         ref={autoScroll.scrollRef}
         onScroll={autoScroll.handleScroll}
-        onClick={autoScroll.handleInteraction}
         class="message-list"
         role="log"
         aria-live="polite"
