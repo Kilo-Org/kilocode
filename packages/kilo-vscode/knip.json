@@ -4,8 +4,13 @@
     "src/extension.ts",
     "webview-ui/agent-manager/index.tsx",
     "webview-ui/src/index.tsx",
-    "src/agent-manager/__tests__/**/*.{ts,spec.ts}"
+    "src/**/__tests__/**/*.{ts,spec.ts}",
+    "src/**/*.test.ts",
+    "tests/**/*.{ts,mts}",
+    "script/*.ts"
   ],
-  "project": ["src/agent-manager/**/*.ts", "webview-ui/agent-manager/**/*.{ts,tsx}"],
-  "exclude": ["dependencies", "devDependencies", "optionalPeerDependencies", "unlisted", "unresolved"]
+  "project": ["src/**/*.ts", "webview-ui/**/*.{ts,tsx}"],
+  "ignore": ["src/services/autocomplete/**"],
+  "ignoreExportsUsedInFile": true,
+  "exclude": ["dependencies", "devDependencies", "optionalPeerDependencies", "unlisted", "unresolved", "binaries"]
 }
