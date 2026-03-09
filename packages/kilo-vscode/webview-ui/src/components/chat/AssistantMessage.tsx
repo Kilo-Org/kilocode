@@ -138,15 +138,45 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                   {(p) => {
                     const isTodoPerm = UPSTREAM_SUPPRESSED_TOOLS.has(p.toolName)
                     // For todo tools: show the friendly operation description instead of raw patterns like '*'
-                    // For other tools: show patterns only if they're meaningful (not just '*')
-                    const meaningfulPatterns = p.patterns.filter((pat) => pat !== "*")
+                    // For other tools: extract a human-readable subject from the tool part's input
+                    // The tool's state.input has filePath/pattern/etc from before execution started
+                    const toolInput = part.type === "tool" ? ((part as SDKPart & { state: { input?: Record<string, unknown> } }).state?.input ?? {}) : {}
+                    const subject = (() => {
+                      const tool = p.toolName
+                      if (tool === "read" || tool === "edit" || tool === "write" || tool === "multiedit") {
+                        const fp = toolInput.filePath
+                        if (typeof fp === "string") return fp.split("/").pop() || fp
+                      }
+                      if (tool === "grep" || tool === "glob") {
+                        const pat = toolInput.pattern
+                        if (typeof pat === "string") return pat
+                      }
+                      if (tool === "list") {
+                        const dir = toolInput.path
+                        if (typeof dir === "string") return dir
+                      }
+                      if (tool === "bash") {
+                        const desc = toolInput.description
+                        if (typeof desc === "string") return desc
+                      }
+                      if (tool === "webfetch") {
+                        const url = toolInput.url
+                        if (typeof url === "string") return url
+                      }
+                      if (tool === "websearch" || tool === "codesearch") {
+                        const q = toolInput.query
+                        if (typeof q === "string") return q
+                      }
+                      // Fall back to meaningful (non-wildcard) patterns from the permission request
+                      const meaningful = p.patterns.filter((pat) => pat !== "*")
+                      if (meaningful.length > 0) return meaningful[0]!.split("/").pop() || meaningful[0]!
+                      return undefined
+                    })()
                     return (
                     <div data-component="permission-prompt" onClick={(e: MouseEvent) => e.stopPropagation()}>
-                      <Show when={!isTodoPerm && meaningfulPatterns.length > 0}>
+                      <Show when={!isTodoPerm && subject}>
                         <div class="permission-dock-patterns">
-                          <For each={meaningfulPatterns}>
-                            {(pattern) => <code class="permission-dock-pattern">{pattern}</code>}
-                          </For>
+                          <code class="permission-dock-pattern">{subject}</code>
                         </div>
                       </Show>
                       <Show when={isTodoPerm}>
