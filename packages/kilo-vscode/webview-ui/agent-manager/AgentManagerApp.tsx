@@ -76,6 +76,7 @@ import type { ReviewComment } from "./review-comments"
 import { BranchSelect } from "./BranchSelect"
 import { WorktreeItem } from "./WorktreeItem"
 import "./agent-manager.css"
+import "./agent-manager-review.css"
 
 const REVIEW_TAB_ID = "review"
 

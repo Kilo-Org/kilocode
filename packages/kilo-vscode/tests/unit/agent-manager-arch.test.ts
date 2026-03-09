@@ -14,9 +14,13 @@ import { Project, SyntaxKind } from "ts-morph"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
 const KILO_PROVIDER_FILE = path.join(ROOT, "src/KiloProvider.ts")
-const CSS_FILE = path.join(ROOT, "webview-ui/agent-manager/agent-manager.css")
+const CSS_FILES = [
+  path.join(ROOT, "webview-ui/agent-manager/agent-manager.css"),
+  path.join(ROOT, "webview-ui/agent-manager/agent-manager-review.css"),
+]
 const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/NewWorktreeDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DiffPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/FullScreenDiffView.tsx"),
@@ -32,13 +36,17 @@ const TSX_FILE = TSX_FILES[0]
 const PROVIDER_FILE = path.join(ROOT, "src/agent-manager/AgentManagerProvider.ts")
 const SETUP_SCRIPT_RUNNER_FILE = path.join(ROOT, "src/agent-manager/SetupScriptRunner.ts")
 
+function readAllCss(): string {
+  return CSS_FILES.map((f) => fs.readFileSync(f, "utf-8")).join("\n")
+}
+
 function readAllTsx(): string {
   return TSX_FILES.map((f) => fs.readFileSync(f, "utf-8")).join("\n")
 }
 
 describe("Agent Manager CSS Prefix", () => {
   it("all class selectors should use am- prefix", () => {
-    const css = fs.readFileSync(CSS_FILE, "utf-8")
+    const css = readAllCss()
     const matches = [...css.matchAll(/\.([a-z][a-z0-9-]*)/gi)]
     const names = [...new Set(matches.map((m) => m[1]))]
 
@@ -48,7 +56,7 @@ describe("Agent Manager CSS Prefix", () => {
   })
 
   it("all CSS custom properties should use am- prefix", () => {
-    const css = fs.readFileSync(CSS_FILE, "utf-8")
+    const css = readAllCss()
     const matches = [...css.matchAll(/--([a-z][a-z0-9-]*)\s*:/gi)]
     const names = [...new Set(matches.map((m) => m[1]))]
 
@@ -61,7 +69,7 @@ describe("Agent Manager CSS Prefix", () => {
   })
 
   it("all @keyframes should use am- prefix", () => {
-    const css = fs.readFileSync(CSS_FILE, "utf-8")
+    const css = readAllCss()
     const matches = [...css.matchAll(/@keyframes\s+([a-z][a-z0-9-]*)/gi)]
     const names = matches.map((m) => m[1])
 
@@ -73,7 +81,7 @@ describe("Agent Manager CSS Prefix", () => {
 
 describe("Agent Manager CSS/TSX Consistency", () => {
   it("all classes used in TSX should be defined in CSS", () => {
-    const css = fs.readFileSync(CSS_FILE, "utf-8")
+    const css = readAllCss()
     const tsx = readAllTsx()
 
     // Extract am- classes defined in CSS
@@ -90,7 +98,7 @@ describe("Agent Manager CSS/TSX Consistency", () => {
   })
 
   it("all am- classes defined in CSS should be used in TSX", () => {
-    const css = fs.readFileSync(CSS_FILE, "utf-8")
+    const css = readAllCss()
     const tsx = readAllTsx()
 
     // Extract am- classes defined in CSS
