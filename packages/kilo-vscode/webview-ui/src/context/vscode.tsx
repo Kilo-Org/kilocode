@@ -9,7 +9,7 @@ import type { VSCodeAPI, WebviewMessage, ExtensionMessage } from "../types/messa
 // Get the VS Code API (only available in webview context)
 let vscodeApi: VSCodeAPI | undefined
 
-function getVSCodeAPI(): VSCodeAPI {
+export function getVSCodeAPI(): VSCodeAPI {
   if (!vscodeApi) {
     // In VS Code webview, acquireVsCodeApi is available globally
     if (typeof acquireVsCodeApi === "function") {
