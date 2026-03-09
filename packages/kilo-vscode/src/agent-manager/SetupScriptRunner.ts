@@ -80,7 +80,11 @@ export class SetupScriptRunner {
           REPO_PATH: env.repoPath,
         },
       })
-      if (typeof code === "number" && code !== 0) {
+      if (code === undefined) {
+        this.log("Setup script finished without a valid exit code — assuming success")
+        return true
+      }
+      if (code !== 0) {
         throw new Error(`Setup script exited with code ${code}`)
       }
       this.log("Setup script completed")
