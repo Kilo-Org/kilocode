@@ -22,6 +22,16 @@ test("cliCommand falls back to execPath when argv[1] is a subcommand", () => {
   expect(result).toEqual(["/usr/local/bin/kilo"])
 })
 
+test("cliCommand ignores subcommand token even when it exists on disk", () => {
+  const result = cliCommand({
+    execPath: "/usr/local/bin/kilo",
+    argv: ["/usr/local/bin/kilo", "pr", "1"],
+    exists: (file) => file === "pr",
+  })
+
+  expect(result).toEqual(["/usr/local/bin/kilo"])
+})
+
 test("cliCommand falls back to execPath when argv[1] is missing", () => {
   const result = cliCommand({
     execPath: "/usr/local/bin/kilo",

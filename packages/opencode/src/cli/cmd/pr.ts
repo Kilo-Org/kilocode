@@ -5,6 +5,8 @@ import { $ } from "bun"
 import { existsSync } from "node:fs" // kilocode_change
 import { Process } from "@/util/process" // kilocode_change
 
+const subcommand = "pr" // kilocode_change
+
 // kilocode_change start - resolve the currently running CLI instead of hardcoding opencode
 export function cliCommand(
   input = {
@@ -14,15 +16,17 @@ export function cliCommand(
   },
 ) {
   const script = input.argv[1]
-  if (script?.startsWith("/$bunfs/root/")) return [input.execPath]
-  if (script?.startsWith("B:/~BUN/root/")) return [input.execPath]
-  if (script && input.exists(script)) return [input.execPath, script]
+  if (!script) return [input.execPath]
+  if (script === subcommand) return [input.execPath] // kilocode_change
+  if (script.startsWith("/$bunfs/root/")) return [input.execPath]
+  if (script.startsWith("B:/~BUN/root/")) return [input.execPath]
+  if (input.exists(script)) return [input.execPath, script]
   return [input.execPath]
 }
 // kilocode_change end
 
 export const PrCommand = cmd({
-  command: "pr <number>",
+  command: `${subcommand} <number>`, // kilocode_change
   describe: "fetch and checkout a GitHub PR branch, then run kilo", // kilocode_change
   builder: (yargs) =>
     yargs.positional("number", {
