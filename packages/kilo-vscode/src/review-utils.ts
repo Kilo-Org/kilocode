@@ -68,5 +68,7 @@ export function openFileInEditor(
 export function openWorkspaceRelativeFile(relativePath: string, line?: number, column?: number): void {
   const root = getWorkspaceRoot()
   if (!root) return
-  openFileInEditor(path.resolve(root, relativePath), line, column, vscode.ViewColumn.Beside, "DiffViewerProvider")
+  const resolved = path.resolve(root, relativePath)
+  if (!resolved.startsWith(root + path.sep) && resolved !== root) return
+  openFileInEditor(resolved, line, column, vscode.ViewColumn.Beside, "DiffViewerProvider")
 }
