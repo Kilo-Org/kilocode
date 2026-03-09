@@ -12,6 +12,8 @@ type ProviderInternals = {
   webview: { postMessage: (message: unknown) => Promise<unknown> } | null
   initializeConnection: () => Promise<void>
   handleLoadSessions: () => Promise<void>
+  fetchAndSendProviders: () => Promise<void>
+  postMessage: (message: unknown) => void
 }
 
 function createContext(overrides?: Partial<SessionRefreshContext>): SessionRefreshContext & { sent: unknown[] } {
@@ -48,7 +50,32 @@ function createClient() {
       },
     },
     provider: {
-      list: async () => ({ data: { all: [], connected: {}, default: {} } }),
+      list: async () => ({
+        data: {
+          all: [
+            {
+              id: "openai",
+              name: "OpenAI",
+              env: [],
+              models: {
+                "gpt-5": {
+                  id: "gpt-5",
+                  name: "GPT-5",
+                  release_date: "2026-01-01",
+                  attachment: false,
+                  reasoning: false,
+                  temperature: true,
+                  tool_call: true,
+                  limit: { context: 1, output: 1 },
+                  options: {},
+                },
+              },
+            },
+          ],
+          connected: [],
+          default: { openai: "gpt-5" },
+        },
+      }),
     },
     app: {
       agents: async () => ({ data: [] }),
@@ -146,5 +173,26 @@ describe("KiloProvider pending session refresh", () => {
     })
 
     expect(errors).toEqual([])
+  })
+
+  it("uses backend provider defaults for fresh sessions", async () => {
+    const client = createClient()
+    const connection = createConnection(client)
+    const provider = new KiloProvider({} as never, connection as never)
+    const internal = provider as unknown as ProviderInternals
+    const sent: unknown[] = []
+
+    await internal.initializeConnection()
+    internal.postMessage = (message: unknown) => {
+      sent.push(message)
+    }
+
+    await internal.fetchAndSendProviders()
+
+    const loaded = sent.find((msg) => {
+      return typeof msg === "object" && !!msg && "type" in msg && (msg as { type?: unknown }).type === "providersLoaded"
+    }) as { defaultSelection: { providerID: string; modelID: string } } | undefined
+
+    expect(loaded?.defaultSelection).toEqual({ providerID: "openai", modelID: "gpt-5" })
   })
 })

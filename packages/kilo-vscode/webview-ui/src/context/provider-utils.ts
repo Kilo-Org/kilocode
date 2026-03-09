@@ -28,3 +28,28 @@ export function findModel(models: EnrichedModel[], selection: ModelSelection | n
   if (!selection) return undefined
   return models.find((m) => m.providerID === selection.providerID && m.id === selection.modelID)
 }
+
+export function getProviderFallback(
+  providers: Record<string, Provider>,
+  defaults: Record<string, string>,
+): ModelSelection {
+  const selected = Object.entries(defaults).find(([providerID, modelID]) => {
+    if (!modelID) return false
+    return !!providers[providerID]?.models?.[modelID]
+  })
+
+  if (selected) {
+    return { providerID: selected[0], modelID: selected[1] }
+  }
+
+  const provider = Object.values(providers).find((item) => Object.keys(item.models).length > 0)
+
+  if (provider) {
+    const modelID = Object.keys(provider.models)[0]
+    if (modelID) {
+      return { providerID: provider.id, modelID }
+    }
+  }
+
+  return { providerID: "kilo", modelID: "kilo-auto/frontier" }
+}

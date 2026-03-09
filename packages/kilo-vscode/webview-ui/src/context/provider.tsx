@@ -7,7 +7,7 @@
 import { createContext, useContext, createSignal, createMemo, onCleanup, ParentComponent, Accessor } from "solid-js"
 import { useVSCode } from "./vscode"
 import type { Provider, ProviderModel, ModelSelection, ExtensionMessage } from "../types/messages"
-import { flattenModels, findModel as _findModel } from "./provider-utils"
+import { flattenModels, findModel as _findModel, getProviderFallback } from "./provider-utils"
 
 export type EnrichedModel = ProviderModel & { providerID: string; providerName: string }
 
@@ -20,8 +20,6 @@ interface ProviderContextValue {
   findModel: (selection: ModelSelection | null) => EnrichedModel | undefined
 }
 
-const KILO_AUTO: ModelSelection = { providerID: "kilo", modelID: "kilo-auto/frontier" }
-
 export const ProviderContext = createContext<ProviderContextValue>()
 
 export const ProviderProvider: ParentComponent = (props) => {
@@ -30,7 +28,7 @@ export const ProviderProvider: ParentComponent = (props) => {
   const [providers, setProviders] = createSignal<Record<string, Provider>>({})
   const [connected, setConnected] = createSignal<string[]>([])
   const [defaults, setDefaults] = createSignal<Record<string, string>>({})
-  const [defaultSelection, setDefaultSelection] = createSignal<ModelSelection>(KILO_AUTO)
+  const [defaultSelection, setDefaultSelection] = createSignal<ModelSelection>(getProviderFallback({}, {}))
 
   const models = createMemo<EnrichedModel[]>(() => flattenModels(providers()))
 
@@ -48,7 +46,7 @@ export const ProviderProvider: ParentComponent = (props) => {
     setProviders(message.providers)
     setConnected(message.connected)
     setDefaults(message.defaults)
-    setDefaultSelection(message.defaultSelection)
+    setDefaultSelection(message.defaultSelection ?? getProviderFallback(message.providers, message.defaults))
   })
 
   onCleanup(unsubscribe)

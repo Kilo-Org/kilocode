@@ -1005,10 +1005,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const { data: response } = await this.client.provider.list({ directory: workspaceDir }, { throwOnError: true })
 
       const normalized = indexProvidersById(response.all)
+      const selected = Object.entries(response.default).find(([providerID, modelID]) => {
+        if (!modelID) return false
+        return !!normalized[providerID]?.models?.[modelID]
+      })
 
-      const config = vscode.workspace.getConfiguration("kilo-code.new.model")
-      const providerID = config.get<string>("providerID", "kilo")
-      const modelID = config.get<string>("modelID", "kilo-auto/frontier")
+      if (!selected) {
+        console.warn("[Kilo New] KiloProvider: No backend default provider selection found")
+        return
+      }
+
+      const [providerID, modelID] = selected
 
       const message = {
         type: "providersLoaded",
