@@ -5,7 +5,6 @@
  * Setup scripts run before an agent starts in a worktree (new sessions only).
  */
 
-import * as vscode from "vscode"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { SETUP_SCRIPT_TEMPLATE, SETUP_SCRIPT_TEMPLATE_POWERSHELL } from "./setup-script-template"
@@ -88,17 +87,6 @@ export class SetupScriptService {
     const scriptPath = path.join(this.dir, script.name)
     const content = this.defaultTemplate(script.kind)
     await fs.promises.writeFile(scriptPath, content, "utf-8")
-  }
-
-  /** Open the setup script in VS Code editor. Creates the default script if it doesn't exist. */
-  async openInEditor(platform: NodeJS.Platform = process.platform): Promise<void> {
-    if (!this.hasScript(platform)) {
-      await this.createDefaultScript(platform)
-    }
-    const resolved = this.resolveScript(platform)
-    if (!resolved) return
-    const document = await vscode.workspace.openTextDocument(resolved.path)
-    await vscode.window.showTextDocument(document)
   }
 
   private candidates(platform: NodeJS.Platform): SetupScriptCandidate[] {

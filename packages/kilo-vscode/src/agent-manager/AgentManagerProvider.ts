@@ -17,6 +17,8 @@ import { normalizePath } from "./git-import"
 import { SetupScriptService } from "./SetupScriptService"
 import { SetupScriptRunner } from "./SetupScriptRunner"
 import { SessionTerminalManager } from "./SessionTerminalManager"
+import { createTerminalHost } from "./terminal-host"
+import { executeVscodeTask } from "./task-runner"
 import { formatKeybinding } from "./format-keybinding"
 import { TelemetryProxy, TelemetryEventName } from "../services/telemetry"
 import { MAX_MULTI_VERSIONS } from "./constants"
@@ -64,8 +66,9 @@ export class AgentManagerProvider implements vscode.Disposable {
     private readonly connectionService: KiloConnectionService,
   ) {
     this.outputChannel = vscode.window.createOutputChannel("Kilo Agent Manager")
-    this.terminalManager = new SessionTerminalManager((msg) =>
-      this.outputChannel.appendLine(`[SessionTerminal] ${msg}`),
+    this.terminalManager = new SessionTerminalManager(
+      (msg) => this.outputChannel.appendLine(`[SessionTerminal] ${msg}`),
+      createTerminalHost(),
     )
     this.gitOps = new GitOps({ log: (...args) => this.log(...args) })
     this.statsPoller = new GitStatsPoller({
@@ -1343,7 +1346,13 @@ export class AgentManagerProvider implements vscode.Disposable {
     const service = this.getSetupScriptService()
     if (!service) return
     try {
-      await service.openInEditor()
+      if (!service.hasScript()) {
+        await service.createDefaultScript()
+      }
+      const resolved = service.resolveScript()
+      if (!resolved) return
+      const document = await vscode.workspace.openTextDocument(resolved.path)
+      await vscode.window.showTextDocument(document)
     } catch (error) {
       this.log(`Failed to open setup script: ${error}`)
     }
@@ -1363,7 +1372,11 @@ export class AgentManagerProvider implements vscode.Disposable {
         branch,
         worktreeId,
       })
-      const runner = new SetupScriptRunner(this.outputChannel, service)
+      const runner = new SetupScriptRunner(
+        (msg) => this.outputChannel.appendLine(`[SetupScriptRunner] ${msg}`),
+        service,
+        executeVscodeTask,
+      )
       await runner.runIfConfigured({ worktreePath, repoPath: root })
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
