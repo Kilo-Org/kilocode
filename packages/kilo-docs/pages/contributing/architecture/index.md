@@ -56,7 +56,6 @@ The CLI can run in several modes:
 - **`kilo`** — Interactive TUI for terminal-based coding
 - **`kilo run`** — Headless single-prompt execution
 - **`kilo serve`** — HTTP server mode for client integrations
-- **`kilo web`** — Browser-based UI
 
 Key subsystems inside the CLI:
 

@@ -113,31 +113,13 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  background: color-mix(in srgb, var(--vscode-button-background) 15%, transparent);
+  color: var(--vscode-button-background);
 }
 
 .migration-wizard__feature-icon svg {
   width: 18px;
   height: 18px;
-}
-
-.migration-wizard__feature-icon--blue {
-  background: color-mix(in srgb, var(--vscode-button-background) 15%, transparent);
-  color: var(--vscode-button-background);
-}
-
-.migration-wizard__feature-icon--purple {
-  background: rgba(167, 139, 250, 0.12);
-  color: #a78bfa;
-}
-
-.migration-wizard__feature-icon--cyan {
-  background: rgba(34, 211, 238, 0.1);
-  color: #22d3ee;
-}
-
-.migration-wizard__feature-icon--orange {
-  background: rgba(251, 146, 60, 0.1);
-  color: #fb923c;
 }
 
 .migration-wizard__feature-text {

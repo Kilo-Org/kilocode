@@ -79,7 +79,7 @@ const MockProviderProvider: ParentComponent = (props) => {
 }
 
 /** @deprecated use MockProviderProvider; kept for callers that still call dispatchMockProviders */
-export function dispatchMockProviders() {}
+function dispatchMockProviders() {}
 
 export const defaultMockData = {
   session: [],

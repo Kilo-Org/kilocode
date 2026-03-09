@@ -11,7 +11,8 @@ import type { FileDiff } from "@kilocode/sdk/v2/client"
 import type { Worktree, ManagedSession } from "./WorktreeStateManager"
 import type { WorktreeStats, LocalStats } from "./GitStatsPoller"
 import type { ApplyConflict } from "./GitOps"
-import type { BranchListItem, ExternalWorktreeItem } from "./WorktreeManager"
+import type { BranchListItem } from "./git-import"
+import type { ExternalWorktreeItem } from "./WorktreeManager"
 
 // ---------------------------------------------------------------------------
 // Shared payload types

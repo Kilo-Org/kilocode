@@ -8,7 +8,7 @@
 import * as vscode from "vscode"
 import { SetupScriptService, type SetupScriptInfo } from "./SetupScriptService"
 
-export interface SetupScriptEnvironment {
+interface SetupScriptEnvironment {
   /** Absolute path to the worktree directory */
   worktreePath: string
   /** Absolute path to the main repository */

@@ -2,7 +2,7 @@ import type { ReviewComment, WorktreeFileDiff } from "../src/types/messages"
 import { formatReviewCommentMarkdown, formatReviewCommentsMarkdown } from "../src/utils/review-comment-markdown"
 
 export type { ReviewComment }
-export { formatReviewCommentMarkdown, formatReviewCommentsMarkdown }
+export { formatReviewCommentsMarkdown }
 
 function lineCount(text: string): number {
   if (text.length === 0) return 0
