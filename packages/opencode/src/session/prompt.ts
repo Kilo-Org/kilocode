@@ -1694,6 +1694,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         ...shellEnv.env,
         TERM: "dumb",
       },
+      windowsHide: true, // kilocode_change - prevent CMD window flash on Windows
     })
 
     let output = ""
