@@ -99,10 +99,10 @@ export const GENERATED_FOLDERS = new Set([
   ".hg", // Mercurial
 
   // -- IDE / Editor --
-  ".vscode", // VS Code
-  ".vscode-test", // VS Code extension testing
-  ".idea", // JetBrains
-  ".idea_modules", // IntelliJ
+  // NOTE: .vscode and .idea are intentionally excluded — many repos commit
+  // settings.json, extensions.json, or run configs. Hiding those from diffs
+  // would be surprising. They remain in FileIgnore.FOLDERS for file-search.
+  ".idea_modules", // IntelliJ (generated, not config)
   ".history", // Local history
   ".settings", // Eclipse
   ".metadata", // Eclipse

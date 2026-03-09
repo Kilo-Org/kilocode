@@ -1415,7 +1415,10 @@ const AgentManagerContent: Component = () => {
     const sel = selection()
     const id = session.currentSessionID()
     if (sel === LOCAL) return data[LOCAL] ?? emptyGenerated
-    if (id && data[id]) return data[id]!
+    if (id && data[id]) {
+      const current = managedSessions().find((s) => s.id === id)
+      if (sel && current?.worktreeId === sel) return data[id]!
+    }
     if (!sel) return emptyGenerated
     const ids = managedSessions()
       .filter((s) => s.worktreeId === sel)

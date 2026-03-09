@@ -241,8 +241,8 @@ export const ExperimentalRoutes = lazy(() =>
         const generatedFolder = (filepath: string): string | undefined => {
           if (exclude === "none") return undefined
           if (attrMatcher?.(filepath)) {
-            // gitattributes match — use first path segment as folder
-            const slash = filepath.indexOf("/")
+            // gitattributes match — group by parent directory
+            const slash = filepath.lastIndexOf("/")
             return slash >= 0 ? filepath.slice(0, slash) : filepath
           }
           return FileIgnore.generatedFolder(filepath)

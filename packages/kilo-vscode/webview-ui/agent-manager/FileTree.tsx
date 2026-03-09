@@ -41,24 +41,6 @@ function groupGeneratedByFolder(generated: GeneratedSummary): GeneratedFolderGro
     .map(([folder, stats]) => ({ folder, ...stats }))
     .sort((a, b) => b.files - a.files)
 }
-  // Fallback: use first segment
-  return segments[0] ?? filepath
-}
-
-function groupGeneratedByFolder(generated: GeneratedSummary): GeneratedFolderGroup[] {
-  const groups = new Map<string, { files: number; additions: number; deletions: number }>()
-  for (const entry of generated.entries) {
-    const folder = generatedPrefix(entry.file)
-    const existing = groups.get(folder) ?? { files: 0, additions: 0, deletions: 0 }
-    existing.files++
-    existing.additions += entry.additions
-    existing.deletions += entry.deletions
-    groups.set(folder, existing)
-  }
-  return Array.from(groups.entries())
-    .map(([folder, stats]) => ({ folder, ...stats }))
-    .sort((a, b) => b.files - a.files)
-}
 
 const DirectoryNode: Component<{
   node: FileTreeNode
