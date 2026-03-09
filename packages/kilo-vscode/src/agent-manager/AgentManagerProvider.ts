@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 import * as fs from "fs"
 import * as path from "path"
 import type { KiloClient, Session, FileDiff } from "@kilocode/sdk/v2/client"
+import { parseDiffResponse } from "./diff-response"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { getErrorMessage } from "../kilo-provider-utils"
 import { isAbsolutePath } from "../path-utils"
@@ -1742,20 +1743,28 @@ export class AgentManagerProvider implements vscode.Disposable {
     this.postToWebview({ type: "agentManager.worktreeDiffLoading", sessionId, loading: true })
     try {
       const client = this.connectionService.getClient()
-      const { data: diffs } = await client.worktree.diff(
+      const { data: raw } = await client.worktree.diff(
         { directory: target.directory, base: target.baseBranch },
         { throwOnError: true },
       )
+      const response = parseDiffResponse(raw)
 
-      this.log(`Worktree diff returned ${diffs.length} file(s) for session ${sessionId}`)
+      this.log(
+        `Worktree diff returned ${response.diffs.length} reviewable, ${response.generated.files} generated file(s) for session ${sessionId}`,
+      )
 
-      const hash = diffs
+      const hash = response.diffs
         .map((d: FileDiff) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`)
         .join("|")
       this.lastDiffHash = hash
       this.diffSessionId = sessionId
 
-      this.postToWebview({ type: "agentManager.worktreeDiff", sessionId, diffs })
+      this.postToWebview({
+        type: "agentManager.worktreeDiff",
+        sessionId,
+        diffs: response.diffs,
+        generated: response.generated,
+      })
     } catch (err) {
       this.log("Failed to fetch worktree diff:", err)
     } finally {
@@ -1770,19 +1779,26 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     try {
       const client = this.connectionService.getClient()
-      const { data: diffs } = await client.worktree.diff(
+      const { data: raw } = await client.worktree.diff(
         { directory: target.directory, base: target.baseBranch },
         { throwOnError: true },
       )
+      const response = parseDiffResponse(raw)
 
-      const hash = diffs
+      const fileHash = response.diffs
         .map((d: FileDiff) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`)
         .join("|")
+      const hash = `${fileHash}|gen:${response.generated.files}:${response.generated.additions}:${response.generated.deletions}`
       if (hash === this.lastDiffHash && this.diffSessionId === sessionId) return
       this.lastDiffHash = hash
       this.diffSessionId = sessionId
 
-      this.postToWebview({ type: "agentManager.worktreeDiff", sessionId, diffs })
+      this.postToWebview({
+        type: "agentManager.worktreeDiff",
+        sessionId,
+        diffs: response.diffs,
+        generated: response.generated,
+      })
     } catch (err) {
       this.log("Failed to poll worktree diff:", err)
     }

@@ -199,6 +199,38 @@ export namespace Snapshot {
       ref: "FileDiff",
     })
   export type FileDiff = z.infer<typeof FileDiff>
+
+  // kilocode_change start - generated file summary for diff filtering
+  export const GeneratedEntry = z
+    .object({
+      file: z.string(),
+      folder: z.string(),
+      status: z.enum(["added", "deleted", "modified"]),
+      additions: z.number(),
+      deletions: z.number(),
+    })
+    .meta({ ref: "GeneratedEntry" })
+  export type GeneratedEntry = z.infer<typeof GeneratedEntry>
+
+  export const GeneratedSummary = z
+    .object({
+      files: z.number(),
+      additions: z.number(),
+      deletions: z.number(),
+      entries: z.array(GeneratedEntry),
+    })
+    .meta({ ref: "GeneratedSummary" })
+  export type GeneratedSummary = z.infer<typeof GeneratedSummary>
+
+  export const WorktreeDiffResponse = z
+    .object({
+      diffs: z.array(FileDiff),
+      generated: GeneratedSummary,
+    })
+    .meta({ ref: "WorktreeDiffResponse" })
+  export type WorktreeDiffResponse = z.infer<typeof WorktreeDiffResponse>
+  // kilocode_change end
+
   export async function diffFull(from: string, to: string): Promise<FileDiff[]> {
     const git = gitdir()
     const result: FileDiff[] = []

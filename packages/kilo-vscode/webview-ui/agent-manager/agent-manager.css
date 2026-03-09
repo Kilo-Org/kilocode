@@ -1027,6 +1027,24 @@ button.am-section-toggle:hover .am-section-label {
   font-variant-numeric: tabular-nums;
 }
 
+.am-diff-header-generated {
+  color: var(--text-weaker);
+  font-variant-numeric: tabular-nums;
+}
+
+.am-diff-generated-summary {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-weak);
+}
+
+.am-diff-generated-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-weaker);
+  font-size: var(--font-size-sm);
+}
+
 .am-diff-header [data-component="radio-group"],
 .am-diff-header [data-component="radio-group"] [data-slot="radio-group-item-label"],
 .am-diff-header [data-component="radio-group"] [data-slot="radio-group-item-control"] {
@@ -3119,6 +3137,60 @@ button.am-section-toggle:hover .am-section-label {
   border-radius: 4px;
   background: color-mix(in lab, var(--syntax-diff-delete, #da3319) 15%, transparent);
   color: var(--syntax-diff-delete, #da3319);
+}
+
+/* Generated folder rows — muted, non-interactive entries for hidden vendor/build dirs */
+
+.am-file-tree-generated-divider {
+  height: 1px;
+  margin: 4px 8px;
+  background: var(--border-weak-base);
+}
+
+.am-file-tree-generated-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 8px;
+  color: var(--text-weaker);
+  font-size: inherit;
+  font-family: inherit;
+  white-space: nowrap;
+  border-radius: 5px;
+  cursor: default;
+  opacity: 0.7;
+}
+
+.am-file-tree-generated-row [data-component="icon"] {
+  color: var(--text-weaker);
+}
+
+.am-file-tree-generated-row .am-file-tree-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.am-file-tree-generated-stats {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: auto;
+  font-size: var(--am-diff-count-size);
+  font-family: var(--vscode-editor-font-family, monospace);
+  line-height: 1;
+}
+
+.am-file-tree-generated-count {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: color-mix(in oklab, var(--text-weaker) 12%, transparent);
+  color: var(--text-weaker);
 }
 
 /* File tree summary footer */
