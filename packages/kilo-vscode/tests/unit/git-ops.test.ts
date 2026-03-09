@@ -262,7 +262,7 @@ describe("GitOps", () => {
       expect(await git.aheadBehind("/repo", "origin/main")).toEqual({ ahead: 3, behind: 1 })
     })
 
-    it("fetches the remote extracted from the ref", async () => {
+    it("fetches the explicitly-provided remote before counting", async () => {
       const commands: string[][] = []
       const git = ops(async (args) => {
         commands.push(args)
@@ -271,13 +271,13 @@ describe("GitOps", () => {
         if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t4"
         return ""
       })
-      expect(await git.aheadBehind("/repo", "myfork/main")).toEqual({ ahead: 4, behind: 0 })
+      expect(await git.aheadBehind("/repo", "myfork/main", "myfork")).toEqual({ ahead: 4, behind: 0 })
       const fetches = commands.filter((c) => c[0] === "fetch")
       expect(fetches.length).toBe(1)
       expect(fetches[0]![3]).toBe("myfork")
     })
 
-    it("skips fetch when ref has no remote prefix", async () => {
+    it("skips fetch when no remote is provided", async () => {
       const commands: string[][] = []
       const git = ops(async (args) => {
         commands.push(args)

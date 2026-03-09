@@ -211,12 +211,11 @@ export class GitOps {
   /**
    * Count commits ahead and behind using `rev-list --left-right --count`.
    * Callers are expected to pass a fully-qualified ref (e.g. "origin/main").
-   * Refreshes the remote before counting so the tracking ref is up-to-date.
+   * Pass `remote` explicitly to refresh the tracking ref before counting;
+   * the remote is NOT inferred from the ref to avoid misinterpreting
+   * branch names that contain slashes (e.g. "release/1.0").
    */
-  async aheadBehind(cwd: string, base: string): Promise<{ ahead: number; behind: number }> {
-    // Extract remote name from the ref (e.g. "origin" from "origin/main") for fetch
-    const slashIdx = base.indexOf("/")
-    const remote = slashIdx > 0 ? base.slice(0, slashIdx) : undefined
+  async aheadBehind(cwd: string, base: string, remote?: string): Promise<{ ahead: number; behind: number }> {
     if (remote) await this.refreshRemote(cwd, remote)
     return this.parseLeftRight(cwd, base)
   }

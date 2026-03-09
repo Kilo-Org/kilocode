@@ -162,14 +162,16 @@ export class WorktreeManager {
     let startPoint: StartPointResult | undefined
 
     if (params.existingBranch) {
-      // Existing branch provided directly — try to resolve remote for diff target
+      // Existing branch provided directly — only attach remote when the
+      // remote tracking ref actually exists (the branch may be local-only).
       const remote = await this.resolveRemote()
+      const hasRemoteRef = remote && (await this.refExistsLocally(`${remote}/${params.existingBranch}`))
       parent = params.existingBranch
-      parentRemote = remote
+      parentRemote = hasRemoteRef ? remote : undefined
       startPoint = {
         ref: params.existingBranch,
         branch: params.existingBranch,
-        remote,
+        remote: hasRemoteRef ? remote : undefined,
         source: "local-branch",
       }
     } else {
@@ -640,13 +642,17 @@ export class WorktreeManager {
   }
 
   async defaultBranch(): Promise<string> {
-    // 1. Try symbolic-ref
-    try {
-      const head = await this.git.raw(["symbolic-ref", "refs/remotes/origin/HEAD"])
-      const match = head.trim().match(/refs\/remotes\/origin\/(.+)$/)
-      if (match) return match[1]
-    } catch (e) {
-      this.log(`defaultBranch: symbolic-ref failed: ${e}`)
+    // 1. Try symbolic-ref against the resolved remote (not hardcoded "origin")
+    const remote = await this.resolveRemote()
+    if (remote) {
+      try {
+        const head = await this.git.raw(["symbolic-ref", `refs/remotes/${remote}/HEAD`])
+        const prefix = `refs/remotes/${remote}/`
+        const trimmed = head.trim()
+        if (trimmed.startsWith(prefix)) return trimmed.slice(prefix.length)
+      } catch (e) {
+        this.log(`defaultBranch: symbolic-ref for ${remote} failed: ${e}`)
+      }
     }
 
     // 2. Try current branch (if not detached)
