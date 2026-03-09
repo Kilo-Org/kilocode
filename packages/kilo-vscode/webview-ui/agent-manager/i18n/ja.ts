@@ -34,6 +34,11 @@ export const dict = {
   "agentManager.tab.openTerminal": "ターミナルを開く",
   "agentManager.setup.failed": "ワークスペースのセットアップに失敗しました",
   "agentManager.setup.settingUp": "ワークスペースをセットアップ中",
+  "agentManager.setup.error.git_not_found":
+    "Gitがインストールされていないか、PATHに見つかりません。GitをインストールしてVS Codeを再起動してください。",
+  "agentManager.setup.error.not_git_repo": "worktreesを使用するには、gitリポジトリを含むフォルダーを開いてください。",
+  "agentManager.setup.error.lfs_missing":
+    "このリポジトリはGit LFSを使用していますが、git-lfsが見つかりませんでした。Git LFSをインストールしてください。",
   "agentManager.shortcuts.title": "キーボードショートカット",
   "agentManager.shortcuts.category.sidebar": "サイドバー",
   "agentManager.shortcuts.category.tabs": "タブ",

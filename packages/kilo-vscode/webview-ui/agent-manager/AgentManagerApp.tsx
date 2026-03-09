@@ -87,6 +87,7 @@ interface SetupState {
   branch?: string
   error?: boolean
   worktreeId?: string
+  errorCode?: string
 }
 
 interface WorktreeBusyState {
@@ -1066,7 +1067,14 @@ const AgentManagerContent: Component = () => {
               return next
             })
           }
-          setSetup({ active: true, message: ev.message, branch: ev.branch, error, worktreeId: ev.worktreeId })
+          setSetup({
+            active: true,
+            message: ev.message,
+            branch: ev.branch,
+            error,
+            worktreeId: ev.worktreeId,
+            errorCode: ev.errorCode,
+          })
           globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 500)
           if (!error && ev.sessionId) {
             session.selectSession(ev.sessionId)
@@ -2407,7 +2415,9 @@ const AgentManagerContent: Component = () => {
                       <Show when={!state().error} fallback={<Icon name="circle-x" size="small" />}>
                         <Spinner class="am-setup-spinner" />
                       </Show>
-                      <span>{state().message}</span>
+                      <span>
+                        {state().errorCode ? t(`agentManager.setup.error.${state().errorCode}`) : state().message}
+                      </span>
                     </div>
                   </div>
                 </div>

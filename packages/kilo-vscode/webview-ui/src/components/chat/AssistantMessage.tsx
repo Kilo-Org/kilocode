@@ -12,7 +12,12 @@ import { Component, For, Show, createMemo, createSignal } from "solid-js"
 import { Dynamic } from "solid-js/web"
 import { Part, PART_MAPPING, ToolRegistry } from "@kilocode/kilo-ui/message-part"
 import { Button } from "@kilocode/kilo-ui/button"
-import type { AssistantMessage as SDKAssistantMessage, Part as SDKPart, Message as SDKMessage, ToolPart } from "@kilocode/sdk/v2"
+import type {
+  AssistantMessage as SDKAssistantMessage,
+  Part as SDKPart,
+  Message as SDKMessage,
+  ToolPart,
+} from "@kilocode/sdk/v2"
 import { useData } from "@kilocode/kilo-ui/context/data"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
@@ -117,7 +122,8 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
           const perm = () => permissionForPart(part)
           // Upstream PART_MAPPING["tool"] returns null for todowrite/todoread,
           // so we detect them here and render via ToolRegistry directly.
-          const isUpstreamSuppressed = part.type === "tool" && UPSTREAM_SUPPRESSED_TOOLS.has((part as SDKPart & { tool: string }).tool)
+          const isUpstreamSuppressed =
+            part.type === "tool" && UPSTREAM_SUPPRESSED_TOOLS.has((part as SDKPart & { tool: string }).tool)
           return (
             <Show when={isUpstreamSuppressed || PART_MAPPING[part.type]}>
               <div data-component="tool-part-wrapper" data-permission={!!perm()} data-part-type={part.type}>
@@ -141,49 +147,49 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                     // For other tools: show patterns only if they're meaningful (not just '*')
                     const meaningfulPatterns = p.patterns.filter((pat) => pat !== "*")
                     return (
-                    <div data-component="permission-prompt" onClick={(e: MouseEvent) => e.stopPropagation()}>
-                      <Show when={!isTodoPerm && meaningfulPatterns.length > 0}>
-                        <div class="permission-dock-patterns">
-                          <For each={meaningfulPatterns}>
-                            {(pattern) => <code class="permission-dock-pattern">{pattern}</code>}
-                          </For>
+                      <div data-component="permission-prompt" onClick={(e: MouseEvent) => e.stopPropagation()}>
+                        <Show when={!isTodoPerm && meaningfulPatterns.length > 0}>
+                          <div class="permission-dock-patterns">
+                            <For each={meaningfulPatterns}>
+                              {(pattern) => <code class="permission-dock-pattern">{pattern}</code>}
+                            </For>
+                          </div>
+                        </Show>
+                        <Show when={isTodoPerm}>
+                          <p data-slot="permission-description">
+                            {p.toolName === "todowrite"
+                              ? language.t("settings.permissions.tool.todowrite.description")
+                              : language.t("settings.permissions.tool.todoread.description")}
+                          </p>
+                        </Show>
+                        <div data-slot="permission-actions">
+                          <Button
+                            variant="ghost"
+                            size="small"
+                            onClick={() => decide(p.id, "reject")}
+                            disabled={responding()}
+                          >
+                            {language.t("ui.permission.deny")}
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="small"
+                            onClick={() => decide(p.id, "always")}
+                            disabled={responding()}
+                          >
+                            {language.t("ui.permission.allowAlways")}
+                          </Button>
+                          <Button
+                            variant="primary"
+                            size="small"
+                            onClick={() => decide(p.id, "once")}
+                            disabled={responding()}
+                          >
+                            {language.t("ui.permission.allowOnce")}
+                          </Button>
                         </div>
-                      </Show>
-                      <Show when={isTodoPerm}>
-                        <p data-slot="permission-description">
-                          {p.toolName === "todowrite"
-                            ? language.t("settings.permissions.tool.todowrite.description")
-                            : language.t("settings.permissions.tool.todoread.description")}
-                        </p>
-                      </Show>
-                      <div data-slot="permission-actions">
-                        <Button
-                          variant="ghost"
-                          size="small"
-                          onClick={() => decide(p.id, "reject")}
-                          disabled={responding()}
-                        >
-                          {language.t("ui.permission.deny")}
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          size="small"
-                          onClick={() => decide(p.id, "always")}
-                          disabled={responding()}
-                        >
-                          {language.t("ui.permission.allowAlways")}
-                        </Button>
-                        <Button
-                          variant="primary"
-                          size="small"
-                          onClick={() => decide(p.id, "once")}
-                          disabled={responding()}
-                        >
-                          {language.t("ui.permission.allowOnce")}
-                        </Button>
+                        <p data-slot="permission-hint">{language.t("ui.permission.sessionHint")}</p>
                       </div>
-                      <p data-slot="permission-hint">{language.t("ui.permission.sessionHint")}</p>
-                    </div>
                     )
                   }}
                 </Show>

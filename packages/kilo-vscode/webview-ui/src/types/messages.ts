@@ -637,6 +637,7 @@ export interface AgentManagerWorktreeSetupMessage {
   sessionId?: string
   branch?: string
   worktreeId?: string
+  errorCode?: "git_not_found" | "not_git_repo" | "lfs_missing"
 }
 
 // Agent Manager worktree state types (mirrored from WorktreeStateManager)
