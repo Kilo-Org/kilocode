@@ -910,6 +910,8 @@ export const SessionProvider: ParentComponent = (props) => {
       permissionId,
       sessionID,
       response,
+      toolName: permission?.toolName,
+      always: permission?.always,
     })
 
     // Remove from pending permissions

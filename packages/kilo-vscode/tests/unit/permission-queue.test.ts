@@ -3,7 +3,7 @@ import { upsertPermission, removeSessionPermissions } from "../../webview-ui/src
 import type { PermissionRequest } from "../../webview-ui/src/types/messages"
 
 function perm(id: string, sessionID: string): PermissionRequest {
-  return { id, sessionID, toolName: "read_file", patterns: [], args: {} }
+  return { id, sessionID, toolName: "read_file", patterns: [], always: [], args: {} }
 }
 
 describe("upsertPermission", () => {

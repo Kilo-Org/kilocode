@@ -1130,10 +1130,12 @@ export namespace Config {
         .optional()
         .describe("When set, ONLY these providers will be enabled. All other providers will be ignored"),
       // kilocode_change start - nullable for delete sentinel
-      model: ModelId.nullable().describe("Model to use in the format of provider/model, eg anthropic/claude-2").optional(),
-      small_model: ModelId.nullable().describe(
-        "Small model to use for tasks like title generation in the format of provider/model",
-      ).optional(),
+      model: ModelId.nullable()
+        .describe("Model to use in the format of provider/model, eg anthropic/claude-2")
+        .optional(),
+      small_model: ModelId.nullable()
+        .describe("Small model to use for tasks like title generation in the format of provider/model")
+        .optional(),
       // kilocode_change end
       // kilocode_change start - renamed from "build" to "code"
       default_agent: z
@@ -1534,6 +1536,33 @@ export namespace Config {
 
     return next
   }
+
+  // kilocode_change start - write global config file without restarting instances
+  export async function updateGlobalFile(config: Info) {
+    const filepath = globalConfigFile()
+    const before = await Filesystem.readText(filepath).catch((err: any) => {
+      if (err.code === "ENOENT") return "{}"
+      throw new JsonError({ path: filepath }, { cause: err })
+    })
+
+    const next = await (async () => {
+      if (!filepath.endsWith(".jsonc")) {
+        const existing = parseConfig(before, filepath)
+        const merged = stripNulls(mergeDeep(existing, config) as Record<string, unknown>) as Info
+        await Filesystem.writeJson(filepath, merged)
+        return merged
+      }
+
+      const updated = patchJsonc(before, config)
+      const merged = parseConfig(updated, filepath)
+      await Filesystem.write(filepath, updated)
+      return merged
+    })()
+
+    global.reset()
+    return next
+  }
+  // kilocode_change end
 
   export async function directories() {
     return state().then((x) => x.directories)

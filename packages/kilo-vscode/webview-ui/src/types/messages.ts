@@ -128,6 +128,7 @@ export interface PermissionRequest {
   sessionID: string
   toolName: string
   patterns: string[]
+  always: string[]
   args: Record<string, unknown>
   message?: string
   tool?: { messageID: string; callID: string }
@@ -1038,6 +1039,8 @@ export interface PermissionResponseRequest {
   permissionId: string
   sessionID: string
   response: "once" | "always" | "reject"
+  toolName?: string
+  always?: string[]
 }
 
 export interface CreateSessionRequest {

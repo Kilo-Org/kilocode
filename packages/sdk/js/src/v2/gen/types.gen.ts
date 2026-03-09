@@ -1987,6 +1987,31 @@ export type GlobalConfigUpdateResponses = {
 
 export type GlobalConfigUpdateResponse = GlobalConfigUpdateResponses[keyof GlobalConfigUpdateResponses]
 
+export type GlobalConfigPersistData = {
+  body?: Config
+  path?: never
+  query?: never
+  url: "/global/config/persist"
+}
+
+export type GlobalConfigPersistErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type GlobalConfigPersistError = GlobalConfigPersistErrors[keyof GlobalConfigPersistErrors]
+
+export type GlobalConfigPersistResponses = {
+  /**
+   * Successfully persisted global config
+   */
+  200: Config
+}
+
+export type GlobalConfigPersistResponse = GlobalConfigPersistResponses[keyof GlobalConfigPersistResponses]
+
 export type GlobalDisposeData = {
   body?: never
   path?: never
