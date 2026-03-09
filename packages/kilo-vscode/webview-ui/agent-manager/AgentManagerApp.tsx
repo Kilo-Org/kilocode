@@ -34,6 +34,7 @@ import type {
   WorktreeState,
   ManagedSessionState,
   SessionInfo,
+  BranchInfo,
 } from "../src/types/messages"
 import { DragDropProvider, DragDropSensors, DragOverlay, SortableProvider, closestCenter } from "@thisbeyond/solid-dnd"
 import type { DragEvent } from "@thisbeyond/solid-dnd"
