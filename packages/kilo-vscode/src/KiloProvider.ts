@@ -24,6 +24,7 @@ import * as MigrationService from "./legacy-migration/migration-service"
 import {
   sessionToWebview,
   indexProvidersById,
+  getProviderFallback,
   filterVisibleAgents,
   buildSettingPath,
   mapSSEEventToWebviewMessage,
@@ -1005,24 +1006,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const { data: response } = await this.client.provider.list({ directory: workspaceDir }, { throwOnError: true })
 
       const normalized = indexProvidersById(response.all)
-      const selected = Object.entries(response.default).find(([providerID, modelID]) => {
-        if (!modelID) return false
-        return !!normalized[providerID]?.models?.[modelID]
-      })
-
-      if (!selected) {
-        console.warn("[Kilo New] KiloProvider: No backend default provider selection found")
-        return
-      }
-
-      const [providerID, modelID] = selected
+      const selection = getProviderFallback(normalized, response.default)
 
       const message = {
         type: "providersLoaded",
         providers: normalized,
         connected: response.connected,
         defaults: response.default,
-        defaultSelection: { providerID, modelID },
+        defaultSelection: selection,
       }
       this.cachedProvidersMessage = message
       this.postMessage(message)

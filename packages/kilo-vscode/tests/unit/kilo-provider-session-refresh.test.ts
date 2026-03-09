@@ -16,6 +16,30 @@ type ProviderInternals = {
   postMessage: (message: unknown) => void
 }
 
+type ProviderData = {
+  all: Array<{
+    id: string
+    name: string
+    env: string[]
+    models: Record<
+      string,
+      {
+        id: string
+        name: string
+        release_date: string
+        attachment: boolean
+        reasoning: boolean
+        temperature: boolean
+        tool_call: boolean
+        limit: { context: number; output: number }
+        options: Record<string, unknown>
+      }
+    >
+  }>
+  connected: string[]
+  default: Record<string, string>
+}
+
 function createContext(overrides?: Partial<SessionRefreshContext>): SessionRefreshContext & { sent: unknown[] } {
   const sent: unknown[] = []
   return {
@@ -39,8 +63,38 @@ function createListSessions() {
   return { calls, fn }
 }
 
-function createClient() {
+function createProvider(id: string, models: string[]) {
+  return {
+    id,
+    name: id,
+    env: [],
+    models: Object.fromEntries(
+      models.map((modelID) => [
+        modelID,
+        {
+          id: modelID,
+          name: modelID,
+          release_date: "2026-01-01",
+          attachment: false,
+          reasoning: false,
+          temperature: true,
+          tool_call: true,
+          limit: { context: 1, output: 1 },
+          options: {},
+        },
+      ]),
+    ),
+  }
+}
+
+function createClient(providerData?: ProviderData) {
   const calls: string[] = []
+  const data = providerData ?? {
+    all: [createProvider("openai", ["gpt-5"])],
+    connected: [],
+    default: { openai: "gpt-5" },
+  }
+
   return {
     calls,
     session: {
@@ -50,32 +104,7 @@ function createClient() {
       },
     },
     provider: {
-      list: async () => ({
-        data: {
-          all: [
-            {
-              id: "openai",
-              name: "OpenAI",
-              env: [],
-              models: {
-                "gpt-5": {
-                  id: "gpt-5",
-                  name: "GPT-5",
-                  release_date: "2026-01-01",
-                  attachment: false,
-                  reasoning: false,
-                  temperature: true,
-                  tool_call: true,
-                  limit: { context: 1, output: 1 },
-                  options: {},
-                },
-              },
-            },
-          ],
-          connected: [],
-          default: { openai: "gpt-5" },
-        },
-      }),
+      list: async () => ({ data }),
     },
     app: {
       agents: async () => ({ data: [] }),
@@ -194,5 +223,58 @@ describe("KiloProvider pending session refresh", () => {
     }) as { defaultSelection: { providerID: string; modelID: string } } | undefined
 
     expect(loaded?.defaultSelection).toEqual({ providerID: "openai", modelID: "gpt-5" })
+  })
+
+  it("posts providersLoaded when defaults are missing", async () => {
+    const client = createClient({
+      all: [createProvider("openai", ["gpt-5"])],
+      connected: [],
+      default: {},
+    })
+    const connection = createConnection(client)
+    const provider = new KiloProvider({} as never, connection as never)
+    const internal = provider as unknown as ProviderInternals
+    const sent: unknown[] = []
+
+    await internal.initializeConnection()
+    internal.postMessage = (message: unknown) => {
+      sent.push(message)
+    }
+
+    await internal.fetchAndSendProviders()
+
+    const loaded = sent.find((msg) => {
+      return typeof msg === "object" && !!msg && "type" in msg && (msg as { type?: unknown }).type === "providersLoaded"
+    }) as { providers: Record<string, unknown>; defaultSelection: { providerID: string; modelID: string } } | undefined
+
+    expect(loaded?.providers.openai).toBeDefined()
+    expect(loaded?.defaultSelection).toEqual({ providerID: "openai", modelID: "gpt-5" })
+  })
+
+  it("posts providersLoaded and falls back when defaults are stale", async () => {
+    const client = createClient({
+      all: [createProvider("openai", ["gpt-5"]), createProvider("anthropic", ["claude-sonnet-4"])],
+      connected: [],
+      default: { kilo: "kilo-auto/frontier", zed: "broken" },
+    })
+    const connection = createConnection(client)
+    const provider = new KiloProvider({} as never, connection as never)
+    const internal = provider as unknown as ProviderInternals
+    const sent: unknown[] = []
+
+    await internal.initializeConnection()
+    internal.postMessage = (message: unknown) => {
+      sent.push(message)
+    }
+
+    await internal.fetchAndSendProviders()
+
+    const loaded = sent.find((msg) => {
+      return typeof msg === "object" && !!msg && "type" in msg && (msg as { type?: unknown }).type === "providersLoaded"
+    }) as { providers: Record<string, unknown>; defaultSelection: { providerID: string; modelID: string } } | undefined
+
+    expect(loaded?.providers.openai).toBeDefined()
+    expect(loaded?.providers.anthropic).toBeDefined()
+    expect(loaded?.defaultSelection).toEqual({ providerID: "anthropic", modelID: "claude-sonnet-4" })
   })
 })

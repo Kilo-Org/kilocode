@@ -54,6 +54,42 @@ export function indexProvidersById(all: ProviderInfo[]): Record<string, Provider
   return normalized
 }
 
+export function getProviderFallback(
+  providers: Record<string, ProviderInfo>,
+  defaults: Record<string, string>,
+): { providerID: string; modelID: string } {
+  const kilo = defaults.kilo
+  if (kilo && providers.kilo?.models?.[kilo]) {
+    return { providerID: "kilo", modelID: kilo }
+  }
+
+  const providerID = Object.keys(providers)
+    .sort()
+    .find((id) => {
+      const modelID = defaults[id]
+      if (!modelID) return false
+      return !!providers[id]?.models?.[modelID]
+    })
+
+  if (providerID) {
+    return { providerID, modelID: defaults[providerID]! }
+  }
+
+  const provider = Object.keys(providers)
+    .sort()
+    .map((id) => providers[id]!)
+    .find((item) => Object.keys(item.models).length > 0)
+
+  if (provider) {
+    const modelID = Object.keys(provider.models).sort()[0]
+    if (modelID) {
+      return { providerID: provider.id, modelID }
+    }
+  }
+
+  return { providerID: "kilo", modelID: "kilo-auto/frontier" }
+}
+
 export function filterVisibleAgents(agents: Agent[]): { visible: Agent[]; defaultAgent: string } {
   const visible = agents.filter((a) => a.mode !== "subagent" && !a.hidden)
   const defaultAgent = visible.length > 0 ? visible[0]!.name : "code"
