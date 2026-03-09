@@ -2,6 +2,22 @@ import { UI } from "../ui"
 import { cmd } from "./cmd"
 import { Instance } from "@/project/instance"
 import { $ } from "bun"
+import { existsSync } from "node:fs" // kilocode_change
+import { Process } from "@/util/process" // kilocode_change
+
+// kilocode_change start - resolve the currently running CLI instead of hardcoding opencode
+export function cliCommand(
+  input = {
+    execPath: process.execPath,
+    argv: process.argv,
+    exists: existsSync,
+  },
+) {
+  const script = input.argv[1]
+  if (script && input.exists(script)) return [input.execPath, script]
+  return [input.execPath]
+}
+// kilocode_change end
 
 export const PrCommand = cmd({
   command: "pr <number>",
@@ -24,6 +40,7 @@ export const PrCommand = cmd({
 
         const prNumber = args.number
         const localBranchName = `pr/${prNumber}`
+        const cli = cliCommand() // kilocode_change
         UI.println(`Fetching and checking out PR #${prNumber}...`)
 
         // Use gh pr checkout with custom branch name
@@ -71,9 +88,9 @@ export const PrCommand = cmd({
                 UI.println(`Found opencode session: ${sessionUrl}`)
                 UI.println(`Importing session...`)
 
-                const importResult = await $`opencode import ${sessionUrl}`.nothrow()
-                if (importResult.exitCode === 0) {
-                  const importOutput = importResult.text().trim()
+                const importResult = await Process.run([...cli, "import", sessionUrl], { nothrow: true }) // kilocode_change
+                if (importResult.code === 0) {
+                  const importOutput = importResult.stdout.toString().trim()
                   // Extract session ID from the output (format: "Imported session: <session-id>")
                   const sessionIdMatch = importOutput.match(/Imported session: ([a-zA-Z0-9_-]+)/)
                   if (sessionIdMatch) {
@@ -88,23 +105,23 @@ export const PrCommand = cmd({
 
         UI.println(`Successfully checked out PR #${prNumber} as branch '${localBranchName}'`)
         UI.println()
-        UI.println("Starting opencode...")
+        UI.println("Starting kilo...") // kilocode_change
         UI.println()
 
-        // Launch opencode TUI with session ID if available
-        const { spawn } = await import("child_process")
-        const opencodeArgs = sessionId ? ["-s", sessionId] : []
-        const opencodeProcess = spawn("opencode", opencodeArgs, {
-          stdio: "inherit",
+        const run = sessionId ? [...cli, "-s", sessionId] : cli // kilocode_change
+        const proc = Process.spawn(run, {
           cwd: process.cwd(),
+          stdin: "inherit",
+          stdout: "inherit",
+          stderr: "inherit",
         })
 
         await new Promise<void>((resolve, reject) => {
-          opencodeProcess.on("exit", (code) => {
+          proc.on("exit", (code) => {
             if (code === 0) resolve()
-            else reject(new Error(`opencode exited with code ${code}`))
+            else reject(new Error(`kilo exited with code ${code}`)) // kilocode_change
           })
-          opencodeProcess.on("error", reject)
+          proc.on("error", reject)
         })
       },
     })
