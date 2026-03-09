@@ -34,6 +34,24 @@ export function Home() {
   const connectedMcpCount = createMemo(() => {
     return Object.values(sync.data.mcp).filter((x) => x.status === "connected").length
   })
+  const indexing = createMemo(() => sync.data.indexing)
+
+  const indexingLabel = createMemo(() => {
+    if (indexing().state === "In Progress") {
+      return `IDX ${indexing().percent}% ${indexing().processedFiles}/${indexing().totalFiles}`
+    }
+    if (indexing().state === "Error") {
+      return `IDX ${indexing().message}`
+    }
+    return `IDX ${indexing().state}`
+  })
+
+  const indexingColor = createMemo(() => {
+    if (indexing().state === "Complete") return theme.success
+    if (indexing().state === "Error") return theme.error
+    if (indexing().state === "In Progress") return theme.warning
+    return theme.textMuted
+  })
 
   const isFirstTimeUser = createMemo(() => sync.data.session.length === 0)
   const tipsHidden = createMemo(() => kv.get("tips_hidden", false))
@@ -152,6 +170,7 @@ export function Home() {
             </text>
             <text fg={theme.textMuted}>/status</text>
           </Show>
+          <text fg={indexingColor()}>{indexingLabel().slice(0, 48)}</text>
         </box>
         <box flexGrow={1} />
         <box flexShrink={0}>

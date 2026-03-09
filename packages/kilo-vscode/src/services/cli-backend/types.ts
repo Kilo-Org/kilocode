@@ -94,6 +94,14 @@ export interface CloudSessionData {
   messages: CloudSessionMessage[]
 }
 
+export interface IndexingStatus {
+  state: "Disabled" | "In Progress" | "Complete" | "Error"
+  message: string
+  processedFiles: number
+  totalFiles: number
+  percent: number
+}
+
 /** VS Code editor context sent alongside messages to the CLI backend */
 interface WorktreeFileDiff {
   file: string

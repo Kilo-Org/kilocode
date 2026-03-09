@@ -73,6 +73,13 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       formatter: FormatterStatus[]
       vcs: VcsInfo | undefined
       path: Path
+      indexing: {
+        state: "Disabled" | "In Progress" | "Complete" | "Error"
+        message: string
+        processedFiles: number
+        totalFiles: number
+        percent: number
+      }
     }>({
       provider_next: {
         all: [],
@@ -100,6 +107,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       formatter: [],
       vcs: undefined,
       path: { state: "", config: "", worktree: "", directory: "" },
+      indexing: { state: "Disabled", message: "Indexing disabled.", processedFiles: 0, totalFiles: 0, percent: 0 },
     })
 
     const sdk = useSDK()
@@ -340,6 +348,10 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           setStore("vcs", { branch: event.properties.branch })
           break
         }
+        case "indexing.status": {
+          setStore("indexing", reconcile(event.properties.status))
+          break
+        }
       }
     })
 
@@ -413,6 +425,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
             sdk.client.provider.auth().then((x) => setStore("provider_auth", reconcile(x.data ?? {}))),
             sdk.client.vcs.get().then((x) => setStore("vcs", reconcile(x.data))),
             sdk.client.path.get().then((x) => setStore("path", reconcile(x.data!))),
+            sdk.client.indexing.status().then((x) => setStore("indexing", reconcile(x.data!))),
           ]).then(() => {
             setStore("status", "complete")
           })

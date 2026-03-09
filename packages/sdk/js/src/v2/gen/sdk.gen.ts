@@ -50,6 +50,7 @@ import type {
   GlobalDisposeResponses,
   GlobalEventResponses,
   GlobalHealthResponses,
+  IndexingStatusResponses,
   InstanceDisposeResponses,
   KiloCloudSessionGetErrors,
   KiloCloudSessionGetResponses,
@@ -2638,6 +2639,38 @@ export class Question extends HeyApiClient {
   }
 }
 
+export class Indexing extends HeyApiClient {
+  /**
+   * Get indexing status
+   *
+   * Retrieve the current code indexing status for the active project.
+   */
+  public status<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<IndexingStatusResponses, unknown, ThrowOnError>({
+      url: "/indexing/status",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class Oauth extends HeyApiClient {
   /**
    * OAuth authorize
@@ -4523,6 +4556,11 @@ export class KiloClient extends HeyApiClient {
   private _question?: Question
   get question(): Question {
     return (this._question ??= new Question({ client: this.client }))
+  }
+
+  private _indexing?: Indexing
+  get indexing(): Indexing {
+    return (this._indexing ??= new Indexing({ client: this.client }))
   }
 
   private _provider?: Provider

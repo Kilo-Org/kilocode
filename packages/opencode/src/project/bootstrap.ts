@@ -12,6 +12,7 @@ import { Log } from "@/util/log"
 import { KiloSessions } from "@/kilo-sessions/kilo-sessions" // kilocode_change
 import { Snapshot } from "../snapshot"
 import { Truncate } from "../tool/truncation"
+import { KiloIndexing } from "@/kilocode/indexing"
 
 export async function InstanceBootstrap() {
   Log.Default.info("bootstrapping", { directory: Instance.directory })
@@ -24,6 +25,7 @@ export async function InstanceBootstrap() {
   Vcs.init()
   Snapshot.init()
   Truncate.init()
+  await KiloIndexing.init() // kilocode_change
 
   Bus.subscribe(Command.Event.Executed, async (payload) => {
     if (payload.properties.name === Command.Default.INIT) {

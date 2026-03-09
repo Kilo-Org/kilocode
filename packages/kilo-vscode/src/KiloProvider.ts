@@ -13,6 +13,7 @@ import type {
 } from "@kilocode/sdk/v2/client"
 import { type KiloConnectionService, type KilocodeNotification, ServerStartupError } from "./services/cli-backend"
 import type { EditorContext, CloudSessionData } from "./services/cli-backend/types"
+import type { IndexingStatus } from "./services/cli-backend/types"
 import { FileIgnoreController } from "./services/autocomplete/shims/FileIgnoreController"
 import { handleChatCompletionRequest } from "./services/autocomplete/chat-autocomplete/handleChatCompletionRequest"
 import { handleChatCompletionAccepted } from "./services/autocomplete/chat-autocomplete/handleChatCompletionAccepted"
@@ -53,6 +54,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private cachedSkillsMessage: unknown = null
   /** Cached configLoaded payload so requestConfig can be served before client is ready */
   private cachedConfigMessage: unknown = null
+  /** Cached indexingStatusLoaded payload so requestIndexingStatus can be served before client is ready */
+  private cachedIndexingStatusMessage: unknown = null
   /** Cached notificationsLoaded payload */
   private cachedNotificationsMessage: unknown = null
   private pendingReviewComments: unknown[][] = []
@@ -439,8 +442,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestConfig":
           this.fetchAndSendConfig().catch((e) => console.error("[Kilo New] fetchAndSendConfig failed:", e))
           break
+        case "requestIndexingStatus":
+          this.fetchAndSendIndexingStatus().catch((e) =>
+            console.error("[Kilo New] fetchAndSendIndexingStatus failed:", e),
+          )
+          break
         case "updateConfig":
           await this.handleUpdateConfig(message.config)
+          break
+        case "openSettingsTab":
+          if (message.tab === "indexing") {
+            await vscode.commands.executeCommand("kilo-code.new.openIndexingSettings")
+          }
           break
         case "setLanguage":
           await vscode.workspace
@@ -724,6 +737,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.fetchAndSendAgents(),
         this.fetchAndSendSkills(),
         this.fetchAndSendConfig(),
+        this.fetchAndSendIndexingStatus(),
         this.fetchAndSendNotifications(),
       ])
       this.sendNotificationSettings()
@@ -1153,6 +1167,27 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
+  private async fetchAndSendIndexingStatus(): Promise<void> {
+    if (!this.client) {
+      if (this.cachedIndexingStatusMessage) {
+        this.postMessage(this.cachedIndexingStatusMessage)
+      }
+      return
+    }
+
+    try {
+      const { data: status } = await this.client.indexing.status(undefined, { throwOnError: true })
+      const message = {
+        type: "indexingStatusLoaded",
+        status: status as IndexingStatus,
+      }
+      this.cachedIndexingStatusMessage = message
+      this.postMessage(message)
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to fetch indexing status:", error)
+    }
+  }
+
   /**
    * Fetch Kilo news/notifications and send to webview.
    * Uses the cached message pattern so the webview gets data immediately on refresh.
@@ -1414,6 +1449,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
       this.cachedConfigMessage = { type: "configLoaded", config: updated }
       this.postMessage(message)
+      await this.fetchAndSendIndexingStatus()
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to update config:", error)
       this.postMessage({
@@ -1970,13 +2006,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Extract sessionID from the event
     const sessionID = this.extractSessionID(event)
 
-    // Events without sessionID (server.connected, server.heartbeat) → always forward
+    // Events without sessionID (server.connected, server.heartbeat, indexing.status) → always forward
     // Events with sessionID → only forward if this webview tracks that session
     // message.part.updated and message.part.delta are always session-scoped; drop if session unknown.
     if (!sessionID && (event.type === "message.part.updated" || event.type === "message.part.delta")) {
       return
     }
-    if (sessionID && !this.trackedSessionIds.has(sessionID)) {
+    if (event.type !== "indexing.status" && sessionID && !this.trackedSessionIds.has(sessionID)) {
       return
     }
 
@@ -1998,6 +2034,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     const msg = mapSSEEventToWebviewMessage(event, sessionID)
     if (msg) {
+      if (msg.type === "indexingStatusLoaded") {
+        this.cachedIndexingStatusMessage = msg
+      }
       this.postMessage(msg)
     }
   }
