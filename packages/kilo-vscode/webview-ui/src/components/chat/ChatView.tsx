@@ -26,11 +26,13 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const hasMessages = () => session.messages().length > 0
   const idle = () => session.status() !== "busy"
   const sessionQuestions = () => session.questions().filter((q) => q.sessionID === id())
+  const blockingQuestions = () => sessionQuestions().filter((q) => q.blocking !== false)
+  const nonBlockingQuestions = () => sessionQuestions().filter((q) => q.blocking === false)
   const sessionPermissions = () => session.permissions().filter((p) => p.sessionID === id())
 
-  const questionRequest = () => sessionQuestions().find((q) => !q.tool)
+  const questionRequest = () => blockingQuestions()[0] ?? nonBlockingQuestions()[0]
   const permissionRequest = () => sessionPermissions().find((p) => !p.tool)
-  const blocked = () => sessionPermissions().length > 0 || sessionQuestions().length > 0
+  const blocked = () => sessionPermissions().length > 0 || blockingQuestions().length > 0
 
   // When a bottom-dock permission/question disappears while the session is busy,
   // the scroll container grows taller. Dispatch a custom event so MessageList can

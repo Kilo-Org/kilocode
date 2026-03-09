@@ -10,7 +10,11 @@ import { SplitBorder } from "../../component/border"
 import { useTextareaKeybindings } from "../../component/textarea-keybindings"
 import { useDialog } from "../../ui/dialog"
 
-export function QuestionPrompt(props: { request: QuestionRequest }) {
+export function QuestionPrompt(props: {
+  request: QuestionRequest
+  nonBlocking?: boolean // kilocode_change
+  inputFocused?: () => boolean // kilocode_change
+}) {
   const sdk = useSDK()
   const { theme } = useTheme()
   const keybind = useKeybind()
@@ -125,6 +129,9 @@ export function QuestionPrompt(props: { request: QuestionRequest }) {
   useKeyboard((evt) => {
     // Skip processing if a dialog (e.g., command palette) is open
     if (dialog.stack.length > 0) return
+
+    // kilocode_change - avoid intrusive key capture for non-blocking review suggestions
+    if (props.nonBlocking && props.inputFocused?.()) return
 
     // When editing custom answer textarea
     if (store.editing && !confirm()) {

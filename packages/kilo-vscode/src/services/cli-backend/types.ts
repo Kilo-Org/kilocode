@@ -5,7 +5,171 @@
 // equivalents in @kilocode/sdk. All API types (Session, Event, Agent,
 // McpStatus, Config, etc.) should be imported from "@kilocode/sdk/v2/client".
 
-/** Connection config used by the extension to reach the local CLI server */
+// Session status from SessionStatus.Info
+export type SessionStatusInfo =
+  | { type: "idle" }
+  | { type: "retry"; attempt: number; message: string; next: number }
+  | { type: "busy" }
+
+// Token usage shape returned by the server on assistant messages
+export interface TokenUsage {
+  input: number
+  output: number
+  reasoning?: number
+  cache?: { read: number; write: number }
+}
+
+// Message types from MessageV2
+export interface MessageInfo {
+  id: string
+  sessionID: string
+  role: "user" | "assistant"
+  time: {
+    created: number
+    completed?: number
+  }
+  agent?: string
+  providerID?: string
+  modelID?: string
+  model?: { providerID: string; modelID: string }
+  mode?: string
+  parentID?: string
+  path?: { cwd: string; root: string }
+  error?: { name: string; data?: Record<string, unknown> }
+  summary?: { title?: string; body?: string; diffs?: unknown[] } | boolean
+  cost?: number
+  tokens?: TokenUsage
+}
+
+// Part types - simplified for UI display
+export type MessagePart =
+  | { type: "text"; id: string; text: string }
+  | { type: "tool"; id: string; tool: string; state: ToolState }
+  | { type: "reasoning"; id: string; text: string }
+
+export type ToolState =
+  | { status: "pending"; input: Record<string, unknown> }
+  | { status: "running"; input: Record<string, unknown>; title?: string }
+  | { status: "completed"; input: Record<string, unknown>; output: string; title: string }
+  | { status: "error"; input: Record<string, unknown>; error: string }
+
+// Permission request from PermissionNext.Request
+export interface PermissionRequest {
+  id: string
+  sessionID: string
+  permission: string
+  patterns: string[]
+  metadata: Record<string, unknown>
+  always: string[]
+  tool?: {
+    messageID: string
+    callID: string
+  }
+}
+
+// SSE Event types - based on BusEvent definitions
+export type SSEEvent =
+  | { type: "server.connected"; properties: Record<string, never> }
+  | { type: "server.heartbeat"; properties: Record<string, never> }
+  | { type: "session.created"; properties: { info: SessionInfo } }
+  | { type: "session.updated"; properties: { info: SessionInfo } }
+  | { type: "session.status"; properties: { sessionID: string; status: SessionStatusInfo } }
+  | { type: "session.idle"; properties: { sessionID: string } }
+  | { type: "message.updated"; properties: { info: MessageInfo } }
+  | { type: "message.part.updated"; properties: { part: MessagePart; delta?: string } }
+  | {
+      type: "message.part.delta"
+      properties: { sessionID: string; messageID: string; partID: string; field: string; delta: string }
+    }
+  | { type: "permission.asked"; properties: PermissionRequest }
+  | {
+      type: "permission.replied"
+      properties: { sessionID: string; requestID: string; reply: "once" | "always" | "reject" }
+    }
+  | { type: "todo.updated"; properties: { sessionID: string; items: TodoItem[] } }
+  | { type: "question.asked"; properties: QuestionRequest }
+  | { type: "question.replied"; properties: { sessionID: string; requestID: string; answers: string[][] } }
+  | { type: "question.rejected"; properties: { sessionID: string; requestID: string } }
+
+export interface TodoItem {
+  id: string
+  content: string
+  status: "pending" | "in_progress" | "completed"
+}
+
+// Question types from Question module
+export interface QuestionOption {
+  label: string
+  description: string
+}
+
+export interface QuestionInfo {
+  question: string
+  header: string
+  options: QuestionOption[]
+  multiple?: boolean
+  custom?: boolean
+}
+
+export interface QuestionRequest {
+  id: string
+  sessionID: string
+  questions: QuestionInfo[]
+  blocking?: boolean
+  tool?: {
+    messageID: string
+    callID: string
+  }
+}
+
+// Agent/mode info from the CLI /agent endpoint
+export interface AgentInfo {
+  name: string
+  description?: string
+  mode: "subagent" | "primary" | "all"
+  native?: boolean
+  hidden?: boolean
+  color?: string
+}
+
+// Provider/model types from provider catalog
+
+// Model definition from provider catalog
+export interface ProviderModel {
+  id: string
+  name: string
+  inputPrice?: number
+  outputPrice?: number
+  contextLength?: number
+  releaseDate?: string
+  latest?: boolean
+  // Actual shape returned by the server (Provider.Model)
+  limit?: { context: number; input?: number; output: number }
+  variants?: Record<string, Record<string, unknown>>
+  capabilities?: { reasoning: boolean }
+}
+
+// Provider definition
+export interface Provider {
+  id: string
+  name: string
+  models: Record<string, ProviderModel>
+}
+
+// Response from provider list endpoint
+export interface ProviderListResponse {
+  all: Record<string, Provider>
+  connected: string[]
+  default: Record<string, string> // providerID → default modelID
+}
+
+// Model selection (providerID + modelID pair)
+export interface ModelSelection {
+  providerID: string
+  modelID: string
+}
+
+// Server connection config
 export interface ServerConfig {
   baseUrl: string
   password: string

@@ -54,6 +54,33 @@ test("ask - adds to pending list", async () => {
   })
 })
 
+test("ask - preserves blocking flag", async () => {
+  await using tmp = await tmpdir({ git: true })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      // kilocode_change - review follow-up uses non-blocking question prompts
+      const askPromise = Question.ask({
+        sessionID: "ses_test",
+        blocking: false,
+        questions: [
+          {
+            question: "Proceed with review suggestion?",
+            header: "Code review",
+            options: [{ label: "Start", description: "Run review" }],
+          },
+        ],
+      })
+
+      const pending = await Question.list()
+      expect(pending[0]?.blocking).toBe(false)
+
+      await Question.reject(pending[0].id)
+      await expect(askPromise).rejects.toBeInstanceOf(Question.RejectedError)
+    },
+  })
+})
+
 // reply tests
 
 test("reply - resolves the pending ask with answers", async () => {

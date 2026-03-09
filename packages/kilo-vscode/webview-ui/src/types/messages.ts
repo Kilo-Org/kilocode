@@ -158,6 +158,7 @@ export interface QuestionRequest {
   id: string
   sessionID: string
   questions: QuestionInfo[]
+  blocking?: boolean
   tool?: {
     messageID: string
     callID: string

@@ -167,7 +167,10 @@ export type WebviewMessage =
       }
     }
   | { type: "todoUpdated"; sessionID: string; items: unknown[] }
-  | { type: "questionRequest"; question: { id: string; sessionID: string; questions: unknown[]; tool?: unknown } }
+  | {
+      type: "questionRequest"
+      question: { id: string; sessionID: string; questions: unknown[]; blocking?: boolean; tool?: unknown }
+    }
   | { type: "questionResolved"; requestID: string }
   | { type: "sessionCreated"; session: ReturnType<typeof sessionToWebview> }
   | { type: "sessionUpdated"; session: ReturnType<typeof sessionToWebview> }
@@ -241,6 +244,7 @@ export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | un
           id: event.properties.id,
           sessionID: event.properties.sessionID,
           questions: event.properties.questions,
+          blocking: event.properties.blocking,
           tool: event.properties.tool,
         },
       }
