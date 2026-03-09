@@ -28,6 +28,7 @@ import { PromptHistoryProvider } from "./component/prompt/history"
 import { FrecencyProvider } from "./component/prompt/frecency"
 import { PromptStashProvider } from "./component/prompt/stash"
 import { DialogAlert } from "./ui/dialog-alert"
+import { isKiloError, showKiloErrorToast } from "@/kilocode/kilo-errors" // kilocode_change
 import { ToastProvider, useToast } from "./ui/toast"
 import { ExitProvider, useExit } from "./context/exit"
 import { Session as SessionApi } from "@/session"
@@ -42,6 +43,8 @@ import { writeHeapSnapshot } from "v8"
 import { PromptRefProvider, usePromptRef } from "./context/prompt"
 import { registerKiloCommands } from "@/kilocode/kilo-commands" // kilocode_change
 import { initializeTUIDependencies } from "@kilocode/kilo-gateway/tui" // kilocode_change
+import { TuiConfigProvider } from "./context/tui-config"
+import { TuiConfig } from "@/config/tui"
 
 async function getTerminalBackgroundColor(): Promise<"dark" | "light"> {
   // can't set raw mode if not a TTY
@@ -108,6 +111,7 @@ import type { EventSource } from "./context/sdk"
 export function tui(input: {
   url: string
   args: Args
+  config: TuiConfig.Info
   directory?: string
   fetch?: typeof fetch
   headers?: RequestInit["headers"]
@@ -142,35 +146,37 @@ export function tui(input: {
                 <KVProvider>
                   <ToastProvider>
                     <RouteProvider>
-                      <SDKProvider
-                        url={input.url}
-                        directory={input.directory}
-                        fetch={input.fetch}
-                        headers={input.headers}
-                        events={input.events}
-                      >
-                        <SyncProvider>
-                          <ThemeProvider mode={mode}>
-                            <LocalProvider>
-                              <KeybindProvider>
-                                <PromptStashProvider>
-                                  <DialogProvider>
-                                    <CommandProvider>
-                                      <FrecencyProvider>
-                                        <PromptHistoryProvider>
-                                          <PromptRefProvider>
-                                            <App />
-                                          </PromptRefProvider>
-                                        </PromptHistoryProvider>
-                                      </FrecencyProvider>
-                                    </CommandProvider>
-                                  </DialogProvider>
-                                </PromptStashProvider>
-                              </KeybindProvider>
-                            </LocalProvider>
-                          </ThemeProvider>
-                        </SyncProvider>
-                      </SDKProvider>
+                      <TuiConfigProvider config={input.config}>
+                        <SDKProvider
+                          url={input.url}
+                          directory={input.directory}
+                          fetch={input.fetch}
+                          headers={input.headers}
+                          events={input.events}
+                        >
+                          <SyncProvider>
+                            <ThemeProvider mode={mode}>
+                              <LocalProvider>
+                                <KeybindProvider>
+                                  <PromptStashProvider>
+                                    <DialogProvider>
+                                      <CommandProvider>
+                                        <FrecencyProvider>
+                                          <PromptHistoryProvider>
+                                            <PromptRefProvider>
+                                              <App />
+                                            </PromptRefProvider>
+                                          </PromptHistoryProvider>
+                                        </FrecencyProvider>
+                                      </CommandProvider>
+                                    </DialogProvider>
+                                  </PromptStashProvider>
+                                </KeybindProvider>
+                              </LocalProvider>
+                            </ThemeProvider>
+                          </SyncProvider>
+                        </SDKProvider>
+                      </TuiConfigProvider>
                     </RouteProvider>
                   </ToastProvider>
                 </KVProvider>
@@ -712,6 +718,12 @@ function App() {
   sdk.event.on(SessionApi.Event.Error.type, (evt) => {
     const error = evt.properties.error
     if (error && typeof error === "object" && error.name === "MessageAbortedError") return
+    // kilocode_change start - Show warning toast for Kilo errors instead of generic error toast
+    if (error && typeof error === "object" && isKiloError(error)) {
+      showKiloErrorToast(error, toast)
+      return
+    }
+    // kilocode_change end
     const message = (() => {
       if (!error) return "An error occurred"
 

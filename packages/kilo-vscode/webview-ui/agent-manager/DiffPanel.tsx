@@ -13,13 +13,7 @@ import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type { DiffLineAnnotation, AnnotationSide } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
 import { useLanguage } from "../src/context/language"
-import {
-  formatReviewCommentsMarkdown,
-  getDirectory,
-  getFilename,
-  sanitizeReviewComments,
-  type ReviewComment,
-} from "./review-comments"
+import { getDirectory, getFilename, sanitizeReviewComments, type ReviewComment } from "./review-comments"
 import { buildReviewAnnotation, type AnnotationLabels, type AnnotationMeta } from "./review-annotations"
 import { LONG_DIFF_MARKER_FILE_COUNT, initialOpenFiles, isLargeDiffFile } from "./diff-open-policy"
 import { DiffEndMarker } from "./DiffEndMarker"
@@ -278,8 +272,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   const sendAllToChat = () => {
     const all = comments()
     if (all.length === 0) return
-    const text = formatReviewCommentsMarkdown(all)
-    window.dispatchEvent(new MessageEvent("message", { data: { type: "appendChatBoxMessage", text } }))
+    window.dispatchEvent(new MessageEvent("message", { data: { type: "appendReviewComments", comments: all } }))
     preserveScroll(() => setComments([]))
     props.onSendAll?.()
   }

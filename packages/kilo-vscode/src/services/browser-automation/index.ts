@@ -1,1 +1,1 @@
-export { BrowserAutomationService, type BrowserAutomationState } from "./browser-automation-service"
+export { BrowserAutomationService } from "./browser-automation-service"

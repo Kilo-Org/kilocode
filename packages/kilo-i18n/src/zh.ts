@@ -1,4 +1,3 @@
-// kilocode_change - new file
 export const dict = {
   // Kilo Gateway provider translations
   "provider.connect.kiloGateway.line1": "Kilo Gateway 为您提供一组精选的可靠优化模型，专为编码代理设计。",
@@ -10,4 +9,7 @@ export const dict = {
   // Provider dialog translations
   "dialog.provider.group.recommended": "推荐",
   "dialog.provider.kilo.note": "访问 500+ AI 模型",
+
+  // Reasoning block label
+  "ui.reasoning.label": "推理",
 }

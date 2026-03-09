@@ -11,7 +11,7 @@
  * - contributes.viewsContainers.activitybar[0].title
  * - contributes.views.kilo-code-sidebar[0].name
  */
-export const NEW_EXTENSION_IS_STILL_EXPERIMENTAL_SO_SHOW_EXTRA_TEXTS_TO_SHOW_DIFFERENCE = true
+const NEW_EXTENSION_IS_STILL_EXPERIMENTAL_SO_SHOW_EXTRA_TEXTS_TO_SHOW_DIFFERENCE = true
 
 export const EXTENSION_DISPLAY_NAME =
   "Kilo Code" + (NEW_EXTENSION_IS_STILL_EXPERIMENTAL_SO_SHOW_EXTRA_TEXTS_TO_SHOW_DIFFERENCE ? " (NEW)" : "")

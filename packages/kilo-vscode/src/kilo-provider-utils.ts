@@ -1,6 +1,43 @@
-import type { SessionInfo, AgentInfo, Provider, SSEEvent } from "./services/cli-backend/types"
+import type { Session, Agent, Event, ProviderListResponse } from "@kilocode/sdk/v2/client"
 
-export function sessionToWebview(session: SessionInfo) {
+/** A single provider entry as returned by the /provider list endpoint. */
+export type ProviderInfo = ProviderListResponse["all"][number]
+
+/**
+ * Extract a human-readable error message from an unknown error value.
+ * Handles Error instances, strings, and SDK error objects (which are
+ * plain JSON objects thrown by the SDK when throwOnError is true).
+ *
+ * SDK error shapes from the server:
+ * - BadRequestError: { data: unknown, errors: [...], success: false }
+ * - NotFoundError: { name: "NotFoundError", data: { message: "..." } }
+ * - Plain string (raw text response)
+ */
+export function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message
+  if (typeof error === "string") return error
+  if (error && typeof error === "object") {
+    const obj = error as Record<string, unknown>
+    // Direct .message field
+    if (typeof obj.message === "string") return obj.message
+    // Direct .error field
+    if (typeof obj.error === "string") return obj.error
+    // NotFoundError shape: { data: { message: "..." } }
+    if (obj.data && typeof obj.data === "object") {
+      const data = obj.data as Record<string, unknown>
+      if (typeof data.message === "string") return data.message
+    }
+    // BadRequestError shape: { errors: [{ message: "..." }] }
+    if (Array.isArray(obj.errors) && obj.errors.length > 0) {
+      const first = obj.errors[0]
+      if (typeof first === "string") return first
+      if (first && typeof first.message === "string") return first.message
+    }
+  }
+  return String(error)
+}
+
+export function sessionToWebview(session: Session) {
   return {
     id: session.id,
     title: session.title,
@@ -9,18 +46,92 @@ export function sessionToWebview(session: SessionInfo) {
   }
 }
 
-export function normalizeProviders(all: Record<string, Provider>): Record<string, Provider> {
-  const normalized: Record<string, Provider> = {}
-  for (const provider of Object.values(all)) {
+export function indexProvidersById(all: ProviderInfo[]): Record<string, ProviderInfo> {
+  const normalized: Record<string, ProviderInfo> = {}
+  for (const provider of all) {
     normalized[provider.id] = provider
   }
   return normalized
 }
 
-export function filterVisibleAgents(agents: AgentInfo[]): { visible: AgentInfo[]; defaultAgent: string } {
+export function filterVisibleAgents(agents: Agent[]): { visible: Agent[]; defaultAgent: string } {
   const visible = agents.filter((a) => a.mode !== "subagent" && !a.hidden)
   const defaultAgent = visible.length > 0 ? visible[0]!.name : "code"
   return { visible, defaultAgent }
+}
+
+/**
+ * Shared interface for the subset of KiloProvider state needed by session-refresh helpers.
+ * Extracted here so the logic can be tested without importing KiloProvider (and vscode).
+ */
+export interface SessionRefreshContext {
+  pendingSessionRefresh: boolean
+  connectionState: "connecting" | "connected" | "disconnected" | "error"
+  listSessions: ((dir: string) => Promise<Session[]>) | null
+  sessionDirectories: Map<string, string>
+  workspaceDirectory: string
+  postMessage(message: unknown): void
+}
+
+/**
+ * Load sessions from the workspace and all registered worktree directories.
+ * Sets pendingSessionRefresh when the HTTP client isn't ready yet.
+ * Returns the resolved projectID (if any) so the caller can update its own state.
+ */
+export async function loadSessions(ctx: SessionRefreshContext): Promise<string | undefined> {
+  const list = ctx.listSessions
+  if (!list) {
+    ctx.pendingSessionRefresh = true
+    if (ctx.connectionState !== "connecting") {
+      ctx.postMessage({ type: "error", message: "Not connected to CLI backend" })
+    }
+    return
+  }
+
+  ctx.pendingSessionRefresh = false
+
+  const sessions = await list(ctx.workspaceDirectory)
+  const projectID = sessions[0]?.projectID
+  const worktreeDirs = new Set(ctx.sessionDirectories.values())
+  const extra = await Promise.all(
+    [...worktreeDirs].map((dir) =>
+      list(dir).catch((err: unknown) => {
+        console.error(`[Kilo] Failed to list sessions for ${dir}:`, err)
+        return [] as Session[]
+      }),
+    ),
+  )
+  const seen = new Set(sessions.map((s) => s.id))
+  for (const batch of extra) {
+    for (const s of batch) {
+      if (!seen.has(s.id) && (!projectID || s.projectID === projectID)) {
+        sessions.push(s)
+        seen.add(s.id)
+      }
+    }
+  }
+
+  ctx.postMessage({
+    type: "sessionsLoaded",
+    sessions: sessions.map((s) => sessionToWebview(s)),
+  })
+
+  return sessions[0]?.projectID
+}
+
+/**
+ * Flush a deferred session refresh when the HTTP client becomes available.
+ */
+export async function flushPendingSessionRefresh(ctx: SessionRefreshContext): Promise<string | undefined> {
+  if (!ctx.pendingSessionRefresh) return
+
+  if (!ctx.listSessions) {
+    if (ctx.connectionState === "connecting") return
+    ctx.postMessage({ type: "error", message: "Not connected to CLI backend" })
+    return
+  }
+
+  return loadSessions(ctx)
 }
 
 export function buildSettingPath(key: string): { section: string; leaf: string } {
@@ -62,7 +173,7 @@ export type WebviewMessage =
   | { type: "sessionUpdated"; session: ReturnType<typeof sessionToWebview> }
   | null
 
-export function mapSSEEventToWebviewMessage(event: SSEEvent, sessionID: string | undefined): WebviewMessage {
+export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | undefined): WebviewMessage {
   switch (event.type) {
     case "message.part.updated": {
       const part = event.properties.part as { messageID?: string; sessionID?: string }
@@ -72,7 +183,6 @@ export function mapSSEEventToWebviewMessage(event: SSEEvent, sessionID: string |
         sessionID,
         messageID: part.messageID || "",
         part: event.properties.part,
-        delta: event.properties.delta ? { type: "text-delta", textDelta: event.properties.delta } : undefined,
       }
     }
     case "message.part.delta": {
@@ -122,7 +232,7 @@ export function mapSSEEventToWebviewMessage(event: SSEEvent, sessionID: string |
       return {
         type: "todoUpdated",
         sessionID: event.properties.sessionID,
-        items: event.properties.items,
+        items: event.properties.todos,
       }
     case "question.asked":
       return {
@@ -153,4 +263,17 @@ export function mapSSEEventToWebviewMessage(event: SSEEvent, sessionID: string |
     default:
       return null
   }
+}
+
+/**
+ * Check whether an SSE event belongs to a different project and should be dropped.
+ * Returns true when the event carries a projectID that does not match the expected one.
+ * When expectedProjectID is undefined (not yet resolved), nothing is filtered.
+ */
+export function isEventFromForeignProject(event: Event, expectedProjectID: string | undefined): boolean {
+  if (!expectedProjectID) return false
+  if (event.type === "session.created" || event.type === "session.updated") {
+    return event.properties.info.projectID !== expectedProjectID
+  }
+  return false
 }

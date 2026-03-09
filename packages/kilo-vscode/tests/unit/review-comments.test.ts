@@ -120,7 +120,7 @@ describe("sanitizeReviewComments", () => {
 describe("formatReviewCommentsMarkdown", () => {
   it("returns header only for empty array", () => {
     const result = formatReviewCommentsMarkdown([])
-    expect(result).toBe("## Review Comments\n")
+    expect(result).toBe("## Review Comments")
   })
 
   it("formats a single comment without selected text", () => {

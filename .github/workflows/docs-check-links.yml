@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
+    paths:
+      - "packages/kilo-docs/**"
+      - ".github/workflows/docs-check-links.yml"
   schedule:
     # Run daily at 9am UTC
     - cron: "0 9 * * *"
@@ -11,6 +14,7 @@ on:
 
 jobs:
   link-checker:
+    if: github.repository == 'Kilo-Org/kilocode'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

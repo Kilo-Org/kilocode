@@ -8,10 +8,10 @@
 
 import * as path from "path"
 import * as fs from "fs"
-import * as cp from "child_process"
 import simpleGit, { type SimpleGit } from "simple-git"
 import { generateBranchName, sanitizeBranchName } from "./branch-name"
 import type { GitOps } from "./GitOps"
+import { execWithShellEnv } from "./shell-env"
 import {
   parsePRUrl,
   localBranchName,
@@ -26,10 +26,7 @@ import {
   type BranchListItem,
 } from "./git-import"
 
-export type { BranchListItem }
-export { generateBranchName }
-
-export interface WorktreeInfo {
+interface WorktreeInfo {
   branch: string
   path: string
   parentBranch: string
@@ -37,13 +34,26 @@ export interface WorktreeInfo {
   sessionId?: string
 }
 
+export type StartPointSource = "remote" | "local-tracking" | "local-branch" | "fallback"
+
+interface StartPointResult {
+  ref: string
+  branch: string
+  source: StartPointSource
+  warning?: string
+}
+
+type WorktreeProgressStep = "syncing" | "verifying" | "fetching" | "creating"
+
 export interface CreateWorktreeResult {
   branch: string
   path: string
   parentBranch: string
+  startPointSource: StartPointSource
+  startPointWarning?: string
 }
 
-export interface ExternalWorktreeItem {
+interface ExternalWorktreeItem {
   path: string
   branch: string
 }
@@ -67,11 +77,47 @@ export class WorktreeManager {
     this.log = log
   }
 
+  // ---------------------------------------------------------------------------
+  // Per-project git operation mutex
+  // ---------------------------------------------------------------------------
+
+  // Serializes git-writing operations per repository root so concurrent
+  // callers (e.g. multi-version worktree creation) don't hit index.lock
+  // conflicts. Operations on different repositories proceed in parallel.
+  private static locks = new Map<string, Promise<void>>()
+
+  private withGitLock<T>(fn: () => Promise<T>): Promise<T> {
+    const key = this.root
+    const prev = WorktreeManager.locks.get(key) ?? Promise.resolve()
+    const result = prev.then(fn)
+    const barrier = result.then(
+      () => {},
+      () => {},
+    )
+    WorktreeManager.locks.set(key, barrier)
+    return result
+  }
+
+  // ---------------------------------------------------------------------------
+  // Public API (acquires git lock)
+  // ---------------------------------------------------------------------------
+
   async createWorktree(params: {
     prompt?: string
     existingBranch?: string
     baseBranch?: string
     branchName?: string
+    onProgress?: (step: WorktreeProgressStep, message: string, detail?: string) => void
+  }): Promise<CreateWorktreeResult> {
+    return this.withGitLock(() => this.createWorktreeImpl(params))
+  }
+
+  private async createWorktreeImpl(params: {
+    prompt?: string
+    existingBranch?: string
+    baseBranch?: string
+    branchName?: string
+    onProgress?: (step: WorktreeProgressStep, message: string, detail?: string) => void
   }): Promise<CreateWorktreeResult> {
     const repo = await this.git.checkIsRepo()
     if (!repo)
@@ -79,20 +125,39 @@ export class WorktreeManager {
         "This folder is not a git repository. Initialize a repository or open a git project to use worktrees.",
       )
 
+    // Git LFS Pre-flight Check
+    if (await this.repoUsesLfs()) {
+      if (!(await this.checkLfsAvailable())) {
+        throw new Error(
+          "This repository uses Git LFS, but git-lfs was not found. Please install Git LFS to use this repository.",
+        )
+      }
+    }
+
     await this.ensureDir()
     await this.ensureGitExclude()
 
-    const parent = params.baseBranch || (await this.currentBranch())
+    // Resolve start point (parent branch)
+    let parent: string
+    let startPoint: StartPointResult | undefined
 
-    // Validate baseBranch exists if explicitly provided
-    if (params.baseBranch) {
-      const exists = await this.branchExists(params.baseBranch)
-      if (!exists) throw new Error(`Base branch "${params.baseBranch}" does not exist`)
-      // Check if the base branch is a remote-only branch and fetch it
-      const branches = await this.git.branch()
-      if (!branches.all.includes(params.baseBranch) && branches.all.includes(`remotes/origin/${params.baseBranch}`)) {
-        await this.git.fetch("origin", params.baseBranch)
+    if (params.existingBranch) {
+      // Existing branch provided directly
+      parent = params.existingBranch
+      startPoint = {
+        ref: params.existingBranch,
+        branch: params.existingBranch,
+        source: "local-branch",
       }
+    } else {
+      // Resolve best start point for new branch
+      const requestedBase = params.baseBranch || (await this.defaultBranch())
+      params.onProgress?.("verifying", `Resolving start point: ${requestedBase}`)
+
+      startPoint = await this.resolveStartPoint(requestedBase, params.onProgress, {
+        allowFallback: !params.baseBranch, // Only fallback if user didn't explicitly request a specific base
+      })
+      parent = startPoint.branch
     }
 
     const sanitized = params.branchName ? sanitizeBranchName(params.branchName) : undefined
@@ -108,15 +173,18 @@ export class WorktreeManager {
 
     if (fs.existsSync(worktreePath)) {
       this.log(`Worktree directory exists, cleaning up before re-creation: ${worktreePath}`)
-      await this.removeWorktree(worktreePath)
+      await this.removeWorktreeImpl(worktreePath)
     }
+
+    params.onProgress?.("creating", `Creating worktree for ${branch}...`)
+
+    // Dereference to commit SHA to prevent upstream tracking for new branches
+    const startRef = params.existingBranch ? undefined : `${startPoint.ref}^{commit}`
 
     try {
       const args = params.existingBranch
         ? ["worktree", "add", worktreePath, branch]
-        : params.baseBranch
-          ? ["worktree", "add", "-b", branch, worktreePath, params.baseBranch]
-          : ["worktree", "add", "-b", branch, worktreePath]
+        : ["worktree", "add", "-b", branch, worktreePath, startRef!]
       await this.git.raw(args)
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
@@ -133,14 +201,20 @@ export class WorktreeManager {
       branch = `${branch}-${Date.now()}`
       const retryDir = branch.replace(/\//g, "-")
       worktreePath = path.join(this.dir, retryDir)
-      const retryArgs = params.baseBranch
-        ? ["worktree", "add", "-b", branch, worktreePath, params.baseBranch]
-        : ["worktree", "add", "-b", branch, worktreePath]
+      const retryArgs = params.existingBranch
+        ? ["worktree", "add", worktreePath, branch]
+        : ["worktree", "add", "-b", branch, worktreePath, startRef!]
       await this.git.raw(retryArgs)
     }
 
     this.log(`Created worktree: ${worktreePath} (branch: ${branch}, base: ${parent})`)
-    return { branch, path: worktreePath, parentBranch: parent }
+    return {
+      branch,
+      path: worktreePath,
+      parentBranch: parent,
+      startPointSource: startPoint.source,
+      startPointWarning: startPoint.warning,
+    }
   }
 
   /**
@@ -154,6 +228,10 @@ export class WorktreeManager {
    * that git doesn't know about.
    */
   async removeWorktree(worktreePath: string): Promise<void> {
+    return this.withGitLock(() => this.removeWorktreeImpl(worktreePath))
+  }
+
+  private async removeWorktreeImpl(worktreePath: string): Promise<void> {
     const clean = await this.git.raw(["worktree", "remove", worktreePath]).then(
       () => true,
       () => false,
@@ -240,6 +318,10 @@ export class WorktreeManager {
     await this.addExcludeEntry(excludePath, ".kilocode/worktrees/", "Kilo Code agent worktrees")
     await this.addExcludeEntry(excludePath, ".kilocode/agent-manager.json", "Kilo Agent Manager state")
     await this.addExcludeEntry(excludePath, ".kilocode/setup-script", "Kilo Code worktree setup script")
+    await this.addExcludeEntry(excludePath, ".kilocode/setup-script.sh", "Kilo Code worktree setup script")
+    await this.addExcludeEntry(excludePath, ".kilocode/setup-script.ps1", "Kilo Code worktree setup script")
+    await this.addExcludeEntry(excludePath, ".kilocode/setup-script.cmd", "Kilo Code worktree setup script")
+    await this.addExcludeEntry(excludePath, ".kilocode/setup-script.bat", "Kilo Code worktree setup script")
   }
 
   private async ensureWorktreeExclude(worktreePath: string): Promise<void> {
@@ -343,6 +425,125 @@ export class WorktreeManager {
     }
   }
 
+  async resolveStartPoint(
+    branch: string,
+    onProgress?: (step: WorktreeProgressStep, message: string, detail?: string) => void,
+    opts?: { allowFallback?: boolean },
+  ): Promise<StartPointResult> {
+    const { allowFallback = true } = opts || {}
+
+    // 1. Remote fetch
+    if (await this.hasOriginRemote()) {
+      onProgress?.("fetching", `Fetching origin/${branch}...`)
+      try {
+        await this.git.fetch("origin", branch)
+        if (await this.refExistsLocally(`origin/${branch}`)) {
+          return {
+            ref: `origin/${branch}`,
+            branch: branch,
+            source: "remote",
+          }
+        }
+      } catch (e) {
+        this.log(`Failed to fetch origin/${branch}: ${e}`)
+      }
+    }
+
+    // 2. Stale local tracking ref (offline fallback)
+    if (await this.refExistsLocally(`origin/${branch}`)) {
+      return {
+        ref: `origin/${branch}`,
+        branch: branch,
+        source: "local-tracking",
+        warning: "Used stale remote tracking branch (fetch failed)",
+      }
+    }
+
+    // 3. Local branch
+    if (await this.refExistsLocally(branch)) {
+      return {
+        ref: branch,
+        branch: branch,
+        source: "local-branch",
+      }
+    }
+
+    // 4. Derived fallback
+    if (allowFallback) {
+      const fallbacks = await this.derivedFallbackBranches(branch)
+      for (const fallback of fallbacks) {
+        if (fallback === branch) continue // already tried
+        try {
+          const res = await this.resolveStartPoint(fallback, onProgress, { allowFallback: false })
+          return {
+            ...res,
+            source: "fallback",
+            warning: `Branch "${branch}" not found, falling back to "${fallback}"`,
+          }
+        } catch {
+          // continue
+        }
+      }
+    }
+
+    throw new Error(`Could not resolve start point for branch "${branch}"`)
+  }
+
+  async hasOriginRemote(): Promise<boolean> {
+    try {
+      const remotes = await this.git.getRemotes()
+      return remotes.some((r) => r.name === "origin")
+    } catch {
+      return false
+    }
+  }
+
+  async refExistsLocally(ref: string): Promise<boolean> {
+    try {
+      await this.git.raw(["rev-parse", "--verify", `${ref}^{commit}`])
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  async derivedFallbackBranches(requested: string): Promise<string[]> {
+    const defaults = []
+    try {
+      defaults.push(await this.defaultBranch())
+    } catch {}
+    return defaults
+  }
+
+  async repoUsesLfs(): Promise<boolean> {
+    // Check .git/lfs/ directory
+    const gitDir = await this.resolveGitDir()
+    if (fs.existsSync(path.join(gitDir, "lfs"))) return true
+
+    // Check .gitattributes
+    try {
+      const attributes = await fs.promises.readFile(path.join(this.root, ".gitattributes"), "utf-8")
+      if (attributes.includes("filter=lfs")) return true
+    } catch {}
+
+    // Check .git/info/attributes
+    try {
+      const infoAttributes = await fs.promises.readFile(path.join(gitDir, "info", "attributes"), "utf-8")
+      if (infoAttributes.includes("filter=lfs")) return true
+    } catch {}
+
+    return false
+  }
+
+  async checkLfsAvailable(): Promise<boolean> {
+    try {
+      await execWithShellEnv("git", ["lfs", "version"], { cwd: this.root, timeout: 5000 })
+      return true
+    } catch {
+      return false
+    }
+  }
+
   async currentBranch(): Promise<string> {
     if (this.ops) {
       const branch = await this.ops.currentBranch(this.root)
@@ -362,28 +563,32 @@ export class WorktreeManager {
   }
 
   async defaultBranch(): Promise<string> {
-    if (this.ops) {
-      const remote = await this.ops.resolveRemote(this.root)
-      const resolved = await this.ops.resolveDefaultBranch(this.root)
-      if (resolved) {
-        const prefix = `${remote}/`
-        return resolved.startsWith(prefix) ? resolved.slice(prefix.length) : resolved
-      }
-    } else {
-      try {
-        const head = await this.git.raw(["symbolic-ref", "refs/remotes/origin/HEAD"])
-        const match = head.trim().match(/refs\/remotes\/origin\/(.+)$/)
-        if (match) return match[1]
-      } catch {}
+    // 1. Try symbolic-ref
+    try {
+      const head = await this.git.raw(["symbolic-ref", "refs/remotes/origin/HEAD"])
+      const match = head.trim().match(/refs\/remotes\/origin\/(.+)$/)
+      if (match) return match[1]
+    } catch (e) {
+      this.log(`defaultBranch: symbolic-ref failed: ${e}`)
     }
 
+    // 2. Try current branch (if not detached)
     try {
-      const branches = await this.git.branch()
-      if (branches.all.includes("main")) return "main"
-      if (branches.all.includes("master")) return "master"
-    } catch {}
+      const current = await this.currentBranch()
+      if (current && current !== "HEAD") return current
+    } catch (e) {
+      this.log(`defaultBranch: currentBranch failed: ${e}`)
+    }
 
-    return "main"
+    // 3. Try first local branch
+    try {
+      const branches = await this.git.branchLocal()
+      if (branches.all.length > 0) return branches.all[0]
+    } catch (e) {
+      this.log(`defaultBranch: branchLocal failed: ${e}`)
+    }
+
+    throw new Error("Could not determine default branch")
   }
 
   // ---------------------------------------------------------------------------
@@ -436,6 +641,10 @@ export class WorktreeManager {
   }
 
   async createFromPR(url: string): Promise<CreateWorktreeResult> {
+    return this.withGitLock(() => this.createFromPRImpl(url))
+  }
+
+  private async createFromPRImpl(url: string): Promise<CreateWorktreeResult> {
     const parsed = parsePRUrl(url)
     if (!parsed) throw new Error("Invalid PR URL. Expected: https://github.com/owner/repo/pull/123")
 
@@ -458,7 +667,7 @@ export class WorktreeManager {
       await this.git.raw(["branch", branch, `${forkOwner}/${info.headRefName}`])
     }
 
-    return this.createWorktree({ existingBranch: branch })
+    return this.createWorktreeImpl({ existingBranch: branch })
   }
 
   private async fetchPRInfo(parsed: { owner: string; repo: string; number: number }): Promise<PRInfo> {
@@ -515,13 +724,9 @@ export class WorktreeManager {
     }
   }
 
-  private exec(cmd: string, args: string[], timeout = 120000): Promise<string> {
-    return new Promise((resolve, reject) => {
-      cp.execFile(cmd, args, { cwd: this.root, timeout, encoding: "utf-8" }, (error, stdout) => {
-        if (error) reject(error)
-        else resolve(stdout)
-      })
-    })
+  private async exec(cmd: string, args: string[], timeout = 120000): Promise<string> {
+    const { stdout } = await execWithShellEnv(cmd, args, { cwd: this.root, timeout })
+    return stdout
   }
 
   private async gitExec(args: string[]): Promise<void> {
