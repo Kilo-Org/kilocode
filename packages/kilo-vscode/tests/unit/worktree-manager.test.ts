@@ -39,23 +39,31 @@ function createManager(root: string): WorktreeManager {
 
 /** Create a temp repo with a bare origin remote so origin/<branch> refs exist. */
 async function createTempRepoWithOrigin(): Promise<{ bare: string; clone: string }> {
+  // Use a non-bare seed repo to control the initial branch name, then clone bare
+  const seed = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-seed-"))
+  tempDirs.push(seed)
+  const seedGit = simpleGit(seed)
+  await seedGit.init()
+  await seedGit.addConfig("user.email", "test@test.com")
+  await seedGit.addConfig("user.name", "Test")
+  await fs.writeFile(path.join(seed, "README.md"), "init")
+  await seedGit.add(".")
+  await seedGit.commit("initial commit")
+  // Ensure branch is named "main" regardless of system default
+  const seedBranch = (await seedGit.revparse(["--abbrev-ref", "HEAD"])).trim()
+  if (seedBranch !== "main") await seedGit.raw(["branch", "-m", seedBranch, "main"])
+
+  // Clone to bare, then clone again as working copy
   const bare = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-bare-"))
   tempDirs.push(bare)
-  const bareGit = simpleGit(bare)
-  await bareGit.init(true)
+  await simpleGit().clone(seed, bare, ["--bare"])
 
   const clone = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-clone-"))
   tempDirs.push(clone)
+  await simpleGit().clone(bare, clone)
   const cloneGit = simpleGit(clone)
-  await cloneGit.clone(bare, clone, ["--no-hardlinks"])
   await cloneGit.addConfig("user.email", "test@test.com")
   await cloneGit.addConfig("user.name", "Test")
-
-  // Bare repo has no commits yet — push an initial one
-  await fs.writeFile(path.join(clone, "README.md"), "init")
-  await cloneGit.add(".")
-  await cloneGit.commit("initial commit")
-  await cloneGit.push("origin", "main")
 
   return { bare, clone }
 }
