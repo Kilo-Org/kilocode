@@ -41,6 +41,14 @@ type ProviderData = {
   default: Record<string, string>
 }
 
+type ConfigValue = {
+  defaultValue?: string
+  globalValue?: string
+  workspaceValue?: string
+  workspaceFolderValue?: string
+  globalLanguageValue?: string
+}
+
 function createContext(overrides?: Partial<SessionRefreshContext>): SessionRefreshContext & { sent: unknown[] } {
   const sent: unknown[] = []
   return {
@@ -143,9 +151,20 @@ function createConnection(client: ReturnType<typeof createClient>) {
   }
 }
 
-function setModelConfig(values?: { providerID?: string; modelID?: string }) {
+function setModelConfig(values?: { providerID?: ConfigValue; modelID?: ConfigValue }) {
   const getConfiguration = vscode.workspace.getConfiguration as unknown as (section?: string) => {
     get: <T>(key: string) => T | undefined
+    inspect: <T>(key: string) => {
+      key: string
+      defaultValue?: T
+      globalValue?: T
+      workspaceValue?: T
+      workspaceFolderValue?: T
+      defaultLanguageValue?: T
+      globalLanguageValue?: T
+      workspaceLanguageValue?: T
+      workspaceFolderLanguageValue?: T
+    }
   }
   ;(vscode.workspace.getConfiguration as unknown as typeof getConfiguration) = (section?: string) => {
     if (section !== "kilo-code.new.model") {
@@ -153,7 +172,18 @@ function setModelConfig(values?: { providerID?: string; modelID?: string }) {
     }
 
     return {
-      get: <T>(key: string) => values?.[key as "providerID" | "modelID"] as T | undefined,
+      get: <T>(key: string) => values?.[key as "providerID" | "modelID"]?.defaultValue as T | undefined,
+      inspect: <T>(key: string) => ({
+        key,
+        defaultValue: values?.[key as "providerID" | "modelID"]?.defaultValue as T | undefined,
+        globalValue: values?.[key as "providerID" | "modelID"]?.globalValue as T | undefined,
+        workspaceValue: values?.[key as "providerID" | "modelID"]?.workspaceValue as T | undefined,
+        workspaceFolderValue: values?.[key as "providerID" | "modelID"]?.workspaceFolderValue as T | undefined,
+        defaultLanguageValue: undefined as T | undefined,
+        globalLanguageValue: values?.[key as "providerID" | "modelID"]?.globalLanguageValue as T | undefined,
+        workspaceLanguageValue: undefined as T | undefined,
+        workspaceFolderLanguageValue: undefined as T | undefined,
+      }),
     }
   }
 }
@@ -297,8 +327,40 @@ describe("KiloProvider pending session refresh", () => {
     expect(loaded?.defaultSelection).toEqual({ providerID: "anthropic", modelID: "claude-sonnet-4" })
   })
 
+  it("fresh installs ignore contributed defaults and use backend fallback", async () => {
+    setModelConfig({
+      providerID: { defaultValue: "kilo" },
+      modelID: { defaultValue: "kilo-auto/frontier" },
+    })
+    const client = createClient({
+      all: [createProvider("openai", ["gpt-5"]), createProvider("anthropic", ["claude-sonnet-4"])],
+      connected: [],
+      default: { openai: "gpt-5" },
+    })
+    const connection = createConnection(client)
+    const provider = new KiloProvider({} as never, connection as never)
+    const internal = provider as unknown as ProviderInternals
+    const sent: unknown[] = []
+
+    await internal.initializeConnection()
+    internal.postMessage = (message: unknown) => {
+      sent.push(message)
+    }
+
+    await internal.fetchAndSendProviders()
+
+    const loaded = sent.find((msg) => {
+      return typeof msg === "object" && !!msg && "type" in msg && (msg as { type?: unknown }).type === "providersLoaded"
+    }) as { defaultSelection: { providerID: string; modelID: string } } | undefined
+
+    expect(loaded?.defaultSelection).toEqual({ providerID: "openai", modelID: "gpt-5" })
+  })
+
   it("uses valid VS Code model settings as the startup override", async () => {
-    setModelConfig({ providerID: "anthropic", modelID: "claude-sonnet-4" })
+    setModelConfig({
+      providerID: { workspaceValue: "anthropic" },
+      modelID: { workspaceValue: "claude-sonnet-4" },
+    })
     const client = createClient({
       all: [createProvider("openai", ["gpt-5"]), createProvider("anthropic", ["claude-sonnet-4"])],
       connected: [],
@@ -324,7 +386,10 @@ describe("KiloProvider pending session refresh", () => {
   })
 
   it("falls back safely when VS Code model settings are invalid", async () => {
-    setModelConfig({ providerID: "missing", modelID: "missing-model" })
+    setModelConfig({
+      providerID: { globalValue: "missing" },
+      modelID: { globalValue: "missing-model" },
+    })
     const client = createClient({
       all: [createProvider("openai", ["gpt-5"]), createProvider("anthropic", ["claude-sonnet-4"])],
       connected: [],

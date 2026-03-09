@@ -1007,9 +1007,23 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       const normalized = indexProvidersById(response.all)
       const config = vscode.workspace.getConfiguration("kilo-code.new.model")
+      const providerID = config.inspect<string>("providerID")
+      const modelID = config.inspect<string>("modelID")
+      const override = {
+        providerID:
+          providerID?.workspaceFolderValue ??
+          providerID?.workspaceValue ??
+          providerID?.globalValue ??
+          providerID?.globalLanguageValue,
+        modelID:
+          modelID?.workspaceFolderValue ??
+          modelID?.workspaceValue ??
+          modelID?.globalValue ??
+          modelID?.globalLanguageValue,
+      }
       const selection = getProviderSelection(normalized, response.default, {
-        providerID: config.get<string>("providerID"),
-        modelID: config.get<string>("modelID"),
+        providerID: override.providerID,
+        modelID: override.modelID,
       })
 
       const message = {

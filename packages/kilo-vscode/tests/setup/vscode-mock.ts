@@ -48,6 +48,17 @@ const mockVscode = {
     workspaceFolders: [{ uri: { fsPath: "/repo" } }],
     getConfiguration: () => ({
       get: <T>(_key: string, value?: T) => value,
+      inspect: <T>(_key: string) => ({
+        key: "",
+        defaultValue: undefined as T | undefined,
+        globalValue: undefined as T | undefined,
+        workspaceValue: undefined as T | undefined,
+        workspaceFolderValue: undefined as T | undefined,
+        defaultLanguageValue: undefined as T | undefined,
+        globalLanguageValue: undefined as T | undefined,
+        workspaceLanguageValue: undefined as T | undefined,
+        workspaceFolderLanguageValue: undefined as T | undefined,
+      }),
       update: async () => {},
     }),
     asRelativePath: (pathOrUri: string) => pathOrUri,
