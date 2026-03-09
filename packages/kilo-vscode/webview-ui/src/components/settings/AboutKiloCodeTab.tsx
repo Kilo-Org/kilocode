@@ -7,6 +7,7 @@ export interface AboutKiloCodeTabProps {
   port: number | null
   connectionState: ConnectionState
   extensionVersion?: string
+  onMigrateClick?: () => void // legacy-migration
 }
 
 const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
@@ -157,8 +158,39 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
         </div>
       </div>
 
-      {/* Reset Settings */}
+      {/* legacy-migration start */}
       <div style={{ ...sectionStyle, "margin-bottom": "0" }}>
+        <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.legacyMigration.title")}</h4>
+        <p
+          style={{
+            "font-size": "12px",
+            color: "var(--vscode-descriptionForeground)",
+            margin: "0 0 12px 0",
+            "line-height": "1.5",
+          }}
+        >
+          {language.t("settings.aboutKiloCode.legacyMigration.description")}
+        </p>
+        <button
+          type="button"
+          onClick={() => props.onMigrateClick?.()}
+          style={{
+            background: "var(--vscode-button-background)",
+            color: "var(--vscode-button-foreground)",
+            border: "none",
+            padding: "6px 14px",
+            "border-radius": "2px",
+            cursor: "pointer",
+            "font-size": "12px",
+          }}
+        >
+          {language.t("settings.legacyMigration.link")}
+        </button>
+      </div>
+      {/* legacy-migration end */}
+
+      {/* Reset Settings */}
+      <div style={sectionStyle}>
         <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.resetSettings.title")}</h4>
         <p
           style={{

@@ -2,7 +2,7 @@
   "name": "kilo-code",
   "displayName": "Kilo Code: AI Coding Agent, Copilot, and Autocomplete",
   "description": "Open Source AI coding agent that generates code from natural language, automates tasks, and runs terminal commands. Features inline autocomplete, browser automation, automated refactoring, and custom modes for planning, coding, and debugging. Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM.",
-  "version": "7.0.33",
+  "version": "7.0.40",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
@@ -111,6 +111,11 @@
         }
       },
       {
+        "command": "kilo-code.new.openMigrationWizard",
+        "title": "Migrate Settings from Legacy Version",
+        "category": "Kilo Code"
+      },
+      {
         "command": "kilo-code.new.autocomplete.generateSuggestions",
         "title": "Generate Suggested Edits",
         "category": "Kilo Code"
@@ -148,6 +153,12 @@
         "icon": "$(diff)"
       },
       {
+        "command": "kilo-code.new.agentManager.showShortcuts",
+        "title": "Agent Manager: Show Keyboard Shortcuts",
+        "category": "Kilo Code",
+        "icon": "$(keyboard)"
+      },
+      {
         "command": "kilo-code.new.agentManager.focusPanel",
         "title": "Agent Manager: Focus Panel",
         "category": "Kilo Code",
@@ -166,6 +177,11 @@
       {
         "command": "kilo-code.new.agentManager.newWorktree",
         "title": "Agent Manager: New Worktree",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.agentManager.openWorktree",
+        "title": "Agent Manager: Open Worktree",
         "category": "Kilo Code"
       },
       {
@@ -399,26 +415,26 @@
       },
       {
         "command": "kilo-code.new.agentManager.previousSession",
-        "key": "ctrl+up",
-        "mac": "cmd+up",
+        "key": "ctrl+alt+up",
+        "mac": "cmd+alt+up",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {
         "command": "kilo-code.new.agentManager.nextSession",
-        "key": "ctrl+down",
-        "mac": "cmd+down",
+        "key": "ctrl+alt+down",
+        "mac": "cmd+alt+down",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {
         "command": "kilo-code.new.agentManager.previousTab",
-        "key": "ctrl+left",
-        "mac": "cmd+left",
+        "key": "ctrl+alt+left",
+        "mac": "cmd+alt+left",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {
         "command": "kilo-code.new.agentManager.nextTab",
-        "key": "ctrl+right",
-        "mac": "cmd+right",
+        "key": "ctrl+alt+right",
+        "mac": "cmd+alt+right",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {
@@ -431,6 +447,12 @@
         "command": "kilo-code.new.agentManager.toggleDiff",
         "key": "ctrl+d",
         "mac": "cmd+d",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.agentManager.showShortcuts",
+        "key": "ctrl+shift+/",
+        "mac": "cmd+shift+/",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {
@@ -455,6 +477,12 @@
         "command": "kilo-code.new.agentManager.newWorktree",
         "key": "ctrl+n",
         "mac": "cmd+n",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.agentManager.openWorktree",
+        "key": "ctrl+shift+o",
+        "mac": "cmd+shift+o",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {
@@ -577,7 +605,7 @@
         },
         "kilo-code.new.model.modelID": {
           "type": "string",
-          "default": "kilo/auto",
+          "default": "kilo-auto/frontier",
           "description": "Default model ID for new sessions"
         },
         "kilo-code.new.autocomplete.enableAutoTrigger": {
@@ -657,23 +685,31 @@
   },
   "scripts": {
     "prepare:cli-binary": "bun script/local-bin.ts",
-    "compile": "bun run prepare:cli-binary && bun run check-types && bun run lint && node esbuild.js",
-    "watch": "bun run --parallel watch:esbuild watch:tsc",
+    "compile": "bun run prepare:cli-binary && bun run rebuild-sdk && bun run check-types && bun run lint && node esbuild.js",
+    "watch": "bun run rebuild-sdk && bun run --parallel watch:esbuild watch:tsc",
     "watch:esbuild": "bun run prepare:cli-binary && node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
     "watch:cli": "bun script/watch-cli.ts",
-    "package": "bun run prepare:cli-binary && bun run check-types && bun run lint && node esbuild.js --production",
+    "package": "bun run prepare:cli-binary && bun run rebuild-sdk && bun run check-types && bun run lint && node esbuild.js --production",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "bun run compile-tests && bun run compile && bun run lint",
     "check-types": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint": "eslint src",
+    "knip": "knip",
+    "lint": "eslint src webview-ui",
     "test": "vscode-test",
-    "test:unit": "bun test tests/unit/"
+    "test:unit": "bun test tests/unit/",
+    "rebuild-sdk": "bun run --cwd ../sdk/js build",
+    "storybook": "storybook dev -p 6007",
+    "build-storybook": "storybook build -o storybook-static",
+    "test:visual": "playwright test",
+    "test:visual:update": "playwright test --update-snapshots"
   },
   "devDependencies": {
+    "@playwright/test": "1.58.2",
+    "@storybook/addon-docs": "10.2.10",
     "@types/diff": "^6.0.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
@@ -681,16 +717,21 @@
     "@types/vscode": "^1.108.0",
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.7.1",
     "esbuild": "^0.27.2",
     "esbuild-plugin-solid": "^0.6.0",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
+    "knip": "5.85.0",
     "prettier": "^3.8.1",
     "qrcode": "^1.5.4",
+    "storybook": "10.2.10",
+    "storybook-solidjs-vite": "10.0.9",
     "ts-morph": "27.0.2",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.54.0",
-    "@vscode/vsce": "^3.7.1"
+    "vite": "7.3.1",
+    "vite-plugin-solid": "2.11.10"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
@@ -701,7 +742,6 @@
     "@thisbeyond/solid-dnd": "0.7.5",
     "diff": "^7.0.0",
     "dotenv": "^16.4.7",
-    "eventsource": "^2.0.2",
     "fastest-levenshtein": "^1.0.16",
     "ignore": "^7.0.3",
     "js-tiktoken": "^1.0.18",

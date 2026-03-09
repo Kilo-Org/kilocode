@@ -22,6 +22,10 @@ export const AutomateNav: NavSection[] = [
         subLinks: [
           { href: "/automate/kiloclaw/overview", children: "Overview" },
           { href: "/automate/kiloclaw/dashboard", children: "Dashboard" },
+          {
+            href: "/automate/kiloclaw/pre-installed-software",
+            children: "Pre-installed Software",
+          },
           { href: "/automate/kiloclaw/control-ui", children: "Control UI" },
           {
             href: "/automate/kiloclaw/chat-platforms",

@@ -10,8 +10,9 @@ import {
   CONTENT_TYPE,
   DEFAULT_EDITOR_NAME,
   ENV_EDITOR_NAME,
+  ENV_VERSION,
   TESTER_SUPPRESS_VALUE,
-  ENV_FEATURE, // kilocode_change
+  ENV_FEATURE,
 } from "./api/constants.js"
 
 /**
@@ -45,10 +46,13 @@ export const DEFAULT_HEADERS = {
 
 /**
  * Get editor name header value
- * Defaults to "opencode" but can be customized
+ * Defaults to "Kilo CLI" but can be customized via KILOCODE_EDITOR_NAME.
+ * Appends the version from KILOCODE_VERSION when available.
  */
 export function getEditorNameHeader(): string {
-  return process.env[ENV_EDITOR_NAME] ?? DEFAULT_EDITOR_NAME
+  const name = process.env[ENV_EDITOR_NAME] ?? DEFAULT_EDITOR_NAME
+  const version = process.env[ENV_VERSION]
+  return version ? `${name} ${version}` : name
 }
 
 /**
@@ -62,13 +66,11 @@ export function buildKiloHeaders(
     machineId?: string
   },
 ): Record<string, string> {
-  // kilocode_change start
   const feature = getFeatureHeader()
   const headers: Record<string, string> = {
     [X_KILOCODE_EDITORNAME]: getEditorNameHeader(),
     ...(feature ? { [X_KILOCODE_FEATURE]: feature } : {}),
   }
-  // kilocode_change end
 
   if (metadata?.taskId) {
     headers[X_KILOCODE_TASKID] = metadata.taskId

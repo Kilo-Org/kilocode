@@ -1,4 +1,3 @@
-// @ts-expect-error quick-lru is ESM-only; esbuild handles the import at build time
 import QuickLRU from "quick-lru"
 
 // maximum number of open files that can be cached
