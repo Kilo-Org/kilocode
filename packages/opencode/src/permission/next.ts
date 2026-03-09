@@ -106,27 +106,38 @@ export namespace PermissionNext {
     ),
   }
 
-  const state = Instance.state(() => {
-    const projectID = Instance.project.id
-    const row = Database.use((db) =>
-      db.select().from(PermissionTable).where(eq(PermissionTable.project_id, projectID)).get(),
-    )
-    const stored = row?.data ?? ([] as Ruleset)
+  const state = Instance.state(
+    () => {
+      const projectID = Instance.project.id
+      const row = Database.use((db) =>
+        db.select().from(PermissionTable).where(eq(PermissionTable.project_id, projectID)).get(),
+      )
+      const stored = row?.data ?? ([] as Ruleset)
 
-    const pending: Record<
-      string,
-      {
-        info: Request
-        resolve: () => void
-        reject: (e: any) => void
+      const pending: Record<
+        string,
+        {
+          info: Request
+          resolve: () => void
+          reject: (e: any) => void
+        }
+      > = {}
+
+      return {
+        pending,
+        approved: stored,
       }
-    > = {}
-
-    return {
-      pending,
-      approved: stored,
-    }
-  })
+    },
+    async (s) => {
+      // On instance disposal, reject all pending permission promises so they
+      // don't leak. Without this, tools awaiting PermissionNext.ask() would
+      // hang forever when the server shuts down or the project is disposed.
+      for (const [id, entry] of Object.entries(s.pending)) {
+        delete s.pending[id]
+        entry.reject(new RejectedError())
+      }
+    },
+  )
 
   export const ask = fn(
     Request.partial({ id: true }).extend({
@@ -282,5 +293,24 @@ export namespace PermissionNext {
   export async function list() {
     const s = await state()
     return Object.values(s.pending).map((x) => x.info)
+  }
+
+  /**
+   * Reject all pending permission requests for a session.
+   * Called when a session is cancelled/aborted so that tools blocked on
+   * PermissionNext.ask() are unblocked instead of hanging forever.
+   */
+  export async function rejectSession(sessionID: string) {
+    const s = await state()
+    for (const [id, entry] of Object.entries(s.pending)) {
+      if (entry.info.sessionID !== sessionID) continue
+      delete s.pending[id]
+      Bus.publish(Event.Replied, {
+        sessionID: entry.info.sessionID,
+        requestID: entry.info.id,
+        reply: "reject",
+      })
+      entry.reject(new RejectedError())
+    }
   }
 }

@@ -165,6 +165,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         type: "profileData",
         data: profileData,
       })
+      // Re-fetch pending permissions so prompts reappear after webview refresh.
+      this.fetchAndSendPendingPermissions()
     }
 
     // legacy-migration start
@@ -647,6 +649,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             }
             await this.syncWebviewState("sse-connected")
             await this.flushPendingSessionRefresh("sse-connected")
+            // Re-fetch pending permissions after SSE reconnect.
+            // The permission.asked SSE event is one-shot — if the connection drops
+            // while a permission prompt is pending, the webview loses the prompt
+            // but the CLI is still blocked waiting for a reply. Re-fetching here
+            // ensures the prompt reappears after reconnection.
+            this.fetchAndSendPendingPermissions()
           } catch (error) {
             console.error("[Kilo New] KiloProvider: ❌ Failed during connected state handling:", error)
             this.postMessage({
@@ -1504,6 +1512,42 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         message: getErrorMessage(error) || "Failed to compact session",
       })
     }
+  }
+
+  /**
+   * Re-fetch all pending permissions from the CLI backend and forward them to the webview.
+   * Called after SSE reconnection to restore permission prompts that may have been lost
+   * when the SSE stream dropped. Without this, the CLI would be blocked waiting for a
+   * reply that the user can never give because the prompt disappeared.
+   */
+  private fetchAndSendPendingPermissions(): void {
+    if (!this.client) return
+
+    this.client.permission
+      .list({ directory: this.getWorkspaceDirectory(this.currentSession?.id) })
+      .then((result) => {
+        const permissions = result.data
+        if (!permissions || permissions.length === 0) return
+
+        for (const p of permissions) {
+          if (!this.trackedSessionIds.has(p.sessionID)) continue
+          this.postMessage({
+            type: "permissionRequest",
+            permission: {
+              id: p.id,
+              sessionID: p.sessionID,
+              toolName: p.permission,
+              patterns: p.patterns ?? [],
+              args: p.metadata,
+              message: `Permission required: ${p.permission}`,
+              tool: p.tool,
+            },
+          })
+        }
+      })
+      .catch((error: unknown) => {
+        console.error("[Kilo New] KiloProvider: Failed to fetch pending permissions:", error)
+      })
   }
 
   /**
