@@ -251,7 +251,7 @@ describe("AutocompleteServiceManager (less mocked logic)", () => {
     })
   })
 
-  describe("updateInlineCompletionProviderRegistration()", () => {
+  describe("ensureInlineCompletionProviderRegistration()", () => {
     it("registers the provider when enableAutoTrigger is true and not snoozed", async () => {
       const manager = await createManager()
 
@@ -262,7 +262,7 @@ describe("AutocompleteServiceManager (less mocked logic)", () => {
         enableSmartInlineTaskKeybinding: true,
       }
 
-      await (manager as any).updateInlineCompletionProviderRegistration()
+      await (manager as any).ensureInlineCompletionProviderRegistration()
 
       expect(vscode.languages.registerInlineCompletionItemProvider).toHaveBeenCalledWith(
         { scheme: "file" },
@@ -283,7 +283,7 @@ describe("AutocompleteServiceManager (less mocked logic)", () => {
         enableSmartInlineTaskKeybinding: true,
       }
 
-      await (manager as any).updateInlineCompletionProviderRegistration()
+      await (manager as any).ensureInlineCompletionProviderRegistration()
 
       expect(vscode.languages.registerInlineCompletionItemProvider).not.toHaveBeenCalled()
       expect((manager as any).inlineCompletionProviderDisposable).toBeNull()
@@ -299,7 +299,7 @@ describe("AutocompleteServiceManager (less mocked logic)", () => {
         enableSmartInlineTaskKeybinding: true,
       }
 
-      await (manager as any).updateInlineCompletionProviderRegistration()
+      await (manager as any).ensureInlineCompletionProviderRegistration()
 
       expect(existingDisposable.dispose).toHaveBeenCalledTimes(1)
       expect((manager as any).inlineCompletionProviderDisposable).toBeNull()
