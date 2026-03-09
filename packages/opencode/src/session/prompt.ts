@@ -288,6 +288,11 @@ export namespace SessionPrompt {
     }
     match.abort.abort()
     delete s[sessionID]
+    // Reject any pending permissions for this session so that tools blocked
+    // on PermissionNext.ask() are unblocked. Without this, cancelling a
+    // session while a permission prompt is pending would leave the permission
+    // promise dangling forever.
+    PermissionNext.rejectSession(sessionID)
     SessionStatus.set(sessionID, { type: "idle" })
     return
   }

@@ -962,7 +962,7 @@ export const SessionRoutes = lazy(() =>
       validator("json", z.object({ response: PermissionNext.Reply })),
       async (c) => {
         const params = c.req.valid("param")
-        PermissionNext.reply({
+        await PermissionNext.reply({
           requestID: params.permissionID,
           reply: c.req.valid("json").response,
         })
