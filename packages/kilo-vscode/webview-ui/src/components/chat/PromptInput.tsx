@@ -21,7 +21,7 @@ import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
 import { useImageAttachments } from "../../hooks/useImageAttachments"
 import { WandSparkles } from "@kilocode/kilo-ui/lucide"
-import { fileName, dirName, buildHighlightSegments } from "./prompt-input-utils"
+import { fileName, dirName, buildHighlightSegments, atEnd } from "./prompt-input-utils"
 import type { ReviewComment } from "../../types/messages"
 import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
 
@@ -175,13 +175,18 @@ export const PromptInput: Component = () => {
     (text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0) &&
     !isBusy() &&
     !isDisabled()
+  const isAtEnd = () =>
+    textareaRef ? atEnd(textareaRef.selectionStart, textareaRef.selectionEnd, textareaRef.value.length) : false
 
   const unsubscribe = vscode.onMessage((message) => {
     if (message.type === "chatCompletionResult") {
       const result = message as { type: "chatCompletionResult"; text: string; requestId: string }
-      if (result.requestId === `chat-ac-${requestCounter}` && result.text) {
+      if (result.requestId !== `chat-ac-${requestCounter}`) return
+      if (result.text && isAtEnd()) {
         setGhostText(result.text)
+        return
       }
+      setGhostText("")
     }
 
     if (message.type === "autocompleteSettingsLoaded") {
@@ -265,7 +270,7 @@ export const PromptInput: Component = () => {
   })
 
   const requestAutocomplete = (val: string) => {
-    if (val.length < MIN_TEXT_LENGTH || isDisabled() || !chatAutocompleteEnabled()) {
+    if (val.length < MIN_TEXT_LENGTH || isDisabled() || !chatAutocompleteEnabled() || !isAtEnd()) {
       setGhostText("")
       return
     }
@@ -289,6 +294,10 @@ export const PromptInput: Component = () => {
   }
 
   const dismissSuggestion = () => setGhostText("")
+  const clearSuggestionAwayFromEnd = () => {
+    if (isAtEnd()) return
+    setGhostText("")
+  }
 
   const scrollToActiveItem = () => {
     if (!dropdownRef) return
@@ -362,7 +371,14 @@ export const PromptInput: Component = () => {
       return
     }
 
-    if ((e.key === "Tab" || e.key === "ArrowRight") && ghostText()) {
+    if (e.key === "Tab" && ghostText()) {
+      if (!isAtEnd()) return
+      e.preventDefault()
+      acceptSuggestion()
+      return
+    }
+    if (e.key === "ArrowRight" && ghostText()) {
+      if (!isAtEnd()) return
       e.preventDefault()
       acceptSuggestion()
       return
@@ -563,7 +579,10 @@ export const PromptInput: Component = () => {
             value={text()}
             onInput={handleInput}
             onKeyDown={handleKeyDown}
+            onKeyUp={clearSuggestionAwayFromEnd}
             onPaste={handlePaste}
+            onClick={clearSuggestionAwayFromEnd}
+            onSelect={clearSuggestionAwayFromEnd}
             onScroll={syncHighlightScroll}
             disabled={isDisabled()}
             rows={1}

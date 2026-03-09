@@ -45,3 +45,7 @@ export function buildHighlightSegments(val: string, paths: Set<string>): { text:
 
   return segments
 }
+
+export function atEnd(start: number, end: number, len: number): boolean {
+  return start === end && end === len
+}
