@@ -49,25 +49,25 @@ describe("provider default fallback", () => {
     }
 
     expect(getProviderFallback(providers, { kilo: "kilo-auto/frontier", zed: "bad" })).toEqual({
-      providerID: "anthropic",
-      modelID: "claude-sonnet-4",
+      providerID: "openai",
+      modelID: "gpt-5-mini",
     })
   })
 
-  it("does not depend on arbitrary default object order", () => {
+  it("preserves provider order instead of default object order", () => {
     const providers = {
       openai: makeProvider("openai", ["gpt-5"]),
       anthropic: makeProvider("anthropic", ["claude-sonnet-4"]),
     }
 
     expect(getProviderFallback(providers, { openai: "gpt-5", anthropic: "claude-sonnet-4" })).toEqual({
-      providerID: "anthropic",
-      modelID: "claude-sonnet-4",
+      providerID: "openai",
+      modelID: "gpt-5",
     })
 
     expect(getProviderFallback(providers, { anthropic: "claude-sonnet-4", openai: "gpt-5" })).toEqual({
-      providerID: "anthropic",
-      modelID: "claude-sonnet-4",
+      providerID: "openai",
+      modelID: "gpt-5",
     })
   })
 
@@ -78,8 +78,20 @@ describe("provider default fallback", () => {
     }
 
     expect(getProviderFallback(providers, {})).toEqual({
-      providerID: "anthropic",
-      modelID: "claude-sonnet-4",
+      providerID: "openai",
+      modelID: "gpt-5-mini",
+    })
+  })
+
+  it("preserves provider order when choosing a fallback provider", () => {
+    const providers = {
+      openai: makeProvider("openai", ["gpt-5"]),
+      anthropic: makeProvider("anthropic", ["claude-sonnet-4"]),
+    }
+
+    expect(getProviderFallback(providers, { kilo: "kilo-auto/frontier" })).toEqual({
+      providerID: "openai",
+      modelID: "gpt-5",
     })
   })
 

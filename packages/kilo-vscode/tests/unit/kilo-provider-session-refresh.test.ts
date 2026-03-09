@@ -324,7 +324,7 @@ describe("KiloProvider pending session refresh", () => {
 
     expect(loaded?.providers.openai).toBeDefined()
     expect(loaded?.providers.anthropic).toBeDefined()
-    expect(loaded?.defaultSelection).toEqual({ providerID: "anthropic", modelID: "claude-sonnet-4" })
+    expect(loaded?.defaultSelection).toEqual({ providerID: "openai", modelID: "gpt-5" })
   })
 
   it("fresh installs ignore contributed defaults and use backend fallback", async () => {

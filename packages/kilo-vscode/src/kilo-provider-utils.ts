@@ -79,22 +79,17 @@ export function getProviderFallback(
     return { providerID: "kilo", modelID: kilo }
   }
 
-  const providerID = Object.keys(providers)
-    .sort()
-    .find((id) => {
-      const modelID = defaults[id]
-      if (!modelID) return false
-      return !!providers[id]?.models?.[modelID]
-    })
+  const providerID = Object.keys(providers).find((id) => {
+    const modelID = defaults[id]
+    if (!modelID) return false
+    return !!providers[id]?.models?.[modelID]
+  })
 
   if (providerID) {
     return { providerID, modelID: defaults[providerID]! }
   }
 
-  const provider = Object.keys(providers)
-    .sort()
-    .map((id) => providers[id]!)
-    .find((item) => Object.keys(item.models).length > 0)
+  const provider = Object.values(providers).find((item) => Object.keys(item.models).length > 0)
 
   if (provider) {
     const modelID = sortModels(Object.values(provider.models))[0]?.id
