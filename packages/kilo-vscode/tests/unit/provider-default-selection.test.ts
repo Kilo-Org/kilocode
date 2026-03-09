@@ -73,13 +73,24 @@ describe("provider default fallback", () => {
 
   it("falls back to the first available provider model when defaults are missing", () => {
     const providers = {
-      openai: makeProvider("openai", ["gpt-5"]),
+      openai: makeProvider("openai", ["gpt-5", "gpt-5-mini"]),
       anthropic: makeProvider("anthropic", ["claude-sonnet-4"]),
     }
 
     expect(getProviderFallback(providers, {})).toEqual({
       providerID: "anthropic",
       modelID: "claude-sonnet-4",
+    })
+  })
+
+  it("uses backend-compatible model ordering within a provider fallback", () => {
+    const providers = {
+      openai: makeProvider("openai", ["gpt-5", "gpt-5-mini"]),
+    }
+
+    expect(getProviderFallback(providers, {})).toEqual({
+      providerID: "openai",
+      modelID: "gpt-5-mini",
     })
   })
 

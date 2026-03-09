@@ -54,6 +54,22 @@ export function indexProvidersById(all: ProviderInfo[]): Record<string, Provider
   return normalized
 }
 
+const priority = ["gpt-5", "claude-sonnet-4", "big-pickle", "gemini-3-pro"]
+
+function sortModels(models: Array<{ id: string }>) {
+  return [...models].sort((a, b) => {
+    const ap = priority.findIndex((item) => a.id.includes(item))
+    const bp = priority.findIndex((item) => b.id.includes(item))
+    if (ap !== bp) return bp - ap
+
+    const al = a.id.includes("latest") ? 0 : 1
+    const bl = b.id.includes("latest") ? 0 : 1
+    if (al !== bl) return al - bl
+
+    return b.id.localeCompare(a.id)
+  })
+}
+
 export function getProviderFallback(
   providers: Record<string, ProviderInfo>,
   defaults: Record<string, string>,
@@ -81,7 +97,7 @@ export function getProviderFallback(
     .find((item) => Object.keys(item.models).length > 0)
 
   if (provider) {
-    const modelID = Object.keys(provider.models).sort()[0]
+    const modelID = sortModels(Object.values(provider.models))[0]?.id
     if (modelID) {
       return { providerID: provider.id, modelID }
     }

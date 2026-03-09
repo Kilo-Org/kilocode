@@ -275,7 +275,7 @@ describe("KiloProvider pending session refresh", () => {
   it("posts providersLoaded when defaults are missing", async () => {
     setModelConfig()
     const client = createClient({
-      all: [createProvider("openai", ["gpt-5"])],
+      all: [createProvider("openai", ["gpt-5", "gpt-5-mini"])],
       connected: [],
       default: {},
     })
@@ -296,7 +296,7 @@ describe("KiloProvider pending session refresh", () => {
     }) as { providers: Record<string, unknown>; defaultSelection: { providerID: string; modelID: string } } | undefined
 
     expect(loaded?.providers.openai).toBeDefined()
-    expect(loaded?.defaultSelection).toEqual({ providerID: "openai", modelID: "gpt-5" })
+    expect(loaded?.defaultSelection).toEqual({ providerID: "openai", modelID: "gpt-5-mini" })
   })
 
   it("posts providersLoaded and falls back when defaults are stale", async () => {
