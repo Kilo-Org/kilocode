@@ -14,21 +14,19 @@ A detailed specification of the old extension's marketplace implementation is av
 
 ## Architecture Differences (New Extension)
 
-In the old extension, the marketplace wrote directly to extension-owned config files. In the new extension:
+In the old extension, the marketplace wrote directly to extension-owned config files. In the new extension, the CLI backend manages configuration at runtime, but the extension can still write directly to CLI-compatible config files for marketplace installation. CLI endpoints can be added later if needed.
 
-- **CLI owns configuration**: MCP servers, modes, and skills are managed by the CLI backend, not the extension. Installation flows must go through CLI APIs or write to CLI-compatible config locations.
-- **No `CustomModesManager`**: The old extension had a `CustomModesManager` class for mode YAML file management. The CLI has its own mode/config management.
-- **No direct `mcp.json` writes**: MCP configuration is managed by the CLI. The extension has `addMcpServer()` / `connectMcpServer()` HTTP client methods that should be used instead of direct file writes.
-- **Skills runtime is CLI-side**: The CLI has a skills runtime; the extension manages skill paths/URLs via config.
+- **No `CustomModesManager`**: The old extension had a `CustomModesManager` class for mode YAML file management. The extension must write mode YAML directly to CLI-compatible config locations.
+- **Skills runtime is CLI-side**: The CLI has a skills runtime; the extension manages skill paths/URLs via config and writes skill files to CLI-compatible directories.
 
 ### Adaptation Strategy
 
-The marketplace UI (catalog browsing, search, filtering, install modal) can be reimplemented largely as-is in the webview. The backend installation logic needs to be adapted:
+The marketplace UI (catalog browsing, search, filtering, install modal) can be reimplemented largely as-is in the webview. The backend installation logic writes directly to CLI config files:
 
 | Item Type | Old Extension                                    | New Extension                                                  |
 | --------- | ------------------------------------------------ | -------------------------------------------------------------- |
-| Modes     | Direct YAML file write via `CustomModesManager`  | CLI config API or write to CLI-compatible mode config location  |
-| MCPs      | Direct JSON write to `mcp.json`                  | Use CLI's `addMcpServer()` HTTP endpoint                       |
+| Modes     | Direct YAML file write via `CustomModesManager`  | Direct write to CLI-compatible mode config file                |
+| MCPs      | Direct JSON write to `mcp.json`                  | Direct write to CLI-compatible MCP config file                 |
 | Skills    | Download tarball, extract to skills directory     | Download tarball, extract to CLI-compatible skills directory    |
 
 ## Remaining Work
@@ -61,8 +59,8 @@ The marketplace UI (catalog browsing, search, filtering, install modal) can be r
   - Prerequisites display (read-only, merged from global + method-specific)
   - Dynamic parameter form (labels, optional markers, placeholders; merged global + method params)
   - Validation: all non-optional parameters must be non-empty
-- [ ] **MCP installation**: template substitution (`{{key}}` → param values), then call CLI's `addMcpServer()` endpoint or write to CLI-compatible `mcp.json`
-- [ ] **Mode installation**: parse YAML content, write to CLI-compatible mode config (project or global scope)
+- [ ] **MCP installation**: template substitution (`{{key}}` → param values), write directly to CLI-compatible MCP config file
+- [ ] **Mode installation**: parse YAML content, write directly to CLI-compatible mode config file (project or global scope)
 - [ ] **Skill installation**: download `.tar.gz` from `content` URL, extract with `strip: 1` to skills directory, verify `SKILL.md` exists, rollback on failure
 - [ ] Post-install: open config file in editor at insertion line, show success state with "Done" button and navigation shortcuts (e.g., "Go to Modes Settings")
 
