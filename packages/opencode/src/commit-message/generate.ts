@@ -40,7 +40,7 @@ function extractSection(content: string, heading: string): string | undefined {
       inCodeFence = !inCodeFence
       continue
     }
-    if (!inCodeFence && /^#{1,2}[^#]/.test(line)) {
+    if (!inCodeFence && /^\s{0,3}#{1,2}[^#]/.test(line)) {
       end = i
       break
     }
