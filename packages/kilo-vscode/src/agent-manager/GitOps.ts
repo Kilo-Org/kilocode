@@ -88,9 +88,9 @@ export class GitOps {
     return "origin"
   }
 
-  /** Resolve the upstream tracking ref for `branch`, or `undefined` if none is set. Note: the `@{upstream}` check uses the current HEAD, not `branch`. */
+  /** Resolve the upstream tracking ref for `branch`, or `undefined` if none is set. */
   async resolveTrackingBranch(cwd: string, branch: string): Promise<string | undefined> {
-    const upstream = await this.raw(["rev-parse", "--abbrev-ref", "@{upstream}"], cwd).catch(() => "")
+    const upstream = await this.raw(["rev-parse", "--abbrev-ref", `${branch}@{upstream}`], cwd).catch(() => "")
     if (upstream) return upstream
 
     const remote = await this.resolveRemote(cwd, branch)
