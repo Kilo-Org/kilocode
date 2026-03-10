@@ -23,7 +23,13 @@ function processCarriageReturns(input: string): string {
     .map((line) => {
       if (!line.includes("\r")) return line
       const parts = line.split("\r")
-      return parts[parts.length - 1]
+      // A trailing \r produces an empty last segment — preserve the previous visible frame
+      const last = parts[parts.length - 1]
+      if (last !== "") return last
+      for (let i = parts.length - 2; i >= 0; i--) {
+        if (parts[i] !== "") return parts[i]
+      }
+      return ""
     })
     .join("\n")
 }
