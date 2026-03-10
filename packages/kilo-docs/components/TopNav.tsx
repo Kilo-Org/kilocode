@@ -3,7 +3,6 @@ import Link from "next/link"
 import { useRouter } from "next/router"
 import docsearch from "@docsearch/js"
 import { ThemeToggle } from "./ThemeToggle"
-import { VersionToggle } from "./VersionToggle"
 
 interface NavItem {
   label: string
@@ -297,7 +296,6 @@ export function TopNav({ onMobileMenuToggle, isMobileMenuOpen = false, showMobil
           <button className="mobile-search-btn mobile-only" onClick={openDocSearch} aria-label="Search documentation">
             <SearchIcon />
           </button>
-          <VersionToggle />
           <ThemeToggle />
           <Link href="https://kilo.ai/github" className="github-link desktop-nav">
             GitHub

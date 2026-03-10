@@ -4,7 +4,6 @@ import { useRouter } from "next/router"
 import posthog from "posthog-js"
 
 import { CopyPageButton, PageFooter, PageVersionSwitcher, SideNav, TableOfContents, TopNav } from "../components"
-import { VersionProvider } from "../lib/VersionContext"
 
 import "prismjs"
 import "prismjs/components/prism-bash.min"
@@ -131,10 +130,9 @@ export default function MyApp({ Component, pageProps }: AppProps<MyAppProps>) {
   const toc = pageProps.markdoc?.content ? collectHeadings(pageProps.markdoc.content) : []
 
   const platform = markdoc?.frontmatter?.platform
-  const alternateVersion = markdoc?.frontmatter?.alternateVersion
 
   return (
-    <VersionProvider>
+    <>
       <Head>
         <title>{title}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -183,7 +181,7 @@ export default function MyApp({ Component, pageProps }: AppProps<MyAppProps>) {
           <main className="main-content">
             <div className="content-wrapper">
               <div className="article-content mt-5">
-                {markdoc && <PageVersionSwitcher platform={platform} alternateVersion={alternateVersion} />}
+                {markdoc && <PageVersionSwitcher platform={platform} />}
                 <Component {...pageProps} />
                 {markdoc && <PageFooter />}
               </div>
@@ -279,6 +277,6 @@ export default function MyApp({ Component, pageProps }: AppProps<MyAppProps>) {
           }
         `}
       </style>
-    </VersionProvider>
+    </>
   )
 }

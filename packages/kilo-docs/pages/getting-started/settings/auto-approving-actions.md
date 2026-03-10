@@ -1,7 +1,6 @@
 ---
 title: "Auto-Approving Actions"
 description: "Configure automatic approval settings for Kilo Code operations"
-platform: classic
 ---
 
 # Auto-Approving Actions
@@ -10,7 +9,10 @@ platform: classic
 **Security Warning:** Auto-approve settings bypass confirmation prompts, giving Kilo Code direct access to your system. This can result in data loss, file corruption, or worse. Command line access is particularly dangerous, as it can potentially execute harmful operations that could damage your system or compromise security. Only enable auto-approval for actions you fully trust.
 {% /callout %}
 
-Auto-approve settings speed up your workflow by eliminating repetitive confirmation prompts, but they significantly increase security risks.
+Auto-approve settings speed up your workflow by eliminating repetitive confirmation prompts, but they significantly increase security risks. The Classic extension and the new CLI & Extension handle permissions differently — choose the tab that matches your setup.
+
+{% tabs %}
+{% tab label="Classic Extension" %}
 
 ## Quick Start Guide
 
@@ -344,3 +346,187 @@ You can optionally enable an AI Safety Gatekeeper, which reviews every intended 
 
 This is the fastest way to work with Kilo Code, but also the riskiest. Use it only when you fully trust the AI and are prepared for the consequences.
 {% /callout %}
+
+{% /tab %}
+{% tab label="New CLI & Extension" %}
+
+## Overview
+
+The new CLI and extension use a granular, per-tool permission system configured in `kilo.jsonc`. Instead of broad categories like "read" or "write," each tool has its own permission level with glob-pattern rules for fine-grained control.
+
+You can configure permissions through:
+
+- The **Settings → Auto Approve** tab in the VS Code extension UI
+- The `kilo.jsonc` configuration file directly (for CLI or manual editing)
+
+## Permission Levels
+
+Each tool permission can be set to one of three values:
+
+| Value     | Behavior                                                  |
+| --------- | --------------------------------------------------------- |
+| `"allow"` | The tool runs automatically without prompting             |
+| `"ask"`   | Kilo pauses and asks for approval before running the tool |
+| `"deny"`  | The tool is blocked entirely                              |
+
+## Available Tool Permissions
+
+Permissions are configured under the `permission` key in `kilo.jsonc`. The following tool-specific permission levels are available:
+
+| Permission           | Controls                                               |
+| -------------------- | ------------------------------------------------------ |
+| `read`               | Reading file contents                                  |
+| `edit`               | Editing existing files                                 |
+| `glob`               | File pattern matching / searching by name              |
+| `grep`               | Searching file contents by regex                       |
+| `list`               | Listing directory contents                             |
+| `bash`               | Executing shell commands                               |
+| `task`               | Launching sub-agents                                   |
+| `skill`              | Loading specialized skills                             |
+| `lsp`                | Language server protocol operations                    |
+| `todoread`           | Reading the todo list                                  |
+| `todowrite`          | Updating the todo list                                 |
+| `webfetch`           | Fetching content from URLs                             |
+| `websearch`          | Performing web searches                                |
+| `codesearch`         | Searching code examples and documentation              |
+| `external_directory` | Accessing files outside the project directory          |
+| `doom_loop`          | Allowing the agent to continue after repeated failures |
+
+## Glob-Pattern Rules
+
+Instead of a simple `"allow"` or `"deny"`, each tool can use glob-pattern rules for granular control. Patterns are matched against the tool's arguments (command strings, file paths, etc.), and the first matching rule wins.
+
+### Example: Shell Commands
+
+Allow git commands automatically, but prompt for everything else:
+
+```json
+{
+  "permission": {
+    "bash": {
+      "git *": "allow",
+      "*": "ask"
+    }
+  }
+}
+```
+
+### Example: File Reading
+
+Prompt before reading `.env` files, but allow all other reads:
+
+```json
+{
+  "permission": {
+    "read": {
+      "*.env": "ask",
+      "*": "allow"
+    }
+  }
+}
+```
+
+### Example: Blocking Dangerous Commands
+
+Deny `rm -rf` commands, allow common dev commands, and ask for anything else:
+
+```json
+{
+  "permission": {
+    "bash": {
+      "rm -rf *": "deny",
+      "npm *": "allow",
+      "bun *": "allow",
+      "git *": "allow",
+      "*": "ask"
+    }
+  }
+}
+```
+
+## Per-Agent Permission Overrides
+
+Different agents can have different permission levels. Override the default permissions for a specific agent under the `agent.<name>.permission` key:
+
+```json
+{
+  "permission": {
+    "bash": { "*": "ask" }
+  },
+  "agent": {
+    "code": {
+      "permission": {
+        "bash": { "git *": "allow", "*": "ask" }
+      }
+    },
+    "plan": {
+      "permission": {
+        "bash": { "*": "deny" }
+      }
+    }
+  }
+}
+```
+
+In this example, the `code` agent can run `git` commands automatically and asks for other shell commands, while the `plan` agent cannot run shell commands at all.
+
+## Set All (Bulk Control)
+
+Use the **Set All** control in the VS Code extension UI to quickly set all tools to the same permission level (`allow`, `ask`, or `deny`). This is useful for:
+
+- Quickly locking down all permissions before working on sensitive code
+- Opening up all permissions for rapid prototyping in a safe environment
+- Resetting to a known baseline
+
+## Runtime Permission Requests
+
+When a tool is set to `"ask"`, Kilo pauses and displays a permission request popup. You have three options:
+
+| Option     | Behavior                                                 |
+| ---------- | -------------------------------------------------------- |
+| **Once**   | Allow this specific invocation only                      |
+| **Always** | Allow this tool (or pattern) for the rest of the session |
+| **Reject** | Block this specific invocation                           |
+
+## Defaults
+
+Most tools default to `"*": "allow"` for a smooth out-of-the-box experience. Notable exceptions that prompt by default:
+
+- **`.env` files** — reading or editing `.env` files prompts for approval
+- **`external_directory`** — accessing files outside the project prompts for approval
+- **`doom_loop`** — prompts when the agent enters a repeated failure cycle
+
+## Full Configuration Example
+
+```json
+{
+  "permission": {
+    "read": { "*.env": "ask", "*": "allow" },
+    "edit": { "*.env": "ask", "*": "allow" },
+    "glob": { "*": "allow" },
+    "grep": { "*": "allow" },
+    "list": { "*": "allow" },
+    "bash": { "git *": "allow", "npm *": "allow", "*": "ask" },
+    "task": { "*": "allow" },
+    "skill": { "*": "allow" },
+    "lsp": { "*": "allow" },
+    "todoread": { "*": "allow" },
+    "todowrite": { "*": "allow" },
+    "webfetch": { "*": "allow" },
+    "websearch": { "*": "allow" },
+    "codesearch": { "*": "allow" },
+    "external_directory": { "*": "ask" },
+    "doom_loop": { "*": "ask" }
+  },
+  "agent": {
+    "code": {
+      "permission": {
+        "bash": { "git *": "allow", "npm *": "allow", "*": "ask" }
+      }
+    }
+  }
+}
+```
+
+{% /tab %}
+{% /tabs %}

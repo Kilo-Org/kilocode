@@ -1,7 +1,6 @@
 ---
 title: "Browser Use"
 description: "Using Kilo Code to interact with web browsers"
-platform: classic
 ---
 
 # Browser Use
@@ -14,7 +13,10 @@ Browser Use requires an advanced agentic model. It is typically most reliable wi
 
 ## How Browser Use Works
 
-By default, Kilo Code uses a built-in browser that:
+{% tabs %}
+{% tab label="Classic Extension" %}
+
+By default, Kilo Code uses a built-in Puppeteer browser that:
 
 - Launches automatically when you ask Kilo to visit a website
 - Captures screenshots of web pages
@@ -22,6 +24,35 @@ By default, Kilo Code uses a built-in browser that:
 - Runs invisibly in the background
 
 All of this happens directly within VS Code, with no setup required.
+
+{% /tab %}
+{% tab label="New CLI & Extension" %}
+
+Kilo Code uses [Playwright](https://playwright.dev/) via MCP (`@playwright/mcp@latest`) for browser automation. The Playwright MCP server is registered dynamically as `kilo-playwright`.
+
+**In the VS Code extension**, browser automation is auto-configured:
+
+- Toggle it on from **Settings → Browser** tab
+- Configure `browserAutomation.headless` and `browserAutomation.useSystemChrome` settings
+- Playwright auto-downloads Chromium on first use
+
+**In CLI-only mode**, you need to manually add the MCP server to your `kilo.jsonc` configuration:
+
+```json
+{
+  "mcp": {
+    "playwright": {
+      "type": "local",
+      "command": ["npx", "-y", "@playwright/mcp@latest"]
+    }
+  }
+}
+```
+
+Once configured, Playwright downloads Chromium automatically on first use.
+
+{% /tab %}
+{% /tabs %}
 
 ## Using Browser Use
 
@@ -40,7 +71,10 @@ For example:
 
 ## How Browser Actions Work
 
-The browser_action tool controls a browser instance that returns screenshots and console logs after each action, allowing you to see the results of interactions.
+{% tabs %}
+{% tab label="Classic Extension" %}
+
+The `browser_action` tool controls a browser instance that returns screenshots and console logs after each action, allowing you to see the results of interactions.
 
 Key characteristics:
 
@@ -60,7 +94,37 @@ Key characteristics:
 | `scroll_up`   | Scrolls up by one page         | Returning to previous content         |
 | `close`       | Closes the browser             | Ending a browser session              |
 
+{% /tab %}
+{% tab label="New CLI & Extension" %}
+
+The Playwright MCP server provides a set of browser tools for interacting with web pages. These tools return screenshots and accessibility snapshots after each action.
+
+Key characteristics:
+
+- The browser launches automatically when a browser tool is invoked
+- Multiple browser tools can be used in sequence
+- Screenshots are captured after each action for visual feedback
+
+### Available Browser Tools
+
+| Tool                 | Description                         | When to Use                           |
+| -------------------- | ----------------------------------- | ------------------------------------- |
+| `browser_navigate`   | Navigates to a URL                  | Opening a web page                    |
+| `browser_click`      | Clicks an element on the page       | Interacting with buttons, links, etc. |
+| `browser_type`       | Types text into an input element    | Filling forms, search boxes           |
+| `browser_screenshot` | Captures a screenshot of the page   | Inspecting visual state               |
+| `browser_scroll`     | Scrolls the page or a specific area | Viewing content above or below        |
+| `browser_hover`      | Hovers over an element              | Revealing tooltips or menus           |
+| `browser_select`     | Selects an option from a dropdown   | Choosing from select elements         |
+| `browser_drag`       | Drags an element to a target        | Drag-and-drop interactions            |
+
+{% /tab %}
+{% /tabs %}
+
 ## Browser Use Settings
+
+{% tabs %}
+{% tab label="Classic Extension" %}
 
 {% callout type="info" title="Default Browser Settings" %}
 
@@ -162,3 +226,34 @@ Connect to a visible Chrome window to observe Kilo's interactions in real-time:
 ```bash
 google-chrome --remote-debugging-port=9222 --user-data-dir=/tmp/chrome-debug --no-first-run
 ```
+
+{% /tab %}
+{% tab label="New CLI & Extension" %}
+
+### VS Code Extension Settings
+
+In the VS Code extension, browser automation settings are available under **Settings → Browser**:
+
+- **Enable browser automation**: Toggle to enable or disable Playwright browser automation
+- **Headless mode** (`browserAutomation.headless`): Run the browser without a visible window (default: enabled)
+- **Use system Chrome** (`browserAutomation.useSystemChrome`): Use your installed Chrome instead of the bundled Chromium
+
+### CLI Configuration
+
+In CLI-only mode, browser automation requires manual MCP configuration in your `kilo.jsonc` file:
+
+```json
+{
+  "mcp": {
+    "playwright": {
+      "type": "local",
+      "command": ["npx", "-y", "@playwright/mcp@latest"]
+    }
+  }
+}
+```
+
+No additional settings are needed — the Playwright MCP server manages the browser lifecycle automatically. Chromium is downloaded on first use.
+
+{% /tab %}
+{% /tabs %}

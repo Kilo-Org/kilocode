@@ -16,7 +16,6 @@ export const CustomizeNav: NavSection[] = [
       {
         href: "/customize/custom-instructions",
         children: "Custom Instructions",
-        platform: "classic",
       },
       {
         href: "/customize/custom-subagents",
@@ -43,12 +42,10 @@ export const CustomizeNav: NavSection[] = [
       {
         href: "/customize/context/context-condensing",
         children: "Context Condensing",
-        platform: "classic",
       },
       {
         href: "/customize/context/kilocodeignore",
         children: ".kilocodeignore",
-        platform: "classic",
       },
       {
         href: "/customize/context/large-projects",

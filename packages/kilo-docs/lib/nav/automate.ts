@@ -47,7 +47,6 @@ export const AutomateNav: NavSection[] = [
       {
         href: "/automate/extending/shell-integration",
         children: "Shell Integration",
-        platform: "classic",
       },
       {
         href: "/automate/extending/auto-launch",
@@ -61,10 +60,8 @@ export const AutomateNav: NavSection[] = [
           { href: "/automate/mcp/overview", children: "MCP Overview" },
           {
             href: "/automate/mcp/using-in-kilo-code",
-            children: "Using MCP in Kilo Code",
-            platform: "classic",
+            children: "Configuring MCP Servers",
           },
-          { href: "/automate/mcp/using-in-cli", children: "Using MCP in CLI", platform: "next" },
           { href: "/automate/mcp/what-is-mcp", children: "What is MCP" },
           {
             href: "/automate/mcp/server-transports",

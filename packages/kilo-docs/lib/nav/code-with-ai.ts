@@ -74,16 +74,15 @@ export const CodeWithAiNav: NavSection[] = [
       {
         href: "/code-with-ai/features/browser-use",
         children: "Agent Behavior",
-        platform: "classic",
         subLinks: [
-          { href: "/code-with-ai/features/browser-use", children: "Browser Use", platform: "classic" },
+          { href: "/code-with-ai/features/browser-use", children: "Browser Use" },
           { href: "/code-with-ai/features/fast-edits", children: "Fast Edits", platform: "classic" },
           {
             href: "/code-with-ai/features/task-todo-list",
             children: "Task Todo List",
             platform: "classic",
           },
-          { href: "/code-with-ai/features/checkpoints", children: "Checkpoints", platform: "classic" },
+          { href: "/code-with-ai/features/checkpoints", children: "Checkpoints" },
         ],
       },
     ],

@@ -28,12 +28,10 @@ export const GettingStartedNav: NavSection[] = [
       {
         href: "/getting-started/settings",
         children: "Settings",
-        platform: "classic",
         subLinks: [
           {
             href: "/getting-started/settings/auto-approving-actions",
             children: "Auto-Approving Actions",
-            platform: "classic",
           },
           { href: "/getting-started/settings/auto-cleanup", children: "Auto Cleanup", platform: "classic" },
           {
