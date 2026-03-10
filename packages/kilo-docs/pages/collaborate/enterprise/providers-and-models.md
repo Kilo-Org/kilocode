@@ -23,7 +23,7 @@ The feature uses a **blocklist** approach: everything is allowed by default, and
 
 - New providers and models added to the platform are automatically available to your organization unless you block them.
 - Blocking a provider disables all of its models for organization members.
-- Disabling a model removes it from the **Models** tab for all members, regardless of which provider serves it.
+- Disabling a model removes it from the model selector for all members, regardless of which provider serves it.
 
 Non-enterprise organizations have unrestricted access to all models and providers — the Providers & Models page is visible but not editable.
 
