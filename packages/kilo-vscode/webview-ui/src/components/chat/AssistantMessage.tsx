@@ -51,6 +51,7 @@ interface AssistantMessageProps {
   message: SDKAssistantMessage
   showAssistantCopyPartID?: string | null
   turnDurationMs?: number
+  onModeAction?: (input: { mode: string; text: string; description?: string }) => void
 }
 
 function TodoToolCard(props: { part: ToolPart }) {
@@ -194,7 +195,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
         }}
       </For>
       <Show when={questionForMessage()} keyed>
-        {(req) => <QuestionDock request={req} />}
+        {(req) => <QuestionDock request={req} onModeAction={props.onModeAction} />}
       </Show>
     </>
   )

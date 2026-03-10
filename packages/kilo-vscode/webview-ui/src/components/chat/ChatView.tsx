@@ -3,7 +3,7 @@
  * Main chat container that combines all chat components
  */
 
-import { Component, For, Show, createEffect, on, onCleanup, onMount } from "solid-js"
+import { Component, For, Show, createEffect, createRoot, on, onCleanup, onMount } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { BasicTool } from "@kilocode/kilo-ui/basic-tool"
@@ -63,6 +63,64 @@ export const ChatView: Component<ChatViewProps> = (props) => {
     }),
   )
 
+  // Mode action: waits for session idle, switches agent, sends follow-up prompt
+  let modeActionAbort: AbortController | undefined
+
+  const waitForIdle = (sessionID: string, signal: AbortSignal) =>
+    new Promise<void>((resolve, reject) => {
+      let settled = false
+      const ref: { dispose?: () => void } = {}
+      const settle = (fn: () => void) => {
+        if (settled) return
+        settled = true
+        clearTimeout(timeout)
+        ref.dispose?.()
+        fn()
+      }
+      const timeout = setTimeout(() => {
+        settle(() => reject(new Error("Timed out waiting for session idle")))
+      }, 30_000)
+
+      createRoot((dispose) => {
+        ref.dispose = dispose
+        signal.addEventListener("abort", () => settle(() => reject(new Error("Cancelled"))), { once: true })
+        createEffect(() => {
+          const info = session.allStatusMap()[sessionID]
+          if (info && info.type !== "idle") return
+          settle(() => resolve())
+        })
+      })
+    })
+
+  const handleModeAction = async (input: { mode: string; text: string; description?: string }) => {
+    const sessionID = id()
+    if (!sessionID) return
+
+    modeActionAbort?.abort()
+    const controller = new AbortController()
+    modeActionAbort = controller
+
+    try {
+      // Allow one microtask for session status to reflect the reply before checking idle
+      await new Promise((r) => setTimeout(r, 0))
+      await waitForIdle(sessionID, controller.signal)
+    } catch {
+      return
+    }
+
+    if (controller.signal.aborted) return
+
+    // Guard against session switch during the wait — if the user navigated to a
+    // different session, don't apply the mode change to the wrong session
+    if (id() !== sessionID) return
+
+    session.selectAgent(input.mode)
+    const sel = session.selected()
+    session.sendMessage(input.description ?? input.text, sel?.providerID, sel?.modelID)
+  }
+
+  onCleanup(() => modeActionAbort?.abort())
+
   onMount(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape" && session.status() === "busy") {
@@ -85,14 +143,14 @@ export const ChatView: Component<ChatViewProps> = (props) => {
       <TaskHeader />
       <div class="chat-messages-wrapper">
         <div class="chat-messages">
-          <MessageList onSelectSession={props.onSelectSession} />
+          <MessageList onSelectSession={props.onSelectSession} onModeAction={handleModeAction} />
         </div>
       </div>
 
       <Show when={!props.readonly}>
         <div class="chat-input">
           <Show when={questionRequest()} keyed>
-            {(req) => <QuestionDock request={req} />}
+            {(req) => <QuestionDock request={req} onModeAction={handleModeAction} />}
           </Show>
           <Show when={permissionRequest()} keyed>
             {(perm) => {

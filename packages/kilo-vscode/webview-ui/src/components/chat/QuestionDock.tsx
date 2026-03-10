@@ -4,7 +4,7 @@
  * Uses kilo-ui's DockPrompt component for proper surface styling.
  */
 
-import { Component, For, Show, createMemo, createEffect } from "solid-js"
+import { Component, For, Show, createMemo, createEffect, createRoot } from "solid-js"
 import { createStore } from "solid-js/store"
 import { Button } from "@kilocode/kilo-ui/button"
 import { DockPrompt } from "@kilocode/kilo-ui/dock-prompt"
@@ -14,7 +14,10 @@ import { useLanguage } from "../../context/language"
 import type { QuestionRequest } from "../../types/messages"
 import { toggleAnswer } from "./question-dock-utils"
 
-export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => {
+export const QuestionDock: Component<{
+  request: QuestionRequest
+  onModeAction?: (input: { mode: string; text: string; description?: string }) => void
+}> = (props) => {
   const session = useSession()
   const language = useLanguage()
 
@@ -78,6 +81,9 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
   }
 
   const pick = (answer: string, custom = false) => {
+    // Find the option to check for mode (custom answers won't match)
+    const option = custom ? undefined : options().find((o) => o.label === answer)
+
     const answers = [...store.answers]
     answers[store.tab] = [answer]
     setStore("answers", answers)
@@ -86,6 +92,43 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       const inputs = [...store.custom]
       inputs[store.tab] = answer
       setStore("custom", inputs)
+    }
+
+    // For single-question with a mode option, reply and trigger mode switch only after the
+    // question is resolved (removed from the queue). This ensures the reply was actually
+    // processed before we attempt mode switching — replyToQuestion is fire-and-forget via
+    // postMessage, so we observe the question disappearing as confirmation.
+    if (single() && !multi() && option?.mode && props.onModeAction) {
+      if (store.sending) return
+      setStore("sending", true)
+      const requestId = props.request.id
+      const action = props.onModeAction
+      const mode = option.mode
+      const description = option.description
+
+      session.replyToQuestion(requestId, [[answer]])
+
+      // Wait for the question to be resolved before triggering mode action
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 30_000)
+      createRoot((dispose) => {
+        controller.signal.addEventListener(
+          "abort",
+          () => {
+            dispose()
+            setStore("sending", false)
+          },
+          { once: true },
+        )
+        createEffect(() => {
+          const pending = session.questions().some((q) => q.id === requestId)
+          if (pending) return
+          clearTimeout(timeout)
+          dispose()
+          action({ mode, text: answer, description })
+        })
+      })
+      return
     }
 
     if (!single() && !multi()) {
