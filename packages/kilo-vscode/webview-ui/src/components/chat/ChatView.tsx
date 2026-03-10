@@ -162,7 +162,9 @@ export const ChatView: Component<ChatViewProps> = (props) => {
               </Show>
             </div>
           </Show>
-          <PromptInput />
+          <Show when={!blocked()}>
+            <PromptInput />
+          </Show>
         </div>
       </Show>
     </div>
