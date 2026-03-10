@@ -1,6 +1,6 @@
 {
   "name": "@kilocode/kilo-ui",
-  "version": "7.0.40",
+  "version": "7.0.41",
   "type": "module",
   "license": "MIT",
   "exports": {
@@ -106,6 +106,7 @@
   },
   "dependencies": {
     "@kobalte/core": "0.13.11",
+    "@solid-primitives/resize-observer": "2.1.5",
     "lucide-solid": "0.576.0"
   }
 }

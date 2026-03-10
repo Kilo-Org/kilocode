@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 import { KiloProvider } from "./KiloProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { DiffViewerProvider } from "./DiffViewerProvider"
+import { SettingsEditorProvider } from "./SettingsEditorProvider"
 import { EXTENSION_DISPLAY_NAME } from "./constants"
 import { KiloConnectionService } from "./services/cli-backend"
 import { registerAutocompleteProvider } from "./services/autocomplete"
@@ -55,6 +56,10 @@ export function activate(context: vscode.ExtensionContext) {
   })
   context.subscriptions.push(diffViewerProvider)
 
+  // Create settings/profile editor provider (opens in editor area, not sidebar)
+  const settingsEditorProvider = new SettingsEditorProvider(context.extensionUri, connectionService, context)
+  context.subscriptions.push(settingsEditorProvider)
+
   // Register toolbar button command handlers
   context.subscriptions.push(
     vscode.commands.registerCommand("kilo-code.new.plusButtonClicked", () => {
@@ -73,10 +78,10 @@ export function activate(context: vscode.ExtensionContext) {
       provider.postMessage({ type: "action", action: "cloudHistoryButtonClicked" })
     }),
     vscode.commands.registerCommand("kilo-code.new.profileButtonClicked", () => {
-      provider.postMessage({ type: "action", action: "profileButtonClicked" })
+      settingsEditorProvider.openPanel("profile")
     }),
     vscode.commands.registerCommand("kilo-code.new.settingsButtonClicked", () => {
-      provider.postMessage({ type: "action", action: "settingsButtonClicked" })
+      settingsEditorProvider.openPanel("settings")
     }),
     // legacy-migration start
     vscode.commands.registerCommand("kilo-code.new.openMigrationWizard", () => {

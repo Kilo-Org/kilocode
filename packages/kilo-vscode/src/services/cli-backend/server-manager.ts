@@ -79,6 +79,7 @@ export class ServerManager {
         },
         stdio: ["ignore", "pipe", "pipe"],
         detached: true,
+        windowsHide: true,
       })
       console.log("[Kilo New] ServerManager: 📦 Process spawned with PID:", serverProcess.pid)
 
