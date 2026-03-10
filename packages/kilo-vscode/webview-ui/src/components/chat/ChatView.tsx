@@ -57,7 +57,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   // Mode action: waits for session idle, switches agent, sends follow-up prompt
   let modeActionAbort: AbortController | undefined
 
-  const waitForIdle = (signal: AbortSignal) =>
+  const waitForIdle = (sessionID: string, signal: AbortSignal) =>
     new Promise<void>((resolve, reject) => {
       let settled = false
       const ref: { dispose?: () => void } = {}
@@ -76,7 +76,8 @@ export const ChatView: Component<ChatViewProps> = (props) => {
         ref.dispose = dispose
         signal.addEventListener("abort", () => settle(() => reject(new Error("Cancelled"))), { once: true })
         createEffect(() => {
-          if (session.status() !== "idle") return
+          const info = session.allStatusMap()[sessionID]
+          if (info && info.type !== "idle") return
           settle(() => resolve())
         })
       })
@@ -93,7 +94,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
     try {
       // Allow one microtask for session status to reflect the reply before checking idle
       await new Promise((r) => setTimeout(r, 0))
-      await waitForIdle(controller.signal)
+      await waitForIdle(sessionID, controller.signal)
     } catch {
       return
     }
@@ -105,7 +106,8 @@ export const ChatView: Component<ChatViewProps> = (props) => {
     if (id() !== sessionID) return
 
     session.selectAgent(input.mode)
-    session.sendMessage(input.description ?? input.text)
+    const sel = session.selected()
+    session.sendMessage(input.description ?? input.text, sel?.providerID, sel?.modelID)
   }
 
   onCleanup(() => modeActionAbort?.abort())

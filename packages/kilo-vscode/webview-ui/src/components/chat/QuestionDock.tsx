@@ -109,10 +109,17 @@ export const QuestionDock: Component<{
       session.replyToQuestion(requestId, [[answer]])
 
       // Wait for the question to be resolved before triggering mode action
-      const timeout = setTimeout(() => controller.abort(), 30_000)
       const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 30_000)
       createRoot((dispose) => {
-        controller.signal.addEventListener("abort", () => dispose(), { once: true })
+        controller.signal.addEventListener(
+          "abort",
+          () => {
+            dispose()
+            setStore("sending", false)
+          },
+          { once: true },
+        )
         createEffect(() => {
           const pending = session.questions().some((q) => q.id === requestId)
           if (pending) return
