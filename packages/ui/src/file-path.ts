@@ -66,5 +66,8 @@ export function extractFilePathFromHref(href: string): string | undefined {
   if (!cleaned) return undefined
   // Must look like a file path (has a dot for extension)
   if (!cleaned.includes(".")) return undefined
-  return cleaned
+  // Strip :line and :line:col suffixes so they aren't treated as part of the filename.
+  // parseFilePath handles these correctly, so use it to extract just the path component.
+  const parsed = parseFilePath(cleaned)
+  return parsed ? parsed.path : cleaned
 }
