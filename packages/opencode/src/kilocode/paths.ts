@@ -69,7 +69,7 @@ export namespace KilocodePaths {
     }
 
     if (!opts.skipGlobalPaths) {
-      // 2. Global ~/.kilo/
+      // 2. Global ~/.kilocode/
       const global = globalDir()
       const globalSkills = path.join(global, "skills")
       if (await Filesystem.isDir(globalSkills)) {
