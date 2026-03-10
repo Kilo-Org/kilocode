@@ -161,10 +161,10 @@ describe("McpMigrator", () => {
       expect(result.skipped).toHaveLength(0)
     })
 
-    test("migrates servers from project .kilocode/mcp.json", async () => {
+    test("migrates servers from project .kilo/mcp.json", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
-          const settingsDir = path.join(dir, ".kilocode")
+          const settingsDir = path.join(dir, ".kilo")
           await Bun.write(
             path.join(settingsDir, "mcp.json"),
             JSON.stringify({
@@ -194,7 +194,7 @@ describe("McpMigrator", () => {
     test("skips disabled servers and records them", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
-          const settingsDir = path.join(dir, ".kilocode")
+          const settingsDir = path.join(dir, ".kilo")
           await Bun.write(
             path.join(settingsDir, "mcp.json"),
             JSON.stringify({
@@ -223,7 +223,7 @@ describe("McpMigrator", () => {
     test("warns about alwaysAllow permissions that cannot be migrated", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
-          const settingsDir = path.join(dir, ".kilocode")
+          const settingsDir = path.join(dir, ".kilo")
           await Bun.write(
             path.join(settingsDir, "mcp.json"),
             JSON.stringify({
@@ -253,7 +253,7 @@ describe("McpMigrator", () => {
     test("migrates multiple servers correctly", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
-          const settingsDir = path.join(dir, ".kilocode")
+          const settingsDir = path.join(dir, ".kilo")
           await Bun.write(
             path.join(settingsDir, "mcp.json"),
             JSON.stringify({
@@ -297,7 +297,7 @@ describe("McpMigrator", () => {
     test("handles empty mcpServers object", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
-          const settingsDir = path.join(dir, ".kilocode")
+          const settingsDir = path.join(dir, ".kilo")
           await Bun.write(
             path.join(settingsDir, "mcp.json"),
             JSON.stringify({
@@ -316,10 +316,10 @@ describe("McpMigrator", () => {
     })
 
     // Regression: project-level MCP settings use mcp.json, not mcp_settings.json
-    test("does not read project-level .kilocode/mcp_settings.json", async () => {
+    test("does not read project-level .kilo/mcp_settings.json", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
-          const settingsDir = path.join(dir, ".kilocode")
+          const settingsDir = path.join(dir, ".kilo")
           await Bun.write(
             path.join(settingsDir, "mcp_settings.json"),
             JSON.stringify({
@@ -432,7 +432,7 @@ describe("McpMigrator", () => {
       test("migrates streamable-http server from project settings", async () => {
         await using tmp = await tmpdir({
           init: async (dir) => {
-            const settingsDir = path.join(dir, ".kilocode")
+            const settingsDir = path.join(dir, ".kilo")
             await Bun.write(
               path.join(settingsDir, "mcp.json"),
               JSON.stringify({
@@ -462,7 +462,7 @@ describe("McpMigrator", () => {
       test("migrates sse server from project settings", async () => {
         await using tmp = await tmpdir({
           init: async (dir) => {
-            const settingsDir = path.join(dir, ".kilocode")
+            const settingsDir = path.join(dir, ".kilo")
             await Bun.write(
               path.join(settingsDir, "mcp.json"),
               JSON.stringify({
@@ -492,7 +492,7 @@ describe("McpMigrator", () => {
       test("migrates mixed stdio and remote servers", async () => {
         await using tmp = await tmpdir({
           init: async (dir) => {
-            const settingsDir = path.join(dir, ".kilocode")
+            const settingsDir = path.join(dir, ".kilo")
             await Bun.write(
               path.join(settingsDir, "mcp.json"),
               JSON.stringify({
@@ -540,7 +540,7 @@ describe("McpMigrator", () => {
       test("migrates remote server with headers and auth", async () => {
         await using tmp = await tmpdir({
           init: async (dir) => {
-            const settingsDir = path.join(dir, ".kilocode")
+            const settingsDir = path.join(dir, ".kilo")
             await Bun.write(
               path.join(settingsDir, "mcp.json"),
               JSON.stringify({
@@ -578,7 +578,7 @@ describe("McpMigrator", () => {
       test("skips disabled remote servers and records them", async () => {
         await using tmp = await tmpdir({
           init: async (dir) => {
-            const settingsDir = path.join(dir, ".kilocode")
+            const settingsDir = path.join(dir, ".kilo")
             await Bun.write(
               path.join(settingsDir, "mcp.json"),
               JSON.stringify({

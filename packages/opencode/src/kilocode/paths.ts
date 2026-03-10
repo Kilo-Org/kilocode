@@ -27,17 +27,17 @@ export namespace KilocodePaths {
     }
   }
 
-  /** Global Kilocode directory in user home: ~/.kilocode */
+  /** Global Kilo directory in user home: ~/.kilo */
   export function globalDir(): string {
-    return path.join(os.homedir(), ".kilocode")
+    return path.join(os.homedir(), ".kilo")
   }
 
   /**
-   * Discover Kilocode directories containing skills.
-   * Returns parent directories (.kilocode/) for glob pattern "skills/[*]/SKILL.md".
+   * Discover Kilo directories containing skills.
+   * Returns parent directories (.kilo/) for glob pattern "skills/[*]/SKILL.md".
    *
-   * - Walks up from projectDir to worktreeRoot for .kilocode/
-   * - Includes global ~/.kilocode/
+   * - Walks up from projectDir to worktreeRoot for .kilo/
+   * - Includes global ~/.kilo/
    * - Includes VSCode extension global storage
    *
    * Does NOT copy/migrate skills - just provides paths for discovery.
@@ -51,12 +51,12 @@ export namespace KilocodePaths {
   }): Promise<string[]> {
     const directories: string[] = []
 
-    // 1. Walk up from project dir to worktree root for .kilocode/
-    // Returns .kilocode/ directories (not .kilocode/skills/) because
+    // 1. Walk up from project dir to worktree root for .kilo/
+    // Returns .kilo/ directories (not .kilo/skills/) because
     // the glob pattern "skills/[*]/SKILL.md" is applied from the parent
     const projectDirs = await Array.fromAsync(
       Filesystem.up({
-        targets: [".kilocode"],
+        targets: [".kilo"],
         start: opts.projectDir,
         stop: opts.worktreeRoot,
       }),
@@ -64,12 +64,12 @@ export namespace KilocodePaths {
     for (const dir of projectDirs) {
       const skillsDir = path.join(dir, "skills")
       if (await Filesystem.isDir(skillsDir)) {
-        directories.push(dir) // Return parent (.kilocode/), not skills/
+        directories.push(dir) // Return parent (.kilo/), not skills/
       }
     }
 
     if (!opts.skipGlobalPaths) {
-      // 2. Global ~/.kilocode/
+      // 2. Global ~/.kilo/
       const global = globalDir()
       const globalSkills = path.join(global, "skills")
       if (await Filesystem.isDir(globalSkills)) {

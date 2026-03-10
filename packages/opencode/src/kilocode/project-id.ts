@@ -35,12 +35,12 @@ function normalizeProjectId(input: string): string {
 }
 
 /**
- * Read project ID from .kilocode/config.json
+ * Read project ID from .kilo/config.json
  * @param directory - Project directory
  * @returns Normalized project ID or undefined
  */
 async function getProjectIdFromConfig(directory: string): Promise<string | undefined> {
-  const file = Bun.file(path.join(directory, ".kilocode", "config.json"))
+  const file = Bun.file(path.join(directory, ".kilo", "config.json"))
   const text = await file.text().catch(() => undefined)
   if (!text) return undefined
 
@@ -74,13 +74,13 @@ async function getProjectIdFromGit(directory: string): Promise<string | undefine
 }
 
 /**
- * Resolve project ID with priority: .kilocode/config.json -> git origin URL
+ * Resolve project ID with priority: .kilo/config.json -> git origin URL
  * @returns Normalized project ID or undefined
  */
 async function resolveProjectId(): Promise<string | undefined> {
   const dir = Instance.directory
 
-  // Priority 1: .kilocode/config.json
+  // Priority 1: .kilo/config.json
   const id = await getProjectIdFromConfig(dir)
   if (id) return id
 

@@ -1,7 +1,7 @@
 /**
  * WorktreeStateManager - Centralized persistent state for agent manager worktrees and sessions.
  *
- * Persists to `.kilocode/agent-manager.json`. Decouples worktrees from sessions
+ * Persists to `.kilo/agent-manager.json`. Decouples worktrees from sessions
  * (many sessions per worktree) and provides CRUD operations for both.
  *
  * Data model:
@@ -52,8 +52,9 @@ interface StateFile {
   defaultBaseBranch?: string
 }
 
+import { KILO_DIR, migrateKiloDir } from "./constants"
+
 const STATE_FILE = "agent-manager.json"
-const KILOCODE_DIR = ".kilocode"
 
 let counter = 0
 
@@ -73,8 +74,12 @@ export class WorktreeStateManager {
   private saving: Promise<void> | undefined
   private pendingSave = false
 
+  private readonly root: string
+  private migrated = false
+
   constructor(root: string, log: (msg: string) => void) {
-    this.file = path.join(root, KILOCODE_DIR, STATE_FILE)
+    this.root = root
+    this.file = path.join(root, KILO_DIR, STATE_FILE)
     this.log = log
   }
 
@@ -279,6 +284,11 @@ export class WorktreeStateManager {
   // ---------------------------------------------------------------------------
 
   async load(): Promise<void> {
+    // Migrate .kilocode → .kilo before first read
+    if (!this.migrated) {
+      this.migrated = true
+      await migrateKiloDir(this.root, this.log)
+    }
     try {
       const content = await fs.promises.readFile(this.file, "utf-8")
       const data = JSON.parse(content) as StateFile

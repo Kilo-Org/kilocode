@@ -28,7 +28,7 @@ import { getWorkspaceRoot, hashFileDiffs, openFileInEditor, resolveLocalDiffTarg
  * AgentManagerProvider opens the Agent Manager panel.
  *
  * Uses WorktreeStateManager for centralized state persistence. Worktrees and
- * sessions are stored in `.kilocode/agent-manager.json`. The UI shows two
+ * sessions are stored in `.kilo/agent-manager.json`. The UI shows two
  * sections: WORKTREES (top) with managed worktrees + their sessions, and
  * SESSIONS (bottom) with unassociated workspace sessions.
  */

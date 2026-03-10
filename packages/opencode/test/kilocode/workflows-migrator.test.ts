@@ -60,7 +60,7 @@ Actual description here.`
     test("discovers project workflows", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
-          const workflowsDir = path.join(dir, ".kilocode", "workflows")
+          const workflowsDir = path.join(dir, ".kilo", "workflows")
           await Bun.write(path.join(workflowsDir, "test-workflow.md"), "# Test\n\nDescription")
         },
       })
@@ -83,7 +83,7 @@ Actual description here.`
     test("only discovers .md files", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
-          const workflowsDir = path.join(dir, ".kilocode", "workflows")
+          const workflowsDir = path.join(dir, ".kilo", "workflows")
           await Bun.write(path.join(workflowsDir, "workflow.md"), "# Workflow")
           await Bun.write(path.join(workflowsDir, "readme.txt"), "Not a workflow")
           await Bun.write(path.join(workflowsDir, "config.json"), "{}")
@@ -130,7 +130,7 @@ Actual description here.`
     test("migrates project workflows to commands", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
-          const workflowsDir = path.join(dir, ".kilocode", "workflows")
+          const workflowsDir = path.join(dir, ".kilo", "workflows")
           await Bun.write(
             path.join(workflowsDir, "code-review.md"),
             "# Code Review\n\nPerform a code review.\n\n## Steps\n\n1. Review",
@@ -158,7 +158,7 @@ Actual description here.`
     test("migrates multiple workflows", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
-          const workflowsDir = path.join(dir, ".kilocode", "workflows")
+          const workflowsDir = path.join(dir, ".kilo", "workflows")
           await Bun.write(path.join(workflowsDir, "review.md"), "# Review\n\nReview code")
           await Bun.write(path.join(workflowsDir, "deploy.md"), "# Deploy\n\nDeploy app")
         },
@@ -179,7 +179,7 @@ Actual description here.`
           await Bun.write(path.join(globalDir, "shared.md"), "# Shared\n\nGlobal version")
 
           // Create project workflows
-          const projectDir = path.join(dir, ".kilocode", "workflows")
+          const projectDir = path.join(dir, ".kilo", "workflows")
           await Bun.write(path.join(projectDir, "shared.md"), "# Shared\n\nProject version")
 
           return globalDir

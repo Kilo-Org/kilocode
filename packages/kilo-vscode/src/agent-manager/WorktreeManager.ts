@@ -3,7 +3,7 @@
  *
  * Ported from kilocode/src/core/kilocode/agent-manager/WorktreeManager.ts.
  * Handles creation, discovery, and cleanup of worktrees stored in
- * {projectRoot}/.kilocode/worktrees/
+ * {projectRoot}/.kilo/worktrees/
  */
 
 import * as path from "path"
@@ -77,7 +77,8 @@ function stripRemotePrefix(ref: string): { branch: string; remote?: string } {
   return { branch: ref }
 }
 
-const KILOCODE_DIR = ".kilocode"
+import { KILO_DIR, migrateKiloDir } from "./constants"
+
 const SESSION_ID_FILE = "session-id"
 const METADATA_FILE = "metadata.json"
 
@@ -87,13 +88,21 @@ export class WorktreeManager {
   private readonly git: SimpleGit
   private readonly ops: GitOps | undefined
   private readonly log: (msg: string) => void
+  private migrated = false
 
   constructor(root: string, log: (msg: string) => void, ops?: GitOps) {
     this.root = root
-    this.dir = path.join(root, KILOCODE_DIR, "worktrees")
+    this.dir = path.join(root, KILO_DIR, "worktrees")
     this.git = simpleGit(root)
     this.ops = ops
     this.log = log
+  }
+
+  /** Run once before first read/write to migrate .kilocode → .kilo. */
+  private async ensureMigrated(): Promise<void> {
+    if (this.migrated) return
+    this.migrated = true
+    await migrateKiloDir(this.root, this.log)
   }
 
   // ---------------------------------------------------------------------------
@@ -128,6 +137,7 @@ export class WorktreeManager {
     branchName?: string
     onProgress?: (step: WorktreeProgressStep, message: string, detail?: string) => void
   }): Promise<CreateWorktreeResult> {
+    await this.ensureMigrated()
     return this.withGitLock(() => this.createWorktreeImpl(params))
   }
 
@@ -291,6 +301,7 @@ export class WorktreeManager {
   }
 
   async discoverWorktrees(): Promise<WorktreeInfo[]> {
+    await this.ensureMigrated()
     if (!fs.existsSync(this.dir)) return []
 
     const entries = await fs.promises.readdir(this.dir, { withFileTypes: true })
@@ -301,7 +312,7 @@ export class WorktreeManager {
   }
 
   async writeMetadata(worktreePath: string, sessionId: string, parentBranch: string, remote?: string): Promise<void> {
-    const dir = path.join(worktreePath, KILOCODE_DIR)
+    const dir = path.join(worktreePath, KILO_DIR)
     if (!fs.existsSync(dir)) await fs.promises.mkdir(dir, { recursive: true })
 
     const meta: Record<string, string> = { sessionId, parentBranch }
@@ -319,7 +330,7 @@ export class WorktreeManager {
   async readMetadata(
     worktreePath: string,
   ): Promise<{ sessionId: string; parentBranch?: string; remote?: string } | undefined> {
-    const dir = path.join(worktreePath, KILOCODE_DIR)
+    const dir = path.join(worktreePath, KILO_DIR)
 
     // Try metadata.json first (has parentBranch + remote)
     try {
@@ -355,13 +366,8 @@ export class WorktreeManager {
   async ensureGitExclude(): Promise<void> {
     const gitDir = await this.resolveGitDir()
     const excludePath = path.join(gitDir, "info", "exclude")
-    await this.addExcludeEntry(excludePath, ".kilocode/worktrees/", "Kilo Code agent worktrees")
-    await this.addExcludeEntry(excludePath, ".kilocode/agent-manager.json", "Kilo Agent Manager state")
-    await this.addExcludeEntry(excludePath, ".kilocode/setup-script", "Kilo Code worktree setup script")
-    await this.addExcludeEntry(excludePath, ".kilocode/setup-script.sh", "Kilo Code worktree setup script")
-    await this.addExcludeEntry(excludePath, ".kilocode/setup-script.ps1", "Kilo Code worktree setup script")
-    await this.addExcludeEntry(excludePath, ".kilocode/setup-script.cmd", "Kilo Code worktree setup script")
-    await this.addExcludeEntry(excludePath, ".kilocode/setup-script.bat", "Kilo Code worktree setup script")
+    await this.addExcludeEntry(excludePath, ".kilo/", "Kilo Code config directory")
+    await this.addExcludeEntry(excludePath, ".kilocode/", "Kilo Code legacy config directory")
   }
 
   private async ensureWorktreeExclude(worktreePath: string): Promise<void> {
@@ -372,11 +378,7 @@ export class WorktreeManager {
 
       const worktreeGitDir = path.resolve(worktreePath, match[1].trim())
       const mainGitDir = path.dirname(path.dirname(worktreeGitDir))
-      await this.addExcludeEntry(
-        path.join(mainGitDir, "info", "exclude"),
-        `${KILOCODE_DIR}/`,
-        "Kilo Code session metadata",
-      )
+      await this.addExcludeEntry(path.join(mainGitDir, "info", "exclude"), `${KILO_DIR}/`, "Kilo Code session metadata")
     } catch (error) {
       this.log(`Warning: Failed to update git exclude for worktree: ${error}`)
     }

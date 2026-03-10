@@ -126,7 +126,7 @@ export namespace ModesMigrator {
       allModes.push(...(await readModesFile(vscodeGlobalPath)))
 
       // 2. CLI global settings (fallback/alternative location)
-      const cliGlobalPath = path.join(os.homedir(), ".kilocode", "cli", "global", "settings", "custom_modes.yaml")
+      const cliGlobalPath = path.join(os.homedir(), ".kilo", "cli", "global", "settings", "custom_modes.yaml")
       allModes.push(...(await readModesFile(cliGlobalPath)))
 
       // 3. Home directory .kilocodemodes

@@ -1,4 +1,3 @@
-
 import * as fs from "fs/promises"
 import * as path from "path"
 import os from "os"
@@ -7,8 +6,8 @@ import { Filesystem } from "../util/filesystem"
 import { KilocodePaths } from "./paths"
 
 export namespace WorkflowsMigrator {
-  const KILOCODE_WORKFLOWS_DIR = ".kilocode/workflows"
-  const GLOBAL_WORKFLOWS_DIR = path.join(os.homedir(), ".kilocode", "workflows")
+  const KILO_WORKFLOWS_DIR = ".kilo/workflows"
+  const GLOBAL_WORKFLOWS_DIR = path.join(os.homedir(), ".kilo", "workflows")
 
   export interface KilocodeWorkflow {
     name: string
@@ -72,12 +71,12 @@ export namespace WorkflowsMigrator {
       const vscodeWorkflowsDir = path.join(KilocodePaths.vscodeGlobalStorage(), "workflows")
       workflows.push(...(await loadWorkflowsFromDir(vscodeWorkflowsDir, "global")))
 
-      // 2. Home directory ~/.kilocode/workflows (fallback/alternative location)
+      // 2. Home directory ~/.kilo/workflows (fallback/alternative location)
       workflows.push(...(await loadWorkflowsFromDir(GLOBAL_WORKFLOWS_DIR, "global")))
     }
 
-    // 3. Project workflows (.kilocode/workflows/)
-    const projectWorkflowsDir = path.join(projectDir, KILOCODE_WORKFLOWS_DIR)
+    // 3. Project workflows (.kilo/workflows/)
+    const projectWorkflowsDir = path.join(projectDir, KILO_WORKFLOWS_DIR)
     workflows.push(...(await loadWorkflowsFromDir(projectWorkflowsDir, "project")))
 
     return workflows

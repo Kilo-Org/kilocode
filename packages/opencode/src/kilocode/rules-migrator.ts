@@ -1,4 +1,3 @@
-
 import * as fs from "fs/promises"
 import * as path from "path"
 import os from "os"
@@ -8,8 +7,8 @@ export namespace RulesMigrator {
   const LEGACY_RULE_FILE = ".kilocoderules"
 
   // Directory-based rules
-  const KILOCODE_RULES_DIR = ".kilocode/rules"
-  const GLOBAL_RULES_DIR = path.join(os.homedir(), ".kilocode", "rules")
+  const KILO_RULES_DIR = ".kilo/rules"
+  const GLOBAL_RULES_DIR = path.join(os.homedir(), ".kilo", "rules")
 
   // Known modes for mode-specific rule discovery
   const KNOWN_MODES = ["code", "architect", "ask", "debug", "orchestrator"]
@@ -50,7 +49,7 @@ export namespace RulesMigrator {
   export async function discoverRules(projectDir: string): Promise<RuleFile[]> {
     const rules: RuleFile[] = []
 
-    // 1. Global rules directory (~/.kilocode/rules/*.md)
+    // 1. Global rules directory (~/.kilo/rules/*.md)
     if (await isDirectory(GLOBAL_RULES_DIR)) {
       const files = await findMarkdownFiles(GLOBAL_RULES_DIR)
       for (const file of files) {
@@ -58,8 +57,8 @@ export namespace RulesMigrator {
       }
     }
 
-    // 2. Project .kilocode/rules/ directory
-    const projectRulesDir = path.join(projectDir, KILOCODE_RULES_DIR)
+    // 2. Project .kilo/rules/ directory
+    const projectRulesDir = path.join(projectDir, KILO_RULES_DIR)
     if (await isDirectory(projectRulesDir)) {
       const files = await findMarkdownFiles(projectRulesDir)
       for (const file of files) {
@@ -75,8 +74,8 @@ export namespace RulesMigrator {
 
     // 4. Mode-specific rules
     for (const mode of KNOWN_MODES) {
-      // Mode-specific directory (.kilocode/rules-{mode}/*.md)
-      const modeDir = path.join(projectDir, `.kilocode/rules-${mode}`)
+      // Mode-specific directory (.kilo/rules-{mode}/*.md)
+      const modeDir = path.join(projectDir, `.kilo/rules-${mode}`)
       if (await isDirectory(modeDir)) {
         const files = await findMarkdownFiles(modeDir)
         for (const file of files) {
@@ -124,8 +123,7 @@ export namespace RulesMigrator {
       // Warn about legacy files
       if (rule.source === "legacy") {
         warnings.push(
-          `Legacy rule file '${path.basename(rule.path)}' found. ` +
-            `Consider migrating to .kilocode/rules/ directory.`,
+          `Legacy rule file '${path.basename(rule.path)}' found. ` + `Consider migrating to .kilo/rules/ directory.`,
         )
       }
     }

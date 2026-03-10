@@ -45,6 +45,7 @@ import { RulesMigrator } from "../kilocode/rules-migrator" // kilocode_change
 import { WorkflowsMigrator } from "../kilocode/workflows-migrator" // kilocode_change
 import { McpMigrator } from "../kilocode/mcp-migrator" // kilocode_change
 import { IgnoreMigrator } from "../kilocode/ignore-migrator" // kilocode_change
+import { migrateKiloDir } from "../kilocode/migrate-kilo-dir" // kilocode_change
 
 export namespace Config {
   const ModelId = z.string().meta({ $ref: "https://models.dev/model-schema.json#/$defs/Model" })
@@ -96,7 +97,11 @@ export namespace Config {
     // Managed config directory is enterprise-only and always overrides everything above.
     let result: Info = {}
 
-    // kilocode_change start - Load Kilocode configs first (lowest precedence)
+    // kilocode_change start
+    // Migrate .kilocode/ directories to .kilo/ (one-time rename)
+    await migrateKiloDir(Instance.directory)
+
+    // Load Kilocode configs first (lowest precedence)
     // Load Kilocode custom modes (legacy fallback)
     try {
       const kilocodeMigration = await ModesMigrator.migrate({
@@ -157,7 +162,7 @@ export namespace Config {
       result = mergeConfigConcatArrays(result, { mcp: kilocodeMcp })
     }
 
-    // Load Kilocode .kilocodeignore patterns (legacy fallback)
+    // Load .kilocodeignore patterns (legacy fallback)
     try {
       const ignorePermission = await IgnoreMigrator.loadIgnoreConfig(Instance.directory)
       if (Object.keys(ignorePermission).length > 0) {
