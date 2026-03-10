@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it } from "bun:test"
-import { getShellEnvironment, execWithShellEnv, clearShellEnvCache } from "../../src/agent-manager/shell-env"
+import {
+  getShellEnvironment,
+  execWithShellEnv,
+  clearShellEnvCache,
+  parseEnvOutput,
+} from "../../src/agent-manager/shell-env"
 
 afterEach(() => {
   clearShellEnvCache()
@@ -61,6 +66,30 @@ describe("execWithShellEnv", () => {
     const [a, b] = await Promise.all([execWithShellEnv("echo", ["first"]), execWithShellEnv("echo", ["second"])])
     expect(a.stdout.trim()).toBe("first")
     expect(b.stdout.trim()).toBe("second")
+  })
+})
+
+describe("parseEnvOutput", () => {
+  it("does not append trailing newline to last variable value", () => {
+    const input = "FOO=bar\nPATH=/usr/bin:/bin\n"
+    const result = parseEnvOutput(input)
+    expect(result.FOO).toBe("bar")
+    expect(result.PATH).toBe("/usr/bin:/bin")
+    // The bug: without trimEnd(), the trailing \n causes PATH to get "\n" appended
+    expect(result.PATH).not.toContain("\n")
+  })
+
+  it("handles multiline values correctly", () => {
+    const input = "SIMPLE=hello\nMULTI=line1\nline2\nline3\nPATH=/usr/bin\n"
+    const result = parseEnvOutput(input)
+    expect(result.SIMPLE).toBe("hello")
+    expect(result.MULTI).toBe("line1\nline2\nline3")
+    expect(result.PATH).toBe("/usr/bin")
+  })
+
+  it("handles empty input", () => {
+    const result = parseEnvOutput("")
+    expect(Object.keys(result).length).toBe(0)
   })
 })
 
