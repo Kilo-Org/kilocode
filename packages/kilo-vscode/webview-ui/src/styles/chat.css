@@ -912,6 +912,7 @@
     --surface-interactive-active,
     var(--vscode-list-activeSelectionBackground, var(--vscode-list-hoverBackground))
   );
+  color: var(--text-on-interactive-base, var(--vscode-list-activeSelectionForeground));
 }
 
 .thinking-selector-item-name {
@@ -952,6 +953,7 @@
     --surface-interactive-active,
     var(--vscode-list-activeSelectionBackground, var(--vscode-list-hoverBackground))
   );
+  color: var(--text-on-interactive-base, var(--vscode-list-activeSelectionForeground));
 }
 
 .mode-switcher-item-name {
@@ -960,10 +962,13 @@
 
 .mode-switcher-item-desc {
   font-size: 11px;
-  color: var(--text-weak, var(--vscode-descriptionForeground));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.mode-switcher-item:not(.selected) .mode-switcher-item-desc {
+  color: var(--text-weak, var(--vscode-descriptionForeground));
 }
 
 /* ============================================
