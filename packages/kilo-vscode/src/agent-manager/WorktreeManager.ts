@@ -330,7 +330,20 @@ export class WorktreeManager {
   async readMetadata(
     worktreePath: string,
   ): Promise<{ sessionId: string; parentBranch?: string; remote?: string } | undefined> {
-    const dir = path.join(worktreePath, KILO_DIR)
+    // Check .kilo/ first, then legacy .kilocode/ (per-worktree metadata dirs
+    // are not renamed by the top-level migration)
+    for (const dirName of [KILO_DIR, ".kilocode"]) {
+      const result = await this.readMetadataFrom(worktreePath, dirName)
+      if (result) return result
+    }
+    return undefined
+  }
+
+  private async readMetadataFrom(
+    worktreePath: string,
+    dirName: string,
+  ): Promise<{ sessionId: string; parentBranch?: string; remote?: string } | undefined> {
+    const dir = path.join(worktreePath, dirName)
 
     // Try metadata.json first (has parentBranch + remote)
     try {

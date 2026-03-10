@@ -298,7 +298,9 @@ export class WorktreeStateManager {
       this.reviewDiffStyle = "unified"
 
       for (const [id, wt] of Object.entries(data.worktrees ?? {})) {
-        this.worktrees.set(id, { id, ...wt })
+        // Rewrite stale .kilocode/ paths left from before the directory rename
+        const fixed = wt.path?.includes("/.kilocode/") ? wt.path.replace("/.kilocode/", "/.kilo/") : wt.path
+        this.worktrees.set(id, { id, ...wt, path: fixed })
       }
       for (const [id, s] of Object.entries(data.sessions ?? {})) {
         this.sessions.set(id, { id, ...s })
