@@ -19,40 +19,60 @@ const HEADING_PATTERN = /^##\s*Commit Message\s*#*$/
 function extractSection(content: string, heading: string): string | undefined {
   const lines = content.split("\n")
 
-  let start = -1
-  let inCodeFence = false
-  for (let i = 0; i < lines.length; i++) {
-    if (FENCE_PATTERN.test(lines[i])) {
-      inCodeFence = !inCodeFence
-      continue
-    }
-    if (!inCodeFence && HEADING_PATTERN.test(lines[i])) {
-      start = i
-      break
+  // Helper function to process lines with fence handling
+  function processLines(
+    startIdx: number,
+    endIdx: number,
+    onNonFenceLine: (line: string, i: number) => boolean | void,
+  ): void {
+    let inCodeFence = false
+    let fenceType: "`" | "~" | null = null
+    for (let i = startIdx; i < endIdx; i++) {
+      const line = lines[i]
+      if (FENCE_PATTERN.test(line)) {
+        if (!inCodeFence) {
+          // Opening fence
+          inCodeFence = true
+          fenceType = line.trim().startsWith("`") ? "`" : "~"
+        } else {
+          // Closing fence - must match opening type
+          const currentType = line.trim().startsWith("`") ? "`" : "~"
+          if (currentType === fenceType) {
+            inCodeFence = false
+            fenceType = null
+          }
+        }
+        continue
+      }
+      if (!inCodeFence && onNonFenceLine(line, i)) {
+        break
+      }
     }
   }
+
+  let start = -1
+  processLines(0, lines.length, (line, i) => {
+    if (HEADING_PATTERN.test(line)) {
+      start = i
+      return true
+    }
+  })
   if (start === -1) return undefined
 
   let end = lines.length
-  for (let i = start + 1; i < lines.length; i++) {
-    const line = lines[i]
-    if (FENCE_PATTERN.test(line)) {
-      inCodeFence = !inCodeFence
-      continue
-    }
+  processLines(start + 1, lines.length, (line, i) => {
     // Skip indented code blocks (4+ spaces)
-    if (!inCodeFence && /^\s{4,}/.test(line)) {
-      continue
+    if (/^\s{4,}/.test(line)) {
+      return false
     }
     if (
-      !inCodeFence &&
-      (/^\s{0,3}#{1,6}[^#]/.test(line) ||
-        (i > start + 1 && lines[i - 1].trim() && !lines[i - 1].trim().startsWith("#") && /^\s*[=-]{3,}\s*$/.test(line)))
+      /^\s{0,3}#{1,6}[^#]/.test(line) ||
+      (i > start + 1 && lines[i - 1].trim() && !lines[i - 1].trim().startsWith("#") && /^\s*[=-]{3,}\s*$/.test(line))
     ) {
       end = i
-      break
+      return true
     }
-  }
+  })
 
   const rawSection = lines.slice(start + 1, end).join("\n")
   // Trim only leading/trailing empty lines, preserve internal formatting
