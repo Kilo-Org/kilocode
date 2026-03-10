@@ -5,9 +5,10 @@
 // - Deduplication of auto-replies
 
 import { describe, test, expect } from "bun:test"
-import { createRoot, createSignal, createEffect } from "solid-js"
+import { createRoot, createSignal } from "solid-js"
 import { PermissionNext } from "../../src/permission/next"
 import { Instance } from "../../src/project/instance"
+import { Config } from "../../src/config/config"
 import { tmpdir } from "../fixture/fixture"
 
 // ── AutoMode context logic ──────────────────────────────────────────────────
@@ -298,5 +299,116 @@ describe("auto mode deduplication", () => {
     }
 
     expect(calls).toEqual(["perm_a", "perm_b", "perm_c"])
+  })
+})
+
+// ── Config schema ───────────────────────────────────────────────────────────
+
+describe("auto mode config", () => {
+  test("auto_toggle keybind defaults to ctrl+shift+a", () => {
+    const result = Config.Keybinds.parse({})
+    expect(result.auto_toggle).toBe("ctrl+shift+a")
+  })
+})
+
+// ── Edge cases ──────────────────────────────────────────────────────────────
+
+describe("auto mode edge cases", () => {
+  test("reply to never-existed permission ID is a no-op", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        // Reply to an ID that was never ask()ed — should not throw
+        await PermissionNext.reply({ requestID: "permission_nonexistent", reply: "once" })
+      },
+    })
+  })
+
+  test("once reply does not cascade to other pending permissions", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const promise1 = PermissionNext.ask({
+          id: "permission_cascade1",
+          sessionID: "session_cascade",
+          permission: "bash",
+          patterns: ["echo 1"],
+          metadata: {},
+          always: [],
+          ruleset: [],
+        })
+
+        const promise2 = PermissionNext.ask({
+          id: "permission_cascade2",
+          sessionID: "session_cascade",
+          permission: "edit",
+          patterns: ["file.ts"],
+          metadata: {},
+          always: [],
+          ruleset: [],
+        })
+
+        // Reply "once" to the first — should NOT cascade to the second
+        await PermissionNext.reply({ requestID: "permission_cascade1", reply: "once" })
+        await promise1
+
+        // Second should still be pending
+        let resolved = false
+        promise2.then(() => {
+          resolved = true
+        })
+        await new Promise((r) => setTimeout(r, 10))
+        expect(resolved).toBe(false)
+
+        // Clean up
+        await PermissionNext.reply({ requestID: "permission_cascade2", reply: "once" })
+        await promise2
+      },
+    })
+  })
+
+  test("list returns empty after all pending permissions are replied", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const promise1 = PermissionNext.ask({
+          id: "permission_list1",
+          sessionID: "session_list",
+          permission: "bash",
+          patterns: ["ls"],
+          metadata: {},
+          always: [],
+          ruleset: [],
+        })
+
+        const promise2 = PermissionNext.ask({
+          id: "permission_list2",
+          sessionID: "session_list",
+          permission: "edit",
+          patterns: ["foo.ts"],
+          metadata: {},
+          always: [],
+          ruleset: [],
+        })
+
+        // Both should be pending
+        const pending = await PermissionNext.list()
+        expect(pending).toHaveLength(2)
+        expect(pending.map((p) => p.id).sort()).toEqual(["permission_list1", "permission_list2"])
+
+        // Reply to both with "once"
+        await PermissionNext.reply({ requestID: "permission_list1", reply: "once" })
+        await PermissionNext.reply({ requestID: "permission_list2", reply: "once" })
+        await promise1
+        await promise2
+
+        // List should now be empty
+        const remaining = await PermissionNext.list()
+        expect(remaining).toHaveLength(0)
+      },
+    })
   })
 })

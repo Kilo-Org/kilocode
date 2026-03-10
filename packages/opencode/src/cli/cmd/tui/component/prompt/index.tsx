@@ -1063,9 +1063,8 @@ export function Prompt(props: PromptProps) {
         {/* kilocode_change start - persistent auto mode banner */}
         <Show when={auto.enabled()}>
           <box flexDirection="row" justifyContent="space-between" paddingLeft={1} paddingRight={1}>
-            <text fg={theme.warning}>{"△ "}Auto mode — permissions are auto-approved</text>
-            <text fg={theme.textMuted}>
-              {keybind.print("auto_toggle")} <span style={{ fg: theme.textMuted }}>disable</span>
+            <text fg={theme.warning}>
+              {"△ "}Auto mode — permissions are auto-approved{"  "}({keybind.print("auto_toggle")} to toggle)
             </text>
           </box>
         </Show>
