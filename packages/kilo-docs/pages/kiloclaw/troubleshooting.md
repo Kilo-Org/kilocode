@@ -12,7 +12,7 @@ OpenClaw Doctor is the recommended first step when something isn't working. It r
 To use it:
 
 1. Make sure your instance is running
-2. Click **OpenClaw Doctor** on your [dashboard](/docs/automate/kiloclaw/dashboard)
+2. Click **OpenClaw Doctor** on your [dashboard](/docs/kiloclaw/dashboard)
 3. Watch the output as it runs — results appear in real time
 
 ## Common Questions
@@ -28,9 +28,9 @@ No. Redeploy does **not** delete your files, git repos, or cron jobs. It stops t
 
 ### My bot isn't responding on Telegram/Discord/Slack
 
-1. Check that the channel token is configured in [Settings](/docs/automate/kiloclaw/dashboard#channels)
+1. Check that the channel token is configured in [Settings](/docs/kiloclaw/dashboard#channels)
 2. Make sure you **Redeployed** or **Restarted OpenClaw** after saving tokens
-3. Check for pending [pairing requests](/docs/automate/kiloclaw/chat-platforms#pairing-requests) — the user may need to be approved
+3. Check for pending [pairing requests](/docs/kiloclaw/chat-platforms#pairing-requests) — the user may need to be approved
 4. Try running **OpenClaw Doctor**
 
 ### The gateway shows "Crashed"
@@ -40,10 +40,6 @@ The OpenClaw process is automatically restarted when it crashes. Check the Gatew
 1. Run **OpenClaw Doctor**
 2. Try a **Redeploy** to apply the latest platform image
 3. If the issue persists, join the [Kilo Discord](https://kilo.ai/discord) and share details in the KiloClaw channel
-
-### My access code isn't working
-
-Access codes are one-time use and expire after 10 minutes. Generate a new one by clicking **Access Code** on the dashboard. Make sure your instance is running before clicking **Open**.
 
 ### I changed the model but the agent is still using the old one
 
@@ -60,6 +56,25 @@ The Gateway Process tab shows the current state of the OpenClaw process inside y
 - **Crashed** — The process exited unexpectedly and will be automatically restarted
 - **Shutting Down** — The process is stopping as part of a machine stop or redeploy
 
+## FAQ
+
+### How can I change my model?
+
+You can change the model in two ways:
+
+- **From chat** — Type `/model` in the Chat window within the OpenClaw Control UI to switch models directly.
+- **From the dashboard** — Go to [https://app.kilo.ai/claw](https://app.kilo.ai/claw), select the model you want, and click **Save**. No redeploy is needed.
+
+### Can I access the filesystem?
+
+Direct filesystem access is not available at this time. You can interact with files through your OpenClaw agent using its built-in file tools.
+
+### How can I update my OpenClaw?
+
+Do **not** click **Update Now** inside the OpenClaw Control UI — this is not supported for KiloClaw instances and may break your setup.
+
+Updates are managed by the KiloClaw platform team to ensure stability. When a new version is available, it will be announced in the **Changelog** on your dashboard. To apply the update, click **Upgrade & Redeploy** from the [KiloClaw Dashboard](/docs/kiloclaw/dashboard#redeploy).
+
 ## Architecture Notes
 
 For advanced users — how KiloClaw instances are structured:
@@ -72,7 +87,7 @@ For advanced users — how KiloClaw instances are structured:
 
 ## Related
 
-- [KiloClaw Overview](/docs/automate/kiloclaw/overview)
-- [Dashboard Reference](/docs/automate/kiloclaw/dashboard)
-- [Connecting Chat Platforms](/docs/automate/kiloclaw/chat-platforms)
-- [KiloClaw Pricing](/docs/automate/kiloclaw/pricing)
+- [KiloClaw Overview](/docs/kiloclaw/overview)
+- [Dashboard Reference](/docs/kiloclaw/dashboard)
+- [Connecting Chat Platforms](/docs/kiloclaw/chat-platforms)
+- [KiloClaw Pricing](/docs/kiloclaw/pricing)

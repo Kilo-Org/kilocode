@@ -1,7 +1,7 @@
 /** @jsxImportSource solid-js */
 /**
  * Stories for high-priority chat components:
- * ChatView, MessageList, QuestionDock
+ * ChatView, MessageList, QuestionDock, TaskHeader
  *
  * These render with mocked session/server/provider contexts — the components
  * will show their "idle / empty" states since no real extension host is connected.
@@ -10,9 +10,10 @@
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import { StoryProviders, mockSessionValue } from "./StoryProviders"
 import { ChatView } from "../components/chat/ChatView"
+import { TaskHeader } from "../components/chat/TaskHeader"
 import { QuestionDock } from "../components/chat/QuestionDock"
 import { SessionContext } from "../context/session"
-import type { QuestionRequest } from "../types/messages"
+import type { QuestionRequest, TodoItem } from "../types/messages"
 
 const SESSION_ID = "story-session-chat-001"
 
@@ -136,4 +137,71 @@ export const QuestionDockMulti: Story = {
       </div>
     </StoryProviders>
   ),
+}
+
+// ---------------------------------------------------------------------------
+// TaskHeader with todos
+// ---------------------------------------------------------------------------
+
+const mockTodosInProgress: TodoItem[] = [
+  { id: "1", content: "Create a haiku about Jan", status: "completed" },
+  { id: "2", content: "Create a poem about Henk", status: "in_progress" },
+  { id: "3", content: "Write a limerick about the team", status: "pending" },
+]
+
+const mockTodosAllDone: TodoItem[] = [
+  { id: "1", content: "Create a haiku about Jan", status: "completed" },
+  { id: "2", content: "Create a poem about Henk", status: "completed" },
+]
+
+export const TaskHeaderWithTodos: Story = {
+  name: "TaskHeader — with todos (in progress)",
+  render: () => {
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy" }),
+      messages: () => [{ id: "msg-001" }] as any[],
+      currentSession: () => ({
+        id: SESSION_ID,
+        title: "Writing poems about the team",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }),
+      todos: () => mockTodosInProgress,
+    }
+    return (
+      <StoryProviders sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "380px" }}>
+            <TaskHeader />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+export const TaskHeaderWithTodosAllDone: Story = {
+  name: "TaskHeader — with todos (all done)",
+  render: () => {
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
+      messages: () => [{ id: "msg-001" }] as any[],
+      currentSession: () => ({
+        id: SESSION_ID,
+        title: "Writing poems about the team",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }),
+      todos: () => mockTodosAllDone,
+    }
+    return (
+      <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "380px" }}>
+            <TaskHeader />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
 }

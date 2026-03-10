@@ -44,6 +44,7 @@ export const dict = {
 
   "command.session.new": "New session",
   "command.session.new.task": "New task",
+  "command.session.show.changes": "Show Changes",
   "command.file.open": "Open file",
   "command.tab.close": "Close tab",
   "command.context.addSelection": "Add selection to context",
@@ -743,6 +744,11 @@ export const dict = {
   "session.empty": "No sessions yet. Click + to start a new conversation.",
   "session.cloud.repoOnly": "Only this repository",
   "session.cloud.import": "Import from cloud",
+  "feedback.button": "Feedback & Support",
+  "feedback.dialog.message": "We'd love to hear your feedback or help with any issues you're experiencing.",
+  "feedback.dialog.github": "Report an issue on GitHub",
+  "feedback.dialog.discord": "Join our Discord community",
+  "feedback.dialog.support": "Customer Support",
   "session.cloud.import.title": "Import from cloud",
   "session.cloud.import.placeholder": "Session ID, URL, or kilo import command",
   "session.cloud.import.button": "Import",
@@ -956,26 +962,38 @@ export const dict = {
   "settings.agentBehaviour.workflowsPlaceholder": "Workflows are managed via workflow files in your workspace.",
   "settings.agentBehaviour.notImplemented": "Not yet implemented.",
 
-  "settings.autoApprove.setAll": "Set all permissions",
+  "settings.autoApprove.description":
+    "Define how tools are allowed to run. Most tools default to Allow. doom_loop and external_directory default to Ask.",
   "settings.autoApprove.level.allow": "Allow",
   "settings.autoApprove.level.ask": "Ask",
   "settings.autoApprove.level.deny": "Deny",
-  "settings.autoApprove.tool.read": "Read file contents",
-  "settings.autoApprove.tool.edit": "Edit or create files",
-  "settings.autoApprove.tool.glob": "Find files by pattern",
-  "settings.autoApprove.tool.grep": "Search file contents",
-  "settings.autoApprove.tool.list": "List directory contents",
-  "settings.autoApprove.tool.bash": "Execute shell commands",
-  "settings.autoApprove.tool.task": "Create sub-agent tasks",
-  "settings.autoApprove.tool.skill": "Execute skills",
-  "settings.autoApprove.tool.lsp": "Language server operations",
-  "settings.autoApprove.tool.todoread": "Read todo lists",
-  "settings.autoApprove.tool.todowrite": "Write todo lists",
-  "settings.autoApprove.tool.webfetch": "Fetch web pages",
-  "settings.autoApprove.tool.websearch": "Search the web",
-  "settings.autoApprove.tool.codesearch": "Search codebase",
-  "settings.autoApprove.tool.external_directory": "Access files outside workspace",
-  "settings.autoApprove.tool.doom_loop": "Continue after repeated failures",
+  "settings.autoApprove.wildcardLabel.commands": "All commands (*)",
+  "settings.autoApprove.wildcardLabel.paths": "All paths (*)",
+  "settings.autoApprove.exceptions": "Exceptions",
+  "settings.autoApprove.addCommand": "Add command",
+  "settings.autoApprove.addPath": "Add path",
+  "settings.autoApprove.placeholder.command": "e.g. git *",
+  "settings.autoApprove.placeholder.path": "e.g. *.env",
+  "settings.autoApprove.tool.external_directory":
+    "Access files outside workspace. Triggered when accessing files outside the current project directory.",
+  "settings.autoApprove.tool.bash": "Run terminal commands. Allows execution of shell commands (e.g., git status).",
+  "settings.autoApprove.tool.read": "Read files. Allows the agent to read files matching the specified path.",
+  "settings.autoApprove.tool.edit":
+    "Modify files. Allows the agent to create or edit files, including patches and multi-file updates.",
+  "settings.autoApprove.tool.glob":
+    "Match files by pattern. Allows file matching using glob patterns (e.g., src/**/*.ts).",
+  "settings.autoApprove.tool.grep": "Search file contents. Allows regex-based search inside files.",
+  "settings.autoApprove.tool.list": "List directory contents. Allows viewing files and folders within a directory.",
+  "settings.autoApprove.tool.task": "Launch sub-agents. Allows starting specialized sub-agents for specific tasks.",
+  "settings.autoApprove.tool.skill": "Load skills. Allows loading predefined skills by name.",
+  "settings.autoApprove.tool.lsp":
+    "Query language server. Allows running language server queries for code intelligence.",
+  "settings.autoApprove.tool.todoreadwrite": "Manage task list. Allows reading and updating the internal task list.",
+  "settings.autoApprove.tool.webfetch": "Fetch a URL. Allows retrieving content from a specific URL.",
+  "settings.autoApprove.tool.websearchcodesearch":
+    "Search web or code. Allows performing external web or code searches.",
+  "settings.autoApprove.tool.doom_loop":
+    "Prevent repeated identical actions. Triggered when the same tool call repeats with identical input.",
 
   "settings.checkpoints.enable.title": "Enable Snapshots",
   "settings.checkpoints.enable.description": "Create checkpoints before file edits so you can restore previous states",
@@ -999,7 +1017,8 @@ export const dict = {
   "settings.providers.smallModel.title": "Small Model",
   "settings.providers.smallModel.description": "Lightweight model for title generation and other quick tasks",
   "settings.providers.modeModels": "Model per Mode",
-  "settings.providers.modeModels.description": "Override the default model for specific modes. If not set, the global default model is used.",
+  "settings.providers.modeModels.description":
+    "Override the default model for specific modes. If not set, the global default model is used.",
   "settings.providers.disabled": "Disabled Providers",
   "settings.providers.disabled.description": "Providers to hide from the provider list",
   "settings.providers.enabled": "Enabled Providers (Allowlist)",
@@ -1072,4 +1091,7 @@ export const dict = {
   // legacy-migration end
 
   "error.details.show": "Details",
+
+  "task.todos.progress": "{{done}}/{{total}} to-dos done",
+  "task.todos.allDone": "{{count}} to-dos done",
 }

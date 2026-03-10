@@ -249,6 +249,64 @@ const questionDismissedPart: ToolPart = {
 }
 
 // ---------------------------------------------------------------------------
+// Todo tool parts
+// ---------------------------------------------------------------------------
+
+const todoWritePending: ToolPart = {
+  id: "part-todo-001",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-todo-001",
+  tool: "todowrite",
+  state: {
+    status: "pending",
+    input: {
+      todos: [
+        { id: "1", content: "Create a haiku about Jan", status: "pending" },
+        { id: "2", content: "Create a poem about Henk", status: "pending" },
+      ],
+    },
+  } as any,
+}
+
+const todoWriteCompleted: ToolPart = {
+  id: "part-todo-002",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-todo-002",
+  tool: "todowrite",
+  state: {
+    status: "completed",
+    input: {
+      todos: [
+        { id: "1", content: "Create a haiku about Jan", status: "completed" },
+        { id: "2", content: "Create a poem about Henk", status: "in_progress" },
+      ],
+    },
+    output: "Updated 2 todos",
+    title: "Updated to-dos",
+    metadata: {
+      todos: [
+        { id: "1", content: "Create a haiku about Jan", status: "completed" },
+        { id: "2", content: "Create a poem about Henk", status: "in_progress" },
+      ],
+    },
+    time: { start: now - 3000, end: now - 2800 },
+  },
+}
+
+const todoWritePermission: PermissionRequest = {
+  id: "perm-todo-001",
+  sessionID: SESSION_ID,
+  toolName: "todowrite",
+  patterns: ["*"],
+  args: {},
+  tool: { messageID: ASST_MSG_ID, callID: "call-todo-001" },
+}
+
+// ---------------------------------------------------------------------------
 // Data helpers
 // ---------------------------------------------------------------------------
 
@@ -483,6 +541,39 @@ export const QuestionDismissed: Story = {
   name: "Question Dismissed",
   render: () => {
     const data = dataWith([textPart, questionDismissedPart])
+    return (
+      <StoryProviders data={data} sessionID={SESSION_ID}>
+        <AssistantMessage message={baseAssistantMessage} />
+      </StoryProviders>
+    )
+  },
+}
+
+// ---------------------------------------------------------------------------
+// 10. TodoWrite with inline permission (pending — shows todo list + permission prompt)
+// ---------------------------------------------------------------------------
+
+export const TodoWriteWithPermission: Story = {
+  name: "TodoWrite + Inline Permission",
+  render: () => {
+    const perms = [todoWritePermission]
+    const data = dataWith([todoWritePending], perms)
+    return (
+      <StoryProviders data={data} permissions={perms} sessionID={SESSION_ID}>
+        <AssistantMessage message={baseAssistantMessage} />
+      </StoryProviders>
+    )
+  },
+}
+
+// ---------------------------------------------------------------------------
+// 11. TodoWrite completed (inline in chat after permission granted)
+// ---------------------------------------------------------------------------
+
+export const TodoWriteCompleted: Story = {
+  name: "TodoWrite — Completed Inline",
+  render: () => {
+    const data = dataWith([todoWriteCompleted])
     return (
       <StoryProviders data={data} sessionID={SESSION_ID}>
         <AssistantMessage message={baseAssistantMessage} />
