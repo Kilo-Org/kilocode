@@ -14,6 +14,8 @@ const SECTION_HEADING = "## Commit Message"
 
 const FENCE_PATTERN = /^[ ]{0,3}(?:`{3,}|~{3,})/
 
+const HEADING_PATTERN = /^##\s*Commit Message\s*#*$/
+
 function extractSection(content: string, heading: string): string | undefined {
   const lines = content.split("\n")
 
@@ -24,7 +26,7 @@ function extractSection(content: string, heading: string): string | undefined {
       inCodeFence = !inCodeFence
       continue
     }
-    if (!inCodeFence && lines[i].trim() === heading) {
+    if (!inCodeFence && HEADING_PATTERN.test(lines[i])) {
       start = i
       break
     }

@@ -84,10 +84,10 @@ You can define commit message instructions in a markdown file with a `## Commit 
 
 The generator searches for instructions in this order:
 
-1. **Project root files**: `AGENTS.md`, `CLAUDE.md`, or `CONTEXT.md`
-2. **Fallback**: `.kilocode/commit-instructions.md` in your project root
+1. **Project root files**: `AGENTS.md`, `CLAUDE.md`, or `CONTEXT.md` (looks for a `## Commit Message` section)
+2. **Fallback**: `.kilocode/commit-instructions.md` in your project root (uses the entire file content)
 
-The first file with a `## Commit Message` section wins.
+The first file found with valid instructions wins.
 
 {% callout type="info" %}
 Place your file at the **project root** (same level as package.json).
