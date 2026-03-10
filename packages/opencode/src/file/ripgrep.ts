@@ -1,5 +1,6 @@
 // Ripgrep utility functions
 import path from "path"
+import { StringDecoder } from "string_decoder" // kilocode_change - fix UTF-8 multi-byte split
 import { Global } from "../global"
 import fs from "fs/promises"
 import z from "zod"
@@ -252,11 +253,14 @@ export namespace Ripgrep {
     }
 
     let buffer = ""
+    // kilocode_change start - use StringDecoder to handle multi-byte UTF-8 characters split across chunks
+    const decoder = new StringDecoder("utf8")
     const stream = proc.stdout as AsyncIterable<Buffer | string>
     for await (const chunk of stream) {
       input.signal?.throwIfAborted()
 
-      buffer += typeof chunk === "string" ? chunk : chunk.toString()
+      buffer += typeof chunk === "string" ? chunk : decoder.write(chunk as Buffer)
+      // kilocode_change end
       // Handle both Unix (\n) and Windows (\r\n) line endings
       const lines = buffer.split(/\r?\n/)
       buffer = lines.pop() || ""

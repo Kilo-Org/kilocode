@@ -1,5 +1,6 @@
 import z from "zod"
 import { spawn } from "child_process"
+import { StringDecoder } from "string_decoder" // kilocode_change - fix UTF-8 multi-byte split
 import { Tool } from "./tool"
 import path from "path"
 import DESCRIPTION from "./bash.txt"
@@ -191,8 +192,10 @@ export const BashTool = Tool.define("bash", async () => {
         },
       })
 
+      // kilocode_change start - use StringDecoder to handle multi-byte UTF-8 characters split across chunks
+      const decoder = new StringDecoder("utf8")
       const append = (chunk: Buffer) => {
-        output += chunk.toString()
+        output += decoder.write(chunk)
         ctx.metadata({
           metadata: {
             // truncate the metadata to avoid GIANT blobs of data (has nothing to do w/ what agent can access)
@@ -201,6 +204,7 @@ export const BashTool = Tool.define("bash", async () => {
           },
         })
       }
+      // kilocode_change end
 
       proc.stdout?.on("data", append)
       proc.stderr?.on("data", append)
