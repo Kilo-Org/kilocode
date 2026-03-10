@@ -15,6 +15,6 @@ See [Gateway Usage and Billing](/docs/gateway/usage-and-billing) for credit pric
 
 ## Related
 
-- [KiloClaw Overview](/docs/automate/kiloclaw/overview)
-- [Connecting Chat Platforms](/docs/automate/kiloclaw/chat-platforms)
+- [KiloClaw Overview](/docs/kiloclaw/overview)
+- [Connecting Chat Platforms](/docs/kiloclaw/chat-platforms)
 - [Gateway Usage and Billing](/docs/gateway/usage-and-billing)

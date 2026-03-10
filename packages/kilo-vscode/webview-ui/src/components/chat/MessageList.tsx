@@ -8,6 +8,7 @@
  */
 
 import { Component, For, Show, createEffect, createMemo, onCleanup, JSX } from "solid-js"
+import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
@@ -17,6 +18,7 @@ import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
 import { formatRelativeDate } from "../../utils/date"
 import { CloudImportDialog } from "./CloudImportDialog"
+import { FeedbackDialog } from "./FeedbackDialog"
 import { VscodeSessionTurn } from "./VscodeSessionTurn"
 import { WorkingIndicator } from "../shared/WorkingIndicator"
 
@@ -77,7 +79,6 @@ export const MessageList: Component<MessageListProps> = (props) => {
       <div
         ref={autoScroll.scrollRef}
         onScroll={autoScroll.handleScroll}
-        onClick={autoScroll.handleInteraction}
         class="message-list"
         role="log"
         aria-live="polite"
@@ -121,6 +122,10 @@ export const MessageList: Component<MessageListProps> = (props) => {
               >
                 {language.t("session.cloud.import")}
               </Button>
+              <button class="feedback-button" onClick={() => dialog.show(() => <FeedbackDialog />)}>
+                <Icon name="bubble-5" size="small" />
+                {language.t("feedback.button")}
+              </button>
             </div>
           </Show>
           <Show when={!session.loading()}>
@@ -144,7 +149,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
           onClick={() => autoScroll.resume()}
           aria-label={language.t("session.messages.scrollToBottom")}
         >
-          ↓
+          <Icon name="arrow-down-to-line" />
         </button>
       </Show>
     </div>

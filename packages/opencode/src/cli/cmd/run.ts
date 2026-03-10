@@ -27,6 +27,7 @@ import { SkillTool } from "../../tool/skill"
 import { BashTool } from "../../tool/bash"
 import { TodoWriteTool } from "../../tool/todo"
 import { Locale } from "../../util/locale"
+import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
 
 type ToolProps<T extends Tool.Info> = {
   input: Tool.InferParameters<T>
@@ -248,6 +249,10 @@ export const RunCommand = cmd({
           describe: "fork the session before continuing (requires --continue or --session)",
           type: "boolean",
         })
+        .option("cloud-fork", {
+          describe: "fetch session from cloud and continue locally (requires --session)",
+          type: "boolean",
+        })
         .option("share", {
           type: "boolean",
           describe: "share the session",
@@ -357,6 +362,13 @@ export const RunCommand = cmd({
       UI.error("--fork requires --continue or --session")
       process.exit(1)
     }
+    // kilocode_change start
+    const cloudForkError = validateCloudFork(args)
+    if (cloudForkError) {
+      UI.error(cloudForkError)
+      process.exit(1)
+    }
+    // kilocode_change end
 
     const rules: PermissionNext.Ruleset = [
       {
@@ -384,6 +396,17 @@ export const RunCommand = cmd({
 
     async function session(sdk: KiloClient) {
       const baseID = args.continue ? (await sdk.session.list()).data?.find((s) => !s.parentID)?.id : args.session
+
+      // kilocode_change start
+      if (baseID && args.cloudFork) {
+        const id = await importCloudSession(sdk, baseID).catch(() => undefined)
+        if (!id) {
+          UI.error("Failed to import session from cloud")
+          process.exit(1)
+        }
+        return id
+      }
+      // kilocode_change end
 
       if (baseID && args.fork) {
         const forked = await sdk.session.fork({ sessionID: baseID })
