@@ -17,6 +17,7 @@ import type {
   EventMessageUpdated,
   EventSessionStatus,
   EventPermissionAsked,
+  EventPermissionReplied,
   EventTodoUpdated,
   EventQuestionAsked,
   EventQuestionReplied,
@@ -299,6 +300,42 @@ describe("mapSSEEventToWebviewMessage", () => {
     const msg = mapSSEEventToWebviewMessage(event, "s1")
     if (msg?.type === "permissionRequest") {
       expect(msg.permission.patterns).toEqual([])
+    }
+  })
+
+  it("maps permission.replied to permissionResolved", () => {
+    const event: EventPermissionReplied = {
+      type: "permission.replied",
+      properties: { sessionID: "sess-1", requestID: "perm-1", reply: "once" },
+    }
+    const msg = mapSSEEventToWebviewMessage(event, "sess-1")
+    expect(msg?.type).toBe("permissionResolved")
+    if (msg?.type === "permissionResolved") {
+      expect(msg.permissionID).toBe("perm-1")
+    }
+  })
+
+  it("maps permission.replied (always) to permissionResolved", () => {
+    const event: EventPermissionReplied = {
+      type: "permission.replied",
+      properties: { sessionID: "sess-1", requestID: "perm-2", reply: "always" },
+    }
+    const msg = mapSSEEventToWebviewMessage(event, "sess-1")
+    expect(msg?.type).toBe("permissionResolved")
+    if (msg?.type === "permissionResolved") {
+      expect(msg.permissionID).toBe("perm-2")
+    }
+  })
+
+  it("maps permission.replied (reject) to permissionResolved", () => {
+    const event: EventPermissionReplied = {
+      type: "permission.replied",
+      properties: { sessionID: "sess-1", requestID: "perm-3", reply: "reject" },
+    }
+    const msg = mapSSEEventToWebviewMessage(event, "sess-1")
+    expect(msg?.type).toBe("permissionResolved")
+    if (msg?.type === "permissionResolved") {
+      expect(msg.permissionID).toBe("perm-3")
     }
   })
 

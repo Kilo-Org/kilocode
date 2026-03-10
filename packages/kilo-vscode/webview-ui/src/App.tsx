@@ -165,6 +165,7 @@ export const LanguageBridge: Component<{ children: any }> = (props) => {
 // Inner app component that uses the contexts
 const AppContent: Component = () => {
   const [currentView, setCurrentView] = createSignal<ViewType>("newTask")
+  const [migrationReturnView, setMigrationReturnView] = createSignal<ViewType>("newTask") // legacy-migration
   const session = useSession()
   const server = useServer()
 
@@ -246,16 +247,23 @@ const AppContent: Component = () => {
             profileData={server.profileData()}
             deviceAuth={server.deviceAuth()}
             onLogin={server.startLogin}
-            onBack={() => setCurrentView("newTask")}
           />
         </Match>
         <Match when={currentView() === "settings"}>
-          <Settings onBack={() => setCurrentView("newTask")} onMigrateClick={() => setCurrentView("migration")} />
+          <Settings
+            onMigrateClick={() => {
+              setMigrationReturnView("settings")
+              setCurrentView("migration")
+            }}
+          />
           {/* legacy-migration */}
         </Match>
         {/* legacy-migration start */}
         <Match when={currentView() === "migration"}>
-          <MigrationWizard onBack={() => setCurrentView("newTask")} onComplete={() => setCurrentView("newTask")} />
+          <MigrationWizard
+            onBack={() => setCurrentView(migrationReturnView())}
+            onComplete={() => setCurrentView(migrationReturnView())}
+          />
         </Match>
         {/* legacy-migration end */}
       </Switch>

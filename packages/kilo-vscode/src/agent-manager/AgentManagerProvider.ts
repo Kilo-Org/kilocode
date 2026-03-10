@@ -8,7 +8,7 @@ import { isAbsolutePath } from "../path-utils"
 import { KiloProvider } from "../KiloProvider"
 import { buildWebviewHtml } from "../utils"
 import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
-import { WorktreeStateManager } from "./WorktreeStateManager"
+import { WorktreeStateManager, remoteRef } from "./WorktreeStateManager"
 import { chooseBaseBranch, normalizeBaseBranch } from "./base-branch"
 import { GitStatsPoller, type WorktreePresenceResult } from "./GitStatsPoller"
 import { GitOps, type ApplyConflict } from "./GitOps"
@@ -23,6 +23,7 @@ import { formatKeybinding } from "./format-keybinding"
 import { TelemetryProxy, TelemetryEventName } from "../services/telemetry"
 import { MAX_MULTI_VERSIONS } from "./constants"
 import type { AgentManagerOutMessage, AgentManagerInMessage } from "./types"
+import { getWorkspaceRoot, hashFileDiffs, openFileInEditor, resolveLocalDiffTarget } from "../review-utils"
 
 /**
  * AgentManagerProvider opens the Agent Manager panel.
@@ -463,6 +464,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       branch: result.branch,
       path: result.path,
       parentBranch: result.parentBranch,
+      remote: result.remote,
       groupId: opts?.groupId,
       label: opts?.label,
     })
@@ -1037,6 +1039,7 @@ export class AgentManagerProvider implements vscode.Disposable {
         branch: result.branch,
         path: result.path,
         parentBranch: result.parentBranch,
+        remote: result.remote,
       })
       this.pushState()
 
@@ -1102,6 +1105,7 @@ export class AgentManagerProvider implements vscode.Disposable {
         branch: result.branch,
         path: result.path,
         parentBranch: result.parentBranch,
+        remote: result.remote,
       })
       this.pushState()
 
@@ -1176,8 +1180,8 @@ export class AgentManagerProvider implements vscode.Disposable {
         return
       }
 
-      const parent = await manager.defaultBranch()
-      worktree = state.addWorktree({ branch, path: wtPath, parentBranch: parent })
+      const base = await manager.resolveBaseBranch()
+      worktree = state.addWorktree({ branch, path: wtPath, parentBranch: base.branch, remote: base.remote })
       this.pushState()
 
       const session = await this.createSessionInWorktree(wtPath, branch, worktree.id)
@@ -1205,7 +1209,7 @@ export class AgentManagerProvider implements vscode.Disposable {
         mode: "worktree",
         branch,
         path: wtPath,
-        parentBranch: parent,
+        parentBranch: base.branch,
       })
       this.postToWebview({ type: "agentManager.importResult", success: true, message: `Imported ${branch}` })
       this.log(`Imported external worktree ${wtPath} (${branch})`)
@@ -1251,10 +1255,15 @@ export class AgentManagerProvider implements vscode.Disposable {
       }
 
       let imported = 0
-      const parent = await manager.defaultBranch()
+      const base = await manager.resolveBaseBranch()
       for (const ext of externals) {
         try {
-          const worktree = state.addWorktree({ branch: ext.branch, path: ext.path, parentBranch: parent })
+          const worktree = state.addWorktree({
+            branch: ext.branch,
+            path: ext.path,
+            parentBranch: base.branch,
+            remote: base.remote,
+          })
           const session = await this.createSessionInWorktree(ext.path, ext.branch, worktree.id)
           if (session) {
             state.addSession(session.id, worktree.id)
@@ -1484,9 +1493,7 @@ export class AgentManagerProvider implements vscode.Disposable {
   // ---------------------------------------------------------------------------
 
   private getWorkspaceRoot(): string | undefined {
-    const folders = vscode.workspace.workspaceFolders
-    if (folders && folders.length > 0) return folders[0].uri.fsPath
-    return undefined
+    return getWorkspaceRoot()
   }
 
   private getWorktreeManager(): WorktreeManager | undefined {
@@ -1573,7 +1580,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     try {
       this.postApplyResult(worktreeId, "checking", "Checking for conflicts...")
-      const patch = await this.gitOps.buildWorktreePatch(worktree.path, worktree.parentBranch, selectedFiles)
+      const patch = await this.gitOps.buildWorktreePatch(worktree.path, remoteRef(worktree), selectedFiles)
 
       if (!patch.trim()) {
         this.postApplyResult(worktreeId, "success", "No changes to apply")
@@ -1632,15 +1639,7 @@ export class AgentManagerProvider implements vscode.Disposable {
   private openWorktreeFile(sessionId: string, filePath: string, line?: number, column?: number): void {
     if (isAbsolutePath(filePath)) {
       const uri = vscode.Uri.file(filePath)
-      const options: vscode.TextDocumentShowOptions = { preview: true }
-      if (line !== undefined && line > 0) {
-        const col = column !== undefined && column > 0 ? column - 1 : 0
-        options.selection = new vscode.Range(new vscode.Position(line - 1, col), new vscode.Position(line - 1, col))
-      }
-      vscode.workspace.openTextDocument(uri).then(
-        (doc) => vscode.window.showTextDocument(doc, options),
-        (err) => console.error("[Kilo New] AgentManagerProvider: Failed to open file:", uri.fsPath, err),
-      )
+      openFileInEditor(uri.fsPath, line, column, vscode.ViewColumn.Active, "AgentManagerProvider")
       return
     }
     const state = this.getStateManager()
@@ -1660,16 +1659,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       console.error("[Kilo New] AgentManagerProvider: Cannot resolve file path:", err)
       return
     }
-    const uri = vscode.Uri.file(resolved)
-    const options: vscode.TextDocumentShowOptions = { preview: true }
-    const target = Math.max(1, Math.floor(line ?? 1))
-    const col = column !== undefined && column > 0 ? column - 1 : 0
-    const pos = new vscode.Position(target - 1, col)
-    options.selection = new vscode.Range(pos, pos)
-    vscode.workspace.openTextDocument(uri).then(
-      (doc) => vscode.window.showTextDocument(doc, options),
-      (err) => console.error("[Kilo New] AgentManagerProvider: Failed to open file:", uri.fsPath, err),
-    )
+    openFileInEditor(resolved, line, column, vscode.ViewColumn.Active, "AgentManagerProvider")
   }
 
   /** Resolve worktree path + parentBranch for a session, or undefined if not applicable. */
@@ -1696,30 +1686,15 @@ export class AgentManagerProvider implements vscode.Disposable {
       this.log(`resolveDiffTarget: worktree ${session.worktreeId} not found for session ${sessionId}`)
       return undefined
     }
-    return { directory: worktree.path, baseBranch: worktree.parentBranch }
+    // Always construct remote-prefixed ref for diff (e.g. "origin/main")
+    return { directory: worktree.path, baseBranch: remoteRef(worktree) }
   }
 
   /** Resolve diff target for the local workspace — diffs against the remote tracking
    *  branch, falling back to the repo's default branch, and ultimately to HEAD so
    *  local-only repos (no remote) still show working-tree changes in the diff panel. */
   private async resolveLocalDiffTarget(): Promise<{ directory: string; baseBranch: string } | undefined> {
-    const root = this.getWorkspaceRoot()
-    if (!root) {
-      this.log("Local diff: no workspace root")
-      return undefined
-    }
-    const branch = await this.gitOps.currentBranch(root)
-    if (!branch || branch === "HEAD") {
-      this.log("Local diff: detached HEAD or no branch")
-      return undefined
-    }
-    const tracking = await this.gitOps.resolveTrackingBranch(root, branch)
-    const defaultBranch = tracking ? undefined : await this.gitOps.resolveDefaultBranch(root, branch)
-    const base = tracking ?? defaultBranch ?? "HEAD"
-    this.log(
-      `Local diff: branch=${branch} tracking=${tracking ?? "none"} default=${defaultBranch ?? "none"} base=${base}`,
-    )
-    return { directory: root, baseBranch: base }
+    return await resolveLocalDiffTarget(this.gitOps, (...args) => this.log(...args))
   }
 
   /** One-shot diff fetch with loading indicators. Resolves target async, then fetches. */
@@ -1750,9 +1725,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       const files = diffs ?? []
       this.log(`Worktree diff returned ${files.length} file(s) for session ${sessionId}`)
 
-      const hash = files
-        .map((d: FileDiff) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`)
-        .join("|")
+      const hash = hashFileDiffs(files)
       this.lastDiffHash = hash
       this.diffSessionId = sessionId
 
@@ -1777,9 +1750,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       )
 
       const files = diffs ?? []
-      const hash = files
-        .map((d: FileDiff) => `${d.file}:${d.status}:${d.additions}:${d.deletions}:${d.after.length}`)
-        .join("|")
+      const hash = hashFileDiffs(files)
       if (hash === this.lastDiffHash && this.diffSessionId === sessionId) return
       this.lastDiffHash = hash
       this.diffSessionId = sessionId

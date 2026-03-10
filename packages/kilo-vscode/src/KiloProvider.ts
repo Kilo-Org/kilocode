@@ -52,6 +52,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private cachedConfigMessage: unknown = null
   /** Cached notificationsLoaded payload */
   private cachedNotificationsMessage: unknown = null
+  private pendingReviewComments: unknown[][] = []
 
   private trackedSessionIds: Set<string> = new Set()
   private syncedChildSessions: Set<string> = new Set()
@@ -316,6 +317,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           console.log("[Kilo New] KiloProvider: ✅ webviewReady received")
           this.isWebviewReady = true
           await this.syncWebviewState("webviewReady")
+          this.flushPendingReviewComments()
           break
         case "sendMessage": {
           const files = z
@@ -388,6 +390,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           if (message.url) {
             vscode.env.openExternal(vscode.Uri.parse(message.url))
           }
+          break
+        case "openChanges":
+          vscode.commands.executeCommand("kilo-code.new.showChanges")
           break
         case "openFile":
           if (message.filePath) {
@@ -642,6 +647,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             }
             await this.syncWebviewState("sse-connected")
             await this.flushPendingSessionRefresh("sse-connected")
+            await this.fetchAndSendPendingPermissions()
           } catch (error) {
             console.error("[Kilo New] KiloProvider: ❌ Failed during connected state handling:", error)
             this.postMessage({
@@ -820,6 +826,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         sessionID,
         messages,
       })
+
+      // Recover any permission.asked events that were missed while the webview
+      // was loading or during an SSE reconnection (fire-and-forget).
+      void this.fetchAndSendPendingPermissions()
     } catch (error) {
       // Silently ignore aborted requests — the user switched to a different session
       if (abort.signal.aborted) return
@@ -1510,23 +1520,58 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     response: "once" | "always" | "reject",
   ): Promise<void> {
     if (!this.client) {
+      this.postMessage({ type: "permissionError", permissionID: permissionId })
       return
     }
 
     const targetSessionID = sessionID || this.currentSession?.id
     if (!targetSessionID) {
       console.error("[Kilo New] KiloProvider: No sessionID for permission response")
+      this.postMessage({ type: "permissionError", permissionID: permissionId })
       return
     }
 
     try {
       const workspaceDir = this.getWorkspaceDirectory(targetSessionID)
-      await this.client.permission.respond(
-        { sessionID: targetSessionID, permissionID: permissionId, response, directory: workspaceDir },
+      await this.client.permission.reply(
+        { requestID: permissionId, reply: response, directory: workspaceDir },
         { throwOnError: true },
       )
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to respond to permission:", error)
+      this.postMessage({ type: "permissionError", permissionID: permissionId })
+    }
+  }
+
+  /**
+   * Fetch all pending permissions from the backend and forward any that belong
+   * to tracked sessions to the webview. Called after SSE reconnects and after
+   * loading messages for a session so that missed permission.asked events are
+   * recovered instead of leaving the server blocked indefinitely.
+   */
+  private async fetchAndSendPendingPermissions(): Promise<void> {
+    if (!this.client) return
+    try {
+      const workspaceDir = this.getWorkspaceDirectory()
+      const { data } = await this.client.permission.list({ directory: workspaceDir })
+      if (!data) return
+      for (const perm of data) {
+        if (!this.trackedSessionIds.has(perm.sessionID)) continue
+        this.postMessage({
+          type: "permissionRequest",
+          permission: {
+            id: perm.id,
+            sessionID: perm.sessionID,
+            toolName: perm.permission,
+            patterns: perm.patterns,
+            args: perm.metadata,
+            message: `Permission required: ${perm.permission}`,
+            tool: perm.tool,
+          },
+        })
+      }
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to fetch pending permissions:", error)
     }
   }
 
@@ -1921,6 +1966,27 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     void this.webview.postMessage(message).then(undefined, (error) => {
       console.error("[Kilo New] KiloProvider: ❌ postMessage failed", error)
     })
+  }
+
+  public async appendReviewComments(comments: unknown[]): Promise<void> {
+    this.pendingReviewComments.push(comments)
+
+    if (!this.webview) {
+      await vscode.commands.executeCommand(`${KiloProvider.viewType}.focus`)
+    }
+
+    this.flushPendingReviewComments()
+  }
+
+  private flushPendingReviewComments(): void {
+    if (!this.webview || !this.isWebviewReady || this.pendingReviewComments.length === 0) return
+
+    const pending = this.pendingReviewComments
+    this.pendingReviewComments = []
+
+    for (const comments of pending) {
+      this.postMessage({ type: "appendReviewComments", comments })
+    }
   }
 
   /**

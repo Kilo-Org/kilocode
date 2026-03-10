@@ -38,6 +38,25 @@ const SCHEME_RE = /^[a-zA-Z][a-zA-Z0-9+.-]*:/
  */
 export function extractFilePathFromHref(href: string): string | undefined {
   if (!href) return undefined
+  // Handle file:// URLs — extract the path component and decode it
+  if (href.startsWith("file://")) {
+    try {
+      const url = new URL(href)
+      const decoded = decodeURIComponent(url.pathname)
+      if (!decoded) return undefined
+      // On Windows, file:///C:/foo gives pathname=/C:/foo — strip the leading slash
+      // so the result is a valid Windows absolute path (C:/foo).
+      const c1 = decoded.charCodeAt(1)
+      const isWindowsDrive =
+        decoded.length >= 4 &&
+        decoded.charCodeAt(0) === 47 /* / */ &&
+        decoded.charCodeAt(2) === 58 /* : */ &&
+        ((c1 >= 65 && c1 <= 90) /* A-Z */ || (c1 >= 97 && c1 <= 122)) /* a-z */
+      return isWindowsDrive ? decoded.slice(1) : decoded
+    } catch {
+      return undefined
+    }
+  }
   // Skip actual URLs and non-file schemes (mailto:, tel:, etc.)
   if (href.includes("://") || SCHEME_RE.test(href)) return undefined
   // Skip pure anchors
