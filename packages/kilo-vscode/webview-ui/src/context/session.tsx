@@ -371,6 +371,13 @@ export const SessionProvider: ParentComponent = (props) => {
 
   onCleanup(unsubVariants)
 
+ const unsubSessionsLoaded = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type !== "sessionsLoaded") return
+    handleSessionsLoaded(message.sessions)
+  })
+
+  onCleanup(unsubSessionsLoaded)
+
   // Handle messages from extension
   onMount(() => {
     const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
@@ -421,10 +428,6 @@ export const SessionProvider: ParentComponent = (props) => {
 
         case "questionError":
           handleQuestionError(message.requestID)
-          break
-
-        case "sessionsLoaded":
-          handleSessionsLoaded(message.sessions)
           break
 
         case "sessionUpdated":
