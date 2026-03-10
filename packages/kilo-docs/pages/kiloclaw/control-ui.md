@@ -41,7 +41,7 @@ The Control UI Chat tab doubles as a command line for model management. KiloClaw
 
 Each `/models` response includes helper text at the bottom with shortcuts for switching, paging, and listing all models.
 
-Switching via `/model` applies to the **current session only** â other active sessions keep their own model. To change the default model for all new sessions, edit `agents.defaults.model.primary` in your `openclaw.json` via **Config** in the Control UI (or the [KiloClaw Dashboard](/docs/kiloclaw/dashboard#changing-the-model) for a quick dropdown pick).
+To change the default model for all new sessions, edit `agents.defaults.model.primary` in your `openclaw.json` via **Config** in the Control UI (or the [KiloClaw Dashboard](/docs/kiloclaw/dashboard#changing-the-model) for a quick dropdown pick).
 
 For the full list of providers, advanced configuration, and CLI commands, see the [OpenClaw Model Providers documentation](https://docs.openclaw.ai/providers).
 
