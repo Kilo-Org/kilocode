@@ -930,6 +930,8 @@ export const dict = {
   "settings.agentBehaviour.defaultAgent.title": "Агент по умолчанию",
   "settings.agentBehaviour.defaultAgent.description": "Агент при отсутствии указания",
   "settings.agentBehaviour.selectAgent": "Выберите агента для настройки…",
+  "settings.agentBehaviour.selectAgent.title": "Агент",
+  "settings.agentBehaviour.selectAgent.description": "Выберите агента для настройки…",
   "settings.agentBehaviour.modelOverride.title": "Переопределение модели",
   "settings.agentBehaviour.modelOverride.description": "Переопределить модель по умолчанию для этого агента",
   "settings.agentBehaviour.prompt.title": "Пользовательский промпт",

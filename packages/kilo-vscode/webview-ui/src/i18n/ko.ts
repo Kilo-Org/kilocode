@@ -922,6 +922,8 @@ export const dict = {
   "settings.agentBehaviour.defaultAgent.title": "기본 에이전트",
   "settings.agentBehaviour.defaultAgent.description": "지정되지 않은 경우 사용할 에이전트",
   "settings.agentBehaviour.selectAgent": "구성할 에이전트를 선택하세요…",
+  "settings.agentBehaviour.selectAgent.title": "에이전트",
+  "settings.agentBehaviour.selectAgent.description": "구성할 에이전트를 선택하세요…",
   "settings.agentBehaviour.modelOverride.title": "모델 재정의",
   "settings.agentBehaviour.modelOverride.description": "이 에이전트의 기본 모델 재정의",
   "settings.agentBehaviour.prompt.title": "사용자 정의 프롬프트",

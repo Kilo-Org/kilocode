@@ -931,6 +931,8 @@ export const dict = {
   "settings.agentBehaviour.defaultAgent.title": "Agente predeterminado",
   "settings.agentBehaviour.defaultAgent.description": "Agente a usar cuando no se especifica ninguno",
   "settings.agentBehaviour.selectAgent": "Seleccionar un agente para configurar…",
+  "settings.agentBehaviour.selectAgent.title": "Agente",
+  "settings.agentBehaviour.selectAgent.description": "Seleccionar un agente para configurar…",
   "settings.agentBehaviour.modelOverride.title": "Anulación de modelo",
   "settings.agentBehaviour.modelOverride.description": "Anular el modelo predeterminado para este agente",
   "settings.agentBehaviour.prompt.title": "Prompt personalizado",
