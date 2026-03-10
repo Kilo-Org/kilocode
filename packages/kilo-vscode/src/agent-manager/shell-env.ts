@@ -42,7 +42,7 @@ export function parseEnvOutput(stdout: string): Record<string, string> {
   let key: string | null = null
   let value = ""
 
-  for (const line of stdout.trimEnd().split("\n")) {
+  for (const line of stdout.replace(/\n$/, "").split("\n")) {
     const match = ENV_KEY_RE.exec(line)
     if (match) {
       if (key) env[key] = value

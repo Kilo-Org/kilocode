@@ -87,6 +87,13 @@ describe("parseEnvOutput", () => {
     expect(result.PATH).toBe("/usr/bin")
   })
 
+  it("preserves trailing whitespace in variable values", () => {
+    const input = "FOO=bar   \nPATH=/usr/bin\n"
+    const result = parseEnvOutput(input)
+    expect(result.FOO).toBe("bar   ")
+    expect(result.PATH).toBe("/usr/bin")
+  })
+
   it("handles empty input", () => {
     const result = parseEnvOutput("")
     expect(Object.keys(result).length).toBe(0)
