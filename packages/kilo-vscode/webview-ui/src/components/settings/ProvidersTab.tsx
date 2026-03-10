@@ -41,8 +41,10 @@ const ProvidersTab: Component = () => {
   )
 
   const [newDisabled, setNewDisabled] = createSignal<ProviderOption | undefined>()
+  const [newEnabled, setNewEnabled] = createSignal<ProviderOption | undefined>()
 
   const disabledProviders = () => config().disabled_providers ?? []
+  const enabledProviders = () => config().enabled_providers ?? []
 
   const addDisabled = (value: string) => {
     const current = [...disabledProviders()]
@@ -56,6 +58,20 @@ const ProvidersTab: Component = () => {
     const current = [...disabledProviders()]
     current.splice(index, 1)
     updateConfig({ disabled_providers: current })
+  }
+
+  const addEnabled = (value: string) => {
+    const current = [...enabledProviders()]
+    if (value && !current.includes(value)) {
+      current.push(value)
+      updateConfig({ enabled_providers: current })
+    }
+  }
+
+  const removeEnabled = (index: number) => {
+    const current = [...enabledProviders()]
+    current.splice(index, 1)
+    updateConfig({ enabled_providers: current })
   }
 
   function handleModelSelect(configKey: "model" | "small_model") {
@@ -128,6 +144,70 @@ const ProvidersTab: Component = () => {
                 clearLabel={language.t("settings.providers.notSet")}
               />
             </SettingsRow>
+          )}
+        </For>
+      </Card>
+
+      {/* Enabled providers (allowlist) */}
+      <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>{language.t("settings.providers.enabled")}</h4>
+      <Card>
+        <div
+          style={{
+            "font-size": "12px",
+            color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+            "padding-bottom": "8px",
+            "border-bottom": "1px solid var(--border-weak-base)",
+          }}
+        >
+          {language.t("settings.providers.enabled.description")}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            gap: "8px",
+            "align-items": "center",
+            padding: "8px 0",
+            "border-bottom": enabledProviders().length > 0 ? "1px solid var(--border-weak-base)" : "none",
+          }}
+        >
+          <div style={{ flex: 1 }}>
+            <Select
+              options={providerOptions().filter((o) => !enabledProviders().includes(o.value))}
+              current={newEnabled()}
+              value={(o) => o.value}
+              label={(o) => o.label}
+              onSelect={(o) => setNewEnabled(o)}
+              variant="secondary"
+              triggerVariant="settings"
+              placeholder="Select provider…"
+            />
+          </div>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              if (newEnabled()) {
+                addEnabled(newEnabled()!.value)
+                setNewEnabled(undefined)
+              }
+            }}
+          >
+            {language.t("common.add")}
+          </Button>
+        </div>
+        <For each={enabledProviders()}>
+          {(id, index) => (
+            <div
+              style={{
+                display: "flex",
+                "align-items": "center",
+                "justify-content": "space-between",
+                padding: "6px 0",
+                "border-bottom": index() < enabledProviders().length - 1 ? "1px solid var(--border-weak-base)" : "none",
+              }}
+            >
+              <span style={{ "font-size": "12px" }}>{id}</span>
+              <IconButton variant="ghost" icon="close" onClick={() => removeEnabled(index())} />
+            </div>
           )}
         </For>
       </Card>
