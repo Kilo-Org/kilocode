@@ -208,8 +208,10 @@ export function Session() {
   // kilocode_change start - auto-approve permissions when auto mode is active
   const replied = new Set<string>()
   const inflight = new Set<string>()
+  const [retryTick, setRetryTick] = createSignal(0)
   createEffect(() => {
     if (!auto.enabled()) return
+    retryTick()
     for (const request of permissions()) {
       if (replied.has(request.id)) continue
       if (inflight.has(request.id)) continue
@@ -223,7 +225,8 @@ export function Session() {
           replied.add(request.id)
         })
         .catch((err) => {
-          console.error("auto-reply failed, will retry", err)
+          console.error("auto-reply failed, retrying in 2s", err)
+          setTimeout(() => setRetryTick((n) => n + 1), 2000)
         })
         .finally(() => {
           inflight.delete(request.id)
