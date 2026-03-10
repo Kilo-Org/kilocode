@@ -13,6 +13,7 @@ import {
   ENV_VERSION,
   TESTER_SUPPRESS_VALUE,
   ENV_FEATURE,
+  ENV_MACHINEID,
 } from "./api/constants.js"
 
 /**
@@ -56,6 +57,15 @@ export function getEditorNameHeader(): string {
 }
 
 /**
+ * Get machine ID header value from KILO_MACHINE_ID env var.
+ * Set by telemetry at startup (CLI) or by the extension when spawning the CLI process.
+ * Returns undefined when not set.
+ */
+export function getMachineIdHeader(): string | undefined {
+  return process.env[ENV_MACHINEID] || undefined
+}
+
+/**
  * Build KiloCode-specific headers from metadata and options
  */
 export function buildKiloHeaders(
@@ -63,13 +73,14 @@ export function buildKiloHeaders(
   options?: {
     kilocodeOrganizationId?: string
     kilocodeTesterWarningsDisabledUntil?: number
-    machineId?: string
   },
 ): Record<string, string> {
   const feature = getFeatureHeader()
+  const machineId = getMachineIdHeader()
   const headers: Record<string, string> = {
     [X_KILOCODE_EDITORNAME]: getEditorNameHeader(),
     ...(feature ? { [X_KILOCODE_FEATURE]: feature } : {}),
+    ...(machineId ? { [X_KILOCODE_MACHINEID]: machineId } : {}),
   }
 
   if (metadata?.taskId) {
@@ -87,10 +98,6 @@ export function buildKiloHeaders(
   // Add X-KILOCODE-TESTER: SUPPRESS header if the setting is enabled
   if (options?.kilocodeTesterWarningsDisabledUntil && options.kilocodeTesterWarningsDisabledUntil > Date.now()) {
     headers[X_KILOCODE_TESTER] = TESTER_SUPPRESS_VALUE
-  }
-
-  if (options?.machineId) {
-    headers[X_KILOCODE_MACHINEID] = options.machineId
   }
 
   return headers

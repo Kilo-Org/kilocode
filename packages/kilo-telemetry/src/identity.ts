@@ -27,11 +27,13 @@ export namespace Identity {
 
     if (await file.exists()) {
       machineId = await file.text()
-      return machineId
+    } else {
+      machineId = crypto.randomUUID()
+      await Bun.write(filepath, machineId)
     }
 
-    machineId = crypto.randomUUID()
-    await Bun.write(filepath, machineId)
+    // Publish to env so kilo-gateway's buildKiloHeaders picks it up automatically
+    process.env.KILO_MACHINE_ID = machineId
     return machineId
   }
 

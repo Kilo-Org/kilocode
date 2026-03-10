@@ -69,3 +69,6 @@ export const HEADER_FEATURE = "X-KILOCODE-FEATURE"
 
 /** Environment variable name for feature override */
 export const ENV_FEATURE = "KILOCODE_FEATURE"
+
+/** Environment variable name for machine ID (set by telemetry at startup, or by extension when spawning CLI) */
+export const ENV_MACHINEID = "KILO_MACHINE_ID"

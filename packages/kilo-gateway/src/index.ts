@@ -9,7 +9,13 @@ export { KiloAuthPlugin, default } from "./plugin.js"
 export { createKilo } from "./provider.js"
 export { createKiloDebug } from "./provider-debug.js"
 export { kiloCustomLoader } from "./loader.js"
-export { buildKiloHeaders, getEditorNameHeader, getFeatureHeader, DEFAULT_HEADERS } from "./headers.js"
+export {
+  buildKiloHeaders,
+  getEditorNameHeader,
+  getFeatureHeader,
+  getMachineIdHeader,
+  DEFAULT_HEADERS,
+} from "./headers.js"
 
 // ============================================================================
 // Auth
@@ -96,4 +102,5 @@ export {
   ENV_VERSION,
   TESTER_SUPPRESS_VALUE,
   ENV_FEATURE,
+  ENV_MACHINEID,
 } from "./api/constants.js"

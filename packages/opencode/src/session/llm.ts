@@ -26,8 +26,7 @@ import { DEFAULT_HEADERS } from "@/kilocode/const" // kilocode_change
 import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
 // kilocode_change start
 import { getKiloProjectId } from "@/kilocode/project-id"
-import { HEADER_PROJECTID, HEADER_MACHINEID, HEADER_TASKID } from "@kilocode/kilo-gateway"
-import { Identity } from "@kilocode/kilo-telemetry"
+import { HEADER_PROJECTID, HEADER_TASKID } from "@kilocode/kilo-gateway"
 // kilocode_change end
 
 export namespace LLM {
@@ -156,10 +155,9 @@ export namespace LLM {
       },
     )
 
-    // kilocode_change start - resolve project ID and machine ID for kilo provider
+    // kilocode_change start - resolve project ID for kilo provider
     const isKilo = input.model.api.npm === "@kilocode/kilo-gateway"
     const kiloProjectId = isKilo ? await getKiloProjectId().catch(() => undefined) : undefined
-    const machineId = isKilo ? await Identity.getMachineId().catch(() => undefined) : undefined
     // kilocode_change end
 
     const maxOutputTokens =
@@ -235,9 +233,8 @@ export namespace LLM {
             ? DEFAULT_HEADERS // kilocode_change
             : undefined),
         ...(isKilo && input.agent.name ? { "x-kilocode-mode": input.agent.name.toLowerCase() } : {}),
-        // kilocode_change start - add project ID, machine ID, and task ID headers for kilo provider
+        // kilocode_change start - add project ID and task ID headers for kilo provider
         ...(isKilo && kiloProjectId ? { [HEADER_PROJECTID]: kiloProjectId } : {}),
-        ...(isKilo && machineId ? { [HEADER_MACHINEID]: machineId } : {}),
         ...(isKilo ? { [HEADER_TASKID]: input.sessionID } : {}),
         // kilocode_change end
         ...input.model.headers,
