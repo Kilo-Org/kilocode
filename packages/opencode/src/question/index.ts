@@ -169,7 +169,12 @@ export namespace Question {
     }
   }
 
-  export async function list() {
-    return state().then((x) => Object.values(x.pending).map((x) => x.info))
+  // kilocode_change start
+  export async function list(filter?: { sessionID?: string }) {
+    const s = await state()
+    const items = Object.values(s.pending).map((x) => x.info)
+    if (filter?.sessionID) return items.filter((x) => x.sessionID === filter.sessionID)
+    return items
   }
+  // kilocode_change end
 }

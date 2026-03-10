@@ -60,9 +60,18 @@ export const PermissionRoutes = lazy(() =>
           },
         },
       }),
+      // kilocode_change start
+      validator(
+        "query",
+        z.object({
+          sessionID: z.string().optional(),
+        }),
+      ),
       async (c) => {
-        const permissions = await PermissionNext.list()
+        const query = c.req.valid("query")
+        const permissions = await PermissionNext.list(query.sessionID ? { sessionID: query.sessionID } : undefined)
         return c.json(permissions)
       },
+      // kilocode_change end
     ),
 )

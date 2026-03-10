@@ -279,8 +279,12 @@ export namespace PermissionNext {
     }
   }
 
-  export async function list() {
+  // kilocode_change start
+  export async function list(filter?: { sessionID?: string }) {
     const s = await state()
-    return Object.values(s.pending).map((x) => x.info)
+    const items = Object.values(s.pending).map((x) => x.info)
+    if (filter?.sessionID) return items.filter((x) => x.sessionID === filter.sessionID)
+    return items
   }
+  // kilocode_change end
 }

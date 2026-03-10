@@ -3706,6 +3706,7 @@ export type PermissionListData = {
   path?: never
   query?: {
     directory?: string
+    sessionID?: string
   }
   url: "/permission"
 }
@@ -3724,6 +3725,7 @@ export type QuestionListData = {
   path?: never
   query?: {
     directory?: string
+    sessionID?: string
   }
   url: "/question"
 }

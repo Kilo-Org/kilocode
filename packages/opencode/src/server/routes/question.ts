@@ -25,10 +25,19 @@ export const QuestionRoutes = lazy(() =>
           },
         },
       }),
+      // kilocode_change start
+      validator(
+        "query",
+        z.object({
+          sessionID: z.string().optional(),
+        }),
+      ),
       async (c) => {
-        const questions = await Question.list()
+        const query = c.req.valid("query")
+        const questions = await Question.list(query.sessionID ? { sessionID: query.sessionID } : undefined)
         return c.json(questions)
       },
+      // kilocode_change end
     )
     .post(
       "/:requestID/reply",

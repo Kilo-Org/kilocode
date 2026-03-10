@@ -39,13 +39,12 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const allPermissions = () => session.permissions()
   const allQuestions = () => session.questions()
 
-  // Bottom-dock permission: prefer current-session permissions,
-  // then fall back to any pending permission (including child sessions).
+  // Bottom-dock permission: prefer current-session non-tool questions/permissions,
+  // then fall back to current-session tool-scoped ones. Never show prompts from
+  // other sessions — that would leak state across Agent Manager tabs.
   const questionRequest = () =>
-    allQuestions().find((q) => q.sessionID === id() && !q.tool) ??
-    allQuestions().find((q) => !q.tool) ??
-    allQuestions()[0]
-  const permissionRequest = () => allPermissions().find((p) => p.sessionID === id()) ?? allPermissions()[0]
+    allQuestions().find((q) => q.sessionID === id() && !q.tool) ?? allQuestions().find((q) => q.sessionID === id())
+  const permissionRequest = () => allPermissions().find((p) => p.sessionID === id())
   const blocked = () => allPermissions().length > 0 || allQuestions().length > 0
 
   // When a bottom-dock permission/question disappears while the session is busy,
