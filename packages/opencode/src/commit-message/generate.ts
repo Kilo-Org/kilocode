@@ -4,7 +4,7 @@ import { LLM } from "@/session/llm"
 import { Filesystem } from "@/util/filesystem"
 import { git } from "@/util/git"
 import { Log } from "@/util/log"
-import { join } from "path"
+import { join, dirname } from "path"
 import { getGitContext } from "./git-context"
 import type { CommitMessageRequest, CommitMessageResponse, GitContext } from "./types"
 
@@ -80,22 +80,36 @@ function extractSection(content: string, heading: string): string | undefined {
   return trimmedSection || undefined
 }
 
-async function loadInstructionsFromAgentsMd(repoPath: string): Promise<{ instructions?: string; found: boolean }> {
-  // Only check at repository level — commit instructions are project-specific
+async function loadInstructionsFromAgentsMd(
+  searchPath: string,
+  repoPath: string,
+): Promise<{ instructions?: string; found: boolean }> {
   const FILES = ["AGENTS.md", "CLAUDE.md", "CONTEXT.md"]
 
-  for (const file of FILES) {
-    const filepath = join(repoPath, file)
-    const exists = await Filesystem.exists(filepath)
+  // Search from searchPath up to repoPath
+  let currentDir = searchPath
+  while (true) {
+    for (const file of FILES) {
+      const filepath = join(currentDir, file)
+      const exists = await Filesystem.exists(filepath)
 
-    if (exists) {
-      const content = await Filesystem.readText(filepath).catch(() => "")
-      const section = extractSection(content, SECTION_HEADING)
-      if (section) {
-        log.info("loaded commit instructions from", { file: filepath })
-        return { instructions: section, found: true }
+      if (exists) {
+        const content = await Filesystem.readText(filepath).catch(() => "")
+        const section = extractSection(content, SECTION_HEADING)
+        if (section) {
+          log.info("loaded commit instructions from", { file: filepath })
+          return { instructions: section, found: true }
+        }
       }
     }
+
+    // Stop if we've reached the repo root
+    if (currentDir === repoPath) break
+
+    // Move up one directory
+    const parentDir = dirname(currentDir)
+    if (parentDir === currentDir) break // reached filesystem root
+    currentDir = parentDir
   }
 
   return { found: false }
@@ -106,15 +120,28 @@ async function loadInstructions(cwd: string): Promise<{ instructions?: string; f
   const result = await git(["rev-parse", "--show-toplevel"], { cwd })
   const repoPath = result.exitCode === 0 ? result.text().trim() : cwd
 
-  const fromAgents = await loadInstructionsFromAgentsMd(repoPath)
+  const fromAgents = await loadInstructionsFromAgentsMd(cwd, repoPath)
   if (fromAgents.found) return fromAgents
 
-  const filepath = join(repoPath, ".kilocode", "commit-instructions.md")
-  const content = await Filesystem.readText(filepath).catch(() => "")
-  const trimmed = content.trim()
-  if (trimmed) {
-    return { instructions: trimmed, found: true }
+  // Search for .kilocode/commit-instructions.md from cwd up to repoPath
+  let currentDir = cwd
+  while (true) {
+    const filepath = join(currentDir, ".kilocode", "commit-instructions.md")
+    const content = await Filesystem.readText(filepath).catch(() => "")
+    const trimmed = content.trim()
+    if (trimmed) {
+      return { instructions: trimmed, found: true }
+    }
+
+    // Stop if we've reached the repo root
+    if (currentDir === repoPath) break
+
+    // Move up one directory
+    const parentDir = dirname(currentDir)
+    if (parentDir === currentDir) break // reached filesystem root
+    currentDir = parentDir
   }
+
   return { found: false }
 }
 
