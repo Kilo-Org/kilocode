@@ -5,11 +5,11 @@ description: "Smart model routing that automatically selects the optimal AI mode
 
 # Auto Model
 
-Auto Model (`kilo/auto`) is a smart model routing system that automatically selects the optimal AI model based on the Kilo Code mode you're using. It balances cost and capability so you get the best results without manual model switching.
+Auto Model (`kilo-auto/frontier`) is a smart model routing system that automatically selects the optimal AI model based on the Kilo Code mode you're using. It balances cost and capability so you get the best results without manual model switching.
 
 ## How It Works
 
-1. Select `kilo/auto` as your model in the model dropdown
+1. Select `kilo-auto/frontier` as your model in the model dropdown
 2. Start working in any mode (Code, Architect, Debug, etc.)
 3. The system automatically routes your requests to the best model for that task
 
@@ -55,18 +55,18 @@ Auto Model always routes to Claude's latest and most capable models:
 ## Requirements
 
 {% callout type="warning" title="Version Requirements" %}
-Auto Model requires **VS Code/JetBrains extension v5.2.3+** or **CLI v1.0.15+** for automatic mode-based switching. On older versions, `kilo/auto` will default to Claude Sonnet for all requests.
+Auto Model requires **VS Code/JetBrains extension v5.2.3+** or **CLI v1.0.15+** for automatic mode-based switching. On older versions, `kilo-auto/frontier` will default to Claude Sonnet for all requests.
 {% /callout %}
 
 ## Getting Started
 
 {% callout type="tip" title="Quick Setup" %}
-Select `kilo/auto` from the model dropdown in the Kilo Code chat interface. That's all you need to do.
+Select `kilo-auto/frontier` from the model dropdown in the Kilo Code chat interface. That's all you need to do.
 {% /callout %}
 
 1. Open Kilo Code in VS Code or JetBrains
 2. Click the model selector dropdown
-3. Choose `kilo/auto`
+3. Choose `kilo-auto/frontier`
 4. Start chatting - the right model is selected automatically based on your current mode
 
 ## When to Use Auto Model
@@ -90,7 +90,7 @@ You may want to select a specific model instead when:
 ## Feedback
 
 {% callout type="note" title="Help Us Improve" %}
-Auto Model is a new feature and we're actively improving it. We'd love to hear how it's working for you! Share feedback in our [Discord](https://discord.gg/kilocode) or [open an issue on GitHub](https://github.com/Kilo-Org/kilocode/issues).
+Auto Model is a new feature and we're actively improving it. We'd love to hear how it's working for you! Share feedback in our [Discord](https://kilo.ai/discord) or [open an issue on GitHub](https://github.com/Kilo-Org/kilocode/issues).
 {% /callout %}
 
 ## Related

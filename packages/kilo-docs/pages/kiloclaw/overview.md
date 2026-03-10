@@ -35,7 +35,7 @@ KiloClaw is powered by KiloCode. The API key is platform-managed, so you never n
 
 {% image src="/docs/img/kiloclaw/create-instance.png" alt="Create instance modal with model selection" width="600" caption="Model selection during instance creation" /%}
 
-5. Optionally configure chat channels (Telegram, Discord, Slack) — you can also do this later from [Settings](/docs/automate/kiloclaw/dashboard#settings)
+5. Optionally configure chat channels (Telegram, Discord, Slack) — you can also do this later from [Settings](/docs/kiloclaw/dashboard#settings)
 6. Click **Create & Provision**
 
 Your instance will be provisioned in seconds. Each instance runs on a dedicated machine with 2 shared vCPUs, 3 GB RAM, and a 10 GB persistent SSD. Once created in a region, your instance always runs there.
@@ -53,7 +53,7 @@ The KiloClaw dashboard gives you full control over your instance.
 - **Redeploy** — This will stop the machine, apply any pending image or config updates, and restart it. The machine will be briefly offline.
 - **OpenClaw Doctor** — Run diagnostics and auto-fix common issues
 
-For full details on each control and when to use them, see the [Dashboard Reference](/docs/automate/kiloclaw/dashboard).
+For full details on each control and when to use them, see the [Dashboard Reference](/docs/kiloclaw/dashboard).
 
 ### Changelog
 
@@ -61,16 +61,11 @@ The dashboard shows recent platform updates. Some updates include a deploy hint 
 
 ### Pairing Requests
 
-When you initialize a new channel for the first time, or a new device connects to the Control UI, you'll see a pairing request on the dashboard that you need to approve. See [Pairing Requests](/docs/automate/kiloclaw/chat-platforms#pairing-requests) for details.
+When you initialize a new channel for the first time, or a new device connects to the Control UI, you'll see a pairing request on the dashboard that you need to approve. See [Pairing Requests](/docs/kiloclaw/chat-platforms#pairing-requests) for details.
 
 ## Accessing Your Agent
 
-1. Click **Access Code** to get a one-time code (expires in 10 minutes)
-
-{% image src="/docs/img/kiloclaw/access-code-modal.png" alt="Access code modal showing one-time code" width="500" caption="One-time access code with 10-minute expiration" /%}
-
-2. Click **Open** to launch the OpenClaw web interface
-3. Enter your access code to authenticate
+1. Click **Open** on your dashboard to launch the OpenClaw web interface
 
 {% image src="/docs/img/kiloclaw/openclaw-dashboard.png" alt="OpenClaw web interface" width="800" caption="OpenClaw web UI" /%}
 
@@ -83,6 +78,24 @@ For more information on use cases:
 - [OpenClaw Showcase](https://docs.openclaw.ai/start/showcase)
 - [100 hours of OpenClaw in 35 Minutes](https://www.youtube.com/watch?v=_kZCoW-Qxnc)
 - [Clawhub](https://clawhub.ai/): search for skills
+
+## Tool Configuration
+
+KiloClaw deploys with the **full** tool profile, giving your agent unrestricted access to all available tools — filesystem operations (read, write, edit), shell execution, web search, messaging, memory, sub-agents, and more.
+
+Shell commands are still gated by an **allowlist** — unknown commands trigger an approval prompt in the Control UI.
+
+### Changing the Tool Profile
+
+If you want to restrict your agent's capabilities, you can change the tool profile from the OpenClaw Control UI:
+
+1. Open your agent's Control UI (via **OpenClaw** on the dashboard)
+2. Navigate to **Settings** → **Config** → **Tools** → **Tool Profile**
+3. Select a different profile.
+
+Your choice persists across restarts — KiloClaw won't overwrite a customized profile.
+
+For a complete and up-to-date tool configuration reference, see the [OpenClaw Tools documentation](https://docs.openclaw.ai/tools#tools-openclaw).
 
 ## Limitations
 
@@ -99,10 +112,10 @@ Have feedback or running into issues? Join the [Kilo Discord](https://kilo.ai/di
 
 ## Related
 
-- [Dashboard Reference](/docs/automate/kiloclaw/dashboard)
-- [Connecting Chat Platforms](/docs/automate/kiloclaw/chat-platforms)
-- [Troubleshooting](/docs/automate/kiloclaw/troubleshooting)
-- [KiloClaw Pricing](/docs/automate/kiloclaw/pricing)
+- [Dashboard Reference](/docs/kiloclaw/dashboard)
+- [Connecting Chat Platforms](/docs/kiloclaw/chat-platforms)
+- [Troubleshooting](/docs/kiloclaw/troubleshooting)
+- [KiloClaw Pricing](/docs/kiloclaw/pricing)
 - [Gateway Usage and Billing](/docs/gateway/usage-and-billing)
 - [Agent Manager](/docs/automate/agent-manager)
 - [OpenClaw Documentation](https://docs.openclaw.ai)

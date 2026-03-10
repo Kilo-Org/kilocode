@@ -2,6 +2,7 @@
 
 [data-component="checkbox"] {
   margin: 4px 0;
+  cursor: pointer;
 
   [data-slot="checkbox-checkbox-control"] {
     width: 18px;

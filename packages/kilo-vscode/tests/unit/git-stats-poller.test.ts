@@ -19,12 +19,13 @@ async function waitFor(check: () => boolean, timeout = 500): Promise<void> {
   }
 }
 
-function worktree(id: string): Worktree {
+function worktree(id: string, remote = "origin"): Worktree {
   return {
     id,
     branch: `branch-${id}`,
     path: `/tmp/${id}`,
     parentBranch: "main",
+    remote,
     createdAt: "2026-01-01T00:00:00.000Z",
   }
 }
@@ -415,8 +416,9 @@ describe("GitStatsPoller", () => {
       worktree: { diff: async () => ({ data: diff(0, 0) }) },
     } as unknown as KiloClient
 
+    // Worktrees store remote="upstream" so aheadBehind receives "upstream/main"
     const poller = new GitStatsPoller({
-      getWorktrees: () => [worktree("a"), worktree("b")],
+      getWorktrees: () => [worktree("a", "upstream"), worktree("b", "upstream")],
       getWorkspaceRoot: () => undefined,
       getClient: () => client,
       onStats: (stats) => emitted.push(stats),
@@ -426,9 +428,6 @@ describe("GitStatsPoller", () => {
       git: gitOps(async (args) => {
         commands.push(args)
         if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return "/repo/.git"
-        if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "upstream/main"
-        if (args[0] === "branch") return "feature"
-        if (args[0] === "config") return "origin"
         if (args[0] === "fetch") return ""
         if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t0"
         return ""

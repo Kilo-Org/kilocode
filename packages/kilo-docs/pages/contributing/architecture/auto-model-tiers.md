@@ -7,7 +7,7 @@ description: "Extending Kilo Auto to a family of smart model tiers that match us
 
 ## Overview
 
-Today, Kilo Auto (`kilo/auto`) solves a real problem: users shouldn't have to know which AI model is best for planning versus coding. It picks the right model for the task automatically.
+Today, Kilo Auto (`kilo-auto/frontier`) solves a real problem: users shouldn't have to know which AI model is best for planning versus coding. It picks the right model for the task automatically.
 
 But it only solves that problem for one audience — users willing to pay for frontier models. Everyone else is left navigating a long, intimidating model list where the "best" free or open-weight option changes monthly. This is a source of friction for new free users and cost-conscious teams.
 
@@ -41,13 +41,13 @@ Extend Kilo Auto into four tiers.
 
 **What problem it solves**: Professional developers and teams don't want to spend time evaluating which paid model is best for which task — and the answer keeps changing as providers release new versions. Frontier eliminates that research burden. Users get the best paid models automatically, matched to their task, without ever having to compare benchmarks or read release notes.
 
-**What it does**: This is what `kilo/auto` is today. It routes between the best paid models based on the task — stronger reasoning models for planning and architecture, faster models for code generation and editing. It optimizes for the best balance of capability, speed, and token efficiency.
+**What it does**: This is what `kilo-auto/frontier` is today. It routes between the best paid models based on the task — stronger reasoning models for planning and architecture, faster models for code generation and editing. It optimizes for the best balance of capability, speed, and token efficiency.
 
 **Why it matters**: Frontier models offer the highest code quality, best instruction following, and most reliable tool use. For professional developers and teams where output quality directly impacts productivity, this is the right choice.
 
 **Pricing**: Paid. Uses credits.
 
-**Backward compatibility**: The existing `kilo/auto` model ID becomes an alias for `kilo/auto-frontier`. No behavior change for existing users.
+**Backward compatibility**: The existing `kilo/auto` model ID becomes an alias for `kilo-auto/frontier`. No behavior change for existing users.
 
 ### Auto: Free
 
@@ -121,8 +121,8 @@ The UI shows the tier name (e.g., "Auto: Frontier"), not the underlying model. U
 
 ## Requirements
 
-- `kilo/auto` remains as a backward-compatible alias for `kilo/auto-frontier`
-- Unauthenticated users default to `kilo/auto-free` with no configuration required
+- `kilo/auto` remains as a backward-compatible alias for `kilo-auto/frontier`
+- Unauthenticated users default to `kilo-auto/free` with no configuration required
 - Free tier must handle model availability changes gracefully — fallback to next-best free model, never surface a "model unavailable" error if any free model exists
 - Open tier must use open-weight models as the primary routing targets
 - Auto: Small must detect credit availability and select paid or free small models accordingly

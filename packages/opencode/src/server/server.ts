@@ -20,7 +20,6 @@ import { Flag } from "../flag/flag"
 import { Format } from "../format"
 import { Global } from "../global"
 import { Identifier } from "../id/id" // kilocode_change
-import { scheduleDisposeAll } from "../kilocode/dispose" // kilocode_change
 import { LSP } from "../lsp"
 import { InstanceBootstrap } from "../project/bootstrap"
 import { Instance } from "../project/instance"
@@ -172,7 +171,6 @@ export namespace Server {
             await Auth.set(providerID, info)
             // kilocode_change start - invalidate provider/model cache after auth change
             ModelCache.clear(providerID)
-            scheduleDisposeAll()
             // kilocode_change end
             return c.json(true)
           },
@@ -206,7 +204,6 @@ export namespace Server {
             await Auth.remove(providerID)
             // kilocode_change start - invalidate provider/model cache after auth removal
             ModelCache.clear(providerID)
-            scheduleDisposeAll()
             // kilocode_change end
             return c.json(true)
           },
@@ -274,6 +271,7 @@ export namespace Server {
             Bus, // kilocode_change
             SessionCreatedEvent: Session.Event.Created, // kilocode_change
             Identifier, // kilocode_change
+            ModelCache, // kilocode_change
           }),
         )
         // kilocode_change end

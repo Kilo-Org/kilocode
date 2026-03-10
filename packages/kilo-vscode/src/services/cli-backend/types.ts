@@ -12,7 +12,7 @@ export interface ServerConfig {
 }
 
 // Provider OAuth types
-export interface ProviderAuthAuthorization {
+interface ProviderAuthAuthorization {
   url: string
   method: "auto" | "code"
   instructions: string
@@ -49,14 +49,14 @@ export interface KilocodeBalance {
   balance: number
 }
 
-export interface ProfileData {
+interface ProfileData {
   profile: KilocodeProfile
   balance: KilocodeBalance | null
   currentOrgId: string | null
 }
 
 // Cloud session from the Kilo cloud API (cli_sessions_v2)
-export interface CloudSessionInfo {
+interface CloudSessionInfo {
   session_id: string
   title: string | null
   created_at: string
@@ -93,7 +93,7 @@ export interface CloudSessionData {
 }
 
 /** VS Code editor context sent alongside messages to the CLI backend */
-export interface WorktreeFileDiff {
+interface WorktreeFileDiff {
   file: string
   before: string
   after: string

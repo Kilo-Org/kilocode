@@ -1,6 +1,8 @@
 import * as vscode from "vscode"
 import { KiloProvider } from "./KiloProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
+import { DiffViewerProvider } from "./DiffViewerProvider"
+import { SettingsEditorProvider } from "./SettingsEditorProvider"
 import { EXTENSION_DISPLAY_NAME } from "./constants"
 import { KiloConnectionService } from "./services/cli-backend"
 import { registerAutocompleteProvider } from "./services/autocomplete"
@@ -47,6 +49,17 @@ export function activate(context: vscode.ExtensionContext) {
   const agentManagerProvider = new AgentManagerProvider(context.extensionUri, connectionService)
   context.subscriptions.push(agentManagerProvider)
 
+  // Create standalone diff viewer provider for the sidebar "Show Changes" action
+  const diffViewerProvider = new DiffViewerProvider(context.extensionUri, connectionService)
+  diffViewerProvider.setCommentHandler((comments) => {
+    void provider.appendReviewComments(comments)
+  })
+  context.subscriptions.push(diffViewerProvider)
+
+  // Create settings/profile editor provider (opens in editor area, not sidebar)
+  const settingsEditorProvider = new SettingsEditorProvider(context.extensionUri, connectionService, context)
+  context.subscriptions.push(settingsEditorProvider)
+
   // Register toolbar button command handlers
   context.subscriptions.push(
     vscode.commands.registerCommand("kilo-code.new.plusButtonClicked", () => {
@@ -65,10 +78,10 @@ export function activate(context: vscode.ExtensionContext) {
       provider.postMessage({ type: "action", action: "cloudHistoryButtonClicked" })
     }),
     vscode.commands.registerCommand("kilo-code.new.profileButtonClicked", () => {
-      provider.postMessage({ type: "action", action: "profileButtonClicked" })
+      settingsEditorProvider.openPanel("profile")
     }),
     vscode.commands.registerCommand("kilo-code.new.settingsButtonClicked", () => {
-      provider.postMessage({ type: "action", action: "settingsButtonClicked" })
+      settingsEditorProvider.openPanel("settings")
     }),
     // legacy-migration start
     vscode.commands.registerCommand("kilo-code.new.openMigrationWizard", () => {
@@ -77,6 +90,9 @@ export function activate(context: vscode.ExtensionContext) {
     // legacy-migration end
     vscode.commands.registerCommand("kilo-code.new.openInTab", () => {
       return openKiloInNewTab(context, connectionService)
+    }),
+    vscode.commands.registerCommand("kilo-code.new.showChanges", () => {
+      diffViewerProvider.openPanel()
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.previousSession", () => {
       agentManagerProvider.postMessage({ type: "action", action: "sessionPrevious" })

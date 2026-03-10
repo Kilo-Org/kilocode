@@ -47,6 +47,8 @@ export const dict = {
   "command.language.set": "Sprache verwenden: {{language}}",
 
   "command.session.new": "Neue Sitzung",
+  "command.session.new.task": "Neue Aufgabe",
+  "command.session.show.changes": "Änderungen anzeigen",
   "command.file.open": "Datei öffnen",
   "command.tab.close": "Tab schließen",
   "command.context.addSelection": "Auswahl zum Kontext hinzufügen",
@@ -234,6 +236,7 @@ export const dict = {
   "prompt.action.send": "Senden",
   "prompt.action.stop": "Stopp",
   "prompt.action.enhance": "Prompt verbessern",
+  "prompt.action.resetModel": "Modell auf Standard zurücksetzen",
   "prompt.action.enhanceDescription":
     "Die Schaltfläche 'Prompt verbessern' hilft, deine Anfrage durch zusätzlichen Kontext, Klarstellungen oder Umformulierungen zu verbessern. Versuche, hier eine Anfrage einzugeben und klicke erneut auf die Schaltfläche, um zu sehen, wie es funktioniert.",
 
@@ -410,6 +413,15 @@ export const dict = {
     "Wurzelelement nicht gefunden. Haben Sie vergessen, es in Ihre index.html aufzunehmen? Oder wurde das id-Attribut falsch geschrieben?",
 
   "error.globalSync.connectFailed": "Verbindung zum Server fehlgeschlagen. Läuft ein Server unter `{{url}}`?",
+
+  "error.paidModel.title": "Du musst dich anmelden, um dieses Modell zu nutzen",
+  "error.paidModel.description":
+    "Melde dich an oder erstelle ein Konto, um auf über 500 Modelle zuzugreifen, Credits zum Selbstkostenpreis zu nutzen oder deinen eigenen Schlüssel mitzubringen.",
+  "error.paidModel.action": "Anmelden",
+  "error.promotionLimit.title": "Du musst dich registrieren, um weiterzumachen",
+  "error.promotionLimit.description":
+    "Registriere dich kostenlos, um weiterzumachen und über 500 Modelle zu entdecken. Dauert 2 Minuten, keine Kreditkarte nötig. Oder komm später wieder.",
+  "error.promotionLimit.action": "Registrieren",
 
   "error.chain.unknown": "Unbekannter Fehler",
   "error.chain.causedBy": "Verursacht durch:",
@@ -737,6 +749,11 @@ export const dict = {
   "session.empty": "Noch keine Sitzungen. Klicke + um eine neue Unterhaltung zu starten.",
   "session.cloud.repoOnly": "Nur dieses Repository",
   "session.cloud.import": "Aus der Cloud importieren",
+  "feedback.button": "Feedback & Support",
+  "feedback.dialog.message": "Wir würden uns freuen, Ihr Feedback zu hören oder Ihnen bei Problemen zu helfen.",
+  "feedback.dialog.github": "Ein Problem auf GitHub melden",
+  "feedback.dialog.discord": "Unserer Discord-Community beitreten",
+  "feedback.dialog.support": "Kundensupport",
   "session.cloud.import.title": "Aus der Cloud importieren",
   "session.cloud.import.placeholder": "Sitzungs-ID, URL oder kilo import-Befehl",
   "session.cloud.import.button": "Importieren",
@@ -948,26 +965,34 @@ export const dict = {
   "settings.agentBehaviour.workflowsPlaceholder":
     "Workflows werden über Workflow-Dateien in Ihrem Arbeitsbereich verwaltet.",
   "settings.agentBehaviour.notImplemented": "Noch nicht implementiert.",
-  "settings.autoApprove.setAll": "Alle Berechtigungen festlegen",
+  "settings.autoApprove.description":
+    "Legen Sie fest, wie Tools ausgeführt werden dürfen. Die meisten Tools sind standardmäßig auf Zulassen eingestellt. doom_loop und external_directory sind standardmäßig auf Fragen eingestellt.",
   "settings.autoApprove.level.allow": "Erlauben",
   "settings.autoApprove.level.ask": "Fragen",
   "settings.autoApprove.level.deny": "Ablehnen",
-  "settings.autoApprove.tool.read": "Dateiinhalte lesen",
-  "settings.autoApprove.tool.edit": "Dateien bearbeiten oder erstellen",
-  "settings.autoApprove.tool.glob": "Dateien nach Muster suchen",
-  "settings.autoApprove.tool.grep": "Dateiinhalte durchsuchen",
-  "settings.autoApprove.tool.list": "Verzeichnisinhalte auflisten",
-  "settings.autoApprove.tool.bash": "Shell-Befehle ausführen",
-  "settings.autoApprove.tool.task": "Unter-Agent-Aufgaben erstellen",
-  "settings.autoApprove.tool.skill": "Skills ausführen",
-  "settings.autoApprove.tool.lsp": "Sprachserver-Operationen",
-  "settings.autoApprove.tool.todoread": "Aufgabenlisten lesen",
-  "settings.autoApprove.tool.todowrite": "Aufgabenlisten schreiben",
-  "settings.autoApprove.tool.webfetch": "Webseiten abrufen",
-  "settings.autoApprove.tool.websearch": "Im Web suchen",
-  "settings.autoApprove.tool.codesearch": "Codebasis durchsuchen",
-  "settings.autoApprove.tool.external_directory": "Auf Dateien außerhalb des Arbeitsbereichs zugreifen",
-  "settings.autoApprove.tool.doom_loop": "Nach wiederholten Fehlern fortfahren",
+  "settings.autoApprove.wildcardLabel.commands": "Alle Befehle (*)",
+  "settings.autoApprove.wildcardLabel.paths": "Alle Pfade (*)",
+  "settings.autoApprove.exceptions": "Ausnahmen",
+  "settings.autoApprove.addCommand": "Befehl hinzufügen",
+  "settings.autoApprove.addPath": "Pfad hinzufügen",
+  "settings.autoApprove.placeholder.command": "z. B. git *",
+  "settings.autoApprove.placeholder.path": "z. B. *.env",
+  "settings.autoApprove.tool.read": "Dateien lesen. Erlaubt dem Agenten, Dateien zu lesen, die dem angegebenen Pfad entsprechen.",
+  "settings.autoApprove.tool.edit": "Dateien ändern. Erlaubt dem Agenten, Dateien zu erstellen oder zu bearbeiten, einschließlich Patches und Aktualisierungen mehrerer Dateien.",
+  "settings.autoApprove.tool.glob": "Dateien nach Muster abgleichen. Erlaubt den Dateiabgleich mithilfe von Glob-Mustern (z. B. src/**/*.ts).",
+  "settings.autoApprove.tool.grep": "Dateiinhalte durchsuchen. Erlaubt Regex-basierte Suchen innerhalb von Dateien.",
+  "settings.autoApprove.tool.list": "Verzeichnisinhalte auflisten. Erlaubt das Anzeigen von Dateien und Ordnern innerhalb eines Verzeichnisses.",
+  "settings.autoApprove.tool.bash": "Terminalbefehle ausführen. Erlaubt die Ausführung von Shell-Befehlen (z. B. git status).",
+  "settings.autoApprove.tool.task": "Sub-Agenten starten. Erlaubt das Starten spezialisierter Sub-Agenten für bestimmte Aufgaben.",
+  "settings.autoApprove.tool.skill": "Fähigkeiten laden. Erlaubt das Laden vordefinierter Fähigkeiten nach Namen.",
+  "settings.autoApprove.tool.lsp": "Sprachserver abfragen. Erlaubt das Ausführen von Sprachserver-Abfragen für Code-Intelligenz.",
+  "settings.autoApprove.tool.todoreadwrite":
+    "Aufgabenliste verwalten. Ermöglicht das Lesen und Aktualisieren der internen Aufgabenliste.",
+  "settings.autoApprove.tool.webfetch": "URL abrufen. Erlaubt das Abrufen von Inhalten einer bestimmten URL.",
+  "settings.autoApprove.tool.websearchcodesearch":
+    "Web oder Code durchsuchen. Ermöglicht die Durchführung externer Web- oder Code-Suchen.",
+  "settings.autoApprove.tool.external_directory": "Zugriff auf Dateien außerhalb des Arbeitsbereichs. Wird ausgelöst, wenn auf Dateien außerhalb des aktuellen Projektverzeichnisses zugegriffen wird.",
+  "settings.autoApprove.tool.doom_loop": "Wiederholte identische Aktionen verhindern. Wird ausgelöst, wenn sich derselbe Werkzeugaufruf mit identischer Eingabe wiederholt.",
   "settings.checkpoints.enable.title": "Snapshots aktivieren",
   "settings.checkpoints.enable.description":
     "Prüfpunkte vor Dateibearbeitungen erstellen, um vorherige Zustände wiederherstellen zu können",
@@ -997,7 +1022,6 @@ export const dict = {
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/de.ts
 
-
   "question.summary": "{{n}} von {{total}} Fragen",
   "common.review": "Überprüfen",
 
@@ -1006,49 +1030,61 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "Legacy-Migration",
   "settings.aboutKiloCode.legacyMigration.description":
     "Migrieren Sie Einstellungen von einer früheren Installation von Kilo Code, einschließlich Anbieter-API-Schlüsseln und dem Standardmodell.",
-  "migration.welcome.title": "Willkommen beim neuen Kilo Code",
-  "migration.welcome.detected": "Wir haben Einstellungen aus einer früheren Installation von Kilo Code erkannt.",
-  "migration.welcome.sessionsInfo":
-    "Chat-Sitzungen und Verlauf können nicht migriert werden — die neue Version verwendet eine andere Architektur.",
-  "migration.welcome.canMigrate": "Die folgenden Einstellungen können in die neue Version migriert werden:",
-  "migration.welcome.start": "Migration starten",
-  "migration.welcome.skip": "Migration überspringen",
-  "migration.steps.title": "Ihre Einstellungen migrieren",
-  "migration.steps.subtitle":
-    "Wir haben Einstellungen aus Ihrer vorherigen Kilo Code-Installation gefunden. Wählen Sie aus, was übernommen werden soll.",
+
+  // Screen 1 — What's New
+  "migration.whatsNew.title": "Neuigkeiten in Kilo Code",
+  "migration.whatsNew.badge": "Beta",
+  "migration.whatsNew.subtitle":
+    "Wir haben die Erweiterung auf einer schnelleren, effizienteren Grundlage neu aufgebaut.",
+  "migration.whatsNew.features.performance.title": "Schnellere Agentenleistung",
+  "migration.whatsNew.features.performance.detail":
+    "Parallele Werkzeugaufrufe und Unteragenten lassen Ihren Agenten mehr gleichzeitig erledigen — so verbringen Sie weniger Zeit mit Warten und mehr Zeit mit Ergebnissen.",
+  "migration.whatsNew.features.interface.title": "Optimierte Oberfläche",
+  "migration.whatsNew.features.interface.detail": "Weniger Ablenkungen, einfacher und schneller zu lesen.",
+  "migration.whatsNew.features.agentManager.title": "Agent Manager",
+  "migration.whatsNew.features.agentManager.detail":
+    "Eine einheitliche Oberfläche zum parallelen Ausführen mehrerer Agenten, jeweils in einem eigenen Worktree — Fortschritt überwachen, Kontext wechseln und Änderungen an einem Ort überprüfen.",
+  "migration.whatsNew.features.foundation.title": "Gemeinsame Grundlage",
+  "migration.whatsNew.features.foundation.detail":
+    "Ein kleiner, effizienter Kern über alle Kilo-Produkte hinweg. Ein vertrautes Erlebnis, egal wie Sie arbeiten.",
+  "migration.whatsNew.blogLink": "Die vollständige Ankündigung lesen",
+  "migration.whatsNew.continue": "Weiter",
+
+  // Screen 2 — Migrate Settings
+  "migration.migrate.title": "Ihre Einstellungen migrieren",
+  "migration.migrate.subtitle":
+    "Wir haben Einstellungen aus Ihrer vorherigen Installation gefunden. Hier ist, was wir übernehmen können.",
+  "migration.migrate.selectLabel": "Auswählen, was migriert werden soll",
+  "migration.migrate.cannotMigrate": "Kann nicht migriert werden",
+  "migration.migrate.chatHistory": "Chat-Sitzungen & Verlauf",
+  "migration.migrate.chatHistoryDesc": "Nicht kompatibel mit der neuen Architektur",
+  "migration.migrate.button": "Einstellungen migrieren",
+  "migration.migrate.skip": "Überspringen",
+  "migration.migrate.back": "Zurück",
+  "migration.migrate.keysDetected": "{{count}} Schlüssel erkannt",
+  "migration.migrate.serversConfigured": "{{count}} Server konfiguriert",
+  "migration.migrate.modesFound": "{{count}} Modus/Modi gefunden",
+  "migration.migrate.nothingToMigrate": "In den Legacy-Einstellungen wurde nichts zum Migrieren gefunden.",
+
+  // Migrate — item labels (reused from old select keys)
   "migration.select.providers": "Anbieter-API-Schlüssel",
   "migration.select.mcpServers": "MCP-Server",
   "migration.select.customModes": "Benutzerdefinierte Modi / Agenten",
   "migration.select.defaultModel": "Standardmodell",
-  "migration.select.unsupported": "Wird in der neuen Version nicht unterstützt",
-  "migration.select.nothingToMigrate": "In den Legacy-Einstellungen wurde nichts gefunden, was migriert werden könnte.",
-  "migration.select.settings": "Einstellungen",
   "migration.select.autoApproval": "Automatische Genehmigung",
-  "migration.select.autoApproval.commandRules": "Befehlsregeln",
-  "migration.select.autoApproval.commandRulesDesc": "Hauptschalter und Listen für erlaubte/verweigerte Befehle",
-  "migration.select.autoApproval.readPermission": "Leseberechtigung",
-  "migration.select.autoApproval.readPermissionDesc": "Dateilesezugriff innerhalb und außerhalb des Arbeitsbereichs",
-  "migration.select.autoApproval.writePermission": "Schreibberechtigung",
-  "migration.select.autoApproval.writePermissionDesc": "Dateischreib- und Bearbeitungszugriff",
-  "migration.select.autoApproval.executePermission": "Ausführungsberechtigung",
-  "migration.select.autoApproval.executePermissionDesc": "Ausführung von Terminalbefehlen",
-  "migration.select.autoApproval.mcpPermission": "MCP-Berechtigung",
-  "migration.select.autoApproval.mcpPermissionDesc": "Nutzung von MCP-Tools",
-  "migration.select.autoApproval.taskPermission": "Aufgabenberechtigung",
-  "migration.select.autoApproval.taskPermissionDesc": "Wechsel des Modus und Erstellung von Teilaufgaben",
   "migration.select.language": "UI-Sprache",
-  "migration.select.languageDesc": "Ihre Spracheinstellung wird auf die neue Erweiterung angewendet",
   "migration.select.autocomplete": "Einstellungen für Autovervollständigung",
-  "migration.select.autocompleteDesc":
-    "Einstellungen für automatische Auslösung, Tastenkombinationen und Chat-Autovervollständigung",
-  "migration.select.continue": "Weiter",
-  "migration.select.back": "Zurück",
-  "migration.progress.title": "Ihre Einstellungen werden migriert…",
-  "migration.progress.done": "Weiter",
+
+  // Migrate — completion
   "migration.complete.summary": "{{success}} von {{total}} Elementen erfolgreich migriert.",
   "migration.complete.cleanup": "Legacy-Einstellungsdaten entfernen",
   "migration.complete.cleanupDescription":
     "Dadurch werden die alten Einstellungen aus dem VS Code-Speicher entfernt. Sie können diese Migration danach nicht erneut ausführen.",
   "migration.complete.done": "Fertig",
   // legacy-migration end
+
+  "error.details.show": "Details",
+
+  "task.todos.progress": "{{done}}/{{total}} Aufgaben erledigt",
+  "task.todos.allDone": "{{count}} Aufgaben erledigt",
 } satisfies Partial<Record<Keys, string>>

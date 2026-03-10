@@ -34,3 +34,7 @@ jobs:
       - name: Run unit tests
         working-directory: packages/kilo-vscode
         run: bun run test:unit
+
+      - name: Check for dead code (knip)
+        working-directory: packages/kilo-vscode
+        run: bun run knip

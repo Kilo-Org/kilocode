@@ -10,7 +10,7 @@
 /** Sentinel value for the local workspace selection. */
 export const LOCAL = "local" as const
 
-export type NavResult = { action: "select"; id: string } | { action: typeof LOCAL } | { action: "none" }
+type NavResult = { action: "select"; id: string } | { action: typeof LOCAL } | { action: "none" }
 
 export function resolveNavigation(direction: "up" | "down", current: string | undefined, ids: string[]): NavResult {
   // Determine current position: -1 = local, 0..N-1 = session index

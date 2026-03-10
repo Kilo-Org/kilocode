@@ -1,14 +1,12 @@
 /**
  * legacy-migration - Multi-step migration wizard UI component.
  *
- * Steps:
- *   1. Welcome — informs the user about what can / cannot be migrated
- *   2. Select  — checkboxes for providers, MCP servers, custom modes, default model
- *   3. Progress — live progress indicators during migration
- *   4. Complete — summary + optional cleanup checkbox
+ * Screens:
+ *   1. What's New  — feature showcase for the new extension
+ *   2. Migrate     — grouped selection, live in-place progress, cleanup
  */
 
-import { Component, For, Show, Switch, Match, createSignal, onMount, onCleanup, JSX } from "solid-js"
+import { Component, Show, createSignal, onMount, onCleanup, JSX } from "solid-js"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import type {
@@ -34,29 +32,119 @@ const KiloLogo = (): JSX.Element => {
     document.body.classList.contains("vscode-light") || document.body.classList.contains("vscode-high-contrast-light")
   const icon = isLight ? "kilo-light.svg" : "kilo-dark.svg"
   return (
-    <div class="migration-wizard__welcome-logo">
+    <div class="migration-wizard__logo">
       <img src={`${iconsBaseUri}/${icon}`} alt="Kilo Code" />
     </div>
   )
 }
 
 // ---------------------------------------------------------------------------
-// CheckIcon — checkmark SVG for completed steps
+// Inline SVG icons for feature cards
 // ---------------------------------------------------------------------------
 
-const CheckIcon = (): JSX.Element => (
+const BoltIcon = (): JSX.Element => (
   <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="16"
-    height="16"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    stroke-width="2.5"
+    stroke-width="2"
     stroke-linecap="round"
     stroke-linejoin="round"
   >
-    <path d="M20 6 9 17l-5-5" />
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+  </svg>
+)
+
+const MonitorIcon = (): JSX.Element => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <rect x="2" y="3" width="20" height="14" rx="2" />
+    <line x1="8" y1="21" x2="16" y2="21" />
+    <line x1="12" y1="17" x2="12" y2="21" />
+  </svg>
+)
+
+const UsersIcon = (): JSX.Element => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  </svg>
+)
+
+const ServerIcon = (): JSX.Element => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <rect x="2" y="12" width="20" height="8" rx="2" />
+    <path d="M6 12V8a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v4" />
+    <line x1="12" y1="16" x2="12" y2="16.01" />
+  </svg>
+)
+
+const CheckmarkSvg = (): JSX.Element => (
+  <svg viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="2.5 6 5 8.5 9.5 3.5" />
+  </svg>
+)
+
+const SuccessCheckSvg = (): JSX.Element => (
+  <svg
+    viewBox="0 0 12 12"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <polyline points="2.5 6 5 8.5 9.5 3.5" />
+  </svg>
+)
+
+const ErrorXSvg = (): JSX.Element => (
+  <svg
+    viewBox="0 0 12 12"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <line x1="3" y1="3" x2="9" y2="9" />
+    <line x1="9" y1="3" x2="3" y2="9" />
+  </svg>
+)
+
+const WarningSvg = (): JSX.Element => (
+  <svg
+    viewBox="0 0 12 12"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <line x1="6" y1="4" x2="6" y2="7" />
+    <line x1="6" y1="9" x2="6" y2="9.01" />
   </svg>
 )
 
@@ -64,11 +152,12 @@ const CheckIcon = (): JSX.Element => (
 // Types
 // ---------------------------------------------------------------------------
 
-type Step = "welcome" | "select" | "progress" | "complete"
-type StepStatus = "upcoming" | "current" | "done"
+type Screen = "whats-new" | "migrate"
+type MigratePhase = "selecting" | "migrating" | "done"
 
 interface ProgressEntry {
   item: string
+  group: string
   status: "pending" | "migrating" | "success" | "warning" | "error"
   message?: string
 }
@@ -86,36 +175,30 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
   const vscode = useVSCode()
   const language = useLanguage()
 
-  const [step, setStep] = createSignal<Step>("welcome")
+  const [screen, setScreen] = createSignal<Screen>("whats-new")
+  const [phase, setPhase] = createSignal<MigratePhase>("selecting")
+
+  // Data from extension
   const [providers, setProviders] = createSignal<MigrationProviderInfo[]>([])
   const [mcpServers, setMcpServers] = createSignal<MigrationMcpServerInfo[]>([])
   const [customModes, setCustomModes] = createSignal<MigrationCustomModeInfo[]>([])
   const [defaultModel, setDefaultModel] = createSignal<{ provider: string; model: string } | undefined>(undefined)
   const [legacySettings, setLegacySettings] = createSignal<LegacySettings | undefined>(undefined)
 
-  // Selections (profile names / server names / mode slugs)
-  const [selectedProviders, setSelectedProviders] = createSignal<Set<string>>(new Set())
-  const [selectedMcpServers, setSelectedMcpServers] = createSignal<Set<string>>(new Set())
-  const [selectedModes, setSelectedModes] = createSignal<Set<string>>(new Set())
+  // Group-level selections
+  const [migrateProviders, setMigrateProviders] = createSignal(true)
+  const [migrateMcpServers, setMigrateMcpServers] = createSignal(true)
+  const [migrateModes, setMigrateModes] = createSignal(true)
   const [migrateDefaultModel, setMigrateDefaultModel] = createSignal(true)
-  const ALL_AP_OFF: MigrationAutoApprovalSelections = {
-    commandRules: false,
-    readPermission: false,
-    writePermission: false,
-    executePermission: false,
-    mcpPermission: false,
-    taskPermission: false,
-  }
-  const [autoApprovalSel, setAutoApprovalSel] = createSignal<MigrationAutoApprovalSelections>({ ...ALL_AP_OFF })
-  const [migrateLanguage, setMigrateLanguage] = createSignal(false)
-  const [migrateAutocomplete, setMigrateAutocomplete] = createSignal(false)
+  const [migrateAutoApproval, setMigrateAutoApproval] = createSignal(true)
+  const [migrateLanguage, setMigrateLanguage] = createSignal(true)
+  const [migrateAutocomplete, setMigrateAutocomplete] = createSignal(true)
 
   // Progress tracking
   const [progressEntries, setProgressEntries] = createSignal<ProgressEntry[]>([])
   const [results, setResults] = createSignal<MigrationResultItem[]>([])
-  const [migrationDone, setMigrationDone] = createSignal(false)
 
-  // Cleanup preference on the completion screen
+  // Cleanup preference
   const [clearLegacyData, setClearLegacyData] = createSignal(false)
 
   // ---------------------------------------------------------------------------
@@ -133,28 +216,26 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
         setDefaultModel(data.defaultModel)
         setLegacySettings(data.settings)
 
-        // Pre-select everything that is supported and has a key
-        setSelectedProviders(
-          new Set(data.providers.filter((p) => p.supported && p.hasApiKey).map((p) => p.profileName)),
-        )
-        setSelectedMcpServers(new Set(data.mcpServers.map((s) => s.name)))
-        setSelectedModes(new Set(data.customModes.map((m) => m.slug)))
+        // Pre-select groups that have data
+        setMigrateProviders(data.providers.some((p) => p.supported && p.hasApiKey))
+        setMigrateMcpServers(data.mcpServers.length > 0)
+        setMigrateModes(data.customModes.length > 0)
         setMigrateDefaultModel(Boolean(data.defaultModel))
 
-        // Pre-select settings migration if data exists
         const s = data.settings
         if (s) {
-          setAutoApprovalSel({
-            commandRules:
-              s.autoApprovalEnabled !== undefined ||
+          setMigrateAutoApproval(
+            s.autoApprovalEnabled !== undefined ||
               Boolean(s.allowedCommands?.length) ||
-              Boolean(s.deniedCommands?.length),
-            readPermission: s.alwaysAllowReadOnly !== undefined || s.alwaysAllowReadOnlyOutsideWorkspace !== undefined,
-            writePermission: s.alwaysAllowWrite !== undefined,
-            executePermission: s.alwaysAllowExecute !== undefined,
-            mcpPermission: s.alwaysAllowMcp !== undefined,
-            taskPermission: s.alwaysAllowModeSwitch !== undefined || s.alwaysAllowSubtasks !== undefined,
-          })
+              Boolean(s.deniedCommands?.length) ||
+              s.alwaysAllowReadOnly !== undefined ||
+              s.alwaysAllowReadOnlyOutsideWorkspace !== undefined ||
+              s.alwaysAllowWrite !== undefined ||
+              s.alwaysAllowExecute !== undefined ||
+              s.alwaysAllowMcp !== undefined ||
+              s.alwaysAllowModeSwitch !== undefined ||
+              s.alwaysAllowSubtasks !== undefined,
+          )
           setMigrateLanguage(Boolean(s.language))
           setMigrateAutocomplete(Boolean(s.autocomplete))
         }
@@ -164,7 +245,12 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
         const update = msg as LegacyMigrationProgressMessage
         setProgressEntries((prev) => {
           const existing = prev.findIndex((e) => e.item === update.item)
-          const entry: ProgressEntry = { item: update.item, status: update.status, message: update.message }
+          const entry: ProgressEntry = {
+            item: update.item,
+            group: existing >= 0 ? prev[existing].group : update.item,
+            status: update.status,
+            message: update.message,
+          }
           return existing >= 0 ? prev.map((e, i) => (i === existing ? entry : e)) : [...prev, entry]
         })
       }
@@ -172,13 +258,11 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
       if (msg?.type === "legacyMigrationComplete") {
         const complete = msg as LegacyMigrationCompleteMessage
         setResults(complete.results)
-        setMigrationDone(true)
-        setStep("complete")
+        setPhase("done")
       }
     }
 
     window.addEventListener("message", handler)
-    // Request data immediately when the wizard mounts
     vscode.postMessage({ type: "requestLegacyMigrationData" })
     onCleanup(() => window.removeEventListener("message", handler))
   })
@@ -193,38 +277,88 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
   }
 
   const handleStartMigration = () => {
-    const allItems: ProgressEntry[] = [
-      ...Array.from(selectedProviders()).map((name) => ({ item: name, status: "pending" as const })),
-      ...Array.from(selectedMcpServers()).map((name) => ({ item: name, status: "pending" as const })),
-      ...Array.from(selectedModes()).map((slug) => {
+    const selectedProviderNames = migrateProviders()
+      ? providers()
+          .filter((p) => p.supported && p.hasApiKey)
+          .map((p) => p.profileName)
+      : []
+    const selectedMcpNames = migrateMcpServers() ? mcpServers().map((s) => s.name) : []
+    const selectedModesSlugs = migrateModes() ? customModes().map((m) => m.slug) : []
+
+    const autoApproval: MigrationAutoApprovalSelections = migrateAutoApproval()
+      ? {
+          commandRules:
+            legacySettings()?.autoApprovalEnabled !== undefined ||
+            Boolean(legacySettings()?.allowedCommands?.length) ||
+            Boolean(legacySettings()?.deniedCommands?.length),
+          readPermission:
+            legacySettings()?.alwaysAllowReadOnly !== undefined ||
+            legacySettings()?.alwaysAllowReadOnlyOutsideWorkspace !== undefined,
+          writePermission: legacySettings()?.alwaysAllowWrite !== undefined,
+          executePermission: legacySettings()?.alwaysAllowExecute !== undefined,
+          mcpPermission: legacySettings()?.alwaysAllowMcp !== undefined,
+          taskPermission:
+            legacySettings()?.alwaysAllowModeSwitch !== undefined ||
+            legacySettings()?.alwaysAllowSubtasks !== undefined,
+        }
+      : {
+          commandRules: false,
+          readPermission: false,
+          writePermission: false,
+          executePermission: false,
+          mcpPermission: false,
+          taskPermission: false,
+        }
+
+    // Build progress entries
+    const entries: ProgressEntry[] = [
+      ...selectedProviderNames.map((name) => ({ item: name, group: "providers", status: "pending" as const })),
+      ...selectedMcpNames.map((name) => ({ item: name, group: "mcpServers", status: "pending" as const })),
+      ...selectedModesSlugs.map((slug) => {
         const mode = customModes().find((m) => m.slug === slug)
-        return { item: mode?.name ?? slug, status: "pending" as const }
+        return { item: mode?.name ?? slug, group: "customModes", status: "pending" as const }
       }),
-      ...(migrateDefaultModel() && defaultModel() ? [{ item: "Default model", status: "pending" as const }] : []),
-      ...(autoApprovalSel().commandRules ? [{ item: "Command rules", status: "pending" as const }] : []),
-      ...(autoApprovalSel().readPermission ? [{ item: "Read permission", status: "pending" as const }] : []),
-      ...(autoApprovalSel().writePermission ? [{ item: "Write permission", status: "pending" as const }] : []),
-      ...(autoApprovalSel().executePermission ? [{ item: "Execute permission", status: "pending" as const }] : []),
-      ...(autoApprovalSel().mcpPermission ? [{ item: "MCP permission", status: "pending" as const }] : []),
-      ...(autoApprovalSel().taskPermission ? [{ item: "Task permission", status: "pending" as const }] : []),
+      ...(migrateDefaultModel() && defaultModel()
+        ? [{ item: "Default model", group: "defaultModel", status: "pending" as const }]
+        : []),
+      ...(autoApproval.commandRules
+        ? [{ item: "Command rules", group: "autoApproval", status: "pending" as const }]
+        : []),
+      ...(autoApproval.readPermission
+        ? [{ item: "Read permission", group: "autoApproval", status: "pending" as const }]
+        : []),
+      ...(autoApproval.writePermission
+        ? [{ item: "Write permission", group: "autoApproval", status: "pending" as const }]
+        : []),
+      ...(autoApproval.executePermission
+        ? [{ item: "Execute permission", group: "autoApproval", status: "pending" as const }]
+        : []),
+      ...(autoApproval.mcpPermission
+        ? [{ item: "MCP permission", group: "autoApproval", status: "pending" as const }]
+        : []),
+      ...(autoApproval.taskPermission
+        ? [{ item: "Task permission", group: "autoApproval", status: "pending" as const }]
+        : []),
       ...(migrateLanguage() && legacySettings()?.language
-        ? [{ item: "Language preference", status: "pending" as const }]
+        ? [{ item: "Language preference", group: "language", status: "pending" as const }]
         : []),
       ...(migrateAutocomplete() && legacySettings()?.autocomplete
-        ? [{ item: "Autocomplete settings", status: "pending" as const }]
+        ? [{ item: "Autocomplete settings", group: "autocomplete", status: "pending" as const }]
         : []),
     ]
-    setProgressEntries(allItems)
-    setStep("progress")
+
+    setProgressEntries(entries)
+    setPhase("migrating")
+
     vscode.postMessage({
       type: "startLegacyMigration",
       selections: {
-        providers: Array.from(selectedProviders()),
-        mcpServers: Array.from(selectedMcpServers()),
-        customModes: Array.from(selectedModes()),
+        providers: selectedProviderNames,
+        mcpServers: selectedMcpNames,
+        customModes: selectedModesSlugs,
         defaultModel: migrateDefaultModel(),
         settings: {
-          autoApproval: autoApprovalSel(),
+          autoApproval,
           language: migrateLanguage(),
           autocomplete: migrateAutocomplete(),
         },
@@ -240,149 +374,96 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
   }
 
   // ---------------------------------------------------------------------------
-  // Selection helpers
+  // Data helpers
   // ---------------------------------------------------------------------------
 
-  const toggleProvider = (name: string) => {
-    setSelectedProviders((prev) => {
-      const next = new Set(prev)
-      next.has(name) ? next.delete(name) : next.add(name)
-      return next
-    })
-  }
+  const supportedProviderCount = () => providers().filter((p) => p.supported && p.hasApiKey).length
 
-  const toggleMcpServer = (name: string) => {
-    setSelectedMcpServers((prev) => {
-      const next = new Set(prev)
-      next.has(name) ? next.delete(name) : next.add(name)
-      return next
-    })
-  }
-
-  const toggleMode = (slug: string) => {
-    setSelectedModes((prev) => {
-      const next = new Set(prev)
-      next.has(slug) ? next.delete(slug) : next.add(slug)
-      return next
-    })
-  }
-
-  const anyAutoApprovalSelected = () => Object.values(autoApprovalSel()).some(Boolean)
-
-  const hasAnySelection = () =>
-    selectedProviders().size > 0 ||
-    selectedMcpServers().size > 0 ||
-    selectedModes().size > 0 ||
-    (migrateDefaultModel() && Boolean(defaultModel())) ||
-    anyAutoApprovalSelected() ||
-    (migrateLanguage() && Boolean(legacySettings()?.language)) ||
-    (migrateAutocomplete() && Boolean(legacySettings()?.autocomplete))
-
-  // ---------------------------------------------------------------------------
-  // Settings data helpers
-  // ---------------------------------------------------------------------------
-
-  const hasCommandRulesData = () => {
+  const hasAnyAutoApprovalData = () => {
     const s = legacySettings()
     return (
       s !== undefined &&
-      (s.autoApprovalEnabled !== undefined || Boolean(s.allowedCommands?.length) || Boolean(s.deniedCommands?.length))
+      (s.autoApprovalEnabled !== undefined ||
+        Boolean(s.allowedCommands?.length) ||
+        Boolean(s.deniedCommands?.length) ||
+        s.alwaysAllowReadOnly !== undefined ||
+        s.alwaysAllowReadOnlyOutsideWorkspace !== undefined ||
+        s.alwaysAllowWrite !== undefined ||
+        s.alwaysAllowExecute !== undefined ||
+        s.alwaysAllowMcp !== undefined ||
+        s.alwaysAllowModeSwitch !== undefined ||
+        s.alwaysAllowSubtasks !== undefined)
     )
   }
-  const hasReadPermissionData = () => {
-    const s = legacySettings()
-    return (
-      s !== undefined && (s.alwaysAllowReadOnly !== undefined || s.alwaysAllowReadOnlyOutsideWorkspace !== undefined)
-    )
-  }
-  const hasWritePermissionData = () => legacySettings()?.alwaysAllowWrite !== undefined
-  const hasExecutePermissionData = () => legacySettings()?.alwaysAllowExecute !== undefined
-  const hasMcpPermissionData = () => legacySettings()?.alwaysAllowMcp !== undefined
-  const hasTaskPermissionData = () => {
-    const s = legacySettings()
-    return s !== undefined && (s.alwaysAllowModeSwitch !== undefined || s.alwaysAllowSubtasks !== undefined)
-  }
-
-  const hasAnyAutoApprovalData = () =>
-    hasCommandRulesData() ||
-    hasReadPermissionData() ||
-    hasWritePermissionData() ||
-    hasExecutePermissionData() ||
-    hasMcpPermissionData() ||
-    hasTaskPermissionData()
 
   const hasLanguageData = () => Boolean(legacySettings()?.language)
-
   const hasAutocompleteData = () => Boolean(legacySettings()?.autocomplete)
 
-  // ---------------------------------------------------------------------------
-  // Result summary helpers
-  // ---------------------------------------------------------------------------
+  const hasAnySelection = () =>
+    (migrateProviders() && supportedProviderCount() > 0) ||
+    (migrateMcpServers() && mcpServers().length > 0) ||
+    (migrateModes() && customModes().length > 0) ||
+    (migrateDefaultModel() && Boolean(defaultModel())) ||
+    (migrateAutoApproval() && hasAnyAutoApprovalData()) ||
+    (migrateLanguage() && hasLanguageData()) ||
+    (migrateAutocomplete() && hasAutocompleteData())
+
+  const hasNothingToShow = () =>
+    supportedProviderCount() === 0 &&
+    mcpServers().length === 0 &&
+    customModes().length === 0 &&
+    !defaultModel() &&
+    !hasAnyAutoApprovalData() &&
+    !hasLanguageData() &&
+    !hasAutocompleteData()
+
+  // Group-level status for progress display
+  const groupStatus = (group: string): ProgressEntry["status"] => {
+    const entries = progressEntries().filter((e) => e.group === group)
+    if (entries.length === 0) return "pending"
+    if (entries.some((e) => e.status === "error")) return "error"
+    if (entries.some((e) => e.status === "warning")) return "warning"
+    if (entries.every((e) => e.status === "success")) return "success"
+    if (entries.some((e) => e.status === "migrating")) return "migrating"
+    return "pending"
+  }
 
   const successCount = () => results().filter((r) => r.status === "success").length
   const totalCount = () => results().length
 
   // ---------------------------------------------------------------------------
-  // Step indicator helpers
+  // Status icon renderer
   // ---------------------------------------------------------------------------
 
-  // The 3-step indicator maps to the non-welcome steps
-  const WIZARD_STEPS: Step[] = ["select", "progress", "complete"]
-
-  const stepStatus = (s: Step): StepStatus => {
-    const idx = WIZARD_STEPS.indexOf(s)
-    const curr = WIZARD_STEPS.indexOf(step())
-    if (curr < 0) return "upcoming" // welcome step — all upcoming
-    if (curr > idx) return "done"
-    if (curr === idx) return "current"
-    return "upcoming"
-  }
-
-  // ---------------------------------------------------------------------------
-  // Progress item render helpers
-  // ---------------------------------------------------------------------------
-
-  const dotColor = (status: ProgressEntry["status"]) => {
-    switch (status) {
-      case "success":
-        return "var(--vscode-testing-iconPassed, #89d185)"
-      case "warning":
-        return "var(--vscode-testing-iconQueued, #cca700)"
-      case "error":
-        return "var(--vscode-testing-iconFailed, #f14c4c)"
-      case "migrating":
-        return "var(--vscode-button-background)"
-      default:
-        return "var(--vscode-descriptionForeground)"
-    }
-  }
-
-  const statusLabel = (status: ProgressEntry["status"]) => {
-    switch (status) {
-      case "success":
-        return "✓ Done"
-      case "warning":
-        return "⚠ Warning"
-      case "error":
-        return "✗ Failed"
-      case "migrating":
-        return "..."
-      default:
-        return ""
-    }
-  }
-
-  const statusLabelColor = (status: ProgressEntry["status"]) => {
-    switch (status) {
-      case "success":
-        return "var(--vscode-testing-iconPassed, #89d185)"
-      case "warning":
-        return "var(--vscode-testing-iconQueued, #cca700)"
-      case "error":
-        return "var(--vscode-testing-iconFailed, #f14c4c)"
-      default:
-        return "var(--vscode-descriptionForeground)"
-    }
+  const StatusIcon = (gProps: { group: string }): JSX.Element => {
+    const status = () => groupStatus(gProps.group)
+    return (
+      <>
+        <Show when={status() === "pending"}>
+          <div class="migration-wizard__status-icon migration-wizard__status-icon--pending" />
+        </Show>
+        <Show when={status() === "migrating"}>
+          <div class="migration-wizard__status-icon">
+            <div class="migration-wizard__spinner" />
+          </div>
+        </Show>
+        <Show when={status() === "success"}>
+          <div class="migration-wizard__status-icon migration-wizard__status-icon--success">
+            <SuccessCheckSvg />
+          </div>
+        </Show>
+        <Show when={status() === "warning"}>
+          <div class="migration-wizard__status-icon migration-wizard__status-icon--warning">
+            <WarningSvg />
+          </div>
+        </Show>
+        <Show when={status() === "error"}>
+          <div class="migration-wizard__status-icon migration-wizard__status-icon--error">
+            <ErrorXSvg />
+          </div>
+        </Show>
+      </>
+    )
   }
 
   // ---------------------------------------------------------------------------
@@ -391,463 +472,344 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
 
   return (
     <div class="migration-wizard">
-      {/* Header — only shown on steps 2-4 */}
-      <Show when={step() !== "welcome"}>
-        <div class="migration-wizard__header">
-          <h2 class="migration-wizard__title">{language.t("migration.steps.title")}</h2>
-          <p class="migration-wizard__header-subtitle">{language.t("migration.steps.subtitle")}</p>
+      <div class="migration-wizard__container">
+        {/* ---- Screen 1: What's New ---- */}
+        <div class={screen() === "whats-new" ? "migration-wizard__screen--active" : "migration-wizard__screen--hidden"}>
+          <div class="migration-wizard__header">
+            <KiloLogo />
+            <h1>
+              {language.t("migration.whatsNew.title")}{" "}
+              <span class="migration-wizard__badge">{language.t("migration.whatsNew.badge")}</span>
+            </h1>
+            <p>{language.t("migration.whatsNew.subtitle")}</p>
+          </div>
 
-          {/* Step indicator */}
-          <div class="migration-wizard__steps">
-            <For each={WIZARD_STEPS}>
-              {(s, i) => (
-                <>
-                  <div class={`migration-wizard__step migration-wizard__step--${stepStatus(s)}`}>
-                    <Switch>
-                      <Match when={stepStatus(s) === "done"}>
-                        <CheckIcon />
-                      </Match>
-                      <Match when={true}>
-                        <span>{i() + 1}</span>
-                      </Match>
-                    </Switch>
-                  </div>
-                  <Show when={i() < WIZARD_STEPS.length - 1}>
-                    <span
-                      class={`migration-wizard__step-connector${stepStatus(s) === "done" ? " migration-wizard__step-connector--done" : ""}`}
-                    />
-                  </Show>
-                </>
-              )}
-            </For>
+          <div class="migration-wizard__features">
+            <div class="migration-wizard__feature">
+              <div class="migration-wizard__feature-icon">
+                <BoltIcon />
+              </div>
+              <div class="migration-wizard__feature-text">
+                <div class="title">{language.t("migration.whatsNew.features.performance.title")}</div>
+                <div class="detail">{language.t("migration.whatsNew.features.performance.detail")}</div>
+              </div>
+            </div>
+
+            <div class="migration-wizard__feature">
+              <div class="migration-wizard__feature-icon">
+                <MonitorIcon />
+              </div>
+              <div class="migration-wizard__feature-text">
+                <div class="title">{language.t("migration.whatsNew.features.interface.title")}</div>
+                <div class="detail">{language.t("migration.whatsNew.features.interface.detail")}</div>
+              </div>
+            </div>
+
+            <div class="migration-wizard__feature">
+              <div class="migration-wizard__feature-icon">
+                <UsersIcon />
+              </div>
+              <div class="migration-wizard__feature-text">
+                <div class="title">{language.t("migration.whatsNew.features.agentManager.title")}</div>
+                <div class="detail">{language.t("migration.whatsNew.features.agentManager.detail")}</div>
+              </div>
+            </div>
+
+            <div class="migration-wizard__feature">
+              <div class="migration-wizard__feature-icon">
+                <ServerIcon />
+              </div>
+              <div class="migration-wizard__feature-text">
+                <div class="title">{language.t("migration.whatsNew.features.foundation.title")}</div>
+                <div class="detail">{language.t("migration.whatsNew.features.foundation.detail")}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="migration-wizard__blog-link">
+            <a href="https://blog.kilo.ai/we-completely-rebuilt-the-kilo-vs-code-extension">
+              {language.t("migration.whatsNew.blogLink")} <span>&rarr;</span>
+            </a>
+          </div>
+
+          <div class="migration-wizard__footer">
+            <div class="migration-wizard__btn-group">
+              <button
+                type="button"
+                class="migration-wizard__btn migration-wizard__btn--primary"
+                onClick={() => setScreen("migrate")}
+              >
+                {language.t("migration.whatsNew.continue")}
+              </button>
+            </div>
           </div>
         </div>
-      </Show>
 
-      <div class="migration-wizard__body">
-        {/* ---- Step 1: Welcome ---- */}
-        <Show when={step() === "welcome"}>
-          <div class="migration-wizard__welcome">
+        {/* ---- Screen 2: Migrate Settings ---- */}
+        <div class={screen() === "migrate" ? "migration-wizard__screen--active" : "migration-wizard__screen--hidden"}>
+          <div class="migration-wizard__header">
             <KiloLogo />
-            <h2 class="migration-wizard__welcome-title">{language.t("migration.welcome.title")}</h2>
-            <p class="migration-wizard__welcome-subtitle">{language.t("migration.welcome.detected")}</p>
+            <h1>{language.t("migration.migrate.title")}</h1>
+            <p>{language.t("migration.migrate.subtitle")}</p>
+          </div>
 
-            <div class="migration-wizard__welcome-cards">
-              <div class="migration-wizard__info-card migration-wizard__info-card--warning">
-                <strong>{language.t("migration.welcome.sessionsInfo")}</strong>
-              </div>
-
-              <div class="migration-wizard__info-card">
-                <p style={{ margin: 0 }}>{language.t("migration.welcome.canMigrate")}</p>
-                <ul class="migration-wizard__list">
-                  <Show when={providers().length > 0}>
-                    <li>
-                      {language.t("migration.select.providers")} ({providers().filter((p) => p.supported).length})
-                    </li>
-                  </Show>
-                  <Show when={mcpServers().length > 0}>
-                    <li>
-                      {language.t("migration.select.mcpServers")} ({mcpServers().length})
-                    </li>
-                  </Show>
-                  <Show when={customModes().length > 0}>
-                    <li>
-                      {language.t("migration.select.customModes")} ({customModes().length})
-                    </li>
-                  </Show>
-                  <Show when={Boolean(defaultModel())}>
-                    <li>{language.t("migration.select.defaultModel")}</li>
-                  </Show>
-                  <Show when={hasAnyAutoApprovalData()}>
-                    <li>{language.t("migration.select.autoApproval")}</li>
-                  </Show>
-                  <Show when={hasLanguageData()}>
-                    <li>{language.t("migration.select.language")}</li>
-                  </Show>
-                  <Show when={hasAutocompleteData()}>
-                    <li>{language.t("migration.select.autocomplete")}</li>
-                  </Show>
-                </ul>
-              </div>
+          <Show when={hasNothingToShow()}>
+            <div class="migration-wizard__card">
+              <div class="migration-wizard__empty">{language.t("migration.migrate.nothingToMigrate")}</div>
             </div>
-          </div>
+          </Show>
 
-          <div class="migration-wizard__footer">
-            <button type="button" class="migration-wizard__btn migration-wizard__btn--ghost" onClick={handleSkip}>
-              {language.t("migration.welcome.skip")}
-            </button>
-            <button
-              type="button"
-              class="migration-wizard__btn migration-wizard__btn--primary"
-              onClick={() => setStep("select")}
-            >
-              {language.t("migration.welcome.start")}
-            </button>
-          </div>
-        </Show>
+          <Show when={!hasNothingToShow()}>
+            <div class="migration-wizard__card">
+              {/* Summary after migration */}
+              <Show when={phase() === "done"}>
+                <div
+                  class={`migration-wizard__summary${successCount() > 0 ? " migration-wizard__summary--success" : ""}`}
+                >
+                  {language.t("migration.complete.summary", {
+                    success: String(successCount()),
+                    total: String(totalCount()),
+                  })}
+                </div>
+              </Show>
 
-        {/* ---- Step 2: Select ---- */}
-        <Show when={step() === "select"}>
-          <div class="migration-wizard__content">
-            {/* Provider API Keys */}
-            <Show when={providers().length > 0}>
-              <div class="migration-wizard__section">
-                <h4 class="migration-wizard__section-title">{language.t("migration.select.providers")}</h4>
-                <For each={providers()}>
-                  {(provider) => (
-                    <label
-                      class={`migration-wizard__item${!provider.supported || !provider.hasApiKey ? " migration-wizard__item--disabled" : ""}`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedProviders().has(provider.profileName)}
-                        disabled={!provider.supported || !provider.hasApiKey}
-                        onChange={() => toggleProvider(provider.profileName)}
-                      />
-                      <div class="migration-wizard__item-info">
-                        <span class="migration-wizard__item-name">{provider.profileName}</span>
-                        <span class="migration-wizard__item-meta">
-                          {provider.newProviderName ?? provider.provider}
-                          {provider.model ? ` · ${provider.model}` : ""}
-                        </span>
-                        <Show when={!provider.supported}>
-                          <span class="migration-wizard__item-tag migration-wizard__item-tag--warn">
-                            {language.t("migration.select.unsupported")}
-                          </span>
-                        </Show>
-                        <Show when={provider.supported && !provider.hasApiKey}>
-                          <span class="migration-wizard__item-tag migration-wizard__item-tag--warn">No API key</span>
-                        </Show>
-                      </div>
-                    </label>
-                  )}
-                </For>
-              </div>
-            </Show>
+              <div class="migration-wizard__section-label">{language.t("migration.migrate.selectLabel")}</div>
 
-            {/* MCP Servers */}
-            <Show when={mcpServers().length > 0}>
-              <div class="migration-wizard__section">
-                <h4 class="migration-wizard__section-title">{language.t("migration.select.mcpServers")}</h4>
-                <For each={mcpServers()}>
-                  {(server) => (
-                    <label class="migration-wizard__item">
+              {/* Provider API Keys */}
+              <Show when={supportedProviderCount() > 0}>
+                <div class="migration-wizard__item">
+                  <Show when={phase() === "selecting"} fallback={<StatusIcon group="providers" />}>
+                    <label class="migration-wizard__checkbox">
                       <input
                         type="checkbox"
-                        checked={selectedMcpServers().has(server.name)}
-                        onChange={() => toggleMcpServer(server.name)}
+                        checked={migrateProviders()}
+                        onChange={(e) => setMigrateProviders(e.currentTarget.checked)}
                       />
-                      <div class="migration-wizard__item-info">
-                        <span class="migration-wizard__item-name">{server.name}</span>
-                        <span class="migration-wizard__item-meta">{server.type}</span>
-                      </div>
-                    </label>
-                  )}
-                </For>
-              </div>
-            </Show>
-
-            {/* Custom Modes */}
-            <Show when={customModes().length > 0}>
-              <div class="migration-wizard__section">
-                <h4 class="migration-wizard__section-title">{language.t("migration.select.customModes")}</h4>
-                <For each={customModes()}>
-                  {(mode) => (
-                    <label class="migration-wizard__item">
-                      <input
-                        type="checkbox"
-                        checked={selectedModes().has(mode.slug)}
-                        onChange={() => toggleMode(mode.slug)}
-                      />
-                      <div class="migration-wizard__item-info">
-                        <span class="migration-wizard__item-name">{mode.name}</span>
-                        <span class="migration-wizard__item-meta">{mode.slug}</span>
-                      </div>
-                    </label>
-                  )}
-                </For>
-              </div>
-            </Show>
-
-            {/* Default Model */}
-            <Show when={Boolean(defaultModel())}>
-              <div class="migration-wizard__section">
-                <h4 class="migration-wizard__section-title">{language.t("migration.select.defaultModel")}</h4>
-                <label class="migration-wizard__item">
-                  <input
-                    type="checkbox"
-                    checked={migrateDefaultModel()}
-                    onChange={(e) => setMigrateDefaultModel(e.currentTarget.checked)}
-                  />
-                  <div class="migration-wizard__item-info">
-                    <span class="migration-wizard__item-name">{defaultModel()?.provider}</span>
-                    <span class="migration-wizard__item-meta">{defaultModel()?.model}</span>
-                  </div>
-                </label>
-              </div>
-            </Show>
-
-            {/* Settings (auto-approval, language, autocomplete) */}
-            <Show when={hasAnyAutoApprovalData() || hasLanguageData() || hasAutocompleteData()}>
-              <div class="migration-wizard__section">
-                <h4 class="migration-wizard__section-title">{language.t("migration.select.settings")}</h4>
-
-                {/* Auto-Approval — one row per permission group */}
-                <Show when={hasAnyAutoApprovalData()}>
-                  <p class="migration-wizard__section-subtitle">{language.t("migration.select.autoApproval")}</p>
-                  <Show when={hasCommandRulesData()}>
-                    <label class="migration-wizard__item">
-                      <input
-                        type="checkbox"
-                        checked={autoApprovalSel().commandRules}
-                        onChange={(e) => setAutoApprovalSel((p) => ({ ...p, commandRules: e.currentTarget.checked }))}
-                      />
-                      <div class="migration-wizard__item-info">
-                        <span class="migration-wizard__item-name">
-                          {language.t("migration.select.autoApproval.commandRules")}
-                        </span>
-                        <span class="migration-wizard__item-meta">
-                          {language.t("migration.select.autoApproval.commandRulesDesc")}
-                        </span>
-                      </div>
-                    </label>
-                  </Show>
-                  <Show when={hasReadPermissionData()}>
-                    <label class="migration-wizard__item">
-                      <input
-                        type="checkbox"
-                        checked={autoApprovalSel().readPermission}
-                        onChange={(e) => setAutoApprovalSel((p) => ({ ...p, readPermission: e.currentTarget.checked }))}
-                      />
-                      <div class="migration-wizard__item-info">
-                        <span class="migration-wizard__item-name">
-                          {language.t("migration.select.autoApproval.readPermission")}
-                        </span>
-                        <span class="migration-wizard__item-meta">
-                          {language.t("migration.select.autoApproval.readPermissionDesc")}
-                        </span>
-                      </div>
-                    </label>
-                  </Show>
-                  <Show when={hasWritePermissionData()}>
-                    <label class="migration-wizard__item">
-                      <input
-                        type="checkbox"
-                        checked={autoApprovalSel().writePermission}
-                        onChange={(e) =>
-                          setAutoApprovalSel((p) => ({ ...p, writePermission: e.currentTarget.checked }))
-                        }
-                      />
-                      <div class="migration-wizard__item-info">
-                        <span class="migration-wizard__item-name">
-                          {language.t("migration.select.autoApproval.writePermission")}
-                        </span>
-                        <span class="migration-wizard__item-meta">
-                          {language.t("migration.select.autoApproval.writePermissionDesc")}
-                        </span>
-                      </div>
-                    </label>
-                  </Show>
-                  <Show when={hasExecutePermissionData()}>
-                    <label class="migration-wizard__item">
-                      <input
-                        type="checkbox"
-                        checked={autoApprovalSel().executePermission}
-                        onChange={(e) =>
-                          setAutoApprovalSel((p) => ({ ...p, executePermission: e.currentTarget.checked }))
-                        }
-                      />
-                      <div class="migration-wizard__item-info">
-                        <span class="migration-wizard__item-name">
-                          {language.t("migration.select.autoApproval.executePermission")}
-                        </span>
-                        <span class="migration-wizard__item-meta">
-                          {language.t("migration.select.autoApproval.executePermissionDesc")}
-                        </span>
-                      </div>
-                    </label>
-                  </Show>
-                  <Show when={hasMcpPermissionData()}>
-                    <label class="migration-wizard__item">
-                      <input
-                        type="checkbox"
-                        checked={autoApprovalSel().mcpPermission}
-                        onChange={(e) => setAutoApprovalSel((p) => ({ ...p, mcpPermission: e.currentTarget.checked }))}
-                      />
-                      <div class="migration-wizard__item-info">
-                        <span class="migration-wizard__item-name">
-                          {language.t("migration.select.autoApproval.mcpPermission")}
-                        </span>
-                        <span class="migration-wizard__item-meta">
-                          {language.t("migration.select.autoApproval.mcpPermissionDesc")}
-                        </span>
-                      </div>
-                    </label>
-                  </Show>
-                  <Show when={hasTaskPermissionData()}>
-                    <label class="migration-wizard__item">
-                      <input
-                        type="checkbox"
-                        checked={autoApprovalSel().taskPermission}
-                        onChange={(e) => setAutoApprovalSel((p) => ({ ...p, taskPermission: e.currentTarget.checked }))}
-                      />
-                      <div class="migration-wizard__item-info">
-                        <span class="migration-wizard__item-name">
-                          {language.t("migration.select.autoApproval.taskPermission")}
-                        </span>
-                        <span class="migration-wizard__item-meta">
-                          {language.t("migration.select.autoApproval.taskPermissionDesc")}
-                        </span>
-                      </div>
-                    </label>
-                  </Show>
-                </Show>
-
-                <Show when={hasLanguageData()}>
-                  <label class="migration-wizard__item">
-                    <input
-                      type="checkbox"
-                      checked={migrateLanguage()}
-                      onChange={(e) => setMigrateLanguage(e.currentTarget.checked)}
-                    />
-                    <div class="migration-wizard__item-info">
-                      <span class="migration-wizard__item-name">{language.t("migration.select.language")}</span>
-                      <span class="migration-wizard__item-meta">
-                        {language.t("migration.select.languageDesc")} ({legacySettings()?.language})
+                      <span class="migration-wizard__checkmark">
+                        <CheckmarkSvg />
                       </span>
+                    </label>
+                  </Show>
+                  <div class="migration-wizard__item-text">
+                    <div class="label">{language.t("migration.select.providers")}</div>
+                    <div class="desc">
+                      {language.t("migration.migrate.keysDetected", {
+                        count: String(supportedProviderCount()),
+                      })}
                     </div>
-                  </label>
-                </Show>
-                <Show when={hasAutocompleteData()}>
-                  <label class="migration-wizard__item">
+                  </div>
+                </div>
+              </Show>
+
+              {/* MCP Servers */}
+              <Show when={mcpServers().length > 0}>
+                <div class="migration-wizard__item">
+                  <Show when={phase() === "selecting"} fallback={<StatusIcon group="mcpServers" />}>
+                    <label class="migration-wizard__checkbox">
+                      <input
+                        type="checkbox"
+                        checked={migrateMcpServers()}
+                        onChange={(e) => setMigrateMcpServers(e.currentTarget.checked)}
+                      />
+                      <span class="migration-wizard__checkmark">
+                        <CheckmarkSvg />
+                      </span>
+                    </label>
+                  </Show>
+                  <div class="migration-wizard__item-text">
+                    <div class="label">{language.t("migration.select.mcpServers")}</div>
+                    <div class="desc">
+                      {language.t("migration.migrate.serversConfigured", {
+                        count: String(mcpServers().length),
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </Show>
+
+              {/* Custom Modes */}
+              <Show when={customModes().length > 0}>
+                <div class="migration-wizard__item">
+                  <Show when={phase() === "selecting"} fallback={<StatusIcon group="customModes" />}>
+                    <label class="migration-wizard__checkbox">
+                      <input
+                        type="checkbox"
+                        checked={migrateModes()}
+                        onChange={(e) => setMigrateModes(e.currentTarget.checked)}
+                      />
+                      <span class="migration-wizard__checkmark">
+                        <CheckmarkSvg />
+                      </span>
+                    </label>
+                  </Show>
+                  <div class="migration-wizard__item-text">
+                    <div class="label">{language.t("migration.select.customModes")}</div>
+                    <div class="desc">
+                      {language.t("migration.migrate.modesFound", {
+                        count: String(customModes().length),
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </Show>
+
+              {/* Default Model */}
+              <Show when={Boolean(defaultModel())}>
+                <div class="migration-wizard__item">
+                  <Show when={phase() === "selecting"} fallback={<StatusIcon group="defaultModel" />}>
+                    <label class="migration-wizard__checkbox">
+                      <input
+                        type="checkbox"
+                        checked={migrateDefaultModel()}
+                        onChange={(e) => setMigrateDefaultModel(e.currentTarget.checked)}
+                      />
+                      <span class="migration-wizard__checkmark">
+                        <CheckmarkSvg />
+                      </span>
+                    </label>
+                  </Show>
+                  <div class="migration-wizard__item-text">
+                    <div class="label">{language.t("migration.select.defaultModel")}</div>
+                  </div>
+                </div>
+              </Show>
+
+              {/* Auto-Approval */}
+              <Show when={hasAnyAutoApprovalData()}>
+                <div class="migration-wizard__item">
+                  <Show when={phase() === "selecting"} fallback={<StatusIcon group="autoApproval" />}>
+                    <label class="migration-wizard__checkbox">
+                      <input
+                        type="checkbox"
+                        checked={migrateAutoApproval()}
+                        onChange={(e) => setMigrateAutoApproval(e.currentTarget.checked)}
+                      />
+                      <span class="migration-wizard__checkmark">
+                        <CheckmarkSvg />
+                      </span>
+                    </label>
+                  </Show>
+                  <div class="migration-wizard__item-text">
+                    <div class="label">{language.t("migration.select.autoApproval")}</div>
+                  </div>
+                </div>
+              </Show>
+
+              {/* Language */}
+              <Show when={hasLanguageData()}>
+                <div class="migration-wizard__item">
+                  <Show when={phase() === "selecting"} fallback={<StatusIcon group="language" />}>
+                    <label class="migration-wizard__checkbox">
+                      <input
+                        type="checkbox"
+                        checked={migrateLanguage()}
+                        onChange={(e) => setMigrateLanguage(e.currentTarget.checked)}
+                      />
+                      <span class="migration-wizard__checkmark">
+                        <CheckmarkSvg />
+                      </span>
+                    </label>
+                  </Show>
+                  <div class="migration-wizard__item-text">
+                    <div class="label">{language.t("migration.select.language")}</div>
+                  </div>
+                </div>
+              </Show>
+
+              {/* Autocomplete */}
+              <Show when={hasAutocompleteData()}>
+                <div class="migration-wizard__item">
+                  <Show when={phase() === "selecting"} fallback={<StatusIcon group="autocomplete" />}>
+                    <label class="migration-wizard__checkbox">
+                      <input
+                        type="checkbox"
+                        checked={migrateAutocomplete()}
+                        onChange={(e) => setMigrateAutocomplete(e.currentTarget.checked)}
+                      />
+                      <span class="migration-wizard__checkmark">
+                        <CheckmarkSvg />
+                      </span>
+                    </label>
+                  </Show>
+                  <div class="migration-wizard__item-text">
+                    <div class="label">{language.t("migration.select.autocomplete")}</div>
+                  </div>
+                </div>
+              </Show>
+
+              {/* Divider + Cannot be migrated */}
+              <div class="migration-wizard__divider" />
+              <div class="migration-wizard__section-label">{language.t("migration.migrate.cannotMigrate")}</div>
+              <div class="migration-wizard__item migration-wizard__item--disabled">
+                <label class="migration-wizard__checkbox">
+                  <input type="checkbox" disabled />
+                  <span class="migration-wizard__checkmark" />
+                </label>
+                <div class="migration-wizard__item-text">
+                  <div class="label">{language.t("migration.migrate.chatHistory")}</div>
+                  <div class="desc">{language.t("migration.migrate.chatHistoryDesc")}</div>
+                </div>
+              </div>
+
+              {/* Cleanup option after done */}
+              <Show when={phase() === "done"}>
+                <div class="migration-wizard__divider" />
+                <div class="migration-wizard__item migration-wizard__item--clickable">
+                  <label class="migration-wizard__checkbox">
                     <input
                       type="checkbox"
-                      checked={migrateAutocomplete()}
-                      onChange={(e) => setMigrateAutocomplete(e.currentTarget.checked)}
+                      checked={clearLegacyData()}
+                      onChange={(e) => setClearLegacyData(e.currentTarget.checked)}
                     />
-                    <div class="migration-wizard__item-info">
-                      <span class="migration-wizard__item-name">{language.t("migration.select.autocomplete")}</span>
-                      <span class="migration-wizard__item-meta">{language.t("migration.select.autocompleteDesc")}</span>
-                    </div>
+                    <span class="migration-wizard__checkmark">
+                      <CheckmarkSvg />
+                    </span>
                   </label>
-                </Show>
-              </div>
-            </Show>
+                  <div class="migration-wizard__item-text" onClick={() => setClearLegacyData((v) => !v)}>
+                    <div class="label">{language.t("migration.complete.cleanup")}</div>
+                    <div class="desc">{language.t("migration.complete.cleanupDescription")}</div>
+                  </div>
+                </div>
+              </Show>
+            </div>
+          </Show>
 
-            <Show
-              when={
-                providers().length === 0 &&
-                mcpServers().length === 0 &&
-                customModes().length === 0 &&
-                !hasAnyAutoApprovalData() &&
-                !hasLanguageData() &&
-                !hasAutocompleteData()
-              }
-            >
-              <p class="migration-wizard__empty">{language.t("migration.select.nothingToMigrate")}</p>
-            </Show>
-          </div>
-
+          {/* Footer */}
           <div class="migration-wizard__footer">
-            <button
-              type="button"
-              class="migration-wizard__btn migration-wizard__btn--ghost"
-              onClick={() => setStep("welcome")}
-            >
-              {language.t("migration.select.back")}
-            </button>
-            <button
-              type="button"
-              class="migration-wizard__btn migration-wizard__btn--primary"
-              disabled={!hasAnySelection()}
-              onClick={handleStartMigration}
-            >
-              {language.t("migration.select.continue")}
-            </button>
-          </div>
-        </Show>
-
-        {/* ---- Step 3: Progress ---- */}
-        <Show when={step() === "progress"}>
-          <div class="migration-wizard__content">
-            <div class="migration-wizard__progress-card">
-              <p class="migration-wizard__lead">{language.t("migration.progress.title")}</p>
-              <div class="migration-wizard__progress-list">
-                <For each={progressEntries()}>
-                  {(entry) => (
-                    <div class="migration-wizard__progress-item">
-                      <span class="migration-wizard__progress-dot" style={{ background: dotColor(entry.status) }} />
-                      <span class="migration-wizard__progress-name">{entry.item}</span>
-                      <Show when={entry.message}>
-                        <span class="migration-wizard__progress-msg">{entry.message}</span>
-                      </Show>
-                      <Show when={statusLabel(entry.status)}>
-                        <span
-                          class="migration-wizard__progress-label"
-                          style={{ color: statusLabelColor(entry.status) }}
-                        >
-                          {statusLabel(entry.status)}
-                        </span>
-                      </Show>
-                    </div>
-                  )}
-                </For>
-              </div>
+            <div class="migration-wizard__btn-group">
+              <Show when={phase() === "selecting"}>
+                <button
+                  type="button"
+                  class="migration-wizard__btn migration-wizard__btn--ghost"
+                  onClick={() => setScreen("whats-new")}
+                >
+                  {language.t("migration.migrate.back")}
+                </button>
+                <button type="button" class="migration-wizard__btn migration-wizard__btn--ghost" onClick={handleSkip}>
+                  {language.t("migration.migrate.skip")}
+                </button>
+                <button
+                  type="button"
+                  class="migration-wizard__btn migration-wizard__btn--primary"
+                  disabled={!hasAnySelection()}
+                  onClick={handleStartMigration}
+                >
+                  {language.t("migration.migrate.button")}
+                </button>
+              </Show>
+              <Show when={phase() === "migrating"}>
+                <button type="button" class="migration-wizard__btn migration-wizard__btn--primary" disabled>
+                  {language.t("migration.migrate.button")}
+                </button>
+              </Show>
+              <Show when={phase() === "done"}>
+                <button type="button" class="migration-wizard__btn migration-wizard__btn--primary" onClick={handleDone}>
+                  {language.t("migration.complete.done")}
+                </button>
+              </Show>
             </div>
           </div>
-
-          <div class="migration-wizard__footer">
-            <button
-              type="button"
-              class="migration-wizard__btn migration-wizard__btn--ghost"
-              onClick={() => setStep("select")}
-            >
-              {language.t("migration.select.back")}
-            </button>
-            <button
-              type="button"
-              class="migration-wizard__btn migration-wizard__btn--primary"
-              disabled={!migrationDone()}
-              onClick={() => setStep("complete")}
-            >
-              {language.t("migration.progress.done")}
-            </button>
-          </div>
-        </Show>
-
-        {/* ---- Step 4: Complete ---- */}
-        <Show when={step() === "complete"}>
-          <div class="migration-wizard__content">
-            <div class="migration-wizard__info-card migration-wizard__info-card--success">
-              <strong>
-                {language.t("migration.complete.summary", {
-                  success: String(successCount()),
-                  total: String(totalCount()),
-                })}
-              </strong>
-            </div>
-
-            <label class="migration-wizard__cleanup">
-              <input
-                type="checkbox"
-                checked={clearLegacyData()}
-                onChange={(e) => setClearLegacyData(e.currentTarget.checked)}
-              />
-              <div>
-                <span class="migration-wizard__cleanup-label">{language.t("migration.complete.cleanup")}</span>
-                <span class="migration-wizard__cleanup-desc">
-                  {language.t("migration.complete.cleanupDescription")}
-                </span>
-              </div>
-            </label>
-          </div>
-
-          <div class="migration-wizard__footer">
-            <button type="button" class="migration-wizard__btn migration-wizard__btn--primary" onClick={handleDone}>
-              {language.t("migration.complete.done")}
-            </button>
-          </div>
-        </Show>
+        </div>
       </div>
     </div>
   )

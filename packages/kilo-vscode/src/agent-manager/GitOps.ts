@@ -5,7 +5,7 @@ import * as fs from "fs/promises"
 import simpleGit from "simple-git"
 import { parseWorktreeList, normalizePath } from "./git-import"
 
-export interface GitOpsOptions {
+interface GitOpsOptions {
   log: (...args: unknown[]) => void
   refreshMs?: number
   /** Override git command execution for testing. */
@@ -17,13 +17,13 @@ export interface ApplyConflict {
   reason: string
 }
 
-export interface ApplyCheckResult {
+interface ApplyCheckResult {
   ok: boolean
   conflicts: ApplyConflict[]
   message: string
 }
 
-export interface ApplyPatchResult {
+interface ApplyPatchResult {
   ok: boolean
   conflicts: ApplyConflict[]
   message: string
@@ -62,6 +62,7 @@ export class GitOps {
     return this.runGit(args, cwd)
   }
 
+  /** Return the name of the currently checked-out branch, or `"HEAD"` if detached. */
   async currentBranch(cwd: string): Promise<string> {
     return this.raw(["rev-parse", "--abbrev-ref", "HEAD"], cwd).catch(() => "")
   }
@@ -87,6 +88,7 @@ export class GitOps {
     return "origin"
   }
 
+  /** Resolve the upstream tracking ref for `branch`, or `undefined` if none is set. Note: the `@{upstream}` check uses the current HEAD, not `branch`. */
   async resolveTrackingBranch(cwd: string, branch: string): Promise<string | undefined> {
     const upstream = await this.raw(["rev-parse", "--abbrev-ref", "@{upstream}"], cwd).catch(() => "")
     if (upstream) return upstream
@@ -139,6 +141,7 @@ export class GitOps {
     return job
   }
 
+  /** Return the set of worktree paths for the repo, excluding bare entries. */
   async listWorktreePaths(cwd: string): Promise<Set<string>> {
     const raw = await this.raw(["worktree", "list", "--porcelain"], cwd)
     const paths = new Set<string>()
@@ -151,12 +154,13 @@ export class GitOps {
 
   /**
    * Compute working-tree stats (staged + unstaged + untracked) without requiring
-   * a remote or base branch — mirrors the superset approach of running
-   * `git diff --numstat` and `git ls-files --others`.
+   * a remote or base branch. Combines `git diff HEAD --numstat` for tracked
+   * changes with `git ls-files --others` for new files.
+   *
+   * Returns aggregate file count, additions, and deletions across the working tree.
    */
   async workingTreeStats(cwd: string): Promise<{ files: number; additions: number; deletions: number }> {
-    // Staged + unstaged changes relative to HEAD (like superset's dual
-    // git diff --cached --numstat + git diff --numstat, combined).
+    // Single diff against HEAD captures both staged and unstaged changes.
     const [numstat, untracked] = await Promise.all([
       this.raw(["diff", "HEAD", "--numstat"], cwd).catch(() => ""),
       this.raw(["ls-files", "--others", "--exclude-standard"], cwd).catch(() => ""),
@@ -177,8 +181,8 @@ export class GitOps {
         )
       : { files: 0, additions: 0, deletions: 0 }
 
-    // Count lines in untracked files as additions (like superset's
-    // applyUntrackedLineCount). Cap at 1MB to avoid reading huge binaries.
+    // Count lines in untracked files as additions. Cap at 1MB to avoid
+    // reading large binary files into memory.
     if (!untracked) return tracked
 
     const paths = untracked.split("\n").filter((line) => line.trim())
@@ -205,34 +209,15 @@ export class GitOps {
   }
 
   /**
-   * Count commits ahead and behind in a single `rev-list --left-right --count`
-   * call (like superset's approach). Falls back through upstream → remote/branch
-   * → remote/parentBranch → parentBranch.
+   * Count commits ahead and behind using `rev-list --left-right --count`.
+   * Callers are expected to pass a fully-qualified ref (e.g. "origin/main").
+   * Pass `remote` explicitly to refresh the tracking ref before counting;
+   * the remote is NOT inferred from the ref to avoid misinterpreting
+   * branch names that contain slashes (e.g. "release/1.0").
    */
-  async aheadBehind(cwd: string, parentBranch: string): Promise<{ ahead: number; behind: number }> {
-    const upstream = await this.raw(["rev-parse", "--abbrev-ref", "@{upstream}"], cwd).catch(() => "")
-    const branch = await this.raw(["branch", "--show-current"], cwd).catch(() => "")
-    const remote = await this.resolveRemote(cwd, branch)
-    await this.refreshRemote(cwd, remote)
-
-    const ref = (() => {
-      if (upstream) return upstream
-      const remoteBranch = branch ? `${remote}/${branch}` : ""
-      // hasRemoteRef is async, so we can't use it inline — resolve below
-      return { remoteBranch, remoteParent: `${remote}/${parentBranch}`, parentBranch }
-    })()
-
-    if (typeof ref === "string") {
-      return this.parseLeftRight(cwd, ref)
-    }
-
-    if (ref.remoteBranch && (await this.hasRemoteRef(cwd, ref.remoteBranch))) {
-      return this.parseLeftRight(cwd, ref.remoteBranch)
-    }
-    if (await this.hasRemoteRef(cwd, ref.remoteParent)) {
-      return this.parseLeftRight(cwd, ref.remoteParent)
-    }
-    return this.parseLeftRight(cwd, ref.parentBranch)
+  async aheadBehind(cwd: string, base: string, remote?: string): Promise<{ ahead: number; behind: number }> {
+    if (remote) await this.refreshRemote(cwd, remote)
+    return this.parseLeftRight(cwd, base)
   }
 
   private async parseLeftRight(cwd: string, ref: string): Promise<{ ahead: number; behind: number }> {
@@ -241,6 +226,10 @@ export class GitOps {
     return { ahead, behind }
   }
 
+  /**
+   * Build a binary-safe patch of all working-tree changes relative to the
+   * merge-base with `baseBranch`. Optionally scoped to `selectedFiles`.
+   */
   async buildWorktreePatch(sourcePath: string, baseBranch: string, selectedFiles?: string[]): Promise<string> {
     const tmp = await fs.mkdtemp(nodePath.join(os.tmpdir(), "kilo-apply-"))
     const index = nodePath.join(tmp, "index")

@@ -43,6 +43,8 @@ export const dict = {
   "command.language.set": "Brug sprog: {{language}}",
 
   "command.session.new": "Ny session",
+  "command.session.new.task": "Ny opgave",
+  "command.session.show.changes": "Vis ændringer",
   "command.file.open": "Åbn fil",
   "command.tab.close": "Luk fane",
   "command.context.addSelection": "Tilføj markering til kontekst",
@@ -230,6 +232,7 @@ export const dict = {
   "prompt.action.send": "Send",
   "prompt.action.stop": "Stop",
   "prompt.action.enhance": "Forbedr prompt",
+  "prompt.action.resetModel": "Nulstil model til standard",
   "prompt.action.enhanceDescription":
     "Knappen 'Forbedr prompt' hjælper med at forbedre din forespørgsel ved at give ekstra kontekst, præcisering eller omformulering. Prøv at skrive en forespørgsel her og klik på knappen igen for at se hvordan det virker.",
 
@@ -405,6 +408,15 @@ export const dict = {
     "Rodelement ikke fundet. Har du glemt at tilføje det til din index.html? Eller måske er id-attributten stavet forkert?",
 
   "error.globalSync.connectFailed": "Kunne ikke forbinde til server. Kører der en server på `{{url}}`?",
+
+  "error.paidModel.title": "Du skal logge ind for at bruge denne model",
+  "error.paidModel.description":
+    "Log ind eller opret en konto for at få adgang til over 500 modeller, brug kreditter til kostpris, eller medbring din egen nøgle.",
+  "error.paidModel.action": "Log ind",
+  "error.promotionLimit.title": "Du skal tilmelde dig for at fortsætte",
+  "error.promotionLimit.description":
+    "Tilmeld dig gratis for at fortsætte og udforske over 500 modeller. Tager 2 minutter, intet kreditkort nødvendigt. Eller kom tilbage senere.",
+  "error.promotionLimit.action": "Tilmeld dig",
 
   "error.chain.unknown": "Ukendt fejl",
   "error.chain.causedBy": "Forårsaget af:",
@@ -727,6 +739,11 @@ export const dict = {
   "session.empty": "Ingen sessioner endnu. Klik + for at starte en ny samtale.",
   "session.cloud.repoOnly": "Kun dette repository",
   "session.cloud.import": "Importér fra skyen",
+  "feedback.button": "Feedback & support",
+  "feedback.dialog.message": "Vi vil gerne høre din feedback eller hjælpe med eventuelle problemer, du oplever.",
+  "feedback.dialog.github": "Rapportér et problem på GitHub",
+  "feedback.dialog.discord": "Deltag i vores Discord-fællesskab",
+  "feedback.dialog.support": "Kundesupport",
   "session.cloud.import.title": "Importér fra skyen",
   "session.cloud.import.placeholder": "Sessions-ID, URL eller kilo import-kommando",
   "session.cloud.import.button": "Importér",
@@ -932,26 +949,34 @@ export const dict = {
     "Ingen MCP-servere konfigureret. Rediger opencode-konfigurationsfilen for at tilføje MCP-servere.",
   "settings.agentBehaviour.workflowsPlaceholder": "Workflows administreres via workflow-filer i dit arbejdsområde.",
   "settings.agentBehaviour.notImplemented": "Endnu ikke implementeret.",
-  "settings.autoApprove.setAll": "Indstil alle tilladelser",
+  "settings.autoApprove.description":
+    "Definer, hvordan værktøjer må køre. De fleste værktøjer er som standard indstillet til Tillad. doom_loop og external_directory er som standard indstillet til Spørg.",
   "settings.autoApprove.level.allow": "Tillad",
   "settings.autoApprove.level.ask": "Spørg",
   "settings.autoApprove.level.deny": "Afvis",
-  "settings.autoApprove.tool.read": "Læs filindhold",
-  "settings.autoApprove.tool.edit": "Rediger eller opret filer",
-  "settings.autoApprove.tool.glob": "Find filer efter mønster",
-  "settings.autoApprove.tool.grep": "Søg i filindhold",
-  "settings.autoApprove.tool.list": "List mappeindhold",
-  "settings.autoApprove.tool.bash": "Udfør shell-kommandoer",
-  "settings.autoApprove.tool.task": "Opret underagentopgaver",
-  "settings.autoApprove.tool.skill": "Udfør skills",
-  "settings.autoApprove.tool.lsp": "Sprogserveroperationer",
-  "settings.autoApprove.tool.todoread": "Læs opgavelister",
-  "settings.autoApprove.tool.todowrite": "Skriv opgavelister",
-  "settings.autoApprove.tool.webfetch": "Hent websider",
-  "settings.autoApprove.tool.websearch": "Søg på nettet",
-  "settings.autoApprove.tool.codesearch": "Søg i kodebasen",
-  "settings.autoApprove.tool.external_directory": "Adgang til filer uden for arbejdsområdet",
-  "settings.autoApprove.tool.doom_loop": "Fortsæt efter gentagne fejl",
+  "settings.autoApprove.wildcardLabel.commands": "Alle kommandoer (*)",
+  "settings.autoApprove.wildcardLabel.paths": "Alle stier (*)",
+  "settings.autoApprove.exceptions": "Undtagelser",
+  "settings.autoApprove.addCommand": "Tilføj kommando",
+  "settings.autoApprove.addPath": "Tilføj sti",
+  "settings.autoApprove.placeholder.command": "f.eks. git *",
+  "settings.autoApprove.placeholder.path": "f.eks. *.env",
+  "settings.autoApprove.tool.read": "Læs filer. Tillader agenten at læse filer, der matcher den angivne sti.",
+  "settings.autoApprove.tool.edit": "Rediger filer. Tillader agenten at oprette eller redigere filer, herunder patches og opdateringer af flere filer.",
+  "settings.autoApprove.tool.glob": "Find filer efter mønster. Tillader filsøgning ved hjælp af glob-mønstre (f.eks. src/**/*.ts).",
+  "settings.autoApprove.tool.grep": "Søg i filindhold. Tillader regex-baseret søgning i filer.",
+  "settings.autoApprove.tool.list": "Vis mappeindhold. Tillader visning af filer og mapper i en mappe.",
+  "settings.autoApprove.tool.bash": "Kør terminalkommandoer. Tillader udførelse af shell-kommandoer (f.eks. git status).",
+  "settings.autoApprove.tool.task": "Start underagenter. Tillader start af specialiserede underagenter til specifikke opgaver.",
+  "settings.autoApprove.tool.skill": "Indlæs færdigheder. Tillader indlæsning af foruddefinerede færdigheder efter navn.",
+  "settings.autoApprove.tool.lsp": "Forespørg sprogserver. Tillader kørsel af sprogserverforespørgsler til kodeintelligens.",
+  "settings.autoApprove.tool.todoreadwrite":
+    "Administrer opgaveliste. Tillader læsning og opdatering af den interne opgaveliste.",
+  "settings.autoApprove.tool.webfetch": "Hent en URL. Tillader hentning af indhold fra en specifik URL.",
+  "settings.autoApprove.tool.websearchcodesearch":
+    "Søg på nettet eller i kode. Tillader udførelse af eksterne web- eller kodesøgninger.",
+  "settings.autoApprove.tool.external_directory": "Få adgang til filer uden for arbejdsområdet. Udløses ved adgang til filer uden for den aktuelle projektmappe.",
+  "settings.autoApprove.tool.doom_loop": "Forhindr gentagne identiske handlinger. Udløses, når det samme værktøjskald gentages med identisk input.",
   "settings.checkpoints.enable.title": "Aktiver snapshots",
   "settings.checkpoints.enable.description": "Opret kontrolpunkter før filredigeringer",
   "settings.context.autoCompaction.title": "Automatisk komprimering",
@@ -980,7 +1005,6 @@ export const dict = {
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/da.ts
 
-
   "question.summary": "{{n}} af {{total}} spørgsmål",
   "common.review": "Gennemgå",
 
@@ -989,48 +1013,60 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "Legacy-migrering",
   "settings.aboutKiloCode.legacyMigration.description":
     "Migrer indstillinger fra en tidligere installation af Kilo Code, herunder udbyder API-nøgler og standardmodel.",
-  "migration.welcome.title": "Velkommen til det nye Kilo Code",
-  "migration.welcome.detected": "Vi har fundet indstillinger fra en tidligere installation af Kilo Code.",
-  "migration.welcome.sessionsInfo":
-    "Chatsessioner og historik kan ikke migreres — den nye version bruger en anden arkitektur.",
-  "migration.welcome.canMigrate": "Følgende indstillinger kan migreres til den nye version:",
-  "migration.welcome.start": "Start migrering",
-  "migration.welcome.skip": "Spring migrering over",
-  "migration.steps.title": "Migrer dine indstillinger",
-  "migration.steps.subtitle":
-    "Vi har fundet indstillinger fra din tidligere Kilo Code-installation. Vælg, hvad der skal overføres.",
+
+  // Screen 1 — What's New
+  "migration.whatsNew.title": "Nyheder i Kilo Code",
+  "migration.whatsNew.badge": "Beta",
+  "migration.whatsNew.subtitle": "Vi har genopbygget udvidelsen på et hurtigere og mere effektivt fundament.",
+  "migration.whatsNew.features.performance.title": "Hurtigere agentydelse",
+  "migration.whatsNew.features.performance.detail":
+    "Parallelle værktøjskald og underagenter lader din agent tackle mere på én gang — så du bruger mindre tid på at vente og mere tid på at levere.",
+  "migration.whatsNew.features.interface.title": "Strømlinet brugerflade",
+  "migration.whatsNew.features.interface.detail": "Færre distraktioner, nemmere og hurtigere at læse.",
+  "migration.whatsNew.features.agentManager.title": "Agent Manager",
+  "migration.whatsNew.features.agentManager.detail":
+    "En samlet brugerflade til at køre flere agenter parallelt, hver på sit eget worktree — overvåg fremskridt, skift kontekst og gennemgå ændringer ét sted.",
+  "migration.whatsNew.features.foundation.title": "Fælles fundament",
+  "migration.whatsNew.features.foundation.detail":
+    "Én lille, effektiv kerne på tværs af alle Kilo-produkter. En velkendt oplevelse uanset hvordan du vælger at arbejde.",
+  "migration.whatsNew.blogLink": "Læs den fulde meddelelse",
+  "migration.whatsNew.continue": "Fortsæt",
+
+  // Screen 2 — Migrate Settings
+  "migration.migrate.title": "Migrer dine indstillinger",
+  "migration.migrate.subtitle":
+    "Vi har fundet indstillinger fra din tidligere installation. Her er, hvad vi kan overføre.",
+  "migration.migrate.selectLabel": "Vælg hvad der skal migreres",
+  "migration.migrate.cannotMigrate": "Kan ikke migreres",
+  "migration.migrate.chatHistory": "Chatsessioner og historik",
+  "migration.migrate.chatHistoryDesc": "Ikke kompatibel med den nye arkitektur",
+  "migration.migrate.button": "Migrer indstillinger",
+  "migration.migrate.skip": "Spring over",
+  "migration.migrate.back": "Tilbage",
+  "migration.migrate.keysDetected": "{{count}} nøgler fundet",
+  "migration.migrate.serversConfigured": "{{count}} server(e) konfigureret",
+  "migration.migrate.modesFound": "{{count}} tilstand(e) fundet",
+  "migration.migrate.nothingToMigrate": "Der blev ikke fundet noget at migrere i legacy-indstillingerne.",
+
+  // Migrate — item labels (reused from old select keys)
   "migration.select.providers": "Udbyder API-nøgler",
   "migration.select.mcpServers": "MCP-servere",
   "migration.select.customModes": "Brugerdefinerede tilstande / Agenter",
   "migration.select.defaultModel": "Standardmodel",
-  "migration.select.unsupported": "Understøttes ikke i den nye version",
-  "migration.select.nothingToMigrate": "Der blev ikke fundet noget at migrere i legacy-indstillingerne.",
-  "migration.select.settings": "Indstillinger",
   "migration.select.autoApproval": "Automatisk godkendelse",
-  "migration.select.autoApproval.commandRules": "Kommandoregler",
-  "migration.select.autoApproval.commandRulesDesc": "Hovedafbryder og lister over tilladte/afviste kommandoer",
-  "migration.select.autoApproval.readPermission": "Læsetilladelse",
-  "migration.select.autoApproval.readPermissionDesc": "Fillæseadgang inden for og uden for arbejdsområdet",
-  "migration.select.autoApproval.writePermission": "Skrivetilladelse",
-  "migration.select.autoApproval.writePermissionDesc": "Filskrive- og redigeringsadgang",
-  "migration.select.autoApproval.executePermission": "Udførelsestilladelse",
-  "migration.select.autoApproval.executePermissionDesc": "Udførelse af terminalkommandoer",
-  "migration.select.autoApproval.mcpPermission": "MCP-tilladelse",
-  "migration.select.autoApproval.mcpPermissionDesc": "Brug af MCP-værktøjer",
-  "migration.select.autoApproval.taskPermission": "Opgavetilladelse",
-  "migration.select.autoApproval.taskPermissionDesc": "Skift af tilstand og oprettelse af underopgaver",
   "migration.select.language": "UI-sprog",
-  "migration.select.languageDesc": "Din sprogpræference vil blive anvendt på den nye udvidelse",
   "migration.select.autocomplete": "Indstillinger for autofuldførelse",
-  "migration.select.autocompleteDesc": "Præferencer for automatisk udløsning, genvejstaster og chat-autofuldførelse",
-  "migration.select.continue": "Fortsæt",
-  "migration.select.back": "Tilbage",
-  "migration.progress.title": "Migrerer dine indstillinger…",
-  "migration.progress.done": "Fortsæt",
+
+  // Migrate — completion
   "migration.complete.summary": "{{success}} af {{total}} elementer blev migreret med succes.",
   "migration.complete.cleanup": "Fjern legacy-indstillingsdata",
   "migration.complete.cleanupDescription":
     "Dette fjerner de gamle indstillinger fra VS Code-lageret. Du vil ikke kunne køre denne migrering igen.",
   "migration.complete.done": "Færdig",
   // legacy-migration end
+
+  "error.details.show": "Detaljer",
+
+  "task.todos.progress": "{{done}}/{{total}} opgaver udført",
+  "task.todos.allDone": "{{count}} opgaver udført",
 }

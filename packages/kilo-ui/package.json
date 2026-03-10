@@ -1,6 +1,6 @@
 {
   "name": "@kilocode/kilo-ui",
-  "version": "7.0.37",
+  "version": "7.0.41",
   "type": "module",
   "license": "MIT",
   "exports": {
@@ -50,6 +50,7 @@
     "./session-review": "./src/components/session-review.tsx",
     "./session-turn": "./src/components/session-turn.tsx",
     "./basic-tool": "./src/components/basic-tool.tsx",
+    "./error-details": "./src/components/error-details.tsx",
     "./diff-changes": "./src/components/diff-changes.tsx",
     "./diff-ssr": "./src/components/diff-ssr.tsx",
     "./dock-prompt": "./src/components/dock-prompt.tsx",
@@ -105,6 +106,7 @@
   },
   "dependencies": {
     "@kobalte/core": "0.13.11",
+    "@solid-primitives/resize-observer": "2.1.5",
     "lucide-solid": "0.576.0"
   }
 }

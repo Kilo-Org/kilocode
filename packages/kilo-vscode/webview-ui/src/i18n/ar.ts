@@ -43,6 +43,8 @@ export const dict = {
   "command.language.set": "استخدام اللغة: {{language}}",
 
   "command.session.new": "جلسة جديدة",
+  "command.session.new.task": "مهمة جديدة",
+  "command.session.show.changes": "إظهار التغييرات",
   "command.file.open": "فتح ملف",
   "command.tab.close": "إغلاق علامة التبويب",
   "command.context.addSelection": "إضافة التحديد إلى السياق",
@@ -229,6 +231,7 @@ export const dict = {
   "prompt.action.send": "إرسال",
   "prompt.action.stop": "توقف",
   "prompt.action.enhance": "تحسين النص",
+  "prompt.action.resetModel": "إعادة تعيين النموذج إلى الافتراضي",
   "prompt.action.enhanceDescription":
     "زر «حسّن الموجه» يطوّر موجهك بإضافة سياق أو توضيح أو إعادة صياغة. جرّب اكتب موجه هنا ثم اضغط الزر مرة ثانية وشوف النتيجة.",
 
@@ -403,6 +406,15 @@ export const dict = {
     "لم يتم العثور على العنصر الجذري. هل نسيت إضافته إلى index.html؟ أو ربما تمت كتابة سمة id بشكل خاطئ؟",
 
   "error.globalSync.connectFailed": "تعذر الاتصال بالخادم. هل هناك خادم يعمل في `{{url}}`؟",
+
+  "error.paidModel.title": "يجب عليك تسجيل الدخول لاستخدام هذا النموذج",
+  "error.paidModel.description":
+    "سجّل الدخول أو أنشئ حسابًا للوصول إلى أكثر من 500 نموذج، واستخدم الرصيد بسعر التكلفة، أو استخدم مفتاحك الخاص.",
+  "error.paidModel.action": "تسجيل الدخول",
+  "error.promotionLimit.title": "يجب عليك التسجيل للمتابعة",
+  "error.promotionLimit.description":
+    "سجّل مجانًا للمتابعة واستكشاف أكثر من 500 نموذج. يستغرق دقيقتين، بدون بطاقة ائتمان. أو عُد لاحقًا.",
+  "error.promotionLimit.action": "التسجيل",
 
   "error.chain.unknown": "خطأ غير معروف",
   "error.chain.causedBy": "بسبب:",
@@ -721,6 +733,11 @@ export const dict = {
   "session.empty": "لا توجد جلسات بعد. انقر + لبدء محادثة جديدة.",
   "session.cloud.repoOnly": "هذا المستودع فقط",
   "session.cloud.import": "استيراد من السحابة",
+  "feedback.button": "التغذية الراجعة والدعم",
+  "feedback.dialog.message": "يسعدنا سماع تعليقاتك أو مساعدتك في حل أي مشكلات تواجهها.",
+  "feedback.dialog.github": "الإبلاغ عن مشكلة على GitHub",
+  "feedback.dialog.discord": "الانضمام إلى مجتمع Discord",
+  "feedback.dialog.support": "دعم العملاء",
   "session.cloud.import.title": "استيراد من السحابة",
   "session.cloud.import.placeholder": "معرّف الجلسة أو الرابط أو أمر kilo import",
   "session.cloud.import.button": "استيراد",
@@ -923,26 +940,33 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty": "لم يتم تهيئة خوادم MCP. قم بتحرير ملف تهيئة opencode لإضافة خوادم MCP.",
   "settings.agentBehaviour.workflowsPlaceholder": "تُدار سير العمل عبر ملفات سير العمل في مساحة العمل.",
   "settings.agentBehaviour.notImplemented": "لم يتم التنفيذ بعد.",
-  "settings.autoApprove.setAll": "تعيين جميع الأذونات",
+  "settings.autoApprove.description":
+    "تحديد كيفية السماح بتشغيل الأدوات. معظم الأدوات معينة افتراضياً على السماح. doom_loop و external_directory معينة افتراضياً على السؤال.",
   "settings.autoApprove.level.allow": "سماح",
   "settings.autoApprove.level.ask": "سؤال",
   "settings.autoApprove.level.deny": "رفض",
-  "settings.autoApprove.tool.read": "قراءة محتويات الملفات",
-  "settings.autoApprove.tool.edit": "تحرير أو إنشاء الملفات",
-  "settings.autoApprove.tool.glob": "البحث عن ملفات بنمط",
-  "settings.autoApprove.tool.grep": "البحث في محتويات الملفات",
-  "settings.autoApprove.tool.list": "عرض محتويات المجلد",
-  "settings.autoApprove.tool.bash": "تنفيذ أوامر الصدفة",
-  "settings.autoApprove.tool.task": "إنشاء مهام وكيل فرعي",
-  "settings.autoApprove.tool.skill": "تنفيذ المهارات",
-  "settings.autoApprove.tool.lsp": "عمليات خادم اللغة",
-  "settings.autoApprove.tool.todoread": "قراءة قوائم المهام",
-  "settings.autoApprove.tool.todowrite": "كتابة قوائم المهام",
-  "settings.autoApprove.tool.webfetch": "جلب صفحات الويب",
-  "settings.autoApprove.tool.websearch": "البحث في الويب",
-  "settings.autoApprove.tool.codesearch": "البحث في قاعدة الكود",
-  "settings.autoApprove.tool.external_directory": "الوصول للملفات خارج مساحة العمل",
-  "settings.autoApprove.tool.doom_loop": "المتابعة بعد الإخفاقات المتكررة",
+  "settings.autoApprove.wildcardLabel.commands": "جميع الأوامر (*)",
+  "settings.autoApprove.wildcardLabel.paths": "جميع المسارات (*)",
+  "settings.autoApprove.exceptions": "الاستثناءات",
+  "settings.autoApprove.addCommand": "إضافة أمر",
+  "settings.autoApprove.addPath": "إضافة مسار",
+  "settings.autoApprove.placeholder.command": "مثال: git *",
+  "settings.autoApprove.placeholder.path": "مثال: *.env",
+  "settings.autoApprove.tool.read": "قراءة الملفات. يسمح للوكيل بقراءة الملفات التي تطابق المسار المحدد.",
+  "settings.autoApprove.tool.edit": "تعديل الملفات. يسمح للوكيل بإنشاء أو تحرير الملفات، بما في ذلك التصحيحات والتحديثات متعددة الملفات.",
+  "settings.autoApprove.tool.glob": "مطابقة الملفات بالنمط. يسمح بمطابقة الملفات باستخدام أنماط glob (مثل src/**/*.ts).",
+  "settings.autoApprove.tool.grep": "البحث في محتويات الملفات. يسمح بالبحث المستند إلى التعبيرات النمطية (regex) داخل الملفات.",
+  "settings.autoApprove.tool.list": "عرض محتويات المجلد. يسمح بعرض الملفات والمجلدات داخل الدليل.",
+  "settings.autoApprove.tool.bash": "تنفيذ أوامر الطرفية. يسمح بتنفيذ أوامر الصدفة (مثل git status).",
+  "settings.autoApprove.tool.task": "إطلاق وكلاء فرعيين. يسمح ببدء وكلاء فرعيين متخصصين لمهام محددة.",
+  "settings.autoApprove.tool.skill": "تحميل المهارات. يسمح بتحميل المهارات المحددة مسبقًا بالاسم.",
+  "settings.autoApprove.tool.lsp": "الاستعلام من خادم اللغة. يسمح بتشغيل استعلامات خادم اللغة لذكاء الكود.",
+  "settings.autoApprove.tool.todoreadwrite": "إدارة قائمة المهام. يسمح بقراءة وتحديث قائمة المهام الداخلية.",
+  "settings.autoApprove.tool.webfetch": "جلب رابط ويب. يسمح باسترداد المحتوى من رابط (URL) محدد.",
+  "settings.autoApprove.tool.websearchcodesearch":
+    "البحث في الويب أو الكود. يسمح بإجراء عمليات بحث خارجية في الويب أو الكود.",
+  "settings.autoApprove.tool.external_directory": "الوصول للملفات خارج مساحة العمل. يتم تشغيله عند الوصول إلى ملفات خارج مسار المشروع الحالي.",
+  "settings.autoApprove.tool.doom_loop": "منع الإجراءات المتطابقة المتكررة. يتم تشغيله عندما يتكرر نفس استدعاء الأداة بمدخلات متطابقة.",
   "settings.checkpoints.enable.title": "تمكين اللقطات",
   "settings.checkpoints.enable.description": "إنشاء نقاط فحص قبل تحرير الملفات",
   "settings.context.autoCompaction.title": "ضغط تلقائي",
@@ -971,7 +995,6 @@ export const dict = {
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/ar.ts
 
-
   "question.summary": "{{n}} من {{total}} أسئلة",
   "common.review": "مراجعة",
 
@@ -980,46 +1003,59 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "ترحيل الإصدار القديم",
   "settings.aboutKiloCode.legacyMigration.description":
     "ترحيل الإعدادات من تثبيت سابق لـ Kilo Code، بما في ذلك مفاتيح API لمقدمي الخدمة والنموذج الافتراضي.",
-  "migration.welcome.title": "مرحبًا بك في Kilo Code الجديد",
-  "migration.welcome.detected": "لقد اكتشفنا إعدادات من تثبيت سابق لـ Kilo Code.",
-  "migration.welcome.sessionsInfo": "لا يمكن ترحيل جلسات الدردشة والسجل — الإصدار الجديد يستخدم بنية مختلفة.",
-  "migration.welcome.canMigrate": "يمكن ترحيل الإعدادات التالية إلى الإصدار الجديد:",
-  "migration.welcome.start": "بدء الترحيل",
-  "migration.welcome.skip": "تخطي الترحيل",
-  "migration.steps.title": "ترحيل إعداداتك",
-  "migration.steps.subtitle": "لقد وجدنا إعدادات من تثبيت Kilo Code السابق. اختر ما تريد نقله.",
+
+  // Screen 1 — What's New
+  "migration.whatsNew.title": "ما الجديد في Kilo Code",
+  "migration.whatsNew.badge": "Beta",
+  "migration.whatsNew.subtitle": "لقد أعدنا بناء الإضافة على أساس أسرع وأكثر كفاءة.",
+  "migration.whatsNew.features.performance.title": "أداء أسرع للوكيل",
+  "migration.whatsNew.features.performance.detail":
+    "استدعاءات الأدوات المتوازية والوكلاء الفرعيون يتيحون لوكيلك إنجاز المزيد في وقت واحد — فتقضي وقتًا أقل في الانتظار ووقتًا أكثر في الإنجاز.",
+  "migration.whatsNew.features.interface.title": "واجهة مبسّطة",
+  "migration.whatsNew.features.interface.detail": "أقل تشتيتًا، أسهل وأسرع في القراءة.",
+  "migration.whatsNew.features.agentManager.title": "Agent Manager",
+  "migration.whatsNew.features.agentManager.detail":
+    "واجهة موحدة لتشغيل عدة وكلاء بالتوازي، كل منهم في شجرة عمل خاصة — راقب التقدم، وبدّل السياق، وراجع التغييرات في مكان واحد.",
+  "migration.whatsNew.features.foundation.title": "أساس مشترك",
+  "migration.whatsNew.features.foundation.detail":
+    "نواة صغيرة وفعالة واحدة عبر كل منتجات Kilo. تجربة مألوفة بغض النظر عن طريقة عملك.",
+  "migration.whatsNew.blogLink": "اقرأ الإعلان الكامل",
+  "migration.whatsNew.continue": "متابعة",
+
+  // Screen 2 — Migrate Settings
+  "migration.migrate.title": "ترحيل إعداداتك",
+  "migration.migrate.subtitle": "لقد وجدنا إعدادات من تثبيتك السابق. إليك ما يمكننا نقله.",
+  "migration.migrate.selectLabel": "اختر ما تريد ترحيله",
+  "migration.migrate.cannotMigrate": "لا يمكن ترحيله",
+  "migration.migrate.chatHistory": "جلسات الدردشة والسجل",
+  "migration.migrate.chatHistoryDesc": "غير متوافق مع البنية الجديدة",
+  "migration.migrate.button": "ترحيل الإعدادات",
+  "migration.migrate.skip": "تخطي",
+  "migration.migrate.back": "رجوع",
+  "migration.migrate.keysDetected": "تم اكتشاف {{count}} مفاتيح",
+  "migration.migrate.serversConfigured": "تم تكوين {{count}} خادم(خوادم)",
+  "migration.migrate.modesFound": "تم العثور على {{count}} وضع(أوضاع)",
+  "migration.migrate.nothingToMigrate": "لم يتم العثور على أي شيء لترحيله في الإعدادات القديمة.",
+
+  // Migrate — item labels (reused from old select keys)
   "migration.select.providers": "مفاتيح API لمقدمي الخدمة",
   "migration.select.mcpServers": "خوادم MCP",
   "migration.select.customModes": "الأوضاع المخصصة / الوكلاء",
   "migration.select.defaultModel": "النموذج الافتراضي",
-  "migration.select.unsupported": "غير مدعوم في الإصدار الجديد",
-  "migration.select.nothingToMigrate": "لم يتم العثور على أي شيء لترحيله في الإعدادات القديمة.",
-  "migration.select.settings": "الإعدادات",
   "migration.select.autoApproval": "الموافقة التلقائية",
-  "migration.select.autoApproval.commandRules": "قواعد الأوامر",
-  "migration.select.autoApproval.commandRulesDesc": "مفتاح التبديل الرئيسي وقوائم الأوامر المسموح بها/المرفوضة",
-  "migration.select.autoApproval.readPermission": "صلاحية القراءة",
-  "migration.select.autoApproval.readPermissionDesc": "الوصول لقراءة الملفات داخل وخارج مساحة العمل",
-  "migration.select.autoApproval.writePermission": "صلاحية الكتابة",
-  "migration.select.autoApproval.writePermissionDesc": "الوصول لكتابة وتعديل الملفات",
-  "migration.select.autoApproval.executePermission": "صلاحية التنفيذ",
-  "migration.select.autoApproval.executePermissionDesc": "تنفيذ أوامر الوحدة الطرفية",
-  "migration.select.autoApproval.mcpPermission": "صلاحية MCP",
-  "migration.select.autoApproval.mcpPermissionDesc": "استخدام أدوات MCP",
-  "migration.select.autoApproval.taskPermission": "صلاحية المهام",
-  "migration.select.autoApproval.taskPermissionDesc": "تبديل الوضع وإنشاء المهام الفرعية",
   "migration.select.language": "لغة واجهة المستخدم",
-  "migration.select.languageDesc": "سيتم تطبيق لغتك المفضلة على الإضافة الجديدة",
   "migration.select.autocomplete": "إعدادات الإكمال التلقائي",
-  "migration.select.autocompleteDesc": "تفضيلات التشغيل التلقائي، واختصارات لوحة المفاتيح، والإكمال التلقائي للدردشة",
-  "migration.select.continue": "متابعة",
-  "migration.select.back": "رجوع",
-  "migration.progress.title": "جاري ترحيل إعداداتك…",
-  "migration.progress.done": "متابعة",
+
+  // Migrate — completion
   "migration.complete.summary": "تم ترحيل {{success}} من {{total}} عناصر بنجاح.",
   "migration.complete.cleanup": "إزالة بيانات الإعدادات القديمة",
   "migration.complete.cleanupDescription":
     "هذا يزيل الإعدادات القديمة من مساحة تخزين VS Code. لن تتمكن من إعادة تشغيل هذا الترحيل.",
   "migration.complete.done": "تم",
   // legacy-migration end
+
+  "error.details.show": "التفاصيل",
+
+  "task.todos.progress": "{{done}}/{{total}} مهام مكتملة",
+  "task.todos.allDone": "{{count}} مهام مكتملة",
 }

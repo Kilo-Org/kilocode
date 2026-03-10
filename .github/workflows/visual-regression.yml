@@ -2,29 +2,60 @@ name: Visual Regression Tests
 
 on:
   pull_request:
-    paths:
-      - "packages/kilo-ui/**"
-      - "packages/ui/**"
-      - "packages/util/**"
-      - "packages/sdk/js/**"
-      - "packages/kilo-vscode/webview-ui/**"
-      - "packages/kilo-vscode/.storybook/**"
-      - "packages/kilo-vscode/tests/visual-regression*"
-      - ".github/workflows/visual-regression.yml"
+    types: [opened, synchronize, reopened]
 
 jobs:
+  check-paths:
+    name: Check changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      matched: ${{ steps.filter.outputs.matched }}
+      is_fork: ${{ steps.fork-check.outputs.is_fork }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Kilo-Org/paths-filter@master
+        id: filter
+        with:
+          filters: |
+            matched:
+              - "packages/kilo-ui/**"
+              - "packages/ui/**"
+              - "packages/util/**"
+              - "packages/sdk/js/**"
+              - "packages/kilo-vscode/webview-ui/**"
+              - "packages/kilo-vscode/.storybook/**"
+              - "packages/kilo-vscode/tests/visual-regression*"
+              - ".github/workflows/visual-regression.yml"
+      - name: Check if PR is from a fork
+        id: fork-check
+        run: |
+          if [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
+            echo "is_fork=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_fork=false" >> "$GITHUB_OUTPUT"
+          fi
+
   visual-regression:
+    needs: check-paths
+    if: needs.check-paths.outputs.matched == 'true'
     name: Visual Regression (kilo-ui)
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
 
     steps:
-      - name: Checkout
+      - name: Checkout (internal)
+        if: needs.check-paths.outputs.is_fork != 'true'
         uses: actions/checkout@v4
         with:
           lfs: true
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.BOT_PAT }}
           ref: ${{ github.head_ref }}
+
+      - name: Checkout (fork)
+        if: needs.check-paths.outputs.is_fork == 'true'
+        uses: actions/checkout@v4
+        with:
+          lfs: true
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -75,8 +106,25 @@ jobs:
           CI: true
           PLAYWRIGHT_WORKERS: "4"
 
+      - name: Check for baseline changes (fork PRs)
+        if: needs.check-paths.outputs.is_fork == 'true'
+        run: |
+          git add packages/kilo-ui/tests/visual-regression.spec.ts-snapshots/
+          if git diff --cached --quiet; then
+            echo "No visual regression detected."
+          else
+            echo "::error::Visual regression detected. Screenshot baselines have changed."
+            echo "::error::Since this PR is from a fork, updated screenshots cannot be committed automatically."
+            echo "::error::Please ask a Kilo developer for help updating the screenshots."
+            git diff --cached --stat
+            exit 1
+          fi
+
       - name: Commit and push new baselines (if any)
+        if: needs.check-paths.outputs.is_fork != 'true'
         id: commit-baselines
+        env:
+          GH_TOKEN: ${{ secrets.BOT_PAT }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -92,7 +140,7 @@ jobs:
           fi
 
       - name: Fail if baselines changed
-        if: steps.commit-baselines.outputs.changed == 'true'
+        if: needs.check-paths.outputs.is_fork != 'true' && steps.commit-baselines.outputs.changed == 'true'
         run: |
           echo "::error::Visual regression baselines changed. New baselines have been committed to the branch. Please pull and review."
           exit 1
@@ -106,17 +154,26 @@ jobs:
           retention-days: 7
 
   visual-regression-vscode:
+    needs: check-paths
+    if: needs.check-paths.outputs.matched == 'true'
     name: Visual Regression (kilo-vscode webview)
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
 
     steps:
-      - name: Checkout
+      - name: Checkout (internal)
+        if: needs.check-paths.outputs.is_fork != 'true'
         uses: actions/checkout@v4
         with:
           lfs: true
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.BOT_PAT }}
           ref: ${{ github.head_ref }}
+
+      - name: Checkout (fork)
+        if: needs.check-paths.outputs.is_fork == 'true'
+        uses: actions/checkout@v4
+        with:
+          lfs: true
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -167,8 +224,25 @@ jobs:
           CI: true
           PLAYWRIGHT_WORKERS: "4"
 
+      - name: Check for baseline changes (fork PRs)
+        if: needs.check-paths.outputs.is_fork == 'true'
+        run: |
+          git add packages/kilo-vscode/tests/visual-regression.spec.ts-snapshots/
+          if git diff --cached --quiet; then
+            echo "No visual regression detected."
+          else
+            echo "::error::Visual regression detected. Screenshot baselines have changed."
+            echo "::error::Since this PR is from a fork, updated screenshots cannot be committed automatically."
+            echo "::error::Please ask a Kilo developer for help updating the screenshots."
+            git diff --cached --stat
+            exit 1
+          fi
+
       - name: Commit and push new baselines (if any)
+        if: needs.check-paths.outputs.is_fork != 'true'
         id: commit-baselines-vscode
+        env:
+          GH_TOKEN: ${{ secrets.BOT_PAT }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -184,7 +258,7 @@ jobs:
           fi
 
       - name: Fail if baselines changed
-        if: steps.commit-baselines-vscode.outputs.changed == 'true'
+        if: needs.check-paths.outputs.is_fork != 'true' && steps.commit-baselines-vscode.outputs.changed == 'true'
         run: |
           echo "::error::Visual regression baselines changed. New baselines have been committed to the branch. Please pull and review."
           exit 1

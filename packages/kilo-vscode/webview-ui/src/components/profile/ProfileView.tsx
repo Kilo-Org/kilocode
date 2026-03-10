@@ -15,7 +15,6 @@ export interface ProfileViewProps {
   profileData: ProfileData | null | undefined
   deviceAuth: DeviceAuthState
   onLogin: () => void
-  onBack?: () => void
 }
 
 const formatBalance = (amount: number): string => {
@@ -109,11 +108,6 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
           gap: "8px",
         }}
       >
-        <Tooltip value={language.t("common.goBack")} placement="bottom">
-          <Button variant="ghost" size="small" onClick={() => props.onBack?.()}>
-            <Icon name="arrow-left" />
-          </Button>
-        </Tooltip>
         <h2 style={{ "font-size": "16px", "font-weight": "600", margin: 0 }}>{language.t("profile.title")}</h2>
       </div>
       <div style={{ padding: "16px" }}>
