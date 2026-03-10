@@ -1014,6 +1014,7 @@ export namespace Config {
       tips_toggle: z.string().optional().default("<leader>h").describe("Toggle tips on home screen"),
       news_toggle: z.string().optional().default("none").describe("Toggle news on home screen"), // kilocode_change
       display_thinking: z.string().optional().default("none").describe("Toggle thinking blocks visibility"),
+      auto_toggle: z.string().optional().default("ctrl+shift+a").describe("Toggle auto-approve permissions"), // kilocode_change
     })
     .strict()
     .meta({
@@ -1130,10 +1131,12 @@ export namespace Config {
         .optional()
         .describe("When set, ONLY these providers will be enabled. All other providers will be ignored"),
       // kilocode_change start - nullable for delete sentinel
-      model: ModelId.nullable().describe("Model to use in the format of provider/model, eg anthropic/claude-2").optional(),
-      small_model: ModelId.nullable().describe(
-        "Small model to use for tasks like title generation in the format of provider/model",
-      ).optional(),
+      model: ModelId.nullable()
+        .describe("Model to use in the format of provider/model, eg anthropic/claude-2")
+        .optional(),
+      small_model: ModelId.nullable()
+        .describe("Small model to use for tasks like title generation in the format of provider/model")
+        .optional(),
       // kilocode_change end
       // kilocode_change start - renamed from "build" to "code"
       default_agent: z

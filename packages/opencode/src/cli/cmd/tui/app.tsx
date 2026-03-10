@@ -682,15 +682,16 @@ function App() {
     // kilocode_change start - auto mode toggle
     {
       title: auto.enabled() ? "Disable auto mode" : "Enable auto mode",
-      description: "Auto-approve all permissions without prompting",
+      description: "Skip permission prompts",
       value: "permission.auto",
+      keybind: "auto_toggle",
       category: "System",
       slash: { name: "auto" },
       onSelect: (dialog) => {
         auto.toggle()
         toast.show({
           variant: auto.enabled() ? "warning" : "info",
-          message: auto.enabled() ? "Auto mode enabled - all permissions will be auto-approved" : "Auto mode disabled",
+          message: auto.enabled() ? "Auto mode enabled" : "Auto mode disabled",
           duration: 3000,
         })
         dialog.clear()

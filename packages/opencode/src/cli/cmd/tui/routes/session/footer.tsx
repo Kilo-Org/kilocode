@@ -5,7 +5,6 @@ import { useDirectory } from "../../context/directory"
 import { useConnected } from "../../component/dialog-model"
 import { createStore } from "solid-js/store"
 import { useRoute } from "../../context/route"
-import { useAutoMode } from "../../context/auto" // kilocode_change
 
 export function Footer() {
   const { theme } = useTheme()
@@ -20,7 +19,6 @@ export function Footer() {
   })
   const directory = useDirectory()
   const connected = useConnected()
-  const auto = useAutoMode() // kilocode_change
 
   const [store, setStore] = createStore({
     welcome: false,
@@ -62,11 +60,6 @@ export function Footer() {
             </text>
           </Match>
           <Match when={connected()}>
-            {/* kilocode_change start - auto mode indicator */}
-            <Show when={auto.enabled()}>
-              <text fg={theme.warning}>AUTO</text>
-            </Show>
-            {/* kilocode_change end */}
             <Show when={permissions().length > 0}>
               <text fg={theme.warning}>
                 <span style={{ fg: theme.warning }}>△</span> {permissions().length} Permission
