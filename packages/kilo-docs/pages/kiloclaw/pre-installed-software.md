@@ -88,12 +88,12 @@ These tools are pre-installed via `go install` and available on `$PATH`:
 | `gifgrep`     | 0.2.3   |
 
 {% callout type="tip" %}
-These tools receive updates when you **Upgrade & Redeploy** your instance from the [KiloClaw Dashboard](/docs/automate/kiloclaw/dashboard#redeploy). Check the changelog for image update announcements.
+These tools receive updates when you **Upgrade & Redeploy** your instance from the [KiloClaw Dashboard](/docs/kiloclaw/dashboard#redeploy). Check the changelog for image update announcements.
 {% /callout %}
 
 ## Related
 
-- [KiloClaw Overview](/docs/automate/kiloclaw/overview)
-- [Dashboard Reference](/docs/automate/kiloclaw/dashboard)
-- [Machine Specs](/docs/automate/kiloclaw/dashboard#machine-specs)
-- [Troubleshooting](/docs/automate/kiloclaw/troubleshooting)
+- [KiloClaw Overview](/docs/kiloclaw/overview)
+- [Dashboard Reference](/docs/kiloclaw/dashboard)
+- [Machine Specs](/docs/kiloclaw/dashboard#machine-specs)
+- [Troubleshooting](/docs/kiloclaw/troubleshooting)

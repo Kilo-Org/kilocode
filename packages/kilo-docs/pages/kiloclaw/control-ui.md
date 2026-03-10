@@ -5,7 +5,7 @@ description: "Browser-based dashboard for managing your OpenClaw instance"
 
 # OpenClaw Control UI
 
-The Control UI is a browser-based dashboard (built with Vite + Lit) served by the OpenClaw Gateway on the same port as the gateway itself (default: `http://localhost:18789/`). It connects via WebSocket and gives you real-time control over your agent, channels, sessions, and system configuration. For KiloClaw users, see [Accessing the Control UI](/docs/automate/kiloclaw/dashboard#accessing-the-control-ui) to get started.
+The Control UI is a browser-based dashboard (built with Vite + Lit) served by the OpenClaw Gateway on the same port as the gateway itself (default: `http://localhost:18789/`). It connects via WebSocket and gives you real-time control over your agent, channels, sessions, and system configuration. For KiloClaw users, see [Accessing the Control UI](/docs/kiloclaw/dashboard#accessing-the-control-ui) to get started.
 
 ## Features
 
@@ -24,12 +24,12 @@ The Control UI is a browser-based dashboard (built with Vite + Lit) served by th
 For more details, please see the official [OpenClaw documentation](https://docs.openclaw.ai/web/control-ui).
 
 {% callout type="warning" %}
-Do not use the **Update** feature in the Control UI to update KiloClaw. Use **Redeploy** from the [KiloClaw Dashboard](/docs/automate/kiloclaw/dashboard#redeploy) instead. Updating via the Control UI will not apply the correct KiloClaw platform image and may break your instance.
+Do not use the **Update** feature in the Control UI to update KiloClaw. Use **Redeploy** from the [KiloClaw Dashboard](/docs/kiloclaw/dashboard#redeploy) instead. Updating via the Control UI will not apply the correct KiloClaw platform image and may break your instance.
 {% /callout %}
 
 ## Authentication
 
-Auth is handled via token or password on the WebSocket handshake. We use the one time "access code" from your KiloClaw Dashboard to pair your device. Other remote connections require one-time device pairing — the pairing request appears on the [KiloClaw Dashboard](/docs/automate/kiloclaw/dashboard#pairing-requests) or in the Control UI itself.
+Auth is handled via token or password on the WebSocket handshake. Remote connections require one-time device pairing — the pairing request appears on the [KiloClaw Dashboard](/docs/kiloclaw/dashboard#pairing-requests) or in the Control UI itself.
 
 ## Exec Approvals
 
@@ -91,12 +91,8 @@ Approval prompts can also be forwarded to chat channels (Slack, Telegram, Discor
 
 Navigate to **Nodes > Exec Approvals** in the Control UI to edit defaults, per-agent overrides, and allowlists. Select a scope (Defaults or a specific agent), adjust the policy, add or remove allowlist patterns, then save.
 
-{% callout type="info" %}
-If a node does not yet advertise exec approval capabilities, edit its `~/.openclaw/exec-approvals.json` file directly. You can also use the CLI: `openclaw approvals`.
-{% /callout %}
-
 ## Related
 
-- [KiloClaw Dashboard](/docs/automate/kiloclaw/dashboard)
-- [KiloClaw Overview](/docs/automate/kiloclaw/overview)
-- [Connecting Chat Platforms](/docs/automate/kiloclaw/chat-platforms)
+- [KiloClaw Dashboard](/docs/kiloclaw/dashboard)
+- [KiloClaw Overview](/docs/kiloclaw/overview)
+- [Connecting Chat Platforms](/docs/kiloclaw/chat-platforms)
