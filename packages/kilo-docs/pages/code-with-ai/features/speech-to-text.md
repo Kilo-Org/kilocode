@@ -1,6 +1,7 @@
 ---
 title: Voice Transcription
 description: Kilo Code now includes experimental support for voice input in the chat interface.
+platform: classic
 ---
 
 # Voice Transcription

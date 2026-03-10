@@ -1,3 +1,7 @@
+---
+platform: classic
+---
+
 # search_files
 
 The `search_files` tool performs regex searches across multiple files in your project. It helps Kilo Code locate specific code patterns, text, or other content throughout your codebase with contextual results.

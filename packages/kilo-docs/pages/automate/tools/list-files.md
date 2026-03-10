@@ -1,3 +1,7 @@
+---
+platform: classic
+---
+
 # list_files
 
 The `list_files` tool displays the files and directories within a specified location. It helps Kilo Code understand your project structure and navigate your codebase effectively.

@@ -20,10 +20,11 @@ export const CustomizeNav: NavSection[] = [
       {
         href: "/customize/custom-subagents",
         children: "Custom Subagents",
+        platform: "next",
       },
       { href: "/customize/agents-md", children: "agents.md" },
-      { href: "/customize/workflows", children: "Workflows" },
-      { href: "/customize/skills", children: "Skills" },
+      { href: "/customize/workflows", children: "Workflows", platform: "next" },
+      { href: "/customize/skills", children: "Skills", platform: "next" },
       {
         href: "/customize/prompt-engineering",
         children: "Prompt Engineering",
@@ -36,6 +37,7 @@ export const CustomizeNav: NavSection[] = [
       {
         href: "/customize/context/codebase-indexing",
         children: "Codebase Indexing",
+        platform: "classic",
       },
       {
         href: "/customize/context/context-condensing",
@@ -48,6 +50,7 @@ export const CustomizeNav: NavSection[] = [
       {
         href: "/customize/context/large-projects",
         children: "Large Projects",
+        platform: "classic",
       },
     ],
   },

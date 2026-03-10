@@ -567,7 +567,13 @@ module.exports = [
   },
   {
     source: "/docs/features/mcp/using-mcp-in-cli",
-    destination: "/docs/automate/mcp/using-in-cli",
+    destination: "/docs/automate/mcp/using-in-kilo-code",
+    basePath: false,
+    permanent: true,
+  },
+  {
+    source: "/docs/automate/mcp/using-in-cli",
+    destination: "/docs/automate/mcp/using-in-kilo-code",
     basePath: false,
     permanent: true,
   },

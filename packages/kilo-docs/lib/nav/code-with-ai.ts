@@ -10,7 +10,7 @@ export const CodeWithAiNav: NavSection[] = [
         href: "/code-with-ai/platforms/jetbrains",
         children: "JetBrains Extension",
       },
-      { href: "/code-with-ai/platforms/cli", children: "CLI" },
+      { href: "/code-with-ai/platforms/cli", children: "CLI", platform: "next" },
       { href: "/code-with-ai/platforms/cloud-agent", children: "Cloud Agent" },
       { href: "/code-with-ai/platforms/mobile", children: "Mobile Apps" },
       { href: "/code-with-ai/platforms/slack", children: "Slack" },
@@ -70,16 +70,17 @@ export const CodeWithAiNav: NavSection[] = [
         href: "/code-with-ai/features/git-commit-generation",
         children: "Git Commit Generation",
       },
-      { href: "/code-with-ai/features/speech-to-text", children: "Voice Transcription" },
+      { href: "/code-with-ai/features/speech-to-text", children: "Voice Transcription", platform: "classic" },
       {
         href: "/code-with-ai/features/browser-use",
         children: "Agent Behavior",
         subLinks: [
           { href: "/code-with-ai/features/browser-use", children: "Browser Use" },
-          { href: "/code-with-ai/features/fast-edits", children: "Fast Edits" },
+          { href: "/code-with-ai/features/fast-edits", children: "Fast Edits", platform: "classic" },
           {
             href: "/code-with-ai/features/task-todo-list",
             children: "Task Todo List",
+            platform: "classic",
           },
           { href: "/code-with-ai/features/checkpoints", children: "Checkpoints" },
         ],

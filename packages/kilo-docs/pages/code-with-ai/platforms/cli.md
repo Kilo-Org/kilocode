@@ -1,6 +1,7 @@
 ---
 title: "Kilo CLI"
 description: "Using Kilo Code from the command line"
+platform: next
 ---
 
 {% callout type="warning" title="Version Notice" %}

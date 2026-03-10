@@ -1,3 +1,7 @@
+---
+platform: classic
+---
+
 # new_task
 
 The `new_task` tool creates subtasks with specialized modes while maintaining a parent-child relationship. It breaks down complex projects into manageable pieces, each operating in the mode best suited for specific work.

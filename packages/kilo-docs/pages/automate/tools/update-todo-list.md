@@ -1,3 +1,7 @@
+---
+platform: classic
+---
+
 # update_todo_list
 
 The `update_todo_list` tool replaces the entire TODO list with an updated checklist reflecting the current state. It provides step-by-step task tracking, allowing confirmation of completion before updating and dynamic addition of new todos discovered during complex tasks.

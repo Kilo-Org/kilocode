@@ -1,3 +1,7 @@
+---
+platform: classic
+---
+
 # execute_command
 
 The `execute_command` tool runs CLI commands on the user's system. It allows Kilo Code to perform system operations, install dependencies, build projects, start servers, and execute other terminal-based tasks needed to accomplish user objectives.

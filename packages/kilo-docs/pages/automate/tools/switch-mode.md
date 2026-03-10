@@ -1,3 +1,7 @@
+---
+platform: classic
+---
+
 # switch_mode
 
 The `switch_mode` tool enables Kilo Code to change between different operational modes, each with specialized capabilities for specific types of tasks. This allows seamless transitions between modes like Code, Architect, Ask, or Debug when the current task requires different expertise.

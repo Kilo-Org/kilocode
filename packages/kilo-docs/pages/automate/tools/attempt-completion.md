@@ -1,3 +1,7 @@
+---
+platform: classic
+---
+
 # attempt_completion
 
 The `attempt_completion` tool signals that Kilo Code believes a task is complete and presents results to the user. It provides a summary of what was accomplished, optionally includes a command to demonstrate the result, and supports continued refinement through user feedback.

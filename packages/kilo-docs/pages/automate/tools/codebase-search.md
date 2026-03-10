@@ -1,3 +1,7 @@
+---
+platform: classic
+---
+
 # codebase_search
 
 {% callout type="info" title="Setup Required" %}
