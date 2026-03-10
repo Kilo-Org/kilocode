@@ -1,5 +1,17 @@
 module.exports = [
   {
+    source: "/docs/collaborate/enterprise/model-access-controls",
+    destination: "/docs/collaborate/enterprise/providers-and-models",
+    basePath: false,
+    permanent: true,
+  },
+  {
+    source: "/docs/contributing/architecture/model-provider-blocklist",
+    destination: "/docs/collaborate/enterprise/providers-and-models",
+    basePath: false,
+    permanent: true,
+  },
+  {
     source: "/docs/automate/kiloclaw",
     destination: "/docs/automate/kiloclaw/overview",
     basePath: false,
