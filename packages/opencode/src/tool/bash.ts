@@ -178,6 +178,7 @@ export const BashTool = Tool.define("bash", async () => {
         },
         stdio: ["ignore", "pipe", "pipe"],
         detached: process.platform !== "win32",
+        windowsHide: true, // kilocode_change - prevent CMD window flash on Windows
       })
 
       let output = ""

@@ -3,20 +3,18 @@
  * Main chat container that combines all chat components
  */
 
-import { Component, For, Show, createEffect, on, onCleanup, onMount } from "solid-js"
+import { Component, Show, createEffect, on, onCleanup, onMount } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
-import { BasicTool } from "@kilocode/kilo-ui/basic-tool"
 import { TaskHeader } from "./TaskHeader"
 import { MessageList } from "./MessageList"
 import { PromptInput } from "./PromptInput"
 import { QuestionDock } from "./QuestionDock"
-import { UPSTREAM_SUPPRESSED_TOOLS } from "./AssistantMessage"
+import { PermissionDock } from "./PermissionDock"
 import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import { useWorktreeMode } from "../../context/worktree-mode"
-import type { PermissionRequest } from "../../types/messages"
 
 interface ChatViewProps {
   onSelectSession?: (id: string) => void
@@ -41,16 +39,14 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const allPermissions = () => session.permissions()
   const allQuestions = () => session.questions()
 
-  // Bottom-dock permission: prefer current-session non-tool permissions,
+  // Bottom-dock permission: prefer current-session permissions,
   // then fall back to any pending permission (including child sessions).
   const questionRequest = () =>
-    allQuestions().find((q) => q.sessionID === id() && !q.tool) ?? allQuestions().find((q) => !q.tool) ?? allQuestions()[0]
-  const permissionRequest = () =>
-    allPermissions().find((p) => p.sessionID === id() && !p.tool) ?? allPermissions().find((p) => !p.tool) ?? allPermissions()[0]
-  // Only block the prompt when there's a non-inline permission or any question pending
-  // (todo permissions are shown inline, not in the bottom dock)
-  const isInlinePermission = (p: PermissionRequest) => p.tool && UPSTREAM_SUPPRESSED_TOOLS.has(p.toolName)
-  const blocked = () => allPermissions().some((p) => !isInlinePermission(p)) || allQuestions().length > 0
+    allQuestions().find((q) => q.sessionID === id() && !q.tool) ??
+    allQuestions().find((q) => !q.tool) ??
+    allQuestions()[0]
+  const permissionRequest = () => allPermissions().find((p) => p.sessionID === id()) ?? allPermissions()[0]
+  const blocked = () => allPermissions().length > 0 || allQuestions().length > 0
 
   // When a bottom-dock permission/question disappears while the session is busy,
   // the scroll container grows taller. Dispatch a custom event so MessageList can
@@ -95,60 +91,13 @@ export const ChatView: Component<ChatViewProps> = (props) => {
             {(req) => <QuestionDock request={req} />}
           </Show>
           <Show when={permissionRequest()} keyed>
-            {(perm) => {
-              const fromChild = () => perm.sessionID !== id()
-              const subtitle = () => fromChild() ? `${perm.toolName} (subagent)` : perm.toolName
-              return (
-              <div data-component="tool-part-wrapper" data-permission="true">
-                <BasicTool
-                  icon="checklist"
-                  locked
-                  defaultOpen
-                  trigger={{
-                    title: language.t("notification.permission.title"),
-                    subtitle: subtitle(),
-                  }}
-                >
-                  <Show when={perm.patterns.length > 0}>
-                    <div class="permission-dock-patterns">
-                      <For each={perm.patterns}>
-                        {(pattern) => <code class="permission-dock-pattern">{pattern}</code>}
-                      </For>
-                    </div>
-                  </Show>
-                </BasicTool>
-                <div data-component="permission-prompt">
-                  <div data-slot="permission-actions">
-                    <Button
-                      variant="ghost"
-                      size="small"
-                      onClick={() => decide("reject")}
-                      disabled={session.respondingPermissions().has(perm.id)}
-                    >
-                      {language.t("ui.permission.deny")}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="small"
-                      onClick={() => decide("always")}
-                      disabled={session.respondingPermissions().has(perm.id)}
-                    >
-                      {language.t("ui.permission.allowAlways")}
-                    </Button>
-                    <Button
-                      variant="primary"
-                      size="small"
-                      onClick={() => decide("once")}
-                      disabled={session.respondingPermissions().has(perm.id)}
-                    >
-                      {language.t("ui.permission.allowOnce")}
-                    </Button>
-                  </div>
-                  <p data-slot="permission-hint">{language.t("ui.permission.sessionHint")}</p>
-                </div>
-              </div>
-              )
-            }}
+            {(perm) => (
+              <PermissionDock
+                request={perm}
+                responding={session.respondingPermissions().has(perm.id)}
+                onDecide={decide}
+              />
+            )}
           </Show>
           <Show when={hasMessages() && idle() && !blocked()}>
             <div class="new-task-button-wrapper">

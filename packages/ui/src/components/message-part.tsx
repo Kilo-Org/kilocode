@@ -11,6 +11,29 @@ import {
   type JSX,
 } from "solid-js"
 import stripAnsi from "strip-ansi"
+
+// kilocode_change start - process carriage returns to simulate terminal line-overwrite behavior
+// Windows CLI tools (e.g. winget) use \r to overwrite progress bars in-place.
+// Without this, every progress frame renders as a separate visual line.
+function processCarriageReturns(input: string): string {
+  // Normalize \r\n to \n first so CRLF line endings aren't treated as overwrites
+  const normalized = input.replace(/\r\n/g, "\n")
+  return normalized
+    .split("\n")
+    .map((line) => {
+      if (!line.includes("\r")) return line
+      const parts = line.split("\r")
+      // A trailing \r produces an empty last segment — preserve the previous visible frame
+      const last = parts[parts.length - 1]
+      if (last !== "") return last
+      for (let i = parts.length - 2; i >= 0; i--) {
+        if (parts[i] !== "") return parts[i]
+      }
+      return ""
+    })
+    .join("\n")
+}
+// kilocode_change end
 import { Dynamic } from "solid-js/web"
 import {
   AgentPart,
@@ -1453,7 +1476,7 @@ ToolRegistry.register({
     const i18n = useI18n()
     // kilocode_change start - separate cmd/output memos so copy excludes the "$ " display prefix
     const cmd = createMemo(() => props.input.command ?? props.metadata.command ?? "")
-    const out = createMemo(() => stripAnsi(props.output || props.metadata.output || ""))
+    const out = createMemo(() => processCarriageReturns(stripAnsi(props.output || props.metadata.output || "")))
     const text = createMemo(() => `$ ${cmd()}${out() ? "\n\n" + out() : ""}`)
     // kilocode_change end
     const [copied, setCopied] = createSignal(false)

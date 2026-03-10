@@ -8,18 +8,10 @@
  */
 
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
-import { For, Show } from "solid-js"
-import { Part } from "@kilocode/kilo-ui/message-part"
-import { BasicTool } from "@kilocode/kilo-ui/basic-tool"
-import { Button } from "@kilocode/kilo-ui/button"
-import type {
-  AssistantMessage as SDKAssistantMessage,
-  TextPart,
-  ToolPart,
-  Message as SDKMessage,
-} from "@kilocode/sdk/v2"
+import type { AssistantMessage as SDKAssistantMessage, TextPart, ToolPart } from "@kilocode/sdk/v2"
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { AssistantMessage } from "../components/chat/AssistantMessage"
+import { ChatView } from "../components/chat/ChatView"
 import { registerVscodeToolOverrides } from "../components/chat/VscodeToolOverrides"
 import { SessionContext } from "../context/session"
 import type { PermissionRequest, QuestionRequest } from "../types/messages"
@@ -333,80 +325,120 @@ export default meta
 type Story = StoryObj
 
 // ---------------------------------------------------------------------------
-// 1. Tool with inline permission (glob)
+// 1. Permission dock — glob (above chatbox)
 // ---------------------------------------------------------------------------
 
 export const GlobWithPermission: Story = {
-  name: "Glob + Inline Permission",
+  name: "Permission Dock — glob above chatbox",
   render: () => {
     const perms = [globPermission]
-    const data = dataWith([globPending], perms)
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy", permissions: perms }),
+      messages: () => [{ id: "msg-001" }] as any[],
+    }
     return (
-      <StoryProviders data={data} permissions={perms} sessionID={SESSION_ID}>
-        <AssistantMessage message={baseAssistantMessage} />
+      <StoryProviders permissions={perms} sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "100%", height: "300px", display: "flex", "flex-direction": "column" }}>
+            <ChatView />
+          </div>
+        </SessionContext.Provider>
       </StoryProviders>
     )
   },
 }
 
 // ---------------------------------------------------------------------------
-// 2. Tool with inline permission (bash)
+// 2. Permission dock — bash (above chatbox)
 // ---------------------------------------------------------------------------
 
 export const BashWithPermission: Story = {
-  name: "Bash + Inline Permission",
+  name: "Permission Dock — bash above chatbox",
   render: () => {
     const perms = [bashPermission]
-    const data = dataWith([bashPending], perms)
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy", permissions: perms }),
+      messages: () => [{ id: "msg-001" }] as any[],
+    }
     return (
-      <StoryProviders data={data} permissions={perms} sessionID={SESSION_ID}>
-        <AssistantMessage message={baseAssistantMessage} />
+      <StoryProviders permissions={perms} sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "100%", height: "300px", display: "flex", "flex-direction": "column" }}>
+            <ChatView />
+          </div>
+        </SessionContext.Provider>
       </StoryProviders>
     )
   },
 }
 
 // ---------------------------------------------------------------------------
-// 3. Permission dock (non-tool bottom prompt)
+// 3. Permission dock — write with file patterns (above chatbox)
 // ---------------------------------------------------------------------------
 
-export const PermissionDock: Story = {
-  name: "Permission Dock",
+export const PermissionDockWrite: Story = {
+  name: "Permission Dock — write with patterns",
   render: () => {
-    const perm = dockPermission
+    const perms = [dockPermission]
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy", permissions: perms }),
+      messages: () => [{ id: "msg-001" }] as any[],
+    }
     return (
-      <StoryProviders sessionID={SESSION_ID}>
-        <div data-component="tool-part-wrapper" data-permission="true">
-          <BasicTool
-            icon="checklist"
-            locked
-            defaultOpen
-            trigger={{
-              title: "Permission required",
-              subtitle: perm.toolName,
-            }}
-          >
-            <Show when={perm.patterns.length > 0}>
-              <div class="permission-dock-patterns">
-                <For each={perm.patterns}>{(pattern) => <code class="permission-dock-pattern">{pattern}</code>}</For>
-              </div>
-            </Show>
-          </BasicTool>
-          <div data-component="permission-prompt">
-            <div data-slot="permission-actions">
-              <Button variant="ghost" size="small">
-                Deny
-              </Button>
-              <Button variant="secondary" size="small">
-                Always Allow
-              </Button>
-              <Button variant="primary" size="small">
-                Allow Once
-              </Button>
-            </div>
-            <p data-slot="permission-hint">Approval applies only to the current session</p>
+      <StoryProviders permissions={perms} sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "100%", height: "350px", display: "flex", "flex-direction": "column" }}>
+            <ChatView />
           </div>
-        </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+// ---------------------------------------------------------------------------
+// 3b. Permission dock — todowrite (above chatbox)
+// ---------------------------------------------------------------------------
+
+export const PermissionDockTodo: Story = {
+  name: "Permission Dock — todowrite above chatbox",
+  render: () => {
+    const perms = [todoWritePermission]
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy", permissions: perms }),
+      messages: () => [{ id: "msg-001" }] as any[],
+    }
+    return (
+      <StoryProviders permissions={perms} sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "100%", height: "300px", display: "flex", "flex-direction": "column" }}>
+            <ChatView />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+// ---------------------------------------------------------------------------
+// 3c. Question dock above chatbox
+// ---------------------------------------------------------------------------
+
+export const QuestionAboveChatbox: Story = {
+  name: "Question Dock — above chatbox",
+  render: () => {
+    const qs = [questionRequest]
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy", questions: qs }),
+      messages: () => [{ id: "msg-001" }] as any[],
+    }
+    return (
+      <StoryProviders questions={qs} sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "100%", height: "500px", display: "flex", "flex-direction": "column" }}>
+            <ChatView />
+          </div>
+        </SessionContext.Provider>
       </StoryProviders>
     )
   },
@@ -547,17 +579,25 @@ export const QuestionDismissed: Story = {
 }
 
 // ---------------------------------------------------------------------------
-// 10. TodoWrite with inline permission (pending — shows todo list + permission prompt)
+// 10. TodoWrite with permission in dock (pending — permission shown above chatbox)
 // ---------------------------------------------------------------------------
 
 export const TodoWriteWithPermission: Story = {
-  name: "TodoWrite + Inline Permission",
+  name: "TodoWrite + Permission in Dock",
   render: () => {
     const perms = [todoWritePermission]
     const data = dataWith([todoWritePending], perms)
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy", permissions: perms }),
+      messages: () => [{ id: "msg-001" }] as any[],
+    }
     return (
-      <StoryProviders data={data} permissions={perms} sessionID={SESSION_ID}>
-        <AssistantMessage message={baseAssistantMessage} />
+      <StoryProviders data={data} permissions={perms} sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "100%", height: "350px", display: "flex", "flex-direction": "column" }}>
+            <ChatView />
+          </div>
+        </SessionContext.Provider>
       </StoryProviders>
     )
   },
