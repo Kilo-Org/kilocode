@@ -80,6 +80,8 @@ Gateway process info is only available when the machine is running.
 
 Select a model from the dropdown and click **Save & Provision**. The API key is platform-managed and refreshes automatically when you save — you never need to enter one. The key has a 30-day expiry.
 
+For access to the full catalog of 335+ models, use the `/model` and `/models` commands in the [Control UI Chat](/docs/kiloclaw/control-ui#changing-models).
+
 ### Channels
 
 You can connect Telegram, Discord, and Slack by entering bot tokens in the Settings tab. See [Connecting Chat Platforms](/docs/kiloclaw/chat-platforms) for setup instructions.

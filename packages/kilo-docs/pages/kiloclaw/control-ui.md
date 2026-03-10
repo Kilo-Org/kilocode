@@ -27,6 +27,22 @@ For more details, please see the official [OpenClaw documentation](https://docs.
 Do not use the **Update** feature in the Control UI to update KiloClaw. Use **Redeploy** from the [KiloClaw Dashboard](/docs/kiloclaw/dashboard#redeploy) instead. Updating via the Control UI will not apply the correct KiloClaw platform image and may break your instance.
 {% /callout %}
 
+## Changing Models
+
+The Control UI Chat tab doubles as a command line for model management. KiloClaw exposes 335+ models through the `kilocode` provider â far more than the [dashboard dropdown](/docs/kiloclaw/dashboard#changing-the-model) â and you can browse and switch between them without leaving the chat.
+
+| Command                              | Description                                                                     |
+| ------------------------------------ | ------------------------------------------------------------------------------- |
+| `/model status`                      | View the currently active model and provider                                    |
+| `/models kilocode`                   | Browse available models (paginated, 20 per page)                                |
+| `/models kilocode <page>`            | Jump to a specific page (e.g. `/models kilocode 2`)                             |
+| `/model kilocode/<provider>/<model>` | Switch to a specific model (e.g. `/model kilocode/anthropic/claude-sonnet-4.6`) |
+| `/models kilocode all`               | List every available model at once                                              |
+
+Each `/models` response includes helper text at the bottom with shortcuts for switching, paging, and listing all models.
+
+{% image src="/docs/img/kiloclaw/control-ui-model-commands.png" alt="Control UI Chat showing model commands: /model status, /models kilocode with pagination, and /model switch" width="700" caption="Browsing and switching models in the Control UI Chat" /%}
+
 ## Authentication
 
 Auth is handled via token or password on the WebSocket handshake. Remote connections require one-time device pairing — the pairing request appears on the [KiloClaw Dashboard](/docs/kiloclaw/dashboard#pairing-requests) or in the Control UI itself.
