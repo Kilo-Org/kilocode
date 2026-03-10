@@ -27,9 +27,9 @@ export namespace KilocodePaths {
     }
   }
 
-  /** Global Kilo directory in user home: ~/.kilo */
+  /** Global Kilocode directory in user home: ~/.kilocode */
   export function globalDir(): string {
-    return path.join(os.homedir(), ".kilo")
+    return path.join(os.homedir(), ".kilocode")
   }
 
   /**

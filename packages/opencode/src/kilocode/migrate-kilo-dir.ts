@@ -1,7 +1,6 @@
 // kilocode_change - new file
 import * as fs from "fs/promises"
 import * as path from "path"
-import os from "os"
 import { Log } from "../util/log"
 
 const log = Log.create({ service: "kilocode.migrate-kilo-dir" })
@@ -50,15 +49,15 @@ async function renameIfNeeded(dir: string): Promise<boolean> {
 }
 
 /**
- * One-time migration: rename .kilocode/ directories to .kilo/.
+ * One-time migration: rename project-level .kilocode/ to .kilo/.
  *
- * Migrates both project-level and global directories:
- * - {projectDir}/.kilocode → {projectDir}/.kilo
- * - ~/.kilocode → ~/.kilo
+ * Only migrates the project directory — the global ~/.kilocode/ is left
+ * untouched because legacy CLI instances and migration scripts still
+ * read from it.
  *
  * Safe to call multiple times and from multiple processes — skips when
  * .kilo already exists or .kilocode is absent.
  */
 export async function migrateKiloDir(projectDir: string): Promise<void> {
-  await Promise.all([renameIfNeeded(projectDir), renameIfNeeded(os.homedir())])
+  await renameIfNeeded(projectDir)
 }

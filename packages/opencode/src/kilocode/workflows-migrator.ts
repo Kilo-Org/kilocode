@@ -7,7 +7,7 @@ import { KilocodePaths } from "./paths"
 
 export namespace WorkflowsMigrator {
   const KILO_WORKFLOWS_DIR = ".kilo/workflows"
-  const GLOBAL_WORKFLOWS_DIR = path.join(os.homedir(), ".kilo", "workflows")
+  const GLOBAL_WORKFLOWS_DIR = path.join(os.homedir(), ".kilocode", "workflows")
 
   export interface KilocodeWorkflow {
     name: string
@@ -71,7 +71,7 @@ export namespace WorkflowsMigrator {
       const vscodeWorkflowsDir = path.join(KilocodePaths.vscodeGlobalStorage(), "workflows")
       workflows.push(...(await loadWorkflowsFromDir(vscodeWorkflowsDir, "global")))
 
-      // 2. Home directory ~/.kilo/workflows (fallback/alternative location)
+      // 2. Home directory ~/.kilocode/workflows (fallback/alternative location)
       workflows.push(...(await loadWorkflowsFromDir(GLOBAL_WORKFLOWS_DIR, "global")))
     }
 

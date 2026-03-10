@@ -8,7 +8,7 @@ export namespace RulesMigrator {
 
   // Directory-based rules
   const KILO_RULES_DIR = ".kilo/rules"
-  const GLOBAL_RULES_DIR = path.join(os.homedir(), ".kilo", "rules")
+  const GLOBAL_RULES_DIR = path.join(os.homedir(), ".kilocode", "rules")
 
   // Known modes for mode-specific rule discovery
   const KNOWN_MODES = ["code", "architect", "ask", "debug", "orchestrator"]
@@ -49,7 +49,7 @@ export namespace RulesMigrator {
   export async function discoverRules(projectDir: string): Promise<RuleFile[]> {
     const rules: RuleFile[] = []
 
-    // 1. Global rules directory (~/.kilo/rules/*.md)
+    // 1. Global rules directory (~/.kilocode/rules/*.md)
     if (await isDirectory(GLOBAL_RULES_DIR)) {
       const files = await findMarkdownFiles(GLOBAL_RULES_DIR)
       for (const file of files) {

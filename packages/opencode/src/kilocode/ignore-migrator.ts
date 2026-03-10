@@ -7,7 +7,7 @@ export namespace IgnoreMigrator {
   const log = Log.create({ service: "kilocode.ignore-migrator" })
 
   const KILOCODEIGNORE_FILE = ".kilocodeignore"
-  const GLOBAL_KILOCODEIGNORE = path.join(os.homedir(), ".kilo", KILOCODEIGNORE_FILE)
+  const GLOBAL_KILOCODEIGNORE = path.join(os.homedir(), ".kilocode", KILOCODEIGNORE_FILE)
 
   export interface IgnorePattern {
     pattern: string
