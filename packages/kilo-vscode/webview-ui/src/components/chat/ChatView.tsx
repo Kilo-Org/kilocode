@@ -100,6 +100,10 @@ export const ChatView: Component<ChatViewProps> = (props) => {
 
     if (controller.signal.aborted) return
 
+    // Guard against session switch during the wait — if the user navigated to a
+    // different session, don't apply the mode change to the wrong session
+    if (id() !== sessionID) return
+
     session.selectAgent(input.mode)
     session.sendMessage(input.description ?? input.text)
   }
