@@ -12,7 +12,7 @@ const log = Log.create({ service: "commit-message" })
 
 const SECTION_HEADING = "## Commit Message"
 
-const FENCE_PATTERN = /^[ ]{0,3}`{3,}/
+const FENCE_PATTERN = /^[ ]{0,3}(?:`{3,}|~{3,})/
 
 function extractSection(content: string, heading: string): string | undefined {
   const lines = content.split("\n")
