@@ -107,11 +107,11 @@ Consider creating a dedicated [API configuration profile](/docs/ai-providers) wi
 - Edit messages to add context the AI might have missed
 - Ensure the message accurately describes the changes
 
-### Custom Templates
+### Custom Instructions
 
-- Tailor the prompt template to your project's needs
-- Include project-specific terminology or conventions
-- Add instructions for handling specific types of changes
+- Define project-specific commit message conventions in AGENTS.md
+- Include team-specific terminology or formatting requirements
+- Add instructions for handling different types of changes
 
 ## Example Generated Messages
 
@@ -157,7 +157,7 @@ git add .
 If generated messages aren't helpful:
 
 - Review your staging strategy - don't stage unrelated changes together
-- Customize the prompt template with more specific instructions
+- Add custom instructions in AGENTS.md for your project's conventions
 - Try a different AI model through API configuration
 
 ### Integration Issues
