@@ -625,7 +625,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             return event.type !== "message.part.updated" && event.type !== "message.part.delta"
           }
 
-          return this.trackedSessionIds.has(sessionId)
+          if (this.trackedSessionIds.has(sessionId)) return true
+
+          if (event.type === "session.created") {
+            const info = event.properties?.info as { parentID?: string } | undefined
+            return !!info?.parentID && this.trackedSessionIds.has(info.parentID)
+          }
+
+          return false
         },
         (event) => {
           this.handleEvent(event)
@@ -1548,6 +1555,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * to tracked sessions to the webview. Called after SSE reconnects and after
    * loading messages for a session so that missed permission.asked events are
    * recovered instead of leaving the server blocked indefinitely.
+   * Includes permissions for child sessions (subagents) of tracked sessions.
    */
   private async fetchAndSendPendingPermissions(): Promise<void> {
     if (!this.client) return
@@ -1556,23 +1564,46 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const { data } = await this.client.permission.list({ directory: workspaceDir })
       if (!data) return
       for (const perm of data) {
-        if (!this.trackedSessionIds.has(perm.sessionID)) continue
-        this.postMessage({
-          type: "permissionRequest",
-          permission: {
-            id: perm.id,
-            sessionID: perm.sessionID,
-            toolName: perm.permission,
-            patterns: perm.patterns,
-            args: perm.metadata,
-            message: `Permission required: ${perm.permission}`,
-            tool: perm.tool,
-          },
-        })
+        if (this.trackedSessionIds.has(perm.sessionID)) {
+          this.forwardPermissionRequest(perm)
+          continue
+        }
+        const session = await this.client.session
+          .get({ sessionID: perm.sessionID, directory: workspaceDir })
+          .then((res) => res.data)
+          .catch(() => undefined)
+        if (session?.parentID && this.trackedSessionIds.has(session.parentID)) {
+          this.trackedSessionIds.add(perm.sessionID)
+          const parentDir = this.sessionDirectories.get(session.parentID)
+          if (parentDir) this.sessionDirectories.set(perm.sessionID, parentDir)
+          this.forwardPermissionRequest(perm)
+        }
       }
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to fetch pending permissions:", error)
     }
+  }
+
+  private forwardPermissionRequest(perm: {
+    id: string
+    sessionID: string
+    permission: string
+    patterns?: string[]
+    metadata?: unknown
+    tool?: unknown
+  }): void {
+    this.postMessage({
+      type: "permissionRequest",
+      permission: {
+        id: perm.id,
+        sessionID: perm.sessionID,
+        toolName: perm.permission,
+        patterns: perm.patterns,
+        args: perm.metadata,
+        message: `Permission required: ${perm.permission}`,
+        tool: perm.tool,
+      },
+    })
   }
 
   /**
@@ -1895,6 +1926,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // This must come first: the trackedSessionIds guard below would otherwise
     // let a foreign session through if it was accidentally tracked.
     if (isEventFromForeignProject(event, this.projectID)) return
+
+    // Track child sessions (subagents) when created so we receive their permission.asked events.
+    // Otherwise the user never sees permission prompts and subagents hang.
+    if (event.type === "session.created") {
+      const info = event.properties.info as { id: string; parentID?: string }
+      if (info.parentID && this.trackedSessionIds.has(info.parentID)) {
+        this.trackedSessionIds.add(info.id)
+        const parentDir = this.sessionDirectories.get(info.parentID)
+        if (parentDir) this.sessionDirectories.set(info.id, parentDir)
+      }
+    }
 
     // Extract sessionID from the event
     const sessionID = this.extractSessionID(event)
