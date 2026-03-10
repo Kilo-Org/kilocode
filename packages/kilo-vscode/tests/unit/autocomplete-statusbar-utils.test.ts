@@ -1,5 +1,6 @@
 import { describe, it, expect } from "bun:test"
-import { humanFormatSessionCost, formatTime } from "../../src/services/autocomplete/statusbar-utils"
+import { humanFormatSessionCost } from "../../src/services/autocomplete/statusbar-utils"
+import { formatTime } from "../../src/services/statusbar/utils"
 
 describe("humanFormatSessionCost", () => {
   it("returns '$0.00' for 0 cost", () => {
