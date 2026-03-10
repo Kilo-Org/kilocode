@@ -604,11 +604,68 @@ export namespace File {
     })
   }
 
+  // kilocode_change start
+  function isPathNavigation(query: string): boolean {
+    return query.startsWith("../") || query === ".." || query.startsWith("/") || query.startsWith("~/")
+  }
+
+  async function browseDirectory(input: {
+    query: string
+    limit: number
+    kind: "file" | "directory" | "all"
+  }): Promise<string[]> {
+    const query = input.query
+    const resolved = query.startsWith("~/")
+      ? path.join(Global.Path.home, query.slice(2))
+      : path.resolve(Instance.directory, query)
+
+    // Determine the directory to list and the partial filename filter
+    const stat = await fs.promises.stat(resolved).catch(() => undefined)
+    const isDir = stat?.isDirectory()
+    const dir = isDir ? resolved : path.dirname(resolved)
+    const partial = isDir ? "" : path.basename(resolved).toLowerCase()
+
+    const entries = await fs.promises.readdir(dir, { withFileTypes: true }).catch(() => [])
+    const exclude = new Set([".git", ".DS_Store"])
+    const results: string[] = []
+
+    for (const entry of entries) {
+      if (exclude.has(entry.name)) continue
+      if (partial && !entry.name.toLowerCase().startsWith(partial)) continue
+      if (entry.name.startsWith(".") && !partial.startsWith(".")) continue
+
+      const isDirectory = entry.isDirectory()
+      if (input.kind === "file" && isDirectory) continue
+      if (input.kind === "directory" && !isDirectory) continue
+
+      const absolute = path.join(dir, entry.name)
+      const relative = path.relative(Instance.directory, absolute)
+      const display = isDirectory ? relative + "/" : relative
+      results.push(display)
+    }
+
+    results.sort((a, b) => {
+      const aDir = a.endsWith("/")
+      const bDir = b.endsWith("/")
+      if (aDir !== bDir) return aDir ? -1 : 1
+      return a.localeCompare(b)
+    })
+
+    return results.slice(0, input.limit)
+  }
+  // kilocode_change end
+
   export async function search(input: { query: string; limit?: number; dirs?: boolean; type?: "file" | "directory" }) {
     const query = input.query.trim()
     const limit = input.limit ?? 100
     const kind = input.type ?? (input.dirs === false ? "file" : "all")
     log.info("search", { query, kind })
+
+    // kilocode_change start - browse external directories when query is a path navigation
+    if (isPathNavigation(query)) {
+      return browseDirectory({ query, limit, kind })
+    }
+    // kilocode_change end
 
     const result = await state().then((x) => x.files())
 

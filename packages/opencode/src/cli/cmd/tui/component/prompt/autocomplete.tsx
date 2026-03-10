@@ -1,5 +1,6 @@
 import type { BoxRenderable, TextareaRenderable, KeyEvent, ScrollBoxRenderable } from "@opentui/core"
 import { pathToFileURL } from "bun"
+import path from "path"
 import fuzzysort from "fuzzysort"
 import { firstBy } from "remeda"
 import { createMemo, createResource, createEffect, onMount, onCleanup, Index, Show, createSignal } from "solid-js"
@@ -248,7 +249,7 @@ export function Autocomplete(props: {
         options.push(
           ...sortedFiles.map((item): AutocompleteOption => {
             const baseDir = (sync.data.path.directory || process.cwd()).replace(/\/+$/, "")
-            const fullPath = `${baseDir}/${item}`
+            const fullPath = path.resolve(baseDir, item) // kilocode_change - use path.resolve for ../ paths
             const urlObj = pathToFileURL(fullPath)
             let filename = item
             if (lineRange && !item.endsWith("/")) {
@@ -382,6 +383,13 @@ export function Autocomplete(props: {
     }))
   })
 
+  // kilocode_change start - detect path navigation queries
+  const isPathNavigation = createMemo(() => {
+    const value = search()
+    return value.startsWith("../") || value === ".." || value.startsWith("/") || value.startsWith("~/")
+  })
+  // kilocode_change end
+
   const options = createMemo((prev: AutocompleteOption[] | undefined) => {
     const filesValue = files()
     const agentsValue = agents()
@@ -399,6 +407,13 @@ export function Autocomplete(props: {
     if (files.loading && prev && prev.length > 0) {
       return prev
     }
+
+    // kilocode_change start - skip client-side fuzzy filtering for path navigation queries
+    // The server already returns properly filtered directory listings for these
+    if (isPathNavigation()) {
+      return filesValue || []
+    }
+    // kilocode_change end
 
     const result = fuzzysort.go(removeLineRange(searchValue), mixed, {
       keys: [
