@@ -36,6 +36,7 @@ const KiloLogo = (): JSX.Element => {
 
 interface MessageListProps {
   onSelectSession?: (id: string) => void
+  onModeAction?: (input: { mode: string; text: string; description?: string }) => void
 }
 
 export const MessageList: Component<MessageListProps> = (props) => {
@@ -130,6 +131,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
                   sessionID={session.currentSessionID() ?? ""}
                   messageID={msg.id}
                   lastUserMessageID={lastUserMessageID()}
+                  onModeAction={props.onModeAction}
                 />
               )}
             </For>

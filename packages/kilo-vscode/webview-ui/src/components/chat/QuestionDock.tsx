@@ -14,7 +14,10 @@ import { useLanguage } from "../../context/language"
 import type { QuestionRequest } from "../../types/messages"
 import { toggleAnswer } from "./question-dock-utils"
 
-export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => {
+export const QuestionDock: Component<{
+  request: QuestionRequest
+  onModeAction?: (input: { mode: string; text: string; description?: string }) => void
+}> = (props) => {
   const session = useSession()
   const language = useLanguage()
 
@@ -78,6 +81,9 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
   }
 
   const pick = (answer: string, custom = false) => {
+    // Find the option to check for mode (custom answers won't match)
+    const option = custom ? undefined : options().find((o) => o.label === answer)
+
     const answers = [...store.answers]
     answers[store.tab] = [answer]
     setStore("answers", answers)
@@ -86,6 +92,15 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       const inputs = [...store.custom]
       inputs[store.tab] = answer
       setStore("custom", inputs)
+    }
+
+    // For single-question with a mode option, reply immediately and trigger mode switch
+    if (single() && !multi() && option?.mode && props.onModeAction) {
+      if (store.sending) return
+      setStore("sending", true)
+      session.replyToQuestion(props.request.id, [[answer]])
+      props.onModeAction({ mode: option.mode, text: answer, description: option.description })
+      return
     }
 
     if (!single() && !multi()) {

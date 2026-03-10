@@ -144,6 +144,7 @@ export interface TodoItem {
 export interface QuestionOption {
   label: string
   description: string
+  mode?: string
 }
 
 export interface QuestionInfo {

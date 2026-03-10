@@ -46,6 +46,7 @@ interface VscodeSessionTurnProps {
   sessionID: string
   messageID: string
   lastUserMessageID?: string
+  onModeAction?: (input: { mode: string; text: string; description?: string }) => void
 }
 
 export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
@@ -179,6 +180,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
                     message={msg}
                     showAssistantCopyPartID={showAssistantCopyPartID()}
                     turnDurationMs={turnDurationMs()}
+                    onModeAction={props.onModeAction}
                   />
                 )}
               </For>
