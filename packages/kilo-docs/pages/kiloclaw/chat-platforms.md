@@ -5,7 +5,7 @@ description: "Connect your KiloClaw agent to Telegram, Discord, Slack, and more"
 
 # Connecting Chat Platforms
 
-KiloClaw supports connecting your AI agent to Telegram, Discord, and Slack. You can configure channels from the **Settings** tab on your [KiloClaw dashboard](/docs/automate/kiloclaw/dashboard#channels), or from the OpenClaw Control UI after accessing your instance.
+KiloClaw supports connecting your AI agent to Telegram, Discord, and Slack. You can configure channels from the **Settings** tab on your [KiloClaw dashboard](/docs/kiloclaw/dashboard#channels), or from the OpenClaw Control UI after accessing your instance.
 
 ## Supported Platforms
 
@@ -40,7 +40,7 @@ Both tokens are required — you cannot save with only one.
 
 ## Configuring a Channel
 
-1. Open your [KiloClaw dashboard](/docs/automate/kiloclaw/dashboard)
+1. Open your [KiloClaw dashboard](/docs/kiloclaw/dashboard)
 2. Go to the **Settings** tab
 3. Scroll to the **Channels** section
 4. Enter the required token(s) for your platform
@@ -69,8 +69,8 @@ Additional platforms (such as WhatsApp) are planned for future releases. For the
 
 ## Related
 
-- [KiloClaw Overview](/docs/automate/kiloclaw/overview)
-- [Dashboard Reference](/docs/automate/kiloclaw/dashboard)
-- [Troubleshooting](/docs/automate/kiloclaw/troubleshooting)
-- [KiloClaw Pricing](/docs/automate/kiloclaw/pricing)
+- [KiloClaw Overview](/docs/kiloclaw/overview)
+- [Dashboard Reference](/docs/kiloclaw/dashboard)
+- [Troubleshooting](/docs/kiloclaw/troubleshooting)
+- [KiloClaw Pricing](/docs/kiloclaw/pricing)
 - [OpenClaw Documentation](https://docs.openclaw.ai)
