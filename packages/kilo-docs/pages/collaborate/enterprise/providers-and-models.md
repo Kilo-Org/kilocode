@@ -73,7 +73,9 @@ Changes are not applied until you explicitly save them. A status bar appears at 
 
 ## Permissions
 
-Only **Owners** of an enterprise organization can enable or disable providers and models. Members with other roles can view the page in read-only mode.
+- Only **Owners** of an enterprise organization can enable or disable providers and models. Members with other roles can view the page in read-only mode.
+- Changes propagate to all organization members within seconds of saving.
+- Individual users cannot override organization-level restrictions.
 
 ## Example Use Cases
 
