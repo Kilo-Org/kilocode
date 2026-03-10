@@ -2,6 +2,13 @@
  * Types for extension <-> webview message communication
  */
 
+import type {
+  MarketplaceItem,
+  MarketplaceInstalledMetadata,
+  InstallMarketplaceItemOptions,
+  MarketplaceFilters,
+} from "./marketplace"
+
 // Connection states
 export type ConnectionState = "connecting" | "connected" | "disconnected" | "error"
 
@@ -1000,6 +1007,29 @@ export interface DiffViewerLoadingMessage {
   loading: boolean
 }
 
+// Marketplace messages (extension → webview)
+export interface MarketplaceDataMessage {
+  type: "marketplaceData"
+  organizationMcps: MarketplaceItem[]
+  marketplaceItems: MarketplaceItem[]
+  marketplaceInstalledMetadata: MarketplaceInstalledMetadata
+  errors?: string[]
+}
+
+export interface MarketplaceInstallResultMessage {
+  type: "marketplaceInstallResult"
+  success: boolean
+  slug: string
+  error?: string
+}
+
+export interface MarketplaceRemoveResultMessage {
+  type: "marketplaceRemoveResult"
+  success: boolean
+  slug: string
+  error?: string
+}
+
 export type ExtensionMessage =
   | ReadyMessage
   | ConnectionStateMessage
@@ -1077,6 +1107,9 @@ export type ExtensionMessage =
   | ViewSubAgentSessionMessage
   | DiffViewerDiffsMessage
   | DiffViewerLoadingMessage
+  | MarketplaceDataMessage
+  | MarketplaceInstallResultMessage
+  | MarketplaceRemoveResultMessage
 
 // ============================================
 // Messages FROM webview TO extension
@@ -1552,6 +1585,28 @@ export interface SetDefaultBaseBranchRequest {
   branch?: string
 }
 
+// Marketplace messages (webview → extension)
+export interface FetchMarketplaceDataMessage {
+  type: "fetchMarketplaceData"
+}
+
+export interface FilterMarketplaceItemsMessage {
+  type: "filterMarketplaceItems"
+  filters: MarketplaceFilters
+}
+
+export interface InstallMarketplaceItemMessage {
+  type: "installMarketplaceItem"
+  mpItem: MarketplaceItem
+  mpInstallOptions: InstallMarketplaceItemOptions
+}
+
+export interface RemoveInstalledMarketplaceItemMessage {
+  type: "removeInstalledMarketplaceItem"
+  mpItem: MarketplaceItem
+  mpInstallOptions: { target?: "global" | "project" }
+}
+
 export type WebviewMessage =
   | SendMessageRequest
   | AbortRequest
@@ -1639,6 +1694,10 @@ export type WebviewMessage =
   | OpenChangesRequest
   | OpenSubAgentViewerRequest
   | SetDefaultBaseBranchRequest
+  | FetchMarketplaceDataMessage
+  | FilterMarketplaceItemsMessage
+  | InstallMarketplaceItemMessage
+  | RemoveInstalledMarketplaceItemMessage
 
 // ============================================
 // VS Code API type

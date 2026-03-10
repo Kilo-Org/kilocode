@@ -34,6 +34,7 @@ import {
   flushPendingSessionRefresh as flushPendingSessionRefreshUtil,
   type SessionRefreshContext,
 } from "./kilo-provider-utils"
+import { MarketplaceService } from "./services/marketplace" // kilocode_change
 
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "kilo-code.new.sidebarView"
@@ -80,6 +81,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /** Lazily initialized ignore controller for .kilocodeignore filtering */
   private ignoreController: FileIgnoreController | null = null
   private ignoreControllerDir: string | null = null
+  private marketplace: MarketplaceService | null = null // kilocode_change
 
   /** Optional interceptor called before the standard message handler.
    *  Return null to consume the message, or return a (possibly transformed) message. */
@@ -602,6 +604,34 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             })
           break
         }
+        // kilocode_change start — marketplace IPC handlers
+        case "fetchMarketplaceData": {
+          const workspace = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+          const mp = this.getMarketplace()
+          const data = await mp.fetchData(workspace)
+          this.postMessage({ type: "marketplaceData", ...data })
+          break
+        }
+        case "filterMarketplaceItems": {
+          // Client-side filtering — no server action needed
+          break
+        }
+        case "installMarketplaceItem": {
+          const workspace = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+          const mp = this.getMarketplace()
+          const result = await mp.install(message.mpItem, message.mpInstallOptions, workspace)
+          this.postMessage({ type: "marketplaceInstallResult", success: result.success, slug: result.slug, error: result.error })
+          break
+        }
+        case "removeInstalledMarketplaceItem": {
+          const workspace = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+          const mp = this.getMarketplace()
+          const scope = message.mpInstallOptions?.target ?? "project"
+          const result = await mp.remove(message.mpItem, scope, workspace)
+          this.postMessage({ type: "marketplaceRemoveResult", success: result.success, slug: result.slug, error: result.error })
+          break
+        }
+        // kilocode_change end
       }
     })
   }
@@ -2262,6 +2292,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   // legacy-migration end ---------------------------------------------------------
 
+  // kilocode_change start — marketplace lazy init
+  private getMarketplace(): MarketplaceService {
+    if (this.marketplace) return this.marketplace
+    const storage = this.extensionContext?.globalStorageUri?.fsPath ?? ""
+    this.marketplace = new MarketplaceService(storage)
+    return this.marketplace
+  }
+  // kilocode_change end
+
   /**
    * Dispose of the provider and clean up subscriptions.
    * Does NOT kill the server — that's the connection service's job.
@@ -2275,5 +2314,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.syncedChildSessions.clear()
     this.sessionDirectories.clear()
     this.ignoreController?.dispose()
+    this.marketplace?.dispose() // kilocode_change
   }
 }
