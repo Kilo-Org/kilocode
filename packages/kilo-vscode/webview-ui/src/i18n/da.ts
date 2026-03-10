@@ -957,21 +957,29 @@ export const dict = {
   "settings.autoApprove.placeholder.command": "f.eks. git *",
   "settings.autoApprove.placeholder.path": "f.eks. *.env",
   "settings.autoApprove.tool.read": "Læs filer. Tillader agenten at læse filer, der matcher den angivne sti.",
-  "settings.autoApprove.tool.edit": "Rediger filer. Tillader agenten at oprette eller redigere filer, herunder patches og opdateringer af flere filer.",
-  "settings.autoApprove.tool.glob": "Find filer efter mønster. Tillader filsøgning ved hjælp af glob-mønstre (f.eks. src/**/*.ts).",
+  "settings.autoApprove.tool.edit":
+    "Rediger filer. Tillader agenten at oprette eller redigere filer, herunder patches og opdateringer af flere filer.",
+  "settings.autoApprove.tool.glob":
+    "Find filer efter mønster. Tillader filsøgning ved hjælp af glob-mønstre (f.eks. src/**/*.ts).",
   "settings.autoApprove.tool.grep": "Søg i filindhold. Tillader regex-baseret søgning i filer.",
   "settings.autoApprove.tool.list": "Vis mappeindhold. Tillader visning af filer og mapper i en mappe.",
-  "settings.autoApprove.tool.bash": "Kør terminalkommandoer. Tillader udførelse af shell-kommandoer (f.eks. git status).",
-  "settings.autoApprove.tool.task": "Start underagenter. Tillader start af specialiserede underagenter til specifikke opgaver.",
-  "settings.autoApprove.tool.skill": "Indlæs færdigheder. Tillader indlæsning af foruddefinerede færdigheder efter navn.",
-  "settings.autoApprove.tool.lsp": "Forespørg sprogserver. Tillader kørsel af sprogserverforespørgsler til kodeintelligens.",
+  "settings.autoApprove.tool.bash":
+    "Kør terminalkommandoer. Tillader udførelse af shell-kommandoer (f.eks. git status).",
+  "settings.autoApprove.tool.task":
+    "Start underagenter. Tillader start af specialiserede underagenter til specifikke opgaver.",
+  "settings.autoApprove.tool.skill":
+    "Indlæs færdigheder. Tillader indlæsning af foruddefinerede færdigheder efter navn.",
+  "settings.autoApprove.tool.lsp":
+    "Forespørg sprogserver. Tillader kørsel af sprogserverforespørgsler til kodeintelligens.",
   "settings.autoApprove.tool.todoreadwrite":
     "Administrer opgaveliste. Tillader læsning og opdatering af den interne opgaveliste.",
   "settings.autoApprove.tool.webfetch": "Hent en URL. Tillader hentning af indhold fra en specifik URL.",
   "settings.autoApprove.tool.websearchcodesearch":
     "Søg på nettet eller i kode. Tillader udførelse af eksterne web- eller kodesøgninger.",
-  "settings.autoApprove.tool.external_directory": "Få adgang til filer uden for arbejdsområdet. Udløses ved adgang til filer uden for den aktuelle projektmappe.",
-  "settings.autoApprove.tool.doom_loop": "Forhindr gentagne identiske handlinger. Udløses, når det samme værktøjskald gentages med identisk input.",
+  "settings.autoApprove.tool.external_directory":
+    "Få adgang til filer uden for arbejdsområdet. Udløses ved adgang til filer uden for den aktuelle projektmappe.",
+  "settings.autoApprove.tool.doom_loop":
+    "Forhindr gentagne identiske handlinger. Udløses, når det samme værktøjskald gentages med identisk input.",
   "settings.checkpoints.enable.title": "Aktiver snapshots",
   "settings.checkpoints.enable.description": "Opret kontrolpunkter før filredigeringer",
   "settings.context.autoCompaction.title": "Automatisk komprimering",

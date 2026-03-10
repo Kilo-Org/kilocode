@@ -961,22 +961,32 @@ export const dict = {
   "settings.autoApprove.addPath": "Adicionar caminho",
   "settings.autoApprove.placeholder.command": "ex. git *",
   "settings.autoApprove.placeholder.path": "ex. *.env",
-  "settings.autoApprove.tool.read": "Ler arquivos. Permite que o agente leia arquivos correspondentes ao caminho especificado.",
-  "settings.autoApprove.tool.edit": "Modificar arquivos. Permite que o agente crie ou edite arquivos, incluindo patches e atualizações de múltiplos arquivos.",
-  "settings.autoApprove.tool.glob": "Corresponder arquivos por padrão. Permite a correspondência de arquivos usando padrões glob (ex: src/**/*.ts).",
-  "settings.autoApprove.tool.grep": "Pesquisar conteúdo de arquivos. Permite a pesquisa baseada em regex dentro de arquivos.",
-  "settings.autoApprove.tool.list": "Listar conteúdo de diretórios. Permite visualizar arquivos e pastas dentro de um diretório.",
-  "settings.autoApprove.tool.bash": "Executar comandos de terminal. Permite a execução de comandos shell (ex: git status).",
-  "settings.autoApprove.tool.task": "Iniciar subagentes. Permite iniciar subagentes especializados para tarefas específicas.",
+  "settings.autoApprove.tool.read":
+    "Ler arquivos. Permite que o agente leia arquivos correspondentes ao caminho especificado.",
+  "settings.autoApprove.tool.edit":
+    "Modificar arquivos. Permite que o agente crie ou edite arquivos, incluindo patches e atualizações de múltiplos arquivos.",
+  "settings.autoApprove.tool.glob":
+    "Corresponder arquivos por padrão. Permite a correspondência de arquivos usando padrões glob (ex: src/**/*.ts).",
+  "settings.autoApprove.tool.grep":
+    "Pesquisar conteúdo de arquivos. Permite a pesquisa baseada em regex dentro de arquivos.",
+  "settings.autoApprove.tool.list":
+    "Listar conteúdo de diretórios. Permite visualizar arquivos e pastas dentro de um diretório.",
+  "settings.autoApprove.tool.bash":
+    "Executar comandos de terminal. Permite a execução de comandos shell (ex: git status).",
+  "settings.autoApprove.tool.task":
+    "Iniciar subagentes. Permite iniciar subagentes especializados para tarefas específicas.",
   "settings.autoApprove.tool.skill": "Carregar habilidades. Permite carregar habilidades predefinidas pelo nome.",
-  "settings.autoApprove.tool.lsp": "Consultar language server. Permite executar consultas ao servidor de linguagem para inteligência de código.",
+  "settings.autoApprove.tool.lsp":
+    "Consultar language server. Permite executar consultas ao servidor de linguagem para inteligência de código.",
   "settings.autoApprove.tool.todoreadwrite":
     "Gerenciar lista de tarefas. Permite ler e atualizar a lista de tarefas interna.",
   "settings.autoApprove.tool.webfetch": "Buscar uma URL. Permite recuperar o conteúdo de uma URL específica.",
   "settings.autoApprove.tool.websearchcodesearch":
     "Pesquisar na web ou no código. Permite realizar pesquisas externas na web ou no código.",
-  "settings.autoApprove.tool.external_directory": "Acessar arquivos fora do workspace. Acionado ao acessar arquivos fora do diretório do projeto atual.",
-  "settings.autoApprove.tool.doom_loop": "Prevenir ações idênticas repetidas. Acionado quando a mesma chamada de ferramenta se repete com entrada idêntica.",
+  "settings.autoApprove.tool.external_directory":
+    "Acessar arquivos fora do workspace. Acionado ao acessar arquivos fora do diretório do projeto atual.",
+  "settings.autoApprove.tool.doom_loop":
+    "Prevenir ações idênticas repetidas. Acionado quando a mesma chamada de ferramenta se repete com entrada idêntica.",
   "settings.checkpoints.enable.title": "Ativar snapshots",
   "settings.checkpoints.enable.description": "Criar pontos de verificação antes de editar arquivos",
   "settings.context.autoCompaction.title": "Compactação automática",

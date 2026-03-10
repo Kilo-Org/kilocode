@@ -950,19 +950,23 @@ export const dict = {
   "settings.autoApprove.placeholder.command": "เช่น git *",
   "settings.autoApprove.placeholder.path": "เช่น *.env",
   "settings.autoApprove.tool.read": "อ่านไฟล์ อนุญาตให้ตัวแทน (Agent) อ่านไฟล์ที่ตรงกับเส้นทางที่ระบุ",
-  "settings.autoApprove.tool.edit": "แก้ไขไฟล์ อนุญาตให้ตัวแทน (Agent) สร้างหรือแก้ไขไฟล์ รวมถึงแพตช์ (Patch) และการอัปเดตหลายไฟล์",
+  "settings.autoApprove.tool.edit":
+    "แก้ไขไฟล์ อนุญาตให้ตัวแทน (Agent) สร้างหรือแก้ไขไฟล์ รวมถึงแพตช์ (Patch) และการอัปเดตหลายไฟล์",
   "settings.autoApprove.tool.glob": "จับคู่ไฟล์ด้วยรูปแบบ อนุญาตให้จับคู่ไฟล์โดยใช้รูปแบบ glob (เช่น src/**/*.ts)",
   "settings.autoApprove.tool.grep": "ค้นหาเนื้อหาไฟล์ อนุญาตให้ค้นหาเนื้อหาภายในไฟล์โดยใช้นิพจน์ทั่วไป (Regex)",
   "settings.autoApprove.tool.list": "แสดงเนื้อหาในไดเรกทอรี อนุญาตให้ดูไฟล์และโฟลเดอร์ภายในไดเรกทอรี",
   "settings.autoApprove.tool.bash": "เรียกใช้คำสั่งเทอร์มินัล อนุญาตให้ดำเนินการคำสั่งเชลล์ (เช่น git status)",
   "settings.autoApprove.tool.task": "เปิดใช้งานตัวแทนย่อย อนุญาตให้เริ่มต้นตัวแทนย่อยเฉพาะทางสำหรับงานเฉพาะ",
   "settings.autoApprove.tool.skill": "โหลดทักษะ อนุญาตให้โหลดทักษะที่กำหนดไว้ล่วงหน้าตามชื่อ",
-  "settings.autoApprove.tool.lsp": "สอบถามเซิร์ฟเวอร์ภาษา อนุญาตให้เรียกใช้การสืบค้นเซิร์ฟเวอร์ภาษาสำหรับระบบอัจฉริยะของโค้ด",
+  "settings.autoApprove.tool.lsp":
+    "สอบถามเซิร์ฟเวอร์ภาษา อนุญาตให้เรียกใช้การสืบค้นเซิร์ฟเวอร์ภาษาสำหรับระบบอัจฉริยะของโค้ด",
   "settings.autoApprove.tool.todoreadwrite": "จัดการรายการงาน อนุญาตให้อ่านและอัปเดตรายการงานภายใน",
   "settings.autoApprove.tool.webfetch": "ดึงข้อมูลจาก URL อนุญาตให้ดึงเนื้อหาจาก URL ที่ระบุ",
   "settings.autoApprove.tool.websearchcodesearch": "ค้นหาเว็บหรือโค้ด อนุญาตให้ทำการค้นหาเว็บหรือโค้ดภายนอก",
-  "settings.autoApprove.tool.external_directory": "เข้าถึงไฟล์นอกพื้นที่ทำงาน (Workspace) ถูกเรียกเมื่อเข้าถึงไฟล์ภายนอกไดเรกทอรีโปรเจ็กต์ปัจจุบัน",
-  "settings.autoApprove.tool.doom_loop": "ป้องกันการกระทำที่ซ้ำกัน ถูกเรียกเมื่อเครื่องมือเดิมถูกเรียกซ้ำด้วยข้อมูลนำเข้าที่เหมือนกัน",
+  "settings.autoApprove.tool.external_directory":
+    "เข้าถึงไฟล์นอกพื้นที่ทำงาน (Workspace) ถูกเรียกเมื่อเข้าถึงไฟล์ภายนอกไดเรกทอรีโปรเจ็กต์ปัจจุบัน",
+  "settings.autoApprove.tool.doom_loop":
+    "ป้องกันการกระทำที่ซ้ำกัน ถูกเรียกเมื่อเครื่องมือเดิมถูกเรียกซ้ำด้วยข้อมูลนำเข้าที่เหมือนกัน",
   "settings.checkpoints.enable.title": "เปิดใช้งานสแนปชอต",
   "settings.checkpoints.enable.description": "สร้างจุดตรวจก่อนแก้ไขไฟล์",
   "settings.context.autoCompaction.title": "การบีบอัดอัตโนมัติ",

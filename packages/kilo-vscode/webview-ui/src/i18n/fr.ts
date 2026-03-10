@@ -973,22 +973,33 @@ export const dict = {
   "settings.autoApprove.addPath": "Ajouter un chemin",
   "settings.autoApprove.placeholder.command": "ex. git *",
   "settings.autoApprove.placeholder.path": "ex. *.env",
-  "settings.autoApprove.tool.read": "Lire des fichiers. Permet à l'agent de lire les fichiers correspondant au chemin spécifié.",
-  "settings.autoApprove.tool.edit": "Modifier des fichiers. Permet à l'agent de créer ou d'éditer des fichiers, y compris les patchs et les mises à jour de plusieurs fichiers.",
-  "settings.autoApprove.tool.glob": "Faire correspondre les fichiers par modèle. Permet la correspondance de fichiers à l'aide de modèles glob (ex. src/**/*.ts).",
-  "settings.autoApprove.tool.grep": "Rechercher dans le contenu des fichiers. Permet la recherche basée sur les expressions régulières dans les fichiers.",
-  "settings.autoApprove.tool.list": "Lister le contenu du répertoire. Permet de visualiser les fichiers et dossiers dans un répertoire.",
-  "settings.autoApprove.tool.bash": "Exécuter des commandes de terminal. Permet l'exécution de commandes shell (ex. git status).",
-  "settings.autoApprove.tool.task": "Lancer des sous-agents. Permet de démarrer des sous-agents spécialisés pour des tâches spécifiques.",
-  "settings.autoApprove.tool.skill": "Charger des compétences. Permet de charger des compétences prédéfinies par leur nom.",
-  "settings.autoApprove.tool.lsp": "Interroger le serveur de langage. Permet d'exécuter des requêtes de serveur de langage pour l'intelligence du code.",
+  "settings.autoApprove.tool.read":
+    "Lire des fichiers. Permet à l'agent de lire les fichiers correspondant au chemin spécifié.",
+  "settings.autoApprove.tool.edit":
+    "Modifier des fichiers. Permet à l'agent de créer ou d'éditer des fichiers, y compris les patchs et les mises à jour de plusieurs fichiers.",
+  "settings.autoApprove.tool.glob":
+    "Faire correspondre les fichiers par modèle. Permet la correspondance de fichiers à l'aide de modèles glob (ex. src/**/*.ts).",
+  "settings.autoApprove.tool.grep":
+    "Rechercher dans le contenu des fichiers. Permet la recherche basée sur les expressions régulières dans les fichiers.",
+  "settings.autoApprove.tool.list":
+    "Lister le contenu du répertoire. Permet de visualiser les fichiers et dossiers dans un répertoire.",
+  "settings.autoApprove.tool.bash":
+    "Exécuter des commandes de terminal. Permet l'exécution de commandes shell (ex. git status).",
+  "settings.autoApprove.tool.task":
+    "Lancer des sous-agents. Permet de démarrer des sous-agents spécialisés pour des tâches spécifiques.",
+  "settings.autoApprove.tool.skill":
+    "Charger des compétences. Permet de charger des compétences prédéfinies par leur nom.",
+  "settings.autoApprove.tool.lsp":
+    "Interroger le serveur de langage. Permet d'exécuter des requêtes de serveur de langage pour l'intelligence du code.",
   "settings.autoApprove.tool.todoreadwrite":
     "Gérer la liste des tâches. Permet de lire et de mettre à jour la liste des tâches interne.",
   "settings.autoApprove.tool.webfetch": "Récupérer une URL. Permet de récupérer le contenu d'une URL spécifique.",
   "settings.autoApprove.tool.websearchcodesearch":
     "Rechercher sur le Web ou dans le code. Permet d'effectuer des recherches externes sur le Web ou dans le code.",
-  "settings.autoApprove.tool.external_directory": "Accéder aux fichiers en dehors de l'espace de travail. Déclenché lors de l'accès à des fichiers en dehors du répertoire de projet actuel.",
-  "settings.autoApprove.tool.doom_loop": "Prévenir les actions identiques répétées. Déclenché lorsque le même appel d'outil se répète avec une entrée identique.",
+  "settings.autoApprove.tool.external_directory":
+    "Accéder aux fichiers en dehors de l'espace de travail. Déclenché lors de l'accès à des fichiers en dehors du répertoire de projet actuel.",
+  "settings.autoApprove.tool.doom_loop":
+    "Prévenir les actions identiques répétées. Déclenché lorsque le même appel d'outil se répète avec une entrée identique.",
   "settings.checkpoints.enable.title": "Activer les instantanés",
   "settings.checkpoints.enable.description": "Créer des points de contrôle avant les modifications de fichiers",
   "settings.context.autoCompaction.title": "Compaction automatique",

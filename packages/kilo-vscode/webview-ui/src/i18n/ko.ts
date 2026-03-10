@@ -954,7 +954,8 @@ export const dict = {
   "settings.autoApprove.placeholder.command": "예: git *",
   "settings.autoApprove.placeholder.path": "예: *.env",
   "settings.autoApprove.tool.read": "파일 읽기. 에이전트가 지정된 경로와 일치하는 파일을 읽을 수 있도록 허용합니다.",
-  "settings.autoApprove.tool.edit": "파일 수정. 패치 및 다중 파일 업데이트를 포함하여 에이전트가 파일을 생성하거나 편집할 수 있도록 허용합니다.",
+  "settings.autoApprove.tool.edit":
+    "파일 수정. 패치 및 다중 파일 업데이트를 포함하여 에이전트가 파일을 생성하거나 편집할 수 있도록 허용합니다.",
   "settings.autoApprove.tool.glob": "패턴으로 파일 찾기. glob 패턴(예: src/**/*.ts)을 사용한 파일 찾기를 허용합니다.",
   "settings.autoApprove.tool.grep": "파일 내용 검색. 파일 내에서 정규식 기반 검색을 허용합니다.",
   "settings.autoApprove.tool.list": "디렉토리 내용 나열. 디렉토리 내의 파일 및 폴더 보기를 허용합니다.",
@@ -966,8 +967,10 @@ export const dict = {
   "settings.autoApprove.tool.webfetch": "URL 가져오기. 특정 URL에서 콘텐츠를 검색할 수 있도록 허용합니다.",
   "settings.autoApprove.tool.websearchcodesearch":
     "웹 또는 코드 검색. 외부 웹 또는 코드 검색을 수행할 수 있도록 허용합니다.",
-  "settings.autoApprove.tool.external_directory": "작업 공간 외부 파일 접근. 현재 프로젝트 디렉토리 외부의 파일에 접근할 때 트리거됩니다.",
-  "settings.autoApprove.tool.doom_loop": "반복되는 동일한 작업 방지. 동일한 입력으로 동일한 도구 호출이 반복될 때 트리거됩니다.",
+  "settings.autoApprove.tool.external_directory":
+    "작업 공간 외부 파일 접근. 현재 프로젝트 디렉토리 외부의 파일에 접근할 때 트리거됩니다.",
+  "settings.autoApprove.tool.doom_loop":
+    "반복되는 동일한 작업 방지. 동일한 입력으로 동일한 도구 호출이 반복될 때 트리거됩니다.",
   "settings.checkpoints.enable.title": "스냅샷 활성화",
   "settings.checkpoints.enable.description": "파일 편집 전 체크포인트를 생성하여 이전 상태를 복원할 수 있습니다",
   "settings.context.autoCompaction.title": "자동 압축",

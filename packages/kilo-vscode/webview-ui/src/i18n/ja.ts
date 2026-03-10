@@ -956,21 +956,29 @@ export const dict = {
   "settings.autoApprove.addPath": "パスを追加",
   "settings.autoApprove.placeholder.command": "例: git *",
   "settings.autoApprove.placeholder.path": "例: *.env",
-  "settings.autoApprove.tool.read": "ファイルを読み取る。指定されたパスに一致するファイルをエージェントが読み取ることを許可します。",
-  "settings.autoApprove.tool.edit": "ファイルを変更する。パッチや複数ファイルの更新を含め、エージェントがファイルを作成または編集することを許可します。",
-  "settings.autoApprove.tool.glob": "パターンでファイルを一致。globパターン（例：src/**/*.ts）を使用したファイルの一致を許可します。",
+  "settings.autoApprove.tool.read":
+    "ファイルを読み取る。指定されたパスに一致するファイルをエージェントが読み取ることを許可します。",
+  "settings.autoApprove.tool.edit":
+    "ファイルを変更する。パッチや複数ファイルの更新を含め、エージェントがファイルを作成または編集することを許可します。",
+  "settings.autoApprove.tool.glob":
+    "パターンでファイルを一致。globパターン（例：src/**/*.ts）を使用したファイルの一致を許可します。",
   "settings.autoApprove.tool.grep": "ファイル内容を検索。ファイル内の正規表現ベースの検索を許可します。",
-  "settings.autoApprove.tool.list": "ディレクトリの内容を一覧表示。ディレクトリ内のファイルとフォルダの表示を許可します。",
+  "settings.autoApprove.tool.list":
+    "ディレクトリの内容を一覧表示。ディレクトリ内のファイルとフォルダの表示を許可します。",
   "settings.autoApprove.tool.bash": "ターミナルコマンドを実行。シェルコマンド（例：git status）の実行を許可します。",
-  "settings.autoApprove.tool.task": "サブエージェントを起動。特定のタスク用に特化したサブエージェントを開始することを許可します。",
+  "settings.autoApprove.tool.task":
+    "サブエージェントを起動。特定のタスク用に特化したサブエージェントを開始することを許可します。",
   "settings.autoApprove.tool.skill": "スキルを読み込む。事前定義されたスキルを名前で読み込むことを許可します。",
-  "settings.autoApprove.tool.lsp": "言語サーバーにクエリ。コードインテリジェンスのために言語サーバークエリの実行を許可します。",
+  "settings.autoApprove.tool.lsp":
+    "言語サーバーにクエリ。コードインテリジェンスのために言語サーバークエリの実行を許可します。",
   "settings.autoApprove.tool.todoreadwrite": "タスクリストの管理。内部タスクリストの読み取りと更新を許可します。",
   "settings.autoApprove.tool.webfetch": "URLをフェッチ。特定のURLからコンテンツを取得することを許可します。",
   "settings.autoApprove.tool.websearchcodesearch":
     "Webまたはコードの検索。外部のWebまたはコード検索の実行を許可します。",
-  "settings.autoApprove.tool.external_directory": "ワークスペース外のファイルにアクセス。現在のプロジェクトディレクトリ外のファイルにアクセスしたときにトリガーされます。",
-  "settings.autoApprove.tool.doom_loop": "繰り返し同一のアクションを防止。同じツール呼び出しが同一の入力で繰り返されたときにトリガーされます。",
+  "settings.autoApprove.tool.external_directory":
+    "ワークスペース外のファイルにアクセス。現在のプロジェクトディレクトリ外のファイルにアクセスしたときにトリガーされます。",
+  "settings.autoApprove.tool.doom_loop":
+    "繰り返し同一のアクションを防止。同じツール呼び出しが同一の入力で繰り返されたときにトリガーされます。",
   "settings.checkpoints.enable.title": "スナップショットを有効にする",
   "settings.checkpoints.enable.description": "ファイル編集前にチェックポイントを作成して以前の状態を復元可能にする",
   "settings.context.autoCompaction.title": "自動圧縮",

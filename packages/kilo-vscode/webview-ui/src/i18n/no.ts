@@ -959,21 +959,28 @@ export const dict = {
   "settings.autoApprove.placeholder.command": "f.eks. git *",
   "settings.autoApprove.placeholder.path": "f.eks. *.env",
   "settings.autoApprove.tool.read": "Les filer. Tillater agenten å lese filer som samsvarer med den angitte stien.",
-  "settings.autoApprove.tool.edit": "Endre filer. Tillater agenten å opprette eller redigere filer, inkludert oppdateringer og flerfilsoppdateringer.",
-  "settings.autoApprove.tool.glob": "Søk etter filer med mønster. Tillater filsøk ved bruk av glob-mønstre (f.eks. src/**/*.ts).",
+  "settings.autoApprove.tool.edit":
+    "Endre filer. Tillater agenten å opprette eller redigere filer, inkludert oppdateringer og flerfilsoppdateringer.",
+  "settings.autoApprove.tool.glob":
+    "Søk etter filer med mønster. Tillater filsøk ved bruk av glob-mønstre (f.eks. src/**/*.ts).",
   "settings.autoApprove.tool.grep": "Søk i filinnhold. Tillater regex-basert søk inne i filer.",
   "settings.autoApprove.tool.list": "Vis kataloginnhold. Tillater visning av filer og mapper i en katalog.",
-  "settings.autoApprove.tool.bash": "Kjør terminalkommandoer. Tillater kjøring av shell-kommandoer (f.eks. git status).",
-  "settings.autoApprove.tool.task": "Start underagenter. Tillater start av spesialiserte underagenter for spesifikke oppgaver.",
-  "settings.autoApprove.tool.skill": "Last inn ferdigheter. Tillater innlasting av forhåndsdefinerte ferdigheter etter navn.",
+  "settings.autoApprove.tool.bash":
+    "Kjør terminalkommandoer. Tillater kjøring av shell-kommandoer (f.eks. git status).",
+  "settings.autoApprove.tool.task":
+    "Start underagenter. Tillater start av spesialiserte underagenter for spesifikke oppgaver.",
+  "settings.autoApprove.tool.skill":
+    "Last inn ferdigheter. Tillater innlasting av forhåndsdefinerte ferdigheter etter navn.",
   "settings.autoApprove.tool.lsp": "Spør språkserver. Tillater kjøring av språkserverforespørsler for kodeintelligens.",
   "settings.autoApprove.tool.todoreadwrite":
     "Administrer oppgaveliste. Tillater lesing og oppdatering av den interne oppgavelisten.",
   "settings.autoApprove.tool.webfetch": "Hent en URL. Tillater henting av innhold fra en spesifikk URL.",
   "settings.autoApprove.tool.websearchcodesearch":
     "Søk på nettet eller i kode. Tillater å utføre eksterne nett- eller kodesøk.",
-  "settings.autoApprove.tool.external_directory": "Få tilgang til filer utenfor arbeidsområdet. Utløses ved tilgang til filer utenfor gjeldende prosjektkatalog.",
-  "settings.autoApprove.tool.doom_loop": "Forhindre gjentatte identiske handlinger. Utløses når det samme verktøyanropet gjentas med identisk inndata.",
+  "settings.autoApprove.tool.external_directory":
+    "Få tilgang til filer utenfor arbeidsområdet. Utløses ved tilgang til filer utenfor gjeldende prosjektkatalog.",
+  "settings.autoApprove.tool.doom_loop":
+    "Forhindre gjentatte identiske handlinger. Utløses når det samme verktøyanropet gjentas med identisk inndata.",
   "settings.checkpoints.enable.title": "Aktiver øyeblikksbilder",
   "settings.checkpoints.enable.description": "Opprett kontrollpunkter før filredigeringer",
   "settings.context.autoCompaction.title": "Automatisk komprimering",

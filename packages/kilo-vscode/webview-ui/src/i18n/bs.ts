@@ -960,22 +960,33 @@ export const dict = {
   "settings.autoApprove.addPath": "Dodaj putanju",
   "settings.autoApprove.placeholder.command": "npr. git *",
   "settings.autoApprove.placeholder.path": "npr. *.env",
-  "settings.autoApprove.tool.read": "Čitanje datoteka. Omogućava agentu da čita datoteke koje odgovaraju navedenoj putanji.",
-  "settings.autoApprove.tool.edit": "Izmjena datoteka. Omogućava agentu da kreira ili uređuje datoteke, uključujući zakrpe i ažuriranja više datoteka.",
-  "settings.autoApprove.tool.glob": "Podudaranje datoteka po uzorku. Omogućava podudaranje datoteka koristeći glob uzorke (npr. src/**/*.ts).",
-  "settings.autoApprove.tool.grep": "Pretraživanje sadržaja datoteka. Omogućava pretraživanje zasnovano na regex-u unutar datoteka.",
-  "settings.autoApprove.tool.list": "Prikaz sadržaja direktorija. Omogućava pregled datoteka i fascikli unutar direktorija.",
-  "settings.autoApprove.tool.bash": "Pokretanje terminalskih komandi. Omogućava izvršavanje shell komandi (npr. git status).",
-  "settings.autoApprove.tool.task": "Pokretanje pod-agenata. Omogućava pokretanje specijalizovanih pod-agenata za određene zadatke.",
-  "settings.autoApprove.tool.skill": "Učitavanje vještina. Omogućava učitavanje unaprijed definisanih vještina po imenu.",
-  "settings.autoApprove.tool.lsp": "Upit ka jezičkom serveru. Omogućava pokretanje upita jezičkom serveru za analizu koda.",
+  "settings.autoApprove.tool.read":
+    "Čitanje datoteka. Omogućava agentu da čita datoteke koje odgovaraju navedenoj putanji.",
+  "settings.autoApprove.tool.edit":
+    "Izmjena datoteka. Omogućava agentu da kreira ili uređuje datoteke, uključujući zakrpe i ažuriranja više datoteka.",
+  "settings.autoApprove.tool.glob":
+    "Podudaranje datoteka po uzorku. Omogućava podudaranje datoteka koristeći glob uzorke (npr. src/**/*.ts).",
+  "settings.autoApprove.tool.grep":
+    "Pretraživanje sadržaja datoteka. Omogućava pretraživanje zasnovano na regex-u unutar datoteka.",
+  "settings.autoApprove.tool.list":
+    "Prikaz sadržaja direktorija. Omogućava pregled datoteka i fascikli unutar direktorija.",
+  "settings.autoApprove.tool.bash":
+    "Pokretanje terminalskih komandi. Omogućava izvršavanje shell komandi (npr. git status).",
+  "settings.autoApprove.tool.task":
+    "Pokretanje pod-agenata. Omogućava pokretanje specijalizovanih pod-agenata za određene zadatke.",
+  "settings.autoApprove.tool.skill":
+    "Učitavanje vještina. Omogućava učitavanje unaprijed definisanih vještina po imenu.",
+  "settings.autoApprove.tool.lsp":
+    "Upit ka jezičkom serveru. Omogućava pokretanje upita jezičkom serveru za analizu koda.",
   "settings.autoApprove.tool.todoreadwrite":
     "Upravljanje listom zadataka. Dozvoljava čitanje i ažuriranje interne liste zadataka.",
   "settings.autoApprove.tool.webfetch": "Preuzimanje URL-a. Omogućava preuzimanje sadržaja sa određenog URL-a.",
   "settings.autoApprove.tool.websearchcodesearch":
     "Pretraga weba ili koda. Dozvoljava izvršavanje eksternih pretraga weba ili koda.",
-  "settings.autoApprove.tool.external_directory": "Pristup datotekama izvan radnog prostora. Pokreće se prilikom pristupa datotekama izvan trenutnog direktorija projekta.",
-  "settings.autoApprove.tool.doom_loop": "Sprečavanje ponavljanja identičnih radnji. Pokreće se kada se isti poziv alata ponovi sa identičnim unosom.",
+  "settings.autoApprove.tool.external_directory":
+    "Pristup datotekama izvan radnog prostora. Pokreće se prilikom pristupa datotekama izvan trenutnog direktorija projekta.",
+  "settings.autoApprove.tool.doom_loop":
+    "Sprečavanje ponavljanja identičnih radnji. Pokreće se kada se isti poziv alata ponovi sa identičnim unosom.",
   "settings.checkpoints.enable.title": "Omogući snimke",
   "settings.checkpoints.enable.description": "Kreiraj kontrolne točke prije uređivanja datoteka",
   "settings.context.autoCompaction.title": "Automatska kompresija",

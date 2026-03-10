@@ -948,9 +948,12 @@ export const dict = {
   "settings.autoApprove.placeholder.command": "مثال: git *",
   "settings.autoApprove.placeholder.path": "مثال: *.env",
   "settings.autoApprove.tool.read": "قراءة الملفات. يسمح للوكيل بقراءة الملفات التي تطابق المسار المحدد.",
-  "settings.autoApprove.tool.edit": "تعديل الملفات. يسمح للوكيل بإنشاء أو تحرير الملفات، بما في ذلك التصحيحات والتحديثات متعددة الملفات.",
-  "settings.autoApprove.tool.glob": "مطابقة الملفات بالنمط. يسمح بمطابقة الملفات باستخدام أنماط glob (مثل src/**/*.ts).",
-  "settings.autoApprove.tool.grep": "البحث في محتويات الملفات. يسمح بالبحث المستند إلى التعبيرات النمطية (regex) داخل الملفات.",
+  "settings.autoApprove.tool.edit":
+    "تعديل الملفات. يسمح للوكيل بإنشاء أو تحرير الملفات، بما في ذلك التصحيحات والتحديثات متعددة الملفات.",
+  "settings.autoApprove.tool.glob":
+    "مطابقة الملفات بالنمط. يسمح بمطابقة الملفات باستخدام أنماط glob (مثل src/**/*.ts).",
+  "settings.autoApprove.tool.grep":
+    "البحث في محتويات الملفات. يسمح بالبحث المستند إلى التعبيرات النمطية (regex) داخل الملفات.",
   "settings.autoApprove.tool.list": "عرض محتويات المجلد. يسمح بعرض الملفات والمجلدات داخل الدليل.",
   "settings.autoApprove.tool.bash": "تنفيذ أوامر الطرفية. يسمح بتنفيذ أوامر الصدفة (مثل git status).",
   "settings.autoApprove.tool.task": "إطلاق وكلاء فرعيين. يسمح ببدء وكلاء فرعيين متخصصين لمهام محددة.",
@@ -960,8 +963,10 @@ export const dict = {
   "settings.autoApprove.tool.webfetch": "جلب رابط ويب. يسمح باسترداد المحتوى من رابط (URL) محدد.",
   "settings.autoApprove.tool.websearchcodesearch":
     "البحث في الويب أو الكود. يسمح بإجراء عمليات بحث خارجية في الويب أو الكود.",
-  "settings.autoApprove.tool.external_directory": "الوصول للملفات خارج مساحة العمل. يتم تشغيله عند الوصول إلى ملفات خارج مسار المشروع الحالي.",
-  "settings.autoApprove.tool.doom_loop": "منع الإجراءات المتطابقة المتكررة. يتم تشغيله عندما يتكرر نفس استدعاء الأداة بمدخلات متطابقة.",
+  "settings.autoApprove.tool.external_directory":
+    "الوصول للملفات خارج مساحة العمل. يتم تشغيله عند الوصول إلى ملفات خارج مسار المشروع الحالي.",
+  "settings.autoApprove.tool.doom_loop":
+    "منع الإجراءات المتطابقة المتكررة. يتم تشغيله عندما يتكرر نفس استدعاء الأداة بمدخلات متطابقة.",
   "settings.checkpoints.enable.title": "تمكين اللقطات",
   "settings.checkpoints.enable.description": "إنشاء نقاط فحص قبل تحرير الملفات",
   "settings.context.autoCompaction.title": "ضغط تلقائي",
