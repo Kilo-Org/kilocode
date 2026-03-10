@@ -1,6 +1,7 @@
 ---
 title: "Auto-launch Configuration"
 description: "Configure automatic agent launching"
+platform: classic
 ---
 
 # Auto-Launch Configuration

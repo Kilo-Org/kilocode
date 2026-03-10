@@ -1,3 +1,7 @@
+---
+platform: classic
+---
+
 # browser_action
 
 The `browser_action` tool enables web automation and interaction via a Puppeteer-controlled browser. It allows Kilo Code to launch browsers, navigate to websites, click elements, type text, and scroll pages with visual feedback through screenshots.

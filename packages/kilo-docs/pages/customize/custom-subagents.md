@@ -1,6 +1,7 @@
 ---
 title: "Custom Subagents"
 description: "Create and configure custom subagents in Kilo Code's CLI"
+platform: next
 ---
 
 # Custom Subagents

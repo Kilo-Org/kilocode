@@ -1,6 +1,7 @@
 ---
 title: "Auto-Approving Actions"
 description: "Configure automatic approval settings for Kilo Code operations"
+platform: classic
 ---
 
 # Auto-Approving Actions

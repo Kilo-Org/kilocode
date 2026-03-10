@@ -1,6 +1,7 @@
 ---
 title: "Skills"
 description: "Extend Kilo Code capabilities with skills"
+platform: next
 ---
 
 # Skills

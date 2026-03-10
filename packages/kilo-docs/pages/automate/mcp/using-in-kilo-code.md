@@ -1,6 +1,7 @@
 ---
 title: "Using MCP in Kilo Code"
 description: "How to use MCP servers in Kilo Code"
+platform: classic
 ---
 
 # Using MCP in Kilo Code

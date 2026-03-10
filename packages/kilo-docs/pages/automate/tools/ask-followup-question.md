@@ -1,3 +1,7 @@
+---
+platform: classic
+---
+
 # ask_followup_question
 
 The `ask_followup_question` tool enables interactive communication by asking specific questions to gather additional information needed to complete tasks effectively.

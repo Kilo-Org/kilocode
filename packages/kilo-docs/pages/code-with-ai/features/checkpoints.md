@@ -1,6 +1,7 @@
 ---
 title: "Checkpoints"
 description: "Save and restore code states with checkpoints"
+platform: classic
 ---
 
 # Checkpoints

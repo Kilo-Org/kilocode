@@ -1,3 +1,7 @@
+---
+platform: classic
+---
+
 # read_file
 
 The `read_file` tool examines the contents of files in a project. It allows Kilo Code to understand code, configuration files, and documentation to provide better assistance.

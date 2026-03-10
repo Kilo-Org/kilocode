@@ -1,6 +1,7 @@
 ---
 title: "Agent Manager"
 description: "Manage and orchestrate multiple AI agents"
+platform: next
 ---
 
 # Agent Manager

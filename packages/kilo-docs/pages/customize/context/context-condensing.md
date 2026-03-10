@@ -1,6 +1,7 @@
 ---
 title: "Context Condensing"
 description: "Manage conversation context to optimize token usage and maintain long sessions"
+platform: classic
 ---
 
 # Context Condensing

@@ -1,6 +1,7 @@
 ---
 title: "Browser Use"
 description: "Using Kilo Code to interact with web browsers"
+platform: classic
 ---
 
 # Browser Use

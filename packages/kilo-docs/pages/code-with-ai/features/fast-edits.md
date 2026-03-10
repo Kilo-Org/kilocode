@@ -1,6 +1,7 @@
 ---
 title: "Fast Edits"
 description: "Quick inline code edits with Kilo Code"
+platform: classic
 ---
 
 # Fast Edits

@@ -1,6 +1,7 @@
 ---
 title: Tool Use Details
 description: Learn how Kilo Code's tools automate your development workflow
+platform: classic
 ---
 
 # Tool Use Overview

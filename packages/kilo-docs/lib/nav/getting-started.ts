@@ -28,10 +28,19 @@ export const GettingStartedNav: NavSection[] = [
       {
         href: "/getting-started/settings",
         children: "Settings",
+        platform: "classic",
         subLinks: [
-          { href: "/getting-started/settings/auto-approving-actions", children: "Auto-Approving Actions" },
-          { href: "/getting-started/settings/auto-cleanup", children: "Auto Cleanup" },
-          { href: "/getting-started/settings/system-notifications", children: "System Notifications" },
+          {
+            href: "/getting-started/settings/auto-approving-actions",
+            children: "Auto-Approving Actions",
+            platform: "classic",
+          },
+          { href: "/getting-started/settings/auto-cleanup", children: "Auto Cleanup", platform: "classic" },
+          {
+            href: "/getting-started/settings/system-notifications",
+            children: "System Notifications",
+            platform: "classic",
+          },
         ],
       },
       { href: "/getting-started/adding-credits", children: "Adding Credits" },

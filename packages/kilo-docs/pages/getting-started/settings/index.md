@@ -1,6 +1,7 @@
 ---
 title: "Settings"
 description: "Configure Kilo Code settings and preferences"
+platform: classic
 ---
 
 # Settings

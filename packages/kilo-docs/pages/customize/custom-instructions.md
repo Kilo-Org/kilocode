@@ -1,6 +1,7 @@
 ---
 title: "Custom Instructions"
 description: "Provide custom instructions to guide Kilo Code"
+platform: classic
 ---
 
 # Custom Instructions

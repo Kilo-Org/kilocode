@@ -1,6 +1,7 @@
 ---
 title: How Tools Work
 description: Learn how Kilo Code's tools automate your development workflow
+platform: classic
 ---
 
 # How Tools Work

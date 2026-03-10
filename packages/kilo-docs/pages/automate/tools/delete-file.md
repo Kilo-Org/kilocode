@@ -1,3 +1,7 @@
+---
+platform: classic
+---
+
 # delete_file
 
 Delete a file or directory from the workspace. This tool provides a safe alternative to rm commands and works across all platforms.

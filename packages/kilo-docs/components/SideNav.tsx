@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react"
 import { useRouter } from "next/router"
 import Link from "next/link"
-import { SectionNav } from "../lib/types"
+import { SectionNav, NavLink } from "../lib/types"
 import { Nav } from "../lib/nav"
+import { useVersion, isVisibleForVersion } from "../lib/VersionContext"
 
 // Define navigation items for each major section
 const sectionNavItems: SectionNav = {
@@ -72,6 +73,7 @@ interface SideNavProps {
 
 export function SideNav({ isMobileOpen = false, onMobileClose }: SideNavProps) {
   const router = useRouter()
+  const { version } = useVersion()
   const currentSection = getCurrentSection(router.pathname)
 
   // Track which view is shown: 'main' or 'section'
@@ -248,64 +250,69 @@ export function SideNav({ isMobileOpen = false, onMobileClose }: SideNavProps) {
       </button>
 
       <div className="section-content">
-        {sectionItems.map((group) => (
-          <div key={group.title} className="nav-group">
-            <span className="nav-group-title">{group.title}</span>
-            <ul className="nav-links">
-              {group.links.map((link) => {
-                const hasSubLinks = link.subLinks && link.subLinks.length > 0
-                const isExpanded = expandedItems.has(link.href)
-                const hasActiveChild = link.subLinks?.some((subLink) => router.pathname === subLink.href)
-                // Parent should only be active if it's the current page AND it has no active children
-                const active = router.pathname === link.href && !hasActiveChild
+        {sectionItems.map((group) => {
+          const filteredLinks = group.links.filter((link) => isVisibleForVersion(link.platform, version))
+          if (filteredLinks.length === 0) return null
+          return (
+            <div key={group.title} className="nav-group">
+              <span className="nav-group-title">{group.title}</span>
+              <ul className="nav-links">
+                {filteredLinks.map((link) => {
+                  const visibleSubLinks = link.subLinks?.filter((sub) => isVisibleForVersion(sub.platform, version))
+                  const hasSubLinks = visibleSubLinks && visibleSubLinks.length > 0
+                  const isExpanded = expandedItems.has(link.href)
+                  const hasActiveChild = link.subLinks?.some((subLink) => router.pathname === subLink.href)
+                  // Parent should only be active if it's the current page AND it has no active children
+                  const active = router.pathname === link.href && !hasActiveChild
 
-                return (
-                  <li key={link.href} className={`${active ? "active" : ""} ${hasSubLinks ? "has-children" : ""}`}>
-                    {hasSubLinks ? (
-                      <>
-                        <div className="nav-item-with-toggle">
-                          <Link href={link.href} onClick={handleLinkClick}>
-                            {link.children}
-                          </Link>
-                          <button
-                            type="button"
-                            className="toggle-button"
-                            onClick={(e) => {
-                              e.preventDefault()
-                              toggleExpanded(link.href)
-                            }}
-                            aria-label={isExpanded ? "Collapse" : "Expand"}
-                          >
-                            {isExpanded ? <ChevronDown /> : <ChevronRight />}
-                          </button>
-                        </div>
-                        {isExpanded && (
-                          <ul className="sub-links">
-                            {link.subLinks.map((subLink) => {
-                              // Only mark sublink as active if it's an exact match
-                              const subActive = router.pathname === subLink.href
-                              return (
-                                <li key={subLink.href} className={subActive ? "active" : ""}>
-                                  <Link href={subLink.href} onClick={handleLinkClick}>
-                                    {subLink.children}
-                                  </Link>
-                                </li>
-                              )
-                            })}
-                          </ul>
-                        )}
-                      </>
-                    ) : (
-                      <Link href={link.href} onClick={handleLinkClick}>
-                        {link.children}
-                      </Link>
-                    )}
-                  </li>
-                )
-              })}
-            </ul>
-          </div>
-        ))}
+                  return (
+                    <li key={link.href} className={`${active ? "active" : ""} ${hasSubLinks ? "has-children" : ""}`}>
+                      {hasSubLinks ? (
+                        <>
+                          <div className="nav-item-with-toggle">
+                            <Link href={link.href} onClick={handleLinkClick}>
+                              {link.children}
+                            </Link>
+                            <button
+                              type="button"
+                              className="toggle-button"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                toggleExpanded(link.href)
+                              }}
+                              aria-label={isExpanded ? "Collapse" : "Expand"}
+                            >
+                              {isExpanded ? <ChevronDown /> : <ChevronRight />}
+                            </button>
+                          </div>
+                          {isExpanded && (
+                            <ul className="sub-links">
+                              {visibleSubLinks.map((subLink) => {
+                                // Only mark sublink as active if it's an exact match
+                                const subActive = router.pathname === subLink.href
+                                return (
+                                  <li key={subLink.href} className={subActive ? "active" : ""}>
+                                    <Link href={subLink.href} onClick={handleLinkClick}>
+                                      {subLink.children}
+                                    </Link>
+                                  </li>
+                                )
+                              })}
+                            </ul>
+                          )}
+                        </>
+                      ) : (
+                        <Link href={link.href} onClick={handleLinkClick}>
+                          {link.children}
+                        </Link>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          )
+        })}
       </div>
 
       <style jsx>{`

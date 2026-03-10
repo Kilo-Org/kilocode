@@ -1,6 +1,7 @@
 ---
 title: "Using MCP in CLI"
 description: "How to configure and use MCP servers in the Kilo CLI"
+platform: next
 ---
 
 # Using MCP in the CLI

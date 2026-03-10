@@ -1,6 +1,7 @@
 ---
 title: "Shell Integration"
 description: "Integrate Kilo Code with your shell environment"
+platform: classic
 ---
 
 # Terminal Shell Integration

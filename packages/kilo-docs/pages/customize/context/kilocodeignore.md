@@ -1,6 +1,7 @@
 ---
 title: ".kilocodeignore"
 description: "Control which files Kilo Code can access"
+platform: classic
 ---
 
 # .kilocodeignore
