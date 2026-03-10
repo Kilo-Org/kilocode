@@ -29,7 +29,7 @@ Do not use the **Update** feature in the Control UI to update KiloClaw. Use **Re
 
 ## Changing Models
 
-The Control UI Chat tab doubles as a command line for model management. KiloClaw exposes 335+ models through the `kilocode` provider â far more than the [dashboard dropdown](/docs/kiloclaw/dashboard#changing-the-model) â and you can browse and switch between them without leaving the chat.
+The Control UI Chat tab doubles as a command line for model management. KiloClaw exposes 335+ models through the `kilocode` provider and you can browse and switch between them without leaving the chat.
 
 | Command                              | Description                                                                     |
 | ------------------------------------ | ------------------------------------------------------------------------------- |
