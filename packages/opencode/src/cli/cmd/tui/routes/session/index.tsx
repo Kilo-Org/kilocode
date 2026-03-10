@@ -207,17 +207,27 @@ export function Session() {
 
   // kilocode_change start - auto-approve permissions when auto mode is active
   const replied = new Set<string>()
+  const inflight = new Set<string>()
   createEffect(() => {
     if (!auto.enabled()) return
     for (const request of permissions()) {
       if (replied.has(request.id)) continue
-      replied.add(request.id)
+      if (inflight.has(request.id)) continue
+      inflight.add(request.id)
       sdk.client.permission
         .reply({
           reply: "once",
           requestID: request.id,
         })
-        .catch((err) => console.error("auto-reply failed", err))
+        .then(() => {
+          replied.add(request.id)
+        })
+        .catch((err) => {
+          console.error("auto-reply failed, will retry", err)
+        })
+        .finally(() => {
+          inflight.delete(request.id)
+        })
     }
   })
   // kilocode_change end

@@ -129,14 +129,30 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
 
         case "permission.asked": {
           const request = event.properties
-          // kilocode_change start - auto-approve immediately, skip store
+          // kilocode_change start - auto-approve immediately, fall back to store on failure
           if (auto.enabled()) {
             sdk.client.permission
               .reply({
                 reply: "once",
                 requestID: request.id,
               })
-              .catch((err) => Log.Default.debug("auto-reply failed", { err }))
+              .catch((err) => {
+                Log.Default.debug("auto-reply failed, adding to store for retry", { err })
+                const existing = store.permission[request.sessionID]
+                if (!existing) {
+                  setStore("permission", request.sessionID, [request])
+                  return
+                }
+                const match = Binary.search(existing, request.id, (r) => r.id)
+                if (match.found) return
+                setStore(
+                  "permission",
+                  request.sessionID,
+                  produce((draft) => {
+                    draft.splice(match.index, 0, request)
+                  }),
+                )
+              })
             break
           }
           // kilocode_change end
