@@ -12,6 +12,7 @@ import type {
   McpConfig,
   Config,
   KilocodeNotification,
+  PermissionRequest,
 } from "./types"
 import { extractHttpErrorMessage, parseSSEDataLine } from "./http-utils"
 
@@ -292,6 +293,13 @@ export class HttpClient {
   // ============================================
   // Permission Methods
   // ============================================
+
+  /**
+   * List all pending permission requests across all sessions.
+   */
+  async listPendingPermissions(directory: string): Promise<PermissionRequest[]> {
+    return this.request<PermissionRequest[]>("GET", "/permission", undefined, { directory })
+  }
 
   /**
    * Respond to a permission request.

@@ -504,6 +504,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               this.postMessage({ type: "profileData", data: profileData })
             }
             await this.syncWebviewState("sse-connected")
+            await this.fetchAndSendPendingPermissions()
           } catch (error) {
             console.error("[Kilo New] KiloProvider: ❌ Failed during connected state handling:", error)
             this.postMessage({
@@ -671,6 +672,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         sessionID,
         messages,
       })
+
+      // Recover any permission.asked events that were missed while the webview
+      // was loading or during an SSE reconnection (fire-and-forget).
+      void this.fetchAndSendPendingPermissions()
     } catch (error) {
       // Silently ignore aborted requests — the user switched to a different session
       if (abort.signal.aborted) return
@@ -716,6 +721,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         sessionID,
         messages,
       })
+
+      // Recover any permission.asked events that were missed while the child
+      // session was not yet tracked (fire-and-forget).
+      void this.fetchAndSendPendingPermissions()
     } catch (err) {
       console.error("[Kilo New] KiloProvider: Failed to sync child session:", err)
     }
@@ -1146,6 +1155,37 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         type: "error",
         message: error instanceof Error ? error.message : "Failed to compact session",
       })
+    }
+  }
+
+  /**
+   * Fetch all pending permissions from the backend and forward any that belong
+   * to tracked sessions to the webview. Called after SSE reconnects and after
+   * syncing a session so that missed permission.asked events are recovered
+   * instead of leaving the server blocked indefinitely.
+   */
+  private async fetchAndSendPendingPermissions(): Promise<void> {
+    if (!this.httpClient) return
+    try {
+      const workspaceDir = this.getWorkspaceDirectory()
+      const permissions = await this.httpClient.listPendingPermissions(workspaceDir)
+      for (const perm of permissions) {
+        if (!this.trackedSessionIds.has(perm.sessionID)) continue
+        this.postMessage({
+          type: "permissionRequest",
+          permission: {
+            id: perm.id,
+            sessionID: perm.sessionID,
+            toolName: perm.permission,
+            patterns: perm.patterns ?? [],
+            args: perm.metadata,
+            message: `Permission required: ${perm.permission}`,
+            tool: perm.tool,
+          },
+        })
+      }
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to fetch pending permissions:", error)
     }
   }
 
