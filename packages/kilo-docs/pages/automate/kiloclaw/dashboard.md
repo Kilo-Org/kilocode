@@ -40,8 +40,10 @@ Available when the instance is **running**.
 
 Stops the machine, applies your current configuration (environment variables, secrets, channel tokens), and starts it again. When redeploying, you have two options:
 
-- **Redeploy** — Redeploys using the same platform version your instance was originally set up with. Use this when you only need to apply configuration changes without changing the underlying platform.
-- **Upgrade & Redeploy** — Upgrades your instance to the latest supported platform version, then redeploys. Use this to pick up new features and fixes from the changelog.
+- **Redeploy** — Redeploys using the same platform version your instance is currently running. Use this when you only need to apply configuration changes without changing the underlying platform.
+- **Upgrade & Redeploy** — Upgrades your instance to the latest platform version supported by Kilo, then redeploys. Use this to pick up new features and fixes from the changelog.
+
+If you have a [version pin](#version-pinning) set, both options will use your pinned version instead.
 
 **Your files, git repos, cron jobs, and everything on your persistent volume are preserved.** Redeploy is not a factory reset — think of it as "apply config and restart" (or "upgrade and restart" if you choose **Upgrade & Redeploy**).
 
@@ -87,6 +89,51 @@ You can connect Telegram, Discord, and Slack by entering bot tokens in the Setti
 {% callout type="info" %}
 After saving channel tokens, you need to **Redeploy** or **Restart OpenClaw** for the changes to take effect.
 {% /callout %}
+
+### Version Pinning
+
+By default, your instance follows the **latest** OpenClaw version — every time you use **Upgrade & Redeploy**, you get the newest available release supported by Kilo. Version pinning lets you lock your instance to a specific OpenClaw version so you can control exactly when you upgrade.
+
+#### Pinning to a version
+
+1. Open the **Settings** tab on your dashboard
+2. In the **Version Pinning** card, select a version from the dropdown (each option shows the OpenClaw version and variant, e.g. `2026.3.2 / default`)
+3. Optionally add a reason for the pin
+4. Click **Pin to this version**
+
+{% callout type="note" %}
+Pinning does not immediately change your running instance. After pinning, use **Redeploy** to apply the pinned version. Similarly, after unpinning, use **Upgrade & Redeploy** to move back to the latest version.
+{% /callout %}
+
+#### Unpinning
+
+To return to following the latest version, click **Unpin** in the Version Pinning card. Your instance will resume tracking the latest release the next time you use **Upgrade & Redeploy**.
+
+#### Current version
+
+When your instance is running, the Settings tab shows an **OpenClaw Version** section with three fields:
+
+- **Running Version** — The OpenClaw version currently active on your machine
+- **Image Version** — The version baked into the platform image your instance was deployed with
+- **Variant** — The image variant (e.g. `default`)
+
+If the running version differs from the image version (for example, if OpenClaw was updated on the machine independently), a **Modified** badge appears. Redeploying will replace the running version with the image version.
+
+#### Current pin status
+
+The Version Pinning card shows your current state:
+
+- **Following latest** — No pin is set. You receive the newest version on each upgrade.
+- **Pinned to {version} / {variant}** — Your instance is locked to that specific version. The card also shows the image tag and the reason (if provided).
+
+#### How pinning interacts with redeploy
+
+| Action                 | Pinned                              | Unpinned                        |
+| ---------------------- | ----------------------------------- | ------------------------------- |
+| **Redeploy**           | Redeploys using your pinned version | Redeploys using current version |
+| **Upgrade & Redeploy** | Redeploys using your pinned version | Upgrades to the latest version  |
+
+When pinned, both redeploy options use your pinned version — the instance will not upgrade past it until you unpin.
 
 ### Stop, Destroy & Restore
 
