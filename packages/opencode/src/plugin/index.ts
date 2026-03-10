@@ -14,6 +14,7 @@ import { CopilotAuthPlugin } from "./copilot"
 import { gitlabAuthPlugin as GitlabAuthPlugin } from "@gitlab/opencode-gitlab-auth"
 
 import { KiloAuthPlugin } from "@kilocode/kilo-gateway" // kilocode_change
+import { OcaAuthPlugin } from "@/kilocode/oca/plugin" // kilocode_change
 
 export namespace Plugin {
   const log = Log.create({ service: "plugin" })
@@ -24,6 +25,7 @@ export namespace Plugin {
   // kilocode_change start
   const INTERNAL_PLUGINS: PluginInstance[] = [
     KiloAuthPlugin,
+    OcaAuthPlugin, // kilocode_change
     CodexAuthPlugin,
     CopilotAuthPlugin,
     GitlabAuthPlugin as unknown as PluginInstance,
