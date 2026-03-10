@@ -745,6 +745,7 @@ export class WorktreeManager {
   }
 
   private async createFromPRImpl(url: string): Promise<CreateWorktreeResult> {
+    await this.ensureGitAvailable()
     const parsed = parsePRUrl(url)
     if (!parsed) throw new Error("Invalid PR URL. Expected: https://github.com/owner/repo/pull/123")
 
