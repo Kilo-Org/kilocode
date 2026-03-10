@@ -40,17 +40,24 @@ function extractSection(content: string, heading: string): string | undefined {
       inCodeFence = !inCodeFence
       continue
     }
-    if (!inCodeFence && /^\s{0,3}#{1,2}[^#]/.test(line)) {
+    // Skip indented code blocks (4+ spaces)
+    if (!inCodeFence && /^\s{4,}/.test(line)) {
+      continue
+    }
+    if (
+      !inCodeFence &&
+      (/^\s{0,3}#{1,6}[^#]/.test(line) ||
+        (i > start + 1 && lines[i - 1].trim() && !lines[i - 1].trim().startsWith("#") && /^\s*[=-]{3,}\s*$/.test(line)))
+    ) {
       end = i
       break
     }
   }
 
-  const section = lines
-    .slice(start + 1, end)
-    .join("\n")
-    .trim()
-  return section || undefined
+  const rawSection = lines.slice(start + 1, end).join("\n")
+  // Trim only leading/trailing empty lines, preserve internal formatting
+  const trimmedSection = rawSection.replace(/^\n+|\n+$/g, "")
+  return trimmedSection || undefined
 }
 
 async function loadInstructionsFromAgentsMd(repoPath: string): Promise<{ instructions?: string; found: boolean }> {
