@@ -20,7 +20,7 @@ export const SettingsPanel: Story = {
   render: () => (
     <StoryProviders>
       <div style={{ width: "420px", height: "700px", display: "flex", "flex-direction": "column" }}>
-        <Settings onBack={() => {}} />
+        <Settings />
       </div>
     </StoryProviders>
   ),
