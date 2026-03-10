@@ -80,7 +80,14 @@ export const TuiThreadCommand = cmd({
       .option("agent", {
         type: "string",
         describe: "agent to use",
+      })
+      // kilocode_change start - auto-approve all permissions in TUI
+      .option("auto", {
+        type: "boolean",
+        describe: "auto-approve all permissions",
+        default: false,
       }),
+  // kilocode_change end
   handler: async (args) => {
     // Keep ENABLE_PROCESSED_INPUT cleared even if other code flips it.
     // (Important when running under `bun run` wrappers on Windows.)
@@ -278,6 +285,7 @@ export const TuiThreadCommand = cmd({
           model: args.model,
           prompt,
           fork: args.fork,
+          auto: args.auto, // kilocode_change
         },
         onExit: () => terminateWorker(),
       })

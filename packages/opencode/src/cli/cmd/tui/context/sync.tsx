@@ -25,6 +25,7 @@ import { createSimpleContext } from "./helper"
 import type { Snapshot } from "@/snapshot"
 import { useExit } from "./exit"
 import { useArgs } from "./args"
+import { useAutoMode } from "./auto" // kilocode_change
 import { batch, onMount } from "solid-js"
 import { Log } from "@/util/log"
 import type { Path } from "@kilocode/sdk"
@@ -103,6 +104,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
     })
 
     const sdk = useSDK()
+    const auto = useAutoMode() // kilocode_change
 
     sdk.event.listen((e) => {
       const event = e.details
@@ -127,6 +129,17 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
 
         case "permission.asked": {
           const request = event.properties
+          // kilocode_change start - auto-approve immediately, skip store
+          if (auto.enabled()) {
+            sdk.client.permission
+              .reply({
+                reply: "once",
+                requestID: request.id,
+              })
+              .catch((err) => Log.Default.debug("auto-reply failed", { err }))
+            break
+          }
+          // kilocode_change end
           const requests = store.permission[request.sessionID]
           if (!requests) {
             setStore("permission", request.sessionID, [request])

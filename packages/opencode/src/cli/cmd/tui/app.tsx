@@ -45,6 +45,7 @@ import { registerKiloCommands } from "@/kilocode/kilo-commands" // kilocode_chan
 import { initializeTUIDependencies } from "@kilocode/kilo-gateway/tui" // kilocode_change
 import { TuiConfigProvider } from "./context/tui-config"
 import { TuiConfig } from "@/config/tui"
+import { AutoModeProvider, useAutoMode } from "./context/auto" // kilocode_change
 
 async function getTerminalBackgroundColor(): Promise<"dark" | "light"> {
   // can't set raw mode if not a TTY
@@ -142,45 +143,49 @@ export function tui(input: {
             fallback={(error, reset) => <ErrorComponent error={error} reset={reset} onExit={onExit} mode={mode} />}
           >
             <ArgsProvider {...input.args}>
-              <ExitProvider onExit={onExit}>
-                <KVProvider>
-                  <ToastProvider>
-                    <RouteProvider>
-                      <TuiConfigProvider config={input.config}>
-                        <SDKProvider
-                          url={input.url}
-                          directory={input.directory}
-                          fetch={input.fetch}
-                          headers={input.headers}
-                          events={input.events}
-                        >
-                          <SyncProvider>
-                            <ThemeProvider mode={mode}>
-                              <LocalProvider>
-                                <KeybindProvider>
-                                  <PromptStashProvider>
-                                    <DialogProvider>
-                                      <CommandProvider>
-                                        <FrecencyProvider>
-                                          <PromptHistoryProvider>
-                                            <PromptRefProvider>
-                                              <App />
-                                            </PromptRefProvider>
-                                          </PromptHistoryProvider>
-                                        </FrecencyProvider>
-                                      </CommandProvider>
-                                    </DialogProvider>
-                                  </PromptStashProvider>
-                                </KeybindProvider>
-                              </LocalProvider>
-                            </ThemeProvider>
-                          </SyncProvider>
-                        </SDKProvider>
-                      </TuiConfigProvider>
-                    </RouteProvider>
-                  </ToastProvider>
-                </KVProvider>
-              </ExitProvider>
+              {/* kilocode_change start - auto mode context */}
+              <AutoModeProvider initial={input.args.auto}>
+                {/* kilocode_change end */}
+                <ExitProvider onExit={onExit}>
+                  <KVProvider>
+                    <ToastProvider>
+                      <RouteProvider>
+                        <TuiConfigProvider config={input.config}>
+                          <SDKProvider
+                            url={input.url}
+                            directory={input.directory}
+                            fetch={input.fetch}
+                            headers={input.headers}
+                            events={input.events}
+                          >
+                            <SyncProvider>
+                              <ThemeProvider mode={mode}>
+                                <LocalProvider>
+                                  <KeybindProvider>
+                                    <PromptStashProvider>
+                                      <DialogProvider>
+                                        <CommandProvider>
+                                          <FrecencyProvider>
+                                            <PromptHistoryProvider>
+                                              <PromptRefProvider>
+                                                <App />
+                                              </PromptRefProvider>
+                                            </PromptHistoryProvider>
+                                          </FrecencyProvider>
+                                        </CommandProvider>
+                                      </DialogProvider>
+                                    </PromptStashProvider>
+                                  </KeybindProvider>
+                                </LocalProvider>
+                              </ThemeProvider>
+                            </SyncProvider>
+                          </SDKProvider>
+                        </TuiConfigProvider>
+                      </RouteProvider>
+                    </ToastProvider>
+                  </KVProvider>
+                </ExitProvider>
+              </AutoModeProvider>
             </ArgsProvider>
           </ErrorBoundary>
         )
@@ -215,6 +220,7 @@ function App() {
   const kv = useKV()
   const command = useCommandDialog()
   const sdk = useSDK()
+  const auto = useAutoMode() // kilocode_change
   const toast = useToast()
   const { theme, mode, setMode } = useTheme()
   const sync = useSync()
@@ -292,6 +298,15 @@ function App() {
 
   const args = useArgs()
   onMount(() => {
+    // kilocode_change start - warn on startup when --auto flag is used
+    if (auto.enabled()) {
+      toast.show({
+        variant: "warning",
+        message: "Auto mode enabled - all permissions will be auto-approved",
+        duration: 5000,
+      })
+    }
+    // kilocode_change end
     batch(() => {
       if (args.agent) local.agent.set(args.agent)
       if (args.model) {
@@ -664,6 +679,24 @@ function App() {
         dialog.clear()
       },
     },
+    // kilocode_change start - auto mode toggle
+    {
+      title: auto.enabled() ? "Disable auto mode" : "Enable auto mode",
+      description: "Auto-approve all permissions without prompting",
+      value: "permission.auto",
+      category: "System",
+      slash: { name: "auto" },
+      onSelect: (dialog) => {
+        auto.toggle()
+        toast.show({
+          variant: auto.enabled() ? "warning" : "info",
+          message: auto.enabled() ? "Auto mode enabled - all permissions will be auto-approved" : "Auto mode disabled",
+          duration: 3000,
+        })
+        dialog.clear()
+      },
+    },
+    // kilocode_change end
   ])
 
   // kilocode_change start - Initialize TUI dependencies for kilo-gateway

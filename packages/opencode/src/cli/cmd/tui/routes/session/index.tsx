@@ -82,6 +82,7 @@ import { UI } from "@/cli/ui.ts"
 import { useTuiConfig } from "../../context/tui-config"
 
 import { formatMarkdownTables } from "../../util/markdown" // kilocode_change
+import { useAutoMode } from "../../context/auto" // kilocode_change
 
 addDefaultParsers(parsers.parsers)
 
@@ -138,6 +139,8 @@ export function Session() {
     if (session()?.parentID) return []
     return children().flatMap((x) => sync.data.question[x.id] ?? [])
   })
+
+  const auto = useAutoMode() // kilocode_change
 
   const pending = createMemo(() => {
     return messages().findLast((x) => x.role === "assistant" && !x.time.completed)?.id
@@ -201,6 +204,23 @@ export function Session() {
 
   const toast = useToast()
   const sdk = useSDK()
+
+  // kilocode_change start - auto-approve permissions when auto mode is active
+  const replied = new Set<string>()
+  createEffect(() => {
+    if (!auto.enabled()) return
+    for (const request of permissions()) {
+      if (replied.has(request.id)) continue
+      replied.add(request.id)
+      sdk.client.permission
+        .reply({
+          reply: "once",
+          requestID: request.id,
+        })
+        .catch((err) => console.error("auto-reply failed", err))
+    }
+  })
+  // kilocode_change end
 
   // Handle initial prompt from fork
   createEffect(() => {
@@ -1120,14 +1140,18 @@ export function Session() {
               </For>
             </scrollbox>
             <box flexShrink={0}>
-              <Show when={permissions().length > 0}>
+              {/* kilocode_change - skip permission prompt when auto mode is active */}
+              <Show when={permissions().length > 0 && !auto.enabled()}>
                 <PermissionPrompt request={permissions()[0]} />
               </Show>
               <Show when={permissions().length === 0 && questions().length > 0}>
                 <QuestionPrompt request={questions()[0]} />
               </Show>
+              {/* kilocode_change - treat permissions as absent when auto mode handles them */}
               <Prompt
-                visible={!session()?.parentID && permissions().length === 0 && questions().length === 0}
+                visible={
+                  !session()?.parentID && (auto.enabled() || permissions().length === 0) && questions().length === 0
+                }
                 ref={(r) => {
                   prompt = r
                   promptRef.set(r)
@@ -1136,7 +1160,7 @@ export function Session() {
                     r.set(route.initialPrompt)
                   }
                 }}
-                disabled={permissions().length > 0 || questions().length > 0}
+                disabled={(!auto.enabled() && permissions().length > 0) || questions().length > 0}
                 onSubmit={() => {
                   toBottom()
                 }}
