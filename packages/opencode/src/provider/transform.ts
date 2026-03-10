@@ -45,11 +45,30 @@ export namespace ProviderTransform {
     return undefined
   }
 
+  // kilocode_change start - Claude 4.6 models do not support assistant message prefill
+  export function supportsAssistantPrefill(model: Provider.Model): boolean {
+    const id = model.api.id.toLowerCase()
+    const noPrefill = ["opus-4-6", "opus-4.6", "sonnet-4-6", "sonnet-4.6", "sonnet-4-5", "sonnet-4.5"]
+    return !noPrefill.some((v) => id.includes(v))
+  }
+
+  function stripTrailingAssistant(msgs: ModelMessage[], model: Provider.Model): ModelMessage[] {
+    if (supportsAssistantPrefill(model)) return msgs
+    while (msgs.length > 0 && msgs[msgs.length - 1].role === "assistant") {
+      msgs = msgs.slice(0, -1)
+    }
+    return msgs
+  }
+  // kilocode_change end
+
   function normalizeMessages(
     msgs: ModelMessage[],
     model: Provider.Model,
     options: Record<string, unknown>,
   ): ModelMessage[] {
+    // kilocode_change - strip trailing assistant messages for models that don't support prefill
+    msgs = stripTrailingAssistant(msgs, model)
+
     // Anthropic rejects messages with empty content - filter out empty string messages
     // and remove empty text/reasoning parts from array content
     if (model.api.npm === "@ai-sdk/anthropic") {

@@ -1,6 +1,7 @@
 import path from "path"
 import os from "os"
 import fs from "fs/promises"
+import { StringDecoder } from "string_decoder" // kilocode_change - fix UTF-8 multi-byte split
 import z from "zod"
 import { Filesystem } from "../util/filesystem"
 import { Identifier } from "../id/id"
@@ -1697,9 +1698,11 @@ NOTE: At any point in time through this workflow you should feel free to ask the
     })
 
     let output = ""
+    // kilocode_change start - use StringDecoder to handle multi-byte UTF-8 characters split across chunks
+    const decoder = new StringDecoder("utf8")
 
     proc.stdout?.on("data", (chunk) => {
-      output += chunk.toString()
+      output += decoder.write(chunk)
       if (part.state.status === "running") {
         part.state.metadata = {
           output: output,
@@ -1710,7 +1713,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
     })
 
     proc.stderr?.on("data", (chunk) => {
-      output += chunk.toString()
+      output += decoder.write(chunk)
       if (part.state.status === "running") {
         part.state.metadata = {
           output: output,
@@ -1719,6 +1722,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         Session.updatePart(part)
       }
     })
+    // kilocode_change end
 
     let aborted = false
     let exited = false
