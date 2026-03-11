@@ -2300,6 +2300,53 @@ dependencies = [
 ]
 
 [[package]]
+name = "kilo-desktop"
+version = "0.0.0"
+dependencies = [
+ "chrono",
+ "comrak",
+ "dirs",
+ "futures",
+ "gtk",
+ "listeners",
+ "objc2 0.6.3",
+ "objc2-web-kit",
+ "process-wrap",
+ "reqwest 0.12.24",
+ "semver",
+ "serde",
+ "serde_json",
+ "specta",
+ "specta-typescript",
+ "tauri",
+ "tauri-build 2.5.2",
+ "tauri-plugin-clipboard-manager",
+ "tauri-plugin-decorum",
+ "tauri-plugin-deep-link",
+ "tauri-plugin-dialog",
+ "tauri-plugin-http",
+ "tauri-plugin-notification",
+ "tauri-plugin-opener",
+ "tauri-plugin-os",
+ "tauri-plugin-process",
+ "tauri-plugin-shell",
+ "tauri-plugin-single-instance",
+ "tauri-plugin-store",
+ "tauri-plugin-updater",
+ "tauri-plugin-window-state",
+ "tauri-specta",
+ "tokio",
+ "tokio-stream",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
+ "uuid",
+ "webkit2gtk",
+ "windows-core 0.62.2",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
 name = "kuchikiki"
 version = "0.8.8-speedreader"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3094,53 +3141,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "kilo-desktop"
-version = "0.0.0"
-dependencies = [
- "chrono",
- "comrak",
- "dirs",
- "futures",
- "gtk",
- "listeners",
- "objc2 0.6.3",
- "objc2-web-kit",
- "process-wrap",
- "reqwest 0.12.24",
- "semver",
- "serde",
- "serde_json",
- "specta",
- "specta-typescript",
- "tauri",
- "tauri-build 2.5.2",
- "tauri-plugin-clipboard-manager",
- "tauri-plugin-decorum",
- "tauri-plugin-deep-link",
- "tauri-plugin-dialog",
- "tauri-plugin-http",
- "tauri-plugin-notification",
- "tauri-plugin-opener",
- "tauri-plugin-os",
- "tauri-plugin-process",
- "tauri-plugin-shell",
- "tauri-plugin-single-instance",
- "tauri-plugin-store",
- "tauri-plugin-updater",
- "tauri-plugin-window-state",
- "tauri-specta",
- "tokio",
- "tokio-stream",
- "tracing",
- "tracing-appender",
- "tracing-subscriber",
- "uuid",
- "webkit2gtk",
- "windows-core 0.62.2",
- "windows-sys 0.61.2",
-]
-
-[[package]]
 name = "option-ext"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3737,9 +3737,9 @@ dependencies = [
 
 [[package]]
 name = "quinn-proto"
-version = "0.11.13"
+version = "0.11.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1906b49b0c3bc04b5fe5d86a77925ae6524a19b816ae38ce1e426255f1d8a31"
+checksum = "434b42fec591c96ef50e21e886936e66d3cc3f737104fdb9b737c40ffb94c098"
 dependencies = [
  "bytes",
  "getrandom 0.3.4",
