@@ -23,7 +23,3 @@ export function mergeWorktreeDiffs(prev: WorktreeFileDiff[], next: WorktreeFileD
     return { ...diff, before: existing.before, after: existing.after, summarized: false }
   })
 }
-
-export function hasDiffDetail(diff: WorktreeFileDiff) {
-  return diff.summarized !== true
-}
