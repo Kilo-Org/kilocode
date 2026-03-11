@@ -22,7 +22,7 @@ export class MarketplaceInstaller {
 	async install(item: MarketplaceItem, options: InstallMarketplaceItemOptions, workspace?: string): Promise<InstallResult> {
 		const scope = options.target ?? "project"
 		if (item.type === "mode") return this.installMode(item, scope, workspace)
-		if (item.type === "mcp") return this.installMcp(item, options)
+		if (item.type === "mcp") return this.installMcp(item, options, workspace)
 		if (item.type === "skill") return this.installSkill(item, scope, workspace)
 		return { success: false, slug: (item as MarketplaceItem).id, error: `Unknown item type` }
 	}
@@ -61,9 +61,8 @@ export class MarketplaceInstaller {
 		}
 	}
 
-	async installMcp(item: McpMarketplaceItem, options: InstallMarketplaceItemOptions): Promise<InstallResult> {
+	async installMcp(item: McpMarketplaceItem, options: InstallMarketplaceItemOptions, workspace?: string): Promise<InstallResult> {
 		const scope = options.target ?? "project"
-		const workspace = options.parameters?.workspace as string | undefined
 		const filepath = this.paths.mcpPath(scope, workspace)
 		try {
 			const template = resolveTemplate(item, options)
@@ -179,11 +178,15 @@ function resolveTemplate(item: McpMarketplaceItem, options: InstallMarketplaceIt
 	return method.content
 }
 
+function escapeJsonValue(value: string): string {
+	return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t")
+}
+
 function substituteParams(template: string, params: Record<string, unknown>): string {
 	return template.replace(/\{\{(\w+)\}\}/g, (_, key) => {
 		const value = params[key]
 		if (value === undefined || value === null) return `{{${key}}}`
-		return String(value)
+		return escapeJsonValue(String(value))
 	})
 }
 
