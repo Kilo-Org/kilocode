@@ -40,10 +40,11 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const familyPermissions = createMemo(() => session.scopedPermissions(id()))
   const familyQuestions = createMemo(() => session.scopedQuestions(id()))
 
+  // Only show non-tool questions in the dock. Tool-linked questions are rendered
+  // inline in the message stream by AssistantMessage — showing them here too
+  // would cause the same question to appear twice.
   const questionRequest = () =>
-    familyQuestions().find((q) => q.sessionID === id() && !q.tool) ??
-    familyQuestions().find((q) => !q.tool) ??
-    familyQuestions()[0]
+    familyQuestions().find((q) => q.sessionID === id() && !q.tool) ?? familyQuestions().find((q) => !q.tool)
   const permissionRequest = () => familyPermissions().find((p) => p.sessionID === id()) ?? familyPermissions()[0]
   const blocked = () => familyPermissions().length > 0 || familyQuestions().length > 0
 
