@@ -31,6 +31,10 @@ bun run --cwd packages/kilo-vscode self-test stop-vscode
 bun run --cwd packages/kilo-vscode self-test stop
 ```
 
+If VS Code is not in a standard macOS install location, or you are running on Linux or Windows, pass `--app-path` or set `VSCODE_EXEC_PATH` before launching.
+
+The `code` shell command is only required for `vsix` mode.
+
 Use the MCP bridge for agent-facing control:
 
 ```bash

@@ -32,6 +32,10 @@ bun run --cwd packages/kilo-vscode self-test stop
 
 Use `start` once per worktree, then `launch-vscode` when you want a fresh window.
 
+If VS Code is installed in a non-standard location, or you are testing on Linux or Windows, pass `--app-path` or set `VSCODE_EXEC_PATH` before launching.
+
+The `code` shell command is only required for `vsix` mode, where the workflow installs a packaged extension into the isolated profile.
+
 ## Use the workflow
 
 Keep the flow simple.

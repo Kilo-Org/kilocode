@@ -112,7 +112,9 @@ function detectAppPath(appPath) {
     return found
   }
 
-  return fail("VS Code app executable not found. Pass appPath explicitly.")
+  return fail(
+    "VS Code app executable not found. Auto-detection currently probes standard macOS installs only; set VSCODE_EXEC_PATH or pass appPath explicitly.",
+  )
 }
 
 function detectCliPath(appPath) {
@@ -212,9 +214,9 @@ async function closeSession(cleanup) {
 async function launchVsCode(input) {
   await closeSession(true)
 
-  const appPath = detectAppPath(input.appPath)
-  const cliPath = detectCliPath(appPath)
   const mode = input.mode ?? "vsix"
+  const appPath = detectAppPath(input.appPath)
+  const cliPath = mode === "vsix" ? detectCliPath(appPath) : null
   const workspace = resolve(input.workspace ?? repo)
   const userDir = temp("kilo-vscode-user-")
   const extDir = temp("kilo-vscode-ext-")
