@@ -135,6 +135,8 @@ export function mockSessionValue(overrides?: {
     respondingPermissions: () => new Set<string>(),
     questions: () => qs,
     questionErrors: () => new Set<string>(),
+    scopedPermissions: () => permissions,
+    scopedQuestions: () => qs,
     selected: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     selectModel: noop,
     hasModelOverride: () => false,
