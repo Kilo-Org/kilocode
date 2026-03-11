@@ -136,6 +136,62 @@ export namespace WorktreeDiff {
     return result
   }
 
+  async function detailMeta(dir: string, ancestor: string, file: string): Promise<Meta | undefined> {
+    const tracked = await $`git ls-files --error-unmatch -- ${file}`.cwd(dir).quiet().nothrow()
+    if (tracked.exitCode !== 0) {
+      const after = Bun.file(path.join(dir, file))
+      if (!(await after.exists())) return undefined
+      return {
+        file,
+        additions: await lineCount(path.join(dir, file)),
+        deletions: 0,
+        status: "added",
+        tracked: false,
+        generatedLike: generatedLike(file),
+        stamp: await statStamp(dir, file),
+      }
+    }
+
+    const nameStatus = await $`git -c core.quotepath=false diff --name-status --no-renames ${ancestor} -- ${file}`
+      .cwd(dir)
+      .quiet()
+      .nothrow()
+    if (nameStatus.exitCode !== 0) return undefined
+    const line = nameStatus.stdout.toString().trim().split("\n")[0]
+    if (!line) return undefined
+
+    const parts = line.split("\t")
+    const code = parts[0]
+    const pathPart = parts.slice(1).join("\t") || file
+    if (!code) return undefined
+
+    const numstat = await $`git -c core.quotepath=false diff --numstat --no-renames ${ancestor} -- ${file}`
+      .cwd(dir)
+      .quiet()
+      .nothrow()
+    const statLine = numstat.stdout.toString().trim().split("\n")[0]
+    const stat = statLine
+      ? (() => {
+          const values = statLine.split("\t")
+          return {
+            additions: values[0] === "-" ? 0 : parseInt(values[0] || "0", 10),
+            deletions: values[1] === "-" ? 0 : parseInt(values[1] || "0", 10),
+          }
+        })()
+      : { additions: 0, deletions: 0 }
+
+    const status = code === "A" ? "added" : code === "D" ? "deleted" : "modified"
+    return {
+      file: pathPart,
+      additions: stat.additions,
+      deletions: stat.deletions,
+      status,
+      tracked: true,
+      generatedLike: generatedLike(pathPart),
+      stamp: status === "deleted" ? `deleted:${ancestor}` : await statStamp(dir, pathPart),
+    }
+  }
+
   function lines(text: string) {
     if (!text) return 0
     return text.endsWith("\n") ? text.split("\n").length - 1 : text.split("\n").length
@@ -228,8 +284,7 @@ export namespace WorktreeDiff {
     const log = input.log ?? Log.create({ service: "worktree-diff" })
     const ancestorHash = await ancestor(input.dir, input.base, log)
     if (!ancestorHash) return undefined
-    const items = await list(input.dir, ancestorHash, log)
-    const item = items.find((item) => item.file === input.file)
+    const item = await detailMeta(input.dir, ancestorHash, input.file)
     if (!item) return undefined
     return await load(input.dir, ancestorHash, item)
   }
