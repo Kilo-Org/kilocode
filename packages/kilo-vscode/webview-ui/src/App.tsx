@@ -138,6 +138,7 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     <DataProvider
       data={data()}
       directory={directory()}
+      // @ts-expect-error — onPermissionRespond/onQuestion* are extension-specific props not yet in kilo-ui's DataProvider types
       onPermissionRespond={respond}
       onQuestionReply={reply}
       onQuestionReject={reject}

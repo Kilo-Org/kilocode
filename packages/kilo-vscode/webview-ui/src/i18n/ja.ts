@@ -930,6 +930,8 @@ export const dict = {
   "settings.agentBehaviour.defaultAgent.title": "デフォルトエージェント",
   "settings.agentBehaviour.defaultAgent.description": "指定されていない場合に使用するエージェント",
   "settings.agentBehaviour.selectAgent": "設定するエージェントを選択…",
+  "settings.agentBehaviour.selectAgent.title": "エージェント",
+  "settings.agentBehaviour.selectAgent.description": "設定するエージェントを選択…",
   "settings.agentBehaviour.modelOverride.title": "モデルオーバーライド",
   "settings.agentBehaviour.modelOverride.description": "このエージェントのデフォルトモデルを上書き",
   "settings.agentBehaviour.prompt.title": "カスタムプロンプト",

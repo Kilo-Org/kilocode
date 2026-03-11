@@ -935,6 +935,8 @@ export const dict = {
   "settings.agentBehaviour.defaultAgent.title": "Zadani agent",
   "settings.agentBehaviour.defaultAgent.description": "Agent koji se koristi kada nijedan nije naveden",
   "settings.agentBehaviour.selectAgent": "Odaberi agenta za konfiguraciju…",
+  "settings.agentBehaviour.selectAgent.title": "Agent",
+  "settings.agentBehaviour.selectAgent.description": "Odaberi agenta za konfiguraciju…",
   "settings.agentBehaviour.modelOverride.title": "Zamjena modela",
   "settings.agentBehaviour.modelOverride.description": "Zamijeni zadani model za ovog agenta",
   "settings.agentBehaviour.prompt.title": "Prilagođeni prompt",

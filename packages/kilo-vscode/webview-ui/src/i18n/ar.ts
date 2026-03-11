@@ -923,6 +923,8 @@ export const dict = {
   "settings.agentBehaviour.defaultAgent.title": "الوكيل الافتراضي",
   "settings.agentBehaviour.defaultAgent.description": "الوكيل المستخدم عند عدم التحديد",
   "settings.agentBehaviour.selectAgent": "اختر وكيلاً للتهيئة…",
+  "settings.agentBehaviour.selectAgent.title": "الوكيل",
+  "settings.agentBehaviour.selectAgent.description": "اختر وكيلاً للتهيئة…",
   "settings.agentBehaviour.modelOverride.title": "تجاوز النموذج",
   "settings.agentBehaviour.modelOverride.description": "تجاوز النموذج الافتراضي لهذا الوكيل",
   "settings.agentBehaviour.prompt.title": "موجه مخصص",

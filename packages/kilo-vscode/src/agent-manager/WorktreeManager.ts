@@ -62,7 +62,7 @@ export interface CreateWorktreeResult {
   startPointWarning?: string
 }
 
-interface ExternalWorktreeItem {
+export interface ExternalWorktreeItem {
   path: string
   branch: string
 }
@@ -324,7 +324,7 @@ export class WorktreeManager {
     // Try metadata.json first (has parentBranch + remote)
     try {
       const content = await fs.promises.readFile(path.join(dir, METADATA_FILE), "utf-8")
-      const data = JSON.parse(content)
+      const data = JSON.parse(content) as { sessionId?: string; parentBranch?: string; remote?: string }
       if (data.sessionId) {
         return {
           sessionId: data.sessionId,
@@ -332,8 +332,8 @@ export class WorktreeManager {
           remote: data.remote,
         }
       }
-    } catch {
-      // Fall back to session-id file
+    } catch (e) {
+      this.log(`readMetadata: metadata.json unreadable in ${worktreePath}: ${e}`)
     }
 
     // Legacy: plain text session-id file
@@ -341,8 +341,8 @@ export class WorktreeManager {
       const content = await fs.promises.readFile(path.join(dir, SESSION_ID_FILE), "utf-8")
       const id = content.trim()
       if (id) return { sessionId: id }
-    } catch {
-      // No metadata
+    } catch (e) {
+      this.log(`readMetadata: session-id unreadable in ${worktreePath}: ${e}`)
     }
 
     return undefined
@@ -440,6 +440,7 @@ export class WorktreeManager {
       const stat = await fs.promises.stat(gitFile)
       if (!stat.isFile()) return undefined
     } catch {
+      // .git path inaccessible — not a valid worktree
       return undefined
     }
 
@@ -538,8 +539,8 @@ export class WorktreeManager {
             source: "fallback",
             warning: `Branch "${branch}" not found, falling back to "${fallback}"`,
           }
-        } catch {
-          // continue
+        } catch (e) {
+          this.log(`resolveStartPoint: fallback "${fallback}" failed: ${e}`)
         }
       }
     }
@@ -556,7 +557,7 @@ export class WorktreeManager {
     if (this.ops) {
       const name = await this.ops.resolveRemote(this.root).catch(() => "origin")
       const remotes = await this.git.getRemotes().catch(() => [])
-      return remotes.some((r) => r.name === name) ? name : undefined
+      return remotes.some((r: { name: string }) => r.name === name) ? name : undefined
     }
     const remotes = await this.git.getRemotes().catch(() => [])
     return remotes.some((r) => r.name === "origin") ? "origin" : undefined
@@ -571,6 +572,7 @@ export class WorktreeManager {
       await this.git.raw(["rev-parse", "--verify", `${ref}^{commit}`])
       return true
     } catch {
+      // ref does not exist
       return false
     }
   }
@@ -579,7 +581,9 @@ export class WorktreeManager {
     const defaults = []
     try {
       defaults.push(await this.defaultBranch())
-    } catch {}
+    } catch (e) {
+      this.log(`derivedFallbackBranches: failed to determine default branch: ${e}`)
+    }
     return defaults
   }
 
@@ -592,13 +596,17 @@ export class WorktreeManager {
     try {
       const attributes = await fs.promises.readFile(path.join(this.root, ".gitattributes"), "utf-8")
       if (attributes.includes("filter=lfs")) return true
-    } catch {}
+    } catch (e) {
+      this.log(`repoUsesLfs: failed to read .gitattributes: ${e}`)
+    }
 
     // Check .git/info/attributes
     try {
       const infoAttributes = await fs.promises.readFile(path.join(gitDir, "info", "attributes"), "utf-8")
       if (infoAttributes.includes("filter=lfs")) return true
-    } catch {}
+    } catch (e) {
+      this.log(`repoUsesLfs: failed to read info/attributes: ${e}`)
+    }
 
     return false
   }
@@ -608,6 +616,7 @@ export class WorktreeManager {
       await execWithShellEnv("git", ["lfs", "version"], { cwd: this.root, timeout: 5000 })
       return true
     } catch {
+      // git-lfs not installed
       return false
     }
   }
@@ -625,7 +634,8 @@ export class WorktreeManager {
     try {
       const branches = await this.git.branch()
       return branches.all.includes(name) || branches.all.includes(`remotes/origin/${name}`)
-    } catch {
+    } catch (e) {
+      this.log(`branchExists: failed to list branches: ${e}`)
       return false
     }
   }
@@ -824,6 +834,7 @@ export class WorktreeManager {
       await this.gitExec(args)
       return true
     } catch {
+      // Command failed — caller handles false return
       return false
     }
   }

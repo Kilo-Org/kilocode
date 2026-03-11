@@ -918,6 +918,8 @@ export const dict = {
   "settings.agentBehaviour.defaultAgent.title": "默认智能体",
   "settings.agentBehaviour.defaultAgent.description": "未指定时使用的智能体",
   "settings.agentBehaviour.selectAgent": "选择要配置的智能体…",
+  "settings.agentBehaviour.selectAgent.title": "智能体",
+  "settings.agentBehaviour.selectAgent.description": "选择要配置的智能体…",
   "settings.agentBehaviour.modelOverride.title": "模型覆盖",
   "settings.agentBehaviour.modelOverride.description": "覆盖此智能体的默认模型",
   "settings.agentBehaviour.prompt.title": "自定义提示词",

@@ -5,7 +5,7 @@ import { remoteRef, type Worktree } from "./WorktreeStateManager"
 import type { GitOps } from "./GitOps"
 import { normalizePath } from "./git-import"
 
-interface WorktreeStats {
+export interface WorktreeStats {
   worktreeId: string
   files: number
   additions: number
@@ -14,7 +14,7 @@ interface WorktreeStats {
   behind: number
 }
 
-interface LocalStats {
+export interface LocalStats {
   branch: string
   files: number
   additions: number

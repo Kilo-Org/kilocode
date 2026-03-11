@@ -818,6 +818,14 @@ export interface AgentManagerLocalStatsMessage {
   stats: LocalGitStats
 }
 
+// Set the model for a session (extension → webview, used during multi-version creation)
+export interface AgentManagerSetSessionModelMessage {
+  type: "agentManager.setSessionModel"
+  sessionId: string
+  providerID: string
+  modelID: string
+}
+
 // Request webview to send initial prompt to a newly created session (extension → webview)
 export interface AgentManagerSendInitialMessage {
   type: "agentManager.sendInitialMessage"
@@ -1008,6 +1016,7 @@ export type ExtensionMessage =
   | AgentManagerStateMessage
   | AgentManagerKeybindingsMessage
   | AgentManagerMultiVersionProgressMessage
+  | AgentManagerSetSessionModelMessage
   | AgentManagerSendInitialMessage
   | SetChatBoxMessage
   | AppendChatBoxMessage
@@ -1380,6 +1389,7 @@ export interface ModelAllocation {
 export interface CreateMultiVersionRequest {
   type: "agentManager.createMultiVersion"
   text?: string
+  name?: string
   versions: number
   providerID?: string
   modelID?: string

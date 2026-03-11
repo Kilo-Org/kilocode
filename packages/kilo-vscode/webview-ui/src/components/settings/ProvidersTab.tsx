@@ -89,7 +89,7 @@ const ProvidersTab: Component = () => {
           description={language.t("settings.providers.defaultModel.description")}
         >
           <ModelSelectorBase
-            value={parseModelConfig(config().model)}
+            value={parseModelConfig(config().model ?? undefined)}
             onSelect={handleModelSelect("model")}
             placement="bottom-start"
             allowClear
@@ -102,7 +102,7 @@ const ProvidersTab: Component = () => {
           last
         >
           <ModelSelectorBase
-            value={parseModelConfig(config().small_model)}
+            value={parseModelConfig(config().small_model ?? undefined)}
             onSelect={handleModelSelect("small_model")}
             placement="bottom-start"
             allowClear
