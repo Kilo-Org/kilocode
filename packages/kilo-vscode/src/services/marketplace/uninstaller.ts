@@ -66,7 +66,14 @@ export class MarketplaceUninstaller {
 	}
 
 	async removeSkill(item: SkillMarketplaceItem, scope: "project" | "global", workspace?: string): Promise<RemoveResult> {
-		const dir = path.join(this.paths.skillsDir(scope, workspace), item.id)
+		if (!item.id || item.id.includes("..") || item.id.includes("/") || item.id.includes("\\") || !/^[\w\-@.]+$/.test(item.id)) {
+			return { success: false, slug: item.id, error: "Invalid skill id" }
+		}
+		const base = this.paths.skillsDir(scope, workspace)
+		const dir = path.join(base, item.id)
+		if (!path.resolve(dir).startsWith(path.resolve(base))) {
+			return { success: false, slug: item.id, error: "Invalid skill id" }
+		}
 		try {
 			await fs.access(dir)
 			await fs.rm(dir, { recursive: true })

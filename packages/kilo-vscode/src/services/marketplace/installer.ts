@@ -98,7 +98,15 @@ export class MarketplaceInstaller {
 			return { success: false, slug: item.id, error: "Skill has no tarball URL" }
 		}
 
-		const dir = path.join(this.paths.skillsDir(scope, workspace), item.id)
+		if (!isSafeId(item.id)) {
+			return { success: false, slug: item.id, error: "Invalid skill id" }
+		}
+
+		const base = this.paths.skillsDir(scope, workspace)
+		const dir = path.join(base, item.id)
+		if (!path.resolve(dir).startsWith(path.resolve(base))) {
+			return { success: false, slug: item.id, error: "Invalid skill id" }
+		}
 		const tmp = path.join(os.tmpdir(), `kilo-skill-${item.id}-${Date.now()}.tar.gz`)
 
 		try {
@@ -188,6 +196,11 @@ function substituteParams(template: string, params: Record<string, unknown>): st
 		if (value === undefined || value === null) return `{{${key}}}`
 		return escapeJsonValue(String(value))
 	})
+}
+
+function isSafeId(id: string): boolean {
+	if (!id || id.includes("..") || id.includes("/") || id.includes("\\")) return false
+	return /^[\w\-@.]+$/.test(id)
 }
 
 function findLineNumber(content: string, search: string): number {

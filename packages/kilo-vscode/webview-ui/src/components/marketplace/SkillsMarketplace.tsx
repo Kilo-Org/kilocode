@@ -32,9 +32,10 @@ export const SkillsMarketplace: Component<SkillsMarketplaceProps> = (props) => {
     return skills().filter((item) => {
       if (query) {
         const id = item.id.toLowerCase()
+        const name = item.name.toLowerCase()
         const desc = item.description.toLowerCase()
         const dc = item.displayCategory.toLowerCase()
-        if (!id.includes(query) && !desc.includes(query) && !dc.includes(query)) return false
+        if (!id.includes(query) && !name.includes(query) && !desc.includes(query) && !dc.includes(query)) return false
       }
 
       if (cat && item.displayCategory !== cat) return false
