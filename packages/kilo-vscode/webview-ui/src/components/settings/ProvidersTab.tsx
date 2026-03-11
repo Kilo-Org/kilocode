@@ -1,138 +1,232 @@
-import { Component, For, createSignal, createMemo } from "solid-js"
-import { Select } from "@kilocode/kilo-ui/select"
-import { Card } from "@kilocode/kilo-ui/card"
 import { Button } from "@kilocode/kilo-ui/button"
+import { Card } from "@kilocode/kilo-ui/card"
+import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { Select } from "@kilocode/kilo-ui/select"
+import { showToast } from "@kilocode/kilo-ui/toast"
+import { Component, For, Show, createMemo, createSignal, onCleanup } from "solid-js"
 import { useConfig } from "../../context/config"
-import { useProvider } from "../../context/provider"
 import { useLanguage } from "../../context/language"
-import { useSession } from "../../context/session"
-import { ModelSelectorBase } from "../shared/ModelSelector"
-import type { ModelSelection } from "../../types/messages"
-import SettingsRow from "./SettingsRow"
+import { useProvider } from "../../context/provider"
+import { useVSCode } from "../../context/vscode"
+import type { ExtensionMessage, Provider } from "../../types/messages"
+import { providerSortKey } from "../shared/model-selector-utils"
+import ProviderConnectDialog from "./ProviderConnectDialog"
 
 interface ProviderOption {
   value: string
   label: string
 }
 
-/** Parse a "provider/model" config string into a ModelSelection (or null). */
-function parseModelConfig(raw: string | undefined): ModelSelection | null {
-  if (!raw) {
-    return null
-  }
-  const slash = raw.indexOf("/")
-  if (slash <= 0) {
-    return null
-  }
-  return { providerID: raw.slice(0, slash), modelID: raw.slice(slash + 1) }
+function sortProviders(items: Provider[]) {
+  return items.slice().sort((a, b) => {
+    const rank = providerSortKey(a.id) - providerSortKey(b.id)
+    if (rank !== 0) return rank
+    return a.name.localeCompare(b.name)
+  })
 }
 
 const ProvidersTab: Component = () => {
   const { config, updateConfig } = useConfig()
   const provider = useProvider()
   const language = useLanguage()
-  const session = useSession()
+  const dialog = useDialog()
+  const vscode = useVSCode()
 
-  const providerOptions = createMemo<ProviderOption[]>(() =>
-    Object.keys(provider.providers())
-      .sort()
-      .map((id) => ({ value: id, label: id })),
-  )
-
+  const [newConnected, setNewConnected] = createSignal<ProviderOption | undefined>()
   const [newDisabled, setNewDisabled] = createSignal<ProviderOption | undefined>()
+  const [disconnecting, setDisconnecting] = createSignal(new Set<string>())
 
   const disabledProviders = () => config().disabled_providers ?? []
 
-  const addDisabled = (value: string) => {
-    const current = [...disabledProviders()]
-    if (value && !current.includes(value)) {
-      current.push(value)
-      updateConfig({ disabled_providers: current })
+  const connectedProviders = createMemo(() =>
+    sortProviders(
+      provider
+        .connected()
+        .map((id) => provider.providers()[id])
+        .filter((item): item is NonNullable<typeof item> => !!item),
+    ),
+  )
+
+  const providerOptions = createMemo<ProviderOption[]>(() =>
+    sortProviders(Object.values(provider.providers())).map((item) => ({ value: item.id, label: item.name })),
+  )
+
+  const availableOptions = createMemo(() => {
+    const connected = new Set(provider.connected())
+    const disabled = new Set(disabledProviders())
+    return providerOptions().filter(
+      (item) => !connected.has(item.value) && !disabled.has(item.value) && item.value !== "kilo",
+    )
+  })
+
+  const disabledOptions = createMemo(() =>
+    providerOptions().filter((item) => !disabledProviders().includes(item.value)),
+  )
+
+  const pendingDisconnects = new Map<string, { providerID: string; name: string }>()
+
+  const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type === "providerDisconnected") {
+      const pending = pendingDisconnects.get(message.requestId)
+      if (!pending) return
+      pendingDisconnects.delete(message.requestId)
+      setDisconnecting((prev) => {
+        const next = new Set(prev)
+        next.delete(pending.providerID)
+        return next
+      })
+      showToast({
+        variant: "success",
+        icon: "circle-check",
+        title: language.t("provider.disconnect.toast.disconnected.title", { provider: pending.name }),
+        description: language.t("provider.disconnect.toast.disconnected.description", { provider: pending.name }),
+      })
+      return
     }
+
+    if (message.type === "providerActionError" && message.action === "disconnect") {
+      const pending = pendingDisconnects.get(message.requestId)
+      if (!pending) return
+      pendingDisconnects.delete(message.requestId)
+      setDisconnecting((prev) => {
+        const next = new Set(prev)
+        next.delete(pending.providerID)
+        return next
+      })
+      showToast({
+        title: language.t("common.requestFailed"),
+        description: message.message,
+      })
+    }
+  })
+
+  onCleanup(unsubscribe)
+
+  function addDisabled(value: string) {
+    const current = [...disabledProviders()]
+    if (!value || current.includes(value)) return
+    current.push(value)
+    updateConfig({ disabled_providers: current })
   }
 
-  const removeDisabled = (index: number) => {
+  function removeDisabled(index: number) {
     const current = [...disabledProviders()]
     current.splice(index, 1)
     updateConfig({ disabled_providers: current })
   }
 
-  function handleModelSelect(configKey: "model" | "small_model") {
-    return (providerID: string, modelID: string) => {
-      if (!providerID || !modelID) {
-        updateConfig({ [configKey]: null })
-      } else {
-        updateConfig({ [configKey]: `${providerID}/${modelID}` })
-      }
-    }
+  function disconnect(item: Provider) {
+    const requestId = crypto.randomUUID()
+    pendingDisconnects.set(requestId, { providerID: item.id, name: item.name })
+    setDisconnecting((prev) => new Set(prev).add(item.id))
+    vscode.postMessage({ type: "disconnectProvider", requestId, providerID: item.id })
   }
 
-  const allAgents = createMemo(() => session.agents())
+  function type(item: Provider) {
+    if (item.source === "env") return language.t("settings.providers.tag.environment")
+    if (item.source === "api") return language.t("provider.connect.method.apiKey")
+    if (item.source === "config") return language.t("settings.providers.tag.config")
+    if (item.source === "custom") return language.t("settings.providers.tag.custom")
+    return language.t("settings.providers.tag.other")
+  }
 
-  function handleModeModelSelect(agentName: string) {
-    return (providerID: string, modelID: string) => {
-      if (!providerID || !modelID) {
-        updateConfig({ agent: { [agentName]: { model: null } } })
-      } else {
-        updateConfig({ agent: { [agentName]: { model: `${providerID}/${modelID}` } } })
-      }
-    }
+  function canDisconnect(item: Provider) {
+    return item.source !== "env"
+  }
+
+  function openConnectDialog() {
+    const item = newConnected()
+    if (!item) return
+    dialog.show(() => <ProviderConnectDialog providerID={item.value} />)
+    setNewConnected(undefined)
   }
 
   return (
     <div>
-      {/* Model selection */}
+      <h4 style={{ "margin-bottom": "8px" }}>{language.t("settings.providers.section.connected")}</h4>
       <Card>
-        <SettingsRow
-          title={language.t("settings.providers.defaultModel.title")}
-          description={language.t("settings.providers.defaultModel.description")}
+        <Show
+          when={connectedProviders().length > 0}
+          fallback={
+            <div style={{ "font-size": "12px", color: "var(--text-weak-base, var(--vscode-descriptionForeground))" }}>
+              {language.t("settings.providers.connected.empty")}
+            </div>
+          }
         >
-          <ModelSelectorBase
-            value={parseModelConfig(config().model ?? undefined)}
-            onSelect={handleModelSelect("model")}
-            placement="bottom-start"
-            allowClear
-            clearLabel={language.t("settings.providers.notSet")}
-          />
-        </SettingsRow>
-        <SettingsRow
-          title={language.t("settings.providers.smallModel.title")}
-          description={language.t("settings.providers.smallModel.description")}
-          last
-        >
-          <ModelSelectorBase
-            value={parseModelConfig(config().small_model ?? undefined)}
-            onSelect={handleModelSelect("small_model")}
-            placement="bottom-start"
-            allowClear
-            clearLabel={language.t("settings.providers.notSet")}
-          />
-        </SettingsRow>
+          <For each={connectedProviders()}>
+            {(item, index) => (
+              <div
+                style={{
+                  display: "flex",
+                  "align-items": "center",
+                  "justify-content": "space-between",
+                  gap: "12px",
+                  padding: "8px 0",
+                  "border-bottom":
+                    index() < connectedProviders().length - 1 ? "1px solid var(--border-weak-base)" : "none",
+                }}
+              >
+                <div style={{ display: "flex", "flex-direction": "column", gap: "4px", "min-width": 0 }}>
+                  <div style={{ display: "flex", gap: "8px", "align-items": "center", "flex-wrap": "wrap" }}>
+                    <span style={{ "font-size": "12px", "font-weight": "500" }}>{item.name}</span>
+                    <span
+                      style={{
+                        "font-size": "11px",
+                        color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                        padding: "2px 6px",
+                        border: "1px solid var(--border-weak-base)",
+                        "border-radius": "999px",
+                      }}
+                    >
+                      {type(item)}
+                    </span>
+                  </div>
+                  <span
+                    style={{ "font-size": "11px", color: "var(--text-weak-base, var(--vscode-descriptionForeground))" }}
+                  >
+                    {item.id}
+                  </span>
+                </div>
+                <Show when={canDisconnect(item)}>
+                  <Button
+                    variant="ghost"
+                    size="small"
+                    disabled={disconnecting().has(item.id)}
+                    onClick={() => disconnect(item)}
+                  >
+                    {language.t("common.disconnect")}
+                  </Button>
+                </Show>
+              </div>
+            )}
+          </For>
+        </Show>
       </Card>
 
-      {/* Model per Mode */}
-      <h4 style={{ "margin-top": "24px", "margin-bottom": "8px" }}>{language.t("settings.providers.modeModels")}</h4>
-      <Card>
-        <For each={allAgents()}>
-          {(agent, index) => (
-            <SettingsRow
-              title={agent.name.charAt(0).toUpperCase() + agent.name.slice(1)}
-              last={index() === allAgents().length - 1}
-            >
-              <ModelSelectorBase
-                value={parseModelConfig(config().agent?.[agent.name]?.model ?? undefined)}
-                onSelect={handleModeModelSelect(agent.name)}
-                placement="bottom-start"
-                allowClear
-                clearLabel={language.t("settings.providers.notSet")}
+      <Show when={availableOptions().length > 0}>
+        <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>{language.t("common.connect")}</h4>
+        <Card>
+          <div style={{ display: "flex", gap: "8px", "align-items": "center" }}>
+            <div style={{ flex: 1 }}>
+              <Select
+                options={availableOptions()}
+                current={newConnected()}
+                value={(item) => item.value}
+                label={(item) => item.label}
+                onSelect={(item) => setNewConnected(item)}
+                variant="secondary"
+                triggerVariant="settings"
+                placeholder="Select provider..."
               />
-            </SettingsRow>
-          )}
-        </For>
-      </Card>
+            </div>
+            <Button variant="secondary" onClick={openConnectDialog} disabled={!newConnected()}>
+              {language.t("common.connect")}
+            </Button>
+          </div>
+        </Card>
+      </Show>
 
-      {/* Disabled providers */}
       <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>{language.t("settings.providers.disabled")}</h4>
       <Card>
         <div
@@ -156,44 +250,59 @@ const ProvidersTab: Component = () => {
         >
           <div style={{ flex: 1 }}>
             <Select
-              options={providerOptions().filter((o) => !disabledProviders().includes(o.value))}
+              options={disabledOptions()}
               current={newDisabled()}
-              value={(o) => o.value}
-              label={(o) => o.label}
-              onSelect={(o) => setNewDisabled(o)}
+              value={(item) => item.value}
+              label={(item) => item.label}
+              onSelect={(item) => setNewDisabled(item)}
               variant="secondary"
               triggerVariant="settings"
-              placeholder="Select provider…"
+              placeholder="Select provider..."
             />
           </div>
           <Button
             variant="secondary"
             onClick={() => {
-              if (newDisabled()) {
-                addDisabled(newDisabled()!.value)
-                setNewDisabled(undefined)
-              }
+              const item = newDisabled()
+              if (!item) return
+              addDisabled(item.value)
+              setNewDisabled(undefined)
             }}
           >
             {language.t("common.add")}
           </Button>
         </div>
         <For each={disabledProviders()}>
-          {(id, index) => (
-            <div
-              style={{
-                display: "flex",
-                "align-items": "center",
-                "justify-content": "space-between",
-                padding: "6px 0",
-                "border-bottom":
-                  index() < disabledProviders().length - 1 ? "1px solid var(--border-weak-base)" : "none",
-              }}
-            >
-              <span style={{ "font-size": "12px" }}>{id}</span>
-              <IconButton variant="ghost" icon="close" onClick={() => removeDisabled(index())} />
-            </div>
-          )}
+          {(id, index) => {
+            const item = providerOptions().find((option) => option.value === id)
+            return (
+              <div
+                style={{
+                  display: "flex",
+                  "align-items": "center",
+                  "justify-content": "space-between",
+                  padding: "6px 0",
+                  "border-bottom":
+                    index() < disabledProviders().length - 1 ? "1px solid var(--border-weak-base)" : "none",
+                }}
+              >
+                <div style={{ display: "flex", "flex-direction": "column", gap: "2px" }}>
+                  <span style={{ "font-size": "12px" }}>{item?.label ?? id}</span>
+                  <Show when={item?.label && item.value !== item.label}>
+                    <span
+                      style={{
+                        "font-size": "11px",
+                        color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                      }}
+                    >
+                      {id}
+                    </span>
+                  </Show>
+                </div>
+                <IconButton variant="ghost" icon="close" onClick={() => removeDisabled(index())} />
+              </div>
+            )
+          }}
         </For>
       </Card>
     </div>

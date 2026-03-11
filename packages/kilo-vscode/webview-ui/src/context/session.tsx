@@ -41,6 +41,9 @@ import type {
 } from "../types/messages"
 import { removeSessionPermissions, upsertPermission } from "./permission-queue"
 import { computeStatus, calcTotalCost, calcContextUsage } from "./session-utils"
+import { KILO_AUTO, parseModelSelection, resolveModelSelection } from "./model-selection"
+
+const RECENT_LIMIT = 5
 
 // Store structure for messages and parts
 interface SessionStore {
@@ -48,9 +51,10 @@ interface SessionStore {
   messages: Record<string, Message[]> // sessionID -> messages
   parts: Record<string, Part[]> // messageID -> parts
   todos: Record<string, TodoItem[]> // sessionID -> todos
-  modelSelections: Record<string, ModelSelection> // agentName -> model (global, extension-lifetime)
+  modelSelections: Record<string, ModelSelection | null> // agentName -> model override (global, extension-lifetime)
   agentSelections: Record<string, string> // sessionID -> agent name
   variantSelections: Record<string, string> // "providerID/modelID" -> variant name
+  recentModels: ModelSelection[] // last N models used, most recent first
 }
 
 interface SessionContextValue {
@@ -208,6 +212,7 @@ export const SessionProvider: ParentComponent = (props) => {
     modelSelections: {},
     agentSelections: {},
     variantSelections: {},
+    recentModels: [],
   })
 
   // Per-session agent selection
@@ -219,54 +224,59 @@ export const SessionProvider: ParentComponent = (props) => {
     return pendingAgentSelection() ?? defaultAgent()
   })
 
-  /** Parse a "provider/model" config string into a ModelSelection (or null). */
-  function parseModel(raw: string | undefined | null): ModelSelection | null {
-    if (!raw) return null
-    const slash = raw.indexOf("/")
-    if (slash <= 0) return null
-    return { providerID: raw.slice(0, slash), modelID: raw.slice(slash + 1) }
-  }
-
   /** Per-mode model from config (e.g. config.agent.code.model). */
   function getModeModel(agentName: string): ModelSelection | null {
-    return parseModel(config().agent?.[agentName]?.model)
+    return parseModelSelection(config().agent?.[agentName]?.model)
   }
 
   /** Global default model from config (config.model). */
   function getGlobalModel(): ModelSelection | null {
-    return parseModel(config().model)
+    return parseModelSelection(config().model)
   }
 
-  // Keep model selection in sync with provider/mode default until the user
-  // explicitly overrides it.
+  function resolveModel(agentName: string, override?: ModelSelection | null): ModelSelection | null {
+    return resolveModelSelection({
+      providers: provider.providers(),
+      connected: provider.connected(),
+      override,
+      mode: getModeModel(agentName),
+      global: getGlobalModel(),
+      recent: store.recentModels,
+      fallback: KILO_AUTO,
+    })
+  }
+
+  // Keep model selection in sync with the fallback chain until the user
+  // explicitly overrides it. Only reads config/provider signals — never
+  // reads store.modelSelections to avoid a write→read loop.
   createEffect(() => {
-    const def = provider.defaultSelection()
     const agentName = selectedAgentName()
     if (userSetAgents()[agentName]) return
-
-    // Per-mode config > global config model > VS Code default selection
-    const sel = getModeModel(agentName) ?? getGlobalModel() ?? def
-    if (sel) setStore("modelSelections", agentName, sel)
+    const sel = resolveModel(agentName)
+    setStore("modelSelections", agentName, sel)
   })
 
-  // Global model selection per agent/mode
-  // Precedence: user override > per-mode config > global config model > VS Code default > kilo-auto/free
+  // Global model selection per agent/mode — validated fallback chain
+  // 1. UI override → 2. mode config → 3. global config → 4. recents → 5. kilo-auto
   const selected = createMemo<ModelSelection | null>(() => {
     const agentName = selectedAgentName()
-    const override = store.modelSelections[agentName]
-    if (override) return override
-    return getModeModel(agentName) ?? getGlobalModel() ?? provider.defaultSelection()
+    return resolveModel(agentName, store.modelSelections[agentName])
   })
-  function selectModel(providerID: string, modelID: string) {
-    const agentName = selectedAgentName()
+
+  function applyModel(agentName: string, selection: ModelSelection) {
     setUserSetAgents((prev) => ({ ...prev, [agentName]: true }))
-    setStore("modelSelections", agentName, { providerID, modelID })
+    setStore("modelSelections", agentName, selection)
+    pushRecent(selection)
   }
 
-  /** The config/default model for the current mode (what settings says). */
+  function selectModel(providerID: string, modelID: string) {
+    applyModel(selectedAgentName(), { providerID, modelID })
+  }
+
+  /** The resolved fallback model for the current mode when no override is active. */
   const configModel = createMemo<ModelSelection | null>(() => {
     const agentName = selectedAgentName()
-    return getModeModel(agentName) ?? getGlobalModel() ?? provider.defaultSelection()
+    return resolveModel(agentName)
   })
 
   /** True when the active model differs from what the config dictates. */
@@ -291,6 +301,15 @@ export const SessionProvider: ParentComponent = (props) => {
         delete selections[agentName]
       }),
     )
+  }
+
+  /** Push a model to the recent list (deduplicates, caps at RECENT_LIMIT). */
+  function pushRecent(selection: ModelSelection) {
+    const key = `${selection.providerID}/${selection.modelID}`
+    const filtered = store.recentModels.filter((r) => `${r.providerID}/${r.modelID}` !== key)
+    const updated = [selection, ...filtered].slice(0, RECENT_LIMIT)
+    setStore("recentModels", updated)
+    vscode.postMessage({ type: "persistRecents", recents: updated })
   }
 
   // Handle agentsLoaded immediately (not in onMount) so we never miss
@@ -370,6 +389,16 @@ export const SessionProvider: ParentComponent = (props) => {
   vscode.postMessage({ type: "requestVariants" })
 
   onCleanup(unsubVariants)
+
+  // Load persisted recent models from extension globalState
+  const unsubRecents = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type !== "recentsLoaded") return
+    setStore("recentModels", message.recents)
+  })
+
+  vscode.postMessage({ type: "requestRecents" })
+
+  onCleanup(unsubRecents)
 
   // Handle messages from extension
   onMount(() => {
@@ -841,11 +870,9 @@ export const SessionProvider: ParentComponent = (props) => {
     } else {
       setPendingAgentSelection(name)
       // When switching mode, initialize model for the new mode if the user
-      // hasn't explicitly set one for it
+      // hasn't explicitly set one for it — uses the fallback chain
       if (!userSetAgents()[name] && !store.modelSelections[name]) {
-        const modeModel = getModeModel(name)
-        const sel = modeModel ?? provider.defaultSelection()
-        if (sel) setStore("modelSelections", name, sel)
+        setStore("modelSelections", name, resolveModel(name))
       }
     }
   }
@@ -1155,12 +1182,11 @@ export const SessionProvider: ParentComponent = (props) => {
     getSessionAgent: (sessionID: string) => store.agentSelections[sessionID] ?? defaultAgent(),
     getSessionModel: (sessionID: string) => {
       const agentName = store.agentSelections[sessionID] ?? defaultAgent()
-      return store.modelSelections[agentName] ?? provider.defaultSelection()
+      return resolveModel(agentName, store.modelSelections[agentName])
     },
-    setSessionModel: (_sessionID: string, providerID: string, modelID: string) => {
-      const agentName = selectedAgentName()
-      setUserSetAgents((prev) => ({ ...prev, [agentName]: true }))
-      setStore("modelSelections", agentName, { providerID, modelID })
+    setSessionModel: (sessionID: string, providerID: string, modelID: string) => {
+      const agentName = store.agentSelections[sessionID] ?? defaultAgent()
+      applyModel(agentName, { providerID, modelID })
     },
     setSessionAgent: (sessionID: string, name: string) => {
       setStore("agentSelections", sessionID, name)

@@ -7,7 +7,8 @@
 import { createContext, useContext, createSignal, createMemo, onCleanup, ParentComponent, Accessor } from "solid-js"
 import { useVSCode } from "./vscode"
 import type { Provider, ProviderModel, ModelSelection, ExtensionMessage } from "../types/messages"
-import { flattenModels, findModel as _findModel } from "./provider-utils"
+import type { ProviderAuthMethod } from "@kilocode/sdk/v2/client"
+import { flattenModels, findModel as _findModel, isModelValid as isValid } from "./provider-utils"
 
 export type EnrichedModel = ProviderModel & { providerID: string; providerName: string }
 
@@ -16,8 +17,11 @@ interface ProviderContextValue {
   connected: Accessor<string[]>
   defaults: Accessor<Record<string, string>>
   defaultSelection: Accessor<ModelSelection>
+  authMethods: Accessor<Record<string, ProviderAuthMethod[]>>
   models: Accessor<EnrichedModel[]>
   findModel: (selection: ModelSelection | null) => EnrichedModel | undefined
+  /** Check if a model selection points to a real model in a connected provider. */
+  isModelValid: (selection: ModelSelection | null) => boolean
 }
 
 const KILO_AUTO: ModelSelection = { providerID: "kilo", modelID: "kilo-auto/free" }
@@ -31,11 +35,17 @@ export const ProviderProvider: ParentComponent = (props) => {
   const [connected, setConnected] = createSignal<string[]>([])
   const [defaults, setDefaults] = createSignal<Record<string, string>>({})
   const [defaultSelection, setDefaultSelection] = createSignal<ModelSelection>(KILO_AUTO)
+  const [authMethods, setAuthMethods] = createSignal<Record<string, ProviderAuthMethod[]>>({})
 
   const models = createMemo<EnrichedModel[]>(() => flattenModels(providers()))
 
   function findModel(selection: ModelSelection | null): EnrichedModel | undefined {
     return _findModel(models(), selection)
+  }
+
+  /** True when the selection points to a real model in a connected (or Kilo) provider. */
+  function isModelValid(selection: ModelSelection | null): boolean {
+    return isValid(providers(), connected(), selection)
   }
 
   // Register handler immediately (not in onMount) so we never miss
@@ -49,6 +59,7 @@ export const ProviderProvider: ParentComponent = (props) => {
     setConnected(message.connected)
     setDefaults(message.defaults)
     setDefaultSelection(message.defaultSelection)
+    setAuthMethods(message.authMethods)
   })
 
   onCleanup(unsubscribe)
@@ -78,8 +89,10 @@ export const ProviderProvider: ParentComponent = (props) => {
     connected,
     defaults,
     defaultSelection,
+    authMethods,
     models,
     findModel,
+    isModelValid,
   }
 
   return <ProviderContext.Provider value={value}>{props.children}</ProviderContext.Provider>
