@@ -344,7 +344,7 @@ export class GitStatsPoller {
 
     const params = new URLSearchParams({ directory, base })
     const response = await fetch(`${config.baseUrl}/experimental/worktree/stats?${params}`, {
-      headers: { Authorization: `Bearer ${config.password}` },
+      headers: { Authorization: `Basic ${Buffer.from(`kilo:${config.password}`).toString("base64")}` },
     })
     if (!response.ok) return undefined
     return (await response.json()) as DiffStats

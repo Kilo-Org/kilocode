@@ -4,6 +4,37 @@ import { inspect } from "util"
 import type { FileDiff } from "@kilocode/sdk/v2/client"
 import { GitOps } from "./agent-manager/GitOps"
 
+function checksum(content: string): string | undefined {
+  if (!content) return undefined
+  let hash = 0x811c9dc5
+  for (let i = 0; i < content.length; i++) {
+    hash ^= content.charCodeAt(i)
+    hash = Math.imul(hash, 0x01000193)
+  }
+  return (hash >>> 0).toString(36)
+}
+
+function sampledChecksum(content: string, limit = 500_000): string | undefined {
+  if (!content) return undefined
+  if (content.length <= limit) return checksum(content)
+
+  const size = 4096
+  const points = [
+    0,
+    Math.floor(content.length * 0.25),
+    Math.floor(content.length * 0.5),
+    Math.floor(content.length * 0.75),
+    content.length - size,
+  ]
+  const hashes = points
+    .map((point) => {
+      const start = Math.max(0, Math.min(content.length - size, point - Math.floor(size / 2)))
+      return checksum(content.slice(start, start + size)) ?? ""
+    })
+    .join(":")
+  return `${content.length}:${hashes}`
+}
+
 export function appendOutput(channel: vscode.OutputChannel, prefix: string, ...args: unknown[]): void {
   const msg = args
     .map((item) => (typeof item === "string" ? item : inspect(item, { breakLength: Infinity, depth: 4 })))
@@ -42,11 +73,15 @@ export async function resolveLocalDiffTarget(
   return { directory: root, baseBranch: base }
 }
 
-// kilocode_change - exclude file content from hash; additions/deletions from numstat
-// already change when content changes, so this is sufficient for change detection
+// kilocode_change - include sampled before/after content fingerprints so the
+// hash stays cheap for large files but still changes when the diff text changes.
 export function hashFileDiffs(diffs: FileDiff[]): string {
   return diffs
-    .map((diff) => `${diff.file}:${diff.status}:${diff.additions}:${diff.deletions}:${diff.binary ? 1 : 0}`)
+    .map((diff) => {
+      const before = sampledChecksum(diff.before) ?? ""
+      const after = sampledChecksum(diff.after) ?? ""
+      return `${diff.file}:${diff.status}:${diff.additions}:${diff.deletions}:${diff.binary ? 1 : 0}:${before}:${after}`
+    })
     .join("|")
 }
 
