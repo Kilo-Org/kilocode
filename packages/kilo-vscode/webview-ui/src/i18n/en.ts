@@ -411,6 +411,8 @@ export const dict = {
 
   "error.globalSync.connectFailed": "Could not connect to server. Is there a server running at `{{url}}`?",
 
+  "error.startup.title": "Server connection failed",
+
   "error.paidModel.title": "You need to sign in to use this model",
   "error.paidModel.description":
     "Sign in or create an account to access over 500 models, use credits at cost, or bring your own key.",
@@ -838,6 +840,7 @@ export const dict = {
 
   "prompt.placeholder.connecting": "Connecting to server...",
   "prompt.placeholder.default": "Type a message... (Enter to send, Shift+Enter for new line)",
+  "prompt.placeholder.error": "",
 
   "context.usage.sessionCost": "Session cost",
 

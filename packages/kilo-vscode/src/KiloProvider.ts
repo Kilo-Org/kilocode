@@ -397,6 +397,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "openChanges":
           vscode.commands.executeCommand("kilo-code.new.showChanges")
           break
+        case "retryConnection":
+          console.log("[Kilo New] KiloProvider: 🔄 Retrying connection...")
+          this.initializeConnection().catch((e) =>
+            console.error("[Kilo New] KiloProvider: ❌ Retry connection failed:", e),
+          )
+          break
         case "openSubAgentViewer":
           vscode.commands.executeCommand("kilo-code.new.openSubAgentViewer", message.sessionID, message.title)
           break
@@ -612,6 +618,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    */
   private async initializeConnection(): Promise<void> {
     console.log("[Kilo New] KiloProvider: 🔧 Starting initializeConnection...")
+
+    this.connectionState = "connecting"
+    this.postMessage({ type: "connectionState", state: "connecting" })
 
     // Clean up any existing subscriptions (e.g., sidebar re-shown)
     this.unsubscribeEvent?.()
