@@ -77,12 +77,12 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const permissionRequest = () => scopedPermissions().find((p) => p.sessionID === id()) ?? scopedPermissions()[0]
   const blocked = () => scopedPermissions().length > 0 || scopedQuestions().length > 0
 
-  // When a bottom-dock permission/question disappears while the session is busy,
-  // the scroll container grows taller. Dispatch a custom event so MessageList can
-  // resume auto-scroll.
+  // When a bottom-dock permission/question disappears the scroll container grows
+  // taller. The content ref hasn't resized so ResizeObserver won't fire — dispatch
+  // a custom event so MessageList can resume auto-scroll.
   createEffect(
     on(blocked, (isBlocked, wasBlocked) => {
-      if (wasBlocked && !isBlocked && !idle()) {
+      if (wasBlocked && !isBlocked) {
         window.dispatchEvent(new CustomEvent("resumeAutoScroll"))
       }
     }),

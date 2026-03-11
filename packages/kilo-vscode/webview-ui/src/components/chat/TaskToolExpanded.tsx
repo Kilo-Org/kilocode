@@ -40,8 +40,6 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
 
   const childSessionId = () => props.metadata.sessionId as string | undefined
 
-  const running = createMemo(() => props.status === "pending" || props.status === "running")
-
   // Sync child session into store whenever we have a sessionId
   createEffect(() => {
     const id = childSessionId()
@@ -64,7 +62,6 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
   })
 
   const autoScroll = createAutoScroll({
-    working: running,
     overflowAnchor: "auto",
   })
 
