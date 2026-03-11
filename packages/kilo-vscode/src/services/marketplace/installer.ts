@@ -125,7 +125,9 @@ export class MarketplaceInstaller {
     }
     const stamp = Date.now()
     const tarball = path.join(os.tmpdir(), `kilo-skill-${item.id}-${stamp}.tar.gz`)
-    const staging = path.join(os.tmpdir(), `kilo-skill-${item.id}-${stamp}`)
+    // Stage under `base` (not os.tmpdir()) so fs.rename() never crosses filesystems (EXDEV).
+    await fs.mkdir(base, { recursive: true })
+    const staging = path.join(base, `.staging-${item.id}-${stamp}`)
 
     try {
       const response = await fetch(item.content)
@@ -159,7 +161,6 @@ export class MarketplaceInstaller {
       }
 
       // Atomically swap: remove old install, move staging into place.
-      await fs.mkdir(base, { recursive: true })
       try {
         await fs.rm(dir, { recursive: true })
       } catch (err) {
