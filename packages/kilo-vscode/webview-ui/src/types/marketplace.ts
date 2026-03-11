@@ -60,4 +60,3 @@ export interface MarketplaceFilters {
   search?: string
   tags?: string[]
 }
-

@@ -294,7 +294,9 @@
   border-radius: 2px;
   cursor: pointer;
   opacity: 0.8;
-  transition: opacity 0.15s ease, background 0.15s ease;
+  transition:
+    opacity 0.15s ease,
+    background 0.15s ease;
 }
 
 .skills-categories button:hover {

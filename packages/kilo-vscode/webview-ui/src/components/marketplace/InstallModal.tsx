@@ -165,9 +165,7 @@ export const InstallModal: Component<InstallModalProps> = (props) => {
                 <div class="install-modal-section">
                   <label class="install-modal-label">Installation Method</label>
                   <select value={selected()} onChange={(e) => setSelected(Number(e.target.value))}>
-                    <For each={methods()}>
-                      {(method, i) => <option value={i()}>{method.name}</option>}
-                    </For>
+                    <For each={methods()}>{(method, i) => <option value={i()}>{method.name}</option>}</For>
                   </select>
                 </div>
               </Show>

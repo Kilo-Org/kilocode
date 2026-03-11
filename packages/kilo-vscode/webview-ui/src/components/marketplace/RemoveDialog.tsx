@@ -25,8 +25,7 @@ export const RemoveDialog: Component<RemoveDialogProps> = (props) => {
           </div>
           <div class="install-modal-body">
             <p>
-              Are you sure you want to remove this {label()}? This will remove it from your {props.scope}{" "}
-              configuration.
+              Are you sure you want to remove this {label()}? This will remove it from your {props.scope} configuration.
             </p>
           </div>
           <div class="install-modal-footer">

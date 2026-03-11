@@ -38,9 +38,7 @@ export const SkillItemCard: Component<SkillItemCardProps> = (props) => {
               {props.item.displayName}
             </a>
           </Show>
-          <span class="marketplace-card-author">
-            {props.item.author && `by ${props.item.author}`}
-          </span>
+          <span class="marketplace-card-author">{props.item.author && `by ${props.item.author}`}</span>
         </div>
         <Show
           when={installed()}
@@ -50,7 +48,10 @@ export const SkillItemCard: Component<SkillItemCardProps> = (props) => {
             </button>
           }
         >
-          <button class="marketplace-remove-btn" onClick={() => props.onRemove(props.item, installed() as "project" | "global")}>
+          <button
+            class="marketplace-remove-btn"
+            onClick={() => props.onRemove(props.item, installed() as "project" | "global")}
+          >
             Remove
           </button>
         </Show>

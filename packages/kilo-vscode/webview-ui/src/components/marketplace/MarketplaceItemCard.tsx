@@ -52,7 +52,10 @@ export const MarketplaceItemCard: Component<MarketplaceItemCardProps> = (props) 
             </button>
           }
         >
-          <button class="marketplace-remove-btn" onClick={() => props.onRemove(props.item, installed() as "project" | "global")}>
+          <button
+            class="marketplace-remove-btn"
+            onClick={() => props.onRemove(props.item, installed() as "project" | "global")}
+          >
             Remove
           </button>
         </Show>
