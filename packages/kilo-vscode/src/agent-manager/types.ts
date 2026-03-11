@@ -26,6 +26,7 @@ export type WorktreeDiffEntry = FileDiff & {
   tracked?: boolean
   generatedLike?: boolean
   summarized?: boolean
+  stamp?: string
 }
 
 // ---------------------------------------------------------------------------

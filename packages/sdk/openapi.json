@@ -11324,9 +11324,22 @@
           },
           "summarized": {
             "type": "boolean"
+          },
+          "stamp": {
+            "type": "string"
           }
         },
-        "required": ["file", "before", "after", "additions", "deletions", "tracked", "generatedLike", "summarized"]
+        "required": [
+          "file",
+          "before",
+          "after",
+          "additions",
+          "deletions",
+          "tracked",
+          "generatedLike",
+          "summarized",
+          "stamp"
+        ]
       },
       "ProjectSummary": {
         "type": "object",

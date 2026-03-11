@@ -8,7 +8,8 @@ export function sameDiffMeta(left: WorktreeFileDiff, right: WorktreeFileDiff) {
     left.deletions === right.deletions &&
     left.tracked === right.tracked &&
     left.generatedLike === right.generatedLike &&
-    left.summarized === right.summarized
+    left.summarized === right.summarized &&
+    left.stamp === right.stamp
   )
 }
 

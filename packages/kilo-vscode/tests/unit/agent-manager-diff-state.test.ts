@@ -14,6 +14,7 @@ function diff(overrides: Partial<WorktreeFileDiff>): WorktreeFileDiff {
     tracked: true,
     generatedLike: false,
     summarized: true,
+    stamp: "1:1",
     ...overrides,
   }
 }
@@ -29,6 +30,13 @@ describe("agent manager diff state", () => {
   it("drops cached detail when summary metadata changes", () => {
     const prev = [diff({ summarized: false, before: "old\n", after: "new\n", additions: 1 })]
     const next = [diff({ summarized: true, additions: 2 })]
+
+    expect(mergeWorktreeDiffs(prev, next)).toEqual(next)
+  })
+
+  it("drops cached detail when the summary stamp changes", () => {
+    const prev = [diff({ summarized: false, before: "old\n", after: "new\n", stamp: "1:1" })]
+    const next = [diff({ summarized: true, stamp: "1:2" })]
 
     expect(mergeWorktreeDiffs(prev, next)).toEqual(next)
   })

@@ -1682,6 +1682,7 @@ export type WorktreeDiffItem = {
   tracked: boolean
   generatedLike: boolean
   summarized: boolean
+  stamp: string
 }
 
 export type ProjectSummary = {

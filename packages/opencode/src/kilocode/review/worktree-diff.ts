@@ -1,5 +1,6 @@
 // kilocode_change - new file
 import { $ } from "bun"
+import fs from "node:fs/promises"
 import path from "node:path"
 import z from "zod"
 import { FileIgnore } from "@/file/ignore"
@@ -11,6 +12,7 @@ export namespace WorktreeDiff {
     tracked: z.boolean(),
     generatedLike: z.boolean(),
     summarized: z.boolean(),
+    stamp: z.string(),
   }).meta({
     ref: "WorktreeDiffItem",
   })
@@ -25,6 +27,7 @@ export namespace WorktreeDiff {
     status: Status
     tracked: boolean
     generatedLike: boolean
+    stamp: string
   }
 
   function generatedLike(file: string) {
@@ -97,6 +100,7 @@ export namespace WorktreeDiff {
         status,
         tracked: true,
         generatedLike: generatedLike(file),
+        stamp: status === "deleted" ? `deleted:${ancestor}` : await statStamp(dir, file),
       })
     }
 
@@ -118,13 +122,15 @@ export namespace WorktreeDiff {
       if (!file || seen.has(file)) continue
       const after = Bun.file(path.join(dir, file))
       if (!(await after.exists())) continue
+      const text = await after.text()
       result.push({
         file,
-        additions: 0,
+        additions: lines(text),
         deletions: 0,
         status: "added",
         tracked: false,
         generatedLike: generatedLike(file),
+        stamp: await statStamp(dir, file),
       })
     }
 
@@ -134,6 +140,12 @@ export namespace WorktreeDiff {
   function lines(text: string) {
     if (!text) return 0
     return text.endsWith("\n") ? text.split("\n").length - 1 : text.split("\n").length
+  }
+
+  async function statStamp(dir: string, file: string) {
+    const stat = await fs.stat(path.join(dir, file)).catch(() => undefined)
+    if (!stat) return `missing:${file}`
+    return `${stat.size}:${stat.mtimeMs}`
   }
 
   async function readBefore(dir: string, ancestor: string, file: string, status: Status) {
@@ -162,6 +174,7 @@ export namespace WorktreeDiff {
       tracked: meta.tracked,
       generatedLike: meta.generatedLike,
       summarized: false,
+      stamp: meta.stamp,
     }
   }
 
@@ -176,6 +189,7 @@ export namespace WorktreeDiff {
       tracked: meta.tracked,
       generatedLike: meta.generatedLike,
       summarized: true,
+      stamp: meta.stamp,
     }
   }
 

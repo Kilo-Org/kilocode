@@ -48,6 +48,7 @@ export function hashFileDiffs(
       tracked?: boolean
       generatedLike?: boolean
       summarized?: boolean
+      stamp?: string
     }
   >,
 ): string {
@@ -62,6 +63,7 @@ export function hashFileDiffs(
         diff.tracked ? "tracked" : "untracked",
         diff.generatedLike ? "generated" : "source",
         diff.summarized ? "summary" : "detail",
+        diff.stamp ?? "",
         content,
       ].join(":")
     })

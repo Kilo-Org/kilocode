@@ -40,7 +40,9 @@ describe("WorktreeDiff summary", () => {
     expect(generated?.summarized).toBe(true)
     expect(generated?.before).toBe("")
     expect(generated?.after).toBe("")
+    expect(generated?.additions).toBe(1)
     expect(generated?.status).toBe("added")
+    expect(generated?.stamp?.length).toBeGreaterThan(0)
   })
 
   test("detail loads one file and computes untracked line counts", async () => {
