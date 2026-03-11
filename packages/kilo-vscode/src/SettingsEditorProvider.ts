@@ -2,16 +2,22 @@ import * as vscode from "vscode"
 import { KiloProvider } from "./KiloProvider"
 import type { KiloConnectionService } from "./services/cli-backend"
 
-type PanelView = "settings" | "profile"
+type PanelView = "settings" | "profile" | "marketplace"
+
+const PANEL_TITLES: Record<PanelView, string> = {
+  settings: "Kilo Settings",
+  profile: "Kilo Profile",
+  marketplace: "Kilo Marketplace",
+}
 
 /**
- * Opens Settings or Profile as an editor-area WebviewPanel,
+ * Opens Settings, Profile, or Marketplace as an editor-area WebviewPanel,
  * keeping the sidebar chat undisturbed.
  *
  * Each view type is a singleton panel — calling openPanel() again
  * reveals the existing panel instead of creating a duplicate.
  *
- * Uses a full KiloProvider under the hood so Settings/Profile have
+ * Uses a full KiloProvider under the hood so each panel has
  * the same backend connectivity (config, providers, profile, auth)
  * as the sidebar.
  */
@@ -32,7 +38,7 @@ export class SettingsEditorProvider implements vscode.Disposable {
       return
     }
 
-    const title = view === "settings" ? "Kilo Settings" : "Kilo Profile"
+    const title = PANEL_TITLES[view]
 
     const panel = vscode.window.createWebviewPanel(`kilo-code.new.${view}Panel`, title, vscode.ViewColumn.One, {
       enableScripts: true,
