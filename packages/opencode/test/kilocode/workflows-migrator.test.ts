@@ -72,6 +72,21 @@ Actual description here.`
       expect(workflows[0].source).toBe("project")
     })
 
+    test("discovers workflows from legacy .kilocode/workflows/", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          const workflowsDir = path.join(dir, ".kilocode", "workflows")
+          await Bun.write(path.join(workflowsDir, "legacy-workflow.md"), "# Legacy\n\nLegacy workflow")
+        },
+      })
+
+      const workflows = await WorkflowsMigrator.discoverWorkflows(tmp.path, true)
+
+      expect(workflows).toHaveLength(1)
+      expect(workflows[0].name).toBe("legacy-workflow")
+      expect(workflows[0].source).toBe("project")
+    })
+
     test("returns empty array when no workflows directory exists", async () => {
       await using tmp = await tmpdir()
 

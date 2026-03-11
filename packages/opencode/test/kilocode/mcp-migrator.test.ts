@@ -191,6 +191,69 @@ describe("McpMigrator", () => {
       })
     })
 
+    test("reads from legacy .kilocode/mcp.json when .kilo/mcp.json is absent", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          const settingsDir = path.join(dir, ".kilocode")
+          await Bun.write(
+            path.join(settingsDir, "mcp.json"),
+            JSON.stringify({
+              mcpServers: {
+                legacy: {
+                  command: "node",
+                  args: ["legacy-server.js"],
+                },
+              },
+            }),
+          )
+        },
+      })
+
+      const result = await McpMigrator.migrate({
+        projectDir: tmp.path,
+        skipGlobalPaths: true,
+      })
+
+      expect(result.mcp).toHaveProperty("legacy")
+      expect(result.mcp.legacy).toEqual({
+        type: "local",
+        command: ["node", "legacy-server.js"],
+      })
+    })
+
+    test(".kilo/mcp.json overrides .kilocode/mcp.json for same server name", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(
+            path.join(dir, ".kilocode", "mcp.json"),
+            JSON.stringify({
+              mcpServers: {
+                myserver: { command: "old-cmd", args: ["old"] },
+              },
+            }),
+          )
+          await Bun.write(
+            path.join(dir, ".kilo", "mcp.json"),
+            JSON.stringify({
+              mcpServers: {
+                myserver: { command: "new-cmd", args: ["new"] },
+              },
+            }),
+          )
+        },
+      })
+
+      const result = await McpMigrator.migrate({
+        projectDir: tmp.path,
+        skipGlobalPaths: true,
+      })
+
+      expect(result.mcp.myserver).toEqual({
+        type: "local",
+        command: ["new-cmd", "new"],
+      })
+    })
+
     test("skips disabled servers and records them", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {

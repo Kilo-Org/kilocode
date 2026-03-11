@@ -77,7 +77,7 @@ function stripRemotePrefix(ref: string): { branch: string; remote?: string } {
   return { branch: ref }
 }
 
-import { KILO_DIR, migrateKiloDir } from "./constants"
+import { KILO_DIR, LEGACY_DIR, migrateAgentManagerData } from "./constants"
 
 const SESSION_ID_FILE = "session-id"
 const METADATA_FILE = "metadata.json"
@@ -98,11 +98,11 @@ export class WorktreeManager {
     this.log = log
   }
 
-  /** Run once before first read/write to migrate .kilocode → .kilo. */
+  /** Run once before first read/write to migrate Agent Manager data from .kilocode → .kilo. */
   private async ensureMigrated(): Promise<void> {
     if (this.migrated) return
     this.migrated = true
-    await migrateKiloDir(this.root, this.log)
+    await migrateAgentManagerData(this.root, this.log)
   }
 
   // ---------------------------------------------------------------------------
@@ -330,9 +330,8 @@ export class WorktreeManager {
   async readMetadata(
     worktreePath: string,
   ): Promise<{ sessionId: string; parentBranch?: string; remote?: string } | undefined> {
-    // Check .kilo/ first, then legacy .kilocode/ (per-worktree metadata dirs
-    // are not renamed by the top-level migration)
-    for (const dirName of [KILO_DIR, ".kilocode"]) {
+    // Check .kilo/ first, then legacy .kilocode/
+    for (const dirName of [KILO_DIR, LEGACY_DIR]) {
       const result = await this.readMetadataFrom(worktreePath, dirName)
       if (result) return result
     }

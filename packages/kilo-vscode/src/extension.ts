@@ -11,18 +11,9 @@ import { BrowserAutomationService } from "./services/browser-automation"
 import { TelemetryProxy } from "./services/telemetry"
 import { registerCommitMessageService } from "./services/commit-message"
 import { registerCodeActions, registerTerminalActions, KiloCodeActionProvider } from "./services/code-actions"
-import { migrateKiloDir } from "./agent-manager/constants"
 
 export function activate(context: vscode.ExtensionContext) {
   console.log("Kilo Code extension is now active")
-
-  // Migrate .kilocode/ → .kilo/ early, before any code reads from the directory.
-  // Fire-and-forget: the CLI migration in Config.state() is the primary path;
-  // this ensures the extension side is also covered before spawning kilo serve.
-  const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
-  if (root) {
-    void migrateKiloDir(root, (msg) => console.log(`[Kilo New] ${msg}`))
-  }
 
   const telemetry = TelemetryProxy.getInstance()
 

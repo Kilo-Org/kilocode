@@ -52,7 +52,7 @@ interface StateFile {
   defaultBaseBranch?: string
 }
 
-import { KILO_DIR, migrateKiloDir } from "./constants"
+import { KILO_DIR, migrateAgentManagerData } from "./constants"
 
 const STATE_FILE = "agent-manager.json"
 
@@ -284,10 +284,10 @@ export class WorktreeStateManager {
   // ---------------------------------------------------------------------------
 
   async load(): Promise<void> {
-    // Migrate .kilocode → .kilo before first read
+    // Migrate Agent Manager data from .kilocode → .kilo before first read
     if (!this.migrated) {
       this.migrated = true
-      await migrateKiloDir(this.root, this.log)
+      await migrateAgentManagerData(this.root, this.log)
     }
     try {
       const content = await fs.promises.readFile(this.file, "utf-8")
@@ -298,8 +298,8 @@ export class WorktreeStateManager {
       this.reviewDiffStyle = "unified"
 
       for (const [id, wt] of Object.entries(data.worktrees ?? {})) {
-        // Rewrite stale .kilocode/ paths left from before the directory rename
-        const fixed = wt.path?.includes("/.kilocode/") ? wt.path.replace("/.kilocode/", "/.kilo/") : wt.path
+        // Rewrite stale .kilocode/ paths (handles both Unix / and Windows \ separators)
+        const fixed = wt.path?.replace(/[/\\]\.kilocode[/\\]/g, `${path.sep}.kilo${path.sep}`) ?? wt.path
         this.worktrees.set(id, { id, ...wt, path: fixed })
       }
       for (const [id, s] of Object.entries(data.sessions ?? {})) {

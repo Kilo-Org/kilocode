@@ -120,6 +120,52 @@ describe("project-id", () => {
       expect(id).toBe("my-custom-project")
     })
 
+    test("falls back to .kilocode/config.json when .kilo/config.json is absent", async () => {
+      await using tmp = await tmpdir({
+        git: true,
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, ".kilocode"), { recursive: true })
+          await Bun.write(
+            path.join(dir, ".kilocode", "config.json"),
+            JSON.stringify({
+              project: {
+                id: "legacy-project",
+              },
+            }),
+          )
+        },
+      })
+
+      const id = await Instance.provide({
+        directory: tmp.path,
+        fn: () => getKiloProjectId(),
+      })
+
+      expect(id).toBe("legacy-project")
+    })
+
+    test("prefers .kilo/config.json over .kilocode/config.json", async () => {
+      await using tmp = await tmpdir({
+        git: true,
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, ".kilo"), { recursive: true })
+          await Bun.write(path.join(dir, ".kilo", "config.json"), JSON.stringify({ project: { id: "new-project" } }))
+          await fs.mkdir(path.join(dir, ".kilocode"), { recursive: true })
+          await Bun.write(
+            path.join(dir, ".kilocode", "config.json"),
+            JSON.stringify({ project: { id: "old-project" } }),
+          )
+        },
+      })
+
+      const id = await Instance.provide({
+        directory: tmp.path,
+        fn: () => getKiloProjectId(),
+      })
+
+      expect(id).toBe("new-project")
+    })
+
     test("normalizes git URL in config file project.id", async () => {
       await using tmp = await tmpdir({
         git: true,

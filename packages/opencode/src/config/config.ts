@@ -45,7 +45,6 @@ import { RulesMigrator } from "../kilocode/rules-migrator" // kilocode_change
 import { WorkflowsMigrator } from "../kilocode/workflows-migrator" // kilocode_change
 import { McpMigrator } from "../kilocode/mcp-migrator" // kilocode_change
 import { IgnoreMigrator } from "../kilocode/ignore-migrator" // kilocode_change
-import { migrateKiloDir } from "../kilocode/migrate-kilo-dir" // kilocode_change
 
 export namespace Config {
   const ModelId = z.string().meta({ $ref: "https://models.dev/model-schema.json#/$defs/Model" })
@@ -97,11 +96,7 @@ export namespace Config {
     // Managed config directory is enterprise-only and always overrides everything above.
     let result: Info = {}
 
-    // kilocode_change start
-    // Migrate .kilocode/ directories to .kilo/ (one-time rename)
-    await migrateKiloDir(Instance.directory)
-
-    // Load Kilocode configs first (lowest precedence)
+    // kilocode_change start - Load Kilocode configs first (lowest precedence)
     // Load Kilocode custom modes (legacy fallback)
     try {
       const kilocodeMigration = await ModesMigrator.migrate({
@@ -239,7 +234,12 @@ export namespace Config {
 
     for (const dir of unique(directories)) {
       // kilocode_change start
-      if (dir.endsWith(".kilo") || dir.endsWith(".opencode") || dir === Flag.KILO_CONFIG_DIR) {
+      if (
+        dir.endsWith(".kilo") ||
+        dir.endsWith(".kilocode") ||
+        dir.endsWith(".opencode") ||
+        dir === Flag.KILO_CONFIG_DIR
+      ) {
         for (const file of ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"]) {
           // kilocode_change end
           log.debug(`loading config from ${path.join(dir, file)}`)
@@ -459,6 +459,8 @@ export namespace Config {
       const patterns = [
         "/.kilo/command/",
         "/.kilo/commands/",
+        "/.kilocode/command/",
+        "/.kilocode/commands/",
         "/.opencode/command/",
         "/.opencode/commands/",
         "/command/",
@@ -506,6 +508,8 @@ export namespace Config {
       const patterns = [
         "/.kilo/agent/",
         "/.kilo/agents/",
+        "/.kilocode/agent/",
+        "/.kilocode/agents/",
         "/.opencode/agent/",
         "/.opencode/agents/",
         "/agent/",

@@ -37,6 +37,37 @@ describe("RulesMigrator", () => {
       expect(rules.every((r) => r.mode === undefined)).toBe(true)
     })
 
+    test("discovers rules from legacy .kilocode/rules/", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, ".kilocode", "rules"), { recursive: true })
+          await Bun.write(path.join(dir, ".kilocode", "rules", "legacy.md"), "# Legacy rules")
+        },
+      })
+
+      const rules = await RulesMigrator.discoverRules(tmp.path)
+
+      expect(rules.some((r) => r.path.includes("legacy.md"))).toBe(true)
+    })
+
+    test(".kilo/rules/ takes precedence over .kilocode/rules/ for same filename", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, ".kilo", "rules"), { recursive: true })
+          await Bun.write(path.join(dir, ".kilo", "rules", "main.md"), "# New rules")
+          await fs.mkdir(path.join(dir, ".kilocode", "rules"), { recursive: true })
+          await Bun.write(path.join(dir, ".kilocode", "rules", "main.md"), "# Old rules")
+        },
+      })
+
+      const rules = await RulesMigrator.discoverRules(tmp.path)
+      const mainRules = rules.filter((r) => r.path.includes("main.md"))
+
+      // Only one main.md should be found (.kilo wins)
+      expect(mainRules).toHaveLength(1)
+      expect(mainRules[0].path).toContain(".kilo/")
+    })
+
     test("discovers mode-specific directory rules", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {

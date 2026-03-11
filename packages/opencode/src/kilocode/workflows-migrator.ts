@@ -6,7 +6,8 @@ import { Filesystem } from "../util/filesystem"
 import { KilocodePaths } from "./paths"
 
 export namespace WorkflowsMigrator {
-  const KILO_WORKFLOWS_DIR = ".kilo/workflows"
+  // .kilocode first (lower precedence), .kilo second (higher precedence / wins)
+  const KILO_WORKFLOWS_DIRS = [".kilocode/workflows", ".kilo/workflows"]
   const GLOBAL_WORKFLOWS_DIR = path.join(os.homedir(), ".kilocode", "workflows")
 
   export interface KilocodeWorkflow {
@@ -75,9 +76,10 @@ export namespace WorkflowsMigrator {
       workflows.push(...(await loadWorkflowsFromDir(GLOBAL_WORKFLOWS_DIR, "global")))
     }
 
-    // 3. Project workflows (.kilo/workflows/)
-    const projectWorkflowsDir = path.join(projectDir, KILO_WORKFLOWS_DIR)
-    workflows.push(...(await loadWorkflowsFromDir(projectWorkflowsDir, "project")))
+    // 3. Project workflows (.kilo/workflows/ and .kilocode/workflows/)
+    for (const dir of KILO_WORKFLOWS_DIRS) {
+      workflows.push(...(await loadWorkflowsFromDir(path.join(projectDir, dir), "project")))
+    }
 
     return workflows
   }

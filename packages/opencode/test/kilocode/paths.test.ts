@@ -137,6 +137,58 @@ description: Symlinked skill
       expect(result[0]).toEndWith(".kilo")
     })
 
+    test("discovers skills from legacy .kilocode/skills/", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          const skillDir = path.join(dir, ".kilocode", "skills", "legacy-skill")
+          await fs.mkdir(skillDir, { recursive: true })
+          await Bun.write(
+            path.join(skillDir, "SKILL.md"),
+            `---
+name: legacy-skill
+description: A legacy skill
+---
+# Legacy instructions`,
+          )
+        },
+      })
+
+      const result = await KilocodePaths.skillDirectories({
+        projectDir: tmp.path,
+        worktreeRoot: tmp.path,
+        skipGlobalPaths: true,
+      })
+
+      expect(result).toHaveLength(1)
+      expect(result[0]).toEndWith(".kilocode")
+    })
+
+    test("discovers skills from both .kilo and .kilocode", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          // .kilo skill
+          const kiloSkillDir = path.join(dir, ".kilo", "skills", "new-skill")
+          await fs.mkdir(kiloSkillDir, { recursive: true })
+          await Bun.write(path.join(kiloSkillDir, "SKILL.md"), "# New skill")
+
+          // .kilocode skill
+          const legacySkillDir = path.join(dir, ".kilocode", "skills", "old-skill")
+          await fs.mkdir(legacySkillDir, { recursive: true })
+          await Bun.write(path.join(legacySkillDir, "SKILL.md"), "# Old skill")
+        },
+      })
+
+      const result = await KilocodePaths.skillDirectories({
+        projectDir: tmp.path,
+        worktreeRoot: tmp.path,
+        skipGlobalPaths: true,
+      })
+
+      expect(result).toHaveLength(2)
+      expect(result.some((d) => d.endsWith(".kilo"))).toBe(true)
+      expect(result.some((d) => d.endsWith(".kilocode"))).toBe(true)
+    })
+
     test("discovers multiple skills in same directory", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {

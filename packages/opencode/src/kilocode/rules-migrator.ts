@@ -6,8 +6,8 @@ export namespace RulesMigrator {
   // Only support .kilocoderules (no migration for .roorules or .clinerules)
   const LEGACY_RULE_FILE = ".kilocoderules"
 
-  // Directory-based rules
-  const KILO_RULES_DIR = ".kilo/rules"
+  // Directory-based rules (read from both .kilo and .kilocode)
+  const KILO_RULES_DIRS = [".kilo/rules", ".kilocode/rules"]
   const GLOBAL_RULES_DIR = path.join(os.homedir(), ".kilocode", "rules")
 
   // Known modes for mode-specific rule discovery
@@ -57,12 +57,19 @@ export namespace RulesMigrator {
       }
     }
 
-    // 2. Project .kilo/rules/ directory
-    const projectRulesDir = path.join(projectDir, KILO_RULES_DIR)
-    if (await isDirectory(projectRulesDir)) {
-      const files = await findMarkdownFiles(projectRulesDir)
-      for (const file of files) {
-        rules.push({ path: file, source: "project" })
+    // 2. Project .kilo/rules/ and .kilocode/rules/ directories
+    const seen = new Set<string>()
+    for (const rulesRel of KILO_RULES_DIRS) {
+      const projectRulesDir = path.join(projectDir, rulesRel)
+      if (await isDirectory(projectRulesDir)) {
+        const files = await findMarkdownFiles(projectRulesDir)
+        for (const file of files) {
+          const name = path.basename(file)
+          if (!seen.has(name)) {
+            seen.add(name)
+            rules.push({ path: file, source: "project" })
+          }
+        }
       }
     }
 
@@ -74,12 +81,19 @@ export namespace RulesMigrator {
 
     // 4. Mode-specific rules
     for (const mode of KNOWN_MODES) {
-      // Mode-specific directory (.kilo/rules-{mode}/*.md)
-      const modeDir = path.join(projectDir, `.kilo/rules-${mode}`)
-      if (await isDirectory(modeDir)) {
-        const files = await findMarkdownFiles(modeDir)
-        for (const file of files) {
-          rules.push({ path: file, source: "project", mode })
+      // Mode-specific directories (.kilo/rules-{mode}/*.md and .kilocode/rules-{mode}/*.md)
+      const modeSeen = new Set<string>()
+      for (const prefix of [".kilo", ".kilocode"]) {
+        const modeDir = path.join(projectDir, `${prefix}/rules-${mode}`)
+        if (await isDirectory(modeDir)) {
+          const files = await findMarkdownFiles(modeDir)
+          for (const file of files) {
+            const name = path.basename(file)
+            if (!modeSeen.has(name)) {
+              modeSeen.add(name)
+              rules.push({ path: file, source: "project", mode })
+            }
+          }
         }
       }
 
@@ -123,7 +137,7 @@ export namespace RulesMigrator {
       // Warn about legacy files
       if (rule.source === "legacy") {
         warnings.push(
-          `Legacy rule file '${path.basename(rule.path)}' found. ` + `Consider migrating to .kilo/rules/ directory.`,
+          `Legacy rule file '${path.basename(rule.path)}' found. Consider migrating to .kilo/rules/ directory.`,
         )
       }
     }
