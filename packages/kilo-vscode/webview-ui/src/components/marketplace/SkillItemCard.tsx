@@ -13,7 +13,7 @@ interface SkillItemCardProps {
 export const SkillItemCard: Component<SkillItemCardProps> = (props) => {
   const vscode = useVSCode()
 
-  const installed = createMemo(() => isInstalled(props.item.id, props.metadata))
+  const installed = createMemo(() => isInstalled(props.item.id, props.item.type, props.metadata))
 
   const openExternal = (url: string) => {
     vscode.postMessage({ type: "openExternal", url })

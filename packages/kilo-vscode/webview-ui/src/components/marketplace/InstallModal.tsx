@@ -121,11 +121,11 @@ export const InstallModal: Component<InstallModalProps> = (props) => {
 
   return (
     <Show when={props.item}>
-      <div class="install-modal-overlay" onClick={props.onClose}>
+      <div class="install-modal-overlay" onClick={() => !installing() && props.onClose()}>
         <div class="install-modal" onClick={(e) => e.stopPropagation()}>
           <div class="install-modal-header">
             <h3>Install {props.item!.name}</h3>
-            <button class="install-modal-close" onClick={props.onClose}>
+            <button class="install-modal-close" onClick={props.onClose} disabled={installing()}>
               ×
             </button>
           </div>

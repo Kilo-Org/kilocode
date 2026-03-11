@@ -55,6 +55,35 @@
   max-width: 900px;
 }
 
+/* Error banner */
+.marketplace-error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  background: rgba(244, 71, 71, 0.15);
+  color: var(--vscode-errorForeground, #f44747);
+  border: 1px solid rgba(244, 71, 71, 0.3);
+}
+
+.marketplace-error-dismiss {
+  background: none;
+  border: none;
+  color: var(--vscode-errorForeground, #f44747);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 4px;
+  opacity: 0.7;
+  line-height: 1;
+}
+
+.marketplace-error-dismiss:hover {
+  opacity: 1;
+}
+
 /* Filter controls */
 .marketplace-filters {
   display: flex;

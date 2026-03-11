@@ -1,4 +1,4 @@
-import { Component, createSignal, createMemo, onMount, onCleanup, Switch, Match } from "solid-js"
+import { Component, createSignal, createMemo, onMount, onCleanup, Switch, Match, Show } from "solid-js"
 import { useVSCode } from "../../context/vscode"
 import type { MarketplaceItem, MarketplaceInstalledMetadata } from "../../types/marketplace"
 import type { ExtensionMessage } from "../../types/messages"
@@ -30,6 +30,7 @@ export const MarketplaceView: Component = () => {
   const [pendingRemove, setPendingRemove] = createSignal<{ item: MarketplaceItem; scope: "project" | "global" } | null>(
     null,
   )
+  const [removeError, setRemoveError] = createSignal<string | null>(null)
 
   const handleInstall = (item: MarketplaceItem) => {
     vscode.postMessage({
@@ -95,8 +96,8 @@ export const MarketplaceView: Component = () => {
         return
       }
       if (msg.type === "marketplaceRemoveResult") {
+        const pending = pendingRemove()
         if (msg.success) {
-          const pending = pendingRemove()
           if (pending) {
             vscode.postMessage({
               type: "telemetry",
@@ -108,11 +109,13 @@ export const MarketplaceView: Component = () => {
                 target: pending.scope,
               },
             })
-            setPendingRemove(null)
           }
+          setRemoveError(null)
+          vscode.postMessage({ type: "fetchMarketplaceData" })
+        } else {
+          setRemoveError(msg.error ?? `Failed to remove ${pending?.item.name ?? "item"}`)
         }
-        // Re-fetch data after remove to update metadata
-        vscode.postMessage({ type: "fetchMarketplaceData" })
+        setPendingRemove(null)
       }
     })
 
@@ -135,6 +138,14 @@ export const MarketplaceView: Component = () => {
         </div>
       </div>
       <div class="marketplace-content">
+        <Show when={removeError()}>
+          <div class="marketplace-error-banner">
+            {removeError()}
+            <button class="marketplace-error-dismiss" onClick={() => setRemoveError(null)}>
+              ×
+            </button>
+          </div>
+        </Show>
         <Switch>
           <Match when={tab() === "mcp"}>
             <MarketplaceListView

@@ -12,9 +12,13 @@ interface MarketplaceListViewProps {
   onRemove: (item: MarketplaceItem, scope: "project" | "global") => void
 }
 
-export function isInstalled(id: string, metadata: MarketplaceInstalledMetadata): "project" | "global" | false {
-  if (metadata.project[id]) return "project"
-  if (metadata.global[id]) return "global"
+export function isInstalled(
+  id: string,
+  type: string,
+  metadata: MarketplaceInstalledMetadata,
+): "project" | "global" | false {
+  if (metadata.project[id]?.type === type) return "project"
+  if (metadata.global[id]?.type === type) return "global"
   return false
 }
 
@@ -57,8 +61,8 @@ export const MarketplaceListView: Component<MarketplaceListViewProps> = (props) 
       }
 
       // Status filter
-      if (filter === "installed" && !isInstalled(item.id, props.metadata)) return false
-      if (filter === "notInstalled" && isInstalled(item.id, props.metadata)) return false
+      if (filter === "installed" && !isInstalled(item.id, item.type, props.metadata)) return false
+      if (filter === "notInstalled" && isInstalled(item.id, item.type, props.metadata)) return false
 
       // Tag filter (OR logic)
       if (selected.length > 0) {
