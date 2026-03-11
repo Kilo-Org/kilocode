@@ -111,7 +111,7 @@ export const dict = {
   "dialog.model.manage": "Управление моделями",
   "dialog.model.manage.description": "Настройте какие модели появляются в выборе модели",
 
-  "dialog.model.unpaid.freeModels.title": "Бесплатные модели от Kilo",
+  "dialog.model.unpaid.freeModels.title": "Бесплатные модели от Pound",
   "dialog.model.unpaid.addMore.title": "Добавьте больше моделей от популярных провайдеров",
 
   "dialog.provider.viewAll": "Показать больше провайдеров",
@@ -124,7 +124,7 @@ export const dict = {
   "provider.connect.status.waiting": "Ожидание авторизации...",
   "provider.connect.status.failed": "Ошибка авторизации: {{error}}",
   "provider.connect.apiKey.description":
-    "Введите ваш API ключ {{provider}} для подключения аккаунта и использования моделей {{provider}} в Kilo.",
+    "Введите ваш API ключ {{provider}} для подключения аккаунта и использования моделей {{provider}} в Pound.",
   "provider.connect.apiKey.label": "{{provider}} API ключ",
   "provider.connect.apiKey.placeholder": "API ключ",
   "provider.connect.apiKey.required": "API ключ обязателен",
@@ -138,7 +138,7 @@ export const dict = {
   "provider.connect.oauth.code.visit.prefix": "Посетите ",
   "provider.connect.oauth.code.visit.link": "эту ссылку",
   "provider.connect.oauth.code.visit.suffix":
-    " чтобы получить код авторизации для подключения аккаунта и использования моделей {{provider}} в Kilo.",
+    " чтобы получить код авторизации для подключения аккаунта и использования моделей {{provider}} в Pound.",
   "provider.connect.oauth.code.label": "{{method}} код авторизации",
   "provider.connect.oauth.code.placeholder": "Код авторизации",
   "provider.connect.oauth.code.required": "Код авторизации обязателен",
@@ -146,7 +146,7 @@ export const dict = {
   "provider.connect.oauth.auto.visit.prefix": "Посетите ",
   "provider.connect.oauth.auto.visit.link": "эту ссылку",
   "provider.connect.oauth.auto.visit.suffix":
-    " и введите код ниже для подключения аккаунта и использования моделей {{provider}} в Kilo.",
+    " и введите код ниже для подключения аккаунта и использования моделей {{provider}} в Pound.",
   "provider.connect.oauth.auto.confirmationCode": "Код подтверждения",
   "provider.connect.toast.connected.title": "{{provider}} подключён",
   "provider.connect.toast.connected.description": "Модели {{provider}} теперь доступны.",
@@ -264,7 +264,7 @@ export const dict = {
   "dialog.directory.empty": "Папки не найдены",
 
   "dialog.server.title": "Серверы",
-  "dialog.server.description": "Переключите сервер Kilo к которому подключается приложение.",
+  "dialog.server.description": "Переключите сервер Pound к которому подключается приложение.",
   "dialog.server.search.placeholder": "Поиск серверов",
   "dialog.server.empty": "Серверов пока нет",
   "dialog.server.add.title": "Добавить сервер",
@@ -390,7 +390,7 @@ export const dict = {
   "toast.session.listFailed.title": "Не удалось загрузить сессии для {{project}}",
 
   "toast.update.title": "Доступно обновление",
-  "toast.update.description": "Новая версия Kilo ({{version}}) доступна для установки.",
+  "toast.update.description": "Новая версия Pound ({{version}}) доступна для установки.",
   "toast.update.action.installRestart": "Установить и перезапустить",
   "toast.update.action.notYet": "Пока нет",
 
@@ -401,7 +401,7 @@ export const dict = {
   "error.page.action.checking": "Проверка...",
   "error.page.action.checkUpdates": "Проверить обновления",
   "error.page.action.updateTo": "Обновить до {{version}}",
-  "error.page.report.prefix": "Пожалуйста, сообщите об этой ошибке команде Kilo",
+  "error.page.report.prefix": "Пожалуйста, сообщите об этой ошибке команде Pound",
   "error.page.report.discord": "в Discord",
   "error.page.version": "Версия: {{version}}",
 
@@ -429,7 +429,7 @@ export const dict = {
   "error.chain.modelNotFound": "Модель не найдена: {{provider}}/{{model}}",
   "error.chain.checkConfig": "Проверьте названия провайдера/модели в конфиге (opencode.json)",
   "error.chain.mcpFailed":
-    'MCP сервер "{{name}}" завершился с ошибкой. Обратите внимание, что Kilo пока не поддерживает MCP авторизацию.',
+    'MCP сервер "{{name}}" завершился с ошибкой. Обратите внимание, что Pound пока не поддерживает MCP авторизацию.',
   "error.chain.providerAuthFailed": "Ошибка аутентификации провайдера ({{provider}}): {{message}}",
   "error.chain.providerInitFailed":
     'Не удалось инициализировать провайдера "{{provider}}". Проверьте учётные данные и конфигурацию.',
@@ -545,13 +545,13 @@ export const dict = {
   "sidebar.workspaces.enable": "Включить рабочие пространства",
   "sidebar.workspaces.disable": "Отключить рабочие пространства",
   "sidebar.gettingStarted.title": "Начало работы",
-  "sidebar.gettingStarted.line1": "Kilo включает бесплатные модели, чтобы вы могли начать сразу.",
+  "sidebar.gettingStarted.line1": "Pound включает бесплатные модели, чтобы вы могли начать сразу.",
   "sidebar.gettingStarted.line2":
     "Подключите любого провайдера для использования моделей, включая Claude, GPT, Gemini и др.",
   "sidebar.project.recentSessions": "Недавние сессии",
   "sidebar.project.viewAllSessions": "Посмотреть все сессии",
 
-  "app.name.desktop": "Kilo Desktop",
+  "app.name.desktop": "Pound Desktop",
   "settings.section.desktop": "Приложение",
   "settings.section.server": "Сервер",
   "settings.tab.general": "Основные",
@@ -563,11 +563,11 @@ export const dict = {
   "settings.general.section.sounds": "Звуковые эффекты",
 
   "settings.general.row.language.title": "Язык",
-  "settings.general.row.language.description": "Изменить язык отображения Kilo",
+  "settings.general.row.language.description": "Изменить язык отображения Pound",
   "settings.general.row.appearance.title": "Внешний вид",
-  "settings.general.row.appearance.description": "Настройте как Kilo выглядит на вашем устройстве",
+  "settings.general.row.appearance.description": "Настройте как Pound выглядит на вашем устройстве",
   "settings.general.row.theme.title": "Тема",
-  "settings.general.row.theme.description": "Настройте оформление Kilo.",
+  "settings.general.row.theme.description": "Настройте оформление Pound.",
   "settings.general.row.font.title": "Шрифт",
   "settings.general.row.font.description": "Настройте моноширинный шрифт для блоков кода",
 
@@ -575,13 +575,13 @@ export const dict = {
   "settings.general.row.releaseNotes.description": 'Показывать всплывающие окна "Что нового" после обновлений',
 
   "settings.updates.row.startup.title": "Проверять обновления при запуске",
-  "settings.updates.row.startup.description": "Автоматически проверять обновления при запуске Kilo",
+  "settings.updates.row.startup.description": "Автоматически проверять обновления при запуске Pound",
   "settings.updates.row.check.title": "Проверить обновления",
   "settings.updates.row.check.description": "Проверить обновления вручную и установить, если доступны",
   "settings.updates.action.checkNow": "Проверить сейчас",
   "settings.updates.action.checking": "Проверка...",
   "settings.updates.toast.latest.title": "У вас последняя версия",
-  "settings.updates.toast.latest.description": "Вы используете последнюю версию Kilo.",
+  "settings.updates.toast.latest.description": "Вы используете последнюю версию Pound.",
   "font.option.ibmPlexMono": "IBM Plex Mono",
   "font.option.cascadiaCode": "Cascadia Code",
   "font.option.firaCode": "Fira Code",
@@ -677,7 +677,7 @@ export const dict = {
   "settings.providers.title": "Провайдеры",
   "settings.providers.description": "Настройки провайдеров будут доступны здесь.",
   "settings.providers.betaNotice":
-    "В настоящее время в интерфейсе настроек можно настроить только провайдер Kilo Gateway. Поддержка настройки других провайдеров скоро появится в период бета-тестирования. А пока вы можете настраивать провайдеров с помощью CLI или конфигурационного файла. Мы стремимся сохранить Kilo открытым — без привязки к поставщикам.",
+    "В настоящее время в интерфейсе настроек можно настроить только провайдер Pound Gateway. Поддержка настройки других провайдеров скоро появится в период бета-тестирования. А пока вы можете настраивать провайдеров с помощью CLI или конфигурационного файла. Мы стремимся сохранить Pound открытым — без привязки к поставщикам.",
   "settings.providers.section.connected": "Подключённые провайдеры",
   "settings.providers.connected.empty": "Нет подключённых провайдеров",
   "settings.providers.section.popular": "Популярные провайдеры",
@@ -753,7 +753,7 @@ export const dict = {
   "feedback.dialog.discord": "Присоединиться к нашему Discord",
   "feedback.dialog.support": "Служба поддержки",
   "session.cloud.import.title": "Импорт из облака",
-  "session.cloud.import.placeholder": "ID сессии, URL или команда kilo import",
+  "session.cloud.import.placeholder": "ID сессии, URL или команда pound import",
   "session.cloud.import.button": "Импортировать",
   "session.cloud.import.invalid": "Неверный формат ID сессии",
   "session.cloud.import.legacy": "Похоже, это устаревшая сессия, которая больше не поддерживается.",
@@ -788,7 +788,7 @@ export const dict = {
   "deviceAuth.toast.urlCopied": "URL скопирован в буфер обмена",
   "deviceAuth.toast.codeCopied": "Код скопирован в буфер обмена",
   "deviceAuth.status.initiating": "Начинаем вход...",
-  "deviceAuth.title": "Войти в Kilo Code",
+  "deviceAuth.title": "Войти в Pound Code",
   "deviceAuth.step1": "Шаг 1: Откройте этот URL",
   "deviceAuth.action.copyUrl": "Копировать URL",
   "deviceAuth.action.openBrowser": "Открыть браузер",
@@ -806,7 +806,7 @@ export const dict = {
 
   "profile.title": "Профиль",
   "profile.notLoggedIn": "Не авторизован",
-  "profile.action.login": "Войти через Kilo Code",
+  "profile.action.login": "Войти через Pound Code",
   "profile.balance.title": "Баланс",
   "profile.balance.refresh": "Обновить баланс",
   "profile.action.dashboard": "Панель управления",
@@ -825,11 +825,11 @@ export const dict = {
   "settings.prompts.title": "Промпты",
   "settings.experimental.title": "Экспериментальное",
   "settings.language.title": "Язык",
-  "settings.aboutKiloCode.title": "О Kilo Code",
+  "settings.aboutKiloCode.title": "О Pound Code",
 
   "session.messages.empty": "Начните разговор, введя сообщение ниже.",
   "session.messages.welcome":
-    "Kilo Code — это AI-помощник для программирования. Попросите его создать функции, исправить ошибки или объяснить вашу кодовую базу.",
+    "Pound Code — это AI-помощник для программирования. Попросите его создать функции, исправить ошибки или объяснить вашу кодовую базу.",
   "session.messages.scrollToBottom": "Прокрутить вниз",
   "session.status.writingResponse": "Пишу ответ…",
   "session.status.retrying": "Повторная попытка ({{ attempt }})… {{ message }}",
@@ -862,14 +862,14 @@ export const dict = {
   "settings.aboutKiloCode.port.label": "Порт:",
   "settings.aboutKiloCode.versionInfo": "Информация о версии",
   "settings.aboutKiloCode.version.label": "Версия:",
-  "settings.aboutKiloCode.extensionName": "Расширение Kilo Code",
+  "settings.aboutKiloCode.extensionName": "Расширение Pound Code",
   "settings.aboutKiloCode.community": "Сообщество и поддержка",
   "settings.aboutKiloCode.feedback.prefix": "Если у вас есть вопросы или отзывы, создайте issue на",
   "settings.aboutKiloCode.feedback.or": "или",
   "settings.aboutKiloCode.support.prefix": "По вопросам оплаты или аккаунта обращайтесь в службу поддержки по адресу",
   "settings.aboutKiloCode.resetSettings.title": "Сброс настроек",
   "settings.aboutKiloCode.resetSettings.description":
-    "Сбросить все настройки расширения Kilo Code до значений по умолчанию. Это не влияет на конфигурацию CLI или бэкенда.",
+    "Сбросить все настройки расширения Pound Code до значений по умолчанию. Это не влияет на конфигурацию CLI или бэкенда.",
   "settings.aboutKiloCode.resetSettings.button": "Сбросить все настройки",
 
   "settings.agentBehaviour.subtab.modes": "Режимы",
@@ -889,7 +889,7 @@ export const dict = {
   "settings.browser.headless.title": "Безголовый режим",
   "settings.browser.headless.description": "Запуск в безголовом режиме (без видимого окна браузера).",
 
-  "settings.language.description": "Выберите язык интерфейса Kilo Code. «Авто» использует язык отображения VS Code.",
+  "settings.language.description": "Выберите язык интерфейса Pound Code. «Авто» использует язык отображения VS Code.",
   "settings.language.auto": "Авто (язык VS Code)",
   "settings.language.current": "Текущий:",
 
@@ -1030,10 +1030,10 @@ export const dict = {
   "settings.legacyMigration.link": "Миграция с устаревшей версии",
   "settings.aboutKiloCode.legacyMigration.title": "Миграция с устаревшей версии",
   "settings.aboutKiloCode.legacyMigration.description":
-    "Перенос настроек из предыдущей установки Kilo Code, включая API-ключи провайдеров и модель по умолчанию.",
+    "Перенос настроек из предыдущей установки Pound Code, включая API-ключи провайдеров и модель по умолчанию.",
 
   // Screen 1 — What's New
-  "migration.whatsNew.title": "Что нового в Kilo Code",
+  "migration.whatsNew.title": "Что нового в Pound Code",
   "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "Мы перестроили расширение на более быстрой и эффективной основе.",
   "migration.whatsNew.features.performance.title": "Более быстрая работа агента",
@@ -1046,7 +1046,7 @@ export const dict = {
     "Единый интерфейс для запуска нескольких агентов параллельно, каждый в своём worktree — отслеживайте прогресс, переключайте контекст и просматривайте изменения в одном месте.",
   "migration.whatsNew.features.foundation.title": "Общая основа",
   "migration.whatsNew.features.foundation.detail":
-    "Одно компактное и эффективное ядро для всех продуктов Kilo. Знакомый опыт независимо от выбранного способа работы.",
+    "Одно компактное и эффективное ядро для всех продуктов Pound. Знакомый опыт независимо от выбранного способа работы.",
   "migration.whatsNew.blogLink": "Читать полный анонс",
   "migration.whatsNew.continue": "Продолжить",
 

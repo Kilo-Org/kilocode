@@ -67,7 +67,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     private readonly extensionUri: vscode.Uri,
     private readonly connectionService: KiloConnectionService,
   ) {
-    this.outputChannel = vscode.window.createOutputChannel("Kilo Agent Manager")
+    this.outputChannel = vscode.window.createOutputChannel("Pound Agent Manager")
     this.terminalManager = new SessionTerminalManager(
       (msg) => this.outputChannel.appendLine(`[SessionTerminal] ${msg}`),
       createTerminalHost(),

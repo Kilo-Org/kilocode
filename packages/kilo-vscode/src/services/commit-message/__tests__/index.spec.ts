@@ -130,7 +130,7 @@ describe("commit-message service", () => {
       await commandCallback()
 
       expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-        "Kilo backend is not connected. Please wait for the connection to establish.",
+        "Pound backend is not connected. Please wait for the connection to establish.",
       )
     })
 

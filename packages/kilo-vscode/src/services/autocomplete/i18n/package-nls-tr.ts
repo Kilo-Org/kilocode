@@ -3,7 +3,7 @@
 export const dict = {
   "autocomplete.input.title": "Onaylamak için 'Enter'a, iptal etmek için 'Escape'e basın",
   "autocomplete.input.placeholder": "Ne yapmak istediğinizi açıklayın...",
-  "autocomplete.commands.generateSuggestions": "Kilo Code: Düzenleme Önerileri Oluştur",
+  "autocomplete.commands.generateSuggestions": "Pound Code: Düzenleme Önerileri Oluştur",
   "autocomplete.commands.displaySuggestions": "Düzenleme Önerilerini Göster",
   "autocomplete.commands.cancelSuggestions": "Düzenleme Önerilerini İptal Et",
   "autocomplete.commands.applyCurrentSuggestion": "Mevcut Düzenleme Önerisini Uygula",

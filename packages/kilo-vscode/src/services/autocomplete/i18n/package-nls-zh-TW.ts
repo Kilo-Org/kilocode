@@ -3,7 +3,7 @@
 export const dict = {
   "autocomplete.input.title": "按 'Enter' 確認或按 'Escape' 取消",
   "autocomplete.input.placeholder": "描述您想要做什麼...",
-  "autocomplete.commands.generateSuggestions": "Kilo Code: 產生編輯建議",
+  "autocomplete.commands.generateSuggestions": "Pound Code: 產生編輯建議",
   "autocomplete.commands.displaySuggestions": "顯示編輯建議",
   "autocomplete.commands.cancelSuggestions": "取消編輯建議",
   "autocomplete.commands.applyCurrentSuggestion": "套用目前編輯建議",

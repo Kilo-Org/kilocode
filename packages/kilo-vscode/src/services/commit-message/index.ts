@@ -45,11 +45,11 @@ export function registerCommitMessageService(
     try {
       client = connectionService.getClient()
     } catch {
-      vscode.window.showErrorMessage("Kilo backend is not connected. Please wait for the connection to establish.")
+      vscode.window.showErrorMessage("Pound backend is not connected. Please wait for the connection to establish.")
       return
     }
     if (!client) {
-      vscode.window.showErrorMessage("Kilo backend is not connected. Please wait for the connection to establish.")
+      vscode.window.showErrorMessage("Pound backend is not connected. Please wait for the connection to establish.")
       return
     }
 

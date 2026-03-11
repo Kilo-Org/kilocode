@@ -1,6 +1,6 @@
 {
   "name": "kilo-code",
-  "displayName": "Kilo Code: AI Coding Agent, Copilot, and Autocomplete",
+  "displayName": "Pound Code: AI Coding Agent, Copilot, and Autocomplete",
   "description": "Open Source AI coding agent that generates code from natural language, automates tasks, and runs terminal commands. Features inline autocomplete, browser automation, automated refactoring, and custom modes for planning, coding, and debugging. Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM.",
   "version": "7.0.46",
   "icon": "assets/icons/logo-outline-black.png",
@@ -8,17 +8,17 @@
     "color": "#FFFFFF",
     "theme": "light"
   },
-  "publisher": "kilocode",
+  "publisher": "poundcode",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Kilo-Org/kilocode.git",
+    "url": "https://github.com/Pound-Org/poundcode.git",
     "directory": "packages/kilo-vscode"
   },
   "engines": {
     "vscode": "^1.108.0"
   },
   "author": {
-    "name": "Kilo Code"
+    "name": "Pound Code"
   },
   "categories": [
     "AI",
@@ -29,7 +29,7 @@
     "Testing"
   ],
   "keywords": [
-    "kilo",
+    "pound",
     "claude",
     "dev",
     "mcp",
@@ -41,8 +41,8 @@
     "sonnet",
     "ai",
     "llama",
-    "Kilo Code",
-    "kilocode"
+    "Pound Code",
+    "poundcode"
   ],
   "activationEvents": [],
   "main": "./dist/extension.js",
@@ -51,7 +51,7 @@
       "activitybar": [
         {
           "id": "kilo-code-sidebar",
-          "title": "Kilo Code (NEW)",
+          "title": "Pound Code (NEW)",
           "icon": "assets/icons/kilo-light.png",
           "darkIcon": "assets/icons/kilo-dark.png"
         }
@@ -62,7 +62,7 @@
         {
           "type": "webview",
           "id": "kilo-code.new.sidebarView",
-          "name": "Kilo Code (NEW)"
+          "name": "Pound Code (NEW)"
         }
       ]
     },
@@ -104,7 +104,7 @@
       },
       {
         "command": "kilo-code.new.openInTab",
-        "title": "Kilo Code (NEW)",
+        "title": "Pound Code (NEW)",
         "icon": {
           "light": "assets/icons/kilo-light.svg",
           "dark": "assets/icons/kilo-dark.svg"
@@ -113,141 +113,141 @@
       {
         "command": "kilo-code.new.showChanges",
         "title": "Show Changes",
-        "category": "Kilo Code"
+        "category": "Pound Code"
       },
       {
         "command": "kilo-code.new.openMigrationWizard",
         "title": "Migrate Settings from Legacy Version",
-        "category": "Kilo Code"
+        "category": "Pound Code"
       },
       {
         "command": "kilo-code.new.autocomplete.generateSuggestions",
         "title": "Generate Suggested Edits",
-        "category": "Kilo Code"
+        "category": "Pound Code"
       },
       {
         "command": "kilo-code.new.agentManager.previousSession",
         "title": "Agent Manager: Previous Session",
-        "category": "Kilo Code"
+        "category": "Pound Code"
       },
       {
         "command": "kilo-code.new.agentManager.nextSession",
         "title": "Agent Manager: Next Session",
-        "category": "Kilo Code"
+        "category": "Pound Code"
       },
       {
         "command": "kilo-code.new.agentManager.previousTab",
         "title": "Agent Manager: Previous Tab",
-        "category": "Kilo Code"
+        "category": "Pound Code"
       },
       {
         "command": "kilo-code.new.agentManager.nextTab",
         "title": "Agent Manager: Next Tab",
-        "category": "Kilo Code"
+        "category": "Pound Code"
       },
       {
         "command": "kilo-code.new.agentManager.showTerminal",
         "title": "Agent Manager: Focus Terminal",
-        "category": "Kilo Code",
+        "category": "Pound Code",
         "icon": "$(terminal)"
       },
       {
         "command": "kilo-code.new.agentManager.toggleDiff",
         "title": "Agent Manager: Toggle Diff Panel",
-        "category": "Kilo Code",
+        "category": "Pound Code",
         "icon": "$(diff)"
       },
       {
         "command": "kilo-code.new.agentManager.showShortcuts",
         "title": "Agent Manager: Show Keyboard Shortcuts",
-        "category": "Kilo Code",
+        "category": "Pound Code",
         "icon": "$(keyboard)"
       },
       {
         "command": "kilo-code.new.agentManager.focusPanel",
         "title": "Agent Manager: Focus Panel",
-        "category": "Kilo Code",
+        "category": "Pound Code",
         "icon": "$(circuit-board)"
       },
       {
         "command": "kilo-code.new.agentManager.newTab",
         "title": "Agent Manager: New Tab",
-        "category": "Kilo Code"
+        "category": "Pound Code"
       },
       {
         "command": "kilo-code.new.agentManager.closeTab",
         "title": "Agent Manager: Close Tab",
-        "category": "Kilo Code"
+        "category": "Pound Code"
       },
       {
         "command": "kilo-code.new.agentManager.newWorktree",
         "title": "Agent Manager: New Worktree",
-        "category": "Kilo Code"
+        "category": "Pound Code"
       },
       {
         "command": "kilo-code.new.agentManager.openWorktree",
         "title": "Agent Manager: Open Worktree",
-        "category": "Kilo Code"
+        "category": "Pound Code"
       },
       {
         "command": "kilo-code.new.agentManager.closeWorktree",
         "title": "Agent Manager: Close Worktree",
-        "category": "Kilo Code"
+        "category": "Pound Code"
       },
       {
         "command": "kilo-code.new.agentManager.advancedWorktree",
         "title": "Agent Manager: Advanced New Worktree",
-        "category": "Kilo Code"
+        "category": "Pound Code"
       },
       {
         "command": "kilo-code.new.agentManager.jumpTo1",
         "title": "Agent Manager: Jump to Item 1",
-        "category": "Kilo Code"
+        "category": "Pound Code"
       },
       {
         "command": "kilo-code.new.agentManager.jumpTo2",
         "title": "Agent Manager: Jump to Item 2",
-        "category": "Kilo Code"
+        "category": "Pound Code"
       },
       {
         "command": "kilo-code.new.agentManager.jumpTo3",
         "title": "Agent Manager: Jump to Item 3",
-        "category": "Kilo Code"
+        "category": "Pound Code"
       },
       {
         "command": "kilo-code.new.agentManager.jumpTo4",
         "title": "Agent Manager: Jump to Item 4",
-        "category": "Kilo Code"
+        "category": "Pound Code"
       },
       {
         "command": "kilo-code.new.agentManager.jumpTo5",
         "title": "Agent Manager: Jump to Item 5",
-        "category": "Kilo Code"
+        "category": "Pound Code"
       },
       {
         "command": "kilo-code.new.agentManager.jumpTo6",
         "title": "Agent Manager: Jump to Item 6",
-        "category": "Kilo Code"
+        "category": "Pound Code"
       },
       {
         "command": "kilo-code.new.agentManager.jumpTo7",
         "title": "Agent Manager: Jump to Item 7",
-        "category": "Kilo Code"
+        "category": "Pound Code"
       },
       {
         "command": "kilo-code.new.agentManager.jumpTo8",
         "title": "Agent Manager: Jump to Item 8",
-        "category": "Kilo Code"
+        "category": "Pound Code"
       },
       {
         "command": "kilo-code.new.agentManager.jumpTo9",
         "title": "Agent Manager: Jump to Item 9",
-        "category": "Kilo Code"
+        "category": "Pound Code"
       },
       {
         "command": "kilo-code.new.generateCommitMessage",
         "title": "Generate Commit Message",
-        "category": "Kilo Code (NEW)",
+        "category": "Pound Code (NEW)",
         "icon": {
           "light": "assets/icons/kilo-light.svg",
           "dark": "assets/icons/kilo-dark.svg"
@@ -256,52 +256,52 @@
       {
         "command": "kilo-code.new.explainCode",
         "title": "Explain Code",
-        "category": "Kilo Code"
+        "category": "Pound Code"
       },
       {
         "command": "kilo-code.new.fixCode",
         "title": "Fix Code",
-        "category": "Kilo Code"
+        "category": "Pound Code"
       },
       {
         "command": "kilo-code.new.improveCode",
         "title": "Improve Code",
-        "category": "Kilo Code"
+        "category": "Pound Code"
       },
       {
         "command": "kilo-code.new.addToContext",
         "title": "Add to Context",
-        "category": "Kilo Code"
+        "category": "Pound Code"
       },
       {
         "command": "kilo-code.new.terminalAddToContext",
         "title": "Add Terminal Content to Context",
-        "category": "Kilo Code"
+        "category": "Pound Code"
       },
       {
         "command": "kilo-code.new.terminalFixCommand",
         "title": "Fix This Command",
-        "category": "Kilo Code"
+        "category": "Pound Code"
       },
       {
         "command": "kilo-code.new.terminalExplainCommand",
         "title": "Explain This Command",
-        "category": "Kilo Code"
+        "category": "Pound Code"
       },
       {
         "command": "kilo-code.new.focusChatInput",
         "title": "Focus Chat Input",
-        "category": "Kilo Code"
+        "category": "Pound Code"
       }
     ],
     "submenus": [
       {
         "id": "kilo-code.new.editorContextMenu",
-        "label": "Kilo Code"
+        "label": "Pound Code"
       },
       {
         "id": "kilo-code.new.terminalContextMenu",
-        "label": "Kilo Code"
+        "label": "Pound Code"
       }
     ],
     "menus": {
@@ -558,12 +558,12 @@
       }
     ],
     "configuration": {
-      "title": "Kilo Code",
+      "title": "Pound Code",
       "properties": {
         "kilo-code.new.language": {
           "type": "string",
           "default": "",
-          "description": "Override the UI language for Kilo Code (e.g. en, de, ja). Empty means use VS Code's display language.",
+          "description": "Override the UI language for Pound Code (e.g. en, de, ja). Empty means use VS Code's display language.",
           "enum": [
             "",
             "en",

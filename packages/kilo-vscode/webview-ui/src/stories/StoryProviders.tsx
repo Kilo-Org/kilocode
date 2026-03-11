@@ -50,7 +50,7 @@ function t(key: string, params?: Record<string, string | number | boolean | unde
 const MOCK_PROVIDERS = {
   kilo: {
     id: "kilo",
-    name: "Kilo",
+    name: "Pound",
     env: [] as string[],
     models: {
       "anthropic/claude-sonnet-4-6": {

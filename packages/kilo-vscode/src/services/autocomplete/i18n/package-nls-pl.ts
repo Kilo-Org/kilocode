@@ -3,7 +3,7 @@
 export const dict = {
   "autocomplete.input.title": "Naciśnij 'Enter' aby potwierdzić lub 'Escape' aby anulować",
   "autocomplete.input.placeholder": "Opisz co chcesz zrobić...",
-  "autocomplete.commands.generateSuggestions": "Kilo Code: Generuj Sugestie Edycji",
+  "autocomplete.commands.generateSuggestions": "Pound Code: Generuj Sugestie Edycji",
   "autocomplete.commands.displaySuggestions": "Wyświetl Sugestie Edycji",
   "autocomplete.commands.cancelSuggestions": "Anuluj Sugestie Edycji",
   "autocomplete.commands.applyCurrentSuggestion": "Zastosuj Bieżącą Sugestię Edycji",

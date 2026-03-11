@@ -31,7 +31,7 @@ export class DiffViewerProvider implements vscode.Disposable {
     private readonly connectionService: KiloConnectionService,
   ) {
     this.gitOps = new GitOps({ log: (...args) => this.log(...args) })
-    this.outputChannel = vscode.window.createOutputChannel("Kilo Diff Viewer")
+    this.outputChannel = vscode.window.createOutputChannel("Pound Diff Viewer")
   }
 
   private log(...args: unknown[]) {

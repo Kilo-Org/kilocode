@@ -17,7 +17,7 @@ export async function executeVscodeTask(config: SetupTaskConfig): Promise<number
     { type: "kilo-worktree-setup", script: config.command },
     vscode.TaskScope.Workspace,
     "Worktree Setup",
-    "Kilo Code",
+    "Pound Code",
     proc,
     [],
   )

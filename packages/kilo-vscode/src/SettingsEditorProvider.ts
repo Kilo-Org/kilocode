@@ -32,7 +32,7 @@ export class SettingsEditorProvider implements vscode.Disposable {
       return
     }
 
-    const title = view === "settings" ? "Kilo Settings" : "Kilo Profile"
+    const title = view === "settings" ? "Pound Settings" : "Pound Profile"
 
     const panel = vscode.window.createWebviewPanel(`kilo-code.new.${view}Panel`, title, vscode.ViewColumn.One, {
       enableScripts: true,

@@ -115,7 +115,7 @@ export const dict = {
   "dialog.model.manage": "管理模型",
   "dialog.model.manage.description": "自訂模型選擇器中顯示的模型。",
 
-  "dialog.model.unpaid.freeModels.title": "Kilo 提供的免費模型",
+  "dialog.model.unpaid.freeModels.title": "Pound 提供的免費模型",
   "dialog.model.unpaid.addMore.title": "從熱門供應商新增更多模型",
 
   "dialog.provider.viewAll": "查看更多供應商",
@@ -128,7 +128,7 @@ export const dict = {
   "provider.connect.status.waiting": "等待授權...",
   "provider.connect.status.failed": "授權失敗：{{error}}",
   "provider.connect.apiKey.description":
-    "輸入你的 {{provider}} API 金鑰以連線帳戶，並在 Kilo 中使用 {{provider}} 模型。",
+    "輸入你的 {{provider}} API 金鑰以連線帳戶，並在 Pound 中使用 {{provider}} 模型。",
   "provider.connect.apiKey.label": "{{provider}} API 金鑰",
   "provider.connect.apiKey.placeholder": "API 金鑰",
   "provider.connect.apiKey.required": "API 金鑰為必填",
@@ -139,14 +139,14 @@ export const dict = {
   "provider.connect.opencodeZen.visit.suffix": " 取得你的 API 金鑰。",
   "provider.connect.oauth.code.visit.prefix": "造訪 ",
   "provider.connect.oauth.code.visit.link": "此連結",
-  "provider.connect.oauth.code.visit.suffix": " 取得授權碼，以連線你的帳戶並在 Kilo 中使用 {{provider}} 模型。",
+  "provider.connect.oauth.code.visit.suffix": " 取得授權碼，以連線你的帳戶並在 Pound 中使用 {{provider}} 模型。",
   "provider.connect.oauth.code.label": "{{method}} 授權碼",
   "provider.connect.oauth.code.placeholder": "授權碼",
   "provider.connect.oauth.code.required": "授權碼為必填",
   "provider.connect.oauth.code.invalid": "授權碼無效",
   "provider.connect.oauth.auto.visit.prefix": "造訪 ",
   "provider.connect.oauth.auto.visit.link": "此連結",
-  "provider.connect.oauth.auto.visit.suffix": " 並輸入以下程式碼，以連線你的帳戶並在 Kilo 中使用 {{provider}} 模型。",
+  "provider.connect.oauth.auto.visit.suffix": " 並輸入以下程式碼，以連線你的帳戶並在 Pound 中使用 {{provider}} 模型。",
   "provider.connect.oauth.auto.confirmationCode": "確認碼",
   "provider.connect.toast.connected.title": "{{provider}} 已連線",
   "provider.connect.toast.connected.description": "現在可以使用 {{provider}} 模型了。",
@@ -264,7 +264,7 @@ export const dict = {
   "dialog.directory.empty": "找不到資料夾",
 
   "dialog.server.title": "伺服器",
-  "dialog.server.description": "切換此應用程式連線的 Kilo 伺服器。",
+  "dialog.server.description": "切換此應用程式連線的 Pound 伺服器。",
   "dialog.server.search.placeholder": "搜尋伺服器",
   "dialog.server.empty": "暫無伺服器",
   "dialog.server.add.title": "新增伺服器",
@@ -388,7 +388,7 @@ export const dict = {
   "toast.session.listFailed.title": "無法載入 {{project}} 的工作階段",
 
   "toast.update.title": "有可用更新",
-  "toast.update.description": "Kilo 有新版本 ({{version}}) 可安裝。",
+  "toast.update.description": "Pound 有新版本 ({{version}}) 可安裝。",
   "toast.update.action.installRestart": "安裝並重新啟動",
   "toast.update.action.notYet": "稍後",
 
@@ -399,7 +399,7 @@ export const dict = {
   "error.page.action.checking": "檢查中...",
   "error.page.action.checkUpdates": "檢查更新",
   "error.page.action.updateTo": "更新到 {{version}}",
-  "error.page.report.prefix": "請將此錯誤回報給 Kilo 團隊",
+  "error.page.report.prefix": "請將此錯誤回報給 Pound 團隊",
   "error.page.report.discord": "在 Discord 上",
   "error.page.version": "版本：{{version}}",
 
@@ -423,7 +423,7 @@ export const dict = {
   "error.chain.didYouMean": "你是不是想輸入：{{suggestions}}",
   "error.chain.modelNotFound": "找不到模型：{{provider}}/{{model}}",
   "error.chain.checkConfig": "請檢查你的設定 (opencode.json) 中的 provider/model 名稱",
-  "error.chain.mcpFailed": 'MCP 伺服器 "{{name}}" 啟動失敗。注意：Kilo 暫不支援 MCP 認證。',
+  "error.chain.mcpFailed": 'MCP 伺服器 "{{name}}" 啟動失敗。注意：Pound 暫不支援 MCP 認證。',
   "error.chain.providerAuthFailed": "供應商認證失敗 ({{provider}}): {{message}}",
   "error.chain.providerInitFailed": '無法初始化供應商 "{{provider}}"。請檢查憑證和設定。',
   "error.chain.configJsonInvalid": "設定檔 {{path}} 不是有效的 JSON(C)",
@@ -534,12 +534,12 @@ export const dict = {
   "sidebar.workspaces.enable": "啟用工作區",
   "sidebar.workspaces.disable": "停用工作區",
   "sidebar.gettingStarted.title": "開始使用",
-  "sidebar.gettingStarted.line1": "Kilo 提供免費模型，你可以立即開始使用。",
+  "sidebar.gettingStarted.line1": "Pound 提供免費模型，你可以立即開始使用。",
   "sidebar.gettingStarted.line2": "連線任意供應商即可使用更多模型，如 Claude、GPT、Gemini 等。",
   "sidebar.project.recentSessions": "最近工作階段",
   "sidebar.project.viewAllSessions": "查看全部工作階段",
 
-  "app.name.desktop": "Kilo Desktop",
+  "app.name.desktop": "Pound Desktop",
   "settings.section.desktop": "桌面",
   "settings.section.server": "伺服器",
   "settings.tab.general": "一般",
@@ -551,11 +551,11 @@ export const dict = {
   "settings.general.section.sounds": "音效",
 
   "settings.general.row.language.title": "語言",
-  "settings.general.row.language.description": "變更 Kilo 的顯示語言",
+  "settings.general.row.language.description": "變更 Pound 的顯示語言",
   "settings.general.row.appearance.title": "外觀",
-  "settings.general.row.appearance.description": "自訂 Kilo 在你的裝置上的外觀",
+  "settings.general.row.appearance.description": "自訂 Pound 在你的裝置上的外觀",
   "settings.general.row.theme.title": "主題",
-  "settings.general.row.theme.description": "自訂 Kilo 的主題。",
+  "settings.general.row.theme.description": "自訂 Pound 的主題。",
   "settings.general.row.font.title": "字型",
   "settings.general.row.font.description": "自訂程式碼區塊使用的等寬字型",
 
@@ -563,13 +563,13 @@ export const dict = {
   "settings.general.row.releaseNotes.description": "更新後顯示「新功能」彈出視窗",
 
   "settings.updates.row.startup.title": "啟動時檢查更新",
-  "settings.updates.row.startup.description": "在 Kilo 啟動時自動檢查更新",
+  "settings.updates.row.startup.description": "在 Pound 啟動時自動檢查更新",
   "settings.updates.row.check.title": "檢查更新",
   "settings.updates.row.check.description": "手動檢查更新並在有更新時安裝",
   "settings.updates.action.checkNow": "立即檢查",
   "settings.updates.action.checking": "檢查中...",
   "settings.updates.toast.latest.title": "已是最新版本",
-  "settings.updates.toast.latest.description": "你正在使用最新版本的 Kilo。",
+  "settings.updates.toast.latest.description": "你正在使用最新版本的 Pound。",
 
   "font.option.ibmPlexMono": "IBM Plex Mono",
   "font.option.cascadiaCode": "Cascadia Code",
@@ -663,7 +663,7 @@ export const dict = {
   "settings.providers.title": "供應商",
   "settings.providers.description": "可在此調整供應商設定。",
   "settings.providers.betaNotice":
-    "目前在設定介面中僅能配置 Kilo Gateway 供應商。在測試期間，即將推出配置其他供應商的支援。在此期間，您可以使用 CLI 或設定檔來配置供應商。我們致力於保持 Kilo 開放，絕不綁定。",
+    "目前在設定介面中僅能配置 Pound Gateway 供應商。在測試期間，即將推出配置其他供應商的支援。在此期間，您可以使用 CLI 或設定檔來配置供應商。我們致力於保持 Pound 開放，絕不綁定。",
   "settings.providers.section.connected": "已連線的供應商",
   "settings.providers.connected.empty": "沒有已連線的供應商",
   "settings.providers.section.popular": "熱門供應商",
@@ -738,7 +738,7 @@ export const dict = {
   "feedback.dialog.discord": "加入我們的 Discord 社群",
   "feedback.dialog.support": "客戶支援",
   "session.cloud.import.title": "從雲端匯入",
-  "session.cloud.import.placeholder": "工作階段 ID、URL 或 kilo import 指令",
+  "session.cloud.import.placeholder": "工作階段 ID、URL 或 pound import 指令",
   "session.cloud.import.button": "匯入",
   "session.cloud.import.invalid": "工作階段 ID 格式無效",
   "session.cloud.import.legacy": "這似乎是一個舊版工作階段，已不再受支援。",
@@ -773,7 +773,7 @@ export const dict = {
   "deviceAuth.toast.urlCopied": "URL 已複製到剪貼簿",
   "deviceAuth.toast.codeCopied": "驗證碼已複製到剪貼簿",
   "deviceAuth.status.initiating": "正在啟動登入...",
-  "deviceAuth.title": "登入 Kilo Code",
+  "deviceAuth.title": "登入 Pound Code",
   "deviceAuth.step1": "步驟 1：開啟此 URL",
   "deviceAuth.action.copyUrl": "複製 URL",
   "deviceAuth.action.openBrowser": "開啟瀏覽器",
@@ -791,7 +791,7 @@ export const dict = {
 
   "profile.title": "個人資料",
   "profile.notLoggedIn": "尚未登入",
-  "profile.action.login": "使用 Kilo Code 登入",
+  "profile.action.login": "使用 Pound Code 登入",
   "profile.balance.title": "餘額",
   "profile.balance.refresh": "重新整理餘額",
   "profile.action.dashboard": "控制面板",
@@ -810,10 +810,10 @@ export const dict = {
   "settings.prompts.title": "提示",
   "settings.experimental.title": "實驗性功能",
   "settings.language.title": "語言",
-  "settings.aboutKiloCode.title": "關於 Kilo Code",
+  "settings.aboutKiloCode.title": "關於 Pound Code",
 
   "session.messages.empty": "在下方輸入訊息以開始對話。",
-  "session.messages.welcome": "Kilo Code 是一個 AI 程式設計助手。讓它幫你建構功能、修復 bug 或解釋程式碼庫。",
+  "session.messages.welcome": "Pound Code 是一個 AI 程式設計助手。讓它幫你建構功能、修復 bug 或解釋程式碼庫。",
   "session.messages.scrollToBottom": "捲動至底部",
   "session.status.writingResponse": "正在撰寫回覆…",
   "session.status.retrying": "正在重試（第 {{ attempt }} 次）… {{ message }}",
@@ -846,14 +846,14 @@ export const dict = {
   "settings.aboutKiloCode.port.label": "連接埠：",
   "settings.aboutKiloCode.versionInfo": "版本資訊",
   "settings.aboutKiloCode.version.label": "版本：",
-  "settings.aboutKiloCode.extensionName": "Kilo Code 擴充功能",
+  "settings.aboutKiloCode.extensionName": "Pound Code 擴充功能",
   "settings.aboutKiloCode.community": "社群與支援",
   "settings.aboutKiloCode.feedback.prefix": "如果您有任何問題或回饋，歡迎在以下平台提交 issue",
   "settings.aboutKiloCode.feedback.or": "或",
   "settings.aboutKiloCode.support.prefix": "如有帳單或帳戶問題，請聯繫客戶支援",
   "settings.aboutKiloCode.resetSettings.title": "重置設定",
   "settings.aboutKiloCode.resetSettings.description":
-    "將所有 Kilo Code 擴充功能設定重置為預設值。這不會影響 CLI 或後端設定。",
+    "將所有 Pound Code 擴充功能設定重置為預設值。這不會影響 CLI 或後端設定。",
   "settings.aboutKiloCode.resetSettings.button": "重置所有設定",
 
   "settings.agentBehaviour.subtab.modes": "模式",
@@ -872,7 +872,7 @@ export const dict = {
   "settings.browser.headless.title": "無頭模式",
   "settings.browser.headless.description": "以無頭模式執行（無可見瀏覽器視窗）。",
 
-  "settings.language.description": "選擇 Kilo Code 介面的語言。「自動」使用 VS Code 的顯示語言。",
+  "settings.language.description": "選擇 Pound Code 介面的語言。「自動」使用 VS Code 的顯示語言。",
   "settings.language.auto": "自動（VS Code 語言）",
   "settings.language.current": "目前：",
 
@@ -1001,10 +1001,10 @@ export const dict = {
   "settings.legacyMigration.link": "從舊版遷移",
   "settings.aboutKiloCode.legacyMigration.title": "舊版遷移",
   "settings.aboutKiloCode.legacyMigration.description":
-    "從舊版 Kilo Code 安裝遷移設定，包括供應商 API 金鑰和預設模型。",
+    "從舊版 Pound Code 安裝遷移設定，包括供應商 API 金鑰和預設模型。",
 
   // Screen 1 — What's New
-  "migration.whatsNew.title": "Kilo Code 新功能",
+  "migration.whatsNew.title": "Pound Code 新功能",
   "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "我們在更快、更高效的基礎上重新建構了擴充功能。",
   "migration.whatsNew.features.performance.title": "更快的 Agent 效能",
@@ -1017,7 +1017,7 @@ export const dict = {
     "一個統一的介面，可以平行執行多個 Agent，每個 Agent 各自使用獨立的 worktree——在同一個地方監控進度、切換上下文和審查變更。",
   "migration.whatsNew.features.foundation.title": "共享基礎",
   "migration.whatsNew.features.foundation.detail":
-    "所有 Kilo 產品共享一個小巧高效的核心。無論你選擇哪種方式工作，都能獲得熟悉的體驗。",
+    "所有 Pound 產品共享一個小巧高效的核心。無論你選擇哪種方式工作，都能獲得熟悉的體驗。",
   "migration.whatsNew.blogLink": "閱讀完整公告",
   "migration.whatsNew.continue": "繼續",
 

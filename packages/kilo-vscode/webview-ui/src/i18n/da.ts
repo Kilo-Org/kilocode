@@ -111,7 +111,7 @@ export const dict = {
   "dialog.model.manage": "Administrer modeller",
   "dialog.model.manage.description": "Tilpas hvilke modeller der vises i modelvælgeren.",
 
-  "dialog.model.unpaid.freeModels.title": "Gratis modeller leveret af Kilo",
+  "dialog.model.unpaid.freeModels.title": "Gratis modeller leveret af Pound",
   "dialog.model.unpaid.addMore.title": "Tilføj flere modeller fra populære udbydere",
 
   "dialog.provider.viewAll": "Vis flere udbydere",
@@ -124,7 +124,7 @@ export const dict = {
   "provider.connect.status.waiting": "Venter på godkendelse...",
   "provider.connect.status.failed": "Godkendelse mislykkedes: {{error}}",
   "provider.connect.apiKey.description":
-    "Indtast din {{provider}} API-nøgle for at forbinde din konto og bruge {{provider}} modeller i Kilo.",
+    "Indtast din {{provider}} API-nøgle for at forbinde din konto og bruge {{provider}} modeller i Pound.",
   "provider.connect.apiKey.label": "{{provider}} API-nøgle",
   "provider.connect.apiKey.placeholder": "API-nøgle",
   "provider.connect.apiKey.required": "API-nøgle er påkrævet",
@@ -138,7 +138,7 @@ export const dict = {
   "provider.connect.oauth.code.visit.prefix": "Besøg ",
   "provider.connect.oauth.code.visit.link": "dette link",
   "provider.connect.oauth.code.visit.suffix":
-    " for at hente din godkendelseskode for at forbinde din konto og bruge {{provider}} modeller i Kilo.",
+    " for at hente din godkendelseskode for at forbinde din konto og bruge {{provider}} modeller i Pound.",
   "provider.connect.oauth.code.label": "{{method}} godkendelseskode",
   "provider.connect.oauth.code.placeholder": "Godkendelseskode",
   "provider.connect.oauth.code.required": "Godkendelseskode er påkrævet",
@@ -146,7 +146,7 @@ export const dict = {
   "provider.connect.oauth.auto.visit.prefix": "Besøg ",
   "provider.connect.oauth.auto.visit.link": "dette link",
   "provider.connect.oauth.auto.visit.suffix":
-    " og indtast koden nedenfor for at forbinde din konto og bruge {{provider}} modeller i Kilo.",
+    " og indtast koden nedenfor for at forbinde din konto og bruge {{provider}} modeller i Pound.",
   "provider.connect.oauth.auto.confirmationCode": "Bekræftelseskode",
   "provider.connect.toast.connected.title": "{{provider}} forbundet",
   "provider.connect.toast.connected.description": "{{provider}} modeller er nu tilgængelige.",
@@ -264,7 +264,7 @@ export const dict = {
   "dialog.directory.empty": "Ingen mapper fundet",
 
   "dialog.server.title": "Servere",
-  "dialog.server.description": "Skift hvilken Kilo-server denne app forbinder til.",
+  "dialog.server.description": "Skift hvilken Pound-server denne app forbinder til.",
   "dialog.server.search.placeholder": "Søg servere",
   "dialog.server.empty": "Ingen servere endnu",
   "dialog.server.add.title": "Tilføj en server",
@@ -389,7 +389,7 @@ export const dict = {
   "toast.session.listFailed.title": "Kunne ikke indlæse sessioner for {{project}}",
 
   "toast.update.title": "Opdatering tilgængelig",
-  "toast.update.description": "En ny version af Kilo ({{version}}) er nu tilgængelig til installation.",
+  "toast.update.description": "En ny version af Pound ({{version}}) er nu tilgængelig til installation.",
   "toast.update.action.installRestart": "Installer og genstart",
   "toast.update.action.notYet": "Ikke endnu",
 
@@ -400,7 +400,7 @@ export const dict = {
   "error.page.action.checking": "Tjekker...",
   "error.page.action.checkUpdates": "Tjek for opdateringer",
   "error.page.action.updateTo": "Opdater til {{version}}",
-  "error.page.report.prefix": "Rapporter venligst denne fejl til Kilo-teamet",
+  "error.page.report.prefix": "Rapporter venligst denne fejl til Pound-teamet",
   "error.page.report.discord": "på Discord",
   "error.page.version": "Version: {{version}}",
 
@@ -427,7 +427,7 @@ export const dict = {
   "error.chain.didYouMean": "Mente du: {{suggestions}}",
   "error.chain.modelNotFound": "Model ikke fundet: {{provider}}/{{model}}",
   "error.chain.checkConfig": "Tjek dine konfigurations (opencode.json) udbyder/modelnavne",
-  "error.chain.mcpFailed": 'MCP-server "{{name}}" fejlede. Bemærk, Kilo understøtter ikke MCP-godkendelse endnu.',
+  "error.chain.mcpFailed": 'MCP-server "{{name}}" fejlede. Bemærk, Pound understøtter ikke MCP-godkendelse endnu.',
   "error.chain.providerAuthFailed": "Udbydergodkendelse mislykkedes ({{provider}}): {{message}}",
   "error.chain.providerInitFailed":
     'Kunne ikke initialisere udbyder "{{provider}}". Tjek legitimationsoplysninger og konfiguration.',
@@ -541,12 +541,12 @@ export const dict = {
   "sidebar.workspaces.enable": "Aktiver arbejdsområder",
   "sidebar.workspaces.disable": "Deaktiver arbejdsområder",
   "sidebar.gettingStarted.title": "Kom i gang",
-  "sidebar.gettingStarted.line1": "Kilo inkluderer gratis modeller så du kan starte med det samme.",
+  "sidebar.gettingStarted.line1": "Pound inkluderer gratis modeller så du kan starte med det samme.",
   "sidebar.gettingStarted.line2": "Forbind enhver udbyder for at bruge modeller, inkl. Claude, GPT, Gemini osv.",
   "sidebar.project.recentSessions": "Seneste sessioner",
   "sidebar.project.viewAllSessions": "Vis alle sessioner",
 
-  "app.name.desktop": "Kilo Desktop",
+  "app.name.desktop": "Pound Desktop",
   "settings.section.desktop": "Desktop",
   "settings.section.server": "Server",
   "settings.tab.general": "Generelt",
@@ -558,11 +558,11 @@ export const dict = {
   "settings.general.section.sounds": "Lydeffekter",
 
   "settings.general.row.language.title": "Sprog",
-  "settings.general.row.language.description": "Ændr visningssproget for Kilo",
+  "settings.general.row.language.description": "Ændr visningssproget for Pound",
   "settings.general.row.appearance.title": "Udseende",
-  "settings.general.row.appearance.description": "Tilpas hvordan Kilo ser ud på din enhed",
+  "settings.general.row.appearance.description": "Tilpas hvordan Pound ser ud på din enhed",
   "settings.general.row.theme.title": "Tema",
-  "settings.general.row.theme.description": "Tilpas hvordan Kilo er temabestemt.",
+  "settings.general.row.theme.description": "Tilpas hvordan Pound er temabestemt.",
   "settings.general.row.font.title": "Skrifttype",
   "settings.general.row.font.description": "Tilpas mono-skrifttypen brugt i kodeblokke",
 
@@ -570,13 +570,13 @@ export const dict = {
   "settings.general.row.releaseNotes.description": 'Vis "Hvad er nyt"-popups efter opdateringer',
 
   "settings.updates.row.startup.title": "Tjek for opdateringer ved opstart",
-  "settings.updates.row.startup.description": "Tjek automatisk for opdateringer, når Kilo starter",
+  "settings.updates.row.startup.description": "Tjek automatisk for opdateringer, når Pound starter",
   "settings.updates.row.check.title": "Tjek for opdateringer",
   "settings.updates.row.check.description": "Tjek manuelt for opdateringer og installer, hvis tilgængelig",
   "settings.updates.action.checkNow": "Tjek nu",
   "settings.updates.action.checking": "Tjekker...",
   "settings.updates.toast.latest.title": "Du er opdateret",
-  "settings.updates.toast.latest.description": "Du kører den nyeste version af Kilo.",
+  "settings.updates.toast.latest.description": "Du kører den nyeste version af Pound.",
 
   "font.option.ibmPlexMono": "IBM Plex Mono",
   "font.option.cascadiaCode": "Cascadia Code",
@@ -671,7 +671,7 @@ export const dict = {
   "settings.providers.title": "Udbydere",
   "settings.providers.description": "Udbyderindstillinger vil kunne konfigureres her.",
   "settings.providers.betaNotice":
-    "I øjeblikket kan kun Kilo Gateway-udbyderen konfigureres i indstillingsgrænsefladen. Understøttelse af konfiguration af andre udbydere kommer snart i løbet af betaperioden. I mellemtiden kan du konfigurere udbydere via CLI eller konfigurationsfilen. Vi er dedikerede til at holde Kilo åben, ingen lock-in.",
+    "I øjeblikket kan kun Pound Gateway-udbyderen konfigureres i indstillingsgrænsefladen. Understøttelse af konfiguration af andre udbydere kommer snart i løbet af betaperioden. I mellemtiden kan du konfigurere udbydere via CLI eller konfigurationsfilen. Vi er dedikerede til at holde Pound åben, ingen lock-in.",
   "settings.providers.section.connected": "Forbundne udbydere",
   "settings.providers.connected.empty": "Ingen forbundne udbydere",
   "settings.providers.section.popular": "Populære udbydere",
@@ -747,7 +747,7 @@ export const dict = {
   "feedback.dialog.discord": "Deltag i vores Discord-fællesskab",
   "feedback.dialog.support": "Kundesupport",
   "session.cloud.import.title": "Importér fra skyen",
-  "session.cloud.import.placeholder": "Sessions-ID, URL eller kilo import-kommando",
+  "session.cloud.import.placeholder": "Sessions-ID, URL eller pound import-kommando",
   "session.cloud.import.button": "Importér",
   "session.cloud.import.invalid": "Ugyldigt sessions-ID-format",
   "session.cloud.import.legacy": "Dette ser ud til at være en ældre session, som ikke længere understøttes.",
@@ -782,7 +782,7 @@ export const dict = {
   "deviceAuth.toast.urlCopied": "URL kopieret til udklipsholder",
   "deviceAuth.toast.codeCopied": "Kode kopieret til udklipsholder",
   "deviceAuth.status.initiating": "Starter login...",
-  "deviceAuth.title": "Log ind på Kilo Code",
+  "deviceAuth.title": "Log ind på Pound Code",
   "deviceAuth.step1": "Trin 1: Åbn denne URL",
   "deviceAuth.action.copyUrl": "Kopiér URL",
   "deviceAuth.action.openBrowser": "Åbn browser",
@@ -800,7 +800,7 @@ export const dict = {
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Ikke logget ind",
-  "profile.action.login": "Log ind med Kilo Code",
+  "profile.action.login": "Log ind med Pound Code",
   "profile.balance.title": "Saldo",
   "profile.balance.refresh": "Opdatér saldo",
   "profile.action.dashboard": "Dashboard",
@@ -819,11 +819,11 @@ export const dict = {
   "settings.prompts.title": "Prompts",
   "settings.experimental.title": "Eksperimentelt",
   "settings.language.title": "Sprog",
-  "settings.aboutKiloCode.title": "Om Kilo Code",
+  "settings.aboutKiloCode.title": "Om Pound Code",
 
   "session.messages.empty": "Start en samtale ved at skrive en besked nedenfor.",
   "session.messages.welcome":
-    "Kilo Code er en AI-kodningsassistent. Bed den om at bygge funktioner, rette fejl eller forklare din kodebase.",
+    "Pound Code er en AI-kodningsassistent. Bed den om at bygge funktioner, rette fejl eller forklare din kodebase.",
   "session.messages.scrollToBottom": "Rul til bunden",
   "session.status.writingResponse": "Skriver svar…",
   "session.status.retrying": "Prøver igen (forsøg {{ attempt }})… {{ message }}",
@@ -856,7 +856,7 @@ export const dict = {
   "settings.aboutKiloCode.port.label": "Port:",
   "settings.aboutKiloCode.versionInfo": "Versionsinformation",
   "settings.aboutKiloCode.version.label": "Version:",
-  "settings.aboutKiloCode.extensionName": "Kilo Code-udvidelse",
+  "settings.aboutKiloCode.extensionName": "Pound Code-udvidelse",
   "settings.aboutKiloCode.community": "Fællesskab og support",
   "settings.aboutKiloCode.feedback.prefix":
     "Hvis du har spørgsmål eller feedback, er du velkommen til at åbne en issue på",
@@ -864,7 +864,7 @@ export const dict = {
   "settings.aboutKiloCode.support.prefix": "For fakturerings- eller kontospørgsmål, kontakt kundesupport på",
   "settings.aboutKiloCode.resetSettings.title": "Nulstil indstillinger",
   "settings.aboutKiloCode.resetSettings.description":
-    "Nulstil alle Kilo Code-udvidelsesindstillinger til standardværdierne. Dette påvirker ikke CLI- eller backend-konfiguration.",
+    "Nulstil alle Pound Code-udvidelsesindstillinger til standardværdierne. Dette påvirker ikke CLI- eller backend-konfiguration.",
   "settings.aboutKiloCode.resetSettings.button": "Nulstil alle indstillinger",
 
   "settings.agentBehaviour.subtab.modes": "Tilstande",
@@ -884,7 +884,7 @@ export const dict = {
   "settings.browser.headless.title": "Headless-tilstand",
   "settings.browser.headless.description": "Kør i headless-tilstand (intet synligt browservindue).",
 
-  "settings.language.description": 'Vælg sproget til Kilo Code-brugerfladen. "Auto" bruger VS Codes visningssprog.',
+  "settings.language.description": 'Vælg sproget til Pound Code-brugerfladen. "Auto" bruger VS Codes visningssprog.',
   "settings.language.auto": "Auto (VS Code-sprog)",
   "settings.language.current": "Nuværende:",
 
@@ -1025,10 +1025,10 @@ export const dict = {
   "settings.legacyMigration.link": "Migrer fra legacy-version",
   "settings.aboutKiloCode.legacyMigration.title": "Legacy-migrering",
   "settings.aboutKiloCode.legacyMigration.description":
-    "Migrer indstillinger fra en tidligere installation af Kilo Code, herunder udbyder API-nøgler og standardmodel.",
+    "Migrer indstillinger fra en tidligere installation af Pound Code, herunder udbyder API-nøgler og standardmodel.",
 
   // Screen 1 — What's New
-  "migration.whatsNew.title": "Nyheder i Kilo Code",
+  "migration.whatsNew.title": "Nyheder i Pound Code",
   "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "Vi har genopbygget udvidelsen på et hurtigere og mere effektivt fundament.",
   "migration.whatsNew.features.performance.title": "Hurtigere agentydelse",
@@ -1041,7 +1041,7 @@ export const dict = {
     "En samlet brugerflade til at køre flere agenter parallelt, hver på sit eget worktree — overvåg fremskridt, skift kontekst og gennemgå ændringer ét sted.",
   "migration.whatsNew.features.foundation.title": "Fælles fundament",
   "migration.whatsNew.features.foundation.detail":
-    "Én lille, effektiv kerne på tværs af alle Kilo-produkter. En velkendt oplevelse uanset hvordan du vælger at arbejde.",
+    "Én lille, effektiv kerne på tværs af alle Pound-produkter. En velkendt oplevelse uanset hvordan du vælger at arbejde.",
   "migration.whatsNew.blogLink": "Læs den fulde meddelelse",
   "migration.whatsNew.continue": "Fortsæt",
 

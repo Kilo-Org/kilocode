@@ -18,12 +18,12 @@ export const DiffEndMarker: Component = () => {
         >
           <ellipse cx="49" cy="76" rx="20" ry="6" fill="#1B1035" opacity="0.45" />
 
-          <rect x="41" y="56" width="6" height="16" fill="#EAB308" />
-          <rect x="51" y="56" width="6" height="16" fill="#EAB308" />
+          <rect x="41" y="56" width="6" height="16" fill="#1976D2" />
+          <rect x="51" y="56" width="6" height="16" fill="#1976D2" />
 
           <g class="am-kiloman-upper">
-            <rect x="41" y="36" width="16" height="22" fill="#EAB308" />
-            <circle cx="49" cy="24" r="14" fill="#FEF08A" />
+            <rect x="41" y="36" width="16" height="22" fill="#1976D2" />
+            <circle cx="49" cy="24" r="14" fill="#BBDEFB" />
             <rect x="53" y="21" width="4" height="4" fill="#111827" />
           </g>
         </svg>

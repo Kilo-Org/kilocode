@@ -33,7 +33,7 @@ const KiloLogo = (): JSX.Element => {
   const icon = isLight ? "kilo-light.svg" : "kilo-dark.svg"
   return (
     <div class="migration-wizard__logo">
-      <img src={`${iconsBaseUri}/${icon}`} alt="Kilo Code" />
+      <img src={`${iconsBaseUri}/${icon}`} alt="Pound Code" />
     </div>
   )
 }
@@ -527,7 +527,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
           </div>
 
           <div class="migration-wizard__blog-link">
-            <a href="https://blog.kilo.ai/we-completely-rebuilt-the-kilo-vs-code-extension">
+            <a href="https://blog.pound.ai/we-completely-rebuilt-the-pound-vs-code-extension">
               {language.t("migration.whatsNew.blogLink")} <span>&rarr;</span>
             </a>
           </div>

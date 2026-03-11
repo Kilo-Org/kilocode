@@ -44,8 +44,8 @@ const preview: Preview = {
         title: "Theme",
         icon: "paintbrush",
         items: [
-          { value: "kilo-vscode", title: "Kilo VSCode" },
-          { value: "kilo", title: "Kilo" },
+          { value: "kilo-vscode", title: "Pound VSCode" },
+          { value: "kilo", title: "Pound" },
         ],
         dynamicTitle: true,
       },

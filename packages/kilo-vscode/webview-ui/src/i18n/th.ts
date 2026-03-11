@@ -111,7 +111,7 @@ export const dict = {
   "dialog.model.manage": "จัดการโมเดล",
   "dialog.model.manage.description": "ปรับแต่งโมเดลที่จะปรากฏในตัวเลือกโมเดล",
 
-  "dialog.model.unpaid.freeModels.title": "โมเดลฟรีที่จัดหาให้โดย Kilo",
+  "dialog.model.unpaid.freeModels.title": "โมเดลฟรีที่จัดหาให้โดย Pound",
   "dialog.model.unpaid.addMore.title": "เพิ่มโมเดลเพิ่มเติมจากผู้ให้บริการยอดนิยม",
 
   "dialog.provider.viewAll": "แสดงผู้ให้บริการเพิ่มเติม",
@@ -124,7 +124,7 @@ export const dict = {
   "provider.connect.status.waiting": "รอการอนุญาต...",
   "provider.connect.status.failed": "การอนุญาตล้มเหลว: {{error}}",
   "provider.connect.apiKey.description":
-    "ป้อนคีย์ API ของ {{provider}} เพื่อเชื่อมต่อบัญชีและใช้โมเดล {{provider}} ใน Kilo",
+    "ป้อนคีย์ API ของ {{provider}} เพื่อเชื่อมต่อบัญชีและใช้โมเดล {{provider}} ใน Pound",
   "provider.connect.apiKey.label": "คีย์ API ของ {{provider}}",
   "provider.connect.apiKey.placeholder": "คีย์ API",
   "provider.connect.apiKey.required": "ต้องใช้คีย์ API",
@@ -138,14 +138,14 @@ export const dict = {
   "provider.connect.oauth.code.visit.prefix": "เยี่ยมชม ",
   "provider.connect.oauth.code.visit.link": "ลิงก์นี้",
   "provider.connect.oauth.code.visit.suffix":
-    " เพื่อรวบรวมรหัสการอนุญาตของคุณเพื่อเชื่อมต่อบัญชีและใช้โมเดล {{provider}} ใน Kilo",
+    " เพื่อรวบรวมรหัสการอนุญาตของคุณเพื่อเชื่อมต่อบัญชีและใช้โมเดล {{provider}} ใน Pound",
   "provider.connect.oauth.code.label": "รหัสการอนุญาต {{method}}",
   "provider.connect.oauth.code.placeholder": "รหัสการอนุญาต",
   "provider.connect.oauth.code.required": "ต้องใช้รหัสการอนุญาต",
   "provider.connect.oauth.code.invalid": "รหัสการอนุญาตไม่ถูกต้อง",
   "provider.connect.oauth.auto.visit.prefix": "เยี่ยมชม ",
   "provider.connect.oauth.auto.visit.link": "ลิงก์นี้",
-  "provider.connect.oauth.auto.visit.suffix": " และป้อนรหัสด้านล่างเพื่อเชื่อมต่อบัญชีและใช้โมเดล {{provider}} ใน Kilo",
+  "provider.connect.oauth.auto.visit.suffix": " และป้อนรหัสด้านล่างเพื่อเชื่อมต่อบัญชีและใช้โมเดล {{provider}} ใน Pound",
   "provider.connect.oauth.auto.confirmationCode": "รหัสยืนยัน",
   "provider.connect.toast.connected.title": "{{provider}} ที่เชื่อมต่อแล้ว",
   "provider.connect.toast.connected.description": "โมเดล {{provider}} พร้อมใช้งานแล้ว",
@@ -264,7 +264,7 @@ export const dict = {
   "dialog.directory.empty": "ไม่พบโฟลเดอร์",
 
   "dialog.server.title": "เซิร์ฟเวอร์",
-  "dialog.server.description": "สลับเซิร์ฟเวอร์ Kilo ที่แอปนี้เชื่อมต่อด้วย",
+  "dialog.server.description": "สลับเซิร์ฟเวอร์ Pound ที่แอปนี้เชื่อมต่อด้วย",
   "dialog.server.search.placeholder": "ค้นหาเซิร์ฟเวอร์",
   "dialog.server.empty": "ยังไม่มีเซิร์ฟเวอร์",
   "dialog.server.add.title": "เพิ่มเซิร์ฟเวอร์",
@@ -389,7 +389,7 @@ export const dict = {
   "toast.session.listFailed.title": "ไม่สามารถโหลดเซสชันสำหรับ {{project}}",
 
   "toast.update.title": "มีการอัปเดต",
-  "toast.update.description": "เวอร์ชันใหม่ของ Kilo ({{version}}) พร้อมใช้งานสำหรับติดตั้ง",
+  "toast.update.description": "เวอร์ชันใหม่ของ Pound ({{version}}) พร้อมใช้งานสำหรับติดตั้ง",
   "toast.update.action.installRestart": "ติดตั้งและรีสตาร์ท",
   "toast.update.action.notYet": "ยังไม่",
 
@@ -400,7 +400,7 @@ export const dict = {
   "error.page.action.checking": "กำลังตรวจสอบ...",
   "error.page.action.checkUpdates": "ตรวจสอบการอัปเดต",
   "error.page.action.updateTo": "อัปเดตเป็น {{version}}",
-  "error.page.report.prefix": "โปรดรายงานข้อผิดพลาดนี้ให้ทีม Kilo",
+  "error.page.report.prefix": "โปรดรายงานข้อผิดพลาดนี้ให้ทีม Pound",
   "error.page.report.discord": "บน Discord",
   "error.page.version": "เวอร์ชัน: {{version}}",
 
@@ -426,7 +426,7 @@ export const dict = {
   "error.chain.didYouMean": "คุณหมายถึง: {{suggestions}}",
   "error.chain.modelNotFound": "ไม่พบโมเดล: {{provider}}/{{model}}",
   "error.chain.checkConfig": "ตรวจสอบการกำหนดค่าของคุณ (opencode.json) ชื่อผู้ให้บริการ/โมเดล",
-  "error.chain.mcpFailed": 'เซิร์ฟเวอร์ MCP "{{name}}" ล้มเหลว โปรดทราบว่า Kilo ยังไม่รองรับการตรวจสอบสิทธิ์ MCP',
+  "error.chain.mcpFailed": 'เซิร์ฟเวอร์ MCP "{{name}}" ล้มเหลว โปรดทราบว่า Pound ยังไม่รองรับการตรวจสอบสิทธิ์ MCP',
   "error.chain.providerAuthFailed": "การตรวจสอบสิทธิ์ผู้ให้บริการล้มเหลว ({{provider}}): {{message}}",
   "error.chain.providerInitFailed": 'ไม่สามารถเริ่มต้นผู้ให้บริการ "{{provider}}" ตรวจสอบข้อมูลรับรองและการกำหนดค่า',
   "error.chain.configJsonInvalid": "ไฟล์กำหนดค่าที่ {{path}} ไม่ใช่ JSON(C) ที่ถูกต้อง",
@@ -539,12 +539,12 @@ export const dict = {
   "sidebar.workspaces.enable": "เปิดใช้งานพื้นที่ทำงาน",
   "sidebar.workspaces.disable": "ปิดใช้งานพื้นที่ทำงาน",
   "sidebar.gettingStarted.title": "เริ่มต้นใช้งาน",
-  "sidebar.gettingStarted.line1": "Kilo รวมถึงโมเดลฟรีเพื่อให้คุณเริ่มต้นได้ทันที",
+  "sidebar.gettingStarted.line1": "Pound รวมถึงโมเดลฟรีเพื่อให้คุณเริ่มต้นได้ทันที",
   "sidebar.gettingStarted.line2": "เชื่อมต่อผู้ให้บริการใด ๆ เพื่อใช้โมเดล รวมถึง Claude, GPT, Gemini ฯลฯ",
   "sidebar.project.recentSessions": "เซสชันล่าสุด",
   "sidebar.project.viewAllSessions": "ดูเซสชันทั้งหมด",
 
-  "app.name.desktop": "Kilo Desktop",
+  "app.name.desktop": "Pound Desktop",
 
   "settings.section.desktop": "เดสก์ท็อป",
   "settings.section.server": "เซิร์ฟเวอร์",
@@ -557,24 +557,24 @@ export const dict = {
   "settings.general.section.sounds": "เสียงเอฟเฟกต์",
 
   "settings.general.row.language.title": "ภาษา",
-  "settings.general.row.language.description": "เปลี่ยนภาษาที่แสดงสำหรับ Kilo",
+  "settings.general.row.language.description": "เปลี่ยนภาษาที่แสดงสำหรับ Pound",
   "settings.general.row.appearance.title": "รูปลักษณ์",
-  "settings.general.row.appearance.description": "ปรับแต่งวิธีการที่ Kilo มีลักษณะบนอุปกรณ์ของคุณ",
+  "settings.general.row.appearance.description": "ปรับแต่งวิธีการที่ Pound มีลักษณะบนอุปกรณ์ของคุณ",
   "settings.general.row.theme.title": "ธีม",
-  "settings.general.row.theme.description": "ปรับแต่งวิธีการที่ Kilo มีธีม",
+  "settings.general.row.theme.description": "ปรับแต่งวิธีการที่ Pound มีธีม",
   "settings.general.row.font.title": "ฟอนต์",
   "settings.general.row.font.description": "ปรับแต่งฟอนต์โมโนที่ใช้ในบล็อกโค้ด",
 
   "settings.general.row.releaseNotes.title": "บันทึกการอัปเดต",
   "settings.general.row.releaseNotes.description": "แสดงป๊อปอัพ What's New หลังจากอัปเดต",
   "settings.updates.row.startup.title": "ตรวจสอบการอัปเดตเมื่อเริ่มต้น",
-  "settings.updates.row.startup.description": "ตรวจสอบการอัปเดตโดยอัตโนมัติเมื่อ Kilo เปิดตัว",
+  "settings.updates.row.startup.description": "ตรวจสอบการอัปเดตโดยอัตโนมัติเมื่อ Pound เปิดตัว",
   "settings.updates.row.check.title": "ตรวจสอบการอัปเดต",
   "settings.updates.row.check.description": "ตรวจสอบการอัปเดตด้วยตนเองและติดตั้งหากมี",
   "settings.updates.action.checkNow": "ตรวจสอบเดี๋ยวนี้",
   "settings.updates.action.checking": "กำลังตรวจสอบ...",
   "settings.updates.toast.latest.title": "คุณใช้เวอร์ชันล่าสุดแล้ว",
-  "settings.updates.toast.latest.description": "คุณกำลังใช้ Kilo เวอร์ชันล่าสุด",
+  "settings.updates.toast.latest.description": "คุณกำลังใช้ Pound เวอร์ชันล่าสุด",
   "font.option.ibmPlexMono": "IBM Plex Mono",
   "font.option.cascadiaCode": "Cascadia Code",
   "font.option.firaCode": "Fira Code",
@@ -668,7 +668,7 @@ export const dict = {
   "settings.providers.title": "ผู้ให้บริการ",
   "settings.providers.description": "การตั้งค่าผู้ให้บริการจะสามารถกำหนดค่าได้ที่นี่",
   "settings.providers.betaNotice":
-    "ปัจจุบันสามารถตั้งค่าได้เฉพาะผู้ให้บริการ Kilo Gateway ในหน้าการตั้งค่าเท่านั้น การรองรับการตั้งค่าผู้ให้บริการรายอื่นจะพร้อมใช้งานในเร็วๆ นี้ในช่วงเบต้า ในระหว่างนี้คุณสามารถตั้งค่าผู้ให้บริการผ่าน CLI หรือไฟล์คอนฟิกได้ เรามุ่งมั่นที่จะรักษาให้ Kilo เปิดกว้างและไม่มีการผูกมัด",
+    "ปัจจุบันสามารถตั้งค่าได้เฉพาะผู้ให้บริการ Pound Gateway ในหน้าการตั้งค่าเท่านั้น การรองรับการตั้งค่าผู้ให้บริการรายอื่นจะพร้อมใช้งานในเร็วๆ นี้ในช่วงเบต้า ในระหว่างนี้คุณสามารถตั้งค่าผู้ให้บริการผ่าน CLI หรือไฟล์คอนฟิกได้ เรามุ่งมั่นที่จะรักษาให้ Pound เปิดกว้างและไม่มีการผูกมัด",
   "settings.providers.section.connected": "ผู้ให้บริการที่เชื่อมต่อ",
   "settings.providers.connected.empty": "ไม่มีผู้ให้บริการที่เชื่อมต่อ",
   "settings.providers.section.popular": "ผู้ให้บริการยอดนิยม",
@@ -743,7 +743,7 @@ export const dict = {
   "feedback.dialog.discord": "เข้าร่วมชุมชน Discord ของเรา",
   "feedback.dialog.support": "ฝ่ายสนับสนุนลูกค้า",
   "session.cloud.import.title": "นำเข้าจากคลาวด์",
-  "session.cloud.import.placeholder": "ID เซสชัน, URL หรือคำสั่ง kilo import",
+  "session.cloud.import.placeholder": "ID เซสชัน, URL หรือคำสั่ง pound import",
   "session.cloud.import.button": "นำเข้า",
   "session.cloud.import.invalid": "รูปแบบ ID เซสชันไม่ถูกต้อง",
   "session.cloud.import.legacy": "นี่ดูเหมือนจะเป็นเซสชันเวอร์ชันเก่าที่ไม่รองรับอีกต่อไปแล้ว",
@@ -778,7 +778,7 @@ export const dict = {
   "deviceAuth.toast.urlCopied": "คัดลอก URL ไปยังคลิปบอร์ดแล้ว",
   "deviceAuth.toast.codeCopied": "คัดลอกรหัสไปยังคลิปบอร์ดแล้ว",
   "deviceAuth.status.initiating": "กำลังเริ่มเข้าสู่ระบบ...",
-  "deviceAuth.title": "เข้าสู่ระบบ Kilo Code",
+  "deviceAuth.title": "เข้าสู่ระบบ Pound Code",
   "deviceAuth.step1": "ขั้นตอนที่ 1: เปิด URL นี้",
   "deviceAuth.action.copyUrl": "คัดลอก URL",
   "deviceAuth.action.openBrowser": "เปิดเบราว์เซอร์",
@@ -796,7 +796,7 @@ export const dict = {
 
   "profile.title": "โปรไฟล์",
   "profile.notLoggedIn": "ยังไม่ได้เข้าสู่ระบบ",
-  "profile.action.login": "เข้าสู่ระบบด้วย Kilo Code",
+  "profile.action.login": "เข้าสู่ระบบด้วย Pound Code",
   "profile.balance.title": "ยอดคงเหลือ",
   "profile.balance.refresh": "รีเฟรชยอดคงเหลือ",
   "profile.action.dashboard": "แดชบอร์ด",
@@ -815,10 +815,10 @@ export const dict = {
   "settings.prompts.title": "พรอมต์",
   "settings.experimental.title": "ทดลอง",
   "settings.language.title": "ภาษา",
-  "settings.aboutKiloCode.title": "เกี่ยวกับ Kilo Code",
+  "settings.aboutKiloCode.title": "เกี่ยวกับ Pound Code",
 
   "session.messages.empty": "เริ่มการสนทนาโดยพิมพ์ข้อความด้านล่าง",
-  "session.messages.welcome": "Kilo Code เป็นผู้ช่วยเขียนโค้ด AI ขอให้สร้างฟีเจอร์ แก้ไขบัก หรืออธิบายโค้ดเบสของคุณ",
+  "session.messages.welcome": "Pound Code เป็นผู้ช่วยเขียนโค้ด AI ขอให้สร้างฟีเจอร์ แก้ไขบัก หรืออธิบายโค้ดเบสของคุณ",
   "session.messages.scrollToBottom": "เลื่อนไปด้านล่าง",
   "session.status.writingResponse": "กำลังเขียนคำตอบ...",
   "session.status.retrying": "กำลังลองใหม่ (ครั้งที่ {{ attempt }})… {{ message }}",
@@ -851,14 +851,14 @@ export const dict = {
   "settings.aboutKiloCode.port.label": "พอร์ต:",
   "settings.aboutKiloCode.versionInfo": "ข้อมูลเวอร์ชัน",
   "settings.aboutKiloCode.version.label": "เวอร์ชัน:",
-  "settings.aboutKiloCode.extensionName": "ส่วนขยาย Kilo Code",
+  "settings.aboutKiloCode.extensionName": "ส่วนขยาย Pound Code",
   "settings.aboutKiloCode.community": "ชุมชนและการสนับสนุน",
   "settings.aboutKiloCode.feedback.prefix": "หากคุณมีคำถามหรือข้อเสนอแนะ สามารถเปิด issue ได้ที่",
   "settings.aboutKiloCode.feedback.or": "หรือ",
   "settings.aboutKiloCode.support.prefix": "สำหรับคำถามเกี่ยวกับการเรียกเก็บเงินหรือบัญชี ติดต่อฝ่ายสนับสนุนลูกค้าที่",
   "settings.aboutKiloCode.resetSettings.title": "รีเซ็ตการตั้งค่า",
   "settings.aboutKiloCode.resetSettings.description":
-    "รีเซ็ตการตั้งค่าส่วนขยาย Kilo Code ทั้งหมดเป็นค่าเริ่มต้น ไม่ส่งผลกระทบต่อการกำหนดค่า CLI หรือแบ็กเอนด์",
+    "รีเซ็ตการตั้งค่าส่วนขยาย Pound Code ทั้งหมดเป็นค่าเริ่มต้น ไม่ส่งผลกระทบต่อการกำหนดค่า CLI หรือแบ็กเอนด์",
   "settings.aboutKiloCode.resetSettings.button": "รีเซ็ตการตั้งค่าทั้งหมด",
 
   "settings.agentBehaviour.subtab.modes": "โหมด",
@@ -877,7 +877,7 @@ export const dict = {
   "settings.browser.headless.title": "โหมด Headless",
   "settings.browser.headless.description": "ทำงานในโหมด headless (ไม่มีหน้าต่างเบราว์เซอร์ที่มองเห็นได้)",
 
-  "settings.language.description": 'เลือกภาษาสำหรับ UI ของ Kilo Code "อัตโนมัติ" จะใช้ภาษาการแสดงผลของ VS Code',
+  "settings.language.description": 'เลือกภาษาสำหรับ UI ของ Pound Code "อัตโนมัติ" จะใช้ภาษาการแสดงผลของ VS Code',
   "settings.language.auto": "อัตโนมัติ (ภาษา VS Code)",
   "settings.language.current": "ปัจจุบัน:",
 
@@ -1011,10 +1011,10 @@ export const dict = {
   "settings.legacyMigration.link": "ย้ายข้อมูลจากเวอร์ชันดั้งเดิม",
   "settings.aboutKiloCode.legacyMigration.title": "การย้ายข้อมูลจากเวอร์ชันดั้งเดิม",
   "settings.aboutKiloCode.legacyMigration.description":
-    "ย้ายการตั้งค่าจากการติดตั้ง Kilo Code ก่อนหน้านี้ รวมถึงคีย์ API ของผู้ให้บริการและโมเดลเริ่มต้น",
+    "ย้ายการตั้งค่าจากการติดตั้ง Pound Code ก่อนหน้านี้ รวมถึงคีย์ API ของผู้ให้บริการและโมเดลเริ่มต้น",
 
   // Screen 1 — What's New
-  "migration.whatsNew.title": "มีอะไรใหม่ใน Kilo Code",
+  "migration.whatsNew.title": "มีอะไรใหม่ใน Pound Code",
   "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "เราได้สร้างส่วนขยายใหม่บนรากฐานที่เร็วและมีประสิทธิภาพมากขึ้น",
   "migration.whatsNew.features.performance.title": "ประสิทธิภาพเอเจนต์ที่เร็วขึ้น",
@@ -1027,7 +1027,7 @@ export const dict = {
     "อินเทอร์เฟซรวมสำหรับการเรียกใช้เอเจนต์หลายตัวพร้อมกัน แต่ละตัวบน worktree ของตัวเอง — ติดตามความคืบหน้า สลับบริบท และตรวจสอบการเปลี่ยนแปลงได้ในที่เดียว",
   "migration.whatsNew.features.foundation.title": "รากฐานที่ใช้ร่วมกัน",
   "migration.whatsNew.features.foundation.detail":
-    "แกนหลักขนาดเล็กและมีประสิทธิภาพเดียวกันในทุกผลิตภัณฑ์ Kilo ประสบการณ์ที่คุ้นเคยไม่ว่าคุณจะเลือกทำงานอย่างไร",
+    "แกนหลักขนาดเล็กและมีประสิทธิภาพเดียวกันในทุกผลิตภัณฑ์ Pound ประสบการณ์ที่คุ้นเคยไม่ว่าคุณจะเลือกทำงานอย่างไร",
   "migration.whatsNew.blogLink": "อ่านประกาศฉบับเต็ม",
   "migration.whatsNew.continue": "ดำเนินการต่อ",
 

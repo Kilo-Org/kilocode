@@ -101,15 +101,15 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
           }}
         >
           {language.t("settings.aboutKiloCode.feedback.prefix")}{" "}
-          <span style={linkStyle} onClick={() => open("https://github.com/Kilo-Org/kilocode")}>
+          <span style={linkStyle} onClick={() => open("https://github.com/Pound-Org/poundcode")}>
             GitHub
           </span>
           ,{" "}
-          <span style={linkStyle} onClick={() => open("https://reddit.com/r/kilocode")}>
+          <span style={linkStyle} onClick={() => open("https://reddit.com/r/poundcode")}>
             Reddit
           </span>
           , {language.t("settings.aboutKiloCode.feedback.or")}{" "}
-          <span style={linkStyle} onClick={() => open("https://kilo.ai/discord")}>
+          <span style={linkStyle} onClick={() => open("https://pound.ai/discord")}>
             Discord
           </span>
           .
@@ -123,8 +123,8 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
           }}
         >
           {language.t("settings.aboutKiloCode.support.prefix")}{" "}
-          <span style={linkStyle} onClick={() => open("https://kilo.ai/support")}>
-            kilo.ai/support
+          <span style={linkStyle} onClick={() => open("https://pound.ai/support")}>
+            pound.ai/support
           </span>
           .
         </p>

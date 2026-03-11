@@ -111,7 +111,7 @@ export const dict = {
   "dialog.model.manage": "إدارة النماذج",
   "dialog.model.manage.description": "تخصيص النماذج التي تظهر في محدد النماذج.",
 
-  "dialog.model.unpaid.freeModels.title": "نماذج مجانية مقدمة من Kilo",
+  "dialog.model.unpaid.freeModels.title": "نماذج مجانية مقدمة من Pound",
   "dialog.model.unpaid.addMore.title": "إضافة المزيد من النماذج من موفرين مشهورين",
 
   "dialog.provider.viewAll": "عرض المزيد من الموفرين",
@@ -124,7 +124,7 @@ export const dict = {
   "provider.connect.status.waiting": "في انتظار التفويض...",
   "provider.connect.status.failed": "فشل التفويض: {{error}}",
   "provider.connect.apiKey.description":
-    "أدخل مفتاح واجهة برمجة تطبيقات {{provider}} الخاص بك لتوصيل حسابك واستخدام نماذج {{provider}} في Kilo.",
+    "أدخل مفتاح واجهة برمجة تطبيقات {{provider}} الخاص بك لتوصيل حسابك واستخدام نماذج {{provider}} في Pound.",
   "provider.connect.apiKey.label": "مفتاح واجهة برمجة تطبيقات {{provider}}",
   "provider.connect.apiKey.placeholder": "مفتاح API",
   "provider.connect.apiKey.required": "مفتاح API مطلوب",
@@ -138,14 +138,14 @@ export const dict = {
   "provider.connect.oauth.code.visit.prefix": "قم بزيارة ",
   "provider.connect.oauth.code.visit.link": "هذا الرابط",
   "provider.connect.oauth.code.visit.suffix":
-    " للحصول على رمز التفويض الخاص بك لتوصيل حسابك واستخدام نماذج {{provider}} في Kilo.",
+    " للحصول على رمز التفويض الخاص بك لتوصيل حسابك واستخدام نماذج {{provider}} في Pound.",
   "provider.connect.oauth.code.label": "رمز تفويض {{method}}",
   "provider.connect.oauth.code.placeholder": "رمز التفويض",
   "provider.connect.oauth.code.required": "رمز التفويض مطلوب",
   "provider.connect.oauth.code.invalid": "رمز التفويض غير صالح",
   "provider.connect.oauth.auto.visit.prefix": "قم بزيارة ",
   "provider.connect.oauth.auto.visit.link": "هذا الرابط",
-  "provider.connect.oauth.auto.visit.suffix": " وأدخل الرمز أدناه لتوصيل حسابك واستخدام نماذج {{provider}} في Kilo.",
+  "provider.connect.oauth.auto.visit.suffix": " وأدخل الرمز أدناه لتوصيل حسابك واستخدام نماذج {{provider}} في Pound.",
   "provider.connect.oauth.auto.confirmationCode": "رمز التأكيد",
   "provider.connect.toast.connected.title": "تم توصيل {{provider}}",
   "provider.connect.toast.connected.description": "نماذج {{provider}} متاحة الآن للاستخدام.",
@@ -263,7 +263,7 @@ export const dict = {
   "dialog.directory.empty": "لم يتم العثور على مجلدات",
 
   "dialog.server.title": "الخوادم",
-  "dialog.server.description": "تبديل خادم Kilo الذي يتصل به هذا التطبيق.",
+  "dialog.server.description": "تبديل خادم Pound الذي يتصل به هذا التطبيق.",
   "dialog.server.search.placeholder": "البحث في الخوادم",
   "dialog.server.empty": "لا توجد خوادم بعد",
   "dialog.server.add.title": "إضافة خادم",
@@ -387,7 +387,7 @@ export const dict = {
   "toast.session.listFailed.title": "فشل تحميل الجلسات لـ {{project}}",
 
   "toast.update.title": "تحديث متاح",
-  "toast.update.description": "نسخة جديدة من Kilo ({{version}}) متاحة الآن للتثبيت.",
+  "toast.update.description": "نسخة جديدة من Pound ({{version}}) متاحة الآن للتثبيت.",
   "toast.update.action.installRestart": "تثبيت وإعادة تشغيل",
   "toast.update.action.notYet": "ليس الآن",
 
@@ -398,7 +398,7 @@ export const dict = {
   "error.page.action.checking": "جارٍ التحقق...",
   "error.page.action.checkUpdates": "التحقق من وجود تحديثات",
   "error.page.action.updateTo": "تحديث إلى {{version}}",
-  "error.page.report.prefix": "يرجى الإبلاغ عن هذا الخطأ لفريق Kilo",
+  "error.page.report.prefix": "يرجى الإبلاغ عن هذا الخطأ لفريق Pound",
   "error.page.report.discord": "على Discord",
   "error.page.version": "الإصدار: {{version}}",
 
@@ -425,7 +425,7 @@ export const dict = {
   "error.chain.didYouMean": "هل كنت تعني: {{suggestions}}",
   "error.chain.modelNotFound": "النموذج غير موجود: {{provider}}/{{model}}",
   "error.chain.checkConfig": "تحقق من أسماء الموفر/النموذج في التكوين (opencode.json)",
-  "error.chain.mcpFailed": 'فشل خادم MCP "{{name}}". لاحظ أن Kilo لا يدعم مصادقة MCP بعد.',
+  "error.chain.mcpFailed": 'فشل خادم MCP "{{name}}". لاحظ أن Pound لا يدعم مصادقة MCP بعد.',
   "error.chain.providerAuthFailed": "فشلت مصادقة الموفر ({{provider}}): {{message}}",
   "error.chain.providerInitFailed": 'فشل تهيئة الموفر "{{provider}}". تحقق من بيانات الاعتماد والتكوين.',
   "error.chain.configJsonInvalid": "ملف التكوين في {{path}} ليس JSON(C) صالحًا",
@@ -536,12 +536,12 @@ export const dict = {
   "sidebar.workspaces.enable": "تمكين مساحات العمل",
   "sidebar.workspaces.disable": "تعطيل مساحات العمل",
   "sidebar.gettingStarted.title": "البدء",
-  "sidebar.gettingStarted.line1": "يتضمن Kilo نماذج مجانية حتى تتمكن من البدء فورًا.",
+  "sidebar.gettingStarted.line1": "يتضمن Pound نماذج مجانية حتى تتمكن من البدء فورًا.",
   "sidebar.gettingStarted.line2": "قم بتوصيل أي موفر لاستخدام النماذج، بما في ذلك Claude و GPT و Gemini وما إلى ذلك.",
   "sidebar.project.recentSessions": "الجلسات الحديثة",
   "sidebar.project.viewAllSessions": "عرض جميع الجلسات",
 
-  "app.name.desktop": "Kilo Desktop",
+  "app.name.desktop": "Pound Desktop",
   "settings.section.desktop": "سطح المكتب",
   "settings.section.server": "الخادم",
   "settings.tab.general": "عام",
@@ -553,11 +553,11 @@ export const dict = {
   "settings.general.section.sounds": "المؤثرات الصوتية",
 
   "settings.general.row.language.title": "اللغة",
-  "settings.general.row.language.description": "تغيير لغة العرض لـ Kilo",
+  "settings.general.row.language.description": "تغيير لغة العرض لـ Pound",
   "settings.general.row.appearance.title": "المظهر",
-  "settings.general.row.appearance.description": "تخصيص كيفية ظهور Kilo على جهازك",
+  "settings.general.row.appearance.description": "تخصيص كيفية ظهور Pound على جهازك",
   "settings.general.row.theme.title": "السمة",
-  "settings.general.row.theme.description": "تخصيص سمة Kilo.",
+  "settings.general.row.theme.description": "تخصيص سمة Pound.",
   "settings.general.row.font.title": "الخط",
   "settings.general.row.font.description": "تخصيص الخط الأحادي المستخدم في كتل التعليمات البرمجية",
 
@@ -565,13 +565,13 @@ export const dict = {
   "settings.general.row.releaseNotes.description": 'عرض نوافذ "ما الجديد" المنبثقة بعد التحديثات',
 
   "settings.updates.row.startup.title": "التحقق من التحديثات عند بدء التشغيل",
-  "settings.updates.row.startup.description": "التحقق تلقائيًا من التحديثات عند تشغيل Kilo",
+  "settings.updates.row.startup.description": "التحقق تلقائيًا من التحديثات عند تشغيل Pound",
   "settings.updates.row.check.title": "التحقق من التحديثات",
   "settings.updates.row.check.description": "التحقق يدويًا من التحديثات وتثبيتها إذا كانت متاحة",
   "settings.updates.action.checkNow": "تحقق الآن",
   "settings.updates.action.checking": "جارٍ التحقق...",
   "settings.updates.toast.latest.title": "أنت على آخر إصدار",
-  "settings.updates.toast.latest.description": "أنت تستخدم أحدث إصدار من Kilo.",
+  "settings.updates.toast.latest.description": "أنت تستخدم أحدث إصدار من Pound.",
   "font.option.ibmPlexMono": "IBM Plex Mono",
   "font.option.cascadiaCode": "Cascadia Code",
   "font.option.firaCode": "Fira Code",
@@ -665,7 +665,7 @@ export const dict = {
   "settings.providers.title": "الموفرون",
   "settings.providers.description": "ستكون إعدادات الموفر قابلة للتكوين هنا.",
   "settings.providers.betaNotice":
-    "حالياً، يمكن إعداد مزود Kilo Gateway فقط في واجهة الإعدادات. سيتوفر دعم إعداد المزودين الآخرين قريباً خلال الفترة التجريبية. في غضون ذلك، يمكنك إعداد المزودين باستخدام CLI أو ملف التكوين. نحن ملتزمون بإبقاء Kilo مفتوحاً، دون تقييد.",
+    "حالياً، يمكن إعداد مزود Pound Gateway فقط في واجهة الإعدادات. سيتوفر دعم إعداد المزودين الآخرين قريباً خلال الفترة التجريبية. في غضون ذلك، يمكنك إعداد المزودين باستخدام CLI أو ملف التكوين. نحن ملتزمون بإبقاء Pound مفتوحاً، دون تقييد.",
   "settings.providers.section.connected": "الموفرون المتصلون",
   "settings.providers.connected.empty": "لا يوجد موفرون متصلون",
   "settings.providers.section.popular": "الموفرون الشائعون",
@@ -741,7 +741,7 @@ export const dict = {
   "feedback.dialog.discord": "الانضمام إلى مجتمع Discord",
   "feedback.dialog.support": "دعم العملاء",
   "session.cloud.import.title": "استيراد من السحابة",
-  "session.cloud.import.placeholder": "معرّف الجلسة أو الرابط أو أمر kilo import",
+  "session.cloud.import.placeholder": "معرّف الجلسة أو الرابط أو أمر pound import",
   "session.cloud.import.button": "استيراد",
   "session.cloud.import.invalid": "تنسيق معرّف الجلسة غير صالح",
   "session.cloud.import.legacy": "يبدو أن هذه جلسة قديمة لم تعد مدعومة.",
@@ -776,7 +776,7 @@ export const dict = {
   "deviceAuth.toast.urlCopied": "تم نسخ الرابط إلى الحافظة",
   "deviceAuth.toast.codeCopied": "تم نسخ الرمز إلى الحافظة",
   "deviceAuth.status.initiating": "جارٍ بدء تسجيل الدخول...",
-  "deviceAuth.title": "تسجيل الدخول إلى Kilo Code",
+  "deviceAuth.title": "تسجيل الدخول إلى Pound Code",
   "deviceAuth.step1": "الخطوة 1: افتح هذا الرابط",
   "deviceAuth.action.copyUrl": "نسخ الرابط",
   "deviceAuth.action.openBrowser": "فتح المتصفح",
@@ -794,7 +794,7 @@ export const dict = {
 
   "profile.title": "الملف الشخصي",
   "profile.notLoggedIn": "لم يتم تسجيل الدخول",
-  "profile.action.login": "تسجيل الدخول باستخدام Kilo Code",
+  "profile.action.login": "تسجيل الدخول باستخدام Pound Code",
   "profile.balance.title": "الرصيد",
   "profile.balance.refresh": "تحديث الرصيد",
   "profile.action.dashboard": "لوحة التحكم",
@@ -813,11 +813,11 @@ export const dict = {
   "settings.prompts.title": "الموجهات",
   "settings.experimental.title": "تجريبي",
   "settings.language.title": "اللغة",
-  "settings.aboutKiloCode.title": "حول Kilo Code",
+  "settings.aboutKiloCode.title": "حول Pound Code",
 
   "session.messages.empty": "ابدأ محادثة بكتابة رسالة أدناه.",
   "session.messages.welcome":
-    "Kilo Code هو مساعد ترميز بالذكاء الاصطناعي. اطلب منه بناء ميزات أو إصلاح أخطاء أو شرح قاعدة الشيفرة.",
+    "Pound Code هو مساعد ترميز بالذكاء الاصطناعي. اطلب منه بناء ميزات أو إصلاح أخطاء أو شرح قاعدة الشيفرة.",
   "session.messages.scrollToBottom": "التمرير إلى الأسفل",
   "session.status.writingResponse": "...جارٍ كتابة الرد",
   "session.status.retrying": "...إعادة المحاولة (المحاولة {{ attempt }})… {{ message }}",
@@ -850,14 +850,14 @@ export const dict = {
   "settings.aboutKiloCode.port.label": "المنفذ:",
   "settings.aboutKiloCode.versionInfo": "معلومات الإصدار",
   "settings.aboutKiloCode.version.label": "الإصدار:",
-  "settings.aboutKiloCode.extensionName": "إضافة Kilo Code",
+  "settings.aboutKiloCode.extensionName": "إضافة Pound Code",
   "settings.aboutKiloCode.community": "المجتمع والدعم",
   "settings.aboutKiloCode.feedback.prefix": "إذا كان لديك أي أسئلة أو ملاحظات، لا تتردد في فتح مشكلة على",
   "settings.aboutKiloCode.feedback.or": "أو",
   "settings.aboutKiloCode.support.prefix": "لأسئلة الفوترة أو الحساب، تواصل مع دعم العملاء على",
   "settings.aboutKiloCode.resetSettings.title": "إعادة تعيين الإعدادات",
   "settings.aboutKiloCode.resetSettings.description":
-    "إعادة تعيين جميع إعدادات إضافة Kilo Code إلى قيمها الافتراضية. لا يؤثر هذا على تكوين CLI أو الواجهة الخلفية.",
+    "إعادة تعيين جميع إعدادات إضافة Pound Code إلى قيمها الافتراضية. لا يؤثر هذا على تكوين CLI أو الواجهة الخلفية.",
   "settings.aboutKiloCode.resetSettings.button": "إعادة تعيين جميع الإعدادات",
 
   "settings.agentBehaviour.subtab.modes": "الأوضاع",
@@ -876,7 +876,7 @@ export const dict = {
   "settings.browser.headless.title": "الوضع بدون واجهة",
   "settings.browser.headless.description": "التشغيل في الوضع بدون واجهة (بدون نافذة متصفح مرئية).",
 
-  "settings.language.description": 'اختر اللغة لواجهة Kilo Code. "تلقائي" يستخدم لغة عرض VS Code.',
+  "settings.language.description": 'اختر اللغة لواجهة Pound Code. "تلقائي" يستخدم لغة عرض VS Code.',
   "settings.language.auto": "تلقائي (لغة VS Code)",
   "settings.language.current": "الحالية:",
 
@@ -1012,10 +1012,10 @@ export const dict = {
   "settings.legacyMigration.link": "الترحيل من الإصدار القديم",
   "settings.aboutKiloCode.legacyMigration.title": "ترحيل الإصدار القديم",
   "settings.aboutKiloCode.legacyMigration.description":
-    "ترحيل الإعدادات من تثبيت سابق لـ Kilo Code، بما في ذلك مفاتيح API لمقدمي الخدمة والنموذج الافتراضي.",
+    "ترحيل الإعدادات من تثبيت سابق لـ Pound Code، بما في ذلك مفاتيح API لمقدمي الخدمة والنموذج الافتراضي.",
 
   // Screen 1 — What's New
-  "migration.whatsNew.title": "ما الجديد في Kilo Code",
+  "migration.whatsNew.title": "ما الجديد في Pound Code",
   "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "لقد أعدنا بناء الإضافة على أساس أسرع وأكثر كفاءة.",
   "migration.whatsNew.features.performance.title": "أداء أسرع للوكيل",
@@ -1028,7 +1028,7 @@ export const dict = {
     "واجهة موحدة لتشغيل عدة وكلاء بالتوازي، كل منهم في شجرة عمل خاصة — راقب التقدم، وبدّل السياق، وراجع التغييرات في مكان واحد.",
   "migration.whatsNew.features.foundation.title": "أساس مشترك",
   "migration.whatsNew.features.foundation.detail":
-    "نواة صغيرة وفعالة واحدة عبر كل منتجات Kilo. تجربة مألوفة بغض النظر عن طريقة عملك.",
+    "نواة صغيرة وفعالة واحدة عبر كل منتجات Pound. تجربة مألوفة بغض النظر عن طريقة عملك.",
   "migration.whatsNew.blogLink": "اقرأ الإعلان الكامل",
   "migration.whatsNew.continue": "متابعة",
 

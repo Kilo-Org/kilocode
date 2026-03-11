@@ -355,13 +355,13 @@ export class WorktreeManager {
   async ensureGitExclude(): Promise<void> {
     const gitDir = await this.resolveGitDir()
     const excludePath = path.join(gitDir, "info", "exclude")
-    await this.addExcludeEntry(excludePath, ".kilocode/worktrees/", "Kilo Code agent worktrees")
-    await this.addExcludeEntry(excludePath, ".kilocode/agent-manager.json", "Kilo Agent Manager state")
-    await this.addExcludeEntry(excludePath, ".kilocode/setup-script", "Kilo Code worktree setup script")
-    await this.addExcludeEntry(excludePath, ".kilocode/setup-script.sh", "Kilo Code worktree setup script")
-    await this.addExcludeEntry(excludePath, ".kilocode/setup-script.ps1", "Kilo Code worktree setup script")
-    await this.addExcludeEntry(excludePath, ".kilocode/setup-script.cmd", "Kilo Code worktree setup script")
-    await this.addExcludeEntry(excludePath, ".kilocode/setup-script.bat", "Kilo Code worktree setup script")
+    await this.addExcludeEntry(excludePath, ".kilocode/worktrees/", "Pound Code agent worktrees")
+    await this.addExcludeEntry(excludePath, ".kilocode/agent-manager.json", "Pound Agent Manager state")
+    await this.addExcludeEntry(excludePath, ".kilocode/setup-script", "Pound Code worktree setup script")
+    await this.addExcludeEntry(excludePath, ".kilocode/setup-script.sh", "Pound Code worktree setup script")
+    await this.addExcludeEntry(excludePath, ".kilocode/setup-script.ps1", "Pound Code worktree setup script")
+    await this.addExcludeEntry(excludePath, ".kilocode/setup-script.cmd", "Pound Code worktree setup script")
+    await this.addExcludeEntry(excludePath, ".kilocode/setup-script.bat", "Pound Code worktree setup script")
   }
 
   private async ensureWorktreeExclude(worktreePath: string): Promise<void> {
@@ -375,7 +375,7 @@ export class WorktreeManager {
       await this.addExcludeEntry(
         path.join(mainGitDir, "info", "exclude"),
         `${KILOCODE_DIR}/`,
-        "Kilo Code session metadata",
+        "Pound Code session metadata",
       )
     } catch (error) {
       this.log(`Warning: Failed to update git exclude for worktree: ${error}`)

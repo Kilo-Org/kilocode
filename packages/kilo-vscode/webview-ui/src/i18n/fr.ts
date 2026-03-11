@@ -112,7 +112,7 @@ export const dict = {
   "dialog.model.manage": "Gérer les modèles",
   "dialog.model.manage.description": "Personnalisez les modèles qui apparaissent dans le sélecteur.",
 
-  "dialog.model.unpaid.freeModels.title": "Modèles gratuits fournis par Kilo",
+  "dialog.model.unpaid.freeModels.title": "Modèles gratuits fournis par Pound",
   "dialog.model.unpaid.addMore.title": "Ajouter plus de modèles de fournisseurs populaires",
 
   "dialog.provider.viewAll": "Voir plus de fournisseurs",
@@ -125,7 +125,7 @@ export const dict = {
   "provider.connect.status.waiting": "En attente d'autorisation...",
   "provider.connect.status.failed": "Échec de l'autorisation : {{error}}",
   "provider.connect.apiKey.description":
-    "Entrez votre clé API {{provider}} pour connecter votre compte et utiliser les modèles {{provider}} dans Kilo.",
+    "Entrez votre clé API {{provider}} pour connecter votre compte et utiliser les modèles {{provider}} dans Pound.",
   "provider.connect.apiKey.label": "Clé API {{provider}}",
   "provider.connect.apiKey.placeholder": "Clé API",
   "provider.connect.apiKey.required": "La clé API est requise",
@@ -139,7 +139,7 @@ export const dict = {
   "provider.connect.oauth.code.visit.prefix": "Visitez ",
   "provider.connect.oauth.code.visit.link": "ce lien",
   "provider.connect.oauth.code.visit.suffix":
-    " pour récupérer votre code d'autorisation afin de connecter votre compte et utiliser les modèles {{provider}} dans Kilo.",
+    " pour récupérer votre code d'autorisation afin de connecter votre compte et utiliser les modèles {{provider}} dans Pound.",
   "provider.connect.oauth.code.label": "Code d'autorisation {{method}}",
   "provider.connect.oauth.code.placeholder": "Code d'autorisation",
   "provider.connect.oauth.code.required": "Le code d'autorisation est requis",
@@ -147,7 +147,7 @@ export const dict = {
   "provider.connect.oauth.auto.visit.prefix": "Visitez ",
   "provider.connect.oauth.auto.visit.link": "ce lien",
   "provider.connect.oauth.auto.visit.suffix":
-    " et entrez le code ci-dessous pour connecter votre compte et utiliser les modèles {{provider}} dans Kilo.",
+    " et entrez le code ci-dessous pour connecter votre compte et utiliser les modèles {{provider}} dans Pound.",
   "provider.connect.oauth.auto.confirmationCode": "Code de confirmation",
   "provider.connect.toast.connected.title": "{{provider}} connecté",
   "provider.connect.toast.connected.description": "Les modèles {{provider}} sont maintenant disponibles.",
@@ -265,7 +265,7 @@ export const dict = {
   "dialog.directory.empty": "Aucun dossier trouvé",
 
   "dialog.server.title": "Serveurs",
-  "dialog.server.description": "Changez le serveur Kilo auquel cette application se connecte.",
+  "dialog.server.description": "Changez le serveur Pound auquel cette application se connecte.",
   "dialog.server.search.placeholder": "Rechercher des serveurs",
   "dialog.server.empty": "Aucun serveur pour l'instant",
   "dialog.server.add.title": "Ajouter un serveur",
@@ -393,7 +393,7 @@ export const dict = {
   "toast.session.listFailed.title": "Échec du chargement des sessions pour {{project}}",
 
   "toast.update.title": "Mise à jour disponible",
-  "toast.update.description": "Une nouvelle version d'Kilo ({{version}}) est maintenant disponible pour installation.",
+  "toast.update.description": "Une nouvelle version d'Pound ({{version}}) est maintenant disponible pour installation.",
   "toast.update.action.installRestart": "Installer et redémarrer",
   "toast.update.action.notYet": "Pas encore",
 
@@ -404,7 +404,7 @@ export const dict = {
   "error.page.action.checking": "Vérification...",
   "error.page.action.checkUpdates": "Vérifier les mises à jour",
   "error.page.action.updateTo": "Mettre à jour vers {{version}}",
-  "error.page.report.prefix": "Veuillez signaler cette erreur à l'équipe Kilo",
+  "error.page.report.prefix": "Veuillez signaler cette erreur à l'équipe Pound",
   "error.page.report.discord": "sur Discord",
   "error.page.version": "Version : {{version}}",
 
@@ -433,7 +433,7 @@ export const dict = {
   "error.chain.modelNotFound": "Modèle introuvable : {{provider}}/{{model}}",
   "error.chain.checkConfig": "Vérifiez votre configuration (opencode.json) pour les noms de fournisseur/modèle",
   "error.chain.mcpFailed":
-    "Le serveur MCP \"{{name}}\" a échoué. Notez qu'Kilo ne supporte pas encore l'authentification MCP.",
+    "Le serveur MCP \"{{name}}\" a échoué. Notez qu'Pound ne supporte pas encore l'authentification MCP.",
   "error.chain.providerAuthFailed": "Échec de l'authentification du fournisseur ({{provider}}) : {{message}}",
   "error.chain.providerInitFailed":
     'Échec de l\'initialisation du fournisseur "{{provider}}". Vérifiez les identifiants et la configuration.',
@@ -549,13 +549,13 @@ export const dict = {
   "sidebar.workspaces.enable": "Activer les espaces de travail",
   "sidebar.workspaces.disable": "Désactiver les espaces de travail",
   "sidebar.gettingStarted.title": "Commencer",
-  "sidebar.gettingStarted.line1": "Kilo inclut des modèles gratuits pour que vous puissiez commencer immédiatement.",
+  "sidebar.gettingStarted.line1": "Pound inclut des modèles gratuits pour que vous puissiez commencer immédiatement.",
   "sidebar.gettingStarted.line2":
     "Connectez n'importe quel fournisseur pour utiliser des modèles, y compris Claude, GPT, Gemini etc.",
   "sidebar.project.recentSessions": "Sessions récentes",
   "sidebar.project.viewAllSessions": "Voir toutes les sessions",
 
-  "app.name.desktop": "Kilo Desktop",
+  "app.name.desktop": "Pound Desktop",
   "settings.section.desktop": "Bureau",
   "settings.section.server": "Serveur",
   "settings.tab.general": "Général",
@@ -567,11 +567,11 @@ export const dict = {
   "settings.general.section.sounds": "Effets sonores",
 
   "settings.general.row.language.title": "Langue",
-  "settings.general.row.language.description": "Changer la langue d'affichage pour Kilo",
+  "settings.general.row.language.description": "Changer la langue d'affichage pour Pound",
   "settings.general.row.appearance.title": "Apparence",
-  "settings.general.row.appearance.description": "Personnaliser l'apparence d'Kilo sur votre appareil",
+  "settings.general.row.appearance.description": "Personnaliser l'apparence d'Pound sur votre appareil",
   "settings.general.row.theme.title": "Thème",
-  "settings.general.row.theme.description": "Personnaliser le thème d'Kilo.",
+  "settings.general.row.theme.description": "Personnaliser le thème d'Pound.",
   "settings.general.row.font.title": "Police",
   "settings.general.row.font.description": "Personnaliser la police mono utilisée dans les blocs de code",
 
@@ -579,13 +579,13 @@ export const dict = {
   "settings.general.row.releaseNotes.description": 'Afficher des pop-ups "Quoi de neuf" après les mises à jour',
 
   "settings.updates.row.startup.title": "Vérifier les mises à jour au démarrage",
-  "settings.updates.row.startup.description": "Vérifier automatiquement les mises à jour au lancement d'Kilo",
+  "settings.updates.row.startup.description": "Vérifier automatiquement les mises à jour au lancement d'Pound",
   "settings.updates.row.check.title": "Vérifier les mises à jour",
   "settings.updates.row.check.description": "Vérifier manuellement les mises à jour et installer si disponible",
   "settings.updates.action.checkNow": "Vérifier maintenant",
   "settings.updates.action.checking": "Vérification...",
   "settings.updates.toast.latest.title": "Vous êtes à jour",
-  "settings.updates.toast.latest.description": "Vous utilisez la dernière version d'Kilo.",
+  "settings.updates.toast.latest.description": "Vous utilisez la dernière version d'Pound.",
 
   "font.option.ibmPlexMono": "IBM Plex Mono",
   "font.option.cascadiaCode": "Cascadia Code",
@@ -681,7 +681,7 @@ export const dict = {
   "settings.providers.title": "Fournisseurs",
   "settings.providers.description": "Les paramètres des fournisseurs seront configurables ici.",
   "settings.providers.betaNotice":
-    "Actuellement, seul le fournisseur Kilo Gateway peut être configuré dans l'interface des paramètres. La prise en charge de la configuration d'autres fournisseurs sera bientôt disponible pendant la période bêta. En attendant, vous pouvez configurer les fournisseurs à l'aide de la CLI ou du fichier de configuration. Nous nous engageons à maintenir Kilo ouvert, sans enfermement propriétaire.",
+    "Actuellement, seul le fournisseur Pound Gateway peut être configuré dans l'interface des paramètres. La prise en charge de la configuration d'autres fournisseurs sera bientôt disponible pendant la période bêta. En attendant, vous pouvez configurer les fournisseurs à l'aide de la CLI ou du fichier de configuration. Nous nous engageons à maintenir Pound ouvert, sans enfermement propriétaire.",
   "settings.providers.section.connected": "Fournisseurs connectés",
   "settings.providers.connected.empty": "Aucun fournisseur connecté",
   "settings.providers.section.popular": "Fournisseurs populaires",
@@ -759,7 +759,7 @@ export const dict = {
   "feedback.dialog.discord": "Rejoindre notre communauté Discord",
   "feedback.dialog.support": "Service client",
   "session.cloud.import.title": "Importer depuis le cloud",
-  "session.cloud.import.placeholder": "ID de session, URL ou commande kilo import",
+  "session.cloud.import.placeholder": "ID de session, URL ou commande pound import",
   "session.cloud.import.button": "Importer",
   "session.cloud.import.invalid": "Format d'ID de session invalide",
   "session.cloud.import.legacy": "Cette session semble être une ancienne session qui n'est plus prise en charge.",
@@ -794,7 +794,7 @@ export const dict = {
   "deviceAuth.toast.urlCopied": "URL copiée dans le presse-papier",
   "deviceAuth.toast.codeCopied": "Code copié dans le presse-papier",
   "deviceAuth.status.initiating": "Démarrage de la connexion...",
-  "deviceAuth.title": "Se connecter à Kilo Code",
+  "deviceAuth.title": "Se connecter à Pound Code",
   "deviceAuth.step1": "Étape 1 : Ouvrez cette URL",
   "deviceAuth.action.copyUrl": "Copier l'URL",
   "deviceAuth.action.openBrowser": "Ouvrir le navigateur",
@@ -812,7 +812,7 @@ export const dict = {
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Non connecté",
-  "profile.action.login": "Se connecter avec Kilo Code",
+  "profile.action.login": "Se connecter avec Pound Code",
   "profile.balance.title": "Solde",
   "profile.balance.refresh": "Actualiser le solde",
   "profile.action.dashboard": "Tableau de bord",
@@ -831,11 +831,11 @@ export const dict = {
   "settings.prompts.title": "Prompts",
   "settings.experimental.title": "Expérimental",
   "settings.language.title": "Langue",
-  "settings.aboutKiloCode.title": "À propos de Kilo Code",
+  "settings.aboutKiloCode.title": "À propos de Pound Code",
 
   "session.messages.empty": "Commencez une conversation en tapant un message ci-dessous.",
   "session.messages.welcome":
-    "Kilo Code est un assistant de programmation IA. Demandez-lui de créer des fonctionnalités, corriger des bugs ou expliquer votre code.",
+    "Pound Code est un assistant de programmation IA. Demandez-lui de créer des fonctionnalités, corriger des bugs ou expliquer votre code.",
   "session.messages.scrollToBottom": "Défiler vers le bas",
   "session.status.writingResponse": "Rédaction de la réponse…",
   "session.status.retrying": "Nouvelle tentative (essai {{ attempt }})… {{ message }}",
@@ -868,7 +868,7 @@ export const dict = {
   "settings.aboutKiloCode.port.label": "Port :",
   "settings.aboutKiloCode.versionInfo": "Informations de version",
   "settings.aboutKiloCode.version.label": "Version :",
-  "settings.aboutKiloCode.extensionName": "Extension Kilo Code",
+  "settings.aboutKiloCode.extensionName": "Extension Pound Code",
   "settings.aboutKiloCode.community": "Communauté et support",
   "settings.aboutKiloCode.feedback.prefix":
     "Si vous avez des questions ou des commentaires, n'hésitez pas à ouvrir un ticket sur",
@@ -877,7 +877,7 @@ export const dict = {
     "Pour les questions de facturation ou de compte, contactez le support client à",
   "settings.aboutKiloCode.resetSettings.title": "Réinitialiser les paramètres",
   "settings.aboutKiloCode.resetSettings.description":
-    "Réinitialiser tous les paramètres de l'extension Kilo Code à leurs valeurs par défaut. Cela n'affecte pas la configuration CLI ou backend.",
+    "Réinitialiser tous les paramètres de l'extension Pound Code à leurs valeurs par défaut. Cela n'affecte pas la configuration CLI ou backend.",
   "settings.aboutKiloCode.resetSettings.button": "Réinitialiser tous les paramètres",
 
   "settings.agentBehaviour.subtab.modes": "Modes",
@@ -898,7 +898,7 @@ export const dict = {
   "settings.browser.headless.description": "Exécuter en mode headless (sans fenêtre de navigateur visible).",
 
   "settings.language.description":
-    "Choisissez la langue de l'interface de Kilo Code. \"Auto\" utilise la langue d'affichage de VS Code.",
+    "Choisissez la langue de l'interface de Pound Code. \"Auto\" utilise la langue d'affichage de VS Code.",
   "settings.language.auto": "Auto (langue VS Code)",
   "settings.language.current": "Actuelle :",
 
@@ -1045,10 +1045,10 @@ export const dict = {
   "settings.legacyMigration.link": "Migrer depuis l'ancienne version",
   "settings.aboutKiloCode.legacyMigration.title": "Migration de l'ancienne version",
   "settings.aboutKiloCode.legacyMigration.description":
-    "Migrer les paramètres d'une précédente installation de Kilo Code, y compris les clés d'API des fournisseurs et le modèle par défaut.",
+    "Migrer les paramètres d'une précédente installation de Pound Code, y compris les clés d'API des fournisseurs et le modèle par défaut.",
 
   // Screen 1 — What's New
-  "migration.whatsNew.title": "Nouveautés de Kilo Code",
+  "migration.whatsNew.title": "Nouveautés de Pound Code",
   "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "Nous avons reconstruit l'extension sur une base plus rapide et plus efficace.",
   "migration.whatsNew.features.performance.title": "Performance accélérée de l'agent",
@@ -1061,7 +1061,7 @@ export const dict = {
     "Une interface unifiée pour exécuter plusieurs agents en parallèle, chacun sur son propre arbre de travail — surveillez la progression, changez de contexte et examinez les modifications depuis un seul endroit.",
   "migration.whatsNew.features.foundation.title": "Base partagée",
   "migration.whatsNew.features.foundation.detail":
-    "Un noyau petit et efficace partagé par tous les produits Kilo. Une expérience familière quelle que soit votre façon de travailler.",
+    "Un noyau petit et efficace partagé par tous les produits Pound. Une expérience familière quelle que soit votre façon de travailler.",
   "migration.whatsNew.blogLink": "Lire l'annonce complète",
   "migration.whatsNew.continue": "Continuer",
 

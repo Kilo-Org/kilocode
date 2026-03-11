@@ -3,7 +3,7 @@
 export const dict = {
   "autocomplete.input.title": "اضغط 'Enter' للتأكيد أو 'Escape' للإلغاء",
   "autocomplete.input.placeholder": "صف ما تريد فعله...",
-  "autocomplete.commands.generateSuggestions": "Kilo Code: إنشاء التعديلات المقترحة",
+  "autocomplete.commands.generateSuggestions": "Pound Code: إنشاء التعديلات المقترحة",
   "autocomplete.commands.displaySuggestions": "عرض التعديلات المقترحة",
   "autocomplete.commands.cancelSuggestions": "إلغاء التعديلات المقترحة",
   "autocomplete.commands.applyCurrentSuggestion": "تطبيق التعديل المقترح الحالي",

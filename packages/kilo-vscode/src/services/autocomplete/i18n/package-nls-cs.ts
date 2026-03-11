@@ -3,7 +3,7 @@
 export const dict = {
   "autocomplete.input.title": "Stiskněte 'Enter' pro potvrzení nebo 'Escape' pro zrušení",
   "autocomplete.input.placeholder": "Popište, co chcete udělat...",
-  "autocomplete.commands.generateSuggestions": "Kilo Code: Generovat Navrhované Úpravy",
+  "autocomplete.commands.generateSuggestions": "Pound Code: Generovat Navrhované Úpravy",
   "autocomplete.commands.displaySuggestions": "Zobrazit Navrhované Úpravy",
   "autocomplete.commands.cancelSuggestions": "Zrušit Navrhované Úpravy",
   "autocomplete.commands.applyCurrentSuggestion": "Použít Aktuální Navrženou Úpravu",

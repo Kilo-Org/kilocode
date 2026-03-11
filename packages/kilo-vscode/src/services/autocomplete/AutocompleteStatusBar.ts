@@ -3,7 +3,7 @@ import { t } from "./shims/i18n"
 import type { AutocompleteStatusBarStateProps } from "./types"
 import { humanFormatSessionCost, formatTime } from "./statusbar-utils"
 
-const SUPPORTED_PROVIDER_DISPLAY_NAME = "Kilo Gateway"
+const SUPPORTED_PROVIDER_DISPLAY_NAME = "Pound Gateway"
 
 export class AutocompleteStatusBar {
   statusBar: vscode.StatusBarItem
