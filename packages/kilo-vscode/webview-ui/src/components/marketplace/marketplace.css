@@ -336,28 +336,6 @@
   opacity: 1;
 }
 
-/* Skills list (vertical) */
-.skills-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-/* Skill card (full width variant) */
-.skill-card {
-  display: flex;
-  flex-direction: column;
-  padding: 12px;
-  border: 1px solid var(--vscode-panel-border, var(--vscode-widget-border, rgba(128, 128, 128, 0.35)));
-  border-radius: 4px;
-  background: var(--vscode-editor-background);
-  transition: border-color 0.15s ease;
-}
-
-.skill-card:hover {
-  border-color: var(--vscode-focusBorder, var(--vscode-button-background));
-}
-
 /* ============================================
    Install Modal / Remove Dialog
    ============================================ */

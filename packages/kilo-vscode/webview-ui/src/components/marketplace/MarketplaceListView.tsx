@@ -1,7 +1,8 @@
 import { Component, createSignal, createMemo, Show, For } from "solid-js"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import type { MarketplaceItem, MarketplaceInstalledMetadata } from "../../types/marketplace"
-import { MarketplaceItemCard } from "./MarketplaceItemCard"
+import { ItemCard } from "./ItemCard"
+import { isInstalled } from "./utils"
 
 interface MarketplaceListViewProps {
   type: "mcp" | "mode"
@@ -10,16 +11,6 @@ interface MarketplaceListViewProps {
   fetching: boolean
   onInstall: (item: MarketplaceItem) => void
   onRemove: (item: MarketplaceItem, scope: "project" | "global") => void
-}
-
-export function isInstalled(
-  id: string,
-  type: string,
-  metadata: MarketplaceInstalledMetadata,
-): "project" | "global" | false {
-  if (metadata.project[id]?.type === type) return "project"
-  if (metadata.global[id]?.type === type) return "global"
-  return false
 }
 
 export const MarketplaceListView: Component<MarketplaceListViewProps> = (props) => {
@@ -121,12 +112,22 @@ export const MarketplaceListView: Component<MarketplaceListViewProps> = (props) 
         <div class="marketplace-grid">
           <For each={filtered()}>
             {(item) => (
-              <MarketplaceItemCard
+              <ItemCard
                 item={item}
                 metadata={props.metadata}
                 onInstall={props.onInstall}
                 onRemove={props.onRemove}
-                onTagClick={toggleTag}
+                linkUrl={item.type === "mcp" && "url" in item ? item.url : undefined}
+                typeBadge={item.type === "mcp" ? "MCP Server" : "Mode"}
+                footer={
+                  <For each={item.tags ?? []}>
+                    {(tag) => (
+                      <button class="marketplace-badge tag" onClick={() => toggleTag(tag)}>
+                        {tag}
+                      </button>
+                    )}
+                  </For>
+                }
               />
             )}
           </For>

@@ -1,20 +1,29 @@
-import { Component, Show, For, createMemo } from "solid-js"
+import { Component, Show, For, createMemo, JSX } from "solid-js"
 import { useVSCode } from "../../context/vscode"
 import type { MarketplaceItem, MarketplaceInstalledMetadata } from "../../types/marketplace"
-import { isInstalled } from "./MarketplaceListView"
+import { isInstalled } from "./utils"
 
-interface MarketplaceItemCardProps {
+interface ItemCardProps {
   item: MarketplaceItem
   metadata: MarketplaceInstalledMetadata
   onInstall: (item: MarketplaceItem) => void
   onRemove: (item: MarketplaceItem, scope: "project" | "global") => void
-  onTagClick: (tag: string) => void
+  /** Display name override (defaults to item.name) */
+  displayName?: string
+  /** External link URL (e.g. item.url for MCPs, item.githubUrl for skills) */
+  linkUrl?: string
+  /** Type badge text shown next to author (e.g. "MCP Server", "Mode") */
+  typeBadge?: string
+  /** Footer content rendered after the installed badge */
+  footer?: JSX.Element
 }
 
-export const MarketplaceItemCard: Component<MarketplaceItemCardProps> = (props) => {
+export const ItemCard: Component<ItemCardProps> = (props) => {
   const vscode = useVSCode()
 
   const installed = createMemo(() => isInstalled(props.item.id, props.item.type, props.metadata))
+
+  const name = () => props.displayName ?? props.item.name
 
   const openExternal = (url: string) => {
     vscode.postMessage({ type: "openExternal", url })
@@ -24,24 +33,23 @@ export const MarketplaceItemCard: Component<MarketplaceItemCardProps> = (props) 
     <div class="marketplace-card">
       <div class="marketplace-card-header">
         <div>
-          <Show
-            when={props.item.type === "mcp" && "url" in props.item && props.item.url}
-            fallback={<span class="marketplace-card-name">{props.item.name}</span>}
-          >
+          <Show when={props.linkUrl} fallback={<span class="marketplace-card-name">{name()}</span>}>
             <a
               class="marketplace-card-name link"
-              href={(props.item as { url: string }).url}
+              href={props.linkUrl}
               onClick={(e) => {
                 e.preventDefault()
-                openExternal((props.item as { url: string }).url)
+                openExternal(props.linkUrl!)
               }}
             >
-              {props.item.name}
+              {name()}
             </a>
           </Show>
           <span class="marketplace-card-author">
             {props.item.author && `by ${props.item.author}`}
-            <span class="marketplace-card-type">{props.item.type === "mcp" ? "MCP Server" : "Mode"}</span>
+            <Show when={props.typeBadge}>
+              <span class="marketplace-card-type">{props.typeBadge}</span>
+            </Show>
           </span>
         </div>
         <Show
@@ -65,13 +73,7 @@ export const MarketplaceItemCard: Component<MarketplaceItemCardProps> = (props) 
         <Show when={installed()}>
           <span class="marketplace-badge installed">Installed</span>
         </Show>
-        <For each={props.item.tags ?? []}>
-          {(tag) => (
-            <button class="marketplace-badge tag" onClick={() => props.onTagClick(tag)}>
-              {tag}
-            </button>
-          )}
-        </For>
+        {props.footer}
       </div>
     </div>
   )

@@ -1,7 +1,7 @@
 import { Component, createSignal, createMemo, Show, For } from "solid-js"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import type { MarketplaceItem, MarketplaceInstalledMetadata, SkillMarketplaceItem } from "../../types/marketplace"
-import { SkillItemCard } from "./SkillItemCard"
+import { ItemCard } from "./ItemCard"
 
 interface SkillsMarketplaceProps {
   items: MarketplaceItem[]
@@ -93,11 +93,18 @@ export const SkillsMarketplace: Component<SkillsMarketplaceProps> = (props) => {
         <div class="marketplace-grid">
           <For each={filtered()}>
             {(item) => (
-              <SkillItemCard
+              <ItemCard
                 item={item}
                 metadata={props.metadata}
                 onInstall={props.onInstall}
                 onRemove={props.onRemove}
+                displayName={item.displayName}
+                linkUrl={item.githubUrl || undefined}
+                footer={
+                  <Show when={item.displayCategory}>
+                    <span class="marketplace-badge tag">{item.displayCategory}</span>
+                  </Show>
+                }
               />
             )}
           </For>
