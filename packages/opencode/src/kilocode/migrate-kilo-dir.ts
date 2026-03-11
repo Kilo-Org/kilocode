@@ -13,6 +13,40 @@ async function isDir(p: string): Promise<boolean> {
 }
 
 /**
+ * After renaming .kilocode → .kilo, fix git worktree internal references.
+ *
+ * Git stores absolute paths in .git/worktrees/{name}/gitdir. When the parent
+ * directory is renamed, those paths become stale and git can't find the
+ * worktrees. This rewrites any gitdir files that reference the old path.
+ */
+async function fixGitWorktreeRefs(projectDir: string): Promise<void> {
+  const gitWorktreesDir = path.join(projectDir, ".git", "worktrees")
+  if (!(await isDir(gitWorktreesDir))) return
+
+  const oldSegment = path.join(projectDir, ".kilocode") + path.sep
+  const newSegment = path.join(projectDir, ".kilo") + path.sep
+
+  try {
+    const entries = await fs.readdir(gitWorktreesDir, { withFileTypes: true })
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue
+      const gitdirFile = path.join(gitWorktreesDir, entry.name, "gitdir")
+      try {
+        const content = await fs.readFile(gitdirFile, "utf-8")
+        if (content.includes(oldSegment)) {
+          await fs.writeFile(gitdirFile, content.replaceAll(oldSegment, newSegment))
+          log.info("fixed git worktree ref", { worktree: entry.name })
+        }
+      } catch {
+        // gitdir file missing or unreadable — skip
+      }
+    }
+  } catch {
+    // .git/worktrees unreadable — skip
+  }
+}
+
+/**
  * Rename a .kilocode directory to .kilo if the legacy directory exists
  * and the new directory does not.
  *
@@ -20,6 +54,9 @@ async function isDir(p: string): Promise<boolean> {
  * - .kilocode doesn't exist (nothing to migrate)
  * - .kilo already exists (already migrated, or both present)
  * - .kilocode is not a directory
+ *
+ * After a successful rename, also fixes git worktree internal references
+ * that point to the old .kilocode path.
  *
  * On failure (e.g. Windows file locking), logs a warning and returns false.
  * The caller should not add fallback paths — the rename will succeed on
@@ -38,6 +75,7 @@ async function renameIfNeeded(dir: string): Promise<boolean> {
   try {
     await fs.rename(legacy, target)
     log.info("migrated .kilocode to .kilo", { dir })
+    await fixGitWorktreeRefs(dir)
     return true
   } catch (err) {
     // On Windows, rename can fail with EPERM/EBUSY if files inside the
