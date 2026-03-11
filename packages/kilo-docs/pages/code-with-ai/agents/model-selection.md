@@ -21,13 +21,13 @@ When Kilo Code determines which model to use for a given task, it follows a spec
 
 | Priority | Source                          | Description                                                                                                                                                                                           |
 | -------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1        | **Chat session model dropdown** | Selecting a model from the model dropdown in an active chat session overrides all other model settings for that session. This is the highest-priority override.                                       |
+| 1        | **Chat session model dropdown** | Selecting a model from the model dropdown in an active chat session overrides all other model settings for that session.                                      |
 | 2        | **Mode/subagent model**         | A model explicitly set on the specific mode or subagent you're using. For modes, this is the model configured via Sticky Models. For subagents, this is the `model` field in the agent configuration. |
 | 3        | **Global settings model**       | The model configured in your global settings, which applies when no mode-specific model is set.                                                                                                       |
 | 4        | **Kilo default**                | If no model is configured at any level, Kilo uses its built-in default (currently Auto Free).                                                                                                         |
 
 {% callout type="tip" title="Quick Model Override" %}
-Need to use a different model for a single task? Use the **model dropdown** in the chat session to switch models on the fly. This overrides the entire priority chain above without changing your mode or global settings. When you start a new session, the model will revert to whatever your mode or global settings specify.
+Need to use a different model without changing your saved settings? Use the **model dropdown** to override the current mode's model. That override stays active for the mode until you clear it or restart the extension, so starting a new session does not automatically reset it. 
 {% /callout %}
 
 {% callout type="info" title="How Subagents Inherit Models" %}
