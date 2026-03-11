@@ -2,14 +2,6 @@
  * Drag-and-drop sortable tab components for the agent manager tab bar.
  */
 
-declare module "solid-js" {
-  namespace JSX {
-    interface Directives {
-      sortable: true
-    }
-  }
-}
-
 import { Component, onCleanup } from "solid-js"
 import { createSortable, useDragDropContext } from "@thisbeyond/solid-dnd"
 import type { Transformer } from "@thisbeyond/solid-dnd"
