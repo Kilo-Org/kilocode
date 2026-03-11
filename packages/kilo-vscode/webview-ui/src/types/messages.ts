@@ -144,6 +144,7 @@ export interface TodoItem {
 export interface QuestionOption {
   label: string
   description: string
+  mode?: string
 }
 
 export interface QuestionInfo {
@@ -1190,6 +1191,13 @@ export interface QuestionRejectRequest {
   requestID: string
 }
 
+export interface QuestionModeSwitchRequest {
+  type: "questionModeSwitch"
+  sessionID: string
+  mode: string
+  text: string
+}
+
 export interface DeleteSessionRequest {
   type: "deleteSession"
   sessionID: string
@@ -1527,6 +1535,7 @@ export type WebviewMessage =
   | SetLanguageRequest
   | QuestionReplyRequest
   | QuestionRejectRequest
+  | QuestionModeSwitchRequest
   | DeleteSessionRequest
   | RenameSessionRequest
   | RequestAutocompleteSettingsMessage

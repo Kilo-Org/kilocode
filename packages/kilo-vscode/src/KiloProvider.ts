@@ -73,6 +73,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private migrationCheckInFlight = false // legacy-migration
   private unsubscribeNotificationDismiss: (() => void) | null = null
   private webviewMessageDisposable: vscode.Disposable | null = null
+  /** Pending mode switch to execute when the session becomes idle after a question reply. */
+  private pendingModeSwitch: {
+    sessionID: string
+    mode: string
+    text: string
+    timeout: ReturnType<typeof setTimeout>
+  } | null = null
 
   /** Lazily initialized ignore controller for .kilocodeignore filtering */
   private ignoreController: FileIgnoreController | null = null
@@ -413,6 +420,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "questionReject":
           await this.handleQuestionReject(message.requestID)
+          break
+        case "questionModeSwitch":
+          this.scheduleModeSwitchAfterIdle(message.sessionID, message.mode, message.text)
           break
         case "requestConfig":
           this.fetchAndSendConfig().catch((e) => console.error("[Kilo New] fetchAndSendConfig failed:", e))
@@ -1616,8 +1626,44 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /**
+   * Schedule a mode switch to execute after the session becomes idle.
+   * This is used when a question option has a `mode` property â after the question
+   * reply resolves, we wait for the session to become idle, then switch to the
+   * requested agent/mode and send a follow-up prompt.
+   */
+  private scheduleModeSwitchAfterIdle(sessionID: string, mode: string, text: string): void {
+    // Cancel any existing pending mode switch
+    if (this.pendingModeSwitch) {
+      clearTimeout(this.pendingModeSwitch.timeout)
+    }
+
+    const timeout = setTimeout(() => {
+      console.warn("[Kilo New] KiloProvider: Mode switch timed out waiting for idle", { sessionID, mode })
+      this.pendingModeSwitch = null
+    }, 30_000)
+
+    this.pendingModeSwitch = { sessionID, mode, text, timeout }
+    console.log("[Kilo New] KiloProvider: Scheduled mode switch after idle", { sessionID, mode })
+  }
+
+  /**
+   * Execute a pending mode switch by sending a new prompt with the target agent.
+   */
+  private async executeModeSwitch(sessionID: string, mode: string, text: string): Promise<void> {
+    if (!this.client) return
+
+    console.log("[Kilo New] KiloProvider: Executing mode switch", { sessionID, mode })
+
+    try {
+      await this.handleSendMessage(text, sessionID, undefined, undefined, mode)
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to execute mode switch:", error)
+    }
+  }
+
+  /**
    * Handle login request from the webview.
-   * Uses the provider OAuth flow: authorize → open browser → callback (polls until complete).
+   * Uses the provider OAuth flow: authorize â open browser â callback (polls until complete).
    * Sends device auth messages so the webview can display a QR code, verification code, and timer.
    */
   private async handleLogin(): Promise<void> {
@@ -1928,6 +1974,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const msg = mapSSEEventToWebviewMessage(event, sessionID)
     if (msg) {
       this.postMessage(msg)
+    }
+
+    // Check for pending mode switch when session becomes idle
+    if (event.type === "session.status" && this.pendingModeSwitch && sessionID === this.pendingModeSwitch.sessionID) {
+      const status = event.properties?.status
+      if (status?.type === "idle") {
+        const pending = this.pendingModeSwitch
+        clearTimeout(pending.timeout)
+        this.pendingModeSwitch = null
+        void this.executeModeSwitch(pending.sessionID, pending.mode, pending.text)
+      }
     }
   }
 
@@ -2251,5 +2308,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.syncedChildSessions.clear()
     this.sessionDirectories.clear()
     this.ignoreController?.dispose()
+    if (this.pendingModeSwitch) {
+      clearTimeout(this.pendingModeSwitch.timeout)
+      this.pendingModeSwitch = null
+    }
   }
 }
