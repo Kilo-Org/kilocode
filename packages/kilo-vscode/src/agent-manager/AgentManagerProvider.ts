@@ -77,6 +77,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       getWorktrees: () => this.state?.getWorktrees() ?? [],
       getWorkspaceRoot: () => this.getWorkspaceRoot(),
       getClient: () => this.connectionService.getClient(),
+      getServerConfig: () => this.connectionService.getServerConfig(), // kilocode_change
       onStats: (stats) => {
         const msg = { type: "agentManager.worktreeStats" as const, stats }
         this.cachedWorktreeStats = msg
@@ -1699,6 +1700,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
   /** One-shot diff fetch with loading indicators. Resolves target async, then fetches. */
   private async onRequestWorktreeDiff(sessionId: string): Promise<void> {
+    const t0 = performance.now()
     // Ensure state is loaded before resolving diff target — avoids race where
     // startDiffWatch arrives before initializeState() finishes loading state from disk.
     // The .catch() is required: this method is called via `void` (fire-and-forget),
@@ -1717,12 +1719,14 @@ export class AgentManagerProvider implements vscode.Disposable {
     this.postToWebview({ type: "agentManager.worktreeDiffLoading", sessionId, loading: true })
     try {
       const client = this.connectionService.getClient()
+      const tFetch = performance.now()
       const { data: diffs } = await client.worktree.diff(
         { directory: target.directory, base: target.baseBranch },
         { throwOnError: true },
       )
 
       const files = diffs ?? []
+      this.log(`[PERF] onRequestWorktreeDiff: fetchMs=${Math.round(performance.now() - tFetch)}, files=${files.length}`)
       this.log(`Worktree diff returned ${files.length} file(s) for session ${sessionId}`)
 
       const hash = hashFileDiffs(files)
@@ -1730,6 +1734,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       this.diffSessionId = sessionId
 
       this.postToWebview({ type: "agentManager.worktreeDiff", sessionId, diffs: files })
+      this.log(`[PERF] onRequestWorktreeDiff TOTAL: ${Math.round(performance.now() - t0)}ms`)
     } catch (err) {
       this.log("Failed to fetch worktree diff:", err)
     } finally {
@@ -1737,29 +1742,45 @@ export class AgentManagerProvider implements vscode.Disposable {
     }
   }
 
+  // kilocode_change start - busy guard to prevent overlapping polls
+  private diffPolling = false
+
   /** Polling diff fetch — uses cached target, no loading state, only pushes when hash changes. */
   private async pollDiff(sessionId: string): Promise<void> {
-    const target = this.cachedDiffTarget
-    if (!target) return
-
+    if (this.diffPolling) return
+    this.diffPolling = true
     try {
+      const t0 = performance.now()
+      const target = this.cachedDiffTarget
+      if (!target) return
+
       const client = this.connectionService.getClient()
+      const tFetch = performance.now()
       const { data: diffs } = await client.worktree.diff(
         { directory: target.directory, base: target.baseBranch },
         { throwOnError: true },
       )
-
+      const fetchMs = Math.round(performance.now() - tFetch)
       const files = diffs ?? []
       const hash = hashFileDiffs(files)
-      if (hash === this.lastDiffHash && this.diffSessionId === sessionId) return
+      if (hash === this.lastDiffHash && this.diffSessionId === sessionId) {
+        this.log(`[PERF] pollDiff: no change, fetchMs=${fetchMs}, files=${files.length}`)
+        return
+      }
       this.lastDiffHash = hash
       this.diffSessionId = sessionId
 
+      this.log(
+        `[PERF] pollDiff CHANGED: fetchMs=${fetchMs}, files=${files.length}, totalMs=${Math.round(performance.now() - t0)}`,
+      )
       this.postToWebview({ type: "agentManager.worktreeDiff", sessionId, diffs: files })
     } catch (err) {
       this.log("Failed to poll worktree diff:", err)
+    } finally {
+      this.diffPolling = false
     }
   }
+  // kilocode_change end
 
   private startDiffPolling(sessionId: string): void {
     // If already polling the same session, keep the existing interval and cache

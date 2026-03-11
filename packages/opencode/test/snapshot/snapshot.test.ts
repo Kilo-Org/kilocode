@@ -1151,6 +1151,43 @@ test("diffFull with binary file changes", async () => {
       const binaryDiff = diffs[0]
       expect(binaryDiff.file).toBe("binary.bin")
       expect(binaryDiff.before).toBe("")
+      expect(binaryDiff.after).toBe("")
+      expect(binaryDiff.additions).toBe(0)
+      expect(binaryDiff.deletions).toBe(0)
+      expect(binaryDiff.binary).toBe(true)
+    },
+  })
+})
+
+test("diffFull treats png files as binary", async () => {
+  await using tmp = await bootstrap()
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const before = await Snapshot.track()
+      expect(before).toBeTruthy()
+
+      await Filesystem.write(
+        `${tmp.path}/hello.png`,
+        Buffer.from(
+          "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5+tmQAAAAASUVORK5CYII=",
+          "base64",
+        ),
+      )
+
+      const after = await Snapshot.track()
+      expect(after).toBeTruthy()
+
+      const diffs = await Snapshot.diffFull(before!, after!)
+      expect(diffs.length).toBe(1)
+
+      const binaryDiff = diffs[0]
+      expect(binaryDiff.file).toBe("hello.png")
+      expect(binaryDiff.before).toBe("")
+      expect(binaryDiff.after).toBe("")
+      expect(binaryDiff.additions).toBe(0)
+      expect(binaryDiff.deletions).toBe(0)
+      expect(binaryDiff.binary).toBe(true)
     },
   })
 })

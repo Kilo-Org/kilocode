@@ -1,4 +1,5 @@
 import { sampledChecksum } from "@opencode-ai/util/encode"
+import { BinaryFile } from "@opencode-ai/util/binary-file"
 import { FileDiff, type FileDiffOptions, type SelectedLineRange, VirtualizedFileDiff } from "@pierre/diffs"
 import { createMediaQuery } from "@solid-primitives/media"
 import { createEffect, createMemo, createSignal, onCleanup, splitProps } from "solid-js"
@@ -7,6 +8,17 @@ import { acquireVirtualizer, virtualMetrics } from "../pierre/virtualizer"
 import { getWorkerPool } from "../pierre/worker"
 
 type SelectionSide = "additions" | "deletions"
+
+function badge(file: string) {
+  const slash = Math.max(file.lastIndexOf("/"), file.lastIndexOf("\\"))
+  const name = file.slice(slash + 1)
+  const dot = name.lastIndexOf(".")
+  if (dot === -1 || dot === name.length - 1) return "BIN"
+
+  const ext = name.slice(dot + 1).toUpperCase()
+  if (ext.length > 5) return "BIN"
+  return ext
+}
 
 function findElement(node: Node | null): HTMLElement | undefined {
   if (!node) return
@@ -75,6 +87,18 @@ export function Diff<T>(props: DiffProps<T>) {
     "commentedLines",
     "onRendered",
   ])
+
+  const file = local.after?.name ?? local.before?.name ?? ""
+  if (BinaryFile.isPath(file)) {
+    return (
+      <div data-component="diff" data-binary style={styleVariables}>
+        <div data-slot="diff-binary-state">
+          <span data-slot="diff-binary-badge">{badge(file)}</span>
+          <div data-slot="diff-binary-meta">{file}</div>
+        </div>
+      </div>
+    )
+  }
 
   const mobile = createMediaQuery("(max-width: 640px)")
 

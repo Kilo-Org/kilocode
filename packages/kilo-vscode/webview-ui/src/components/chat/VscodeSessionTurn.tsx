@@ -48,6 +48,13 @@ interface VscodeSessionTurnProps {
   lastUserMessageID?: string
 }
 
+function changeStatus(diff: FileDiff): "added" | "deleted" | "modified" {
+  if (diff.status) return diff.status
+  if (diff.before.length === 0 && diff.after.length > 0) return "added"
+  if (diff.after.length === 0 && diff.before.length > 0) return "deleted"
+  return "modified"
+}
+
 export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
   const data = useData()
   const i18n = useI18n()
@@ -216,6 +223,13 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
                           {(diff) => {
                             const active = createMemo(() => expanded().includes(diff.file))
                             const [visible, setVisible] = createSignal(false)
+                            const binary = () => diff.binary === true
+                            const change = () => changeStatus(diff)
+                            const label = () => {
+                              if (change() === "added") return i18n.t("ui.sessionReview.change.added")
+                              if (change() === "deleted") return i18n.t("ui.sessionReview.change.removed")
+                              return i18n.t("ui.sessionReview.change.modified")
+                            }
 
                             createEffect(
                               on(
@@ -247,9 +261,18 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
                                         <span data-slot="session-turn-diff-filename">{getFilename(diff.file)}</span>
                                       </span>
                                       <div data-slot="session-turn-diff-meta">
-                                        <span data-slot="session-turn-diff-changes">
-                                          <DiffChanges changes={diff} />
-                                        </span>
+                                        <Show
+                                          when={binary()}
+                                          fallback={
+                                            <span data-slot="session-turn-diff-changes">
+                                              <DiffChanges changes={diff} />
+                                            </span>
+                                          }
+                                        >
+                                          <span data-slot="session-review-change" data-type={change()}>
+                                            {label()}
+                                          </span>
+                                        </Show>
                                         <span data-slot="session-turn-diff-chevron">
                                           <Icon name="chevron-down" size="small" />
                                         </span>

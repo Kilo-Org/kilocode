@@ -12,6 +12,7 @@ import { useDiffComponent } from "../context/diff"
 import { useI18n } from "../context/i18n"
 import { getDirectory, getFilename } from "@opencode-ai/util/path"
 import { checksum } from "@opencode-ai/util/encode"
+import { BinaryFile } from "@opencode-ai/util/binary-file"
 import { createEffect, createMemo, createSignal, For, Match, Show, Switch, type JSX } from "solid-js"
 import { createStore } from "solid-js/store"
 import { type FileContent, type FileDiff } from "@kilocode/sdk/v2"
@@ -351,6 +352,7 @@ export const SessionReview = (props: SessionReviewProps) => {
                 const isAdded = () => item().status === "added" || (beforeText().length === 0 && afterText().length > 0)
                 const isDeleted = () =>
                   item().status === "deleted" || (afterText().length === 0 && beforeText().length > 0)
+                const isBinary = () => item().binary === true || BinaryFile.isPath(file)
                 const isImage = () => isImageFile(file)
                 const isAudio = () => isAudioFile(file)
 
@@ -585,7 +587,7 @@ export const SessionReview = (props: SessionReviewProps) => {
                                   {i18n.t("ui.sessionReview.change.removed")}
                                 </span>
                               </Match>
-                              <Match when={isImage()}>
+                              <Match when={isBinary()}>
                                 <span data-slot="session-review-change" data-type="modified">
                                   {i18n.t("ui.sessionReview.change.modified")}
                                 </span>

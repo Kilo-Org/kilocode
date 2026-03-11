@@ -33,10 +33,19 @@ export interface WorktreePresenceResult {
   degraded: boolean
 }
 
+// kilocode_change start - lightweight stats response type
+interface DiffStats {
+  files: number
+  additions: number
+  deletions: number
+}
+// kilocode_change end
+
 interface GitStatsPollerOptions {
   getWorktrees: () => Worktree[]
   getWorkspaceRoot: () => string | undefined
   getClient: () => KiloClient
+  getServerConfig: () => { baseUrl: string; password: string } | null // kilocode_change
   git: GitOps
   onStats: (stats: WorktreeStats[]) => void
   onLocalStats: (stats: LocalStats) => void
@@ -143,35 +152,46 @@ export class GitStatsPoller {
       return
     }
 
-    const stats = (
-      await Promise.all(
-        active.map(async (wt) => {
-          try {
-            const base = remoteRef(wt)
-            const [{ data: diffs }, ab] = await Promise.all([
-              client.worktree.diff({ directory: wt.path, base }, { throwOnError: true }),
-              this.git.aheadBehind(wt.path, base, wt.remote),
-            ])
-            const files = diffs.length
-            const additions = diffs.reduce((sum: number, diff: FileDiff) => sum + diff.additions, 0)
-            const deletions = diffs.reduce((sum: number, diff: FileDiff) => sum + diff.deletions, 0)
-            return { worktreeId: wt.id, files, additions, deletions, ahead: ab.ahead, behind: ab.behind }
-          } catch (err) {
-            this.options.log(`Failed to fetch worktree stats for ${wt.branch} (${wt.path}):`, err)
-            const prev = this.lastStats[wt.id]
-            if (!prev) return undefined
-            return {
-              worktreeId: wt.id,
-              files: prev.files,
-              additions: prev.additions,
-              deletions: prev.deletions,
-              ahead: prev.ahead,
-              behind: prev.behind,
-            }
-          }
-        }),
-      )
-    ).filter((item): item is WorktreeStats => !!item)
+    // kilocode_change start - use lightweight stats endpoint, fetch worktrees sequentially to avoid git contention
+    const tStats = performance.now()
+    const stats: WorktreeStats[] = []
+    for (const wt of active) {
+      try {
+        const tWt = performance.now()
+        const base = remoteRef(wt)
+        const [diffStats, ab] = await Promise.all([
+          this.fetchDiffStats(wt.path, base),
+          this.git.aheadBehind(wt.path, base, wt.remote),
+        ])
+        this.options.log(`[PERF] GitStatsPoller worktree ${wt.branch}: ${Math.round(performance.now() - tWt)}ms`)
+        if (diffStats) {
+          stats.push({
+            worktreeId: wt.id,
+            files: diffStats.files,
+            additions: diffStats.additions,
+            deletions: diffStats.deletions,
+            ahead: ab.ahead,
+            behind: ab.behind,
+          })
+        }
+      } catch (err) {
+        this.options.log(`Failed to fetch worktree stats for ${wt.branch} (${wt.path}):`, err)
+        const prev = this.lastStats[wt.id]
+        if (!prev) continue
+        stats.push({
+          worktreeId: wt.id,
+          files: prev.files,
+          additions: prev.additions,
+          deletions: prev.deletions,
+          ahead: prev.ahead,
+          behind: prev.behind,
+        })
+      }
+    }
+    this.options.log(
+      `[PERF] GitStatsPoller fetchWorktreeStats TOTAL: ${Math.round(performance.now() - tStats)}ms, ${active.length} worktrees`,
+    )
+    // kilocode_change end
 
     if (stats.length === 0) return
 
@@ -247,18 +267,30 @@ export class GitStatsPoller {
       let ahead: number
       let behind: number
       try {
-        if (base && client) {
-          this.options.log(`Local stats: using HTTP client with base=${base}`)
-          const [{ data: diffs }, ab] = await Promise.all([
-            client.worktree.diff({ directory: root, base }, { throwOnError: true }),
+        // kilocode_change start - use lightweight stats endpoint
+        if (base) {
+          this.options.log(`Local stats: using stats endpoint with base=${base}`)
+          const [diffStats, ab] = await Promise.all([
+            this.fetchDiffStats(root, base),
             this.git.aheadBehind(root, base, remote),
           ])
-          files = diffs.length
-          additions = diffs.reduce((sum: number, d: FileDiff) => sum + d.additions, 0)
-          deletions = diffs.reduce((sum: number, d: FileDiff) => sum + d.deletions, 0)
-          ahead = ab.ahead
-          behind = ab.behind
+          if (diffStats) {
+            files = diffStats.files
+            additions = diffStats.additions
+            deletions = diffStats.deletions
+            ahead = ab.ahead
+            behind = ab.behind
+          } else {
+            // Stats endpoint not available, fall back to git
+            const wt = await this.git.workingTreeStats(root)
+            files = wt.files
+            additions = wt.additions
+            deletions = wt.deletions
+            ahead = ab.ahead
+            behind = ab.behind
+          }
         } else {
+          // kilocode_change end
           this.options.log(`Local stats: fallback to workingTreeStats (base=${base ?? "none"} client=${!!client})`)
           const wt = await this.git.workingTreeStats(root)
           files = wt.files
@@ -288,4 +320,18 @@ export class GitStatsPoller {
       this.options.log("Failed to fetch local stats:", err)
     }
   }
+
+  // kilocode_change start - lightweight stats fetch via /experimental/worktree/stats
+  private async fetchDiffStats(directory: string, base: string): Promise<DiffStats | undefined> {
+    const config = this.options.getServerConfig()
+    if (!config) return undefined
+
+    const params = new URLSearchParams({ directory, base })
+    const response = await fetch(`${config.baseUrl}/experimental/worktree/stats?${params}`, {
+      headers: { Authorization: `Bearer ${config.password}` },
+    })
+    if (!response.ok) return undefined
+    return (await response.json()) as DiffStats
+  }
+  // kilocode_change end
 }

@@ -370,6 +370,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
               {(diff) => {
                 const isAdded = () => diff.status === "added"
                 const isDeleted = () => diff.status === "deleted"
+                const isBinary = () => diff.binary === true
                 const isLargeCollapsed = () => isLargeDiffFile(diff) && !open().includes(diff.file)
                 const fileCommentCount = () => (commentsByFile().get(diff.file) ?? []).length
 
@@ -399,6 +400,11 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                             <Show when={isDeleted()}>
                               <span data-slot="session-review-change" data-type="removed">
                                 {t("ui.sessionReview.change.removed")}
+                              </span>
+                            </Show>
+                            <Show when={isBinary() && !isAdded() && !isDeleted()}>
+                              <span data-slot="session-review-change" data-type="modified">
+                                {t("ui.sessionReview.change.modified")}
                               </span>
                             </Show>
                             <DiffChanges changes={diff} />

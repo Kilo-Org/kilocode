@@ -101,6 +101,7 @@ interface WorktreeFileDiff {
   after: string
   additions: number
   deletions: number
+  binary?: boolean
   status?: "added" | "deleted" | "modified"
 }
 

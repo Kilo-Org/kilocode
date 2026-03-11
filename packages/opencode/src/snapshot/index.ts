@@ -8,6 +8,7 @@ import z from "zod"
 import { Config } from "../config/config"
 import { Instance } from "../project/instance"
 import { Scheduler } from "../scheduler"
+import { BinaryFile } from "@opencode-ai/util/binary-file"
 
 export namespace Snapshot {
   const log = Log.create({ service: "snapshot" })
@@ -193,6 +194,7 @@ export namespace Snapshot {
       after: z.string(),
       additions: z.number(),
       deletions: z.number(),
+      binary: z.boolean().optional(),
       status: z.enum(["added", "deleted", "modified"]).optional(),
     })
     .meta({
@@ -225,8 +227,12 @@ export namespace Snapshot {
       .nothrow()
       .lines()) {
       if (!line) continue
-      const [additions, deletions, file] = line.split("\t")
-      const isBinaryFile = additions === "-" && deletions === "-"
+      const parts = line.split("\t")
+      const additions = parts[0]
+      const deletions = parts[1]
+      const file = parts.slice(2).join("\t")
+      if (!file) continue
+      const isBinaryFile = BinaryFile.isNumstat(additions, deletions, file)
       const before = isBinaryFile
         ? ""
         : await $`git -c core.autocrlf=false -c core.longpaths=true -c core.symlinks=true --git-dir ${git} --work-tree ${Instance.worktree} show ${from}:${file}`
@@ -247,6 +253,7 @@ export namespace Snapshot {
         after,
         additions: Number.isFinite(added) ? added : 0,
         deletions: Number.isFinite(deleted) ? deleted : 0,
+        binary: isBinaryFile ? true : undefined,
         status: status.get(file) ?? "modified",
       })
     }

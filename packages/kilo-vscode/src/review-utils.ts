@@ -42,8 +42,12 @@ export async function resolveLocalDiffTarget(
   return { directory: root, baseBranch: base }
 }
 
+// kilocode_change - exclude file content from hash; additions/deletions from numstat
+// already change when content changes, so this is sufficient for change detection
 export function hashFileDiffs(diffs: FileDiff[]): string {
-  return diffs.map((diff) => `${diff.file}:${diff.status}:${diff.additions}:${diff.deletions}:${diff.after}`).join("|")
+  return diffs
+    .map((diff) => `${diff.file}:${diff.status}:${diff.additions}:${diff.deletions}:${diff.binary ? 1 : 0}`)
+    .join("|")
 }
 
 export function openFileInEditor(

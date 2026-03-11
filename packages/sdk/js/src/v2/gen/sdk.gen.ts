@@ -199,6 +199,8 @@ import type {
   WorktreeResetErrors,
   WorktreeResetInput,
   WorktreeResetResponses,
+  WorktreeStatsErrors,
+  WorktreeStatsResponses,
 } from "./types.gen.js"
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<
@@ -947,6 +949,36 @@ export class Worktree extends HeyApiClient {
     )
     return (options?.client ?? this.client).get<WorktreeDiffResponses, WorktreeDiffErrors, ThrowOnError>({
       url: "/experimental/worktree/diff",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get worktree diff stats
+   *
+   * Get lightweight diff stats (file count, additions, deletions) without file contents. Much faster than /worktree/diff for use in polling scenarios.
+   */
+  public stats<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      base?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "base" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<WorktreeStatsResponses, WorktreeStatsErrors, ThrowOnError>({
+      url: "/experimental/worktree/stats",
       ...options,
       ...params,
     })

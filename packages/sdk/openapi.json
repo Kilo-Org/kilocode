@@ -1257,6 +1257,70 @@
         ]
       }
     },
+    "/experimental/worktree/stats": {
+      "get": {
+        "operationId": "worktree.stats",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "base",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Base branch or ref to diff against"
+          }
+        ],
+        "summary": "Get worktree diff stats",
+        "description": "Get lightweight diff stats (file count, additions, deletions) without file contents. Much faster than /worktree/diff for use in polling scenarios.",
+        "responses": {
+          "200": {
+            "description": "Diff stats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "files": {
+                      "type": "number"
+                    },
+                    "additions": {
+                      "type": "number"
+                    },
+                    "deletions": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["files", "additions", "deletions"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.worktree.stats({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/experimental/session": {
       "get": {
         "operationId": "experimental.session.list",
@@ -7201,6 +7265,9 @@
           },
           "deletions": {
             "type": "number"
+          },
+          "binary": {
+            "type": "boolean"
           },
           "status": {
             "type": "string",

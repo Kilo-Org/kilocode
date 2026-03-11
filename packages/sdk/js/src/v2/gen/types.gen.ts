@@ -112,6 +112,7 @@ export type FileDiff = {
   after: string
   additions: number
   deletions: number
+  binary?: boolean
   status?: "added" | "deleted" | "modified"
 }
 
@@ -2567,6 +2568,41 @@ export type WorktreeDiffResponses = {
 }
 
 export type WorktreeDiffResponse = WorktreeDiffResponses[keyof WorktreeDiffResponses]
+
+export type WorktreeStatsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    /**
+     * Base branch or ref to diff against
+     */
+    base?: string
+  }
+  url: "/experimental/worktree/stats"
+}
+
+export type WorktreeStatsErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type WorktreeStatsError = WorktreeStatsErrors[keyof WorktreeStatsErrors]
+
+export type WorktreeStatsResponses = {
+  /**
+   * Diff stats
+   */
+  200: {
+    files: number
+    additions: number
+    deletions: number
+  }
+}
+
+export type WorktreeStatsResponse = WorktreeStatsResponses[keyof WorktreeStatsResponses]
 
 export type ExperimentalSessionListData = {
   body?: never

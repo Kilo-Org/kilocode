@@ -3,6 +3,7 @@ import { useData } from "../context"
 import { useDiffComponent } from "../context/diff"
 
 import { Binary } from "@opencode-ai/util/binary"
+import { BinaryFile } from "@opencode-ai/util/binary-file"
 import { getDirectory, getFilename } from "@opencode-ai/util/path"
 import { createEffect, createMemo, createSignal, For, on, ParentProps, Show } from "solid-js"
 import { Dynamic } from "solid-js/web"
@@ -79,6 +80,13 @@ function same<T>(a: readonly T[], b: readonly T[]) {
 function list<T>(value: T[] | undefined | null, fallback: T[]) {
   if (Array.isArray(value)) return value
   return fallback
+}
+
+function changeStatus(diff: FileDiff): "added" | "deleted" | "modified" {
+  if (diff.status) return diff.status
+  if (diff.before.length === 0 && diff.after.length > 0) return "added"
+  if (diff.after.length === 0 && diff.before.length > 0) return "deleted"
+  return "modified"
 }
 
 const hidden = new Set(["todowrite", "todoread"])
@@ -416,6 +424,13 @@ export function SessionTurn(
                                 {(diff) => {
                                   const active = createMemo(() => expanded().includes(diff.file))
                                   const [visible, setVisible] = createSignal(false)
+                                  const binary = () => BinaryFile.isDiff(diff)
+                                  const change = () => changeStatus(diff)
+                                  const label = () => {
+                                    if (change() === "added") return i18n.t("ui.sessionReview.change.added")
+                                    if (change() === "deleted") return i18n.t("ui.sessionReview.change.removed")
+                                    return i18n.t("ui.sessionReview.change.modified")
+                                  }
 
                                   createEffect(
                                     on(
@@ -451,9 +466,18 @@ export function SessionTurn(
                                               </span>
                                             </span>
                                             <div data-slot="session-turn-diff-meta">
-                                              <span data-slot="session-turn-diff-changes">
-                                                <DiffChanges changes={diff} />
-                                              </span>
+                                              <Show
+                                                when={binary()}
+                                                fallback={
+                                                  <span data-slot="session-turn-diff-changes">
+                                                    <DiffChanges changes={diff} />
+                                                  </span>
+                                                }
+                                              >
+                                                <span data-slot="session-review-change" data-type={change()}>
+                                                  {label()}
+                                                </span>
+                                              </Show>
                                               <span data-slot="session-turn-diff-chevron">
                                                 <Icon name="chevron-down" size="small" />
                                               </span>
