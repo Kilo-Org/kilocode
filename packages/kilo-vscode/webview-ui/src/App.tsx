@@ -33,7 +33,15 @@ import { NotificationsProvider } from "./context/notifications"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
 import "./styles/chat.css"
 
-type ViewType = "newTask" | "marketplace" | "history" | "cloudHistory" | "profile" | "settings" | "migration" // legacy-migration
+type ViewType =
+  | "newTask"
+  | "marketplace"
+  | "history"
+  | "cloudHistory"
+  | "profile"
+  | "settings"
+  | "migration" // legacy-migration
+  | "subAgentViewer"
 const VALID_VIEWS = new Set<string>([
   "newTask",
   "marketplace",
@@ -41,8 +49,9 @@ const VALID_VIEWS = new Set<string>([
   "cloudHistory",
   "profile",
   "settings",
-  "migration",
-]) // legacy-migration
+  "migration", // legacy-migration
+  "subAgentViewer",
+])
 
 const DummyView: Component<{ title: string }> = (props) => {
   return (
@@ -138,6 +147,7 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     <DataProvider
       data={data()}
       directory={directory()}
+      // @ts-expect-error — onPermissionRespond/onQuestion* are extension-specific props not yet in kilo-ui's DataProvider types
       onPermissionRespond={respond}
       onQuestionReply={reply}
       onQuestionReject={reject}
@@ -208,6 +218,11 @@ const AppContent: Component = () => {
         session.selectCloudSession(message.sessionId)
         setCurrentView("newTask")
       }
+      if (message?.type === "viewSubAgentSession" && message.sessionID) {
+        console.log("[Kilo New] App: 🔍 viewSubAgentSession:", message.sessionID)
+        session.setCurrentSessionID(message.sessionID)
+        setCurrentView("subAgentViewer")
+      }
     }
     window.addEventListener("message", handler)
     onCleanup(() => window.removeEventListener("message", handler))
@@ -265,6 +280,9 @@ const AppContent: Component = () => {
           />
         </Match>
         {/* legacy-migration end */}
+        <Match when={currentView() === "subAgentViewer"}>
+          <ChatView readonly />
+        </Match>
       </Switch>
     </div>
   )

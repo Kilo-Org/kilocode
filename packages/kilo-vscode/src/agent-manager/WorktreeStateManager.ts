@@ -37,7 +37,7 @@ export function remoteRef(wt: Pick<Worktree, "parentBranch" | "remote">): string
   return wt.remote ? `${wt.remote}/${wt.parentBranch}` : wt.parentBranch
 }
 
-interface ManagedSession {
+export interface ManagedSession {
   id: string
   worktreeId: string | null
   createdAt: string

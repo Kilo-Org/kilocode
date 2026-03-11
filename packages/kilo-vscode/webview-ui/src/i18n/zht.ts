@@ -739,6 +739,7 @@ export const dict = {
   "session.cloud.import.placeholder": "工作階段 ID、URL 或 kilo import 指令",
   "session.cloud.import.button": "匯入",
   "session.cloud.import.invalid": "工作階段 ID 格式無效",
+  "session.cloud.import.legacy": "這似乎是一個舊版工作階段，已不再受支援。",
   "session.cloud.import.failed": "無法匯入雲端工作階段",
 
   "workspace.new": "新增工作區",
@@ -919,6 +920,8 @@ export const dict = {
   "settings.agentBehaviour.defaultAgent.title": "預設 Agent",
   "settings.agentBehaviour.defaultAgent.description": "未指定時使用的 Agent",
   "settings.agentBehaviour.selectAgent": "選擇要設定的 Agent…",
+  "settings.agentBehaviour.selectAgent.title": "Agent",
+  "settings.agentBehaviour.selectAgent.description": "選擇要設定的 Agent…",
   "settings.agentBehaviour.modelOverride.title": "模型覆寫",
   "settings.agentBehaviour.modelOverride.description": "覆寫此 Agent 的預設模型",
   "settings.agentBehaviour.prompt.title": "自訂提示詞",

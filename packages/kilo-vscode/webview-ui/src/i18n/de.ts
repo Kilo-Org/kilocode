@@ -758,6 +758,7 @@ export const dict = {
   "session.cloud.import.placeholder": "Sitzungs-ID, URL oder kilo import-Befehl",
   "session.cloud.import.button": "Importieren",
   "session.cloud.import.invalid": "Ungültiges Sitzungs-ID-Format",
+  "session.cloud.import.legacy": "Dies scheint eine veraltete Sitzung zu sein, die nicht mehr unterstützt wird.",
   "session.cloud.import.failed": "Fehler beim Importieren der Cloud-Sitzung",
 
   "workspace.new": "Neuer Arbeitsbereich",
@@ -946,6 +947,8 @@ export const dict = {
   "settings.agentBehaviour.defaultAgent.title": "Standard-Agent",
   "settings.agentBehaviour.defaultAgent.description": "Agent, der verwendet wird, wenn keiner angegeben ist",
   "settings.agentBehaviour.selectAgent": "Agent zum Konfigurieren auswählen…",
+  "settings.agentBehaviour.selectAgent.title": "Agent",
+  "settings.agentBehaviour.selectAgent.description": "Agent zum Konfigurieren auswählen…",
   "settings.agentBehaviour.modelOverride.title": "Modell-Überschreibung",
   "settings.agentBehaviour.modelOverride.description": "Standardmodell für diesen Agent überschreiben",
   "settings.agentBehaviour.prompt.title": "Benutzerdefinierter Prompt",
@@ -977,22 +980,31 @@ export const dict = {
   "settings.autoApprove.addPath": "Pfad hinzufügen",
   "settings.autoApprove.placeholder.command": "z. B. git *",
   "settings.autoApprove.placeholder.path": "z. B. *.env",
-  "settings.autoApprove.tool.read": "Dateien lesen. Erlaubt dem Agenten, Dateien zu lesen, die dem angegebenen Pfad entsprechen.",
-  "settings.autoApprove.tool.edit": "Dateien ändern. Erlaubt dem Agenten, Dateien zu erstellen oder zu bearbeiten, einschließlich Patches und Aktualisierungen mehrerer Dateien.",
-  "settings.autoApprove.tool.glob": "Dateien nach Muster abgleichen. Erlaubt den Dateiabgleich mithilfe von Glob-Mustern (z. B. src/**/*.ts).",
+  "settings.autoApprove.tool.read":
+    "Dateien lesen. Erlaubt dem Agenten, Dateien zu lesen, die dem angegebenen Pfad entsprechen.",
+  "settings.autoApprove.tool.edit":
+    "Dateien ändern. Erlaubt dem Agenten, Dateien zu erstellen oder zu bearbeiten, einschließlich Patches und Aktualisierungen mehrerer Dateien.",
+  "settings.autoApprove.tool.glob":
+    "Dateien nach Muster abgleichen. Erlaubt den Dateiabgleich mithilfe von Glob-Mustern (z. B. src/**/*.ts).",
   "settings.autoApprove.tool.grep": "Dateiinhalte durchsuchen. Erlaubt Regex-basierte Suchen innerhalb von Dateien.",
-  "settings.autoApprove.tool.list": "Verzeichnisinhalte auflisten. Erlaubt das Anzeigen von Dateien und Ordnern innerhalb eines Verzeichnisses.",
-  "settings.autoApprove.tool.bash": "Terminalbefehle ausführen. Erlaubt die Ausführung von Shell-Befehlen (z. B. git status).",
-  "settings.autoApprove.tool.task": "Sub-Agenten starten. Erlaubt das Starten spezialisierter Sub-Agenten für bestimmte Aufgaben.",
+  "settings.autoApprove.tool.list":
+    "Verzeichnisinhalte auflisten. Erlaubt das Anzeigen von Dateien und Ordnern innerhalb eines Verzeichnisses.",
+  "settings.autoApprove.tool.bash":
+    "Terminalbefehle ausführen. Erlaubt die Ausführung von Shell-Befehlen (z. B. git status).",
+  "settings.autoApprove.tool.task":
+    "Sub-Agenten starten. Erlaubt das Starten spezialisierter Sub-Agenten für bestimmte Aufgaben.",
   "settings.autoApprove.tool.skill": "Fähigkeiten laden. Erlaubt das Laden vordefinierter Fähigkeiten nach Namen.",
-  "settings.autoApprove.tool.lsp": "Sprachserver abfragen. Erlaubt das Ausführen von Sprachserver-Abfragen für Code-Intelligenz.",
+  "settings.autoApprove.tool.lsp":
+    "Sprachserver abfragen. Erlaubt das Ausführen von Sprachserver-Abfragen für Code-Intelligenz.",
   "settings.autoApprove.tool.todoreadwrite":
     "Aufgabenliste verwalten. Ermöglicht das Lesen und Aktualisieren der internen Aufgabenliste.",
   "settings.autoApprove.tool.webfetch": "URL abrufen. Erlaubt das Abrufen von Inhalten einer bestimmten URL.",
   "settings.autoApprove.tool.websearchcodesearch":
     "Web oder Code durchsuchen. Ermöglicht die Durchführung externer Web- oder Code-Suchen.",
-  "settings.autoApprove.tool.external_directory": "Zugriff auf Dateien außerhalb des Arbeitsbereichs. Wird ausgelöst, wenn auf Dateien außerhalb des aktuellen Projektverzeichnisses zugegriffen wird.",
-  "settings.autoApprove.tool.doom_loop": "Wiederholte identische Aktionen verhindern. Wird ausgelöst, wenn sich derselbe Werkzeugaufruf mit identischer Eingabe wiederholt.",
+  "settings.autoApprove.tool.external_directory":
+    "Zugriff auf Dateien außerhalb des Arbeitsbereichs. Wird ausgelöst, wenn auf Dateien außerhalb des aktuellen Projektverzeichnisses zugegriffen wird.",
+  "settings.autoApprove.tool.doom_loop":
+    "Wiederholte identische Aktionen verhindern. Wird ausgelöst, wenn sich derselbe Werkzeugaufruf mit identischer Eingabe wiederholt.",
   "settings.checkpoints.enable.title": "Snapshots aktivieren",
   "settings.checkpoints.enable.description":
     "Prüfpunkte vor Dateibearbeitungen erstellen, um vorherige Zustände wiederherstellen zu können",

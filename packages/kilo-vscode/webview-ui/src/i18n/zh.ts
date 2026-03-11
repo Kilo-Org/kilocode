@@ -737,6 +737,7 @@ export const dict = {
   "session.cloud.import.placeholder": "会话 ID、URL 或 kilo import 命令",
   "session.cloud.import.button": "导入",
   "session.cloud.import.invalid": "会话 ID 格式无效",
+  "session.cloud.import.legacy": "这似乎是一个旧版会话，已不再受支持。",
   "session.cloud.import.failed": "导入云会话失败",
 
   "workspace.new": "新建工作区",
@@ -918,6 +919,8 @@ export const dict = {
   "settings.agentBehaviour.defaultAgent.title": "默认智能体",
   "settings.agentBehaviour.defaultAgent.description": "未指定时使用的智能体",
   "settings.agentBehaviour.selectAgent": "选择要配置的智能体…",
+  "settings.agentBehaviour.selectAgent.title": "智能体",
+  "settings.agentBehaviour.selectAgent.description": "选择要配置的智能体…",
   "settings.agentBehaviour.modelOverride.title": "模型覆盖",
   "settings.agentBehaviour.modelOverride.description": "覆盖此智能体的默认模型",
   "settings.agentBehaviour.prompt.title": "自定义提示词",

@@ -46,7 +46,7 @@ export const LoggedIn: Story = {
   render: () => (
     <StoryProviders noPadding>
       <div style={{ width: "420px", height: "500px" }}>
-        <ProfileView profileData={loggedInProfile} deviceAuth={idleAuth} onLogin={noop} onBack={noop} />
+        <ProfileView profileData={loggedInProfile} deviceAuth={idleAuth} onLogin={noop} />
       </div>
     </StoryProviders>
   ),
@@ -57,7 +57,7 @@ export const LoggedInPersonal: Story = {
   render: () => (
     <StoryProviders noPadding>
       <div style={{ width: "420px", height: "400px" }}>
-        <ProfileView profileData={personalProfile} deviceAuth={idleAuth} onLogin={noop} onBack={noop} />
+        <ProfileView profileData={personalProfile} deviceAuth={idleAuth} onLogin={noop} />
       </div>
     </StoryProviders>
   ),
@@ -68,7 +68,7 @@ export const NotLoggedIn: Story = {
   render: () => (
     <StoryProviders noPadding>
       <div style={{ width: "420px", height: "300px" }}>
-        <ProfileView profileData={null} deviceAuth={idleAuth} onLogin={noop} onBack={noop} />
+        <ProfileView profileData={null} deviceAuth={idleAuth} onLogin={noop} />
       </div>
     </StoryProviders>
   ),
