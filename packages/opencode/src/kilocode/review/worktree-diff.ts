@@ -122,10 +122,9 @@ export namespace WorktreeDiff {
       if (!file || seen.has(file)) continue
       const after = Bun.file(path.join(dir, file))
       if (!(await after.exists())) continue
-      const text = await after.text()
       result.push({
         file,
-        additions: lines(text),
+        additions: await lineCount(path.join(dir, file)),
         deletions: 0,
         status: "added",
         tracked: false,
@@ -140,6 +139,27 @@ export namespace WorktreeDiff {
   function lines(text: string) {
     if (!text) return 0
     return text.endsWith("\n") ? text.split("\n").length - 1 : text.split("\n").length
+  }
+
+  async function lineCount(file: string) {
+    let count = 0
+    let size = 0
+    let last = 10
+    const reader = Bun.file(file).stream().getReader()
+
+    while (true) {
+      const result = await reader.read()
+      if (result.done) break
+      const bytes = result.value instanceof Uint8Array ? result.value : new Uint8Array(result.value)
+      size += bytes.length
+      for (const byte of bytes) {
+        if (byte === 10) count += 1
+        last = byte
+      }
+    }
+
+    if (size === 0) return 0
+    return last === 10 ? count : count + 1
   }
 
   async function statStamp(dir: string, file: string) {

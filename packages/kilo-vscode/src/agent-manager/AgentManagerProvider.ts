@@ -53,7 +53,7 @@ export class AgentManagerProvider implements vscode.Disposable {
   private lastDiffHash: string | undefined
   private statsPoller: GitStatsPoller
   private gitOps: GitOps
-  private cachedDiffTarget: { directory: string; baseBranch: string } | undefined
+  private cachedDiffTarget: { sessionId: string; directory: string; baseBranch: string } | undefined
   private staleWorktreeIds = new Set<string>()
   private cachedWorktreeStats: AgentManagerOutMessage | undefined
   private cachedLocalStats: AgentManagerOutMessage | undefined
@@ -1716,7 +1716,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     if (!target) return
 
     // Cache the resolved target so subsequent polls skip resolution entirely
-    this.cachedDiffTarget = target
+    this.cachedDiffTarget = { sessionId, ...target }
 
     this.postToWebview({ type: "agentManager.worktreeDiffLoading", sessionId, loading: true })
     try {
@@ -1743,7 +1743,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
   /** Polling diff fetch — uses cached target, no loading state, only pushes when hash changes. */
   private async pollDiff(sessionId: string): Promise<void> {
-    const target = this.cachedDiffTarget
+    const target = this.cachedDiffTarget?.sessionId === sessionId ? this.cachedDiffTarget : undefined
     if (!target) return
 
     try {
@@ -1772,10 +1772,11 @@ export class AgentManagerProvider implements vscode.Disposable {
       await this.stateReady.catch((err) => this.log("stateReady rejected, continuing diff detail resolve:", err))
     }
 
-    const target = this.cachedDiffTarget ?? (await this.resolveDiffTarget(sessionId))
+    const target =
+      this.cachedDiffTarget?.sessionId === sessionId ? this.cachedDiffTarget : await this.resolveDiffTarget(sessionId)
     if (!target) return
 
-    this.cachedDiffTarget = target
+    this.cachedDiffTarget = { sessionId, directory: target.directory, baseBranch: target.baseBranch }
 
     try {
       const client = this.connectionService.getClient()
