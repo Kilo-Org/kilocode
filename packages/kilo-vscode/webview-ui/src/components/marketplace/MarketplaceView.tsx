@@ -1,4 +1,4 @@
-import { Component, createSignal, createMemo, onMount, onCleanup, Switch, Match, Show } from "solid-js"
+import { Component, createSignal, createMemo, onMount, onCleanup, Switch, Match, Show, For } from "solid-js"
 import { useVSCode } from "../../context/vscode"
 import type { MarketplaceItem, MarketplaceInstalledMetadata } from "../../types/marketplace"
 import type { ExtensionMessage } from "../../types/messages"
@@ -138,6 +138,7 @@ export const MarketplaceView: Component = () => {
         </div>
       </div>
       <div class="marketplace-content">
+        <For each={errors()}>{(err) => <div class="marketplace-error-banner">{err}</div>}</For>
         <Show when={removeError()}>
           <div class="marketplace-error-banner">
             {removeError()}
