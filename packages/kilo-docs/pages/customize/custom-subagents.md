@@ -37,12 +37,12 @@ Understanding how subagents select their model is important for getting the beha
 
 **Built-in subagents (`general` and `explore`) do not have a predefined model.** When a primary agent invokes a subagent, the model is resolved in this order:
 
-| Priority | Source                   | Description                                                                                                                                                 |
-| -------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1        | **Subagent's own model** | If the subagent has a `model` field set in its configuration, that model is used.                                                                           |
-| 2        | **Parent task's model**  | If no model is set on the subagent, it inherits the model from the parent task that invoked it — i.e., whatever model the primary agent is currently using. |
+| Priority | Source                   | Description                                                                                                                                                                                                               |
+| -------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1        | **Subagent's own model** | If the subagent has a `model` field set in its configuration, that model is used.                                                                                                                                         |
+| 2        | **Parent task's model**  | If no model is set on the subagent, it inherits the model from the parent task that invoked it — i.e., whatever model the primary agent is currently using (including any override from the chat session model dropdown). |
 
-This means that if you're using Claude Opus in Code mode and it spawns a `general` subagent, that subagent will also use Claude Opus. If you want a subagent to always use a specific model (for example, a cheaper model for exploration tasks), set the `model` field explicitly:
+This means that if you're using Claude Opus in Code mode and it spawns a `general` subagent, that subagent will also use Claude Opus — and if you override the model via the chat session dropdown, subagents will inherit that override too. If you want a subagent to always use a specific model (for example, a cheaper model for exploration tasks), set the `model` field explicitly:
 
 ```json
 {
