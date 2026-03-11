@@ -123,6 +123,14 @@ export class MarketplaceInstaller {
     if (!path.resolve(dir).startsWith(path.resolve(base))) {
       return { success: false, slug: item.id, error: "Invalid skill id" }
     }
+
+    try {
+      await fs.access(dir)
+      return { success: false, slug: item.id, error: "Skill already installed. Uninstall it before installing again." }
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err
+    }
+
     const stamp = Date.now()
     const tarball = path.join(os.tmpdir(), `kilo-skill-${item.id}-${stamp}.tar.gz`)
     // Stage under `base` (not os.tmpdir()) so fs.rename() never crosses filesystems (EXDEV).
@@ -160,12 +168,6 @@ export class MarketplaceInstaller {
         return { success: false, slug: item.id, error: "Extracted archive missing SKILL.md" }
       }
 
-      // Atomically swap: remove old install, move staging into place.
-      try {
-        await fs.rm(dir, { recursive: true })
-      } catch (err) {
-        if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err
-      }
       await fs.rename(staging, dir)
 
       return { success: true, slug: item.id, filePath: path.join(dir, "SKILL.md"), line: 1 }
