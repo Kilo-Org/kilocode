@@ -3,6 +3,17 @@ import { WorkflowsMigrator } from "../../src/kilocode/workflows-migrator"
 import { tmpdir } from "../fixture/fixture"
 import path from "path"
 
+async function withHome<T>(home: string, fn: () => Promise<T>): Promise<T> {
+  const prev = process.env.HOME
+  process.env.HOME = home
+  try {
+    return await fn()
+  } finally {
+    if (prev) process.env.HOME = prev
+    else delete process.env.HOME
+  }
+}
+
 describe("WorkflowsMigrator", () => {
   describe("extractNameFromFilename", () => {
     test("extracts name from simple filename", () => {
@@ -109,6 +120,21 @@ Actual description here.`
 
       expect(workflows).toHaveLength(1)
       expect(workflows[0].name).toBe("workflow")
+    })
+
+    test("discovers global workflows from ~/.kilo/workflows/", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(path.join(dir, ".kilo", "workflows", "global.md"), "# Global\n\nGlobal workflow")
+          await Bun.write(path.join(dir, "repo", "README.md"), "repo")
+        },
+      })
+
+      const workflows = await withHome(tmp.path, () => WorkflowsMigrator.discoverWorkflows(path.join(tmp.path, "repo")))
+
+      expect(
+        workflows.some((w) => w.source === "global" && w.path.includes(path.join(".kilo", "workflows", "global.md"))),
+      ).toBe(true)
     })
   })
 

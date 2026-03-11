@@ -4,6 +4,17 @@ import { tmpdir } from "../fixture/fixture"
 import path from "path"
 import fs from "fs/promises"
 
+async function withHome<T>(home: string, fn: () => Promise<T>): Promise<T> {
+  const prev = process.env.HOME
+  process.env.HOME = home
+  try {
+    return await fn()
+  } finally {
+    if (prev) process.env.HOME = prev
+    else delete process.env.HOME
+  }
+}
+
 describe("RulesMigrator", () => {
   describe("discoverRules", () => {
     test("discovers legacy .kilocoderules file", async () => {
@@ -140,6 +151,22 @@ describe("RulesMigrator", () => {
       expect(rules.some((r) => r.source === "legacy" && !r.mode)).toBe(true)
       expect(rules.some((r) => r.source === "project")).toBe(true)
       expect(rules.some((r) => r.mode === "code")).toBe(true)
+    })
+
+    test("discovers global rules from ~/.kilo/rules/", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, ".kilo", "rules"), { recursive: true })
+          await Bun.write(path.join(dir, ".kilo", "rules", "global.md"), "# Global rules")
+          await fs.mkdir(path.join(dir, "repo"), { recursive: true })
+        },
+      })
+
+      const rules = await withHome(tmp.path, () => RulesMigrator.discoverRules(path.join(tmp.path, "repo")))
+
+      expect(
+        rules.some((r) => r.source === "global" && r.path.includes(path.join(".kilo", "rules", "global.md"))),
+      ).toBe(true)
     })
   })
 

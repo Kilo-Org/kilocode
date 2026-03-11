@@ -32,64 +32,65 @@ const AGENT_MANAGER_ITEMS = [
  * that already exist in .kilo/ (the new location wins). This is safe
  * because Agent Manager exclusively owns these files.
  *
- * After moving worktrees, fixes git worktree internal references
- * (.git/worktrees/{name}/gitdir) that point to the old path.
+ * Fixes git worktree internal references (.git/worktrees/{name}/gitdir)
+ * whenever .kilo/worktrees/ exists so partially migrated repos recover too.
  *
- * Idempotent: safe to call on every startup. No-ops when .kilocode/
- * doesn't exist or has no Agent Manager data.
+ * Idempotent: safe to call on every startup.
  */
 export async function migrateAgentManagerData(root: string, log: (msg: string) => void): Promise<void> {
   const legacy = path.join(root, LEGACY_DIR)
-
-  try {
-    const stat = await fs.promises.stat(legacy)
-    if (!stat.isDirectory()) return
-  } catch {
-    return // .kilocode doesn't exist
-  }
-
   const target = path.join(root, KILO_DIR)
 
-  // Ensure .kilo/ exists
-  try {
-    await fs.promises.mkdir(target, { recursive: true })
-  } catch {
-    // already exists
-  }
-
-  let movedWorktrees = false
-
-  for (const item of AGENT_MANAGER_ITEMS) {
-    const src = path.join(legacy, item)
-    const dst = path.join(target, item)
-
+  if (await isDirectory(legacy)) {
+    // Ensure .kilo/ exists
     try {
-      await fs.promises.stat(src)
+      await fs.promises.mkdir(target, { recursive: true })
     } catch {
-      continue // source doesn't exist — skip
+      // already exists
     }
 
-    try {
-      await fs.promises.stat(dst)
-      log(`Skipping ${item}: already exists in ${KILO_DIR}`)
-      continue // destination already exists — don't overwrite
-    } catch {
-      // destination doesn't exist — proceed with move
-    }
+    for (const item of AGENT_MANAGER_ITEMS) {
+      const src = path.join(legacy, item)
+      const dst = path.join(target, item)
 
-    try {
-      await fs.promises.rename(src, dst)
-      log(`Migrated ${item} from ${LEGACY_DIR} to ${KILO_DIR}`)
-      if (item === "worktrees") movedWorktrees = true
-    } catch (err) {
-      // On Windows, rename can fail with EPERM/EBUSY if files are held open.
-      // Will succeed on next startup.
-      log(`Warning: failed to migrate ${item}: ${err}`)
+      if (!(await exists(src))) continue
+
+      if (await exists(dst)) {
+        log(`Skipping ${item}: already exists in ${KILO_DIR}`)
+        continue
+      }
+
+      try {
+        await fs.promises.rename(src, dst)
+        log(`Migrated ${item} from ${LEGACY_DIR} to ${KILO_DIR}`)
+      } catch (err) {
+        // On Windows, rename can fail with EPERM/EBUSY if files are held open.
+        // Will succeed on next startup.
+        log(`Warning: failed to migrate ${item}: ${err}`)
+      }
     }
   }
 
-  if (movedWorktrees) {
+  if (await isDirectory(path.join(target, "worktrees"))) {
     await fixGitWorktreeRefs(root, log)
+  }
+}
+
+async function exists(filepath: string): Promise<boolean> {
+  try {
+    await fs.promises.stat(filepath)
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function isDirectory(filepath: string): Promise<boolean> {
+  try {
+    const stat = await fs.promises.stat(filepath)
+    return stat.isDirectory()
+  } catch {
+    return false
   }
 }
 

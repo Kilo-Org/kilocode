@@ -5,10 +5,11 @@ import os from "os"
 export namespace RulesMigrator {
   // Only support .kilocoderules (no migration for .roorules or .clinerules)
   const LEGACY_RULE_FILE = ".kilocoderules"
+  const home = () => process.env.HOME || process.env.USERPROFILE || os.homedir()
 
   // Directory-based rules (read from both .kilo and .kilocode)
   const KILO_RULES_DIRS = [".kilo/rules", ".kilocode/rules"]
-  const GLOBAL_RULES_DIR = path.join(os.homedir(), ".kilocode", "rules")
+  const globalRulesDirs = () => [path.join(home(), ".kilo", "rules"), path.join(home(), ".kilocode", "rules")]
 
   // Known modes for mode-specific rule discovery
   const KNOWN_MODES = ["code", "architect", "ask", "debug", "orchestrator"]
@@ -49,10 +50,15 @@ export namespace RulesMigrator {
   export async function discoverRules(projectDir: string): Promise<RuleFile[]> {
     const rules: RuleFile[] = []
 
-    // 1. Global rules directory (~/.kilocode/rules/*.md)
-    if (await isDirectory(GLOBAL_RULES_DIR)) {
-      const files = await findMarkdownFiles(GLOBAL_RULES_DIR)
+    // 1. Global rules directories (~/.kilo/rules/*.md and ~/.kilocode/rules/*.md)
+    const globalSeen = new Set<string>()
+    for (const dir of globalRulesDirs()) {
+      if (!(await isDirectory(dir))) continue
+      const files = await findMarkdownFiles(dir)
       for (const file of files) {
+        const name = path.basename(file)
+        if (globalSeen.has(name)) continue
+        globalSeen.add(name)
         rules.push({ path: file, source: "global" })
       }
     }

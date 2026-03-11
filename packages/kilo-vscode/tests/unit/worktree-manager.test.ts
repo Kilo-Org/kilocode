@@ -512,6 +512,22 @@ describe("WorktreeManager.discoverWorktrees", () => {
     expect(found).toBeDefined()
     expect(found!.parentBranch).toBe("feature/my-branch")
   })
+
+  it("repairs stale gitdir refs when .kilo/worktrees already exists", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    const worktree = path.join(root, ".kilo", "worktrees", "partial")
+    const gitdir = path.join(root, ".git", "worktrees", "partial", "gitdir")
+    await fs.mkdir(worktree, { recursive: true })
+    await fs.mkdir(path.dirname(gitdir), { recursive: true })
+    await fs.writeFile(gitdir, path.join(root, ".kilocode", "worktrees", "partial", ".git"), "utf-8")
+
+    await mgr.discoverWorktrees()
+
+    const fixed = await fs.readFile(gitdir, "utf-8")
+    expect(fixed).toContain(path.join(root, ".kilo", "worktrees", "partial", ".git"))
+  })
 })
 
 // ---------------------------------------------------------------------------

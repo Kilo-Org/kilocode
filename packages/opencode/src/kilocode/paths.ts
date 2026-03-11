@@ -3,6 +3,8 @@ import os from "os"
 import { Filesystem } from "../util/filesystem"
 
 export namespace KilocodePaths {
+  const home = () => process.env.HOME || process.env.USERPROFILE || os.homedir()
+
   /**
    * Get the platform-specific VSCode global storage path for Kilocode extension.
    * - macOS: ~/Library/Application Support/Code/User/globalStorage/kilocode.kilo-code
@@ -27,9 +29,9 @@ export namespace KilocodePaths {
     }
   }
 
-  /** Global Kilocode directory in user home: ~/.kilocode */
-  export function globalDir(): string {
-    return path.join(os.homedir(), ".kilocode")
+  /** Global Kilo directories in user home: ~/.kilocode and ~/.kilo */
+  export function globalDirs(): string[] {
+    return [path.join(home(), ".kilocode"), path.join(home(), ".kilo")]
   }
 
   /**
@@ -37,7 +39,7 @@ export namespace KilocodePaths {
    * Returns parent directories (.kilo/ and .kilocode/) for glob pattern "skills/[*]/SKILL.md".
    *
    * - Walks up from projectDir to worktreeRoot for .kilo/ and .kilocode/
-   * - Includes global ~/.kilocode/
+   * - Includes global ~/.kilocode/ and ~/.kilo/
    * - Includes VSCode extension global storage
    *
    * Does NOT copy/migrate skills - just provides paths for discovery.
@@ -71,10 +73,10 @@ export namespace KilocodePaths {
     }
 
     if (!opts.skipGlobalPaths) {
-      // 2. Global ~/.kilocode/
-      const global = globalDir()
-      const globalSkills = path.join(global, "skills")
-      if (await Filesystem.isDir(globalSkills)) {
+      // 2. Global ~/.kilocode/ and ~/.kilo/
+      for (const global of globalDirs()) {
+        const globalSkills = path.join(global, "skills")
+        if (!(await Filesystem.isDir(globalSkills))) continue
         directories.push(global) // Return parent, not skills/
       }
 

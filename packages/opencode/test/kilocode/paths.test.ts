@@ -4,6 +4,17 @@ import { tmpdir } from "../fixture/fixture"
 import path from "path"
 import fs from "fs/promises"
 
+async function withHome<T>(home: string, fn: () => Promise<T>): Promise<T> {
+  const prev = process.env.HOME
+  process.env.HOME = home
+  try {
+    return await fn()
+  } finally {
+    if (prev) process.env.HOME = prev
+    else delete process.env.HOME
+  }
+}
+
 describe("KilocodePaths", () => {
   describe("skillDirectories", () => {
     test("discovers skills from .kilo/skills/", async () => {
@@ -187,6 +198,26 @@ description: A legacy skill
       expect(result).toHaveLength(2)
       expect(result.some((d) => d.endsWith(".kilo"))).toBe(true)
       expect(result.some((d) => d.endsWith(".kilocode"))).toBe(true)
+    })
+
+    test("discovers global skills from ~/.kilo/skills/", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          const skillDir = path.join(dir, ".kilo", "skills", "global-skill")
+          await fs.mkdir(skillDir, { recursive: true })
+          await Bun.write(path.join(skillDir, "SKILL.md"), "# Global skill")
+          await fs.mkdir(path.join(dir, "repo"), { recursive: true })
+        },
+      })
+
+      const result = await withHome(tmp.path, () =>
+        KilocodePaths.skillDirectories({
+          projectDir: path.join(tmp.path, "repo"),
+          worktreeRoot: path.join(tmp.path, "repo"),
+        }),
+      )
+
+      expect(result.some((d) => d.endsWith(".kilo"))).toBe(true)
     })
 
     test("discovers multiple skills in same directory", async () => {
