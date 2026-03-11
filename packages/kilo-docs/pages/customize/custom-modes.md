@@ -14,11 +14,12 @@ Each mode—including custom ones—features **Sticky Models**. This means Kilo 
 {% callout type="info" title="Model Resolution Priority" %}
 When Kilo determines which model to use, it follows this priority order:
 
-1. **Mode-specific model** — the model selected for the current mode (via Sticky Models or the model dropdown)
-2. **Global settings model** — the model configured in your global settings
-3. **Kilo default** — the built-in default (currently Auto Free)
+1. **Chat session model dropdown** — selecting a model from the dropdown in an active chat session overrides all other settings for that session
+2. **Mode-specific model** — the model configured for the current mode (via Sticky Models)
+3. **Global settings model** — the model configured in your global settings
+4. **Kilo default** — the built-in default (currently Auto Free)
 
-This means if you select a model for a specific mode, that choice takes priority over the global setting. See the [Model Selection Guide](/docs/code-with-ai/agents/model-selection#model-resolution-priority) for the full breakdown.
+This means you can always override the model for a specific task by using the model dropdown in the chat session, without changing your mode or global configuration. See the [Model Selection Guide](/docs/code-with-ai/agents/model-selection#model-resolution-priority) for the full breakdown.
 {% /callout %}
 
 ## Why Use Custom Modes?

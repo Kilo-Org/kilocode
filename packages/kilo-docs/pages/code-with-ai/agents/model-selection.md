@@ -19,11 +19,16 @@ This isn't benchmarks from some lab. It's real usage data from developers like y
 
 When Kilo Code determines which model to use for a given task, it follows a specific priority order. This applies to both primary agents (modes) and subagents:
 
-| Priority | Source                    | Description                                                                                                                                                                                             |
-| -------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1        | **Mode/subagent model**   | A model explicitly set on the specific mode or subagent you're using. For modes, this is the model selected in the model dropdown. For subagents, this is the `model` field in the agent configuration. |
-| 2        | **Global settings model** | The model configured in your global settings, which applies when no mode-specific model is set.                                                                                                         |
-| 3        | **Kilo default**          | If no model is configured at any level, Kilo uses its built-in default (currently Auto Free).                                                                                                           |
+| Priority | Source                          | Description                                                                                                                                                                                           |
+| -------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1        | **Chat session model dropdown** | Selecting a model from the model dropdown in an active chat session overrides all other model settings for that session. This is the highest-priority override.                                       |
+| 2        | **Mode/subagent model**         | A model explicitly set on the specific mode or subagent you're using. For modes, this is the model configured via Sticky Models. For subagents, this is the `model` field in the agent configuration. |
+| 3        | **Global settings model**       | The model configured in your global settings, which applies when no mode-specific model is set.                                                                                                       |
+| 4        | **Kilo default**                | If no model is configured at any level, Kilo uses its built-in default (currently Auto Free).                                                                                                         |
+
+{% callout type="tip" title="Quick Model Override" %}
+Need to use a different model for a single task? Use the **model dropdown** in the chat session to switch models on the fly. This overrides the entire priority chain above without changing your mode or global settings. When you start a new session, the model will revert to whatever your mode or global settings specify.
+{% /callout %}
 
 {% callout type="info" title="How Subagents Inherit Models" %}
 Built-in subagents (like `general` and `explore`) do **not** have a predefined model. When a primary agent invokes a subagent, the subagent inherits the model from the parent task — meaning it uses whatever model the primary agent is using. You can override this by setting a `model` on the subagent in your configuration. See [Custom Subagents](/docs/customize/custom-subagents#model-inheritance) for details.
