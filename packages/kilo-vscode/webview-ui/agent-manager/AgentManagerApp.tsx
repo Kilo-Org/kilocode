@@ -36,6 +36,7 @@ import type {
   SessionInfo,
   BranchInfo,
 } from "../src/types/messages"
+import { extensionMessageSchema } from "../src/types/messages"
 import { DragDropProvider, DragDropSensors, DragOverlay, SortableProvider, closestCenter } from "@thisbeyond/solid-dnd"
 import type { DragEvent } from "@thisbeyond/solid-dnd"
 import { ThemeProvider } from "@kilocode/kilo-ui/theme"
@@ -944,8 +945,10 @@ const AgentManagerContent: Component = () => {
 
   onMount(() => {
     const handler = (event: MessageEvent) => {
-      const msg = event.data as ExtensionMessage
-      if (msg?.type !== "action") return
+      const result = extensionMessageSchema.safeParse(event.data)
+      if (!result.success) return
+      const msg = result.data
+      if (msg.type !== "action") return
       if (msg.action === "sessionPrevious") navigate("up")
       else if (msg.action === "sessionNext") navigate("down")
       else if (msg.action === "tabPrevious") navigateTab("left")

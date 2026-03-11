@@ -5,6 +5,7 @@
 
 import { createContext, useContext, onCleanup, ParentComponent } from "solid-js"
 import type { VSCodeAPI, WebviewMessage, ExtensionMessage } from "../types/messages"
+import { extensionMessageSchema } from "../types/messages"
 
 // Get the VS Code API (only available in webview context)
 let vscodeApi: VSCodeAPI | undefined
@@ -41,10 +42,14 @@ export const VSCodeProvider: ParentComponent = (props) => {
   const api = getVSCodeAPI()
   const handlers = new Set<(message: ExtensionMessage) => void>()
 
-  // Listen for messages from the extension
+  // Listen for messages from the extension — validate at the IO boundary via Zod
   const messageListener = (event: MessageEvent) => {
-    const message = event.data as ExtensionMessage
-    handlers.forEach((handler) => handler(message))
+    const result = extensionMessageSchema.safeParse(event.data)
+    if (!result.success) {
+      console.warn("[Kilo New] Invalid extension message:", result.error.format(), event.data)
+      return
+    }
+    handlers.forEach((handler) => handler(result.data))
   }
 
   window.addEventListener("message", messageListener)
