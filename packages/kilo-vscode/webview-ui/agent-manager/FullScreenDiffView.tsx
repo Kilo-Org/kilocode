@@ -25,12 +25,15 @@ type DiffStyle = "unified" | "split"
 interface FullScreenDiffViewProps {
   diffs: WorktreeFileDiff[]
   loading: boolean
+  loadingFiles?: Set<string>
+  sessionId?: string
   sessionKey?: string
   comments: ReviewComment[]
   onCommentsChange: (comments: ReviewComment[]) => void
   onSendAll?: () => void
   diffStyle: DiffStyle
   onDiffStyleChange: (style: DiffStyle) => void
+  onRequestDiff?: (file: string) => void
   onOpenFile?: (relativePath: string) => void
   onClose: () => void
 }
@@ -143,6 +146,22 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
           return filtered
         })
       },
+    ),
+  )
+
+  createEffect(
+    on(
+      () => [open(), props.diffs] as const,
+      ([next]) => {
+        const loading = props.loadingFiles ?? new Set<string>()
+        for (const file of next) {
+          if (loading.has(file)) continue
+          const diff = props.diffs.find((item) => item.file === file)
+          if (!diff || diff.summarized !== true) continue
+          props.onRequestDiff?.(file)
+        }
+      },
+      { defer: true },
     ),
   )
 
@@ -471,6 +490,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                     const isAdded = () => diff.status === "added"
                     const isDeleted = () => diff.status === "deleted"
                     const isLargeCollapsed = () => isLargeDiffFile(diff) && !open().includes(diff.file)
+                    const isLoadingDetail = () => props.loadingFiles?.has(diff.file) ?? false
                     const fileCommentCount = () => (commentsByFile().get(diff.file) ?? []).length
 
                     return (
@@ -505,6 +525,12 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                                 <Show when={isLargeCollapsed()}>
                                   <span class="am-diff-large-pill">{t("agentManager.review.largeFileCollapsed")}</span>
                                 </Show>
+                                <Show when={diff.tracked === false}>
+                                  <span class="am-diff-summary-pill">untracked</span>
+                                </Show>
+                                <Show when={diff.generatedLike === true}>
+                                  <span class="am-diff-summary-pill">generated</span>
+                                </Show>
                                 <Show when={props.onOpenFile && !isDeleted()}>
                                   <Tooltip value={t("agentManager.diff.openFile")} placement="top">
                                     <IconButton
@@ -528,15 +554,29 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                         </StickyAccordionHeader>
                         <Accordion.Content>
                           <Show when={open().includes(diff.file)}>
-                            <Diff<AnnotationMeta>
-                              before={{ name: diff.file, contents: diff.before }}
-                              after={{ name: diff.file, contents: diff.after }}
-                              diffStyle={props.diffStyle}
-                              annotations={annotationsForFile(diff.file)}
-                              renderAnnotation={buildAnnotation}
-                              enableGutterUtility={true}
-                              onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
-                            />
+                            <Show
+                              when={diff.summarized !== true}
+                              fallback={
+                                <div class="am-diff-summary-state">
+                                  <Show when={isLoadingDetail()} fallback={<span>Diff preview loads on demand.</span>}>
+                                    <>
+                                      <Spinner />
+                                      <span>Loading diff...</span>
+                                    </>
+                                  </Show>
+                                </div>
+                              }
+                            >
+                              <Diff<AnnotationMeta>
+                                before={{ name: diff.file, contents: diff.before }}
+                                after={{ name: diff.file, contents: diff.after }}
+                                diffStyle={props.diffStyle}
+                                annotations={annotationsForFile(diff.file)}
+                                renderAnnotation={buildAnnotation}
+                                enableGutterUtility={true}
+                                onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
+                              />
+                            </Show>
                           </Show>
                         </Accordion.Content>
                       </Accordion.Item>

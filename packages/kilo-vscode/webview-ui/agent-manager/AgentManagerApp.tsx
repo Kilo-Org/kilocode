@@ -22,6 +22,7 @@ import type {
   AgentManagerSendInitialMessage,
   AgentManagerBranchesMessage,
   AgentManagerWorktreeDiffMessage,
+  AgentManagerWorktreeDiffFileMessage,
   AgentManagerWorktreeDiffLoadingMessage,
   AgentManagerApplyWorktreeDiffResultMessage,
   AgentManagerApplyWorktreeDiffStatus,
@@ -76,6 +77,7 @@ import { groupApplyConflicts } from "./apply-conflicts"
 import type { ReviewComment } from "./review-comments"
 import { BranchSelect } from "./BranchSelect"
 import { WorktreeItem } from "./WorktreeItem"
+import { mergeWorktreeDiffs } from "./diff-state"
 import "./agent-manager.css"
 import "./agent-manager-review.css"
 
@@ -325,6 +327,7 @@ const AgentManagerContent: Component = () => {
   const [diffOpen, setDiffOpen] = createSignal(false)
   const [diffDatas, setDiffDatas] = createSignal<Record<string, WorktreeFileDiff[]>>({})
   const [diffLoading, setDiffLoading] = createSignal(false)
+  const [diffFileLoading, setDiffFileLoading] = createSignal<Record<string, Record<string, true>>>({})
   const [diffWidth, setDiffWidth] = createSignal(Math.round(window.innerWidth * 0.5))
 
   // Full-screen review state (in-memory, per sidebar context: local/worktree)
@@ -1215,22 +1218,40 @@ const AgentManagerContent: Component = () => {
         const ev = msg as AgentManagerWorktreeDiffMessage
         setDiffDatas((prev) => {
           const existing = prev[ev.sessionId]
-          // Reuse previous array reference when content is unchanged to prevent
-          // <For> from tearing down / rebuilding <Diff> components (which resets scroll)
-          if (existing && existing.length === ev.diffs.length) {
+          const next = existing ? mergeWorktreeDiffs(existing, ev.diffs) : ev.diffs
+          if (existing && existing.length === next.length) {
             const same = existing.every((old, i) => {
-              const next = ev.diffs[i]!
+              const item = next[i]!
               return (
-                old.file === next.file &&
-                old.before === next.before &&
-                old.after === next.after &&
-                old.status === next.status
+                old.file === item.file &&
+                old.before === item.before &&
+                old.after === item.after &&
+                old.status === item.status &&
+                old.tracked === item.tracked &&
+                old.generatedLike === item.generatedLike &&
+                old.summarized === item.summarized &&
+                old.additions === item.additions &&
+                old.deletions === item.deletions
               )
             })
             if (same) return prev
           }
-          return { ...prev, [ev.sessionId]: ev.diffs }
+          return { ...prev, [ev.sessionId]: next }
         })
+      }
+
+      if (msg.type === "agentManager.worktreeDiffFile") {
+        const ev = msg as AgentManagerWorktreeDiffFileMessage
+        if (ev.diff) {
+          setDiffDatas((prev) => {
+            const existing = prev[ev.sessionId] ?? []
+            const next = existing.map((item) => (item.file === ev.diff!.file ? ev.diff! : item))
+            return { ...prev, [ev.sessionId]: next }
+          })
+          setDiffFilePending(ev.sessionId, ev.diff.file, false)
+          return
+        }
+        setDiffFilePending(ev.sessionId, ev.file, false)
       }
 
       if (msg.type === "agentManager.worktreeDiffLoading") {
@@ -1394,6 +1415,20 @@ const AgentManagerContent: Component = () => {
     return []
   })
 
+  const currentDiffSessionId = createMemo(() => {
+    const sel = selection()
+    if (sel === LOCAL) return LOCAL
+
+    const current = session.currentSessionID()
+    if (current) {
+      const item = managedSessions().find((entry) => entry.id === current)
+      if (sel && item?.worktreeId === sel) return current
+    }
+
+    if (!sel) return undefined
+    return managedSessions().find((entry) => entry.worktreeId === sel)?.id
+  })
+
   const diffSessionKey = createMemo(() => {
     const sel = selection()
     if (sel === LOCAL) return `local:${LOCAL}`
@@ -1406,6 +1441,46 @@ const AgentManagerContent: Component = () => {
     setReviewDiffStyle(style)
     vscode.postMessage({ type: "agentManager.setReviewDiffStyle", style })
   }
+
+  const setDiffFilePending = (sessionId: string, file: string, value: boolean) => {
+    setDiffFileLoading((prev) => {
+      const session = prev[sessionId] ?? {}
+      if (value) {
+        if (session[file]) return prev
+        return {
+          ...prev,
+          [sessionId]: { ...session, [file]: true },
+        }
+      }
+
+      if (!session[file]) return prev
+      const next = { ...session }
+      delete next[file]
+      if (Object.keys(next).length === 0) {
+        const result = { ...prev }
+        delete result[sessionId]
+        return result
+      }
+      return {
+        ...prev,
+        [sessionId]: next,
+      }
+    })
+  }
+
+  const requestDiffFile = (file: string) => {
+    const sessionId = currentDiffSessionId()
+    if (!sessionId) return
+    if (diffFileLoading()[sessionId]?.[file]) return
+    setDiffFilePending(sessionId, file, true)
+    vscode.postMessage({ type: "agentManager.requestWorktreeDiffFile", sessionId, file })
+  }
+
+  const diffFileLoadingForCurrent = createMemo(() => {
+    const sessionId = currentDiffSessionId()
+    if (!sessionId) return new Set<string>()
+    return new Set(Object.keys(diffFileLoading()[sessionId] ?? {}))
+  })
 
   const handleConfigureSetupScript = () => {
     vscode.postMessage({ type: "agentManager.configureSetupScript" })
@@ -2463,8 +2538,10 @@ const AgentManagerContent: Component = () => {
                 />
                 <div class="am-diff-panel-wrapper">
                   <DiffPanel
-                    diffs={diffDatas()[selection() === LOCAL ? LOCAL : (session.currentSessionID() ?? "")] ?? []}
+                    diffs={diffDatas()[currentDiffSessionId() ?? ""] ?? []}
                     loading={diffLoading()}
+                    loadingFiles={diffFileLoadingForCurrent()}
+                    sessionId={currentDiffSessionId()}
                     sessionKey={diffSessionKey()}
                     diffStyle={reviewDiffStyle()}
                     onDiffStyleChange={setSharedDiffStyle}
@@ -2472,8 +2549,9 @@ const AgentManagerContent: Component = () => {
                     onCommentsChange={setReviewCommentsForSelection}
                     onClose={() => setDiffOpen(false)}
                     onExpand={selection() !== null ? openReviewTab : undefined}
+                    onRequestDiff={requestDiffFile}
                     onOpenFile={(file) => {
-                      const id = session.currentSessionID()
+                      const id = currentDiffSessionId()
                       if (id) vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file })
                       else if (selection() === LOCAL) vscode.postMessage({ type: "openFile", filePath: file })
                     }}
@@ -2488,14 +2566,17 @@ const AgentManagerContent: Component = () => {
               <FullScreenDiffView
                 diffs={reviewDiffs()}
                 loading={diffLoading()}
+                loadingFiles={diffFileLoadingForCurrent()}
+                sessionId={currentDiffSessionId()}
                 sessionKey={diffSessionKey()}
                 comments={reviewComments()}
                 onCommentsChange={setReviewCommentsForSelection}
                 onSendAll={closeReviewTab}
                 diffStyle={reviewDiffStyle()}
                 onDiffStyleChange={setSharedDiffStyle}
+                onRequestDiff={requestDiffFile}
                 onOpenFile={(file) => {
-                  const id = session.currentSessionID()
+                  const id = currentDiffSessionId()
                   if (id) vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file })
                   else if (selection() === LOCAL) vscode.postMessage({ type: "openFile", filePath: file })
                 }}
