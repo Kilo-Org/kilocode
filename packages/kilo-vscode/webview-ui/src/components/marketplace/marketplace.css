@@ -5,32 +5,35 @@
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  align-items: center;
 }
 
 .marketplace-header {
   flex-shrink: 0;
+  width: 100%;
+  max-width: 900px;
   border-bottom: 1px solid var(--vscode-panel-border, var(--vscode-widget-border, rgba(128, 128, 128, 0.35)));
 }
 
 /* Tab bar */
 .marketplace-tabs {
   display: flex;
-  position: relative;
   gap: 0;
 }
 
 .marketplace-tab {
-  flex: 1;
-  padding: 8px 12px;
+  padding: 8px 16px;
   background: none;
   border: none;
+  border-bottom: 2px solid transparent;
   color: var(--vscode-foreground);
   font-size: 13px;
   font-family: var(--vscode-font-family);
   cursor: pointer;
   opacity: 0.7;
-  transition: opacity 0.15s ease;
-  text-align: center;
+  transition:
+    opacity 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .marketplace-tab:hover {
@@ -40,15 +43,7 @@
 .marketplace-tab.active {
   opacity: 1;
   font-weight: 500;
-}
-
-.marketplace-tab-indicator {
-  position: absolute;
-  bottom: 0;
-  height: 2px;
-  width: 33.33%;
-  background: var(--vscode-focusBorder, var(--vscode-button-background));
-  transition: left 0.2s ease;
+  border-bottom-color: var(--vscode-focusBorder, var(--vscode-button-background));
 }
 
 /* Scrollable content area */
@@ -56,6 +51,8 @@
   flex: 1;
   overflow-y: auto;
   padding: 12px;
+  width: 100%;
+  max-width: 900px;
 }
 
 /* Filter controls */

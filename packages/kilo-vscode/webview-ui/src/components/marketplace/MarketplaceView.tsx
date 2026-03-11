@@ -10,12 +10,6 @@ import "./marketplace.css"
 
 type Tab = "mcp" | "mode" | "skill"
 
-const TAB_POSITIONS: Record<Tab, string> = {
-  mcp: "0%",
-  mode: "33.33%",
-  skill: "66.66%",
-}
-
 export const MarketplaceView: Component = () => {
   const vscode = useVSCode()
 
@@ -29,7 +23,6 @@ export const MarketplaceView: Component = () => {
   const mcpItems = createMemo(() => items().filter((i) => i.type === "mcp"))
   const modeItems = createMemo(() => items().filter((i) => i.type === "mode"))
   const skillItems = createMemo(() => items().filter((i) => i.type === "skill"))
-  const indicator = createMemo(() => TAB_POSITIONS[tab()])
 
   const [installItem, setInstallItem] = createSignal<MarketplaceItem | null>(null)
   const [removeItem, setRemoveItem] = createSignal<MarketplaceItem | null>(null)
@@ -139,7 +132,6 @@ export const MarketplaceView: Component = () => {
           <button class="marketplace-tab" classList={{ active: tab() === "skill" }} onClick={() => setTab("skill")}>
             Skills
           </button>
-          <div class="marketplace-tab-indicator" style={{ left: indicator() }} />
         </div>
       </div>
       <div class="marketplace-content">
