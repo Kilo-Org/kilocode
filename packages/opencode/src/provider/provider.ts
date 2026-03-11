@@ -566,6 +566,35 @@ export namespace Provider {
         },
       }
     },
+    // kilocode_change start - OCA provider
+    oca: async (input) => {
+      const auth = await Auth.get("oca")
+      if (!auth || auth.type !== "oauth") return { autoload: false }
+
+      const baseURL = process.env.OCA_API_BASE ?? "https://code-internal.aiservice.us-chicago-1.oci.oraclecloud.com"
+
+      return {
+        autoload: true,
+        options: {
+          baseURL: `${baseURL}/v1`,
+          apiKey: auth.access,
+          headers: {
+            client: "kilo",
+            "client-version": Installation.VERSION,
+          },
+        },
+        async getModel(sdk: any, modelID: string, options?: Record<string, any>) {
+          // Use responses API for models that support it, otherwise chat completions
+          const model = input.models[modelID]
+          const apiType = model?.options?.apiType
+          if (apiType === "responses" && sdk.responses) {
+            return sdk.responses(modelID)
+          }
+          return sdk.languageModel(modelID)
+        },
+      }
+    },
+    // kilocode_change end
     // kilocode_change start
     kilo: async (input) => {
       const env = Env.all()

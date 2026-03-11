@@ -164,10 +164,100 @@ export namespace ModelCache {
       return fetchKiloModels(options)
     }
 
+    // kilocode_change start
+    if (providerID === "oca") {
+      return fetchOcaModels(options)
+    }
+    // kilocode_change end
+
     // Other providers not implemented yet
     log.debug("provider not implemented", { providerID })
     return {}
   }
+
+  // kilocode_change start
+  const DEFAULT_OCA_BASE_URL = "https://code-internal.aiservice.us-chicago-1.oci.oraclecloud.com"
+
+  async function fetchOcaModels(options: any): Promise<Record<string, any>> {
+    const baseUrl = options?.baseUrl ?? process.env.OCA_API_BASE ?? DEFAULT_OCA_BASE_URL
+    const token = options?.accessToken
+
+    const url = new URL(baseUrl)
+    url.pathname = `${url.pathname.replace(/\/+$/, "")}/v1/model/info`
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      client: "kilo",
+      "client-version": "1.0.0",
+    }
+    if (token) headers["Authorization"] = `Bearer ${token}`
+
+    const response = await fetch(url.toString(), {
+      headers,
+      signal: AbortSignal.timeout(5000),
+    })
+
+    if (!response.ok) {
+      throw new Error(`OCA model fetch failed: ${response.status} ${response.statusText}`)
+    }
+
+    const json = (await response.json()) as { data?: any[] }
+    const dataArray: any[] = Array.isArray(json?.data) ? json.data : []
+    const models: Record<string, any> = {}
+
+    for (const model of dataArray) {
+      const modelId = model?.litellm_params?.model
+      if (typeof modelId !== "string" || !modelId) continue
+
+      const supportedApis: string[] = Array.isArray(model?.model_info?.supported_api_list)
+        ? model.model_info.supported_api_list
+        : []
+      if (!supportedApis.includes("CHAT_COMPLETIONS") && !supportedApis.includes("RESPONSES")) continue
+
+      const info = model?.model_info || {}
+      const maxTokens = typeof model?.litellm_params?.max_tokens === "number" ? model.litellm_params.max_tokens : -1
+      const contextWindow =
+        typeof info?.context_window === "number" && info.context_window > 0 ? info.context_window : 128000
+
+      const apiType = supportedApis.includes("RESPONSES")
+        ? "responses"
+        : supportedApis.includes("CHAT_COMPLETIONS")
+          ? "chat-completions"
+          : "unknown"
+
+      models[modelId] = {
+        id: modelId,
+        name: modelId,
+        family: "",
+        release_date: "",
+        attachment: !!info?.supports_vision,
+        reasoning: !!info?.is_reasoning_model,
+        temperature: true,
+        tool_call: true,
+        cost: {
+          input: info?.input_price !== undefined ? parseFloat(info.input_price) * 1_000_000 : 0,
+          output: info?.output_price !== undefined ? parseFloat(info.output_price) * 1_000_000 : 0,
+          cache_read: info?.cached_price !== undefined ? parseFloat(info.cached_price) * 1_000_000 : 0,
+          cache_write: info?.caching_price !== undefined ? parseFloat(info.caching_price) * 1_000_000 : 0,
+        },
+        limit: {
+          context: contextWindow,
+          output: maxTokens > 0 ? maxTokens : 4096,
+        },
+        modalities: {
+          input: ["text", ...(info?.supports_vision ? ["image"] : [])],
+          output: ["text"],
+        },
+        options: {
+          apiType,
+          supportedApiTypes: supportedApis.filter((a: string) => a === "CHAT_COMPLETIONS" || a === "RESPONSES"),
+        },
+      }
+    }
+
+    return models
+  }
+  // kilocode_change end
 
   /**
    * Get authentication options from multiple sources
@@ -222,6 +312,20 @@ export namespace ModelCache {
         hasOrganizationId: !!options.kilocodeOrganizationId,
       })
     }
+
+    // kilocode_change start
+    if (providerID === "oca") {
+      const auth = await Auth.get(providerID)
+      if (auth?.type === "oauth") {
+        options.accessToken = auth.access
+      }
+      const config = await Config.get()
+      const providerConfig = config.provider?.[providerID]
+      if (providerConfig?.options?.baseURL) {
+        options.baseUrl = providerConfig.options.baseURL
+      }
+    }
+    // kilocode_change end
 
     return options
   }
