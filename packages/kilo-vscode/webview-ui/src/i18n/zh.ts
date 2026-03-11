@@ -660,6 +660,7 @@ export const dict = {
 
   "settings.providers.title": "提供商",
   "settings.providers.description": "提供商设置将在此处可配置。",
+  "settings.providers.betaNotice": "在测试版中，暂时无法在界面中配置其他提供商。此功能将在正式发布前添加。",
   "settings.providers.section.connected": "已连接的提供商",
   "settings.providers.connected.empty": "没有已连接的提供商",
   "settings.providers.section.popular": "热门提供商",

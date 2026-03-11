@@ -662,6 +662,7 @@ export const dict = {
 
   "settings.providers.title": "供應商",
   "settings.providers.description": "可在此調整供應商設定。",
+  "settings.providers.betaNotice": "在測試版中，目前尚無法在介面中設定其他供應商。此功能將在正式發布前加入。",
   "settings.providers.section.connected": "已連線的供應商",
   "settings.providers.connected.empty": "沒有已連線的供應商",
   "settings.providers.section.popular": "熱門供應商",

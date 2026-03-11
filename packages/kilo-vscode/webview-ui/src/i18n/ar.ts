@@ -664,6 +664,8 @@ export const dict = {
 
   "settings.providers.title": "الموفرون",
   "settings.providers.description": "ستكون إعدادات الموفر قابلة للتكوين هنا.",
+  "settings.providers.betaNotice":
+    "في الإصدار التجريبي، لا يمكن بعد تكوين مزودين آخرين في واجهة المستخدم. سيتم إضافة هذا قبل الإصدار.",
   "settings.providers.section.connected": "الموفرون المتصلون",
   "settings.providers.connected.empty": "لا يوجد موفرون متصلون",
   "settings.providers.section.popular": "الموفرون الشائعون",

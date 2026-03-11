@@ -82,6 +82,19 @@ const ProvidersTab: Component = () => {
 
   return (
     <div>
+      <Card>
+        <p
+          style={{
+            "font-size": "12px",
+            color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+            margin: 0,
+            "line-height": "1.5",
+          }}
+        >
+          {language.t("settings.providers.betaNotice")}
+        </p>
+      </Card>
+
       {/* Model selection */}
       <Card>
         <SettingsRow

@@ -670,6 +670,8 @@ export const dict = {
 
   "settings.providers.title": "공급자",
   "settings.providers.description": "공급자 설정은 여기서 구성할 수 있습니다.",
+  "settings.providers.betaNotice":
+    "베타 버전에서는 아직 UI에서 다른 공급자를 구성할 수 없습니다. 정식 출시 전에 추가될 예정입니다.",
   "settings.providers.section.connected": "연결된 공급자",
   "settings.providers.connected.empty": "연결된 공급자 없음",
   "settings.providers.section.popular": "인기 공급자",

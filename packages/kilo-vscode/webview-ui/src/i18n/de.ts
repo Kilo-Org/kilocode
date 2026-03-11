@@ -680,6 +680,8 @@ export const dict = {
 
   "settings.providers.title": "Anbieter",
   "settings.providers.description": "Anbietereinstellungen können hier konfiguriert werden.",
+  "settings.providers.betaNotice":
+    "In der Betaversion ist es noch nicht möglich, andere Anbieter in der Benutzeroberfläche zu konfigurieren. Dies wird vor der Veröffentlichung hinzugefügt.",
   "settings.providers.section.connected": "Verbundene Anbieter",
   "settings.providers.connected.empty": "Keine verbundenen Anbieter",
   "settings.providers.section.popular": "Beliebte Anbieter",

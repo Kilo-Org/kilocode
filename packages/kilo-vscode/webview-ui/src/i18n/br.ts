@@ -671,6 +671,8 @@ export const dict = {
 
   "settings.providers.title": "Provedores",
   "settings.providers.description": "Configurações de provedores estarão disponíveis aqui.",
+  "settings.providers.betaNotice":
+    "Na versão beta, ainda não é possível configurar outros provedores na interface. Isso será adicionado antes do lançamento.",
   "settings.providers.section.connected": "Provedores conectados",
   "settings.providers.connected.empty": "Nenhum provedor conectado",
   "settings.providers.section.popular": "Provedores populares",

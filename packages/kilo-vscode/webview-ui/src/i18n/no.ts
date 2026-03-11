@@ -673,6 +673,8 @@ export const dict = {
 
   "settings.providers.title": "Leverandører",
   "settings.providers.description": "Leverandørinnstillinger vil kunne konfigureres her.",
+  "settings.providers.betaNotice":
+    "I betaversjonen er det foreløpig ikke mulig å konfigurere andre leverandører i brukergrensesnittet. Dette vil bli lagt til før lansering.",
   "settings.providers.section.connected": "Tilkoblede leverandører",
   "settings.providers.connected.empty": "Ingen tilkoblede leverandører",
   "settings.providers.section.popular": "Populære leverandører",

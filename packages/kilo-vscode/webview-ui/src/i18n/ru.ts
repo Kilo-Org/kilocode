@@ -676,6 +676,8 @@ export const dict = {
 
   "settings.providers.title": "Провайдеры",
   "settings.providers.description": "Настройки провайдеров будут доступны здесь.",
+  "settings.providers.betaNotice":
+    "В бета-версии пока нет возможности настраивать других провайдеров в интерфейсе. Это будет добавлено до релиза.",
   "settings.providers.section.connected": "Подключённые провайдеры",
   "settings.providers.connected.empty": "Нет подключённых провайдеров",
   "settings.providers.section.popular": "Популярные провайдеры",

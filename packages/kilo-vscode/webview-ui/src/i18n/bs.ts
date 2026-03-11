@@ -675,6 +675,8 @@ export const dict = {
 
   "settings.providers.title": "Provajderi",
   "settings.providers.description": "Postavke provajdera će se ovdje moći podešavati.",
+  "settings.providers.betaNotice":
+    "U beta verziji još nije moguće konfigurisati druge provajdere u korisničkom interfejsu. Ovo će biti dodano prije izdanja.",
   "settings.providers.section.connected": "Povezani provajderi",
   "settings.providers.connected.empty": "Nema povezanih provajdera",
   "settings.providers.section.popular": "Popularni provajderi",

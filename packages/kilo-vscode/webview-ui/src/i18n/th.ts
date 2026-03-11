@@ -667,6 +667,8 @@ export const dict = {
 
   "settings.providers.title": "ผู้ให้บริการ",
   "settings.providers.description": "การตั้งค่าผู้ให้บริการจะสามารถกำหนดค่าได้ที่นี่",
+  "settings.providers.betaNotice":
+    "ในเวอร์ชันเบต้า ยังไม่สามารถกำหนดค่าผู้ให้บริการอื่นในส่วนติดต่อผู้ใช้ได้ จะเพิ่มฟีเจอร์นี้ก่อนเปิดตัว",
   "settings.providers.section.connected": "ผู้ให้บริการที่เชื่อมต่อ",
   "settings.providers.connected.empty": "ไม่มีผู้ให้บริการที่เชื่อมต่อ",
   "settings.providers.section.popular": "ผู้ให้บริการยอดนิยม",
