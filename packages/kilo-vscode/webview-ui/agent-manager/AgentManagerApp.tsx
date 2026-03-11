@@ -115,6 +115,7 @@ const defaultBindings: Record<string, string> = {
   previousTab: isMac ? "⌘⌥←" : "Ctrl+Alt+←",
   nextTab: isMac ? "⌘⌥→" : "Ctrl+Alt+→",
   showTerminal: isMac ? "⌘/" : "Ctrl+/",
+  toggleDiff: isMac ? "⌘D" : "Ctrl+D",
   showShortcuts: isMac ? "⌘⇧/" : "Ctrl+Shift+/",
   newTab: isMac ? "⌘T" : "Ctrl+T",
   closeTab: isMac ? "⌘W" : "Ctrl+W",
@@ -1969,7 +1970,7 @@ const AgentManagerContent: Component = () => {
             >
               <Show when={!isGitRepo()}>
                 <div class="am-not-git-notice">
-                  <Icon name="info" size="small" />
+                  <Icon name="warning" size="small" />
                   <span>{t("agentManager.notGitRepo")}</span>
                 </div>
               </Show>
@@ -2376,7 +2377,7 @@ const AgentManagerContent: Component = () => {
         {(() => {
           // Show setup overlay: either the transient ready/error state for the selected worktree,
           // or if the selected worktree is still being set up (from busyWorktrees map)
-          const overlayState = () => {
+          const overlayState = (): SetupState | null => {
             const s = setup()
             const sel = selection()
             // Transient ready/error overlay for the selected worktree (or worktree-less setup)
@@ -2386,7 +2387,11 @@ const AgentManagerContent: Component = () => {
               const busy = busyWorktrees().get(sel)
               if (busy?.reason === "setting-up") {
                 const wt = worktrees().find((w) => w.id === sel)
-                return { active: true, message: busy.message, branch: busy.branch ?? wt?.branch }
+                return {
+                  active: true,
+                  message: busy.message ?? "",
+                  branch: busy.branch ?? wt?.branch,
+                } satisfies SetupState
               }
             }
             return null

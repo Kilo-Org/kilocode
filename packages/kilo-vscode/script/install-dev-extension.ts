@@ -29,4 +29,7 @@ try {
 }
 
 const vsix = (await $`ls -1v ${outDir}/*.vsix`.text()).trim().split("\n").at(-1)!
-await $`code --force --install-extension ${vsix}`
+const execPath = process.env.VSCODE_EXEC_PATH ?? ""
+const cli = execPath.toLowerCase().includes("insiders") ? "code-insiders" : "code"
+console.log(`Installing into: ${cli} (VSCODE_EXEC_PATH=${execPath || "<not set>"})`)
+await $`${cli} --force --install-extension ${vsix}`

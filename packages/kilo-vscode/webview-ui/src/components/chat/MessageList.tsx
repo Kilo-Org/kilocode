@@ -18,6 +18,7 @@ import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
 import { formatRelativeDate } from "../../utils/date"
 import { CloudImportDialog } from "./CloudImportDialog"
+import { FeedbackDialog } from "./FeedbackDialog"
 import { VscodeSessionTurn } from "./VscodeSessionTurn"
 import { WorkingIndicator } from "../shared/WorkingIndicator"
 
@@ -121,6 +122,10 @@ export const MessageList: Component<MessageListProps> = (props) => {
               >
                 {language.t("session.cloud.import")}
               </Button>
+              <button class="feedback-button" onClick={() => dialog.show(() => <FeedbackDialog />)}>
+                <Icon name="bubble-5" size="small" />
+                {language.t("feedback.button")}
+              </button>
             </div>
           </Show>
           <Show when={!session.loading()}>

@@ -750,10 +750,17 @@ export const dict = {
   "session.empty": "Aucune session pour l'instant. Cliquez + pour démarrer une nouvelle conversation.",
   "session.cloud.repoOnly": "Uniquement ce dépôt",
   "session.cloud.import": "Importer depuis le cloud",
+  "feedback.button": "Commentaires & support",
+  "feedback.dialog.message":
+    "Nous aimerions recueillir vos commentaires ou vous aider avec les problèmes que vous rencontrez.",
+  "feedback.dialog.github": "Signaler un problème sur GitHub",
+  "feedback.dialog.discord": "Rejoindre notre communauté Discord",
+  "feedback.dialog.support": "Service client",
   "session.cloud.import.title": "Importer depuis le cloud",
   "session.cloud.import.placeholder": "ID de session, URL ou commande kilo import",
   "session.cloud.import.button": "Importer",
   "session.cloud.import.invalid": "Format d'ID de session invalide",
+  "session.cloud.import.legacy": "Cette session semble être une ancienne session qui n'est plus prise en charge.",
   "session.cloud.import.failed": "Échec de l'importation de la session cloud",
 
   "workspace.new": "Nouvel espace de travail",
@@ -942,6 +949,8 @@ export const dict = {
   "settings.agentBehaviour.defaultAgent.title": "Agent par défaut",
   "settings.agentBehaviour.defaultAgent.description": "Agent à utiliser lorsqu'aucun n'est spécifié",
   "settings.agentBehaviour.selectAgent": "Sélectionner un agent à configurer…",
+  "settings.agentBehaviour.selectAgent.title": "Agent",
+  "settings.agentBehaviour.selectAgent.description": "Sélectionner un agent à configurer…",
   "settings.agentBehaviour.modelOverride.title": "Remplacement du modèle",
   "settings.agentBehaviour.modelOverride.description": "Remplacer le modèle par défaut pour cet agent",
   "settings.agentBehaviour.prompt.title": "Prompt personnalisé",
@@ -961,26 +970,45 @@ export const dict = {
   "settings.agentBehaviour.workflowsPlaceholder":
     "Les workflows sont gérés via les fichiers de workflow dans votre espace de travail.",
   "settings.agentBehaviour.notImplemented": "Pas encore implémenté.",
-  "settings.autoApprove.setAll": "Définir toutes les autorisations",
+  "settings.autoApprove.description":
+    "Définissez comment les outils sont autorisés à s'exécuter. La plupart des outils sont définis sur Autoriser par défaut. doom_loop et external_directory sont définis sur Demander par défaut.",
   "settings.autoApprove.level.allow": "Autoriser",
   "settings.autoApprove.level.ask": "Demander",
   "settings.autoApprove.level.deny": "Refuser",
-  "settings.autoApprove.tool.read": "Lire le contenu des fichiers",
-  "settings.autoApprove.tool.edit": "Modifier ou créer des fichiers",
-  "settings.autoApprove.tool.glob": "Rechercher des fichiers par motif",
-  "settings.autoApprove.tool.grep": "Rechercher le contenu des fichiers",
-  "settings.autoApprove.tool.list": "Lister le contenu du répertoire",
-  "settings.autoApprove.tool.bash": "Exécuter des commandes shell",
-  "settings.autoApprove.tool.task": "Créer des tâches de sous-agent",
-  "settings.autoApprove.tool.skill": "Exécuter des compétences",
-  "settings.autoApprove.tool.lsp": "Opérations du serveur de langage",
-  "settings.autoApprove.tool.todoread": "Lire les listes de tâches",
-  "settings.autoApprove.tool.todowrite": "Écrire les listes de tâches",
-  "settings.autoApprove.tool.webfetch": "Récupérer des pages web",
-  "settings.autoApprove.tool.websearch": "Rechercher sur le web",
-  "settings.autoApprove.tool.codesearch": "Rechercher dans le code",
-  "settings.autoApprove.tool.external_directory": "Accéder aux fichiers hors de l'espace de travail",
-  "settings.autoApprove.tool.doom_loop": "Continuer après des échecs répétés",
+  "settings.autoApprove.wildcardLabel.commands": "Toutes les commandes (*)",
+  "settings.autoApprove.wildcardLabel.paths": "Tous les chemins (*)",
+  "settings.autoApprove.exceptions": "Exceptions",
+  "settings.autoApprove.addCommand": "Ajouter une commande",
+  "settings.autoApprove.addPath": "Ajouter un chemin",
+  "settings.autoApprove.placeholder.command": "ex. git *",
+  "settings.autoApprove.placeholder.path": "ex. *.env",
+  "settings.autoApprove.tool.read":
+    "Lire des fichiers. Permet à l'agent de lire les fichiers correspondant au chemin spécifié.",
+  "settings.autoApprove.tool.edit":
+    "Modifier des fichiers. Permet à l'agent de créer ou d'éditer des fichiers, y compris les patchs et les mises à jour de plusieurs fichiers.",
+  "settings.autoApprove.tool.glob":
+    "Faire correspondre les fichiers par modèle. Permet la correspondance de fichiers à l'aide de modèles glob (ex. src/**/*.ts).",
+  "settings.autoApprove.tool.grep":
+    "Rechercher dans le contenu des fichiers. Permet la recherche basée sur les expressions régulières dans les fichiers.",
+  "settings.autoApprove.tool.list":
+    "Lister le contenu du répertoire. Permet de visualiser les fichiers et dossiers dans un répertoire.",
+  "settings.autoApprove.tool.bash":
+    "Exécuter des commandes de terminal. Permet l'exécution de commandes shell (ex. git status).",
+  "settings.autoApprove.tool.task":
+    "Lancer des sous-agents. Permet de démarrer des sous-agents spécialisés pour des tâches spécifiques.",
+  "settings.autoApprove.tool.skill":
+    "Charger des compétences. Permet de charger des compétences prédéfinies par leur nom.",
+  "settings.autoApprove.tool.lsp":
+    "Interroger le serveur de langage. Permet d'exécuter des requêtes de serveur de langage pour l'intelligence du code.",
+  "settings.autoApprove.tool.todoreadwrite":
+    "Gérer la liste des tâches. Permet de lire et de mettre à jour la liste des tâches interne.",
+  "settings.autoApprove.tool.webfetch": "Récupérer une URL. Permet de récupérer le contenu d'une URL spécifique.",
+  "settings.autoApprove.tool.websearchcodesearch":
+    "Rechercher sur le Web ou dans le code. Permet d'effectuer des recherches externes sur le Web ou dans le code.",
+  "settings.autoApprove.tool.external_directory":
+    "Accéder aux fichiers en dehors de l'espace de travail. Déclenché lors de l'accès à des fichiers en dehors du répertoire de projet actuel.",
+  "settings.autoApprove.tool.doom_loop":
+    "Prévenir les actions identiques répétées. Déclenché lorsque le même appel d'outil se répète avec une entrée identique.",
   "settings.checkpoints.enable.title": "Activer les instantanés",
   "settings.checkpoints.enable.description": "Créer des points de contrôle avant les modifications de fichiers",
   "settings.context.autoCompaction.title": "Compaction automatique",

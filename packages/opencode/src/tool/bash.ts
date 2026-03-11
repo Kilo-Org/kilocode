@@ -1,5 +1,6 @@
 import z from "zod"
 import { spawn } from "child_process"
+import { StringDecoder } from "string_decoder" // kilocode_change - fix UTF-8 multi-byte split
 import { Tool } from "./tool"
 import path from "path"
 import DESCRIPTION from "./bash.txt"
@@ -178,6 +179,7 @@ export const BashTool = Tool.define("bash", async () => {
         },
         stdio: ["ignore", "pipe", "pipe"],
         detached: process.platform !== "win32",
+        windowsHide: true, // kilocode_change - prevent CMD window flash on Windows
       })
 
       let output = ""
@@ -190,8 +192,12 @@ export const BashTool = Tool.define("bash", async () => {
         },
       })
 
-      const append = (chunk: Buffer) => {
-        output += chunk.toString()
+      // kilocode_change start - use StringDecoder to handle multi-byte UTF-8 characters split across chunks
+      // separate decoder per stream so partial bytes from one pipe don't corrupt the other
+      const stdoutDecoder = new StringDecoder("utf8")
+      const stderrDecoder = new StringDecoder("utf8")
+      const append = (decoder: StringDecoder) => (chunk: Buffer) => {
+        output += decoder.write(chunk)
         ctx.metadata({
           metadata: {
             // truncate the metadata to avoid GIANT blobs of data (has nothing to do w/ what agent can access)
@@ -200,9 +206,10 @@ export const BashTool = Tool.define("bash", async () => {
           },
         })
       }
+      // kilocode_change end
 
-      proc.stdout?.on("data", append)
-      proc.stderr?.on("data", append)
+      proc.stdout?.on("data", append(stdoutDecoder))
+      proc.stderr?.on("data", append(stderrDecoder))
 
       let timedOut = false
       let aborted = false
@@ -233,7 +240,9 @@ export const BashTool = Tool.define("bash", async () => {
           ctx.abort.removeEventListener("abort", abortHandler)
         }
 
-        proc.once("exit", () => {
+        // kilocode_change - use "close" instead of "exit" so stdio streams are fully drained
+        // before we flush the StringDecoders and read `output`
+        proc.once("close", () => {
           exited = true
           cleanup()
           resolve()
@@ -245,6 +254,10 @@ export const BashTool = Tool.define("bash", async () => {
           reject(error)
         })
       })
+
+      // kilocode_change - flush any trailing buffered bytes from decoders
+      output += stdoutDecoder.end()
+      output += stderrDecoder.end()
 
       const resultMetadata: string[] = []
 

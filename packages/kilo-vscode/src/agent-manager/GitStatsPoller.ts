@@ -1,11 +1,11 @@
 import * as fs from "fs"
 import * as path from "path"
 import type { KiloClient, FileDiff } from "@kilocode/sdk/v2/client"
-import type { Worktree } from "./WorktreeStateManager"
+import { remoteRef, type Worktree } from "./WorktreeStateManager"
 import type { GitOps } from "./GitOps"
 import { normalizePath } from "./git-import"
 
-interface WorktreeStats {
+export interface WorktreeStats {
   worktreeId: string
   files: number
   additions: number
@@ -14,7 +14,7 @@ interface WorktreeStats {
   behind: number
 }
 
-interface LocalStats {
+export interface LocalStats {
   branch: string
   files: number
   additions: number
@@ -147,9 +147,10 @@ export class GitStatsPoller {
       await Promise.all(
         active.map(async (wt) => {
           try {
+            const base = remoteRef(wt)
             const [{ data: diffs }, ab] = await Promise.all([
-              client.worktree.diff({ directory: wt.path, base: wt.parentBranch }, { throwOnError: true }),
-              this.git.aheadBehind(wt.path, wt.parentBranch),
+              client.worktree.diff({ directory: wt.path, base }, { throwOnError: true }),
+              this.git.aheadBehind(wt.path, base, wt.remote),
             ])
             const files = diffs.length
             const additions = diffs.reduce((sum: number, diff: FileDiff) => sum + diff.additions, 0)
@@ -237,8 +238,8 @@ export class GitStatsPoller {
       if (!branch || branch === "HEAD") return
 
       const tracking = await this.git.resolveTrackingBranch(root, branch)
-
       const base = tracking ?? (await this.git.resolveDefaultBranch(root, branch))
+      const remote = await this.git.resolveRemote(root, branch).catch(() => undefined)
 
       let files: number
       let additions: number
@@ -250,7 +251,7 @@ export class GitStatsPoller {
           this.options.log(`Local stats: using HTTP client with base=${base}`)
           const [{ data: diffs }, ab] = await Promise.all([
             client.worktree.diff({ directory: root, base }, { throwOnError: true }),
-            this.git.aheadBehind(root, base),
+            this.git.aheadBehind(root, base, remote),
           ])
           files = diffs.length
           additions = diffs.reduce((sum: number, d: FileDiff) => sum + d.additions, 0)

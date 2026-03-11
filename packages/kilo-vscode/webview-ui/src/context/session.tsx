@@ -250,7 +250,7 @@ export const SessionProvider: ParentComponent = (props) => {
   })
 
   // Global model selection per agent/mode
-  // Precedence: user override > per-mode config > global config model > VS Code default > kilo-auto/frontier
+  // Precedence: user override > per-mode config > global config model > VS Code default > kilo-auto/free
   const selected = createMemo<ModelSelection | null>(() => {
     const agentName = selectedAgentName()
     const override = store.modelSelections[agentName]
@@ -885,6 +885,11 @@ export const SessionProvider: ParentComponent = (props) => {
       }
       setStore("messages", sid, (msgs = []) => [...msgs, temp])
       setStore("parts", tempId, [{ type: "text" as const, id: `${tempId}-text`, text }])
+      // The optimistic message is now in the DOM but the session status is
+      // still "idle" (the CLI backend hasn't started yet), so the auto-scroll
+      // ResizeObserver won't scroll on its own. Force scroll to bottom so the
+      // user's own message is immediately visible.
+      queueMicrotask(() => window.dispatchEvent(new CustomEvent("resumeAutoScroll")))
     }
 
     const agent = selectedAgentName() !== defaultAgent() ? selectedAgentName() : undefined

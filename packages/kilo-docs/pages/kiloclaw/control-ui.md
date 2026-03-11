@@ -5,7 +5,7 @@ description: "Browser-based dashboard for managing your OpenClaw instance"
 
 # OpenClaw Control UI
 
-The Control UI is a browser-based dashboard (built with Vite + Lit) served by the OpenClaw Gateway on the same port as the gateway itself (default: `http://localhost:18789/`). It connects via WebSocket and gives you real-time control over your agent, channels, sessions, and system configuration. For KiloClaw users, see [Accessing the Control UI](/docs/automate/kiloclaw/dashboard#accessing-the-control-ui) to get started.
+The Control UI is a browser-based dashboard (built with Vite + Lit) served by the OpenClaw Gateway on the same port as the gateway itself (default: `http://localhost:18789/`). It connects via WebSocket and gives you real-time control over your agent, channels, sessions, and system configuration. For KiloClaw users, see [Accessing the Control UI](/docs/kiloclaw/dashboard#accessing-the-control-ui) to get started.
 
 ## Features
 
@@ -24,12 +24,30 @@ The Control UI is a browser-based dashboard (built with Vite + Lit) served by th
 For more details, please see the official [OpenClaw documentation](https://docs.openclaw.ai/web/control-ui).
 
 {% callout type="warning" %}
-Do not use the **Update** feature in the Control UI to update KiloClaw. Use **Redeploy** from the [KiloClaw Dashboard](/docs/automate/kiloclaw/dashboard#redeploy) instead. Updating via the Control UI will not apply the correct KiloClaw platform image and may break your instance.
+Do not use the **Update** feature in the Control UI to update KiloClaw. Use **Redeploy** from the [KiloClaw Dashboard](/docs/kiloclaw/dashboard#redeploy) instead. Updating via the Control UI will not apply the correct KiloClaw platform image and may break your instance.
 {% /callout %}
+
+## Changing Models
+
+The Control UI Chat tab doubles as a command line for model management. KiloClaw exposes 335+ models through the `kilocode` provider and you can browse and switch between them without leaving the chat.
+
+| Command                              | Description                                                                     |
+| ------------------------------------ | ------------------------------------------------------------------------------- |
+| `/model status`                      | View the currently active model and provider                                    |
+| `/models kilocode`                   | Browse available models (paginated, 20 per page)                                |
+| `/models kilocode <page>`            | Jump to a specific page (e.g. `/models kilocode 2`)                             |
+| `/model kilocode/<provider>/<model>` | Switch to a specific model (e.g. `/model kilocode/anthropic/claude-sonnet-4.6`) |
+| `/models kilocode all`               | List every available model at once                                              |
+
+Each `/models` response includes helper text at the bottom with shortcuts for switching, paging, and listing all models.
+
+To change the default model for all new sessions, edit `agents.defaults.model.primary` in your `openclaw.json` via **Config** in the Control UI (or the [KiloClaw Dashboard](/docs/kiloclaw/dashboard#changing-the-model) for a quick dropdown pick).
+
+For the full list of providers, advanced configuration, and CLI commands, see the [OpenClaw Model Providers documentation](https://docs.openclaw.ai/providers).
 
 ## Authentication
 
-Auth is handled via token or password on the WebSocket handshake. We use the one time "access code" from your KiloClaw Dashboard to pair your device. Other remote connections require one-time device pairing — the pairing request appears on the [KiloClaw Dashboard](/docs/automate/kiloclaw/dashboard#pairing-requests) or in the Control UI itself.
+Auth is handled via token or password on the WebSocket handshake. Remote connections require one-time device pairing — the pairing request appears on the [KiloClaw Dashboard](/docs/kiloclaw/dashboard#pairing-requests) or in the Control UI itself.
 
 ## Exec Approvals
 
@@ -91,12 +109,8 @@ Approval prompts can also be forwarded to chat channels (Slack, Telegram, Discor
 
 Navigate to **Nodes > Exec Approvals** in the Control UI to edit defaults, per-agent overrides, and allowlists. Select a scope (Defaults or a specific agent), adjust the policy, add or remove allowlist patterns, then save.
 
-{% callout type="info" %}
-If a node does not yet advertise exec approval capabilities, edit its `~/.openclaw/exec-approvals.json` file directly. You can also use the CLI: `openclaw approvals`.
-{% /callout %}
-
 ## Related
 
-- [KiloClaw Dashboard](/docs/automate/kiloclaw/dashboard)
-- [KiloClaw Overview](/docs/automate/kiloclaw/overview)
-- [Connecting Chat Platforms](/docs/automate/kiloclaw/chat-platforms)
+- [KiloClaw Dashboard](/docs/kiloclaw/dashboard)
+- [KiloClaw Overview](/docs/kiloclaw/overview)
+- [Connecting Chat Platforms](/docs/kiloclaw/chat-platforms)

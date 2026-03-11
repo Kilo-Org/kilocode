@@ -108,14 +108,12 @@ const WithSessions: ParentComponent<{ sessions?: typeof mockSessions }> = (props
                   <SessionContext.Provider value={session as any}>
                     <DataProvider
                       data={{
-                        session: sessions,
+                        session: sessions as any,
                         session_status: {},
                         session_diff: {},
                         message: {},
                         part: {},
-                        permission: {},
-                        question: {},
-                        provider: { all: [], connected: false, default: {} },
+                        provider: { all: [], connected: [] as string[], default: {} as any },
                       }}
                       directory="/project/"
                     >

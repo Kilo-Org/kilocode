@@ -5,7 +5,7 @@ description: "Managing your KiloClaw instance from the dashboard"
 
 # KiloClaw Dashboard
 
-This page covers everything you can do from the KiloClaw dashboard. For getting started, see [KiloClaw Overview](/docs/automate/kiloclaw/overview).
+This page covers everything you can do from the KiloClaw dashboard. For getting started, see [KiloClaw Overview](/docs/kiloclaw/overview).
 
 {% image src="/docs/img/kiloclaw/dashboard.png" alt="Connect account screen" width="800" caption="The KiloClaw Dashboard" /%}
 
@@ -80,13 +80,43 @@ Gateway process info is only available when the machine is running.
 
 Select a model from the dropdown and click **Save & Provision**. The API key is platform-managed and refreshes automatically when you save — you never need to enter one. The key has a 30-day expiry.
 
+For access to the full catalog of 335+ models, use the `/model` and `/models` commands in the [Control UI Chat](/docs/kiloclaw/control-ui#changing-models).
+
 ### Channels
 
-You can connect Telegram, Discord, and Slack by entering bot tokens in the Settings tab. See [Connecting Chat Platforms](/docs/automate/kiloclaw/chat-platforms) for setup instructions.
+You can connect Telegram, Discord, and Slack by entering bot tokens in the Settings tab. See [Connecting Chat Platforms](/docs/kiloclaw/chat-platforms) for setup instructions.
 
 {% callout type="info" %}
 After saving channel tokens, you need to **Redeploy** or **Restart OpenClaw** for the changes to take effect.
 {% /callout %}
+
+### Version Pinning
+
+You can pin your instance to a specific OpenClaw version and variant from the Settings tab. This gives you control over when you upgrade — your instance stays on the pinned version until you choose to change it.
+
+Select a version and variant from the dropdowns and click **Save**. To return to automatic updates, clear the version pin and save.
+
+See [Version Pinning](/docs/kiloclaw/version-pinning) for details.
+
+### Restore Default Config
+
+If your OpenClaw configuration gets corrupted — for example, if the agent edits `openclaw.json` and introduces an error — you can restore it without a full redeploy.
+
+In **Settings > Danger Zone**, click **Restore Config**. This will:
+
+1. Back up your current `openclaw.json` to `/root/.openclaw/`
+2. Rewrite `openclaw.json` from your environment variables (channel tokens, model settings, etc.)
+3. Restart the gateway
+
+Your files, workspace, and persistent data are not affected. Only the OpenClaw configuration file is reset.
+
+> 💡 **Tip**
+> If your instance is in a crash loop and you can't access the Control UI, try **Restore Config** from the KiloClaw dashboard first before redeploying.
+
+{% callout type="warning" %}
+This action cannot be undone. Make sure you've saved any important changes to your configuration before restoring.
+{% /callout %}
+
 
 ### Stop, Destroy & Restore
 
@@ -98,13 +128,11 @@ At the bottom of Settings:
 
 ## Accessing the Control UI
 
-When your instance is running you can access the [OpenClaw Control UI](/docs/automate/kiloclaw/control-ui) — a browser-based dashboard for managing your agent, channels, sessions, exec approvals, and more:
+When your instance is running you can access the [OpenClaw Control UI](/docs/kiloclaw/control-ui) — a browser-based dashboard for managing your agent, channels, sessions, exec approvals, and more:
 
-1. Click **Access Code** to generate a one-time code (expires in 10 minutes)
-2. Click **Open** to launch the OpenClaw web interface in a new tab
-3. Enter the access code to authenticate
+1. Click **Open** to launch the OpenClaw web interface in a new tab
 
-See the [Control UI reference](/docs/automate/kiloclaw/control-ui) for a full overview of its capabilities.
+See the [Control UI reference](/docs/kiloclaw/control-ui) for a full overview of its capabilities.
 
 {% callout type="warning" %}
 Do not use the **Update** feature in the OpenClaw Control UI to update KiloClaw. Use **Redeploy** from the KiloClaw Dashboard instead. Updating via the Control UI will not apply the correct KiloClaw platform image and may break your instance.
@@ -117,7 +145,7 @@ When your instance is running, the dashboard shows any pending pairing requests.
 - Someone messages your bot on Telegram, Discord, or Slack for the first time
 - A new browser or device connects to the Control UI
 
-You need to **approve** each request before the user or device can interact with your agent. See [Pairing Requests](/docs/automate/kiloclaw/chat-platforms#pairing-requests) for details.
+You need to **approve** each request before the user or device can interact with your agent. See [Pairing Requests](/docs/kiloclaw/chat-platforms#pairing-requests) for details.
 
 ## Changelog
 
@@ -155,8 +183,8 @@ These are the beta specifications for machines and subject to change without not
 
 ## Related
 
-- [KiloClaw Overview](/docs/automate/kiloclaw/overview)
-- [OpenClaw Control UI](/docs/automate/kiloclaw/control-ui)
-- [Connecting Chat Platforms](/docs/automate/kiloclaw/chat-platforms)
-- [Troubleshooting](/docs/automate/kiloclaw/troubleshooting)
-- [KiloClaw Pricing](/docs/automate/kiloclaw/pricing)
+- [KiloClaw Overview](/docs/kiloclaw/overview)
+- [OpenClaw Control UI](/docs/kiloclaw/control-ui)
+- [Connecting Chat Platforms](/docs/kiloclaw/chat-platforms)
+- [Troubleshooting](/docs/kiloclaw/troubleshooting)
+- [KiloClaw Pricing](/docs/kiloclaw/pricing)

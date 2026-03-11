@@ -254,7 +254,9 @@ export interface ModelSelection {
 
 export type PermissionLevel = "allow" | "ask" | "deny"
 
-export type PermissionConfig = Partial<Record<string, PermissionLevel>>
+export type PermissionRule = PermissionLevel | Record<string, PermissionLevel>
+
+export type PermissionConfig = Partial<Record<string, PermissionRule>>
 
 export interface AgentConfig {
   model?: string | null
@@ -654,7 +656,10 @@ export interface WorktreeState {
   id: string
   branch: string
   path: string
+  /** Bare branch name (e.g. "main"), without remote prefix. */
   parentBranch: string
+  /** Remote name (e.g. "origin"). */
+  remote?: string
   createdAt: string
   /** Shared identifier for worktrees created together via multi-version mode. */
   groupId?: string
@@ -811,6 +816,14 @@ export interface LocalGitStats {
 export interface AgentManagerLocalStatsMessage {
   type: "agentManager.localStats"
   stats: LocalGitStats
+}
+
+// Set the model for a session (extension → webview, used during multi-version creation)
+export interface AgentManagerSetSessionModelMessage {
+  type: "agentManager.setSessionModel"
+  sessionId: string
+  providerID: string
+  modelID: string
 }
 
 // Request webview to send initial prompt to a newly created session (extension → webview)
@@ -1003,6 +1016,7 @@ export type ExtensionMessage =
   | AgentManagerStateMessage
   | AgentManagerKeybindingsMessage
   | AgentManagerMultiVersionProgressMessage
+  | AgentManagerSetSessionModelMessage
   | AgentManagerSendInitialMessage
   | SetChatBoxMessage
   | AppendChatBoxMessage
@@ -1375,6 +1389,7 @@ export interface ModelAllocation {
 export interface CreateMultiVersionRequest {
   type: "agentManager.createMultiVersion"
   text?: string
+  name?: string
   versions: number
   providerID?: string
   modelID?: string

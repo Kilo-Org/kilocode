@@ -5,27 +5,65 @@ description: "Connect your KiloClaw agent to Telegram, Discord, Slack, and more"
 
 # Connecting Chat Platforms
 
-KiloClaw supports connecting your AI agent to Telegram, Discord, and Slack. You can configure channels from the **Settings** tab on your [KiloClaw dashboard](/docs/automate/kiloclaw/dashboard#channels), or from the OpenClaw Control UI after accessing your instance.
+KiloClaw supports connecting your AI agent to Telegram, Discord, and Slack. You can configure channels from the **Settings** tab on your [KiloClaw dashboard](/docs/kiloclaw/dashboard#channels), or from the OpenClaw Control UI after accessing your instance.
 
 ## Supported Platforms
 
 ### Telegram
 
-To connect Telegram, you need a **Bot Token** from [@BotFather](https://t.me/BotFather) on Telegram.
-
-Enter the token in the Settings tab and click **Save**. You can remove or replace a configured token at any time.
+1. Open Telegram and search for [@BotFather](https://t.me/BotFather)
+2. Send `/newbot` and follow the prompts to create your bot
+3. Copy the **Bot Token** that BotFather gives you
+4. Go to the **Settings** tab on your [KiloClaw dashboard](/docs/kiloclaw/dashboard)
+5. Paste the token into the **Telegram Bot Token** field
+6. Click **Save**
+7. Redeploy your KiloClaw instance
 
 {% image src="/docs/img/kiloclaw/telegram.png" alt="Connect account screen" width="800" caption="Telegram bot token entry" /%}
 
-Advanced settings such as DM policy, allow lists, and groups can be configured in the OpenClaw Control UI after connecting.
+You can remove or replace a configured token at any time.
+
+> ℹ️ **Info**
+> Advanced settings such as DM policy, allow lists, and groups can be configured in the OpenClaw Control UI after connecting.
 
 ### Discord
 
 To connect Discord, you need a **Bot Token** from the [Discord Developer Portal](https://discord.com/developers/applications).
+#### Enable Privileged Intents
+
+Still on the **Bot** page, scroll down to **Privileged Gateway Intents** and enable:
+
+- **Message Content Intent** (required)
+- **Server Members Intent** (recommended — needed for role allowlists and name matching)
+- **Presence Intent** (optional)
+#### Copy Your Bot Token
+
+1. Scroll back up on the **Bot** page and click **Reset Token**
+
+> 📝 **Note**
+> Despite the name, this generates your first token — nothing is being "reset."
+
+2. Copy the token that appears and paste it into the **Discord Bot Token** field in your KiloClaw dashboard.
 
 {% image src="/docs/img/kiloclaw/discord.png" alt="Connect account screen" width="800" caption="Discord bot token entry" /%}
 
 Enter the token in the Settings tab and click **Save**. You can remove or replace a configured token at any time.
+#### Generate an Invite URL and Add the Bot to Your Server
+
+1. Click **OAuth2** on the sidebar
+2. Scroll down to **OAuth2 URL Generator** and enable:
+   - `bot`
+   - `applications.commands`
+3. A **Bot Permissions** section will appear below. Enable:
+   - View Channels
+   - Send Messages
+   - Read Message History
+   - Embed Links
+   - Attach Files
+   - Add Reactions (optional)
+4. Copy the generated URL at the bottom
+5. Paste it into your browser, select your server, and click **Continue**
+6. You should now see your bot in the Discord server
 
 ### Slack
 
@@ -40,7 +78,7 @@ Both tokens are required — you cannot save with only one.
 
 ## Configuring a Channel
 
-1. Open your [KiloClaw dashboard](/docs/automate/kiloclaw/dashboard)
+1. Open your [KiloClaw dashboard](/docs/kiloclaw/dashboard)
 2. Go to the **Settings** tab
 3. Scroll to the **Channels** section
 4. Enter the required token(s) for your platform
@@ -69,8 +107,8 @@ Additional platforms (such as WhatsApp) are planned for future releases. For the
 
 ## Related
 
-- [KiloClaw Overview](/docs/automate/kiloclaw/overview)
-- [Dashboard Reference](/docs/automate/kiloclaw/dashboard)
-- [Troubleshooting](/docs/automate/kiloclaw/troubleshooting)
-- [KiloClaw Pricing](/docs/automate/kiloclaw/pricing)
+- [KiloClaw Overview](/docs/kiloclaw/overview)
+- [Dashboard Reference](/docs/kiloclaw/dashboard)
+- [Troubleshooting](/docs/kiloclaw/troubleshooting)
+- [KiloClaw Pricing](/docs/kiloclaw/pricing)
 - [OpenClaw Documentation](https://docs.openclaw.ai)

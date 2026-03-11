@@ -33,6 +33,10 @@ export const CloudImportDialog: Component<CloudImportDialogProps> = (props) => {
       setError(language.t("session.cloud.import.invalid"))
       return
     }
+    if (!id.startsWith("ses_")) {
+      setError(language.t("session.cloud.import.legacy"))
+      return
+    }
     props.onImport(id)
     dialog.close()
   }

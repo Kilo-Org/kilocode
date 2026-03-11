@@ -2,6 +2,14 @@
  * Drag-and-drop sortable tab components for the agent manager tab bar.
  */
 
+declare module "solid-js" {
+  namespace JSX {
+    interface Directives {
+      sortable: true
+    }
+  }
+}
+
 import { Component, onCleanup } from "solid-js"
 import { createSortable, useDragDropContext } from "@thisbeyond/solid-dnd"
 import type { Transformer } from "@thisbeyond/solid-dnd"
@@ -46,7 +54,6 @@ export const SortableTab: Component<{
   // Prevent tree-shaking of the directive reference used by `use:sortable`
   void sortable
   return (
-    // @ts-ignore - use:sortable is a SolidJS directive compiled by esbuild-plugin-solid
     <div
       use:sortable
       class={`am-tab-sortable ${sortable.isActiveDraggable ? "am-tab-dragging" : ""}`}
@@ -98,7 +105,6 @@ export const SortableReviewTab: Component<{
   void sortable
 
   return (
-    // @ts-ignore - use:sortable is a SolidJS directive compiled by esbuild-plugin-solid
     <div
       use:sortable
       class={`am-tab-sortable ${sortable.isActiveDraggable ? "am-tab-dragging" : ""}`}

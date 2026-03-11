@@ -1,7 +1,7 @@
 module.exports = [
   {
-    source: "/docs/automate/kiloclaw",
-    destination: "/docs/automate/kiloclaw/overview",
+    source: "/docs/contributing/architecture/model-provider-blocklist",
+    destination: "/docs/collaborate/enterprise/model-access-controls",
     basePath: false,
     permanent: true,
   },
@@ -792,6 +792,12 @@ module.exports = [
   {
     source: "/docs/features/tools/write-to-file",
     destination: "/docs/automate/tools/write-to-file",
+    basePath: false,
+    permanent: true,
+  },
+  {
+    source: "/docs/automate/kiloclaw/:path*",
+    destination: "/docs/kiloclaw/:path*",
     basePath: false,
     permanent: true,
   },
