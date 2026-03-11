@@ -1241,11 +1241,6 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
                 modelID={(props.message as AssistantMessage).modelID}
               />
             </Show>
-            <Show when={provenance() && !meta()}>
-              <span data-slot="text-part-meta" class="text-12-regular text-text-weak cursor-default">
-                {provenance()}
-              </span>
-            </Show>
             <Show when={meta()}>
               <span data-slot="text-part-meta" class="text-12-regular text-text-weak cursor-default">
                 {meta()}
