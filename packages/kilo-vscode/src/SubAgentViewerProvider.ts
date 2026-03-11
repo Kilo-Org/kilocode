@@ -100,6 +100,79 @@ export class SubAgentViewerProvider implements vscode.Disposable {
     })
   }
 
+  /**
+   * Restore a deserialized panel after VS Code reload.
+   * Wires up the panel the same way openPanel() does, but reuses the
+   * already-existing WebviewPanel that VS Code hands back from the serializer.
+   */
+  restorePanel(panel: vscode.WebviewPanel, sessionID: string): void {
+    // If we already have a panel for this session, dispose the stale one
+    const existing = this.panels.get(sessionID)
+    if (existing) {
+      existing.dispose()
+    }
+
+    panel.iconPath = {
+      light: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-light.svg"),
+      dark: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-dark.svg"),
+    }
+
+    const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context)
+    provider.resolveWebviewPanel(panel)
+
+    // Once the webview is ready, fetch the session and display it in read-only mode.
+    const readyDisposable = panel.webview.onDidReceiveMessage(async (msg) => {
+      if (msg.type !== "webviewReady") return
+      readyDisposable.dispose()
+
+      // Small delay to let KiloProvider's own webviewReady handler finish first
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      try {
+        const client = this.connectionService.getClient()
+        const { data: session } = await client.session.get({ sessionID }, { throwOnError: true })
+
+        provider.registerSession(session)
+
+        const { data: messagesData } = await client.session.messages({ sessionID }, { throwOnError: true })
+        const messages = messagesData.map((m) => ({
+          ...m.info,
+          parts: m.parts,
+          createdAt: new Date(m.info.time.created).toISOString(),
+        }))
+        provider.postMessage({
+          type: "messagesLoaded",
+          sessionID,
+          messages,
+        })
+
+        provider.postMessage({ type: "viewSubAgentSession", sessionID })
+      } catch (err) {
+        console.error("[Kilo New] SubAgentViewerProvider: Failed to restore session:", err)
+        panel.dispose()
+        return
+      }
+    })
+
+    // Listen for closePanel from the webview (back button)
+    const closeDisposable = panel.webview.onDidReceiveMessage((msg) => {
+      if (msg.type === "closePanel") {
+        panel.dispose()
+      }
+    })
+
+    this.panels.set(sessionID, panel)
+    this.providers.set(sessionID, provider)
+
+    panel.onDidDispose(() => {
+      console.log("[Kilo New] Restored sub-agent viewer panel disposed:", sessionID)
+      closeDisposable.dispose()
+      provider.dispose()
+      this.panels.delete(sessionID)
+      this.providers.delete(sessionID)
+    })
+  }
+
   dispose(): void {
     for (const [, panel] of this.panels) {
       panel.dispose()

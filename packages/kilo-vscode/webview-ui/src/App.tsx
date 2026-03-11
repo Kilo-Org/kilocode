@@ -179,6 +179,7 @@ const AppContent: Component = () => {
   const [migrationReturnView, setMigrationReturnView] = createSignal<ViewType>("newTask") // legacy-migration
   const session = useSession()
   const server = useServer()
+  const vsc = useVSCode()
 
   const handleViewAction = (action: string) => {
     switch (action) {
@@ -224,6 +225,8 @@ const AppContent: Component = () => {
         console.log("[Kilo New] App: 🔍 viewSubAgentSession:", message.sessionID)
         session.setCurrentSessionID(message.sessionID)
         setCurrentView("subAgentViewer")
+        // Persist session ID so VS Code can restore this panel after reload
+        vsc.setState({ sessionID: message.sessionID })
       }
     }
     window.addEventListener("message", handler)
