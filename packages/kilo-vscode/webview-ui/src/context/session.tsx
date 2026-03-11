@@ -673,7 +673,7 @@ export const SessionProvider: ParentComponent = (props) => {
     const family = new Set<string>([rootID])
     const queue = [rootID]
     while (queue.length > 0) {
-      const sid = queue.shift()!
+      const sid = queue.pop()!
       const msgs = store.messages[sid]
       if (!msgs) continue
       for (const msg of msgs) {
