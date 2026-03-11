@@ -250,6 +250,7 @@
         "zod": "^3.24.2",
       },
       "devDependencies": {
+        "@modelcontextprotocol/sdk": "^1.25.2",
         "@playwright/test": "1.58.2",
         "@storybook/addon-docs": "10.2.10",
         "@types/diff": "^6.0.0",
