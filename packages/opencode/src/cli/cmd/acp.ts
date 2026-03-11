@@ -9,6 +9,7 @@ import { withNetworkOptions, resolveNetworkOptions } from "../network"
 
 const log = Log.create({ service: "acp-command" })
 
+// kilocode_change start
 export const AcpCommand = cmd({
   command: "acp",
   describe: "start ACP (Agent Client Protocol) server",
@@ -21,7 +22,7 @@ export const AcpCommand = cmd({
   },
   handler: async (args) => {
     process.env.KILO_CLIENT = "acp"
-    await bootstrap(process.cwd(), async () => {
+    await bootstrap(args.cwd, async () => {
       const opts = await resolveNetworkOptions(args)
       const server = Server.listen(opts)
 
@@ -53,11 +54,12 @@ export const AcpCommand = cmd({
       })
 
       const stream = ndJsonStream(input, output)
-      const agent = await ACP.init({ sdk })
+      const agent = await ACP.init({ sdk, defaultCwd: args.cwd })
 
       new AgentSideConnection((conn) => {
-        return agent.create(conn, { sdk })
+        return agent.create(conn, { sdk, defaultCwd: args.cwd })
       }, stream)
+      // kilocode_change end
 
       log.info("setup connection")
       process.stdin.resume()
