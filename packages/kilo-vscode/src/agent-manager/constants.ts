@@ -94,6 +94,28 @@ export async function migrateAgentManagerData(root: string, log: (msg: string) =
 }
 
 /**
+ * Resolve the real git directory for a repository root.
+ * When root/.git is a directory, returns it directly.
+ * When root/.git is a file (worktree), follows the gitdir pointer
+ * up two levels to reach the shared git directory.
+ */
+async function resolveGitDir(root: string): Promise<string | undefined> {
+  const gitPath = path.join(root, ".git")
+  try {
+    const stat = await fs.promises.stat(gitPath)
+    if (stat.isDirectory()) return gitPath
+
+    const content = await fs.promises.readFile(gitPath, "utf-8")
+    const match = content.match(/^gitdir:\s*(.+)$/m)
+    if (!match) return undefined
+    // gitdir points to e.g. /repo/.git/worktrees/foo — go up two levels to /repo/.git
+    return path.resolve(path.dirname(gitPath), match[1].trim(), "..", "..")
+  } catch {
+    return undefined
+  }
+}
+
+/**
  * After moving worktrees from .kilocode/ to .kilo/, fix git internal refs.
  *
  * Git stores absolute paths in .git/worktrees/{name}/gitdir. When the
@@ -101,7 +123,10 @@ export async function migrateAgentManagerData(root: string, log: (msg: string) =
  * gitdir files that reference the old .kilocode path.
  */
 async function fixGitWorktreeRefs(root: string, log: (msg: string) => void): Promise<void> {
-  const gitWorktreesDir = path.join(root, ".git", "worktrees")
+  const gitDir = await resolveGitDir(root)
+  if (!gitDir) return
+
+  const gitWorktreesDir = path.join(gitDir, "worktrees")
   try {
     const stat = await fs.promises.stat(gitWorktreesDir)
     if (!stat.isDirectory()) return
