@@ -33,9 +33,17 @@ export const SkillsMarketplace: Component<SkillsMarketplaceProps> = (props) => {
       if (query) {
         const id = item.id.toLowerCase()
         const name = item.name.toLowerCase()
+        const display = item.displayName.toLowerCase()
         const desc = item.description.toLowerCase()
         const dc = item.displayCategory.toLowerCase()
-        if (!id.includes(query) && !name.includes(query) && !desc.includes(query) && !dc.includes(query)) return false
+        if (
+          !id.includes(query) &&
+          !name.includes(query) &&
+          !display.includes(query) &&
+          !desc.includes(query) &&
+          !dc.includes(query)
+        )
+          return false
       }
 
       if (cat && item.displayCategory !== cat) return false
@@ -61,7 +69,10 @@ export const SkillsMarketplace: Component<SkillsMarketplaceProps> = (props) => {
         </button>
         <For each={categories()}>
           {(cat) => (
-            <button classList={{ active: category() === cat }} onClick={() => setCategory(category() === cat ? null : cat)}>
+            <button
+              classList={{ active: category() === cat }}
+              onClick={() => setCategory(category() === cat ? null : cat)}
+            >
               {cat}
             </button>
           )}
@@ -82,7 +93,12 @@ export const SkillsMarketplace: Component<SkillsMarketplaceProps> = (props) => {
         <div class="skills-list">
           <For each={filtered()}>
             {(item) => (
-              <SkillItemCard item={item} metadata={props.metadata} onInstall={props.onInstall} onRemove={props.onRemove} />
+              <SkillItemCard
+                item={item}
+                metadata={props.metadata}
+                onInstall={props.onInstall}
+                onRemove={props.onRemove}
+              />
             )}
           </For>
         </div>

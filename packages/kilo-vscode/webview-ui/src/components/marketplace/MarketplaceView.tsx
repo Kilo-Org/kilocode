@@ -34,10 +34,16 @@ export const MarketplaceView: Component = () => {
   const [installItem, setInstallItem] = createSignal<MarketplaceItem | null>(null)
   const [removeItem, setRemoveItem] = createSignal<MarketplaceItem | null>(null)
   const [removeScope, setRemoveScope] = createSignal<"project" | "global">("project")
-  const [pendingRemove, setPendingRemove] = createSignal<{ item: MarketplaceItem; scope: "project" | "global" } | null>(null)
+  const [pendingRemove, setPendingRemove] = createSignal<{ item: MarketplaceItem; scope: "project" | "global" } | null>(
+    null,
+  )
 
   const handleInstall = (item: MarketplaceItem) => {
-    vscode.postMessage({ type: "telemetry", event: "Marketplace Install Button Clicked", properties: { itemId: item.id, itemType: item.type, itemName: item.name } })
+    vscode.postMessage({
+      type: "telemetry",
+      event: "Marketplace Install Button Clicked",
+      properties: { itemId: item.id, itemType: item.type, itemName: item.name },
+    })
     setInstallItem(item)
   }
 
@@ -46,11 +52,20 @@ export const MarketplaceView: Component = () => {
     setRemoveScope(scope)
   }
 
-  const handleInstallResult = (result: { success: boolean; slug: string; scope: "project" | "global"; error?: string }) => {
+  const handleInstallResult = (result: {
+    success: boolean
+    slug: string
+    scope: "project" | "global"
+    error?: string
+  }) => {
     if (!result.success) return
     const item = installItem()
     if (item) {
-      vscode.postMessage({ type: "telemetry", event: "Marketplace Item Installed", properties: { itemId: item.id, itemType: item.type, itemName: item.name, target: result.scope } })
+      vscode.postMessage({
+        type: "telemetry",
+        event: "Marketplace Item Installed",
+        properties: { itemId: item.id, itemType: item.type, itemName: item.name, target: result.scope },
+      })
     }
     vscode.postMessage({ type: "fetchMarketplaceData" })
   }
@@ -82,15 +97,24 @@ export const MarketplaceView: Component = () => {
         return
       }
       if (msg.type === "marketplaceInstallResult") {
-        // Re-fetch data after install to update metadata
-        vscode.postMessage({ type: "fetchMarketplaceData" })
+        // Install result handled by InstallModal's onInstallResult callback,
+        // which calls handleInstallResult and triggers fetchMarketplaceData
         return
       }
       if (msg.type === "marketplaceRemoveResult") {
         if (msg.success) {
           const pending = pendingRemove()
           if (pending) {
-            vscode.postMessage({ type: "telemetry", event: "Marketplace Item Removed", properties: { itemId: pending.item.id, itemType: pending.item.type, itemName: pending.item.name, target: pending.scope } })
+            vscode.postMessage({
+              type: "telemetry",
+              event: "Marketplace Item Removed",
+              properties: {
+                itemId: pending.item.id,
+                itemType: pending.item.type,
+                itemName: pending.item.name,
+                target: pending.scope,
+              },
+            })
             setPendingRemove(null)
           }
         }

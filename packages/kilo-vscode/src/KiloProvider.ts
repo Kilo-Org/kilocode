@@ -606,7 +606,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         }
         // kilocode_change start — marketplace IPC handlers
         case "fetchMarketplaceData": {
-          const workspace = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+          const workspace = this.getWorkspaceDirectory(this.currentSession?.id)
           const mp = this.getMarketplace()
           const data = await mp.fetchData(workspace)
           this.postMessage({ type: "marketplaceData", ...data })
@@ -617,18 +617,28 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         }
         case "installMarketplaceItem": {
-          const workspace = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+          const workspace = this.getWorkspaceDirectory(this.currentSession?.id)
           const mp = this.getMarketplace()
           const result = await mp.install(message.mpItem, message.mpInstallOptions, workspace)
-          this.postMessage({ type: "marketplaceInstallResult", success: result.success, slug: result.slug, error: result.error })
+          this.postMessage({
+            type: "marketplaceInstallResult",
+            success: result.success,
+            slug: result.slug,
+            error: result.error,
+          })
           break
         }
         case "removeInstalledMarketplaceItem": {
-          const workspace = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+          const workspace = this.getWorkspaceDirectory(this.currentSession?.id)
           const mp = this.getMarketplace()
           const scope = message.mpInstallOptions?.target ?? "project"
           const result = await mp.remove(message.mpItem, scope, workspace)
-          this.postMessage({ type: "marketplaceRemoveResult", success: result.success, slug: result.slug, error: result.error })
+          this.postMessage({
+            type: "marketplaceRemoveResult",
+            success: result.success,
+            slug: result.slug,
+            error: result.error,
+          })
           break
         }
         // kilocode_change end
