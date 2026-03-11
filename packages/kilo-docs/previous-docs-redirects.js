@@ -1,5 +1,11 @@
 module.exports = [
   {
+    source: "/docs/contributing/architecture/model-provider-blocklist",
+    destination: "/docs/collaborate/enterprise/model-access-controls",
+    basePath: false,
+    permanent: true,
+  },
+  {
     source: "/docs/features/custom-modes",
     destination: "/docs/customize/custom-modes",
     basePath: false,
