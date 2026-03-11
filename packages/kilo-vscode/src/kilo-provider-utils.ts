@@ -280,6 +280,15 @@ export function mapCloudSessionMessageToWebviewMessage(message: CloudSessionMess
       ? { providerID: message.info.providerID, modelID: message.info.modelID }
       : undefined)
 
+  const cost =
+    typeof message.info.cost === "number"
+      ? message.info.cost
+      : (message.info.cost?.input ?? 0) +
+        (message.info.cost?.output ?? 0) +
+        (message.info.cost?.reasoning ?? 0) +
+        (message.info.cost?.cache?.read ?? 0) +
+        (message.info.cost?.cache?.write ?? 0)
+
   return {
     id: message.info.id,
     sessionID: message.info.sessionID,
@@ -292,7 +301,7 @@ export function mapCloudSessionMessageToWebviewMessage(message: CloudSessionMess
     model,
     providerID: model?.providerID,
     modelID: model?.modelID,
-    cost: message.info.cost,
+    cost,
     tokens: message.info.tokens,
   }
 }
