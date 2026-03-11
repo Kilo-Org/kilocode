@@ -45,11 +45,7 @@ export class MarketplaceService {
   ): Promise<InstallResult> {
     const result = await this.installer.install(item, options, workspace)
 
-    if (result.success && result.filePath) {
-      const line = result.line ?? 1
-      await vscode.window.showTextDocument(vscode.Uri.file(result.filePath), {
-        selection: new vscode.Range(line - 1, 0, line - 1, 0),
-      })
+    if (result.success) {
       vscode.window.showInformationMessage(`Successfully installed ${item.name}`)
     }
 
