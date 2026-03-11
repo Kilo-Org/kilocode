@@ -3,7 +3,7 @@
  * Main chat container that combines all chat components
  */
 
-import { Component, Show, createEffect, on, onCleanup, onMount } from "solid-js"
+import { Component, Show, createEffect, createMemo, on, onCleanup, onMount } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { TaskHeader } from "./TaskHeader"
@@ -35,8 +35,10 @@ export const ChatView: Component<ChatViewProps> = (props) => {
 
   // Permissions and questions scoped to this session's family (self + subagents).
   // Each ChatView only sees its own session tree — no cross-session leakage.
-  const familyPermissions = () => session.scopedPermissions(id())
-  const familyQuestions = () => session.scopedQuestions(id())
+  // Memoized so the BFS walk in sessionFamily() runs once per reactive update,
+  // not once per accessor call (questionRequest, permissionRequest, blocked all read these).
+  const familyPermissions = createMemo(() => session.scopedPermissions(id()))
+  const familyQuestions = createMemo(() => session.scopedQuestions(id()))
 
   const questionRequest = () =>
     familyQuestions().find((q) => q.sessionID === id() && !q.tool) ??
