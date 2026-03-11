@@ -90,7 +90,7 @@ export const SkillsMarketplace: Component<SkillsMarketplaceProps> = (props) => {
       </Show>
 
       <Show when={!props.fetching && filtered().length > 0}>
-        <div class="skills-list">
+        <div class="marketplace-grid">
           <For each={filtered()}>
             {(item) => (
               <SkillItemCard
