@@ -670,7 +670,7 @@ export const dict = {
   "settings.providers.title": "プロバイダー",
   "settings.providers.description": "プロバイダー設定はここで構成できます。",
   "settings.providers.betaNotice":
-    "ベータ版の期間中、拡張機能で設定できるのは Kilo Gateway のみです。他のプロバイダーを設定するサポートはまもなく追加され、この拡張機能がベータ版を終了する前に利用可能になります。私たちは、Kilo をオープンに保ち、ロックインのない状態を維持することをお約束します。",
+    "現在、設定画面で設定できるのはKilo Gatewayプロバイダーのみです。他のプロバイダーの設定については、ベータ期間中にまもなく対応予定です。それまでの間は、CLIまたは設定ファイルを使用してプロバイダーを設定できます。私たちはKiloをオープンに保ち、ロックインのない状態を維持することをお約束します。",
   "settings.providers.section.connected": "接続済みプロバイダー",
   "settings.providers.connected.empty": "接続済みプロバイダーはありません",
   "settings.providers.section.popular": "人気のプロバイダー",

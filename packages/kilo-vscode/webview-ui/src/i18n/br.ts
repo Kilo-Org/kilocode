@@ -672,7 +672,7 @@ export const dict = {
   "settings.providers.title": "Provedores",
   "settings.providers.description": "Configurações de provedores estarão disponíveis aqui.",
   "settings.providers.betaNotice":
-    "Durante o beta, apenas o Kilo Gateway pode ser configurado na extensão. O suporte para configurar outros provedores chegará em breve e estará disponível antes que esta extensão saia do beta. Estamos comprometidos em manter o Kilo aberto, sem lock-in.",
+    "Atualmente, apenas o provedor Kilo Gateway pode ser configurado na interface de configurações. O suporte para a configuração de outros provedores estará disponível em breve durante o período beta. Enquanto isso, você pode configurar provedores usando a CLI ou o arquivo de configuração. Estamos comprometidos em manter o Kilo aberto, sem lock-in.",
   "settings.providers.section.connected": "Provedores conectados",
   "settings.providers.connected.empty": "Nenhum provedor conectado",
   "settings.providers.section.popular": "Provedores populares",

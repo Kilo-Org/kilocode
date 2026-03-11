@@ -671,7 +671,7 @@ export const dict = {
   "settings.providers.title": "공급자",
   "settings.providers.description": "공급자 설정은 여기서 구성할 수 있습니다.",
   "settings.providers.betaNotice":
-    "베타 기간 동안에는 확장 프로그램에서 Kilo Gateway만 설정할 수 있습니다. 다른 제공업체 설정 지원은 곧 추가될 예정이며, 이 확장 프로그램이 베타 버전을 벗어나기 전에 제공될 것입니다. 저희는 종속(lock-in) 없이 Kilo를 개방적으로 유지하기 위해 최선을 다하고 있습니다.",
+    "현재 설정 인터페이스에서는 Kilo Gateway 제공자만 설정할 수 있습니다. 다른 제공자 설정에 대한 지원은 베타 기간 동안 곧 제공될 예정입니다. 그동안에는 CLI 또는 설정 파일을 사용하여 제공자를 설정할 수 있습니다. 우리는 종속(lock-in) 없이 Kilo를 개방적으로 유지하기 위해 최선을 다하고 있습니다.",
   "settings.providers.section.connected": "연결된 공급자",
   "settings.providers.connected.empty": "연결된 공급자 없음",
   "settings.providers.section.popular": "인기 공급자",

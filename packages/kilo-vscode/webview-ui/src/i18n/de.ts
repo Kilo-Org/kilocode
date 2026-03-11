@@ -681,7 +681,7 @@ export const dict = {
   "settings.providers.title": "Anbieter",
   "settings.providers.description": "Anbietereinstellungen können hier konfiguriert werden.",
   "settings.providers.betaNotice":
-    "Während der Beta kann nur Kilo Gateway in der Erweiterung konfiguriert werden. Die Unterstützung für die Konfiguration anderer Anbieter folgt in Kürze und wird verfügbar sein, bevor diese Erweiterung die Beta verlässt. Wir setzen uns dafür ein, Kilo offen zu halten, kein Lock-in.",
+    "Derzeit kann in den Einstellungen nur der Kilo Gateway-Anbieter konfiguriert werden. Die Unterstützung für die Konfiguration weiterer Anbieter folgt in Kürze während der Beta-Phase. In der Zwischenzeit können Sie Anbieter über die CLI oder die Konfigurationsdatei konfigurieren. Wir setzen uns dafür ein, Kilo offen zu halten, ohne Lock-in.",
   "settings.providers.section.connected": "Verbundene Anbieter",
   "settings.providers.connected.empty": "Keine verbundenen Anbieter",
   "settings.providers.section.popular": "Beliebte Anbieter",
