@@ -45,7 +45,7 @@ interface GitStatsPollerOptions {
   getWorktrees: () => Worktree[]
   getWorkspaceRoot: () => string | undefined
   getClient: () => KiloClient
-  getServerConfig: () => { baseUrl: string; password: string } | null // kilocode_change
+  getServerConfig?: () => { baseUrl: string; password: string } | null // kilocode_change
   git: GitOps
   onStats: (stats: WorktreeStats[]) => void
   onLocalStats: (stats: LocalStats) => void
@@ -160,7 +160,7 @@ export class GitStatsPoller {
         const tWt = performance.now()
         const base = remoteRef(wt)
         const [diffStats, ab] = await Promise.all([
-          this.fetchDiffStats(wt.path, base),
+          this.resolveDiffStats(wt.path, base, client),
           this.git.aheadBehind(wt.path, base, wt.remote),
         ])
         this.options.log(`[PERF] GitStatsPoller worktree ${wt.branch}: ${Math.round(performance.now() - tWt)}ms`)
@@ -271,7 +271,7 @@ export class GitStatsPoller {
         if (base) {
           this.options.log(`Local stats: using stats endpoint with base=${base}`)
           const [diffStats, ab] = await Promise.all([
-            this.fetchDiffStats(root, base),
+            this.resolveDiffStats(root, base, client),
             this.git.aheadBehind(root, base, remote),
           ])
           if (diffStats) {
@@ -322,8 +322,24 @@ export class GitStatsPoller {
   }
 
   // kilocode_change start - lightweight stats fetch via /experimental/worktree/stats
+  private async resolveDiffStats(
+    directory: string,
+    base: string,
+    client: KiloClient | undefined,
+  ): Promise<DiffStats | undefined> {
+    const stats = await this.fetchDiffStats(directory, base)
+    if (stats) return stats
+    if (!client) return undefined
+
+    const { data: diffs } = await client.worktree.diff({ directory, base }, { throwOnError: true })
+    const files = diffs.length
+    const additions = diffs.reduce((sum: number, diff: FileDiff) => sum + diff.additions, 0)
+    const deletions = diffs.reduce((sum: number, diff: FileDiff) => sum + diff.deletions, 0)
+    return { files, additions, deletions }
+  }
+
   private async fetchDiffStats(directory: string, base: string): Promise<DiffStats | undefined> {
-    const config = this.options.getServerConfig()
+    const config = this.options.getServerConfig?.()
     if (!config) return undefined
 
     const params = new URLSearchParams({ directory, base })
