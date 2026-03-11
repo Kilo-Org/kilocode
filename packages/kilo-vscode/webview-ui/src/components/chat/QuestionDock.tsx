@@ -42,6 +42,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
   const input = createMemo(() => store.custom[store.tab] ?? "")
   const multi = createMemo(() => question()?.multiple === true)
   const customPicked = createMemo(() => {
+    if (store.editing) return true
     const value = input()
     if (!value) return false
     return store.answers[store.tab]?.includes(value) ?? false
@@ -255,58 +256,89 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
               }}
             </For>
             <Show when={question()?.custom !== false}>
-              <button
-                data-slot="question-option"
-                data-custom="true"
-                data-picked={customPicked()}
-                disabled={store.sending}
-                onClick={() => selectOption(options().length)}
-              >
-                <span data-slot="question-option-check" aria-hidden="true">
-                  <span
-                    data-slot="question-option-box"
-                    data-type={multi() ? "checkbox" : "radio"}
+              <Show
+                when={store.editing}
+                fallback={
+                  <button
+                    data-slot="question-option"
+                    data-custom="true"
                     data-picked={customPicked()}
-                  >
-                    <Show when={multi()} fallback={<span data-slot="question-option-radio-dot" />}>
-                      <Icon name="check-small" size="small" />
-                    </Show>
-                  </span>
-                </span>
-                <span data-slot="question-option-main">
-                  <span data-slot="option-label">{language.t("ui.messagePart.option.typeOwnAnswer")}</span>
-                  <span data-slot="option-description" data-placeholder={!input()}>
-                    {input() || language.t("ui.question.custom.placeholder")}
-                  </span>
-                </span>
-              </button>
-              <Show when={store.editing}>
-                <form data-slot="custom-input-form" onSubmit={handleCustomSubmit}>
-                  <input
-                    ref={(el) => setTimeout(() => el.focus(), 0)}
-                    type="text"
-                    data-slot="custom-input"
-                    placeholder={language.t("ui.question.custom.placeholder")}
-                    value={input()}
                     disabled={store.sending}
-                    onInput={(e) => {
-                      const inputs = [...store.custom]
-                      inputs[store.tab] = e.currentTarget.value
-                      setStore("custom", inputs)
-                    }}
-                  />
-                  <Button type="submit" variant="primary" size="small" disabled={store.sending}>
-                    {multi() ? language.t("ui.common.add") : language.t("ui.common.submit")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="small"
-                    disabled={store.sending}
-                    onClick={() => setStore("editing", false)}
+                    onClick={() => selectOption(options().length)}
                   >
-                    {language.t("ui.common.cancel")}
-                  </Button>
+                    <span data-slot="question-option-check" aria-hidden="true">
+                      <span
+                        data-slot="question-option-box"
+                        data-type={multi() ? "checkbox" : "radio"}
+                        data-picked={customPicked()}
+                      >
+                        <Show when={multi()} fallback={<span data-slot="question-option-radio-dot" />}>
+                          <Icon name="check-small" size="small" />
+                        </Show>
+                      </span>
+                    </span>
+                    <span data-slot="question-option-main">
+                      <span data-slot="option-label">{language.t("ui.messagePart.option.typeOwnAnswer")}</span>
+                      <span data-slot="option-description" data-placeholder={!input()}>
+                        {input() || language.t("ui.question.custom.placeholder")}
+                      </span>
+                    </span>
+                  </button>
+                }
+              >
+                <form
+                  data-slot="question-option"
+                  data-custom="true"
+                  data-picked={true}
+                  onSubmit={handleCustomSubmit}
+                >
+                  <span data-slot="question-option-check" aria-hidden="true">
+                    <span
+                      data-slot="question-option-box"
+                      data-type={multi() ? "checkbox" : "radio"}
+                      data-picked={true}
+                    >
+                      <Show when={multi()} fallback={<span data-slot="question-option-radio-dot" />}>
+                        <Icon name="check-small" size="small" />
+                      </Show>
+                    </span>
+                  </span>
+                  <span data-slot="question-option-main">
+                    <span data-slot="option-label">{language.t("ui.messagePart.option.typeOwnAnswer")}</span>
+                    <input
+                      ref={(el) => setTimeout(() => el.focus(), 0)}
+                      type="text"
+                      data-slot="question-custom-input"
+                      placeholder={language.t("ui.question.custom.placeholder")}
+                      value={input()}
+                      disabled={store.sending}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") {
+                          e.preventDefault()
+                          setStore("editing", false)
+                        }
+                      }}
+                      onInput={(e) => {
+                        const inputs = [...store.custom]
+                        inputs[store.tab] = e.currentTarget.value
+                        setStore("custom", inputs)
+                      }}
+                    />
+                    <div data-slot="custom-input-actions">
+                      <Button type="submit" variant="primary" size="small" disabled={store.sending}>
+                        {multi() ? language.t("ui.common.add") : language.t("ui.common.submit")}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="small"
+                        disabled={store.sending}
+                        onClick={() => setStore("editing", false)}
+                      >
+                        {language.t("ui.common.cancel")}
+                      </Button>
+                    </div>
+                  </span>
                 </form>
               </Show>
             </Show>
