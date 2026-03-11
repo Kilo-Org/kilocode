@@ -34,14 +34,6 @@ export interface ModeMarketplaceItem extends MarketplaceItemBase {
   content: string
 }
 
-export interface RawSkill {
-  id: string
-  description: string
-  category: string
-  githubUrl: string
-  content: string
-}
-
 export interface SkillMarketplaceItem extends MarketplaceItemBase {
   type: "skill"
   category: string
@@ -69,23 +61,3 @@ export interface MarketplaceFilters {
   tags?: string[]
 }
 
-export interface MarketplaceDataResponse {
-  organizationMcps: MarketplaceItem[]
-  marketplaceItems: MarketplaceItem[]
-  marketplaceInstalledMetadata: MarketplaceInstalledMetadata
-  errors?: string[]
-}
-
-export interface InstallResult {
-  success: boolean
-  slug: string
-  error?: string
-  filePath?: string
-  line?: number
-}
-
-export interface RemoveResult {
-  success: boolean
-  slug: string
-  error?: string
-}

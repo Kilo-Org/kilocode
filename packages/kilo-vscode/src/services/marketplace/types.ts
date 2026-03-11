@@ -63,12 +63,6 @@ export interface MarketplaceInstalledMetadata {
   global: Record<string, { type: string }>
 }
 
-export interface MarketplaceFilters {
-  type?: string
-  search?: string
-  tags?: string[]
-}
-
 export interface MarketplaceDataResponse {
   organizationMcps: MarketplaceItem[]
   marketplaceItems: MarketplaceItem[]
