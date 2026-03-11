@@ -151,8 +151,16 @@ export const SessionProvider: ParentComponent = (props) => {
   const { config } = useConfig()
   const language = useLanguage()
 
-  // Current session ID
-  const [currentSessionID, setCurrentSessionID] = createSignal<string | undefined>()
+  // Current session ID — initialize from persisted state if available (VS Code reload)
+  const persisted = vscode.getState<{ sessionID?: string }>()
+  const [currentSessionID, setCurrentSessionID] = createSignal<string | undefined>(persisted?.sessionID)
+
+  // Persist the current session ID so VS Code can restore the correct session
+  // after a reload (TabPanel serializer reads this via vscode.getState()).
+  createEffect(() => {
+    const id = currentSessionID()
+    vscode.setState({ sessionID: id })
+  })
 
   // Per-session status map — keyed by sessionID
   const [statusMap, setStatusMap] = createStore<Record<string, SessionStatusInfo>>({})
@@ -680,6 +688,18 @@ export const SessionProvider: ParentComponent = (props) => {
       )
       for (const s of loaded) {
         setStore("sessions", s.id, s)
+      }
+
+      // After a VS Code reload, restore the previously active session.
+      // currentSessionID is initialized from persisted vscode.getState() above.
+      const restored = currentSessionID()
+      if (restored && ids.has(restored) && !store.messages[restored]?.length) {
+        setLoading(true)
+        vscode.postMessage({ type: "loadMessages", sessionID: restored })
+      }
+      // Clear stale persisted session ID if the session no longer exists
+      if (restored && !ids.has(restored)) {
+        setCurrentSessionID(undefined)
       }
     })
   }
