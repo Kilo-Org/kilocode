@@ -1,5 +1,18 @@
-import { Component, createSignal, createMemo, onMount, onCleanup, Switch, Match, Show, For } from "solid-js"
+import {
+  Component,
+  createSignal,
+  createMemo,
+  createEffect,
+  on,
+  onMount,
+  onCleanup,
+  Switch,
+  Match,
+  Show,
+  For,
+} from "solid-js"
 import { useVSCode } from "../../context/vscode"
+import { useServer } from "../../context/server"
 import type { MarketplaceItem, MarketplaceInstalledMetadata } from "../../types/marketplace"
 import type { ExtensionMessage } from "../../types/messages"
 import { MarketplaceListView } from "./MarketplaceListView"
@@ -12,6 +25,7 @@ type Tab = "mcp" | "mode" | "skill"
 
 export const MarketplaceView: Component = () => {
   const vscode = useVSCode()
+  const server = useServer()
 
   const [items, setItems] = createSignal<MarketplaceItem[]>([])
   const [metadata, setMetadata] = createSignal<MarketplaceInstalledMetadata>({ project: {}, global: {} })
@@ -121,6 +135,17 @@ export const MarketplaceView: Component = () => {
 
     onCleanup(unsubscribe)
   })
+
+  createEffect(
+    on(
+      () => server.workspaceDirectory(),
+      () => {
+        setFetching(true)
+        vscode.postMessage({ type: "fetchMarketplaceData" })
+      },
+      { defer: true },
+    ),
+  )
 
   return (
     <div class="marketplace-view">

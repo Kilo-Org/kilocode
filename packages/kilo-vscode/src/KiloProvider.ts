@@ -36,6 +36,10 @@ import {
 } from "./kilo-provider-utils"
 import { MarketplaceService } from "./services/marketplace" // kilocode_change
 
+type KiloProviderOptions = {
+  projectDirectory?: string | null
+}
+
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "kilo-code.new.sidebarView"
 
@@ -82,6 +86,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private ignoreController: FileIgnoreController | null = null
   private ignoreControllerDir: string | null = null
   private marketplace: MarketplaceService | null = null // kilocode_change
+  private projectDirectory: string | null | undefined
 
   /** Optional interceptor called before the standard message handler.
    *  Return null to consume the message, or return a (possibly transformed) message. */
@@ -91,8 +96,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     private readonly extensionUri: vscode.Uri,
     private readonly connectionService: KiloConnectionService,
     private readonly extensionContext?: vscode.ExtensionContext,
+    options?: KiloProviderOptions,
   ) {
+    this.projectDirectory = options?.projectDirectory
     TelemetryProxy.getInstance().setProvider(this)
+  }
+
+  public setProjectDirectory(directory: string | null): void {
+    if (this.projectDirectory === directory) return
+    this.projectDirectory = directory
+    this.postMessage({ type: "workspaceDirectoryChanged", directory: directory ?? "" })
   }
 
   getTelemetryProperties(): Record<string, unknown> {
@@ -154,7 +167,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         extensionVersion: this.extensionVersion,
         vscodeLanguage: vscode.env.language,
         languageOverride: langConfig.get<string>("language"),
-        workspaceDirectory: this.getWorkspaceDirectory(this.currentSession?.id),
+        workspaceDirectory: this.getProjectDirectory(this.currentSession?.id),
       })
     }
 
@@ -606,7 +619,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         }
         // kilocode_change start — marketplace IPC handlers
         case "fetchMarketplaceData": {
-          const workspace = this.getWorkspaceDirectory(this.currentSession?.id)
+          const workspace = this.getProjectDirectory(this.currentSession?.id)
           const mp = this.getMarketplace()
           const data = await mp.fetchData(workspace)
           this.postMessage({ type: "marketplaceData", ...data })
@@ -617,7 +630,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         }
         case "installMarketplaceItem": {
-          const workspace = this.getWorkspaceDirectory(this.currentSession?.id)
+          const workspace = this.getProjectDirectory(this.currentSession?.id)
           const mp = this.getMarketplace()
           const result = await mp.install(message.mpItem, message.mpInstallOptions, workspace)
           this.postMessage({
@@ -629,7 +642,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         }
         case "removeInstalledMarketplaceItem": {
-          const workspace = this.getWorkspaceDirectory(this.currentSession?.id)
+          const workspace = this.getProjectDirectory(this.currentSession?.id)
           const mp = this.getMarketplace()
           const scope = message.mpInstallOptions?.target ?? "project"
           const result = await mp.remove(message.mpItem, scope, workspace)
@@ -724,7 +737,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           extensionVersion: this.extensionVersion,
           vscodeLanguage: vscode.env.language,
           languageOverride: langConfig.get<string>("language"),
-          workspaceDirectory: this.getWorkspaceDirectory(this.currentSession?.id),
+          workspaceDirectory: this.getProjectDirectory(this.currentSession?.id),
         })
       }
 
@@ -2175,6 +2188,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return workspaceFolders[0].uri.fsPath
     }
     return process.cwd()
+  }
+
+  private getProjectDirectory(sessionId?: string): string | undefined {
+    if (this.projectDirectory !== undefined) {
+      return this.projectDirectory ?? undefined
+    }
+    return this.getWorkspaceDirectory(sessionId)
   }
 
   private _getHtmlForWebview(webview: vscode.Webview): string {
