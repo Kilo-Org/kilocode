@@ -27,6 +27,20 @@ const NotificationsResponseSchema = z.object({
 const NOTIFICATIONS_TIMEOUT_MS = 5000
 
 /**
+ * Derive the `client` identifier sent to the cloud notifications API.
+ *
+ * The gateway endpoint is shared across multiple clients (VS Code extension,
+ * JetBrains plugin, CLI TUI). Each host process sets `KILO_PLATFORM` when
+ * spawning `kilo serve`, so we use it to tag outgoing requests accurately.
+ */
+function clientFromPlatform(): string {
+  const platform = process.env["KILO_PLATFORM"]
+  if (platform === "vscode") return "kilocode-vscode-extension"
+  if (platform === "jetbrains") return "kilocode-jetbrains-plugin"
+  return "cli"
+}
+
+/**
  * Fetch notifications from Kilo API
  *
  * @param options - Configuration with token and optional organization ID
@@ -39,7 +53,7 @@ export async function fetchKilocodeNotifications(options: {
   const token = options.kilocodeToken
   if (!token) return []
 
-  const url = `${KILO_API_BASE}/api/users/notifications`
+  const url = `${KILO_API_BASE}/api/users/notifications?client=${clientFromPlatform()}`
 
   try {
     const response = await fetch(url, {
