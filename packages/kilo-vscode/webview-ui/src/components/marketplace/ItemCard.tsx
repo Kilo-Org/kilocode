@@ -32,7 +32,7 @@ export const ItemCard: Component<ItemCardProps> = (props) => {
   }
 
   const scopeLabel = (scope: "project" | "global") =>
-    scope === "project" ? t("marketplace.remove.scope.project") : t("marketplace.remove.scope.global")
+    scope === "project" ? t("marketplace.scope.project") : t("marketplace.scope.global")
 
   return (
     <div class="marketplace-card">
@@ -61,7 +61,7 @@ export const ItemCard: Component<ItemCardProps> = (props) => {
           when={scopes().length > 0}
           fallback={
             <button class="marketplace-install-btn" onClick={() => props.onInstall(props.item)}>
-              {t("marketplace.card.install")}
+              {t("marketplace.install")}
             </button>
           }
         >
@@ -70,8 +70,8 @@ export const ItemCard: Component<ItemCardProps> = (props) => {
               {(scope) => (
                 <button class="marketplace-remove-btn" onClick={() => props.onRemove(props.item, scope)}>
                   {scopes().length > 1
-                    ? t("marketplace.card.removeScope", { scope: scopeLabel(scope) })
-                    : t("marketplace.card.remove")}
+                    ? t("marketplace.removeScope", { scope: scopeLabel(scope) })
+                    : t("marketplace.remove")}
                 </button>
               )}
             </For>
@@ -81,7 +81,7 @@ export const ItemCard: Component<ItemCardProps> = (props) => {
       <p class="marketplace-card-description">{props.item.description}</p>
       <div class="marketplace-card-footer">
         <Show when={scopes().length > 0}>
-          <span class="marketplace-badge installed">{t("marketplace.badge.installed")}</span>
+          <span class="marketplace-badge installed">{t("marketplace.installed")}</span>
         </Show>
         {props.footer}
       </div>

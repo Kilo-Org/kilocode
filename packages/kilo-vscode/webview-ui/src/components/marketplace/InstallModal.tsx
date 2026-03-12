@@ -147,7 +147,7 @@ export const InstallModal: Component<InstallModalProps> = (props) => {
                       disabled={!workspace()}
                       onChange={() => setScope("project")}
                     />
-                    {t("marketplace.install.project")}
+                    {t("marketplace.scope.project")}
                   </label>
                   <label>
                     <input
@@ -157,7 +157,7 @@ export const InstallModal: Component<InstallModalProps> = (props) => {
                       checked={scope() === "global"}
                       onChange={() => setScope("global")}
                     />
-                    {t("marketplace.install.global")}
+                    {t("marketplace.scope.global")}
                   </label>
                 </div>
               </div>
@@ -213,10 +213,10 @@ export const InstallModal: Component<InstallModalProps> = (props) => {
 
             <div class="install-modal-footer">
               <button class="install-modal-cancel" onClick={props.onClose}>
-                {t("marketplace.install.cancel")}
+                {t("marketplace.cancel")}
               </button>
               <button class="install-modal-submit" onClick={handleInstall} disabled={installing()}>
-                {installing() ? t("marketplace.install.installing") : t("marketplace.install.submit")}
+                {installing() ? t("marketplace.install.installing") : t("marketplace.install")}
               </button>
             </div>
           </Show>
@@ -227,7 +227,7 @@ export const InstallModal: Component<InstallModalProps> = (props) => {
               <div class="install-modal-result">
                 <div class="install-modal-success">
                   <span class="install-modal-checkmark">✓</span>
-                  <span>{t("marketplace.install.success")}</span>
+                  <span>{t("marketplace.installed")}</span>
                 </div>
                 <div class="install-modal-footer">
                   <button class="install-modal-submit" onClick={props.onClose}>
@@ -241,7 +241,7 @@ export const InstallModal: Component<InstallModalProps> = (props) => {
                 <div class="install-modal-error-msg">{result()!.error ?? t("marketplace.install.failed")}</div>
                 <div class="install-modal-footer">
                   <button class="install-modal-cancel" onClick={props.onClose}>
-                    {t("marketplace.install.close")}
+                    {t("marketplace.close")}
                   </button>
                 </div>
               </div>

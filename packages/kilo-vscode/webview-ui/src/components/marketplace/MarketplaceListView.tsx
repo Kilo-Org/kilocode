@@ -83,7 +83,7 @@ export const MarketplaceListView: Component<MarketplaceListViewProps> = (props) 
           class="marketplace-status-filter"
         >
           <option value="all">{t("marketplace.filter.all")}</option>
-          <option value="installed">{t("marketplace.filter.installed")}</option>
+          <option value="installed">{t("marketplace.installed")}</option>
           <option value="notInstalled">{t("marketplace.filter.notInstalled")}</option>
         </select>
       </div>

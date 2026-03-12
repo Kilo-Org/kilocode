@@ -20,7 +20,7 @@ export const RemoveDialog: Component<RemoveDialogProps> = (props) => {
   })
 
   const scopeLabel = createMemo(() =>
-    props.scope === "project" ? t("marketplace.remove.scope.project") : t("marketplace.remove.scope.global"),
+    props.scope === "project" ? t("marketplace.scope.project") : t("marketplace.scope.global"),
   )
 
   return (
@@ -35,10 +35,10 @@ export const RemoveDialog: Component<RemoveDialogProps> = (props) => {
           </div>
           <div class="install-modal-footer">
             <button class="install-modal-cancel" onClick={props.onClose}>
-              {t("marketplace.remove.cancel")}
+              {t("marketplace.cancel")}
             </button>
             <button class="install-modal-submit danger" onClick={props.onConfirm}>
-              {t("marketplace.remove.submit")}
+              {t("marketplace.remove")}
             </button>
           </div>
         </div>
