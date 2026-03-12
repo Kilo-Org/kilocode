@@ -3917,8 +3917,6 @@ export type PermissionReplyData = {
   body?: {
     reply: "once" | "always" | "reject"
     message?: string
-    approvedPatterns?: Array<string>
-    deniedPatterns?: Array<string>
   }
   path: {
     requestID: string
@@ -3951,6 +3949,44 @@ export type PermissionReplyResponses = {
 }
 
 export type PermissionReplyResponse = PermissionReplyResponses[keyof PermissionReplyResponses]
+
+export type PermissionSavePatternRulesData = {
+  body?: {
+    approvedPatterns?: Array<string>
+    deniedPatterns?: Array<string>
+  }
+  path: {
+    requestID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/permission/{requestID}/pattern-rules"
+}
+
+export type PermissionSavePatternRulesErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type PermissionSavePatternRulesError = PermissionSavePatternRulesErrors[keyof PermissionSavePatternRulesErrors]
+
+export type PermissionSavePatternRulesResponses = {
+  /**
+   * Pattern rules saved successfully
+   */
+  200: boolean
+}
+
+export type PermissionSavePatternRulesResponse =
+  PermissionSavePatternRulesResponses[keyof PermissionSavePatternRulesResponses]
 
 export type PermissionListData = {
   body?: never

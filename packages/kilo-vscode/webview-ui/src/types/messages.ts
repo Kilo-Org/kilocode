@@ -1108,6 +1108,12 @@ export interface PermissionResponseRequest {
   permissionId: string
   sessionID: string
   response: "once" | "always" | "reject"
+}
+
+export interface PermissionPatternRulesRequest {
+  type: "permissionPatternRules"
+  permissionId: string
+  sessionID: string
   approvedPatterns: string[]
   deniedPatterns: string[]
 }
@@ -1558,6 +1564,7 @@ export type WebviewMessage =
   | SendMessageRequest
   | AbortRequest
   | PermissionResponseRequest
+  | PermissionPatternRulesRequest
   | CreateSessionRequest
   | ClearSessionRequest
   | LoadMessagesRequest

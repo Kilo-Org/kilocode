@@ -160,13 +160,36 @@ export namespace PermissionNext {
     },
   )
 
+  // kilocode_change start
+  export const savePatternRules = fn(
+    z.object({
+      requestID: Identifier.schema("permission"),
+      approvedPatterns: z.string().array().optional(),
+      deniedPatterns: z.string().array().optional(),
+    }),
+    async (input) => {
+      const s = await state()
+      const existing = s.pending[input.requestID]
+      if (!existing) return
+
+      const validPatterns = new Set(existing.info.patterns)
+      const permission = existing.info.permission
+
+      for (const pattern of input.approvedPatterns ?? []) {
+        if (validPatterns.has(pattern)) s.approved.push({ permission, pattern, action: "allow" })
+      }
+      for (const pattern of input.deniedPatterns ?? []) {
+        if (validPatterns.has(pattern)) s.approved.push({ permission, pattern, action: "deny" })
+      }
+    },
+  )
+  // kilocode_change end
+
   export const reply = fn(
     z.object({
       requestID: Identifier.schema("permission"),
       reply: Reply,
       message: z.string().optional(),
-      approvedPatterns: z.string().array().optional(), // kilocode_change
-      deniedPatterns: z.string().array().optional(), // kilocode_change
     }),
     async (input) => {
       const s = await state()
@@ -179,27 +202,7 @@ export namespace PermissionNext {
         reply: input.reply,
       })
 
-      // kilocode_change start - Helper to save per-pattern rules. Only persists
-      // patterns that were part of the original request to prevent a client from
-      // silently whitelisting or blacklisting unrelated commands.
-      const validPatterns = new Set(existing.info.patterns)
-      const savePatternRules = () => {
-        const permission = existing.info.permission
-        if (input.approvedPatterns) {
-          for (const pattern of input.approvedPatterns) {
-            if (validPatterns.has(pattern)) s.approved.push({ permission, pattern, action: "allow" })
-          }
-        }
-        if (input.deniedPatterns) {
-          for (const pattern of input.deniedPatterns) {
-            if (validPatterns.has(pattern)) s.approved.push({ permission, pattern, action: "deny" })
-          }
-        }
-      }
-      // kilocode_change end
-
       if (input.reply === "reject") {
-        savePatternRules() // kilocode_change
         existing.reject(input.message ? new CorrectedError(input.message) : new RejectedError())
         // Reject all other pending permissions for this session
         const sessionID = existing.info.sessionID
@@ -217,7 +220,6 @@ export namespace PermissionNext {
         return
       }
       if (input.reply === "once") {
-        savePatternRules() // kilocode_change
         existing.resolve()
         return
       }
@@ -229,7 +231,6 @@ export namespace PermissionNext {
             action: "allow",
           })
         }
-        savePatternRules() // kilocode_change
 
         existing.resolve()
 

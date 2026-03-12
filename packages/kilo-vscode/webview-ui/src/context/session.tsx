@@ -959,13 +959,21 @@ export const SessionProvider: ParentComponent = (props) => {
     // The permission is removed when the server confirms via permission.replied SSE.
     setRespondingPermissions((prev) => new Set(prev).add(permissionId))
 
+    if (approvedPatterns.length > 0 || deniedPatterns.length > 0) {
+      vscode.postMessage({
+        type: "permissionPatternRules",
+        permissionId,
+        sessionID,
+        approvedPatterns,
+        deniedPatterns,
+      })
+    }
+
     vscode.postMessage({
       type: "permissionResponse",
       permissionId,
       sessionID,
       response,
-      approvedPatterns,
-      deniedPatterns,
     })
   }
 

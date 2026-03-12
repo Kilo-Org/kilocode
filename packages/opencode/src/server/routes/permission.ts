@@ -36,8 +36,6 @@ export const PermissionRoutes = lazy(() =>
         z.object({
           reply: PermissionNext.Reply,
           message: z.string().optional(),
-          approvedPatterns: z.string().array().optional(), // kilocode_change
-          deniedPatterns: z.string().array().optional(), // kilocode_change
         }),
       ),
       async (c) => {
@@ -47,12 +45,55 @@ export const PermissionRoutes = lazy(() =>
           requestID: params.requestID,
           reply: json.reply,
           message: json.message,
-          approvedPatterns: json.approvedPatterns, // kilocode_change
-          deniedPatterns: json.deniedPatterns, // kilocode_change
         })
         return c.json(true)
       },
     )
+    // kilocode_change start
+    .post(
+      "/:requestID/pattern-rules",
+      describeRoute({
+        summary: "Save per-pattern permission rules",
+        description:
+          "Save approved/denied patterns for a pending permission request.",
+        operationId: "permission.savePatternRules",
+        responses: {
+          200: {
+            description: "Pattern rules saved successfully",
+            content: {
+              "application/json": {
+                schema: resolver(z.boolean()),
+              },
+            },
+          },
+          ...errors(400, 404),
+        },
+      }),
+      validator(
+        "param",
+        z.object({
+          requestID: z.string(),
+        }),
+      ),
+      validator(
+        "json",
+        z.object({
+          approvedPatterns: z.string().array().optional(),
+          deniedPatterns: z.string().array().optional(),
+        }),
+      ),
+      async (c) => {
+        const params = c.req.valid("param")
+        const json = c.req.valid("json")
+        await PermissionNext.savePatternRules({
+          requestID: params.requestID,
+          approvedPatterns: json.approvedPatterns,
+          deniedPatterns: json.deniedPatterns,
+        })
+        return c.json(true)
+      },
+    )
+    // kilocode_change end
     .get(
       "/",
       describeRoute({
