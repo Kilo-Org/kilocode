@@ -33,9 +33,9 @@ describe("MarketplaceInstaller.installSkill", () => {
     const workspace = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-marketplace-installer-"))
     dirs.push(workspace)
 
-    const paths = new MarketplacePaths(path.join(workspace, "storage"))
+    const paths = new MarketplacePaths()
     const installer = new MarketplaceInstaller(paths)
-    const dir = path.join(paths.projectSkillsDir(workspace), item.id)
+    const dir = path.join(paths.skillsDir("project", workspace), item.id)
 
     await fs.mkdir(dir, { recursive: true })
     await fs.writeFile(path.join(dir, "SKILL.md"), "# Installed\n", "utf-8")
