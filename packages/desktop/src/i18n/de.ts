@@ -45,8 +45,7 @@ export const dict = {
   "desktop.menu.help.shareFeedback": "Feedback teilen",
   "desktop.menu.help.reportBug": "Einen Fehler melden",
   "desktop.cli.error.unsupportedPlatform": "Die CLI-Installation wird nur unter macOS und Linux unterstützt.",
-  "desktop.cli.error.sidecarMissing":
-    "Das Kilo CLI-Binary fehlt. Versuchen Sie, die Desktop-App neu zu installieren.",
+  "desktop.cli.error.sidecarMissing": "Das Kilo CLI-Binary fehlt. Versuchen Sie, die Desktop-App neu zu installieren.",
   "desktop.cli.error.scriptWriteFailed": "Das CLI-Installationsskript konnte nicht vorbereitet werden.",
   "desktop.cli.error.scriptPermissionFailed": "Das CLI-Installationsskript konnte nicht ausführbar gemacht werden.",
   "desktop.cli.error.scriptRunFailed": "Das CLI-Installationsskript konnte nicht ausgeführt werden.",

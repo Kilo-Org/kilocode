@@ -152,15 +152,15 @@ The Agent Manager is a feature within this extension (not a separate product). I
 
 ### How It Differs From the Sidebar
 
-| Aspect        | Sidebar                    | Agent Manager                                           |
-| ------------- | -------------------------- | ------------------------------------------------------- |
-| Location      | Activity bar sidebar panel | Editor tab (full panel)                                 |
-| Sessions      | Single session at a time   | Multiple parallel sessions with tabbed UI               |
-| Git isolation | Uses workspace root        | Each session can get its own worktree branch            |
-| State         | No dedicated state file    | `.kilocode/agent-manager.json`                          |
-| Terminals     | None                       | Dedicated VS Code terminal per session                  |
-| Setup scripts | None                       | Configurable `.kilocode/setup-script` runs per worktree |
-| Multi-version | Not supported              | Up to 4 parallel worktrees with the same prompt         |
+| Aspect        | Sidebar                    | Agent Manager                                       |
+| ------------- | -------------------------- | --------------------------------------------------- |
+| Location      | Activity bar sidebar panel | Editor tab (full panel)                             |
+| Sessions      | Single session at a time   | Multiple parallel sessions with tabbed UI           |
+| Git isolation | Uses workspace root        | Each session can get its own worktree branch        |
+| State         | No dedicated state file    | `.kilo/agent-manager.json`                          |
+| Terminals     | None                       | Dedicated VS Code terminal per session              |
+| Setup scripts | None                       | Configurable `.kilo/setup-script` runs per worktree |
+| Multi-version | Not supported              | Up to 4 parallel worktrees with the same prompt     |
 
 ### Architecture
 

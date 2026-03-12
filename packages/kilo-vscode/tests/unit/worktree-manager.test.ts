@@ -303,13 +303,13 @@ describe("WorktreeManager.createWorktree", () => {
     await expect(mgr.createWorktree({ prompt: "test" })).rejects.toThrow("not a git repository")
   })
 
-  it("creates worktrees directory under .kilocode/worktrees/", async () => {
+  it("creates worktrees directory under .kilo/worktrees/", async () => {
     const root = await createTempRepo()
     const mgr = createManager(root)
 
     const result = await mgr.createWorktree({ prompt: "test" })
 
-    expect(result.path).toContain(path.join(".kilocode", "worktrees"))
+    expect(result.path).toContain(path.join(".kilo", "worktrees"))
   })
 
   it("records parentBranch as default branch", async () => {
@@ -350,7 +350,7 @@ describe("WorktreeManager.removeWorktree", () => {
     const mgr = createManager(root)
 
     // Should not throw
-    await mgr.removeWorktree(path.join(root, ".kilocode", "worktrees", "nonexistent"))
+    await mgr.removeWorktree(path.join(root, ".kilo", "worktrees", "nonexistent"))
   })
 
   it("removes orphaned directory that git does not know about", async () => {
@@ -358,7 +358,7 @@ describe("WorktreeManager.removeWorktree", () => {
     const mgr = createManager(root)
 
     // Create an orphaned directory (not a real worktree)
-    const orphanPath = path.join(root, ".kilocode", "worktrees", "orphan")
+    const orphanPath = path.join(root, ".kilo", "worktrees", "orphan")
     await fs.mkdir(orphanPath, { recursive: true })
     await fs.writeFile(path.join(orphanPath, "file.txt"), "orphan")
 
@@ -440,7 +440,7 @@ describe("WorktreeManager metadata", () => {
     const result = await mgr.createWorktree({ prompt: "legacy-test" })
 
     // Write only the legacy session-id file (no metadata.json)
-    const dir = path.join(result.path, ".kilocode")
+    const dir = path.join(result.path, ".kilo")
     await fs.mkdir(dir, { recursive: true })
     await fs.writeFile(path.join(dir, "session-id"), "legacy-sess-456", "utf-8")
 
@@ -512,6 +512,22 @@ describe("WorktreeManager.discoverWorktrees", () => {
     expect(found).toBeDefined()
     expect(found!.parentBranch).toBe("feature/my-branch")
   })
+
+  it("repairs stale gitdir refs when .kilo/worktrees already exists", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    const worktree = path.join(root, ".kilo", "worktrees", "partial")
+    const gitdir = path.join(root, ".git", "worktrees", "partial", "gitdir")
+    await fs.mkdir(worktree, { recursive: true })
+    await fs.mkdir(path.dirname(gitdir), { recursive: true })
+    await fs.writeFile(gitdir, path.join(root, ".kilocode", "worktrees", "partial", ".git"), "utf-8")
+
+    await mgr.discoverWorktrees()
+
+    const fixed = await fs.readFile(gitdir, "utf-8")
+    expect(fixed).toContain(path.join(root, ".kilo", "worktrees", "partial", ".git"))
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -519,7 +535,17 @@ describe("WorktreeManager.discoverWorktrees", () => {
 // ---------------------------------------------------------------------------
 
 describe("WorktreeManager.ensureGitExclude", () => {
-  it("adds .kilocode/worktrees/ to .git/info/exclude", async () => {
+  it("adds .kilo/worktrees/ to .git/info/exclude", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    await mgr.ensureGitExclude()
+
+    const content = await fs.readFile(path.join(root, ".git", "info", "exclude"), "utf-8")
+    expect(content).toContain(".kilo/worktrees/")
+  })
+
+  it("adds only specific legacy Agent Manager paths", async () => {
     const root = await createTempRepo()
     const mgr = createManager(root)
 
@@ -527,6 +553,9 @@ describe("WorktreeManager.ensureGitExclude", () => {
 
     const content = await fs.readFile(path.join(root, ".git", "info", "exclude"), "utf-8")
     expect(content).toContain(".kilocode/worktrees/")
+    expect(content).toContain(".kilocode/agent-manager.json")
+    expect(content).toContain(".kilocode/setup-script")
+    expect(content).not.toContain("\n.kilocode/\n")
   })
 
   it("is idempotent -- does not duplicate entries", async () => {
@@ -538,7 +567,7 @@ describe("WorktreeManager.ensureGitExclude", () => {
     await mgr.ensureGitExclude()
 
     const content = await fs.readFile(path.join(root, ".git", "info", "exclude"), "utf-8")
-    const count = content.split(".kilocode/worktrees/").length - 1
+    const count = content.split(".kilo/worktrees/").length - 1
     expect(count).toBe(1)
   })
 })
@@ -604,7 +633,7 @@ describe("WorktreeManager.removeWorktree safety", () => {
     const root = await createTempRepo()
     const mgr = createManager(root)
 
-    // Create a directory outside .kilocode/worktrees/
+    // Create a directory outside .kilo/worktrees/
     const outside = path.join(root, "important-data")
     await fs.mkdir(outside, { recursive: true })
     await fs.writeFile(path.join(outside, "file.txt"), "precious")

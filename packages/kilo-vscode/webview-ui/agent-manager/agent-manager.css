@@ -1367,6 +1367,33 @@ button.am-section-toggle:hover .am-section-label {
   flex-shrink: 0;
 }
 
+.am-diff-summary-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  height: 18px;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-weak);
+  background: color-mix(in oklab, var(--surface-interactive-base) 70%, transparent);
+  border: 1px solid var(--border-weak-base);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.am-diff-summary-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 96px;
+  padding: 12px;
+  border-top: 1px solid var(--border-weak-base);
+  color: var(--text-weak);
+  font-size: var(--font-size-small);
+}
+
 /* Comments footer bar */
 
 .am-diff-comments-footer {

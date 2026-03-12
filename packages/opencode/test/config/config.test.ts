@@ -130,6 +130,35 @@ test("merges multiple config files with correct precedence", async () => {
   })
 })
 
+test("prefers .kilo directory config over legacy .kilocode", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Filesystem.write(
+        path.join(dir, ".kilocode", "kilo.json"),
+        JSON.stringify({
+          $schema: "https://app.kilo.ai/config.json",
+          model: "legacy/model",
+        }),
+      )
+      await Filesystem.write(
+        path.join(dir, ".kilo", "kilo.json"),
+        JSON.stringify({
+          $schema: "https://app.kilo.ai/config.json",
+          model: "new/model",
+        }),
+      )
+    },
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await Config.get()
+      expect(config.model).toBe("new/model")
+    },
+  })
+})
+
 test("handles environment variable substitution", async () => {
   const originalEnv = process.env["TEST_VAR"]
   process.env["TEST_VAR"] = "test-user"
@@ -578,6 +607,39 @@ Nested command template`,
       expect(config.command?.["nested/child"]).toEqual({
         description: "Nested command",
         template: "Nested command template",
+      })
+    },
+  })
+})
+
+test("prefers .kilo commands over legacy .kilocode commands", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Filesystem.write(
+        path.join(dir, ".kilocode", "command", "hello.md"),
+        `---
+description: Legacy command
+---
+Hello from legacy command`,
+      )
+      await Filesystem.write(
+        path.join(dir, ".kilo", "command", "hello.md"),
+        `---
+description: New command
+---
+Hello from new command`,
+      )
+    },
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await Config.get()
+
+      expect(config.command?.["hello"]).toEqual({
+        description: "New command",
+        template: "Hello from new command",
       })
     },
   })
