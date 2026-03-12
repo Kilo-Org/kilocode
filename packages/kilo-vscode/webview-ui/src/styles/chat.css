@@ -1099,7 +1099,8 @@
 
 [data-component="dock-prompt"][data-kind="permission"] {
   animation: permission-slide-in 0.3s ease-out;
-  border: 1px solid color-mix(in srgb, var(--vscode-editorWarning-foreground, #cca700) 40%, var(--vscode-panel-border, transparent));
+  border: 1px solid
+    color-mix(in srgb, var(--vscode-editorWarning-foreground, #cca700) 40%, var(--vscode-panel-border, transparent));
   border-radius: 8px;
   overflow: clip;
 
@@ -1214,7 +1215,9 @@
     border-radius: 4px;
     cursor: pointer;
     color: var(--text-weak, var(--vscode-descriptionForeground));
-    transition: color 0.1s, background-color 0.1s;
+    transition:
+      color 0.1s,
+      background-color 0.1s;
 
     &:hover:not(:disabled) {
       background-color: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
