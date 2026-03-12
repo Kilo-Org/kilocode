@@ -79,7 +79,7 @@
     "@aws-sdk/client-s3": "3.933.0",
     "@kilocode/plugin": "workspace:*",
     "@kilocode/sdk": "workspace:*",
-    "@morphllm/morphsdk": "0.2.138",
+    "@morphllm/morphsdk": "0.2.141",
     "@opencode-ai/script": "workspace:*",
     "typescript": "catalog:"
   },
