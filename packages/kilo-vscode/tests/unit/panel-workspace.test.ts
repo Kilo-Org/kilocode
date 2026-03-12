@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { resolvePanelProjectDirectory } from "../../src/panel-workspace"
+import { resolvePanelProjectDirectory } from "../../src/project-directory"
 
 describe("resolvePanelProjectDirectory", () => {
   it("prefers the active workspace directory", () => {

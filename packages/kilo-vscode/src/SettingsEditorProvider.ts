@@ -1,6 +1,6 @@
 import * as vscode from "vscode"
 import { KiloProvider } from "./KiloProvider"
-import { resolvePanelProjectDirectory } from "./panel-workspace"
+import { resolvePanelProjectDirectory } from "./project-directory"
 import type { KiloConnectionService } from "./services/cli-backend"
 
 type PanelView = "settings" | "profile" | "marketplace"

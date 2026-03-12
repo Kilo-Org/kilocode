@@ -35,6 +35,7 @@ import {
   type SessionRefreshContext,
 } from "./kilo-provider-utils"
 import { MarketplaceService } from "./services/marketplace" // kilocode_change
+import { resolveProjectDirectory } from "./project-directory" // kilocode_change
 
 type KiloProviderOptions = {
   projectDirectory?: string | null
@@ -2191,10 +2192,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private getProjectDirectory(sessionId?: string): string | undefined {
-    if (this.projectDirectory !== undefined) {
-      return this.projectDirectory ?? undefined
-    }
-    return this.getWorkspaceDirectory(sessionId)
+    return resolveProjectDirectory(this.projectDirectory, () => this.getWorkspaceDirectory(sessionId))
   }
 
   private _getHtmlForWebview(webview: vscode.Webview): string {
