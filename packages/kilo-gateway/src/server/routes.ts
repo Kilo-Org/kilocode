@@ -108,6 +108,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
               content: z.string().optional(),
             })
             .optional(),
+          text: z.string().optional(), // Text-completion style streaming (Mercury)
         }),
       )
       .optional(),
@@ -255,28 +256,60 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
         const fimMaxTokens = maxTokens ?? 256
         const fimTemperature = temperature ?? 0.2
 
-        const baseApiUrl = KILO_API_BASE + "/api/"
-        const endpoint = new URL("fim/completions", baseApiUrl)
+        const isMercury = fimModel.toLowerCase().includes("mercury")
 
-        const headers = {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          ...buildKiloHeaders(undefined, { kilocodeOrganizationId: organizationId }),
-          [HEADER_FEATURE]: "autocomplete",
+        let response: Response
+        if (isMercury) {
+          // Route Mercury models directly to Inception Labs API
+          const inceptionAuth = await Auth.get("inception")
+          if (!inceptionAuth || inceptionAuth.type !== "api" || !inceptionAuth.key) {
+            return c.json(
+              { error: "Inception API key not configured. Add an Inception provider in auth settings." },
+              401,
+            )
+          }
+
+          const endpoint = "https://api.inceptionlabs.ai/v1/fim/completions"
+          response = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${inceptionAuth.key}`,
+            },
+            body: JSON.stringify({
+              model: fimModel,
+              prompt: prefix,
+              suffix,
+              max_tokens: fimMaxTokens,
+              temperature: 0, // Mercury only supports temperature 0
+              stream: true,
+            }),
+          })
+        } else {
+          // Route to Kilo Gateway API (default path for Codestral etc.)
+          const baseApiUrl = KILO_API_BASE + "/api/"
+          const endpoint = new URL("fim/completions", baseApiUrl)
+
+          const headers = {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            ...buildKiloHeaders(undefined, { kilocodeOrganizationId: organizationId }),
+            [HEADER_FEATURE]: "autocomplete",
+          }
+
+          response = await fetch(endpoint, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+              model: fimModel,
+              prompt: prefix,
+              suffix,
+              max_tokens: fimMaxTokens,
+              temperature: fimTemperature,
+              stream: true,
+            }),
+          })
         }
-
-        const response = await fetch(endpoint, {
-          method: "POST",
-          headers,
-          body: JSON.stringify({
-            model: fimModel,
-            prompt: prefix,
-            suffix,
-            max_tokens: fimMaxTokens,
-            temperature: fimTemperature,
-            stream: true,
-          }),
-        })
 
         if (!response.ok) {
           const errorText = await response.text()

@@ -1,10 +1,18 @@
 import { Component, createSignal, onCleanup } from "solid-js"
 import { Switch } from "@kilocode/kilo-ui/switch"
+import { Select } from "@kilocode/kilo-ui/select"
 import { Card } from "@kilocode/kilo-ui/card"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import type { ExtensionMessage } from "../../types/messages"
 import SettingsRow from "./SettingsRow"
+
+const AUTOCOMPLETE_MODELS = [
+  { id: "mistralai/codestral-2508", label: "Codestral (Mistral AI)" },
+  { id: "mercury-edit", label: "Mercury Edit (Inception Labs)" },
+] as const
+
+type ModelId = (typeof AUTOCOMPLETE_MODELS)[number]["id"]
 
 const AutocompleteTab: Component = () => {
   const vscode = useVSCode()
@@ -13,6 +21,7 @@ const AutocompleteTab: Component = () => {
   const [enableAutoTrigger, setEnableAutoTrigger] = createSignal(true)
   const [enableSmartInlineTaskKeybinding, setEnableSmartInlineTaskKeybinding] = createSignal(false)
   const [enableChatAutocomplete, setEnableChatAutocomplete] = createSignal(false)
+  const [model, setModel] = createSignal<string>("mistralai/codestral-2508")
 
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type !== "autocompleteSettingsLoaded") {
@@ -21,6 +30,7 @@ const AutocompleteTab: Component = () => {
     setEnableAutoTrigger(message.settings.enableAutoTrigger)
     setEnableSmartInlineTaskKeybinding(message.settings.enableSmartInlineTaskKeybinding)
     setEnableChatAutocomplete(message.settings.enableChatAutocomplete)
+    setModel(message.settings.model)
   })
 
   onCleanup(unsubscribe)
@@ -37,6 +47,26 @@ const AutocompleteTab: Component = () => {
   return (
     <div data-component="autocomplete-settings">
       <Card>
+        <SettingsRow
+          title={language.t("settings.autocomplete.model.title")}
+          description={language.t("settings.autocomplete.model.description")}
+        >
+          <Select
+            options={AUTOCOMPLETE_MODELS.map((m) => m.id)}
+            current={model() as ModelId}
+            label={(opt: ModelId) => AUTOCOMPLETE_MODELS.find((m) => m.id === opt)?.label ?? opt}
+            value={(opt: ModelId) => opt}
+            onSelect={(opt) => {
+              if (opt !== undefined) {
+                setModel(opt)
+                vscode.postMessage({ type: "updateAutocompleteSetting", key: "model", value: opt })
+              }
+            }}
+            variant="secondary"
+            size="large"
+          />
+        </SettingsRow>
+
         <SettingsRow
           title={language.t("settings.autocomplete.autoTrigger.title")}
           description={language.t("settings.autocomplete.autoTrigger.description")}

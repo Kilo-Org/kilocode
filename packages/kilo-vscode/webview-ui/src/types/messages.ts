@@ -554,6 +554,7 @@ export interface AutocompleteSettingsLoadedMessage {
     enableAutoTrigger: boolean
     enableSmartInlineTaskKeybinding: boolean
     enableChatAutocomplete: boolean
+    model: string
   }
 }
 
@@ -1214,8 +1215,8 @@ export interface RequestAutocompleteSettingsMessage {
 
 export interface UpdateAutocompleteSettingMessage {
   type: "updateAutocompleteSetting"
-  key: "enableAutoTrigger" | "enableSmartInlineTaskKeybinding" | "enableChatAutocomplete"
-  value: boolean
+  key: "enableAutoTrigger" | "enableSmartInlineTaskKeybinding" | "enableChatAutocomplete" | "model"
+  value: boolean | string
 }
 
 export interface RequestChatCompletionMessage {
