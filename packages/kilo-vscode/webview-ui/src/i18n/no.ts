@@ -411,6 +411,8 @@ export const dict = {
 
   "error.globalSync.connectFailed": "Kunne ikke koble til server. Kjører det en server på `{{url}}`?",
 
+  "error.startup.title": "Servertilkobling mislyktes",
+
   "error.paidModel.title": "Du må logge inn for å bruke denne modellen",
   "error.paidModel.description":
     "Logg inn eller opprett en konto for å få tilgang til over 500 modeller, bruk kreditter til kostpris, eller ta med din egen nøkkel.",
@@ -673,6 +675,8 @@ export const dict = {
 
   "settings.providers.title": "Leverandører",
   "settings.providers.description": "Leverandørinnstillinger vil kunne konfigureres her.",
+  "settings.providers.betaNotice":
+    "For øyeblikket kan kun Kilo Gateway-leverandøren konfigureres i innstillingsgrensesnittet. Støtte for konfigurering av andre leverandører kommer snart i løpet av betaperioden. I mellomtiden kan du konfigurere leverandører via CLI eller konfigurasjonsfilen. Vi er forpliktet til å holde Kilo åpent, ingen lock-in.",
   "settings.providers.section.connected": "Tilkoblede leverandører",
   "settings.providers.connected.empty": "Ingen tilkoblede leverandører",
   "settings.providers.section.popular": "Populære leverandører",
@@ -742,10 +746,16 @@ export const dict = {
   "session.empty": "Ingen sesjoner ennå. Klikk + for å starte en ny samtale.",
   "session.cloud.repoOnly": "Kun dette repositoriet",
   "session.cloud.import": "Importer fra skyen",
+  "feedback.button": "Tilbakemelding & støtte",
+  "feedback.dialog.message": "Vi vil gjerne høre tilbakemeldingene dine eller hjelpe med problemer du opplever.",
+  "feedback.dialog.github": "Rapporter et problem på GitHub",
+  "feedback.dialog.discord": "Bli med i Discord-fellesskapet vårt",
+  "feedback.dialog.support": "Kundestøtte",
   "session.cloud.import.title": "Importer fra skyen",
   "session.cloud.import.placeholder": "Økt-ID, URL eller kilo import-kommando",
   "session.cloud.import.button": "Importer",
   "session.cloud.import.invalid": "Ugyldig økt-ID-format",
+  "session.cloud.import.legacy": "Dette ser ut til å være en eldre økt som ikke lenger støttes.",
   "session.cloud.import.failed": "Kunne ikke importere skyøkt",
 
   "workspace.new": "Nytt arbeidsområde",
@@ -927,7 +937,10 @@ export const dict = {
   "settings.experimental.toolToggles": "Verktøybrytere",
   "settings.agentBehaviour.defaultAgent.title": "Standardagent",
   "settings.agentBehaviour.defaultAgent.description": "Agent å bruke når ingen er angitt",
+  "settings.agentBehaviour.availableAgents": "Tilgjengelige agenter",
   "settings.agentBehaviour.selectAgent": "Velg en agent å konfigurere…",
+  "settings.agentBehaviour.selectAgent.title": "Agent",
+  "settings.agentBehaviour.selectAgent.description": "Velg en agent å konfigurere…",
   "settings.agentBehaviour.modelOverride.title": "Modelloverstying",
   "settings.agentBehaviour.modelOverride.description": "Overstyr standardmodellen for denne agenten",
   "settings.agentBehaviour.prompt.title": "Egendefinert prompt",
@@ -938,6 +951,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Nucleus-samplingsparameter (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Maks. trinn",
   "settings.agentBehaviour.maxSteps.description": "Maksimale agentiterasjoner",
+  "settings.agentBehaviour.discoveredSkills": "Oppdagede ferdigheter",
+  "settings.agentBehaviour.noSkillsFound":
+    "Ingen ferdigheter funnet. Legg til ferdighetsmappestier eller URLer nedenfor for å gjøre ferdigheter tilgjengelige.",
   "settings.agentBehaviour.skillPaths": "Ferdighetsmappe-stier",
   "settings.agentBehaviour.skillUrls": "Ferdighets-URLer",
   "settings.agentBehaviour.instructionFiles": "Ekstra instruksjonsfiler",
@@ -946,26 +962,41 @@ export const dict = {
     "Ingen MCP-servere konfigurert. Rediger opencode-konfigurasjonsfilen for å legge til MCP-servere.",
   "settings.agentBehaviour.workflowsPlaceholder": "Arbeidsflyter administreres via arbeidsflytfiler i arbeidsområdet.",
   "settings.agentBehaviour.notImplemented": "Ikke implementert ennå.",
-  "settings.autoApprove.setAll": "Sett alle tillatelser",
+  "settings.autoApprove.description":
+    "Definer hvordan verktøy kan kjøre. De fleste verktøy har Tillat som standard. doom_loop og external_directory har Spør som standard.",
   "settings.autoApprove.level.allow": "Tillat",
   "settings.autoApprove.level.ask": "Spør",
   "settings.autoApprove.level.deny": "Avvis",
-  "settings.autoApprove.tool.read": "Les filinnhold",
-  "settings.autoApprove.tool.edit": "Rediger eller opprett filer",
-  "settings.autoApprove.tool.glob": "Finn filer etter mønster",
-  "settings.autoApprove.tool.grep": "Søk i filinnhold",
-  "settings.autoApprove.tool.list": "List mappeinnhold",
-  "settings.autoApprove.tool.bash": "Kjør skallkommandoer",
-  "settings.autoApprove.tool.task": "Opprett underagentoppgaver",
-  "settings.autoApprove.tool.skill": "Kjør ferdigheter",
-  "settings.autoApprove.tool.lsp": "Språkserveroperasjoner",
-  "settings.autoApprove.tool.todoread": "Les oppgavelister",
-  "settings.autoApprove.tool.todowrite": "Skriv oppgavelister",
-  "settings.autoApprove.tool.webfetch": "Hent nettsider",
-  "settings.autoApprove.tool.websearch": "Søk på nettet",
-  "settings.autoApprove.tool.codesearch": "Søk i kodebasen",
-  "settings.autoApprove.tool.external_directory": "Tilgang til filer utenfor arbeidsområdet",
-  "settings.autoApprove.tool.doom_loop": "Fortsett etter gjentatte feil",
+  "settings.autoApprove.wildcardLabel.commands": "Alle kommandoer (*)",
+  "settings.autoApprove.wildcardLabel.paths": "Alle stier (*)",
+  "settings.autoApprove.exceptions": "Unntak",
+  "settings.autoApprove.addCommand": "Legg til kommando",
+  "settings.autoApprove.addPath": "Legg til sti",
+  "settings.autoApprove.placeholder.command": "f.eks. git *",
+  "settings.autoApprove.placeholder.path": "f.eks. *.env",
+  "settings.autoApprove.tool.read": "Les filer. Tillater agenten å lese filer som samsvarer med den angitte stien.",
+  "settings.autoApprove.tool.edit":
+    "Endre filer. Tillater agenten å opprette eller redigere filer, inkludert oppdateringer og flerfilsoppdateringer.",
+  "settings.autoApprove.tool.glob":
+    "Søk etter filer med mønster. Tillater filsøk ved bruk av glob-mønstre (f.eks. src/**/*.ts).",
+  "settings.autoApprove.tool.grep": "Søk i filinnhold. Tillater regex-basert søk inne i filer.",
+  "settings.autoApprove.tool.list": "Vis kataloginnhold. Tillater visning av filer og mapper i en katalog.",
+  "settings.autoApprove.tool.bash":
+    "Kjør terminalkommandoer. Tillater kjøring av shell-kommandoer (f.eks. git status).",
+  "settings.autoApprove.tool.task":
+    "Start underagenter. Tillater start av spesialiserte underagenter for spesifikke oppgaver.",
+  "settings.autoApprove.tool.skill":
+    "Last inn ferdigheter. Tillater innlasting av forhåndsdefinerte ferdigheter etter navn.",
+  "settings.autoApprove.tool.lsp": "Spør språkserver. Tillater kjøring av språkserverforespørsler for kodeintelligens.",
+  "settings.autoApprove.tool.todoreadwrite":
+    "Administrer oppgaveliste. Tillater lesing og oppdatering av den interne oppgavelisten.",
+  "settings.autoApprove.tool.webfetch": "Hent en URL. Tillater henting av innhold fra en spesifikk URL.",
+  "settings.autoApprove.tool.websearchcodesearch":
+    "Søk på nettet eller i kode. Tillater å utføre eksterne nett- eller kodesøk.",
+  "settings.autoApprove.tool.external_directory":
+    "Få tilgang til filer utenfor arbeidsområdet. Utløses ved tilgang til filer utenfor gjeldende prosjektkatalog.",
+  "settings.autoApprove.tool.doom_loop":
+    "Forhindre gjentatte identiske handlinger. Utløses når det samme verktøyanropet gjentas med identisk inndata.",
   "settings.checkpoints.enable.title": "Aktiver øyeblikksbilder",
   "settings.checkpoints.enable.description": "Opprett kontrollpunkter før filredigeringer",
   "settings.context.autoCompaction.title": "Automatisk komprimering",

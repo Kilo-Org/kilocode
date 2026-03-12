@@ -252,90 +252,67 @@ describe("GitOps", () => {
   })
 
   describe("aheadBehind", () => {
-    it("counts commits ahead and behind upstream", async () => {
+    it("counts commits ahead and behind using the provided ref", async () => {
       const git = ops(async (args) => {
-        if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "@{upstream}") return "origin/main"
-        if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "origin/main"
-        if (args[0] === "branch") return "feature"
-        if (args[0] === "config") return "origin"
         if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
         if (args[0] === "fetch") return ""
         if (args[0] === "rev-list" && args[1] === "--left-right") return "1\t3"
         return ""
       })
-      expect(await git.aheadBehind("/repo", "main")).toEqual({ ahead: 3, behind: 1 })
+      expect(await git.aheadBehind("/repo", "origin/main")).toEqual({ ahead: 3, behind: 1 })
     })
 
-    it("uses resolved remote for non-origin setups", async () => {
+    it("fetches the explicitly-provided remote before counting", async () => {
       const commands: string[][] = []
       const git = ops(async (args) => {
         commands.push(args)
-        // no upstream configured
-        if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "@{upstream}")
-          throw new Error("no upstream")
-        if (args[0] === "rev-parse" && args[3] === "@{upstream}") throw new Error("no upstream")
-        if (args[0] === "branch") return "feature"
-        // branch.feature.remote = myfork
-        if (args[0] === "config" && args[1] === "branch.feature.remote") return "myfork"
         if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
-        // myfork/feature exists
-        if (
-          args[0] === "rev-parse" &&
-          args[1] === "--verify" &&
-          args[2] === "--quiet" &&
-          args[3] === "refs/remotes/myfork/feature"
-        )
-          return "abc"
         if (args[0] === "fetch") return ""
         if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t4"
         return ""
       })
-      expect(await git.aheadBehind("/repo", "main")).toEqual({ ahead: 4, behind: 0 })
+      expect(await git.aheadBehind("/repo", "myfork/main", "myfork")).toEqual({ ahead: 4, behind: 0 })
       const fetches = commands.filter((c) => c[0] === "fetch")
+      expect(fetches.length).toBe(1)
       expect(fetches[0]![3]).toBe("myfork")
     })
 
-    it("falls back to remote/parentBranch when no upstream and no remote branch", async () => {
+    it("skips fetch when no remote is provided", async () => {
+      const commands: string[][] = []
       const git = ops(async (args) => {
-        if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "@{upstream}")
-          throw new Error("no upstream")
-        if (args[0] === "rev-parse" && args[3] === "@{upstream}") throw new Error("no upstream")
-        if (args[0] === "branch") return "feature"
-        if (args[0] === "config") return "origin"
-        if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
-        if (
-          args[0] === "rev-parse" &&
-          args[1] === "--verify" &&
-          args[2] === "--quiet" &&
-          args[3] === "refs/remotes/origin/feature"
-        )
-          throw new Error("no ref")
-        if (
-          args[0] === "rev-parse" &&
-          args[1] === "--verify" &&
-          args[2] === "--quiet" &&
-          args[3] === "refs/remotes/origin/main"
-        )
-          return "abc"
-        if (args[0] === "fetch") return ""
+        commands.push(args)
         if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t2"
         return ""
       })
       expect(await git.aheadBehind("/repo", "main")).toEqual({ ahead: 2, behind: 0 })
+      const fetches = commands.filter((c) => c[0] === "fetch")
+      expect(fetches.length).toBe(0)
     })
 
     it("returns zeros when rev-list fails", async () => {
       const git = ops(async (args) => {
-        if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "@{upstream}") return "origin/main"
-        if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "origin/main"
-        if (args[0] === "branch") return "feature"
-        if (args[0] === "config") return "origin"
         if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
         if (args[0] === "fetch") return ""
         if (args[0] === "rev-list") throw new Error("fatal")
         return ""
       })
-      expect(await git.aheadBehind("/repo", "main")).toEqual({ ahead: 0, behind: 0 })
+      expect(await git.aheadBehind("/repo", "origin/main")).toEqual({ ahead: 0, behind: 0 })
+    })
+
+    it("uses the ref directly without double-prefixing", async () => {
+      const refs: string[] = []
+      const git = ops(async (args) => {
+        if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
+        if (args[0] === "fetch") return ""
+        if (args[0] === "rev-list" && args[1] === "--left-right") {
+          refs.push(args[3]!)
+          return "0\t1"
+        }
+        return ""
+      })
+      const result = await git.aheadBehind("/repo", "origin/main")
+      expect(result).toEqual({ ahead: 1, behind: 0 })
+      expect(refs[0]).toBe("origin/main...HEAD")
     })
   })
 

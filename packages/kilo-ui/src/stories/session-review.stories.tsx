@@ -1,18 +1,18 @@
 /** @jsxImportSource solid-js */
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import { SessionReview } from "@opencode-ai/ui/session-review"
-import { DiffComponentProvider } from "@opencode-ai/ui/context/diff"
-import { Diff } from "@opencode-ai/ui/diff"
+import { FileComponentProvider } from "@kilocode/kilo-ui/context/file"
+import { File } from "@kilocode/kilo-ui/file"
 
 const meta: Meta = {
   title: "Components/SessionReview",
   decorators: [
     (Story) => (
-      <DiffComponentProvider component={Diff}>
+      <FileComponentProvider component={File}>
         <div style={{ width: "800px", "min-height": "300px" }}>
           <Story />
         </div>
-      </DiffComponentProvider>
+      </FileComponentProvider>
     ),
   ],
   parameters: { layout: "padded" },
