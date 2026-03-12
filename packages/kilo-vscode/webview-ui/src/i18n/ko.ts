@@ -670,6 +670,8 @@ export const dict = {
 
   "settings.providers.title": "공급자",
   "settings.providers.description": "공급자 설정은 여기서 구성할 수 있습니다.",
+  "settings.providers.betaNotice":
+    "현재 설정 인터페이스에서는 Kilo Gateway 제공자만 설정할 수 있습니다. 다른 제공자 설정에 대한 지원은 베타 기간 동안 곧 제공될 예정입니다. 그동안에는 CLI 또는 설정 파일을 사용하여 제공자를 설정할 수 있습니다. 우리는 종속(lock-in) 없이 Kilo를 개방적으로 유지하기 위해 최선을 다하고 있습니다.",
   "settings.providers.section.connected": "연결된 공급자",
   "settings.providers.connected.empty": "연결된 공급자 없음",
   "settings.providers.section.popular": "인기 공급자",
@@ -941,6 +943,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "핵 샘플링 매개변수 (0-1)",
   "settings.agentBehaviour.maxSteps.title": "최대 단계",
   "settings.agentBehaviour.maxSteps.description": "최대 에이전트 반복 횟수",
+  "settings.agentBehaviour.discoveredSkills": "검색된 스킬",
+  "settings.agentBehaviour.noSkillsFound":
+    "스킬을 찾을 수 없습니다. 스킬을 사용하려면 아래에 스킬 폴더 경로 또는 URL을 추가하세요.",
   "settings.agentBehaviour.skillPaths": "스킬 폴더 경로",
   "settings.agentBehaviour.skillUrls": "스킬 URL",
   "settings.agentBehaviour.instructionFiles": "추가 지시 파일",

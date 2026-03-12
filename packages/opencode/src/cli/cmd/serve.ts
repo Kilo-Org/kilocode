@@ -3,6 +3,9 @@ import { cmd } from "./cmd"
 import { withNetworkOptions, resolveNetworkOptions } from "../network"
 import { Flag } from "../../flag/flag"
 import { Instance } from "../../project/instance" // kilocode_change
+import { Workspace } from "../../control-plane/workspace"
+import { Project } from "../../project/project"
+import { Installation } from "../../installation"
 
 export const ServeCommand = cmd({
   command: "serve",
@@ -14,15 +17,21 @@ export const ServeCommand = cmd({
     }
     const opts = await resolveNetworkOptions(args)
     const server = Server.listen(opts)
-    console.log(`kilo server listening on http://${server.hostname}:${server.port}`) // kilocode_change
+    console.log(`kilo server listening on http://${server.hostname}:${server.port}`)
+
+    let workspaceSync: Array<ReturnType<typeof Workspace.startSyncing>> = []
+    // Only available in development right now
+    if (Installation.isLocal()) {
+      workspaceSync = Project.list().map((project) => Workspace.startSyncing(project))
+    }
+
     // kilocode_change start - graceful signal shutdown
     const abort = new AbortController()
     const shutdown = async () => {
       try {
-        // Race disposeAll against a 5s timeout so hung MCP subprocesses
-        // cannot prevent the server from shutting down gracefully.
-        await Promise.race([Instance.disposeAll(), new Promise<void>((resolve) => setTimeout(resolve, 5000))])
+        await Instance.disposeAll()
         await server.stop(true)
+        await Promise.all(workspaceSync.map((item) => item.stop()))
       } finally {
         abort.abort()
       }
@@ -30,21 +39,7 @@ export const ServeCommand = cmd({
     process.on("SIGTERM", shutdown)
     process.on("SIGINT", shutdown)
     process.on("SIGHUP", shutdown)
-    // Orphan detection: exit if the parent process (extension host) dies.
-    // Mirrors the pattern in tui/thread.ts to prevent zombie server processes
-    // accumulating across extension restarts.
-    const ppid = process.ppid
-    const orphanCheck = setInterval(() => {
-      try {
-        process.kill(ppid, 0)
-      } catch {
-        clearInterval(orphanCheck)
-        process.exit(143)
-      }
-    }, 1000)
-    orphanCheck.unref()
     await new Promise((resolve) => abort.signal.addEventListener("abort", resolve))
-    clearInterval(orphanCheck)
     // kilocode_change end
   },
 })

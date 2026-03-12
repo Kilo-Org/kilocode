@@ -6,8 +6,10 @@ import {
   buildSettingPath,
   mapSSEEventToWebviewMessage,
   isEventFromForeignProject,
+  mapCloudSessionMessageToWebviewMessage,
   type ProviderInfo,
 } from "../../src/kilo-provider-utils"
+import type { CloudSessionMessage } from "../../src/services/cli-backend/types"
 import type {
   Session,
   Agent,
@@ -456,5 +458,57 @@ describe("isEventFromForeignProject", () => {
   it("keeps non-session events regardless of project", () => {
     const event = { type: "server.heartbeat", properties: {} } as unknown as Event
     expect(isEventFromForeignProject(event, "project-A")).toBe(false)
+  })
+})
+
+describe("mapCloudSessionMessage", () => {
+  function makeCloudMessage(overrides: Partial<CloudSessionMessage["info"]> = {}): CloudSessionMessage {
+    return {
+      info: {
+        id: "msg-1",
+        sessionID: "sess-1",
+        role: "assistant",
+        time: { created: 1700000000000, completed: 1700000005000 },
+        cost: { input: 10, output: 20 },
+        tokens: { input: 100, output: 200 },
+        ...overrides,
+      },
+      parts: [{ id: "p1", sessionID: "sess-1", messageID: "msg-1", type: "text", text: "hello" }],
+    }
+  }
+
+  it("maps fields to webview message format", () => {
+    const msg = mapCloudSessionMessageToWebviewMessage(makeCloudMessage())
+    expect(msg.id).toBe("msg-1")
+    expect(msg.sessionID).toBe("sess-1")
+    expect(msg.role).toBe("assistant")
+    expect(msg.createdAt).toBe(new Date(1700000000000).toISOString())
+    expect(msg.cost).toEqual({ input: 10, output: 20 })
+    expect(msg.tokens).toEqual({ input: 100, output: 200 })
+    expect(msg.parts).toHaveLength(1)
+  })
+
+  it("includes the time field with created and completed", () => {
+    const msg = mapCloudSessionMessageToWebviewMessage(makeCloudMessage())
+    expect(msg.time).toEqual({ created: 1700000000000, completed: 1700000005000 })
+  })
+
+  it("includes time when only created is present", () => {
+    const msg = mapCloudSessionMessageToWebviewMessage(makeCloudMessage({ time: { created: 1700000000000 } }))
+    expect(msg.time).toEqual({ created: 1700000000000 })
+  })
+
+  it("falls back to current date when time.created is missing", () => {
+    const before = Date.now()
+    const msg = mapCloudSessionMessageToWebviewMessage(makeCloudMessage({ time: undefined as never }))
+    const after = Date.now()
+    const createdAt = new Date(msg.createdAt).getTime()
+    expect(createdAt).toBeGreaterThanOrEqual(before)
+    expect(createdAt).toBeLessThanOrEqual(after)
+  })
+
+  it("maps user role correctly", () => {
+    const msg = mapCloudSessionMessageToWebviewMessage(makeCloudMessage({ role: "user" }))
+    expect(msg.role).toBe("user")
   })
 })

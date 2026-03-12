@@ -676,6 +676,8 @@ export const dict = {
 
   "settings.providers.title": "Proveedores",
   "settings.providers.description": "La configuración de proveedores estará disponible aquí.",
+  "settings.providers.betaNotice":
+    "Actualmente, solo el proveedor Kilo Gateway se puede configurar en la interfaz de ajustes. El soporte para configurar otros proveedores llegará pronto durante el período beta. Mientras tanto, puedes configurar proveedores usando la CLI o el archivo de configuración. Estamos comprometidos a mantener Kilo abierto, sin ataduras.",
   "settings.providers.section.connected": "Proveedores conectados",
   "settings.providers.connected.empty": "No hay proveedores conectados",
   "settings.providers.section.popular": "Proveedores populares",
@@ -951,6 +953,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Parámetro de muestreo nucleus (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Pasos máximos",
   "settings.agentBehaviour.maxSteps.description": "Iteraciones máximas del agente",
+  "settings.agentBehaviour.discoveredSkills": "Habilidades descubiertas",
+  "settings.agentBehaviour.noSkillsFound":
+    "No se encontraron habilidades. Agregue rutas de carpetas o URLs abajo para hacer disponibles las habilidades.",
   "settings.agentBehaviour.skillPaths": "Rutas de carpetas de habilidades",
   "settings.agentBehaviour.skillUrls": "URLs de habilidades",
   "settings.agentBehaviour.instructionFiles": "Archivos de instrucciones adicionales",

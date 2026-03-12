@@ -669,6 +669,8 @@ export const dict = {
 
   "settings.providers.title": "プロバイダー",
   "settings.providers.description": "プロバイダー設定はここで構成できます。",
+  "settings.providers.betaNotice":
+    "現在、設定画面で設定できるのはKilo Gatewayプロバイダーのみです。他のプロバイダーの設定については、ベータ期間中にまもなく対応予定です。それまでの間は、CLIまたは設定ファイルを使用してプロバイダーを設定できます。私たちはKiloをオープンに保ち、ロックインのない状態を維持することをお約束します。",
   "settings.providers.section.connected": "接続済みプロバイダー",
   "settings.providers.connected.empty": "接続済みプロバイダーはありません",
   "settings.providers.section.popular": "人気のプロバイダー",
@@ -944,6 +946,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "核サンプリングパラメータ（0-1）",
   "settings.agentBehaviour.maxSteps.title": "最大ステップ数",
   "settings.agentBehaviour.maxSteps.description": "最大エージェント反復回数",
+  "settings.agentBehaviour.discoveredSkills": "検出されたスキル",
+  "settings.agentBehaviour.noSkillsFound":
+    "スキルが見つかりません。スキルを利用可能にするには、以下にスキルフォルダパスまたはURLを追加してください。",
   "settings.agentBehaviour.skillPaths": "スキルフォルダパス",
   "settings.agentBehaviour.skillUrls": "スキルURL",
   "settings.agentBehaviour.instructionFiles": "追加の指示ファイル",

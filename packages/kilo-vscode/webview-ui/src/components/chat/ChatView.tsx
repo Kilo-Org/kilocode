@@ -89,6 +89,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   )
 
   onMount(() => {
+    if (props.readonly) return
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape" && session.status() === "busy") {
         e.preventDefault()
@@ -107,7 +108,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
 
   return (
     <div class="chat-view">
-      <TaskHeader />
+      <TaskHeader readonly={props.readonly} />
       <div class="chat-messages-wrapper">
         <div class="chat-messages">
           <MessageList onSelectSession={props.onSelectSession} />

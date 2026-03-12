@@ -164,6 +164,13 @@ export interface QuestionRequest {
   }
 }
 
+// Skill info from CLI backend
+export interface SkillInfo {
+  name: string
+  description: string
+  location: string
+}
+
 // Agent/mode info from CLI backend
 export interface AgentInfo {
   name: string
@@ -531,7 +538,7 @@ export interface DeviceAuthCancelledMessage {
 
 export interface NavigateMessage {
   type: "navigate"
-  view: "newTask" | "marketplace" | "history" | "cloudHistory" | "profile" | "settings" | "migration" // legacy-migration
+  view: "newTask" | "marketplace" | "history" | "cloudHistory" | "profile" | "settings" | "migration" | "subAgentViewer" // legacy-migration: "migration"
 }
 
 export interface ProvidersLoadedMessage {
@@ -546,6 +553,11 @@ export interface AgentsLoadedMessage {
   type: "agentsLoaded"
   agents: AgentInfo[]
   defaultAgent: string
+}
+
+export interface SkillsLoadedMessage {
+  type: "skillsLoaded"
+  skills: SkillInfo[]
 }
 
 export interface AutocompleteSettingsLoadedMessage {
@@ -961,6 +973,12 @@ export interface EnhancePromptErrorMessage {
   requestId: string
 }
 
+// Sub-agent viewer: open a child session in read-only mode (extension → webview)
+export interface ViewSubAgentSessionMessage {
+  type: "viewSubAgentSession"
+  sessionID: string
+}
+
 export interface DiffViewerDiffsMessage {
   type: "diffViewer.diffs"
   diffs: WorktreeFileDiff[]
@@ -998,6 +1016,7 @@ export type ExtensionMessage =
   | NavigateMessage
   | ProvidersLoadedMessage
   | AgentsLoadedMessage
+  | SkillsLoadedMessage
   | AutocompleteSettingsLoadedMessage
   | ChatCompletionResultMessage
   | FileSearchResultMessage
@@ -1043,6 +1062,7 @@ export type ExtensionMessage =
   // legacy-migration end
   | EnhancePromptResultMessage
   | EnhancePromptErrorMessage
+  | ViewSubAgentSessionMessage
   | DiffViewerDiffsMessage
   | DiffViewerLoadingMessage
 
@@ -1172,6 +1192,10 @@ export interface CompactRequest {
 
 export interface RequestAgentsMessage {
   type: "requestAgents"
+}
+
+export interface RequestSkillsMessage {
+  type: "requestSkills"
 }
 
 export interface SetLanguageRequest {
@@ -1497,6 +1521,13 @@ export interface OpenChangesRequest {
   type: "openChanges"
 }
 
+// Open a sub-agent session in a read-only editor panel
+export interface OpenSubAgentViewerRequest {
+  type: "openSubAgentViewer"
+  sessionID: string
+  title?: string
+}
+
 // Set default base branch (webview → extension)
 export interface SetDefaultBaseBranchRequest {
   type: "agentManager.setDefaultBaseBranch"
@@ -1524,6 +1555,7 @@ export type WebviewMessage =
   | RequestProvidersMessage
   | CompactRequest
   | RequestAgentsMessage
+  | RequestSkillsMessage
   | SetLanguageRequest
   | QuestionReplyRequest
   | QuestionRejectRequest
@@ -1586,6 +1618,7 @@ export type WebviewMessage =
   | ApplyWorktreeDiffMessage
   | EnhancePromptRequest
   | OpenChangesRequest
+  | OpenSubAgentViewerRequest
   | SetDefaultBaseBranchRequest
 
 // ============================================
