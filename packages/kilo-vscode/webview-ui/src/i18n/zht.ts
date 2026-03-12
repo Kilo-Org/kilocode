@@ -662,6 +662,8 @@ export const dict = {
 
   "settings.providers.title": "供應商",
   "settings.providers.description": "可在此調整供應商設定。",
+  "settings.providers.betaNotice":
+    "目前在設定介面中僅能配置 Kilo Gateway 供應商。在測試期間，即將推出配置其他供應商的支援。在此期間，您可以使用 CLI 或設定檔來配置供應商。我們致力於保持 Kilo 開放，絕不綁定。",
   "settings.providers.section.connected": "已連線的供應商",
   "settings.providers.connected.empty": "沒有已連線的供應商",
   "settings.providers.section.popular": "熱門供應商",
@@ -739,6 +741,7 @@ export const dict = {
   "session.cloud.import.placeholder": "工作階段 ID、URL 或 kilo import 指令",
   "session.cloud.import.button": "匯入",
   "session.cloud.import.invalid": "工作階段 ID 格式無效",
+  "session.cloud.import.legacy": "這似乎是一個舊版工作階段，已不再受支援。",
   "session.cloud.import.failed": "無法匯入雲端工作階段",
 
   "workspace.new": "新增工作區",
@@ -919,6 +922,8 @@ export const dict = {
   "settings.agentBehaviour.defaultAgent.title": "預設 Agent",
   "settings.agentBehaviour.defaultAgent.description": "未指定時使用的 Agent",
   "settings.agentBehaviour.selectAgent": "選擇要設定的 Agent…",
+  "settings.agentBehaviour.selectAgent.title": "Agent",
+  "settings.agentBehaviour.selectAgent.description": "選擇要設定的 Agent…",
   "settings.agentBehaviour.modelOverride.title": "模型覆寫",
   "settings.agentBehaviour.modelOverride.description": "覆寫此 Agent 的預設模型",
   "settings.agentBehaviour.prompt.title": "自訂提示詞",
@@ -929,6 +934,8 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "核取樣參數（0-1）",
   "settings.agentBehaviour.maxSteps.title": "最大步數",
   "settings.agentBehaviour.maxSteps.description": "最大 Agent 迭代次數",
+  "settings.agentBehaviour.discoveredSkills": "已發現的 Skill",
+  "settings.agentBehaviour.noSkillsFound": "未發現任何 Skill。請在下方新增 Skill 資料夾路徑或 URL 以使 Skill 可用。",
   "settings.agentBehaviour.skillPaths": "Skill 資料夾路徑",
   "settings.agentBehaviour.skillUrls": "Skill URL",
   "settings.agentBehaviour.instructionFiles": "附加指令檔案",

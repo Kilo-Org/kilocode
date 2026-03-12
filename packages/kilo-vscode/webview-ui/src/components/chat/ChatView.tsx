@@ -51,7 +51,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
         if (!msgParts) continue
         for (const p of msgParts) {
           if (p.type !== "tool") continue
-          const child = (p as { metadata?: { sessionId?: string } }).metadata?.sessionId
+          const child = (p as { state?: { metadata?: { sessionId?: string } } }).state?.metadata?.sessionId
           if (child && !family.has(child)) {
             family.add(child)
             queue.push(child)
@@ -76,6 +76,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
     scopedQuestions()[0]
   const permissionRequest = () => scopedPermissions().find((p) => p.sessionID === id()) ?? scopedPermissions()[0]
   const blocked = () => scopedPermissions().length > 0 || scopedQuestions().length > 0
+  const dock = () => !props.readonly || !!questionRequest() || !!permissionRequest()
 
   // When a bottom-dock permission/question disappears while the session is busy,
   // the scroll container grows taller. Dispatch a custom event so MessageList can
@@ -89,6 +90,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   )
 
   onMount(() => {
+    if (props.readonly) return
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape" && session.status() === "busy") {
         e.preventDefault()
@@ -107,14 +109,14 @@ export const ChatView: Component<ChatViewProps> = (props) => {
 
   return (
     <div class="chat-view">
-      <TaskHeader />
+      <TaskHeader readonly={props.readonly} />
       <div class="chat-messages-wrapper">
         <div class="chat-messages">
           <MessageList onSelectSession={props.onSelectSession} />
         </div>
       </div>
 
-      <Show when={!props.readonly}>
+      <Show when={dock()}>
         <div class="chat-input">
           <Show when={questionRequest()} keyed>
             {(req) => <QuestionDock request={req} />}
@@ -128,7 +130,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
               />
             )}
           </Show>
-          <Show when={hasMessages() && idle() && !blocked()}>
+          <Show when={!props.readonly && hasMessages() && idle() && !blocked()}>
             <div class="new-task-button-wrapper">
               <Button
                 variant="secondary"
@@ -153,7 +155,9 @@ export const ChatView: Component<ChatViewProps> = (props) => {
               </Show>
             </div>
           </Show>
-          <PromptInput />
+          <Show when={!props.readonly}>
+            <PromptInput />
+          </Show>
         </div>
       </Show>
     </div>

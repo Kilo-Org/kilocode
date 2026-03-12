@@ -671,6 +671,8 @@ export const dict = {
 
   "settings.providers.title": "Provedores",
   "settings.providers.description": "Configurações de provedores estarão disponíveis aqui.",
+  "settings.providers.betaNotice":
+    "Atualmente, apenas o provedor Kilo Gateway pode ser configurado na interface de configurações. O suporte para a configuração de outros provedores estará disponível em breve durante o período beta. Enquanto isso, você pode configurar provedores usando a CLI ou o arquivo de configuração. Estamos comprometidos em manter o Kilo aberto, sem lock-in.",
   "settings.providers.section.connected": "Provedores conectados",
   "settings.providers.connected.empty": "Nenhum provedor conectado",
   "settings.providers.section.popular": "Provedores populares",
@@ -750,6 +752,7 @@ export const dict = {
   "session.cloud.import.placeholder": "ID da sessão, URL ou comando kilo import",
   "session.cloud.import.button": "Importar",
   "session.cloud.import.invalid": "Formato de ID de sessão inválido",
+  "session.cloud.import.legacy": "Esta parece ser uma sessão legada que não é mais suportada.",
   "session.cloud.import.failed": "Falha ao importar sessão da nuvem",
 
   "workspace.new": "Novo espaço de trabalho",
@@ -935,6 +938,8 @@ export const dict = {
   "settings.agentBehaviour.defaultAgent.title": "Agente padrão",
   "settings.agentBehaviour.defaultAgent.description": "Agente a usar quando nenhum é especificado",
   "settings.agentBehaviour.selectAgent": "Selecionar um agente para configurar…",
+  "settings.agentBehaviour.selectAgent.title": "Agente",
+  "settings.agentBehaviour.selectAgent.description": "Selecionar um agente para configurar…",
   "settings.agentBehaviour.modelOverride.title": "Substituição de modelo",
   "settings.agentBehaviour.modelOverride.description": "Substituir o modelo padrão para este agente",
   "settings.agentBehaviour.prompt.title": "Prompt personalizado",
@@ -945,6 +950,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Parâmetro de amostragem nucleus (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Passos máximos",
   "settings.agentBehaviour.maxSteps.description": "Iterações máximas do agente",
+  "settings.agentBehaviour.discoveredSkills": "Habilidades descobertas",
+  "settings.agentBehaviour.noSkillsFound":
+    "Nenhuma habilidade encontrada. Adicione caminhos de pastas ou URLs abaixo para disponibilizar habilidades.",
   "settings.agentBehaviour.skillPaths": "Caminhos de pastas de habilidades",
   "settings.agentBehaviour.skillUrls": "URLs de habilidades",
   "settings.agentBehaviour.instructionFiles": "Arquivos de instruções adicionais",
@@ -967,22 +975,32 @@ export const dict = {
   "settings.autoApprove.addPath": "Adicionar caminho",
   "settings.autoApprove.placeholder.command": "ex. git *",
   "settings.autoApprove.placeholder.path": "ex. *.env",
-  "settings.autoApprove.tool.read": "Ler arquivos. Permite que o agente leia arquivos correspondentes ao caminho especificado.",
-  "settings.autoApprove.tool.edit": "Modificar arquivos. Permite que o agente crie ou edite arquivos, incluindo patches e atualizações de múltiplos arquivos.",
-  "settings.autoApprove.tool.glob": "Corresponder arquivos por padrão. Permite a correspondência de arquivos usando padrões glob (ex: src/**/*.ts).",
-  "settings.autoApprove.tool.grep": "Pesquisar conteúdo de arquivos. Permite a pesquisa baseada em regex dentro de arquivos.",
-  "settings.autoApprove.tool.list": "Listar conteúdo de diretórios. Permite visualizar arquivos e pastas dentro de um diretório.",
-  "settings.autoApprove.tool.bash": "Executar comandos de terminal. Permite a execução de comandos shell (ex: git status).",
-  "settings.autoApprove.tool.task": "Iniciar subagentes. Permite iniciar subagentes especializados para tarefas específicas.",
+  "settings.autoApprove.tool.read":
+    "Ler arquivos. Permite que o agente leia arquivos correspondentes ao caminho especificado.",
+  "settings.autoApprove.tool.edit":
+    "Modificar arquivos. Permite que o agente crie ou edite arquivos, incluindo patches e atualizações de múltiplos arquivos.",
+  "settings.autoApprove.tool.glob":
+    "Corresponder arquivos por padrão. Permite a correspondência de arquivos usando padrões glob (ex: src/**/*.ts).",
+  "settings.autoApprove.tool.grep":
+    "Pesquisar conteúdo de arquivos. Permite a pesquisa baseada em regex dentro de arquivos.",
+  "settings.autoApprove.tool.list":
+    "Listar conteúdo de diretórios. Permite visualizar arquivos e pastas dentro de um diretório.",
+  "settings.autoApprove.tool.bash":
+    "Executar comandos de terminal. Permite a execução de comandos shell (ex: git status).",
+  "settings.autoApprove.tool.task":
+    "Iniciar subagentes. Permite iniciar subagentes especializados para tarefas específicas.",
   "settings.autoApprove.tool.skill": "Carregar habilidades. Permite carregar habilidades predefinidas pelo nome.",
-  "settings.autoApprove.tool.lsp": "Consultar language server. Permite executar consultas ao servidor de linguagem para inteligência de código.",
+  "settings.autoApprove.tool.lsp":
+    "Consultar language server. Permite executar consultas ao servidor de linguagem para inteligência de código.",
   "settings.autoApprove.tool.todoreadwrite":
     "Gerenciar lista de tarefas. Permite ler e atualizar a lista de tarefas interna.",
   "settings.autoApprove.tool.webfetch": "Buscar uma URL. Permite recuperar o conteúdo de uma URL específica.",
   "settings.autoApprove.tool.websearchcodesearch":
     "Pesquisar na web ou no código. Permite realizar pesquisas externas na web ou no código.",
-  "settings.autoApprove.tool.external_directory": "Acessar arquivos fora do workspace. Acionado ao acessar arquivos fora do diretório do projeto atual.",
-  "settings.autoApprove.tool.doom_loop": "Prevenir ações idênticas repetidas. Acionado quando a mesma chamada de ferramenta se repete com entrada idêntica.",
+  "settings.autoApprove.tool.external_directory":
+    "Acessar arquivos fora do workspace. Acionado ao acessar arquivos fora do diretório do projeto atual.",
+  "settings.autoApprove.tool.doom_loop":
+    "Prevenir ações idênticas repetidas. Acionado quando a mesma chamada de ferramenta se repete com entrada idêntica.",
   "settings.checkpoints.enable.title": "Ativar snapshots",
   "settings.checkpoints.enable.description": "Criar pontos de verificação antes de editar arquivos",
   "settings.context.autoCompaction.title": "Compactação automática",

@@ -670,6 +670,8 @@ export const dict = {
 
   "settings.providers.title": "공급자",
   "settings.providers.description": "공급자 설정은 여기서 구성할 수 있습니다.",
+  "settings.providers.betaNotice":
+    "현재 설정 인터페이스에서는 Kilo Gateway 제공자만 설정할 수 있습니다. 다른 제공자 설정에 대한 지원은 베타 기간 동안 곧 제공될 예정입니다. 그동안에는 CLI 또는 설정 파일을 사용하여 제공자를 설정할 수 있습니다. 우리는 종속(lock-in) 없이 Kilo를 개방적으로 유지하기 위해 최선을 다하고 있습니다.",
   "settings.providers.section.connected": "연결된 공급자",
   "settings.providers.connected.empty": "연결된 공급자 없음",
   "settings.providers.section.popular": "인기 공급자",
@@ -747,6 +749,7 @@ export const dict = {
   "session.cloud.import.placeholder": "세션 ID, URL 또는 kilo import 명령어",
   "session.cloud.import.button": "가져오기",
   "session.cloud.import.invalid": "잘못된 세션 ID 형식입니다",
+  "session.cloud.import.legacy": "이전 버전의 세션으로 보이며 더 이상 지원되지 않습니다.",
   "session.cloud.import.failed": "클라우드 세션 가져오기 실패",
 
   "workspace.new": "새 작업 공간",
@@ -928,6 +931,8 @@ export const dict = {
   "settings.agentBehaviour.defaultAgent.title": "기본 에이전트",
   "settings.agentBehaviour.defaultAgent.description": "지정되지 않은 경우 사용할 에이전트",
   "settings.agentBehaviour.selectAgent": "구성할 에이전트를 선택하세요…",
+  "settings.agentBehaviour.selectAgent.title": "에이전트",
+  "settings.agentBehaviour.selectAgent.description": "구성할 에이전트를 선택하세요…",
   "settings.agentBehaviour.modelOverride.title": "모델 재정의",
   "settings.agentBehaviour.modelOverride.description": "이 에이전트의 기본 모델 재정의",
   "settings.agentBehaviour.prompt.title": "사용자 정의 프롬프트",
@@ -938,6 +943,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "핵 샘플링 매개변수 (0-1)",
   "settings.agentBehaviour.maxSteps.title": "최대 단계",
   "settings.agentBehaviour.maxSteps.description": "최대 에이전트 반복 횟수",
+  "settings.agentBehaviour.discoveredSkills": "검색된 스킬",
+  "settings.agentBehaviour.noSkillsFound":
+    "스킬을 찾을 수 없습니다. 스킬을 사용하려면 아래에 스킬 폴더 경로 또는 URL을 추가하세요.",
   "settings.agentBehaviour.skillPaths": "스킬 폴더 경로",
   "settings.agentBehaviour.skillUrls": "스킬 URL",
   "settings.agentBehaviour.instructionFiles": "추가 지시 파일",
@@ -959,7 +967,8 @@ export const dict = {
   "settings.autoApprove.placeholder.command": "예: git *",
   "settings.autoApprove.placeholder.path": "예: *.env",
   "settings.autoApprove.tool.read": "파일 읽기. 에이전트가 지정된 경로와 일치하는 파일을 읽을 수 있도록 허용합니다.",
-  "settings.autoApprove.tool.edit": "파일 수정. 패치 및 다중 파일 업데이트를 포함하여 에이전트가 파일을 생성하거나 편집할 수 있도록 허용합니다.",
+  "settings.autoApprove.tool.edit":
+    "파일 수정. 패치 및 다중 파일 업데이트를 포함하여 에이전트가 파일을 생성하거나 편집할 수 있도록 허용합니다.",
   "settings.autoApprove.tool.glob": "패턴으로 파일 찾기. glob 패턴(예: src/**/*.ts)을 사용한 파일 찾기를 허용합니다.",
   "settings.autoApprove.tool.grep": "파일 내용 검색. 파일 내에서 정규식 기반 검색을 허용합니다.",
   "settings.autoApprove.tool.list": "디렉토리 내용 나열. 디렉토리 내의 파일 및 폴더 보기를 허용합니다.",
@@ -971,8 +980,10 @@ export const dict = {
   "settings.autoApprove.tool.webfetch": "URL 가져오기. 특정 URL에서 콘텐츠를 검색할 수 있도록 허용합니다.",
   "settings.autoApprove.tool.websearchcodesearch":
     "웹 또는 코드 검색. 외부 웹 또는 코드 검색을 수행할 수 있도록 허용합니다.",
-  "settings.autoApprove.tool.external_directory": "작업 공간 외부 파일 접근. 현재 프로젝트 디렉토리 외부의 파일에 접근할 때 트리거됩니다.",
-  "settings.autoApprove.tool.doom_loop": "반복되는 동일한 작업 방지. 동일한 입력으로 동일한 도구 호출이 반복될 때 트리거됩니다.",
+  "settings.autoApprove.tool.external_directory":
+    "작업 공간 외부 파일 접근. 현재 프로젝트 디렉토리 외부의 파일에 접근할 때 트리거됩니다.",
+  "settings.autoApprove.tool.doom_loop":
+    "반복되는 동일한 작업 방지. 동일한 입력으로 동일한 도구 호출이 반복될 때 트리거됩니다.",
   "settings.checkpoints.enable.title": "스냅샷 활성화",
   "settings.checkpoints.enable.description": "파일 편집 전 체크포인트를 생성하여 이전 상태를 복원할 수 있습니다",
   "settings.context.autoCompaction.title": "자동 압축",

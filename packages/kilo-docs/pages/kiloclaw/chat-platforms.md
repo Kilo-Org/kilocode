@@ -29,6 +29,7 @@ You can remove or replace a configured token at any time.
 ### Discord
 
 To connect Discord, you need a **Bot Token** from the [Discord Developer Portal](https://discord.com/developers/applications).
+
 #### Enable Privileged Intents
 
 Still on the **Bot** page, scroll down to **Privileged Gateway Intents** and enable:
@@ -36,6 +37,7 @@ Still on the **Bot** page, scroll down to **Privileged Gateway Intents** and ena
 - **Message Content Intent** (required)
 - **Server Members Intent** (recommended — needed for role allowlists and name matching)
 - **Presence Intent** (optional)
+
 #### Copy Your Bot Token
 
 1. Scroll back up on the **Bot** page and click **Reset Token**
@@ -48,6 +50,7 @@ Still on the **Bot** page, scroll down to **Privileged Gateway Intents** and ena
 {% image src="/docs/img/kiloclaw/discord.png" alt="Connect account screen" width="800" caption="Discord bot token entry" /%}
 
 Enter the token in the Settings tab and click **Save**. You can remove or replace a configured token at any time.
+
 #### Generate an Invite URL and Add the Bot to Your Server
 
 1. Click **OAuth2** on the sidebar

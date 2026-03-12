@@ -667,6 +667,8 @@ export const dict = {
 
   "settings.providers.title": "ผู้ให้บริการ",
   "settings.providers.description": "การตั้งค่าผู้ให้บริการจะสามารถกำหนดค่าได้ที่นี่",
+  "settings.providers.betaNotice":
+    "ปัจจุบันสามารถตั้งค่าได้เฉพาะผู้ให้บริการ Kilo Gateway ในหน้าการตั้งค่าเท่านั้น การรองรับการตั้งค่าผู้ให้บริการรายอื่นจะพร้อมใช้งานในเร็วๆ นี้ในช่วงเบต้า ในระหว่างนี้คุณสามารถตั้งค่าผู้ให้บริการผ่าน CLI หรือไฟล์คอนฟิกได้ เรามุ่งมั่นที่จะรักษาให้ Kilo เปิดกว้างและไม่มีการผูกมัด",
   "settings.providers.section.connected": "ผู้ให้บริการที่เชื่อมต่อ",
   "settings.providers.connected.empty": "ไม่มีผู้ให้บริการที่เชื่อมต่อ",
   "settings.providers.section.popular": "ผู้ให้บริการยอดนิยม",
@@ -744,6 +746,7 @@ export const dict = {
   "session.cloud.import.placeholder": "ID เซสชัน, URL หรือคำสั่ง kilo import",
   "session.cloud.import.button": "นำเข้า",
   "session.cloud.import.invalid": "รูปแบบ ID เซสชันไม่ถูกต้อง",
+  "session.cloud.import.legacy": "นี่ดูเหมือนจะเป็นเซสชันเวอร์ชันเก่าที่ไม่รองรับอีกต่อไปแล้ว",
   "session.cloud.import.failed": "ไม่สามารถนำเข้าเซสชันคลาวด์ได้",
 
   "workspace.new": "พื้นที่ทำงานใหม่",
@@ -924,6 +927,8 @@ export const dict = {
   "settings.agentBehaviour.defaultAgent.title": "เอเจนต์เริ่มต้น",
   "settings.agentBehaviour.defaultAgent.description": "เอเจนต์ที่ใช้เมื่อไม่ได้ระบุ",
   "settings.agentBehaviour.selectAgent": "เลือกเอเจนต์เพื่อกำหนดค่า…",
+  "settings.agentBehaviour.selectAgent.title": "เอเจนต์",
+  "settings.agentBehaviour.selectAgent.description": "เลือกเอเจนต์เพื่อกำหนดค่า…",
   "settings.agentBehaviour.modelOverride.title": "แทนที่โมเดล",
   "settings.agentBehaviour.modelOverride.description": "แทนที่โมเดลเริ่มต้นของเอเจนต์นี้",
   "settings.agentBehaviour.prompt.title": "พรอมต์กำหนดเอง",
@@ -934,6 +939,8 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "พารามิเตอร์ nucleus sampling (0-1)",
   "settings.agentBehaviour.maxSteps.title": "ขั้นตอนสูงสุด",
   "settings.agentBehaviour.maxSteps.description": "จำนวนรอบเอเจนต์สูงสุด",
+  "settings.agentBehaviour.discoveredSkills": "ทักษะที่ค้นพบ",
+  "settings.agentBehaviour.noSkillsFound": "ไม่พบทักษะ เพิ่มเส้นทางโฟลเดอร์หรือ URL ด้านล่างเพื่อทำให้ทักษะพร้อมใช้งาน",
   "settings.agentBehaviour.skillPaths": "เส้นทางโฟลเดอร์ทักษะ",
   "settings.agentBehaviour.skillUrls": "URL ทักษะ",
   "settings.agentBehaviour.instructionFiles": "ไฟล์คำสั่งเพิ่มเติม",
@@ -955,19 +962,23 @@ export const dict = {
   "settings.autoApprove.placeholder.command": "เช่น git *",
   "settings.autoApprove.placeholder.path": "เช่น *.env",
   "settings.autoApprove.tool.read": "อ่านไฟล์ อนุญาตให้ตัวแทน (Agent) อ่านไฟล์ที่ตรงกับเส้นทางที่ระบุ",
-  "settings.autoApprove.tool.edit": "แก้ไขไฟล์ อนุญาตให้ตัวแทน (Agent) สร้างหรือแก้ไขไฟล์ รวมถึงแพตช์ (Patch) และการอัปเดตหลายไฟล์",
+  "settings.autoApprove.tool.edit":
+    "แก้ไขไฟล์ อนุญาตให้ตัวแทน (Agent) สร้างหรือแก้ไขไฟล์ รวมถึงแพตช์ (Patch) และการอัปเดตหลายไฟล์",
   "settings.autoApprove.tool.glob": "จับคู่ไฟล์ด้วยรูปแบบ อนุญาตให้จับคู่ไฟล์โดยใช้รูปแบบ glob (เช่น src/**/*.ts)",
   "settings.autoApprove.tool.grep": "ค้นหาเนื้อหาไฟล์ อนุญาตให้ค้นหาเนื้อหาภายในไฟล์โดยใช้นิพจน์ทั่วไป (Regex)",
   "settings.autoApprove.tool.list": "แสดงเนื้อหาในไดเรกทอรี อนุญาตให้ดูไฟล์และโฟลเดอร์ภายในไดเรกทอรี",
   "settings.autoApprove.tool.bash": "เรียกใช้คำสั่งเทอร์มินัล อนุญาตให้ดำเนินการคำสั่งเชลล์ (เช่น git status)",
   "settings.autoApprove.tool.task": "เปิดใช้งานตัวแทนย่อย อนุญาตให้เริ่มต้นตัวแทนย่อยเฉพาะทางสำหรับงานเฉพาะ",
   "settings.autoApprove.tool.skill": "โหลดทักษะ อนุญาตให้โหลดทักษะที่กำหนดไว้ล่วงหน้าตามชื่อ",
-  "settings.autoApprove.tool.lsp": "สอบถามเซิร์ฟเวอร์ภาษา อนุญาตให้เรียกใช้การสืบค้นเซิร์ฟเวอร์ภาษาสำหรับระบบอัจฉริยะของโค้ด",
+  "settings.autoApprove.tool.lsp":
+    "สอบถามเซิร์ฟเวอร์ภาษา อนุญาตให้เรียกใช้การสืบค้นเซิร์ฟเวอร์ภาษาสำหรับระบบอัจฉริยะของโค้ด",
   "settings.autoApprove.tool.todoreadwrite": "จัดการรายการงาน อนุญาตให้อ่านและอัปเดตรายการงานภายใน",
   "settings.autoApprove.tool.webfetch": "ดึงข้อมูลจาก URL อนุญาตให้ดึงเนื้อหาจาก URL ที่ระบุ",
   "settings.autoApprove.tool.websearchcodesearch": "ค้นหาเว็บหรือโค้ด อนุญาตให้ทำการค้นหาเว็บหรือโค้ดภายนอก",
-  "settings.autoApprove.tool.external_directory": "เข้าถึงไฟล์นอกพื้นที่ทำงาน (Workspace) ถูกเรียกเมื่อเข้าถึงไฟล์ภายนอกไดเรกทอรีโปรเจ็กต์ปัจจุบัน",
-  "settings.autoApprove.tool.doom_loop": "ป้องกันการกระทำที่ซ้ำกัน ถูกเรียกเมื่อเครื่องมือเดิมถูกเรียกซ้ำด้วยข้อมูลนำเข้าที่เหมือนกัน",
+  "settings.autoApprove.tool.external_directory":
+    "เข้าถึงไฟล์นอกพื้นที่ทำงาน (Workspace) ถูกเรียกเมื่อเข้าถึงไฟล์ภายนอกไดเรกทอรีโปรเจ็กต์ปัจจุบัน",
+  "settings.autoApprove.tool.doom_loop":
+    "ป้องกันการกระทำที่ซ้ำกัน ถูกเรียกเมื่อเครื่องมือเดิมถูกเรียกซ้ำด้วยข้อมูลนำเข้าที่เหมือนกัน",
   "settings.checkpoints.enable.title": "เปิดใช้งานสแนปชอต",
   "settings.checkpoints.enable.description": "สร้างจุดตรวจก่อนแก้ไขไฟล์",
   "settings.context.autoCompaction.title": "การบีบอัดอัตโนมัติ",

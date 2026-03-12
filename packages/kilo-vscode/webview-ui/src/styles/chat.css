@@ -1389,6 +1389,8 @@
    ============================================ */
 
 [data-component="dock-prompt"][data-kind="question"] {
+  margin: 8px;
+
   [data-slot="question-progress-nav"] {
     display: inline-flex;
     align-items: center;

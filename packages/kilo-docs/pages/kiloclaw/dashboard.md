@@ -117,7 +117,6 @@ Your files, workspace, and persistent data are not affected. Only the OpenClaw c
 This action cannot be undone. Make sure you've saved any important changes to your configuration before restoring.
 {% /callout %}
 
-
 ### Stop, Destroy & Restore
 
 At the bottom of Settings:

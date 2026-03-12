@@ -5,7 +5,7 @@ import { remoteRef, type Worktree } from "./WorktreeStateManager"
 import type { GitOps } from "./GitOps"
 import { normalizePath } from "./git-import"
 
-interface WorktreeStats {
+export interface WorktreeStats {
   worktreeId: string
   files: number
   additions: number
@@ -14,7 +14,7 @@ interface WorktreeStats {
   behind: number
 }
 
-interface LocalStats {
+export interface LocalStats {
   branch: string
   files: number
   additions: number
@@ -149,7 +149,7 @@ export class GitStatsPoller {
           try {
             const base = remoteRef(wt)
             const [{ data: diffs }, ab] = await Promise.all([
-              client.worktree.diff({ directory: wt.path, base }, { throwOnError: true }),
+              client.worktree.diffSummary({ directory: wt.path, base }, { throwOnError: true }),
               this.git.aheadBehind(wt.path, base, wt.remote),
             ])
             const files = diffs.length
@@ -250,7 +250,7 @@ export class GitStatsPoller {
         if (base && client) {
           this.options.log(`Local stats: using HTTP client with base=${base}`)
           const [{ data: diffs }, ab] = await Promise.all([
-            client.worktree.diff({ directory: root, base }, { throwOnError: true }),
+            client.worktree.diffSummary({ directory: root, base }, { throwOnError: true }),
             this.git.aheadBehind(root, base, remote),
           ])
           files = diffs.length

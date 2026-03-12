@@ -4,8 +4,7 @@
  * Unlike the upstream AssistantParts, this renders each read/glob/grep/list tool
  * individually for maximum verbosity in the VS Code sidebar context.
  *
- * Questions with a tool context are rendered inline with their tool call.
- * Permissions are rendered in the bottom dock (PermissionDock).
+ * Active questions and permissions are rendered in the bottom dock.
  */
 
 import { Component, For, Show, createMemo } from "solid-js"
@@ -18,8 +17,6 @@ import type {
   ToolPart,
 } from "@kilocode/sdk/v2"
 import { useData } from "@kilocode/kilo-ui/context/data"
-import { useSession } from "../../context/session"
-import { QuestionDock } from "./QuestionDock"
 
 // Tools that the upstream message-part renderer suppresses (returns null for).
 // We render these ourselves via ToolRegistry when they complete,
@@ -70,18 +67,12 @@ function TodoToolCard(props: { part: ToolPart }) {
 
 export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   const data = useData()
-  const session = useSession()
-
-  const questions = () => session.questions().filter((q) => q.sessionID === session.currentSessionID() && q.tool)
 
   const parts = createMemo(() => {
     const stored = data.store.part?.[props.message.id]
     if (!stored) return []
     return (stored as SDKPart[]).filter((part) => isRenderable(part))
   })
-
-  // Questions linked to this message (rendered after the last part)
-  const questionForMessage = () => questions().find((q) => q.tool!.messageID === props.message.id)
 
   return (
     <>
@@ -112,9 +103,6 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
           )
         }}
       </For>
-      <Show when={questionForMessage()} keyed>
-        {(req) => <QuestionDock request={req} />}
-      </Show>
     </>
   )
 }

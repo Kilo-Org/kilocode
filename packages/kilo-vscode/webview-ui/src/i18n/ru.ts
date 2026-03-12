@@ -676,6 +676,8 @@ export const dict = {
 
   "settings.providers.title": "Провайдеры",
   "settings.providers.description": "Настройки провайдеров будут доступны здесь.",
+  "settings.providers.betaNotice":
+    "В настоящее время в интерфейсе настроек можно настроить только провайдер Kilo Gateway. Поддержка настройки других провайдеров скоро появится в период бета-тестирования. А пока вы можете настраивать провайдеров с помощью CLI или конфигурационного файла. Мы стремимся сохранить Kilo открытым — без привязки к поставщикам.",
   "settings.providers.section.connected": "Подключённые провайдеры",
   "settings.providers.connected.empty": "Нет подключённых провайдеров",
   "settings.providers.section.popular": "Популярные провайдеры",
@@ -754,6 +756,7 @@ export const dict = {
   "session.cloud.import.placeholder": "ID сессии, URL или команда kilo import",
   "session.cloud.import.button": "Импортировать",
   "session.cloud.import.invalid": "Неверный формат ID сессии",
+  "session.cloud.import.legacy": "Похоже, это устаревшая сессия, которая больше не поддерживается.",
   "session.cloud.import.failed": "Не удалось импортировать облачную сессию",
 
   "workspace.new": "Новое рабочее пространство",
@@ -936,6 +939,8 @@ export const dict = {
   "settings.agentBehaviour.defaultAgent.title": "Агент по умолчанию",
   "settings.agentBehaviour.defaultAgent.description": "Агент при отсутствии указания",
   "settings.agentBehaviour.selectAgent": "Выберите агента для настройки…",
+  "settings.agentBehaviour.selectAgent.title": "Агент",
+  "settings.agentBehaviour.selectAgent.description": "Выберите агента для настройки…",
   "settings.agentBehaviour.modelOverride.title": "Переопределение модели",
   "settings.agentBehaviour.modelOverride.description": "Переопределить модель по умолчанию для этого агента",
   "settings.agentBehaviour.prompt.title": "Пользовательский промпт",
@@ -946,6 +951,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Параметр nucleus-сэмплирования (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Макс. шагов",
   "settings.agentBehaviour.maxSteps.description": "Максимальное число итераций агента",
+  "settings.agentBehaviour.discoveredSkills": "Обнаруженные навыки",
+  "settings.agentBehaviour.noSkillsFound":
+    "Навыки не обнаружены. Добавьте пути к папкам навыков или URL-адреса ниже, чтобы сделать навыки доступными.",
   "settings.agentBehaviour.skillPaths": "Пути папок навыков",
   "settings.agentBehaviour.skillUrls": "URL навыков",
   "settings.agentBehaviour.instructionFiles": "Дополнительные файлы инструкций",
@@ -967,21 +975,30 @@ export const dict = {
   "settings.autoApprove.placeholder.command": "например, git *",
   "settings.autoApprove.placeholder.path": "например, *.env",
   "settings.autoApprove.tool.read": "Чтение файлов. Разрешает агенту читать файлы, соответствующие указанному пути.",
-  "settings.autoApprove.tool.edit": "Изменение файлов. Разрешает агенту создавать или редактировать файлы, включая патчи и обновления нескольких файлов.",
-  "settings.autoApprove.tool.glob": "Поиск файлов по шаблону. Разрешает поиск файлов с использованием glob-шаблонов (например, src/**/*.ts).",
-  "settings.autoApprove.tool.grep": "Поиск по содержимому файлов. Разрешает поиск на основе регулярных выражений внутри файлов.",
-  "settings.autoApprove.tool.list": "Просмотр содержимого каталогов. Разрешает просмотр файлов и папок внутри каталога.",
-  "settings.autoApprove.tool.bash": "Выполнение команд терминала. Разрешает выполнение команд оболочки (например, git status).",
-  "settings.autoApprove.tool.task": "Запуск субагентов. Разрешает запуск специализированных субагентов для конкретных задач.",
+  "settings.autoApprove.tool.edit":
+    "Изменение файлов. Разрешает агенту создавать или редактировать файлы, включая патчи и обновления нескольких файлов.",
+  "settings.autoApprove.tool.glob":
+    "Поиск файлов по шаблону. Разрешает поиск файлов с использованием glob-шаблонов (например, src/**/*.ts).",
+  "settings.autoApprove.tool.grep":
+    "Поиск по содержимому файлов. Разрешает поиск на основе регулярных выражений внутри файлов.",
+  "settings.autoApprove.tool.list":
+    "Просмотр содержимого каталогов. Разрешает просмотр файлов и папок внутри каталога.",
+  "settings.autoApprove.tool.bash":
+    "Выполнение команд терминала. Разрешает выполнение команд оболочки (например, git status).",
+  "settings.autoApprove.tool.task":
+    "Запуск субагентов. Разрешает запуск специализированных субагентов для конкретных задач.",
   "settings.autoApprove.tool.skill": "Загрузка навыков. Разрешает загрузку предопределенных навыков по имени.",
-  "settings.autoApprove.tool.lsp": "Запрос к языковому серверу. Разрешает выполнение запросов к языковому серверу для анализа кода.",
+  "settings.autoApprove.tool.lsp":
+    "Запрос к языковому серверу. Разрешает выполнение запросов к языковому серверу для анализа кода.",
   "settings.autoApprove.tool.todoreadwrite":
     "Управление списком задач. Разрешает чтение и обновление внутреннего списка задач.",
   "settings.autoApprove.tool.webfetch": "Получение URL. Разрешает извлечение содержимого по указанному URL-адресу.",
   "settings.autoApprove.tool.websearchcodesearch":
     "Поиск в интернете или коде. Разрешает выполнение внешних поисковых запросов в интернете или коде.",
-  "settings.autoApprove.tool.external_directory": "Доступ к файлам вне рабочей области. Срабатывает при доступе к файлам за пределами текущего каталога проекта.",
-  "settings.autoApprove.tool.doom_loop": "Предотвращение повторных идентичных действий. Срабатывает, когда один и тот же вызов инструмента повторяется с идентичными входными данными.",
+  "settings.autoApprove.tool.external_directory":
+    "Доступ к файлам вне рабочей области. Срабатывает при доступе к файлам за пределами текущего каталога проекта.",
+  "settings.autoApprove.tool.doom_loop":
+    "Предотвращение повторных идентичных действий. Срабатывает, когда один и тот же вызов инструмента повторяется с идентичными входными данными.",
   "settings.checkpoints.enable.title": "Включить снимки",
   "settings.checkpoints.enable.description": "Создавать контрольные точки перед редактированием файлов",
   "settings.context.autoCompaction.title": "Автоматическое сжатие",

@@ -76,6 +76,7 @@
 }
 
 html[data-theme="kilo-vscode"] [data-component="bash-output"] {
+  border-radius: 0;
   background: var(--vscode-terminal-background, var(--vscode-panel-background));
 
   [data-slot="bash-pre"] code {

@@ -102,14 +102,17 @@ export namespace McpMigrator {
     }
 
     // 2. Project-level MCP settings (if projectDir provided)
-    // The Kilocode extension uses ".kilocode/mcp.json" for project-level settings
+    // Check .kilo/mcp.json and .kilocode/mcp.json for project-level settings
     // (not "mcp_settings.json" which is only used for global settings)
+    // .kilocode is loaded first (lower precedence), .kilo second (higher precedence)
     if (options?.projectDir) {
-      const projectSettingsPath = path.join(options.projectDir, ".kilocode", "mcp.json")
-      const projectSettings = await readMcpSettings(projectSettingsPath)
-      if (projectSettings?.mcpServers) {
-        for (const [name, server] of Object.entries(projectSettings.mcpServers)) {
-          allServers.push({ name, server }) // Later entries win in deduplication
+      for (const dir of [".kilocode", ".kilo"]) {
+        const projectSettingsPath = path.join(options.projectDir, dir, "mcp.json")
+        const projectSettings = await readMcpSettings(projectSettingsPath)
+        if (projectSettings?.mcpServers) {
+          for (const [name, server] of Object.entries(projectSettings.mcpServers)) {
+            allServers.push({ name, server }) // Later entries win in deduplication
+          }
         }
       }
     }

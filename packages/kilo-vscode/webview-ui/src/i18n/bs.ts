@@ -675,6 +675,8 @@ export const dict = {
 
   "settings.providers.title": "Provajderi",
   "settings.providers.description": "Postavke provajdera će se ovdje moći podešavati.",
+  "settings.providers.betaNotice":
+    "Trenutno se samo Kilo Gateway provajder može konfigurisati u interfejsu za postavke. Podrška za konfigurisanje drugih provajdera stiže uskoro tokom beta perioda. U međuvremenu, provajdere možete konfigurisati koristeći CLI ili konfiguracijsku datoteku. Posvećeni smo tome da Kilo ostane otvoren, bez vezivanja.",
   "settings.providers.section.connected": "Povezani provajderi",
   "settings.providers.connected.empty": "Nema povezanih provajdera",
   "settings.providers.section.popular": "Popularni provajderi",
@@ -753,6 +755,7 @@ export const dict = {
   "session.cloud.import.placeholder": "ID sesije, URL ili kilo import naredba",
   "session.cloud.import.button": "Uvezi",
   "session.cloud.import.invalid": "Neispravan format ID-a sesije",
+  "session.cloud.import.legacy": "Čini se da je ovo zastarjela sesija koja više nije podržana.",
   "session.cloud.import.failed": "Uvoz sesije iz oblaka nije uspio",
 
   "workspace.new": "Novi radni prostor",
@@ -935,6 +938,8 @@ export const dict = {
   "settings.agentBehaviour.defaultAgent.title": "Zadani agent",
   "settings.agentBehaviour.defaultAgent.description": "Agent koji se koristi kada nijedan nije naveden",
   "settings.agentBehaviour.selectAgent": "Odaberi agenta za konfiguraciju…",
+  "settings.agentBehaviour.selectAgent.title": "Agent",
+  "settings.agentBehaviour.selectAgent.description": "Odaberi agenta za konfiguraciju…",
   "settings.agentBehaviour.modelOverride.title": "Zamjena modela",
   "settings.agentBehaviour.modelOverride.description": "Zamijeni zadani model za ovog agenta",
   "settings.agentBehaviour.prompt.title": "Prilagođeni prompt",
@@ -945,6 +950,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Nucleus parametar uzorkovanja (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Maks. koraci",
   "settings.agentBehaviour.maxSteps.description": "Maksimalne iteracije agenta",
+  "settings.agentBehaviour.discoveredSkills": "Otkrivene vještine",
+  "settings.agentBehaviour.noSkillsFound":
+    "Nisu pronađene vještine. Dodajte putanje mapa ili URL-ove ispod kako biste učinili vještine dostupnim.",
   "settings.agentBehaviour.skillPaths": "Putanje mapa vještina",
   "settings.agentBehaviour.skillUrls": "URL-ovi vještina",
   "settings.agentBehaviour.instructionFiles": "Dodatne datoteke uputa",
@@ -965,22 +973,33 @@ export const dict = {
   "settings.autoApprove.addPath": "Dodaj putanju",
   "settings.autoApprove.placeholder.command": "npr. git *",
   "settings.autoApprove.placeholder.path": "npr. *.env",
-  "settings.autoApprove.tool.read": "Čitanje datoteka. Omogućava agentu da čita datoteke koje odgovaraju navedenoj putanji.",
-  "settings.autoApprove.tool.edit": "Izmjena datoteka. Omogućava agentu da kreira ili uređuje datoteke, uključujući zakrpe i ažuriranja više datoteka.",
-  "settings.autoApprove.tool.glob": "Podudaranje datoteka po uzorku. Omogućava podudaranje datoteka koristeći glob uzorke (npr. src/**/*.ts).",
-  "settings.autoApprove.tool.grep": "Pretraživanje sadržaja datoteka. Omogućava pretraživanje zasnovano na regex-u unutar datoteka.",
-  "settings.autoApprove.tool.list": "Prikaz sadržaja direktorija. Omogućava pregled datoteka i fascikli unutar direktorija.",
-  "settings.autoApprove.tool.bash": "Pokretanje terminalskih komandi. Omogućava izvršavanje shell komandi (npr. git status).",
-  "settings.autoApprove.tool.task": "Pokretanje pod-agenata. Omogućava pokretanje specijalizovanih pod-agenata za određene zadatke.",
-  "settings.autoApprove.tool.skill": "Učitavanje vještina. Omogućava učitavanje unaprijed definisanih vještina po imenu.",
-  "settings.autoApprove.tool.lsp": "Upit ka jezičkom serveru. Omogućava pokretanje upita jezičkom serveru za analizu koda.",
+  "settings.autoApprove.tool.read":
+    "Čitanje datoteka. Omogućava agentu da čita datoteke koje odgovaraju navedenoj putanji.",
+  "settings.autoApprove.tool.edit":
+    "Izmjena datoteka. Omogućava agentu da kreira ili uređuje datoteke, uključujući zakrpe i ažuriranja više datoteka.",
+  "settings.autoApprove.tool.glob":
+    "Podudaranje datoteka po uzorku. Omogućava podudaranje datoteka koristeći glob uzorke (npr. src/**/*.ts).",
+  "settings.autoApprove.tool.grep":
+    "Pretraživanje sadržaja datoteka. Omogućava pretraživanje zasnovano na regex-u unutar datoteka.",
+  "settings.autoApprove.tool.list":
+    "Prikaz sadržaja direktorija. Omogućava pregled datoteka i fascikli unutar direktorija.",
+  "settings.autoApprove.tool.bash":
+    "Pokretanje terminalskih komandi. Omogućava izvršavanje shell komandi (npr. git status).",
+  "settings.autoApprove.tool.task":
+    "Pokretanje pod-agenata. Omogućava pokretanje specijalizovanih pod-agenata za određene zadatke.",
+  "settings.autoApprove.tool.skill":
+    "Učitavanje vještina. Omogućava učitavanje unaprijed definisanih vještina po imenu.",
+  "settings.autoApprove.tool.lsp":
+    "Upit ka jezičkom serveru. Omogućava pokretanje upita jezičkom serveru za analizu koda.",
   "settings.autoApprove.tool.todoreadwrite":
     "Upravljanje listom zadataka. Dozvoljava čitanje i ažuriranje interne liste zadataka.",
   "settings.autoApprove.tool.webfetch": "Preuzimanje URL-a. Omogućava preuzimanje sadržaja sa određenog URL-a.",
   "settings.autoApprove.tool.websearchcodesearch":
     "Pretraga weba ili koda. Dozvoljava izvršavanje eksternih pretraga weba ili koda.",
-  "settings.autoApprove.tool.external_directory": "Pristup datotekama izvan radnog prostora. Pokreće se prilikom pristupa datotekama izvan trenutnog direktorija projekta.",
-  "settings.autoApprove.tool.doom_loop": "Sprečavanje ponavljanja identičnih radnji. Pokreće se kada se isti poziv alata ponovi sa identičnim unosom.",
+  "settings.autoApprove.tool.external_directory":
+    "Pristup datotekama izvan radnog prostora. Pokreće se prilikom pristupa datotekama izvan trenutnog direktorija projekta.",
+  "settings.autoApprove.tool.doom_loop":
+    "Sprečavanje ponavljanja identičnih radnji. Pokreće se kada se isti poziv alata ponovi sa identičnim unosom.",
   "settings.checkpoints.enable.title": "Omogući snimke",
   "settings.checkpoints.enable.description": "Kreiraj kontrolne točke prije uređivanja datoteka",
   "settings.context.autoCompaction.title": "Automatska kompresija",
