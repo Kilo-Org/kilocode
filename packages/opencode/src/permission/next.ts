@@ -179,17 +179,20 @@ export namespace PermissionNext {
         reply: input.reply,
       })
 
-      // kilocode_change start - Helper to save per-pattern rules
+      // kilocode_change start - Helper to save per-pattern rules. Only persists
+      // patterns that were part of the original request to prevent a client from
+      // silently whitelisting or blacklisting unrelated commands.
+      const validPatterns = new Set(existing.info.patterns)
       const savePatternRules = () => {
         const permission = existing.info.permission
         if (input.approvedPatterns) {
           for (const pattern of input.approvedPatterns) {
-            s.approved.push({ permission, pattern, action: "allow" })
+            if (validPatterns.has(pattern)) s.approved.push({ permission, pattern, action: "allow" })
           }
         }
         if (input.deniedPatterns) {
           for (const pattern of input.deniedPatterns) {
-            s.approved.push({ permission, pattern, action: "deny" })
+            if (validPatterns.has(pattern)) s.approved.push({ permission, pattern, action: "deny" })
           }
         }
       }
