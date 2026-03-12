@@ -64,7 +64,6 @@ export interface MarketplaceInstalledMetadata {
 }
 
 export interface MarketplaceDataResponse {
-  organizationMcps: MarketplaceItem[]
   marketplaceItems: MarketplaceItem[]
   marketplaceInstalledMetadata: MarketplaceInstalledMetadata
   errors?: string[]

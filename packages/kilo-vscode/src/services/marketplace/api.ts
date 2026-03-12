@@ -111,7 +111,7 @@ export class MarketplaceApiClient {
     return result
   }
 
-  async fetchAll(options?: { skipMcps?: boolean }): Promise<{ items: MarketplaceItem[]; errors: string[] }> {
+  async fetchAll(): Promise<{ items: MarketplaceItem[]; errors: string[] }> {
     const errors: string[] = []
 
     const settled = await Promise.all([
@@ -119,12 +119,10 @@ export class MarketplaceApiClient {
         errors.push(`Failed to fetch modes: ${err instanceof Error ? err.message : String(err)}`)
         return [] as ModeMarketplaceItem[]
       }),
-      options?.skipMcps
-        ? Promise.resolve([] as McpMarketplaceItem[])
-        : this.fetchMcps().catch((err: unknown) => {
-            errors.push(`Failed to fetch mcps: ${err instanceof Error ? err.message : String(err)}`)
-            return [] as McpMarketplaceItem[]
-          }),
+      this.fetchMcps().catch((err: unknown) => {
+        errors.push(`Failed to fetch mcps: ${err instanceof Error ? err.message : String(err)}`)
+        return [] as McpMarketplaceItem[]
+      }),
       this.fetchSkills().catch((err: unknown) => {
         errors.push(`Failed to fetch skills: ${err instanceof Error ? err.message : String(err)}`)
         return [] as SkillMarketplaceItem[]

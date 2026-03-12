@@ -32,8 +32,6 @@ export const MarketplaceView: Component = () => {
   const [fetching, setFetching] = createSignal(true)
   const [errors, setErrors] = createSignal<string[]>([])
   const [tab, setTab] = createSignal<Tab>("mcp")
-  const [organizationMcps, setOrganizationMcps] = createSignal<MarketplaceItem[]>([])
-
   const mcpItems = createMemo(() => items().filter((i) => i.type === "mcp"))
   const modeItems = createMemo(() => items().filter((i) => i.type === "mode"))
   const skillItems = createMemo(() => items().filter((i) => i.type === "skill"))
@@ -99,7 +97,6 @@ export const MarketplaceView: Component = () => {
       if (msg.type === "marketplaceData") {
         setItems(msg.marketplaceItems)
         setMetadata(msg.marketplaceInstalledMetadata)
-        setOrganizationMcps(msg.organizationMcps)
         setErrors(msg.errors ?? [])
         setFetching(false)
         return

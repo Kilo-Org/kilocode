@@ -1010,7 +1010,6 @@ export interface DiffViewerLoadingMessage {
 // Marketplace messages (extension → webview)
 export interface MarketplaceDataMessage {
   type: "marketplaceData"
-  organizationMcps: MarketplaceItem[]
   marketplaceItems: MarketplaceItem[]
   marketplaceInstalledMetadata: MarketplaceInstalledMetadata
   errors?: string[]

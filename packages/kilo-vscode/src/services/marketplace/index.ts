@@ -27,11 +27,10 @@ export class MarketplaceService {
     this.uninstaller = new MarketplaceUninstaller(this.paths)
   }
 
-  async fetchData(workspace?: string, options?: { skipMcps?: boolean }): Promise<MarketplaceDataResponse> {
-    const [fetched, metadata] = await Promise.all([this.api.fetchAll(options), this.detector.detect(workspace)])
+  async fetchData(workspace?: string): Promise<MarketplaceDataResponse> {
+    const [fetched, metadata] = await Promise.all([this.api.fetchAll(), this.detector.detect(workspace)])
 
     return {
-      organizationMcps: [],
       marketplaceItems: fetched.items,
       marketplaceInstalledMetadata: metadata,
       errors: fetched.errors.length > 0 ? fetched.errors : undefined,
