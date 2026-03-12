@@ -6,12 +6,18 @@ export namespace KilocodePaths {
   const home = () => process.env.HOME || process.env.USERPROFILE || os.homedir()
 
   /**
-   * Get the platform-specific VSCode global storage path for Kilocode extension.
-   * - macOS: ~/Library/Application Support/Code/User/globalStorage/kilocode.kilo-code
-   * - Windows: %APPDATA%/Code/User/globalStorage/kilocode.kilo-code
-   * - Linux: ~/.config/Code/User/globalStorage/kilocode.kilo-code
+   * Get the VSCode global storage path for the Kilocode extension.
+   *
+   * When launched from the VS Code extension, the actual storage path is passed
+   * via the KILO_VSCODE_STORAGE_PATH env var. This avoids mismatches with
+   * VS Code variants (Insiders, VSCodium, Cursor, etc.) that use different
+   * Application Support directories.
+   *
+   * Falls back to a platform-specific guess for the standard VS Code stable path.
    */
   export function vscodeGlobalStorage(): string {
+    if (process.env.KILO_VSCODE_STORAGE_PATH) return process.env.KILO_VSCODE_STORAGE_PATH
+
     const home = os.homedir()
     switch (process.platform) {
       case "darwin":
