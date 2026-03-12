@@ -256,6 +256,21 @@ test("savePatternRules - ignores patterns not in the original request", async ()
   })
 })
 
+test("savePatternRules - throws error for stale/unknown request ID", async () => {
+  await using tmp = await tmpdir({ git: true })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      await expect(
+        PermissionNext.savePatternRules({
+          requestID: "permission_nonexistent",
+          approvedPatterns: ["npm install"],
+        }),
+      ).rejects.toThrow("not found")
+    },
+  })
+})
+
 test("savePatternRules - multiple bash commands: deny all patterns", async () => {
   await using tmp = await tmpdir({ git: true })
   await Instance.provide({

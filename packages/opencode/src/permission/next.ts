@@ -170,7 +170,7 @@ export namespace PermissionNext {
     async (input) => {
       const s = await state()
       const existing = s.pending[input.requestID]
-      if (!existing) return
+      if (!existing) throw new Error(`Permission request ${input.requestID} not found`)
 
       const validPatterns = new Set(existing.info.patterns)
       const permission = existing.info.permission
