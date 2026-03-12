@@ -303,10 +303,14 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     const isAutoTriggerEnabled = settings?.enableAutoTrigger ?? false
 
     if (!isAutoTriggerEnabled) {
+      void vscode.commands.executeCommand("setContext", "kilo-code.new.autocomplete.hasSuggestions", false)
       return []
     }
 
-    return this.provideInlineCompletionItems_Internal(document, position, _context, _token)
+    const result = await this.provideInlineCompletionItems_Internal(document, position, _context, _token)
+    const items = Array.isArray(result) ? result : result.items
+    void vscode.commands.executeCommand("setContext", "kilo-code.new.autocomplete.hasSuggestions", items.length > 0)
+    return result
   }
 
   public async provideInlineCompletionItems_Internal(

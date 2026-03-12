@@ -15,7 +15,7 @@ import ProfileView from "./components/profile/ProfileView"
 import { VSCodeProvider, useVSCode } from "./context/vscode"
 import { ServerProvider, useServer } from "./context/server"
 import { ProviderProvider, useProvider } from "./context/provider"
-import { ConfigProvider } from "./context/config"
+import { ConfigProvider, useConfig } from "./context/config"
 import { SessionProvider, useSession } from "./context/session"
 import { LanguageProvider } from "./context/language"
 import { ChatView } from "./components/chat"
@@ -179,6 +179,18 @@ const AppContent: Component = () => {
   const [migrationReturnView, setMigrationReturnView] = createSignal<ViewType>("newTask") // legacy-migration
   const session = useSession()
   const server = useServer()
+  const { config, updateConfig } = useConfig()
+
+  const cycleAgent = (direction: 1 | -1) => {
+    const available = session.agents().filter((a) => a.mode !== "subagent" && !a.hidden)
+    if (available.length === 0) return
+    const current = session.selectedAgent()
+    const idx = available.findIndex((a) => a.name === current)
+    const raw = idx + direction
+    const next = raw < 0 ? available.length - 1 : raw >= available.length ? 0 : raw
+    const agent = available[next]
+    if (agent) session.selectAgent(agent.name)
+  }
 
   const handleViewAction = (action: string) => {
     switch (action) {
@@ -200,6 +212,28 @@ const AppContent: Component = () => {
         break
       case "settingsButtonClicked":
         setCurrentView("settings")
+        break
+      case "cycleAgentMode":
+        cycleAgent(1)
+        break
+      case "cyclePreviousAgentMode":
+        cycleAgent(-1)
+        break
+      case "toggleAutoApprove": {
+        const perm = config().permission ?? {}
+        const values = Object.values(perm)
+        const hasAllow = values.some(
+          (v) => v === "allow" || (typeof v === "object" && Object.values(v).some((l) => l === "allow")),
+        )
+        const target = hasAllow ? "ask" : "allow"
+        const updated: Record<string, typeof target> = {}
+        for (const key of Object.keys(perm)) {
+          updated[key] = target
+        }
+        updateConfig({ permission: updated })
+        break
+      }
+      case "generateTerminalCommand":
         break
     }
   }
