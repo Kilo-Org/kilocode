@@ -22,7 +22,7 @@ import { executeVscodeTask } from "./task-runner"
 import { formatKeybinding } from "./format-keybinding"
 import { TelemetryProxy, TelemetryEventName } from "../services/telemetry"
 import { MAX_MULTI_VERSIONS } from "./constants"
-import type { AgentManagerOutMessage, AgentManagerInMessage } from "./types"
+import type { AgentManagerOutMessage, AgentManagerInMessage, WorktreeDiffEntry } from "./types"
 import { getWorkspaceRoot, hashFileDiffs, openFileInEditor, resolveLocalDiffTarget } from "../review-utils"
 
 /**
@@ -1721,13 +1721,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     this.postToWebview({ type: "agentManager.worktreeDiffLoading", sessionId, loading: true })
     try {
-      const client = this.connectionService.getClient()
-      const { data: diffs } = await client.worktree.diffSummary(
-        { directory: target.directory, base: target.baseBranch },
-        { throwOnError: true },
-      )
-
-      const files = diffs ?? []
+      const files = await this.loadWorktreeDiffs(sessionId, target.directory, target.baseBranch)
       this.log(`Worktree diff returned ${files.length} file(s) for session ${sessionId}`)
 
       const hash = hashFileDiffs(files)
@@ -1743,6 +1737,86 @@ export class AgentManagerProvider implements vscode.Disposable {
   }
 
   private diffPolling = false
+  private localDiffFallback = false
+
+  private hasLocalDiffStats(): boolean {
+    if (!this.cachedLocalStats || this.cachedLocalStats.type !== "agentManager.localStats") return false
+    const stats = this.cachedLocalStats.stats
+    return stats.files > 0 || stats.additions > 0 || stats.deletions > 0
+  }
+
+  private async fetchWorktreeJson<T>(route: string, params: Record<string, string>): Promise<T | undefined> {
+    const config = this.connectionService.getServerConfig()
+    if (!config) return undefined
+
+    const query = new URLSearchParams(params)
+    const response = await fetch(`${config.baseUrl}${route}?${query}`, {
+      headers: { Authorization: `Basic ${Buffer.from(`kilo:${config.password}`).toString("base64")}` },
+    })
+    if (!response.ok) {
+      this.log(`Failed to fetch ${route}: ${response.status} ${response.statusText}`)
+      return undefined
+    }
+    return (await response.json()) as T
+  }
+
+  private async fetchWorktreeDiffSummary(directory: string, base: string): Promise<WorktreeDiffEntry[]> {
+    const direct = await this.fetchWorktreeJson<WorktreeDiffEntry[]>("/experimental/worktree/diff/summary", {
+      directory,
+      base,
+    })
+    if (direct) return direct
+
+    const client = this.connectionService.getClient()
+    const { data } = await client.worktree.diffSummary({ directory, base }, { throwOnError: true })
+    return data ?? []
+  }
+
+  private async fetchWorktreeDiffFile(
+    directory: string,
+    base: string,
+    file: string,
+  ): Promise<WorktreeDiffEntry | null> {
+    const direct = await this.fetchWorktreeJson<WorktreeDiffEntry | null>("/experimental/worktree/diff/file", {
+      directory,
+      base,
+      file,
+    })
+    if (direct !== undefined) return direct
+
+    const client = this.connectionService.getClient()
+    const { data } = await client.worktree.diffFile({ directory, base, file }, { throwOnError: true })
+    return (data as WorktreeDiffEntry | null | undefined) ?? null
+  }
+
+  private async fetchWorktreeDiffFull(directory: string, base: string): Promise<WorktreeDiffEntry[]> {
+    const direct = await this.fetchWorktreeJson<WorktreeDiffEntry[]>("/experimental/worktree/diff", {
+      directory,
+      base,
+    })
+    if (direct) return direct.map((diff) => ({ ...diff, summarized: false }))
+
+    const client = this.connectionService.getClient()
+    const { data } = await client.worktree.diff({ directory, base }, { throwOnError: true })
+    return (data ?? []).map((diff) => ({ ...diff, summarized: false }))
+  }
+
+  private async loadWorktreeDiffs(sessionId: string, directory: string, base: string): Promise<WorktreeDiffEntry[]> {
+    const forceFull = sessionId === LOCAL_DIFF_ID && this.localDiffFallback
+    const files = forceFull
+      ? await this.fetchWorktreeDiffFull(directory, base)
+      : await this.fetchWorktreeDiffSummary(directory, base)
+    if (sessionId !== LOCAL_DIFF_ID) return files
+    if (files.length > 0) {
+      this.localDiffFallback = false
+      return files
+    }
+    if (!this.hasLocalDiffStats()) return files
+
+    this.localDiffFallback = true
+    this.log("Local diff summary returned no files despite local stats; falling back to full diff")
+    return await this.fetchWorktreeDiffFull(directory, base)
+  }
 
   /** Polling diff fetch — uses cached target, no loading state, only pushes when hash changes. */
   private async pollDiff(sessionId: string): Promise<void> {
@@ -1752,13 +1826,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     this.diffPolling = true
     try {
-      const client = this.connectionService.getClient()
-      const { data: diffs } = await client.worktree.diffSummary(
-        { directory: target.directory, base: target.baseBranch },
-        { throwOnError: true },
-      )
-
-      const files = diffs ?? []
+      const files = await this.loadWorktreeDiffs(sessionId, target.directory, target.baseBranch)
       const hash = hashFileDiffs(files)
       if (hash === this.lastDiffHash && this.diffSessionId === sessionId) return
       this.lastDiffHash = hash
@@ -1786,11 +1854,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     this.cachedDiffTarget = { sessionId, directory: target.directory, baseBranch: target.baseBranch }
 
     try {
-      const client = this.connectionService.getClient()
-      const { data } = await client.worktree.diffFile(
-        { directory: target.directory, base: target.baseBranch, file },
-        { throwOnError: true },
-      )
+      const data = await this.fetchWorktreeDiffFile(target.directory, target.baseBranch, file)
       this.postToWebview({ type: "agentManager.worktreeDiffFile", sessionId, file, diff: data ?? null })
     } catch (err) {
       this.log("Failed to fetch worktree diff file:", err)
