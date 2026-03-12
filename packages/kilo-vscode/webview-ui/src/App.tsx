@@ -4,8 +4,10 @@ import { DialogProvider } from "@kilocode/kilo-ui/context/dialog"
 import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
 import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
 import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff"
+import { FileComponentProvider } from "@kilocode/kilo-ui/context/file"
 import { Code } from "@kilocode/kilo-ui/code"
 import { Diff } from "@kilocode/kilo-ui/diff"
+import { File } from "@kilocode/kilo-ui/file"
 import { DataProvider } from "@kilocode/kilo-ui/context/data"
 import { Toast } from "@kilocode/kilo-ui/toast"
 import Settings from "./components/settings/Settings"
@@ -299,17 +301,19 @@ const App: Component = () => {
               <MarkedProvider>
                 <DiffComponentProvider component={Diff}>
                   <CodeComponentProvider component={Code}>
-                    <ProviderProvider>
-                      <ConfigProvider>
-                        <NotificationsProvider>
-                          <SessionProvider>
-                            <DataBridge>
-                              <AppContent />
-                            </DataBridge>
-                          </SessionProvider>
-                        </NotificationsProvider>
-                      </ConfigProvider>
-                    </ProviderProvider>
+                    <FileComponentProvider component={File}>
+                      <ProviderProvider>
+                        <ConfigProvider>
+                          <NotificationsProvider>
+                            <SessionProvider>
+                              <DataBridge>
+                                <AppContent />
+                              </DataBridge>
+                            </SessionProvider>
+                          </NotificationsProvider>
+                        </ConfigProvider>
+                      </ProviderProvider>
+                    </FileComponentProvider>
                   </CodeComponentProvider>
                 </DiffComponentProvider>
               </MarkedProvider>

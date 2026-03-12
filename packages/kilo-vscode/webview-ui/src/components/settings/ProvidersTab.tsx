@@ -3,6 +3,7 @@ import { Select } from "@kilocode/kilo-ui/select"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { Icon } from "@kilocode/kilo-ui/icon"
 import { useConfig } from "../../context/config"
 import { useProvider } from "../../context/provider"
 import { useLanguage } from "../../context/language"
@@ -130,6 +131,21 @@ const ProvidersTab: Component = () => {
             </SettingsRow>
           )}
         </For>
+      </Card>
+
+      {/* Beta notice */}
+      <Card
+        variant="warning"
+        style={{
+          "margin-top": "16px",
+          display: "flex",
+          "flex-direction": "row",
+          "align-items": "flex-start",
+          gap: "8px",
+        }}
+      >
+        <Icon name="warning" style={{ "flex-shrink": "0", "margin-top": "2px" }} />
+        <p style={{ margin: 0, "line-height": "1.5" }}>{language.t("settings.providers.betaNotice")}</p>
       </Card>
 
       {/* Disabled providers */}

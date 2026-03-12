@@ -45,8 +45,10 @@ import { DropdownMenu } from "@kilocode/kilo-ui/dropdown-menu"
 import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
 import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
 import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff"
+import { FileComponentProvider } from "@kilocode/kilo-ui/context/file"
 import { Code } from "@kilocode/kilo-ui/code"
 import { Diff } from "@kilocode/kilo-ui/diff"
+import { File } from "@kilocode/kilo-ui/file"
 import { Toast, showToast } from "@kilocode/kilo-ui/toast"
 import { ResizeHandle } from "@kilocode/kilo-ui/resize-handle"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -2519,17 +2521,19 @@ export const AgentManagerApp: Component = () => {
               <MarkedProvider>
                 <DiffComponentProvider component={Diff}>
                   <CodeComponentProvider component={Code}>
-                    <ProviderProvider>
-                      <ConfigProvider>
-                        <SessionProvider>
-                          <WorktreeModeProvider>
-                            <DataBridge>
-                              <AgentManagerContent />
-                            </DataBridge>
-                          </WorktreeModeProvider>
-                        </SessionProvider>
-                      </ConfigProvider>
-                    </ProviderProvider>
+                    <FileComponentProvider component={File}>
+                      <ProviderProvider>
+                        <ConfigProvider>
+                          <SessionProvider>
+                            <WorktreeModeProvider>
+                              <DataBridge>
+                                <AgentManagerContent />
+                              </DataBridge>
+                            </WorktreeModeProvider>
+                          </SessionProvider>
+                        </ConfigProvider>
+                      </ProviderProvider>
+                    </FileComponentProvider>
                   </CodeComponentProvider>
                 </DiffComponentProvider>
               </MarkedProvider>

@@ -114,6 +114,8 @@ The GitHub/GitLab bot that responds to issue comments and PR mentions. It dispat
 
 A multi-tenant compute platform running on Fly.io, orchestrated by a Cloudflare Worker. Each user gets a dedicated persistent machine running an OpenClaw gateway, coordinated via Durable Objects for state management and self-healing reconciliation.
 
+{% image src="/docs/img/kiloclaw/kiloclaw-architecture.png" alt="KiloClaw infrastructure architecture diagram" width="800" caption="KiloClaw infrastructure architecture" /%}
+
 ### Code Review
 
 An automated code review service that subscribes to GitHub webhooks, dispatches reviews through the Cloud Agent, and posts feedback directly on pull requests. Supports per-organization concurrency limits and automatic queuing.
