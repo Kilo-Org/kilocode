@@ -22,7 +22,7 @@ import z from "zod"
 import { Plugin } from "../plugin"
 import { WebSearchTool } from "./websearch"
 import { CodeSearchTool } from "./codesearch"
-import { WarpGrepTool } from "./warpgrep" // kilocode_change
+import { CodebaseSearchTool } from "./warpgrep" // kilocode_change
 import { Flag } from "@/flag/flag"
 import { Log } from "@/util/log"
 import { LspTool } from "./lsp"
@@ -116,7 +116,7 @@ export namespace ToolRegistry {
       // TodoReadTool,
       WebSearchTool,
       CodeSearchTool,
-      WarpGrepTool, // kilocode_change
+      CodebaseSearchTool, // kilocode_change
       SkillTool,
       ApplyPatchTool,
       ...(Flag.KILO_EXPERIMENTAL_LSP_TOOL ? [LspTool] : []),
@@ -149,7 +149,7 @@ export namespace ToolRegistry {
           // kilocode_change end
 
           // kilocode_change start
-          if (t.id === "warpgrep") return Flag.KILO_ENABLE_WARPGREP
+          if (t.id === "codebase_search") return Flag.KILO_ENABLE_WARPGREP
           // kilocode_change end
 
           // use apply tool in same format as codex

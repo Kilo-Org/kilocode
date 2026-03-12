@@ -158,7 +158,7 @@ export namespace Agent {
             webfetch: "allow",
             websearch: "allow",
             codesearch: "allow",
-            warpgrep: "allow", // kilocode_change
+            codebase_search: "allow", // kilocode_change
             external_directory: {
               [Truncate.GLOB]: "allow",
             },
@@ -191,7 +191,7 @@ export namespace Agent {
             webfetch: "allow",
             websearch: "allow",
             codesearch: "allow",
-            warpgrep: "allow", // kilocode_change
+            codebase_search: "allow", // kilocode_change
             external_directory: {
               [Truncate.GLOB]: "allow",
             },
@@ -229,7 +229,7 @@ export namespace Agent {
             webfetch: "allow",
             websearch: "allow",
             codesearch: "allow",
-            warpgrep: "allow", // kilocode_change
+            codebase_search: "allow", // kilocode_change
             read: "allow",
             external_directory: {
               "*": "ask",
@@ -242,7 +242,7 @@ export namespace Agent {
         // kilocode_change start
         prompt:
           Flag.KILO_ENABLE_WARPGREP
-            ? `Prefer using the WarpGrep tool for codebase searches — it performs intelligent multi-step code search and returns the most relevant code spans.\n\n${PROMPT_EXPLORE}`
+            ? `Prefer using the codebase_search tool for codebase searches — it performs intelligent multi-step code search and returns the most relevant code spans.\n\n${PROMPT_EXPLORE}`
             : PROMPT_EXPLORE,
         // kilocode_change end
         options: {},
