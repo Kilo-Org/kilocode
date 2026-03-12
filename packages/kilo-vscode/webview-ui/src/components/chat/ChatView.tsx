@@ -11,10 +11,12 @@ import { MessageList } from "./MessageList"
 import { PromptInput } from "./PromptInput"
 import { QuestionDock } from "./QuestionDock"
 import { PermissionDock } from "./PermissionDock"
+import { StartupErrorBanner } from "./StartupErrorBanner"
 import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import { useWorktreeMode } from "../../context/worktree-mode"
+import { useServer } from "../../context/server"
 
 interface ChatViewProps {
   onSelectSession?: (id: string) => void
@@ -26,6 +28,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const vscode = useVSCode()
   const language = useLanguage()
   const worktreeMode = useWorktreeMode()
+  const server = useServer()
   // Show "Show Changes" only in the standalone sidebar, not inside Agent Manager
   const isSidebar = () => worktreeMode === undefined
 
@@ -117,6 +120,9 @@ export const ChatView: Component<ChatViewProps> = (props) => {
 
       <Show when={!props.readonly}>
         <div class="chat-input">
+          <Show when={server.connectionState() === "error" && server.error()}>
+            <StartupErrorBanner error={server.error()!} />
+          </Show>
           <Show when={questionRequest()} keyed>
             {(req) => <QuestionDock request={req} />}
           </Show>

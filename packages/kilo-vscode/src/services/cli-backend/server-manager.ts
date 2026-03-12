@@ -1,14 +1,18 @@
-import { spawn, ChildProcess } from "child_process"
 import * as crypto from "crypto"
 import * as fs from "fs"
 import * as path from "path"
 import * as vscode from "vscode"
-import { parseServerPort } from "./server-utils"
+import { createKiloServer, type ServerResult } from "@kilocode/sdk/v2/server"
 
 export interface ServerInstance {
   port: number
   password: string
-  process: ChildProcess
+  /** PID of the spawned CLI process, used for process-group cleanup. */
+  pid: number | undefined
+  /** Collected stderr output from CLI startup — surfaced to the user on failure. */
+  stderr: string
+  /** Kill the CLI server process via the SDK handle. */
+  close(): void
 }
 
 export class ServerManager {
@@ -60,11 +64,15 @@ export class ServerManager {
     console.log("[Kilo New] ServerManager: 📄 CLI isFile:", stat.isFile())
     console.log("[Kilo New] ServerManager: 📄 CLI mode (octal):", (stat.mode & 0o777).toString(8))
 
-    return new Promise((resolve, reject) => {
-      console.log("[Kilo New] ServerManager: 🎬 Spawning CLI process:", cliPath, ["serve", "--port", "0"])
-      const serverProcess = spawn(cliPath, ["serve", "--port", "0"], {
+    console.log("[Kilo New] ServerManager: 🎬 Starting CLI server via SDK:", cliPath)
+
+    let result: ServerResult
+    try {
+      result = await createKiloServer({
+        command: cliPath,
+        port: 0,
+        timeout: 30000,
         env: {
-          ...process.env,
           KILO_SERVER_PASSWORD: password,
           KILO_CLIENT: "vscode",
           KILO_ENABLE_QUESTION_TOOL: "true",
@@ -77,57 +85,27 @@ export class ServerManager {
           KILO_APP_VERSION: this.context.extension.packageJSON.version,
           KILO_VSCODE_VERSION: vscode.version,
         },
-        stdio: ["ignore", "pipe", "pipe"],
-        detached: true,
-        windowsHide: true,
+        spawnOptions: {
+          detached: true,
+          windowsHide: true,
+        },
       })
-      console.log("[Kilo New] ServerManager: 📦 Process spawned with PID:", serverProcess.pid)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      const { text } = toErrorMessage(message, cliPath)
+      throw new Error(text)
+    }
 
-      let resolved = false
+    console.log("[Kilo New] ServerManager: 📦 Process spawned with PID:", result.pid)
+    console.log("[Kilo New] ServerManager: 🎯 Port detected:", result.port)
 
-      serverProcess.stdout?.on("data", (data: Buffer) => {
-        const output = data.toString()
-        console.log("[Kilo New] ServerManager: 📥 CLI Server stdout:", output)
-
-        const port = parseServerPort(output)
-        if (port !== null && !resolved) {
-          resolved = true
-          console.log("[Kilo New] ServerManager: 🎯 Port detected:", port)
-          resolve({ port, password, process: serverProcess })
-        }
-      })
-
-      serverProcess.stderr?.on("data", (data: Buffer) => {
-        const errorOutput = data.toString()
-        console.error("[Kilo New] ServerManager: ⚠️ CLI Server stderr:", errorOutput)
-      })
-
-      serverProcess.on("error", (error) => {
-        console.error("[Kilo New] ServerManager: ❌ Process error:", error)
-        if (!resolved) {
-          reject(error)
-        }
-      })
-
-      serverProcess.on("exit", (code) => {
-        console.log("[Kilo New] ServerManager: 🛑 Process exited with code:", code)
-        if (this.instance?.process === serverProcess) {
-          this.instance = null
-        }
-        if (!resolved) {
-          reject(new Error(`CLI process exited with code ${code} before server started`))
-        }
-      })
-
-      // Timeout after 30 seconds
-      setTimeout(() => {
-        if (!resolved) {
-          console.error("[Kilo New] ServerManager: ⏰ Server startup timeout (30s)")
-          ServerManager.killProcess(serverProcess)
-          reject(new Error("Server startup timeout"))
-        }
-      }, 30000)
-    })
+    return {
+      port: result.port,
+      password,
+      pid: result.pid,
+      stderr: result.stderr,
+      close: result.close,
+    }
   }
 
   private getCliPath(): string {
@@ -139,24 +117,33 @@ export class ServerManager {
   }
 
   /**
-   * Kill a process and its entire process group.
+   * Kill a process and its entire process group by PID.
    * On Unix, we send the signal to -pid (negative) to reach the whole group,
    * mirroring the desktop app's ProcessGroup::leader() + start_kill() pattern.
-   * On Windows, process.kill() on the child handle is sufficient.
+   * On Windows, process.kill() on the PID is sufficient.
    */
-  private static killProcess(proc: ChildProcess, signal: NodeJS.Signals = "SIGTERM"): void {
-    if (proc.pid === undefined) {
-      return
-    }
+  private static killByPid(pid: number, signal: NodeJS.Signals = "SIGTERM"): void {
     try {
       if (process.platform !== "win32") {
         // Negative PID targets the entire process group
-        process.kill(-proc.pid, signal)
+        process.kill(-pid, signal)
       } else {
-        proc.kill(signal)
+        process.kill(pid, signal)
       }
     } catch {
       // Process already gone — ignore
+    }
+  }
+
+  /**
+   * Check whether the process is still running.
+   */
+  private static isProcessAlive(pid: number): boolean {
+    try {
+      process.kill(pid, 0)
+      return true
+    } catch {
+      return false
     }
   }
 
@@ -164,23 +151,35 @@ export class ServerManager {
     if (!this.instance) {
       return
     }
-    const proc = this.instance.process
+    const { pid, close } = this.instance
     this.instance = null
 
-    console.log("[Kilo New] ServerManager: 🔴 Disposing — sending SIGTERM to process group, PID:", proc.pid)
-    ServerManager.killProcess(proc, "SIGTERM")
+    console.log("[Kilo New] ServerManager: 🔴 Disposing — sending SIGTERM to process group, PID:", pid)
+
+    if (pid !== undefined) {
+      ServerManager.killByPid(pid, "SIGTERM")
+    } else {
+      // Fallback: use the SDK close() if PID is unavailable
+      close()
+    }
 
     // SIGKILL fallback after 5s: mirrors the desktop app going straight to
     // start_kill(). Ensures the process tree dies even if SIGTERM is ignored
     // or Instance.disposeAll() hangs past the serve.ts shutdown timeout.
-    const timer = setTimeout(() => {
-      if (proc.exitCode === null) {
-        console.warn("[Kilo New] ServerManager: ⚠️ Process did not exit after SIGTERM, sending SIGKILL")
-        ServerManager.killProcess(proc, "SIGKILL")
-      }
-    }, 5000)
-    // unref so this timer doesn't prevent the extension host from exiting
-    timer.unref()
-    proc.on("exit", () => clearTimeout(timer))
+    if (pid !== undefined) {
+      const timer = setTimeout(() => {
+        if (ServerManager.isProcessAlive(pid)) {
+          console.warn("[Kilo New] ServerManager: ⚠️ Process did not exit after SIGTERM, sending SIGKILL")
+          ServerManager.killByPid(pid, "SIGKILL")
+        }
+      }, 5000)
+      // unref so this timer doesn't prevent the extension host from exiting
+      timer.unref()
+    }
   }
+}
+
+function toErrorMessage(message: string, cliPath?: string): { text: string } {
+  const header = cliPath ? `${message}\nCLI path: ${cliPath}` : message
+  return { text: header }
 }
