@@ -11,6 +11,7 @@ interface ClientOptions {
   authMethods?: Record<string, Array<{ type: "api" | "oauth"; label: string }>>
   authorize?: { url: string; method: "auto" | "code"; instructions: string }
   failSet?: unknown
+  config?: Record<string, unknown>
 }
 
 function createClient(options: ClientOptions) {
@@ -20,18 +21,36 @@ function createClient(options: ClientOptions) {
     authorize: [] as unknown[],
     callback: [] as unknown[],
     dispose: 0,
+    updateConfig: [] as unknown[],
   }
 
-  const all = [
-    {
+  const connected = [...options.connected]
+  const authStates = { ...(options.authStates ?? {}) }
+  const configState = { ...(options.config ?? {}) }
+
+  function all() {
+    const configured = Object.entries(
+      (configState.provider as Record<string, Record<string, unknown>> | undefined) ?? {},
+    ).map(([id, provider]) => ({
+      id,
+      name: String(provider.name ?? id),
+      source: "custom" as const,
+      env: Array.isArray(provider.env) ? provider.env : [],
+      options: {},
+      models: (provider.models as Record<string, unknown>) ?? {},
+    }))
+
+    const base = {
       id: options.providerID,
       name: options.providerID,
-      source: options.authStates?.[options.providerID] === "api" ? "api" : "custom",
+      source: authStates[options.providerID] === "api" ? "api" : "custom",
       env: [],
       options: {},
       models: {},
-    },
-  ]
+    }
+
+    return [base, ...configured.filter((provider) => provider.id !== options.providerID)]
+  }
 
   return {
     calls,
@@ -39,16 +58,23 @@ function createClient(options: ClientOptions) {
       set: async (params: unknown) => {
         calls.set.push(params)
         if (options.failSet) throw options.failSet
+        const payload = params as { providerID: string }
+        authStates[payload.providerID] = "api"
+        if (!connected.includes(payload.providerID)) connected.push(payload.providerID)
         return { data: true }
       },
       remove: async (params: unknown) => {
         calls.remove.push(params)
+        const payload = params as { providerID: string }
+        delete authStates[payload.providerID]
+        const index = connected.indexOf(payload.providerID)
+        if (index >= 0) connected.splice(index, 1)
         return { data: true }
       },
-      list: async () => ({ data: options.authStates ?? {} }),
+      list: async () => ({ data: authStates }),
     },
     provider: {
-      list: async () => ({ data: { all, connected: options.connected, default: {} } }),
+      list: async () => ({ data: { all: all(), connected, default: {} } }),
       auth: async () => ({ data: options.authMethods ?? {} }),
       oauth: {
         authorize: async (params: unknown) => {
@@ -68,12 +94,27 @@ function createClient(options: ClientOptions) {
         calls.dispose += 1
         return { data: true }
       },
+      config: {
+        update: async (params: { config: Record<string, unknown> }) => {
+          calls.updateConfig.push(params)
+          if (params.config.provider && typeof params.config.provider === "object") {
+            configState.provider = {
+              ...((configState.provider as Record<string, unknown>) ?? {}),
+              ...(params.config.provider as Record<string, unknown>),
+            }
+          }
+          if (params.config.disabled_providers !== undefined) {
+            configState.disabled_providers = params.config.disabled_providers
+          }
+          return { data: configState }
+        },
+      },
     },
     app: {
       agents: async () => ({ data: [] }),
     },
     config: {
-      get: async () => ({ data: {} }),
+      get: async () => ({ data: configState }),
     },
     kilo: {
       notifications: async () => ({ data: [] }),
@@ -236,5 +277,62 @@ describe("KiloProvider provider actions", () => {
       action: "connect",
       message: "boom",
     })
+  })
+
+  it("saves custom providers and refreshes provider state", async () => {
+    const client = createClient({
+      providerID: "openrouter",
+      connected: [],
+      config: { disabled_providers: ["myprovider"] },
+    })
+    const { webview } = createBoundProvider(client)
+
+    await webview.receive({
+      type: "saveCustomProvider",
+      requestId: "req-6",
+      providerID: "myprovider",
+      apiKey: "sk-custom",
+      config: {
+        npm: "@ai-sdk/openai-compatible",
+        name: "My Provider",
+        options: { baseURL: "https://example.com/v1" },
+        models: { "model-1": { name: "Model One" } },
+      },
+    })
+
+    expect(client.calls.set).toContainEqual({
+      providerID: "myprovider",
+      auth: { type: "api", key: "sk-custom" },
+    })
+    expect(client.calls.updateConfig).toContainEqual({
+      config: {
+        provider: {
+          myprovider: {
+            npm: "@ai-sdk/openai-compatible",
+            name: "My Provider",
+            options: { baseURL: "https://example.com/v1" },
+            models: { "model-1": { name: "Model One" } },
+          },
+        },
+        disabled_providers: [],
+      },
+    })
+    expect(webview.sent).toContainEqual({ type: "providerConnected", requestId: "req-6", providerID: "myprovider" })
+    expect(webview.sent).toContainEqual(
+      expect.objectContaining({
+        type: "configUpdated",
+        config: expect.objectContaining({
+          provider: expect.objectContaining({
+            myprovider: expect.objectContaining({ name: "My Provider" }),
+          }),
+        }),
+      }),
+    )
+    expect(webview.sent).toContainEqual(
+      expect.objectContaining({
+        type: "providersLoaded",
+        authStates: expect.objectContaining({ myprovider: "api" }),
+      }),
+    )
   })
 })

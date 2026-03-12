@@ -45,13 +45,13 @@ const Settings: Component<SettingsProps> = (props) => {
       {/* Settings tabs */}
       <Tabs orientation="vertical" variant="settings" defaultValue="providers" style={{ flex: 1, overflow: "hidden" }}>
         <Tabs.List>
-          <Tabs.Trigger value="providers">
-            <Icon name="providers" />
-            <span class="label">{language.t("settings.providers.title")}</span>
-          </Tabs.Trigger>
           <Tabs.Trigger value="models">
             <Icon name="models" />
             <span class="label">{language.t("settings.models.title")}</span>
+          </Tabs.Trigger>
+          <Tabs.Trigger value="providers">
+            <Icon name="providers" />
+            <span class="label">{language.t("settings.providers.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="agentBehaviour">
             <Icon name="brain" />
@@ -107,13 +107,13 @@ const Settings: Component<SettingsProps> = (props) => {
           </Tabs.Trigger>
         </Tabs.List>
 
-        <Tabs.Content value="providers">
-          <h3>{language.t("settings.providers.title")}</h3>
-          <ProvidersTab />
-        </Tabs.Content>
         <Tabs.Content value="models">
           <h3>{language.t("settings.models.title")}</h3>
           <ModelsTab />
+        </Tabs.Content>
+        <Tabs.Content value="providers">
+          <h3>{language.t("settings.providers.title")}</h3>
+          <ProvidersTab />
         </Tabs.Content>
         <Tabs.Content value="agentBehaviour">
           <h3>{language.t("settings.agentBehaviour.title")}</h3>

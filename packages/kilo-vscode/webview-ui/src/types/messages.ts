@@ -274,7 +274,10 @@ export interface AgentConfig {
 }
 
 export interface ProviderConfig {
+  npm?: string
   name?: string
+  env?: string[]
+  options?: Record<string, unknown>
   api_key?: string
   base_url?: string
   models?: Record<string, unknown>
@@ -1244,6 +1247,14 @@ export interface DisconnectProviderMessage {
   providerID: string
 }
 
+export interface SaveCustomProviderMessage {
+  type: "saveCustomProvider"
+  requestId: string
+  providerID: string
+  config: ProviderConfig
+  apiKey?: string
+}
+
 export interface CompactRequest {
   type: "compact"
   sessionID: string
@@ -1625,6 +1636,7 @@ export type WebviewMessage =
   | AuthorizeProviderOAuthMessage
   | CompleteProviderOAuthMessage
   | DisconnectProviderMessage
+  | SaveCustomProviderMessage
   | CompactRequest
   | RequestAgentsMessage
   | SetLanguageRequest

@@ -418,6 +418,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "disconnectProvider":
           await this.handleDisconnectProvider(message.requestId, message.providerID)
           break
+        case "saveCustomProvider":
+          await this.handleSaveCustomProvider(message.requestId, message.providerID, message.config, message.apiKey)
+          break
         case "compact":
           await this.handleCompact(message.sessionID, message.providerID, message.modelID)
           break
@@ -1271,6 +1274,70 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         providerID,
         action: "disconnect",
         message: getErrorMessage(error) || "Failed to disconnect provider",
+      })
+    }
+  }
+
+  private async handleSaveCustomProvider(
+    requestId: string,
+    providerID: string,
+    provider: Record<string, unknown>,
+    apiKey?: string,
+  ): Promise<void> {
+    if (!this.client) {
+      this.postMessage({
+        type: "providerActionError",
+        requestId,
+        providerID,
+        action: "connect",
+        message: "Not connected to CLI backend",
+      })
+      return
+    }
+
+    try {
+      if (apiKey) {
+        await this.client.auth.set(
+          {
+            providerID,
+            auth: {
+              type: "api",
+              key: apiKey,
+            },
+          },
+          { throwOnError: true },
+        )
+      }
+
+      const workspaceDir = this.getWorkspaceDirectory()
+      const config =
+        (this.cachedConfigMessage as { config?: Config } | null)?.config ??
+        (await this.client.config.get({ directory: workspaceDir }, { throwOnError: true })).data ??
+        {}
+      const disabled = config.disabled_providers ?? []
+      const nextDisabled = disabled.filter((id) => id !== providerID)
+      const { data: updated } = await this.client.global.config.update(
+        {
+          config: {
+            provider: { [providerID]: provider },
+            disabled_providers: nextDisabled,
+          },
+        },
+        { throwOnError: true },
+      )
+
+      this.cachedConfigMessage = { type: "configLoaded", config: updated }
+      this.postMessage({ type: "configUpdated", config: updated })
+      await this.disposeGlobal(`custom provider save (${providerID})`)
+      await this.fetchAndSendProviders()
+      this.postMessage({ type: "providerConnected", requestId, providerID })
+    } catch (error) {
+      this.postMessage({
+        type: "providerActionError",
+        requestId,
+        providerID,
+        action: "connect",
+        message: getErrorMessage(error) || "Failed to save custom provider",
       })
     }
   }

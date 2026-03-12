@@ -1,9 +1,12 @@
 import { Button } from "@kilocode/kilo-ui/button"
 import { Card } from "@kilocode/kilo-ui/card"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
+import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { ProviderIcon } from "@kilocode/kilo-ui/provider-icon"
+import { Tag } from "@kilocode/kilo-ui/tag"
 import { showToast } from "@kilocode/kilo-ui/toast"
-import { Component, For, Show, createMemo, createSignal, onCleanup } from "solid-js"
+import { Component, For, JSX, Show, createMemo, createSignal, onCleanup } from "solid-js"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
@@ -11,16 +14,63 @@ import { useServer } from "../../context/server"
 import { useVSCode } from "../../context/vscode"
 import type { ExtensionMessage, Provider } from "../../types/messages"
 import DeviceAuthCard from "../profile/DeviceAuthCard"
-import { providerSortKey } from "../shared/model-selector-utils"
+import CustomProviderDialog from "./CustomProviderDialog"
 import ProviderConnectDialog from "./ProviderConnectDialog"
+import {
+  CUSTOM_PROVIDER_ID,
+  POPULAR_PROVIDER_IDS,
+  providerIcon,
+  providerNoteKey,
+  sortProviders,
+} from "./provider-catalog"
 import ProviderSelector, { type ProviderOption } from "./ProviderSelector"
+import ProviderSelectDialog from "./ProviderSelectDialog"
 
-function sortProviders(items: Provider[]) {
-  return items.slice().sort((a, b) => {
-    const rank = providerSortKey(a.id) - providerSortKey(b.id)
-    if (rank !== 0) return rank
-    return a.name.localeCompare(b.name)
-  })
+type ProviderSource = "env" | "api" | "config" | "custom"
+
+const kiloFallback: Provider = {
+  id: "kilo",
+  name: "Kilo Gateway",
+  source: "custom",
+  env: ["KILO_API_KEY"],
+  models: {},
+}
+
+function ProviderGlyph(props: { id: string }): JSX.Element {
+  if (props.id === "kilo") {
+    return (
+      <div
+        style={{
+          width: "20px",
+          height: "20px",
+          display: "flex",
+          "align-items": "center",
+          "justify-content": "center",
+          "border-radius": "6px",
+          background: "var(--vscode-button-secondaryBackground, var(--vscode-editorWidget-background))",
+          color: "var(--vscode-foreground)",
+          "font-size": "12px",
+          "font-weight": "700",
+          "flex-shrink": 0,
+        }}
+      >
+        K
+      </div>
+    )
+  }
+
+  return <ProviderIcon id={providerIcon(props.id)} width={20} height={20} />
+}
+
+function rowStyle(bordered: boolean) {
+  return {
+    display: "flex",
+    "align-items": "center",
+    "justify-content": "space-between",
+    gap: "16px",
+    padding: "14px 0",
+    "border-bottom": bordered ? "1px solid var(--border-weak-base)" : "none",
+  } as const
 }
 
 const ProvidersTab: Component = () => {
@@ -31,7 +81,6 @@ const ProvidersTab: Component = () => {
   const dialog = useDialog()
   const vscode = useVSCode()
 
-  const [newConnected, setNewConnected] = createSignal<ProviderOption | undefined>()
   const [newDisabled, setNewDisabled] = createSignal<ProviderOption | undefined>()
   const [disconnecting, setDisconnecting] = createSignal(new Set<string>())
 
@@ -50,25 +99,17 @@ const ProvidersTab: Component = () => {
     sortProviders(Object.values(provider.providers())).map((item) => ({ value: item.id, label: item.name })),
   )
 
-  const kilo = createMemo<Provider>(() => {
-    return (
-      provider.providers().kilo ?? {
-        id: "kilo",
-        name: "Kilo Gateway",
-        source: "custom",
-        env: ["KILO_API_KEY"],
-        models: {},
-      }
-    )
-  })
+  const kilo = createMemo<Provider>(() => provider.providers().kilo ?? kiloFallback)
   const kiloConnected = createMemo(() => provider.connected().includes("kilo"))
+  const showKiloAuth = createMemo(() => !kiloConnected() && server.deviceAuth().status !== "idle")
 
-  const availableOptions = createMemo(() => {
+  const popularProviders = createMemo(() => {
     const connected = new Set(provider.connected())
     const disabled = new Set(disabledProviders())
-    return providerOptions().filter(
-      (item) => !connected.has(item.value) && !disabled.has(item.value) && item.value !== "kilo",
-    )
+    return POPULAR_PROVIDER_IDS.map((id) => (id === "kilo" ? kilo() : provider.providers()[id]))
+      .filter((item): item is Provider => !!item)
+      .filter((item) => !connected.has(item.id) && !disabled.has(item.id))
+      .filter((item) => !(showKiloAuth() && item.id === "kilo"))
   })
 
   const disabledOptions = createMemo(() =>
@@ -91,7 +132,7 @@ const ProvidersTab: Component = () => {
         variant: "success",
         icon: "circle-check",
         title: language.t("provider.disconnect.toast.disconnected.title", { provider: pending.name }),
-        description: language.t("provider.disconnect.toast.disconnected.description", { provider: pending.name }),
+        description: disconnectDescription(pending.providerID, pending.name),
       })
       return
     }
@@ -114,6 +155,32 @@ const ProvidersTab: Component = () => {
 
   onCleanup(unsubscribe)
 
+  function source(item: Provider): ProviderSource | undefined {
+    const value = item.source
+    if (value === "env" || value === "api" || value === "config" || value === "custom") return value
+    return
+  }
+
+  function type(item: Provider) {
+    const current = source(item)
+    const auth = provider.authStates()[item.id]
+    if (item.id === "kilo") return language.t("settings.providers.tag.gateway")
+    if (current === "env") return language.t("settings.providers.tag.environment")
+    if (auth === "oauth") return language.t("settings.providers.tag.oauth")
+    if (auth === "api") return language.t("provider.connect.method.apiKey")
+    if (current === "config") return language.t("settings.providers.tag.configured")
+    if (current === "custom") return language.t("settings.providers.tag.customProvider")
+    return language.t("settings.providers.tag.connected")
+  }
+
+  function canDisconnect(item: Provider) {
+    return source(item) !== "env"
+  }
+
+  function canHide(item: Provider) {
+    return item.id !== "kilo" && source(item) === "env"
+  }
+
   function addDisabled(value: string) {
     const current = [...disabledProviders()]
     if (!value || current.includes(value)) return
@@ -121,14 +188,14 @@ const ProvidersTab: Component = () => {
     updateConfig({ disabled_providers: current })
   }
 
-  function hide(item: Provider) {
-    addDisabled(item.id)
-  }
-
   function removeDisabled(index: number) {
     const current = [...disabledProviders()]
     current.splice(index, 1)
     updateConfig({ disabled_providers: current })
+  }
+
+  function hide(item: Provider) {
+    addDisabled(item.id)
   }
 
   function disconnect(item: Provider) {
@@ -138,87 +205,85 @@ const ProvidersTab: Component = () => {
     vscode.postMessage({ type: "disconnectProvider", requestId, providerID: item.id })
   }
 
-  function type(item: Provider) {
-    const auth = provider.authStates()[item.id]
-    if (item.id === "kilo") return language.t("settings.providers.tag.gateway")
-    if (item.source === "env") return language.t("settings.providers.tag.environment")
-    if (auth === "oauth") return language.t("settings.providers.tag.oauth")
-    if (auth === "api") return language.t("provider.connect.method.apiKey")
-    if (item.source === "config") return language.t("settings.providers.tag.configured")
-    if (item.source === "custom") return language.t("settings.providers.tag.customProvider")
-    return language.t("settings.providers.tag.connected")
+  function disconnectDescription(providerID: string, name: string) {
+    if (providerID === "kilo") {
+      return language.t("provider.disconnect.toast.disconnected.description.kilo", { provider: name })
+    }
+    return language.t("provider.disconnect.toast.disconnected.description", { provider: name })
   }
 
-  function canDisconnect(item: Provider) {
-    return item.source !== "env"
+  function providerNote(providerID: string) {
+    const key = providerNoteKey(providerID)
+    if (!key) return undefined
+    return language.t(key)
   }
 
-  function canHide(item: Provider) {
-    return item.id !== "kilo" && item.source === "env"
+  function openPopular(item: Provider) {
+    if (item.id === "kilo") {
+      server.startLogin()
+      return
+    }
+    dialog.show(() => <ProviderConnectDialog providerID={item.id} />)
   }
 
-  function openConnectDialog() {
-    const item = newConnected()
-    if (!item) return
-    dialog.show(() => <ProviderConnectDialog providerID={item.value} />)
-    setNewConnected(undefined)
+  function openCustom() {
+    dialog.show(() => <CustomProviderDialog />)
   }
 
-  function cancelKiloLogin() {
-    vscode.postMessage({ type: "cancelLogin" })
+  function openAllProviders() {
+    dialog.show(() => <ProviderSelectDialog />)
+  }
+
+  function renderProviderRow(item: Provider, bordered: boolean, action: JSX.Element) {
+    return (
+      <div style={rowStyle(bordered)}>
+        <div style={{ display: "flex", gap: "12px", "align-items": "center", "min-width": 0, flex: 1 }}>
+          <ProviderGlyph id={item.id} />
+          <div style={{ display: "flex", gap: "8px", "align-items": "center", "flex-wrap": "wrap", "min-width": 0 }}>
+            <span style={{ "font-size": "14px", "font-weight": "500", color: "var(--vscode-foreground)" }}>
+              {item.name}
+            </span>
+            <Tag>{type(item)}</Tag>
+          </div>
+        </div>
+        {action}
+      </div>
+    )
+  }
+
+  function renderPopularRow(item: Provider, bordered: boolean) {
+    return (
+      <div style={rowStyle(bordered)}>
+        <div style={{ display: "flex", gap: "12px", "align-items": "center", "min-width": 0, flex: 1 }}>
+          <ProviderGlyph id={item.id} />
+          <div style={{ display: "flex", "flex-direction": "column", gap: "4px", "min-width": 0 }}>
+            <div style={{ display: "flex", gap: "8px", "align-items": "center", "flex-wrap": "wrap" }}>
+              <span style={{ "font-size": "14px", "font-weight": "500", color: "var(--vscode-foreground)" }}>
+                {item.name}
+              </span>
+              <Show when={item.id === "kilo"}>
+                <Tag>{language.t("dialog.provider.tag.recommended")}</Tag>
+              </Show>
+            </div>
+            <Show when={providerNote(item.id)}>
+              {(note) => (
+                <span style={{ "font-size": "12px", color: "var(--vscode-descriptionForeground)" }}>{note()}</span>
+              )}
+            </Show>
+          </div>
+        </div>
+        <Button variant="secondary" size="small" onClick={() => openPopular(item)}>
+          <span style={{ display: "flex", gap: "6px", "align-items": "center" }}>
+            <Icon name="plus-small" size="small" />
+            {language.t("common.connect")}
+          </span>
+        </Button>
+      </div>
+    )
   }
 
   return (
     <div>
-      <Show when={!kiloConnected()}>
-        <h4 style={{ "margin-bottom": "8px" }}>{kilo().name}</h4>
-        <Show
-          when={server.deviceAuth().status !== "idle"}
-          fallback={
-            <Card>
-              <div
-                style={{ display: "flex", "justify-content": "space-between", gap: "12px", "align-items": "center" }}
-              >
-                <div style={{ display: "flex", "flex-direction": "column", gap: "4px" }}>
-                  <div style={{ display: "flex", gap: "8px", "align-items": "center", "flex-wrap": "wrap" }}>
-                    <span style={{ "font-size": "12px", "font-weight": "500" }}>{kilo().name}</span>
-                    <span
-                      style={{
-                        "font-size": "11px",
-                        color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
-                        padding: "2px 6px",
-                        border: "1px solid var(--border-weak-base)",
-                        "border-radius": "999px",
-                      }}
-                    >
-                      {language.t("settings.providers.tag.gateway")}
-                    </span>
-                  </div>
-                  <span
-                    style={{ "font-size": "11px", color: "var(--text-weak-base, var(--vscode-descriptionForeground))" }}
-                  >
-                    {language.t("profile.notLoggedIn")}
-                  </span>
-                </div>
-                <Button variant="primary" size="small" onClick={server.startLogin}>
-                  {language.t("profile.action.login")}
-                </Button>
-              </div>
-            </Card>
-          }
-        >
-          <DeviceAuthCard
-            status={server.deviceAuth().status}
-            code={server.deviceAuth().code}
-            verificationUrl={server.deviceAuth().verificationUrl}
-            expiresIn={server.deviceAuth().expiresIn}
-            error={server.deviceAuth().error}
-            onCancel={cancelKiloLogin}
-            onRetry={server.startLogin}
-          />
-        </Show>
-      </Show>
-
       <h4 style={{ "margin-bottom": "8px" }}>{language.t("settings.providers.section.connected")}</h4>
       <Card>
         <Show
@@ -230,39 +295,10 @@ const ProvidersTab: Component = () => {
           }
         >
           <For each={connectedProviders()}>
-            {(item, index) => (
-              <div
-                style={{
-                  display: "flex",
-                  "align-items": "center",
-                  "justify-content": "space-between",
-                  gap: "12px",
-                  padding: "8px 0",
-                  "border-bottom":
-                    index() < connectedProviders().length - 1 ? "1px solid var(--border-weak-base)" : "none",
-                }}
-              >
-                <div style={{ display: "flex", "flex-direction": "column", gap: "4px", "min-width": 0 }}>
-                  <div style={{ display: "flex", gap: "8px", "align-items": "center", "flex-wrap": "wrap" }}>
-                    <span style={{ "font-size": "12px", "font-weight": "500" }}>{item.name}</span>
-                    <span
-                      style={{
-                        "font-size": "11px",
-                        color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
-                        padding: "2px 6px",
-                        border: "1px solid var(--border-weak-base)",
-                        "border-radius": "999px",
-                      }}
-                    >
-                      {type(item)}
-                    </span>
-                  </div>
-                  <span
-                    style={{ "font-size": "11px", color: "var(--text-weak-base, var(--vscode-descriptionForeground))" }}
-                  >
-                    {item.id}
-                  </span>
-                </div>
+            {(item, index) =>
+              renderProviderRow(
+                item,
+                index() < connectedProviders().length - 1,
                 <Show
                   when={canDisconnect(item)}
                   fallback={
@@ -281,30 +317,69 @@ const ProvidersTab: Component = () => {
                   >
                     {language.t("common.disconnect")}
                   </Button>
-                </Show>
-              </div>
-            )}
+                </Show>,
+              )
+            }
           </For>
         </Show>
       </Card>
 
-      <Show when={availableOptions().length > 0}>
-        <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>{language.t("common.connect")}</h4>
-        <Card>
-          <div style={{ display: "flex", gap: "8px", "align-items": "center" }}>
-            <div style={{ flex: 1 }}>
-              <ProviderSelector
-                options={availableOptions()}
-                value={newConnected()}
-                onSelect={(item) => setNewConnected(item)}
-              />
-            </div>
-            <Button variant="secondary" onClick={openConnectDialog} disabled={!newConnected()}>
-              {language.t("common.connect")}
-            </Button>
-          </div>
-        </Card>
+      <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>
+        {language.t("settings.providers.section.popular")}
+      </h4>
+      <Show when={showKiloAuth()}>
+        <div style={{ "margin-bottom": "12px" }}>
+          <DeviceAuthCard
+            status={server.deviceAuth().status}
+            code={server.deviceAuth().code}
+            verificationUrl={server.deviceAuth().verificationUrl}
+            expiresIn={server.deviceAuth().expiresIn}
+            error={server.deviceAuth().error}
+            onCancel={() => vscode.postMessage({ type: "cancelLogin" })}
+            onRetry={server.startLogin}
+          />
+        </div>
       </Show>
+      <Card>
+        <For each={popularProviders()}>
+          {(item, index) => renderPopularRow(item, index() < popularProviders().length)}
+        </For>
+
+        <div style={rowStyle(false)}>
+          <div style={{ display: "flex", gap: "12px", "align-items": "center", "min-width": 0, flex: 1 }}>
+            <ProviderGlyph id={CUSTOM_PROVIDER_ID} />
+            <div style={{ display: "flex", "flex-direction": "column", gap: "4px", "min-width": 0 }}>
+              <div style={{ display: "flex", gap: "8px", "align-items": "center", "flex-wrap": "wrap" }}>
+                <span style={{ "font-size": "14px", "font-weight": "500", color: "var(--vscode-foreground)" }}>
+                  {language.t("settings.providers.tag.customProvider")}
+                </span>
+                <Tag>{language.t("settings.providers.tag.custom")}</Tag>
+              </div>
+              <span style={{ "font-size": "12px", color: "var(--vscode-descriptionForeground)" }}>
+                {language.t("settings.providers.custom.note")}
+              </span>
+            </div>
+          </div>
+          <Button variant="secondary" size="small" onClick={openCustom}>
+            <span style={{ display: "flex", gap: "6px", "align-items": "center" }}>
+              <Icon name="plus-small" size="small" />
+              {language.t("common.connect")}
+            </span>
+          </Button>
+        </div>
+      </Card>
+
+      <Button
+        variant="secondary"
+        size="small"
+        style={{ margin: "12px 0 0", "justify-content": "flex-start" }}
+        onClick={openAllProviders}
+      >
+        <span style={{ display: "flex", gap: "6px", "align-items": "center" }}>
+          <Icon name="plus-small" size="small" />
+          {language.t("settings.providers.action.addProvider")}
+        </span>
+      </Button>
 
       <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>{language.t("settings.providers.disabled")}</h4>
       <Card>
