@@ -9,10 +9,12 @@ import { DialogProvider } from "@kilocode/kilo-ui/context/dialog"
 import { DataProvider } from "@kilocode/kilo-ui/context/data"
 import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff"
 import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
+import { FileComponentProvider } from "@kilocode/kilo-ui/context/file"
 import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
 import { I18nProvider } from "@kilocode/kilo-ui/context"
 import { Diff } from "@kilocode/kilo-ui/diff"
 import { Code } from "@kilocode/kilo-ui/code"
+import { File } from "@kilocode/kilo-ui/file"
 import { VSCodeProvider } from "../context/vscode"
 import { ServerProvider } from "../context/server"
 import { ConfigProvider } from "../context/config"
@@ -121,9 +123,11 @@ const WithSessions: ParentComponent<{ sessions?: typeof mockSessions }> = (props
                     >
                       <DiffComponentProvider component={Diff}>
                         <CodeComponentProvider component={Code}>
-                          <MarkedProvider>
-                            <div style={{ padding: "12px" }}>{props.children}</div>
-                          </MarkedProvider>
+                          <FileComponentProvider component={File}>
+                            <MarkedProvider>
+                              <div style={{ padding: "12px" }}>{props.children}</div>
+                            </MarkedProvider>
+                          </FileComponentProvider>
                         </CodeComponentProvider>
                       </DiffComponentProvider>
                     </DataProvider>

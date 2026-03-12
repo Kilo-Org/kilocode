@@ -57,6 +57,18 @@ jobs:
         with:
           lfs: true
 
+      - name: Check if HEAD is a baseline update commit
+        if: needs.check-paths.outputs.is_fork != 'true'
+        id: check-baseline-commit
+        run: |
+          COMMIT_MSG=$(git log -1 --format=%s)
+          if [ "$COMMIT_MSG" = "chore: update visual regression baselines" ] || [ "$COMMIT_MSG" = "chore: update kilo-vscode visual regression baselines" ]; then
+            echo "is_baseline_update=true" >> "$GITHUB_OUTPUT"
+            echo "HEAD commit is a baseline update commit — will not auto-commit again."
+          else
+            echo "is_baseline_update=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
@@ -106,6 +118,26 @@ jobs:
           CI: true
           PLAYWRIGHT_WORKERS: "4"
 
+      - name: Remove stale baselines for deleted stories
+        run: |
+          node -e "
+            const fs = require('fs'), path = require('path');
+            const idx = JSON.parse(fs.readFileSync('storybook-static/index.json', 'utf8'));
+            const stories = Object.values(idx.entries || idx.stories || {}).filter(s => s.id && !s.id.endsWith('--docs'));
+            const expected = new Set(stories.map(s => { const [c,v] = s.id.split('--'); return c + '/' + v + '-chromium-linux.png'; }));
+            const dir = 'tests/visual-regression.spec.ts-snapshots';
+            if (!fs.existsSync(dir)) process.exit(0);
+            for (const component of fs.readdirSync(dir)) {
+              const cdir = path.join(dir, component);
+              if (!fs.statSync(cdir).isDirectory()) continue;
+              for (const file of fs.readdirSync(cdir)) {
+                const rel = component + '/' + file;
+                if (file.endsWith('.png') && !expected.has(rel)) { console.log('Removing stale baseline:', rel); fs.unlinkSync(path.join(cdir, file)); }
+              }
+            }
+          "
+        working-directory: packages/kilo-ui
+
       - name: Check for baseline changes (fork PRs)
         if: needs.check-paths.outputs.is_fork == 'true'
         run: |
@@ -120,8 +152,22 @@ jobs:
             exit 1
           fi
 
+      - name: Fail if baselines still changing after auto-update
+        if: needs.check-paths.outputs.is_fork != 'true' && steps.check-baseline-commit.outputs.is_baseline_update == 'true'
+        run: |
+          git add packages/kilo-ui/tests/visual-regression.spec.ts-snapshots/
+          if git diff --cached --quiet; then
+            echo "Baselines are stable after auto-update."
+          else
+            echo "::error::Visual regression baselines changed again after a previous auto-update commit."
+            echo "::error::This indicates non-deterministic screenshots that would cause an infinite update loop."
+            echo "::error::Please investigate the flaky screenshots and add non-deterministic stories to the SKIP set."
+            git diff --cached --stat
+            exit 1
+          fi
+
       - name: Commit and push new baselines (if any)
-        if: needs.check-paths.outputs.is_fork != 'true'
+        if: needs.check-paths.outputs.is_fork != 'true' && steps.check-baseline-commit.outputs.is_baseline_update != 'true'
         id: commit-baselines
         env:
           GH_TOKEN: ${{ secrets.BOT_PAT }}
@@ -175,6 +221,18 @@ jobs:
         with:
           lfs: true
 
+      - name: Check if HEAD is a baseline update commit
+        if: needs.check-paths.outputs.is_fork != 'true'
+        id: check-baseline-commit-vscode
+        run: |
+          COMMIT_MSG=$(git log -1 --format=%s)
+          if [ "$COMMIT_MSG" = "chore: update visual regression baselines" ] || [ "$COMMIT_MSG" = "chore: update kilo-vscode visual regression baselines" ]; then
+            echo "is_baseline_update=true" >> "$GITHUB_OUTPUT"
+            echo "HEAD commit is a baseline update commit — will not auto-commit again."
+          else
+            echo "is_baseline_update=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
@@ -224,6 +282,26 @@ jobs:
           CI: true
           PLAYWRIGHT_WORKERS: "4"
 
+      - name: Remove stale baselines for deleted stories
+        run: |
+          node -e "
+            const fs = require('fs'), path = require('path');
+            const idx = JSON.parse(fs.readFileSync('storybook-static/index.json', 'utf8'));
+            const stories = Object.values(idx.entries || idx.stories || {}).filter(s => s.id && !s.id.endsWith('--docs'));
+            const expected = new Set(stories.map(s => { const [c,v] = s.id.split('--'); return c + '/' + v + '-chromium-linux.png'; }));
+            const dir = 'tests/visual-regression.spec.ts-snapshots';
+            if (!fs.existsSync(dir)) process.exit(0);
+            for (const component of fs.readdirSync(dir)) {
+              const cdir = path.join(dir, component);
+              if (!fs.statSync(cdir).isDirectory()) continue;
+              for (const file of fs.readdirSync(cdir)) {
+                const rel = component + '/' + file;
+                if (file.endsWith('.png') && !expected.has(rel)) { console.log('Removing stale baseline:', rel); fs.unlinkSync(path.join(cdir, file)); }
+              }
+            }
+          "
+        working-directory: packages/kilo-vscode
+
       - name: Check for baseline changes (fork PRs)
         if: needs.check-paths.outputs.is_fork == 'true'
         run: |
@@ -238,8 +316,22 @@ jobs:
             exit 1
           fi
 
+      - name: Fail if baselines still changing after auto-update
+        if: needs.check-paths.outputs.is_fork != 'true' && steps.check-baseline-commit-vscode.outputs.is_baseline_update == 'true'
+        run: |
+          git add packages/kilo-vscode/tests/visual-regression.spec.ts-snapshots/
+          if git diff --cached --quiet; then
+            echo "Baselines are stable after auto-update."
+          else
+            echo "::error::Visual regression baselines changed again after a previous auto-update commit."
+            echo "::error::This indicates non-deterministic screenshots that would cause an infinite update loop."
+            echo "::error::Please investigate the flaky screenshots and add non-deterministic stories to the SKIP set."
+            git diff --cached --stat
+            exit 1
+          fi
+
       - name: Commit and push new baselines (if any)
-        if: needs.check-paths.outputs.is_fork != 'true'
+        if: needs.check-paths.outputs.is_fork != 'true' && steps.check-baseline-commit-vscode.outputs.is_baseline_update != 'true'
         id: commit-baselines-vscode
         env:
           GH_TOKEN: ${{ secrets.BOT_PAT }}

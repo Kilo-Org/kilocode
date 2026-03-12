@@ -24,7 +24,8 @@ export async function enhancePrompt(text: string): Promise<string> {
     hidden: true,
     options: {},
     permission: [],
-    prompt: "Generate an enhanced version of this prompt (reply with only the enhanced prompt - no conversation, explanations, lead-in, bullet points, placeholders, or surrounding quotes):",
+    prompt:
+      "Generate an enhanced version of this prompt (reply with only the enhanced prompt - no conversation, explanations, lead-in, bullet points, placeholders, or surrounding quotes):",
     temperature: 0.7,
   }
 
