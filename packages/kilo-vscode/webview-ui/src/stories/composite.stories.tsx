@@ -546,11 +546,11 @@ export const MultipleToolCalls: Story = {
 }
 
 // ---------------------------------------------------------------------------
-// 8. Active question tool is hidden inline and rendered only in the bottom dock
+// 8. Active question tool is hidden inline
 // ---------------------------------------------------------------------------
 
-export const ActiveQuestionHiddenInline: Story = {
-  name: "Active Question Hidden Inline",
+export const QuestionToolHiddenInline: Story = {
+  name: "Question Tool Hidden Inline",
   render: () => {
     const qs = [questionRequest]
     const data = dataWith([textPart, questionToolPart])
