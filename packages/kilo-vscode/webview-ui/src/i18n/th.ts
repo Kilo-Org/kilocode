@@ -939,6 +939,8 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "พารามิเตอร์ nucleus sampling (0-1)",
   "settings.agentBehaviour.maxSteps.title": "ขั้นตอนสูงสุด",
   "settings.agentBehaviour.maxSteps.description": "จำนวนรอบเอเจนต์สูงสุด",
+  "settings.agentBehaviour.discoveredSkills": "ทักษะที่ค้นพบ",
+  "settings.agentBehaviour.noSkillsFound": "ไม่พบทักษะ เพิ่มเส้นทางโฟลเดอร์หรือ URL ด้านล่างเพื่อทำให้ทักษะพร้อมใช้งาน",
   "settings.agentBehaviour.skillPaths": "เส้นทางโฟลเดอร์ทักษะ",
   "settings.agentBehaviour.skillUrls": "URL ทักษะ",
   "settings.agentBehaviour.instructionFiles": "ไฟล์คำสั่งเพิ่มเติม",

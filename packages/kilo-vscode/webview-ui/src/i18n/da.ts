@@ -946,6 +946,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Nucleus-samplingparameter (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Maks. trin",
   "settings.agentBehaviour.maxSteps.description": "Maksimale agentiterationer",
+  "settings.agentBehaviour.discoveredSkills": "Opdagede skills",
+  "settings.agentBehaviour.noSkillsFound":
+    "Ingen skills fundet. Tilføj skill-mappestier eller URL'er nedenfor for at gøre skills tilgængelige.",
   "settings.agentBehaviour.skillPaths": "Skill-mappestier",
   "settings.agentBehaviour.skillUrls": "Skill-URL'er",
   "settings.agentBehaviour.instructionFiles": "Yderligere instruktionsfiler",

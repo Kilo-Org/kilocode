@@ -951,6 +951,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Параметр nucleus-сэмплирования (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Макс. шагов",
   "settings.agentBehaviour.maxSteps.description": "Максимальное число итераций агента",
+  "settings.agentBehaviour.discoveredSkills": "Обнаруженные навыки",
+  "settings.agentBehaviour.noSkillsFound":
+    "Навыки не обнаружены. Добавьте пути к папкам навыков или URL-адреса ниже, чтобы сделать навыки доступными.",
   "settings.agentBehaviour.skillPaths": "Пути папок навыков",
   "settings.agentBehaviour.skillUrls": "URL навыков",
   "settings.agentBehaviour.instructionFiles": "Дополнительные файлы инструкций",

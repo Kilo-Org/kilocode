@@ -1,0 +1,90 @@
+[data-component="diff"] {
+  content-visibility: auto;
+
+  [data-slot="diff-hunk-separator-line-number"] {
+    position: sticky;
+    left: 0;
+    background-color: var(--surface-diff-hidden-strong);
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    [data-slot="diff-hunk-separator-line-number-icon"] {
+      aspect-ratio: 1;
+      width: 24px;
+      height: 24px;
+      color: var(--icon-strong-base);
+    }
+  }
+  [data-slot="diff-hunk-separator-content"] {
+    position: sticky;
+    background-color: var(--surface-diff-hidden-base);
+    color: var(--text-base);
+    width: var(--diffs-column-content-width);
+    left: var(--diffs-column-number-width);
+    padding-left: 8px;
+    user-select: none;
+    cursor: default;
+    text-align: left;
+
+    [data-slot="diff-hunk-separator-content-span"] {
+      mix-blend-mode: var(--text-mix-blend-mode);
+    }
+  }
+}
+
+[data-component="diff"][data-binary] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 140px;
+  padding: 20px;
+
+  [data-slot="diff-binary-state"] {
+    width: min(100%, 420px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 20px 24px;
+    border: 1px dashed var(--border-base);
+    border-radius: 12px;
+    background: var(--surface-diff-hidden-weaker);
+    box-shadow: var(--shadow-xs-border);
+    text-align: center;
+  }
+
+  [data-slot="diff-binary-badge"] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--surface-raised-strong);
+    color: var(--text-weak);
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: 0.04em;
+  }
+
+  [data-slot="diff-binary-title"] {
+    color: var(--text-strong);
+    font-family: var(--font-family-sans);
+    font-size: var(--font-size-large);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.3;
+  }
+
+  [data-slot="diff-binary-meta"] {
+    max-width: 32ch;
+    color: var(--text-weak);
+    font-family: var(--font-family-sans);
+    font-size: var(--font-size-small);
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+}

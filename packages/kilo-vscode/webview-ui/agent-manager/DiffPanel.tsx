@@ -10,7 +10,7 @@ import { RadioGroup } from "@kilocode/kilo-ui/radio-group"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
-import type { DiffLineAnnotation, AnnotationSide } from "@pierre/diffs"
+import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
 import { useLanguage } from "../src/context/language"
 import { getDirectory, getFilename, sanitizeReviewComments, type ReviewComment } from "./review-comments"
@@ -260,11 +260,12 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   }
 
   // --- Gutter utility click ---
-  const handleGutterClick = (file: string, result: { lineNumber: number; side: AnnotationSide }) => {
+  const handleGutterClick = (file: string, range: SelectedLineRange) => {
     // Don't open a second draft while one is active
     if (draft()) return
+    const side: AnnotationSide = range.side === "deletions" ? "deletions" : "additions"
     preserveScroll(() => {
-      setDraft({ file, side: result.side, line: result.lineNumber })
+      setDraft({ file, side, line: range.start })
     })
   }
 

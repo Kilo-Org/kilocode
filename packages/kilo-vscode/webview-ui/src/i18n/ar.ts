@@ -938,6 +938,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "معامل أخذ العينات النووي (0-1)",
   "settings.agentBehaviour.maxSteps.title": "الحد الأقصى للخطوات",
   "settings.agentBehaviour.maxSteps.description": "الحد الأقصى لتكرارات الوكيل",
+  "settings.agentBehaviour.discoveredSkills": "المهارات المكتشفة",
+  "settings.agentBehaviour.noSkillsFound":
+    "لم يتم العثور على مهارات. أضف مسارات مجلدات أو عناوين URL أدناه لإتاحة المهارات.",
   "settings.agentBehaviour.skillPaths": "مسارات مجلدات المهارات",
   "settings.agentBehaviour.skillUrls": "عناوين URL للمهارات",
   "settings.agentBehaviour.instructionFiles": "ملفات تعليمات إضافية",

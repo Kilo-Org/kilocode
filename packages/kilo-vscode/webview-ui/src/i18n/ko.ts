@@ -943,6 +943,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "핵 샘플링 매개변수 (0-1)",
   "settings.agentBehaviour.maxSteps.title": "최대 단계",
   "settings.agentBehaviour.maxSteps.description": "최대 에이전트 반복 횟수",
+  "settings.agentBehaviour.discoveredSkills": "검색된 스킬",
+  "settings.agentBehaviour.noSkillsFound":
+    "스킬을 찾을 수 없습니다. 스킬을 사용하려면 아래에 스킬 폴더 경로 또는 URL을 추가하세요.",
   "settings.agentBehaviour.skillPaths": "스킬 폴더 경로",
   "settings.agentBehaviour.skillUrls": "스킬 URL",
   "settings.agentBehaviour.instructionFiles": "추가 지시 파일",

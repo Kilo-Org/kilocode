@@ -950,6 +950,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Nucleus parametar uzorkovanja (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Maks. koraci",
   "settings.agentBehaviour.maxSteps.description": "Maksimalne iteracije agenta",
+  "settings.agentBehaviour.discoveredSkills": "Otkrivene vještine",
+  "settings.agentBehaviour.noSkillsFound":
+    "Nisu pronađene vještine. Dodajte putanje mapa ili URL-ove ispod kako biste učinili vještine dostupnim.",
   "settings.agentBehaviour.skillPaths": "Putanje mapa vještina",
   "settings.agentBehaviour.skillUrls": "URL-ovi vještina",
   "settings.agentBehaviour.instructionFiles": "Dodatne datoteke uputa",

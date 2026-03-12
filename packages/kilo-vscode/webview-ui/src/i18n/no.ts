@@ -948,6 +948,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Nucleus-samplingsparameter (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Maks. trinn",
   "settings.agentBehaviour.maxSteps.description": "Maksimale agentiterasjoner",
+  "settings.agentBehaviour.discoveredSkills": "Oppdagede ferdigheter",
+  "settings.agentBehaviour.noSkillsFound":
+    "Ingen ferdigheter funnet. Legg til ferdighetsmappestier eller URLer nedenfor for å gjøre ferdigheter tilgjengelige.",
   "settings.agentBehaviour.skillPaths": "Ferdighetsmappe-stier",
   "settings.agentBehaviour.skillUrls": "Ferdighets-URLer",
   "settings.agentBehaviour.instructionFiles": "Ekstra instruksjonsfiler",

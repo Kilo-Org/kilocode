@@ -934,6 +934,8 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "核取樣參數（0-1）",
   "settings.agentBehaviour.maxSteps.title": "最大步數",
   "settings.agentBehaviour.maxSteps.description": "最大 Agent 迭代次數",
+  "settings.agentBehaviour.discoveredSkills": "已發現的 Skill",
+  "settings.agentBehaviour.noSkillsFound": "未發現任何 Skill。請在下方新增 Skill 資料夾路徑或 URL 以使 Skill 可用。",
   "settings.agentBehaviour.skillPaths": "Skill 資料夾路徑",
   "settings.agentBehaviour.skillUrls": "Skill URL",
   "settings.agentBehaviour.instructionFiles": "附加指令檔案",

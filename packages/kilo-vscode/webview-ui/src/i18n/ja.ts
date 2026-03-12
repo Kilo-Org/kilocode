@@ -946,6 +946,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "核サンプリングパラメータ（0-1）",
   "settings.agentBehaviour.maxSteps.title": "最大ステップ数",
   "settings.agentBehaviour.maxSteps.description": "最大エージェント反復回数",
+  "settings.agentBehaviour.discoveredSkills": "検出されたスキル",
+  "settings.agentBehaviour.noSkillsFound":
+    "スキルが見つかりません。スキルを利用可能にするには、以下にスキルフォルダパスまたはURLを追加してください。",
   "settings.agentBehaviour.skillPaths": "スキルフォルダパス",
   "settings.agentBehaviour.skillUrls": "スキルURL",
   "settings.agentBehaviour.instructionFiles": "追加の指示ファイル",

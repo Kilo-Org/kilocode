@@ -961,6 +961,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Nucleus-Sampling-Parameter (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Max. Schritte",
   "settings.agentBehaviour.maxSteps.description": "Maximale Agent-Iterationen",
+  "settings.agentBehaviour.discoveredSkills": "Erkannte Skills",
+  "settings.agentBehaviour.noSkillsFound":
+    "Keine Skills gefunden. Fügen Sie unten Skill-Ordnerpfade oder URLs hinzu, um Skills verfügbar zu machen.",
   "settings.agentBehaviour.skillPaths": "Skill-Ordnerpfade",
   "settings.agentBehaviour.skillUrls": "Skill-URLs",
   "settings.agentBehaviour.instructionFiles": "Zusätzliche Anweisungsdateien",

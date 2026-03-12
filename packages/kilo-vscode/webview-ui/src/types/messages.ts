@@ -164,6 +164,13 @@ export interface QuestionRequest {
   }
 }
 
+// Skill info from CLI backend
+export interface SkillInfo {
+  name: string
+  description: string
+  location: string
+}
+
 // Agent/mode info from CLI backend
 export interface AgentInfo {
   name: string
@@ -546,6 +553,11 @@ export interface AgentsLoadedMessage {
   type: "agentsLoaded"
   agents: AgentInfo[]
   defaultAgent: string
+}
+
+export interface SkillsLoadedMessage {
+  type: "skillsLoaded"
+  skills: SkillInfo[]
 }
 
 export interface AutocompleteSettingsLoadedMessage {
@@ -1005,6 +1017,7 @@ export type ExtensionMessage =
   | NavigateMessage
   | ProvidersLoadedMessage
   | AgentsLoadedMessage
+  | SkillsLoadedMessage
   | AutocompleteSettingsLoadedMessage
   | ChatCompletionResultMessage
   | FileSearchResultMessage
@@ -1180,6 +1193,10 @@ export interface CompactRequest {
 
 export interface RequestAgentsMessage {
   type: "requestAgents"
+}
+
+export interface RequestSkillsMessage {
+  type: "requestSkills"
 }
 
 export interface SetLanguageRequest {
@@ -1539,6 +1556,7 @@ export type WebviewMessage =
   | RequestProvidersMessage
   | CompactRequest
   | RequestAgentsMessage
+  | RequestSkillsMessage
   | SetLanguageRequest
   | QuestionReplyRequest
   | QuestionRejectRequest

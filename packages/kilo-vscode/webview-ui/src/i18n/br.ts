@@ -950,6 +950,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Parâmetro de amostragem nucleus (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Passos máximos",
   "settings.agentBehaviour.maxSteps.description": "Iterações máximas do agente",
+  "settings.agentBehaviour.discoveredSkills": "Habilidades descobertas",
+  "settings.agentBehaviour.noSkillsFound":
+    "Nenhuma habilidade encontrada. Adicione caminhos de pastas ou URLs abaixo para disponibilizar habilidades.",
   "settings.agentBehaviour.skillPaths": "Caminhos de pastas de habilidades",
   "settings.agentBehaviour.skillUrls": "URLs de habilidades",
   "settings.agentBehaviour.instructionFiles": "Arquivos de instruções adicionais",

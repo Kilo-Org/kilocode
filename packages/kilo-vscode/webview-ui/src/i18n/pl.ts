@@ -948,6 +948,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Parametr próbkowania nucleus (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Maks. kroki",
   "settings.agentBehaviour.maxSteps.description": "Maksymalna liczba iteracji agenta",
+  "settings.agentBehaviour.discoveredSkills": "Wykryte umiejętności",
+  "settings.agentBehaviour.noSkillsFound":
+    "Nie znaleziono umiejętności. Dodaj ścieżki folderów lub adresy URL poniżej, aby udostępnić umiejętności.",
   "settings.agentBehaviour.skillPaths": "Ścieżki folderów umiejętności",
   "settings.agentBehaviour.skillUrls": "Adresy URL umiejętności",
   "settings.agentBehaviour.instructionFiles": "Dodatkowe pliki instrukcji",

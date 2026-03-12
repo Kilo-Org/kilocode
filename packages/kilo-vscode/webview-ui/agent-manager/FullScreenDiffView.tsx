@@ -11,7 +11,7 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { ResizeHandle } from "@kilocode/kilo-ui/resize-handle"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
-import type { DiffLineAnnotation, AnnotationSide } from "@pierre/diffs"
+import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
 import { useLanguage } from "../src/context/language"
 import { FileTree } from "./FileTree"
@@ -259,10 +259,11 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     })
   }
 
-  const handleGutterClick = (file: string, result: { lineNumber: number; side: AnnotationSide }) => {
+  const handleGutterClick = (file: string, range: SelectedLineRange) => {
     if (draft()) return
+    const side: AnnotationSide = range.side === "deletions" ? "deletions" : "additions"
     preserveScroll(() => {
-      setDraft({ file, side: result.side, line: result.lineNumber })
+      setDraft({ file, side, line: range.start })
     })
   }
 
