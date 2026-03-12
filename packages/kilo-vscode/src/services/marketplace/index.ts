@@ -3,7 +3,6 @@ import { MarketplaceApiClient } from "./api"
 import { MarketplacePaths } from "./paths"
 import { InstallationDetector } from "./detection"
 import { MarketplaceInstaller } from "./installer"
-import { MarketplaceUninstaller } from "./uninstaller"
 import type {
   MarketplaceItem,
   InstallMarketplaceItemOptions,
@@ -17,14 +16,12 @@ export class MarketplaceService {
   private paths: MarketplacePaths
   private detector: InstallationDetector
   private installer: MarketplaceInstaller
-  private uninstaller: MarketplaceUninstaller
 
   constructor(globalStoragePath: string) {
     this.paths = new MarketplacePaths(globalStoragePath)
     this.api = new MarketplaceApiClient()
     this.detector = new InstallationDetector(this.paths)
     this.installer = new MarketplaceInstaller(this.paths)
-    this.uninstaller = new MarketplaceUninstaller(this.paths)
   }
 
   async fetchData(workspace?: string): Promise<MarketplaceDataResponse> {
@@ -52,7 +49,7 @@ export class MarketplaceService {
   }
 
   async remove(item: MarketplaceItem, scope: "project" | "global", workspace?: string): Promise<RemoveResult> {
-    const result = await this.uninstaller.remove(item, scope, workspace)
+    const result = await this.installer.remove(item, scope, workspace)
 
     if (result.success) {
       vscode.window.showInformationMessage(`Successfully removed ${item.name}`)
