@@ -623,7 +623,8 @@ export const dict = {
   "settings.general.row.font.title": "Fuente",
   "settings.general.row.font.description": "Personaliza la fuente monoespaciada usada en bloques de código",
   "settings.general.row.reasoningSummaries.title": "Mostrar resúmenes de razonamiento",
-  "settings.general.row.reasoningSummaries.description": "Mostrar resúmenes de razonamiento del modelo en la línea de tiempo",
+  "settings.general.row.reasoningSummaries.description":
+    "Mostrar resúmenes de razonamiento del modelo en la línea de tiempo",
 
   "settings.general.row.shellToolPartsExpanded.title": "Expandir partes de la herramienta shell",
   "settings.general.row.shellToolPartsExpanded.description":

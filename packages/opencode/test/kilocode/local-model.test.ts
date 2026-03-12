@@ -39,8 +39,22 @@ const mockProviders = [
 ]
 
 let mockAgents = [
-  { name: "code", mode: "primary" as const, hidden: false, model: undefined as any, color: undefined as any, permission: {} },
-  { name: "plan", mode: "primary" as const, hidden: false, model: undefined as any, color: undefined as any, permission: {} },
+  {
+    name: "code",
+    mode: "primary" as const,
+    hidden: false,
+    model: undefined as any,
+    color: undefined as any,
+    permission: {},
+  },
+  {
+    name: "plan",
+    mode: "primary" as const,
+    hidden: false,
+    model: undefined as any,
+    color: undefined as any,
+    permission: {},
+  },
 ]
 
 let mockConfig: { model?: string } = {}
@@ -142,9 +156,7 @@ function runInRoot(): { local: any; dispose: () => void } {
   return { local: local!, dispose }
 }
 
-async function initLocal(options?: {
-  prewrite?: Record<string, any>
-}): Promise<{ local: any; dispose: () => void }> {
+async function initLocal(options?: { prewrite?: Record<string, any> }): Promise<{ local: any; dispose: () => void }> {
   if (options?.prewrite) {
     await fs.writeFile(modelJsonPath, JSON.stringify(options.prewrite))
   }
