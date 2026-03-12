@@ -111,11 +111,11 @@ This provides the benefit of Vercel's reliability infrastructure while using you
 
 The gateway accepts the following headers:
 
-| Header                      | Required                | Description                                      |
-| --------------------------- | ----------------------- | ------------------------------------------------ |
-| `Authorization`             | Yes (unless free model) | `Bearer <api_key>`                               |
-| `Content-Type`              | Yes                     | `application/json`                               |
-| `X-KiloCode-OrganizationId` | No                      | Organization context for org-scoped requests     |
-| `X-KiloCode-TaskId`         | No                      | Task identifier for prompt cache keying          |
-| `X-KiloCode-Version`        | No                      | Client version string                            |
-| `x-kilocode-mode`           | No                      | Mode hint for `kilo-auto/frontier` model routing |
+| Header                      | Required                | Description                                  |
+| --------------------------- | ----------------------- | -------------------------------------------- |
+| `Authorization`             | Yes (unless free model) | `Bearer <api_key>`                           |
+| `Content-Type`              | Yes                     | `application/json`                           |
+| `X-KiloCode-OrganizationId` | No                      | Organization context for org-scoped requests |
+| `X-KiloCode-TaskId`         | No                      | Task identifier for prompt cache keying      |
+| `X-KiloCode-Version`        | No                      | Client version string                        |
+| `x-kilocode-mode`           | No                      | Mode hint for `kilo-auto` model routing      |

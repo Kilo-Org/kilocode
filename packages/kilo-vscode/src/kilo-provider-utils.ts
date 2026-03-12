@@ -1,4 +1,5 @@
 import type { Session, Agent, Event, ProviderListResponse } from "@kilocode/sdk/v2/client"
+import type { CloudSessionMessage } from "./services/cli-backend/types"
 
 /** A single provider entry as returned by the /provider list endpoint. */
 export type ProviderInfo = ProviderListResponse["all"][number]
@@ -276,6 +277,21 @@ export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | un
       }
     default:
       return null
+  }
+}
+
+export function mapCloudSessionMessageToWebviewMessage(message: CloudSessionMessage) {
+  return {
+    id: message.info.id,
+    sessionID: message.info.sessionID,
+    role: message.info.role as "user" | "assistant",
+    parts: message.parts,
+    createdAt: message.info.time?.created
+      ? new Date(message.info.time.created).toISOString()
+      : new Date().toISOString(),
+    time: message.info.time,
+    cost: message.info.cost,
+    tokens: message.info.tokens,
   }
 }
 

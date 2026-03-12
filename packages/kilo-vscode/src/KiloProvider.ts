@@ -30,6 +30,7 @@ import {
   mapSSEEventToWebviewMessage,
   getErrorMessage,
   isEventFromForeignProject,
+  mapCloudSessionMessageToWebviewMessage,
   loadSessions as loadSessionsUtil,
   flushPendingSessionRefresh as flushPendingSessionRefreshUtil,
   type SessionRefreshContext,
@@ -49,6 +50,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private cachedProvidersMessage: unknown = null
   /** Cached agentsLoaded payload so requestAgents can be served before client is ready */
   private cachedAgentsMessage: unknown = null
+  /** Cached skillsLoaded payload so requestSkills can be served before client is ready */
+  private cachedSkillsMessage: unknown = null
   /** Cached configLoaded payload so requestConfig can be served before client is ready */
   private cachedConfigMessage: unknown = null
   /** Cached notificationsLoaded payload */
@@ -427,6 +430,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestAgents":
           this.fetchAndSendAgents().catch((e) => console.error("[Kilo New] fetchAndSendAgents failed:", e))
           break
+        case "requestSkills":
+          this.fetchAndSendSkills().catch((e) => console.error("[Kilo New] fetchAndSendSkills failed:", e))
+          break
         case "questionReply":
           await this.handleQuestionReply(message.requestID, message.answers)
           break
@@ -712,10 +718,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       await this.syncWebviewState("initializeConnection")
       await this.flushPendingSessionRefresh("initializeConnection")
 
-      // Fetch providers, agents, config, and notifications in parallel
+      // Fetch providers, agents, skills, config, and notifications in parallel
       await Promise.all([
         this.fetchAndSendProviders(),
         this.fetchAndSendAgents(),
+        this.fetchAndSendSkills(),
         this.fetchAndSendConfig(),
         this.fetchAndSendNotifications(),
       ])
@@ -1377,6 +1384,29 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
+  private async fetchAndSendSkills(): Promise<void> {
+    if (!this.client) {
+      if (this.cachedSkillsMessage) {
+        this.postMessage(this.cachedSkillsMessage)
+      }
+      return
+    }
+
+    try {
+      const workspaceDir = this.getWorkspaceDirectory()
+      const { data: skills } = await this.client.app.skills({ directory: workspaceDir }, { throwOnError: true })
+
+      const message = {
+        type: "skillsLoaded",
+        skills,
+      }
+      this.cachedSkillsMessage = message
+      this.postMessage(message)
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to fetch skills:", error)
+    }
+  }
+
   /**
    * Fetch backend config and send to webview.
    */
@@ -1496,17 +1526,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         return
       }
 
-      const messages = (data.messages ?? [])
-        .filter((m) => m.info)
-        .map((m) => ({
-          id: m.info.id,
-          sessionID: m.info.sessionID,
-          role: m.info.role as "user" | "assistant",
-          parts: m.parts,
-          createdAt: m.info.time?.created ? new Date(m.info.time.created).toISOString() : new Date().toISOString(),
-          cost: m.info.cost,
-          tokens: m.info.tokens,
-        }))
+      const messages = (data.messages ?? []).filter((m) => m.info).map(mapCloudSessionMessageToWebviewMessage)
 
       this.postMessage({
         type: "cloudSessionDataLoaded",
@@ -2201,6 +2221,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     await Promise.all([
       this.fetchAndSendProviders(),
       this.fetchAndSendAgents(),
+      this.fetchAndSendSkills(),
       this.fetchAndSendConfig(),
       this.fetchAndSendNotifications(),
     ])

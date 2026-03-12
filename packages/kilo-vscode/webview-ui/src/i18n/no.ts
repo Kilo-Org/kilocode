@@ -711,6 +711,8 @@ export const dict = {
 
   "settings.providers.title": "Leverandører",
   "settings.providers.description": "Leverandørinnstillinger vil kunne konfigureres her.",
+  "settings.providers.betaNotice":
+    "For øyeblikket kan kun Kilo Gateway-leverandøren konfigureres i innstillingsgrensesnittet. Støtte for konfigurering av andre leverandører kommer snart i løpet av betaperioden. I mellomtiden kan du konfigurere leverandører via CLI eller konfigurasjonsfilen. Vi er forpliktet til å holde Kilo åpent, ingen lock-in.",
   "settings.providers.section.connected": "Tilkoblede leverandører",
   "settings.providers.connected.empty": "Ingen tilkoblede leverandører",
   "settings.providers.section.popular": "Populære leverandører",
@@ -984,6 +986,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Nucleus-samplingsparameter (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Maks. trinn",
   "settings.agentBehaviour.maxSteps.description": "Maksimale agentiterasjoner",
+  "settings.agentBehaviour.discoveredSkills": "Oppdagede ferdigheter",
+  "settings.agentBehaviour.noSkillsFound":
+    "Ingen ferdigheter funnet. Legg til ferdighetsmappestier eller URLer nedenfor for å gjøre ferdigheter tilgjengelige.",
   "settings.agentBehaviour.skillPaths": "Ferdighetsmappe-stier",
   "settings.agentBehaviour.skillUrls": "Ferdighets-URLer",
   "settings.agentBehaviour.instructionFiles": "Ekstra instruksjonsfiler",

@@ -701,6 +701,8 @@ export const dict = {
 
   "settings.providers.title": "الموفرون",
   "settings.providers.description": "ستكون إعدادات الموفر قابلة للتكوين هنا.",
+  "settings.providers.betaNotice":
+    "حالياً، يمكن إعداد مزود Kilo Gateway فقط في واجهة الإعدادات. سيتوفر دعم إعداد المزودين الآخرين قريباً خلال الفترة التجريبية. في غضون ذلك، يمكنك إعداد المزودين باستخدام CLI أو ملف التكوين. نحن ملتزمون بإبقاء Kilo مفتوحاً، دون تقييد.",
   "settings.providers.section.connected": "الموفرون المتصلون",
   "settings.providers.connected.empty": "لا يوجد موفرون متصلون",
   "settings.providers.section.popular": "الموفرون الشائعون",
@@ -973,6 +975,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "معامل أخذ العينات النووي (0-1)",
   "settings.agentBehaviour.maxSteps.title": "الحد الأقصى للخطوات",
   "settings.agentBehaviour.maxSteps.description": "الحد الأقصى لتكرارات الوكيل",
+  "settings.agentBehaviour.discoveredSkills": "المهارات المكتشفة",
+  "settings.agentBehaviour.noSkillsFound":
+    "لم يتم العثور على مهارات. أضف مسارات مجلدات أو عناوين URL أدناه لإتاحة المهارات.",
   "settings.agentBehaviour.skillPaths": "مسارات مجلدات المهارات",
   "settings.agentBehaviour.skillUrls": "عناوين URL للمهارات",
   "settings.agentBehaviour.instructionFiles": "ملفات تعليمات إضافية",

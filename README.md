@@ -56,6 +56,7 @@ npx @kilocode/cli
 Then run `kilo` in any project directory to start.
 
 <!-- kilocode_change start -->
+
 ### npm Install Note: Hidden `.kilo` File
 
 On some systems and npm versions, installing `@kilocode/cli` can create a hidden `.kilo` file near the installed `kilo` command (for example in a global npm bin directory). This file is an npm-generated launcher helper, not project data.
@@ -74,7 +75,7 @@ Download the latest binary or source code from the [Releases page](https://githu
 - `x64` is standard 64-bit Intel/AMD CPUs.
 - `x64-baseline` is a compatibility build for older x64 CPUs(do not support AVX Instruction).
 - `arm64` is ARM-based Linux/MacOS.
-- `musl` is statically linked Linux build for Alpine/minimal Docker without glibc. Alpine/minimal Docker users should prefer the matching *-musl asset.
+- `musl` is statically linked Linux build for Alpine/minimal Docker without glibc. Alpine/minimal Docker users should prefer the matching \*-musl asset.
 - `kilo-vscode-*.vsix` is the VS Code extension package and not the CLI binary.
 - `Source code` releases are for building from source, not normal installation.
 

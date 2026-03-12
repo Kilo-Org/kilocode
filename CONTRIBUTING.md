@@ -16,7 +16,7 @@ The Kilo Community is [on Discord](https://kilo.ai/discord).
 
 ## Developing Kilo CLI
 
-- **Requirements:** Bun 1.3+
+- **Requirements:** Bun 1.3.10+
 - Install dependencies and start the dev server from the repo root:
 
   ```bash
@@ -26,7 +26,7 @@ The Kilo Community is [on Discord](https://kilo.ai/discord).
 
 ### Running against a different directory
 
-By default, `bun dev` runs Kilo CLI in the `packages/kilo-cli` directory. To run it against a different directory or repository:
+By default, `bun dev` runs Kilo CLI in the `packages/opencode` directory. To run it against a different directory or repository:
 
 ```bash
 bun dev <directory>
@@ -43,13 +43,13 @@ bun dev .
 To compile a standalone executable:
 
 ```bash
-./packages/kilo-cli/script/build.ts --single
+./packages/opencode/script/build.ts --single
 ```
 
 Then run it with:
 
 ```bash
-./packages/kilo-cli/dist/kilo-cli-<platform>/bin/kilo
+./packages/opencode/dist/@kilocode/cli-<platform>/bin/kilo
 ```
 
 Replace `<platform>` with your platform (e.g., `darwin-arm64`, `linux-x64`).

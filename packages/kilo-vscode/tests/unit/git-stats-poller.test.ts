@@ -46,7 +46,7 @@ describe("GitStatsPoller", () => {
 
     const client = {
       worktree: {
-        diff: async () => {
+        diffSummary: async () => {
           calls += 1
           running += 1
           max = Math.max(max, running)
@@ -89,7 +89,7 @@ describe("GitStatsPoller", () => {
 
     const client = {
       worktree: {
-        diff: async () => {
+        diffSummary: async () => {
           calls += 1
           if (calls === 1) return { data: diff(7, 3) }
           throw new Error("transient backend failure")
@@ -208,7 +208,7 @@ describe("GitStatsPoller", () => {
 
     const client = {
       worktree: {
-        diff: async ({ directory }: { directory: string }) => {
+        diffSummary: async ({ directory }: { directory: string }) => {
           calls.push(directory)
           return { data: diff(1, 1) }
         },
@@ -268,7 +268,7 @@ describe("GitStatsPoller", () => {
 
     const client = {
       worktree: {
-        diff: async () => {
+        diffSummary: async () => {
           diffCalls += 1
           if (diffCalls === 1) return { data: diff(5, 2) }
           throw new Error("transient backend failure")
@@ -316,7 +316,7 @@ describe("GitStatsPoller", () => {
     }> = []
 
     const client = {
-      worktree: { diff: async () => ({ data: diff(10, 4) }) },
+      worktree: { diffSummary: async () => ({ data: diff(10, 4) }) },
     } as unknown as KiloClient
 
     const poller = new GitStatsPoller({
@@ -366,7 +366,7 @@ describe("GitStatsPoller", () => {
     }> = []
 
     const client = {
-      worktree: { diff: async () => ({ data: diff(0, 0) }) },
+      worktree: { diffSummary: async () => ({ data: diff(0, 0) }) },
     } as unknown as KiloClient
 
     const poller = new GitStatsPoller({
@@ -413,7 +413,7 @@ describe("GitStatsPoller", () => {
     > = []
 
     const client = {
-      worktree: { diff: async () => ({ data: diff(0, 0) }) },
+      worktree: { diffSummary: async () => ({ data: diff(0, 0) }) },
     } as unknown as KiloClient
 
     // Worktrees store remote="upstream" so aheadBehind receives "upstream/main"

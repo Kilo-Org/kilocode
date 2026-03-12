@@ -22,6 +22,13 @@ type SessionMode = "worktree" | "local"
 
 export type ApplyDiffStatus = "checking" | "applying" | "success" | "conflict" | "error"
 
+export type WorktreeDiffEntry = FileDiff & {
+  tracked?: boolean
+  generatedLike?: boolean
+  summarized?: boolean
+  stamp?: string
+}
+
 // ---------------------------------------------------------------------------
 // Extension → Webview messages (postToWebview)
 // ---------------------------------------------------------------------------
@@ -148,7 +155,14 @@ interface WorktreeDiffLoadingMessage {
 interface WorktreeDiffMessage {
   type: "agentManager.worktreeDiff"
   sessionId: string
-  diffs: FileDiff[]
+  diffs: WorktreeDiffEntry[]
+}
+
+interface WorktreeDiffFileMessage {
+  type: "agentManager.worktreeDiffFile"
+  sessionId: string
+  file: string
+  diff: WorktreeDiffEntry | null
 }
 
 interface ActionOutMessage {
@@ -176,6 +190,7 @@ export type AgentManagerOutMessage =
   | ApplyWorktreeDiffResultMessage
   | WorktreeDiffLoadingMessage
   | WorktreeDiffMessage
+  | WorktreeDiffFileMessage
   | ActionOutMessage
 
 // ---------------------------------------------------------------------------
@@ -323,6 +338,12 @@ interface ApplyWorktreeDiffIn {
   selectedFiles?: string[]
 }
 
+interface RequestWorktreeDiffFileIn {
+  type: "agentManager.requestWorktreeDiffFile"
+  sessionId: string
+  file: string
+}
+
 interface StartDiffWatchIn {
   type: "agentManager.startDiffWatch"
   sessionId: string
@@ -390,6 +411,7 @@ export type AgentManagerInMessage =
   | ImportExternalWorktreeIn
   | ImportAllExternalWorktreesIn
   | RequestWorktreeDiffIn
+  | RequestWorktreeDiffFileIn
   | ApplyWorktreeDiffIn
   | StartDiffWatchIn
   | StopDiffWatchIn

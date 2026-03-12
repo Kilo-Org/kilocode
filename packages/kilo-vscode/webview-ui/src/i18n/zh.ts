@@ -697,6 +697,8 @@ export const dict = {
 
   "settings.providers.title": "提供商",
   "settings.providers.description": "提供商设置将在此处可配置。",
+  "settings.providers.betaNotice":
+    "目前只能在设置界面中配置 Kilo Gateway 提供商。在 Beta 测试期间即将支持配置其他提供商。在此期间，您可以使用 CLI 或配置文件来配置提供商。我们致力于保持 Kilo 开放，无锁定。",
   "settings.providers.section.connected": "已连接的提供商",
   "settings.providers.connected.empty": "没有已连接的提供商",
   "settings.providers.section.popular": "热门提供商",
@@ -968,6 +970,8 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "核采样参数（0-1）",
   "settings.agentBehaviour.maxSteps.title": "最大步数",
   "settings.agentBehaviour.maxSteps.description": "最大智能体迭代次数",
+  "settings.agentBehaviour.discoveredSkills": "已发现的技能",
+  "settings.agentBehaviour.noSkillsFound": "未发现任何技能。请在下方添加技能文件夹路径或 URL 以使技能可用。",
   "settings.agentBehaviour.skillPaths": "技能文件夹路径",
   "settings.agentBehaviour.skillUrls": "技能 URL",
   "settings.agentBehaviour.instructionFiles": "附加指令文件",
