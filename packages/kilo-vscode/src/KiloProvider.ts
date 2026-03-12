@@ -347,16 +347,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "abort":
           await this.handleAbort(message.sessionID)
           break
-        case "permissionPatternRules":
-          await this.handlePermissionPatternRules(
+        case "permissionResponse":
+          await this.handlePermissionResponse(
             message.permissionId,
             message.sessionID,
+            message.response,
             message.approvedPatterns,
             message.deniedPatterns,
           )
-          break
-        case "permissionResponse":
-          await this.handlePermissionResponse(message.permissionId, message.sessionID, message.response)
           break
         case "createSession":
           await this.handleCreateSession()
@@ -1544,38 +1542,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /**
    * Handle permission response from the webview.
+   * Calls savePatternRules first (if any), then reply — sequentially to avoid races.
    */
-  private async handlePermissionPatternRules(
-    permissionId: string,
-    sessionID: string,
-    approvedPatterns: string[],
-    deniedPatterns: string[],
-  ): Promise<void> {
-    if (!this.client) return
-
-    const targetSessionID = sessionID || this.currentSession?.id
-    if (!targetSessionID) return
-
-    try {
-      const workspaceDir = this.getWorkspaceDirectory(targetSessionID)
-      await this.client.permission.savePatternRules(
-        {
-          requestID: permissionId,
-          directory: workspaceDir,
-          approvedPatterns,
-          deniedPatterns,
-        },
-        { throwOnError: true },
-      )
-    } catch (error) {
-      console.error("[Kilo New] KiloProvider: Failed to save pattern rules:", error)
-    }
-  }
-
   private async handlePermissionResponse(
     permissionId: string,
     sessionID: string,
     response: "once" | "always" | "reject",
+    approvedPatterns: string[],
+    deniedPatterns: string[],
   ): Promise<void> {
     if (!this.client) {
       this.postMessage({ type: "permissionError", permissionID: permissionId })
@@ -1591,6 +1565,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const workspaceDir = this.getWorkspaceDirectory(targetSessionID)
+
+      // Save per-pattern rules before replying (reply deletes the pending request)
+      if (approvedPatterns.length > 0 || deniedPatterns.length > 0) {
+        await this.client.permission.savePatternRules(
+          {
+            requestID: permissionId,
+            directory: workspaceDir,
+            approvedPatterns,
+            deniedPatterns,
+          },
+          { throwOnError: true },
+        )
+      }
+
       await this.client.permission.reply(
         { requestID: permissionId, reply: response, directory: workspaceDir },
         { throwOnError: true },
