@@ -179,21 +179,24 @@ export namespace PermissionNext {
         reply: input.reply,
       })
 
-      // kilocode_change start - Save per-pattern rules (independent of command decision)
-      const permission = existing.info.permission
-      if (input.approvedPatterns) {
-        for (const pattern of input.approvedPatterns) {
-          s.approved.push({ permission, pattern, action: "allow" })
+      // kilocode_change start - Helper to save per-pattern rules
+      const savePatternRules = () => {
+        const permission = existing.info.permission
+        if (input.approvedPatterns) {
+          for (const pattern of input.approvedPatterns) {
+            s.approved.push({ permission, pattern, action: "allow" })
+          }
         }
-      }
-      if (input.deniedPatterns) {
-        for (const pattern of input.deniedPatterns) {
-          s.approved.push({ permission, pattern, action: "deny" })
+        if (input.deniedPatterns) {
+          for (const pattern of input.deniedPatterns) {
+            s.approved.push({ permission, pattern, action: "deny" })
+          }
         }
       }
       // kilocode_change end
 
       if (input.reply === "reject") {
+        savePatternRules() // kilocode_change
         existing.reject(input.message ? new CorrectedError(input.message) : new RejectedError())
         // Reject all other pending permissions for this session
         const sessionID = existing.info.sessionID
@@ -211,17 +214,19 @@ export namespace PermissionNext {
         return
       }
       if (input.reply === "once") {
+        savePatternRules() // kilocode_change
         existing.resolve()
         return
       }
       if (input.reply === "always") {
-          for (const pattern of existing.info.always) {
-            s.approved.push({
-              permission: existing.info.permission,
-              pattern,
-              action: "allow",
-            })
-          }
+        for (const pattern of existing.info.always) {
+          s.approved.push({
+            permission: existing.info.permission,
+            pattern,
+            action: "allow",
+          })
+        }
+        savePatternRules() // kilocode_change
 
         existing.resolve()
 

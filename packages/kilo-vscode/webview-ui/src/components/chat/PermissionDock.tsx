@@ -54,11 +54,10 @@ export const PermissionDock: Component<{
     const updated = { ...decisions(), [index]: next }
     setDecisions(updated)
 
-    // Auto-run when all patterns are approved
     const total = patterns().length
     const count = Object.values(updated).filter((d) => d === "approved").length
     if (count === total && total > 0) {
-      props.onDecide("always", [...patterns()], [])
+      props.onDecide("once", [...patterns()], [])
     }
   }
 
