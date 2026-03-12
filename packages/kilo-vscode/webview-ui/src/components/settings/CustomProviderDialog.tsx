@@ -350,6 +350,7 @@ export const CustomProviderDialog = (props: CustomProviderDialogProps) => {
             error={errors.baseURL}
           />
           <TextField
+            type="password"
             label={language.t("provider.custom.field.apiKey.label")}
             placeholder={language.t("provider.custom.field.apiKey.placeholder")}
             description={language.t("provider.custom.field.apiKey.description")}

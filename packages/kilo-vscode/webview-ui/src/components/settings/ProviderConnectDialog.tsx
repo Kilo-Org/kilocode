@@ -224,7 +224,7 @@ export const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (pro
         </div>
         <TextField
           autofocus
-          type="text"
+          type="password"
           label={language.t("provider.connect.apiKey.label", { provider: name() })}
           placeholder={language.t("provider.connect.apiKey.placeholder")}
           value={value()}
