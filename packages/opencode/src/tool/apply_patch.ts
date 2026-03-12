@@ -14,6 +14,9 @@ import { Filesystem } from "../util/filesystem"
 import DESCRIPTION from "./apply_patch.txt"
 import { File } from "../file"
 import { filterDiagnostics } from "./diagnostics" // kilocode_change
+// kilocode_change start
+import { type FileEncoding, DEFAULT_ENCODING, readWithEncoding, encodeWithEncoding } from "../util/encoding"
+// kilocode_change end
 
 const PatchParams = z.object({
   patchText: z.string().describe("The full patch text that describes all changes to be made"),
@@ -54,6 +57,7 @@ export const ApplyPatchTool = Tool.define("apply_patch", {
       diff: string
       additions: number
       deletions: number
+      fileEncoding: FileEncoding // kilocode_change
     }> = []
 
     let totalDiff = ""
@@ -84,6 +88,7 @@ export const ApplyPatchTool = Tool.define("apply_patch", {
             diff,
             additions,
             deletions,
+            fileEncoding: { ...DEFAULT_ENCODING }, // kilocode_change - new files default to UTF-8
           })
 
           totalDiff += diff + "\n"
@@ -97,7 +102,9 @@ export const ApplyPatchTool = Tool.define("apply_patch", {
             throw new Error(`apply_patch verification failed: Failed to read file to update: ${filePath}`)
           }
 
-          const oldContent = await fs.readFile(filePath, "utf-8")
+          // kilocode_change start - read with encoding detection
+          const { text: oldContent, fileEncoding } = await readWithEncoding(filePath)
+          // kilocode_change end
           let newContent = oldContent
 
           // Apply the update chunks to get new content
@@ -129,6 +136,7 @@ export const ApplyPatchTool = Tool.define("apply_patch", {
             diff,
             additions,
             deletions,
+            fileEncoding, // kilocode_change
           })
 
           totalDiff += diff + "\n"
@@ -136,9 +144,13 @@ export const ApplyPatchTool = Tool.define("apply_patch", {
         }
 
         case "delete": {
-          const contentToDelete = await fs.readFile(filePath, "utf-8").catch((error) => {
-            throw new Error(`apply_patch verification failed: ${error}`)
-          })
+          // kilocode_change start - read with encoding detection for consistent text
+          const { text: contentToDelete, fileEncoding: deleteEncoding } = await readWithEncoding(filePath).catch(
+            (error) => {
+              throw new Error(`apply_patch verification failed: ${error}`)
+            },
+          )
+          // kilocode_change end
           const deleteDiff = trimDiff(createTwoFilesPatch(filePath, filePath, contentToDelete, ""))
 
           const deletions = contentToDelete.split("\n").length
@@ -151,6 +163,7 @@ export const ApplyPatchTool = Tool.define("apply_patch", {
             diff: deleteDiff,
             additions: 0,
             deletions,
+            fileEncoding: deleteEncoding, // kilocode_change
           })
 
           totalDiff += deleteDiff + "\n"
@@ -190,16 +203,19 @@ export const ApplyPatchTool = Tool.define("apply_patch", {
 
     for (const change of fileChanges) {
       const edited = change.type === "delete" ? undefined : (change.movePath ?? change.filePath)
+      // kilocode_change start - encode with preserved encoding
+      const encoded = change.newContent ? encodeWithEncoding(change.newContent, change.fileEncoding) : undefined
+      // kilocode_change end
       switch (change.type) {
         case "add":
           // Create parent directories (recursive: true is safe on existing/root dirs)
           await fs.mkdir(path.dirname(change.filePath), { recursive: true })
-          await fs.writeFile(change.filePath, change.newContent, "utf-8")
+          await fs.writeFile(change.filePath, encoded!) // kilocode_change
           updates.push({ file: change.filePath, event: "add" })
           break
 
         case "update":
-          await fs.writeFile(change.filePath, change.newContent, "utf-8")
+          await fs.writeFile(change.filePath, encoded!) // kilocode_change
           updates.push({ file: change.filePath, event: "change" })
           break
 
@@ -207,7 +223,7 @@ export const ApplyPatchTool = Tool.define("apply_patch", {
           if (change.movePath) {
             // Create parent directories (recursive: true is safe on existing/root dirs)
             await fs.mkdir(path.dirname(change.movePath), { recursive: true })
-            await fs.writeFile(change.movePath, change.newContent, "utf-8")
+            await fs.writeFile(change.movePath, encoded!) // kilocode_change
             await fs.unlink(change.filePath)
             updates.push({ file: change.filePath, event: "unlink" })
             updates.push({ file: change.movePath, event: "add" })

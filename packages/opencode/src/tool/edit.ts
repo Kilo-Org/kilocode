@@ -18,6 +18,7 @@ import { Instance } from "../project/instance"
 import { Snapshot } from "@/snapshot"
 import { assertExternalDirectory } from "./external-directory"
 import { filterDiagnostics } from "./diagnostics" // kilocode_change
+import { DEFAULT_ENCODING } from "../util/encoding" // kilocode_change
 
 const MAX_DIAGNOSTICS_PER_FILE = 20
 
@@ -51,6 +52,11 @@ export const EditTool = Tool.define("edit", {
     await FileTime.withLock(filePath, async () => {
       if (params.oldString === "") {
         const existed = await Filesystem.exists(filePath)
+        // kilocode_change start - preserve encoding on new file creation from existing
+        const fileEncoding = existed
+          ? (await Filesystem.readTextWithEncoding(filePath)).fileEncoding
+          : { ...DEFAULT_ENCODING }
+        // kilocode_change end
         contentNew = params.newString
         diff = trimDiff(createTwoFilesPatch(filePath, filePath, contentOld, contentNew))
         await ctx.ask({
@@ -62,7 +68,7 @@ export const EditTool = Tool.define("edit", {
             diff,
           },
         })
-        await Filesystem.write(filePath, params.newString)
+        await Filesystem.writeWithEncoding(filePath, params.newString, fileEncoding) // kilocode_change
         await Bus.publish(File.Event.Edited, {
           file: filePath,
         })
@@ -78,7 +84,10 @@ export const EditTool = Tool.define("edit", {
       if (!stats) throw new Error(`File ${filePath} not found`)
       if (stats.isDirectory()) throw new Error(`Path is a directory, not a file: ${filePath}`)
       await FileTime.assert(ctx.sessionID, filePath)
-      contentOld = await Filesystem.readText(filePath)
+      // kilocode_change start - read with encoding detection
+      const { text: rawContent, fileEncoding } = await Filesystem.readTextWithEncoding(filePath)
+      contentOld = rawContent
+      // kilocode_change end
       contentNew = replace(contentOld, params.oldString, params.newString, params.replaceAll)
 
       diff = trimDiff(
@@ -94,7 +103,7 @@ export const EditTool = Tool.define("edit", {
         },
       })
 
-      await Filesystem.write(filePath, contentNew)
+      await Filesystem.writeWithEncoding(filePath, contentNew, fileEncoding) // kilocode_change
       await Bus.publish(File.Event.Edited, {
         file: filePath,
       })

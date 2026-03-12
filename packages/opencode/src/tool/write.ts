@@ -28,7 +28,11 @@ export const WriteTool = Tool.define("write", {
     await assertExternalDirectory(ctx, filepath)
 
     const exists = await Filesystem.exists(filepath)
-    const contentOld = exists ? await Filesystem.readText(filepath) : ""
+    // kilocode_change start - preserve encoding when overwriting existing files
+    const { text: contentOld, fileEncoding } = exists
+      ? await Filesystem.readTextWithEncoding(filepath)
+      : { text: "", fileEncoding: undefined }
+    // kilocode_change end
     if (exists) await FileTime.assert(ctx.sessionID, filepath)
 
     const diff = trimDiff(createTwoFilesPatch(filepath, filepath, contentOld, params.content))
@@ -42,7 +46,13 @@ export const WriteTool = Tool.define("write", {
       },
     })
 
-    await Filesystem.write(filepath, params.content)
+    // kilocode_change start - preserve encoding for existing files, plain write for new files
+    if (fileEncoding) {
+      await Filesystem.writeWithEncoding(filepath, params.content, fileEncoding)
+    } else {
+      await Filesystem.write(filepath, params.content)
+    }
+    // kilocode_change end
     await Bus.publish(File.Event.Edited, {
       file: filepath,
     })
