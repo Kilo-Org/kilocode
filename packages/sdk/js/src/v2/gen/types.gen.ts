@@ -1701,6 +1701,20 @@ export type WorktreeResetInput = {
   directory: string
 }
 
+export type WorktreeDiffItem = {
+  file: string
+  before: string
+  after: string
+  additions: number
+  deletions: number
+  binary?: boolean
+  status?: "added" | "deleted" | "modified"
+  tracked: boolean
+  generatedLike: boolean
+  summarized: boolean
+  stamp: string
+}
+
 export type ProjectSummary = {
   id: string
   name?: string
@@ -2706,6 +2720,74 @@ export type WorktreeDiffResponses = {
 }
 
 export type WorktreeDiffResponse = WorktreeDiffResponses[keyof WorktreeDiffResponses]
+
+export type WorktreeDiffSummaryData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+    /**
+     * Base branch or ref to diff against
+     */
+    base?: string
+  }
+  url: "/experimental/worktree/diff/summary"
+}
+
+export type WorktreeDiffSummaryErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type WorktreeDiffSummaryError = WorktreeDiffSummaryErrors[keyof WorktreeDiffSummaryErrors]
+
+export type WorktreeDiffSummaryResponses = {
+  /**
+   * Diff summary items
+   */
+  200: Array<WorktreeDiffItem>
+}
+
+export type WorktreeDiffSummaryResponse = WorktreeDiffSummaryResponses[keyof WorktreeDiffSummaryResponses]
+
+export type WorktreeDiffFileData = {
+  body?: never
+  path?: never
+  query: {
+    directory?: string
+    workspace?: string
+    /**
+     * Base branch or ref to diff against
+     */
+    base?: string
+    /**
+     * Relative file path to load diff contents for
+     */
+    file: string
+  }
+  url: "/experimental/worktree/diff/file"
+}
+
+export type WorktreeDiffFileErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type WorktreeDiffFileError = WorktreeDiffFileErrors[keyof WorktreeDiffFileErrors]
+
+export type WorktreeDiffFileResponses = {
+  /**
+   * Diff detail item
+   */
+  200: WorktreeDiffItem | null
+}
+
+export type WorktreeDiffFileResponse = WorktreeDiffFileResponses[keyof WorktreeDiffFileResponses]
 
 export type WorktreeStatsData = {
   body?: never

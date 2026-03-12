@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 import * as fs from "fs"
 import * as path from "path"
-import type { KiloClient, Session, FileDiff } from "@kilocode/sdk/v2/client"
+import type { KiloClient, Session } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { getErrorMessage } from "../kilo-provider-utils"
 import { isAbsolutePath } from "../path-utils"
@@ -53,7 +53,7 @@ export class AgentManagerProvider implements vscode.Disposable {
   private lastDiffHash: string | undefined
   private statsPoller: GitStatsPoller
   private gitOps: GitOps
-  private cachedDiffTarget: { directory: string; baseBranch: string } | undefined
+  private cachedDiffTarget: { sessionId: string; directory: string; baseBranch: string } | undefined
   private staleWorktreeIds = new Set<string>()
   private cachedWorktreeStats: AgentManagerOutMessage | undefined
   private cachedLocalStats: AgentManagerOutMessage | undefined
@@ -77,7 +77,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       getWorktrees: () => this.state?.getWorktrees() ?? [],
       getWorkspaceRoot: () => this.getWorkspaceRoot(),
       getClient: () => this.connectionService.getClient(),
-      getServerConfig: () => this.connectionService.getServerConfig(), // kilocode_change
+      getServerConfig: () => this.connectionService.getServerConfig(),
       onStats: (stats) => {
         const msg = { type: "agentManager.worktreeStats" as const, stats }
         this.cachedWorktreeStats = msg
@@ -310,6 +310,10 @@ export class AgentManagerProvider implements vscode.Disposable {
     }
     if (m.type === "agentManager.requestWorktreeDiff") {
       void this.onRequestWorktreeDiff(m.sessionId)
+      return null
+    }
+    if (m.type === "agentManager.requestWorktreeDiffFile") {
+      void this.onRequestWorktreeDiffFile(m.sessionId, m.file)
       return null
     }
     if (m.type === "agentManager.applyWorktreeDiff") {
@@ -1700,7 +1704,6 @@ export class AgentManagerProvider implements vscode.Disposable {
 
   /** One-shot diff fetch with loading indicators. Resolves target async, then fetches. */
   private async onRequestWorktreeDiff(sessionId: string): Promise<void> {
-    const t0 = performance.now()
     // Ensure state is loaded before resolving diff target — avoids race where
     // startDiffWatch arrives before initializeState() finishes loading state from disk.
     // The .catch() is required: this method is called via `void` (fire-and-forget),
@@ -1714,19 +1717,17 @@ export class AgentManagerProvider implements vscode.Disposable {
     if (!target) return
 
     // Cache the resolved target so subsequent polls skip resolution entirely
-    this.cachedDiffTarget = target
+    this.cachedDiffTarget = { sessionId, ...target }
 
     this.postToWebview({ type: "agentManager.worktreeDiffLoading", sessionId, loading: true })
     try {
       const client = this.connectionService.getClient()
-      const tFetch = performance.now()
-      const { data: diffs } = await client.worktree.diff(
+      const { data: diffs } = await client.worktree.diffSummary(
         { directory: target.directory, base: target.baseBranch },
         { throwOnError: true },
       )
 
       const files = diffs ?? []
-      this.log(`[PERF] onRequestWorktreeDiff: fetchMs=${Math.round(performance.now() - tFetch)}, files=${files.length}`)
       this.log(`Worktree diff returned ${files.length} file(s) for session ${sessionId}`)
 
       const hash = hashFileDiffs(files)
@@ -1734,7 +1735,6 @@ export class AgentManagerProvider implements vscode.Disposable {
       this.diffSessionId = sessionId
 
       this.postToWebview({ type: "agentManager.worktreeDiff", sessionId, diffs: files })
-      this.log(`[PERF] onRequestWorktreeDiff TOTAL: ${Math.round(performance.now() - t0)}ms`)
     } catch (err) {
       this.log("Failed to fetch worktree diff:", err)
     } finally {
@@ -1742,37 +1742,28 @@ export class AgentManagerProvider implements vscode.Disposable {
     }
   }
 
-  // kilocode_change start - busy guard to prevent overlapping polls
   private diffPolling = false
 
   /** Polling diff fetch — uses cached target, no loading state, only pushes when hash changes. */
   private async pollDiff(sessionId: string): Promise<void> {
     if (this.diffPolling) return
+    const target = this.cachedDiffTarget?.sessionId === sessionId ? this.cachedDiffTarget : undefined
+    if (!target) return
+
     this.diffPolling = true
     try {
-      const t0 = performance.now()
-      const target = this.cachedDiffTarget
-      if (!target) return
-
       const client = this.connectionService.getClient()
-      const tFetch = performance.now()
-      const { data: diffs } = await client.worktree.diff(
+      const { data: diffs } = await client.worktree.diffSummary(
         { directory: target.directory, base: target.baseBranch },
         { throwOnError: true },
       )
-      const fetchMs = Math.round(performance.now() - tFetch)
+
       const files = diffs ?? []
       const hash = hashFileDiffs(files)
-      if (hash === this.lastDiffHash && this.diffSessionId === sessionId) {
-        this.log(`[PERF] pollDiff: no change, fetchMs=${fetchMs}, files=${files.length}`)
-        return
-      }
+      if (hash === this.lastDiffHash && this.diffSessionId === sessionId) return
       this.lastDiffHash = hash
       this.diffSessionId = sessionId
 
-      this.log(
-        `[PERF] pollDiff CHANGED: fetchMs=${fetchMs}, files=${files.length}, totalMs=${Math.round(performance.now() - t0)}`,
-      )
       this.postToWebview({ type: "agentManager.worktreeDiff", sessionId, diffs: files })
     } catch (err) {
       this.log("Failed to poll worktree diff:", err)
@@ -1780,7 +1771,32 @@ export class AgentManagerProvider implements vscode.Disposable {
       this.diffPolling = false
     }
   }
-  // kilocode_change end
+
+  private async onRequestWorktreeDiffFile(sessionId: string, file: string): Promise<void> {
+    if (!file) return
+
+    if (this.stateReady) {
+      await this.stateReady.catch((err) => this.log("stateReady rejected, continuing diff detail resolve:", err))
+    }
+
+    const target =
+      this.cachedDiffTarget?.sessionId === sessionId ? this.cachedDiffTarget : await this.resolveDiffTarget(sessionId)
+    if (!target) return
+
+    this.cachedDiffTarget = { sessionId, directory: target.directory, baseBranch: target.baseBranch }
+
+    try {
+      const client = this.connectionService.getClient()
+      const { data } = await client.worktree.diffFile(
+        { directory: target.directory, base: target.baseBranch, file },
+        { throwOnError: true },
+      )
+      this.postToWebview({ type: "agentManager.worktreeDiffFile", sessionId, file, diff: data ?? null })
+    } catch (err) {
+      this.log("Failed to fetch worktree diff file:", err)
+      this.postToWebview({ type: "agentManager.worktreeDiffFile", sessionId, file, diff: null })
+    }
+  }
 
   private startDiffPolling(sessionId: string): void {
     // If already polling the same session, keep the existing interval and cache

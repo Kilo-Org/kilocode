@@ -151,6 +151,13 @@ interface WorktreeDiffMessage {
   diffs: FileDiff[]
 }
 
+interface WorktreeDiffFileMessage {
+  type: "agentManager.worktreeDiffFile"
+  sessionId: string
+  file: string
+  diff: FileDiff | null
+}
+
 interface ActionOutMessage {
   type: "action"
   action: string
@@ -176,6 +183,7 @@ export type AgentManagerOutMessage =
   | ApplyWorktreeDiffResultMessage
   | WorktreeDiffLoadingMessage
   | WorktreeDiffMessage
+  | WorktreeDiffFileMessage
   | ActionOutMessage
 
 // ---------------------------------------------------------------------------
@@ -317,6 +325,12 @@ interface RequestWorktreeDiffIn {
   sessionId: string
 }
 
+interface RequestWorktreeDiffFileIn {
+  type: "agentManager.requestWorktreeDiffFile"
+  sessionId: string
+  file: string
+}
+
 interface ApplyWorktreeDiffIn {
   type: "agentManager.applyWorktreeDiff"
   worktreeId: string
@@ -390,6 +404,7 @@ export type AgentManagerInMessage =
   | ImportExternalWorktreeIn
   | ImportAllExternalWorktreesIn
   | RequestWorktreeDiffIn
+  | RequestWorktreeDiffFileIn
   | ApplyWorktreeDiffIn
   | StartDiffWatchIn
   | StopDiffWatchIn

@@ -1524,7 +1524,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.worktree.reset({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.worktree.reset({\n  ...\n})"
           }
         ]
       }
@@ -1536,6 +1536,13 @@
           {
             "in": "query",
             "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
             "schema": {
               "type": "string"
             }
@@ -1579,7 +1586,144 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.worktree.diff({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.worktree.diff({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/experimental/worktree/diff/summary": {
+      "get": {
+        "operationId": "worktree.diffSummary",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "base",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Base branch or ref to diff against"
+          }
+        ],
+        "summary": "Get worktree diff summary",
+        "description": "Get lightweight file diff metadata for a worktree compared to its base branch.",
+        "responses": {
+          "200": {
+            "description": "Diff summary items",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorktreeDiffItem"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.worktree.diffSummary({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/experimental/worktree/diff/file": {
+      "get": {
+        "operationId": "worktree.diffFile",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "base",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Base branch or ref to diff against"
+          },
+          {
+            "in": "query",
+            "name": "file",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Relative file path to load diff contents for"
+          }
+        ],
+        "summary": "Get worktree diff detail",
+        "description": "Get full diff contents for one worktree file compared to its base branch.",
+        "responses": {
+          "200": {
+            "description": "Diff detail item",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/WorktreeDiffItem"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.worktree.diffFile({\n  ...\n})"
           }
         ]
       }
@@ -1591,6 +1735,13 @@
           {
             "in": "query",
             "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
             "schema": {
               "type": "string"
             }
@@ -1643,7 +1794,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.worktree.stats({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.worktree.stats({\n  ...\n})"
           }
         ]
       }
@@ -4973,7 +5124,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.provider.oauth.callback({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.provider.oauth.callback({\n  ...\n})"
           }
         ]
       }
@@ -4985,6 +5136,13 @@
           {
             "in": "query",
             "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
             "schema": {
               "type": "string"
             }
@@ -5041,7 +5199,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.telemetry.capture({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.telemetry.capture({\n  ...\n})"
           }
         ]
       }
@@ -5053,6 +5211,13 @@
           {
             "in": "query",
             "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
             "schema": {
               "type": "string"
             }
@@ -5118,7 +5283,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.commitMessage.generate({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.commitMessage.generate({\n  ...\n})"
           }
         ]
       }
@@ -5130,6 +5295,13 @@
           {
             "in": "query",
             "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
             "schema": {
               "type": "string"
             }
@@ -5185,7 +5357,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.enhancePrompt.enhance({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.enhancePrompt.enhance({\n  ...\n})"
           }
         ]
       }
@@ -5197,6 +5369,13 @@
           {
             "in": "query",
             "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
             "schema": {
               "type": "string"
             }
@@ -5288,7 +5467,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.profile({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.profile({\n  ...\n})"
           }
         ]
       }
@@ -5300,6 +5479,13 @@
           {
             "in": "query",
             "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
             "schema": {
               "type": "string"
             }
@@ -5354,7 +5540,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.organization.set({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.organization.set({\n  ...\n})"
           }
         ]
       }
@@ -5366,6 +5552,13 @@
           {
             "in": "query",
             "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
             "schema": {
               "type": "string"
             }
@@ -5457,7 +5650,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.fim({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.fim({\n  ...\n})"
           }
         ]
       }
@@ -5469,6 +5662,13 @@
           {
             "in": "query",
             "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
             "schema": {
               "type": "string"
             }
@@ -5534,7 +5734,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.notifications({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.notifications({\n  ...\n})"
           }
         ]
       }
@@ -5546,6 +5746,13 @@
           {
             "in": "query",
             "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
             "schema": {
               "type": "string"
             }
@@ -5584,7 +5791,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.cloud.session.get({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.cloud.session.get({\n  ...\n})"
           }
         ]
       }
@@ -5596,6 +5803,13 @@
           {
             "in": "query",
             "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
             "schema": {
               "type": "string"
             }
@@ -5651,7 +5865,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.cloud.session.import({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.cloud.session.import({\n  ...\n})"
           }
         ]
       }
@@ -5663,6 +5877,13 @@
           {
             "in": "query",
             "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
             "schema": {
               "type": "string"
             }
@@ -5760,7 +5981,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.cloudSessions({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.cloudSessions({\n  ...\n})"
           }
         ]
       }
@@ -10808,7 +11029,14 @@
         "type": "object",
         "properties": {
           "model": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "variant": {
             "description": "Default model variant for this agent (applies only when using the agent's configured model).",
@@ -11369,11 +11597,25 @@
           },
           "model": {
             "description": "Model to use in the format of provider/model, eg anthropic/claude-2",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "small_model": {
             "description": "Small model to use for tasks like title generation in the format of provider/model",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "default_agent": {
             "description": "Default agent to use when none is specified. Must be a primary agent. Falls back to 'code' if not set or if the specified agent is invalid.",
@@ -12158,6 +12400,56 @@
           }
         },
         "required": ["directory"]
+      },
+      "WorktreeDiffItem": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "before": {
+            "type": "string"
+          },
+          "after": {
+            "type": "string"
+          },
+          "additions": {
+            "type": "number"
+          },
+          "deletions": {
+            "type": "number"
+          },
+          "binary": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["added", "deleted", "modified"]
+          },
+          "tracked": {
+            "type": "boolean"
+          },
+          "generatedLike": {
+            "type": "boolean"
+          },
+          "summarized": {
+            "type": "boolean"
+          },
+          "stamp": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "file",
+          "before",
+          "after",
+          "additions",
+          "deletions",
+          "tracked",
+          "generatedLike",
+          "summarized",
+          "stamp"
+        ]
       },
       "ProjectSummary": {
         "type": "object",

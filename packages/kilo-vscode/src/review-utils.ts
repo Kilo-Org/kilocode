@@ -73,14 +73,34 @@ export async function resolveLocalDiffTarget(
   return { directory: root, baseBranch: base }
 }
 
-// kilocode_change - include sampled before/after content fingerprints so the
-// hash stays cheap for large files but still changes when the diff text changes.
-export function hashFileDiffs(diffs: FileDiff[]): string {
+export function hashFileDiffs(
+  diffs: Array<
+    FileDiff & {
+      binary?: boolean
+      tracked?: boolean
+      generatedLike?: boolean
+      summarized?: boolean
+      stamp?: string
+    }
+  >,
+): string {
   return diffs
     .map((diff) => {
-      const before = sampledChecksum(diff.before) ?? ""
-      const after = sampledChecksum(diff.after) ?? ""
-      return `${diff.file}:${diff.status}:${diff.additions}:${diff.deletions}:${diff.binary ? 1 : 0}:${before}:${after}`
+      const before = diff.summarized ? "" : (sampledChecksum(diff.before) ?? "")
+      const after = diff.summarized ? "" : (sampledChecksum(diff.after) ?? "")
+      return [
+        diff.file,
+        diff.status,
+        diff.additions,
+        diff.deletions,
+        diff.binary ? "binary" : "text",
+        diff.tracked ? "tracked" : "untracked",
+        diff.generatedLike ? "generated" : "source",
+        diff.summarized ? "summary" : "detail",
+        diff.stamp ?? "",
+        before,
+        after,
+      ].join(":")
     })
     .join("|")
 }

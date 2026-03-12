@@ -10,12 +10,10 @@ import { Session } from "../../session"
 import { zodToJsonSchema } from "zod-to-json-schema"
 import { errors } from "../error"
 import { lazy } from "../../util/lazy"
-import { $ } from "bun" // kilocode_change
-import path from "path" // kilocode_change
 import { Snapshot } from "../../snapshot" // kilocode_change
 import { Review } from "../../kilocode/review/review" // kilocode_change
+import { WorktreeDiff } from "../../kilocode/review/worktree-diff" // kilocode_change
 import { Log } from "../../util/log" // kilocode_change
-import { BinaryFile } from "@opencode-ai/util/binary-file"
 import { WorkspaceRoutes } from "./workspace"
 
 export const ExperimentalRoutes = lazy(() =>
@@ -221,195 +219,92 @@ export const ExperimentalRoutes = lazy(() =>
       ),
       async (c) => {
         const log = Log.create({ service: "worktree-diff" })
-        const t0 = performance.now()
         const query = c.req.valid("query")
         const base = query.base || (await Review.getBaseBranch())
         // kilocode_change end
         const dir = Instance.directory
-        log.info("[PERF] worktree-diff START", { dir, base })
-
-        const tMergeBase = performance.now()
-        const mergeBaseResult = await $`git merge-base HEAD ${base}`.cwd(dir).quiet().nothrow()
-        log.info("[PERF] git merge-base", { ms: Math.round(performance.now() - tMergeBase) })
-        if (mergeBaseResult.exitCode !== 0) {
-          log.warn("git merge-base failed", {
-            exitCode: mergeBaseResult.exitCode,
-            stderr: mergeBaseResult.stderr.toString().trim(),
-            dir,
-            base,
-          })
-          return c.json([])
-        }
-        const ancestor = mergeBaseResult.stdout.toString().trim()
-        log.info("merge-base resolved", { ancestor: ancestor.slice(0, 12) })
-
-        const nameStatus = await $`git -c core.quotepath=false diff --name-status --no-renames ${ancestor}`
-          .cwd(dir)
-          .quiet()
-          .nothrow()
-        if (nameStatus.exitCode !== 0) return c.json([])
-
-        const numstat = await $`git -c core.quotepath=false diff --numstat --no-renames ${ancestor}`
-          .cwd(dir)
-          .quiet()
-          .nothrow()
-        const stats = new Map<string, { additions: number; deletions: number }>()
-        // kilocode_change start - track binary files to skip content reads
-        const binaryFiles = new Set<string>()
-        if (numstat.exitCode === 0) {
-          for (const line of numstat.stdout.toString().trim().split("\n")) {
-            if (!line) continue
-            const parts = line.split("\t")
-            const add = parts[0]
-            const del = parts[1]
-            const file = parts.slice(2).join("\t")
-            if (!file) continue
-            if (BinaryFile.isNumstat(add, del, file)) {
-              binaryFiles.add(file)
-              stats.set(file, { additions: 0, deletions: 0 })
-            } else {
-              stats.set(file, {
-                additions: add === "-" ? 0 : parseInt(add!, 10),
-                deletions: del === "-" ? 0 : parseInt(del!, 10),
-              })
-            }
-          }
-        }
-        // kilocode_change end
-
-        const seen = new Set<string>()
-        const entries: { file: string; status: "added" | "deleted" | "modified" }[] = []
-        for (const line of nameStatus.stdout.toString().trim().split("\n")) {
-          if (!line) continue
-          const parts = line.split("\t")
-          const statusChar = parts[0]
-          const file = parts.slice(1).join("\t")
-          if (!file || !statusChar) continue
-          seen.add(file)
-          const status =
-            statusChar === "A" ? ("added" as const) : statusChar === "D" ? ("deleted" as const) : ("modified" as const)
-          entries.push({ file, status })
-        }
-
-        // kilocode_change - parallel file reads with concurrency limit
-        log.info("[PERF] tracked file count", { count: entries.length })
-        const tFileReads = performance.now()
-        const CONCURRENCY = 10
-        const diffs: Snapshot.FileDiff[] = []
-        for (let i = 0; i < entries.length; i += CONCURRENCY) {
-          const batch = entries.slice(i, i + CONCURRENCY)
-          const results = await Promise.all(
-            batch.map(async (entry) => {
-              const stat = stats.get(entry.file) ?? { additions: 0, deletions: 0 }
-              // kilocode_change - skip content reads for binary files (images, LFS pointers, etc)
-              if (binaryFiles.has(entry.file)) {
-                return {
-                  file: entry.file,
-                  before: "",
-                  after: "",
-                  additions: stat.additions,
-                  deletions: stat.deletions,
-                  binary: true,
-                  status: entry.status,
-                }
-              }
-              const before =
-                entry.status === "added"
-                  ? ""
-                  : await (async () => {
-                      const result = await $`git show ${ancestor}:${entry.file}`.cwd(dir).quiet().nothrow()
-                      return result.exitCode === 0 ? result.stdout.toString() : ""
-                    })()
-              const after =
-                entry.status === "deleted"
-                  ? ""
-                  : await (async () => {
-                      const f = Bun.file(path.join(dir, entry.file))
-                      return (await f.exists()) ? await f.text() : ""
-                    })()
-              return {
-                file: entry.file,
-                before,
-                after,
-                additions: stat.additions,
-                deletions: stat.deletions,
-                status: entry.status,
-              }
-            }),
-          )
-          diffs.push(...results)
-        }
-
-        log.info("[PERF] all tracked file reads (parallel)", {
-          ms: Math.round(performance.now() - tFileReads),
-          files: entries.length,
-        })
-
-        // Include untracked files (new files never staged) so the diff
-        // viewer shows all working-tree changes, not just tracked ones.
-        const untrackedResult = await $`git ls-files --others --exclude-standard`.cwd(dir).quiet().nothrow()
-        if (untrackedResult.exitCode === 0) {
-          const untrackedFiles = untrackedResult.stdout.toString().trim()
-          if (untrackedFiles) {
-            log.info("untracked files found", { count: untrackedFiles.split("\n").length })
-          }
-          const untrackedEntries = untrackedFiles.split("\n").filter((file: string) => file && !seen.has(file))
-          for (let i = 0; i < untrackedEntries.length; i += CONCURRENCY) {
-            const batch = untrackedEntries.slice(i, i + CONCURRENCY)
-            const results = await Promise.all(
-              batch.map(async (file: string) => {
-                // kilocode_change - skip binary untracked files by extension
-                if (BinaryFile.isPath(file)) {
-                  return {
-                    file,
-                    before: "",
-                    after: "",
-                    additions: 0,
-                    deletions: 0,
-                    binary: true,
-                    status: "added" as const,
-                  }
-                }
-                const f = Bun.file(path.join(dir, file))
-                if (!(await f.exists())) return undefined
-                const content = await f.text()
-                const lines = content.endsWith("\n") ? content.split("\n").length - 1 : content.split("\n").length
-                return {
-                  file,
-                  before: "",
-                  after: content,
-                  additions: lines,
-                  deletions: 0,
-                  status: "added" as const,
-                }
-              }),
-            )
-            for (const r of results) {
-              if (r) diffs.push(r)
-            }
-          }
-        } else {
-          log.warn("git ls-files failed", {
-            exitCode: untrackedResult.exitCode,
-            stderr: untrackedResult.stderr.toString().trim(),
-          })
-        }
-
-        const totalBytes = diffs.reduce(
-          (sum: number, d: Snapshot.FileDiff) => sum + d.before.length + d.after.length,
-          0,
+        log.info("computing diff", { dir, base })
+        const diffs = await WorktreeDiff.full({ dir, base, log })
+        return c.json(
+          diffs.map((diff) => ({
+            file: diff.file,
+            before: diff.before,
+            after: diff.after,
+            additions: diff.additions,
+            deletions: diff.deletions,
+            binary: diff.binary,
+            status: diff.status,
+          })),
         )
-        log.info("[PERF] worktree-diff DONE", {
-          totalMs: Math.round(performance.now() - t0),
-          totalFiles: diffs.length,
-          totalBytes,
-          totalMB: (totalBytes / 1024 / 1024).toFixed(2),
-        })
-        return c.json(diffs)
       },
     )
-    // kilocode_change end
-    // kilocode_change start - lightweight stats endpoint for agent manager
+    .get(
+      "/worktree/diff/summary",
+      describeRoute({
+        summary: "Get worktree diff summary",
+        description: "Get lightweight file diff metadata for a worktree compared to its base branch.",
+        operationId: "worktree.diffSummary",
+        responses: {
+          200: {
+            description: "Diff summary items",
+            content: {
+              "application/json": {
+                schema: resolver(z.array(WorktreeDiff.Item)),
+              },
+            },
+          },
+          ...errors(400),
+        },
+      }),
+      validator(
+        "query",
+        z.object({
+          base: z.string().optional().meta({ description: "Base branch or ref to diff against" }),
+        }),
+      ),
+      async (c) => {
+        const log = Log.create({ service: "worktree-diff" })
+        const query = c.req.valid("query")
+        const base = query.base || (await Review.getBaseBranch())
+        const dir = Instance.directory
+        log.info("computing diff summary", { dir, base })
+        return c.json(await WorktreeDiff.summary({ dir, base, log }))
+      },
+    )
+    .get(
+      "/worktree/diff/file",
+      describeRoute({
+        summary: "Get worktree diff detail",
+        description: "Get full diff contents for one worktree file compared to its base branch.",
+        operationId: "worktree.diffFile",
+        responses: {
+          200: {
+            description: "Diff detail item",
+            content: {
+              "application/json": {
+                schema: resolver(WorktreeDiff.Item.nullable()),
+              },
+            },
+          },
+          ...errors(400),
+        },
+      }),
+      validator(
+        "query",
+        z.object({
+          base: z.string().optional().meta({ description: "Base branch or ref to diff against" }),
+          file: z.string().meta({ description: "Relative file path to load diff contents for" }),
+        }),
+      ),
+      async (c) => {
+        const log = Log.create({ service: "worktree-diff" })
+        const query = c.req.valid("query")
+        const base = query.base || (await Review.getBaseBranch())
+        const dir = Instance.directory
+        log.info("computing diff detail", { dir, base, file: query.file })
+        return c.json((await WorktreeDiff.detail({ dir, base, file: query.file, log })) ?? null)
+      },
+    )
     .get(
       "/worktree/stats",
       describeRoute({
@@ -442,60 +337,12 @@ export const ExperimentalRoutes = lazy(() =>
         }),
       ),
       async (c) => {
-        const log = Log.create({ service: "worktree-stats" })
+        const log = Log.create({ service: "worktree-diff" })
         const query = c.req.valid("query")
         const base = query.base || (await Review.getBaseBranch())
         const dir = Instance.directory
-
-        const mergeBaseResult = await $`git merge-base HEAD ${base}`.cwd(dir).quiet().nothrow()
-        if (mergeBaseResult.exitCode !== 0) {
-          return c.json({ files: 0, additions: 0, deletions: 0 })
-        }
-        const ancestor = mergeBaseResult.stdout.toString().trim()
-
-        const numstat = await $`git -c core.quotepath=false diff --numstat --no-renames ${ancestor}`
-          .cwd(dir)
-          .quiet()
-          .nothrow()
-
-        let files = 0
-        let additions = 0
-        let deletions = 0
-        if (numstat.exitCode === 0) {
-          for (const line of numstat.stdout.toString().trim().split("\n")) {
-            if (!line) continue
-            const parts = line.split("\t")
-            const add = parts[0]
-            const del = parts[1]
-            if (add && del) {
-              files++
-              additions += add === "-" ? 0 : parseInt(add, 10)
-              deletions += del === "-" ? 0 : parseInt(del, 10)
-            }
-          }
-        }
-
-        // Count untracked files
-        const untrackedResult = await $`git ls-files --others --exclude-standard`.cwd(dir).quiet().nothrow()
-        if (untrackedResult.exitCode === 0) {
-          const untracked = untrackedResult.stdout.toString().trim()
-          if (untracked) {
-            for (const file of untracked.split("\n")) {
-              if (!file) continue
-              files++
-              // kilocode_change - skip reading binary files for line count
-              if (BinaryFile.isPath(file)) continue
-              const f = Bun.file(path.join(dir, file))
-              if (await f.exists()) {
-                const content = await f.text()
-                additions += content.endsWith("\n") ? content.split("\n").length - 1 : content.split("\n").length
-              }
-            }
-          }
-        }
-
-        log.info("stats complete", { files, additions, deletions })
-        return c.json({ files, additions, deletions })
+        log.info("computing diff stats", { dir, base })
+        return c.json(await WorktreeDiff.statsOnly({ dir, base, log }))
       },
     )
     // kilocode_change end
