@@ -125,6 +125,18 @@ describe("McpMigrator", () => {
       expect(result?.mcpServers.filesystem.args).toEqual(["-y", "@modelcontextprotocol/server-filesystem"])
     })
 
+    test("returns null for malformed JSON file instead of throwing", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(path.join(dir, "mcp_settings.json"), "{ not valid json !!!")
+        },
+      })
+
+      const result = await McpMigrator.readMcpSettings(path.join(tmp.path, "mcp_settings.json"))
+
+      expect(result).toBeNull()
+    })
+
     test("reads file with multiple servers", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
@@ -218,6 +230,34 @@ describe("McpMigrator", () => {
       expect(result.mcp.legacy).toEqual({
         type: "local",
         command: ["node", "legacy-server.js"],
+      })
+    })
+
+    // Regression: malformed .kilocode/mcp.json must not prevent .kilo/mcp.json from loading
+    test("loads .kilo/mcp.json even when .kilocode/mcp.json is malformed", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(path.join(dir, ".kilocode", "mcp.json"), "{ corrupt json !!!")
+          await Bun.write(
+            path.join(dir, ".kilo", "mcp.json"),
+            JSON.stringify({
+              mcpServers: {
+                valid: { command: "valid-cmd", args: ["--ok"] },
+              },
+            }),
+          )
+        },
+      })
+
+      const result = await McpMigrator.migrate({
+        projectDir: tmp.path,
+        skipGlobalPaths: true,
+      })
+
+      expect(result.mcp).toHaveProperty("valid")
+      expect(result.mcp.valid).toEqual({
+        type: "local",
+        command: ["valid-cmd", "--ok"],
       })
     })
 
