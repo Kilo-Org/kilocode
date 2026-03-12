@@ -9,7 +9,7 @@ import SettingsRow from "./SettingsRow"
 
 const AUTOCOMPLETE_MODELS = [
   { id: "mistralai/codestral-2508", label: "Codestral (Mistral AI)" },
-  { id: "mercury-edit", label: "Mercury Edit (Inception Labs)" },
+  { id: "mercury-edit", label: "Mercury Edit (Inception)" },
 ] as const
 
 type ModelId = (typeof AUTOCOMPLETE_MODELS)[number]["id"]

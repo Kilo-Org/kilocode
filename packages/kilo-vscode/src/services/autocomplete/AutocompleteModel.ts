@@ -5,7 +5,7 @@ const DEFAULT_MODEL = "mistralai/codestral-2508"
 
 const MODEL_PROVIDERS: Record<string, string> = {
   "mistralai/codestral-2508": "Kilo Gateway",
-  "mercury-edit": "Inception Labs",
+  "mercury-edit": "Inception",
 }
 
 /** Chunk from an LLM streaming response */

@@ -622,7 +622,7 @@
           ],
           "enumDescriptions": [
             "Codestral by Mistral AI (default)",
-            "Mercury Edit by Inception Labs"
+            "Mercury Edit by Inception"
           ],
           "description": "Model to use for inline autocomplete suggestions"
         },
