@@ -100,7 +100,7 @@ const ProvidersTab: Component = () => {
   )
 
   const kilo = createMemo<Provider>(() => provider.providers().kilo ?? kiloFallback)
-  const kiloConnected = createMemo(() => provider.connected().includes("kilo"))
+  const kiloConnected = createMemo(() => !!provider.authStates()["kilo"])
   const showKiloAuth = createMemo(() => !kiloConnected() && server.deviceAuth().status !== "idle")
 
   const popularProviders = createMemo(() => {
