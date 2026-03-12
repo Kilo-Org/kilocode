@@ -546,11 +546,11 @@ export const MultipleToolCalls: Story = {
 }
 
 // ---------------------------------------------------------------------------
-// 8. Active question tool is hidden inline
+// 8. Active question (tool-linked question rendered in message flow)
 // ---------------------------------------------------------------------------
 
-export const QuestionToolHiddenInline: Story = {
-  name: "Question Tool Hidden Inline",
+export const ActiveQuestionHiddenInline: Story = {
+  name: "Active Question Hidden Inline",
   render: () => {
     const qs = [questionRequest]
     const data = dataWith([textPart, questionToolPart])
