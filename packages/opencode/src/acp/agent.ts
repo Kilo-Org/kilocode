@@ -126,7 +126,7 @@ export namespace ACP {
   export async function init({ sdk: _sdk, defaultCwd }: { sdk: KiloClient; defaultCwd?: string }) {
     return {
       create: (connection: AgentSideConnection, fullConfig: ACPConfig) => {
-        return new Agent(connection, { ...fullConfig, defaultCwd })
+        return new Agent(connection, { ...fullConfig, defaultCwd: fullConfig.defaultCwd ?? defaultCwd })
       },
     }
   }
