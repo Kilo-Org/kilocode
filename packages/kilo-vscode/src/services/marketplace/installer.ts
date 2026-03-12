@@ -17,10 +17,53 @@ import { MarketplacePaths } from "./paths"
 
 const exec = promisify(execFile)
 
+// ── Opencode config types ───────────────────────────────────────────
+
+interface McpLocal {
+  type: "local"
+  command: string[]
+  environment?: Record<string, string>
+}
+
+interface McpRemote {
+  type: "remote"
+  url: string
+  headers?: Record<string, string>
+}
+
+type McpEntry = McpLocal | McpRemote
+
+interface AgentEntry {
+  mode: string
+  description?: string
+  prompt?: string
+  permission?: Record<string, unknown>
+}
+
+interface KiloConfig {
+  $schema?: string
+  mcp?: Record<string, McpEntry>
+  agent?: Record<string, AgentEntry>
+  [key: string]: unknown
+}
+
+// ── Kilocode legacy format (from marketplace API) ───────────────────
+
+interface LegacyMcp {
+  command?: string
+  args?: string[]
+  env?: Record<string, string>
+  type?: string
+  url?: string
+  headers?: Record<string, string>
+}
+
+// ── Installer ───────────────────────────────────────────────────────
+
 export class MarketplaceInstaller {
   constructor(private paths: MarketplacePaths) {}
 
-  // ── Install ──────────────────────────────────────────────────────────
+  // ── Install ──────────────────────────────────────────────────────
 
   async install(
     item: MarketplaceItem,
@@ -34,76 +77,57 @@ export class MarketplaceInstaller {
     return { success: false, slug: (item as MarketplaceItem).id, error: `Unknown item type` }
   }
 
-  async installMode(
-    item: ModeMarketplaceItem,
-    scope: "project" | "global",
-    workspace?: string,
-  ): Promise<InstallResult> {
-    const filepath = this.paths.modesPath(scope, workspace)
-    try {
-      const mode = yaml.parse(item.content)
-      if (!mode?.slug) {
-        return { success: false, slug: item.id, error: "Mode content missing slug" }
-      }
-
-      const existing = await this.readYaml(filepath)
-      if (existing === null) {
-        return { success: false, slug: item.id, error: "Existing modes file has invalid YAML" }
-      }
-
-      const data = existing ?? { customModes: [] as Record<string, unknown>[] }
-      if (!Array.isArray(data.customModes)) {
-        data.customModes = [] as Record<string, unknown>[]
-      }
-
-      const modes = data.customModes as Record<string, unknown>[]
-      data.customModes = modes.filter((m) => m.slug !== mode.slug)
-      ;(data.customModes as Record<string, unknown>[]).push(mode)
-
-      await fs.mkdir(path.dirname(filepath), { recursive: true })
-      const output = yaml.stringify(data, { lineWidth: 0 })
-      await fs.writeFile(filepath, output, "utf-8")
-
-      const line = findLineNumber(output, `slug: ${mode.slug}`)
-      return { success: true, slug: item.id, filePath: filepath, line }
-    } catch (err) {
-      console.warn(`Failed to install mode ${item.id}:`, err)
-      return { success: false, slug: item.id, error: String(err) }
-    }
-  }
-
   async installMcp(
     item: McpMarketplaceItem,
     options: InstallMarketplaceItemOptions,
     workspace?: string,
   ): Promise<InstallResult> {
     const scope = options.target ?? "project"
-    const filepath = this.paths.mcpPath(scope, workspace)
+    const filepath = this.paths.configPath(scope, workspace)
     try {
       const template = resolveTemplate(item, options)
       const filled = substituteParams(template, options.parameters ?? {})
-      const parsed = JSON.parse(filled)
+      const legacy: LegacyMcp = JSON.parse(filled)
+      const entry = convertMcp(legacy)
+      if (!entry) return { success: false, slug: item.id, error: "Invalid MCP configuration" }
 
-      const existing = await this.readJson(filepath)
-      if (existing === null) {
-        return { success: false, slug: item.id, error: "Existing MCP file has invalid JSON" }
-      }
+      const config = await readConfig(filepath)
+      config.mcp ??= {}
+      config.mcp[item.id] = entry
 
-      const data = existing ?? { mcpServers: {} as Record<string, unknown> }
-      if (!data.mcpServers || typeof data.mcpServers !== "object") {
-        data.mcpServers = {} as Record<string, unknown>
-      }
+      await writeConfig(filepath, config)
 
-      ;(data.mcpServers as Record<string, unknown>)[item.id] = parsed
-
-      await fs.mkdir(path.dirname(filepath), { recursive: true })
-      const output = JSON.stringify(data, null, 2)
-      await fs.writeFile(filepath, output, "utf-8")
-
+      const output = JSON.stringify(config, null, 2)
       const line = findLineNumber(output, `"${item.id}"`)
       return { success: true, slug: item.id, filePath: filepath, line }
     } catch (err) {
       console.warn(`Failed to install MCP ${item.id}:`, err)
+      return { success: false, slug: item.id, error: String(err) }
+    }
+  }
+
+  async installMode(
+    item: ModeMarketplaceItem,
+    scope: "project" | "global",
+    workspace?: string,
+  ): Promise<InstallResult> {
+    const filepath = this.paths.configPath(scope, workspace)
+    try {
+      const mode = yaml.parse(item.content)
+      if (!mode?.slug) return { success: false, slug: item.id, error: "Mode content missing slug" }
+
+      const agent = convertMode(mode)
+      const config = await readConfig(filepath)
+      config.agent ??= {}
+      config.agent[mode.slug] = agent
+
+      await writeConfig(filepath, config)
+
+      const output = JSON.stringify(config, null, 2)
+      const line = findLineNumber(output, `"${mode.slug}"`)
+      return { success: true, slug: item.id, filePath: filepath, line }
+    } catch (err) {
+      console.warn(`Failed to install mode ${item.id}:`, err)
       return { success: false, slug: item.id, error: String(err) }
     }
   }
@@ -149,13 +173,9 @@ export class MarketplaceInstaller {
       const buffer = Buffer.from(await response.arrayBuffer())
       await fs.writeFile(tarball, buffer)
 
-      // Extract to a staging directory so we can validate before touching
-      // the real install path (preserves any existing installation on failure).
       await fs.mkdir(staging, { recursive: true })
       await exec("tar", ["-xzf", tarball, "--strip-components=1", "-C", staging])
 
-      // Reject archives with entries that escaped the staging directory
-      // (absolute paths, symlinks, or .. segments).
       const escaped = await findEscapedPaths(staging)
       if (escaped.length > 0) {
         console.warn(`Skill archive ${item.id} contains escaped paths:`, escaped)
@@ -191,7 +211,7 @@ export class MarketplaceInstaller {
     }
   }
 
-  // ── Remove ───────────────────────────────────────────────────────────
+  // ── Remove ───────────────────────────────────────────────────────
 
   async remove(item: MarketplaceItem, scope: "project" | "global", workspace?: string): Promise<RemoveResult> {
     if (item.type === "mode") return this.removeMode(item, scope, workspace)
@@ -200,47 +220,32 @@ export class MarketplaceInstaller {
     return { success: false, slug: (item as MarketplaceItem).id, error: "Unknown item type" }
   }
 
-  async removeMode(item: ModeMarketplaceItem, scope: "project" | "global", workspace?: string): Promise<RemoveResult> {
-    const filepath = this.paths.modesPath(scope, workspace)
+  async removeMcp(item: McpMarketplaceItem, scope: "project" | "global", workspace?: string): Promise<RemoveResult> {
+    const filepath = this.paths.configPath(scope, workspace)
     try {
-      const mode = yaml.parse(item.content)
-      const slug = mode?.slug ?? item.id
-
-      const content = await fs.readFile(filepath, "utf-8")
-      const data = yaml.parse(content)
-      if (!data?.customModes || !Array.isArray(data.customModes)) {
-        return { success: true, slug: item.id }
-      }
-
-      data.customModes = data.customModes.filter((m: Record<string, unknown>) => m.slug !== slug)
-      await fs.writeFile(filepath, yaml.stringify(data, { lineWidth: 0 }), "utf-8")
+      const config = await readConfig(filepath)
+      if (!config.mcp?.[item.id]) return { success: true, slug: item.id }
+      delete config.mcp[item.id]
+      await writeConfig(filepath, config)
       return { success: true, slug: item.id }
     } catch (err) {
-      if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-        return { success: true, slug: item.id }
-      }
-      console.warn(`Failed to remove mode ${item.id}:`, err)
+      console.warn(`Failed to remove MCP ${item.id}:`, err)
       return { success: false, slug: item.id, error: String(err) }
     }
   }
 
-  async removeMcp(item: McpMarketplaceItem, scope: "project" | "global", workspace?: string): Promise<RemoveResult> {
-    const filepath = this.paths.mcpPath(scope, workspace)
+  async removeMode(item: ModeMarketplaceItem, scope: "project" | "global", workspace?: string): Promise<RemoveResult> {
+    const filepath = this.paths.configPath(scope, workspace)
     try {
-      const content = await fs.readFile(filepath, "utf-8")
-      const data = JSON.parse(content)
-      if (!data?.mcpServers || typeof data.mcpServers !== "object") {
-        return { success: true, slug: item.id }
-      }
-
-      delete data.mcpServers[item.id]
-      await fs.writeFile(filepath, JSON.stringify(data, null, 2), "utf-8")
+      const mode = yaml.parse(item.content)
+      const slug = mode?.slug ?? item.id
+      const config = await readConfig(filepath)
+      if (!config.agent?.[slug]) return { success: true, slug: item.id }
+      delete config.agent[slug]
+      await writeConfig(filepath, config)
       return { success: true, slug: item.id }
     } catch (err) {
-      if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-        return { success: true, slug: item.id }
-      }
-      console.warn(`Failed to remove MCP ${item.id}:`, err)
+      console.warn(`Failed to remove mode ${item.id}:`, err)
       return { success: false, slug: item.id, error: String(err) }
     }
   }
@@ -270,39 +275,90 @@ export class MarketplaceInstaller {
       return { success: false, slug: item.id, error: String(err) }
     }
   }
+}
 
-  // ── Helpers ──────────────────────────────────────────────────────────
+// ── Config file helpers ─────────────────────────────────────────────
 
-  private async readYaml(filepath: string): Promise<Record<string, unknown> | undefined | null> {
-    try {
-      const content = await fs.readFile(filepath, "utf-8")
-      try {
-        return yaml.parse(content) ?? { customModes: [] }
-      } catch {
-        console.warn(`Invalid YAML in ${filepath}`)
-        return null
-      }
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code === "ENOENT") return undefined
-      throw err
-    }
-  }
-
-  private async readJson(filepath: string): Promise<Record<string, unknown> | undefined | null> {
-    try {
-      const content = await fs.readFile(filepath, "utf-8")
-      try {
-        return JSON.parse(content)
-      } catch {
-        console.warn(`Invalid JSON in ${filepath}`)
-        return null
-      }
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code === "ENOENT") return undefined
-      throw err
-    }
+async function readConfig(filepath: string): Promise<KiloConfig> {
+  try {
+    const content = await fs.readFile(filepath, "utf-8")
+    return JSON.parse(content)
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return {}
+    throw err
   }
 }
+
+async function writeConfig(filepath: string, config: KiloConfig): Promise<void> {
+  config.$schema ??= "https://kilo.ai/config.json"
+  await fs.mkdir(path.dirname(filepath), { recursive: true })
+  await fs.writeFile(filepath, JSON.stringify(config, null, 2), "utf-8")
+}
+
+// ── Format converters ───────────────────────────────────────────────
+
+const REMOTE_TYPES = new Set(["streamable-http", "sse"])
+
+function convertMcp(legacy: LegacyMcp): McpEntry | null {
+  if (legacy.type && REMOTE_TYPES.has(legacy.type)) {
+    if (!legacy.url) return null
+    const entry: McpRemote = { type: "remote", url: legacy.url }
+    if (legacy.headers && Object.keys(legacy.headers).length > 0) entry.headers = legacy.headers
+    return entry
+  }
+
+  if (!legacy.command) return null
+  const entry: McpLocal = {
+    type: "local",
+    command: [legacy.command, ...(legacy.args ?? [])],
+  }
+  if (legacy.env && Object.keys(legacy.env).length > 0) entry.environment = legacy.env
+  return entry
+}
+
+const GROUP_TO_PERMISSION: Record<string, string> = {
+  read: "read",
+  edit: "edit",
+  browser: "bash",
+  command: "bash",
+  mcp: "mcp",
+}
+
+const ALL_PERMISSIONS = ["read", "edit", "bash", "mcp"]
+
+function convertMode(mode: Record<string, unknown>): AgentEntry {
+  const prompt = [mode.roleDefinition, mode.customInstructions].filter(Boolean).join("\n\n")
+  const groups = (mode.groups ?? []) as Array<string | [string, { fileRegex?: string }]>
+
+  const permission: Record<string, unknown> = {}
+  const allowed = new Set<string>()
+
+  for (const group of groups) {
+    if (typeof group === "string") {
+      const key = GROUP_TO_PERMISSION[group] ?? group
+      allowed.add(key)
+      permission[key] = "allow"
+    } else if (Array.isArray(group)) {
+      const [name, config] = group
+      const key = GROUP_TO_PERMISSION[name] ?? name
+      allowed.add(key)
+      permission[key] = config?.fileRegex ? { [config.fileRegex]: "allow", "*": "deny" } : "allow"
+    }
+  }
+
+  for (const perm of ALL_PERMISSIONS) {
+    if (!allowed.has(perm)) permission[perm] = "deny"
+  }
+
+  return {
+    mode: "primary",
+    description: (mode.description ?? mode.whenToUse ?? mode.name) as string,
+    prompt,
+    permission,
+  }
+}
+
+// ── Template/param helpers ──────────────────────────────────────────
 
 function resolveTemplate(item: McpMarketplaceItem, options: InstallMarketplaceItemOptions): string {
   if (typeof item.content === "string") return item.content
@@ -346,7 +402,6 @@ async function findEscapedPaths(dir: string): Promise<string[]> {
         escaped.push(full)
         continue
       }
-      // Check symlinks point within the directory
       if (entry.isSymbolicLink()) {
         const target = await fs.realpath(full)
         if (!target.startsWith(resolved + path.sep) && target !== resolved) {

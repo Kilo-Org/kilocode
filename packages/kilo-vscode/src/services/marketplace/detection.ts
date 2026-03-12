@@ -1,6 +1,5 @@
 import * as fs from "fs/promises"
 import * as path from "path"
-import * as yaml from "yaml"
 import type { MarketplaceInstalledMetadata } from "./types"
 import { MarketplacePaths } from "./paths"
 
@@ -14,9 +13,8 @@ export class InstallationDetector {
       ? Object.fromEntries(
           (
             await Promise.all([
-              this.detectModes(this.paths.projectModesPath(workspace)),
-              this.detectMcps(this.paths.projectMcpPath(workspace)),
-              this.detectSkills(this.paths.projectSkillsDir(workspace)),
+              this.detectFromConfig(this.paths.configPath("project", workspace)),
+              this.detectSkills(this.paths.skillsDir("project", workspace)),
             ])
           ).flat(),
         )
@@ -25,9 +23,8 @@ export class InstallationDetector {
     const global = Object.fromEntries(
       (
         await Promise.all([
-          this.detectModes(this.paths.globalModesPath()),
-          this.detectMcps(this.paths.globalMcpPath()),
-          this.detectSkills(this.paths.globalSkillsDir()),
+          this.detectFromConfig(this.paths.configPath("global")),
+          this.detectSkills(this.paths.skillsDir("global")),
         ])
       ).flat(),
     )
@@ -35,31 +32,29 @@ export class InstallationDetector {
     return { project, global }
   }
 
-  private async detectModes(filepath: string): Promise<Entry[]> {
-    try {
-      const content = await fs.readFile(filepath, "utf-8")
-      const parsed = yaml.parse(content)
-      if (!parsed?.customModes || !Array.isArray(parsed.customModes)) return []
-      return parsed.customModes
-        .filter((mode: { slug?: string }) => mode.slug)
-        .map((mode: { slug: string }) => [mode.slug, { type: "mode" }])
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
-        console.warn(`Failed to detect modes from ${filepath}:`, err)
-      }
-      return []
-    }
-  }
-
-  private async detectMcps(filepath: string): Promise<Entry[]> {
+  /** Read mcp and agent entries from a kilo.json config file. */
+  private async detectFromConfig(filepath: string): Promise<Entry[]> {
     try {
       const content = await fs.readFile(filepath, "utf-8")
       const parsed = JSON.parse(content)
-      if (!parsed?.mcpServers || typeof parsed.mcpServers !== "object") return []
-      return Object.keys(parsed.mcpServers).map((key) => [key, { type: "mcp" }])
+      const entries: Entry[] = []
+
+      if (parsed?.mcp && typeof parsed.mcp === "object") {
+        for (const key of Object.keys(parsed.mcp)) {
+          entries.push([key, { type: "mcp" }])
+        }
+      }
+
+      if (parsed?.agent && typeof parsed.agent === "object") {
+        for (const key of Object.keys(parsed.agent)) {
+          entries.push([key, { type: "mode" }])
+        }
+      }
+
+      return entries
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
-        console.warn(`Failed to detect MCPs from ${filepath}:`, err)
+        console.warn(`Failed to detect items from ${filepath}:`, err)
       }
       return []
     }

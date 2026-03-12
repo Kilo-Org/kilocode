@@ -289,11 +289,15 @@ export interface ProviderConfig {
 }
 
 export interface McpConfig {
-  command?: string
-  args?: string[]
-  env?: Record<string, string>
+  type?: "local" | "remote"
+  command?: string[] | string
+  environment?: Record<string, string>
   url?: string
   headers?: Record<string, string>
+  enabled?: boolean
+  // Legacy fields from old Kilocode format
+  args?: string[]
+  env?: Record<string, string>
 }
 
 export interface CommandConfig {
