@@ -64,15 +64,40 @@ Several models are available at no cost, subject to rate limits:
 
 Free models are available to both authenticated and anonymous users. Anonymous users are rate-limited to 200 requests per hour per IP address.
 
-## The `kilo-auto/frontier` model
+## Auto models
 
-The `kilo-auto/frontier` virtual model automatically selects the best model based on the task type. The selection is controlled by the `x-kilocode-mode` request header:
+Kilo Auto virtual models automatically select the best underlying model based on the task type. The selection is controlled by the `x-kilocode-mode` request header.
+
+### `kilo-auto/frontier`
+
+Routes to the most capable paid models optimizing for cost, performance, and capabilities.
 
 | Mode                                                           | Resolved Model                |
 | -------------------------------------------------------------- | ----------------------------- |
 | `plan`, `general`, `architect`, `orchestrator`, `ask`, `debug` | `anthropic/claude-opus-4.6`   |
 | `build`, `explore`, `code`                                     | `anthropic/claude-sonnet-4.6` |
 | Default (no mode specified)                                    | `anthropic/claude-sonnet-4.6` |
+
+### `kilo-auto/balanced`
+
+Follows the same mode-based routing as Frontier but uses more cost-effective models.
+
+| Mode                                                           | Resolved Model              |
+| -------------------------------------------------------------- | --------------------------- |
+| `plan`, `general`, `architect`, `orchestrator`, `ask`, `debug` | `moonshotai/kimi-k2.5`      |
+| `build`, `explore`, `code`                                     | `minimax/minimax-m2.5:free` |
+| Default (no mode specified)                                    | `minimax/minimax-m2.5:free` |
+
+### `kilo-auto/free`
+
+The best available free model for each mode.
+
+| Mode                        | Resolved Model              |
+| --------------------------- | --------------------------- |
+| All modes                   | `minimax/minimax-m2.5:free` |
+| Default (no mode specified) | `minimax/minimax-m2.5:free` |
+
+### Example usage
 
 ```json
 {
@@ -88,7 +113,7 @@ curl -X POST "https://api.kilo.ai/api/gateway/chat/completions" \
   -H "Authorization: Bearer $KILO_API_KEY" \
   -H "x-kilocode-mode: plan" \
   -H "Content-Type: application/json" \
-  -d '{"model": "kilo-auto/frontier", "messages": [{"role": "user", "content": "Design a database schema"}]}'
+  -d '{"model": "kilo-auto/balanced", "messages": [{"role": "user", "content": "Design a database schema"}]}'
 ```
 
 ## Providers

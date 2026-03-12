@@ -33,49 +33,21 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const hasMessages = () => session.messages().length > 0
   const idle = () => session.status() !== "busy"
 
-  // Collect child session IDs spawned by task tools in the current session
-  // (recursive: subagents can spawn their own subagents).
-  const sessionFamily = createMemo<Set<string>>(() => {
-    const root = id()
-    if (!root) return new Set()
-    const family = new Set([root])
-    const parts = session.allParts()
-    const messages = session.allMessages()
-    const queue = [root]
-    while (queue.length > 0) {
-      const sid = queue.pop()!
-      const msgs = messages[sid]
-      if (!msgs) continue
-      for (const msg of msgs) {
-        const msgParts = parts[msg.id]
-        if (!msgParts) continue
-        for (const p of msgParts) {
-          if (p.type !== "tool") continue
-          const child = (p as { state?: { metadata?: { sessionId?: string } } }).state?.metadata?.sessionId
-          if (child && !family.has(child)) {
-            family.add(child)
-            queue.push(child)
-          }
-        }
-      }
-    }
-    return family
-  })
+  // Permissions and questions scoped to this session's family (self + subagents).
+  // Each ChatView only sees its own session tree — no cross-session leakage.
+  // Memoized so the BFS walk in sessionFamily() runs once per reactive update,
+  // not once per accessor call (questionRequest, permissionRequest, blocked all read these).
+  const familyPermissions = createMemo(() => session.scopedPermissions(id()))
+  const familyQuestions = createMemo(() => session.scopedQuestions(id()))
 
-  // Filter permissions/questions to the current session + its child sessions
-  // (subagents). In the Agent Manager all worktree sessions share one provider,
-  // so without this filter prompts from unrelated sessions would leak through.
-  const scopedPermissions = () => session.permissions().filter((p) => sessionFamily().has(p.sessionID))
-  const scopedQuestions = () => session.questions().filter((q) => sessionFamily().has(q.sessionID))
-
-  // Bottom-dock permission: prefer current-session non-tool permissions,
-  // then fall back to any scoped pending permission (including child sessions).
+  // Prefer non-tool questions in the dock: current-session non-tool first,
+  // then any non-tool, then fall back to any remaining scoped question.
   const questionRequest = () =>
-    scopedQuestions().find((q) => q.sessionID === id() && !q.tool) ??
-    scopedQuestions().find((q) => !q.tool) ??
-    scopedQuestions()[0]
-  const permissionRequest = () => scopedPermissions().find((p) => p.sessionID === id()) ?? scopedPermissions()[0]
-  const blocked = () => scopedPermissions().length > 0 || scopedQuestions().length > 0
+    familyQuestions().find((q) => q.sessionID === id() && !q.tool) ??
+    familyQuestions().find((q) => !q.tool) ??
+    familyQuestions()[0]
+  const permissionRequest = () => familyPermissions().find((p) => p.sessionID === id()) ?? familyPermissions()[0]
+  const blocked = () => familyPermissions().length > 0 || familyQuestions().length > 0
   const dock = () => !props.readonly || !!questionRequest() || !!permissionRequest()
 
   // When a bottom-dock permission/question disappears while the session is busy,
