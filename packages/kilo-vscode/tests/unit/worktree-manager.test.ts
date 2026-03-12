@@ -545,6 +545,19 @@ describe("WorktreeManager.ensureGitExclude", () => {
     expect(content).toContain(".kilo/worktrees/")
   })
 
+  it("adds only specific legacy Agent Manager paths", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    await mgr.ensureGitExclude()
+
+    const content = await fs.readFile(path.join(root, ".git", "info", "exclude"), "utf-8")
+    expect(content).toContain(".kilocode/worktrees/")
+    expect(content).toContain(".kilocode/agent-manager.json")
+    expect(content).toContain(".kilocode/setup-script")
+    expect(content).not.toContain("\n.kilocode/\n")
+  })
+
   it("is idempotent -- does not duplicate entries", async () => {
     const root = await createTempRepo()
     const mgr = createManager(root)

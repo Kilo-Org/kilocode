@@ -1,6 +1,9 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 
+// TODO(2026-06): Remove the legacy .kilocode -> .kilo migration helpers below
+// after the Agent Manager rename rollout window has passed.
+
 /**
  * Maximum number of parallel worktree versions for multi-version mode.
  * Keep in sync with MAX_MULTI_VERSIONS in webview-ui/src/types/messages.ts.
