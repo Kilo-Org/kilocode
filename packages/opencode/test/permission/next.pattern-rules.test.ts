@@ -1,6 +1,7 @@
 import { test, expect } from "bun:test"
 import { PermissionNext } from "../../src/permission/next"
 import { Instance } from "../../src/project/instance"
+import { NotFoundError } from "../../src/storage/db"
 import { tmpdir } from "../fixture/fixture"
 
 test("savePatternRules - approvedPatterns saves allow rules for future requests", async () => {
@@ -266,7 +267,7 @@ test("savePatternRules - throws error for stale/unknown request ID", async () =>
           requestID: "permission_nonexistent",
           approvedPatterns: ["npm install"],
         }),
-      ).rejects.toThrow("not found")
+      ).rejects.toBeInstanceOf(NotFoundError)
     },
   })
 })

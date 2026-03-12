@@ -3,7 +3,7 @@ import { BusEvent } from "@/bus/bus-event"
 import { Config } from "@/config/config"
 import { Identifier } from "@/id/id"
 import { Instance } from "@/project/instance"
-import { Database, eq } from "@/storage/db"
+import { Database, eq, NotFoundError } from "@/storage/db"
 import { PermissionTable } from "@/session/session.sql"
 import { fn } from "@/util/fn"
 import { Log } from "@/util/log"
@@ -170,7 +170,7 @@ export namespace PermissionNext {
     async (input) => {
       const s = await state()
       const existing = s.pending[input.requestID]
-      if (!existing) throw new Error(`Permission request ${input.requestID} not found`)
+      if (!existing) throw new NotFoundError({ message: `Permission request ${input.requestID} not found` })
 
       const validPatterns = new Set(existing.info.patterns)
       const permission = existing.info.permission
