@@ -13,7 +13,7 @@ Models are identified using the format `provider/model-name`. Pass this as the `
 
 ```typescript
 const result = streamText({
-  model: kilo.chat("anthropic/claude-sonnet-4.5"),
+  model: kilo.chat("anthropic/claude-sonnet-4.6"),
   prompt: "Hello!",
 })
 ```
@@ -22,7 +22,7 @@ Or in a raw API request:
 
 ```json
 {
-  "model": "anthropic/claude-sonnet-4.5",
+  "model": "anthropic/claude-sonnet-4.6",
   "messages": [{ "role": "user", "content": "Hello!" }]
 }
 ```
@@ -42,7 +42,7 @@ This returns model information including pricing, context window, and supported 
 | Model ID                        | Provider  | Description                                     |
 | ------------------------------- | --------- | ----------------------------------------------- |
 | `anthropic/claude-opus-4.6`     | Anthropic | Most capable Claude model for complex reasoning |
-| `anthropic/claude-sonnet-4.5`   | Anthropic | Balanced performance and cost                   |
+| `anthropic/claude-sonnet-4.6`   | Anthropic | Balanced performance and cost                   |
 | `anthropic/claude-haiku-4.5`    | Anthropic | Fast and cost-effective                         |
 | `openai/gpt-5.2`                | OpenAI    | Latest GPT model                                |
 | `google/gemini-3-pro-preview`   | Google    | Advanced reasoning with 1M context              |
@@ -71,8 +71,8 @@ The `kilo-auto/frontier` virtual model automatically selects the best model base
 | Mode                                                           | Resolved Model                |
 | -------------------------------------------------------------- | ----------------------------- |
 | `plan`, `general`, `architect`, `orchestrator`, `ask`, `debug` | `anthropic/claude-opus-4.6`   |
-| `build`, `explore`, `code`                                     | `anthropic/claude-sonnet-4.5` |
-| Default (no mode specified)                                    | `anthropic/claude-sonnet-4.5` |
+| `build`, `explore`, `code`                                     | `anthropic/claude-sonnet-4.6` |
+| Default (no mode specified)                                    | `anthropic/claude-sonnet-4.6` |
 
 ```json
 {
