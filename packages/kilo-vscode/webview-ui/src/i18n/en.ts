@@ -411,6 +411,8 @@ export const dict = {
 
   "error.globalSync.connectFailed": "Could not connect to server. Is there a server running at `{{url}}`?",
 
+  "error.startup.title": "Server connection failed",
+
   "error.paidModel.title": "You need to sign in to use this model",
   "error.paidModel.description":
     "Sign in or create an account to access over 500 models, use credits at cost, or bring your own key.",
@@ -676,6 +678,8 @@ export const dict = {
 
   "settings.providers.title": "Providers",
   "settings.providers.description": "Provider settings will be configurable here.",
+  "settings.providers.betaNotice":
+    "Currently only the Kilo Gateway provider can be configured in the settings interface. Support for configuring other providers is coming soon during the beta period. In the interim you can configure providers using the CLI or config file. We're committed to keeping Kilo open, no lock-in.",
   "settings.providers.section.connected": "Connected providers",
   "settings.providers.connected.empty": "No connected providers",
   "settings.providers.section.popular": "Popular providers",
@@ -744,10 +748,16 @@ export const dict = {
   "session.empty": "No sessions yet. Click + to start a new conversation.",
   "session.cloud.repoOnly": "Only this repository",
   "session.cloud.import": "Import from cloud",
+  "feedback.button": "Feedback & Support",
+  "feedback.dialog.message": "We'd love to hear your feedback or help with any issues you're experiencing.",
+  "feedback.dialog.github": "Report an issue on GitHub",
+  "feedback.dialog.discord": "Join our Discord community",
+  "feedback.dialog.support": "Customer Support",
   "session.cloud.import.title": "Import from cloud",
   "session.cloud.import.placeholder": "Session ID, URL, or kilo import command",
   "session.cloud.import.button": "Import",
   "session.cloud.import.invalid": "Invalid session ID format",
+  "session.cloud.import.legacy": "This appears to be a legacy session that is no longer supported.",
   "session.cloud.import.failed": "Failed to import cloud session",
 
   "workspace.new": "New workspace",
@@ -830,6 +840,7 @@ export const dict = {
 
   "prompt.placeholder.connecting": "Connecting to server...",
   "prompt.placeholder.default": "Type a message... (Enter to send, Shift+Enter for new line)",
+  "prompt.placeholder.error": "",
 
   "context.usage.sessionCost": "Session cost",
 
@@ -936,6 +947,8 @@ export const dict = {
 
   "settings.agentBehaviour.defaultAgent.title": "Default Agent",
   "settings.agentBehaviour.defaultAgent.description": "Agent to use when none is specified",
+  "settings.agentBehaviour.availableAgents": "Available Agents",
+  "settings.agentBehaviour.selectAgent": "Select an agent to configure…",
   "settings.agentBehaviour.selectAgent.title": "Agent",
   "settings.agentBehaviour.selectAgent.description": "Select an agent to configure…",
   "settings.agentBehaviour.modelOverride.title": "Model Override",
@@ -948,6 +961,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Nucleus sampling parameter (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Max Steps",
   "settings.agentBehaviour.maxSteps.description": "Maximum agentic iterations",
+  "settings.agentBehaviour.discoveredSkills": "Discovered Skills",
+  "settings.agentBehaviour.noSkillsFound":
+    "No skills discovered. Add skill folder paths or URLs below to make skills available.",
   "settings.agentBehaviour.skillPaths": "Skill Folder Paths",
   "settings.agentBehaviour.skillUrls": "Skill URLs",
   "settings.agentBehaviour.instructionFiles": "Additional Instruction Files",
@@ -957,26 +973,38 @@ export const dict = {
   "settings.agentBehaviour.workflowsPlaceholder": "Workflows are managed via workflow files in your workspace.",
   "settings.agentBehaviour.notImplemented": "Not yet implemented.",
 
-  "settings.autoApprove.setAll": "Set all permissions",
+  "settings.autoApprove.description":
+    "Define how tools are allowed to run. Most tools default to Allow. doom_loop and external_directory default to Ask.",
   "settings.autoApprove.level.allow": "Allow",
   "settings.autoApprove.level.ask": "Ask",
   "settings.autoApprove.level.deny": "Deny",
-  "settings.autoApprove.tool.read": "Read file contents",
-  "settings.autoApprove.tool.edit": "Edit or create files",
-  "settings.autoApprove.tool.glob": "Find files by pattern",
-  "settings.autoApprove.tool.grep": "Search file contents",
-  "settings.autoApprove.tool.list": "List directory contents",
-  "settings.autoApprove.tool.bash": "Execute shell commands",
-  "settings.autoApprove.tool.task": "Create sub-agent tasks",
-  "settings.autoApprove.tool.skill": "Execute skills",
-  "settings.autoApprove.tool.lsp": "Language server operations",
-  "settings.autoApprove.tool.todoread": "Read todo lists",
-  "settings.autoApprove.tool.todowrite": "Write todo lists",
-  "settings.autoApprove.tool.webfetch": "Fetch web pages",
-  "settings.autoApprove.tool.websearch": "Search the web",
-  "settings.autoApprove.tool.codesearch": "Search codebase",
-  "settings.autoApprove.tool.external_directory": "Access files outside workspace",
-  "settings.autoApprove.tool.doom_loop": "Continue after repeated failures",
+  "settings.autoApprove.wildcardLabel.commands": "All commands (*)",
+  "settings.autoApprove.wildcardLabel.paths": "All paths (*)",
+  "settings.autoApprove.exceptions": "Exceptions",
+  "settings.autoApprove.addCommand": "Add command",
+  "settings.autoApprove.addPath": "Add path",
+  "settings.autoApprove.placeholder.command": "e.g. git *",
+  "settings.autoApprove.placeholder.path": "e.g. *.env",
+  "settings.autoApprove.tool.external_directory":
+    "Access files outside workspace. Triggered when accessing files outside the current project directory.",
+  "settings.autoApprove.tool.bash": "Run terminal commands. Allows execution of shell commands (e.g., git status).",
+  "settings.autoApprove.tool.read": "Read files. Allows the agent to read files matching the specified path.",
+  "settings.autoApprove.tool.edit":
+    "Modify files. Allows the agent to create or edit files, including patches and multi-file updates.",
+  "settings.autoApprove.tool.glob":
+    "Match files by pattern. Allows file matching using glob patterns (e.g., src/**/*.ts).",
+  "settings.autoApprove.tool.grep": "Search file contents. Allows regex-based search inside files.",
+  "settings.autoApprove.tool.list": "List directory contents. Allows viewing files and folders within a directory.",
+  "settings.autoApprove.tool.task": "Launch sub-agents. Allows starting specialized sub-agents for specific tasks.",
+  "settings.autoApprove.tool.skill": "Load skills. Allows loading predefined skills by name.",
+  "settings.autoApprove.tool.lsp":
+    "Query language server. Allows running language server queries for code intelligence.",
+  "settings.autoApprove.tool.todoreadwrite": "Manage task list. Allows reading and updating the internal task list.",
+  "settings.autoApprove.tool.webfetch": "Fetch a URL. Allows retrieving content from a specific URL.",
+  "settings.autoApprove.tool.websearchcodesearch":
+    "Search web or code. Allows performing external web or code searches.",
+  "settings.autoApprove.tool.doom_loop":
+    "Prevent repeated identical actions. Triggered when the same tool call repeats with identical input.",
 
   "settings.checkpoints.enable.title": "Enable Snapshots",
   "settings.checkpoints.enable.description": "Create checkpoints before file edits so you can restore previous states",

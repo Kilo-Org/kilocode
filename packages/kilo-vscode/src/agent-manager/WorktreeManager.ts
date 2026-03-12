@@ -3,7 +3,7 @@
  *
  * Ported from kilocode/src/core/kilocode/agent-manager/WorktreeManager.ts.
  * Handles creation, discovery, and cleanup of worktrees stored in
- * {projectRoot}/.kilocode/worktrees/
+ * {projectRoot}/.kilo/worktrees/
  */
 
 import * as path from "path"
@@ -29,7 +29,10 @@ import {
 interface WorktreeInfo {
   branch: string
   path: string
+  /** Bare branch name (e.g. "main"), without remote prefix. */
   parentBranch: string
+  /** Remote name (e.g. "origin"). */
+  remote?: string
   createdAt: number
   sessionId?: string
 }
@@ -38,7 +41,10 @@ export type StartPointSource = "remote" | "local-tracking" | "local-branch" | "f
 
 interface StartPointResult {
   ref: string
+  /** Bare branch name (e.g. "main"), without remote prefix. */
   branch: string
+  /** Remote name (e.g. "origin") when the start point came from a remote. */
+  remote?: string
   source: StartPointSource
   warning?: string
 }
@@ -48,17 +54,31 @@ type WorktreeProgressStep = "syncing" | "verifying" | "fetching" | "creating"
 export interface CreateWorktreeResult {
   branch: string
   path: string
+  /** Bare branch name (e.g. "main"), without remote prefix. */
   parentBranch: string
+  /** Remote name (e.g. "origin"). */
+  remote?: string
   startPointSource: StartPointSource
   startPointWarning?: string
 }
 
-interface ExternalWorktreeItem {
+export interface ExternalWorktreeItem {
   path: string
   branch: string
 }
 
-const KILOCODE_DIR = ".kilocode"
+/**
+ * Backward compat: split a possibly-prefixed branch like "origin/main" into
+ * `{ branch: "main", remote: "origin" }`. If no slash is found, returns bare branch.
+ */
+function stripRemotePrefix(ref: string): { branch: string; remote?: string } {
+  const idx = ref.indexOf("/")
+  if (idx > 0) return { branch: ref.slice(idx + 1), remote: ref.slice(0, idx) }
+  return { branch: ref }
+}
+
+import { KILO_DIR, LEGACY_DIR, migrateAgentManagerData } from "./constants"
+
 const SESSION_ID_FILE = "session-id"
 const METADATA_FILE = "metadata.json"
 
@@ -68,13 +88,21 @@ export class WorktreeManager {
   private readonly git: SimpleGit
   private readonly ops: GitOps | undefined
   private readonly log: (msg: string) => void
+  private migrated = false
 
   constructor(root: string, log: (msg: string) => void, ops?: GitOps) {
     this.root = root
-    this.dir = path.join(root, KILOCODE_DIR, "worktrees")
+    this.dir = path.join(root, KILO_DIR, "worktrees")
     this.git = simpleGit(root)
     this.ops = ops
     this.log = log
+  }
+
+  /** Run once before first read/write to migrate Agent Manager data from .kilocode → .kilo. */
+  private async ensureMigrated(): Promise<void> {
+    if (this.migrated) return
+    this.migrated = true
+    await migrateAgentManagerData(this.root, this.log)
   }
 
   // ---------------------------------------------------------------------------
@@ -109,6 +137,7 @@ export class WorktreeManager {
     branchName?: string
     onProgress?: (step: WorktreeProgressStep, message: string, detail?: string) => void
   }): Promise<CreateWorktreeResult> {
+    await this.ensureMigrated()
     return this.withGitLock(() => this.createWorktreeImpl(params))
   }
 
@@ -137,16 +166,22 @@ export class WorktreeManager {
     await this.ensureDir()
     await this.ensureGitExclude()
 
-    // Resolve start point (parent branch)
+    // Resolve start point (parent branch + remote)
     let parent: string
+    let parentRemote: string | undefined
     let startPoint: StartPointResult | undefined
 
     if (params.existingBranch) {
-      // Existing branch provided directly
+      // Existing branch provided directly — only attach remote when the
+      // remote tracking ref actually exists (the branch may be local-only).
+      const remote = await this.resolveRemote()
+      const hasRemoteRef = remote && (await this.refExistsLocally(`${remote}/${params.existingBranch}`))
       parent = params.existingBranch
+      parentRemote = hasRemoteRef ? remote : undefined
       startPoint = {
         ref: params.existingBranch,
         branch: params.existingBranch,
+        remote: hasRemoteRef ? remote : undefined,
         source: "local-branch",
       }
     } else {
@@ -158,6 +193,7 @@ export class WorktreeManager {
         allowFallback: !params.baseBranch, // Only fallback if user didn't explicitly request a specific base
       })
       parent = startPoint.branch
+      parentRemote = startPoint.remote
     }
 
     const sanitized = params.branchName ? sanitizeBranchName(params.branchName) : undefined
@@ -207,11 +243,14 @@ export class WorktreeManager {
       await this.git.raw(retryArgs)
     }
 
-    this.log(`Created worktree: ${worktreePath} (branch: ${branch}, base: ${parent})`)
+    this.log(
+      `Created worktree: ${worktreePath} (branch: ${branch}, base: ${parentRemote ? `${parentRemote}/` : ""}${parent})`,
+    )
     return {
       branch,
       path: worktreePath,
       parentBranch: parent,
+      remote: parentRemote,
       startPointSource: startPoint.source,
       startPointWarning: startPoint.warning,
     }
@@ -262,6 +301,7 @@ export class WorktreeManager {
   }
 
   async discoverWorktrees(): Promise<WorktreeInfo[]> {
+    await this.ensureMigrated()
     if (!fs.existsSync(this.dir)) return []
 
     const entries = await fs.promises.readdir(this.dir, { withFileTypes: true })
@@ -271,29 +311,52 @@ export class WorktreeManager {
     return results.filter((info): info is WorktreeInfo => info !== undefined)
   }
 
-  async writeMetadata(worktreePath: string, sessionId: string, parentBranch: string): Promise<void> {
-    const dir = path.join(worktreePath, KILOCODE_DIR)
+  async writeMetadata(worktreePath: string, sessionId: string, parentBranch: string, remote?: string): Promise<void> {
+    const dir = path.join(worktreePath, KILO_DIR)
     if (!fs.existsSync(dir)) await fs.promises.mkdir(dir, { recursive: true })
 
-    // Write both formats: session-id for backward compat, metadata.json for parentBranch
+    const meta: Record<string, string> = { sessionId, parentBranch }
+    if (remote) meta.remote = remote
+
+    // Write both formats: session-id for backward compat, metadata.json for parentBranch+remote
     await Promise.all([
       fs.promises.writeFile(path.join(dir, SESSION_ID_FILE), sessionId, "utf-8"),
-      fs.promises.writeFile(path.join(dir, METADATA_FILE), JSON.stringify({ sessionId, parentBranch }), "utf-8"),
+      fs.promises.writeFile(path.join(dir, METADATA_FILE), JSON.stringify(meta), "utf-8"),
     ])
     this.log(`Wrote metadata for session ${sessionId} to ${worktreePath}`)
     await this.ensureWorktreeExclude(worktreePath)
   }
 
-  async readMetadata(worktreePath: string): Promise<{ sessionId: string; parentBranch?: string } | undefined> {
-    const dir = path.join(worktreePath, KILOCODE_DIR)
+  async readMetadata(
+    worktreePath: string,
+  ): Promise<{ sessionId: string; parentBranch?: string; remote?: string } | undefined> {
+    // Check .kilo/ first, then legacy .kilocode/
+    for (const dirName of [KILO_DIR, LEGACY_DIR]) {
+      const result = await this.readMetadataFrom(worktreePath, dirName)
+      if (result) return result
+    }
+    return undefined
+  }
 
-    // Try metadata.json first (has parentBranch)
+  private async readMetadataFrom(
+    worktreePath: string,
+    dirName: string,
+  ): Promise<{ sessionId: string; parentBranch?: string; remote?: string } | undefined> {
+    const dir = path.join(worktreePath, dirName)
+
+    // Try metadata.json first (has parentBranch + remote)
     try {
       const content = await fs.promises.readFile(path.join(dir, METADATA_FILE), "utf-8")
-      const data = JSON.parse(content)
-      if (data.sessionId) return { sessionId: data.sessionId, parentBranch: data.parentBranch }
-    } catch {
-      // Fall back to session-id file
+      const data = JSON.parse(content) as { sessionId?: string; parentBranch?: string; remote?: string }
+      if (data.sessionId) {
+        return {
+          sessionId: data.sessionId,
+          parentBranch: data.parentBranch,
+          remote: data.remote,
+        }
+      }
+    } catch (e) {
+      this.log(`readMetadata: metadata.json unreadable in ${worktreePath}: ${e}`)
     }
 
     // Legacy: plain text session-id file
@@ -301,8 +364,8 @@ export class WorktreeManager {
       const content = await fs.promises.readFile(path.join(dir, SESSION_ID_FILE), "utf-8")
       const id = content.trim()
       if (id) return { sessionId: id }
-    } catch {
-      // No metadata
+    } catch (e) {
+      this.log(`readMetadata: session-id unreadable in ${worktreePath}: ${e}`)
     }
 
     return undefined
@@ -315,13 +378,26 @@ export class WorktreeManager {
   async ensureGitExclude(): Promise<void> {
     const gitDir = await this.resolveGitDir()
     const excludePath = path.join(gitDir, "info", "exclude")
-    await this.addExcludeEntry(excludePath, ".kilocode/worktrees/", "Kilo Code agent worktrees")
-    await this.addExcludeEntry(excludePath, ".kilocode/agent-manager.json", "Kilo Agent Manager state")
-    await this.addExcludeEntry(excludePath, ".kilocode/setup-script", "Kilo Code worktree setup script")
-    await this.addExcludeEntry(excludePath, ".kilocode/setup-script.sh", "Kilo Code worktree setup script")
-    await this.addExcludeEntry(excludePath, ".kilocode/setup-script.ps1", "Kilo Code worktree setup script")
-    await this.addExcludeEntry(excludePath, ".kilocode/setup-script.cmd", "Kilo Code worktree setup script")
-    await this.addExcludeEntry(excludePath, ".kilocode/setup-script.bat", "Kilo Code worktree setup script")
+    const items = [
+      [".kilo/worktrees/", "Kilo Code agent worktrees"],
+      [".kilo/agent-manager.json", "Kilo Agent Manager state"],
+      [".kilo/setup-script", "Kilo Code worktree setup script"],
+      [".kilo/setup-script.sh", "Kilo Code worktree setup script"],
+      [".kilo/setup-script.ps1", "Kilo Code worktree setup script"],
+      [".kilo/setup-script.cmd", "Kilo Code worktree setup script"],
+      [".kilo/setup-script.bat", "Kilo Code worktree setup script"],
+      [".kilocode/worktrees/", "Kilo Code legacy agent worktrees"],
+      [".kilocode/agent-manager.json", "Kilo Agent Manager legacy state"],
+      [".kilocode/setup-script", "Kilo Code legacy worktree setup script"],
+      [".kilocode/setup-script.sh", "Kilo Code legacy worktree setup script"],
+      [".kilocode/setup-script.ps1", "Kilo Code legacy worktree setup script"],
+      [".kilocode/setup-script.cmd", "Kilo Code legacy worktree setup script"],
+      [".kilocode/setup-script.bat", "Kilo Code legacy worktree setup script"],
+    ] as const
+
+    for (const [entry, comment] of items) {
+      await this.addExcludeEntry(excludePath, entry, comment)
+    }
   }
 
   private async ensureWorktreeExclude(worktreePath: string): Promise<void> {
@@ -332,11 +408,7 @@ export class WorktreeManager {
 
       const worktreeGitDir = path.resolve(worktreePath, match[1].trim())
       const mainGitDir = path.dirname(path.dirname(worktreeGitDir))
-      await this.addExcludeEntry(
-        path.join(mainGitDir, "info", "exclude"),
-        `${KILOCODE_DIR}/`,
-        "Kilo Code session metadata",
-      )
+      await this.addExcludeEntry(path.join(mainGitDir, "info", "exclude"), `${KILO_DIR}/`, "Kilo Code session metadata")
     } catch (error) {
       this.log(`Warning: Failed to update git exclude for worktree: ${error}`)
     }
@@ -400,6 +472,7 @@ export class WorktreeManager {
       const stat = await fs.promises.stat(gitFile)
       if (!stat.isFile()) return undefined
     } catch {
+      // .git path inaccessible — not a valid worktree
       return undefined
     }
 
@@ -410,12 +483,27 @@ export class WorktreeManager {
         fs.promises.stat(wtPath),
         this.readMetadata(wtPath),
       ])
-      // Use persisted parentBranch if available, fall back to defaultBranch
-      const parent = meta?.parentBranch ?? (await this.defaultBranch())
+      // Use persisted metadata if available, fall back to resolveBaseBranch.
+      // Backward compat: old metadata may store "origin/main" in parentBranch without
+      // a separate remote field. Try to detect this by checking if the prefix is a known remote.
+      const base =
+        (await (async () => {
+          if (!meta?.parentBranch) return undefined
+          if (meta.remote) return { branch: meta.parentBranch, remote: meta.remote }
+          // Backward compat: old metadata stored "origin/main" in parentBranch.
+          // Only split when the prefix is a known remote name (not a branch like "release/1.0").
+          const split = stripRemotePrefix(meta.parentBranch)
+          if (split.remote) {
+            const remotes = await this.git.getRemotes().catch(() => [])
+            if (remotes.some((r) => r.name === split.remote)) return split
+          }
+          return { branch: meta.parentBranch }
+        })()) ?? (await this.resolveBaseBranch())
       return {
         branch: branch.trim(),
         path: wtPath,
-        parentBranch: parent,
+        parentBranch: base.branch,
+        remote: base.remote,
         createdAt: stat.birthtimeMs,
         sessionId: meta?.sessionId,
       }
@@ -433,27 +521,30 @@ export class WorktreeManager {
     const { allowFallback = true } = opts || {}
 
     // 1. Remote fetch
-    if (await this.hasOriginRemote()) {
-      onProgress?.("fetching", `Fetching origin/${branch}...`)
+    const remote = await this.resolveRemote()
+    if (remote) {
+      onProgress?.("fetching", `Fetching ${remote}/${branch}...`)
       try {
-        await this.git.fetch("origin", branch)
-        if (await this.refExistsLocally(`origin/${branch}`)) {
+        await this.git.fetch(remote, branch)
+        if (await this.refExistsLocally(`${remote}/${branch}`)) {
           return {
-            ref: `origin/${branch}`,
-            branch: branch,
+            ref: `${remote}/${branch}`,
+            branch,
+            remote,
             source: "remote",
           }
         }
       } catch (e) {
-        this.log(`Failed to fetch origin/${branch}: ${e}`)
+        this.log(`Failed to fetch ${remote}/${branch}: ${e}`)
       }
     }
 
     // 2. Stale local tracking ref (offline fallback)
-    if (await this.refExistsLocally(`origin/${branch}`)) {
+    if (remote && (await this.refExistsLocally(`${remote}/${branch}`))) {
       return {
-        ref: `origin/${branch}`,
-        branch: branch,
+        ref: `${remote}/${branch}`,
+        branch,
+        remote,
         source: "local-tracking",
         warning: "Used stale remote tracking branch (fetch failed)",
       }
@@ -463,7 +554,7 @@ export class WorktreeManager {
     if (await this.refExistsLocally(branch)) {
       return {
         ref: branch,
-        branch: branch,
+        branch,
         source: "local-branch",
       }
     }
@@ -480,8 +571,8 @@ export class WorktreeManager {
             source: "fallback",
             warning: `Branch "${branch}" not found, falling back to "${fallback}"`,
           }
-        } catch {
-          // continue
+        } catch (e) {
+          this.log(`resolveStartPoint: fallback "${fallback}" failed: ${e}`)
         }
       }
     }
@@ -489,13 +580,23 @@ export class WorktreeManager {
     throw new Error(`Could not resolve start point for branch "${branch}"`)
   }
 
-  async hasOriginRemote(): Promise<boolean> {
-    try {
-      const remotes = await this.git.getRemotes()
-      return remotes.some((r) => r.name === "origin")
-    } catch {
-      return false
+  /**
+   * Resolve the primary remote name for this repo.
+   * Uses `GitOps.resolveRemote` when available, otherwise checks for "origin".
+   * Returns `undefined` when no remote exists (local-only repo).
+   */
+  async resolveRemote(): Promise<string | undefined> {
+    if (this.ops) {
+      const name = await this.ops.resolveRemote(this.root).catch(() => "origin")
+      const remotes = await this.git.getRemotes().catch(() => [])
+      return remotes.some((r: { name: string }) => r.name === name) ? name : undefined
     }
+    const remotes = await this.git.getRemotes().catch(() => [])
+    return remotes.some((r) => r.name === "origin") ? "origin" : undefined
+  }
+
+  async hasOriginRemote(): Promise<boolean> {
+    return (await this.resolveRemote()) !== undefined
   }
 
   async refExistsLocally(ref: string): Promise<boolean> {
@@ -503,6 +604,7 @@ export class WorktreeManager {
       await this.git.raw(["rev-parse", "--verify", `${ref}^{commit}`])
       return true
     } catch {
+      // ref does not exist
       return false
     }
   }
@@ -511,7 +613,9 @@ export class WorktreeManager {
     const defaults = []
     try {
       defaults.push(await this.defaultBranch())
-    } catch {}
+    } catch (e) {
+      this.log(`derivedFallbackBranches: failed to determine default branch: ${e}`)
+    }
     return defaults
   }
 
@@ -524,13 +628,17 @@ export class WorktreeManager {
     try {
       const attributes = await fs.promises.readFile(path.join(this.root, ".gitattributes"), "utf-8")
       if (attributes.includes("filter=lfs")) return true
-    } catch {}
+    } catch (e) {
+      this.log(`repoUsesLfs: failed to read .gitattributes: ${e}`)
+    }
 
     // Check .git/info/attributes
     try {
       const infoAttributes = await fs.promises.readFile(path.join(gitDir, "info", "attributes"), "utf-8")
       if (infoAttributes.includes("filter=lfs")) return true
-    } catch {}
+    } catch (e) {
+      this.log(`repoUsesLfs: failed to read info/attributes: ${e}`)
+    }
 
     return false
   }
@@ -540,6 +648,7 @@ export class WorktreeManager {
       await execWithShellEnv("git", ["lfs", "version"], { cwd: this.root, timeout: 5000 })
       return true
     } catch {
+      // git-lfs not installed
       return false
     }
   }
@@ -557,19 +666,38 @@ export class WorktreeManager {
     try {
       const branches = await this.git.branch()
       return branches.all.includes(name) || branches.all.includes(`remotes/origin/${name}`)
-    } catch {
+    } catch (e) {
+      this.log(`branchExists: failed to list branches: ${e}`)
       return false
     }
   }
 
+  /**
+   * Resolve the base branch and remote for diffs and comparisons.
+   * Returns a bare branch name + remote name so callers can construct
+   * `${remote}/${branch}` at diff time (mirroring what a PR would show).
+   */
+  async resolveBaseBranch(): Promise<{ branch: string; remote?: string }> {
+    const branch = await this.defaultBranch()
+    const remote = await this.resolveRemote()
+    if (remote && (await this.refExistsLocally(`${remote}/${branch}`))) {
+      return { branch, remote }
+    }
+    return { branch }
+  }
+
   async defaultBranch(): Promise<string> {
-    // 1. Try symbolic-ref
-    try {
-      const head = await this.git.raw(["symbolic-ref", "refs/remotes/origin/HEAD"])
-      const match = head.trim().match(/refs\/remotes\/origin\/(.+)$/)
-      if (match) return match[1]
-    } catch (e) {
-      this.log(`defaultBranch: symbolic-ref failed: ${e}`)
+    // 1. Try symbolic-ref against the resolved remote (not hardcoded "origin")
+    const remote = await this.resolveRemote()
+    if (remote) {
+      try {
+        const head = await this.git.raw(["symbolic-ref", `refs/remotes/${remote}/HEAD`])
+        const prefix = `refs/remotes/${remote}/`
+        const trimmed = head.trim()
+        if (trimmed.startsWith(prefix)) return trimmed.slice(prefix.length)
+      } catch (e) {
+        this.log(`defaultBranch: symbolic-ref for ${remote} failed: ${e}`)
+      }
     }
 
     // 2. Try current branch (if not detached)
@@ -738,6 +866,7 @@ export class WorktreeManager {
       await this.gitExec(args)
       return true
     } catch {
+      // Command failed — caller handles false return
       return false
     }
   }

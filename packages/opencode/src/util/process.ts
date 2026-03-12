@@ -56,6 +56,7 @@ export namespace Process {
       cwd: opts.cwd,
       env: opts.env === null ? {} : opts.env ? { ...process.env, ...opts.env } : undefined,
       stdio: [opts.stdin ?? "ignore", opts.stdout ?? "ignore", opts.stderr ?? "ignore"],
+      windowsHide: true, // kilocode_change - prevent CMD window flash on Windows
     })
 
     let closed = false

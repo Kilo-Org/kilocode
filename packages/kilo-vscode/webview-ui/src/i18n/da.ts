@@ -409,6 +409,8 @@ export const dict = {
 
   "error.globalSync.connectFailed": "Kunne ikke forbinde til server. Kører der en server på `{{url}}`?",
 
+  "error.startup.title": "Serverforbindelse mislykkedes",
+
   "error.paidModel.title": "Du skal logge ind for at bruge denne model",
   "error.paidModel.description":
     "Log ind eller opret en konto for at få adgang til over 500 modeller, brug kreditter til kostpris, eller medbring din egen nøgle.",
@@ -670,6 +672,8 @@ export const dict = {
 
   "settings.providers.title": "Udbydere",
   "settings.providers.description": "Udbyderindstillinger vil kunne konfigureres her.",
+  "settings.providers.betaNotice":
+    "I øjeblikket kan kun Kilo Gateway-udbyderen konfigureres i indstillingsgrænsefladen. Understøttelse af konfiguration af andre udbydere kommer snart i løbet af betaperioden. I mellemtiden kan du konfigurere udbydere via CLI eller konfigurationsfilen. Vi er dedikerede til at holde Kilo åben, ingen lock-in.",
   "settings.providers.section.connected": "Forbundne udbydere",
   "settings.providers.connected.empty": "Ingen forbundne udbydere",
   "settings.providers.section.popular": "Populære udbydere",
@@ -739,10 +743,16 @@ export const dict = {
   "session.empty": "Ingen sessioner endnu. Klik + for at starte en ny samtale.",
   "session.cloud.repoOnly": "Kun dette repository",
   "session.cloud.import": "Importér fra skyen",
+  "feedback.button": "Feedback & support",
+  "feedback.dialog.message": "Vi vil gerne høre din feedback eller hjælpe med eventuelle problemer, du oplever.",
+  "feedback.dialog.github": "Rapportér et problem på GitHub",
+  "feedback.dialog.discord": "Deltag i vores Discord-fællesskab",
+  "feedback.dialog.support": "Kundesupport",
   "session.cloud.import.title": "Importér fra skyen",
   "session.cloud.import.placeholder": "Sessions-ID, URL eller kilo import-kommando",
   "session.cloud.import.button": "Importér",
   "session.cloud.import.invalid": "Ugyldigt sessions-ID-format",
+  "session.cloud.import.legacy": "Dette ser ud til at være en ældre session, som ikke længere understøttes.",
   "session.cloud.import.failed": "Kunne ikke importere cloud-session",
 
   "workspace.new": "Nyt arbejdsområde",
@@ -925,7 +935,10 @@ export const dict = {
   "settings.experimental.toolToggles": "Værktøjsskift",
   "settings.agentBehaviour.defaultAgent.title": "Standardagent",
   "settings.agentBehaviour.defaultAgent.description": "Agent til brug, når ingen er angivet",
+  "settings.agentBehaviour.availableAgents": "Tilgængelige agenter",
   "settings.agentBehaviour.selectAgent": "Vælg en agent at konfigurere…",
+  "settings.agentBehaviour.selectAgent.title": "Agent",
+  "settings.agentBehaviour.selectAgent.description": "Vælg en agent at konfigurere…",
   "settings.agentBehaviour.modelOverride.title": "Modeloverstyring",
   "settings.agentBehaviour.modelOverride.description": "Tilsidesæt standardmodellen for denne agent",
   "settings.agentBehaviour.prompt.title": "Brugerdefineret prompt",
@@ -936,6 +949,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Nucleus-samplingparameter (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Maks. trin",
   "settings.agentBehaviour.maxSteps.description": "Maksimale agentiterationer",
+  "settings.agentBehaviour.discoveredSkills": "Opdagede skills",
+  "settings.agentBehaviour.noSkillsFound":
+    "Ingen skills fundet. Tilføj skill-mappestier eller URL'er nedenfor for at gøre skills tilgængelige.",
   "settings.agentBehaviour.skillPaths": "Skill-mappestier",
   "settings.agentBehaviour.skillUrls": "Skill-URL'er",
   "settings.agentBehaviour.instructionFiles": "Yderligere instruktionsfiler",
@@ -944,26 +960,42 @@ export const dict = {
     "Ingen MCP-servere konfigureret. Rediger opencode-konfigurationsfilen for at tilføje MCP-servere.",
   "settings.agentBehaviour.workflowsPlaceholder": "Workflows administreres via workflow-filer i dit arbejdsområde.",
   "settings.agentBehaviour.notImplemented": "Endnu ikke implementeret.",
-  "settings.autoApprove.setAll": "Indstil alle tilladelser",
+  "settings.autoApprove.description":
+    "Definer, hvordan værktøjer må køre. De fleste værktøjer er som standard indstillet til Tillad. doom_loop og external_directory er som standard indstillet til Spørg.",
   "settings.autoApprove.level.allow": "Tillad",
   "settings.autoApprove.level.ask": "Spørg",
   "settings.autoApprove.level.deny": "Afvis",
-  "settings.autoApprove.tool.read": "Læs filindhold",
-  "settings.autoApprove.tool.edit": "Rediger eller opret filer",
-  "settings.autoApprove.tool.glob": "Find filer efter mønster",
-  "settings.autoApprove.tool.grep": "Søg i filindhold",
-  "settings.autoApprove.tool.list": "List mappeindhold",
-  "settings.autoApprove.tool.bash": "Udfør shell-kommandoer",
-  "settings.autoApprove.tool.task": "Opret underagentopgaver",
-  "settings.autoApprove.tool.skill": "Udfør skills",
-  "settings.autoApprove.tool.lsp": "Sprogserveroperationer",
-  "settings.autoApprove.tool.todoread": "Læs opgavelister",
-  "settings.autoApprove.tool.todowrite": "Skriv opgavelister",
-  "settings.autoApprove.tool.webfetch": "Hent websider",
-  "settings.autoApprove.tool.websearch": "Søg på nettet",
-  "settings.autoApprove.tool.codesearch": "Søg i kodebasen",
-  "settings.autoApprove.tool.external_directory": "Adgang til filer uden for arbejdsområdet",
-  "settings.autoApprove.tool.doom_loop": "Fortsæt efter gentagne fejl",
+  "settings.autoApprove.wildcardLabel.commands": "Alle kommandoer (*)",
+  "settings.autoApprove.wildcardLabel.paths": "Alle stier (*)",
+  "settings.autoApprove.exceptions": "Undtagelser",
+  "settings.autoApprove.addCommand": "Tilføj kommando",
+  "settings.autoApprove.addPath": "Tilføj sti",
+  "settings.autoApprove.placeholder.command": "f.eks. git *",
+  "settings.autoApprove.placeholder.path": "f.eks. *.env",
+  "settings.autoApprove.tool.read": "Læs filer. Tillader agenten at læse filer, der matcher den angivne sti.",
+  "settings.autoApprove.tool.edit":
+    "Rediger filer. Tillader agenten at oprette eller redigere filer, herunder patches og opdateringer af flere filer.",
+  "settings.autoApprove.tool.glob":
+    "Find filer efter mønster. Tillader filsøgning ved hjælp af glob-mønstre (f.eks. src/**/*.ts).",
+  "settings.autoApprove.tool.grep": "Søg i filindhold. Tillader regex-baseret søgning i filer.",
+  "settings.autoApprove.tool.list": "Vis mappeindhold. Tillader visning af filer og mapper i en mappe.",
+  "settings.autoApprove.tool.bash":
+    "Kør terminalkommandoer. Tillader udførelse af shell-kommandoer (f.eks. git status).",
+  "settings.autoApprove.tool.task":
+    "Start underagenter. Tillader start af specialiserede underagenter til specifikke opgaver.",
+  "settings.autoApprove.tool.skill":
+    "Indlæs færdigheder. Tillader indlæsning af foruddefinerede færdigheder efter navn.",
+  "settings.autoApprove.tool.lsp":
+    "Forespørg sprogserver. Tillader kørsel af sprogserverforespørgsler til kodeintelligens.",
+  "settings.autoApprove.tool.todoreadwrite":
+    "Administrer opgaveliste. Tillader læsning og opdatering af den interne opgaveliste.",
+  "settings.autoApprove.tool.webfetch": "Hent en URL. Tillader hentning af indhold fra en specifik URL.",
+  "settings.autoApprove.tool.websearchcodesearch":
+    "Søg på nettet eller i kode. Tillader udførelse af eksterne web- eller kodesøgninger.",
+  "settings.autoApprove.tool.external_directory":
+    "Få adgang til filer uden for arbejdsområdet. Udløses ved adgang til filer uden for den aktuelle projektmappe.",
+  "settings.autoApprove.tool.doom_loop":
+    "Forhindr gentagne identiske handlinger. Udløses, når det samme værktøjskald gentages med identisk input.",
   "settings.checkpoints.enable.title": "Aktiver snapshots",
   "settings.checkpoints.enable.description": "Opret kontrolpunkter før filredigeringer",
   "settings.context.autoCompaction.title": "Automatisk komprimering",
