@@ -348,7 +348,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           await this.handleAbort(message.sessionID)
           break
         case "permissionResponse":
-          await this.handlePermissionResponse(message.permissionId, message.sessionID, message.response)
+          await this.handlePermissionResponse(
+            message.permissionId,
+            message.sessionID,
+            message.response,
+            message.approvedPatterns,
+            message.deniedPatterns,
+          )
           break
         case "createSession":
           await this.handleCreateSession()
@@ -1541,6 +1547,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     permissionId: string,
     sessionID: string,
     response: "once" | "always" | "reject",
+    approvedPatterns: string[],
+    deniedPatterns: string[],
   ): Promise<void> {
     if (!this.client) {
       this.postMessage({ type: "permissionError", permissionID: permissionId })
@@ -1557,7 +1565,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     try {
       const workspaceDir = this.getWorkspaceDirectory(targetSessionID)
       await this.client.permission.reply(
-        { requestID: permissionId, reply: response, directory: workspaceDir },
+        {
+          requestID: permissionId,
+          reply: response,
+          directory: workspaceDir,
+          approvedPatterns,
+          deniedPatterns,
+        },
         { throwOnError: true },
       )
     } catch (error) {

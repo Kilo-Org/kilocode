@@ -687,3 +687,78 @@ test("ask - allows all patterns when all match allow rules", async () => {
     },
   })
 })
+
+test("reply - approvedPatterns saves allow rules for future requests", async () => {
+  await using tmp = await tmpdir({ git: true })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const askPromise = PermissionNext.ask({
+        id: "permission_approved1",
+        sessionID: "session_test",
+        permission: "bash",
+        patterns: ["npm install"],
+        metadata: {},
+        always: [],
+        ruleset: [],
+      })
+
+      await PermissionNext.reply({
+        requestID: "permission_approved1",
+        reply: "once",
+        approvedPatterns: ["npm install"],
+      })
+
+      await expect(askPromise).resolves.toBeUndefined()
+
+      // The approved pattern should now auto-allow future requests
+      const result = await PermissionNext.ask({
+        sessionID: "session_test",
+        permission: "bash",
+        patterns: ["npm install"],
+        metadata: {},
+        always: [],
+        ruleset: [],
+      })
+      expect(result).toBeUndefined()
+    },
+  })
+})
+
+test("reply - deniedPatterns saves deny rules for future requests", async () => {
+  await using tmp = await tmpdir({ git: true })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const askPromise = PermissionNext.ask({
+        id: "permission_denied1",
+        sessionID: "session_test",
+        permission: "bash",
+        patterns: ["rm -rf /"],
+        metadata: {},
+        always: [],
+        ruleset: [],
+      })
+
+      await PermissionNext.reply({
+        requestID: "permission_denied1",
+        reply: "once",
+        deniedPatterns: ["rm -rf /"],
+      })
+
+      await expect(askPromise).resolves.toBeUndefined()
+
+      // The denied pattern should now auto-deny future requests
+      await expect(
+        PermissionNext.ask({
+          sessionID: "session_test",
+          permission: "bash",
+          patterns: ["rm -rf /"],
+          metadata: {},
+          always: [],
+          ruleset: [],
+        }),
+      ).rejects.toBeInstanceOf(PermissionNext.DeniedError)
+    },
+  })
+})

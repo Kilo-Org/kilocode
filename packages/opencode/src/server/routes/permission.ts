@@ -31,7 +31,15 @@ export const PermissionRoutes = lazy(() =>
           requestID: z.string(),
         }),
       ),
-      validator("json", z.object({ reply: PermissionNext.Reply, message: z.string().optional() })),
+      validator(
+        "json",
+        z.object({
+          reply: PermissionNext.Reply,
+          message: z.string().optional(),
+          approvedPatterns: z.string().array().optional(), // kilocode_change
+          deniedPatterns: z.string().array().optional(), // kilocode_change
+        }),
+      ),
       async (c) => {
         const params = c.req.valid("param")
         const json = c.req.valid("json")
@@ -39,6 +47,8 @@ export const PermissionRoutes = lazy(() =>
           requestID: params.requestID,
           reply: json.reply,
           message: json.message,
+          approvedPatterns: json.approvedPatterns, // kilocode_change
+          deniedPatterns: json.deniedPatterns, // kilocode_change
         })
         return c.json(true)
       },
