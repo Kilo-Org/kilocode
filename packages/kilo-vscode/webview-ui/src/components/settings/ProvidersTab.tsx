@@ -2,21 +2,18 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { Card } from "@kilocode/kilo-ui/card"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { Select } from "@kilocode/kilo-ui/select"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { Component, For, Show, createMemo, createSignal, onCleanup } from "solid-js"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
+import { useServer } from "../../context/server"
 import { useVSCode } from "../../context/vscode"
 import type { ExtensionMessage, Provider } from "../../types/messages"
+import DeviceAuthCard from "../profile/DeviceAuthCard"
 import { providerSortKey } from "../shared/model-selector-utils"
 import ProviderConnectDialog from "./ProviderConnectDialog"
-
-interface ProviderOption {
-  value: string
-  label: string
-}
+import ProviderSelector, { type ProviderOption } from "./ProviderSelector"
 
 function sortProviders(items: Provider[]) {
   return items.slice().sort((a, b) => {
@@ -29,6 +26,7 @@ function sortProviders(items: Provider[]) {
 const ProvidersTab: Component = () => {
   const { config, updateConfig } = useConfig()
   const provider = useProvider()
+  const server = useServer()
   const language = useLanguage()
   const dialog = useDialog()
   const vscode = useVSCode()
@@ -51,6 +49,19 @@ const ProvidersTab: Component = () => {
   const providerOptions = createMemo<ProviderOption[]>(() =>
     sortProviders(Object.values(provider.providers())).map((item) => ({ value: item.id, label: item.name })),
   )
+
+  const kilo = createMemo<Provider>(() => {
+    return (
+      provider.providers().kilo ?? {
+        id: "kilo",
+        name: "Kilo Gateway",
+        source: "custom",
+        env: ["KILO_API_KEY"],
+        models: {},
+      }
+    )
+  })
+  const kiloConnected = createMemo(() => provider.connected().includes("kilo"))
 
   const availableOptions = createMemo(() => {
     const connected = new Set(provider.connected())
@@ -110,6 +121,10 @@ const ProvidersTab: Component = () => {
     updateConfig({ disabled_providers: current })
   }
 
+  function hide(item: Provider) {
+    addDisabled(item.id)
+  }
+
   function removeDisabled(index: number) {
     const current = [...disabledProviders()]
     current.splice(index, 1)
@@ -124,15 +139,22 @@ const ProvidersTab: Component = () => {
   }
 
   function type(item: Provider) {
+    const auth = provider.authStates()[item.id]
+    if (item.id === "kilo") return language.t("settings.providers.tag.gateway")
     if (item.source === "env") return language.t("settings.providers.tag.environment")
-    if (item.source === "api") return language.t("provider.connect.method.apiKey")
-    if (item.source === "config") return language.t("settings.providers.tag.config")
-    if (item.source === "custom") return language.t("settings.providers.tag.custom")
-    return language.t("settings.providers.tag.other")
+    if (auth === "oauth") return language.t("settings.providers.tag.oauth")
+    if (auth === "api") return language.t("provider.connect.method.apiKey")
+    if (item.source === "config") return language.t("settings.providers.tag.configured")
+    if (item.source === "custom") return language.t("settings.providers.tag.customProvider")
+    return language.t("settings.providers.tag.connected")
   }
 
   function canDisconnect(item: Provider) {
     return item.source !== "env"
+  }
+
+  function canHide(item: Provider) {
+    return item.id !== "kilo" && item.source === "env"
   }
 
   function openConnectDialog() {
@@ -142,8 +164,61 @@ const ProvidersTab: Component = () => {
     setNewConnected(undefined)
   }
 
+  function cancelKiloLogin() {
+    vscode.postMessage({ type: "cancelLogin" })
+  }
+
   return (
     <div>
+      <Show when={!kiloConnected()}>
+        <h4 style={{ "margin-bottom": "8px" }}>{kilo().name}</h4>
+        <Show
+          when={server.deviceAuth().status !== "idle"}
+          fallback={
+            <Card>
+              <div
+                style={{ display: "flex", "justify-content": "space-between", gap: "12px", "align-items": "center" }}
+              >
+                <div style={{ display: "flex", "flex-direction": "column", gap: "4px" }}>
+                  <div style={{ display: "flex", gap: "8px", "align-items": "center", "flex-wrap": "wrap" }}>
+                    <span style={{ "font-size": "12px", "font-weight": "500" }}>{kilo().name}</span>
+                    <span
+                      style={{
+                        "font-size": "11px",
+                        color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                        padding: "2px 6px",
+                        border: "1px solid var(--border-weak-base)",
+                        "border-radius": "999px",
+                      }}
+                    >
+                      {language.t("settings.providers.tag.gateway")}
+                    </span>
+                  </div>
+                  <span
+                    style={{ "font-size": "11px", color: "var(--text-weak-base, var(--vscode-descriptionForeground))" }}
+                  >
+                    {language.t("profile.notLoggedIn")}
+                  </span>
+                </div>
+                <Button variant="primary" size="small" onClick={server.startLogin}>
+                  {language.t("profile.action.login")}
+                </Button>
+              </div>
+            </Card>
+          }
+        >
+          <DeviceAuthCard
+            status={server.deviceAuth().status}
+            code={server.deviceAuth().code}
+            verificationUrl={server.deviceAuth().verificationUrl}
+            expiresIn={server.deviceAuth().expiresIn}
+            error={server.deviceAuth().error}
+            onCancel={cancelKiloLogin}
+            onRetry={server.startLogin}
+          />
+        </Show>
+      </Show>
+
       <h4 style={{ "margin-bottom": "8px" }}>{language.t("settings.providers.section.connected")}</h4>
       <Card>
         <Show
@@ -188,7 +263,16 @@ const ProvidersTab: Component = () => {
                     {item.id}
                   </span>
                 </div>
-                <Show when={canDisconnect(item)}>
+                <Show
+                  when={canDisconnect(item)}
+                  fallback={
+                    <Show when={canHide(item)}>
+                      <Button variant="ghost" size="small" onClick={() => hide(item)}>
+                        {language.t("settings.providers.action.hideModels")}
+                      </Button>
+                    </Show>
+                  }
+                >
                   <Button
                     variant="ghost"
                     size="small"
@@ -209,15 +293,10 @@ const ProvidersTab: Component = () => {
         <Card>
           <div style={{ display: "flex", gap: "8px", "align-items": "center" }}>
             <div style={{ flex: 1 }}>
-              <Select
+              <ProviderSelector
                 options={availableOptions()}
-                current={newConnected()}
-                value={(item) => item.value}
-                label={(item) => item.label}
+                value={newConnected()}
                 onSelect={(item) => setNewConnected(item)}
-                variant="secondary"
-                triggerVariant="settings"
-                placeholder="Select provider..."
               />
             </div>
             <Button variant="secondary" onClick={openConnectDialog} disabled={!newConnected()}>
@@ -249,15 +328,10 @@ const ProvidersTab: Component = () => {
           }}
         >
           <div style={{ flex: 1 }}>
-            <Select
+            <ProviderSelector
               options={disabledOptions()}
-              current={newDisabled()}
-              value={(item) => item.value}
-              label={(item) => item.label}
+              value={newDisabled()}
               onSelect={(item) => setNewDisabled(item)}
-              variant="secondary"
-              triggerVariant="settings"
-              placeholder="Select provider..."
             />
           </div>
           <Button

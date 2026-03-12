@@ -88,7 +88,15 @@ async function ensureBuiltBinary(): Promise<string> {
     `No prebuilt binary found under ${relative(kiloVscodeDir, join(opencodeDir, "dist"))} - attempting build via bun.`,
   )
 
-  const bunFile = Bun.file(await Bun.which("bun"))
+  const bunPath = await Bun.which("bun")
+  if (!bunPath) {
+    throw new Error(
+      `Bun is required to build the CLI binary, but was not found on PATH. ` +
+        `Install bun, or build the CLI separately in ${opencodeDir} and re-run.`,
+    )
+  }
+
+  const bunFile = Bun.file(bunPath)
   if (!(await bunFile.exists())) {
     throw new Error(
       `Bun is required to build the CLI binary, but was not found on PATH. ` +
@@ -128,10 +136,12 @@ async function main() {
     rmSync(targetBinPath)
     // Also remove the prebuilt dist so ensureBuiltBinary() triggers a fresh build
     const distDir = join(opencodeDir, "dist")
-    const distFile = Bun.file(distDir)
-    if (await distFile.exists()) {
+    try {
+      statSync(distDir)
       rmSync(distDir, { recursive: true })
       log(`Removed ${relative(kiloVscodeDir, distDir)} to force rebuild.`)
+    } catch {
+      // dist directory did not exist
     }
   }
 

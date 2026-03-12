@@ -1023,7 +1023,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * the map here so the rest of the code can use provider.id everywhere.
    */
   private async fetchAndSendProviders(): Promise<void> {
-    if (!this.client) {
+    const client = this.client
+    if (!client) {
       // client not ready — serve from cache if available
       if (this.cachedProvidersMessage) {
         this.postMessage(this.cachedProvidersMessage)
@@ -1034,8 +1035,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     try {
       const workspaceDir = this.getWorkspaceDirectory()
       const authRequest =
-        typeof this.client.provider.auth === "function"
-          ? this.client.provider
+        typeof client.provider.auth === "function"
+          ? client.provider
               .auth({ directory: workspaceDir }, { throwOnError: true })
               .then((result) => result.data ?? {})
               .catch((error: unknown) => {
@@ -1043,9 +1044,27 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
                 return {}
               })
           : Promise.resolve({})
-      const [{ data: response }, authMethods] = await Promise.all([
-        this.client.provider.list({ directory: workspaceDir }, { throwOnError: true }),
+      const auth = (client.auth ?? {}) as {
+        list?: (
+          params: { directory: string },
+          options: { throwOnError: true },
+        ) => Promise<{ data?: Record<string, "api" | "oauth" | "wellknown"> }>
+      }
+      const authStatesRequest: Promise<Record<string, "api" | "oauth" | "wellknown">> =
+        typeof auth.list === "function"
+          ? auth
+              .list({ directory: workspaceDir }, { throwOnError: true })
+              .then((result) => result.data ?? {})
+              .catch((error: unknown) => {
+                console.warn("[Kilo New] KiloProvider: Failed to fetch provider auth states:", error)
+                return {}
+              })
+          : Promise.resolve({})
+
+      const [{ data: response }, authMethods, authStates] = await Promise.all([
+        client.provider.list({ directory: workspaceDir }, { throwOnError: true }),
         authRequest,
+        authStatesRequest,
       ])
 
       const normalized = indexProvidersById(response.all)
@@ -1060,6 +1079,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         defaults: response.default,
         defaultSelection,
         authMethods,
+        authStates,
       }
       this.cachedProvidersMessage = message
       this.postMessage(message)

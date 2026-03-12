@@ -139,6 +139,33 @@ export namespace Server {
           }),
         )
         .route("/global", GlobalRoutes())
+        // kilocode_change start
+        .get(
+          "/auth",
+          describeRoute({
+            summary: "List auth credential types",
+            description: "List the stored authentication type for each provider",
+            operationId: "auth.list",
+            responses: {
+              200: {
+                description: "Successfully listed authentication credential types",
+                content: {
+                  "application/json": {
+                    schema: resolver(
+                      z.record(z.string(), z.union([z.literal("oauth"), z.literal("api"), z.literal("wellknown")])),
+                    ),
+                  },
+                },
+              },
+              ...errors(400),
+            },
+          }),
+          async (c) => {
+            const auth = await Auth.all()
+            return c.json(Object.fromEntries(Object.entries(auth).map(([id, info]) => [id, info.type])))
+          },
+        )
+        // kilocode_change end
         .put(
           "/auth/:providerID",
           describeRoute({

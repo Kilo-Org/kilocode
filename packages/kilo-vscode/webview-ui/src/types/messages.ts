@@ -252,6 +252,8 @@ export interface ModelSelection {
   modelID: string
 }
 
+export type ProviderAuthState = "api" | "oauth" | "wellknown"
+
 // ============================================
 // Backend Config Types (mirrored for webview)
 // ============================================
@@ -545,6 +547,7 @@ export interface ProvidersLoadedMessage {
   defaults: Record<string, string>
   defaultSelection: ModelSelection
   authMethods: Record<string, ProviderAuthMethod[]>
+  authStates: Record<string, ProviderAuthState>
 }
 
 export interface ProviderOAuthReadyMessage {

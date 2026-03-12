@@ -6,7 +6,7 @@
 
 import { createContext, useContext, createSignal, createMemo, onCleanup, ParentComponent, Accessor } from "solid-js"
 import { useVSCode } from "./vscode"
-import type { Provider, ProviderModel, ModelSelection, ExtensionMessage } from "../types/messages"
+import type { Provider, ProviderModel, ModelSelection, ExtensionMessage, ProviderAuthState } from "../types/messages"
 import type { ProviderAuthMethod } from "@kilocode/sdk/v2/client"
 import { flattenModels, findModel as _findModel, isModelValid as isValid } from "./provider-utils"
 
@@ -18,6 +18,7 @@ interface ProviderContextValue {
   defaults: Accessor<Record<string, string>>
   defaultSelection: Accessor<ModelSelection>
   authMethods: Accessor<Record<string, ProviderAuthMethod[]>>
+  authStates: Accessor<Record<string, ProviderAuthState>>
   models: Accessor<EnrichedModel[]>
   findModel: (selection: ModelSelection | null) => EnrichedModel | undefined
   /** Check if a model selection points to a real model in a connected provider. */
@@ -36,6 +37,7 @@ export const ProviderProvider: ParentComponent = (props) => {
   const [defaults, setDefaults] = createSignal<Record<string, string>>({})
   const [defaultSelection, setDefaultSelection] = createSignal<ModelSelection>(KILO_AUTO)
   const [authMethods, setAuthMethods] = createSignal<Record<string, ProviderAuthMethod[]>>({})
+  const [authStates, setAuthStates] = createSignal<Record<string, ProviderAuthState>>({})
 
   const models = createMemo<EnrichedModel[]>(() => flattenModels(providers()))
 
@@ -60,6 +62,7 @@ export const ProviderProvider: ParentComponent = (props) => {
     setDefaults(message.defaults)
     setDefaultSelection(message.defaultSelection)
     setAuthMethods(message.authMethods)
+    setAuthStates(message.authStates)
   })
 
   onCleanup(unsubscribe)
@@ -90,6 +93,7 @@ export const ProviderProvider: ParentComponent = (props) => {
     defaults,
     defaultSelection,
     authMethods,
+    authStates,
     models,
     findModel,
     isModelValid,

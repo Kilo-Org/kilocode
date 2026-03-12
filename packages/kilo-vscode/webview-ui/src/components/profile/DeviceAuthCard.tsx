@@ -1,12 +1,39 @@
 import { Component, Show, Switch, Match, createSignal, createEffect, onCleanup } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Card } from "@kilocode/kilo-ui/card"
+import { useDialog } from "@kilocode/kilo-ui/context/dialog"
+import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import { generateQRCode } from "../../utils/qrcode"
 import type { DeviceAuthStatus } from "../../types/messages"
+
+const ERROR_LIMIT = 180
+
+function compactError(error: string | undefined, fallback: string) {
+  if (!error) return fallback
+
+  const text = error.replace(/\s+/g, " ").trim()
+  const html = text.search(/<!doctype html|<html|<head|<body/i)
+  const head =
+    html >= 0
+      ? text
+          .slice(0, html)
+          .trim()
+          .replace(/[\s:,-]+$/, "")
+      : text
+
+  if (head.length > 0) {
+    if (head.length <= ERROR_LIMIT) return head
+    return `${head.slice(0, ERROR_LIMIT).trimEnd()}...`
+  }
+
+  const status = text.match(/\b([45]\d{2})\b/)?.[1]
+  if (status) return `${fallback} (${status})`
+  return fallback
+}
 
 interface DeviceAuthCardProps {
   status: DeviceAuthStatus
@@ -25,6 +52,7 @@ const formatTime = (seconds: number): string => {
 }
 
 const DeviceAuthCard: Component<DeviceAuthCardProps> = (props) => {
+  const dialog = useDialog()
   const vscode = useVSCode()
   const language = useLanguage()
   const [timeRemaining, setTimeRemaining] = createSignal(props.expiresIn ?? 900)
@@ -68,6 +96,56 @@ const DeviceAuthCard: Component<DeviceAuthCardProps> = (props) => {
     if (props.verificationUrl) {
       vscode.postMessage({ type: "openExternal", url: props.verificationUrl })
     }
+  }
+
+  const errorSummary = () => compactError(props.error, language.t("deviceAuth.status.failed"))
+
+  const hasErrorDetails = () => {
+    if (!props.error) return false
+    return errorSummary() !== props.error.replace(/\s+/g, " ").trim()
+  }
+
+  const handleCopyError = () => {
+    if (!props.error) return
+    navigator.clipboard.writeText(props.error)
+    showToast({ variant: "success", title: language.t("deviceAuth.toast.errorCopied") })
+  }
+
+  const handleShowError = () => {
+    if (!props.error) return
+
+    dialog.show(() => (
+      <Dialog title={language.t("deviceAuth.error.detailsTitle")} fit>
+        <div style={{ display: "flex", "flex-direction": "column", gap: "12px", width: "min(720px, 80vw)" }}>
+          <pre
+            style={{
+              margin: 0,
+              padding: "12px",
+              "max-height": "50vh",
+              overflow: "auto",
+              background: "var(--vscode-textCodeBlock-background, var(--vscode-editorWidget-background))",
+              color: "var(--vscode-foreground)",
+              border: "1px solid var(--border-weak-base, var(--vscode-panel-border))",
+              "border-radius": "6px",
+              "font-size": "12px",
+              "line-height": "1.5",
+              "white-space": "pre-wrap",
+              "word-break": "break-word",
+            }}
+          >
+            {props.error}
+          </pre>
+          <div class="dialog-confirm-actions">
+            <Button variant="secondary" size="large" onClick={handleCopyError}>
+              {language.t("deviceAuth.action.copyError")}
+            </Button>
+            <Button variant="primary" size="large" onClick={() => dialog.close()}>
+              {language.t("common.close")}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+    ))
   }
 
   return (
@@ -281,11 +359,23 @@ const DeviceAuthCard: Component<DeviceAuthCardProps> = (props) => {
                 margin: "8px 0 12px 0",
               }}
             >
-              {props.error || language.t("deviceAuth.status.failed")}
+              {errorSummary()}
             </p>
-            <Button variant="primary" onClick={props.onRetry}>
-              {language.t("common.retry")}
-            </Button>
+            <div style={{ display: "flex", gap: "8px", "justify-content": "center", "flex-wrap": "wrap" }}>
+              <Show when={props.error}>
+                <Button variant="secondary" onClick={handleCopyError}>
+                  {language.t("deviceAuth.action.copyError")}
+                </Button>
+              </Show>
+              <Show when={hasErrorDetails()}>
+                <Button variant="ghost" onClick={handleShowError}>
+                  {language.t("deviceAuth.action.showDetails")}
+                </Button>
+              </Show>
+              <Button variant="primary" onClick={props.onRetry}>
+                {language.t("common.retry")}
+              </Button>
+            </div>
           </div>
         </Card>
       </Match>

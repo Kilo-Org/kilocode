@@ -679,9 +679,15 @@ export const dict = {
   "settings.providers.section.connected": "Connected providers",
   "settings.providers.connected.empty": "No connected providers",
   "settings.providers.section.popular": "Popular providers",
+  "settings.providers.action.hideModels": "Hide models",
+  "settings.providers.tag.gateway": "Gateway",
   "settings.providers.tag.environment": "Environment",
+  "settings.providers.tag.oauth": "OAuth",
   "settings.providers.tag.config": "Config",
   "settings.providers.tag.custom": "Custom",
+  "settings.providers.tag.configured": "Configured",
+  "settings.providers.tag.customProvider": "Custom provider",
+  "settings.providers.tag.connected": "Connected",
   "settings.providers.tag.other": "Other",
   "settings.models.title": "Models",
   "settings.models.description": "Model settings will be configurable here.",
@@ -784,6 +790,7 @@ export const dict = {
 
   "deviceAuth.toast.urlCopied": "URL copied to clipboard",
   "deviceAuth.toast.codeCopied": "Code copied to clipboard",
+  "deviceAuth.toast.errorCopied": "Error copied to clipboard",
   "deviceAuth.status.initiating": "Starting login...",
   "deviceAuth.title": "Sign in to Kilo Code",
   "deviceAuth.step1": "Step 1: Open this URL",
@@ -796,7 +803,10 @@ export const dict = {
   "deviceAuth.status.success": "Login successful!",
   "deviceAuth.status.failed": "Login failed",
   "deviceAuth.status.cancelled": "Login cancelled",
+  "deviceAuth.action.copyError": "Copy error",
+  "deviceAuth.action.showDetails": "View details",
   "deviceAuth.action.tryAgain": "Try Again",
+  "deviceAuth.error.detailsTitle": "Login error details",
 
   "common.retry": "Retry",
   "common.refresh": "Refresh",
@@ -1026,6 +1036,8 @@ export const dict = {
   "settings.providers.enabled": "Enabled Providers (Allowlist)",
   "settings.providers.enabled.description": "If set, only these providers will be available (exclusive allowlist)",
   "settings.providers.notSet": "Not set (use server default)",
+  "settings.providers.search.placeholder": "Search providers",
+  "settings.providers.select.placeholder": "Select provider...",
 
   "dialog.model.notSet": "Not set",
 

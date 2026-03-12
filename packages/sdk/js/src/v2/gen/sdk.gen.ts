@@ -9,6 +9,8 @@ import type {
   AppLogResponses,
   AppSkillsResponses,
   Auth as Auth3,
+  AuthListErrors,
+  AuthListResponses,
   AuthRemoveErrors,
   AuthRemoveResponses,
   AuthSetErrors,
@@ -326,6 +328,18 @@ export class Global extends HeyApiClient {
 }
 
 export class Auth extends HeyApiClient {
+  /**
+   * List auth credential types
+   *
+   * List the stored authentication type for each provider
+   */
+  public list<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
+    return (options?.client ?? this.client).get<AuthListResponses, AuthListErrors, ThrowOnError>({
+      url: "/auth",
+      ...options,
+    })
+  }
+
   /**
    * Remove auth credentials
    *

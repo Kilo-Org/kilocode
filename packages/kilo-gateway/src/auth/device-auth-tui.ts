@@ -4,6 +4,7 @@ import { poll } from "./polling.js"
 import { getKiloProfile, getKiloDefaultModel } from "../api/profile.js"
 import { KILO_API_BASE, POLL_INTERVAL_MS } from "../api/constants.js"
 import type { AuthOuathResult } from "@kilocode/plugin"
+import { buildKiloHeaders, DEFAULT_HEADERS } from "../headers.js"
 
 /**
  * Initiate device authorization flow
@@ -14,15 +15,21 @@ async function initiateDeviceAuth(): Promise<DeviceAuthInitiateResponse> {
   const response = await fetch(`${KILO_API_BASE}/api/device-auth/codes`, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
+      ...DEFAULT_HEADERS,
+      ...buildKiloHeaders(),
     },
   })
 
   if (!response.ok) {
+    const detail = await response.text().catch(() => "")
     if (response.status === 429) {
       throw new Error("Too many pending authorization requests. Please try again later.")
     }
-    throw new Error(`Failed to initiate device authorization: ${response.status}`)
+    throw new Error(
+      detail
+        ? `Failed to initiate device authorization: ${response.status} ${detail}`
+        : `Failed to initiate device authorization: ${response.status}`,
+    )
   }
 
   const data = await response.json()
@@ -36,7 +43,12 @@ async function initiateDeviceAuth(): Promise<DeviceAuthInitiateResponse> {
  * @throws Error if polling fails
  */
 async function pollDeviceAuth(code: string): Promise<DeviceAuthPollResponse> {
-  const response = await fetch(`${KILO_API_BASE}/api/device-auth/codes/${code}`)
+  const response = await fetch(`${KILO_API_BASE}/api/device-auth/codes/${code}`, {
+    headers: {
+      ...DEFAULT_HEADERS,
+      ...buildKiloHeaders(),
+    },
+  })
 
   if (response.status === 202) {
     return { status: "pending" }
