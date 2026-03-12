@@ -13,6 +13,7 @@ import {
 } from "solid-js"
 import { useVSCode } from "../../context/vscode"
 import { useServer } from "../../context/server"
+import { useLanguage } from "../../context/language"
 import type { MarketplaceItem, MarketplaceInstalledMetadata } from "../../types/marketplace"
 import type { ExtensionMessage } from "../../types/messages"
 import { MarketplaceListView } from "./MarketplaceListView"
@@ -26,6 +27,7 @@ type Tab = "mcp" | "mode" | "skill"
 export const MarketplaceView: Component = () => {
   const vscode = useVSCode()
   const server = useServer()
+  const { t } = useLanguage()
 
   const [items, setItems] = createSignal<MarketplaceItem[]>([])
   const [metadata, setMetadata] = createSignal<MarketplaceInstalledMetadata>({ project: {}, global: {} })
@@ -124,7 +126,7 @@ export const MarketplaceView: Component = () => {
           setRemoveError(null)
           vscode.postMessage({ type: "fetchMarketplaceData" })
         } else {
-          setRemoveError(msg.error ?? `Failed to remove ${pending?.item.name ?? "item"}`)
+          setRemoveError(msg.error ?? t("marketplace.remove.failed", { name: pending?.item.name ?? "item" }))
         }
         setPendingRemove(null)
       }
@@ -149,13 +151,13 @@ export const MarketplaceView: Component = () => {
       <div class="marketplace-header">
         <div class="marketplace-tabs">
           <button class="marketplace-tab" classList={{ active: tab() === "mcp" }} onClick={() => setTab("mcp")}>
-            MCP
+            {t("marketplace.tab.mcp")}
           </button>
           <button class="marketplace-tab" classList={{ active: tab() === "mode" }} onClick={() => setTab("mode")}>
-            Modes
+            {t("marketplace.tab.modes")}
           </button>
           <button class="marketplace-tab" classList={{ active: tab() === "skill" }} onClick={() => setTab("skill")}>
-            Skills
+            {t("marketplace.tab.skills")}
           </button>
         </div>
       </div>

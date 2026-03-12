@@ -1,5 +1,6 @@
 import { Component, createSignal, createMemo, Show, For } from "solid-js"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
+import { useLanguage } from "../../context/language"
 import type { MarketplaceItem, MarketplaceInstalledMetadata } from "../../types/marketplace"
 import { ItemCard } from "./ItemCard"
 import { isInstalled } from "./utils"
@@ -14,6 +15,7 @@ interface MarketplaceListViewProps {
 }
 
 export const MarketplaceListView: Component<MarketplaceListViewProps> = (props) => {
+  const { t } = useLanguage()
   const [search, setSearch] = createSignal("")
   const [status, setStatus] = createSignal<"all" | "installed" | "notInstalled">("all")
   const [tags, setTags] = createSignal<string[]>([])
@@ -70,7 +72,7 @@ export const MarketplaceListView: Component<MarketplaceListViewProps> = (props) 
       <div class="marketplace-filters">
         <input
           type="text"
-          placeholder="Search..."
+          placeholder={t("marketplace.search")}
           value={search()}
           onInput={(e) => setSearch(e.currentTarget.value)}
           class="marketplace-search"
@@ -80,9 +82,9 @@ export const MarketplaceListView: Component<MarketplaceListViewProps> = (props) 
           onChange={(e) => setStatus(e.currentTarget.value as "all" | "installed" | "notInstalled")}
           class="marketplace-status-filter"
         >
-          <option value="all">All Items</option>
-          <option value="installed">Installed</option>
-          <option value="notInstalled">Not Installed</option>
+          <option value="all">{t("marketplace.filter.all")}</option>
+          <option value="installed">{t("marketplace.filter.installed")}</option>
+          <option value="notInstalled">{t("marketplace.filter.notInstalled")}</option>
         </select>
       </div>
 
@@ -105,7 +107,7 @@ export const MarketplaceListView: Component<MarketplaceListViewProps> = (props) 
       </Show>
 
       <Show when={!props.fetching && filtered().length === 0}>
-        <div class="marketplace-empty">No items found</div>
+        <div class="marketplace-empty">{t("marketplace.empty")}</div>
       </Show>
 
       <Show when={!props.fetching && filtered().length > 0}>
@@ -118,7 +120,7 @@ export const MarketplaceListView: Component<MarketplaceListViewProps> = (props) 
                 onInstall={props.onInstall}
                 onRemove={props.onRemove}
                 linkUrl={item.type === "mcp" && "url" in item ? item.url : undefined}
-                typeBadge={item.type === "mcp" ? "MCP Server" : "Mode"}
+                typeBadge={item.type === "mcp" ? t("marketplace.badge.mcpServer") : t("marketplace.badge.mode")}
                 footer={
                   <For each={item.tags ?? []}>
                     {(tag) => (

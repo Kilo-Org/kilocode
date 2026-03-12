@@ -1,5 +1,6 @@
 import { Component, Show, For, createMemo, JSX } from "solid-js"
 import { useVSCode } from "../../context/vscode"
+import { useLanguage } from "../../context/language"
 import type { MarketplaceItem, MarketplaceInstalledMetadata } from "../../types/marketplace"
 import { isInstalled } from "./utils"
 
@@ -20,6 +21,7 @@ interface ItemCardProps {
 
 export const ItemCard: Component<ItemCardProps> = (props) => {
   const vscode = useVSCode()
+  const { t } = useLanguage()
 
   const installed = createMemo(() => isInstalled(props.item.id, props.item.type, props.metadata))
 
@@ -46,7 +48,7 @@ export const ItemCard: Component<ItemCardProps> = (props) => {
             </a>
           </Show>
           <span class="marketplace-card-author">
-            {props.item.author && `by ${props.item.author}`}
+            {props.item.author && t("marketplace.card.by", { author: props.item.author })}
             <Show when={props.typeBadge}>
               <span class="marketplace-card-type">{props.typeBadge}</span>
             </Show>
@@ -56,7 +58,7 @@ export const ItemCard: Component<ItemCardProps> = (props) => {
           when={installed()}
           fallback={
             <button class="marketplace-install-btn" onClick={() => props.onInstall(props.item)}>
-              Install
+              {t("marketplace.card.install")}
             </button>
           }
         >
@@ -64,14 +66,14 @@ export const ItemCard: Component<ItemCardProps> = (props) => {
             class="marketplace-remove-btn"
             onClick={() => props.onRemove(props.item, installed() as "project" | "global")}
           >
-            Remove
+            {t("marketplace.card.remove")}
           </button>
         </Show>
       </div>
       <p class="marketplace-card-description">{props.item.description}</p>
       <div class="marketplace-card-footer">
         <Show when={installed()}>
-          <span class="marketplace-badge installed">Installed</span>
+          <span class="marketplace-badge installed">{t("marketplace.badge.installed")}</span>
         </Show>
         {props.footer}
       </div>

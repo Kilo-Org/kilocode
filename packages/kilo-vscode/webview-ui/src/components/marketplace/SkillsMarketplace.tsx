@@ -1,5 +1,6 @@
 import { Component, createSignal, createMemo, Show, For } from "solid-js"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
+import { useLanguage } from "../../context/language"
 import type { MarketplaceItem, MarketplaceInstalledMetadata, SkillMarketplaceItem } from "../../types/marketplace"
 import { ItemCard } from "./ItemCard"
 
@@ -12,6 +13,7 @@ interface SkillsMarketplaceProps {
 }
 
 export const SkillsMarketplace: Component<SkillsMarketplaceProps> = (props) => {
+  const { t } = useLanguage()
   const [search, setSearch] = createSignal("")
   const [category, setCategory] = createSignal<string | null>(null)
 
@@ -56,7 +58,7 @@ export const SkillsMarketplace: Component<SkillsMarketplaceProps> = (props) => {
     <div>
       <input
         type="text"
-        placeholder="Search skills..."
+        placeholder={t("marketplace.searchSkills")}
         value={search()}
         onInput={(e) => setSearch(e.currentTarget.value)}
         class="marketplace-search"
@@ -65,7 +67,7 @@ export const SkillsMarketplace: Component<SkillsMarketplaceProps> = (props) => {
 
       <div class="skills-categories">
         <button classList={{ active: !category() }} onClick={() => setCategory(null)}>
-          All
+          {t("marketplace.categoryAll")}
         </button>
         <For each={categories()}>
           {(cat) => (
@@ -86,7 +88,7 @@ export const SkillsMarketplace: Component<SkillsMarketplaceProps> = (props) => {
       </Show>
 
       <Show when={!props.fetching && filtered().length === 0}>
-        <div class="marketplace-empty">No skills found</div>
+        <div class="marketplace-empty">{t("marketplace.emptySkills")}</div>
       </Show>
 
       <Show when={!props.fetching && filtered().length > 0}>
