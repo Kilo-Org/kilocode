@@ -11,7 +11,7 @@ type RequestPermissionResult = Awaited<ReturnType<AgentSideConnection["requestPe
 
 function createMockConnection() {
   const sessionUpdates: SessionUpdateParams[] = []
-  
+
   return {
     connection: {
       async sessionUpdate(params: SessionUpdateParams) {
@@ -25,7 +25,11 @@ function createMockConnection() {
   }
 }
 
-function createMockSDK(sessionCreateCallback?: (cwd: string) => void, sessionGetCallback?: (cwd: string) => void, listSessionsCallback?: (cwd: string) => void) {
+function createMockSDK(
+  sessionCreateCallback?: (cwd: string) => void,
+  sessionGetCallback?: (cwd: string) => void,
+  listSessionsCallback?: (cwd: string) => void,
+) {
   return {
     global: {
       event: async (opts?: { signal?: AbortSignal }) => {
@@ -129,10 +133,10 @@ describe("acp.agent defaultCwd handling", () => {
       fn: async () => {
         const defaultCwd = path.join(tmp.path, "project")
         const capturedCwds: string[] = []
-        
+
         const { connection } = createMockConnection()
         const sdk = createMockSDK((cwd) => capturedCwds.push(cwd))
-        
+
         const agent = new ACP.Agent(connection, {
           sdk,
           defaultCwd,
@@ -141,7 +145,7 @@ describe("acp.agent defaultCwd handling", () => {
 
         try {
           await agent.newSession({ mcpServers: [] } as any)
-          
+
           expect(capturedCwds).toHaveLength(1)
           expect(capturedCwds[0]).toBe(defaultCwd)
         } finally {
@@ -160,10 +164,10 @@ describe("acp.agent defaultCwd handling", () => {
         const defaultCwd = path.join(tmp.path, "default")
         const explicitCwd = path.join(tmp.path, "explicit")
         const capturedCwds: string[] = []
-        
+
         const { connection } = createMockConnection()
         const sdk = createMockSDK((cwd) => capturedCwds.push(cwd))
-        
+
         const agent = new ACP.Agent(connection, {
           sdk,
           defaultCwd,
@@ -172,7 +176,7 @@ describe("acp.agent defaultCwd handling", () => {
 
         try {
           await agent.newSession({ cwd: explicitCwd, mcpServers: [] } as any)
-          
+
           expect(capturedCwds).toHaveLength(1)
           expect(capturedCwds[0]).toBe(explicitCwd)
         } finally {
@@ -189,10 +193,10 @@ describe("acp.agent defaultCwd handling", () => {
       directory: tmp.path,
       fn: async () => {
         const capturedCwds: string[] = []
-        
+
         const { connection } = createMockConnection()
         const sdk = createMockSDK((cwd) => capturedCwds.push(cwd))
-        
+
         const agent = new ACP.Agent(connection, {
           sdk,
           defaultModel: { providerID: "opencode", modelID: "big-pickle" },
@@ -200,7 +204,7 @@ describe("acp.agent defaultCwd handling", () => {
 
         try {
           await agent.newSession({ mcpServers: [] } as any)
-          
+
           expect(capturedCwds).toHaveLength(1)
           expect(capturedCwds[0]).toBe(process.cwd())
         } finally {
@@ -218,10 +222,10 @@ describe("acp.agent defaultCwd handling", () => {
       fn: async () => {
         const defaultCwd = path.join(tmp.path, "project")
         const capturedCwds: string[] = []
-        
+
         const { connection } = createMockConnection()
         const sdk = createMockSDK(undefined, (cwd) => capturedCwds.push(cwd))
-        
+
         const agent = new ACP.Agent(connection, {
           sdk,
           defaultCwd,
@@ -231,12 +235,12 @@ describe("acp.agent defaultCwd handling", () => {
         try {
           const result = await agent.newSession({ mcpServers: [] } as any)
           capturedCwds.length = 0
-          
-          await agent.loadSession({ 
-            sessionId: result.sessionId, 
-            mcpServers: [] 
+
+          await agent.loadSession({
+            sessionId: result.sessionId,
+            mcpServers: [],
           } as any)
-          
+
           expect(capturedCwds).toHaveLength(1)
           expect(capturedCwds[0]).toBe(defaultCwd)
         } finally {
@@ -254,10 +258,10 @@ describe("acp.agent defaultCwd handling", () => {
       fn: async () => {
         const defaultCwd = path.join(tmp.path, "project")
         const capturedCwds: string[] = []
-        
+
         const { connection } = createMockConnection()
         const sdk = createMockSDK(undefined, undefined, (cwd) => capturedCwds.push(cwd))
-        
+
         const agent = new ACP.Agent(connection, {
           sdk,
           defaultCwd,
@@ -266,7 +270,7 @@ describe("acp.agent defaultCwd handling", () => {
 
         try {
           await agent.unstable_listSessions({} as any)
-          
+
           expect(capturedCwds).toHaveLength(1)
           expect(capturedCwds[0]).toBe(defaultCwd)
         } finally {
@@ -284,10 +288,10 @@ describe("acp.agent defaultCwd handling", () => {
       fn: async () => {
         const defaultCwd = path.join(tmp.path, "project")
         const capturedCwds: string[] = []
-        
+
         const { connection } = createMockConnection()
         const sdk = createMockSDK((cwd) => capturedCwds.push(cwd))
-        
+
         const factory = await ACP.init({ sdk, defaultCwd })
         const agent = factory.create(connection, {
           sdk,
@@ -296,9 +300,42 @@ describe("acp.agent defaultCwd handling", () => {
 
         try {
           await agent.newSession({ mcpServers: [] } as any)
-          
+
           expect(capturedCwds).toHaveLength(1)
           expect(capturedCwds[0]).toBe(defaultCwd)
+        } finally {
+          ;(agent as any).eventAbort.abort()
+          await new Promise((r) => setTimeout(r, 100))
+        }
+      },
+    })
+  })
+
+  test("create() caller-provided defaultCwd takes precedence over init() defaultCwd", async () => {
+    await using tmp = await tmpdir()
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const initCwd = path.join(tmp.path, "init")
+        const createCwd = path.join(tmp.path, "create")
+        const capturedCwds: string[] = []
+
+        const { connection } = createMockConnection()
+        const sdk = createMockSDK((cwd) => capturedCwds.push(cwd))
+
+        // Pass different defaultCwd to init() vs create()
+        const factory = await ACP.init({ sdk, defaultCwd: initCwd })
+        const agent = factory.create(connection, {
+          sdk,
+          defaultCwd: createCwd, // This should win
+          defaultModel: { providerID: "opencode", modelID: "big-pickle" },
+        } as any)
+
+        try {
+          await agent.newSession({ mcpServers: [] } as any)
+
+          expect(capturedCwds).toHaveLength(1)
+          expect(capturedCwds[0]).toBe(createCwd) // create-provided wins
         } finally {
           ;(agent as any).eventAbort.abort()
           await new Promise((r) => setTimeout(r, 100))
