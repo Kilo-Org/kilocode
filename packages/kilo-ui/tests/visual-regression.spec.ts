@@ -45,6 +45,24 @@ async function disableAnimations(page: Page) {
   })
 }
 
+// Wait for every <img> inside the story root to finish loading so screenshots
+// never capture an intermediate state with missing / half-loaded images.
+async function waitForImages(page: Page) {
+  await page.evaluate(() => {
+    const imgs = document.querySelectorAll<HTMLImageElement>("#storybook-root img")
+    return Promise.all(
+      Array.from(imgs).map(
+        (img) =>
+          img.complete ||
+          new Promise<void>((resolve) => {
+            img.addEventListener("load", () => resolve(), { once: true })
+            img.addEventListener("error", () => resolve(), { once: true })
+          }),
+      ),
+    )
+  })
+}
+
 // Stories to skip from visual regression:
 // - Font/Favicon: inject into <head>, no visible content in #storybook-root
 // - Typewriter: uses JS setTimeout + Math.random(), inherently non-deterministic
@@ -72,6 +90,7 @@ for (const story of stories) {
     await disableAnimations(page)
     // Wait for Kobalte/SolidJS to finish hydrating interactive components
     await page.waitForSelector("#storybook-root *", { state: "attached" })
+    await waitForImages(page)
 
     // Screenshot just the story content, not the full 1280x720 canvas.
     // Use [component, variant] path so snapshots are grouped per component dir.

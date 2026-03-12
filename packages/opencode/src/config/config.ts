@@ -157,7 +157,7 @@ export namespace Config {
       result = mergeConfigConcatArrays(result, { mcp: kilocodeMcp })
     }
 
-    // Load Kilocode .kilocodeignore patterns (legacy fallback)
+    // Load .kilocodeignore patterns (legacy fallback)
     try {
       const ignorePermission = await IgnoreMigrator.loadIgnoreConfig(Instance.directory)
       if (Object.keys(ignorePermission).length > 0) {
@@ -235,7 +235,12 @@ export namespace Config {
 
     for (const dir of unique(directories)) {
       // kilocode_change start
-      if (dir.endsWith(".kilo") || dir.endsWith(".opencode") || dir === Flag.KILO_CONFIG_DIR) {
+      if (
+        dir.endsWith(".kilo") ||
+        dir.endsWith(".kilocode") ||
+        dir.endsWith(".opencode") ||
+        dir === Flag.KILO_CONFIG_DIR
+      ) {
         for (const file of ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"]) {
           // kilocode_change end
           log.debug(`loading config from ${path.join(dir, file)}`)
@@ -455,6 +460,8 @@ export namespace Config {
       const patterns = [
         "/.kilo/command/",
         "/.kilo/commands/",
+        "/.kilocode/command/",
+        "/.kilocode/commands/",
         "/.opencode/command/",
         "/.opencode/commands/",
         "/command/",
@@ -502,6 +509,8 @@ export namespace Config {
       const patterns = [
         "/.kilo/agent/",
         "/.kilo/agents/",
+        "/.kilocode/agent/",
+        "/.kilocode/agents/",
         "/.opencode/agent/",
         "/.opencode/agents/",
         "/agent/",

@@ -143,8 +143,7 @@ export const dict = {
   "provider.connect.opencodeZen.visit.prefix": "",
   "provider.connect.opencodeZen.visit.link": "opencode.ai/zen",
   "provider.connect.opencodeZen.visit.suffix": " adresini ziyaret ederek API anahtarınızı alın.",
-  "provider.connect.oauth.code.visit.prefix":
-    "Hesabınızı bağlamak ve Kilo'da {{provider}} modellerini kullanmak için ",
+  "provider.connect.oauth.code.visit.prefix": "Hesabınızı bağlamak ve Kilo'da {{provider}} modellerini kullanmak için ",
   "provider.connect.oauth.code.visit.link": "bu bağlantıya",
   "provider.connect.oauth.code.visit.suffix": " tıklayarak yetkilendirme kodunuzu alın.",
   "provider.connect.oauth.code.label": "{{method}} yetkilendirme kodu",

@@ -22,6 +22,13 @@ type SessionMode = "worktree" | "local"
 
 export type ApplyDiffStatus = "checking" | "applying" | "success" | "conflict" | "error"
 
+export type WorktreeDiffEntry = FileDiff & {
+  tracked?: boolean
+  generatedLike?: boolean
+  summarized?: boolean
+  stamp?: string
+}
+
 // ---------------------------------------------------------------------------
 // Extension → Webview messages (postToWebview)
 // ---------------------------------------------------------------------------
@@ -148,14 +155,14 @@ interface WorktreeDiffLoadingMessage {
 interface WorktreeDiffMessage {
   type: "agentManager.worktreeDiff"
   sessionId: string
-  diffs: FileDiff[]
+  diffs: WorktreeDiffEntry[]
 }
 
 interface WorktreeDiffFileMessage {
   type: "agentManager.worktreeDiffFile"
   sessionId: string
   file: string
-  diff: FileDiff | null
+  diff: WorktreeDiffEntry | null
 }
 
 interface ActionOutMessage {
