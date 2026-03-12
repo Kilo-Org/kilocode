@@ -11,7 +11,7 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { ResizeHandle } from "@kilocode/kilo-ui/resize-handle"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
-import type { DiffLineAnnotation, AnnotationSide } from "@pierre/diffs"
+import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
 import { useLanguage } from "../src/context/language"
 import { FileTree } from "./FileTree"
@@ -259,10 +259,11 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     })
   }
 
-  const handleGutterClick = (file: string, result: { lineNumber: number; side: AnnotationSide }) => {
+  const handleGutterClick = (file: string, range: SelectedLineRange) => {
     if (draft()) return
+    const side: AnnotationSide = range.side === "deletions" ? "deletions" : "additions"
     preserveScroll(() => {
-      setDraft({ file, side: result.side, line: result.lineNumber })
+      setDraft({ file, side, line: range.start })
     })
   }
 
@@ -293,10 +294,14 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     }
     // Scroll to the file in the diff viewer
     requestAnimationFrame(() => {
-      const el = scrollRef?.querySelector(`[data-slot="accordion-item"][data-file-path="${CSS.escape(path)}"]`)
-      if (el instanceof HTMLElement) {
-        el.scrollIntoView({ block: "start", behavior: "smooth" })
-      }
+      const container = scrollRef
+      const el = container?.querySelector(`[data-slot="accordion-item"][data-file-path="${CSS.escape(path)}"]`)
+      if (!(container instanceof HTMLElement)) return
+      if (!(el instanceof HTMLElement)) return
+
+      const gap = 8
+      const top = container.scrollTop + el.getBoundingClientRect().top - container.getBoundingClientRect().top - gap
+      container.scrollTo({ top: Math.max(0, top), behavior: "smooth" })
     })
   }
 

@@ -92,6 +92,7 @@ interface SessionContextValue {
 
   // Pending permission requests
   permissions: Accessor<PermissionRequest[]>
+  respondingPermissions: Accessor<Set<string>>
 
   // Pending question requests
   questions: Accessor<QuestionRequest[]>
@@ -175,6 +176,9 @@ export const SessionProvider: ParentComponent = (props) => {
   // Pending permissions
   const [permissions, setPermissions] = createSignal<PermissionRequest[]>([])
 
+  // Permission IDs that have been responded to but not yet confirmed by the server
+  const [respondingPermissions, setRespondingPermissions] = createSignal<Set<string>>(new Set())
+
   // Pending questions
   const [questions, setQuestions] = createSignal<QuestionRequest[]>([])
 
@@ -216,12 +220,21 @@ export const SessionProvider: ParentComponent = (props) => {
   })
 
   /** Parse a "provider/model" config string into a ModelSelection (or null). */
-  function getModeModel(agentName: string): ModelSelection | null {
-    const raw = config().agent?.[agentName]?.model
+  function parseModel(raw: string | undefined | null): ModelSelection | null {
     if (!raw) return null
     const slash = raw.indexOf("/")
     if (slash <= 0) return null
     return { providerID: raw.slice(0, slash), modelID: raw.slice(slash + 1) }
+  }
+
+  /** Per-mode model from config (e.g. config.agent.code.model). */
+  function getModeModel(agentName: string): ModelSelection | null {
+    return parseModel(config().agent?.[agentName]?.model)
+  }
+
+  /** Global default model from config (config.model). */
+  function getGlobalModel(): ModelSelection | null {
+    return parseModel(config().model)
   }
 
   // Keep model selection in sync with provider/mode default until the user
@@ -231,21 +244,19 @@ export const SessionProvider: ParentComponent = (props) => {
     const agentName = selectedAgentName()
     if (userSetAgents()[agentName]) return
 
-    // Per-mode config takes priority over global default
-    const modeModel = getModeModel(agentName)
-    const sel = modeModel ?? def
+    // Per-mode config > global config model > VS Code default selection
+    const sel = getModeModel(agentName) ?? getGlobalModel() ?? def
     if (sel) setStore("modelSelections", agentName, sel)
   })
 
   // Global model selection per agent/mode
-  // Precedence: user override > per-mode config > global default > kilo-auto/frontier
+  // Precedence: user override > per-mode config > global config model > VS Code default > kilo-auto/free
   const selected = createMemo<ModelSelection | null>(() => {
     const agentName = selectedAgentName()
     const override = store.modelSelections[agentName]
     if (override) return override
-    return getModeModel(agentName) ?? provider.defaultSelection()
+    return getModeModel(agentName) ?? getGlobalModel() ?? provider.defaultSelection()
   })
-
   function selectModel(providerID: string, modelID: string) {
     const agentName = selectedAgentName()
     setUserSetAgents((prev) => ({ ...prev, [agentName]: true }))
@@ -255,7 +266,7 @@ export const SessionProvider: ParentComponent = (props) => {
   /** The config/default model for the current mode (what settings says). */
   const configModel = createMemo<ModelSelection | null>(() => {
     const agentName = selectedAgentName()
-    return getModeModel(agentName) ?? provider.defaultSelection()
+    return getModeModel(agentName) ?? getGlobalModel() ?? provider.defaultSelection()
   })
 
   /** True when the active model differs from what the config dictates. */
@@ -386,6 +397,14 @@ export const SessionProvider: ParentComponent = (props) => {
 
         case "permissionRequest":
           handlePermissionRequest(message.permission)
+          break
+
+        case "permissionResolved":
+          handlePermissionResolved(message.permissionID)
+          break
+
+        case "permissionError":
+          handlePermissionError(message.permissionID)
           break
 
         case "todoUpdated":
@@ -592,6 +611,30 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function handlePermissionRequest(permission: PermissionRequest) {
     setPermissions((prev) => upsertPermission(prev, permission))
+  }
+
+  function handlePermissionResolved(permissionID: string) {
+    setPermissions((prev) => prev.filter((p) => p.id !== permissionID))
+    setRespondingPermissions((prev) => {
+      if (!prev.has(permissionID)) return prev
+      const next = new Set(prev)
+      next.delete(permissionID)
+      return next
+    })
+  }
+
+  function handlePermissionError(permissionID: string) {
+    // Remove from responding set so buttons re-enable (permission prompt is still visible)
+    setRespondingPermissions((prev) => {
+      if (!prev.has(permissionID)) return prev
+      const next = new Set(prev)
+      next.delete(permissionID)
+      return next
+    })
+    showToast({
+      variant: "error",
+      title: language.t("settings.permissions.toast.updateFailed.title"),
+    })
   }
 
   function handleQuestionRequest(question: QuestionRequest) {
@@ -842,6 +885,11 @@ export const SessionProvider: ParentComponent = (props) => {
       }
       setStore("messages", sid, (msgs = []) => [...msgs, temp])
       setStore("parts", tempId, [{ type: "text" as const, id: `${tempId}-text`, text }])
+      // The optimistic message is now in the DOM but the session status is
+      // still "idle" (the CLI backend hasn't started yet), so the auto-scroll
+      // ResizeObserver won't scroll on its own. Force scroll to bottom so the
+      // user's own message is immediately visible.
+      queueMicrotask(() => window.dispatchEvent(new CustomEvent("resumeAutoScroll")))
     }
 
     const agent = selectedAgentName() !== defaultAgent() ? selectedAgentName() : undefined
@@ -897,15 +945,16 @@ export const SessionProvider: ParentComponent = (props) => {
     const permission = permissions().find((p) => p.id === permissionId)
     const sessionID = permission?.sessionID ?? currentSessionID() ?? ""
 
+    // Mark as responding so the UI disables the buttons.
+    // The permission is removed when the server confirms via permission.replied SSE.
+    setRespondingPermissions((prev) => new Set(prev).add(permissionId))
+
     vscode.postMessage({
       type: "permissionResponse",
       permissionId,
       sessionID,
       response,
     })
-
-    // Remove from pending permissions
-    setPermissions((prev) => prev.filter((p) => p.id !== permissionId))
   }
 
   function clearQuestionError(requestID: string) {
@@ -950,6 +999,7 @@ export const SessionProvider: ParentComponent = (props) => {
     setCloudPreviewId(null)
     setLoading(false)
     setPermissions([])
+    setRespondingPermissions(new Set<string>())
     setQuestions([])
     setQuestionErrors(new Set<string>())
     setPendingAgentSelection(defaultAgent())
@@ -1090,6 +1140,7 @@ export const SessionProvider: ParentComponent = (props) => {
     getParts,
     todos,
     permissions,
+    respondingPermissions,
     questions,
     questionErrors,
     selected,

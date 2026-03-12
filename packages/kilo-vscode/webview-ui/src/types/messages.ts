@@ -164,6 +164,13 @@ export interface QuestionRequest {
   }
 }
 
+// Skill info from CLI backend
+export interface SkillInfo {
+  name: string
+  description: string
+  location: string
+}
+
 // Agent/mode info from CLI backend
 export interface AgentInfo {
   name: string
@@ -254,7 +261,9 @@ export interface ModelSelection {
 
 export type PermissionLevel = "allow" | "ask" | "deny"
 
-export type PermissionConfig = Partial<Record<string, PermissionLevel>>
+export type PermissionRule = PermissionLevel | Record<string, PermissionLevel>
+
+export type PermissionConfig = Partial<Record<string, PermissionRule>>
 
 export interface AgentConfig {
   model?: string | null
@@ -384,6 +393,16 @@ export interface SessionStatusMessage {
 export interface PermissionRequestMessage {
   type: "permissionRequest"
   permission: PermissionRequest
+}
+
+export interface PermissionResolvedMessage {
+  type: "permissionResolved"
+  permissionID: string
+}
+
+export interface PermissionErrorMessage {
+  type: "permissionError"
+  permissionID: string
 }
 
 export interface TodoUpdatedMessage {
@@ -519,7 +538,7 @@ export interface DeviceAuthCancelledMessage {
 
 export interface NavigateMessage {
   type: "navigate"
-  view: "newTask" | "marketplace" | "history" | "cloudHistory" | "profile" | "settings" | "migration" // legacy-migration
+  view: "newTask" | "marketplace" | "history" | "cloudHistory" | "profile" | "settings" | "migration" | "subAgentViewer" // legacy-migration: "migration"
 }
 
 export interface ProvidersLoadedMessage {
@@ -534,6 +553,11 @@ export interface AgentsLoadedMessage {
   type: "agentsLoaded"
   agents: AgentInfo[]
   defaultAgent: string
+}
+
+export interface SkillsLoadedMessage {
+  type: "skillsLoaded"
+  skills: SkillInfo[]
 }
 
 export interface AutocompleteSettingsLoadedMessage {
@@ -644,7 +668,10 @@ export interface WorktreeState {
   id: string
   branch: string
   path: string
+  /** Bare branch name (e.g. "main"), without remote prefix. */
   parentBranch: string
+  /** Remote name (e.g. "origin"). */
+  remote?: string
   createdAt: string
   /** Shared identifier for worktrees created together via multi-version mode. */
   groupId?: string
@@ -803,6 +830,14 @@ export interface AgentManagerLocalStatsMessage {
   stats: LocalGitStats
 }
 
+// Set the model for a session (extension → webview, used during multi-version creation)
+export interface AgentManagerSetSessionModelMessage {
+  type: "agentManager.setSessionModel"
+  sessionId: string
+  providerID: string
+  modelID: string
+}
+
 // Request webview to send initial prompt to a newly created session (extension → webview)
 export interface AgentManagerSendInitialMessage {
   type: "agentManager.sendInitialMessage"
@@ -938,6 +973,22 @@ export interface EnhancePromptErrorMessage {
   requestId: string
 }
 
+// Sub-agent viewer: open a child session in read-only mode (extension → webview)
+export interface ViewSubAgentSessionMessage {
+  type: "viewSubAgentSession"
+  sessionID: string
+}
+
+export interface DiffViewerDiffsMessage {
+  type: "diffViewer.diffs"
+  diffs: WorktreeFileDiff[]
+}
+
+export interface DiffViewerLoadingMessage {
+  type: "diffViewer.loading"
+  loading: boolean
+}
+
 export type ExtensionMessage =
   | ReadyMessage
   | ConnectionStateMessage
@@ -945,6 +996,8 @@ export type ExtensionMessage =
   | PartUpdatedMessage
   | SessionStatusMessage
   | PermissionRequestMessage
+  | PermissionResolvedMessage
+  | PermissionErrorMessage
   | TodoUpdatedMessage
   | SessionCreatedMessage
   | SessionUpdatedMessage
@@ -963,6 +1016,7 @@ export type ExtensionMessage =
   | NavigateMessage
   | ProvidersLoadedMessage
   | AgentsLoadedMessage
+  | SkillsLoadedMessage
   | AutocompleteSettingsLoadedMessage
   | ChatCompletionResultMessage
   | FileSearchResultMessage
@@ -981,6 +1035,7 @@ export type ExtensionMessage =
   | AgentManagerStateMessage
   | AgentManagerKeybindingsMessage
   | AgentManagerMultiVersionProgressMessage
+  | AgentManagerSetSessionModelMessage
   | AgentManagerSendInitialMessage
   | SetChatBoxMessage
   | AppendChatBoxMessage
@@ -1007,6 +1062,9 @@ export type ExtensionMessage =
   // legacy-migration end
   | EnhancePromptResultMessage
   | EnhancePromptErrorMessage
+  | ViewSubAgentSessionMessage
+  | DiffViewerDiffsMessage
+  | DiffViewerLoadingMessage
 
 // ============================================
 // Messages FROM webview TO extension
@@ -1134,6 +1192,10 @@ export interface CompactRequest {
 
 export interface RequestAgentsMessage {
   type: "requestAgents"
+}
+
+export interface RequestSkillsMessage {
+  type: "requestSkills"
 }
 
 export interface SetLanguageRequest {
@@ -1351,6 +1413,7 @@ export interface ModelAllocation {
 export interface CreateMultiVersionRequest {
   type: "agentManager.createMultiVersion"
   text?: string
+  name?: string
   versions: number
   providerID?: string
   modelID?: string
@@ -1453,6 +1516,18 @@ export interface EnhancePromptRequest {
   requestId: string
 }
 
+// Open the standalone changes viewer tab from the sidebar
+export interface OpenChangesRequest {
+  type: "openChanges"
+}
+
+// Open a sub-agent session in a read-only editor panel
+export interface OpenSubAgentViewerRequest {
+  type: "openSubAgentViewer"
+  sessionID: string
+  title?: string
+}
+
 // Set default base branch (webview → extension)
 export interface SetDefaultBaseBranchRequest {
   type: "agentManager.setDefaultBaseBranch"
@@ -1480,6 +1555,7 @@ export type WebviewMessage =
   | RequestProvidersMessage
   | CompactRequest
   | RequestAgentsMessage
+  | RequestSkillsMessage
   | SetLanguageRequest
   | QuestionReplyRequest
   | QuestionRejectRequest
@@ -1541,6 +1617,8 @@ export type WebviewMessage =
   // legacy-migration end
   | ApplyWorktreeDiffMessage
   | EnhancePromptRequest
+  | OpenChangesRequest
+  | OpenSubAgentViewerRequest
   | SetDefaultBaseBranchRequest
 
 // ============================================

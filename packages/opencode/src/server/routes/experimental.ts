@@ -15,6 +15,7 @@ import path from "path" // kilocode_change
 import { Snapshot } from "../../snapshot" // kilocode_change
 import { Review } from "../../kilocode/review/review" // kilocode_change
 import { Log } from "../../util/log" // kilocode_change
+import { WorkspaceRoutes } from "./workspace"
 
 export const ExperimentalRoutes = lazy(() =>
   new Hono()
@@ -117,6 +118,7 @@ export const ExperimentalRoutes = lazy(() =>
         return c.json(worktree)
       },
     )
+    .route("/workspace", WorkspaceRoutes())
     .get(
       "/worktree",
       describeRoute({

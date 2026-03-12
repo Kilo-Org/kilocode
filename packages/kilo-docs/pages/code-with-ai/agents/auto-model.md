@@ -90,7 +90,7 @@ You may want to select a specific model instead when:
 ## Feedback
 
 {% callout type="note" title="Help Us Improve" %}
-Auto Model is a new feature and we're actively improving it. We'd love to hear how it's working for you! Share feedback in our [Discord](https://discord.gg/kilocode) or [open an issue on GitHub](https://github.com/Kilo-Org/kilocode/issues).
+Auto Model is a new feature and we're actively improving it. We'd love to hear how it's working for you! Share feedback in our [Discord](https://kilo.ai/discord) or [open an issue on GitHub](https://github.com/Kilo-Org/kilocode/issues).
 {% /callout %}
 
 ## Related

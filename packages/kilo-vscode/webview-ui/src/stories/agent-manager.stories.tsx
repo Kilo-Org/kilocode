@@ -12,6 +12,7 @@ import { FullScreenDiffView } from "../../agent-manager/FullScreenDiffView"
 import { WorktreeItem } from "../../agent-manager/WorktreeItem"
 import type { WorktreeFileDiff, WorktreeState, WorktreeGitStats } from "../types/messages"
 import "../../agent-manager/agent-manager.css"
+import "../../agent-manager/agent-manager-review.css"
 
 // ---------------------------------------------------------------------------
 // Shared mock data
@@ -139,6 +140,7 @@ const baseWorktree: WorktreeState = {
   branch: "feat/inline-delete",
   path: "/tmp/worktrees/feat-inline-delete",
   parentBranch: "main",
+  remote: "origin",
   createdAt: new Date(Date.now() - 3600_000).toISOString(),
 }
 

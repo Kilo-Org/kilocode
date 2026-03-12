@@ -111,7 +111,8 @@ export namespace Agent {
             },
             edit: {
               "*": "deny",
-              [path.join(".opencode", "plans", "*.md")]: "allow",
+              [path.join(".kilo", "plans", "*.md")]: "allow", // kilocode_change
+              [path.join(".opencode", "plans", "*.md")]: "allow", // kilocode_change: .opencode fallback
               [path.relative(Instance.worktree, path.join(Global.Path.data, path.join("plans", "*.md")))]: "allow",
             },
           }),

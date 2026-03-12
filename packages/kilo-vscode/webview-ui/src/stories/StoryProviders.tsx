@@ -18,11 +18,13 @@ import { ConfigProvider } from "../context/config"
 import { DataProvider } from "@kilocode/kilo-ui/context/data"
 import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff"
 import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
+import { FileComponentProvider } from "@kilocode/kilo-ui/context/file"
 import { DialogProvider } from "@kilocode/kilo-ui/context/dialog"
 import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
 import { I18nProvider } from "@kilocode/kilo-ui/context"
 import { Diff } from "@kilocode/kilo-ui/diff"
 import { Code } from "@kilocode/kilo-ui/code"
+import { File } from "@kilocode/kilo-ui/file"
 import { SessionContext } from "../context/session"
 import { LanguageContext } from "../context/language"
 import { dict as uiEn } from "@kilocode/kilo-ui/i18n/en"
@@ -79,7 +81,7 @@ const MockProviderProvider: ParentComponent = (props) => {
 }
 
 /** @deprecated use MockProviderProvider; kept for callers that still call dispatchMockProviders */
-export function dispatchMockProviders() {}
+function dispatchMockProviders() {}
 
 export const defaultMockData = {
   session: [],
@@ -132,6 +134,7 @@ export function mockSessionValue(overrides?: {
     getParts: () => [],
     todos: () => [],
     permissions: () => permissions,
+    respondingPermissions: () => new Set<string>(),
     questions: () => qs,
     questionErrors: () => new Set<string>(),
     selected: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
@@ -211,9 +214,15 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
                     <DataProvider data={data()} directory="/project/">
                       <DiffComponentProvider component={Diff}>
                         <CodeComponentProvider component={Code}>
-                          <MarkedProvider>
-                            {props.noPadding ? props.children : <div style={{ padding: "12px" }}>{props.children}</div>}
-                          </MarkedProvider>
+                          <FileComponentProvider component={File}>
+                            <MarkedProvider>
+                              {props.noPadding ? (
+                                props.children
+                              ) : (
+                                <div style={{ padding: "12px" }}>{props.children}</div>
+                              )}
+                            </MarkedProvider>
+                          </FileComponentProvider>
                         </CodeComponentProvider>
                       </DiffComponentProvider>
                     </DataProvider>

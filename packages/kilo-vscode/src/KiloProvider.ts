@@ -29,6 +29,7 @@ import {
   mapSSEEventToWebviewMessage,
   getErrorMessage,
   isEventFromForeignProject,
+  mapCloudSessionMessageToWebviewMessage,
   loadSessions as loadSessionsUtil,
   flushPendingSessionRefresh as flushPendingSessionRefreshUtil,
   type SessionRefreshContext,
@@ -48,10 +49,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private cachedProvidersMessage: unknown = null
   /** Cached agentsLoaded payload so requestAgents can be served before client is ready */
   private cachedAgentsMessage: unknown = null
+  /** Cached skillsLoaded payload so requestSkills can be served before client is ready */
+  private cachedSkillsMessage: unknown = null
   /** Cached configLoaded payload so requestConfig can be served before client is ready */
   private cachedConfigMessage: unknown = null
   /** Cached notificationsLoaded payload */
   private cachedNotificationsMessage: unknown = null
+  private pendingReviewComments: unknown[][] = []
 
   private trackedSessionIds: Set<string> = new Set()
   private syncedChildSessions: Set<string> = new Set()
@@ -316,6 +320,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           console.log("[Kilo New] KiloProvider: ✅ webviewReady received")
           this.isWebviewReady = true
           await this.syncWebviewState("webviewReady")
+          this.flushPendingReviewComments()
           break
         case "sendMessage": {
           const files = z
@@ -389,6 +394,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             vscode.env.openExternal(vscode.Uri.parse(message.url))
           }
           break
+        case "openChanges":
+          vscode.commands.executeCommand("kilo-code.new.showChanges")
+          break
+        case "openSubAgentViewer":
+          vscode.commands.executeCommand("kilo-code.new.openSubAgentViewer", message.sessionID, message.title)
+          break
         case "openFile":
           if (message.filePath) {
             this.handleOpenFile(message.filePath, message.line, message.column)
@@ -402,6 +413,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "requestAgents":
           this.fetchAndSendAgents().catch((e) => console.error("[Kilo New] fetchAndSendAgents failed:", e))
+          break
+        case "requestSkills":
+          this.fetchAndSendSkills().catch((e) => console.error("[Kilo New] fetchAndSendSkills failed:", e))
           break
         case "questionReply":
           await this.handleQuestionReply(message.requestID, message.answers)
@@ -642,6 +656,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             }
             await this.syncWebviewState("sse-connected")
             await this.flushPendingSessionRefresh("sse-connected")
+            await this.fetchAndSendPendingPermissions()
           } catch (error) {
             console.error("[Kilo New] KiloProvider: ❌ Failed during connected state handling:", error)
             this.postMessage({
@@ -677,10 +692,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       await this.syncWebviewState("initializeConnection")
       await this.flushPendingSessionRefresh("initializeConnection")
 
-      // Fetch providers, agents, config, and notifications in parallel
+      // Fetch providers, agents, skills, config, and notifications in parallel
       await Promise.all([
         this.fetchAndSendProviders(),
         this.fetchAndSendAgents(),
+        this.fetchAndSendSkills(),
         this.fetchAndSendConfig(),
         this.fetchAndSendNotifications(),
       ])
@@ -820,6 +836,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         sessionID,
         messages,
       })
+
+      // Recover any permission.asked events that were missed while the webview
+      // was loading or during an SSE reconnection (fire-and-forget).
+      void this.fetchAndSendPendingPermissions()
     } catch (error) {
       // Silently ignore aborted requests — the user switched to a different session
       if (abort.signal.aborted) return
@@ -1003,7 +1023,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       const config = vscode.workspace.getConfiguration("kilo-code.new.model")
       const providerID = config.get<string>("providerID", "kilo")
-      const modelID = config.get<string>("modelID", "kilo-auto/frontier")
+      const modelID = config.get<string>("modelID", "kilo-auto/free")
 
       const message = {
         type: "providersLoaded",
@@ -1051,6 +1071,29 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage(message)
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to fetch agents:", error)
+    }
+  }
+
+  private async fetchAndSendSkills(): Promise<void> {
+    if (!this.client) {
+      if (this.cachedSkillsMessage) {
+        this.postMessage(this.cachedSkillsMessage)
+      }
+      return
+    }
+
+    try {
+      const workspaceDir = this.getWorkspaceDirectory()
+      const { data: skills } = await this.client.app.skills({ directory: workspaceDir }, { throwOnError: true })
+
+      const message = {
+        type: "skillsLoaded",
+        skills,
+      }
+      this.cachedSkillsMessage = message
+      this.postMessage(message)
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to fetch skills:", error)
     }
   }
 
@@ -1173,17 +1216,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         return
       }
 
-      const messages = (data.messages ?? [])
-        .filter((m) => m.info)
-        .map((m) => ({
-          id: m.info.id,
-          sessionID: m.info.sessionID,
-          role: m.info.role as "user" | "assistant",
-          parts: m.parts,
-          createdAt: m.info.time?.created ? new Date(m.info.time.created).toISOString() : new Date().toISOString(),
-          cost: m.info.cost,
-          tokens: m.info.tokens,
-        }))
+      const messages = (data.messages ?? []).filter((m) => m.info).map(mapCloudSessionMessageToWebviewMessage)
 
       this.postMessage({
         type: "cloudSessionDataLoaded",
@@ -1510,23 +1543,58 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     response: "once" | "always" | "reject",
   ): Promise<void> {
     if (!this.client) {
+      this.postMessage({ type: "permissionError", permissionID: permissionId })
       return
     }
 
     const targetSessionID = sessionID || this.currentSession?.id
     if (!targetSessionID) {
       console.error("[Kilo New] KiloProvider: No sessionID for permission response")
+      this.postMessage({ type: "permissionError", permissionID: permissionId })
       return
     }
 
     try {
       const workspaceDir = this.getWorkspaceDirectory(targetSessionID)
-      await this.client.permission.respond(
-        { sessionID: targetSessionID, permissionID: permissionId, response, directory: workspaceDir },
+      await this.client.permission.reply(
+        { requestID: permissionId, reply: response, directory: workspaceDir },
         { throwOnError: true },
       )
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to respond to permission:", error)
+      this.postMessage({ type: "permissionError", permissionID: permissionId })
+    }
+  }
+
+  /**
+   * Fetch all pending permissions from the backend and forward any that belong
+   * to tracked sessions to the webview. Called after SSE reconnects and after
+   * loading messages for a session so that missed permission.asked events are
+   * recovered instead of leaving the server blocked indefinitely.
+   */
+  private async fetchAndSendPendingPermissions(): Promise<void> {
+    if (!this.client) return
+    try {
+      const workspaceDir = this.getWorkspaceDirectory()
+      const { data } = await this.client.permission.list({ directory: workspaceDir })
+      if (!data) return
+      for (const perm of data) {
+        if (!this.trackedSessionIds.has(perm.sessionID)) continue
+        this.postMessage({
+          type: "permissionRequest",
+          permission: {
+            id: perm.id,
+            sessionID: perm.sessionID,
+            toolName: perm.permission,
+            patterns: perm.patterns,
+            args: perm.metadata,
+            message: `Permission required: ${perm.permission}`,
+            tool: perm.tool,
+          },
+        })
+      }
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to fetch pending permissions:", error)
     }
   }
 
@@ -1836,6 +1904,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     await Promise.all([
       this.fetchAndSendProviders(),
       this.fetchAndSendAgents(),
+      this.fetchAndSendSkills(),
       this.fetchAndSendConfig(),
       this.fetchAndSendNotifications(),
     ])
@@ -1921,6 +1990,27 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     void this.webview.postMessage(message).then(undefined, (error) => {
       console.error("[Kilo New] KiloProvider: ❌ postMessage failed", error)
     })
+  }
+
+  public async appendReviewComments(comments: unknown[]): Promise<void> {
+    this.pendingReviewComments.push(comments)
+
+    if (!this.webview) {
+      await vscode.commands.executeCommand(`${KiloProvider.viewType}.focus`)
+    }
+
+    this.flushPendingReviewComments()
+  }
+
+  private flushPendingReviewComments(): void {
+    if (!this.webview || !this.isWebviewReady || this.pendingReviewComments.length === 0) return
+
+    const pending = this.pendingReviewComments
+    this.pendingReviewComments = []
+
+    for (const comments of pending) {
+      this.postMessage({ type: "appendReviewComments", comments })
+    }
   }
 
   /**

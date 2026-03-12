@@ -15,7 +15,7 @@ import { formatRelativeDate } from "../src/utils/date"
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 
-export interface WorktreeItemProps {
+interface WorktreeItemProps {
   worktree: WorktreeState
   /** Display label (resolved from label, first session title, or branch). */
   label: string
@@ -207,7 +207,11 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
             <div class="am-hover-card-divider" />
             <div class="am-hover-card-row">
               <span class="am-hover-card-row-label">{t("agentManager.hoverCard.base")}</span>
-              <span class="am-hover-card-row-value">{props.worktree.parentBranch}</span>
+              <span class="am-hover-card-row-value">
+                {props.worktree.remote
+                  ? `${props.worktree.remote}/${props.worktree.parentBranch}`
+                  : props.worktree.parentBranch}
+              </span>
             </div>
           </Show>
           <div class="am-hover-card-divider" />
@@ -229,7 +233,7 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
               <Button
                 variant="ghost"
                 size="small"
-                onClick={(e) => {
+                onClick={(e: MouseEvent) => {
                   e.stopPropagation()
                   props.onRemoveStale()
                 }}

@@ -44,6 +44,7 @@ export const dict = {
 
   "command.session.new": "Nowa sesja",
   "command.session.new.task": "Nowe zadanie",
+  "command.session.show.changes": "Pokaż zmiany",
   "command.file.open": "Otwórz plik",
   "command.tab.close": "Zamknij kartę",
   "command.context.addSelection": "Dodaj zaznaczenie do kontekstu",
@@ -672,6 +673,8 @@ export const dict = {
 
   "settings.providers.title": "Dostawcy",
   "settings.providers.description": "Ustawienia dostawców będą tutaj konfigurowalne.",
+  "settings.providers.betaNotice":
+    "Obecnie w interfejsie ustawień można skonfigurować tylko dostawcę Kilo Gateway. Obsługa konfiguracji innych dostawców pojawi się wkrótce w fazie beta. W międzyczasie możesz konfigurować dostawców za pomocą CLI lub pliku konfiguracyjnego. Zależy nam na zachowaniu otwartości Kilo, bez lock-inu.",
   "settings.providers.section.connected": "Połączeni dostawcy",
   "settings.providers.connected.empty": "Brak połączonych dostawców",
   "settings.providers.section.popular": "Popularni dostawcy",
@@ -740,10 +743,16 @@ export const dict = {
   "session.empty": "Brak sesji. Kliknij + aby rozpocząć nową rozmowę.",
   "session.cloud.repoOnly": "Tylko to repozytorium",
   "session.cloud.import": "Importuj z chmury",
+  "feedback.button": "Opinie i wsparcie",
+  "feedback.dialog.message": "Chętnie poznamy Twoją opinię lub pomożemy w przypadku problemów.",
+  "feedback.dialog.github": "Zgłoś problem na GitHubie",
+  "feedback.dialog.discord": "Dołącz do naszej społeczności Discord",
+  "feedback.dialog.support": "Wsparcie klienta",
   "session.cloud.import.title": "Importuj z chmury",
   "session.cloud.import.placeholder": "ID sesji, URL lub polecenie kilo import",
   "session.cloud.import.button": "Importuj",
   "session.cloud.import.invalid": "Nieprawidłowy format ID sesji",
+  "session.cloud.import.legacy": "Wygląda na to, że jest to starsza sesja, która nie jest już obsługiwana.",
   "session.cloud.import.failed": "Nie udało się zaimportować sesji chmurowej",
 
   "workspace.new": "Nowa przestrzeń robocza",
@@ -927,6 +936,8 @@ export const dict = {
   "settings.agentBehaviour.defaultAgent.title": "Domyślny agent",
   "settings.agentBehaviour.defaultAgent.description": "Agent używany, gdy żaden nie jest określony",
   "settings.agentBehaviour.selectAgent": "Wybierz agenta do konfiguracji…",
+  "settings.agentBehaviour.selectAgent.title": "Agent",
+  "settings.agentBehaviour.selectAgent.description": "Wybierz agenta do konfiguracji…",
   "settings.agentBehaviour.modelOverride.title": "Nadpisanie modelu",
   "settings.agentBehaviour.modelOverride.description": "Nadpisz domyślny model dla tego agenta",
   "settings.agentBehaviour.prompt.title": "Niestandardowy prompt",
@@ -937,6 +948,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Parametr próbkowania nucleus (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Maks. kroki",
   "settings.agentBehaviour.maxSteps.description": "Maksymalna liczba iteracji agenta",
+  "settings.agentBehaviour.discoveredSkills": "Wykryte umiejętności",
+  "settings.agentBehaviour.noSkillsFound":
+    "Nie znaleziono umiejętności. Dodaj ścieżki folderów lub adresy URL poniżej, aby udostępnić umiejętności.",
   "settings.agentBehaviour.skillPaths": "Ścieżki folderów umiejętności",
   "settings.agentBehaviour.skillUrls": "Adresy URL umiejętności",
   "settings.agentBehaviour.instructionFiles": "Dodatkowe pliki instrukcji",
@@ -946,26 +960,45 @@ export const dict = {
     "Brak skonfigurowanych serwerów MCP. Edytuj plik konfiguracyjny opencode, aby dodać serwery MCP.",
   "settings.agentBehaviour.workflowsPlaceholder": "Przepływy pracy zarządzane są za pomocą plików przepływów pracy.",
   "settings.agentBehaviour.notImplemented": "Jeszcze nie zaimplementowano.",
-  "settings.autoApprove.setAll": "Ustaw wszystkie uprawnienia",
+  "settings.autoApprove.description":
+    "Zdefiniuj, jak narzędzia mogą być uruchamiane. Większość narzędzi domyślnie ma ustawienie Zezwalaj. doom_loop i external_directory domyślnie mają ustawienie Pytaj.",
   "settings.autoApprove.level.allow": "Zezwól",
   "settings.autoApprove.level.ask": "Pytaj",
   "settings.autoApprove.level.deny": "Odmów",
-  "settings.autoApprove.tool.read": "Odczyt zawartości plików",
-  "settings.autoApprove.tool.edit": "Edycja lub tworzenie plików",
-  "settings.autoApprove.tool.glob": "Wyszukiwanie plików według wzorca",
-  "settings.autoApprove.tool.grep": "Przeszukiwanie zawartości plików",
-  "settings.autoApprove.tool.list": "Listowanie zawartości katalogu",
-  "settings.autoApprove.tool.bash": "Wykonywanie poleceń powłoki",
-  "settings.autoApprove.tool.task": "Tworzenie podzadań agenta",
-  "settings.autoApprove.tool.skill": "Wykonywanie umiejętności",
-  "settings.autoApprove.tool.lsp": "Operacje serwera języka",
-  "settings.autoApprove.tool.todoread": "Odczyt list zadań",
-  "settings.autoApprove.tool.todowrite": "Zapis list zadań",
-  "settings.autoApprove.tool.webfetch": "Pobieranie stron internetowych",
-  "settings.autoApprove.tool.websearch": "Wyszukiwanie w internecie",
-  "settings.autoApprove.tool.codesearch": "Przeszukiwanie bazy kodu",
-  "settings.autoApprove.tool.external_directory": "Dostęp do plików poza obszarem roboczym",
-  "settings.autoApprove.tool.doom_loop": "Kontynuuj po powtarzających się błędach",
+  "settings.autoApprove.wildcardLabel.commands": "Wszystkie polecenia (*)",
+  "settings.autoApprove.wildcardLabel.paths": "Wszystkie ścieżki (*)",
+  "settings.autoApprove.exceptions": "Wyjątki",
+  "settings.autoApprove.addCommand": "Dodaj polecenie",
+  "settings.autoApprove.addPath": "Dodaj ścieżkę",
+  "settings.autoApprove.placeholder.command": "np. git *",
+  "settings.autoApprove.placeholder.path": "np. *.env",
+  "settings.autoApprove.tool.read":
+    "Odczytywanie plików. Pozwala agentowi na odczytywanie plików pasujących do określonej ścieżki.",
+  "settings.autoApprove.tool.edit":
+    "Modyfikowanie plików. Pozwala agentowi na tworzenie lub edytowanie plików, w tym wprowadzanie poprawek i aktualizację wielu plików.",
+  "settings.autoApprove.tool.glob":
+    "Dopasowywanie plików do wzorca. Pozwala na dopasowywanie plików za pomocą wzorców glob (np. src/**/*.ts).",
+  "settings.autoApprove.tool.grep":
+    "Przeszukiwanie zawartości plików. Pozwala na wyszukiwanie oparte na wyrażeniach regularnych wewnątrz plików.",
+  "settings.autoApprove.tool.list":
+    "Wyświetlanie zawartości katalogu. Pozwala na przeglądanie plików i folderów w katalogu.",
+  "settings.autoApprove.tool.bash":
+    "Uruchamianie poleceń terminala. Pozwala na wykonanie poleceń powłoki (np. git status).",
+  "settings.autoApprove.tool.task":
+    "Uruchamianie podagentów. Pozwala na uruchamianie wyspecjalizowanych podagentów do określonych zadań.",
+  "settings.autoApprove.tool.skill":
+    "Ładowanie umiejętności. Pozwala na ładowanie predefiniowanych umiejętności po nazwie.",
+  "settings.autoApprove.tool.lsp":
+    "Zapytania do serwera języka. Pozwala na uruchamianie zapytań do serwera języka w celu analizy kodu.",
+  "settings.autoApprove.tool.todoreadwrite":
+    "Zarządzaj listą zadań. Pozwala na odczytywanie i aktualizowanie wewnętrznej listy zadań.",
+  "settings.autoApprove.tool.webfetch": "Pobieranie URL. Pozwala na pobieranie zawartości z określonego adresu URL.",
+  "settings.autoApprove.tool.websearchcodesearch":
+    "Przeszukuj sieć lub kod. Pozwala na wykonywanie zewnętrznych wyszukiwań w sieci lub kodzie.",
+  "settings.autoApprove.tool.external_directory":
+    "Dostęp do plików poza obszarem roboczym. Uruchamiane przy dostępie do plików poza bieżącym katalogiem projektu.",
+  "settings.autoApprove.tool.doom_loop":
+    "Zapobieganie powtarzaniu tych samych akcji. Uruchamiane, gdy to samo wywołanie narzędzia powtarza się z identycznymi danymi wejściowymi.",
   "settings.checkpoints.enable.title": "Włącz migawki",
   "settings.checkpoints.enable.description": "Twórz punkty kontrolne przed edycją plików",
   "settings.context.autoCompaction.title": "Automatyczna kompakcja",
@@ -1053,4 +1086,7 @@ export const dict = {
   // legacy-migration end
 
   "error.details.show": "Szczegóły",
+
+  "task.todos.progress": "{{done}}/{{total}} zadań ukończono",
+  "task.todos.allDone": "{{count}} zadań ukończono",
 }
