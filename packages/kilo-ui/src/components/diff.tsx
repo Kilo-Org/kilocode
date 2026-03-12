@@ -10,6 +10,10 @@ import { getWorkerPool } from "@opencode-ai/ui/pierre/worker"
 
 type SelectionSide = "additions" | "deletions"
 
+type Props<T> = DiffProps<T> & {
+  binary?: boolean
+}
+
 function badge(file: string) {
   const slash = Math.max(file.lastIndexOf("/"), file.lastIndexOf("\\"))
   const name = file.slice(slash + 1)
@@ -63,7 +67,7 @@ function findSide(node: Node | null): SelectionSide | undefined {
   return "additions"
 }
 
-export function Diff<T>(props: DiffProps<T>) {
+export function Diff<T>(props: Props<T>) {
   const i18n = useI18n()
   let container!: HTMLDivElement
   let observer: MutationObserver | undefined
@@ -88,10 +92,11 @@ export function Diff<T>(props: DiffProps<T>) {
     "selectedLines",
     "commentedLines",
     "onRendered",
+    "binary",
   ])
 
   const file = local.after?.name ?? local.before?.name ?? ""
-  if (BinaryFile.isPath(file)) {
+  if (local.binary || BinaryFile.isPath(file)) {
     return (
       <div data-component="diff" data-binary style={styleVariables}>
         <div data-slot="diff-binary-state">

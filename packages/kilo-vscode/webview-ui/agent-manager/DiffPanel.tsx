@@ -156,6 +156,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
         for (const file of next) {
           if (loading.has(file)) continue
           const diff = props.diffs.find((item) => item.file === file)
+          if (diff?.binary === true) continue
           if (!diff || diff.summarized !== true) continue
           props.onRequestDiff?.(file)
         }
@@ -468,7 +469,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                     <Accordion.Content>
                       <Show when={open().includes(diff.file)}>
                         <Show
-                          when={diff.summarized !== true}
+                          when={diff.summarized !== true || diff.binary === true}
                           fallback={
                             <div class="am-diff-summary-state">
                               <Show when={isLoadingDetail()} fallback={<span>Diff preview loads on demand.</span>}>
@@ -483,6 +484,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                           <Diff<AnnotationMeta>
                             before={{ name: diff.file, contents: diff.before }}
                             after={{ name: diff.file, contents: diff.after }}
+                            binary={diff.binary === true}
                             diffStyle={props.diffStyle ?? "unified"}
                             annotations={annotationsForFile(diff.file)}
                             renderAnnotation={buildAnnotation}
