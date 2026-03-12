@@ -17,8 +17,8 @@ export class MarketplaceService {
   private detector: InstallationDetector
   private installer: MarketplaceInstaller
 
-  constructor(globalStoragePath: string) {
-    this.paths = new MarketplacePaths(globalStoragePath)
+  constructor() {
+    this.paths = new MarketplacePaths()
     this.api = new MarketplaceApiClient()
     this.detector = new InstallationDetector(this.paths)
     this.installer = new MarketplaceInstaller(this.paths)

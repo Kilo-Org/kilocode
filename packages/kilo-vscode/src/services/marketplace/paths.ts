@@ -1,31 +1,31 @@
 import * as path from "path"
 import * as os from "os"
 
-export class MarketplacePaths {
-  constructor(private storage: string) {}
+const kiloDir = () => path.join(os.homedir(), ".kilo")
 
+export class MarketplacePaths {
   projectModesPath(workspace: string) {
     return path.join(workspace, ".kilocodemodes")
   }
 
   projectMcpPath(workspace: string) {
-    return path.join(workspace, ".kilocode", "mcp.json")
+    return path.join(workspace, ".kilo", "mcp.json")
   }
 
   projectSkillsDir(workspace: string) {
-    return path.join(workspace, ".kilocode", "skills")
+    return path.join(workspace, ".kilo", "skills")
   }
 
   globalModesPath() {
-    return path.join(this.storage, "settings", "custom_modes.yaml")
+    return path.join(os.homedir(), ".kilocodemodes")
   }
 
   globalMcpPath() {
-    return path.join(this.storage, "settings", "mcp_settings.json")
+    return path.join(kiloDir(), "mcp.json")
   }
 
   globalSkillsDir() {
-    return path.join(os.homedir(), ".kilocode", "skills")
+    return path.join(kiloDir(), "skills")
   }
 
   modesPath(scope: "project" | "global", workspace?: string) {

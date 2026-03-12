@@ -2323,8 +2323,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   // kilocode_change start — marketplace lazy init
   private getMarketplace(): MarketplaceService {
     if (this.marketplace) return this.marketplace
-    const storage = this.extensionContext?.globalStorageUri?.fsPath ?? ""
-    this.marketplace = new MarketplaceService(storage)
+    this.marketplace = new MarketplaceService()
     return this.marketplace
   }
   // kilocode_change end

@@ -76,7 +76,6 @@ export class ServerManager {
           KILO_MACHINE_ID: vscode.env.machineId,
           KILO_APP_VERSION: this.context.extension.packageJSON.version,
           KILO_VSCODE_VERSION: vscode.version,
-          KILO_VSCODE_STORAGE_PATH: this.context.globalStorageUri.fsPath,
         },
         stdio: ["ignore", "pipe", "pipe"],
         detached: true,

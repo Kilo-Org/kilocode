@@ -91,7 +91,7 @@ export namespace McpMigrator {
     const allServers: Array<{ name: string; server: KilocodeMcpServer }> = []
 
     if (!options?.skipGlobalPaths) {
-      // 1. VSCode extension global storage (primary location for global MCP settings)
+      // 1. VSCode extension global storage (legacy location for global MCP settings)
       const vscodeSettingsPath = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "mcp_settings.json")
       const vscodeSettings = await readMcpSettings(vscodeSettingsPath)
       if (vscodeSettings?.mcpServers) {
@@ -99,11 +99,21 @@ export namespace McpMigrator {
           allServers.push({ name, server })
         }
       }
+
+      // 2. Global ~/.kilocode/mcp.json and ~/.kilo/mcp.json
+      for (const dir of KilocodePaths.globalDirs()) {
+        const globalPath = path.join(dir, "mcp.json")
+        const globalSettings = await readMcpSettings(globalPath)
+        if (globalSettings?.mcpServers) {
+          for (const [name, server] of Object.entries(globalSettings.mcpServers)) {
+            allServers.push({ name, server }) // Later entries win in deduplication
+          }
+        }
+      }
     }
 
-    // 2. Project-level MCP settings (if projectDir provided)
+    // 3. Project-level MCP settings (if projectDir provided)
     // Check .kilo/mcp.json and .kilocode/mcp.json for project-level settings
-    // (not "mcp_settings.json" which is only used for global settings)
     // .kilocode is loaded first (lower precedence), .kilo second (higher precedence)
     if (options?.projectDir) {
       for (const dir of [".kilocode", ".kilo"]) {
