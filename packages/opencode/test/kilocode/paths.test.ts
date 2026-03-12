@@ -174,7 +174,7 @@ description: A legacy skill
       expect(result[0]).toEndWith(".kilocode")
     })
 
-    test("discovers skills from both .kilo and .kilocode", async () => {
+    test("returns legacy skill dirs before .kilo so .kilo skills win", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
           // .kilo skill
@@ -196,8 +196,8 @@ description: A legacy skill
       })
 
       expect(result).toHaveLength(2)
-      expect(result.some((d) => d.endsWith(".kilo"))).toBe(true)
-      expect(result.some((d) => d.endsWith(".kilocode"))).toBe(true)
+      expect(result[0]).toEndWith(".kilocode")
+      expect(result[1]).toEndWith(".kilo")
     })
 
     test("discovers global skills from ~/.kilo/skills/", async () => {

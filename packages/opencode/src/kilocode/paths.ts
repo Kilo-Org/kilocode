@@ -29,16 +29,16 @@ export namespace KilocodePaths {
     }
   }
 
-  /** Global Kilo directories in user home: ~/.kilocode and ~/.kilo */
+  /** Global Kilo directories in user home: ~/.kilocode and ~/.kilo (legacy first, .kilo wins later) */
   export function globalDirs(): string[] {
     return [path.join(home(), ".kilocode"), path.join(home(), ".kilo")]
   }
 
   /**
    * Discover Kilo directories containing skills.
-   * Returns parent directories (.kilo/ and .kilocode/) for glob pattern "skills/[*]/SKILL.md".
+   * Returns parent directories (.kilocode/ and .kilo/) for glob pattern "skills/[*]/SKILL.md".
    *
-   * - Walks up from projectDir to worktreeRoot for .kilo/ and .kilocode/
+   * - Walks up from projectDir to worktreeRoot for .kilocode/ and .kilo/
    * - Includes global ~/.kilocode/ and ~/.kilo/
    * - Includes VSCode extension global storage
    *
@@ -53,10 +53,10 @@ export namespace KilocodePaths {
   }): Promise<string[]> {
     const directories: string[] = []
 
-    // 1. Walk up from project dir to worktree root for .kilo/ and .kilocode/
+    // 1. Walk up from project dir to worktree root for .kilocode/ and .kilo/
     // Returns parent directories (not skills/) because
     // the glob pattern "skills/[*]/SKILL.md" is applied from the parent
-    for (const target of [".kilo", ".kilocode"] as const) {
+    for (const target of [".kilocode", ".kilo"] as const) {
       const projectDirs = await Array.fromAsync(
         Filesystem.up({
           targets: [target],
