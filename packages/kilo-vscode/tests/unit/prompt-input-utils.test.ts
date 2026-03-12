@@ -1,5 +1,10 @@
 import { describe, it, expect } from "bun:test"
-import { fileName, dirName, buildHighlightSegments, atEnd } from "../../webview-ui/src/components/chat/prompt-input-utils"
+import {
+  fileName,
+  dirName,
+  buildHighlightSegments,
+  atEnd,
+} from "../../webview-ui/src/components/chat/prompt-input-utils"
 
 describe("fileName", () => {
   it("extracts the last segment of a unix path", () => {
