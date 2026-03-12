@@ -50,6 +50,7 @@ interface WorktreeSetupMessage {
   sessionId?: string
   branch?: string
   worktreeId?: string
+  errorCode?: "git_not_found" | "not_git_repo" | "lfs_missing"
 }
 
 interface SessionMetaMessage {
