@@ -1094,6 +1094,7 @@ export const dict = {
   "marketplace.card.by": "{{author}} 제작",
   "marketplace.card.install": "설치",
   "marketplace.card.remove": "제거",
+  "marketplace.card.removeScope": "제거 ({{scope}})",
   "marketplace.install.title": "{{name}} 설치",
   "marketplace.install.scope": "범위",
   "marketplace.install.project": "프로젝트",

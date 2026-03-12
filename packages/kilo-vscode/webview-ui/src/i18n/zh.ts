@@ -1077,6 +1077,7 @@ export const dict = {
   "marketplace.card.by": "由 {{author}} 提供",
   "marketplace.card.install": "安装",
   "marketplace.card.remove": "移除",
+  "marketplace.card.removeScope": "移除 ({{scope}})",
   "marketplace.install.title": "安装 {{name}}",
   "marketplace.install.scope": "作用域",
   "marketplace.install.project": "项目",

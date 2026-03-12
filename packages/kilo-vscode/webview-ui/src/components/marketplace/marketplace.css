@@ -253,6 +253,13 @@
   opacity: 1;
 }
 
+/* Remove actions wrapper (shown when installed in multiple scopes) */
+.marketplace-remove-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+}
+
 /* Install / Remove buttons */
 .marketplace-install-btn,
 .marketplace-remove-btn {

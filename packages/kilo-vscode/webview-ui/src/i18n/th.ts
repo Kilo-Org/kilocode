@@ -1089,6 +1089,7 @@ export const dict = {
   "marketplace.card.by": "โดย {{author}}",
   "marketplace.card.install": "ติดตั้ง",
   "marketplace.card.remove": "เอาออก",
+  "marketplace.card.removeScope": "เอาออก ({{scope}})",
   "marketplace.install.title": "ติดตั้ง {{name}}",
   "marketplace.install.scope": "ขอบเขต",
   "marketplace.install.project": "โปรเจกต์",

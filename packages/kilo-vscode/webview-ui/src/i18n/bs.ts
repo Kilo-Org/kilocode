@@ -1111,6 +1111,7 @@ export const dict = {
   "marketplace.card.by": "od {{author}}",
   "marketplace.card.install": "Instaliraj",
   "marketplace.card.remove": "Ukloni",
+  "marketplace.card.removeScope": "Ukloni ({{scope}})",
   "marketplace.install.title": "Instaliraj {{name}}",
   "marketplace.install.scope": "Opseg",
   "marketplace.install.project": "Projekat",

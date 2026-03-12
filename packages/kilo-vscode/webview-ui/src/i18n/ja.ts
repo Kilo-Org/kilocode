@@ -1103,6 +1103,7 @@ export const dict = {
   "marketplace.card.by": "作成者: {{author}}",
   "marketplace.card.install": "インストール",
   "marketplace.card.remove": "削除",
+  "marketplace.card.removeScope": "削除 ({{scope}})",
   "marketplace.install.title": "{{name}} をインストール",
   "marketplace.install.scope": "スコープ",
   "marketplace.install.project": "プロジェクト",

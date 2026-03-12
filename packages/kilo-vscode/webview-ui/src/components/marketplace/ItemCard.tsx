@@ -2,7 +2,7 @@ import { Component, Show, For, createMemo, JSX } from "solid-js"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import type { MarketplaceItem, MarketplaceInstalledMetadata } from "../../types/marketplace"
-import { isInstalled } from "./utils"
+import { installedScopes } from "./utils"
 
 interface ItemCardProps {
   item: MarketplaceItem
@@ -23,13 +23,16 @@ export const ItemCard: Component<ItemCardProps> = (props) => {
   const vscode = useVSCode()
   const { t } = useLanguage()
 
-  const installed = createMemo(() => isInstalled(props.item.id, props.item.type, props.metadata))
+  const scopes = createMemo(() => installedScopes(props.item.id, props.item.type, props.metadata))
 
   const name = () => props.displayName ?? props.item.name
 
   const openExternal = (url: string) => {
     vscode.postMessage({ type: "openExternal", url })
   }
+
+  const scopeLabel = (scope: "project" | "global") =>
+    scope === "project" ? t("marketplace.remove.scope.project") : t("marketplace.remove.scope.global")
 
   return (
     <div class="marketplace-card">
@@ -55,24 +58,29 @@ export const ItemCard: Component<ItemCardProps> = (props) => {
           </span>
         </div>
         <Show
-          when={installed()}
+          when={scopes().length > 0}
           fallback={
             <button class="marketplace-install-btn" onClick={() => props.onInstall(props.item)}>
               {t("marketplace.card.install")}
             </button>
           }
         >
-          <button
-            class="marketplace-remove-btn"
-            onClick={() => props.onRemove(props.item, installed() as "project" | "global")}
-          >
-            {t("marketplace.card.remove")}
-          </button>
+          <div class="marketplace-remove-actions">
+            <For each={scopes()}>
+              {(scope) => (
+                <button class="marketplace-remove-btn" onClick={() => props.onRemove(props.item, scope)}>
+                  {scopes().length > 1
+                    ? t("marketplace.card.removeScope", { scope: scopeLabel(scope) })
+                    : t("marketplace.card.remove")}
+                </button>
+              )}
+            </For>
+          </div>
         </Show>
       </div>
       <p class="marketplace-card-description">{props.item.description}</p>
       <div class="marketplace-card-footer">
-        <Show when={installed()}>
+        <Show when={scopes().length > 0}>
           <span class="marketplace-badge installed">{t("marketplace.badge.installed")}</span>
         </Show>
         {props.footer}

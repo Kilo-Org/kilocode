@@ -1125,6 +1125,7 @@ export const dict = {
   "marketplace.card.by": "par {{author}}",
   "marketplace.card.install": "Installer",
   "marketplace.card.remove": "Supprimer",
+  "marketplace.card.removeScope": "Supprimer ({{scope}})",
   "marketplace.install.title": "Installer {{name}}",
   "marketplace.install.scope": "Portée",
   "marketplace.install.project": "Projet",
