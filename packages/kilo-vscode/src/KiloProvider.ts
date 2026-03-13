@@ -322,6 +322,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.isWebviewReady = true
           await this.syncWebviewState("webviewReady")
           this.flushPendingReviewComments()
+          await this.handleLoadSessions()
           break
         case "sendMessage": {
           const files = z
