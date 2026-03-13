@@ -175,6 +175,16 @@ export const PromptInput: Component = () => {
     (text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0) &&
     !isBusy() &&
     !isDisabled()
+  const placeholder = () => {
+    switch (server.connectionState()) {
+      case "connecting":
+        return language.t("prompt.placeholder.connecting")
+      case "error":
+        return language.t("prompt.placeholder.error")
+      default:
+        return language.t("prompt.placeholder.default")
+    }
+  }
 
   const unsubscribe = vscode.onMessage((message) => {
     if (message.type === "chatCompletionResult") {
@@ -557,9 +567,7 @@ export const PromptInput: Component = () => {
           <textarea
             ref={textareaRef}
             class="prompt-input"
-            placeholder={
-              isDisabled() ? language.t("prompt.placeholder.connecting") : language.t("prompt.placeholder.default")
-            }
+            placeholder={placeholder()}
             value={text()}
             onInput={handleInput}
             onKeyDown={handleKeyDown}

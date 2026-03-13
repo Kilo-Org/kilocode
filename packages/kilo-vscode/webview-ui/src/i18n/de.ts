@@ -414,6 +414,8 @@ export const dict = {
 
   "error.globalSync.connectFailed": "Verbindung zum Server fehlgeschlagen. Läuft ein Server unter `{{url}}`?",
 
+  "error.startup.title": "Serververbindung fehlgeschlagen",
+
   "error.paidModel.title": "Du musst dich anmelden, um dieses Modell zu nutzen",
   "error.paidModel.description":
     "Melde dich an oder erstelle ein Konto, um auf über 500 Modelle zuzugreifen, Credits zum Selbstkostenpreis zu nutzen oder deinen eigenen Schlüssel mitzubringen.",
@@ -948,6 +950,7 @@ export const dict = {
   "settings.experimental.toolToggles": "Werkzeug-Schalter",
   "settings.agentBehaviour.defaultAgent.title": "Standard-Agent",
   "settings.agentBehaviour.defaultAgent.description": "Agent, der verwendet wird, wenn keiner angegeben ist",
+  "settings.agentBehaviour.availableAgents": "Verfügbare Agenten",
   "settings.agentBehaviour.selectAgent": "Agent zum Konfigurieren auswählen…",
   "settings.agentBehaviour.selectAgent.title": "Agent",
   "settings.agentBehaviour.selectAgent.description": "Agent zum Konfigurieren auswählen…",

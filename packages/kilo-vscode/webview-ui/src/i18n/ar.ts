@@ -407,6 +407,8 @@ export const dict = {
 
   "error.globalSync.connectFailed": "تعذر الاتصال بالخادم. هل هناك خادم يعمل في `{{url}}`؟",
 
+  "error.startup.title": "فشل الاتصال بالخادم",
+
   "error.paidModel.title": "يجب عليك تسجيل الدخول لاستخدام هذا النموذج",
   "error.paidModel.description":
     "سجّل الدخول أو أنشئ حسابًا للوصول إلى أكثر من 500 نموذج، واستخدم الرصيد بسعر التكلفة، أو استخدم مفتاحك الخاص.",
@@ -925,6 +927,7 @@ export const dict = {
   "settings.experimental.toolToggles": "مفاتيح الأدوات",
   "settings.agentBehaviour.defaultAgent.title": "الوكيل الافتراضي",
   "settings.agentBehaviour.defaultAgent.description": "الوكيل المستخدم عند عدم التحديد",
+  "settings.agentBehaviour.availableAgents": "الوكلاء المتاحون",
   "settings.agentBehaviour.selectAgent": "اختر وكيلاً للتهيئة…",
   "settings.agentBehaviour.selectAgent.title": "الوكيل",
   "settings.agentBehaviour.selectAgent.description": "اختر وكيلاً للتهيئة…",

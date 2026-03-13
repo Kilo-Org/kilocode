@@ -13,7 +13,7 @@ import { chooseBaseBranch, normalizeBaseBranch } from "./base-branch"
 import { GitStatsPoller, type WorktreePresenceResult } from "./GitStatsPoller"
 import { GitOps, type ApplyConflict } from "./GitOps"
 import { versionedName } from "./branch-name"
-import { normalizePath } from "./git-import"
+import { normalizePath, classifyWorktreeError } from "./git-import"
 import { SetupScriptService } from "./SetupScriptService"
 import { SetupScriptRunner } from "./SetupScriptRunner"
 import { SessionTerminalManager } from "./SessionTerminalManager"
@@ -109,7 +109,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     this.log("Opening Agent Manager panel")
     TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_OPENED, { source: PLATFORM })
 
-    this.panel = vscode.window.createWebviewPanel(
+    const panel = vscode.window.createWebviewPanel(
       AgentManagerProvider.viewType,
       "Agent Manager",
       vscode.ViewColumn.One,
@@ -120,15 +120,35 @@ export class AgentManagerProvider implements vscode.Disposable {
       },
     )
 
-    this.panel.iconPath = {
+    this.attachPanel(panel)
+  }
+
+  /** Restore the Agent Manager panel from a previously serialized state (VS Code restart). */
+  public deserializeWebviewPanel(panel: vscode.WebviewPanel): void {
+    this.log("Deserializing Agent Manager panel")
+    this.attachPanel(panel)
+  }
+
+  /** Wire up a webview panel (shared by openPanel and deserializeWebviewPanel). */
+  private attachPanel(panel: vscode.WebviewPanel): void {
+    this.panel = panel
+
+    // Reapply options — required for deserialized panels where enableScripts
+    // and localResourceRoots are not carried over from the original creation.
+    panel.webview.options = {
+      enableScripts: true,
+      localResourceRoots: [this.extensionUri],
+    }
+
+    panel.iconPath = {
       light: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-light.svg"),
       dark: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-dark.svg"),
     }
 
-    this.panel.webview.html = this.getHtml(this.panel.webview)
+    panel.webview.html = this.getHtml(panel.webview)
 
     this.provider = new KiloProvider(this.extensionUri, this.connectionService)
-    this.provider.attachToWebview(this.panel.webview, {
+    this.provider.attachToWebview(panel.webview, {
       onBeforeMessage: (msg) => this.onMessage(msg),
     })
 
@@ -136,7 +156,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     void this.sendRepoInfo()
     this.sendKeybindings()
 
-    this.panel.onDidDispose(() => {
+    panel.onDidDispose(() => {
       this.log("Panel disposed")
       this.statsPoller.stop()
       this.stopDiffPolling()
@@ -430,6 +450,7 @@ export class AgentManagerProvider implements vscode.Disposable {
         type: "agentManager.worktreeSetup",
         status: "error",
         message: "Open a folder that contains a git repository to use worktrees",
+        errorCode: "not_git_repo",
       })
       return null
     }
@@ -455,6 +476,7 @@ export class AgentManagerProvider implements vscode.Disposable {
         type: "agentManager.worktreeSetup",
         status: "error",
         message: msg,
+        errorCode: classifyWorktreeError(msg),
       })
       TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_SESSION_ERROR, {
         source: PLATFORM,
@@ -1077,8 +1099,9 @@ export class AgentManagerProvider implements vscode.Disposable {
         raw.includes("already used by worktree") || raw.includes("already checked out")
           ? `Branch "${branch}" is already checked out in another worktree`
           : raw
-      this.postToWebview({ type: "agentManager.worktreeSetup", status: "error", message: msg })
-      this.postToWebview({ type: "agentManager.importResult", success: false, message: msg })
+      const code = classifyWorktreeError(msg)
+      this.postToWebview({ type: "agentManager.worktreeSetup", status: "error", message: msg, errorCode: code })
+      this.postToWebview({ type: "agentManager.importResult", success: false, message: msg, errorCode: code })
     } finally {
       this.importing = false
     }
@@ -1147,8 +1170,9 @@ export class AgentManagerProvider implements vscode.Disposable {
         raw.includes("already used by worktree") || raw.includes("already checked out")
           ? "This PR's branch is already checked out in another worktree"
           : raw
-      this.postToWebview({ type: "agentManager.worktreeSetup", status: "error", message: msg })
-      this.postToWebview({ type: "agentManager.importResult", success: false, message: msg })
+      const code = classifyWorktreeError(msg)
+      this.postToWebview({ type: "agentManager.worktreeSetup", status: "error", message: msg, errorCode: code })
+      this.postToWebview({ type: "agentManager.importResult", success: false, message: msg, errorCode: code })
     } finally {
       this.importing = false
     }

@@ -407,6 +407,8 @@ export const dict = {
 
   "error.globalSync.connectFailed": "サーバーに接続できませんでした。`{{url}}`でサーバーが実行されていますか？",
 
+  "error.startup.title": "サーバー接続に失敗しました",
+
   "error.paidModel.title": "このモデルを使用するにはサインインが必要です",
   "error.paidModel.description":
     "サインインまたはアカウントを作成して、500以上のモデルにアクセスし、原価でクレジットを使用するか、独自のキーを持ち込みましょう。",
@@ -933,6 +935,7 @@ export const dict = {
   "settings.experimental.toolToggles": "ツールトグル",
   "settings.agentBehaviour.defaultAgent.title": "デフォルトエージェント",
   "settings.agentBehaviour.defaultAgent.description": "指定されていない場合に使用するエージェント",
+  "settings.agentBehaviour.availableAgents": "利用可能なエージェント",
   "settings.agentBehaviour.selectAgent": "設定するエージェントを選択…",
   "settings.agentBehaviour.selectAgent.title": "エージェント",
   "settings.agentBehaviour.selectAgent.description": "設定するエージェントを選択…",

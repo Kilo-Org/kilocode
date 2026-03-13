@@ -410,6 +410,8 @@ export const dict = {
 
   "error.globalSync.connectFailed": "Не удалось подключиться к серверу. Запущен ли сервер по адресу `{{url}}`?",
 
+  "error.startup.title": "Ошибка подключения к серверу",
+
   "error.paidModel.title": "Для использования этой модели необходимо войти",
   "error.paidModel.description":
     "Войдите или создайте аккаунт для доступа к более чем 500 моделям, используйте кредиты по себестоимости или подключите свой ключ.",
@@ -938,6 +940,7 @@ export const dict = {
   "settings.experimental.toolToggles": "Переключатели инструментов",
   "settings.agentBehaviour.defaultAgent.title": "Агент по умолчанию",
   "settings.agentBehaviour.defaultAgent.description": "Агент при отсутствии указания",
+  "settings.agentBehaviour.availableAgents": "Доступные агенты",
   "settings.agentBehaviour.selectAgent": "Выберите агента для настройки…",
   "settings.agentBehaviour.selectAgent.title": "Агент",
   "settings.agentBehaviour.selectAgent.description": "Выберите агента для настройки…",

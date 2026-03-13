@@ -42,7 +42,7 @@ export namespace ProviderError {
 
   function error(providerID: string, error: APICallError) {
     if (providerID.includes("github-copilot") && error.statusCode === 403) {
-      return "Please reauthenticate with the copilot provider to ensure your credentials work properly with OpenCode."
+      return "Please reauthenticate with the copilot provider to ensure your credentials work properly with Kilo." // kilocode_change
     }
 
     return error.message

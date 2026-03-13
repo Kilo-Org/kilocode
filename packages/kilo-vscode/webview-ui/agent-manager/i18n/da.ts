@@ -34,6 +34,11 @@ export const dict = {
   "agentManager.tab.openTerminal": "Åbn Terminal",
   "agentManager.setup.failed": "Opsætning af workspace mislykkedes",
   "agentManager.setup.settingUp": "Opsætter workspace",
+  "agentManager.setup.error.git_not_found":
+    "Git er ikke installeret eller blev ikke fundet i PATH. Installer venligst Git og genstart VS Code.",
+  "agentManager.setup.error.not_git_repo": "Åbn en mappe, der indeholder et git-repository for at bruge worktrees.",
+  "agentManager.setup.error.lfs_missing":
+    "Dette repository bruger Git LFS, men git-lfs blev ikke fundet. Installer venligst Git LFS.",
   "agentManager.shortcuts.title": "Tastaturgenveje",
   "agentManager.shortcuts.category.sidebar": "Sidebjælke",
   "agentManager.shortcuts.category.tabs": "Faner",

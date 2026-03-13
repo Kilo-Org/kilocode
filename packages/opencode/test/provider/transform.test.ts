@@ -1773,6 +1773,24 @@ describe("ProviderTransform.variants", () => {
       expect(Object.keys(result)).toEqual(["none", "minimal", "low", "medium", "high", "xhigh"])
     })
 
+    // kilocode_change start
+    test("mercury-2 returns OPENAI_EFFORTS with reasoning", () => {
+      const model = createMockModel({
+        id: "openrouter/inception/mercury-2",
+        providerID: "openrouter",
+        api: {
+          id: "inception/mercury-2",
+          url: "https://openrouter.ai",
+          npm: "@openrouter/ai-sdk-provider",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["none", "minimal", "low", "medium", "high", "xhigh"])
+      expect(result.low).toEqual({ reasoning: { effort: "low" } })
+      expect(result.high).toEqual({ reasoning: { effort: "high" } })
+    })
+    // kilocode_change end
+
     test("grok-4 returns empty object", () => {
       const model = createMockModel({
         id: "openrouter/grok-4",
@@ -1913,6 +1931,29 @@ describe("ProviderTransform.variants", () => {
       expect(result.high).toEqual({ reasoning: { effort: "high" } })
       expect(result.xhigh).toEqual({ reasoning: { effort: "xhigh" } })
     })
+
+    // kilocode_change start
+    test("mercury-2 uses server-provided variants from kilo gateway", () => {
+      const serverVariants = {
+        low: { reasoningEffort: "low" },
+        medium: { reasoningEffort: "medium" },
+        high: { reasoningEffort: "high" },
+      }
+      const model = createMockModel({
+        id: "kilo/inception/mercury-2",
+        providerID: "kilo",
+        api: {
+          id: "inception/mercury-2",
+          url: "https://gateway.kilo.ai",
+          npm: "@kilocode/kilo-gateway",
+        },
+        variants: serverVariants,
+      })
+      const result = ProviderTransform.variants(model)
+      expect(result).toEqual(serverVariants)
+      expect(Object.keys(result)).toEqual(["low", "medium", "high"])
+    })
+    // kilocode_change end
   })
   // kilocode_change end
 
@@ -2218,6 +2259,24 @@ describe("ProviderTransform.variants", () => {
       expect(result.low).toEqual({ reasoningEffort: "low" })
       expect(result.high).toEqual({ reasoningEffort: "high" })
     })
+
+    // kilocode_change start
+    test("mercury-2 returns WIDELY_SUPPORTED_EFFORTS with reasoningEffort", () => {
+      const model = createMockModel({
+        id: "inception/mercury-2",
+        providerID: "inception",
+        api: {
+          id: "mercury-2",
+          url: "https://api.inceptionlabs.ai",
+          npm: "@ai-sdk/openai-compatible",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["low", "medium", "high"])
+      expect(result.low).toEqual({ reasoningEffort: "low" })
+      expect(result.high).toEqual({ reasoningEffort: "high" })
+    })
+    // kilocode_change end
   })
 
   describe("@ai-sdk/azure", () => {
