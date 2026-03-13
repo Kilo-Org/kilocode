@@ -99,16 +99,32 @@ describe("GitOps", () => {
   describe("resolveTrackingBranch", () => {
     it("returns configured upstream", async () => {
       const git = ops(async (args) => {
-        if (args[0] === "rev-parse" && args[2] === "@{upstream}") return "origin/feature"
+        if (args[0] === "rev-parse" && args[2] === "feature@{upstream}") return "origin/feature"
         return ""
       })
       expect(await git.resolveTrackingBranch("/repo", "feature")).toBe("origin/feature")
     })
 
+    it("queries the passed branch, not HEAD", async () => {
+      // Regression: the old code used bare @{upstream} which resolves HEAD's upstream,
+      // not the upstream of the requested branch. This test ensures the branch parameter
+      // is included in the git rev-parse argument.
+      let capturedArg = ""
+      const git = ops(async (args) => {
+        if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2]?.includes("@{upstream}")) {
+          capturedArg = args[2]
+          return "origin/other-branch"
+        }
+        return ""
+      })
+      await git.resolveTrackingBranch("/repo", "other-branch")
+      expect(capturedArg).toBe("other-branch@{upstream}")
+    })
+
     it("falls back to <remote>/<branch> when no upstream", async () => {
       const git = ops(async (args) => {
         // resolveTrackingBranch: no upstream
-        if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "@{upstream}")
+        if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "feature@{upstream}")
           throw new Error("no upstream")
         // resolveRemote: no upstream, config says "myfork"
         if (args[0] === "rev-parse" && args[3] === "@{upstream}") throw new Error("no upstream")
@@ -122,7 +138,7 @@ describe("GitOps", () => {
 
     it("falls back to origin/<branch> when no branch config", async () => {
       const git = ops(async (args) => {
-        if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "@{upstream}")
+        if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "feature@{upstream}")
           throw new Error("no upstream")
         if (args[0] === "rev-parse" && args[3] === "@{upstream}") throw new Error("no upstream")
         if (args[0] === "config") throw new Error("no config")
