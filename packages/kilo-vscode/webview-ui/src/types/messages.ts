@@ -653,6 +653,8 @@ export interface AgentManagerRepoInfoMessage {
   defaultBranch?: string
 }
 
+export type WorktreeErrorCode = "git_not_found" | "not_git_repo" | "lfs_missing"
+
 // Agent Manager worktree setup progress
 export interface AgentManagerWorktreeSetupMessage {
   type: "agentManager.worktreeSetup"
@@ -661,7 +663,7 @@ export interface AgentManagerWorktreeSetupMessage {
   sessionId?: string
   branch?: string
   worktreeId?: string
-  errorCode?: "git_not_found" | "not_git_repo" | "lfs_missing"
+  errorCode?: WorktreeErrorCode
 }
 
 // Agent Manager worktree state types (mirrored from WorktreeStateManager)
@@ -758,7 +760,7 @@ export interface AgentManagerImportResultMessage {
   type: "agentManager.importResult"
   success: boolean
   message: string
-  errorCode?: "git_not_found" | "not_git_repo" | "lfs_missing"
+  errorCode?: WorktreeErrorCode
 }
 
 // Shared FileDiff shape (matches Snapshot.FileDiff from CLI backend)
