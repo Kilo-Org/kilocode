@@ -412,6 +412,8 @@ export const dict = {
 
   "error.globalSync.connectFailed": "Nije moguće povezati se na server. Da li server radi na `{{url}}`?",
 
+  "error.startup.title": "Povezivanje sa serverom nije uspjelo",
+
   "error.paidModel.title": "Morate se prijaviti da biste koristili ovaj model",
   "error.paidModel.description":
     "Prijavite se ili kreirajte račun za pristup preko 500 modela, koristite kredite po cijeni koštanja ili donesite vlastiti ključ.",
@@ -937,6 +939,7 @@ export const dict = {
   "settings.experimental.toolToggles": "Prekidači alata",
   "settings.agentBehaviour.defaultAgent.title": "Zadani agent",
   "settings.agentBehaviour.defaultAgent.description": "Agent koji se koristi kada nijedan nije naveden",
+  "settings.agentBehaviour.availableAgents": "Dostupni agenti",
   "settings.agentBehaviour.selectAgent": "Odaberi agenta za konfiguraciju…",
   "settings.agentBehaviour.selectAgent.title": "Agent",
   "settings.agentBehaviour.selectAgent.description": "Odaberi agenta za konfiguraciju…",

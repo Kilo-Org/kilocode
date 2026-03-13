@@ -411,6 +411,8 @@ export const dict = {
 
   "error.globalSync.connectFailed": "Kunne ikke koble til server. Kjører det en server på `{{url}}`?",
 
+  "error.startup.title": "Servertilkobling mislyktes",
+
   "error.paidModel.title": "Du må logge inn for å bruke denne modellen",
   "error.paidModel.description":
     "Logg inn eller opprett en konto for å få tilgang til over 500 modeller, bruk kreditter til kostpris, eller ta med din egen nøkkel.",
@@ -935,6 +937,7 @@ export const dict = {
   "settings.experimental.toolToggles": "Verktøybrytere",
   "settings.agentBehaviour.defaultAgent.title": "Standardagent",
   "settings.agentBehaviour.defaultAgent.description": "Agent å bruke når ingen er angitt",
+  "settings.agentBehaviour.availableAgents": "Tilgjengelige agenter",
   "settings.agentBehaviour.selectAgent": "Velg en agent å konfigurere…",
   "settings.agentBehaviour.selectAgent.title": "Agent",
   "settings.agentBehaviour.selectAgent.description": "Velg en agent å konfigurere…",

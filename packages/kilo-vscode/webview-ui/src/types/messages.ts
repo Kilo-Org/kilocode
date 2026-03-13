@@ -363,6 +363,8 @@ export interface ConnectionStateMessage {
   type: "connectionState"
   state: ConnectionState
   error?: string
+  userMessage?: string
+  userDetails?: string
 }
 
 export interface ErrorMessage {
@@ -653,6 +655,8 @@ export interface AgentManagerRepoInfoMessage {
   defaultBranch?: string
 }
 
+export type WorktreeErrorCode = "git_not_found" | "not_git_repo" | "lfs_missing"
+
 // Agent Manager worktree setup progress
 export interface AgentManagerWorktreeSetupMessage {
   type: "agentManager.worktreeSetup"
@@ -661,6 +665,7 @@ export interface AgentManagerWorktreeSetupMessage {
   sessionId?: string
   branch?: string
   worktreeId?: string
+  errorCode?: WorktreeErrorCode
 }
 
 // Agent Manager worktree state types (mirrored from WorktreeStateManager)
@@ -757,6 +762,7 @@ export interface AgentManagerImportResultMessage {
   type: "agentManager.importResult"
   success: boolean
   message: string
+  errorCode?: WorktreeErrorCode
 }
 
 // Shared FileDiff shape (matches Snapshot.FileDiff from CLI backend)
@@ -1540,6 +1546,10 @@ export interface OpenChangesRequest {
   type: "openChanges"
 }
 
+export interface RetryConnectionRequest {
+  type: "retryConnection"
+}
+
 // Open a sub-agent session in a read-only editor panel
 export interface OpenSubAgentViewerRequest {
   type: "openSubAgentViewer"
@@ -1638,6 +1648,7 @@ export type WebviewMessage =
   | ApplyWorktreeDiffMessage
   | EnhancePromptRequest
   | OpenChangesRequest
+  | RetryConnectionRequest
   | OpenSubAgentViewerRequest
   | SetDefaultBaseBranchRequest
 

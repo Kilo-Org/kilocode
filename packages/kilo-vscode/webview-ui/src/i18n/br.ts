@@ -407,6 +407,8 @@ export const dict = {
 
   "error.globalSync.connectFailed": "Não foi possível conectar ao servidor. Há um servidor executando em `{{url}}`?",
 
+  "error.startup.title": "Falha na conexão com o servidor",
+
   "error.paidModel.title": "Você precisa fazer login para usar este modelo",
   "error.paidModel.description":
     "Faça login ou crie uma conta para acessar mais de 500 modelos, usar créditos a preço de custo ou trazer sua própria chave.",
@@ -937,6 +939,7 @@ export const dict = {
   "settings.experimental.toolToggles": "Alternadores de ferramentas",
   "settings.agentBehaviour.defaultAgent.title": "Agente padrão",
   "settings.agentBehaviour.defaultAgent.description": "Agente a usar quando nenhum é especificado",
+  "settings.agentBehaviour.availableAgents": "Agentes Disponíveis",
   "settings.agentBehaviour.selectAgent": "Selecionar um agente para configurar…",
   "settings.agentBehaviour.selectAgent.title": "Agente",
   "settings.agentBehaviour.selectAgent.description": "Selecionar um agente para configurar…",

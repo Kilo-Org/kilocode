@@ -11,7 +11,7 @@ import type { FileDiff } from "@kilocode/sdk/v2/client"
 import type { Worktree, ManagedSession } from "./WorktreeStateManager"
 import type { WorktreeStats, LocalStats } from "./GitStatsPoller"
 import type { ApplyConflict } from "./GitOps"
-import type { BranchListItem } from "./git-import"
+import type { BranchListItem, WorktreeSetupErrorCode } from "./git-import"
 import type { ExternalWorktreeItem } from "./WorktreeManager"
 
 // ---------------------------------------------------------------------------
@@ -50,6 +50,7 @@ interface WorktreeSetupMessage {
   sessionId?: string
   branch?: string
   worktreeId?: string
+  errorCode?: WorktreeSetupErrorCode
 }
 
 interface SessionMetaMessage {
@@ -125,6 +126,7 @@ interface ImportResultMessage {
   type: "agentManager.importResult"
   success: boolean
   message: string
+  errorCode?: WorktreeSetupErrorCode
 }
 
 interface KeybindingsMessage {

@@ -406,6 +406,8 @@ export const dict = {
 
   "error.globalSync.connectFailed": "无法连接到服务器。是否有服务器正在 `{{url}}` 运行？",
 
+  "error.startup.title": "服务器连接失败",
+
   "error.paidModel.title": "您需要登录才能使用此模型",
   "error.paidModel.description": "登录或创建账户以访问500多个模型，按成本使用积分，或使用您自己的密钥。",
   "error.paidModel.action": "登录",
@@ -920,6 +922,7 @@ export const dict = {
   "settings.experimental.toolToggles": "工具开关",
   "settings.agentBehaviour.defaultAgent.title": "默认智能体",
   "settings.agentBehaviour.defaultAgent.description": "未指定时使用的智能体",
+  "settings.agentBehaviour.availableAgents": "可用代理",
   "settings.agentBehaviour.selectAgent": "选择要配置的智能体…",
   "settings.agentBehaviour.selectAgent.title": "智能体",
   "settings.agentBehaviour.selectAgent.description": "选择要配置的智能体…",

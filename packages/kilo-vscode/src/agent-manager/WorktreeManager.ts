@@ -141,6 +141,19 @@ export class WorktreeManager {
     return this.withGitLock(() => this.createWorktreeImpl(params))
   }
 
+  private async ensureGitAvailable(): Promise<void> {
+    try {
+      await execWithShellEnv("git", ["--version"])
+    } catch (error) {
+      if (error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT") {
+        throw new Error(
+          "Git is not installed or not found in PATH. Please install Git (https://git-scm.com) and restart VS Code.",
+        )
+      }
+      throw error
+    }
+  }
+
   private async createWorktreeImpl(params: {
     prompt?: string
     existingBranch?: string
@@ -148,6 +161,7 @@ export class WorktreeManager {
     branchName?: string
     onProgress?: (step: WorktreeProgressStep, message: string, detail?: string) => void
   }): Promise<CreateWorktreeResult> {
+    await this.ensureGitAvailable()
     const repo = await this.git.checkIsRepo()
     if (!repo)
       throw new Error(
@@ -773,6 +787,7 @@ export class WorktreeManager {
   }
 
   private async createFromPRImpl(url: string): Promise<CreateWorktreeResult> {
+    await this.ensureGitAvailable()
     const parsed = parsePRUrl(url)
     if (!parsed) throw new Error("Invalid PR URL. Expected: https://github.com/owner/repo/pull/123")
 

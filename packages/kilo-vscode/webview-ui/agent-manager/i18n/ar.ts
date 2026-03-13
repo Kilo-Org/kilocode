@@ -34,6 +34,10 @@ export const dict = {
   "agentManager.tab.openTerminal": "فتح الطرفية",
   "agentManager.setup.failed": "فشل إعداد مساحة العمل",
   "agentManager.setup.settingUp": "جارٍ إعداد مساحة العمل",
+  "agentManager.setup.error.git_not_found": "Git غير مثبت أو غير موجود في PATH. يرجى تثبيت Git وإعادة تشغيل VS Code.",
+  "agentManager.setup.error.not_git_repo": "افتح مجلدًا يحتوي على مستودع git لاستخدام مساحات العمل (worktrees).",
+  "agentManager.setup.error.lfs_missing":
+    "يستخدم هذا المستودع Git LFS، ولكن لم يتم العثور على git-lfs. يرجى تثبيت Git LFS.",
   "agentManager.shortcuts.title": "اختصارات لوحة المفاتيح",
   "agentManager.shortcuts.category.sidebar": "الشريط الجانبي",
   "agentManager.shortcuts.category.tabs": "علامات التبويب",

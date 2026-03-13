@@ -39,6 +39,11 @@ export const dict = {
 
   "agentManager.setup.failed": "Workspace setup failed",
   "agentManager.setup.settingUp": "Setting up workspace",
+  "agentManager.setup.error.git_not_found":
+    "Git is not installed or not found in PATH. Please install Git and restart VS Code.",
+  "agentManager.setup.error.not_git_repo": "Open a folder that contains a git repository to use worktrees.",
+  "agentManager.setup.error.lfs_missing":
+    "This repository uses Git LFS, but git-lfs was not found. Please install Git LFS.",
   "agentManager.shortcuts.title": "Keyboard Shortcuts",
   "agentManager.shortcuts.category.sidebar": "Sidebar",
   "agentManager.shortcuts.category.tabs": "Tabs",
