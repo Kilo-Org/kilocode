@@ -71,6 +71,7 @@ function createClient(options: ClientOptions) {
       },
       remove: async (params: unknown) => {
         calls.remove.push(params)
+        calls.order.push("remove")
         const payload = params as { providerID: string }
         delete authStates[payload.providerID]
         const index = connected.indexOf(payload.providerID)
@@ -440,6 +441,43 @@ describe("KiloProvider provider actions", () => {
       action: "connect",
       message: "boom",
     })
+  })
+
+  it("removes stale auth when re-saving a custom provider without an api key", async () => {
+    const client = createClient({
+      providerID: "openrouter",
+      connected: ["myprovider"],
+      authStates: { myprovider: "api" },
+      globalConfig: { disabled_providers: ["myprovider"] },
+    })
+    const { webview } = createBoundProvider(client)
+
+    await webview.receive({
+      type: "saveCustomProvider",
+      requestId: "req-6c",
+      providerID: "myprovider",
+      config: {
+        name: "My Provider",
+        env: ["MY_PROVIDER_KEY"],
+        options: {
+          baseURL: "https://example.com/v1",
+        },
+        models: { "model-1": { name: "Model One" } },
+      },
+    })
+
+    expect(client.calls.getGlobalConfig).toBe(1)
+    expect(client.calls.getConfig).toBe(0)
+    expect(client.calls.order.indexOf("updateConfig")).toBeLessThan(client.calls.order.indexOf("remove"))
+    expect(client.calls.remove).toContainEqual({ providerID: "myprovider" })
+
+    const providersLoaded = webview.sent.find((item) => {
+      if (!item || typeof item !== "object") return false
+      return "type" in item && item.type === "providersLoaded"
+    }) as { authStates?: Record<string, ProviderAuthState>; connected?: string[] } | undefined
+
+    expect(providersLoaded?.authStates?.myprovider).toBeUndefined()
+    expect(providersLoaded?.connected).not.toContain("myprovider")
   })
 
   it("rejects invalid provider IDs before forwarding provider actions", async () => {

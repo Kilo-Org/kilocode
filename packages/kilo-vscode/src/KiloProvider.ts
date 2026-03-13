@@ -1339,8 +1339,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.cachedConfigMessage = { type: "configLoaded", config: updated }
       this.postMessage({ type: "configUpdated", config: updated })
 
-      if (apiKey) {
-        try {
+      try {
+        if (apiKey) {
           await this.client.auth.set(
             {
               providerID: id,
@@ -1351,16 +1351,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             },
             { throwOnError: true },
           )
-        } catch (error) {
-          await refresh()
-          this.postProviderActionError(
-            requestId,
-            providerID,
-            "connect",
-            getErrorMessage(error) || "Failed to save custom provider",
-          )
-          return
+        } else {
+          await this.client.auth.remove({ providerID: id }, { throwOnError: true })
         }
+      } catch (error) {
+        await refresh()
+        this.postProviderActionError(
+          requestId,
+          providerID,
+          "connect",
+          getErrorMessage(error) || "Failed to save custom provider",
+        )
+        return
       }
 
       await refresh()
