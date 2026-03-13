@@ -122,13 +122,15 @@ export namespace ACP {
       })
   }
 
-  export async function init({ sdk: _sdk }: { sdk: KiloClient }) {
+  // kilocode_change start
+  export async function init({ sdk: _sdk, defaultCwd }: { sdk: KiloClient; defaultCwd?: string }) {
     return {
       create: (connection: AgentSideConnection, fullConfig: ACPConfig) => {
-        return new Agent(connection, fullConfig)
+        return new Agent(connection, { ...fullConfig, defaultCwd: fullConfig.defaultCwd ?? defaultCwd })
       },
     }
   }
+  // kilocode_change end
 
   export class Agent implements ACPAgent {
     private connection: AgentSideConnection
@@ -567,12 +569,12 @@ export namespace ACP {
     }
 
     async newSession(params: NewSessionRequest) {
-      const directory = params.cwd
+      const directory = params.cwd ?? this.config.defaultCwd ?? process.cwd()
       try {
         const model = await defaultModel(this.config, directory)
 
         // Store ACP session state
-        const state = await this.sessionManager.create(params.cwd, params.mcpServers, model)
+        const state = await this.sessionManager.create(directory, params.mcpServers, model)
         const sessionId = state.id
 
         log.info("creating_session", { sessionId, mcpServers: params.mcpServers.length })
@@ -601,14 +603,14 @@ export namespace ACP {
     }
 
     async loadSession(params: LoadSessionRequest) {
-      const directory = params.cwd
+      const directory = params.cwd ?? this.config.defaultCwd ?? process.cwd()
       const sessionId = params.sessionId
 
       try {
         const model = await defaultModel(this.config, directory)
 
         // Store ACP session state
-        await this.sessionManager.load(sessionId, params.cwd, params.mcpServers, model)
+        await this.sessionManager.load(sessionId, directory, params.mcpServers, model)
 
         log.info("load_session", { sessionId, mcpServers: params.mcpServers.length })
 
@@ -669,11 +671,12 @@ export namespace ACP {
       try {
         const cursor = params.cursor ? Number(params.cursor) : undefined
         const limit = 100
+        const directory = params.cwd ?? this.config.defaultCwd ?? process.cwd()
 
         const sessions = await this.sdk.session
           .list(
             {
-              directory: params.cwd ?? undefined,
+              directory: directory,
               roots: true,
             },
             { throwOnError: true },
@@ -711,7 +714,7 @@ export namespace ACP {
     }
 
     async unstable_forkSession(params: ForkSessionRequest): Promise<ForkSessionResponse> {
-      const directory = params.cwd
+      const directory = params.cwd ?? this.config.defaultCwd ?? process.cwd()
       const mcpServers = params.mcpServers ?? []
 
       try {
@@ -776,7 +779,7 @@ export namespace ACP {
     }
 
     async unstable_resumeSession(params: ResumeSessionRequest): Promise<ResumeSessionResponse> {
-      const directory = params.cwd
+      const directory = params.cwd ?? this.config.defaultCwd ?? process.cwd()
       const sessionId = params.sessionId
       const mcpServers = params.mcpServers ?? []
 
@@ -1147,7 +1150,7 @@ export namespace ACP {
     }
 
     private async loadSessionMode(params: LoadSessionRequest) {
-      const directory = params.cwd
+      const directory = params.cwd ?? this.config.defaultCwd ?? process.cwd()
       const model = await defaultModel(this.config, directory)
       const sessionId = params.sessionId
 
