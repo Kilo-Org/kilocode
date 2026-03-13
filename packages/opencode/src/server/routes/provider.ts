@@ -61,7 +61,7 @@ export const ProviderRoutes = lazy(() =>
             const sorted = Provider.sort(Object.values(item.models))
             return sorted[0]?.id ?? (item.id === "kilo" ? "kilo-auto/free" : "")
           }),
-          connected: Object.keys(connected),
+          connected: Object.keys(connected).filter((id) => Object.hasOwn(validProviders, id)),
         })
         // kilocode_change end
       },
