@@ -92,7 +92,7 @@ export const SortableTab: Component<{
           </TooltipKeybind>
         </ContextMenu.Trigger>
         <ContextMenu.Portal>
-          <ContextMenu.Content class="am-tab-context-menu">
+          <ContextMenu.Content>
             <Show when={props.onFork}>
               <ContextMenu.Item onSelect={() => props.onFork?.()}>
                 <Icon name="branch" size="small" />
