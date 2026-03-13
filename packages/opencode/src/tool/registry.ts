@@ -116,7 +116,7 @@ export namespace ToolRegistry {
       // TodoReadTool,
       WebSearchTool,
       CodeSearchTool,
-      CodebaseSearchTool, // kilocode_change
+      ...(config.experimental?.codebase_search === true ? [CodebaseSearchTool] : []), // kilocode_change
       SkillTool,
       ApplyPatchTool,
       ...(Flag.KILO_EXPERIMENTAL_LSP_TOOL ? [LspTool] : []),
@@ -146,10 +146,6 @@ export namespace ToolRegistry {
           if (t.id === "codesearch" || t.id === "websearch") {
             return model.providerID === "opencode" || model.providerID === "kilo" || Flag.KILO_ENABLE_EXA
           }
-          // kilocode_change end
-
-          // kilocode_change start
-          if (t.id === "codebase_search") return Flag.KILO_ENABLE_WARPGREP
           // kilocode_change end
 
           // use apply tool in same format as codex

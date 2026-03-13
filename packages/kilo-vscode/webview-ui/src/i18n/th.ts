@@ -919,6 +919,8 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "ไม่สรุปเนื้อหาที่วางขนาดใหญ่",
   "settings.experimental.batch.title": "เครื่องมือแบทช์",
   "settings.experimental.batch.description": "เปิดใช้งานการประมวลผลแบทช์ของการเรียกเครื่องมือ",
+  "settings.experimental.codebaseSearch.title": "ค้นหาโค้ดเบส",
+  "settings.experimental.codebaseSearch.description": "เปิดใช้งานการค้นหาด้วยภาษาธรรมชาติโดย AI ทั่วทั้งโค้ดเบส",
   "settings.experimental.continueOnDeny.title": "ดำเนินต่อเมื่อถูกปฏิเสธ",
   "settings.experimental.continueOnDeny.description": "ดำเนินลูปเอเจนต์ต่อเมื่อสิทธิ์ถูกปฏิเสธ",
   "settings.experimental.mcpTimeout.title": "หมดเวลา MCP (มิลลิวินาที)",

@@ -913,6 +913,8 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "不对大量粘贴内容进行摘要",
   "settings.experimental.batch.title": "批量工具",
   "settings.experimental.batch.description": "启用多个工具调用的批处理",
+  "settings.experimental.codebaseSearch.title": "代码库搜索",
+  "settings.experimental.codebaseSearch.description": "启用 AI 驱动的自然语言代码库搜索",
   "settings.experimental.continueOnDeny.title": "拒绝后继续",
   "settings.experimental.continueOnDeny.description": "权限被拒绝时继续智能体循环",
   "settings.experimental.mcpTimeout.title": "MCP 超时（毫秒）",
