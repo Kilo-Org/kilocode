@@ -54,8 +54,7 @@ export const PermissionRoutes = lazy(() =>
       "/:requestID/pattern-rules",
       describeRoute({
         summary: "Save per-pattern permission rules",
-        description:
-          "Save approved/denied patterns for a pending permission request.",
+        description: "Save approved/denied patterns for a pending permission request.",
         operationId: "permission.savePatternRules",
         responses: {
           200: {

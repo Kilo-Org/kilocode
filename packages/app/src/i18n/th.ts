@@ -113,7 +113,6 @@ export const dict = {
   "dialog.model.empty": "ไม่พบผลลัพธ์โมเดล",
   "dialog.model.manage": "จัดการโมเดล",
   "dialog.model.manage.description": "ปรับแต่งโมเดลที่จะปรากฏในตัวเลือกโมเดล",
-  "dialog.model.manage.provider.toggle": "สลับโมเดล {{provider}} ทั้งหมด",
 
   "dialog.model.unpaid.freeModels.title": "โมเดลฟรีที่จัดหาให้โดย Kilo",
   "dialog.model.unpaid.addMore.title": "เพิ่มโมเดลเพิ่มเติมจากผู้ให้บริการยอดนิยม",
@@ -495,7 +494,6 @@ export const dict = {
   "session.review.loadingChanges": "กำลังโหลดการเปลี่ยนแปลง...",
   "session.review.empty": "ยังไม่มีการเปลี่ยนแปลงในเซสชันนี้",
   "session.review.noChanges": "ไม่มีการเปลี่ยนแปลง",
-  "session.review.noVcs": "ไม่พบ git VCS ดังนั้นจะไม่สามารถตรวจจับการเปลี่ยนแปลงของเซสชันได้",
 
   "session.files.selectToOpen": "เลือกไฟล์เพื่อเปิด",
   "session.files.all": "ไฟล์ทั้งหมด",
@@ -511,11 +509,6 @@ export const dict = {
   "session.todo.title": "สิ่งที่ต้องทำ",
   "session.todo.collapse": "ย่อ",
   "session.todo.expand": "ขยาย",
-
-  "session.modeSwitch.switching": "กำลังสลับไปยังโหมด {{mode}}…",
-  "session.modeSwitch.waiting": "รอให้งานปัจจุบันเสร็จสมบูรณ์",
-  "session.modeSwitch.notAvailable": "ตัวแทนไม่พร้อมใช้งาน",
-  "session.modeSwitch.fallback": 'ไม่พบ "{{requested}}" กำลังใช้ "{{actual}}"',
 
   "session.new.worktree.main": "สาขาหลัก",
   "session.new.worktree.mainWithBranch": "สาขาหลัก ({{branch}})",
@@ -613,8 +606,6 @@ export const dict = {
   "settings.general.row.theme.description": "ปรับแต่งวิธีการที่ Kilo มีธีม",
   "settings.general.row.font.title": "ฟอนต์",
   "settings.general.row.font.description": "ปรับแต่งฟอนต์โมโนที่ใช้ในบล็อกโค้ด",
-  "settings.general.row.reasoningSummaries.title": "แสดงสรุปการให้เหตุผล",
-  "settings.general.row.reasoningSummaries.description": "แสดงสรุปการให้เหตุผลของโมเดลในไทม์ไลน์",
 
   "settings.general.row.shellToolPartsExpanded.title": "ขยายส่วนเครื่องมือ shell",
   "settings.general.row.shellToolPartsExpanded.description": "แสดงส่วนเครื่องมือ shell แบบขยายตามค่าเริ่มต้นในไทม์ไลน์",

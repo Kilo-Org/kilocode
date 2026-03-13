@@ -4,11 +4,6 @@
   "version": "7.0.47",
   "type": "module",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Kilo-Org/kilocode",
-    "directory": "packages/sdk/js"
-  },
   "scripts": {
     "typecheck": "tsgo --noEmit",
     "build": "bun ./script/build.ts"
@@ -17,18 +12,9 @@
     ".": "./src/index.ts",
     "./client": "./src/client.ts",
     "./server": "./src/server.ts",
-    "./v2": {
-      "types": "./dist/v2/index.d.ts",
-      "default": "./src/v2/index.ts"
-    },
-    "./v2/client": {
-      "types": "./dist/v2/client.d.ts",
-      "default": "./src/v2/client.ts"
-    },
-    "./v2/gen/client": {
-      "types": "./dist/v2/gen/client/index.d.ts",
-      "default": "./src/v2/gen/client/index.ts"
-    },
+    "./v2": "./src/v2/index.ts",
+    "./v2/client": "./src/v2/client.ts",
+    "./v2/gen/client": "./src/v2/gen/client/index.ts",
     "./v2/server": "./src/v2/server.ts"
   },
   "files": [
@@ -42,8 +28,5 @@
     "@typescript/native-preview": "catalog:"
   },
   "dependencies": {},
-  "publishConfig": {
-    "directory": "dist"
-  },
   "peerDependencies": {}
 }
