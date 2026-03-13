@@ -493,11 +493,17 @@ const AGENT_MANAGER_DIR = path.join(ROOT, "src/agent-manager")
  *
  * When you extract code out of one of these files, lower its maxLines to
  * the new line count rounded up to the nearest 50.
+ *
+ * DO NOT raise maxLines to accommodate new code. If adding a feature would
+ * exceed the cap, extract logic into a vscode-free helper module and have
+ * the provider call it. Only raise the cap as a last resort when the code
+ * is structurally impossible to extract (e.g. deep vscode API interleaving)
+ * — and document the reason in the entry's `note` field.
  */
 const VSCODE_ALLOWED: Record<string, { maxLines: number; note: string }> = {
   // God class — decompose into WorktreeOrchestrator, DiffManager, ApplyManager, etc.
   "AgentManagerProvider.ts": {
-    maxLines: 2000,
+    maxLines: 1900,
     note: "primary extraction target: break into vscode-free orchestrators",
   },
   // Thin adapter: wraps vscode.window terminal APIs behind TerminalHost interface
@@ -544,13 +550,16 @@ describe("Agent Manager — VS Code import boundary", () => {
       const filepath = path.join(AGENT_MANAGER_DIR, file)
       if (!fs.existsSync(filepath)) continue
       const lines = fs.readFileSync(filepath, "utf-8").split("\n").length
-      if (lines > maxLines) overweight.push(`${file}: ${lines} lines (maxLines: ${maxLines})`)
+      if (lines > maxLines) overweight.push(`${file}: ${lines} lines (cap: ${maxLines})`)
     }
     expect(
       overweight,
-      `These VS Code integration files exceed their maxLines cap.\n` +
-        `Extract business logic into vscode-free modules and lower maxLines:\n` +
-        overweight.map((o) => `  - ${o}`).join("\n"),
+      `File too large — needs better modularization.\n\n` +
+        overweight.map((o) => `  ${o}`).join("\n") +
+        `\n\n` +
+        `Do NOT raise maxLines. Instead, extract logic into a vscode-free\n` +
+        `helper module and call it from the provider. See fork-session.ts\n` +
+        `for an example of this pattern.`,
     ).toEqual([])
   })
 

@@ -19,6 +19,7 @@ import { SetupScriptRunner } from "./SetupScriptRunner"
 import { SessionTerminalManager } from "./SessionTerminalManager"
 import { createTerminalHost } from "./terminal-host"
 import { executeVscodeTask } from "./task-runner"
+import { forkSession } from "./fork-session"
 import { formatKeybinding } from "./format-keybinding"
 import { TelemetryProxy, TelemetryEventName } from "../services/telemetry"
 import { MAX_MULTI_VERSIONS } from "./constants"
@@ -774,58 +775,27 @@ export class AgentManagerProvider implements vscode.Disposable {
     return null
   }
 
-  /** Fork an existing session, copying its conversation history via the CLI. */
-  private async onForkSession(sessionId: string, worktreeId?: string): Promise<null> {
-    let client: KiloClient
-    try {
-      client = this.connectionService.getClient()
-    } catch (err) {
-      this.log("onForkSession: client not available:", err)
-      this.postToWebview({ type: "error", message: "Not connected to CLI backend" })
-      return null
-    }
-
-    const state = this.getStateManager()
-    const directory = (() => {
-      if (!worktreeId || !state) return undefined
-      const worktree = state.getWorktree(worktreeId)
-      return worktree?.path
-    })()
-
-    let forked: Session
-    try {
-      const { data } = await client.session.fork({ sessionID: sessionId, directory }, { throwOnError: true })
-      forked = data
-    } catch (error) {
-      const err = getErrorMessage(error)
-      this.postToWebview({ type: "error", message: `Failed to fork session: ${err}` })
-      TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_SESSION_ERROR, {
-        source: PLATFORM,
-        error: err,
-        context: "forkSession",
-        sessionId,
-      })
-      return null
-    }
-
-    if (worktreeId && state) {
-      state.addSession(forked.id, worktreeId)
-      if (directory) this.registerWorktreeSession(forked.id, directory)
-    }
-    this.pushState()
-    this.postToWebview({
-      type: "agentManager.sessionForked",
-      sessionId: forked.id,
-      forkedFromId: sessionId,
+  private onForkSession(sessionId: string, worktreeId?: string) {
+    return forkSession(
+      {
+        getClient: () => this.connectionService.getClient(),
+        state: this.getStateManager(),
+        postError: (msg) => this.postToWebview({ type: "error", message: msg }),
+        registerWorktreeSession: (sid, dir) => this.registerWorktreeSession(sid, dir),
+        pushState: () => this.pushState(),
+        notifyForked: (s, from, wt) =>
+          this.postToWebview({
+            type: "agentManager.sessionForked",
+            sessionId: s.id,
+            forkedFromId: from,
+            worktreeId: wt,
+          }),
+        registerSession: (s) => this.provider?.registerSession(s),
+        log: (...args) => this.log(...args),
+      },
+      sessionId,
       worktreeId,
-    })
-
-    if (this.provider) {
-      this.provider.registerSession(forked)
-    }
-
-    this.log(`Forked session ${sessionId} → ${forked.id}${worktreeId ? ` in worktree ${worktreeId}` : ""}`)
-    return null
+    )
   }
 
   /** Close (remove) a session from its worktree. */
