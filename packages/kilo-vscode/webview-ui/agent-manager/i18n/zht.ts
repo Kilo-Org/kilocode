@@ -30,6 +30,7 @@ export const dict = {
   "agentManager.session.noSessions": "沒有開啟的工作階段",
   "agentManager.tab.close": "關閉",
   "agentManager.tab.closeTab": "關閉分頁",
+  "agentManager.tab.forkSession": "複製工作階段",
   "agentManager.tab.terminal": "終端機",
   "agentManager.tab.openTerminal": "開啟終端機",
   "agentManager.setup.failed": "工作區設定失敗",

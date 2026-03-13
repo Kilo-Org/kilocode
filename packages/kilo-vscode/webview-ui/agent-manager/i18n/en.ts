@@ -34,6 +34,7 @@ export const dict = {
 
   "agentManager.tab.close": "Close",
   "agentManager.tab.closeTab": "Close tab",
+  "agentManager.tab.forkSession": "Fork Session",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Open Terminal",
 

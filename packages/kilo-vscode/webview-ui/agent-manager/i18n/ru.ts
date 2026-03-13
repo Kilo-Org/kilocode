@@ -30,6 +30,7 @@ export const dict = {
   "agentManager.session.noSessions": "Нет открытых сессий",
   "agentManager.tab.close": "Закрыть",
   "agentManager.tab.closeTab": "Закрыть вкладку",
+  "agentManager.tab.forkSession": "Ответвить сессию",
   "agentManager.tab.terminal": "Терминал",
   "agentManager.tab.openTerminal": "Открыть терминал",
   "agentManager.setup.failed": "Не удалось настроить рабочее пространство",
