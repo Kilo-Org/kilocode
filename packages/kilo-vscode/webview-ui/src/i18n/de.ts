@@ -450,7 +450,7 @@ export const dict = {
 
   "notification.permission.title": "Berechtigung erforderlich",
   "notification.permission.description": "{{sessionTitle}} in {{projectName}} benötigt Berechtigung",
-  "ui.permission.autoApprovedCommands": "Automatisch genehmigte Befehle",
+  "ui.permission.autoApprovedRules": "Automatisch genehmigte Regeln",
   "ui.permission.pattern.addToAllowed": "Zur Erlaubt-Liste hinzufügen",
   "ui.permission.pattern.removeFromAllowed": "Aus der Erlaubt-Liste entfernen",
   "ui.permission.pattern.addToDenied": "Zur Verweigert-Liste hinzufügen",
