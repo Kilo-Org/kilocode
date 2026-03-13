@@ -1168,9 +1168,9 @@
 [data-component="dock-prompt"][data-kind="permission"] {
   animation: permission-slide-in 0.3s ease-out;
   margin: 12px;
-  border: 2px solid
+  border: 1px solid
     color-mix(in srgb, var(--vscode-editorWarning-foreground, #cca700) 40%, var(--vscode-panel-border, transparent));
-  border-radius: 8px;
+  border-radius: 0.25rem;
   overflow: clip;
 
   [data-dock-surface="shell"] {
