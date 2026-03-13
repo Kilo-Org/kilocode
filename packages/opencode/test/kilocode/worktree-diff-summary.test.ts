@@ -78,4 +78,13 @@ describe("WorktreeDiff summary", () => {
     expect(detail?.after).toBe("one\ntwo\n")
     expect(detail?.additions).toBe(2)
   })
+
+  test("statsOnly counts untracked text file additions", async () => {
+    await using tmp = await setup()
+    await Bun.write(path.join(tmp.path, "notes.txt"), "one\ntwo\nthree\n")
+
+    const stats = await WorktreeDiff.statsOnly({ dir: tmp.path, base: "HEAD" })
+
+    expect(stats).toEqual({ files: 1, additions: 3, deletions: 0 })
+  })
 })

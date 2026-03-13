@@ -93,6 +93,26 @@ export namespace WorktreeDiff {
     return files.split("\n").filter(Boolean)
   }
 
+  async function untrackedStats(dir: string, log: Log.Logger) {
+    const entries = await untracked(dir, log)
+    if (entries.length === 0) return { files: 0, additions: 0 }
+
+    const concurrency = 10
+    const result = { files: entries.length, additions: 0 }
+    for (let i = 0; i < entries.length; i += concurrency) {
+      const batch = entries.slice(i, i + concurrency)
+      const counts = await Promise.all(
+        batch.map(async (file) => {
+          const full = path.join(dir, file)
+          if (await sniff(full)) return 0
+          return await lineCount(full)
+        }),
+      )
+      result.additions += counts.reduce((sum, count) => sum + count, 0)
+    }
+    return result
+  }
+
   async function list(dir: string, ancestor: string, log: Log.Logger): Promise<Meta[]> {
     const nameStatus = await $`git -c core.quotepath=false diff --name-status --no-renames ${ancestor}`
       .cwd(dir)
@@ -327,11 +347,10 @@ export namespace WorktreeDiff {
       },
       { files: 0, additions: 0, deletions: 0 },
     )
-    const files = (await untracked(input.dir, log)).length
+    const untracked = await untrackedStats(input.dir, log)
     return {
-      files: tracked.files + files,
-      // Keep stats polling cheap: count untracked files, but do not read their contents here.
-      additions: tracked.additions,
+      files: tracked.files + untracked.files,
+      additions: tracked.additions + untracked.additions,
       deletions: tracked.deletions,
     }
   }
