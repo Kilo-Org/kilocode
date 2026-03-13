@@ -46,7 +46,6 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const dialog = useDialog()
 
   const autoScroll = createAutoScroll({
-    working: () => session.status() !== "idle",
     overflowAnchor: "dynamic",
   })
 

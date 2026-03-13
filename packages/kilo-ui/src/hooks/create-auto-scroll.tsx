@@ -1,12 +1,10 @@
 // kilocode_change - new file
-import { createEffect, on, onCleanup } from "solid-js"
+import { createEffect, onCleanup } from "solid-js"
 import { createStore } from "solid-js/store"
 import { createResizeObserver } from "@solid-primitives/resize-observer"
 
-const DEBOUNCE_MS = 100
-
 export interface AutoScrollOptions {
-  working: () => boolean
+  working?: () => boolean
   onUserInteracted?: () => void
   overflowAnchor?: "none" | "auto" | "dynamic"
   bottomThreshold?: number
@@ -14,12 +12,9 @@ export interface AutoScrollOptions {
 
 export function createAutoScroll(options: AutoScrollOptions) {
   let scroll: HTMLElement | undefined
-  let settling = false
-  let settleTimer: ReturnType<typeof setTimeout> | undefined
-  let autoTimer: ReturnType<typeof setTimeout> | undefined
-  let stopTimer: ReturnType<typeof setTimeout> | undefined
+  let programmatic = false
+  let raf: number | undefined
   let cleanup: (() => void) | undefined
-  let auto: { time: number } | undefined
 
   const threshold = () => options.bottomThreshold ?? 10
 
@@ -27,8 +22,6 @@ export function createAutoScroll(options: AutoScrollOptions) {
     contentRef: undefined as HTMLElement | undefined,
     userScrolled: false,
   })
-
-  const active = () => options.working() || settling
 
   const distanceFromBottom = (el: HTMLElement) => {
     return el.scrollHeight - el.clientHeight - el.scrollTop
@@ -38,36 +31,20 @@ export function createAutoScroll(options: AutoScrollOptions) {
     return el.scrollHeight - el.clientHeight > 1
   }
 
-  // Browsers can dispatch scroll events asynchronously. If new content arrives
-  // between us calling `scrollTo()` and the subsequent `scroll` event firing,
-  // the handler can see a non-zero `distanceFromBottom` and incorrectly assume
-  // the user scrolled.
-  const markAuto = (_el: HTMLElement) => {
-    auto = { time: Date.now() }
-
-    if (autoTimer) clearTimeout(autoTimer)
-    autoTimer = setTimeout(() => {
-      auto = undefined
-      autoTimer = undefined
-    }, 250)
-  }
-
-  const isAuto = (_el: HTMLElement) => {
-    const a = auto
-    if (!a) return false
-
-    if (Date.now() - a.time > 250) {
-      auto = undefined
-      return false
-    }
-
-    return true
-  }
-
   const scrollToBottomNow = (behavior: ScrollBehavior) => {
     const el = scroll
     if (!el) return
-    markAuto(el)
+    programmatic = true
+    if (raf) cancelAnimationFrame(raf)
+    // Clear after the browser has processed the scroll event.
+    // Double-rAF ensures the scroll event from our call has been dispatched
+    // before we clear the flag.
+    raf = requestAnimationFrame(() => {
+      raf = requestAnimationFrame(() => {
+        programmatic = false
+        raf = undefined
+      })
+    })
     if (behavior === "smooth") {
       el.scrollTo({ top: el.scrollHeight, behavior })
       return
@@ -78,7 +55,6 @@ export function createAutoScroll(options: AutoScrollOptions) {
   }
 
   const scrollToBottom = (force: boolean) => {
-    if (!force && !active()) return
     const el = scroll
     if (!el) return
 
@@ -107,7 +83,8 @@ export function createAutoScroll(options: AutoScrollOptions) {
   }
 
   const handleWheel = (e: WheelEvent) => {
-    if (e.deltaY >= 0) return
+    // Ignore tiny upward deltas from trackpad inertia / noise.
+    if (e.deltaY >= -2) return
     // If the user is scrolling within a nested scrollable region (tool output,
     // code block, etc), don't treat it as leaving the "follow bottom" mode.
     // Those regions opt in via `data-scrollable`.
@@ -133,26 +110,15 @@ export function createAutoScroll(options: AutoScrollOptions) {
     }
 
     // Ignore scroll events triggered by our own scrollToBottom calls.
-    if (!store.userScrolled && isAuto(el)) {
+    if (!store.userScrolled && programmatic) {
       scrollToBottom(false)
       return
     }
 
-    // Debounce to avoid layout-induced scroll shifts (e.g. images loading,
-    // virtual-list reflows) from incorrectly breaking auto-follow.
-    if (stopTimer) clearTimeout(stopTimer)
-    stopTimer = setTimeout(() => {
-      stopTimer = undefined
-      const cur = scroll
-      if (!cur) return
-      if (distanceFromBottom(cur) < threshold()) return
-      if (!store.userScrolled && isAuto(cur)) return
-      stop()
-    }, DEBOUNCE_MS)
+    stop()
   }
 
   const handleInteraction = () => {
-    if (!active()) return
     stop()
   }
 
@@ -180,31 +146,12 @@ export function createAutoScroll(options: AutoScrollOptions) {
         if (store.userScrolled) setStore("userScrolled", false)
         return
       }
-      if (!active()) return
       if (store.userScrolled) return
       // ResizeObserver fires after layout, before paint.
       // Keep the bottom locked in the same frame to avoid visible
       // "jump up then catch up" artifacts while streaming content.
       scrollToBottom(false)
     },
-  )
-
-  createEffect(
-    on(options.working, (working: boolean) => {
-      settling = false
-      if (settleTimer) clearTimeout(settleTimer)
-      settleTimer = undefined
-
-      if (working) {
-        scrollToBottom(true)
-        return
-      }
-
-      settling = true
-      settleTimer = setTimeout(() => {
-        settling = false
-      }, 300)
-    }),
   )
 
   createEffect(() => {
@@ -217,9 +164,7 @@ export function createAutoScroll(options: AutoScrollOptions) {
   })
 
   onCleanup(() => {
-    if (settleTimer) clearTimeout(settleTimer)
-    if (autoTimer) clearTimeout(autoTimer)
-    if (stopTimer) clearTimeout(stopTimer)
+    if (raf) cancelAnimationFrame(raf)
     if (cleanup) cleanup()
   })
 
