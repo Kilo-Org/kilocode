@@ -43,6 +43,7 @@ export type PromptProps = {
   ref?: (ref: PromptRef) => void
   hint?: JSX.Element
   showPlaceholder?: boolean
+  onScroll?: (direction: "up" | "down") => void
 }
 
 export type PromptRef = {
@@ -1007,6 +1008,14 @@ export function Prompt(props: PromptProps) {
                 }, 0)
               }}
               onMouseDown={(r: MouseEvent) => r.target?.focus()}
+              onMouseScroll={(e: MouseEvent) => {
+                if (!props.onScroll) return
+                const direction = e.scroll?.direction
+                if (direction === "up" || direction === "down") {
+                  e.preventDefault()
+                  props.onScroll(direction)
+                }
+              }}
               focusedBackgroundColor={theme.backgroundElement}
               cursorColor={theme.text}
               syntaxStyle={syntax()}
