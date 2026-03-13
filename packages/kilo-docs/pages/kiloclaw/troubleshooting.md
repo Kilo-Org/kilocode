@@ -69,6 +69,10 @@ You can change the model in two ways:
 
 Direct filesystem access is not available at this time. You can interact with files through your OpenClaw agent using its built-in file tools.
 
+### Can I access my KiloClaw via SSH?
+
+For security reasons, SSH access is currently disabled for all KiloClaw instances. Our primary goal is to provide a secure environment for all users, and restricting direct SSH access is one of the many measures we take to ensure the platform remains safe and protected for everyone.
+
 ### How can I update my OpenClaw?
 
 Do **not** click **Update Now** inside the OpenClaw Control UI — this is not supported for KiloClaw instances and may break your setup.
