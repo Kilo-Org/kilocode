@@ -541,6 +541,13 @@ export function SessionTurn(
                                               mode="diff"
                                               before={{ name: diff.file, contents: diff.before }}
                                               after={{ name: diff.file, contents: diff.after }}
+                                              media={{
+                                                mode: "auto",
+                                                path: diff.file,
+                                                before: diff.before,
+                                                after: diff.after,
+                                                binary: binary(),
+                                              }}
                                             />
                                           </div>
                                         </Show>

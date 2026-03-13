@@ -76,6 +76,23 @@ export namespace WorktreeDiff {
     return map
   }
 
+  async function untracked(dir: string, log: Log.Logger) {
+    const result = await $`git ls-files --others --exclude-standard`.cwd(dir).quiet().nothrow()
+    if (result.exitCode !== 0) {
+      log.warn("git ls-files failed", {
+        exitCode: result.exitCode,
+        stderr: result.stderr.toString().trim(),
+      })
+      return []
+    }
+
+    const files = result.stdout.toString().trim()
+    if (files) {
+      log.info("untracked files found", { count: files.split("\n").length })
+    }
+    return files.split("\n").filter(Boolean)
+  }
+
   async function list(dir: string, ancestor: string, log: Log.Logger): Promise<Meta[]> {
     const nameStatus = await $`git -c core.quotepath=false diff --name-status --no-renames ${ancestor}`
       .cwd(dir)
@@ -109,21 +126,7 @@ export namespace WorktreeDiff {
       })
     }
 
-    const untracked = await $`git ls-files --others --exclude-standard`.cwd(dir).quiet().nothrow()
-    if (untracked.exitCode !== 0) {
-      log.warn("git ls-files failed", {
-        exitCode: untracked.exitCode,
-        stderr: untracked.stderr.toString().trim(),
-      })
-      return result
-    }
-
-    const files = untracked.stdout.toString().trim()
-    if (files) {
-      log.info("untracked files found", { count: files.split("\n").length })
-    }
-
-    const entries = files.split("\n").filter((file) => file && !seen.has(file))
+    const entries = (await untracked(dir, log)).filter((file) => !seen.has(file))
     const concurrency = 10
     for (let i = 0; i < entries.length; i += concurrency) {
       const batch = entries.slice(i, i + concurrency)
@@ -315,8 +318,7 @@ export namespace WorktreeDiff {
     const log = input.log ?? Log.create({ service: "worktree-diff" })
     const ancestorHash = await ancestor(input.dir, input.base, log)
     if (!ancestorHash) return { files: 0, additions: 0, deletions: 0 }
-    const items = await list(input.dir, ancestorHash, log)
-    return items.reduce(
+    const tracked = [...(await stats(input.dir, ancestorHash)).values()].reduce(
       (acc, item) => {
         acc.files += 1
         acc.additions += item.additions
@@ -325,6 +327,13 @@ export namespace WorktreeDiff {
       },
       { files: 0, additions: 0, deletions: 0 },
     )
+    const files = (await untracked(input.dir, log)).length
+    return {
+      files: tracked.files + files,
+      // Keep stats polling cheap: count untracked files, but do not read their contents here.
+      additions: tracked.additions,
+      deletions: tracked.deletions,
+    }
   }
 
   export async function summary(input: { dir: string; base: string; log?: Log.Logger }) {

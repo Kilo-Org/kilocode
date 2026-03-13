@@ -13,6 +13,7 @@ import {
 export type FileMediaOptions = {
   mode?: "auto" | "off"
   path?: string
+  binary?: boolean
   current?: unknown
   before?: unknown
   after?: unknown
@@ -40,6 +41,7 @@ export function FileMedia(props: { media?: FileMediaOptions; fallback: () => JSX
     const media = cfg()
     if (!media || media.mode === "off") return false
     if (kind()) return false
+    if (media.binary === true) return true
     return isBinaryContent(media.current as any)
   })
 

@@ -287,6 +287,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
                                         component={diffComponent}
                                         before={{ name: diff.file, contents: diff.before }}
                                         after={{ name: diff.file, contents: diff.after }}
+                                        binary={binary()}
                                       />
                                     </div>
                                   </Show>
