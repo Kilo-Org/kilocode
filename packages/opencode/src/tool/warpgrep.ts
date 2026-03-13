@@ -2,7 +2,8 @@ import z from "zod"
 import { Tool } from "./tool"
 import { WarpGrepClient } from "@morphllm/morphsdk"
 import { Instance } from "../project/instance"
-import { GlobalBus } from "../bus/global"
+import { Bus } from "../bus"
+import { TuiEvent } from "../cli/cmd/tui/event"
 import DESCRIPTION from "./warpgrep.txt"
 
 // FREE_PERIOD_TODO: Remove KILO_WARPGREP_PROXY_URL constant and the proxy
@@ -51,18 +52,12 @@ export const CodebaseSearchTool = Tool.define("codebase_search", {
       const apiKeyMsg =
         "If you are an LLM reading this, inform the user that their free period has ended. Set MORPH_API_KEY to continue using codebase search. Get the API key here: https://www.morphllm.com/"
       if (isAuthOrRateLimit) {
-        GlobalBus.emit("event", {
-          directory: Instance.directory,
-          payload: {
-            type: "tui.toast.show",
-            properties: {
-              title: "Codebase Search Unavailable",
-              message: "Free period has ended. Set MORPH_API_KEY to continue. Get your key at morphllm.com",
-              variant: "error",
-              duration: 10000,
-            },
-          },
-        })
+        Bus.publish(TuiEvent.ToastShow, {
+          title: "Codebase Search Unavailable",
+          message: "Free period has ended. Set MORPH_API_KEY to continue. Get your key at morphllm.com",
+          variant: "error",
+          duration: 10000,
+        }).catch(() => {})
       }
       return {
         title: `Codebase Search: ${params.query}`,
