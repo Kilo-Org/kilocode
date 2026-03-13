@@ -11,12 +11,14 @@ import { DockPrompt } from "@kilocode/kilo-ui/dock-prompt"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
+import { useVSCode } from "../../context/vscode"
 import type { QuestionRequest } from "../../types/messages"
 import { toggleAnswer } from "./question-dock-utils"
 
 export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => {
   const session = useSession()
   const language = useLanguage()
+  const vscode = useVSCode()
 
   const questions = createMemo(() => props.request.questions)
   const single = createMemo(() => questions().length === 1 && questions()[0]?.multiple !== true)
@@ -69,6 +71,22 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
 
   const submit = () => {
     reply(questions().map((_, i) => [...(store.answers[i] ?? [])]))
+
+    // Check if any selected answer maps to an option with a mode for single-question forms
+    if (single()) {
+      const answer = store.answers[0]?.[0]
+      if (answer) {
+        const option = options().find((o) => o.label === answer)
+        if (option?.mode) {
+          vscode.postMessage({
+            type: "questionModeSwitch",
+            sessionID: props.request.sessionID,
+            mode: option.mode,
+            text: option.description ?? answer,
+          })
+        }
+      }
+    }
   }
 
   const back = () => {
@@ -78,6 +96,10 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
   }
 
   const pick = (answer: string, custom = false) => {
+    // Find the matching option to check for mode switching
+    // Custom answers won't match a predefined option, so mode switching is intentionally skipped
+    const option = options().find((o) => o.label === answer)
+
     const answers = [...store.answers]
     answers[store.tab] = [answer]
     setStore("answers", answers)
@@ -88,7 +110,22 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       setStore("custom", inputs)
     }
 
-    if (!single() && !multi()) {
+    // For single-select single-question: reply immediately and trigger mode switch if needed
+    if (single()) {
+      reply([[answer]])
+      if (option?.mode) {
+        const sid = props.request.sessionID
+        vscode.postMessage({
+          type: "questionModeSwitch",
+          sessionID: sid,
+          mode: option.mode,
+          text: option.description ?? answer,
+        })
+      }
+      return
+    }
+
+    if (!multi()) {
       setStore("tab", store.tab + 1)
     }
   }
