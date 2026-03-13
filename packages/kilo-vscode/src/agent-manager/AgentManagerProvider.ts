@@ -109,7 +109,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     this.log("Opening Agent Manager panel")
     TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_OPENED, { source: PLATFORM })
 
-    this.panel = vscode.window.createWebviewPanel(
+    const panel = vscode.window.createWebviewPanel(
       AgentManagerProvider.viewType,
       "Agent Manager",
       vscode.ViewColumn.One,
@@ -120,15 +120,28 @@ export class AgentManagerProvider implements vscode.Disposable {
       },
     )
 
-    this.panel.iconPath = {
+    this.attachPanel(panel)
+  }
+
+  /** Restore the Agent Manager panel from a previously serialized state (VS Code restart). */
+  public deserializeWebviewPanel(panel: vscode.WebviewPanel): void {
+    this.log("Deserializing Agent Manager panel")
+    this.attachPanel(panel)
+  }
+
+  /** Wire up a webview panel (shared by openPanel and deserializeWebviewPanel). */
+  private attachPanel(panel: vscode.WebviewPanel): void {
+    this.panel = panel
+
+    panel.iconPath = {
       light: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-light.svg"),
       dark: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-dark.svg"),
     }
 
-    this.panel.webview.html = this.getHtml(this.panel.webview)
+    panel.webview.html = this.getHtml(panel.webview)
 
     this.provider = new KiloProvider(this.extensionUri, this.connectionService)
-    this.provider.attachToWebview(this.panel.webview, {
+    this.provider.attachToWebview(panel.webview, {
       onBeforeMessage: (msg) => this.onMessage(msg),
     })
 
@@ -136,7 +149,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     void this.sendRepoInfo()
     this.sendKeybindings()
 
-    this.panel.onDidDispose(() => {
+    panel.onDidDispose(() => {
       this.log("Panel disposed")
       this.statsPoller.stop()
       this.stopDiffPolling()
