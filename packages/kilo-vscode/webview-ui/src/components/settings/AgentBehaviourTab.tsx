@@ -201,23 +201,50 @@ const AgentBehaviourTab: Component = () => {
         </SettingsRow>
       </Card>
 
+      {/* Available agents list */}
+      <hr
+        style={{
+          border: "none",
+          "border-top": "1px solid var(--border-weak-base)",
+          margin: "16px 0",
+        }}
+      />
+      <div data-slot="settings-row-label-title" style={{ "margin-bottom": "8px" }}>
+        {language.t("settings.agentBehaviour.availableAgents")}
+      </div>
       <Card style={{ "margin-bottom": "12px" }}>
-        <SettingsRow
-          title={language.t("settings.agentBehaviour.selectAgent.title")}
-          description={language.t("settings.agentBehaviour.selectAgent.description")}
-          last
-        >
-          <Select
-            options={agentSelectorOptions()}
-            current={agentSelectorOptions().find((o) => o.value === selectedAgent())}
-            value={(o) => o.value}
-            label={(o) => o.label}
-            onSelect={(o) => o && setSelectedAgent(o.value)}
-            variant="secondary"
-            size="small"
-            triggerVariant="settings"
-          />
-        </SettingsRow>
+        <For each={agentNames()}>
+          {(name, index) => {
+            const agent = () => session.agents().find((a) => a.name === name)
+            return (
+              <div
+                style={{
+                  display: "flex",
+                  "align-items": "center",
+                  "justify-content": "space-between",
+                  padding: "8px 4px",
+                  "border-bottom": index() < agentNames().length - 1 ? "1px solid var(--border-weak-base)" : "none",
+                  "border-radius": "4px",
+                }}
+              >
+                <div>
+                  <div style={{ "font-weight": "500", "font-size": "13px" }}>{name}</div>
+                  <Show when={agent()?.description}>
+                    <div
+                      style={{
+                        "font-size": "11px",
+                        color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                        "margin-top": "2px",
+                      }}
+                    >
+                      {agent()!.description}
+                    </div>
+                  </Show>
+                </div>
+              </div>
+            )
+          }}
+        </For>
       </Card>
 
       <Show when={selectedAgent()}>

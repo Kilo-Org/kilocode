@@ -50,6 +50,16 @@ export function activate(context: vscode.ExtensionContext) {
   const agentManagerProvider = new AgentManagerProvider(context.extensionUri, connectionService)
   context.subscriptions.push(agentManagerProvider)
 
+  // Register serializer so Agent Manager restores when VS Code restarts
+  context.subscriptions.push(
+    vscode.window.registerWebviewPanelSerializer(AgentManagerProvider.viewType, {
+      deserializeWebviewPanel(panel: vscode.WebviewPanel) {
+        agentManagerProvider.deserializeWebviewPanel(panel)
+        return Promise.resolve()
+      },
+    }),
+  )
+
   // Create standalone diff viewer provider for the sidebar "Show Changes" action
   const diffViewerProvider = new DiffViewerProvider(context.extensionUri, connectionService)
   diffViewerProvider.setCommentHandler((comments) => {

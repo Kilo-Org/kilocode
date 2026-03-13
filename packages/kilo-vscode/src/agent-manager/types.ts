@@ -11,7 +11,7 @@ import type { FileDiff } from "@kilocode/sdk/v2/client"
 import type { Worktree, ManagedSession } from "./WorktreeStateManager"
 import type { WorktreeStats, LocalStats } from "./GitStatsPoller"
 import type { ApplyConflict } from "./GitOps"
-import type { BranchListItem } from "./git-import"
+import type { BranchListItem, WorktreeSetupErrorCode } from "./git-import"
 import type { ExternalWorktreeItem } from "./WorktreeManager"
 
 // ---------------------------------------------------------------------------
@@ -21,6 +21,13 @@ import type { ExternalWorktreeItem } from "./WorktreeManager"
 type SessionMode = "worktree" | "local"
 
 export type ApplyDiffStatus = "checking" | "applying" | "success" | "conflict" | "error"
+
+export type WorktreeDiffEntry = FileDiff & {
+  tracked?: boolean
+  generatedLike?: boolean
+  summarized?: boolean
+  stamp?: string
+}
 
 // ---------------------------------------------------------------------------
 // Extension → Webview messages (postToWebview)
@@ -43,6 +50,7 @@ interface WorktreeSetupMessage {
   sessionId?: string
   branch?: string
   worktreeId?: string
+  errorCode?: WorktreeSetupErrorCode
 }
 
 interface SessionMetaMessage {
@@ -75,6 +83,13 @@ interface SessionAddedMessage {
   type: "agentManager.sessionAdded"
   sessionId: string
   worktreeId: string
+}
+
+interface SessionForkedMessage {
+  type: "agentManager.sessionForked"
+  sessionId: string
+  forkedFromId: string
+  worktreeId?: string
 }
 
 interface MultiVersionProgressMessage {
@@ -118,6 +133,7 @@ interface ImportResultMessage {
   type: "agentManager.importResult"
   success: boolean
   message: string
+  errorCode?: WorktreeSetupErrorCode
 }
 
 interface KeybindingsMessage {
@@ -148,7 +164,14 @@ interface WorktreeDiffLoadingMessage {
 interface WorktreeDiffMessage {
   type: "agentManager.worktreeDiff"
   sessionId: string
-  diffs: FileDiff[]
+  diffs: WorktreeDiffEntry[]
+}
+
+interface WorktreeDiffFileMessage {
+  type: "agentManager.worktreeDiffFile"
+  sessionId: string
+  file: string
+  diff: WorktreeDiffEntry | null
 }
 
 interface ActionOutMessage {
@@ -165,6 +188,7 @@ export type AgentManagerOutMessage =
   | StateMessage
   | ErrorOutMessage
   | SessionAddedMessage
+  | SessionForkedMessage
   | MultiVersionProgressMessage
   | SetSessionModelMessage
   | SendInitialMessage
@@ -176,6 +200,7 @@ export type AgentManagerOutMessage =
   | ApplyWorktreeDiffResultMessage
   | WorktreeDiffLoadingMessage
   | WorktreeDiffMessage
+  | WorktreeDiffFileMessage
   | ActionOutMessage
 
 // ---------------------------------------------------------------------------
@@ -323,6 +348,12 @@ interface ApplyWorktreeDiffIn {
   selectedFiles?: string[]
 }
 
+interface RequestWorktreeDiffFileIn {
+  type: "agentManager.requestWorktreeDiffFile"
+  sessionId: string
+  file: string
+}
+
 interface StartDiffWatchIn {
   type: "agentManager.startDiffWatch"
   sessionId: string
@@ -357,6 +388,12 @@ interface ClearSessionIn {
   type: "clearSession"
 }
 
+interface ForkSessionIn {
+  type: "agentManager.forkSession"
+  sessionId: string
+  worktreeId?: string
+}
+
 interface AbortIn {
   type: "abort"
   sessionID: string
@@ -370,6 +407,7 @@ export type AgentManagerInMessage =
   | PromoteSessionIn
   | AddSessionToWorktreeIn
   | CloseSessionIn
+  | ForkSessionIn
   | ConfigureSetupScriptIn
   | ShowTerminalIn
   | ShowLocalTerminalIn
@@ -390,6 +428,7 @@ export type AgentManagerInMessage =
   | ImportExternalWorktreeIn
   | ImportAllExternalWorktreesIn
   | RequestWorktreeDiffIn
+  | RequestWorktreeDiffFileIn
   | ApplyWorktreeDiffIn
   | StartDiffWatchIn
   | StopDiffWatchIn

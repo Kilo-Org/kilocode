@@ -6,7 +6,6 @@ import { useNotification } from "@/context/notification"
 import { usePermission } from "@/context/permission"
 import { base64Encode } from "@opencode-ai/util/encode"
 import { Avatar } from "@opencode-ai/ui/avatar"
-import { DiffChanges } from "@opencode-ai/ui/diff-changes"
 import { HoverCard } from "@opencode-ai/ui/hover-card"
 import { Icon } from "@opencode-ai/ui/icon"
 import { IconButton } from "@opencode-ai/ui/icon-button"
@@ -44,9 +43,7 @@ export const ProjectIcon = (props: { project: LocalProject; class?: string; noti
       <div class="size-full rounded overflow-clip">
         <Avatar
           fallback={name()}
-          src={
-            props.project.id === KILO_PROJECT_ID ? "https://kilo.ai/favicon.svg" : props.project.icon?.override
-          }
+          src={props.project.id === KILO_PROJECT_ID ? "https://kilo.ai/favicon.svg" : props.project.icon?.override}
           {...getAvatarColors(props.project.icon?.color)}
           class="size-full rounded"
           classList={{ "badge-mask": notify() }}
@@ -137,13 +134,6 @@ const SessionRow = (props: {
       <span class="text-14-regular text-text-strong grow-1 min-w-0 overflow-hidden text-ellipsis truncate">
         {props.session.title}
       </span>
-      <Show when={props.session.summary}>
-        {(summary) => (
-          <div class="group-hover/session:hidden group-active/session:hidden group-focus-within/session:hidden">
-            <DiffChanges changes={summary()} />
-          </div>
-        )}
-      </Show>
     </div>
   </A>
 )

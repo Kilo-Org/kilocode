@@ -407,6 +407,8 @@ export const dict = {
 
   "error.globalSync.connectFailed": "無法連線到伺服器。是否有伺服器正在 `{{url}}` 執行？",
 
+  "error.startup.title": "伺服器連線失敗",
+
   "error.paidModel.title": "您需要登入才能使用此模型",
   "error.paidModel.description": "登入或建立帳戶以存取500多個模型，按成本使用點數，或使用您自己的金鑰。",
   "error.paidModel.action": "登入",
@@ -436,6 +438,10 @@ export const dict = {
 
   "notification.permission.title": "需要權限",
   "notification.permission.description": "{{sessionTitle}}（{{projectName}}）需要權限",
+  "ui.permission.pattern.addToAllowed": "加入允許清單",
+  "ui.permission.pattern.removeFromAllowed": "從允許清單移除",
+  "ui.permission.pattern.addToDenied": "加入拒絕清單",
+  "ui.permission.pattern.removeFromDenied": "從拒絕清單移除",
   "notification.question.title": "問題",
   "notification.question.description": "{{sessionTitle}}（{{projectName}}）有一個問題",
   "notification.action.goToSession": "前往工作階段",
@@ -923,6 +929,7 @@ export const dict = {
   "settings.experimental.toolToggles": "工具開關",
   "settings.agentBehaviour.defaultAgent.title": "預設 Agent",
   "settings.agentBehaviour.defaultAgent.description": "未指定時使用的 Agent",
+  "settings.agentBehaviour.availableAgents": "可用代理",
   "settings.agentBehaviour.selectAgent": "選擇要設定的 Agent…",
   "settings.agentBehaviour.selectAgent.title": "Agent",
   "settings.agentBehaviour.selectAgent.description": "選擇要設定的 Agent…",

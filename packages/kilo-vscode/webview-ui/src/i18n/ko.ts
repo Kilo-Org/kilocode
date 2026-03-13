@@ -411,6 +411,8 @@ export const dict = {
 
   "error.globalSync.connectFailed": "서버에 연결할 수 없습니다. `{{url}}`에서 서버가 실행 중인가요?",
 
+  "error.startup.title": "서버 연결 실패",
+
   "error.paidModel.title": "이 모델을 사용하려면 로그인이 필요합니다",
   "error.paidModel.description":
     "로그인하거나 계정을 만들어 500개 이상의 모델에 접근하고, 원가로 크레딧을 사용하거나, 자체 키를 가져오세요.",
@@ -442,6 +444,10 @@ export const dict = {
 
   "notification.permission.title": "권한 필요",
   "notification.permission.description": "{{projectName}}의 {{sessionTitle}}에서 권한이 필요합니다",
+  "ui.permission.pattern.addToAllowed": "허용 목록에 추가",
+  "ui.permission.pattern.removeFromAllowed": "허용 목록에서 제거",
+  "ui.permission.pattern.addToDenied": "거부 목록에 추가",
+  "ui.permission.pattern.removeFromDenied": "거부 목록에서 제거",
   "notification.question.title": "질문",
   "notification.question.description": "{{projectName}}의 {{sessionTitle}}에서 질문이 있습니다",
   "notification.action.goToSession": "세션으로 이동",
@@ -932,6 +938,7 @@ export const dict = {
   "settings.experimental.toolToggles": "도구 토글",
   "settings.agentBehaviour.defaultAgent.title": "기본 에이전트",
   "settings.agentBehaviour.defaultAgent.description": "지정되지 않은 경우 사용할 에이전트",
+  "settings.agentBehaviour.availableAgents": "사용 가능한 에이전트",
   "settings.agentBehaviour.selectAgent": "구성할 에이전트를 선택하세요…",
   "settings.agentBehaviour.selectAgent.title": "에이전트",
   "settings.agentBehaviour.selectAgent.description": "구성할 에이전트를 선택하세요…",

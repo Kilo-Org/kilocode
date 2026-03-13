@@ -364,6 +364,8 @@ export interface ConnectionStateMessage {
   type: "connectionState"
   state: ConnectionState
   error?: string
+  userMessage?: string
+  userDetails?: string
 }
 
 export interface ErrorMessage {
@@ -654,6 +656,8 @@ export interface AgentManagerRepoInfoMessage {
   defaultBranch?: string
 }
 
+export type WorktreeErrorCode = "git_not_found" | "not_git_repo" | "lfs_missing"
+
 // Agent Manager worktree setup progress
 export interface AgentManagerWorktreeSetupMessage {
   type: "agentManager.worktreeSetup"
@@ -662,6 +666,7 @@ export interface AgentManagerWorktreeSetupMessage {
   sessionId?: string
   branch?: string
   worktreeId?: string
+  errorCode?: WorktreeErrorCode
 }
 
 // Agent Manager worktree state types (mirrored from WorktreeStateManager)
@@ -691,6 +696,14 @@ export interface AgentManagerSessionAddedMessage {
   type: "agentManager.sessionAdded"
   sessionId: string
   worktreeId: string
+}
+
+// Agent Manager session forked from an existing session
+export interface AgentManagerSessionForkedMessage {
+  type: "agentManager.sessionForked"
+  sessionId: string
+  forkedFromId: string
+  worktreeId?: string
 }
 
 // Full state push from extension to webview
@@ -758,6 +771,7 @@ export interface AgentManagerImportResultMessage {
   type: "agentManager.importResult"
   success: boolean
   message: string
+  errorCode?: WorktreeErrorCode
 }
 
 // Shared FileDiff shape (matches Snapshot.FileDiff from CLI backend)
@@ -768,6 +782,10 @@ export interface WorktreeFileDiff {
   additions: number
   deletions: number
   status?: "added" | "deleted" | "modified"
+  tracked?: boolean
+  generatedLike?: boolean
+  summarized?: boolean
+  stamp?: string
 }
 
 // Agent Manager: Diff data push (extension → webview)
@@ -775,6 +793,13 @@ export interface AgentManagerWorktreeDiffMessage {
   type: "agentManager.worktreeDiff"
   sessionId: string
   diffs: WorktreeFileDiff[]
+}
+
+export interface AgentManagerWorktreeDiffFileMessage {
+  type: "agentManager.worktreeDiffFile"
+  sessionId: string
+  file: string
+  diff: WorktreeFileDiff | null
 }
 
 // Agent Manager: Diff loading state (extension → webview)
@@ -1033,6 +1058,7 @@ export type ExtensionMessage =
   | AgentManagerRepoInfoMessage
   | AgentManagerWorktreeSetupMessage
   | AgentManagerSessionAddedMessage
+  | AgentManagerSessionForkedMessage
   | AgentManagerStateMessage
   | AgentManagerKeybindingsMessage
   | AgentManagerMultiVersionProgressMessage
@@ -1052,6 +1078,7 @@ export type ExtensionMessage =
   | AgentManagerImportResultMessage
   | WorkspaceDirectoryChangedMessage
   | AgentManagerWorktreeDiffMessage
+  | AgentManagerWorktreeDiffFileMessage
   | AgentManagerWorktreeDiffLoadingMessage
   | AgentManagerApplyWorktreeDiffResultMessage
   | AgentManagerWorktreeStatsMessage
@@ -1097,6 +1124,8 @@ export interface PermissionResponseRequest {
   permissionId: string
   sessionID: string
   response: "once" | "always" | "reject"
+  approvedPatterns: string[]
+  deniedPatterns: string[]
 }
 
 export interface CreateSessionRequest {
@@ -1340,6 +1369,13 @@ export interface AddSessionToWorktreeRequest {
   worktreeId: string
 }
 
+// Fork an existing session (copies conversation history)
+export interface ForkSessionRequest {
+  type: "agentManager.forkSession"
+  sessionId: string
+  worktreeId?: string
+}
+
 // Close (remove) a session from its worktree
 export interface CloseSessionRequest {
   type: "agentManager.closeSession"
@@ -1481,6 +1517,12 @@ export interface RequestWorktreeDiffMessage {
   sessionId: string
 }
 
+export interface RequestWorktreeDiffFileMessage {
+  type: "agentManager.requestWorktreeDiffFile"
+  sessionId: string
+  file: string
+}
+
 // Agent Manager: Start polling for live diff updates (webview → extension)
 export interface StartDiffWatchMessage {
   type: "agentManager.startDiffWatch"
@@ -1520,6 +1562,10 @@ export interface EnhancePromptRequest {
 // Open the standalone changes viewer tab from the sidebar
 export interface OpenChangesRequest {
   type: "openChanges"
+}
+
+export interface RetryConnectionRequest {
+  type: "retryConnection"
 }
 
 // Open a sub-agent session in a read-only editor panel
@@ -1582,6 +1628,7 @@ export type WebviewMessage =
   | RemoveStaleWorktreeRequest
   | PromoteSessionRequest
   | AddSessionToWorktreeRequest
+  | ForkSessionRequest
   | CloseSessionRequest
   | RenameWorktreeRequest
   | TelemetryRequest
@@ -1608,6 +1655,7 @@ export type WebviewMessage =
   | ImportExternalWorktreeRequest
   | ImportAllExternalWorktreesRequest
   | RequestWorktreeDiffMessage
+  | RequestWorktreeDiffFileMessage
   | StartDiffWatchMessage
   | StopDiffWatchMessage
   // legacy-migration start
@@ -1619,6 +1667,7 @@ export type WebviewMessage =
   | ApplyWorktreeDiffMessage
   | EnhancePromptRequest
   | OpenChangesRequest
+  | RetryConnectionRequest
   | OpenSubAgentViewerRequest
   | SetDefaultBaseBranchRequest
 

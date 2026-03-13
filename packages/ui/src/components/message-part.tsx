@@ -1591,27 +1591,6 @@ ToolRegistry.register({
       return `${path.slice(0, idx)}/session/${sessionId}`
     })
 
-    const handleLinkClick = (e: MouseEvent) => {
-      const sessionId = childSessionId()
-      const url = href()
-      if (!sessionId || !url) return
-
-      e.stopPropagation()
-
-      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
-
-      const nav = data.navigateToSession
-      if (!nav || typeof window === "undefined") return
-
-      e.preventDefault()
-      const before = window.location.pathname + window.location.search + window.location.hash
-      nav(sessionId)
-      setTimeout(() => {
-        const after = window.location.pathname + window.location.search + window.location.hash
-        if (after === before) window.location.assign(url)
-      }, 50)
-    }
-
     const titleContent = () => <TextShimmer text={title()} active={running()} />
 
     const trigger = () => (
@@ -1628,7 +1607,7 @@ ToolRegistry.register({
                     data-slot="basic-tool-tool-subtitle"
                     class="clickable subagent-link"
                     href={url()}
-                    onClick={handleLinkClick}
+                    onClick={(e) => e.stopPropagation()}
                   >
                     {description()}
                   </a>

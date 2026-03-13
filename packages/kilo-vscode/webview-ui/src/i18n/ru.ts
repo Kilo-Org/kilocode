@@ -410,6 +410,8 @@ export const dict = {
 
   "error.globalSync.connectFailed": "Не удалось подключиться к серверу. Запущен ли сервер по адресу `{{url}}`?",
 
+  "error.startup.title": "Ошибка подключения к серверу",
+
   "error.paidModel.title": "Для использования этой модели необходимо войти",
   "error.paidModel.description":
     "Войдите или создайте аккаунт для доступа к более чем 500 моделям, используйте кредиты по себестоимости или подключите свой ключ.",
@@ -444,6 +446,10 @@ export const dict = {
 
   "notification.permission.title": "Требуется разрешение",
   "notification.permission.description": "{{sessionTitle}} в {{projectName}} требуется разрешение",
+  "ui.permission.pattern.addToAllowed": "Добавить в список разрешённых",
+  "ui.permission.pattern.removeFromAllowed": "Убрать из списка разрешённых",
+  "ui.permission.pattern.addToDenied": "Добавить в список запрещённых",
+  "ui.permission.pattern.removeFromDenied": "Убрать из списка запрещённых",
   "notification.question.title": "Вопрос",
   "notification.question.description": "У {{sessionTitle}} в {{projectName}} есть вопрос",
   "notification.action.goToSession": "Перейти к сессии",
@@ -940,6 +946,7 @@ export const dict = {
   "settings.experimental.toolToggles": "Переключатели инструментов",
   "settings.agentBehaviour.defaultAgent.title": "Агент по умолчанию",
   "settings.agentBehaviour.defaultAgent.description": "Агент при отсутствии указания",
+  "settings.agentBehaviour.availableAgents": "Доступные агенты",
   "settings.agentBehaviour.selectAgent": "Выберите агента для настройки…",
   "settings.agentBehaviour.selectAgent.title": "Агент",
   "settings.agentBehaviour.selectAgent.description": "Выберите агента для настройки…",

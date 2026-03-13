@@ -1356,6 +1356,7 @@ export default function Page() {
 
           <SessionComposerRegion
             state={composer}
+            ready={!store.deferRender && messagesReady()}
             centered={centered()}
             inputRef={(el) => {
               inputRef = el

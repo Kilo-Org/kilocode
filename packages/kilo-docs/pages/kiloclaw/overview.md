@@ -91,7 +91,6 @@ For more information on use cases:
 - [100 hours of OpenClaw in 35 Minutes](https://www.youtube.com/watch?v=_kZCoW-Qxnc)
 - [Clawhub](https://clawhub.ai/): search for skills
 
-
 ## Related
 
 - [Dashboard Reference](/docs/kiloclaw/dashboard)

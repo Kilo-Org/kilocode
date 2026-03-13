@@ -376,7 +376,13 @@ export namespace ProviderTransform {
     switch (model.api.npm) {
       case "@kilocode/kilo-gateway": // kilocode_change
       case "@openrouter/ai-sdk-provider":
-        if (!model.id.includes("gpt") && !model.id.includes("gemini-3") && !model.id.includes("claude")) return {}
+        if (
+          !model.id.includes("gpt") &&
+          !model.id.includes("gemini-3") &&
+          !model.id.includes("claude") &&
+          !model.id.includes("mercury") // kilocode_change
+        )
+          return {}
         return Object.fromEntries(OPENAI_EFFORTS.map((effort) => [effort, { reasoning: { effort } }]))
 
       // TODO: YOU CANNOT SET max_tokens if this is set!!!

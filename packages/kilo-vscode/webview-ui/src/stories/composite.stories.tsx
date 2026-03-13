@@ -546,23 +546,6 @@ export const MultipleToolCalls: Story = {
 }
 
 // ---------------------------------------------------------------------------
-// 8. Inline question (tool-linked question rendered in message flow)
-// ---------------------------------------------------------------------------
-
-export const InlineQuestion: Story = {
-  name: "Inline Question",
-  render: () => {
-    const qs = [questionRequest]
-    const data = dataWith([textPart, questionToolPart])
-    return (
-      <StoryProviders data={data} questions={qs} sessionID={SESSION_ID}>
-        <AssistantMessage message={baseAssistantMessage} />
-      </StoryProviders>
-    )
-  },
-}
-
-// ---------------------------------------------------------------------------
 // 9. Dismissed question (right-aligned "Questions dismissed" text)
 // ---------------------------------------------------------------------------
 

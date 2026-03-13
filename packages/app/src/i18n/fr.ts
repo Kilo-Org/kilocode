@@ -104,7 +104,6 @@ export const dict = {
   "dialog.model.empty": "Aucun résultat de modèle",
   "dialog.model.manage": "Gérer les modèles",
   "dialog.model.manage.description": "Personnalisez les modèles qui apparaissent dans le sélecteur.",
-  "dialog.model.manage.provider.toggle": "Activer/désactiver tous les modèles {{provider}}",
   "dialog.model.unpaid.freeModels.title": "Modèles gratuits fournis par Kilo",
   "dialog.model.unpaid.addMore.title": "Ajouter plus de modèles de fournisseurs populaires",
   "dialog.provider.viewAll": "Voir plus de fournisseurs",
@@ -390,8 +389,7 @@ export const dict = {
   "toast.session.unshare.failed.description": "Une erreur s'est produite lors de l'annulation du partage de la session",
   "toast.session.listFailed.title": "Échec du chargement des sessions pour {{project}}",
   "toast.update.title": "Mise à jour disponible",
-  "toast.update.description":
-    "Une nouvelle version d'Kilo ({{version}}) est maintenant disponible pour installation.",
+  "toast.update.description": "Une nouvelle version d'Kilo ({{version}}) est maintenant disponible pour installation.",
   "toast.update.action.installRestart": "Installer et redémarrer",
   "toast.update.action.notYet": "Pas encore",
   "error.page.title": "Quelque chose s'est mal passé",
@@ -452,7 +450,6 @@ export const dict = {
   "session.review.loadingChanges": "Chargement des modifications...",
   "session.review.empty": "Aucune modification dans cette session pour l'instant",
   "session.review.noChanges": "Aucune modification",
-  "session.review.noVcs": "Aucun VCS git détecté, les modifications de session ne seront donc pas détectées",
   "session.files.selectToOpen": "Sélectionnez un fichier à ouvrir",
   "session.files.all": "Tous les fichiers",
   "session.files.binaryContent": "Fichier binaire (le contenu ne peut pas être affiché)",
@@ -465,10 +462,6 @@ export const dict = {
   "session.todo.title": "Tâches",
   "session.todo.collapse": "Réduire",
   "session.todo.expand": "Développer",
-  "session.modeSwitch.switching": "Passage en mode {{mode}}…",
-  "session.modeSwitch.waiting": "En attente de la fin de la tâche en cours",
-  "session.modeSwitch.notAvailable": "Agent non disponible",
-  "session.modeSwitch.fallback": '"{{requested}}" introuvable, utilisation de "{{actual}}"',
   "session.new.worktree.main": "Branche principale",
   "session.new.worktree.mainWithBranch": "Branche principale ({{branch}})",
   "session.new.worktree.create": "Créer un nouvel arbre de travail",
@@ -530,8 +523,7 @@ export const dict = {
   "sidebar.workspaces.enable": "Activer les espaces de travail",
   "sidebar.workspaces.disable": "Désactiver les espaces de travail",
   "sidebar.gettingStarted.title": "Commencer",
-  "sidebar.gettingStarted.line1":
-    "Kilo inclut des modèles gratuits pour que vous puissiez commencer immédiatement.",
+  "sidebar.gettingStarted.line1": "Kilo inclut des modèles gratuits pour que vous puissiez commencer immédiatement.",
   "sidebar.gettingStarted.line2":
     "Connectez n'importe quel fournisseur pour utiliser des modèles, y compris Claude, GPT, Gemini etc.",
   "sidebar.project.recentSessions": "Sessions récentes",
@@ -560,7 +552,8 @@ export const dict = {
   "settings.general.row.font.title": "Police",
   "settings.general.row.font.description": "Personnaliser la police mono utilisée dans les blocs de code",
   "settings.general.row.reasoningSummaries.title": "Afficher les résumés de raisonnement",
-  "settings.general.row.reasoningSummaries.description": "Afficher les résumés de raisonnement du modèle dans la chronologie",
+  "settings.general.row.reasoningSummaries.description":
+    "Afficher les résumés de raisonnement du modèle dans la chronologie",
   "settings.general.row.shellToolPartsExpanded.title": "Développer les parties de l'outil shell",
   "settings.general.row.shellToolPartsExpanded.description":
     "Afficher les parties de l'outil shell développées par défaut dans la chronologie",

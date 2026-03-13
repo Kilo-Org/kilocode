@@ -48,6 +48,7 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
     <Show when={hasAgents()}>
       <Popover
         placement="top-start"
+        fitViewport
         open={open()}
         onOpenChange={setOpen}
         triggerAs={Button}
