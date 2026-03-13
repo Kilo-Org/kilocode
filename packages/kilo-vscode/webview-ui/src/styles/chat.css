@@ -1167,7 +1167,8 @@
 
 [data-component="dock-prompt"][data-kind="permission"] {
   animation: permission-slide-in 0.3s ease-out;
-  border: 1px solid
+  margin: 12px;
+  border: 2px solid
     color-mix(in srgb, var(--vscode-editorWarning-foreground, #cca700) 40%, var(--vscode-panel-border, transparent));
   border-radius: 8px;
   overflow: clip;
@@ -1181,11 +1182,6 @@
     border: none;
     border-radius: 0;
     margin-top: 0;
-  }
-
-  [data-slot="permission-body"] {
-    padding: 10px 12px 0;
-    gap: 8px;
   }
 
   [data-slot="permission-header-title"] {

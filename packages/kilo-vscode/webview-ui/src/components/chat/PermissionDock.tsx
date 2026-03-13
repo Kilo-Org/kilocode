@@ -12,6 +12,7 @@ import { Component, For, Show, createSignal } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { DockPrompt } from "@kilocode/kilo-ui/dock-prompt"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { PermissionRequest } from "../../types/messages"
@@ -34,6 +35,8 @@ export const PermissionDock: Component<{
   }
 
   const [decisions, setDecisions] = createSignal<Record<number, PatternDecision>>({})
+
+  const hasDeniedPatterns = () => Object.values(decisions()).some((d) => d === "denied")
 
   const collectPatterns = () => {
     const all = patterns()
@@ -62,6 +65,12 @@ export const PermissionDock: Component<{
   }
 
   const decision = (index: number): PatternDecision => decisions()[index] ?? "pending"
+
+  const approveTooltip = (index: number) =>
+    decision(index) === "approved" ? "Remove from allowed list" : "Add to allowed list"
+
+  const denyTooltip = (index: number) =>
+    decision(index) === "denied" ? "Remove from denied list" : "Add to denied list"
 
   const toolDescription = () => {
     const key = `settings.permissions.tool.${props.request.toolName}.description`
@@ -108,7 +117,7 @@ export const PermissionDock: Component<{
                 const { approved, denied } = collectPatterns()
                 props.onDecide("always", approved, denied)
               }}
-              disabled={props.responding}
+              disabled={props.responding || hasDeniedPatterns()}
             >
               {language.t("ui.permission.allowAlways")}
             </Button>
@@ -153,26 +162,30 @@ export const PermissionDock: Component<{
                   <span data-slot="permission-pattern-type">{props.request.toolName}</span>
                   <code data-slot="permission-pattern">{pattern}</code>
                   <div data-slot="permission-pattern-actions">
-                    <button
-                      data-slot="permission-pattern-toggle"
-                      data-variant="approve"
-                      data-active={decision(index()) === "approved" ? "" : undefined}
-                      disabled={props.responding}
-                      onClick={() => togglePattern(index(), "approved")}
-                      aria-label={language.t("ui.permission.allowAlways")}
-                    >
-                      <Icon name="check-small" size="small" />
-                    </button>
-                    <button
-                      data-slot="permission-pattern-toggle"
-                      data-variant="deny"
-                      data-active={decision(index()) === "denied" ? "" : undefined}
-                      disabled={props.responding}
-                      onClick={() => togglePattern(index(), "denied")}
-                      aria-label={language.t("ui.permission.deny")}
-                    >
-                      <Icon name="close-small" size="small" />
-                    </button>
+                    <Tooltip value={approveTooltip(index())} placement="top">
+                      <button
+                        data-slot="permission-pattern-toggle"
+                        data-variant="approve"
+                        data-active={decision(index()) === "approved" ? "" : undefined}
+                        disabled={props.responding}
+                        onClick={() => togglePattern(index(), "approved")}
+                        aria-label={approveTooltip(index())}
+                      >
+                        <Icon name="check-small" size="small" />
+                      </button>
+                    </Tooltip>
+                    <Tooltip value={denyTooltip(index())} placement="top">
+                      <button
+                        data-slot="permission-pattern-toggle"
+                        data-variant="deny"
+                        data-active={decision(index()) === "denied" ? "" : undefined}
+                        disabled={props.responding}
+                        onClick={() => togglePattern(index(), "denied")}
+                        aria-label={denyTooltip(index())}
+                      >
+                        <Icon name="close-small" size="small" />
+                      </button>
+                    </Tooltip>
                   </div>
                 </div>
               )}
