@@ -445,6 +445,10 @@ export const dict = {
 
   "notification.permission.title": "Tillatelse påkrevd",
   "notification.permission.description": "{{sessionTitle}} i {{projectName}} trenger tillatelse",
+  "ui.permission.pattern.addToAllowed": "Legg til i tillatt-listen",
+  "ui.permission.pattern.removeFromAllowed": "Fjern fra tillatt-listen",
+  "ui.permission.pattern.addToDenied": "Legg til i blokkert-listen",
+  "ui.permission.pattern.removeFromDenied": "Fjern fra blokkert-listen",
   "notification.question.title": "Spørsmål",
   "notification.question.description": "{{sessionTitle}} i {{projectName}} har et spørsmål",
   "notification.action.goToSession": "Gå til sesjon",

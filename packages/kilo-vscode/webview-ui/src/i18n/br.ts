@@ -442,6 +442,10 @@ export const dict = {
 
   "notification.permission.title": "Permissão necessária",
   "notification.permission.description": "{{sessionTitle}} em {{projectName}} precisa de permissão",
+  "ui.permission.pattern.addToAllowed": "Adicionar à lista de permitidos",
+  "ui.permission.pattern.removeFromAllowed": "Remover da lista de permitidos",
+  "ui.permission.pattern.addToDenied": "Adicionar à lista de negados",
+  "ui.permission.pattern.removeFromDenied": "Remover da lista de negados",
   "notification.question.title": "Pergunta",
   "notification.question.description": "{{sessionTitle}} em {{projectName}} tem uma pergunta",
   "notification.action.goToSession": "Ir para sessão",

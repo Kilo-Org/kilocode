@@ -67,10 +67,14 @@ export const PermissionDock: Component<{
   const decision = (index: number): PatternDecision => decisions()[index] ?? "pending"
 
   const approveTooltip = (index: number) =>
-    decision(index) === "approved" ? "Remove from allowed list" : "Add to allowed list"
+    decision(index) === "approved"
+      ? language.t("ui.permission.pattern.removeFromAllowed")
+      : language.t("ui.permission.pattern.addToAllowed")
 
   const denyTooltip = (index: number) =>
-    decision(index) === "denied" ? "Remove from denied list" : "Add to denied list"
+    decision(index) === "denied"
+      ? language.t("ui.permission.pattern.removeFromDenied")
+      : language.t("ui.permission.pattern.addToDenied")
 
   const toolDescription = () => {
     const key = `settings.permissions.tool.${props.request.toolName}.description`

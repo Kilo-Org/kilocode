@@ -446,6 +446,10 @@ export const dict = {
 
   "notification.permission.title": "Potrebna dozvola",
   "notification.permission.description": "{{sessionTitle}} u {{projectName}} traži dozvolu",
+  "ui.permission.pattern.addToAllowed": "Dodaj na listu dozvoljenih",
+  "ui.permission.pattern.removeFromAllowed": "Ukloni sa liste dozvoljenih",
+  "ui.permission.pattern.addToDenied": "Dodaj na listu odbijenih",
+  "ui.permission.pattern.removeFromDenied": "Ukloni sa liste odbijenih",
   "notification.question.title": "Pitanje",
   "notification.question.description": "{{sessionTitle}} u {{projectName}} ima pitanje",
   "notification.action.goToSession": "Idi na sesiju",
