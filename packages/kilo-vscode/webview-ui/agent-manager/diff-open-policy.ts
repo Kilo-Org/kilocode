@@ -9,9 +9,32 @@ export function isLargeDiffFile(diff: WorktreeFileDiff): boolean {
   return diff.additions + diff.deletions > LARGE_FILE_CHANGED_LINES
 }
 
+function initialPreviewFile(diffs: WorktreeFileDiff[]): string | undefined {
+  const pool = (() => {
+    const source = diffs.filter((diff) => diff.generatedLike !== true)
+    if (source.length > 0) return source
+    return diffs
+  })()
+
+  return [...pool].sort((left, right) => {
+    const leftLarge = isLargeDiffFile(left) ? 1 : 0
+    const rightLarge = isLargeDiffFile(right) ? 1 : 0
+    if (leftLarge !== rightLarge) return leftLarge - rightLarge
+
+    const leftBinary = left.binary === true ? 1 : 0
+    const rightBinary = right.binary === true ? 1 : 0
+    if (leftBinary !== rightBinary) return leftBinary - rightBinary
+
+    return left.additions + left.deletions - (right.additions + right.deletions)
+  })[0]?.file
+}
+
 export function initialOpenFiles(diffs: WorktreeFileDiff[]): string[] {
   if (diffs.length === 0) return []
-  if (diffs.length > AUTO_OPEN_FILE_COUNT) return []
+  if (diffs.length > AUTO_OPEN_FILE_COUNT) {
+    const file = initialPreviewFile(diffs)
+    return file ? [file] : []
+  }
 
   const files = diffs
     .filter((diff) => !isLargeDiffFile(diff) && diff.generatedLike !== true)

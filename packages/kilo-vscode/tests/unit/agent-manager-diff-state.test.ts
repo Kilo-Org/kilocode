@@ -41,7 +41,7 @@ describe("agent manager diff state", () => {
     expect(mergeWorktreeDiffs(prev, next)).toEqual(next)
   })
 
-  it("does not auto-open generated-like files or large diff sets", () => {
+  it("avoids generated-like files and keeps one preview open for large diff sets", () => {
     expect(
       initialOpenFiles([
         diff({ file: "src/app.ts", generatedLike: false, additions: 3 }),
@@ -49,7 +49,11 @@ describe("agent manager diff state", () => {
       ]),
     ).toEqual(["src/app.ts"])
 
-    const many = Array.from({ length: 26 }, (_, i) => diff({ file: `src/${i}.ts` }))
-    expect(initialOpenFiles(many)).toEqual([])
+    const many = [
+      diff({ file: "src/huge.ts", additions: 900, deletions: 30 }),
+      diff({ file: "node_modules/pkg/index.js", generatedLike: true, additions: 1 }),
+      ...Array.from({ length: 24 }, (_, i) => diff({ file: `src/${i}.ts`, additions: 5 + i })),
+    ]
+    expect(initialOpenFiles(many)).toEqual(["src/0.ts"])
   })
 })
