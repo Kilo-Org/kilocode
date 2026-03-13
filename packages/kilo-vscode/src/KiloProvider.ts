@@ -35,10 +35,7 @@ import {
   type SessionRefreshContext,
 } from "./kilo-provider-utils"
 import { KILO_AUTO, parseModelString } from "./shared/provider-model"
-import {
-  sanitizeCustomProviderConfig,
-  validateProviderID as validateProviderIDShared,
-} from "./shared/custom-provider"
+import { sanitizeCustomProviderConfig, validateProviderID as validateProviderIDShared } from "./shared/custom-provider"
 
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "kilo-code.new.sidebarView"
@@ -1166,12 +1163,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   ): string | null {
     const result = validateProviderIDShared(providerID)
     if ("value" in result) return result.value
-    this.postProviderActionError(
-      requestId,
-      providerID,
-      action,
-      result.error,
-    )
+    this.postProviderActionError(requestId, providerID, action, result.error)
     return null
   }
 

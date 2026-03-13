@@ -65,7 +65,11 @@ type ValidateResult = {
   config: SanitizedProviderConfig
 }
 
-function validateCustomProvider(input: ValidateArgs): { errors: FormErrors; result?: ValidateResult; message?: string } {
+function validateCustomProvider(input: ValidateArgs): {
+  errors: FormErrors
+  result?: ValidateResult
+  message?: string
+} {
   const providerID = input.form.providerID.trim()
   const name = input.form.name.trim()
   const baseURL = input.form.baseURL.trim()

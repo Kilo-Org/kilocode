@@ -6,7 +6,10 @@ const INVALID_ENV = "Invalid environment variable name"
 const INVALID_BASE_URL = "Base URL must start with http:// or https://"
 
 export const ProviderIDSchema = z.string().trim().regex(PROVIDER_ID_PATTERN, INVALID_PROVIDER_ID)
-export const EnvSchema = z.string().trim().regex(/^[A-Z_][A-Z0-9_]*$/, INVALID_ENV)
+export const EnvSchema = z
+  .string()
+  .trim()
+  .regex(/^[A-Z_][A-Z0-9_]*$/, INVALID_ENV)
 export const CustomProviderConfigSchema = z
   .object({
     npm: z.string().optional(),
@@ -75,7 +78,9 @@ export function parseCustomProviderSecret(raw: string): { value: { apiKey?: stri
   return fail(issue?.message ?? INVALID_ENV, issue)
 }
 
-export function normalizeCustomProviderConfig(config: z.output<typeof CustomProviderConfigSchema>): SanitizedProviderConfig {
+export function normalizeCustomProviderConfig(
+  config: z.output<typeof CustomProviderConfigSchema>,
+): SanitizedProviderConfig {
   const headers = config.options.headers
     ? Object.fromEntries(
         Object.entries(config.options.headers)
