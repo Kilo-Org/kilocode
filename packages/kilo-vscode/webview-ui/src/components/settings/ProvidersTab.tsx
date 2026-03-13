@@ -381,21 +381,6 @@ const ProvidersTab: Component = () => {
         </span>
       </Button>
 
-      {/* Beta notice */}
-      <Card
-        variant="warning"
-        style={{
-          "margin-top": "16px",
-          display: "flex",
-          "flex-direction": "row",
-          "align-items": "flex-start",
-          gap: "8px",
-        }}
-      >
-        <Icon name="warning" style={{ "flex-shrink": "0", "margin-top": "2px" }} />
-        <p style={{ margin: 0, "line-height": "1.5" }}>{language.t("settings.providers.betaNotice")}</p>
-      </Card>
-
       <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>{language.t("settings.providers.disabled")}</h4>
       <Card>
         <div
