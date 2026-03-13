@@ -4,12 +4,7 @@ import type { KiloConnectionService } from "./services/cli-backend"
 import { buildWebviewHtml } from "./utils"
 import { GitOps } from "./agent-manager/GitOps"
 import { hashFileDiffs } from "./diff-hash"
-import {
-  appendOutput,
-  getWorkspaceRoot,
-  openWorkspaceRelativeFile,
-  resolveLocalDiffTarget,
-} from "./review-utils"
+import { appendOutput, getWorkspaceRoot, openWorkspaceRelativeFile, resolveLocalDiffTarget } from "./review-utils"
 
 /**
  * DiffViewerProvider opens a full-screen diff viewer in an editor tab.
