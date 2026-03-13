@@ -10,7 +10,7 @@ import { createStore } from "solid-js/store"
 import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
 import { useVSCode } from "../../context/vscode"
-import type { ExtensionMessage } from "../../types/messages"
+import { createProviderAction } from "../../utils/provider-action"
 
 interface ProviderConnectDialogProps {
   providerID: string
@@ -42,8 +42,8 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
   const language = useLanguage()
   const provider = useProvider()
   const vscode = useVSCode()
+  const action = createProviderAction(vscode)
 
-  const [requestId, setRequestId] = createSignal<string>()
   const [state, setState] = createStore<ViewState>({})
 
   const item = createMemo(() => provider.providers()[props.providerID])
@@ -56,43 +56,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
     return index === undefined ? undefined : methods()[index]
   })
 
-  const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
-    if (!("requestId" in message) || message.requestId !== requestId()) return
-
-    if (message.type === "providerOAuthReady") {
-      setState({
-        ...state,
-        authorization: message.authorization,
-        phase: undefined,
-        error: undefined,
-        failed: undefined,
-      })
-      return
-    }
-
-    if (message.type === "providerConnected") {
-      showToast({
-        variant: "success",
-        icon: "circle-check",
-        title: language.t("provider.connect.toast.connected.title", { provider: name() }),
-        description: language.t("provider.connect.toast.connected.description", { provider: name() }),
-      })
-      dialog.close()
-      return
-    }
-
-    if (message.type === "providerActionError") {
-      const failed = state.authorization?.method === "auto" || state.phase === "authorizing"
-      setState({
-        ...state,
-        phase: undefined,
-        error: failed ? undefined : message.message,
-        failed: failed ? message.message : undefined,
-      })
-    }
-  })
-
-  onCleanup(unsubscribe)
+  onCleanup(action.dispose)
 
   onMount(() => {
     if (methods().length !== 1) return
@@ -104,7 +68,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
   }
 
   function reset() {
-    setRequestId(undefined)
+    action.clear()
     setState({
       methodIndex: undefined,
       authorization: undefined,
@@ -114,9 +78,29 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
     })
   }
 
+  function fail(message: string) {
+    const failed = state.authorization?.method === "auto" || state.phase === "authorizing"
+    setState({
+      ...state,
+      phase: undefined,
+      error: failed ? undefined : message,
+      failed: failed ? message : undefined,
+    })
+  }
+
+  function succeed() {
+    showToast({
+      variant: "success",
+      icon: "circle-check",
+      title: language.t("provider.connect.toast.connected.title", { provider: name() }),
+      description: language.t("provider.connect.toast.connected.description", { provider: name() }),
+    })
+    dialog.close()
+  }
+
   function selectMethod(index: number) {
     const current = methods()[index]
-    setRequestId(undefined)
+    action.clear()
     setState({
       methodIndex: index,
       authorization: undefined,
@@ -126,52 +110,69 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
     })
     if (current?.type !== "oauth") return
 
-    const next = crypto.randomUUID()
-    setRequestId(next)
-    vscode.postMessage({
-      type: "authorizeProviderOAuth",
-      requestId: next,
-      providerID: props.providerID,
-      method: index,
-    })
+    action.send(
+      {
+        type: "authorizeProviderOAuth",
+        providerID: props.providerID,
+        method: index,
+      },
+      {
+        onOAuthReady: (message) => {
+          setState({
+            ...state,
+            authorization: message.authorization,
+            phase: undefined,
+            error: undefined,
+            failed: undefined,
+          })
+        },
+        onError: (message) => fail(message.message),
+      },
+    )
   }
 
   function connect(apiKey: string) {
-    const next = crypto.randomUUID()
-    setRequestId(next)
     setState({
       ...state,
       phase: "connecting",
       error: undefined,
       failed: undefined,
     })
-    vscode.postMessage({
-      type: "connectProvider",
-      requestId: next,
-      providerID: props.providerID,
-      apiKey,
-    })
+    action.send(
+      {
+        type: "connectProvider",
+        providerID: props.providerID,
+        apiKey,
+      },
+      {
+        onConnected: succeed,
+        onError: (message) => fail(message.message),
+      },
+    )
   }
 
   function complete(code?: string) {
     const index = state.methodIndex
     if (index === undefined) return
 
-    const next = crypto.randomUUID()
-    setRequestId(next)
     setState({
       ...state,
       phase: "connecting",
       error: undefined,
       failed: undefined,
     })
-    vscode.postMessage({
-      type: "completeProviderOAuth",
-      requestId: next,
-      providerID: props.providerID,
-      method: index,
-      code,
-    })
+    action.send(
+      {
+        type: "completeProviderOAuth",
+        providerID: props.providerID,
+        method: index,
+        code,
+      },
+      {
+        onConnected: succeed,
+        onError: (message) => fail(message.message),
+      },
+    )
   }
 
   const title = () => language.t("provider.connect.title", { provider: name() })

@@ -34,53 +34,11 @@ import {
   flushPendingSessionRefresh as flushPendingSessionRefreshUtil,
   type SessionRefreshContext,
 } from "./kilo-provider-utils"
-import { CUSTOM_PROVIDER_PACKAGE, KILO_AUTO, PROVIDER_ID_PATTERN, parseModelString } from "./shared/provider-model"
-
-const ProviderIDSchema = z.string().trim().regex(PROVIDER_ID_PATTERN, "Invalid provider ID")
-const EnvSchema = z
-  .string()
-  .trim()
-  .regex(/^[A-Z_][A-Z0-9_]*$/, "Invalid environment variable name")
-const CustomProviderConfigSchema = z
-  .object({
-    npm: z.string().optional(),
-    name: z.string().trim().min(1).max(200),
-    env: z.array(EnvSchema).max(1).optional(),
-    options: z
-      .object({
-        baseURL: z
-          .string()
-          .trim()
-          .url()
-          .refine((value) => value.startsWith("http://") || value.startsWith("https://"), {
-            message: "Base URL must start with http:// or https://",
-          }),
-        headers: z.record(z.string().trim().min(1), z.string().trim().min(1)).optional(),
-      })
-      .strict(),
-    models: z
-      .record(
-        z.string().trim().min(1),
-        z
-          .object({
-            name: z.string().trim().min(1).max(200),
-          })
-          .strict(),
-      )
-      .refine((value) => Object.keys(value).length > 0, "At least one model is required"),
-  })
-  .strict()
-
-type SanitizedProviderConfig = {
-  npm: typeof CUSTOM_PROVIDER_PACKAGE
-  name: string
-  env?: string[]
-  options: {
-    baseURL: string
-    headers?: Record<string, string>
-  }
-  models: Record<string, { name: string }>
-}
+import { KILO_AUTO, parseModelString } from "./shared/provider-model"
+import {
+  sanitizeCustomProviderConfig,
+  validateProviderID as validateProviderIDShared,
+} from "./shared/custom-provider"
 
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "kilo-code.new.sidebarView"
@@ -1206,48 +1164,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     providerID: string,
     action: "connect" | "disconnect" | "authorize",
   ): string | null {
-    const result = ProviderIDSchema.safeParse(providerID)
-    if (result.success) return result.data
+    const result = validateProviderIDShared(providerID)
+    if ("value" in result) return result.value
     this.postProviderActionError(
       requestId,
       providerID,
       action,
-      result.error.issues[0]?.message ?? "Invalid provider ID",
+      result.error,
     )
     return null
-  }
-
-  private sanitizeCustomProviderConfig(
-    provider: Record<string, unknown>,
-  ): { value: SanitizedProviderConfig } | { error: string } {
-    const parsed = CustomProviderConfigSchema.safeParse(provider)
-    if (!parsed.success) {
-      return { error: parsed.error.issues[0]?.message ?? "Invalid custom provider config" } as const
-    }
-
-    const config = parsed.data
-    const headers = config.options.headers
-      ? Object.fromEntries(
-          Object.entries(config.options.headers)
-            .map(([key, value]) => [key.trim(), value.trim()] as const)
-            .filter(([key, value]) => key.length > 0 && value.length > 0),
-        )
-      : undefined
-
-    const value: SanitizedProviderConfig = {
-      npm: CUSTOM_PROVIDER_PACKAGE,
-      name: config.name.trim(),
-      ...(config.env ? { env: config.env.map((item) => item.trim()) } : {}),
-      options: {
-        baseURL: config.options.baseURL.trim(),
-        ...(headers && Object.keys(headers).length > 0 ? { headers } : {}),
-      },
-      models: Object.fromEntries(
-        Object.entries(config.models).map(([id, model]) => [id.trim(), { name: model.name.trim() }]),
-      ),
-    }
-
-    return { value }
   }
 
   private async handleConnectProvider(requestId: string, providerID: string, apiKey: string): Promise<void> {
@@ -1394,7 +1319,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const id = this.validateProviderID(requestId, providerID, "connect")
     if (!id) return
 
-    const sanitized = this.sanitizeCustomProviderConfig(provider)
+    const sanitized = sanitizeCustomProviderConfig(provider)
     if ("error" in sanitized) {
       this.postProviderActionError(requestId, providerID, "connect", sanitized.error)
       return

@@ -5,15 +5,20 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { ProviderIcon } from "@kilocode/kilo-ui/provider-icon"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { showToast } from "@kilocode/kilo-ui/toast"
-import { For, createSignal, onCleanup } from "solid-js"
+import { For, onCleanup } from "solid-js"
 import { createStore } from "solid-js/store"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
 import { useVSCode } from "../../context/vscode"
-import type { ExtensionMessage, ProviderConfig } from "../../types/messages"
 import { CUSTOM_PROVIDER_ID } from "./provider-catalog"
-import { PROVIDER_ID_PATTERN } from "../../../../src/shared/provider-model"
+import {
+  parseCustomProviderSecret,
+  sanitizeCustomProviderConfig,
+  type SanitizedProviderConfig,
+  validateProviderID,
+} from "../../../../src/shared/custom-provider"
+import { createProviderAction } from "../../utils/provider-action"
 
 type Translator = ReturnType<typeof useLanguage>["t"]
 
@@ -41,6 +46,7 @@ type FormErrors = {
   providerID: string | undefined
   name: string | undefined
   baseURL: string | undefined
+  apiKey: string | undefined
   models: Array<{ id?: string; name?: string }>
   headers: Array<{ key?: string; value?: string }>
 }
@@ -56,19 +62,19 @@ type ValidateResult = {
   providerID: string
   name: string
   apiKey?: string
-  config: ProviderConfig
+  config: SanitizedProviderConfig
 }
 
-function validateCustomProvider(input: ValidateArgs): { errors: FormErrors; result?: ValidateResult } {
+function validateCustomProvider(input: ValidateArgs): { errors: FormErrors; result?: ValidateResult; message?: string } {
   const providerID = input.form.providerID.trim()
   const name = input.form.name.trim()
   const baseURL = input.form.baseURL.trim()
-  const apiKey = input.form.apiKey.trim()
-  const env = apiKey.match(/^\{env:([^}]+)\}$/)?.[1]?.trim()
+  const secret = parseCustomProviderSecret(input.form.apiKey)
+  const parsedID = providerID ? validateProviderID(providerID) : null
 
   const idError = !providerID
     ? input.t("provider.custom.error.providerID.required")
-    : !PROVIDER_ID_PATTERN.test(providerID)
+    : parsedID && "error" in parsedID
       ? input.t("provider.custom.error.providerID.format")
       : undefined
 
@@ -86,6 +92,7 @@ function validateCustomProvider(input: ValidateArgs): { errors: FormErrors; resu
       ? input.t("provider.custom.error.providerID.exists")
       : undefined
 
+  const apiKeyError = "error" in secret ? secret.error : undefined
   const seenModels = new Set<string>()
   const modelErrors = input.form.models.map((model) => {
     const id = model.id.trim()
@@ -122,14 +129,16 @@ function validateCustomProvider(input: ValidateArgs): { errors: FormErrors; resu
     providerID: idError ?? existsError,
     name: nameError,
     baseURL: baseURLError,
+    apiKey: apiKeyError,
     models: modelErrors,
     headers: headerErrors,
   }
 
   const validModels = modelErrors.every((model) => !model.id && !model.name)
   const validHeaders = headerErrors.every((header) => !header.key && !header.value)
-  const ok = !idError && !existsError && !nameError && !baseURLError && validModels && validHeaders
+  const ok = !idError && !existsError && !nameError && !baseURLError && !apiKeyError && validModels && validHeaders
   if (!ok) return { errors }
+  if (!parsedID || "error" in parsedID || "error" in secret) return { errors }
 
   const headers = Object.fromEntries(
     input.form.headers
@@ -139,22 +148,37 @@ function validateCustomProvider(input: ValidateArgs): { errors: FormErrors; resu
   )
 
   const models = Object.fromEntries(input.form.models.map((model) => [model.id.trim(), { name: model.name.trim() }]))
+  const config = {
+    name,
+    ...(secret.value.env ? { env: [secret.value.env] } : {}),
+    options: {
+      baseURL,
+      ...(Object.keys(headers).length ? { headers } : {}),
+    },
+    models,
+  }
+  const sanitized = sanitizeCustomProviderConfig(config)
+  if ("error" in sanitized) {
+    const path = sanitized.issue?.path.join(".")
+    if (path === "name") {
+      return { errors: { ...errors, name: sanitized.error } }
+    }
+    if (path === "options.baseURL") {
+      return { errors: { ...errors, baseURL: sanitized.error } }
+    }
+    if (path === "env" || path?.startsWith("env.")) {
+      return { errors: { ...errors, apiKey: sanitized.error } }
+    }
+    return { errors, message: sanitized.error }
+  }
 
   return {
     errors,
     result: {
-      providerID,
+      providerID: parsedID.value,
       name,
-      apiKey: env ? undefined : apiKey || undefined,
-      config: {
-        name,
-        ...(env ? { env: [env] } : {}),
-        options: {
-          baseURL,
-          ...(Object.keys(headers).length ? { headers } : {}),
-        },
-        models,
-      },
+      apiKey: secret.value.apiKey,
+      config: sanitized.value,
     },
   }
 }
@@ -169,8 +193,8 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
   const provider = useProvider()
   const vscode = useVSCode()
   const language = useLanguage()
+  const action = createProviderAction(vscode)
 
-  const [requestId, setRequestId] = createSignal<string>()
   const [form, setForm] = createStore<FormState>({
     providerID: "",
     name: "",
@@ -184,36 +208,12 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     providerID: undefined,
     name: undefined,
     baseURL: undefined,
+    apiKey: undefined,
     models: [{}],
     headers: [{}],
   })
 
-  const unsub = vscode.onMessage((message: ExtensionMessage) => {
-    if (!("requestId" in message) || message.requestId !== requestId()) return
-
-    if (message.type === "providerConnected") {
-      setForm("saving", false)
-      showToast({
-        variant: "success",
-        icon: "circle-check",
-        title: language.t("provider.connect.toast.connected.title", {
-          provider: form.name.trim() || form.providerID.trim(),
-        }),
-        description: language.t("provider.connect.toast.connected.description", {
-          provider: form.name.trim() || form.providerID.trim(),
-        }),
-      })
-      dialog.close()
-      return
-    }
-
-    if (message.type === "providerActionError" && message.action === "connect") {
-      setForm("saving", false)
-      showToast({ title: language.t("common.requestFailed"), description: message.message })
-    }
-  })
-
-  onCleanup(unsub)
+  onCleanup(action.dispose)
 
   function goBack() {
     if (!props.onBack) {
@@ -257,19 +257,42 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     })
 
     setErrors(output.errors)
-    if (!output.result) return
+    if (!output.result) {
+      if (output.message) {
+        showToast({ title: language.t("common.requestFailed"), description: output.message })
+      }
+      return
+    }
 
-    const next = crypto.randomUUID()
-    setRequestId(next)
     setForm("saving", true)
-
-    vscode.postMessage({
-      type: "saveCustomProvider",
-      requestId: next,
-      providerID: output.result.providerID,
-      config: output.result.config,
-      apiKey: output.result.apiKey,
-    })
+    action.send(
+      {
+        type: "saveCustomProvider",
+        providerID: output.result.providerID,
+        config: output.result.config,
+        apiKey: output.result.apiKey,
+      },
+      {
+        onConnected: () => {
+          setForm("saving", false)
+          showToast({
+            variant: "success",
+            icon: "circle-check",
+            title: language.t("provider.connect.toast.connected.title", {
+              provider: form.name.trim() || form.providerID.trim(),
+            }),
+            description: language.t("provider.connect.toast.connected.description", {
+              provider: form.name.trim() || form.providerID.trim(),
+            }),
+          })
+          dialog.close()
+        },
+        onError: (message) => {
+          setForm("saving", false)
+          showToast({ title: language.t("common.requestFailed"), description: message.message })
+        },
+      },
+    )
   }
 
   return (
@@ -353,6 +376,8 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
             description={language.t("provider.custom.field.apiKey.description")}
             value={form.apiKey}
             onChange={(value) => setForm("apiKey", value)}
+            validationState={errors.apiKey ? "invalid" : undefined}
+            error={errors.apiKey}
           />
 
           <div style={{ display: "flex", "flex-direction": "column", gap: "10px" }}>

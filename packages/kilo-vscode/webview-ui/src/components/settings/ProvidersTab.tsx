@@ -12,7 +12,7 @@ import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
 import { useServer } from "../../context/server"
 import { useVSCode } from "../../context/vscode"
-import type { ExtensionMessage, Provider } from "../../types/messages"
+import type { Provider } from "../../types/messages"
 import DeviceAuthCard from "../profile/DeviceAuthCard"
 import CustomProviderDialog from "./CustomProviderDialog"
 import ProviderConnectDialog from "./ProviderConnectDialog"
@@ -27,6 +27,7 @@ import {
 import ProviderSelector, { type ProviderOption } from "./ProviderSelector"
 import ProviderSelectDialog from "./ProviderSelectDialog"
 import { KILO_PROVIDER_ID } from "../../../../src/shared/provider-model"
+import { createProviderAction } from "../../utils/provider-action"
 
 type ProviderSource = "env" | "api" | "config" | "custom"
 
@@ -74,6 +75,7 @@ const ProvidersTab: Component = () => {
   const language = useLanguage()
   const dialog = useDialog()
   const vscode = useVSCode()
+  const action = createProviderAction(vscode)
 
   const [newDisabled, setNewDisabled] = createSignal<ProviderOption | undefined>()
   const [disconnecting, setDisconnecting] = createSignal(new Set<string>())
@@ -110,44 +112,7 @@ const ProvidersTab: Component = () => {
     providerOptions().filter((item) => !disabledProviders().includes(item.value)),
   )
 
-  const pendingDisconnects = new Map<string, { providerID: string; name: string }>()
-
-  const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
-    if (message.type === "providerDisconnected") {
-      const pending = pendingDisconnects.get(message.requestId)
-      if (!pending) return
-      pendingDisconnects.delete(message.requestId)
-      setDisconnecting((prev) => {
-        const next = new Set(prev)
-        next.delete(pending.providerID)
-        return next
-      })
-      showToast({
-        variant: "success",
-        icon: "circle-check",
-        title: language.t("provider.disconnect.toast.disconnected.title", { provider: pending.name }),
-        description: disconnectDescription(pending.providerID, pending.name),
-      })
-      return
-    }
-
-    if (message.type === "providerActionError" && message.action === "disconnect") {
-      const pending = pendingDisconnects.get(message.requestId)
-      if (!pending) return
-      pendingDisconnects.delete(message.requestId)
-      setDisconnecting((prev) => {
-        const next = new Set(prev)
-        next.delete(pending.providerID)
-        return next
-      })
-      showToast({
-        title: language.t("common.requestFailed"),
-        description: message.message,
-      })
-    }
-  })
-
-  onCleanup(unsubscribe)
+  onCleanup(action.dispose)
 
   function source(item: Provider): ProviderSource | undefined {
     const value = item.source
@@ -193,10 +158,39 @@ const ProvidersTab: Component = () => {
   }
 
   function disconnect(item: Provider) {
-    const requestId = crypto.randomUUID()
-    pendingDisconnects.set(requestId, { providerID: item.id, name: item.name })
     setDisconnecting((prev) => new Set(prev).add(item.id))
-    vscode.postMessage({ type: "disconnectProvider", requestId, providerID: item.id })
+    action.send(
+      {
+        type: "disconnectProvider",
+        providerID: item.id,
+      },
+      {
+        onDisconnected: () => {
+          setDisconnecting((prev) => {
+            const next = new Set(prev)
+            next.delete(item.id)
+            return next
+          })
+          showToast({
+            variant: "success",
+            icon: "circle-check",
+            title: language.t("provider.disconnect.toast.disconnected.title", { provider: item.name }),
+            description: disconnectDescription(item.id, item.name),
+          })
+        },
+        onError: (message) => {
+          setDisconnecting((prev) => {
+            const next = new Set(prev)
+            next.delete(item.id)
+            return next
+          })
+          showToast({
+            title: language.t("common.requestFailed"),
+            description: message.message,
+          })
+        },
+      },
+    )
   }
 
   function disconnectDescription(providerID: string, name: string) {
