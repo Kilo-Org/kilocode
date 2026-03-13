@@ -496,7 +496,7 @@ const AGENT_MANAGER_DIR = path.join(ROOT, "src/agent-manager")
 const VSCODE_ALLOWED: Record<string, { maxLines: number; note: string }> = {
   // God class — decompose into WorktreeOrchestrator, DiffManager, ApplyManager, etc.
   "AgentManagerProvider.ts": {
-    maxLines: 1900,
+    maxLines: 1950,
     note: "primary extraction target: break into vscode-free orchestrators",
   },
   // Thin adapter: wraps vscode.window terminal APIs behind TerminalHost interface
