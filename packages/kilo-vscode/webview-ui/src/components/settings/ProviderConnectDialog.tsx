@@ -37,7 +37,7 @@ function formatError(value: unknown, fallback: string): string {
   return fallback
 }
 
-export const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => {
+const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => {
   const dialog = useDialog()
   const language = useLanguage()
   const provider = useProvider()

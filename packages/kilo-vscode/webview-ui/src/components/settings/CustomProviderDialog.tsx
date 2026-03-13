@@ -166,7 +166,7 @@ interface CustomProviderDialogProps {
   onBack?: () => void
 }
 
-export const CustomProviderDialog = (props: CustomProviderDialogProps) => {
+const CustomProviderDialog = (props: CustomProviderDialogProps) => {
   const dialog = useDialog()
   const { config } = useConfig()
   const provider = useProvider()

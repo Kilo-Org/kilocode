@@ -26,7 +26,7 @@ const kiloFallback: Provider = {
   models: {},
 }
 
-export const ProviderSelectDialog = () => {
+const ProviderSelectDialog = () => {
   const dialog = useDialog()
   const { config } = useConfig()
   const provider = useProvider()
