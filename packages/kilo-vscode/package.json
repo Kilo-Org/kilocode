@@ -44,7 +44,9 @@
     "Kilo Code",
     "kilocode"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onWebviewPanel:kilo-code.new.AgentManagerPanel"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "viewsContainers": {

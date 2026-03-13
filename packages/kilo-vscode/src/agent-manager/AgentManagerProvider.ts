@@ -133,6 +133,13 @@ export class AgentManagerProvider implements vscode.Disposable {
   private attachPanel(panel: vscode.WebviewPanel): void {
     this.panel = panel
 
+    // Reapply options — required for deserialized panels where enableScripts
+    // and localResourceRoots are not carried over from the original creation.
+    panel.webview.options = {
+      enableScripts: true,
+      localResourceRoots: [this.extensionUri],
+    }
+
     panel.iconPath = {
       light: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-light.svg"),
       dark: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-dark.svg"),
