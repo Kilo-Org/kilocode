@@ -9,6 +9,7 @@ import { useVSCode } from "./vscode"
 import type { Provider, ProviderModel, ModelSelection, ExtensionMessage, ProviderAuthState } from "../types/messages"
 import type { ProviderAuthMethod } from "@kilocode/sdk/v2/client"
 import { flattenModels, findModel as _findModel, isModelValid as isValid } from "./provider-utils"
+import { KILO_AUTO } from "../../../src/shared/provider-model"
 
 export type EnrichedModel = ProviderModel & { providerID: string; providerName: string }
 
@@ -24,8 +25,6 @@ interface ProviderContextValue {
   /** Check if a model selection points to a real model in a connected provider. */
   isModelValid: (selection: ModelSelection | null) => boolean
 }
-
-const KILO_AUTO: ModelSelection = { providerID: "kilo", modelID: "kilo-auto/free" }
 
 export const ProviderContext = createContext<ProviderContextValue>()
 

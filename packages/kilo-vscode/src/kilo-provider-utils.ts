@@ -55,13 +55,6 @@ export function indexProvidersById(all: ProviderInfo[]): Record<string, Provider
   return normalized
 }
 
-export function parseModelString(raw: string | undefined | null): { providerID: string; modelID: string } | null {
-  if (!raw) return null
-  const slash = raw.indexOf("/")
-  if (slash <= 0 || slash >= raw.length - 1) return null
-  return { providerID: raw.slice(0, slash), modelID: raw.slice(slash + 1) }
-}
-
 export function filterVisibleAgents(agents: Agent[]): { visible: Agent[]; defaultAgent: string } {
   const visible = agents.filter((a) => a.mode !== "subagent" && !a.hidden)
   const defaultAgent = visible.length > 0 ? visible[0]!.name : "code"

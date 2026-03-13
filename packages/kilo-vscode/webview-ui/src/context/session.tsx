@@ -41,7 +41,8 @@ import type {
 } from "../types/messages"
 import { removeSessionPermissions, upsertPermission } from "./permission-queue"
 import { computeStatus, calcTotalCost, calcContextUsage } from "./session-utils"
-import { KILO_AUTO, parseModelSelection, resolveModelSelection } from "./model-selection"
+import { resolveModelSelection } from "./model-selection"
+import { KILO_AUTO, parseModelString } from "../../../src/shared/provider-model"
 
 const RECENT_LIMIT = 5
 
@@ -226,12 +227,12 @@ export const SessionProvider: ParentComponent = (props) => {
 
   /** Per-mode model from config (e.g. config.agent.code.model). */
   function getModeModel(agentName: string): ModelSelection | null {
-    return parseModelSelection(config().agent?.[agentName]?.model)
+    return parseModelString(config().agent?.[agentName]?.model)
   }
 
   /** Global default model from config (config.model). */
   function getGlobalModel(): ModelSelection | null {
-    return parseModelSelection(config().model)
+    return parseModelString(config().model)
   }
 
   function resolveModel(agentName: string, override?: ModelSelection | null): ModelSelection | null {

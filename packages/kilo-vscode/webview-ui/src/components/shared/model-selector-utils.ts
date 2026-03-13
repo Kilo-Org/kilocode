@@ -1,21 +1,15 @@
 import type { ModelSelection } from "../../types/messages"
 import type { EnrichedModel } from "../../context/provider"
+import {
+  KILO_PROVIDER_ID as KILO_GATEWAY_ID,
+  PROVIDER_PRIORITY as PROVIDER_ORDER,
+  providerOrderIndex,
+} from "../../../../src/shared/provider-model"
 
-export const KILO_GATEWAY_ID = "kilo"
-
-export const PROVIDER_ORDER = [
-  KILO_GATEWAY_ID,
-  "anthropic",
-  "github-copilot",
-  "openai",
-  "google",
-  "openrouter",
-  "vercel",
-]
+export { KILO_GATEWAY_ID, PROVIDER_ORDER }
 
 export function providerSortKey(providerID: string, order = PROVIDER_ORDER): number {
-  const idx = order.indexOf(providerID.toLowerCase())
-  return idx >= 0 ? idx : order.length
+  return providerOrderIndex(providerID, order)
 }
 
 export function isFree(model: Pick<EnrichedModel, "inputPrice">): boolean {

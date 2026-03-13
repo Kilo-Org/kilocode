@@ -1,12 +1,5 @@
 import type { ModelSelection, Provider } from "../types/messages"
-import { parseModelString } from "../../../src/kilo-provider-utils"
 import { isModelValid } from "./provider-utils"
-
-export const KILO_AUTO: ModelSelection = { providerID: "kilo", modelID: "kilo-auto/free" }
-
-export function parseModelSelection(raw: string | undefined | null): ModelSelection | null {
-  return parseModelString(raw)
-}
 
 function validate(
   providers: Record<string, Provider>,
@@ -44,6 +37,7 @@ export function resolveModelSelection(input: {
     validate(input.providers, input.connected, input.mode) ??
     validate(input.providers, input.connected, input.global) ??
     recent(input.providers, input.connected, input.recent) ??
-    validate(input.providers, input.connected, input.fallback)
+    input.fallback ??
+    null
   )
 }

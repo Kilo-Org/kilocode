@@ -18,6 +18,7 @@ import CustomProviderDialog from "./CustomProviderDialog"
 import ProviderConnectDialog from "./ProviderConnectDialog"
 import {
   CUSTOM_PROVIDER_ID,
+  kiloFallbackProvider,
   POPULAR_PROVIDER_IDS,
   providerIcon,
   providerNoteKey,
@@ -25,19 +26,12 @@ import {
 } from "./provider-catalog"
 import ProviderSelector, { type ProviderOption } from "./ProviderSelector"
 import ProviderSelectDialog from "./ProviderSelectDialog"
+import { KILO_PROVIDER_ID } from "../../../../src/shared/provider-model"
 
 type ProviderSource = "env" | "api" | "config" | "custom"
 
-const kiloFallback: Provider = {
-  id: "kilo",
-  name: "Kilo Gateway",
-  source: "custom",
-  env: ["KILO_API_KEY"],
-  models: {},
-}
-
 function ProviderGlyph(props: { id: string }): JSX.Element {
-  if (props.id === "kilo") {
+  if (props.id === KILO_PROVIDER_ID) {
     return (
       <div
         style={{
@@ -99,17 +93,17 @@ const ProvidersTab: Component = () => {
     sortProviders(Object.values(provider.providers())).map((item) => ({ value: item.id, label: item.name })),
   )
 
-  const kilo = createMemo<Provider>(() => provider.providers().kilo ?? kiloFallback)
-  const kiloConnected = createMemo(() => !!provider.authStates()["kilo"])
+  const kilo = createMemo<Provider>(() => provider.providers().kilo ?? kiloFallbackProvider())
+  const kiloConnected = createMemo(() => !!provider.authStates()[KILO_PROVIDER_ID])
   const showKiloAuth = createMemo(() => !kiloConnected() && server.deviceAuth().status !== "idle")
 
   const popularProviders = createMemo(() => {
     const connected = new Set(provider.connected())
     const disabled = new Set(disabledProviders())
-    return POPULAR_PROVIDER_IDS.map((id) => (id === "kilo" ? kilo() : provider.providers()[id]))
+    return POPULAR_PROVIDER_IDS.map((id) => (id === KILO_PROVIDER_ID ? kilo() : provider.providers()[id]))
       .filter((item): item is Provider => !!item)
       .filter((item) => !connected.has(item.id) && !disabled.has(item.id))
-      .filter((item) => !(showKiloAuth() && item.id === "kilo"))
+      .filter((item) => !(showKiloAuth() && item.id === KILO_PROVIDER_ID))
   })
 
   const disabledOptions = createMemo(() =>
@@ -164,7 +158,7 @@ const ProvidersTab: Component = () => {
   function type(item: Provider) {
     const current = source(item)
     const auth = provider.authStates()[item.id]
-    if (item.id === "kilo") return language.t("settings.providers.tag.gateway")
+    if (item.id === KILO_PROVIDER_ID) return language.t("settings.providers.tag.gateway")
     if (current === "env") return language.t("settings.providers.tag.environment")
     if (auth === "oauth") return language.t("settings.providers.tag.oauth")
     if (auth === "api") return language.t("provider.connect.method.apiKey")
@@ -178,7 +172,7 @@ const ProvidersTab: Component = () => {
   }
 
   function canHide(item: Provider) {
-    return item.id !== "kilo" && source(item) === "env"
+    return item.id !== KILO_PROVIDER_ID && source(item) === "env"
   }
 
   function addDisabled(value: string) {
@@ -206,7 +200,7 @@ const ProvidersTab: Component = () => {
   }
 
   function disconnectDescription(providerID: string, name: string) {
-    if (providerID === "kilo") {
+    if (providerID === KILO_PROVIDER_ID) {
       return language.t("provider.disconnect.toast.disconnected.description.kilo", { provider: name })
     }
     return language.t("provider.disconnect.toast.disconnected.description", { provider: name })
@@ -219,7 +213,7 @@ const ProvidersTab: Component = () => {
   }
 
   function openPopular(item: Provider) {
-    if (item.id === "kilo") {
+    if (item.id === KILO_PROVIDER_ID) {
       server.startLogin()
       return
     }
@@ -261,7 +255,7 @@ const ProvidersTab: Component = () => {
               <span style={{ "font-size": "14px", "font-weight": "500", color: "var(--vscode-foreground)" }}>
                 {item.name}
               </span>
-              <Show when={item.id === "kilo"}>
+              <Show when={item.id === KILO_PROVIDER_ID}>
                 <Tag>{language.t("dialog.provider.tag.recommended")}</Tag>
               </Show>
             </div>

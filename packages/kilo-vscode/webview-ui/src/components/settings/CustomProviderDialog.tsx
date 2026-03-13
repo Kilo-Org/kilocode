@@ -13,9 +13,7 @@ import { useProvider } from "../../context/provider"
 import { useVSCode } from "../../context/vscode"
 import type { ExtensionMessage, ProviderConfig } from "../../types/messages"
 import { CUSTOM_PROVIDER_ID } from "./provider-catalog"
-
-const PROVIDER_ID = /^[a-z0-9][a-z0-9-_]*$/
-const OPENAI_COMPATIBLE = "@ai-sdk/openai-compatible"
+import { PROVIDER_ID_PATTERN } from "../../../../src/shared/provider-model"
 
 type Translator = ReturnType<typeof useLanguage>["t"]
 
@@ -70,7 +68,7 @@ function validateCustomProvider(input: ValidateArgs): { errors: FormErrors; resu
 
   const idError = !providerID
     ? input.t("provider.custom.error.providerID.required")
-    : !PROVIDER_ID.test(providerID)
+    : !PROVIDER_ID_PATTERN.test(providerID)
       ? input.t("provider.custom.error.providerID.format")
       : undefined
 
@@ -149,7 +147,6 @@ function validateCustomProvider(input: ValidateArgs): { errors: FormErrors; resu
       name,
       apiKey: env ? undefined : apiKey || undefined,
       config: {
-        npm: OPENAI_COMPATIBLE,
         name,
         ...(env ? { env: [env] } : {}),
         options: {

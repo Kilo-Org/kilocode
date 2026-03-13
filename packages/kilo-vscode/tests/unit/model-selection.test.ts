@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test"
-import { KILO_AUTO, parseModelSelection, resolveModelSelection } from "../../webview-ui/src/context/model-selection"
+import { resolveModelSelection } from "../../webview-ui/src/context/model-selection"
+import { KILO_AUTO, parseModelString } from "../../src/shared/provider-model"
 import type { Provider } from "../../webview-ui/src/types/messages"
 
 function makeProvider(id: string, name: string, modelIds: string[]): Provider {
@@ -16,24 +17,24 @@ const providers = {
   openai: makeProvider("openai", "OpenAI", ["gpt-4.1"]),
 }
 
-describe("parseModelSelection", () => {
+describe("parseModelString", () => {
   it("parses provider/model pairs", () => {
-    expect(parseModelSelection("anthropic/claude-sonnet-4")).toEqual({
+    expect(parseModelString("anthropic/claude-sonnet-4")).toEqual({
       providerID: "anthropic",
       modelID: "claude-sonnet-4",
     })
   })
 
   it("keeps slashes inside kilo model ids", () => {
-    expect(parseModelSelection("kilo/kilo-auto/free")).toEqual({
+    expect(parseModelString("kilo/kilo-auto/free")).toEqual({
       providerID: "kilo",
       modelID: "kilo-auto/free",
     })
   })
 
   it("returns null for invalid values", () => {
-    expect(parseModelSelection(undefined)).toBeNull()
-    expect(parseModelSelection("claude-sonnet-4")).toBeNull()
+    expect(parseModelString(undefined)).toBeNull()
+    expect(parseModelString("claude-sonnet-4")).toBeNull()
   })
 })
 
@@ -83,13 +84,13 @@ describe("resolveModelSelection", () => {
     expect(result).toEqual(KILO_AUTO)
   })
 
-  it("returns null when nothing is usable", () => {
+  it("keeps the explicit fallback even when kilo is missing from the loaded catalog", () => {
     const result = resolveModelSelection({
       providers: { openai: providers.openai },
       connected: [],
       fallback: KILO_AUTO,
     })
-    expect(result).toBeNull()
+    expect(result).toEqual(KILO_AUTO)
   })
 
   it("keeps the raw preference order before providers load", () => {

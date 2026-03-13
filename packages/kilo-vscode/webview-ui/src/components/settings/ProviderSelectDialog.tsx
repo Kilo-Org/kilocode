@@ -10,20 +10,19 @@ import { useProvider } from "../../context/provider"
 import { useServer } from "../../context/server"
 import type { Provider } from "../../types/messages"
 import ProviderConnectDialog from "./ProviderConnectDialog"
-import { CUSTOM_PROVIDER_ID, isPopularProvider, popularProviderIndex, providerIcon } from "./provider-catalog"
+import {
+  CUSTOM_PROVIDER_ID,
+  isPopularProvider,
+  kiloFallbackProvider,
+  popularProviderIndex,
+  providerIcon,
+} from "./provider-catalog"
 import CustomProviderDialog from "./CustomProviderDialog"
+import { KILO_PROVIDER_ID } from "../../../../src/shared/provider-model"
 
 type ProviderItem = {
   id: string
   name: string
-}
-
-const kiloFallback: Provider = {
-  id: "kilo",
-  name: "Kilo Gateway",
-  source: "custom",
-  env: ["KILO_API_KEY"],
-  models: {},
 }
 
 const ProviderSelectDialog = () => {
@@ -39,7 +38,7 @@ const ProviderSelectDialog = () => {
     const disabled = new Set(config().disabled_providers ?? [])
     const connected = new Set(provider.connected())
     const all = Object.values(provider.providers())
-    const withKilo = all.some((item) => item.id === "kilo") ? all : [kiloFallback, ...all]
+    const withKilo = all.some((item) => item.id === KILO_PROVIDER_ID) ? all : [kiloFallbackProvider(), ...all]
     const available = withKilo.filter((item) => !disabled.has(item.id) && !connected.has(item.id))
 
     return [
@@ -60,7 +59,7 @@ const ProviderSelectDialog = () => {
       return
     }
 
-    if (item.id === "kilo") {
+    if (item.id === KILO_PROVIDER_ID) {
       dialog.close()
       server.startLogin()
       return
@@ -118,7 +117,7 @@ const ProviderSelectDialog = () => {
               <span style={{ "font-size": "14px", "line-height": "20px", color: "var(--vscode-foreground)" }}>
                 {item.name}
               </span>
-              <Show when={item.id === "kilo"}>
+              <Show when={item.id === KILO_PROVIDER_ID}>
                 <Tag>{language.t("dialog.provider.tag.recommended")}</Tag>
               </Show>
               <Show when={item.id === CUSTOM_PROVIDER_ID}>

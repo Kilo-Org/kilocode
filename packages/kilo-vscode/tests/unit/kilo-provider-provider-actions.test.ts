@@ -316,9 +316,13 @@ describe("KiloProvider provider actions", () => {
       providerID: "myprovider",
       apiKey: "sk-custom",
       config: {
-        npm: "@ai-sdk/openai-compatible",
+        npm: "malicious-package",
         name: "My Provider",
-        options: { baseURL: "https://example.com/v1" },
+        env: ["MY_PROVIDER_KEY"],
+        options: {
+          baseURL: "https://example.com/v1",
+          headers: { Authorization: "Bearer test" },
+        },
         models: { "model-1": { name: "Model One" } },
       },
     })
@@ -333,7 +337,11 @@ describe("KiloProvider provider actions", () => {
           myprovider: {
             npm: "@ai-sdk/openai-compatible",
             name: "My Provider",
-            options: { baseURL: "https://example.com/v1" },
+            env: ["MY_PROVIDER_KEY"],
+            options: {
+              baseURL: "https://example.com/v1",
+              headers: { Authorization: "Bearer test" },
+            },
             models: { "model-1": { name: "Model One" } },
           },
         },
@@ -355,6 +363,98 @@ describe("KiloProvider provider actions", () => {
       expect.objectContaining({
         type: "providersLoaded",
         authStates: expect.objectContaining({ myprovider: "api" }),
+      }),
+    )
+  })
+
+  it("rejects invalid provider IDs before forwarding provider actions", async () => {
+    const cases = [
+      {
+        action: "connect" as const,
+        message: { type: "connectProvider", requestId: "bad-1", providerID: "bad/id", apiKey: "sk-test" },
+      },
+      {
+        action: "authorize" as const,
+        message: { type: "authorizeProviderOAuth", requestId: "bad-2", providerID: "bad/id", method: 0 },
+      },
+      {
+        action: "connect" as const,
+        message: {
+          type: "completeProviderOAuth",
+          requestId: "bad-3",
+          providerID: "bad/id",
+          method: 0,
+          code: "oauth-code",
+        },
+      },
+      {
+        action: "disconnect" as const,
+        message: { type: "disconnectProvider", requestId: "bad-4", providerID: "bad/id" },
+      },
+      {
+        action: "connect" as const,
+        message: {
+          type: "saveCustomProvider",
+          requestId: "bad-5",
+          providerID: "bad/id",
+          apiKey: "sk-custom",
+          config: {
+            npm: "@ai-sdk/openai-compatible",
+            name: "My Provider",
+            options: { baseURL: "https://example.com/v1" },
+            models: { "model-1": { name: "Model One" } },
+          },
+        },
+      },
+    ]
+
+    for (const item of cases) {
+      const client = createClient({ providerID: "openrouter", connected: [] })
+      const { webview } = createBoundProvider(client)
+
+      await webview.receive(item.message)
+
+      expect(client.calls.set).toHaveLength(0)
+      expect(client.calls.remove).toHaveLength(0)
+      expect(client.calls.authorize).toHaveLength(0)
+      expect(client.calls.callback).toHaveLength(0)
+      expect(client.calls.updateConfig).toHaveLength(0)
+      expect(webview.sent).toContainEqual({
+        type: "providerActionError",
+        requestId: item.message.requestId,
+        providerID: "bad/id",
+        action: item.action,
+        message: "Invalid provider ID",
+      })
+    }
+  })
+
+  it("rejects custom provider config with unknown fields", async () => {
+    const client = createClient({ providerID: "openrouter", connected: [] })
+    const { webview } = createBoundProvider(client)
+
+    await webview.receive({
+      type: "saveCustomProvider",
+      requestId: "req-7",
+      providerID: "safeprovider",
+      config: {
+        name: "Bad Provider",
+        options: {
+          baseURL: "https://example.com/v1",
+          mcpServer: "https://malicious.example",
+        },
+        models: { "model-1": { name: "Model One" } },
+      },
+    })
+
+    expect(client.calls.updateConfig).toHaveLength(0)
+    expect(webview.sent).toContainEqual(
+      expect.objectContaining({
+        type: "providerActionError",
+        requestId: "req-7",
+        providerID: "safeprovider",
+        action: "connect",
+        message: expect.stringContaining("mcpServer"),
       }),
     )
   })

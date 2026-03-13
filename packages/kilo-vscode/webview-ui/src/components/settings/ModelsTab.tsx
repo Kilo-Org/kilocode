@@ -3,7 +3,7 @@ import { Card } from "@kilocode/kilo-ui/card"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useSession } from "../../context/session"
-import { parseModelSelection } from "../../context/model-selection"
+import { parseModelString } from "../../../../src/shared/provider-model"
 import { ModelSelectorBase } from "../shared/ModelSelector"
 import SettingsRow from "./SettingsRow"
 
@@ -42,7 +42,7 @@ const ModelsTab: Component = () => {
           description={language.t("settings.providers.defaultModel.description")}
         >
           <ModelSelectorBase
-            value={parseModelSelection(config().model ?? undefined)}
+            value={parseModelString(config().model ?? undefined)}
             onSelect={handleModelSelect("model")}
             placement="bottom-start"
             allowClear
@@ -55,7 +55,7 @@ const ModelsTab: Component = () => {
           last
         >
           <ModelSelectorBase
-            value={parseModelSelection(config().small_model ?? undefined)}
+            value={parseModelString(config().small_model ?? undefined)}
             onSelect={handleModelSelect("small_model")}
             placement="bottom-start"
             allowClear
@@ -73,7 +73,7 @@ const ModelsTab: Component = () => {
               last={index() === allAgents().length - 1}
             >
               <ModelSelectorBase
-                value={parseModelSelection(config().agent?.[agent.name]?.model ?? undefined)}
+                value={parseModelString(config().agent?.[agent.name]?.model ?? undefined)}
                 onSelect={handleModeModelSelect(agent.name)}
                 placement="bottom-start"
                 allowClear

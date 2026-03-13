@@ -1,17 +1,14 @@
 import { iconNames, type IconName } from "@opencode-ai/ui/icons/provider"
 import type { Provider } from "../../types/messages"
+import {
+  KILO_PROVIDER_ID,
+  PROVIDER_PRIORITY as POPULAR_PROVIDER_IDS,
+  createKiloFallbackProvider,
+  providerOrderIndex,
+} from "../../../../src/shared/provider-model"
 
 export const CUSTOM_PROVIDER_ID = "_custom"
-
-export const POPULAR_PROVIDER_IDS = [
-  "kilo",
-  "anthropic",
-  "github-copilot",
-  "openai",
-  "google",
-  "openrouter",
-  "vercel",
-] as const
+export { POPULAR_PROVIDER_IDS }
 
 const POPULAR_PROVIDER_SET = new Set<string>(POPULAR_PROVIDER_IDS)
 
@@ -20,14 +17,17 @@ export function isPopularProvider(providerID: string) {
 }
 
 export function popularProviderIndex(providerID: string) {
-  const index = POPULAR_PROVIDER_IDS.indexOf(providerID as (typeof POPULAR_PROVIDER_IDS)[number])
-  return index >= 0 ? index : POPULAR_PROVIDER_IDS.length
+  return providerOrderIndex(providerID, POPULAR_PROVIDER_IDS)
 }
 
 export function providerIcon(providerID: string): IconName {
-  if (providerID === "kilo") return "synthetic"
+  if (providerID === KILO_PROVIDER_ID) return "synthetic"
   if (iconNames.includes(providerID as IconName)) return providerID as IconName
   return "synthetic"
+}
+
+export function kiloFallbackProvider(): Provider {
+  return createKiloFallbackProvider()
 }
 
 export function providerNoteKey(providerID: string) {
