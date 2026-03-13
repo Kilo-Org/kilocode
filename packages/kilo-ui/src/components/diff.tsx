@@ -1,5 +1,4 @@
 import { sampledChecksum } from "@opencode-ai/util/encode"
-import { BinaryFile } from "@opencode-ai/util/binary-file"
 import { FileDiff, type FileDiffOptions, type SelectedLineRange, VirtualizedFileDiff } from "@pierre/diffs"
 import { createMediaQuery } from "@solid-primitives/media"
 import { createEffect, createMemo, createSignal, onCleanup, splitProps } from "solid-js"
@@ -96,7 +95,7 @@ export function Diff<T>(props: Props<T>) {
   ])
 
   const file = local.after?.name ?? local.before?.name ?? ""
-  if (local.binary || BinaryFile.isPath(file)) {
+  if (local.binary) {
     return (
       <div data-component="diff" data-binary style={styleVariables}>
         <div data-slot="diff-binary-state">

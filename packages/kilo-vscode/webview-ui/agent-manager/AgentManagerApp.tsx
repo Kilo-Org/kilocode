@@ -79,7 +79,7 @@ import { groupApplyConflicts } from "./apply-conflicts"
 import type { ReviewComment } from "./review-comments"
 import { BranchSelect } from "./BranchSelect"
 import { WorktreeItem } from "./WorktreeItem"
-import { mergeWorktreeDiffs, sameDiffMeta } from "./diff-state"
+import { mergeWorktreeDiffDetail, mergeWorktreeDiffs, sameDiffMeta } from "./diff-state"
 import "./agent-manager.css"
 import "./agent-manager-review.css"
 
@@ -1243,12 +1243,14 @@ const AgentManagerContent: Component = () => {
       if (msg.type === "agentManager.worktreeDiffFile") {
         const ev = msg as AgentManagerWorktreeDiffFileMessage
         if (ev.diff) {
+          const diff = ev.diff
           setDiffDatas((prev) => {
             const existing = prev[ev.sessionId] ?? []
-            const next = existing.map((item) => (item.file === ev.diff!.file ? ev.diff! : item))
+            const next = mergeWorktreeDiffDetail(existing, diff)
+            if (next === existing) return prev
             return { ...prev, [ev.sessionId]: next }
           })
-          setDiffFilePending(ev.sessionId, ev.diff.file, false)
+          setDiffFilePending(ev.sessionId, diff.file, false)
           return
         }
         setDiffFilePending(ev.sessionId, ev.file, false)

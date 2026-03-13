@@ -1192,6 +1192,35 @@ test("diffFull treats png files as binary", async () => {
   })
 })
 
+test("diffFull keeps text .dat files readable", async () => {
+  await using tmp = await bootstrap()
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      await Filesystem.write(`${tmp.path}/notes.dat`, "alpha\nbeta\n")
+
+      const before = await Snapshot.track()
+      expect(before).toBeTruthy()
+
+      await Filesystem.write(`${tmp.path}/notes.dat`, "alpha\nbeta\ngamma\n")
+
+      const after = await Snapshot.track()
+      expect(after).toBeTruthy()
+
+      const diffs = await Snapshot.diffFull(before!, after!)
+      expect(diffs.length).toBe(1)
+
+      const textDiff = diffs[0]
+      expect(textDiff.file).toBe("notes.dat")
+      expect(textDiff.before).toBe("alpha\nbeta\n")
+      expect(textDiff.after).toBe("alpha\nbeta\ngamma\n")
+      expect(textDiff.additions).toBe(1)
+      expect(textDiff.deletions).toBe(0)
+      expect(textDiff.binary).toBeUndefined()
+    },
+  })
+})
+
 test("diffFull with whitespace changes", async () => {
   await using tmp = await bootstrap()
   await Instance.provide({

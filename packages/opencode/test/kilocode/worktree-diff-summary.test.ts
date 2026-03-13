@@ -61,4 +61,21 @@ describe("WorktreeDiff summary", () => {
     expect(diff?.additions).toBe(3)
     expect(diff?.status).toBe("added")
   })
+
+  test("text files with .dat extensions stay renderable", async () => {
+    await using tmp = await setup()
+    await Bun.write(path.join(tmp.path, "notes.dat"), "one\ntwo\n")
+
+    const summary = await WorktreeDiff.summary({ dir: tmp.path, base: "HEAD" })
+    const meta = summary.find((diff) => diff.file === "notes.dat")
+    expect(meta).toBeDefined()
+    expect(meta?.binary).toBeUndefined()
+    expect(meta?.additions).toBe(2)
+
+    const detail = await WorktreeDiff.detail({ dir: tmp.path, base: "HEAD", file: "notes.dat" })
+    expect(detail).toBeDefined()
+    expect(detail?.binary).toBeUndefined()
+    expect(detail?.after).toBe("one\ntwo\n")
+    expect(detail?.additions).toBe(2)
+  })
 })

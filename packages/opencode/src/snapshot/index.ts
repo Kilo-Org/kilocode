@@ -232,7 +232,7 @@ export namespace Snapshot {
       const deletions = parts[1]
       const file = parts.slice(2).join("\t")
       if (!file) continue
-      const isBinaryFile = BinaryFile.isNumstat(additions, deletions, file)
+      const isBinaryFile = BinaryFile.isNumstat(additions, deletions)
       const before = isBinaryFile
         ? ""
         : await $`git -c core.autocrlf=false -c core.longpaths=true -c core.symlinks=true --git-dir ${git} --work-tree ${Instance.worktree} show ${from}:${file}`

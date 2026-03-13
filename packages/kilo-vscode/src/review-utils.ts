@@ -1,39 +1,7 @@
 import * as path from "path"
 import * as vscode from "vscode"
 import { inspect } from "util"
-import type { FileDiff } from "@kilocode/sdk/v2/client"
 import { GitOps } from "./agent-manager/GitOps"
-
-function checksum(content: string): string | undefined {
-  if (!content) return undefined
-  let hash = 0x811c9dc5
-  for (let i = 0; i < content.length; i++) {
-    hash ^= content.charCodeAt(i)
-    hash = Math.imul(hash, 0x01000193)
-  }
-  return (hash >>> 0).toString(36)
-}
-
-function sampledChecksum(content: string, limit = 500_000): string | undefined {
-  if (!content) return undefined
-  if (content.length <= limit) return checksum(content)
-
-  const size = 4096
-  const points = [
-    0,
-    Math.floor(content.length * 0.25),
-    Math.floor(content.length * 0.5),
-    Math.floor(content.length * 0.75),
-    content.length - size,
-  ]
-  const hashes = points
-    .map((point) => {
-      const start = Math.max(0, Math.min(content.length - size, point - Math.floor(size / 2)))
-      return checksum(content.slice(start, start + size)) ?? ""
-    })
-    .join(":")
-  return `${content.length}:${hashes}`
-}
 
 export function appendOutput(channel: vscode.OutputChannel, prefix: string, ...args: unknown[]): void {
   const msg = args
@@ -71,38 +39,6 @@ export async function resolveLocalDiffTarget(
   log(`Local diff: branch=${branch} tracking=${tracking ?? "none"} default=${fallback ?? "none"} base=${base}`)
 
   return { directory: root, baseBranch: base }
-}
-
-export function hashFileDiffs(
-  diffs: Array<
-    FileDiff & {
-      binary?: boolean
-      tracked?: boolean
-      generatedLike?: boolean
-      summarized?: boolean
-      stamp?: string
-    }
-  >,
-): string {
-  return diffs
-    .map((diff) => {
-      const before = diff.summarized ? "" : (sampledChecksum(diff.before) ?? "")
-      const after = diff.summarized ? "" : (sampledChecksum(diff.after) ?? "")
-      return [
-        diff.file,
-        diff.status,
-        diff.additions,
-        diff.deletions,
-        diff.binary ? "binary" : "text",
-        diff.tracked ? "tracked" : "untracked",
-        diff.generatedLike ? "generated" : "source",
-        diff.summarized ? "summary" : "detail",
-        diff.stamp ?? "",
-        before,
-        after,
-      ].join(":")
-    })
-    .join("|")
 }
 
 export function openFileInEditor(

@@ -3,10 +3,10 @@ import type { FileDiff } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "./services/cli-backend"
 import { buildWebviewHtml } from "./utils"
 import { GitOps } from "./agent-manager/GitOps"
+import { hashFileDiffs } from "./diff-hash"
 import {
   appendOutput,
   getWorkspaceRoot,
-  hashFileDiffs,
   openWorkspaceRelativeFile,
   resolveLocalDiffTarget,
 } from "./review-utils"

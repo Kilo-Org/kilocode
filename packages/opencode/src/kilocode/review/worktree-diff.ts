@@ -65,7 +65,7 @@ export namespace WorktreeDiff {
       const del = parts[1]
       const file = parts.slice(2).join("\t")
       if (!file) continue
-      const binary = BinaryFile.isNumstat(add, del, file)
+      const binary = BinaryFile.isNumstat(add, del)
       map.set(file, {
         additions: binary ? 0 : add === "-" ? 0 : parseInt(add || "0", 10),
         deletions: binary ? 0 : del === "-" ? 0 : parseInt(del || "0", 10),
@@ -129,12 +129,13 @@ export namespace WorktreeDiff {
       const batch = entries.slice(i, i + concurrency)
       const items = await Promise.all(
         batch.map(async (file) => {
-          const after = Bun.file(path.join(dir, file))
+          const full = path.join(dir, file)
+          const after = Bun.file(full)
           if (!(await after.exists())) return undefined
-          const binary = BinaryFile.isPath(file)
+          const binary = await sniff(full)
           return {
             file,
-            additions: binary ? 0 : await lineCount(path.join(dir, file)),
+            additions: binary ? 0 : await lineCount(full),
             deletions: 0,
             binary,
             status: "added" as const,
@@ -155,12 +156,13 @@ export namespace WorktreeDiff {
   async function detailMeta(dir: string, ancestor: string, file: string): Promise<Meta | undefined> {
     const tracked = await $`git ls-files --error-unmatch -- ${file}`.cwd(dir).quiet().nothrow()
     if (tracked.exitCode !== 0) {
-      const after = Bun.file(path.join(dir, file))
+      const full = path.join(dir, file)
+      const after = Bun.file(full)
       if (!(await after.exists())) return undefined
-      const binary = BinaryFile.isPath(file)
+      const binary = await sniff(full)
       return {
         file,
-        additions: binary ? 0 : await lineCount(path.join(dir, file)),
+        additions: binary ? 0 : await lineCount(full),
         deletions: 0,
         binary,
         status: "added",
@@ -191,14 +193,14 @@ export namespace WorktreeDiff {
     const stat = statLine
       ? (() => {
           const values = statLine.split("\t")
-          const binary = BinaryFile.isNumstat(values[0], values[1], pathPart)
+          const binary = BinaryFile.isNumstat(values[0], values[1])
           return {
             additions: binary ? 0 : values[0] === "-" ? 0 : parseInt(values[0] || "0", 10),
             deletions: binary ? 0 : values[1] === "-" ? 0 : parseInt(values[1] || "0", 10),
             binary,
           }
         })()
-      : { additions: 0, deletions: 0, binary: BinaryFile.isPath(pathPart) }
+      : { additions: 0, deletions: 0, binary: false }
 
     const status = code === "A" ? "added" : code === "D" ? "deleted" : "modified"
     return {
@@ -243,6 +245,22 @@ export namespace WorktreeDiff {
     const stat = await fs.stat(path.join(dir, file)).catch(() => undefined)
     if (!stat) return `missing:${file}`
     return `${stat.size}:${stat.mtimeMs}`
+  }
+
+  async function sniff(file: string) {
+    const stat = await fs.stat(file).catch(() => undefined)
+    if (!stat || stat.size === 0) return false
+
+    const handle = await fs.open(file, "r")
+    try {
+      const size = Math.min(4096, stat.size)
+      const sample = Buffer.alloc(size)
+      const result = await handle.read(sample, 0, size, 0)
+      if (result.bytesRead === 0) return false
+      return BinaryFile.isBytes(sample.subarray(0, result.bytesRead))
+    } finally {
+      await handle.close()
+    }
   }
 
   async function readBefore(dir: string, ancestor: string, file: string, status: Status, binary: boolean) {

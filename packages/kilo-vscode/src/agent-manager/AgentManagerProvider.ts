@@ -23,7 +23,8 @@ import { formatKeybinding } from "./format-keybinding"
 import { TelemetryProxy, TelemetryEventName } from "../services/telemetry"
 import { MAX_MULTI_VERSIONS } from "./constants"
 import type { AgentManagerOutMessage, AgentManagerInMessage } from "./types"
-import { getWorkspaceRoot, hashFileDiffs, openFileInEditor, resolveLocalDiffTarget } from "../review-utils"
+import { hashFileDiffs } from "../diff-hash"
+import { getWorkspaceRoot, openFileInEditor, resolveLocalDiffTarget } from "../review-utils"
 
 /**
  * AgentManagerProvider opens the Agent Manager panel.

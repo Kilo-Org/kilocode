@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { mergeWorktreeDiffs } from "../../webview-ui/agent-manager/diff-state"
+import { mergeWorktreeDiffDetail, mergeWorktreeDiffs } from "../../webview-ui/agent-manager/diff-state"
 import { initialOpenFiles } from "../../webview-ui/agent-manager/diff-open-policy"
 import type { WorktreeFileDiff } from "../../webview-ui/src/types/messages"
 
@@ -39,6 +39,20 @@ describe("agent manager diff state", () => {
     const next = [diff({ summarized: true, stamp: "1:2" })]
 
     expect(mergeWorktreeDiffs(prev, next)).toEqual(next)
+  })
+
+  it("applies detail when it still matches the current summary metadata", () => {
+    const prev = [diff({ summarized: true, additions: 2, stamp: "1:2" })]
+    const next = diff({ summarized: false, before: "old\n", after: "new\n", additions: 2, stamp: "1:2" })
+
+    expect(mergeWorktreeDiffDetail(prev, next)).toEqual([next])
+  })
+
+  it("ignores stale detail when the summary metadata has already changed", () => {
+    const prev = [diff({ summarized: true, additions: 2, stamp: "1:2" })]
+    const stale = diff({ summarized: false, before: "old\n", after: "new\n", additions: 1, stamp: "1:1" })
+
+    expect(mergeWorktreeDiffDetail(prev, stale)).toEqual(prev)
   })
 
   it("avoids generated-like files and keeps one preview open for large diff sets", () => {

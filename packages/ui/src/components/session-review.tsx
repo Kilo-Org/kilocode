@@ -16,7 +16,6 @@ import { useFileComponent } from "../context/file"
 import { useI18n } from "../context/i18n"
 import { getDirectory, getFilename } from "@opencode-ai/util/path"
 import { checksum } from "@opencode-ai/util/encode"
-import { BinaryFile } from "@opencode-ai/util/binary-file"
 import { createEffect, createMemo, createSignal, For, Match, Show, Switch, untrack, type JSX } from "solid-js"
 import { onCleanup } from "solid-js"
 import { createStore } from "solid-js/store"
@@ -641,7 +640,7 @@ export const SessionReview = (props: SessionReviewProps) => {
                     const afterText = () => (typeof item().after === "string" ? item().after : "")
                     const changedLines = () => item().additions + item().deletions
                     const mediaKind = createMemo(() => mediaKindFromPath(file))
-                    const isBinary = () => item().binary === true || BinaryFile.isPath(file)
+                    const isBinary = () => item().binary === true
 
                     const tooLarge = createMemo(() => {
                       if (!expanded()) return false
