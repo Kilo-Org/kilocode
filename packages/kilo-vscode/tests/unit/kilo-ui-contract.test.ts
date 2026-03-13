@@ -21,9 +21,13 @@ const MONOREPO_ROOT = path.resolve(import.meta.dir, "../../../..")
 const KILO_UI_DIR = path.join(MONOREPO_ROOT, "packages/kilo-ui")
 const DATA_CONTEXT_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/context/data.tsx")
 const MESSAGE_PART_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/components/message-part.tsx")
+const BROWSER_SHIM = path.join(import.meta.dir, "browser-shim.ts")
 
 function check(code: string): { ok: boolean; output: string } {
-  const result = Bun.spawnSync(["bun", "--conditions=browser", "-e", code], {
+  // Append process.exit(0) so the spawned process exits promptly even when
+  // loaded modules keep the event loop alive (e.g. @solidjs/router timers).
+  const wrapped = code + "\nprocess.exit(0)"
+  const result = Bun.spawnSync(["bun", "--conditions=browser", "--preload", BROWSER_SHIM, "-e", wrapped], {
     cwd: KILO_UI_DIR,
     stdout: "pipe",
     stderr: "pipe",
