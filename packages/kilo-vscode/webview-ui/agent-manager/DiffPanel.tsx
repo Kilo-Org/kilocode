@@ -10,7 +10,7 @@ import { RadioGroup } from "@kilocode/kilo-ui/radio-group"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
-import type { DiffLineAnnotation, AnnotationSide } from "@pierre/diffs"
+import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
 import { useLanguage } from "../src/context/language"
 import { getDirectory, getFilename, sanitizeReviewComments, type ReviewComment } from "./review-comments"
@@ -23,6 +23,8 @@ import { DiffEndMarker } from "./DiffEndMarker"
 interface DiffPanelProps {
   diffs: WorktreeFileDiff[]
   loading: boolean
+  loadingFiles?: Set<string>
+  sessionId?: string
   sessionKey?: string
   diffStyle?: "unified" | "split"
   onDiffStyleChange?: (style: "unified" | "split") => void
@@ -31,6 +33,7 @@ interface DiffPanelProps {
   onSendAll?: () => void
   onClose: () => void
   onExpand?: () => void
+  onRequestDiff?: (file: string) => void
   onOpenFile?: (relativePath: string) => void
 }
 
@@ -142,6 +145,22 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
           return filtered
         })
       },
+    ),
+  )
+
+  createEffect(
+    on(
+      () => [open(), props.diffs] as const,
+      ([next]) => {
+        const loading = props.loadingFiles ?? new Set<string>()
+        for (const file of next) {
+          if (loading.has(file)) continue
+          const diff = props.diffs.find((item) => item.file === file)
+          if (!diff || diff.summarized !== true) continue
+          props.onRequestDiff?.(file)
+        }
+      },
+      { defer: true },
     ),
   )
 
@@ -260,11 +279,12 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   }
 
   // --- Gutter utility click ---
-  const handleGutterClick = (file: string, result: { lineNumber: number; side: AnnotationSide }) => {
+  const handleGutterClick = (file: string, range: SelectedLineRange) => {
     // Don't open a second draft while one is active
     if (draft()) return
+    const side: AnnotationSide = range.side === "deletions" ? "deletions" : "additions"
     preserveScroll(() => {
-      setDraft({ file, side: result.side, line: result.lineNumber })
+      setDraft({ file, side, line: range.start })
     })
   }
 
@@ -371,6 +391,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                 const isAdded = () => diff.status === "added"
                 const isDeleted = () => diff.status === "deleted"
                 const isLargeCollapsed = () => isLargeDiffFile(diff) && !open().includes(diff.file)
+                const isLoadingDetail = () => props.loadingFiles?.has(diff.file) ?? false
                 const fileCommentCount = () => (commentsByFile().get(diff.file) ?? []).length
 
                 return (
@@ -405,6 +426,12 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                             <Show when={isLargeCollapsed()}>
                               <span class="am-diff-large-pill">{t("agentManager.review.largeFileCollapsed")}</span>
                             </Show>
+                            <Show when={diff.tracked === false}>
+                              <span class="am-diff-summary-pill">untracked</span>
+                            </Show>
+                            <Show when={diff.generatedLike === true}>
+                              <span class="am-diff-summary-pill">generated</span>
+                            </Show>
                             <Show when={props.onOpenFile && !isDeleted()}>
                               <Tooltip value={t("agentManager.diff.openFile")} placement="top">
                                 <IconButton
@@ -428,15 +455,29 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                     </StickyAccordionHeader>
                     <Accordion.Content>
                       <Show when={open().includes(diff.file)}>
-                        <Diff<AnnotationMeta>
-                          before={{ name: diff.file, contents: diff.before }}
-                          after={{ name: diff.file, contents: diff.after }}
-                          diffStyle={props.diffStyle ?? "unified"}
-                          annotations={annotationsForFile(diff.file)}
-                          renderAnnotation={buildAnnotation}
-                          enableGutterUtility={true}
-                          onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
-                        />
+                        <Show
+                          when={diff.summarized !== true}
+                          fallback={
+                            <div class="am-diff-summary-state">
+                              <Show when={isLoadingDetail()} fallback={<span>Diff preview loads on demand.</span>}>
+                                <>
+                                  <Spinner />
+                                  <span>Loading diff...</span>
+                                </>
+                              </Show>
+                            </div>
+                          }
+                        >
+                          <Diff<AnnotationMeta>
+                            before={{ name: diff.file, contents: diff.before }}
+                            after={{ name: diff.file, contents: diff.after }}
+                            diffStyle={props.diffStyle ?? "unified"}
+                            annotations={annotationsForFile(diff.file)}
+                            renderAnnotation={buildAnnotation}
+                            enableGutterUtility={true}
+                            onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
+                          />
+                        </Show>
                       </Show>
                     </Accordion.Content>
                   </Accordion.Item>

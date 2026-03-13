@@ -102,6 +102,7 @@ export const defaultConfig: MergeConfig = {
     "README.de.md",
     "README.es.md",
     "README.fr.md",
+    "README.gr.md",
     "README.it.md",
     "README.ja.md",
     "README.ko.md",

@@ -409,6 +409,8 @@ export const dict = {
 
   "error.globalSync.connectFailed": "Nie można połączyć się z serwerem. Czy serwer działa pod adresem `{{url}}`?",
 
+  "error.startup.title": "Błąd połączenia z serwerem",
+
   "error.paidModel.title": "Musisz się zalogować, aby użyć tego modelu",
   "error.paidModel.description":
     "Zaloguj się lub utwórz konto, aby uzyskać dostęp do ponad 500 modeli, korzystać z kredytów po kosztach lub użyć własnego klucza.",
@@ -442,6 +444,10 @@ export const dict = {
 
   "notification.permission.title": "Wymagane uprawnienie",
   "notification.permission.description": "{{sessionTitle}} w {{projectName}} potrzebuje uprawnienia",
+  "ui.permission.pattern.addToAllowed": "Dodaj do listy dozwolonych",
+  "ui.permission.pattern.removeFromAllowed": "Usuń z listy dozwolonych",
+  "ui.permission.pattern.addToDenied": "Dodaj do listy zablokowanych",
+  "ui.permission.pattern.removeFromDenied": "Usuń z listy zablokowanych",
   "notification.question.title": "Pytanie",
   "notification.question.description": "{{sessionTitle}} w {{projectName}} ma pytanie",
   "notification.action.goToSession": "Przejdź do sesji",
@@ -673,6 +679,8 @@ export const dict = {
 
   "settings.providers.title": "Dostawcy",
   "settings.providers.description": "Ustawienia dostawców będą tutaj konfigurowalne.",
+  "settings.providers.betaNotice":
+    "Obecnie w interfejsie ustawień można skonfigurować tylko dostawcę Kilo Gateway. Obsługa konfiguracji innych dostawców pojawi się wkrótce w fazie beta. W międzyczasie możesz konfigurować dostawców za pomocą CLI lub pliku konfiguracyjnego. Zależy nam na zachowaniu otwartości Kilo, bez lock-inu.",
   "settings.providers.section.connected": "Połączeni dostawcy",
   "settings.providers.connected.empty": "Brak połączonych dostawców",
   "settings.providers.section.popular": "Popularni dostawcy",
@@ -750,6 +758,7 @@ export const dict = {
   "session.cloud.import.placeholder": "ID sesji, URL lub polecenie kilo import",
   "session.cloud.import.button": "Importuj",
   "session.cloud.import.invalid": "Nieprawidłowy format ID sesji",
+  "session.cloud.import.legacy": "Wygląda na to, że jest to starsza sesja, która nie jest już obsługiwana.",
   "session.cloud.import.failed": "Nie udało się zaimportować sesji chmurowej",
 
   "workspace.new": "Nowa przestrzeń robocza",
@@ -932,7 +941,10 @@ export const dict = {
   "settings.experimental.toolToggles": "Przełączniki narzędzi",
   "settings.agentBehaviour.defaultAgent.title": "Domyślny agent",
   "settings.agentBehaviour.defaultAgent.description": "Agent używany, gdy żaden nie jest określony",
+  "settings.agentBehaviour.availableAgents": "Dostępni agenci",
   "settings.agentBehaviour.selectAgent": "Wybierz agenta do konfiguracji…",
+  "settings.agentBehaviour.selectAgent.title": "Agent",
+  "settings.agentBehaviour.selectAgent.description": "Wybierz agenta do konfiguracji…",
   "settings.agentBehaviour.modelOverride.title": "Nadpisanie modelu",
   "settings.agentBehaviour.modelOverride.description": "Nadpisz domyślny model dla tego agenta",
   "settings.agentBehaviour.prompt.title": "Niestandardowy prompt",
@@ -943,6 +955,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Parametr próbkowania nucleus (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Maks. kroki",
   "settings.agentBehaviour.maxSteps.description": "Maksymalna liczba iteracji agenta",
+  "settings.agentBehaviour.discoveredSkills": "Wykryte umiejętności",
+  "settings.agentBehaviour.noSkillsFound":
+    "Nie znaleziono umiejętności. Dodaj ścieżki folderów lub adresy URL poniżej, aby udostępnić umiejętności.",
   "settings.agentBehaviour.skillPaths": "Ścieżki folderów umiejętności",
   "settings.agentBehaviour.skillUrls": "Adresy URL umiejętności",
   "settings.agentBehaviour.instructionFiles": "Dodatkowe pliki instrukcji",
@@ -964,22 +979,33 @@ export const dict = {
   "settings.autoApprove.addPath": "Dodaj ścieżkę",
   "settings.autoApprove.placeholder.command": "np. git *",
   "settings.autoApprove.placeholder.path": "np. *.env",
-  "settings.autoApprove.tool.read": "Odczytywanie plików. Pozwala agentowi na odczytywanie plików pasujących do określonej ścieżki.",
-  "settings.autoApprove.tool.edit": "Modyfikowanie plików. Pozwala agentowi na tworzenie lub edytowanie plików, w tym wprowadzanie poprawek i aktualizację wielu plików.",
-  "settings.autoApprove.tool.glob": "Dopasowywanie plików do wzorca. Pozwala na dopasowywanie plików za pomocą wzorców glob (np. src/**/*.ts).",
-  "settings.autoApprove.tool.grep": "Przeszukiwanie zawartości plików. Pozwala na wyszukiwanie oparte na wyrażeniach regularnych wewnątrz plików.",
-  "settings.autoApprove.tool.list": "Wyświetlanie zawartości katalogu. Pozwala na przeglądanie plików i folderów w katalogu.",
-  "settings.autoApprove.tool.bash": "Uruchamianie poleceń terminala. Pozwala na wykonanie poleceń powłoki (np. git status).",
-  "settings.autoApprove.tool.task": "Uruchamianie podagentów. Pozwala na uruchamianie wyspecjalizowanych podagentów do określonych zadań.",
-  "settings.autoApprove.tool.skill": "Ładowanie umiejętności. Pozwala na ładowanie predefiniowanych umiejętności po nazwie.",
-  "settings.autoApprove.tool.lsp": "Zapytania do serwera języka. Pozwala na uruchamianie zapytań do serwera języka w celu analizy kodu.",
+  "settings.autoApprove.tool.read":
+    "Odczytywanie plików. Pozwala agentowi na odczytywanie plików pasujących do określonej ścieżki.",
+  "settings.autoApprove.tool.edit":
+    "Modyfikowanie plików. Pozwala agentowi na tworzenie lub edytowanie plików, w tym wprowadzanie poprawek i aktualizację wielu plików.",
+  "settings.autoApprove.tool.glob":
+    "Dopasowywanie plików do wzorca. Pozwala na dopasowywanie plików za pomocą wzorców glob (np. src/**/*.ts).",
+  "settings.autoApprove.tool.grep":
+    "Przeszukiwanie zawartości plików. Pozwala na wyszukiwanie oparte na wyrażeniach regularnych wewnątrz plików.",
+  "settings.autoApprove.tool.list":
+    "Wyświetlanie zawartości katalogu. Pozwala na przeglądanie plików i folderów w katalogu.",
+  "settings.autoApprove.tool.bash":
+    "Uruchamianie poleceń terminala. Pozwala na wykonanie poleceń powłoki (np. git status).",
+  "settings.autoApprove.tool.task":
+    "Uruchamianie podagentów. Pozwala na uruchamianie wyspecjalizowanych podagentów do określonych zadań.",
+  "settings.autoApprove.tool.skill":
+    "Ładowanie umiejętności. Pozwala na ładowanie predefiniowanych umiejętności po nazwie.",
+  "settings.autoApprove.tool.lsp":
+    "Zapytania do serwera języka. Pozwala na uruchamianie zapytań do serwera języka w celu analizy kodu.",
   "settings.autoApprove.tool.todoreadwrite":
     "Zarządzaj listą zadań. Pozwala na odczytywanie i aktualizowanie wewnętrznej listy zadań.",
   "settings.autoApprove.tool.webfetch": "Pobieranie URL. Pozwala na pobieranie zawartości z określonego adresu URL.",
   "settings.autoApprove.tool.websearchcodesearch":
     "Przeszukuj sieć lub kod. Pozwala na wykonywanie zewnętrznych wyszukiwań w sieci lub kodzie.",
-  "settings.autoApprove.tool.external_directory": "Dostęp do plików poza obszarem roboczym. Uruchamiane przy dostępie do plików poza bieżącym katalogiem projektu.",
-  "settings.autoApprove.tool.doom_loop": "Zapobieganie powtarzaniu tych samych akcji. Uruchamiane, gdy to samo wywołanie narzędzia powtarza się z identycznymi danymi wejściowymi.",
+  "settings.autoApprove.tool.external_directory":
+    "Dostęp do plików poza obszarem roboczym. Uruchamiane przy dostępie do plików poza bieżącym katalogiem projektu.",
+  "settings.autoApprove.tool.doom_loop":
+    "Zapobieganie powtarzaniu tych samych akcji. Uruchamiane, gdy to samo wywołanie narzędzia powtarza się z identycznymi danymi wejściowymi.",
   "settings.checkpoints.enable.title": "Włącz migawki",
   "settings.checkpoints.enable.description": "Twórz punkty kontrolne przed edycją plików",
   "settings.context.autoCompaction.title": "Automatyczna kompakcja",

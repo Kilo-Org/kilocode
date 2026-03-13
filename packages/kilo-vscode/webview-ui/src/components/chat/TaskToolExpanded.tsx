@@ -11,10 +11,13 @@ import { Component, createEffect, createMemo, For, Show } from "solid-js"
 import { ToolRegistry, ToolProps, getToolInfo } from "@kilocode/kilo-ui/message-part"
 import { BasicTool } from "@kilocode/kilo-ui/basic-tool"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { useData } from "@kilocode/kilo-ui/context/data"
 import { useI18n } from "@kilocode/kilo-ui/context/i18n"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
+import { useVSCode } from "../../context/vscode"
+import { useWorktreeMode } from "../../context/worktree-mode"
 import type { ToolPart, Message as SDKMessage } from "@kilocode/sdk/v2"
 
 /** Collect all tool parts from all assistant messages in a given session. */
@@ -37,6 +40,10 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
   const data = useData()
   const i18n = useI18n()
   const session = useSession()
+  const vscode = useVSCode()
+  const worktreeMode = useWorktreeMode()
+  // Hide the open-in-tab button inside the Agent Manager
+  const inAgentManager = worktreeMode !== undefined
 
   const childSessionId = () => props.metadata.sessionId as string | undefined
 
@@ -68,6 +75,13 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     overflowAnchor: "auto",
   })
 
+  const openInTab = (e: MouseEvent) => {
+    e.stopPropagation()
+    const id = childSessionId()
+    if (!id) return
+    vscode.postMessage({ type: "openSubAgentViewer", sessionID: id, title: description() })
+  }
+
   const trigger = () => (
     <div data-slot="basic-tool-tool-info-structured">
       <div data-slot="basic-tool-tool-info-main">
@@ -78,6 +92,15 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
           <span data-slot="basic-tool-tool-subtitle">{description()}</span>
         </Show>
       </div>
+      <Show when={!inAgentManager && childSessionId()}>
+        <IconButton
+          icon="square-arrow-top-right"
+          size="small"
+          variant="ghost"
+          aria-label="Open sub-agent in tab"
+          onClick={openInTab}
+        />
+      </Show>
     </div>
   )
 

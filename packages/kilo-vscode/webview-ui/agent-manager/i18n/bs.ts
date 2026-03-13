@@ -30,10 +30,17 @@ export const dict = {
   "agentManager.session.noSessions": "Nema otvorenih sesija",
   "agentManager.tab.close": "Zatvori",
   "agentManager.tab.closeTab": "Zatvori karticu",
+  "agentManager.tab.forkSession": "Razdvoji sesiju",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Otvori Terminal",
   "agentManager.setup.failed": "Postavljanje radnog prostora neuspješno",
   "agentManager.setup.settingUp": "Postavljanje radnog prostora",
+  "agentManager.setup.error.git_not_found":
+    "Git nije instaliran ili nije pronađen u PATH-u. Molimo instalirajte Git i ponovo pokrenite VS Code.",
+  "agentManager.setup.error.not_git_repo":
+    "Otvorite fasciklu koja sadrži git repozitorijum da biste koristili worktrees.",
+  "agentManager.setup.error.lfs_missing":
+    "Ovaj repozitorijum koristi Git LFS, ali git-lfs nije pronađen. Molimo instalirajte Git LFS.",
   "agentManager.shortcuts.title": "Prečice na tastaturi",
   "agentManager.shortcuts.category.sidebar": "Bočna traka",
   "agentManager.shortcuts.category.tabs": "Kartice",

@@ -179,7 +179,8 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
       if (ev.success) {
         props.onClose()
       } else {
-        showToast({ variant: "error", title: t("agentManager.import.failed"), description: ev.message })
+        const description = ev.errorCode ? t(`agentManager.setup.error.${ev.errorCode}`) : ev.message
+        showToast({ variant: "error", title: t("agentManager.import.failed"), description })
       }
     }
   })

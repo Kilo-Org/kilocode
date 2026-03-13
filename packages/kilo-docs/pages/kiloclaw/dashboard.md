@@ -90,6 +90,42 @@ You can connect Telegram, Discord, and Slack by entering bot tokens in the Setti
 After saving channel tokens, you need to **Redeploy** or **Restart OpenClaw** for the changes to take effect.
 {% /callout %}
 
+### Version Pinning
+
+You can pin your instance to a specific OpenClaw version and variant from the Settings tab. This gives you control over when you upgrade — your instance stays on the pinned version until you choose to change it.
+
+Select a version and variant from the dropdowns and click **Save**. To return to automatic updates, clear the version pin and save.
+
+See [Version Pinning](/docs/kiloclaw/version-pinning) for details.
+
+### Version Status Indicators
+
+The Settings tab shows badges indicating your OpenClaw version status:
+
+- **Update available** — A newer OpenClaw version is available in the catalog. Use **Upgrade & Redeploy** to move to that version.
+- **Modified** — OpenClaw was updated on this machine independently of the image. Redeploying will revert to the image version.
+
+These indicators help you track whether your running version is up to date or if a newer version exists in the catalog.
+
+### Restore Default Config
+
+If your OpenClaw configuration gets corrupted — for example, if the agent edits `openclaw.json` and introduces an error — you can restore it without a full redeploy.
+
+In **Settings > Danger Zone**, click **Restore Config**. This will:
+
+1. Back up your current `openclaw.json` to `/root/.openclaw/`
+2. Rewrite `openclaw.json` from your environment variables (channel tokens, model settings, etc.)
+3. Restart the gateway
+
+Your files, workspace, and persistent data are not affected. Only the OpenClaw configuration file is reset.
+
+> 💡 **Tip**
+> If your instance is in a crash loop and you can't access the Control UI, try **Restore Config** from the KiloClaw dashboard first before redeploying.
+
+{% callout type="warning" %}
+This action cannot be undone. Make sure you've saved any important changes to your configuration before restoring.
+{% /callout %}
+
 ### Stop, Destroy & Restore
 
 At the bottom of Settings:

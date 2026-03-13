@@ -406,6 +406,8 @@ export const dict = {
 
   "error.globalSync.connectFailed": "无法连接到服务器。是否有服务器正在 `{{url}}` 运行？",
 
+  "error.startup.title": "服务器连接失败",
+
   "error.paidModel.title": "您需要登录才能使用此模型",
   "error.paidModel.description": "登录或创建账户以访问500多个模型，按成本使用积分，或使用您自己的密钥。",
   "error.paidModel.action": "登录",
@@ -435,6 +437,10 @@ export const dict = {
 
   "notification.permission.title": "需要权限",
   "notification.permission.description": "{{sessionTitle}}（{{projectName}}）需要权限",
+  "ui.permission.pattern.addToAllowed": "添加到允许列表",
+  "ui.permission.pattern.removeFromAllowed": "从允许列表移除",
+  "ui.permission.pattern.addToDenied": "添加到拒绝列表",
+  "ui.permission.pattern.removeFromDenied": "从拒绝列表移除",
   "notification.question.title": "问题",
   "notification.question.description": "{{sessionTitle}}（{{projectName}}）有一个问题",
   "notification.action.goToSession": "前往会话",
@@ -660,6 +666,8 @@ export const dict = {
 
   "settings.providers.title": "提供商",
   "settings.providers.description": "提供商设置将在此处可配置。",
+  "settings.providers.betaNotice":
+    "目前只能在设置界面中配置 Kilo Gateway 提供商。在 Beta 测试期间即将支持配置其他提供商。在此期间，您可以使用 CLI 或配置文件来配置提供商。我们致力于保持 Kilo 开放，无锁定。",
   "settings.providers.section.connected": "已连接的提供商",
   "settings.providers.connected.empty": "没有已连接的提供商",
   "settings.providers.section.popular": "热门提供商",
@@ -737,6 +745,7 @@ export const dict = {
   "session.cloud.import.placeholder": "会话 ID、URL 或 kilo import 命令",
   "session.cloud.import.button": "导入",
   "session.cloud.import.invalid": "会话 ID 格式无效",
+  "session.cloud.import.legacy": "这似乎是一个旧版会话，已不再受支持。",
   "session.cloud.import.failed": "导入云会话失败",
 
   "workspace.new": "新建工作区",
@@ -917,7 +926,10 @@ export const dict = {
   "settings.experimental.toolToggles": "工具开关",
   "settings.agentBehaviour.defaultAgent.title": "默认智能体",
   "settings.agentBehaviour.defaultAgent.description": "未指定时使用的智能体",
+  "settings.agentBehaviour.availableAgents": "可用代理",
   "settings.agentBehaviour.selectAgent": "选择要配置的智能体…",
+  "settings.agentBehaviour.selectAgent.title": "智能体",
+  "settings.agentBehaviour.selectAgent.description": "选择要配置的智能体…",
   "settings.agentBehaviour.modelOverride.title": "模型覆盖",
   "settings.agentBehaviour.modelOverride.description": "覆盖此智能体的默认模型",
   "settings.agentBehaviour.prompt.title": "自定义提示词",
@@ -928,6 +940,8 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "核采样参数（0-1）",
   "settings.agentBehaviour.maxSteps.title": "最大步数",
   "settings.agentBehaviour.maxSteps.description": "最大智能体迭代次数",
+  "settings.agentBehaviour.discoveredSkills": "已发现的技能",
+  "settings.agentBehaviour.noSkillsFound": "未发现任何技能。请在下方添加技能文件夹路径或 URL 以使技能可用。",
   "settings.agentBehaviour.skillPaths": "技能文件夹路径",
   "settings.agentBehaviour.skillUrls": "技能 URL",
   "settings.agentBehaviour.instructionFiles": "附加指令文件",

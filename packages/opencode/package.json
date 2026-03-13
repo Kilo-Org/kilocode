@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "7.0.43",
+  "version": "7.0.47",
   "name": "@kilocode/cli",
   "type": "module",
   "license": "MIT",
@@ -91,8 +91,8 @@
     "@opencode-ai/script": "workspace:*",
     "@opencode-ai/util": "workspace:*",
     "@openrouter/ai-sdk-provider": "1.5.4",
-    "@opentui/core": "0.1.81",
-    "@opentui/solid": "0.1.81",
+    "@opentui/core": "0.1.86",
+    "@opentui/solid": "0.1.86",
     "@parcel/watcher": "2.5.1",
     "@pierre/diffs": "catalog:",
     "@solid-primitives/event-bus": "1.1.2",
