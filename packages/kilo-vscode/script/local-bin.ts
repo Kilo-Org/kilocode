@@ -29,6 +29,16 @@ function log(msg: string) {
   console.log(`[local-bin] ${msg}`)
 }
 
+function exists(path: string) {
+  try {
+    statSync(path)
+    return true
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false
+    throw error
+  }
+}
+
 function platformTag(): string {
   const os = process.platform === "win32" ? "windows" : process.platform
   return `cli-${os}-${process.arch}`
@@ -136,12 +146,9 @@ async function main() {
     rmSync(targetBinPath)
     // Also remove the prebuilt dist so ensureBuiltBinary() triggers a fresh build
     const distDir = join(opencodeDir, "dist")
-    try {
-      statSync(distDir)
+    if (exists(distDir)) {
       rmSync(distDir, { recursive: true })
       log(`Removed ${relative(kiloVscodeDir, distDir)} to force rebuild.`)
-    } catch {
-      // dist directory did not exist
     }
   }
 

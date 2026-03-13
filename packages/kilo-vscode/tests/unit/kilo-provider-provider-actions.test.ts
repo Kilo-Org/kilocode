@@ -12,6 +12,7 @@ interface ClientOptions {
   authorize?: { url: string; method: "auto" | "code"; instructions: string }
   failSet?: unknown
   config?: Record<string, unknown>
+  globalConfig?: Record<string, unknown>
 }
 
 function createClient(options: ClientOptions) {
@@ -22,15 +23,19 @@ function createClient(options: ClientOptions) {
     callback: [] as unknown[],
     dispose: 0,
     updateConfig: [] as unknown[],
+    getConfig: 0,
+    getGlobalConfig: 0,
+    order: [] as string[],
   }
 
   const connected = [...options.connected]
   const authStates = { ...(options.authStates ?? {}) }
   const configState = { ...(options.config ?? {}) }
+  const globalConfigState = { ...(options.globalConfig ?? options.config ?? {}) }
 
   function all() {
     const configured = Object.entries(
-      (configState.provider as Record<string, Record<string, unknown>> | undefined) ?? {},
+      (globalConfigState.provider as Record<string, Record<string, unknown>> | undefined) ?? {},
     ).map(([id, provider]) => ({
       id,
       name: String(provider.name ?? id),
@@ -57,6 +62,7 @@ function createClient(options: ClientOptions) {
     auth: {
       set: async (params: unknown) => {
         calls.set.push(params)
+        calls.order.push("set")
         if (options.failSet) throw options.failSet
         const payload = params as { providerID: string }
         authStates[payload.providerID] = "api"
@@ -95,18 +101,24 @@ function createClient(options: ClientOptions) {
         return { data: true }
       },
       config: {
+        get: async () => {
+          calls.getGlobalConfig += 1
+          calls.order.push("getGlobalConfig")
+          return { data: globalConfigState }
+        },
         update: async (params: { config: Record<string, unknown> }) => {
           calls.updateConfig.push(params)
+          calls.order.push("updateConfig")
           if (params.config.provider && typeof params.config.provider === "object") {
-            configState.provider = {
-              ...((configState.provider as Record<string, unknown>) ?? {}),
+            globalConfigState.provider = {
+              ...((globalConfigState.provider as Record<string, unknown>) ?? {}),
               ...(params.config.provider as Record<string, unknown>),
             }
           }
           if (params.config.disabled_providers !== undefined) {
-            configState.disabled_providers = params.config.disabled_providers
+            globalConfigState.disabled_providers = params.config.disabled_providers
           }
-          return { data: configState }
+          return { data: globalConfigState }
         },
       },
     },
@@ -114,7 +126,11 @@ function createClient(options: ClientOptions) {
       agents: async () => ({ data: [] }),
     },
     config: {
-      get: async () => ({ data: configState }),
+      get: async () => {
+        calls.getConfig += 1
+        calls.order.push("getConfig")
+        return { data: configState }
+      },
     },
     kilo: {
       notifications: async () => ({ data: [] }),
@@ -306,7 +322,8 @@ describe("KiloProvider provider actions", () => {
     const client = createClient({
       providerID: "openrouter",
       connected: [],
-      config: { disabled_providers: ["myprovider"] },
+      config: { disabled_providers: ["workspace-only", "myprovider"] },
+      globalConfig: { disabled_providers: ["myprovider"] },
     })
     const { webview } = createBoundProvider(client)
 
@@ -331,6 +348,9 @@ describe("KiloProvider provider actions", () => {
       providerID: "myprovider",
       auth: { type: "api", key: "sk-custom" },
     })
+    expect(client.calls.getGlobalConfig).toBe(1)
+    expect(client.calls.getConfig).toBe(0)
+    expect(client.calls.order.indexOf("updateConfig")).toBeLessThan(client.calls.order.indexOf("set"))
     expect(client.calls.updateConfig).toContainEqual({
       config: {
         provider: {
@@ -365,6 +385,61 @@ describe("KiloProvider provider actions", () => {
         authStates: expect.objectContaining({ myprovider: "api" }),
       }),
     )
+  })
+
+  it("refreshes provider state when auth setup fails after saving custom provider config", async () => {
+    const client = createClient({
+      providerID: "openrouter",
+      connected: [],
+      failSet: new Error("boom"),
+      globalConfig: { disabled_providers: ["myprovider"] },
+    })
+    const { webview } = createBoundProvider(client)
+
+    await webview.receive({
+      type: "saveCustomProvider",
+      requestId: "req-6b",
+      providerID: "myprovider",
+      apiKey: "sk-custom",
+      config: {
+        name: "My Provider",
+        options: {
+          baseURL: "https://example.com/v1",
+        },
+        models: { "model-1": { name: "Model One" } },
+      },
+    })
+
+    expect(client.calls.getGlobalConfig).toBe(1)
+    expect(client.calls.getConfig).toBe(0)
+    expect(client.calls.order.indexOf("updateConfig")).toBeLessThan(client.calls.order.indexOf("set"))
+    expect(client.calls.updateConfig).toHaveLength(1)
+    expect(client.calls.dispose).toBe(1)
+    expect(webview.sent).toContainEqual(
+      expect.objectContaining({
+        type: "configUpdated",
+        config: expect.objectContaining({
+          provider: expect.objectContaining({
+            myprovider: expect.objectContaining({ name: "My Provider" }),
+          }),
+        }),
+      }),
+    )
+    expect(webview.sent).toContainEqual(
+      expect.objectContaining({
+        type: "providersLoaded",
+        providers: expect.objectContaining({
+          myprovider: expect.objectContaining({ name: "My Provider" }),
+        }),
+      }),
+    )
+    expect(webview.sent).toContainEqual({
+      type: "providerActionError",
+      requestId: "req-6b",
+      providerID: "myprovider",
+      action: "connect",
+      message: "boom",
+    })
   })
 
   it("rejects invalid provider IDs before forwarding provider actions", async () => {

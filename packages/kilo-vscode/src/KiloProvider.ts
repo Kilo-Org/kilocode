@@ -1317,26 +1317,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
-    try {
-      if (apiKey) {
-        await this.client.auth.set(
-          {
-            providerID: id,
-            auth: {
-              type: "api",
-              key: apiKey,
-            },
-          },
-          { throwOnError: true },
-        )
-      }
+    const refresh = async () => {
+      await this.disposeGlobal(`custom provider save (${id})`)
+      await this.fetchAndSendProviders()
+    }
 
-      const workspaceDir = this.getWorkspaceDirectory()
-      const config =
-        (this.cachedConfigMessage as { config?: Config } | null)?.config ??
-        (await this.client.config.get({ directory: workspaceDir }, { throwOnError: true })).data ??
-        {}
-      const disabled = config.disabled_providers ?? []
+    try {
+      const globalConfig = (await this.client.global.config.get({ throwOnError: true })).data ?? {}
+      const disabled = globalConfig.disabled_providers ?? []
       const nextDisabled = disabled.filter((item) => item !== id)
       const { data: updated } = await this.client.global.config.update(
         {
@@ -1350,8 +1338,32 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       this.cachedConfigMessage = { type: "configLoaded", config: updated }
       this.postMessage({ type: "configUpdated", config: updated })
-      await this.disposeGlobal(`custom provider save (${id})`)
-      await this.fetchAndSendProviders()
+
+      if (apiKey) {
+        try {
+          await this.client.auth.set(
+            {
+              providerID: id,
+              auth: {
+                type: "api",
+                key: apiKey,
+              },
+            },
+            { throwOnError: true },
+          )
+        } catch (error) {
+          await refresh()
+          this.postProviderActionError(
+            requestId,
+            providerID,
+            "connect",
+            getErrorMessage(error) || "Failed to save custom provider",
+          )
+          return
+        }
+      }
+
+      await refresh()
       this.postMessage({ type: "providerConnected", requestId, providerID: id })
     } catch (error) {
       this.postProviderActionError(
