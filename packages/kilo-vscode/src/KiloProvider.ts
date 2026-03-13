@@ -48,6 +48,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     vscode.extensions.getExtension("kilocode.kilo-code")?.packageJSON?.version ?? "unknown"
   /** Cached providersLoaded payload so requestProviders can be served before client is ready */
   private cachedProvidersMessage: unknown = null
+  /** Serialize provider refreshes and let the latest request win. */
+  private providersRefresh = Promise.resolve()
+  private providersGeneration = 0
   /** Cached agentsLoaded payload so requestAgents can be served before client is ready */
   private cachedAgentsMessage: unknown = null
   /** Cached skillsLoaded payload so requestSkills can be served before client is ready */
@@ -1033,69 +1036,79 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * the map here so the rest of the code can use provider.id everywhere.
    */
   private async fetchAndSendProviders(): Promise<void> {
-    const client = this.client
-    if (!client) {
-      // client not ready — serve from cache if available
-      if (this.cachedProvidersMessage) {
-        this.postMessage(this.cachedProvidersMessage)
-      }
-      return
-    }
+    const generation = ++this.providersGeneration
+    const task = this.providersRefresh
+      .catch(() => undefined)
+      .then(async () => {
+        const client = this.client
+        if (!client) {
+          if (this.cachedProvidersMessage && generation === this.providersGeneration) {
+            this.postMessage(this.cachedProvidersMessage)
+          }
+          return
+        }
 
-    try {
-      const workspaceDir = this.getWorkspaceDirectory()
-      const authRequest =
-        typeof client.provider.auth === "function"
-          ? client.provider
-              .auth({ directory: workspaceDir }, { throwOnError: true })
-              .then((result) => result.data ?? {})
-              .catch((error: unknown) => {
-                console.warn("[Kilo New] KiloProvider: Failed to fetch provider auth methods:", error)
-                return {}
-              })
-          : Promise.resolve({})
-      const auth = (client.auth ?? {}) as {
-        list?: (
-          params: { directory: string },
-          options: { throwOnError: true },
-        ) => Promise<{ data?: Record<string, "api" | "oauth" | "wellknown"> }>
-      }
-      const authStatesRequest: Promise<Record<string, "api" | "oauth" | "wellknown">> =
-        typeof auth.list === "function"
-          ? auth
-              .list({ directory: workspaceDir }, { throwOnError: true })
-              .then((result) => result.data ?? {})
-              .catch((error: unknown) => {
-                console.warn("[Kilo New] KiloProvider: Failed to fetch provider auth states:", error)
-                return {}
-              })
-          : Promise.resolve({})
+        try {
+          const workspaceDir = this.getWorkspaceDirectory()
+          const authRequest =
+            typeof client.provider.auth === "function"
+              ? client.provider
+                  .auth({ directory: workspaceDir }, { throwOnError: true })
+                  .then((result) => result.data ?? {})
+                  .catch((error: unknown) => {
+                    console.warn("[Kilo New] KiloProvider: Failed to fetch provider auth methods:", error)
+                    return {}
+                  })
+              : Promise.resolve({})
+          const auth = (client.auth ?? {}) as {
+            list?: (
+              params: { directory: string },
+              options: { throwOnError: true },
+            ) => Promise<{ data?: Record<string, "api" | "oauth" | "wellknown"> }>
+          }
+          const authStatesRequest: Promise<Record<string, "api" | "oauth" | "wellknown">> =
+            typeof auth.list === "function"
+              ? auth
+                  .list({ directory: workspaceDir }, { throwOnError: true })
+                  .then((result) => result.data ?? {})
+                  .catch((error: unknown) => {
+                    console.warn("[Kilo New] KiloProvider: Failed to fetch provider auth states:", error)
+                    return {}
+                  })
+              : Promise.resolve({})
 
-      const [{ data: response }, authMethods, authStates] = await Promise.all([
-        client.provider.list({ directory: workspaceDir }, { throwOnError: true }),
-        authRequest,
-        authStatesRequest,
-      ])
+          const [{ data: response }, authMethods, authStates] = await Promise.all([
+            client.provider.list({ directory: workspaceDir }, { throwOnError: true }),
+            authRequest,
+            authStatesRequest,
+          ])
 
-      const normalized = indexProvidersById(response.all)
+          if (generation !== this.providersGeneration || client !== this.client) return
 
-      // Compute defaultSelection: CLI config.model > VS Code settings > kilo-auto/free
-      const defaultSelection = this.computeDefaultSelection()
+          const normalized = indexProvidersById(response.all)
 
-      const message = {
-        type: "providersLoaded",
-        providers: normalized,
-        connected: response.connected,
-        defaults: response.default,
-        defaultSelection,
-        authMethods,
-        authStates,
-      }
-      this.cachedProvidersMessage = message
-      this.postMessage(message)
-    } catch (error) {
-      console.error("[Kilo New] KiloProvider: Failed to fetch providers:", error)
-    }
+          // Compute defaultSelection: CLI config.model > VS Code settings > kilo-auto/free
+          const defaultSelection = this.computeDefaultSelection()
+
+          const message = {
+            type: "providersLoaded",
+            providers: normalized,
+            connected: response.connected,
+            defaults: response.default,
+            defaultSelection,
+            authMethods,
+            authStates,
+          }
+          this.cachedProvidersMessage = message
+          this.postMessage(message)
+        } catch (error) {
+          if (generation !== this.providersGeneration) return
+          console.error("[Kilo New] KiloProvider: Failed to fetch providers:", error)
+        }
+      })
+
+    this.providersRefresh = task
+    await task
   }
 
   /**

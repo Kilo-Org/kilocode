@@ -166,6 +166,29 @@ function createBoundProvider(client: ReturnType<typeof createClient>) {
   return { provider, webview }
 }
 
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  const promise = new Promise<T>((done) => {
+    resolve = done
+  })
+  return { promise, resolve }
+}
+
+type ProviderListResult = {
+  data: {
+    all: Array<{
+      id: string
+      name: string
+      source: "custom"
+      env: string[]
+      options: {}
+      models: Record<string, unknown>
+    }>
+    connected: string[]
+    default: {}
+  }
+}
+
 describe("KiloProvider provider actions", () => {
   it("handles connectProvider and refreshes provider auth state", async () => {
     const client = createClient({
@@ -334,5 +357,80 @@ describe("KiloProvider provider actions", () => {
         authStates: expect.objectContaining({ myprovider: "api" }),
       }),
     )
+  })
+
+  it("drops stale provider refreshes when a newer refresh is queued", async () => {
+    const client = createClient({ providerID: "openrouter", connected: [] })
+    const first = deferred<ProviderListResult>()
+    const second = deferred<ProviderListResult>()
+    const calls: string[] = []
+
+    client.provider.list = async () => {
+      if (calls.length === 0) {
+        calls.push("openai")
+        return first.promise
+      }
+
+      calls.push("google")
+      return second.promise
+    }
+
+    const { provider, webview } = createBoundProvider(client)
+    const target = provider as unknown as { fetchAndSendProviders: () => Promise<void> }
+
+    const early = target.fetchAndSendProviders()
+    const late = target.fetchAndSendProviders()
+
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(calls).toEqual(["openai"])
+
+    first.resolve({
+      data: {
+        all: [
+          {
+            id: "openai",
+            name: "OpenAI",
+            source: "custom",
+            env: [],
+            options: {},
+            models: { gpt: { id: "gpt", name: "GPT" } },
+          },
+        ],
+        connected: ["openai"],
+        default: {},
+      },
+    })
+
+    second.resolve({
+      data: {
+        all: [
+          {
+            id: "google",
+            name: "Google",
+            source: "custom",
+            env: [],
+            options: {},
+            models: { gemini: { id: "gemini", name: "Gemini" } },
+          },
+        ],
+        connected: ["google"],
+        default: {},
+      },
+    })
+
+    await Promise.all([early, late])
+
+    expect(calls).toEqual(["openai", "google"])
+
+    const messages = webview.sent.filter((item) => {
+      if (!item || typeof item !== "object") return false
+      return "type" in item && item.type === "providersLoaded"
+    }) as Array<{ connected: string[]; providers: Record<string, unknown> }>
+
+    expect(messages).toHaveLength(1)
+    expect(messages[0]?.connected).toEqual(["google"])
+    expect(Object.keys(messages[0]?.providers ?? {})).toEqual(["google"])
   })
 })
