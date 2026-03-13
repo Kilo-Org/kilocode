@@ -7,7 +7,7 @@ import {
   parseNewSessionDeepLink,
 } from "./deep-links"
 import { displayName, errorMessage, getDraggableId, syncWorkspaceOrder, workspaceKey } from "./helpers"
-import { type Session } from "@opencode-ai/sdk/v2/client"
+import { type Session } from "@kilocode/sdk/v2/client"
 import { hasProjectPermissions, latestRootSession } from "./helpers"
 
 const session = (input: Partial<Session> & Pick<Session, "id" | "directory">) =>

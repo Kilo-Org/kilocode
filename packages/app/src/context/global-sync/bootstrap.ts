@@ -1,6 +1,6 @@
 import type {
   Config,
-  OpencodeClient,
+  KiloClient,
   Path,
   PermissionRequest,
   Project,
@@ -8,7 +8,7 @@ import type {
   ProviderListResponse,
   QuestionRequest,
   Todo,
-} from "@opencode-ai/sdk/v2/client"
+} from "@kilocode/sdk/v2/client"
 import { showToast } from "@opencode-ai/ui/toast"
 import { getFilename } from "@opencode-ai/util/path"
 import { retry } from "@opencode-ai/util/retry"
@@ -32,7 +32,7 @@ type GlobalStore = {
 }
 
 export async function bootstrapGlobal(input: {
-  globalSDK: OpencodeClient
+  globalSDK: KiloClient
   connectErrorTitle: string
   connectErrorDescription: string
   requestFailedTitle: string
@@ -113,7 +113,7 @@ function groupBySession<T extends { id: string; sessionID: string }>(input: T[])
 
 export async function bootstrapDirectory(input: {
   directory: string
-  sdk: OpencodeClient
+  sdk: KiloClient
   store: Store<State>
   setStore: SetStoreFunction<State>
   vcsCache: VcsCache

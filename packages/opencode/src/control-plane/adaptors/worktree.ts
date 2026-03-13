@@ -36,7 +36,7 @@ export const WorktreeAdaptor: Adaptor = {
   async fetch(info, input: RequestInfo | URL, init?: RequestInit) {
     const config = Config.parse(info)
     const { WorkspaceServer } = await import("../workspace-server/server")
-    const url = input instanceof Request || input instanceof URL ? input : new URL(input, "http://opencode.internal")
+    const url = input instanceof Request || input instanceof URL ? input : new URL(input, "http://kilo.internal")
     const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined))
     headers.set("x-opencode-directory", config.directory)
 

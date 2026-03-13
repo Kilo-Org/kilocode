@@ -1,4 +1,4 @@
-import type { UserMessage } from "@opencode-ai/sdk/v2"
+import type { UserMessage } from "@kilocode/sdk/v2"
 import { useDialog } from "@opencode-ai/ui/context/dialog"
 import {
   onCleanup,
