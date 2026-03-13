@@ -934,19 +934,34 @@ const AgentManagerContent: Component = () => {
   const selectWorktree = (worktreeId: string) => {
     saveTabMemory()
     setSelection(worktreeId)
-    const managed = managedSessions().filter((ms) => ms.worktreeId === worktreeId)
-    const ids = new Set(managed.map((ms) => ms.id))
-    const sessions = session.sessions().filter((s) => ids.has(s.id))
     const remembered = tabMemory()[worktreeId]
-    const target = remembered ? sessions.find((s) => s.id === remembered) : undefined
-    const fallback = target ?? sessions[0]
+    const target =
+      remembered && managedSessions().some((entry) => entry.id === remembered && entry.worktreeId === worktreeId)
+        ? remembered
+        : undefined
+    const fallback = target ?? resolveWorktreeSessionId(worktreeId)
     if (fallback) {
-      session.selectSession(fallback.id)
+      session.selectSession(fallback)
     } else {
       session.setCurrentSessionID(undefined)
     }
     setReviewActive(remembered === REVIEW_TAB_ID && reviewOpenByContext()[worktreeId] === true)
   }
+
+  createEffect(() => {
+    const sel = selection()
+    if (!sel || sel === LOCAL) return
+
+    const current = session.currentSessionID()
+    if (current) {
+      const item = managedSessions().find((entry) => entry.id === current)
+      if (item?.worktreeId === sel) return
+    }
+
+    const fallback = resolveWorktreeSessionId(sel)
+    if (!fallback || fallback === current) return
+    session.selectSession(fallback)
+  })
 
   onMount(() => {
     const handler = (event: MessageEvent) => {
@@ -1330,16 +1345,16 @@ const AgentManagerContent: Component = () => {
     const panel = diffOpen()
     const review = reviewActive()
     const sel = selection()
-    const id = session.currentSessionID()
     if (panel) {
       if (sel === LOCAL) {
         // For local tab, diff against unpushed changes using LOCAL sentinel
         vscode.postMessage({ type: "agentManager.startDiffWatch", sessionId: LOCAL })
         return
-      } else if (id) {
-        const ms = managedSessions().find((s) => s.id === id)
-        if (ms?.worktreeId) {
-          vscode.postMessage({ type: "agentManager.startDiffWatch", sessionId: id })
+      }
+      if (sel) {
+        const sid = resolveWorktreeSessionId(sel)
+        if (sid) {
+          vscode.postMessage({ type: "agentManager.startDiffWatch", sessionId: sid })
           return
         }
       }
@@ -1354,9 +1369,9 @@ const AgentManagerContent: Component = () => {
         return
       }
       if (sel) {
-        const managed = managedSessions().find((ms) => ms.worktreeId === sel)
-        if (managed) {
-          vscode.postMessage({ type: "agentManager.startDiffWatch", sessionId: managed.id })
+        const sid = resolveWorktreeSessionId(sel)
+        if (sid) {
+          vscode.postMessage({ type: "agentManager.startDiffWatch", sessionId: sid })
           return
         }
       }
