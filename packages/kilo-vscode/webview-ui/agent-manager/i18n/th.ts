@@ -30,6 +30,7 @@ export const dict = {
   "agentManager.session.noSessions": "ไม่มีเซสชันที่เปิดอยู่",
   "agentManager.tab.close": "ปิด",
   "agentManager.tab.closeTab": "ปิดแท็บ",
+  "agentManager.tab.forkSession": "แยกเซสชัน",
   "agentManager.tab.terminal": "เทอร์มินัล",
   "agentManager.tab.openTerminal": "เปิดเทอร์มินัล",
   "agentManager.setup.failed": "ตั้งค่า Workspace ล้มเหลว",

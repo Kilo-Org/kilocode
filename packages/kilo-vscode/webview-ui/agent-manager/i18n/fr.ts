@@ -30,6 +30,7 @@ export const dict = {
   "agentManager.session.noSessions": "Aucune session ouverte",
   "agentManager.tab.close": "Fermer",
   "agentManager.tab.closeTab": "Fermer l'onglet",
+  "agentManager.tab.forkSession": "Dupliquer la session",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Ouvrir le Terminal",
   "agentManager.setup.failed": "Échec de la configuration de l'espace de travail",

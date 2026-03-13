@@ -214,6 +214,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     if (m.type === "agentManager.removeStaleWorktree") return this.onRemoveStaleWorktree(m.worktreeId)
     if (m.type === "agentManager.promoteSession") return this.onPromoteSession(m.sessionId)
     if (m.type === "agentManager.addSessionToWorktree") return this.onAddSessionToWorktree(m.worktreeId)
+    if (m.type === "agentManager.forkSession") return this.onForkSession(m.sessionId, m.worktreeId)
     if (m.type === "agentManager.closeSession") return this.onCloseSession(m.sessionId)
     if (m.type === "agentManager.configureSetupScript") {
       void this.configureSetupScript()
@@ -770,6 +771,60 @@ export class AgentManagerProvider implements vscode.Disposable {
       worktreeId,
     })
     this.log(`Added session ${session.id} to worktree ${worktreeId}`)
+    return null
+  }
+
+  /** Fork an existing session, copying its conversation history via the CLI. */
+  private async onForkSession(sessionId: string, worktreeId?: string): Promise<null> {
+    let client: KiloClient
+    try {
+      client = this.connectionService.getClient()
+    } catch (err) {
+      this.log("onForkSession: client not available:", err)
+      this.postToWebview({ type: "error", message: "Not connected to CLI backend" })
+      return null
+    }
+
+    const state = this.getStateManager()
+    const directory = (() => {
+      if (!worktreeId || !state) return undefined
+      const worktree = state.getWorktree(worktreeId)
+      return worktree?.path
+    })()
+
+    let forked: Session
+    try {
+      const { data } = await client.session.fork({ sessionID: sessionId, directory }, { throwOnError: true })
+      forked = data
+    } catch (error) {
+      const err = getErrorMessage(error)
+      this.postToWebview({ type: "error", message: `Failed to fork session: ${err}` })
+      TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_SESSION_ERROR, {
+        source: PLATFORM,
+        error: err,
+        context: "forkSession",
+        sessionId,
+      })
+      return null
+    }
+
+    if (worktreeId && state) {
+      state.addSession(forked.id, worktreeId)
+      if (directory) this.registerWorktreeSession(forked.id, directory)
+    }
+    this.pushState()
+    this.postToWebview({
+      type: "agentManager.sessionForked",
+      sessionId: forked.id,
+      forkedFromId: sessionId,
+      worktreeId,
+    })
+
+    if (this.provider) {
+      this.provider.registerSession(forked)
+    }
+
+    this.log(`Forked session ${sessionId} → ${forked.id}${worktreeId ? ` in worktree ${worktreeId}` : ""}`)
     return null
   }
 

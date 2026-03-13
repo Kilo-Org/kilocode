@@ -1106,6 +1106,19 @@ const AgentManagerContent: Component = () => {
         session.selectSession(ev.sessionId)
       }
 
+      if (msg.type === "agentManager.sessionForked") {
+        const ev = msg as { type: string; sessionId: string; forkedFromId: string; worktreeId?: string }
+        if (!ev.worktreeId) {
+          // Local session: insert new tab after the forked-from tab
+          setLocalSessionIDs((prev) => {
+            const idx = prev.indexOf(ev.forkedFromId)
+            if (idx >= 0) return [...prev.slice(0, idx + 1), ev.sessionId, ...prev.slice(idx + 1)]
+            return [...prev, ev.sessionId]
+          })
+        }
+        session.selectSession(ev.sessionId)
+      }
+
       if (msg.type === "agentManager.keybindings") {
         const ev = msg as AgentManagerKeybindingsMessage
         setKb(ev.bindings)
@@ -1725,8 +1738,16 @@ const AgentManagerContent: Component = () => {
     }
   }
 
-  const handleCloseTab = (sessionId: string, e: MouseEvent) => {
-    e.stopPropagation()
+  const handleForkSession = (sessionId: string) => {
+    const sel = selection()
+    if (sel === LOCAL) {
+      vscode.postMessage({ type: "agentManager.forkSession", sessionId })
+    } else if (sel) {
+      vscode.postMessage({ type: "agentManager.forkSession", sessionId, worktreeId: sel })
+    }
+  }
+
+  const handleCloseTab = (sessionId: string) => {
     const pending = isPending(sessionId)
     const isActive = pending ? sessionId === activePendingId() : session.currentSessionID() === sessionId
     if (isActive) {
@@ -1756,7 +1777,7 @@ const AgentManagerContent: Component = () => {
   const handleTabMouseDown = (sessionId: string, e: MouseEvent) => {
     if (e.button === 1) {
       e.preventDefault()
-      handleCloseTab(sessionId, e)
+      handleCloseTab(sessionId)
     }
   }
 
@@ -1854,8 +1875,7 @@ const AgentManagerContent: Component = () => {
         ? tabs.find((s) => s.id === pending)
         : undefined
     if (!target) return
-    const synthetic = new MouseEvent("click")
-    handleCloseTab(target.id, synthetic)
+    handleCloseTab(target.id)
   }
 
   // Cmd+T: add a new tab strictly to the current selection (no side effects)
@@ -2310,7 +2330,8 @@ const AgentManagerContent: Component = () => {
                               session.selectSession(s.id)
                             }}
                             onMiddleClick={(e: MouseEvent) => handleTabMouseDown(s.id, e)}
-                            onClose={(e: MouseEvent) => handleCloseTab(s.id, e)}
+                            onClose={() => handleCloseTab(s.id)}
+                            onFork={pending ? undefined : () => handleForkSession(s.id)}
                           />
                         )
                       }}

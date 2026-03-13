@@ -30,6 +30,7 @@ export const dict = {
   "agentManager.session.noSessions": "열린 세션 없음",
   "agentManager.tab.close": "닫기",
   "agentManager.tab.closeTab": "탭 닫기",
+  "agentManager.tab.forkSession": "세션 포크",
   "agentManager.tab.terminal": "터미널",
   "agentManager.tab.openTerminal": "터미널 열기",
   "agentManager.setup.failed": "워크스페이스 설정 실패",
