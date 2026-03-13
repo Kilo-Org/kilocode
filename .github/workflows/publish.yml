@@ -240,11 +240,86 @@ jobs:
   #         APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
   #         APPLE_API_KEY_PATH: ${{ runner.temp }}/apple-api-key.p8
 
+  # kilocode_change start
+  smoke-test:
+    name: Smoke Test (pre-publish gate)
+    needs:
+      - version
+      - build-cli
+    if: github.repository == 'Kilo-Org/kilocode'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Trigger kilo-bench smoke test
+        id: trigger
+        env:
+          GH_TOKEN: ${{ secrets.BENCH_GITHUB_TOKEN }}
+        run: |
+          BEFORE=$(date -u -d '60 seconds ago' +%Y-%m-%dT%H:%M:%SZ)
+
+          gh api repos/Kilo-Org/kilo-bench/dispatches \
+            --method POST \
+            -f event_type=smoke-test \
+            -f 'client_payload[release_tag]=${{ needs.version.outputs.tag }}' \
+            -f 'client_payload[source_run_id]=${{ github.run_id }}'
+
+          # Poll for the run created after our dispatch timestamp.
+          # The dispatch API returns no run ID, so we query by created time
+          # and pick the oldest match to avoid grabbing an unrelated run.
+          echo "Waiting for smoke-test run to appear (dispatched after $BEFORE)..."
+          for attempt in $(seq 1 30); do
+            RUN_ID=$(gh api \
+              "repos/Kilo-Org/kilo-bench/actions/workflows/smoke-test.yml/runs?event=repository_dispatch&created=>=$BEFORE" \
+              --jq '.workflow_runs | sort_by(.created_at) | .[0].id // empty')
+
+            if [[ -n "$RUN_ID" && "$RUN_ID" != "null" ]]; then
+              echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+              echo "::notice::Smoke test run: https://github.com/Kilo-Org/kilo-bench/actions/runs/$RUN_ID"
+              exit 0
+            fi
+
+            echo "  attempt $attempt: run not yet registered, retrying in 10s..."
+            sleep 10
+          done
+
+          echo "::error::Smoke test run did not appear within 5 minutes after dispatch."
+          exit 1
+
+      - name: Wait for smoke test to complete
+        env:
+          GH_TOKEN: ${{ secrets.BENCH_GITHUB_TOKEN }}
+        run: |
+          RUN_ID="${{ steps.trigger.outputs.run_id }}"
+          echo "Waiting for run $RUN_ID..."
+
+          for i in $(seq 1 60); do
+            CONCLUSION=$(gh run view "$RUN_ID" \
+              --repo Kilo-Org/kilo-bench \
+              --json conclusion \
+              --jq '.conclusion')
+
+            echo "  attempt $i: $CONCLUSION"
+
+            if [[ "$CONCLUSION" == "success" ]]; then
+              echo "::notice::Smoke test passed."
+              exit 0
+            elif [[ "$CONCLUSION" != "null" && "$CONCLUSION" != "" ]]; then
+              echo "::error::Smoke test failed with conclusion: $CONCLUSION"
+              echo "See: https://github.com/Kilo-Org/kilo-bench/actions/runs/$RUN_ID"
+              exit 1
+            fi
+
+            sleep 30
+          done
+
+          echo "::error::Smoke test did not complete within 30 minutes."
+          exit 1
+  # kilocode_change end
   publish:
     needs:
       - version
       - build-cli
       - build-vscode
+      - smoke-test
       # - build-tauri
     runs-on: ubuntu-24.04
     steps:
