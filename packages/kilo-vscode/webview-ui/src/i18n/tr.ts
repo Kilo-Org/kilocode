@@ -73,7 +73,8 @@ export const dict = {
   "command.permissions.autoaccept.enable": "Düzenlemeleri otomatik kabul et",
   "command.permissions.autoaccept.disable": "Otomatik düzenleme kabulünü durdur",
   "command.workspace.toggle": "Çalışma alanlarını aç/kapat",
-  "command.workspace.toggle.description": "Kenar çubuğunda birden fazla çalışma alanını etkinleştir veya devre dışı bırak",
+  "command.workspace.toggle.description":
+    "Kenar çubuğunda birden fazla çalışma alanını etkinleştir veya devre dışı bırak",
   "command.session.undo": "Geri Al",
   "command.session.undo.description": "Son mesajı geri al",
   "command.session.redo": "Yinele",
@@ -135,18 +136,17 @@ export const dict = {
   "provider.connect.opencodeZen.visit.prefix": "API anahtarınızı almak için ",
   "provider.connect.opencodeZen.visit.link": "https://opencode.ai/zen",
   "provider.connect.opencodeZen.visit.suffix": " adresini ziyaret edin.",
-  "provider.connect.oauth.code.visit.prefix": "Hesabınızı bağlamak ve Kilo'da {{provider}} modellerini kullanmak için yetkilendirme kodunuzu almak üzere ",
+  "provider.connect.oauth.code.visit.prefix":
+    "Hesabınızı bağlamak ve Kilo'da {{provider}} modellerini kullanmak için yetkilendirme kodunuzu almak üzere ",
   "provider.connect.oauth.code.visit.link": "bu bağlantıyı",
-  "provider.connect.oauth.code.visit.suffix":
-    " ziyaret edin.",
+  "provider.connect.oauth.code.visit.suffix": " ziyaret edin.",
   "provider.connect.oauth.code.label": "{{method}} yetkilendirme kodu",
   "provider.connect.oauth.code.placeholder": "Yetkilendirme kodu",
   "provider.connect.oauth.code.required": "Yetkilendirme kodu gereklidir",
   "provider.connect.oauth.code.invalid": "Geçersiz yetkilendirme kodu",
   "provider.connect.oauth.auto.visit.prefix": "Hesabınızı bağlamak ve Kilo'da {{provider}} modellerini kullanmak için ",
   "provider.connect.oauth.auto.visit.link": "bu bağlantıyı",
-  "provider.connect.oauth.auto.visit.suffix":
-    " ziyaret edin ve aşağıdaki kodu girin.",
+  "provider.connect.oauth.auto.visit.suffix": " ziyaret edin ve aşağıdaki kodu girin.",
   "provider.connect.oauth.auto.confirmationCode": "Onay kodu",
   "provider.connect.toast.connected.title": "{{provider}} bağlandı",
   "provider.connect.toast.connected.description": "{{provider}} modelleri artık kullanılabilir.",
@@ -430,12 +430,14 @@ export const dict = {
   "error.chain.didYouMean": "Şunu mu demek istediniz: {{suggestions}}",
   "error.chain.modelNotFound": "Model bulunamadı: {{provider}}/{{model}}",
   "error.chain.checkConfig": "Yapılandırmanızı (opencode.json) kontrol edin: sağlayıcı/model adları",
-  "error.chain.mcpFailed": 'MCP sunucusu "{{name}}" başarısız oldu. Not: Kilo henüz MCP kimlik doğrulamasını desteklemiyor.',
+  "error.chain.mcpFailed":
+    'MCP sunucusu "{{name}}" başarısız oldu. Not: Kilo henüz MCP kimlik doğrulamasını desteklemiyor.',
   "error.chain.providerAuthFailed": "Sağlayıcı kimlik doğrulaması başarısız ({{provider}}): {{message}}",
   "error.chain.providerInitFailed":
     'Sağlayıcı "{{provider}}" başlatılamadı. Kimlik bilgilerini ve yapılandırmayı kontrol edin.',
   "error.chain.configJsonInvalid": "{{path}} konumundaki yapılandırma dosyası geçerli bir JSON(C) değil",
-  "error.chain.configJsonInvalidWithMessage": "{{path}} konumundaki yapılandırma dosyası geçerli bir JSON(C) değil: {{message}}",
+  "error.chain.configJsonInvalidWithMessage":
+    "{{path}} konumundaki yapılandırma dosyası geçerli bir JSON(C) değil: {{message}}",
   "error.chain.configDirectoryTypo":
     '{{path}} içindeki "{{dir}}" dizini geçerli değil. Dizini "{{suggestion}}" olarak yeniden adlandırın veya kaldırın. Bu yaygın bir yazım hatasıdır.',
   "error.chain.configFrontmatterError": "{{path}} dosyasındaki frontmatter ayrıştırılamadı:\n{{message}}",
@@ -501,8 +503,7 @@ export const dict = {
   "status.popover.action.manageServers": "Sunucuları yönet",
 
   "session.share.popover.title": "Web'de yayınla",
-  "session.share.popover.description.shared":
-    "Bu oturum web'de herkese açıktır. Bağlantıya sahip herkes erişebilir.",
+  "session.share.popover.description.shared": "Bu oturum web'de herkese açıktır. Bağlantıya sahip herkes erişebilir.",
   "session.share.popover.description.unshared":
     "Oturumu web'de herkese açık olarak paylaşın. Bağlantıya sahip herkes erişebilecektir.",
   "session.share.action.share": "Paylaş",
@@ -864,9 +865,11 @@ export const dict = {
   "settings.aboutKiloCode.version.label": "Sürüm:",
   "settings.aboutKiloCode.extensionName": "Kilo Code Eklentisi",
   "settings.aboutKiloCode.community": "Topluluk ve Destek",
-  "settings.aboutKiloCode.feedback.prefix": "Herhangi bir sorunuz veya geri bildiriminiz varsa, lütfen şu platformlarda bir sorun bildirin:",
+  "settings.aboutKiloCode.feedback.prefix":
+    "Herhangi bir sorunuz veya geri bildiriminiz varsa, lütfen şu platformlarda bir sorun bildirin:",
   "settings.aboutKiloCode.feedback.or": "veya",
-  "settings.aboutKiloCode.support.prefix": "Faturalandırma veya hesap soruları için Müşteri Desteği ile iletişime geçin:",
+  "settings.aboutKiloCode.support.prefix":
+    "Faturalandırma veya hesap soruları için Müşteri Desteği ile iletişime geçin:",
   "settings.aboutKiloCode.resetSettings.title": "Ayarları Sıfırla",
   "settings.aboutKiloCode.resetSettings.description":
     "Tüm Kilo Code eklenti ayarlarını varsayılan değerlerine sıfırlayın. Bu işlem CLI veya arka uç yapılandırmasını etkilemez.",
@@ -884,8 +887,7 @@ export const dict = {
   "settings.browser.enable.title": "Tarayıcı Otomasyonunu Etkinleştir",
   "settings.browser.enable.description": "Playwright MCP sunucusunu CLI arka ucuna kaydedin.",
   "settings.browser.systemChrome.title": "Sistem Chrome'unu Kullan",
-  "settings.browser.systemChrome.description":
-    "Ayrı bir Chromium örneği yerine kurulu Chrome tarayıcınızı kullanın.",
+  "settings.browser.systemChrome.description": "Ayrı bir Chromium örneği yerine kurulu Chrome tarayıcınızı kullanın.",
   "settings.browser.headless.title": "Başsız Mod",
   "settings.browser.headless.description": "Başsız modda çalıştır (görünür tarayıcı penceresi yok).",
 
@@ -904,7 +906,8 @@ export const dict = {
   "settings.autocomplete.autoTrigger.title": "Otomatik satır içi tamamlamaları etkinleştir",
   "settings.autocomplete.autoTrigger.description": "Yazarken satır içi tamamlama önerilerini otomatik göster",
   "settings.autocomplete.smartKeybinding.title": "Akıllı satır içi görev kısayolunu etkinleştir",
-  "settings.autocomplete.smartKeybinding.description": "Satır içi görevleri tetiklemek için akıllı bir kısayol tuşu kullan",
+  "settings.autocomplete.smartKeybinding.description":
+    "Satır içi görevleri tetiklemek için akıllı bir kısayol tuşu kullan",
   "settings.autocomplete.chatAutocomplete.title": "Sohbet alanı otomatik tamamlamayı etkinleştir",
   "settings.autocomplete.chatAutocomplete.description": "Sohbet metin alanında otomatik tamamlama önerilerini göster",
 
@@ -966,8 +969,10 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "Ek Talimat Dosyaları",
   "settings.agentBehaviour.instructionFiles.description":
     "Sistem istemine dahil edilen ek talimat dosyalarının yolları",
-  "settings.agentBehaviour.mcpEmpty": "Yapılandırılmış MCP sunucusu yok. MCP sunucuları eklemek için opencode yapılandırma dosyasını düzenleyin.",
-  "settings.agentBehaviour.workflowsPlaceholder": "İş akışları çalışma alanınızdaki iş akışı dosyaları aracılığıyla yönetilir.",
+  "settings.agentBehaviour.mcpEmpty":
+    "Yapılandırılmış MCP sunucusu yok. MCP sunucuları eklemek için opencode yapılandırma dosyasını düzenleyin.",
+  "settings.agentBehaviour.workflowsPlaceholder":
+    "İş akışları çalışma alanınızdaki iş akışı dosyaları aracılığıyla yönetilir.",
   "settings.agentBehaviour.notImplemented": "Henüz uygulanmadı.",
 
   "settings.autoApprove.description":
@@ -984,19 +989,24 @@ export const dict = {
   "settings.autoApprove.placeholder.path": "örn. *.env",
   "settings.autoApprove.tool.external_directory":
     "Çalışma alanı dışındaki dosyalara eriş. Mevcut proje dizini dışındaki dosyalara erişildiğinde tetiklenir.",
-  "settings.autoApprove.tool.bash": "Terminal komutlarını çalıştır. Kabuk komutlarının (örn. git status) yürütülmesine izin verir.",
+  "settings.autoApprove.tool.bash":
+    "Terminal komutlarını çalıştır. Kabuk komutlarının (örn. git status) yürütülmesine izin verir.",
   "settings.autoApprove.tool.read": "Dosyaları oku. Ajanın belirtilen yola uyan dosyaları okumasına izin verir.",
   "settings.autoApprove.tool.edit":
     "Dosyaları değiştir. Ajanın yamalar ve çoklu dosya güncellemeleri dahil dosya oluşturmasına veya düzenlemesine izin verir.",
   "settings.autoApprove.tool.glob":
     "Dosyaları kalıba göre eşleştir. Glob kalıpları (örn. src/**/*.ts) kullanarak dosya eşleştirmeye izin verir.",
   "settings.autoApprove.tool.grep": "Dosya içeriklerini ara. Dosyalar içinde regex tabanlı aramaya izin verir.",
-  "settings.autoApprove.tool.list": "Dizin içeriğini listele. Bir dizindeki dosya ve klasörleri görüntülemeye izin verir.",
-  "settings.autoApprove.tool.task": "Alt ajanları başlat. Belirli görevler için özelleşmiş alt ajanları başlatmaya izin verir.",
-  "settings.autoApprove.tool.skill": "Yetenekleri yükle. Önceden tanımlanmış yeteneklerin ada göre yüklenmesine izin verir.",
+  "settings.autoApprove.tool.list":
+    "Dizin içeriğini listele. Bir dizindeki dosya ve klasörleri görüntülemeye izin verir.",
+  "settings.autoApprove.tool.task":
+    "Alt ajanları başlat. Belirli görevler için özelleşmiş alt ajanları başlatmaya izin verir.",
+  "settings.autoApprove.tool.skill":
+    "Yetenekleri yükle. Önceden tanımlanmış yeteneklerin ada göre yüklenmesine izin verir.",
   "settings.autoApprove.tool.lsp":
     "Dil sunucusunu sorgula. Kod zekası için dil sunucusu sorgularını çalıştırmaya izin verir.",
-  "settings.autoApprove.tool.todoreadwrite": "Görev listesini yönet. Dahili görev listesini okumaya ve güncellemeye izin verir.",
+  "settings.autoApprove.tool.todoreadwrite":
+    "Görev listesini yönet. Dahili görev listesini okumaya ve güncellemeye izin verir.",
   "settings.autoApprove.tool.webfetch": "URL getir. Belirli bir URL'den içerik almaya izin verir.",
   "settings.autoApprove.tool.websearchcodesearch":
     "Web veya kod ara. Harici web veya kod aramaları gerçekleştirmeye izin verir.",
@@ -1004,7 +1014,8 @@ export const dict = {
     "Tekrarlanan aynı eylemleri önle. Aynı araç çağrısı aynı girdiyle tekrarlandığında tetiklenir.",
 
   "settings.checkpoints.enable.title": "Anlık Görüntüleri Etkinleştir",
-  "settings.checkpoints.enable.description": "Dosya düzenlemelerinden önce kontrol noktaları oluşturun, böylece önceki durumları geri yükleyebilirsiniz",
+  "settings.checkpoints.enable.description":
+    "Dosya düzenlemelerinden önce kontrol noktaları oluşturun, böylece önceki durumları geri yükleyebilirsiniz",
 
   "settings.context.autoCompaction.title": "Otomatik Sıkıştırma",
   "settings.context.autoCompaction.description": "Bağlam dolduğunda otomatik olarak sıkıştır",
