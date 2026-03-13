@@ -120,7 +120,9 @@ export const PermissionDock: Component<{
               aria-expanded={patternsExpanded()}
             >
               <div data-slot="permission-patterns-header-main">
-                <span data-slot="permission-patterns-header-title">Auto-Approved Commands</span>
+                <span data-slot="permission-patterns-header-title">
+                  {language.t("ui.permission.autoApprovedCommands")}
+                </span>
               </div>
               <span data-slot="permission-patterns-header-chevron" data-open={patternsExpanded() ? "" : undefined}>
                 <Icon name="chevron-down" size="small" />

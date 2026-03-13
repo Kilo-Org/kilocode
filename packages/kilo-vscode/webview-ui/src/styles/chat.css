@@ -1217,6 +1217,7 @@
     margin: 0;
     padding: 0 16px;
     max-height: 160px;
+    overflow-y: auto;
     gap: 2px;
 
     code {
