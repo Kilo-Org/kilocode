@@ -121,7 +121,8 @@ export namespace Database {
     } catch (err) {
       if (err instanceof Context.NotFound) {
         const effects: (() => void | Promise<void>)[] = []
-        const result = ctx.provide({ effects, tx: Client() }, () => callback(Client()))
+        const client = Client() // kilocode_change - avoid calling Client() twice
+        const result = ctx.provide({ effects, tx: client }, () => callback(client))
         for (const effect of effects) effect()
         return result
       }

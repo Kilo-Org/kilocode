@@ -587,7 +587,8 @@ export namespace Session {
       conditions.push(gte(SessionTable.time_updated, input.start))
     }
     if (input?.search) {
-      conditions.push(like(SessionTable.title, `%${input.search}%`))
+      const escaped = input.search.replace(/[%_\\]/g, "\\$&") // kilocode_change
+      conditions.push(like(SessionTable.title, `%${escaped}%`))
     }
 
     const limit = input?.limit ?? 100
@@ -630,7 +631,8 @@ export namespace Session {
       conditions.push(lt(SessionTable.time_updated, input.cursor))
     }
     if (input?.search) {
-      conditions.push(like(SessionTable.title, `%${input.search}%`))
+      const escaped = input.search.replace(/[%_\\]/g, "\\$&") // kilocode_change
+      conditions.push(like(SessionTable.title, `%${escaped}%`))
     }
     if (!input?.archived) {
       conditions.push(isNull(SessionTable.time_archived))
