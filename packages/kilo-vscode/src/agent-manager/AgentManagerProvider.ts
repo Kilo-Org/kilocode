@@ -1079,13 +1079,9 @@ export class AgentManagerProvider implements vscode.Disposable {
         raw.includes("already used by worktree") || raw.includes("already checked out")
           ? `Branch "${branch}" is already checked out in another worktree`
           : raw
-      this.postToWebview({
-        type: "agentManager.worktreeSetup",
-        status: "error",
-        message: msg,
-        errorCode: classifyWorktreeError(msg),
-      })
-      this.postToWebview({ type: "agentManager.importResult", success: false, message: msg })
+      const code = classifyWorktreeError(msg)
+      this.postToWebview({ type: "agentManager.worktreeSetup", status: "error", message: msg, errorCode: code })
+      this.postToWebview({ type: "agentManager.importResult", success: false, message: msg, errorCode: code })
     } finally {
       this.importing = false
     }
@@ -1154,13 +1150,9 @@ export class AgentManagerProvider implements vscode.Disposable {
         raw.includes("already used by worktree") || raw.includes("already checked out")
           ? "This PR's branch is already checked out in another worktree"
           : raw
-      this.postToWebview({
-        type: "agentManager.worktreeSetup",
-        status: "error",
-        message: msg,
-        errorCode: classifyWorktreeError(msg),
-      })
-      this.postToWebview({ type: "agentManager.importResult", success: false, message: msg })
+      const code = classifyWorktreeError(msg)
+      this.postToWebview({ type: "agentManager.worktreeSetup", status: "error", message: msg, errorCode: code })
+      this.postToWebview({ type: "agentManager.importResult", success: false, message: msg, errorCode: code })
     } finally {
       this.importing = false
     }

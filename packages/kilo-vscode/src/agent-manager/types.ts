@@ -126,6 +126,7 @@ interface ImportResultMessage {
   type: "agentManager.importResult"
   success: boolean
   message: string
+  errorCode?: "git_not_found" | "not_git_repo" | "lfs_missing"
 }
 
 interface KeybindingsMessage {

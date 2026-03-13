@@ -758,6 +758,7 @@ export interface AgentManagerImportResultMessage {
   type: "agentManager.importResult"
   success: boolean
   message: string
+  errorCode?: "git_not_found" | "not_git_repo" | "lfs_missing"
 }
 
 // Shared FileDiff shape (matches Snapshot.FileDiff from CLI backend)
