@@ -409,6 +409,8 @@ export const dict = {
 
   "error.globalSync.connectFailed": "Nie można połączyć się z serwerem. Czy serwer działa pod adresem `{{url}}`?",
 
+  "error.startup.title": "Błąd połączenia z serwerem",
+
   "error.paidModel.title": "Musisz się zalogować, aby użyć tego modelu",
   "error.paidModel.description":
     "Zaloguj się lub utwórz konto, aby uzyskać dostęp do ponad 500 modeli, korzystać z kredytów po kosztach lub użyć własnego klucza.",
@@ -442,6 +444,11 @@ export const dict = {
 
   "notification.permission.title": "Wymagane uprawnienie",
   "notification.permission.description": "{{sessionTitle}} w {{projectName}} potrzebuje uprawnienia",
+  "ui.permission.permissionRules": "Reguły uprawnień",
+  "ui.permission.pattern.addToAllowed": "Dodaj do listy dozwolonych",
+  "ui.permission.pattern.removeFromAllowed": "Usuń z listy dozwolonych",
+  "ui.permission.pattern.addToDenied": "Dodaj do listy zablokowanych",
+  "ui.permission.pattern.removeFromDenied": "Usuń z listy zablokowanych",
   "notification.question.title": "Pytanie",
   "notification.question.description": "{{sessionTitle}} w {{projectName}} ma pytanie",
   "notification.action.goToSession": "Przejdź do sesji",
@@ -935,6 +942,7 @@ export const dict = {
   "settings.experimental.toolToggles": "Przełączniki narzędzi",
   "settings.agentBehaviour.defaultAgent.title": "Domyślny agent",
   "settings.agentBehaviour.defaultAgent.description": "Agent używany, gdy żaden nie jest określony",
+  "settings.agentBehaviour.availableAgents": "Dostępni agenci",
   "settings.agentBehaviour.selectAgent": "Wybierz agenta do konfiguracji…",
   "settings.agentBehaviour.selectAgent.title": "Agent",
   "settings.agentBehaviour.selectAgent.description": "Wybierz agenta do konfiguracji…",

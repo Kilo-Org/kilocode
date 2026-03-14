@@ -152,15 +152,15 @@ The Agent Manager is a feature within this extension (not a separate product). I
 
 ### How It Differs From the Sidebar
 
-| Aspect        | Sidebar                    | Agent Manager                                           |
-| ------------- | -------------------------- | ------------------------------------------------------- |
-| Location      | Activity bar sidebar panel | Editor tab (full panel)                                 |
-| Sessions      | Single session at a time   | Multiple parallel sessions with tabbed UI               |
-| Git isolation | Uses workspace root        | Each session can get its own worktree branch            |
-| State         | No dedicated state file    | `.kilocode/agent-manager.json`                          |
-| Terminals     | None                       | Dedicated VS Code terminal per session                  |
-| Setup scripts | None                       | Configurable `.kilocode/setup-script` runs per worktree |
-| Multi-version | Not supported              | Up to 4 parallel worktrees with the same prompt         |
+| Aspect        | Sidebar                    | Agent Manager                                       |
+| ------------- | -------------------------- | --------------------------------------------------- |
+| Location      | Activity bar sidebar panel | Editor tab (full panel)                             |
+| Sessions      | Single session at a time   | Multiple parallel sessions with tabbed UI           |
+| Git isolation | Uses workspace root        | Each session can get its own worktree branch        |
+| State         | No dedicated state file    | `.kilo/agent-manager.json`                          |
+| Terminals     | None                       | Dedicated VS Code terminal per session              |
+| Setup scripts | None                       | Configurable `.kilo/setup-script` runs per worktree |
+| Multi-version | Not supported              | Up to 4 parallel worktrees with the same prompt     |
 
 ### Architecture
 
@@ -210,6 +210,10 @@ Follow monorepo root AGENTS.md style guide:
 - Single-word variable names when possible
 - Avoid `try`/`catch`, avoid `any` type
 - ESLint enforces: curly braces, strict equality, semicolons, camelCase/PascalCase imports
+
+## File Size Caps (maxLines)
+
+Large files in `src/agent-manager/` have `maxLines` caps enforced by `tests/unit/agent-manager-arch.test.ts`. **Do not raise these caps.** If adding a feature would exceed a cap, extract logic into a vscode-free helper module and call it from the provider. See `fork-session.ts` and `format-keybinding.ts` for examples of this pattern.
 
 ## Markdown Tables
 

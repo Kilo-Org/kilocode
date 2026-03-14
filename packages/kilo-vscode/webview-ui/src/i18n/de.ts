@@ -414,6 +414,8 @@ export const dict = {
 
   "error.globalSync.connectFailed": "Verbindung zum Server fehlgeschlagen. Läuft ein Server unter `{{url}}`?",
 
+  "error.startup.title": "Serververbindung fehlgeschlagen",
+
   "error.paidModel.title": "Du musst dich anmelden, um dieses Modell zu nutzen",
   "error.paidModel.description":
     "Melde dich an oder erstelle ein Konto, um auf über 500 Modelle zuzugreifen, Credits zum Selbstkostenpreis zu nutzen oder deinen eigenen Schlüssel mitzubringen.",
@@ -448,6 +450,11 @@ export const dict = {
 
   "notification.permission.title": "Berechtigung erforderlich",
   "notification.permission.description": "{{sessionTitle}} in {{projectName}} benötigt Berechtigung",
+  "ui.permission.permissionRules": "Berechtigungsregeln",
+  "ui.permission.pattern.addToAllowed": "Zur Erlaubt-Liste hinzufügen",
+  "ui.permission.pattern.removeFromAllowed": "Aus der Erlaubt-Liste entfernen",
+  "ui.permission.pattern.addToDenied": "Zur Verweigert-Liste hinzufügen",
+  "ui.permission.pattern.removeFromDenied": "Aus der Verweigert-Liste entfernen",
   "notification.question.title": "Frage",
   "notification.question.description": "{{sessionTitle}} in {{projectName}} hat eine Frage",
   "notification.action.goToSession": "Zur Sitzung gehen",
@@ -948,6 +955,7 @@ export const dict = {
   "settings.experimental.toolToggles": "Werkzeug-Schalter",
   "settings.agentBehaviour.defaultAgent.title": "Standard-Agent",
   "settings.agentBehaviour.defaultAgent.description": "Agent, der verwendet wird, wenn keiner angegeben ist",
+  "settings.agentBehaviour.availableAgents": "Verfügbare Agenten",
   "settings.agentBehaviour.selectAgent": "Agent zum Konfigurieren auswählen…",
   "settings.agentBehaviour.selectAgent.title": "Agent",
   "settings.agentBehaviour.selectAgent.description": "Agent zum Konfigurieren auswählen…",

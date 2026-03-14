@@ -406,6 +406,8 @@ export const dict = {
 
   "error.globalSync.connectFailed": "无法连接到服务器。是否有服务器正在 `{{url}}` 运行？",
 
+  "error.startup.title": "服务器连接失败",
+
   "error.paidModel.title": "您需要登录才能使用此模型",
   "error.paidModel.description": "登录或创建账户以访问500多个模型，按成本使用积分，或使用您自己的密钥。",
   "error.paidModel.action": "登录",
@@ -435,6 +437,11 @@ export const dict = {
 
   "notification.permission.title": "需要权限",
   "notification.permission.description": "{{sessionTitle}}（{{projectName}}）需要权限",
+  "ui.permission.permissionRules": "权限规则",
+  "ui.permission.pattern.addToAllowed": "添加到允许列表",
+  "ui.permission.pattern.removeFromAllowed": "从允许列表移除",
+  "ui.permission.pattern.addToDenied": "添加到拒绝列表",
+  "ui.permission.pattern.removeFromDenied": "从拒绝列表移除",
   "notification.question.title": "问题",
   "notification.question.description": "{{sessionTitle}}（{{projectName}}）有一个问题",
   "notification.action.goToSession": "前往会话",
@@ -920,6 +927,7 @@ export const dict = {
   "settings.experimental.toolToggles": "工具开关",
   "settings.agentBehaviour.defaultAgent.title": "默认智能体",
   "settings.agentBehaviour.defaultAgent.description": "未指定时使用的智能体",
+  "settings.agentBehaviour.availableAgents": "可用代理",
   "settings.agentBehaviour.selectAgent": "选择要配置的智能体…",
   "settings.agentBehaviour.selectAgent.title": "智能体",
   "settings.agentBehaviour.selectAgent.description": "选择要配置的智能体…",

@@ -30,10 +30,16 @@ export const dict = {
   "agentManager.session.noSessions": "Нет открытых сессий",
   "agentManager.tab.close": "Закрыть",
   "agentManager.tab.closeTab": "Закрыть вкладку",
+  "agentManager.tab.forkSession": "Ответвить сессию",
   "agentManager.tab.terminal": "Терминал",
   "agentManager.tab.openTerminal": "Открыть терминал",
   "agentManager.setup.failed": "Не удалось настроить рабочее пространство",
   "agentManager.setup.settingUp": "Настройка рабочего пространства",
+  "agentManager.setup.error.git_not_found":
+    "Git не установлен или не найден в PATH. Пожалуйста, установите Git и перезапустите VS Code.",
+  "agentManager.setup.error.not_git_repo": "Откройте папку, содержащую репозиторий git, чтобы использовать worktrees.",
+  "agentManager.setup.error.lfs_missing":
+    "Этот репозиторий использует Git LFS, но git-lfs не найден. Пожалуйста, установите Git LFS.",
   "agentManager.shortcuts.title": "Сочетания клавиш",
   "agentManager.shortcuts.category.sidebar": "Боковая панель",
   "agentManager.shortcuts.category.tabs": "Вкладки",

@@ -407,6 +407,8 @@ export const dict = {
 
   "error.globalSync.connectFailed": "サーバーに接続できませんでした。`{{url}}`でサーバーが実行されていますか？",
 
+  "error.startup.title": "サーバー接続に失敗しました",
+
   "error.paidModel.title": "このモデルを使用するにはサインインが必要です",
   "error.paidModel.description":
     "サインインまたはアカウントを作成して、500以上のモデルにアクセスし、原価でクレジットを使用するか、独自のキーを持ち込みましょう。",
@@ -439,6 +441,11 @@ export const dict = {
 
   "notification.permission.title": "権限が必要です",
   "notification.permission.description": "{{projectName}} の {{sessionTitle}} が権限を必要としています",
+  "ui.permission.permissionRules": "権限ルール",
+  "ui.permission.pattern.addToAllowed": "許可リストに追加",
+  "ui.permission.pattern.removeFromAllowed": "許可リストから削除",
+  "ui.permission.pattern.addToDenied": "拒否リストに追加",
+  "ui.permission.pattern.removeFromDenied": "拒否リストから削除",
   "notification.question.title": "質問",
   "notification.question.description": "{{projectName}} の {{sessionTitle}} から質問があります",
   "notification.action.goToSession": "セッションへ移動",
@@ -933,6 +940,7 @@ export const dict = {
   "settings.experimental.toolToggles": "ツールトグル",
   "settings.agentBehaviour.defaultAgent.title": "デフォルトエージェント",
   "settings.agentBehaviour.defaultAgent.description": "指定されていない場合に使用するエージェント",
+  "settings.agentBehaviour.availableAgents": "利用可能なエージェント",
   "settings.agentBehaviour.selectAgent": "設定するエージェントを選択…",
   "settings.agentBehaviour.selectAgent.title": "エージェント",
   "settings.agentBehaviour.selectAgent.description": "設定するエージェントを選択…",

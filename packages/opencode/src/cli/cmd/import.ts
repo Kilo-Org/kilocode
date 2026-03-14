@@ -6,7 +6,6 @@ import { bootstrap } from "../bootstrap"
 import { Database } from "../../storage/db"
 import { SessionTable, MessageTable, PartTable } from "../../session/session.sql"
 import { Instance } from "../../project/instance"
-import { ShareNext } from "../../share/share-next"
 import { EOL } from "os"
 import { Filesystem } from "../../util/filesystem"
 import { Log } from "../../util/log"
@@ -21,11 +20,13 @@ export type ShareData =
   | { type: "session_diff"; data: unknown }
   | { type: "model"; data: unknown }
 
-/** Extract share ID from a share URL like https://opncd.ai/share/abc123 */
+// kilocode_change start
+/** Extract share ID from a Kilo share URL like https://app.kilo.ai/s/abc123 */
 export function parseShareUrl(url: string): string | null {
-  const match = url.match(/^https?:\/\/[^/]+\/share\/([a-zA-Z0-9_-]+)$/)
+  const match = url.match(/^https?:\/\/app\.kilo\.ai\/s\/([a-zA-Z0-9_-]+)$/)
   return match ? match[1] : null
 }
+// kilocode_change end
 
 /**
  * Transform ShareNext API response (flat array) into the nested structure for local file storage.
@@ -130,16 +131,16 @@ export const ImportCommand = cmd({
       const isUrl = args.file.startsWith("http://") || args.file.startsWith("https://")
 
       if (isUrl) {
+        // kilocode_change start
         const slug = parseShareUrl(args.file)
         if (!slug) {
-          const baseUrl = await ShareNext.url()
-          process.stdout.write(`Invalid URL format. Expected: ${baseUrl}/share/<slug>`)
+          process.stdout.write(`Invalid URL format. Expected: https://app.kilo.ai/s/<id>`)
           process.stdout.write(EOL)
           return
         }
 
-        const baseUrl = await ShareNext.url()
-        const response = await fetch(`${baseUrl}/api/share/${slug}/data`)
+        const base = process.env["KILO_SESSION_INGEST_URL"] ?? "https://ingest.kilosessions.ai"
+        const response = await fetch(`${base}/session/${encodeURIComponent(slug)}`)
 
         if (!response.ok) {
           process.stdout.write(`Failed to fetch share data: ${response.statusText}`)
@@ -147,16 +148,16 @@ export const ImportCommand = cmd({
           return
         }
 
-        const shareData: ShareData[] = await response.json()
-        const transformed = transformShareData(shareData)
+        const data = await response.json()
 
-        if (!transformed) {
+        if (!data || typeof data !== "object" || !data.info || !data.messages || !Array.isArray(data.messages)) {
           process.stdout.write(`Share not found or empty: ${slug}`)
           process.stdout.write(EOL)
           return
         }
 
-        exportData = transformed
+        exportData = data
+        // kilocode_change end
       } else {
         exportData = await Filesystem.readJson<NonNullable<typeof exportData>>(args.file).catch(() => undefined)
         if (!exportData) {
@@ -172,9 +173,14 @@ export const ImportCommand = cmd({
         return
       }
 
-      Database.use((db) => {
-        db.insert(SessionTable).values(Session.toRow(exportData.info)).onConflictDoNothing().run()
-      })
+      const row = { ...Session.toRow(exportData.info), project_id: Instance.project.id }
+      Database.use((db) =>
+        db
+          .insert(SessionTable)
+          .values(row)
+          .onConflictDoUpdate({ target: SessionTable.id, set: { project_id: row.project_id } })
+          .run(),
+      )
 
       for (const msg of exportData.messages) {
         Database.use((db) =>

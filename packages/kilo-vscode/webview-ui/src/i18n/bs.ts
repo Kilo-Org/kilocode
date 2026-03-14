@@ -412,6 +412,8 @@ export const dict = {
 
   "error.globalSync.connectFailed": "Nije moguće povezati se na server. Da li server radi na `{{url}}`?",
 
+  "error.startup.title": "Povezivanje sa serverom nije uspjelo",
+
   "error.paidModel.title": "Morate se prijaviti da biste koristili ovaj model",
   "error.paidModel.description":
     "Prijavite se ili kreirajte račun za pristup preko 500 modela, koristite kredite po cijeni koštanja ili donesite vlastiti ključ.",
@@ -444,6 +446,11 @@ export const dict = {
 
   "notification.permission.title": "Potrebna dozvola",
   "notification.permission.description": "{{sessionTitle}} u {{projectName}} traži dozvolu",
+  "ui.permission.permissionRules": "Pravila dozvola",
+  "ui.permission.pattern.addToAllowed": "Dodaj na listu dozvoljenih",
+  "ui.permission.pattern.removeFromAllowed": "Ukloni sa liste dozvoljenih",
+  "ui.permission.pattern.addToDenied": "Dodaj na listu odbijenih",
+  "ui.permission.pattern.removeFromDenied": "Ukloni sa liste odbijenih",
   "notification.question.title": "Pitanje",
   "notification.question.description": "{{sessionTitle}} u {{projectName}} ima pitanje",
   "notification.action.goToSession": "Idi na sesiju",
@@ -937,6 +944,7 @@ export const dict = {
   "settings.experimental.toolToggles": "Prekidači alata",
   "settings.agentBehaviour.defaultAgent.title": "Zadani agent",
   "settings.agentBehaviour.defaultAgent.description": "Agent koji se koristi kada nijedan nije naveden",
+  "settings.agentBehaviour.availableAgents": "Dostupni agenti",
   "settings.agentBehaviour.selectAgent": "Odaberi agenta za konfiguraciju…",
   "settings.agentBehaviour.selectAgent.title": "Agent",
   "settings.agentBehaviour.selectAgent.description": "Odaberi agenta za konfiguraciju…",

@@ -411,6 +411,8 @@ export const dict = {
 
   "error.globalSync.connectFailed": "Kunne ikke koble til server. Kjører det en server på `{{url}}`?",
 
+  "error.startup.title": "Servertilkobling mislyktes",
+
   "error.paidModel.title": "Du må logge inn for å bruke denne modellen",
   "error.paidModel.description":
     "Logg inn eller opprett en konto for å få tilgang til over 500 modeller, bruk kreditter til kostpris, eller ta med din egen nøkkel.",
@@ -443,6 +445,11 @@ export const dict = {
 
   "notification.permission.title": "Tillatelse påkrevd",
   "notification.permission.description": "{{sessionTitle}} i {{projectName}} trenger tillatelse",
+  "ui.permission.permissionRules": "Tillatelsesregler",
+  "ui.permission.pattern.addToAllowed": "Legg til i tillatt-listen",
+  "ui.permission.pattern.removeFromAllowed": "Fjern fra tillatt-listen",
+  "ui.permission.pattern.addToDenied": "Legg til i blokkert-listen",
+  "ui.permission.pattern.removeFromDenied": "Fjern fra blokkert-listen",
   "notification.question.title": "Spørsmål",
   "notification.question.description": "{{sessionTitle}} i {{projectName}} har et spørsmål",
   "notification.action.goToSession": "Gå til sesjon",
@@ -935,6 +942,7 @@ export const dict = {
   "settings.experimental.toolToggles": "Verktøybrytere",
   "settings.agentBehaviour.defaultAgent.title": "Standardagent",
   "settings.agentBehaviour.defaultAgent.description": "Agent å bruke når ingen er angitt",
+  "settings.agentBehaviour.availableAgents": "Tilgjengelige agenter",
   "settings.agentBehaviour.selectAgent": "Velg en agent å konfigurere…",
   "settings.agentBehaviour.selectAgent.title": "Agent",
   "settings.agentBehaviour.selectAgent.description": "Velg en agent å konfigurere…",
