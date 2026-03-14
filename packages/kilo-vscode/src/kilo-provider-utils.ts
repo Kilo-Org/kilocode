@@ -68,7 +68,7 @@ export function formatCommitError(error: unknown): string {
       const data = error.data
       const modelID = "modelID" in data ? String(data.modelID) : "unknown"
       const providerID = "providerID" in data ? String(data.providerID) : "unknown"
-      return `Model "${modelID}" not found on provider "${providerID}". Check your small model configuration in Settings > Providers.`
+      return `Model "${modelID}" not found on provider "${providerID}". Check your model configuration in Settings > Providers.`
     }
   }
   return getErrorMessage(error)
