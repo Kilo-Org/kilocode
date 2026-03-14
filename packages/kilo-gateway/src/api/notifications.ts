@@ -38,7 +38,7 @@ export async function fetchKilocodeNotifications(options: {
   const token = options.kilocodeToken
   if (!token) return []
 
-  const url = `${KILO_API_BASE}/api/users/notifications`
+  const url = `${KILO_API_BASE}/api/users/notifications?client=kilocode`
 
   try {
     const response = await fetch(url, {

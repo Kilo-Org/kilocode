@@ -1167,7 +1167,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const { data: all } = await this.client.kilo.notifications(undefined, { throwOnError: true })
-      const notifications = all.filter((n) => !n.showIn || n.showIn.includes("extension"))
+      const notifications = all.filter(
+        (n) => !n.showIn || n.showIn.includes("extension") || n.showIn.includes("extension-kilocode"),
+      )
       const existing = this.extensionContext?.globalState.get<string[]>("kilo.dismissedNotificationIds", []) ?? []
       const active = new Set(notifications.map((n) => n.id))
       const dismissedIds = existing.filter((id) => active.has(id))
