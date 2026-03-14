@@ -1380,6 +1380,7 @@
   [data-slot="permission-actions"] {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
     justify-content: flex-start;
     padding: 4px 0 8px;
