@@ -159,6 +159,24 @@ export function activate(context: vscode.ExtensionContext) {
         agentManagerProvider.postMessage({ type: "action", action: `jumpTo${i + 1}` })
       }),
     ),
+    vscode.commands.registerCommand("kilo-code.new.toggleAutoApprove", () => {
+      provider.postMessage({ type: "action", action: "toggleAutoApprove" })
+    }),
+    vscode.commands.registerCommand("kilo-code.new.generateTerminalCommand", async () => {
+      const input = await vscode.window.showInputBox({
+        prompt: "Describe the terminal command you want to generate",
+        placeHolder: "e.g. find all TypeScript files modified in the last week",
+      })
+      if (!input) return
+      await vscode.commands.executeCommand(`${KiloProvider.viewType}.focus`)
+      provider.postMessage({ type: "triggerTask", text: `Generate a terminal command: ${input}` })
+    }),
+    vscode.commands.registerCommand("kilo-code.new.cycleAgentMode", () => {
+      provider.postMessage({ type: "action", action: "cycleAgentMode" })
+    }),
+    vscode.commands.registerCommand("kilo-code.new.cyclePreviousAgentMode", () => {
+      provider.postMessage({ type: "action", action: "cyclePreviousAgentMode" })
+    }),
   )
 
   // Register URI handler for session imports (vscode://kilocode.kilo-code/kilocode/s/{sessionId})

@@ -294,6 +294,31 @@
         "command": "kilo-code.new.focusChatInput",
         "title": "Focus Chat Input",
         "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.toggleAutoApprove",
+        "title": "Toggle Auto-Approve",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.generateTerminalCommand",
+        "title": "Generate Terminal Command",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.autocomplete.cancelSuggestions",
+        "title": "Cancel Suggested Edits",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.cycleAgentMode",
+        "title": "Cycle Agent Mode",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.cyclePreviousAgentMode",
+        "title": "Cycle Previous Agent Mode",
+        "category": "Kilo Code"
       }
     ],
     "submenus": [
@@ -557,6 +582,39 @@
         "key": "ctrl+9",
         "mac": "cmd+9",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.toggleAutoApprove",
+        "key": "ctrl+alt+a",
+        "mac": "cmd+alt+a"
+      },
+      {
+        "command": "kilo-code.new.generateTerminalCommand",
+        "key": "ctrl+shift+g",
+        "mac": "cmd+shift+g"
+      },
+      {
+        "command": "kilo-code.new.autocomplete.cancelSuggestions",
+        "key": "escape",
+        "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilo-code.new.autocomplete.hasSuggestions"
+      },
+      {
+        "command": "kilo-code.new.generateCommitMessage",
+        "key": "ctrl+l",
+        "mac": "cmd+l",
+        "when": "scmInputIsFocused"
+      },
+      {
+        "command": "kilo-code.new.cycleAgentMode",
+        "key": "ctrl+.",
+        "mac": "cmd+.",
+        "when": "activeViewlet == 'workbench.view.extension.kilo-code-sidebar'"
+      },
+      {
+        "command": "kilo-code.new.cyclePreviousAgentMode",
+        "key": "ctrl+shift+.",
+        "mac": "cmd+shift+.",
+        "when": "activeViewlet == 'workbench.view.extension.kilo-code-sidebar'"
       }
     ],
     "configuration": {
