@@ -1388,7 +1388,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    justify-content: center;
+    justify-content: flex-start;
     padding: 4px 0 8px;
   }
 

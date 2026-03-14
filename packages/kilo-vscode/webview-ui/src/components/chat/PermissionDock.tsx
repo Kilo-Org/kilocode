@@ -190,15 +190,15 @@ export const PermissionDock: Component<{
       <p data-slot="permission-session-hint">{language.t("ui.permission.sessionHint")}</p>
       <div data-slot="permission-actions">
         <Button
-          variant="ghost"
+          variant="primary"
           size="small"
           onClick={() => {
             const { approved, denied } = collectPatterns()
-            props.onDecide("reject", approved, denied)
+            props.onDecide("once", approved, denied)
           }}
           disabled={props.responding}
         >
-          {language.t("ui.permission.deny")}
+          {language.t("ui.permission.allowOnce")}
         </Button>
         <Button
           variant="secondary"
@@ -212,15 +212,15 @@ export const PermissionDock: Component<{
           {language.t("ui.permission.allowAlways")}
         </Button>
         <Button
-          variant="primary"
+          variant="ghost"
           size="small"
           onClick={() => {
             const { approved, denied } = collectPatterns()
-            props.onDecide("once", approved, denied)
+            props.onDecide("reject", approved, denied)
           }}
           disabled={props.responding}
         >
-          {language.t("ui.permission.allowOnce")}
+          {language.t("ui.permission.deny")}
         </Button>
       </div>
     </DockPrompt>
