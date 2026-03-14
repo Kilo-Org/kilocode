@@ -1047,11 +1047,11 @@
 }
 
 .model-selector-item:hover,
-.model-selector-item.active {
+.model-selector-item.selected {
   background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
 }
 
-.model-selector-item.selected {
+.model-selector-item.active {
   font-weight: 600;
 }
 
