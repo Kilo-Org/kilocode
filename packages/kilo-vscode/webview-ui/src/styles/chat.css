@@ -1378,7 +1378,7 @@
     color: var(--text-weak, var(--vscode-descriptionForeground));
     margin: 0;
     padding: 4px 0 0;
-    text-align: center;
+    text-align: left;
   }
 
   [data-slot="permission-actions"] {
