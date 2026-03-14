@@ -116,17 +116,124 @@ export namespace MCP {
     })
   }
 
+  // kilocode_change start - Anchor regex patterns for providers that require ^/$ (e.g. llama.cpp)
+  // Check for unescaped `|` at the top level of a regex pattern (not inside [...] or (...)).
+  function hasTopLevelAlternation(pattern: string): boolean {
+    let inCharClass = false
+    let depth = 0
+    for (let i = 0; i < pattern.length; i++) {
+      const ch = pattern[i]
+      if (ch === "\\") {
+        i++
+        continue
+      }
+      if (inCharClass) {
+        if (ch === "]") inCharClass = false
+        continue
+      }
+      if (ch === "[") inCharClass = true
+      else if (ch === "(") depth++
+      else if (ch === ")" && depth > 0) depth--
+      else if (ch === "|" && depth === 0) return true
+    }
+    return false
+  }
+
+  // Recursively anchor regex patterns in JSON schemas.
+  // Some providers (e.g. llama.cpp) require patterns to start with ^ and end with $.
+  export function anchorPatterns(schema: JSONSchema7): JSONSchema7 {
+    if (!schema || typeof schema !== "object") return schema
+    const result = { ...schema }
+
+    if (typeof result.pattern === "string") {
+      // Guard against escaped \^ or \$ being mistaken for anchors.
+      // Account for even-length backslash sequences (e.g. \\$ is a real anchor, \$ is not).
+      const hasStart = /^\^/.test(result.pattern)
+      const hasEnd = /(^|[^\\])(\\\\)*\$$/.test(result.pattern)
+      if (hasTopLevelAlternation(result.pattern) && (!hasStart || !hasEnd)) {
+        // Wrap in non-capturing group to preserve alternation semantics.
+        // Applies to unanchored ("foo|bar"), and partially-anchored ("^foo|bar", "foo|bar$")
+        // patterns — naively prepending/appending anchors would change regex semantics.
+        const inner = result.pattern.replace(/^\^/, "").replace(/(^|[^\\])(\\\\)*\$$/, "$1$2")
+        result.pattern = "^(?:" + inner + ")$"
+      } else {
+        if (!hasStart) result.pattern = "^" + result.pattern
+        if (!hasEnd) result.pattern = result.pattern + "$"
+      }
+    }
+
+    if (result.properties) {
+      const props: Record<string, JSONSchema7> = {}
+      for (const [key, value] of Object.entries(result.properties)) {
+        props[key] = anchorPatterns(value as JSONSchema7)
+      }
+      result.properties = props
+    }
+
+    if (result.patternProperties) {
+      const pp: Record<string, JSONSchema7> = {}
+      for (const [key, value] of Object.entries(result.patternProperties)) {
+        pp[key] = anchorPatterns(value as JSONSchema7)
+      }
+      result.patternProperties = pp
+    }
+
+    if (typeof result.additionalProperties === "object" && result.additionalProperties !== null) {
+      result.additionalProperties = anchorPatterns(result.additionalProperties as JSONSchema7)
+    }
+
+    if (result.items) {
+      result.items = Array.isArray(result.items)
+        ? result.items.map((item) => anchorPatterns(item as JSONSchema7))
+        : anchorPatterns(result.items as JSONSchema7)
+    }
+
+    if (typeof result.contains === "object" && result.contains !== null) {
+      result.contains = anchorPatterns(result.contains as JSONSchema7)
+    }
+
+    if (typeof result.not === "object" && result.not !== null) {
+      result.not = anchorPatterns(result.not as JSONSchema7)
+    }
+
+    for (const key of ["anyOf", "oneOf", "allOf"] as const) {
+      if (Array.isArray(result[key])) {
+        ;(result as any)[key] = (result[key] as JSONSchema7[]).map((s) => anchorPatterns(s))
+      }
+    }
+
+    for (const key of ["if", "then", "else"] as const) {
+      if (typeof (result as any)[key] === "object" && (result as any)[key] !== null) {
+        ;(result as any)[key] = anchorPatterns((result as any)[key] as JSONSchema7)
+      }
+    }
+
+    for (const key of ["definitions", "$defs"] as const) {
+      const defs = (result as any)[key]
+      if (typeof defs === "object" && defs !== null) {
+        const out: Record<string, JSONSchema7> = {}
+        for (const [k, v] of Object.entries(defs)) {
+          out[k] = anchorPatterns(v as JSONSchema7)
+        }
+        ;(result as any)[key] = out
+      }
+    }
+
+    return result
+  }
+  // kilocode_change end
+
   // Convert MCP tool definition to AI SDK Tool type
   async function convertMcpTool(mcpTool: MCPToolDef, client: MCPClient, timeout?: number): Promise<Tool> {
     const inputSchema = mcpTool.inputSchema
 
     // Spread first, then override type to ensure it's always "object"
-    const schema: JSONSchema7 = {
+    const schema: JSONSchema7 = anchorPatterns({ // kilocode_change - anchor patterns for llama.cpp compatibility
       ...(inputSchema as JSONSchema7),
       type: "object",
       properties: (inputSchema.properties ?? {}) as JSONSchema7["properties"],
       additionalProperties: false,
-    }
+    })
 
     return dynamicTool({
       description: mcpTool.description ?? "",
