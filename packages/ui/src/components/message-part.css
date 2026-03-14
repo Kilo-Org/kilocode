@@ -228,6 +228,29 @@
     user-select: none;
   }
 
+  [data-slot="assistant-model-notice"] {
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 1px 6px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    background: var(--surface-secondary);
+
+    [data-component="provider-icon"] {
+      flex: 0 0 auto;
+    }
+  }
+
+  [data-slot="assistant-model-notice-text"] {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   [data-slot="text-part-copy-wrapper"][data-interrupted] {
     width: 100%;
     justify-content: flex-end;

@@ -483,9 +483,28 @@ describe("mapCloudSessionMessage", () => {
     expect(msg.sessionID).toBe("sess-1")
     expect(msg.role).toBe("assistant")
     expect(msg.createdAt).toBe(new Date(1700000000000).toISOString())
-    expect(msg.cost).toEqual({ input: 10, output: 20 })
+    expect(msg.cost).toBe(30)
     expect(msg.tokens).toEqual({ input: 100, output: 200 })
     expect(msg.parts).toHaveLength(1)
+  })
+
+  it("preserves numeric cost values", () => {
+    const msg = mapCloudSessionMessageToWebviewMessage(makeCloudMessage({ cost: 0.001 }))
+    expect(msg.cost).toBe(0.001)
+  })
+
+  it("sums full cost breakdowns into a numeric total", () => {
+    const msg = mapCloudSessionMessageToWebviewMessage(
+      makeCloudMessage({
+        cost: {
+          input: 10,
+          output: 20,
+          reasoning: 5,
+          cache: { read: 2, write: 3 },
+        },
+      }),
+    )
+    expect(msg.cost).toBe(40)
   })
 
   it("includes the time field with created and completed", () => {

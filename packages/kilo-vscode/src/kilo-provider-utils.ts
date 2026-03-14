@@ -274,6 +274,21 @@ export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | un
 }
 
 export function mapCloudSessionMessageToWebviewMessage(message: CloudSessionMessage) {
+  const model =
+    message.info.model ??
+    (message.info.providerID && message.info.modelID
+      ? { providerID: message.info.providerID, modelID: message.info.modelID }
+      : undefined)
+
+  const cost =
+    typeof message.info.cost === "number"
+      ? message.info.cost
+      : (message.info.cost?.input ?? 0) +
+        (message.info.cost?.output ?? 0) +
+        (message.info.cost?.reasoning ?? 0) +
+        (message.info.cost?.cache?.read ?? 0) +
+        (message.info.cost?.cache?.write ?? 0)
+
   return {
     id: message.info.id,
     sessionID: message.info.sessionID,
@@ -283,7 +298,10 @@ export function mapCloudSessionMessageToWebviewMessage(message: CloudSessionMess
       ? new Date(message.info.time.created).toISOString()
       : new Date().toISOString(),
     time: message.info.time,
-    cost: message.info.cost,
+    model,
+    providerID: model?.providerID,
+    modelID: model?.modelID,
+    cost,
     tokens: message.info.tokens,
   }
 }

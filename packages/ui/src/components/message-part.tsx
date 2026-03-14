@@ -73,6 +73,8 @@ import { checksum } from "@opencode-ai/util/encode"
 import { Tooltip } from "./tooltip"
 import { IconButton } from "./icon-button"
 import { TextShimmer } from "./text-shimmer"
+import { iconNames, type IconName } from "./provider-icons/types"
+import { ProviderIcon } from "./provider-icon"
 import { AnimatedCountList } from "./tool-count-summary"
 import { ToolStatusTitle } from "./tool-status-title"
 import { animate } from "motion"
@@ -218,6 +220,57 @@ function relativizeProjectPath(path: string, directory?: string) {
   const prefix = directory.endsWith(separator) ? directory : directory + separator
   if (!path.startsWith(prefix)) return path
   return path.slice(directory.length)
+}
+
+function title(text: string | undefined) {
+  if (!text) return ""
+  return text[0]?.toUpperCase() + text.slice(1)
+}
+
+function useProviderMeta(providerID: () => string | undefined, modelID: () => string | undefined) {
+  const data = useData()
+  const provider = createMemo(() => {
+    const id = providerID()
+    if (!id) return
+    return data.store.provider?.all?.find((item) => item.id === id)
+  })
+  const model = createMemo(() => {
+    const id = modelID()
+    if (!id) return ""
+    return provider()?.models?.[id]?.name ?? id
+  })
+  const gateway = createMemo(() => {
+    const value = provider()?.name ?? providerID() ?? ""
+    return value.trim()
+  })
+  const icon = createMemo(() => {
+    const id = providerID()
+    if (!id) return
+    return iconNames.includes(id as IconName) ? (id as IconName) : undefined
+  })
+  return { provider, model, gateway, icon }
+}
+
+function AssistantModelNotice(props: { providerID?: string; modelID?: string }) {
+  const meta = useProviderMeta(
+    () => props.providerID,
+    () => props.modelID,
+  )
+  const text = createMemo(() => {
+    const items = [meta.gateway(), meta.model()].filter((item) => !!item)
+    return items.join(" · ")
+  })
+
+  return (
+    <Show when={text()}>
+      <span data-slot="assistant-model-notice" class="text-12-regular text-text-weak cursor-default">
+        <Show when={meta.icon()}>
+          {(icon) => <ProviderIcon id={icon()} width="12" height="12" aria-hidden="true" />}
+        </Show>
+        <span data-slot="assistant-model-notice-text">{text()}</span>
+      </span>
+    </Show>
+  )
 }
 
 function getDirectory(path: string | undefined) {
@@ -880,7 +933,7 @@ export function UserMessageDisplay(props: {
 
   const metaHead = createMemo(() => {
     const agent = props.message.agent
-    const items = [agent ? agent[0]?.toUpperCase() + agent.slice(1) : "", model()]
+    const items = [title(agent), model()]
     return items.filter((x) => !!x).join("\u00A0\u00B7\u00A0")
   })
 
@@ -1230,19 +1283,24 @@ PART_MAPPING["compaction"] = function CompactionPartDisplay() {
 }
 
 PART_MAPPING["text"] = function TextPartDisplay(props) {
-  const data = useData()
   const i18n = useI18n()
   const part = () => props.part as TextPart
+  const data = useData()
+  const message = createMemo(() =>
+    props.message.role === "assistant" ? (props.message as AssistantMessage) : undefined,
+  )
+  const providerMeta = useProviderMeta(
+    () => message()?.providerID,
+    () => message()?.modelID,
+  )
   const interrupted = createMemo(
     () =>
       props.message.role === "assistant" && (props.message as AssistantMessage).error?.name === "MessageAbortedError",
   )
 
-  const model = createMemo(() => {
-    if (props.message.role !== "assistant") return ""
-    const message = props.message as AssistantMessage
-    const match = data.store.provider?.all?.find((p) => p.id === message.providerID)
-    return match?.models?.[message.modelID]?.name ?? message.modelID
+  const provenance = createMemo(() => {
+    const items = [providerMeta.gateway(), providerMeta.model()].filter((item) => !!item)
+    return items.join(" \u00B7 ")
   })
 
   const duration = createMemo(() => {
@@ -1266,12 +1324,7 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
   const meta = createMemo(() => {
     if (props.message.role !== "assistant") return ""
     const agent = (props.message as AssistantMessage).agent
-    const items = [
-      agent ? agent[0]?.toUpperCase() + agent.slice(1) : "",
-      model(),
-      duration(),
-      interrupted() ? i18n.t("ui.message.interrupted") : "",
-    ]
+    const items = [title(agent), duration(), interrupted() ? i18n.t("ui.message.interrupted") : ""]
     return items.filter((x) => !!x).join(" \u00B7 ")
   })
 
@@ -1361,6 +1414,12 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
                 aria-label={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyResponse")}
               />
             </Tooltip>
+            <Show when={props.message.role === "assistant"}>
+              <AssistantModelNotice
+                providerID={(props.message as AssistantMessage).providerID}
+                modelID={(props.message as AssistantMessage).modelID}
+              />
+            </Show>
             <Show when={meta()}>
               <span data-slot="text-part-meta" class="text-12-regular text-text-weak cursor-default">
                 {meta()}
