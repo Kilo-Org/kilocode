@@ -1184,6 +1184,10 @@
     margin-top: 0;
   }
 
+  [data-slot="permission-row"] {
+    grid-template-columns: 16px 1fr;
+  }
+
   [data-slot="permission-body"] {
     padding: 10px 16px 0;
     gap: 8px;
