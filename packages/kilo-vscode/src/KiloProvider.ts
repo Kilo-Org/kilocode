@@ -1987,7 +1987,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     // Refresh config when the server signals a config change
-    if (event.type === "config.changed" && event.properties.directory === this.projectID) {
+    if (event.type === "config.changed" && event.properties.directory === this.getWorkspaceDirectory()) {
       void this.fetchAndSendConfig()
       return
     }
