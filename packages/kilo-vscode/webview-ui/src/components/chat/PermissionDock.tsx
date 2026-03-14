@@ -172,19 +172,11 @@ export const PermissionDock: Component<{
       }
     >
       <Show when={command()}>
-        {(cmd) => (
-          <div data-slot="permission-row">
-            <span data-slot="permission-spacer" aria-hidden="true" />
-            <code data-slot="permission-command">{cmd()}</code>
-          </div>
-        )}
+        {(cmd) => <code data-slot="permission-command">{cmd()}</code>}
       </Show>
 
       <Show when={!command() && toolDescription()}>
-        <div data-slot="permission-row">
-          <span data-slot="permission-spacer" aria-hidden="true" />
-          <div data-slot="permission-hint">{toolDescription()}</div>
-        </div>
+        <div data-slot="permission-hint">{toolDescription()}</div>
       </Show>
 
       <p data-slot="permission-session-hint">{language.t("ui.permission.sessionHint")}</p>
