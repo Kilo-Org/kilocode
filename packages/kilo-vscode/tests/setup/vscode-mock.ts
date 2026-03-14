@@ -51,6 +51,12 @@ const mockVscode = {
       update: async () => {},
     }),
     asRelativePath: (pathOrUri: string) => pathOrUri,
+    fs: {
+      createDirectory: async () => {},
+      writeFile: async () => {},
+      readFile: async () => new Uint8Array(),
+      stat: async () => ({ type: 1, ctime: 0, mtime: 0, size: 0 }),
+    },
   },
   window: {
     activeTextEditor: undefined,

@@ -1,6 +1,7 @@
 import * as path from "path"
 import * as vscode from "vscode"
 import { z } from "zod"
+import { buildPreviewPath, getPreviewCommand, parseImage } from "./image-preview"
 import { isAbsolutePath } from "./path-utils"
 import type {
   KiloClient,
@@ -412,6 +413,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "openSubAgentViewer":
           vscode.commands.executeCommand("kilo-code.new.openSubAgentViewer", message.sessionID, message.title)
+          break
+        case "previewImage":
+          this.handlePreviewImage(message.dataUrl, message.filename)
           break
         case "openFile":
           if (message.filePath) {
@@ -1810,6 +1814,25 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * a worktree path registered via setSessionDirectory), falling back to workspace root.
    * Absolute paths (Unix `/…` or Windows `C:\…`) are used as-is.
    */
+  private handlePreviewImage(dataUrl: string, filename: string): void {
+    const dir = this.extensionContext?.globalStorageUri
+    if (!dir) return
+
+    const img = parseImage(dataUrl, filename)
+    if (!img) return
+
+    const uri = vscode.Uri.joinPath(dir, buildPreviewPath(img.name, Date.now()))
+    const open = () =>
+      vscode.commands
+        .executeCommand(...getPreviewCommand(uri))
+        .then(undefined, () => vscode.commands.executeCommand("vscode.open", uri))
+
+    void vscode.workspace.fs
+      .createDirectory(vscode.Uri.joinPath(dir, "image-preview"))
+      .then(() => vscode.workspace.fs.writeFile(uri, img.data))
+      .then(open, (err) => console.error("[Kilo New] KiloProvider: Failed to preview image:", err))
+  }
+
   private handleOpenFile(filePath: string, line?: number, column?: number): void {
     const uri = isAbsolutePath(filePath)
       ? vscode.Uri.file(filePath)
