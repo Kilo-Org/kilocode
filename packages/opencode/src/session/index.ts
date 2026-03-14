@@ -27,6 +27,7 @@ import { WorkspaceContext } from "../control-plane/workspace-context"
 import type { Provider } from "@/provider/provider"
 import { PermissionNext } from "@/permission/next"
 import { Global } from "@/global"
+import { Todo } from "./todo" // kilocode_change
 import type { LanguageModelV2Usage } from "@ai-sdk/provider"
 import { iife } from "@/util/iife"
 
@@ -302,6 +303,12 @@ export namespace Session {
           })
         }
       }
+      // kilocode_change start: copy todo rows so forked sessions preserve the active plan
+      const todos = Todo.get(input.sessionID)
+      if (todos.length > 0) {
+        Todo.update({ sessionID: session.id, todos })
+      }
+      // kilocode_change end
       return session
     },
   )
