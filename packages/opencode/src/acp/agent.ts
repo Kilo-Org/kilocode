@@ -272,10 +272,14 @@ export namespace ACP {
           const sessionId = session.id
 
           if (part.type === "tool") {
-            // kilocode_change: skip compacted parts entirely — toolStart emits a synthetic pending
-            // event for unseen IDs, so the guard must come before toolStart to avoid leaving
-            // ACP clients with a stuck pending tool call with no matching completed update
-            if (part.state.status === "completed" && part.state.time.compacted) return
+            // kilocode_change start: skip compacted parts but still rebuild plan state for todowrite
+            if (part.state.status === "completed" && part.state.time.compacted) {
+              if (part.tool === "todowrite") {
+                await this.sendPlan(sessionId, part.sessionID)
+              }
+              return
+            }
+            // kilocode_change end
             await this.toolStart(sessionId, part)
 
             switch (part.state.status) {
@@ -817,9 +821,14 @@ export namespace ACP {
 
       for (const part of message.parts) {
         if (part.type === "tool") {
-          // kilocode_change: skip compacted parts entirely before toolStart to avoid emitting
-          // a pending event that would never be resolved to completed in ACP history
-          if (part.state.status === "completed" && part.state.time.compacted) continue
+          // kilocode_change start: skip compacted parts but still rebuild plan state for todowrite
+          if (part.state.status === "completed" && part.state.time.compacted) {
+            if (part.tool === "todowrite") {
+              await this.sendPlan(sessionId, part.sessionID)
+            }
+            continue
+          }
+          // kilocode_change end
           await this.toolStart(sessionId, part)
           switch (part.state.status) {
             case "pending":
@@ -1093,6 +1102,33 @@ export namespace ACP {
       if (typeof output !== "string") return
       return output
     }
+
+    // kilocode_change start: read plan from DB so compacted todowrite parts (whose output was
+    // cleared by prune()) still rebuild the ACP plan on session load/fork
+    private async sendPlan(sessionId: string, storageID: string) {
+      const todos = Todo.get(storageID)
+      if (todos.length === 0) return
+      await this.connection
+        .sessionUpdate({
+          sessionId,
+          update: {
+            sessionUpdate: "plan",
+            entries: todos.map((todo) => {
+              const status: PlanEntry["status"] =
+                todo.status === "cancelled" ? "completed" : (todo.status as PlanEntry["status"])
+              return {
+                priority: "medium",
+                status,
+                content: todo.content,
+              }
+            }),
+          },
+        })
+        .catch((err) => {
+          log.error("failed to send plan for compacted todowrite", { error: err })
+        })
+    }
+    // kilocode_change end
 
     private async toolStart(sessionId: string, part: ToolPart) {
       if (this.toolStarts.has(part.callID)) return
