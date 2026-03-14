@@ -9,7 +9,7 @@
  * package.json must also be updated manually when removing this flag:
  * - contributes.commands[*].title — any command title containing "(NEW)"
  * - contributes.viewsContainers.activitybar[0].title
- * - contributes.views.kilo-code-sidebar[0].name
+ * - contributes.views.kilo-code-ActivityBar[0].name
  */
 const NEW_EXTENSION_IS_STILL_EXPERIMENTAL_SO_SHOW_EXTRA_TEXTS_TO_SHOW_DIFFERENCE = true
 
