@@ -162,7 +162,9 @@ export namespace ModelsDev {
         npm: "@kilocode/kilo-gateway",
         models: kiloModels,
       }
-      if (Object.keys(kiloModels).length === 0) {
+      const fetchStatus = (kiloModels as { __kiloFetchStatus?: "success" | "fallback" }).__kiloFetchStatus
+
+      if (fetchStatus === "fallback") {
         ModelCache.refresh("kilo", kiloFetchOptions).catch(() => {})
       }
     }
