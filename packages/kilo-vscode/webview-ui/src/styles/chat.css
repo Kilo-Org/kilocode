@@ -1236,8 +1236,8 @@
     all: unset;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
+    justify-content: flex-start;
+    gap: 6px;
     padding: 6px 8px;
     border-radius: 4px;
     cursor: pointer;
@@ -1247,13 +1247,6 @@
     &:hover {
       background-color: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
     }
-  }
-
-  [data-slot="permission-patterns-header-main"] {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    min-width: 0;
   }
 
   [data-slot="permission-patterns-header-title"] {
