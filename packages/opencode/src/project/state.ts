@@ -98,4 +98,9 @@ export namespace State {
     }
     await Promise.all(tasks)
   }
+
+  // kilocode_change - expose all registered keys for global config change fan-out
+  export function keys(): string[] {
+    return [...recordsByKey.keys()]
+  }
 }

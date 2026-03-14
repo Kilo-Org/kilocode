@@ -1503,21 +1503,28 @@ export namespace Config {
     // dispose all project config states since the change affects all projects.
     // Otherwise, just dispose the current project's config.
     const isSharedConfig = !configPath.startsWith(Instance.directory)
+    const affectedDirectories: string[] = []
     if (isSharedConfig) {
+      // Get all affected directories BEFORE disposing (disposal clears the keys)
+      affectedDirectories.push(...State.keys())
       await State.disposeAllEntries(initConfigState)
     } else {
+      affectedDirectories.push(Instance.directory)
       await State.disposeEntry(Instance.directory, initConfigState)
     }
-    // kilocode_change: Emit config changed event to notify UI/watchers
-    GlobalBus.emit("event", {
-      directory: Instance.directory,
-      payload: {
-        type: Event.Changed.type,
-        properties: {
-          directory: Instance.directory,
+    // kilocode_change: Emit config changed event for each affected directory
+    // This ensures all workspaces/worktrees refresh their config after a global/shared MCP toggle
+    for (const dir of affectedDirectories) {
+      GlobalBus.emit("event", {
+        directory: dir,
+        payload: {
+          type: Event.Changed.type,
+          properties: {
+            directory: dir,
+          },
         },
-      },
-    })
+      })
+    }
     return true
   }
 
