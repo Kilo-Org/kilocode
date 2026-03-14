@@ -10,6 +10,7 @@ import { SessionRevert } from "../../session/revert"
 import { SessionStatus } from "@/session/status"
 import { SessionSummary } from "@/session/summary"
 import { Todo } from "../../session/todo"
+import { LearnTracker } from "../../kilocode/learn-tracker" // kilocode_change
 import { Agent } from "../../agent/agent"
 import { Snapshot } from "@/snapshot"
 import { Log } from "../../util/log"
@@ -89,6 +90,37 @@ export const SessionRoutes = lazy(() =>
         return c.json(result)
       },
     )
+    // kilocode_change start
+    .get(
+      "/learn-aggregate",
+      describeRoute({
+        summary: "Get project learn aggregate",
+        description: "Retrieve the aggregated learning progress across all sessions for the current project.",
+        operationId: "session.learnAggregate",
+        responses: {
+          200: {
+            description: "Learn aggregate",
+            content: {
+              "application/json": {
+                schema: resolver(LearnTracker.Aggregate),
+              },
+            },
+          },
+          ...errors(400),
+        },
+      }),
+      validator(
+        "query",
+        z.object({
+          directory: z.string().optional(),
+        }),
+      ),
+      async (c) => {
+        const aggregate = await LearnTracker.getAggregate()
+        return c.json(aggregate)
+      },
+    )
+    // kilocode_change end
     .get(
       "/:sessionID",
       describeRoute({
@@ -182,6 +214,39 @@ export const SessionRoutes = lazy(() =>
         return c.json(todos)
       },
     )
+    // kilocode_change start
+    .get(
+      "/:sessionID/learn",
+      describeRoute({
+        summary: "Get learn state",
+        description:
+          "Retrieve the learning tracker state for a session, including comprehension checks, difficulty level, and summary.",
+        operationId: "session.learn",
+        responses: {
+          200: {
+            description: "Learn state",
+            content: {
+              "application/json": {
+                schema: resolver(LearnTracker.State),
+              },
+            },
+          },
+          ...errors(400),
+        },
+      }),
+      validator(
+        "param",
+        z.object({
+          sessionID: z.string().meta({ description: "Session ID" }),
+        }),
+      ),
+      async (c) => {
+        const sessionID = c.req.valid("param").sessionID
+        const state = await LearnTracker.get(sessionID)
+        return c.json(state)
+      },
+    )
+    // kilocode_change end
     .post(
       "/",
       describeRoute({

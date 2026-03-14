@@ -865,8 +865,8 @@ export function Prompt(props: PromptProps) {
                 }
                 if (keybind.match("app_exit", e)) {
                   if (store.prompt.input === "") {
-                    // kilocode_change start - double ctrl+c to exit, single ctrl+d exits immediately
-                    if (e.ctrl && e.name === "c") {
+                    // kilocode_change start - double ctrl+c/ctrl+d to exit
+                    if (e.ctrl && (e.name === "c" || e.name === "d")) {
                       setStore("exitPress", store.exitPress + 1)
                       setTimeout(() => {
                         setStore("exitPress", 0)
@@ -1027,6 +1027,25 @@ export function Prompt(props: PromptProps) {
                       <span style={{ fg: theme.warning, bold: true }}>{local.model.variant.current()}</span>
                     </text>
                   </Show>
+                  {/* kilocode_change start */}
+                  <Show
+                    when={
+                      local.agent.current().name === "learn" && props.sessionID
+                        ? sync.data.learn[props.sessionID]
+                        : undefined
+                    }
+                    keyed
+                  >
+                    {(learnState) => (
+                      <>
+                        <text fg={theme.textMuted}>·</text>
+                        <text fg={highlight()}>
+                          {learnState.level} · {learnState.checks.length} checks
+                        </text>
+                      </>
+                    )}
+                  </Show>
+                  {/* kilocode_change end */}
                 </box>
               </Show>
             </box>
@@ -1141,10 +1160,10 @@ export function Prompt(props: PromptProps) {
           </Show>
           <Show when={status().type !== "retry"}>
             <box gap={2} flexDirection="row">
-              {/* kilocode_change start - show "ctrl+c again to exit" hint */}
+              {/* kilocode_change start - show "press again to exit" hint */}
               <Show when={store.exitPress > 0}>
                 <text fg={theme.primary}>
-                  ctrl+c <span style={{ fg: theme.primary }}>again to exit</span>
+                  press <span style={{ fg: theme.primary }}>again to exit</span>
                 </text>
               </Show>
               {/* kilocode_change end */}

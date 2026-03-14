@@ -30,6 +30,7 @@ import { Truncate } from "./truncation"
 import { ApplyPatchTool } from "./apply_patch"
 import { Glob } from "../util/glob"
 import { pathToFileURL } from "url"
+import { LearnWriteTool, LearnReadTool } from "../kilocode/learn-tool" // kilocode_change
 
 export namespace ToolRegistry {
   const log = Log.create({ service: "tool.registry" })
@@ -117,6 +118,8 @@ export namespace ToolRegistry {
       CodeSearchTool,
       SkillTool,
       ApplyPatchTool,
+      LearnWriteTool, // kilocode_change
+      LearnReadTool, // kilocode_change
       ...(Flag.KILO_EXPERIMENTAL_LSP_TOOL ? [LspTool] : []),
       ...(config.experimental?.batch_tool === true ? [BatchTool] : []),
       PlanExitTool, // kilocode_change - always registered; gated by agent permission instead
@@ -145,6 +148,8 @@ export namespace ToolRegistry {
             return model.providerID === "opencode" || model.providerID === "kilo" || Flag.KILO_ENABLE_EXA
           }
           // kilocode_change end
+
+          if ((t.id === "learnwrite" || t.id === "learnread") && agent?.name !== "learn") return false // kilocode_change
 
           // use apply tool in same format as codex
           const usePatch =
