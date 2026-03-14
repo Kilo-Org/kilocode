@@ -93,6 +93,7 @@ export namespace SessionCompaction {
           part.state.time.compacted = Date.now()
           part.state.output = "" // kilocode_change: clear output from DB to prevent unbounded memory re-hydration
           part.state.attachments = [] // kilocode_change: also clear attachments (images/PDFs) from DB
+          if (part.state.metadata?.["output"]) part.state.metadata["output"] = "" // kilocode_change: clear nested metadata output (bash tool stores transcript here too)
           await Session.updatePart(part)
         }
       }
