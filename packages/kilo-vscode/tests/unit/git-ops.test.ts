@@ -1,4 +1,7 @@
 import { describe, it, expect } from "bun:test"
+import * as fs from "fs/promises"
+import * as os from "os"
+import * as nodePath from "path"
 import { GitOps } from "../../src/agent-manager/GitOps"
 
 function sleep(ms: number): Promise<void> {
@@ -7,6 +10,33 @@ function sleep(ms: number): Promise<void> {
 
 function ops(handler: (args: string[], cwd: string) => Promise<string>): GitOps {
   return new GitOps({ log: () => undefined, refreshMs: 120000, runGit: handler })
+}
+
+function runGit(cwd: string, args: string[]): string {
+  const result = Bun.spawnSync({
+    cmd: ["git", ...args],
+    cwd,
+    stderr: "pipe",
+    stdout: "pipe",
+    env: {
+      ...process.env,
+      GIT_TERMINAL_PROMPT: "0",
+    },
+  })
+  if (result.exitCode !== 0) {
+    throw new Error(Buffer.from(result.stderr).toString("utf8") || Buffer.from(result.stdout).toString("utf8"))
+  }
+  return Buffer.from(result.stdout).toString("utf8").trim()
+}
+
+async function withRepo(run: (cwd: string) => Promise<void>): Promise<void> {
+  const cwd = await fs.mkdtemp(nodePath.join(os.tmpdir(), "kilo-gitops-test-"))
+  try {
+    runGit(cwd, ["init"])
+    await run(cwd)
+  } finally {
+    await fs.rm(cwd, { recursive: true, force: true })
+  }
 }
 
 describe("GitOps", () => {
@@ -174,7 +204,7 @@ describe("GitOps", () => {
       await git.refreshRemote("/repo", "origin")
       const fetches = commands.filter((c) => c[0] === "fetch")
       expect(fetches.length).toBe(1)
-      expect(fetches[0][3]).toBe("origin")
+      expect(fetches[0]![3]).toBe("origin")
     })
 
     it("skips empty remote name", async () => {
@@ -221,91 +251,311 @@ describe("GitOps", () => {
     })
   })
 
-  describe("countMissingOriginCommits", () => {
-    it("counts commits ahead of upstream", async () => {
+  describe("aheadBehind", () => {
+    it("counts commits ahead and behind using the provided ref", async () => {
       const git = ops(async (args) => {
-        if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "@{upstream}") return "origin/main"
-        if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "origin/main"
-        if (args[0] === "branch") return "feature"
-        if (args[0] === "config") return "origin"
         if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
         if (args[0] === "fetch") return ""
-        if (args[0] === "rev-list") return "3"
+        if (args[0] === "rev-list" && args[1] === "--left-right") return "1\t3"
         return ""
       })
-      expect(await git.countMissingOriginCommits("/repo", "main")).toBe(3)
+      expect(await git.aheadBehind("/repo", "origin/main")).toEqual({ ahead: 3, behind: 1 })
     })
 
-    it("uses resolved remote for non-origin setups", async () => {
+    it("fetches the explicitly-provided remote before counting", async () => {
       const commands: string[][] = []
       const git = ops(async (args) => {
         commands.push(args)
-        // no upstream configured
-        if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "@{upstream}")
-          throw new Error("no upstream")
-        if (args[0] === "rev-parse" && args[3] === "@{upstream}") throw new Error("no upstream")
-        if (args[0] === "branch") return "feature"
-        // branch.feature.remote = myfork
-        if (args[0] === "config" && args[1] === "branch.feature.remote") return "myfork"
         if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
-        // myfork/feature exists
-        if (
-          args[0] === "rev-parse" &&
-          args[1] === "--verify" &&
-          args[2] === "--quiet" &&
-          args[3] === "refs/remotes/myfork/feature"
-        )
-          return "abc"
         if (args[0] === "fetch") return ""
-        if (args[0] === "rev-list") return "4"
+        if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t4"
         return ""
       })
-      expect(await git.countMissingOriginCommits("/repo", "main")).toBe(4)
+      expect(await git.aheadBehind("/repo", "myfork/main", "myfork")).toEqual({ ahead: 4, behind: 0 })
       const fetches = commands.filter((c) => c[0] === "fetch")
-      expect(fetches[0][3]).toBe("myfork")
+      expect(fetches.length).toBe(1)
+      expect(fetches[0]![3]).toBe("myfork")
     })
 
-    it("falls back to remote/parentBranch when no upstream and no remote branch", async () => {
+    it("skips fetch when no remote is provided", async () => {
+      const commands: string[][] = []
       const git = ops(async (args) => {
-        if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "@{upstream}")
-          throw new Error("no upstream")
-        if (args[0] === "rev-parse" && args[3] === "@{upstream}") throw new Error("no upstream")
-        if (args[0] === "branch") return "feature"
-        if (args[0] === "config") return "origin"
-        if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
-        if (
-          args[0] === "rev-parse" &&
-          args[1] === "--verify" &&
-          args[2] === "--quiet" &&
-          args[3] === "refs/remotes/origin/feature"
-        )
-          throw new Error("no ref")
-        if (
-          args[0] === "rev-parse" &&
-          args[1] === "--verify" &&
-          args[2] === "--quiet" &&
-          args[3] === "refs/remotes/origin/main"
-        )
-          return "abc"
-        if (args[0] === "fetch") return ""
-        if (args[0] === "rev-list") return "2"
+        commands.push(args)
+        if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t2"
         return ""
       })
-      expect(await git.countMissingOriginCommits("/repo", "main")).toBe(2)
+      expect(await git.aheadBehind("/repo", "main")).toEqual({ ahead: 2, behind: 0 })
+      const fetches = commands.filter((c) => c[0] === "fetch")
+      expect(fetches.length).toBe(0)
     })
 
-    it("returns zero when rev-list fails", async () => {
+    it("returns zeros when rev-list fails", async () => {
       const git = ops(async (args) => {
-        if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "@{upstream}") return "origin/main"
-        if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "origin/main"
-        if (args[0] === "branch") return "feature"
-        if (args[0] === "config") return "origin"
         if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
         if (args[0] === "fetch") return ""
         if (args[0] === "rev-list") throw new Error("fatal")
         return ""
       })
-      expect(await git.countMissingOriginCommits("/repo", "main")).toBe(0)
+      expect(await git.aheadBehind("/repo", "origin/main")).toEqual({ ahead: 0, behind: 0 })
+    })
+
+    it("uses the ref directly without double-prefixing", async () => {
+      const refs: string[] = []
+      const git = ops(async (args) => {
+        if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
+        if (args[0] === "fetch") return ""
+        if (args[0] === "rev-list" && args[1] === "--left-right") {
+          refs.push(args[3]!)
+          return "0\t1"
+        }
+        return ""
+      })
+      const result = await git.aheadBehind("/repo", "origin/main")
+      expect(result).toEqual({ ahead: 1, behind: 0 })
+      expect(refs[0]).toBe("origin/main...HEAD")
+    })
+  })
+
+  describe("buildWorktreePatch", () => {
+    it("includes tracked and untracked changes", async () => {
+      await withRepo(async (cwd) => {
+        const git = new GitOps({ log: () => undefined })
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "one\n", "utf8")
+        await fs.writeFile(nodePath.join(cwd, "b.txt"), "one\n", "utf8")
+        runGit(cwd, ["add", "-A"])
+        runGit(cwd, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "init"])
+
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "two\n", "utf8")
+        await fs.writeFile(nodePath.join(cwd, "b.txt"), "two\n", "utf8")
+        await fs.writeFile(nodePath.join(cwd, "c.txt"), "new\n", "utf8")
+
+        const branch = runGit(cwd, ["branch", "--show-current"]) || "HEAD"
+        const patch = await git.buildWorktreePatch(cwd, branch)
+
+        expect(patch).toContain("a/a.txt")
+        expect(patch).toContain("a/b.txt")
+        expect(patch).toContain("a/c.txt")
+      })
+    })
+
+    it("limits patch to selected files", async () => {
+      await withRepo(async (cwd) => {
+        const git = new GitOps({ log: () => undefined })
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "one\n", "utf8")
+        await fs.writeFile(nodePath.join(cwd, "b.txt"), "one\n", "utf8")
+        runGit(cwd, ["add", "-A"])
+        runGit(cwd, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "init"])
+
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "two\n", "utf8")
+        await fs.writeFile(nodePath.join(cwd, "b.txt"), "two\n", "utf8")
+        await fs.writeFile(nodePath.join(cwd, "c.txt"), "new\n", "utf8")
+
+        const branch = runGit(cwd, ["branch", "--show-current"]) || "HEAD"
+        const patch = await git.buildWorktreePatch(cwd, branch, ["a.txt", "c.txt"])
+
+        expect(patch).toContain("a/a.txt")
+        expect(patch).toContain("a/c.txt")
+        expect(patch).not.toContain("a/b.txt")
+      })
+    })
+
+    it("filters absolute paths and .. traversal from selectedFiles", async () => {
+      await withRepo(async (cwd) => {
+        const git = new GitOps({ log: () => undefined })
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "one\n", "utf8")
+        await fs.writeFile(nodePath.join(cwd, "b.txt"), "one\n", "utf8")
+        runGit(cwd, ["add", "-A"])
+        runGit(cwd, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "init"])
+
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "two\n", "utf8")
+        await fs.writeFile(nodePath.join(cwd, "b.txt"), "two\n", "utf8")
+
+        const branch = runGit(cwd, ["branch", "--show-current"]) || "HEAD"
+        const patch = await git.buildWorktreePatch(cwd, branch, ["a.txt", "/etc/passwd", "../../../secret", "", "  "])
+
+        expect(patch).toContain("a/a.txt")
+        expect(patch).not.toContain("b.txt")
+        expect(patch).not.toContain("passwd")
+        expect(patch).not.toContain("secret")
+      })
+    })
+  })
+
+  describe("checkApplyPatch", () => {
+    it("returns ok for a clean patch", async () => {
+      await withRepo(async (cwd) => {
+        const git = new GitOps({ log: () => undefined })
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "one\n", "utf8")
+        runGit(cwd, ["add", "-A"])
+        runGit(cwd, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "init"])
+
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "two\n", "utf8")
+        const branch = runGit(cwd, ["branch", "--show-current"]) || "HEAD"
+        const patch = await git.buildWorktreePatch(cwd, branch)
+
+        // Reset the file so the patch can apply cleanly to the original state
+        runGit(cwd, ["checkout", "--", "a.txt"])
+        const result = await git.checkApplyPatch(cwd, patch)
+        expect(result.ok).toBe(true)
+      })
+    })
+
+    it("returns not-ok for an empty patch", async () => {
+      const git = new GitOps({ log: () => undefined })
+      const result = await git.checkApplyPatch("/tmp", "")
+      expect(result.ok).toBe(true)
+      expect(result.message).toBe("No changes to apply")
+    })
+
+    it("reports conflicts when patch context does not match", async () => {
+      await withRepo(async (cwd) => {
+        const git = new GitOps({ log: () => undefined })
+        // File content that does NOT match the patch context
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "completely different content\n", "utf8")
+        runGit(cwd, ["add", "-A"])
+        runGit(cwd, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "init"])
+
+        // Craft a patch whose context lines don't exist in the file
+        // and has no full-index blob SHAs, so --3way can't recover
+        const patch = [
+          "diff --git a/a.txt b/a.txt",
+          "--- a/a.txt",
+          "+++ b/a.txt",
+          "@@ -1,3 +1,3 @@",
+          " line1",
+          "-line2",
+          "+patched",
+          " line3",
+          "",
+        ].join("\n")
+
+        const result = await git.checkApplyPatch(cwd, patch)
+        expect(result.ok).toBe(false)
+        expect(result.conflicts.length).toBeGreaterThan(0)
+        expect(result.message).toBeTruthy()
+      })
+    })
+  })
+
+  describe("applyPatch", () => {
+    it("applies changes to the working tree", async () => {
+      await withRepo(async (cwd) => {
+        const git = new GitOps({ log: () => undefined })
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "one\n", "utf8")
+        runGit(cwd, ["add", "-A"])
+        runGit(cwd, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "init"])
+
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "two\n", "utf8")
+        const branch = runGit(cwd, ["branch", "--show-current"]) || "HEAD"
+        const patch = await git.buildWorktreePatch(cwd, branch)
+
+        runGit(cwd, ["checkout", "--", "a.txt"])
+        const result = await git.applyPatch(cwd, patch)
+        expect(result.ok).toBe(true)
+
+        const content = await fs.readFile(nodePath.join(cwd, "a.txt"), "utf8")
+        expect(content).toBe("two\n")
+      })
+    })
+
+    it("returns empty patch as success", async () => {
+      const git = new GitOps({ log: () => undefined })
+      const result = await git.applyPatch("/tmp", "")
+      expect(result.ok).toBe(true)
+      expect(result.message).toBe("No changes to apply")
+    })
+
+    it("returns conflicts when applying a conflicting patch", async () => {
+      await withRepo(async (cwd) => {
+        const git = new GitOps({ log: () => undefined })
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "line1\nline2\nline3\n", "utf8")
+        runGit(cwd, ["add", "-A"])
+        runGit(cwd, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "init"])
+
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "line1\npatched\nline3\n", "utf8")
+        const branch = runGit(cwd, ["branch", "--show-current"]) || "HEAD"
+        const patch = await git.buildWorktreePatch(cwd, branch)
+
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "line1\ndifferent\nline3\n", "utf8")
+        runGit(cwd, ["add", "-A"])
+        runGit(cwd, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "diverge"])
+
+        const result = await git.applyPatch(cwd, patch)
+        expect(result.ok).toBe(false)
+        expect(result.conflicts.length).toBeGreaterThan(0)
+      })
+    })
+  })
+
+  describe("workingTreeStats", () => {
+    it("parses numstat for tracked changes", async () => {
+      const git = ops(async (args) => {
+        if (args[0] === "diff") return "3\t1\tsrc/a.ts\n0\t5\tsrc/b.ts"
+        if (args[0] === "ls-files") return ""
+        return ""
+      })
+      const stats = await git.workingTreeStats("/repo")
+      expect(stats).toEqual({ files: 2, additions: 3, deletions: 6 })
+    })
+
+    it("treats binary numstat entries as zero additions and deletions", async () => {
+      const git = ops(async (args) => {
+        if (args[0] === "diff") return "2\t1\ttext.ts\n-\t-\timage.png"
+        if (args[0] === "ls-files") return ""
+        return ""
+      })
+      const stats = await git.workingTreeStats("/repo")
+      expect(stats).toEqual({ files: 2, additions: 2, deletions: 1 })
+    })
+
+    it("returns zeros for a clean working tree", async () => {
+      const git = ops(async (args) => {
+        if (args[0] === "diff") return ""
+        if (args[0] === "ls-files") return ""
+        return ""
+      })
+      const stats = await git.workingTreeStats("/repo")
+      expect(stats).toEqual({ files: 0, additions: 0, deletions: 0 })
+    })
+
+    it("returns zeros when git commands fail", async () => {
+      const git = ops(async () => {
+        throw new Error("not a git repo")
+      })
+      const stats = await git.workingTreeStats("/repo")
+      expect(stats).toEqual({ files: 0, additions: 0, deletions: 0 })
+    })
+
+    it("counts untracked file lines as additions", async () => {
+      await withRepo(async (cwd) => {
+        const git = new GitOps({ log: () => undefined })
+        await fs.writeFile(nodePath.join(cwd, "init.txt"), "x\n", "utf8")
+        runGit(cwd, ["add", "-A"])
+        runGit(cwd, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "init"])
+
+        await fs.writeFile(nodePath.join(cwd, "new.txt"), "a\nb\nc", "utf8")
+
+        const stats = await git.workingTreeStats(cwd)
+        expect(stats.files).toBe(1)
+        expect(stats.additions).toBe(3)
+      })
+    })
+
+    it("skips untracked files larger than 1MB", async () => {
+      await withRepo(async (cwd) => {
+        const git = new GitOps({ log: () => undefined })
+        await fs.writeFile(nodePath.join(cwd, "init.txt"), "x\n", "utf8")
+        runGit(cwd, ["add", "-A"])
+        runGit(cwd, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "init"])
+
+        await fs.writeFile(nodePath.join(cwd, "huge.bin"), Buffer.alloc(1_000_001, 0x41))
+        await fs.writeFile(nodePath.join(cwd, "small.txt"), "hello", "utf8")
+
+        const stats = await git.workingTreeStats(cwd)
+        expect(stats.files).toBe(2)
+        // small.txt: "hello".split("\n").length = 1, huge.bin: skipped (0)
+        expect(stats.additions).toBe(1)
+      })
     })
   })
 })

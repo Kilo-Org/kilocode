@@ -18,9 +18,12 @@ import { Vcs } from "../project/vcs"
 import { Agent } from "../agent/agent"
 import { Skill } from "../skill/skill"
 import { Auth } from "../auth"
+import { ModelCache } from "../provider/model-cache" // kilocode_change
 import { Flag } from "../flag/flag"
 import { Command } from "../command"
 import { Global } from "../global"
+import { WorkspaceContext } from "../control-plane/workspace-context"
+import { WorkspaceRouterMiddleware } from "../control-plane/workspace-router-middleware"
 import { ProjectRoutes } from "./routes/project"
 import { SessionRoutes } from "./routes/session"
 import { PtyRoutes } from "./routes/pty"
@@ -43,6 +46,7 @@ import { websocket } from "hono/bun"
 import { HTTPException } from "hono/http-exception"
 import { errors } from "./error"
 import { CommitMessageRoutes } from "./routes/commit-message"
+import { EnhancePromptRoutes } from "./routes/enhance-prompt" // kilocode_change
 import { QuestionRoutes } from "./routes/question"
 import { PermissionRoutes } from "./routes/permission"
 import { GlobalRoutes } from "./routes/global"
@@ -166,6 +170,9 @@ export namespace Server {
             const providerID = c.req.valid("param").providerID
             const info = c.req.valid("json")
             await Auth.set(providerID, info)
+            // kilocode_change start - invalidate provider/model cache after auth change
+            ModelCache.clear(providerID)
+            // kilocode_change end
             return c.json(true)
           },
         )
@@ -196,11 +203,15 @@ export namespace Server {
           async (c) => {
             const providerID = c.req.valid("param").providerID
             await Auth.remove(providerID)
+            // kilocode_change start - invalidate provider/model cache after auth removal
+            ModelCache.clear(providerID)
+            // kilocode_change end
             return c.json(true)
           },
         )
         .use(async (c, next) => {
           if (c.req.path === "/log") return next()
+          const workspaceID = c.req.query("workspace") || c.req.header("x-opencode-workspace")
           const raw = c.req.query("directory") || c.req.header("x-opencode-directory") || process.cwd()
           const directory = (() => {
             try {
@@ -209,14 +220,21 @@ export namespace Server {
               return raw
             }
           })()
-          return Instance.provide({
-            directory,
-            init: InstanceBootstrap,
+
+          return WorkspaceContext.provide({
+            workspaceID,
             async fn() {
-              return next()
+              return Instance.provide({
+                directory,
+                init: InstanceBootstrap,
+                async fn() {
+                  return next()
+                },
+              })
             },
           })
         })
+        .use(WorkspaceRouterMiddleware)
         .get(
           "/doc",
           openAPIRouteHandler(app, {
@@ -230,7 +248,15 @@ export namespace Server {
             },
           }),
         )
-        .use(validator("query", z.object({ directory: z.string().optional() })))
+        .use(
+          validator(
+            "query",
+            z.object({
+              directory: z.string().optional(),
+              workspace: z.string().optional(),
+            }),
+          ),
+        )
         .route("/project", ProjectRoutes())
         .route("/pty", PtyRoutes())
         .route("/config", ConfigRoutes())
@@ -241,6 +267,7 @@ export namespace Server {
         .route("/provider", ProviderRoutes())
         .route("/telemetry", TelemetryRoutes()) // kilocode_change
         .route("/commit-message", CommitMessageRoutes()) // kilocode_change
+        .route("/enhance-prompt", EnhancePromptRoutes()) // kilocode_change
         // kilocode_change start - Kilo Gateway routes
         .route(
           "/kilo",
@@ -261,6 +288,7 @@ export namespace Server {
             Bus, // kilocode_change
             SessionCreatedEvent: Session.Event.Created, // kilocode_change
             Identifier, // kilocode_change
+            ModelCache, // kilocode_change
           }),
         )
         // kilocode_change end

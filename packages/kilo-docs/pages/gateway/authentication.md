@@ -118,4 +118,4 @@ The gateway accepts the following headers:
 | `X-KiloCode-OrganizationId` | No                      | Organization context for org-scoped requests |
 | `X-KiloCode-TaskId`         | No                      | Task identifier for prompt cache keying      |
 | `X-KiloCode-Version`        | No                      | Client version string                        |
-| `x-kilocode-mode`           | No                      | Mode hint for `kilo/auto` model routing      |
+| `x-kilocode-mode`           | No                      | Mode hint for `kilo-auto` model routing      |

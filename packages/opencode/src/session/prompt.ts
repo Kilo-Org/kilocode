@@ -1,6 +1,7 @@
 import path from "path"
 import os from "os"
 import fs from "fs/promises"
+import { StringDecoder } from "string_decoder" // kilocode_change - fix UTF-8 multi-byte split
 import z from "zod"
 import { Filesystem } from "../util/filesystem"
 import { Identifier } from "../id/id"
@@ -578,6 +579,7 @@ export namespace SessionPrompt {
           abort,
           sessionID,
           auto: task.auto,
+          overflow: task.overflow,
         })
         if (result === "stop") break
         continue
@@ -761,6 +763,7 @@ export namespace SessionPrompt {
           agent: lastUser.agent,
           model: lastUser.model,
           auto: true,
+          overflow: !processor.message.finish,
         })
       }
       continue
@@ -768,7 +771,7 @@ export namespace SessionPrompt {
     SessionCompaction.prune({ sessionID })
     // kilocode_change start
     finished = true
-    // kilocode_change end
+    // Return the stored interrupted assistant turn before surfacing AbortError.
     for await (const item of MessageV2.stream(sessionID)) {
       if (item.info.role === "user") continue
       const queued = state()[sessionID]?.callbacks ?? []
@@ -777,6 +780,8 @@ export namespace SessionPrompt {
       }
       return item
     }
+    if (abort.aborted) abort.throwIfAborted()
+    // kilocode_change end
     throw new Error("Impossible")
   })
 
@@ -1692,12 +1697,17 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         ...shellEnv.env,
         TERM: "dumb",
       },
+      windowsHide: true, // kilocode_change - prevent CMD window flash on Windows
     })
 
     let output = ""
+    // kilocode_change start - use StringDecoder to handle multi-byte UTF-8 characters split across chunks
+    // separate decoder per stream so partial bytes from one pipe don't corrupt the other
+    const stdoutDecoder = new StringDecoder("utf8")
+    const stderrDecoder = new StringDecoder("utf8")
 
     proc.stdout?.on("data", (chunk) => {
-      output += chunk.toString()
+      output += stdoutDecoder.write(chunk)
       if (part.state.status === "running") {
         part.state.metadata = {
           output: output,
@@ -1708,7 +1718,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
     })
 
     proc.stderr?.on("data", (chunk) => {
-      output += chunk.toString()
+      output += stderrDecoder.write(chunk)
       if (part.state.status === "running") {
         part.state.metadata = {
           output: output,
@@ -1717,6 +1727,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         Session.updatePart(part)
       }
     })
+    // kilocode_change end
 
     let aborted = false
     let exited = false
@@ -1742,6 +1753,10 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         resolve()
       })
     })
+
+    // kilocode_change - flush any trailing buffered bytes from decoders
+    output += stdoutDecoder.end()
+    output += stderrDecoder.end()
 
     if (aborted) {
       output += "\n\n" + ["<metadata>", "User aborted the command", "</metadata>"].join("\n")
@@ -1991,7 +2006,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       tools: {},
       model,
       abort: new AbortController().signal,
-      sessionID: input.session.id,
+      sessionID: `title-${input.session.id}`, // kilocode_change - separate taskID to prevent small-model leak (#6552)
       retries: 2,
       messages: [
         {

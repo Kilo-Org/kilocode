@@ -25,13 +25,13 @@ import { AttachCommand } from "./cli/cmd/tui/attach"
 import { TuiThreadCommand } from "./cli/cmd/tui/thread"
 import { AcpCommand } from "./cli/cmd/acp"
 import { EOL } from "os"
-import { WebCommand } from "./cli/cmd/web"
+// import { WebCommand } from "./cli/cmd/web" // kilocode_change (Disabled unsupported opencode web UI)
 import { PrCommand } from "./cli/cmd/pr"
 import { SessionCommand } from "./cli/cmd/session"
 // kilocode_change start - Import telemetry, instance disposal, and legacy migration
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Instance } from "./project/instance" // kilocode_change
-import { migrateLegacyKiloAuth, ENV_FEATURE } from "@kilocode/kilo-gateway"
+import { migrateLegacyKiloAuth, ENV_FEATURE, ENV_VERSION } from "@kilocode/kilo-gateway"
 
 // kilocode_change - set feature for tracking. 'serve' is spawned by other services
 // (extension, cloud) which set their own KILOCODE_FEATURE env var. Direct CLI use
@@ -40,6 +40,11 @@ import { migrateLegacyKiloAuth, ENV_FEATURE } from "@kilocode/kilo-gateway"
 if (!process.env[ENV_FEATURE]) {
   const isServe = process.argv.includes("serve")
   process.env[ENV_FEATURE] = isServe ? "unknown" : "cli"
+}
+
+// kilocode_change - set version so kilo-gateway can include it in the editor name header
+if (!process.env[ENV_VERSION]) {
+  process.env[ENV_VERSION] = Installation.VERSION
 }
 import { Config } from "./config/config"
 import { Auth } from "./auth"
@@ -91,7 +96,8 @@ let cli = yargs(hideBin(process.argv))
     })
 
     process.env.AGENT = "1"
-    process.env.OPENCODE = "1"
+    process.env.KILO = "1"
+    process.env.KILO_PID = String(process.pid)
 
     Log.Default.info("opencode", {
       version: Installation.VERSION,
@@ -173,7 +179,7 @@ let cli = yargs(hideBin(process.argv))
   .command(UpgradeCommand)
   .command(UninstallCommand)
   .command(ServeCommand)
-  .command(WebCommand)
+  // .command(WebCommand) // kilocode_change (Disabled unsupported opencode web UI)
   .command(ModelsCommand)
   .command(StatsCommand)
   .command(ExportCommand)

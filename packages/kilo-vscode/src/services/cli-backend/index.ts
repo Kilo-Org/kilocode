@@ -1,43 +1,6 @@
 // Main exports for cli-backend services
-// Classes will be exported here as they are created in subsequent phases
 
-export type {
-  SessionInfo,
-  SessionStatusInfo,
-  MessageInfo,
-  MessagePart,
-  TokenUsage,
-  ToolState,
-  PermissionRequest,
-  SSEEvent,
-  TodoItem,
-  AgentInfo,
-  ServerConfig,
-  KilocodeOrganization,
-  KilocodeProfile,
-  KilocodeBalance,
-  ProfileData,
-  ProviderModel,
-  Provider,
-  ProviderListResponse,
-  ModelSelection,
-  McpStatus,
-  McpLocalConfig,
-  McpRemoteConfig,
-  McpConfig,
-  Config,
-  KilocodeNotification,
-  KilocodeNotificationAction,
-  CloudSessionData,
-} from "./types"
-
-export { ServerManager } from "./server-manager"
-export type { ServerInstance } from "./server-manager"
-
-export { HttpClient } from "./http-client"
-
-export { SSEClient } from "./sse-client"
-export type { SSEEventHandler, SSEErrorHandler, SSEStateHandler } from "./sse-client"
+export type { KilocodeNotification } from "./types"
 
 export { KiloConnectionService } from "./connection-service"
-export type { ConnectionState } from "./connection-service"
+export { ServerStartupError } from "./server-manager"

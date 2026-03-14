@@ -43,6 +43,8 @@ export const dict = {
   "command.language.set": "Use language: {{language}}",
 
   "command.session.new": "New session",
+  "command.session.new.task": "New task",
+  "command.session.show.changes": "Show Changes",
   "command.file.open": "Open file",
   "command.tab.close": "Close tab",
   "command.context.addSelection": "Add selection to context",
@@ -230,6 +232,10 @@ export const dict = {
   "prompt.attachment.remove": "Remove attachment",
   "prompt.action.send": "Send",
   "prompt.action.stop": "Stop",
+  "prompt.action.enhance": "Enhance prompt",
+  "prompt.action.resetModel": "Reset model to default",
+  "prompt.action.enhanceDescription":
+    "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.",
 
   "prompt.toast.pasteUnsupported.title": "Unsupported paste",
   "prompt.toast.pasteUnsupported.description": "Only images or PDFs can be pasted here.",
@@ -405,6 +411,17 @@ export const dict = {
 
   "error.globalSync.connectFailed": "Could not connect to server. Is there a server running at `{{url}}`?",
 
+  "error.startup.title": "Server connection failed",
+
+  "error.paidModel.title": "You need to sign in to use this model",
+  "error.paidModel.description":
+    "Sign in or create an account to access over 500 models, use credits at cost, or bring your own key.",
+  "error.paidModel.action": "Sign In",
+  "error.promotionLimit.title": "You need to sign up to keep going",
+  "error.promotionLimit.description":
+    "Sign up for free to continue and explore 500 other models. Takes 2 minutes, no credit card required. Or come back later.",
+  "error.promotionLimit.action": "Sign Up",
+
   "error.chain.unknown": "Unknown error",
   "error.chain.causedBy": "Caused by:",
   "error.chain.apiError": "API error",
@@ -428,6 +445,11 @@ export const dict = {
 
   "notification.permission.title": "Permission required",
   "notification.permission.description": "{{sessionTitle}} in {{projectName}} needs permission",
+  "ui.permission.permissionRules": "Permission rules",
+  "ui.permission.pattern.addToAllowed": "Add to allowed list",
+  "ui.permission.pattern.removeFromAllowed": "Remove from allowed list",
+  "ui.permission.pattern.addToDenied": "Add to denied list",
+  "ui.permission.pattern.removeFromDenied": "Remove from denied list",
   "notification.question.title": "Question",
   "notification.question.description": "{{sessionTitle}} in {{projectName}} has a question",
   "notification.action.goToSession": "Go to session",
@@ -661,6 +683,8 @@ export const dict = {
 
   "settings.providers.title": "Providers",
   "settings.providers.description": "Provider settings will be configurable here.",
+  "settings.providers.betaNotice":
+    "Currently only the Kilo Gateway provider can be configured in the settings interface. Support for configuring other providers is coming soon during the beta period. In the interim you can configure providers using the CLI or config file. We're committed to keeping Kilo open, no lock-in.",
   "settings.providers.section.connected": "Connected providers",
   "settings.providers.connected.empty": "No connected providers",
   "settings.providers.section.popular": "Popular providers",
@@ -729,10 +753,16 @@ export const dict = {
   "session.empty": "No sessions yet. Click + to start a new conversation.",
   "session.cloud.repoOnly": "Only this repository",
   "session.cloud.import": "Import from cloud",
+  "feedback.button": "Feedback & Support",
+  "feedback.dialog.message": "We'd love to hear your feedback or help with any issues you're experiencing.",
+  "feedback.dialog.github": "Report an issue on GitHub",
+  "feedback.dialog.discord": "Join our Discord community",
+  "feedback.dialog.support": "Customer Support",
   "session.cloud.import.title": "Import from cloud",
   "session.cloud.import.placeholder": "Session ID, URL, or kilo import command",
   "session.cloud.import.button": "Import",
   "session.cloud.import.invalid": "Invalid session ID format",
+  "session.cloud.import.legacy": "This appears to be a legacy session that is no longer supported.",
   "session.cloud.import.failed": "Failed to import cloud session",
 
   "workspace.new": "New workspace",
@@ -815,6 +845,7 @@ export const dict = {
 
   "prompt.placeholder.connecting": "Connecting to server...",
   "prompt.placeholder.default": "Type a message... (Enter to send, Shift+Enter for new line)",
+  "prompt.placeholder.error": "",
 
   "context.usage.sessionCost": "Session cost",
 
@@ -871,7 +902,6 @@ export const dict = {
   "settings.language.current": "Current:",
 
   "common.add": "Add",
-  "common.default": "Default",
   "common.choose": "Choose…",
 
   "settings.notImplemented": "This section is not implemented yet.",
@@ -922,7 +952,10 @@ export const dict = {
 
   "settings.agentBehaviour.defaultAgent.title": "Default Agent",
   "settings.agentBehaviour.defaultAgent.description": "Agent to use when none is specified",
+  "settings.agentBehaviour.availableAgents": "Available Agents",
   "settings.agentBehaviour.selectAgent": "Select an agent to configure…",
+  "settings.agentBehaviour.selectAgent.title": "Agent",
+  "settings.agentBehaviour.selectAgent.description": "Select an agent to configure…",
   "settings.agentBehaviour.modelOverride.title": "Model Override",
   "settings.agentBehaviour.modelOverride.description": "Override the default model for this agent",
   "settings.agentBehaviour.prompt.title": "Custom Prompt",
@@ -933,6 +966,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Nucleus sampling parameter (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Max Steps",
   "settings.agentBehaviour.maxSteps.description": "Maximum agentic iterations",
+  "settings.agentBehaviour.discoveredSkills": "Discovered Skills",
+  "settings.agentBehaviour.noSkillsFound":
+    "No skills discovered. Add skill folder paths or URLs below to make skills available.",
   "settings.agentBehaviour.skillPaths": "Skill Folder Paths",
   "settings.agentBehaviour.skillUrls": "Skill URLs",
   "settings.agentBehaviour.instructionFiles": "Additional Instruction Files",
@@ -942,26 +978,38 @@ export const dict = {
   "settings.agentBehaviour.workflowsPlaceholder": "Workflows are managed via workflow files in your workspace.",
   "settings.agentBehaviour.notImplemented": "Not yet implemented.",
 
-  "settings.autoApprove.setAll": "Set all permissions",
+  "settings.autoApprove.description":
+    "Define how tools are allowed to run. Most tools default to Allow. doom_loop and external_directory default to Ask.",
   "settings.autoApprove.level.allow": "Allow",
   "settings.autoApprove.level.ask": "Ask",
   "settings.autoApprove.level.deny": "Deny",
-  "settings.autoApprove.tool.read": "Read file contents",
-  "settings.autoApprove.tool.edit": "Edit or create files",
-  "settings.autoApprove.tool.glob": "Find files by pattern",
-  "settings.autoApprove.tool.grep": "Search file contents",
-  "settings.autoApprove.tool.list": "List directory contents",
-  "settings.autoApprove.tool.bash": "Execute shell commands",
-  "settings.autoApprove.tool.task": "Create sub-agent tasks",
-  "settings.autoApprove.tool.skill": "Execute skills",
-  "settings.autoApprove.tool.lsp": "Language server operations",
-  "settings.autoApprove.tool.todoread": "Read todo lists",
-  "settings.autoApprove.tool.todowrite": "Write todo lists",
-  "settings.autoApprove.tool.webfetch": "Fetch web pages",
-  "settings.autoApprove.tool.websearch": "Search the web",
-  "settings.autoApprove.tool.codesearch": "Search codebase",
-  "settings.autoApprove.tool.external_directory": "Access files outside workspace",
-  "settings.autoApprove.tool.doom_loop": "Continue after repeated failures",
+  "settings.autoApprove.wildcardLabel.commands": "All commands (*)",
+  "settings.autoApprove.wildcardLabel.paths": "All paths (*)",
+  "settings.autoApprove.exceptions": "Exceptions",
+  "settings.autoApprove.addCommand": "Add command",
+  "settings.autoApprove.addPath": "Add path",
+  "settings.autoApprove.placeholder.command": "e.g. git *",
+  "settings.autoApprove.placeholder.path": "e.g. *.env",
+  "settings.autoApprove.tool.external_directory":
+    "Access files outside workspace. Triggered when accessing files outside the current project directory.",
+  "settings.autoApprove.tool.bash": "Run terminal commands. Allows execution of shell commands (e.g., git status).",
+  "settings.autoApprove.tool.read": "Read files. Allows the agent to read files matching the specified path.",
+  "settings.autoApprove.tool.edit":
+    "Modify files. Allows the agent to create or edit files, including patches and multi-file updates.",
+  "settings.autoApprove.tool.glob":
+    "Match files by pattern. Allows file matching using glob patterns (e.g., src/**/*.ts).",
+  "settings.autoApprove.tool.grep": "Search file contents. Allows regex-based search inside files.",
+  "settings.autoApprove.tool.list": "List directory contents. Allows viewing files and folders within a directory.",
+  "settings.autoApprove.tool.task": "Launch sub-agents. Allows starting specialized sub-agents for specific tasks.",
+  "settings.autoApprove.tool.skill": "Load skills. Allows loading predefined skills by name.",
+  "settings.autoApprove.tool.lsp":
+    "Query language server. Allows running language server queries for code intelligence.",
+  "settings.autoApprove.tool.todoreadwrite": "Manage task list. Allows reading and updating the internal task list.",
+  "settings.autoApprove.tool.webfetch": "Fetch a URL. Allows retrieving content from a specific URL.",
+  "settings.autoApprove.tool.websearchcodesearch":
+    "Search web or code. Allows performing external web or code searches.",
+  "settings.autoApprove.tool.doom_loop":
+    "Prevent repeated identical actions. Triggered when the same tool call repeats with identical input.",
 
   "settings.checkpoints.enable.title": "Enable Snapshots",
   "settings.checkpoints.enable.description": "Create checkpoints before file edits so you can restore previous states",
@@ -984,6 +1032,9 @@ export const dict = {
   "settings.providers.defaultModel.description": "Primary model for conversations",
   "settings.providers.smallModel.title": "Small Model",
   "settings.providers.smallModel.description": "Lightweight model for title generation and other quick tasks",
+  "settings.providers.modeModels": "Model per Mode",
+  "settings.providers.modeModels.description":
+    "Override the default model for specific modes. If not set, the global default model is used.",
   "settings.providers.disabled": "Disabled Providers",
   "settings.providers.disabled.description": "Providers to hide from the provider list",
   "settings.providers.enabled": "Enabled Providers (Allowlist)",
@@ -994,119 +1045,69 @@ export const dict = {
 
   "profile.personalAccount": "Personal Account",
 
-  // Agent Manager
-  "agentManager.local": "local",
-  "agentManager.section.worktrees": "WORKTREES",
-  "agentManager.section.sessions": "SESSIONS",
-  "agentManager.notGitRepo": "Not a git repository",
-
-  "agentManager.worktree.settings": "Worktree settings",
-  "agentManager.worktree.new": "New Worktree",
-  "agentManager.worktree.setupScript": "Worktree Setup Script",
-  "agentManager.worktree.delete": "Delete worktree",
-  "agentManager.worktree.doubleClickRename": "Double-click to rename",
-  "agentManager.worktree.versions": "{{count}} versions",
-  "agentManager.worktree.advancedOptions": "Advanced worktree options",
-
-  "agentManager.hoverCard.branch": "BRANCH",
-  "agentManager.hoverCard.base": "Base",
-  "agentManager.hoverCard.sessions": "Sessions",
-  "agentManager.hoverCard.changes": "Changes",
-  "agentManager.hoverCard.commits": "Commits",
-
-  "agentManager.session.new": "New session",
-  "agentManager.session.untitled": "Untitled",
-  "agentManager.session.newSession": "New Session",
-  "agentManager.session.openInWorktree": "Open in worktree",
-  "agentManager.session.readonly": "Read-only session",
-  "agentManager.session.noSessions": "No sessions open",
-
-  "agentManager.tab.close": "Close",
-  "agentManager.tab.closeTab": "Close tab",
-  "agentManager.tab.terminal": "Terminal",
-  "agentManager.tab.openTerminal": "Open Terminal",
-
-  "agentManager.setup.failed": "Workspace setup failed",
-  "agentManager.setup.settingUp": "Setting up workspace",
-
-  "agentManager.shortcuts.title": "Keyboard Shortcuts",
-  "agentManager.shortcuts.category.sidebar": "Sidebar",
-  "agentManager.shortcuts.category.tabs": "Tabs",
-  "agentManager.shortcuts.category.terminal": "Terminal",
-  "agentManager.shortcuts.category.global": "Global",
-  "agentManager.shortcuts.previousItem": "Previous item",
-  "agentManager.shortcuts.nextItem": "Next item",
-  "agentManager.shortcuts.newWorktree": "New worktree",
-  "agentManager.shortcuts.advancedWorktree": "Advanced worktree",
-  "agentManager.shortcuts.deleteWorktree": "Delete worktree",
-  "agentManager.shortcuts.previousTab": "Previous tab",
-  "agentManager.shortcuts.nextTab": "Next tab",
-  "agentManager.shortcuts.newTab": "New tab",
-  "agentManager.shortcuts.closeTab": "Close tab",
-  "agentManager.shortcuts.toggleTerminal": "Toggle terminal",
-  "agentManager.shortcuts.focusPanel": "Focus panel",
-  "agentManager.shortcuts.openAgentManager": "Open Agent Manager",
-
-  "agentManager.dialog.deleteWorktree.title": "Delete Worktree",
-  "agentManager.dialog.deleteWorktree.messagePre": "Delete worktree ",
-  "agentManager.dialog.deleteWorktree.messagePost":
-    "? This removes the worktree from disk and dissociates all sessions.",
-  "agentManager.dialog.deleteWorktree.cancel": "Cancel",
-  "agentManager.dialog.deleteWorktree.confirm": "Delete",
-
-  "agentManager.dialog.openWorktree": "New Worktree",
-  "agentManager.dialog.tab.new": "New",
-  "agentManager.dialog.tab.import": "Import",
-  "agentManager.dialog.namePlaceholder": "Worktree name (optional)",
-  "agentManager.dialog.promptPlaceholder.mac": "Type a message (\u2318Enter to send)",
-  "agentManager.dialog.promptPlaceholder.other": "Type a message (Ctrl+Enter to send)",
-  "agentManager.dialog.advancedOptions": "Advanced options",
-  "agentManager.dialog.branchName": "Branch name",
-  "agentManager.dialog.branchNamePlaceholder": "auto-generated",
-  "agentManager.dialog.baseBranch": "Base branch",
-  "agentManager.dialog.searchBranches": "Search branches...",
-  "agentManager.dialog.branchBadge.default": "default",
-  "agentManager.dialog.branchBadge.remote": "remote",
-  "agentManager.dialog.versions": "Versions",
-  "agentManager.dialog.versionHint": "{{count}} worktrees will run in parallel",
-  "agentManager.dialog.compareModels": "Compare Models",
-  "agentManager.dialog.compareModels.searchModels": "Search models...",
-  "agentManager.dialog.creating": "Creating...",
-  "agentManager.dialog.createWorkspace": "Create Worktree",
-  "agentManager.dialog.removeImage": "Remove image",
-  "agentManager.dialog.advanced": "Advanced...",
-
-  "agentManager.diff.toggle": "Toggle diff",
-  "agentManager.diff.openFile": "Open file",
-  "agentManager.shortcuts.toggleDiff": "Toggle diff panel",
-  "agentManager.shortcuts.category.quickSwitch": "Quick Switch",
-  "agentManager.shortcuts.jumpToItem": "Jump to item 1\u20139",
-  "agentManager.review.sendAllToChat": "Send all to chat",
-  "agentManager.review.sendAllToChatWithCount": "Send all to chat ({{count}})",
-  "agentManager.review.sendAllShortcut.mac": "⌘Enter",
-  "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
-  "agentManager.review.commentOnLine": "Comment on line {{line}}",
-  "agentManager.review.editCommentOnLine": "Edit comment on line {{line}}",
-  "agentManager.review.commentPlaceholder": "Leave a comment...",
-  "agentManager.review.commentAction": "Comment",
-  "agentManager.review.sendToChat": "Send to chat",
-  "agentManager.review.collapsedOnly": "{{count}} collapsed",
-  "agentManager.review.collapsedWithLarge": "{{collapsed}} collapsed, {{large}} large",
-  "agentManager.review.largeFileCollapsed": "Large file (collapsed)",
-  "agentManager.review.endOfLongDiff": "You made it to the end!",
-
-  "agentManager.import.pullRequest": "Pull Request",
-  "agentManager.import.pastePrUrl": "Paste PR URL...",
-  "agentManager.import.open": "Open",
-  "agentManager.import.branches": "Branches",
-  "agentManager.import.selectBranch": "Select branch...",
-  "agentManager.import.loading": "Loading...",
-  "agentManager.import.loadingBranches": "Loading branches...",
-  "agentManager.import.noMatchingBranches": "No matching branches",
-  "agentManager.import.noBranchesFound": "No branches found.",
-  "agentManager.import.noBranchesHint": "Paste a PR URL above or create a new worktree.",
-  "agentManager.import.failed": "Import failed",
+  // Agent Manager strings live in webview-ui/agent-manager/i18n/en.ts
 
   "question.summary": "{{n}} of {{total}} questions",
   "common.review": "Review",
+
+  // legacy-migration start
+  "settings.legacyMigration.link": "Migrate from Legacy Version",
+  "settings.aboutKiloCode.legacyMigration.title": "Legacy Migration",
+  "settings.aboutKiloCode.legacyMigration.description":
+    "Migrate settings from a previous installation of Kilo Code, including provider API keys and default model.",
+
+  // Screen 1 — What's New
+  "migration.whatsNew.title": "What's New in Kilo Code",
+  "migration.whatsNew.badge": "Beta",
+  "migration.whatsNew.subtitle": "We've rebuilt the extension on a faster, more efficient foundation.",
+  "migration.whatsNew.features.performance.title": "Faster Agent Performance",
+  "migration.whatsNew.features.performance.detail":
+    "Parallel tool calls and subagents let your agent tackle more at once — so you spend less time watching and more time shipping.",
+  "migration.whatsNew.features.interface.title": "Streamlined Interface",
+  "migration.whatsNew.features.interface.detail": "Fewer distractions, easier and quicker to read.",
+  "migration.whatsNew.features.agentManager.title": "Agent Manager",
+  "migration.whatsNew.features.agentManager.detail":
+    "A unified interface for running multiple agents in parallel, each on its own worktree — monitor progress, switch context, and review changes in one place.",
+  "migration.whatsNew.features.foundation.title": "Shared Foundation",
+  "migration.whatsNew.features.foundation.detail":
+    "One small, efficient core across every Kilo product. A familiar experience however you choose to work.",
+  "migration.whatsNew.blogLink": "Read the full announcement",
+  "migration.whatsNew.continue": "Continue",
+
+  // Screen 2 — Migrate Settings
+  "migration.migrate.title": "Migrate Your Settings",
+  "migration.migrate.subtitle": "We found settings from your previous installation. Here's what we can bring over.",
+  "migration.migrate.selectLabel": "Select what to migrate",
+  "migration.migrate.cannotMigrate": "Cannot be migrated",
+  "migration.migrate.chatHistory": "Chat Sessions & History",
+  "migration.migrate.chatHistoryDesc": "Incompatible with the new architecture",
+  "migration.migrate.button": "Migrate Settings",
+  "migration.migrate.skip": "Skip",
+  "migration.migrate.back": "Back",
+  "migration.migrate.keysDetected": "{{count}} keys detected",
+  "migration.migrate.serversConfigured": "{{count}} server(s) configured",
+  "migration.migrate.modesFound": "{{count}} mode(s) found",
+  "migration.migrate.nothingToMigrate": "Nothing to migrate was found in the legacy settings.",
+
+  // Migrate — item labels (reused from old select keys)
+  "migration.select.providers": "Provider API Keys",
+  "migration.select.mcpServers": "MCP Servers",
+  "migration.select.customModes": "Custom Modes / Agents",
+  "migration.select.defaultModel": "Default Model",
+  "migration.select.autoApproval": "Auto-Approval",
+  "migration.select.language": "UI Language",
+  "migration.select.autocomplete": "Autocomplete Settings",
+
+  // Migrate — completion
+  "migration.complete.summary": "{{success}} of {{total}} items migrated successfully.",
+  "migration.complete.cleanup": "Remove legacy settings data",
+  "migration.complete.cleanupDescription":
+    "This removes the old settings from VS Code storage. You will not be able to re-run this migration.",
+  "migration.complete.done": "Done",
+  // legacy-migration end
+
+  "error.details.show": "Details",
+
+  "task.todos.progress": "{{done}}/{{total}} to-dos done",
+  "task.todos.allDone": "{{count}} to-dos done",
 }

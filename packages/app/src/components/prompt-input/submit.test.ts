@@ -5,6 +5,7 @@ let createPromptSubmit: typeof import("./submit").createPromptSubmit
 
 const createdClients: string[] = []
 const createdSessions: string[] = []
+const enabledAutoAccept: Array<{ sessionID: string; directory: string }> = []
 const sentShell: string[] = []
 const syncedDirectories: string[] = []
 
@@ -42,10 +43,8 @@ beforeAll(async () => {
     useParams: () => ({}),
   }))
 
-  // kilocode_change start
   mock.module("@kilocode/sdk/v2/client", () => ({
-    // kilocode_change end
-    createOpencodeClient: (input: { directory: string }) => {
+    createKiloClient: (input: { directory: string }) => {
       createdClients.push(input.directory)
       return clientFor(input.directory)
     },
@@ -67,6 +66,14 @@ beforeAll(async () => {
       },
       agent: {
         current: () => ({ name: "agent" }),
+      },
+    }),
+  }))
+
+  mock.module("@/context/permission", () => ({
+    usePermission: () => ({
+      enableAutoAccept(sessionID: string, directory: string) {
+        enabledAutoAccept.push({ sessionID, directory })
       },
     }),
   }))
@@ -147,6 +154,7 @@ beforeAll(async () => {
 beforeEach(() => {
   createdClients.length = 0
   createdSessions.length = 0
+  enabledAutoAccept.length = 0
   sentShell.length = 0
   syncedDirectories.length = 0
   selected = "/repo/worktree-a"
@@ -158,6 +166,7 @@ describe("prompt submit worktree selection", () => {
       info: () => undefined,
       imageAttachments: () => [],
       commentCount: () => 0,
+      autoAccept: () => false,
       mode: () => "shell",
       working: () => false,
       editor: () => undefined,
@@ -182,5 +191,32 @@ describe("prompt submit worktree selection", () => {
     expect(createdSessions).toEqual(["/repo/worktree-a", "/repo/worktree-b"])
     expect(sentShell).toEqual(["/repo/worktree-a", "/repo/worktree-b"])
     expect(syncedDirectories).toEqual(["/repo/worktree-a", "/repo/worktree-b"])
+  })
+
+  test("applies auto-accept to newly created sessions", async () => {
+    const submit = createPromptSubmit({
+      info: () => undefined,
+      imageAttachments: () => [],
+      commentCount: () => 0,
+      autoAccept: () => true,
+      mode: () => "shell",
+      working: () => false,
+      editor: () => undefined,
+      queueScroll: () => undefined,
+      promptLength: (value) => value.reduce((sum, part) => sum + ("content" in part ? part.content.length : 0), 0),
+      addToHistory: () => undefined,
+      resetHistoryNavigation: () => undefined,
+      setMode: () => undefined,
+      setPopover: () => undefined,
+      newSessionWorktree: () => selected,
+      onNewSessionWorktreeReset: () => undefined,
+      onSubmit: () => undefined,
+    })
+
+    const event = { preventDefault: () => undefined } as unknown as Event
+
+    await submit.handleSubmit(event)
+
+    expect(enabledAutoAccept).toEqual([{ sessionID: "session-1", directory: "/repo/worktree-a" }])
   })
 })

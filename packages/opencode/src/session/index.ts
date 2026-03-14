@@ -22,6 +22,7 @@ import { SessionPrompt } from "./prompt"
 import { fn } from "@/util/fn"
 import { Command } from "../command"
 import { Snapshot } from "@/snapshot"
+import { WorkspaceContext } from "../control-plane/workspace-context"
 
 import type { Provider } from "@/provider/provider"
 import { PermissionNext } from "@/permission/next"
@@ -63,6 +64,7 @@ export namespace Session {
       id: row.id,
       slug: row.slug,
       projectID: row.project_id,
+      workspaceID: row.workspace_id ?? undefined,
       directory: row.directory,
       parentID: row.parent_id ?? undefined,
       title: row.title,
@@ -84,6 +86,7 @@ export namespace Session {
     return {
       id: info.id,
       project_id: info.projectID,
+      workspace_id: info.workspaceID,
       parent_id: info.parentID,
       slug: info.slug,
       directory: info.directory,
@@ -118,6 +121,7 @@ export namespace Session {
       id: Identifier.schema("session"),
       slug: z.string(),
       projectID: z.string(),
+      workspaceID: z.string().optional(),
       directory: z.string(),
       parentID: Identifier.schema("session").optional(),
       summary: z
@@ -330,6 +334,7 @@ export namespace Session {
       version: Installation.VERSION,
       projectID: Instance.project.id,
       directory: input.directory,
+      workspaceID: WorkspaceContext.workspaceID,
       parentID: input.parentID,
       title: input.title ?? createDefaultTitle(!!input.parentID),
       permission: input.permission,
@@ -360,7 +365,7 @@ export namespace Session {
 
   export function plan(input: { slug: string; time: { created: number } }) {
     const base = Instance.project.vcs
-      ? path.join(Instance.worktree, ".opencode", "plans")
+      ? path.join(Instance.worktree, ".kilo", "plans") // kilocode_change
       : path.join(Global.Path.data, "plans")
     return path.join(base, [input.time.created, input.slug].join("-") + ".md")
   }
@@ -560,6 +565,7 @@ export namespace Session {
 
   export function* list(input?: {
     directory?: string
+    workspaceID?: string
     roots?: boolean
     start?: number
     search?: string
@@ -568,6 +574,9 @@ export namespace Session {
     const project = Instance.project
     const conditions = [eq(SessionTable.project_id, project.id)]
 
+    if (WorkspaceContext.workspaceID) {
+      conditions.push(eq(SessionTable.workspace_id, WorkspaceContext.workspaceID))
+    }
     if (input?.directory) {
       conditions.push(eq(SessionTable.directory, input.directory))
     }
@@ -688,6 +697,9 @@ export namespace Session {
       const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
       await KiloSessions.remove(sessionID).catch(() => {}) // kilocode_change
       platformOverrides.delete(sessionID) // kilocode_change - clean up platform override
+      // kilocode_change start - cancel running processor before deleting to avoid FK constraint errors
+      SessionPrompt.cancel(sessionID)
+      // kilocode_change end
       // CASCADE delete handles messages and parts automatically
       Database.use((db) => {
         db.delete(SessionTable).where(eq(SessionTable.id, sessionID)).run()
@@ -705,22 +717,32 @@ export namespace Session {
   export const updateMessage = fn(MessageV2.Info, async (msg) => {
     const time_created = msg.time.created
     const { id, sessionID, ...data } = msg
-    Database.use((db) => {
-      db.insert(MessageTable)
-        .values({
-          id,
-          session_id: sessionID,
-          time_created,
-          data,
-        })
-        .onConflictDoUpdate({ target: MessageTable.id, set: { data } })
-        .run()
-      Database.effect(() =>
-        Bus.publish(MessageV2.Event.Updated, {
-          info: msg,
-        }),
-      )
-    })
+    // kilocode_change start - ignore FK errors when session was deleted while processor was still running
+    try {
+      Database.use((db) => {
+        db.insert(MessageTable)
+          .values({
+            id,
+            session_id: sessionID,
+            time_created,
+            data,
+          })
+          .onConflictDoUpdate({ target: MessageTable.id, set: { data } })
+          .run()
+        Database.effect(() =>
+          Bus.publish(MessageV2.Event.Updated, {
+            info: msg,
+          }),
+        )
+      })
+    } catch (e: any) {
+      if (e?.code === "SQLITE_CONSTRAINT_FOREIGNKEY") {
+        log.warn("skipping message update for deleted session", { id: msg.id, sessionID: msg.sessionID })
+      } else {
+        throw e
+      }
+    }
+    // kilocode_change end
     return msg
   })
 
@@ -774,23 +796,33 @@ export namespace Session {
   export const updatePart = fn(UpdatePartInput, async (part) => {
     const { id, messageID, sessionID, ...data } = part
     const time = Date.now()
-    Database.use((db) => {
-      db.insert(PartTable)
-        .values({
-          id,
-          message_id: messageID,
-          session_id: sessionID,
-          time_created: time,
-          data,
-        })
-        .onConflictDoUpdate({ target: PartTable.id, set: { data } })
-        .run()
-      Database.effect(() =>
-        Bus.publish(MessageV2.Event.PartUpdated, {
-          part,
-        }),
-      )
-    })
+    // kilocode_change start - ignore FK errors when session was deleted while processor was still running
+    try {
+      Database.use((db) => {
+        db.insert(PartTable)
+          .values({
+            id,
+            message_id: messageID,
+            session_id: sessionID,
+            time_created: time,
+            data,
+          })
+          .onConflictDoUpdate({ target: PartTable.id, set: { data } })
+          .run()
+        Database.effect(() =>
+          Bus.publish(MessageV2.Event.PartUpdated, {
+            part: structuredClone(part),
+          }),
+        )
+      })
+    } catch (e: any) {
+      if (e?.code === "SQLITE_CONSTRAINT_FOREIGNKEY") {
+        log.warn("skipping part update for deleted session", { id: part.id, sessionID: part.sessionID })
+      } else {
+        throw e
+      }
+    }
+    // kilocode_change end
     return part
   })
 

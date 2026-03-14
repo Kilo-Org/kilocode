@@ -72,7 +72,7 @@ const serverEnv = {
   KILO_E2E_PROJECT_DIR: repoDir,
   KILO_E2E_SESSION_TITLE: "E2E Session",
   KILO_E2E_MESSAGE: "Seeded for UI e2e",
-  KILO_E2E_MODEL: "kilo/kilo/auto", // kilocode_change
+  KILO_E2E_MODEL: "kilo/kilo-auto/frontier", // kilocode_change
   KILO_CLIENT: "app",
 } satisfies Record<string, string>
 
@@ -145,7 +145,8 @@ try {
   } else {
     Object.assign(process.env, serverEnv)
     process.env.AGENT = "1"
-    process.env.OPENCODE = "1"
+    process.env.KILO = "1"
+    process.env.KILO_PID = String(process.pid)
 
     const log = await import("../../opencode/src/util/log")
     const install = await import("../../opencode/src/installation")

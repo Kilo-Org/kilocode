@@ -172,6 +172,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   const triggerLabel = () =>
     buildTriggerLabel(
       selectedModel()?.name,
+      selectedModel()?.providerID,
       props.value,
       props.allowClear ?? false,
       props.clearLabel ?? "",
@@ -190,14 +191,14 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
       onOpenChange={setOpen}
       triggerAs={Button}
       triggerProps={{
-        variant: "ghost",
-        size: "small",
+        variant: "secondary",
+        size: "normal",
         disabled: !hasProviders(),
         title: selectedModel()?.id,
       }}
       trigger={
         <>
-          <span class="model-selector-trigger-label">{() => triggerLabel()}</span>
+          <span class="model-selector-trigger-label">{triggerLabel()}</span>
           <svg class="model-selector-trigger-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
             <path d="M8 4l4 5H4l4-5z" />
           </svg>

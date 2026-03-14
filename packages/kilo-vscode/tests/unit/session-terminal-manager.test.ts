@@ -34,8 +34,8 @@ describe("SessionTerminalManager structure", () => {
     expect(ctor).toBeTruthy()
     const text = ctor!.getText()
     // Both listeners are required: close (cleanup) and active-change (context key)
-    expect(text).toContain("onDidCloseTerminal")
-    expect(text).toContain("onDidChangeActiveTerminal")
+    expect(text).toContain("onTerminalClosed")
+    expect(text).toContain("onActiveTerminalChanged")
   })
 
   it("dispose clears the context key, disposes terminals, and clears the map", () => {

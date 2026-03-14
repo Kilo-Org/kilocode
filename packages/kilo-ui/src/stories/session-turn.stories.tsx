@@ -2,10 +2,10 @@
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import { SessionTurn } from "@opencode-ai/ui/session-turn"
 import { DataProvider } from "@opencode-ai/ui/context/data"
-import { DiffComponentProvider } from "@opencode-ai/ui/context/diff"
+import { FileComponentProvider } from "@kilocode/kilo-ui/context/file"
 import { DialogProvider } from "@opencode-ai/ui/context/dialog"
 import { MarkedProvider } from "@opencode-ai/ui/context/marked"
-import { Diff } from "@opencode-ai/ui/diff"
+import { File } from "@kilocode/kilo-ui/file"
 import type { UserMessage, AssistantMessage, TextPart, ToolPart } from "@kilocode/sdk/v2"
 
 const SESSION_ID = "session-turn-story-001"
@@ -151,11 +151,11 @@ const workingData = {
 function Providers(props: { data: any; children: any }) {
   return (
     <DataProvider data={props.data} directory="/project">
-      <DiffComponentProvider component={Diff}>
+      <FileComponentProvider component={File}>
         <DialogProvider>
           <MarkedProvider>{props.children}</MarkedProvider>
         </DialogProvider>
-      </DiffComponentProvider>
+      </FileComponentProvider>
     </DataProvider>
   )
 }
@@ -172,7 +172,7 @@ export const Default: Story = {
   render: () => (
     <Providers data={baseData}>
       <div style={{ width: "700px" }}>
-        <SessionTurn sessionID={SESSION_ID} messageID={USER_MSG_ID} lastUserMessageID={USER_MSG_ID} />
+        <SessionTurn sessionID={SESSION_ID} messageID={USER_MSG_ID} />
       </div>
     </Providers>
   ),
@@ -182,7 +182,7 @@ export const Working: Story = {
   render: () => (
     <Providers data={workingData}>
       <div style={{ width: "700px" }}>
-        <SessionTurn sessionID={SESSION_ID_2} messageID={USER_MSG_ID_2} lastUserMessageID={USER_MSG_ID_2} />
+        <SessionTurn sessionID={SESSION_ID_2} messageID={USER_MSG_ID_2} />
       </div>
     </Providers>
   ),
@@ -192,7 +192,7 @@ export const WithStepsExpanded: Story = {
   render: () => (
     <Providers data={baseData}>
       <div style={{ width: "700px" }}>
-        <SessionTurn sessionID={SESSION_ID} messageID={USER_MSG_ID} lastUserMessageID={USER_MSG_ID} stepsExpanded />
+        <SessionTurn sessionID={SESSION_ID} messageID={USER_MSG_ID} stepsExpanded />
       </div>
     </Providers>
   ),

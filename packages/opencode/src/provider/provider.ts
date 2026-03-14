@@ -544,7 +544,28 @@ export namespace Provider {
       const { createAiGateway } = await import("ai-gateway-provider")
       const { createUnified } = await import("ai-gateway-provider/providers/unified")
 
-      const aigateway = createAiGateway({ accountId, gateway, apiKey: apiToken })
+      const metadata = iife(() => {
+        if (input.options?.metadata) return input.options.metadata
+        try {
+          return JSON.parse(input.options?.headers?.["cf-aig-metadata"])
+        } catch {
+          return undefined
+        }
+      })
+      const opts = {
+        metadata,
+        cacheTtl: input.options?.cacheTtl,
+        cacheKey: input.options?.cacheKey,
+        skipCache: input.options?.skipCache,
+        collectLog: input.options?.collectLog,
+      }
+
+      const aigateway = createAiGateway({
+        accountId,
+        gateway,
+        apiKey: apiToken,
+        ...(Object.values(opts).some((v) => v !== undefined) ? { options: opts } : {}),
+      })
       const unified = createUnified()
 
       return {
@@ -1256,7 +1277,7 @@ export namespace Provider {
       ]
       // kilocode_change start
       if (providerID.startsWith("kilo")) {
-        priority = ["gpt-5-nano"]
+        priority = ["kilo-auto/small"]
       }
       // kilocode_change end
       if (providerID.startsWith("github-copilot")) {
@@ -1297,8 +1318,8 @@ export namespace Provider {
     // kilocode_change start
     // Check if kilo provider is available before using it
     const kiloProvider = await state().then((state) => state.providers["kilo"])
-    if (kiloProvider && kiloProvider.models["gpt-5-nano"]) {
-      return getModel("kilo", "gpt-5-nano")
+    if (kiloProvider && kiloProvider.models["kilo-auto/small"]) {
+      return getModel("kilo", "kilo-auto/small")
     }
     // kilocode_change end
 
