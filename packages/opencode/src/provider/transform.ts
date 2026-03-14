@@ -145,24 +145,19 @@ export namespace ProviderTransform {
           // Filter out reasoning parts from content
           const filteredContent = msg.content.filter((part: any) => part.type !== "reasoning")
 
-          // Include reasoning_content | reasoning_details directly on the message for all assistant messages
-          if (reasoningText) {
-            return {
-              ...msg,
-              content: filteredContent,
-              providerOptions: {
-                ...msg.providerOptions,
-                openaiCompatible: {
-                  ...(msg.providerOptions as any)?.openaiCompatible,
-                  [field]: reasoningText,
-                },
-              },
-            }
-          }
-
+          // Always include reasoning_content | reasoning_details on assistant messages.
+          // Some backends (e.g. Kimi) require the field on every assistant message
+          // when thinking is enabled, even if the message only contains tool calls.
           return {
             ...msg,
             content: filteredContent,
+            providerOptions: {
+              ...msg.providerOptions,
+              openaiCompatible: {
+                ...(msg.providerOptions as any)?.openaiCompatible,
+                [field]: reasoningText || "",
+              },
+            },
           }
         }
 
