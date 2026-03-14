@@ -14,10 +14,23 @@ const SECTION_HEADING = "## Commit Message"
 
 const FENCE_PATTERN = /^[ ]{0,3}(?:`{3,}|~{3,})/
 
-const HEADING_PATTERN = /^##\s*Commit Message\s*#*$/
+function escape(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
 
-function extractSection(content: string, heading: string): string | undefined {
+function fence(line: string) {
+  const match = line.match(FENCE_PATTERN)
+  if (!match) return
+  const text = match[0].trimEnd()
+  return {
+    char: text[0],
+    size: text.length,
+  }
+}
+
+export function extractSection(content: string, heading: string): string | undefined {
   const lines = content.split("\n")
+  const pattern = new RegExp(`^##\\s*${escape(heading.replace(/^##\s*/, ""))}\\s*#*$`)
 
   // Helper function to process lines with fence handling
   function processLines(
@@ -26,21 +39,19 @@ function extractSection(content: string, heading: string): string | undefined {
     onNonFenceLine: (line: string, i: number) => boolean | void,
   ): void {
     let inCodeFence = false
-    let fenceType: "`" | "~" | null = null
+    let marker: ReturnType<typeof fence>
     for (let i = startIdx; i < endIdx; i++) {
       const line = lines[i]
-      if (FENCE_PATTERN.test(line)) {
+      const match = fence(line)
+      if (match) {
         if (!inCodeFence) {
-          // Opening fence
           inCodeFence = true
-          fenceType = line.trim().startsWith("`") ? "`" : "~"
-        } else {
-          // Closing fence - must match opening type
-          const currentType = line.trim().startsWith("`") ? "`" : "~"
-          if (currentType === fenceType) {
-            inCodeFence = false
-            fenceType = null
-          }
+          marker = match
+          continue
+        }
+        if (match.char === marker?.char && match.size >= marker.size) {
+          inCodeFence = false
+          marker = undefined
         }
         continue
       }
@@ -52,7 +63,7 @@ function extractSection(content: string, heading: string): string | undefined {
 
   let start = -1
   processLines(0, lines.length, (line, i) => {
-    if (HEADING_PATTERN.test(line)) {
+    if (pattern.test(line)) {
       start = i
       return true
     }
