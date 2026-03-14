@@ -536,7 +536,14 @@ export const PromptInput: Component = () => {
           <For each={imageAttach.images()}>
             {(img) => (
               <div class="image-attachment">
-                <img src={img.dataUrl} alt={img.filename} title={img.filename} />
+                <img
+                  src={img.dataUrl}
+                  alt={img.filename}
+                  title={img.filename}
+                  onClick={() =>
+                    vscode.postMessage({ type: "previewImage", dataUrl: img.dataUrl, filename: img.filename })
+                  }
+                />
                 <button
                   type="button"
                   class="image-attachment-remove"
