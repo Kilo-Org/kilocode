@@ -151,7 +151,7 @@ function MoonIcon() {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="M13.5 10.605A6.5 6.5 0 0 1 5.395 2.5 6.501 6.501 0 0 0 13.5 10.605z" />
+      <path d="M14 8.526A6 6 0 1 1 7.473 2 4.666 4.666 0 0 0 14 8.526z" />
     </svg>
   )
 }
