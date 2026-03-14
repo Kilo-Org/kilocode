@@ -1491,6 +1491,8 @@ export namespace Config {
 
     const result = applyEdits(text, edits)
     await Bun.write(configPath, result)
+    // kilocode_change: Reset global config cache to avoid stale reads when writing to global files
+    await global.reset()
     // kilocode_change: Dispose only the Config state, not the entire instance (preserves MCP connections)
     await State.disposeEntry(Instance.directory, initConfigState)
     // kilocode_change: Emit config changed event to notify UI/watchers
@@ -1596,13 +1598,18 @@ export namespace Config {
     }
 
     // Check project config files (kilo.jsonc/kilo.json/opencode.jsonc/opencode.json in project root)
+    // kilocode_change: Check by directory depth (closest first) to match initConfigState loading precedence
     if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
+      const allFiles: string[] = []
       for (const file of CONFIG_FILES_KILO_PROJECT) {
         const found = await Filesystem.findUp(file, Instance.directory, Instance.worktree)
-        for (const filepath of found) {
-          if (await hasMcpDefinition(filepath, mcpName)) {
-            return filepath
-          }
+        allFiles.push(...found)
+      }
+      // Sort by directory depth (deepest/most specific first, so closest wins)
+      allFiles.sort((a, b) => b.split(path.sep).length - a.split(path.sep).length)
+      for (const filepath of allFiles) {
+        if (await hasMcpDefinition(filepath, mcpName)) {
+          return filepath
         }
       }
     }
