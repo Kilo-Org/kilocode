@@ -131,8 +131,6 @@ export const PermissionDock: Component<{
                   <For each={patterns()}>
                     {(pattern, index) => (
                       <div data-slot="permission-pattern-row" data-decision={decision(index())}>
-                        <span data-slot="permission-pattern-type">{props.request.toolName}</span>
-                        <code data-slot="permission-pattern">{pattern}</code>
                         <div data-slot="permission-pattern-actions">
                           <Tooltip value={approveTooltip(index())} placement="top">
                             <button
@@ -159,6 +157,8 @@ export const PermissionDock: Component<{
                             </button>
                           </Tooltip>
                         </div>
+                        <span data-slot="permission-pattern-type">{props.request.toolName}</span>
+                        <code data-slot="permission-pattern">{pattern}</code>
                       </div>
                     )}
                   </For>
