@@ -17,8 +17,9 @@ describe("providerSortKey", () => {
 
   it("returns correct index for known providers", () => {
     expect(providerSortKey("anthropic")).toBe(1)
-    expect(providerSortKey("openai")).toBe(2)
-    expect(providerSortKey("google")).toBe(3)
+    expect(providerSortKey("github-copilot")).toBe(2)
+    expect(providerSortKey("openai")).toBe(3)
+    expect(providerSortKey("google")).toBe(4)
   })
 
   it("returns order length for unknown provider", () => {
@@ -38,9 +39,9 @@ describe("providerSortKey", () => {
   })
 
   it("sorts providers correctly when used with sort", () => {
-    const ids = ["google", "anthropic", "kilo", "openai"]
+    const ids = ["google", "anthropic", "kilo", "openai", "github-copilot"]
     const sorted = ids.slice().sort((a, b) => providerSortKey(a) - providerSortKey(b))
-    expect(sorted).toEqual(["kilo", "anthropic", "openai", "google"])
+    expect(sorted).toEqual(["kilo", "anthropic", "github-copilot", "openai", "google"])
   })
 })
 

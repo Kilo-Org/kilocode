@@ -53,15 +53,15 @@ export const ProviderRoutes = lazy(() =>
           connected,
         )
         // kilocode_change start: Filter out providers with no models to prevent crashes
-        const validProviders = pickBy(providers, (item) => Object.keys(item.models).length > 0)
+        const validProviders = pickBy(providers, (item) => item.id === "kilo" || Object.keys(item.models).length > 0)
 
         return c.json({
           all: Object.values(validProviders),
           default: mapValues(validProviders, (item) => {
             const sorted = Provider.sort(Object.values(item.models))
-            return sorted[0]?.id ?? ""
+            return sorted[0]?.id ?? (item.id === "kilo" ? "kilo-auto/free" : "")
           }),
-          connected: Object.keys(connected),
+          connected: Object.keys(connected).filter((id) => Object.hasOwn(validProviders, id)),
         })
         // kilocode_change end
       },

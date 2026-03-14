@@ -2045,6 +2045,33 @@ export type GlobalDisposeResponses = {
 
 export type GlobalDisposeResponse = GlobalDisposeResponses[keyof GlobalDisposeResponses]
 
+export type AuthListData = {
+  body?: never
+  path?: never
+  query?: never
+  url: "/auth"
+}
+
+export type AuthListErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type AuthListError = AuthListErrors[keyof AuthListErrors]
+
+export type AuthListResponses = {
+  /**
+   * Successfully listed authentication credential types
+   */
+  200: {
+    [key: string]: "oauth" | "api" | "wellknown"
+  }
+}
+
+export type AuthListResponse = AuthListResponses[keyof AuthListResponses]
+
 export type AuthRemoveData = {
   body?: never
   path: {

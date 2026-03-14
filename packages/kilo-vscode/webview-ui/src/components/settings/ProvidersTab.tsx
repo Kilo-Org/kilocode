@@ -1,154 +1,374 @@
-import { Component, For, createSignal, createMemo } from "solid-js"
-import { Select } from "@kilocode/kilo-ui/select"
-import { Card } from "@kilocode/kilo-ui/card"
 import { Button } from "@kilocode/kilo-ui/button"
-import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { Card } from "@kilocode/kilo-ui/card"
+import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { ProviderIcon } from "@kilocode/kilo-ui/provider-icon"
+import { Tag } from "@kilocode/kilo-ui/tag"
+import { showToast } from "@kilocode/kilo-ui/toast"
+import { Component, For, JSX, Show, createMemo, createSignal, onCleanup } from "solid-js"
 import { useConfig } from "../../context/config"
-import { useProvider } from "../../context/provider"
 import { useLanguage } from "../../context/language"
-import { useSession } from "../../context/session"
-import { ModelSelectorBase } from "../shared/ModelSelector"
-import type { ModelSelection } from "../../types/messages"
-import SettingsRow from "./SettingsRow"
+import { useProvider } from "../../context/provider"
+import { useServer } from "../../context/server"
+import { useVSCode } from "../../context/vscode"
+import type { Provider } from "../../types/messages"
+import DeviceAuthCard from "../profile/DeviceAuthCard"
+import CustomProviderDialog from "./CustomProviderDialog"
+import ProviderConnectDialog from "./ProviderConnectDialog"
+import {
+  CUSTOM_PROVIDER_ID,
+  kiloFallbackProvider,
+  POPULAR_PROVIDER_IDS,
+  providerIcon,
+  providerNoteKey,
+  sortProviders,
+} from "./provider-catalog"
+import ProviderSelector, { type ProviderOption } from "./ProviderSelector"
+import ProviderSelectDialog from "./ProviderSelectDialog"
+import { KILO_PROVIDER_ID } from "../../../../src/shared/provider-model"
+import { createProviderAction } from "../../utils/provider-action"
 
-interface ProviderOption {
-  value: string
-  label: string
+type ProviderSource = "env" | "api" | "config" | "custom"
+
+function ProviderGlyph(props: { id: string }): JSX.Element {
+  if (props.id === KILO_PROVIDER_ID) {
+    return (
+      <div
+        style={{
+          width: "20px",
+          height: "20px",
+          display: "flex",
+          "align-items": "center",
+          "justify-content": "center",
+          "border-radius": "6px",
+          background: "var(--vscode-button-secondaryBackground, var(--vscode-editorWidget-background))",
+          color: "var(--vscode-foreground)",
+          "font-size": "12px",
+          "font-weight": "700",
+          "flex-shrink": 0,
+        }}
+      >
+        K
+      </div>
+    )
+  }
+
+  return <ProviderIcon id={providerIcon(props.id)} width={20} height={20} />
 }
 
-/** Parse a "provider/model" config string into a ModelSelection (or null). */
-function parseModelConfig(raw: string | undefined): ModelSelection | null {
-  if (!raw) {
-    return null
-  }
-  const slash = raw.indexOf("/")
-  if (slash <= 0) {
-    return null
-  }
-  return { providerID: raw.slice(0, slash), modelID: raw.slice(slash + 1) }
+function rowStyle(bordered: boolean) {
+  return {
+    display: "flex",
+    "align-items": "center",
+    "justify-content": "space-between",
+    gap: "16px",
+    padding: "14px 0",
+    "border-bottom": bordered ? "1px solid var(--border-weak-base)" : "none",
+  } as const
 }
 
 const ProvidersTab: Component = () => {
   const { config, updateConfig } = useConfig()
   const provider = useProvider()
+  const server = useServer()
   const language = useLanguage()
-  const session = useSession()
-
-  const providerOptions = createMemo<ProviderOption[]>(() =>
-    Object.keys(provider.providers())
-      .sort()
-      .map((id) => ({ value: id, label: id })),
-  )
+  const dialog = useDialog()
+  const vscode = useVSCode()
+  const action = createProviderAction(vscode)
 
   const [newDisabled, setNewDisabled] = createSignal<ProviderOption | undefined>()
+  const [disconnecting, setDisconnecting] = createSignal(new Set<string>())
 
   const disabledProviders = () => config().disabled_providers ?? []
 
-  const addDisabled = (value: string) => {
-    const current = [...disabledProviders()]
-    if (value && !current.includes(value)) {
-      current.push(value)
-      updateConfig({ disabled_providers: current })
-    }
+  const connectedProviders = createMemo(() =>
+    sortProviders(
+      provider
+        .connected()
+        .map((id) => provider.providers()[id])
+        .filter((item): item is NonNullable<typeof item> => !!item),
+    ),
+  )
+
+  const providerOptions = createMemo<ProviderOption[]>(() =>
+    sortProviders(Object.values(provider.providers())).map((item) => ({ value: item.id, label: item.name })),
+  )
+
+  const kilo = createMemo<Provider>(() => provider.providers().kilo ?? kiloFallbackProvider())
+  const kiloConnected = createMemo(() => !!provider.authStates()[KILO_PROVIDER_ID])
+  const showKiloAuth = createMemo(() => !kiloConnected() && server.deviceAuth().status !== "idle")
+
+  const popularProviders = createMemo(() => {
+    const connected = new Set(provider.connected())
+    const disabled = new Set(disabledProviders())
+    return POPULAR_PROVIDER_IDS.map((id) => (id === KILO_PROVIDER_ID ? kilo() : provider.providers()[id]))
+      .filter((item): item is Provider => !!item)
+      .filter((item) => !connected.has(item.id) && !disabled.has(item.id))
+      .filter((item) => !(showKiloAuth() && item.id === KILO_PROVIDER_ID))
+  })
+
+  const disabledOptions = createMemo(() =>
+    providerOptions().filter((item) => !disabledProviders().includes(item.value)),
+  )
+
+  onCleanup(action.dispose)
+
+  function source(item: Provider): ProviderSource | undefined {
+    const value = item.source
+    if (value === "env" || value === "api" || value === "config" || value === "custom") return value
+    return
   }
 
-  const removeDisabled = (index: number) => {
+  function type(item: Provider) {
+    const current = source(item)
+    const auth = provider.authStates()[item.id]
+    if (item.id === KILO_PROVIDER_ID) return language.t("settings.providers.tag.gateway")
+    if (current === "env") return language.t("settings.providers.tag.environment")
+    if (auth === "oauth") return language.t("settings.providers.tag.oauth")
+    if (auth === "api") return language.t("provider.connect.method.apiKey")
+    if (current === "config") return language.t("settings.providers.tag.configured")
+    if (current === "custom") return language.t("settings.providers.tag.customProvider")
+    return language.t("settings.providers.tag.connected")
+  }
+
+  function canDisconnect(item: Provider) {
+    return source(item) !== "env"
+  }
+
+  function canHide(item: Provider) {
+    return item.id !== KILO_PROVIDER_ID && source(item) === "env"
+  }
+
+  function addDisabled(value: string) {
+    const current = [...disabledProviders()]
+    if (!value || current.includes(value)) return
+    current.push(value)
+    updateConfig({ disabled_providers: current })
+  }
+
+  function removeDisabled(index: number) {
     const current = [...disabledProviders()]
     current.splice(index, 1)
     updateConfig({ disabled_providers: current })
   }
 
-  function handleModelSelect(configKey: "model" | "small_model") {
-    return (providerID: string, modelID: string) => {
-      if (!providerID || !modelID) {
-        updateConfig({ [configKey]: null })
-      } else {
-        updateConfig({ [configKey]: `${providerID}/${modelID}` })
-      }
-    }
+  function hide(item: Provider) {
+    addDisabled(item.id)
   }
 
-  const allAgents = createMemo(() => session.agents())
+  function disconnect(item: Provider) {
+    setDisconnecting((prev) => new Set(prev).add(item.id))
+    action.send(
+      {
+        type: "disconnectProvider",
+        providerID: item.id,
+      },
+      {
+        onDisconnected: () => {
+          setDisconnecting((prev) => {
+            const next = new Set(prev)
+            next.delete(item.id)
+            return next
+          })
+          showToast({
+            variant: "success",
+            icon: "circle-check",
+            title: language.t("provider.disconnect.toast.disconnected.title", { provider: item.name }),
+            description: disconnectDescription(item.id, item.name),
+          })
+        },
+        onError: (message) => {
+          setDisconnecting((prev) => {
+            const next = new Set(prev)
+            next.delete(item.id)
+            return next
+          })
+          showToast({
+            title: language.t("common.requestFailed"),
+            description: message.message,
+          })
+        },
+      },
+    )
+  }
 
-  function handleModeModelSelect(agentName: string) {
-    return (providerID: string, modelID: string) => {
-      if (!providerID || !modelID) {
-        updateConfig({ agent: { [agentName]: { model: null } } })
-      } else {
-        updateConfig({ agent: { [agentName]: { model: `${providerID}/${modelID}` } } })
-      }
+  function disconnectDescription(providerID: string, name: string) {
+    if (providerID === KILO_PROVIDER_ID) {
+      return language.t("provider.disconnect.toast.disconnected.description.kilo", { provider: name })
     }
+    return language.t("provider.disconnect.toast.disconnected.description", { provider: name })
+  }
+
+  function providerNote(providerID: string) {
+    const key = providerNoteKey(providerID)
+    if (!key) return undefined
+    return language.t(key)
+  }
+
+  function openPopular(item: Provider) {
+    if (item.id === KILO_PROVIDER_ID) {
+      server.startLogin()
+      return
+    }
+    dialog.show(() => <ProviderConnectDialog providerID={item.id} />)
+  }
+
+  function openCustom() {
+    dialog.show(() => <CustomProviderDialog />)
+  }
+
+  function openAllProviders() {
+    dialog.show(() => <ProviderSelectDialog />)
+  }
+
+  function renderProviderRow(item: Provider, bordered: boolean, action: JSX.Element) {
+    return (
+      <div style={rowStyle(bordered)}>
+        <div style={{ display: "flex", gap: "12px", "align-items": "center", "min-width": 0, flex: 1 }}>
+          <ProviderGlyph id={item.id} />
+          <div style={{ display: "flex", gap: "8px", "align-items": "center", "flex-wrap": "wrap", "min-width": 0 }}>
+            <span style={{ "font-size": "14px", "font-weight": "500", color: "var(--vscode-foreground)" }}>
+              {item.name}
+            </span>
+            <Tag>{type(item)}</Tag>
+          </div>
+        </div>
+        {action}
+      </div>
+    )
+  }
+
+  function renderPopularRow(item: Provider, bordered: boolean) {
+    return (
+      <div style={rowStyle(bordered)}>
+        <div style={{ display: "flex", gap: "12px", "align-items": "center", "min-width": 0, flex: 1 }}>
+          <ProviderGlyph id={item.id} />
+          <div style={{ display: "flex", "flex-direction": "column", gap: "4px", "min-width": 0 }}>
+            <div style={{ display: "flex", gap: "8px", "align-items": "center", "flex-wrap": "wrap" }}>
+              <span style={{ "font-size": "14px", "font-weight": "500", color: "var(--vscode-foreground)" }}>
+                {item.name}
+              </span>
+              <Show when={item.id === KILO_PROVIDER_ID}>
+                <Tag>{language.t("dialog.provider.tag.recommended")}</Tag>
+              </Show>
+            </div>
+            <Show when={providerNote(item.id)}>
+              {(note) => (
+                <span style={{ "font-size": "12px", color: "var(--vscode-descriptionForeground)" }}>{note()}</span>
+              )}
+            </Show>
+          </div>
+        </div>
+        <Button variant="secondary" size="small" onClick={() => openPopular(item)}>
+          <span style={{ display: "flex", gap: "6px", "align-items": "center" }}>
+            <Icon name="plus-small" size="small" />
+            {language.t("common.connect")}
+          </span>
+        </Button>
+      </div>
+    )
   }
 
   return (
     <div>
-      {/* Model selection */}
+      <h4 style={{ "margin-bottom": "8px" }}>{language.t("settings.providers.section.connected")}</h4>
       <Card>
-        <SettingsRow
-          title={language.t("settings.providers.defaultModel.title")}
-          description={language.t("settings.providers.defaultModel.description")}
+        <Show
+          when={connectedProviders().length > 0}
+          fallback={
+            <div style={{ "font-size": "12px", color: "var(--text-weak-base, var(--vscode-descriptionForeground))" }}>
+              {language.t("settings.providers.connected.empty")}
+            </div>
+          }
         >
-          <ModelSelectorBase
-            value={parseModelConfig(config().model ?? undefined)}
-            onSelect={handleModelSelect("model")}
-            placement="bottom-start"
-            allowClear
-            clearLabel={language.t("settings.providers.notSet")}
-          />
-        </SettingsRow>
-        <SettingsRow
-          title={language.t("settings.providers.smallModel.title")}
-          description={language.t("settings.providers.smallModel.description")}
-          last
-        >
-          <ModelSelectorBase
-            value={parseModelConfig(config().small_model ?? undefined)}
-            onSelect={handleModelSelect("small_model")}
-            placement="bottom-start"
-            allowClear
-            clearLabel={language.t("settings.providers.notSet")}
-          />
-        </SettingsRow>
+          <For each={connectedProviders()}>
+            {(item, index) =>
+              renderProviderRow(
+                item,
+                index() < connectedProviders().length - 1,
+                <Show
+                  when={canDisconnect(item)}
+                  fallback={
+                    <Show when={canHide(item)}>
+                      <Button variant="ghost" size="small" onClick={() => hide(item)}>
+                        {language.t("settings.providers.action.hideModels")}
+                      </Button>
+                    </Show>
+                  }
+                >
+                  <Button
+                    variant="ghost"
+                    size="small"
+                    disabled={disconnecting().has(item.id)}
+                    onClick={() => disconnect(item)}
+                  >
+                    {language.t("common.disconnect")}
+                  </Button>
+                </Show>,
+              )
+            }
+          </For>
+        </Show>
       </Card>
 
-      {/* Model per Mode */}
-      <h4 style={{ "margin-top": "24px", "margin-bottom": "8px" }}>{language.t("settings.providers.modeModels")}</h4>
+      <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>
+        {language.t("settings.providers.section.popular")}
+      </h4>
+      <Show when={showKiloAuth()}>
+        <div style={{ "margin-bottom": "12px" }}>
+          <DeviceAuthCard
+            status={server.deviceAuth().status}
+            code={server.deviceAuth().code}
+            verificationUrl={server.deviceAuth().verificationUrl}
+            expiresIn={server.deviceAuth().expiresIn}
+            error={server.deviceAuth().error}
+            onCancel={() => vscode.postMessage({ type: "cancelLogin" })}
+            onRetry={server.startLogin}
+          />
+        </div>
+      </Show>
       <Card>
-        <For each={allAgents()}>
-          {(agent, index) => (
-            <SettingsRow
-              title={agent.name.charAt(0).toUpperCase() + agent.name.slice(1)}
-              last={index() === allAgents().length - 1}
-            >
-              <ModelSelectorBase
-                value={parseModelConfig(config().agent?.[agent.name]?.model ?? undefined)}
-                onSelect={handleModeModelSelect(agent.name)}
-                placement="bottom-start"
-                allowClear
-                clearLabel={language.t("settings.providers.notSet")}
-              />
-            </SettingsRow>
-          )}
+        <For each={popularProviders()}>
+          {(item, index) => renderPopularRow(item, index() < popularProviders().length)}
         </For>
+
+        <div style={rowStyle(false)}>
+          <div style={{ display: "flex", gap: "12px", "align-items": "center", "min-width": 0, flex: 1 }}>
+            <ProviderGlyph id={CUSTOM_PROVIDER_ID} />
+            <div style={{ display: "flex", "flex-direction": "column", gap: "4px", "min-width": 0 }}>
+              <div style={{ display: "flex", gap: "8px", "align-items": "center", "flex-wrap": "wrap" }}>
+                <span style={{ "font-size": "14px", "font-weight": "500", color: "var(--vscode-foreground)" }}>
+                  {language.t("settings.providers.tag.customProvider")}
+                </span>
+                <Tag>{language.t("settings.providers.tag.custom")}</Tag>
+              </div>
+              <span style={{ "font-size": "12px", color: "var(--vscode-descriptionForeground)" }}>
+                {language.t("settings.providers.custom.note")}
+              </span>
+            </div>
+          </div>
+          <Button variant="secondary" size="small" onClick={openCustom}>
+            <span style={{ display: "flex", gap: "6px", "align-items": "center" }}>
+              <Icon name="plus-small" size="small" />
+              {language.t("common.connect")}
+            </span>
+          </Button>
+        </div>
       </Card>
 
-      {/* Beta notice */}
-      <Card
-        variant="warning"
-        style={{
-          "margin-top": "16px",
-          display: "flex",
-          "flex-direction": "row",
-          "align-items": "flex-start",
-          gap: "8px",
-        }}
+      <Button
+        variant="secondary"
+        size="small"
+        style={{ margin: "12px 0 0", "justify-content": "flex-start" }}
+        onClick={openAllProviders}
       >
-        <Icon name="warning" style={{ "flex-shrink": "0", "margin-top": "2px" }} />
-        <p style={{ margin: 0, "line-height": "1.5" }}>{language.t("settings.providers.betaNotice")}</p>
-      </Card>
+        <span style={{ display: "flex", gap: "6px", "align-items": "center" }}>
+          <Icon name="plus-small" size="small" />
+          {language.t("settings.providers.action.addProvider")}
+        </span>
+      </Button>
 
-      {/* Disabled providers */}
       <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>{language.t("settings.providers.disabled")}</h4>
       <Card>
         <div
@@ -171,45 +391,55 @@ const ProvidersTab: Component = () => {
           }}
         >
           <div style={{ flex: 1 }}>
-            <Select
-              options={providerOptions().filter((o) => !disabledProviders().includes(o.value))}
-              current={newDisabled()}
-              value={(o) => o.value}
-              label={(o) => o.label}
-              onSelect={(o) => setNewDisabled(o)}
-              variant="secondary"
-              triggerVariant="settings"
-              placeholder="Select provider…"
+            <ProviderSelector
+              options={disabledOptions()}
+              value={newDisabled()}
+              onSelect={(item) => setNewDisabled(item)}
             />
           </div>
           <Button
             variant="secondary"
             onClick={() => {
-              if (newDisabled()) {
-                addDisabled(newDisabled()!.value)
-                setNewDisabled(undefined)
-              }
+              const item = newDisabled()
+              if (!item) return
+              addDisabled(item.value)
+              setNewDisabled(undefined)
             }}
           >
             {language.t("common.add")}
           </Button>
         </div>
         <For each={disabledProviders()}>
-          {(id, index) => (
-            <div
-              style={{
-                display: "flex",
-                "align-items": "center",
-                "justify-content": "space-between",
-                padding: "6px 0",
-                "border-bottom":
-                  index() < disabledProviders().length - 1 ? "1px solid var(--border-weak-base)" : "none",
-              }}
-            >
-              <span style={{ "font-size": "12px" }}>{id}</span>
-              <IconButton variant="ghost" icon="close" onClick={() => removeDisabled(index())} />
-            </div>
-          )}
+          {(id, index) => {
+            const item = providerOptions().find((option) => option.value === id)
+            return (
+              <div
+                style={{
+                  display: "flex",
+                  "align-items": "center",
+                  "justify-content": "space-between",
+                  padding: "6px 0",
+                  "border-bottom":
+                    index() < disabledProviders().length - 1 ? "1px solid var(--border-weak-base)" : "none",
+                }}
+              >
+                <div style={{ display: "flex", "flex-direction": "column", gap: "2px" }}>
+                  <span style={{ "font-size": "12px" }}>{item?.label ?? id}</span>
+                  <Show when={item?.label && item.value !== item.label}>
+                    <span
+                      style={{
+                        "font-size": "11px",
+                        color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                      }}
+                    >
+                      {id}
+                    </span>
+                  </Show>
+                </div>
+                <IconButton variant="ghost" icon="close" onClick={() => removeDisabled(index())} />
+              </div>
+            )
+          }}
         </For>
       </Card>
     </div>

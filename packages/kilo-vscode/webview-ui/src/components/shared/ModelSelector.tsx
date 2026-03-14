@@ -57,6 +57,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   })
 
   const hasProviders = () => visibleModels().length > 0
+  const canOpen = () => hasProviders() || ((props.allowClear ?? false) && !!props.value)
 
   // Flat filtered list for keyboard navigation
   const filtered = createMemo(() => {
@@ -193,7 +194,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
       triggerProps={{
         variant: "secondary",
         size: "normal",
-        disabled: !hasProviders(),
+        disabled: !canOpen(),
         title: selectedModel()?.id,
       }}
       trigger={

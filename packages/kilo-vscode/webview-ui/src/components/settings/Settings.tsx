@@ -3,6 +3,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tabs } from "@kilocode/kilo-ui/tabs"
 import { useLanguage } from "../../context/language"
 import ProvidersTab from "./ProvidersTab"
+import ModelsTab from "./ModelsTab"
 import AgentBehaviourTab from "./AgentBehaviourTab"
 import AutoApproveTab from "./AutoApproveTab"
 import BrowserTab from "./BrowserTab"
@@ -44,6 +45,10 @@ const Settings: Component<SettingsProps> = (props) => {
       {/* Settings tabs */}
       <Tabs orientation="vertical" variant="settings" defaultValue="providers" style={{ flex: 1, overflow: "hidden" }}>
         <Tabs.List>
+          <Tabs.Trigger value="models">
+            <Icon name="models" />
+            <span class="label">{language.t("settings.models.title")}</span>
+          </Tabs.Trigger>
           <Tabs.Trigger value="providers">
             <Icon name="providers" />
             <span class="label">{language.t("settings.providers.title")}</span>
@@ -102,6 +107,10 @@ const Settings: Component<SettingsProps> = (props) => {
           </Tabs.Trigger>
         </Tabs.List>
 
+        <Tabs.Content value="models">
+          <h3>{language.t("settings.models.title")}</h3>
+          <ModelsTab />
+        </Tabs.Content>
         <Tabs.Content value="providers">
           <h3>{language.t("settings.providers.title")}</h3>
           <ProvidersTab />
