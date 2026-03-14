@@ -167,6 +167,31 @@ export namespace ModelsDev {
       }
     }
 
+    // kilocode_change start - inject OCA provider
+    if (providers["oca"]) {
+      delete providers["oca"]
+    }
+    const ocaAuth = await Auth.get("oca")
+    const ocaToken = ocaAuth?.type === "oauth" ? ocaAuth.access : undefined
+    const ocaFetchOptions = {
+      ...(ocaToken ? { token: ocaToken } : {}),
+    }
+    const ocaModels = await ModelCache.fetch("oca", ocaFetchOptions).catch(() => ({}))
+    if (Object.keys(ocaModels).length > 0) {
+      providers["oca"] = {
+        id: "oca",
+        name: "Oracle Code Assist",
+        env: ["OCA_ACCESS_TOKEN"],
+        api: "https://code-internal.aiservice.us-chicago-1.oci.oraclecloud.com/20250206/app/litellm",
+        npm: "@ai-sdk/openai",
+        models: ocaModels,
+      }
+    }
+    if (Object.keys(ocaModels).length === 0 && ocaToken) {
+      ModelCache.refresh("oca", ocaFetchOptions).catch(() => {})
+    }
+    // kilocode_change end
+
     return providers
     // kilocode_change end
   }

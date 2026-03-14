@@ -620,6 +620,24 @@ export namespace Provider {
       }
     },
     // kilocode_change end
+    // kilocode_change start
+    oca: async (input) => {
+      const env = Env.all()
+      const hasAuth = await (async () => {
+        if (env.OCA_ACCESS_TOKEN) return true
+        if (await Auth.get("oca")) return true
+        return false
+      })()
+
+      return {
+        autoload: hasAuth && Object.keys(input.models).length > 0,
+        async getModel(sdk: any, modelID: string) {
+          return sdk.responses(modelID)
+        },
+        options: {},
+      }
+    },
+    // kilocode_change end
   }
 
   export const Model = z

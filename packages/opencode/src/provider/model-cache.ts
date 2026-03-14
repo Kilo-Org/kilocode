@@ -1,5 +1,6 @@
 // kilocode_change new file
 import { fetchKiloModels } from "@kilocode/kilo-gateway"
+import { fetchOcaModels } from "@/kilocode/oca/models"
 import { Config } from "../config/config"
 import { Auth } from "../auth"
 import { Env } from "../env"
@@ -164,6 +165,12 @@ export namespace ModelCache {
       return fetchKiloModels(options)
     }
 
+    // kilocode_change start
+    if (providerID === "oca") {
+      return fetchOcaModels(options)
+    }
+    // kilocode_change end
+
     // Other providers not implemented yet
     log.debug("provider not implemented", { providerID })
     return {}
@@ -222,6 +229,28 @@ export namespace ModelCache {
         hasOrganizationId: !!options.kilocodeOrganizationId,
       })
     }
+
+    // kilocode_change start
+    if (providerID === "oca") {
+      const auth = await Auth.get(providerID)
+      if (auth?.type === "oauth") {
+        options.token = auth.access
+      }
+      const env = Env.all()
+      if (env.OCA_ACCESS_TOKEN) {
+        options.token = env.OCA_ACCESS_TOKEN
+      }
+      if (env.OCA_API_BASE) {
+        options.baseURL = env.OCA_API_BASE
+      }
+
+      log.debug("auth options resolved", {
+        providerID,
+        hasToken: !!options.token,
+        hasBaseURL: !!options.baseURL,
+      })
+    }
+    // kilocode_change end
 
     return options
   }
