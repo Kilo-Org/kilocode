@@ -75,6 +75,54 @@ export function activate(context: vscode.ExtensionContext) {
   const subAgentViewerProvider = new SubAgentViewerProvider(context.extensionUri, connectionService, context)
   context.subscriptions.push(subAgentViewerProvider)
 
+  // Register serializers so VS Code can restore (or close) webview panels after reload.
+  // TabPanel and SubAgentViewerPanel get a full restore; ephemeral panels (settings, profile, diff, agent manager)
+  // are disposed immediately since they require runtime state that doesn't survive a reload.
+  context.subscriptions.push(
+    vscode.window.registerWebviewPanelSerializer("kilo-code.new.TabPanel", {
+      async deserializeWebviewPanel(panel: vscode.WebviewPanel) {
+        console.log("[Kilo New] Restoring TabPanel after reload")
+
+        panel.iconPath = {
+          light: vscode.Uri.joinPath(context.extensionUri, "assets", "icons", "kilo-light.svg"),
+          dark: vscode.Uri.joinPath(context.extensionUri, "assets", "icons", "kilo-dark.svg"),
+        }
+
+        const tabProvider = new KiloProvider(context.extensionUri, connectionService, context)
+        tabProvider.resolveWebviewPanel(panel)
+
+        panel.onDidDispose(
+          () => {
+            console.log("[Kilo New] Restored tab panel disposed")
+            tabProvider.dispose()
+          },
+          null,
+          context.subscriptions,
+        )
+      },
+    }),
+    vscode.window.registerWebviewPanelSerializer("kilo-code.new.SubAgentViewerPanel", {
+      async deserializeWebviewPanel(panel: vscode.WebviewPanel, state: { sessionID?: string } | undefined) {
+        const sessionID = state?.sessionID
+        if (!sessionID) {
+          console.log("[Kilo New] Closing stale SubAgentViewerPanel after reload (no session state)")
+          panel.dispose()
+          return
+        }
+        console.log("[Kilo New] Restoring SubAgentViewerPanel after reload:", sessionID)
+        subAgentViewerProvider.restorePanel(panel, sessionID)
+      },
+    }),
+    ...["settingsPanel", "profilePanel", "DiffViewerPanel", "AgentManagerPanel"].map((viewType) =>
+      vscode.window.registerWebviewPanelSerializer(`kilo-code.new.${viewType}`, {
+        async deserializeWebviewPanel(panel: vscode.WebviewPanel) {
+          console.log(`[Kilo New] Closing stale ${viewType} after reload`)
+          panel.dispose()
+        },
+      }),
+    ),
+  )
+
   // Register toolbar button command handlers
   context.subscriptions.push(
     vscode.commands.registerCommand("kilo-code.new.plusButtonClicked", () => {
