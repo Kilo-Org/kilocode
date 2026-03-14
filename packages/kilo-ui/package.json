@@ -1,6 +1,6 @@
 {
   "name": "@kilocode/kilo-ui",
-  "version": "7.0.40",
+  "version": "7.0.47",
   "type": "module",
   "license": "MIT",
   "exports": {
@@ -8,6 +8,7 @@
     "./button": "./src/components/button.tsx",
     "./code": "./src/components/code.tsx",
     "./diff": "./src/components/diff.tsx",
+    "./diff-ssr": "./src/components/diff-ssr.tsx",
     "./dialog": "./src/components/dialog.tsx",
     "./icon": "./src/components/icon.tsx",
     "./icon-button": "./src/components/icon-button.tsx",
@@ -52,10 +53,15 @@
     "./basic-tool": "./src/components/basic-tool.tsx",
     "./error-details": "./src/components/error-details.tsx",
     "./diff-changes": "./src/components/diff-changes.tsx",
-    "./diff-ssr": "./src/components/diff-ssr.tsx",
     "./dock-prompt": "./src/components/dock-prompt.tsx",
     "./dock-surface": "./src/components/dock-surface.tsx",
     "./scroll-view": "./src/components/scroll-view.tsx",
+    "./file": "./src/components/file.tsx",
+    "./motion-spring": "./src/components/motion-spring.tsx",
+    "./line-comment-annotations": "./src/components/line-comment-annotations.tsx",
+    "./animated-number": "./src/components/animated-number.tsx",
+    "./text-reveal": "./src/components/text-reveal.tsx",
+    "./text-strikethrough": "./src/components/text-strikethrough.tsx",
     "./context": "./src/context/index.ts",
     "./context/code": "./src/context/code.tsx",
     "./context/data": "./src/context/data.tsx",
@@ -65,6 +71,7 @@
     "./context/i18n": "./src/context/i18n.tsx",
     "./context/marked": "./src/context/marked.tsx",
     "./context/worker-pool": "./src/context/worker-pool.tsx",
+    "./context/file": "./src/context/file.tsx",
     "./i18n/*": "./src/i18n/*.ts",
     "./pierre": "./src/pierre/index.ts",
     "./pierre/*": "./src/pierre/*.ts",
@@ -106,6 +113,10 @@
   },
   "dependencies": {
     "@kobalte/core": "0.13.11",
+    "@opencode-ai/util": "workspace:*",
+    "@pierre/diffs": "catalog:",
+    "@solid-primitives/media": "2.3.3",
+    "@solid-primitives/resize-observer": "2.1.5",
     "lucide-solid": "0.576.0"
   }
 }

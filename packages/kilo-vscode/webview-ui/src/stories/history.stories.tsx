@@ -9,10 +9,12 @@ import { DialogProvider } from "@kilocode/kilo-ui/context/dialog"
 import { DataProvider } from "@kilocode/kilo-ui/context/data"
 import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff"
 import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
+import { FileComponentProvider } from "@kilocode/kilo-ui/context/file"
 import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
 import { I18nProvider } from "@kilocode/kilo-ui/context"
 import { Diff } from "@kilocode/kilo-ui/diff"
 import { Code } from "@kilocode/kilo-ui/code"
+import { File } from "@kilocode/kilo-ui/file"
 import { VSCodeProvider } from "../context/vscode"
 import { ServerProvider } from "../context/server"
 import { ConfigProvider } from "../context/config"
@@ -64,6 +66,8 @@ const WithSessions: ParentComponent<{ sessions?: typeof mockSessions }> = (props
     permissions: () => [],
     questions: () => [],
     questionErrors: () => new Set<string>(),
+    scopedPermissions: () => [] as any[],
+    scopedQuestions: () => [] as any[],
     selected: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     selectModel: noop,
     hasModelOverride: () => false,
@@ -108,22 +112,22 @@ const WithSessions: ParentComponent<{ sessions?: typeof mockSessions }> = (props
                   <SessionContext.Provider value={session as any}>
                     <DataProvider
                       data={{
-                        session: sessions,
+                        session: sessions as any,
                         session_status: {},
                         session_diff: {},
                         message: {},
                         part: {},
-                        permission: {},
-                        question: {},
-                        provider: { all: [], connected: false, default: {} },
+                        provider: { all: [], connected: [] as string[], default: {} as any },
                       }}
                       directory="/project/"
                     >
                       <DiffComponentProvider component={Diff}>
                         <CodeComponentProvider component={Code}>
-                          <MarkedProvider>
-                            <div style={{ padding: "12px" }}>{props.children}</div>
-                          </MarkedProvider>
+                          <FileComponentProvider component={File}>
+                            <MarkedProvider>
+                              <div style={{ padding: "12px" }}>{props.children}</div>
+                            </MarkedProvider>
+                          </FileComponentProvider>
                         </CodeComponentProvider>
                       </DiffComponentProvider>
                     </DataProvider>

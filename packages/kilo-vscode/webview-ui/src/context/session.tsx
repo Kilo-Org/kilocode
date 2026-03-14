@@ -90,12 +90,17 @@ interface SessionContextValue {
   // Todos for current session
   todos: Accessor<TodoItem[]>
 
-  // Pending permission requests
+  // Pending permission requests (unscoped — all tracked sessions)
   permissions: Accessor<PermissionRequest[]>
+  respondingPermissions: Accessor<Set<string>>
 
-  // Pending question requests
+  // Pending question requests (unscoped — all tracked sessions)
   questions: Accessor<QuestionRequest[]>
   questionErrors: Accessor<Set<string>>
+
+  // Scoped permissions/questions — filtered to a session's family (self + subagents)
+  scopedPermissions: (sessionID: string | undefined) => PermissionRequest[]
+  scopedQuestions: (sessionID: string | undefined) => QuestionRequest[]
 
   // Model selection (global, extension-lifetime)
   selected: Accessor<ModelSelection | null>
@@ -125,7 +130,12 @@ interface SessionContextValue {
   sendMessage: (text: string, providerID?: string, modelID?: string, files?: FileAttachment[]) => void
   abort: () => void
   compact: () => void
-  respondToPermission: (permissionId: string, response: "once" | "always" | "reject") => void
+  respondToPermission: (
+    permissionId: string,
+    response: "once" | "always" | "reject",
+    approvedPatterns: string[],
+    deniedPatterns: string[],
+  ) => void
   replyToQuestion: (requestID: string, answers: string[][]) => void
   rejectQuestion: (requestID: string) => void
   createSession: () => void
@@ -174,6 +184,9 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Pending permissions
   const [permissions, setPermissions] = createSignal<PermissionRequest[]>([])
+
+  // Permission IDs that have been responded to but not yet confirmed by the server
+  const [respondingPermissions, setRespondingPermissions] = createSignal<Set<string>>(new Set())
 
   // Pending questions
   const [questions, setQuestions] = createSignal<QuestionRequest[]>([])
@@ -246,7 +259,7 @@ export const SessionProvider: ParentComponent = (props) => {
   })
 
   // Global model selection per agent/mode
-  // Precedence: user override > per-mode config > global config model > VS Code default > kilo-auto/frontier
+  // Precedence: user override > per-mode config > global config model > VS Code default > kilo-auto/free
   const selected = createMemo<ModelSelection | null>(() => {
     const agentName = selectedAgentName()
     const override = store.modelSelections[agentName]
@@ -393,6 +406,14 @@ export const SessionProvider: ParentComponent = (props) => {
 
         case "permissionRequest":
           handlePermissionRequest(message.permission)
+          break
+
+        case "permissionResolved":
+          handlePermissionResolved(message.permissionID)
+          break
+
+        case "permissionError":
+          handlePermissionError(message.permissionID)
           break
 
         case "todoUpdated":
@@ -601,6 +622,30 @@ export const SessionProvider: ParentComponent = (props) => {
     setPermissions((prev) => upsertPermission(prev, permission))
   }
 
+  function handlePermissionResolved(permissionID: string) {
+    setPermissions((prev) => prev.filter((p) => p.id !== permissionID))
+    setRespondingPermissions((prev) => {
+      if (!prev.has(permissionID)) return prev
+      const next = new Set(prev)
+      next.delete(permissionID)
+      return next
+    })
+  }
+
+  function handlePermissionError(permissionID: string) {
+    // Remove from responding set so buttons re-enable (permission prompt is still visible)
+    setRespondingPermissions((prev) => {
+      if (!prev.has(permissionID)) return prev
+      const next = new Set(prev)
+      next.delete(permissionID)
+      return next
+    })
+    showToast({
+      variant: "error",
+      title: language.t("settings.permissions.toast.updateFailed.title"),
+    })
+  }
+
   function handleQuestionRequest(question: QuestionRequest) {
     setQuestions((prev) => {
       const idx = prev.findIndex((q) => q.id === question.id)
@@ -622,6 +667,48 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function handleQuestionError(requestID: string) {
     setQuestionErrors((prev) => new Set(prev).add(requestID))
+  }
+
+  /**
+   * BFS walk over message parts to discover all session IDs in a session's
+   * family tree (self + subagents + sub-subagents). Reads directly from the
+   * store so it's reactive — automatically updates when new parts arrive.
+   */
+  function sessionFamily(rootID: string): Set<string> {
+    const family = new Set<string>([rootID])
+    const queue = [rootID]
+    while (queue.length > 0) {
+      const sid = queue.pop()!
+      const msgs = store.messages[sid]
+      if (!msgs) continue
+      for (const msg of msgs) {
+        const parts = store.parts[msg.id]
+        if (!parts) continue
+        for (const p of parts) {
+          if (p.type !== "tool") continue
+          const child = (p as { state?: { metadata?: { sessionId?: string } } }).state?.metadata?.sessionId
+          if (child && !family.has(child)) {
+            family.add(child)
+            queue.push(child)
+          }
+        }
+      }
+    }
+    return family
+  }
+
+  /** Return permissions scoped to the given session's family (self + subagents). */
+  function scopedPermissions(sessionID: string | undefined): PermissionRequest[] {
+    if (!sessionID) return []
+    const family = sessionFamily(sessionID)
+    return permissions().filter((p) => family.has(p.sessionID))
+  }
+
+  /** Return questions scoped to the given session's family (self + subagents). */
+  function scopedQuestions(sessionID: string | undefined): QuestionRequest[] {
+    if (!sessionID) return []
+    const family = sessionFamily(sessionID)
+    return questions().filter((q) => family.has(q.sessionID))
   }
 
   function handleTodoUpdated(sessionID: string, items: TodoItem[]) {
@@ -849,6 +936,11 @@ export const SessionProvider: ParentComponent = (props) => {
       }
       setStore("messages", sid, (msgs = []) => [...msgs, temp])
       setStore("parts", tempId, [{ type: "text" as const, id: `${tempId}-text`, text }])
+      // The optimistic message is now in the DOM but the session status is
+      // still "idle" (the CLI backend hasn't started yet), so the auto-scroll
+      // ResizeObserver won't scroll on its own. Force scroll to bottom so the
+      // user's own message is immediately visible.
+      queueMicrotask(() => window.dispatchEvent(new CustomEvent("resumeAutoScroll")))
     }
 
     const agent = selectedAgentName() !== defaultAgent() ? selectedAgentName() : undefined
@@ -899,20 +991,28 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
-  function respondToPermission(permissionId: string, response: "once" | "always" | "reject") {
+  function respondToPermission(
+    permissionId: string,
+    response: "once" | "always" | "reject",
+    approvedPatterns: string[],
+    deniedPatterns: string[],
+  ) {
     // Resolve sessionID from the stored permission request
     const permission = permissions().find((p) => p.id === permissionId)
     const sessionID = permission?.sessionID ?? currentSessionID() ?? ""
+
+    // Mark as responding so the UI disables the buttons.
+    // The permission is removed when the server confirms via permission.replied SSE.
+    setRespondingPermissions((prev) => new Set(prev).add(permissionId))
 
     vscode.postMessage({
       type: "permissionResponse",
       permissionId,
       sessionID,
       response,
+      approvedPatterns,
+      deniedPatterns,
     })
-
-    // Remove from pending permissions
-    setPermissions((prev) => prev.filter((p) => p.id !== permissionId))
   }
 
   function clearQuestionError(requestID: string) {
@@ -957,6 +1057,7 @@ export const SessionProvider: ParentComponent = (props) => {
     setCloudPreviewId(null)
     setLoading(false)
     setPermissions([])
+    setRespondingPermissions(new Set<string>())
     setQuestions([])
     setQuestionErrors(new Set<string>())
     setPendingAgentSelection(defaultAgent())
@@ -1097,8 +1198,11 @@ export const SessionProvider: ParentComponent = (props) => {
     getParts,
     todos,
     permissions,
+    respondingPermissions,
     questions,
     questionErrors,
+    scopedPermissions,
+    scopedQuestions,
     selected,
     selectModel,
     hasModelOverride,
