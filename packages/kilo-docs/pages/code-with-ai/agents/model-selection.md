@@ -15,6 +15,20 @@ Instead of maintaining a static list that's perpetually behind, we built somethi
 
 This isn't benchmarks from some lab. It's real usage data from developers like you, updated continuously. You'll see which models people are choosing for different tasks, what's delivering results, and how the landscape is shifting in real-time.
 
+## Model Resolution Priority
+
+When Kilo Code determines which model to use for a given task, it follows a specific priority order. This applies to both primary agents (modes) and subagents:
+
+| Priority | Source                    | Description                                                                                                                                                                                             |
+| -------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1        | **Mode/subagent model**   | A model explicitly set on the specific mode or subagent you're using. For modes, this is the model selected in the model dropdown. For subagents, this is the `model` field in the agent configuration. |
+| 2        | **Global settings model** | The model configured in your global settings, which applies when no mode-specific model is set.                                                                                                         |
+| 3        | **Kilo default**          | If no model is configured at any level, Kilo uses its built-in default (currently Auto Free).                                                                                                           |
+
+{% callout type="info" title="How Subagents Inherit Models" %}
+Built-in subagents (like `general` and `explore`) do **not** have a predefined model. When a primary agent invokes a subagent, the subagent inherits the model from the parent task — meaning it uses whatever model the primary agent is using. You can override this by setting a `model` on the subagent in your configuration. See [Custom Subagents](/docs/customize/custom-subagents#model-inheritance) for details.
+{% /callout %}
+
 ## General Guidance
 
 While the specifics change constantly, some principles stay consistent:

@@ -11,6 +11,16 @@ Kilo Code allows you to create **custom modes** to tailor Kilo's behavior to spe
 
 Each mode—including custom ones—features **Sticky Models**. This means Kilo Code automatically remembers and selects the last model you used with a particular mode. This lets you assign different preferred models to different tasks without constant reconfiguration, as Kilo switches between models when you change modes.
 
+{% callout type="info" title="Model Resolution Priority" %}
+When Kilo determines which model to use, it follows this priority order:
+
+1. **Mode-specific model** — the model selected for the current mode (via Sticky Models or the model dropdown)
+2. **Global settings model** — the model configured in your global settings
+3. **Kilo default** — the built-in default (currently Auto Free)
+
+This means if you select a model for a specific mode, that choice takes priority over the global setting. See the [Model Selection Guide](/docs/code-with-ai/agents/model-selection#model-resolution-priority) for the full breakdown.
+{% /callout %}
+
 ## Why Use Custom Modes?
 
 - **Specialization:** Create modes optimized for specific tasks, like "Documentation Writer," "Test Engineer," or "Refactoring Expert"
