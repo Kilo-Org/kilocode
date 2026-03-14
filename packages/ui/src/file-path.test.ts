@@ -208,6 +208,24 @@ describe("extractFilePathFromHref", () => {
     })
   })
 
+  describe("strips :line and :line:col suffixes", () => {
+    it("strips :line suffix", () => {
+      expect(extractFilePathFromHref("src/foo.ts:42")).toBe("src/foo.ts")
+    })
+
+    it("strips :line:col suffix", () => {
+      expect(extractFilePathFromHref("src/foo.ts:42:10")).toBe("src/foo.ts")
+    })
+
+    it("strips suffix from relative path", () => {
+      expect(extractFilePathFromHref("./utils/helper.js:100")).toBe("./utils/helper.js")
+    })
+
+    it("returns path without suffix unchanged", () => {
+      expect(extractFilePathFromHref("src/foo.ts")).toBe("src/foo.ts")
+    })
+  })
+
   describe("rejects anchors and non-file values", () => {
     it("pure anchor", () => {
       expect(extractFilePathFromHref("#section")).toBeUndefined()
