@@ -1499,10 +1499,11 @@ export namespace Config {
     await Bun.write(configPath, result)
     // kilocode_change: Reset global config cache to avoid stale reads when writing to global files
     await global.reset()
-    // kilocode_change: If writing to a shared/global config file, dispose all project config states
-    // since the change affects all projects. Otherwise, just dispose the current project's config.
-    const isGlobalConfig = configPath.startsWith(Global.Path.home)
-    if (isGlobalConfig) {
+    // kilocode_change: If writing to a shared config file (outside the current project directory),
+    // dispose all project config states since the change affects all projects.
+    // Otherwise, just dispose the current project's config.
+    const isSharedConfig = !configPath.startsWith(Instance.directory)
+    if (isSharedConfig) {
       await State.disposeAllEntries(initConfigState)
     } else {
       await State.disposeEntry(Instance.directory, initConfigState)
