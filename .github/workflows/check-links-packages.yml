@@ -1,0 +1,54 @@
+name: Check Links (CLI/VS Code)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/opencode/src/**"
+      - "packages/kilo-vscode/src/**"
+      - "packages/kilo-vscode/webview-ui/**"
+      - "lychee.toml"
+      - ".github/workflows/check-links-packages.yml"
+  pull_request:
+    paths:
+      - "packages/opencode/src/**"
+      - "packages/kilo-vscode/src/**"
+      - "packages/kilo-vscode/webview-ui/**"
+      - "lychee.toml"
+      - ".github/workflows/check-links-packages.yml"
+  schedule:
+    # Run weekly on Mondays at 9am UTC (less frequent than docs)
+    - cron: "0 9 * * 1"
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  link-checker:
+    if: github.repository == 'Kilo-Org/kilocode'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check CLI package links
+        uses: Kilo-Org/lychee-action@8646ba30535128ac92d33dfc9133794bfdd9b411
+        with:
+          args: >-
+            packages/opencode/src/**/*.ts
+            packages/opencode/README.md
+          configFile: lychee.toml
+          # Start non-blocking until exclusions are tuned
+          fail: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check VS Code extension links
+        uses: Kilo-Org/lychee-action@8646ba30535128ac92d33dfc9133794bfdd9b411
+        with:
+          args: >-
+            packages/kilo-vscode/src/**/*.ts
+            packages/kilo-vscode/webview-ui/**/*.tsx
+            packages/kilo-vscode/README.md
+          configFile: lychee.toml
+          # Start non-blocking until exclusions are tuned
+          fail: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
