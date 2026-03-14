@@ -1772,7 +1772,6 @@ export namespace Config {
         },
       },
     })
-    await Instance.dispose()
   }
 
   function globalConfigFile() {
