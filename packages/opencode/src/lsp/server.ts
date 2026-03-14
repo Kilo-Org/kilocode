@@ -1,4 +1,4 @@
-import { spawn, type ChildProcessWithoutNullStreams } from "child_process"
+import { spawn as _spawn, type ChildProcessWithoutNullStreams, type SpawnOptions } from "child_process"
 import path from "path"
 import os from "os"
 import { Global } from "../global"
@@ -12,6 +12,16 @@ import { Instance } from "../project/instance"
 import { Flag } from "../flag/flag"
 import { Archive } from "../util/archive"
 import { Process } from "../util/process"
+
+// kilocode_change start - prevent CMD window flash on Windows for all LSP server spawns
+function spawn(cmd: string, opts?: SpawnOptions): ChildProcessWithoutNullStreams
+function spawn(cmd: string, args: readonly string[], opts?: SpawnOptions): ChildProcessWithoutNullStreams
+function spawn(cmd: string, ...rest: any[]): ChildProcessWithoutNullStreams {
+  const opts = typeof rest[rest.length - 1] === "object" && !Array.isArray(rest[rest.length - 1]) ? rest.pop() : {}
+  const args = rest[0] as readonly string[] | undefined
+  return args ? _spawn(cmd, args, { ...opts, windowsHide: true }) : _spawn(cmd, { ...opts, windowsHide: true })
+}
+// kilocode_change end
 
 export namespace LSPServer {
   const log = Log.create({ service: "lsp.server" })

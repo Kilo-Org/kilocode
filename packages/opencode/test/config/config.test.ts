@@ -130,6 +130,35 @@ test("merges multiple config files with correct precedence", async () => {
   })
 })
 
+test("prefers .kilo directory config over legacy .kilocode", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Filesystem.write(
+        path.join(dir, ".kilocode", "kilo.json"),
+        JSON.stringify({
+          $schema: "https://app.kilo.ai/config.json",
+          model: "legacy/model",
+        }),
+      )
+      await Filesystem.write(
+        path.join(dir, ".kilo", "kilo.json"),
+        JSON.stringify({
+          $schema: "https://app.kilo.ai/config.json",
+          model: "new/model",
+        }),
+      )
+    },
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await Config.get()
+      expect(config.model).toBe("new/model")
+    },
+  })
+})
+
 test("handles environment variable substitution", async () => {
   const originalEnv = process.env["TEST_VAR"]
   process.env["TEST_VAR"] = "test-user"
@@ -578,6 +607,39 @@ Nested command template`,
       expect(config.command?.["nested/child"]).toEqual({
         description: "Nested command",
         template: "Nested command template",
+      })
+    },
+  })
+})
+
+test("prefers .kilo commands over legacy .kilocode commands", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Filesystem.write(
+        path.join(dir, ".kilocode", "command", "hello.md"),
+        `---
+description: Legacy command
+---
+Hello from legacy command`,
+      )
+      await Filesystem.write(
+        path.join(dir, ".kilo", "command", "hello.md"),
+        `---
+description: New command
+---
+Hello from new command`,
+      )
+    },
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await Config.get()
+
+      expect(config.command?.["hello"]).toEqual({
+        description: "New command",
+        template: "Hello from new command",
       })
     },
   })
@@ -1527,6 +1589,71 @@ test("project config overrides remote well-known config", async () => {
         expect(fetchedUrl).toBe("https://example.com/.well-known/opencode")
         // Project config (enabled: true) should override remote (enabled: false)
         expect(config.mcp?.jira?.enabled).toBe(true)
+      },
+    })
+  } finally {
+    globalThis.fetch = originalFetch
+    Auth.all = originalAuthAll
+  }
+})
+
+test("wellknown URL with trailing slash is normalized", async () => {
+  const originalFetch = globalThis.fetch
+  let fetchedUrl: string | undefined
+  const mockFetch = mock((url: string | URL | Request) => {
+    const urlStr = url.toString()
+    if (urlStr.includes(".well-known/opencode")) {
+      fetchedUrl = urlStr
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            config: {
+              mcp: {
+                slack: {
+                  type: "remote",
+                  url: "https://slack.example.com/mcp",
+                  enabled: true,
+                },
+              },
+            },
+          }),
+          { status: 200 },
+        ),
+      )
+    }
+    return originalFetch(url)
+  })
+  globalThis.fetch = mockFetch as unknown as typeof fetch
+
+  const originalAuthAll = Auth.all
+  Auth.all = mock(() =>
+    Promise.resolve({
+      "https://example.com/": {
+        type: "wellknown" as const,
+        key: "TEST_TOKEN",
+        token: "test-token",
+      },
+    }),
+  )
+
+  try {
+    await using tmp = await tmpdir({
+      git: true,
+      init: async (dir) => {
+        await Filesystem.write(
+          path.join(dir, "opencode.json"),
+          JSON.stringify({
+            $schema: "https://opencode.ai/config.json",
+          }),
+        )
+      },
+    })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        await Config.get()
+        // Trailing slash should be stripped — no double slash in the fetch URL
+        expect(fetchedUrl).toBe("https://example.com/.well-known/opencode")
       },
     })
   } finally {

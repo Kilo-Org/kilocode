@@ -101,6 +101,76 @@
   border-top: 1px solid var(--vscode-panel-border);
 }
 
+/* Startup Error Banner */
+.startup-error-banner {
+  margin: 8px 12px;
+  border: 1px solid var(--vscode-inputValidation-errorBorder, #f14c4c);
+  border-radius: 4px;
+  background: var(--vscode-inputValidation-errorBackground, rgba(241, 76, 76, 0.1));
+  font-size: 12px;
+}
+
+.startup-error-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  cursor: pointer;
+  user-select: none;
+  min-width: 0;
+}
+
+.startup-error-title {
+  flex: 1;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.startup-error-firstline {
+  font-weight: 400;
+}
+
+.startup-error-chevron {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  transition: transform 150ms;
+}
+
+.startup-error-chevron-expanded {
+  transform: rotate(90deg);
+}
+
+.startup-error-retry {
+  background: none;
+  border: none;
+  color: var(--vscode-textLink-foreground);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.startup-error-retry:hover {
+  text-decoration: underline;
+}
+
+.startup-error-details {
+  margin: 0;
+  padding: 8px 10px;
+  border-top: 1px solid var(--vscode-inputValidation-errorBorder, #f14c4c);
+  background: var(--vscode-editor-background);
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
 /* New Task Button */
 .new-task-button-wrapper {
   padding: 8px 12px 0;
@@ -175,6 +245,126 @@
   max-width: 260px;
   font-size: 13px;
   line-height: 1.4;
+}
+
+/* ============================================
+   Feedback Button (empty state)
+   ============================================ */
+
+.feedback-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border: 1px dashed var(--vscode-textLink-foreground, #3794ff);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--vscode-textLink-foreground, #3794ff);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+
+.feedback-button:hover {
+  background: var(--vscode-textLink-foreground, #3794ff);
+  color: var(--vscode-editor-background, #1e1e1e);
+  border-style: solid;
+  border-color: var(--vscode-textLink-foreground, #3794ff);
+}
+
+.feedback-button:hover [data-slot="icon-svg"] {
+  color: var(--vscode-editor-background, #1e1e1e);
+}
+
+/* Feedback Dialog */
+
+@keyframes feedback-dialog-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes feedback-dialog-logo-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes feedback-dialog-item-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.feedback-dialog {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px 16px;
+  text-align: center;
+  animation: feedback-dialog-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.feedback-dialog-logo {
+  width: 48px;
+  height: 48px;
+  animation: feedback-dialog-logo-enter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.05s both;
+}
+
+.feedback-dialog-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.feedback-dialog-message {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--vscode-foreground);
+  max-width: 280px;
+  animation: feedback-dialog-item-enter 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+}
+
+.feedback-dialog-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.feedback-dialog-actions > [data-component="button"]:nth-child(1) {
+  animation: feedback-dialog-item-enter 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
+}
+
+.feedback-dialog-actions > [data-component="button"]:nth-child(2) {
+  animation: feedback-dialog-item-enter 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+}
+
+.feedback-dialog-actions > [data-component="button"]:nth-child(3) {
+  animation: feedback-dialog-item-enter 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.25s both;
 }
 
 /* ============================================
@@ -572,6 +762,7 @@
   line-height: 1.4;
   resize: none;
   outline: none;
+  scrollbar-gutter: stable;
 }
 
 .prompt-input:focus {
@@ -618,6 +809,7 @@
   word-wrap: break-word;
   overflow-x: hidden;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   z-index: 0;
   color: var(--vscode-input-foreground);
 }
@@ -912,6 +1104,7 @@
     --surface-interactive-active,
     var(--vscode-list-activeSelectionBackground, var(--vscode-list-hoverBackground))
   );
+  color: var(--text-on-interactive-base, var(--vscode-list-activeSelectionForeground));
 }
 
 .thinking-selector-item-name {
@@ -930,7 +1123,7 @@
 }
 
 .mode-switcher-list {
-  max-height: 280px;
+  max-height: var(--kb-popper-content-available-height, 280px);
   overflow-y: auto;
 }
 
@@ -940,7 +1133,7 @@
   gap: 2px;
   padding: 8px 12px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--vscode-font-size);
 }
 
 .mode-switcher-item:hover {
@@ -952,6 +1145,7 @@
     --surface-interactive-active,
     var(--vscode-list-activeSelectionBackground, var(--vscode-list-hoverBackground))
   );
+  color: var(--text-on-interactive-base, var(--vscode-list-activeSelectionForeground));
 }
 
 .mode-switcher-item-name {
@@ -961,62 +1155,269 @@
 .mode-switcher-item-desc {
   font-size: 11px;
   color: var(--text-weak, var(--vscode-descriptionForeground));
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.mode-switcher-item.selected .mode-switcher-item-desc {
+  color: inherit;
 }
 
 /* ============================================
-   Permission Dock (patterns inside BasicTool)
+   Permission Dock (VS Code overrides)
    ============================================ */
 
-.permission-dock-patterns {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  max-height: 120px;
-  overflow-y: auto;
-  padding: 8px 12px;
-}
+[data-component="dock-prompt"][data-kind="permission"] {
+  animation: permission-slide-in 0.3s ease-out;
+  margin: 12px;
+  border: 1px solid
+    color-mix(in srgb, var(--vscode-editorWarning-foreground, #cca700) 40%, var(--vscode-panel-border, transparent));
+  border-radius: 0.25rem;
+  overflow: clip;
 
-.permission-dock-pattern {
-  font-size: 12px;
-  font-family: var(--vscode-editor-font-family, monospace);
-  color: var(--vscode-foreground);
-  word-break: break-all;
-}
+  [data-dock-surface="shell"] {
+    border-radius: 0;
+    box-shadow: none;
+  }
 
-/* Permission Prompt (inline with tool cards) */
-[data-component="tool-part-wrapper"][data-permission="true"] {
-  /* When wrapping a Part + permission, the outer wrapper provides the card border.
-     Remove the inner Part's tool-part-wrapper border so we don't get double borders. */
-  > [data-component="tool-part-wrapper"] {
+  [data-dock-surface="tray"] {
     border: none;
     border-radius: 0;
+    margin-top: 0;
+  }
+
+  [data-slot="permission-body"] {
+    padding: 10px 16px 0;
+    gap: 8px;
+  }
+
+  [data-slot="permission-header-title"] {
+    font-size: 13px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  [data-slot="permission-header-subtitle"] {
+    font-size: 11px;
+    font-weight: var(--font-weight-regular, 400);
+    color: var(--text-weak, var(--vscode-descriptionForeground));
+  }
+
+  [data-slot="permission-command"] {
+    font-size: 12px;
+    font-family: var(--vscode-editor-font-family, monospace);
+    color: var(--text-weak, var(--vscode-descriptionForeground));
+    word-break: break-word;
+  }
+
+  [data-slot="permission-hint"] {
+    font-size: 12px;
+  }
+
+  [data-slot="permission-patterns"] {
+    margin: 0;
+    padding: 0 16px;
+    max-height: 160px;
+    overflow-y: auto;
+    gap: 2px;
+
+    code {
+      font-size: 12px;
+      font-family: var(--vscode-editor-font-family, monospace);
+      color: var(--vscode-foreground);
+      word-break: break-all;
+    }
+  }
+
+  [data-slot="permission-patterns-section"] {
+    display: flex;
+    flex-direction: column;
+  }
+
+  [data-slot="permission-patterns-header"] {
+    all: unset;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--text-weak, var(--vscode-descriptionForeground));
+    transition: background-color 0.15s ease;
+
+    &:hover {
+      background-color: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+    }
+  }
+
+  [data-slot="permission-patterns-header-main"] {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  [data-slot="permission-patterns-header-title"] {
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  [data-slot="permission-patterns-header-chevron"] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: transform 0.15s ease;
+
+    &[data-open] {
+      transform: rotate(180deg);
+    }
+  }
+
+  [data-slot="permission-patterns-collapse"] {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition:
+      grid-template-rows 0.2s ease,
+      opacity 0.2s ease;
+    opacity: 0;
+
+    &[data-open] {
+      grid-template-rows: 1fr;
+      opacity: 1;
+    }
+  }
+
+  [data-slot="permission-patterns-collapse-inner"] {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  [data-slot="permission-pattern-row"] {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 0;
+    min-width: 0;
+
+    &[data-decision="approved"] [data-slot="permission-pattern"] {
+      color: var(--text-success, var(--vscode-testing-iconPassed, #5cb85c));
+    }
+
+    &[data-decision="denied"] [data-slot="permission-pattern"] {
+      color: var(--text-error, var(--vscode-errorForeground, #f44));
+      text-decoration: line-through;
+    }
+  }
+
+  [data-slot="permission-pattern-type"] {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-base, var(--vscode-foreground));
+    flex-shrink: 0;
+  }
+
+  [data-slot="permission-pattern"] {
+    font-size: 12px;
+    font-family: var(--vscode-editor-font-family, monospace);
+    color: var(--text-weak, var(--vscode-descriptionForeground));
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    flex: 1;
+  }
+
+  [data-slot="permission-pattern-actions"] {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+
+  [data-slot="permission-pattern-toggle"] {
+    all: unset;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--text-weak, var(--vscode-descriptionForeground));
+    transition:
+      color 0.1s,
+      background-color 0.1s;
+
+    &:hover:not(:disabled) {
+      background-color: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+
+    &[data-variant="approve"][data-active] {
+      color: var(--text-success, var(--vscode-testing-iconPassed, #5cb85c));
+      background-color: color-mix(in srgb, var(--vscode-testing-iconPassed, #5cb85c) 15%, transparent);
+    }
+
+    &[data-variant="deny"][data-active] {
+      color: var(--text-error, var(--vscode-errorForeground, #f44));
+      background-color: color-mix(in srgb, var(--vscode-errorForeground, #f44) 15%, transparent);
+    }
+  }
+
+  [data-slot="permission-footer"] {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0 16px 8px;
+    margin-top: 0;
+  }
+
+  [data-slot="permission-session-hint"] {
+    font-size: 11px;
+    color: var(--text-weak, var(--vscode-descriptionForeground));
+    margin: 0;
+    padding: 4px 0 0;
+    text-align: center;
+  }
+
+  [data-slot="permission-actions"] {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    padding: 4px 0 8px;
+  }
+
+  [data-slot="permission-actions"] > [data-component="button"][data-variant="primary"] {
+    color: var(--vscode-button-foreground);
+    background-color: var(--vscode-button-background);
+    border: 1px solid var(--vscode-button-border, transparent);
+
+    &:hover:not(:disabled) {
+      background-color: var(--vscode-button-hoverBackground);
+    }
+  }
+
+  [data-slot="permission-actions"] > [data-component="button"][data-variant="ghost"] {
+    border: none;
+    box-shadow: none;
   }
 }
 
-[data-component="permission-prompt"] {
-  border-top: 1px solid var(--border-weak-base, var(--vscode-panel-border));
-  padding: 8px 12px;
-}
-
-[data-component="permission-prompt"] [data-slot="permission-description"] {
-  font-size: 12px;
-  color: var(--text-weak, var(--vscode-descriptionForeground));
-  margin: 0 0 8px;
-}
-
-[data-component="permission-prompt"] [data-slot="permission-actions"] {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-[data-component="permission-prompt"] [data-slot="permission-hint"] {
-  font-size: 11px;
-  color: var(--text-weak, var(--vscode-descriptionForeground));
-  margin: 4px 0 0;
+@keyframes permission-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Dialog Confirmation */
@@ -1245,6 +1646,8 @@
    ============================================ */
 
 [data-component="dock-prompt"][data-kind="question"] {
+  margin: 8px;
+
   [data-slot="question-progress-nav"] {
     display: inline-flex;
     align-items: center;
