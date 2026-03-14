@@ -1987,7 +1987,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     // Refresh config and dependent data when the server signals a config change
-    if (event.type === "config.changed" && event.properties.directory === this.getWorkspaceDirectory()) {
+    const affectedDirectories = new Set<string>()
+    affectedDirectories.add(this.getWorkspaceDirectory()) // root workspace
+    for (const sessionDir of this.sessionDirectories.values()) {
+      affectedDirectories.add(sessionDir) // worktree directories
+    }
+    if (event.type === "config.changed" && affectedDirectories.has(event.properties.directory)) {
       void this.reloadAfterAuthChange()
       return
     }

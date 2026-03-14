@@ -51,7 +51,13 @@ import { WorkflowsMigrator } from "../kilocode/workflows-migrator" // kilocode_c
 
 export namespace Config {
   const CONFIG_FILES_OPENCODE = ["opencode.jsonc", "opencode.json"] as const
-  const CONFIG_FILES_KILO = ["config.json", "kilo.jsonc", "kilo.json", ...CONFIG_FILES_OPENCODE] as const
+  // kilocode_change start
+  // Used for project-level findUp() scanning
+  const CONFIG_FILES_PROJECT = ["kilo.jsonc", "kilo.json", ...CONFIG_FILES_OPENCODE] as const
+
+  // Used only for explicit local config resolution (non-ancestry scanning)
+  const CONFIG_FILES_KILO = ["config.json", ...CONFIG_FILES_PROJECT] as const
+  // kilocode_change end
 
   const ModelId = z.string().meta({ $ref: "https://models.dev/model-schema.json#/$defs/Model" })
 
@@ -232,7 +238,7 @@ export namespace Config {
     if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
       // kilocode_change start: Collect files by directory, then process closest first
       const filesByDir = new Map<string, string[]>()
-      for (const file of CONFIG_FILES_KILO) {
+      for (const file of CONFIG_FILES_PROJECT) {
         const found = await Filesystem.findUp(file, Instance.directory, Instance.worktree)
         for (const filepath of found) {
           const dir = path.dirname(filepath)
@@ -1493,8 +1499,14 @@ export namespace Config {
     await Bun.write(configPath, result)
     // kilocode_change: Reset global config cache to avoid stale reads when writing to global files
     await global.reset()
-    // kilocode_change: Dispose only the Config state, not the entire instance (preserves MCP connections)
-    await State.disposeEntry(Instance.directory, initConfigState)
+    // kilocode_change: If writing to a shared/global config file, dispose all project config states
+    // since the change affects all projects. Otherwise, just dispose the current project's config.
+    const isGlobalConfig = configPath.startsWith(Global.Path.home)
+    if (isGlobalConfig) {
+      await State.disposeAllEntries(initConfigState)
+    } else {
+      await State.disposeEntry(Instance.directory, initConfigState)
+    }
     // kilocode_change: Emit config changed event to notify UI/watchers
     GlobalBus.emit("event", {
       directory: Instance.directory,

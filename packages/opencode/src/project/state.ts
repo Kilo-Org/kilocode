@@ -90,4 +90,12 @@ export namespace State {
         })
     }
   }
+
+  export async function disposeAllEntries(init: () => unknown) {
+    const tasks: Promise<void>[] = []
+    for (const key of recordsByKey.keys()) {
+      tasks.push(disposeEntry(key, init))
+    }
+    await Promise.all(tasks)
+  }
 }
