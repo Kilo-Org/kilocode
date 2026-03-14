@@ -4,9 +4,10 @@ export interface BranchListItem {
   isRemote: boolean
   isDefault: boolean
   lastCommitDate?: string
+  isCheckedOut?: boolean
 }
 
-export interface PRUrlParts {
+interface PRUrlParts {
   owner: string
   repo: string
   number: number
@@ -19,14 +20,16 @@ export interface PRInfo {
   title: string
 }
 
-export interface WorktreeEntry {
+interface WorktreeEntry {
   path: string
   branch: string
   bare: boolean
   detached: boolean
 }
 
-export type PRErrorKind = "not_found" | "gh_missing" | "gh_auth" | "unknown"
+type PRErrorKind = "not_found" | "gh_missing" | "gh_auth" | "unknown"
+
+export type WorktreeSetupErrorCode = "git_not_found" | "not_git_repo" | "lfs_missing"
 
 export function parsePRUrl(url: string): PRUrlParts | null {
   let normalized = url.trim()
@@ -149,4 +152,11 @@ export function classifyPRError(msg: string): PRErrorKind {
   if (msg.includes("not logged") || msg.includes("auth login")) return "gh_auth"
   if (msg.includes("not found") || msg.includes("Could not resolve")) return "not_found"
   return "unknown"
+}
+
+export function classifyWorktreeError(msg: string): WorktreeSetupErrorCode | undefined {
+  if (msg.includes("ENOENT") || msg.includes("not found in PATH")) return "git_not_found"
+  if (msg.includes("not a git repository")) return "not_git_repo"
+  if (msg.includes("Git LFS") && msg.includes("not found")) return "lfs_missing"
+  return undefined
 }

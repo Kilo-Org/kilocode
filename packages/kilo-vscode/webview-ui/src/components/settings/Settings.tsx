@@ -1,8 +1,6 @@
 import { Component } from "solid-js"
-import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tabs } from "@kilocode/kilo-ui/tabs"
-import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../context/language"
 import ProvidersTab from "./ProvidersTab"
 import AgentBehaviourTab from "./AgentBehaviourTab"
@@ -21,7 +19,6 @@ import AboutKiloCodeTab from "./AboutKiloCodeTab"
 import { useServer } from "../../context/server"
 
 export interface SettingsProps {
-  onBack?: () => void
   onMigrateClick?: () => void // legacy-migration
 }
 
@@ -41,11 +38,6 @@ const Settings: Component<SettingsProps> = (props) => {
           gap: "8px",
         }}
       >
-        <Tooltip value={language.t("common.goBack")} placement="bottom">
-          <Button variant="ghost" size="small" onClick={() => props.onBack?.()}>
-            <Icon name="arrow-left" />
-          </Button>
-        </Tooltip>
         <h2 style={{ "font-size": "16px", "font-weight": "600", margin: 0 }}>{language.t("sidebar.settings")}</h2>
       </div>
 

@@ -43,6 +43,8 @@ export const dict = {
   "command.language.set": "ใช้ภาษา: {{language}}",
 
   "command.session.new": "เซสชันใหม่",
+  "command.session.new.task": "งานใหม่",
+  "command.session.show.changes": "แสดงการเปลี่ยนแปลง",
   "command.file.open": "เปิดไฟล์",
   "command.tab.close": "ปิดแท็บ",
   "command.context.addSelection": "เพิ่มส่วนที่เลือกไปยังบริบท",
@@ -230,6 +232,7 @@ export const dict = {
   "prompt.action.send": "ส่ง",
   "prompt.action.stop": "หยุด",
   "prompt.action.enhance": "ปรับปรุงพรอมต์",
+  "prompt.action.resetModel": "รีเซ็ตโมเดลเป็นค่าเริ่มต้น",
   "prompt.action.enhanceDescription":
     "ปุ่ม 'ปรับปรุงพรอมต์' ช่วยปรับปรุงพรอมต์ของคุณโดยให้บริบทเพิ่มเติม ชี้แจง หรือเขียนใหม่ ลองพิมพ์พรอมต์ที่นี่และคลิกปุ่มอีกครั้งเพื่อดูว่ามันทำงานอย่างไร",
 
@@ -405,6 +408,17 @@ export const dict = {
 
   "error.globalSync.connectFailed": "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ มีเซิร์ฟเวอร์ทำงานอยู่ที่ `{{url}}` หรือไม่?",
 
+  "error.startup.title": "การเชื่อมต่อเซิร์ฟเวอร์ล้มเหลว",
+
+  "error.paidModel.title": "คุณต้องเข้าสู่ระบบเพื่อใช้โมเดลนี้",
+  "error.paidModel.description":
+    "เข้าสู่ระบบหรือสร้างบัญชีเพื่อเข้าถึงโมเดลกว่า 500 รายการ ใช้เครดิตในราคาทุน หรือใช้คีย์ของคุณเอง",
+  "error.paidModel.action": "เข้าสู่ระบบ",
+  "error.promotionLimit.title": "คุณต้องสมัครสมาชิกเพื่อดำเนินการต่อ",
+  "error.promotionLimit.description":
+    "สมัครฟรีเพื่อดำเนินการต่อและสำรวจโมเดลกว่า 500 รายการ ใช้เวลา 2 นาที ไม่ต้องใช้บัตรเครดิต หรือกลับมาทีหลัง",
+  "error.promotionLimit.action": "สมัครสมาชิก",
+
   "error.chain.unknown": "ข้อผิดพลาดที่ไม่รู้จัก",
   "error.chain.causedBy": "สาเหตุ:",
   "error.chain.apiError": "ข้อผิดพลาด API",
@@ -427,6 +441,10 @@ export const dict = {
 
   "notification.permission.title": "ต้องการสิทธิ์",
   "notification.permission.description": "{{sessionTitle}} ใน {{projectName}} ต้องการสิทธิ์",
+  "ui.permission.pattern.addToAllowed": "เพิ่มไปยังรายการที่อนุญาต",
+  "ui.permission.pattern.removeFromAllowed": "นำออกจากรายการที่อนุญาต",
+  "ui.permission.pattern.addToDenied": "เพิ่มไปยังรายการที่ถูกปฏิเสธ",
+  "ui.permission.pattern.removeFromDenied": "นำออกจากรายการที่ถูกปฏิเสธ",
   "notification.question.title": "คำถาม",
   "notification.question.description": "{{sessionTitle}} ใน {{projectName}} มีคำถาม",
   "notification.action.goToSession": "ไปที่เซสชัน",
@@ -655,6 +673,8 @@ export const dict = {
 
   "settings.providers.title": "ผู้ให้บริการ",
   "settings.providers.description": "การตั้งค่าผู้ให้บริการจะสามารถกำหนดค่าได้ที่นี่",
+  "settings.providers.betaNotice":
+    "ปัจจุบันสามารถตั้งค่าได้เฉพาะผู้ให้บริการ Kilo Gateway ในหน้าการตั้งค่าเท่านั้น การรองรับการตั้งค่าผู้ให้บริการรายอื่นจะพร้อมใช้งานในเร็วๆ นี้ในช่วงเบต้า ในระหว่างนี้คุณสามารถตั้งค่าผู้ให้บริการผ่าน CLI หรือไฟล์คอนฟิกได้ เรามุ่งมั่นที่จะรักษาให้ Kilo เปิดกว้างและไม่มีการผูกมัด",
   "settings.providers.section.connected": "ผู้ให้บริการที่เชื่อมต่อ",
   "settings.providers.connected.empty": "ไม่มีผู้ให้บริการที่เชื่อมต่อ",
   "settings.providers.section.popular": "ผู้ให้บริการยอดนิยม",
@@ -723,10 +743,16 @@ export const dict = {
   "session.empty": "ยังไม่มีเซสชัน คลิก + เพื่อเริ่มการสนทนาใหม่",
   "session.cloud.repoOnly": "เฉพาะรีโพซิทอรีนี้",
   "session.cloud.import": "นำเข้าจากคลาวด์",
+  "feedback.button": "ข้อเสนอแนะและการสนับสนุน",
+  "feedback.dialog.message": "เรายินดีรับฟังข้อเสนอแนะของคุณหรือช่วยแก้ไขปัญหาที่คุณพบ",
+  "feedback.dialog.github": "รายงานปัญหาบน GitHub",
+  "feedback.dialog.discord": "เข้าร่วมชุมชน Discord ของเรา",
+  "feedback.dialog.support": "ฝ่ายสนับสนุนลูกค้า",
   "session.cloud.import.title": "นำเข้าจากคลาวด์",
   "session.cloud.import.placeholder": "ID เซสชัน, URL หรือคำสั่ง kilo import",
   "session.cloud.import.button": "นำเข้า",
   "session.cloud.import.invalid": "รูปแบบ ID เซสชันไม่ถูกต้อง",
+  "session.cloud.import.legacy": "นี่ดูเหมือนจะเป็นเซสชันเวอร์ชันเก่าที่ไม่รองรับอีกต่อไปแล้ว",
   "session.cloud.import.failed": "ไม่สามารถนำเข้าเซสชันคลาวด์ได้",
 
   "workspace.new": "พื้นที่ทำงานใหม่",
@@ -906,7 +932,10 @@ export const dict = {
   "settings.experimental.toolToggles": "สวิตช์เครื่องมือ",
   "settings.agentBehaviour.defaultAgent.title": "เอเจนต์เริ่มต้น",
   "settings.agentBehaviour.defaultAgent.description": "เอเจนต์ที่ใช้เมื่อไม่ได้ระบุ",
+  "settings.agentBehaviour.availableAgents": "เอเจนต์ที่ใช้งานได้",
   "settings.agentBehaviour.selectAgent": "เลือกเอเจนต์เพื่อกำหนดค่า…",
+  "settings.agentBehaviour.selectAgent.title": "เอเจนต์",
+  "settings.agentBehaviour.selectAgent.description": "เลือกเอเจนต์เพื่อกำหนดค่า…",
   "settings.agentBehaviour.modelOverride.title": "แทนที่โมเดล",
   "settings.agentBehaviour.modelOverride.description": "แทนที่โมเดลเริ่มต้นของเอเจนต์นี้",
   "settings.agentBehaviour.prompt.title": "พรอมต์กำหนดเอง",
@@ -917,6 +946,8 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "พารามิเตอร์ nucleus sampling (0-1)",
   "settings.agentBehaviour.maxSteps.title": "ขั้นตอนสูงสุด",
   "settings.agentBehaviour.maxSteps.description": "จำนวนรอบเอเจนต์สูงสุด",
+  "settings.agentBehaviour.discoveredSkills": "ทักษะที่ค้นพบ",
+  "settings.agentBehaviour.noSkillsFound": "ไม่พบทักษะ เพิ่มเส้นทางโฟลเดอร์หรือ URL ด้านล่างเพื่อทำให้ทักษะพร้อมใช้งาน",
   "settings.agentBehaviour.skillPaths": "เส้นทางโฟลเดอร์ทักษะ",
   "settings.agentBehaviour.skillUrls": "URL ทักษะ",
   "settings.agentBehaviour.instructionFiles": "ไฟล์คำสั่งเพิ่มเติม",
@@ -925,26 +956,36 @@ export const dict = {
     "ไม่ได้กำหนดค่าเซิร์ฟเวอร์ MCP แก้ไขไฟล์กำหนดค่า opencode เพื่อเพิ่มเซิร์ฟเวอร์ MCP",
   "settings.agentBehaviour.workflowsPlaceholder": "เวิร์กโฟลว์จัดการผ่านไฟล์เวิร์กโฟลว์ในพื้นที่ทำงาน",
   "settings.agentBehaviour.notImplemented": "ยังไม่ได้ใช้งาน",
-  "settings.autoApprove.setAll": "ตั้งค่าสิทธิ์ทั้งหมด",
+  "settings.autoApprove.description":
+    "กำหนดวิธีอนุญาตการทำงานของเครื่องมือ โดยค่าเริ่มต้นเครื่องมือส่วนใหญ่คืออนุญาต ส่วน doom_loop และ external_directory ค่าเริ่มต้นคือถาม",
   "settings.autoApprove.level.allow": "อนุญาต",
   "settings.autoApprove.level.ask": "ถาม",
   "settings.autoApprove.level.deny": "ปฏิเสธ",
-  "settings.autoApprove.tool.read": "อ่านเนื้อหาไฟล์",
-  "settings.autoApprove.tool.edit": "แก้ไขหรือสร้างไฟล์",
-  "settings.autoApprove.tool.glob": "ค้นหาไฟล์ตามรูปแบบ",
-  "settings.autoApprove.tool.grep": "ค้นหาเนื้อหาไฟล์",
-  "settings.autoApprove.tool.list": "แสดงเนื้อหาไดเรกทอรี",
-  "settings.autoApprove.tool.bash": "เรียกใช้คำสั่ง shell",
-  "settings.autoApprove.tool.task": "สร้างงานเอเจนต์ย่อย",
-  "settings.autoApprove.tool.skill": "เรียกใช้ทักษะ",
-  "settings.autoApprove.tool.lsp": "การดำเนินการเซิร์ฟเวอร์ภาษา",
-  "settings.autoApprove.tool.todoread": "อ่านรายการสิ่งที่ต้องทำ",
-  "settings.autoApprove.tool.todowrite": "เขียนรายการสิ่งที่ต้องทำ",
-  "settings.autoApprove.tool.webfetch": "ดึงหน้าเว็บ",
-  "settings.autoApprove.tool.websearch": "ค้นหาเว็บ",
-  "settings.autoApprove.tool.codesearch": "ค้นหาโค้ดเบส",
-  "settings.autoApprove.tool.external_directory": "เข้าถึงไฟล์นอกพื้นที่ทำงาน",
-  "settings.autoApprove.tool.doom_loop": "ดำเนินต่อหลังจากล้มเหลวซ้ำ",
+  "settings.autoApprove.wildcardLabel.commands": "คำสั่งทั้งหมด (*)",
+  "settings.autoApprove.wildcardLabel.paths": "พาธทั้งหมด (*)",
+  "settings.autoApprove.exceptions": "ข้อยกเว้น",
+  "settings.autoApprove.addCommand": "เพิ่มคำสั่ง",
+  "settings.autoApprove.addPath": "เพิ่มพาธ",
+  "settings.autoApprove.placeholder.command": "เช่น git *",
+  "settings.autoApprove.placeholder.path": "เช่น *.env",
+  "settings.autoApprove.tool.read": "อ่านไฟล์ อนุญาตให้ตัวแทน (Agent) อ่านไฟล์ที่ตรงกับเส้นทางที่ระบุ",
+  "settings.autoApprove.tool.edit":
+    "แก้ไขไฟล์ อนุญาตให้ตัวแทน (Agent) สร้างหรือแก้ไขไฟล์ รวมถึงแพตช์ (Patch) และการอัปเดตหลายไฟล์",
+  "settings.autoApprove.tool.glob": "จับคู่ไฟล์ด้วยรูปแบบ อนุญาตให้จับคู่ไฟล์โดยใช้รูปแบบ glob (เช่น src/**/*.ts)",
+  "settings.autoApprove.tool.grep": "ค้นหาเนื้อหาไฟล์ อนุญาตให้ค้นหาเนื้อหาภายในไฟล์โดยใช้นิพจน์ทั่วไป (Regex)",
+  "settings.autoApprove.tool.list": "แสดงเนื้อหาในไดเรกทอรี อนุญาตให้ดูไฟล์และโฟลเดอร์ภายในไดเรกทอรี",
+  "settings.autoApprove.tool.bash": "เรียกใช้คำสั่งเทอร์มินัล อนุญาตให้ดำเนินการคำสั่งเชลล์ (เช่น git status)",
+  "settings.autoApprove.tool.task": "เปิดใช้งานตัวแทนย่อย อนุญาตให้เริ่มต้นตัวแทนย่อยเฉพาะทางสำหรับงานเฉพาะ",
+  "settings.autoApprove.tool.skill": "โหลดทักษะ อนุญาตให้โหลดทักษะที่กำหนดไว้ล่วงหน้าตามชื่อ",
+  "settings.autoApprove.tool.lsp":
+    "สอบถามเซิร์ฟเวอร์ภาษา อนุญาตให้เรียกใช้การสืบค้นเซิร์ฟเวอร์ภาษาสำหรับระบบอัจฉริยะของโค้ด",
+  "settings.autoApprove.tool.todoreadwrite": "จัดการรายการงาน อนุญาตให้อ่านและอัปเดตรายการงานภายใน",
+  "settings.autoApprove.tool.webfetch": "ดึงข้อมูลจาก URL อนุญาตให้ดึงเนื้อหาจาก URL ที่ระบุ",
+  "settings.autoApprove.tool.websearchcodesearch": "ค้นหาเว็บหรือโค้ด อนุญาตให้ทำการค้นหาเว็บหรือโค้ดภายนอก",
+  "settings.autoApprove.tool.external_directory":
+    "เข้าถึงไฟล์นอกพื้นที่ทำงาน (Workspace) ถูกเรียกเมื่อเข้าถึงไฟล์ภายนอกไดเรกทอรีโปรเจ็กต์ปัจจุบัน",
+  "settings.autoApprove.tool.doom_loop":
+    "ป้องกันการกระทำที่ซ้ำกัน ถูกเรียกเมื่อเครื่องมือเดิมถูกเรียกซ้ำด้วยข้อมูลนำเข้าที่เหมือนกัน",
   "settings.checkpoints.enable.title": "เปิดใช้งานสแนปชอต",
   "settings.checkpoints.enable.description": "สร้างจุดตรวจก่อนแก้ไขไฟล์",
   "settings.context.autoCompaction.title": "การบีบอัดอัตโนมัติ",
@@ -972,7 +1013,6 @@ export const dict = {
   "profile.personalAccount": "บัญชีส่วนตัว",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/th.ts
 
-
   "question.summary": "{{n}} จาก {{total}} คำถาม",
   "common.review": "ตรวจสอบ",
 
@@ -981,47 +1021,59 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "การย้ายข้อมูลจากเวอร์ชันดั้งเดิม",
   "settings.aboutKiloCode.legacyMigration.description":
     "ย้ายการตั้งค่าจากการติดตั้ง Kilo Code ก่อนหน้านี้ รวมถึงคีย์ API ของผู้ให้บริการและโมเดลเริ่มต้น",
-  "migration.welcome.title": "ยินดีต้อนรับสู่ Kilo Code โฉมใหม่",
-  "migration.welcome.detected": "เราตรวจพบการตั้งค่าจากการติดตั้ง Kilo Code ก่อนหน้านี้",
-  "migration.welcome.sessionsInfo": "ไม่สามารถย้ายเซสชันการแชทและประวัติได้ — เวอร์ชันใหม่ใช้สถาปัตยกรรมที่แตกต่างกัน",
-  "migration.welcome.canMigrate": "การตั้งค่าต่อไปนี้สามารถย้ายไปยังเวอร์ชันใหม่ได้:",
-  "migration.welcome.start": "เริ่มการย้ายข้อมูล",
-  "migration.welcome.skip": "ข้ามการย้ายข้อมูล",
-  "migration.steps.title": "ย้ายการตั้งค่าของคุณ",
-  "migration.steps.subtitle": "เราพบการตั้งค่าจากการติดตั้ง Kilo Code ก่อนหน้านี้ของคุณ เลือกสิ่งที่จะนำเข้ามาด้วย",
+
+  // Screen 1 — What's New
+  "migration.whatsNew.title": "มีอะไรใหม่ใน Kilo Code",
+  "migration.whatsNew.badge": "Beta",
+  "migration.whatsNew.subtitle": "เราได้สร้างส่วนขยายใหม่บนรากฐานที่เร็วและมีประสิทธิภาพมากขึ้น",
+  "migration.whatsNew.features.performance.title": "ประสิทธิภาพเอเจนต์ที่เร็วขึ้น",
+  "migration.whatsNew.features.performance.detail":
+    "การเรียกเครื่องมือแบบขนานและเอเจนต์ย่อยช่วยให้เอเจนต์ของคุณจัดการได้มากขึ้นในครั้งเดียว — คุณจึงใช้เวลารอน้อยลงและส่งงานได้มากขึ้น",
+  "migration.whatsNew.features.interface.title": "อินเทอร์เฟซที่กระชับ",
+  "migration.whatsNew.features.interface.detail": "สิ่งรบกวนน้อยลง อ่านง่ายและรวดเร็วขึ้น",
+  "migration.whatsNew.features.agentManager.title": "Agent Manager",
+  "migration.whatsNew.features.agentManager.detail":
+    "อินเทอร์เฟซรวมสำหรับการเรียกใช้เอเจนต์หลายตัวพร้อมกัน แต่ละตัวบน worktree ของตัวเอง — ติดตามความคืบหน้า สลับบริบท และตรวจสอบการเปลี่ยนแปลงได้ในที่เดียว",
+  "migration.whatsNew.features.foundation.title": "รากฐานที่ใช้ร่วมกัน",
+  "migration.whatsNew.features.foundation.detail":
+    "แกนหลักขนาดเล็กและมีประสิทธิภาพเดียวกันในทุกผลิตภัณฑ์ Kilo ประสบการณ์ที่คุ้นเคยไม่ว่าคุณจะเลือกทำงานอย่างไร",
+  "migration.whatsNew.blogLink": "อ่านประกาศฉบับเต็ม",
+  "migration.whatsNew.continue": "ดำเนินการต่อ",
+
+  // Screen 2 — Migrate Settings
+  "migration.migrate.title": "ย้ายการตั้งค่าของคุณ",
+  "migration.migrate.subtitle": "เราพบการตั้งค่าจากการติดตั้งก่อนหน้านี้ของคุณ นี่คือสิ่งที่เราสามารถนำมาได้",
+  "migration.migrate.selectLabel": "เลือกสิ่งที่จะย้าย",
+  "migration.migrate.cannotMigrate": "ไม่สามารถย้ายได้",
+  "migration.migrate.chatHistory": "เซสชันแชทและประวัติ",
+  "migration.migrate.chatHistoryDesc": "เข้ากันไม่ได้กับสถาปัตยกรรมใหม่",
+  "migration.migrate.button": "ย้ายการตั้งค่า",
+  "migration.migrate.skip": "ข้าม",
+  "migration.migrate.back": "ย้อนกลับ",
+  "migration.migrate.keysDetected": "ตรวจพบ {{count}} คีย์",
+  "migration.migrate.serversConfigured": "กำหนดค่า {{count}} เซิร์ฟเวอร์",
+  "migration.migrate.modesFound": "พบ {{count}} โหมด",
+  "migration.migrate.nothingToMigrate": "ไม่พบสิ่งที่จะย้ายในการตั้งค่าดั้งเดิม",
+
+  // Migrate — item labels (reused from old select keys)
   "migration.select.providers": "คีย์ API ของผู้ให้บริการ",
   "migration.select.mcpServers": "เซิร์ฟเวอร์ MCP",
-  "migration.select.customModes": "โหมดกำหนดเอง / Agents",
+  "migration.select.customModes": "โหมดที่กำหนดเอง / เอเจนต์",
   "migration.select.defaultModel": "โมเดลเริ่มต้น",
-  "migration.select.unsupported": "ไม่รองรับในเวอร์ชันใหม่",
-  "migration.select.nothingToMigrate": "ไม่พบสิ่งที่จะย้ายในการตั้งค่าดั้งเดิม",
-  "migration.select.settings": "การตั้งค่า",
   "migration.select.autoApproval": "การอนุมัติอัตโนมัติ",
-  "migration.select.autoApproval.commandRules": "กฎคำสั่ง",
-  "migration.select.autoApproval.commandRulesDesc": "สวิตช์หลักและรายการคำสั่งที่อนุญาต/ปฏิเสธ",
-  "migration.select.autoApproval.readPermission": "สิทธิ์การอ่าน",
-  "migration.select.autoApproval.readPermissionDesc": "การเข้าถึงการอ่านไฟล์ภายในและภายนอกเวิร์กสเปซ",
-  "migration.select.autoApproval.writePermission": "สิทธิ์การเขียน",
-  "migration.select.autoApproval.writePermissionDesc": "การเข้าถึงการเขียนและแก้ไขไฟล์",
-  "migration.select.autoApproval.executePermission": "สิทธิ์การดำเนินการ",
-  "migration.select.autoApproval.executePermissionDesc": "การเรียกใช้งานคำสั่ง Terminal",
-  "migration.select.autoApproval.mcpPermission": "สิทธิ์ MCP",
-  "migration.select.autoApproval.mcpPermissionDesc": "การใช้งานเครื่องมือ MCP",
-  "migration.select.autoApproval.taskPermission": "สิทธิ์งาน",
-  "migration.select.autoApproval.taskPermissionDesc": "การสลับโหมดและการสร้างงานย่อย",
-  "migration.select.language": "ภาษา UI",
-  "migration.select.languageDesc": "การตั้งค่าภาษาของคุณจะถูกนำไปใช้กับส่วนขยายใหม่",
-  "migration.select.autocomplete": "การตั้งค่าเติมข้อความอัตโนมัติ",
-  "migration.select.autocompleteDesc":
-    "การเรียกใช้อัตโนมัติ, การผูกแป้นพิมพ์ และการตั้งค่าการเติมข้อความอัตโนมัติในการแชท",
-  "migration.select.continue": "ดำเนินการต่อ",
-  "migration.select.back": "ย้อนกลับ",
-  "migration.progress.title": "กำลังย้ายการตั้งค่าของคุณ…",
-  "migration.progress.done": "ดำเนินการต่อ",
-  "migration.complete.summary": "ย้ายรายการสำเร็จ {{success}} จาก {{total}} รายการ",
-  "migration.complete.cleanup": "ลบข้อมูลการตั้งค่าดั้งเดิม",
+  "migration.select.language": "ภาษาของ UI",
+  "migration.select.autocomplete": "การตั้งค่าการเติมข้อความอัตโนมัติ",
+
+  // Migrate — completion
+  "migration.complete.summary": "ย้ายข้อมูลสำเร็จ {{success}} จาก {{total}} รายการ",
+  "migration.complete.cleanup": "ลบข้อมูลการตั้งค่าเดิม",
   "migration.complete.cleanupDescription":
-    "การดำเนินการนี้จะลบการตั้งค่าเก่าออกจากพื้นที่เก็บข้อมูลของ VS Code คุณจะไม่สามารถเรียกใช้การย้ายข้อมูลนี้ซ้ำได้อีก",
+    "การดำเนินการนี้จะลบการตั้งค่าเดิมจากที่เก็บข้อมูล VS Code คุณจะไม่สามารถเรียกใช้การย้ายข้อมูลนี้ได้อีก",
   "migration.complete.done": "เสร็จสิ้น",
   // legacy-migration end
+
+  "error.details.show": "รายละเอียด",
+
+  "task.todos.progress": "{{done}}/{{total}} งานเสร็จแล้ว",
+  "task.todos.allDone": "{{count}} งานเสร็จแล้ว",
 }

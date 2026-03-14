@@ -2,4 +2,8 @@
 
 [data-component="accordion"] {
   font-size: 13px;
+
+  [data-slot="accordion-trigger"] {
+    cursor: pointer;
+  }
 }

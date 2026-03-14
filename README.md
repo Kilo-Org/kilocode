@@ -9,7 +9,7 @@
 # 🚀 Kilo
 
 > Kilo is the all-in-one agentic engineering platform. Build, ship, and iterate faster with the most popular open source coding agent.
-> #1 on OpenRouter. 1.5M+ Kilo Coders. 25T+ tokens processed
+> [#1 coding agent on OpenRouter](https://openrouter.ai/apps/category/coding). 1.5M+ Kilo Coders. 25T+ tokens processed
 
 - ✨ Generate code from natural language
 - ✅ Checks its own work
@@ -56,6 +56,7 @@ npx @kilocode/cli
 Then run `kilo` in any project directory to start.
 
 <!-- kilocode_change start -->
+
 ### npm Install Note: Hidden `.kilo` File
 
 On some systems and npm versions, installing `@kilocode/cli` can create a hidden `.kilo` file near the installed `kilo` command (for example in a global npm bin directory). This file is an npm-generated launcher helper, not project data.
@@ -64,6 +65,27 @@ On some systems and npm versions, installing `@kilocode/cli` can create a hidden
 - Size caveat: size can vary by platform, npm version, and install mode (symlink vs copied launcher), so a strict fixed size is not guaranteed.
 - Safety: it is safe to leave in place. Do not edit it manually. Use your package manager's uninstall (`npm uninstall -g @kilocode/cli`) to remove install artifacts cleanly.
 <!-- kilocode_change end -->
+
+### Install from GitHub Releases (Optional)
+
+Download the latest binary or source code from the [Releases page](https://github.com/Kilo-Org/kilocode/releases), use this quick guide:
+
+- `kilo-<os>-<arch>.zip` is the CLI binary for your OS and CPU architecture on Windows and macOS. (`kilo-linux-<arch>.tar.gz` for Linux)
+- `darwin` means macOS.
+- `x64` is standard 64-bit Intel/AMD CPUs.
+- `x64-baseline` is a compatibility build for older x64 CPUs(do not support AVX Instruction).
+- `arm64` is ARM-based Linux/MacOS.
+- `musl` is statically linked Linux build for Alpine/minimal Docker without glibc. Alpine/minimal Docker users should prefer the matching \*-musl asset.
+- `kilo-vscode-*.vsix` is the VS Code extension package and not the CLI binary.
+- `Source code` releases are for building from source, not normal installation.
+
+For most users:
+
+- **Windows (most PCs):** `kilo-windows-x64.zip`
+- **macOS Apple Silicon:** `kilo-darwin-arm64.zip`
+- **macOS Intel:** `kilo-darwin-x64.zip`
+- **Linux x64:** `kilo-linux-x64.tar,gz`
+- **Linux on ARM:** `kilo-linux-arm64.tar.gz`
 
 ### Autonomous Mode (CI/CD)
 

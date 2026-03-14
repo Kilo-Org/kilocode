@@ -56,7 +56,6 @@ The CLI can run in several modes:
 - **`kilo`** — Interactive TUI for terminal-based coding
 - **`kilo run`** — Headless single-prompt execution
 - **`kilo serve`** — HTTP server mode for client integrations
-- **`kilo web`** — Browser-based UI
 
 Key subsystems inside the CLI:
 
@@ -114,6 +113,8 @@ The GitHub/GitLab bot that responds to issue comments and PR mentions. It dispat
 ### KiloClaw
 
 A multi-tenant compute platform running on Fly.io, orchestrated by a Cloudflare Worker. Each user gets a dedicated persistent machine running an OpenClaw gateway, coordinated via Durable Objects for state management and self-healing reconciliation.
+
+{% image src="/docs/img/kiloclaw/kiloclaw-architecture.png" alt="KiloClaw infrastructure architecture diagram" width="800" caption="KiloClaw infrastructure architecture" /%}
 
 ### Code Review
 

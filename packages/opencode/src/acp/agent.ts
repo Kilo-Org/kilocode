@@ -529,9 +529,9 @@ export namespace ACP {
       if (params.clientCapabilities?._meta?.["terminal-auth"] === true) {
         authMethod._meta = {
           "terminal-auth": {
-            command: "opencode",
+            command: "kilo",
             args: ["auth", "login"],
-            label: "OpenCode Login",
+            label: "Kilo Login", // kilocode_change
           },
         }
       }
@@ -556,7 +556,7 @@ export namespace ACP {
         },
         authMethods: [authMethod],
         agentInfo: {
-          name: "OpenCode",
+          name: "Kilo", // kilocode_change
           version: Installation.VERSION,
         },
       }
@@ -1590,8 +1590,7 @@ export namespace ACP {
 
     // kilocode_change start
     const freeModel = await fetchDefaultModel()
-    const parsed = Provider.parseModel(freeModel)
-    return { providerID: "kilo", modelID: parsed.modelID }
+    return { providerID: "kilo", modelID: freeModel }
     // kilocode_change end
   }
 

@@ -43,6 +43,8 @@ export const dict = {
   "command.language.set": "Utiliser la langue : {{language}}",
 
   "command.session.new": "Nouvelle session",
+  "command.session.new.task": "Nouvelle tâche",
+  "command.session.show.changes": "Afficher les modifications",
   "command.file.open": "Ouvrir un fichier",
   "command.tab.close": "Fermer l'onglet",
   "command.context.addSelection": "Ajouter la sélection au contexte",
@@ -71,7 +73,8 @@ export const dict = {
   "command.permissions.autoaccept.enable": "Accepter automatiquement les modifications",
   "command.permissions.autoaccept.disable": "Arrêter l'acceptation automatique des modifications",
   "command.workspace.toggle": "Basculer les espaces de travail",
-  "command.workspace.toggle.description": "Activer ou désactiver les espaces de travail multiples dans la barre latérale",
+  "command.workspace.toggle.description":
+    "Activer ou désactiver les espaces de travail multiples dans la barre latérale",
   "command.session.undo": "Annuler",
   "command.session.undo.description": "Annuler le dernier message",
   "command.session.redo": "Rétablir",
@@ -230,6 +233,7 @@ export const dict = {
   "prompt.action.send": "Envoyer",
   "prompt.action.stop": "Arrêter",
   "prompt.action.enhance": "Améliorer le prompt",
+  "prompt.action.resetModel": "Réinitialiser le modèle par défaut",
   "prompt.action.enhanceDescription":
     "Le bouton 'Améliorer la requête' aide à améliorer votre demande en fournissant un contexte supplémentaire, des clarifications ou des reformulations. Essayez de taper une demande ici et cliquez à nouveau sur le bouton pour voir comment cela fonctionne.",
 
@@ -410,6 +414,17 @@ export const dict = {
   "error.globalSync.connectFailed":
     "Impossible de se connecter au serveur. Y a-t-il un serveur en cours d'exécution à `{{url}}` ?",
 
+  "error.startup.title": "Échec de la connexion au serveur",
+
+  "error.paidModel.title": "Vous devez vous connecter pour utiliser ce modèle",
+  "error.paidModel.description":
+    "Connectez-vous ou créez un compte pour accéder à plus de 500 modèles, utiliser des crédits au prix coûtant ou apporter votre propre clé.",
+  "error.paidModel.action": "Se connecter",
+  "error.promotionLimit.title": "Vous devez vous inscrire pour continuer",
+  "error.promotionLimit.description":
+    "Inscrivez-vous gratuitement pour continuer et explorer plus de 500 modèles. 2 minutes, sans carte bancaire. Ou revenez plus tard.",
+  "error.promotionLimit.action": "S'inscrire",
+
   "error.chain.unknown": "Erreur inconnue",
   "error.chain.causedBy": "Causé par :",
   "error.chain.apiError": "Erreur API",
@@ -435,6 +450,10 @@ export const dict = {
 
   "notification.permission.title": "Permission requise",
   "notification.permission.description": "{{sessionTitle}} dans {{projectName}} a besoin d'une permission",
+  "ui.permission.pattern.addToAllowed": "Ajouter à la liste des autorisés",
+  "ui.permission.pattern.removeFromAllowed": "Retirer de la liste des autorisés",
+  "ui.permission.pattern.addToDenied": "Ajouter à la liste des refusés",
+  "ui.permission.pattern.removeFromDenied": "Retirer de la liste des refusés",
   "notification.question.title": "Question",
   "notification.question.description": "{{sessionTitle}} dans {{projectName}} a une question",
   "notification.action.goToSession": "Aller à la session",
@@ -667,6 +686,8 @@ export const dict = {
 
   "settings.providers.title": "Fournisseurs",
   "settings.providers.description": "Les paramètres des fournisseurs seront configurables ici.",
+  "settings.providers.betaNotice":
+    "Actuellement, seul le fournisseur Kilo Gateway peut être configuré dans l'interface des paramètres. La prise en charge de la configuration d'autres fournisseurs sera bientôt disponible pendant la période bêta. En attendant, vous pouvez configurer les fournisseurs à l'aide de la CLI ou du fichier de configuration. Nous nous engageons à maintenir Kilo ouvert, sans enfermement propriétaire.",
   "settings.providers.section.connected": "Fournisseurs connectés",
   "settings.providers.connected.empty": "Aucun fournisseur connecté",
   "settings.providers.section.popular": "Fournisseurs populaires",
@@ -737,10 +758,17 @@ export const dict = {
   "session.empty": "Aucune session pour l'instant. Cliquez + pour démarrer une nouvelle conversation.",
   "session.cloud.repoOnly": "Uniquement ce dépôt",
   "session.cloud.import": "Importer depuis le cloud",
+  "feedback.button": "Commentaires & support",
+  "feedback.dialog.message":
+    "Nous aimerions recueillir vos commentaires ou vous aider avec les problèmes que vous rencontrez.",
+  "feedback.dialog.github": "Signaler un problème sur GitHub",
+  "feedback.dialog.discord": "Rejoindre notre communauté Discord",
+  "feedback.dialog.support": "Service client",
   "session.cloud.import.title": "Importer depuis le cloud",
   "session.cloud.import.placeholder": "ID de session, URL ou commande kilo import",
   "session.cloud.import.button": "Importer",
   "session.cloud.import.invalid": "Format d'ID de session invalide",
+  "session.cloud.import.legacy": "Cette session semble être une ancienne session qui n'est plus prise en charge.",
   "session.cloud.import.failed": "Échec de l'importation de la session cloud",
 
   "workspace.new": "Nouvel espace de travail",
@@ -928,7 +956,10 @@ export const dict = {
   "settings.experimental.toolToggles": "Commutateurs d'outils",
   "settings.agentBehaviour.defaultAgent.title": "Agent par défaut",
   "settings.agentBehaviour.defaultAgent.description": "Agent à utiliser lorsqu'aucun n'est spécifié",
+  "settings.agentBehaviour.availableAgents": "Agents disponibles",
   "settings.agentBehaviour.selectAgent": "Sélectionner un agent à configurer…",
+  "settings.agentBehaviour.selectAgent.title": "Agent",
+  "settings.agentBehaviour.selectAgent.description": "Sélectionner un agent à configurer…",
   "settings.agentBehaviour.modelOverride.title": "Remplacement du modèle",
   "settings.agentBehaviour.modelOverride.description": "Remplacer le modèle par défaut pour cet agent",
   "settings.agentBehaviour.prompt.title": "Prompt personnalisé",
@@ -939,6 +970,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Paramètre d'échantillonnage nucleus (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Étapes max.",
   "settings.agentBehaviour.maxSteps.description": "Itérations maximales de l'agent",
+  "settings.agentBehaviour.discoveredSkills": "Compétences découvertes",
+  "settings.agentBehaviour.noSkillsFound":
+    "Aucune compétence découverte. Ajoutez des chemins de dossiers ou des URLs ci-dessous pour rendre les compétences disponibles.",
   "settings.agentBehaviour.skillPaths": "Chemins des dossiers de compétences",
   "settings.agentBehaviour.skillUrls": "URLs de compétences",
   "settings.agentBehaviour.instructionFiles": "Fichiers d'instructions supplémentaires",
@@ -948,26 +982,45 @@ export const dict = {
   "settings.agentBehaviour.workflowsPlaceholder":
     "Les workflows sont gérés via les fichiers de workflow dans votre espace de travail.",
   "settings.agentBehaviour.notImplemented": "Pas encore implémenté.",
-  "settings.autoApprove.setAll": "Définir toutes les autorisations",
+  "settings.autoApprove.description":
+    "Définissez comment les outils sont autorisés à s'exécuter. La plupart des outils sont définis sur Autoriser par défaut. doom_loop et external_directory sont définis sur Demander par défaut.",
   "settings.autoApprove.level.allow": "Autoriser",
   "settings.autoApprove.level.ask": "Demander",
   "settings.autoApprove.level.deny": "Refuser",
-  "settings.autoApprove.tool.read": "Lire le contenu des fichiers",
-  "settings.autoApprove.tool.edit": "Modifier ou créer des fichiers",
-  "settings.autoApprove.tool.glob": "Rechercher des fichiers par motif",
-  "settings.autoApprove.tool.grep": "Rechercher le contenu des fichiers",
-  "settings.autoApprove.tool.list": "Lister le contenu du répertoire",
-  "settings.autoApprove.tool.bash": "Exécuter des commandes shell",
-  "settings.autoApprove.tool.task": "Créer des tâches de sous-agent",
-  "settings.autoApprove.tool.skill": "Exécuter des compétences",
-  "settings.autoApprove.tool.lsp": "Opérations du serveur de langage",
-  "settings.autoApprove.tool.todoread": "Lire les listes de tâches",
-  "settings.autoApprove.tool.todowrite": "Écrire les listes de tâches",
-  "settings.autoApprove.tool.webfetch": "Récupérer des pages web",
-  "settings.autoApprove.tool.websearch": "Rechercher sur le web",
-  "settings.autoApprove.tool.codesearch": "Rechercher dans le code",
-  "settings.autoApprove.tool.external_directory": "Accéder aux fichiers hors de l'espace de travail",
-  "settings.autoApprove.tool.doom_loop": "Continuer après des échecs répétés",
+  "settings.autoApprove.wildcardLabel.commands": "Toutes les commandes (*)",
+  "settings.autoApprove.wildcardLabel.paths": "Tous les chemins (*)",
+  "settings.autoApprove.exceptions": "Exceptions",
+  "settings.autoApprove.addCommand": "Ajouter une commande",
+  "settings.autoApprove.addPath": "Ajouter un chemin",
+  "settings.autoApprove.placeholder.command": "ex. git *",
+  "settings.autoApprove.placeholder.path": "ex. *.env",
+  "settings.autoApprove.tool.read":
+    "Lire des fichiers. Permet à l'agent de lire les fichiers correspondant au chemin spécifié.",
+  "settings.autoApprove.tool.edit":
+    "Modifier des fichiers. Permet à l'agent de créer ou d'éditer des fichiers, y compris les patchs et les mises à jour de plusieurs fichiers.",
+  "settings.autoApprove.tool.glob":
+    "Faire correspondre les fichiers par modèle. Permet la correspondance de fichiers à l'aide de modèles glob (ex. src/**/*.ts).",
+  "settings.autoApprove.tool.grep":
+    "Rechercher dans le contenu des fichiers. Permet la recherche basée sur les expressions régulières dans les fichiers.",
+  "settings.autoApprove.tool.list":
+    "Lister le contenu du répertoire. Permet de visualiser les fichiers et dossiers dans un répertoire.",
+  "settings.autoApprove.tool.bash":
+    "Exécuter des commandes de terminal. Permet l'exécution de commandes shell (ex. git status).",
+  "settings.autoApprove.tool.task":
+    "Lancer des sous-agents. Permet de démarrer des sous-agents spécialisés pour des tâches spécifiques.",
+  "settings.autoApprove.tool.skill":
+    "Charger des compétences. Permet de charger des compétences prédéfinies par leur nom.",
+  "settings.autoApprove.tool.lsp":
+    "Interroger le serveur de langage. Permet d'exécuter des requêtes de serveur de langage pour l'intelligence du code.",
+  "settings.autoApprove.tool.todoreadwrite":
+    "Gérer la liste des tâches. Permet de lire et de mettre à jour la liste des tâches interne.",
+  "settings.autoApprove.tool.webfetch": "Récupérer une URL. Permet de récupérer le contenu d'une URL spécifique.",
+  "settings.autoApprove.tool.websearchcodesearch":
+    "Rechercher sur le Web ou dans le code. Permet d'effectuer des recherches externes sur le Web ou dans le code.",
+  "settings.autoApprove.tool.external_directory":
+    "Accéder aux fichiers en dehors de l'espace de travail. Déclenché lors de l'accès à des fichiers en dehors du répertoire de projet actuel.",
+  "settings.autoApprove.tool.doom_loop":
+    "Prévenir les actions identiques répétées. Déclenché lorsque le même appel d'outil se répète avec une entrée identique.",
   "settings.checkpoints.enable.title": "Activer les instantanés",
   "settings.checkpoints.enable.description": "Créer des points de contrôle avant les modifications de fichiers",
   "settings.context.autoCompaction.title": "Compaction automatique",
@@ -995,7 +1048,6 @@ export const dict = {
   "profile.personalAccount": "Compte personnel",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/fr.ts
 
-
   "question.summary": "{{n}} sur {{total}} questions",
   "common.review": "Réviser",
 
@@ -1004,50 +1056,60 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "Migration de l'ancienne version",
   "settings.aboutKiloCode.legacyMigration.description":
     "Migrer les paramètres d'une précédente installation de Kilo Code, y compris les clés d'API des fournisseurs et le modèle par défaut.",
-  "migration.welcome.title": "Bienvenue dans le nouveau Kilo Code",
-  "migration.welcome.detected": "Nous avons détecté des paramètres d'une précédente installation de Kilo Code.",
-  "migration.welcome.sessionsInfo":
-    "Les sessions de discussion et l'historique ne peuvent pas être migrés — la nouvelle version utilise une architecture différente.",
-  "migration.welcome.canMigrate": "Les paramètres suivants peuvent être migrés vers la nouvelle version :",
-  "migration.welcome.start": "Démarrer la migration",
-  "migration.welcome.skip": "Ignorer la migration",
-  "migration.steps.title": "Migrer vos paramètres",
-  "migration.steps.subtitle":
-    "Nous avons trouvé des paramètres de votre précédente installation de Kilo Code. Choisissez ce que vous souhaitez transférer.",
+
+  // Screen 1 — What's New
+  "migration.whatsNew.title": "Nouveautés de Kilo Code",
+  "migration.whatsNew.badge": "Beta",
+  "migration.whatsNew.subtitle": "Nous avons reconstruit l'extension sur une base plus rapide et plus efficace.",
+  "migration.whatsNew.features.performance.title": "Performance accélérée de l'agent",
+  "migration.whatsNew.features.performance.detail":
+    "Les appels d'outils en parallèle et les sous-agents permettent à votre agent de traiter plus de tâches simultanément — vous passez moins de temps à attendre et plus de temps à livrer.",
+  "migration.whatsNew.features.interface.title": "Interface simplifiée",
+  "migration.whatsNew.features.interface.detail": "Moins de distractions, plus facile et plus rapide à lire.",
+  "migration.whatsNew.features.agentManager.title": "Agent Manager",
+  "migration.whatsNew.features.agentManager.detail":
+    "Une interface unifiée pour exécuter plusieurs agents en parallèle, chacun sur son propre arbre de travail — surveillez la progression, changez de contexte et examinez les modifications depuis un seul endroit.",
+  "migration.whatsNew.features.foundation.title": "Base partagée",
+  "migration.whatsNew.features.foundation.detail":
+    "Un noyau petit et efficace partagé par tous les produits Kilo. Une expérience familière quelle que soit votre façon de travailler.",
+  "migration.whatsNew.blogLink": "Lire l'annonce complète",
+  "migration.whatsNew.continue": "Continuer",
+
+  // Screen 2 — Migrate Settings
+  "migration.migrate.title": "Migrer vos paramètres",
+  "migration.migrate.subtitle":
+    "Nous avons trouvé des paramètres de votre précédente installation. Voici ce que nous pouvons récupérer.",
+  "migration.migrate.selectLabel": "Sélectionnez ce que vous souhaitez migrer",
+  "migration.migrate.cannotMigrate": "Impossible à migrer",
+  "migration.migrate.chatHistory": "Sessions de discussion et historique",
+  "migration.migrate.chatHistoryDesc": "Incompatible avec la nouvelle architecture",
+  "migration.migrate.button": "Migrer les paramètres",
+  "migration.migrate.skip": "Ignorer",
+  "migration.migrate.back": "Retour",
+  "migration.migrate.keysDetected": "{{count}} clés détectées",
+  "migration.migrate.serversConfigured": "{{count}} serveur(s) configuré(s)",
+  "migration.migrate.modesFound": "{{count}} mode(s) trouvé(s)",
+  "migration.migrate.nothingToMigrate": "Rien à migrer n'a été trouvé dans les anciens paramètres.",
+
+  // Migrate — item labels (reused from old select keys)
   "migration.select.providers": "Clés d'API des fournisseurs",
   "migration.select.mcpServers": "Serveurs MCP",
   "migration.select.customModes": "Modes personnalisés / Agents",
   "migration.select.defaultModel": "Modèle par défaut",
-  "migration.select.unsupported": "Non pris en charge dans la nouvelle version",
-  "migration.select.nothingToMigrate": "Rien à migrer n'a été trouvé dans les anciens paramètres.",
-  "migration.select.settings": "Paramètres",
   "migration.select.autoApproval": "Approbation automatique",
-  "migration.select.autoApproval.commandRules": "Règles de commande",
-  "migration.select.autoApproval.commandRulesDesc": "Bascule principale et listes de commandes autorisées/refusées",
-  "migration.select.autoApproval.readPermission": "Autorisation de lecture",
-  "migration.select.autoApproval.readPermissionDesc":
-    "Accès en lecture aux fichiers à l'intérieur et à l'extérieur de l'espace de travail",
-  "migration.select.autoApproval.writePermission": "Autorisation d'écriture",
-  "migration.select.autoApproval.writePermissionDesc": "Accès en écriture et modification de fichiers",
-  "migration.select.autoApproval.executePermission": "Autorisation d'exécution",
-  "migration.select.autoApproval.executePermissionDesc": "Exécution de commandes dans le terminal",
-  "migration.select.autoApproval.mcpPermission": "Autorisation MCP",
-  "migration.select.autoApproval.mcpPermissionDesc": "Utilisation d'outils MCP",
-  "migration.select.autoApproval.taskPermission": "Autorisation de tâche",
-  "migration.select.autoApproval.taskPermissionDesc": "Changement de mode et création de sous-tâches",
   "migration.select.language": "Langue de l'interface",
-  "migration.select.languageDesc": "Votre préférence de langue sera appliquée à la nouvelle extension",
   "migration.select.autocomplete": "Paramètres de saisie semi-automatique",
-  "migration.select.autocompleteDesc":
-    "Préférences de déclenchement automatique, de raccourcis clavier et de saisie semi-automatique du chat",
-  "migration.select.continue": "Continuer",
-  "migration.select.back": "Retour",
-  "migration.progress.title": "Migration de vos paramètres…",
-  "migration.progress.done": "Continuer",
+
+  // Migrate — completion
   "migration.complete.summary": "{{success}} éléments sur {{total}} migrés avec succès.",
   "migration.complete.cleanup": "Supprimer les données des anciens paramètres",
   "migration.complete.cleanupDescription":
     "Cela supprime les anciens paramètres du stockage de VS Code. Vous ne pourrez pas réexécuter cette migration.",
   "migration.complete.done": "Terminé",
   // legacy-migration end
+
+  "error.details.show": "Détails",
+
+  "task.todos.progress": "{{done}}/{{total}} tâches terminées",
+  "task.todos.allDone": "{{count}} tâches terminées",
 }

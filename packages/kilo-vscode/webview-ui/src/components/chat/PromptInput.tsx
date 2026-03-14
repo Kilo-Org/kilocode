@@ -5,12 +5,16 @@
 
 import { Component, createSignal, createEffect, on, For, Index, onCleanup, onMount, Show, untrack } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
+import { Dialog } from "@kilocode/kilo-ui/dialog"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
+import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
+import { useWorktreeMode } from "../../context/worktree-mode"
 import { ModelSelector } from "../shared/ModelSelector"
 import { ModeSwitcher } from "../shared/ModeSwitcher"
 import { ThinkingSelector } from "../shared/ThinkingSelector"
@@ -18,18 +22,32 @@ import { useFileMention } from "../../hooks/useFileMention"
 import { useImageAttachments } from "../../hooks/useImageAttachments"
 import { WandSparkles } from "@kilocode/kilo-ui/lucide"
 import { fileName, dirName, buildHighlightSegments } from "./prompt-input-utils"
+import type { ReviewComment } from "../../types/messages"
+import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
 
 const AUTOCOMPLETE_DEBOUNCE_MS = 500
 const MIN_TEXT_LENGTH = 3
 
 // Per-session input text storage (module-level so it survives remounts)
 const drafts = new Map<string, string>()
+const reviewDrafts = new Map<string, ReviewComment[]>()
+
+function mergeReviewComments(current: ReviewComment[], incoming: ReviewComment[]): ReviewComment[] {
+  if (incoming.length === 0) return current
+  const map = new Map(current.map((item) => [item.id, item]))
+  for (const item of incoming) {
+    map.set(item.id, item)
+  }
+  return [...map.values()]
+}
 
 export const PromptInput: Component = () => {
   const session = useSession()
   const server = useServer()
   const language = useLanguage()
   const vscode = useVSCode()
+  const worktree = useWorktreeMode()
+  const dialog = useDialog()
   const mention = useFileMention(vscode)
   const imageAttach = useImageAttachments()
 
@@ -37,10 +55,74 @@ export const PromptInput: Component = () => {
 
   const [text, setText] = createSignal("")
   const [ghostText, setGhostText] = createSignal("")
+  const [reviewComments, setReviewComments] = createSignal<ReviewComment[]>([])
   const [chatAutocompleteEnabled, setChatAutocompleteEnabled] = createSignal(false)
   const [enhancing, setEnhancing] = createSignal(false)
   let enhanceCounter = 0
   let preEnhanceText: string | null = null
+
+  const replaceReviewComments = (next: ReviewComment[]) => {
+    setReviewComments(next)
+    if (next.length === 0) {
+      reviewDrafts.delete(sessionKey())
+      return
+    }
+    reviewDrafts.set(sessionKey(), next)
+  }
+
+  const clearReviewComments = () => replaceReviewComments([])
+
+  const removeReviewComment = (id: string) => {
+    replaceReviewComments(reviewComments().filter((item) => item.id !== id))
+  }
+
+  const openReviewFile = (item: ReviewComment) => {
+    const id = session.currentSessionID()
+    if (worktree && id) {
+      vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: item.file, line: item.line })
+      dialog.close()
+      return
+    }
+    vscode.postMessage({ type: "openFile", filePath: item.file, line: item.line, column: 1 })
+    dialog.close()
+  }
+
+  const side = (item: ReviewComment) => (item.side === "deletions" ? "-" : "+")
+  const reviewChipTitle = (item: ReviewComment) => `${fileName(item.file)} ${side(item)}${item.line}`
+
+  const showReviewCommentDialog = (item: ReviewComment) => {
+    dialog.show(() => (
+      <Dialog title={language.t("agentManager.review.modalTitle")} fit>
+        <div class="prompt-review-modal">
+          <div class="prompt-review-modal-head">
+            <span class="prompt-review-modal-headline">{reviewChipTitle(item)}</span>
+            <Tooltip value={language.t("agentManager.diff.openFile")} placement="top">
+              <IconButton
+                icon="go-to-file"
+                size="small"
+                variant="ghost"
+                label={language.t("agentManager.diff.openFile")}
+                onClick={() => openReviewFile(item)}
+              />
+            </Tooltip>
+          </div>
+
+          <div class="prompt-review-modal-grid">
+            <span class="prompt-review-modal-label">{language.t("agentManager.review.metaFile")}</span>
+            <code class="prompt-review-modal-value">{item.file}</code>
+            <span class="prompt-review-modal-label">{language.t("agentManager.review.metaLine")}</span>
+            <span class="prompt-review-modal-value">L{item.line}</span>
+            <span class="prompt-review-modal-label">{language.t("agentManager.review.metaComment")}</span>
+            <span class="prompt-review-modal-value">{item.comment}</span>
+          </div>
+
+          <Show when={item.selectedText}>
+            <pre class="prompt-review-modal-snippet">{item.selectedText}</pre>
+          </Show>
+        </div>
+      </Dialog>
+    ))
+  }
 
   let textareaRef: HTMLTextAreaElement | undefined
   let highlightRef: HTMLDivElement | undefined
@@ -53,10 +135,15 @@ export const PromptInput: Component = () => {
     on(sessionKey, (key, prev) => {
       if (prev !== undefined && prev !== key) {
         drafts.set(prev, untrack(text))
+        const pending = untrack(reviewComments)
+        if (pending.length > 0) reviewDrafts.set(prev, pending)
+        else reviewDrafts.delete(prev)
       }
       const draft = drafts.get(key) ?? ""
+      const pending = reviewDrafts.get(key) ?? []
       setText(draft)
       setGhostText("")
+      setReviewComments(pending)
       if (textareaRef) {
         textareaRef.value = draft
         // Reset height then adjust
@@ -72,9 +159,32 @@ export const PromptInput: Component = () => {
   window.addEventListener("focusPrompt", onFocusPrompt)
   onCleanup(() => window.removeEventListener("focusPrompt", onFocusPrompt))
 
+  // Start a new task, carrying over the current prompt text (without auto-sending it)
+  const onNewTaskRequest = () => {
+    const prompt = text().trim()
+    // Pre-populate the draft for the new (empty) session so the effect restores it
+    if (prompt) drafts.set("__new__", prompt)
+    session.clearCurrentSession()
+  }
+  window.addEventListener("newTaskRequest", onNewTaskRequest)
+  onCleanup(() => window.removeEventListener("newTaskRequest", onNewTaskRequest))
+
   const isBusy = () => session.status() === "busy"
   const isDisabled = () => !server.isConnected()
-  const canSend = () => (text().trim().length > 0 || imageAttach.images().length > 0) && !isBusy() && !isDisabled()
+  const canSend = () =>
+    (text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0) &&
+    !isBusy() &&
+    !isDisabled()
+  const placeholder = () => {
+    switch (server.connectionState()) {
+      case "connecting":
+        return language.t("prompt.placeholder.connecting")
+      case "error":
+        return language.t("prompt.placeholder.error")
+      default:
+        return language.t("prompt.placeholder.default")
+    }
+  }
 
   const unsubscribe = vscode.onMessage((message) => {
     if (message.type === "chatCompletionResult") {
@@ -109,6 +219,12 @@ export const PromptInput: Component = () => {
         textareaRef.focus()
         textareaRef.scrollTop = textareaRef.scrollHeight
       }
+    }
+
+    if (message.type === "appendReviewComments") {
+      const merged = mergeReviewComments(reviewComments(), message.comments)
+      replaceReviewComments(merged)
+      textareaRef?.focus()
     }
 
     if (message.type === "triggerTask") {
@@ -151,6 +267,9 @@ export const PromptInput: Component = () => {
     // Persist current draft before unmounting
     const current = text()
     if (current) drafts.set(sessionKey(), current)
+    const pending = reviewComments()
+    if (pending.length > 0) reviewDrafts.set(sessionKey(), pending)
+    else reviewDrafts.delete(sessionKey())
     unsubscribe()
     if (debounceTimer) clearTimeout(debounceTimer)
   })
@@ -300,11 +419,14 @@ export const PromptInput: Component = () => {
   }
 
   const handleSend = () => {
-    const message = text().trim()
+    const draft = text().trim()
     const imgs = imageAttach.images()
+    const pending = reviewComments()
+    const review = pending.length > 0 ? formatReviewCommentsMarkdown(pending) : ""
+    const message = draft && review ? `${review}\n\n${draft}` : draft || review
     if ((!message && imgs.length === 0) || isBusy() || isDisabled()) return
 
-    const mentionFiles = mention.parseFileAttachments(message)
+    const mentionFiles = mention.parseFileAttachments(draft)
     const imgFiles = imgs.map((img) => ({ mime: img.mime, url: img.dataUrl }))
     const allFiles = [...mentionFiles, ...imgFiles]
 
@@ -316,6 +438,7 @@ export const PromptInput: Component = () => {
     requestCounter++
     setText("")
     setGhostText("")
+    clearReviewComments()
     imageAttach.clear()
     if (debounceTimer) clearTimeout(debounceTimer)
     mention.closeMention()
@@ -332,6 +455,56 @@ export const PromptInput: Component = () => {
       onDragLeave={imageAttach.handleDragLeave}
       onDrop={imageAttach.handleDrop}
     >
+      <Show when={reviewComments().length > 0}>
+        <div class="prompt-review-comments">
+          <div class="prompt-review-comments-header">
+            <span class="prompt-review-comments-title">
+              {language.t("agentManager.review.inlineCount", { count: reviewComments().length })}
+            </span>
+            <Button variant="ghost" size="small" onClick={clearReviewComments}>
+              {language.t("agentManager.review.clearAll")}
+            </Button>
+          </div>
+          <div class="prompt-review-chip-list">
+            <For each={reviewComments()}>
+              {(item) => (
+                <div class="prompt-review-chip">
+                  <button type="button" class="prompt-review-chip-body" onClick={() => showReviewCommentDialog(item)}>
+                    <span class="prompt-review-chip-icon">
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path
+                          d="M3.2 11.8l-.6 2.5 2.3-1.2h6.1A2.8 2.8 0 0013.8 10V5A2.8 2.8 0 0011 2.2H5A2.8 2.8 0 002.2 5v5a2.8 2.8 0 001 2.2z"
+                          stroke="currentColor"
+                          stroke-width="1.4"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                    </span>
+                    <span class="prompt-review-chip-copy">
+                      <span class="prompt-review-chip-main">
+                        <span class="prompt-review-chip-title">{fileName(item.file)}</span>
+                        <span class="prompt-review-chip-line">
+                          {side(item)}
+                          {item.line}
+                        </span>
+                      </span>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    class="prompt-review-chip-remove"
+                    onClick={() => removeReviewComment(item.id)}
+                    aria-label={language.t("common.delete")}
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+            </For>
+          </div>
+        </div>
+      </Show>
       <Show when={mention.showMention()}>
         <div class="file-mention-dropdown" ref={dropdownRef}>
           <Show
@@ -394,9 +567,7 @@ export const PromptInput: Component = () => {
           <textarea
             ref={textareaRef}
             class="prompt-input"
-            placeholder={
-              isDisabled() ? language.t("prompt.placeholder.connecting") : language.t("prompt.placeholder.default")
-            }
+            placeholder={placeholder()}
             value={text()}
             onInput={handleInput}
             onKeyDown={handleKeyDown}
@@ -412,6 +583,20 @@ export const PromptInput: Component = () => {
           <ModeSwitcher />
           <ModelSelector />
           <ThinkingSelector />
+          <Show when={session.hasModelOverride()}>
+            <Tooltip value={language.t("prompt.action.resetModel")} placement="top">
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={() => session.clearModelOverride()}
+                aria-label={language.t("prompt.action.resetModel")}
+              >
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M3.72 3.72a.75.75 0 011.06 0L8 6.94l3.22-3.22a.75.75 0 111.06 1.06L9.06 8l3.22 3.22a.75.75 0 11-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 01-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 010-1.06z" />
+                </svg>
+              </Button>
+            </Tooltip>
+          </Show>
         </div>
         <div class="prompt-input-hint-actions">
           <Tooltip value={language.t("prompt.action.enhance")} placement="top">

@@ -59,7 +59,7 @@ html[data-theme="kilo-vscode"] [data-component="tool-trigger"] {
 }
 
 /* Card styling for tool calls in the VS Code sidebar theme */
-html[data-theme="kilo-vscode"] [data-component="tool-part-wrapper"] {
+html[data-theme="kilo-vscode"] [data-component="tool-part-wrapper"][data-part-type="tool"] {
   border-radius: var(--radius-md);
   border: 1px solid var(--border-weak-base, var(--vscode-panel-border));
   overflow: hidden;

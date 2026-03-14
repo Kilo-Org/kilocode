@@ -1,7 +1,7 @@
 module.exports = [
   {
-    source: "/docs/automate/kiloclaw",
-    destination: "/docs/automate/kiloclaw/overview",
+    source: "/docs/contributing/architecture/model-provider-blocklist",
+    destination: "/docs/collaborate/enterprise/model-access-controls",
     basePath: false,
     permanent: true,
   },
@@ -215,6 +215,12 @@ module.exports = [
   {
     source: "/docs/basic-usage/task-todo-list",
     destination: "/docs/code-with-ai/features/task-todo-list",
+    basePath: false,
+    permanent: true,
+  },
+  {
+    source: "/docs/features/experimental/voice-transcription",
+    destination: "/docs/code-with-ai/features/speech-to-text",
     basePath: false,
     permanent: true,
   },
@@ -786,6 +792,18 @@ module.exports = [
   {
     source: "/docs/features/tools/write-to-file",
     destination: "/docs/automate/tools/write-to-file",
+    basePath: false,
+    permanent: true,
+  },
+  {
+    source: "/docs/automate/kiloclaw/:path*",
+    destination: "/docs/kiloclaw/:path*",
+    basePath: false,
+    permanent: true,
+  },
+  {
+    source: "/docs/contributing/architecture/vercel-ai-gateway",
+    destination: "/docs/contributing/architecture/features",
     basePath: false,
     permanent: true,
   },

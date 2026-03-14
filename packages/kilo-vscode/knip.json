@@ -1,0 +1,17 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "src/extension.ts",
+    "webview-ui/agent-manager/index.tsx",
+    "webview-ui/diff-viewer/index.tsx",
+    "webview-ui/src/index.tsx",
+    "src/**/__tests__/**/*.{ts,spec.ts}",
+    "src/**/*.test.ts",
+    "tests/**/*.{ts,mts}",
+    "script/*.ts"
+  ],
+  "project": ["src/**/*.ts", "webview-ui/**/*.{ts,tsx}"],
+  "ignore": ["src/services/autocomplete/**"],
+  "ignoreExportsUsedInFile": true,
+  "exclude": ["dependencies", "devDependencies", "optionalPeerDependencies", "unlisted", "unresolved", "binaries"]
+}

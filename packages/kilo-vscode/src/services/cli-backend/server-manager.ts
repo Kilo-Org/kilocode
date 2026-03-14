@@ -3,6 +3,7 @@ import * as crypto from "crypto"
 import * as fs from "fs"
 import * as path from "path"
 import * as vscode from "vscode"
+import { t } from "./i18n"
 import { parseServerPort } from "./server-utils"
 
 export interface ServerInstance {
@@ -10,6 +11,8 @@ export interface ServerInstance {
   password: string
   process: ChildProcess
 }
+
+const STARTUP_TIMEOUT_SECONDS = 30
 
 export class ServerManager {
   private instance: ServerInstance | null = null
@@ -78,10 +81,13 @@ export class ServerManager {
           KILO_VSCODE_VERSION: vscode.version,
         },
         stdio: ["ignore", "pipe", "pipe"],
+        detached: true,
+        windowsHide: true,
       })
       console.log("[Kilo New] ServerManager: 📦 Process spawned with PID:", serverProcess.pid)
 
       let resolved = false
+      const stderrLines: string[] = []
 
       serverProcess.stdout?.on("data", (data: Buffer) => {
         const output = data.toString()
@@ -98,6 +104,7 @@ export class ServerManager {
       serverProcess.stderr?.on("data", (data: Buffer) => {
         const errorOutput = data.toString()
         console.error("[Kilo New] ServerManager: ⚠️ CLI Server stderr:", errorOutput)
+        stderrLines.push(errorOutput)
       })
 
       serverProcess.on("error", (error) => {
@@ -113,18 +120,27 @@ export class ServerManager {
           this.instance = null
         }
         if (!resolved) {
-          reject(new Error(`CLI process exited with code ${code} before server started`))
+          const { userMessage, userDetails } = toErrorMessage(
+            t("server.processExited", { code: code ?? "null" }),
+            stderrLines,
+            cliPath,
+          )
+          reject(new ServerStartupError(userMessage, userDetails))
         }
       })
 
-      // Timeout after 30 seconds
       setTimeout(() => {
         if (!resolved) {
-          console.error("[Kilo New] ServerManager: ⏰ Server startup timeout (30s)")
-          serverProcess.kill()
-          reject(new Error("Server startup timeout"))
+          console.error(`[Kilo New] ServerManager: ⏰ Server startup timeout (${STARTUP_TIMEOUT_SECONDS}s)`)
+          ServerManager.killProcess(serverProcess)
+          const { userMessage, userDetails } = toErrorMessage(
+            t("server.startupTimeout", { seconds: STARTUP_TIMEOUT_SECONDS }),
+            stderrLines,
+            cliPath,
+          )
+          reject(new ServerStartupError(userMessage, userDetails))
         }
-      }, 30000)
+      }, STARTUP_TIMEOUT_SECONDS * 1000)
     })
   }
 
@@ -136,10 +152,94 @@ export class ServerManager {
     return cliPath
   }
 
-  dispose(): void {
-    if (this.instance) {
-      this.instance.process.kill("SIGTERM")
-      this.instance = null
+  /**
+   * Kill a process and its entire process group.
+   * On Unix, we send the signal to -pid (negative) to reach the whole group,
+   * mirroring the desktop app's ProcessGroup::leader() + start_kill() pattern.
+   * On Windows, process.kill() on the child handle is sufficient.
+   */
+  private static killProcess(proc: ChildProcess, signal: NodeJS.Signals = "SIGTERM"): void {
+    if (proc.pid === undefined) {
+      return
     }
+    try {
+      if (process.platform !== "win32") {
+        // Negative PID targets the entire process group
+        process.kill(-proc.pid, signal)
+      } else {
+        proc.kill(signal)
+      }
+    } catch {
+      // Process already gone — ignore
+    }
+  }
+
+  dispose(): void {
+    if (!this.instance) {
+      return
+    }
+    const proc = this.instance.process
+    this.instance = null
+
+    console.log("[Kilo New] ServerManager: 🔴 Disposing — sending SIGTERM to process group, PID:", proc.pid)
+    ServerManager.killProcess(proc, "SIGTERM")
+
+    // SIGKILL fallback after 5s: mirrors the desktop app going straight to
+    // start_kill(). Ensures the process tree dies even if SIGTERM is ignored
+    // or Instance.disposeAll() hangs past the serve.ts shutdown timeout.
+    const timer = setTimeout(() => {
+      if (proc.exitCode === null) {
+        console.warn("[Kilo New] ServerManager: ⚠️ Process did not exit after SIGTERM, sending SIGKILL")
+        ServerManager.killProcess(proc, "SIGKILL")
+      }
+    }, 5000)
+    // unref so this timer doesn't prevent the extension host from exiting
+    timer.unref()
+    proc.on("exit", () => clearTimeout(timer))
+  }
+}
+
+export class ServerStartupError extends Error {
+  readonly userMessage: string
+  readonly userDetails: string
+  constructor(userMessage: string, userDetails: string) {
+    super(userDetails)
+    this.name = "ServerStartupError"
+    this.userMessage = userMessage
+    this.userDetails = userDetails
+  }
+}
+
+function stripAnsi(str: string): string {
+  return str.replace(/\x1b\[[0-9;]*m/g, "")
+}
+
+export function toErrorMessage(
+  error: string,
+  stderrLines: string[],
+  cliPath?: string,
+): {
+  userMessage: string
+  userDetails: string
+  error: string
+} {
+  let lines = stderrLines.flatMap((line) => line.split("\n"))
+
+  const errorLine = lines.map(stripAnsi).find((line) => /Error:\s+/.test(line))
+  const userMessage = errorLine
+    ? errorLine.match(/Error:\s+(.+)/)![1].trim()
+    : stripAnsi([...lines].reverse().find((line) => line.trim() !== "") ?? error).trim()
+
+  lines = [error, ...lines]
+  if (cliPath && cliPath.trim() !== "") {
+    lines = [`CLI path: ${cliPath}`, ...lines]
+  }
+
+  const detailsText = lines.map(stripAnsi).join("\n").trim()
+
+  return {
+    userMessage,
+    userDetails: detailsText,
+    error,
   }
 }

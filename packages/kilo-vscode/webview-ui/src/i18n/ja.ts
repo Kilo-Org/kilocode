@@ -43,6 +43,8 @@ export const dict = {
   "command.language.set": "言語を使用: {{language}}",
 
   "command.session.new": "新しいセッション",
+  "command.session.new.task": "新しいタスク",
+  "command.session.show.changes": "変更を表示",
   "command.file.open": "ファイルを開く",
   "command.tab.close": "タブを閉じる",
   "command.context.addSelection": "選択範囲をコンテキストに追加",
@@ -229,6 +231,7 @@ export const dict = {
   "prompt.action.send": "送信",
   "prompt.action.stop": "停止",
   "prompt.action.enhance": "プロンプトを改善",
+  "prompt.action.resetModel": "モデルをデフォルトにリセット",
   "prompt.action.enhanceDescription":
     "「プロンプトを強化」ボタンは、追加コンテキスト、説明、または言い換えを提供することで、リクエストを改善します。ここにリクエストを入力し、ボタンを再度クリックして動作を確認してください。",
 
@@ -404,6 +407,17 @@ export const dict = {
 
   "error.globalSync.connectFailed": "サーバーに接続できませんでした。`{{url}}`でサーバーが実行されていますか？",
 
+  "error.startup.title": "サーバー接続に失敗しました",
+
+  "error.paidModel.title": "このモデルを使用するにはサインインが必要です",
+  "error.paidModel.description":
+    "サインインまたはアカウントを作成して、500以上のモデルにアクセスし、原価でクレジットを使用するか、独自のキーを持ち込みましょう。",
+  "error.paidModel.action": "サインイン",
+  "error.promotionLimit.title": "続けるにはサインアップが必要です",
+  "error.promotionLimit.description":
+    "無料でサインアップして、500以上のモデルを探索しましょう。2分で完了、クレジットカード不要。または後でお戻りください。",
+  "error.promotionLimit.action": "サインアップ",
+
   "error.chain.unknown": "不明なエラー",
   "error.chain.causedBy": "原因:",
   "error.chain.apiError": "APIエラー",
@@ -427,6 +441,10 @@ export const dict = {
 
   "notification.permission.title": "権限が必要です",
   "notification.permission.description": "{{projectName}} の {{sessionTitle}} が権限を必要としています",
+  "ui.permission.pattern.addToAllowed": "許可リストに追加",
+  "ui.permission.pattern.removeFromAllowed": "許可リストから削除",
+  "ui.permission.pattern.addToDenied": "拒否リストに追加",
+  "ui.permission.pattern.removeFromDenied": "拒否リストから削除",
   "notification.question.title": "質問",
   "notification.question.description": "{{projectName}} の {{sessionTitle}} から質問があります",
   "notification.action.goToSession": "セッションへ移動",
@@ -657,6 +675,8 @@ export const dict = {
 
   "settings.providers.title": "プロバイダー",
   "settings.providers.description": "プロバイダー設定はここで構成できます。",
+  "settings.providers.betaNotice":
+    "現在、設定画面で設定できるのはKilo Gatewayプロバイダーのみです。他のプロバイダーの設定については、ベータ期間中にまもなく対応予定です。それまでの間は、CLIまたは設定ファイルを使用してプロバイダーを設定できます。私たちはKiloをオープンに保ち、ロックインのない状態を維持することをお約束します。",
   "settings.providers.section.connected": "接続済みプロバイダー",
   "settings.providers.connected.empty": "接続済みプロバイダーはありません",
   "settings.providers.section.popular": "人気のプロバイダー",
@@ -725,10 +745,17 @@ export const dict = {
   "session.empty": "セッションがありません。+ をクリックして新しい会話を始めましょう。",
   "session.cloud.repoOnly": "このリポジトリのみ",
   "session.cloud.import": "クラウドからインポート",
+  "feedback.button": "フィードバック & サポート",
+  "feedback.dialog.message": "フィードバックをお聞かせいただくか、問題がある場合はお気軽にご相談ください。",
+  "feedback.dialog.github": "GitHubで問題を報告する",
+  "feedback.dialog.discord": "Discordコミュニティに参加する",
+  "feedback.dialog.support": "カスタマーサポート",
   "session.cloud.import.title": "クラウドからインポート",
   "session.cloud.import.placeholder": "セッションID、URL、またはkilo importコマンド",
   "session.cloud.import.button": "インポート",
   "session.cloud.import.invalid": "セッションIDの形式が無効です",
+  "session.cloud.import.legacy":
+    "これは以前のバージョンのセッションのようです。このセッションはサポートされなくなりました。",
   "session.cloud.import.failed": "クラウドセッションのインポートに失敗しました",
 
   "workspace.new": "新しいワークスペース",
@@ -912,7 +939,10 @@ export const dict = {
   "settings.experimental.toolToggles": "ツールトグル",
   "settings.agentBehaviour.defaultAgent.title": "デフォルトエージェント",
   "settings.agentBehaviour.defaultAgent.description": "指定されていない場合に使用するエージェント",
+  "settings.agentBehaviour.availableAgents": "利用可能なエージェント",
   "settings.agentBehaviour.selectAgent": "設定するエージェントを選択…",
+  "settings.agentBehaviour.selectAgent.title": "エージェント",
+  "settings.agentBehaviour.selectAgent.description": "設定するエージェントを選択…",
   "settings.agentBehaviour.modelOverride.title": "モデルオーバーライド",
   "settings.agentBehaviour.modelOverride.description": "このエージェントのデフォルトモデルを上書き",
   "settings.agentBehaviour.prompt.title": "カスタムプロンプト",
@@ -923,6 +953,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "核サンプリングパラメータ（0-1）",
   "settings.agentBehaviour.maxSteps.title": "最大ステップ数",
   "settings.agentBehaviour.maxSteps.description": "最大エージェント反復回数",
+  "settings.agentBehaviour.discoveredSkills": "検出されたスキル",
+  "settings.agentBehaviour.noSkillsFound":
+    "スキルが見つかりません。スキルを利用可能にするには、以下にスキルフォルダパスまたはURLを追加してください。",
   "settings.agentBehaviour.skillPaths": "スキルフォルダパス",
   "settings.agentBehaviour.skillUrls": "スキルURL",
   "settings.agentBehaviour.instructionFiles": "追加の指示ファイル",
@@ -932,26 +965,41 @@ export const dict = {
   "settings.agentBehaviour.workflowsPlaceholder":
     "ワークフローはワークスペース内のワークフローファイルを通じて管理されます。",
   "settings.agentBehaviour.notImplemented": "まだ実装されていません。",
-  "settings.autoApprove.setAll": "すべての権限を設定",
+  "settings.autoApprove.description":
+    "ツールの実行許可を定義します。ほとんどのツールはデフォルトで「許可」されます。doom_loop と external_directory はデフォルトで「確認」になります。",
   "settings.autoApprove.level.allow": "許可",
   "settings.autoApprove.level.ask": "確認",
   "settings.autoApprove.level.deny": "拒否",
-  "settings.autoApprove.tool.read": "ファイルの内容を読み取る",
-  "settings.autoApprove.tool.edit": "ファイルを編集または作成",
-  "settings.autoApprove.tool.glob": "パターンでファイルを検索",
-  "settings.autoApprove.tool.grep": "ファイルの内容を検索",
-  "settings.autoApprove.tool.list": "ディレクトリの内容を一覧表示",
-  "settings.autoApprove.tool.bash": "シェルコマンドを実行",
-  "settings.autoApprove.tool.task": "サブエージェントタスクを作成",
-  "settings.autoApprove.tool.skill": "スキルを実行",
-  "settings.autoApprove.tool.lsp": "言語サーバー操作",
-  "settings.autoApprove.tool.todoread": "TODOリストを読み取る",
-  "settings.autoApprove.tool.todowrite": "TODOリストに書き込む",
-  "settings.autoApprove.tool.webfetch": "ウェブページを取得",
-  "settings.autoApprove.tool.websearch": "ウェブ検索",
-  "settings.autoApprove.tool.codesearch": "コードベースを検索",
-  "settings.autoApprove.tool.external_directory": "ワークスペース外のファイルにアクセス",
-  "settings.autoApprove.tool.doom_loop": "繰り返しの失敗後に続行",
+  "settings.autoApprove.wildcardLabel.commands": "すべてのコマンド (*)",
+  "settings.autoApprove.wildcardLabel.paths": "すべてのパス (*)",
+  "settings.autoApprove.exceptions": "例外",
+  "settings.autoApprove.addCommand": "コマンドを追加",
+  "settings.autoApprove.addPath": "パスを追加",
+  "settings.autoApprove.placeholder.command": "例: git *",
+  "settings.autoApprove.placeholder.path": "例: *.env",
+  "settings.autoApprove.tool.read":
+    "ファイルを読み取る。指定されたパスに一致するファイルをエージェントが読み取ることを許可します。",
+  "settings.autoApprove.tool.edit":
+    "ファイルを変更する。パッチや複数ファイルの更新を含め、エージェントがファイルを作成または編集することを許可します。",
+  "settings.autoApprove.tool.glob":
+    "パターンでファイルを一致。globパターン（例：src/**/*.ts）を使用したファイルの一致を許可します。",
+  "settings.autoApprove.tool.grep": "ファイル内容を検索。ファイル内の正規表現ベースの検索を許可します。",
+  "settings.autoApprove.tool.list":
+    "ディレクトリの内容を一覧表示。ディレクトリ内のファイルとフォルダの表示を許可します。",
+  "settings.autoApprove.tool.bash": "ターミナルコマンドを実行。シェルコマンド（例：git status）の実行を許可します。",
+  "settings.autoApprove.tool.task":
+    "サブエージェントを起動。特定のタスク用に特化したサブエージェントを開始することを許可します。",
+  "settings.autoApprove.tool.skill": "スキルを読み込む。事前定義されたスキルを名前で読み込むことを許可します。",
+  "settings.autoApprove.tool.lsp":
+    "言語サーバーにクエリ。コードインテリジェンスのために言語サーバークエリの実行を許可します。",
+  "settings.autoApprove.tool.todoreadwrite": "タスクリストの管理。内部タスクリストの読み取りと更新を許可します。",
+  "settings.autoApprove.tool.webfetch": "URLをフェッチ。特定のURLからコンテンツを取得することを許可します。",
+  "settings.autoApprove.tool.websearchcodesearch":
+    "Webまたはコードの検索。外部のWebまたはコード検索の実行を許可します。",
+  "settings.autoApprove.tool.external_directory":
+    "ワークスペース外のファイルにアクセス。現在のプロジェクトディレクトリ外のファイルにアクセスしたときにトリガーされます。",
+  "settings.autoApprove.tool.doom_loop":
+    "繰り返し同一のアクションを防止。同じツール呼び出しが同一の入力で繰り返されたときにトリガーされます。",
   "settings.checkpoints.enable.title": "スナップショットを有効にする",
   "settings.checkpoints.enable.description": "ファイル編集前にチェックポイントを作成して以前の状態を復元可能にする",
   "settings.context.autoCompaction.title": "自動圧縮",
@@ -979,7 +1027,6 @@ export const dict = {
   "profile.personalAccount": "個人アカウント",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/ja.ts
 
-
   "question.summary": "{{total}} 問中 {{n}} 問目",
   "common.review": "確認",
 
@@ -988,47 +1035,59 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "レガシー移行",
   "settings.aboutKiloCode.legacyMigration.description":
     "プロバイダーのAPIキーやデフォルトモデルなど、以前にインストールしたKilo Codeから設定を移行します。",
-  "migration.welcome.title": "新しいKilo Codeへようこそ",
-  "migration.welcome.detected": "以前にインストールされたKilo Codeの設定を検出しました。",
-  "migration.welcome.sessionsInfo":
-    "チャットセッションと履歴は移行できません — 新しいバージョンでは異なるアーキテクチャが使用されています。",
-  "migration.welcome.canMigrate": "以下の設定を新しいバージョンに移行できます：",
-  "migration.welcome.start": "移行を開始",
-  "migration.welcome.skip": "移行をスキップ",
-  "migration.steps.title": "設定の移行",
-  "migration.steps.subtitle": "以前のKilo Codeインストールの設定が見つかりました。引き継ぐ項目を選択してください。",
+
+  // Screen 1 — What's New
+  "migration.whatsNew.title": "Kilo Codeの新機能",
+  "migration.whatsNew.badge": "Beta",
+  "migration.whatsNew.subtitle": "より高速で効率的な基盤上に拡張機能を再構築しました。",
+  "migration.whatsNew.features.performance.title": "高速なエージェントパフォーマンス",
+  "migration.whatsNew.features.performance.detail":
+    "並列ツール呼び出しとサブエージェントにより、エージェントがより多くのタスクを同時に処理できます — 待ち時間が減り、作業効率が向上します。",
+  "migration.whatsNew.features.interface.title": "洗練されたインターフェース",
+  "migration.whatsNew.features.interface.detail": "不要な要素を排除し、より読みやすく素早く操作できます。",
+  "migration.whatsNew.features.agentManager.title": "Agent Manager",
+  "migration.whatsNew.features.agentManager.detail":
+    "複数のエージェントを並列実行するための統合インターフェース。それぞれ独自のワークツリー上で動作し、進捗の確認、コンテキストの切り替え、変更のレビューを一箇所で行えます。",
+  "migration.whatsNew.features.foundation.title": "共通基盤",
+  "migration.whatsNew.features.foundation.detail":
+    "すべてのKilo製品で共有される小さく効率的なコア。どのような作業スタイルでも馴染みのある体験を提供します。",
+  "migration.whatsNew.blogLink": "完全なアナウンスを読む",
+  "migration.whatsNew.continue": "続行",
+
+  // Screen 2 — Migrate Settings
+  "migration.migrate.title": "設定の移行",
+  "migration.migrate.subtitle": "以前のインストールから設定が見つかりました。移行可能な項目は以下の通りです。",
+  "migration.migrate.selectLabel": "移行する項目を選択",
+  "migration.migrate.cannotMigrate": "移行できません",
+  "migration.migrate.chatHistory": "チャットセッションと履歴",
+  "migration.migrate.chatHistoryDesc": "新しいアーキテクチャと互換性がありません",
+  "migration.migrate.button": "設定を移行",
+  "migration.migrate.skip": "スキップ",
+  "migration.migrate.back": "戻る",
+  "migration.migrate.keysDetected": "{{count}}個のキーを検出",
+  "migration.migrate.serversConfigured": "{{count}}個のサーバーが設定済み",
+  "migration.migrate.modesFound": "{{count}}個のモードが見つかりました",
+  "migration.migrate.nothingToMigrate": "レガシー設定に移行する項目が見つかりませんでした。",
+
+  // Migrate — item labels (reused from old select keys)
   "migration.select.providers": "プロバイダーのAPIキー",
   "migration.select.mcpServers": "MCPサーバー",
   "migration.select.customModes": "カスタムモード / エージェント",
   "migration.select.defaultModel": "デフォルトモデル",
-  "migration.select.unsupported": "新しいバージョンではサポートされていません",
-  "migration.select.nothingToMigrate": "レガシー設定に移行する項目が見つかりませんでした。",
-  "migration.select.settings": "設定",
   "migration.select.autoApproval": "自動承認",
-  "migration.select.autoApproval.commandRules": "コマンドルール",
-  "migration.select.autoApproval.commandRulesDesc": "マスタートグルと許可/拒否されたコマンドリスト",
-  "migration.select.autoApproval.readPermission": "読み取り権限",
-  "migration.select.autoApproval.readPermissionDesc": "ワークスペース内外のファイル読み取りアクセス",
-  "migration.select.autoApproval.writePermission": "書き込み権限",
-  "migration.select.autoApproval.writePermissionDesc": "ファイルの書き込みと編集アクセス",
-  "migration.select.autoApproval.executePermission": "実行権限",
-  "migration.select.autoApproval.executePermissionDesc": "ターミナルコマンドの実行",
-  "migration.select.autoApproval.mcpPermission": "MCP権限",
-  "migration.select.autoApproval.mcpPermissionDesc": "MCPツールの使用",
-  "migration.select.autoApproval.taskPermission": "タスク権限",
-  "migration.select.autoApproval.taskPermissionDesc": "モードの切り替えとサブタスクの作成",
   "migration.select.language": "UI言語",
-  "migration.select.languageDesc": "言語設定は新しい拡張機能に適用されます",
   "migration.select.autocomplete": "オートコンプリート設定",
-  "migration.select.autocompleteDesc": "自動トリガー、キーバインド、およびチャットのオートコンプリート設定",
-  "migration.select.continue": "続行",
-  "migration.select.back": "戻る",
-  "migration.progress.title": "設定を移行しています…",
-  "migration.progress.done": "続行",
+
+  // Migrate — completion
   "migration.complete.summary": "{{total}}個中{{success}}個の項目が正常に移行されました。",
   "migration.complete.cleanup": "レガシー設定データを削除する",
   "migration.complete.cleanupDescription":
     "VS Codeのストレージから古い設定を削除します。この移行を再度実行することはできなくなります。",
   "migration.complete.done": "完了",
   // legacy-migration end
+
+  "error.details.show": "詳細",
+
+  "task.todos.progress": "{{done}}/{{total}} タスク完了",
+  "task.todos.allDone": "{{count}} タスク完了",
 }

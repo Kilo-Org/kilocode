@@ -1,7 +1,7 @@
 /** @jsxImportSource solid-js */
 /**
  * Stories for Agent Manager components:
- * FileTree, DiffPanel, FullScreenDiffView
+ * FileTree, DiffPanel, FullScreenDiffView, WorktreeItem
  */
 
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
@@ -9,7 +9,10 @@ import { StoryProviders } from "./StoryProviders"
 import { FileTree } from "../../agent-manager/FileTree"
 import { DiffPanel } from "../../agent-manager/DiffPanel"
 import { FullScreenDiffView } from "../../agent-manager/FullScreenDiffView"
-import type { WorktreeFileDiff } from "../types/messages"
+import { WorktreeItem } from "../../agent-manager/WorktreeItem"
+import type { WorktreeFileDiff, WorktreeState, WorktreeGitStats } from "../types/messages"
+import "../../agent-manager/agent-manager.css"
+import "../../agent-manager/agent-manager-review.css"
 
 // ---------------------------------------------------------------------------
 // Shared mock data
@@ -124,4 +127,170 @@ export const FullScreenDiffWithChanges: Story = {
       </div>
     </StoryProviders>
   ),
+}
+
+// ---------------------------------------------------------------------------
+// WorktreeItem — shared mock helpers
+// ---------------------------------------------------------------------------
+
+const noop = () => {}
+
+const baseWorktree: WorktreeState = {
+  id: "wt-abc123",
+  branch: "feat/inline-delete",
+  path: "/tmp/worktrees/feat-inline-delete",
+  parentBranch: "main",
+  remote: "origin",
+  createdAt: new Date(Date.now() - 3600_000).toISOString(),
+}
+
+const baseStats: WorktreeGitStats = {
+  worktreeId: "wt-abc123",
+  files: 4,
+  additions: 32,
+  deletions: 8,
+  ahead: 2,
+  behind: 0,
+}
+
+const defaultProps = {
+  worktree: baseWorktree,
+  label: "feat/inline-delete",
+  active: false,
+  pendingDelete: false,
+  busy: false,
+  stale: false,
+  shortcut: 2,
+  sessions: 1,
+  grouped: false,
+  groupStart: false,
+  groupEnd: false,
+  groupSize: 0,
+  renaming: false,
+  renameValue: "",
+  closeKeybind: "⌘⇧W",
+  onClick: noop,
+  onDelete: noop,
+  onStartRename: noop,
+  onRenameInput: noop,
+  onCommitRename: noop,
+  onCancelRename: noop,
+  onRemoveStale: noop,
+}
+
+// ---------------------------------------------------------------------------
+// WorktreeItem stories
+// ---------------------------------------------------------------------------
+
+export const WorktreeItemDefault: Story = {
+  name: "WorktreeItem — default",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem {...defaultProps} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const WorktreeItemActive: Story = {
+  name: "WorktreeItem — active",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem {...defaultProps} active />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const WorktreeItemPendingDelete: Story = {
+  name: "WorktreeItem — pending delete",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem {...defaultProps} active pendingDelete />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const WorktreeItemBusy: Story = {
+  name: "WorktreeItem — busy (spinner)",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem {...defaultProps} busy />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const WorktreeItemStale: Story = {
+  name: "WorktreeItem — stale",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem {...defaultProps} stale />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const WorktreeItemWithStats: Story = {
+  name: "WorktreeItem — with git stats",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem {...defaultProps} stats={baseStats} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const WorktreeItemGrouped: Story = {
+  name: "WorktreeItem — grouped (3 versions)",
+  render: () => {
+    const group: WorktreeState[] = [
+      { ...baseWorktree, id: "wt-g1", branch: "feat/v1", groupId: "g1" },
+      { ...baseWorktree, id: "wt-g2", branch: "feat/v2", groupId: "g1" },
+      { ...baseWorktree, id: "wt-g3", branch: "feat/v3", groupId: "g1" },
+    ]
+    return (
+      <StoryProviders noPadding>
+        <div style={{ width: "200px" }}>
+          <WorktreeItem
+            {...defaultProps}
+            worktree={group[0]}
+            label="feat/v1"
+            grouped
+            groupStart
+            groupEnd={false}
+            groupSize={3}
+            shortcut={2}
+          />
+          <WorktreeItem
+            {...defaultProps}
+            worktree={group[1]}
+            label="feat/v2"
+            grouped
+            groupStart={false}
+            groupEnd={false}
+            groupSize={0}
+            shortcut={3}
+          />
+          <WorktreeItem
+            {...defaultProps}
+            worktree={group[2]}
+            label="feat/v3"
+            grouped
+            groupStart={false}
+            groupEnd
+            groupSize={0}
+            shortcut={4}
+          />
+        </div>
+      </StoryProviders>
+    )
+  },
 }

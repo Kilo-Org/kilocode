@@ -43,6 +43,8 @@ export const dict = {
   "command.language.set": "Usar idioma: {{language}}",
 
   "command.session.new": "Nueva sesión",
+  "command.session.new.task": "Nueva tarea",
+  "command.session.show.changes": "Mostrar cambios",
   "command.file.open": "Abrir archivo",
   "command.tab.close": "Cerrar pestaña",
   "command.context.addSelection": "Añadir selección al contexto",
@@ -230,6 +232,7 @@ export const dict = {
   "prompt.action.send": "Enviar",
   "prompt.action.stop": "Detener",
   "prompt.action.enhance": "Mejorar prompt",
+  "prompt.action.resetModel": "Restablecer modelo al predeterminado",
   "prompt.action.enhanceDescription":
     "El botón 'Mejorar el mensaje' ayuda a mejorar tu petición proporcionando contexto adicional, aclaraciones o reformulaciones. Intenta escribir una petición aquí y haz clic en el botón nuevamente para ver cómo funciona.",
 
@@ -407,6 +410,17 @@ export const dict = {
 
   "error.globalSync.connectFailed": "No se pudo conectar al servidor. ¿Hay un servidor ejecutándose en `{{url}}`?",
 
+  "error.startup.title": "Error de conexión al servidor",
+
+  "error.paidModel.title": "Necesitas iniciar sesión para usar este modelo",
+  "error.paidModel.description":
+    "Inicia sesión o crea una cuenta para acceder a más de 500 modelos, usar créditos a precio de coste o traer tu propia clave.",
+  "error.paidModel.action": "Iniciar sesión",
+  "error.promotionLimit.title": "Necesitas registrarte para continuar",
+  "error.promotionLimit.description":
+    "Regístrate gratis para continuar y explorar más de 500 modelos. Solo 2 minutos, sin tarjeta de crédito. O vuelve más tarde.",
+  "error.promotionLimit.action": "Registrarse",
+
   "error.chain.unknown": "Error desconocido",
   "error.chain.causedBy": "Causado por:",
   "error.chain.apiError": "Error de API",
@@ -431,6 +445,10 @@ export const dict = {
 
   "notification.permission.title": "Permiso requerido",
   "notification.permission.description": "{{sessionTitle}} en {{projectName}} necesita permiso",
+  "ui.permission.pattern.addToAllowed": "Añadir a la lista de permitidos",
+  "ui.permission.pattern.removeFromAllowed": "Quitar de la lista de permitidos",
+  "ui.permission.pattern.addToDenied": "Añadir a la lista de denegados",
+  "ui.permission.pattern.removeFromDenied": "Quitar de la lista de denegados",
   "notification.question.title": "Pregunta",
   "notification.question.description": "{{sessionTitle}} en {{projectName}} tiene una pregunta",
   "notification.action.goToSession": "Ir a sesión",
@@ -664,6 +682,8 @@ export const dict = {
 
   "settings.providers.title": "Proveedores",
   "settings.providers.description": "La configuración de proveedores estará disponible aquí.",
+  "settings.providers.betaNotice":
+    "Actualmente, solo el proveedor Kilo Gateway se puede configurar en la interfaz de ajustes. El soporte para configurar otros proveedores llegará pronto durante el período beta. Mientras tanto, puedes configurar proveedores usando la CLI o el archivo de configuración. Estamos comprometidos a mantener Kilo abierto, sin ataduras.",
   "settings.providers.section.connected": "Proveedores conectados",
   "settings.providers.connected.empty": "No hay proveedores conectados",
   "settings.providers.section.popular": "Proveedores populares",
@@ -733,10 +753,17 @@ export const dict = {
   "session.empty": "Aún no hay sesiones. Haz clic en + para iniciar una nueva conversación.",
   "session.cloud.repoOnly": "Solo este repositorio",
   "session.cloud.import": "Importar desde la nube",
+  "feedback.button": "Comentarios y soporte",
+  "feedback.dialog.message":
+    "Nos encantaría escuchar tus comentarios o ayudarte con cualquier problema que estés experimentando.",
+  "feedback.dialog.github": "Reportar un problema en GitHub",
+  "feedback.dialog.discord": "Unirse a nuestra comunidad de Discord",
+  "feedback.dialog.support": "Atención al cliente",
   "session.cloud.import.title": "Importar desde la nube",
   "session.cloud.import.placeholder": "ID de sesión, URL o comando kilo import",
   "session.cloud.import.button": "Importar",
   "session.cloud.import.invalid": "Formato de ID de sesión no válido",
+  "session.cloud.import.legacy": "Esta parece ser una sesión heredada que ya no es compatible.",
   "session.cloud.import.failed": "Error al importar la sesión de la nube",
 
   "workspace.new": "Nuevo espacio de trabajo",
@@ -919,7 +946,10 @@ export const dict = {
   "settings.experimental.toolToggles": "Interruptores de herramientas",
   "settings.agentBehaviour.defaultAgent.title": "Agente predeterminado",
   "settings.agentBehaviour.defaultAgent.description": "Agente a usar cuando no se especifica ninguno",
+  "settings.agentBehaviour.availableAgents": "Agentes disponibles",
   "settings.agentBehaviour.selectAgent": "Seleccionar un agente para configurar…",
+  "settings.agentBehaviour.selectAgent.title": "Agente",
+  "settings.agentBehaviour.selectAgent.description": "Seleccionar un agente para configurar…",
   "settings.agentBehaviour.modelOverride.title": "Anulación de modelo",
   "settings.agentBehaviour.modelOverride.description": "Anular el modelo predeterminado para este agente",
   "settings.agentBehaviour.prompt.title": "Prompt personalizado",
@@ -930,6 +960,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Parámetro de muestreo nucleus (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Pasos máximos",
   "settings.agentBehaviour.maxSteps.description": "Iteraciones máximas del agente",
+  "settings.agentBehaviour.discoveredSkills": "Habilidades descubiertas",
+  "settings.agentBehaviour.noSkillsFound":
+    "No se encontraron habilidades. Agregue rutas de carpetas o URLs abajo para hacer disponibles las habilidades.",
   "settings.agentBehaviour.skillPaths": "Rutas de carpetas de habilidades",
   "settings.agentBehaviour.skillUrls": "URLs de habilidades",
   "settings.agentBehaviour.instructionFiles": "Archivos de instrucciones adicionales",
@@ -940,26 +973,44 @@ export const dict = {
   "settings.agentBehaviour.workflowsPlaceholder":
     "Los flujos de trabajo se gestionan mediante archivos de flujo de trabajo en su espacio de trabajo.",
   "settings.agentBehaviour.notImplemented": "Aún no implementado.",
-  "settings.autoApprove.setAll": "Establecer todos los permisos",
+  "settings.autoApprove.description":
+    "Defina cómo se permite la ejecución de las herramientas. La mayoría de las herramientas tienen como valor predeterminado Permitir. doom_loop y external_directory tienen como valor predeterminado Preguntar.",
   "settings.autoApprove.level.allow": "Permitir",
   "settings.autoApprove.level.ask": "Preguntar",
   "settings.autoApprove.level.deny": "Denegar",
-  "settings.autoApprove.tool.read": "Leer contenido de archivos",
-  "settings.autoApprove.tool.edit": "Editar o crear archivos",
-  "settings.autoApprove.tool.glob": "Buscar archivos por patrón",
-  "settings.autoApprove.tool.grep": "Buscar contenido de archivos",
-  "settings.autoApprove.tool.list": "Listar contenido de directorio",
-  "settings.autoApprove.tool.bash": "Ejecutar comandos de shell",
-  "settings.autoApprove.tool.task": "Crear tareas de sub-agente",
-  "settings.autoApprove.tool.skill": "Ejecutar habilidades",
-  "settings.autoApprove.tool.lsp": "Operaciones del servidor de lenguaje",
-  "settings.autoApprove.tool.todoread": "Leer listas de tareas",
-  "settings.autoApprove.tool.todowrite": "Escribir listas de tareas",
-  "settings.autoApprove.tool.webfetch": "Obtener páginas web",
-  "settings.autoApprove.tool.websearch": "Buscar en la web",
-  "settings.autoApprove.tool.codesearch": "Buscar en el código",
-  "settings.autoApprove.tool.external_directory": "Acceder a archivos fuera del espacio de trabajo",
-  "settings.autoApprove.tool.doom_loop": "Continuar tras fallos repetidos",
+  "settings.autoApprove.wildcardLabel.commands": "Todos los comandos (*)",
+  "settings.autoApprove.wildcardLabel.paths": "Todas las rutas (*)",
+  "settings.autoApprove.exceptions": "Excepciones",
+  "settings.autoApprove.addCommand": "Agregar comando",
+  "settings.autoApprove.addPath": "Agregar ruta",
+  "settings.autoApprove.placeholder.command": "ej. git *",
+  "settings.autoApprove.placeholder.path": "ej. *.env",
+  "settings.autoApprove.tool.read":
+    "Leer archivos. Permite que el agente lea archivos que coincidan con la ruta especificada.",
+  "settings.autoApprove.tool.edit":
+    "Modificar archivos. Permite que el agente cree o edite archivos, incluyendo parches y actualizaciones de múltiples archivos.",
+  "settings.autoApprove.tool.glob":
+    "Buscar archivos por patrón. Permite la búsqueda de archivos mediante patrones glob (ej. src/**/*.ts).",
+  "settings.autoApprove.tool.grep":
+    "Buscar en el contenido de archivos. Permite la búsqueda basada en expresiones regulares dentro de los archivos.",
+  "settings.autoApprove.tool.list":
+    "Listar contenido del directorio. Permite ver archivos y carpetas dentro de un directorio.",
+  "settings.autoApprove.tool.bash":
+    "Ejecutar comandos de terminal. Permite la ejecución de comandos de shell (ej. git status).",
+  "settings.autoApprove.tool.task":
+    "Iniciar subagentes. Permite iniciar subagentes especializados para tareas específicas.",
+  "settings.autoApprove.tool.skill": "Cargar habilidades. Permite cargar habilidades predefinidas por su nombre.",
+  "settings.autoApprove.tool.lsp":
+    "Consultar servidor de lenguaje. Permite ejecutar consultas al servidor de lenguaje para la inteligencia del código.",
+  "settings.autoApprove.tool.todoreadwrite":
+    "Administrar lista de tareas. Permite leer y actualizar la lista de tareas interna.",
+  "settings.autoApprove.tool.webfetch": "Obtener una URL. Permite recuperar contenido de una URL específica.",
+  "settings.autoApprove.tool.websearchcodesearch":
+    "Buscar en la web o en el código. Permite realizar búsquedas externas en la web o en el código.",
+  "settings.autoApprove.tool.external_directory":
+    "Acceder a archivos fuera del espacio de trabajo. Se activa al acceder a archivos fuera del directorio del proyecto actual.",
+  "settings.autoApprove.tool.doom_loop":
+    "Evitar acciones idénticas repetidas. Se activa cuando se repite la misma llamada de herramienta con entrada idéntica.",
   "settings.checkpoints.enable.title": "Habilitar instantáneas",
   "settings.checkpoints.enable.description": "Crear puntos de control antes de editar archivos",
   "settings.context.autoCompaction.title": "Compactación automática",
@@ -987,7 +1038,6 @@ export const dict = {
   "profile.personalAccount": "Cuenta personal",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/es.ts
 
-
   "question.summary": "{{n}} de {{total}} preguntas",
   "common.review": "Revisar",
 
@@ -996,50 +1046,60 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "Migración heredada",
   "settings.aboutKiloCode.legacyMigration.description":
     "Migra la configuración de una instalación anterior de Kilo Code, incluyendo las claves API de proveedores y el modelo predeterminado.",
-  "migration.welcome.title": "Bienvenido al nuevo Kilo Code",
-  "migration.welcome.detected": "Hemos detectado una configuración de una instalación anterior de Kilo Code.",
-  "migration.welcome.sessionsInfo":
-    "Las sesiones de chat y el historial no se pueden migrar — la nueva versión utiliza una arquitectura diferente.",
-  "migration.welcome.canMigrate": "Las siguientes configuraciones se pueden migrar a la nueva versión:",
-  "migration.welcome.start": "Iniciar migración",
-  "migration.welcome.skip": "Omitir migración",
-  "migration.steps.title": "Migra tu configuración",
-  "migration.steps.subtitle":
-    "Encontramos configuraciones de tu instalación anterior de Kilo Code. Elige qué deseas transferir.",
+
+  // Screen 1 — What's New
+  "migration.whatsNew.title": "Novedades en Kilo Code",
+  "migration.whatsNew.badge": "Beta",
+  "migration.whatsNew.subtitle": "Hemos reconstruido la extensión sobre una base más rápida y eficiente.",
+  "migration.whatsNew.features.performance.title": "Rendimiento de agente más rápido",
+  "migration.whatsNew.features.performance.detail":
+    "Las llamadas a herramientas en paralelo y los subagentes permiten que tu agente aborde más a la vez — así pasas menos tiempo esperando y más tiempo entregando.",
+  "migration.whatsNew.features.interface.title": "Interfaz optimizada",
+  "migration.whatsNew.features.interface.detail": "Menos distracciones, más fácil y rápido de leer.",
+  "migration.whatsNew.features.agentManager.title": "Agent Manager",
+  "migration.whatsNew.features.agentManager.detail":
+    "Una interfaz unificada para ejecutar múltiples agentes en paralelo, cada uno en su propio worktree — supervisa el progreso, cambia de contexto y revisa cambios en un solo lugar.",
+  "migration.whatsNew.features.foundation.title": "Base compartida",
+  "migration.whatsNew.features.foundation.detail":
+    "Un núcleo pequeño y eficiente en todos los productos Kilo. Una experiencia familiar sin importar cómo elijas trabajar.",
+  "migration.whatsNew.blogLink": "Leer el anuncio completo",
+  "migration.whatsNew.continue": "Continuar",
+
+  // Screen 2 — Migrate Settings
+  "migration.migrate.title": "Migra tu configuración",
+  "migration.migrate.subtitle":
+    "Encontramos configuraciones de tu instalación anterior. Esto es lo que podemos transferir.",
+  "migration.migrate.selectLabel": "Selecciona qué migrar",
+  "migration.migrate.cannotMigrate": "No se puede migrar",
+  "migration.migrate.chatHistory": "Sesiones de chat e historial",
+  "migration.migrate.chatHistoryDesc": "Incompatible con la nueva arquitectura",
+  "migration.migrate.button": "Migrar configuración",
+  "migration.migrate.skip": "Omitir",
+  "migration.migrate.back": "Atrás",
+  "migration.migrate.keysDetected": "{{count}} claves detectadas",
+  "migration.migrate.serversConfigured": "{{count}} servidor(es) configurado(s)",
+  "migration.migrate.modesFound": "{{count}} modo(s) encontrado(s)",
+  "migration.migrate.nothingToMigrate": "No se encontró nada para migrar en la configuración heredada.",
+
+  // Migrate — item labels (reused from old select keys)
   "migration.select.providers": "Claves API de proveedores",
   "migration.select.mcpServers": "Servidores MCP",
   "migration.select.customModes": "Modos personalizados / Agentes",
   "migration.select.defaultModel": "Modelo predeterminado",
-  "migration.select.unsupported": "No compatible con la nueva versión",
-  "migration.select.nothingToMigrate": "No se encontró nada para migrar en la configuración heredada.",
-  "migration.select.settings": "Configuración",
   "migration.select.autoApproval": "Aprobación automática",
-  "migration.select.autoApproval.commandRules": "Reglas de comandos",
-  "migration.select.autoApproval.commandRulesDesc": "Interruptor principal y listas de comandos permitidos/denegados",
-  "migration.select.autoApproval.readPermission": "Permiso de lectura",
-  "migration.select.autoApproval.readPermissionDesc":
-    "Acceso de lectura de archivos dentro y fuera del espacio de trabajo",
-  "migration.select.autoApproval.writePermission": "Permiso de escritura",
-  "migration.select.autoApproval.writePermissionDesc": "Acceso de escritura y edición de archivos",
-  "migration.select.autoApproval.executePermission": "Permiso de ejecución",
-  "migration.select.autoApproval.executePermissionDesc": "Ejecución de comandos en terminal",
-  "migration.select.autoApproval.mcpPermission": "Permiso MCP",
-  "migration.select.autoApproval.mcpPermissionDesc": "Uso de herramientas MCP",
-  "migration.select.autoApproval.taskPermission": "Permiso de tareas",
-  "migration.select.autoApproval.taskPermissionDesc": "Cambio de modos y creación de subtareas",
   "migration.select.language": "Idioma de la interfaz",
-  "migration.select.languageDesc": "Tu preferencia de idioma se aplicará a la nueva extensión",
   "migration.select.autocomplete": "Configuración de autocompletado",
-  "migration.select.autocompleteDesc":
-    "Preferencias de activación automática, atajos de teclado y autocompletado del chat",
-  "migration.select.continue": "Continuar",
-  "migration.select.back": "Atrás",
-  "migration.progress.title": "Migrando tu configuración…",
-  "migration.progress.done": "Continuar",
+
+  // Migrate — completion
   "migration.complete.summary": "{{success}} de {{total}} elementos migrados con éxito.",
   "migration.complete.cleanup": "Eliminar datos de la configuración heredada",
   "migration.complete.cleanupDescription":
     "Esto elimina la configuración antigua del almacenamiento de VS Code. No podrás volver a ejecutar esta migración.",
   "migration.complete.done": "Hecho",
   // legacy-migration end
+
+  "error.details.show": "Detalles",
+
+  "task.todos.progress": "{{done}}/{{total}} tareas completadas",
+  "task.todos.allDone": "{{count}} tareas completadas",
 }

@@ -31,7 +31,13 @@ export const PermissionRoutes = lazy(() =>
           requestID: z.string(),
         }),
       ),
-      validator("json", z.object({ reply: PermissionNext.Reply, message: z.string().optional() })),
+      validator(
+        "json",
+        z.object({
+          reply: PermissionNext.Reply,
+          message: z.string().optional(),
+        }),
+      ),
       async (c) => {
         const params = c.req.valid("param")
         const json = c.req.valid("json")
@@ -43,6 +49,50 @@ export const PermissionRoutes = lazy(() =>
         return c.json(true)
       },
     )
+    // kilocode_change start
+    .post(
+      "/:requestID/pattern-rules",
+      describeRoute({
+        summary: "Save per-pattern permission rules",
+        description: "Save approved/denied patterns for a pending permission request.",
+        operationId: "permission.savePatternRules",
+        responses: {
+          200: {
+            description: "Pattern rules saved successfully",
+            content: {
+              "application/json": {
+                schema: resolver(z.boolean()),
+              },
+            },
+          },
+          ...errors(400, 404),
+        },
+      }),
+      validator(
+        "param",
+        z.object({
+          requestID: z.string(),
+        }),
+      ),
+      validator(
+        "json",
+        z.object({
+          approvedPatterns: z.string().array().optional(),
+          deniedPatterns: z.string().array().optional(),
+        }),
+      ),
+      async (c) => {
+        const params = c.req.valid("param")
+        const json = c.req.valid("json")
+        await PermissionNext.savePatternRules({
+          requestID: params.requestID,
+          approvedPatterns: json.approvedPatterns,
+          deniedPatterns: json.deniedPatterns,
+        })
+        return c.json(true)
+      },
+    )
+    // kilocode_change end
     .get(
       "/",
       describeRoute({

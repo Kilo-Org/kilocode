@@ -1,7 +1,7 @@
 /**
  * Session context
  * Manages session state, messages, and handles SSE events from the extension.
- * Also owns per-session model selection (provider context is catalog-only).
+ * Also owns global (extension-lifetime) model selection (provider context is catalog-only).
  */
 
 import {
@@ -20,6 +20,7 @@ import { createStore, produce } from "solid-js/store"
 import { useVSCode } from "./vscode"
 import { useServer } from "./server"
 import { useProvider } from "./provider"
+import { useConfig } from "./config"
 import { useLanguage } from "./language"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import type {
@@ -47,7 +48,7 @@ interface SessionStore {
   messages: Record<string, Message[]> // sessionID -> messages
   parts: Record<string, Part[]> // messageID -> parts
   todos: Record<string, TodoItem[]> // sessionID -> todos
-  modelSelections: Record<string, ModelSelection> // sessionID -> model
+  modelSelections: Record<string, ModelSelection> // agentName -> model (global, extension-lifetime)
   agentSelections: Record<string, string> // sessionID -> agent name
   variantSelections: Record<string, string> // "providerID/modelID" -> variant name
 }
@@ -89,16 +90,23 @@ interface SessionContextValue {
   // Todos for current session
   todos: Accessor<TodoItem[]>
 
-  // Pending permission requests
+  // Pending permission requests (unscoped — all tracked sessions)
   permissions: Accessor<PermissionRequest[]>
+  respondingPermissions: Accessor<Set<string>>
 
-  // Pending question requests
+  // Pending question requests (unscoped — all tracked sessions)
   questions: Accessor<QuestionRequest[]>
   questionErrors: Accessor<Set<string>>
 
-  // Model selection (per-session)
+  // Scoped permissions/questions — filtered to a session's family (self + subagents)
+  scopedPermissions: (sessionID: string | undefined) => PermissionRequest[]
+  scopedQuestions: (sessionID: string | undefined) => QuestionRequest[]
+
+  // Model selection (global, extension-lifetime)
   selected: Accessor<ModelSelection | null>
   selectModel: (providerID: string, modelID: string) => void
+  hasModelOverride: Accessor<boolean>
+  clearModelOverride: () => void
 
   // Cost and context usage for the current session
   totalCost: Accessor<number>
@@ -122,7 +130,12 @@ interface SessionContextValue {
   sendMessage: (text: string, providerID?: string, modelID?: string, files?: FileAttachment[]) => void
   abort: () => void
   compact: () => void
-  respondToPermission: (permissionId: string, response: "once" | "always" | "reject") => void
+  respondToPermission: (
+    permissionId: string,
+    response: "once" | "always" | "reject",
+    approvedPatterns: string[],
+    deniedPatterns: string[],
+  ) => void
   replyToQuestion: (requestID: string, answers: string[][]) => void
   rejectQuestion: (requestID: string) => void
   createSession: () => void
@@ -144,6 +157,7 @@ export const SessionProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
   const server = useServer()
   const provider = useProvider()
+  const { config } = useConfig()
   const language = useLanguage()
 
   // Current session ID
@@ -171,21 +185,24 @@ export const SessionProvider: ParentComponent = (props) => {
   // Pending permissions
   const [permissions, setPermissions] = createSignal<PermissionRequest[]>([])
 
+  // Permission IDs that have been responded to but not yet confirmed by the server
+  const [respondingPermissions, setRespondingPermissions] = createSignal<Set<string>>(new Set())
+
   // Pending questions
   const [questions, setQuestions] = createSignal<QuestionRequest[]>([])
 
   // Tracks question IDs that failed so the UI can reset sending state
   const [questionErrors, setQuestionErrors] = createSignal<Set<string>>(new Set())
 
-  // Pending model selection for before a session exists
-  const [pendingModelSelection, setPendingModelSelection] = createSignal<ModelSelection | null>(null)
-  const [pendingWasUserSet, setPendingWasUserSet] = createSignal(false)
+  // Tracks whether the user has explicitly set a model override per agent (to
+  // prevent the default-sync effect from overwriting it).
+  const [userSetAgents, setUserSetAgents] = createSignal<Record<string, boolean>>({})
 
   // Agents (modes) loaded from the CLI backend
   const [agents, setAgents] = createSignal<AgentInfo[]>([])
   const [defaultAgent, setDefaultAgent] = createSignal("code")
 
-  // Pending agent selection for before a session exists (mirrors pendingModelSelection)
+  // Pending agent selection for before a session exists
   const [pendingAgentSelection, setPendingAgentSelection] = createSignal<string | null>(null)
 
   // Cloud session preview state
@@ -202,37 +219,6 @@ export const SessionProvider: ParentComponent = (props) => {
     variantSelections: {},
   })
 
-  // Keep pending selection in sync with provider default until the user
-  // explicitly changes it (or a session exists).
-  createEffect(() => {
-    const def = provider.defaultSelection()
-    if (currentSessionID()) {
-      return
-    }
-
-    if (pendingWasUserSet()) {
-      return
-    }
-
-    setPendingModelSelection(def)
-  })
-
-  // If we have no pending yet, initialize it from provider default.
-  createEffect(() => {
-    if (!pendingModelSelection()) {
-      setPendingModelSelection(provider.defaultSelection())
-    }
-  })
-
-  // Per-session model selection
-  const selected = createMemo<ModelSelection | null>(() => {
-    const sessionID = currentSessionID()
-    if (sessionID) {
-      return store.modelSelections[sessionID] ?? provider.defaultSelection()
-    }
-    return pendingModelSelection()
-  })
-
   // Per-session agent selection
   const selectedAgentName = createMemo<string>(() => {
     const sessionID = currentSessionID()
@@ -242,15 +228,78 @@ export const SessionProvider: ParentComponent = (props) => {
     return pendingAgentSelection() ?? defaultAgent()
   })
 
+  /** Parse a "provider/model" config string into a ModelSelection (or null). */
+  function parseModel(raw: string | undefined | null): ModelSelection | null {
+    if (!raw) return null
+    const slash = raw.indexOf("/")
+    if (slash <= 0) return null
+    return { providerID: raw.slice(0, slash), modelID: raw.slice(slash + 1) }
+  }
+
+  /** Per-mode model from config (e.g. config.agent.code.model). */
+  function getModeModel(agentName: string): ModelSelection | null {
+    return parseModel(config().agent?.[agentName]?.model)
+  }
+
+  /** Global default model from config (config.model). */
+  function getGlobalModel(): ModelSelection | null {
+    return parseModel(config().model)
+  }
+
+  // Keep model selection in sync with provider/mode default until the user
+  // explicitly overrides it.
+  createEffect(() => {
+    const def = provider.defaultSelection()
+    const agentName = selectedAgentName()
+    if (userSetAgents()[agentName]) return
+
+    // Per-mode config > global config model > VS Code default selection
+    const sel = getModeModel(agentName) ?? getGlobalModel() ?? def
+    if (sel) setStore("modelSelections", agentName, sel)
+  })
+
+  // Global model selection per agent/mode
+  // Precedence: user override > per-mode config > global config model > VS Code default > kilo-auto/free
+  const selected = createMemo<ModelSelection | null>(() => {
+    const agentName = selectedAgentName()
+    const override = store.modelSelections[agentName]
+    if (override) return override
+    return getModeModel(agentName) ?? getGlobalModel() ?? provider.defaultSelection()
+  })
   function selectModel(providerID: string, modelID: string) {
-    const selection: ModelSelection = { providerID, modelID }
-    const id = currentSessionID()
-    if (id) {
-      setStore("modelSelections", id, selection)
-    } else {
-      setPendingWasUserSet(true)
-      setPendingModelSelection(selection)
-    }
+    const agentName = selectedAgentName()
+    setUserSetAgents((prev) => ({ ...prev, [agentName]: true }))
+    setStore("modelSelections", agentName, { providerID, modelID })
+  }
+
+  /** The config/default model for the current mode (what settings says). */
+  const configModel = createMemo<ModelSelection | null>(() => {
+    const agentName = selectedAgentName()
+    return getModeModel(agentName) ?? getGlobalModel() ?? provider.defaultSelection()
+  })
+
+  /** True when the active model differs from what the config dictates. */
+  const hasModelOverride = createMemo<boolean>(() => {
+    const sel = selected()
+    const cfg = configModel()
+    if (!sel || !cfg) return false
+    return sel.providerID !== cfg.providerID || sel.modelID !== cfg.modelID
+  })
+
+  /** Clear the per-mode model override, falling back to config default. */
+  function clearModelOverride() {
+    const agentName = selectedAgentName()
+    setUserSetAgents((prev) => {
+      const next = { ...prev }
+      delete next[agentName]
+      return next
+    })
+    setStore(
+      "modelSelections",
+      produce((selections) => {
+        delete selections[agentName]
+      }),
+    )
   }
 
   // Handle agentsLoaded immediately (not in onMount) so we never miss
@@ -359,6 +408,14 @@ export const SessionProvider: ParentComponent = (props) => {
           handlePermissionRequest(message.permission)
           break
 
+        case "permissionResolved":
+          handlePermissionResolved(message.permissionID)
+          break
+
+        case "permissionError":
+          handlePermissionError(message.permissionID)
+          break
+
         case "todoUpdated":
           handleTodoUpdated(message.sessionID, message.items)
           break
@@ -430,16 +487,6 @@ export const SessionProvider: ParentComponent = (props) => {
       // the empty/welcome screen.
       if (!store.messages[session.id]?.length) {
         setStore("messages", session.id, [])
-      }
-
-      // If there's a pending model selection, assign it to this new session.
-      // Guard against duplicate sessionCreated events (HTTP response + SSE)
-      // which would overwrite the user's selection with the effect-restored default.
-      const pending = pendingModelSelection()
-      if (pending && !store.modelSelections[session.id]) {
-        setStore("modelSelections", session.id, pending)
-        setPendingModelSelection(null)
-        setPendingWasUserSet(false)
       }
 
       // Transfer pending agent selection to the new session
@@ -575,6 +622,30 @@ export const SessionProvider: ParentComponent = (props) => {
     setPermissions((prev) => upsertPermission(prev, permission))
   }
 
+  function handlePermissionResolved(permissionID: string) {
+    setPermissions((prev) => prev.filter((p) => p.id !== permissionID))
+    setRespondingPermissions((prev) => {
+      if (!prev.has(permissionID)) return prev
+      const next = new Set(prev)
+      next.delete(permissionID)
+      return next
+    })
+  }
+
+  function handlePermissionError(permissionID: string) {
+    // Remove from responding set so buttons re-enable (permission prompt is still visible)
+    setRespondingPermissions((prev) => {
+      if (!prev.has(permissionID)) return prev
+      const next = new Set(prev)
+      next.delete(permissionID)
+      return next
+    })
+    showToast({
+      variant: "error",
+      title: language.t("settings.permissions.toast.updateFailed.title"),
+    })
+  }
+
   function handleQuestionRequest(question: QuestionRequest) {
     setQuestions((prev) => {
       const idx = prev.findIndex((q) => q.id === question.id)
@@ -596,6 +667,48 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function handleQuestionError(requestID: string) {
     setQuestionErrors((prev) => new Set(prev).add(requestID))
+  }
+
+  /**
+   * BFS walk over message parts to discover all session IDs in a session's
+   * family tree (self + subagents + sub-subagents). Reads directly from the
+   * store so it's reactive — automatically updates when new parts arrive.
+   */
+  function sessionFamily(rootID: string): Set<string> {
+    const family = new Set<string>([rootID])
+    const queue = [rootID]
+    while (queue.length > 0) {
+      const sid = queue.pop()!
+      const msgs = store.messages[sid]
+      if (!msgs) continue
+      for (const msg of msgs) {
+        const parts = store.parts[msg.id]
+        if (!parts) continue
+        for (const p of parts) {
+          if (p.type !== "tool") continue
+          const child = (p as { state?: { metadata?: { sessionId?: string } } }).state?.metadata?.sessionId
+          if (child && !family.has(child)) {
+            family.add(child)
+            queue.push(child)
+          }
+        }
+      }
+    }
+    return family
+  }
+
+  /** Return permissions scoped to the given session's family (self + subagents). */
+  function scopedPermissions(sessionID: string | undefined): PermissionRequest[] {
+    if (!sessionID) return []
+    const family = sessionFamily(sessionID)
+    return permissions().filter((p) => family.has(p.sessionID))
+  }
+
+  /** Return questions scoped to the given session's family (self + subagents). */
+  function scopedQuestions(sessionID: string | undefined): QuestionRequest[] {
+    if (!sessionID) return []
+    const family = sessionFamily(sessionID)
+    return questions().filter((q) => family.has(q.sessionID))
   }
 
   function handleTodoUpdated(sessionID: string, items: TodoItem[]) {
@@ -652,12 +765,6 @@ export const SessionProvider: ParentComponent = (props) => {
         "todos",
         produce((todos) => {
           delete todos[sessionID]
-        }),
-      )
-      setStore(
-        "modelSelections",
-        produce((selections) => {
-          delete selections[sessionID]
         }),
       )
       setStore(
@@ -724,10 +831,6 @@ export const SessionProvider: ParentComponent = (props) => {
     batch(() => {
       setStore("sessions", session.id, session)
 
-      const pending = pendingModelSelection()
-      if (pending && !store.modelSelections[session.id]) {
-        setStore("modelSelections", session.id, pending)
-      }
       const pendingAgent = pendingAgentSelection()
       if (pendingAgent && !store.agentSelections[session.id]) {
         setStore("agentSelections", session.id, pendingAgent)
@@ -788,6 +891,13 @@ export const SessionProvider: ParentComponent = (props) => {
       setStore("agentSelections", id, name)
     } else {
       setPendingAgentSelection(name)
+      // When switching mode, initialize model for the new mode if the user
+      // hasn't explicitly set one for it
+      if (!userSetAgents()[name] && !store.modelSelections[name]) {
+        const modeModel = getModeModel(name)
+        const sel = modeModel ?? provider.defaultSelection()
+        if (sel) setStore("modelSelections", name, sel)
+      }
     }
   }
 
@@ -826,6 +936,11 @@ export const SessionProvider: ParentComponent = (props) => {
       }
       setStore("messages", sid, (msgs = []) => [...msgs, temp])
       setStore("parts", tempId, [{ type: "text" as const, id: `${tempId}-text`, text }])
+      // The optimistic message is now in the DOM but the session status is
+      // still "idle" (the CLI backend hasn't started yet), so the auto-scroll
+      // ResizeObserver won't scroll on its own. Force scroll to bottom so the
+      // user's own message is immediately visible.
+      queueMicrotask(() => window.dispatchEvent(new CustomEvent("resumeAutoScroll")))
     }
 
     const agent = selectedAgentName() !== defaultAgent() ? selectedAgentName() : undefined
@@ -876,20 +991,28 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
-  function respondToPermission(permissionId: string, response: "once" | "always" | "reject") {
+  function respondToPermission(
+    permissionId: string,
+    response: "once" | "always" | "reject",
+    approvedPatterns: string[],
+    deniedPatterns: string[],
+  ) {
     // Resolve sessionID from the stored permission request
     const permission = permissions().find((p) => p.id === permissionId)
     const sessionID = permission?.sessionID ?? currentSessionID() ?? ""
+
+    // Mark as responding so the UI disables the buttons.
+    // The permission is removed when the server confirms via permission.replied SSE.
+    setRespondingPermissions((prev) => new Set(prev).add(permissionId))
 
     vscode.postMessage({
       type: "permissionResponse",
       permissionId,
       sessionID,
       response,
+      approvedPatterns,
+      deniedPatterns,
     })
-
-    // Remove from pending permissions
-    setPermissions((prev) => prev.filter((p) => p.id !== permissionId))
   }
 
   function clearQuestionError(requestID: string) {
@@ -924,9 +1047,7 @@ export const SessionProvider: ParentComponent = (props) => {
       return
     }
 
-    // Reset pending selection to default for the new session
-    setPendingModelSelection(provider.defaultSelection())
-    setPendingWasUserSet(false)
+    // Reset agent selection to default for the new session (model overrides persist)
     setPendingAgentSelection(defaultAgent())
     vscode.postMessage({ type: "createSession" })
   }
@@ -936,10 +1057,9 @@ export const SessionProvider: ParentComponent = (props) => {
     setCloudPreviewId(null)
     setLoading(false)
     setPermissions([])
+    setRespondingPermissions(new Set<string>())
     setQuestions([])
     setQuestionErrors(new Set<string>())
-    setPendingModelSelection(provider.defaultSelection())
-    setPendingWasUserSet(false)
     setPendingAgentSelection(defaultAgent())
     vscode.postMessage({ type: "clearSession" })
   }
@@ -1078,19 +1198,29 @@ export const SessionProvider: ParentComponent = (props) => {
     getParts,
     todos,
     permissions,
+    respondingPermissions,
     questions,
     questionErrors,
+    scopedPermissions,
+    scopedQuestions,
     selected,
     selectModel,
+    hasModelOverride,
+    clearModelOverride,
     totalCost,
     contextUsage,
     agents,
     selectedAgent: selectedAgentName,
     selectAgent,
     getSessionAgent: (sessionID: string) => store.agentSelections[sessionID] ?? defaultAgent(),
-    getSessionModel: (sessionID: string) => store.modelSelections[sessionID] ?? provider.defaultSelection(),
-    setSessionModel: (sessionID: string, providerID: string, modelID: string) => {
-      setStore("modelSelections", sessionID, { providerID, modelID })
+    getSessionModel: (sessionID: string) => {
+      const agentName = store.agentSelections[sessionID] ?? defaultAgent()
+      return store.modelSelections[agentName] ?? provider.defaultSelection()
+    },
+    setSessionModel: (_sessionID: string, providerID: string, modelID: string) => {
+      const agentName = selectedAgentName()
+      setUserSetAgents((prev) => ({ ...prev, [agentName]: true }))
+      setStore("modelSelections", agentName, { providerID, modelID })
     },
     setSessionAgent: (sessionID: string, name: string) => {
       setStore("agentSelections", sessionID, name)

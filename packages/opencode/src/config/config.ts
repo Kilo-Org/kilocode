@@ -11,13 +11,18 @@ import { proxied } from "@/util/proxied"
 import { NamedError } from "@opencode-ai/util/error"
 import { constants, existsSync } from "fs"
 import fs from "fs/promises"
+// kilocode_change start
 import {
   type ParseError as JsoncParseError,
   applyEdits,
+  findNodeAtLocation,
   modify,
   parse as parseJsonc,
+  parseTree,
   printParseErrorCode,
 } from "jsonc-parser"
+// kilocode_change end
+import { Filesystem } from "@/util/filesystem"
 import { createRequire } from "module"
 import os from "os"
 import path from "path"
@@ -31,7 +36,6 @@ import { LSPServer } from "../lsp/server"
 import { Instance } from "../project/instance"
 import { ModelsDev } from "../provider/models"
 import { Event as ServerEvent } from "../server/event"
-import { Filesystem } from "@/util/filesystem"
 import { Glob } from "../util/glob"
 import { lazy } from "../util/lazy"
 import { Log } from "../util/log"
@@ -47,7 +51,7 @@ import { WorkflowsMigrator } from "../kilocode/workflows-migrator" // kilocode_c
 
 export namespace Config {
   const CONFIG_FILES_OPENCODE = ["opencode.jsonc", "opencode.json"] as const
-  const CONFIG_FILES_KILO_PROJECT = ["kilo.json", "kilo.jsonc", ...CONFIG_FILES_OPENCODE] as const
+  const CONFIG_FILES_KILO_PROJECT = ["kilo.jsonc", "kilo.json", ...CONFIG_FILES_OPENCODE] as const
   const CONFIG_FILES_KILO_GLOBAL = ["kilo.json", "kilo.jsonc", "config.json", ...CONFIG_FILES_OPENCODE] as const
 
   const ModelId = z.string().meta({ $ref: "https://models.dev/model-schema.json#/$defs/Model" })
@@ -171,7 +175,7 @@ export namespace Config {
       result = mergeConfigConcatArrays(result, { mcp: kilocodeMcp })
     }
 
-    // Load Kilocode .kilocodeignore patterns (legacy fallback)
+    // Load .kilocodeignore patterns (legacy fallback)
     try {
       const ignorePermission = await IgnoreMigrator.loadIgnoreConfig(Instance.directory)
       if (Object.keys(ignorePermission).length > 0) {
@@ -190,11 +194,12 @@ export namespace Config {
     // This allows organizations to provide default configs that users can override
     for (const [key, value] of Object.entries(auth)) {
       if (value.type === "wellknown") {
+        const url = key.replace(/\/+$/, "")
         process.env[value.key] = value.token
-        log.debug("fetching remote config", { url: `${key}/.well-known/opencode` })
-        const response = await fetch(`${key}/.well-known/opencode`)
+        log.debug("fetching remote config", { url: `${url}/.well-known/opencode` })
+        const response = await fetch(`${url}/.well-known/opencode`)
         if (!response.ok) {
-          throw new Error(`failed to fetch remote config from ${key}: ${response.status}`)
+          throw new Error(`failed to fetch remote config from ${url}: ${response.status}`)
         }
         const wellknown = (await response.json()) as any
         const remoteConfig = wellknown.config ?? {}
@@ -203,11 +208,11 @@ export namespace Config {
         result = mergeConfigConcatArrays(
           result,
           await load(JSON.stringify(remoteConfig), {
-            dir: path.dirname(`${key}/.well-known/opencode`),
-            source: `${key}/.well-known/opencode`,
+            dir: path.dirname(`${url}/.well-known/opencode`),
+            source: `${url}/.well-known/opencode`,
           }),
         )
-        log.debug("loaded remote config from well-known", { url: key })
+        log.debug("loaded remote config from well-known", { url })
       }
     }
 
@@ -265,8 +270,15 @@ export namespace Config {
     const deps = []
 
     for (const dir of unique(directories)) {
-      if (dir.endsWith(".kilo") || dir.endsWith(".opencode") || dir === Flag.KILO_CONFIG_DIR) {
+      // kilocode_change start
+      if (
+        dir.endsWith(".kilo") ||
+        dir.endsWith(".kilocode") ||
+        dir.endsWith(".opencode") ||
+        dir === Flag.KILO_CONFIG_DIR
+      ) {
         for (const file of CONFIG_FILES_KILO_PROJECT) {
+          // kilocode_change end
           log.debug(`loading config from ${path.join(dir, file)}`)
           result = mergeConfigConcatArrays(result, await loadFile(path.join(dir, file)))
           // to satisfy the type checker
@@ -486,6 +498,8 @@ export namespace Config {
       const patterns = [
         "/.kilo/command/",
         "/.kilo/commands/",
+        "/.kilocode/command/",
+        "/.kilocode/commands/",
         "/.opencode/command/",
         "/.opencode/commands/",
         "/command/",
@@ -533,6 +547,8 @@ export namespace Config {
       const patterns = [
         "/.kilo/agent/",
         "/.kilo/agents/",
+        "/.kilocode/agent/",
+        "/.kilocode/agents/",
         "/.opencode/agent/",
         "/.opencode/agents/",
         "/agent/",
@@ -810,7 +826,7 @@ export namespace Config {
 
   export const Agent = z
     .object({
-      model: ModelId.optional(),
+      model: ModelId.nullable().optional(), // kilocode_change - nullable for delete sentinel
       variant: z
         .string()
         .optional()
@@ -1042,9 +1058,10 @@ export namespace Config {
         .describe("Delete word backward in input"),
       history_previous: z.string().optional().default("up").describe("Previous history item"),
       history_next: z.string().optional().default("down").describe("Next history item"),
-      session_child_cycle: z.string().optional().default("<leader>right").describe("Next child session"),
-      session_child_cycle_reverse: z.string().optional().default("<leader>left").describe("Previous child session"),
-      session_parent: z.string().optional().default("<leader>up").describe("Go to parent session"),
+      session_child_first: z.string().optional().default("<leader>down").describe("Go to first child session"),
+      session_child_cycle: z.string().optional().default("right").describe("Go to next child session"),
+      session_child_cycle_reverse: z.string().optional().default("left").describe("Go to previous child session"),
+      session_parent: z.string().optional().default("up").describe("Go to parent session"),
       terminal_suspend: z.string().optional().default("ctrl+z").describe("Suspend terminal"),
       terminal_title_toggle: z.string().optional().default("none").describe("Toggle terminal title"),
       tips_toggle: z.string().optional().default("<leader>h").describe("Toggle tips on home screen"),
@@ -1165,10 +1182,14 @@ export namespace Config {
         .array(z.string())
         .optional()
         .describe("When set, ONLY these providers will be enabled. All other providers will be ignored"),
-      model: ModelId.describe("Model to use in the format of provider/model, eg anthropic/claude-2").optional(),
-      small_model: ModelId.describe(
-        "Small model to use for tasks like title generation in the format of provider/model",
-      ).optional(),
+      // kilocode_change start - nullable for delete sentinel
+      model: ModelId.nullable()
+        .describe("Model to use in the format of provider/model, eg anthropic/claude-2")
+        .optional(),
+      small_model: ModelId.nullable()
+        .describe("Small model to use for tasks like title generation in the format of provider/model")
+        .optional(),
+      // kilocode_change end
       // kilocode_change start - renamed from "build" to "code"
       default_agent: z
         .string()
@@ -1738,7 +1759,7 @@ export namespace Config {
     const filepath = path.join(Instance.directory, "config.json")
     using _lock = await Lock.write(filepath)
     const existing = await loadFile(filepath)
-    await Bun.write(filepath, JSON.stringify(mergeDeep(existing, config), null, 2))
+    await Filesystem.writeJson(filepath, stripNulls(mergeDeep(existing, config) as Record<string, unknown>)) // kilocode_change - strip null delete sentinels
     // kilocode_change: Dispose only the Config state, not the entire instance (preserves MCP connections)
     await State.disposeEntry(Instance.directory, initConfigState)
     // kilocode_change: Emit config changed event to notify UI/watchers
@@ -1751,6 +1772,7 @@ export namespace Config {
         },
       },
     })
+    await Instance.dispose()
   }
 
   function globalConfigFile() {
@@ -1765,9 +1787,26 @@ export namespace Config {
     return !!value && typeof value === "object" && !Array.isArray(value)
   }
 
+  // kilocode_change start - strip null delete sentinels after merge
+  /** Recursively remove keys whose value is null (used after mergeDeep to honor delete sentinels). */
+  function stripNulls(obj: Record<string, unknown>): Record<string, unknown> {
+    const result: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(obj)) {
+      if (value === null) continue
+      if (isRecord(value)) {
+        result[key] = stripNulls(value)
+      } else {
+        result[key] = value
+      }
+    }
+    return result
+  }
+  // kilocode_change end
+
   function patchJsonc(input: string, patch: unknown, path: string[] = []): string {
     if (!isRecord(patch)) {
-      const edits = modify(input, path, patch, {
+      // kilocode_change - null means "delete this key" — pass undefined to jsonc-parser's modify()
+      const edits = modify(input, path, patch === null ? undefined : patch, {
         formattingOptions: {
           insertSpaces: true,
           tabSize: 2,
@@ -1775,6 +1814,22 @@ export namespace Config {
       })
       return applyEdits(input, edits)
     }
+
+    // kilocode_change start — when the existing JSONC node at this path is a
+    // scalar (e.g. permission.bash is "ask" as a string), jsonc-parser cannot
+    // add child keys to it. Detect this case and replace the whole node with
+    // the patch object in a single modify() call instead of recursing.
+    if (path.length > 0) {
+      const tree = parseTree(input)
+      const node = tree && findNodeAtLocation(tree, path)
+      if (node && node.type !== "object") {
+        const edits = modify(input, path, patch, {
+          formattingOptions: { insertSpaces: true, tabSize: 2 },
+        })
+        return applyEdits(input, edits)
+      }
+    }
+    // kilocode_change end
 
     return Object.entries(patch).reduce((result, [key, value]) => {
       if (value === undefined) return result
@@ -1826,7 +1881,7 @@ export namespace Config {
     const next = await (async () => {
       if (!filepath.endsWith(".jsonc")) {
         const existing = parseConfig(before, filepath)
-        const merged = mergeDeep(existing, config)
+        const merged = stripNulls(mergeDeep(existing, config) as Record<string, unknown>) as Info // kilocode_change - strip null delete sentinels
         await Filesystem.writeJson(filepath, merged)
         return merged
       }

@@ -1,4 +1,5 @@
 import type { Session, Agent, Event, ProviderListResponse } from "@kilocode/sdk/v2/client"
+import type { CloudSessionMessage } from "./services/cli-backend/types"
 
 /** A single provider entry as returned by the /provider list endpoint. */
 export type ProviderInfo = ProviderListResponse["all"][number]
@@ -169,6 +170,8 @@ export type WebviewMessage =
   | { type: "todoUpdated"; sessionID: string; items: unknown[] }
   | { type: "questionRequest"; question: { id: string; sessionID: string; questions: unknown[]; tool?: unknown } }
   | { type: "questionResolved"; requestID: string }
+  | { type: "permissionResolved"; permissionID: string }
+  | { type: "permissionError"; permissionID: string }
   | { type: "sessionCreated"; session: ReturnType<typeof sessionToWebview> }
   | { type: "sessionUpdated"; session: ReturnType<typeof sessionToWebview> }
   | null
@@ -228,6 +231,11 @@ export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | un
           tool: event.properties.tool,
         },
       }
+    case "permission.replied":
+      return {
+        type: "permissionResolved",
+        permissionID: event.properties.requestID,
+      }
     case "todo.updated":
       return {
         type: "todoUpdated",
@@ -262,6 +270,21 @@ export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | un
       }
     default:
       return null
+  }
+}
+
+export function mapCloudSessionMessageToWebviewMessage(message: CloudSessionMessage) {
+  return {
+    id: message.info.id,
+    sessionID: message.info.sessionID,
+    role: message.info.role as "user" | "assistant",
+    parts: message.parts,
+    createdAt: message.info.time?.created
+      ? new Date(message.info.time.created).toISOString()
+      : new Date().toISOString(),
+    time: message.info.time,
+    cost: message.info.cost,
+    tokens: message.info.tokens,
   }
 }
 

@@ -1,4 +1,3 @@
-
 import { Installation } from "@/installation"
 
 export const DEFAULT_HEADERS = {
