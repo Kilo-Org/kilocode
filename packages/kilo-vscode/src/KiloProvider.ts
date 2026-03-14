@@ -1986,6 +1986,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
+    // Refresh config when the server signals a config change
+    if (event.type === "config.changed" && event.properties.directory === this.projectID) {
+      void this.fetchAndSendConfig()
+      return
+    }
+
     // Forward relevant events to webview
     // Side effects that must happen before the webview message is sent
     if (event.type === "session.created" && !this.currentSession) {
