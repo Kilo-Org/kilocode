@@ -1211,6 +1211,7 @@
     font-family: var(--vscode-editor-font-family, monospace);
     color: var(--text-weak, var(--vscode-descriptionForeground));
     word-break: break-word;
+    margin-bottom: 4px;
   }
 
   [data-slot="permission-hint"] {
@@ -1330,6 +1331,9 @@
     align-items: center;
     gap: 2px;
     flex-shrink: 0;
+    /* Pull 3px left to align the 16px icon inside the 22px toggle button
+       with the chevron icon in the "Permission rules" header above. */
+    margin-left: -3px;
   }
 
   [data-slot="permission-pattern-toggle"] {

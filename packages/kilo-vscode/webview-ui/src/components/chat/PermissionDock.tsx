@@ -119,10 +119,10 @@ export const PermissionDock: Component<{
               onClick={togglePatternsExpanded}
               aria-expanded={patternsExpanded()}
             >
-              <span data-slot="permission-patterns-header-title">{language.t("ui.permission.permissionRules")}</span>
               <span data-slot="permission-patterns-header-chevron" data-open={patternsExpanded() ? "" : undefined}>
                 <Icon name="chevron-down" size="small" />
               </span>
+              <span data-slot="permission-patterns-header-title">{language.t("ui.permission.permissionRules")}</span>
             </button>
 
             <div data-slot="permission-patterns-collapse" data-open={patternsExpanded() ? "" : undefined}>
