@@ -30,7 +30,10 @@ function fence(line: string) {
 
 export function extractSection(content: string, heading: string): string | undefined {
   const lines = content.split("\n")
-  const pattern = new RegExp(`^##\\s*${escape(heading.replace(/^##\s*/, ""))}\\s*#*$`)
+  const target = heading.match(/^(#{1,6})\s*(.*)$/)
+  const size = target?.[1].length ?? 2
+  const text = target?.[2] ?? heading.replace(/^##\s*/, "")
+  const pattern = new RegExp(`^#{${size}}\\s*${escape(text)}\\s*#*$`)
 
   // Helper function to process lines with fence handling
   function processLines(
@@ -76,8 +79,9 @@ export function extractSection(content: string, heading: string): string | undef
     if (/^\s{4,}/.test(line)) {
       return false
     }
+    const atx = line.match(/^\s{0,3}(#{1,6})[^#]/)
     if (
-      /^\s{0,3}#{1,6}[^#]/.test(line) ||
+      (atx && atx[1].length <= size) ||
       (i > start + 1 && lines[i - 1].trim() && !lines[i - 1].trim().startsWith("#") && /^\s*[=-]{3,}\s*$/.test(line))
     ) {
       end = i

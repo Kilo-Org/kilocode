@@ -185,6 +185,35 @@ chore: ignore this too
       expect(result).toBe("fix: keep this")
     })
 
+    test("extractSection keeps nested headings inside the section", async () => {
+      const mod = await import("../generate")
+      const { extractSection } = mod
+
+      const content = `
+## Commit Message
+
+Use this format.
+
+### Example
+
+feat: keep nested heading content
+
+## Next Section
+
+ignore this
+`
+
+      const result = extractSection(content, "## Commit Message")
+      expect(result).toBe(
+        `
+Use this format.
+
+### Example
+
+feat: keep nested heading content`.trim(),
+      )
+    })
+
     test("returns clean message when no markers present", async () => {
       mockStreamText = "docs: update readme"
 
