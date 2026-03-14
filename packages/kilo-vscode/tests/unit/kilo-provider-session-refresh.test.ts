@@ -52,6 +52,7 @@ function createClient() {
     },
     app: {
       agents: async () => ({ data: [] }),
+      skills: async () => ({ data: [] }),
     },
     config: {
       get: async () => ({ data: {} }),
