@@ -151,6 +151,8 @@ export const ReadTool = Tool.define("read", {
       // ('\r\n') in file as a single line break.
       crlfDelay: Infinity,
     })
+    // kilocode_change - track if we need to strip BOM from first line
+    let isFirstLine = true
 
     const limit = params.limit ?? DEFAULT_READ_LIMIT
     const offset = params.offset ?? 1
@@ -161,7 +163,15 @@ export const ReadTool = Tool.define("read", {
     let truncatedByBytes = false
     let hasMoreLines = false
     try {
-      for await (const text of rl) {
+      for await (let text of rl) {
+        // kilocode_change start - strip UTF-8 BOM from first line
+        if (isFirstLine) {
+          isFirstLine = false
+          if (text.charCodeAt(0) === 0xfeff) {
+            text = text.slice(1)
+          }
+        }
+        // kilocode_change end
         lines += 1
         if (lines <= start) continue
 

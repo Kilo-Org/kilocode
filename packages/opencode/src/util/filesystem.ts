@@ -6,6 +6,9 @@ import { dirname, join, relative } from "path"
 import { Readable } from "stream"
 import { pipeline } from "stream/promises"
 import { Glob } from "./glob"
+// kilocode_change start
+import { type FileEncoding, DEFAULT_ENCODING, readWithEncoding, encodeWithEncoding } from "./encoding"
+// kilocode_change end
 
 export namespace Filesystem {
   // Fast sync version for metadata checks
@@ -33,6 +36,16 @@ export namespace Filesystem {
   export async function readText(p: string): Promise<string> {
     return readFile(p, "utf-8")
   }
+
+  // kilocode_change start
+  /**
+   * Read a file and detect its encoding (BOM, line endings).
+   * Returns the text content and encoding metadata for later preservation.
+   */
+  export async function readTextWithEncoding(p: string): Promise<{ text: string; fileEncoding: FileEncoding }> {
+    return readWithEncoding(p)
+  }
+  // kilocode_change end
 
   export async function readJson<T = any>(p: string): Promise<T> {
     return JSON.parse(await readFile(p, "utf-8"))
@@ -71,6 +84,25 @@ export namespace Filesystem {
       throw e
     }
   }
+
+  // kilocode_change start
+  export type FileEncoding = import("./encoding").FileEncoding
+  export const DEFAULT_FILE_ENCODING = DEFAULT_ENCODING
+
+  /**
+   * Write text to a file, preserving the specified encoding (BOM, line endings).
+   * Use this when writing back content that was read with readTextWithEncoding().
+   */
+  export async function writeWithEncoding(
+    p: string,
+    content: string,
+    fileEncoding: FileEncoding,
+    mode?: number,
+  ): Promise<void> {
+    const encoded = encodeWithEncoding(content, fileEncoding)
+    return write(p, encoded, mode)
+  }
+  // kilocode_change end
 
   export async function writeJson(p: string, data: unknown, mode?: number): Promise<void> {
     return write(p, JSON.stringify(data, null, 2), mode)
