@@ -1294,7 +1294,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 3px 0;
+    padding: 3px 0 3px 8px;
     min-width: 0;
 
     &[data-decision="approved"] [data-slot="permission-pattern"] {
@@ -1371,14 +1371,6 @@
     align-items: stretch;
     padding: 0 16px 8px;
     margin-top: 0;
-  }
-
-  [data-slot="permission-session-hint"] {
-    font-size: 11px;
-    color: var(--text-weak, var(--vscode-descriptionForeground));
-    margin: 0;
-    padding: 4px 0 0;
-    text-align: left;
   }
 
   [data-slot="permission-actions"] {
