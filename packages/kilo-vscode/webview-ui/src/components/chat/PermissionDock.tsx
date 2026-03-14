@@ -169,9 +169,7 @@ export const PermissionDock: Component<{
         </Show>
       }
     >
-      <Show when={command()}>
-        {(cmd) => <code data-slot="permission-command">{cmd()}</code>}
-      </Show>
+      <Show when={command()}>{(cmd) => <code data-slot="permission-command">{cmd()}</code>}</Show>
 
       <Show when={!command() && toolDescription()}>
         <div data-slot="permission-hint">{toolDescription()}</div>
