@@ -609,12 +609,13 @@ export namespace MCP {
     }
     s.status[name] = { status: "disabled" }
 
-    // kilocode_change start - Persist enabled: false to config only if MCP is defined in config
-    const cfg = await Config.get()
-    if (cfg.mcp?.[name]) {
-      await Config.persistMcpToggle(name, false).catch((error) => {
-        log.error("Failed to persist MCP disabled state to config", { name, error })
-      })
+    // kilocode_change: Persist disabled state to config and only set status if persistence succeeded
+    const persisted = await Config.persistMcpToggle(name, false).catch((error) => {
+      log.error("Failed to persist MCP disabled state to config", { name, error })
+      return false
+    })
+    if (persisted) {
+      s.status[name] = { status: "disabled" }
     }
     // kilocode_change end
   }

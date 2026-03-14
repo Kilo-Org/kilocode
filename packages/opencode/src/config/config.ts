@@ -1462,9 +1462,10 @@ export namespace Config {
   }
 
   // kilocode_change start - Add function to persist MCP enabled state to config
-  export async function persistMcpToggle(name: string, enabled: boolean) {
+  export async function persistMcpToggle(name: string, enabled: boolean): Promise<boolean> {
     // kilocode_change: Find the file where this MCP server is actually defined
     const configPath = await findMcpConfigPath(name)
+    if (!configPath) return false
 
     // kilocode_change: Serialize config file writes to prevent race conditions
     using _lock = await Lock.write(configPath)
@@ -1477,17 +1478,17 @@ export namespace Config {
     const data = parseJsonc(text, [], { allowTrailingComma: true })
     const mcpEntry = data?.mcp?.[name]
     // kilocode_change: Don't create orphan entries for MCPs not defined in config
-    if (mcpEntry === undefined) return
+    if (mcpEntry === undefined) return false
     // kilocode_change: MCP entry must be an object to have an enabled field
-    if (typeof mcpEntry !== "object" || mcpEntry === null) return
+    if (typeof mcpEntry !== "object" || mcpEntry === null) return false
     const currentEnabled = mcpEntry.enabled
-    if (currentEnabled === enabled) return
+    if (currentEnabled === enabled) return false
 
     const edits = modify(text, ["mcp", name, "enabled"], enabled, {
       formattingOptions: { tabSize: 2, insertSpaces: true },
     })
 
-    if (!edits.length) return
+    if (!edits.length) return false
 
     const result = applyEdits(text, edits)
     await Bun.write(configPath, result)
@@ -1505,6 +1506,7 @@ export namespace Config {
         },
       },
     })
+    return true
   }
 
   async function findMcpConfigPath(mcpName: string): Promise<string> {
