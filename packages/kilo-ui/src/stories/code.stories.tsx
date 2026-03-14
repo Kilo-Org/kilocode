@@ -1,6 +1,6 @@
 /** @jsxImportSource solid-js */
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
-import { Code } from "@opencode-ai/ui/code"
+import { Code } from "@kilocode/kilo-ui/code"
 
 const meta: Meta = {
   title: "Components/Code",

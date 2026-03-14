@@ -414,6 +414,8 @@ export const dict = {
   "error.globalSync.connectFailed":
     "Impossible de se connecter au serveur. Y a-t-il un serveur en cours d'exécution à `{{url}}` ?",
 
+  "error.startup.title": "Échec de la connexion au serveur",
+
   "error.paidModel.title": "Vous devez vous connecter pour utiliser ce modèle",
   "error.paidModel.description":
     "Connectez-vous ou créez un compte pour accéder à plus de 500 modèles, utiliser des crédits au prix coûtant ou apporter votre propre clé.",
@@ -448,6 +450,10 @@ export const dict = {
 
   "notification.permission.title": "Permission requise",
   "notification.permission.description": "{{sessionTitle}} dans {{projectName}} a besoin d'une permission",
+  "ui.permission.pattern.addToAllowed": "Ajouter à la liste des autorisés",
+  "ui.permission.pattern.removeFromAllowed": "Retirer de la liste des autorisés",
+  "ui.permission.pattern.addToDenied": "Ajouter à la liste des refusés",
+  "ui.permission.pattern.removeFromDenied": "Retirer de la liste des refusés",
   "notification.question.title": "Question",
   "notification.question.description": "{{sessionTitle}} dans {{projectName}} a une question",
   "notification.action.goToSession": "Aller à la session",
@@ -680,6 +686,8 @@ export const dict = {
 
   "settings.providers.title": "Fournisseurs",
   "settings.providers.description": "Les paramètres des fournisseurs seront configurables ici.",
+  "settings.providers.betaNotice":
+    "Actuellement, seul le fournisseur Kilo Gateway peut être configuré dans l'interface des paramètres. La prise en charge de la configuration d'autres fournisseurs sera bientôt disponible pendant la période bêta. En attendant, vous pouvez configurer les fournisseurs à l'aide de la CLI ou du fichier de configuration. Nous nous engageons à maintenir Kilo ouvert, sans enfermement propriétaire.",
   "settings.providers.section.connected": "Fournisseurs connectés",
   "settings.providers.connected.empty": "Aucun fournisseur connecté",
   "settings.providers.section.popular": "Fournisseurs populaires",
@@ -760,6 +768,7 @@ export const dict = {
   "session.cloud.import.placeholder": "ID de session, URL ou commande kilo import",
   "session.cloud.import.button": "Importer",
   "session.cloud.import.invalid": "Format d'ID de session invalide",
+  "session.cloud.import.legacy": "Cette session semble être une ancienne session qui n'est plus prise en charge.",
   "session.cloud.import.failed": "Échec de l'importation de la session cloud",
 
   "workspace.new": "Nouvel espace de travail",
@@ -947,7 +956,10 @@ export const dict = {
   "settings.experimental.toolToggles": "Commutateurs d'outils",
   "settings.agentBehaviour.defaultAgent.title": "Agent par défaut",
   "settings.agentBehaviour.defaultAgent.description": "Agent à utiliser lorsqu'aucun n'est spécifié",
+  "settings.agentBehaviour.availableAgents": "Agents disponibles",
   "settings.agentBehaviour.selectAgent": "Sélectionner un agent à configurer…",
+  "settings.agentBehaviour.selectAgent.title": "Agent",
+  "settings.agentBehaviour.selectAgent.description": "Sélectionner un agent à configurer…",
   "settings.agentBehaviour.modelOverride.title": "Remplacement du modèle",
   "settings.agentBehaviour.modelOverride.description": "Remplacer le modèle par défaut pour cet agent",
   "settings.agentBehaviour.prompt.title": "Prompt personnalisé",
@@ -958,6 +970,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Paramètre d'échantillonnage nucleus (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Étapes max.",
   "settings.agentBehaviour.maxSteps.description": "Itérations maximales de l'agent",
+  "settings.agentBehaviour.discoveredSkills": "Compétences découvertes",
+  "settings.agentBehaviour.noSkillsFound":
+    "Aucune compétence découverte. Ajoutez des chemins de dossiers ou des URLs ci-dessous pour rendre les compétences disponibles.",
   "settings.agentBehaviour.skillPaths": "Chemins des dossiers de compétences",
   "settings.agentBehaviour.skillUrls": "URLs de compétences",
   "settings.agentBehaviour.instructionFiles": "Fichiers d'instructions supplémentaires",
@@ -979,22 +994,33 @@ export const dict = {
   "settings.autoApprove.addPath": "Ajouter un chemin",
   "settings.autoApprove.placeholder.command": "ex. git *",
   "settings.autoApprove.placeholder.path": "ex. *.env",
-  "settings.autoApprove.tool.read": "Lire des fichiers. Permet à l'agent de lire les fichiers correspondant au chemin spécifié.",
-  "settings.autoApprove.tool.edit": "Modifier des fichiers. Permet à l'agent de créer ou d'éditer des fichiers, y compris les patchs et les mises à jour de plusieurs fichiers.",
-  "settings.autoApprove.tool.glob": "Faire correspondre les fichiers par modèle. Permet la correspondance de fichiers à l'aide de modèles glob (ex. src/**/*.ts).",
-  "settings.autoApprove.tool.grep": "Rechercher dans le contenu des fichiers. Permet la recherche basée sur les expressions régulières dans les fichiers.",
-  "settings.autoApprove.tool.list": "Lister le contenu du répertoire. Permet de visualiser les fichiers et dossiers dans un répertoire.",
-  "settings.autoApprove.tool.bash": "Exécuter des commandes de terminal. Permet l'exécution de commandes shell (ex. git status).",
-  "settings.autoApprove.tool.task": "Lancer des sous-agents. Permet de démarrer des sous-agents spécialisés pour des tâches spécifiques.",
-  "settings.autoApprove.tool.skill": "Charger des compétences. Permet de charger des compétences prédéfinies par leur nom.",
-  "settings.autoApprove.tool.lsp": "Interroger le serveur de langage. Permet d'exécuter des requêtes de serveur de langage pour l'intelligence du code.",
+  "settings.autoApprove.tool.read":
+    "Lire des fichiers. Permet à l'agent de lire les fichiers correspondant au chemin spécifié.",
+  "settings.autoApprove.tool.edit":
+    "Modifier des fichiers. Permet à l'agent de créer ou d'éditer des fichiers, y compris les patchs et les mises à jour de plusieurs fichiers.",
+  "settings.autoApprove.tool.glob":
+    "Faire correspondre les fichiers par modèle. Permet la correspondance de fichiers à l'aide de modèles glob (ex. src/**/*.ts).",
+  "settings.autoApprove.tool.grep":
+    "Rechercher dans le contenu des fichiers. Permet la recherche basée sur les expressions régulières dans les fichiers.",
+  "settings.autoApprove.tool.list":
+    "Lister le contenu du répertoire. Permet de visualiser les fichiers et dossiers dans un répertoire.",
+  "settings.autoApprove.tool.bash":
+    "Exécuter des commandes de terminal. Permet l'exécution de commandes shell (ex. git status).",
+  "settings.autoApprove.tool.task":
+    "Lancer des sous-agents. Permet de démarrer des sous-agents spécialisés pour des tâches spécifiques.",
+  "settings.autoApprove.tool.skill":
+    "Charger des compétences. Permet de charger des compétences prédéfinies par leur nom.",
+  "settings.autoApprove.tool.lsp":
+    "Interroger le serveur de langage. Permet d'exécuter des requêtes de serveur de langage pour l'intelligence du code.",
   "settings.autoApprove.tool.todoreadwrite":
     "Gérer la liste des tâches. Permet de lire et de mettre à jour la liste des tâches interne.",
   "settings.autoApprove.tool.webfetch": "Récupérer une URL. Permet de récupérer le contenu d'une URL spécifique.",
   "settings.autoApprove.tool.websearchcodesearch":
     "Rechercher sur le Web ou dans le code. Permet d'effectuer des recherches externes sur le Web ou dans le code.",
-  "settings.autoApprove.tool.external_directory": "Accéder aux fichiers en dehors de l'espace de travail. Déclenché lors de l'accès à des fichiers en dehors du répertoire de projet actuel.",
-  "settings.autoApprove.tool.doom_loop": "Prévenir les actions identiques répétées. Déclenché lorsque le même appel d'outil se répète avec une entrée identique.",
+  "settings.autoApprove.tool.external_directory":
+    "Accéder aux fichiers en dehors de l'espace de travail. Déclenché lors de l'accès à des fichiers en dehors du répertoire de projet actuel.",
+  "settings.autoApprove.tool.doom_loop":
+    "Prévenir les actions identiques répétées. Déclenché lorsque le même appel d'outil se répète avec une entrée identique.",
   "settings.checkpoints.enable.title": "Activer les instantanés",
   "settings.checkpoints.enable.description": "Créer des points de contrôle avant les modifications de fichiers",
   "settings.context.autoCompaction.title": "Compaction automatique",

@@ -19,6 +19,20 @@ import { NoChangesError } from "../commit-message/generate" // kilocode_change
 import { Flag } from "../flag/flag"
 import { Format } from "../format"
 import { Global } from "../global"
+import { WorkspaceContext } from "../control-plane/workspace-context"
+import { WorkspaceRouterMiddleware } from "../control-plane/workspace-router-middleware"
+import { ProjectRoutes } from "./routes/project"
+import { SessionRoutes } from "./routes/session"
+import { PtyRoutes } from "./routes/pty"
+import { McpRoutes } from "./routes/mcp"
+import { FileRoutes } from "./routes/file"
+import { ConfigRoutes } from "./routes/config"
+import { ExperimentalRoutes } from "./routes/experimental"
+import { TelemetryRoutes } from "./routes/telemetry" // kilocode_change
+import { ProviderRoutes } from "./routes/provider"
+import { createKiloRoutes } from "@kilocode/kilo-gateway" // kilocode_change
+import { Database } from "../storage/db" // kilocode_change
+import { Session } from "../session" // kilocode_change
 import { Identifier } from "../id/id" // kilocode_change
 import { LSP } from "../lsp"
 import { InstanceBootstrap } from "../project/bootstrap"
@@ -210,6 +224,7 @@ export namespace Server {
         )
         .use(async (c, next) => {
           if (c.req.path === "/log") return next()
+          const workspaceID = c.req.query("workspace") || c.req.header("x-opencode-workspace")
           const raw = c.req.query("directory") || c.req.header("x-opencode-directory") || process.cwd()
           const directory = (() => {
             try {
@@ -218,14 +233,21 @@ export namespace Server {
               return raw
             }
           })()
-          return Instance.provide({
-            directory,
-            init: InstanceBootstrap,
+
+          return WorkspaceContext.provide({
+            workspaceID,
             async fn() {
-              return next()
+              return Instance.provide({
+                directory,
+                init: InstanceBootstrap,
+                async fn() {
+                  return next()
+                },
+              })
             },
           })
         })
+        .use(WorkspaceRouterMiddleware)
         .get(
           "/doc",
           openAPIRouteHandler(app, {
@@ -239,7 +261,15 @@ export namespace Server {
             },
           }),
         )
-        .use(validator("query", z.object({ directory: z.string().optional() })))
+        .use(
+          validator(
+            "query",
+            z.object({
+              directory: z.string().optional(),
+              workspace: z.string().optional(),
+            }),
+          ),
+        )
         .route("/project", ProjectRoutes())
         .route("/pty", PtyRoutes())
         .route("/config", ConfigRoutes())

@@ -47,6 +47,4 @@ describe("enhance-prompt", () => {
       expect(clean("\"hello world'")).toBe("\"hello world'")
     })
   })
-
-
 })

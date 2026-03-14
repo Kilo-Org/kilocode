@@ -90,13 +90,17 @@ interface SessionContextValue {
   // Todos for current session
   todos: Accessor<TodoItem[]>
 
-  // Pending permission requests
+  // Pending permission requests (unscoped — all tracked sessions)
   permissions: Accessor<PermissionRequest[]>
   respondingPermissions: Accessor<Set<string>>
 
-  // Pending question requests
+  // Pending question requests (unscoped — all tracked sessions)
   questions: Accessor<QuestionRequest[]>
   questionErrors: Accessor<Set<string>>
+
+  // Scoped permissions/questions — filtered to a session's family (self + subagents)
+  scopedPermissions: (sessionID: string | undefined) => PermissionRequest[]
+  scopedQuestions: (sessionID: string | undefined) => QuestionRequest[]
 
   // Model selection (global, extension-lifetime)
   selected: Accessor<ModelSelection | null>
@@ -126,7 +130,12 @@ interface SessionContextValue {
   sendMessage: (text: string, providerID?: string, modelID?: string, files?: FileAttachment[]) => void
   abort: () => void
   compact: () => void
-  respondToPermission: (permissionId: string, response: "once" | "always" | "reject") => void
+  respondToPermission: (
+    permissionId: string,
+    response: "once" | "always" | "reject",
+    approvedPatterns: string[],
+    deniedPatterns: string[],
+  ) => void
   replyToQuestion: (requestID: string, answers: string[][]) => void
   rejectQuestion: (requestID: string) => void
   createSession: () => void
@@ -250,7 +259,7 @@ export const SessionProvider: ParentComponent = (props) => {
   })
 
   // Global model selection per agent/mode
-  // Precedence: user override > per-mode config > global config model > VS Code default > kilo-auto/frontier
+  // Precedence: user override > per-mode config > global config model > VS Code default > kilo-auto/free
   const selected = createMemo<ModelSelection | null>(() => {
     const agentName = selectedAgentName()
     const override = store.modelSelections[agentName]
@@ -660,6 +669,48 @@ export const SessionProvider: ParentComponent = (props) => {
     setQuestionErrors((prev) => new Set(prev).add(requestID))
   }
 
+  /**
+   * BFS walk over message parts to discover all session IDs in a session's
+   * family tree (self + subagents + sub-subagents). Reads directly from the
+   * store so it's reactive — automatically updates when new parts arrive.
+   */
+  function sessionFamily(rootID: string): Set<string> {
+    const family = new Set<string>([rootID])
+    const queue = [rootID]
+    while (queue.length > 0) {
+      const sid = queue.pop()!
+      const msgs = store.messages[sid]
+      if (!msgs) continue
+      for (const msg of msgs) {
+        const parts = store.parts[msg.id]
+        if (!parts) continue
+        for (const p of parts) {
+          if (p.type !== "tool") continue
+          const child = (p as { state?: { metadata?: { sessionId?: string } } }).state?.metadata?.sessionId
+          if (child && !family.has(child)) {
+            family.add(child)
+            queue.push(child)
+          }
+        }
+      }
+    }
+    return family
+  }
+
+  /** Return permissions scoped to the given session's family (self + subagents). */
+  function scopedPermissions(sessionID: string | undefined): PermissionRequest[] {
+    if (!sessionID) return []
+    const family = sessionFamily(sessionID)
+    return permissions().filter((p) => family.has(p.sessionID))
+  }
+
+  /** Return questions scoped to the given session's family (self + subagents). */
+  function scopedQuestions(sessionID: string | undefined): QuestionRequest[] {
+    if (!sessionID) return []
+    const family = sessionFamily(sessionID)
+    return questions().filter((q) => family.has(q.sessionID))
+  }
+
   function handleTodoUpdated(sessionID: string, items: TodoItem[]) {
     setStore("todos", sessionID, items)
   }
@@ -940,7 +991,12 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
-  function respondToPermission(permissionId: string, response: "once" | "always" | "reject") {
+  function respondToPermission(
+    permissionId: string,
+    response: "once" | "always" | "reject",
+    approvedPatterns: string[],
+    deniedPatterns: string[],
+  ) {
     // Resolve sessionID from the stored permission request
     const permission = permissions().find((p) => p.id === permissionId)
     const sessionID = permission?.sessionID ?? currentSessionID() ?? ""
@@ -954,6 +1010,8 @@ export const SessionProvider: ParentComponent = (props) => {
       permissionId,
       sessionID,
       response,
+      approvedPatterns,
+      deniedPatterns,
     })
   }
 
@@ -1143,6 +1201,8 @@ export const SessionProvider: ParentComponent = (props) => {
     respondingPermissions,
     questions,
     questionErrors,
+    scopedPermissions,
+    scopedQuestions,
     selected,
     selectModel,
     hasModelOverride,

@@ -3,6 +3,7 @@ import { KiloProvider } from "./KiloProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { DiffViewerProvider } from "./DiffViewerProvider"
 import { SettingsEditorProvider } from "./SettingsEditorProvider"
+import { SubAgentViewerProvider } from "./SubAgentViewerProvider"
 import { EXTENSION_DISPLAY_NAME } from "./constants"
 import { KiloConnectionService } from "./services/cli-backend"
 import { registerAutocompleteProvider } from "./services/autocomplete"
@@ -49,6 +50,16 @@ export function activate(context: vscode.ExtensionContext) {
   const agentManagerProvider = new AgentManagerProvider(context.extensionUri, connectionService)
   context.subscriptions.push(agentManagerProvider)
 
+  // Register serializer so Agent Manager restores when VS Code restarts
+  context.subscriptions.push(
+    vscode.window.registerWebviewPanelSerializer(AgentManagerProvider.viewType, {
+      deserializeWebviewPanel(panel: vscode.WebviewPanel) {
+        agentManagerProvider.deserializeWebviewPanel(panel)
+        return Promise.resolve()
+      },
+    }),
+  )
+
   // Create standalone diff viewer provider for the sidebar "Show Changes" action
   const diffViewerProvider = new DiffViewerProvider(context.extensionUri, connectionService)
   diffViewerProvider.setCommentHandler((comments) => {
@@ -59,6 +70,10 @@ export function activate(context: vscode.ExtensionContext) {
   // Create settings/profile editor provider (opens in editor area, not sidebar)
   const settingsEditorProvider = new SettingsEditorProvider(context.extensionUri, connectionService, context)
   context.subscriptions.push(settingsEditorProvider)
+
+  // Create sub-agent viewer provider (read-only editor panel for sub-agent sessions)
+  const subAgentViewerProvider = new SubAgentViewerProvider(context.extensionUri, connectionService, context)
+  context.subscriptions.push(subAgentViewerProvider)
 
   // Register toolbar button command handlers
   context.subscriptions.push(
@@ -93,6 +108,9 @@ export function activate(context: vscode.ExtensionContext) {
     }),
     vscode.commands.registerCommand("kilo-code.new.showChanges", () => {
       diffViewerProvider.openPanel()
+    }),
+    vscode.commands.registerCommand("kilo-code.new.openSubAgentViewer", (sessionID: string, title?: string) => {
+      subAgentViewerProvider.openPanel(sessionID, title)
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.previousSession", () => {
       agentManagerProvider.postMessage({ type: "action", action: "sessionPrevious" })

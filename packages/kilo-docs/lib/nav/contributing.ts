@@ -51,10 +51,6 @@ export const ContributingNav: NavSection[] = [
             children: "MCP OAuth Authorization",
           },
           {
-            href: "/contributing/architecture/model-provider-blocklist",
-            children: "Model/Provider Blocklist",
-          },
-          {
             href: "/contributing/architecture/onboarding-improvements",
             children: "Onboarding Improvements",
           },
@@ -69,10 +65,6 @@ export const ContributingNav: NavSection[] = [
           {
             href: "/contributing/architecture/track-repo-url",
             children: "Track Repo URL",
-          },
-          {
-            href: "/contributing/architecture/vercel-ai-gateway",
-            children: "Vercel AI Gateway",
           },
           {
             href: "/contributing/architecture/voice-transcription",

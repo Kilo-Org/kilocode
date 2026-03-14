@@ -5,7 +5,7 @@ description: "One-click deployment of your personal AI agent with OpenClaw"
 
 # KiloClaw 🦀
 
-KiloClaw is Kilo's hosted [OpenClaw](https://openclaw.ai) service — a one-click deployment that gives you a personal AI agent without the complexity of self-hosting. OpenClaw is an open source AI agent that connects to chat platforms like Telegram, Discord, and Slack.
+KiloClaw is Kilo's hosted [OpenClaw](https://openclaw.ai) service — a one-click deployment that gives you a personal AI agent without the complexity of self-hosting. OpenClaw is a 24/7, open source AI agent that connects to chat platforms like Telegram, Discord, and Slack so it can take real actions automatically, not just chat.
 
 KiloClaw is powered by KiloCode. The API key is platform-managed, so you never need to bring your own. KiloClaw is currently in **Beta**.
 
@@ -21,7 +21,11 @@ KiloClaw is powered by KiloCode. The API key is platform-managed, so you never n
 ## Prerequisites
 
 - **Kilo account** — Sign up at [kilo.ai](https://kilo.ai) if you haven't already
-- **Gateway credits** — KiloClaw uses your existing [Gateway credits](/docs/gateway/usage-and-billing) for model inference
+- **Model access** — KiloClaw uses **Kilo Gateway by default**, which provides access to **500+ AI models** through a single integration.
+
+You can also run KiloClaw using:
+
+- **Your own provider API keys (BYOK)** such as Anthropic, OpenAI, Google, or other supported providers.
 
 ## Creating an Instance
 
@@ -73,42 +77,19 @@ When you initialize a new channel for the first time, or a new device connects t
 
 OpenClaw lets you customize your own AI assistant that can actually take action — check your email, manage your calendar, control smart devices, browse the web, and message you on Telegram or Discord when something needs attention. It's like having a personal assistant that runs 24/7, with the skills and access you choose to give it.
 
+### Browser Tool
+
+KiloClaw includes a headless Chromium browser, enabling your agent to browse the web, take screenshots, and automate web interactions using the OpenClaw browser tool. This works out of the box with the "full" tool profile — no additional setup needed.
+
+### Default Tool Profile
+
+New KiloClaw instances deploy with the **full** tool profile by default, giving your agent unrestricted access to all available tools — filesystem operations, shell execution, web search, browser automation, messaging, memory, sub-agents, and more.
+
 For more information on use cases:
 
 - [OpenClaw Showcase](https://docs.openclaw.ai/start/showcase)
 - [100 hours of OpenClaw in 35 Minutes](https://www.youtube.com/watch?v=_kZCoW-Qxnc)
 - [Clawhub](https://clawhub.ai/): search for skills
-
-## Tool Configuration
-
-KiloClaw deploys with the **full** tool profile, giving your agent unrestricted access to all available tools — filesystem operations (read, write, edit), shell execution, web search, messaging, memory, sub-agents, and more.
-
-Shell commands are still gated by an **allowlist** — unknown commands trigger an approval prompt in the Control UI.
-
-### Changing the Tool Profile
-
-If you want to restrict your agent's capabilities, you can change the tool profile from the OpenClaw Control UI:
-
-1. Open your agent's Control UI (via **OpenClaw** on the dashboard)
-2. Navigate to **Settings** → **Config** → **Tools** → **Tool Profile**
-3. Select a different profile.
-
-Your choice persists across restarts — KiloClaw won't overwrite a customized profile.
-
-For a complete and up-to-date tool configuration reference, see the [OpenClaw Tools documentation](https://docs.openclaw.ai/tools#tools-openclaw).
-
-## Limitations
-
-KiloClaw is currently in **beta**. Current constraints include:
-
-- **One instance per account** — Each user can run a single KiloClaw instance
-- **Model availability** — Some models may have rate limits during high demand
-- **Session persistence** — Chat history may be cleared during beta updates
-- **Feature parity** — Not all OpenClaw features are available in the hosted version yet
-
-{% callout type="info" %}
-Have feedback or running into issues? Join the [Kilo Discord](https://kilo.ai/discord) and share it in the KiloClaw channel.
-{% /callout %}
 
 ## Related
 

@@ -39,6 +39,12 @@ The following packages are installed via `apt` on top of the base image:
 | `ffmpeg`          | Audio/video processing                    |
 | `tmux`            | Terminal multiplexer                      |
 
+## Browser
+
+| Tool              | Description                                                                                                                                              |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Headless Chromium | Built-in browser for web browsing, screenshots, and CDP automation. Works with OpenClaw's browser tool out of the box. Requires the "full" tool profile. |
+
 ## Languages & Runtimes
 
 | Language / Runtime | Version                            | Install Method                   |
@@ -75,17 +81,24 @@ The following packages are installed globally via `npm`:
 | mcporter                | 0.7.3    |
 | `@steipete/summarize`   | 0.11.1   |
 
-## Go Tools
+## OpenClaw Skills & Integrations
 
-These tools are pre-installed via `go install` and available on `$PATH`:
+| Tool         | Description                                                           |
+| ------------ | --------------------------------------------------------------------- |
+| gog (gogcli) | Google Workspace CLI — Gmail, Calendar, Drive, Contacts, Sheets, Docs |
+| blogwatcher  | Monitor blogs and RSS/Atom feeds for updates                          |
+| xurl         | Authenticated requests to the X (Twitter) API                         |
+| gifgrep      | Search GIF providers, download results, extract stills                |
+| summarize    | Summarize or extract text/transcripts from URLs and files             |
+| goplaces     | Location and places lookup                                            |
 
-| Tool          | Version |
-| ------------- | ------- |
-| `gog`         | 0.11.0  |
-| `goplaces`    | 0.3.0   |
-| `blogwatcher` | 0.0.2   |
-| `xurl`        | 1.0.3   |
-| `gifgrep`     | 0.2.3   |
+## Installing Additional Tools
+
+Your agent can install additional tools at runtime:
+
+- **Go packages:** `go install github.com/example/tool@latest`
+- **Node packages:** `npm install -g <package>`
+- **Python packages:** `pip install <package>`
 
 {% callout type="tip" %}
 These tools receive updates when you **Upgrade & Redeploy** your instance from the [KiloClaw Dashboard](/docs/kiloclaw/dashboard#redeploy). Check the changelog for image update announcements.

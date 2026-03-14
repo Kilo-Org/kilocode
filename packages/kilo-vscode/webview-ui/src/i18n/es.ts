@@ -410,6 +410,8 @@ export const dict = {
 
   "error.globalSync.connectFailed": "No se pudo conectar al servidor. ¿Hay un servidor ejecutándose en `{{url}}`?",
 
+  "error.startup.title": "Error de conexión al servidor",
+
   "error.paidModel.title": "Necesitas iniciar sesión para usar este modelo",
   "error.paidModel.description":
     "Inicia sesión o crea una cuenta para acceder a más de 500 modelos, usar créditos a precio de coste o traer tu propia clave.",
@@ -443,6 +445,10 @@ export const dict = {
 
   "notification.permission.title": "Permiso requerido",
   "notification.permission.description": "{{sessionTitle}} en {{projectName}} necesita permiso",
+  "ui.permission.pattern.addToAllowed": "Añadir a la lista de permitidos",
+  "ui.permission.pattern.removeFromAllowed": "Quitar de la lista de permitidos",
+  "ui.permission.pattern.addToDenied": "Añadir a la lista de denegados",
+  "ui.permission.pattern.removeFromDenied": "Quitar de la lista de denegados",
   "notification.question.title": "Pregunta",
   "notification.question.description": "{{sessionTitle}} en {{projectName}} tiene una pregunta",
   "notification.action.goToSession": "Ir a sesión",
@@ -676,6 +682,8 @@ export const dict = {
 
   "settings.providers.title": "Proveedores",
   "settings.providers.description": "La configuración de proveedores estará disponible aquí.",
+  "settings.providers.betaNotice":
+    "Actualmente, solo el proveedor Kilo Gateway se puede configurar en la interfaz de ajustes. El soporte para configurar otros proveedores llegará pronto durante el período beta. Mientras tanto, puedes configurar proveedores usando la CLI o el archivo de configuración. Estamos comprometidos a mantener Kilo abierto, sin ataduras.",
   "settings.providers.section.connected": "Proveedores conectados",
   "settings.providers.connected.empty": "No hay proveedores conectados",
   "settings.providers.section.popular": "Proveedores populares",
@@ -755,6 +763,7 @@ export const dict = {
   "session.cloud.import.placeholder": "ID de sesión, URL o comando kilo import",
   "session.cloud.import.button": "Importar",
   "session.cloud.import.invalid": "Formato de ID de sesión no válido",
+  "session.cloud.import.legacy": "Esta parece ser una sesión heredada que ya no es compatible.",
   "session.cloud.import.failed": "Error al importar la sesión de la nube",
 
   "workspace.new": "Nuevo espacio de trabajo",
@@ -937,7 +946,10 @@ export const dict = {
   "settings.experimental.toolToggles": "Interruptores de herramientas",
   "settings.agentBehaviour.defaultAgent.title": "Agente predeterminado",
   "settings.agentBehaviour.defaultAgent.description": "Agente a usar cuando no se especifica ninguno",
+  "settings.agentBehaviour.availableAgents": "Agentes disponibles",
   "settings.agentBehaviour.selectAgent": "Seleccionar un agente para configurar…",
+  "settings.agentBehaviour.selectAgent.title": "Agente",
+  "settings.agentBehaviour.selectAgent.description": "Seleccionar un agente para configurar…",
   "settings.agentBehaviour.modelOverride.title": "Anulación de modelo",
   "settings.agentBehaviour.modelOverride.description": "Anular el modelo predeterminado para este agente",
   "settings.agentBehaviour.prompt.title": "Prompt personalizado",
@@ -948,6 +960,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Parámetro de muestreo nucleus (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Pasos máximos",
   "settings.agentBehaviour.maxSteps.description": "Iteraciones máximas del agente",
+  "settings.agentBehaviour.discoveredSkills": "Habilidades descubiertas",
+  "settings.agentBehaviour.noSkillsFound":
+    "No se encontraron habilidades. Agregue rutas de carpetas o URLs abajo para hacer disponibles las habilidades.",
   "settings.agentBehaviour.skillPaths": "Rutas de carpetas de habilidades",
   "settings.agentBehaviour.skillUrls": "URLs de habilidades",
   "settings.agentBehaviour.instructionFiles": "Archivos de instrucciones adicionales",
@@ -970,22 +985,32 @@ export const dict = {
   "settings.autoApprove.addPath": "Agregar ruta",
   "settings.autoApprove.placeholder.command": "ej. git *",
   "settings.autoApprove.placeholder.path": "ej. *.env",
-  "settings.autoApprove.tool.read": "Leer archivos. Permite que el agente lea archivos que coincidan con la ruta especificada.",
-  "settings.autoApprove.tool.edit": "Modificar archivos. Permite que el agente cree o edite archivos, incluyendo parches y actualizaciones de múltiples archivos.",
-  "settings.autoApprove.tool.glob": "Buscar archivos por patrón. Permite la búsqueda de archivos mediante patrones glob (ej. src/**/*.ts).",
-  "settings.autoApprove.tool.grep": "Buscar en el contenido de archivos. Permite la búsqueda basada en expresiones regulares dentro de los archivos.",
-  "settings.autoApprove.tool.list": "Listar contenido del directorio. Permite ver archivos y carpetas dentro de un directorio.",
-  "settings.autoApprove.tool.bash": "Ejecutar comandos de terminal. Permite la ejecución de comandos de shell (ej. git status).",
-  "settings.autoApprove.tool.task": "Iniciar subagentes. Permite iniciar subagentes especializados para tareas específicas.",
+  "settings.autoApprove.tool.read":
+    "Leer archivos. Permite que el agente lea archivos que coincidan con la ruta especificada.",
+  "settings.autoApprove.tool.edit":
+    "Modificar archivos. Permite que el agente cree o edite archivos, incluyendo parches y actualizaciones de múltiples archivos.",
+  "settings.autoApprove.tool.glob":
+    "Buscar archivos por patrón. Permite la búsqueda de archivos mediante patrones glob (ej. src/**/*.ts).",
+  "settings.autoApprove.tool.grep":
+    "Buscar en el contenido de archivos. Permite la búsqueda basada en expresiones regulares dentro de los archivos.",
+  "settings.autoApprove.tool.list":
+    "Listar contenido del directorio. Permite ver archivos y carpetas dentro de un directorio.",
+  "settings.autoApprove.tool.bash":
+    "Ejecutar comandos de terminal. Permite la ejecución de comandos de shell (ej. git status).",
+  "settings.autoApprove.tool.task":
+    "Iniciar subagentes. Permite iniciar subagentes especializados para tareas específicas.",
   "settings.autoApprove.tool.skill": "Cargar habilidades. Permite cargar habilidades predefinidas por su nombre.",
-  "settings.autoApprove.tool.lsp": "Consultar servidor de lenguaje. Permite ejecutar consultas al servidor de lenguaje para la inteligencia del código.",
+  "settings.autoApprove.tool.lsp":
+    "Consultar servidor de lenguaje. Permite ejecutar consultas al servidor de lenguaje para la inteligencia del código.",
   "settings.autoApprove.tool.todoreadwrite":
     "Administrar lista de tareas. Permite leer y actualizar la lista de tareas interna.",
   "settings.autoApprove.tool.webfetch": "Obtener una URL. Permite recuperar contenido de una URL específica.",
   "settings.autoApprove.tool.websearchcodesearch":
     "Buscar en la web o en el código. Permite realizar búsquedas externas en la web o en el código.",
-  "settings.autoApprove.tool.external_directory": "Acceder a archivos fuera del espacio de trabajo. Se activa al acceder a archivos fuera del directorio del proyecto actual.",
-  "settings.autoApprove.tool.doom_loop": "Evitar acciones idénticas repetidas. Se activa cuando se repite la misma llamada de herramienta con entrada idéntica.",
+  "settings.autoApprove.tool.external_directory":
+    "Acceder a archivos fuera del espacio de trabajo. Se activa al acceder a archivos fuera del directorio del proyecto actual.",
+  "settings.autoApprove.tool.doom_loop":
+    "Evitar acciones idénticas repetidas. Se activa cuando se repite la misma llamada de herramienta con entrada idéntica.",
   "settings.checkpoints.enable.title": "Habilitar instantáneas",
   "settings.checkpoints.enable.description": "Crear puntos de control antes de editar archivos",
   "settings.context.autoCompaction.title": "Compactación automática",

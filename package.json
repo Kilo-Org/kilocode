@@ -9,6 +9,7 @@
     "dev": "bun run --cwd packages/opencode --conditions=browser src/index.ts",
     "dev:desktop": "bun --cwd packages/desktop tauri dev",
     "dev:web": "bun --cwd packages/app dev",
+    "dev:storybook": "bun --cwd packages/storybook storybook",
     "typecheck": "bun turbo typecheck",
     "prepare": "husky",
     "random": "echo 'Random script'",
@@ -33,7 +34,7 @@
       "@tsconfig/bun": "1.0.9",
       "@cloudflare/workers-types": "4.20251008.0",
       "@openauthjs/openauth": "0.0.0-20250322224806",
-      "@pierre/diffs": "1.1.0-beta.17",
+      "@pierre/diffs": "1.1.0-beta.18",
       "@solid-primitives/storage": "4.3.3",
       "@tailwindcss/vite": "4.1.11",
       "diff": "8.0.2",
@@ -96,7 +97,8 @@
     "protobufjs",
     "tree-sitter",
     "tree-sitter-bash",
-    "web-tree-sitter"
+    "web-tree-sitter",
+    "electron"
   ],
   "overrides": {
     "@types/bun": "catalog:",
@@ -107,6 +109,6 @@
     "@openrouter/ai-sdk-provider@1.5.4": "patches/@openrouter%2Fai-sdk-provider@1.5.4.patch",
     "ghostty-web@0.3.0": "patches/ghostty-web@0.3.0.patch"
   },
-  "version": "7.0.41",
+  "version": "7.0.47",
   "peerDependencies": {}
 }

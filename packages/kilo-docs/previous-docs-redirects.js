@@ -1,5 +1,11 @@
 module.exports = [
   {
+    source: "/docs/contributing/architecture/model-provider-blocklist",
+    destination: "/docs/collaborate/enterprise/model-access-controls",
+    basePath: false,
+    permanent: true,
+  },
+  {
     source: "/docs/features/custom-modes",
     destination: "/docs/customize/custom-modes",
     basePath: false,
@@ -792,6 +798,12 @@ module.exports = [
   {
     source: "/docs/automate/kiloclaw/:path*",
     destination: "/docs/kiloclaw/:path*",
+    basePath: false,
+    permanent: true,
+  },
+  {
+    source: "/docs/contributing/architecture/vercel-ai-gateway",
+    destination: "/docs/contributing/architecture/features",
     basePath: false,
     permanent: true,
   },

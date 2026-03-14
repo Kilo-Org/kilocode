@@ -4,8 +4,10 @@ import { DialogProvider } from "@kilocode/kilo-ui/context/dialog"
 import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
 import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
 import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff"
+import { FileComponentProvider } from "@kilocode/kilo-ui/context/file"
 import { Code } from "@kilocode/kilo-ui/code"
 import { Diff } from "@kilocode/kilo-ui/diff"
+import { File } from "@kilocode/kilo-ui/file"
 import { DataProvider } from "@kilocode/kilo-ui/context/data"
 import { Toast } from "@kilocode/kilo-ui/toast"
 import Settings from "./components/settings/Settings"
@@ -33,7 +35,15 @@ import { NotificationsProvider } from "./context/notifications"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
 import "./styles/chat.css"
 
-type ViewType = "newTask" | "marketplace" | "history" | "cloudHistory" | "profile" | "settings" | "migration" // legacy-migration
+type ViewType =
+  | "newTask"
+  | "marketplace"
+  | "history"
+  | "cloudHistory"
+  | "profile"
+  | "settings"
+  | "migration" // legacy-migration
+  | "subAgentViewer"
 const VALID_VIEWS = new Set<string>([
   "newTask",
   "marketplace",
@@ -41,8 +51,9 @@ const VALID_VIEWS = new Set<string>([
   "cloudHistory",
   "profile",
   "settings",
-  "migration",
-]) // legacy-migration
+  "migration", // legacy-migration
+  "subAgentViewer",
+])
 
 const DummyView: Component<{ title: string }> = (props) => {
   return (
@@ -113,7 +124,7 @@ export const DataBridge: Component<{ children: any }> = (props) => {
   })
 
   const respond = (input: { sessionID: string; permissionID: string; response: "once" | "always" | "reject" }) => {
-    session.respondToPermission(input.permissionID, input.response)
+    session.respondToPermission(input.permissionID, input.response, [], [])
   }
 
   const reply = (input: { requestID: string; answers: string[][] }) => {
@@ -138,6 +149,7 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     <DataProvider
       data={data()}
       directory={directory()}
+      // @ts-expect-error — onPermissionRespond/onQuestion* are extension-specific props not yet in kilo-ui's DataProvider types
       onPermissionRespond={respond}
       onQuestionReply={reply}
       onQuestionReject={reject}
@@ -208,6 +220,11 @@ const AppContent: Component = () => {
         session.selectCloudSession(message.sessionId)
         setCurrentView("newTask")
       }
+      if (message?.type === "viewSubAgentSession" && message.sessionID) {
+        console.log("[Kilo New] App: 🔍 viewSubAgentSession:", message.sessionID)
+        session.setCurrentSessionID(message.sessionID)
+        setCurrentView("subAgentViewer")
+      }
     }
     window.addEventListener("message", handler)
     onCleanup(() => window.removeEventListener("message", handler))
@@ -265,6 +282,9 @@ const AppContent: Component = () => {
           />
         </Match>
         {/* legacy-migration end */}
+        <Match when={currentView() === "subAgentViewer"}>
+          <ChatView readonly />
+        </Match>
       </Switch>
     </div>
   )
@@ -281,17 +301,19 @@ const App: Component = () => {
               <MarkedProvider>
                 <DiffComponentProvider component={Diff}>
                   <CodeComponentProvider component={Code}>
-                    <ProviderProvider>
-                      <ConfigProvider>
-                        <NotificationsProvider>
-                          <SessionProvider>
-                            <DataBridge>
-                              <AppContent />
-                            </DataBridge>
-                          </SessionProvider>
-                        </NotificationsProvider>
-                      </ConfigProvider>
-                    </ProviderProvider>
+                    <FileComponentProvider component={File}>
+                      <ProviderProvider>
+                        <ConfigProvider>
+                          <NotificationsProvider>
+                            <SessionProvider>
+                              <DataBridge>
+                                <AppContent />
+                              </DataBridge>
+                            </SessionProvider>
+                          </NotificationsProvider>
+                        </ConfigProvider>
+                      </ProviderProvider>
+                    </FileComponentProvider>
                   </CodeComponentProvider>
                 </DiffComponentProvider>
               </MarkedProvider>
