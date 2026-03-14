@@ -410,6 +410,8 @@ export const dict = {
 
   "error.globalSync.connectFailed": "Не удалось подключиться к серверу. Запущен ли сервер по адресу `{{url}}`?",
 
+  "error.startup.title": "Ошибка подключения к серверу",
+
   "error.paidModel.title": "Для использования этой модели необходимо войти",
   "error.paidModel.description":
     "Войдите или создайте аккаунт для доступа к более чем 500 моделям, используйте кредиты по себестоимости или подключите свой ключ.",
@@ -444,6 +446,11 @@ export const dict = {
 
   "notification.permission.title": "Требуется разрешение",
   "notification.permission.description": "{{sessionTitle}} в {{projectName}} требуется разрешение",
+  "ui.permission.permissionRules": "Правила разрешений",
+  "ui.permission.pattern.addToAllowed": "Добавить в список разрешённых",
+  "ui.permission.pattern.removeFromAllowed": "Убрать из списка разрешённых",
+  "ui.permission.pattern.addToDenied": "Добавить в список запрещённых",
+  "ui.permission.pattern.removeFromDenied": "Убрать из списка запрещённых",
   "notification.question.title": "Вопрос",
   "notification.question.description": "У {{sessionTitle}} в {{projectName}} есть вопрос",
   "notification.action.goToSession": "Перейти к сессии",
@@ -676,6 +683,8 @@ export const dict = {
 
   "settings.providers.title": "Провайдеры",
   "settings.providers.description": "Настройки провайдеров будут доступны здесь.",
+  "settings.providers.betaNotice":
+    "В настоящее время в интерфейсе настроек можно настроить только провайдер Kilo Gateway. Поддержка настройки других провайдеров скоро появится в период бета-тестирования. А пока вы можете настраивать провайдеров с помощью CLI или конфигурационного файла. Мы стремимся сохранить Kilo открытым — без привязки к поставщикам.",
   "settings.providers.section.connected": "Подключённые провайдеры",
   "settings.providers.connected.empty": "Нет подключённых провайдеров",
   "settings.providers.section.popular": "Популярные провайдеры",
@@ -745,10 +754,16 @@ export const dict = {
   "session.empty": "Сессий пока нет. Нажмите + чтобы начать новый разговор.",
   "session.cloud.repoOnly": "Только этот репозиторий",
   "session.cloud.import": "Импорт из облака",
+  "feedback.button": "Отзывы и поддержка",
+  "feedback.dialog.message": "Мы будем рады услышать ваши отзывы или помочь с любыми возникающими проблемами.",
+  "feedback.dialog.github": "Сообщить о проблеме на GitHub",
+  "feedback.dialog.discord": "Присоединиться к нашему Discord",
+  "feedback.dialog.support": "Служба поддержки",
   "session.cloud.import.title": "Импорт из облака",
   "session.cloud.import.placeholder": "ID сессии, URL или команда kilo import",
   "session.cloud.import.button": "Импортировать",
   "session.cloud.import.invalid": "Неверный формат ID сессии",
+  "session.cloud.import.legacy": "Похоже, это устаревшая сессия, которая больше не поддерживается.",
   "session.cloud.import.failed": "Не удалось импортировать облачную сессию",
 
   "workspace.new": "Новое рабочее пространство",
@@ -930,7 +945,10 @@ export const dict = {
   "settings.experimental.toolToggles": "Переключатели инструментов",
   "settings.agentBehaviour.defaultAgent.title": "Агент по умолчанию",
   "settings.agentBehaviour.defaultAgent.description": "Агент при отсутствии указания",
+  "settings.agentBehaviour.availableAgents": "Доступные агенты",
   "settings.agentBehaviour.selectAgent": "Выберите агента для настройки…",
+  "settings.agentBehaviour.selectAgent.title": "Агент",
+  "settings.agentBehaviour.selectAgent.description": "Выберите агента для настройки…",
   "settings.agentBehaviour.modelOverride.title": "Переопределение модели",
   "settings.agentBehaviour.modelOverride.description": "Переопределить модель по умолчанию для этого агента",
   "settings.agentBehaviour.prompt.title": "Пользовательский промпт",
@@ -941,6 +959,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Параметр nucleus-сэмплирования (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Макс. шагов",
   "settings.agentBehaviour.maxSteps.description": "Максимальное число итераций агента",
+  "settings.agentBehaviour.discoveredSkills": "Обнаруженные навыки",
+  "settings.agentBehaviour.noSkillsFound":
+    "Навыки не обнаружены. Добавьте пути к папкам навыков или URL-адреса ниже, чтобы сделать навыки доступными.",
   "settings.agentBehaviour.skillPaths": "Пути папок навыков",
   "settings.agentBehaviour.skillUrls": "URL навыков",
   "settings.agentBehaviour.instructionFiles": "Дополнительные файлы инструкций",
@@ -949,26 +970,43 @@ export const dict = {
     "MCP-серверы не настроены. Отредактируйте файл конфигурации opencode для добавления MCP-серверов.",
   "settings.agentBehaviour.workflowsPlaceholder": "Рабочие процессы управляются через файлы рабочих процессов.",
   "settings.agentBehaviour.notImplemented": "Ещё не реализовано.",
-  "settings.autoApprove.setAll": "Установить все разрешения",
+  "settings.autoApprove.description":
+    "Определите правила запуска инструментов. Большинство инструментов по умолчанию Разрешены. Для doom_loop и external_directory по умолчанию установлено Спрашивать.",
   "settings.autoApprove.level.allow": "Разрешить",
   "settings.autoApprove.level.ask": "Спросить",
   "settings.autoApprove.level.deny": "Отклонить",
-  "settings.autoApprove.tool.read": "Чтение содержимого файлов",
-  "settings.autoApprove.tool.edit": "Редактирование или создание файлов",
-  "settings.autoApprove.tool.glob": "Поиск файлов по шаблону",
-  "settings.autoApprove.tool.grep": "Поиск в содержимом файлов",
-  "settings.autoApprove.tool.list": "Список содержимого каталога",
-  "settings.autoApprove.tool.bash": "Выполнение команд оболочки",
-  "settings.autoApprove.tool.task": "Создание подзадач агента",
-  "settings.autoApprove.tool.skill": "Выполнение навыков",
-  "settings.autoApprove.tool.lsp": "Операции языкового сервера",
-  "settings.autoApprove.tool.todoread": "Чтение списков задач",
-  "settings.autoApprove.tool.todowrite": "Запись списков задач",
-  "settings.autoApprove.tool.webfetch": "Получение веб-страниц",
-  "settings.autoApprove.tool.websearch": "Поиск в интернете",
-  "settings.autoApprove.tool.codesearch": "Поиск в кодовой базе",
-  "settings.autoApprove.tool.external_directory": "Доступ к файлам вне рабочей области",
-  "settings.autoApprove.tool.doom_loop": "Продолжить после повторных сбоев",
+  "settings.autoApprove.wildcardLabel.commands": "Все команды (*)",
+  "settings.autoApprove.wildcardLabel.paths": "Все пути (*)",
+  "settings.autoApprove.exceptions": "Исключения",
+  "settings.autoApprove.addCommand": "Добавить команду",
+  "settings.autoApprove.addPath": "Добавить путь",
+  "settings.autoApprove.placeholder.command": "например, git *",
+  "settings.autoApprove.placeholder.path": "например, *.env",
+  "settings.autoApprove.tool.read": "Чтение файлов. Разрешает агенту читать файлы, соответствующие указанному пути.",
+  "settings.autoApprove.tool.edit":
+    "Изменение файлов. Разрешает агенту создавать или редактировать файлы, включая патчи и обновления нескольких файлов.",
+  "settings.autoApprove.tool.glob":
+    "Поиск файлов по шаблону. Разрешает поиск файлов с использованием glob-шаблонов (например, src/**/*.ts).",
+  "settings.autoApprove.tool.grep":
+    "Поиск по содержимому файлов. Разрешает поиск на основе регулярных выражений внутри файлов.",
+  "settings.autoApprove.tool.list":
+    "Просмотр содержимого каталогов. Разрешает просмотр файлов и папок внутри каталога.",
+  "settings.autoApprove.tool.bash":
+    "Выполнение команд терминала. Разрешает выполнение команд оболочки (например, git status).",
+  "settings.autoApprove.tool.task":
+    "Запуск субагентов. Разрешает запуск специализированных субагентов для конкретных задач.",
+  "settings.autoApprove.tool.skill": "Загрузка навыков. Разрешает загрузку предопределенных навыков по имени.",
+  "settings.autoApprove.tool.lsp":
+    "Запрос к языковому серверу. Разрешает выполнение запросов к языковому серверу для анализа кода.",
+  "settings.autoApprove.tool.todoreadwrite":
+    "Управление списком задач. Разрешает чтение и обновление внутреннего списка задач.",
+  "settings.autoApprove.tool.webfetch": "Получение URL. Разрешает извлечение содержимого по указанному URL-адресу.",
+  "settings.autoApprove.tool.websearchcodesearch":
+    "Поиск в интернете или коде. Разрешает выполнение внешних поисковых запросов в интернете или коде.",
+  "settings.autoApprove.tool.external_directory":
+    "Доступ к файлам вне рабочей области. Срабатывает при доступе к файлам за пределами текущего каталога проекта.",
+  "settings.autoApprove.tool.doom_loop":
+    "Предотвращение повторных идентичных действий. Срабатывает, когда один и тот же вызов инструмента повторяется с идентичными входными данными.",
   "settings.checkpoints.enable.title": "Включить снимки",
   "settings.checkpoints.enable.description": "Создавать контрольные точки перед редактированием файлов",
   "settings.context.autoCompaction.title": "Автоматическое сжатие",

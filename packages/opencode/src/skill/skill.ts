@@ -136,7 +136,7 @@ export namespace Skill {
           symlink: true,
         }),
       ).catch((error) => {
-        log.error("failed .kilocode directory scan for skills", { dir, error })
+        log.error("failed .kilo directory scan for skills", { dir, error })
         return []
       })
 

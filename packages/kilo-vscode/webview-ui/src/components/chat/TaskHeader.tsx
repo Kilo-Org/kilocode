@@ -14,7 +14,11 @@ import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { TodoItem } from "../../types/messages"
 
-export const TaskHeader: Component = () => {
+interface TaskHeaderProps {
+  readonly?: boolean
+}
+
+export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const session = useSession()
   const language = useLanguage()
 
@@ -80,16 +84,18 @@ export const TaskHeader: Component = () => {
               </Tooltip>
             )}
           </Show>
-          <Tooltip value={language.t("command.session.compact")} placement="bottom">
-            <IconButton
-              icon="collapse"
-              size="small"
-              variant="ghost"
-              disabled={!canCompact()}
-              onClick={() => session.compact()}
-              aria-label={language.t("command.session.compact")}
-            />
-          </Tooltip>
+          <Show when={!props.readonly}>
+            <Tooltip value={language.t("command.session.compact")} placement="bottom">
+              <IconButton
+                icon="collapse"
+                size="small"
+                variant="ghost"
+                disabled={!canCompact()}
+                onClick={() => session.compact()}
+                aria-label={language.t("command.session.compact")}
+              />
+            </Tooltip>
+          </Show>
         </div>
       </div>
       <Show when={hasTodos()}>

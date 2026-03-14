@@ -414,6 +414,8 @@ export const dict = {
 
   "error.globalSync.connectFailed": "Verbindung zum Server fehlgeschlagen. Läuft ein Server unter `{{url}}`?",
 
+  "error.startup.title": "Serververbindung fehlgeschlagen",
+
   "error.paidModel.title": "Du musst dich anmelden, um dieses Modell zu nutzen",
   "error.paidModel.description":
     "Melde dich an oder erstelle ein Konto, um auf über 500 Modelle zuzugreifen, Credits zum Selbstkostenpreis zu nutzen oder deinen eigenen Schlüssel mitzubringen.",
@@ -448,6 +450,11 @@ export const dict = {
 
   "notification.permission.title": "Berechtigung erforderlich",
   "notification.permission.description": "{{sessionTitle}} in {{projectName}} benötigt Berechtigung",
+  "ui.permission.permissionRules": "Berechtigungsregeln",
+  "ui.permission.pattern.addToAllowed": "Zur Erlaubt-Liste hinzufügen",
+  "ui.permission.pattern.removeFromAllowed": "Aus der Erlaubt-Liste entfernen",
+  "ui.permission.pattern.addToDenied": "Zur Verweigert-Liste hinzufügen",
+  "ui.permission.pattern.removeFromDenied": "Aus der Verweigert-Liste entfernen",
   "notification.question.title": "Frage",
   "notification.question.description": "{{sessionTitle}} in {{projectName}} hat eine Frage",
   "notification.action.goToSession": "Zur Sitzung gehen",
@@ -680,6 +687,8 @@ export const dict = {
 
   "settings.providers.title": "Anbieter",
   "settings.providers.description": "Anbietereinstellungen können hier konfiguriert werden.",
+  "settings.providers.betaNotice":
+    "Derzeit kann in den Einstellungen nur der Kilo Gateway-Anbieter konfiguriert werden. Die Unterstützung für die Konfiguration weiterer Anbieter folgt in Kürze während der Beta-Phase. In der Zwischenzeit können Sie Anbieter über die CLI oder die Konfigurationsdatei konfigurieren. Wir setzen uns dafür ein, Kilo offen zu halten, ohne Lock-in.",
   "settings.providers.section.connected": "Verbundene Anbieter",
   "settings.providers.connected.empty": "Keine verbundenen Anbieter",
   "settings.providers.section.popular": "Beliebte Anbieter",
@@ -749,10 +758,16 @@ export const dict = {
   "session.empty": "Noch keine Sitzungen. Klicke + um eine neue Unterhaltung zu starten.",
   "session.cloud.repoOnly": "Nur dieses Repository",
   "session.cloud.import": "Aus der Cloud importieren",
+  "feedback.button": "Feedback & Support",
+  "feedback.dialog.message": "Wir würden uns freuen, Ihr Feedback zu hören oder Ihnen bei Problemen zu helfen.",
+  "feedback.dialog.github": "Ein Problem auf GitHub melden",
+  "feedback.dialog.discord": "Unserer Discord-Community beitreten",
+  "feedback.dialog.support": "Kundensupport",
   "session.cloud.import.title": "Aus der Cloud importieren",
   "session.cloud.import.placeholder": "Sitzungs-ID, URL oder kilo import-Befehl",
   "session.cloud.import.button": "Importieren",
   "session.cloud.import.invalid": "Ungültiges Sitzungs-ID-Format",
+  "session.cloud.import.legacy": "Dies scheint eine veraltete Sitzung zu sein, die nicht mehr unterstützt wird.",
   "session.cloud.import.failed": "Fehler beim Importieren der Cloud-Sitzung",
 
   "workspace.new": "Neuer Arbeitsbereich",
@@ -940,7 +955,10 @@ export const dict = {
   "settings.experimental.toolToggles": "Werkzeug-Schalter",
   "settings.agentBehaviour.defaultAgent.title": "Standard-Agent",
   "settings.agentBehaviour.defaultAgent.description": "Agent, der verwendet wird, wenn keiner angegeben ist",
+  "settings.agentBehaviour.availableAgents": "Verfügbare Agenten",
   "settings.agentBehaviour.selectAgent": "Agent zum Konfigurieren auswählen…",
+  "settings.agentBehaviour.selectAgent.title": "Agent",
+  "settings.agentBehaviour.selectAgent.description": "Agent zum Konfigurieren auswählen…",
   "settings.agentBehaviour.modelOverride.title": "Modell-Überschreibung",
   "settings.agentBehaviour.modelOverride.description": "Standardmodell für diesen Agent überschreiben",
   "settings.agentBehaviour.prompt.title": "Benutzerdefinierter Prompt",
@@ -951,6 +969,9 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Nucleus-Sampling-Parameter (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Max. Schritte",
   "settings.agentBehaviour.maxSteps.description": "Maximale Agent-Iterationen",
+  "settings.agentBehaviour.discoveredSkills": "Erkannte Skills",
+  "settings.agentBehaviour.noSkillsFound":
+    "Keine Skills gefunden. Fügen Sie unten Skill-Ordnerpfade oder URLs hinzu, um Skills verfügbar zu machen.",
   "settings.agentBehaviour.skillPaths": "Skill-Ordnerpfade",
   "settings.agentBehaviour.skillUrls": "Skill-URLs",
   "settings.agentBehaviour.instructionFiles": "Zusätzliche Anweisungsdateien",
@@ -960,26 +981,43 @@ export const dict = {
   "settings.agentBehaviour.workflowsPlaceholder":
     "Workflows werden über Workflow-Dateien in Ihrem Arbeitsbereich verwaltet.",
   "settings.agentBehaviour.notImplemented": "Noch nicht implementiert.",
-  "settings.autoApprove.setAll": "Alle Berechtigungen festlegen",
+  "settings.autoApprove.description":
+    "Legen Sie fest, wie Tools ausgeführt werden dürfen. Die meisten Tools sind standardmäßig auf Zulassen eingestellt. doom_loop und external_directory sind standardmäßig auf Fragen eingestellt.",
   "settings.autoApprove.level.allow": "Erlauben",
   "settings.autoApprove.level.ask": "Fragen",
   "settings.autoApprove.level.deny": "Ablehnen",
-  "settings.autoApprove.tool.read": "Dateiinhalte lesen",
-  "settings.autoApprove.tool.edit": "Dateien bearbeiten oder erstellen",
-  "settings.autoApprove.tool.glob": "Dateien nach Muster suchen",
-  "settings.autoApprove.tool.grep": "Dateiinhalte durchsuchen",
-  "settings.autoApprove.tool.list": "Verzeichnisinhalte auflisten",
-  "settings.autoApprove.tool.bash": "Shell-Befehle ausführen",
-  "settings.autoApprove.tool.task": "Unter-Agent-Aufgaben erstellen",
-  "settings.autoApprove.tool.skill": "Skills ausführen",
-  "settings.autoApprove.tool.lsp": "Sprachserver-Operationen",
-  "settings.autoApprove.tool.todoread": "Aufgabenlisten lesen",
-  "settings.autoApprove.tool.todowrite": "Aufgabenlisten schreiben",
-  "settings.autoApprove.tool.webfetch": "Webseiten abrufen",
-  "settings.autoApprove.tool.websearch": "Im Web suchen",
-  "settings.autoApprove.tool.codesearch": "Codebasis durchsuchen",
-  "settings.autoApprove.tool.external_directory": "Auf Dateien außerhalb des Arbeitsbereichs zugreifen",
-  "settings.autoApprove.tool.doom_loop": "Nach wiederholten Fehlern fortfahren",
+  "settings.autoApprove.wildcardLabel.commands": "Alle Befehle (*)",
+  "settings.autoApprove.wildcardLabel.paths": "Alle Pfade (*)",
+  "settings.autoApprove.exceptions": "Ausnahmen",
+  "settings.autoApprove.addCommand": "Befehl hinzufügen",
+  "settings.autoApprove.addPath": "Pfad hinzufügen",
+  "settings.autoApprove.placeholder.command": "z. B. git *",
+  "settings.autoApprove.placeholder.path": "z. B. *.env",
+  "settings.autoApprove.tool.read":
+    "Dateien lesen. Erlaubt dem Agenten, Dateien zu lesen, die dem angegebenen Pfad entsprechen.",
+  "settings.autoApprove.tool.edit":
+    "Dateien ändern. Erlaubt dem Agenten, Dateien zu erstellen oder zu bearbeiten, einschließlich Patches und Aktualisierungen mehrerer Dateien.",
+  "settings.autoApprove.tool.glob":
+    "Dateien nach Muster abgleichen. Erlaubt den Dateiabgleich mithilfe von Glob-Mustern (z. B. src/**/*.ts).",
+  "settings.autoApprove.tool.grep": "Dateiinhalte durchsuchen. Erlaubt Regex-basierte Suchen innerhalb von Dateien.",
+  "settings.autoApprove.tool.list":
+    "Verzeichnisinhalte auflisten. Erlaubt das Anzeigen von Dateien und Ordnern innerhalb eines Verzeichnisses.",
+  "settings.autoApprove.tool.bash":
+    "Terminalbefehle ausführen. Erlaubt die Ausführung von Shell-Befehlen (z. B. git status).",
+  "settings.autoApprove.tool.task":
+    "Sub-Agenten starten. Erlaubt das Starten spezialisierter Sub-Agenten für bestimmte Aufgaben.",
+  "settings.autoApprove.tool.skill": "Fähigkeiten laden. Erlaubt das Laden vordefinierter Fähigkeiten nach Namen.",
+  "settings.autoApprove.tool.lsp":
+    "Sprachserver abfragen. Erlaubt das Ausführen von Sprachserver-Abfragen für Code-Intelligenz.",
+  "settings.autoApprove.tool.todoreadwrite":
+    "Aufgabenliste verwalten. Ermöglicht das Lesen und Aktualisieren der internen Aufgabenliste.",
+  "settings.autoApprove.tool.webfetch": "URL abrufen. Erlaubt das Abrufen von Inhalten einer bestimmten URL.",
+  "settings.autoApprove.tool.websearchcodesearch":
+    "Web oder Code durchsuchen. Ermöglicht die Durchführung externer Web- oder Code-Suchen.",
+  "settings.autoApprove.tool.external_directory":
+    "Zugriff auf Dateien außerhalb des Arbeitsbereichs. Wird ausgelöst, wenn auf Dateien außerhalb des aktuellen Projektverzeichnisses zugegriffen wird.",
+  "settings.autoApprove.tool.doom_loop":
+    "Wiederholte identische Aktionen verhindern. Wird ausgelöst, wenn sich derselbe Werkzeugaufruf mit identischer Eingabe wiederholt.",
   "settings.checkpoints.enable.title": "Snapshots aktivieren",
   "settings.checkpoints.enable.description":
     "Prüfpunkte vor Dateibearbeitungen erstellen, um vorherige Zustände wiederherstellen zu können",

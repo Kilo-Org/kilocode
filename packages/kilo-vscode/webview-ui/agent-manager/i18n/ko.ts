@@ -30,10 +30,16 @@ export const dict = {
   "agentManager.session.noSessions": "열린 세션 없음",
   "agentManager.tab.close": "닫기",
   "agentManager.tab.closeTab": "탭 닫기",
+  "agentManager.tab.forkSession": "세션 포크",
   "agentManager.tab.terminal": "터미널",
   "agentManager.tab.openTerminal": "터미널 열기",
   "agentManager.setup.failed": "워크스페이스 설정 실패",
   "agentManager.setup.settingUp": "워크스페이스 설정 중",
+  "agentManager.setup.error.git_not_found":
+    "Git이 설치되어 있지 않거나 PATH에서 찾을 수 없습니다. Git을 설치하고 VS Code를 다시 시작하세요.",
+  "agentManager.setup.error.not_git_repo": "worktrees를 사용하려면 git 리포지토리가 포함된 폴더를 여세요.",
+  "agentManager.setup.error.lfs_missing":
+    "이 리포지토리는 Git LFS를 사용하지만 git-lfs를 찾을 수 없습니다. Git LFS를 설치하세요.",
   "agentManager.shortcuts.title": "키보드 단축키",
   "agentManager.shortcuts.category.sidebar": "사이드바",
   "agentManager.shortcuts.category.tabs": "탭",
