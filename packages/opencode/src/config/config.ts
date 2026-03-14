@@ -51,8 +51,7 @@ import { WorkflowsMigrator } from "../kilocode/workflows-migrator" // kilocode_c
 
 export namespace Config {
   const CONFIG_FILES_OPENCODE = ["opencode.jsonc", "opencode.json"] as const
-  const CONFIG_FILES_KILO_PROJECT = ["kilo.jsonc", "kilo.json", ...CONFIG_FILES_OPENCODE] as const
-  const CONFIG_FILES_KILO_GLOBAL = ["kilo.json", "kilo.jsonc", "config.json", ...CONFIG_FILES_OPENCODE] as const
+  const CONFIG_FILES_KILO = ["config.json", "kilo.jsonc", "kilo.json", ...CONFIG_FILES_OPENCODE] as const
 
   const ModelId = z.string().meta({ $ref: "https://models.dev/model-schema.json#/$defs/Model" })
 
@@ -233,7 +232,7 @@ export namespace Config {
     if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
       // kilocode_change start: Collect files by directory, then process closest first
       const filesByDir = new Map<string, string[]>()
-      for (const file of CONFIG_FILES_KILO_PROJECT) {
+      for (const file of CONFIG_FILES_KILO) {
         const found = await Filesystem.findUp(file, Instance.directory, Instance.worktree)
         for (const filepath of found) {
           const dir = path.dirname(filepath)
@@ -248,7 +247,7 @@ export namespace Config {
       )
       // Process directories farthest first so closest is processed last and wins
       for (const [, files] of sortedDirs) {
-        for (const file of CONFIG_FILES_KILO_PROJECT) {
+        for (const file of CONFIG_FILES_KILO) {
           const filepath = files.find((f) => path.basename(f) === file)
           if (filepath) result = mergeConfigConcatArrays(result, await loadFile(filepath))
         }
@@ -277,7 +276,7 @@ export namespace Config {
         dir.endsWith(".opencode") ||
         dir === Flag.KILO_CONFIG_DIR
       ) {
-        for (const file of CONFIG_FILES_KILO_PROJECT) {
+        for (const file of CONFIG_FILES_KILO) {
           // kilocode_change end
           log.debug(`loading config from ${path.join(dir, file)}`)
           result = mergeConfigConcatArrays(result, await loadFile(path.join(dir, file)))
@@ -319,7 +318,7 @@ export namespace Config {
     // This way it only loads config file and not skills/plugins/commands
     if (existsSync(managedDir)) {
       // kilocode_change start
-      for (const file of CONFIG_FILES_KILO_GLOBAL) {
+      for (const file of CONFIG_FILES_KILO) {
         // kilocode_change end
         result = mergeConfigConcatArrays(result, await loadFile(path.join(managedDir, file)))
       }
@@ -1517,7 +1516,7 @@ export namespace Config {
     // since managed config directories are typically read-only for regular users.
     // Continue searching to find a writable location for the toggle.
     if (existsSync(managedDir)) {
-      for (const file of CONFIG_FILES_KILO_GLOBAL) {
+      for (const file of CONFIG_FILES_KILO) {
         const filepath = path.join(managedDir, file)
         if (await hasMcpDefinition(filepath, mcpName)) {
           log.warn("MCP server is defined in managed config (read-only), toggle may not be persisted", {
@@ -1553,7 +1552,7 @@ export namespace Config {
 
     // Check KILO_CONFIG_DIR (searches both kilo.json and opencode.json files)
     if (Flag.KILO_CONFIG_DIR) {
-      for (const file of CONFIG_FILES_KILO_PROJECT) {
+      for (const file of CONFIG_FILES_KILO) {
         const filepath = path.join(Flag.KILO_CONFIG_DIR, file)
         if (await hasMcpDefinition(filepath, mcpName)) {
           return filepath
@@ -1571,7 +1570,7 @@ export namespace Config {
         }),
       )
       for (const dir of opencodeDirs) {
-        for (const file of CONFIG_FILES_KILO_PROJECT) {
+        for (const file of CONFIG_FILES_KILO) {
           const filepath = path.join(dir, file)
           if (await hasMcpDefinition(filepath, mcpName)) {
             return filepath
@@ -1590,7 +1589,7 @@ export namespace Config {
         }),
       )
       for (const dir of kiloDirs) {
-        for (const file of CONFIG_FILES_KILO_PROJECT) {
+        for (const file of CONFIG_FILES_KILO) {
           const filepath = path.join(dir, file)
           if (await hasMcpDefinition(filepath, mcpName)) {
             return filepath
@@ -1603,7 +1602,7 @@ export namespace Config {
     // kilocode_change: Check by directory depth (closest first) to match initConfigState loading precedence
     if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
       const allFiles: string[] = []
-      for (const file of CONFIG_FILES_KILO_PROJECT) {
+      for (const file of CONFIG_FILES_KILO) {
         const found = await Filesystem.findUp(file, Instance.directory, Instance.worktree)
         allFiles.push(...found)
       }
@@ -1618,7 +1617,7 @@ export namespace Config {
 
     // Check ~/.opencode/ - lower precedence than project directories
     const homeOpencodeDir = path.join(Global.Path.home, ".opencode")
-    for (const file of CONFIG_FILES_KILO_PROJECT) {
+    for (const file of CONFIG_FILES_KILO) {
       const filepath = path.join(homeOpencodeDir, file)
       if (await hasMcpDefinition(filepath, mcpName)) {
         return filepath
@@ -1627,7 +1626,7 @@ export namespace Config {
 
     // Check ~/.kilo/ directory (legacy Kilocode config location) - lowest precedence
     const homeKiloDir = path.join(Global.Path.home, ".kilo")
-    for (const file of CONFIG_FILES_KILO_PROJECT) {
+    for (const file of CONFIG_FILES_KILO) {
       const filepath = path.join(homeKiloDir, file)
       if (await hasMcpDefinition(filepath, mcpName)) {
         return filepath
@@ -1671,7 +1670,7 @@ export namespace Config {
 
     // Check KILO_CONFIG_DIR (explicit directory flag)
     if (Flag.KILO_CONFIG_DIR) {
-      for (const file of CONFIG_FILES_KILO_PROJECT) {
+      for (const file of CONFIG_FILES_KILO) {
         const filepath = path.join(Flag.KILO_CONFIG_DIR, file)
         if (existsSync(filepath)) {
           return filepath
@@ -1697,7 +1696,7 @@ export namespace Config {
       }),
     )
     for (const dir of opencodeDirs) {
-      for (const file of CONFIG_FILES_KILO_PROJECT) {
+      for (const file of CONFIG_FILES_KILO) {
         const filepath = path.join(dir, file)
         if (existsSync(filepath)) {
           return filepath
@@ -1718,7 +1717,7 @@ export namespace Config {
       }),
     )
     for (const dir of kiloDirs) {
-      for (const file of CONFIG_FILES_KILO_PROJECT) {
+      for (const file of CONFIG_FILES_KILO) {
         const filepath = path.join(dir, file)
         if (existsSync(filepath)) {
           return filepath
@@ -1731,7 +1730,7 @@ export namespace Config {
     }
 
     // Find project config files (closest first)
-    for (const file of CONFIG_FILES_KILO_PROJECT) {
+    for (const file of CONFIG_FILES_KILO) {
       const found = await Filesystem.findUp(file, Instance.directory, Instance.worktree)
       if (found.length > 0) {
         return found[0]
@@ -1740,7 +1739,7 @@ export namespace Config {
 
     // Check ~/.opencode/ (user home directory config)
     const homeOpencodeDir = path.join(Global.Path.home, ".opencode")
-    for (const file of CONFIG_FILES_KILO_PROJECT) {
+    for (const file of CONFIG_FILES_KILO) {
       const filepath = path.join(homeOpencodeDir, file)
       if (existsSync(filepath)) {
         return filepath
@@ -1752,7 +1751,7 @@ export namespace Config {
 
     // Check ~/.kilo/ (legacy Kilocode config location)
     const homeKiloDir = path.join(Global.Path.home, ".kilo")
-    for (const file of CONFIG_FILES_KILO_PROJECT) {
+    for (const file of CONFIG_FILES_KILO) {
       const filepath = path.join(homeKiloDir, file)
       if (existsSync(filepath)) {
         return filepath
@@ -1784,7 +1783,7 @@ export namespace Config {
   }
 
   function globalConfigFile() {
-    const candidates = CONFIG_FILES_KILO_GLOBAL.map((file) => path.join(Global.Path.config, file))
+    const candidates = CONFIG_FILES_KILO.map((file) => path.join(Global.Path.config, file))
     for (const file of candidates) {
       if (existsSync(file)) return file
     }
