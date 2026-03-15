@@ -1988,15 +1988,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     // Refresh config and dependent data when the server signals a config change
-    const affectedDirectories = new Set<string>()
-    affectedDirectories.add(this.getWorkspaceDirectory()) // root workspace
-    for (const sessionDir of this.sessionDirectories.values()) {
-      affectedDirectories.add(sessionDir) // worktree directories
-    }
-    if (event.type === "config.changed" && affectedDirectories.has(event.properties.directory)) {
-      // Pass the affected directory so worktree panels get their own config, not the root workspace's
-      void this.reloadAfterAuthChange(event.properties.directory)
-      return
+    // Only refresh if the change affects the current session's directory, not background worktrees
+    // This prevents a config change in one worktree from overwriting the active panel's state
+    if (event.type === "config.changed") {
+      const currentSessionDir = this.currentSession
+        ? (this.sessionDirectories.get(this.currentSession.id) ?? this.getWorkspaceDirectory())
+        : this.getWorkspaceDirectory()
+      if (event.properties.directory === currentSessionDir) {
+        void this.reloadAfterAuthChange(event.properties.directory)
+        return
+      }
     }
 
     // Forward relevant events to webview

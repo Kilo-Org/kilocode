@@ -96,9 +96,11 @@ export namespace State {
     return [...recordsByKey.keys()]
   }
 
-  // kilocode_change - dispose ALL state for ALL directories (not just a specific init entry)
-  // This is needed when shared config changes affect all instances (e.g., global MCP toggle)
-  export async function disposeAll() {
-    await Promise.all(keys().map((key) => dispose(key)))
+  // kilocode_change - dispose all state except for the specified key
+  // Used when shared config changes but the current instance's state should be preserved
+  // (e.g., MCP.connect() persists enabled:true, but should keep the just-connected client alive)
+  export async function disposeAllExcept(excludeKey: string) {
+    const allKeys = keys().filter((key) => key !== excludeKey)
+    await Promise.all(allKeys.map((key) => dispose(key)))
   }
 }
