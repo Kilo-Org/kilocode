@@ -116,15 +116,124 @@ export namespace MCP {
     })
   }
 
+  // Non-standard JSON Schema keywords that some MCP servers emit (e.g. OpenAI
+  // extensions). These are not part of JSON Schema draft-07 and cause validation
+  // failures in strict backends like llama.cpp.
+  const NON_STANDARD_KEYWORDS = new Set(["endsWith", "startsWith"])
+
+  // JSON Schema keywords whose values are single schemas and need recursion.
+  // Covers draft-07 and draft 2020-12.
+  const SCHEMA_VALUED_KEYWORDS = new Set([
+    "additionalProperties",
+    "additionalItems",
+    "unevaluatedItems",
+    "unevaluatedProperties",
+    "not",
+    "if",
+    "then",
+    "else",
+    "contains",
+    "propertyNames",
+  ])
+
+  // JSON Schema keywords whose values are maps of schemas (like properties).
+  // Each value in the map is a schema that needs recursive sanitization.
+  const SCHEMA_MAP_KEYWORDS = new Set([
+    "$defs",
+    "definitions",
+    "dependencies",
+  ])
+
+  /**
+   * Recursively sanitize a JSON Schema object so it is safe for any LLM backend.
+   *
+   * - Strips non-standard keywords (endsWith, startsWith, …)
+   * - Anchors unanchored `pattern` values with `^…$` (required by some backends)
+   */
+  function sanitizeSchema(schema: Record<string, unknown>): Record<string, unknown> {
+    const result: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(schema)) {
+      if (NON_STANDARD_KEYWORDS.has(key)) continue
+
+      if (key === "pattern" && typeof value === "string") {
+        let anchored = value
+        if (!anchored.startsWith("^") || !anchored.endsWith("$")) {
+          // Wrap in non-capturing group to preserve alternation semantics:
+          // "foo|bar" → "^(?:foo|bar)$" (not "^foo|bar$" which changes meaning)
+          anchored = `^(?:${value})$`
+        }
+        result[key] = anchored
+        continue
+      }
+
+      // properties, patternProperties, dependentSchemas, $defs, definitions, and
+      // dependencies are all maps whose values are schemas needing recursion.
+      if (
+        (key === "properties" || key === "patternProperties" || key === "dependentSchemas" || SCHEMA_MAP_KEYWORDS.has(key)) &&
+        value &&
+        typeof value === "object" &&
+        !Array.isArray(value)
+      ) {
+        const props: Record<string, unknown> = {}
+        for (const [propName, propSchema] of Object.entries(value as Record<string, unknown>)) {
+          props[propName] =
+            propSchema && typeof propSchema === "object" && !Array.isArray(propSchema)
+              ? sanitizeSchema(propSchema as Record<string, unknown>)
+              : propSchema
+        }
+        result[key] = props
+        continue
+      }
+
+      if ((key === "items" || key === "prefixItems") && value && typeof value === "object") {
+        result[key] = Array.isArray(value)
+          ? value.map((item) =>
+              item && typeof item === "object" && !Array.isArray(item)
+                ? sanitizeSchema(item as Record<string, unknown>)
+                : item,
+            )
+          : sanitizeSchema(value as Record<string, unknown>)
+        continue
+      }
+
+      if ((key === "allOf" || key === "anyOf" || key === "oneOf") && Array.isArray(value)) {
+        result[key] = value.map((item) =>
+          item && typeof item === "object" && !Array.isArray(item)
+            ? sanitizeSchema(item as Record<string, unknown>)
+            : item,
+        )
+        continue
+      }
+
+      // Recurse into other schema-valued keywords (additionalProperties, not,
+      // if, then, else, $defs, etc.) so non-standard keywords are stripped
+      // regardless of where they appear.
+      if (
+        value &&
+        typeof value === "object" &&
+        !Array.isArray(value) &&
+        SCHEMA_VALUED_KEYWORDS.has(key)
+      ) {
+        result[key] = sanitizeSchema(value as Record<string, unknown>)
+        continue
+      }
+
+      result[key] = value
+    }
+    return result
+  }
+
   // Convert MCP tool definition to AI SDK Tool type
   async function convertMcpTool(mcpTool: MCPToolDef, client: MCPClient, timeout?: number): Promise<Tool> {
     const inputSchema = mcpTool.inputSchema
 
-    // Spread first, then override type to ensure it's always "object"
+    // Sanitize the schema to strip non-standard keywords and anchor patterns,
+    // then override type to ensure it's always "object".
+    const sanitized = sanitizeSchema(inputSchema as Record<string, unknown>)
     const schema: JSONSchema7 = {
-      ...(inputSchema as JSONSchema7),
+      ...sanitized,
       type: "object",
-      properties: (inputSchema.properties ?? {}) as JSONSchema7["properties"],
+      properties: (sanitized.properties ?? {}) as JSONSchema7["properties"],
       additionalProperties: false,
     }
 
