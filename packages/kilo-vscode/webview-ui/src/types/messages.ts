@@ -316,6 +316,48 @@ export interface ExperimentalConfig {
   mcp_timeout?: number
 }
 
+export type IndexingProvider =
+  | "openai"
+  | "ollama"
+  | "openai-compatible"
+  | "gemini"
+  | "mistral"
+  | "vercel-ai-gateway"
+  | "bedrock"
+  | "openrouter"
+  | "voyage"
+
+export interface IndexingConfig {
+  enabled?: boolean
+  provider?: IndexingProvider
+  model?: string
+  dimension?: number
+  vectorStore?: "lancedb" | "qdrant"
+  openai?: { apiKey?: string }
+  ollama?: { baseUrl?: string }
+  "openai-compatible"?: { baseUrl?: string; apiKey?: string }
+  gemini?: { apiKey?: string }
+  mistral?: { apiKey?: string }
+  "vercel-ai-gateway"?: { apiKey?: string }
+  bedrock?: { region?: string; profile?: string }
+  openrouter?: { apiKey?: string; specificProvider?: string }
+  voyage?: { apiKey?: string }
+  qdrant?: { url?: string; apiKey?: string }
+  lancedb?: { directory?: string }
+  searchMinScore?: number
+  searchMaxResults?: number
+  embeddingBatchSize?: number
+  scannerMaxBatchRetries?: number
+}
+
+export interface IndexingStatus {
+  state: "Disabled" | "In Progress" | "Complete" | "Error"
+  message: string
+  processedFiles: number
+  totalFiles: number
+  percent: number
+}
+
 export interface Config {
   permission?: PermissionConfig
   model?: string | null
@@ -339,6 +381,7 @@ export interface Config {
   tools?: Record<string, boolean>
   layout?: "auto" | "stretch"
   experimental?: ExperimentalConfig
+  indexing?: IndexingConfig
 }
 
 // ============================================
@@ -541,6 +584,12 @@ export interface DeviceAuthCancelledMessage {
 export interface NavigateMessage {
   type: "navigate"
   view: "newTask" | "marketplace" | "history" | "cloudHistory" | "profile" | "settings" | "migration" | "subAgentViewer" // legacy-migration: "migration"
+  tab?: string
+}
+
+export interface IndexingStatusLoadedMessage {
+  type: "indexingStatusLoaded"
+  status: IndexingStatus
 }
 
 export interface ProvidersLoadedMessage {
@@ -1039,6 +1088,7 @@ export type ExtensionMessage =
   | DeviceAuthFailedMessage
   | DeviceAuthCancelledMessage
   | NavigateMessage
+  | IndexingStatusLoadedMessage
   | ProvidersLoadedMessage
   | AgentsLoadedMessage
   | SkillsLoadedMessage
@@ -1292,6 +1342,15 @@ export interface RequestBrowserSettingsMessage {
 
 export interface RequestConfigMessage {
   type: "requestConfig"
+}
+
+export interface RequestIndexingStatusMessage {
+  type: "requestIndexingStatus"
+}
+
+export interface OpenSettingsTabRequest {
+  type: "openSettingsTab"
+  tab: string
 }
 
 export interface UpdateConfigMessage {
@@ -1615,7 +1674,9 @@ export type WebviewMessage =
   | UpdateSettingRequest
   | RequestBrowserSettingsMessage
   | RequestConfigMessage
+  | RequestIndexingStatusMessage
   | UpdateConfigMessage
+  | OpenSettingsTabRequest
   | RequestNotificationSettingsMessage
   | ResetAllSettingsRequest
   | SyncSessionRequest

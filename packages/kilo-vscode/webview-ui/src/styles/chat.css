@@ -902,6 +902,46 @@
   }
 }
 
+.prompt-indexing-button {
+  position: relative;
+
+  [data-slot="icon-svg"] {
+    color: currentColor;
+  }
+}
+
+.prompt-indexing-button--muted {
+  color: var(--vscode-descriptionForeground);
+}
+
+.prompt-indexing-button--warning {
+  color: var(--vscode-charts-yellow, #cca700);
+}
+
+.prompt-indexing-button--success {
+  color: var(--vscode-testing-iconPassed, #73c991);
+}
+
+.prompt-indexing-button--error {
+  color: var(--vscode-errorForeground, #f48771);
+}
+
+.prompt-indexing-icon {
+  position: relative;
+  display: inline-flex;
+}
+
+.prompt-indexing-dot {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 0 1px var(--vscode-editor-background, #1e1e1e);
+}
+
 /* ============================================
    File Mention Dropdown
    ============================================ */

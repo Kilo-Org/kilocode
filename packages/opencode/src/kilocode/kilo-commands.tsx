@@ -13,6 +13,7 @@ import { DialogAlert } from "@tui/ui/dialog-alert"
 import type { Organization } from "@kilocode/kilo-gateway"
 import { DialogKiloTeamSelect } from "./components/dialog-kilo-team-select.js"
 import { DialogKiloProfile } from "./components/dialog-kilo-profile.js"
+import { DialogIndexing } from "./components/dialog-indexing.js"
 
 // These types are OpenCode-internal and imported at runtime
 type UseSDK = any
@@ -68,6 +69,18 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
         } catch (error) {
           dialog.replace(() => <DialogAlert title="Error" message={`Failed to fetch profile: ${error}`} />)
         }
+      },
+    },
+
+    // /indexing command — always available (local feature, not gated by Kilo connection)
+    {
+      value: "kilo.indexing",
+      title: "Indexing",
+      description: "Configure codebase indexing",
+      category: "Kilo",
+      slash: { name: "indexing", aliases: ["index", "embedding"] },
+      onSelect: () => {
+        dialog.replace(() => <DialogIndexing useSDK={useSDK} />)
       },
     },
 

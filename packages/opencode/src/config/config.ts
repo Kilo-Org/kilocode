@@ -1106,6 +1106,129 @@ export namespace Config {
     })
   export type Provider = z.infer<typeof Provider>
 
+  // kilocode_change start - indexing configuration
+  export const Indexing = z
+    .object({
+      enabled: z.boolean().optional().describe("Enable codebase indexing"),
+      provider: z
+        .enum([
+          "openai",
+          "ollama",
+          "openai-compatible",
+          "gemini",
+          "mistral",
+          "vercel-ai-gateway",
+          "bedrock",
+          "openrouter",
+          "voyage",
+        ])
+        .optional()
+        .describe("Embedding provider to use for codebase indexing"),
+      model: z.string().optional().describe("Embedding model ID (uses provider default if omitted)"),
+      dimension: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe("Override embedding vector dimension (auto-detected from model if omitted)"),
+      vectorStore: z.enum(["lancedb", "qdrant"]).optional().describe("Vector store backend (default: lancedb)"),
+      openai: z
+        .object({ apiKey: z.string().optional() })
+        .strict()
+        .optional()
+        .describe("OpenAI embedding provider options"),
+      ollama: z
+        .object({ baseUrl: z.string().optional() })
+        .strict()
+        .optional()
+        .describe("Ollama embedding provider options"),
+      "openai-compatible": z
+        .object({
+          baseUrl: z.string().optional(),
+          apiKey: z.string().optional(),
+        })
+        .strict()
+        .optional()
+        .describe("OpenAI-compatible embedding provider options"),
+      gemini: z
+        .object({ apiKey: z.string().optional() })
+        .strict()
+        .optional()
+        .describe("Gemini embedding provider options"),
+      mistral: z
+        .object({ apiKey: z.string().optional() })
+        .strict()
+        .optional()
+        .describe("Mistral embedding provider options"),
+      "vercel-ai-gateway": z
+        .object({ apiKey: z.string().optional() })
+        .strict()
+        .optional()
+        .describe("Vercel AI Gateway embedding provider options"),
+      bedrock: z
+        .object({
+          region: z.string().optional(),
+          profile: z.string().optional(),
+        })
+        .strict()
+        .optional()
+        .describe("AWS Bedrock embedding provider options"),
+      openrouter: z
+        .object({
+          apiKey: z.string().optional(),
+          specificProvider: z.string().optional(),
+        })
+        .strict()
+        .optional()
+        .describe("OpenRouter embedding provider options"),
+      voyage: z
+        .object({ apiKey: z.string().optional() })
+        .strict()
+        .optional()
+        .describe("Voyage embedding provider options"),
+      qdrant: z
+        .object({
+          url: z.string().optional(),
+          apiKey: z.string().optional(),
+        })
+        .strict()
+        .optional()
+        .describe("Qdrant vector store connection options"),
+      lancedb: z
+        .object({ directory: z.string().optional() })
+        .strict()
+        .optional()
+        .describe("LanceDB vector store options"),
+      searchMinScore: z
+        .number()
+        .min(0)
+        .max(1)
+        .optional()
+        .describe("Minimum similarity score for search results (default: 0.4)"),
+      searchMaxResults: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe("Maximum number of search results (default: 50)"),
+      embeddingBatchSize: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe("Number of code segments per embedding batch (default: 60)"),
+      scannerMaxBatchRetries: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe("Maximum retry attempts for failed embedding batches (default: 3)"),
+    })
+    .strict()
+    .meta({ ref: "IndexingConfig" })
+  export type Indexing = z.infer<typeof Indexing>
+  // kilocode_change end
+
   export const Info = z
     .object({
       $schema: z.string().optional().describe("JSON schema reference for configuration validation"),
@@ -1300,6 +1423,9 @@ export namespace Config {
             .describe("Timeout in milliseconds for model context protocol (MCP) requests"),
         })
         .optional(),
+      // kilocode_change start
+      indexing: Indexing.optional().describe("Codebase indexing configuration"),
+      // kilocode_change end
     })
     .strict()
     .meta({

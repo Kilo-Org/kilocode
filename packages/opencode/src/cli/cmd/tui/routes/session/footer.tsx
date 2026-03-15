@@ -6,6 +6,28 @@ import { useConnected } from "../../component/dialog-model"
 import { createStore } from "solid-js/store"
 import { useRoute } from "../../context/route"
 
+function indexingTone(
+  state: "Disabled" | "In Progress" | "Complete" | "Error",
+  theme: ReturnType<typeof useTheme>["theme"],
+) {
+  if (state === "Complete") return theme.success
+  if (state === "Error") return theme.error
+  if (state === "In Progress") return theme.warning
+  return theme.textMuted
+}
+
+function indexingText(indexing: ReturnType<typeof useSync>["data"]["indexing"]) {
+  if (indexing.state === "In Progress") {
+    return `IDX ${indexing.percent}% ${indexing.processedFiles}/${indexing.totalFiles}`
+  }
+
+  if (indexing.state === "Error") {
+    return `IDX ${indexing.message}`
+  }
+
+  return `IDX ${indexing.state}`
+}
+
 export function Footer() {
   const { theme } = useTheme()
   const sync = useSync()
@@ -19,6 +41,7 @@ export function Footer() {
   })
   const directory = useDirectory()
   const connected = useConnected()
+  const indexing = createMemo(() => sync.data.indexing)
 
   const [store, setStore] = createStore({
     welcome: false,
@@ -82,6 +105,7 @@ export function Footer() {
                 {mcp()} MCP
               </text>
             </Show>
+            <text fg={indexingTone(indexing().state, theme)}>{indexingText(indexing()).slice(0, 48)}</text>
             <text fg={theme.textMuted}>/status</text>
           </Match>
         </Switch>

@@ -5,10 +5,12 @@ import path from "path"
 import fs from "fs"
 import { $ } from "bun"
 import { fileURLToPath } from "url"
+import { createRequire } from "module"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const dir = path.resolve(__dirname, "..")
+const require = createRequire(import.meta.url)
 
 process.chdir(dir)
 
@@ -28,6 +30,24 @@ console.log("Generated models-snapshot.ts")
 const singleFlag = process.argv.includes("--single")
 const baselineFlag = process.argv.includes("--baseline")
 const skipInstall = process.argv.includes("--skip-install")
+
+async function copyTreeSitterWasms(outputDir: string) {
+  const runtimeWasmPath = require.resolve("web-tree-sitter/tree-sitter.wasm")
+  const languagePackagePath = require.resolve("tree-sitter-wasms/package.json")
+  const languageWasmDir = path.join(path.dirname(languagePackagePath), "out")
+  const targetDir = path.join(outputDir, "tree-sitter")
+
+  await fs.promises.mkdir(targetDir, { recursive: true })
+  await fs.promises.copyFile(runtimeWasmPath, path.join(targetDir, "tree-sitter.wasm"))
+
+  const languageWasmFiles = (await fs.promises.readdir(languageWasmDir)).filter((file) => file.endsWith(".wasm"))
+
+  await Promise.all(
+    languageWasmFiles.map((file) => fs.promises.copyFile(path.join(languageWasmDir, file), path.join(targetDir, file))),
+  )
+
+  console.log(`copied ${languageWasmFiles.length + 1} tree-sitter wasm files to ${targetDir}`)
+}
 
 const allTargets: {
   os: string
@@ -187,6 +207,8 @@ for (const item of targets) {
       KILO_MIGRATIONS: JSON.stringify(migrationEntries),
     },
   })
+
+  await copyTreeSitterWasms(path.resolve(dir, `dist/${name}/bin`))
 
   // kilocode_change start - fix Nix-specific ELF interpreter paths for Linux binaries
   if (item.os === "linux") {

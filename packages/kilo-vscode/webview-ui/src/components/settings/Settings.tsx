@@ -1,4 +1,4 @@
-import { Component } from "solid-js"
+import { Component, createSignal, onCleanup, onMount } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tabs } from "@kilocode/kilo-ui/tabs"
 import { useLanguage } from "../../context/language"
@@ -16,6 +16,7 @@ import PromptsTab from "./PromptsTab"
 import ExperimentalTab from "./ExperimentalTab"
 import LanguageTab from "./LanguageTab"
 import AboutKiloCodeTab from "./AboutKiloCodeTab"
+import IndexingTab from "./IndexingTab"
 import { useServer } from "../../context/server"
 
 export interface SettingsProps {
@@ -25,6 +26,17 @@ export interface SettingsProps {
 const Settings: Component<SettingsProps> = (props) => {
   const server = useServer()
   const language = useLanguage()
+  const [tab, setTab] = createSignal("providers")
+
+  onMount(() => {
+    const handler = (event: Event) => {
+      const custom = event as CustomEvent<{ tab?: string }>
+      if (!custom.detail?.tab) return
+      setTab(custom.detail.tab)
+    }
+    window.addEventListener("settingsTabNavigate", handler)
+    onCleanup(() => window.removeEventListener("settingsTabNavigate", handler))
+  })
 
   return (
     <div style={{ display: "flex", "flex-direction": "column", height: "100%" }}>
@@ -42,7 +54,13 @@ const Settings: Component<SettingsProps> = (props) => {
       </div>
 
       {/* Settings tabs */}
-      <Tabs orientation="vertical" variant="settings" defaultValue="providers" style={{ flex: 1, overflow: "hidden" }}>
+      <Tabs
+        orientation="vertical"
+        variant="settings"
+        value={tab()}
+        onChange={setTab}
+        style={{ flex: 1, overflow: "hidden" }}
+      >
         <Tabs.List>
           <Tabs.Trigger value="providers">
             <Icon name="providers" />
@@ -79,6 +97,10 @@ const Settings: Component<SettingsProps> = (props) => {
           <Tabs.Trigger value="context">
             <Icon name="server" />
             <span class="label">{language.t("settings.context.title")}</span>
+          </Tabs.Trigger>
+          <Tabs.Trigger value="indexing">
+            <Icon name="server" />
+            <span class="label">{language.t("settings.indexing.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="terminal">
             <Icon name="console" />
@@ -137,6 +159,10 @@ const Settings: Component<SettingsProps> = (props) => {
         <Tabs.Content value="context">
           <h3>{language.t("settings.context.title")}</h3>
           <ContextTab />
+        </Tabs.Content>
+        <Tabs.Content value="indexing">
+          <h3>{language.t("settings.indexing.title")}</h3>
+          <IndexingTab />
         </Tabs.Content>
         <Tabs.Content value="terminal">
           <h3>{language.t("settings.terminal.title")}</h3>

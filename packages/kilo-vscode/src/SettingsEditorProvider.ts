@@ -3,6 +3,7 @@ import { KiloProvider } from "./KiloProvider"
 import type { KiloConnectionService } from "./services/cli-backend"
 
 type PanelView = "settings" | "profile"
+type PanelTab = "indexing"
 
 /**
  * Opens Settings or Profile as an editor-area WebviewPanel,
@@ -18,6 +19,7 @@ type PanelView = "settings" | "profile"
 export class SettingsEditorProvider implements vscode.Disposable {
   private panels = new Map<PanelView, vscode.WebviewPanel>()
   private providers = new Map<PanelView, KiloProvider>()
+  private pendingTabs = new Map<PanelView, PanelTab | undefined>()
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -25,10 +27,12 @@ export class SettingsEditorProvider implements vscode.Disposable {
     private readonly context: vscode.ExtensionContext,
   ) {}
 
-  openPanel(view: PanelView): void {
+  openPanel(view: PanelView, options?: { tab?: PanelTab }): void {
+    this.pendingTabs.set(view, options?.tab)
     const existing = this.panels.get(view)
     if (existing) {
       existing.reveal(vscode.ViewColumn.One)
+      this.providers.get(view)?.postMessage({ type: "navigate", view, ...(options?.tab ? { tab: options.tab } : {}) })
       return
     }
 
@@ -60,10 +64,8 @@ export class SettingsEditorProvider implements vscode.Disposable {
     // Once the webview signals ready, navigate to the target view.
     const readyDisposable = panel.webview.onDidReceiveMessage((msg) => {
       if (msg.type === "webviewReady") {
-        // Small delay to let KiloProvider's own webviewReady handler finish first
-        setTimeout(() => {
-          provider.postMessage({ type: "navigate", view })
-        }, 50)
+        const tab = this.pendingTabs.get(view)
+        provider.postMessage({ type: "navigate", view, ...(tab ? { tab } : {}) })
         readyDisposable.dispose()
       }
     })
@@ -77,6 +79,7 @@ export class SettingsEditorProvider implements vscode.Disposable {
       provider.dispose()
       this.panels.delete(view)
       this.providers.delete(view)
+      this.pendingTabs.delete(view)
     })
   }
 
@@ -86,5 +89,6 @@ export class SettingsEditorProvider implements vscode.Disposable {
     }
     this.panels.clear()
     this.providers.clear()
+    this.pendingTabs.clear()
   }
 }

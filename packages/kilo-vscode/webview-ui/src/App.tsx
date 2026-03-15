@@ -16,6 +16,7 @@ import { VSCodeProvider, useVSCode } from "./context/vscode"
 import { ServerProvider, useServer } from "./context/server"
 import { ProviderProvider, useProvider } from "./context/provider"
 import { ConfigProvider } from "./context/config"
+import { IndexingProvider } from "./context/indexing"
 import { SessionProvider, useSession } from "./context/session"
 import { LanguageProvider } from "./context/language"
 import { ChatView } from "./components/chat"
@@ -214,6 +215,7 @@ const AppContent: Component = () => {
       if (message?.type === "navigate" && message.view && VALID_VIEWS.has(message.view)) {
         console.log("[Kilo New] App: 🧭 navigate:", message.view)
         setCurrentView(message.view as ViewType)
+        window.dispatchEvent(new CustomEvent("settingsTabNavigate", { detail: { tab: message.tab } }))
       }
       if (message?.type === "openCloudSession" && message.sessionId) {
         console.log("[Kilo New] App: ☁️ openCloudSession:", message.sessionId)
@@ -304,13 +306,15 @@ const App: Component = () => {
                     <FileComponentProvider component={File}>
                       <ProviderProvider>
                         <ConfigProvider>
-                          <NotificationsProvider>
-                            <SessionProvider>
-                              <DataBridge>
-                                <AppContent />
-                              </DataBridge>
-                            </SessionProvider>
-                          </NotificationsProvider>
+                          <IndexingProvider>
+                            <NotificationsProvider>
+                              <SessionProvider>
+                                <DataBridge>
+                                  <AppContent />
+                                </DataBridge>
+                              </SessionProvider>
+                            </NotificationsProvider>
+                          </IndexingProvider>
                         </ConfigProvider>
                       </ProviderProvider>
                     </FileComponentProvider>
