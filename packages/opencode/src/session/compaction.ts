@@ -50,7 +50,7 @@ export namespace SessionCompaction {
   export const PRUNE_MINIMUM = 20_000
   export const PRUNE_PROTECT = 40_000
 
-  const PRUNE_PROTECTED_TOOLS = ["skill"]
+  const PRUNE_PROTECTED_TOOLS_DEFAULT = ["skill"]
 
   // goes backwards through parts until there are 40_000 tokens worth of tool
   // calls. then erases output of previous tool calls. idea is to throw away old
@@ -58,6 +58,10 @@ export namespace SessionCompaction {
   export async function prune(input: { sessionID: string }) {
     const config = await Config.get()
     if (config.compaction?.prune === false) return
+    const pruneProtectedTools = [
+      ...PRUNE_PROTECTED_TOOLS_DEFAULT,
+      ...(config.compaction?.protectedTools ?? []),
+    ]
     log.info("pruning")
     const msgs = await Session.messages({ sessionID: input.sessionID })
     let total = 0
@@ -74,7 +78,7 @@ export namespace SessionCompaction {
         const part = msg.parts[partIndex]
         if (part.type === "tool")
           if (part.state.status === "completed") {
-            if (PRUNE_PROTECTED_TOOLS.includes(part.tool)) continue
+            if (pruneProtectedTools.includes(part.tool)) continue
 
             if (part.state.time.compacted) break loop
             const estimate = Token.estimate(part.state.output)
