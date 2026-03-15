@@ -134,3 +134,24 @@ JetBrains IDEs rely on the **system certificate store**, so resolving trust at t
 {% callout type="note" %}
 **JetBrains 2024.3 note:** Some builds may fail to recognize OS certificates. Workarounds include downgrading to a previous version, upgrading to **2024.3.1 or later**, or adding the JVM option `-Djavax.net.ssl.trustStoreType=Windows-ROOT`.
 {% /callout %}
+
+### Android Studio
+
+#### Custom workspace required
+
+##### Symptoms
+
+- `Kilo Code cannot access paths without an active workspace`
+
+##### Cause
+
+Kilo Code requires an explicit workspace configuration to access project files in JetBrains IDEs. This is especially common in Android Studio, which may not automatically set up the workspace that Kilo Code expects.
+
+##### Resolution
+
+1. Open **Settings / Preferences**
+2. Navigate to **Tools → Kilo Code**
+3. Locate **Custom Workspaces**
+4. Click **Add Workspace**
+5. Select your project folder
+6. Apply changes and restart the IDE
