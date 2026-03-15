@@ -970,7 +970,7 @@ export function UserMessageDisplay(props: {
             </Show>
             <Tooltip
               value={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
-              placement="top"
+              placement="right" // kilocode_change: avoid overlapping message text
               gutter={4}
             >
               <IconButton
@@ -1349,7 +1349,7 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
           >
             <Tooltip
               value={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyResponse")}
-              placement="top"
+              placement="bottom" // kilocode_change: avoid overlapping message text above and metadata to the right
               gutter={4}
             >
               <IconButton
