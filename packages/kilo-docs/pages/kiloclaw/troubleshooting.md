@@ -73,6 +73,20 @@ Direct filesystem access is not available at this time. You can interact with fi
 
 For security reasons, SSH access is currently disabled for all KiloClaw instances. Our primary goal is to provide a secure environment for all users, and restricting direct SSH access is one of the many measures we take to ensure the platform remains safe and protected for everyone.
 
+### Can I install tailscale on my KiloClaw instance?
+
+Not at this time.
+
+### Can I update the version of Node on my instance?
+
+Not at this time.
+
+### Can I upgrade the version of OpenClaw myself?
+
+We do not recommend upgrading the version of OpenClaw yourself. Different versions of OpenClaw may have different requirements and dependencies, and manually upgrading could potentially lead to compatibility issues or break your setup.
+
+If you upgrade to a version of OpenClaw that breaks your setup, you can use the version pinning dialog at the bottom of the settings tab on the [KiloClaw Dashboard](https://app.kilo.ai/claw) to revert to an earlier version of OpenClaw. 
+
 ### How can I update my OpenClaw?
 
 Do **not** click **Update Now** inside the OpenClaw Control UI — this is not supported for KiloClaw instances and may break your setup.
