@@ -455,12 +455,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             "enableAutoTrigger",
             "enableSmartInlineTaskKeybinding",
             "enableChatAutocomplete",
+            "model",
           ])
           if (allowedKeys.has(message.key)) {
             await vscode.workspace
               .getConfiguration("kilo-code.new.autocomplete")
               .update(message.key, message.value, vscode.ConfigurationTarget.Global)
             this.sendAutocompleteSettings()
+            // Reload autocomplete service to pick up model/setting changes
+            await vscode.commands.executeCommand("kilo-code.new.autocomplete.reload")
           }
           break
         }
@@ -2013,6 +2016,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         enableAutoTrigger: config.get<boolean>("enableAutoTrigger", true),
         enableSmartInlineTaskKeybinding: config.get<boolean>("enableSmartInlineTaskKeybinding", false),
         enableChatAutocomplete: config.get<boolean>("enableChatAutocomplete", false),
+        model: config.get<string>("model", "mistralai/codestral-2508"),
       },
     })
   }

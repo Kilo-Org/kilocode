@@ -615,6 +615,19 @@
           "default": "kilo-auto/free",
           "description": "Default model ID for new sessions"
         },
+        "kilo-code.new.autocomplete.model": {
+          "type": "string",
+          "default": "mistralai/codestral-2508",
+          "enum": [
+            "mistralai/codestral-2508",
+            "mercury-edit"
+          ],
+          "enumDescriptions": [
+            "Codestral by Mistral AI (default)",
+            "Mercury Edit by Inception"
+          ],
+          "description": "Model to use for inline autocomplete suggestions"
+        },
         "kilo-code.new.autocomplete.enableAutoTrigger": {
           "type": "boolean",
           "default": true,
