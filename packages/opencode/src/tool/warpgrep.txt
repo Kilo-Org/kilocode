@@ -1,0 +1,10 @@
+- Searches the codebase using a natural language search string
+- Takes a natural language search string as input: a question about something you want to understand, or a description of what you're looking for
+- This is not pattern matching or semantic search — it is an AI-powered search agent that performs intelligent multi-step searches across the repository, returning only the most relevant spans
+- Use this when you're looking for a feature or implementation, or trying to understand how something works in a large codebase but are unclear about the exact patterns to search for
+
+Usage notes:
+  - This does NOT accept regex or keyword dumps — use natural language
+  - Best practice is using this at the start of long codebase explorations when you haven't yet mapped out the relevant areas
+  - Firing two or three concurrent codebase_search calls at different angles helps go through a large codebase faster
+  - This tool is read-only and does not modify any files

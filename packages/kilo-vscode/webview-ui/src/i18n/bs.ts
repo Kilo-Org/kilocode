@@ -937,6 +937,8 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "Ne sažimaj veliki zalijepljeni sadržaj",
   "settings.experimental.batch.title": "Batch alat",
   "settings.experimental.batch.description": "Omogući batch obradu poziva alata",
+  "settings.experimental.codebaseSearch.title": "Pretraga koda",
+  "settings.experimental.codebaseSearch.description": "Omogući AI pretragu prirodnim jezikom kroz bazu koda",
   "settings.experimental.continueOnDeny.title": "Nastavi pri odbijanju",
   "settings.experimental.continueOnDeny.description": "Nastavi petlju agenta kada je dozvola odbijena",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",

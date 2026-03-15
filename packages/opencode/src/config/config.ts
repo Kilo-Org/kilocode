@@ -1284,6 +1284,7 @@ export namespace Config {
         .object({
           disable_paste_summary: z.boolean().optional(),
           batch_tool: z.boolean().optional().describe("Enable the batch tool"),
+          codebase_search: z.boolean().optional().describe("Enable AI-powered codebase search"), // kilocode_change
           // kilocode_change start - enable telemetry by default
           openTelemetry: z.boolean().default(true).describe("Enable telemetry. Set to false to opt-out."),
           // kilocode_change end

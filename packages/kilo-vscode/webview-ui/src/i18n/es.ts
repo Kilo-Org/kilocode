@@ -940,6 +940,8 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "No resumir contenido pegado grande",
   "settings.experimental.batch.title": "Herramienta por lotes",
   "settings.experimental.batch.description": "Habilitar procesamiento por lotes de llamadas a herramientas",
+  "settings.experimental.codebaseSearch.title": "Búsqueda de código",
+  "settings.experimental.codebaseSearch.description": "Habilitar búsqueda por lenguaje natural con IA en toda la base de código",
   "settings.experimental.continueOnDeny.title": "Continuar al denegar",
   "settings.experimental.continueOnDeny.description": "Continuar el bucle del agente cuando se deniega un permiso",
   "settings.experimental.mcpTimeout.title": "Tiempo de espera MCP (ms)",

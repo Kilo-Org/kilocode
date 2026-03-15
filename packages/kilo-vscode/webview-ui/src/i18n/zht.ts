@@ -921,6 +921,8 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "不對大量貼上內容進行摘要",
   "settings.experimental.batch.title": "批次工具",
   "settings.experimental.batch.description": "啟用多個工具呼叫的批次處理",
+  "settings.experimental.codebaseSearch.title": "程式碼庫搜尋",
+  "settings.experimental.codebaseSearch.description": "啟用 AI 驅動的自然語言程式碼庫搜尋",
   "settings.experimental.continueOnDeny.title": "拒絕後繼續",
   "settings.experimental.continueOnDeny.description": "權限被拒絕時繼續 Agent 迴圈",
   "settings.experimental.mcpTimeout.title": "MCP 逾時（毫秒）",
