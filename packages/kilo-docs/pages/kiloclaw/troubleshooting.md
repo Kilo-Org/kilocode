@@ -81,11 +81,13 @@ Not at this time.
 
 Not at this time.
 
-### How do I upgrade the OpenClaw version?
+### How do I upgrade the OpenClaw version? Can I upgrade it myself?
 
-Use **Upgrade & Redeploy** from the [KiloClaw Dashboard](https://app.kilo.ai/claw). Do **not** click **Update Now** inside the OpenClaw Control UI — this is not supported for KiloClaw instances and may break your setup.
+Updates are managed by the KiloClaw platform team to ensure stability and dependency availability. When a new version is available, it will be announced in the **Changelog** on your dashboard.
 
-When a new version is available, it will be announced in the **Changelog** on your dashboard. If you need to roll back, use the [version pinning](/docs/kiloclaw/version-pinning) dialog in the Settings tab.
+To apply the update, click **Upgrade & Redeploy** from the [KiloClaw Dashboard](https://app.kilo.ai/claw). Do **not** click **Update Now** inside the OpenClaw Control UI — this is not supported for KiloClaw instances and may break your setup.
+
+If you need to roll back, use the [version pinning](/docs/kiloclaw/version-pinning) dialog in the Settings tab.
 
 ## Architecture Notes
 
