@@ -101,7 +101,7 @@ export const PermissionDock: Component<{
       header={
         <div data-slot="permission-row" data-variant="header">
           <span data-slot="permission-icon">
-            <Icon name="warning" size="normal" />
+            <Icon name="warning" size="small" />
           </span>
           <div data-slot="permission-header-title">
             {language.t("notification.permission.title")}
@@ -119,13 +119,10 @@ export const PermissionDock: Component<{
               onClick={togglePatternsExpanded}
               aria-expanded={patternsExpanded()}
             >
-              <div data-slot="permission-patterns-header-main">
-                <Icon name="check-all" size="small" />
-                <span data-slot="permission-patterns-header-title">{language.t("ui.permission.permissionRules")}</span>
-              </div>
               <span data-slot="permission-patterns-header-chevron" data-open={patternsExpanded() ? "" : undefined}>
                 <Icon name="chevron-down" size="small" />
               </span>
+              <span data-slot="permission-patterns-header-title">{language.t("ui.permission.permissionRules")}</span>
             </button>
 
             <div data-slot="permission-patterns-collapse" data-open={patternsExpanded() ? "" : undefined}>
@@ -134,8 +131,6 @@ export const PermissionDock: Component<{
                   <For each={patterns()}>
                     {(pattern, index) => (
                       <div data-slot="permission-pattern-row" data-decision={decision(index())}>
-                        <span data-slot="permission-pattern-type">{props.request.toolName}</span>
-                        <code data-slot="permission-pattern">{pattern}</code>
                         <div data-slot="permission-pattern-actions">
                           <Tooltip value={approveTooltip(index())} placement="top">
                             <button
@@ -162,6 +157,8 @@ export const PermissionDock: Component<{
                             </button>
                           </Tooltip>
                         </div>
+                        <span data-slot="permission-pattern-type">{props.request.toolName}</span>
+                        <code data-slot="permission-pattern">{pattern}</code>
                       </div>
                     )}
                   </For>
@@ -172,34 +169,24 @@ export const PermissionDock: Component<{
         </Show>
       }
     >
-      <Show when={command()}>
-        {(cmd) => (
-          <div data-slot="permission-row">
-            <span data-slot="permission-spacer" aria-hidden="true" />
-            <code data-slot="permission-command">{cmd()}</code>
-          </div>
-        )}
-      </Show>
+      <Show when={command()}>{(cmd) => <code data-slot="permission-command">{cmd()}</code>}</Show>
 
       <Show when={!command() && toolDescription()}>
-        <div data-slot="permission-row">
-          <span data-slot="permission-spacer" aria-hidden="true" />
-          <div data-slot="permission-hint">{toolDescription()}</div>
-        </div>
+        <div data-slot="permission-hint">{toolDescription()}</div>
       </Show>
 
       <p data-slot="permission-session-hint">{language.t("ui.permission.sessionHint")}</p>
       <div data-slot="permission-actions">
         <Button
-          variant="ghost"
+          variant="primary"
           size="small"
           onClick={() => {
             const { approved, denied } = collectPatterns()
-            props.onDecide("reject", approved, denied)
+            props.onDecide("once", approved, denied)
           }}
           disabled={props.responding}
         >
-          {language.t("ui.permission.deny")}
+          {language.t("ui.permission.allowOnce")}
         </Button>
         <Button
           variant="secondary"
@@ -213,15 +200,15 @@ export const PermissionDock: Component<{
           {language.t("ui.permission.allowAlways")}
         </Button>
         <Button
-          variant="primary"
+          variant="ghost"
           size="small"
           onClick={() => {
             const { approved, denied } = collectPatterns()
-            props.onDecide("once", approved, denied)
+            props.onDecide("reject", approved, denied)
           }}
           disabled={props.responding}
         >
-          {language.t("ui.permission.allowOnce")}
+          {language.t("ui.permission.deny")}
         </Button>
       </div>
     </DockPrompt>

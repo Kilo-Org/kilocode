@@ -1184,6 +1184,10 @@
     margin-top: 0;
   }
 
+  [data-slot="permission-row"] {
+    grid-template-columns: 16px 1fr;
+  }
+
   [data-slot="permission-body"] {
     padding: 10px 16px 0;
     gap: 8px;
@@ -1207,6 +1211,7 @@
     font-family: var(--vscode-editor-font-family, monospace);
     color: var(--text-weak, var(--vscode-descriptionForeground));
     word-break: break-word;
+    margin-bottom: 4px;
   }
 
   [data-slot="permission-hint"] {
@@ -1215,7 +1220,6 @@
 
   [data-slot="permission-patterns"] {
     margin: 0;
-    padding: 0 16px;
     max-height: 160px;
     overflow-y: auto;
     gap: 2px;
@@ -1237,8 +1241,8 @@
     all: unset;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
+    justify-content: flex-start;
+    gap: 6px;
     padding: 6px 8px;
     border-radius: 4px;
     cursor: pointer;
@@ -1248,13 +1252,6 @@
     &:hover {
       background-color: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
     }
-  }
-
-  [data-slot="permission-patterns-header-main"] {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    min-width: 0;
   }
 
   [data-slot="permission-patterns-header-title"] {
@@ -1298,7 +1295,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 3px 0;
+    padding: 3px 0 3px 8px;
     min-width: 0;
 
     &[data-decision="approved"] [data-slot="permission-pattern"] {
@@ -1334,6 +1331,9 @@
     align-items: center;
     gap: 2px;
     flex-shrink: 0;
+    /* Pull 3px left to align the 16px icon inside the 22px toggle button
+       with the chevron icon in the "Permission rules" header above. */
+    margin-left: -3px;
   }
 
   [data-slot="permission-pattern-toggle"] {
@@ -1382,14 +1382,15 @@
     color: var(--text-weak, var(--vscode-descriptionForeground));
     margin: 0;
     padding: 4px 0 0;
-    text-align: center;
+    text-align: left;
   }
 
   [data-slot="permission-actions"] {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
-    justify-content: center;
+    justify-content: flex-start;
     padding: 4px 0 8px;
   }
 
