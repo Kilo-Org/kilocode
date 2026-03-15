@@ -12,7 +12,7 @@
   }
 
   [data-slot="text-part-copy-wrapper"][data-is-turn-copy] {
-    display: block;
+    display: flex;
   }
 }
 
@@ -93,25 +93,21 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
 }
 
 /* Remove the empty space below user message bubbles.
- * The upstream copy wrapper is a normal-flow block with min-height + margin,
- * so it reserves ~28px even when invisible. Override it to be absolutely
- * positioned over the bottom-right corner of the bubble — zero layout impact
- * when hidden, overlays on hover exactly like the text-part copy button. */
+ * The upstream copy wrapper uses opacity:0 when hidden but still takes up
+ * layout space (~28px). Override with display:none so it takes zero space,
+ * and restore display:flex on hover for proper vertical centering. */
 [data-component="user-message"] {
-  position: relative;
-
   [data-slot="user-message-copy-wrapper"] {
-    position: absolute;
-    top: 4px;
-    right: 4px;
-    bottom: auto;
-    min-height: unset;
-    margin-top: 0;
-    width: auto;
+    display: none;
     /* hide meta text; only the icon-button matters in the sidebar */
     [data-slot="user-message-meta-wrap"] {
       display: none;
     }
+  }
+
+  &:hover [data-slot="user-message-copy-wrapper"],
+  &:focus-within [data-slot="user-message-copy-wrapper"] {
+    display: flex;
   }
 }
 
