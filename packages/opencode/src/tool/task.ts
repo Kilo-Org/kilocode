@@ -61,7 +61,7 @@ export const TaskTool = Tool.define("task", async (ctx) => {
       const agent = await Agent.get(params.subagent_type)
       if (!agent) throw new Error(`Unknown agent type: ${params.subagent_type} is not a valid agent type`)
 
-      const hasTaskPermission = agent.permission.some((rule) => rule.permission === "task")
+      const allowsTask = agent.permission.some((rule) => rule.permission === "task" && rule.action === "allow")
 
       const session = await iife(async () => {
         if (params.task_id) {
@@ -83,7 +83,7 @@ export const TaskTool = Tool.define("task", async (ctx) => {
               pattern: "*",
               action: "deny",
             },
-            ...(hasTaskPermission
+            ...(allowsTask
               ? []
               : [
                   {
@@ -136,7 +136,7 @@ export const TaskTool = Tool.define("task", async (ctx) => {
         tools: {
           todowrite: false,
           todoread: false,
-          ...(hasTaskPermission ? {} : { task: false }),
+          ...(allowsTask ? {} : { task: false }),
           ...Object.fromEntries((config.experimental?.primary_tools ?? []).map((t) => [t, false])),
         },
         parts: promptParts,
