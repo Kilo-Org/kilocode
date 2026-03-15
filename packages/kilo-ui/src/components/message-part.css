@@ -101,6 +101,8 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   [data-slot="user-message-copy-wrapper"] {
     opacity: 0;
     height: 0;
+    min-height: 0;
+    margin-top: 0;
     overflow: hidden;
     pointer-events: none;
     /* hide meta text; only the icon-button matters in the sidebar */
