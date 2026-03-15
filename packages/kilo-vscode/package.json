@@ -704,6 +704,9 @@
     "check-types": "tsc --noEmit",
     "check-types:webview": "bun script/typecheck.ts --project webview-ui/tsconfig.json",
     "typecheck": "bun run check-types:extension && bun run check-types:webview",
+    "mcp:self-test": "node script/self-test/mcp.mjs",
+    "self-test": "node script/self-test/cli.mjs",
+    "self-test:daemon": "node script/self-test/daemon.mjs",
     "check-types:extension": "bun script/typecheck.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -719,6 +722,7 @@
   },
   "devDependencies": {
     "@playwright/test": "1.58.2",
+    "@modelcontextprotocol/sdk": "^1.25.2",
     "@storybook/addon-docs": "10.2.10",
     "@types/diff": "^6.0.0",
     "@types/mocha": "^10.0.10",
