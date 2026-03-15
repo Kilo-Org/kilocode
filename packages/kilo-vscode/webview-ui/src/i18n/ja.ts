@@ -441,6 +441,7 @@ export const dict = {
 
   "notification.permission.title": "権限が必要です",
   "notification.permission.description": "{{projectName}} の {{sessionTitle}} が権限を必要としています",
+  "ui.permission.permissionRules": "権限ルール",
   "ui.permission.pattern.addToAllowed": "許可リストに追加",
   "ui.permission.pattern.removeFromAllowed": "許可リストから削除",
   "ui.permission.pattern.addToDenied": "拒否リストに追加",

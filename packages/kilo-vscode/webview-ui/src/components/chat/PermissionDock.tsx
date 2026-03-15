@@ -19,6 +19,8 @@ import type { PermissionRequest } from "../../types/messages"
 
 type PatternDecision = "approved" | "denied" | "pending"
 
+let permissionPatternsExpandedPreference = false
+
 export const PermissionDock: Component<{
   request: PermissionRequest
   responding: boolean
@@ -35,8 +37,16 @@ export const PermissionDock: Component<{
   }
 
   const [decisions, setDecisions] = createSignal<Record<number, PatternDecision>>({})
+  const [patternsExpanded, setPatternsExpanded] = createSignal(permissionPatternsExpandedPreference)
 
   const hasDeniedPatterns = () => Object.values(decisions()).some((d) => d === "denied")
+  const hasPatterns = () => patterns().length > 0
+
+  const togglePatternsExpanded = () => {
+    const next = !patternsExpanded()
+    permissionPatternsExpandedPreference = next
+    setPatternsExpanded(next)
+  }
 
   const collectPatterns = () => {
     const all = patterns()
@@ -91,7 +101,7 @@ export const PermissionDock: Component<{
       header={
         <div data-slot="permission-row" data-variant="header">
           <span data-slot="permission-icon">
-            <Icon name="warning" size="normal" />
+            <Icon name="warning" size="small" />
           </span>
           <div data-slot="permission-header-title">
             {language.t("notification.permission.title")}
@@ -100,103 +110,107 @@ export const PermissionDock: Component<{
         </div>
       }
       footer={
-        <>
-          <p data-slot="permission-session-hint">{language.t("ui.permission.sessionHint")}</p>
-          <div data-slot="permission-footer-actions">
-            <Button
-              variant="ghost"
-              size="small"
-              onClick={() => {
-                const { approved, denied } = collectPatterns()
-                props.onDecide("reject", approved, denied)
-              }}
-              disabled={props.responding}
+        <Show when={hasPatterns()}>
+          <div data-slot="permission-patterns-section">
+            <button
+              type="button"
+              data-slot="permission-patterns-header"
+              data-open={patternsExpanded() ? "" : undefined}
+              onClick={togglePatternsExpanded}
+              aria-expanded={patternsExpanded()}
             >
-              {language.t("ui.permission.deny")}
-            </Button>
-            <Button
-              variant="secondary"
-              size="small"
-              onClick={() => {
-                const { approved, denied } = collectPatterns()
-                props.onDecide("always", approved, denied)
-              }}
-              disabled={props.responding || hasDeniedPatterns()}
-            >
-              {language.t("ui.permission.allowAlways")}
-            </Button>
-            <Button
-              variant="primary"
-              size="small"
-              onClick={() => {
-                const { approved, denied } = collectPatterns()
-                props.onDecide("once", approved, denied)
-              }}
-              disabled={props.responding}
-            >
-              {language.t("ui.permission.allowOnce")}
-            </Button>
+              <span data-slot="permission-patterns-header-chevron" data-open={patternsExpanded() ? "" : undefined}>
+                <Icon name="chevron-down" size="small" />
+              </span>
+              <span data-slot="permission-patterns-header-title">{language.t("ui.permission.permissionRules")}</span>
+            </button>
+
+            <div data-slot="permission-patterns-collapse" data-open={patternsExpanded() ? "" : undefined}>
+              <div data-slot="permission-patterns-collapse-inner">
+                <div data-slot="permission-patterns">
+                  <For each={patterns()}>
+                    {(pattern, index) => (
+                      <div data-slot="permission-pattern-row" data-decision={decision(index())}>
+                        <div data-slot="permission-pattern-actions">
+                          <Tooltip value={approveTooltip(index())} placement="top">
+                            <button
+                              data-slot="permission-pattern-toggle"
+                              data-variant="approve"
+                              data-active={decision(index()) === "approved" ? "" : undefined}
+                              disabled={props.responding}
+                              onClick={() => togglePattern(index(), "approved")}
+                              aria-label={approveTooltip(index())}
+                            >
+                              <Icon name="check-small" size="small" />
+                            </button>
+                          </Tooltip>
+                          <Tooltip value={denyTooltip(index())} placement="top">
+                            <button
+                              data-slot="permission-pattern-toggle"
+                              data-variant="deny"
+                              data-active={decision(index()) === "denied" ? "" : undefined}
+                              disabled={props.responding}
+                              onClick={() => togglePattern(index(), "denied")}
+                              aria-label={denyTooltip(index())}
+                            >
+                              <Icon name="close-small" size="small" />
+                            </button>
+                          </Tooltip>
+                        </div>
+                        <span data-slot="permission-pattern-type">{props.request.toolName}</span>
+                        <code data-slot="permission-pattern">{pattern}</code>
+                      </div>
+                    )}
+                  </For>
+                </div>
+              </div>
+            </div>
           </div>
-        </>
+        </Show>
       }
     >
-      <Show when={command()}>
-        {(cmd) => (
-          <div data-slot="permission-row">
-            <span data-slot="permission-spacer" aria-hidden="true" />
-            <code data-slot="permission-command">{cmd()}</code>
-          </div>
-        )}
-      </Show>
+      <Show when={command()}>{(cmd) => <code data-slot="permission-command">{cmd()}</code>}</Show>
 
       <Show when={!command() && toolDescription()}>
-        <div data-slot="permission-row">
-          <span data-slot="permission-spacer" aria-hidden="true" />
-          <div data-slot="permission-hint">{toolDescription()}</div>
-        </div>
+        <div data-slot="permission-hint">{toolDescription()}</div>
       </Show>
 
-      <Show when={patterns().length > 0}>
-        <div data-slot="permission-row">
-          <span data-slot="permission-spacer" aria-hidden="true" />
-          <div data-slot="permission-patterns">
-            <For each={patterns()}>
-              {(pattern, index) => (
-                <div data-slot="permission-pattern-row" data-decision={decision(index())}>
-                  <span data-slot="permission-pattern-type">{props.request.toolName}</span>
-                  <code data-slot="permission-pattern">{pattern}</code>
-                  <div data-slot="permission-pattern-actions">
-                    <Tooltip value={approveTooltip(index())} placement="top">
-                      <button
-                        data-slot="permission-pattern-toggle"
-                        data-variant="approve"
-                        data-active={decision(index()) === "approved" ? "" : undefined}
-                        disabled={props.responding}
-                        onClick={() => togglePattern(index(), "approved")}
-                        aria-label={approveTooltip(index())}
-                      >
-                        <Icon name="check-small" size="small" />
-                      </button>
-                    </Tooltip>
-                    <Tooltip value={denyTooltip(index())} placement="top">
-                      <button
-                        data-slot="permission-pattern-toggle"
-                        data-variant="deny"
-                        data-active={decision(index()) === "denied" ? "" : undefined}
-                        disabled={props.responding}
-                        onClick={() => togglePattern(index(), "denied")}
-                        aria-label={denyTooltip(index())}
-                      >
-                        <Icon name="close-small" size="small" />
-                      </button>
-                    </Tooltip>
-                  </div>
-                </div>
-              )}
-            </For>
-          </div>
-        </div>
-      </Show>
+      <p data-slot="permission-session-hint">{language.t("ui.permission.sessionHint")}</p>
+      <div data-slot="permission-actions">
+        <Button
+          variant="primary"
+          size="small"
+          onClick={() => {
+            const { approved, denied } = collectPatterns()
+            props.onDecide("once", approved, denied)
+          }}
+          disabled={props.responding}
+        >
+          {language.t("ui.permission.allowOnce")}
+        </Button>
+        <Button
+          variant="secondary"
+          size="small"
+          onClick={() => {
+            const { approved, denied } = collectPatterns()
+            props.onDecide("always", approved, denied)
+          }}
+          disabled={props.responding || hasDeniedPatterns()}
+        >
+          {language.t("ui.permission.allowAlways")}
+        </Button>
+        <Button
+          variant="ghost"
+          size="small"
+          onClick={() => {
+            const { approved, denied } = collectPatterns()
+            props.onDecide("reject", approved, denied)
+          }}
+          disabled={props.responding}
+        >
+          {language.t("ui.permission.deny")}
+        </Button>
+      </div>
     </DockPrompt>
   )
 }

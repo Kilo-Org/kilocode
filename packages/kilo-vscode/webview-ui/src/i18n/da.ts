@@ -443,6 +443,7 @@ export const dict = {
 
   "notification.permission.title": "Tilladelse påkrævet",
   "notification.permission.description": "{{sessionTitle}} i {{projectName}} kræver tilladelse",
+  "ui.permission.permissionRules": "Tilladelsesregler",
   "ui.permission.pattern.addToAllowed": "Tilføj til tilladelseslisten",
   "ui.permission.pattern.removeFromAllowed": "Fjern fra tilladelseslisten",
   "ui.permission.pattern.addToDenied": "Tilføj til afvisningslisten",
