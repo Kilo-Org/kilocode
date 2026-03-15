@@ -21,6 +21,7 @@ import { CloudImportDialog } from "./CloudImportDialog"
 import { FeedbackDialog } from "./FeedbackDialog"
 import { VscodeSessionTurn } from "./VscodeSessionTurn"
 import { WorkingIndicator } from "../shared/WorkingIndicator"
+import { activeUserMessageID as getActiveUserMessageID } from "../../context/session-queue"
 
 const KiloLogo = (): JSX.Element => {
   const iconsBaseUri = (window as { ICONS_BASE_URI?: string }).ICONS_BASE_URI || ""
@@ -72,7 +73,13 @@ export const MessageList: Component<MessageListProps> = (props) => {
       .slice(0, 3),
   )
 
-  const lastUserMessageID = createMemo(() => userMessages().at(-1)?.id)
+  const activeUserID = createMemo(() => getActiveUserMessageID(session.messages(), session.statusInfo()))
+
+  const activeUserIndex = createMemo(() => {
+    const active = activeUserID()
+    if (!active) return -1
+    return userMessages().findIndex((msg) => msg.id === active)
+  })
 
   return (
     <div class="message-list-container">
@@ -130,13 +137,21 @@ export const MessageList: Component<MessageListProps> = (props) => {
           </Show>
           <Show when={!session.loading()}>
             <For each={userMessages()}>
-              {(msg) => (
-                <VscodeSessionTurn
-                  sessionID={session.currentSessionID() ?? ""}
-                  messageID={msg.id}
-                  lastUserMessageID={lastUserMessageID()}
-                />
-              )}
+              {(msg, index) => {
+                const queued = createMemo(() => {
+                  const active = activeUserIndex()
+                  if (active === -1) return false
+                  return index() > active
+                })
+
+                return (
+                  <VscodeSessionTurn
+                    sessionID={session.currentSessionID() ?? ""}
+                    messageID={msg.id}
+                    queued={queued()}
+                  />
+                )
+              }}
             </For>
             <WorkingIndicator />
           </Show>

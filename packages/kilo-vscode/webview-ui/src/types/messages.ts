@@ -374,6 +374,15 @@ export interface ErrorMessage {
   sessionID?: string
 }
 
+export interface SendMessageFailedMessage {
+  type: "sendMessageFailed"
+  error: string
+  text: string
+  sessionID?: string
+  messageID?: string
+  files?: FileAttachment[]
+}
+
 export interface PartUpdatedMessage {
   type: "partUpdated"
   sessionID?: string
@@ -1018,6 +1027,7 @@ export type ExtensionMessage =
   | ReadyMessage
   | ConnectionStateMessage
   | ErrorMessage
+  | SendMessageFailedMessage
   | PartUpdatedMessage
   | SessionStatusMessage
   | PermissionRequestMessage
@@ -1105,6 +1115,7 @@ export interface FileAttachment {
 export interface SendMessageRequest {
   type: "sendMessage"
   text: string
+  messageID?: string
   sessionID?: string
   providerID?: string
   modelID?: string
@@ -1164,6 +1175,7 @@ export interface ImportAndSendMessage {
   type: "importAndSend"
   cloudSessionId: string
   text: string
+  messageID?: string
   providerID?: string
   modelID?: string
   agent?: string

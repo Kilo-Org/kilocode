@@ -171,10 +171,9 @@ export const PromptInput: Component = () => {
 
   const isBusy = () => session.status() === "busy"
   const isDisabled = () => !server.isConnected()
-  const canSend = () =>
-    (text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0) &&
-    !isBusy() &&
-    !isDisabled()
+  const hasInput = () => text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0
+  const canSend = () => hasInput() && !isDisabled()
+  const showStop = () => isBusy() && !hasInput()
   const placeholder = () => {
     switch (server.connectionState()) {
       case "connecting":
@@ -228,9 +227,23 @@ export const PromptInput: Component = () => {
     }
 
     if (message.type === "triggerTask") {
-      if (isBusy() || isDisabled()) return
+      if (isDisabled()) return
       const sel = session.selected()
       session.sendMessage(message.text, sel?.providerID, sel?.modelID)
+    }
+
+    if (message.type === "sendMessageFailed") {
+      const failed = message as import("../../types/messages").SendMessageFailedMessage
+      // Restore draft text so the user can retry
+      if (failed.text && !text().trim()) {
+        setText(failed.text)
+        setGhostText("")
+        if (textareaRef) {
+          textareaRef.value = failed.text
+          adjustHeight()
+          textareaRef.focus()
+        }
+      }
     }
 
     if (message.type === "action" && message.action === "focusInput") {
@@ -424,7 +437,7 @@ export const PromptInput: Component = () => {
     const pending = reviewComments()
     const review = pending.length > 0 ? formatReviewCommentsMarkdown(pending) : ""
     const message = draft && review ? `${review}\n\n${draft}` : draft || review
-    if ((!message && imgs.length === 0) || isBusy() || isDisabled()) return
+    if ((!message && imgs.length === 0) || isDisabled()) return
 
     const mentionFiles = mention.parseFileAttachments(draft)
     const imgFiles = imgs.map((img) => ({ mime: img.mime, url: img.dataUrl }))
@@ -611,7 +624,7 @@ export const PromptInput: Component = () => {
             </Button>
           </Tooltip>
           <Show
-            when={isBusy()}
+            when={showStop()}
             fallback={
               <Tooltip value={language.t("prompt.action.send")} placement="top">
                 <Button
