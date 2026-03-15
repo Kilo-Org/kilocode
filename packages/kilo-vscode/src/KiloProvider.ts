@@ -1713,8 +1713,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const codeMatch = auth.instructions?.match(/code:\s*(\S+)/i)
       const code = codeMatch ? codeMatch[1] : undefined
 
-      // Step 2: Open browser for user to authorize
-      vscode.env.openExternal(vscode.Uri.parse(auth.url))
+      // The backend already opens the browser via the `open` npm package during
+      // authorize(). Calling vscode.env.openExternal() here would show a VS Code
+      // trust dialog that persists after the user completes authentication in the
+      // browser, and would open a second browser tab. The DeviceAuthCard webview
+      // provides an "Open Browser" button as a user-initiated fallback.
 
       // Send device auth details to webview
       this.postMessage({
