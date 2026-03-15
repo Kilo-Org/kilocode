@@ -81,17 +81,11 @@ Not at this time.
 
 Not at this time.
 
-### Can I upgrade the version of OpenClaw myself?
+### How do I upgrade the OpenClaw version?
 
-We do not recommend upgrading the version of OpenClaw yourself. Different versions of OpenClaw may have different requirements and dependencies, and manually upgrading could potentially lead to compatibility issues or break your setup.
+Use **Upgrade & Redeploy** from the [KiloClaw Dashboard](https://app.kilo.ai/claw). Do **not** click **Update Now** inside the OpenClaw Control UI — this is not supported for KiloClaw instances and may break your setup.
 
-If you upgrade to a version of OpenClaw that breaks your setup, you can use the version pinning dialog at the bottom of the settings tab on the [KiloClaw Dashboard](https://app.kilo.ai/claw) to revert to an earlier version of OpenClaw. 
-
-### How can I update my OpenClaw?
-
-Do **not** click **Update Now** inside the OpenClaw Control UI — this is not supported for KiloClaw instances and may break your setup.
-
-Updates are managed by the KiloClaw platform team to ensure stability. When a new version is available, it will be announced in the **Changelog** on your dashboard. To apply the update, click **Upgrade & Redeploy** from the [KiloClaw Dashboard](/docs/kiloclaw/dashboard#redeploy).
+When a new version is available, it will be announced in the **Changelog** on your dashboard. If you need to roll back, use the [version pinning](/docs/kiloclaw/version-pinning) dialog in the Settings tab.
 
 ## Architecture Notes
 
