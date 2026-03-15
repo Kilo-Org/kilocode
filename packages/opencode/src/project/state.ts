@@ -91,16 +91,14 @@ export namespace State {
     }
   }
 
-  export async function disposeAllEntries(init: () => unknown) {
-    const tasks: Promise<void>[] = []
-    for (const key of recordsByKey.keys()) {
-      tasks.push(disposeEntry(key, init))
-    }
-    await Promise.all(tasks)
-  }
-
   // kilocode_change - expose all registered keys for global config change fan-out
   export function keys(): string[] {
     return [...recordsByKey.keys()]
+  }
+
+  // kilocode_change - dispose ALL state for ALL directories (not just a specific init entry)
+  // This is needed when shared config changes affect all instances (e.g., global MCP toggle)
+  export async function disposeAll() {
+    await Promise.all(keys().map((key) => dispose(key)))
   }
 }

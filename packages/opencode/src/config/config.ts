@@ -1500,14 +1500,15 @@ export namespace Config {
     // kilocode_change: Reset global config cache to avoid stale reads when writing to global files
     await global.reset()
     // kilocode_change: If writing to a shared config file (outside the current project directory),
-    // dispose all project config states since the change affects all projects.
+    // dispose ALL state for ALL projects (including MCP clients, not just config cache).
     // Otherwise, just dispose the current project's config.
     const isSharedConfig = !configPath.startsWith(Instance.directory)
     const affectedDirectories: string[] = []
     if (isSharedConfig) {
       // Get all affected directories BEFORE disposing (disposal clears the keys)
       affectedDirectories.push(...State.keys())
-      await State.disposeAllEntries(initConfigState)
+      // Dispose ALL state for ALL directories (config + MCP clients + everything else)
+      await State.disposeAll()
     } else {
       affectedDirectories.push(Instance.directory)
       await State.disposeEntry(Instance.directory, initConfigState)
