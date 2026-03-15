@@ -67,4 +67,40 @@ export namespace State {
     disposalFinished = true
     log.info("state disposal completed", { key })
   }
+
+  export async function disposeEntry(key: string, init: () => unknown) {
+    const entries = recordsByKey.get(key)
+    if (!entries) return
+
+    const entry = entries.get(init)
+    if (!entry) return
+
+    // Delete from map immediately so concurrent create() calls will create new entry
+    entries.delete(init)
+    if (entries.size === 0) {
+      recordsByKey.delete(key)
+    }
+
+    if (entry.dispose) {
+      const label = typeof init === "function" ? init.name : String(init)
+      await Promise.resolve(entry.state)
+        .then((state) => entry.dispose!(state))
+        .catch((error) => {
+          log.error("Error while disposing state entry:", { error, key, init: label })
+        })
+    }
+  }
+
+  // kilocode_change - expose all registered keys for global config change fan-out
+  export function keys(): string[] {
+    return [...recordsByKey.keys()]
+  }
+
+  // kilocode_change - dispose all state except for the specified key
+  // Used when shared config changes but the current instance's state should be preserved
+  // (e.g., MCP.connect() persists enabled:true, but should keep the just-connected client alive)
+  export async function disposeAllExcept(excludeKey: string) {
+    const allKeys = keys().filter((key) => key !== excludeKey)
+    await Promise.all(allKeys.map((key) => dispose(key)))
+  }
 }

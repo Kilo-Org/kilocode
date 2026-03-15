@@ -1036,7 +1036,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * keyed by their real `provider.id` (e.g. "anthropic", "openai"). We re-key
    * the map here so the rest of the code can use provider.id everywhere.
    */
-  private async fetchAndSendProviders(): Promise<void> {
+  private async fetchAndSendProviders(directory?: string): Promise<void> {
     if (!this.client) {
       // client not ready — serve from cache if available
       if (this.cachedProvidersMessage) {
@@ -1046,7 +1046,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     try {
-      const workspaceDir = this.getWorkspaceDirectory()
+      const workspaceDir = directory ?? this.getWorkspaceDirectory()
       const { data: response } = await this.client.provider.list({ directory: workspaceDir }, { throwOnError: true })
 
       const normalized = indexProvidersById(response.all)
@@ -1072,7 +1072,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /**
    * Fetch agents (modes) from the backend and send to webview.
    */
-  private async fetchAndSendAgents(): Promise<void> {
+  private async fetchAndSendAgents(directory?: string): Promise<void> {
     if (!this.client) {
       if (this.cachedAgentsMessage) {
         this.postMessage(this.cachedAgentsMessage)
@@ -1081,7 +1081,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     try {
-      const workspaceDir = this.getWorkspaceDirectory()
+      const workspaceDir = directory ?? this.getWorkspaceDirectory()
       const { data: agents } = await this.client.app.agents({ directory: workspaceDir }, { throwOnError: true })
 
       const { visible, defaultAgent } = filterVisibleAgents(agents)
@@ -1104,7 +1104,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
-  private async fetchAndSendSkills(): Promise<void> {
+  private async fetchAndSendSkills(directory?: string): Promise<void> {
     if (!this.client) {
       if (this.cachedSkillsMessage) {
         this.postMessage(this.cachedSkillsMessage)
@@ -1113,7 +1113,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     try {
-      const workspaceDir = this.getWorkspaceDirectory()
+      const workspaceDir = directory ?? this.getWorkspaceDirectory()
       const { data: skills } = await this.client.app.skills({ directory: workspaceDir }, { throwOnError: true })
 
       const message = {
@@ -1130,7 +1130,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /**
    * Fetch backend config and send to webview.
    */
-  private async fetchAndSendConfig(): Promise<void> {
+  private async fetchAndSendConfig(directory?: string): Promise<void> {
     if (!this.client) {
       if (this.cachedConfigMessage) {
         this.postMessage(this.cachedConfigMessage)
@@ -1139,7 +1139,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     try {
-      const workspaceDir = this.getWorkspaceDirectory()
+      const workspaceDir = directory ?? this.getWorkspaceDirectory()
       const { data: config } = await this.client.config.get({ directory: workspaceDir }, { throwOnError: true })
 
       const message = {
@@ -1946,13 +1946,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * After instance.dispose() clears the server cache, the next request to each
    * endpoint will re-initialize with the current auth state.
    * This mirrors the TUI's sync.bootstrap() pattern.
+   * @param directory - Optional directory to use instead of workspace root (for worktree-specific refreshes)
    */
-  private async reloadAfterAuthChange(): Promise<void> {
+  private async reloadAfterAuthChange(directory?: string): Promise<void> {
     await Promise.all([
-      this.fetchAndSendProviders(),
-      this.fetchAndSendAgents(),
-      this.fetchAndSendSkills(),
-      this.fetchAndSendConfig(),
+      this.fetchAndSendProviders(directory),
+      this.fetchAndSendAgents(directory),
+      this.fetchAndSendSkills(directory),
+      this.fetchAndSendConfig(directory),
       this.fetchAndSendNotifications(),
     ])
   }
@@ -1984,6 +1985,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (event.type === "server.instance.disposed" || event.type === "global.disposed") {
       void this.reloadAfterAuthChange()
       return
+    }
+
+    // Refresh config and dependent data when the server signals a config change
+    // Only refresh if the change affects the current session's directory, not background worktrees
+    // This prevents a config change in one worktree from overwriting the active panel's state
+    if (event.type === "config.changed") {
+      const currentSessionDir = this.currentSession
+        ? (this.sessionDirectories.get(this.currentSession.id) ?? this.getWorkspaceDirectory())
+        : this.getWorkspaceDirectory()
+      if (event.properties.directory === currentSessionDir) {
+        void this.reloadAfterAuthChange(event.properties.directory)
+        return
+      }
     }
 
     // Forward relevant events to webview

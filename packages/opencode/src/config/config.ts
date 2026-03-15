@@ -1,17 +1,16 @@
-import { Log } from "../util/log"
-import path from "path"
-import { pathToFileURL, fileURLToPath } from "url"
-import { createRequire } from "module"
-import os from "os"
-import z from "zod"
-import { ModelsDev } from "../provider/models"
-import { mergeDeep, pipe, unique } from "remeda"
-import { Global } from "../global"
-import fs from "fs/promises"
-import { lazy } from "../util/lazy"
+import { BunProc } from "@/bun"
+import { PackageRegistry } from "@/bun/registry"
+import { Bus } from "@/bus"
+import { BusEvent } from "@/bus/bus-event"
+import { GlobalBus } from "@/bus/global"
+import { Control } from "@/control"
+import { Installation } from "@/installation"
+import { iife } from "@/util/iife"
+import { Lock } from "@/util/lock"
+import { proxied } from "@/util/proxied"
 import { NamedError } from "@opencode-ai/util/error"
-import { Flag } from "../flag/flag"
-import { Auth } from "../auth"
+import { constants, existsSync } from "fs"
+import fs from "fs/promises"
 // kilocode_change start
 import {
   type ParseError as JsoncParseError,
@@ -23,33 +22,56 @@ import {
   printParseErrorCode,
 } from "jsonc-parser"
 // kilocode_change end
-import { Instance } from "../project/instance"
-import { LSPServer } from "../lsp/server"
-import { BunProc } from "@/bun"
-import { Installation } from "@/installation"
-import { ConfigMarkdown } from "./markdown"
-import { constants, existsSync } from "fs"
-import { Bus } from "@/bus"
-import { GlobalBus } from "@/bus/global"
-import { Event } from "../server/event"
-import { Glob } from "../util/glob"
-import { PackageRegistry } from "@/bun/registry"
-import { proxied } from "@/util/proxied"
-import { iife } from "@/util/iife"
-import { Control } from "@/control"
-import { ConfigPaths } from "./paths"
 import { Filesystem } from "@/util/filesystem"
+import { createRequire } from "module"
+import os from "os"
+import path from "path"
+import { mergeDeep, pipe, unique } from "remeda"
+import { pathToFileURL } from "url"
+import z from "zod"
+import { Auth } from "../auth"
+import { Flag } from "../flag/flag"
+import { Global } from "../global"
+import { LSPServer } from "../lsp/server"
+import { Instance } from "../project/instance"
+import { ModelsDev } from "../provider/models"
+import { Event as ServerEvent } from "../server/event"
+import { Glob } from "../util/glob"
+import { lazy } from "../util/lazy"
+import { Log } from "../util/log"
+import { ConfigMarkdown } from "./markdown"
+import { ConfigPaths } from "./paths"
 
+import { State } from "@/project/state" // kilocode_change
+import { IgnoreMigrator } from "../kilocode/ignore-migrator" // kilocode_change
+import { McpMigrator } from "../kilocode/mcp-migrator" // kilocode_change
 import { ModesMigrator } from "../kilocode/modes-migrator" // kilocode_change
 import { RulesMigrator } from "../kilocode/rules-migrator" // kilocode_change
 import { WorkflowsMigrator } from "../kilocode/workflows-migrator" // kilocode_change
-import { McpMigrator } from "../kilocode/mcp-migrator" // kilocode_change
-import { IgnoreMigrator } from "../kilocode/ignore-migrator" // kilocode_change
 
 export namespace Config {
+  const CONFIG_FILES_OPENCODE = ["opencode.jsonc", "opencode.json"] as const
+  // kilocode_change start
+  // Used for project-level findUp() scanning
+  const CONFIG_FILES_PROJECT = ["kilo.jsonc", "kilo.json", ...CONFIG_FILES_OPENCODE] as const
+
+  // Used only for explicit local config resolution (non-ancestry scanning)
+  const CONFIG_FILES_KILO = ["config.json", ...CONFIG_FILES_PROJECT] as const
+  // kilocode_change end
+
   const ModelId = z.string().meta({ $ref: "https://models.dev/model-schema.json#/$defs/Model" })
 
   const log = Log.create({ service: "config" })
+
+  // kilocode_change: Export Config.Event for config change notifications
+  export const Event = {
+    Changed: BusEvent.define(
+      "config.changed",
+      z.object({
+        directory: z.string(),
+      }),
+    ),
+  }
 
   // Managed settings directory for enterprise deployments (highest priority, admin-controlled)
   // These settings override all user and project settings
@@ -68,8 +90,6 @@ export namespace Config {
     return process.env.KILO_TEST_MANAGED_CONFIG_DIR || systemManagedConfigDir()
   }
 
-  const managedDir = managedConfigDir()
-
   // Custom merge function that concatenates array fields instead of replacing them
   function mergeConfigConcatArrays(target: Info, source: Info): Info {
     const merged = mergeDeep(target, source)
@@ -82,7 +102,10 @@ export namespace Config {
     return merged
   }
 
-  export const state = Instance.state(async () => {
+  const managedDir = managedConfigDir()
+
+  // kilocode_change: Expose the init function so it can be used for targeted state disposal
+  async function initConfigState() {
     const auth = await Auth.all()
 
     // This ensures Opencode native configs always take precedence over legacy Kilocode configs
@@ -213,11 +236,29 @@ export namespace Config {
 
     // Project config overrides global and remote config.
     if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
-      // kilocode_change start
-      for (const file of ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"]) {
-        // kilocode_change end
-        result = mergeConfigConcatArrays(result, await loadFile(file))
+      // kilocode_change start: Collect files by directory, then process closest first
+      const filesByDir = new Map<string, string[]>()
+      for (const file of CONFIG_FILES_PROJECT) {
+        const found = await Filesystem.findUp(file, Instance.directory, Instance.worktree)
+        for (const filepath of found) {
+          const dir = path.dirname(filepath)
+          const existing = filesByDir.get(dir) ?? []
+          existing.push(filepath)
+          filesByDir.set(dir, existing)
+        }
       }
+      // Sort by directory depth (shallowest/farthest first)
+      const sortedDirs = Array.from(filesByDir.entries()).sort(
+        ([a], [b]) => a.split(path.sep).length - b.split(path.sep).length,
+      )
+      // Process directories farthest first so closest is processed last and wins
+      for (const [, files] of sortedDirs) {
+        for (const file of CONFIG_FILES_KILO) {
+          const filepath = files.find((f) => path.basename(f) === file)
+          if (filepath) result = mergeConfigConcatArrays(result, await loadFile(filepath))
+        }
+      }
+      // kilocode_change end
     }
 
     result.agent = result.agent || {}
@@ -241,7 +282,7 @@ export namespace Config {
         dir.endsWith(".opencode") ||
         dir === Flag.KILO_CONFIG_DIR
       ) {
-        for (const file of ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"]) {
+        for (const file of CONFIG_FILES_KILO) {
           // kilocode_change end
           log.debug(`loading config from ${path.join(dir, file)}`)
           result = mergeConfigConcatArrays(result, await loadFile(path.join(dir, file)))
@@ -283,7 +324,7 @@ export namespace Config {
     // This way it only loads config file and not skills/plugins/commands
     if (existsSync(managedDir)) {
       // kilocode_change start
-      for (const file of ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"]) {
+      for (const file of CONFIG_FILES_KILO) {
         // kilocode_change end
         result = mergeConfigConcatArrays(result, await loadFile(path.join(managedDir, file)))
       }
@@ -339,7 +380,9 @@ export namespace Config {
       directories,
       deps,
     }
-  })
+  }
+
+  export const state = Instance.state(initConfigState)
 
   export async function waitForDependencies() {
     const deps = await state().then((x) => x.deps)
@@ -1423,19 +1466,348 @@ export namespace Config {
     return global()
   }
 
+  // kilocode_change start - Add function to persist MCP enabled state to config
+  export async function persistMcpToggle(name: string, enabled: boolean): Promise<boolean> {
+    // kilocode_change: Find the file where this MCP server is actually defined
+    const configPath = await findMcpConfigPath(name)
+    if (!configPath) return false
+
+    // kilocode_change: Serialize config file writes to prevent race conditions
+    using _lock = await Lock.write(configPath)
+
+    const file = Bun.file(configPath)
+
+    const text = (await file.exists()) ? await file.text() : "{}"
+
+    // kilocode_change: Check if value is already the same to avoid unnecessary writes (inside lock to prevent race)
+    const data = parseJsonc(text, [], { allowTrailingComma: true })
+    const mcpEntry = data?.mcp?.[name]
+    // kilocode_change: Don't create orphan entries for MCPs not defined in config
+    if (mcpEntry === undefined) return false
+    // kilocode_change: MCP entry must be an object to have an enabled field
+    if (typeof mcpEntry !== "object" || mcpEntry === null) return false
+    const currentEnabled = mcpEntry.enabled
+    if (currentEnabled === enabled) return false
+
+    const edits = modify(text, ["mcp", name, "enabled"], enabled, {
+      formattingOptions: { tabSize: 2, insertSpaces: true },
+    })
+
+    if (!edits.length) return false
+
+    const result = applyEdits(text, edits)
+    await Bun.write(configPath, result)
+    // kilocode_change: Reset global config cache to avoid stale reads when writing to global files
+    await global.reset()
+    // kilocode_change: If writing to a shared config file (outside the current project directory),
+    // dispose other instances' state (including MCP clients, not just config cache).
+    // Otherwise, just dispose the current project's config.
+    // Use path.relative for proper ancestor check (not string prefix which fails on sibling paths)
+    const rel = path.relative(Instance.directory, configPath)
+    const isSharedConfig = rel.startsWith("..") || path.isAbsolute(rel)
+    const affectedDirectories: string[] = []
+    if (isSharedConfig) {
+      // Get all affected directories BEFORE disposing (disposal clears the keys)
+      affectedDirectories.push(...State.keys())
+      // Dispose other instances' state but preserve current instance's MCP connections
+      // (MCP.connect already manages the just-connected/disconnected client)
+      await State.disposeAllExcept(Instance.directory)
+    } else {
+      affectedDirectories.push(Instance.directory)
+    }
+    await State.disposeEntry(Instance.directory, initConfigState)
+    // kilocode_change: Emit config changed event for each affected directory
+    // This ensures all workspaces/worktrees refresh their config after a global/shared MCP toggle
+    for (const dir of affectedDirectories) {
+      GlobalBus.emit("event", {
+        directory: dir,
+        payload: {
+          type: Event.Changed.type,
+          properties: {
+            directory: dir,
+          },
+        },
+      })
+    }
+    return true
+  }
+
+  async function findMcpConfigPath(mcpName: string): Promise<string> {
+    // kilocode_change: Find which config file contains the MCP server definition
+    // Search in reverse priority order (highest precedence first) to find where it's defined
+
+    // Check managed config first (highest priority) - but only to warn, don't return it
+    // since managed config directories are typically read-only for regular users.
+    // Continue searching to find a writable location for the toggle.
+    if (existsSync(managedDir)) {
+      for (const file of CONFIG_FILES_KILO) {
+        const filepath = path.join(managedDir, file)
+        if (await hasMcpDefinition(filepath, mcpName)) {
+          log.warn("MCP server is defined in managed config (read-only), toggle may not be persisted", {
+            mcp: mcpName,
+            managedConfig: filepath,
+          })
+          // Continue searching - we need to find a writable location
+        }
+      }
+    }
+
+    // Check inline config content (can't write here, fall through)
+    // Skip: Flag.KILO_CONFIG_CONTENT is read-only
+    if (Flag.KILO_CONFIG_CONTENT) {
+      try {
+        const inlineConfig = parseJsonc(Flag.KILO_CONFIG_CONTENT)
+        if (inlineConfig?.mcp?.[mcpName]) {
+          log.warn("MCP server is defined in KILO_CONFIG_CONTENT (read-only), toggle may not be persisted", {
+            mcp: mcpName,
+          })
+        }
+      } catch (err) {
+        log.debug("failed to parse KILO_CONFIG_CONTENT", { error: err })
+      }
+    }
+
+    // Check custom config path
+    if (Flag.KILO_CONFIG) {
+      if (await hasMcpDefinition(Flag.KILO_CONFIG, mcpName)) {
+        return Flag.KILO_CONFIG
+      }
+    }
+
+    // Check KILO_CONFIG_DIR (searches both kilo.json and opencode.json files)
+    if (Flag.KILO_CONFIG_DIR) {
+      for (const file of CONFIG_FILES_KILO) {
+        const filepath = path.join(Flag.KILO_CONFIG_DIR, file)
+        if (await hasMcpDefinition(filepath, mcpName)) {
+          return filepath
+        }
+      }
+    }
+
+    // Check project .opencode directories (closest first) - higher precedence than .kilo
+    if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
+      const opencodeDirs = await Array.fromAsync(
+        Filesystem.up({
+          targets: [".opencode"],
+          start: Instance.directory,
+          stop: Instance.worktree,
+        }),
+      )
+      for (const dir of opencodeDirs) {
+        for (const file of CONFIG_FILES_KILO) {
+          const filepath = path.join(dir, file)
+          if (await hasMcpDefinition(filepath, mcpName)) {
+            return filepath
+          }
+        }
+      }
+    }
+
+    // Check project .kilo directories (legacy, closest first)
+    if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
+      const kiloDirs = await Array.fromAsync(
+        Filesystem.up({
+          targets: [".kilo"],
+          start: Instance.directory,
+          stop: Instance.worktree,
+        }),
+      )
+      for (const dir of kiloDirs) {
+        for (const file of CONFIG_FILES_KILO) {
+          const filepath = path.join(dir, file)
+          if (await hasMcpDefinition(filepath, mcpName)) {
+            return filepath
+          }
+        }
+      }
+    }
+
+    // Check project config files (kilo.jsonc/kilo.json/opencode.jsonc/opencode.json in project root)
+    // kilocode_change: Check by directory depth (closest first) to match initConfigState loading precedence
+    if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
+      const allFiles: string[] = []
+      for (const file of CONFIG_FILES_KILO) {
+        const found = await Filesystem.findUp(file, Instance.directory, Instance.worktree)
+        allFiles.push(...found)
+      }
+      // Sort by directory depth (deepest/most specific first, so closest wins)
+      allFiles.sort((a, b) => b.split(path.sep).length - a.split(path.sep).length)
+      for (const filepath of allFiles) {
+        if (await hasMcpDefinition(filepath, mcpName)) {
+          return filepath
+        }
+      }
+    }
+
+    // Check ~/.opencode/ - lower precedence than project directories
+    const homeOpencodeDir = path.join(Global.Path.home, ".opencode")
+    for (const file of CONFIG_FILES_KILO) {
+      const filepath = path.join(homeOpencodeDir, file)
+      if (await hasMcpDefinition(filepath, mcpName)) {
+        return filepath
+      }
+    }
+
+    // Check ~/.kilo/ directory (legacy Kilocode config location) - lowest precedence
+    const homeKiloDir = path.join(Global.Path.home, ".kilo")
+    for (const file of CONFIG_FILES_KILO) {
+      const filepath = path.join(homeKiloDir, file)
+      if (await hasMcpDefinition(filepath, mcpName)) {
+        return filepath
+      }
+    }
+
+    // Check global config (returns first existing from kilo.json, kilo.jsonc, config.json, opencode.json, opencode.jsonc)
+    const globalPath = globalConfigFile()
+    if (await hasMcpDefinition(globalPath, mcpName)) {
+      return globalPath
+    }
+
+    // MCP not found in any existing file - fall back to default resolution.
+    // Note: persistMcpToggle will return early since the MCP entry doesn't exist,
+    // so this fallback results in a silent no-op.
+    return resolveConfigPath()
+  }
+
+  async function hasMcpDefinition(filepath: string, mcpName: string): Promise<boolean> {
+    if (!existsSync(filepath)) return false
+    try {
+      const text = await Bun.file(filepath).text()
+      const data = parseJsonc(text, [], { allowTrailingComma: true })
+      return data?.mcp?.[mcpName] !== undefined
+    } catch (err) {
+      log.debug("failed to read MCP definition", { filepath, mcpName, error: err })
+      return false
+    }
+  }
+
+  async function resolveConfigPath() {
+    // kilocode_change: Find highest-priority writable config location
+    // Order: explicit flags > project directories > home directories > global
+    // Note: This is used as a fallback when MCP is not found in any config file,
+    // and persistMcpToggle will return early in that case, making this a no-op.
+
+    // Check if custom config path is set via flag (highest priority)
+    if (Flag.KILO_CONFIG) {
+      return Flag.KILO_CONFIG
+    }
+
+    // Check KILO_CONFIG_DIR (explicit directory flag)
+    if (Flag.KILO_CONFIG_DIR) {
+      for (const file of CONFIG_FILES_KILO) {
+        const filepath = path.join(Flag.KILO_CONFIG_DIR, file)
+        if (existsSync(filepath)) {
+          return filepath
+        }
+      }
+      // Directory exists but no config file - create new file here
+      if (existsSync(Flag.KILO_CONFIG_DIR)) {
+        return path.join(Flag.KILO_CONFIG_DIR, "opencode.json")
+      }
+    }
+
+    // Check if project config is disabled
+    if (Flag.KILO_DISABLE_PROJECT_CONFIG) {
+      return globalConfigFile()
+    }
+
+    // Check .opencode directories (highest precedence project-level)
+    const opencodeDirs = await Array.fromAsync(
+      Filesystem.up({
+        targets: [".opencode"],
+        start: Instance.directory,
+        stop: Instance.worktree,
+      }),
+    )
+    for (const dir of opencodeDirs) {
+      for (const file of CONFIG_FILES_KILO) {
+        const filepath = path.join(dir, file)
+        if (existsSync(filepath)) {
+          return filepath
+        }
+      }
+      // .opencode/ directory exists but no config file - create new file here
+      if (existsSync(dir)) {
+        return path.join(dir, "opencode.json")
+      }
+    }
+
+    // Check .kilo directories (legacy project-level)
+    const kiloDirs = await Array.fromAsync(
+      Filesystem.up({
+        targets: [".kilo"],
+        start: Instance.directory,
+        stop: Instance.worktree,
+      }),
+    )
+    for (const dir of kiloDirs) {
+      for (const file of CONFIG_FILES_KILO) {
+        const filepath = path.join(dir, file)
+        if (existsSync(filepath)) {
+          return filepath
+        }
+      }
+      // .kilo/ directory exists but no config file - create new file here
+      if (existsSync(dir)) {
+        return path.join(dir, "opencode.json")
+      }
+    }
+
+    // Find project config files (closest first)
+    for (const file of CONFIG_FILES_KILO) {
+      const found = await Filesystem.findUp(file, Instance.directory, Instance.worktree)
+      if (found.length > 0) {
+        return found[0]
+      }
+    }
+
+    // Check ~/.opencode/ (user home directory config)
+    const homeOpencodeDir = path.join(Global.Path.home, ".opencode")
+    for (const file of CONFIG_FILES_KILO) {
+      const filepath = path.join(homeOpencodeDir, file)
+      if (existsSync(filepath)) {
+        return filepath
+      }
+    }
+    if (existsSync(homeOpencodeDir)) {
+      return path.join(homeOpencodeDir, "opencode.json")
+    }
+
+    // Check ~/.kilo/ (legacy Kilocode config location)
+    const homeKiloDir = path.join(Global.Path.home, ".kilo")
+    for (const file of CONFIG_FILES_KILO) {
+      const filepath = path.join(homeKiloDir, file)
+      if (existsSync(filepath)) {
+        return filepath
+      }
+    }
+
+    // Fallback to global config
+    return globalConfigFile()
+  }
+  // kilocode_change end
+
   export async function update(config: Info) {
     const filepath = path.join(Instance.directory, "config.json")
+    using _lock = await Lock.write(filepath)
     const existing = await loadFile(filepath)
     await Filesystem.writeJson(filepath, stripNulls(mergeDeep(existing, config) as Record<string, unknown>)) // kilocode_change - strip null delete sentinels
-    await Instance.dispose()
+    // kilocode_change: Dispose only the Config state, not the entire instance (preserves MCP connections)
+    await State.disposeEntry(Instance.directory, initConfigState)
+    // kilocode_change: Emit config changed event to notify UI/watchers
+    GlobalBus.emit("event", {
+      directory: Instance.directory,
+      payload: {
+        type: Event.Changed.type,
+        properties: {
+          directory: Instance.directory,
+        },
+      },
+    })
   }
 
   function globalConfigFile() {
-    // kilocode_change start
-    const candidates = ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json", "config.json"].map((file) =>
-      // kilocode_change end
-      path.join(Global.Path.config, file),
-    )
+    const candidates = CONFIG_FILES_KILO.map((file) => path.join(Global.Path.config, file))
     for (const file of candidates) {
       if (existsSync(file)) return file
     }
@@ -1559,7 +1931,7 @@ export namespace Config {
         GlobalBus.emit("event", {
           directory: "global",
           payload: {
-            type: Event.Disposed.type,
+            type: ServerEvent.Disposed.type,
             properties: {},
           },
         })

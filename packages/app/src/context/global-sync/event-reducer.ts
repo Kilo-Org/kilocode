@@ -91,6 +91,13 @@ export function applyDirectoryEvent(input: {
       input.push(input.directory)
       return
     }
+    case "config.changed": {
+      const props = event.properties as { directory: string }
+      if (props.directory === input.directory) {
+        input.push(input.directory)
+      }
+      return
+    }
     case "session.created": {
       const info = (event.properties as { info: Session }).info
       const result = Binary.search(input.store.session, info.id, (s) => s.id)
