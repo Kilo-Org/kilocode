@@ -81,6 +81,7 @@ Or use npm:
 | `kilo github`             | Manage GitHub agent (install, run)         |
 | `kilo debug`              | Debugging and troubleshooting tools        |
 | `kilo completion`         | Generate shell completion script           |
+| `kilo acp`                | Start ACP (Agent Client Protocol) server   |
 
 ### Global Options
 
@@ -90,6 +91,65 @@ Or use npm:
 | `--version`, `-v` | Show version number                 |
 | `--print-logs`    | Print logs to stderr                |
 | `--log-level`     | Log level: DEBUG, INFO, WARN, ERROR |
+
+## ACP Integration
+
+Kilo CLI supports the [Agent Client Protocol (ACP)](https://agentclientprotocol.com/), enabling integration with any ACP-compatible client.
+
+### Quick Start with acpx
+
+[acpx](https://github.com/openclaw/acpx) is a headless CLI client for ACP agents that works perfectly with Kilo:
+
+```bash
+# Install both tools
+npm install -g @kilocode/cli
+npm install -g acpx
+
+# Use with Kilo CLI via --agent flag
+acpx --agent "kilo acp" exec "help me fix this bug"
+acpx --agent "kilo acp" sessions new --name backend-work
+acpx --agent "kilo acp" --session backend-work "continue working on the API"
+
+# Auto-approve permissions for CI/automation (only use in trusted environments)
+acpx --agent "kilo acp" --approve-all exec "run the test suite and fix any failures"
+```
+
+{% callout type="warning" %}
+**Security Note:** The `--approve-all` flag auto-approves all permission requests including file writes and command execution. Only use this in trusted CI/automation environments where you control the input.
+{% /callout %}
+
+### Alternative: Use kx Alias (Optional)
+
+If you want to avoid typing `kilo acp` every time, you can create a personal shell alias (note: this is your own alias, not a shipped command):
+
+```bash
+# Add to your shell profile (.bashrc, .zshrc, etc.)
+alias kx='acpx --agent "kilo acp"'
+
+# Then use the shorter form
+kx exec "help me fix this bug"
+kx sessions new --name backend-work
+```
+
+### Supported ACP Clients
+
+- **[acpx](https://github.com/openclaw/acpx)** - Headless CLI client for agent orchestration
+- **Zed Editor** - Built-in ACP support for coding agents
+- **Any ACP v1 client** - Full protocol compliance
+
+### Manual ACP Server
+
+If you want to use Kilo with a custom ACP client, you can start the ACP server manually:
+
+```bash
+# Start ACP server on stdio
+kilo acp
+
+# With specific working directory
+kilo acp --cwd /path/to/project
+```
+
+For detailed technical information, see the [ACP Implementation README](https://github.com/Kilo-Org/kilocode/tree/main/packages/opencode/src/acp).
 
 ### Interactive Slash Commands
 
