@@ -1502,7 +1502,9 @@ export namespace Config {
     // kilocode_change: If writing to a shared config file (outside the current project directory),
     // dispose ALL state for ALL projects (including MCP clients, not just config cache).
     // Otherwise, just dispose the current project's config.
-    const isSharedConfig = !configPath.startsWith(Instance.directory)
+    // Use path.relative for proper ancestor check (not string prefix which fails on sibling paths)
+    const rel = path.relative(Instance.directory, configPath)
+    const isSharedConfig = rel.startsWith("..") || path.isAbsolute(rel)
     const affectedDirectories: string[] = []
     if (isSharedConfig) {
       // Get all affected directories BEFORE disposing (disposal clears the keys)
