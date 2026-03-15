@@ -127,6 +127,93 @@ describe("commit-message.generate", () => {
       expect(result.message).toBe("refactor: simplify logic")
     })
 
+    test("extractSection ignores shorter matching fences and accepts longer closers", async () => {
+      const mod = await import("../generate")
+      const { extractSection } = mod
+
+      const contentWithMismatchedFences = `
+## Commit Message
+
+\`\`\`\`markdown
+# Example Commit Message
+
+feat: add new feature
+\`\`\`
+More instructions here that should be included.
+Another line of instructions.
+\`\`\`\`\`
+
+## Next Section
+
+This should not be included.
+`
+
+      const result = extractSection(contentWithMismatchedFences, "## Commit Message")
+      expect(result).toBeDefined()
+      expect(result).toBe(
+        `
+\`\`\`\`markdown
+# Example Commit Message
+
+feat: add new feature
+\`\`\`
+More instructions here that should be included.
+Another line of instructions.
+\`\`\`\`\``.trim(),
+      )
+    })
+
+    test("extractSection matches the provided heading", async () => {
+      const mod = await import("../generate")
+      const { extractSection } = mod
+
+      const content = `
+## Ignore This
+
+docs: ignore this
+
+## Something Else
+
+fix: keep this
+
+## Final
+
+chore: ignore this too
+`
+
+      const result = extractSection(content, "## Something Else")
+      expect(result).toBe("fix: keep this")
+    })
+
+    test("extractSection keeps nested headings inside the section", async () => {
+      const mod = await import("../generate")
+      const { extractSection } = mod
+
+      const content = `
+## Commit Message
+
+Use this format.
+
+### Example
+
+feat: keep nested heading content
+
+## Next Section
+
+ignore this
+`
+
+      const result = extractSection(content, "## Commit Message")
+      expect(result).toBe(
+        `
+Use this format.
+
+### Example
+
+feat: keep nested heading content`.trim(),
+      )
+    })
+
     test("returns clean message when no markers present", async () => {
       mockStreamText = "docs: update readme"
 

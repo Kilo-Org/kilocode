@@ -1,11 +1,164 @@
+import { Agent } from "@/agent/agent"
 import { Provider } from "@/provider/provider"
 import { LLM } from "@/session/llm"
-import { Agent } from "@/agent/agent"
+import { Filesystem } from "@/util/filesystem"
+import { git } from "@/util/git"
 import { Log } from "@/util/log"
-import type { CommitMessageRequest, CommitMessageResponse, GitContext } from "./types"
+import { join, dirname } from "path"
 import { getGitContext } from "./git-context"
+import type { CommitMessageRequest, CommitMessageResponse, GitContext } from "./types"
 
 const log = Log.create({ service: "commit-message" })
+
+const SECTION_HEADING = "## Commit Message"
+
+const FENCE_PATTERN = /^[ ]{0,3}(?:`{3,}|~{3,})/
+
+function escape(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+function fence(line: string) {
+  const match = line.match(FENCE_PATTERN)
+  if (!match) return
+  const text = match[0].trimEnd()
+  return {
+    char: text[0],
+    size: text.length,
+  }
+}
+
+export function extractSection(content: string, heading: string): string | undefined {
+  const lines = content.split("\n")
+  const target = heading.match(/^(#{1,6})\s*(.*)$/)
+  const size = target?.[1].length ?? 2
+  const text = target?.[2] ?? heading.replace(/^##\s*/, "")
+  const pattern = new RegExp(`^#{${size}}\\s*${escape(text)}\\s*#*$`)
+
+  // Helper function to process lines with fence handling
+  function processLines(
+    startIdx: number,
+    endIdx: number,
+    onNonFenceLine: (line: string, i: number) => boolean | void,
+  ): void {
+    let inCodeFence = false
+    let marker: ReturnType<typeof fence>
+    for (let i = startIdx; i < endIdx; i++) {
+      const line = lines[i]
+      const match = fence(line)
+      if (match) {
+        if (!inCodeFence) {
+          inCodeFence = true
+          marker = match
+          continue
+        }
+        if (match.char === marker?.char && match.size >= marker.size) {
+          inCodeFence = false
+          marker = undefined
+        }
+        continue
+      }
+      if (!inCodeFence && onNonFenceLine(line, i)) {
+        break
+      }
+    }
+  }
+
+  let start = -1
+  processLines(0, lines.length, (line, i) => {
+    if (pattern.test(line)) {
+      start = i
+      return true
+    }
+  })
+  if (start === -1) return undefined
+
+  let end = lines.length
+  processLines(start + 1, lines.length, (line, i) => {
+    // Skip indented code blocks (4+ spaces)
+    if (/^\s{4,}/.test(line)) {
+      return false
+    }
+    const atx = line.match(/^\s{0,3}(#{1,6})[^#]/)
+    if (
+      (atx && atx[1].length <= size) ||
+      (i > start + 1 && lines[i - 1].trim() && !lines[i - 1].trim().startsWith("#") && /^\s*[=-]{3,}\s*$/.test(line))
+    ) {
+      end = i
+      return true
+    }
+  })
+
+  const rawSection = lines.slice(start + 1, end).join("\n")
+  // Trim only leading/trailing empty lines, preserve internal formatting
+  const trimmedSection = rawSection.replace(/^\n+|\n+$/g, "")
+  return trimmedSection || undefined
+}
+
+async function loadInstructionsFromAgentsMd(
+  searchPath: string,
+  repoPath: string,
+): Promise<{ instructions?: string; found: boolean }> {
+  const FILES = ["AGENTS.md", "CLAUDE.md", "CONTEXT.md"]
+
+  // Search from searchPath up to repoPath
+  let currentDir = searchPath
+  while (true) {
+    for (const file of FILES) {
+      const filepath = join(currentDir, file)
+      const exists = await Filesystem.exists(filepath)
+
+      if (exists) {
+        const content = await Filesystem.readText(filepath).catch(() => "")
+        const section = extractSection(content, SECTION_HEADING)
+        if (section) {
+          log.info("loaded commit instructions from", { file: filepath })
+          return { instructions: section, found: true }
+        }
+      }
+    }
+
+    // Stop if we've reached the repo root
+    if (currentDir === repoPath) break
+
+    // Move up one directory
+    const parentDir = dirname(currentDir)
+    if (parentDir === currentDir) break // reached filesystem root
+    currentDir = parentDir
+  }
+
+  return { found: false }
+}
+
+async function loadInstructions(cwd: string): Promise<{ instructions?: string; found: boolean }> {
+  // Always resolve to the actual git root to handle nested paths correctly
+  const result = await git(["rev-parse", "--show-toplevel"], { cwd })
+  const repoPath = result.exitCode === 0 ? result.text().trim() : cwd
+
+  const fromAgents = await loadInstructionsFromAgentsMd(cwd, repoPath)
+  if (fromAgents.found) return fromAgents
+
+  // Search for .kilocode/commit-instructions.md from cwd up to repoPath
+  let currentDir = cwd
+  while (true) {
+    const filepath = join(currentDir, ".kilocode", "commit-instructions.md")
+    const content = await Filesystem.readText(filepath).catch(() => "")
+    const trimmed = content.trim()
+    if (trimmed) {
+      return { instructions: trimmed, found: true }
+    }
+
+    // Stop if we've reached the repo root
+    if (currentDir === repoPath) break
+
+    // Move up one directory
+    const parentDir = dirname(currentDir)
+    if (parentDir === currentDir) break // reached filesystem root
+    currentDir = parentDir
+  }
+
+  return { found: false }
+}
 
 const SYSTEM_PROMPT = `You are an expert Git commit message generator that creates conventional commit messages based on staged changes. Analyze the provided git diff output and generate an appropriate conventional commit message following the specification.
 
@@ -126,13 +279,19 @@ export async function generateCommitMessage(request: CommitMessageRequest): Prom
     (await Provider.getSmallModel(defaultModel.providerID)) ??
     (await Provider.getModel(defaultModel.providerID, defaultModel.modelID))
 
+  // Callers never pass instructions — load from AGENTS.md, CLAUDE.md, CONTEXT.md, or .kilocode/commit-instructions.md
+  const loaded = await loadInstructions(request.path)
+  const prompt = loaded.instructions
+    ? `${SYSTEM_PROMPT}\n\n## Custom Instructions\n${loaded.instructions}`
+    : SYSTEM_PROMPT
+
   const agent: Agent.Info = {
     name: "commit-message",
     mode: "primary",
     hidden: true,
     options: {},
     permission: [],
-    prompt: SYSTEM_PROMPT,
+    prompt,
     temperature: 0.3,
   }
 
