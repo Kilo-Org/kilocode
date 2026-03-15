@@ -1509,13 +1509,13 @@ export namespace Config {
     if (isSharedConfig) {
       // Get all affected directories BEFORE disposing (disposal clears the keys)
       affectedDirectories.push(...State.keys())
-      // Dispose other instances' state but preserve current instance (MCP.connect already manages it)
-      // This prevents tearing down the just-connected client when persisting enabled:true
+      // Dispose other instances' state but preserve current instance's MCP connections
+      // (MCP.connect already manages the just-connected/disconnected client)
       await State.disposeAllExcept(Instance.directory)
     } else {
       affectedDirectories.push(Instance.directory)
-      await State.disposeEntry(Instance.directory, initConfigState)
     }
+    await State.disposeEntry(Instance.directory, initConfigState)
     // kilocode_change: Emit config changed event for each affected directory
     // This ensures all workspaces/worktrees refresh their config after a global/shared MCP toggle
     for (const dir of affectedDirectories) {
