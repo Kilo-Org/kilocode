@@ -49,7 +49,7 @@ mock.module("@/util/log", () => ({
   },
 }))
 
-import { generateCommitMessage } from "../generate"
+import { generateCommitMessage, NoChangesError } from "../generate"
 
 describe("commit-message.generate", () => {
   beforeEach(() => {
@@ -143,9 +143,7 @@ describe("commit-message.generate", () => {
         files: [],
       }
 
-      await expect(generateCommitMessage({ path: "/repo" })).rejects.toThrow(
-        "No changes found to generate a commit message for",
-      )
+      await expect(generateCommitMessage({ path: "/repo" })).rejects.toThrow(NoChangesError)
     })
   })
 

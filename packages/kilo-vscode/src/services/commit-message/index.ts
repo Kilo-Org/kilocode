@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../cli-backend/connection-service"
-import { getErrorMessage } from "../../kilo-provider-utils"
+import { formatCommitError, getCommitErrorType, COMMIT_ERROR_TYPES } from "../../kilo-provider-utils"
 
 let lastGeneratedMessage: string | undefined
 let lastWorkspacePath: string | undefined
@@ -73,9 +73,16 @@ export function registerCommitMessageService(
         },
       )
       .then(undefined, (error: unknown) => {
-        const msg = getErrorMessage(error)
-        console.error("[Kilo New] Failed to generate commit message:", msg)
-        vscode.window.showErrorMessage(`Failed to generate commit message: ${msg}`)
+        console.error("[Kilo New] Failed to generate commit message:", error)
+
+        const errorType = getCommitErrorType(error)
+        if (errorType === COMMIT_ERROR_TYPES.NO_CHANGES) {
+          vscode.window.showInformationMessage(
+            "No staged or unstaged changes found. Stage some changes first to generate a commit message.",
+          )
+        } else {
+          vscode.window.showErrorMessage(`Failed to generate commit message: ${formatCommitError(error)}`)
+        }
       })
   })
 
