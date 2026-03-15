@@ -46,6 +46,22 @@
 
 If you want to contribute or modify the extension locally, see the [DEVELOPMENT.md](/DEVELOPMENT.md) file for build and setup instructions.
 
+### Snapshot Builds
+
+To build and share a development snapshot of the extension:
+
+```bash
+# Run from packages/kilo-vscode/
+
+# Build only (outputs VSIX to system temp dir)
+bun run snapshot:build
+
+# Build and install directly into VS Code
+bun run snapshot:install
+```
+
+The snapshot version embeds the current commit SHA and your git username (from `git config user.name`), e.g. `7.0.47-snapshot+8ff7f2d02.kirillk`.
+
 ## Contributing
 
 We welcome contributions from developers, writers, and enthusiasts!
