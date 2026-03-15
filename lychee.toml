@@ -1,0 +1,135 @@
+# Kilo Code Monorepo Link Checker Configuration
+# For CLI (opencode) and VS Code (kilo-vscode) packages
+# See: https://github.com/lycheeverse/lychee
+#
+# Note: packages/kilo-docs has its own lychee.toml with docs-specific settings
+
+#############################  Behavior  ############################
+
+format = "Detailed"
+max_redirects = 3
+max_retries = 3
+retry_wait_time = 5
+
+# Accept these status codes as "valid"
+accept = [
+  "200",
+  "201",
+  "204",
+  "301",  # Permanent redirect (valid, just moved)
+  "302",  # Temporary redirect
+  "307",  # Temporary redirect (HTTP/1.1)
+  "403",  # Forbidden (often valid but auth-gated)
+  "429",  # Rate limited (valid, just throttled)
+]
+
+#############################  Path Exclusions  #####################
+
+exclude_path = [
+  "node_modules",
+  "dist",
+  "build",
+  ".git",
+  # Test directories with intentional example/mock URLs
+  "test",
+  "tests",
+  "__tests__",
+  "__mocks__",
+  "fixtures",
+  # Generated files
+  "*.d.ts",
+  "*.map",
+]
+
+#############################  URL Exclusions  ######################
+
+exclude = [
+  # === Image/asset file extensions (not URLs to check) ===
+  '\.png$',
+  '\.jpg$',
+  '\.jpeg$',
+  '\.gif$',
+  '\.svg$',
+  '\.ico$',
+  '\.woff2?$',
+  '\.wasm$',
+
+  # === Example/Placeholder URLs ===
+  '^https?://example\.(com|org|net|invalid)',
+  '^https?://[a-z]+\.example\.(com|org|net)',
+  '^https?://test\.',
+  '^https?://fake\.',
+  '^https?://mock\.',
+  '^https?://your-',
+  '^https?://my-',
+
+  # === Localhost/Local development ===
+  '^https?://localhost',
+  '^https?://127\.0\.0\.1',
+  '^https?://0\.0\.0\.0',
+  '^localhost:',
+
+  # === Template/Variable URLs (cannot be resolved) ===
+  '\$\{',                           # ${variable}
+  '\$%7B',                          # URL-encoded ${
+  '\{[a-zA-Z_][a-zA-Z0-9_]*\}',     # {placeholder}
+  '%s',                             # printf-style placeholders
+  '<[A-Z_]+>',                      # <PLACEHOLDER> style
+
+  # === GitHub (HTTP/2 protocol errors on GHA runners) ===
+  '^https?://github\.com/',
+  '^https?://raw\.githubusercontent\.com/',
+
+  # === API Consoles/Dashboards (require authentication) ===
+  '^https?://(api|console)\.mistral\.ai',
+  '^https?://(app|console)\.requesty\.ai',
+  '^https?://(cloud|console)\.google\.ai',
+  '^https?://console\.groq\.com',
+  '^https?://platform\.slack-edge\.com',
+  '^https?://([A-Za-z0-9-]+\.)?glama\.ai',
+  '^https?://console\.anthropic\.com',
+  '^https?://platform\.openai\.com',
+  '^https?://aistudio\.google\.com',
+
+  # === Dynamic/Runtime URLs with embedded IDs ===
+  '^https?://api\.kilo\.ai/api/organizations/',
+  '^https?://[a-zA-Z0-9-]+\.cognitiveservices\.azure\.com',
+  '^https?://[a-zA-Z0-9-]+\.openai\.azure\.com',
+
+  # === Known problematic URLs (from docs config) ===
+  'https://synthetic.new/user-settings/api',
+  'https://opencode.ai/pages/config',
+  'https://tbench.ai/',
+
+  # === API base URLs (not browseable endpoints) ===
+  '^https?://api\.openai\.com/(v1|auth)$',
+  '^https?://api\.github\.com/',
+  '^https?://chatgpt\.com/backend-api/',
+  '^https?://copilot-api/',
+  '^https?://mcp\.exa\.ai/',
+  '^https?://api\.kilo\.ai/api/',
+  '^https?://ingest\.kilosessions\.ai/',
+  '^https?://api\.cloudflare\.com/',
+  '^https?://download-cdn\.jetbrains\.com/',
+
+  # === Internal/Example domains ===
+  '^https?://dev\.kilo\.ai/',
+  '^https?://kilo\.internal/',
+  '^https?://company\.ghe\.com/',
+  '^https?://app\.kilo\.ai/s/',               # Session sharing URLs with dynamic IDs
+  '^https?://kilo\.ai/config\.json$',         # Config file URL
+
+  # === Schema references (not actual URLs) ===
+  '\$ref.*#/',                      # JSON Schema $ref fragments
+  '^#',                             # Internal anchor links
+
+  # === VS Code specific ===
+  '^vscode:',                       # VS Code URI scheme
+  '^command:',                      # VS Code command URIs
+
+  # === File paths that look like URLs ===
+  '^file://',
+]
+
+# Skip private/internal IP ranges
+exclude_all_private = true
