@@ -2,6 +2,7 @@ import { describe, test, expect } from "bun:test"
 import path from "path"
 import fs from "fs/promises"
 import { File } from "../../src/file"
+import { Ripgrep } from "../../src/file/ripgrep"
 import { Instance } from "../../src/project/instance"
 import { Filesystem } from "../../src/util/filesystem"
 import { tmpdir } from "../fixture/fixture"
@@ -391,4 +392,42 @@ describe("file/index Filesystem patterns", () => {
       })
     })
   })
+
+  // kilocode_change start
+  describe("File.search() fallback indexing", () => {
+    test("returns project files when ripgrep scan fails", async () => {
+      await using tmp = await tmpdir()
+      await fs.mkdir(path.join(tmp.path, "src"), { recursive: true })
+      await fs.mkdir(path.join(tmp.path, "node_modules", "pkg"), { recursive: true })
+      await fs.writeFile(path.join(tmp.path, "src", "alpha.ts"), "export const alpha = 1", "utf-8")
+      await fs.writeFile(path.join(tmp.path, "node_modules", "pkg", "ignored.ts"), "export {}", "utf-8")
+
+      const original = Ripgrep.files
+      const failing = async function* () {
+        throw new Error("ripgrep unavailable")
+      }
+      ;(Ripgrep as { files: typeof Ripgrep.files }).files = failing as typeof Ripgrep.files
+
+      await Instance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          await (async () => {
+            for (let i = 0; i < 30; i++) {
+              const result = await File.search({ query: "alpha", dirs: false, limit: 20 })
+              if (result.includes("src/alpha.ts")) {
+                expect(result.includes("node_modules/pkg/ignored.ts")).toBe(false)
+                return
+              }
+              await Bun.sleep(20)
+            }
+            const final = await File.search({ query: "alpha", dirs: false, limit: 20 })
+            expect(final).toContain("src/alpha.ts")
+          })().finally(() => {
+            ;(Ripgrep as { files: typeof Ripgrep.files }).files = original
+          })
+        },
+      })
+    })
+  })
+  // kilocode_change end
 })

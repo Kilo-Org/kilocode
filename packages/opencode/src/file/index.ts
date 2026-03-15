@@ -9,6 +9,7 @@ import { Log } from "../util/log"
 import { Filesystem } from "../util/filesystem"
 import { Instance } from "../project/instance"
 import { Ripgrep } from "./ripgrep"
+import { FileIgnore } from "./ignore"
 import fuzzysort from "fuzzysort"
 import { Global } from "../global"
 
@@ -336,6 +337,39 @@ export namespace File {
     let cache: Entry = { files: [], dirs: [] }
     let fetching = false
 
+    // kilocode_change start
+    const fallbackScan = async (result: Entry) => {
+      const stack = [""]
+      const seenDirs = new Set<string>()
+
+      while (stack.length > 0) {
+        const current = stack.pop()
+        if (current === undefined) break
+        const cwd = current ? path.join(Instance.directory, current) : Instance.directory
+        const entries = await fs.promises.readdir(cwd, { withFileTypes: true }).catch(() => [] as fs.Dirent[])
+
+        for (const entry of entries) {
+          const relative = current ? path.join(current, entry.name) : entry.name
+          const normalized = relative.split(path.sep).join("/")
+
+          if (entry.isDirectory()) {
+            if (FileIgnore.match(normalized + "/")) continue
+            const dir = normalized + "/"
+            if (seenDirs.has(dir)) continue
+            seenDirs.add(dir)
+            result.dirs.push(dir)
+            stack.push(relative)
+            continue
+          }
+
+          if (!entry.isFile()) continue
+          if (FileIgnore.match(normalized)) continue
+          result.files.push(normalized)
+        }
+      }
+    }
+    // kilocode_change end
+
     const isGlobalHome = Instance.directory === Global.Path.home && Instance.project.id === "global"
 
     const fn = async (result: Entry) => {
@@ -378,20 +412,32 @@ export namespace File {
         return
       }
 
-      const set = new Set<string>()
-      for await (const file of Ripgrep.files({ cwd: Instance.directory })) {
-        result.files.push(file)
-        let current = file
-        while (true) {
-          const dir = path.dirname(current)
-          if (dir === ".") break
-          if (dir === current) break
-          current = dir
-          if (set.has(dir)) continue
-          set.add(dir)
-          result.dirs.push(dir + "/")
+      // kilocode_change start
+      await (async () => {
+        const set = new Set<string>()
+        for await (const file of Ripgrep.files({ cwd: Instance.directory })) {
+          result.files.push(file)
+          let current = file
+          while (true) {
+            const dir = path.dirname(current)
+            if (dir === ".") break
+            if (dir === current) break
+            current = dir
+            if (set.has(dir)) continue
+            set.add(dir)
+            result.dirs.push(dir + "/")
+          }
         }
-      }
+      })().catch(async (error) => {
+        log.error("index scan failed, using fallback scanner", {
+          error: error instanceof Error ? error.message : String(error),
+        })
+        await fallbackScan(result)
+      })
+
+      result.files = result.files.toSorted()
+      result.dirs = result.dirs.toSorted()
+      // kilocode_change end
       cache = result
       fetching = false
     }
