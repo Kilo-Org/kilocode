@@ -1123,8 +1123,8 @@ export interface PermissionResponseRequest {
   permissionId: string
   sessionID: string
   response: "once" | "always" | "reject"
-  approvedPatterns: string[]
-  deniedPatterns: string[]
+  approvedAlways: string[]
+  deniedAlways: string[]
 }
 
 export interface CreateSessionRequest {

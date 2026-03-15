@@ -3949,8 +3949,8 @@ export type PermissionReplyResponse = PermissionReplyResponses[keyof PermissionR
 
 export type PermissionSavePatternRulesData = {
   body?: {
-    approvedPatterns?: Array<string>
-    deniedPatterns?: Array<string>
+    approvedAlways?: Array<string>
+    deniedAlways?: Array<string>
   }
   path: {
     requestID: string

@@ -164,8 +164,8 @@ export namespace PermissionNext {
   export const savePatternRules = fn(
     z.object({
       requestID: Identifier.schema("permission"),
-      approvedPatterns: z.string().array().optional(),
-      deniedPatterns: z.string().array().optional(),
+      approvedAlways: z.string().array().optional(),
+      deniedAlways: z.string().array().optional(),
     }),
     async (input) => {
       const s = await state()
@@ -175,10 +175,10 @@ export namespace PermissionNext {
       const validPatterns = new Set(existing.info.patterns)
       const permission = existing.info.permission
 
-      for (const pattern of input.approvedPatterns ?? []) {
+      for (const pattern of input.approvedAlways ?? []) {
         if (validPatterns.has(pattern)) s.approved.push({ permission, pattern, action: "allow" })
       }
-      for (const pattern of input.deniedPatterns ?? []) {
+      for (const pattern of input.deniedAlways ?? []) {
         if (validPatterns.has(pattern)) s.approved.push({ permission, pattern, action: "deny" })
       }
     },

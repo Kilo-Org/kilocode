@@ -77,8 +77,8 @@ export const PermissionRoutes = lazy(() =>
       validator(
         "json",
         z.object({
-          approvedPatterns: z.string().array().optional(),
-          deniedPatterns: z.string().array().optional(),
+          approvedAlways: z.string().array().optional(),
+          deniedAlways: z.string().array().optional(),
         }),
       ),
       async (c) => {
@@ -86,8 +86,8 @@ export const PermissionRoutes = lazy(() =>
         const json = c.req.valid("json")
         await PermissionNext.savePatternRules({
           requestID: params.requestID,
-          approvedPatterns: json.approvedPatterns,
-          deniedPatterns: json.deniedPatterns,
+          approvedAlways: json.approvedAlways,
+          deniedAlways: json.deniedAlways,
         })
         return c.json(true)
       },

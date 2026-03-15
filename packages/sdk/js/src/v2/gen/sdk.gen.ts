@@ -2469,8 +2469,8 @@ export class Permission extends HeyApiClient {
       requestID: string
       directory?: string
       workspace?: string
-      approvedPatterns?: Array<string>
-      deniedPatterns?: Array<string>
+      approvedAlways?: Array<string>
+      deniedAlways?: Array<string>
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -2482,8 +2482,8 @@ export class Permission extends HeyApiClient {
             { in: "path", key: "requestID" },
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
-            { in: "body", key: "approvedPatterns" },
-            { in: "body", key: "deniedPatterns" },
+            { in: "body", key: "approvedAlways" },
+            { in: "body", key: "deniedAlways" },
           ],
         },
       ],
