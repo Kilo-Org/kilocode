@@ -30,10 +30,11 @@ export async function enhancePrompt(text: string): Promise<string> {
 
   const result = await generateText({
     model: language,
-    temperature: 0.7,
+    temperature: model.capabilities.temperature ? 0.7 : undefined,
     providerOptions: ProviderTransform.providerOptions(model, ProviderTransform.smallOptions(model)),
     maxRetries: 3,
-    messages: [{ role: "user" as const, content: `${INSTRUCTION}\n\n${text}` }],
+    system: INSTRUCTION,
+    messages: [{ role: "user" as const, content: text }],
   })
 
   log.info("enhanced", { length: result.text.length })
