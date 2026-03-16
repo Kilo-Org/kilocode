@@ -7,9 +7,9 @@ export const dict = {
   "kilocode:autocomplete.statusBar.tooltip.basic": "Kilo Code Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.disabled": "Kilo Code Autocomplete (disabilitato)",
   "kilocode:autocomplete.statusBar.tooltip.noCredits":
-    "**Nessun credito nel tuo account**\n\nIl tuo account Kilo Code non ha crediti. Per usare l'autocompletamento, aggiungi crediti al tuo account.\n\n[Apri Impostazioni](command:kilo-code.settingsButtonClicked)",
+    "**Nessun credito nel tuo account**\n\nIl tuo account Kilo Code non ha crediti. Per usare l'autocompletamento, aggiungi crediti al tuo account.\n\n[Apri Impostazioni]({{command}})",
   "kilocode:autocomplete.statusBar.tooltip.noUsableProvider":
-    "**Nessun modello di autocompletamento configurato**\n\nPer abilitare l'autocompletamento, aggiungi un profilo con uno di questi provider supportati: {{providers}}.\n\n[Apri Impostazioni](command:kilo-code.settingsButtonClicked)",
+    "**Nessun modello di autocompletamento configurato**\n\nPer abilitare l'autocompletamento, aggiungi un profilo con uno di questi provider supportati: {{providers}}.\n\n[Apri Impostazioni]({{command}})",
   "kilocode:autocomplete.statusBar.tooltip.sessionTotal": "Costo totale della sessione:",
   "kilocode:autocomplete.statusBar.tooltip.provider": "Provider:",
   "kilocode:autocomplete.statusBar.tooltip.model": "Modello:",

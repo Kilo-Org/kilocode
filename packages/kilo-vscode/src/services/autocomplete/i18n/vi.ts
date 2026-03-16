@@ -7,9 +7,9 @@ export const dict = {
   "kilocode:autocomplete.statusBar.tooltip.basic": "Kilo Code Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.disabled": "Kilo Code Autocomplete (đã tắt)",
   "kilocode:autocomplete.statusBar.tooltip.noCredits":
-    "**Không có tín dụng trong tài khoản của bạn**\n\nTài khoản Kilo Code của bạn không có tín dụng. Để sử dụng tự động hoàn thành, vui lòng thêm tín dụng vào tài khoản của bạn.\n\n[Mở Cài đặt](command:kilo-code.settingsButtonClicked)",
+    "**Không có tín dụng trong tài khoản của bạn**\n\nTài khoản Kilo Code của bạn không có tín dụng. Để sử dụng tự động hoàn thành, vui lòng thêm tín dụng vào tài khoản của bạn.\n\n[Mở Cài đặt]({{command}})",
   "kilocode:autocomplete.statusBar.tooltip.noUsableProvider":
-    "**Chưa cấu hình mô hình tự động hoàn thành**\n\nĐể bật tự động hoàn thành, hãy thêm hồ sơ với một trong các nhà cung cấp được hỗ trợ sau: {{providers}}.\n\n[Mở Cài đặt](command:kilo-code.settingsButtonClicked)",
+    "**Chưa cấu hình mô hình tự động hoàn thành**\n\nĐể bật tự động hoàn thành, hãy thêm hồ sơ với một trong các nhà cung cấp được hỗ trợ sau: {{providers}}.\n\n[Mở Cài đặt]({{command}})",
   "kilocode:autocomplete.statusBar.tooltip.sessionTotal": "Tổng chi phí phiên:",
   "kilocode:autocomplete.statusBar.tooltip.provider": "Nhà cung cấp:",
   "kilocode:autocomplete.statusBar.tooltip.model": "Mô hình:",

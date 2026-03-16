@@ -45,7 +45,7 @@ function getFilename(path: string): string {
 interface VscodeSessionTurnProps {
   sessionID: string
   messageID: string
-  lastUserMessageID?: string
+  queued?: boolean
 }
 
 export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
@@ -167,6 +167,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
               message={msg() as unknown as Parameters<typeof UserMessageDisplay>[0]["message"]}
               parts={parts() as unknown as Parameters<typeof UserMessageDisplay>[0]["parts"]}
               interrupted={interrupted()}
+              queued={props.queued}
             />
           </div>
 

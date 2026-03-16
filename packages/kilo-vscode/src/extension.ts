@@ -95,8 +95,8 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.profileButtonClicked", () => {
       settingsEditorProvider.openPanel("profile")
     }),
-    vscode.commands.registerCommand("kilo-code.new.settingsButtonClicked", () => {
-      settingsEditorProvider.openPanel("settings")
+    vscode.commands.registerCommand("kilo-code.new.settingsButtonClicked", (tab?: string) => {
+      settingsEditorProvider.openPanel("settings", tab)
     }),
     // legacy-migration start
     vscode.commands.registerCommand("kilo-code.new.openMigrationWizard", () => {

@@ -171,10 +171,9 @@ export const PromptInput: Component = () => {
 
   const isBusy = () => session.status() === "busy"
   const isDisabled = () => !server.isConnected()
-  const canSend = () =>
-    (text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0) &&
-    !isBusy() &&
-    !isDisabled()
+  const hasInput = () => text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0
+  const canSend = () => hasInput() && !isDisabled()
+  const showStop = () => isBusy() && !hasInput()
   const placeholder = () => {
     switch (server.connectionState()) {
       case "connecting":
@@ -228,9 +227,36 @@ export const PromptInput: Component = () => {
     }
 
     if (message.type === "triggerTask") {
-      if (isBusy() || isDisabled()) return
+      if (isDisabled()) return
       const sel = session.selected()
       session.sendMessage(message.text, sel?.providerID, sel?.modelID)
+    }
+
+    if (message.type === "sendMessageFailed") {
+      const failed = message as import("../../types/messages").SendMessageFailedMessage
+      // Only restore draft if the failure is for the current session and the
+      // input is empty (user hasn't started typing something new).
+      const target = failed.sessionID ?? "__new__"
+      if (target === sessionKey() && !text().trim() && imageAttach.images().length === 0) {
+        if (failed.text) {
+          setText(failed.text)
+          setGhostText("")
+          if (textareaRef) {
+            textareaRef.value = failed.text
+            adjustHeight()
+            textareaRef.focus()
+          }
+        }
+        const images = (failed.files ?? [])
+          .filter((f) => f.mime.startsWith("image/") && f.url.startsWith("data:"))
+          .map((f) => ({
+            id: crypto.randomUUID(),
+            filename: f.filename ?? "image",
+            mime: f.mime,
+            dataUrl: f.url,
+          }))
+        if (images.length > 0) imageAttach.replace(images)
+      }
     }
 
     if (message.type === "action" && message.action === "focusInput") {
@@ -424,10 +450,10 @@ export const PromptInput: Component = () => {
     const pending = reviewComments()
     const review = pending.length > 0 ? formatReviewCommentsMarkdown(pending) : ""
     const message = draft && review ? `${review}\n\n${draft}` : draft || review
-    if ((!message && imgs.length === 0) || isBusy() || isDisabled()) return
+    if ((!message && imgs.length === 0) || isDisabled()) return
 
     const mentionFiles = mention.parseFileAttachments(draft)
-    const imgFiles = imgs.map((img) => ({ mime: img.mime, url: img.dataUrl }))
+    const imgFiles = imgs.map((img) => ({ mime: img.mime, url: img.dataUrl, filename: img.filename }))
     const allFiles = [...mentionFiles, ...imgFiles]
 
     const sel = session.selected()
@@ -611,7 +637,7 @@ export const PromptInput: Component = () => {
             </Button>
           </Tooltip>
           <Show
-            when={isBusy()}
+            when={showStop()}
             fallback={
               <Tooltip value={language.t("prompt.action.send")} placement="top">
                 <Button

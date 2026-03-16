@@ -7,9 +7,9 @@ export const dict = {
   "kilocode:autocomplete.statusBar.tooltip.basic": "Kilo Code Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.disabled": "Kilo Code Autocomplete (desactivat)",
   "kilocode:autocomplete.statusBar.tooltip.noCredits":
-    "**No tens crèdits al teu compte**\n\nEl teu compte de Kilo Code no té crèdits. Per utilitzar l'autocompletat, si us plau afegeix crèdits al teu compte.\n\n[Obrir Configuració](command:kilo-code.settingsButtonClicked)",
+    "**No tens crèdits al teu compte**\n\nEl teu compte de Kilo Code no té crèdits. Per utilitzar l'autocompletat, si us plau afegeix crèdits al teu compte.\n\n[Obrir Configuració]({{command}})",
   "kilocode:autocomplete.statusBar.tooltip.noUsableProvider":
-    "**No s'ha configurat cap model d'autocompletat**\n\nPer habilitar l'autocompletat, afegeix un perfil amb un d'aquests proveïdors compatibles: {{providers}}.\n\n[Obrir Configuració](command:kilo-code.settingsButtonClicked)",
+    "**No s'ha configurat cap model d'autocompletat**\n\nPer habilitar l'autocompletat, afegeix un perfil amb un d'aquests proveïdors compatibles: {{providers}}.\n\n[Obrir Configuració]({{command}})",
   "kilocode:autocomplete.statusBar.tooltip.sessionTotal": "Cost total de la sessió:",
   "kilocode:autocomplete.statusBar.tooltip.provider": "Proveïdor:",
   "kilocode:autocomplete.statusBar.tooltip.model": "Model:",

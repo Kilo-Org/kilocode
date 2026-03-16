@@ -7,9 +7,9 @@ export const dict = {
   "kilocode:autocomplete.statusBar.tooltip.basic": "Kilo Code Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.disabled": "Kilo Code Autocomplete（已禁用）",
   "kilocode:autocomplete.statusBar.tooltip.noCredits":
-    "**账户余额不足**\n\n你的 Kilo Code 账户没有余额。要使用自动补全功能，请为账户充值。\n\n[打开设置](command:kilo-code.settingsButtonClicked)",
+    "**账户余额不足**\n\n你的 Kilo Code 账户没有余额。要使用自动补全功能，请为账户充值。\n\n[打开设置]({{command}})",
   "kilocode:autocomplete.statusBar.tooltip.noUsableProvider":
-    "**未配置自动补全模型**\n\n要启用自动补全，请添加一个使用以下支持的提供商的配置文件：{{providers}}。\n\n[打开设置](command:kilo-code.settingsButtonClicked)",
+    "**未配置自动补全模型**\n\n要启用自动补全，请添加一个使用以下支持的提供商的配置文件：{{providers}}。\n\n[打开设置]({{command}})",
   "kilocode:autocomplete.statusBar.tooltip.sessionTotal": "会话总费用:",
   "kilocode:autocomplete.statusBar.tooltip.provider": "提供商:",
   "kilocode:autocomplete.statusBar.tooltip.model": "模型:",

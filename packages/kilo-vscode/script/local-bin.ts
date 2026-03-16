@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { $ } from "bun"
 import { join, relative, dirname, basename } from "node:path"
-import { chmodSync, statSync, rmSync, readdirSync } from "node:fs"
+import { chmodSync, statSync, rmSync, readdirSync, existsSync } from "node:fs"
 
 const forceRebuild = process.argv.includes("--force")
 
@@ -128,8 +128,7 @@ async function main() {
     rmSync(targetBinPath)
     // Also remove the prebuilt dist so ensureBuiltBinary() triggers a fresh build
     const distDir = join(opencodeDir, "dist")
-    const distFile = Bun.file(distDir)
-    if (await distFile.exists()) {
+    if (existsSync(distDir)) {
       rmSync(distDir, { recursive: true })
       log(`Removed ${relative(kiloVscodeDir, distDir)} to force rebuild.`)
     }

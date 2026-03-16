@@ -881,7 +881,7 @@
   [data-component="button"] {
     background: transparent;
     border: none;
-    padding: 0;
+    padding: 4px;
 
     [data-slot="icon-svg"] {
       color: var(--icon-base);
