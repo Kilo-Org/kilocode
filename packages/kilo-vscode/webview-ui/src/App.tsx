@@ -250,7 +250,7 @@ const AppContent: Component = () => {
           <DummyView title="Marketplace" />
         </Match>
         <Match when={currentView() === "history"}>
-          <SessionList onSelectSession={handleSelectSession} />
+          <SessionList onSelectSession={handleSelectSession} showDelete />
         </Match>
         <Match when={currentView() === "cloudHistory"}>
           <CloudSessionList

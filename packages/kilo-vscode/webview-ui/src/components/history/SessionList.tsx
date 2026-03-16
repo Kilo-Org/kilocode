@@ -9,6 +9,7 @@ import { List } from "@kilocode/kilo-ui/list"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { Button } from "@kilocode/kilo-ui/button"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { InlineInput } from "@kilocode/kilo-ui/inline-input"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { useSession } from "../../context/session"
@@ -36,6 +37,7 @@ function dateGroupKey(iso: string): (typeof DATE_GROUP_KEYS)[number] {
 
 interface SessionListProps {
   onSelectSession: (id: string) => void
+  showDelete?: boolean
 }
 
 const SessionList: Component<SessionListProps> = (props) => {
@@ -93,6 +95,10 @@ const SessionList: Component<SessionListProps> = (props) => {
             <Button
               variant="primary"
               size="large"
+              style={{
+                background: "var(--vscode-errorForeground, #f48771)",
+                border: "1px solid var(--vscode-errorForeground, #f48771)",
+              }}
               onClick={() => {
                 session.deleteSession(s.id)
                 dialog.close()
@@ -152,10 +158,35 @@ const SessionList: Component<SessionListProps> = (props) => {
           <Show
             when={renamingId() === s.id}
             fallback={
-              <>
-                <span data-slot="list-item-title">{s.title || language.t("session.untitled")}</span>
-                <span data-slot="list-item-description">{formatRelativeDate(s.updatedAt)}</span>
-              </>
+              <div
+                style={{
+                  display: "flex",
+                  "align-items": "center",
+                  gap: "8px",
+                  width: "100%",
+                  "min-width": "0",
+                }}
+              >
+                <div style={{ flex: "1", "min-width": "0", overflow: "hidden" }}>
+                  <span data-slot="list-item-title">{s.title || language.t("session.untitled")}</span>
+                  <span data-slot="list-item-description">{formatRelativeDate(s.updatedAt)}</span>
+                </div>
+                <Show when={props.showDelete}>
+                  <IconButton
+                    icon="trash"
+                    size="small"
+                    variant="ghost"
+                    label={language.t("session.delete.button")}
+                    style={{ color: "var(--vscode-errorForeground, #f48771)" }}
+                    onClick={(e: MouseEvent) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      confirmDelete(s)
+                    }}
+                    aria-label={language.t("session.delete.button")}
+                  />
+                </Show>
+              </div>
             }
           >
             <InlineInput

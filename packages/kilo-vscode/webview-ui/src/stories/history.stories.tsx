@@ -154,7 +154,7 @@ export const WithItems: Story = {
   render: () => (
     <WithSessions sessions={mockSessions as any}>
       <div style={{ height: "500px" }}>
-        <SessionList onSelectSession={noop} />
+        <SessionList onSelectSession={noop} showDelete />
       </div>
     </WithSessions>
   ),
