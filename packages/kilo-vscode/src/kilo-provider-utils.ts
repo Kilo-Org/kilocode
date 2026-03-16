@@ -155,7 +155,7 @@ export type WebviewMessage =
       message: Record<string, unknown>
     }
   | { type: "sessionStatus"; sessionID: string; status: string; attempt?: number; message?: string; next?: number }
-   | {
+  | {
       type: "permissionRequest"
       permission: {
         id: string

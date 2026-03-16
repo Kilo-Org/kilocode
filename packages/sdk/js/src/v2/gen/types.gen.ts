@@ -3977,7 +3977,7 @@ export type PermissionSaveAlwaysRulesError = PermissionSaveAlwaysRulesErrors[key
 
 export type PermissionSaveAlwaysRulesResponses = {
   /**
-   * Pattern rules saved successfully
+   * Always rules saved successfully
    */
   200: boolean
 }

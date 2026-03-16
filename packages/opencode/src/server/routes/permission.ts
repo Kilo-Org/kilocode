@@ -53,12 +53,12 @@ export const PermissionRoutes = lazy(() =>
     .post(
       "/:requestID/always-rules",
       describeRoute({
-        summary: "Save per-pattern permission rules",
-        description: "Save approved/denied patterns for a pending permission request.",
+        summary: "Save always-allow/deny permission rules",
+        description: "Save approved/denied always-rules for a pending permission request.",
         operationId: "permission.saveAlwaysRules",
         responses: {
           200: {
-            description: "Pattern rules saved successfully",
+            description: "Always rules saved successfully",
             content: {
               "application/json": {
                 schema: resolver(z.boolean()),

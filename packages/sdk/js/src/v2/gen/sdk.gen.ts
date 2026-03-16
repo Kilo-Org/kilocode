@@ -2460,9 +2460,9 @@ export class Permission extends HeyApiClient {
   }
 
   /**
-   * Save per-pattern permission rules
+   * Save always-allow/deny permission rules
    *
-   * Save approved/denied patterns for a pending permission request.
+   * Save approved/denied always-rules for a pending permission request.
    */
   public saveAlwaysRules<ThrowOnError extends boolean = false>(
     parameters: {
