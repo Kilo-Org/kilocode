@@ -1,7 +1,7 @@
 import open from "open"
 import type { DeviceAuthInitiateResponse, DeviceAuthPollResponse } from "../types.js"
 import { poll } from "./polling.js"
-import { getKiloProfile, getKiloDefaultModel } from "../api/profile.js"
+import { getKiloProfile } from "../api/profile.js"
 import { KILO_API_BASE, POLL_INTERVAL_MS } from "../api/constants.js"
 import type { AuthOuathResult } from "@kilocode/plugin"
 
@@ -127,9 +127,6 @@ export async function authenticateWithDeviceAuthTUI(inputs?: Record<string, stri
       // Organization selection is handled by TUI after this callback completes
       // The TUI will fetch the profile separately and show organization dialog if needed
       const organizationId = undefined
-
-      // Fetch default model
-      const model = await getKiloDefaultModel(token, organizationId)
 
       // Return success with OAuth credentials
       return {
