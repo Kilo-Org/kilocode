@@ -16,6 +16,7 @@ import { Flag } from "@/flag/flag.ts"
 import { Shell } from "@/shell/shell"
 
 import { BashArity } from "@/permission/arity"
+import { BashHierarchy } from "@/kilocode/bash-hierarchy" // kilocode_change
 import { Truncate } from "./truncation"
 import { Plugin } from "@/plugin"
 
@@ -138,7 +139,7 @@ export const BashTool = Tool.define("bash", async () => {
         // cd covered by above check
         if (command.length && command[0] !== "cd") {
           patterns.add(commandText)
-          always.add(BashArity.prefix(command).join(" ") + " *")
+          BashHierarchy.addAll(always, command, commandText) // kilocode_change
         }
       }
 
