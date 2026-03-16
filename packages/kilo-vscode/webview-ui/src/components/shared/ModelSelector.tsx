@@ -130,11 +130,13 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   function pick(model: EnrichedModel) {
     props.onSelect(model.providerID, model.id)
     setOpen(false)
+    requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
   }
 
   function pickClear() {
     props.onSelect("", "")
     setOpen(false)
+    requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
   }
 
   function handleKeyDown(e: KeyboardEvent) {

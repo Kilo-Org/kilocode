@@ -34,6 +34,7 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
   function pick(name: string) {
     props.onSelect(name)
     setOpen(false)
+    requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
   }
 
   const triggerLabel = () => {
