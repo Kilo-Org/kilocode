@@ -78,13 +78,13 @@ export const PermissionDock: Component<{
 
   const approveTooltip = (index: number) =>
     decision(index) === "approved"
-      ? language.t("ui.permission.pattern.removeFromAllowed")
-      : language.t("ui.permission.pattern.addToAllowed")
+      ? language.t("ui.permission.rule.removeFromAllowed")
+      : language.t("ui.permission.rule.addToAllowed")
 
   const denyTooltip = (index: number) =>
     decision(index) === "denied"
-      ? language.t("ui.permission.pattern.removeFromDenied")
-      : language.t("ui.permission.pattern.addToDenied")
+      ? language.t("ui.permission.rule.removeFromDenied")
+      : language.t("ui.permission.rule.addToDenied")
 
   const toolDescription = () => {
     const key = `settings.permissions.tool.${props.request.toolName}.description`
@@ -111,30 +111,30 @@ export const PermissionDock: Component<{
       }
       footer={
         <Show when={hasRules()}>
-          <div data-slot="permission-patterns-section">
+          <div data-slot="permission-rules-section">
             <button
               type="button"
-              data-slot="permission-patterns-header"
+              data-slot="permission-rules-header"
               data-open={expanded() ? "" : undefined}
               onClick={toggleExpanded}
               aria-expanded={expanded()}
             >
-              <span data-slot="permission-patterns-header-chevron" data-open={expanded() ? "" : undefined}>
+              <span data-slot="permission-rules-header-chevron" data-open={expanded() ? "" : undefined}>
                 <Icon name="chevron-down" size="small" />
               </span>
-              <span data-slot="permission-patterns-header-title">{language.t("ui.permission.permissionRules")}</span>
+              <span data-slot="permission-rules-header-title">{language.t("ui.permission.permissionRules")}</span>
             </button>
 
-            <div data-slot="permission-patterns-collapse" data-open={expanded() ? "" : undefined}>
-              <div data-slot="permission-patterns-collapse-inner">
-                <div data-slot="permission-patterns">
+            <div data-slot="permission-rules-collapse" data-open={expanded() ? "" : undefined}>
+              <div data-slot="permission-rules-collapse-inner">
+                <div data-slot="permission-rules">
                   <For each={rules()}>
                     {(rule, index) => (
-                      <div data-slot="permission-pattern-row" data-decision={decision(index())}>
-                        <div data-slot="permission-pattern-actions">
+                      <div data-slot="permission-rule-row" data-decision={decision(index())}>
+                        <div data-slot="permission-rule-actions">
                           <Tooltip value={approveTooltip(index())} placement="top">
                             <button
-                              data-slot="permission-pattern-toggle"
+                              data-slot="permission-rule-toggle"
                               data-variant="approve"
                               data-active={decision(index()) === "approved" ? "" : undefined}
                               disabled={props.responding}
@@ -146,7 +146,7 @@ export const PermissionDock: Component<{
                           </Tooltip>
                           <Tooltip value={denyTooltip(index())} placement="top">
                             <button
-                              data-slot="permission-pattern-toggle"
+                              data-slot="permission-rule-toggle"
                               data-variant="deny"
                               data-active={decision(index()) === "denied" ? "" : undefined}
                               disabled={props.responding}
@@ -157,8 +157,8 @@ export const PermissionDock: Component<{
                             </button>
                           </Tooltip>
                         </div>
-                        <span data-slot="permission-pattern-type">{props.request.toolName}</span>
-                        <code data-slot="permission-pattern">{rule}</code>
+                        <span data-slot="permission-rule-type">{props.request.toolName}</span>
+                        <code data-slot="permission-rule">{rule}</code>
                       </div>
                     )}
                   </For>

@@ -1218,7 +1218,7 @@
     font-size: 12px;
   }
 
-  [data-slot="permission-patterns"] {
+  [data-slot="permission-rules"] {
     margin: 0;
     max-height: 160px;
     overflow-y: auto;
@@ -1232,12 +1232,12 @@
     }
   }
 
-  [data-slot="permission-patterns-section"] {
+  [data-slot="permission-rules-section"] {
     display: flex;
     flex-direction: column;
   }
 
-  [data-slot="permission-patterns-header"] {
+  [data-slot="permission-rules-header"] {
     all: unset;
     display: flex;
     align-items: center;
@@ -1254,13 +1254,13 @@
     }
   }
 
-  [data-slot="permission-patterns-header-title"] {
+  [data-slot="permission-rules-header-title"] {
     font-size: 12px;
     font-weight: 500;
     line-height: 1.4;
   }
 
-  [data-slot="permission-patterns-header-chevron"] {
+  [data-slot="permission-rules-header-chevron"] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1272,7 +1272,7 @@
     }
   }
 
-  [data-slot="permission-patterns-collapse"] {
+  [data-slot="permission-rules-collapse"] {
     display: grid;
     grid-template-rows: 0fr;
     transition:
@@ -1286,36 +1286,36 @@
     }
   }
 
-  [data-slot="permission-patterns-collapse-inner"] {
+  [data-slot="permission-rules-collapse-inner"] {
     min-height: 0;
     overflow: hidden;
   }
 
-  [data-slot="permission-pattern-row"] {
+  [data-slot="permission-rule-row"] {
     display: flex;
     align-items: center;
     gap: 6px;
     padding: 3px 0 3px 8px;
     min-width: 0;
 
-    &[data-decision="approved"] [data-slot="permission-pattern"] {
+    &[data-decision="approved"] [data-slot="permission-rule"] {
       color: var(--text-success, var(--vscode-testing-iconPassed, #5cb85c));
     }
 
-    &[data-decision="denied"] [data-slot="permission-pattern"] {
+    &[data-decision="denied"] [data-slot="permission-rule"] {
       color: var(--text-error, var(--vscode-errorForeground, #f44));
       text-decoration: line-through;
     }
   }
 
-  [data-slot="permission-pattern-type"] {
+  [data-slot="permission-rule-type"] {
     font-size: 11px;
     font-weight: 600;
     color: var(--text-base, var(--vscode-foreground));
     flex-shrink: 0;
   }
 
-  [data-slot="permission-pattern"] {
+  [data-slot="permission-rule"] {
     font-size: 12px;
     font-family: var(--vscode-editor-font-family, monospace);
     color: var(--text-weak, var(--vscode-descriptionForeground));
@@ -1326,7 +1326,7 @@
     flex: 1;
   }
 
-  [data-slot="permission-pattern-actions"] {
+  [data-slot="permission-rule-actions"] {
     display: flex;
     align-items: center;
     gap: 2px;
@@ -1336,7 +1336,7 @@
     margin-left: -3px;
   }
 
-  [data-slot="permission-pattern-toggle"] {
+  [data-slot="permission-rule-toggle"] {
     all: unset;
     display: flex;
     align-items: center;
