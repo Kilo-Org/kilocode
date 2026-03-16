@@ -34,7 +34,6 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
   function pick(name: string) {
     props.onSelect(name)
     setOpen(false)
-    requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
   }
 
   const triggerLabel = () => {
@@ -92,5 +91,14 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
 export const ModeSwitcher: Component = () => {
   const session = useSession()
 
-  return <ModeSwitcherBase agents={session.agents()} value={session.selectedAgent()} onSelect={session.selectAgent} />
+  return (
+    <ModeSwitcherBase
+      agents={session.agents()}
+      value={session.selectedAgent()}
+      onSelect={(name) => {
+        session.selectAgent(name)
+        requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
+      }}
+    />
+  )
 }

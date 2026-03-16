@@ -130,13 +130,11 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   function pick(model: EnrichedModel) {
     props.onSelect(model.providerID, model.id)
     setOpen(false)
-    requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
   }
 
   function pickClear() {
     props.onSelect("", "")
     setOpen(false)
-    requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
   }
 
   function handleKeyDown(e: KeyboardEvent) {
@@ -297,7 +295,10 @@ export const ModelSelector: Component = () => {
   return (
     <ModelSelectorBase
       value={session.selected()}
-      onSelect={(providerID, modelID) => session.selectModel(providerID, modelID)}
+      onSelect={(providerID, modelID) => {
+        session.selectModel(providerID, modelID)
+        requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
+      }}
     />
   )
 }
