@@ -155,14 +155,13 @@ export type WebviewMessage =
       message: Record<string, unknown>
     }
   | { type: "sessionStatus"; sessionID: string; status: string; attempt?: number; message?: string; next?: number }
-  | {
+   | {
       type: "permissionRequest"
       permission: {
         id: string
         sessionID: string
         toolName: string
         patterns: string[]
-        always: string[]
         args: Record<string, unknown>
         message: string
         tool?: { messageID: string; callID: string }
@@ -227,7 +226,6 @@ export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | un
           sessionID: event.properties.sessionID,
           toolName: event.properties.permission,
           patterns: event.properties.patterns ?? [],
-          always: event.properties.always ?? [],
           args: event.properties.metadata,
           message: `Permission required: ${event.properties.permission}`,
           tool: event.properties.tool,

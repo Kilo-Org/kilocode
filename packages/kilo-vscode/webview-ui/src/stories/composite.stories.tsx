@@ -161,7 +161,6 @@ const globPermission: PermissionRequest = {
   sessionID: SESSION_ID,
   toolName: "glob",
   patterns: ["**/*.md"],
-  always: ["*"],
   args: { pattern: "**/*.md", rules: ["**/*.md"] },
   tool: { messageID: ASST_MSG_ID, callID: "call-glob-001" },
 }
@@ -171,7 +170,6 @@ const bashPermission: PermissionRequest = {
   sessionID: SESSION_ID,
   toolName: "bash",
   patterns: ["bun test"],
-  always: ["bun test *"],
   args: { command: "bun test", rules: ["bun *", "bun test"] },
   tool: { messageID: ASST_MSG_ID, callID: "call-bash-001" },
 }
@@ -181,7 +179,6 @@ const dockPermission: PermissionRequest = {
   sessionID: SESSION_ID,
   toolName: "write",
   patterns: ["src/main.tsx", "src/utils.ts"],
-  always: ["*"],
   args: { rules: ["src/main.tsx", "src/utils.ts"] },
   // No `tool` field — this is a non-tool (dock) permission
 }
@@ -294,7 +291,6 @@ const todoWritePermission: PermissionRequest = {
   sessionID: SESSION_ID,
   toolName: "todowrite",
   patterns: ["*"],
-  always: ["*"],
   args: { rules: ["*"] },
   tool: { messageID: ASST_MSG_ID, callID: "call-todo-001" },
 }
