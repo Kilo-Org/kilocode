@@ -139,6 +139,38 @@ export const QuestionDockMulti: Story = {
   ),
 }
 
+/** Many options to verify the max-height scroll constraint */
+const manyOptionsQuestion: QuestionRequest = {
+  id: "q-many-001",
+  sessionID: SESSION_ID,
+  questions: [
+    {
+      question: "What would you like to work on today?",
+      header: "Quick check-in",
+      options: [
+        { label: "Fix a bug", description: "Debug and resolve an issue in the codebase" },
+        { label: "Add a feature", description: "Implement new functionality" },
+        { label: "Refactor code", description: "Improve existing code structure or quality" },
+        { label: "Write tests", description: "Add or improve test coverage" },
+        { label: "Review code", description: "Provide feedback on code changes" },
+        { label: "Update docs", description: "Improve documentation" },
+        { label: "Performance", description: "Optimize for speed or memory" },
+      ],
+    },
+  ],
+}
+
+export const QuestionDockManyOptions: Story = {
+  name: "QuestionDock — many options (scrollable)",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} questions={[manyOptionsQuestion]}>
+      <div style={{ width: "100%" }}>
+        <QuestionDock request={manyOptionsQuestion} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
 // ---------------------------------------------------------------------------
 // TaskHeader with todos
 // ---------------------------------------------------------------------------
