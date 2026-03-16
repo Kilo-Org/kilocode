@@ -31,6 +31,8 @@ export const PermissionDock: Component<{
 
   const fromChild = () => props.request.sessionID !== session.currentSessionID()
   const rules = () => props.request.always ?? []
+  // "always" rules are defined as "git *", "git log *" — remove the trailing asterisk when displayed
+  const label = (rule: string) => rule.replace(/ \*$/, "")
   const command = () => {
     const cmd = props.request.args?.command
     return typeof cmd === "string" ? cmd : undefined
@@ -158,7 +160,7 @@ export const PermissionDock: Component<{
                           </Tooltip>
                         </div>
                         <span data-slot="permission-rule-type">{props.request.toolName}</span>
-                        <code data-slot="permission-rule">{rule}</code>
+                        <code data-slot="permission-rule">{label(rule)}</code>
                       </div>
                     )}
                   </For>
