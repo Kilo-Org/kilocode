@@ -234,8 +234,10 @@ export const PromptInput: Component = () => {
 
     if (message.type === "sendMessageFailed") {
       const failed = message as import("../../types/messages").SendMessageFailedMessage
-      // Restore draft text and image attachments so the user can retry
-      if (!text().trim() && imageAttach.images().length === 0) {
+      // Only restore draft if the failure is for the current session and the
+      // input is empty (user hasn't started typing something new).
+      const target = failed.sessionID ?? "__new__"
+      if (target === sessionKey() && !text().trim() && imageAttach.images().length === 0) {
         if (failed.text) {
           setText(failed.text)
           setGhostText("")
