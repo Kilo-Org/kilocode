@@ -2279,3 +2279,30 @@ test("cloudflare-ai-gateway forwards config metadata options", async () => {
     },
   })
 })
+
+test("minimax provider loaded from MINIMAX_API_KEY env variable", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(
+        path.join(dir, "opencode.json"),
+        JSON.stringify({
+          $schema: "https://app.kilo.ai/config.json",
+        }),
+      )
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    init: async () => {
+      Env.set("MINIMAX_API_KEY", "test-minimax-key")
+    },
+    fn: async () => {
+      const providers = await Provider.list()
+      expect(providers["minimax"]).toBeDefined()
+      expect(providers["minimax"].source).toBe("env")
+      // MiniMax M2.5 models should be available
+      const modelIds = Object.keys(providers["minimax"].models)
+      expect(modelIds.some((id) => id.includes("M2.5"))).toBe(true)
+    },
+  })
+})

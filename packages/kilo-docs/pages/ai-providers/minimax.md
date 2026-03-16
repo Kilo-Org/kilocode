@@ -4,7 +4,7 @@ sidebar_label: MiniMax
 
 # Using MiniMax With Kilo Code
 
-MiniMax is a global AI foundation model company focused on fast, cost-efficient multimodal models with strong coding, tool-use, and agentic capabilities. Their flagship MiniMax M2.1 model delivers high-speed inference, long-context reasoning, and advanced development workflow support.
+MiniMax is a global AI foundation model company focused on fast, cost-efficient multimodal models with strong coding, tool-use, and agentic capabilities. Their flagship MiniMax-M2.5 model delivers peak performance with a 204,800-token context window, high-speed inference, and advanced development workflow support.
 
 **Website:** [https://www.minimax.io/](https://www.minimax.io/)
 
@@ -22,8 +22,23 @@ MiniMax is a global AI foundation model company focused on fast, cost-efficient 
 3. **Enter API Key:** Paste your MiniMax API key into the MiniMax API Key field.
 4. **Select Model:** Choose your desired MiniMax model from the Model dropdown.
 
+## Available Models
+
+| Model | Description | Context Window |
+|-------|------------|---------------|
+| **MiniMax-M2.5** | Peak performance. Ultimate value. Master the complex. | 204,800 tokens |
+| **MiniMax-M2.5-highspeed** | Same performance, faster and more agile. | 204,800 tokens |
+
+## Pricing
+
+| Model | Input | Output | Prompt Caching Read | Prompt Caching Write |
+|-------|-------|--------|---------------------|----------------------|
+| MiniMax-M2.5 | $0.30 / M tokens | $1.20 / M tokens | $0.03 / M tokens | $0.375 / M tokens |
+| MiniMax-M2.5-highspeed | $0.60 / M tokens | $2.40 / M tokens | $0.06 / M tokens | $0.375 / M tokens |
+
 ## Tips and Notes
 
-- **Performance:** MiniMax M2.1 emphasizes fast inference, strong coding ability, and exceptional tool-calling performance.
-- **Context Window:** MiniMax models support ultra-long context windows suitable for large codebases and agent workflows.
-- **Pricing:** Pricing varies by model, with input costs ranging from $0.20 to $0.30 per million tokens and output costs from $1.10 to $2.20 per million tokens. Refer to the MiniMax documentation for the most current pricing information.
+- **Performance:** MiniMax-M2.5 delivers peak performance with strong coding ability, tool-calling, and agentic capabilities.
+- **Context Window:** All MiniMax-M2.5 models support a 204,800-token context window, suitable for large codebases and complex agent workflows.
+- **Speed:** Use `MiniMax-M2.5-highspeed` for faster inference while maintaining the same level of performance.
+- **API Documentation:** See the [MiniMax API Reference](https://platform.minimax.io/docs/api-reference/text-anthropic-api) for detailed API documentation.

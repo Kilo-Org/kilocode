@@ -1688,12 +1688,12 @@ describe("ProviderTransform.variants", () => {
 
   test("minimax returns empty object", () => {
     const model = createMockModel({
-      id: "minimax/minimax-model",
+      id: "minimax/MiniMax-M2.5",
       providerID: "minimax",
       api: {
-        id: "minimax-model",
-        url: "https://api.minimax.com",
-        npm: "@ai-sdk/openai-compatible",
+        id: "MiniMax-M2.5",
+        url: "https://api.minimax.io/anthropic/v1",
+        npm: "@ai-sdk/anthropic",
       },
     })
     const result = ProviderTransform.variants(model)
@@ -2705,6 +2705,119 @@ describe("ProviderTransform.variants", () => {
       const result = ProviderTransform.variants(model)
       expect(result).toEqual({})
     })
+  })
+})
+
+describe("ProviderTransform.temperature - MiniMax models", () => {
+  const createMinimaxModel = (modelId: string): any => ({
+    id: modelId,
+    providerID: "minimax",
+    api: {
+      id: modelId,
+      url: "https://api.minimax.io/anthropic/v1",
+      npm: "@ai-sdk/anthropic",
+    },
+    name: modelId,
+    capabilities: {
+      temperature: true,
+      reasoning: false,
+      attachment: false,
+      toolcall: true,
+      input: { text: true, audio: false, image: false, video: false, pdf: false },
+      output: { text: true, audio: false, image: false, video: false, pdf: false },
+      interleaved: false,
+    },
+    cost: { input: 0.3, output: 1.2, cache: { read: 0.03, write: 0.375 } },
+    limit: { context: 204800, output: 192000 },
+    status: "active",
+    options: {},
+    headers: {},
+    release_date: "2025-06-01",
+  })
+
+  test("MiniMax-M2.5 returns temperature 1.0", () => {
+    const model = createMinimaxModel("MiniMax-M2.5")
+    expect(ProviderTransform.temperature(model)).toBe(1.0)
+  })
+
+  test("MiniMax-M2.5-highspeed returns temperature 1.0", () => {
+    const model = createMinimaxModel("MiniMax-M2.5-highspeed")
+    expect(ProviderTransform.temperature(model)).toBe(1.0)
+  })
+
+  test("MiniMax-M2.1 returns temperature 1.0", () => {
+    const model = createMinimaxModel("MiniMax-M2.1")
+    expect(ProviderTransform.temperature(model)).toBe(1.0)
+  })
+
+  test("MiniMax-M2 returns temperature 1.0", () => {
+    const model = createMinimaxModel("MiniMax-M2")
+    expect(ProviderTransform.temperature(model)).toBe(1.0)
+  })
+})
+
+describe("ProviderTransform.topP - MiniMax models", () => {
+  const createMinimaxModel = (modelId: string): any => ({
+    id: modelId,
+    providerID: "minimax",
+    api: {
+      id: modelId,
+      url: "https://api.minimax.io/anthropic/v1",
+      npm: "@ai-sdk/anthropic",
+    },
+    name: modelId,
+    capabilities: { temperature: true, reasoning: false, attachment: false, toolcall: true, input: { text: true, audio: false, image: false, video: false, pdf: false }, output: { text: true, audio: false, image: false, video: false, pdf: false }, interleaved: false },
+    cost: { input: 0.3, output: 1.2, cache: { read: 0.03, write: 0.375 } },
+    limit: { context: 204800, output: 192000 },
+    status: "active",
+    options: {},
+    headers: {},
+    release_date: "2025-06-01",
+  })
+
+  test("MiniMax-M2.5 returns topP 0.95", () => {
+    const model = createMinimaxModel("MiniMax-M2.5")
+    expect(ProviderTransform.topP(model)).toBe(0.95)
+  })
+
+  test("MiniMax-M2.5-highspeed returns topP 0.95", () => {
+    const model = createMinimaxModel("MiniMax-M2.5-highspeed")
+    expect(ProviderTransform.topP(model)).toBe(0.95)
+  })
+})
+
+describe("ProviderTransform.topK - MiniMax models", () => {
+  const createMinimaxModel = (modelId: string): any => ({
+    id: modelId,
+    providerID: "minimax",
+    api: {
+      id: modelId,
+      url: "https://api.minimax.io/anthropic/v1",
+      npm: "@ai-sdk/anthropic",
+    },
+    name: modelId,
+    capabilities: { temperature: true, reasoning: false, attachment: false, toolcall: true, input: { text: true, audio: false, image: false, video: false, pdf: false }, output: { text: true, audio: false, image: false, video: false, pdf: false }, interleaved: false },
+    cost: { input: 0.3, output: 1.2, cache: { read: 0.03, write: 0.375 } },
+    limit: { context: 204800, output: 192000 },
+    status: "active",
+    options: {},
+    headers: {},
+    release_date: "2025-06-01",
+  })
+
+  test("MiniMax-M2.5 returns topK 40", () => {
+    const model = createMinimaxModel("MiniMax-M2.5")
+    expect(ProviderTransform.topK(model)).toBe(40)
+  })
+
+  test("MiniMax-M2.5-highspeed returns topK 40", () => {
+    const model = createMinimaxModel("MiniMax-M2.5-highspeed")
+    expect(ProviderTransform.topK(model)).toBe(40)
+  })
+
+  test("MiniMax-M2 returns topK 20", () => {
+    const model = createMinimaxModel("MiniMax-M2")
+    expect(ProviderTransform.topK(model)).toBe(20)
   })
 })
 // kilocode_change end
