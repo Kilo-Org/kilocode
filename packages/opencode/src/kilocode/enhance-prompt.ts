@@ -1,4 +1,5 @@
 import { generateText } from "ai"
+import { mergeDeep } from "remeda"
 import { Provider } from "@/provider/provider"
 import { ProviderTransform } from "@/provider/transform"
 import { Log } from "@/util/log"
@@ -31,7 +32,10 @@ export async function enhancePrompt(text: string): Promise<string> {
   const result = await generateText({
     model: language,
     temperature: model.capabilities.temperature ? 0.7 : undefined,
-    providerOptions: ProviderTransform.providerOptions(model, ProviderTransform.smallOptions(model)),
+    providerOptions: ProviderTransform.providerOptions(
+      model,
+      mergeDeep(ProviderTransform.smallOptions(model), model.options),
+    ),
     maxRetries: 3,
     system: INSTRUCTION,
     messages: [{ role: "user" as const, content: text }],
