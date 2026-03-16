@@ -983,8 +983,23 @@ export const SessionProvider: ParentComponent = (props) => {
       pending.add(messageID)
       pendingOptimistic.set(sid, pending)
 
+      const parts: Part[] = []
+      if (text) {
+        parts.push({ type: "text" as const, id: Identifier.ascending("part"), messageID, text })
+      }
+      for (const file of files ?? []) {
+        parts.push({
+          type: "file" as const,
+          id: Identifier.ascending("part"),
+          messageID,
+          mime: file.mime,
+          url: file.url,
+          filename: file.filename,
+        })
+      }
+
       setStore("messages", sid, (msgs = []) => [...msgs, temp])
-      setStore("parts", messageID, [{ type: "text" as const, id: `${messageID}-text`, text }])
+      setStore("parts", messageID, parts)
       // The optimistic message is now in the DOM but the session status is
       // still "idle" (the CLI backend hasn't started yet), so the auto-scroll
       // ResizeObserver won't scroll on its own. Force scroll to bottom so the
