@@ -172,14 +172,14 @@ export namespace PermissionNext {
       const existing = s.pending[input.requestID]
       if (!existing) throw new NotFoundError({ message: `Permission request ${input.requestID} not found` })
 
-      const validPatterns = new Set(existing.info.always)
+      const validRules = new Set(existing.info.metadata?.rules ?? [])
       const permission = existing.info.permission
 
       for (const pattern of input.approvedAlways ?? []) {
-        if (validPatterns.has(pattern)) s.approved.push({ permission, pattern, action: "allow" })
+        if (validRules.has(pattern)) s.approved.push({ permission, pattern, action: "allow" })
       }
       for (const pattern of input.deniedAlways ?? []) {
-        if (validPatterns.has(pattern)) s.approved.push({ permission, pattern, action: "deny" })
+        if (validRules.has(pattern)) s.approved.push({ permission, pattern, action: "deny" })
       }
     },
   )

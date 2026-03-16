@@ -91,6 +91,7 @@ export const BashTool = Tool.define("bash", async () => {
       if (!Instance.containsPath(cwd)) directories.add(cwd)
       const patterns = new Set<string>()
       const always = new Set<string>()
+      const rules = new Set<string>() // kilocode_change — hierarchy rules for permissions "npm", "npm install", "npm install lodash"
 
       for (const node of tree.rootNode.descendantsOfType("command")) {
         if (!node) continue
@@ -139,7 +140,8 @@ export const BashTool = Tool.define("bash", async () => {
         // cd covered by above check
         if (command.length && command[0] !== "cd") {
           patterns.add(commandText)
-          BashHierarchy.addAll(always, command, commandText) // kilocode_change
+          always.add(BashArity.prefix(command).join(" ") + " *")
+          BashHierarchy.addAll(rules, command, commandText) // kilocode_change
         }
       }
 
@@ -162,7 +164,7 @@ export const BashTool = Tool.define("bash", async () => {
           permission: "bash",
           patterns: Array.from(patterns),
           always: Array.from(always),
-          metadata: { command: params.command }, // kilocode_change
+          metadata: { command: params.command, rules: Array.from(rules) }, // kilocode_change
         })
       }
 
