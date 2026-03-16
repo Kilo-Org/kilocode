@@ -13,6 +13,11 @@
 
   [data-slot="text-part-copy-wrapper"][data-is-turn-copy] {
     display: flex;
+
+    [data-component="icon-button"] {
+      width: 20px;
+      height: 20px;
+    }
   }
 }
 
@@ -92,32 +97,29 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   margin-bottom: 0px;
 }
 
-/* Remove the empty space below user message bubbles.
- * The upstream copy wrapper uses opacity:0 when hidden but still takes up
- * layout space (~28px). Collapse it to zero height so it takes no space,
- * but keep it rendered so the button stays in the tab order and
- * :focus-within can fire for keyboard access. */
+/* User message copy button: tiny reserved space, button overflows on hover.
+ * height:2px keeps layout stable; overflow:hidden clips the invisible button;
+ * on hover overflow:visible lets the button appear without shifting content. */
 [data-component="user-message"] {
   [data-slot="user-message-copy-wrapper"] {
-    opacity: 0;
-    height: 0;
     min-height: 0;
+    height: 10px;
     margin-top: 0;
     overflow: hidden;
-    pointer-events: none;
-    /* hide meta text; only the icon-button matters in the sidebar */
+
     [data-slot="user-message-meta-wrap"] {
       display: none;
+    }
+
+    [data-component="icon-button"] {
+      width: 20px;
+      height: 20px;
     }
   }
 
   &:hover [data-slot="user-message-copy-wrapper"],
   &:focus-within [data-slot="user-message-copy-wrapper"] {
-    opacity: 1;
-    height: auto;
     overflow: visible;
-    pointer-events: auto;
-    display: flex;
   }
 }
 
