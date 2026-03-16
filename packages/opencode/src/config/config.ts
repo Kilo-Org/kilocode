@@ -186,7 +186,7 @@ export namespace Config {
         const wellknown = (await response.json()) as any
         const remoteConfig = wellknown.config ?? {}
         // Add $schema to prevent load() from trying to write back to a non-existent file
-        if (!remoteConfig.$schema) remoteConfig.$schema = "https://kilo.ai/config.json" // kilocode_change
+        if (!remoteConfig.$schema) remoteConfig.$schema = "https://app.kilo.ai/config.json" // kilocode_change
         result = mergeConfigConcatArrays(
           result,
           await load(JSON.stringify(remoteConfig), {
@@ -1330,7 +1330,7 @@ export namespace Config {
         .then(async (mod) => {
           const { provider, model, ...rest } = mod.default
           if (provider && model) result.model = `${provider}/${model}`
-          result["$schema"] = "https://kilo.ai/config.json" // kilocode_change
+          result["$schema"] = "https://app.kilo.ai/config.json" // kilocode_change
           result = mergeDeep(result, rest)
           await Filesystem.writeJson(path.join(Global.Path.config, "config.json"), result)
           await fs.unlink(legacy)
@@ -1374,8 +1374,8 @@ export namespace Config {
     const parsed = Info.safeParse(normalized)
     if (parsed.success) {
       if (!parsed.data.$schema && isFile) {
-        parsed.data.$schema = "https://kilo.ai/config.json" // kilocode_change
-        const updated = original.replace(/^\s*\{/, '{\n  "$schema": "https://kilo.ai/config.json",') // kilocode_change
+        parsed.data.$schema = "https://app.kilo.ai/config.json" // kilocode_change
+        const updated = original.replace(/^\s*\{/, '{\n  "$schema": "https://app.kilo.ai/config.json",') // kilocode_change
         await Bun.write(options.path, updated).catch(() => {})
       }
       const data = parsed.data
