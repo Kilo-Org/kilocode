@@ -1634,6 +1634,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             sessionID: perm.sessionID,
             toolName: perm.permission,
             patterns: perm.patterns,
+            always: perm.always,
             args: perm.metadata,
             message: `Permission required: ${perm.permission}`,
             tool: perm.tool,
