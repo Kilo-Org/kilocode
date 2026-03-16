@@ -5,7 +5,7 @@
  *
  * Per-rule toggles allow users to approve/deny individual permission rules for future requests.
  * The command buttons (Deny / Allow Always / Allow Once) control the current command.
- * When any rule is toggled ✓ (and none ✗), the command auto-runs.
+ * When all rules are toggled ✓, the command auto-runs.
  */
 
 import { Component, For, Show, createSignal } from "solid-js"
