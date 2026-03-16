@@ -30,6 +30,7 @@ export const dict = {
   "agentManager.session.noSessions": "Ingen åpne økter",
   "agentManager.tab.close": "Lukk",
   "agentManager.tab.closeTab": "Lukk fane",
+  "agentManager.tab.forkSession": "Forgrein økt",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Åpne Terminal",
   "agentManager.setup.failed": "Oppsett av arbeidsområde mislyktes",

@@ -706,6 +706,14 @@ export interface AgentManagerSessionAddedMessage {
   worktreeId: string
 }
 
+// Agent Manager session forked from an existing session
+export interface AgentManagerSessionForkedMessage {
+  type: "agentManager.sessionForked"
+  sessionId: string
+  forkedFromId: string
+  worktreeId?: string
+}
+
 // Full state push from extension to webview
 export interface AgentManagerStateMessage {
   type: "agentManager.state"
@@ -1059,6 +1067,7 @@ export type ExtensionMessage =
   | AgentManagerRepoInfoMessage
   | AgentManagerWorktreeSetupMessage
   | AgentManagerSessionAddedMessage
+  | AgentManagerSessionForkedMessage
   | AgentManagerStateMessage
   | AgentManagerKeybindingsMessage
   | AgentManagerMultiVersionProgressMessage
@@ -1126,6 +1135,8 @@ export interface PermissionResponseRequest {
   permissionId: string
   sessionID: string
   response: "once" | "always" | "reject"
+  approvedPatterns: string[]
+  deniedPatterns: string[]
 }
 
 export interface CreateSessionRequest {
@@ -1368,6 +1379,13 @@ export interface PromoteSessionRequest {
 export interface AddSessionToWorktreeRequest {
   type: "agentManager.addSessionToWorktree"
   worktreeId: string
+}
+
+// Fork an existing session (copies conversation history)
+export interface ForkSessionRequest {
+  type: "agentManager.forkSession"
+  sessionId: string
+  worktreeId?: string
 }
 
 // Close (remove) a session from its worktree
@@ -1622,6 +1640,7 @@ export type WebviewMessage =
   | RemoveStaleWorktreeRequest
   | PromoteSessionRequest
   | AddSessionToWorktreeRequest
+  | ForkSessionRequest
   | CloseSessionRequest
   | RenameWorktreeRequest
   | TelemetryRequest

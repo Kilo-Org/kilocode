@@ -92,6 +92,7 @@ export const ExperimentalRoutes = lazy(() =>
         )
       },
     )
+    .route("/workspace", WorkspaceRoutes())
     .post(
       "/worktree",
       describeRoute({
@@ -117,7 +118,6 @@ export const ExperimentalRoutes = lazy(() =>
         return c.json(worktree)
       },
     )
-    .route("/workspace", WorkspaceRoutes())
     .get(
       "/worktree",
       describeRoute({

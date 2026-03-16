@@ -3,7 +3,7 @@ import { BusEvent } from "@/bus/bus-event"
 import { Config } from "@/config/config"
 import { Identifier } from "@/id/id"
 import { Instance } from "@/project/instance"
-import { Database, eq } from "@/storage/db"
+import { Database, eq, NotFoundError } from "@/storage/db"
 import { PermissionTable } from "@/session/session.sql"
 import { fn } from "@/util/fn"
 import { Log } from "@/util/log"
@@ -160,6 +160,31 @@ export namespace PermissionNext {
     },
   )
 
+  // kilocode_change start
+  export const savePatternRules = fn(
+    z.object({
+      requestID: Identifier.schema("permission"),
+      approvedPatterns: z.string().array().optional(),
+      deniedPatterns: z.string().array().optional(),
+    }),
+    async (input) => {
+      const s = await state()
+      const existing = s.pending[input.requestID]
+      if (!existing) throw new NotFoundError({ message: `Permission request ${input.requestID} not found` })
+
+      const validPatterns = new Set(existing.info.patterns)
+      const permission = existing.info.permission
+
+      for (const pattern of input.approvedPatterns ?? []) {
+        if (validPatterns.has(pattern)) s.approved.push({ permission, pattern, action: "allow" })
+      }
+      for (const pattern of input.deniedPatterns ?? []) {
+        if (validPatterns.has(pattern)) s.approved.push({ permission, pattern, action: "deny" })
+      }
+    },
+  )
+  // kilocode_change end
+
   export const reply = fn(
     z.object({
       requestID: Identifier.schema("permission"),
@@ -176,6 +201,7 @@ export namespace PermissionNext {
         requestID: existing.info.id,
         reply: input.reply,
       })
+
       if (input.reply === "reject") {
         existing.reject(input.message ? new CorrectedError(input.message) : new RejectedError())
         // Reject all other pending permissions for this session

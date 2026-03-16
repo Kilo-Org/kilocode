@@ -124,7 +124,7 @@ export const DataBridge: Component<{ children: any }> = (props) => {
   })
 
   const respond = (input: { sessionID: string; permissionID: string; response: "once" | "always" | "reject" }) => {
-    session.respondToPermission(input.permissionID, input.response)
+    session.respondToPermission(input.permissionID, input.response, [], [])
   }
 
   const reply = (input: { requestID: string; answers: string[][] }) => {

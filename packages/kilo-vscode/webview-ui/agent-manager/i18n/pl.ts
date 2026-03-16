@@ -30,6 +30,7 @@ export const dict = {
   "agentManager.session.noSessions": "Brak otwartych sesji",
   "agentManager.tab.close": "Zamknij",
   "agentManager.tab.closeTab": "Zamknij kartę",
+  "agentManager.tab.forkSession": "Rozgałęź sesję",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Otwórz Terminal",
   "agentManager.setup.failed": "Konfiguracja workspace nie powiodła się",

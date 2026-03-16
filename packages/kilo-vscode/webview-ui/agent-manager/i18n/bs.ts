@@ -30,6 +30,7 @@ export const dict = {
   "agentManager.session.noSessions": "Nema otvorenih sesija",
   "agentManager.tab.close": "Zatvori",
   "agentManager.tab.closeTab": "Zatvori karticu",
+  "agentManager.tab.forkSession": "Razdvoji sesiju",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Otvori Terminal",
   "agentManager.setup.failed": "Postavljanje radnog prostora neuspješno",

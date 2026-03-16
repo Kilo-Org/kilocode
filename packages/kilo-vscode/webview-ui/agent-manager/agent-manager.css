@@ -1181,7 +1181,7 @@ button.am-section-toggle:hover .am-section-label {
 .am-diff-content [data-slot="session-review-directory"],
 .am-review-diff-content [data-slot="session-review-directory"] {
   min-width: 0;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
 }
 
 .am-diff-content [data-slot="session-review-filename"],

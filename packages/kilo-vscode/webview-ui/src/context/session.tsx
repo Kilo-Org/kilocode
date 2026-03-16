@@ -132,7 +132,12 @@ interface SessionContextValue {
   sendMessage: (text: string, providerID?: string, modelID?: string, files?: FileAttachment[]) => void
   abort: () => void
   compact: () => void
-  respondToPermission: (permissionId: string, response: "once" | "always" | "reject") => void
+  respondToPermission: (
+    permissionId: string,
+    response: "once" | "always" | "reject",
+    approvedPatterns: string[],
+    deniedPatterns: string[],
+  ) => void
   replyToQuestion: (requestID: string, answers: string[][]) => void
   rejectQuestion: (requestID: string) => void
   createSession: () => void
@@ -1036,7 +1041,12 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
-  function respondToPermission(permissionId: string, response: "once" | "always" | "reject") {
+  function respondToPermission(
+    permissionId: string,
+    response: "once" | "always" | "reject",
+    approvedPatterns: string[],
+    deniedPatterns: string[],
+  ) {
     // Resolve sessionID from the stored permission request
     const permission = permissions().find((p) => p.id === permissionId)
     const sessionID = permission?.sessionID ?? currentSessionID() ?? ""
@@ -1050,6 +1060,8 @@ export const SessionProvider: ParentComponent = (props) => {
       permissionId,
       sessionID,
       response,
+      approvedPatterns,
+      deniedPatterns,
     })
   }
 

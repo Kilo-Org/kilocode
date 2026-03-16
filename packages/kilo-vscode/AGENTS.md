@@ -211,6 +211,10 @@ Follow monorepo root AGENTS.md style guide:
 - Avoid `try`/`catch`, avoid `any` type
 - ESLint enforces: curly braces, strict equality, semicolons, camelCase/PascalCase imports
 
+## File Size Caps (maxLines)
+
+Large files in `src/agent-manager/` have `maxLines` caps enforced by `tests/unit/agent-manager-arch.test.ts`. **Do not raise these caps.** If adding a feature would exceed a cap, extract logic into a vscode-free helper module and call it from the provider. See `fork-session.ts` and `format-keybinding.ts` for examples of this pattern.
+
 ## Markdown Tables
 
 Do not pad markdown table cells for column alignment. Use `| content |` with single spaces, not `| content       |` with extra padding. Padding creates spurious diffs. Markdown files are excluded from prettier (via `.prettierignore`) to prevent auto-reformatting of tables.

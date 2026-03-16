@@ -19,9 +19,10 @@ import { SetupScriptRunner } from "./SetupScriptRunner"
 import { SessionTerminalManager } from "./SessionTerminalManager"
 import { createTerminalHost } from "./terminal-host"
 import { executeVscodeTask } from "./task-runner"
-import { formatKeybinding } from "./format-keybinding"
+import { forkSession } from "./fork-session"
+import { buildKeybindingMap } from "./format-keybinding"
 import { TelemetryProxy, TelemetryEventName } from "../services/telemetry"
-import { MAX_MULTI_VERSIONS } from "./constants"
+import { MAX_MULTI_VERSIONS, PLATFORM } from "./constants"
 import type { AgentManagerOutMessage, AgentManagerInMessage } from "./types"
 import { getWorkspaceRoot, hashFileDiffs, openFileInEditor, resolveLocalDiffTarget } from "../review-utils"
 
@@ -33,7 +34,6 @@ import { getWorkspaceRoot, hashFileDiffs, openFileInEditor, resolveLocalDiffTarg
  * sections: WORKTREES (top) with managed worktrees + their sessions, and
  * SESSIONS (bottom) with unassociated workspace sessions.
  */
-const PLATFORM = "agent-manager" as const
 const LOCAL_DIFF_ID = "local" as const
 
 export class AgentManagerProvider implements vscode.Disposable {
@@ -214,6 +214,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     if (m.type === "agentManager.removeStaleWorktree") return this.onRemoveStaleWorktree(m.worktreeId)
     if (m.type === "agentManager.promoteSession") return this.onPromoteSession(m.sessionId)
     if (m.type === "agentManager.addSessionToWorktree") return this.onAddSessionToWorktree(m.worktreeId)
+    if (m.type === "agentManager.forkSession") return this.onForkSession(m.sessionId, m.worktreeId)
     if (m.type === "agentManager.closeSession") return this.onCloseSession(m.sessionId)
     if (m.type === "agentManager.configureSetupScript") {
       void this.configureSetupScript()
@@ -773,6 +774,29 @@ export class AgentManagerProvider implements vscode.Disposable {
     return null
   }
 
+  private onForkSession(sessionId: string, worktreeId?: string) {
+    return forkSession(
+      {
+        getClient: () => this.connectionService.getClient(),
+        state: this.getStateManager(),
+        postError: (msg) => this.postToWebview({ type: "error", message: msg }),
+        registerWorktreeSession: (sid, dir) => this.registerWorktreeSession(sid, dir),
+        pushState: () => this.pushState(),
+        notifyForked: (s, from, wt) =>
+          this.postToWebview({
+            type: "agentManager.sessionForked",
+            sessionId: s.id,
+            forkedFromId: from,
+            worktreeId: wt,
+          }),
+        registerSession: (s) => this.provider?.registerSession(s),
+        log: (...args) => this.log(...args),
+      },
+      sessionId,
+      worktreeId,
+    )
+  }
+
   /** Close (remove) a session from its worktree. */
   private async onCloseSession(sessionId: string): Promise<null> {
     const state = this.getStateManager()
@@ -1328,36 +1352,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     const ext = vscode.extensions.getExtension("kilocode.kilo-code")
     const keybindings: Array<{ command: string; key?: string; mac?: string }> =
       ext?.packageJSON?.contributes?.keybindings ?? []
-
-    const mac = process.platform === "darwin"
-    const prefix = "kilo-code.new.agentManager."
-    const bindings: Record<string, string> = {}
-
-    // Global keybindings exposed to the shortcuts dialog
-    const globals: Record<string, string> = {
-      "kilo-code.new.agentManagerOpen": "agentManagerOpen",
-    }
-
-    for (const kb of keybindings) {
-      const raw = mac ? (kb.mac ?? kb.key) : kb.key
-      if (!raw) continue
-
-      if (kb.command.startsWith(prefix)) {
-        bindings[kb.command.slice(prefix.length)] = formatKeybinding(raw, mac)
-      } else if (globals[kb.command]) {
-        bindings[globals[kb.command]] = formatKeybinding(raw, mac)
-      }
-    }
-
-    // Ensure toggleDiff binding is always present (may be missing from
-    // cached packageJSON if the extension hasn't been fully reloaded)
-    if (!bindings.toggleDiff) {
-      bindings.toggleDiff = formatKeybinding(mac ? "cmd+d" : "ctrl+d", mac)
-    }
-    if (!bindings.showShortcuts) {
-      bindings.showShortcuts = formatKeybinding(mac ? "cmd+shift+/" : "ctrl+shift+/", mac)
-    }
-
+    const bindings = buildKeybindingMap(keybindings, process.platform === "darwin")
     this.postToWebview({ type: "agentManager.keybindings", bindings })
   }
 

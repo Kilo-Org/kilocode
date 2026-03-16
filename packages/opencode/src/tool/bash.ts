@@ -161,7 +161,7 @@ export const BashTool = Tool.define("bash", async () => {
           permission: "bash",
           patterns: Array.from(patterns),
           always: Array.from(always),
-          metadata: {},
+          metadata: { command: params.command }, // kilocode_change
         })
       }
 

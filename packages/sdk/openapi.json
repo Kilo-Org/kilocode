@@ -1108,6 +1108,196 @@
         ]
       }
     },
+    "/experimental/workspace": {
+      "post": {
+        "operationId": "experimental.workspace.create",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Create workspace",
+        "description": "Create a workspace for the current project.",
+        "responses": {
+          "200": {
+            "description": "Workspace created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Workspace"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^wrk.*"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "branch": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "extra": {
+                    "anyOf": [
+                      {},
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["type", "branch", "extra"]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.workspace.create({\n  ...\n})"
+          }
+        ]
+      },
+      "get": {
+        "operationId": "experimental.workspace.list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "List workspaces",
+        "description": "List all workspaces.",
+        "responses": {
+          "200": {
+            "description": "Workspaces",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Workspace"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.workspace.list({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/experimental/workspace/{id}": {
+      "delete": {
+        "operationId": "experimental.workspace.remove",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string",
+              "pattern": "^wrk.*"
+            },
+            "required": true
+          }
+        ],
+        "summary": "Remove workspace",
+        "description": "Remove an existing workspace.",
+        "responses": {
+          "200": {
+            "description": "Workspace removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Workspace"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.workspace.remove({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/experimental/worktree": {
       "post": {
         "operationId": "worktree.create",
@@ -1268,207 +1458,6 @@
         ]
       }
     },
-    "/experimental/workspace/{id}": {
-      "post": {
-        "operationId": "experimental.workspace.create",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "directory",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "workspace",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "string",
-              "pattern": "^wrk.*"
-            },
-            "required": true
-          }
-        ],
-        "summary": "Create workspace",
-        "description": "Create a workspace for the current project.",
-        "responses": {
-          "200": {
-            "description": "Workspace created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Workspace"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BadRequestError"
-                }
-              }
-            }
-          }
-        },
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "branch": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "config": {
-                    "anyOf": [
-                      {
-                        "type": "object",
-                        "properties": {
-                          "directory": {
-                            "type": "string"
-                          },
-                          "type": {
-                            "type": "string",
-                            "const": "worktree"
-                          }
-                        },
-                        "required": ["directory", "type"]
-                      }
-                    ]
-                  }
-                },
-                "required": ["branch", "config"]
-              }
-            }
-          }
-        },
-        "x-codeSamples": [
-          {
-            "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.workspace.create({\n  ...\n})"
-          }
-        ]
-      },
-      "delete": {
-        "operationId": "experimental.workspace.remove",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "directory",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "workspace",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "string",
-              "pattern": "^wrk.*"
-            },
-            "required": true
-          }
-        ],
-        "summary": "Remove workspace",
-        "description": "Remove an existing workspace.",
-        "responses": {
-          "200": {
-            "description": "Workspace removed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Workspace"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BadRequestError"
-                }
-              }
-            }
-          }
-        },
-        "x-codeSamples": [
-          {
-            "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.workspace.remove({\n  ...\n})"
-          }
-        ]
-      }
-    },
-    "/experimental/workspace": {
-      "get": {
-        "operationId": "experimental.workspace.list",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "directory",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "workspace",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "summary": "List workspaces",
-        "description": "List all workspaces.",
-        "responses": {
-          "200": {
-            "description": "Workspaces",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Workspace"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "x-codeSamples": [
-          {
-            "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.workspace.list({\n  ...\n})"
-          }
-        ]
-      }
-    },
     "/experimental/worktree/reset": {
       "post": {
         "operationId": "worktree.reset",
@@ -1524,7 +1513,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.worktree.reset({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.worktree.reset({\n  ...\n})"
           }
         ]
       }
@@ -1536,6 +1525,13 @@
           {
             "in": "query",
             "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
             "schema": {
               "type": "string"
             }
@@ -1579,7 +1575,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.worktree.diff({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.worktree.diff({\n  ...\n})"
           }
         ]
       }
@@ -1591,6 +1587,13 @@
           {
             "in": "query",
             "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
             "schema": {
               "type": "string"
             }
@@ -1634,7 +1637,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.worktree.diffSummary({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.worktree.diffSummary({\n  ...\n})"
           }
         ]
       }
@@ -1646,6 +1649,13 @@
           {
             "in": "query",
             "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
             "schema": {
               "type": "string"
             }
@@ -1702,7 +1712,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.worktree.diffFile({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.worktree.diffFile({\n  ...\n})"
           }
         ]
       }
@@ -4310,6 +4320,98 @@
         ]
       }
     },
+    "/permission/{requestID}/pattern-rules": {
+      "post": {
+        "operationId": "permission.savePatternRules",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "requestID",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "summary": "Save per-pattern permission rules",
+        "description": "Save approved/denied patterns for a pending permission request.",
+        "responses": {
+          "200": {
+            "description": "Pattern rules saved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "approvedPatterns": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "deniedPatterns": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.permission.savePatternRules({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/permission": {
       "get": {
         "operationId": "permission.list",
@@ -5032,7 +5134,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.provider.oauth.callback({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.provider.oauth.callback({\n  ...\n})"
           }
         ]
       }
@@ -5044,6 +5146,13 @@
           {
             "in": "query",
             "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
             "schema": {
               "type": "string"
             }
@@ -5100,7 +5209,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.telemetry.capture({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.telemetry.capture({\n  ...\n})"
           }
         ]
       }
@@ -5112,6 +5221,13 @@
           {
             "in": "query",
             "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
             "schema": {
               "type": "string"
             }
@@ -5177,7 +5293,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.commitMessage.generate({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.commitMessage.generate({\n  ...\n})"
           }
         ]
       }
@@ -5189,6 +5305,13 @@
           {
             "in": "query",
             "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
             "schema": {
               "type": "string"
             }
@@ -5244,7 +5367,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.enhancePrompt.enhance({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.enhancePrompt.enhance({\n  ...\n})"
           }
         ]
       }
@@ -5256,6 +5379,13 @@
           {
             "in": "query",
             "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
             "schema": {
               "type": "string"
             }
@@ -5347,7 +5477,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.profile({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.profile({\n  ...\n})"
           }
         ]
       }
@@ -5359,6 +5489,13 @@
           {
             "in": "query",
             "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
             "schema": {
               "type": "string"
             }
@@ -5413,7 +5550,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.organization.set({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.organization.set({\n  ...\n})"
           }
         ]
       }
@@ -5425,6 +5562,13 @@
           {
             "in": "query",
             "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
             "schema": {
               "type": "string"
             }
@@ -5516,7 +5660,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.fim({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.fim({\n  ...\n})"
           }
         ]
       }
@@ -5528,6 +5672,13 @@
           {
             "in": "query",
             "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
             "schema": {
               "type": "string"
             }
@@ -5593,7 +5744,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.notifications({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.notifications({\n  ...\n})"
           }
         ]
       }
@@ -5605,6 +5756,13 @@
           {
             "in": "query",
             "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
             "schema": {
               "type": "string"
             }
@@ -5643,7 +5801,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.cloud.session.get({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.cloud.session.get({\n  ...\n})"
           }
         ]
       }
@@ -5655,6 +5813,13 @@
           {
             "in": "query",
             "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
             "schema": {
               "type": "string"
             }
@@ -5710,7 +5875,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.cloud.session.import({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.cloud.session.import({\n  ...\n})"
           }
         ]
       }
@@ -5722,6 +5887,13 @@
           {
             "in": "query",
             "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
             "schema": {
               "type": "string"
             }
@@ -5819,7 +5991,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.cloudSessions({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.cloudSessions({\n  ...\n})"
           }
         ]
       }
@@ -10379,47 +10551,6 @@
         },
         "required": ["type", "properties"]
       },
-      "Event.worktree.ready": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "worktree.ready"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "name": {
-                "type": "string"
-              },
-              "branch": {
-                "type": "string"
-              }
-            },
-            "required": ["name", "branch"]
-          }
-        },
-        "required": ["type", "properties"]
-      },
-      "Event.worktree.failed": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "worktree.failed"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "message": {
-                "type": "string"
-              }
-            },
-            "required": ["message"]
-          }
-        },
-        "required": ["type", "properties"]
-      },
       "Event.workspace.ready": {
         "type": "object",
         "properties": {
@@ -10571,6 +10702,47 @@
         },
         "required": ["type", "properties"]
       },
+      "Event.worktree.ready": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "worktree.ready"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "branch": {
+                "type": "string"
+              }
+            },
+            "required": ["name", "branch"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.worktree.failed": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "worktree.failed"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": ["message"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
       "Event": {
         "anyOf": [
           {
@@ -10691,12 +10863,6 @@
             "$ref": "#/components/schemas/Event.vcs.branch.updated"
           },
           {
-            "$ref": "#/components/schemas/Event.worktree.ready"
-          },
-          {
-            "$ref": "#/components/schemas/Event.worktree.failed"
-          },
-          {
             "$ref": "#/components/schemas/Event.workspace.ready"
           },
           {
@@ -10713,6 +10879,12 @@
           },
           {
             "$ref": "#/components/schemas/Event.pty.deleted"
+          },
+          {
+            "$ref": "#/components/schemas/Event.worktree.ready"
+          },
+          {
+            "$ref": "#/components/schemas/Event.worktree.failed"
           }
         ]
       },
@@ -12151,6 +12323,60 @@
           "$ref": "#/components/schemas/ToolListItem"
         }
       },
+      "Workspace": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^wrk.*"
+          },
+          "type": {
+            "type": "string"
+          },
+          "branch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "directory": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "extra": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "projectID": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "type", "branch", "name", "directory", "extra", "projectID"]
+      },
       "Worktree": {
         "type": "object",
         "properties": {
@@ -12177,46 +12403,6 @@
             "type": "string"
           }
         }
-      },
-      "Workspace": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^wrk.*"
-          },
-          "branch": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "projectID": {
-            "type": "string"
-          },
-          "config": {
-            "anyOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "directory": {
-                    "type": "string"
-                  },
-                  "type": {
-                    "type": "string",
-                    "const": "worktree"
-                  }
-                },
-                "required": ["directory", "type"]
-              }
-            ]
-          }
-        },
-        "required": ["id", "branch", "projectID", "config"]
       },
       "WorktreeRemoveInput": {
         "type": "object",

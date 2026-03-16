@@ -372,7 +372,10 @@ const AgentBehaviourTab: Component = () => {
                   >
                     <Show when={mcp.command}>
                       <div>
-                        command: {mcp.command} {(mcp.args ?? []).join(" ")}
+                        command:{" "}
+                        {Array.isArray(mcp.command)
+                          ? mcp.command.join(" ")
+                          : `${mcp.command} ${(mcp.args ?? []).join(" ")}`}
                       </div>
                     </Show>
                     <Show when={mcp.url}>
