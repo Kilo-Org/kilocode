@@ -1377,14 +1377,6 @@
     margin-top: 0;
   }
 
-  [data-slot="permission-session-hint"] {
-    font-size: 11px;
-    color: var(--text-weak, var(--vscode-descriptionForeground));
-    margin: 0;
-    padding: 4px 0 0;
-    text-align: left;
-  }
-
   [data-slot="permission-actions"] {
     display: flex;
     align-items: center;

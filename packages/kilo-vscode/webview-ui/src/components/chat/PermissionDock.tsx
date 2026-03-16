@@ -179,7 +179,6 @@ export const PermissionDock: Component<{
         <div data-slot="permission-hint">{toolDescription()}</div>
       </Show>
 
-      <p data-slot="permission-session-hint">{language.t("ui.permission.sessionHint")}</p>
       <div data-slot="permission-actions">
         <Button
           variant="primary"

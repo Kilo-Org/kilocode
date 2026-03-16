@@ -65,6 +65,31 @@ export namespace PermissionNext {
     return rulesets.flat()
   }
 
+  // kilocode_change start — inverse of fromConfig: convert rules back to config format
+  export function toConfig(rules: Ruleset): Config.Permission {
+    const result: Config.Permission = {}
+    for (const rule of rules) {
+      const existing = result[rule.permission]
+      if (existing === undefined) {
+        // First rule for this permission — use simple format if wildcard
+        if (rule.pattern === "*") {
+          result[rule.permission] = rule.action
+          continue
+        }
+        result[rule.permission] = { [rule.pattern]: rule.action }
+        continue
+      }
+      // Already have a rule — must use object format
+      if (typeof existing === "string") {
+        result[rule.permission] = { "*": existing, [rule.pattern]: rule.action }
+        continue
+      }
+      existing[rule.pattern] = rule.action
+    }
+    return result
+  }
+  // kilocode_change end
+
   export const Request = z
     .object({
       id: Identifier.schema("permission"),
@@ -175,11 +200,17 @@ export namespace PermissionNext {
       const validRules = new Set(existing.info.metadata?.rules ?? [])
       const permission = existing.info.permission
 
+      const newRules: Ruleset = []
       for (const pattern of input.approvedAlways ?? []) {
-        if (validRules.has(pattern)) s.approved.push({ permission, pattern, action: "allow" })
+        if (validRules.has(pattern)) newRules.push({ permission, pattern, action: "allow" })
       }
       for (const pattern of input.deniedAlways ?? []) {
-        if (validRules.has(pattern)) s.approved.push({ permission, pattern, action: "deny" })
+        if (validRules.has(pattern)) newRules.push({ permission, pattern, action: "deny" })
+      }
+      s.approved.push(...newRules)
+
+      if (newRules.length > 0) {
+        await Config.updateGlobal({ permission: toConfig(newRules) })
       }
     },
   )
@@ -254,6 +285,16 @@ export namespace PermissionNext {
         // UI to manage it
         // db().insert(PermissionTable).values({ projectID: Instance.project.id, data: s.approved })
         //   .onConflictDoUpdate({ target: PermissionTable.projectID, set: { data: s.approved } }).run()
+        // kilocode_change start - persist always rules to global config
+        const alwaysRules: Ruleset = existing.info.always.map((pattern) => ({
+          permission: existing.info.permission,
+          pattern,
+          action: "allow" as const,
+        }))
+        if (alwaysRules.length > 0) {
+          await Config.updateGlobal({ permission: toConfig(alwaysRules) })
+        }
+        // kilocode_change end
         return
       }
     },

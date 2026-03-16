@@ -1426,7 +1426,7 @@ export namespace Config {
   export async function update(config: Info) {
     const filepath = path.join(Instance.directory, "config.json")
     const existing = await loadFile(filepath)
-    await Filesystem.writeJson(filepath, stripNulls(mergeDeep(existing, config) as Record<string, unknown>)) // kilocode_change - strip null delete sentinels
+    await Filesystem.writeJson(filepath, mergeConfig(existing, config)) // kilocode_change
     await Instance.dispose()
   }
 
@@ -1459,6 +1459,33 @@ export namespace Config {
       }
     }
     return result
+  }
+  // kilocode_change end
+
+  // kilocode_change start — merge config with normalization pipeline
+  /**
+   * Merge a patch into an existing config:
+   * 1. Normalize permission scalars → objects when the patch has an object
+   *    (e.g. existing `"bash": "ask"` + patch `"bash": { "npm *": "allow" }`
+   *    → promotes existing to `"bash": { "*": "ask" }` so mergeDeep works)
+   * 2. Deep-merge
+   * 3. Strip null delete sentinels
+   */
+  function mergeConfig(existing: Info, patch: Info): Info {
+    const e = existing as Record<string, unknown>
+    const p = patch as Record<string, unknown>
+    // Normalize permission scalars before merge
+    const existingPerm = e.permission
+    const patchPerm = p.permission
+    if (isRecord(existingPerm) && isRecord(patchPerm)) {
+      for (const [key, patchValue] of Object.entries(patchPerm)) {
+        const existingValue = existingPerm[key]
+        if (typeof existingValue === "string" && isRecord(patchValue)) {
+          existingPerm[key] = { "*": existingValue }
+        }
+      }
+    }
+    return stripNulls(mergeDeep(e, p) as Record<string, unknown>) as Info
   }
   // kilocode_change end
 
@@ -1540,7 +1567,7 @@ export namespace Config {
     const next = await (async () => {
       if (!filepath.endsWith(".jsonc")) {
         const existing = parseConfig(before, filepath)
-        const merged = stripNulls(mergeDeep(existing, config) as Record<string, unknown>) as Info // kilocode_change - strip null delete sentinels
+        const merged = mergeConfig(existing, config) // kilocode_change
         await Filesystem.writeJson(filepath, merged)
         return merged
       }
