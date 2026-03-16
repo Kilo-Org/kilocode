@@ -9,7 +9,7 @@ import { List } from "@kilocode/kilo-ui/list"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { Button } from "@kilocode/kilo-ui/button"
-import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { Icon } from "@kilocode/kilo-ui/icon"
 import { InlineInput } from "@kilocode/kilo-ui/inline-input"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { useSession } from "../../context/session"
@@ -172,19 +172,29 @@ const SessionList: Component<SessionListProps> = (props) => {
                   <span data-slot="list-item-description">{formatRelativeDate(s.updatedAt)}</span>
                 </div>
                 <Show when={props.showDelete}>
-                  <IconButton
-                    icon="trash"
-                    size="small"
-                    variant="ghost"
-                    label={language.t("session.delete.button")}
+                  <span
+                    role="button"
+                    tabindex={0}
+                    data-component="icon-button"
+                    data-icon="trash"
+                    data-size="small"
+                    data-variant="ghost"
+                    aria-label={language.t("session.delete.button")}
                     style={{ color: "var(--vscode-errorForeground, #f48771)" }}
                     onClick={(e: MouseEvent) => {
                       e.preventDefault()
                       e.stopPropagation()
                       confirmDelete(s)
                     }}
-                    aria-label={language.t("session.delete.button")}
-                  />
+                    onKeyDown={(e: KeyboardEvent) => {
+                      if (e.key !== "Enter" && e.key !== " ") return
+                      e.preventDefault()
+                      e.stopPropagation()
+                      confirmDelete(s)
+                    }}
+                  >
+                    <Icon name="trash" size="small" />
+                  </span>
                 </Show>
               </div>
             }
