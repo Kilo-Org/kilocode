@@ -27,10 +27,8 @@ export {
   fetchProfile,
   fetchBalance,
   fetchProfileWithBalance,
-  fetchDefaultModel,
   getKiloProfile,
   getKiloBalance,
-  getKiloDefaultModel,
   promptOrganizationSelection,
 } from "./api/profile.js"
 export { fetchKiloModels } from "./api/models.js"

@@ -44,8 +44,6 @@ import { LoadAPIKeyError } from "ai"
 import type { AssistantMessage, Event, KiloClient, SessionMessageResponse, ToolPart } from "@kilocode/sdk/v2"
 import { applyPatch } from "diff"
 
-import { fetchDefaultModel } from "@kilocode/kilo-gateway" // kilocode_change
-
 type ModeOption = { id: string; name: string; description?: string }
 type ModelOption = { modelId: string; name: string }
 
@@ -1586,12 +1584,7 @@ export namespace ACP {
       }
     }
 
-    if (specified) return specified
-
-    // kilocode_change start
-    const freeModel = await fetchDefaultModel()
-    return { providerID: "kilo", modelID: freeModel }
-    // kilocode_change end
+    return specified
   }
 
   function parseUri(

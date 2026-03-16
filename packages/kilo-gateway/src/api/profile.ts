@@ -76,44 +76,6 @@ export async function fetchBalance(token: string, organizationId?: string): Prom
 export const getKiloBalance = fetchBalance
 
 /**
- * Fetch default model for a given organization context
- * When token is provided, returns the authenticated user's default model
- * When no token is provided, returns the default free model for anonymous usage
- */
-export async function fetchDefaultModel(token?: string, organizationId?: string): Promise<string> {
-  const path = organizationId ? `/api/organizations/${organizationId}/defaults` : `/api/defaults`
-  const url = `${KILO_API_BASE}${path}`
-
-  try {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    }
-    if (token) {
-      headers.Authorization = `Bearer ${token}`
-    }
-
-    const response = await fetch(url, { headers })
-
-    if (!response.ok) {
-      return token ? DEFAULT_MODEL : DEFAULT_FREE_MODEL
-    }
-
-    const data = (await response.json()) as { defaultModel?: string; defaultFreeModel?: string }
-    if (token) {
-      return data.defaultModel || DEFAULT_MODEL
-    }
-    return data.defaultFreeModel || DEFAULT_FREE_MODEL
-  } catch {
-    return token ? DEFAULT_MODEL : DEFAULT_FREE_MODEL
-  }
-}
-
-/**
- * Alias for compatibility with existing code
- */
-export const getKiloDefaultModel = fetchDefaultModel
-
-/**
  * Fetch both profile and balance in parallel
  */
 export async function fetchProfileWithBalance(token: string): Promise<{
