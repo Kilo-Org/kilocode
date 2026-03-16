@@ -74,12 +74,11 @@ async function pollDeviceAuth(code: string): Promise<DeviceAuthPollResponse> {
 export interface DeviceAuthResult {
   token: string
   organizationId?: string
-  model: string
 }
 
 /**
  * Execute the device authorization flow
- * @returns Authentication result with token, org ID, and model
+ * @returns Authentication result with token and org ID
  * @throws Error if authentication fails
  */
 export async function authenticateWithDeviceAuth(): Promise<DeviceAuthResult> {
