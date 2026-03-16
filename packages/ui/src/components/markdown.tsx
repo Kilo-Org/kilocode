@@ -1,4 +1,4 @@
-import { useMarked } from "../context/marked"
+import { useMarked, deferredHighlight, fnv1a } from "../context/marked"
 import { useI18n } from "../context/i18n"
 import DOMPurify from "dompurify"
 import morphdom from "morphdom"
@@ -258,8 +258,13 @@ export function Markdown(
     { initialValue: "" },
   )
 
-  let copySetupTimer: ReturnType<typeof setTimeout> | undefined
   let copyCleanup: (() => void) | undefined
+  // kilocode_change start: generation counter prevents stale deferredHighlight
+  // callbacks from overwriting copyCleanup set by a newer render (issue #6221).
+  // The abort signal cancels the previous in-flight highlight pass so rapid
+  // streaming tokens don't spawn concurrent passes racing on the same DOM nodes.
+  const highlightState = { gen: 0, signal: { aborted: false } }
+  // kilocode_change end
 
   createEffect(() => {
     const container = root()
@@ -274,31 +279,72 @@ export function Markdown(
 
     const temp = document.createElement("div")
     temp.innerHTML = content
-    decorate(temp, {
+    const labels = {
       copy: i18n.t("ui.message.copy"),
       copied: i18n.t("ui.message.copied"),
-    })
+    }
+    decorate(temp, labels)
 
+    // kilocode_change start: morphdom guard for highlighted blocks (issue #6221)
+    // During streaming, morphdom re-runs on every token. Without this guard,
+    // it would revert already-highlighted <pre> blocks back to plain code.
     morphdom(container, temp, {
       childrenOnly: true,
       onBeforeElUpdated: (fromEl, toEl) => {
         if (fromEl.isEqualNode(toEl)) return false
+        // Preserve Shiki-highlighted blocks — don't let morphdom revert them
+        // to plain <pre><code> during streaming re-renders.
+        // Note: "shiki" class is on <pre> (set by Shiki's codeToHtml output).
+        // We compare data-source-hash (a lightweight FNV-1a hash stored by
+        // deferredHighlight on the highlighted <pre>) against a hash of the
+        // incoming code text to detect mid-stream content changes: if the code
+        // changed, we let morphdom update so the block can be re-queued for
+        // highlighting with the new content.
+        if (
+          fromEl instanceof HTMLElement &&
+          fromEl.tagName === "PRE" &&
+          fromEl.classList.contains("shiki") &&
+          toEl instanceof HTMLElement &&
+          toEl.tagName === "PRE" &&
+          !toEl.classList.contains("shiki")
+        ) {
+          const fromHash = fromEl.getAttribute("data-source-hash")
+          const toCode = toEl.querySelector("code")?.textContent ?? ""
+          if (fromHash === fnv1a(toCode)) return false
+          // Source changed during streaming — fall through so morphdom replaces
+          // the stale highlighted block with the updated plain block, which will
+          // be re-highlighted on the next deferredHighlight pass.
+        }
         return true
       },
     })
+    // kilocode_change end
 
-    if (copySetupTimer) clearTimeout(copySetupTimer)
-    copySetupTimer = setTimeout(() => {
+    // kilocode_change start: deferred syntax highlighting (issue #6221)
+    // DOM is now painted with plain <pre><code> blocks.
+    // Progressively highlight via setTimeout(0) to avoid blocking.
+    // onComplete re-runs setupCodeCopy since highlighting replaces DOM nodes.
+    // The generation counter ensures a stale in-flight highlight run (from a
+    // previous streaming token) doesn't overwrite the cleanup set by a newer run.
+    // Cancel any in-flight highlight pass before starting a new one — prevents
+    // concurrent passes from racing to replace the same DOM nodes.
+    highlightState.signal.aborted = true
+    const gen = ++highlightState.gen
+    const signal = { aborted: false }
+    highlightState.signal = signal
+    deferredHighlight(container, () => {
+      if (gen !== highlightState.gen) return
       if (copyCleanup) copyCleanup()
-      copyCleanup = setupCodeCopy(container, {
-        copy: i18n.t("ui.message.copy"),
-        copied: i18n.t("ui.message.copied"),
-      })
-    }, 150)
+      copyCleanup = setupCodeCopy(container, labels)
+    }, signal)
+    // kilocode_change end
   })
 
   onCleanup(() => {
-    if (copySetupTimer) clearTimeout(copySetupTimer)
+    // Invalidate any in-flight deferredHighlight callbacks so they don't call
+    // setupCodeCopy on a disconnected container after the component unmounts.
+    highlightState.signal.aborted = true
+    highlightState.gen++
     if (copyCleanup) copyCleanup()
   })
 

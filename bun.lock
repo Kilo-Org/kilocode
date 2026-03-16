@@ -501,7 +501,6 @@
         "luxon": "catalog:",
         "marked": "catalog:",
         "marked-katex-extension": "5.1.6",
-        "marked-shiki": "catalog:",
         "morphdom": "2.7.8",
         "motion": "12.34.5",
         "motion-dom": "12.34.3",
