@@ -1472,18 +1472,20 @@ export namespace Config {
    * 3. Strip null delete sentinels
    */
   function mergeConfig(existing: Info, patch: Info): Info {
-    const e = existing as Record<string, unknown>
+    const e = { ...existing } as Record<string, unknown>
     const p = patch as Record<string, unknown>
-    // Normalize permission scalars before merge
+    // Normalize permission scalars before merge (clone to avoid mutating the input)
     const existingPerm = e.permission
     const patchPerm = p.permission
     if (isRecord(existingPerm) && isRecord(patchPerm)) {
+      const cloned = { ...existingPerm }
       for (const [key, patchValue] of Object.entries(patchPerm)) {
-        const existingValue = existingPerm[key]
+        const existingValue = cloned[key]
         if (typeof existingValue === "string" && isRecord(patchValue)) {
-          existingPerm[key] = { "*": existingValue }
+          cloned[key] = { "*": existingValue }
         }
       }
+      e.permission = cloned
     }
     return stripNulls(mergeDeep(e, p) as Record<string, unknown>) as Info
   }
