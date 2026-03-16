@@ -15,11 +15,10 @@ test("saveAlwaysRules - approvedAlways saves allow rules for future requests", a
         permission: "bash",
         patterns: ["npm install"],
         metadata: {},
-        always: [],
+        always: ["npm *", "npm install"],
         ruleset: [],
       })
 
-      // Save pattern rules before replying
       await PermissionNext.saveAlwaysRules({
         requestID: "permission_approved1",
         approvedAlways: ["npm install"],
@@ -57,11 +56,10 @@ test("saveAlwaysRules - deniedAlways saves deny rules for future requests", asyn
         permission: "bash",
         patterns: ["rm -rf /"],
         metadata: {},
-        always: [],
+        always: ["rm *", "rm -rf /"],
         ruleset: [],
       })
 
-      // Save pattern rules before replying
       await PermissionNext.saveAlwaysRules({
         requestID: "permission_denied1",
         deniedAlways: ["rm -rf /"],
@@ -100,7 +98,7 @@ test("saveAlwaysRules - multiple bash commands: approve some, deny others", asyn
         permission: "bash",
         patterns: ["npm install", "npm test", "rm -rf /tmp/cache"],
         metadata: {},
-        always: [],
+        always: ["npm *", "npm install", "npm test", "rm *", "rm -rf /tmp/cache"],
         ruleset: [],
       })
 
@@ -165,7 +163,7 @@ test("saveAlwaysRules - multiple bash commands: approve all patterns", async () 
         permission: "bash",
         patterns: ["git status", "git diff", "git log --oneline"],
         metadata: {},
-        always: [],
+        always: ["git *", "git status", "git diff", "git log *", "git log --oneline"],
         ruleset: [],
       })
 
@@ -195,7 +193,7 @@ test("saveAlwaysRules - multiple bash commands: approve all patterns", async () 
   })
 })
 
-test("saveAlwaysRules - ignores patterns not in the original request", async () => {
+test("saveAlwaysRules - ignores patterns not in always", async () => {
   await using tmp = await tmpdir({ git: true })
   await Instance.provide({
     directory: tmp.path,
@@ -206,7 +204,7 @@ test("saveAlwaysRules - ignores patterns not in the original request", async () 
         permission: "bash",
         patterns: ["npm install"],
         metadata: {},
-        always: [],
+        always: ["npm *", "npm install"],
         ruleset: [],
       })
 
@@ -223,7 +221,7 @@ test("saveAlwaysRules - ignores patterns not in the original request", async () 
 
       await expect(askPromise).resolves.toBeUndefined()
 
-      // npm install was in the original request — should be auto-allowed
+      // npm install was in always — should be auto-allowed
       const result = await PermissionNext.ask({
         sessionID: "session_test",
         permission: "bash",
@@ -234,7 +232,7 @@ test("saveAlwaysRules - ignores patterns not in the original request", async () 
       })
       expect(result).toBeUndefined()
 
-      // curl was NOT in the original request — should still require permission (ask)
+      // curl was NOT in always — should still require permission (ask)
       const curlPromise = PermissionNext.ask({
         id: "permission_curl_check",
         sessionID: "session_test",
@@ -283,7 +281,7 @@ test("saveAlwaysRules - multiple bash commands: deny all patterns", async () => 
         permission: "bash",
         patterns: ["rm -rf /", "sudo shutdown", "dd if=/dev/zero of=/dev/sda"],
         metadata: {},
-        always: [],
+        always: ["rm *", "rm -rf /", "sudo *", "sudo shutdown", "dd *", "dd if=/dev/zero of=/dev/sda"],
         ruleset: [],
       })
 
@@ -312,6 +310,97 @@ test("saveAlwaysRules - multiple bash commands: deny all patterns", async () => 
           }),
         ).rejects.toBeInstanceOf(PermissionNext.DeniedError)
       }
+    },
+  })
+})
+
+test("saveAlwaysRules - accepts hierarchy patterns from always array", async () => {
+  await using tmp = await tmpdir({ git: true })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const askPromise = PermissionNext.ask({
+        id: "permission_hierarchy1",
+        sessionID: "session_test",
+        permission: "bash",
+        patterns: ["npm install lodash"],
+        metadata: {},
+        always: ["npm *", "npm install *", "npm install lodash"],
+        ruleset: [],
+      })
+
+      // Approve a hierarchy pattern that is in always but NOT in patterns
+      await PermissionNext.saveAlwaysRules({
+        requestID: "permission_hierarchy1",
+        approvedAlways: ["npm *"],
+      })
+
+      await PermissionNext.reply({
+        requestID: "permission_hierarchy1",
+        reply: "once",
+      })
+
+      await expect(askPromise).resolves.toBeUndefined()
+
+      // "npm *" should now auto-allow any npm command via wildcard match
+      const result = await PermissionNext.ask({
+        sessionID: "session_test",
+        permission: "bash",
+        patterns: ["npm test"],
+        metadata: {},
+        always: [],
+        ruleset: [],
+      })
+      expect(result).toBeUndefined()
+    },
+  })
+})
+
+test("saveAlwaysRules - rejects patterns not in always", async () => {
+  await using tmp = await tmpdir({ git: true })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const askPromise = PermissionNext.ask({
+        id: "permission_hierarchy2",
+        sessionID: "session_test",
+        permission: "bash",
+        patterns: ["npm install lodash"],
+        metadata: {},
+        always: ["npm *", "npm install *", "npm install lodash"],
+        ruleset: [],
+      })
+
+      // Try to sneak in a pattern not in always — should be ignored
+      await PermissionNext.saveAlwaysRules({
+        requestID: "permission_hierarchy2",
+        approvedAlways: ["rm -rf /"],
+      })
+
+      await PermissionNext.reply({
+        requestID: "permission_hierarchy2",
+        reply: "once",
+      })
+
+      await expect(askPromise).resolves.toBeUndefined()
+
+      // "rm -rf /" should NOT be auto-allowed
+      const rmPromise = PermissionNext.ask({
+        id: "permission_hierarchy2_rm",
+        sessionID: "session_test",
+        permission: "bash",
+        patterns: ["rm -rf /"],
+        metadata: {},
+        always: [],
+        ruleset: [],
+      })
+
+      await PermissionNext.reply({
+        requestID: "permission_hierarchy2_rm",
+        reply: "once",
+      })
+
+      await expect(rmPromise).resolves.toBeUndefined()
     },
   })
 })
