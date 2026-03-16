@@ -537,8 +537,22 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function handleMessageCreated(message: Message) {
-    // Message confirmed by server — no longer optimistic
-    pendingOptimistic.get(message.sessionID)?.delete(message.id)
+    // Message confirmed by server — no longer optimistic.
+    // Clear placeholder parts so they don't duplicate alongside real parts
+    // arriving via individual part.updated events (the server's message.updated
+    // SSE event does NOT include parts).
+    const pending = pendingOptimistic.get(message.sessionID)
+    const wasOptimistic = pending?.has(message.id)
+    pending?.delete(message.id)
+
+    if (wasOptimistic) {
+      setStore(
+        "parts",
+        produce((p) => {
+          delete p[message.id]
+        }),
+      )
+    }
 
     setStore("messages", message.sessionID, (msgs = []) => {
       // Check if message already exists (optimistic or update case).
