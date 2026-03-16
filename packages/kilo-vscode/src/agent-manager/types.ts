@@ -379,6 +379,12 @@ interface GenericOpenFileIn {
   column?: number
 }
 
+interface PreviewImageIn {
+  type: "previewImage"
+  dataUrl: string
+  filename: string
+}
+
 interface LoadMessagesIn {
   type: "loadMessages"
   sessionID: string
@@ -434,6 +440,7 @@ export type AgentManagerInMessage =
   | StopDiffWatchIn
   | OpenFileIn
   | GenericOpenFileIn
+  | PreviewImageIn
   | LoadMessagesIn
   | ClearSessionIn
   | AbortIn

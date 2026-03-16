@@ -1,6 +1,8 @@
 import * as path from "path"
 
 const IMAGE_PREVIEW_ID = "imagePreview.previewEditor"
+const PREVIEW_DIR = "image-preview"
+const PREVIEW_LIMIT = 20
 
 type Preview = {
   data: Uint8Array
@@ -25,13 +27,27 @@ export function parseImage(dataUrl: string, filename: string): Preview | null {
 }
 
 export function buildPreviewPath(name: string, now: number): string {
-  return path.posix.join("image-preview", `${now}-${name}`)
+  return path.posix.join(PREVIEW_DIR, `${now}-${name}`)
 }
 
 export function getPreviewCommand(uri: {
   toString(): string
 }): [string, { resource: { toString(): string }; size: "contain" }] {
   return [IMAGE_PREVIEW_ID, { resource: uri, size: "contain" }]
+}
+
+export function getPreviewDir(): string {
+  return PREVIEW_DIR
+}
+
+export function trimEntries<T extends { path: string }>(items: T[], limit = PREVIEW_LIMIT): string[] {
+  if (items.length <= limit) return []
+
+  return items
+    .slice()
+    .sort((a, b) => a.path.localeCompare(b.path))
+    .slice(0, items.length - limit)
+    .map((item) => item.path)
 }
 
 function parseBase64(value: string): Uint8Array | null {

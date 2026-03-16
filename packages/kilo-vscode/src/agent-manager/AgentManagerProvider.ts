@@ -232,6 +232,9 @@ export class AgentManagerProvider implements vscode.Disposable {
       this.openWorktreeDirectory(m.worktreeId)
       return null
     }
+    if (m.type === "previewImage") {
+      return msg
+    }
     if (m.type === "agentManager.showExistingLocalTerminal") {
       this.terminalManager.syncLocalOnSessionSwitch()
       return null

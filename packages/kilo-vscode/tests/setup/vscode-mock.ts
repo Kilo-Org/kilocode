@@ -55,6 +55,8 @@ const mockVscode = {
       createDirectory: async () => {},
       writeFile: async () => {},
       readFile: async () => new Uint8Array(),
+      readDirectory: async () => [],
+      delete: async () => {},
       stat: async () => ({ type: 1, ctime: 0, mtime: 0, size: 0 }),
     },
   },

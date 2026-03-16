@@ -1,7 +1,7 @@
 import * as path from "path"
 import * as vscode from "vscode"
 import { z } from "zod"
-import { buildPreviewPath, getPreviewCommand, parseImage } from "./image-preview"
+import { buildPreviewPath, getPreviewCommand, getPreviewDir, parseImage, trimEntries } from "./image-preview"
 import { isAbsolutePath } from "./path-utils"
 import type {
   KiloClient,
@@ -1808,12 +1808,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
-  /**
-   * Handle openFile request from the webview — open a file in the VS Code editor.
-   * Resolves relative paths against the current session's directory (which may be
-   * a worktree path registered via setSessionDirectory), falling back to workspace root.
-   * Absolute paths (Unix `/…` or Windows `C:\…`) are used as-is.
-   */
   private handlePreviewImage(dataUrl: string, filename: string): void {
     const dir = this.extensionContext?.globalStorageUri
     if (!dir) return
@@ -1821,18 +1815,36 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const img = parseImage(dataUrl, filename)
     if (!img) return
 
+    const root = vscode.Uri.joinPath(dir, getPreviewDir())
     const uri = vscode.Uri.joinPath(dir, buildPreviewPath(img.name, Date.now()))
+    const clean = () =>
+      vscode.workspace.fs.readDirectory(root).then(
+        (items) => {
+          const stale = trimEntries(items.map(([name]) => ({ path: name })))
+          return Promise.all(
+            stale.map((name) => vscode.workspace.fs.delete(vscode.Uri.joinPath(root, name), { recursive: true })),
+          )
+        },
+        () => [],
+      )
     const open = () =>
       vscode.commands
         .executeCommand(...getPreviewCommand(uri))
         .then(undefined, () => vscode.commands.executeCommand("vscode.open", uri))
 
     void vscode.workspace.fs
-      .createDirectory(vscode.Uri.joinPath(dir, "image-preview"))
+      .createDirectory(root)
       .then(() => vscode.workspace.fs.writeFile(uri, img.data))
+      .then(() => clean())
       .then(open, (err) => console.error("[Kilo New] KiloProvider: Failed to preview image:", err))
   }
 
+  /**
+   * Handle openFile request from the webview — open a file in the VS Code editor.
+   * Resolves relative paths against the current session's directory (which may be
+   * a worktree path registered via setSessionDirectory), falling back to workspace root.
+   * Absolute paths (Unix `/…` or Windows `C:\…`) are used as-is.
+   */
   private handleOpenFile(filePath: string, line?: number, column?: number): void {
     const uri = isAbsolutePath(filePath)
       ? vscode.Uri.file(filePath)
