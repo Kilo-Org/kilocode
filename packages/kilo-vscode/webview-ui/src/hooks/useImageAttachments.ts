@@ -33,6 +33,8 @@ export function useImageAttachments() {
 
   const clear = () => setImages([])
 
+  const replace = (next: ImageAttachment[]) => setImages(next)
+
   const handlePaste = (event: ClipboardEvent) => {
     const items = Array.from(event.clipboardData?.items ?? [])
     const imageItems = items.filter((item) => item.kind === "file" && ACCEPTED_IMAGE_TYPES.includes(item.type))
@@ -71,6 +73,7 @@ export function useImageAttachments() {
     add,
     remove,
     clear,
+    replace,
     handlePaste,
     handleDragOver,
     handleDragLeave,

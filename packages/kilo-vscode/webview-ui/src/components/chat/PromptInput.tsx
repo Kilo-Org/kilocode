@@ -234,15 +234,26 @@ export const PromptInput: Component = () => {
 
     if (message.type === "sendMessageFailed") {
       const failed = message as import("../../types/messages").SendMessageFailedMessage
-      // Restore draft text so the user can retry
-      if (failed.text && !text().trim()) {
-        setText(failed.text)
-        setGhostText("")
-        if (textareaRef) {
-          textareaRef.value = failed.text
-          adjustHeight()
-          textareaRef.focus()
+      // Restore draft text and image attachments so the user can retry
+      if (!text().trim() && imageAttach.images().length === 0) {
+        if (failed.text) {
+          setText(failed.text)
+          setGhostText("")
+          if (textareaRef) {
+            textareaRef.value = failed.text
+            adjustHeight()
+            textareaRef.focus()
+          }
         }
+        const images = (failed.files ?? [])
+          .filter((f) => f.mime.startsWith("image/") && f.url.startsWith("data:"))
+          .map((f) => ({
+            id: crypto.randomUUID(),
+            filename: f.filename ?? "image",
+            mime: f.mime,
+            dataUrl: f.url,
+          }))
+        if (images.length > 0) imageAttach.replace(images)
       }
     }
 
@@ -440,7 +451,7 @@ export const PromptInput: Component = () => {
     if ((!message && imgs.length === 0) || isDisabled()) return
 
     const mentionFiles = mention.parseFileAttachments(draft)
-    const imgFiles = imgs.map((img) => ({ mime: img.mime, url: img.dataUrl }))
+    const imgFiles = imgs.map((img) => ({ mime: img.mime, url: img.dataUrl, filename: img.filename }))
     const allFiles = [...mentionFiles, ...imgFiles]
 
     const sel = session.selected()

@@ -1101,6 +1101,7 @@ export type ExtensionMessage =
 export interface FileAttachment {
   mime: string
   url: string
+  filename?: string
 }
 
 export interface SendMessageRequest {

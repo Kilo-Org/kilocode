@@ -42,6 +42,7 @@ import type {
 } from "../types/messages"
 import { removeSessionPermissions, upsertPermission } from "./permission-queue"
 import { computeStatus, calcTotalCost, calcContextUsage } from "./session-utils"
+import { Identifier } from "../utils/id"
 
 // Store structure for messages and parts
 interface SessionStore {
@@ -943,20 +944,7 @@ export const SessionProvider: ParentComponent = (props) => {
       return
     }
 
-    // Generate a stable messageID using the same hex-timestamp scheme as the
-    // server's Identifier.ascending(). The server's loop exit condition checks
-    // lastUser.id < lastAssistant.id (lexicographic), so the user message ID
-    // must sort before server-generated assistant IDs. The server uses 6-byte
-    // hex-encoded (timestamp*0x1000 + counter), followed by 14 random chars.
-    const now = BigInt(Date.now()) * BigInt(0x1000) + BigInt(1)
-    let hex = ""
-    for (let i = 0; i < 6; i++) {
-      hex += Number((now >> BigInt(40 - 8 * i)) & BigInt(0xff))
-        .toString(16)
-        .padStart(2, "0")
-    }
-    const rand = crypto.randomUUID().replace(/-/g, "").slice(0, 14)
-    const messageID = `msg_${hex}${rand}`
+    const messageID = Identifier.ascending("message")
 
     const preview = cloudPreviewId()
     if (preview) {
