@@ -1505,11 +1505,13 @@ export namespace Config {
     // scalar (e.g. permission.bash is "ask" as a string), jsonc-parser cannot
     // add child keys to it. Detect this case and replace the whole node with
     // the patch object in a single modify() call instead of recursing.
+    // Promote the scalar to { "*": scalarValue } so the default is preserved.
     if (path.length > 0) {
       const tree = parseTree(input)
       const node = tree && findNodeAtLocation(tree, path)
       if (node && node.type !== "object") {
-        const edits = modify(input, path, patch, {
+        const promoted = { "*": node.value, ...patch }
+        const edits = modify(input, path, promoted, {
           formattingOptions: { insertSpaces: true, tabSize: 2 },
         })
         return applyEdits(input, edits)
@@ -1557,7 +1559,10 @@ export namespace Config {
     })
   }
 
-  export async function updateGlobal(config: Info) {
+  // kilocode_change start — add dispose option to skip Instance.disposeAll for permission-only changes
+  export async function updateGlobal(config: Info, options?: { dispose?: boolean }) {
+    const dispose = options?.dispose ?? true
+    // kilocode_change end
     const filepath = globalConfigFile()
     const before = await Filesystem.readText(filepath).catch((err: any) => {
       if (err.code === "ENOENT") return "{}"
@@ -1579,6 +1584,10 @@ export namespace Config {
     })()
 
     global.reset()
+
+    // kilocode_change start — skip dispose for permission-only changes to avoid killing active sessions
+    if (!dispose) return next
+    // kilocode_change end
 
     void Instance.disposeAll()
       .catch(() => undefined)
