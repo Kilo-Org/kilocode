@@ -183,7 +183,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Register code actions (editor context menus, terminal context menus, keyboard shortcuts)
   registerCodeActions(context, provider, agentManagerProvider)
-  registerTerminalActions(context, provider)
+  registerTerminalActions(context, provider, agentManagerProvider)
 
   // Register CodeActionProvider (lightbulb quick fixes)
   context.subscriptions.push(

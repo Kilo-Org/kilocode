@@ -1,21 +1,35 @@
 import * as vscode from "vscode"
 import type { KiloProvider } from "../../KiloProvider"
+import type { AgentManagerProvider } from "../../agent-manager/AgentManagerProvider"
 import { createPrompt } from "./support-prompt"
 
-function getTerminalSelection(): string {
+async function getTerminalSelection(): Promise<string> {
   const terminal = vscode.window.activeTerminal
   if (!terminal) return ""
-  // VS Code terminal API doesn't expose buffer contents directly.
-  // Terminal selection is available via clipboard in some cases.
-  // For now, this is a placeholder — full implementation requires
-  // VS Code shell integration API (terminal.shellIntegration).
-  return ""
+  // VS Code terminal API doesn't expose selection text directly.
+  // Copy the terminal selection to clipboard, read it, then restore.
+  const previous = await vscode.env.clipboard.readText()
+  await vscode.commands.executeCommand("workbench.action.terminal.copySelection")
+  const selection = await vscode.env.clipboard.readText()
+  // Restore original clipboard content if it changed
+  if (selection !== previous) {
+    await vscode.env.clipboard.writeText(previous)
+  }
+  // If clipboard didn't change, nothing was selected
+  if (selection === previous) return ""
+  return selection
 }
 
-export function registerTerminalActions(context: vscode.ExtensionContext, provider: KiloProvider): void {
+export function registerTerminalActions(
+  context: vscode.ExtensionContext,
+  provider: KiloProvider,
+  agentManager?: AgentManagerProvider,
+): void {
+  const target = () => (agentManager?.isActive() ? agentManager : provider)
+
   context.subscriptions.push(
-    vscode.commands.registerCommand("kilo-code.new.terminalAddToContext", () => {
-      const content = getTerminalSelection()
+    vscode.commands.registerCommand("kilo-code.new.terminalAddToContext", async () => {
+      const content = await getTerminalSelection()
       if (!content) {
         vscode.window.showInformationMessage("No terminal content available. Select text in the terminal first.")
         return
@@ -24,12 +38,12 @@ export function registerTerminalActions(context: vscode.ExtensionContext, provid
         terminalContent: content,
         userInput: "",
       })
-      provider.postMessage({ type: "setChatBoxMessage", text: prompt })
-      provider.postMessage({ type: "action", action: "focusInput" })
+      target().postMessage({ type: "appendChatBoxMessage", text: prompt })
+      target().postMessage({ type: "action", action: "focusInput" })
     }),
 
-    vscode.commands.registerCommand("kilo-code.new.terminalFixCommand", () => {
-      const content = getTerminalSelection()
+    vscode.commands.registerCommand("kilo-code.new.terminalFixCommand", async () => {
+      const content = await getTerminalSelection()
       if (!content) {
         vscode.window.showInformationMessage("No terminal content available. Select text in the terminal first.")
         return
@@ -38,11 +52,11 @@ export function registerTerminalActions(context: vscode.ExtensionContext, provid
         terminalContent: content,
         userInput: "",
       })
-      provider.postMessage({ type: "triggerTask", text: prompt })
+      target().postMessage({ type: "triggerTask", text: prompt })
     }),
 
-    vscode.commands.registerCommand("kilo-code.new.terminalExplainCommand", () => {
-      const content = getTerminalSelection()
+    vscode.commands.registerCommand("kilo-code.new.terminalExplainCommand", async () => {
+      const content = await getTerminalSelection()
       if (!content) {
         vscode.window.showInformationMessage("No terminal content available. Select text in the terminal first.")
         return
@@ -51,7 +65,7 @@ export function registerTerminalActions(context: vscode.ExtensionContext, provid
         terminalContent: content,
         userInput: "",
       })
-      provider.postMessage({ type: "triggerTask", text: prompt })
+      target().postMessage({ type: "triggerTask", text: prompt })
     }),
   )
 }
