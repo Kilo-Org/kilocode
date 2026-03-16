@@ -43,6 +43,7 @@ import { z } from "zod"
 import { LoadAPIKeyError } from "ai"
 import type { AssistantMessage, Event, KiloClient, SessionMessageResponse, ToolPart } from "@kilocode/sdk/v2"
 import { applyPatch } from "diff"
+import { DEFAULT_FREE_MODEL } from "@kilocode/kilo-gateway" // kilocode_change
 
 type ModeOption = { id: string; name: string; description?: string }
 type ModelOption = { modelId: string; name: string }
@@ -1584,7 +1585,11 @@ export namespace ACP {
       }
     }
 
-    return specified
+    if (specified) return specified
+
+    // kilocode_change start
+    return { providerID: "kilo", modelID: DEFAULT_FREE_MODEL }
+    // kilocode_change end
   }
 
   function parseUri(
