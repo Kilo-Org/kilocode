@@ -23,7 +23,13 @@ export const Identifier = {
 
     counter += 1
 
-    const sortable = (BigInt(currentTimestamp) * BigInt(0x1000) + BigInt(counter)).toString(16).padStart(12, "0")
+    // Server uses 6 bytes big-endian (48 bits). Truncate to 12 hex chars
+    // to match — without this, the full BigInt produces 14 chars which
+    // breaks the server's lexicographic exit condition (lastUser < lastAssistant).
+    const sortable = (BigInt(currentTimestamp) * BigInt(0x1000) + BigInt(counter))
+      .toString(16)
+      .slice(-12)
+      .padStart(12, "0")
     return `${prefixes[prefix]}_${sortable}${randomBase62(RANDOM_LENGTH)}`
   },
 }
