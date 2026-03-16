@@ -308,7 +308,7 @@ describe("tool.bash permissions", () => {
         expect(bashReq).toBeDefined()
         // kilocode_change start — hierarchy adds base wildcard + exact
         expect(bashReq!.always).toContain("ls *")
-        expect(bashReq!.always).toContain("ls -la")
+        expect(bashReq!.metadata.rules).toContain("ls -la")
         // kilocode_change end
       },
     })
