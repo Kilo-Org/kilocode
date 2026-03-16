@@ -612,7 +612,7 @@
         },
         "kilo-code.new.model.modelID": {
           "type": "string",
-          "default": "kilo-auto/free",
+          "default": "kilo-auto/balanced",
           "description": "Default model ID for new sessions"
         },
         "kilo-code.new.autocomplete.enableAutoTrigger": {

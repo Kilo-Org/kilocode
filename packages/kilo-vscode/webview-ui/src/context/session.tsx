@@ -259,7 +259,7 @@ export const SessionProvider: ParentComponent = (props) => {
   })
 
   // Global model selection per agent/mode
-  // Precedence: user override > per-mode config > global config model > VS Code default > kilo-auto/free
+  // Precedence: user override > per-mode config > global config model > VS Code default > kilo-auto/balanced
   const selected = createMemo<ModelSelection | null>(() => {
     const agentName = selectedAgentName()
     const override = store.modelSelections[agentName]

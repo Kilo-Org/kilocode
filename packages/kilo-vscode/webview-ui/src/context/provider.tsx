@@ -20,7 +20,7 @@ interface ProviderContextValue {
   findModel: (selection: ModelSelection | null) => EnrichedModel | undefined
 }
 
-const KILO_AUTO: ModelSelection = { providerID: "kilo", modelID: "kilo-auto/free" }
+const KILO_AUTO: ModelSelection = { providerID: "kilo", modelID: "kilo-auto/balanced" }
 
 export const ProviderContext = createContext<ProviderContextValue>()
 
