@@ -46,6 +46,11 @@ async function openDropdown(page: Page) {
   await page.locator('[data-slot="permission-rules-collapse"][data-open]').waitFor({ state: "visible" })
 }
 
+// Match the viewport used by visual-regression.spec.ts for composite stories.
+test.beforeEach(async ({ page }) => {
+  await page.setViewportSize({ width: 420, height: 720 })
+})
+
 // ---------------------------------------------------------------------------
 // Bash permission — dropdown expanded (all rules pending)
 // ---------------------------------------------------------------------------
