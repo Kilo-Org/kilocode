@@ -51,11 +51,11 @@ export const PermissionRoutes = lazy(() =>
     )
     // kilocode_change start
     .post(
-      "/:requestID/pattern-rules",
+      "/:requestID/always-rules",
       describeRoute({
         summary: "Save per-pattern permission rules",
         description: "Save approved/denied patterns for a pending permission request.",
-        operationId: "permission.savePatternRules",
+        operationId: "permission.saveAlwaysRules",
         responses: {
           200: {
             description: "Pattern rules saved successfully",
@@ -84,7 +84,7 @@ export const PermissionRoutes = lazy(() =>
       async (c) => {
         const params = c.req.valid("param")
         const json = c.req.valid("json")
-        await PermissionNext.savePatternRules({
+        await PermissionNext.saveAlwaysRules({
           requestID: params.requestID,
           approvedAlways: json.approvedAlways,
           deniedAlways: json.deniedAlways,

@@ -3947,7 +3947,7 @@ export type PermissionReplyResponses = {
 
 export type PermissionReplyResponse = PermissionReplyResponses[keyof PermissionReplyResponses]
 
-export type PermissionSavePatternRulesData = {
+export type PermissionSaveAlwaysRulesData = {
   body?: {
     approvedAlways?: Array<string>
     deniedAlways?: Array<string>
@@ -3959,10 +3959,10 @@ export type PermissionSavePatternRulesData = {
     directory?: string
     workspace?: string
   }
-  url: "/permission/{requestID}/pattern-rules"
+  url: "/permission/{requestID}/always-rules"
 }
 
-export type PermissionSavePatternRulesErrors = {
+export type PermissionSaveAlwaysRulesErrors = {
   /**
    * Bad request
    */
@@ -3973,17 +3973,17 @@ export type PermissionSavePatternRulesErrors = {
   404: NotFoundError
 }
 
-export type PermissionSavePatternRulesError = PermissionSavePatternRulesErrors[keyof PermissionSavePatternRulesErrors]
+export type PermissionSaveAlwaysRulesError = PermissionSaveAlwaysRulesErrors[keyof PermissionSaveAlwaysRulesErrors]
 
-export type PermissionSavePatternRulesResponses = {
+export type PermissionSaveAlwaysRulesResponses = {
   /**
    * Pattern rules saved successfully
    */
   200: boolean
 }
 
-export type PermissionSavePatternRulesResponse =
-  PermissionSavePatternRulesResponses[keyof PermissionSavePatternRulesResponses]
+export type PermissionSaveAlwaysRulesResponse =
+  PermissionSaveAlwaysRulesResponses[keyof PermissionSaveAlwaysRulesResponses]
 
 export type PermissionListData = {
   body?: never

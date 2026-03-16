@@ -94,8 +94,8 @@ import type {
   PermissionRespondErrors,
   PermissionRespondResponses,
   PermissionRuleset,
-  PermissionSavePatternRulesErrors,
-  PermissionSavePatternRulesResponses,
+  PermissionSaveAlwaysRulesErrors,
+  PermissionSaveAlwaysRulesResponses,
   ProjectCurrentResponses,
   ProjectListResponses,
   ProjectUpdateErrors,
@@ -2464,7 +2464,7 @@ export class Permission extends HeyApiClient {
    *
    * Save approved/denied patterns for a pending permission request.
    */
-  public savePatternRules<ThrowOnError extends boolean = false>(
+  public saveAlwaysRules<ThrowOnError extends boolean = false>(
     parameters: {
       requestID: string
       directory?: string
@@ -2489,11 +2489,11 @@ export class Permission extends HeyApiClient {
       ],
     )
     return (options?.client ?? this.client).post<
-      PermissionSavePatternRulesResponses,
-      PermissionSavePatternRulesErrors,
+      PermissionSaveAlwaysRulesResponses,
+      PermissionSaveAlwaysRulesErrors,
       ThrowOnError
     >({
-      url: "/permission/{requestID}/pattern-rules",
+      url: "/permission/{requestID}/always-rules",
       ...options,
       ...params,
       headers: {

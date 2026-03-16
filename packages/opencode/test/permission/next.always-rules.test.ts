@@ -4,7 +4,7 @@ import { Instance } from "../../src/project/instance"
 import { NotFoundError } from "../../src/storage/db"
 import { tmpdir } from "../fixture/fixture"
 
-test("savePatternRules - approvedAlways saves allow rules for future requests", async () => {
+test("saveAlwaysRules - approvedAlways saves allow rules for future requests", async () => {
   await using tmp = await tmpdir({ git: true })
   await Instance.provide({
     directory: tmp.path,
@@ -20,7 +20,7 @@ test("savePatternRules - approvedAlways saves allow rules for future requests", 
       })
 
       // Save pattern rules before replying
-      await PermissionNext.savePatternRules({
+      await PermissionNext.saveAlwaysRules({
         requestID: "permission_approved1",
         approvedAlways: ["npm install"],
       })
@@ -46,7 +46,7 @@ test("savePatternRules - approvedAlways saves allow rules for future requests", 
   })
 })
 
-test("savePatternRules - deniedAlways saves deny rules for future requests", async () => {
+test("saveAlwaysRules - deniedAlways saves deny rules for future requests", async () => {
   await using tmp = await tmpdir({ git: true })
   await Instance.provide({
     directory: tmp.path,
@@ -62,7 +62,7 @@ test("savePatternRules - deniedAlways saves deny rules for future requests", asy
       })
 
       // Save pattern rules before replying
-      await PermissionNext.savePatternRules({
+      await PermissionNext.saveAlwaysRules({
         requestID: "permission_denied1",
         deniedAlways: ["rm -rf /"],
       })
@@ -89,7 +89,7 @@ test("savePatternRules - deniedAlways saves deny rules for future requests", asy
   })
 })
 
-test("savePatternRules - multiple bash commands: approve some, deny others", async () => {
+test("saveAlwaysRules - multiple bash commands: approve some, deny others", async () => {
   await using tmp = await tmpdir({ git: true })
   await Instance.provide({
     directory: tmp.path,
@@ -105,7 +105,7 @@ test("savePatternRules - multiple bash commands: approve some, deny others", asy
       })
 
       // Approve npm commands, deny the rm command
-      await PermissionNext.savePatternRules({
+      await PermissionNext.saveAlwaysRules({
         requestID: "permission_multi1",
         approvedAlways: ["npm install", "npm test"],
         deniedAlways: ["rm -rf /tmp/cache"],
@@ -154,7 +154,7 @@ test("savePatternRules - multiple bash commands: approve some, deny others", asy
   })
 })
 
-test("savePatternRules - multiple bash commands: approve all patterns", async () => {
+test("saveAlwaysRules - multiple bash commands: approve all patterns", async () => {
   await using tmp = await tmpdir({ git: true })
   await Instance.provide({
     directory: tmp.path,
@@ -169,7 +169,7 @@ test("savePatternRules - multiple bash commands: approve all patterns", async ()
         ruleset: [],
       })
 
-      await PermissionNext.savePatternRules({
+      await PermissionNext.saveAlwaysRules({
         requestID: "permission_multi2",
         approvedAlways: ["git status", "git diff", "git log --oneline"],
       })
@@ -195,7 +195,7 @@ test("savePatternRules - multiple bash commands: approve all patterns", async ()
   })
 })
 
-test("savePatternRules - ignores patterns not in the original request", async () => {
+test("saveAlwaysRules - ignores patterns not in the original request", async () => {
   await using tmp = await tmpdir({ git: true })
   await Instance.provide({
     directory: tmp.path,
@@ -211,7 +211,7 @@ test("savePatternRules - ignores patterns not in the original request", async ()
       })
 
       // Try to sneak in an unrelated pattern — should be ignored
-      await PermissionNext.savePatternRules({
+      await PermissionNext.saveAlwaysRules({
         requestID: "permission_multi3",
         approvedAlways: ["npm install", "curl http://evil.com"],
       })
@@ -257,13 +257,13 @@ test("savePatternRules - ignores patterns not in the original request", async ()
   })
 })
 
-test("savePatternRules - throws error for stale/unknown request ID", async () => {
+test("saveAlwaysRules - throws error for stale/unknown request ID", async () => {
   await using tmp = await tmpdir({ git: true })
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
       await expect(
-        PermissionNext.savePatternRules({
+        PermissionNext.saveAlwaysRules({
           requestID: "permission_nonexistent",
           approvedAlways: ["npm install"],
         }),
@@ -272,7 +272,7 @@ test("savePatternRules - throws error for stale/unknown request ID", async () =>
   })
 })
 
-test("savePatternRules - multiple bash commands: deny all patterns", async () => {
+test("saveAlwaysRules - multiple bash commands: deny all patterns", async () => {
   await using tmp = await tmpdir({ git: true })
   await Instance.provide({
     directory: tmp.path,
@@ -287,7 +287,7 @@ test("savePatternRules - multiple bash commands: deny all patterns", async () =>
         ruleset: [],
       })
 
-      await PermissionNext.savePatternRules({
+      await PermissionNext.saveAlwaysRules({
         requestID: "permission_multi4",
         deniedAlways: ["rm -rf /", "sudo shutdown", "dd if=/dev/zero of=/dev/sda"],
       })

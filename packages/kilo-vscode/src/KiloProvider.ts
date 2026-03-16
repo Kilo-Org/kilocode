@@ -1566,7 +1566,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /**
    * Handle permission response from the webview.
-   * Calls savePatternRules first (if any), then reply — sequentially to avoid races.
+   * Calls saveAlwaysRules first (if any), then reply — sequentially to avoid races.
    */
   private async handlePermissionResponse(
     permissionId: string,
@@ -1592,7 +1592,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       // Save per-pattern rules before replying (reply deletes the pending request)
       if (approvedAlways.length > 0 || deniedAlways.length > 0) {
-        await this.client.permission.savePatternRules(
+        await this.client.permission.saveAlwaysRules(
           {
             requestID: permissionId,
             directory: workspaceDir,

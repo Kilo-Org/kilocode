@@ -161,7 +161,7 @@ export namespace PermissionNext {
   )
 
   // kilocode_change start
-  export const savePatternRules = fn(
+  export const saveAlwaysRules = fn(
     z.object({
       requestID: Identifier.schema("permission"),
       approvedAlways: z.string().array().optional(),
