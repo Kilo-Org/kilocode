@@ -8,20 +8,22 @@ import { BashArity } from "@/permission/arity"
  * Given `["npm", "install", "lodash"]` with text `"npm install lodash"`,
  * adds: `"npm *"`, `"npm install *"`, `"npm install lodash"`.
  *
+ * When the exact text matches the arity prefix (e.g. `"git branch"` with
+ * prefix `["git", "branch"]`), the exact text is skipped because the
+ * wildcard `"git branch *"` already covers it.
  */
 export namespace BashHierarchy {
   export function addAll(target: Set<string>, command: string[], text: string) {
     const prefix = BashArity.prefix(command)
 
-    // Base wildcard: "npm *"
-    if (command[0]) target.add(command[0] + " *")
-
-    // Intermediate levels from arity: "npm install *", "npm run dev *", etc.
-    for (let i = 2; i <= prefix.length; i++) {
+    // Add wildcard at each arity level: "git *", "git branch *", etc.
+    for (let i = 1; i <= prefix.length; i++) {
       target.add(prefix.slice(0, i).join(" ") + " *")
     }
 
-    // Exact command text: "npm install lodash"
-    target.add(text)
+    // Add exact text only when it adds specificity beyond the arity prefix.
+    // e.g. if text is "git log --oneline", add it; if it's only "git log",
+    // no need to add it because arity already generates "git log *" as a prefix.
+    if (text !== prefix.join(" ")) target.add(text)
   }
 }

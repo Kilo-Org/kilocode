@@ -31,8 +31,9 @@ export const PermissionDock: Component<{
 
   const fromChild = () => props.request.sessionID !== session.currentSessionID()
   const rules = () => props.request.always ?? []
-  // "always" rules are defined as "git *", "git log *" — remove the trailing asterisk when displayed
-  const label = (rule: string) => rule.replace(/ \*$/, "")
+  // "always" rules are defined as "git *", "git log *" — remove the trailing wildcard when displayed.
+  // A bare "*" (global wildcard, used by non-bash tools like read/edit) becomes empty so only the tool name shows.
+  const label = (rule: string) => (rule === "*" ? "" : rule.replace(/ \*$/, ""))
   const command = () => {
     const cmd = props.request.args?.command
     return typeof cmd === "string" ? cmd : undefined
