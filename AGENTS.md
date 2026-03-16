@@ -163,6 +163,10 @@ const bazFoo = 3
 You MUST avoid using `mocks` as much as possible.
 Tests MUST test actual implementation, do not duplicate logic into a test.
 
+## Commit Conventions
+
+[Conventional Commits](https://www.conventionalcommits.org/) with scopes matching packages: `vscode`, `cli`, `agent-manager`, `sdk`, `ui`, `i18n`, `kilo-docs`, `gateway`, `telemetry`, `desktop`. Omit scope when spanning multiple packages.
+
 ## Fork Merge Process
 
 Kilo CLI is a fork of [opencode](https://github.com/anomalyco/opencode).
