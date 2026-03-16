@@ -201,7 +201,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       </div>
 
       {/* Animated body — hidden when collapsed */}
-      <div data-slot="question-dock-body">
+      <div data-slot="question-dock-body" inert={store.collapsed || undefined}>
         <div data-slot="question-dock-body-inner">
           <Show when={!confirm()}>
             <div data-slot="question-text">{question()?.question}</div>
