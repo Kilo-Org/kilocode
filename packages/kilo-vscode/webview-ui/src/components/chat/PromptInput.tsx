@@ -359,13 +359,19 @@ export const PromptInput: Component = () => {
   const handleInput = (e: InputEvent) => {
     const target = e.target as HTMLTextAreaElement
     const val = target.value
+    // Save caret position before setText() — SolidJS's reactive value={text()}
+    // binding re-sets textarea.value when text() changes, which resets the caret.
+    const start = target.selectionStart
+    const end = target.selectionEnd
     setText(val)
+    // Restore caret after the reactive update
+    if (start !== null) target.setSelectionRange(start, end)
     preEnhanceText = null
     adjustHeight()
     setGhostText("")
     syncHighlightScroll()
 
-    mention.onInput(val, target.selectionStart ?? val.length)
+    mention.onInput(val, start ?? val.length)
 
     if (mention.showMention()) {
       setGhostText("")
