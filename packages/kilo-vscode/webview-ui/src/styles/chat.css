@@ -1542,29 +1542,35 @@
   white-space: nowrap;
 }
 
-.session-list [data-slot="session-delete-button"] {
-  display: inline-flex;
+.session-list [data-slot="session-row"] {
+  position: relative;
+  display: flex;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-left: 4px;
-  padding: 2px;
-  border-radius: 4px;
-  cursor: pointer;
+  width: 100%;
+}
+
+.session-list [data-slot="session-row"] > [data-slot="list-item"] {
+  /* Let the row button fill the wrapper; add right padding so text
+     doesn't render under the absolutely-positioned delete button. */
+  flex: 1;
+  min-width: 0;
+}
+
+.session-list [data-slot="session-delete-button"] {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
   opacity: 0;
-  transition:
-    opacity 0.15s,
-    background 0.15s;
-  color: var(--text-weak, var(--vscode-descriptionForeground));
+  transition: opacity 0.15s;
 }
 
-.session-list [data-slot="session-delete-button"]:hover {
-  background: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, 0.31));
-  color: var(--text-normal, var(--vscode-foreground));
-}
-
-.session-list [data-slot="list-item"]:hover [data-slot="session-delete-button"],
-.session-list [data-slot="list-item"][data-active="true"] [data-slot="session-delete-button"] {
+/* Reveal on row hover, active highlight, or when the button itself has focus */
+.session-list [data-slot="session-row"]:hover > [data-slot="session-delete-button"],
+.session-list
+  [data-slot="session-row"]:has([data-slot="list-item"][data-active="true"])
+  > [data-slot="session-delete-button"],
+.session-list [data-slot="session-delete-button"]:focus-visible {
   opacity: 1;
 }
 

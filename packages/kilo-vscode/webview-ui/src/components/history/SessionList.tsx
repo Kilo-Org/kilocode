@@ -9,7 +9,7 @@ import { List } from "@kilocode/kilo-ui/list"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { Button } from "@kilocode/kilo-ui/button"
-import { Icon } from "@kilocode/kilo-ui/icon"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { InlineInput } from "@kilocode/kilo-ui/inline-input"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { useSession } from "../../context/session"
@@ -115,8 +115,21 @@ const SessionList: Component<SessionListProps> = (props) => {
   function wrapItem(item: SessionInfo, node: JSX.Element): JSX.Element {
     return (
       <ContextMenu>
-        <ContextMenu.Trigger as="div" style={{ display: "contents" }}>
+        <ContextMenu.Trigger as="div" data-slot="session-row">
           {node}
+          <Show when={props.showDelete}>
+            <IconButton
+              data-slot="session-delete-button"
+              icon="trash"
+              size="small"
+              variant="ghost"
+              aria-label={language.t("session.delete.title")}
+              onClick={(e: MouseEvent) => {
+                e.stopPropagation()
+                confirmDelete(item)
+              }}
+            />
+          </Show>
         </ContextMenu.Trigger>
         <ContextMenu.Portal>
           <ContextMenu.Content>
@@ -161,27 +174,6 @@ const SessionList: Component<SessionListProps> = (props) => {
               <>
                 <span data-slot="list-item-title">{s.title || language.t("session.untitled")}</span>
                 <span data-slot="list-item-description">{formatRelativeDate(s.updatedAt)}</span>
-                <Show when={props.showDelete}>
-                  <span
-                    data-slot="session-delete-button"
-                    role="button"
-                    tabIndex={0}
-                    aria-label={language.t("session.delete.title")}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      confirmDelete(s)
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        confirmDelete(s)
-                      }
-                    }}
-                  >
-                    <Icon name="trash" size="small" />
-                  </span>
-                </Show>
               </>
             }
           >
