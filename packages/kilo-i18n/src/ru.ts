@@ -14,4 +14,33 @@ export const dict = {
 
   // Reasoning block label
   "ui.reasoning.label": "Рассуждение",
+
+  // Marketplace
+  "marketplace.tab.skills": "Навыки",
+  "marketplace.tab.mcpServers": "MCP-серверы",
+  "marketplace.tab.modes": "Режимы",
+  "marketplace.search.skills": "Поиск навыков...",
+  "marketplace.category.all": "Все",
+  "marketplace.empty.skills": "Навыки не найдены",
+  "marketplace.placeholder": "Будет реализовано",
+  "marketplace.card.installed": "Установлено",
+  "marketplace.card.install": "Установить",
+  "marketplace.card.remove": "Удалить",
+  "marketplace.card.removeScope": "Удалить ({{scope}})",
+  "marketplace.install.title": "Установка {{name}}",
+  "marketplace.install.scope": "Область",
+  "marketplace.install.scope.project": "Проект",
+  "marketplace.install.scope.global": "Глобально",
+  "marketplace.install.prerequisites": "Предварительные требования",
+  "marketplace.install.installing": "Установка...",
+  "marketplace.install.cancel": "Отмена",
+  "marketplace.install.success": "Успешно установлено!",
+  "marketplace.install.failed": "Сбой установки",
+  "marketplace.install.done": "Готово",
+  "marketplace.install.close": "Закрыть",
+  "marketplace.remove.title": "Удалить {{name}}?",
+  "marketplace.remove.confirm":
+    "Вы уверены, что хотите удалить этот {{type}}? Это удалит его из вашей конфигурации ({{scope}}).",
+  "marketplace.remove.cancel": "Отмена",
+  "marketplace.remove.confirm.button": "Удалить",
 }

@@ -14,4 +14,33 @@ export const dict = {
 
   // Reasoning block label
   "ui.reasoning.label": "Razonamiento",
+
+  // Marketplace
+  "marketplace.tab.skills": "Skills",
+  "marketplace.tab.mcpServers": "Servidores MCP",
+  "marketplace.tab.modes": "Modos",
+  "marketplace.search.skills": "Buscar skills...",
+  "marketplace.category.all": "Todos",
+  "marketplace.empty.skills": "No se encontraron skills",
+  "marketplace.placeholder": "Por implementar",
+  "marketplace.card.installed": "Instalado",
+  "marketplace.card.install": "Instalar",
+  "marketplace.card.remove": "Eliminar",
+  "marketplace.card.removeScope": "Eliminar ({{scope}})",
+  "marketplace.install.title": "Instalar {{name}}",
+  "marketplace.install.scope": "Alcance",
+  "marketplace.install.scope.project": "Proyecto",
+  "marketplace.install.scope.global": "Global",
+  "marketplace.install.prerequisites": "Requisitos previos",
+  "marketplace.install.installing": "Instalando...",
+  "marketplace.install.cancel": "Cancelar",
+  "marketplace.install.success": "¡Instalado con éxito!",
+  "marketplace.install.failed": "La instalación falló",
+  "marketplace.install.done": "Hecho",
+  "marketplace.install.close": "Cerrar",
+  "marketplace.remove.title": "¿Eliminar {{name}}?",
+  "marketplace.remove.confirm":
+    "¿Estás seguro de que deseas eliminar este {{type}}? Esto lo eliminará de tu configuración {{scope}}.",
+  "marketplace.remove.cancel": "Cancelar",
+  "marketplace.remove.confirm.button": "Eliminar",
 }

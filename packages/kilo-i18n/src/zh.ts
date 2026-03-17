@@ -12,4 +12,32 @@ export const dict = {
 
   // Reasoning block label
   "ui.reasoning.label": "推理",
+
+  // Marketplace
+  "marketplace.tab.skills": "技能",
+  "marketplace.tab.mcpServers": "MCP 服务器",
+  "marketplace.tab.modes": "模式",
+  "marketplace.search.skills": "搜索技能...",
+  "marketplace.category.all": "全部",
+  "marketplace.empty.skills": "未找到技能",
+  "marketplace.placeholder": "待实现",
+  "marketplace.card.installed": "已安装",
+  "marketplace.card.install": "安装",
+  "marketplace.card.remove": "移除",
+  "marketplace.card.removeScope": "移除 ({{scope}})",
+  "marketplace.install.title": "安装 {{name}}",
+  "marketplace.install.scope": "作用域",
+  "marketplace.install.scope.project": "项目",
+  "marketplace.install.scope.global": "全局",
+  "marketplace.install.prerequisites": "先决条件",
+  "marketplace.install.installing": "安装中...",
+  "marketplace.install.cancel": "取消",
+  "marketplace.install.success": "安装成功！",
+  "marketplace.install.failed": "安装失败",
+  "marketplace.install.done": "完成",
+  "marketplace.install.close": "关闭",
+  "marketplace.remove.title": "移除 {{name}}？",
+  "marketplace.remove.confirm": "确定要移除此 {{type}} 吗？这会将其从你的 {{scope}} 配置中移除。",
+  "marketplace.remove.cancel": "取消",
+  "marketplace.remove.confirm.button": "移除",
 }
