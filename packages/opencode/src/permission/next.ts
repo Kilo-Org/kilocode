@@ -71,15 +71,12 @@ export namespace PermissionNext {
     for (const rule of rules) {
       const existing = result[rule.permission]
       if (existing === undefined) {
-        // First rule for this permission — use simple format if wildcard
-        if (rule.pattern === "*") {
-          result[rule.permission] = rule.action
-          continue
-        }
+        // Always use object format to avoid replacing existing granular rules
+        // when merged via updateGlobal (e.g. { read: "allow" } would wipe
+        // { read: { "*": "ask", "src/*": "allow" } })
         result[rule.permission] = { [rule.pattern]: rule.action }
         continue
       }
-      // Already have a rule — must use object format
       if (typeof existing === "string") {
         result[rule.permission] = { "*": existing, [rule.pattern]: rule.action }
         continue

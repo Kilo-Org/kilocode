@@ -3,9 +3,9 @@ import { PermissionNext } from "../../src/permission/next"
 
 // toConfig tests (inverse of fromConfig)
 
-test("toConfig - single wildcard rule uses simple format", () => {
+test("toConfig - single wildcard rule uses object format", () => {
   const result = PermissionNext.toConfig([{ permission: "read", pattern: "*", action: "allow" }])
-  expect(result).toEqual({ read: "allow" })
+  expect(result).toEqual({ read: { "*": "allow" } })
 })
 
 test("toConfig - single non-wildcard rule uses object format", () => {
@@ -28,7 +28,7 @@ test("toConfig - mixed permissions", () => {
     { permission: "bash", pattern: "git *", action: "allow" },
   ])
   expect(result).toEqual({
-    read: "allow",
+    read: { "*": "allow" },
     bash: { "npm *": "allow", "git *": "allow" },
   })
 })
@@ -46,11 +46,12 @@ test("toConfig - wildcard then specific promotes to object", () => {
   expect(result).toEqual({ bash: { "*": "ask", "rm *": "deny" } })
 })
 
-test("toConfig - roundtrip with fromConfig (simple)", () => {
+test("toConfig - roundtrip with fromConfig (simple) always uses object format", () => {
   const config = { read: "allow" as const, bash: "ask" as const }
   const rules = PermissionNext.fromConfig(config)
   const result = PermissionNext.toConfig(rules)
-  expect(result).toEqual(config)
+  // toConfig always uses object format to avoid erasing existing granular rules on merge
+  expect(result).toEqual({ read: { "*": "allow" }, bash: { "*": "ask" } })
 })
 
 test("toConfig - roundtrip with fromConfig (object)", () => {
