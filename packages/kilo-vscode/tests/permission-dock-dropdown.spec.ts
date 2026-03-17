@@ -160,7 +160,6 @@ test.describe("Permission Dock Dropdown — write", () => {
     const root = page.locator("#storybook-root")
     await expect(root).toHaveScreenshot(["permission-dock-dropdown", "write-expanded-pending.png"])
   })
-
 })
 
 // ---------------------------------------------------------------------------
