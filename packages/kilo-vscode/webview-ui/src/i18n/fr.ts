@@ -231,6 +231,7 @@ export const dict = {
   "prompt.action.attachFile": "Joindre un fichier",
   "prompt.attachment.remove": "Supprimer la pièce jointe",
   "prompt.action.send": "Envoyer",
+  "prompt.action.send.blocked": "Répondez ou rejetez d'abord la question en attente",
   "prompt.action.stop": "Arrêter",
   "prompt.action.enhance": "Améliorer le prompt",
   "prompt.action.resetModel": "Réinitialiser le modèle par défaut",

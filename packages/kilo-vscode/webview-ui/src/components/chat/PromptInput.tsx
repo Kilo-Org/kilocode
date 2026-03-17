@@ -643,7 +643,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           <Show
             when={showStop()}
             fallback={
-              <Tooltip value={language.t("prompt.action.send")} placement="top">
+              <Tooltip
+                value={props.blocked?.() ? language.t("prompt.action.send.blocked") : language.t("prompt.action.send")}
+                placement="top"
+              >
                 <Button
                   variant="ghost"
                   size="small"

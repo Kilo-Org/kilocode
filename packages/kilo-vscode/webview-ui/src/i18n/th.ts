@@ -230,6 +230,7 @@ export const dict = {
   "prompt.action.attachFile": "แนบไฟล์",
   "prompt.attachment.remove": "เอาไฟล์แนบออก",
   "prompt.action.send": "ส่ง",
+  "prompt.action.send.blocked": "โปรดตอบหรือข้ามคำถามที่รอดำเนินการก่อน",
   "prompt.action.stop": "หยุด",
   "prompt.action.enhance": "ปรับปรุงพรอมต์",
   "prompt.action.resetModel": "รีเซ็ตโมเดลเป็นค่าเริ่มต้น",

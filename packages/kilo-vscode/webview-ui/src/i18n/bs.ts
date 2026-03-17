@@ -231,6 +231,7 @@ export const dict = {
   "prompt.action.attachFile": "Priloži datoteku",
   "prompt.attachment.remove": "Ukloni prilog",
   "prompt.action.send": "Pošalji",
+  "prompt.action.send.blocked": "Prvo odgovorite ili odbacite pitanje na čekanju",
   "prompt.action.stop": "Zaustavi",
   "prompt.action.enhance": "Poboljšaj prompt",
   "prompt.action.resetModel": "Resetuj model na zadani",

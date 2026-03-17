@@ -229,6 +229,7 @@ export const dict = {
   "prompt.action.attachFile": "ファイルを添付",
   "prompt.attachment.remove": "添付ファイルを削除",
   "prompt.action.send": "送信",
+  "prompt.action.send.blocked": "最初に保留中の質問に答えるか、閉じてください",
   "prompt.action.stop": "停止",
   "prompt.action.enhance": "プロンプトを改善",
   "prompt.action.resetModel": "モデルをデフォルトにリセット",

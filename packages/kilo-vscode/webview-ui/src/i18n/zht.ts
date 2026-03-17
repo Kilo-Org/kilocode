@@ -230,6 +230,7 @@ export const dict = {
   "prompt.action.attachFile": "附加檔案",
   "prompt.attachment.remove": "移除附件",
   "prompt.action.send": "傳送",
+  "prompt.action.send.blocked": "請先回答或忽略待處理的問題",
   "prompt.action.stop": "停止",
   "prompt.action.enhance": "改善提示詞",
   "prompt.action.resetModel": "重置模型為預設值",

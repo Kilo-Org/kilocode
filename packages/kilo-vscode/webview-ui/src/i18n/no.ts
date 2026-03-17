@@ -233,6 +233,7 @@ export const dict = {
   "prompt.action.attachFile": "Legg ved fil",
   "prompt.attachment.remove": "Fjern vedlegg",
   "prompt.action.send": "Send",
+  "prompt.action.send.blocked": "Svar på eller avvis det ventende spørsmålet først",
   "prompt.action.stop": "Stopp",
   "prompt.action.enhance": "Forbedre prompt",
   "prompt.action.resetModel": "Tilbakestill modell til standard",

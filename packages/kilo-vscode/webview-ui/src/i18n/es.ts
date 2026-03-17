@@ -230,6 +230,7 @@ export const dict = {
   "prompt.action.attachFile": "Adjuntar archivo",
   "prompt.attachment.remove": "Eliminar adjunto",
   "prompt.action.send": "Enviar",
+  "prompt.action.send.blocked": "Responda o descarte la pregunta pendiente primero",
   "prompt.action.stop": "Detener",
   "prompt.action.enhance": "Mejorar prompt",
   "prompt.action.resetModel": "Restablecer modelo al predeterminado",

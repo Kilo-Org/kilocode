@@ -229,6 +229,7 @@ export const dict = {
   "prompt.action.attachFile": "إرفاق ملف",
   "prompt.attachment.remove": "إزالة المرفق",
   "prompt.action.send": "إرسال",
+  "prompt.action.send.blocked": "أجب عن السؤال المعلق أو تجاهله أولاً",
   "prompt.action.stop": "توقف",
   "prompt.action.enhance": "تحسين النص",
   "prompt.action.resetModel": "إعادة تعيين النموذج إلى الافتراضي",
