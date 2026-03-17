@@ -4,7 +4,7 @@
  * Uses kilo-ui's DockPrompt component for proper surface styling.
  *
  * Per-rule toggles allow users to approve/deny individual permission rules for future requests.
- * The command buttons (Deny / Allow Always / Allow Once) control the current command.
+ * The command buttons (Deny / Allow Once) control the current command.
  * When all rules are toggled ✓, the command auto-runs.
  */
 
@@ -43,7 +43,6 @@ export const PermissionDock: Component<{
   const [decisions, setDecisions] = createSignal<Record<number, RuleDecision>>({})
   const [expanded, setExpanded] = createSignal(rulesExpandedPreference)
 
-  const hasDenied = () => Object.values(decisions()).some((d) => d === "denied")
   const hasRules = () => rules().length > 0
 
   const toggleExpanded = () => {
@@ -190,17 +189,6 @@ export const PermissionDock: Component<{
           disabled={props.responding}
         >
           {language.t("ui.permission.allowOnce")}
-        </Button>
-        <Button
-          variant="secondary"
-          size="small"
-          onClick={() => {
-            const { approved, denied } = collectRules()
-            props.onDecide("always", approved, denied)
-          }}
-          disabled={props.responding || hasDenied()}
-        >
-          {language.t("ui.permission.allowAlways")}
         </Button>
         <Button
           variant="ghost"
