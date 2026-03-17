@@ -42,7 +42,7 @@ type KiloProviderOptions = {
 }
 
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
-  public static readonly viewType = "kilo-code.new.sidebarView"
+  public static readonly viewType = "kilo-code.SidebarProvider"
 
   private webview: vscode.Webview | null = null
   private currentSession: Session | null = null

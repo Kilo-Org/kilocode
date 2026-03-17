@@ -85,6 +85,7 @@
     "@kilocode/plugin": "workspace:*",
     "@kilocode/sdk": "workspace:*",
     "@modelcontextprotocol/sdk": "1.25.2",
+    "@morphllm/morphsdk": "0.2.148",
     "@octokit/graphql": "9.0.2",
     "@octokit/rest": "catalog:",
     "@openauthjs/openauth": "catalog:",

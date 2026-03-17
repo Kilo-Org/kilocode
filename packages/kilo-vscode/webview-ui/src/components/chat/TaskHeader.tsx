@@ -87,7 +87,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           <Show when={!props.readonly}>
             <Tooltip value={language.t("command.session.compact")} placement="bottom">
               <IconButton
-                icon="collapse"
+                icon="compress"
                 size="small"
                 variant="ghost"
                 disabled={!canCompact()}
