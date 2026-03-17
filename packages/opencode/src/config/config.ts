@@ -1507,13 +1507,15 @@ export namespace Config {
     // scalar (e.g. permission.bash is "ask" as a string), jsonc-parser cannot
     // add child keys to it. Detect this case and replace the whole node with
     // the patch object in a single modify() call instead of recursing.
-    // Promote the scalar to { "*": scalarValue } so the default is preserved.
+    // For permission keys, promote the scalar to { "*": scalarValue } so the
+    // wildcard default is preserved. For other keys, replace directly.
     if (path.length > 0) {
       const tree = parseTree(input)
       const node = tree && findNodeAtLocation(tree, path)
       if (node && node.type !== "object") {
-        const promoted = { "*": node.value, ...patch }
-        const edits = modify(input, path, promoted, {
+        const isPermissionKey = path[0] === "permission" && path.length === 2
+        const replacement = isPermissionKey ? { "*": node.value, ...patch } : patch
+        const edits = modify(input, path, replacement, {
           formattingOptions: { insertSpaces: true, tabSize: 2 },
         })
         return applyEdits(input, edits)
