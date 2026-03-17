@@ -237,3 +237,63 @@ export const TaskHeaderWithTodosAllDone: Story = {
     )
   },
 }
+
+// ---------------------------------------------------------------------------
+// TaskHeader — compact button (compress icon)
+// ---------------------------------------------------------------------------
+
+/** Shows the TaskHeader with the compact (compress) icon enabled */
+export const TaskHeaderCompactEnabled: Story = {
+  name: "TaskHeader — compact button enabled",
+  render: () => {
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
+      messages: () => [{ id: "msg-001" }] as any[],
+      totalCost: () => 0.0047,
+      contextUsage: () => ({ tokens: 24_310, percentage: 12 }),
+      currentSession: () => ({
+        id: SESSION_ID,
+        title: "Refactoring authentication module",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }),
+    }
+    return (
+      <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "380px" }}>
+            <TaskHeader />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+/** Shows the TaskHeader with the compact (compress) icon disabled (busy state) */
+export const TaskHeaderCompactDisabled: Story = {
+  name: "TaskHeader — compact button disabled (busy)",
+  render: () => {
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy" }),
+      messages: () => [{ id: "msg-001" }] as any[],
+      totalCost: () => 0.0023,
+      contextUsage: () => ({ tokens: 8_192, percentage: 4 }),
+      currentSession: () => ({
+        id: SESSION_ID,
+        title: "Refactoring authentication module",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }),
+    }
+    return (
+      <StoryProviders sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "380px" }}>
+            <TaskHeader />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
