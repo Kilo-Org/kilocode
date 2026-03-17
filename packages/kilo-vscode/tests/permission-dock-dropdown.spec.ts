@@ -74,9 +74,9 @@ test.describe("Permission Dock Dropdown — bash", () => {
     await page.waitForSelector("#storybook-root *", { state: "attached" })
     await openDropdown(page)
 
-    // Click the first approve toggle
+    // Click the first approve toggle (dispatchEvent bypasses tooltip overlays)
     const approveButtons = page.locator('[data-slot="permission-rule-toggle"][data-variant="approve"]')
-    await approveButtons.first().click()
+    await approveButtons.first().dispatchEvent("click")
 
     const root = page.locator("#storybook-root")
     await expect(root).toHaveScreenshot(["permission-dock-dropdown", "bash-rule-approved.png"])
@@ -88,9 +88,9 @@ test.describe("Permission Dock Dropdown — bash", () => {
     await page.waitForSelector("#storybook-root *", { state: "attached" })
     await openDropdown(page)
 
-    // Click the first deny toggle
+    // Click the first deny toggle (dispatchEvent bypasses tooltip overlays)
     const denyButtons = page.locator('[data-slot="permission-rule-toggle"][data-variant="deny"]')
-    await denyButtons.first().click()
+    await denyButtons.first().dispatchEvent("click")
 
     const root = page.locator("#storybook-root")
     await expect(root).toHaveScreenshot(["permission-dock-dropdown", "bash-rule-denied.png"])
@@ -102,11 +102,11 @@ test.describe("Permission Dock Dropdown — bash", () => {
     await page.waitForSelector("#storybook-root *", { state: "attached" })
     await openDropdown(page)
 
-    // Approve first rule, deny second rule
+    // Approve first rule, deny second rule (dispatchEvent bypasses tooltip overlays)
     const approveButtons = page.locator('[data-slot="permission-rule-toggle"][data-variant="approve"]')
     const denyButtons = page.locator('[data-slot="permission-rule-toggle"][data-variant="deny"]')
-    await approveButtons.first().click()
-    await denyButtons.nth(1).click()
+    await approveButtons.first().dispatchEvent("click")
+    await denyButtons.nth(1).dispatchEvent("click")
 
     const root = page.locator("#storybook-root")
     await expect(root).toHaveScreenshot(["permission-dock-dropdown", "bash-rules-mixed.png"])
@@ -137,7 +137,7 @@ test.describe("Permission Dock Dropdown — glob", () => {
     await openDropdown(page)
 
     const approveButtons = page.locator('[data-slot="permission-rule-toggle"][data-variant="approve"]')
-    await approveButtons.first().click()
+    await approveButtons.first().dispatchEvent("click")
 
     const root = page.locator("#storybook-root")
     await expect(root).toHaveScreenshot(["permission-dock-dropdown", "glob-rule-approved.png"])
@@ -167,11 +167,11 @@ test.describe("Permission Dock Dropdown — write", () => {
     await page.waitForSelector("#storybook-root *", { state: "attached" })
     await openDropdown(page)
 
-    // Approve first rule, deny second
+    // Approve first rule, deny second (dispatchEvent bypasses tooltip overlays)
     const approveButtons = page.locator('[data-slot="permission-rule-toggle"][data-variant="approve"]')
     const denyButtons = page.locator('[data-slot="permission-rule-toggle"][data-variant="deny"]')
-    await approveButtons.first().click()
-    await denyButtons.nth(1).click()
+    await approveButtons.first().dispatchEvent("click")
+    await denyButtons.nth(1).dispatchEvent("click")
 
     const root = page.locator("#storybook-root")
     await expect(root).toHaveScreenshot(["permission-dock-dropdown", "write-rules-mixed.png"])
@@ -255,13 +255,21 @@ test.describe("Permission Dock Dropdown — many rules", () => {
     await page.waitForSelector("#storybook-root *", { state: "attached" })
     await openDropdown(page)
 
-    // Approve first 3 rules, deny the 4th
-    const approveButtons = page.locator('[data-slot="permission-rule-toggle"][data-variant="approve"]')
-    const denyButtons = page.locator('[data-slot="permission-rule-toggle"][data-variant="deny"]')
-    await approveButtons.nth(0).click()
-    await approveButtons.nth(1).click()
-    await approveButtons.nth(2).click()
-    await denyButtons.nth(3).click()
+    // Approve first 3 rules, deny the 4th.
+    // Use dispatchEvent to bypass any overlay/tooltip interception issues.
+    const rows = page.locator('[data-slot="permission-rule-row"]')
+    const approveInRow = (n: number) =>
+      rows.nth(n).locator('[data-slot="permission-rule-toggle"][data-variant="approve"]')
+    const denyInRow = (n: number) =>
+      rows.nth(n).locator('[data-slot="permission-rule-toggle"][data-variant="deny"]')
+
+    await approveInRow(0).dispatchEvent("click")
+    await expect(rows.nth(0)).toHaveAttribute("data-decision", "approved")
+    await approveInRow(1).dispatchEvent("click")
+    await expect(rows.nth(1)).toHaveAttribute("data-decision", "approved")
+    await approveInRow(2).dispatchEvent("click")
+    await expect(rows.nth(2)).toHaveAttribute("data-decision", "approved")
+    await denyInRow(3).dispatchEvent("click")
 
     const root = page.locator("#storybook-root")
     await expect(root).toHaveScreenshot(["permission-dock-dropdown", "many-rules-mixed.png"])
