@@ -26,6 +26,7 @@ jobs:
               - "packages/kilo-vscode/.storybook/**"
               - "packages/kilo-vscode/tests/visual-regression*"
               - "packages/kilo-vscode/tests/permission-dock-dropdown*"
+              - "packages/kilo-vscode/tests/permission-dock-dropdown.spec.ts-snapshots/**"
               - ".github/workflows/visual-regression.yml"
       - name: Check if PR is from a fork
         id: fork-check
