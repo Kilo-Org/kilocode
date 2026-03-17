@@ -115,21 +115,23 @@ const SessionList: Component<SessionListProps> = (props) => {
   function wrapItem(item: SessionInfo, node: JSX.Element): JSX.Element {
     return (
       <ContextMenu>
-        <ContextMenu.Trigger as="div" data-slot="session-row">
-          {node}
-          <Show when={props.showDelete}>
-            <IconButton
-              data-slot="session-delete-button"
-              icon="trash"
-              size="small"
-              variant="ghost"
-              aria-label={language.t("session.delete.title")}
-              onClick={(e: MouseEvent) => {
-                e.stopPropagation()
-                confirmDelete(item)
-              }}
-            />
-          </Show>
+        <ContextMenu.Trigger as="div" style={{ display: "contents" }}>
+          <div data-slot="session-row">
+            {node}
+            <Show when={props.showDelete}>
+              <IconButton
+                data-slot="session-delete-button"
+                icon="trash"
+                size="small"
+                variant="ghost"
+                aria-label={language.t("session.delete.title")}
+                onClick={(e: MouseEvent) => {
+                  e.stopPropagation()
+                  confirmDelete(item)
+                }}
+              />
+            </Show>
+          </div>
         </ContextMenu.Trigger>
         <ContextMenu.Portal>
           <ContextMenu.Content>
