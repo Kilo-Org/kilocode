@@ -260,8 +260,7 @@ test.describe("Permission Dock Dropdown — many rules", () => {
     const rows = page.locator('[data-slot="permission-rule-row"]')
     const approveInRow = (n: number) =>
       rows.nth(n).locator('[data-slot="permission-rule-toggle"][data-variant="approve"]')
-    const denyInRow = (n: number) =>
-      rows.nth(n).locator('[data-slot="permission-rule-toggle"][data-variant="deny"]')
+    const denyInRow = (n: number) => rows.nth(n).locator('[data-slot="permission-rule-toggle"][data-variant="deny"]')
 
     await approveInRow(0).dispatchEvent("click")
     await expect(rows.nth(0)).toHaveAttribute("data-decision", "approved")
