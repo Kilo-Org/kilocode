@@ -1550,10 +1550,11 @@
 }
 
 .session-list [data-slot="session-row"] > [data-slot="list-item"] {
-  /* Let the row button fill the wrapper; add right padding so text
-     doesn't render under the absolutely-positioned delete button. */
   flex: 1;
   min-width: 0;
+  /* Reserve space so the absolutely-positioned delete button (20px)
+     plus its right offset (4px) never overlaps row content. */
+  padding-right: 28px;
 }
 
 .session-list [data-slot="session-delete-button"] {
