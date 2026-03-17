@@ -113,12 +113,34 @@ export interface Message {
   tokens?: TokenUsage
 }
 
+// File diff info (matches Snapshot.FileDiff from CLI backend)
+export interface SessionFileDiff {
+  file: string
+  before: string
+  after: string
+  additions: number
+  deletions: number
+  status?: "added" | "deleted" | "modified"
+}
+
 // Session info (simplified for webview)
 export interface SessionInfo {
   id: string
   title?: string
   createdAt: string
   updatedAt: string
+  revert?: {
+    messageID: string
+    partID?: string
+    snapshot?: string
+    diff?: string
+  } | null
+  summary?: {
+    additions: number
+    deletions: number
+    files: number
+    diffs?: SessionFileDiff[]
+  } | null
 }
 
 // Cloud session info (from Kilo cloud API)
@@ -446,6 +468,12 @@ export interface SessionUpdatedMessage {
 export interface SessionDeletedMessage {
   type: "sessionDeleted"
   sessionID: string
+}
+
+export interface MessageRemovedMessage {
+  type: "messageRemoved"
+  sessionID: string
+  messageID: string
 }
 
 export interface MessagesLoadedMessage {
@@ -1102,6 +1130,7 @@ export type ExtensionMessage =
   | SessionCreatedMessage
   | SessionUpdatedMessage
   | SessionDeletedMessage
+  | MessageRemovedMessage
   | MessagesLoadedMessage
   | MessageCreatedMessage
   | SessionsLoadedMessage
@@ -1195,6 +1224,17 @@ export interface SendMessageRequest {
 
 export interface AbortRequest {
   type: "abort"
+  sessionID: string
+}
+
+export interface RevertSessionRequest {
+  type: "revertSession"
+  sessionID: string
+  messageID: string
+}
+
+export interface UnrevertSessionRequest {
+  type: "unrevertSession"
   sessionID: string
 }
 
@@ -1679,6 +1719,8 @@ export interface SetDefaultBaseBranchRequest {
 export type WebviewMessage =
   | SendMessageRequest
   | AbortRequest
+  | RevertSessionRequest
+  | UnrevertSessionRequest
   | PermissionResponseRequest
   | CreateSessionRequest
   | ClearSessionRequest

@@ -44,6 +44,11 @@ export function sessionToWebview(session: Session) {
     title: session.title,
     createdAt: new Date(session.time.created).toISOString(),
     updatedAt: new Date(session.time.updated).toISOString(),
+    // Use null (not undefined) so the value survives postMessage JSON serialization.
+    // Without this, unrevert responses lose the revert key entirely and the
+    // SolidJS store merge never clears the existing revert state.
+    revert: session.revert ?? null,
+    summary: session.summary ?? null,
   }
 }
 
@@ -174,6 +179,7 @@ export type WebviewMessage =
   | { type: "permissionError"; permissionID: string }
   | { type: "sessionCreated"; session: ReturnType<typeof sessionToWebview> }
   | { type: "sessionUpdated"; session: ReturnType<typeof sessionToWebview> }
+  | { type: "messageRemoved"; sessionID: string; messageID: string }
   | null
 
 export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | undefined): WebviewMessage {
@@ -207,6 +213,14 @@ export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | un
           ...info,
           createdAt: new Date(info.time.created).toISOString(),
         },
+      }
+    }
+    case "message.removed": {
+      const props = event.properties as { sessionID: string; messageID: string }
+      return {
+        type: "messageRemoved",
+        sessionID: props.sessionID,
+        messageID: props.messageID,
       }
     }
     case "session.status": {

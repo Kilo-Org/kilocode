@@ -365,6 +365,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "abort":
           await this.handleAbort(message.sessionID)
           break
+        case "revertSession":
+          this.handleRevertSession(message.sessionID, message.messageID).catch((e) =>
+            console.error("[Kilo New] handleRevertSession failed:", e),
+          )
+          break
+        case "unrevertSession":
+          this.handleUnrevertSession(message.sessionID).catch((e) =>
+            console.error("[Kilo New] handleUnrevertSession failed:", e),
+          )
+          break
         case "permissionResponse":
           await this.handlePermissionResponse(
             message.permissionId,
@@ -1695,6 +1705,30 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to abort session:", error)
     }
+  }
+
+  private async handleRevertSession(sessionID: string, messageID: string): Promise<void> {
+    if (!this.client) return
+    const dir = this.getWorkspaceDirectory(sessionID)
+    const { data, error } = await this.client.session.revert({ sessionID, messageID, directory: dir })
+    if (error) {
+      console.error("[Kilo New] KiloProvider: Failed to revert session:", error)
+      this.postMessage({ type: "error", message: "Failed to revert session", sessionID })
+      return
+    }
+    if (data) this.postMessage({ type: "sessionUpdated", session: sessionToWebview(data) })
+  }
+
+  private async handleUnrevertSession(sessionID: string): Promise<void> {
+    if (!this.client) return
+    const dir = this.getWorkspaceDirectory(sessionID)
+    const { data, error } = await this.client.session.unrevert({ sessionID, directory: dir })
+    if (error) {
+      console.error("[Kilo New] KiloProvider: Failed to unrevert session:", error)
+      this.postMessage({ type: "error", message: "Failed to redo session", sessionID })
+      return
+    }
+    if (data) this.postMessage({ type: "sessionUpdated", session: sessionToWebview(data) })
   }
 
   /**

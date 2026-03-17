@@ -447,6 +447,75 @@
 }
 
 /* ============================================
+   Revert Banner
+   ============================================ */
+
+.revert-banner {
+  margin: 8px 12px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: var(--surface-secondary, var(--vscode-editorWidget-background, #252526));
+  border: 1px solid var(--border-base, var(--vscode-editorWidget-border, #454545));
+  font-size: 12px;
+}
+
+.revert-banner-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.revert-banner-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted, var(--vscode-descriptionForeground));
+}
+
+.revert-banner-count {
+  font-weight: 500;
+}
+
+.revert-banner-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.revert-banner-files {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.revert-banner-file {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 1px 0;
+  color: var(--text-base, var(--vscode-foreground));
+}
+
+.revert-banner-filename {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  direction: rtl;
+  text-align: left;
+}
+
+.revert-banner-hint {
+  margin-top: 6px;
+  color: var(--text-muted, var(--vscode-descriptionForeground));
+  font-style: italic;
+  font-size: 11px;
+}
+
+/* ============================================
    Prompt Input
    ============================================ */
 

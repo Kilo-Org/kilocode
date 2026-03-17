@@ -128,6 +128,7 @@ export const dict = {
   "ui.message.copyMessage": "Kopier besked",
   "ui.message.copyResponse": "Kopier svar",
   "ui.message.copied": "Kopieret!",
+  "ui.message.revert": "Revert to here",
   "ui.message.interrupted": "Afbrudt",
   "ui.message.queued": "I kø",
   "ui.message.attachment.alt": "vedhæftning",

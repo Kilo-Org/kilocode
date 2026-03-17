@@ -135,7 +135,14 @@ interface SessionContextValue {
   currentVariant: () => string | undefined
   selectVariant: (value: string) => void
 
+  // Revert/undo state for the current session
+  revert: Accessor<SessionInfo["revert"]>
+  revertedCount: Accessor<number>
+  summary: Accessor<SessionInfo["summary"]>
+
   // Actions
+  revertSession: (messageID: string) => void
+  unrevertSession: () => void
   sendMessage: (text: string, providerID?: string, modelID?: string, files?: FileAttachment[]) => void
   abort: () => void
   compact: () => void
@@ -491,6 +498,10 @@ export const SessionProvider: ParentComponent = (props) => {
 
         case "sessionDeleted":
           handleSessionDeleted(message.sessionID)
+          break
+
+        case "messageRemoved":
+          handleMessageRemoved(message.sessionID, message.messageID)
           break
 
         case "error":
@@ -903,6 +914,18 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
+  // Matches desktop app's event-reducer.ts: message.removed handler.
+  // Splices the message from the store and deletes its parts.
+  function handleMessageRemoved(sessionID: string, messageID: string) {
+    setStore("messages", sessionID, (msgs = []) => msgs.filter((m) => m.id !== messageID))
+    setStore(
+      "parts",
+      produce((parts) => {
+        delete parts[messageID]
+      }),
+    )
+  }
+
   function handleCloudSessionDataLoaded(cloudSessionId: string, title: string, messages: Message[]) {
     if (cloudPreviewId() !== cloudSessionId) return
     const key = `cloud:${cloudSessionId}`
@@ -1262,6 +1285,47 @@ export const SessionProvider: ParentComponent = (props) => {
 
   const userMessages = createMemo(() => messages().filter((m) => m.role === "user"))
 
+  const revert = createMemo(() => {
+    const id = currentSessionID()
+    // revert can be null (cleared by unrevert) or undefined (never set) — treat both as "no revert"
+    return id ? (store.sessions[id]?.revert ?? undefined) : undefined
+  })
+
+  const revertedCount = createMemo(() => {
+    const boundary = revert()?.messageID
+    if (!boundary) return 0
+    return userMessages().filter((m) => m.id >= boundary).length
+  })
+
+  const summary = createMemo(() => {
+    const id = currentSessionID()
+    return id ? (store.sessions[id]?.summary ?? undefined) : undefined
+  })
+
+  function revertSession(messageID: string) {
+    const id = currentSessionID()
+    if (!id) return
+    // Restore the reverted user message's prompt text into the input.
+    // Dispatch as a window message so PromptInput picks it up via onMessage.
+    const parts = store.parts[messageID]
+    if (parts) {
+      const text = parts
+        .filter((p) => p.type === "text" && !(p as { synthetic?: boolean }).synthetic)
+        .map((p) => (p as { text: string }).text ?? "")
+        .join("")
+      if (text) window.postMessage({ type: "setChatBoxMessage", text }, "*")
+    }
+    vscode.postMessage({ type: "revertSession", sessionID: id, messageID })
+  }
+
+  function unrevertSession() {
+    const id = currentSessionID()
+    if (!id) return
+    // Clear the prompt input on full redo (matching TUI/desktop behavior)
+    window.postMessage({ type: "setChatBoxMessage", text: "" }, "*")
+    vscode.postMessage({ type: "unrevertSession", sessionID: id })
+  }
+
   function syncSession(sessionID: string) {
     vscode.postMessage({ type: "syncSession", sessionID })
   }
@@ -1360,6 +1424,11 @@ export const SessionProvider: ParentComponent = (props) => {
     variantList,
     currentVariant,
     selectVariant,
+    revert,
+    revertedCount,
+    summary,
+    revertSession,
+    unrevertSession,
     sendMessage,
     abort,
     compact,
