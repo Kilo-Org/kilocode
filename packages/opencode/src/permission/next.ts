@@ -66,12 +66,35 @@ export namespace PermissionNext {
   }
 
   // kilocode_change start — inverse of fromConfig: convert rules back to config format
+  /**
+   * Permissions typed as PermissionAction in the config schema (scalar-only).
+   * These must be serialized as "allow"/"deny"/"ask", not as { "*": "allow" }.
+   */
+  const SCALAR_ONLY_PERMISSIONS = new Set([
+    "todowrite",
+    "todoread",
+    "question",
+    "webfetch",
+    "websearch",
+    "codesearch",
+    "doom_loop",
+  ])
+
   export function toConfig(rules: Ruleset): Config.Permission {
     const result: Config.Permission = {}
     for (const rule of rules) {
       const existing = result[rule.permission]
+
+      // Scalar-only permissions (e.g. websearch, todowrite) only accept
+      // PermissionAction ("allow"/"deny"/"ask"), not object form.
+      // Use scalar format when the pattern is "*".
+      if (SCALAR_ONLY_PERMISSIONS.has(rule.permission) && rule.pattern === "*") {
+        result[rule.permission] = rule.action
+        continue
+      }
+
       if (existing === undefined) {
-        // Always use object format to avoid replacing existing granular rules
+        // Use object format to avoid replacing existing granular rules
         // when merged via updateGlobal (e.g. { read: "allow" } would wipe
         // { read: { "*": "ask", "src/*": "allow" } })
         result[rule.permission] = { [rule.pattern]: rule.action }

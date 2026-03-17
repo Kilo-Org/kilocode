@@ -60,3 +60,27 @@ test("toConfig - roundtrip with fromConfig (object)", () => {
   const result = PermissionNext.toConfig(rules)
   expect(result).toEqual(config)
 })
+
+test("toConfig - scalar-only permission uses scalar format", () => {
+  const result = PermissionNext.toConfig([{ permission: "websearch", pattern: "*", action: "allow" }])
+  expect(result).toEqual({ websearch: "allow" })
+})
+
+test("toConfig - scalar-only permission with non-wildcard still uses object", () => {
+  // This shouldn't happen in practice, but if it does, object format is used
+  const result = PermissionNext.toConfig([{ permission: "websearch", pattern: "specific-query", action: "allow" }])
+  expect(result).toEqual({ websearch: { "specific-query": "allow" } })
+})
+
+test("toConfig - mixed scalar-only and rule-capable permissions", () => {
+  const result = PermissionNext.toConfig([
+    { permission: "websearch", pattern: "*", action: "allow" },
+    { permission: "todowrite", pattern: "*", action: "allow" },
+    { permission: "bash", pattern: "npm *", action: "allow" },
+  ])
+  expect(result).toEqual({
+    websearch: "allow",
+    todowrite: "allow",
+    bash: { "npm *": "allow" },
+  })
+})
