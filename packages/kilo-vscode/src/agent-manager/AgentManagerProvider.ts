@@ -66,6 +66,7 @@ export class AgentManagerProvider implements vscode.Disposable {
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly connectionService: KiloConnectionService,
+    private readonly context: vscode.ExtensionContext,
   ) {
     this.outputChannel = vscode.window.createOutputChannel("Kilo Agent Manager")
     this.terminalManager = new SessionTerminalManager(
@@ -147,7 +148,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     panel.webview.html = this.getHtml(panel.webview)
 
-    this.provider = new KiloProvider(this.extensionUri, this.connectionService)
+    this.provider = new KiloProvider(this.extensionUri, this.connectionService, this.context)
     this.provider.attachToWebview(panel.webview, {
       onBeforeMessage: (msg) => this.onMessage(msg),
     })
@@ -231,6 +232,9 @@ export class AgentManagerProvider implements vscode.Disposable {
     if (m.type === "agentManager.openWorktree") {
       this.openWorktreeDirectory(m.worktreeId)
       return null
+    }
+    if (m.type === "previewImage") {
+      return msg
     }
     if (m.type === "agentManager.showExistingLocalTerminal") {
       this.terminalManager.syncLocalOnSessionSwitch()

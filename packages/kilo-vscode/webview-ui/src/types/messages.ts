@@ -1711,6 +1711,13 @@ export interface OpenSubAgentViewerRequest {
   title?: string
 }
 
+// Preview an image attachment in VS Code's built-in image viewer
+export interface PreviewImageRequest {
+  type: "previewImage"
+  dataUrl: string
+  filename: string
+}
+
 // Set default base branch (webview → extension)
 export interface SetDefaultBaseBranchRequest {
   type: "agentManager.setDefaultBaseBranch"
@@ -1810,6 +1817,7 @@ export type WebviewMessage =
   | OpenChangesRequest
   | RetryConnectionRequest
   | OpenSubAgentViewerRequest
+  | PreviewImageRequest
   | SetDefaultBaseBranchRequest
   | FetchMarketplaceDataMessage
   | FilterMarketplaceItemsMessage
