@@ -28,8 +28,8 @@ export const dict = {
   "command.settings.open": "Åbn indstillinger",
   "command.session.previous": "Forrige session",
   "command.session.next": "Næste session",
-  "command.session.previous.unseen": "Previous unread session",
-  "command.session.next.unseen": "Next unread session",
+  "command.session.previous.unseen": "Forrige ulæste session",
+  "command.session.next.unseen": "Næste ulæste session",
   "command.session.archive": "Arkivér session",
 
   "command.palette": "Kommandopalette",
@@ -230,6 +230,7 @@ export const dict = {
   "prompt.action.attachFile": "Vedhæft fil",
   "prompt.attachment.remove": "Fjern vedhæftning",
   "prompt.action.send": "Send",
+  "prompt.action.send.blocked": "Besvar eller afvis det afventende spørgsmål først",
   "prompt.action.stop": "Stop",
   "prompt.action.enhance": "Forbedr prompt",
   "prompt.action.resetModel": "Nulstil model til standard",
@@ -686,6 +687,9 @@ export const dict = {
   "settings.providers.tag.config": "Konfiguration",
   "settings.providers.tag.custom": "Brugerdefineret",
   "settings.providers.tag.other": "Andet",
+  "settings.providers.modeModels": "Model pr. tilstand",
+  "settings.providers.modeModels.description":
+    "Tilsidesæt standardmodellen for bestemte tilstande. Hvis ikke angivet, bruges den globale standardmodel.",
   "settings.models.title": "Modeller",
   "settings.models.description": "Modelindstillinger vil kunne konfigureres her.",
   "settings.agents.title": "Agenter",
@@ -833,12 +837,14 @@ export const dict = {
     "Kilo Code er en AI-kodningsassistent. Bed den om at bygge funktioner, rette fejl eller forklare din kodebase.",
   "session.messages.scrollToBottom": "Rul til bunden",
   "session.status.writingResponse": "Skriver svar…",
+  "session.status.retry": "Prøver igen…",
   "session.status.retrying": "Prøver igen (forsøg {{ attempt }})… {{ message }}",
   "session.status.working": "Arbejder…",
 
   "dialog.model.noProviders": "Ingen udbydere",
 
   "prompt.placeholder.connecting": "Opretter forbindelse til server...",
+  "prompt.placeholder.error": "Forbindelse mislykkedes. Tjek outputpanelet eller genstart udvidelsen.",
   "prompt.placeholder.default": "Skriv en besked... (Enter for at sende, Shift+Enter for ny linje)",
 
   "context.usage.sessionCost": "Sessionsomkostning",

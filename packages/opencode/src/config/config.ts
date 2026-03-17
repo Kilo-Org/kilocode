@@ -1589,22 +1589,6 @@ export namespace Config {
 
     global.reset()
 
-    // kilocode_change start — skip dispose for permission-only changes to avoid killing active sessions
-    if (!dispose) return next
-    // kilocode_change end
-
-    void Instance.disposeAll()
-      .catch(() => undefined)
-      .finally(() => {
-        GlobalBus.emit("event", {
-          directory: "global",
-          payload: {
-            type: Event.Disposed.type,
-            properties: {},
-          },
-        })
-      })
-
     GlobalBus.emit("event", {
       directory: "global",
       payload: {

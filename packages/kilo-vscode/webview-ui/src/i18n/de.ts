@@ -32,8 +32,8 @@ export const dict = {
   "command.settings.open": "Einstellungen öffnen",
   "command.session.previous": "Vorherige Sitzung",
   "command.session.next": "Nächste Sitzung",
-  "command.session.previous.unseen": "Previous unread session",
-  "command.session.next.unseen": "Next unread session",
+  "command.session.previous.unseen": "Vorherige ungelesene Sitzung",
+  "command.session.next.unseen": "Nächste ungelesene Sitzung",
   "command.session.archive": "Sitzung archivieren",
 
   "command.palette": "Befehlspalette",
@@ -234,6 +234,7 @@ export const dict = {
   "prompt.action.attachFile": "Datei anhängen",
   "prompt.attachment.remove": "Anhang entfernen",
   "prompt.action.send": "Senden",
+  "prompt.action.send.blocked": "Beantworten oder verwerfen Sie zuerst die ausstehende Frage",
   "prompt.action.stop": "Stopp",
   "prompt.action.enhance": "Prompt verbessern",
   "prompt.action.resetModel": "Modell auf Standard zurücksetzen",
@@ -696,6 +697,9 @@ export const dict = {
   "settings.providers.tag.config": "Konfiguration",
   "settings.providers.tag.custom": "Benutzerdefiniert",
   "settings.providers.tag.other": "Andere",
+  "settings.providers.modeModels": "Modell pro Modus",
+  "settings.providers.modeModels.description":
+    "Überschreiben Sie das Standardmodell für bestimmte Modi. Wenn nicht festgelegt, wird das globale Standardmodell verwendet.",
   "settings.models.title": "Modelle",
   "settings.models.description": "Modelleinstellungen können hier konfiguriert werden.",
   "settings.agents.title": "Agenten",
@@ -843,12 +847,15 @@ export const dict = {
     "Kilo Code ist ein KI-Programmierassistent. Bitten Sie ihn, Funktionen zu erstellen, Fehler zu beheben oder Ihre Codebasis zu erklären.",
   "session.messages.scrollToBottom": "Nach unten scrollen",
   "session.status.writingResponse": "Antwort wird geschrieben…",
+  "session.status.retry": "Erneuter Versuch…",
   "session.status.retrying": "Erneuter Versuch ({{ attempt }})… {{ message }}",
   "session.status.working": "Wird bearbeitet…",
 
   "dialog.model.noProviders": "Keine Anbieter",
 
   "prompt.placeholder.connecting": "Verbindung zum Server wird hergestellt...",
+  "prompt.placeholder.error":
+    "Verbindung fehlgeschlagen. Überprüfen Sie das Ausgabepanel oder starten Sie die Erweiterung neu.",
   "prompt.placeholder.default": "Nachricht eingeben... (Enter zum Senden, Shift+Enter für neue Zeile)",
 
   "context.usage.sessionCost": "Sitzungskosten",

@@ -230,6 +230,7 @@ export const dict = {
   "prompt.action.attachFile": "附加檔案",
   "prompt.attachment.remove": "移除附件",
   "prompt.action.send": "傳送",
+  "prompt.action.send.blocked": "請先回答或忽略待處理的問題",
   "prompt.action.stop": "停止",
   "prompt.action.enhance": "改善提示詞",
   "prompt.action.resetModel": "重置模型為預設值",
@@ -678,6 +679,8 @@ export const dict = {
   "settings.providers.tag.config": "設定",
   "settings.providers.tag.custom": "自訂",
   "settings.providers.tag.other": "其他",
+  "settings.providers.modeModels": "按模式選擇模型",
+  "settings.providers.modeModels.description": "為特定模式覆寫預設模型。如果未設定，將使用全域預設模型。",
   "settings.models.title": "模型",
   "settings.models.description": "可在此調整模型設定。",
   "settings.agents.title": "Agents",
@@ -823,12 +826,14 @@ export const dict = {
   "session.messages.welcome": "Kilo Code 是一個 AI 程式設計助手。讓它幫你建構功能、修復 bug 或解釋程式碼庫。",
   "session.messages.scrollToBottom": "捲動至底部",
   "session.status.writingResponse": "正在撰寫回覆…",
+  "session.status.retry": "正在重試…",
   "session.status.retrying": "正在重試（第 {{ attempt }} 次）… {{ message }}",
   "session.status.working": "處理中…",
 
   "dialog.model.noProviders": "沒有供應商",
 
   "prompt.placeholder.connecting": "正在連線至伺服器...",
+  "prompt.placeholder.error": "連線失敗。請檢查輸出面板或重新啟動擴充功能。",
   "prompt.placeholder.default": "輸入訊息... (Enter 送出，Shift+Enter 換行)",
 
   "context.usage.sessionCost": "工作階段費用",

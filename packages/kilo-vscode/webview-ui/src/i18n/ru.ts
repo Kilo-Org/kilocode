@@ -28,8 +28,8 @@ export const dict = {
   "command.settings.open": "Открыть настройки",
   "command.session.previous": "Предыдущая сессия",
   "command.session.next": "Следующая сессия",
-  "command.session.previous.unseen": "Previous unread session",
-  "command.session.next.unseen": "Next unread session",
+  "command.session.previous.unseen": "Предыдущая непрочитанная сессия",
+  "command.session.next.unseen": "Следующая непрочитанная сессия",
   "command.session.archive": "Архивировать сессию",
 
   "command.palette": "Палитра команд",
@@ -230,6 +230,7 @@ export const dict = {
   "prompt.action.attachFile": "Прикрепить файл",
   "prompt.attachment.remove": "Удалить вложение",
   "prompt.action.send": "Отправить",
+  "prompt.action.send.blocked": "Сначала ответьте на ожидающий вопрос или отклоните его",
   "prompt.action.stop": "Остановить",
   "prompt.action.enhance": "Улучшить промпт",
   "prompt.action.resetModel": "Сбросить модель на значение по умолчанию",
@@ -692,6 +693,9 @@ export const dict = {
   "settings.providers.tag.config": "Конфигурация",
   "settings.providers.tag.custom": "Пользовательский",
   "settings.providers.tag.other": "Другое",
+  "settings.providers.modeModels": "Модель для режима",
+  "settings.providers.modeModels.description":
+    "Переопределите модель по умолчанию для определённых режимов. Если не задано, используется глобальная модель по умолчанию.",
   "settings.models.title": "Модели",
   "settings.models.description": "Настройки моделей будут доступны здесь.",
   "settings.agents.title": "Агенты",
@@ -839,12 +843,14 @@ export const dict = {
     "Kilo Code — это AI-помощник для программирования. Попросите его создать функции, исправить ошибки или объяснить вашу кодовую базу.",
   "session.messages.scrollToBottom": "Прокрутить вниз",
   "session.status.writingResponse": "Пишу ответ…",
+  "session.status.retry": "Повторная попытка…",
   "session.status.retrying": "Повторная попытка ({{ attempt }})… {{ message }}",
   "session.status.working": "Работаю…",
 
   "dialog.model.noProviders": "Нет провайдеров",
 
   "prompt.placeholder.connecting": "Подключение к серверу...",
+  "prompt.placeholder.error": "Не удалось подключиться. Проверьте панель вывода или перезапустите расширение.",
   "prompt.placeholder.default": "Введите сообщение... (Enter для отправки, Shift+Enter для новой строки)",
 
   "context.usage.sessionCost": "Стоимость сессии",

@@ -32,8 +32,8 @@ export const dict = {
   "command.settings.open": "打开设置",
   "command.session.previous": "上一个会话",
   "command.session.next": "下一个会话",
-  "command.session.previous.unseen": "Previous unread session",
-  "command.session.next.unseen": "Next unread session",
+  "command.session.previous.unseen": "上一个未读会话",
+  "command.session.next.unseen": "下一个未读会话",
   "command.session.archive": "归档会话",
 
   "command.palette": "命令面板",
@@ -230,6 +230,7 @@ export const dict = {
   "prompt.action.attachFile": "附加文件",
   "prompt.attachment.remove": "移除附件",
   "prompt.action.send": "发送",
+  "prompt.action.send.blocked": "请先回答或忽略待处理的问题",
   "prompt.action.stop": "停止",
   "prompt.action.enhance": "优化提示词",
   "prompt.action.resetModel": "重置模型为默认值",
@@ -676,6 +677,8 @@ export const dict = {
   "settings.providers.tag.config": "配置",
   "settings.providers.tag.custom": "自定义",
   "settings.providers.tag.other": "其他",
+  "settings.providers.modeModels": "按模式选择模型",
+  "settings.providers.modeModels.description": "为特定模式覆盖默认模型。如果未设置，将使用全局默认模型。",
   "settings.models.title": "模型",
   "settings.models.description": "模型设置将在此处可配置。",
   "settings.agents.title": "智能体",
@@ -821,12 +824,14 @@ export const dict = {
   "session.messages.welcome": "Kilo Code 是一个 AI 编程助手。让它帮你构建功能、修复 bug 或解释代码库。",
   "session.messages.scrollToBottom": "滚动到底部",
   "session.status.writingResponse": "正在撰写回复…",
+  "session.status.retry": "正在重试…",
   "session.status.retrying": "正在重试（第 {{ attempt }} 次）… {{ message }}",
   "session.status.working": "处理中…",
 
   "dialog.model.noProviders": "无供应商",
 
   "prompt.placeholder.connecting": "正在连接服务器...",
+  "prompt.placeholder.error": "连接失败。请检查输出面板或重启扩展。",
   "prompt.placeholder.default": "输入消息... (Enter 发送，Shift+Enter 换行)",
 
   "context.usage.sessionCost": "会话费用",

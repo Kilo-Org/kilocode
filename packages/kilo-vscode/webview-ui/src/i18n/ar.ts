@@ -28,8 +28,8 @@ export const dict = {
   "command.settings.open": "فتح الإعدادات",
   "command.session.previous": "الجلسة السابقة",
   "command.session.next": "الجلسة التالية",
-  "command.session.previous.unseen": "Previous unread session",
-  "command.session.next.unseen": "Next unread session",
+  "command.session.previous.unseen": "الجلسة غير المقروءة السابقة",
+  "command.session.next.unseen": "الجلسة غير المقروءة التالية",
   "command.session.archive": "أرشفة الجلسة",
 
   "command.palette": "لوحة الأوامر",
@@ -229,6 +229,7 @@ export const dict = {
   "prompt.action.attachFile": "إرفاق ملف",
   "prompt.attachment.remove": "إزالة المرفق",
   "prompt.action.send": "إرسال",
+  "prompt.action.send.blocked": "أجب عن السؤال المعلق أو تجاهله أولاً",
   "prompt.action.stop": "توقف",
   "prompt.action.enhance": "تحسين النص",
   "prompt.action.resetModel": "إعادة تعيين النموذج إلى الافتراضي",
@@ -680,6 +681,9 @@ export const dict = {
   "settings.providers.tag.config": "التكوين",
   "settings.providers.tag.custom": "مخصص",
   "settings.providers.tag.other": "أخرى",
+  "settings.providers.modeModels": "نموذج لكل وضع",
+  "settings.providers.modeModels.description":
+    "تجاوز النموذج الافتراضي لأوضاع محددة. إذا لم يتم التعيين، يتم استخدام النموذج الافتراضي العام.",
   "settings.models.title": "النماذج",
   "settings.models.description": "ستكون إعدادات النموذج قابلة للتكوين هنا.",
   "settings.agents.title": "الوكلاء",
@@ -827,12 +831,14 @@ export const dict = {
     "Kilo Code هو مساعد ترميز بالذكاء الاصطناعي. اطلب منه بناء ميزات أو إصلاح أخطاء أو شرح قاعدة الشيفرة.",
   "session.messages.scrollToBottom": "التمرير إلى الأسفل",
   "session.status.writingResponse": "...جارٍ كتابة الرد",
+  "session.status.retry": "جارٍ إعادة المحاولة…",
   "session.status.retrying": "...إعادة المحاولة (المحاولة {{ attempt }})… {{ message }}",
   "session.status.working": "...جارٍ العمل",
 
   "dialog.model.noProviders": "لا يوجد موفرون",
 
   "prompt.placeholder.connecting": "جارٍ الاتصال بالخادم...",
+  "prompt.placeholder.error": "فشل الاتصال. تحقق من لوحة الإخراج أو أعد تشغيل الإضافة.",
   "prompt.placeholder.default": "اكتب رسالة... (Enter للإرسال، Shift+Enter لسطر جديد)",
 
   "context.usage.sessionCost": "تكلفة الجلسة",

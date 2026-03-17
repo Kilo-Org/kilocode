@@ -31,8 +31,8 @@ export const dict = {
   "command.settings.open": "Åpne innstillinger",
   "command.session.previous": "Forrige sesjon",
   "command.session.next": "Neste sesjon",
-  "command.session.previous.unseen": "Previous unread session",
-  "command.session.next.unseen": "Next unread session",
+  "command.session.previous.unseen": "Forrige uleste økt",
+  "command.session.next.unseen": "Neste uleste økt",
   "command.session.archive": "Arkiver sesjon",
 
   "command.palette": "Kommandopalett",
@@ -233,6 +233,7 @@ export const dict = {
   "prompt.action.attachFile": "Legg ved fil",
   "prompt.attachment.remove": "Fjern vedlegg",
   "prompt.action.send": "Send",
+  "prompt.action.send.blocked": "Svar på eller avvis det ventende spørsmålet først",
   "prompt.action.stop": "Stopp",
   "prompt.action.enhance": "Forbedre prompt",
   "prompt.action.resetModel": "Tilbakestill modell til standard",
@@ -398,6 +399,7 @@ export const dict = {
   "error.page.title": "Noe gikk galt",
   "error.page.description": "Det oppstod en feil under lasting av applikasjonen.",
   "error.page.details.label": "Feildetaljer",
+  "error.details.show": "Detaljer",
   "error.page.action.restart": "Start på nytt",
   "error.page.action.checking": "Sjekker...",
   "error.page.action.checkUpdates": "Se etter oppdateringer",
@@ -689,6 +691,9 @@ export const dict = {
   "settings.providers.tag.config": "Konfigurasjon",
   "settings.providers.tag.custom": "Tilpasset",
   "settings.providers.tag.other": "Annet",
+  "settings.providers.modeModels": "Modell per modus",
+  "settings.providers.modeModels.description":
+    "Overstyr standardmodellen for bestemte moduser. Hvis ikke angitt, brukes den globale standardmodellen.",
   "settings.models.title": "Modeller",
   "settings.models.description": "Modellinnstillinger vil kunne konfigureres her.",
   "settings.agents.title": "Agenter",
@@ -836,12 +841,14 @@ export const dict = {
     "Kilo Code er en AI-kodingsassistent. Be den om å bygge funksjoner, fikse feil eller forklare kodebasen din.",
   "session.messages.scrollToBottom": "Rull til bunnen",
   "session.status.writingResponse": "Skriver svar…",
+  "session.status.retry": "Prøver på nytt…",
   "session.status.retrying": "Prøver på nytt (forsøk {{ attempt }})… {{ message }}",
   "session.status.working": "Arbeider…",
 
   "dialog.model.noProviders": "Ingen leverandører",
 
   "prompt.placeholder.connecting": "Kobler til server...",
+  "prompt.placeholder.error": "Tilkobling mislyktes. Sjekk utdatapanelet eller start utvidelsen på nytt.",
   "prompt.placeholder.default": "Skriv en melding... (Enter for å sende, Shift+Enter for ny linje)",
 
   "context.usage.sessionCost": "Sesjonskostnad",

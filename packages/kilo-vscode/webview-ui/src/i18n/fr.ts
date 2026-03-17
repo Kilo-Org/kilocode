@@ -28,8 +28,8 @@ export const dict = {
   "command.settings.open": "Ouvrir les paramètres",
   "command.session.previous": "Session précédente",
   "command.session.next": "Session suivante",
-  "command.session.previous.unseen": "Previous unread session",
-  "command.session.next.unseen": "Next unread session",
+  "command.session.previous.unseen": "Session non lue précédente",
+  "command.session.next.unseen": "Session non lue suivante",
   "command.session.archive": "Archiver la session",
 
   "command.palette": "Palette de commandes",
@@ -231,6 +231,7 @@ export const dict = {
   "prompt.action.attachFile": "Joindre un fichier",
   "prompt.attachment.remove": "Supprimer la pièce jointe",
   "prompt.action.send": "Envoyer",
+  "prompt.action.send.blocked": "Répondez ou rejetez d'abord la question en attente",
   "prompt.action.stop": "Arrêter",
   "prompt.action.enhance": "Améliorer le prompt",
   "prompt.action.resetModel": "Réinitialiser le modèle par défaut",
@@ -696,6 +697,9 @@ export const dict = {
   "settings.providers.tag.config": "Configuration",
   "settings.providers.tag.custom": "Personnalisé",
   "settings.providers.tag.other": "Autre",
+  "settings.providers.modeModels": "Modèle par mode",
+  "settings.providers.modeModels.description":
+    "Remplacez le modèle par défaut pour des modes spécifiques. Si non défini, le modèle par défaut global est utilisé.",
   "settings.models.title": "Modèles",
   "settings.models.description": "Les paramètres des modèles seront configurables ici.",
   "settings.agents.title": "Agents",
@@ -845,12 +849,14 @@ export const dict = {
     "Kilo Code est un assistant de programmation IA. Demandez-lui de créer des fonctionnalités, corriger des bugs ou expliquer votre code.",
   "session.messages.scrollToBottom": "Défiler vers le bas",
   "session.status.writingResponse": "Rédaction de la réponse…",
+  "session.status.retry": "Nouvelle tentative…",
   "session.status.retrying": "Nouvelle tentative (essai {{ attempt }})… {{ message }}",
   "session.status.working": "En cours…",
 
   "dialog.model.noProviders": "Aucun fournisseur",
 
   "prompt.placeholder.connecting": "Connexion au serveur...",
+  "prompt.placeholder.error": "Échec de la connexion. Vérifiez le panneau de sortie ou redémarrez l'extension.",
   "prompt.placeholder.default": "Tapez un message... (Entrée pour envoyer, Maj+Entrée pour un saut de ligne)",
 
   "context.usage.sessionCost": "Coût de la session",

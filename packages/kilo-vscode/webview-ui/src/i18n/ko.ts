@@ -32,8 +32,8 @@ export const dict = {
   "command.settings.open": "설정 열기",
   "command.session.previous": "이전 세션",
   "command.session.next": "다음 세션",
-  "command.session.previous.unseen": "Previous unread session",
-  "command.session.next.unseen": "Next unread session",
+  "command.session.previous.unseen": "이전 읽지 않은 세션",
+  "command.session.next.unseen": "다음 읽지 않은 세션",
   "command.session.archive": "세션 보관",
 
   "command.palette": "명령 팔레트",
@@ -233,6 +233,7 @@ export const dict = {
   "prompt.action.attachFile": "파일 첨부",
   "prompt.attachment.remove": "첨부 파일 제거",
   "prompt.action.send": "전송",
+  "prompt.action.send.blocked": "먼저 대기 중인 질문에 답하거나 닫아주세요",
   "prompt.action.stop": "중지",
   "prompt.action.enhance": "프롬프트 개선",
   "prompt.action.resetModel": "모델을 기본값으로 재설정",
@@ -686,6 +687,9 @@ export const dict = {
   "settings.providers.tag.config": "구성",
   "settings.providers.tag.custom": "사용자 지정",
   "settings.providers.tag.other": "기타",
+  "settings.providers.modeModels": "모드별 모델",
+  "settings.providers.modeModels.description":
+    "특정 모드의 기본 모델을 재정의합니다. 설정하지 않으면 전역 기본 모델이 사용됩니다.",
   "settings.models.title": "모델",
   "settings.models.description": "모델 설정은 여기서 구성할 수 있습니다.",
   "settings.agents.title": "에이전트",
@@ -832,12 +836,14 @@ export const dict = {
     "Kilo Code는 AI 코딩 어시스턴트입니다. 기능 구축, 버그 수정 또는 코드베이스 설명을 요청하세요.",
   "session.messages.scrollToBottom": "하단으로 스크롤",
   "session.status.writingResponse": "응답 작성 중...",
+  "session.status.retry": "재시도 중…",
   "session.status.retrying": "재시도 중 ({{ attempt }}번째 시도)… {{ message }}",
   "session.status.working": "작업 중...",
 
   "dialog.model.noProviders": "공급자 없음",
 
   "prompt.placeholder.connecting": "서버에 연결 중...",
+  "prompt.placeholder.error": "연결에 실패했습니다. 출력 패널을 확인하거나 확장 프로그램을 다시 시작하세요.",
   "prompt.placeholder.default": "메시지를 입력하세요... (Enter로 전송, Shift+Enter로 줄 바꿈)",
 
   "context.usage.sessionCost": "세션 비용",

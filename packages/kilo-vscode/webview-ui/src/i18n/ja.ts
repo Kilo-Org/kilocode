@@ -28,8 +28,8 @@ export const dict = {
   "command.settings.open": "設定を開く",
   "command.session.previous": "前のセッション",
   "command.session.next": "次のセッション",
-  "command.session.previous.unseen": "Previous unread session",
-  "command.session.next.unseen": "Next unread session",
+  "command.session.previous.unseen": "前の未読セッション",
+  "command.session.next.unseen": "次の未読セッション",
   "command.session.archive": "セッションをアーカイブ",
 
   "command.palette": "コマンドパレット",
@@ -229,6 +229,7 @@ export const dict = {
   "prompt.action.attachFile": "ファイルを添付",
   "prompt.attachment.remove": "添付ファイルを削除",
   "prompt.action.send": "送信",
+  "prompt.action.send.blocked": "最初に保留中の質問に答えるか、閉じてください",
   "prompt.action.stop": "停止",
   "prompt.action.enhance": "プロンプトを改善",
   "prompt.action.resetModel": "モデルをデフォルトにリセット",
@@ -685,6 +686,9 @@ export const dict = {
   "settings.providers.tag.config": "設定",
   "settings.providers.tag.custom": "カスタム",
   "settings.providers.tag.other": "その他",
+  "settings.providers.modeModels": "モードごとのモデル",
+  "settings.providers.modeModels.description":
+    "特定のモードのデフォルトモデルを上書きします。設定されていない場合、グローバルデフォルトモデルが使用されます。",
   "settings.models.title": "モデル",
   "settings.models.description": "モデル設定はここで構成できます。",
   "settings.agents.title": "エージェント",
@@ -832,12 +836,14 @@ export const dict = {
     "Kilo CodeはAIコーディングアシスタントです。機能の構築、バグの修正、コードベースの説明を依頼できます。",
   "session.messages.scrollToBottom": "下にスクロール",
   "session.status.writingResponse": "応答を作成中…",
+  "session.status.retry": "再試行中…",
   "session.status.retrying": "再試行中（{{ attempt }}回目）… {{ message }}",
   "session.status.working": "作業中…",
 
   "dialog.model.noProviders": "プロバイダーなし",
 
   "prompt.placeholder.connecting": "サーバーに接続中...",
+  "prompt.placeholder.error": "接続に失敗しました。出力パネルを確認するか、拡張機能を再起動してください。",
   "prompt.placeholder.default": "メッセージを入力... (Enterで送信、Shift+Enterで改行)",
 
   "context.usage.sessionCost": "セッションコスト",

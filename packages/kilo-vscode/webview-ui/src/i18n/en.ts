@@ -231,6 +231,7 @@ export const dict = {
   "prompt.action.attachFile": "Attach file",
   "prompt.attachment.remove": "Remove attachment",
   "prompt.action.send": "Send",
+  "prompt.action.send.blocked": "Answer or dismiss the pending question first",
   "prompt.action.stop": "Stop",
   "prompt.action.enhance": "Enhance prompt",
   "prompt.action.resetModel": "Reset model to default",
@@ -838,6 +839,7 @@ export const dict = {
     "Kilo Code is an AI coding assistant. Ask it to build features, fix bugs, or explain your codebase.",
   "session.messages.scrollToBottom": "Scroll to bottom",
   "session.status.writingResponse": "Writing response...",
+  "session.status.retry": "Retrying…",
   "session.status.retrying": "Retrying (attempt {{ attempt }})… {{ message }}",
   "session.status.working": "Working...",
 
@@ -845,7 +847,7 @@ export const dict = {
 
   "prompt.placeholder.connecting": "Connecting to server...",
   "prompt.placeholder.default": "Type a message... (Enter to send, Shift+Enter for new line)",
-  "prompt.placeholder.error": "",
+  "prompt.placeholder.error": "Connection failed. Check the output panel or restart the extension.",
 
   "context.usage.sessionCost": "Session cost",
 

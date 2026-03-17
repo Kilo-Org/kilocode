@@ -28,8 +28,8 @@ export const dict = {
   "command.settings.open": "เปิดการตั้งค่า",
   "command.session.previous": "เซสชันก่อนหน้า",
   "command.session.next": "เซสชันถัดไป",
-  "command.session.previous.unseen": "Previous unread session",
-  "command.session.next.unseen": "Next unread session",
+  "command.session.previous.unseen": "เซสชันที่ยังไม่ได้อ่านก่อนหน้า",
+  "command.session.next.unseen": "เซสชันที่ยังไม่ได้อ่านถัดไป",
   "command.session.archive": "จัดเก็บเซสชัน",
 
   "command.palette": "คำสั่งค้นหา",
@@ -230,6 +230,7 @@ export const dict = {
   "prompt.action.attachFile": "แนบไฟล์",
   "prompt.attachment.remove": "เอาไฟล์แนบออก",
   "prompt.action.send": "ส่ง",
+  "prompt.action.send.blocked": "โปรดตอบหรือข้ามคำถามที่รอดำเนินการก่อน",
   "prompt.action.stop": "หยุด",
   "prompt.action.enhance": "ปรับปรุงพรอมต์",
   "prompt.action.resetModel": "รีเซ็ตโมเดลเป็นค่าเริ่มต้น",
@@ -683,6 +684,9 @@ export const dict = {
   "settings.providers.tag.config": "กำหนดค่า",
   "settings.providers.tag.custom": "กำหนดเอง",
   "settings.providers.tag.other": "อื่น ๆ",
+  "settings.providers.modeModels": "โมเดลต่อโหมด",
+  "settings.providers.modeModels.description":
+    "แทนที่โมเดลเริ่มต้นสำหรับโหมดที่กำหนด หากไม่ได้ตั้งค่า จะใช้โมเดลเริ่มต้นทั่วไป",
   "settings.models.title": "โมเดล",
   "settings.models.description": "การตั้งค่าโมเดลจะสามารถกำหนดค่าได้ที่นี่",
   "settings.agents.title": "เอเจนต์",
@@ -828,12 +832,14 @@ export const dict = {
   "session.messages.welcome": "Kilo Code เป็นผู้ช่วยเขียนโค้ด AI ขอให้สร้างฟีเจอร์ แก้ไขบัก หรืออธิบายโค้ดเบสของคุณ",
   "session.messages.scrollToBottom": "เลื่อนไปด้านล่าง",
   "session.status.writingResponse": "กำลังเขียนคำตอบ...",
+  "session.status.retry": "กำลังลองใหม่…",
   "session.status.retrying": "กำลังลองใหม่ (ครั้งที่ {{ attempt }})… {{ message }}",
   "session.status.working": "กำลังทำงาน...",
 
   "dialog.model.noProviders": "ไม่มีผู้ให้บริการ",
 
   "prompt.placeholder.connecting": "กำลังเชื่อมต่อกับเซิร์ฟเวอร์...",
+  "prompt.placeholder.error": "การเชื่อมต่อล้มเหลว ตรวจสอบแผงเอาต์พุตหรือรีสตาร์ทส่วนขยาย",
   "prompt.placeholder.default": "พิมพ์ข้อความ... (Enter เพื่อส่ง, Shift+Enter เพื่อขึ้นบรรทัดใหม่)",
 
   "context.usage.sessionCost": "ค่าใช้จ่ายเซสชัน",

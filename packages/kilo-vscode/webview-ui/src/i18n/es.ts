@@ -28,8 +28,8 @@ export const dict = {
   "command.settings.open": "Abrir ajustes",
   "command.session.previous": "Sesión anterior",
   "command.session.next": "Siguiente sesión",
-  "command.session.previous.unseen": "Previous unread session",
-  "command.session.next.unseen": "Next unread session",
+  "command.session.previous.unseen": "Sesión no leída anterior",
+  "command.session.next.unseen": "Siguiente sesión no leída",
   "command.session.archive": "Archivar sesión",
 
   "command.palette": "Paleta de comandos",
@@ -230,6 +230,7 @@ export const dict = {
   "prompt.action.attachFile": "Adjuntar archivo",
   "prompt.attachment.remove": "Eliminar adjunto",
   "prompt.action.send": "Enviar",
+  "prompt.action.send.blocked": "Responda o descarte la pregunta pendiente primero",
   "prompt.action.stop": "Detener",
   "prompt.action.enhance": "Mejorar prompt",
   "prompt.action.resetModel": "Restablecer modelo al predeterminado",
@@ -692,6 +693,9 @@ export const dict = {
   "settings.providers.tag.config": "Configuración",
   "settings.providers.tag.custom": "Personalizado",
   "settings.providers.tag.other": "Otro",
+  "settings.providers.modeModels": "Modelo por modo",
+  "settings.providers.modeModels.description":
+    "Anula el modelo predeterminado para modos específicos. Si no se establece, se usa el modelo predeterminado global.",
   "settings.models.title": "Modelos",
   "settings.models.description": "La configuración de modelos estará disponible aquí.",
   "settings.agents.title": "Agentes",
@@ -840,12 +844,14 @@ export const dict = {
     "Kilo Code es un asistente de programación con IA. Pídele que cree funcionalidades, corrija errores o explique tu código.",
   "session.messages.scrollToBottom": "Desplazar al final",
   "session.status.writingResponse": "Escribiendo respuesta…",
+  "session.status.retry": "Reintentando…",
   "session.status.retrying": "Reintentando (intento {{ attempt }})… {{ message }}",
   "session.status.working": "Trabajando…",
 
   "dialog.model.noProviders": "Sin proveedores",
 
   "prompt.placeholder.connecting": "Conectando al servidor...",
+  "prompt.placeholder.error": "Conexión fallida. Revisa el panel de salida o reinicia la extensión.",
   "prompt.placeholder.default": "Escribe un mensaje... (Enter para enviar, Shift+Enter para nueva línea)",
 
   "context.usage.sessionCost": "Coste de la sesión",

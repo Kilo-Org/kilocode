@@ -28,8 +28,8 @@ export const dict = {
   "command.settings.open": "Abrir configurações",
   "command.session.previous": "Sessão anterior",
   "command.session.next": "Próxima sessão",
-  "command.session.previous.unseen": "Previous unread session",
-  "command.session.next.unseen": "Next unread session",
+  "command.session.previous.unseen": "Sessão não lida anterior",
+  "command.session.next.unseen": "Próxima sessão não lida",
   "command.session.archive": "Arquivar sessão",
 
   "command.palette": "Paleta de comandos",
@@ -230,6 +230,7 @@ export const dict = {
   "prompt.action.attachFile": "Anexar arquivo",
   "prompt.attachment.remove": "Remover anexo",
   "prompt.action.send": "Enviar",
+  "prompt.action.send.blocked": "Responda ou feche a pergunta pendente primeiro",
   "prompt.action.stop": "Parar",
   "prompt.action.enhance": "Melhorar prompt",
   "prompt.action.resetModel": "Redefinir modelo para o padrão",
@@ -687,6 +688,9 @@ export const dict = {
   "settings.providers.tag.config": "Configuração",
   "settings.providers.tag.custom": "Personalizado",
   "settings.providers.tag.other": "Outro",
+  "settings.providers.modeModels": "Modelo por Modo",
+  "settings.providers.modeModels.description":
+    "Substitua o modelo padrão para modos específicos. Se não definido, o modelo padrão global é usado.",
   "settings.models.title": "Modelos",
   "settings.models.description": "Configurações de modelos estarão disponíveis aqui.",
   "settings.agents.title": "Agentes",
@@ -835,12 +839,14 @@ export const dict = {
     "Kilo Code é um assistente de programação com IA. Peça para criar funcionalidades, corrigir bugs ou explicar sua base de código.",
   "session.messages.scrollToBottom": "Rolar para o final",
   "session.status.writingResponse": "Escrevendo resposta…",
+  "session.status.retry": "Tentando novamente…",
   "session.status.retrying": "Tentando novamente (tentativa {{ attempt }})… {{ message }}",
   "session.status.working": "Trabalhando…",
 
   "dialog.model.noProviders": "Nenhum provedor",
 
   "prompt.placeholder.connecting": "Conectando ao servidor...",
+  "prompt.placeholder.error": "Conexão falhou. Verifique o painel de saída ou reinicie a extensão.",
   "prompt.placeholder.default": "Digite uma mensagem... (Enter para enviar, Shift+Enter para nova linha)",
 
   "context.usage.sessionCost": "Custo da sessão",
