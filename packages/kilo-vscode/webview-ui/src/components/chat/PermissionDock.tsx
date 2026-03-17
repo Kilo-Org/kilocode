@@ -24,7 +24,7 @@ let rulesExpandedPreference = false
 export const PermissionDock: Component<{
   request: PermissionRequest
   responding: boolean
-  onDecide: (response: "once" | "always" | "reject", approvedAlways: string[], deniedAlways: string[]) => void
+  onDecide: (response: "once" | "reject", approvedAlways: string[], deniedAlways: string[]) => void
 }> = (props) => {
   const session = useSession()
   const language = useLanguage()
