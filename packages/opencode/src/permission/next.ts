@@ -87,9 +87,10 @@ export namespace PermissionNext {
 
       // Scalar-only permissions (e.g. websearch, todowrite, doom_loop) only
       // accept PermissionAction ("allow"/"deny"/"ask"), not object form.
-      // Always use scalar format — the config schema has no per-pattern support.
+      // Use scalar format for "*"; skip non-wildcard patterns (they can't be
+      // represented in the config schema — they only work in-memory).
       if (SCALAR_ONLY_PERMISSIONS.has(rule.permission)) {
-        result[rule.permission] = rule.action
+        if (rule.pattern === "*") result[rule.permission] = rule.action
         continue
       }
 
