@@ -1480,6 +1480,18 @@
   white-space: nowrap;
 }
 
+.session-list [data-slot="session-delete-button"] {
+  flex-shrink: 0;
+  margin-left: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.session-list [data-slot="list-item"]:hover [data-slot="session-delete-button"],
+.session-list [data-slot="list-item"][data-active="true"] [data-slot="session-delete-button"] {
+  opacity: 1;
+}
+
 /* Cloud Session List */
 .cloud-session-list {
   display: flex;
