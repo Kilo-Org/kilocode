@@ -128,6 +128,7 @@ export const dict: Record<string, string> = {
   "ui.message.copyMessage": "Copy message",
   "ui.message.copyResponse": "Copy response",
   "ui.message.copied": "Copied",
+  "ui.message.revert": "Revert to here",
   "ui.message.interrupted": "Interrupted",
   "ui.message.queued": "Queued",
   "ui.message.attachment.alt": "attachment",

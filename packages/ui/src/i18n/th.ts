@@ -128,6 +128,7 @@ export const dict = {
   "ui.message.copyMessage": "คัดลอกข้อความ",
   "ui.message.copyResponse": "คัดลอกคำตอบ",
   "ui.message.copied": "คัดลอกแล้ว!",
+  "ui.message.revert": "Revert to here",
   "ui.message.interrupted": "ถูกขัดจังหวะ",
   "ui.message.queued": "อยู่ในคิว",
   "ui.message.attachment.alt": "ไฟล์แนบ",

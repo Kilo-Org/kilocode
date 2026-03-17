@@ -131,6 +131,7 @@ export const dict = {
   "ui.message.copyMessage": "Kopiraj poruku",
   "ui.message.copyResponse": "Kopiraj odgovor",
   "ui.message.copied": "Kopirano!",
+  "ui.message.revert": "Revert to here",
   "ui.message.interrupted": "Prekinuto",
   "ui.message.queued": "U redu",
   "ui.message.attachment.alt": "prilog",

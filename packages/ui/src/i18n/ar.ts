@@ -127,6 +127,7 @@ export const dict = {
   "ui.message.copyMessage": "نسخ الرسالة",
   "ui.message.copyResponse": "نسخ الرد",
   "ui.message.copied": "تم النسخ!",
+  "ui.message.revert": "Revert to here",
   "ui.message.interrupted": "تمت المقاطعة",
   "ui.message.queued": "في الانتظار",
   "ui.message.attachment.alt": "مرفق",

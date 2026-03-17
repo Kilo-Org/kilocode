@@ -880,6 +880,7 @@ export function UserMessageDisplay(props: {
   parts: PartType[]
   interrupted?: boolean
   queued?: boolean
+  onRevert?: () => void
 }) {
   const data = useData()
   const dialog = useDialog()
@@ -1017,6 +1018,21 @@ export function UserMessageDisplay(props: {
                   </span>
                 </Show>
               </span>
+            </Show>
+            <Show when={props.onRevert}>
+              <Tooltip value={i18n.t("ui.message.revert")} placement="right" gutter={4}>
+                <IconButton
+                  icon="arrow-left"
+                  size="normal"
+                  variant="ghost"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    props.onRevert?.()
+                  }}
+                  aria-label={i18n.t("ui.message.revert")}
+                />
+              </Tooltip>
             </Show>
             <Tooltip
               value={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}

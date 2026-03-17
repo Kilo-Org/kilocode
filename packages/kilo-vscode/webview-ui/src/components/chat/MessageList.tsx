@@ -20,6 +20,7 @@ import { formatRelativeDate } from "../../utils/date"
 import { CloudImportDialog } from "./CloudImportDialog"
 import { FeedbackDialog } from "./FeedbackDialog"
 import { VscodeSessionTurn } from "./VscodeSessionTurn"
+import { RevertBanner } from "./RevertBanner"
 import { WorkingIndicator } from "../shared/WorkingIndicator"
 import { activeUserMessageID as getActiveUserMessageID } from "../../context/session-queue"
 
@@ -64,8 +65,14 @@ export const MessageList: Component<MessageListProps> = (props) => {
     }
   })
 
-  const userMessages = () => session.userMessages()
-  const isEmpty = () => userMessages().length === 0 && !session.loading()
+  const allUserMessages = () => session.userMessages()
+  const boundary = () => session.revert()?.messageID
+  const userMessages = createMemo(() => {
+    const b = boundary()
+    if (!b) return allUserMessages()
+    return allUserMessages().filter((m) => m.id < b)
+  })
+  const isEmpty = () => userMessages().length === 0 && !session.loading() && !boundary()
 
   const recent = createMemo(() =>
     [...session.sessions()]
@@ -153,6 +160,9 @@ export const MessageList: Component<MessageListProps> = (props) => {
                 )
               }}
             </For>
+            <Show when={boundary()}>
+              <RevertBanner />
+            </Show>
             <WorkingIndicator />
           </Show>
         </div>
