@@ -56,7 +56,6 @@ import { useFileComponent } from "../context/file"
 import { useDialog } from "../context/dialog"
 import { useI18n } from "../context/i18n"
 import { BasicTool } from "./basic-tool"
-import { GenericTool } from "./basic-tool"
 import { Accordion } from "./accordion"
 import { StickyAccordionHeader } from "./sticky-accordion-header"
 import { Card } from "./card"
@@ -76,6 +75,7 @@ import { TextShimmer } from "./text-shimmer"
 import { AnimatedCountList } from "./tool-count-summary"
 import { ToolStatusTitle } from "./tool-status-title"
 import { animate } from "motion"
+import { useLocation } from "@solidjs/router"
 
 function ShellSubmessage(props: { text: string; animate?: boolean }) {
   let widthRef: HTMLSpanElement | undefined
@@ -266,6 +266,18 @@ export function getToolInfo(tool: string, input: any = {}): ToolInfo {
         title: i18n.t("ui.tool.webfetch"),
         subtitle: input.url,
       }
+    case "websearch":
+      return {
+        icon: "window-cursor",
+        title: i18n.t("ui.tool.websearch"),
+        subtitle: input.query,
+      }
+    case "codesearch":
+      return {
+        icon: "code",
+        title: i18n.t("ui.tool.codesearch"),
+        subtitle: input.query,
+      }
     case "task":
       return {
         icon: "task",
@@ -324,6 +336,18 @@ export function getToolInfo(tool: string, input: any = {}): ToolInfo {
         title: tool,
       }
   }
+}
+
+function urls(text: string | undefined) {
+  if (!text) return []
+  const seen = new Set<string>()
+  return [...text.matchAll(/https?:\/\/[^\s<>"'`)\]]+/g)]
+    .map((item) => item[0].replace(/[),.;:!?]+$/g, ""))
+    .filter((item) => {
+      if (seen.has(item)) return false
+      seen.add(item)
+      return true
+    })
 }
 
 const CONTEXT_GROUP_TOOLS = new Set(["read", "glob", "grep", "list"])
@@ -619,6 +643,32 @@ function contextToolSummary(parts: ToolPart[]) {
   const search = parts.filter((part) => part.tool === "glob" || part.tool === "grep").length
   const list = parts.filter((part) => part.tool === "list").length
   return { read, search, list }
+}
+
+function ExaOutput(props: { output?: string }) {
+  const links = createMemo(() => urls(props.output))
+
+  return (
+    <Show when={links().length > 0}>
+      <div data-component="exa-tool-output">
+        <div data-slot="exa-tool-links">
+          <For each={links()}>
+            {(url) => (
+              <a
+                data-slot="exa-tool-link"
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(event) => event.stopPropagation()}
+              >
+                {url}
+              </a>
+            )}
+          </For>
+        </div>
+      </div>
+    </Show>
+  )
 }
 
 export function registerPartComponent(type: string, component: PartComponent) {
@@ -1120,6 +1170,30 @@ function ToolFileAccordion(props: { path: string; actions?: JSX.Element; childre
   )
 }
 
+// kilocode_change start
+function McpTool(props: ToolProps) {
+  return (
+    <BasicTool
+      icon="mcp"
+      status={props.status}
+      trigger={{ title: props.tool }}
+      hideDetails={props.hideDetails}
+      defaultOpen={props.defaultOpen}
+      forceOpen={props.forceOpen}
+      locked={props.locked}
+    >
+      <Show when={props.output}>
+        {(output) => (
+          <div data-component="tool-output" data-scrollable>
+            <Markdown text={output()} />
+          </div>
+        )}
+      </Show>
+    </BasicTool>
+  )
+}
+// kilocode_change end
+
 PART_MAPPING["tool"] = function ToolPartDisplay(props) {
   const i18n = useI18n()
   const part = () => props.part as ToolPart
@@ -1136,7 +1210,7 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
   // @ts-expect-error
   const partMetadata = () => part().state?.metadata ?? emptyMetadata
 
-  const render = createMemo(() => ToolRegistry.render(part().tool) ?? GenericTool)
+  const render = createMemo(() => ToolRegistry.render(part().tool) ?? McpTool) // kilocode_change
 
   // kilocode_change start
   const dismissed = createMemo(() => {
@@ -1564,10 +1638,63 @@ ToolRegistry.register({
 })
 
 ToolRegistry.register({
+  name: "websearch",
+  render(props) {
+    const i18n = useI18n()
+    const query = createMemo(() => {
+      const value = props.input.query
+      if (typeof value !== "string") return ""
+      return value
+    })
+
+    return (
+      <BasicTool
+        {...props}
+        icon="window-cursor"
+        trigger={{
+          title: i18n.t("ui.tool.websearch"),
+          subtitle: query(),
+          subtitleClass: "exa-tool-query",
+        }}
+      >
+        <ExaOutput output={props.output} />
+      </BasicTool>
+    )
+  },
+})
+
+ToolRegistry.register({
+  name: "codesearch",
+  render(props) {
+    const i18n = useI18n()
+    const query = createMemo(() => {
+      const value = props.input.query
+      if (typeof value !== "string") return ""
+      return value
+    })
+
+    return (
+      <BasicTool
+        {...props}
+        icon="code"
+        trigger={{
+          title: i18n.t("ui.tool.codesearch"),
+          subtitle: query(),
+          subtitleClass: "exa-tool-query",
+        }}
+      >
+        <ExaOutput output={props.output} />
+      </BasicTool>
+    )
+  },
+})
+
+ToolRegistry.register({
   name: "task",
   render(props) {
     const data = useData()
     const i18n = useI18n()
+    const location = useLocation()
     const childSessionId = () => props.metadata.sessionId as string | undefined
     const title = createMemo(() => i18n.t("ui.tool.agent", { type: props.input.subagent_type || props.tool }))
     const description = createMemo(() => {
@@ -1584,8 +1711,7 @@ ToolRegistry.register({
       const direct = data.sessionHref?.(sessionId)
       if (direct) return direct
 
-      if (typeof window === "undefined") return
-      const path = window.location.pathname
+      const path = location.pathname
       const idx = path.indexOf("/session")
       if (idx === -1) return
       return `${path.slice(0, idx)}/session/${sessionId}`

@@ -239,7 +239,12 @@ const AgentBehaviourTab: Component = () => {
             current={defaultAgentOptions().find((o) => o.value === (config().default_agent ?? ""))}
             value={(o) => o.value}
             label={(o) => o.label}
-            onSelect={(o) => o && updateConfig({ default_agent: o.value || undefined })}
+            onSelect={(o) => {
+              if (!o) return
+              const next = o.value || undefined
+              if (next === (config().default_agent ?? undefined)) return
+              updateConfig({ default_agent: next })
+            }}
             variant="secondary"
             size="small"
             triggerVariant="settings"

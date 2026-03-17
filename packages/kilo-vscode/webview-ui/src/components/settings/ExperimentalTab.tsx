@@ -43,7 +43,12 @@ const ExperimentalTab: Component = () => {
             current={SHARE_OPTIONS.find((o) => o.value === (config().share ?? "manual"))}
             value={(o) => o.value}
             label={(o) => language.t(o.labelKey)}
-            onSelect={(o) => o && updateConfig({ share: o.value as "manual" | "auto" | "disabled" })}
+            onSelect={(o) => {
+              if (!o) return
+              const next = o.value as "manual" | "auto" | "disabled"
+              if (next === (config().share ?? "manual")) return
+              updateConfig({ share: next })
+            }}
             variant="secondary"
             size="small"
             triggerVariant="settings"
