@@ -192,6 +192,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       e.preventDefault()
       e.stopPropagation()
       if (store.sending) return
+      if (!confirm() && (store.answers[store.tab]?.length ?? 0) === 0) return
       submit()
       return
     }
