@@ -124,8 +124,6 @@ export const dict = {
   "ui.permission.deny": "Zabrani",
   "ui.permission.allowAlways": "Uvijek dozvoli",
   "ui.permission.allowOnce": "Dozvoli jednom",
-  "ui.permission.sessionHint":
-    '"Uvijek dozvoli" primjenjuje se samo na ovu sesiju. Koristite postavke za globalne dozvole.',
 
   "ui.message.expand": "Proširi poruku",
   "ui.message.collapse": "Sažmi poruku",

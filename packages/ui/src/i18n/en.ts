@@ -121,7 +121,6 @@ export const dict: Record<string, string> = {
   "ui.permission.deny": "Deny",
   "ui.permission.allowAlways": "Allow always",
   "ui.permission.allowOnce": "Allow once",
-  "ui.permission.sessionHint": '"Allow always" applies to this session only. Use settings for global permissions.',
 
   "ui.message.expand": "Expand message",
   "ui.message.collapse": "Collapse message",
