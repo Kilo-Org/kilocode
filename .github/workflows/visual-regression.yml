@@ -307,13 +307,16 @@ jobs:
         run: |
           node -e "
             const fs = require('fs'), path = require('path');
-            const spec = fs.readFileSync('tests/permission-dock-dropdown.spec.ts', 'utf8');
-            const re = /toHaveScreenshot\(\[([^\]]+)\]\)/g;
+            const specPath = 'tests/permission-dock-dropdown.spec.ts';
             const expected = new Set();
-            let m;
-            while ((m = re.exec(spec)) !== null) {
-              const parts = m[1].split(',').map(s => s.trim().replace(/[\"']/g, ''));
-              expected.add(parts.join('/').replace(/\.png$/, '-chromium-linux.png'));
+            if (fs.existsSync(specPath)) {
+              const spec = fs.readFileSync(specPath, 'utf8');
+              const re = /toHaveScreenshot\(\[([^\]]+)\]\)/g;
+              let m;
+              while ((m = re.exec(spec)) !== null) {
+                const parts = m[1].split(',').map(s => s.trim().replace(/[\"']/g, ''));
+                expected.add(parts.join('/').replace(/\.png$/, '-chromium-linux.png'));
+              }
             }
             const dir = 'tests/permission-dock-dropdown.spec.ts-snapshots';
             if (!fs.existsSync(dir)) process.exit(0);
