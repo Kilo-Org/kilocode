@@ -33,16 +33,23 @@ describe("Extension — package.json command sync", () => {
   const declared: string[] = pkg.contributes?.commands?.map((c: { command: string }) => c.command) ?? []
   const source = readSrcFiles(SRC_DIR)
 
+  // Extract command IDs that appear in registerCommand() calls specifically.
+  // This avoids false positives from executeCommand() or other string references.
+  const registered = new Set([...source.matchAll(/registerCommand\s*\(\s*["']([^"']+)["']/g)].map((m) => m[1]))
+
   /**
-   * Every command declared in package.json must be registered in extension code.
+   * Every command declared in package.json must be registered via registerCommand()
+   * somewhere in src/. A bare string match would accept executeCommand() references,
+   * which don't actually register a handler.
    *
    * Commands registered via template literals (e.g. jumpTo${i}) are detected by
-   * their shared prefix pattern instead of a literal string match.
+   * checking the dynamic registerCommand pattern in source instead.
    */
-  it("every contributes.commands entry is implemented in source code", () => {
-    // Commands generated via template literals: prefix → pattern in source
+  it("every contributes.commands entry has a registerCommand() call", () => {
+    // Commands generated via template literals can't be extracted by regex,
+    // so verify the dynamic registration pattern exists in source instead.
     const dynamic: Record<string, string> = {
-      "kilo-code.new.agentManager.jumpTo": "agentManager.jumpTo${",
+      "kilo-code.new.agentManager.jumpTo": "registerCommand(`kilo-code.new.agentManager.jumpTo${",
     }
 
     const missing: string[] = []
@@ -50,15 +57,15 @@ describe("Extension — package.json command sync", () => {
       const entry = Object.entries(dynamic).find(([prefix]) => cmd.startsWith(prefix))
       if (entry) {
         const [, pattern] = entry
-        if (!source.includes(pattern)) missing.push(`${cmd} (dynamic pattern "${pattern}" not found)`)
+        if (!source.includes(pattern)) missing.push(`${cmd} (dynamic pattern not found)`)
         continue
       }
-      if (!source.includes(`"${cmd}"`)) missing.push(cmd)
+      if (!registered.has(cmd)) missing.push(cmd)
     }
 
     expect(
       missing,
-      `Commands declared in package.json but missing in source code.\n` +
+      `Commands declared in package.json but not registered via registerCommand().\n` +
         `Add registerCommand("...", ...) or remove the declaration:\n` +
         missing.map((m) => `  - ${m}`).join("\n"),
     ).toEqual([])
