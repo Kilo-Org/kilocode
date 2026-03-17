@@ -29,6 +29,8 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     collapsed: false,
   })
 
+  let root!: HTMLDivElement
+
   // Reset sending state when an error occurs for this question
   createEffect(() => {
     if (session.questionErrors().has(props.request.id)) {
@@ -55,16 +57,20 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     return language.t("question.summary", { n, total: total() })
   })
 
+  const focusPrompt = () => requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
+
   const reply = (answers: string[][]) => {
     if (store.sending) return
     setStore("sending", true)
     session.replyToQuestion(props.request.id, answers)
+    focusPrompt()
   }
 
   const reject = () => {
     if (store.sending) return
     setStore("sending", true)
     session.rejectQuestion(props.request.id)
+    focusPrompt()
   }
 
   const submit = () => {
@@ -122,6 +128,27 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     pick(opt.label)
   }
 
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return
+    if ((e.target as HTMLElement).tagName === "INPUT") return
+    e.preventDefault()
+    const el = e.currentTarget as HTMLElement
+    const items = Array.from(
+      el.querySelectorAll<HTMLButtonElement>("button[data-slot='question-option']:not(:disabled)"),
+    )
+    if (!items.length) return
+    const idx = items.findIndex((b) => b === document.activeElement)
+    const next =
+      e.key === "ArrowDown"
+        ? idx === -1
+          ? 0
+          : (idx + 1) % items.length
+        : idx === -1
+          ? items.length - 1
+          : (idx - 1 + items.length) % items.length
+    items[next]?.focus()
+  }
+
   const handleCustomSubmit = (e: Event) => {
     e.preventDefault()
     if (store.sending) return
@@ -150,11 +177,44 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
 
   const toggleCollapse = () => setStore("collapsed", !store.collapsed)
 
+  const onRoot = (e: KeyboardEvent) => {
+    if (e.key === "Escape") {
+      e.preventDefault()
+      e.stopPropagation()
+      if (store.editing) {
+        setStore("editing", false)
+        return
+      }
+      reject()
+      return
+    }
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault()
+      e.stopPropagation()
+      if (store.sending) return
+      if (!confirm() && (store.answers[store.tab]?.length ?? 0) === 0) return
+      submit()
+      return
+    }
+  }
+
+  // Auto-focus first option when dock appears, tab changes, or editing ends
+  createEffect(() => {
+    void store.tab
+    if (store.collapsed || store.editing || confirm()) return
+    requestAnimationFrame(() => {
+      const btn = root?.querySelector<HTMLButtonElement>("button[data-slot='question-option']:not(:disabled)")
+      btn?.focus()
+    })
+  })
+
   return (
     <div
+      ref={root}
       data-component="question-dock"
       data-collapsed={store.collapsed ? "true" : "false"}
       onClick={(e: MouseEvent) => e.stopPropagation()}
+      onKeyDown={onRoot}
     >
       {/* Single unified header row — always visible */}
       <div data-slot="question-dock-header">
@@ -208,7 +268,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
             <Show when={multi()} fallback={<div data-slot="question-hint">{language.t("ui.question.singleHint")}</div>}>
               <div data-slot="question-hint">{language.t("ui.question.multiHint")}</div>
             </Show>
-            <div data-slot="question-options">
+            <div data-slot="question-options" onKeyDown={onKey}>
               <For each={options()}>
                 {(opt, i) => {
                   const picked = () => store.answers[store.tab]?.includes(opt.label) ?? false

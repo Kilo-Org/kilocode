@@ -139,12 +139,16 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   }
 
   [data-slot="collapsible-trigger"] {
-    height: 28px;
+    height: 36px;
     padding: 0 8px;
     gap: 6px;
     background: var(--surface-inset-base);
     border-radius: 0;
     cursor: pointer;
+
+    &:hover {
+      background-color: var(--surface-inset-base-hover, var(--vscode-list-hoverBackground));
+    }
   }
 
   [data-slot="reasoning-header"] {

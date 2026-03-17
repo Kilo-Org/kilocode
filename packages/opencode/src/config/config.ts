@@ -355,7 +355,7 @@ export namespace Config {
     }))
     json.dependencies = {
       ...json.dependencies,
-      "@kilocode/plugin": targetVersion, // kilocode_change
+      "@kilocode/plugin": targetVersion,
     }
     await Filesystem.writeJson(pkg, json)
 
@@ -405,7 +405,6 @@ export namespace Config {
 
     const parsed = await Filesystem.readJson<{ dependencies?: Record<string, string> }>(pkg).catch(() => null)
     const dependencies = parsed?.dependencies ?? {}
-    // kilocode_change start
     const depVersion = dependencies["@kilocode/plugin"]
     if (!depVersion) return true
 
@@ -1377,7 +1376,7 @@ export namespace Config {
       if (!parsed.data.$schema && isFile) {
         parsed.data.$schema = "https://app.kilo.ai/config.json" // kilocode_change
         const updated = original.replace(/^\s*\{/, '{\n  "$schema": "https://app.kilo.ai/config.json",') // kilocode_change
-        await Bun.write(options.path, updated).catch(() => {})
+        await Filesystem.write(options.path, updated).catch(() => {})
       }
       const data = parsed.data
       if (data.plugin && isFile) {
@@ -1606,6 +1605,14 @@ export namespace Config {
         })
       })
 
+    GlobalBus.emit("event", {
+      directory: "global",
+      payload: {
+        type: Event.Disposed.type,
+        properties: {},
+      },
+    })
+
     return next
   }
 
@@ -1613,3 +1620,5 @@ export namespace Config {
     return state().then((x) => x.directories)
   }
 }
+Filesystem.write
+Filesystem.write

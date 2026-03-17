@@ -27,21 +27,21 @@ Once you have a GitHub account ready, continue to Step 2.
 
 KiloClaw uses a [fine grained Personal Access Token](https://github.com/settings/tokens?type=beta) to authenticate as your bot. When creating the token, use these settings:
 
-| Setting | Recommended Value |
-| --- | --- |
-| **Token name** | `kiloclaw-bot` (or any descriptive name) |
-| **Expiration** | 90 days (set a reminder to rotate) |
+| Setting               | Recommended Value                         |
+| --------------------- | ----------------------------------------- |
+| **Token name**        | `kiloclaw-bot` (or any descriptive name)  |
+| **Expiration**        | 90 days (set a reminder to rotate)        |
 | **Repository access** | All repositories, or select specific ones |
 
 Grant the following permissions:
 
-| Permission | Access Level | Purpose |
-| --- | --- | --- |
-| **Contents** | Read & Write | Clone repos, push commits |
-| **Pull requests** | Read & Write | Open and manage pull requests |
-| **Issues** | Read & Write | Create and comment on issues |
-| **Metadata** | Read only | List repositories and basic repo info |
-| **Workflows** | Read & Write | Trigger and manage GitHub Actions workflows |
+| Permission        | Access Level | Purpose                                     |
+| ----------------- | ------------ | ------------------------------------------- |
+| **Contents**      | Read & Write | Clone repos, push commits                   |
+| **Pull requests** | Read & Write | Open and manage pull requests               |
+| **Issues**        | Read & Write | Create and comment on issues                |
+| **Metadata**      | Read only    | List repositories and basic repo info       |
+| **Workflows**     | Read & Write | Trigger and manage GitHub Actions workflows |
 
 ### Step 3: Enter credentials in KiloClaw
 

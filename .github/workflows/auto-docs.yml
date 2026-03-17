@@ -10,7 +10,6 @@ jobs:
       github.event.pull_request.merged == true &&
       startsWith(github.event.pull_request.title, 'feat:')
     runs-on: ubuntu-latest
-
     steps:
       - name: Send webhook safely
         run: |
