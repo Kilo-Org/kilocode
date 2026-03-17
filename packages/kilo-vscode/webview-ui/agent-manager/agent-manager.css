@@ -885,6 +885,7 @@ button.am-section-toggle:hover .am-section-label {
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  isolation: isolate;
 }
 
 .am-detail-split {
