@@ -134,7 +134,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
             </div>
           </Show>
           <Show when={!props.readonly}>
-            <PromptInput />
+            <PromptInput blocked={blocked} />
           </Show>
         </div>
       </Show>
