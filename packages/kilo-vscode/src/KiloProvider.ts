@@ -1822,7 +1822,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         (items) => {
           const stale = trimEntries(items.map(([name]) => ({ path: name })))
           return Promise.all(
-            stale.map((name) => vscode.workspace.fs.delete(vscode.Uri.joinPath(root, name), { recursive: true })),
+            stale.map((name) =>
+              Promise.resolve(vscode.workspace.fs.delete(vscode.Uri.joinPath(root, name), { recursive: true })).then(
+                undefined,
+                (err: unknown) => {
+                  console.warn("[Kilo New] KiloProvider: Failed to delete stale preview:", err)
+                },
+              ),
+            ),
           )
         },
         () => [],
