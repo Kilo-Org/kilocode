@@ -441,8 +441,17 @@ export namespace SessionProcessor {
           input.assistantMessage.time.completed = Date.now()
           await Session.updateMessage(input.assistantMessage)
           if (needsCompaction) return "compact"
-          if (blocked) return "stop"
-          if (input.assistantMessage.error) return "stop"
+          if (blocked || input.assistantMessage.error) {
+            // kilocode_change start - fix: set status to idle on stop (error or blocked)
+            SessionStatus.set(input.sessionID, { type: "idle" })
+            // kilocode_change end
+            return "stop"
+          }
+          // kilocode_change start - fix: set status to idle when turn completes
+          // The "finish" event handler above is a no-op, so we need to reset the status here
+          // to ensure the UI updates (stop button disappears, input re-enables)
+          SessionStatus.set(input.sessionID, { type: "idle" })
+          // kilocode_change end
           return "continue"
         }
       },
