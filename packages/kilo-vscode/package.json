@@ -52,7 +52,7 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "kilo-code-sidebar",
+          "id": "kilo-code-ActivityBar",
           "title": "Kilo Code",
           "icon": "assets/icons/kilo-light.png",
           "darkIcon": "assets/icons/kilo-dark.png"
@@ -60,10 +60,10 @@
       ]
     },
     "views": {
-      "kilo-code-sidebar": [
+      "kilo-code-ActivityBar": [
         {
           "type": "webview",
-          "id": "kilo-code.new.sidebarView",
+          "id": "kilo-code.SidebarProvider",
           "name": "Kilo Code"
         }
       ]
@@ -311,37 +311,37 @@
         {
           "command": "kilo-code.new.plusButtonClicked",
           "group": "navigation@0",
-          "when": "view == kilo-code.new.sidebarView"
+          "when": "view == kilo-code.SidebarProvider"
         },
         {
           "command": "kilo-code.new.agentManagerOpen",
           "group": "navigation@1",
-          "when": "view == kilo-code.new.sidebarView"
+          "when": "view == kilo-code.SidebarProvider"
         },
         {
           "command": "kilo-code.new.marketplaceButtonClicked",
           "group": "navigation@2",
-          "when": "view == kilo-code.new.sidebarView"
+          "when": "view == kilo-code.SidebarProvider"
         },
         {
           "command": "kilo-code.new.cloudHistoryButtonClicked",
           "group": "navigation@3",
-          "when": "view == kilo-code.new.sidebarView"
+          "when": "view == kilo-code.SidebarProvider"
         },
         {
           "command": "kilo-code.new.historyButtonClicked",
           "group": "navigation@4",
-          "when": "view == kilo-code.new.sidebarView"
+          "when": "view == kilo-code.SidebarProvider"
         },
         {
           "command": "kilo-code.new.profileButtonClicked",
           "group": "navigation@5",
-          "when": "view == kilo-code.new.sidebarView"
+          "when": "view == kilo-code.SidebarProvider"
         },
         {
           "command": "kilo-code.new.settingsButtonClicked",
           "group": "navigation@6",
-          "when": "view == kilo-code.new.sidebarView"
+          "when": "view == kilo-code.SidebarProvider"
         }
       ],
       "scm/title": [

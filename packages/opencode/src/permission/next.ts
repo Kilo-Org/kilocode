@@ -71,15 +71,12 @@ export namespace PermissionNext {
     for (const rule of rules) {
       const existing = result[rule.permission]
       if (existing === undefined) {
-        // First rule for this permission — use simple format if wildcard
-        if (rule.pattern === "*") {
-          result[rule.permission] = rule.action
-          continue
-        }
+        // Always use object format to avoid replacing existing granular rules
+        // when merged via updateGlobal (e.g. { read: "allow" } would wipe
+        // { read: { "*": "ask", "src/*": "allow" } })
         result[rule.permission] = { [rule.pattern]: rule.action }
         continue
       }
-      // Already have a rule — must use object format
       if (typeof existing === "string") {
         result[rule.permission] = { "*": existing, [rule.pattern]: rule.action }
         continue
@@ -200,12 +197,14 @@ export namespace PermissionNext {
       const validRules = new Set([...(existing.info.metadata?.rules ?? []), ...existing.info.always])
       const permission = existing.info.permission
 
+      // Build rules in metadata.rules order so broader patterns come before
+      // specific ones, preserving intended precedence for evaluate(findLast).
+      const approvedSet = new Set(input.approvedAlways ?? [])
+      const deniedSet = new Set(input.deniedAlways ?? [])
       const newRules: Ruleset = []
-      for (const pattern of input.approvedAlways ?? []) {
-        if (validRules.has(pattern)) newRules.push({ permission, pattern, action: "allow" })
-      }
-      for (const pattern of input.deniedAlways ?? []) {
-        if (validRules.has(pattern)) newRules.push({ permission, pattern, action: "deny" })
+      for (const pattern of existing.info.metadata?.rules ?? []) {
+        if (approvedSet.has(pattern)) newRules.push({ permission, pattern, action: "allow" })
+        if (deniedSet.has(pattern)) newRules.push({ permission, pattern, action: "deny" })
       }
       s.approved.push(...newRules)
 

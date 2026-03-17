@@ -192,7 +192,7 @@ New webview features must use **`@kilocode/kilo-ui`** components instead of raw 
 ## Naming Conventions
 
 - All VSCode commands must use `kilo-code.new.` prefix (not `kilo-code.`)
-- All view IDs must use `kilo-code.new.` prefix (e.g., `kilo-code.new.sidebarView`)
+- All view IDs must use `kilo-code.new.` prefix, **except** the sidebar view which uses `kilo-code.SidebarProvider` to preserve user sidebar position when upgrading from the legacy extension
 
 ## Kilocode Change Markers
 

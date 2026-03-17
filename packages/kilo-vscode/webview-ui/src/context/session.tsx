@@ -1221,6 +1221,13 @@ export const SessionProvider: ParentComponent = (props) => {
       console.warn("[Kilo New] Cannot delete session: not connected")
       return
     }
+    // Optimistically remove from the list so the UI updates immediately
+    setStore(
+      "sessions",
+      produce((sessions) => {
+        delete sessions[id]
+      }),
+    )
     vscode.postMessage({ type: "deleteSession", sessionID: id })
   }
 
