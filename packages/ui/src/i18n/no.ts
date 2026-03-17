@@ -97,6 +97,8 @@ export const dict: Record<Keys, string> = {
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
   "ui.tool.webfetch": "Webhenting",
+  "ui.tool.websearch": "Nettsøk",
+  "ui.tool.codesearch": "Kodesøk",
   "ui.tool.shell": "Shell",
   "ui.tool.patch": "Patch",
   "ui.tool.todos": "Gjøremål",
@@ -121,8 +123,6 @@ export const dict: Record<Keys, string> = {
   "ui.permission.deny": "Avslå",
   "ui.permission.allowAlways": "Tillat alltid",
   "ui.permission.allowOnce": "Tillat én gang",
-  "ui.permission.sessionHint":
-    '"Tillat alltid" gjelder bare for denne økten. Bruk innstillinger for globale tillatelser.',
 
   "ui.message.expand": "Utvid melding",
   "ui.message.collapse": "Skjul melding",
@@ -130,6 +130,7 @@ export const dict: Record<Keys, string> = {
   "ui.message.copyMessage": "Kopier melding",
   "ui.message.copyResponse": "Kopier svar",
   "ui.message.copied": "Kopiert!",
+  "ui.message.revert": "Revert to here",
   "ui.message.interrupted": "Avbrutt",
   "ui.message.queued": "I kø",
   "ui.message.attachment.alt": "vedlegg",

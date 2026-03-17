@@ -14,4 +14,33 @@ export const dict = {
 
   // Reasoning block label
   "ui.reasoning.label": "Raisonnement",
+
+  // Marketplace
+  "marketplace.tab.skills": "Skills",
+  "marketplace.tab.mcpServers": "Serveurs MCP",
+  "marketplace.tab.modes": "Modes",
+  "marketplace.search.skills": "Rechercher des skills...",
+  "marketplace.category.all": "Tout",
+  "marketplace.empty.skills": "Aucune skill trouvée",
+  "marketplace.placeholder": "À implémenter",
+  "marketplace.card.installed": "Installé",
+  "marketplace.card.install": "Installer",
+  "marketplace.card.remove": "Supprimer",
+  "marketplace.card.removeScope": "Supprimer ({{scope}})",
+  "marketplace.install.title": "Installer {{name}}",
+  "marketplace.install.scope": "Portée",
+  "marketplace.install.scope.project": "Projet",
+  "marketplace.install.scope.global": "Global",
+  "marketplace.install.prerequisites": "Prérequis",
+  "marketplace.install.installing": "Installation en cours...",
+  "marketplace.install.cancel": "Annuler",
+  "marketplace.install.success": "Installé avec succès !",
+  "marketplace.install.failed": "L'installation a échoué",
+  "marketplace.install.done": "Terminé",
+  "marketplace.install.close": "Fermer",
+  "marketplace.remove.title": "Supprimer {{name}} ?",
+  "marketplace.remove.confirm":
+    "Êtes-vous sûr de vouloir supprimer ce {{type}} ? Cela le supprimera de votre configuration {{scope}}.",
+  "marketplace.remove.cancel": "Annuler",
+  "marketplace.remove.confirm.button": "Supprimer",
 }

@@ -14,4 +14,33 @@ export const dict = {
 
   // Reasoning block label
   "ui.reasoning.label": "Resonnement",
+
+  // Marketplace
+  "marketplace.tab.skills": "Skills",
+  "marketplace.tab.mcpServers": "MCP-servere",
+  "marketplace.tab.modes": "Moduser",
+  "marketplace.search.skills": "Søk etter skills...",
+  "marketplace.category.all": "Alle",
+  "marketplace.empty.skills": "Ingen skills funnet",
+  "marketplace.placeholder": "Skal implementeres",
+  "marketplace.card.installed": "Installert",
+  "marketplace.card.install": "Installer",
+  "marketplace.card.remove": "Fjern",
+  "marketplace.card.removeScope": "Fjern ({{scope}})",
+  "marketplace.install.title": "Installer {{name}}",
+  "marketplace.install.scope": "Omfang",
+  "marketplace.install.scope.project": "Prosjekt",
+  "marketplace.install.scope.global": "Globalt",
+  "marketplace.install.prerequisites": "Forutsetninger",
+  "marketplace.install.installing": "Installerer...",
+  "marketplace.install.cancel": "Avbryt",
+  "marketplace.install.success": "Installert!",
+  "marketplace.install.failed": "Installasjonen mislyktes",
+  "marketplace.install.done": "Ferdig",
+  "marketplace.install.close": "Lukk",
+  "marketplace.remove.title": "Fjern {{name}}?",
+  "marketplace.remove.confirm":
+    "Er du sikker på at du vil fjerne denne {{type}}? Dette vil fjerne den fra din {{scope}}-konfigurasjon.",
+  "marketplace.remove.cancel": "Avbryt",
+  "marketplace.remove.confirm.button": "Fjern",
 }

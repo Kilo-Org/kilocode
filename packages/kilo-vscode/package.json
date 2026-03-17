@@ -2,7 +2,7 @@
   "name": "kilo-code",
   "displayName": "Kilo Code: AI Coding Agent, Copilot, and Autocomplete",
   "description": "Open Source AI coding agent that generates code from natural language, automates tasks, and runs terminal commands. Features inline autocomplete, browser automation, automated refactoring, and custom modes for planning, coding, and debugging. Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM.",
-  "version": "7.0.47",
+  "version": "7.0.49",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
@@ -52,19 +52,19 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "kilo-code-sidebar",
-          "title": "Kilo Code (NEW)",
+          "id": "kilo-code-ActivityBar",
+          "title": "Kilo Code",
           "icon": "assets/icons/kilo-light.png",
           "darkIcon": "assets/icons/kilo-dark.png"
         }
       ]
     },
     "views": {
-      "kilo-code-sidebar": [
+      "kilo-code-ActivityBar": [
         {
           "type": "webview",
-          "id": "kilo-code.new.sidebarView",
-          "name": "Kilo Code (NEW)"
+          "id": "kilo-code.SidebarProvider",
+          "name": "Kilo Code"
         }
       ]
     },
@@ -106,7 +106,7 @@
       },
       {
         "command": "kilo-code.new.openInTab",
-        "title": "Kilo Code (NEW)",
+        "title": "Kilo Code",
         "icon": {
           "light": "assets/icons/kilo-light.svg",
           "dark": "assets/icons/kilo-dark.svg"
@@ -249,7 +249,7 @@
       {
         "command": "kilo-code.new.generateCommitMessage",
         "title": "Generate Commit Message",
-        "category": "Kilo Code (NEW)",
+        "category": "Kilo Code",
         "icon": {
           "light": "assets/icons/kilo-light.svg",
           "dark": "assets/icons/kilo-dark.svg"
@@ -311,37 +311,37 @@
         {
           "command": "kilo-code.new.plusButtonClicked",
           "group": "navigation@0",
-          "when": "view == kilo-code.new.sidebarView"
+          "when": "view == kilo-code.SidebarProvider"
         },
         {
           "command": "kilo-code.new.agentManagerOpen",
           "group": "navigation@1",
-          "when": "view == kilo-code.new.sidebarView"
+          "when": "view == kilo-code.SidebarProvider"
         },
         {
           "command": "kilo-code.new.marketplaceButtonClicked",
           "group": "navigation@2",
-          "when": "view == kilo-code.new.sidebarView"
+          "when": "view == kilo-code.SidebarProvider"
         },
         {
           "command": "kilo-code.new.cloudHistoryButtonClicked",
           "group": "navigation@3",
-          "when": "view == kilo-code.new.sidebarView"
+          "when": "view == kilo-code.SidebarProvider"
         },
         {
           "command": "kilo-code.new.historyButtonClicked",
           "group": "navigation@4",
-          "when": "view == kilo-code.new.sidebarView"
+          "when": "view == kilo-code.SidebarProvider"
         },
         {
           "command": "kilo-code.new.profileButtonClicked",
           "group": "navigation@5",
-          "when": "view == kilo-code.new.sidebarView"
+          "when": "view == kilo-code.SidebarProvider"
         },
         {
           "command": "kilo-code.new.settingsButtonClicked",
           "group": "navigation@6",
-          "when": "view == kilo-code.new.sidebarView"
+          "when": "view == kilo-code.SidebarProvider"
         }
       ],
       "scm/title": [
@@ -708,6 +708,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "knip": "knip",
+    "check-kilocode-change": "! grep -rn 'kilocode_change' . ../kilo-ui/ --exclude='package.json' --exclude='*.md' --exclude-dir='node_modules' --exclude-dir='dist' | grep -v '`kilocode_change`'",
     "lint": "eslint src webview-ui",
     "test": "vscode-test",
     "test:unit": "bun test tests/unit/",
@@ -715,7 +716,9 @@
     "storybook": "storybook dev -p 6007",
     "build-storybook": "storybook build -o storybook-static",
     "test:visual": "playwright test",
-    "test:visual:update": "playwright test --update-snapshots"
+    "test:visual:update": "playwright test --update-snapshots",
+    "snapshot:build": "bun script/dev-snapshot.ts build",
+    "snapshot:install": "bun script/dev-snapshot.ts install"
   },
   "devDependencies": {
     "@playwright/test": "1.58.2",
@@ -762,6 +765,7 @@
     "solid-js": "^1.9.11",
     "uri-js": "^4.4.1",
     "web-tree-sitter": "^0.24.7",
+    "yaml": "2.8.2",
     "zod": "^3.24.2"
   }
 }

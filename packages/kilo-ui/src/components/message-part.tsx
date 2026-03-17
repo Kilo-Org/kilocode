@@ -21,7 +21,7 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
   return (
     <Show when={text()}>
       <div data-component="reasoning-part">
-        <Collapsible open={open()} onOpenChange={setOpen}>
+        <Collapsible open={open()} onOpenChange={setOpen} class="tool-collapsible">
           <Collapsible.Trigger>
             <div data-slot="reasoning-header">
               <Icon name="brain" size="small" />

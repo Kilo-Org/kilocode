@@ -12,7 +12,12 @@
   }
 
   [data-slot="text-part-copy-wrapper"][data-is-turn-copy] {
-    display: block;
+    display: flex;
+
+    [data-component="icon-button"] {
+      width: 20px;
+      height: 20px;
+    }
   }
 }
 
@@ -92,26 +97,29 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   margin-bottom: 0px;
 }
 
-/* Remove the empty space below user message bubbles.
- * The upstream copy wrapper is a normal-flow block with min-height + margin,
- * so it reserves ~28px even when invisible. Override it to be absolutely
- * positioned over the bottom-right corner of the bubble — zero layout impact
- * when hidden, overlays on hover exactly like the text-part copy button. */
+/* User message copy button: tiny reserved space, button overflows on hover.
+ * height:2px keeps layout stable; overflow:hidden clips the invisible button;
+ * on hover overflow:visible lets the button appear without shifting content. */
 [data-component="user-message"] {
-  position: relative;
-
   [data-slot="user-message-copy-wrapper"] {
-    position: absolute;
-    top: 4px;
-    right: 4px;
-    bottom: auto;
-    min-height: unset;
+    min-height: 0;
+    height: 10px;
     margin-top: 0;
-    width: auto;
-    /* hide meta text; only the icon-button matters in the sidebar */
+    overflow: hidden;
+
     [data-slot="user-message-meta-wrap"] {
       display: none;
     }
+
+    [data-component="icon-button"] {
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  &:hover [data-slot="user-message-copy-wrapper"],
+  &:focus-within [data-slot="user-message-copy-wrapper"] {
+    overflow: visible;
   }
 }
 
@@ -131,12 +139,16 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   }
 
   [data-slot="collapsible-trigger"] {
-    height: 28px;
+    height: 36px;
     padding: 0 8px;
     gap: 6px;
     background: var(--surface-inset-base);
     border-radius: 0;
     cursor: pointer;
+
+    &:hover {
+      background-color: var(--surface-inset-base-hover, var(--vscode-list-hoverBackground));
+    }
   }
 
   [data-slot="reasoning-header"] {

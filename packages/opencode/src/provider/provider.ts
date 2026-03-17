@@ -6,12 +6,10 @@ import { mapValues, mergeDeep, omit, pickBy, sortBy } from "remeda"
 import { NoSuchModelError, type Provider as SDK } from "ai"
 import { Log } from "../util/log"
 import { BunProc } from "../bun"
+import { Hash } from "../util/hash"
 import { Plugin } from "../plugin"
-import {
-  ModelsDev,
-  Prompt, // kilocode_change
-} from "./models"
 import { NamedError } from "@opencode-ai/util/error"
+import { ModelsDev, Prompt } from "./models" // kilocode_change
 import { Auth } from "../auth"
 import { Env } from "../env"
 import { Instance } from "../project/instance"
@@ -816,7 +814,7 @@ export namespace Provider {
     const modelLoaders: {
       [providerID: string]: CustomModelLoader
     } = {}
-    const sdk = new Map<number, SDK>()
+    const sdk = new Map<string, SDK>()
 
     log.info("init")
 
@@ -1111,7 +1109,7 @@ export namespace Provider {
           ...model.headers,
         }
 
-      const key = Bun.hash.xxHash32(JSON.stringify({ providerID: model.providerID, npm: model.api.npm, options }))
+      const key = Hash.fast(JSON.stringify({ providerID: model.providerID, npm: model.api.npm, options }))
       const existing = s.sdk.get(key)
       if (existing) return existing
 

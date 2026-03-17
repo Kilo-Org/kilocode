@@ -25,6 +25,8 @@ jobs:
               - "packages/kilo-vscode/webview-ui/**"
               - "packages/kilo-vscode/.storybook/**"
               - "packages/kilo-vscode/tests/visual-regression*"
+              - "packages/kilo-vscode/tests/permission-dock-dropdown*"
+              - "packages/kilo-vscode/tests/permission-dock-dropdown.spec.ts-snapshots/**"
               - ".github/workflows/visual-regression.yml"
       - name: Check if PR is from a fork
         id: fork-check
@@ -181,7 +183,7 @@ jobs:
           else
             git commit -m "chore: update visual regression baselines"
             git lfs push --all origin
-            git push
+            git push --no-verify
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
@@ -302,10 +304,42 @@ jobs:
           "
         working-directory: packages/kilo-vscode
 
+      - name: Remove stale baselines for permission-dock-dropdown tests
+        run: |
+          node -e "
+            const fs = require('fs'), path = require('path');
+            const specPath = 'tests/permission-dock-dropdown.spec.ts';
+            const expected = new Set();
+            if (fs.existsSync(specPath)) {
+              const spec = fs.readFileSync(specPath, 'utf8');
+              const re = /toHaveScreenshot\(\[([^\]]+)\]\)/g;
+              let m;
+              while ((m = re.exec(spec)) !== null) {
+                const parts = m[1].split(',').map(s => s.trim().replace(/[\"']/g, ''));
+                expected.add(parts.join('/').replace(/\.png$/, '-chromium-linux.png'));
+              }
+            }
+            const dir = 'tests/permission-dock-dropdown.spec.ts-snapshots';
+            if (!fs.existsSync(dir)) process.exit(0);
+            for (const sub of fs.readdirSync(dir)) {
+              const sdir = path.join(dir, sub);
+              if (!fs.statSync(sdir).isDirectory()) continue;
+              for (const file of fs.readdirSync(sdir)) {
+                const rel = sub + '/' + file;
+                if (file.endsWith('.png') && !expected.has(rel)) {
+                  console.log('Removing stale baseline:', rel);
+                  fs.unlinkSync(path.join(sdir, file));
+                }
+              }
+            }
+          "
+        working-directory: packages/kilo-vscode
+
       - name: Check for baseline changes (fork PRs)
         if: needs.check-paths.outputs.is_fork == 'true'
         run: |
           git add packages/kilo-vscode/tests/visual-regression.spec.ts-snapshots/
+          [ -d packages/kilo-vscode/tests/permission-dock-dropdown.spec.ts-snapshots ] && git add packages/kilo-vscode/tests/permission-dock-dropdown.spec.ts-snapshots/
           if git diff --cached --quiet; then
             echo "No visual regression detected."
           else
@@ -320,6 +354,7 @@ jobs:
         if: needs.check-paths.outputs.is_fork != 'true' && steps.check-baseline-commit-vscode.outputs.is_baseline_update == 'true'
         run: |
           git add packages/kilo-vscode/tests/visual-regression.spec.ts-snapshots/
+          [ -d packages/kilo-vscode/tests/permission-dock-dropdown.spec.ts-snapshots ] && git add packages/kilo-vscode/tests/permission-dock-dropdown.spec.ts-snapshots/
           if git diff --cached --quiet; then
             echo "Baselines are stable after auto-update."
           else
@@ -339,13 +374,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add packages/kilo-vscode/tests/visual-regression.spec.ts-snapshots/
+          [ -d packages/kilo-vscode/tests/permission-dock-dropdown.spec.ts-snapshots ] && git add packages/kilo-vscode/tests/permission-dock-dropdown.spec.ts-snapshots/
           if git diff --cached --quiet; then
             echo "No new baselines — nothing to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             git commit -m "chore: update kilo-vscode visual regression baselines"
             git lfs push --all origin
-            git push
+            git push --no-verify
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 

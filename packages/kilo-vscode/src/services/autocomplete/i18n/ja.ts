@@ -6,10 +6,8 @@ export const dict = {
   "kilocode:autocomplete.statusBar.warning": "$(warning) Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.basic": "Kilo Code Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.disabled": "Kilo Code Autocomplete（無効）",
-  "kilocode:autocomplete.statusBar.tooltip.noCredits":
-    "**アカウントにクレジットがありません**\n\nKilo Code アカウントにクレジットがありません。オートコンプリートを使用するには、アカウントにクレジットを追加してください。\n\n[設定を開く](command:kilo-code.settingsButtonClicked)",
   "kilocode:autocomplete.statusBar.tooltip.noUsableProvider":
-    "**オートコンプリートモデルが設定されていません**\n\nオートコンプリートを有効にするには、これらのサポートされているプロバイダーのいずれかでプロファイルを追加してください: {{providers}}。\n\n[設定を開く](command:kilo-code.settingsButtonClicked)",
+    "**オートコンプリートモデルが設定されていません**\n\nオートコンプリートを有効にするには、これらのサポートされているプロバイダーのいずれかでプロファイルを追加してください: {{providers}}。\n\n[設定を開く]({{command}})",
   "kilocode:autocomplete.statusBar.tooltip.sessionTotal": "セッション合計コスト:",
   "kilocode:autocomplete.statusBar.tooltip.provider": "プロバイダー:",
   "kilocode:autocomplete.statusBar.tooltip.model": "モデル:",

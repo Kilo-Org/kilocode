@@ -14,10 +14,11 @@
 import { $ } from "bun"
 import { info, success, warn, debug } from "../utils/logger"
 import { defaultConfig } from "../utils/config"
+import { oursHasKilocodeChanges } from "../utils/git"
 
 export interface TakeTheirsResult {
   file: string
-  action: "transformed" | "skipped" | "failed"
+  action: "transformed" | "skipped" | "failed" | "flagged"
   replacements: number
   dryRun: boolean
 }
@@ -211,6 +212,12 @@ export async function transformTakeTheirs(file: string, options: TakeTheirsOptio
   if (options.dryRun) {
     info(`[DRY-RUN] Would take theirs and transform: ${file}`)
     return { file, action: "transformed", replacements: 0, dryRun: true }
+  }
+
+  // If our version has kilocode_change markers, flag for manual resolution
+  if (await oursHasKilocodeChanges(file)) {
+    warn(`${file} has kilocode_change markers — skipping auto-transform, needs manual resolution`)
+    return { file, action: "flagged", replacements: 0, dryRun: false }
   }
 
   try {

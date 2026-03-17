@@ -20,7 +20,9 @@ import { formatRelativeDate } from "../../utils/date"
 import { CloudImportDialog } from "./CloudImportDialog"
 import { FeedbackDialog } from "./FeedbackDialog"
 import { VscodeSessionTurn } from "./VscodeSessionTurn"
+import { RevertBanner } from "./RevertBanner"
 import { WorkingIndicator } from "../shared/WorkingIndicator"
+import { activeUserMessageID as getActiveUserMessageID } from "../../context/session-queue"
 
 const KiloLogo = (): JSX.Element => {
   const iconsBaseUri = (window as { ICONS_BASE_URI?: string }).ICONS_BASE_URI || ""
@@ -63,8 +65,14 @@ export const MessageList: Component<MessageListProps> = (props) => {
     }
   })
 
-  const userMessages = () => session.userMessages()
-  const isEmpty = () => userMessages().length === 0 && !session.loading()
+  const allUserMessages = () => session.userMessages()
+  const boundary = () => session.revert()?.messageID
+  const userMessages = createMemo(() => {
+    const b = boundary()
+    if (!b) return allUserMessages()
+    return allUserMessages().filter((m) => m.id < b)
+  })
+  const isEmpty = () => userMessages().length === 0 && !session.loading() && !boundary()
 
   const recent = createMemo(() =>
     [...session.sessions()]
@@ -72,7 +80,13 @@ export const MessageList: Component<MessageListProps> = (props) => {
       .slice(0, 3),
   )
 
-  const lastUserMessageID = createMemo(() => userMessages().at(-1)?.id)
+  const activeUserID = createMemo(() => getActiveUserMessageID(session.messages(), session.statusInfo()))
+
+  const activeUserIndex = createMemo(() => {
+    const active = activeUserID()
+    if (!active) return -1
+    return userMessages().findIndex((msg) => msg.id === active)
+  })
 
   return (
     <div class="message-list-container">
@@ -130,14 +144,25 @@ export const MessageList: Component<MessageListProps> = (props) => {
           </Show>
           <Show when={!session.loading()}>
             <For each={userMessages()}>
-              {(msg) => (
-                <VscodeSessionTurn
-                  sessionID={session.currentSessionID() ?? ""}
-                  messageID={msg.id}
-                  lastUserMessageID={lastUserMessageID()}
-                />
-              )}
+              {(msg, index) => {
+                const queued = createMemo(() => {
+                  const active = activeUserIndex()
+                  if (active === -1) return false
+                  return index() > active
+                })
+
+                return (
+                  <VscodeSessionTurn
+                    sessionID={session.currentSessionID() ?? ""}
+                    messageID={msg.id}
+                    queued={queued()}
+                  />
+                )
+              }}
             </For>
+            <Show when={boundary()}>
+              <RevertBanner />
+            </Show>
             <WorkingIndicator />
           </Show>
         </div>

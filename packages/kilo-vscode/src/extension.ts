@@ -84,7 +84,7 @@ export function activate(context: vscode.ExtensionContext) {
       agentManagerProvider.openPanel()
     }),
     vscode.commands.registerCommand("kilo-code.new.marketplaceButtonClicked", () => {
-      provider.postMessage({ type: "action", action: "marketplaceButtonClicked" })
+      settingsEditorProvider.openPanel("marketplace")
     }),
     vscode.commands.registerCommand("kilo-code.new.historyButtonClicked", () => {
       provider.postMessage({ type: "action", action: "historyButtonClicked" })
@@ -95,8 +95,8 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.profileButtonClicked", () => {
       settingsEditorProvider.openPanel("profile")
     }),
-    vscode.commands.registerCommand("kilo-code.new.settingsButtonClicked", () => {
-      settingsEditorProvider.openPanel("settings")
+    vscode.commands.registerCommand("kilo-code.new.settingsButtonClicked", (tab?: string) => {
+      settingsEditorProvider.openPanel("settings", tab)
     }),
     // legacy-migration start
     vscode.commands.registerCommand("kilo-code.new.openMigrationWizard", () => {
@@ -183,7 +183,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Register code actions (editor context menus, terminal context menus, keyboard shortcuts)
   registerCodeActions(context, provider, agentManagerProvider)
-  registerTerminalActions(context, provider)
+  registerTerminalActions(context, provider, agentManagerProvider)
 
   // Register CodeActionProvider (lightbulb quick fixes)
   context.subscriptions.push(

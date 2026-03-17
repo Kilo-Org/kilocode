@@ -117,7 +117,6 @@ export const dict = {
   "dialog.model.empty": "找不到模型",
   "dialog.model.manage": "管理模型",
   "dialog.model.manage.description": "自訂模型選擇器中顯示的模型。",
-  "dialog.model.manage.provider.toggle": "切換所有 {{provider}} 模型",
 
   "dialog.model.unpaid.freeModels.title": "Kilo 提供的免費模型",
   "dialog.model.unpaid.addMore.title": "從熱門提供者新增更多模型",
@@ -150,7 +149,8 @@ export const dict = {
   "provider.connect.oauth.code.invalid": "授權碼無效",
   "provider.connect.oauth.auto.visit.prefix": "造訪 ",
   "provider.connect.oauth.auto.visit.link": "此連結",
-  "provider.connect.oauth.auto.visit.suffix": " 並輸入以下程式碼，以連線你的帳戶並在 Kilo 中使用 {{provider}} 模型。",
+  "provider.connect.oauth.auto.visit.suffix":
+    " 並輸入以下程式碼，以連線你的帳戶並在 Kilo 中使用 {{provider}} 模型。",
   "provider.connect.oauth.auto.confirmationCode": "確認碼",
   "provider.connect.toast.connected.title": "{{provider}} 已連線",
   "provider.connect.toast.connected.description": "現在可以使用 {{provider}} 模型了。",
@@ -493,7 +493,6 @@ export const dict = {
   "session.review.loadingChanges": "正在載入變更...",
   "session.review.empty": "此工作階段暫無變更",
   "session.review.noChanges": "沒有變更",
-  "session.review.noVcs": "未偵測到 git VCS，因此無法偵測到工作階段變更",
   "session.files.selectToOpen": "選取要開啟的檔案",
   "session.files.all": "所有檔案",
   "session.files.binaryContent": "二進位檔案（無法顯示內容）",
@@ -507,11 +506,6 @@ export const dict = {
   "session.todo.title": "待辦事項",
   "session.todo.collapse": "折疊",
   "session.todo.expand": "展開",
-
-  "session.modeSwitch.switching": "正在切換到 {{mode}} 模式…",
-  "session.modeSwitch.waiting": "等待目前任務完成",
-  "session.modeSwitch.notAvailable": "Agent 不可用",
-  "session.modeSwitch.fallback": '找不到 "{{requested}}"，使用 "{{actual}}"',
 
   "session.new.worktree.main": "主分支",
   "session.new.worktree.mainWithBranch": "主分支 ({{branch}})",
@@ -608,8 +602,6 @@ export const dict = {
   "settings.general.row.theme.description": "自訂 Kilo 的主題。",
   "settings.general.row.font.title": "字型",
   "settings.general.row.font.description": "自訂程式碼區塊使用的等寬字型",
-  "settings.general.row.reasoningSummaries.title": "顯示推理摘要",
-  "settings.general.row.reasoningSummaries.description": "在時間軸中顯示模型推理摘要",
 
   "settings.general.row.shellToolPartsExpanded.title": "展開 shell 工具區塊",
   "settings.general.row.shellToolPartsExpanded.description": "在時間軸中預設展開 shell 工具區塊",

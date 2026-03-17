@@ -16,7 +16,10 @@ import PROMPT_ASK from "./prompt/ask.txt"
 import PROMPT_ORCHESTRATOR from "./prompt/orchestrator.txt"
 import PROMPT_SUMMARY from "./prompt/summary.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
+
 import { PermissionNext } from "@/permission/next"
+import { NamedError } from "@opencode-ai/util/error" // kilocode_change
+import { Glob } from "../util/glob" // kilocode_change
 import { mergeDeep, pipe, sortBy, values } from "remeda"
 import { Global } from "@/global"
 import path from "path"
@@ -158,6 +161,7 @@ export namespace Agent {
             webfetch: "allow",
             websearch: "allow",
             codesearch: "allow",
+            codebase_search: "allow", // kilocode_change
             external_directory: {
               [Truncate.GLOB]: "allow",
             },
@@ -190,6 +194,7 @@ export namespace Agent {
             webfetch: "allow",
             websearch: "allow",
             codesearch: "allow",
+            codebase_search: "allow", // kilocode_change
             external_directory: {
               [Truncate.GLOB]: "allow",
             },
@@ -227,6 +232,7 @@ export namespace Agent {
             webfetch: "allow",
             websearch: "allow",
             codesearch: "allow",
+            codebase_search: "allow", // kilocode_change
             read: "allow",
             external_directory: {
               "*": "ask",
@@ -236,7 +242,10 @@ export namespace Agent {
           user,
         ),
         description: `Fast agent specialized for exploring codebases. Use this when you need to quickly find files by patterns (eg. "src/components/**/*.tsx"), search code for keywords (eg. "API endpoints"), or answer questions about the codebase (eg. "how do API endpoints work?"). When calling this agent, specify the desired thoroughness level: "quick" for basic searches, "medium" for moderate exploration, or "very thorough" for comprehensive analysis across multiple locations and naming conventions.`,
-        prompt: PROMPT_EXPLORE,
+        // kilocode_change - only advertise codebase_search when the experimental flag is on
+        prompt: cfg.experimental?.codebase_search
+          ? `Prefer using the codebase_search tool for codebase searches — it performs intelligent multi-step code search and returns the most relevant code spans.\n\n${PROMPT_EXPLORE}`
+          : PROMPT_EXPLORE,
         options: {},
         mode: "subagent",
         native: true,
@@ -438,4 +447,78 @@ export namespace Agent {
     const result = await generateObject(params)
     return result.object
   }
+
+  // kilocode_change start
+  export const RemoveError = NamedError.create(
+    "AgentRemoveError",
+    z.object({
+      name: z.string(),
+      message: z.string(),
+    }),
+  )
+
+  /**
+   * Remove a custom agent by deleting its markdown source file and/or
+   * removing it from legacy .kilocodemodes YAML files.
+   * Scans all config directories for agent/mode .md files matching the name,
+   * then also checks the .kilocodemodes files the ModesMigrator reads.
+   */
+  export async function remove(name: string) {
+    const agents = await state()
+    const agent = agents[name]
+    if (!agent) throw new RemoveError({ name, message: "agent not found" })
+    if (agent.native) throw new RemoveError({ name, message: "cannot remove native agent" })
+
+    const { unlink, readFile, writeFile } = await import("fs/promises")
+    let found = false
+
+    // 1. Delete .md files from config directories
+    const dirs = await Config.directories()
+    const patterns = ["{agent,agents}/**/" + name + ".md", "{mode,modes}/" + name + ".md"]
+    for (const dir of dirs) {
+      for (const pattern of patterns) {
+        const matches = await Glob.scan(pattern, { cwd: dir, absolute: true, dot: true })
+        for (const file of matches) {
+          if (await Bun.file(file).exists()) {
+            await unlink(file)
+            found = true
+          }
+        }
+      }
+    }
+
+    // 2. Remove from legacy .kilocodemodes YAML files (read by ModesMigrator)
+    const { ModesMigrator } = await import("@/kilocode/modes-migrator")
+    const { KilocodePaths } = await import("@/kilocode/paths")
+    const os = await import("os")
+    const matter = (await import("gray-matter")).default
+    const home = os.default.homedir()
+    const modesFiles = [
+      path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "custom_modes.yaml"),
+      path.join(home, ".kilocode", "cli", "global", "settings", "custom_modes.yaml"),
+      path.join(home, ".kilocodemodes"),
+      path.join(Instance.directory, ".kilocodemodes"),
+    ]
+
+    for (const file of modesFiles) {
+      const modes = await ModesMigrator.readModesFile(file)
+      if (!modes.length) continue
+
+      const filtered = modes.filter((m) => m.slug !== name)
+      if (filtered.length === modes.length) continue
+
+      // Rewrite the file without the removed mode
+      const yaml = matter
+        .stringify("", { customModes: filtered })
+        .replace(/^---\n/, "")
+        .replace(/\n---\n?$/, "")
+      await writeFile(file, yaml)
+      found = true
+    }
+
+    if (!found) throw new RemoveError({ name, message: "no agent file found on disk" })
+
+    await Instance.dispose()
+  }
+  // kilocode_change end
 }

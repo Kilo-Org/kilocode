@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import { createEffect, on, onCleanup } from "solid-js"
 import { createStore } from "solid-js/store"
 import { createResizeObserver } from "@solid-primitives/resize-observer"

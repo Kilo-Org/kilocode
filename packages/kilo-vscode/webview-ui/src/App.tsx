@@ -19,6 +19,7 @@ import { ConfigProvider } from "./context/config"
 import { SessionProvider, useSession } from "./context/session"
 import { LanguageProvider } from "./context/language"
 import { ChatView } from "./components/chat"
+import { MarketplaceView } from "./components/marketplace"
 import { KiloNotifications } from "./components/chat/KiloNotifications"
 import { registerExpandedTaskTool } from "./components/chat/TaskToolExpanded"
 import { registerVscodeToolOverrides } from "./components/chat/VscodeToolOverrides"
@@ -54,24 +55,6 @@ const VALID_VIEWS = new Set<string>([
   "migration", // legacy-migration
   "subAgentViewer",
 ])
-
-const DummyView: Component<{ title: string }> = (props) => {
-  return (
-    <div
-      style={{
-        display: "flex",
-        "justify-content": "center",
-        "align-items": "center",
-        height: "100%",
-        "min-height": "200px",
-        "font-size": "24px",
-        color: "var(--vscode-foreground)",
-      }}
-    >
-      <h1>{props.title}</h1>
-    </div>
-  )
-}
 
 /**
  * Bridge our session store to the DataProvider's expected Data shape.
@@ -176,6 +159,7 @@ export const LanguageBridge: Component<{ children: any }> = (props) => {
 // Inner app component that uses the contexts
 const AppContent: Component = () => {
   const [currentView, setCurrentView] = createSignal<ViewType>("newTask")
+  const [settingsTab, setSettingsTab] = createSignal<string | undefined>()
   const [migrationReturnView, setMigrationReturnView] = createSignal<ViewType>("newTask") // legacy-migration
   const session = useSession()
   const server = useServer()
@@ -212,7 +196,8 @@ const AppContent: Component = () => {
         handleViewAction(message.action)
       }
       if (message?.type === "navigate" && message.view && VALID_VIEWS.has(message.view)) {
-        console.log("[Kilo New] App: 🧭 navigate:", message.view)
+        console.log("[Kilo New] App: 🧭 navigate:", message.view, message.tab ? `tab=${message.tab}` : "")
+        if (message.tab) setSettingsTab(message.tab)
         setCurrentView(message.view as ViewType)
       }
       if (message?.type === "openCloudSession" && message.sessionId) {
@@ -245,7 +230,7 @@ const AppContent: Component = () => {
           <ChatView onSelectSession={handleSelectSession} />
         </Match>
         <Match when={currentView() === "marketplace"}>
-          <DummyView title="Marketplace" />
+          <MarketplaceView />
         </Match>
         <Match when={currentView() === "history"}>
           <SessionList onSelectSession={handleSelectSession} />
@@ -267,6 +252,8 @@ const AppContent: Component = () => {
         </Match>
         <Match when={currentView() === "settings"}>
           <Settings
+            tab={settingsTab()}
+            onTabChange={setSettingsTab}
             onMigrateClick={() => {
               setMigrationReturnView("settings")
               setCurrentView("migration")

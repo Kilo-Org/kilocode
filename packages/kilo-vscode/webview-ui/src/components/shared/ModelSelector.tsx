@@ -7,7 +7,7 @@
  * ModelSelector    — thin wrapper wired to session context for chat usage.
  */
 
-import { Component, createSignal, createMemo, createEffect, For, Show } from "solid-js"
+import { Component, createSignal, createMemo, createEffect, onCleanup, For, Show, createSelector } from "solid-js"
 import { Popover } from "@kilocode/kilo-ui/popover"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useProvider, EnrichedModel } from "../../context/provider"
@@ -41,11 +41,12 @@ export interface ModelSelectorBaseProps {
 export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   const { connected, models, findModel } = useProvider()
   const language = useLanguage()
-  const selectedModel = () => findModel(props.value)
+  const activeModel = () => findModel(props.value)
 
   const [open, setOpen] = createSignal(false)
   const [search, setSearch] = createSignal("")
-  const [activeIndex, setActiveIndex] = createSignal(0)
+  const [debouncedSearch, setDebouncedSearch] = createSignal("")
+  const [selectedIndex, setSelectedIndex] = createSignal(0)
 
   let searchRef: HTMLInputElement | undefined
   let listRef: HTMLDivElement | undefined
@@ -58,9 +59,16 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
 
   const hasProviders = () => visibleModels().length > 0
 
+  // Debounce search input to avoid re-filtering on every keystroke
+  createEffect(() => {
+    const q = search()
+    const t = setTimeout(() => setDebouncedSearch(q), 250)
+    onCleanup(() => clearTimeout(t))
+  })
+
   // Flat filtered list for keyboard navigation
   const filtered = createMemo(() => {
-    const q = search().toLowerCase()
+    const q = debouncedSearch().toLowerCase()
     if (!q) {
       return visibleModels()
     }
@@ -91,10 +99,22 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   // Offset for "clear" option at the top of the list
   const clearOffset = () => (props.allowClear ? 1 : 0)
 
-  // Reset active index when filter changes
+  // Pre-computed index map — avoids O(n) indexOf on every hover event
+  const flatIndexMap = createMemo(() => {
+    const map = new Map<EnrichedModel, number>()
+    const offset = clearOffset()
+    flatFiltered().forEach((m, i) => map.set(m, i + offset))
+    return map
+  })
+
+  // createSelector gives fine-grained reactivity: only the two items that
+  // change (old selected → new selected) re-render, not the entire list.
+  const isSelected = createSelector(selectedIndex)
+
+  // Reset selection when filter changes
   createEffect(() => {
     filtered() // track
-    setActiveIndex(0)
+    setSelectedIndex(0)
   })
 
   // Focus search input when popover opens
@@ -103,6 +123,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
       requestAnimationFrame(() => searchRef?.focus())
     } else {
       setSearch("")
+      setDebouncedSearch("")
     }
   })
 
@@ -132,15 +153,15 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
 
     if (e.key === "ArrowDown") {
       e.preventDefault()
-      setActiveIndex((i) => (i + 1) % totalLen)
-      scrollActiveIntoView()
+      setSelectedIndex((i) => (i + 1) % totalLen)
+      scrollSelectedIntoView()
     } else if (e.key === "ArrowUp") {
       e.preventDefault()
-      setActiveIndex((i) => (i - 1 + totalLen) % totalLen)
-      scrollActiveIntoView()
+      setSelectedIndex((i) => (i - 1 + totalLen) % totalLen)
+      scrollSelectedIntoView()
     } else if (e.key === "Enter") {
       e.preventDefault()
-      const idx = activeIndex()
+      const idx = selectedIndex()
       if (props.allowClear && idx === 0) {
         pickClear()
       } else {
@@ -152,27 +173,22 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     }
   }
 
-  function scrollActiveIntoView() {
+  function scrollSelectedIntoView() {
     requestAnimationFrame(() => {
-      const el = listRef?.querySelector(".model-selector-item.active")
+      const el = listRef?.querySelector(".model-selector-item.selected")
       el?.scrollIntoView({ block: "nearest" })
     })
   }
 
-  function isSelected(model: EnrichedModel): boolean {
-    const sel = selectedModel()
-    return sel !== undefined && sel.providerID === model.providerID && sel.id === model.id
-  }
-
-  // Track flat index across groups for active highlighting
-  function flatIndex(model: EnrichedModel): number {
-    return flatFiltered().indexOf(model) + clearOffset()
+  function isActive(model: EnrichedModel): boolean {
+    const m = activeModel()
+    return m !== undefined && m.providerID === model.providerID && m.id === model.id
   }
 
   const triggerLabel = () =>
     buildTriggerLabel(
-      selectedModel()?.name,
-      selectedModel()?.providerID,
+      activeModel()?.name,
+      activeModel()?.providerID,
       props.value,
       props.allowClear ?? false,
       props.clearLabel ?? "",
@@ -194,7 +210,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
         variant: "secondary",
         size: "normal",
         disabled: !hasProviders(),
-        title: selectedModel()?.id,
+        title: activeModel()?.id,
       }}
       trigger={
         <>
@@ -225,11 +241,11 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
 
           <Show when={props.allowClear}>
             <div
-              class={`model-selector-item${activeIndex() === 0 ? " active" : ""}${!props.value?.providerID ? " selected" : ""}`}
+              class={`model-selector-item${isSelected(0) ? " selected" : ""}${!props.value?.providerID ? " active" : ""}`}
               role="option"
               aria-selected={!props.value?.providerID}
               onClick={() => pickClear()}
-              onMouseEnter={() => setActiveIndex(0)}
+              onMouseEnter={() => setSelectedIndex(0)}
             >
               <span class="model-selector-item-name" style={{ "font-style": "italic", opacity: 0.7 }}>
                 {props.clearLabel ?? language.t("dialog.model.notSet")}
@@ -242,20 +258,23 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
               <>
                 <div class="model-selector-group-label">{group.providerName}</div>
                 <For each={group.models}>
-                  {(model) => (
-                    <div
-                      class={`model-selector-item${flatIndex(model) === activeIndex() ? " active" : ""}${isSelected(model) ? " selected" : ""}`}
-                      role="option"
-                      aria-selected={isSelected(model)}
-                      onClick={() => pick(model)}
-                      onMouseEnter={() => setActiveIndex(flatIndex(model))}
-                    >
-                      <span class="model-selector-item-name">{model.name}</span>
-                      <Show when={isFree(model)}>
-                        <span class="model-selector-tag">{language.t("model.tag.free")}</span>
-                      </Show>
-                    </div>
-                  )}
+                  {(model) => {
+                    const idx = () => flatIndexMap().get(model) ?? 0
+                    return (
+                      <div
+                        class={`model-selector-item${isSelected(idx()) ? " selected" : ""}${isActive(model) ? " active" : ""}`}
+                        role="option"
+                        aria-selected={isActive(model)}
+                        onClick={() => pick(model)}
+                        onMouseEnter={() => setSelectedIndex(idx())}
+                      >
+                        <span class="model-selector-item-name">{model.name}</span>
+                        <Show when={isFree(model)}>
+                          <span class="model-selector-tag">{language.t("model.tag.free")}</span>
+                        </Show>
+                      </div>
+                    )
+                  }}
                 </For>
               </>
             )}
@@ -276,7 +295,10 @@ export const ModelSelector: Component = () => {
   return (
     <ModelSelectorBase
       value={session.selected()}
-      onSelect={(providerID, modelID) => session.selectModel(providerID, modelID)}
+      onSelect={(providerID, modelID) => {
+        session.selectModel(providerID, modelID)
+        requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
+      }}
     />
   )
 }

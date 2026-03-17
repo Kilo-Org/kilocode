@@ -36,11 +36,14 @@ import type {
   ModelSelection,
   ContextUsage,
   AgentInfo,
+  SkillInfo,
   ExtensionMessage,
   FileAttachment,
+  SendMessageFailedMessage,
 } from "../types/messages"
 import { removeSessionPermissions, upsertPermission } from "./permission-queue"
 import { computeStatus, calcTotalCost, calcContextUsage } from "./session-utils"
+import { Identifier } from "../utils/id"
 
 // Store structure for messages and parts
 interface SessionStore {
@@ -112,8 +115,14 @@ interface SessionContextValue {
   totalCost: Accessor<number>
   contextUsage: Accessor<ContextUsage | undefined>
 
+  // Skills loaded from the CLI backend
+  skills: Accessor<SkillInfo[]>
+  refreshSkills: () => void
+  removeSkill: (location: string) => void
+
   // Agent/mode selection (per-session)
   agents: Accessor<AgentInfo[]>
+  removeMode: (name: string) => void
   selectedAgent: Accessor<string>
   selectAgent: (name: string) => void
   getSessionAgent: (sessionID: string) => string
@@ -126,15 +135,22 @@ interface SessionContextValue {
   currentVariant: () => string | undefined
   selectVariant: (value: string) => void
 
+  // Revert/undo state for the current session
+  revert: Accessor<SessionInfo["revert"]>
+  revertedCount: Accessor<number>
+  summary: Accessor<SessionInfo["summary"]>
+
   // Actions
+  revertSession: (messageID: string) => void
+  unrevertSession: () => void
   sendMessage: (text: string, providerID?: string, modelID?: string, files?: FileAttachment[]) => void
   abort: () => void
   compact: () => void
   respondToPermission: (
     permissionId: string,
     response: "once" | "always" | "reject",
-    approvedPatterns: string[],
-    deniedPatterns: string[],
+    approvedAlways: string[],
+    deniedAlways: string[],
   ) => void
   replyToQuestion: (requestID: string, answers: string[][]) => void
   rejectQuestion: (requestID: string) => void
@@ -202,11 +218,34 @@ export const SessionProvider: ParentComponent = (props) => {
   const [agents, setAgents] = createSignal<AgentInfo[]>([])
   const [defaultAgent, setDefaultAgent] = createSignal("code")
 
+  // Skills loaded from the CLI backend
+  const [skills, setSkills] = createSignal<SkillInfo[]>([])
+
+  const removeMode = (name: string) => {
+    setAgents((prev) => prev.filter((a) => a.name !== name))
+
+    // Clear stale selections so selectedAgentName() falls back to the default
+    if (pendingAgentSelection() === name) {
+      setPendingAgentSelection(null)
+    }
+    for (const sid of Object.keys(store.agentSelections)) {
+      if (store.agentSelections[sid] === name) {
+        setStore("agentSelections", sid, undefined as unknown as string)
+      }
+    }
+
+    vscode.postMessage({ type: "removeMode", name })
+  }
+
   // Pending agent selection for before a session exists
   const [pendingAgentSelection, setPendingAgentSelection] = createSignal<string | null>(null)
 
   // Cloud session preview state
   const [cloudPreviewId, setCloudPreviewId] = createSignal<string | null>(null)
+
+  // Tracks optimistic messageIDs that haven't been confirmed by the server yet.
+  // Prevents handleMessagesLoaded from wiping them when it replaces the array.
+  const pendingOptimistic = new Map<string, Set<string>>()
 
   // Store for sessions, messages, parts, todos, modelSelections, agentSelections
   const [store, setStore] = createStore<SessionStore>({
@@ -335,8 +374,25 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "requestAgents" })
   }, agentRetryMs)
 
+  // Skills loaded from the CLI backend
+  const unsubSkills = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type === "skillsLoaded") {
+      setSkills(message.skills)
+    }
+  })
+
+  const refreshSkills = () => {
+    vscode.postMessage({ type: "requestSkills" })
+  }
+
+  const removeSkill = (location: string) => {
+    setSkills((prev) => prev.filter((s) => s.location !== location))
+    vscode.postMessage({ type: "removeSkill", location })
+  }
+
   onCleanup(() => {
     unsubAgents()
+    unsubSkills()
     clearInterval(agentRetryTimer)
   })
 
@@ -444,10 +500,18 @@ export const SessionProvider: ParentComponent = (props) => {
           handleSessionDeleted(message.sessionID)
           break
 
+        case "messageRemoved":
+          handleMessageRemoved(message.sessionID, message.messageID)
+          break
+
         case "error":
           // Only clear loading if the error is for the current session
           // (or has no sessionID for backwards compatibility)
           if (!message.sessionID || message.sessionID === currentSessionID()) setLoading(false)
+          break
+
+        case "sendMessageFailed":
+          handleSendMessageFailed(message as unknown as SendMessageFailedMessage)
           break
 
         case "cloudSessionDataLoaded":
@@ -503,7 +567,19 @@ export const SessionProvider: ParentComponent = (props) => {
   function handleMessagesLoaded(sessionID: string, messages: Message[]) {
     batch(() => {
       if (sessionID === currentSessionID()) setLoading(false)
-      setStore("messages", sessionID, messages)
+
+      // Preserve optimistic messages that haven't been confirmed yet.
+      // The server may not have created the message record by the time
+      // this session's messages are loaded (e.g. on session switch).
+      const pending = pendingOptimistic.get(sessionID)
+      if (pending && pending.size > 0) {
+        const loadedIds = new Set(messages.map((m) => m.id))
+        const current = store.messages[sessionID] ?? []
+        const orphans = current.filter((m) => pending.has(m.id) && !loadedIds.has(m.id))
+        setStore("messages", sessionID, [...messages, ...orphans])
+      } else {
+        setStore("messages", sessionID, messages)
+      }
 
       // Also extract parts from messages
       for (const msg of messages) {
@@ -515,30 +591,32 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function handleMessageCreated(message: Message) {
+    // Message confirmed by server — no longer optimistic.
+    // Clear placeholder parts so they don't duplicate alongside real parts
+    // arriving via individual part.updated events (the server's message.updated
+    // SSE event does NOT include parts).
+    const pending = pendingOptimistic.get(message.sessionID)
+    const wasOptimistic = pending?.has(message.id)
+    pending?.delete(message.id)
+
+    if (wasOptimistic) {
+      setStore(
+        "parts",
+        produce((p) => {
+          delete p[message.id]
+        }),
+      )
+    }
+
     setStore("messages", message.sessionID, (msgs = []) => {
-      // Check if message already exists (update case)
-      const existingIndex = msgs.findIndex((m) => m.id === message.id)
-      if (existingIndex >= 0) {
+      // Check if message already exists (optimistic or update case).
+      // Since we now use the same messageID for optimistic and server messages,
+      // this naturally handles the optimistic→real transition.
+      const idx = msgs.findIndex((m) => m.id === message.id)
+      if (idx >= 0) {
         const updated = [...msgs]
-        updated[existingIndex] = { ...msgs[existingIndex], ...message }
+        updated[idx] = { ...msgs[idx], ...message }
         return updated
-      }
-      // Replace optimistic user message if one exists
-      if (message.role === "user") {
-        const optimisticIdx = msgs.findIndex((m) => m.id.startsWith("optimistic-") && m.role === "user")
-        if (optimisticIdx >= 0) {
-          const updated = [...msgs]
-          // Clean up optimistic parts
-          const old = msgs[optimisticIdx]
-          setStore(
-            "parts",
-            produce((parts) => {
-              delete parts[old.id]
-            }),
-          )
-          updated[optimisticIdx] = message
-          return updated
-        }
       }
       return [...msgs, message]
     })
@@ -615,6 +693,11 @@ export const SessionProvider: ParentComponent = (props) => {
           delete map[sessionID]
         }),
       )
+      // Session is idle — any remaining pending optimistic IDs are either
+      // already confirmed (messageCreated removed them) or orphaned (queued
+      // callbacks were dropped on abort). Clean up the tracking set; the
+      // messages themselves will be reconciled on the next messagesLoaded.
+      pendingOptimistic.delete(sessionID)
     }
   }
 
@@ -667,6 +750,32 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function handleQuestionError(requestID: string) {
     setQuestionErrors((prev) => new Set(prev).add(requestID))
+  }
+
+  /**
+   * Handle a failed send: remove the optimistic message from the store
+   * and show a toast. The PromptInput restores the draft text separately
+   * by listening for the same sendMessageFailed event.
+   */
+  function handleSendMessageFailed(message: SendMessageFailedMessage) {
+    if (message.sessionID && message.messageID) {
+      pendingOptimistic.get(message.sessionID)?.delete(message.messageID)
+      batch(() => {
+        setStore("messages", message.sessionID!, (msgs = []) => msgs.filter((m) => m.id !== message.messageID))
+        setStore(
+          "parts",
+          produce((parts) => {
+            delete parts[message.messageID!]
+          }),
+        )
+      })
+    }
+
+    showToast({
+      variant: "error",
+      title: language.t("prompt.toast.promptSendFailed.title") ?? "Failed to send message",
+      description: message.error,
+    })
   }
 
   /**
@@ -736,6 +845,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function handleSessionDeleted(sessionID: string) {
+    pendingOptimistic.delete(sessionID)
     batch(() => {
       // Collect message IDs so we can clean up their parts
       const msgs = store.messages[sessionID] ?? []
@@ -802,6 +912,18 @@ export const SessionProvider: ParentComponent = (props) => {
         setLoading(false)
       }
     })
+  }
+
+  // Matches desktop app's event-reducer.ts: message.removed handler.
+  // Splices the message from the store and deletes its parts.
+  function handleMessageRemoved(sessionID: string, messageID: string) {
+    setStore("messages", sessionID, (msgs = []) => msgs.filter((m) => m.id !== messageID))
+    setStore(
+      "parts",
+      produce((parts) => {
+        delete parts[messageID]
+      }),
+    )
   }
 
   function handleCloudSessionDataLoaded(cloudSessionId: string, title: string, messages: Message[]) {
@@ -907,6 +1029,8 @@ export const SessionProvider: ParentComponent = (props) => {
       return
     }
 
+    const messageID = Identifier.ascending("message")
+
     const preview = cloudPreviewId()
     if (preview) {
       const agent = selectedAgentName() !== defaultAgent() ? selectedAgentName() : undefined
@@ -914,6 +1038,7 @@ export const SessionProvider: ParentComponent = (props) => {
         type: "importAndSend",
         cloudSessionId: preview,
         text,
+        messageID,
         providerID,
         modelID,
         agent,
@@ -925,17 +1050,36 @@ export const SessionProvider: ParentComponent = (props) => {
 
     const sid = currentSessionID()
     if (sid) {
-      const tempId = `optimistic-${crypto.randomUUID()}`
       const now = Date.now()
       const temp: Message = {
-        id: tempId,
+        id: messageID,
         sessionID: sid,
         role: "user",
         createdAt: new Date(now).toISOString(),
         time: { created: now },
       }
+      // Track this optimistic message so handleMessagesLoaded preserves it
+      const pending = pendingOptimistic.get(sid) ?? new Set()
+      pending.add(messageID)
+      pendingOptimistic.set(sid, pending)
+
+      const parts: Part[] = []
+      if (text) {
+        parts.push({ type: "text" as const, id: Identifier.ascending("part"), messageID, text })
+      }
+      for (const file of files ?? []) {
+        parts.push({
+          type: "file" as const,
+          id: Identifier.ascending("part"),
+          messageID,
+          mime: file.mime,
+          url: file.url,
+          filename: file.filename,
+        })
+      }
+
       setStore("messages", sid, (msgs = []) => [...msgs, temp])
-      setStore("parts", tempId, [{ type: "text" as const, id: `${tempId}-text`, text }])
+      setStore("parts", messageID, parts)
       // The optimistic message is now in the DOM but the session status is
       // still "idle" (the CLI backend hasn't started yet), so the auto-scroll
       // ResizeObserver won't scroll on its own. Force scroll to bottom so the
@@ -948,6 +1092,7 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({
       type: "sendMessage",
       text,
+      messageID,
       sessionID: sid,
       providerID,
       modelID,
@@ -994,8 +1139,8 @@ export const SessionProvider: ParentComponent = (props) => {
   function respondToPermission(
     permissionId: string,
     response: "once" | "always" | "reject",
-    approvedPatterns: string[],
-    deniedPatterns: string[],
+    approvedAlways: string[],
+    deniedAlways: string[],
   ) {
     // Resolve sessionID from the stored permission request
     const permission = permissions().find((p) => p.id === permissionId)
@@ -1010,8 +1155,8 @@ export const SessionProvider: ParentComponent = (props) => {
       permissionId,
       sessionID,
       response,
-      approvedPatterns,
-      deniedPatterns,
+      approvedAlways,
+      deniedAlways,
     })
   }
 
@@ -1056,10 +1201,6 @@ export const SessionProvider: ParentComponent = (props) => {
     setCurrentSessionID(undefined)
     setCloudPreviewId(null)
     setLoading(false)
-    setPermissions([])
-    setRespondingPermissions(new Set<string>())
-    setQuestions([])
-    setQuestionErrors(new Set<string>())
     setPendingAgentSelection(defaultAgent())
     vscode.postMessage({ type: "clearSession" })
   }
@@ -1103,6 +1244,13 @@ export const SessionProvider: ParentComponent = (props) => {
       console.warn("[Kilo New] Cannot delete session: not connected")
       return
     }
+    // Optimistically remove from the list so the UI updates immediately
+    setStore(
+      "sessions",
+      produce((sessions) => {
+        delete sessions[id]
+      }),
+    )
     vscode.postMessage({ type: "deleteSession", sessionID: id })
   }
 
@@ -1136,6 +1284,47 @@ export const SessionProvider: ParentComponent = (props) => {
   const allStatusMap = () => statusMap as Record<string, SessionStatusInfo>
 
   const userMessages = createMemo(() => messages().filter((m) => m.role === "user"))
+
+  const revert = createMemo(() => {
+    const id = currentSessionID()
+    // revert can be null (cleared by unrevert) or undefined (never set) — treat both as "no revert"
+    return id ? (store.sessions[id]?.revert ?? undefined) : undefined
+  })
+
+  const revertedCount = createMemo(() => {
+    const boundary = revert()?.messageID
+    if (!boundary) return 0
+    return userMessages().filter((m) => m.id >= boundary).length
+  })
+
+  const summary = createMemo(() => {
+    const id = currentSessionID()
+    return id ? (store.sessions[id]?.summary ?? undefined) : undefined
+  })
+
+  function revertSession(messageID: string) {
+    const id = currentSessionID()
+    if (!id) return
+    // Restore the reverted user message's prompt text into the input.
+    // Dispatch as a window message so PromptInput picks it up via onMessage.
+    const parts = store.parts[messageID]
+    if (parts) {
+      const text = parts
+        .filter((p) => p.type === "text" && !(p as { synthetic?: boolean }).synthetic)
+        .map((p) => (p as { text: string }).text ?? "")
+        .join("")
+      if (text) window.postMessage({ type: "setChatBoxMessage", text }, "*")
+    }
+    vscode.postMessage({ type: "revertSession", sessionID: id, messageID })
+  }
+
+  function unrevertSession() {
+    const id = currentSessionID()
+    if (!id) return
+    // Clear the prompt input on full redo (matching TUI/desktop behavior)
+    window.postMessage({ type: "setChatBoxMessage", text: "" }, "*")
+    vscode.postMessage({ type: "unrevertSession", sessionID: id })
+  }
 
   function syncSession(sessionID: string) {
     vscode.postMessage({ type: "syncSession", sessionID })
@@ -1210,6 +1399,10 @@ export const SessionProvider: ParentComponent = (props) => {
     totalCost,
     contextUsage,
     agents,
+    skills,
+    refreshSkills,
+    removeSkill,
+    removeMode,
     selectedAgent: selectedAgentName,
     selectAgent,
     getSessionAgent: (sessionID: string) => store.agentSelections[sessionID] ?? defaultAgent(),
@@ -1231,6 +1424,11 @@ export const SessionProvider: ParentComponent = (props) => {
     variantList,
     currentVariant,
     selectVariant,
+    revert,
+    revertedCount,
+    summary,
+    revertSession,
+    unrevertSession,
     sendMessage,
     abort,
     compact,

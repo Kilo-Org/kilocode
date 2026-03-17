@@ -1,15 +1,16 @@
-import { Component, createSignal, createMemo, createEffect, For, Show, onCleanup } from "solid-js"
+import { Component, createSignal, createMemo, createEffect, For, Show } from "solid-js"
 import { Select } from "@kilocode/kilo-ui/select"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { Dialog } from "@kilocode/kilo-ui/dialog"
+import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 
 import { useConfig } from "../../context/config"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
-import { useVSCode } from "../../context/vscode"
-import type { AgentConfig, SkillInfo, ExtensionMessage } from "../../types/messages"
+import type { AgentConfig, AgentInfo, SkillInfo } from "../../types/messages"
 
 type SubtabId = "agents" | "mcpServers" | "rules" | "workflows" | "skills"
 
@@ -52,29 +53,19 @@ const AgentBehaviourTab: Component = () => {
   const language = useLanguage()
   const { config, updateConfig } = useConfig()
   const session = useSession()
-  const vscode = useVSCode()
+  const dialog = useDialog()
   const [activeSubtab, setActiveSubtab] = createSignal<SubtabId>("agents")
   const [selectedAgent, setSelectedAgent] = createSignal<string>("")
   const [newSkillPath, setNewSkillPath] = createSignal("")
   const [newSkillUrl, setNewSkillUrl] = createSignal("")
   const [newInstruction, setNewInstruction] = createSignal("")
-  const [discoveredSkills, setDiscoveredSkills] = createSignal<SkillInfo[]>([])
-
-  // Subscribe to skillsLoaded messages from the extension
-  const unsub = vscode.onMessage((message: ExtensionMessage) => {
-    if (message.type === "skillsLoaded") {
-      setDiscoveredSkills(message.skills)
-    }
-  })
 
   // Fetch skills whenever the skills subtab becomes active
   createEffect(() => {
     if (activeSubtab() === "skills") {
-      vscode.postMessage({ type: "requestSkills" })
+      session.refreshSkills()
     }
   })
-
-  onCleanup(() => unsub())
 
   const agentNames = createMemo(() => {
     const names = session.agents().map((a) => a.name)
@@ -179,6 +170,61 @@ const AgentBehaviourTab: Component = () => {
     updateConfig({ skills: { ...config().skills, urls: current } })
   }
 
+  const confirmRemoveSkill = (skill: SkillInfo) => {
+    dialog.show(() => (
+      <Dialog title={language.t("settings.agentBehaviour.removeSkill.title")} fit>
+        <div class="dialog-confirm-body">
+          <span>{language.t("settings.agentBehaviour.removeSkill.confirm", { name: skill.name })}</span>
+          <div class="dialog-confirm-actions">
+            <Button variant="ghost" size="large" onClick={() => dialog.close()}>
+              {language.t("common.cancel")}
+            </Button>
+            <Button
+              variant="primary"
+              size="large"
+              onClick={() => {
+                session.removeSkill(skill.location)
+                dialog.close()
+              }}
+            >
+              {language.t("settings.agentBehaviour.removeSkill.button")}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+    ))
+  }
+
+  const removableModes = createMemo(() => session.agents().filter((a) => !a.native))
+
+  const confirmRemoveMode = (agent: AgentInfo) => {
+    dialog.show(() => (
+      <Dialog title={language.t("settings.agentBehaviour.removeMode.title")} fit>
+        <div class="dialog-confirm-body">
+          <span>{language.t("settings.agentBehaviour.removeMode.confirm", { name: agent.name })}</span>
+          <div class="dialog-confirm-actions">
+            <Button variant="ghost" size="large" onClick={() => dialog.close()}>
+              {language.t("common.cancel")}
+            </Button>
+            <Button
+              variant="primary"
+              size="large"
+              onClick={() => {
+                dialog.close()
+                // Delay optimistic removal until after dialog close animation (100ms)
+                // to prevent the reactive list re-render from firing click handlers
+                // on shifted list items while the dialog overlay is still present.
+                setTimeout(() => session.removeMode(agent.name), 150)
+              }}
+            >
+              {language.t("settings.agentBehaviour.removeMode.button")}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+    ))
+  }
+
   const renderAgentsSubtab = () => (
     <div>
       {/* Default agent */}
@@ -193,7 +239,12 @@ const AgentBehaviourTab: Component = () => {
             current={defaultAgentOptions().find((o) => o.value === (config().default_agent ?? ""))}
             value={(o) => o.value}
             label={(o) => o.label}
-            onSelect={(o) => o && updateConfig({ default_agent: o.value || undefined })}
+            onSelect={(o) => {
+              if (!o) return
+              const next = o.value || undefined
+              if (next === (config().default_agent ?? undefined)) return
+              updateConfig({ default_agent: next })
+            }}
             variant="secondary"
             size="small"
             triggerVariant="settings"
@@ -329,6 +380,48 @@ const AgentBehaviourTab: Component = () => {
           </SettingsRow>
         </Card>
       </Show>
+
+      {/* Available modes (non-native only, with remove button) */}
+      <Show when={removableModes().length > 0}>
+        <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>
+          {language.t("settings.agentBehaviour.availableModes")}
+        </h4>
+        <Card>
+          <For each={removableModes()}>
+            {(agent, index) => (
+              <div
+                style={{
+                  display: "flex",
+                  "align-items": "center",
+                  "justify-content": "space-between",
+                  padding: "8px 0",
+                  "border-bottom": index() < removableModes().length - 1 ? "1px solid var(--border-weak-base)" : "none",
+                }}
+              >
+                <div style={{ flex: 1, "min-width": 0 }}>
+                  <div data-slot="settings-row-label-title" style={{ "margin-bottom": "0" }}>
+                    {agent.name}
+                  </div>
+                  <Show when={agent.description}>
+                    <div data-slot="settings-row-label-subtitle" style={{ "margin-top": "4px" }}>
+                      {agent.description}
+                    </div>
+                  </Show>
+                </div>
+                <IconButton
+                  size="small"
+                  variant="ghost"
+                  icon="close"
+                  onClick={(e: MouseEvent) => {
+                    e.stopPropagation()
+                    confirmRemoveMode(agent)
+                  }}
+                />
+              </div>
+            )}
+          </For>
+        </Card>
+      </Show>
     </div>
   )
 
@@ -372,7 +465,10 @@ const AgentBehaviourTab: Component = () => {
                   >
                     <Show when={mcp.command}>
                       <div>
-                        command: {mcp.command} {(mcp.args ?? []).join(" ")}
+                        command:{" "}
+                        {Array.isArray(mcp.command)
+                          ? mcp.command.join(" ")
+                          : `${mcp.command} ${(mcp.args ?? []).join(" ")}`}
                       </div>
                     </Show>
                     <Show when={mcp.url}>
@@ -395,7 +491,7 @@ const AgentBehaviourTab: Component = () => {
         {language.t("settings.agentBehaviour.discoveredSkills")}
       </h4>
       <Show
-        when={discoveredSkills().length > 0}
+        when={session.skills().length > 0}
         fallback={
           <Card style={{ "margin-bottom": "16px" }}>
             <div data-slot="settings-row-label-subtitle">{language.t("settings.agentBehaviour.noSkillsFound")}</div>
@@ -403,28 +499,33 @@ const AgentBehaviourTab: Component = () => {
         }
       >
         <Card style={{ "margin-bottom": "16px" }}>
-          <For each={discoveredSkills()}>
+          <For each={session.skills()}>
             {(skill, index) => (
               <div
                 style={{
+                  display: "flex",
+                  "align-items": "center",
+                  "justify-content": "space-between",
                   padding: "8px 0",
-                  "border-bottom":
-                    index() < discoveredSkills().length - 1 ? "1px solid var(--border-weak-base)" : "none",
+                  "border-bottom": index() < session.skills().length - 1 ? "1px solid var(--border-weak-base)" : "none",
                 }}
               >
-                <div data-slot="settings-row-label-title" style={{ "margin-bottom": "0" }}>
-                  {skill.name}
+                <div style={{ flex: 1, "min-width": 0 }}>
+                  <div data-slot="settings-row-label-title" style={{ "margin-bottom": "0" }}>
+                    {skill.name}
+                  </div>
+                  <div
+                    data-slot="settings-row-label-subtitle"
+                    style={{
+                      "margin-top": "4px",
+                      "font-family": "var(--vscode-editor-font-family, monospace)",
+                    }}
+                  >
+                    <div>{skill.description}</div>
+                    <div>{skill.location}</div>
+                  </div>
                 </div>
-                <div
-                  data-slot="settings-row-label-subtitle"
-                  style={{
-                    "margin-top": "4px",
-                    "font-family": "var(--vscode-editor-font-family, monospace)",
-                  }}
-                >
-                  <div>{skill.description}</div>
-                  <div>{skill.location}</div>
-                </div>
+                <IconButton size="small" variant="ghost" icon="close" onClick={() => confirmRemoveSkill(skill)} />
               </div>
             )}
           </For>

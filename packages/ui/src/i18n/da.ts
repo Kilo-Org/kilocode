@@ -93,6 +93,8 @@ export const dict = {
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
   "ui.tool.webfetch": "Webhentning",
+  "ui.tool.websearch": "Websøgning",
+  "ui.tool.codesearch": "Kodesøgning",
   "ui.tool.shell": "Shell",
   "ui.tool.patch": "Patch",
   "ui.tool.todos": "Opgaver",
@@ -117,8 +119,6 @@ export const dict = {
   "ui.permission.deny": "Afvis",
   "ui.permission.allowAlways": "Tillad altid",
   "ui.permission.allowOnce": "Tillad én gang",
-  "ui.permission.sessionHint":
-    '"Tillad altid" gælder kun for denne session. Brug indstillinger til globale tilladelser.',
 
   "ui.message.expand": "Udvid besked",
   "ui.message.collapse": "Skjul besked",
@@ -126,6 +126,7 @@ export const dict = {
   "ui.message.copyMessage": "Kopier besked",
   "ui.message.copyResponse": "Kopier svar",
   "ui.message.copied": "Kopieret!",
+  "ui.message.revert": "Revert to here",
   "ui.message.interrupted": "Afbrudt",
   "ui.message.queued": "I kø",
   "ui.message.attachment.alt": "vedhæftning",

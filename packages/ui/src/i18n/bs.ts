@@ -98,6 +98,8 @@ export const dict = {
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
   "ui.tool.webfetch": "Web preuzimanje",
+  "ui.tool.websearch": "Pretraga weba",
+  "ui.tool.codesearch": "Pretraga koda",
   "ui.tool.shell": "Shell",
   "ui.tool.patch": "Patch",
   "ui.tool.todos": "Lista zadataka",
@@ -122,8 +124,6 @@ export const dict = {
   "ui.permission.deny": "Zabrani",
   "ui.permission.allowAlways": "Uvijek dozvoli",
   "ui.permission.allowOnce": "Dozvoli jednom",
-  "ui.permission.sessionHint":
-    '"Uvijek dozvoli" primjenjuje se samo na ovu sesiju. Koristite postavke za globalne dozvole.',
 
   "ui.message.expand": "Proširi poruku",
   "ui.message.collapse": "Sažmi poruku",
@@ -131,6 +131,7 @@ export const dict = {
   "ui.message.copyMessage": "Kopiraj poruku",
   "ui.message.copyResponse": "Kopiraj odgovor",
   "ui.message.copied": "Kopirano!",
+  "ui.message.revert": "Revert to here",
   "ui.message.interrupted": "Prekinuto",
   "ui.message.queued": "U redu",
   "ui.message.attachment.alt": "prilog",

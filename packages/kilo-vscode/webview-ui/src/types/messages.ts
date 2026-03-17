@@ -34,6 +34,13 @@ export interface TextPart extends BasePart {
   text: string
 }
 
+export interface FilePart extends BasePart {
+  type: "file"
+  mime: string
+  url: string
+  filename?: string
+}
+
 export interface ToolPart extends BasePart {
   type: "tool"
   tool: string
@@ -62,7 +69,7 @@ export interface StepFinishPart extends BasePart {
   }
 }
 
-export type Part = TextPart | ToolPart | ReasoningPart | StepStartPart | StepFinishPart
+export type Part = TextPart | FilePart | ToolPart | ReasoningPart | StepStartPart | StepFinishPart
 
 // Part delta for streaming updates
 export interface PartDelta {
@@ -106,12 +113,34 @@ export interface Message {
   tokens?: TokenUsage
 }
 
+// File diff info (matches Snapshot.FileDiff from CLI backend)
+export interface SessionFileDiff {
+  file: string
+  before: string
+  after: string
+  additions: number
+  deletions: number
+  status?: "added" | "deleted" | "modified"
+}
+
 // Session info (simplified for webview)
 export interface SessionInfo {
   id: string
   title?: string
   createdAt: string
   updatedAt: string
+  revert?: {
+    messageID: string
+    partID?: string
+    snapshot?: string
+    diff?: string
+  } | null
+  summary?: {
+    additions: number
+    deletions: number
+    files: number
+    diffs?: SessionFileDiff[]
+  } | null
 }
 
 // Cloud session info (from Kilo cloud API)
@@ -128,7 +157,7 @@ export interface PermissionRequest {
   sessionID: string
   toolName: string
   patterns: string[]
-  args: Record<string, unknown>
+  args: Record<string, unknown> & { rules?: string[] }
   message?: string
   tool?: { messageID: string; callID: string }
 }
@@ -282,11 +311,14 @@ export interface ProviderConfig {
 }
 
 export interface McpConfig {
-  command?: string
+  type?: "local" | "remote"
+  command?: string[] | string
   args?: string[]
   env?: Record<string, string>
+  environment?: Record<string, string>
   url?: string
   headers?: Record<string, string>
+  enabled?: boolean
 }
 
 export interface CommandConfig {
@@ -311,6 +343,7 @@ export interface WatcherConfig {
 export interface ExperimentalConfig {
   disable_paste_summary?: boolean
   batch_tool?: boolean
+  codebase_search?: boolean
   primary_tools?: string[]
   continue_loop_on_deny?: boolean
   mcp_timeout?: number
@@ -374,6 +407,15 @@ export interface ErrorMessage {
   sessionID?: string
 }
 
+export interface SendMessageFailedMessage {
+  type: "sendMessageFailed"
+  error: string
+  text: string
+  sessionID?: string
+  messageID?: string
+  files?: FileAttachment[]
+}
+
 export interface PartUpdatedMessage {
   type: "partUpdated"
   sessionID?: string
@@ -426,6 +468,12 @@ export interface SessionUpdatedMessage {
 export interface SessionDeletedMessage {
   type: "sessionDeleted"
   sessionID: string
+}
+
+export interface MessageRemovedMessage {
+  type: "messageRemoved"
+  sessionID: string
+  messageID: string
 }
 
 export interface MessagesLoadedMessage {
@@ -541,6 +589,7 @@ export interface DeviceAuthCancelledMessage {
 export interface NavigateMessage {
   type: "navigate"
   view: "newTask" | "marketplace" | "history" | "cloudHistory" | "profile" | "settings" | "migration" | "subAgentViewer" // legacy-migration: "migration"
+  tab?: string
 }
 
 export interface ProvidersLoadedMessage {
@@ -1014,10 +1063,64 @@ export interface DiffViewerLoadingMessage {
   loading: boolean
 }
 
+// ============================================
+// Marketplace Messages
+// ============================================
+
+import type {
+  MarketplaceItem,
+  MarketplaceInstalledMetadata,
+  InstallMarketplaceItemOptions,
+  MarketplaceFilters,
+} from "./marketplace"
+
+export interface MarketplaceDataMessage {
+  type: "marketplaceData"
+  marketplaceItems: MarketplaceItem[]
+  marketplaceInstalledMetadata: MarketplaceInstalledMetadata
+  errors?: string[]
+}
+
+export interface MarketplaceInstallResultMessage {
+  type: "marketplaceInstallResult"
+  success: boolean
+  slug: string
+  error?: string
+}
+
+export interface MarketplaceRemoveResultMessage {
+  type: "marketplaceRemoveResult"
+  success: boolean
+  slug: string
+  error?: string
+}
+
+export interface FetchMarketplaceDataMessage {
+  type: "fetchMarketplaceData"
+}
+
+export interface FilterMarketplaceItemsMessage {
+  type: "filterMarketplaceItems"
+  filters: MarketplaceFilters
+}
+
+export interface InstallMarketplaceItemMessage {
+  type: "installMarketplaceItem"
+  mpItem: MarketplaceItem
+  mpInstallOptions: InstallMarketplaceItemOptions
+}
+
+export interface RemoveInstalledMarketplaceItemMessage {
+  type: "removeInstalledMarketplaceItem"
+  mpItem: MarketplaceItem
+  mpInstallOptions: InstallMarketplaceItemOptions
+}
+
 export type ExtensionMessage =
   | ReadyMessage
   | ConnectionStateMessage
   | ErrorMessage
+  | SendMessageFailedMessage
   | PartUpdatedMessage
   | SessionStatusMessage
   | PermissionRequestMessage
@@ -1027,6 +1130,7 @@ export type ExtensionMessage =
   | SessionCreatedMessage
   | SessionUpdatedMessage
   | SessionDeletedMessage
+  | MessageRemovedMessage
   | MessagesLoadedMessage
   | MessageCreatedMessage
   | SessionsLoadedMessage
@@ -1092,6 +1196,9 @@ export type ExtensionMessage =
   | ViewSubAgentSessionMessage
   | DiffViewerDiffsMessage
   | DiffViewerLoadingMessage
+  | MarketplaceDataMessage
+  | MarketplaceInstallResultMessage
+  | MarketplaceRemoveResultMessage
 
 // ============================================
 // Messages FROM webview TO extension
@@ -1100,11 +1207,13 @@ export type ExtensionMessage =
 export interface FileAttachment {
   mime: string
   url: string
+  filename?: string
 }
 
 export interface SendMessageRequest {
   type: "sendMessage"
   text: string
+  messageID?: string
   sessionID?: string
   providerID?: string
   modelID?: string
@@ -1118,13 +1227,24 @@ export interface AbortRequest {
   sessionID: string
 }
 
+export interface RevertSessionRequest {
+  type: "revertSession"
+  sessionID: string
+  messageID: string
+}
+
+export interface UnrevertSessionRequest {
+  type: "unrevertSession"
+  sessionID: string
+}
+
 export interface PermissionResponseRequest {
   type: "permissionResponse"
   permissionId: string
   sessionID: string
   response: "once" | "always" | "reject"
-  approvedPatterns: string[]
-  deniedPatterns: string[]
+  approvedAlways: string[]
+  deniedAlways: string[]
 }
 
 export interface CreateSessionRequest {
@@ -1164,6 +1284,7 @@ export interface ImportAndSendMessage {
   type: "importAndSend"
   cloudSessionId: string
   text: string
+  messageID?: string
   providerID?: string
   modelID?: string
   agent?: string
@@ -1225,6 +1346,16 @@ export interface RequestAgentsMessage {
 
 export interface RequestSkillsMessage {
   type: "requestSkills"
+}
+
+export interface RemoveSkillMessage {
+  type: "removeSkill"
+  location: string
+}
+
+export interface RemoveModeMessage {
+  type: "removeMode"
+  name: string
 }
 
 export interface SetLanguageRequest {
@@ -1305,6 +1436,11 @@ export interface RequestNotificationSettingsMessage {
 
 export interface ResetAllSettingsRequest {
   type: "resetAllSettings"
+}
+
+export interface SettingsTabChangedMessage {
+  type: "settingsTabChanged"
+  tab: string
 }
 
 export interface RequestNotificationsMessage {
@@ -1583,6 +1719,8 @@ export interface SetDefaultBaseBranchRequest {
 export type WebviewMessage =
   | SendMessageRequest
   | AbortRequest
+  | RevertSessionRequest
+  | UnrevertSessionRequest
   | PermissionResponseRequest
   | CreateSessionRequest
   | ClearSessionRequest
@@ -1602,6 +1740,8 @@ export type WebviewMessage =
   | CompactRequest
   | RequestAgentsMessage
   | RequestSkillsMessage
+  | RemoveSkillMessage
+  | RemoveModeMessage
   | SetLanguageRequest
   | QuestionReplyRequest
   | QuestionRejectRequest
@@ -1618,6 +1758,7 @@ export type WebviewMessage =
   | UpdateConfigMessage
   | RequestNotificationSettingsMessage
   | ResetAllSettingsRequest
+  | SettingsTabChangedMessage
   | SyncSessionRequest
   | CreateWorktreeSessionRequest
   | RequestNotificationsMessage
@@ -1669,6 +1810,10 @@ export type WebviewMessage =
   | RetryConnectionRequest
   | OpenSubAgentViewerRequest
   | SetDefaultBaseBranchRequest
+  | FetchMarketplaceDataMessage
+  | FilterMarketplaceItemsMessage
+  | InstallMarketplaceItemMessage
+  | RemoveInstalledMarketplaceItemMessage
 
 // ============================================
 // VS Code API type

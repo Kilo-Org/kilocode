@@ -14,4 +14,33 @@ export const dict = {
 
   // Reasoning block label
   "ui.reasoning.label": "الاستدلال",
+
+  // Marketplace
+  "marketplace.tab.skills": "المهارات",
+  "marketplace.tab.mcpServers": "خوادم MCP",
+  "marketplace.tab.modes": "الأوضاع",
+  "marketplace.search.skills": "البحث في المهارات...",
+  "marketplace.category.all": "الكل",
+  "marketplace.empty.skills": "لم يتم العثور على مهارات",
+  "marketplace.placeholder": "سيتم تنفيذه لاحقاً",
+  "marketplace.card.installed": "مثبت",
+  "marketplace.card.install": "تثبيت",
+  "marketplace.card.remove": "إزالة",
+  "marketplace.card.removeScope": "إزالة ({{scope}})",
+  "marketplace.install.title": "تثبيت {{name}}",
+  "marketplace.install.scope": "النطاق",
+  "marketplace.install.scope.project": "المشروع",
+  "marketplace.install.scope.global": "عالمي",
+  "marketplace.install.prerequisites": "المتطلبات الأساسية",
+  "marketplace.install.installing": "جاري التثبيت...",
+  "marketplace.install.cancel": "إلغاء",
+  "marketplace.install.success": "تم التثبيت بنجاح!",
+  "marketplace.install.failed": "فشل التثبيت",
+  "marketplace.install.done": "تم",
+  "marketplace.install.close": "إغلاق",
+  "marketplace.remove.title": "إزالة {{name}}؟",
+  "marketplace.remove.confirm":
+    "هل أنت متأكد أنك تريد إزالة هذا الـ {{type}}؟ سيؤدي هذا إلى إزالته من تكوين {{scope}} الخاص بك.",
+  "marketplace.remove.cancel": "إلغاء",
+  "marketplace.remove.confirm.button": "إزالة",
 }

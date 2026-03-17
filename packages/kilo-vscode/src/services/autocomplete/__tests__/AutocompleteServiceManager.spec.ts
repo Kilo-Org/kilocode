@@ -63,12 +63,7 @@ vi.mock("vscode", () => {
 
 vi.mock("../AutocompleteModel", () => {
   class AutocompleteModel {
-    public loaded = false
     public profileName = "test-profile"
-
-    public async reload(): Promise<void> {
-      this.loaded = true
-    }
 
     public getModelName(): string {
       return "test-model"
@@ -169,7 +164,9 @@ async function createManager(): Promise<AutocompleteServiceManager> {
     postStateToWebview: vi.fn().mockResolvedValue(undefined),
   }
 
-  const manager = new AutocompleteServiceManager(context, cline as any)
+  const connection = { onStateChange: vi.fn().mockReturnValue(() => {}), ...cline }
+
+  const manager = new AutocompleteServiceManager(context, connection as any)
 
   await manager.load()
 
