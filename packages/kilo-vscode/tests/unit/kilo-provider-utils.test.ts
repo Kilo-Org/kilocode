@@ -284,6 +284,7 @@ describe("mapSSEEventToWebviewMessage", () => {
       expect(msg.permission.args).toEqual({ path: "/foo" })
       expect(msg.permission.message).toBe("Permission required: read_file")
       expect(msg.permission.patterns).toEqual(["**/*.ts"])
+      expect(msg.permission.always).toEqual([])
     }
   })
 

@@ -197,7 +197,7 @@ export namespace PermissionNext {
       const existing = s.pending[input.requestID]
       if (!existing) throw new NotFoundError({ message: `Permission request ${input.requestID} not found` })
 
-      const validRules = new Set(existing.info.metadata?.rules ?? [])
+      const validRules = new Set([...(existing.info.metadata?.rules ?? []), ...existing.info.always])
       const permission = existing.info.permission
 
       const newRules: Ruleset = []

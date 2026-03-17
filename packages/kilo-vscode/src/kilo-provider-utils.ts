@@ -162,6 +162,7 @@ export type WebviewMessage =
         sessionID: string
         toolName: string
         patterns: string[]
+        always: string[]
         args: Record<string, unknown>
         message: string
         tool?: { messageID: string; callID: string }
@@ -226,6 +227,7 @@ export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | un
           sessionID: event.properties.sessionID,
           toolName: event.properties.permission,
           patterns: event.properties.patterns ?? [],
+          always: event.properties.always ?? [],
           args: event.properties.metadata,
           message: `Permission required: ${event.properties.permission}`,
           tool: event.properties.tool,

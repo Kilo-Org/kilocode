@@ -4,6 +4,8 @@
  * Uses kilo-ui's DockPrompt component for proper surface styling.
  *
  * Per-rule toggles allow users to approve/deny individual permission rules for future requests.
+ * For bash, the hierarchical rules from metadata.rules are shown.
+ * For other tools, the always array is shown so users can configure per-tool permissions.
  * The command buttons (Deny / Allow Once) control the current command.
  * When all rules are toggled ✓, the command auto-runs.
  */
@@ -30,8 +32,8 @@ export const PermissionDock: Component<{
   const language = useLanguage()
 
   const fromChild = () => props.request.sessionID !== session.currentSessionID()
-  // Bash sends fine-grained rules via metadata.rules; other tools have no dropdown.
-  const rules = () => props.request.args?.rules ?? []
+  // Bash sends fine-grained rules via metadata.rules; other tools use the always array.
+  const rules = () => props.request.args?.rules ?? props.request.always ?? []
   // Rules like "git *" or "git log *" — strip the trailing wildcard for display.
   // A bare "*" (global wildcard) becomes empty so only the tool name shows.
   const label = (rule: string) => (rule === "*" ? "" : rule.replace(/ \*$/, ""))
