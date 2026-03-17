@@ -66,12 +66,36 @@ export namespace PermissionNext {
   }
 
   // kilocode_change start — inverse of fromConfig: convert rules back to config format
+  /**
+   * Permissions typed as PermissionAction in the config schema (scalar-only).
+   * These must be serialized as "allow"/"deny"/"ask", not as { "*": "allow" }.
+   */
+  const SCALAR_ONLY_PERMISSIONS = new Set([
+    "todowrite",
+    "todoread",
+    "question",
+    "webfetch",
+    "websearch",
+    "codesearch",
+    "doom_loop",
+  ])
+
   export function toConfig(rules: Ruleset): Config.Permission {
     const result: Config.Permission = {}
     for (const rule of rules) {
       const existing = result[rule.permission]
+
+      // Scalar-only permissions (e.g. websearch, todowrite, doom_loop) only
+      // accept PermissionAction ("allow"/"deny"/"ask"), not object form.
+      // Use scalar format for "*"; skip non-wildcard patterns (they can't be
+      // represented in the config schema — they only work in-memory).
+      if (SCALAR_ONLY_PERMISSIONS.has(rule.permission)) {
+        if (rule.pattern === "*") result[rule.permission] = rule.action
+        continue
+      }
+
       if (existing === undefined) {
-        // Always use object format to avoid replacing existing granular rules
+        // Use object format to avoid replacing existing granular rules
         // when merged via updateGlobal (e.g. { read: "allow" } would wipe
         // { read: { "*": "ask", "src/*": "allow" } })
         result[rule.permission] = { [rule.pattern]: rule.action }
@@ -194,15 +218,15 @@ export namespace PermissionNext {
       const existing = s.pending[input.requestID]
       if (!existing) throw new NotFoundError({ message: `Permission request ${input.requestID} not found` })
 
-      const validRules = new Set(existing.info.metadata?.rules ?? [])
+      // Combine metadata.rules (bash hierarchy) and always (all tools).
+      // Set preserves insertion order and deduplicates.
+      const validRules = new Set([...(existing.info.metadata?.rules ?? []), ...existing.info.always])
       const permission = existing.info.permission
 
-      // Build rules in metadata.rules order so broader patterns come before
-      // specific ones, preserving intended precedence for evaluate(findLast).
       const approvedSet = new Set(input.approvedAlways ?? [])
       const deniedSet = new Set(input.deniedAlways ?? [])
       const newRules: Ruleset = []
-      for (const pattern of existing.info.metadata?.rules ?? []) {
+      for (const pattern of validRules) {
         if (approvedSet.has(pattern)) newRules.push({ permission, pattern, action: "allow" })
         if (deniedSet.has(pattern)) newRules.push({ permission, pattern, action: "deny" })
       }

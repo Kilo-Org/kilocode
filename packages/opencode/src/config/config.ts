@@ -1563,7 +1563,10 @@ export namespace Config {
     })
   }
 
-  export async function updateGlobal(config: Info) {
+  // kilocode_change start — add dispose option to skip Instance.disposeAll for permission-only changes
+  export async function updateGlobal(config: Info, options?: { dispose?: boolean }) {
+    const dispose = options?.dispose ?? true
+    // kilocode_change end
     const filepath = globalConfigFile()
     const before = await Filesystem.readText(filepath).catch((err: any) => {
       if (err.code === "ENOENT") return "{}"

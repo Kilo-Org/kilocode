@@ -4,7 +4,9 @@
  * Uses kilo-ui's DockPrompt component for proper surface styling.
  *
  * Per-rule toggles allow users to approve/deny individual permission rules for future requests.
- * The command buttons (Deny / Allow Always / Allow Once) control the current command.
+ * For bash, the hierarchical rules from metadata.rules are shown.
+ * For other tools, the always array is shown so users can configure per-tool permissions.
+ * The command buttons (Deny / Allow Once) control the current command.
  * When all rules are toggled ✓, the command auto-runs.
  */
 
@@ -24,14 +26,14 @@ let rulesExpandedPreference = false
 export const PermissionDock: Component<{
   request: PermissionRequest
   responding: boolean
-  onDecide: (response: "once" | "always" | "reject", approvedAlways: string[], deniedAlways: string[]) => void
+  onDecide: (response: "once" | "reject", approvedAlways: string[], deniedAlways: string[]) => void
 }> = (props) => {
   const session = useSession()
   const language = useLanguage()
 
   const fromChild = () => props.request.sessionID !== session.currentSessionID()
-  // Bash sends fine-grained rules via metadata.rules; other tools have no dropdown.
-  const rules = () => props.request.args?.rules ?? []
+  // Bash sends fine-grained rules via metadata.rules; other tools use the always array.
+  const rules = () => props.request.args?.rules ?? props.request.always ?? []
   // Rules like "git *" or "git log *" — strip the trailing wildcard for display.
   // A bare "*" (global wildcard) becomes empty so only the tool name shows.
   const label = (rule: string) => (rule === "*" ? "" : rule.replace(/ \*$/, ""))
@@ -43,7 +45,6 @@ export const PermissionDock: Component<{
   const [decisions, setDecisions] = createSignal<Record<number, RuleDecision>>({})
   const [expanded, setExpanded] = createSignal(rulesExpandedPreference)
 
-  const hasDenied = () => Object.values(decisions()).some((d) => d === "denied")
   const hasRules = () => rules().length > 0
 
   const toggleExpanded = () => {
@@ -190,17 +191,6 @@ export const PermissionDock: Component<{
           disabled={props.responding}
         >
           {language.t("ui.permission.allowOnce")}
-        </Button>
-        <Button
-          variant="secondary"
-          size="small"
-          onClick={() => {
-            const { approved, denied } = collectRules()
-            props.onDecide("always", approved, denied)
-          }}
-          disabled={props.responding || hasDenied()}
-        >
-          {language.t("ui.permission.allowAlways")}
         </Button>
         <Button
           variant="ghost"
