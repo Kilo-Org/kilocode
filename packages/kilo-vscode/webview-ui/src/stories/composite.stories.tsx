@@ -12,6 +12,7 @@ import type { AssistantMessage as SDKAssistantMessage, TextPart, ToolPart } from
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { AssistantMessage } from "../components/chat/AssistantMessage"
 import { ChatView } from "../components/chat/ChatView"
+import { Part } from "@kilocode/kilo-ui/message-part"
 import { registerVscodeToolOverrides } from "../components/chat/VscodeToolOverrides"
 import { SessionContext } from "../context/session"
 import type { PermissionRequest, QuestionRequest } from "../types/messages"
@@ -773,7 +774,7 @@ export const PermissionDockSubagent: Story = {
 }
 
 // ---------------------------------------------------------------------------
-// 17. MCP tool cards — collapsed (completed, not expanded)
+// 17. MCP tool cards — collapsed
 // ---------------------------------------------------------------------------
 
 const mcpCompleted: ToolPart = {
@@ -812,20 +813,6 @@ const mcpShort: ToolPart = {
   },
 }
 
-const mcpPending: ToolPart = {
-  id: "part-mcp-003",
-  sessionID: SESSION_ID,
-  messageID: ASST_MSG_ID,
-  type: "tool",
-  callID: "call-mcp-003",
-  tool: "slack_conversations_history",
-  state: {
-    status: "pending",
-    input: { channel_id: "#general" },
-    raw: "",
-  } as any,
-}
-
 export const McpToolCards: Story = {
   name: "MCP Tool Cards — collapsed",
   render: () => {
@@ -839,32 +826,18 @@ export const McpToolCards: Story = {
 }
 
 // ---------------------------------------------------------------------------
-// 18. MCP tool card — pending (spinner)
+// 18. MCP tool card — expanded (defaultOpen)
 // ---------------------------------------------------------------------------
 
-export const McpToolPending: Story = {
-  name: "MCP Tool Card — pending",
+export const McpToolExpanded: Story = {
+  name: "MCP Tool Card — expanded",
   render: () => {
-    const data = dataWith([mcpPending])
+    const data = dataWith([mcpCompleted])
     return (
       <StoryProviders data={data} sessionID={SESSION_ID}>
-        <AssistantMessage message={baseAssistantMessage} />
-      </StoryProviders>
-    )
-  },
-}
-
-// ---------------------------------------------------------------------------
-// 19. MCP tool cards mixed with built-in tools
-// ---------------------------------------------------------------------------
-
-export const McpMixedWithBuiltin: Story = {
-  name: "MCP + built-in tools mixed",
-  render: () => {
-    const data = dataWith([readCompleted, mcpCompleted, grepCompleted, mcpShort])
-    return (
-      <StoryProviders data={data} sessionID={SESSION_ID}>
-        <AssistantMessage message={baseAssistantMessage} />
+        <div data-component="tool-part-wrapper" data-part-type="tool">
+          <Part part={mcpCompleted} message={baseAssistantMessage as any} defaultOpen />
+        </div>
       </StoryProviders>
     )
   },
