@@ -56,7 +56,6 @@ import { useFileComponent } from "../context/file"
 import { useDialog } from "../context/dialog"
 import { useI18n } from "../context/i18n"
 import { BasicTool } from "./basic-tool"
-import { GenericTool } from "./basic-tool"
 import { Accordion } from "./accordion"
 import { StickyAccordionHeader } from "./sticky-accordion-header"
 import { Card } from "./card"
@@ -1120,6 +1119,30 @@ function ToolFileAccordion(props: { path: string; actions?: JSX.Element; childre
   )
 }
 
+// kilocode_change start
+function McpTool(props: ToolProps) {
+  return (
+    <BasicTool
+      icon="mcp"
+      status={props.status}
+      trigger={{ title: props.tool }}
+      hideDetails={props.hideDetails}
+      defaultOpen={props.defaultOpen}
+      forceOpen={props.forceOpen}
+      locked={props.locked}
+    >
+      <Show when={props.output}>
+        {(output) => (
+          <div data-component="tool-output" data-scrollable>
+            <Markdown text={output()} />
+          </div>
+        )}
+      </Show>
+    </BasicTool>
+  )
+}
+// kilocode_change end
+
 PART_MAPPING["tool"] = function ToolPartDisplay(props) {
   const i18n = useI18n()
   const part = () => props.part as ToolPart
@@ -1136,7 +1159,7 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
   // @ts-expect-error
   const partMetadata = () => part().state?.metadata ?? emptyMetadata
 
-  const render = createMemo(() => ToolRegistry.render(part().tool) ?? GenericTool)
+  const render = createMemo(() => ToolRegistry.render(part().tool) ?? McpTool) // kilocode_change
 
   // kilocode_change start
   const dismissed = createMemo(() => {

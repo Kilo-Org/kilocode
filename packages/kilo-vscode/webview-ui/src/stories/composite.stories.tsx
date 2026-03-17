@@ -771,3 +771,101 @@ export const PermissionDockSubagent: Story = {
     )
   },
 }
+
+// ---------------------------------------------------------------------------
+// 17. MCP tool cards — collapsed (completed, not expanded)
+// ---------------------------------------------------------------------------
+
+const mcpCompleted: ToolPart = {
+  id: "part-mcp-001",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-mcp-001",
+  tool: "vercel_search_vercel_documentation",
+  state: {
+    status: "completed",
+    input: { topic: "serverless functions" },
+    output:
+      "## Serverless Function Configuration\n\nSource: https://vercel.com/docs/build-output-api/primitives\n\nThis TypeScript type definition (`ServerlessFunctionConfig`) specifies configuration for Vercel Serverless Functions.\n\n```ts\ntype ServerlessFunctionConfig = {\n  handler: string;\n  runtime: string;\n  memory?: number;\n  maxDuration?: number;\n}\n```",
+    title: "Search Vercel docs",
+    metadata: {},
+    time: { start: now - 4000, end: now - 3500 },
+  },
+}
+
+const mcpShort: ToolPart = {
+  id: "part-mcp-002",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-mcp-002",
+  tool: "sentry_search_issues",
+  state: {
+    status: "completed",
+    input: { query: "unresolved errors" },
+    output:
+      "Found 3 issues:\n- PROJ-123: TypeError in auth flow\n- PROJ-456: Network timeout\n- PROJ-789: Null reference",
+    title: "Search issues",
+    metadata: {},
+    time: { start: now - 3000, end: now - 2800 },
+  },
+}
+
+const mcpPending: ToolPart = {
+  id: "part-mcp-003",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-mcp-003",
+  tool: "slack_conversations_history",
+  state: {
+    status: "pending",
+    input: { channel_id: "#general" },
+    raw: "",
+  } as any,
+}
+
+export const McpToolCards: Story = {
+  name: "MCP Tool Cards — collapsed",
+  render: () => {
+    const data = dataWith([mcpCompleted, mcpShort])
+    return (
+      <StoryProviders data={data} sessionID={SESSION_ID}>
+        <AssistantMessage message={baseAssistantMessage} />
+      </StoryProviders>
+    )
+  },
+}
+
+// ---------------------------------------------------------------------------
+// 18. MCP tool card — pending (spinner)
+// ---------------------------------------------------------------------------
+
+export const McpToolPending: Story = {
+  name: "MCP Tool Card — pending",
+  render: () => {
+    const data = dataWith([mcpPending])
+    return (
+      <StoryProviders data={data} sessionID={SESSION_ID}>
+        <AssistantMessage message={baseAssistantMessage} />
+      </StoryProviders>
+    )
+  },
+}
+
+// ---------------------------------------------------------------------------
+// 19. MCP tool cards mixed with built-in tools
+// ---------------------------------------------------------------------------
+
+export const McpMixedWithBuiltin: Story = {
+  name: "MCP + built-in tools mixed",
+  render: () => {
+    const data = dataWith([readCompleted, mcpCompleted, grepCompleted, mcpShort])
+    return (
+      <StoryProviders data={data} sessionID={SESSION_ID}>
+        <AssistantMessage message={baseAssistantMessage} />
+      </StoryProviders>
+    )
+  },
+}
