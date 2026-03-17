@@ -194,15 +194,15 @@ export namespace PermissionNext {
       const existing = s.pending[input.requestID]
       if (!existing) throw new NotFoundError({ message: `Permission request ${input.requestID} not found` })
 
+      // Combine metadata.rules (bash hierarchy) and always (all tools).
+      // Set preserves insertion order and deduplicates.
       const validRules = new Set([...(existing.info.metadata?.rules ?? []), ...existing.info.always])
       const permission = existing.info.permission
 
-      // Build rules in metadata.rules order so broader patterns come before
-      // specific ones, preserving intended precedence for evaluate(findLast).
       const approvedSet = new Set(input.approvedAlways ?? [])
       const deniedSet = new Set(input.deniedAlways ?? [])
       const newRules: Ruleset = []
-      for (const pattern of existing.info.metadata?.rules ?? []) {
+      for (const pattern of validRules) {
         if (approvedSet.has(pattern)) newRules.push({ permission, pattern, action: "allow" })
         if (deniedSet.has(pattern)) newRules.push({ permission, pattern, action: "deny" })
       }
