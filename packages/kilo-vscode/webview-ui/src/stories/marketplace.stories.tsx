@@ -2,14 +2,14 @@
 /**
  * Stories for Marketplace components.
  *
- * Renders SkillsMarketplace and ItemCard directly with mock data
+ * Renders MarketplaceListView and ItemCard directly with mock data
  * so no API requests are made.
  */
 
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import { StoryProviders } from "./StoryProviders"
-import SkillsMarketplace from "../components/marketplace/SkillsMarketplace"
-import ItemCard from "../components/marketplace/ItemCard"
+import { MarketplaceListView } from "../components/marketplace/MarketplaceListView"
+import { ItemCard } from "../components/marketplace/ItemCard"
 import type { SkillMarketplaceItem, MarketplaceInstalledMetadata } from "../types/marketplace"
 import "../components/marketplace/marketplace.css"
 
@@ -116,10 +116,13 @@ export const SkillsTabWithItems: Story = {
   render: () => (
     <StoryProviders>
       <div style={{ width: "420px", height: "700px", overflow: "auto", padding: "12px" }}>
-        <SkillsMarketplace
+        <MarketplaceListView
           items={MOCK_SKILLS}
           metadata={EMPTY_METADATA}
           fetching={false}
+          type="skill"
+          searchPlaceholder="Search skills..."
+          emptyMessage="No skills found"
           onInstall={noop}
           onRemove={noop}
         />
@@ -133,10 +136,13 @@ export const SkillsTabWithInstalled: Story = {
   render: () => (
     <StoryProviders>
       <div style={{ width: "420px", height: "700px", overflow: "auto", padding: "12px" }}>
-        <SkillsMarketplace
+        <MarketplaceListView
           items={MOCK_SKILLS}
           metadata={PARTIAL_INSTALLED}
           fetching={false}
+          type="skill"
+          searchPlaceholder="Search skills..."
+          emptyMessage="No skills found"
           onInstall={noop}
           onRemove={noop}
         />
@@ -150,7 +156,16 @@ export const SkillsTabEmpty: Story = {
   render: () => (
     <StoryProviders>
       <div style={{ width: "420px", height: "400px", overflow: "auto", padding: "12px" }}>
-        <SkillsMarketplace items={[]} metadata={EMPTY_METADATA} fetching={false} onInstall={noop} onRemove={noop} />
+        <MarketplaceListView
+          items={[]}
+          metadata={EMPTY_METADATA}
+          fetching={false}
+          type="skill"
+          searchPlaceholder="Search skills..."
+          emptyMessage="No skills found"
+          onInstall={noop}
+          onRemove={noop}
+        />
       </div>
     </StoryProviders>
   ),

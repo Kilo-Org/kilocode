@@ -671,7 +671,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           const workspace = this.getProjectDirectory(this.currentSession?.id)
           const scope = message.mpInstallOptions?.target ?? "project"
           const result = await this.getMarketplace().install(message.mpItem, message.mpInstallOptions, workspace)
-          if (result.success) await this.disposeCliInstance(scope)
+          if (result.success) {
+            await this.disposeCliInstance(scope)
+            this.cachedAgentsMessage = null
+            await this.fetchAndSendAgents()
+          }
           this.postMessage({
             type: "marketplaceInstallResult",
             success: result.success,
@@ -684,7 +688,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           const workspace = this.getProjectDirectory(this.currentSession?.id)
           const scope = message.mpInstallOptions?.target ?? "project"
           const result = await this.getMarketplace().remove(message.mpItem, scope, workspace)
-          if (result.success) await this.disposeCliInstance(scope)
+          if (result.success) {
+            await this.disposeCliInstance(scope)
+            this.cachedAgentsMessage = null
+            await this.fetchAndSendAgents()
+          }
           this.postMessage({
             type: "marketplaceRemoveResult",
             success: result.success,
@@ -1250,22 +1258,34 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    */
   private async handleRemoveMode(name: string): Promise<void> {
     if (!this.client) return
+    let removed = false
+
+    // 1. Try CLI removal (handles .md files and legacy .kilocodemodes)
     try {
       const dir = this.getWorkspaceDirectory()
       const result = await this.client.kilocode.removeAgent({ name, directory: dir })
-      if (result.error) {
-        console.error("[Kilo New] KiloProvider: removeAgent returned error:", result.error)
-        this.cachedAgentsMessage = null
-        await this.fetchAndSendAgents()
-        return
-      }
-    } catch (error) {
-      console.error("[Kilo New] KiloProvider: Failed to remove mode:", error)
-      this.cachedAgentsMessage = null
-      await this.fetchAndSendAgents()
-      return
+      if (!result.error) removed = true
+    } catch {
+      // CLI removal failed — agent may be in kilo.json instead
     }
-    // Invalidate cache so next requestAgents fetches fresh data
+
+    // 2. Try removing from kilo.json (handles marketplace-installed modes)
+    if (!removed) {
+      const workspace = this.getProjectDirectory(this.currentSession?.id)
+      const mp = this.getMarketplace()
+      const stub = { id: name, type: "mode" as const, name, description: "", content: "" }
+      const project = await mp.remove(stub, "project", workspace)
+      const global = await mp.remove(stub, "global", workspace)
+      if (project.success || global.success) {
+        await this.disposeCliInstance("global")
+        removed = true
+      }
+    }
+
+    if (!removed) {
+      console.error("[Kilo New] KiloProvider: Failed to remove mode:", name)
+    }
+
     this.cachedAgentsMessage = null
     await this.fetchAndSendAgents()
   }
@@ -1281,12 +1301,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       await this.client.global.dispose().catch((e: unknown) => {
         console.warn("[Kilo New] global.dispose() after marketplace change failed:", e)
       })
-    } else {
-      const dir = this.getWorkspaceDirectory()
-      await this.client.instance.dispose({ directory: dir }).catch((e: unknown) => {
-        console.warn("[Kilo New] instance.dispose() after marketplace change failed:", e)
-      })
     }
+    // Always dispose the per-project instance so it rebuilds state from
+    // the (possibly updated) global + project config on the next request.
+    const dir = this.getWorkspaceDirectory()
+    await this.client.instance.dispose({ directory: dir }).catch((e: unknown) => {
+      console.warn("[Kilo New] instance.dispose() after marketplace change failed:", e)
+    })
   }
 
   /**

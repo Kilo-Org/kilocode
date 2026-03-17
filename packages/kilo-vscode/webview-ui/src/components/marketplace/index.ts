@@ -1,1 +1,1 @@
-export { default as MarketplaceView } from "./MarketplaceView"
+export { MarketplaceView } from "./MarketplaceView"
