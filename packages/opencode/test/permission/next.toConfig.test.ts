@@ -60,3 +60,29 @@ test("toConfig - roundtrip with fromConfig (object)", () => {
   const result = PermissionNext.toConfig(rules)
   expect(result).toEqual(config)
 })
+
+test("toConfig - scalar-only permission uses scalar format", () => {
+  const result = PermissionNext.toConfig([{ permission: "websearch", pattern: "*", action: "allow" }])
+  expect(result).toEqual({ websearch: "allow" })
+})
+
+test("toConfig - scalar-only permission with non-wildcard pattern is skipped", () => {
+  // doom_loop uses always: [toolName], so pattern can be "bash" etc.
+  // Non-wildcard patterns for scalar-only permissions can't be represented
+  // in the config schema — they only work in-memory (known limitation).
+  const result = PermissionNext.toConfig([{ permission: "doom_loop", pattern: "bash", action: "allow" }])
+  expect(result).toEqual({})
+})
+
+test("toConfig - mixed scalar-only and rule-capable permissions", () => {
+  const result = PermissionNext.toConfig([
+    { permission: "websearch", pattern: "*", action: "allow" },
+    { permission: "todowrite", pattern: "*", action: "allow" },
+    { permission: "bash", pattern: "npm *", action: "allow" },
+  ])
+  expect(result).toEqual({
+    websearch: "allow",
+    todowrite: "allow",
+    bash: { "npm *": "allow" },
+  })
+})

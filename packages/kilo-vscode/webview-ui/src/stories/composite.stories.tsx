@@ -162,7 +162,8 @@ const globPermission: PermissionRequest = {
   sessionID: SESSION_ID,
   toolName: "glob",
   patterns: ["**/*.md"],
-  args: { pattern: "**/*.md", rules: ["**/*.md"] },
+  always: ["*"],
+  args: { pattern: "**/*.md" },
   tool: { messageID: ASST_MSG_ID, callID: "call-glob-001" },
 }
 
@@ -171,6 +172,7 @@ const bashPermission: PermissionRequest = {
   sessionID: SESSION_ID,
   toolName: "bash",
   patterns: ["bun test"],
+  always: ["bun *"],
   args: { command: "bun test", rules: ["bun *", "bun test"] },
   tool: { messageID: ASST_MSG_ID, callID: "call-bash-001" },
 }
@@ -180,7 +182,8 @@ const dockPermission: PermissionRequest = {
   sessionID: SESSION_ID,
   toolName: "write",
   patterns: ["src/main.tsx", "src/utils.ts"],
-  args: { rules: ["src/main.tsx", "src/utils.ts"] },
+  always: ["*"],
+  args: {},
   // No `tool` field — this is a non-tool (dock) permission
 }
 
@@ -292,7 +295,8 @@ const todoWritePermission: PermissionRequest = {
   sessionID: SESSION_ID,
   toolName: "todowrite",
   patterns: ["*"],
-  args: { rules: ["*"] },
+  always: ["*"],
+  args: {},
   tool: { messageID: ASST_MSG_ID, callID: "call-todo-001" },
 }
 
@@ -612,7 +616,8 @@ const editPermission: PermissionRequest = {
   sessionID: SESSION_ID,
   toolName: "edit",
   patterns: ["src/components/App.tsx", "src/utils/helpers.ts"],
-  args: { rules: ["src/components/App.tsx", "src/utils/helpers.ts"] },
+  always: ["*"],
+  args: {},
   tool: { messageID: ASST_MSG_ID, callID: "call-edit-001" },
 }
 
@@ -645,7 +650,8 @@ const websearchPermission: PermissionRequest = {
   sessionID: SESSION_ID,
   toolName: "websearch",
   patterns: ["*"],
-  args: { rules: ["*"] },
+  always: ["*"],
+  args: {},
   tool: { messageID: ASST_MSG_ID, callID: "call-websearch-001" },
 }
 
@@ -677,8 +683,9 @@ const externalDirPermission: PermissionRequest = {
   id: "perm-extdir-001",
   sessionID: SESSION_ID,
   toolName: "external_directory",
-  patterns: ["/home/user/other-project/config.json"],
-  args: { rules: ["/home/user/other-project/config.json"] },
+  patterns: ["/home/user/other-project/*"],
+  always: ["/home/user/other-project/*"],
+  args: { filepath: "/home/user/other-project/config.json" },
   tool: { messageID: ASST_MSG_ID, callID: "call-extdir-001" },
 }
 
@@ -711,6 +718,7 @@ const bashManyRulesPermission: PermissionRequest = {
   sessionID: SESSION_ID,
   toolName: "bash",
   patterns: ["npm install"],
+  always: ["npm install *"],
   args: {
     command: "npm install",
     rules: ["npm *", "npm install", "npm run *", "npm test", "npm run build", "npx *"],
@@ -747,6 +755,7 @@ const subagentPermission: PermissionRequest = {
   sessionID: "child-session-001",
   toolName: "bash",
   patterns: ["git status"],
+  always: ["git status *"],
   args: { command: "git status", rules: ["git *", "git status"] },
   tool: { messageID: ASST_MSG_ID, callID: "call-subagent-001" },
 }

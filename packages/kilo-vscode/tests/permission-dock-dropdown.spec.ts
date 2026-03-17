@@ -160,22 +160,6 @@ test.describe("Permission Dock Dropdown — write", () => {
     const root = page.locator("#storybook-root")
     await expect(root).toHaveScreenshot(["permission-dock-dropdown", "write-expanded-pending.png"])
   })
-
-  test("rules expanded — mixed decisions", async ({ page }) => {
-    await page.goto(storyUrl(STORY_ID), { waitUntil: "load" })
-    await disableAnimations(page)
-    await page.waitForSelector("#storybook-root *", { state: "attached" })
-    await openDropdown(page)
-
-    // Approve first rule, deny second (dispatchEvent bypasses tooltip overlays)
-    const approveButtons = page.locator('[data-slot="permission-rule-toggle"][data-variant="approve"]')
-    const denyButtons = page.locator('[data-slot="permission-rule-toggle"][data-variant="deny"]')
-    await approveButtons.first().dispatchEvent("click")
-    await denyButtons.nth(1).dispatchEvent("click")
-
-    const root = page.locator("#storybook-root")
-    await expect(root).toHaveScreenshot(["permission-dock-dropdown", "write-rules-mixed.png"])
-  })
 })
 
 // ---------------------------------------------------------------------------

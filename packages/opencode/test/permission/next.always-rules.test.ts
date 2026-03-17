@@ -82,7 +82,7 @@ describe("saveAlwaysRules", () => {
     })
   })
 
-  test("ignores patterns not in metadata.rules", async () => {
+  test("ignores patterns not in metadata.rules or always", async () => {
     await using tmp = await tmpdir({ git: true })
     await Instance.provide({
       directory: tmp.path,
@@ -97,7 +97,7 @@ describe("saveAlwaysRules", () => {
           ruleset: [],
         })
 
-        // "curl" is not in metadata.rules — should be silently ignored
+        // "curl" is not in metadata.rules or always — should be silently ignored
         await PermissionNext.saveAlwaysRules({
           requestID: "permission_3",
           approvedAlways: ["npm install", "curl http://evil.com"],
@@ -129,6 +129,40 @@ describe("saveAlwaysRules", () => {
         })
         await PermissionNext.reply({ requestID: "permission_curl", reply: "reject" })
         await expect(curlPromise).rejects.toBeInstanceOf(PermissionNext.RejectedError)
+      },
+    })
+  })
+
+  test("accepts patterns from always array (non-bash tools)", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const askPromise = PermissionNext.ask({
+          id: "permission_nonbash",
+          sessionID: "session_test",
+          permission: "read",
+          patterns: ["src/main.ts"],
+          metadata: {},
+          always: ["*"],
+          ruleset: [],
+        })
+
+        // "*" is in always — should be accepted even without metadata.rules
+        await PermissionNext.saveAlwaysRules({ requestID: "permission_nonbash", approvedAlways: ["*"] })
+        await PermissionNext.reply({ requestID: "permission_nonbash", reply: "once" })
+        await expect(askPromise).resolves.toBeUndefined()
+
+        // "*" wildcard should auto-allow any read
+        const result = await PermissionNext.ask({
+          sessionID: "session_test",
+          permission: "read",
+          patterns: ["any/file.ts"],
+          metadata: {},
+          always: [],
+          ruleset: [],
+        })
+        expect(result).toBeUndefined()
       },
     })
   })
