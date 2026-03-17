@@ -77,7 +77,6 @@ export namespace PermissionNext {
     "webfetch",
     "websearch",
     "codesearch",
-    "doom_loop",
   ])
 
   export function toConfig(rules: Ruleset): Config.Permission {

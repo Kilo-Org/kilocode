@@ -66,12 +66,11 @@ test("toConfig - scalar-only permission uses scalar format", () => {
   expect(result).toEqual({ websearch: "allow" })
 })
 
-test("toConfig - scalar-only permission with non-wildcard pattern is skipped", () => {
+test("toConfig - doom_loop with tool-specific pattern uses object format", () => {
   // doom_loop uses always: [toolName], so pattern can be "bash" etc.
-  // Non-wildcard patterns for scalar-only permissions can't be represented
-  // in the config schema — they only work in-memory.
+  // Config schema accepts PermissionRule for doom_loop.
   const result = PermissionNext.toConfig([{ permission: "doom_loop", pattern: "bash", action: "allow" }])
-  expect(result).toEqual({})
+  expect(result).toEqual({ doom_loop: { bash: "allow" } })
 })
 
 test("toConfig - mixed scalar-only and rule-capable permissions", () => {

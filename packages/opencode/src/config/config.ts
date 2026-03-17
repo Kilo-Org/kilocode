@@ -755,7 +755,7 @@ export namespace Config {
           websearch: PermissionAction.optional(),
           codesearch: PermissionAction.optional(),
           lsp: PermissionRule.optional(),
-          doom_loop: PermissionAction.optional(),
+          doom_loop: PermissionRule.optional(), // kilocode_change — promoted from PermissionAction to support per-tool persistence
           skill: PermissionRule.optional(),
         })
         .catchall(PermissionRule)
