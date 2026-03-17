@@ -1,9 +1,10 @@
-import { Component, Show, createSignal, createMemo, createEffect, onMount } from "solid-js"
+import { Component, Show, createSignal, createMemo, createEffect, onMount, on } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Select } from "@kilocode/kilo-ui/select"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
+import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import DeviceAuthCard from "./DeviceAuthCard"
@@ -33,11 +34,16 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
   const vscode = useVSCode()
   const language = useLanguage()
   const [target, setTarget] = createSignal<string | null>(null)
+  const [loading, setLoading] = createSignal(true)
 
   // Always fetch fresh profile+balance when navigating to this view
   onMount(() => {
     vscode.postMessage({ type: "refreshProfile" })
   })
+
+  // Stop loading once we receive profile data response (including null = not logged in)
+  // Use on() to only react to changes, not the initial mount
+  createEffect(on(() => props.profileData, () => setLoading(false)))
 
   // Reset pending target whenever profileData changes (success or failure both send a fresh profile)
   createEffect(() => {
@@ -116,33 +122,49 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
           fallback={
             <div style={{ display: "flex", "flex-direction": "column", gap: "12px" }}>
               <Show
-                when={props.deviceAuth.status !== "idle"}
+                when={loading()}
                 fallback={
-                  <>
-                    <p
-                      style={{
-                        "font-size": "13px",
-                        color: "var(--vscode-descriptionForeground)",
-                        margin: "0 0 8px 0",
-                      }}
-                    >
-                      {language.t("profile.notLoggedIn")}
-                    </p>
-                    <Button variant="primary" onClick={handleLogin}>
-                      {language.t("profile.action.login")}
-                    </Button>
-                  </>
+                  <Show
+                    when={props.deviceAuth.status !== "idle"}
+                    fallback={
+                      <>
+                        <p
+                          style={{
+                            "font-size": "13px",
+                            color: "var(--vscode-descriptionForeground)",
+                            margin: "0 0 8px 0",
+                          }}
+                        >
+                          {language.t("profile.notLoggedIn")}
+                        </p>
+                        <Button variant="primary" onClick={handleLogin}>
+                          {language.t("profile.action.login")}
+                        </Button>
+                      </>
+                    }
+                  >
+                    <DeviceAuthCard
+                      status={props.deviceAuth.status}
+                      code={props.deviceAuth.code}
+                      verificationUrl={props.deviceAuth.verificationUrl}
+                      expiresIn={props.deviceAuth.expiresIn}
+                      error={props.deviceAuth.error}
+                      onCancel={handleCancelLogin}
+                      onRetry={handleLogin}
+                    />
+                  </Show>
                 }
               >
-                <DeviceAuthCard
-                  status={props.deviceAuth.status}
-                  code={props.deviceAuth.code}
-                  verificationUrl={props.deviceAuth.verificationUrl}
-                  expiresIn={props.deviceAuth.expiresIn}
-                  error={props.deviceAuth.error}
-                  onCancel={handleCancelLogin}
-                  onRetry={handleLogin}
-                />
+                <div
+                  style={{
+                    display: "flex",
+                    "align-items": "center",
+                    "justify-content": "center",
+                    padding: "24px 0",
+                  }}
+                >
+                  <Spinner />
+                </div>
               </Show>
             </div>
           }
