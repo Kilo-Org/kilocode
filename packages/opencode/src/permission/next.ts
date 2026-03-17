@@ -197,12 +197,14 @@ export namespace PermissionNext {
       const validRules = new Set(existing.info.metadata?.rules ?? [])
       const permission = existing.info.permission
 
+      // Build rules in metadata.rules order so broader patterns come before
+      // specific ones, preserving intended precedence for evaluate(findLast).
+      const approvedSet = new Set(input.approvedAlways ?? [])
+      const deniedSet = new Set(input.deniedAlways ?? [])
       const newRules: Ruleset = []
-      for (const pattern of input.approvedAlways ?? []) {
-        if (validRules.has(pattern)) newRules.push({ permission, pattern, action: "allow" })
-      }
-      for (const pattern of input.deniedAlways ?? []) {
-        if (validRules.has(pattern)) newRules.push({ permission, pattern, action: "deny" })
+      for (const pattern of existing.info.metadata?.rules ?? []) {
+        if (approvedSet.has(pattern)) newRules.push({ permission, pattern, action: "allow" })
+        if (deniedSet.has(pattern)) newRules.push({ permission, pattern, action: "deny" })
       }
       s.approved.push(...newRules)
 
