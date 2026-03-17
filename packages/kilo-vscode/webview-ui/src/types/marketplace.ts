@@ -1,3 +1,17 @@
+export interface McpParameter {
+  name: string
+  key: string
+  placeholder?: string
+  optional?: boolean
+}
+
+export interface McpInstallationMethod {
+  name: string
+  content: string
+  parameters?: McpParameter[]
+  prerequisites?: string[]
+}
+
 export interface MarketplaceItemBase {
   id: string
   name: string
@@ -11,7 +25,8 @@ export interface MarketplaceItemBase {
 export interface McpMarketplaceItem extends MarketplaceItemBase {
   type: "mcp"
   url: string
-  content: string | unknown[]
+  content: string | McpInstallationMethod[]
+  parameters?: McpParameter[]
 }
 
 export interface ModeMarketplaceItem extends MarketplaceItemBase {
@@ -41,8 +56,7 @@ export interface MarketplaceInstalledMetadata {
 }
 
 export interface MarketplaceFilters {
-  search?: string
   type?: string
-  status?: string
+  search?: string
   tags?: string[]
 }

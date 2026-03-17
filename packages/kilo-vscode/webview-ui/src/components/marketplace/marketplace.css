@@ -6,6 +6,19 @@
   height: 100%;
   padding: 12px;
   overflow: auto;
+  gap: 8px;
+}
+
+.marketplace-tabs-root {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.marketplace-content {
+  flex: 1;
+  overflow: auto;
 }
 
 /* List layout */
@@ -23,22 +36,59 @@
   align-items: center;
 }
 
+.marketplace-search-field {
+  flex: 1;
+}
+
 .marketplace-category-filters {
   overflow-x: auto;
+}
+
+/* Tag filters */
+
+.marketplace-active-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.marketplace-tag-filter {
+  all: unset;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.15s ease;
+}
+
+.marketplace-tag-filter:hover {
+  opacity: 0.8;
+}
+
+.marketplace-tag-filter.active {
+  opacity: 1;
+}
+
+/* Loading & empty */
+
+.marketplace-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+.marketplace-empty {
+  text-align: center;
+  color: var(--text-weak);
+  padding: 24px;
 }
 
 /* Grid */
 
 .marketplace-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
   gap: 12px;
-}
-
-@media (min-width: 500px) {
-  .marketplace-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  max-width: 1200px;
 }
 
 /* Card */
@@ -48,9 +98,6 @@
   flex-direction: column;
   gap: 8px;
   padding: 12px;
-  border: 1px solid var(--border-base);
-  border-radius: 6px;
-  background: var(--background-base);
 }
 
 .marketplace-card-header {
@@ -71,11 +118,11 @@
   color: var(--text-base);
 }
 
-.marketplace-card-link {
-  text-decoration: none;
+.marketplace-card-name.clickable {
+  cursor: pointer;
 }
 
-.marketplace-card-link:hover {
+.marketplace-card-name.clickable:hover {
   text-decoration: underline;
 }
 
@@ -92,6 +139,22 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
   margin: 0;
+}
+
+.marketplace-card-description.expanded {
+  display: block;
+  -webkit-line-clamp: unset;
+}
+
+.marketplace-card-expand {
+  all: unset;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-interactive-base);
+}
+
+.marketplace-card-expand:hover {
+  text-decoration: underline;
 }
 
 .marketplace-card-footer {
@@ -115,117 +178,109 @@
   flex-shrink: 0;
 }
 
-.marketplace-installed-tag {
+/* Installed badge */
+
+.marketplace-badge-installed {
   color: var(--text-on-success-base) !important;
   border-color: var(--border-success-base) !important;
 }
+
+/* Remove button */
 
 .marketplace-remove-btn {
   color: var(--text-on-critical-base) !important;
   border-color: var(--border-critical-base) !important;
 }
 
-/* Placeholder */
+/* Remove dialog actions */
 
-.marketplace-placeholder {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 200px;
-  color: var(--text-weak);
-  font-size: 16px;
-}
-
-/* Empty state */
-
-.marketplace-empty {
-  text-align: center;
-  color: var(--text-weak);
-  padding: 24px;
-}
-
-/* Modal / Dialog */
-
-.marketplace-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.marketplace-modal {
-  background: var(--background-base);
-  border: 1px solid var(--border-base);
-  border-radius: 8px;
-  padding: 20px;
-  max-width: 480px;
-  width: 90%;
-  max-height: 80vh;
-  overflow-y: auto;
-}
-
-.marketplace-modal h3 {
-  margin: 0 0 16px;
-  font-size: 16px;
-  color: var(--text-base);
-}
-
-.marketplace-modal p {
-  margin: 0 0 12px;
-  color: var(--text-weak);
-  font-size: 13px;
-}
-
-.marketplace-modal-section {
-  margin-bottom: 16px;
-}
-
-.marketplace-modal-section > label {
-  display: block;
-  font-weight: 600;
-  font-size: 13px;
-  margin-bottom: 6px;
-  color: var(--text-base);
-}
-
-.marketplace-modal-actions {
+.marketplace-remove-actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
   margin-top: 16px;
 }
 
-.marketplace-modal-result {
-  text-align: center;
-  padding: 12px 0;
+/* Danger button (remove confirm) */
+
+.danger-btn {
+  color: var(--text-on-critical-base) !important;
+  border-color: var(--border-critical-base) !important;
 }
 
-.marketplace-prerequisites {
+/* Install modal */
+
+.install-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.install-modal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.install-modal-label {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-base);
+}
+
+.install-modal-prerequisites {
   margin: 0;
   padding-left: 20px;
   font-size: 13px;
   color: var(--text-weak);
 }
 
-/* Error/Success messages */
-
-.marketplace-errors {
-  margin-top: 12px;
+.install-modal-param {
+  margin-bottom: 8px;
 }
 
-.marketplace-error {
-  color: var(--text-on-critical-base);
-  font-size: 13px;
+.install-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
-.marketplace-success {
+.install-modal-result {
+  text-align: center;
+  padding: 12px 0;
+}
+
+.install-modal-success {
   color: var(--text-on-success-base);
   font-size: 14px;
   font-weight: 600;
+  margin: 0 0 16px;
+}
+
+.install-modal-error-msg {
+  color: var(--text-on-critical-base);
+  font-size: 13px;
+  margin: 0 0 16px;
+}
+
+/* Error banner */
+
+.marketplace-error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+/* Link style */
+
+.link {
+  color: var(--text-interactive-base);
+  cursor: pointer;
+}
+
+.link:hover {
+  text-decoration: underline;
 }
