@@ -82,9 +82,15 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
           // so we detect them here and render via ToolRegistry directly.
           const isUpstreamSuppressed =
             part.type === "tool" && UPSTREAM_SUPPRESSED_TOOLS.has((part as SDKPart & { tool: string }).tool)
+          // Dismissed questions render as plain text — skip the card border
+          const dismissed =
+            part.type === "tool" &&
+            (part as unknown as ToolPart).tool === "question" &&
+            (part as unknown as ToolPart).state.status === "error" &&
+            ((part as unknown as ToolPart).state as any).error?.includes("dismissed this question")
           return (
             <Show when={isUpstreamSuppressed || PART_MAPPING[part.type]}>
-              <div data-component="tool-part-wrapper" data-part-type={part.type}>
+              <div data-component="tool-part-wrapper" data-part-type={dismissed ? undefined : part.type}>
                 <Show
                   when={isUpstreamSuppressed}
                   fallback={
