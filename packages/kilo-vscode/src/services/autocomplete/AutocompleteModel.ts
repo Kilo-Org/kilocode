@@ -20,13 +20,10 @@ export class AutocompleteModel {
   private connectionService: KiloConnectionService | null = null
   public profileName: string | null = null
   public profileType: string | null = null
-  public loaded = false
-  public hasKilocodeProfileWithNoBalance = false
 
   constructor(connectionService?: KiloConnectionService) {
     if (connectionService) {
       this.connectionService = connectionService
-      this.loaded = true
     }
   }
 
@@ -35,21 +32,6 @@ export class AutocompleteModel {
    */
   public setConnectionService(service: KiloConnectionService): void {
     this.connectionService = service
-  }
-
-  /**
-   * Load model configuration.
-   * Returns true if the connection service is available.
-   */
-  public async reload(): Promise<boolean> {
-    this.loaded = true
-
-    if (this.connectionService) {
-      const state = this.connectionService.getConnectionState()
-      return state === "connected"
-    }
-
-    return false
   }
 
   public supportsFim(): boolean {

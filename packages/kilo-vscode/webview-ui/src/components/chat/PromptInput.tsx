@@ -41,7 +41,11 @@ function mergeReviewComments(current: ReviewComment[], incoming: ReviewComment[]
   return [...map.values()]
 }
 
-export const PromptInput: Component = () => {
+interface PromptInputProps {
+  blocked?: () => boolean
+}
+
+export const PromptInput: Component<PromptInputProps> = (props) => {
   const session = useSession()
   const server = useServer()
   const language = useLanguage()
@@ -172,7 +176,7 @@ export const PromptInput: Component = () => {
   const isBusy = () => session.status() === "busy"
   const isDisabled = () => !server.isConnected()
   const hasInput = () => text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0
-  const canSend = () => hasInput() && !isDisabled()
+  const canSend = () => hasInput() && !isDisabled() && !props.blocked?.()
   const showStop = () => isBusy() && !hasInput()
   const placeholder = () => {
     switch (server.connectionState()) {
@@ -450,7 +454,7 @@ export const PromptInput: Component = () => {
     const pending = reviewComments()
     const review = pending.length > 0 ? formatReviewCommentsMarkdown(pending) : ""
     const message = draft && review ? `${review}\n\n${draft}` : draft || review
-    if ((!message && imgs.length === 0) || isDisabled()) return
+    if ((!message && imgs.length === 0) || isDisabled() || props.blocked?.()) return
 
     const mentionFiles = mention.parseFileAttachments(draft)
     const imgFiles = imgs.map((img) => ({ mime: img.mime, url: img.dataUrl, filename: img.filename }))
@@ -562,7 +566,14 @@ export const PromptInput: Component = () => {
           <For each={imageAttach.images()}>
             {(img) => (
               <div class="image-attachment">
-                <img src={img.dataUrl} alt={img.filename} title={img.filename} />
+                <img
+                  src={img.dataUrl}
+                  alt={img.filename}
+                  title={img.filename}
+                  onClick={() =>
+                    vscode.postMessage({ type: "previewImage", dataUrl: img.dataUrl, filename: img.filename })
+                  }
+                />
                 <button
                   type="button"
                   class="image-attachment-remove"
@@ -639,7 +650,10 @@ export const PromptInput: Component = () => {
           <Show
             when={showStop()}
             fallback={
-              <Tooltip value={language.t("prompt.action.send")} placement="top">
+              <Tooltip
+                value={props.blocked?.() ? language.t("prompt.action.send.blocked") : language.t("prompt.action.send")}
+                placement="top"
+              >
                 <Button
                   variant="ghost"
                   size="small"

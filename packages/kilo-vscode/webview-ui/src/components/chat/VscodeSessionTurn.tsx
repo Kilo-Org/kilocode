@@ -29,6 +29,7 @@ import type {
 } from "@kilocode/sdk/v2"
 import { ErrorDisplay } from "./ErrorDisplay"
 import { useServer } from "../../context/server"
+import { useSession } from "../../context/session"
 
 function getDirectory(path: string): string {
   const sep = path.includes("/") ? "/" : "\\"
@@ -53,6 +54,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
   const i18n = useI18n()
   const diffComponent = useDiffComponent()
   const server = useServer()
+  const session = useSession()
 
   const emptyMessages: SDKMessage[] = []
   const emptyParts: SDKPart[] = []
@@ -168,6 +170,11 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
               parts={parts() as unknown as Parameters<typeof UserMessageDisplay>[0]["parts"]}
               interrupted={interrupted()}
               queued={props.queued}
+              onRevert={
+                assistantMessages().length > 0 && session.status() === "idle" && !session.revert()
+                  ? () => session.revertSession(props.messageID)
+                  : undefined
+              }
             />
           </div>
 

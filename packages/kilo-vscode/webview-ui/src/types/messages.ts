@@ -113,12 +113,34 @@ export interface Message {
   tokens?: TokenUsage
 }
 
+// File diff info (matches Snapshot.FileDiff from CLI backend)
+export interface SessionFileDiff {
+  file: string
+  before: string
+  after: string
+  additions: number
+  deletions: number
+  status?: "added" | "deleted" | "modified"
+}
+
 // Session info (simplified for webview)
 export interface SessionInfo {
   id: string
   title?: string
   createdAt: string
   updatedAt: string
+  revert?: {
+    messageID: string
+    partID?: string
+    snapshot?: string
+    diff?: string
+  } | null
+  summary?: {
+    additions: number
+    deletions: number
+    files: number
+    diffs?: SessionFileDiff[]
+  } | null
 }
 
 // Cloud session info (from Kilo cloud API)
@@ -135,7 +157,7 @@ export interface PermissionRequest {
   sessionID: string
   toolName: string
   patterns: string[]
-  args: Record<string, unknown>
+  args: Record<string, unknown> & { rules?: string[] }
   message?: string
   tool?: { messageID: string; callID: string }
 }
@@ -289,11 +311,14 @@ export interface ProviderConfig {
 }
 
 export interface McpConfig {
-  command?: string
+  type?: "local" | "remote"
+  command?: string[] | string
   args?: string[]
   env?: Record<string, string>
+  environment?: Record<string, string>
   url?: string
   headers?: Record<string, string>
+  enabled?: boolean
 }
 
 export interface CommandConfig {
@@ -318,6 +343,7 @@ export interface WatcherConfig {
 export interface ExperimentalConfig {
   disable_paste_summary?: boolean
   batch_tool?: boolean
+  codebase_search?: boolean
   primary_tools?: string[]
   continue_loop_on_deny?: boolean
   mcp_timeout?: number
@@ -442,6 +468,12 @@ export interface SessionUpdatedMessage {
 export interface SessionDeletedMessage {
   type: "sessionDeleted"
   sessionID: string
+}
+
+export interface MessageRemovedMessage {
+  type: "messageRemoved"
+  sessionID: string
+  messageID: string
 }
 
 export interface MessagesLoadedMessage {
@@ -1031,6 +1063,59 @@ export interface DiffViewerLoadingMessage {
   loading: boolean
 }
 
+// ============================================
+// Marketplace Messages
+// ============================================
+
+import type {
+  MarketplaceItem,
+  MarketplaceInstalledMetadata,
+  InstallMarketplaceItemOptions,
+  MarketplaceFilters,
+} from "./marketplace"
+
+export interface MarketplaceDataMessage {
+  type: "marketplaceData"
+  marketplaceItems: MarketplaceItem[]
+  marketplaceInstalledMetadata: MarketplaceInstalledMetadata
+  errors?: string[]
+}
+
+export interface MarketplaceInstallResultMessage {
+  type: "marketplaceInstallResult"
+  success: boolean
+  slug: string
+  error?: string
+}
+
+export interface MarketplaceRemoveResultMessage {
+  type: "marketplaceRemoveResult"
+  success: boolean
+  slug: string
+  error?: string
+}
+
+export interface FetchMarketplaceDataMessage {
+  type: "fetchMarketplaceData"
+}
+
+export interface FilterMarketplaceItemsMessage {
+  type: "filterMarketplaceItems"
+  filters: MarketplaceFilters
+}
+
+export interface InstallMarketplaceItemMessage {
+  type: "installMarketplaceItem"
+  mpItem: MarketplaceItem
+  mpInstallOptions: InstallMarketplaceItemOptions
+}
+
+export interface RemoveInstalledMarketplaceItemMessage {
+  type: "removeInstalledMarketplaceItem"
+  mpItem: MarketplaceItem
+  mpInstallOptions: InstallMarketplaceItemOptions
+}
+
 export type ExtensionMessage =
   | ReadyMessage
   | ConnectionStateMessage
@@ -1045,6 +1130,7 @@ export type ExtensionMessage =
   | SessionCreatedMessage
   | SessionUpdatedMessage
   | SessionDeletedMessage
+  | MessageRemovedMessage
   | MessagesLoadedMessage
   | MessageCreatedMessage
   | SessionsLoadedMessage
@@ -1110,6 +1196,9 @@ export type ExtensionMessage =
   | ViewSubAgentSessionMessage
   | DiffViewerDiffsMessage
   | DiffViewerLoadingMessage
+  | MarketplaceDataMessage
+  | MarketplaceInstallResultMessage
+  | MarketplaceRemoveResultMessage
 
 // ============================================
 // Messages FROM webview TO extension
@@ -1138,13 +1227,24 @@ export interface AbortRequest {
   sessionID: string
 }
 
+export interface RevertSessionRequest {
+  type: "revertSession"
+  sessionID: string
+  messageID: string
+}
+
+export interface UnrevertSessionRequest {
+  type: "unrevertSession"
+  sessionID: string
+}
+
 export interface PermissionResponseRequest {
   type: "permissionResponse"
   permissionId: string
   sessionID: string
   response: "once" | "always" | "reject"
-  approvedPatterns: string[]
-  deniedPatterns: string[]
+  approvedAlways: string[]
+  deniedAlways: string[]
 }
 
 export interface CreateSessionRequest {
@@ -1610,6 +1710,13 @@ export interface OpenSubAgentViewerRequest {
   title?: string
 }
 
+// Preview an image attachment in VS Code's built-in image viewer
+export interface PreviewImageRequest {
+  type: "previewImage"
+  dataUrl: string
+  filename: string
+}
+
 // Set default base branch (webview → extension)
 export interface SetDefaultBaseBranchRequest {
   type: "agentManager.setDefaultBaseBranch"
@@ -1619,6 +1726,8 @@ export interface SetDefaultBaseBranchRequest {
 export type WebviewMessage =
   | SendMessageRequest
   | AbortRequest
+  | RevertSessionRequest
+  | UnrevertSessionRequest
   | PermissionResponseRequest
   | CreateSessionRequest
   | ClearSessionRequest
@@ -1707,7 +1816,12 @@ export type WebviewMessage =
   | OpenChangesRequest
   | RetryConnectionRequest
   | OpenSubAgentViewerRequest
+  | PreviewImageRequest
   | SetDefaultBaseBranchRequest
+  | FetchMarketplaceDataMessage
+  | FilterMarketplaceItemsMessage
+  | InstallMarketplaceItemMessage
+  | RemoveInstalledMarketplaceItemMessage
 
 // ============================================
 // VS Code API type

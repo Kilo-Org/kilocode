@@ -3,9 +3,9 @@
  * Displays permission requests from the AI assistant in the dock above the prompt input.
  * Uses kilo-ui's DockPrompt component for proper surface styling.
  *
- * Per-pattern toggles allow users to approve/deny individual patterns for future requests.
+ * Per-rule toggles allow users to approve/deny individual permission rules for future requests.
  * The command buttons (Deny / Allow Always / Allow Once) control the current command.
- * When all patterns are toggled ✓, the command auto-runs.
+ * When all rules are toggled ✓, the command auto-runs.
  */
 
 import { Component, For, Show, createSignal } from "solid-js"
@@ -17,74 +17,78 @@ import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { PermissionRequest } from "../../types/messages"
 
-type PatternDecision = "approved" | "denied" | "pending"
+type RuleDecision = "approved" | "denied" | "pending"
 
-let permissionPatternsExpandedPreference = false
+let rulesExpandedPreference = false
 
 export const PermissionDock: Component<{
   request: PermissionRequest
   responding: boolean
-  onDecide: (response: "once" | "always" | "reject", approvedPatterns: string[], deniedPatterns: string[]) => void
+  onDecide: (response: "once" | "always" | "reject", approvedAlways: string[], deniedAlways: string[]) => void
 }> = (props) => {
   const session = useSession()
   const language = useLanguage()
 
   const fromChild = () => props.request.sessionID !== session.currentSessionID()
-  const patterns = () => props.request.patterns ?? []
+  // Bash sends fine-grained rules via metadata.rules; other tools have no dropdown.
+  const rules = () => props.request.args?.rules ?? []
+  // Rules like "git *" or "git log *" — strip the trailing wildcard for display.
+  // A bare "*" (global wildcard) becomes empty so only the tool name shows.
+  const label = (rule: string) => (rule === "*" ? "" : rule.replace(/ \*$/, ""))
   const command = () => {
     const cmd = props.request.args?.command
     return typeof cmd === "string" ? cmd : undefined
   }
 
-  const [decisions, setDecisions] = createSignal<Record<number, PatternDecision>>({})
-  const [patternsExpanded, setPatternsExpanded] = createSignal(permissionPatternsExpandedPreference)
+  const [decisions, setDecisions] = createSignal<Record<number, RuleDecision>>({})
+  const [expanded, setExpanded] = createSignal(rulesExpandedPreference)
 
-  const hasDeniedPatterns = () => Object.values(decisions()).some((d) => d === "denied")
-  const hasPatterns = () => patterns().length > 0
+  const hasDenied = () => Object.values(decisions()).some((d) => d === "denied")
+  const hasRules = () => rules().length > 0
 
-  const togglePatternsExpanded = () => {
-    const next = !patternsExpanded()
-    permissionPatternsExpandedPreference = next
-    setPatternsExpanded(next)
+  const toggleExpanded = () => {
+    const next = !expanded()
+    rulesExpandedPreference = next
+    setExpanded(next)
   }
 
-  const collectPatterns = () => {
-    const all = patterns()
+  const collectRules = () => {
+    const all = rules()
     const approved: string[] = []
     const denied: string[] = []
     for (const [i, d] of Object.entries(decisions())) {
-      const pattern = all[Number(i)]
-      if (!pattern) continue
-      if (d === "approved") approved.push(pattern)
-      else if (d === "denied") denied.push(pattern)
+      const rule = all[Number(i)]
+      if (!rule) continue
+      if (d === "approved") approved.push(rule)
+      else if (d === "denied") denied.push(rule)
     }
     return { approved, denied }
   }
 
-  const togglePattern = (index: number, decision: PatternDecision) => {
+  const toggleRule = (index: number, decision: RuleDecision) => {
     const current = decisions()[index]
     const next = current === decision ? "pending" : decision
     const updated = { ...decisions(), [index]: next }
     setDecisions(updated)
 
-    const total = patterns().length
+    const total = rules().length
     const count = Object.values(updated).filter((d) => d === "approved").length
     if (count === total && total > 0) {
-      props.onDecide("once", [...patterns()], [])
+      props.onDecide("once", [...rules()], [])
     }
   }
 
-  const decision = (index: number): PatternDecision => decisions()[index] ?? "pending"
+  const decision = (index: number): RuleDecision => decisions()[index] ?? "pending"
 
   const approveTooltip = (index: number) =>
     decision(index) === "approved"
-      ? language.t("ui.permission.pattern.removeFromAllowed")
-      : language.t("ui.permission.pattern.addToAllowed")
+      ? language.t("ui.permission.rule.removeFromAllowed")
+      : language.t("ui.permission.rule.addToAllowed")
 
   const denyTooltip = (index: number) =>
     decision(index) === "denied"
-      ? language.t("ui.permission.pattern.removeFromDenied")
-      : language.t("ui.permission.pattern.addToDenied")
+      ? language.t("ui.permission.rule.removeFromDenied")
+      : language.t("ui.permission.rule.addToDenied")
 
   const toolDescription = () => {
     const key = `settings.permissions.tool.${props.request.toolName}.description`
@@ -110,35 +114,35 @@ export const PermissionDock: Component<{
         </div>
       }
       footer={
-        <Show when={hasPatterns()}>
-          <div data-slot="permission-patterns-section">
+        <Show when={hasRules()}>
+          <div data-slot="permission-rules-section">
             <button
               type="button"
-              data-slot="permission-patterns-header"
-              data-open={patternsExpanded() ? "" : undefined}
-              onClick={togglePatternsExpanded}
-              aria-expanded={patternsExpanded()}
+              data-slot="permission-rules-header"
+              data-open={expanded() ? "" : undefined}
+              onClick={toggleExpanded}
+              aria-expanded={expanded()}
             >
-              <span data-slot="permission-patterns-header-chevron" data-open={patternsExpanded() ? "" : undefined}>
+              <span data-slot="permission-rules-header-chevron" data-open={expanded() ? "" : undefined}>
                 <Icon name="chevron-down" size="small" />
               </span>
-              <span data-slot="permission-patterns-header-title">{language.t("ui.permission.permissionRules")}</span>
+              <span data-slot="permission-rules-header-title">{language.t("ui.permission.permissionRules")}</span>
             </button>
 
-            <div data-slot="permission-patterns-collapse" data-open={patternsExpanded() ? "" : undefined}>
-              <div data-slot="permission-patterns-collapse-inner">
-                <div data-slot="permission-patterns">
-                  <For each={patterns()}>
-                    {(pattern, index) => (
-                      <div data-slot="permission-pattern-row" data-decision={decision(index())}>
-                        <div data-slot="permission-pattern-actions">
+            <div data-slot="permission-rules-collapse" data-open={expanded() ? "" : undefined}>
+              <div data-slot="permission-rules-collapse-inner">
+                <div data-slot="permission-rules">
+                  <For each={rules()}>
+                    {(rule, index) => (
+                      <div data-slot="permission-rule-row" data-decision={decision(index())}>
+                        <div data-slot="permission-rule-actions">
                           <Tooltip value={approveTooltip(index())} placement="top">
                             <button
-                              data-slot="permission-pattern-toggle"
+                              data-slot="permission-rule-toggle"
                               data-variant="approve"
                               data-active={decision(index()) === "approved" ? "" : undefined}
                               disabled={props.responding}
-                              onClick={() => togglePattern(index(), "approved")}
+                              onClick={() => toggleRule(index(), "approved")}
                               aria-label={approveTooltip(index())}
                             >
                               <Icon name="check-small" size="small" />
@@ -146,19 +150,19 @@ export const PermissionDock: Component<{
                           </Tooltip>
                           <Tooltip value={denyTooltip(index())} placement="top">
                             <button
-                              data-slot="permission-pattern-toggle"
+                              data-slot="permission-rule-toggle"
                               data-variant="deny"
                               data-active={decision(index()) === "denied" ? "" : undefined}
                               disabled={props.responding}
-                              onClick={() => togglePattern(index(), "denied")}
+                              onClick={() => toggleRule(index(), "denied")}
                               aria-label={denyTooltip(index())}
                             >
                               <Icon name="close-small" size="small" />
                             </button>
                           </Tooltip>
                         </div>
-                        <span data-slot="permission-pattern-type">{props.request.toolName}</span>
-                        <code data-slot="permission-pattern">{pattern}</code>
+                        <span data-slot="permission-rule-type">{props.request.toolName}</span>
+                        <code data-slot="permission-rule">{label(rule)}</code>
                       </div>
                     )}
                   </For>
@@ -175,13 +179,12 @@ export const PermissionDock: Component<{
         <div data-slot="permission-hint">{toolDescription()}</div>
       </Show>
 
-      <p data-slot="permission-session-hint">{language.t("ui.permission.sessionHint")}</p>
       <div data-slot="permission-actions">
         <Button
           variant="primary"
           size="small"
           onClick={() => {
-            const { approved, denied } = collectPatterns()
+            const { approved, denied } = collectRules()
             props.onDecide("once", approved, denied)
           }}
           disabled={props.responding}
@@ -192,10 +195,10 @@ export const PermissionDock: Component<{
           variant="secondary"
           size="small"
           onClick={() => {
-            const { approved, denied } = collectPatterns()
+            const { approved, denied } = collectRules()
             props.onDecide("always", approved, denied)
           }}
-          disabled={props.responding || hasDeniedPatterns()}
+          disabled={props.responding || hasDenied()}
         >
           {language.t("ui.permission.allowAlways")}
         </Button>
@@ -203,7 +206,7 @@ export const PermissionDock: Component<{
           variant="ghost"
           size="small"
           onClick={() => {
-            const { approved, denied } = collectPatterns()
+            const { approved, denied } = collectRules()
             props.onDecide("reject", approved, denied)
           }}
           disabled={props.responding}

@@ -447,6 +447,75 @@
 }
 
 /* ============================================
+   Revert Banner
+   ============================================ */
+
+.revert-banner {
+  margin: 8px 12px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: var(--surface-secondary, var(--vscode-editorWidget-background, #252526));
+  border: 1px solid var(--border-base, var(--vscode-editorWidget-border, #454545));
+  font-size: 12px;
+}
+
+.revert-banner-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.revert-banner-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted, var(--vscode-descriptionForeground));
+}
+
+.revert-banner-count {
+  font-weight: 500;
+}
+
+.revert-banner-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.revert-banner-files {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.revert-banner-file {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 1px 0;
+  color: var(--text-base, var(--vscode-foreground));
+}
+
+.revert-banner-filename {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  direction: rtl;
+  text-align: left;
+}
+
+.revert-banner-hint {
+  margin-top: 6px;
+  color: var(--text-muted, var(--vscode-descriptionForeground));
+  font-style: italic;
+  font-size: 11px;
+}
+
+/* ============================================
    Prompt Input
    ============================================ */
 
@@ -707,6 +776,7 @@
   border-radius: 4px;
   border: 1px solid var(--vscode-widget-border, rgba(255, 255, 255, 0.1));
   display: block;
+  cursor: pointer;
 }
 
 .image-attachment-remove {
@@ -1218,7 +1288,7 @@
     font-size: 12px;
   }
 
-  [data-slot="permission-patterns"] {
+  [data-slot="permission-rules"] {
     margin: 0;
     max-height: 160px;
     overflow-y: auto;
@@ -1232,12 +1302,12 @@
     }
   }
 
-  [data-slot="permission-patterns-section"] {
+  [data-slot="permission-rules-section"] {
     display: flex;
     flex-direction: column;
   }
 
-  [data-slot="permission-patterns-header"] {
+  [data-slot="permission-rules-header"] {
     all: unset;
     display: flex;
     align-items: center;
@@ -1254,13 +1324,13 @@
     }
   }
 
-  [data-slot="permission-patterns-header-title"] {
+  [data-slot="permission-rules-header-title"] {
     font-size: 12px;
     font-weight: 500;
     line-height: 1.4;
   }
 
-  [data-slot="permission-patterns-header-chevron"] {
+  [data-slot="permission-rules-header-chevron"] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1272,7 +1342,7 @@
     }
   }
 
-  [data-slot="permission-patterns-collapse"] {
+  [data-slot="permission-rules-collapse"] {
     display: grid;
     grid-template-rows: 0fr;
     transition:
@@ -1286,36 +1356,36 @@
     }
   }
 
-  [data-slot="permission-patterns-collapse-inner"] {
+  [data-slot="permission-rules-collapse-inner"] {
     min-height: 0;
     overflow: hidden;
   }
 
-  [data-slot="permission-pattern-row"] {
+  [data-slot="permission-rule-row"] {
     display: flex;
     align-items: center;
     gap: 6px;
     padding: 3px 0 3px 8px;
     min-width: 0;
 
-    &[data-decision="approved"] [data-slot="permission-pattern"] {
+    &[data-decision="approved"] [data-slot="permission-rule"] {
       color: var(--text-success, var(--vscode-testing-iconPassed, #5cb85c));
     }
 
-    &[data-decision="denied"] [data-slot="permission-pattern"] {
+    &[data-decision="denied"] [data-slot="permission-rule"] {
       color: var(--text-error, var(--vscode-errorForeground, #f44));
       text-decoration: line-through;
     }
   }
 
-  [data-slot="permission-pattern-type"] {
+  [data-slot="permission-rule-type"] {
     font-size: 11px;
     font-weight: 600;
     color: var(--text-base, var(--vscode-foreground));
     flex-shrink: 0;
   }
 
-  [data-slot="permission-pattern"] {
+  [data-slot="permission-rule"] {
     font-size: 12px;
     font-family: var(--vscode-editor-font-family, monospace);
     color: var(--text-weak, var(--vscode-descriptionForeground));
@@ -1326,7 +1396,7 @@
     flex: 1;
   }
 
-  [data-slot="permission-pattern-actions"] {
+  [data-slot="permission-rule-actions"] {
     display: flex;
     align-items: center;
     gap: 2px;
@@ -1336,7 +1406,7 @@
     margin-left: -3px;
   }
 
-  [data-slot="permission-pattern-toggle"] {
+  [data-slot="permission-rule-toggle"] {
     all: unset;
     display: flex;
     align-items: center;
@@ -1375,14 +1445,6 @@
     align-items: stretch;
     padding: 0 16px 8px;
     margin-top: 0;
-  }
-
-  [data-slot="permission-session-hint"] {
-    font-size: 11px;
-    color: var(--text-weak, var(--vscode-descriptionForeground));
-    margin: 0;
-    padding: 4px 0 0;
-    text-align: left;
   }
 
   [data-slot="permission-actions"] {
@@ -1478,6 +1540,18 @@
   font-size: 12px;
   color: var(--text-weak, var(--vscode-descriptionForeground));
   white-space: nowrap;
+}
+
+.session-list [data-slot="session-delete-button"] {
+  flex-shrink: 0;
+  margin-left: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.session-list [data-slot="list-item"]:hover [data-slot="session-delete-button"],
+.session-list [data-slot="list-item"][data-active="true"] [data-slot="session-delete-button"] {
+  opacity: 1;
 }
 
 /* Cloud Session List */

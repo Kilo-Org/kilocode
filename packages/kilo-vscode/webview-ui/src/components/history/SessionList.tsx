@@ -158,38 +158,26 @@ const SessionList: Component<SessionListProps> = (props) => {
           <Show
             when={renamingId() === s.id}
             fallback={
-              <div
-                style={{
-                  display: "flex",
-                  "align-items": "center",
-                  gap: "8px",
-                  width: "100%",
-                  "min-width": "0",
-                }}
-              >
-                <div style={{ flex: "1", "min-width": "0", overflow: "hidden" }}>
-                  <span data-slot="list-item-title">{s.title || language.t("session.untitled")}</span>
-                  <span data-slot="list-item-description">{formatRelativeDate(s.updatedAt)}</span>
-                </div>
+              <>
+                <span data-slot="list-item-title">{s.title || language.t("session.untitled")}</span>
+                <span data-slot="list-item-description">{formatRelativeDate(s.updatedAt)}</span>
                 <Show when={props.showDelete}>
-                  <IconButton
-                    icon="trash"
-                    size="small"
-                    variant="ghost"
-                    label={language.t("session.delete.button")}
-                    style={{ color: "var(--vscode-errorForeground, #f48771)" }}
-                    onClick={(e: MouseEvent) => {
-                      e.preventDefault()
+                  <span
+                    data-slot="session-delete-button"
+                    onClick={(e) => {
                       e.stopPropagation()
                       confirmDelete(s)
                     }}
-                    onMouseDown={(e: MouseEvent) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                    }}
-                  />
+                  >
+                    <IconButton
+                      icon="trash"
+                      size="small"
+                      variant="ghost"
+                      aria-label={language.t("session.delete.title")}
+                    />
+                  </span>
                 </Show>
-              </div>
+              </>
             }
           >
             <InlineInput

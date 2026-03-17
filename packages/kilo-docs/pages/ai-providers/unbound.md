@@ -11,7 +11,7 @@ Kilo Code supports accessing models through [Unbound](https://getunbound.ai/), a
 ## Creating an Account
 
 1.  **Sign Up/Sign In:** Go to the [Unbound gateway](https://gateway.getunbound.ai). Create an account or sign in.
-2.  **Create an Application:** Go to the [Applications](https://gateway.getunbound.ai/ai-gateway-applications) page and hit the "Create Application" button.
+2.  **Create an Application:** Go to the [Connect](https://gateway.getunbound.ai/connect) page and select "Kilo Code".
 3.  **Copy the API Key:** Copy the API key to your clipboard.
 
 ## Supported Models

@@ -15,10 +15,6 @@ export class ChatTextAreaAutocomplete {
     this.telemetry = new AutocompleteTelemetry("chat-textarea")
   }
 
-  async initialize(): Promise<boolean> {
-    return this.model.reload()
-  }
-
   async getCompletion(userText: string, visibleCodeContext?: VisibleCodeContext): Promise<{ suggestion: string }> {
     const startTime = Date.now()
 
@@ -27,13 +23,6 @@ export class ChatTextAreaAutocomplete {
       languageId: "chat", // Chat textarea doesn't have a language ID
       modelId: this.model.getModelName(),
       provider: this.model.getProviderDisplayName(),
-    }
-
-    if (!this.model.loaded) {
-      const loaded = await this.initialize()
-      if (!loaded) {
-        return { suggestion: "" }
-      }
     }
 
     // Check if model has valid credentials (but don't require FIM)

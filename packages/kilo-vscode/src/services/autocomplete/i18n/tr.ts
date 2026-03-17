@@ -6,8 +6,6 @@ export const dict = {
   "kilocode:autocomplete.statusBar.warning": "$(warning) Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.basic": "Kilo Code Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.disabled": "Kilo Code Autocomplete (devre dışı)",
-  "kilocode:autocomplete.statusBar.tooltip.noCredits":
-    "**Hesabınızda kredi yok**\n\nKilo Code hesabınızda kredi bulunmuyor. Otomatik tamamlamayı kullanmak için lütfen hesabınıza kredi ekleyin.\n\n[Ayarları Aç]({{command}})",
   "kilocode:autocomplete.statusBar.tooltip.noUsableProvider":
     "**Otomatik tamamlama modeli yapılandırılmadı**\n\nOtomatik tamamlamayı etkinleştirmek için desteklenen sağlayıcılardan biriyle bir profil ekleyin: {{providers}}.\n\n[Ayarları Aç]({{command}})",
   "kilocode:autocomplete.statusBar.tooltip.sessionTotal": "Oturum toplam maliyeti:",

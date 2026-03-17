@@ -186,7 +186,7 @@ export namespace Config {
         const wellknown = (await response.json()) as any
         const remoteConfig = wellknown.config ?? {}
         // Add $schema to prevent load() from trying to write back to a non-existent file
-        if (!remoteConfig.$schema) remoteConfig.$schema = "https://kilo.ai/config.json" // kilocode_change
+        if (!remoteConfig.$schema) remoteConfig.$schema = "https://app.kilo.ai/config.json" // kilocode_change
         result = mergeConfigConcatArrays(
           result,
           await load(JSON.stringify(remoteConfig), {
@@ -355,7 +355,7 @@ export namespace Config {
     }))
     json.dependencies = {
       ...json.dependencies,
-      "@kilocode/plugin": targetVersion, // kilocode_change
+      "@kilocode/plugin": targetVersion,
     }
     await Filesystem.writeJson(pkg, json)
 
@@ -405,7 +405,6 @@ export namespace Config {
 
     const parsed = await Filesystem.readJson<{ dependencies?: Record<string, string> }>(pkg).catch(() => null)
     const dependencies = parsed?.dependencies ?? {}
-    // kilocode_change start
     const depVersion = dependencies["@kilocode/plugin"]
     if (!depVersion) return true
 
@@ -1284,6 +1283,7 @@ export namespace Config {
         .object({
           disable_paste_summary: z.boolean().optional(),
           batch_tool: z.boolean().optional().describe("Enable the batch tool"),
+          codebase_search: z.boolean().optional().describe("Enable AI-powered codebase search"), // kilocode_change
           // kilocode_change start - enable telemetry by default
           openTelemetry: z.boolean().default(true).describe("Enable telemetry. Set to false to opt-out."),
           // kilocode_change end
@@ -1330,7 +1330,7 @@ export namespace Config {
         .then(async (mod) => {
           const { provider, model, ...rest } = mod.default
           if (provider && model) result.model = `${provider}/${model}`
-          result["$schema"] = "https://kilo.ai/config.json" // kilocode_change
+          result["$schema"] = "https://app.kilo.ai/config.json" // kilocode_change
           result = mergeDeep(result, rest)
           await Filesystem.writeJson(path.join(Global.Path.config, "config.json"), result)
           await fs.unlink(legacy)
@@ -1374,9 +1374,9 @@ export namespace Config {
     const parsed = Info.safeParse(normalized)
     if (parsed.success) {
       if (!parsed.data.$schema && isFile) {
-        parsed.data.$schema = "https://kilo.ai/config.json" // kilocode_change
-        const updated = original.replace(/^\s*\{/, '{\n  "$schema": "https://kilo.ai/config.json",') // kilocode_change
-        await Bun.write(options.path, updated).catch(() => {})
+        parsed.data.$schema = "https://app.kilo.ai/config.json" // kilocode_change
+        const updated = original.replace(/^\s*\{/, '{\n  "$schema": "https://app.kilo.ai/config.json",') // kilocode_change
+        await Filesystem.write(options.path, updated).catch(() => {})
       }
       const data = parsed.data
       if (data.plugin && isFile) {
@@ -1426,7 +1426,7 @@ export namespace Config {
   export async function update(config: Info) {
     const filepath = path.join(Instance.directory, "config.json")
     const existing = await loadFile(filepath)
-    await Filesystem.writeJson(filepath, stripNulls(mergeDeep(existing, config) as Record<string, unknown>)) // kilocode_change - strip null delete sentinels
+    await Filesystem.writeJson(filepath, mergeConfig(existing, config)) // kilocode_change
     await Instance.dispose()
   }
 
@@ -1462,6 +1462,35 @@ export namespace Config {
   }
   // kilocode_change end
 
+  // kilocode_change start — merge config with normalization pipeline
+  /**
+   * Merge a patch into an existing config:
+   * 1. Normalize permission scalars → objects when the patch has an object
+   *    (e.g. existing `"bash": "ask"` + patch `"bash": { "npm *": "allow" }`
+   *    → promotes existing to `"bash": { "*": "ask" }` so mergeDeep works)
+   * 2. Deep-merge
+   * 3. Strip null delete sentinels
+   */
+  function mergeConfig(existing: Info, patch: Info): Info {
+    const e = { ...existing } as Record<string, unknown>
+    const p = patch as Record<string, unknown>
+    // Normalize permission scalars before merge (clone to avoid mutating the input)
+    const existingPerm = e.permission
+    const patchPerm = p.permission
+    if (isRecord(existingPerm) && isRecord(patchPerm)) {
+      const cloned = { ...existingPerm }
+      for (const [key, patchValue] of Object.entries(patchPerm)) {
+        const existingValue = cloned[key]
+        if (typeof existingValue === "string" && isRecord(patchValue)) {
+          cloned[key] = { "*": existingValue }
+        }
+      }
+      e.permission = cloned
+    }
+    return stripNulls(mergeDeep(e, p) as Record<string, unknown>) as Info
+  }
+  // kilocode_change end
+
   function patchJsonc(input: string, patch: unknown, path: string[] = []): string {
     if (!isRecord(patch)) {
       // kilocode_change - null means "delete this key" — pass undefined to jsonc-parser's modify()
@@ -1478,11 +1507,15 @@ export namespace Config {
     // scalar (e.g. permission.bash is "ask" as a string), jsonc-parser cannot
     // add child keys to it. Detect this case and replace the whole node with
     // the patch object in a single modify() call instead of recursing.
+    // For permission keys, promote the scalar to { "*": scalarValue } so the
+    // wildcard default is preserved. For other keys, replace directly.
     if (path.length > 0) {
       const tree = parseTree(input)
       const node = tree && findNodeAtLocation(tree, path)
       if (node && node.type !== "object") {
-        const edits = modify(input, path, patch, {
+        const isPermissionKey = path[0] === "permission" && path.length === 2
+        const replacement = isPermissionKey ? { "*": node.value, ...patch } : patch
+        const edits = modify(input, path, replacement, {
           formattingOptions: { insertSpaces: true, tabSize: 2 },
         })
         return applyEdits(input, edits)
@@ -1540,7 +1573,7 @@ export namespace Config {
     const next = await (async () => {
       if (!filepath.endsWith(".jsonc")) {
         const existing = parseConfig(before, filepath)
-        const merged = stripNulls(mergeDeep(existing, config) as Record<string, unknown>) as Info // kilocode_change - strip null delete sentinels
+        const merged = mergeConfig(existing, config) // kilocode_change
         await Filesystem.writeJson(filepath, merged)
         return merged
       }
@@ -1553,17 +1586,13 @@ export namespace Config {
 
     global.reset()
 
-    void Instance.disposeAll()
-      .catch(() => undefined)
-      .finally(() => {
-        GlobalBus.emit("event", {
-          directory: "global",
-          payload: {
-            type: Event.Disposed.type,
-            properties: {},
-          },
-        })
-      })
+    GlobalBus.emit("event", {
+      directory: "global",
+      payload: {
+        type: Event.Disposed.type,
+        properties: {},
+      },
+    })
 
     return next
   }
@@ -1572,3 +1601,5 @@ export namespace Config {
     return state().then((x) => x.directories)
   }
 }
+Filesystem.write
+Filesystem.write

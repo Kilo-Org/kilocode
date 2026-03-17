@@ -332,11 +332,15 @@ export function Markdown(
     const gen = ++highlightState.gen
     const signal = { aborted: false }
     highlightState.signal = signal
-    deferredHighlight(container, () => {
-      if (gen !== highlightState.gen) return
-      if (copyCleanup) copyCleanup()
-      copyCleanup = setupCodeCopy(container, labels)
-    }, signal)
+    deferredHighlight(
+      container,
+      () => {
+        if (gen !== highlightState.gen) return
+        if (copyCleanup) copyCleanup()
+        copyCleanup = setupCodeCopy(container, labels)
+      },
+      signal,
+    )
     // kilocode_change end
   })
 

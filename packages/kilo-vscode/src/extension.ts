@@ -47,7 +47,7 @@ export function activate(context: vscode.ExtensionContext) {
   )
 
   // Create Agent Manager provider for editor panel
-  const agentManagerProvider = new AgentManagerProvider(context.extensionUri, connectionService)
+  const agentManagerProvider = new AgentManagerProvider(context.extensionUri, connectionService, context)
   context.subscriptions.push(agentManagerProvider)
 
   // Register serializer so Agent Manager restores when VS Code restarts
@@ -84,7 +84,7 @@ export function activate(context: vscode.ExtensionContext) {
       agentManagerProvider.openPanel()
     }),
     vscode.commands.registerCommand("kilo-code.new.marketplaceButtonClicked", () => {
-      provider.postMessage({ type: "action", action: "marketplaceButtonClicked" })
+      settingsEditorProvider.openPanel("marketplace")
     }),
     vscode.commands.registerCommand("kilo-code.new.historyButtonClicked", () => {
       provider.postMessage({ type: "action", action: "historyButtonClicked" })

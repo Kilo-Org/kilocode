@@ -51,14 +51,14 @@ export const PermissionRoutes = lazy(() =>
     )
     // kilocode_change start
     .post(
-      "/:requestID/pattern-rules",
+      "/:requestID/always-rules",
       describeRoute({
-        summary: "Save per-pattern permission rules",
-        description: "Save approved/denied patterns for a pending permission request.",
-        operationId: "permission.savePatternRules",
+        summary: "Save always-allow/deny permission rules",
+        description: "Save approved/denied always-rules for a pending permission request.",
+        operationId: "permission.saveAlwaysRules",
         responses: {
           200: {
-            description: "Pattern rules saved successfully",
+            description: "Always rules saved successfully",
             content: {
               "application/json": {
                 schema: resolver(z.boolean()),
@@ -77,17 +77,17 @@ export const PermissionRoutes = lazy(() =>
       validator(
         "json",
         z.object({
-          approvedPatterns: z.string().array().optional(),
-          deniedPatterns: z.string().array().optional(),
+          approvedAlways: z.string().array().optional(),
+          deniedAlways: z.string().array().optional(),
         }),
       ),
       async (c) => {
         const params = c.req.valid("param")
         const json = c.req.valid("json")
-        await PermissionNext.savePatternRules({
+        await PermissionNext.saveAlwaysRules({
           requestID: params.requestID,
-          approvedPatterns: json.approvedPatterns,
-          deniedPatterns: json.deniedPatterns,
+          approvedAlways: json.approvedAlways,
+          deniedAlways: json.deniedAlways,
         })
         return c.json(true)
       },

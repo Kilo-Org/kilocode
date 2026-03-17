@@ -16,6 +16,7 @@ import { Flag } from "@/flag/flag.ts"
 import { Shell } from "@/shell/shell"
 
 import { BashArity } from "@/permission/arity"
+import { BashHierarchy } from "@/kilocode/bash-hierarchy" // kilocode_change
 import { Truncate } from "./truncation"
 import { Plugin } from "@/plugin"
 
@@ -90,6 +91,7 @@ export const BashTool = Tool.define("bash", async () => {
       if (!Instance.containsPath(cwd)) directories.add(cwd)
       const patterns = new Set<string>()
       const always = new Set<string>()
+      const rules = new Set<string>() // kilocode_change — hierarchy rules for permissions "npm", "npm install", "npm install lodash"
 
       for (const node of tree.rootNode.descendantsOfType("command")) {
         if (!node) continue
@@ -139,6 +141,7 @@ export const BashTool = Tool.define("bash", async () => {
         if (command.length && command[0] !== "cd") {
           patterns.add(commandText)
           always.add(BashArity.prefix(command).join(" ") + " *")
+          BashHierarchy.addAll(rules, command, commandText) // kilocode_change
         }
       }
 
@@ -161,7 +164,7 @@ export const BashTool = Tool.define("bash", async () => {
           permission: "bash",
           patterns: Array.from(patterns),
           always: Array.from(always),
-          metadata: { command: params.command }, // kilocode_change
+          metadata: { command: params.command, rules: Array.from(rules) }, // kilocode_change
         })
       }
 
