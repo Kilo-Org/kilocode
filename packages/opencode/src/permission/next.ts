@@ -85,10 +85,10 @@ export namespace PermissionNext {
     for (const rule of rules) {
       const existing = result[rule.permission]
 
-      // Scalar-only permissions (e.g. websearch, todowrite) only accept
-      // PermissionAction ("allow"/"deny"/"ask"), not object form.
-      // Use scalar format when the pattern is "*".
-      if (SCALAR_ONLY_PERMISSIONS.has(rule.permission) && rule.pattern === "*") {
+      // Scalar-only permissions (e.g. websearch, todowrite, doom_loop) only
+      // accept PermissionAction ("allow"/"deny"/"ask"), not object form.
+      // Always use scalar format — the config schema has no per-pattern support.
+      if (SCALAR_ONLY_PERMISSIONS.has(rule.permission)) {
         result[rule.permission] = rule.action
         continue
       }

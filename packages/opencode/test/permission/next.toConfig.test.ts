@@ -66,10 +66,11 @@ test("toConfig - scalar-only permission uses scalar format", () => {
   expect(result).toEqual({ websearch: "allow" })
 })
 
-test("toConfig - scalar-only permission with non-wildcard still uses object", () => {
-  // This shouldn't happen in practice, but if it does, object format is used
-  const result = PermissionNext.toConfig([{ permission: "websearch", pattern: "specific-query", action: "allow" }])
-  expect(result).toEqual({ websearch: { "specific-query": "allow" } })
+test("toConfig - scalar-only permission with non-wildcard uses scalar (schema has no per-pattern support)", () => {
+  // doom_loop uses always: [toolName], so pattern can be "bash" etc.
+  // Config schema only accepts scalar for these permissions.
+  const result = PermissionNext.toConfig([{ permission: "doom_loop", pattern: "bash", action: "allow" }])
+  expect(result).toEqual({ doom_loop: "allow" })
 })
 
 test("toConfig - mixed scalar-only and rule-capable permissions", () => {
