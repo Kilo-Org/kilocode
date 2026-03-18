@@ -15,7 +15,7 @@ import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pie
 import type { WorktreeFileDiff } from "../src/types/messages"
 import { useLanguage } from "../src/context/language"
 import { FileTree } from "./FileTree"
-import { getDirectory, getFilename, sanitizeReviewComments, type ReviewComment } from "./review-comments"
+import { getDirectory, getFilename, lineCount, sanitizeReviewComments, type ReviewComment } from "./review-comments"
 import { buildReviewAnnotation, type AnnotationLabels, type AnnotationMeta } from "./review-annotations"
 import { LONG_DIFF_MARKER_FILE_COUNT, initialOpenFiles, isLargeDiffFile } from "./diff-open-policy"
 import { DiffEndMarker } from "./DiffEndMarker"
@@ -226,7 +226,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
           return
         }
         const content = currentDraft.side === "deletions" ? diff.before : diff.after
-        const max = content.length === 0 ? 0 : content.split("\n").length
+        const max = lineCount(content)
         if (currentDraft.line < 1 || currentDraft.line > max) {
           setDraft(null)
           draftMeta = null

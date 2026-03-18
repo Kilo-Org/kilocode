@@ -13,7 +13,7 @@ import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
 import { useLanguage } from "../src/context/language"
-import { getDirectory, getFilename, sanitizeReviewComments, type ReviewComment } from "./review-comments"
+import { getDirectory, getFilename, lineCount, sanitizeReviewComments, type ReviewComment } from "./review-comments"
 import { buildReviewAnnotation, type AnnotationLabels, type AnnotationMeta } from "./review-annotations"
 import { LONG_DIFF_MARKER_FILE_COUNT, initialOpenFiles, isLargeDiffFile } from "./diff-open-policy"
 import { DiffEndMarker } from "./DiffEndMarker"
@@ -220,7 +220,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
           return
         }
         const content = currentDraft.side === "deletions" ? diff.before : diff.after
-        const max = content.length === 0 ? 0 : content.split("\n").length
+        const max = lineCount(content)
         if (currentDraft.line < 1 || currentDraft.line > max) {
           setDraft(null)
           draftMeta = null
