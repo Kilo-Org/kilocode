@@ -17,7 +17,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
-import { describePatterns } from "../../utils/permission-description"
+import { describePatterns, resolveLabel } from "../../utils/permission-description"
 import type { PermissionRequest } from "../../types/messages"
 
 type RuleDecision = "approved" | "denied" | "pending"
@@ -103,9 +103,7 @@ export const PermissionDock: Component<{
   }
 
   const title = () =>
-    fromChild()
-      ? language.t("notification.permission.titleSubagent")
-      : language.t("notification.permission.title")
+    fromChild() ? language.t("notification.permission.titleSubagent") : language.t("notification.permission.title")
 
   return (
     <DockPrompt
@@ -166,8 +164,13 @@ export const PermissionDock: Component<{
                             </button>
                           </Tooltip>
                         </div>
-                        <span data-slot="permission-rule-type">{props.request.toolName}</span>
-                        <code data-slot="permission-rule">{label(rule)}</code>
+                        <code data-slot="permission-rule">
+                          {command()
+                            ? label(rule)
+                            : rule === "*"
+                              ? resolveLabel(props.request.toolName, language.t)
+                              : `${resolveLabel(props.request.toolName, language.t)} ${rule}`}
+                        </code>
                       </div>
                     )}
                   </For>

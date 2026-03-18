@@ -24,9 +24,13 @@ export const TOOL_LABEL_KEYS: Record<string, string> = {
   lsp: "ui.permission.toolLabel.lsp",
 }
 
-export type PatternDescription =
-  | { kind: "single"; text: string }
-  | { kind: "multi"; title: string; paths: string[] }
+export type PatternDescription = { kind: "single"; text: string } | { kind: "multi"; title: string; paths: string[] }
+
+/** Resolve the human-readable label for a tool (e.g. "Read", "Web Fetch"). */
+export function resolveLabel(tool: string, t: (key: string) => string): string {
+  const key = TOOL_LABEL_KEYS[tool]
+  return key ? t(key) : tool
+}
 
 export function describePatterns(
   tool: string,
