@@ -450,6 +450,7 @@ export const dict = {
   "error.chain.configInvalidWithMessage": "ไฟล์กำหนดค่าที่ {{path}} ไม่ถูกต้อง: {{message}}",
 
   "notification.permission.title": "ต้องการสิทธิ์",
+  "notification.permission.titleSubagent": "ต้องการสิทธิ์ (ตัวแทนย่อย)",
   "notification.permission.description": "{{sessionTitle}} ใน {{projectName}} ต้องการสิทธิ์",
   "ui.permission.manageAutoApprove": "จัดการกฎการอนุมัติอัตโนมัติ",
   "ui.permission.rule.addToAllowed": "เพิ่มไปยังรายการที่อนุญาต",

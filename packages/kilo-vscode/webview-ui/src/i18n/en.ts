@@ -454,6 +454,7 @@ export const dict = {
   "error.chain.configInvalidWithMessage": "Config file at {{path}} is invalid: {{message}}",
 
   "notification.permission.title": "Permission required",
+  "notification.permission.titleSubagent": "Permission required (subagent)",
   "notification.permission.description": "{{sessionTitle}} in {{projectName}} needs permission",
   "ui.permission.manageAutoApprove": "Manage Auto-Approve Rules",
   "ui.permission.rule.addToAllowed": "Add to allowed list",

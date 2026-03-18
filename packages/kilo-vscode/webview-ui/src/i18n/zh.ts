@@ -446,6 +446,7 @@ export const dict = {
   "error.chain.configInvalidWithMessage": "配置文件 {{path}} 无效：{{message}}",
 
   "notification.permission.title": "需要权限",
+  "notification.permission.titleSubagent": "需要权限（子代理）",
   "notification.permission.description": "{{sessionTitle}}（{{projectName}}）需要权限",
   "ui.permission.manageAutoApprove": "管理自动审批规则",
   "ui.permission.rule.addToAllowed": "添加到允许列表",

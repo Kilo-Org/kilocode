@@ -102,7 +102,10 @@ export const PermissionDock: Component<{
     return value
   }
 
-  const subtitle = () => (fromChild() ? `${props.request.toolName} (subagent)` : props.request.toolName)
+  const title = () =>
+    fromChild()
+      ? language.t("notification.permission.titleSubagent")
+      : language.t("notification.permission.title")
 
   return (
     <DockPrompt
@@ -112,10 +115,7 @@ export const PermissionDock: Component<{
           <span data-slot="permission-icon">
             <Icon name="warning" size="small" />
           </span>
-          <div data-slot="permission-header-title">
-            {language.t("notification.permission.title")}
-            <span data-slot="permission-header-subtitle">{subtitle()}</span>
-          </div>
+          <div data-slot="permission-header-title">{title()}</div>
         </div>
       }
       footer={

@@ -1392,15 +1392,6 @@
     gap: 6px;
     padding: 3px 0 3px 8px;
     min-width: 0;
-
-    &[data-decision="approved"] [data-slot="permission-rule"] {
-      color: var(--text-success, var(--vscode-testing-iconPassed, #5cb85c));
-    }
-
-    &[data-decision="denied"] [data-slot="permission-rule"] {
-      color: var(--text-error, var(--vscode-errorForeground, #f44));
-      text-decoration: line-through;
-    }
   }
 
   [data-slot="permission-rule-type"] {

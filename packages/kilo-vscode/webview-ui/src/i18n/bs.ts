@@ -455,6 +455,7 @@ export const dict = {
   "error.chain.configInvalidWithMessage": "Konfiguracijska datoteka na {{path}} nije ispravna: {{message}}",
 
   "notification.permission.title": "Potrebna dozvola",
+  "notification.permission.titleSubagent": "Potrebna dozvola (podagent)",
   "notification.permission.description": "{{sessionTitle}} u {{projectName}} traži dozvolu",
   "ui.permission.manageAutoApprove": "Upravljanje pravilima automatskog odobravanja",
   "ui.permission.rule.addToAllowed": "Dodaj na listu dozvoljenih",

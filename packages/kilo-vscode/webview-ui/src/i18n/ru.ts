@@ -455,6 +455,7 @@ export const dict = {
   "error.chain.configInvalidWithMessage": "Конфигурационный файл по адресу {{path}} невалиден: {{message}}",
 
   "notification.permission.title": "Требуется разрешение",
+  "notification.permission.titleSubagent": "Требуется разрешение (субагент)",
   "notification.permission.description": "{{sessionTitle}} в {{projectName}} требуется разрешение",
   "ui.permission.manageAutoApprove": "Управление правилами автоодобрения",
   "ui.permission.rule.addToAllowed": "Добавить в список разрешённых",

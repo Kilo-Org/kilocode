@@ -453,6 +453,7 @@ export const dict = {
   "error.chain.configInvalidWithMessage": "{{path}}의 구성 파일이 유효하지 않습니다: {{message}}",
 
   "notification.permission.title": "권한 필요",
+  "notification.permission.titleSubagent": "권한 필요 (서브에이전트)",
   "notification.permission.description": "{{projectName}}의 {{sessionTitle}}에서 권한이 필요합니다",
   "ui.permission.manageAutoApprove": "자동 승인 규칙 관리",
   "ui.permission.rule.addToAllowed": "허용 목록에 추가",

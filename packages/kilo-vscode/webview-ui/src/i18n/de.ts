@@ -459,6 +459,7 @@ export const dict = {
   "error.chain.configInvalidWithMessage": "Konfigurationsdatei unter {{path}} ist ungültig: {{message}}",
 
   "notification.permission.title": "Berechtigung erforderlich",
+  "notification.permission.titleSubagent": "Berechtigung erforderlich (Subagent)",
   "notification.permission.description": "{{sessionTitle}} in {{projectName}} benötigt Berechtigung",
   "ui.permission.manageAutoApprove": "Regeln für automatische Genehmigung verwalten",
   "ui.permission.rule.addToAllowed": "Zur Erlaubt-Liste hinzufügen",

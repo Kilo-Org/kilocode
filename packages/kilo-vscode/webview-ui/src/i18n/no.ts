@@ -455,6 +455,7 @@ export const dict = {
   "error.chain.configInvalidWithMessage": "Konfigurasjonsfilen på {{path}} er ugyldig: {{message}}",
 
   "notification.permission.title": "Tillatelse påkrevd",
+  "notification.permission.titleSubagent": "Tillatelse påkrevd (underagent)",
   "notification.permission.description": "{{sessionTitle}} i {{projectName}} trenger tillatelse",
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkjenning",
   "ui.permission.rule.addToAllowed": "Legg til i tillatt-listen",

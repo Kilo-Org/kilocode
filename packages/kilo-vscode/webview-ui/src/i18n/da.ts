@@ -452,6 +452,7 @@ export const dict = {
   "error.chain.configInvalidWithMessage": "Konfigurationsfil på {{path}} er ugyldig: {{message}}",
 
   "notification.permission.title": "Tilladelse påkrævet",
+  "notification.permission.titleSubagent": "Tilladelse påkrævet (underagent)",
   "notification.permission.description": "{{sessionTitle}} i {{projectName}} kræver tilladelse",
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkendelse",
   "ui.permission.rule.addToAllowed": "Tilføj til tilladelseslisten",

@@ -450,6 +450,7 @@ export const dict = {
   "error.chain.configInvalidWithMessage": "{{path}} の設定ファイルが無効です: {{message}}",
 
   "notification.permission.title": "権限が必要です",
+  "notification.permission.titleSubagent": "権限が必要です（サブエージェント）",
   "notification.permission.description": "{{projectName}} の {{sessionTitle}} が権限を必要としています",
   "ui.permission.manageAutoApprove": "自動承認ルールを管理",
   "ui.permission.rule.addToAllowed": "許可リストに追加",

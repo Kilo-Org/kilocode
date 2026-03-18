@@ -451,6 +451,7 @@ export const dict = {
   "error.chain.configInvalidWithMessage": "Arquivo de configuração em {{path}} é inválido: {{message}}",
 
   "notification.permission.title": "Permissão necessária",
+  "notification.permission.titleSubagent": "Permissão necessária (subagente)",
   "notification.permission.description": "{{sessionTitle}} em {{projectName}} precisa de permissão",
   "ui.permission.manageAutoApprove": "Gerenciar regras de aprovação automática",
   "ui.permission.rule.addToAllowed": "Adicionar à lista de permitidos",

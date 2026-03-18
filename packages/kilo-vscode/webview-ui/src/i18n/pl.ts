@@ -453,6 +453,7 @@ export const dict = {
   "error.chain.configInvalidWithMessage": "Plik konfiguracyjny w {{path}} jest nieprawidłowy: {{message}}",
 
   "notification.permission.title": "Wymagane uprawnienie",
+  "notification.permission.titleSubagent": "Wymagane uprawnienie (podagent)",
   "notification.permission.description": "{{sessionTitle}} w {{projectName}} potrzebuje uprawnienia",
   "ui.permission.manageAutoApprove": "Zarządzaj regułami automatycznego zatwierdzania",
   "ui.permission.rule.addToAllowed": "Dodaj do listy dozwolonych",

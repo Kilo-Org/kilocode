@@ -449,6 +449,7 @@ export const dict = {
   "error.chain.configInvalidWithMessage": "ملف التكوين في {{path}} غير صالح: {{message}}",
 
   "notification.permission.title": "مطلوب إذن",
+  "notification.permission.titleSubagent": "مطلوب إذن (وكيل فرعي)",
   "notification.permission.description": "{{sessionTitle}} في {{projectName}} يحتاج إلى إذن",
   "ui.permission.manageAutoApprove": "إدارة قواعد الموافقة التلقائية",
   "ui.permission.rule.addToAllowed": "أضف إلى قائمة المسموح",
