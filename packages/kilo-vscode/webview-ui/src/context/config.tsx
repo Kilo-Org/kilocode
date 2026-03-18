@@ -45,7 +45,7 @@ function stripNulls(obj: Config): Config {
   return result as Config
 }
 
-const ConfigContext = createContext<ConfigContextValue>()
+export const ConfigContext = createContext<ConfigContextValue>()
 
 export const ConfigProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
