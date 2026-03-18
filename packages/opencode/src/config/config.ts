@@ -1587,15 +1587,25 @@ export namespace Config {
       return merged
     })()
 
-    global.reset()
+    // kilocode_change start — skip dispose when caller opts out (e.g. permission-only saves)
+    await global.reset()
 
-    GlobalBus.emit("event", {
-      directory: "global",
-      payload: {
-        type: Event.Disposed.type,
-        properties: {},
-      },
-    })
+    if (!dispose) return next;
+    // kilocode_change end
+
+
+    void Instance.disposeAll()
+      .catch(() => undefined)
+      .finally(() => {
+        GlobalBus.emit("event", {
+          directory: "global",
+          payload: {
+            type: Event.Disposed.type,
+            properties: {},
+          },
+        })
+      })
+
 
     return next
   }
