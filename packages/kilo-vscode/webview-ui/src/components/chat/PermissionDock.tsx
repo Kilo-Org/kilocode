@@ -78,7 +78,6 @@ export const PermissionDock: Component<{
     const next = current === decision ? "pending" : decision
     const updated = { ...decisions(), [index]: next }
     setDecisions(updated)
-
   }
 
   const decision = (index: number): RuleDecision => decisions()[index] ?? "pending"
