@@ -1,7 +1,7 @@
 import { sampledChecksum } from "@opencode-ai/util/encode"
 import { FileDiff, type FileDiffOptions, type SelectedLineRange, VirtualizedFileDiff } from "@pierre/diffs"
 import { createMediaQuery } from "@solid-primitives/media"
-import { createEffect, createMemo, createSignal, onCleanup, splitProps } from "solid-js"
+import { createEffect, createMemo, createSignal, on, onCleanup, splitProps, untrack } from "solid-js"
 import { createDefaultOptions, type DiffProps, styleVariables } from "@opencode-ai/ui/pierre"
 import { acquireVirtualizer, virtualMetrics } from "@opencode-ai/ui/pierre/virtualizer"
 import { getWorkerPool } from "@opencode-ai/ui/pierre/worker"
@@ -545,7 +545,6 @@ export function Diff<T>(props: DiffProps<T>) {
     const opts = options()
     const workerPool = large() ? getWorkerPool("unified") : getWorkerPool(props.diffStyle)
     const virtualizer = getVirtualizer()
-    const annotations = local.annotations
     const beforeContents = typeof local.before?.contents === "string" ? local.before.contents : ""
     const afterContents = typeof local.after?.contents === "string" ? local.after.contents : ""
 
@@ -572,7 +571,7 @@ export function Diff<T>(props: DiffProps<T>) {
         contents: afterContents,
         cacheKey: cacheKey(afterContents),
       },
-      lineAnnotations: annotations,
+      lineAnnotations: untrack(() => local.annotations),
       containerWrapper: container,
     })
 
@@ -581,6 +580,23 @@ export function Diff<T>(props: DiffProps<T>) {
     setRendered((value) => value + 1)
     notifyRendered()
   })
+
+  // Separate effect for annotation-only updates. When annotations change but
+  // file contents / options stay the same, this avoids the full teardown+rebuild
+  // in the render effect above. Pierre's setLineAnnotations + rerender handles
+  // incremental DOM patching of annotation slots.
+  // defer: true skips the initial run (the main effect already passed annotations).
+  createEffect(
+    on(
+      () => local.annotations,
+      (annotations) => {
+        if (!instance) return
+        instance.setLineAnnotations(annotations ?? [])
+        instance.rerender()
+      },
+      { defer: true },
+    ),
+  )
 
   createEffect(() => {
     if (typeof document === "undefined") return
