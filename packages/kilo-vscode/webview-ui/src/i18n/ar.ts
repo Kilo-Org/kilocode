@@ -450,7 +450,7 @@ export const dict = {
 
   "notification.permission.title": "مطلوب إذن",
   "notification.permission.description": "{{sessionTitle}} في {{projectName}} يحتاج إلى إذن",
-  "ui.permission.permissionRules": "قواعد الأذونات",
+  "ui.permission.manageAutoApprove": "إدارة قواعد الموافقة التلقائية",
   "ui.permission.rule.addToAllowed": "أضف إلى قائمة المسموح",
   "ui.permission.rule.removeFromAllowed": "أزل من قائمة المسموح",
   "ui.permission.rule.addToDenied": "أضف إلى قائمة المرفوض",

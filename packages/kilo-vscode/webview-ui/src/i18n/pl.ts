@@ -454,7 +454,7 @@ export const dict = {
 
   "notification.permission.title": "Wymagane uprawnienie",
   "notification.permission.description": "{{sessionTitle}} w {{projectName}} potrzebuje uprawnienia",
-  "ui.permission.permissionRules": "Reguły uprawnień",
+  "ui.permission.manageAutoApprove": "Zarządzaj regułami automatycznego zatwierdzania",
   "ui.permission.rule.addToAllowed": "Dodaj do listy dozwolonych",
   "ui.permission.rule.removeFromAllowed": "Usuń z listy dozwolonych",
   "ui.permission.rule.addToDenied": "Dodaj do listy zablokowanych",

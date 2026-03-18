@@ -127,7 +127,7 @@ export const PermissionDock: Component<{
               <span data-slot="permission-rules-header-chevron" data-open={expanded() ? "" : undefined}>
                 <Icon name="chevron-down" size="small" />
               </span>
-              <span data-slot="permission-rules-header-title">{language.t("ui.permission.permissionRules")}</span>
+              <span data-slot="permission-rules-header-title">{language.t("ui.permission.manageAutoApprove")}</span>
             </button>
 
             <div data-slot="permission-rules-collapse" data-open={expanded() ? "" : undefined}>
