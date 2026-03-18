@@ -1843,14 +1843,7 @@ ToolRegistry.register({
     const i18n = useI18n()
     const fileComponent = useFileComponent()
     const diagnostics = createMemo(() => getDiagnostics(props.metadata.diagnostics, props.input.filePath))
-    const preview = createMemo(() => {
-      const diff = props.metadata?.filediff
-      if (!diff) return
-      if (typeof diff.before !== "string") return
-      if (typeof diff.after !== "string") return
-      return diff
-    })
-    const path = createMemo(() => preview()?.file || "")
+    const path = createMemo(() => props.metadata?.filediff?.file || props.input.filePath || "")
     const filename = () => getFilename(props.input.filePath ?? "")
     // kilocode_change start
     const handleFileClick = (e: MouseEvent) => {
@@ -1861,7 +1854,6 @@ ToolRegistry.register({
     // kilocode_change end
 
     const pending = () => props.status === "pending" || props.status === "running"
-    const details = createMemo(() => !!preview() || diagnostics().length > 0)
     return (
       <div data-component="edit-tool">
         <BasicTool
@@ -1909,36 +1901,30 @@ ToolRegistry.register({
             </div>
           }
         >
-          {details()
-            ? [
-                <Show when={path()}>
-                  <ToolFileAccordion
-                    path={path()}
-                    actions={
-                      <Show when={!pending() && props.metadata.filediff}>
-                        {(diff) => <DiffChanges changes={diff()} />}
-                      </Show>
-                    }
-                  >
-                    <div data-component="edit-content">
-                      <Dynamic
-                        component={fileComponent}
-                        mode="diff"
-                        before={{
-                          name: preview()?.file || props.input.filePath,
-                          contents: preview()?.before || props.input.oldString,
-                        }}
-                        after={{
-                          name: preview()?.file || props.input.filePath,
-                          contents: preview()?.after || props.input.newString,
-                        }}
-                      />
-                    </div>
-                  </ToolFileAccordion>
-                </Show>,
-                <DiagnosticsDisplay diagnostics={diagnostics()} />,
-              ]
-            : undefined}
+          <Show when={path()}>
+            <ToolFileAccordion
+              path={path()}
+              actions={
+                <Show when={!pending() && props.metadata.filediff}>{(diff) => <DiffChanges changes={diff()} />}</Show>
+              }
+            >
+              <div data-component="edit-content">
+                <Dynamic
+                  component={fileComponent}
+                  mode="diff"
+                  before={{
+                    name: props.metadata?.filediff?.file || props.input.filePath,
+                    contents: props.metadata?.filediff?.before || props.input.oldString,
+                  }}
+                  after={{
+                    name: props.metadata?.filediff?.file || props.input.filePath,
+                    contents: props.metadata?.filediff?.after || props.input.newString,
+                  }}
+                />
+              </div>
+            </ToolFileAccordion>
+          </Show>
+          <DiagnosticsDisplay diagnostics={diagnostics()} />
         </BasicTool>
       </div>
     )
