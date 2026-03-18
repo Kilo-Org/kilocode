@@ -665,13 +665,14 @@ export const SessionProvider: ParentComponent = (props) => {
 
         if (existingIndex >= 0) {
           // Update existing part
+          const existing = parts[effectiveMessageID][existingIndex]
           if (
             delta?.type === "text-delta" &&
             delta.textDelta &&
-            parts[effectiveMessageID][existingIndex].type === "text"
+            (existing.type === "text" || existing.type === "reasoning")
           ) {
-            // Append text delta
-            ;(parts[effectiveMessageID][existingIndex] as { text: string }).text += delta.textDelta
+            // Append text delta to text or reasoning parts
+            ;(existing as { text: string }).text += delta.textDelta
           } else {
             // Replace entire part
             parts[effectiveMessageID][existingIndex] = part
