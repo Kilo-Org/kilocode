@@ -1869,8 +1869,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     variant?: string,
     files?: Array<{ mime: string; url: string }>,
   ): Promise<void> {
-    const resolved = await this.resolveSession(sessionID).catch(() => undefined)
-    if (!resolved) {
+    if (!this.client) {
       this.postMessage({
         type: "sendMessageFailed",
         error: "Not connected to CLI backend",
@@ -1882,7 +1881,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
+    let resolved: { sid: string; dir: string } | undefined
     try {
+      resolved = await this.resolveSession(sessionID)
+
       const parts: Array<TextPartInput | FilePartInput> = []
       if (files) {
         for (const f of files) {
@@ -1894,13 +1896,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const editorContext = await this.gatherEditorContext()
 
       if (messageID) {
-        this.connectionService.recordMessageSessionId(messageID, resolved.sid)
+        this.connectionService.recordMessageSessionId(messageID, resolved!.sid)
       }
 
-      await this.client!.session.promptAsync(
+      await this.client.session.promptAsync(
         {
-          sessionID: resolved.sid,
-          directory: resolved.dir,
+          sessionID: resolved!.sid,
+          directory: resolved!.dir,
           messageID,
           parts,
           model: providerID && modelID ? { providerID, modelID } : undefined,
@@ -1916,7 +1918,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         type: "sendMessageFailed",
         error: getErrorMessage(error) || "Failed to send message",
         text,
-        sessionID: resolved.sid,
+        sessionID: resolved?.sid ?? sessionID,
         messageID,
         files,
       })
@@ -1934,8 +1936,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     variant?: string,
     files?: Array<{ mime: string; url: string }>,
   ): Promise<void> {
-    const resolved = await this.resolveSession(sessionID).catch(() => undefined)
-    if (!resolved) {
+    if (!this.client) {
       this.postMessage({
         type: "sendMessageFailed",
         error: "Not connected to CLI backend",
@@ -1947,17 +1948,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
+    let resolved: { sid: string; dir: string } | undefined
     try {
+      resolved = await this.resolveSession(sessionID)
+
       if (messageID) {
-        this.connectionService.recordMessageSessionId(messageID, resolved.sid)
+        this.connectionService.recordMessageSessionId(messageID, resolved!.sid)
       }
 
       const parts = files?.map((f) => ({ type: "file" as const, mime: f.mime, url: f.url }))
 
-      await this.client!.session.command(
+      await this.client.session.command(
         {
-          sessionID: resolved.sid,
-          directory: resolved.dir,
+          sessionID: resolved!.sid,
+          directory: resolved!.dir,
           command,
           arguments: args,
           messageID,
@@ -1974,7 +1978,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         type: "sendMessageFailed",
         error: getErrorMessage(error) || "Failed to send command",
         text: `/${command} ${args}`.trim(),
-        sessionID: resolved.sid,
+        sessionID: resolved?.sid ?? sessionID,
         messageID,
         files,
       })
