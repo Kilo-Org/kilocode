@@ -67,7 +67,8 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
 
   // --- New tab state ---
   const [name, setName] = createSignal("")
-  const [prompt, setPrompt] = createSignal("")
+  const cached = vscode.getState<Record<string, unknown>>()
+  const [prompt, setPrompt] = createSignal((cached?.advancedDialogPrompt as string) ?? "")
   const [versions, setVersions] = createSignal<VersionCount>(1)
   const [model, setModel] = createSignal<{ providerID: string; modelID: string } | null>(null)
   const [compareMode, setCompareMode] = createSignal(false)
@@ -83,11 +84,18 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
 
   const imageAttach = useImageAttachments()
 
+  const persistPrompt = (value: string) => {
+    const state = vscode.getState<Record<string, unknown>>() ?? {}
+    vscode.setState({ ...state, advancedDialogPrompt: value || undefined })
+  }
+
   let textareaRef: HTMLTextAreaElement | undefined
 
   onMount(() => {
     setBranchesLoading(true)
     vscode.postMessage({ type: "agentManager.requestBranches" })
+    // Resize textarea if restoring a cached prompt
+    if (prompt()) adjustHeight()
   })
 
   const effectiveBaseBranch = () => baseBranch() ?? defaultBranch()
@@ -135,6 +143,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
       files: imgFiles,
     })
 
+    persistPrompt("")
     props.onClose()
   }
 
@@ -276,7 +285,9 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                     )}
                     value={prompt()}
                     onInput={(e) => {
-                      setPrompt(e.currentTarget.value)
+                      const val = e.currentTarget.value
+                      setPrompt(val)
+                      persistPrompt(val)
                       adjustHeight()
                     }}
                     onPaste={(e) => imageAttach.handlePaste(e)}
@@ -522,7 +533,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                   </>
                 }
               >
-                {t("agentManager.dialog.createWorkspace")}
+                {t("agentManager.dialog.createWorktree")}
               </Show>
             </Button>
           </div>

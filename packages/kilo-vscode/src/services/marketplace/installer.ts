@@ -80,7 +80,8 @@ export class MarketplaceInstaller {
   private buildMcpEntry(content: string, params?: Record<string, unknown>): Record<string, unknown> {
     const filtered = Object.fromEntries(Object.entries(params ?? {}).filter(([k]) => k !== "__method"))
     const replaced = Object.keys(filtered).length > 0 ? substituteParams(content, filtered) : content
-    return JSON.parse(replaced)
+    const raw = JSON.parse(replaced) as Record<string, unknown>
+    return normalizeMcpEntry(raw)
   }
 
   // ── Mode ────────────────────────────────────────────────────────────
@@ -272,6 +273,48 @@ export class MarketplaceInstaller {
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────
+
+/**
+ * Normalize a marketplace MCP entry from the old Kilocode format to the CLI's expected format.
+ *
+ * Old format (from marketplace API):
+ *   { "command": "npx", "args": [...], "env": {...} }
+ *   { "type": "sse"|"streamable-http", "url": "...", "headers": {...} }
+ *
+ * New format (CLI Config.Mcp schema):
+ *   { "type": "local", "command": ["npx", ...], "environment": {...} }
+ *   { "type": "remote", "url": "...", "headers": {...} }
+ */
+function normalizeMcpEntry(raw: Record<string, unknown>): Record<string, unknown> {
+  // Already in new format
+  if (raw.type === "local" || raw.type === "remote") return raw
+
+  // Remote MCP (sse / streamable-http) → type: "remote"
+  if (typeof raw.url === "string") {
+    const { type: _type, url, headers, ...rest } = raw
+    const entry: Record<string, unknown> = { type: "remote", url }
+    if (headers && typeof headers === "object") entry.headers = headers
+    // Carry through any other recognized fields (enabled, timeout, oauth)
+    for (const key of ["enabled", "timeout", "oauth"] as const) {
+      if (key in rest) entry[key] = rest[key]
+    }
+    return entry
+  }
+
+  // Local MCP (command string + args array) → type: "local", command array
+  if (typeof raw.command === "string") {
+    const args = (raw.args as string[] | undefined) ?? []
+    const env = raw.env
+    const entry: Record<string, unknown> = { type: "local", command: [raw.command, ...args] }
+    if (env && typeof env === "object" && Object.keys(env as object).length > 0) entry.environment = env
+    for (const key of ["enabled", "timeout"] as const) {
+      if (key in raw) entry[key] = raw[key]
+    }
+    return entry
+  }
+
+  return raw
+}
 
 function isSafeId(id: string): boolean {
   if (!id || id.includes("..") || id.includes("/") || id.includes("\\")) return false

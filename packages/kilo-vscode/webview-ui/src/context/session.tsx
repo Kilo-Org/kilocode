@@ -52,6 +52,7 @@ interface SessionStore {
   parts: Record<string, Part[]> // messageID -> parts
   todos: Record<string, TodoItem[]> // sessionID -> todos
   modelSelections: Record<string, ModelSelection> // agentName -> model (global, extension-lifetime)
+  sessionOverrides: Record<string, ModelSelection> // sessionID -> per-session model override (compare mode)
   agentSelections: Record<string, string> // sessionID -> agent name
   variantSelections: Record<string, string> // "providerID/modelID" -> variant name
 }
@@ -262,6 +263,7 @@ export const SessionProvider: ParentComponent = (props) => {
     parts: {},
     todos: {},
     modelSelections: {},
+    sessionOverrides: {},
     agentSelections: {},
     variantSelections: {},
   })
@@ -306,8 +308,13 @@ export const SessionProvider: ParentComponent = (props) => {
   })
 
   // Global model selection per agent/mode
-  // Precedence: user override > per-mode config > global config model > VS Code default > kilo-auto/free
+  // Precedence: per-session override > user override > per-mode config > global config model > VS Code default > kilo-auto/free
   const selected = createMemo<ModelSelection | null>(() => {
+    const sid = currentSessionID()
+    if (sid) {
+      const session = store.sessionOverrides[sid]
+      if (session) return session
+    }
     const agentName = selectedAgentName()
     const override = store.modelSelections[agentName]
     if (override) return override
@@ -317,6 +324,9 @@ export const SessionProvider: ParentComponent = (props) => {
     const agentName = selectedAgentName()
     setUserSetAgents((prev) => ({ ...prev, [agentName]: true }))
     setStore("modelSelections", agentName, { providerID, modelID })
+    // Update per-session override so compare-mode sessions stay independent
+    const sid = currentSessionID()
+    if (sid) setStore("sessionOverrides", sid, { providerID, modelID })
   }
 
   /** The config/default model for the current mode (what settings says). */
@@ -347,6 +357,16 @@ export const SessionProvider: ParentComponent = (props) => {
         delete selections[agentName]
       }),
     )
+    // Also clear per-session override so the session falls back to config default
+    const sid = currentSessionID()
+    if (sid) {
+      setStore(
+        "sessionOverrides",
+        produce((overrides) => {
+          delete overrides[sid]
+        }),
+      )
+    }
   }
 
   // Handle agentsLoaded immediately (not in onMount) so we never miss
@@ -1073,6 +1093,14 @@ export const SessionProvider: ParentComponent = (props) => {
     const id = currentSessionID()
     if (id) {
       setStore("agentSelections", id, name)
+      // Clear per-session model override so the new mode's configured/default
+      // model takes effect instead of the previous mode's override.
+      setStore(
+        "sessionOverrides",
+        produce((overrides) => {
+          delete overrides[id]
+        }),
+      )
     } else {
       setPendingAgentSelection(name)
       // When switching mode, initialize model for the new mode if the user
@@ -1475,13 +1503,19 @@ export const SessionProvider: ParentComponent = (props) => {
     selectAgent,
     getSessionAgent: (sessionID: string) => store.agentSelections[sessionID] ?? defaultAgent(),
     getSessionModel: (sessionID: string) => {
+      const override = store.sessionOverrides[sessionID]
+      if (override) return override
       const agentName = store.agentSelections[sessionID] ?? defaultAgent()
       return store.modelSelections[agentName] ?? provider.defaultSelection()
     },
-    setSessionModel: (_sessionID: string, providerID: string, modelID: string) => {
-      const agentName = selectedAgentName()
-      setUserSetAgents((prev) => ({ ...prev, [agentName]: true }))
-      setStore("modelSelections", agentName, { providerID, modelID })
+    setSessionModel: (sessionID: string, providerID: string, modelID: string) => {
+      // Only write per-session override — do NOT touch global modelSelections or
+      // userSetAgents.  The override is what selected()/getSessionModel() actually
+      // reads, and mutating the global map here is both redundant and harmful: the
+      // agent may not yet be assigned (sendInitialMessage calls setSessionModel
+      // before setSessionAgent), so the write would land on defaultAgent() and
+      // corrupt the default mode's model for later sessions.
+      setStore("sessionOverrides", sessionID, { providerID, modelID })
     },
     setSessionAgent: (sessionID: string, name: string) => {
       setStore("agentSelections", sessionID, name)

@@ -57,6 +57,7 @@ export const NotificationsProvider: ParentComponent = (props) => {
   })
 
   const dismiss = (id: string) => {
+    setDismissedIds((prev) => (prev.includes(id) ? prev : [...prev, id]))
     vscode.postMessage({ type: "dismissNotification", notificationId: id })
   }
 

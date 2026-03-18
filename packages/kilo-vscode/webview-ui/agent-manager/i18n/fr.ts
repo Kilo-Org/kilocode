@@ -85,7 +85,7 @@ export const dict = {
   "agentManager.dialog.compareModels.searchModels": "Rechercher des modèles...",
   "agentManager.dialog.compareModels.selectModels": "Sélectionner des modèles...",
   "agentManager.dialog.creating": "Création...",
-  "agentManager.dialog.createWorkspace": "Créer un worktree",
+  "agentManager.dialog.createWorktree": "Créer un worktree",
   "agentManager.dialog.removeImage": "Supprimer l'image",
   "agentManager.dialog.advanced": "Avancé...",
 

@@ -84,7 +84,7 @@ export const dict = {
   "agentManager.dialog.compareModels.searchModels": "البحث عن النماذج...",
   "agentManager.dialog.compareModels.selectModels": "اختر النماذج...",
   "agentManager.dialog.creating": "جارٍ الإنشاء...",
-  "agentManager.dialog.createWorkspace": "إنشاء شجرة العمل",
+  "agentManager.dialog.createWorktree": "إنشاء شجرة العمل",
   "agentManager.dialog.removeImage": "إزالة الصورة",
   "agentManager.dialog.advanced": "متقدم...",
 

@@ -732,9 +732,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           const scope = message.mpInstallOptions?.target ?? "project"
           const result = await this.getMarketplace().install(message.mpItem, message.mpInstallOptions, workspace)
           if (result.success) {
-            await this.disposeCliInstance(scope)
-            this.cachedAgentsMessage = null
-            await this.fetchAndSendAgents()
+            await this.invalidateAfterMarketplaceChange(scope)
           }
           this.postMessage({
             type: "marketplaceInstallResult",
@@ -749,9 +747,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           const scope = message.mpInstallOptions?.target ?? "project"
           const result = await this.getMarketplace().remove(message.mpItem, scope, workspace)
           if (result.success) {
-            await this.disposeCliInstance(scope)
-            this.cachedAgentsMessage = null
-            await this.fetchAndSendAgents()
+            await this.invalidateAfterMarketplaceChange(scope)
           }
           this.postMessage({
             type: "marketplaceRemoveResult",
@@ -1372,6 +1368,43 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /**
+   * Invalidate CLI caches and refresh the webview after a marketplace install/remove.
+   *
+   * For global scope: uses global.config.update with the freshly-written config file
+   * contents rather than global.dispose. This goes through Config.updateGlobal() which
+   * calls Config.global.reset() to invalidate the lazy-cached global config, ensuring
+   * the newly installed/removed MCP entry is visible on the next config.get call.
+   * (global.dispose alone is not sufficient on older CLI versions that lack the
+   * Config.global.reset() call in the dispose handler.)
+   *
+   * For project scope: instance.dispose is sufficient because the per-instance
+   * Config.state is cleared and re-reads all files (including global) on next access.
+   */
+  private async invalidateAfterMarketplaceChange(scope: "project" | "global"): Promise<void> {
+    if (!this.client) return
+    if (scope === "global") {
+      // Use global.config.update with an empty config to trigger Config.updateGlobal()
+      // which calls Config.global.reset(). This invalidates the lazy-cached global
+      // config in the CLI process so it re-reads kilo.json from disk.
+      // An empty object merge is a no-op for the file content but resets the cache.
+      // (global.dispose alone is insufficient on older CLI versions that lack
+      // the Config.global.reset() call in the dispose handler.)
+      await this.client.global.config.update({ config: {} }).catch((e: unknown) => {
+        console.warn("[Kilo New] global.config.update after marketplace change failed:", e)
+      })
+    }
+    // Always dispose the per-project instance so it rebuilds state from
+    // the (possibly updated) global + project config on the next request.
+    const dir = this.getWorkspaceDirectory()
+    await this.client.instance.dispose({ directory: dir }).catch((e: unknown) => {
+      console.warn("[Kilo New] instance.dispose() after marketplace change failed:", e)
+    })
+    this.cachedAgentsMessage = null
+    this.cachedConfigMessage = null
+    await Promise.all([this.fetchAndSendAgents(), this.fetchAndSendConfig()])
+  }
+
+  /**
    * Fetch backend config and send to webview.
    */
   private async fetchAndSendConfig(): Promise<void> {
@@ -1404,6 +1437,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private async fetchAndSendNotifications(): Promise<void> {
     if (!this.client) {
       if (this.cachedNotificationsMessage) {
+        // Merge the latest dismissed IDs from globalState into the cached
+        // message so that dismissals persisted while offline are honoured.
+        const persisted = this.extensionContext?.globalState.get<string[]>("kilo.dismissedNotificationIds", []) ?? []
+        if (persisted.length > 0) {
+          const cached = this.cachedNotificationsMessage as {
+            type: string
+            notifications: unknown[]
+            dismissedIds: string[]
+          }
+          const merged = Array.from(new Set([...cached.dismissedIds, ...persisted]))
+          this.cachedNotificationsMessage = { ...cached, dismissedIds: merged }
+        }
         this.postMessage(this.cachedNotificationsMessage)
       }
       return
@@ -1414,7 +1459,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const notifications = all.filter((n) => !n.showIn || n.showIn.includes("extension"))
       const existing = this.extensionContext?.globalState.get<string[]>("kilo.dismissedNotificationIds", []) ?? []
       const active = new Set(notifications.map((n) => n.id))
-      const dismissedIds = existing.filter((id) => active.has(id))
+      // Only prune stale dismissed IDs when we have a non-empty notification
+      // list. An empty list may mean the API returned nothing due to being
+      // unauthenticated (e.g. right after logout), not that all notifications
+      // are gone — pruning in that case would wipe the persisted dismissals.
+      const dismissedIds = notifications.length > 0 ? existing.filter((id) => active.has(id)) : existing
       if (dismissedIds.length !== existing.length) {
         await this.extensionContext?.globalState.update("kilo.dismissedNotificationIds", dismissedIds)
       }
@@ -1623,6 +1672,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const existing = this.extensionContext.globalState.get<string[]>("kilo.dismissedNotificationIds", [])
     if (!existing.includes(notificationId)) {
       await this.extensionContext.globalState.update("kilo.dismissedNotificationIds", [...existing, notificationId])
+    }
+    // Update the cached message so the dismiss persists even if
+    // fetchAndSendNotifications() fails (e.g. no client / API error).
+    if (this.cachedNotificationsMessage) {
+      const cached = this.cachedNotificationsMessage as {
+        type: string
+        notifications: unknown[]
+        dismissedIds: string[]
+      }
+      if (!cached.dismissedIds.includes(notificationId)) {
+        this.cachedNotificationsMessage = {
+          ...cached,
+          dismissedIds: [...cached.dismissedIds, notificationId],
+        }
+      }
     }
     await this.fetchAndSendNotifications()
     this.connectionService.notifyNotificationDismissed(notificationId)

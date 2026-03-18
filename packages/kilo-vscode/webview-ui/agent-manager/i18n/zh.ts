@@ -82,7 +82,7 @@ export const dict = {
   "agentManager.dialog.compareModels.searchModels": "搜索模型...",
   "agentManager.dialog.compareModels.selectModels": "选择模型...",
   "agentManager.dialog.creating": "创建中...",
-  "agentManager.dialog.createWorkspace": "创建工作树",
+  "agentManager.dialog.createWorktree": "创建工作树",
   "agentManager.dialog.removeImage": "移除图片",
   "agentManager.dialog.advanced": "高级...",
 
