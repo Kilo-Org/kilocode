@@ -110,19 +110,6 @@ export async function completeProviderOAuth(
   }
 }
 
-async function isConfigCustom(client: KiloClient, providerID: string): Promise<boolean> {
-  try {
-    const globalConfig = (await client.global.config.get({ throwOnError: true })).data ?? {}
-    const entry = globalConfig.provider?.[providerID]
-    if (!entry) return false
-    if (entry.npm !== "@ai-sdk/openai-compatible") return false
-    if (!entry.models || Object.keys(entry.models).length === 0) return false
-    return true
-  } catch {
-    return false
-  }
-}
-
 export async function disconnectProvider(
   ctx: ActionContext,
   requestId: string,
@@ -133,20 +120,27 @@ export async function disconnectProvider(
   const id = validateID(ctx, requestId, providerID, "disconnect")
   if (!id) return
   try {
-    const custom = await isConfigCustom(ctx.client, id)
+    const globalConfig = (await ctx.client.global.config.get({ throwOnError: true })).data ?? {}
+    const configured = !!globalConfig.provider?.[id]
 
-    if (custom) {
-      await ctx.client.auth.remove({ providerID: id }, { throwOnError: true }).catch(() => undefined)
-    } else {
+    // Remove auth store entry. Config-sourced providers may not have an auth
+    // store entry (credentials come from config or env), so failure is non-fatal.
+    // For auth-only providers, failure means disconnect failed.
+    try {
       await ctx.client.auth.remove({ providerID: id }, { throwOnError: true })
+    } catch (err) {
+      if (!configured) throw err
     }
 
     if (id === "kilo") {
       ctx.postMessage({ type: "profileData", data: null })
     }
 
-    if (custom) {
-      const globalConfig = (await ctx.client.global.config.get({ throwOnError: true })).data ?? {}
+    // Config-sourced providers stay "connected" after auth.remove because the
+    // server rebuilds state from config. Add to disabled_providers so the server
+    // excludes them. The config entry is preserved (user may re-enable later).
+    // This matches the desktop app's disableProvider() pattern.
+    if (configured) {
       const disabled = globalConfig.disabled_providers ?? []
       if (!disabled.includes(id)) {
         const merged = (
@@ -156,8 +150,7 @@ export async function disconnectProvider(
           )
         ).data
         if (merged) {
-          const msg = { type: "configLoaded", config: merged }
-          setCachedConfig(msg)
+          setCachedConfig({ type: "configLoaded", config: merged })
           ctx.postMessage({ type: "configUpdated", config: merged })
         }
       }

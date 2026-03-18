@@ -5,7 +5,7 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { ProviderIcon } from "@kilocode/kilo-ui/provider-icon"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { showToast } from "@kilocode/kilo-ui/toast"
-import { For } from "solid-js"
+import { For, onCleanup } from "solid-js"
 import { createStore } from "solid-js/store"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
@@ -168,6 +168,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
   const language = useLanguage()
   const vscode = useVSCode()
   const action = createProviderAction(vscode)
+  onCleanup(action.dispose)
 
   const [form, setForm] = createStore<FormState>({
     providerID: "",
