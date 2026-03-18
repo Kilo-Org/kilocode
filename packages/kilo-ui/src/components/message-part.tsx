@@ -15,6 +15,43 @@ import type { MessagePartProps } from "@opencode-ai/ui/message-part"
 // knows the part was just streaming and can animate the collapse.
 const streamed = new Set<string>()
 
+const THROTTLE_MS = 100
+
+// Throttle a reactive string accessor so markdown parsing + morphdom
+// don't run on every single streaming delta.
+function throttled(get: () => string) {
+  const [value, set] = createSignal(get())
+  let timer: ReturnType<typeof setTimeout> | undefined
+  let last = 0
+
+  createEffect(() => {
+    const next = get()
+    const now = Date.now()
+    const remaining = THROTTLE_MS - (now - last)
+    if (remaining <= 0) {
+      if (timer) {
+        clearTimeout(timer)
+        timer = undefined
+      }
+      last = now
+      set(next)
+      return
+    }
+    if (timer) clearTimeout(timer)
+    timer = setTimeout(() => {
+      last = Date.now()
+      set(next)
+      timer = undefined
+    }, remaining)
+  })
+
+  onCleanup(() => {
+    if (timer) clearTimeout(timer)
+  })
+
+  return value
+}
+
 // Override: streaming reasoning block with auto-collapse
 PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProps) {
   const i18n = useI18n()
@@ -23,6 +60,9 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
     const p = props.part as unknown as ReasoningPart
     return (p.text ?? "").replace("[REDACTED]", "").trim()
   }
+
+  // Throttle markdown re-renders during streaming
+  const display = throttled(text)
 
   // time.end is set by the processor on reasoning-end.
   // v1 parts lack time entirely → treat as historical.
@@ -59,14 +99,14 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
   // Auto-scroll the content container while streaming
   let ref: HTMLDivElement | undefined
   createEffect(() => {
-    text()
+    display()
     if (!done() && ref) {
       ref.scrollTop = ref.scrollHeight
     }
   })
 
   return (
-    <Show when={text()}>
+    <Show when={display()}>
       <div data-component="reasoning-part" data-streaming={!done() ? "" : undefined}>
         <Collapsible open={open()} onOpenChange={setOpen} class="tool-collapsible">
           <Collapsible.Trigger>
@@ -78,7 +118,7 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
           </Collapsible.Trigger>
           <Collapsible.Content>
             <div data-slot="reasoning-content" ref={ref}>
-              <Markdown text={text()} cacheKey={id} />
+              <Markdown text={display()} cacheKey={id} />
             </div>
           </Collapsible.Content>
         </Collapsible>
