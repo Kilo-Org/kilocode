@@ -19,8 +19,8 @@ const options = {
   },
   "mdns-domain": {
     type: "string" as const,
-    describe: "custom domain name for mDNS service (default: opencode.local)",
-    default: "opencode.local",
+    describe: "custom domain name for mDNS service (default: kilo.local)", // kilocode_change
+    default: "kilo.local", // kilocode_change
   },
   cors: {
     type: "string" as const,
