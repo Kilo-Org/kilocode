@@ -156,13 +156,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const additions = typeof diff.additions === "number" ? diff.additions : 0
     const deletions = typeof diff.deletions === "number" ? diff.deletions : 0
 
-    return {
+    const result: Record<string, unknown> = {
       filediff: {
         ...(file ? { file } : {}),
         additions,
         deletions,
       },
     }
+    // Preserve diagnostics so post-edit LSP errors still render
+    if (obj.diagnostics) result.diagnostics = obj.diagnostics
+    return result
   }
 
   /** Strip heavy metadata from a single edit tool part; pass-through for all other part types. */
