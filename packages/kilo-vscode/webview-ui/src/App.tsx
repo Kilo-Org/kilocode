@@ -67,25 +67,16 @@ export const DataBridge: Component<{ children: any }> = (props) => {
 
   const data = createMemo(() => {
     const id = session.currentSessionID()
-    const allParts = session.allParts()
-    // Expose ALL session messages (including child sessions from sub-agents),
-    // not just the current session. This lets VscodeSessionTurn and
-    // TaskToolExpanded read child session data from the DataProvider store.
-    const allMessages = Object.fromEntries(
-      Object.entries(session.allMessages() as Record<string, SDKMessage[]>)
-        .filter(([, msgs]) => (msgs as SDKMessage[]).length > 0)
-        .map(([sid, msgs]) => [sid, msgs as SDKMessage[]]),
-    )
+    const family = session.familyData(id)
     return {
       session: session.sessions().map((s) => ({ ...s, id: s.id, role: "user" as const })) as unknown as any[],
-      session_status: session.allStatusMap() as unknown as Record<string, any>,
+      session_status: family.status as unknown as Record<string, any>,
       session_diff: {} as Record<string, any[]>,
-      message: allMessages,
-      part: Object.fromEntries(
-        Object.entries(allParts)
-          .filter(([, parts]) => (parts as SDKPart[]).length > 0)
-          .map(([msgId, parts]) => [msgId, parts as unknown as SDKPart[]]),
-      ),
+      // Restrict chat data to the selected session family (self + subagents).
+      // This keeps unrelated tracked sessions from invalidating the visible
+      // chat tree during streaming or background updates.
+      message: family.messages as Record<string, SDKMessage[]>,
+      part: family.parts as Record<string, SDKPart[]>,
       permission: (() => {
         const grouped: Record<string, any[]> = {}
         for (const p of session.permissions()) {

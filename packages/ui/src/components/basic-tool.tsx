@@ -32,6 +32,7 @@ export interface BasicToolProps {
   locked?: boolean
   animated?: boolean
   onSubtitleClick?: () => void
+  onOpenChange?: (open: boolean) => void
 }
 
 const SPRING = { type: "spring" as const, visualDuration: 0.35, bounce: 0 }
@@ -54,6 +55,8 @@ export function BasicTool(props: BasicToolProps) {
   createEffect(() => {
     if (props.forceOpen) setOpen(true)
   })
+
+  createEffect(on(open, (value) => props.onOpenChange?.(value), { defer: true }))
 
   createEffect(
     on(

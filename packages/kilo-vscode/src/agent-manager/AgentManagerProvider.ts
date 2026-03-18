@@ -148,7 +148,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     panel.webview.html = this.getHtml(panel.webview)
 
-    this.provider = new KiloProvider(this.extensionUri, this.connectionService, this.context)
+    this.provider = new KiloProvider(this.extensionUri, this.connectionService, this.context, {
+      slimEditMetadata: true,
+    })
     this.provider.attachToWebview(panel.webview, {
       onBeforeMessage: (msg) => this.onMessage(msg),
     })

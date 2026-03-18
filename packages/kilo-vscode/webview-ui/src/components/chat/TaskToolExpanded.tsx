@@ -1,13 +1,14 @@
 /**
  * TaskToolExpanded component
  * Registers a custom "task" tool renderer that matches the v1.0.25 layout:
- * a BasicTool open by default with a compact scrollable list of child tool calls,
+ * a BasicTool that opens while running and otherwise defers child rendering,
+ * with a compact scrollable list of child tool calls,
  * each shown as: icon + title + subtitle.
  *
  * Call registerExpandedTaskTool() once at app startup to activate.
  */
 
-import { Component, createEffect, createMemo, For, Show } from "solid-js"
+import { Component, createEffect, createMemo, createSignal, For, Show } from "solid-js"
 import { ToolRegistry, ToolProps, getToolInfo } from "@kilocode/kilo-ui/message-part"
 import { BasicTool } from "@kilocode/kilo-ui/basic-tool"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -48,8 +49,10 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
   const childSessionId = () => props.metadata.sessionId as string | undefined
 
   const running = createMemo(() => props.status === "pending" || props.status === "running")
+  const [open, setOpen] = createSignal(running())
 
-  // Sync child session into store whenever we have a sessionId
+  // Warm child session data immediately so completed task tools already have
+  // their compact child tool list available when the user expands them.
   createEffect(() => {
     const id = childSessionId()
     if (!id) return
@@ -67,6 +70,7 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
   const childToolParts = createMemo(() => {
     const id = childSessionId()
     if (!id) return []
+    if (!running() && !open()) return []
     return getSessionToolParts(data.store, id)
   })
 
@@ -106,7 +110,15 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
 
   return (
     <div data-component="tool-part-wrapper">
-      <BasicTool icon="task" status={props.status} trigger={trigger()} defaultOpen>
+      <BasicTool
+        icon="task"
+        status={props.status}
+        trigger={trigger()}
+        defaultOpen={running()}
+        forceOpen={running()}
+        defer
+        onOpenChange={setOpen}
+      >
         <div ref={autoScroll.scrollRef} onScroll={autoScroll.handleScroll} data-component="tool-output" data-scrollable>
           <div ref={autoScroll.contentRef} data-component="task-tools">
             <For each={childToolParts()}>

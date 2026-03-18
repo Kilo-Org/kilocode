@@ -131,6 +131,7 @@ export function mockSessionValue(overrides?: {
     allMessages: () => ({}),
     allParts: () => ({}),
     allStatusMap: () => ({}),
+    familyData: () => ({ messages: {}, parts: {}, status: {} }),
     getParts: () => [],
     todos: () => [],
     permissions: () => permissions,
