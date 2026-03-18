@@ -41,9 +41,12 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
   // then collapse. Historical → collapsed from the start.
   const [open, setOpen] = createSignal(!done() || was)
 
-  // Auto-collapse after reasoning finishes
+  // Auto-collapse once when reasoning finishes (streaming → done transition).
+  // Uses a flag so manual reopens are not auto-closed again.
+  let collapsed = false
   createEffect(() => {
-    if (done() && open()) {
+    if (done() && open() && !collapsed) {
+      collapsed = true
       const timer = setTimeout(() => setOpen(false), 500)
       onCleanup(() => clearTimeout(timer))
     }
