@@ -252,7 +252,7 @@ export class WorktreeManager {
       const args = params.existingBranch
         ? ["worktree", "add", worktreePath, branch]
         : ["worktree", "add", "-b", branch, worktreePath, startRef!]
-      await this.git.raw(args)
+      await this.runWorktreeAdd(args, worktreePath)
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
       if (msg.includes("already checked out")) {
@@ -261,23 +261,17 @@ export class WorktreeManager {
         const loc = match ? match[1] : "another worktree"
         throw new Error(`Branch "${branch}" is already checked out in worktree at: ${loc}`)
       }
-      // Post-checkout hook failures (husky, lefthook, etc.) cause a non-zero
-      // exit even though the worktree was created successfully. Verify via
-      // git worktree list before treating this as a real error.
-      if (this.isHookError(msg) && (await this.worktreeRegistered(worktreePath))) {
-        this.log(`Ignoring post-checkout hook failure for ${worktreePath}: ${msg}`)
-      } else if (!msg.includes("already exists") || params.existingBranch) {
+      if (!msg.includes("already exists") || params.existingBranch) {
         throw new Error(`Failed to create worktree: ${msg}`)
-      } else {
-        // Branch name collision -- retry with unique suffix
-        branch = `${branch}-${Date.now()}`
-        const retryDir = branch.replace(/\//g, "-")
-        worktreePath = path.join(this.dir, retryDir)
-        const retryArgs = params.existingBranch
-          ? ["worktree", "add", worktreePath, branch]
-          : ["worktree", "add", "-b", branch, worktreePath, startRef!]
-        await this.git.raw(retryArgs)
       }
+      // Branch name collision -- retry with unique suffix
+      branch = `${branch}-${Date.now()}`
+      const retryDir = branch.replace(/\//g, "-")
+      worktreePath = path.join(this.dir, retryDir)
+      const retryArgs = params.existingBranch
+        ? ["worktree", "add", worktreePath, branch]
+        : ["worktree", "add", "-b", branch, worktreePath, startRef!]
+      await this.runWorktreeAdd(retryArgs, worktreePath)
     }
 
     this.log(
@@ -290,6 +284,27 @@ export class WorktreeManager {
       remote: parentRemote,
       startPointSource: startPoint.source,
       startPointWarning: startPoint.warning,
+    }
+  }
+
+  /**
+   * Run `git worktree add` with post-checkout hook tolerance.
+   *
+   * Hooks like husky or lefthook run after `git worktree add` and can cause
+   * a non-zero exit code even though the worktree was created successfully.
+   * When a hook failure is detected, we verify the worktree was registered
+   * via `git worktree list --porcelain` before treating it as a real error.
+   */
+  private async runWorktreeAdd(args: string[], wtPath: string): Promise<void> {
+    try {
+      await this.git.raw(args)
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error)
+      if (this.isHookError(msg) && (await this.worktreeRegistered(wtPath))) {
+        this.log(`Ignoring post-checkout hook failure for ${wtPath}: ${msg}`)
+        return
+      }
+      throw error
     }
   }
 
