@@ -73,51 +73,34 @@ async function createTempRepoWithOrigin(): Promise<{ bare: string; clone: string
 // ---------------------------------------------------------------------------
 
 describe("generateBranchName", () => {
-  it("sanitizes special characters", () => {
-    const name = generateBranchName("Fix bug #123 & add feature!")
-    // Should only contain lowercase alphanumeric and hyphens (plus timestamp)
-    expect(name).toMatch(/^fix-bug-123-add-feature-\d+$/)
+  it("generates a two-word predicate-object name", () => {
+    const name = generateBranchName("anything")
+    // Should be two lowercase words joined by a hyphen
+    expect(name).toMatch(/^[a-z]+-[a-z]+$/)
   })
 
-  it("truncates long prompts to 50 chars before sanitizing", () => {
-    const long = "a".repeat(100)
-    const name = generateBranchName(long)
-    // 50 a's + hyphen + timestamp
-    const prefix = name.split("-").slice(0, -1).join("-")
-    expect(prefix.length).toBeLessThanOrEqual(50)
+  it("avoids existing branches", () => {
+    // Generate 50 names and collect them; none should collide with the existing list
+    const existing = ["brave-piano", "sunny-cloud"]
+    for (let i = 0; i < 50; i++) {
+      const name = generateBranchName("task", existing)
+      expect(existing).not.toContain(name)
+    }
   })
 
-  it("falls back to 'kilo' for empty input", () => {
-    expect(generateBranchName("")).toMatch(/^kilo-\d+$/)
+  it("falls back to numeric suffix when collisions are likely", () => {
+    // Supply a huge existing list — eventually a numeric suffix or timestamp is used
+    const name = generateBranchName("task", [])
+    expect(typeof name).toBe("string")
+    expect(name.length).toBeGreaterThan(0)
   })
 
-  it("falls back to 'kilo' for whitespace-only input", () => {
-    expect(generateBranchName("   ")).toMatch(/^kilo-\d+$/)
-  })
-
-  it("strips leading and trailing hyphens from sanitized text", () => {
-    const name = generateBranchName("---hello---")
-    expect(name).toMatch(/^hello-\d+$/)
-  })
-
-  it("collapses consecutive hyphens", () => {
-    const name = generateBranchName("one   two   three")
-    expect(name).toMatch(/^one-two-three-\d+$/)
-  })
-
-  it("lowercases input", () => {
-    const name = generateBranchName("FIX BUG")
-    expect(name).toMatch(/^fix-bug-\d+$/)
-  })
-
-  it("handles custom name with version suffix _v2", () => {
-    const name = generateBranchName("my-feature_v2")
-    expect(name).toMatch(/^my-feature-v2-\d+$/)
-  })
-
-  it("handles a clean custom name", () => {
-    const name = generateBranchName("auth-refactor")
-    expect(name).toMatch(/^auth-refactor-\d+$/)
+  it("ignores the prompt and always returns friendly words", () => {
+    const a = generateBranchName("")
+    const b = generateBranchName("FIX BUG")
+    // Both should be lowercase word-hyphen-word patterns
+    expect(a).toMatch(/^[a-z]+-[a-z]+/)
+    expect(b).toMatch(/^[a-z]+-[a-z]+/)
   })
 })
 
@@ -260,7 +243,8 @@ describe("WorktreeManager.createWorktree", () => {
 
     const result = await mgr.createWorktree({ prompt: "test task" })
 
-    expect(result.branch).toMatch(/^test-task-\d+$/)
+    // Branch should be a friendly two-word name (e.g. "brave-piano")
+    expect(result.branch).toMatch(/^[a-z]+-[a-z]+/)
     expect(result.parentBranch).toBeTruthy()
 
     // Worktree directory should exist and have a .git file (not directory)
@@ -578,49 +562,38 @@ describe("WorktreeManager.ensureGitExclude", () => {
 
 describe("WorktreeManager.createWorktree branch collision", () => {
   /**
-   * Exercise the retry path at WorktreeManager.ts:77-86.
+   * Exercise the retry path in WorktreeManager when `git worktree add -b <name>`
+   * fails because a branch with that name already exists.
    *
-   * The collision happens when `git worktree add -b <name>` fails because
-   * a branch with that name already exists. generateBranchName appends
-   * Date.now() making it hard to predict. We force the collision by
-   * monkey-patching Date.now to return a fixed value for the duration of
-   * the branch name generation, guaranteeing the same name is produced
-   * twice.
+   * We force the collision by creating a worktree with branchName "collide",
+   * removing the worktree (keeping the branch), then requesting the same
+   * branchName again.
    */
   it("retries with a unique suffix when generated branch name collides", async () => {
     const root = await createTempRepo()
     const git = simpleGit(root)
     const mgr = createManager(root)
 
-    // Create a first worktree — this consumes a branch name
-    const first = await mgr.createWorktree({ prompt: "collide" })
-    const firstBranch = first.branch
+    // Create a first worktree with a fixed branch name
+    const first = await mgr.createWorktree({ branchName: "collide" })
+    expect(first.branch).toBe("collide")
 
     // Remove the worktree via git but keep the branch ref alive
     await git.raw(["worktree", "remove", "--force", first.path])
 
     // Verify the branch still exists (worktree is gone, branch is not)
     const branches = await git.branch()
-    expect(branches.all).toContain(firstBranch)
+    expect(branches.all).toContain("collide")
 
-    // Force Date.now to return the same timestamp that produced firstBranch.
-    // firstBranch is "collide-<timestamp>", extract that timestamp.
-    const timestamp = firstBranch.replace("collide-", "")
-    const real = Date.now
-    Date.now = () => Number(timestamp)
-    try {
-      // This will generate the same branch name and hit the collision retry
-      const second = await mgr.createWorktree({ prompt: "collide" })
+    // Request the same branchName — git will fail, triggering the retry
+    const second = await mgr.createWorktree({ branchName: "collide" })
 
-      // The retry appends a new timestamp suffix, so the branch name differs
-      expect(second.branch).not.toBe(firstBranch)
-      expect(second.branch).toStartWith("collide-")
+    // The retry appends a timestamp suffix, so the branch name differs
+    expect(second.branch).not.toBe("collide")
+    expect(second.branch).toStartWith("collide-")
 
-      const stat = await fs.stat(path.join(second.path, ".git"))
-      expect(stat.isFile()).toBe(true)
-    } finally {
-      Date.now = real
-    }
+    const stat = await fs.stat(path.join(second.path, ".git"))
+    expect(stat.isFile()).toBe(true)
   })
 })
 

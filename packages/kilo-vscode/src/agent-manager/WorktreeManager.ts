@@ -211,7 +211,18 @@ export class WorktreeManager {
     }
 
     const sanitized = params.branchName ? sanitizeBranchName(params.branchName) : undefined
-    let branch = params.existingBranch ?? (sanitized || undefined) ?? generateBranchName(params.prompt || "agent-task")
+    let branch: string
+    if (params.existingBranch) {
+      branch = params.existingBranch
+    } else if (sanitized) {
+      branch = sanitized
+    } else {
+      const existing = await this.git
+        .branch()
+        .then((b) => b.all)
+        .catch(() => [] as string[])
+      branch = generateBranchName(params.prompt || "agent-task", existing)
+    }
 
     if (params.existingBranch) {
       const exists = await this.branchExists(branch)
