@@ -451,7 +451,7 @@ export const dict = {
 
   "notification.permission.title": "ต้องการสิทธิ์",
   "notification.permission.description": "{{sessionTitle}} ใน {{projectName}} ต้องการสิทธิ์",
-  "ui.permission.permissionRules": "กฎการอนุญาต",
+  "ui.permission.manageAutoApprove": "จัดการกฎการอนุมัติอัตโนมัติ",
   "ui.permission.rule.addToAllowed": "เพิ่มไปยังรายการที่อนุญาต",
   "ui.permission.rule.removeFromAllowed": "นำออกจากรายการที่อนุญาต",
   "ui.permission.rule.addToDenied": "เพิ่มไปยังรายการที่ถูกปฏิเสธ",
