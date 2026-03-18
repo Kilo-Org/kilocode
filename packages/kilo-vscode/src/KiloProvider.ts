@@ -1598,13 +1598,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     try {
-      const { data: updated } = await this.client.global.config.update({ config: partial }, { throwOnError: true })
+      await this.client.global.config.update({ config: partial }, { throwOnError: true })
+
+      // Re-fetch the full merged config (global + project + all layers) so the
+      // webview receives the complete resolved config, not just global-only data.
+      // Without this, the global-only response would overwrite project-level
+      // values in the webview, causing settings to flicker and revert.
+      const dir = this.getWorkspaceDirectory()
+      const { data: merged } = await this.client.config.get({ directory: dir }, { throwOnError: true })
 
       const message = {
         type: "configUpdated",
-        config: updated,
+        config: merged,
       }
-      this.cachedConfigMessage = { type: "configLoaded", config: updated }
+      this.cachedConfigMessage = { type: "configLoaded", config: merged }
       this.postMessage(message)
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to update config:", error)
