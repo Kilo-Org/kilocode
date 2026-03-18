@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test"
-import { describePatterns, TOOL_LABEL_KEYS } from "../../webview-ui/src/utils/permission-description"
+import { describePatterns, resolveLabel, TOOL_LABEL_KEYS } from "../../webview-ui/src/utils/permission-description"
 
 // Mock t() that returns the English label for known keys, or the key itself
 const labels: Record<string, string> = {
@@ -88,9 +88,104 @@ describe("describePatterns", () => {
   })
 
   test("TOOL_LABEL_KEYS maps all expected tools", () => {
-    expect(TOOL_LABEL_KEYS.read).toBe("ui.permission.toolLabel.read")
-    expect(TOOL_LABEL_KEYS.edit).toBe("ui.permission.toolLabel.edit")
-    expect(TOOL_LABEL_KEYS.external_directory).toBe("ui.permission.toolLabel.externalDirectory")
-    expect(TOOL_LABEL_KEYS.multiedit).toBe("ui.permission.toolLabel.edit")
+    const expected: Record<string, string> = {
+      read: "ui.permission.toolLabel.read",
+      edit: "ui.permission.toolLabel.edit",
+      write: "ui.permission.toolLabel.write",
+      patch: "ui.permission.toolLabel.patch",
+      multiedit: "ui.permission.toolLabel.edit",
+      glob: "ui.permission.toolLabel.globSearch",
+      grep: "ui.permission.toolLabel.grepSearch",
+      list: "ui.permission.toolLabel.list",
+      external_directory: "ui.permission.toolLabel.externalDirectory",
+      webfetch: "ui.permission.toolLabel.webFetch",
+      websearch: "ui.permission.toolLabel.webSearch",
+      task: "ui.permission.toolLabel.task",
+      skill: "ui.permission.toolLabel.skill",
+      lsp: "ui.permission.toolLabel.lsp",
+    }
+    expect(TOOL_LABEL_KEYS).toEqual(expected)
+  })
+
+  test("every i18n key in TOOL_LABEL_KEYS has a mock translation", () => {
+    const keys = new Set(Object.values(TOOL_LABEL_KEYS))
+    for (const key of keys) {
+      expect(labels[key]).toBeDefined()
+    }
+  })
+
+  test("multi preserves pattern order", () => {
+    const result = describePatterns("write", ["z.ts", "a.ts", "m.ts"], t)
+    expect(result).toEqual({ kind: "multi", title: "Write:", paths: ["z.ts", "a.ts", "m.ts"] })
+  })
+
+  test("grep tool uses Grep Search label", () => {
+    const result = describePatterns("grep", ["TODO"], t)
+    expect(result).toEqual({ kind: "single", text: "Grep Search TODO" })
+  })
+
+  test("list tool uses List label", () => {
+    const result = describePatterns("list", ["src/"], t)
+    expect(result).toEqual({ kind: "single", text: "List src/" })
+  })
+
+  test("webfetch tool uses Web Fetch label", () => {
+    const result = describePatterns("webfetch", ["https://example.com"], t)
+    expect(result).toEqual({ kind: "single", text: "Web Fetch https://example.com" })
+  })
+
+  test("patch tool uses Patch label", () => {
+    const result = describePatterns("patch", ["file.ts"], t)
+    expect(result).toEqual({ kind: "single", text: "Patch file.ts" })
+  })
+
+  test("task tool uses Task label", () => {
+    const result = describePatterns("task", ["run-tests"], t)
+    expect(result).toEqual({ kind: "single", text: "Task run-tests" })
+  })
+
+  test("lsp tool uses LSP label", () => {
+    const result = describePatterns("lsp", ["diagnostics"], t)
+    expect(result).toEqual({ kind: "single", text: "LSP diagnostics" })
+  })
+})
+
+describe("resolveLabel", () => {
+  test("returns translated label for known tool", () => {
+    expect(resolveLabel("read", t)).toBe("Read")
+  })
+
+  test("returns translated label for edit", () => {
+    expect(resolveLabel("edit", t)).toBe("Edit")
+  })
+
+  test("multiedit resolves to Edit", () => {
+    expect(resolveLabel("multiedit", t)).toBe("Edit")
+  })
+
+  test("returns raw tool name for unknown tool", () => {
+    expect(resolveLabel("unknown_tool", t)).toBe("unknown_tool")
+  })
+
+  test("returns translated label for all mapped tools", () => {
+    const expected: Record<string, string> = {
+      read: "Read",
+      edit: "Edit",
+      write: "Write",
+      patch: "Patch",
+      multiedit: "Edit",
+      glob: "Glob Search",
+      grep: "Grep Search",
+      list: "List",
+      external_directory: "Read External Directory",
+      webfetch: "Web Fetch",
+      websearch: "Web Search",
+      task: "Task",
+      skill: "Skill",
+      lsp: "LSP",
+    }
+    for (const [tool, label] of Object.entries(expected)) {
+      expect(resolveLabel(tool, t)).toBe(label)
+    }
   })
 })
