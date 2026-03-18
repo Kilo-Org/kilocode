@@ -21,8 +21,9 @@ import { createTerminalHost } from "./terminal-host"
 import { executeVscodeTask } from "./task-runner"
 import { forkSession } from "./fork-session"
 import { buildKeybindingMap } from "./format-keybinding"
+import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from "./multi-version"
 import { TelemetryProxy, TelemetryEventName } from "../services/telemetry"
-import { MAX_MULTI_VERSIONS, PLATFORM } from "./constants"
+import { PLATFORM } from "./constants"
 import type { AgentManagerOutMessage, AgentManagerInMessage } from "./types"
 import { getWorkspaceRoot, hashFileDiffs, openFileInEditor, resolveLocalDiffTarget } from "../review-utils"
 
@@ -829,33 +830,15 @@ export class AgentManagerProvider implements vscode.Disposable {
     const baseBranch = msg.baseBranch
     const branchName = msg.branchName?.trim() || undefined
 
-    // Expand model allocations into per-version model assignments
-    const rawAllocations = msg.modelAllocations
-    const perVersionModels: Array<{ providerID: string; modelID: string } | undefined> = []
-    if (rawAllocations && rawAllocations.length > 0) {
-      for (const alloc of rawAllocations) {
-        const clamped = Math.min(Math.max(Math.floor(alloc.count) || 0, 0), MAX_MULTI_VERSIONS)
-        for (let c = 0; c < clamped; c++) {
-          perVersionModels.push({ providerID: alloc.providerID, modelID: alloc.modelID })
-        }
-        if (perVersionModels.length >= MAX_MULTI_VERSIONS) break
-      }
-    }
-
-    const versions =
-      perVersionModels.length > 0
-        ? Math.min(perVersionModels.length, MAX_MULTI_VERSIONS)
-        : Math.min(Math.max(Number(msg.versions) || 1, 1), MAX_MULTI_VERSIONS)
-
-    // Fall back to single model when not in compare mode
-    const providerID = perVersionModels.length > 0 ? undefined : msg.providerID
-    const modelID = perVersionModels.length > 0 ? undefined : msg.modelID
+    const fallback = msg.providerID && msg.modelID ? { providerID: msg.providerID, modelID: msg.modelID } : undefined
+    const resolved = resolveVersionModels(msg.modelAllocations, fallback, Number(msg.versions) || 1)
+    const { models, versions, providerID, modelID } = resolved
 
     // Generate a shared group ID for multi-version worktrees
     const groupId = versions > 1 ? `grp-${Date.now()}` : undefined
 
     this.log(
-      `Creating ${versions} worktrees${perVersionModels.length > 0 ? " (model comparison)" : ""}${text ? ` for: ${text.slice(0, 60)}` : ""}${groupId ? ` (group=${groupId})` : ""}`,
+      `Creating ${versions} worktrees${models.length > 0 ? " (model comparison)" : ""}${text ? ` for: ${text.slice(0, 60)}` : ""}${groupId ? ` (group=${groupId})` : ""}`,
     )
 
     // Notify webview that multi-version creation has started
@@ -868,14 +851,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     })
 
     // Phase 1: Create all worktrees + sessions first
-    const created: Array<{
-      worktreeId: string
-      sessionId: string
-      path: string
-      branch: string
-      parentBranch: string
-      versionIndex: number
-    }> = []
+    const created: CreatedVersion[] = []
 
     for (let i = 0; i < versions; i++) {
       this.log(`Creating worktree ${i + 1}/${versions}`)
@@ -913,7 +889,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       // Set the per-version model immediately so the UI selector reflects
       // the correct model as soon as the worktree appears, before Phase 2.
       // Uses a dedicated message type to avoid clearing the busy state.
-      const versionModel = perVersionModels[i]
+      const versionModel = models[i]
       const earlyProviderID = versionModel?.providerID ?? providerID
       const earlyModelID = versionModel?.modelID ?? modelID
       if (earlyProviderID && earlyModelID) {
@@ -957,40 +933,15 @@ export class AgentManagerProvider implements vscode.Disposable {
     }
 
     // Phase 2: Send the initial prompt to all sessions, or clear busy state if no text.
-    // Always include per-version model so the UI selector reflects the correct model.
-    for (let i = 0; i < created.length; i++) {
-      const entry = created[i]!
-      // Use the original version index to match the correct model from perVersionModels,
-      // since `created` may have gaps if earlier worktree creations failed.
-      const versionModel = perVersionModels[entry.versionIndex]
-      const versionProviderID = versionModel?.providerID ?? providerID
-      const versionModelID = versionModel?.modelID ?? modelID
+    const messages = buildInitialMessages(created, models, { providerID, modelID }, text, agent, files)
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i]!
       if (text) {
-        this.log(
-          `Sending initial message to version ${i + 1} (session=${entry.sessionId}${versionModel ? `, model=${versionProviderID}/${versionModelID}` : ""})`,
-        )
-        this.postToWebview({
-          type: "agentManager.sendInitialMessage",
-          sessionId: entry.sessionId,
-          worktreeId: entry.worktreeId,
-          text,
-          providerID: versionProviderID,
-          modelID: versionModelID,
-          agent,
-          files,
-        })
-        if (i < created.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 300))
-        }
-      } else {
-        // No prompt — still include model info so the UI selector is correct
-        this.postToWebview({
-          type: "agentManager.sendInitialMessage",
-          sessionId: entry.sessionId,
-          worktreeId: entry.worktreeId,
-          providerID: versionProviderID,
-          modelID: versionModelID,
-        })
+        this.log(`Sending initial message to version ${i + 1} (session=${msg.sessionId})`)
+      }
+      this.postToWebview({ type: "agentManager.sendInitialMessage", ...msg })
+      if (text && i < messages.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 300))
       }
     }
 
