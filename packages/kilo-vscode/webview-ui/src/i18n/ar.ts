@@ -551,6 +551,8 @@ export const dict = {
   "terminal.connectionLost.description": "انقطع اتصال المحطة الطرفية. يمكن أن يحدث هذا عند إعادة تشغيل الخادم.",
 
   "common.closeTab": "إغلاق علامة التبويب",
+  "common.signIn": "تسجيل الدخول",
+  "common.signOut": "تسجيل الخروج",
   "common.dismiss": "رفض",
   "common.requestFailed": "فشل الطلب",
   "common.moreOptions": "مزيد من الخيارات",
@@ -706,6 +708,7 @@ export const dict = {
   "settings.providers.section.popular": "الموفرون الشائعون",
   "settings.providers.search.placeholder": "البحث عن موفرين",
   "settings.providers.select.placeholder": "اختر موفرًا...",
+  "settings.providers.tag.gateway": "Gateway",
   "settings.providers.tag.environment": "البيئة",
   "settings.providers.tag.config": "التكوين",
   "settings.providers.tag.custom": "مخصص",

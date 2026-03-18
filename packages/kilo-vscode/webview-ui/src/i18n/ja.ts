@@ -555,6 +555,8 @@ export const dict = {
   "terminal.connectionLost.description":
     "ターミナルの接続が中断されました。これはサーバーが再起動したときに発生することがあります。",
   "common.closeTab": "タブを閉じる",
+  "common.signIn": "サインイン",
+  "common.signOut": "サインアウト",
   "common.dismiss": "閉じる",
   "common.requestFailed": "リクエスト失敗",
   "common.moreOptions": "その他のオプション",
@@ -711,6 +713,7 @@ export const dict = {
   "settings.providers.section.popular": "人気のプロバイダー",
   "settings.providers.search.placeholder": "プロバイダーを検索",
   "settings.providers.select.placeholder": "プロバイダーを選択...",
+  "settings.providers.tag.gateway": "Gateway",
   "settings.providers.tag.environment": "環境",
   "settings.providers.tag.config": "設定",
   "settings.providers.tag.custom": "カスタム",

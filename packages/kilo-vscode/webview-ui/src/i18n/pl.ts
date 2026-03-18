@@ -558,6 +558,8 @@ export const dict = {
     "Połączenie z terminalem zostało przerwane. Może się to zdarzyć przy restarcie serwera.",
 
   "common.closeTab": "Zamknij kartę",
+  "common.signIn": "Zaloguj się",
+  "common.signOut": "Wyloguj się",
   "common.dismiss": "Odrzuć",
   "common.requestFailed": "Żądanie nie powiodło się",
   "common.moreOptions": "Więcej opcji",
@@ -715,6 +717,7 @@ export const dict = {
   "settings.providers.section.popular": "Popularni dostawcy",
   "settings.providers.search.placeholder": "Szukaj dostawców",
   "settings.providers.select.placeholder": "Wybierz dostawcę...",
+  "settings.providers.tag.gateway": "Gateway",
   "settings.providers.tag.environment": "Środowisko",
   "settings.providers.tag.config": "Konfiguracja",
   "settings.providers.tag.custom": "Niestandardowe",

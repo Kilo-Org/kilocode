@@ -564,6 +564,8 @@ export const dict = {
   "terminal.connectionLost.description":
     "Die Terminalverbindung wurde unterbrochen. Das kann passieren, wenn der Server neu startet.",
   "common.closeTab": "Tab schließen",
+  "common.signIn": "Anmelden",
+  "common.signOut": "Abmelden",
   "common.dismiss": "Verwerfen",
   "common.requestFailed": "Anfrage fehlgeschlagen",
   "common.moreOptions": "Weitere Optionen",
@@ -722,6 +724,7 @@ export const dict = {
   "settings.providers.section.popular": "Beliebte Anbieter",
   "settings.providers.search.placeholder": "Anbieter durchsuchen",
   "settings.providers.select.placeholder": "Anbieter auswählen...",
+  "settings.providers.tag.gateway": "Gateway",
   "settings.providers.tag.environment": "Umgebung",
   "settings.providers.tag.config": "Konfiguration",
   "settings.providers.tag.custom": "Benutzerdefiniert",

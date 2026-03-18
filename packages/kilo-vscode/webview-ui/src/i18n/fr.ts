@@ -564,6 +564,8 @@ export const dict = {
   "terminal.connectionLost.description":
     "La connexion au terminal a été interrompue. Cela peut arriver lorsque le serveur redémarre.",
   "common.closeTab": "Fermer l'onglet",
+  "common.signIn": "Se connecter",
+  "common.signOut": "Se déconnecter",
   "common.dismiss": "Ignorer",
   "common.requestFailed": "La demande a échoué",
   "common.moreOptions": "Plus d'options",
@@ -722,6 +724,7 @@ export const dict = {
   "settings.providers.section.popular": "Fournisseurs populaires",
   "settings.providers.search.placeholder": "Rechercher des fournisseurs",
   "settings.providers.select.placeholder": "Sélectionner un fournisseur...",
+  "settings.providers.tag.gateway": "Gateway",
   "settings.providers.tag.environment": "Environnement",
   "settings.providers.tag.config": "Configuration",
   "settings.providers.tag.custom": "Personnalisé",

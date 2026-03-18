@@ -560,6 +560,8 @@ export const dict = {
     "Terminalforbindelsen ble avbrutt. Dette kan skje når serveren starter på nytt.",
 
   "common.closeTab": "Lukk fane",
+  "common.signIn": "Logg inn",
+  "common.signOut": "Logg ut",
   "common.dismiss": "Avvis",
   "common.requestFailed": "Forespørsel mislyktes",
   "common.moreOptions": "Flere alternativer",
@@ -716,6 +718,7 @@ export const dict = {
   "settings.providers.section.popular": "Populære leverandører",
   "settings.providers.search.placeholder": "Søk etter leverandører",
   "settings.providers.select.placeholder": "Velg leverandør...",
+  "settings.providers.tag.gateway": "Gateway",
   "settings.providers.tag.environment": "Miljø",
   "settings.providers.tag.config": "Konfigurasjon",
   "settings.providers.tag.custom": "Tilpasset",

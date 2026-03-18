@@ -556,6 +556,8 @@ export const dict = {
     "A conexão do terminal foi interrompida. Isso pode acontecer quando o servidor reinicia.",
 
   "common.closeTab": "Fechar aba",
+  "common.signIn": "Entrar",
+  "common.signOut": "Sair",
   "common.dismiss": "Descartar",
   "common.requestFailed": "Requisição falhou",
   "common.moreOptions": "Mais opções",
@@ -713,6 +715,7 @@ export const dict = {
   "settings.providers.section.popular": "Provedores populares",
   "settings.providers.search.placeholder": "Buscar provedores",
   "settings.providers.select.placeholder": "Selecionar provedor...",
+  "settings.providers.tag.gateway": "Gateway",
   "settings.providers.tag.environment": "Ambiente",
   "settings.providers.tag.config": "Configuração",
   "settings.providers.tag.custom": "Personalizado",

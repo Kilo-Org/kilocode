@@ -561,6 +561,8 @@ export const dict = {
     "The terminal connection was interrupted. This can happen when the server restarts.",
 
   "common.closeTab": "Close tab",
+  "common.signIn": "Sign in",
+  "common.signOut": "Sign out",
   "common.dismiss": "Dismiss",
   "common.requestFailed": "Request failed",
   "common.moreOptions": "More options",
@@ -716,6 +718,7 @@ export const dict = {
   "settings.providers.section.connected": "Connected providers",
   "settings.providers.connected.empty": "No connected providers",
   "settings.providers.section.popular": "Popular providers",
+  "settings.providers.tag.gateway": "Gateway",
   "settings.providers.tag.environment": "Environment",
   "settings.providers.tag.config": "Config",
   "settings.providers.tag.custom": "Custom",

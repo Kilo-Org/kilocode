@@ -557,6 +557,8 @@ export const dict = {
   "terminal.connectionLost.description":
     "터미널 연결이 중단되었습니다. 서버가 재시작하면 이런 일이 발생할 수 있습니다.",
   "common.closeTab": "탭 닫기",
+  "common.signIn": "로그인",
+  "common.signOut": "로그아웃",
   "common.dismiss": "닫기",
   "common.requestFailed": "요청 실패",
   "common.moreOptions": "더 많은 옵션",
@@ -712,6 +714,7 @@ export const dict = {
   "settings.providers.section.popular": "인기 공급자",
   "settings.providers.search.placeholder": "공급자 검색",
   "settings.providers.select.placeholder": "공급자 선택...",
+  "settings.providers.tag.gateway": "Gateway",
   "settings.providers.tag.environment": "환경",
   "settings.providers.tag.config": "구성",
   "settings.providers.tag.custom": "사용자 지정",

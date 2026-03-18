@@ -554,6 +554,8 @@ export const dict = {
   "terminal.connectionLost.description": "การเชื่อมต่อเทอร์มินัลถูกขัดจังหวะ อาจเกิดขึ้นเมื่อเซิร์ฟเวอร์รีสตาร์ท",
 
   "common.closeTab": "ปิดแท็บ",
+  "common.signIn": "เข้าสู่ระบบ",
+  "common.signOut": "ออกจากระบบ",
   "common.dismiss": "ปิด",
   "common.requestFailed": "คำขอล้มเหลว",
   "common.moreOptions": "ตัวเลือกเพิ่มเติม",
@@ -709,6 +711,7 @@ export const dict = {
   "settings.providers.section.popular": "ผู้ให้บริการยอดนิยม",
   "settings.providers.search.placeholder": "ค้นหาผู้ให้บริการ",
   "settings.providers.select.placeholder": "เลือกผู้ให้บริการ...",
+  "settings.providers.tag.gateway": "Gateway",
   "settings.providers.tag.environment": "สภาพแวดล้อม",
   "settings.providers.tag.config": "กำหนดค่า",
   "settings.providers.tag.custom": "กำหนดเอง",

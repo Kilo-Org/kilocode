@@ -560,6 +560,8 @@ export const dict = {
     "Соединение с терминалом прервано. Это может произойти при перезапуске сервера.",
 
   "common.closeTab": "Закрыть вкладку",
+  "common.signIn": "Войти",
+  "common.signOut": "Выйти",
   "common.dismiss": "Закрыть",
   "common.requestFailed": "Запрос не выполнен",
   "common.moreOptions": "Дополнительные опции",
@@ -718,6 +720,7 @@ export const dict = {
   "settings.providers.section.popular": "Популярные провайдеры",
   "settings.providers.search.placeholder": "Поиск провайдеров",
   "settings.providers.select.placeholder": "Выберите провайдера...",
+  "settings.providers.tag.gateway": "Gateway",
   "settings.providers.tag.environment": "Среда",
   "settings.providers.tag.config": "Конфигурация",
   "settings.providers.tag.custom": "Пользовательский",

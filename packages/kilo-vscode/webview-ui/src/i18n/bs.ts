@@ -560,6 +560,8 @@ export const dict = {
     "Veza s terminalom je prekinuta. Ovo se može desiti kada se server restartuje.",
 
   "common.closeTab": "Zatvori karticu",
+  "common.signIn": "Prijava",
+  "common.signOut": "Odjava",
   "common.dismiss": "Odbaci",
   "common.requestFailed": "Zahtjev nije uspio",
   "common.moreOptions": "Više opcija",
@@ -717,6 +719,7 @@ export const dict = {
   "settings.providers.section.popular": "Popularni provajderi",
   "settings.providers.search.placeholder": "Pretraži provajdere",
   "settings.providers.select.placeholder": "Odaberi provajdera...",
+  "settings.providers.tag.gateway": "Gateway",
   "settings.providers.tag.environment": "Okruženje",
   "settings.providers.tag.config": "Konfiguracija",
   "settings.providers.tag.custom": "Prilagođeno",
