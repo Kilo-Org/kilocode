@@ -114,6 +114,12 @@ export class WorktreeManager {
   // conflicts. Operations on different repositories proceed in parallel.
   private static locks = new Map<string, Promise<void>>()
 
+  // Cache for fetched refs: avoids redundant git fetch calls when creating
+  // multiple worktrees from the same base branch (e.g., multi-version mode).
+  // Key: `${root}:${remote}:${branch}`, Value: timestamp when fetch was done
+  private static fetchCache = new Map<string, number>()
+  private static readonly FETCH_CACHE_TTL = 60_000 // 1 minute
+
   private withGitLock<T>(fn: () => Promise<T>): Promise<T> {
     const key = this.root
     const prev = WorktreeManager.locks.get(key) ?? Promise.resolve()
@@ -255,17 +261,23 @@ export class WorktreeManager {
         const loc = match ? match[1] : "another worktree"
         throw new Error(`Branch "${branch}" is already checked out in worktree at: ${loc}`)
       }
-      if (!msg.includes("already exists") || params.existingBranch) {
+      // Post-checkout hook failures (husky, lefthook, etc.) cause a non-zero
+      // exit even though the worktree was created successfully. Verify via
+      // git worktree list before treating this as a real error.
+      if (this.isHookError(msg) && (await this.worktreeRegistered(worktreePath))) {
+        this.log(`Ignoring post-checkout hook failure for ${worktreePath}: ${msg}`)
+      } else if (!msg.includes("already exists") || params.existingBranch) {
         throw new Error(`Failed to create worktree: ${msg}`)
+      } else {
+        // Branch name collision -- retry with unique suffix
+        branch = `${branch}-${Date.now()}`
+        const retryDir = branch.replace(/\//g, "-")
+        worktreePath = path.join(this.dir, retryDir)
+        const retryArgs = params.existingBranch
+          ? ["worktree", "add", worktreePath, branch]
+          : ["worktree", "add", "-b", branch, worktreePath, startRef!]
+        await this.git.raw(retryArgs)
       }
-      // Branch name collision -- retry with unique suffix
-      branch = `${branch}-${Date.now()}`
-      const retryDir = branch.replace(/\//g, "-")
-      worktreePath = path.join(this.dir, retryDir)
-      const retryArgs = params.existingBranch
-        ? ["worktree", "add", worktreePath, branch]
-        : ["worktree", "add", "-b", branch, worktreePath, startRef!]
-      await this.git.raw(retryArgs)
     }
 
     this.log(
@@ -278,6 +290,34 @@ export class WorktreeManager {
       remote: parentRemote,
       startPointSource: startPoint.source,
       startPointWarning: startPoint.warning,
+    }
+  }
+
+  /**
+   * Detect post-checkout hook failures in git error output.
+   * Hooks like husky or lefthook run after `git worktree add` and can fail
+   * with a non-zero exit code even though the worktree was created.
+   */
+  private isHookError(msg: string): boolean {
+    const lower = msg.toLowerCase()
+    return (
+      (lower.includes("hook") || lower.includes("husky") || lower.includes("lefthook")) &&
+      (lower.includes("post-checkout") || lower.includes("post_checkout"))
+    )
+  }
+
+  /**
+   * Verify that git actually registered a worktree at the given path by
+   * checking `git worktree list --porcelain`. Used to confirm that a
+   * worktree was created despite a non-zero exit code (e.g., hook failure).
+   */
+  private async worktreeRegistered(wtPath: string): Promise<boolean> {
+    try {
+      const raw = await this.git.raw(["worktree", "list", "--porcelain"])
+      const normalized = normalizePath(wtPath)
+      return parseWorktreeList(raw).some((e) => normalizePath(e.path) === normalized)
+    } catch {
+      return false
     }
   }
 
@@ -545,12 +585,29 @@ export class WorktreeManager {
   ): Promise<StartPointResult> {
     const { allowFallback = true } = opts || {}
 
-    // 1. Remote fetch
+    // 1. Remote fetch (with caching to avoid redundant fetches in multi-version mode)
     const remote = await this.resolveRemote()
     if (remote) {
+      const cacheKey = `${this.root}:${remote}:${branch}`
+      const cached = WorktreeManager.fetchCache.get(cacheKey)
+
+      // Skip fetch if recently fetched (within TTL) AND ref exists locally
+      if (cached && Date.now() - cached < WorktreeManager.FETCH_CACHE_TTL) {
+        if (await this.refExistsLocally(`${remote}/${branch}`)) {
+          return {
+            ref: `${remote}/${branch}`,
+            branch,
+            remote,
+            source: "remote",
+          }
+        }
+      }
+
+      // Either not cached or cache is stale - do the fetch
       onProgress?.("fetching", `Fetching ${remote}/${branch}...`)
       try {
         await this.git.fetch(remote, branch)
+        WorktreeManager.fetchCache.set(cacheKey, Date.now())
         if (await this.refExistsLocally(`${remote}/${branch}`)) {
           return {
             ref: `${remote}/${branch}`,
