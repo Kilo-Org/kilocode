@@ -50,8 +50,8 @@ export const DEFAULT_HEADERS = {
  * Appends the version from KILOCODE_VERSION when available.
  */
 export function getEditorNameHeader(): string {
-  const name = process.env[ENV_EDITOR_NAME] ?? process.env.KILO_EDITOR_NAME ?? DEFAULT_EDITOR_NAME
-  const version = process.env[ENV_VERSION] ?? process.env.KILO_APP_VERSION
+  const name = process.env[ENV_EDITOR_NAME] ?? DEFAULT_EDITOR_NAME
+  const version = process.env[ENV_VERSION]
   return version ? `${name} ${version}` : name
 }
 
@@ -89,9 +89,8 @@ export function buildKiloHeaders(
     headers[X_KILOCODE_TESTER] = TESTER_SUPPRESS_VALUE
   }
 
-  const machine = options?.machineId ?? process.env.KILO_MACHINE_ID
-  if (machine) {
-    headers[X_KILOCODE_MACHINEID] = machine
+  if (options?.machineId) {
+    headers[X_KILOCODE_MACHINEID] = options.machineId
   }
 
   return headers

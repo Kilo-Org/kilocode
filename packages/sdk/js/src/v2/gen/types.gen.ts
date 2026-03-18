@@ -2051,24 +2051,6 @@ export type GlobalDisposeResponses = {
 
 export type GlobalDisposeResponse = GlobalDisposeResponses[keyof GlobalDisposeResponses]
 
-export type AuthListData = {
-  body?: never
-  path?: never
-  query?: never
-  url: "/auth"
-}
-
-export type AuthListResponses = {
-  /**
-   * Map of provider ID to auth type
-   */
-  200: {
-    [key: string]: "oauth" | "api" | "wellknown"
-  }
-}
-
-export type AuthListResponse = AuthListResponses[keyof AuthListResponses]
-
 export type AuthRemoveData = {
   body?: never
   path: {

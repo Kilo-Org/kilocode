@@ -158,50 +158,6 @@
         ]
       }
     },
-    "/auth": {
-      "get": {
-        "operationId": "auth.list",
-        "summary": "List auth types",
-        "description": "Get the type of each stored auth entry",
-        "responses": {
-          "200": {
-            "description": "Map of provider ID to auth type",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "const": "oauth"
-                      },
-                      {
-                        "type": "string",
-                        "const": "api"
-                      },
-                      {
-                        "type": "string",
-                        "const": "wellknown"
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        },
-        "x-codeSamples": [
-          {
-            "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.auth.list({\n  ...\n})"
-          }
-        ]
-      }
-    },
     "/auth/{providerID}": {
       "put": {
         "operationId": "auth.set",
@@ -12075,10 +12031,6 @@
               },
               "batch_tool": {
                 "description": "Enable the batch tool",
-                "type": "boolean"
-              },
-              "codebase_search": {
-                "description": "Enable AI-powered codebase search",
                 "type": "boolean"
               },
               "openTelemetry": {

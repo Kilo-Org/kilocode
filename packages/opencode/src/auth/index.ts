@@ -2,7 +2,6 @@ import path from "path"
 import { Global } from "../global"
 import z from "zod"
 import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
-import { clearLegacyKiloAuth } from "@kilocode/kilo-gateway" // kilocode_change
 import { Filesystem } from "../util/filesystem"
 
 export const OAUTH_DUMMY_KEY = "opencode-oauth-dummy-key"
@@ -70,12 +69,10 @@ export namespace Auth {
     const data = await all()
     delete data[key]
     delete data[normalized]
-    delete data[normalized + "/"]
     await Filesystem.writeJson(filepath, data, 0o600)
 
     // kilocode_change start - Track logout and reset telemetry identity for Kilo
-    if (normalized === "kilo") {
-      await clearLegacyKiloAuth()
+    if (key === "kilo") {
       await Telemetry.updateIdentity(null)
     }
     Telemetry.trackAuthLogout(key)

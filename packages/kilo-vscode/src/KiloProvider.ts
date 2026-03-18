@@ -1250,11 +1250,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
                     return {}
                   })
               : Promise.resolve({})
+          // Auth state listing (GET /auth) may not be available on all server versions.
+          // Use a runtime check and fall back to empty if unavailable.
+          const authClient = client.auth as unknown as Record<string, unknown>
           const authStatesRequest: Promise<Record<string, "api" | "oauth" | "wellknown">> =
-            typeof client.auth?.list === "function"
-              ? client.auth
-                  .list({ throwOnError: true })
-                  .then((result) => result.data ?? {})
+            typeof authClient.list === "function"
+              ? (authClient.list as (opts: unknown) => Promise<{ data?: Record<string, string> }>)({
+                  throwOnError: true,
+                })
+                  .then((result) => (result.data ?? {}) as Record<string, "api" | "oauth" | "wellknown">)
                   .catch((error: unknown) => {
                     console.warn("[Kilo New] KiloProvider: Failed to fetch provider auth states:", error)
                     return {}

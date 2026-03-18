@@ -18,9 +18,8 @@ interface LegacyProvider {
   kilocodeOrganizationId?: string
 }
 
-interface LegacyConfigFile {
+interface LegacyConfig {
   providers?: LegacyProvider[]
-  [key: string]: unknown
 }
 
 interface LegacyKiloAuth {
@@ -33,20 +32,10 @@ type ApiAuth = { type: "api"; key: string }
 type OAuthAuth = { type: "oauth"; access: string; refresh: string; expires: number; accountId?: string }
 type AuthInfo = ApiAuth | OAuthAuth
 
-async function readLegacyConfig(file: string): Promise<LegacyConfigFile | null> {
-  const content = await fs.readFile(file, "utf-8").catch(() => null)
-  if (!content) return null
-  try {
-    return JSON.parse(content) as LegacyConfigFile
-  } catch {
-    return null
-  }
-}
-
 /**
  * Extract kilo auth from legacy config
  */
-function extractKiloAuth(config: LegacyConfigFile): LegacyKiloAuth | undefined {
+function extractKiloAuth(config: LegacyConfig): LegacyKiloAuth | undefined {
   if (!config.providers) return undefined
 
   const provider = config.providers.find((p) => p.provider === "kilocode")
@@ -75,8 +64,16 @@ export async function migrateLegacyKiloAuth(
   // Skip if kilo auth already configured
   if (await hasKiloAuth()) return false
 
-  const config = await readLegacyConfig(LEGACY_CONFIG_PATH)
-  if (!config) return false
+  // Check if legacy config exists and parse it
+  const content = await fs.readFile(LEGACY_CONFIG_PATH, "utf-8").catch(() => null)
+  if (!content) return false
+
+  let config: LegacyConfig | null = null
+  try {
+    config = JSON.parse(content) as LegacyConfig
+  } catch {
+    return false
+  }
 
   // Extract kilo auth from legacy config
   const legacy = extractKiloAuth(config)
@@ -100,38 +97,4 @@ export async function migrateLegacyKiloAuth(
   }
 
   return true
-}
-
-/**
- * Clear kilo credentials from the legacy config without deleting the whole file.
- *
- * Removes kilocodeToken and kilocodeOrganizationId from providers with
- * provider === "kilocode", preserving any other config in the file.
- *
- * @param file - Config file path (defaults to LEGACY_CONFIG_PATH, override for testing)
- * @returns true if changes were made
- */
-export async function clearLegacyKiloAuth(file?: string): Promise<boolean> {
-  const target = file ?? LEGACY_CONFIG_PATH
-  const config = await readLegacyConfig(target)
-  if (!config?.providers) return false
-
-  let changed = false
-  for (const p of config.providers) {
-    if (p.provider !== "kilocode") continue
-    if (p.kilocodeToken !== undefined) {
-      delete p.kilocodeToken
-      changed = true
-    }
-    if (p.kilocodeOrganizationId !== undefined) {
-      delete p.kilocodeOrganizationId
-      changed = true
-    }
-  }
-
-  if (changed) {
-    await fs.writeFile(target, JSON.stringify(config, null, 2), "utf-8")
-  }
-
-  return changed
 }
