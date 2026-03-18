@@ -49,8 +49,7 @@ export function useSlashCommand(vscode: VSCodeContext): SlashCommand {
 
   const unsubscribe = vscode.onMessage((message) => {
     if (message.type !== "commandsLoaded") return
-    const result = message as { type: "commandsLoaded"; commands: SlashCommandInfo[] }
-    setCommands(result.commands)
+    setCommands(message.commands)
   })
 
   onMount(() => {
