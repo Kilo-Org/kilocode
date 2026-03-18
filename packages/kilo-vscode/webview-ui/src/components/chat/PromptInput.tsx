@@ -543,7 +543,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const attachments = allFiles.length > 0 ? allFiles : undefined
 
     // Detect slash command: text starts with "/" and first word matches a known command
-    const cmdMatch = draft.match(/^\/([^ ]+)/)
+    const cmdMatch = draft.match(/^\/(\S+)/)
     const matched = cmdMatch ? slash.commands().find((c) => c.name === cmdMatch[1]) : undefined
     if (matched) {
       const args = draft.slice(cmdMatch![0].length).trim()

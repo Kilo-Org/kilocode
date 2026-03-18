@@ -426,6 +426,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         }
         case "sendCommand": {
+          const files = z
+            .array(
+              z.object({
+                mime: z.string(),
+                url: z.string().refine((u) => u.startsWith("file://") || u.startsWith("data:")),
+              }),
+            )
+            .optional()
+            .catch(undefined)
+            .parse(message.files)
           await this.handleSendCommand(
             message.command,
             message.arguments,
@@ -435,6 +445,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.modelID,
             message.agent,
             message.variant,
+            files,
           )
           break
         }
@@ -1343,18 +1354,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         console.error("[Kilo New] removeSkill returned error:", result.error)
         this.cachedSkillsMessage = null
         this.cachedCommandsMessage = null
-        await this.fetchAndSendSkills()
+        await Promise.all([this.fetchAndSendSkills(), this.fetchAndSendCommands()])
         return false
       }
     } catch (error) {
       console.error("[Kilo New] Failed to remove skill:", error)
       this.cachedSkillsMessage = null
       this.cachedCommandsMessage = null
-      await this.fetchAndSendSkills()
+      await Promise.all([this.fetchAndSendSkills(), this.fetchAndSendCommands()])
       return false
     }
     this.cachedSkillsMessage = null
     this.cachedCommandsMessage = null
+    await this.fetchAndSendCommands()
     return true
   }
 
@@ -1902,6 +1914,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     modelID?: string,
     agent?: string,
     variant?: string,
+    files?: Array<{ mime: string; url: string }>,
   ): Promise<void> {
     if (!this.client) {
       this.postMessage({
@@ -1938,6 +1951,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.connectionService.recordMessageSessionId(messageID, target)
       }
 
+      const parts = files?.map((f) => ({ type: "file" as const, mime: f.mime, url: f.url }))
+
       await this.client.session.command(
         {
           sessionID: target,
@@ -1948,6 +1963,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           model: providerID && modelID ? `${providerID}/${modelID}` : undefined,
           agent,
           variant,
+          parts,
         },
         { throwOnError: true },
       )

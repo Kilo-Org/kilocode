@@ -1199,6 +1199,12 @@ export const SessionProvider: ParentComponent = (props) => {
       return
     }
 
+    // Cloud previews need import-then-send; fall back to sendMessage which handles that flow
+    if (cloudPreviewId()) {
+      sendMessage(`/${command} ${args}`.trim(), providerID, modelID, files)
+      return
+    }
+
     const messageID = Identifier.ascending("message")
     const sid = currentSessionID()
 
