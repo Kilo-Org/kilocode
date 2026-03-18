@@ -820,6 +820,7 @@ export class AgentManagerProvider implements vscode.Disposable {
   private async onCreateMultiVersion(
     msg: Extract<AgentManagerInMessage, { type: "agentManager.createMultiVersion" }>,
   ): Promise<null> {
+    await this.waitForStateReady("onCreateMultiVersion")
     const text = msg.text?.trim() || undefined
 
     const worktreeName = msg.name?.trim() || undefined
