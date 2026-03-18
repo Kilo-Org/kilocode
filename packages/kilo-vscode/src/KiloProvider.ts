@@ -678,6 +678,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.agent,
             message.variant,
             files,
+            typeof message.command === "string" ? message.command : undefined,
+            typeof message.commandArgs === "string" ? message.commandArgs : undefined,
           )
           break
         }
@@ -1366,7 +1368,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
     this.cachedSkillsMessage = null
     this.cachedCommandsMessage = null
-    await this.fetchAndSendCommands()
+    await Promise.all([this.fetchAndSendSkills(), this.fetchAndSendCommands()])
     return true
   }
 
@@ -1633,6 +1635,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     agent?: string,
     variant?: string,
     files?: Array<{ mime: string; url: string }>,
+    command?: string,
+    commandArgs?: string,
   ): Promise<void> {
     if (!this.client) {
       this.postMessage({
@@ -1682,37 +1686,52 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       session: this.sessionToWebview(session),
     })
 
-    // Step 2: Send the user's message on the new local session
-    const parts: Array<TextPartInput | FilePartInput> = []
-
-    if (files) {
-      for (const f of files) {
-        parts.push({ type: "file", mime: f.mime, url: f.url })
-      }
-    }
-
-    parts.push({ type: "text", text })
-
+    // Step 2: Send the user's message/command on the new local session
     try {
-      const editorContext = await this.gatherEditorContext()
-
       if (messageID) {
         this.connectionService.recordMessageSessionId(messageID, session.id)
       }
 
-      await this.client.session.promptAsync(
-        {
-          sessionID: session.id,
-          directory: workspaceDir,
-          messageID,
-          parts,
-          model: providerID && modelID ? { providerID, modelID } : undefined,
-          agent,
-          variant,
-          editorContext,
-        },
-        { throwOnError: true },
-      )
+      if (command) {
+        const fileParts = files?.map((f) => ({ type: "file" as const, mime: f.mime, url: f.url }))
+        await this.client.session.command(
+          {
+            sessionID: session.id,
+            directory: workspaceDir,
+            command,
+            arguments: commandArgs ?? "",
+            messageID,
+            model: providerID && modelID ? `${providerID}/${modelID}` : undefined,
+            agent,
+            variant,
+            parts: fileParts,
+          },
+          { throwOnError: true },
+        )
+      } else {
+        const parts: Array<TextPartInput | FilePartInput> = []
+        if (files) {
+          for (const f of files) {
+            parts.push({ type: "file", mime: f.mime, url: f.url })
+          }
+        }
+        parts.push({ type: "text", text })
+
+        const editorContext = await this.gatherEditorContext()
+        await this.client.session.promptAsync(
+          {
+            sessionID: session.id,
+            directory: workspaceDir,
+            messageID,
+            parts,
+            model: providerID && modelID ? { providerID, modelID } : undefined,
+            agent,
+            variant,
+            editorContext,
+          },
+          { throwOnError: true },
+        )
+      }
     } catch (err) {
       console.error("[Kilo New] Failed to send message after cloud import:", err)
       this.postMessage({
@@ -1923,6 +1942,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         text: `/${command} ${args}`.trim(),
         sessionID,
         messageID,
+        files,
       })
       return
     }
@@ -1975,6 +1995,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         text: `/${command} ${args}`.trim(),
         sessionID: target,
         messageID,
+        files,
       })
     }
   }
