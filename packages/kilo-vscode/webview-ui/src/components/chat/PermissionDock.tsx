@@ -10,13 +10,14 @@
  * When all rules are toggled ✓, the command auto-runs.
  */
 
-import { Component, For, Show, createSignal } from "solid-js"
+import { Component, For, Show, createMemo, createSignal } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { DockPrompt } from "@kilocode/kilo-ui/dock-prompt"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
+import { describePatterns } from "../../utils/permission-description"
 import type { PermissionRequest } from "../../types/messages"
 
 type RuleDecision = "approved" | "denied" | "pending"
@@ -41,6 +42,9 @@ export const PermissionDock: Component<{
     const cmd = props.request.args?.command
     return typeof cmd === "string" ? cmd : undefined
   }
+  const description = createMemo(() =>
+    command() ? null : describePatterns(props.request.toolName, props.request.patterns),
+  )
 
   const [decisions, setDecisions] = createSignal<Record<number, RuleDecision>>({})
   const [expanded, setExpanded] = createSignal(rulesExpandedPreference)
@@ -176,9 +180,18 @@ export const PermissionDock: Component<{
     >
       <Show when={command()}>{(cmd) => <code data-slot="permission-command">{cmd()}</code>}</Show>
 
-      <Show when={!command() && toolDescription()}>
-        <div data-slot="permission-hint">{toolDescription()}</div>
-      </Show>
+      {(() => {
+        const desc = description()
+        if (!desc)
+          return !command() && toolDescription() ? <div data-slot="permission-hint">{toolDescription()}</div> : null
+        if (desc.kind === "single") return <div data-slot="permission-hint">{desc.text}</div>
+        return (
+          <div data-slot="permission-patterns">
+            <span data-slot="permission-patterns-title">{desc.title}</span>
+            <For each={desc.paths}>{(path) => <code data-slot="permission-pattern">{path}</code>}</For>
+          </div>
+        )
+      })()}
 
       <div data-slot="permission-actions">
         <Button
