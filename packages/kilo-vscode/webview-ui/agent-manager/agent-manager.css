@@ -1725,13 +1725,24 @@ button.am-section-toggle:hover .am-section-label {
 /* Compare mode pill in the version bar */
 
 .am-nv-pill-compare {
-  margin-left: 4px;
-  width: 28px;
-  opacity: 0.6;
+  margin-left: 6px;
+  width: auto;
+  gap: 4px;
+  padding: 0 8px;
+  border: 1px dashed var(--border-base);
+  color: var(--text-weak);
 }
 
 .am-nv-pill-compare:hover {
-  opacity: 1;
+  border-color: var(--border-focus, #007fd4);
+  color: var(--text-base);
+  background: var(--surface-inset-base-hover);
+}
+
+.am-nv-pill-compare-label {
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 /* Compare mode section */
