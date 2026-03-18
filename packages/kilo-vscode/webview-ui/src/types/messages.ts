@@ -428,6 +428,12 @@ export interface SendMessageFailedMessage {
   files?: FileAttachment[]
 }
 
+export interface SessionErrorMessage {
+  type: "sessionError"
+  sessionID?: string
+  error: string
+}
+
 export interface PartUpdatedMessage {
   type: "partUpdated"
   sessionID?: string
@@ -1138,6 +1144,7 @@ export type ExtensionMessage =
   | ConnectionStateMessage
   | ErrorMessage
   | SendMessageFailedMessage
+  | SessionErrorMessage
   | PartUpdatedMessage
   | SessionStatusMessage
   | PermissionRequestMessage

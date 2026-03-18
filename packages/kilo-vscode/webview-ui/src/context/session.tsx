@@ -40,6 +40,7 @@ import type {
   ExtensionMessage,
   FileAttachment,
   SendMessageFailedMessage,
+  SessionErrorMessage,
 } from "../types/messages"
 import { removeSessionPermissions, upsertPermission } from "./permission-queue"
 import { computeStatus, calcTotalCost, calcContextUsage } from "./session-utils"
@@ -541,6 +542,14 @@ export const SessionProvider: ParentComponent = (props) => {
 
         case "sendMessageFailed":
           handleSendMessageFailed(message as unknown as SendMessageFailedMessage)
+          break
+
+        case "sessionError":
+          showToast({
+            variant: "error",
+            title: "Session error",
+            description: (message as unknown as SessionErrorMessage).error,
+          })
           break
 
         case "cloudSessionDataLoaded":

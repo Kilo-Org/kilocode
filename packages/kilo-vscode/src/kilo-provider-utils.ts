@@ -181,6 +181,7 @@ export type WebviewMessage =
   | { type: "sessionCreated"; session: ReturnType<typeof sessionToWebview> }
   | { type: "sessionUpdated"; session: ReturnType<typeof sessionToWebview> }
   | { type: "messageRemoved"; sessionID: string; messageID: string }
+  | { type: "sessionError"; sessionID?: string; error: string }
   | null
 
 export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | undefined): WebviewMessage {
@@ -284,6 +285,14 @@ export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | un
         type: "sessionUpdated",
         session: sessionToWebview(event.properties.info),
       }
+    case "session.error": {
+      const props = event.properties as { sessionID?: string; error?: { message?: string } }
+      return {
+        type: "sessionError",
+        sessionID: props.sessionID,
+        error: props.error?.message ?? "An error occurred",
+      }
+    }
     default:
       return null
   }
