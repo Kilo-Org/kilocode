@@ -10,66 +10,11 @@
 
 import open from "open"
 import { spinner } from "@clack/prompts"
-import type { DeviceAuthInitiateResponse, DeviceAuthPollResponse } from "../types.js"
+import type { DeviceAuthPollResponse } from "../types.js"
 import { poll, formatTimeRemaining } from "./polling.js"
 import { getKiloProfile, getKiloDefaultModel, promptOrganizationSelection } from "../api/profile.js"
-import { KILO_API_BASE, POLL_INTERVAL_MS } from "../api/constants.js"
-
-/**
- * Initiate device authorization flow
- * @returns Device authorization details
- * @throws Error if initiation fails
- */
-async function initiateDeviceAuth(): Promise<DeviceAuthInitiateResponse> {
-  const response = await fetch(`${KILO_API_BASE}/api/device-auth/codes`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  })
-
-  if (!response.ok) {
-    if (response.status === 429) {
-      throw new Error("Too many pending authorization requests. Please try again later.")
-    }
-    throw new Error(`Failed to initiate device authorization: ${response.status}`)
-  }
-
-  const data = await response.json()
-  return data as DeviceAuthInitiateResponse
-}
-
-/**
- * Poll for device authorization status
- * @param code The verification code
- * @returns Poll response with status and optional token
- * @throws Error if polling fails
- */
-async function pollDeviceAuth(code: string): Promise<DeviceAuthPollResponse> {
-  const response = await fetch(`${KILO_API_BASE}/api/device-auth/codes/${code}`)
-
-  if (response.status === 202) {
-    // Still pending
-    return { status: "pending" }
-  }
-
-  if (response.status === 403) {
-    // Denied by user
-    return { status: "denied" }
-  }
-
-  if (response.status === 410) {
-    // Code expired
-    return { status: "expired" }
-  }
-
-  if (!response.ok) {
-    throw new Error(`Failed to poll device authorization: ${response.status}`)
-  }
-
-  const data = await response.json()
-  return data as DeviceAuthPollResponse
-}
+import { POLL_INTERVAL_MS } from "../api/constants.js"
+import { initiateDeviceAuth, pollDeviceAuth } from "./device-auth-shared.js"
 
 export interface DeviceAuthResult {
   token: string
@@ -89,8 +34,7 @@ export async function authenticateWithDeviceAuth(): Promise<DeviceAuthResult> {
   const s = spinner()
   s.start("Initiating device authorization")
 
-  let authData: DeviceAuthInitiateResponse
-  authData = await initiateDeviceAuth()
+  const authData = await initiateDeviceAuth()
 
   const { code, verificationUrl, expiresIn } = authData
   s.stop("Device authorization initiated")

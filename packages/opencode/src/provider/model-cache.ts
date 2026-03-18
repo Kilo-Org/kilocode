@@ -59,27 +59,13 @@ export namespace ModelCache {
       return cached
     }
 
-    // Cache miss - fetch models
-    log.info("fetching models", { providerID })
-
-    try {
-      const authOptions = await getAuthOptions(providerID)
-      const mergedOptions = { ...authOptions, ...options }
-
-      const models = await fetchModels(providerID, mergedOptions)
-
-      // Store in cache
-      cache.set(providerID, {
-        models,
-        timestamp: Date.now(),
-      })
-
-      log.info("models fetched and cached", { providerID, count: Object.keys(models).length })
-      return models
-    } catch (error) {
-      log.error("failed to fetch models", { providerID, error })
-      return {}
+    // Cache miss - join in-flight refresh or start a new one
+    const inFlight = inFlightRefresh.get(providerID)
+    if (inFlight) {
+      log.info("joining in-flight refresh", { providerID })
+      return inFlight
     }
+    return refresh(providerID, options)
   }
 
   /**

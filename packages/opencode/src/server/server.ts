@@ -142,6 +142,36 @@ export namespace Server {
           }),
         )
         .route("/global", GlobalRoutes())
+        // kilocode_change start - GET /auth endpoint to list auth entry types
+        .get(
+          "/auth",
+          describeRoute({
+            summary: "List auth types",
+            description: "Get the type of each stored auth entry",
+            operationId: "auth.list",
+            responses: {
+              200: {
+                description: "Map of provider ID to auth type",
+                content: {
+                  "application/json": {
+                    schema: resolver(
+                      z.record(z.string(), z.union([z.literal("oauth"), z.literal("api"), z.literal("wellknown")])),
+                    ),
+                  },
+                },
+              },
+            },
+          }),
+          async (c) => {
+            const entries = await Auth.all()
+            const result: Record<string, string> = {}
+            for (const [id, info] of Object.entries(entries)) {
+              result[id] = info.type
+            }
+            return c.json(result)
+          },
+        )
+        // kilocode_change end
         .put(
           "/auth/:providerID",
           describeRoute({
