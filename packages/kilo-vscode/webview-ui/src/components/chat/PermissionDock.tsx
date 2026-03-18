@@ -10,7 +10,7 @@
  * When all rules are toggled ✓, the command auto-runs.
  */
 
-import { Component, For, Show, createSignal } from "solid-js"
+import { Component, For, Show, createMemo, createSignal } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { DockPrompt } from "@kilocode/kilo-ui/dock-prompt"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -18,7 +18,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import { useConfig } from "../../context/config"
-import { savedRuleStates, type RuleDecision } from "./permission-dock-utils"
+import { describePatterns, resolveLabel, savedRuleStates, type RuleDecision } from "./permission-dock-utils"
 import type { PermissionRequest } from "../../types/messages"
 
 let rulesExpandedPreference = false
@@ -42,6 +42,9 @@ export const PermissionDock: Component<{
     const cmd = props.request.args?.command
     return typeof cmd === "string" ? cmd : undefined
   }
+  const description = createMemo(() =>
+    command() ? null : describePatterns(props.request.toolName, props.request.patterns, language.t),
+  )
 
   // Pre-populate toggle states from existing config rules so previously
   // approved/denied patterns show their saved state immediately.
@@ -103,7 +106,8 @@ export const PermissionDock: Component<{
     return value
   }
 
-  const subtitle = () => (fromChild() ? `${props.request.toolName} (subagent)` : props.request.toolName)
+  const title = () =>
+    fromChild() ? language.t("notification.permission.titleSubagent") : language.t("notification.permission.title")
 
   return (
     <DockPrompt
@@ -113,10 +117,7 @@ export const PermissionDock: Component<{
           <span data-slot="permission-icon">
             <Icon name="warning" size="small" />
           </span>
-          <div data-slot="permission-header-title">
-            {language.t("notification.permission.title")}
-            <span data-slot="permission-header-subtitle">{subtitle()}</span>
-          </div>
+          <div data-slot="permission-header-title">{title()}</div>
         </div>
       }
       footer={
@@ -167,8 +168,13 @@ export const PermissionDock: Component<{
                             </button>
                           </Tooltip>
                         </div>
-                        <span data-slot="permission-rule-type">{props.request.toolName}</span>
-                        <code data-slot="permission-rule">{label(rule)}</code>
+                        <code data-slot="permission-rule">
+                          {command()
+                            ? label(rule)
+                            : rule === "*"
+                              ? resolveLabel(props.request.toolName, language.t)
+                              : `${resolveLabel(props.request.toolName, language.t)} ${rule}`}
+                        </code>
                       </div>
                     )}
                   </For>
@@ -181,9 +187,18 @@ export const PermissionDock: Component<{
     >
       <Show when={command()}>{(cmd) => <code data-slot="permission-command">{cmd()}</code>}</Show>
 
-      <Show when={!command() && toolDescription()}>
-        <div data-slot="permission-hint">{toolDescription()}</div>
-      </Show>
+      {(() => {
+        const desc = description()
+        if (!desc)
+          return !command() && toolDescription() ? <div data-slot="permission-hint">{toolDescription()}</div> : null
+        if (desc.kind === "single") return <div data-slot="permission-hint">{desc.text}</div>
+        return (
+          <div data-slot="permission-patterns">
+            <span data-slot="permission-patterns-title">{desc.title}</span>
+            <For each={desc.paths}>{(path) => <code data-slot="permission-pattern">{path}</code>}</For>
+          </div>
+        )
+      })()}
 
       <div data-slot="permission-actions">
         <Button
