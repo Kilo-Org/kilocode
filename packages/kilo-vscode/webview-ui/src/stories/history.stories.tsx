@@ -61,6 +61,7 @@ const WithSessions: ParentComponent<{ sessions?: typeof mockSessions }> = (props
     allMessages: () => ({}),
     allParts: () => ({}),
     allStatusMap: () => ({}),
+    familyData: () => ({ messages: {}, parts: {}, status: {} }),
     getParts: () => [],
     todos: () => [],
     permissions: () => [],

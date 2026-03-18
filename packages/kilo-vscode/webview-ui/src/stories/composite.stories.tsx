@@ -783,6 +783,58 @@ export const PermissionDockSubagent: Story = {
 }
 
 // ---------------------------------------------------------------------------
+// 17. Permission dock — bash with pre-populated config rules
+// ---------------------------------------------------------------------------
+
+const bashConfigPermission: PermissionRequest = {
+  id: "perm-bash-config-001",
+  sessionID: SESSION_ID,
+  toolName: "bash",
+  patterns: ["npm install"],
+  always: ["npm install *"],
+  args: {
+    command: "npm install",
+    rules: ["npm *", "npm install", "npm run *", "npm test", "git *", "npx *"],
+  },
+  tool: { messageID: ASST_MSG_ID, callID: "call-bash-config-001" },
+}
+
+export const PermissionDockConfigPreloaded: Story = {
+  name: "Permission Dock — config pre-populated",
+  render: () => {
+    const perms = [bashConfigPermission]
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy", permissions: perms }),
+      messages: () => [{ id: "msg-001" }] as any[],
+    }
+    return (
+      <StoryProviders
+        permissions={perms}
+        sessionID={SESSION_ID}
+        status="busy"
+        noPadding
+        config={{
+          permission: {
+            bash: {
+              "*": "ask",
+              "npm *": "allow",
+              "npm install": "allow",
+              "git *": "deny",
+            },
+          },
+        }}
+      >
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "100%", height: "400px", display: "flex", "flex-direction": "column" }}>
+            <ChatView />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+// ---------------------------------------------------------------------------
 // 17. MCP tool cards — collapsed
 // ---------------------------------------------------------------------------
 

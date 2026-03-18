@@ -830,6 +830,11 @@ export function Prompt(props: PromptProps) {
                 autocomplete.onInput(value)
                 syncExtmarksWithPromptParts()
               }}
+              // kilocode_change start
+              onCursorChange={() => {
+                if (store.mode === "normal") autocomplete.onCursorChange()
+              }}
+              // kilocode_change end
               keyBindings={textareaKeybindings()}
               onKeyDown={async (e) => {
                 if (props.disabled) {

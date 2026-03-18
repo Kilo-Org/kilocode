@@ -1,5 +1,10 @@
 import { describe, it, expect } from "bun:test"
-import { fileName, dirName, buildHighlightSegments } from "../../webview-ui/src/components/chat/prompt-input-utils"
+import {
+  fileName,
+  dirName,
+  buildHighlightSegments,
+  atEnd,
+} from "../../webview-ui/src/components/chat/prompt-input-utils"
 
 describe("fileName", () => {
   it("extracts the last segment of a unix path", () => {
@@ -116,5 +121,27 @@ describe("buildHighlightSegments", () => {
   it("does not partially match longer paths", () => {
     const result = buildHighlightSegments("@foo.ts", new Set(["foo.tsx"]))
     expect(result).toEqual([{ text: "@foo.ts", highlight: false }])
+  })
+})
+
+describe("atEnd", () => {
+  it("returns true when caret is at end with no selection", () => {
+    expect(atEnd(5, 5, 5)).toBe(true)
+  })
+
+  it("returns false when caret is before end", () => {
+    expect(atEnd(4, 4, 5)).toBe(false)
+  })
+
+  it("returns false when there is a selection", () => {
+    expect(atEnd(2, 5, 5)).toBe(false)
+  })
+
+  it("returns true for empty input", () => {
+    expect(atEnd(0, 0, 0)).toBe(true)
+  })
+
+  it("returns false when caret is at start of non-empty input", () => {
+    expect(atEnd(0, 0, 10)).toBe(false)
   })
 })

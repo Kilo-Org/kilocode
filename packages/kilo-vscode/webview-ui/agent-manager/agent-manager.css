@@ -22,7 +22,7 @@
   background: var(--surface-interactive-base);
 }
 
-/* Fixed local workspace item */
+/* Fixed local repo item */
 
 .am-local-item {
   position: relative;
@@ -885,6 +885,7 @@ button.am-section-toggle:hover .am-section-label {
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  isolation: isolate;
 }
 
 .am-detail-split {

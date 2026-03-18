@@ -260,6 +260,24 @@ test.describe("Permission Dock Dropdown — many rules", () => {
 })
 
 // ---------------------------------------------------------------------------
+// Config pre-populated — rules show saved allow/deny state from config
+// ---------------------------------------------------------------------------
+
+test.describe("Permission Dock Dropdown — config pre-populated", () => {
+  const STORY_ID = "composite-webview--permission-dock-config-preloaded"
+
+  test("rules expanded — pre-populated from config (mixed allow/deny/pending)", async ({ page }) => {
+    await page.goto(storyUrl(STORY_ID), { waitUntil: "load" })
+    await disableAnimations(page)
+    await page.waitForSelector("#storybook-root *", { state: "attached" })
+    await openDropdown(page)
+
+    const root = page.locator("#storybook-root")
+    await expect(root).toHaveScreenshot(["permission-dock-dropdown", "config-preloaded-expanded.png"])
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Subagent permission — shows "(subagent)" in subtitle
 // ---------------------------------------------------------------------------
 

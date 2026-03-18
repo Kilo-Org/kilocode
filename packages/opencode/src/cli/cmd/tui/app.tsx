@@ -646,6 +646,15 @@ function App() {
       },
     },
     {
+      title: kv.get("bell_enabled", true) ? "Disable notifications" : "Enable notifications",
+      value: "app.toggle.notifications",
+      category: "System",
+      onSelect: (dialog) => {
+        kv.set("bell_enabled", !kv.get("bell_enabled", true))
+        dialog.clear()
+      },
+    },
+    {
       title: kv.get("animations_enabled", true) ? "Disable animations" : "Enable animations",
       value: "app.toggle.animations",
       category: "System",

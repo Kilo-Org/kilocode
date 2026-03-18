@@ -18,9 +18,9 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import { describePatterns, resolveLabel } from "../../utils/permission-description"
+import { useConfig } from "../../context/config"
+import { savedRuleStates, type RuleDecision } from "./permission-dock-utils"
 import type { PermissionRequest } from "../../types/messages"
-
-type RuleDecision = "approved" | "denied" | "pending"
 
 let rulesExpandedPreference = false
 
@@ -31,6 +31,7 @@ export const PermissionDock: Component<{
 }> = (props) => {
   const session = useSession()
   const language = useLanguage()
+  const { config } = useConfig()
 
   const fromChild = () => props.request.sessionID !== session.currentSessionID()
   // Bash sends fine-grained rules via metadata.rules; other tools use the always array.
@@ -46,7 +47,11 @@ export const PermissionDock: Component<{
     command() ? null : describePatterns(props.request.toolName, props.request.patterns, language.t),
   )
 
-  const [decisions, setDecisions] = createSignal<Record<number, RuleDecision>>({})
+  // Pre-populate toggle states from existing config rules so previously
+  // approved/denied patterns show their saved state immediately.
+  const saved = config().permission?.[props.request.toolName]
+  const loadState = savedRuleStates(rules(), saved)
+  const [decisions, setDecisions] = createSignal<Record<number, RuleDecision>>(loadState)
   const [expanded, setExpanded] = createSignal(rulesExpandedPreference)
 
   const hasRules = () => rules().length > 0

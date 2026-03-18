@@ -241,12 +241,16 @@ jobs:
   #         APPLE_API_KEY_PATH: ${{ runner.temp }}/apple-api-key.p8
 
   # kilocode_change start
+  # Smoke test disabled as a release gate due to infrastructure issues.
+  # The job is skipped via `if: false` so it no longer blocks publishing.
+  # Re-enable by restoring the original `if:` condition and uncommenting
+  # `- smoke-test` in the publish job's `needs` list below.
   smoke-test:
-    name: Smoke Test (pre-publish gate)
+    name: Smoke Test (pre-publish gate) [DISABLED]
     needs:
       - version
       - build-cli
-    if: github.repository == 'Kilo-Org/kilocode'
+    if: false # was: github.repository == 'Kilo-Org/kilocode'
     runs-on: ubuntu-24.04
     steps:
       - name: Trigger kilo-bench smoke test
@@ -319,7 +323,7 @@ jobs:
       - version
       - build-cli
       - build-vscode
-      - smoke-test
+      # - smoke-test  # disabled: infrastructure issues (see smoke-test job comment)
       # - build-tauri
     runs-on: ubuntu-24.04
     steps:
