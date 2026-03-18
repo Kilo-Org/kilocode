@@ -1730,6 +1730,7 @@ const AgentManagerContent: Component = () => {
 
   const handlePromote = (sessionId: string, e: MouseEvent) => {
     e.stopPropagation()
+    if (!loaded()) return
     vscode.postMessage({ type: "agentManager.promoteSession", sessionId })
   }
 
@@ -2557,6 +2558,7 @@ const AgentManagerContent: Component = () => {
                     variant="primary"
                     size="small"
                     onClick={() => {
+                      if (!loaded()) return
                       const sid = session.currentSessionID()
                       if (sid) vscode.postMessage({ type: "agentManager.promoteSession", sessionId: sid })
                     }}

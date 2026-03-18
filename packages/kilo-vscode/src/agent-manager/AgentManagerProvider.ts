@@ -699,6 +699,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
   /** Promote a session: create a worktree and move the session into it. */
   private async onPromoteSession(sessionId: string): Promise<null> {
+    await this.waitForStateReady("onPromoteSession")
     const created = await this.createWorktreeOnDisk({})
     if (!created) return null
 
