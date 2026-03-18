@@ -45,32 +45,11 @@ export function createKilo(options: KiloProviderOptions = {}): SDK {
     ...options.headers,
   }
 
-  // Create custom fetch wrapper to add dynamic headers
-  const originalFetch = options.fetch ?? fetch
-  const wrappedFetch = async (input: string | URL | Request, init?: RequestInit) => {
-    const headers = new Headers(init?.headers)
-
-    // Add custom headers
-    Object.entries(customHeaders).forEach(([key, value]) => {
-      headers.set(key, value)
-    })
-
-    // Add authorization if API key exists
-    if (apiKey) {
-      headers.set("Authorization", `Bearer ${apiKey}`)
-    }
-
-    return originalFetch(input, {
-      ...init,
-      headers,
-    })
-  }
-
   // Create OpenRouter provider with KiloCode configuration
   return createOpenRouter({
     baseURL: openRouterUrl,
     apiKey: apiKey ?? ANONYMOUS_API_KEY,
     headers: customHeaders,
-    fetch: wrappedFetch as typeof fetch,
+    fetch: options.fetch,
   })
 }
