@@ -106,7 +106,7 @@ interface ApplyState {
   conflicts: AgentManagerApplyWorktreeDiffConflict[]
 }
 
-/** Sidebar selection: LOCAL for workspace, worktree ID for a worktree, or null for an unassigned session. */
+/** Sidebar selection: LOCAL for local repo, worktree ID for a worktree, or null for an unassigned session. */
 type SidebarSelection = typeof LOCAL | string | null
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
@@ -343,7 +343,7 @@ const AgentManagerContent: Component = () => {
   // Per-worktree git stats (diff additions/deletions, commits missing from origin)
   const [worktreeStats, setWorktreeStats] = createSignal<Record<string, WorktreeGitStats>>({})
 
-  // Local workspace git stats (branch name, diff additions/deletions, commits)
+  // Local repo git stats (branch name, diff additions/deletions, commits)
   const [localStats, setLocalStats] = createSignal<LocalGitStats | undefined>()
 
   // Per-worktree apply-to-local status
@@ -1917,7 +1917,7 @@ const AgentManagerContent: Component = () => {
           max={9999}
           onResize={(width) => setSidebarWidth(Math.min(width, window.innerWidth * MAX_SIDEBAR_WIDTH_RATIO))}
         />
-        {/* Local workspace item */}
+        {/* Local repo item */}
         <button
           class={`am-local-item ${selection() === LOCAL ? "am-local-item-active" : ""}`}
           data-sidebar-id="local"

@@ -85,7 +85,7 @@ export const dict = {
   "agentManager.dialog.compareModels.searchModels": "모델 검색...",
   "agentManager.dialog.compareModels.selectModels": "모델 선택...",
   "agentManager.dialog.creating": "생성 중...",
-  "agentManager.dialog.createWorkspace": "워크트리 생성",
+  "agentManager.dialog.createWorktree": "워크트리 생성",
   "agentManager.dialog.removeImage": "이미지 제거",
   "agentManager.dialog.advanced": "고급...",
 

@@ -33,8 +33,8 @@ export const dict = {
   "agentManager.tab.forkSession": "Rozgałęź sesję",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Otwórz Terminal",
-  "agentManager.setup.failed": "Konfiguracja workspace nie powiodła się",
-  "agentManager.setup.settingUp": "Konfigurowanie workspace",
+  "agentManager.setup.failed": "Konfiguracja worktree nie powiodła się",
+  "agentManager.setup.settingUp": "Konfigurowanie worktree",
   "agentManager.setup.error.git_not_found":
     "Git nie jest zainstalowany lub nie został znaleziony w zmiennej PATH. Zainstaluj Git i uruchom ponownie VS Code.",
   "agentManager.setup.error.not_git_repo": "Otwórz folder zawierający repozytorium git, aby używać worktrees.",
@@ -85,7 +85,7 @@ export const dict = {
   "agentManager.dialog.compareModels.searchModels": "Szukaj modeli...",
   "agentManager.dialog.compareModels.selectModels": "Wybierz modele...",
   "agentManager.dialog.creating": "Tworzenie...",
-  "agentManager.dialog.createWorkspace": "Utwórz Worktree",
+  "agentManager.dialog.createWorktree": "Utwórz Worktree",
   "agentManager.dialog.removeImage": "Usuń obraz",
   "agentManager.dialog.advanced": "Zaawansowane...",
 

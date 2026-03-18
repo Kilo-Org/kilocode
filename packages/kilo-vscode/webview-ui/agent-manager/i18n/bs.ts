@@ -86,7 +86,7 @@ export const dict = {
   "agentManager.dialog.compareModels.searchModels": "Pretraži modele...",
   "agentManager.dialog.compareModels.selectModels": "Odaberi modele...",
   "agentManager.dialog.creating": "Kreiranje...",
-  "agentManager.dialog.createWorkspace": "Kreiraj worktree",
+  "agentManager.dialog.createWorktree": "Kreiraj worktree",
   "agentManager.dialog.removeImage": "Ukloni sliku",
   "agentManager.dialog.advanced": "Napredno...",
 

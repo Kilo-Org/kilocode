@@ -35,7 +35,7 @@ export function createTerminalHost(): TerminalHost {
       const t = vscode.window.activeTerminal
       return t ? wrap(t) : undefined
     },
-    workspacePath: () => vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,
+    repoPath: () => vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,
     showWarning: (msg) => void vscode.window.showWarningMessage(msg),
     setContext: (key, value) => void vscode.commands.executeCommand("setContext", key, value),
     onTerminalClosed: (cb) => vscode.window.onDidCloseTerminal((terminal) => cb(wrap(terminal))),

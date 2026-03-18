@@ -7,7 +7,7 @@
  * Returns the action to take: select a session by ID, go to local, or do nothing.
  */
 
-/** Sentinel value for the local workspace selection. */
+/** Sentinel value for the local repo selection. */
 export const LOCAL = "local" as const
 
 type NavResult = { action: "select"; id: string } | { action: typeof LOCAL } | { action: "none" }

@@ -85,7 +85,7 @@ export const dict = {
   "agentManager.dialog.compareModels.searchModels": "モデルを検索...",
   "agentManager.dialog.compareModels.selectModels": "モデルを選択...",
   "agentManager.dialog.creating": "作成中...",
-  "agentManager.dialog.createWorkspace": "ワークツリーを作成",
+  "agentManager.dialog.createWorktree": "ワークツリーを作成",
   "agentManager.dialog.removeImage": "画像を削除",
   "agentManager.dialog.advanced": "詳細...",
 

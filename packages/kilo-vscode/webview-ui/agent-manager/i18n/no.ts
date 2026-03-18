@@ -85,7 +85,7 @@ export const dict = {
   "agentManager.dialog.compareModels.searchModels": "Søk modeller...",
   "agentManager.dialog.compareModels.selectModels": "Velg modeller...",
   "agentManager.dialog.creating": "Oppretter...",
-  "agentManager.dialog.createWorkspace": "Opprett worktree",
+  "agentManager.dialog.createWorktree": "Opprett worktree",
   "agentManager.dialog.removeImage": "Fjern bilde",
   "agentManager.dialog.advanced": "Avansert...",
 

@@ -32,7 +32,7 @@ import { getWorkspaceRoot, hashFileDiffs, openFileInEditor, resolveLocalDiffTarg
  * Uses WorktreeStateManager for centralized state persistence. Worktrees and
  * sessions are stored in `.kilo/agent-manager.json`. The UI shows two
  * sections: WORKTREES (top) with managed worktrees + their sessions, and
- * SESSIONS (bottom) with unassociated workspace sessions.
+ * SESSIONS (bottom) with unassociated local sessions.
  */
 const LOCAL_DIFF_ID = "local" as const
 
@@ -76,7 +76,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     this.gitOps = new GitOps({ log: (...args) => this.log(...args) })
     this.statsPoller = new GitStatsPoller({
       getWorktrees: () => this.state?.getWorktrees() ?? [],
-      getWorkspaceRoot: () => this.getWorkspaceRoot(),
+      getWorkspaceRoot: () => this.getRoot(),
       getClient: () => this.connectionService.getClient(),
       onStats: (stats) => {
         const msg = { type: "agentManager.worktreeStats" as const, stats }
@@ -259,7 +259,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     if (m.type === "agentManager.requestState") {
       void this.stateReady
         ?.then(() => {
-          // When the workspace is not a git repo (or has no folder open),
+          // When the folder is not a git repo (or has no folder open),
           // this.state is never created. pushState() silently returns in that
           // case, so re-send the empty/non-git state explicitly.
           if (!this.state) {
@@ -366,7 +366,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     // Intercept generic "openFile" from DataBridge (markdown links, tool subtitle clicks)
     // and route through worktree-aware resolution — but only for worktree sessions.
-    // Local sessions fall through to KiloProvider which resolves against workspace root.
+    // Local sessions fall through to KiloProvider which resolves against the repo root.
     // Uses activeSessionId (set synchronously by loadMessages) rather than
     // KiloProvider.currentSession which can be stale during rapid tab switches.
     if (m.type === "openFile") {
@@ -505,7 +505,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     this.postToWebview({
       type: "agentManager.worktreeSetup",
       status: "creating",
-      message: "Setting up workspace...",
+      message: "Setting up worktree...",
       branch: result.branch,
       worktreeId: worktree.id,
     })
@@ -1168,7 +1168,7 @@ export class AgentManagerProvider implements vscode.Disposable {
         this.postToWebview({
           type: "agentManager.worktreeSetup",
           status: "creating",
-          message: "Setting up workspace...",
+          message: "Setting up worktree...",
           branch: result.branch,
           worktreeId: worktree.id,
         })
@@ -1337,7 +1337,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       this.postToWebview({
         type: "agentManager.importResult",
         success: true,
-        message: `Imported ${imported} workspace${imported !== 1 ? "s" : ""}`,
+        message: `Imported ${imported} worktree${imported !== 1 ? "s" : ""}`,
       })
       this.log(`Imported ${imported}/${externals.length} external worktrees`)
     } catch (error) {
@@ -1383,7 +1383,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
   /** Run the worktree setup script if configured. Blocks until complete. Shows progress in overlay. */
   private async runSetupScriptForWorktree(worktreePath: string, branch?: string, worktreeId?: string): Promise<void> {
-    const root = this.getWorkspaceRoot()
+    const root = this.getRoot()
     if (!root) return
     try {
       const service = this.getSetupScriptService()
@@ -1502,7 +1502,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     this.statsPoller.setEnabled(worktrees.length > 0 || this.panel !== undefined)
   }
 
-  /** Push empty state when the workspace is not a git repo or has no workspace folder. */
+  /** Push empty state when the folder is not a git repo or has no folder open. */
   private pushEmptyState(): void {
     this.staleWorktreeIds.clear()
     this.postToWebview({
@@ -1519,15 +1519,15 @@ export class AgentManagerProvider implements vscode.Disposable {
   // Manager accessors
   // ---------------------------------------------------------------------------
 
-  private getWorkspaceRoot(): string | undefined {
+  private getRoot(): string | undefined {
     return getWorkspaceRoot()
   }
 
   private getWorktreeManager(): WorktreeManager | undefined {
     if (this.worktrees) return this.worktrees
-    const root = this.getWorkspaceRoot()
+    const root = this.getRoot()
     if (!root) {
-      this.log("getWorktreeManager: no workspace folder available")
+      this.log("getWorktreeManager: no folder available")
       return undefined
     }
     this.worktrees = new WorktreeManager(
@@ -1540,9 +1540,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 
   private getStateManager(): WorktreeStateManager | undefined {
     if (this.state) return this.state
-    const root = this.getWorkspaceRoot()
+    const root = this.getRoot()
     if (!root) {
-      this.log("getStateManager: no workspace folder available")
+      this.log("getStateManager: no folder available")
       return undefined
     }
     this.state = new WorktreeStateManager(root, (msg) => this.outputChannel.appendLine(`[StateManager] ${msg}`))
@@ -1551,9 +1551,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 
   private getSetupScriptService(): SetupScriptService | undefined {
     if (this.setupScript) return this.setupScript
-    const root = this.getWorkspaceRoot()
+    const root = this.getRoot()
     if (!root) {
-      this.log("getSetupScriptService: no workspace folder available")
+      this.log("getSetupScriptService: no folder available")
       return undefined
     }
     this.setupScript = new SetupScriptService(root)
@@ -1591,9 +1591,9 @@ export class AgentManagerProvider implements vscode.Disposable {
     }
 
     const state = this.getStateManager()
-    const root = this.getWorkspaceRoot()
+    const root = this.getRoot()
     if (!state || !root) {
-      this.postApplyResult(worktreeId, "error", "Open a git workspace to apply changes")
+      this.postApplyResult(worktreeId, "error", "Open a git repository to apply changes")
       return
     }
 
@@ -1662,7 +1662,7 @@ export class AgentManagerProvider implements vscode.Disposable {
   /** Open a file from a worktree or local session in the VS Code editor.
    * Absolute paths (Unix `/…` or Windows `C:\…`) are opened directly.
    * Relative paths are resolved against the session's worktree directory
-   * (or workspace root for local sessions) with symlink-traversal protection. */
+   * (or repo root for local sessions) with symlink-traversal protection. */
   private openWorktreeFile(sessionId: string, filePath: string, line?: number, column?: number): void {
     if (isAbsolutePath(filePath)) {
       const uri = vscode.Uri.file(filePath)
@@ -1672,7 +1672,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     const state = this.getStateManager()
     if (!state) return
     const session = state.getSession(sessionId)
-    const base = session?.worktreeId ? state.getWorktree(session.worktreeId)?.path : this.getWorkspaceRoot()
+    const base = session?.worktreeId ? state.getWorktree(session.worktreeId)?.path : this.getRoot()
     if (!base) return
     // Resolve real paths to prevent symlink traversal and normalize for
     // consistent comparison on both Unix and Windows.
@@ -1717,7 +1717,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     return { directory: worktree.path, baseBranch: remoteRef(worktree) }
   }
 
-  /** Resolve diff target for the local workspace — diffs against the remote tracking
+  /** Resolve diff target for the local repo — diffs against the remote tracking
    *  branch, falling back to the repo's default branch, and ultimately to HEAD so
    *  local-only repos (no remote) still show working-tree changes in the diff panel. */
   private async resolveLocalDiffTarget(): Promise<{ directory: string; baseBranch: string } | undefined> {

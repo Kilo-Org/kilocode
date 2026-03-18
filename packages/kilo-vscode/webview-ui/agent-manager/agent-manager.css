@@ -22,7 +22,7 @@
   background: var(--surface-interactive-base);
 }
 
-/* Fixed local workspace item */
+/* Fixed local repo item */
 
 .am-local-item {
   position: relative;
