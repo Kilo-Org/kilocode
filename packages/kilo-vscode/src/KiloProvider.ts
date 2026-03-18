@@ -38,7 +38,13 @@ import {
 import { MarketplaceService } from "./services/marketplace"
 import { resolveProjectDirectory } from "./project-directory"
 import { KILO_AUTO, parseModelString } from "./shared/provider-model"
-import { sanitizeCustomProviderConfig, validateProviderID as validateProviderIDShared } from "./shared/custom-provider"
+import {
+  connectProvider as connectProviderAction,
+  authorizeProviderOAuth as authorizeOAuthAction,
+  completeProviderOAuth as completeOAuthAction,
+  disconnectProvider as disconnectProviderAction,
+  saveCustomProvider as saveCustomProviderAction,
+} from "./provider-actions"
 
 type KiloProviderOptions = {
   projectDirectory?: string | null
@@ -1331,256 +1337,76 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
   }
 
-  private postProviderActionError(
-    requestId: string,
-    providerID: string,
-    action: "connect" | "disconnect" | "authorize",
-    message: string,
-  ): void {
+  private actionCtx() {
+    return {
+      client: this.client!,
+      postMessage: (msg: unknown) => this.postMessage(msg),
+      getErrorMessage,
+      workspaceDir: this.getWorkspaceDirectory(),
+      disposeGlobal: (reason: string) => this.disposeGlobal(reason),
+      fetchAndSendProviders: () => this.fetchAndSendProviders(),
+    }
+  }
+
+  private noBackend(rid: string, pid: string, action: "connect" | "disconnect" | "authorize") {
     this.postMessage({
       type: "providerActionError",
-      requestId,
-      providerID,
+      requestId: rid,
+      providerID: pid,
       action,
-      message,
+      message: "Not connected to CLI backend",
     })
   }
 
-  private validateProviderID(
-    requestId: string,
-    providerID: string,
-    action: "connect" | "disconnect" | "authorize",
-  ): string | null {
-    const result = validateProviderIDShared(providerID)
-    if ("value" in result) return result.value
-    this.postProviderActionError(requestId, providerID, action, result.error)
-    return null
-  }
-
-  private async handleConnectProvider(requestId: string, providerID: string, apiKey: string): Promise<void> {
+  private async handleConnectProvider(rid: string, pid: string, apiKey: string): Promise<void> {
     if (!this.client) {
-      this.postProviderActionError(requestId, providerID, "connect", "Not connected to CLI backend")
+      this.noBackend(rid, pid, "connect")
       return
     }
-    const id = this.validateProviderID(requestId, providerID, "connect")
-    if (!id) return
-    try {
-      await this.client.auth.set({ providerID: id, auth: { type: "api", key: apiKey } }, { throwOnError: true })
-      await this.disposeGlobal(`provider connect (${id})`)
-      await this.fetchAndSendProviders()
-      this.postMessage({ type: "providerConnected", requestId, providerID: id })
-    } catch (error) {
-      this.postProviderActionError(
-        requestId,
-        providerID,
-        "connect",
-        getErrorMessage(error) || "Failed to connect provider",
-      )
-    }
+    await connectProviderAction(this.actionCtx(), rid, pid, apiKey)
   }
 
-  private async handleAuthorizeProviderOAuth(requestId: string, providerID: string, method: number): Promise<void> {
+  private async handleAuthorizeProviderOAuth(rid: string, pid: string, method: number): Promise<void> {
     if (!this.client) {
-      this.postProviderActionError(requestId, providerID, "authorize", "Not connected to CLI backend")
+      this.noBackend(rid, pid, "authorize")
       return
     }
-    const id = this.validateProviderID(requestId, providerID, "authorize")
-    if (!id) return
-    try {
-      const workspaceDir = this.getWorkspaceDirectory()
-      const { data: authorization } = await this.client.provider.oauth.authorize(
-        { providerID: id, method, directory: workspaceDir },
-        { throwOnError: true },
-      )
-      if (!authorization) {
-        this.postProviderActionError(requestId, providerID, "authorize", "Failed to start provider authorization")
-        return
-      }
-      this.postMessage({ type: "providerOAuthReady", requestId, providerID: id, authorization })
-    } catch (error) {
-      this.postProviderActionError(
-        requestId,
-        providerID,
-        "authorize",
-        getErrorMessage(error) || "Failed to start provider authorization",
-      )
-    }
+    await authorizeOAuthAction(this.actionCtx(), rid, pid, method)
   }
 
-  private async handleCompleteProviderOAuth(
-    requestId: string,
-    providerID: string,
-    method: number,
-    code?: string,
-  ): Promise<void> {
+  private async handleCompleteProviderOAuth(rid: string, pid: string, method: number, code?: string): Promise<void> {
     if (!this.client) {
-      this.postProviderActionError(requestId, providerID, "connect", "Not connected to CLI backend")
+      this.noBackend(rid, pid, "connect")
       return
     }
-    const id = this.validateProviderID(requestId, providerID, "connect")
-    if (!id) return
-    try {
-      const workspaceDir = this.getWorkspaceDirectory()
-      await this.client.provider.oauth.callback(
-        { providerID: id, method, code, directory: workspaceDir },
-        { throwOnError: true },
-      )
-      await this.disposeGlobal(`provider oauth (${id})`)
-      await this.fetchAndSendProviders()
-      this.postMessage({ type: "providerConnected", requestId, providerID: id })
-    } catch (error) {
-      this.postProviderActionError(
-        requestId,
-        providerID,
-        "connect",
-        getErrorMessage(error) || "Failed to complete provider authorization",
-      )
-    }
+    await completeOAuthAction(this.actionCtx(), rid, pid, method, code)
   }
 
-  /**
-   * Check if a provider is a config-sourced custom provider (OpenAI-compatible
-   * with models defined in the config file). These providers need a different
-   * disconnect path — adding to disabled_providers instead of just auth.remove,
-   * matching the desktop app's disableProvider() pattern.
-   */
-  private async isConfigCustomProvider(providerID: string): Promise<boolean> {
-    if (!this.client) return false
-    try {
-      const globalConfig = (await this.client.global.config.get({ throwOnError: true })).data ?? {}
-      const entry = globalConfig.provider?.[providerID]
-      if (!entry) return false
-      if (entry.npm !== "@ai-sdk/openai-compatible") return false
-      if (!entry.models || Object.keys(entry.models).length === 0) return false
-      return true
-    } catch {
-      return false
-    }
-  }
-
-  private async handleDisconnectProvider(requestId: string, providerID: string): Promise<void> {
+  private async handleDisconnectProvider(rid: string, pid: string): Promise<void> {
     if (!this.client) {
-      this.postProviderActionError(requestId, providerID, "disconnect", "Not connected to CLI backend")
+      this.noBackend(rid, pid, "disconnect")
       return
     }
-    const id = this.validateProviderID(requestId, providerID, "disconnect")
-    if (!id) return
-    try {
-      // Config-custom providers (OpenAI-compatible with models) use disabled_providers
-      // to hide them, matching the desktop app's disableProvider() pattern.
-      // Normal providers use auth.remove + global.dispose.
-      const configCustom = await this.isConfigCustomProvider(id)
-
-      // Always remove auth entry (swallow errors for config-custom since they may not have one)
-      if (configCustom) {
-        await this.client.auth.remove({ providerID: id }, { throwOnError: true }).catch(() => undefined)
-      } else {
-        await this.client.auth.remove({ providerID: id }, { throwOnError: true })
-      }
-
-      if (id === "kilo") {
-        this.postMessage({ type: "profileData", data: null })
-      }
-
-      if (configCustom) {
-        // Add to disabled_providers — this hides the provider without deleting its config
-        const globalConfig = (await this.client.global.config.get({ throwOnError: true })).data ?? {}
-        const disabled = globalConfig.disabled_providers ?? []
-        if (!disabled.includes(id)) {
-          const merged = (
-            await this.client.global.config.update(
-              { config: { disabled_providers: [...disabled, id] } },
-              { throwOnError: true },
-            )
-          ).data
-          if (merged) {
-            this.cachedConfigMessage = { type: "configLoaded", config: merged }
-            this.postMessage({ type: "configUpdated", config: merged })
-          }
-        }
-      }
-
-      await this.disposeGlobal(`provider disconnect (${id})`)
-      await this.fetchAndSendProviders()
-      this.postMessage({ type: "providerDisconnected", requestId, providerID: id })
-    } catch (error) {
-      this.postProviderActionError(
-        requestId,
-        providerID,
-        "disconnect",
-        getErrorMessage(error) || "Failed to disconnect provider",
-      )
+    const set = (m: unknown) => {
+      this.cachedConfigMessage = m
     }
+    await disconnectProviderAction(this.actionCtx(), rid, pid, this.cachedConfigMessage, set)
   }
 
   private async handleSaveCustomProvider(
-    requestId: string,
-    providerID: string,
-    provider: Record<string, unknown>,
-    apiKey?: string,
+    rid: string,
+    pid: string,
+    prov: Record<string, unknown>,
+    key?: string,
   ): Promise<void> {
     if (!this.client) {
-      this.postProviderActionError(requestId, providerID, "connect", "Not connected to CLI backend")
+      this.noBackend(rid, pid, "connect")
       return
     }
-    const id = this.validateProviderID(requestId, providerID, "connect")
-    if (!id) return
-
-    const sanitized = sanitizeCustomProviderConfig(provider)
-    if ("error" in sanitized) {
-      this.postProviderActionError(requestId, providerID, "connect", sanitized.error)
-      return
+    const set = (m: unknown) => {
+      this.cachedConfigMessage = m
     }
-
-    const refresh = async () => {
-      await this.disposeGlobal(`custom provider save (${id})`)
-      await this.fetchAndSendProviders()
-    }
-
-    try {
-      const globalConfig = (await this.client.global.config.get({ throwOnError: true })).data ?? {}
-      const disabled = globalConfig.disabled_providers ?? []
-      const nextDisabled = disabled.filter((item: string) => item !== id)
-      const { data: updated } = await this.client.global.config.update(
-        {
-          config: {
-            provider: { [id]: sanitized.value },
-            disabled_providers: nextDisabled,
-          },
-        },
-        { throwOnError: true },
-      )
-
-      this.cachedConfigMessage = { type: "configLoaded", config: updated }
-      this.postMessage({ type: "configUpdated", config: updated })
-
-      try {
-        if (apiKey) {
-          await this.client.auth.set({ providerID: id, auth: { type: "api", key: apiKey } }, { throwOnError: true })
-        } else {
-          await this.client.auth.remove({ providerID: id }, { throwOnError: true })
-        }
-      } catch (error) {
-        await refresh()
-        this.postProviderActionError(
-          requestId,
-          providerID,
-          "connect",
-          getErrorMessage(error) || "Failed to save custom provider",
-        )
-        return
-      }
-
-      await refresh()
-      this.postMessage({ type: "providerConnected", requestId, providerID: id })
-    } catch (error) {
-      this.postProviderActionError(
-        requestId,
-        providerID,
-        "connect",
-        getErrorMessage(error) || "Failed to save custom provider",
-      )
-    }
+    await saveCustomProviderAction(this.actionCtx(), rid, pid, prov, key, this.cachedConfigMessage, set)
   }
 
   /**

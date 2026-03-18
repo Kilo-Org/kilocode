@@ -6,7 +6,7 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { ProviderIcon } from "@kilocode/kilo-ui/provider-icon"
 import { Tag } from "@kilocode/kilo-ui/tag"
 import { showToast } from "@kilocode/kilo-ui/toast"
-import { Component, For, Show, createMemo, onCleanup } from "solid-js"
+import { Component, For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
@@ -26,6 +26,7 @@ import {
   sortProviders,
 } from "./provider-catalog"
 import { visibleConnectedIds } from "./provider-visibility"
+import ProviderSelector, { type ProviderOption } from "./ProviderSelector"
 import { KILO_PROVIDER_ID } from "../../../../src/shared/provider-model"
 import { createProviderAction } from "../../utils/provider-action"
 
@@ -42,6 +43,16 @@ const ProvidersTab: Component = () => {
 
   onCleanup(action.dispose)
 
+  // Optimistic local state for disabled_providers — applies immediately,
+  // cleared back to null when the server-confirmed config arrives so the
+  // signal falls through to the authoritative value.
+  const [pendingDisabled, setPendingDisabled] = createSignal<string[] | null>(null)
+  createEffect(() => {
+    config().disabled_providers
+    setPendingDisabled(null)
+  })
+  const effectiveDisabled = () => pendingDisabled() ?? config().disabled_providers ?? []
+
   const connectedProviders = createMemo(() => {
     const ids = visibleConnectedIds(provider.connected(), provider.authStates())
     const all = provider.providers()
@@ -50,7 +61,7 @@ const ProvidersTab: Component = () => {
 
   const popularProviders = createMemo(() => {
     const connected = new Set(provider.connected())
-    const disabled = new Set(config().disabled_providers ?? [])
+    const disabled = new Set(effectiveDisabled())
     const all = Object.values(provider.providers())
     const withKilo = all.some((item) => item.id === KILO_PROVIDER_ID) ? all : [kiloFallbackProvider(), ...all]
     const available = withKilo.filter(
@@ -60,10 +71,20 @@ const ProvidersTab: Component = () => {
   })
 
   const disabledProviders = createMemo(() => {
-    const ids = config().disabled_providers ?? []
+    const ids = effectiveDisabled()
     const all = provider.providers()
     return ids.map((id) => all[id] ?? { id, name: id, models: {} })
   })
+
+  const providerOptions = createMemo<ProviderOption[]>(() =>
+    sortProviders(Object.values(provider.providers())).map((item) => ({ value: item.id, label: item.name })),
+  )
+
+  const disabledOptions = createMemo(() =>
+    providerOptions().filter((item) => !effectiveDisabled().includes(item.value)),
+  )
+
+  const [newDisabled, setNewDisabled] = createSignal<ProviderOption | undefined>()
 
   function source(item: Provider): ProviderSource | undefined {
     if (!("source" in item)) return
@@ -123,9 +144,18 @@ const ProvidersTab: Component = () => {
     dialog.show(() => <ProviderConnectDialog providerID={item.id} />)
   }
 
+  function addDisabled(value: string) {
+    const current = effectiveDisabled()
+    if (!value || current.includes(value)) return
+    const next = [...current, value]
+    setPendingDisabled(next)
+    updateConfig({ disabled_providers: next })
+  }
+
   function removeDisabled(providerID: string) {
-    const current = config().disabled_providers ?? []
-    updateConfig({ disabled_providers: current.filter((id) => id !== providerID) })
+    const next = effectiveDisabled().filter((id) => id !== providerID)
+    setPendingDisabled(next)
+    updateConfig({ disabled_providers: next })
   }
 
   return (
@@ -326,41 +356,67 @@ const ProvidersTab: Component = () => {
       </div>
 
       {/* Disabled providers */}
-      <Show when={disabledProviders().length > 0}>
-        <h4 style={{ "margin-top": "24px", "margin-bottom": "8px" }}>{language.t("settings.providers.disabled")}</h4>
-        <Card>
-          <div
-            style={{
-              "font-size": "12px",
-              color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
-              "padding-bottom": "8px",
-              "border-bottom": "1px solid var(--border-weak-base)",
+      <h4 style={{ "margin-top": "24px", "margin-bottom": "8px" }}>{language.t("settings.providers.disabled")}</h4>
+      <Card>
+        <div
+          style={{
+            "font-size": "12px",
+            color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+            "padding-bottom": "8px",
+            "border-bottom": "1px solid var(--border-weak-base)",
+          }}
+        >
+          {language.t("settings.providers.disabled.description")}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            gap: "8px",
+            "align-items": "center",
+            padding: "8px 0",
+            "border-bottom": disabledProviders().length > 0 ? "1px solid var(--border-weak-base)" : "none",
+          }}
+        >
+          <div style={{ flex: 1 }}>
+            <ProviderSelector
+              options={disabledOptions()}
+              value={newDisabled()}
+              onSelect={(item) => setNewDisabled(item)}
+            />
+          </div>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              const item = newDisabled()
+              if (!item) return
+              addDisabled(item.value)
+              setNewDisabled(undefined)
             }}
           >
-            {language.t("settings.providers.disabled.description")}
-          </div>
-          <For each={disabledProviders()}>
-            {(item, index) => (
-              <div
-                style={{
-                  display: "flex",
-                  "align-items": "center",
-                  "justify-content": "space-between",
-                  padding: "8px 0",
-                  "border-bottom":
-                    index() < disabledProviders().length - 1 ? "1px solid var(--border-weak-base)" : "none",
-                }}
-              >
-                <div style={{ display: "flex", "align-items": "center", gap: "12px" }}>
-                  <ProviderIcon id={providerIcon(item.id)} width={16} height={16} />
-                  <span style={{ "font-size": "12px" }}>{item.name}</span>
-                </div>
-                <IconButton variant="ghost" icon="close" onClick={() => removeDisabled(item.id)} />
+            {language.t("common.add")}
+          </Button>
+        </div>
+        <For each={disabledProviders()}>
+          {(item, index) => (
+            <div
+              style={{
+                display: "flex",
+                "align-items": "center",
+                "justify-content": "space-between",
+                padding: "8px 0",
+                "border-bottom":
+                  index() < disabledProviders().length - 1 ? "1px solid var(--border-weak-base)" : "none",
+              }}
+            >
+              <div style={{ display: "flex", "align-items": "center", gap: "12px" }}>
+                <ProviderIcon id={providerIcon(item.id)} width={16} height={16} />
+                <span style={{ "font-size": "12px" }}>{item.name}</span>
               </div>
-            )}
-          </For>
-        </Card>
-      </Show>
+              <IconButton variant="ghost" icon="close" onClick={() => removeDisabled(item.id)} />
+            </div>
+          )}
+        </For>
+      </Card>
     </div>
   )
 }
