@@ -152,6 +152,7 @@ interface SessionContextValue {
   revertSession: (messageID: string) => void
   unrevertSession: () => void
   sendMessage: (text: string, providerID?: string, modelID?: string, files?: FileAttachment[]) => void
+  sendCommand: (command: string, args: string, providerID?: string, modelID?: string, files?: FileAttachment[]) => void
   abort: () => void
   compact: () => void
   respondToPermission: (
@@ -1192,6 +1193,63 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
+  function sendCommand(command: string, args: string, providerID?: string, modelID?: string, files?: FileAttachment[]) {
+    if (!server.isConnected()) {
+      console.warn("[Kilo New] Cannot send command: not connected")
+      return
+    }
+
+    const messageID = Identifier.ascending("message")
+    const sid = currentSessionID()
+
+    if (sid) {
+      const now = Date.now()
+      const temp: Message = {
+        id: messageID,
+        sessionID: sid,
+        role: "user",
+        createdAt: new Date(now).toISOString(),
+        time: { created: now },
+      }
+      const pending = pendingOptimistic.get(sid) ?? new Set()
+      pending.add(messageID)
+      pendingOptimistic.set(sid, pending)
+
+      const parts: Part[] = [
+        { type: "text" as const, id: Identifier.ascending("part"), messageID, text: `/${command} ${args}`.trim() },
+      ]
+      for (const file of files ?? []) {
+        parts.push({
+          type: "file" as const,
+          id: Identifier.ascending("part"),
+          messageID,
+          mime: file.mime,
+          url: file.url,
+          filename: file.filename,
+        })
+      }
+
+      setStore("messages", sid, (msgs = []) => [...msgs, temp])
+      setStore("parts", messageID, parts)
+      queueMicrotask(() => window.dispatchEvent(new CustomEvent("resumeAutoScroll")))
+    }
+
+    const agent = selectedAgentName() !== defaultAgent() ? selectedAgentName() : undefined
+
+    vscode.postMessage({
+      type: "sendCommand",
+      command,
+      arguments: args,
+      messageID,
+      sessionID: sid,
+      providerID,
+      modelID,
+      agent,
+      variant: currentVariant(),
+      files,
+    })
+  }
+
   function abort() {
     const sessionID = currentSessionID()
     if (!sessionID) {
@@ -1533,6 +1591,7 @@ export const SessionProvider: ParentComponent = (props) => {
     revertSession,
     unrevertSession,
     sendMessage,
+    sendCommand,
     abort,
     compact,
     respondToPermission,

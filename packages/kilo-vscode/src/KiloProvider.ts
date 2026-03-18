@@ -59,6 +59,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private cachedAgentsMessage: unknown = null
   /** Cached skillsLoaded payload so requestSkills can be served before client is ready */
   private cachedSkillsMessage: unknown = null
+  /** Cached commandsLoaded payload so requestCommands can be served before client is ready */
+  private cachedCommandsMessage: unknown = null
   /** Cached configLoaded payload so requestConfig can be served before client is ready */
   private cachedConfigMessage: unknown = null
   /** Cached notificationsLoaded payload */
@@ -423,6 +425,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           )
           break
         }
+        case "sendCommand": {
+          await this.handleSendCommand(
+            message.command,
+            message.arguments,
+            typeof message.messageID === "string" ? message.messageID : undefined,
+            message.sessionID,
+            message.providerID,
+            message.modelID,
+            message.agent,
+            message.variant,
+          )
+          break
+        }
         case "abort":
           await this.handleAbort(message.sessionID)
           break
@@ -518,6 +533,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "requestSkills":
           this.fetchAndSendSkills().catch((e) => console.error("[Kilo New] fetchAndSendSkills failed:", e))
+          break
+        case "requestCommands":
+          this.fetchAndSendCommands().catch((e) => console.error("[Kilo New] fetchAndSendCommands failed:", e))
           break
         case "removeSkill":
           this.removeSkillViaCli(message.location).catch((e: unknown) =>
@@ -865,6 +883,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.fetchAndSendProviders(),
         this.fetchAndSendAgents(),
         this.fetchAndSendSkills(),
+        this.fetchAndSendCommands(),
         this.fetchAndSendConfig(),
         this.fetchAndSendNotifications(),
       ])
@@ -1270,6 +1289,34 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
+  private async fetchAndSendCommands(): Promise<void> {
+    if (!this.client) {
+      if (this.cachedCommandsMessage) {
+        this.postMessage(this.cachedCommandsMessage)
+      }
+      return
+    }
+
+    try {
+      const dir = this.getWorkspaceDirectory()
+      const { data: commands } = await this.client.command.list({ directory: dir }, { throwOnError: true })
+
+      const message = {
+        type: "commandsLoaded",
+        commands: commands.map((c) => ({
+          name: c.name,
+          description: c.description,
+          source: c.source,
+          hints: c.hints,
+        })),
+      }
+      this.cachedCommandsMessage = message
+      this.postMessage(message)
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to fetch commands:", error)
+    }
+  }
+
   private async fetchCliSkills(): Promise<Array<{ name: string; location: string }> | undefined> {
     if (!this.client) return undefined
     try {
@@ -1295,16 +1342,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (result.error) {
         console.error("[Kilo New] removeSkill returned error:", result.error)
         this.cachedSkillsMessage = null
+        this.cachedCommandsMessage = null
         await this.fetchAndSendSkills()
         return false
       }
     } catch (error) {
       console.error("[Kilo New] Failed to remove skill:", error)
       this.cachedSkillsMessage = null
+      this.cachedCommandsMessage = null
       await this.fetchAndSendSkills()
       return false
     }
     this.cachedSkillsMessage = null
+    this.cachedCommandsMessage = null
     return true
   }
 
@@ -1843,6 +1893,76 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
+  private async handleSendCommand(
+    command: string,
+    args: string,
+    messageID?: string,
+    sessionID?: string,
+    providerID?: string,
+    modelID?: string,
+    agent?: string,
+    variant?: string,
+  ): Promise<void> {
+    if (!this.client) {
+      this.postMessage({
+        type: "sendMessageFailed",
+        error: "Not connected to CLI backend",
+        text: `/${command} ${args}`.trim(),
+        sessionID,
+        messageID,
+      })
+      return
+    }
+
+    let target = sessionID
+    try {
+      const dir = this.getWorkspaceDirectory(sessionID || this.currentSession?.id)
+
+      if (!sessionID && !this.currentSession) {
+        const { data: session } = await this.client.session.create({ directory: dir }, { throwOnError: true })
+        this.currentSession = session
+        this.trackedSessionIds.add(session.id)
+        this.postMessage({
+          type: "sessionCreated",
+          session: this.sessionToWebview(session),
+        })
+      }
+
+      target = sessionID || this.currentSession?.id
+      if (!target) {
+        throw new Error("No session available")
+      }
+      this.trackedSessionIds.add(target)
+
+      if (messageID) {
+        this.connectionService.recordMessageSessionId(messageID, target)
+      }
+
+      await this.client.session.command(
+        {
+          sessionID: target,
+          directory: dir,
+          command,
+          arguments: args,
+          messageID,
+          model: providerID && modelID ? `${providerID}/${modelID}` : undefined,
+          agent,
+          variant,
+        },
+        { throwOnError: true },
+      )
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to send command:", error)
+      this.postMessage({
+        type: "sendMessageFailed",
+        error: getErrorMessage(error) || "Failed to send command",
+        text: `/${command} ${args}`.trim(),
+        sessionID: target,
+        messageID,
+      })
+    }
+  }
+
   /**
    * Handle abort request from the webview.
    */
@@ -2360,6 +2480,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.fetchAndSendProviders(),
       this.fetchAndSendAgents(),
       this.fetchAndSendSkills(),
+      this.fetchAndSendCommands(),
       this.fetchAndSendConfig(),
       this.fetchAndSendNotifications(),
     ])
