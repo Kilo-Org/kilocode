@@ -30,7 +30,7 @@ import { createOpenAI } from "@ai-sdk/openai"
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
 import { createOpenRouter, type LanguageModelV2 } from "@openrouter/ai-sdk-provider"
 import { createOpenaiCompatible as createGitHubCopilotOpenAICompatible } from "./sdk/copilot"
-import { createKilo } from "@kilocode/kilo-gateway" // kilocode_change
+import { createKilo, KILO_OPENROUTER_BASE } from "@kilocode/kilo-gateway" // kilocode_change
 import { createXai } from "@ai-sdk/xai"
 import { createMistral } from "@ai-sdk/mistral"
 import { createGroq } from "@ai-sdk/groq"
@@ -1207,6 +1207,39 @@ export namespace Provider {
 
     const info = provider.models[modelID]
     if (!info) {
+      // kilocode_change start
+      // For the kilo gateway provider, synthesize a fallback model so the API call can proceed
+      // even if the model has been removed from the listed models. The gateway will return a
+      // proper error response if the model truly cannot be routed.
+      if (providerID === "kilo") {
+        const fallback: Model = {
+          id: modelID,
+          providerID: "kilo",
+          name: modelID,
+          api: {
+            id: modelID,
+            url: KILO_OPENROUTER_BASE + "/",
+            npm: "@kilocode/kilo-gateway",
+          },
+          status: "active",
+          headers: {},
+          options: {},
+          cost: { input: 0, output: 0, cache: { read: 0, write: 0 } },
+          limit: { context: 200000, output: 4096 },
+          capabilities: {
+            temperature: true,
+            reasoning: false,
+            attachment: false,
+            toolcall: true,
+            input: { text: true, audio: false, image: false, video: false, pdf: false },
+            output: { text: true, audio: false, image: false, video: false, pdf: false },
+            interleaved: false,
+          },
+          release_date: new Date().toISOString().split("T")[0],
+        }
+        return fallback
+      }
+      // kilocode_change end
       const availableModels = Object.keys(provider.models)
       const matches = fuzzysort.go(modelID, availableModels, { limit: 3, threshold: -10000 })
       const suggestions = matches.map((m) => m.target)
