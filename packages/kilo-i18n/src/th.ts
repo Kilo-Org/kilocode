@@ -13,6 +13,7 @@ export const dict = {
   "dialog.provider.kilo.note": "เข้าถึงโมเดล AI มากกว่า 500 รายการ",
 
   // Reasoning block label
+  "ui.permission.run": "เรียกใช้",
   "ui.reasoning.label": "การให้เหตุผล",
 
   // Marketplace

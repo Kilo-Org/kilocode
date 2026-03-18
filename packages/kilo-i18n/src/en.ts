@@ -15,6 +15,7 @@ export const dict = {
   "dialog.provider.kilo.note": "Access 500+ AI models",
 
   // Reasoning block label
+  "ui.permission.run": "Run",
   "ui.reasoning.label": "Reasoning",
 
   // Marketplace

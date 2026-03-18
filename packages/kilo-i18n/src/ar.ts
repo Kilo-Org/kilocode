@@ -13,6 +13,7 @@ export const dict = {
   "dialog.provider.kilo.note": "الوصول إلى أكثر من 500 نموذج ذكاء اصطناعي",
 
   // Reasoning block label
+  "ui.permission.run": "تشغيل",
   "ui.reasoning.label": "الاستدلال",
 
   // Marketplace
