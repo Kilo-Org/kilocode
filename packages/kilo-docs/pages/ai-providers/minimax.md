@@ -35,7 +35,7 @@ MiniMax is a global AI foundation model company focused on fast, cost-efficient 
 
 | Model | Input | Output | Prompt Caching Read | Prompt Caching Write |
 |-------|-------|--------|---------------------|----------------------|
-| MiniMax-M2.7 | $0.30 / M tokens | $1.20 / M tokens | $0.03 / M tokens | $0.375 / M tokens |
+| MiniMax-M2.7 | $0.30 / M tokens | $1.20 / M tokens | $0.06 / M tokens | $0.375 / M tokens |
 | MiniMax-M2.7-highspeed | $0.60 / M tokens | $2.40 / M tokens | $0.06 / M tokens | $0.375 / M tokens |
 | MiniMax-M2.5 | $0.30 / M tokens | $1.20 / M tokens | $0.03 / M tokens | $0.375 / M tokens |
 | MiniMax-M2.5-highspeed | $0.60 / M tokens | $2.40 / M tokens | $0.06 / M tokens | $0.375 / M tokens |
