@@ -45,7 +45,7 @@ export function sanitizeReviewComments(comments: ReviewComment[], diffs: Worktre
     const diff = map.get(comment.file)
     if (!diff) return false
     const content = comment.side === "deletions" ? diff.before : diff.after
-    if (content.length === 0) return true
+    if (diff.summarized === true) return true
     const max = lineCount(content)
     if (comment.line < 1) return false
     if (comment.line > max) return false
