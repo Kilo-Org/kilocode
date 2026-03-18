@@ -1833,6 +1833,32 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Uses promptAsync (fire-and-forget) — the server queues concurrent prompts
    * internally, so the client doesn't need to block on busy sessions.
    */
+  /**
+   * Ensure a session exists, creating one if needed. Returns the resolved
+   * session ID and workspace directory, or undefined when the client is
+   * disconnected.
+   */
+  private async resolveSession(sessionID?: string): Promise<{ sid: string; dir: string } | undefined> {
+    if (!this.client) return undefined
+
+    const dir = this.getWorkspaceDirectory(sessionID || this.currentSession?.id)
+
+    if (!sessionID && !this.currentSession) {
+      const { data: session } = await this.client.session.create({ directory: dir }, { throwOnError: true })
+      this.currentSession = session
+      this.trackedSessionIds.add(session.id)
+      this.postMessage({
+        type: "sessionCreated",
+        session: this.sessionToWebview(session),
+      })
+    }
+
+    const sid = sessionID || this.currentSession?.id
+    if (!sid) throw new Error("No session available")
+    this.trackedSessionIds.add(sid)
+    return { sid, dir }
+  }
+
   private async handleSendMessage(
     text: string,
     messageID?: string,
@@ -1843,7 +1869,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     variant?: string,
     files?: Array<{ mime: string; url: string }>,
   ): Promise<void> {
-    if (!this.client) {
+    const resolved = await this.resolveSession(sessionID).catch(() => undefined)
+    if (!resolved) {
       this.postMessage({
         type: "sendMessageFailed",
         error: "Not connected to CLI backend",
@@ -1855,53 +1882,25 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
-    let targetSessionID = sessionID
     try {
-      const workspaceDir = this.getWorkspaceDirectory(sessionID || this.currentSession?.id)
-
-      // Create session if needed
-      if (!sessionID && !this.currentSession) {
-        const { data: newSession } = await this.client.session.create(
-          { directory: workspaceDir },
-          { throwOnError: true },
-        )
-        this.currentSession = newSession
-        this.trackedSessionIds.add(this.currentSession.id)
-        // Notify webview of the new session
-        this.postMessage({
-          type: "sessionCreated",
-          session: this.sessionToWebview(this.currentSession),
-        })
-      }
-
-      targetSessionID = sessionID || this.currentSession?.id
-      if (!targetSessionID) {
-        throw new Error("No session available")
-      }
-      this.trackedSessionIds.add(targetSessionID)
-
-      // Build parts array with file context and user text
       const parts: Array<TextPartInput | FilePartInput> = []
-
-      // Add any explicitly attached files from the webview
       if (files) {
         for (const f of files) {
           parts.push({ type: "file", mime: f.mime, url: f.url })
         }
       }
-
       parts.push({ type: "text", text })
 
       const editorContext = await this.gatherEditorContext()
 
       if (messageID) {
-        this.connectionService.recordMessageSessionId(messageID, targetSessionID)
+        this.connectionService.recordMessageSessionId(messageID, resolved.sid)
       }
 
-      await this.client.session.promptAsync(
+      await this.client!.session.promptAsync(
         {
-          sessionID: targetSessionID,
-          directory: workspaceDir,
+          sessionID: resolved.sid,
+          directory: resolved.dir,
           messageID,
           parts,
           model: providerID && modelID ? { providerID, modelID } : undefined,
@@ -1917,7 +1916,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         type: "sendMessageFailed",
         error: getErrorMessage(error) || "Failed to send message",
         text,
-        sessionID: targetSessionID,
+        sessionID: resolved.sid,
         messageID,
         files,
       })
@@ -1935,7 +1934,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     variant?: string,
     files?: Array<{ mime: string; url: string }>,
   ): Promise<void> {
-    if (!this.client) {
+    const resolved = await this.resolveSession(sessionID).catch(() => undefined)
+    if (!resolved) {
       this.postMessage({
         type: "sendMessageFailed",
         error: "Not connected to CLI backend",
@@ -1947,36 +1947,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
-    let target = sessionID
     try {
-      const dir = this.getWorkspaceDirectory(sessionID || this.currentSession?.id)
-
-      if (!sessionID && !this.currentSession) {
-        const { data: session } = await this.client.session.create({ directory: dir }, { throwOnError: true })
-        this.currentSession = session
-        this.trackedSessionIds.add(session.id)
-        this.postMessage({
-          type: "sessionCreated",
-          session: this.sessionToWebview(session),
-        })
-      }
-
-      target = sessionID || this.currentSession?.id
-      if (!target) {
-        throw new Error("No session available")
-      }
-      this.trackedSessionIds.add(target)
-
       if (messageID) {
-        this.connectionService.recordMessageSessionId(messageID, target)
+        this.connectionService.recordMessageSessionId(messageID, resolved.sid)
       }
 
       const parts = files?.map((f) => ({ type: "file" as const, mime: f.mime, url: f.url }))
 
-      await this.client.session.command(
+      await this.client!.session.command(
         {
-          sessionID: target,
-          directory: dir,
+          sessionID: resolved.sid,
+          directory: resolved.dir,
           command,
           arguments: args,
           messageID,
@@ -1993,7 +1974,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         type: "sendMessageFailed",
         error: getErrorMessage(error) || "Failed to send command",
         text: `/${command} ${args}`.trim(),
-        sessionID: target,
+        sessionID: resolved.sid,
         messageID,
         files,
       })
