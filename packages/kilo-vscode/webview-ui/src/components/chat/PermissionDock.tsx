@@ -43,7 +43,7 @@ export const PermissionDock: Component<{
     return typeof cmd === "string" ? cmd : undefined
   }
   const description = createMemo(() =>
-    command() ? null : describePatterns(props.request.toolName, props.request.patterns),
+    command() ? null : describePatterns(props.request.toolName, props.request.patterns, language.t),
   )
 
   const [decisions, setDecisions] = createSignal<Record<number, RuleDecision>>({})

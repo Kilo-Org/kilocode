@@ -6,30 +6,38 @@
  * For multiple patterns: { title: "Read:", paths: ["src/app.ts", "src/index.ts"] }
  */
 
-const TOOL_LABELS: Record<string, string> = {
-  read: "Read",
-  edit: "Edit",
-  write: "Write",
-  patch: "Patch",
-  multiedit: "Edit",
-  glob: "Search",
-  grep: "Search",
-  list: "List",
-  external_directory: "External Directory",
-  webfetch: "Fetch",
-  websearch: "Search",
-  task: "Task",
-  skill: "Skill",
-  lsp: "LSP",
+/** Maps tool names to their i18n key for the human-readable label. */
+export const TOOL_LABEL_KEYS: Record<string, string> = {
+  read: "ui.permission.toolLabel.read",
+  edit: "ui.permission.toolLabel.edit",
+  write: "ui.permission.toolLabel.write",
+  patch: "ui.permission.toolLabel.patch",
+  multiedit: "ui.permission.toolLabel.edit",
+  glob: "ui.permission.toolLabel.globSearch",
+  grep: "ui.permission.toolLabel.grepSearch",
+  list: "ui.permission.toolLabel.list",
+  external_directory: "ui.permission.toolLabel.externalDirectory",
+  webfetch: "ui.permission.toolLabel.webFetch",
+  websearch: "ui.permission.toolLabel.webSearch",
+  task: "ui.permission.toolLabel.task",
+  skill: "ui.permission.toolLabel.skill",
+  lsp: "ui.permission.toolLabel.lsp",
 }
 
-export type PatternDescription = { kind: "single"; text: string } | { kind: "multi"; title: string; paths: string[] }
+export type PatternDescription =
+  | { kind: "single"; text: string }
+  | { kind: "multi"; title: string; paths: string[] }
 
-export function describePatterns(tool: string, patterns: string[]): PatternDescription | null {
+export function describePatterns(
+  tool: string,
+  patterns: string[],
+  t: (key: string) => string,
+): PatternDescription | null {
   const filtered = patterns.filter((p) => p !== "*")
   if (filtered.length === 0) return null
 
-  const label = TOOL_LABELS[tool] ?? tool
+  const key = TOOL_LABEL_KEYS[tool]
+  const label = key ? t(key) : tool
   if (filtered.length === 1) return { kind: "single", text: `${label} ${filtered[0]}` }
   return { kind: "multi", title: `${label}:`, paths: filtered }
 }
