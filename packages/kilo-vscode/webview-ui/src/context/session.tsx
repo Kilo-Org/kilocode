@@ -1114,6 +1114,40 @@ export const SessionProvider: ParentComponent = (props) => {
     }
   }
 
+  /** Create an optimistic user message + parts in the store so the UI updates instantly. */
+  function addOptimistic(sid: string, messageID: string, text: string, files?: FileAttachment[]) {
+    const now = Date.now()
+    const temp: Message = {
+      id: messageID,
+      sessionID: sid,
+      role: "user",
+      createdAt: new Date(now).toISOString(),
+      time: { created: now },
+    }
+    const pending = pendingOptimistic.get(sid) ?? new Set()
+    pending.add(messageID)
+    pendingOptimistic.set(sid, pending)
+
+    const parts: Part[] = []
+    if (text) {
+      parts.push({ type: "text" as const, id: Identifier.ascending("part"), messageID, text })
+    }
+    for (const file of files ?? []) {
+      parts.push({
+        type: "file" as const,
+        id: Identifier.ascending("part"),
+        messageID,
+        mime: file.mime,
+        url: file.url,
+        filename: file.filename,
+      })
+    }
+
+    setStore("messages", sid, (msgs = []) => [...msgs, temp])
+    setStore("parts", messageID, parts)
+    queueMicrotask(() => window.dispatchEvent(new CustomEvent("resumeAutoScroll")))
+  }
+
   function sendMessage(text: string, providerID?: string, modelID?: string, files?: FileAttachment[]) {
     if (!server.isConnected()) {
       console.warn("[Kilo New] Cannot send message: not connected")
@@ -1140,43 +1174,7 @@ export const SessionProvider: ParentComponent = (props) => {
     }
 
     const sid = currentSessionID()
-    if (sid) {
-      const now = Date.now()
-      const temp: Message = {
-        id: messageID,
-        sessionID: sid,
-        role: "user",
-        createdAt: new Date(now).toISOString(),
-        time: { created: now },
-      }
-      // Track this optimistic message so handleMessagesLoaded preserves it
-      const pending = pendingOptimistic.get(sid) ?? new Set()
-      pending.add(messageID)
-      pendingOptimistic.set(sid, pending)
-
-      const parts: Part[] = []
-      if (text) {
-        parts.push({ type: "text" as const, id: Identifier.ascending("part"), messageID, text })
-      }
-      for (const file of files ?? []) {
-        parts.push({
-          type: "file" as const,
-          id: Identifier.ascending("part"),
-          messageID,
-          mime: file.mime,
-          url: file.url,
-          filename: file.filename,
-        })
-      }
-
-      setStore("messages", sid, (msgs = []) => [...msgs, temp])
-      setStore("parts", messageID, parts)
-      // The optimistic message is now in the DOM but the session status is
-      // still "idle" (the CLI backend hasn't started yet), so the auto-scroll
-      // ResizeObserver won't scroll on its own. Force scroll to bottom so the
-      // user's own message is immediately visible.
-      queueMicrotask(() => window.dispatchEvent(new CustomEvent("resumeAutoScroll")))
-    }
+    if (sid) addOptimistic(sid, messageID, text, files)
 
     const agent = selectedAgentName() !== defaultAgent() ? selectedAgentName() : undefined
 
@@ -1222,37 +1220,7 @@ export const SessionProvider: ParentComponent = (props) => {
     const messageID = Identifier.ascending("message")
     const sid = currentSessionID()
 
-    if (sid) {
-      const now = Date.now()
-      const temp: Message = {
-        id: messageID,
-        sessionID: sid,
-        role: "user",
-        createdAt: new Date(now).toISOString(),
-        time: { created: now },
-      }
-      const pending = pendingOptimistic.get(sid) ?? new Set()
-      pending.add(messageID)
-      pendingOptimistic.set(sid, pending)
-
-      const parts: Part[] = [
-        { type: "text" as const, id: Identifier.ascending("part"), messageID, text: `/${command} ${args}`.trim() },
-      ]
-      for (const file of files ?? []) {
-        parts.push({
-          type: "file" as const,
-          id: Identifier.ascending("part"),
-          messageID,
-          mime: file.mime,
-          url: file.url,
-          filename: file.filename,
-        })
-      }
-
-      setStore("messages", sid, (msgs = []) => [...msgs, temp])
-      setStore("parts", messageID, parts)
-      queueMicrotask(() => window.dispatchEvent(new CustomEvent("resumeAutoScroll")))
-    }
+    if (sid) addOptimistic(sid, messageID, `/${command} ${args}`.trim(), files)
 
     const agent = selectedAgentName() !== defaultAgent() ? selectedAgentName() : undefined
 
