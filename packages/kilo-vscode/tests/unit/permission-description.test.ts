@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test"
-import { describePatterns, resolveLabel, TOOL_LABEL_KEYS } from "../../webview-ui/src/utils/permission-description"
+import { describePatterns, resolveLabel, TOOL_LABEL_KEYS } from "../../webview-ui/src/components/chat/permission-dock-utils"
 
 // Mock t() that returns the English label for known keys, or the key itself
 const labels: Record<string, string> = {

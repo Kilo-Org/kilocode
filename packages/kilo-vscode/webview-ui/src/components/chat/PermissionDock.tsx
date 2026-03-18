@@ -17,9 +17,8 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
-import { describePatterns, resolveLabel } from "../../utils/permission-description"
 import { useConfig } from "../../context/config"
-import { savedRuleStates, type RuleDecision } from "./permission-dock-utils"
+import { describePatterns, resolveLabel, savedRuleStates, type RuleDecision } from "./permission-dock-utils"
 import type { PermissionRequest } from "../../types/messages"
 
 let rulesExpandedPreference = false
