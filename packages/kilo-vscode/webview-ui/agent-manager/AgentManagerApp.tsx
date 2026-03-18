@@ -1206,12 +1206,13 @@ const AgentManagerContent: Component = () => {
       if ((msg as { type: string }).type === "agentManager.sendInitialMessage") {
         const ev = msg as unknown as AgentManagerSendInitialMessage
 
-        // Set model and agent selections for this session so the UI reflects them
-        if (ev.providerID && ev.modelID) {
-          session.setSessionModel(ev.sessionId, ev.providerID, ev.modelID)
-        }
+        // Set agent first so setSessionModel (and getSessionModel) resolve the
+        // correct agent — otherwise the session falls back to defaultAgent().
         if (ev.agent) {
           session.setSessionAgent(ev.sessionId, ev.agent)
+        }
+        if (ev.providerID && ev.modelID) {
+          session.setSessionModel(ev.sessionId, ev.providerID, ev.modelID)
         }
 
         // Only send a message if there's text — otherwise just clear busy state
