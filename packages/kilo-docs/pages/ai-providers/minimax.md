@@ -4,7 +4,7 @@ sidebar_label: MiniMax
 
 # Using MiniMax With Kilo Code
 
-MiniMax is a global AI foundation model company focused on fast, cost-efficient multimodal models with strong coding, tool-use, and agentic capabilities. Their flagship MiniMax-M2.5 model delivers peak performance with a 204,800-token context window, high-speed inference, and advanced development workflow support.
+MiniMax is a global AI foundation model company focused on fast, cost-efficient multimodal models with strong coding, tool-use, and agentic capabilities. Their flagship MiniMax-M2.7 model delivers peak performance with enhanced reasoning and coding capabilities, a 204,800-token context window, high-speed inference, and advanced development workflow support.
 
 **Website:** [https://www.minimax.io/](https://www.minimax.io/)
 
@@ -26,6 +26,8 @@ MiniMax is a global AI foundation model company focused on fast, cost-efficient 
 
 | Model | Description | Context Window |
 |-------|------------|---------------|
+| **MiniMax-M2.7** | Latest flagship model with enhanced reasoning and coding. | 204,800 tokens |
+| **MiniMax-M2.7-highspeed** | High-speed version of M2.7 for low-latency scenarios. | 204,800 tokens |
 | **MiniMax-M2.5** | Peak performance. Ultimate value. Master the complex. | 204,800 tokens |
 | **MiniMax-M2.5-highspeed** | Same performance, faster and more agile. | 204,800 tokens |
 
@@ -33,12 +35,14 @@ MiniMax is a global AI foundation model company focused on fast, cost-efficient 
 
 | Model | Input | Output | Prompt Caching Read | Prompt Caching Write |
 |-------|-------|--------|---------------------|----------------------|
+| MiniMax-M2.7 | $0.30 / M tokens | $1.20 / M tokens | $0.03 / M tokens | $0.375 / M tokens |
+| MiniMax-M2.7-highspeed | $0.60 / M tokens | $2.40 / M tokens | $0.06 / M tokens | $0.375 / M tokens |
 | MiniMax-M2.5 | $0.30 / M tokens | $1.20 / M tokens | $0.03 / M tokens | $0.375 / M tokens |
 | MiniMax-M2.5-highspeed | $0.60 / M tokens | $2.40 / M tokens | $0.06 / M tokens | $0.375 / M tokens |
 
 ## Tips and Notes
 
-- **Performance:** MiniMax-M2.5 delivers peak performance with strong coding ability, tool-calling, and agentic capabilities.
-- **Context Window:** All MiniMax-M2.5 models support a 204,800-token context window, suitable for large codebases and complex agent workflows.
-- **Speed:** Use `MiniMax-M2.5-highspeed` for faster inference while maintaining the same level of performance.
+- **Performance:** MiniMax-M2.7 is the latest flagship model with enhanced reasoning and coding capabilities.
+- **Context Window:** All MiniMax models support a 204,800-token context window, suitable for large codebases and complex agent workflows.
+- **Speed:** Use `MiniMax-M2.7-highspeed` for faster inference while maintaining the same level of performance.
 - **API Documentation:** See the [MiniMax API Reference](https://platform.minimax.io/docs/api-reference/text-anthropic-api) for detailed API documentation.

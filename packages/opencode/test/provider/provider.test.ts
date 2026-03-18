@@ -2300,9 +2300,9 @@ test("minimax provider loaded from MINIMAX_API_KEY env variable", async () => {
       const providers = await Provider.list()
       expect(providers["minimax"]).toBeDefined()
       expect(providers["minimax"].source).toBe("env")
-      // MiniMax M2.5 models should be available
+      // MiniMax models should be available
       const modelIds = Object.keys(providers["minimax"].models)
-      expect(modelIds.some((id) => id.includes("M2.5"))).toBe(true)
+      expect(modelIds.some((id) => id.includes("MiniMax"))).toBe(true)
     },
   })
 })

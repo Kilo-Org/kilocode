@@ -1688,10 +1688,10 @@ describe("ProviderTransform.variants", () => {
 
   test("minimax returns empty object", () => {
     const model = createMockModel({
-      id: "minimax/MiniMax-M2.5",
+      id: "minimax/MiniMax-M2.7",
       providerID: "minimax",
       api: {
-        id: "MiniMax-M2.5",
+        id: "MiniMax-M2.7",
         url: "https://api.minimax.io/anthropic/v1",
         npm: "@ai-sdk/anthropic",
       },
@@ -2735,6 +2735,16 @@ describe("ProviderTransform.temperature - MiniMax models", () => {
     release_date: "2025-06-01",
   })
 
+  test("MiniMax-M2.7 returns temperature 1.0", () => {
+    const model = createMinimaxModel("MiniMax-M2.7")
+    expect(ProviderTransform.temperature(model)).toBe(1.0)
+  })
+
+  test("MiniMax-M2.7-highspeed returns temperature 1.0", () => {
+    const model = createMinimaxModel("MiniMax-M2.7-highspeed")
+    expect(ProviderTransform.temperature(model)).toBe(1.0)
+  })
+
   test("MiniMax-M2.5 returns temperature 1.0", () => {
     const model = createMinimaxModel("MiniMax-M2.5")
     expect(ProviderTransform.temperature(model)).toBe(1.0)
@@ -2775,6 +2785,16 @@ describe("ProviderTransform.topP - MiniMax models", () => {
     release_date: "2025-06-01",
   })
 
+  test("MiniMax-M2.7 returns topP 0.95", () => {
+    const model = createMinimaxModel("MiniMax-M2.7")
+    expect(ProviderTransform.topP(model)).toBe(0.95)
+  })
+
+  test("MiniMax-M2.7-highspeed returns topP 0.95", () => {
+    const model = createMinimaxModel("MiniMax-M2.7-highspeed")
+    expect(ProviderTransform.topP(model)).toBe(0.95)
+  })
+
   test("MiniMax-M2.5 returns topP 0.95", () => {
     const model = createMinimaxModel("MiniMax-M2.5")
     expect(ProviderTransform.topP(model)).toBe(0.95)
@@ -2803,6 +2823,16 @@ describe("ProviderTransform.topK - MiniMax models", () => {
     options: {},
     headers: {},
     release_date: "2025-06-01",
+  })
+
+  test("MiniMax-M2.7 returns topK 40", () => {
+    const model = createMinimaxModel("MiniMax-M2.7")
+    expect(ProviderTransform.topK(model)).toBe(40)
+  })
+
+  test("MiniMax-M2.7-highspeed returns topK 40", () => {
+    const model = createMinimaxModel("MiniMax-M2.7-highspeed")
+    expect(ProviderTransform.topK(model)).toBe(40)
   })
 
   test("MiniMax-M2.5 returns topK 40", () => {
