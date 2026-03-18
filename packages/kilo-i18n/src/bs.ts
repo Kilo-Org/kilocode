@@ -18,6 +18,7 @@ export const dict = {
   "desktop.cli.installed.message": "CLI je instaliran u {{path}}\n\nRestartuj terminal da bi koristio komandu 'kilo'.",
 
   // Reasoning block label
+  "ui.permission.run": "Pokreni",
   "ui.reasoning.label": "Rezonovanje",
 
   // Marketplace

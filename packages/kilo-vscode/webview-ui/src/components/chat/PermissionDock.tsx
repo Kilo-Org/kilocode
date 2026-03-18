@@ -6,7 +6,7 @@
  * Per-rule toggles allow users to approve/deny individual permission rules for future requests.
  * For bash, the hierarchical rules from metadata.rules are shown.
  * For other tools, the always array is shown so users can configure per-tool permissions.
- * The command buttons (Deny / Allow Once) control the current command.
+ * The command buttons (Deny / Run) control the current command.
  * When all rules are toggled ✓, the command auto-runs.
  */
 
@@ -127,7 +127,7 @@ export const PermissionDock: Component<{
               <span data-slot="permission-rules-header-chevron" data-open={expanded() ? "" : undefined}>
                 <Icon name="chevron-down" size="small" />
               </span>
-              <span data-slot="permission-rules-header-title">{language.t("ui.permission.permissionRules")}</span>
+              <span data-slot="permission-rules-header-title">{language.t("ui.permission.manageAutoApprove")}</span>
             </button>
 
             <div data-slot="permission-rules-collapse" data-open={expanded() ? "" : undefined}>
@@ -190,7 +190,7 @@ export const PermissionDock: Component<{
           }}
           disabled={props.responding}
         >
-          {language.t("ui.permission.allowOnce")}
+          {language.t("ui.permission.run")}
         </Button>
         <Button
           variant="ghost"

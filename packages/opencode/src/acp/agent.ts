@@ -520,11 +520,13 @@ export namespace ACP {
     async initialize(params: InitializeRequest): Promise<InitializeResponse> {
       log.info("initialize", { protocolVersion: params.protocolVersion })
 
+      // kilocode_change start
       const authMethod: AuthMethod = {
-        description: "Run `opencode auth login` in the terminal",
-        name: "Login with opencode",
-        id: "opencode-login",
+        description: "Run `kilo auth login` in the terminal",
+        name: "Login with Kilo",
+        id: "kilo-login",
       }
+      // kilocode_change end
 
       // If client supports terminal-auth capability, use that instead.
       if (params.clientCapabilities?._meta?.["terminal-auth"] === true) {
