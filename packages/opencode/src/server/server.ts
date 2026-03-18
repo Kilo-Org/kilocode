@@ -603,22 +603,41 @@ export namespace Server {
             })
           },
         )
-        // kilocode_change start - disable external proxy to app.opencode.ai for privacy/security
+        // kilocode_change start - serve UI from @opencode-ai/app package instead of proxy
         .all("/*", async (c) => {
-          // const path = c.req.path
-          //
-          // const response = await proxy(`https://app.opencode.ai${path}`, {
-          //   ...c.req,
-          //   headers: {
-          //     ...c.req.raw.headers,
-          //     host: "app.opencode.ai",
-          //   },
-          // })
-          // response.headers.set(
-          //   "Content-Security-Policy",
-          //   "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; media-src 'self' data:; connect-src 'self' data:",
-          // )
-          // return response
+          const path = c.req.path
+          // Serve UI files from @opencode-ai/app package
+          const appDir = new URL("../../../app", import.meta.url).pathname
+          // Map root to index.html, otherwise serve requested file
+          const filePath = path === "/" ? "/index.html" : path
+          const fullPath = `${appDir}${filePath}`
+
+          try {
+            const file = Bun.file(fullPath)
+            if (await file.exists()) {
+              // Set appropriate content type based on file extension
+              const ext = filePath.split(".").pop()?.toLowerCase()
+              const contentTypes: Record<string, string> = {
+                html: "text/html",
+                js: "application/javascript",
+                tsx: "application/javascript",
+                css: "text/css",
+                json: "application/json",
+                png: "image/png",
+                jpg: "image/jpeg",
+                jpeg: "image/jpeg",
+                svg: "image/svg+xml",
+                ico: "image/x-icon",
+                webmanifest: "application/manifest+json",
+              }
+              if (ext && contentTypes[ext]) {
+                c.header("Content-Type", contentTypes[ext])
+              }
+              return c.body(file)
+            }
+          } catch {
+            // File doesn't exist, fall through to 404
+          }
           return c.notFound()
         }) as unknown as Hono,
     // kilocode_change end
