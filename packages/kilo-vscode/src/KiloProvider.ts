@@ -42,6 +42,7 @@ import {
   buildActionContext,
   computeDefaultSelection,
   fetchProviderData,
+  validateRecents,
   connectProvider as connectProviderAction,
   authorizeProviderOAuth as authorizeOAuthAction,
   completeProviderOAuth as completeOAuthAction,
@@ -725,13 +726,32 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.postMessage({ type: "variantsLoaded", variants })
           break
         }
-        case "persistRecents": {
-          await this.extensionContext?.globalState.update("recentModels", message.recents)
+        case "persistRecents":
+          await this.extensionContext?.globalState.update("recentModels", validateRecents(message.recents))
+          break
+        case "requestRecents": {
+          const recents = validateRecents(this.extensionContext?.globalState.get("recentModels"))
+          this.postMessage({ type: "recentsLoaded", recents })
           break
         }
         case "requestRecents": {
-          const recents =
-            this.extensionContext?.globalState.get<Array<{ providerID: string; modelID: string }>>("recentModels") ?? []
+          this.postMessage({
+            type: "recentsLoaded",
+            recents: validateRecents(this.extensionContext?.globalState.get("recentModels")),
+          })
+          break
+        }
+        case "requestRecents": {
+          const stored = this.extensionContext?.globalState.get<unknown[]>("recentModels") ?? []
+          const recents = Array.isArray(stored)
+            ? stored.filter(
+                (r): r is { providerID: string; modelID: string } =>
+                  !!r &&
+                  typeof r === "object" &&
+                  typeof (r as Record<string, unknown>).providerID === "string" &&
+                  typeof (r as Record<string, unknown>).modelID === "string",
+              )
+            : []
           this.postMessage({ type: "recentsLoaded", recents })
           break
         }

@@ -52,6 +52,24 @@ export function buildActionContext(
   }
 }
 
+function isModelSelection(r: unknown): r is { providerID: string; modelID: string } {
+  return (
+    !!r &&
+    typeof r === "object" &&
+    typeof (r as Record<string, unknown>).providerID === "string" &&
+    typeof (r as Record<string, unknown>).modelID === "string"
+  )
+}
+
+/** Validate and sanitize recent model selections from untrusted sources. */
+export function validateRecents(raw: unknown): Array<{ providerID: string; modelID: string }> {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .filter(isModelSelection)
+    .slice(0, 5)
+    .map((r) => ({ providerID: r.providerID, modelID: r.modelID }))
+}
+
 export function computeDefaultSelection(
   cachedConfig: { config?: { model?: string } } | null,
   vscodePID: string,
