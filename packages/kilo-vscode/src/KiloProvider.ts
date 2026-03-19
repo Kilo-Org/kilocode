@@ -37,6 +37,7 @@ import {
 } from "./kilo-provider-utils"
 import { MarketplaceService } from "./services/marketplace"
 import { resolveProjectDirectory } from "./project-directory"
+import { getBusySessionCount, seedSessionStatuses } from "./session-status"
 
 type KiloProviderOptions = {
   projectDirectory?: string | null
@@ -1546,26 +1547,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Seed sessionStatusMap with current session statuses on connect.
    * Without this, the Settings panel (which has no tracked sessions) would see
    * busyCount() = 0 for sessions that were already running before it opened.
-   * Sends sessionStatus messages to the webview for ALL sessions (not just tracked).
    */
   private async seedSessionStatusMap(): Promise<void> {
     if (!this.client || this.connectionState !== "connected") return
-    try {
-      const dir = this.getWorkspaceDirectory()
-      const result = await this.client.session.status({ directory: dir })
-      if (!result.data) return
-      for (const [sid, info] of Object.entries(result.data) as [string, SessionStatus][]) {
-        this.sessionStatusMap.set(sid, info.type)
-        this.postMessage({
-          type: "sessionStatus",
-          sessionID: sid,
-          status: info.type,
-          ...(info.type === "retry" ? { attempt: info.attempt, message: info.message, next: info.next } : {}),
-        })
-      }
-    } catch (error) {
-      console.error("[Kilo New] KiloProvider: Failed to seed session statuses:", error)
-    }
+    const dir = this.getWorkspaceDirectory()
+    await seedSessionStatuses(this.client, dir, this.sessionStatusMap, (msg) => this.postMessage(msg))
   }
 
   /**
@@ -1884,11 +1870,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /** Returns the number of sessions currently in "busy" state. */
   private getBusySessionCount(): number {
-    let count = 0
-    for (const status of this.sessionStatusMap.values()) {
-      if (status === "busy") count++
-    }
-    return count
+    return getBusySessionCount(this.sessionStatusMap)
   }
 
   /**
@@ -1909,33 +1891,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     try {
       await this.client.global.config.update({ config: partial }, { throwOnError: true })
 
-      // global.config.update only resets the global config cache — the
-      // per-instance merged config (Config.state) is still stale. Force a
-      // full instance disposal so the next config.get re-merges all layers.
-      await this.client.global.dispose({ throwOnError: true })
-
       // Re-fetch the full merged config (global + project + all layers) so the
       // webview receives the complete resolved config, not just global-only data.
+      // Config.state is reset by updateGlobal (via Instance.resetStateEntry) so
+      // config.get() returns fresh data without a full dispose cycle.
       const dir = this.getWorkspaceDirectory()
       const { data: merged } = await this.client.config.get({ directory: dir }, { throwOnError: true })
 
-      const message = {
-        type: "configUpdated",
-        config: merged,
-      }
       this.cachedConfigMessage = { type: "configLoaded", config: merged }
-      this.postMessage(message)
+      this.postMessage({ type: "configUpdated", config: merged })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to update config:", error)
       this.postMessage({
         type: "error",
         message: getErrorMessage(error) || "Failed to update config",
       })
-      // Send configUpdated with the last known good config so the webview
-      // decrements its pendingUpdates counter and reverts the optimistic state.
-      if (this.cachedConfigMessage) {
-        this.postMessage({ type: "configUpdated", config: (this.cachedConfigMessage as { config: unknown }).config })
-      }
     } finally {
       this.pending--
     }

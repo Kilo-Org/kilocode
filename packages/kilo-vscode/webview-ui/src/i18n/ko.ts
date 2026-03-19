@@ -1134,5 +1134,4 @@ export const dict = {
   "settings.saveBar.warning.many": "여러 세션이 실행 중이며 중단됩니다",
   "settings.saveBar.saveAnyway": "그래도 저장",
   "settings.saveBar.cancel": "취소",
-
 }

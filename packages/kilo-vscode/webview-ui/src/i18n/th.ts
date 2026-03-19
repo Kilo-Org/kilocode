@@ -1130,5 +1130,4 @@ export const dict = {
   "settings.saveBar.warning.many": "มีหลายเซสชันกำลังทำงานและจะถูกขัดจังหวะ",
   "settings.saveBar.saveAnyway": "บันทึกต่อไป",
   "settings.saveBar.cancel": "ยกเลิก",
-
 }

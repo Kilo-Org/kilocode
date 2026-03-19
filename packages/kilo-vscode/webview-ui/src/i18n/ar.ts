@@ -1131,5 +1131,4 @@ export const dict = {
   "settings.saveBar.warning.many": "عدة جلسات تعمل وستتوقف",
   "settings.saveBar.saveAnyway": "حفظ على أي حال",
   "settings.saveBar.cancel": "إلغاء",
-
 }

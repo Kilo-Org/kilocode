@@ -1144,5 +1144,4 @@ export const dict = {
   "settings.saveBar.warning.many": "Flere økter kjører og vil bli avbrutt",
   "settings.saveBar.saveAnyway": "Lagre uansett",
   "settings.saveBar.cancel": "Avbryt",
-
 } satisfies Partial<Record<Keys, string>>

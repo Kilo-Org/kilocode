@@ -1157,5 +1157,4 @@ export const dict = {
   "settings.saveBar.warning.many": "Varias sesiones están en ejecución y se interrumpirán",
   "settings.saveBar.saveAnyway": "Guardar de todas formas",
   "settings.saveBar.cancel": "Cancelar",
-
 }

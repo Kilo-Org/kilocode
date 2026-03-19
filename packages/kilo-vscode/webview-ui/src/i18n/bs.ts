@@ -1152,5 +1152,4 @@ export const dict = {
   "settings.saveBar.warning.many": "Nekoliko sesija je pokrenuto i bit će prekinuto",
   "settings.saveBar.saveAnyway": "Spremi svejedno",
   "settings.saveBar.cancel": "Otkaži",
-
 }

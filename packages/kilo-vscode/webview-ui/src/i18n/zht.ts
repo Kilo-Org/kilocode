@@ -1115,5 +1115,4 @@ export const dict = {
   "settings.saveBar.warning.many": "多個工作階段正在執行，將被中斷",
   "settings.saveBar.saveAnyway": "仍然儲存",
   "settings.saveBar.cancel": "取消",
-
 } satisfies Partial<Record<Keys, string>>

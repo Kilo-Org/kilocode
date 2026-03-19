@@ -1167,5 +1167,4 @@ export const dict = {
   "settings.saveBar.warning.many": "Mehrere Sitzungen laufen und werden unterbrochen",
   "settings.saveBar.saveAnyway": "Trotzdem speichern",
   "settings.saveBar.cancel": "Abbrechen",
-
 } satisfies Partial<Record<Keys, string>>

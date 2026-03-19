@@ -1114,5 +1114,4 @@ export const dict = {
   "settings.saveBar.warning.many": "多个会话正在运行，将被中断",
   "settings.saveBar.saveAnyway": "仍然保存",
   "settings.saveBar.cancel": "取消",
-
 } satisfies Partial<Record<Keys, string>>
