@@ -558,10 +558,39 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             openLabel: "Attach",
           })
           if (uris && uris.length > 0) {
-            const files = uris.map((uri) => ({
-              url: uri.toString(),
-              name: uri.fsPath.split(/[\\/]/).pop() || uri.fsPath,
-            }))
+            const mimeMap: Record<string, string> = {
+              ".pdf": "application/pdf",
+              ".json": "application/json",
+              ".xml": "application/xml",
+              ".zip": "application/zip",
+              ".gz": "application/gzip",
+              ".tar": "application/x-tar",
+              ".html": "text/html",
+              ".htm": "text/html",
+              ".css": "text/css",
+              ".csv": "text/csv",
+              ".md": "text/markdown",
+              ".svg": "image/svg+xml",
+              ".png": "image/png",
+              ".jpg": "image/jpeg",
+              ".jpeg": "image/jpeg",
+              ".gif": "image/gif",
+              ".webp": "image/webp",
+              ".ico": "image/x-icon",
+              ".mp3": "audio/mpeg",
+              ".wav": "audio/wav",
+              ".mp4": "video/mp4",
+              ".webm": "video/webm",
+              ".wasm": "application/wasm",
+              ".yaml": "text/yaml",
+              ".yml": "text/yaml",
+              ".toml": "text/plain",
+            }
+            const files = uris.map((uri) => {
+              const name = uri.fsPath.split(/[\\/]/).pop() || uri.fsPath
+              const ext = name.includes(".") ? name.slice(name.lastIndexOf(".")).toLowerCase() : ""
+              return { url: uri.toString(), name, mime: mimeMap[ext] || "text/plain" }
+            })
             this.postMessage({ type: "filePickerResult", files })
           }
           break

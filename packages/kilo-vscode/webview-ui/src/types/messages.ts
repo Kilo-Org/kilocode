@@ -670,7 +670,7 @@ export interface FileSearchResultMessage {
 
 export interface FilePickerResultMessage {
   type: "filePickerResult"
-  files: Array<{ url: string; name: string }>
+  files: Array<{ url: string; name: string; mime: string }>
 }
 
 export interface QuestionRequestMessage {
