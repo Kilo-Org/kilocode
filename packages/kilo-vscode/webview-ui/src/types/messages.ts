@@ -668,6 +668,11 @@ export interface FileSearchResultMessage {
   requestId: string
 }
 
+export interface FilePickerResultMessage {
+  type: "filePickerResult"
+  files: Array<{ path: string; name: string }>
+}
+
 export interface QuestionRequestMessage {
   type: "questionRequest"
   question: QuestionRequest
@@ -1218,6 +1223,7 @@ export type ExtensionMessage =
   | AutocompleteSettingsLoadedMessage
   | ChatCompletionResultMessage
   | FileSearchResultMessage
+  | FilePickerResultMessage
   | QuestionRequestMessage
   | QuestionResolvedMessage
   | QuestionErrorMessage
@@ -1813,6 +1819,11 @@ export interface OpenSubAgentViewerRequest {
   title?: string
 }
 
+// Request the extension to open a native file picker dialog
+export interface RequestFilePickerMessage {
+  type: "requestFilePicker"
+}
+
 // Preview an image attachment in VS Code's built-in image viewer
 export interface PreviewImageRequest {
   type: "previewImage"
@@ -1969,6 +1980,7 @@ export type WebviewMessage =
   | RetryConnectionRequest
   | OpenSubAgentViewerRequest
   | PreviewImageRequest
+  | RequestFilePickerMessage
   | SetDefaultBaseBranchRequest
   | FetchMarketplaceDataMessage
   | FilterMarketplaceItemsMessage

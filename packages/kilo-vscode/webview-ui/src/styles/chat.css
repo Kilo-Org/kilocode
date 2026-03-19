@@ -814,6 +814,69 @@
   border-style: dashed;
 }
 
+/* File Attachments */
+.file-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 8px 0;
+}
+
+.file-attachment {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+  background: var(--vscode-editor-background, rgba(127, 127, 127, 0.08));
+  font-size: 11px;
+  color: var(--vscode-foreground);
+  max-width: 200px;
+  min-width: 0;
+}
+
+.file-attachment-icon {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+}
+
+.file-attachment-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.file-attachment-remove {
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 999px;
+  background: var(--surface-inset-base, rgba(127, 127, 127, 0.16));
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.file-attachment-remove:hover {
+  color: var(--vscode-foreground);
+  background: var(--surface-inset-base-hover, rgba(127, 127, 127, 0.24));
+}
+
+.file-attachment:hover .file-attachment-remove {
+  opacity: 1;
+}
+
 .prompt-input-wrapper {
   display: flex;
   gap: 8px;

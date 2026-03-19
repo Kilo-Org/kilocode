@@ -550,6 +550,22 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "previewImage":
           this.handlePreviewImage(message.dataUrl, message.filename)
           break
+        case "requestFilePicker": {
+          const uris = await vscode.window.showOpenDialog({
+            canSelectMany: true,
+            canSelectFiles: true,
+            canSelectFolders: false,
+            openLabel: "Attach",
+          })
+          if (uris && uris.length > 0) {
+            const files = uris.map((uri) => ({
+              path: uri.fsPath,
+              name: uri.fsPath.split(/[\\/]/).pop() || uri.fsPath,
+            }))
+            this.postMessage({ type: "filePickerResult", files })
+          }
+          break
+        }
         case "openFile":
           if (message.filePath) {
             this.handleOpenFile(message.filePath, message.line, message.column)

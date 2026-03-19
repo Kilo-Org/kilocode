@@ -21,8 +21,9 @@ import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
 import { useSlashCommand } from "../../hooks/useSlashCommand"
 import { useImageAttachments } from "../../hooks/useImageAttachments"
+import { useFileAttachments } from "../../hooks/useFileAttachments"
 import { usePromptHistory } from "../../hooks/usePromptHistory"
-import { WandSparkles } from "@kilocode/kilo-ui/lucide"
+import { Paperclip, WandSparkles } from "@kilocode/kilo-ui/lucide"
 import { fileName, dirName, buildHighlightSegments, atEnd } from "./prompt-input-utils"
 import type { ReviewComment, TextPart } from "../../types/messages"
 import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
@@ -58,6 +59,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const excluded = worktree ? new Set(["sessions"]) : undefined
   const slash = useSlashCommand(vscode, excluded)
   const imageAttach = useImageAttachments()
+  const fileAttach = useFileAttachments()
   const history = usePromptHistory()
 
   const sessionKey = () => session.currentSessionID() ?? "__new__"
@@ -211,7 +213,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   const isBusy = () => session.status() === "busy"
   const isDisabled = () => !server.isConnected()
-  const hasInput = () => text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0
+  const hasInput = () =>
+    text().trim().length > 0 ||
+    imageAttach.images().length > 0 ||
+    fileAttach.files().length > 0 ||
+    reviewComments().length > 0
   const canSend = () => hasInput() && !isDisabled() && !props.blocked?.()
   const showStop = () => isBusy() && !hasInput()
   const isAtEnd = () =>
@@ -282,7 +288,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       // Only restore draft if the failure is for the current session and the
       // input is empty (user hasn't started typing something new).
       const target = failed.sessionID ?? "__new__"
-      if (target === sessionKey() && !text().trim() && imageAttach.images().length === 0) {
+      if (
+        target === sessionKey() &&
+        !text().trim() &&
+        imageAttach.images().length === 0 &&
+        fileAttach.files().length === 0
+      ) {
         if (failed.text) {
           setText(failed.text)
           setGhostText("")
@@ -301,6 +312,14 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             dataUrl: f.url,
           }))
         if (images.length > 0) imageAttach.replace(images)
+        const restored = (failed.files ?? [])
+          .filter((f) => f.url.startsWith("file://"))
+          .map((f) => ({
+            id: crypto.randomUUID(),
+            path: f.url.slice(7),
+            name: f.filename ?? f.url.split("/").pop() ?? "file",
+          }))
+        if (restored.length > 0) fileAttach.replace(restored)
       }
     }
 
@@ -327,6 +346,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       if (result.requestId === `enhance-${enhanceCounter}`) {
         setEnhancing(false)
       }
+    }
+
+    if (message.type === "filePickerResult") {
+      const result = message as import("../../types/messages").FilePickerResultMessage
+      for (const f of result.files) fileAttach.add(f.path, f.name)
+      textareaRef?.focus()
     }
   })
 
@@ -566,14 +591,20 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
 
     const imgs = imageAttach.images()
+    const attached = fileAttach.files()
     const pending = reviewComments()
     const review = pending.length > 0 ? formatReviewCommentsMarkdown(pending) : ""
     const message = draft && review ? `${review}\n\n${draft}` : draft || review
-    if ((!message && imgs.length === 0) || isDisabled() || props.blocked?.()) return
+    if ((!message && imgs.length === 0 && attached.length === 0) || isDisabled() || props.blocked?.()) return
 
     const mentionFiles = mention.parseFileAttachments(draft)
     const imgFiles = imgs.map((img) => ({ mime: img.mime, url: img.dataUrl, filename: img.filename }))
-    const allFiles = [...mentionFiles, ...imgFiles]
+    const pickedFiles = attached.map((f) => ({
+      mime: "text/plain",
+      url: `file://${f.path}`,
+      filename: f.name,
+    }))
+    const allFiles = [...mentionFiles, ...imgFiles, ...pickedFiles]
 
     const sel = session.selected()
     const attachments = allFiles.length > 0 ? allFiles : undefined
@@ -594,6 +625,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     setGhostText("")
     clearReviewComments()
     imageAttach.clear()
+    fileAttach.clear()
     if (debounceTimer) clearTimeout(debounceTimer)
     mention.closeMention()
     slash.close()
@@ -773,6 +805,26 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           </For>
         </div>
       </Show>
+      <Show when={fileAttach.files().length > 0}>
+        <div class="file-attachments">
+          <For each={fileAttach.files()}>
+            {(f) => (
+              <div class="file-attachment" title={f.path}>
+                <FileIcon node={{ path: f.name, type: "file" }} class="file-attachment-icon" />
+                <span class="file-attachment-name">{f.name}</span>
+                <button
+                  type="button"
+                  class="file-attachment-remove"
+                  onClick={() => fileAttach.remove(f.id)}
+                  aria-label={language.t("prompt.attachment.remove")}
+                >
+                  ×
+                </button>
+              </div>
+            )}
+          </For>
+        </div>
+      </Show>
       <div class="prompt-input-wrapper">
         <div class="prompt-input-ghost-wrapper">
           <div class="prompt-input-highlight-overlay" ref={highlightRef} aria-hidden="true">
@@ -826,6 +878,17 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           </Show>
         </div>
         <div class="prompt-input-hint-actions">
+          <Tooltip value={language.t("prompt.action.attachFile")} placement="top">
+            <Button
+              variant="ghost"
+              size="small"
+              onClick={() => vscode.postMessage({ type: "requestFilePicker" })}
+              disabled={isDisabled()}
+              aria-label={language.t("prompt.action.attachFile")}
+            >
+              <Paperclip size={16} />
+            </Button>
+          </Tooltip>
           <Tooltip value={language.t("prompt.action.enhance")} placement="top">
             <Button
               variant="ghost"
