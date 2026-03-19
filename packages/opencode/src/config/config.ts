@@ -699,7 +699,7 @@ export namespace Config {
   export const Mcp = z.discriminatedUnion("type", [McpLocal, McpRemote])
   export type Mcp = z.infer<typeof Mcp>
 
-  export const PermissionAction = z.enum(["ask", "allow", "deny"]).meta({
+  export const PermissionAction = z.enum(["ask", "allow", "deny"]).nullable().meta({ // kilocode_change - nullable allows null as a delete sentinel
     ref: "PermissionActionConfig",
   })
   export type PermissionAction = z.infer<typeof PermissionAction>

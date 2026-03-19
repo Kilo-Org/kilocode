@@ -208,34 +208,11 @@ const AutoApproveTab: Component = () => {
   const removeException = (tool: string, pattern: string) => {
     const current = ruleFor(tool)
     if (!current || typeof current === "string") return
-    const rebuilt: Record<string, PermissionLevel> = {}
-    for (const [k, v] of Object.entries(current)) {
-      if (k !== pattern) rebuilt[k] = v
-    }
-    const keys = Object.keys(rebuilt)
-    const fallback = defaultFor(tool)
-    const value: PermissionRule =
-      keys.length === 0 ? fallback : keys.length === 1 && keys[0] === "*" ? rebuilt["*"]! : rebuilt
-    // patchJsonc only sets keys present in the patch — it won't remove the deleted key
-    // from the JSONC file. To work around this, first set the tool to a plain string
-    // (which replaces the entire JSONC node), then immediately send the rebuilt object
-    // in a second call only when necessary.
-    // Both messages are dispatched synchronously before any reactive flush, so the
-    // second call always operates on the value we just computed — not on stale signal
-    // state — avoiding a race condition.
-    // Ideally when keys.length === 0 we'd remove the tool key entirely so it
-    // inherits the global default, but that requires backend support for null
-    // delete sentinels (tracked in #6625).
-    const wildcard = rebuilt["*"] ?? fallback
-    // Single call covers string and collapsed-to-string cases
-    updateConfig({ permission: { [tool]: wildcard } })
-    // Only send the second call when the result must remain an object
-    if (typeof value === "object") {
-      // This runs synchronously in the same microtask tick; the first updateConfig
-      // queues a JSONC node replacement, and this one immediately overwrites it with
-      // the full object — no intervening reactive update occurs.
-      updateConfig({ permission: { [tool]: value } })
-    }
+    // Send a single patch with null for the deleted key.
+    // The server's patchJsonc handles null as a delete sentinel (removes the key
+    // from the JSONC file). The webview's stripNulls removes it from the optimistic
+    // UI. This replaces the previous two-call workaround.
+    updateConfig({ permission: { [tool]: { [pattern]: null } } })
   }
 
   return (

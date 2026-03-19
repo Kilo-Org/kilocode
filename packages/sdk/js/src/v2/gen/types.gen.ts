@@ -1068,7 +1068,7 @@ export type ServerConfig = {
   cors?: Array<string>
 }
 
-export type PermissionActionConfig = "ask" | "allow" | "deny"
+export type PermissionActionConfig = "ask" | "allow" | "deny" | null
 
 export type PermissionObjectConfig = {
   [key: string]: PermissionActionConfig
