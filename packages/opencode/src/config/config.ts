@@ -82,7 +82,9 @@ export namespace Config {
     return merged
   }
 
-  export const state = Instance.state(async () => {
+  // kilocode_change start — capture init so resetState() can invalidate the cache entry
+  const stateInit = async () => {
+    // kilocode_change end
     const auth = await Auth.all()
 
     // This ensures Opencode native configs always take precedence over legacy Kilocode configs
@@ -339,7 +341,10 @@ export namespace Config {
       directories,
       deps,
     }
-  })
+  }
+  // kilocode_change start — create state from named init so resetState() can invalidate it
+  export const state = Instance.state(stateInit)
+  // kilocode_change end
 
   export async function waitForDependencies() {
     const deps = await state().then((x) => x.deps)
@@ -1592,12 +1597,12 @@ export namespace Config {
     await global.reset()
 
     if (!dispose) {
-      // Update Config.state in-place so Config.get() returns fresh data without a full dispose.
-      // This avoids the stale-cache problem: Config.state is a per-instance singleton that
-      // caches the merged config. Without this, config.get() would return the old merged config
-      // until the next full dispose cycle.
-      const s = await state()
-      s.config = mergeConfig(s.config, config)
+      // Reset Config.state for all instances so the next Config.get() call re-reads
+      // from disk and re-merges all layers (global + project + workspace) in the
+      // correct precedence order. This avoids the stale-cache problem without the
+      // precedence bug that would occur if we merged the global patch directly into
+      // the already-resolved config (which includes project overrides).
+      Instance.resetStateEntry(stateInit)
 
       GlobalBus.emit("event", {
         directory: "global",
