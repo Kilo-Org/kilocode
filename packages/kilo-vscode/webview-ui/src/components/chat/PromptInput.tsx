@@ -199,8 +199,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   window.addEventListener("newTaskRequest", onNewTaskRequest)
   onCleanup(() => window.removeEventListener("newTaskRequest", onNewTaskRequest))
 
-  // Compact/summarize the current session
-const onCompact = () => session.compact()
+  // Compact/summarize the current session (mirrors canCompact guards in TaskHeader)
+  const onCompact = () => {
+    if (session.status() === "busy") return
+    if (session.messages().length === 0) return
+    if (!session.selected()) return
+    session.compact()
+  }
   window.addEventListener("compactSession", onCompact)
   onCleanup(() => window.removeEventListener("compactSession", onCompact))
 
