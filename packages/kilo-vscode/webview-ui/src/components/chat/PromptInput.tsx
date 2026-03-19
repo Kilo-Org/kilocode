@@ -351,7 +351,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
     if (message.type === "filePickerResult") {
       const result = message as import("../../types/messages").FilePickerResultMessage
-      for (const f of result.files) fileAttach.add(`file://${f.path}`, f.name, "text/plain")
+      for (const f of result.files) fileAttach.add(f.url, f.name, "text/plain")
       textareaRef?.focus()
     }
   })
