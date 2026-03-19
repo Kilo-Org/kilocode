@@ -734,27 +734,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.postMessage({ type: "recentsLoaded", recents })
           break
         }
-        case "requestRecents": {
-          this.postMessage({
-            type: "recentsLoaded",
-            recents: validateRecents(this.extensionContext?.globalState.get("recentModels")),
-          })
-          break
-        }
-        case "requestRecents": {
-          const stored = this.extensionContext?.globalState.get<unknown[]>("recentModels") ?? []
-          const recents = Array.isArray(stored)
-            ? stored.filter(
-                (r): r is { providerID: string; modelID: string } =>
-                  !!r &&
-                  typeof r === "object" &&
-                  typeof (r as Record<string, unknown>).providerID === "string" &&
-                  typeof (r as Record<string, unknown>).modelID === "string",
-              )
-            : []
-          this.postMessage({ type: "recentsLoaded", recents })
-          break
-        }
         // legacy-migration start
         case "requestLegacyMigrationData":
           void this.handleRequestLegacyMigrationData()
