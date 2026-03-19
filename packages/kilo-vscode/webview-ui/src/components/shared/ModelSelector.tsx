@@ -15,7 +15,7 @@ import { useProvider, EnrichedModel } from "../../context/provider"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { ModelSelection } from "../../types/messages"
-import { KILO_GATEWAY_ID, providerSortKey, isFree, buildTriggerLabel } from "./model-selector-utils"
+import { KILO_GATEWAY_ID, isSmall, providerSortKey, isFree, buildTriggerLabel } from "./model-selector-utils"
 
 interface ModelGroup {
   providerName: string
@@ -37,6 +37,8 @@ export interface ModelSelectorBaseProps {
   allowClear?: boolean
   /** Label shown for the clear option */
   clearLabel?: string
+  /** Include the kilo-auto/small model in the list — defaults to false */
+  includeAutoSmall?: boolean
 }
 
 export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
@@ -52,10 +54,14 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   let searchRef: HTMLInputElement | undefined
   let listRef: HTMLDivElement | undefined
 
-  // Only show models from Kilo Gateway or connected providers
+  // Only show models from Kilo Gateway or connected providers.
+  // kilo-auto/small is excluded unless includeAutoSmall is explicitly true.
   const visibleModels = createMemo(() => {
     const c = connected()
-    return models().filter((m) => m.providerID === KILO_GATEWAY_ID || c.includes(m.providerID))
+    return models().filter((m) => {
+      if (!props.includeAutoSmall && isSmall(m)) return false
+      return m.providerID === KILO_GATEWAY_ID || c.includes(m.providerID)
+    })
   })
 
   const hasProviders = () => visibleModels().length > 0
@@ -143,6 +149,11 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
       setDebouncedSearch("")
     }
   })
+
+  // Listen for slash command trigger
+  const onTrigger = () => setOpen(true)
+  window.addEventListener("openModelPicker", onTrigger)
+  onCleanup(() => window.removeEventListener("openModelPicker", onTrigger))
 
   function pick(model: EnrichedModel) {
     props.onSelect(model.providerID, model.id)

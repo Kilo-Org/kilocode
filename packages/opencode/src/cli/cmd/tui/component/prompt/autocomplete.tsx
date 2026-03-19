@@ -49,6 +49,7 @@ function extractLineRange(input: string) {
 export type AutocompleteRef = {
   onInput: (value: string) => void
   onKeyDown: (e: KeyEvent) => void
+  onCursorChange: () => void
   visible: false | "@" | "/"
 }
 
@@ -579,6 +580,18 @@ export function Autocomplete(props: {
             e.preventDefault()
             return
           }
+          // kilocode_change start
+          if (name === "right") {
+            // Right arrow should not accept the suggestion when cursor is not
+            // within the filter region (not near where the suggestion is being added)
+            const cursor = props.input().cursorOffset
+            if (cursor <= store.index) {
+              hide()
+              // Don't preventDefault - let cursor move normally
+              return
+            }
+          }
+          // kilocode_change end
         }
         if (!store.visible) {
           if (e.name === "@") {
@@ -594,6 +607,23 @@ export function Autocomplete(props: {
           }
         }
       },
+      // kilocode_change start
+      onCursorChange() {
+        if (!store.visible) return
+        const cursor = props.input().cursorOffset
+        const value = props.input().plainText
+        if (
+          // Cursor moved before the trigger
+          cursor <= store.index ||
+          // There is a space between the trigger and the cursor
+          props.input().getTextRange(store.index, cursor).match(/\s/) ||
+          // "/<command>" is not the sole content — dismiss slash popup once args are typed
+          (store.visible === "/" && value.match(/^\S+\s+\S+\s*$/))
+        ) {
+          hide()
+        }
+      },
+      // kilocode_change end
     })
   })
 

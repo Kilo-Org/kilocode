@@ -284,3 +284,26 @@
 .link:hover {
   text-decoration: underline;
 }
+
+/* ============================================
+   High Contrast Theme Support
+   ============================================ */
+
+body.vscode-high-contrast,
+body.vscode-high-contrast-light {
+  .marketplace-card {
+    border: 1px solid var(--vscode-contrastBorder, transparent);
+  }
+
+  .marketplace-tag-filter {
+    border: 1px solid var(--vscode-contrastBorder, transparent);
+  }
+
+  .marketplace-tag-filter.active {
+    border-color: var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
+  }
+
+  .marketplace-card-expand:focus-visible {
+    outline: 1px solid var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
+  }
+}

@@ -9,7 +9,7 @@
 
 import { Component, createEffect, createMemo, For, Show } from "solid-js"
 import { ToolRegistry, ToolProps, getToolInfo } from "@kilocode/kilo-ui/message-part"
-import { BasicTool } from "@kilocode/kilo-ui/basic-tool"
+import { ToolCall } from "@kilocode/kilo-ui/basic-tool"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { useData } from "@kilocode/kilo-ui/context/data"
@@ -89,8 +89,13 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
         <span data-slot="basic-tool-tool-title" class="capitalize">
           {title()}
         </span>
-        <Show when={description()}>
-          <span data-slot="basic-tool-tool-subtitle">{description()}</span>
+        <Show when={description() || childToolParts().length > 0}>
+          <span data-slot="basic-tool-tool-subtitle">
+            {description()}
+            <Show when={childToolParts().length > 0}>
+              {description() ? " " : ""}({childToolParts().length})
+            </Show>
+          </span>
         </Show>
       </div>
       <Show when={!inAgentManager && childSessionId()}>
@@ -107,7 +112,7 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
 
   return (
     <div data-component="tool-part-wrapper">
-      <BasicTool icon="task" status={props.status} trigger={trigger()} defaultOpen>
+      <ToolCall variant="panel" icon="task" status={props.status} trigger={trigger()} defaultOpen>
         <div ref={autoScroll.scrollRef} onScroll={autoScroll.handleScroll} data-component="tool-output" data-scrollable>
           <div ref={autoScroll.contentRef} data-component="task-tools">
             <For each={childToolParts()}>
@@ -134,7 +139,7 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
             </For>
           </div>
         </div>
-      </BasicTool>
+      </ToolCall>
     </div>
   )
 }

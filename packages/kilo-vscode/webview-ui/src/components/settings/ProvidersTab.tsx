@@ -108,6 +108,7 @@ const ProvidersTab: Component = () => {
             placement="bottom-start"
             allowClear
             clearLabel={language.t("settings.providers.notSet")}
+            includeAutoSmall
           />
         </SettingsRow>
       </Card>
