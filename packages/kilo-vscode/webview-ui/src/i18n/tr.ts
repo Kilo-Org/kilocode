@@ -1150,5 +1150,16 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.button": "Kaldır",
   "settings.agentBehaviour.removeMcp.title": "MCP sunucusunu kaldır",
   "settings.agentBehaviour.removeMcp.confirm": "\"{{name}}\" MCP sunucusu kaldırılsın mı? Bu, onu yapılandırmanızdan çıkarır.",
-  "settings.agentBehaviour.removeMcp.button": "Kaldır"
+  "settings.agentBehaviour.removeMcp.button": "Kaldır",
+
+  // v7.0.52 (Bot Checks) Missing Keys
+  "ui.permission.toggleWrap": "Kelime kaydırmayı aç/kapat",
+  "ui.permission.copyCommand": "Kopyala",
+  "settings.saveBar.unsavedChanges": "Kaydedilmemiş değişiklikler",
+  "settings.saveBar.discard": "Vazgeç",
+  "settings.saveBar.save": "Kaydet",
+  "settings.saveBar.warning.one": "Bir oturum çalışıyor ve kesintiye uğrayacak",
+  "settings.saveBar.warning.many": "Birden fazla oturum çalışıyor ve kesintiye uğrayacak",
+  "settings.saveBar.saveAnyway": "Yine de kaydet",
+  "settings.saveBar.cancel": "İptal"
 }
