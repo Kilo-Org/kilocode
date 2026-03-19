@@ -86,7 +86,7 @@ export const dict = {
   "revert.turn.revert": "Revert to here",
   "revert.turn.copy": "Copy message",
   "revert.bottom.undo": "Undo Changes",
-  "revert.disabled.agentBusy": "Wait for agent to finish",
+  "revert.disabled.agentBusy": "Sačekajte da agent završi",
   "command.session.compact": "Sažmi sesiju",
   "command.session.compact.description": "Sažmi sesiju kako bi se smanjio kontekst",
   "command.session.fork": "Fork iz poruke",

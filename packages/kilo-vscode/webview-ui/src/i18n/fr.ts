@@ -87,7 +87,7 @@ export const dict = {
   "revert.turn.revert": "Revert to here",
   "revert.turn.copy": "Copy message",
   "revert.bottom.undo": "Undo Changes",
-  "revert.disabled.agentBusy": "Wait for agent to finish",
+  "revert.disabled.agentBusy": "Attendre la fin de l'agent",
   "command.session.compact": "Compacter la session",
   "command.session.compact.description": "Résumer la session pour réduire la taille du contexte",
   "command.session.fork": "Bifurquer à partir du message",

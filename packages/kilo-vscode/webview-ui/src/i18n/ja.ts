@@ -86,7 +86,7 @@ export const dict = {
   "revert.turn.revert": "Revert to here",
   "revert.turn.copy": "Copy message",
   "revert.bottom.undo": "Undo Changes",
-  "revert.disabled.agentBusy": "Wait for agent to finish",
+  "revert.disabled.agentBusy": "エージェントの完了を待ってください",
   "command.session.compact": "セッションを圧縮",
   "command.session.compact.description": "セッションを要約してコンテキストサイズを削減",
   "command.session.fork": "メッセージからフォーク",
