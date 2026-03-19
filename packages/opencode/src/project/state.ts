@@ -94,31 +94,17 @@ export namespace State {
   }
 
   /**
-   * Remove all entries in a named group across all directories.
-   * Entries that registered a dispose callback are properly disposed before
-   * removal so resources (e.g. MCP child processes) are cleaned up.
+   * Remove all entries in a named group across all directories without
+   * calling dispose callbacks. Existing references (e.g. MCP tool closures
+   * held by running sessions) remain usable; the next access to any
+   * invalidated state lazily re-initialises it with the fresh config.
    */
-  export async function invalidateGroup(group: string) {
+  export function invalidateGroup(group: string) {
     const inits = groups.get(group)
     if (!inits) return
-    const tasks: Promise<void>[] = []
     for (const init of inits) {
-      for (const entries of recordsByKey.values()) {
-        const entry = entries.get(init)
-        if (!entry) continue
-        if (entry.dispose) {
-          tasks.push(
-            Promise.resolve(entry.state)
-              .then((resolved) => entry.dispose!(resolved))
-              .catch((error) => {
-                log.error("dispose failed during group invalidation", { error })
-              }),
-          )
-        }
-        entries.delete(init)
-      }
+      removeByInit(init)
     }
-    if (tasks.length) await Promise.all(tasks)
   }
   // kilocode_change end
 }
