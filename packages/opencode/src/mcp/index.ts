@@ -14,7 +14,6 @@ import { Log } from "../util/log"
 import { NamedError } from "@opencode-ai/util/error"
 import z from "zod/v4"
 import { Instance } from "../project/instance"
-import { State } from "../project/state"
 import { Installation } from "../installation"
 import { withTimeout } from "@/util/timeout"
 import { McpOAuthProvider } from "./oauth-provider"
@@ -248,7 +247,11 @@ export namespace MCP {
   }
 
   const state = Instance.state(mcpInit, mcpDispose)
-  State.register("config", mcpInit)
+  // MCP is intentionally NOT registered in the "config" invalidation group.
+  // MCP clients hold live transports and spawn child processes that require
+  // proper disposal via mcpDispose. Config invalidation only drops cache
+  // entries without calling dispose, which would leak those resources.
+  // MCP changes are handled through dedicated APIs (connect/disconnect/add).
   // kilocode_change end
 
   // Helper function to fetch prompts for a specific client
