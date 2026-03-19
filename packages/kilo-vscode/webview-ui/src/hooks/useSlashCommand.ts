@@ -85,7 +85,7 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
     {
       name: "compact",
       description: "Summarize and compact the session",
-      hints: ["summarize"],
+      hints: ["smol", "condense"],
       action: () => {
         window.dispatchEvent(new CustomEvent("compactSession"))
       },
