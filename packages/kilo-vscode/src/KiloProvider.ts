@@ -2651,7 +2651,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (event.type === "server.instance.disposed") {
       const props = event.properties as Record<string, unknown> | null
       const dir = typeof props?.directory === "string" ? props.directory : undefined
-      if (dir && dir !== this.getWorkspaceDirectory()) return
+      if (dir && path.resolve(dir) !== path.resolve(this.getWorkspaceDirectory())) return
       void this.reloadAfterAuthChange()
       return
     }
