@@ -35,12 +35,12 @@ export interface SlashCommand {
   close: () => void
 }
 
-export function useSlashCommand(vscode: VSCodeContext): SlashCommand {
+export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): SlashCommand {
   const [server, setServer] = createSignal<SlashCommandInfo[]>([])
   const [query, setQuery] = createSignal<string | null>(null)
   const [index, setIndex] = createSignal(0)
 
-  const client: SlashCommandEntry[] = [
+  const all: SlashCommandEntry[] = [
     {
       name: "new",
       description: "Start a new session",
@@ -69,7 +69,7 @@ export function useSlashCommand(vscode: VSCodeContext): SlashCommand {
     {
       name: "agents",
       description: "Switch the agent mode",
-      hints: [],
+      hints: ["modes"],
       action: () => {
         window.dispatchEvent(new CustomEvent("openModePicker"))
       },
@@ -83,11 +83,11 @@ export function useSlashCommand(vscode: VSCodeContext): SlashCommand {
       },
     },
     {
-      name: "profile",
-      description: "Show your profile",
-      hints: ["me", "whoami"],
+      name: "compact",
+      description: "Summarize and compact the session",
+      hints: ["summarize"],
       action: () => {
-        window.postMessage({ type: "navigate", view: "profile" }, "*")
+        window.dispatchEvent(new CustomEvent("compactSession"))
       },
     },
     {
@@ -95,10 +95,12 @@ export function useSlashCommand(vscode: VSCodeContext): SlashCommand {
       description: "Open settings",
       hints: [],
       action: () => {
-        window.postMessage({ type: "navigate", view: "settings" }, "*")
+        vscode.postMessage({ type: "openSettingsPanel" })
       },
     },
   ]
+
+  const client = exclude ? all.filter((c) => !exclude.has(c.name)) : all
 
   const commands = (): SlashCommandEntry[] => {
     const names = new Set(client.map((c) => c.name))

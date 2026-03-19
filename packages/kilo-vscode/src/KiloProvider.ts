@@ -513,6 +513,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             vscode.env.openExternal(vscode.Uri.parse(message.url))
           }
           break
+        case "openSettingsPanel":
+          vscode.commands.executeCommand("kilo-code.new.settingsButtonClicked", message.tab)
+          break
         case "openChanges":
           vscode.commands.executeCommand("kilo-code.new.showChanges")
           break

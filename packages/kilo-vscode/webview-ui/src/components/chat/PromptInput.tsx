@@ -55,7 +55,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const worktree = useWorktreeMode()
   const dialog = useDialog()
   const mention = useFileMention(vscode)
-  const slash = useSlashCommand(vscode)
+  const excluded = worktree ? new Set(["sessions"]) : undefined
+  const slash = useSlashCommand(vscode, excluded)
   const imageAttach = useImageAttachments()
   const history = usePromptHistory()
 
@@ -197,6 +198,16 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
   window.addEventListener("newTaskRequest", onNewTaskRequest)
   onCleanup(() => window.removeEventListener("newTaskRequest", onNewTaskRequest))
+
+  // Compact/summarize the current session
+  const onCompact = () => {
+    const id = session.currentSessionID()
+    if (!id) return
+    const sel = session.selected()
+    vscode.postMessage({ type: "compact", sessionID: id, providerID: sel?.providerID, modelID: sel?.modelID })
+  }
+  window.addEventListener("compactSession", onCompact)
+  onCleanup(() => window.removeEventListener("compactSession", onCompact))
 
   const isBusy = () => session.status() === "busy"
   const isDisabled = () => !server.isConnected()
