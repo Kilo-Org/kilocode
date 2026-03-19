@@ -53,16 +53,38 @@ export const ConfigProvider: ParentComponent = (props) => {
   const [config, setConfig] = createSignal<Config>({})
   const [loading, setLoading] = createSignal(true)
 
+  // Race-condition guard: track how many updateConfig calls are in-flight.
+  //
+  // Why this is needed:
+  // When the user picks a new dropdown value, updateConfig() optimistically
+  // updates local state and sends an "updateConfig" message to the extension.
+  // The extension writes the change, then sends back "configUpdated".
+  // However, the CLI backend may emit a "global.disposed" SSE event as part
+  // of its config-reload cycle, causing KiloProvider to call fetchAndSendConfig()
+  // which may return the *old* config (before the write is committed) and send
+  // a "configLoaded" message. Without this guard, that stale "configLoaded"
+  // would overwrite the optimistic state, causing a visible flash/revert.
+  //
+  // Solution: increment pendingUpdates on each updateConfig() call and
+  // decrement on each "configUpdated" response. Discard any "configLoaded"
+  // message that arrives while pendingUpdates > 0.
+  const [pendingUpdates, setPendingUpdates] = createSignal(0)
+
   // Register handler immediately (not in onMount) so we never miss
   // a configLoaded message that arrives before the DOM mount.
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type === "configLoaded") {
-      setConfig(message.config)
-      setLoading(false)
+      // Only apply if no update is in flight — a stale configLoaded must not
+      // overwrite the optimistically-updated state (see pendingUpdates above).
+      if (pendingUpdates() === 0) {
+        setConfig(message.config)
+        setLoading(false)
+      }
       return
     }
     if (message.type === "configUpdated") {
       setConfig(message.config)
+      setPendingUpdates((n) => Math.max(0, n - 1))
       return
     }
   })
@@ -92,6 +114,8 @@ export const ConfigProvider: ParentComponent = (props) => {
   function updateConfig(partial: Partial<Config>) {
     // Optimistically update local state with deep merge + null stripping
     setConfig((prev) => stripNulls(deepMerge(prev, partial)))
+    // Track this in-flight update so stale configLoaded messages are ignored
+    setPendingUpdates((n) => n + 1)
     // Send to extension for persistence
     vscode.postMessage({ type: "updateConfig", config: partial })
   }

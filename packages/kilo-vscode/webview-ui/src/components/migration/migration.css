@@ -411,3 +411,34 @@
   font-style: italic;
   font-size: 12px;
 }
+
+/* ============================================
+   High Contrast Theme Support
+   ============================================ */
+
+body.vscode-high-contrast,
+body.vscode-high-contrast-light {
+  .migration-wizard__feature {
+    border-color: var(--vscode-contrastBorder, var(--vscode-panel-border));
+  }
+
+  .migration-wizard__card {
+    border-color: var(--vscode-contrastBorder, var(--vscode-panel-border));
+  }
+
+  .migration-wizard__item {
+    border-top-color: var(--vscode-contrastBorder, var(--vscode-panel-border));
+  }
+
+  .migration-wizard__btn {
+    border: 1px solid var(--vscode-contrastBorder, transparent);
+  }
+
+  .migration-wizard__checkmark {
+    border-color: var(--vscode-contrastBorder, var(--vscode-foreground));
+  }
+
+  .migration-wizard__divider {
+    background: var(--vscode-contrastBorder, var(--vscode-panel-border));
+  }
+}

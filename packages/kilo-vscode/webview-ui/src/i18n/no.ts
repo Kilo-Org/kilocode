@@ -998,6 +998,10 @@ export const dict = {
   "settings.agentBehaviour.removeMode.confirm":
     'Vil du fjerne modusen "{{name}}"? Dette vil deaktivere modusen ved å oppdatere konfigurasjonen din.',
   "settings.agentBehaviour.removeMode.button": "Fjern",
+  "settings.agentBehaviour.removeMcp.title": "Fjern MCP-server",
+  "settings.agentBehaviour.removeMcp.confirm":
+    'Vil du fjerne MCP-serveren "{{name}}"? Dette vil fjerne den fra konfigurasjonen din.',
+  "settings.agentBehaviour.removeMcp.button": "Fjern",
   "settings.agentBehaviour.skillPaths": "Ferdighetsmappe-stier",
   "settings.agentBehaviour.skillUrls": "Ferdighets-URLer",
   "settings.agentBehaviour.removeSkill.title": "Fjern ferdighet",
