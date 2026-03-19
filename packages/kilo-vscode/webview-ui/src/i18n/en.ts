@@ -1151,8 +1151,8 @@ export const dict = {
   "settings.saveBar.unsavedChanges": "Unsaved changes",
   "settings.saveBar.discard": "Discard",
   "settings.saveBar.save": "Save",
-  "settings.saveBar.warning.one": "1 session is running and will be interrupted",
-  "settings.saveBar.warning.many": "{{count}} sessions are running and will be interrupted",
+  "settings.saveBar.warning.one": "One session is running and will be interrupted",
+  "settings.saveBar.warning.many": "Several sessions are running and will be interrupted",
   "settings.saveBar.saveAnyway": "Save anyway",
   "settings.saveBar.cancel": "Cancel",
 }

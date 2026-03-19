@@ -1156,4 +1156,12 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} tâches terminées",
   "task.todos.allDone": "{{count}} tâches terminées",
+  "settings.saveBar.unsavedChanges": "Modifications non enregistrées",
+  "settings.saveBar.discard": "Ignorer",
+  "settings.saveBar.save": "Enregistrer",
+  "settings.saveBar.warning.one": "Une session est en cours et sera interrompue",
+  "settings.saveBar.warning.many": "Plusieurs sessions sont en cours et seront interrompues",
+  "settings.saveBar.saveAnyway": "Enregistrer quand même",
+  "settings.saveBar.cancel": "Annuler",
+
 }

@@ -1105,4 +1105,12 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} 個待辦已完成",
   "task.todos.allDone": "{{count}} 個待辦已完成",
+  "settings.saveBar.unsavedChanges": "未儲存的變更",
+  "settings.saveBar.discard": "捨棄",
+  "settings.saveBar.save": "儲存",
+  "settings.saveBar.warning.one": "一個工作階段正在執行，將被中斷",
+  "settings.saveBar.warning.many": "多個工作階段正在執行，將被中斷",
+  "settings.saveBar.saveAnyway": "仍然儲存",
+  "settings.saveBar.cancel": "取消",
+
 } satisfies Partial<Record<Keys, string>>

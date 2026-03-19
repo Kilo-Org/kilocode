@@ -1141,4 +1141,12 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} zadataka završeno",
   "task.todos.allDone": "{{count}} zadataka završeno",
+  "settings.saveBar.unsavedChanges": "Nespremljene promjene",
+  "settings.saveBar.discard": "Odbaci",
+  "settings.saveBar.save": "Spremi",
+  "settings.saveBar.warning.one": "Jedna sesija je pokrenuta i bit će prekinuta",
+  "settings.saveBar.warning.many": "Nekoliko sesija je pokrenuto i bit će prekinuto",
+  "settings.saveBar.saveAnyway": "Spremi svejedno",
+  "settings.saveBar.cancel": "Otkaži",
+
 }

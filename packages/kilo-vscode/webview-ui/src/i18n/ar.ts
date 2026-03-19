@@ -1121,4 +1121,12 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} مهام مكتملة",
   "task.todos.allDone": "{{count}} مهام مكتملة",
+  "settings.saveBar.unsavedChanges": "تغييرات غير محفوظة",
+  "settings.saveBar.discard": "تجاهل",
+  "settings.saveBar.save": "حفظ",
+  "settings.saveBar.warning.one": "جلسة واحدة تعمل وستتوقف",
+  "settings.saveBar.warning.many": "عدة جلسات تعمل وستتوقف",
+  "settings.saveBar.saveAnyway": "حفظ على أي حال",
+  "settings.saveBar.cancel": "إلغاء",
+
 }

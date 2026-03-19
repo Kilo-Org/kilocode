@@ -1156,4 +1156,12 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} Aufgaben erledigt",
   "task.todos.allDone": "{{count}} Aufgaben erledigt",
+  "settings.saveBar.unsavedChanges": "Nicht gespeicherte Änderungen",
+  "settings.saveBar.discard": "Verwerfen",
+  "settings.saveBar.save": "Speichern",
+  "settings.saveBar.warning.one": "Eine Sitzung läuft und wird unterbrochen",
+  "settings.saveBar.warning.many": "Mehrere Sitzungen laufen und werden unterbrochen",
+  "settings.saveBar.saveAnyway": "Trotzdem speichern",
+  "settings.saveBar.cancel": "Abbrechen",
+
 } satisfies Partial<Record<Keys, string>>

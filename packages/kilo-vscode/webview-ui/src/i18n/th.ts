@@ -1119,4 +1119,12 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} งานเสร็จแล้ว",
   "task.todos.allDone": "{{count}} งานเสร็จแล้ว",
+  "settings.saveBar.unsavedChanges": "การเปลี่ยนแปลงที่ยังไม่ได้บันทึก",
+  "settings.saveBar.discard": "ยกเลิก",
+  "settings.saveBar.save": "บันทึก",
+  "settings.saveBar.warning.one": "มีเซสชันหนึ่งกำลังทำงานและจะถูกขัดจังหวะ",
+  "settings.saveBar.warning.many": "มีหลายเซสชันกำลังทำงานและจะถูกขัดจังหวะ",
+  "settings.saveBar.saveAnyway": "บันทึกต่อไป",
+  "settings.saveBar.cancel": "ยกเลิก",
+
 }

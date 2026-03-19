@@ -1135,4 +1135,12 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} opgaver udført",
   "task.todos.allDone": "{{count}} opgaver udført",
+  "settings.saveBar.unsavedChanges": "Ikke-gemte ændringer",
+  "settings.saveBar.discard": "Kassér",
+  "settings.saveBar.save": "Gem",
+  "settings.saveBar.warning.one": "En session kører og vil blive afbrudt",
+  "settings.saveBar.warning.many": "Flere sessioner kører og vil blive afbrudt",
+  "settings.saveBar.saveAnyway": "Gem alligevel",
+  "settings.saveBar.cancel": "Annuller",
+
 }

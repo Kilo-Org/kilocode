@@ -1124,4 +1124,12 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} 할 일 완료",
   "task.todos.allDone": "{{count}} 할 일 완료",
+  "settings.saveBar.unsavedChanges": "저장되지 않은 변경 사항",
+  "settings.saveBar.discard": "취소",
+  "settings.saveBar.save": "저장",
+  "settings.saveBar.warning.one": "하나의 세션이 실행 중이며 중단됩니다",
+  "settings.saveBar.warning.many": "여러 세션이 실행 중이며 중단됩니다",
+  "settings.saveBar.saveAnyway": "그래도 저장",
+  "settings.saveBar.cancel": "취소",
+
 }

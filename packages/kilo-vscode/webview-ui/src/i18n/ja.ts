@@ -1133,4 +1133,12 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} タスク完了",
   "task.todos.allDone": "{{count}} タスク完了",
+  "settings.saveBar.unsavedChanges": "未保存の変更",
+  "settings.saveBar.discard": "破棄",
+  "settings.saveBar.save": "保存",
+  "settings.saveBar.warning.one": "1つのセッションが実行中で中断されます",
+  "settings.saveBar.warning.many": "複数のセッションが実行中で中断されます",
+  "settings.saveBar.saveAnyway": "それでも保存",
+  "settings.saveBar.cancel": "キャンセル",
+
 }

@@ -1133,4 +1133,12 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} oppgaver fullført",
   "task.todos.allDone": "{{count}} oppgaver fullført",
+  "settings.saveBar.unsavedChanges": "Ulagrede endringer",
+  "settings.saveBar.discard": "Forkast",
+  "settings.saveBar.save": "Lagre",
+  "settings.saveBar.warning.one": "En økt kjører og vil bli avbrutt",
+  "settings.saveBar.warning.many": "Flere økter kjører og vil bli avbrutt",
+  "settings.saveBar.saveAnyway": "Lagre uansett",
+  "settings.saveBar.cancel": "Avbryt",
+
 } satisfies Partial<Record<Keys, string>>

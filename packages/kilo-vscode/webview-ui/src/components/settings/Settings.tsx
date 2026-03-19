@@ -49,7 +49,7 @@ const Settings: Component<SettingsProps> = (props) => {
     const msg =
       busy === 1
         ? language.t("settings.saveBar.warning.one")
-        : language.t("settings.saveBar.warning.many", { count: String(busy) })
+        : language.t("settings.saveBar.warning.many")
     showToast({
       variant: "error",
       title: msg,
