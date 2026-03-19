@@ -15,6 +15,7 @@ export type Locale =
   | "br"
   | "th"
   | "bs"
+  | "tr"
 
 export const LOCALES: readonly Locale[] = [
   "en",
@@ -33,6 +34,7 @@ export const LOCALES: readonly Locale[] = [
   "br",
   "th",
   "bs",
+  "tr",
 ]
 
 /**
