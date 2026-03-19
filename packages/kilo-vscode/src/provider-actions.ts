@@ -187,6 +187,7 @@ export async function disconnectProvider(
       await ctx.client.auth.remove({ providerID: id }, { throwOnError: true })
     } catch (err) {
       if (!configured) throw err
+      console.warn(`[Kilo New] auth.remove failed for configured provider ${id} (non-fatal):`, err)
     }
 
     if (id === "kilo") {
