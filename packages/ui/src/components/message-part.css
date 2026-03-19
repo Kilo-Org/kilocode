@@ -90,6 +90,47 @@
     }
   }
 
+  [data-slot="user-message-files"] {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+    width: fit-content;
+    max-width: min(82%, 64ch);
+    margin-left: auto;
+    margin-bottom: 4px;
+  }
+
+  [data-slot="user-message-file"] {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    background: var(--surface-base);
+    border: 1px solid var(--border-weak-base);
+    font-size: var(--font-size-small, 12px);
+    color: var(--text-base);
+    max-width: 200px;
+    transition: opacity 0.3s ease;
+
+    [data-component="icon"] {
+      flex-shrink: 0;
+      color: var(--icon-weak);
+    }
+
+    &[data-queued] {
+      opacity: 0.6;
+    }
+  }
+
+  [data-slot="user-message-file-name"] {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+
   [data-slot="user-message-body"] {
     width: fit-content;
     max-width: min(82%, 64ch);

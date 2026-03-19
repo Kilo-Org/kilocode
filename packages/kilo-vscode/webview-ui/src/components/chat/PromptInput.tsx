@@ -313,11 +313,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           }))
         if (images.length > 0) imageAttach.replace(images)
         const restored = (failed.files ?? [])
-          .filter((f) => f.url.startsWith("file://"))
+          .filter((f) => !f.mime.startsWith("image/"))
           .map((f) => ({
             id: crypto.randomUUID(),
-            path: f.url.slice(7),
+            url: f.url,
             name: f.filename ?? f.url.split("/").pop() ?? "file",
+            mime: f.mime,
           }))
         if (restored.length > 0) fileAttach.replace(restored)
       }
@@ -350,7 +351,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
     if (message.type === "filePickerResult") {
       const result = message as import("../../types/messages").FilePickerResultMessage
-      for (const f of result.files) fileAttach.add(f.path, f.name)
+      for (const f of result.files) fileAttach.add(`file://${f.path}`, f.name, "text/plain")
       textareaRef?.focus()
     }
   })
@@ -600,8 +601,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const mentionFiles = mention.parseFileAttachments(draft)
     const imgFiles = imgs.map((img) => ({ mime: img.mime, url: img.dataUrl, filename: img.filename }))
     const pickedFiles = attached.map((f) => ({
-      mime: "text/plain",
-      url: `file://${f.path}`,
+      mime: f.mime,
+      url: f.url,
       filename: f.name,
     }))
     const allFiles = [...mentionFiles, ...imgFiles, ...pickedFiles]
@@ -640,7 +641,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       classList={{ "prompt-input-container--dragging": imageAttach.dragging() }}
       onDragOver={imageAttach.handleDragOver}
       onDragLeave={imageAttach.handleDragLeave}
-      onDrop={imageAttach.handleDrop}
+      onDrop={(e: DragEvent) => {
+        imageAttach.handleDrop(e)
+        fileAttach.handleDrop(e)
+      }}
     >
       <Show when={reviewComments().length > 0}>
         <div class="prompt-review-comments">
@@ -809,7 +813,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         <div class="file-attachments">
           <For each={fileAttach.files()}>
             {(f) => (
-              <div class="file-attachment" title={f.path}>
+              <div class="file-attachment" title={f.name}>
                 <FileIcon node={{ path: f.name, type: "file" }} class="file-attachment-icon" />
                 <span class="file-attachment-name">{f.name}</span>
                 <button

@@ -722,6 +722,13 @@ export function UserMessageDisplay(props: {
     }),
   )
 
+  const standalone = createMemo(() =>
+    files().filter((f) => {
+      const mime = f.mime
+      return !mime.startsWith("image/") && mime !== "application/pdf" && f.source?.text?.start === undefined
+    }),
+  )
+
   const agents = createMemo(() => (props.parts?.filter((p) => p.type === "agent") as AgentPart[]) ?? [])
 
   const model = createMemo(() => {
@@ -796,6 +803,20 @@ export function UserMessageDisplay(props: {
                       alt={file.filename ?? i18n.t("ui.message.attachment.alt")}
                     />
                   </Show>
+                </div>
+              )}
+            </For>
+          </div>
+        </Show>
+        <Show when={standalone().length > 0}>
+          <div data-slot="user-message-files">
+            <For each={standalone()}>
+              {(file) => (
+                <div data-slot="user-message-file" data-queued={props.queued ? "" : undefined}>
+                  <Icon name="go-to-file" size="small" />
+                  <span data-slot="user-message-file-name">
+                    {file.filename ?? file.url?.split("/").pop() ?? "file"}
+                  </span>
                 </div>
               )}
             </For>
