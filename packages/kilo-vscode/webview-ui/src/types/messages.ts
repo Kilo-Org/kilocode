@@ -203,6 +203,14 @@ export interface SkillInfo {
   location: string
 }
 
+// Slash command info from CLI backend
+export interface SlashCommandInfo {
+  name: string
+  description?: string
+  source?: "command" | "mcp" | "skill"
+  hints: string[]
+}
+
 // Agent/mode info from CLI backend
 export interface AgentInfo {
   name: string
@@ -624,6 +632,11 @@ export interface AgentsLoadedMessage {
 export interface SkillsLoadedMessage {
   type: "skillsLoaded"
   skills: SkillInfo[]
+}
+
+export interface CommandsLoadedMessage {
+  type: "commandsLoaded"
+  commands: SlashCommandInfo[]
 }
 
 export interface AutocompleteSettingsLoadedMessage {
@@ -1193,6 +1206,7 @@ export type ExtensionMessage =
   | ProvidersLoadedMessage
   | AgentsLoadedMessage
   | SkillsLoadedMessage
+  | CommandsLoadedMessage
   | AutocompleteSettingsLoadedMessage
   | ChatCompletionResultMessage
   | FileSearchResultMessage
@@ -1342,6 +1356,8 @@ export interface ImportAndSendMessage {
   agent?: string
   variant?: string
   files?: FileAttachment[]
+  command?: string
+  commandArgs?: string
 }
 
 export interface LoginRequest {
@@ -1398,6 +1414,23 @@ export interface RequestAgentsMessage {
 
 export interface RequestSkillsMessage {
   type: "requestSkills"
+}
+
+export interface RequestCommandsMessage {
+  type: "requestCommands"
+}
+
+export interface SendCommandRequest {
+  type: "sendCommand"
+  command: string
+  arguments: string
+  messageID?: string
+  sessionID?: string
+  providerID?: string
+  modelID?: string
+  agent?: string
+  variant?: string
+  files?: FileAttachment[]
 }
 
 export interface RemoveSkillMessage {
@@ -1844,6 +1877,8 @@ export type WebviewMessage =
   | CompactRequest
   | RequestAgentsMessage
   | RequestSkillsMessage
+  | RequestCommandsMessage
+  | SendCommandRequest
   | RemoveSkillMessage
   | RemoveModeMessage
   | SetLanguageRequest

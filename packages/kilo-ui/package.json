@@ -93,7 +93,7 @@
     "solid-js": "catalog:"
   },
   "devDependencies": {
-    "@playwright/test": "1.58.2",
+    "@playwright/test": "1.57.0",
     "@storybook/addon-a11y": "10.2.10",
     "@storybook/addon-docs": "10.2.10",
     "@storybook/addon-themes": "10.2.10",
@@ -117,6 +117,7 @@
     "@pierre/diffs": "catalog:",
     "@solid-primitives/media": "2.3.3",
     "@solid-primitives/resize-observer": "2.1.5",
-    "lucide-solid": "0.576.0"
+    "lucide-solid": "0.576.0",
+    "strip-ansi": "7.1.2"
   }
 }

@@ -113,7 +113,6 @@ export const dict = {
   "dialog.model.empty": "Ingen modeller fundet",
   "dialog.model.manage": "Administrer modeller",
   "dialog.model.manage.description": "Tilpas hvilke modeller der vises i modelvælgeren.",
-  "dialog.model.manage.provider.toggle": "Skift alle {{provider}}-modeller",
 
   "dialog.model.unpaid.freeModels.title": "Gratis modeller leveret af Kilo",
   "dialog.model.unpaid.addMore.title": "Tilføj flere modeller fra populære udbydere",
@@ -497,7 +496,6 @@ export const dict = {
   "session.review.loadingChanges": "Indlæser ændringer...",
   "session.review.empty": "Ingen ændringer i denne session endnu",
   "session.review.noChanges": "Ingen ændringer",
-  "session.review.noVcs": "Ingen git VCS registreret, så sessionsændringer vil ikke blive registreret",
   "session.files.selectToOpen": "Vælg en fil at åbne",
   "session.files.all": "Alle filer",
   "session.files.binaryContent": "Binær fil (indhold kan ikke vises)",
@@ -512,11 +510,7 @@ export const dict = {
   "session.todo.collapse": "Skjul",
   "session.todo.expand": "Udvid",
 
-  "session.modeSwitch.switching": "Skifter til {{mode}}-tilstand…",
-  "session.modeSwitch.waiting": "Venter på at den aktuelle opgave er fuldført",
-  "session.modeSwitch.notAvailable": "Agent ikke tilgængelig",
-  "session.modeSwitch.fallback": '"{{requested}}" ikke fundet, bruger "{{actual}}"',
-
+  "session.new.title": "Byg hvad som helst",
   "session.new.worktree.main": "Hovedgren",
   "session.new.worktree.mainWithBranch": "Hovedgren ({{branch}})",
   "session.new.worktree.create": "Opret nyt worktree",
@@ -614,8 +608,6 @@ export const dict = {
   "settings.general.row.theme.description": "Tilpas hvordan Kilo er temabestemt.",
   "settings.general.row.font.title": "Skrifttype",
   "settings.general.row.font.description": "Tilpas mono-skrifttypen brugt i kodeblokke",
-  "settings.general.row.reasoningSummaries.title": "Vis ræsonneringssammendrag",
-  "settings.general.row.reasoningSummaries.description": "Vis modelræsonneringssammendrag i tidslinjen",
 
   "settings.general.row.shellToolPartsExpanded.title": "Udvid shell-værktøjsdele",
   "settings.general.row.shellToolPartsExpanded.description": "Vis shell-værktøjsdele udvidet som standard i tidslinjen",

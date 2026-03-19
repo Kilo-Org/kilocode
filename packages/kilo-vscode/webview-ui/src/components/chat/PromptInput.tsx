@@ -19,6 +19,7 @@ import { ModelSelector } from "../shared/ModelSelector"
 import { ModeSwitcher } from "../shared/ModeSwitcher"
 import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
+import { useSlashCommand } from "../../hooks/useSlashCommand"
 import { useImageAttachments } from "../../hooks/useImageAttachments"
 import { usePromptHistory } from "../../hooks/usePromptHistory"
 import { WandSparkles } from "@kilocode/kilo-ui/lucide"
@@ -54,6 +55,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const worktree = useWorktreeMode()
   const dialog = useDialog()
   const mention = useFileMention(vscode)
+  const slash = useSlashCommand(vscode)
   const imageAttach = useImageAttachments()
   const history = usePromptHistory()
 
@@ -133,6 +135,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   let textareaRef: HTMLTextAreaElement | undefined
   let highlightRef: HTMLDivElement | undefined
   let dropdownRef: HTMLDivElement | undefined
+  let slashDropdownRef: HTMLDivElement | undefined
   let debounceTimer: ReturnType<typeof setTimeout> | undefined
   let requestCounter = 0
   // Save/restore input text when switching sessions.
@@ -369,6 +372,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (active) active.scrollIntoView({ block: "nearest" })
   }
 
+  const scrollToActiveSlashItem = () => {
+    if (!slashDropdownRef) return
+    const items = slashDropdownRef.querySelectorAll(".slash-command-item")
+    const active = items[slash.index()] as HTMLElement | undefined
+    if (active) active.scrollIntoView({ block: "nearest" })
+  }
+
   const syncHighlightScroll = () => {
     if (highlightRef && textareaRef) {
       highlightRef.scrollTop = textareaRef.scrollTop
@@ -402,9 +412,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     syncHighlightScroll()
     history.reset()
 
+    slash.onInput(val, target.selectionStart ?? val.length)
     mention.onInput(val, target.selectionStart ?? val.length)
 
-    if (mention.showMention()) {
+    if (slash.show() || mention.showMention()) {
       setGhostText("")
       if (debounceTimer) clearTimeout(debounceTimer)
       return
@@ -426,6 +437,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         textareaRef.value = restored
         adjustHeight()
       }
+      return
+    }
+
+    if (slash.onKeyDown(e, textareaRef, setText, adjustHeight)) {
+      setGhostText("")
+      queueMicrotask(scrollToActiveSlashItem)
       return
     }
 
@@ -525,7 +542,16 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const sel = session.selected()
     const attachments = allFiles.length > 0 ? allFiles : undefined
 
-    session.sendMessage(message, sel?.providerID, sel?.modelID, attachments)
+    // Detect slash command: text starts with "/" and first word matches a known command
+    const cmdMatch = draft.match(/^\/(\S+)/)
+    const matched = cmdMatch ? slash.commands().find((c) => c.name === cmdMatch[1]) : undefined
+    if (matched) {
+      const rest = draft.slice(cmdMatch![0].length).trim()
+      const args = review && rest ? `${review}\n\n${rest}` : rest || review
+      session.sendCommand(matched.name, args, sel?.providerID, sel?.modelID, attachments)
+    } else {
+      session.sendMessage(message, sel?.providerID, sel?.modelID, attachments)
+    }
 
     history.append(draft)
     history.reset()
@@ -536,6 +562,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     imageAttach.clear()
     if (debounceTimer) clearTimeout(debounceTimer)
     mention.closeMention()
+    slash.close()
     drafts.delete(sessionKey())
 
     if (textareaRef) textareaRef.style.height = "auto"
@@ -619,6 +646,30 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                   <FileIcon node={{ path, type: "file" }} class="file-mention-icon" />
                   <span class="file-mention-name">{fileName(path)}</span>
                   <span class="file-mention-dir">{dirName(path)}</span>
+                </div>
+              )}
+            </For>
+          </Show>
+        </div>
+      </Show>
+      <Show when={slash.show()}>
+        <div class="slash-command-dropdown" ref={slashDropdownRef}>
+          <Show when={slash.results().length > 0} fallback={<div class="slash-command-empty">No commands found</div>}>
+            <For each={slash.results()}>
+              {(cmd, idx) => (
+                <div
+                  class="slash-command-item"
+                  classList={{ "slash-command-item--active": idx() === slash.index() }}
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    if (textareaRef) slash.select(cmd, textareaRef, setText, adjustHeight)
+                  }}
+                  onMouseEnter={() => slash.setIndex(idx())}
+                >
+                  <span class="slash-command-name">/{cmd.name}</span>
+                  <Show when={cmd.description}>
+                    <span class="slash-command-desc">{cmd.description}</span>
+                  </Show>
                 </div>
               )}
             </For>

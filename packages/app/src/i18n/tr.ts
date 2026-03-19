@@ -522,6 +522,7 @@ export const dict = {
   "session.todo.collapse": "Daralt",
   "session.todo.expand": "Genişlet",
 
+  "session.new.title": "İstediğini yap",
   "session.new.worktree.main": "Ana dal",
   "session.new.worktree.mainWithBranch": "Ana dal ({{branch}})",
   "session.new.worktree.create": "Yeni çalışma ağacı oluştur",

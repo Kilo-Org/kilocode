@@ -7,7 +7,6 @@
  * For bash, the hierarchical rules from metadata.rules are shown.
  * For other tools, the always array is shown so users can configure per-tool permissions.
  * The command buttons (Deny / Run) control the current command.
- * When all rules are toggled ✓, the command auto-runs.
  */
 
 import { Component, For, Show, createMemo, createSignal } from "solid-js"
@@ -79,12 +78,6 @@ export const PermissionDock: Component<{
     const next = current === decision ? "pending" : decision
     const updated = { ...decisions(), [index]: next }
     setDecisions(updated)
-
-    const total = rules().length
-    const count = Object.values(updated).filter((d) => d === "approved").length
-    if (count === total && total > 0) {
-      props.onDecide("once", [...rules()], [])
-    }
   }
 
   const decision = (index: number): RuleDecision => decisions()[index] ?? "pending"
