@@ -5,6 +5,63 @@
 import type { KiloClient } from "@kilocode/sdk/v2"
 import { validateProviderID as validateProviderIDShared } from "./shared/custom-provider"
 import { sanitizeCustomProviderConfig } from "./shared/custom-provider"
+import { KILO_AUTO, parseModelString } from "./shared/provider-model"
+
+/**
+ * Compute the default model selection from CLI config, VS Code settings, or hardcoded fallback.
+ * Pure function — takes cachedConfig and vscode settings as parameters.
+ */
+type AuthState = "api" | "oauth" | "wellknown"
+
+/** Fetch auth methods alongside the provider list. Auth states default to empty (endpoint not yet available). */
+export async function fetchProviderData(client: KiloClient, dir: string) {
+  const authRequest =
+    typeof client.provider.auth === "function"
+      ? client.provider
+          .auth({ directory: dir }, { throwOnError: true })
+          .then((r) => r.data ?? {})
+          .catch(() => ({}))
+      : Promise.resolve({})
+
+  const [{ data: response }, authMethods] = await Promise.all([
+    client.provider.list({ directory: dir }, { throwOnError: true }),
+    authRequest,
+  ])
+  const authStates: Record<string, AuthState> = {}
+  return { response, authMethods, authStates }
+}
+
+export function buildActionContext(
+  client: KiloClient,
+  post: (msg: unknown) => void,
+  errFn: (err: unknown) => string,
+  dir: string,
+  refresh: () => Promise<void>,
+): ActionContext {
+  return {
+    client,
+    postMessage: post,
+    getErrorMessage: errFn,
+    workspaceDir: dir,
+    disposeGlobal: async (reason: string) => {
+      await client.global.dispose().catch((error: unknown) => {
+        console.warn(`[Kilo New] KiloProvider: global.dispose() after ${reason} failed:`, error)
+      })
+    },
+    fetchAndSendProviders: refresh,
+  }
+}
+
+export function computeDefaultSelection(
+  cachedConfig: { config?: { model?: string } } | null,
+  vscodePID: string,
+  vscodeMID: string,
+): { providerID: string; modelID: string } {
+  const configured = parseModelString(cachedConfig?.config?.model)
+  if (configured) return configured
+  if (vscodePID && vscodeMID) return { providerID: vscodePID, modelID: vscodeMID }
+  return { ...KILO_AUTO }
+}
 
 type PostMessage = (message: unknown) => void
 type GetErrorMessage = (error: unknown) => string
