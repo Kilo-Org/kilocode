@@ -468,6 +468,8 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "讀取待辦",
   "ui.permission.toolLabel.todoWrite": "更新待辦",
   "ui.permission.toolLabel.codeSearch": "程式碼搜尋",
+  "ui.permission.toggleWrap": "切換自動換行",
+  "ui.permission.copyCommand": "複製",
   "notification.question.title": "問題",
   "notification.question.description": "{{sessionTitle}}（{{projectName}}）有一個問題",
   "notification.action.goToSession": "前往工作階段",

@@ -471,6 +471,8 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "อ่านรายการงาน",
   "ui.permission.toolLabel.todoWrite": "เขียนรายการงาน",
   "ui.permission.toolLabel.codeSearch": "ค้นหาโค้ด",
+  "ui.permission.toggleWrap": "สลับการตัดคำ",
+  "ui.permission.copyCommand": "คัดลอก",
   "notification.question.title": "คำถาม",
   "notification.question.description": "{{sessionTitle}} ใน {{projectName}} มีคำถาม",
   "notification.action.goToSession": "ไปที่เซสชัน",

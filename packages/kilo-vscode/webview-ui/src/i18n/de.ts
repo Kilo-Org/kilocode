@@ -480,6 +480,8 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Todo lesen",
   "ui.permission.toolLabel.todoWrite": "Todo schreiben",
   "ui.permission.toolLabel.codeSearch": "Code-Suche",
+  "ui.permission.toggleWrap": "Zeilenumbruch umschalten",
+  "ui.permission.copyCommand": "Kopieren",
   "notification.question.title": "Frage",
   "notification.question.description": "{{sessionTitle}} in {{projectName}} hat eine Frage",
   "notification.action.goToSession": "Zur Sitzung gehen",

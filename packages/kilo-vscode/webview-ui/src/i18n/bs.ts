@@ -476,6 +476,8 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Čitanje liste zadataka",
   "ui.permission.toolLabel.todoWrite": "Ažuriranje liste zadataka",
   "ui.permission.toolLabel.codeSearch": "Pretraga koda",
+  "ui.permission.toggleWrap": "Prebaci prelamanje teksta",
+  "ui.permission.copyCommand": "Kopiraj",
   "notification.question.title": "Pitanje",
   "notification.question.description": "{{sessionTitle}} u {{projectName}} ima pitanje",
   "notification.action.goToSession": "Idi na sesiju",

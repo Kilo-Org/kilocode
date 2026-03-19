@@ -475,6 +475,8 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Leer Todo",
   "ui.permission.toolLabel.todoWrite": "Escribir Todo",
   "ui.permission.toolLabel.codeSearch": "Búsqueda de Código",
+  "ui.permission.toggleWrap": "Alternar ajuste de línea",
+  "ui.permission.copyCommand": "Copiar",
   "notification.question.title": "Pregunta",
   "notification.question.description": "{{sessionTitle}} en {{projectName}} tiene una pregunta",
   "notification.action.goToSession": "Ir a sesión",
