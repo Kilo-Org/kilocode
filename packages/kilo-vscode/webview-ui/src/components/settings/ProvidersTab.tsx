@@ -12,7 +12,6 @@ import { useProvider } from "../../context/provider"
 import { useServer } from "../../context/server"
 import { useVSCode } from "../../context/vscode"
 import type { Provider } from "../../types/messages"
-import DeviceAuthCard from "../profile/DeviceAuthCard"
 import CustomProviderDialog from "./CustomProviderDialog"
 import ProviderConnectDialog from "./ProviderConnectDialog"
 import ProviderSelectDialog from "./ProviderSelectDialog"
@@ -34,7 +33,7 @@ const ProvidersTab: Component = () => {
 
   onCleanup(action.dispose)
 
-  const kiloLoggedIn = createMemo(() => !!provider.authStates()[KILO_PROVIDER_ID])
+  const kiloLoggedIn = createMemo(() => !!server.profileData())
 
   const connectedProviders = createMemo(() => {
     const ids = visibleConnectedIds(provider.connected(), provider.authStates())
@@ -140,21 +139,6 @@ const ProvidersTab: Component = () => {
           </Show>
         </div>
       </Card>
-
-      {/* Device auth card for Kilo login */}
-      <Show when={server.deviceAuth().status !== "idle"}>
-        <div style={{ "margin-top": "12px" }}>
-          <DeviceAuthCard
-            status={server.deviceAuth().status}
-            code={server.deviceAuth().code}
-            verificationUrl={server.deviceAuth().verificationUrl}
-            expiresIn={server.deviceAuth().expiresIn}
-            error={server.deviceAuth().error}
-            onCancel={() => vscode.postMessage({ type: "cancelLogin" })}
-            onRetry={() => server.startLogin()}
-          />
-        </div>
-      </Show>
 
       {/* Connected providers (excluding Kilo) */}
       <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>
