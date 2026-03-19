@@ -8,6 +8,7 @@ import * as Formatter from "./formatter"
 import { Config } from "../config/config"
 import { mergeDeep } from "remeda"
 import { Instance } from "../project/instance"
+import { State } from "../project/state"
 import { Process } from "../util/process"
 
 export namespace Format {
@@ -24,7 +25,8 @@ export namespace Format {
     })
   export type Status = z.infer<typeof Status>
 
-  const state = Instance.state(async () => {
+  // kilocode_change start
+  async function load() {
     const enabled: Record<string, boolean> = {}
     const cfg = await Config.get()
 
@@ -62,7 +64,11 @@ export namespace Format {
       enabled,
       formatters,
     }
-  })
+  }
+
+  const state = Instance.state(load)
+  State.register("config", load)
+  // kilocode_change end
 
   async function isEnabled(item: Formatter.Info) {
     const s = await state()

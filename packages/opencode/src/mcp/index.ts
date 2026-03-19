@@ -14,6 +14,7 @@ import { Log } from "../util/log"
 import { NamedError } from "@opencode-ai/util/error"
 import z from "zod/v4"
 import { Instance } from "../project/instance"
+import { State } from "../project/state"
 import { Installation } from "../installation"
 import { withTimeout } from "@/util/timeout"
 import { McpOAuthProvider } from "./oauth-provider"
@@ -182,69 +183,73 @@ export namespace MCP {
     return pids
   }
 
-  const state = Instance.state(
-    async () => {
-      const cfg = await Config.get()
-      const config = cfg.mcp ?? {}
-      const clients: Record<string, MCPClient> = {}
-      const status: Record<string, Status> = {}
+  // kilocode_change start
+  async function mcpInit() {
+    const cfg = await Config.get()
+    const config = cfg.mcp ?? {}
+    const clients: Record<string, MCPClient> = {}
+    const status: Record<string, Status> = {}
 
-      await Promise.all(
-        Object.entries(config).map(async ([key, mcp]) => {
-          if (!isMcpConfigured(mcp)) {
-            log.error("Ignoring MCP config entry without type", { key })
-            return
-          }
-
-          // If disabled by config, mark as disabled without trying to connect
-          if (mcp.enabled === false) {
-            status[key] = { status: "disabled" }
-            return
-          }
-
-          const result = await create(key, mcp).catch(() => undefined)
-          if (!result) return
-
-          status[key] = result.status
-
-          if (result.mcpClient) {
-            clients[key] = result.mcpClient
-          }
-        }),
-      )
-      return {
-        status,
-        clients,
-      }
-    },
-    async (state) => {
-      // The MCP SDK only signals the direct child process on close.
-      // Servers like chrome-devtools-mcp spawn grandchild processes
-      // (e.g. Chrome) that the SDK never reaches, leaving them orphaned.
-      // Kill the full descendant tree first so the server exits promptly
-      // and no processes are left behind.
-      for (const client of Object.values(state.clients)) {
-        const pid = (client.transport as any)?.pid
-        if (typeof pid !== "number") continue
-        for (const dpid of await descendants(pid)) {
-          try {
-            process.kill(dpid, "SIGTERM")
-          } catch {}
+    await Promise.all(
+      Object.entries(config).map(async ([key, mcp]) => {
+        if (!isMcpConfigured(mcp)) {
+          log.error("Ignoring MCP config entry without type", { key })
+          return
         }
-      }
 
-      await Promise.all(
-        Object.values(state.clients).map((client) =>
-          client.close().catch((error) => {
-            log.error("Failed to close MCP client", {
-              error,
-            })
-          }),
-        ),
-      )
-      pendingOAuthTransports.clear()
-    },
-  )
+        // If disabled by config, mark as disabled without trying to connect
+        if (mcp.enabled === false) {
+          status[key] = { status: "disabled" }
+          return
+        }
+
+        const result = await create(key, mcp).catch(() => undefined)
+        if (!result) return
+
+        status[key] = result.status
+
+        if (result.mcpClient) {
+          clients[key] = result.mcpClient
+        }
+      }),
+    )
+    return {
+      status,
+      clients,
+    }
+  }
+
+  async function mcpDispose(state: Awaited<ReturnType<typeof mcpInit>>) {
+    // The MCP SDK only signals the direct child process on close.
+    // Servers like chrome-devtools-mcp spawn grandchild processes
+    // (e.g. Chrome) that the SDK never reaches, leaving them orphaned.
+    // Kill the full descendant tree first so the server exits promptly
+    // and no processes are left behind.
+    for (const client of Object.values(state.clients)) {
+      const pid = (client.transport as any)?.pid
+      if (typeof pid !== "number") continue
+      for (const dpid of await descendants(pid)) {
+        try {
+          process.kill(dpid, "SIGTERM")
+        } catch {}
+      }
+    }
+
+    await Promise.all(
+      Object.values(state.clients).map((client) =>
+        client.close().catch((error) => {
+          log.error("Failed to close MCP client", {
+            error,
+          })
+        }),
+      ),
+    )
+    pendingOAuthTransports.clear()
+  }
+
+  const state = Instance.state(mcpInit, mcpDispose)
+  State.register("config", mcpInit)
+  // kilocode_change end
 
   // Helper function to fetch prompts for a specific client
   async function fetchPromptsForClient(clientName: string, client: Client) {

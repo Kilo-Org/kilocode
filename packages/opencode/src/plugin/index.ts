@@ -6,7 +6,7 @@ import { createKiloClient } from "@kilocode/sdk"
 import { Server } from "../server/server"
 import { BunProc } from "../bun"
 import { Instance } from "../project/instance"
-import { State } from "../project/state" // kilocode_change
+import { State } from "../project/state"
 import { Flag } from "../flag/flag"
 import { CodexAuthPlugin } from "./codex"
 import { Session } from "../session"
@@ -31,7 +31,7 @@ export namespace Plugin {
   ] // kilocode_change end
 
   // kilocode_change start
-  async function load() {
+  async function pluginInit() {
     const client = createKiloClient({
       baseUrl: "http://localhost:4096",
       directory: Instance.directory,
@@ -51,10 +51,10 @@ export namespace Plugin {
 
     for (const plugin of INTERNAL_PLUGINS) {
       log.info("loading internal plugin", { name: plugin.name })
-      const init = await plugin(input).catch((err) => {
+      const loaded = await plugin(input).catch((err) => {
         log.error("failed to load internal plugin", { name: plugin.name, error: err })
       })
-      if (init) hooks.push(init)
+      if (loaded) hooks.push(loaded)
     }
 
     let plugins = config.plugin ?? []
@@ -107,14 +107,21 @@ export namespace Plugin {
         })
     }
 
+    // Send the current config to each hook so config-aware plugins see the
+    // latest settings, including after a config invalidation + lazy re-init.
+    for (const hook of hooks) {
+      // @ts-expect-error this is because we haven't moved plugin to sdk v2
+      await hook.config?.(config)
+    }
+
     return {
       hooks,
       input,
     }
   }
 
-  const state = Instance.state(load)
-  State.register("config", load)
+  const state = Instance.state(pluginInit)
+  State.register("config", pluginInit)
   // kilocode_change end
 
   export async function trigger<
@@ -139,12 +146,10 @@ export namespace Plugin {
   }
 
   export async function init() {
-    const hooks = await state().then((x) => x.hooks)
-    const config = await Config.get()
-    for (const hook of hooks) {
-      // @ts-expect-error this is because we haven't moved plugin to sdk v2
-      await hook.config?.(config)
-    }
+    // kilocode_change start — config callback moved into pluginInit so plugins
+    // receive fresh config on re-initialisation after a settings change.
+    await state()
+    // kilocode_change end
     Bus.subscribeAll(async (input) => {
       const hooks = await state().then((x) => x.hooks)
       for (const hook of hooks) {

@@ -348,8 +348,8 @@ export namespace Config {
   State.register("config", init)
 
   /** Remove all config-derived caches so the next access re-reads from disk. */
-  export function invalidateAll() {
-    State.invalidateGroup("config")
+  export async function invalidateAll() {
+    await State.invalidateGroup("config")
   }
   // kilocode_change end
 
@@ -1608,7 +1608,7 @@ export namespace Config {
     // kilocode_change start — invalidate per-instance config caches instead of
     // tearing down all instance state (which aborts active sessions, kills MCP
     // servers, etc.). The next Config.get() call will lazily re-read from disk.
-    invalidateAll()
+    await invalidateAll()
 
     GlobalBus.emit("event", {
       directory: "global",
