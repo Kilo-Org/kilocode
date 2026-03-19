@@ -106,7 +106,7 @@
       /* } */
     }
     &:disabled {
-      opacity: 0.4;
+      color: var(--icon-invert-base);
       cursor: not-allowed;
     }
   }

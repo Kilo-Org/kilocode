@@ -674,8 +674,6 @@ export function UserMessageDisplay(props: {
   animate?: boolean
   queued?: boolean
   onRevert?: () => void
-  revertDisabled?: boolean
-  revertDisabledReason?: string
 }) {
   const data = useData()
   const dialog = useDialog()
@@ -796,26 +794,6 @@ export function UserMessageDisplay(props: {
                   <span data-slot="user-message-meta" class="text-12-regular text-text-weak cursor-default">
                     {userMeta()}
                   </span>
-                </Show>
-                <Show when={props.onRevert || props.revertDisabled}>
-                  <Tooltip
-                    value={props.revertDisabled ? (props.revertDisabledReason ?? "") : i18n.t("ui.message.revert")}
-                    placement="top"
-                    gutter={4}
-                  >
-                    <IconButton
-                      icon="arrow-left"
-                      size="normal"
-                      variant="ghost"
-                      disabled={props.revertDisabled}
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        props.onRevert?.()
-                      }}
-                      aria-label={i18n.t("ui.message.revert")}
-                    />
-                  </Tooltip>
                 </Show>
                 <Tooltip
                   value={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}

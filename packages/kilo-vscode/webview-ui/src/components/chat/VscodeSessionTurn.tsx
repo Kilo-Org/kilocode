@@ -153,7 +153,17 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
       {(msg) => (
         <div class="vscode-session-turn" data-message={msg().id}>
           {/* User message */}
-          <div class="vscode-session-turn-user">
+          <div
+            class="vscode-session-turn-user"
+            data-revert-disabled={
+              assistantMessages().length > 0 && !session.revert() && session.status() !== "idle" ? "" : undefined
+            }
+            title={
+              assistantMessages().length > 0 && !session.revert() && session.status() !== "idle"
+                ? language.t("revert.disabled.agentBusy")
+                : undefined
+            }
+          >
             <UserMessageDisplay
               message={msg() as unknown as Parameters<typeof UserMessageDisplay>[0]["message"]}
               parts={parts() as unknown as Parameters<typeof UserMessageDisplay>[0]["parts"]}
@@ -161,11 +171,12 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
               queued={props.queued}
               onRevert={
                 assistantMessages().length > 0 && !session.revert()
-                  ? () => session.revertSession(props.messageID)
+                  ? () => {
+                      if (session.status() !== "idle") return
+                      session.revertSession(props.messageID)
+                    }
                   : undefined
               }
-              revertDisabled={assistantMessages().length > 0 && !session.revert() && session.status() !== "idle"}
-              revertDisabledReason={language.t("revert.disabled.agentBusy")}
             />
           </div>
 
