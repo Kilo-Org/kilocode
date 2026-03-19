@@ -1000,6 +1000,10 @@ export const dict = {
   "settings.agentBehaviour.removeMode.confirm":
     'Remover o modo "{{name}}"? Isso desativará o modo atualizando sua configuração.',
   "settings.agentBehaviour.removeMode.button": "Remover",
+  "settings.agentBehaviour.removeMcp.title": "Remover servidor MCP",
+  "settings.agentBehaviour.removeMcp.confirm":
+    'Remover o servidor MCP "{{name}}"? Isso o removerá da sua configuração.',
+  "settings.agentBehaviour.removeMcp.button": "Remover",
   "settings.agentBehaviour.skillPaths": "Caminhos de pastas de habilidades",
   "settings.agentBehaviour.skillUrls": "URLs de habilidades",
   "settings.agentBehaviour.removeSkill.title": "Remover habilidade",

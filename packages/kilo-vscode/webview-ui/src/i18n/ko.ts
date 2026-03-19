@@ -992,6 +992,9 @@ export const dict = {
   "settings.agentBehaviour.removeMode.confirm":
     '모드 "{{name}}"을(를) 제거하시겠습니까? 구성을 업데이트하여 모드를 비활성화합니다.',
   "settings.agentBehaviour.removeMode.button": "제거",
+  "settings.agentBehaviour.removeMcp.title": "MCP 서버 제거",
+  "settings.agentBehaviour.removeMcp.confirm": 'MCP 서버 "{{name}}"을(를) 제거하시겠습니까? 구성에서 제거됩니다.',
+  "settings.agentBehaviour.removeMcp.button": "제거",
   "settings.agentBehaviour.skillPaths": "스킬 폴더 경로",
   "settings.agentBehaviour.skillUrls": "스킬 URL",
   "settings.agentBehaviour.removeSkill.title": "스킬 제거",

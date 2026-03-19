@@ -105,5 +105,9 @@ html[data-theme="kilo-vscode"] [data-component="tool-part-wrapper"][data-part-ty
     word-break: break-word;
     min-width: 0;
     overflow: hidden;
+
+    &[data-scrollable] {
+      overflow-y: auto;
+    }
   }
 }

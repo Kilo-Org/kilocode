@@ -425,6 +425,31 @@ const AgentBehaviourTab: Component = () => {
     </div>
   )
 
+  const confirmRemoveMcp = (name: string) => {
+    dialog.show(() => (
+      <Dialog title={language.t("settings.agentBehaviour.removeMcp.title")} fit>
+        <div class="dialog-confirm-body">
+          <span>{language.t("settings.agentBehaviour.removeMcp.confirm", { name })}</span>
+          <div class="dialog-confirm-actions">
+            <Button variant="ghost" size="large" onClick={() => dialog.close()}>
+              {language.t("common.cancel")}
+            </Button>
+            <Button
+              variant="primary"
+              size="large"
+              onClick={() => {
+                dialog.close()
+                setTimeout(() => session.removeMcp(name), 150)
+              }}
+            >
+              {language.t("settings.agentBehaviour.removeMcp.button")}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+    ))
+  }
+
   const renderMcpSubtab = () => {
     const mcpEntries = createMemo(() => Object.entries(config().mcp ?? {}))
 
@@ -450,31 +475,45 @@ const AgentBehaviourTab: Component = () => {
               {([name, mcp], index) => (
                 <div
                   style={{
+                    display: "flex",
+                    "align-items": "center",
+                    "justify-content": "space-between",
                     padding: "8px 0",
                     "border-bottom": index() < mcpEntries().length - 1 ? "1px solid var(--border-weak-base)" : "none",
                   }}
                 >
-                  <div style={{ "font-weight": "500" }}>{name}</div>
-                  <div
-                    style={{
-                      "font-size": "12px",
-                      color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
-                      "margin-top": "4px",
-                      "font-family": "var(--vscode-editor-font-family, monospace)",
-                    }}
-                  >
-                    <Show when={mcp.command}>
-                      <div>
-                        command:{" "}
-                        {Array.isArray(mcp.command)
-                          ? mcp.command.join(" ")
-                          : `${mcp.command} ${(mcp.args ?? []).join(" ")}`}
-                      </div>
-                    </Show>
-                    <Show when={mcp.url}>
-                      <div>url: {mcp.url}</div>
-                    </Show>
+                  <div style={{ flex: 1, "min-width": 0 }}>
+                    <div style={{ "font-weight": "500" }}>{name}</div>
+                    <div
+                      style={{
+                        "font-size": "12px",
+                        color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                        "margin-top": "4px",
+                        "font-family": "var(--vscode-editor-font-family, monospace)",
+                      }}
+                    >
+                      <Show when={mcp.command}>
+                        <div>
+                          command:{" "}
+                          {Array.isArray(mcp.command)
+                            ? mcp.command.join(" ")
+                            : `${mcp.command} ${(mcp.args ?? []).join(" ")}`}
+                        </div>
+                      </Show>
+                      <Show when={mcp.url}>
+                        <div>url: {mcp.url}</div>
+                      </Show>
+                    </div>
                   </div>
+                  <IconButton
+                    size="small"
+                    variant="ghost"
+                    icon="close"
+                    onClick={(e: MouseEvent) => {
+                      e.stopPropagation()
+                      confirmRemoveMcp(name)
+                    }}
+                  />
                 </div>
               )}
             </For>

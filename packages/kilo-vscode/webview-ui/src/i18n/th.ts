@@ -987,6 +987,10 @@ export const dict = {
   "settings.agentBehaviour.removeMode.confirm":
     'ต้องการลบโหมด "{{name}}" หรือไม่? การดำเนินการนี้จะปิดใช้งานโหมดโดยอัปเดตการกำหนดค่าของคุณ',
   "settings.agentBehaviour.removeMode.button": "ลบ",
+  "settings.agentBehaviour.removeMcp.title": "ลบเซิร์ฟเวอร์ MCP",
+  "settings.agentBehaviour.removeMcp.confirm":
+    'ต้องการลบเซิร์ฟเวอร์ MCP "{{name}}" หรือไม่? การดำเนินการนี้จะลบออกจากการกำหนดค่าของคุณ',
+  "settings.agentBehaviour.removeMcp.button": "ลบ",
   "settings.agentBehaviour.skillPaths": "เส้นทางโฟลเดอร์ทักษะ",
   "settings.agentBehaviour.skillUrls": "URL ทักษะ",
   "settings.agentBehaviour.removeSkill.title": "ลบทักษะ",

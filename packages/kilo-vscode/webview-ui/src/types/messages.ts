@@ -1361,6 +1361,11 @@ export interface CompactRequest {
   modelID?: string
 }
 
+export interface OpenSettingsPanelRequest {
+  type: "openSettingsPanel"
+  tab?: string
+}
+
 export interface RequestAgentsMessage {
   type: "requestAgents"
 }
@@ -1393,6 +1398,11 @@ export interface RemoveSkillMessage {
 
 export interface RemoveModeMessage {
   type: "removeMode"
+  name: string
+}
+
+export interface RemoveMcpMessage {
+  type: "removeMcp"
   name: string
 }
 
@@ -1777,6 +1787,7 @@ export type WebviewMessage =
   | LogoutRequest
   | RefreshProfileRequest
   | OpenExternalRequest
+  | OpenSettingsPanelRequest
   | OpenFileRequest
   | CancelLoginRequest
   | SetOrganizationRequest
@@ -1789,6 +1800,7 @@ export type WebviewMessage =
   | SendCommandRequest
   | RemoveSkillMessage
   | RemoveModeMessage
+  | RemoveMcpMessage
   | SetLanguageRequest
   | QuestionReplyRequest
   | QuestionRejectRequest
