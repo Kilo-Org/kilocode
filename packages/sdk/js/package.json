@@ -1,14 +1,9 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@kilocode/sdk",
-  "version": "7.0.50",
+  "version": "7.0.51",
   "type": "module",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Kilo-Org/kilocode",
-    "directory": "packages/sdk/js"
-  },
   "scripts": {
     "typecheck": "tsgo --noEmit",
     "build": "bun ./script/build.ts"
@@ -33,5 +28,10 @@
     "@typescript/native-preview": "catalog:"
   },
   "dependencies": {},
-  "peerDependencies": {}
+  "peerDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kilo-Org/kilocode",
+    "directory": "packages/sdk/js"
+  }
 }

@@ -63,6 +63,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private cachedCommandsMessage: unknown = null
   /** Cached configLoaded payload so requestConfig can be served before client is ready */
   private cachedConfigMessage: unknown = null
+  /** Ref-count of in-flight handleUpdateConfig calls; prevents fetchAndSendConfig from sending stale data */
+  private pending = 0
   /** Cached notificationsLoaded payload */
   private cachedNotificationsMessage: unknown = null
   private pendingReviewComments: unknown[][] = []
@@ -513,6 +515,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             vscode.env.openExternal(vscode.Uri.parse(message.url))
           }
           break
+        case "openSettingsPanel":
+          vscode.commands.executeCommand("kilo-code.new.settingsButtonClicked", message.tab)
+          break
         case "openChanges":
           vscode.commands.executeCommand("kilo-code.new.showChanges")
           break
@@ -555,6 +560,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "removeMode":
           this.handleRemoveMode(message.name).catch((e) => console.error("[Kilo New] handleRemoveMode failed:", e))
+          break
+        case "removeMcp":
+          this.handleRemoveMcp(message.name).catch((e) => console.error("[Kilo New] handleRemoveMcp failed:", e))
           break
         case "questionReply":
           await this.handleQuestionReply(message.requestID, message.answers)
@@ -1411,6 +1419,27 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     await this.fetchAndSendAgents()
   }
 
+  private async handleRemoveMcp(name: string): Promise<void> {
+    const workspace = this.getProjectDirectory(this.currentSession?.id)
+    const mp = this.getMarketplace()
+    const stub = { id: name, type: "mcp" as const, name, description: "", url: "", content: "" }
+
+    // Remove from both scopes — an MCP could exist in project, global, or both
+    const project = await mp.remove(stub, "project", workspace)
+    const global = await mp.remove(stub, "global", workspace)
+
+    if (project.success || global.success) {
+      // Use global scope when removed from global (or both) so the global
+      // config cache is also invalidated; project scope is a subset.
+      const scope = global.success ? "global" : "project"
+      await this.disposeCliInstance(scope)
+      this.cachedConfigMessage = null
+      await this.fetchAndSendConfig()
+    } else {
+      console.error("[Kilo New] KiloProvider: Failed to remove MCP server:", name)
+    }
+  }
+
   /**
    * Dispose the CLI backend instance so it re-reads config from disk.
    * Call after any marketplace install/remove that writes config files directly.
@@ -1476,6 +1505,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (this.cachedConfigMessage) {
         this.postMessage(this.cachedConfigMessage)
       }
+      return
+    }
+
+    // Skip if handleUpdateConfig is in flight — sending a configLoaded now
+    // would race with the write and potentially overwrite optimistic webview state.
+    if (this.pending > 0) {
       return
     }
 
@@ -1803,13 +1838,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
+    // Belt-and-suspenders guard: prevent fetchAndSendConfig from sending a
+    // stale configLoaded while this write is in flight (the SSE-triggered reload
+    // races with the async config.update() write on the CLI backend).
+    this.pending++
     try {
       await this.client.global.config.update({ config: partial }, { throwOnError: true })
 
+      // global.config.update only resets the global config cache — the
+      // per-instance merged config (Config.state) is still stale. Force a
+      // full instance disposal so the next config.get re-merges all layers.
+      await this.client.global.dispose({ throwOnError: true })
+
       // Re-fetch the full merged config (global + project + all layers) so the
       // webview receives the complete resolved config, not just global-only data.
-      // Without this, the global-only response would overwrite project-level
-      // values in the webview, causing settings to flicker and revert.
       const dir = this.getWorkspaceDirectory()
       const { data: merged } = await this.client.config.get({ directory: dir }, { throwOnError: true })
 
@@ -1825,6 +1867,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         type: "error",
         message: getErrorMessage(error) || "Failed to update config",
       })
+      // Send configUpdated with the last known good config so the webview
+      // decrements its pendingUpdates counter and reverts the optimistic state.
+      if (this.cachedConfigMessage) {
+        this.postMessage({ type: "configUpdated", config: (this.cachedConfigMessage as { config: unknown }).config })
+      }
+    } finally {
+      this.pending--
     }
   }
 
@@ -2714,15 +2763,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Shell
     const shell = vscode.env.shell || undefined
 
-    // Timezone
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || undefined
-
     return {
       ...(visibleFiles.length > 0 ? { visibleFiles } : {}),
       ...(openTabs.length > 0 ? { openTabs } : {}),
       ...(activeFile ? { activeFile } : {}),
       ...(shell ? { shell } : {}),
-      ...(timezone ? { timezone } : {}),
     }
   }
 

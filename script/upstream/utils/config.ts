@@ -113,6 +113,7 @@ export const defaultConfig: MergeConfig = {
     "README.th.md",
     "README.tr.md",
     "README.uk.md",
+    "README.vi.md",
     "README.zh.md",
     "README.zht.md",
     // Stats file
