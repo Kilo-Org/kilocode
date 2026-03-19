@@ -1845,11 +1845,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     try {
       await this.client.global.config.update({ config: partial }, { throwOnError: true })
 
-      // global.config.update only resets the global config cache — the
-      // per-instance merged config (Config.state) is still stale. Force a
-      // full instance disposal so the next config.get re-merges all layers.
-      await this.client.global.dispose({ throwOnError: true })
-
       // Re-fetch the full merged config (global + project + all layers) so the
       // webview receives the complete resolved config, not just global-only data.
       const dir = this.getWorkspaceDirectory()

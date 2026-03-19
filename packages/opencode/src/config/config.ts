@@ -24,6 +24,7 @@ import {
 } from "jsonc-parser"
 // kilocode_change end
 import { Instance } from "../project/instance"
+import { State } from "../project/state" // kilocode_change
 import { LSPServer } from "../lsp/server"
 import { BunProc } from "@/bun"
 import { Installation } from "@/installation"
@@ -82,7 +83,7 @@ export namespace Config {
     return merged
   }
 
-  export const state = Instance.state(async () => {
+  async function init() {
     const auth = await Auth.all()
 
     // This ensures Opencode native configs always take precedence over legacy Kilocode configs
@@ -339,7 +340,16 @@ export namespace Config {
       directories,
       deps,
     }
-  })
+  }
+
+  export const state = Instance.state(init)
+
+  // kilocode_change start
+  /** Remove cached config state from all instances so the next access re-reads from disk. */
+  export function invalidateAll() {
+    State.removeByInit(init)
+  }
+  // kilocode_change end
 
   export async function waitForDependencies() {
     const deps = await state().then((x) => x.deps)
@@ -1590,22 +1600,22 @@ export namespace Config {
     // kilocode_change start — skip dispose when caller opts out (e.g. permission-only saves)
     await global.reset()
 
-    if (!dispose) return next;
+    if (!dispose) return next
     // kilocode_change end
 
+    // kilocode_change start — invalidate per-instance config caches instead of
+    // tearing down all instance state (which aborts active sessions, kills MCP
+    // servers, etc.). The next Config.get() call will lazily re-read from disk.
+    invalidateAll()
 
-    void Instance.disposeAll()
-      .catch(() => undefined)
-      .finally(() => {
-        GlobalBus.emit("event", {
-          directory: "global",
-          payload: {
-            type: Event.Disposed.type,
-            properties: {},
-          },
-        })
-      })
-
+    GlobalBus.emit("event", {
+      directory: "global",
+      payload: {
+        type: Event.Disposed.type,
+        properties: {},
+      },
+    })
+    // kilocode_change end
 
     return next
   }

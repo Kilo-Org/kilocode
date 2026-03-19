@@ -67,4 +67,15 @@ export namespace State {
     disposalFinished = true
     log.info("state disposal completed", { key })
   }
+
+  /**
+   * Remove entries across all directories that were registered with the given
+   * init function. Unlike dispose(), this does NOT call dispose callbacks —
+   * the entry is simply dropped so the next access re-initialises it lazily.
+   */
+  export function removeByInit(init: any) {
+    for (const entries of recordsByKey.values()) {
+      entries.delete(init)
+    }
+  }
 }
