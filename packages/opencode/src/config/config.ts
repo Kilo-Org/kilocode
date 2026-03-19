@@ -1590,7 +1590,23 @@ export namespace Config {
     // kilocode_change start — skip dispose when caller opts out (e.g. permission-only saves)
     await global.reset()
 
-    if (!dispose) return next;
+    if (!dispose) {
+      // Update Config.state in-place so Config.get() returns fresh data without a full dispose.
+      // This avoids the stale-cache problem: Config.state is a per-instance singleton that
+      // caches the merged config. Without this, config.get() would return the old merged config
+      // until the next full dispose cycle.
+      const s = await state()
+      s.config = mergeConfig(s.config, config)
+
+      GlobalBus.emit("event", {
+        directory: "global",
+        payload: {
+          type: Event.ConfigUpdated.type,
+          properties: {},
+        },
+      })
+      return next
+    }
     // kilocode_change end
 
 

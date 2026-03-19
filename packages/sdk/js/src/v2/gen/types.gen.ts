@@ -68,6 +68,13 @@ export type EventGlobalDisposed = {
   }
 }
 
+export type EventGlobalConfigUpdated = {
+  type: "global.config.updated"
+  properties: {
+    [key: string]: unknown
+  }
+}
+
 export type EventLspClientDiagnostics = {
   type: "lsp.client.diagnostics"
   properties: {
@@ -990,6 +997,7 @@ export type Event =
   | EventServerInstanceDisposed
   | EventServerConnected
   | EventGlobalDisposed
+  | EventGlobalConfigUpdated
   | EventLspClientDiagnostics
   | EventLspUpdated
   | EventFileEdited

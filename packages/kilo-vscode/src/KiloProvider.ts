@@ -1503,6 +1503,22 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /**
+   * Fetch the latest merged config and push it as configUpdated.
+   * Called when global.config.updated SSE fires (config changed without a full dispose).
+   */
+  private async fetchAndSendConfigUpdated(): Promise<void> {
+    if (!this.client || this.connectionState !== "connected") return
+    try {
+      const dir = this.getWorkspaceDirectory()
+      const { data: config } = await this.client.config.get({ directory: dir }, { throwOnError: true })
+      this.cachedConfigMessage = { type: "configLoaded", config }
+      this.postMessage({ type: "configUpdated", config })
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to fetch config after update:", error)
+    }
+  }
+
+  /**
    * Fetch Kilo news/notifications and send to webview.
    * Uses the cached message pattern so the webview gets data immediately on refresh.
    */
@@ -2564,6 +2580,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Refresh provider and agent lists when the server signals a state disposal
     if (event.type === "server.instance.disposed" || event.type === "global.disposed") {
       void this.reloadAfterAuthChange()
+      return
+    }
+
+    // Config was updated without a full dispose (e.g. permission-only save).
+    // Fetch and push the updated config so the Settings panel reflects the change.
+    if (event.type === "global.config.updated") {
+      void this.fetchAndSendConfigUpdated()
       return
     }
 

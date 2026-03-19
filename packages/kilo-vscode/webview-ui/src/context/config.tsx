@@ -74,7 +74,14 @@ export const ConfigProvider: ParentComponent = (props) => {
       return
     }
     if (message.type === "configUpdated") {
-      setConfig(message.config)
+      // When there's an active draft, re-apply the draft on top of the incoming server
+      // config so both the server-side change (e.g. a permission-dock save) and the
+      // user's pending settings changes are reflected in the UI.
+      if (isDirty()) {
+        setConfig(stripNulls(deepMerge(message.config, draft())))
+      } else {
+        setConfig(message.config)
+      }
       setSaved(message.config)
       return
     }
