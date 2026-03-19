@@ -252,6 +252,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         type: "profileData",
         data: profileData,
       })
+
+      // Seed session status map so the Settings panel knows about already-running sessions.
+      // Must run after webview is ready (postMessage is a no-op before that).
+      void this.seedSessionStatusMap()
     }
 
     // legacy-migration start
@@ -907,7 +911,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       await this.syncWebviewState("initializeConnection")
       await this.flushPendingSessionRefresh("initializeConnection")
 
-      // Fetch providers, agents, skills, config, and notifications in parallel
+      // Fetch providers, agents, skills, config, notifications, and session statuses in parallel
       await Promise.all([
         this.fetchAndSendProviders(),
         this.fetchAndSendAgents(),
@@ -915,6 +919,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.fetchAndSendCommands(),
         this.fetchAndSendConfig(),
         this.fetchAndSendNotifications(),
+        this.seedSessionStatusMap(),
       ])
       this.sendNotificationSettings()
 
@@ -1534,6 +1539,32 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage(message)
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to fetch config:", error)
+    }
+  }
+
+  /**
+   * Seed sessionStatusMap with current session statuses on connect.
+   * Without this, the Settings panel (which has no tracked sessions) would see
+   * busyCount() = 0 for sessions that were already running before it opened.
+   * Sends sessionStatus messages to the webview for ALL sessions (not just tracked).
+   */
+  private async seedSessionStatusMap(): Promise<void> {
+    if (!this.client || this.connectionState !== "connected") return
+    try {
+      const dir = this.getWorkspaceDirectory()
+      const result = await this.client.session.status({ directory: dir })
+      if (!result.data) return
+      for (const [sid, info] of Object.entries(result.data) as [string, SessionStatus][]) {
+        this.sessionStatusMap.set(sid, info.type)
+        this.postMessage({
+          type: "sessionStatus",
+          sessionID: sid,
+          status: info.type,
+          ...(info.type === "retry" ? { attempt: info.attempt, message: info.message, next: info.next } : {}),
+        })
+      }
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to seed session statuses:", error)
     }
   }
 

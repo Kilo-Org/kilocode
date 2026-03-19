@@ -63,6 +63,8 @@ export const ConfigProvider: ParentComponent = (props) => {
   const [isDirty, setIsDirty] = createSignal(false)
   // Last config received from the server — used to revert on discard
   const [saved, setSaved] = createSignal<Config>({})
+  // True while a saveConfig() write is in-flight — used to clear draft on success
+  let saving = false
 
   // Race-condition guard: track how many updateConfig calls are in-flight.
   //
@@ -92,13 +94,21 @@ export const ConfigProvider: ParentComponent = (props) => {
       return
     }
     if (message.type === "configUpdated") {
-      // When there's an active draft, re-apply the draft on top of the incoming server
-      // config so both the server-side change (e.g. a permission-dock save) and the
-      // user's pending settings changes are reflected in the UI.
-      if (isDirty()) {
-        setConfig(stripNulls(deepMerge(message.config, draft())))
-      } else {
+      if (saving) {
+        // This configUpdated is the confirmation of our saveConfig() write.
+        // Clear the draft now that the server has confirmed the write.
+        saving = false
+        setDraft({})
+        setIsDirty(false)
         setConfig(message.config)
+      } else {
+        // configUpdated from a different source (e.g. PermissionDock save).
+        // Re-apply the draft on top so pending settings changes are preserved.
+        if (isDirty()) {
+          setConfig(stripNulls(deepMerge(message.config, draft())))
+        } else {
+          setConfig(message.config)
+        }
       }
       setSaved(message.config)
 =======
@@ -152,8 +162,9 @@ export const ConfigProvider: ParentComponent = (props) => {
   function saveConfig() {
     const changes = draft()
     if (Object.keys(changes).length === 0) return
-    setDraft({})
-    setIsDirty(false)
+    // Don't clear draft/isDirty yet — wait for configUpdated confirmation.
+    // If the write fails, the save bar stays visible so the user can retry.
+    saving = true
     vscode.postMessage({ type: "updateConfig", config: changes })
   }
 
