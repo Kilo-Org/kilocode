@@ -792,6 +792,11 @@ export function UserMessageDisplay(props: {
                 </GrowBox>
               </div>
               <div data-slot="user-message-copy-wrapper" data-interrupted={props.interrupted ? "" : undefined}>
+                <Show when={userMeta()}>
+                  <span data-slot="user-message-meta" class="text-12-regular text-text-weak cursor-default">
+                    {userMeta()}
+                  </span>
+                </Show>
                 <Show when={props.onRevert || props.revertDisabled}>
                   <Tooltip
                     value={props.revertDisabled ? (props.revertDisabledReason ?? "") : i18n.t("ui.message.revert")}
