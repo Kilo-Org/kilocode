@@ -136,6 +136,7 @@ interface SessionContextValue {
   // Agent/mode selection (per-session)
   agents: Accessor<AgentInfo[]>
   removeMode: (name: string) => void
+  removeMcp: (name: string) => void
   selectedAgent: Accessor<string>
   selectAgent: (name: string) => void
   getSessionAgent: (sessionID: string) => string
@@ -250,6 +251,10 @@ export const SessionProvider: ParentComponent = (props) => {
     }
 
     vscode.postMessage({ type: "removeMode", name })
+  }
+
+  const removeMcp = (name: string) => {
+    vscode.postMessage({ type: "removeMcp", name })
   }
 
   // Pending agent selection for before a session exists
@@ -1568,6 +1573,7 @@ export const SessionProvider: ParentComponent = (props) => {
     refreshSkills,
     removeSkill,
     removeMode,
+    removeMcp,
     selectedAgent: selectedAgentName,
     selectAgent,
     getSessionAgent: (sessionID: string) => store.agentSelections[sessionID] ?? defaultAgent(),

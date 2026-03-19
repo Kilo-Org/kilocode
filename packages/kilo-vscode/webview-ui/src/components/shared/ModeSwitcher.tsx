@@ -7,7 +7,7 @@
  * ModeSwitcher     — thin wrapper wired to session context for chat usage.
  */
 
-import { Component, createSignal, For, Show } from "solid-js"
+import { Component, createSignal, onCleanup, For, Show } from "solid-js"
 import { Popover } from "@kilocode/kilo-ui/popover"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useSession } from "../../context/session"
@@ -28,6 +28,11 @@ export interface ModeSwitcherBaseProps {
 
 export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
   const [open, setOpen] = createSignal(false)
+
+  // Listen for slash command trigger
+  const onTrigger = () => setOpen(true)
+  window.addEventListener("openModePicker", onTrigger)
+  onCleanup(() => window.removeEventListener("openModePicker", onTrigger))
 
   const hasAgents = () => props.agents.length > 1
 

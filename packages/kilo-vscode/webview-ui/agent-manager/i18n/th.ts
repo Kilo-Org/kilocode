@@ -80,6 +80,7 @@ export const dict = {
   "agentManager.dialog.versions": "เวอร์ชัน",
   "agentManager.dialog.versionHint": "{{count}} Worktrees จะทำงานพร้อมกัน",
   "agentManager.dialog.compareModels": "เปรียบเทียบโมเดล",
+  "agentManager.dialog.compareModels.tooltip": "เรียกใช้เอเจนต์บนโมเดลต่าง ๆ พร้อมกันเพื่อเปรียบเทียบผลลัพธ์",
   "agentManager.dialog.compareModels.searchModels": "ค้นหาโมเดล...",
   "agentManager.dialog.compareModels.selectModels": "เลือกโมเดล...",
   "agentManager.dialog.creating": "กำลังสร้าง...",
