@@ -530,12 +530,16 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const handleSend = () => {
     const draft = text().trim()
 
-    // Detect slash command (hoisted for both client and server command checks)
+    // Detect slash command (hoisted for both client and server command checks).
+    // Prioritize exact name matches over hint/alias matches so that a server
+    // command named e.g. "continue" is not hijacked by a client alias.
     const cmdMatch = draft.match(/^\/(\S+)/)
     const word = cmdMatch?.[1]
-    const matched = word ? slash.commands().find((c) => c.name === word || c.hints.includes(word)) : undefined
+    const matched = word
+      ? (slash.commands().find((c) => c.name === word) ?? slash.commands().find((c) => c.hints.includes(word)))
+      : undefined
 
-    // Client-side slash command — runs locally, works even when disconnected
+    // Client-side slash command — runs locally without a backend round-trip
     if (matched?.action) {
       setText("")
       setGhostText("")
