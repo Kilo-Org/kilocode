@@ -28,7 +28,7 @@ export function createInlineEditorController() {
   }
 
   const editorKeyDown = (event: KeyboardEvent, callback: (next: string) => void) => {
-    if (event.key === "Enter") {
+    if (event.key === "Enter" && !(event.isComposing || event.keyCode === 229)) { // kilocode_change
       event.preventDefault()
       saveEditor(callback)
       return

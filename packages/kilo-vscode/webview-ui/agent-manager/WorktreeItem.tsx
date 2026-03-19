@@ -121,7 +121,7 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                 value={props.renameValue}
                 onInput={(e) => props.onRenameInput(e.currentTarget.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") {
+                  if (e.key === "Enter" && !(e.isComposing || e.keyCode === 229)) {
                     e.preventDefault()
                     props.onCommitRename()
                   }

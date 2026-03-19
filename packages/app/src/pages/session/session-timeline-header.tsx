@@ -451,7 +451,7 @@ export function SessionTimelineHeader(props: {
                     onInput={(event) => setTitle("draft", event.currentTarget.value)}
                     onKeyDown={(event) => {
                       event.stopPropagation()
-                      if (event.key === "Enter") {
+                      if (event.key === "Enter" && !(event.isComposing || event.keyCode === 229)) { // kilocode_change
                         event.preventDefault()
                         void saveTitleEditor()
                         return

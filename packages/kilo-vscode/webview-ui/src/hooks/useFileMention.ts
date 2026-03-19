@@ -139,7 +139,7 @@ export function useFileMention(vscode: VSCodeContext): FileMention {
       setMentionIndex((i) => Math.max(i - 1, 0))
       return true
     }
-    if (e.key === "Enter" || e.key === "Tab") {
+    if ((e.key === "Enter" || e.key === "Tab") && !(e.isComposing || e.keyCode === 229)) {
       const path = mentionResults()[mentionIndex()]
       if (!path) return false
       e.preventDefault()

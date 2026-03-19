@@ -1556,7 +1556,7 @@ const AgentManagerContent: Component = () => {
         e.preventDefault()
         e.stopPropagation()
         setHighlighted((prev) => Math.max(prev - 1, -1))
-      } else if (e.key === "Enter") {
+      } else if (e.key === "Enter" && !(e.isComposing || e.keyCode === 229)) {
         e.preventDefault()
         e.stopPropagation()
         const idx = highlighted()

@@ -550,7 +550,7 @@ const AgentBehaviourTab: Component = () => {
               placeholder="e.g. ./skills"
               onChange={(val) => setNewSkillPath(val)}
               onKeyDown={(e: KeyboardEvent) => {
-                if (e.key === "Enter") addSkillPath()
+                if (e.key === "Enter" && !(e.isComposing || e.keyCode === 229)) addSkillPath()
               }}
             />
           </div>
@@ -601,7 +601,7 @@ const AgentBehaviourTab: Component = () => {
               placeholder="e.g. https://example.com/skills"
               onChange={(val) => setNewSkillUrl(val)}
               onKeyDown={(e: KeyboardEvent) => {
-                if (e.key === "Enter") addSkillUrl()
+                if (e.key === "Enter" && !(e.isComposing || e.keyCode === 229)) addSkillUrl()
               }}
             />
           </div>
@@ -673,7 +673,7 @@ const AgentBehaviourTab: Component = () => {
               placeholder="e.g. ./INSTRUCTIONS.md"
               onChange={(val) => setNewInstruction(val)}
               onKeyDown={(e: KeyboardEvent) => {
-                if (e.key === "Enter") addInstruction()
+                if (e.key === "Enter" && !(e.isComposing || e.keyCode === 229)) addInstruction()
               }}
             />
           </div>

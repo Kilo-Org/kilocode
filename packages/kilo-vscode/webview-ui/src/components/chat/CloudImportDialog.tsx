@@ -50,7 +50,7 @@ export const CloudImportDialog: Component<CloudImportDialogProps> = (props) => {
           value={value()}
           onChange={setValue}
           onKeyDown={(e: KeyboardEvent) => {
-            if (e.key === "Enter") submit()
+            if (e.key === "Enter" && !(e.isComposing || e.keyCode === 229)) submit()
           }}
           validationState={error() ? "invalid" : undefined}
           error={error()}

@@ -182,7 +182,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
       e.preventDefault()
       setSelectedIndex((i) => (i - 1 + totalLen) % totalLen)
       scrollSelectedIntoView()
-    } else if (e.key === "Enter") {
+    } else if (e.key === "Enter" && !(e.isComposing || e.keyCode === 229)) {
       e.preventDefault()
       const idx = selectedIndex()
       if (props.allowClear && idx === 0) {

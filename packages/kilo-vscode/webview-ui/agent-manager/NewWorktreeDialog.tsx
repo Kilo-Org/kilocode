@@ -398,7 +398,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                                 .querySelector(`.am-branch-item[data-index="${prev}"]`)
                                 ?.scrollIntoView({ block: "nearest" })
                             })
-                          } else if (e.key === "Enter") {
+                          } else if (e.key === "Enter" && !(e.isComposing || e.keyCode === 229)) {
                             e.preventDefault()
                             e.stopPropagation()
                             const selected = items[highlightedIndex()]
@@ -556,7 +556,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                   value={prUrl()}
                   onInput={(e) => setPrUrl(e.currentTarget.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
+                    if (e.key === "Enter" && !(e.isComposing || e.keyCode === 229)) {
                       e.preventDefault()
                       handlePRSubmit()
                     }

@@ -248,7 +248,7 @@ export const LineCommentEditor = (props: LineCommentEditorProps) => {
               return
             }
             if (e.key !== "Enter") return
-            if (e.shiftKey) return
+            if (e.shiftKey || event.isComposing || event.keyCode === 229) return // kilocode_change
             event.preventDefault()
             submit()
           }}

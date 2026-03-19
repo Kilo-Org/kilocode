@@ -568,7 +568,7 @@ export function createFileFind(opts: CreateFileFindOptions) {
         close()
         return
       }
-      if (event.key !== "Enter") return
+      if (event.key !== "Enter" || event.isComposing || event.keyCode === 229) return // kilocode_change
       event.preventDefault()
       next(event.shiftKey ? -1 : 1)
     },

@@ -179,7 +179,7 @@ const SessionList: Component<SessionListProps> = (props) => {
               onInput={(e) => setRenameValue(e.currentTarget.value)}
               onKeyDown={(e) => {
                 e.stopPropagation()
-                if (e.key === "Enter") {
+                if (e.key === "Enter" && !(e.isComposing || e.keyCode === 229)) {
                   e.preventDefault()
                   saveRename()
                 }

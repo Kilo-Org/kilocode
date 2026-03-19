@@ -493,7 +493,7 @@ const GranularToolRow: Component<{
             value={input()}
             onInput={(e) => setInput(e.currentTarget.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") submit()
+              if (e.key === "Enter" && !(e.isComposing || e.keyCode === 229)) submit()
               if (e.key === "Escape") cancel()
             }}
             onBlur={() => {

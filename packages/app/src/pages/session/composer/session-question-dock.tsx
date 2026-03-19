@@ -453,7 +453,7 @@ export const SessionQuestionDock: Component<{
                     setStore("editing", false)
                     return
                   }
-                  if (e.key !== "Enter" || e.shiftKey) return
+                  if (e.key !== "Enter" || e.shiftKey || e.isComposing || e.keyCode === 229) return // kilocode_change
                   e.preventDefault()
                   commitCustom()
                 }}

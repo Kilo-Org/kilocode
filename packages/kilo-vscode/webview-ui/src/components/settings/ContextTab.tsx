@@ -94,7 +94,7 @@ const ContextTab: Component = () => {
               placeholder="e.g. **/node_modules/**"
               onChange={(val) => setNewPattern(val)}
               onKeyDown={(e: KeyboardEvent) => {
-                if (e.key === "Enter") addPattern()
+                if (e.key === "Enter" && !(e.isComposing || e.keyCode === 229)) addPattern()
               }}
             />
           </div>

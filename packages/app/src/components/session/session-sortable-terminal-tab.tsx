@@ -92,7 +92,7 @@ export function SortableTerminalTab(props: { terminal: LocalPTY; onClose?: () =>
   }
 
   const keydown = (e: KeyboardEvent) => {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && !(e.isComposing || e.keyCode === 229)) { // kilocode_change
       e.preventDefault()
       save()
       return

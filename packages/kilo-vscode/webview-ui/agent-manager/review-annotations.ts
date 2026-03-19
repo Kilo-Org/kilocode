@@ -136,7 +136,7 @@ export function buildReviewAnnotation(
         handlers.cancelDraft()
         return
       }
-      if (event.key === "Enter" && !event.shiftKey) {
+      if (event.key === "Enter" && !event.shiftKey && !(event.isComposing || event.keyCode === 229)) {
         event.preventDefault()
         submit()
       }
@@ -195,7 +195,7 @@ export function buildReviewAnnotation(
         handlers.setEditing(null)
         return
       }
-      if (event.key === "Enter" && !event.shiftKey) {
+      if (event.key === "Enter" && !event.shiftKey && !(event.isComposing || event.keyCode === 229)) {
         event.preventDefault()
         const text = textarea.value.trim()
         if (!text) return

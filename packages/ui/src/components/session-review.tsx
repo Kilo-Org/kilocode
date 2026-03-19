@@ -545,7 +545,7 @@ export const SessionReview = (props: SessionReviewProps) => {
       return
     }
 
-    if (event.key !== "Enter") return
+    if (event.key !== "Enter" || event.isComposing || event.keyCode === 229) return // kilocode_change
     event.preventDefault()
     event.stopPropagation()
     navigateSearch(event.shiftKey ? -1 : 1)
