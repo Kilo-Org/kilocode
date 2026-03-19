@@ -69,6 +69,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private trackedSessionIds: Set<string> = new Set()
   private syncedChildSessions: Set<string> = new Set()
+  /** Tracks the latest status for each session, used to warn before destructive config operations. */
+  private sessionStatusMap = new Map<string, SessionStatus["type"]>()
   /** Per-session directory overrides (e.g., worktree paths registered by AgentManagerProvider). */
   private sessionDirectories = new Map<string, string>()
   /** Project ID for the current workspace, used to filter out sessions from other repositories. */
@@ -1792,6 +1794,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
   }
 
+  /** Returns the number of sessions currently in "busy" state. */
+  private getBusySessionCount(): number {
+    let count = 0
+    for (const status of this.sessionStatusMap.values()) {
+      if (status === "busy") count++
+    }
+    return count
+  }
+
   /**
    * Handle config update request from the webview.
    * Applies a partial config update via the global config endpoint, then pushes
@@ -2537,6 +2548,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
+    // Track session status for busy-session warnings
+    if (event.type === "session.status") {
+      this.sessionStatusMap.set(event.properties.sessionID, event.properties.status.type)
+    }
+
     // Forward relevant events to webview
     // Side effects that must happen before the webview message is sent
     if (event.type === "session.created" && !this.currentSession) {
@@ -2889,6 +2905,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.trackedSessionIds.clear()
     this.syncedChildSessions.clear()
     this.sessionDirectories.clear()
+    this.sessionStatusMap.clear()
     this.ignoreController?.dispose()
     this.marketplace?.dispose()
   }
