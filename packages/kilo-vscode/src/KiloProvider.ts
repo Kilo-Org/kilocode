@@ -2358,11 +2358,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const { data: profileData } = await this.client.kilo.profile(undefined, { throwOnError: true })
       this.postMessage({ type: "profileData", data: profileData })
       this.postMessage({ type: "deviceAuthComplete" })
-
-      // Step 5: If user has organizations, navigate to profile view so they can pick one
-      if (profileData?.profile?.organizations && profileData.profile.organizations.length > 0) {
-        this.postMessage({ type: "navigate", view: "profile" })
-      }
     } catch (error) {
       if (attempt !== this.loginAttempt) {
         return
