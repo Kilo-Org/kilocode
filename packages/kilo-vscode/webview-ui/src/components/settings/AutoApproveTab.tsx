@@ -135,8 +135,8 @@ function wildcardAction(rule: PermissionRule | undefined, fallback: PermissionLe
 function exceptions(rule: PermissionRule | undefined): Array<{ pattern: string; action: PermissionLevel }> {
   if (!rule || typeof rule === "string") return []
   return Object.entries(rule)
-    .filter(([key]) => key !== "*")
-    .map(([pattern, action]) => ({ pattern, action }))
+    .filter(([key, action]) => key !== "*" && action !== null)
+    .map(([pattern, action]) => ({ pattern, action: action as PermissionLevel }))
 }
 
 function toolTitle(id: string): string {
@@ -184,14 +184,14 @@ const AutoApproveTab: Component = () => {
       updateConfig({ permission: { [tool]: level } })
       return
     }
-    const obj: Record<string, PermissionLevel> = { "*": level }
+    const obj: Record<string, PermissionLevel | null> = { "*": level }
     for (const exc of excs) obj[exc.pattern] = exc.action
     updateConfig({ permission: { [tool]: obj } })
   }
 
   const setException = (tool: string, pattern: string, level: PermissionLevel) => {
     const current = ruleFor(tool)
-    const base: Record<string, PermissionLevel> =
+    const base: Record<string, PermissionLevel | null> =
       typeof current === "string" ? { "*": current } : { ...(current ?? {}) }
     base[pattern] = level
     updateConfig({ permission: { [tool]: base } })
@@ -199,7 +199,7 @@ const AutoApproveTab: Component = () => {
 
   const addException = (tool: string, pattern: string) => {
     const current = ruleFor(tool)
-    const base: Record<string, PermissionLevel> =
+    const base: Record<string, PermissionLevel | null> =
       typeof current === "string" ? { "*": current } : { ...(current ?? {}) }
     base[pattern] = "allow"
     updateConfig({ permission: { [tool]: base } })
@@ -209,9 +209,8 @@ const AutoApproveTab: Component = () => {
     const current = ruleFor(tool)
     if (!current || typeof current === "string") return
     // Send a single patch with null for the deleted key.
-    // The server's patchJsonc handles null as a delete sentinel (removes the key
-    // from the JSONC file). The webview's stripNulls removes it from the optimistic
-    // UI. This replaces the previous two-call workaround.
+    // null is a delete sentinel: patchJsonc removes the key from the JSONC file,
+    // stripNulls removes it from the optimistic UI.
     updateConfig({ permission: { [tool]: { [pattern]: null } } })
   }
 
