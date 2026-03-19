@@ -42,7 +42,6 @@ function isRenderable(part: SDKPart): boolean {
 interface AssistantMessageProps {
   message: SDKAssistantMessage
   showAssistantCopyPartID?: string | null
-  turnDurationMs?: number
 }
 
 function TodoToolCard(props: { part: ToolPart }) {
@@ -92,7 +91,6 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                       part={part}
                       message={props.message as SDKMessage}
                       showAssistantCopyPartID={props.showAssistantCopyPartID}
-                      turnDurationMs={props.turnDurationMs}
                     />
                   }
                 >

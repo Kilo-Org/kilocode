@@ -83,6 +83,8 @@ export const dict = {
   "agentManager.dialog.versions": "Verzije",
   "agentManager.dialog.versionHint": "{{count}} worktree-ova će se pokrenuti paralelno",
   "agentManager.dialog.compareModels": "Uporedi modele",
+  "agentManager.dialog.compareModels.tooltip":
+    "Pokrenite agente na različitim modelima paralelno radi usporedbe rezultata",
   "agentManager.dialog.compareModels.searchModels": "Pretraži modele...",
   "agentManager.dialog.compareModels.selectModels": "Odaberi modele...",
   "agentManager.dialog.creating": "Kreiranje...",

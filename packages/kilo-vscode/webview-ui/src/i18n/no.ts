@@ -86,9 +86,6 @@ export const dict = {
   "revert.banner.redo": "Redo",
   "revert.banner.redo.all": "Redo All",
   "revert.banner.hint": "Send a new message to make this permanent",
-  "revert.turn.revert": "Revert to here",
-  "revert.turn.copy": "Copy message",
-  "revert.bottom.undo": "Undo Changes",
   "revert.disabled.agentBusy": "Vent til agenten er ferdig",
   "command.session.compact": "Komprimer sesjon",
   "command.session.compact.description": "Oppsummer sesjonen for å redusere kontekststørrelsen",
@@ -1002,6 +999,10 @@ export const dict = {
   "settings.agentBehaviour.removeMode.confirm":
     'Vil du fjerne modusen "{{name}}"? Dette vil deaktivere modusen ved å oppdatere konfigurasjonen din.',
   "settings.agentBehaviour.removeMode.button": "Fjern",
+  "settings.agentBehaviour.removeMcp.title": "Fjern MCP-server",
+  "settings.agentBehaviour.removeMcp.confirm":
+    'Vil du fjerne MCP-serveren "{{name}}"? Dette vil fjerne den fra konfigurasjonen din.',
+  "settings.agentBehaviour.removeMcp.button": "Fjern",
   "settings.agentBehaviour.skillPaths": "Ferdighetsmappe-stier",
   "settings.agentBehaviour.skillUrls": "Ferdighets-URLer",
   "settings.agentBehaviour.removeSkill.title": "Fjern ferdighet",

@@ -82,6 +82,8 @@ export const dict = {
   "agentManager.dialog.versions": "Версии",
   "agentManager.dialog.versionHint": "{{count}} Worktree будут выполняться параллельно",
   "agentManager.dialog.compareModels": "Сравнить модели",
+  "agentManager.dialog.compareModels.tooltip":
+    "Запустите агентов на разных моделях параллельно для сравнения результатов",
   "agentManager.dialog.compareModels.searchModels": "Поиск моделей...",
   "agentManager.dialog.compareModels.selectModels": "Выбрать модели...",
   "agentManager.dialog.creating": "Создание...",

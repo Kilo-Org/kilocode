@@ -50,7 +50,8 @@ describe("ToolRegistry tool name contract (runtime)", () => {
     const names = JSON.stringify(TOOL_NAMES_WE_DEPEND_ON)
     const result = check(`
       const hist = { state: null, length: 1, replaceState(s) { hist.state = s }, pushState(s) { hist.state = s }, go() {} }
-      globalThis.window = globalThis.window || { history: hist, location: { pathname: "/", search: "", hash: "", href: "/", origin: "" }, scrollTo() {}, addEventListener() {}, removeEventListener() {}, confirm() { return false } }
+      const mql = { matches: false, media: "", onchange: null, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true } }
+      globalThis.window = globalThis.window || { history: hist, location: { pathname: "/", search: "", hash: "", href: "/", origin: "" }, scrollTo() {}, addEventListener() {}, removeEventListener() {}, confirm() { return false }, matchMedia() { return mql } }
       const { ToolRegistry } = await import("./src/components/message-part.tsx")
       const names = ${names}
       const missing = names.filter(n => typeof ToolRegistry.render(n) !== "function")
@@ -71,7 +72,8 @@ describe("getToolInfo() export contract (runtime)", () => {
     // outside a SolidJS rendering context. We verify it exists as a function.
     const result = check(`
       const hist = { state: null, length: 1, replaceState(s) { hist.state = s }, pushState(s) { hist.state = s }, go() {} }
-      globalThis.window = globalThis.window || { history: hist, location: { pathname: "/", search: "", hash: "", href: "/", origin: "" }, scrollTo() {}, addEventListener() {}, removeEventListener() {}, confirm() { return false } }
+      const mql = { matches: false, media: "", onchange: null, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true } }
+      globalThis.window = globalThis.window || { history: hist, location: { pathname: "/", search: "", hash: "", href: "/", origin: "" }, scrollTo() {}, addEventListener() {}, removeEventListener() {}, confirm() { return false }, matchMedia() { return mql } }
       const { getToolInfo } = await import("./src/components/message-part.tsx")
       if (typeof getToolInfo !== "function") {
         console.error("getToolInfo is " + typeof getToolInfo)

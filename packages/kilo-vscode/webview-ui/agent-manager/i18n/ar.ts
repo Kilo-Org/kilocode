@@ -81,6 +81,7 @@ export const dict = {
   "agentManager.dialog.versions": "النسخ",
   "agentManager.dialog.versionHint": "{{count}} Worktrees ستعمل بالتوازي",
   "agentManager.dialog.compareModels": "مقارنة النماذج",
+  "agentManager.dialog.compareModels.tooltip": "تشغيل الوكلاء على نماذج مختلفة بالتوازي لمقارنة النتائج",
   "agentManager.dialog.compareModels.searchModels": "البحث عن النماذج...",
   "agentManager.dialog.compareModels.selectModels": "اختر النماذج...",
   "agentManager.dialog.creating": "جارٍ الإنشاء...",

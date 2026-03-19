@@ -143,7 +143,6 @@ export type UserMessage = {
     openTabs?: Array<string>
     activeFile?: string
     shell?: string
-    timezone?: string
   }
 }
 
@@ -2143,6 +2142,25 @@ export type ProjectCurrentResponses = {
 
 export type ProjectCurrentResponse = ProjectCurrentResponses[keyof ProjectCurrentResponses]
 
+export type ProjectInitGitData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/project/git/init"
+}
+
+export type ProjectInitGitResponses = {
+  /**
+   * Project information after git initialization
+   */
+  200: Project
+}
+
+export type ProjectInitGitResponse = ProjectInitGitResponses[keyof ProjectInitGitResponses]
+
 export type ProjectUpdateData = {
   body?: {
     name?: string
@@ -3430,7 +3448,6 @@ export type SessionPromptData = {
       openTabs?: Array<string>
       activeFile?: string
       shell?: string
-      timezone?: string
     }
     parts: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
   }
@@ -3670,7 +3687,6 @@ export type SessionPromptAsyncData = {
       openTabs?: Array<string>
       activeFile?: string
       shell?: string
-      timezone?: string
     }
     parts: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
   }

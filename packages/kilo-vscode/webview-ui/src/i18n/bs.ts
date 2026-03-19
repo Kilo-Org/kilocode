@@ -83,9 +83,6 @@ export const dict = {
   "revert.banner.redo": "Redo",
   "revert.banner.redo.all": "Redo All",
   "revert.banner.hint": "Send a new message to make this permanent",
-  "revert.turn.revert": "Revert to here",
-  "revert.turn.copy": "Copy message",
-  "revert.bottom.undo": "Undo Changes",
   "revert.disabled.agentBusy": "Sačekajte da agent završi",
   "command.session.compact": "Sažmi sesiju",
   "command.session.compact.description": "Sažmi sesiju kako bi se smanjio kontekst",
@@ -1003,6 +1000,10 @@ export const dict = {
   "settings.agentBehaviour.removeMode.confirm":
     'Ukloniti mod "{{name}}"? Ovo će onemogućiti mod ažuriranjem vaše konfiguracije.',
   "settings.agentBehaviour.removeMode.button": "Ukloni",
+  "settings.agentBehaviour.removeMcp.title": "Ukloni MCP server",
+  "settings.agentBehaviour.removeMcp.confirm":
+    'Ukloniti MCP server "{{name}}"? Ovo će ga ukloniti iz vaše konfiguracije.',
+  "settings.agentBehaviour.removeMcp.button": "Ukloni",
   "settings.agentBehaviour.skillPaths": "Putanje mapa vještina",
   "settings.agentBehaviour.skillUrls": "URL-ovi vještina",
   "settings.agentBehaviour.removeSkill.title": "Ukloni vještinu",

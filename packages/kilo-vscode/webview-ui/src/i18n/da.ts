@@ -83,9 +83,6 @@ export const dict = {
   "revert.banner.redo": "Redo",
   "revert.banner.redo.all": "Redo All",
   "revert.banner.hint": "Send a new message to make this permanent",
-  "revert.turn.revert": "Revert to here",
-  "revert.turn.copy": "Copy message",
-  "revert.bottom.undo": "Undo Changes",
   "revert.disabled.agentBusy": "Vent på at agenten er færdig",
   "command.session.compact": "Komprimér session",
   "command.session.compact.description": "Opsummer sessionen for at reducere kontekststørrelsen",
@@ -999,6 +996,10 @@ export const dict = {
   "settings.agentBehaviour.removeMode.confirm":
     'Vil du fjerne tilstanden "{{name}}"? Dette vil deaktivere tilstanden ved at opdatere din konfiguration.',
   "settings.agentBehaviour.removeMode.button": "Fjern",
+  "settings.agentBehaviour.removeMcp.title": "Fjern MCP-server",
+  "settings.agentBehaviour.removeMcp.confirm":
+    'Vil du fjerne MCP-serveren "{{name}}"? Dette vil fjerne den fra din konfiguration.',
+  "settings.agentBehaviour.removeMcp.button": "Fjern",
   "settings.agentBehaviour.skillPaths": "Skill-mappestier",
   "settings.agentBehaviour.skillUrls": "Skill-URL'er",
   "settings.agentBehaviour.removeSkill.title": "Fjern færdighed",

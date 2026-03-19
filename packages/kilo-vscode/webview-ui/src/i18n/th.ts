@@ -83,9 +83,6 @@ export const dict = {
   "revert.banner.redo": "Redo",
   "revert.banner.redo.all": "Redo All",
   "revert.banner.hint": "Send a new message to make this permanent",
-  "revert.turn.revert": "Revert to here",
-  "revert.turn.copy": "Copy message",
-  "revert.bottom.undo": "Undo Changes",
   "revert.disabled.agentBusy": "รอให้เอเจนต์ทำงานเสร็จ",
   "command.session.compact": "บีบอัดเซสชัน",
   "command.session.compact.description": "สรุปเซสชันเพื่อลดขนาดบริบท",
@@ -991,6 +988,10 @@ export const dict = {
   "settings.agentBehaviour.removeMode.confirm":
     'ต้องการลบโหมด "{{name}}" หรือไม่? การดำเนินการนี้จะปิดใช้งานโหมดโดยอัปเดตการกำหนดค่าของคุณ',
   "settings.agentBehaviour.removeMode.button": "ลบ",
+  "settings.agentBehaviour.removeMcp.title": "ลบเซิร์ฟเวอร์ MCP",
+  "settings.agentBehaviour.removeMcp.confirm":
+    'ต้องการลบเซิร์ฟเวอร์ MCP "{{name}}" หรือไม่? การดำเนินการนี้จะลบออกจากการกำหนดค่าของคุณ',
+  "settings.agentBehaviour.removeMcp.button": "ลบ",
   "settings.agentBehaviour.skillPaths": "เส้นทางโฟลเดอร์ทักษะ",
   "settings.agentBehaviour.skillUrls": "URL ทักษะ",
   "settings.agentBehaviour.removeSkill.title": "ลบทักษะ",

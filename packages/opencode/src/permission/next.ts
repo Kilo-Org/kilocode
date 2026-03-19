@@ -233,7 +233,7 @@ export namespace PermissionNext {
       s.approved.push(...newRules)
 
       if (newRules.length > 0) {
-        await Config.updateGlobal({ permission: toConfig(newRules) })
+        await Config.updateGlobal({ permission: toConfig(newRules) }, { dispose: false })
       }
     },
   )
@@ -315,7 +315,7 @@ export namespace PermissionNext {
           action: "allow" as const,
         }))
         if (alwaysRules.length > 0) {
-          await Config.updateGlobal({ permission: toConfig(alwaysRules) })
+          await Config.updateGlobal({ permission: toConfig(alwaysRules) }, { dispose: false })
         }
         // kilocode_change end
         return

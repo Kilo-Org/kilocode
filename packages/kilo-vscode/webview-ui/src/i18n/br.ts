@@ -83,9 +83,6 @@ export const dict = {
   "revert.banner.redo": "Redo",
   "revert.banner.redo.all": "Redo All",
   "revert.banner.hint": "Send a new message to make this permanent",
-  "revert.turn.revert": "Revert to here",
-  "revert.turn.copy": "Copy message",
-  "revert.bottom.undo": "Undo Changes",
   "revert.disabled.agentBusy": "Aguarde o agente terminar",
   "command.session.compact": "Compactar sessão",
   "command.session.compact.description": "Resumir a sessão para reduzir o tamanho do contexto",
@@ -1004,6 +1001,10 @@ export const dict = {
   "settings.agentBehaviour.removeMode.confirm":
     'Remover o modo "{{name}}"? Isso desativará o modo atualizando sua configuração.',
   "settings.agentBehaviour.removeMode.button": "Remover",
+  "settings.agentBehaviour.removeMcp.title": "Remover servidor MCP",
+  "settings.agentBehaviour.removeMcp.confirm":
+    'Remover o servidor MCP "{{name}}"? Isso o removerá da sua configuração.',
+  "settings.agentBehaviour.removeMcp.button": "Remover",
   "settings.agentBehaviour.skillPaths": "Caminhos de pastas de habilidades",
   "settings.agentBehaviour.skillUrls": "URLs de habilidades",
   "settings.agentBehaviour.removeSkill.title": "Remover habilidade",
