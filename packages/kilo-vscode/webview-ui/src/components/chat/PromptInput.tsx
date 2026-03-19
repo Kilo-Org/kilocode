@@ -200,12 +200,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   onCleanup(() => window.removeEventListener("newTaskRequest", onNewTaskRequest))
 
   // Compact/summarize the current session
-  const onCompact = () => {
-    const id = session.currentSessionID()
-    if (!id) return
-    const sel = session.selected()
-    vscode.postMessage({ type: "compact", sessionID: id, providerID: sel?.providerID, modelID: sel?.modelID })
-  }
+const onCompact = () => session.compact()
   window.addEventListener("compactSession", onCompact)
   onCleanup(() => window.removeEventListener("compactSession", onCompact))
 
