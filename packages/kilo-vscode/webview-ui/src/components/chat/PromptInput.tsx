@@ -529,6 +529,27 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   const handleSend = () => {
     const draft = text().trim()
+
+    // Detect slash command (hoisted for both client and server command checks)
+    const cmdMatch = draft.match(/^\/(\S+)/)
+    const word = cmdMatch?.[1]
+    const matched = word ? slash.commands().find((c) => c.name === word || c.hints.includes(word)) : undefined
+
+    // Client-side slash command — runs locally, works even when disconnected
+    if (matched?.action) {
+      setText("")
+      setGhostText("")
+      clearReviewComments()
+      imageAttach.clear()
+      if (debounceTimer) clearTimeout(debounceTimer)
+      mention.closeMention()
+      slash.close()
+      drafts.delete(sessionKey())
+      if (textareaRef) textareaRef.style.height = "auto"
+      matched.action()
+      return
+    }
+
     const imgs = imageAttach.images()
     const pending = reviewComments()
     const review = pending.length > 0 ? formatReviewCommentsMarkdown(pending) : ""
@@ -542,9 +563,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const sel = session.selected()
     const attachments = allFiles.length > 0 ? allFiles : undefined
 
-    // Detect slash command: text starts with "/" and first word matches a known command
-    const cmdMatch = draft.match(/^\/(\S+)/)
-    const matched = cmdMatch ? slash.commands().find((c) => c.name === cmdMatch[1]) : undefined
+    // Server-side slash command (cmdMatch/matched already computed above)
     if (matched) {
       const rest = draft.slice(cmdMatch![0].length).trim()
       const args = review && rest ? `${review}\n\n${rest}` : rest || review
@@ -655,24 +674,61 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       <Show when={slash.show()}>
         <div class="slash-command-dropdown" ref={slashDropdownRef}>
           <Show when={slash.results().length > 0} fallback={<div class="slash-command-empty">No commands found</div>}>
-            <For each={slash.results()}>
-              {(cmd, idx) => (
-                <div
-                  class="slash-command-item"
-                  classList={{ "slash-command-item--active": idx() === slash.index() }}
-                  onMouseDown={(e) => {
-                    e.preventDefault()
-                    if (textareaRef) slash.select(cmd, textareaRef, setText, adjustHeight)
-                  }}
-                  onMouseEnter={() => slash.setIndex(idx())}
-                >
-                  <span class="slash-command-name">/{cmd.name}</span>
-                  <Show when={cmd.description}>
-                    <span class="slash-command-desc">{cmd.description}</span>
+            {(() => {
+              const all = slash.results()
+              const actions = all.filter((c) => c.action)
+              const server = all.filter((c) => !c.action)
+              const offset = actions.length
+              return (
+                <>
+                  <Show when={actions.length > 0}>
+                    <div class="slash-command-group-label">Actions</div>
+                    <For each={actions}>
+                      {(cmd, idx) => (
+                        <div
+                          class="slash-command-item"
+                          classList={{ "slash-command-item--active": idx() === slash.index() }}
+                          onMouseDown={(e) => {
+                            e.preventDefault()
+                            if (textareaRef) slash.select(cmd, textareaRef, setText, adjustHeight)
+                          }}
+                          onMouseEnter={() => slash.setIndex(idx())}
+                        >
+                          <span class="slash-command-name">/{cmd.name}</span>
+                          <Show when={cmd.description}>
+                            <span class="slash-command-desc">{cmd.description}</span>
+                          </Show>
+                        </div>
+                      )}
+                    </For>
                   </Show>
-                </div>
-              )}
-            </For>
+                  <Show when={server.length > 0}>
+                    <Show when={actions.length > 0}>
+                      <div class="slash-command-separator" />
+                    </Show>
+                    <div class="slash-command-group-label">Commands</div>
+                    <For each={server}>
+                      {(cmd, idx) => (
+                        <div
+                          class="slash-command-item"
+                          classList={{ "slash-command-item--active": idx() + offset === slash.index() }}
+                          onMouseDown={(e) => {
+                            e.preventDefault()
+                            if (textareaRef) slash.select(cmd, textareaRef, setText, adjustHeight)
+                          }}
+                          onMouseEnter={() => slash.setIndex(idx() + offset)}
+                        >
+                          <span class="slash-command-name">/{cmd.name}</span>
+                          <Show when={cmd.description}>
+                            <span class="slash-command-desc">{cmd.description}</span>
+                          </Show>
+                        </div>
+                      )}
+                    </For>
+                  </Show>
+                </>
+              )
+            })()}
           </Show>
         </div>
       </Show>

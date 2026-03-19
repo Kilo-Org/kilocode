@@ -1094,6 +1094,23 @@
   text-align: center;
 }
 
+.slash-command-separator {
+  height: 1px;
+  margin: 4px 10px;
+  background: var(--vscode-editorWidget-border, var(--vscode-input-border));
+  opacity: 0.5;
+}
+
+.slash-command-group-label {
+  padding: 4px 10px 2px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--vscode-descriptionForeground);
+  opacity: 0.7;
+}
+
 /* ============================================
    Model Selector (uses kilo-ui Popover)
    ============================================ */

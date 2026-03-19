@@ -9,11 +9,15 @@ interface VSCodeContext {
   onMessage: (handler: (message: ExtensionMessage) => void) => () => void
 }
 
+export interface SlashCommandEntry extends SlashCommandInfo {
+  action?: () => void
+}
+
 export interface SlashCommand {
-  results: Accessor<SlashCommandInfo[]>
+  results: Accessor<SlashCommandEntry[]>
   index: Accessor<number>
   show: Accessor<boolean>
-  commands: Accessor<SlashCommandInfo[]>
+  commands: Accessor<SlashCommandEntry[]>
   onInput: (val: string, cursor: number) => void
   onKeyDown: (
     e: KeyboardEvent,
@@ -22,7 +26,7 @@ export interface SlashCommand {
     onSelect?: () => void,
   ) => boolean
   select: (
-    cmd: SlashCommandInfo,
+    cmd: SlashCommandEntry,
     textarea: HTMLTextAreaElement,
     setText: (text: string) => void,
     onSelect?: () => void,
@@ -32,9 +36,75 @@ export interface SlashCommand {
 }
 
 export function useSlashCommand(vscode: VSCodeContext): SlashCommand {
-  const [commands, setCommands] = createSignal<SlashCommandInfo[]>([])
+  const [server, setServer] = createSignal<SlashCommandInfo[]>([])
   const [query, setQuery] = createSignal<string | null>(null)
   const [index, setIndex] = createSignal(0)
+
+  const client: SlashCommandEntry[] = [
+    {
+      name: "new",
+      description: "Start a new session",
+      hints: ["clear"],
+      action: () => {
+        window.dispatchEvent(new CustomEvent("newTaskRequest"))
+        window.postMessage({ type: "navigate", view: "newTask" }, "*")
+      },
+    },
+    {
+      name: "sessions",
+      description: "Switch to another session",
+      hints: ["resume", "continue", "history"],
+      action: () => {
+        window.postMessage({ type: "navigate", view: "history" }, "*")
+      },
+    },
+    {
+      name: "models",
+      description: "Switch the AI model",
+      hints: [],
+      action: () => {
+        window.dispatchEvent(new CustomEvent("openModelPicker"))
+      },
+    },
+    {
+      name: "agents",
+      description: "Switch the agent mode",
+      hints: [],
+      action: () => {
+        window.dispatchEvent(new CustomEvent("openModePicker"))
+      },
+    },
+    {
+      name: "help",
+      description: "Open help documentation",
+      hints: [],
+      action: () => {
+        vscode.postMessage({ type: "openExternal", url: "https://kilo.ai/docs" })
+      },
+    },
+    {
+      name: "profile",
+      description: "Show your profile",
+      hints: ["me", "whoami"],
+      action: () => {
+        window.postMessage({ type: "navigate", view: "profile" }, "*")
+      },
+    },
+    {
+      name: "settings",
+      description: "Open settings",
+      hints: [],
+      action: () => {
+        window.postMessage({ type: "navigate", view: "settings" }, "*")
+      },
+    },
+  ]
+
+  const commands = (): SlashCommandEntry[] => {
+    const names = new Set(client.map((c) => c.name))
+    const filtered = server().filter((c) => !names.has(c.name))
+    return [...client, ...filtered]
+  }
 
   const show = () => query() !== null
 
@@ -44,12 +114,17 @@ export function useSlashCommand(vscode: VSCodeContext): SlashCommand {
     const all = commands()
     if (!q) return all
     const lower = q.toLowerCase()
-    return all.filter((cmd) => cmd.name.toLowerCase().includes(lower) || cmd.description?.toLowerCase().includes(lower))
+    return all.filter(
+      (cmd) =>
+        cmd.name.toLowerCase().includes(lower) ||
+        cmd.description?.toLowerCase().includes(lower) ||
+        cmd.hints.some((h) => h.toLowerCase().includes(lower)),
+    )
   }
 
   const unsubscribe = vscode.onMessage((message) => {
     if (message.type !== "commandsLoaded") return
-    setCommands(message.commands)
+    setServer(message.commands)
   })
 
   onMount(() => {
@@ -76,11 +151,19 @@ export function useSlashCommand(vscode: VSCodeContext): SlashCommand {
   }
 
   const select = (
-    cmd: SlashCommandInfo,
+    cmd: SlashCommandEntry,
     textarea: HTMLTextAreaElement,
     setText: (text: string) => void,
     onSelect?: () => void,
   ) => {
+    if (cmd.action) {
+      textarea.value = ""
+      setText("")
+      close()
+      onSelect?.()
+      cmd.action()
+      return
+    }
     const text = `/${cmd.name} `
     textarea.value = text
     setText(text)

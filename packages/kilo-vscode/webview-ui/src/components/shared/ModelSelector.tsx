@@ -150,6 +150,11 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     }
   })
 
+  // Listen for slash command trigger
+  const onTrigger = () => setOpen(true)
+  window.addEventListener("openModelPicker", onTrigger)
+  onCleanup(() => window.removeEventListener("openModelPicker", onTrigger))
+
   function pick(model: EnrichedModel) {
     props.onSelect(model.providerID, model.id)
     setOpen(false)
