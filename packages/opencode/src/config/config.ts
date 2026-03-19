@@ -699,7 +699,8 @@ export namespace Config {
   export const Mcp = z.discriminatedUnion("type", [McpLocal, McpRemote])
   export type Mcp = z.infer<typeof Mcp>
 
-  export const PermissionAction = z.enum(["ask", "allow", "deny"]).nullable().meta({ // kilocode_change - nullable allows null as a delete sentinel
+  export const PermissionAction = z.enum(["ask", "allow", "deny"]).nullable().meta({
+    // kilocode_change - nullable allows null as a delete sentinel
     ref: "PermissionActionConfig",
   })
   export type PermissionAction = z.infer<typeof PermissionAction>
@@ -1609,7 +1610,6 @@ export namespace Config {
     }
     // kilocode_change end
 
-
     void Instance.disposeAll()
       .catch(() => undefined)
       .finally(() => {
@@ -1621,7 +1621,6 @@ export namespace Config {
           },
         })
       })
-
 
     return next
   }

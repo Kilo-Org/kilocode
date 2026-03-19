@@ -37,8 +37,7 @@ const Settings: Component<SettingsProps> = (props) => {
   const session = useSession()
   const [active, setActive] = createSignal(props.tab ?? "providers")
 
-  const busyCount = () =>
-    Object.values(session.allStatusMap()).filter((s) => s.type === "busy").length
+  const busyCount = () => Object.values(session.allStatusMap()).filter((s) => s.type === "busy").length
 
   const handleSave = () => {
     const busy = busyCount()
@@ -46,10 +45,7 @@ const Settings: Component<SettingsProps> = (props) => {
       saveConfig()
       return
     }
-    const msg =
-      busy === 1
-        ? language.t("settings.saveBar.warning.one")
-        : language.t("settings.saveBar.warning.many")
+    const msg = busy === 1 ? language.t("settings.saveBar.warning.one") : language.t("settings.saveBar.warning.many")
     showToast({
       variant: "error",
       title: msg,
