@@ -881,6 +881,8 @@ export function UserMessageDisplay(props: {
   interrupted?: boolean
   queued?: boolean
   onRevert?: () => void
+  revertDisabled?: boolean
+  revertDisabledReason?: string
 }) {
   const data = useData()
   const dialog = useDialog()
@@ -1019,12 +1021,17 @@ export function UserMessageDisplay(props: {
                 </Show>
               </span>
             </Show>
-            <Show when={props.onRevert}>
-              <Tooltip value={i18n.t("ui.message.revert")} placement="right" gutter={4}>
+            <Show when={props.onRevert || props.revertDisabled}>
+              <Tooltip
+                value={props.revertDisabled ? (props.revertDisabledReason ?? "") : i18n.t("ui.message.revert")}
+                placement="right"
+                gutter={4}
+              >
                 <IconButton
                   icon="arrow-left"
                   size="normal"
                   variant="ghost"
+                  disabled={props.revertDisabled}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={(event) => {
                     event.stopPropagation()

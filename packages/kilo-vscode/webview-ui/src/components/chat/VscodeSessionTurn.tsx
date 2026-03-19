@@ -30,6 +30,7 @@ import type {
 import { ErrorDisplay } from "./ErrorDisplay"
 import { useServer } from "../../context/server"
 import { useSession } from "../../context/session"
+import { useLanguage } from "../../context/language"
 
 function getDirectory(path: string): string {
   const sep = path.includes("/") ? "/" : "\\"
@@ -55,6 +56,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
   const diffComponent = useDiffComponent()
   const server = useServer()
   const session = useSession()
+  const language = useLanguage()
 
   const emptyMessages: SDKMessage[] = []
   const emptyParts: SDKPart[] = []
@@ -171,10 +173,12 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
               interrupted={interrupted()}
               queued={props.queued}
               onRevert={
-                assistantMessages().length > 0 && session.status() === "idle" && !session.revert()
+                assistantMessages().length > 0 && !session.revert()
                   ? () => session.revertSession(props.messageID)
                   : undefined
               }
+              revertDisabled={assistantMessages().length > 0 && !session.revert() && session.status() !== "idle"}
+              revertDisabledReason={language.t("revert.disabled.agentBusy")}
             />
           </div>
 
