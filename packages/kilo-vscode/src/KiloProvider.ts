@@ -835,6 +835,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             return event.type !== "message.part.updated" && event.type !== "message.part.delta"
           }
 
+          // session.status must always pass through — even for sessions not tracked by this
+          // KiloProvider instance. The Settings panel is a separate provider with no tracked
+          // sessions, but it needs session.status to populate sessionStatusMap and allStatusMap
+          // for the busy-session warning on Save.
+          if (event.type === "session.status") return true
+
           return this.trackedSessionIds.has(sessionId)
         },
         (event) => {
@@ -2529,6 +2535,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // let a foreign session through if it was accidentally tracked.
     if (isEventFromForeignProject(event, this.projectID)) return
 
+    // session.status events pass the onEventFiltered pre-filter for all providers (see line 842),
+    // so this runs on every KiloProvider instance — including the Settings panel which has no
+    // tracked sessions. Update sessionStatusMap and forward to webview before the
+    // trackedSessionIds guard so the Settings panel's allStatusMap stays current for the
+    // busy-session warning on Save.
+    if (event.type === "session.status") {
+      const sid = event.properties.sessionID
+      this.sessionStatusMap.set(sid, event.properties.status.type)
+      const msg = mapSSEEventToWebviewMessage(event, sid)
+      if (msg) this.postMessage(msg)
+      return
+    }
+
     // Extract sessionID from the event
     const sessionID = this.extractSessionID(event)
 
@@ -2546,11 +2565,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (event.type === "server.instance.disposed" || event.type === "global.disposed") {
       void this.reloadAfterAuthChange()
       return
-    }
-
-    // Track session status for busy-session warnings
-    if (event.type === "session.status") {
-      this.sessionStatusMap.set(event.properties.sessionID, event.properties.status.type)
     }
 
     // Forward relevant events to webview
