@@ -1342,8 +1342,11 @@
     font-size: 12px;
     font-family: var(--vscode-editor-font-family, monospace);
     color: var(--text-weak, var(--vscode-descriptionForeground));
-    word-break: break-word;
-    margin-bottom: 4px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 150px;
+    overflow: auto;
+    margin: 0 0 4px;
   }
 
   [data-slot="permission-hint"] {
