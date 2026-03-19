@@ -180,9 +180,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
   const MethodSelection: Component = () => {
     return (
       <div class="dialog-confirm-body" style={{ display: "flex", "flex-direction": "column", gap: "12px" }}>
-        <div style={{ "font-size": "13px", color: "var(--text-base)" }}>
-          {language.t("provider.connect.selectMethod", { provider: name() })}
-        </div>
+        <div class="provider-connect-body">{language.t("provider.connect.selectMethod", { provider: name() })}</div>
         <div style={{ display: "flex", "flex-direction": "column", gap: "8px" }}>
           <For each={methods()}>
             {(item, index) => (
@@ -220,7 +218,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
         style={{ display: "flex", "flex-direction": "column", gap: "16px" }}
         onSubmit={submit}
       >
-        <div style={{ "font-size": "13px", color: "var(--text-base)" }}>
+        <div class="provider-connect-body">
           {language.t("provider.connect.apiKey.description", { provider: name() })}
         </div>
         <TextField
@@ -269,7 +267,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
         style={{ display: "flex", "flex-direction": "column", gap: "16px" }}
         onSubmit={submit}
       >
-        <div style={{ "font-size": "13px", color: "var(--text-base)" }}>
+        <div class="provider-connect-body">
           {language.t("provider.connect.oauth.code.visit.prefix")}
           <a
             href={state.authorization?.url ?? "#"}
@@ -320,7 +318,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
 
     return (
       <div class="dialog-confirm-body" style={{ display: "flex", "flex-direction": "column", gap: "16px" }}>
-        <div style={{ "font-size": "13px", color: "var(--text-base)" }}>
+        <div class="provider-connect-body">
           {language.t("provider.connect.oauth.auto.visit.prefix")}
           <a
             href={state.authorization?.url ?? "#"}
@@ -336,23 +334,11 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
         </div>
         <Show when={code()}>
           <div>
-            <div style={{ "font-size": "12px", color: "var(--text-weak-base)" }}>
-              {language.t("provider.connect.oauth.auto.confirmationCode")}
-            </div>
-            <div
-              style={{
-                "font-family": "monospace",
-                padding: "8px 10px",
-                border: "1px solid var(--border-weak-base)",
-                "border-radius": "8px",
-                "margin-top": "6px",
-              }}
-            >
-              {code()}
-            </div>
+            <div class="provider-connect-code-label">{language.t("provider.connect.oauth.auto.confirmationCode")}</div>
+            <div class="provider-connect-code">{code()}</div>
           </div>
         </Show>
-        <div style={{ display: "flex", gap: "8px", "align-items": "center", "font-size": "13px" }}>
+        <div class="provider-connect-status">
           <Spinner />
           <span>
             {state.error
@@ -377,7 +363,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
         </Match>
         <Match when={state.phase === "authorizing"}>
           <div class="dialog-confirm-body">
-            <div style={{ display: "flex", gap: "8px", "align-items": "center" }}>
+            <div class="provider-connect-status">
               <Spinner />
               <span>{language.t("provider.connect.status.inProgress")}</span>
             </div>
