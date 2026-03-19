@@ -589,7 +589,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             const files = uris.map((uri) => {
               const name = uri.fsPath.split(/[\\/]/).pop() || uri.fsPath
               const ext = name.includes(".") ? name.slice(name.lastIndexOf(".")).toLowerCase() : ""
-              return { url: uri.toString(), name, mime: mimeMap[ext] || "text/plain" }
+              return { url: uri.toString(), name, mime: mimeMap[ext] || "application/octet-stream" }
             })
             this.postMessage({ type: "filePickerResult", files })
           }
