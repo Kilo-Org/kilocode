@@ -1814,6 +1814,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
+    const busy = this.getBusySessionCount()
+    if (busy > 0) {
+      const msg =
+        busy === 1
+          ? "1 session is running and will be interrupted. Save settings anyway?"
+          : `${busy} sessions are running and will be interrupted. Save settings anyway?`
+      const choice = await vscode.window.showWarningMessage(msg, "Save", "Cancel")
+      if (choice !== "Save") return
+    }
+
     try {
       await this.client.global.config.update({ config: partial }, { throwOnError: true })
 
