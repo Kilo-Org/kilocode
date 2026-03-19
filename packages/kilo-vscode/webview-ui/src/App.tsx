@@ -4,8 +4,10 @@ import { DialogProvider } from "@kilocode/kilo-ui/context/dialog"
 import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
 import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
 import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff"
+import { FileComponentProvider } from "@kilocode/kilo-ui/context/file"
 import { Code } from "@kilocode/kilo-ui/code"
 import { Diff } from "@kilocode/kilo-ui/diff"
+import { File } from "@kilocode/kilo-ui/file"
 import { DataProvider } from "@kilocode/kilo-ui/context/data"
 import { Toast } from "@kilocode/kilo-ui/toast"
 import Settings from "./components/settings/Settings"
@@ -17,6 +19,7 @@ import { ConfigProvider } from "./context/config"
 import { SessionProvider, useSession } from "./context/session"
 import { LanguageProvider } from "./context/language"
 import { ChatView } from "./components/chat"
+import { MarketplaceView } from "./components/marketplace"
 import { KiloNotifications } from "./components/chat/KiloNotifications"
 import { registerExpandedTaskTool } from "./components/chat/TaskToolExpanded"
 import { registerVscodeToolOverrides } from "./components/chat/VscodeToolOverrides"
@@ -53,24 +56,6 @@ const VALID_VIEWS = new Set<string>([
   "subAgentViewer",
 ])
 
-const DummyView: Component<{ title: string }> = (props) => {
-  return (
-    <div
-      style={{
-        display: "flex",
-        "justify-content": "center",
-        "align-items": "center",
-        height: "100%",
-        "min-height": "200px",
-        "font-size": "24px",
-        color: "var(--vscode-foreground)",
-      }}
-    >
-      <h1>{props.title}</h1>
-    </div>
-  )
-}
-
 /**
  * Bridge our session store to the DataProvider's expected Data shape.
  */
@@ -82,25 +67,16 @@ export const DataBridge: Component<{ children: any }> = (props) => {
 
   const data = createMemo(() => {
     const id = session.currentSessionID()
-    const allParts = session.allParts()
-    // Expose ALL session messages (including child sessions from sub-agents),
-    // not just the current session. This lets VscodeSessionTurn and
-    // TaskToolExpanded read child session data from the DataProvider store.
-    const allMessages = Object.fromEntries(
-      Object.entries(session.allMessages() as Record<string, SDKMessage[]>)
-        .filter(([, msgs]) => (msgs as SDKMessage[]).length > 0)
-        .map(([sid, msgs]) => [sid, msgs as SDKMessage[]]),
-    )
+    const family = session.familyData(id)
     return {
       session: session.sessions().map((s) => ({ ...s, id: s.id, role: "user" as const })) as unknown as any[],
-      session_status: session.allStatusMap() as unknown as Record<string, any>,
+      session_status: family.status as unknown as Record<string, any>,
       session_diff: {} as Record<string, any[]>,
-      message: allMessages,
-      part: Object.fromEntries(
-        Object.entries(allParts)
-          .filter(([, parts]) => (parts as SDKPart[]).length > 0)
-          .map(([msgId, parts]) => [msgId, parts as unknown as SDKPart[]]),
-      ),
+      // Restrict chat data to the selected session family (self + subagents).
+      // This keeps unrelated tracked sessions from invalidating the visible
+      // chat tree during streaming or background updates.
+      message: family.messages as Record<string, SDKMessage[]>,
+      part: family.parts as Record<string, SDKPart[]>,
       permission: (() => {
         const grouped: Record<string, any[]> = {}
         for (const p of session.permissions()) {
@@ -122,7 +98,7 @@ export const DataBridge: Component<{ children: any }> = (props) => {
   })
 
   const respond = (input: { sessionID: string; permissionID: string; response: "once" | "always" | "reject" }) => {
-    session.respondToPermission(input.permissionID, input.response)
+    session.respondToPermission(input.permissionID, input.response, [], [])
   }
 
   const reply = (input: { requestID: string; answers: string[][] }) => {
@@ -174,6 +150,7 @@ export const LanguageBridge: Component<{ children: any }> = (props) => {
 // Inner app component that uses the contexts
 const AppContent: Component = () => {
   const [currentView, setCurrentView] = createSignal<ViewType>("newTask")
+  const [settingsTab, setSettingsTab] = createSignal<string | undefined>()
   const [migrationReturnView, setMigrationReturnView] = createSignal<ViewType>("newTask") // legacy-migration
   const session = useSession()
   const server = useServer()
@@ -210,7 +187,8 @@ const AppContent: Component = () => {
         handleViewAction(message.action)
       }
       if (message?.type === "navigate" && message.view && VALID_VIEWS.has(message.view)) {
-        console.log("[Kilo New] App: 🧭 navigate:", message.view)
+        console.log("[Kilo New] App: 🧭 navigate:", message.view, message.tab ? `tab=${message.tab}` : "")
+        if (message.tab) setSettingsTab(message.tab)
         setCurrentView(message.view as ViewType)
       }
       if (message?.type === "openCloudSession" && message.sessionId) {
@@ -243,7 +221,7 @@ const AppContent: Component = () => {
           <ChatView onSelectSession={handleSelectSession} />
         </Match>
         <Match when={currentView() === "marketplace"}>
-          <DummyView title="Marketplace" />
+          <MarketplaceView />
         </Match>
         <Match when={currentView() === "history"}>
           <SessionList onSelectSession={handleSelectSession} />
@@ -265,6 +243,8 @@ const AppContent: Component = () => {
         </Match>
         <Match when={currentView() === "settings"}>
           <Settings
+            tab={settingsTab()}
+            onTabChange={setSettingsTab}
             onMigrateClick={() => {
               setMigrationReturnView("settings")
               setCurrentView("migration")
@@ -299,17 +279,19 @@ const App: Component = () => {
               <MarkedProvider>
                 <DiffComponentProvider component={Diff}>
                   <CodeComponentProvider component={Code}>
-                    <ProviderProvider>
-                      <ConfigProvider>
-                        <NotificationsProvider>
-                          <SessionProvider>
-                            <DataBridge>
-                              <AppContent />
-                            </DataBridge>
-                          </SessionProvider>
-                        </NotificationsProvider>
-                      </ConfigProvider>
-                    </ProviderProvider>
+                    <FileComponentProvider component={File}>
+                      <ProviderProvider>
+                        <ConfigProvider>
+                          <NotificationsProvider>
+                            <SessionProvider>
+                              <DataBridge>
+                                <AppContent />
+                              </DataBridge>
+                            </SessionProvider>
+                          </NotificationsProvider>
+                        </ConfigProvider>
+                      </ProviderProvider>
+                    </FileComponentProvider>
                   </CodeComponentProvider>
                 </DiffComponentProvider>
               </MarkedProvider>

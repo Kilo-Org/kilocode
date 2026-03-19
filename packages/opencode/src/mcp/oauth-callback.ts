@@ -1,3 +1,4 @@
+import { createConnection } from "net"
 import { Log } from "../util/log"
 import { OAUTH_CALLBACK_PORT, OAUTH_CALLBACK_PATH } from "./oauth-provider"
 
@@ -6,7 +7,9 @@ const log = Log.create({ service: "mcp.oauth-callback" })
 const HTML_SUCCESS = `<!DOCTYPE html>
 <html>
 <head>
-  <title>OpenCode - Authorization Successful</title>
+  <!-- kilocode_change start -->
+  <title>Kilo - Authorization Successful</title>
+  <!-- kilocode_change end -->
   <style>
     body { font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #1a1a2e; color: #eee; }
     .container { text-align: center; padding: 2rem; }
@@ -17,7 +20,9 @@ const HTML_SUCCESS = `<!DOCTYPE html>
 <body>
   <div class="container">
     <h1>Authorization Successful</h1>
-    <p>You can close this window and return to OpenCode.</p>
+    <!-- kilocode_change start -->
+    <p>You can close this window and return to Kilo.</p>
+    <!-- kilocode_change end -->
   </div>
   <script>setTimeout(() => window.close(), 2000);</script>
 </body>
@@ -26,7 +31,9 @@ const HTML_SUCCESS = `<!DOCTYPE html>
 const HTML_ERROR = (error: string) => `<!DOCTYPE html>
 <html>
 <head>
-  <title>OpenCode - Authorization Failed</title>
+  <!-- kilocode_change start -->
+  <title>Kilo - Authorization Failed</title>
+  <!-- kilocode_change end -->
   <style>
     body { font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #1a1a2e; color: #eee; }
     .container { text-align: center; padding: 2rem; }
@@ -160,21 +167,12 @@ export namespace McpOAuthCallback {
 
   export async function isPortInUse(): Promise<boolean> {
     return new Promise((resolve) => {
-      Bun.connect({
-        hostname: "127.0.0.1",
-        port: OAUTH_CALLBACK_PORT,
-        socket: {
-          open(socket) {
-            socket.end()
-            resolve(true)
-          },
-          error() {
-            resolve(false)
-          },
-          data() {},
-          close() {},
-        },
-      }).catch(() => {
+      const socket = createConnection(OAUTH_CALLBACK_PORT, "127.0.0.1")
+      socket.on("connect", () => {
+        socket.destroy()
+        resolve(true)
+      })
+      socket.on("error", () => {
         resolve(false)
       })
     })

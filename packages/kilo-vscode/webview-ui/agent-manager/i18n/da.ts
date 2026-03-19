@@ -30,10 +30,16 @@ export const dict = {
   "agentManager.session.noSessions": "Ingen åbne sessioner",
   "agentManager.tab.close": "Luk",
   "agentManager.tab.closeTab": "Luk fane",
+  "agentManager.tab.forkSession": "Forgren session",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Åbn Terminal",
-  "agentManager.setup.failed": "Opsætning af workspace mislykkedes",
-  "agentManager.setup.settingUp": "Opsætter workspace",
+  "agentManager.setup.failed": "Opsætning af worktree mislykkedes",
+  "agentManager.setup.settingUp": "Opsætter worktree",
+  "agentManager.setup.error.git_not_found":
+    "Git er ikke installeret eller blev ikke fundet i PATH. Installer venligst Git og genstart VS Code.",
+  "agentManager.setup.error.not_git_repo": "Åbn en mappe, der indeholder et git-repository for at bruge worktrees.",
+  "agentManager.setup.error.lfs_missing":
+    "Dette repository bruger Git LFS, men git-lfs blev ikke fundet. Installer venligst Git LFS.",
   "agentManager.shortcuts.title": "Tastaturgenveje",
   "agentManager.shortcuts.category.sidebar": "Sidebjælke",
   "agentManager.shortcuts.category.tabs": "Faner",
@@ -76,10 +82,12 @@ export const dict = {
   "agentManager.dialog.versions": "Versioner",
   "agentManager.dialog.versionHint": "{{count}} worktrees vil køre parallelt",
   "agentManager.dialog.compareModels": "Sammenlign modeller",
+  "agentManager.dialog.compareModels.tooltip":
+    "Kør agenter på forskellige modeller parallelt for at sammenligne resultater",
   "agentManager.dialog.compareModels.searchModels": "Søg modeller...",
   "agentManager.dialog.compareModels.selectModels": "Vælg modeller...",
   "agentManager.dialog.creating": "Opretter...",
-  "agentManager.dialog.createWorkspace": "Opret Worktree",
+  "agentManager.dialog.createWorktree": "Opret Worktree",
   "agentManager.dialog.removeImage": "Fjern billede",
   "agentManager.dialog.advanced": "Avanceret...",
 

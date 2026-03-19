@@ -30,6 +30,7 @@ const openRouterModelSchema = z.object({
   top_provider: z.object({ max_completion_tokens: z.number().nullish() }).optional(),
   supported_parameters: z.array(z.string()).optional(),
   preferredIndex: z.number().optional(),
+  isFree: z.boolean().optional(),
   opencode: z
     .object({
       family: z.string().optional(),
@@ -162,6 +163,7 @@ function transformToModelDevFormat(model: OpenRouterModel): any {
     variants: model.opencode?.variants,
     prompt: model.opencode?.prompt,
     tool_call: supportsTools,
+    isFree: model.isFree,
     ...(inputPrice !== undefined &&
       outputPrice !== undefined && {
         cost: {

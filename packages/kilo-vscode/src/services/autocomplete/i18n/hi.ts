@@ -6,10 +6,8 @@ export const dict = {
   "kilocode:autocomplete.statusBar.warning": "$(warning) Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.basic": "Kilo Code Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.disabled": "Kilo Code Autocomplete (अक्षम)",
-  "kilocode:autocomplete.statusBar.tooltip.noCredits":
-    "**आपके खाते में कोई क्रेडिट नहीं है**\n\nआपके Kilo Code खाते में कोई क्रेडिट नहीं है। ऑटोकम्प्लीट का उपयोग करने के लिए, कृपया अपने खाते में क्रेडिट जोड़ें।\n\n[सेटिंग्स खोलें](command:kilo-code.settingsButtonClicked)",
   "kilocode:autocomplete.statusBar.tooltip.noUsableProvider":
-    "**कोई ऑटोकम्प्लीट मॉडल कॉन्फ़िगर नहीं किया गया**\n\nऑटोकम्प्लीट सक्षम करने के लिए, इन समर्थित प्रदाताओं में से एक के साथ एक प्रोफ़ाइल जोड़ें: {{providers}}।\n\n[सेटिंग्स खोलें](command:kilo-code.settingsButtonClicked)",
+    "**कोई ऑटोकम्प्लीट मॉडल कॉन्फ़िगर नहीं किया गया**\n\nऑटोकम्प्लीट सक्षम करने के लिए, इन समर्थित प्रदाताओं में से एक के साथ एक प्रोफ़ाइल जोड़ें: {{providers}}।\n\n[सेटिंग्स खोलें]({{command}})",
   "kilocode:autocomplete.statusBar.tooltip.sessionTotal": "सत्र की कुल लागत:",
   "kilocode:autocomplete.statusBar.tooltip.provider": "प्रदाता:",
   "kilocode:autocomplete.statusBar.tooltip.model": "मॉडल:",

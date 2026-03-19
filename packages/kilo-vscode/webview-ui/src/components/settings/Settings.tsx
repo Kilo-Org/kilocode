@@ -1,7 +1,12 @@
-import { Component } from "solid-js"
+import { Component, createSignal, createEffect, on, Show } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tabs } from "@kilocode/kilo-ui/tabs"
+import { Button } from "@kilocode/kilo-ui/button"
+import { showToast } from "@kilocode/kilo-ui/toast"
+import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
+import { useConfig } from "../../context/config"
+import { useSession } from "../../context/session"
 import ProvidersTab from "./ProvidersTab"
 import AgentBehaviourTab from "./AgentBehaviourTab"
 import AutoApproveTab from "./AutoApproveTab"
@@ -19,12 +24,54 @@ import AboutKiloCodeTab from "./AboutKiloCodeTab"
 import { useServer } from "../../context/server"
 
 export interface SettingsProps {
+  tab?: string
+  onTabChange?: (tab: string) => void
   onMigrateClick?: () => void // legacy-migration
 }
 
 const Settings: Component<SettingsProps> = (props) => {
   const server = useServer()
   const language = useLanguage()
+  const vscode = useVSCode()
+  const { isDirty, saveConfig, discardConfig } = useConfig()
+  const session = useSession()
+  const [active, setActive] = createSignal(props.tab ?? "providers")
+
+  const busyCount = () => Object.values(session.allStatusMap()).filter((s) => s.type === "busy").length
+
+  const handleSave = () => {
+    const busy = busyCount()
+    if (busy === 0) {
+      saveConfig()
+      return
+    }
+    const msg = busy === 1 ? language.t("settings.saveBar.warning.one") : language.t("settings.saveBar.warning.many")
+    showToast({
+      variant: "error",
+      title: msg,
+      persistent: true,
+      actions: [
+        { label: language.t("settings.saveBar.saveAnyway"), onClick: saveConfig },
+        { label: language.t("settings.saveBar.cancel"), onClick: "dismiss" },
+      ],
+    })
+  }
+
+  // Sync when the parent changes the tab prop (e.g. via navigate message)
+  createEffect(
+    on(
+      () => props.tab,
+      (tab) => {
+        if (tab) setActive(tab)
+      },
+    ),
+  )
+
+  const onTabChange = (tab: string) => {
+    setActive(tab)
+    props.onTabChange?.(tab)
+    vscode.postMessage({ type: "settingsTabChanged", tab })
+  }
 
   return (
     <div style={{ display: "flex", "flex-direction": "column", height: "100%" }}>
@@ -42,7 +89,13 @@ const Settings: Component<SettingsProps> = (props) => {
       </div>
 
       {/* Settings tabs */}
-      <Tabs orientation="vertical" variant="settings" defaultValue="providers" style={{ flex: 1, overflow: "hidden" }}>
+      <Tabs
+        orientation="vertical"
+        variant="settings"
+        value={active()}
+        onChange={onTabChange}
+        style={{ flex: 1, overflow: "hidden" }}
+      >
         <Tabs.List>
           <Tabs.Trigger value="providers">
             <Icon name="providers" />
@@ -164,6 +217,30 @@ const Settings: Component<SettingsProps> = (props) => {
           />
         </Tabs.Content>
       </Tabs>
+
+      {/* Save bar — visible when there are unsaved config changes */}
+      <Show when={isDirty()}>
+        <div
+          style={{
+            display: "flex",
+            "align-items": "center",
+            "justify-content": "flex-end",
+            gap: "8px",
+            padding: "8px 16px",
+            "border-top": "1px solid var(--border-weak-base)",
+          }}
+        >
+          <span style={{ "font-size": "12px", color: "var(--foreground-secondary)", "margin-right": "auto" }}>
+            {language.t("settings.saveBar.unsavedChanges")}
+          </span>
+          <Button variant="ghost" size="small" onClick={discardConfig}>
+            {language.t("settings.saveBar.discard")}
+          </Button>
+          <Button variant="primary" size="small" onClick={handleSave}>
+            {language.t("settings.saveBar.save")}
+          </Button>
+        </div>
+      </Show>
     </div>
   )
 }

@@ -52,4 +52,19 @@ describe("file.ripgrep", () => {
     expect(result).toContain("src")
   })
   // kilocode_change end
+
+  test("search returns empty when nothing matches", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(path.join(dir, "match.ts"), "const value = 'other'\n")
+      },
+    })
+
+    const hits = await Ripgrep.search({
+      cwd: tmp.path,
+      pattern: "needle",
+    })
+
+    expect(hits).toEqual([])
+  })
 })

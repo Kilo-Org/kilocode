@@ -1,23 +1,31 @@
 import * as vscode from "vscode"
 import { KiloProvider } from "./KiloProvider"
+import { resolvePanelProjectDirectory } from "./project-directory"
 import type { KiloConnectionService } from "./services/cli-backend"
 
-type PanelView = "settings" | "profile"
+type PanelView = "settings" | "profile" | "marketplace"
+
+const PANEL_TITLES: Record<PanelView, string> = {
+  settings: "Kilo Settings",
+  profile: "Kilo Profile",
+  marketplace: "Kilo Marketplace",
+}
 
 /**
- * Opens Settings or Profile as an editor-area WebviewPanel,
+ * Opens Settings, Profile, or Marketplace as an editor-area WebviewPanel,
  * keeping the sidebar chat undisturbed.
  *
  * Each view type is a singleton panel — calling openPanel() again
  * reveals the existing panel instead of creating a duplicate.
  *
- * Uses a full KiloProvider under the hood so Settings/Profile have
+ * Uses a full KiloProvider under the hood so each panel has
  * the same backend connectivity (config, providers, profile, auth)
  * as the sidebar.
  */
 export class SettingsEditorProvider implements vscode.Disposable {
   private panels = new Map<PanelView, vscode.WebviewPanel>()
   private providers = new Map<PanelView, KiloProvider>()
+  private tabs = new Map<PanelView, string>()
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -25,14 +33,31 @@ export class SettingsEditorProvider implements vscode.Disposable {
     private readonly context: vscode.ExtensionContext,
   ) {}
 
-  openPanel(view: PanelView): void {
+  private getProjectDirectory(): string | null {
+    const editor = vscode.window.activeTextEditor
+    const active =
+      editor?.document.uri.scheme === "file"
+        ? vscode.workspace.getWorkspaceFolder(editor.document.uri)?.uri.fsPath
+        : undefined
+    return resolvePanelProjectDirectory(active, vscode.workspace.workspaceFolders)
+  }
+
+  openPanel(view: PanelView, tab?: string): void {
+    if (tab) this.tabs.set(view, tab)
+
+    const projectDirectory = this.getProjectDirectory()
     const existing = this.panels.get(view)
     if (existing) {
+      this.providers.get(view)?.setProjectDirectory(projectDirectory)
+      if (tab) {
+        const provider = this.providers.get(view)
+        provider?.postMessage({ type: "navigate", view, tab })
+      }
       existing.reveal(vscode.ViewColumn.One)
       return
     }
 
-    const title = view === "settings" ? "Kilo Settings" : "Kilo Profile"
+    const title = PANEL_TITLES[view]
 
     const panel = vscode.window.createWebviewPanel(`kilo-code.new.${view}Panel`, title, vscode.ViewColumn.One, {
       enableScripts: true,
@@ -47,7 +72,9 @@ export class SettingsEditorProvider implements vscode.Disposable {
 
     // Create a dedicated KiloProvider for this panel so it has full
     // backend connectivity (config, providers, agents, profile, auth).
-    const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context)
+    const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context, {
+      projectDirectory,
+    })
     provider.resolveWebviewPanel(panel)
 
     // Listen for closePanel from the webview (back button in panel mode)
@@ -57,14 +84,21 @@ export class SettingsEditorProvider implements vscode.Disposable {
       }
     })
 
-    // Once the webview signals ready, navigate to the target view.
+    // Navigate to the target view on every webviewReady (including after
+    // "Developer: Reload Webviews" which re-creates the JS context).
     const readyDisposable = panel.webview.onDidReceiveMessage((msg) => {
       if (msg.type === "webviewReady") {
         // Small delay to let KiloProvider's own webviewReady handler finish first
         setTimeout(() => {
-          provider.postMessage({ type: "navigate", view })
+          provider.postMessage({ type: "navigate", view, tab: this.tabs.get(view) })
         }, 50)
-        readyDisposable.dispose()
+      }
+    })
+
+    // Remember the active settings tab so it survives webview reloads.
+    const tabDisposable = panel.webview.onDidReceiveMessage((msg) => {
+      if (msg.type === "settingsTabChanged" && typeof msg.tab === "string") {
+        this.tabs.set(view, msg.tab)
       }
     })
 
@@ -74,9 +108,12 @@ export class SettingsEditorProvider implements vscode.Disposable {
     panel.onDidDispose(() => {
       console.log(`[Kilo New] ${title} panel disposed`)
       closePanelDisposable.dispose()
+      readyDisposable.dispose()
+      tabDisposable.dispose()
       provider.dispose()
       this.panels.delete(view)
       this.providers.delete(view)
+      this.tabs.delete(view)
     })
   }
 

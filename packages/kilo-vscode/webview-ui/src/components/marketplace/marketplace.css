@@ -1,0 +1,309 @@
+/* Marketplace View */
+
+.marketplace-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 12px;
+  overflow: auto;
+  gap: 8px;
+}
+
+.marketplace-tabs-root {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.marketplace-content {
+  flex: 1;
+  overflow: auto;
+}
+
+/* List layout */
+
+.marketplace-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 12px;
+}
+
+.marketplace-filters {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.marketplace-search-field {
+  flex: 1;
+}
+
+.marketplace-category-filters {
+  overflow-x: auto;
+}
+
+/* Tag filters */
+
+.marketplace-active-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.marketplace-tag-filter {
+  all: unset;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.15s ease;
+}
+
+.marketplace-tag-filter:hover {
+  opacity: 0.8;
+}
+
+.marketplace-tag-filter.active {
+  opacity: 1;
+}
+
+/* Loading & empty */
+
+.marketplace-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+.marketplace-empty {
+  text-align: center;
+  color: var(--text-weak);
+  padding: 24px;
+}
+
+/* Grid */
+
+.marketplace-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 12px;
+  max-width: 1200px;
+}
+
+/* Card */
+
+.marketplace-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+
+.marketplace-card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.marketplace-card-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.marketplace-card-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-base);
+}
+
+.marketplace-card-name.clickable {
+  cursor: pointer;
+}
+
+.marketplace-card-name.clickable:hover {
+  text-decoration: underline;
+}
+
+.marketplace-card-author {
+  font-size: 12px;
+  color: var(--text-weak);
+}
+
+.marketplace-card-description {
+  font-size: 13px;
+  color: var(--text-weak);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0;
+}
+
+.marketplace-card-description.expanded {
+  display: block;
+  -webkit-line-clamp: unset;
+}
+
+.marketplace-card-expand {
+  all: unset;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-interactive-base);
+}
+
+.marketplace-card-expand:hover {
+  text-decoration: underline;
+}
+
+.marketplace-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.marketplace-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.marketplace-card-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* Installed badge */
+
+.marketplace-badge-installed {
+  color: var(--text-on-success-base) !important;
+  border-color: var(--border-success-base) !important;
+}
+
+/* Remove button */
+
+.marketplace-remove-btn {
+  color: var(--text-on-critical-base) !important;
+  border-color: var(--border-critical-base) !important;
+}
+
+/* Remove dialog actions */
+
+.marketplace-remove-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+/* Danger button (remove confirm) */
+
+.danger-btn {
+  color: var(--text-on-critical-base) !important;
+  border-color: var(--border-critical-base) !important;
+}
+
+/* Install modal */
+
+.install-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.install-modal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.install-modal-label {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-base);
+}
+
+.install-modal-prerequisites {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+  color: var(--text-weak);
+}
+
+.install-modal-param {
+  margin-bottom: 8px;
+}
+
+.install-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.install-modal-result {
+  text-align: center;
+  padding: 12px 0;
+}
+
+.install-modal-success {
+  color: var(--text-on-success-base);
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 16px;
+}
+
+.install-modal-error-msg {
+  color: var(--text-on-critical-base);
+  font-size: 13px;
+  margin: 0 0 16px;
+}
+
+/* Error banner */
+
+.marketplace-error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+/* Link style */
+
+.link {
+  color: var(--text-interactive-base);
+  cursor: pointer;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+/* ============================================
+   High Contrast Theme Support
+   ============================================ */
+
+body.vscode-high-contrast,
+body.vscode-high-contrast-light {
+  .marketplace-card {
+    border: 1px solid var(--vscode-contrastBorder, transparent);
+  }
+
+  .marketplace-tag-filter {
+    border: 1px solid var(--vscode-contrastBorder, transparent);
+  }
+
+  .marketplace-tag-filter.active {
+    border-color: var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
+  }
+
+  .marketplace-card-expand:focus-visible {
+    outline: 1px solid var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
+  }
+}

@@ -2,6 +2,11 @@ import type { ModelSelection } from "../../types/messages"
 import type { EnrichedModel } from "../../context/provider"
 
 export const KILO_GATEWAY_ID = "kilo"
+export const KILO_AUTO_SMALL_IDS = new Set(["kilo-auto/small", "auto-small"])
+
+export function isSmall(model: Pick<EnrichedModel, "providerID" | "id">): boolean {
+  return model.providerID === KILO_GATEWAY_ID && KILO_AUTO_SMALL_IDS.has(model.id)
+}
 
 export const PROVIDER_ORDER = [KILO_GATEWAY_ID, "anthropic", "openai", "google"]
 
@@ -10,8 +15,8 @@ export function providerSortKey(providerID: string, order = PROVIDER_ORDER): num
   return idx >= 0 ? idx : order.length
 }
 
-export function isFree(model: Pick<EnrichedModel, "inputPrice">): boolean {
-  return model.inputPrice === 0
+export function isFree(model: Pick<EnrichedModel, "isFree">): boolean {
+  return model.isFree === true
 }
 
 export function stripSubProviderPrefix(name: string): string {

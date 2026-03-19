@@ -44,6 +44,11 @@ export function sessionToWebview(session: Session) {
     title: session.title,
     createdAt: new Date(session.time.created).toISOString(),
     updatedAt: new Date(session.time.updated).toISOString(),
+    // Use null (not undefined) so the value survives postMessage JSON serialization.
+    // Without this, unrevert responses lose the revert key entirely and the
+    // SolidJS store merge never clears the existing revert state.
+    revert: session.revert ?? null,
+    summary: session.summary ?? null,
   }
 }
 
@@ -162,6 +167,7 @@ export type WebviewMessage =
         sessionID: string
         toolName: string
         patterns: string[]
+        always: string[]
         args: Record<string, unknown>
         message: string
         tool?: { messageID: string; callID: string }
@@ -174,6 +180,7 @@ export type WebviewMessage =
   | { type: "permissionError"; permissionID: string }
   | { type: "sessionCreated"; session: ReturnType<typeof sessionToWebview> }
   | { type: "sessionUpdated"; session: ReturnType<typeof sessionToWebview> }
+  | { type: "messageRemoved"; sessionID: string; messageID: string }
   | null
 
 export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | undefined): WebviewMessage {
@@ -209,6 +216,14 @@ export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | un
         },
       }
     }
+    case "message.removed": {
+      const props = event.properties as { sessionID: string; messageID: string }
+      return {
+        type: "messageRemoved",
+        sessionID: props.sessionID,
+        messageID: props.messageID,
+      }
+    }
     case "session.status": {
       const info = event.properties.status
       return {
@@ -226,6 +241,7 @@ export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | un
           sessionID: event.properties.sessionID,
           toolName: event.properties.permission,
           patterns: event.properties.patterns ?? [],
+          always: event.properties.always ?? [],
           args: event.properties.metadata,
           message: `Permission required: ${event.properties.permission}`,
           tool: event.properties.tool,

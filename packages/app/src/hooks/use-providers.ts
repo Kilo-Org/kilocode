@@ -4,16 +4,7 @@ import { useParams } from "@solidjs/router"
 import { createMemo } from "solid-js"
 
 // kilocode_change start - Preferred providers list (order determines display priority)
-export const popularProviders = [
-  "kilo",
-  "opencode",
-  "anthropic",
-  "github-copilot",
-  "openai",
-  "google",
-  "openrouter",
-  "vercel",
-]
+export const popularProviders = ["kilo", "anthropic", "github-copilot", "openai", "google", "openrouter", "vercel"]
 // kilocode_change end
 const popularProviderSet = new Set(popularProviders)
 

@@ -13,7 +13,7 @@ describe("npm install artifact behavior", () => {
     const text = await fs.readFile(wrapper, "utf8")
     expect(text.startsWith("#!/usr/bin/env node")).toBe(true)
     expect(text).toContain("const envPath = process.env.KILO_BIN_PATH")
-    expect(text).toContain("const base = \"@kilocode/cli-\" + platform + \"-\" + arch")
+    expect(text).toContain('const base = "@kilocode/cli-" + platform + "-" + arch')
     expect(text).toContain("function findBinary(startDir)")
   })
 

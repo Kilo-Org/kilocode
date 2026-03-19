@@ -86,6 +86,7 @@ export namespace ModelsDev {
     // kilocode_change start
     recommendedIndex: z.number().optional(),
     prompt: Prompt.optional().catch(undefined),
+    isFree: z.boolean().optional(),
     // kilocode_change end
 
     experimental: z.boolean().optional(),

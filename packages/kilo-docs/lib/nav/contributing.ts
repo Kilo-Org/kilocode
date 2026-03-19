@@ -67,10 +67,6 @@ export const ContributingNav: NavSection[] = [
             children: "Track Repo URL",
           },
           {
-            href: "/contributing/architecture/vercel-ai-gateway",
-            children: "Vercel AI Gateway",
-          },
-          {
             href: "/contributing/architecture/voice-transcription",
             children: "Voice Transcription",
           },

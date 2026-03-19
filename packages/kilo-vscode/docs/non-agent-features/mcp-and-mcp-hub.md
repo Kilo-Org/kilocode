@@ -1,13 +1,8 @@
 # MCP (Model Context Protocol) & MCP Hub
 
 **Priority:** P1
-**Status:** 🔨 Partial
 
-## What Exists
-
-- HTTP client methods: `getMcpStatus()`, `addMcpServer()`, `connectMcpServer()`, `disconnectMcpServer()`
-- `BrowserAutomationService` uses MCP API to register Playwright MCP server
-- AgentBehaviour settings tab has "MCP Servers" subtab showing a **read-only list** of configured MCP servers (names, commands/args, URLs)
+Settings UI shows a read-only list of configured MCP servers. HTTP client methods exist for add/connect/disconnect.
 
 ## Remaining Work
 

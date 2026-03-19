@@ -6,10 +6,8 @@ export const dict = {
   "kilocode:autocomplete.statusBar.warning": "$(warning) Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.basic": "Kilo Code Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.disabled": "Kilo Code Autocomplete (вимкнено)",
-  "kilocode:autocomplete.statusBar.tooltip.noCredits":
-    "**На вашому рахунку немає кредитів**\n\nНа вашому рахунку Kilo Code немає кредитів. Щоб використовувати автодоповнення, будь ласка, поповніть рахунок.\n\n[Відкрити Налаштування](command:kilo-code.settingsButtonClicked)",
   "kilocode:autocomplete.statusBar.tooltip.noUsableProvider":
-    "**Модель автодоповнення не налаштована**\n\nЩоб увімкнути автодоповнення, додайте профіль з одним із підтримуваних провайдерів: {{providers}}.\n\n[Відкрити Налаштування](command:kilo-code.settingsButtonClicked)",
+    "**Модель автодоповнення не налаштована**\n\nЩоб увімкнути автодоповнення, додайте профіль з одним із підтримуваних провайдерів: {{providers}}.\n\n[Відкрити Налаштування]({{command}})",
   "kilocode:autocomplete.statusBar.tooltip.sessionTotal": "Загальна вартість сесії:",
   "kilocode:autocomplete.statusBar.tooltip.provider": "Провайдер:",
   "kilocode:autocomplete.statusBar.tooltip.model": "Модель:",

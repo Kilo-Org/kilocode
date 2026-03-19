@@ -2,6 +2,10 @@
  * Config context
  * Manages backend configuration state (permissions, agents, providers, etc.)
  * and exposes an updateConfig method to apply partial updates.
+ *
+ * Changes are accumulated in a local draft and only sent to the extension
+ * when saveConfig() is called. This allows batching multiple settings
+ * changes into a single write (which triggers disposeAll on the CLI).
  */
 
 import { createContext, useContext, createSignal, onCleanup, ParentComponent, Accessor } from "solid-js"
@@ -11,7 +15,10 @@ import type { Config, ExtensionMessage } from "../types/messages"
 interface ConfigContextValue {
   config: Accessor<Config>
   loading: Accessor<boolean>
+  isDirty: Accessor<boolean>
   updateConfig: (partial: Partial<Config>) => void
+  saveConfig: () => void
+  discardConfig: () => void
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -45,24 +52,51 @@ function stripNulls(obj: Config): Config {
   return result as Config
 }
 
-const ConfigContext = createContext<ConfigContextValue>()
+export const ConfigContext = createContext<ConfigContextValue>()
 
 export const ConfigProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
 
   const [config, setConfig] = createSignal<Config>({})
   const [loading, setLoading] = createSignal(true)
+  const [draft, setDraft] = createSignal<Partial<Config>>({})
+  const [isDirty, setIsDirty] = createSignal(false)
+  // Last config received from the server — used to revert on discard
+  const [saved, setSaved] = createSignal<Config>({})
+  // True while a saveConfig() write is in-flight — used to clear draft on success
+  // and to guard against stale configLoaded messages overwriting optimistic state.
+  let saving = false
 
   // Register handler immediately (not in onMount) so we never miss
   // a configLoaded message that arrives before the DOM mount.
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type === "configLoaded") {
+      // Skip if a save is in-flight — a stale configLoaded must not overwrite
+      // the optimistically-updated state while the write is being confirmed.
+      if (saving) return
       setConfig(message.config)
+      setSaved(message.config)
       setLoading(false)
       return
     }
     if (message.type === "configUpdated") {
-      setConfig(message.config)
+      if (saving) {
+        // This configUpdated is the confirmation of our saveConfig() write.
+        // Clear the draft now that the server has confirmed the write.
+        saving = false
+        setDraft({})
+        setIsDirty(false)
+        setConfig(message.config)
+      } else {
+        // configUpdated from a different source (e.g. PermissionDock save).
+        // Re-apply the draft on top so pending settings changes are preserved.
+        if (isDirty()) {
+          setConfig(stripNulls(deepMerge(message.config, draft())))
+        } else {
+          setConfig(message.config)
+        }
+      }
+      setSaved(message.config)
       return
     }
   })
@@ -92,14 +126,33 @@ export const ConfigProvider: ParentComponent = (props) => {
   function updateConfig(partial: Partial<Config>) {
     // Optimistically update local state with deep merge + null stripping
     setConfig((prev) => stripNulls(deepMerge(prev, partial)))
-    // Send to extension for persistence
-    vscode.postMessage({ type: "updateConfig", config: partial })
+    // Accumulate in draft — will be sent on saveConfig()
+    setDraft((prev) => deepMerge(prev as Config, partial))
+    setIsDirty(true)
+  }
+
+  function saveConfig() {
+    const changes = draft()
+    if (Object.keys(changes).length === 0) return
+    // Don't clear draft/isDirty yet — wait for configUpdated confirmation.
+    // If the write fails, the save bar stays visible so the user can retry.
+    saving = true
+    vscode.postMessage({ type: "updateConfig", config: changes })
+  }
+
+  function discardConfig() {
+    setConfig(saved())
+    setDraft({})
+    setIsDirty(false)
   }
 
   const value: ConfigContextValue = {
     config,
     loading,
+    isDirty,
     updateConfig,
+    saveConfig,
+    discardConfig,
   }
 
   return <ConfigContext.Provider value={value}>{props.children}</ConfigContext.Provider>

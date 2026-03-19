@@ -35,24 +35,27 @@ function normalizeProjectId(input: string): string {
 }
 
 /**
- * Read project ID from .kilocode/config.json
+ * Read project ID from .kilo/config.json, falling back to .kilocode/config.json
  * @param directory - Project directory
  * @returns Normalized project ID or undefined
  */
 async function getProjectIdFromConfig(directory: string): Promise<string | undefined> {
-  const file = Bun.file(path.join(directory, ".kilocode", "config.json"))
-  const text = await file.text().catch(() => undefined)
-  if (!text) return undefined
+  // Check .kilo first, then legacy .kilocode
+  for (const dir of [".kilo", ".kilocode"]) {
+    const file = Bun.file(path.join(directory, dir, "config.json"))
+    const text = await file.text().catch(() => undefined)
+    if (!text) continue
 
-  try {
-    const parsed = JSON.parse(text)
-    const id = parsed?.project?.id
-    // Trim whitespace/newlines to ensure valid HTTP header value
-    return typeof id === "string" && id.trim() ? normalizeProjectId(id) : undefined
-  } catch {
-    // Malformed JSON - return undefined to fall back to git
-    return undefined
+    try {
+      const parsed = JSON.parse(text)
+      const id = parsed?.project?.id
+      // Trim whitespace/newlines to ensure valid HTTP header value
+      if (typeof id === "string" && id.trim()) return normalizeProjectId(id)
+    } catch {
+      // Malformed JSON - try next location
+    }
   }
+  return undefined
 }
 
 /**
@@ -74,13 +77,13 @@ async function getProjectIdFromGit(directory: string): Promise<string | undefine
 }
 
 /**
- * Resolve project ID with priority: .kilocode/config.json -> git origin URL
+ * Resolve project ID with priority: .kilo/config.json -> .kilocode/config.json -> git origin URL
  * @returns Normalized project ID or undefined
  */
 async function resolveProjectId(): Promise<string | undefined> {
   const dir = Instance.directory
 
-  // Priority 1: .kilocode/config.json
+  // Priority 1: .kilo/config.json (falls back to .kilocode/config.json)
   const id = await getProjectIdFromConfig(dir)
   if (id) return id
 

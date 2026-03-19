@@ -6,10 +6,8 @@ export const dict = {
   "kilocode:autocomplete.statusBar.warning": "$(warning) Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.basic": "Kilo Code Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.disabled": "Kilo Code Autocomplete (deaktiviert)",
-  "kilocode:autocomplete.statusBar.tooltip.noCredits":
-    "**Kein Guthaben auf deinem Konto**\n\nDein Kilo Code Konto hat kein Guthaben. Um Autocomplete zu nutzen, füge bitte Guthaben zu deinem Konto hinzu.\n\n[Einstellungen öffnen](command:kilo-code.settingsButtonClicked)",
   "kilocode:autocomplete.statusBar.tooltip.noUsableProvider":
-    "**Kein Autocomplete-Modell konfiguriert**\n\nUm Autocomplete zu aktivieren, füge ein Profil mit einem dieser unterstützten Anbieter hinzu: {{providers}}.\n\n[Einstellungen öffnen](command:kilo-code.settingsButtonClicked)",
+    "**Kein Autocomplete-Modell konfiguriert**\n\nUm Autocomplete zu aktivieren, füge ein Profil mit einem dieser unterstützten Anbieter hinzu: {{providers}}.\n\n[Einstellungen öffnen]({{command}})",
   "kilocode:autocomplete.statusBar.tooltip.sessionTotal": "Sitzungsgesamtkosten:",
   "kilocode:autocomplete.statusBar.tooltip.provider": "Anbieter:",
   "kilocode:autocomplete.statusBar.tooltip.model": "Modell:",

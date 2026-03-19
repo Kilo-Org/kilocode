@@ -19,6 +19,7 @@ import { dict as no } from "@/i18n/no"
 import { dict as br } from "@/i18n/br"
 import { dict as th } from "@/i18n/th"
 import { dict as bs } from "@/i18n/bs"
+import { dict as tr } from "@/i18n/tr"
 import { dict as uiEn } from "@opencode-ai/ui/i18n/en"
 import { dict as uiZh } from "@opencode-ai/ui/i18n/zh"
 import { dict as uiZht } from "@opencode-ai/ui/i18n/zht"
@@ -35,6 +36,7 @@ import { dict as uiNo } from "@opencode-ai/ui/i18n/no"
 import { dict as uiBr } from "@opencode-ai/ui/i18n/br"
 import { dict as uiTh } from "@opencode-ai/ui/i18n/th"
 import { dict as uiBs } from "@opencode-ai/ui/i18n/bs"
+import { dict as uiTr } from "@opencode-ai/ui/i18n/tr"
 
 // kilocode_change start
 import { dict as kiloEn } from "@kilocode/kilo-i18n/en"
@@ -53,6 +55,7 @@ import { dict as kiloNo } from "@kilocode/kilo-i18n/no"
 import { dict as kiloBr } from "@kilocode/kilo-i18n/br"
 import { dict as kiloTh } from "@kilocode/kilo-i18n/th"
 import { dict as kiloBs } from "@kilocode/kilo-i18n/bs"
+import { dict as kiloTr } from "@kilocode/kilo-i18n/tr"
 // kilocode_change end
 
 export type Locale =
@@ -72,6 +75,7 @@ export type Locale =
   | "br"
   | "th"
   | "bs"
+  | "tr"
 
 type RawDictionary = typeof en & typeof uiEn & typeof kiloEn // kilocode_change
 type Dictionary = i18n.Flatten<RawDictionary>
@@ -97,7 +101,28 @@ const LOCALES: readonly Locale[] = [
   "no",
   "br",
   "th",
+  "tr",
 ]
+
+const INTL: Record<Locale, string> = {
+  en: "en",
+  zh: "zh-Hans",
+  zht: "zh-Hant",
+  ko: "ko",
+  de: "de",
+  es: "es",
+  fr: "fr",
+  da: "da",
+  ja: "ja",
+  pl: "pl",
+  ru: "ru",
+  ar: "ar",
+  no: "nb-NO",
+  br: "pt-BR",
+  th: "th",
+  bs: "bs",
+  tr: "tr",
+}
 
 const LABEL_KEY: Record<Locale, keyof Dictionary> = {
   en: "language.en",
@@ -116,6 +141,7 @@ const LABEL_KEY: Record<Locale, keyof Dictionary> = {
   br: "language.br",
   th: "language.th",
   bs: "language.bs",
+  tr: "language.tr",
 }
 
 const base = i18n.flatten({ ...en, ...uiEn, ...kiloEn })
@@ -136,9 +162,11 @@ const DICT: Record<Locale, Dictionary> = {
   br: { ...base, ...i18n.flatten({ ...br, ...uiBr, ...kiloBr }) },
   th: { ...base, ...i18n.flatten({ ...th, ...uiTh, ...kiloTh }) },
   bs: { ...base, ...i18n.flatten({ ...bs, ...uiBs, ...kiloBs }) },
+  tr: { ...base, ...i18n.flatten({ ...tr, ...uiTr, ...kiloTr }) },
 }
 
 const localeMatchers: Array<{ locale: Locale; match: (language: string) => boolean }> = [
+  { locale: "en", match: (language) => language.startsWith("en") },
   { locale: "zht", match: (language) => language.startsWith("zh") && language.includes("hant") },
   { locale: "zh", match: (language) => language.startsWith("zh") },
   { locale: "ko", match: (language) => language.startsWith("ko") },
@@ -157,6 +185,7 @@ const localeMatchers: Array<{ locale: Locale; match: (language: string) => boole
   { locale: "br", match: (language) => language.startsWith("pt") },
   { locale: "th", match: (language) => language.startsWith("th") },
   { locale: "bs", match: (language) => language.startsWith("bs") },
+  { locale: "tr", match: (language) => language.startsWith("tr") },
 ]
 
 type ParityKey = "command.session.previous.unseen" | "command.session.next.unseen"
@@ -176,6 +205,7 @@ const PARITY_CHECK: Record<Exclude<Locale, "en">, Record<ParityKey, string>> = {
   br,
   th,
   bs,
+  tr,
 }
 void PARITY_CHECK
 
@@ -208,6 +238,8 @@ export const { use: useLanguage, provider: LanguageProvider } = createSimpleCont
     )
 
     const locale = createMemo<Locale>(() => normalizeLocale(store.locale))
+    console.log("locale", locale())
+    const intl = createMemo(() => INTL[locale()])
 
     const dict = createMemo<Dictionary>(() => DICT[locale()])
 
@@ -224,6 +256,7 @@ export const { use: useLanguage, provider: LanguageProvider } = createSimpleCont
     return {
       ready,
       locale,
+      intl,
       locales: LOCALES,
       label,
       t,

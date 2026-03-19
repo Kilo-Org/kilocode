@@ -18,7 +18,6 @@ These pages document the architecture and design of current or planned features,
 | [Organization Modes Library](/docs/contributing/architecture/organization-modes-library) | Shared modes for teams and enterprise                |
 | [Agentic Security Reviews](/docs/deploy-secure/security-reviews)                         | AI-powered security vulnerability analysis           |
 | [Track Repo URL](/docs/contributing/architecture/track-repo-url)                         | Usage tracking by repository/project                 |
-| [Vercel AI Gateway](/docs/contributing/architecture/vercel-ai-gateway)                   | Vercel AI Gateway integration                        |
 | [Voice Transcription](/docs/contributing/architecture/voice-transcription)               | Live voice input for chat                            |
 
 To propose a new feature design, consider using the [Spec Template](/docs/contributing/architecture/feature-template).

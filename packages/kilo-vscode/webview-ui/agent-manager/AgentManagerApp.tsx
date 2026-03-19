@@ -22,6 +22,7 @@ import type {
   AgentManagerSendInitialMessage,
   AgentManagerBranchesMessage,
   AgentManagerWorktreeDiffMessage,
+  AgentManagerWorktreeDiffFileMessage,
   AgentManagerWorktreeDiffLoadingMessage,
   AgentManagerApplyWorktreeDiffResultMessage,
   AgentManagerApplyWorktreeDiffStatus,
@@ -45,8 +46,10 @@ import { DropdownMenu } from "@kilocode/kilo-ui/dropdown-menu"
 import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
 import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
 import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff"
+import { FileComponentProvider } from "@kilocode/kilo-ui/context/file"
 import { Code } from "@kilocode/kilo-ui/code"
 import { Diff } from "@kilocode/kilo-ui/diff"
+import { File } from "@kilocode/kilo-ui/file"
 import { Toast, showToast } from "@kilocode/kilo-ui/toast"
 import { ResizeHandle } from "@kilocode/kilo-ui/resize-handle"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -76,6 +79,7 @@ import { groupApplyConflicts } from "./apply-conflicts"
 import type { ReviewComment } from "./review-comments"
 import { BranchSelect } from "./BranchSelect"
 import { WorktreeItem } from "./WorktreeItem"
+import { mergeWorktreeDiffs } from "./diff-state"
 import "./agent-manager.css"
 import "./agent-manager-review.css"
 
@@ -87,6 +91,7 @@ interface SetupState {
   branch?: string
   error?: boolean
   worktreeId?: string
+  errorCode?: string
 }
 
 interface WorktreeBusyState {
@@ -101,7 +106,7 @@ interface ApplyState {
   conflicts: AgentManagerApplyWorktreeDiffConflict[]
 }
 
-/** Sidebar selection: LOCAL for workspace, worktree ID for a worktree, or null for an unassigned session. */
+/** Sidebar selection: LOCAL for local repo, worktree ID for a worktree, or null for an unassigned session. */
 type SidebarSelection = typeof LOCAL | string | null
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
@@ -325,6 +330,7 @@ const AgentManagerContent: Component = () => {
   const [diffOpen, setDiffOpen] = createSignal(false)
   const [diffDatas, setDiffDatas] = createSignal<Record<string, WorktreeFileDiff[]>>({})
   const [diffLoading, setDiffLoading] = createSignal(false)
+  const [diffFileLoading, setDiffFileLoading] = createSignal<Record<string, Record<string, true>>>({})
   const [diffWidth, setDiffWidth] = createSignal(Math.round(window.innerWidth * 0.5))
 
   // Full-screen review state (in-memory, per sidebar context: local/worktree)
@@ -337,7 +343,7 @@ const AgentManagerContent: Component = () => {
   // Per-worktree git stats (diff additions/deletions, commits missing from origin)
   const [worktreeStats, setWorktreeStats] = createSignal<Record<string, WorktreeGitStats>>({})
 
-  // Local workspace git stats (branch name, diff additions/deletions, commits)
+  // Local repo git stats (branch name, diff additions/deletions, commits)
   const [localStats, setLocalStats] = createSignal<LocalGitStats | undefined>()
 
   // Per-worktree apply-to-local status
@@ -609,7 +615,9 @@ const AgentManagerContent: Component = () => {
 
   // Persist local session IDs and sidebar width to webview state for recovery (exclude pending tabs)
   createEffect(() => {
+    const prev = vscode.getState<Record<string, unknown>>() ?? {}
     vscode.setState({
+      ...prev,
       localSessionIDs: localSessionIDs().filter((id) => !isPending(id)),
       sidebarWidth: sidebarWidth(),
     })
@@ -1067,7 +1075,14 @@ const AgentManagerContent: Component = () => {
               return next
             })
           }
-          setSetup({ active: true, message: ev.message, branch: ev.branch, error, worktreeId: ev.worktreeId })
+          setSetup({
+            active: true,
+            message: ev.message,
+            branch: ev.branch,
+            error,
+            worktreeId: ev.worktreeId,
+            errorCode: ev.errorCode,
+          })
           globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 500)
           if (!error && ev.sessionId) {
             session.selectSession(ev.sessionId)
@@ -1084,12 +1099,28 @@ const AgentManagerContent: Component = () => {
             )
             setSelection(ev.worktreeId)
           }
+          // Close diff/review panels — nothing to show during setup
+          setDiffOpen(false)
+          setReviewActive(false)
           setSetup({ active: true, message: ev.message, branch: ev.branch, worktreeId: ev.worktreeId })
         }
       }
 
       if (msg.type === "agentManager.sessionAdded") {
         const ev = msg as { type: string; sessionId: string; worktreeId: string }
+        session.selectSession(ev.sessionId)
+      }
+
+      if (msg.type === "agentManager.sessionForked") {
+        const ev = msg as { type: string; sessionId: string; forkedFromId: string; worktreeId?: string }
+        if (!ev.worktreeId) {
+          // Local session: insert new tab after the forked-from tab
+          setLocalSessionIDs((prev) => {
+            const idx = prev.indexOf(ev.forkedFromId)
+            if (idx >= 0) return [...prev.slice(0, idx + 1), ev.sessionId, ...prev.slice(idx + 1)]
+            return [...prev, ev.sessionId]
+          })
+        }
         session.selectSession(ev.sessionId)
       }
 
@@ -1180,12 +1211,13 @@ const AgentManagerContent: Component = () => {
       if ((msg as { type: string }).type === "agentManager.sendInitialMessage") {
         const ev = msg as unknown as AgentManagerSendInitialMessage
 
-        // Set model and agent selections for this session so the UI reflects them
-        if (ev.providerID && ev.modelID) {
-          session.setSessionModel(ev.sessionId, ev.providerID, ev.modelID)
-        }
+        // Set agent first so setSessionModel (and getSessionModel) resolve the
+        // correct agent — otherwise the session falls back to defaultAgent().
         if (ev.agent) {
           session.setSessionAgent(ev.sessionId, ev.agent)
+        }
+        if (ev.providerID && ev.modelID) {
+          session.setSessionModel(ev.sessionId, ev.providerID, ev.modelID)
         }
 
         // Only send a message if there's text — otherwise just clear busy state
@@ -1215,22 +1247,40 @@ const AgentManagerContent: Component = () => {
         const ev = msg as AgentManagerWorktreeDiffMessage
         setDiffDatas((prev) => {
           const existing = prev[ev.sessionId]
-          // Reuse previous array reference when content is unchanged to prevent
-          // <For> from tearing down / rebuilding <Diff> components (which resets scroll)
-          if (existing && existing.length === ev.diffs.length) {
+          const next = existing ? mergeWorktreeDiffs(existing, ev.diffs) : ev.diffs
+          if (existing && existing.length === next.length) {
             const same = existing.every((old, i) => {
-              const next = ev.diffs[i]!
+              const item = next[i]!
               return (
-                old.file === next.file &&
-                old.before === next.before &&
-                old.after === next.after &&
-                old.status === next.status
+                old.file === item.file &&
+                old.before === item.before &&
+                old.after === item.after &&
+                old.status === item.status &&
+                old.tracked === item.tracked &&
+                old.generatedLike === item.generatedLike &&
+                old.summarized === item.summarized &&
+                old.additions === item.additions &&
+                old.deletions === item.deletions
               )
             })
             if (same) return prev
           }
-          return { ...prev, [ev.sessionId]: ev.diffs }
+          return { ...prev, [ev.sessionId]: next }
         })
+      }
+
+      if (msg.type === "agentManager.worktreeDiffFile") {
+        const ev = msg as AgentManagerWorktreeDiffFileMessage
+        if (ev.diff) {
+          setDiffDatas((prev) => {
+            const existing = prev[ev.sessionId] ?? []
+            const next = existing.map((item) => (item.file === ev.diff!.file ? ev.diff! : item))
+            return { ...prev, [ev.sessionId]: next }
+          })
+          setDiffFilePending(ev.sessionId, ev.diff.file, false)
+          return
+        }
+        setDiffFilePending(ev.sessionId, ev.file, false)
       }
 
       if (msg.type === "agentManager.worktreeDiffLoading") {
@@ -1394,6 +1444,20 @@ const AgentManagerContent: Component = () => {
     return []
   })
 
+  const currentDiffSessionId = createMemo(() => {
+    const sel = selection()
+    if (sel === LOCAL) return LOCAL
+
+    const current = session.currentSessionID()
+    if (current) {
+      const item = managedSessions().find((entry) => entry.id === current)
+      if (sel && item?.worktreeId === sel) return current
+    }
+
+    if (!sel) return undefined
+    return managedSessions().find((entry) => entry.worktreeId === sel)?.id
+  })
+
   const diffSessionKey = createMemo(() => {
     const sel = selection()
     if (sel === LOCAL) return `local:${LOCAL}`
@@ -1406,6 +1470,46 @@ const AgentManagerContent: Component = () => {
     setReviewDiffStyle(style)
     vscode.postMessage({ type: "agentManager.setReviewDiffStyle", style })
   }
+
+  const setDiffFilePending = (sessionId: string, file: string, value: boolean) => {
+    setDiffFileLoading((prev) => {
+      const session = prev[sessionId] ?? {}
+      if (value) {
+        if (session[file]) return prev
+        return {
+          ...prev,
+          [sessionId]: { ...session, [file]: true },
+        }
+      }
+
+      if (!session[file]) return prev
+      const next = { ...session }
+      delete next[file]
+      if (Object.keys(next).length === 0) {
+        const result = { ...prev }
+        delete result[sessionId]
+        return result
+      }
+      return {
+        ...prev,
+        [sessionId]: next,
+      }
+    })
+  }
+
+  const requestDiffFile = (file: string) => {
+    const sessionId = currentDiffSessionId()
+    if (!sessionId) return
+    if (diffFileLoading()[sessionId]?.[file]) return
+    setDiffFilePending(sessionId, file, true)
+    vscode.postMessage({ type: "agentManager.requestWorktreeDiffFile", sessionId, file })
+  }
+
+  const diffFileLoadingForCurrent = createMemo(() => {
+    const sessionId = currentDiffSessionId()
+    if (!sessionId) return new Set<string>()
+    return new Set(Object.keys(diffFileLoading()[sessionId] ?? {}))
+  })
 
   const handleConfigureSetupScript = () => {
     vscode.postMessage({ type: "agentManager.configureSetupScript" })
@@ -1538,12 +1642,16 @@ const AgentManagerContent: Component = () => {
     ))
   }
 
+  const loaded = () => worktreesLoaded() && sessionsLoaded()
+
   const handleCreateWorktree = () => {
+    if (!loaded()) return
     vscode.postMessage({ type: "agentManager.createWorktree" })
   }
 
   // Advanced worktree dialog — opens a full dialog with prompt, versions, model, mode
   const showAdvancedWorktreeDialog = () => {
+    if (!loaded()) return
     dialog.show(() => <NewWorktreeDialog onClose={() => dialog.close()} defaultBaseBranch={repoDefaultBranch()} />)
   }
 
@@ -1628,6 +1736,7 @@ const AgentManagerContent: Component = () => {
 
   const handlePromote = (sessionId: string, e: MouseEvent) => {
     e.stopPropagation()
+    if (!loaded()) return
     vscode.postMessage({ type: "agentManager.promoteSession", sessionId })
   }
 
@@ -1640,8 +1749,16 @@ const AgentManagerContent: Component = () => {
     }
   }
 
-  const handleCloseTab = (sessionId: string, e: MouseEvent) => {
-    e.stopPropagation()
+  const handleForkSession = (sessionId: string) => {
+    const sel = selection()
+    if (sel === LOCAL) {
+      vscode.postMessage({ type: "agentManager.forkSession", sessionId })
+    } else if (sel) {
+      vscode.postMessage({ type: "agentManager.forkSession", sessionId, worktreeId: sel })
+    }
+  }
+
+  const handleCloseTab = (sessionId: string) => {
     const pending = isPending(sessionId)
     const isActive = pending ? sessionId === activePendingId() : session.currentSessionID() === sessionId
     if (isActive) {
@@ -1671,7 +1788,7 @@ const AgentManagerContent: Component = () => {
   const handleTabMouseDown = (sessionId: string, e: MouseEvent) => {
     if (e.button === 1) {
       e.preventDefault()
-      handleCloseTab(sessionId, e)
+      handleCloseTab(sessionId)
     }
   }
 
@@ -1769,8 +1886,7 @@ const AgentManagerContent: Component = () => {
         ? tabs.find((s) => s.id === pending)
         : undefined
     if (!target) return
-    const synthetic = new MouseEvent("click")
-    handleCloseTab(target.id, synthetic)
+    handleCloseTab(target.id)
   }
 
   // Cmd+T: add a new tab strictly to the current selection (no side effects)
@@ -1786,6 +1902,7 @@ const AgentManagerContent: Component = () => {
 
   // Cmd+N: if an unassigned session is selected, promote it; otherwise create a new worktree
   const handleNewWorktreeOrPromote = () => {
+    if (!loaded()) return
     const sel = selection()
     const sid = session.currentSessionID()
     if (sel === null && sid && !worktreeSessionIds().has(sid)) {
@@ -1812,7 +1929,7 @@ const AgentManagerContent: Component = () => {
           max={9999}
           onResize={(width) => setSidebarWidth(Math.min(width, window.innerWidth * MAX_SIDEBAR_WIDTH_RATIO))}
         />
-        {/* Local workspace item */}
+        {/* Local repo item */}
         <button
           class={`am-local-item ${selection() === LOCAL ? "am-local-item-active" : ""}`}
           data-sidebar-id="local"
@@ -1886,11 +2003,13 @@ const AgentManagerContent: Component = () => {
                     variant="ghost"
                     label={t("agentManager.worktree.new")}
                     onClick={handleCreateWorktree}
+                    disabled={!loaded()}
                   />
                   <DropdownMenu gutter={4} placement="bottom-end">
                     <DropdownMenu.Trigger
                       class="am-split-arrow"
                       aria-label={t("agentManager.worktree.advancedOptions")}
+                      disabled={!loaded()}
                     >
                       <Icon name="chevron-down" size="small" />
                     </DropdownMenu.Trigger>
@@ -2225,7 +2344,8 @@ const AgentManagerContent: Component = () => {
                               session.selectSession(s.id)
                             }}
                             onMiddleClick={(e: MouseEvent) => handleTabMouseDown(s.id, e)}
-                            onClose={(e: MouseEvent) => handleCloseTab(s.id, e)}
+                            onClose={() => handleCloseTab(s.id)}
+                            onFork={pending ? undefined : () => handleForkSession(s.id)}
                           />
                         )
                       }}
@@ -2412,7 +2532,9 @@ const AgentManagerContent: Component = () => {
                       <Show when={!state().error} fallback={<Icon name="circle-x" size="small" />}>
                         <Spinner class="am-setup-spinner" />
                       </Show>
-                      <span>{state().message}</span>
+                      <span>
+                        {state().errorCode ? t(`agentManager.setup.error.${state().errorCode}`) : state().message}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -2442,6 +2564,7 @@ const AgentManagerContent: Component = () => {
                     variant="primary"
                     size="small"
                     onClick={() => {
+                      if (!loaded()) return
                       const sid = session.currentSessionID()
                       if (sid) vscode.postMessage({ type: "agentManager.promoteSession", sessionId: sid })
                     }}
@@ -2463,8 +2586,10 @@ const AgentManagerContent: Component = () => {
                 />
                 <div class="am-diff-panel-wrapper">
                   <DiffPanel
-                    diffs={diffDatas()[selection() === LOCAL ? LOCAL : (session.currentSessionID() ?? "")] ?? []}
+                    diffs={diffDatas()[currentDiffSessionId() ?? ""] ?? []}
                     loading={diffLoading()}
+                    loadingFiles={diffFileLoadingForCurrent()}
+                    sessionId={currentDiffSessionId()}
                     sessionKey={diffSessionKey()}
                     diffStyle={reviewDiffStyle()}
                     onDiffStyleChange={setSharedDiffStyle}
@@ -2472,8 +2597,9 @@ const AgentManagerContent: Component = () => {
                     onCommentsChange={setReviewCommentsForSelection}
                     onClose={() => setDiffOpen(false)}
                     onExpand={selection() !== null ? openReviewTab : undefined}
+                    onRequestDiff={requestDiffFile}
                     onOpenFile={(file) => {
-                      const id = session.currentSessionID()
+                      const id = currentDiffSessionId()
                       if (id) vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file })
                       else if (selection() === LOCAL) vscode.postMessage({ type: "openFile", filePath: file })
                     }}
@@ -2488,14 +2614,17 @@ const AgentManagerContent: Component = () => {
               <FullScreenDiffView
                 diffs={reviewDiffs()}
                 loading={diffLoading()}
+                loadingFiles={diffFileLoadingForCurrent()}
+                sessionId={currentDiffSessionId()}
                 sessionKey={diffSessionKey()}
                 comments={reviewComments()}
                 onCommentsChange={setReviewCommentsForSelection}
                 onSendAll={closeReviewTab}
                 diffStyle={reviewDiffStyle()}
                 onDiffStyleChange={setSharedDiffStyle}
+                onRequestDiff={requestDiffFile}
                 onOpenFile={(file) => {
-                  const id = session.currentSessionID()
+                  const id = currentDiffSessionId()
                   if (id) vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file })
                   else if (selection() === LOCAL) vscode.postMessage({ type: "openFile", filePath: file })
                 }}
@@ -2519,17 +2648,19 @@ export const AgentManagerApp: Component = () => {
               <MarkedProvider>
                 <DiffComponentProvider component={Diff}>
                   <CodeComponentProvider component={Code}>
-                    <ProviderProvider>
-                      <ConfigProvider>
-                        <SessionProvider>
-                          <WorktreeModeProvider>
-                            <DataBridge>
-                              <AgentManagerContent />
-                            </DataBridge>
-                          </WorktreeModeProvider>
-                        </SessionProvider>
-                      </ConfigProvider>
-                    </ProviderProvider>
+                    <FileComponentProvider component={File}>
+                      <ProviderProvider>
+                        <ConfigProvider>
+                          <SessionProvider>
+                            <WorktreeModeProvider>
+                              <DataBridge>
+                                <AgentManagerContent />
+                              </DataBridge>
+                            </WorktreeModeProvider>
+                          </SessionProvider>
+                        </ConfigProvider>
+                      </ProviderProvider>
+                    </FileComponentProvider>
                   </CodeComponentProvider>
                 </DiffComponentProvider>
               </MarkedProvider>

@@ -11,7 +11,7 @@
 
 import { Component, createMemo, For, Show, createSignal, createEffect, on } from "solid-js"
 import { Dynamic } from "solid-js/web"
-import { Message, UserMessageDisplay } from "@kilocode/kilo-ui/message-part"
+import { UserMessageDisplay } from "@kilocode/kilo-ui/message-part"
 import { Collapsible } from "@kilocode/kilo-ui/collapsible"
 import { Accordion } from "@kilocode/kilo-ui/accordion"
 import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
@@ -29,6 +29,7 @@ import type {
 } from "@kilocode/sdk/v2"
 import { ErrorDisplay } from "./ErrorDisplay"
 import { useServer } from "../../context/server"
+import { useSession } from "../../context/session"
 
 function getDirectory(path: string): string {
   const sep = path.includes("/") ? "/" : "\\"
@@ -45,7 +46,7 @@ function getFilename(path: string): string {
 interface VscodeSessionTurnProps {
   sessionID: string
   messageID: string
-  lastUserMessageID?: string
+  queued?: boolean
 }
 
 export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
@@ -53,6 +54,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
   const i18n = useI18n()
   const diffComponent = useDiffComponent()
   const server = useServer()
+  const session = useSession()
 
   const emptyMessages: SDKMessage[] = []
   const emptyParts: SDKPart[] = []
@@ -128,19 +130,6 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
     ),
   )
 
-  // Last turn duration (for text part meta)
-  const turnDurationMs = createMemo(() => {
-    const start = (message() as unknown as { time?: { created?: number } } | undefined)?.time?.created
-    if (typeof start !== "number") return undefined
-    const end = assistantMessages().reduce<number | undefined>((max, item) => {
-      const completed = item.time?.completed
-      if (typeof completed !== "number") return max
-      return max === undefined ? completed : Math.max(max, completed)
-    }, undefined)
-    if (typeof end !== "number" || end < start) return undefined
-    return end - start
-  })
-
   // Copy part ID — the last text part from the last assistant message
   const showAssistantCopyPartID = createMemo(() => {
     const msgs = assistantMessages()
@@ -167,6 +156,12 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
               message={msg() as unknown as Parameters<typeof UserMessageDisplay>[0]["message"]}
               parts={parts() as unknown as Parameters<typeof UserMessageDisplay>[0]["parts"]}
               interrupted={interrupted()}
+              queued={props.queued}
+              onRevert={
+                assistantMessages().length > 0 && session.status() === "idle" && !session.revert()
+                  ? () => session.revertSession(props.messageID)
+                  : undefined
+              }
             />
           </div>
 
@@ -174,13 +169,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
           <Show when={assistantMessages().length > 0}>
             <div class="vscode-session-turn-assistant">
               <For each={assistantMessages()}>
-                {(msg) => (
-                  <AssistantMessage
-                    message={msg}
-                    showAssistantCopyPartID={showAssistantCopyPartID()}
-                    turnDurationMs={turnDurationMs()}
-                  />
-                )}
+                {(msg) => <AssistantMessage message={msg} showAssistantCopyPartID={showAssistantCopyPartID()} />}
               </For>
             </div>
           </Show>

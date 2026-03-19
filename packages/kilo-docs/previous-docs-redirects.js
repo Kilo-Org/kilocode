@@ -801,4 +801,10 @@ module.exports = [
     basePath: false,
     permanent: true,
   },
+  {
+    source: "/docs/contributing/architecture/vercel-ai-gateway",
+    destination: "/docs/contributing/architecture/features",
+    basePath: false,
+    permanent: true,
+  },
 ]

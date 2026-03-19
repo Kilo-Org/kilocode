@@ -49,7 +49,8 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
 
   const running = createMemo(() => props.status === "pending" || props.status === "running")
 
-  // Sync child session into store whenever we have a sessionId
+  // Warm child session data immediately so completed task tools already have
+  // their compact child tool list available when the user expands them.
   createEffect(() => {
     const id = childSessionId()
     if (!id) return
@@ -88,8 +89,13 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
         <span data-slot="basic-tool-tool-title" class="capitalize">
           {title()}
         </span>
-        <Show when={description()}>
-          <span data-slot="basic-tool-tool-subtitle">{description()}</span>
+        <Show when={description() || childToolParts().length > 0}>
+          <span data-slot="basic-tool-tool-subtitle">
+            {description()}
+            <Show when={childToolParts().length > 0}>
+              {description() ? " " : ""}({childToolParts().length})
+            </Show>
+          </span>
         </Show>
       </div>
       <Show when={!inAgentManager && childSessionId()}>

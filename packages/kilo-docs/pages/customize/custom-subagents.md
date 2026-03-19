@@ -51,7 +51,7 @@ Add agents to the `agent` section of your `kilo.json` config file. Any key that 
 
 ```json
 {
-  "$schema": "https://kilo.ai/config.json",
+  "$schema": "https://app.kilo.ai/config.json",
   "agent": {
     "code-reviewer": {
       "description": "Reviews code for best practices and potential issues",

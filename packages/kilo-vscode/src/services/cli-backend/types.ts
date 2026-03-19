@@ -113,6 +113,4 @@ export interface EditorContext {
   activeFile?: string
   /** User's default shell (from vscode.env.shell) */
   shell?: string
-  /** User's timezone (e.g. "Europe/Amsterdam") */
-  timezone?: string
 }

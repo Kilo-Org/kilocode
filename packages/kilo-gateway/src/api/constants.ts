@@ -19,7 +19,7 @@ export const KILO_OPENROUTER_BASE = `${KILO_API_BASE}/api/openrouter`
 export const POLL_INTERVAL_MS = 3000
 
 /** Default model for authenticated users */
-export const DEFAULT_MODEL = "kilo-auto/frontier"
+export const DEFAULT_MODEL = "kilo-auto/balanced"
 
 /** Default model for anonymous/free usage */
 export const DEFAULT_FREE_MODEL = "kilo-auto/free"

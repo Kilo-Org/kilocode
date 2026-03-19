@@ -6,12 +6,10 @@ import { mapValues, mergeDeep, omit, pickBy, sortBy } from "remeda"
 import { NoSuchModelError, type Provider as SDK } from "ai"
 import { Log } from "../util/log"
 import { BunProc } from "../bun"
+import { Hash } from "../util/hash"
 import { Plugin } from "../plugin"
-import {
-  ModelsDev,
-  Prompt, // kilocode_change
-} from "./models"
 import { NamedError } from "@opencode-ai/util/error"
+import { ModelsDev, Prompt } from "./models" // kilocode_change
 import { Auth } from "../auth"
 import { Env } from "../env"
 import { Instance } from "../project/instance"
@@ -536,7 +534,7 @@ export namespace Provider {
       if (!apiToken) {
         throw new Error(
           "CLOUDFLARE_API_TOKEN (or CF_AIG_TOKEN) is required for Cloudflare AI Gateway. " +
-            "Set it via environment variable or run `opencode auth cloudflare-ai-gateway`.",
+            "Set it via environment variable or run `kilo auth cloudflare-ai-gateway`.", // kilocode_change
         )
       }
 
@@ -544,7 +542,28 @@ export namespace Provider {
       const { createAiGateway } = await import("ai-gateway-provider")
       const { createUnified } = await import("ai-gateway-provider/providers/unified")
 
-      const aigateway = createAiGateway({ accountId, gateway, apiKey: apiToken })
+      const metadata = iife(() => {
+        if (input.options?.metadata) return input.options.metadata
+        try {
+          return JSON.parse(input.options?.headers?.["cf-aig-metadata"])
+        } catch {
+          return undefined
+        }
+      })
+      const opts = {
+        metadata,
+        cacheTtl: input.options?.cacheTtl,
+        cacheKey: input.options?.cacheKey,
+        skipCache: input.options?.skipCache,
+        collectLog: input.options?.collectLog,
+      }
+
+      const aigateway = createAiGateway({
+        accountId,
+        gateway,
+        apiKey: apiToken,
+        ...(Object.values(opts).some((v) => v !== undefined) ? { options: opts } : {}),
+      })
       const unified = createUnified()
 
       return {
@@ -670,6 +689,7 @@ export namespace Provider {
       // kilocode_change start
       recommendedIndex: z.number().optional(),
       prompt: Prompt.optional().catch(undefined),
+      isFree: z.boolean().optional(),
       // kilocode_change end
     })
     .meta({
@@ -756,6 +776,7 @@ export namespace Provider {
       variants: provider.id === "kilo" ? (model.variants ?? {}) : {},
       recommendedIndex: model.recommendedIndex,
       prompt: model.prompt,
+      isFree: model.isFree,
       // kilocode_change end
     }
 
@@ -795,7 +816,7 @@ export namespace Provider {
     const modelLoaders: {
       [providerID: string]: CustomModelLoader
     } = {}
-    const sdk = new Map<number, SDK>()
+    const sdk = new Map<string, SDK>()
 
     log.info("init")
 
@@ -904,6 +925,7 @@ export namespace Provider {
           // kilocode_change start
           recommendedIndex: model.recommendedIndex ?? existingModel?.recommendedIndex,
           prompt: model.prompt ?? existingModel?.prompt,
+          isFree: model.isFree ?? existingModel?.isFree,
           // kilocode_change end
         }
         const merged = mergeDeep(ProviderTransform.variants(parsedModel), model.variants ?? {})
@@ -1090,7 +1112,7 @@ export namespace Provider {
           ...model.headers,
         }
 
-      const key = Bun.hash.xxHash32(JSON.stringify({ providerID: model.providerID, npm: model.api.npm, options }))
+      const key = Hash.fast(JSON.stringify({ providerID: model.providerID, npm: model.api.npm, options }))
       const existing = s.sdk.get(key)
       if (existing) return existing
 

@@ -46,7 +46,7 @@ describe("buildConfigEnv", () => {
       agent: {
         translate: { mode: "primary", prompt: "You are a translator" },
       },
-      instructions: [".kilocode/rules/main.md"],
+      instructions: [".kilo/rules/main.md"],
     })
 
     // Now spawn with additional config
@@ -61,7 +61,7 @@ describe("buildConfigEnv", () => {
     expect(parsed.agent.review).toEqual({ mode: "primary", prompt: "You are a reviewer" })
 
     // Both instructions should be present
-    expect(parsed.instructions).toContain(".kilocode/rules/main.md")
+    expect(parsed.instructions).toContain(".kilo/rules/main.md")
     expect(parsed.instructions).toContain("additional-rule.md")
   })
 

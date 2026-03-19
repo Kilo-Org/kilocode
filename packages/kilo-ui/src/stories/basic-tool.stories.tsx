@@ -35,12 +35,17 @@ export const DefaultOpen: Story = {
 }
 
 export const NoChildren: Story = {
-  render: () => <BasicTool icon="mcp" trigger={{ title: "Tool call", subtitle: "No output" }} hideDetails />,
+  render: () => <BasicTool hideDetails icon="mcp" trigger={{ title: "Tool call", subtitle: "No output" }} />,
 }
 
 export const Locked: Story = {
   render: () => (
-    <BasicTool icon="folder" trigger={{ title: "Writing file", subtitle: "output.txt" }} defaultOpen locked>
+    <BasicTool
+      icon="folder"
+      trigger={{ title: "Writing file", subtitle: "output.txt" }}
+      defaultOpen
+      locked
+    >
       <pre style={{ padding: "8px", margin: 0, "font-size": "12px" }}>{"Hello, world!"}</pre>
     </BasicTool>
   ),
@@ -59,7 +64,7 @@ export const AllVariants: Story = {
       <BasicTool icon="console" trigger={{ title: "Run command", args: ["bun", "test"] }} defaultOpen>
         <pre style={{ padding: "8px", margin: 0, "font-size": "12px" }}>All tests passed!</pre>
       </BasicTool>
-      <BasicTool icon="mcp" trigger={{ title: "MCP tool call" }} hideDetails />
+      <BasicTool icon="mcp" trigger={{ title: "MCP tool call" }} />
       <GenericTool tool="generic_tool" />
     </div>
   ),

@@ -1,15 +1,24 @@
+import { generateText } from "ai"
+import { mergeDeep } from "remeda"
 import { Provider } from "@/provider/provider"
-import { LLM } from "@/session/llm"
-import { Agent } from "@/agent/agent"
+import { ProviderTransform } from "@/provider/transform"
 import { Log } from "@/util/log"
 
 const log = Log.create({ service: "enhance-prompt" })
+
+const INSTRUCTION =
+  "Generate an enhanced version of this prompt (reply with only the enhanced prompt - no conversation, explanations, lead-in, bullet points, placeholders, or surrounding quotes):"
 
 export function clean(text: string) {
   const stripped = text.replace(/^```\w*\n?|```$/g, "").trim()
   return stripped.replace(/^(['"])([\s\S]*)\1$/, "$2").trim()
 }
 
+/**
+ * Lightweight prompt enhancement that mirrors the legacy singleCompletionHandler.
+ * Calls generateText directly — no agent identity, no system prompt, no tools,
+ * no plugins. Just the bare instruction + user text as a single user message.
+ */
 export async function enhancePrompt(text: string): Promise<string> {
   log.info("enhancing", { length: text.length })
 
@@ -18,42 +27,20 @@ export async function enhancePrompt(text: string): Promise<string> {
     (await Provider.getSmallModel(defaultModel.providerID)) ??
     (await Provider.getModel(defaultModel.providerID, defaultModel.modelID))
 
-  const agent: Agent.Info = {
-    name: "enhance-prompt",
-    mode: "primary",
-    hidden: true,
-    options: {},
-    permission: [],
-    prompt: "Generate an enhanced version of this prompt (reply with only the enhanced prompt - no conversation, explanations, lead-in, bullet points, placeholders, or surrounding quotes):",
-    temperature: 0.7,
-  }
+  const language = await Provider.getLanguage(model)
 
-  const stream = await LLM.stream({
-    agent,
-    user: {
-      id: "enhance-prompt",
-      sessionID: "enhance-prompt",
-      role: "user",
-      model: {
-        providerID: model.providerID,
-        modelID: model.id,
-      },
-      time: {
-        created: Date.now(),
-        completed: Date.now(),
-      },
-    } as any,
-    tools: {},
-    model,
-    small: true,
+  const result = await generateText({
+    model: language,
+    temperature: model.capabilities.temperature ? 0.7 : undefined,
+    providerOptions: ProviderTransform.providerOptions(
+      model,
+      mergeDeep(ProviderTransform.smallOptions(model), model.options),
+    ),
+    maxRetries: 3,
+    system: INSTRUCTION,
     messages: [{ role: "user" as const, content: text }],
-    abort: new AbortController().signal,
-    sessionID: "enhance-prompt",
-    system: [],
-    retries: 3,
   })
 
-  const result = await stream.text
-  log.info("enhanced", { length: result.length })
-  return clean(result)
+  log.info("enhanced", { length: result.text.length })
+  return clean(result.text)
 }

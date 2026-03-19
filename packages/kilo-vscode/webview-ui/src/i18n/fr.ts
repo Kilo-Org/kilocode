@@ -28,8 +28,8 @@ export const dict = {
   "command.settings.open": "Ouvrir les paramètres",
   "command.session.previous": "Session précédente",
   "command.session.next": "Session suivante",
-  "command.session.previous.unseen": "Previous unread session",
-  "command.session.next.unseen": "Next unread session",
+  "command.session.previous.unseen": "Session non lue précédente",
+  "command.session.next.unseen": "Session non lue suivante",
   "command.session.archive": "Archiver la session",
 
   "command.palette": "Palette de commandes",
@@ -79,6 +79,11 @@ export const dict = {
   "command.session.undo.description": "Annuler le dernier message",
   "command.session.redo": "Rétablir",
   "command.session.redo.description": "Rétablir le dernier message annulé",
+  "revert.banner.count_one": "{{count}} message reverted",
+  "revert.banner.count_other": "{{count}} messages reverted",
+  "revert.banner.redo": "Redo",
+  "revert.banner.redo.all": "Redo All",
+  "revert.banner.hint": "Send a new message to make this permanent",
   "command.session.compact": "Compacter la session",
   "command.session.compact.description": "Résumer la session pour réduire la taille du contexte",
   "command.session.fork": "Bifurquer à partir du message",
@@ -156,6 +161,7 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "Les modèles {{provider}} ne sont plus disponibles.",
   "model.tag.free": "Gratuit",
   "model.tag.latest": "Dernier",
+  "model.group.recommended": "Recommandé",
 
   "model.provider.anthropic": "Anthropic",
   "model.provider.openai": "OpenAI",
@@ -231,6 +237,7 @@ export const dict = {
   "prompt.action.attachFile": "Joindre un fichier",
   "prompt.attachment.remove": "Supprimer la pièce jointe",
   "prompt.action.send": "Envoyer",
+  "prompt.action.send.blocked": "Répondez ou rejetez d'abord la question en attente",
   "prompt.action.stop": "Arrêter",
   "prompt.action.enhance": "Améliorer le prompt",
   "prompt.action.resetModel": "Réinitialiser le modèle par défaut",
@@ -414,6 +421,8 @@ export const dict = {
   "error.globalSync.connectFailed":
     "Impossible de se connecter au serveur. Y a-t-il un serveur en cours d'exécution à `{{url}}` ?",
 
+  "error.startup.title": "Échec de la connexion au serveur",
+
   "error.paidModel.title": "Vous devez vous connecter pour utiliser ce modèle",
   "error.paidModel.description":
     "Connectez-vous ou créez un compte pour accéder à plus de 500 modèles, utiliser des crédits au prix coûtant ou apporter votre propre clé.",
@@ -447,7 +456,32 @@ export const dict = {
   "error.chain.configInvalidWithMessage": "Le fichier de configuration à {{path}} est invalide : {{message}}",
 
   "notification.permission.title": "Permission requise",
+  "notification.permission.titleSubagent": "Permission requise (sous-agent)",
   "notification.permission.description": "{{sessionTitle}} dans {{projectName}} a besoin d'une permission",
+  "ui.permission.manageAutoApprove": "Gérer les règles d'approbation automatique",
+  "ui.permission.rule.addToAllowed": "Ajouter à la liste des autorisés",
+  "ui.permission.rule.removeFromAllowed": "Retirer de la liste des autorisés",
+  "ui.permission.rule.addToDenied": "Ajouter à la liste des refusés",
+  "ui.permission.rule.removeFromDenied": "Retirer de la liste des refusés",
+  "ui.permission.toolLabel.read": "Lire",
+  "ui.permission.toolLabel.edit": "Modifier",
+  "ui.permission.toolLabel.write": "Écrire",
+  "ui.permission.toolLabel.patch": "Patcher",
+  "ui.permission.toolLabel.globSearch": "Recherche Glob",
+  "ui.permission.toolLabel.grepSearch": "Recherche Grep",
+  "ui.permission.toolLabel.webSearch": "Recherche Web",
+  "ui.permission.toolLabel.list": "Lister",
+  "ui.permission.toolLabel.externalDirectory": "Lire répertoire externe",
+  "ui.permission.toolLabel.webFetch": "Récupération Web",
+  "ui.permission.toolLabel.task": "Tâche",
+  "ui.permission.toolLabel.skill": "Compétence",
+  "ui.permission.toolLabel.lsp": "LSP",
+  "ui.permission.toolLabel.bash": "Bash",
+  "ui.permission.toolLabel.todoRead": "Lire Todo",
+  "ui.permission.toolLabel.todoWrite": "Écrire Todo",
+  "ui.permission.toolLabel.codeSearch": "Recherche de code",
+  "ui.permission.toggleWrap": "Basculer le retour à la ligne",
+  "ui.permission.copyCommand": "Copier",
   "notification.question.title": "Question",
   "notification.question.description": "{{sessionTitle}} dans {{projectName}} a une question",
   "notification.action.goToSession": "Aller à la session",
@@ -689,6 +723,9 @@ export const dict = {
   "settings.providers.tag.config": "Configuration",
   "settings.providers.tag.custom": "Personnalisé",
   "settings.providers.tag.other": "Autre",
+  "settings.providers.modeModels": "Modèle par mode",
+  "settings.providers.modeModels.description":
+    "Remplacez le modèle par défaut pour des modes spécifiques. Si non défini, le modèle par défaut global est utilisé.",
   "settings.models.title": "Modèles",
   "settings.models.description": "Les paramètres des modèles seront configurables ici.",
   "settings.agents.title": "Agents",
@@ -838,12 +875,14 @@ export const dict = {
     "Kilo Code est un assistant de programmation IA. Demandez-lui de créer des fonctionnalités, corriger des bugs ou expliquer votre code.",
   "session.messages.scrollToBottom": "Défiler vers le bas",
   "session.status.writingResponse": "Rédaction de la réponse…",
+  "session.status.retry": "Nouvelle tentative…",
   "session.status.retrying": "Nouvelle tentative (essai {{ attempt }})… {{ message }}",
   "session.status.working": "En cours…",
 
   "dialog.model.noProviders": "Aucun fournisseur",
 
   "prompt.placeholder.connecting": "Connexion au serveur...",
+  "prompt.placeholder.error": "Échec de la connexion. Vérifiez le panneau de sortie ou redémarrez l'extension.",
   "prompt.placeholder.default": "Tapez un message... (Entrée pour envoyer, Maj+Entrée pour un saut de ligne)",
 
   "context.usage.sessionCost": "Coût de la session",
@@ -942,6 +981,9 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "Ne pas résumer le contenu collé volumineux",
   "settings.experimental.batch.title": "Outil par lot",
   "settings.experimental.batch.description": "Activer le traitement par lot d'appels d'outils",
+  "settings.experimental.codebaseSearch.title": "Recherche de code",
+  "settings.experimental.codebaseSearch.description":
+    "Activer la recherche en langage naturel par IA dans toute la base de code",
   "settings.experimental.continueOnDeny.title": "Continuer en cas de refus",
   "settings.experimental.continueOnDeny.description":
     "Continuer la boucle de l'agent lorsqu'une autorisation est refusée",
@@ -950,6 +992,7 @@ export const dict = {
   "settings.experimental.toolToggles": "Commutateurs d'outils",
   "settings.agentBehaviour.defaultAgent.title": "Agent par défaut",
   "settings.agentBehaviour.defaultAgent.description": "Agent à utiliser lorsqu'aucun n'est spécifié",
+  "settings.agentBehaviour.availableAgents": "Agents disponibles",
   "settings.agentBehaviour.selectAgent": "Sélectionner un agent à configurer…",
   "settings.agentBehaviour.selectAgent.title": "Agent",
   "settings.agentBehaviour.selectAgent.description": "Sélectionner un agent à configurer…",
@@ -966,8 +1009,22 @@ export const dict = {
   "settings.agentBehaviour.discoveredSkills": "Compétences découvertes",
   "settings.agentBehaviour.noSkillsFound":
     "Aucune compétence découverte. Ajoutez des chemins de dossiers ou des URLs ci-dessous pour rendre les compétences disponibles.",
+  "settings.agentBehaviour.availableModes": "Modes personnalisés disponibles",
+  "settings.agentBehaviour.noModesFound": "Aucun mode trouvé.",
+  "settings.agentBehaviour.removeMode.title": "Supprimer le mode",
+  "settings.agentBehaviour.removeMode.confirm":
+    'Supprimer le mode "{{name}}" ? Cela désactivera le mode en mettant à jour votre configuration.',
+  "settings.agentBehaviour.removeMode.button": "Supprimer",
+  "settings.agentBehaviour.removeMcp.title": "Supprimer le serveur MCP",
+  "settings.agentBehaviour.removeMcp.confirm":
+    'Supprimer le serveur MCP "{{name}}" ? Cela le supprimera de votre configuration.',
+  "settings.agentBehaviour.removeMcp.button": "Supprimer",
   "settings.agentBehaviour.skillPaths": "Chemins des dossiers de compétences",
   "settings.agentBehaviour.skillUrls": "URLs de compétences",
+  "settings.agentBehaviour.removeSkill.title": "Supprimer la compétence",
+  "settings.agentBehaviour.removeSkill.confirm":
+    'Supprimer la compétence "{{name}}" ? Cela supprimera les fichiers de la compétence du disque.',
+  "settings.agentBehaviour.removeSkill.button": "Supprimer",
   "settings.agentBehaviour.instructionFiles": "Fichiers d'instructions supplémentaires",
   "settings.agentBehaviour.instructionFiles.description": "Chemins vers des fichiers d'instructions supplémentaires",
   "settings.agentBehaviour.mcpEmpty":
@@ -1105,4 +1162,11 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} tâches terminées",
   "task.todos.allDone": "{{count}} tâches terminées",
+  "settings.saveBar.unsavedChanges": "Modifications non enregistrées",
+  "settings.saveBar.discard": "Ignorer",
+  "settings.saveBar.save": "Enregistrer",
+  "settings.saveBar.warning.one": "Une session est en cours et sera interrompue",
+  "settings.saveBar.warning.many": "Plusieurs sessions sont en cours et seront interrompues",
+  "settings.saveBar.saveAnyway": "Enregistrer quand même",
+  "settings.saveBar.cancel": "Annuler",
 }

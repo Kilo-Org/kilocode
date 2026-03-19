@@ -133,7 +133,7 @@ describe("AgentManagerProvider worktree creation", () => {
     const manager = createHarness()
     const created = {
       worktree: { id: "wt-1" },
-      result: { path: "/repo/.kilocode/worktrees/wt-1", branch: "feature/wt-1", parentBranch: "main" },
+      result: { path: "/repo/.kilo/worktrees/wt-1", branch: "feature/wt-1", parentBranch: "main" },
     }
     const session = { id: "session-1" }
     const state = { addSession: vi.fn() }
@@ -155,7 +155,7 @@ describe("AgentManagerProvider worktree creation", () => {
     manager.stateReady = ready.promise
     manager.createWorktreeOnDisk.mockResolvedValue({
       worktree: { id: "wt-2" },
-      result: { path: "/repo/.kilocode/worktrees/wt-2", branch: "feature/wt-2", parentBranch: "main" },
+      result: { path: "/repo/.kilo/worktrees/wt-2", branch: "feature/wt-2", parentBranch: "main" },
     })
     manager.createSessionInWorktree.mockResolvedValue({ id: "session-2" })
     manager.getStateManager.mockReturnValue({ addSession: vi.fn() })

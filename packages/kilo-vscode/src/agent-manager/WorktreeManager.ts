@@ -3,7 +3,7 @@
  *
  * Ported from kilocode/src/core/kilocode/agent-manager/WorktreeManager.ts.
  * Handles creation, discovery, and cleanup of worktrees stored in
- * {projectRoot}/.kilocode/worktrees/
+ * {projectRoot}/.kilo/worktrees/
  */
 
 import * as path from "path"
@@ -77,7 +77,8 @@ function stripRemotePrefix(ref: string): { branch: string; remote?: string } {
   return { branch: ref }
 }
 
-const KILOCODE_DIR = ".kilocode"
+import { KILO_DIR, LEGACY_DIR, migrateAgentManagerData } from "./constants"
+
 const SESSION_ID_FILE = "session-id"
 const METADATA_FILE = "metadata.json"
 
@@ -87,13 +88,21 @@ export class WorktreeManager {
   private readonly git: SimpleGit
   private readonly ops: GitOps | undefined
   private readonly log: (msg: string) => void
+  private migrated = false
 
   constructor(root: string, log: (msg: string) => void, ops?: GitOps) {
     this.root = root
-    this.dir = path.join(root, KILOCODE_DIR, "worktrees")
+    this.dir = path.join(root, KILO_DIR, "worktrees")
     this.git = simpleGit(root)
     this.ops = ops
     this.log = log
+  }
+
+  /** Run once before first read/write to migrate Agent Manager data from .kilocode → .kilo. */
+  private async ensureMigrated(): Promise<void> {
+    if (this.migrated) return
+    this.migrated = true
+    await migrateAgentManagerData(this.root, this.log)
   }
 
   // ---------------------------------------------------------------------------
@@ -104,6 +113,12 @@ export class WorktreeManager {
   // callers (e.g. multi-version worktree creation) don't hit index.lock
   // conflicts. Operations on different repositories proceed in parallel.
   private static locks = new Map<string, Promise<void>>()
+
+  // Cache for fetched refs: avoids redundant git fetch calls when creating
+  // multiple worktrees from the same base branch (e.g., multi-version mode).
+  // Key: `${root}:${remote}:${branch}`, Value: timestamp when fetch was done
+  private static fetchCache = new Map<string, number>()
+  private static readonly FETCH_CACHE_TTL = 60_000 // 1 minute
 
   private withGitLock<T>(fn: () => Promise<T>): Promise<T> {
     const key = this.root
@@ -128,7 +143,21 @@ export class WorktreeManager {
     branchName?: string
     onProgress?: (step: WorktreeProgressStep, message: string, detail?: string) => void
   }): Promise<CreateWorktreeResult> {
+    await this.ensureMigrated()
     return this.withGitLock(() => this.createWorktreeImpl(params))
+  }
+
+  private async ensureGitAvailable(): Promise<void> {
+    try {
+      await execWithShellEnv("git", ["--version"])
+    } catch (error) {
+      if (error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT") {
+        throw new Error(
+          "Git is not installed or not found in PATH. Please install Git (https://git-scm.com) and restart VS Code.",
+        )
+      }
+      throw error
+    }
   }
 
   private async createWorktreeImpl(params: {
@@ -138,6 +167,7 @@ export class WorktreeManager {
     branchName?: string
     onProgress?: (step: WorktreeProgressStep, message: string, detail?: string) => void
   }): Promise<CreateWorktreeResult> {
+    await this.ensureGitAvailable()
     const repo = await this.git.checkIsRepo()
     if (!repo)
       throw new Error(
@@ -187,7 +217,18 @@ export class WorktreeManager {
     }
 
     const sanitized = params.branchName ? sanitizeBranchName(params.branchName) : undefined
-    let branch = params.existingBranch ?? (sanitized || undefined) ?? generateBranchName(params.prompt || "agent-task")
+    let branch: string
+    if (params.existingBranch) {
+      branch = params.existingBranch
+    } else if (sanitized) {
+      branch = sanitized
+    } else {
+      const existing = await this.git
+        .branch()
+        .then((b) => b.all)
+        .catch(() => [] as string[])
+      branch = generateBranchName(params.prompt || "agent-task", existing)
+    }
 
     if (params.existingBranch) {
       const exists = await this.branchExists(branch)
@@ -211,7 +252,7 @@ export class WorktreeManager {
       const args = params.existingBranch
         ? ["worktree", "add", worktreePath, branch]
         : ["worktree", "add", "-b", branch, worktreePath, startRef!]
-      await this.git.raw(args)
+      await this.runWorktreeAdd(args, worktreePath)
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
       if (msg.includes("already checked out")) {
@@ -230,7 +271,7 @@ export class WorktreeManager {
       const retryArgs = params.existingBranch
         ? ["worktree", "add", worktreePath, branch]
         : ["worktree", "add", "-b", branch, worktreePath, startRef!]
-      await this.git.raw(retryArgs)
+      await this.runWorktreeAdd(retryArgs, worktreePath)
     }
 
     this.log(
@@ -243,6 +284,55 @@ export class WorktreeManager {
       remote: parentRemote,
       startPointSource: startPoint.source,
       startPointWarning: startPoint.warning,
+    }
+  }
+
+  /**
+   * Run `git worktree add` with post-checkout hook tolerance.
+   *
+   * Hooks like husky or lefthook run after `git worktree add` and can cause
+   * a non-zero exit code even though the worktree was created successfully.
+   * When a hook failure is detected, we verify the worktree was registered
+   * via `git worktree list --porcelain` before treating it as a real error.
+   */
+  private async runWorktreeAdd(args: string[], wtPath: string): Promise<void> {
+    try {
+      await this.git.raw(args)
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error)
+      if (this.isHookError(msg) && (await this.worktreeRegistered(wtPath))) {
+        this.log(`Ignoring post-checkout hook failure for ${wtPath}: ${msg}`)
+        return
+      }
+      throw error
+    }
+  }
+
+  /**
+   * Detect post-checkout hook failures in git error output.
+   * Hooks like husky or lefthook run after `git worktree add` and can fail
+   * with a non-zero exit code even though the worktree was created.
+   */
+  private isHookError(msg: string): boolean {
+    const lower = msg.toLowerCase()
+    return (
+      (lower.includes("hook") || lower.includes("husky") || lower.includes("lefthook")) &&
+      (lower.includes("post-checkout") || lower.includes("post_checkout"))
+    )
+  }
+
+  /**
+   * Verify that git actually registered a worktree at the given path by
+   * checking `git worktree list --porcelain`. Used to confirm that a
+   * worktree was created despite a non-zero exit code (e.g., hook failure).
+   */
+  private async worktreeRegistered(wtPath: string): Promise<boolean> {
+    try {
+      const raw = await this.git.raw(["worktree", "list", "--porcelain"])
+      const normalized = normalizePath(wtPath)
+      return parseWorktreeList(raw).some((e) => normalizePath(e.path) === normalized)
+    } catch {
+      return false
     }
   }
 
@@ -291,6 +381,7 @@ export class WorktreeManager {
   }
 
   async discoverWorktrees(): Promise<WorktreeInfo[]> {
+    await this.ensureMigrated()
     if (!fs.existsSync(this.dir)) return []
 
     const entries = await fs.promises.readdir(this.dir, { withFileTypes: true })
@@ -301,7 +392,7 @@ export class WorktreeManager {
   }
 
   async writeMetadata(worktreePath: string, sessionId: string, parentBranch: string, remote?: string): Promise<void> {
-    const dir = path.join(worktreePath, KILOCODE_DIR)
+    const dir = path.join(worktreePath, KILO_DIR)
     if (!fs.existsSync(dir)) await fs.promises.mkdir(dir, { recursive: true })
 
     const meta: Record<string, string> = { sessionId, parentBranch }
@@ -319,7 +410,19 @@ export class WorktreeManager {
   async readMetadata(
     worktreePath: string,
   ): Promise<{ sessionId: string; parentBranch?: string; remote?: string } | undefined> {
-    const dir = path.join(worktreePath, KILOCODE_DIR)
+    // Check .kilo/ first, then legacy .kilocode/
+    for (const dirName of [KILO_DIR, LEGACY_DIR]) {
+      const result = await this.readMetadataFrom(worktreePath, dirName)
+      if (result) return result
+    }
+    return undefined
+  }
+
+  private async readMetadataFrom(
+    worktreePath: string,
+    dirName: string,
+  ): Promise<{ sessionId: string; parentBranch?: string; remote?: string } | undefined> {
+    const dir = path.join(worktreePath, dirName)
 
     // Try metadata.json first (has parentBranch + remote)
     try {
@@ -355,13 +458,26 @@ export class WorktreeManager {
   async ensureGitExclude(): Promise<void> {
     const gitDir = await this.resolveGitDir()
     const excludePath = path.join(gitDir, "info", "exclude")
-    await this.addExcludeEntry(excludePath, ".kilocode/worktrees/", "Kilo Code agent worktrees")
-    await this.addExcludeEntry(excludePath, ".kilocode/agent-manager.json", "Kilo Agent Manager state")
-    await this.addExcludeEntry(excludePath, ".kilocode/setup-script", "Kilo Code worktree setup script")
-    await this.addExcludeEntry(excludePath, ".kilocode/setup-script.sh", "Kilo Code worktree setup script")
-    await this.addExcludeEntry(excludePath, ".kilocode/setup-script.ps1", "Kilo Code worktree setup script")
-    await this.addExcludeEntry(excludePath, ".kilocode/setup-script.cmd", "Kilo Code worktree setup script")
-    await this.addExcludeEntry(excludePath, ".kilocode/setup-script.bat", "Kilo Code worktree setup script")
+    const items = [
+      [".kilo/worktrees/", "Kilo Code agent worktrees"],
+      [".kilo/agent-manager.json", "Kilo Agent Manager state"],
+      [".kilo/setup-script", "Kilo Code worktree setup script"],
+      [".kilo/setup-script.sh", "Kilo Code worktree setup script"],
+      [".kilo/setup-script.ps1", "Kilo Code worktree setup script"],
+      [".kilo/setup-script.cmd", "Kilo Code worktree setup script"],
+      [".kilo/setup-script.bat", "Kilo Code worktree setup script"],
+      [".kilocode/worktrees/", "Kilo Code legacy agent worktrees"],
+      [".kilocode/agent-manager.json", "Kilo Agent Manager legacy state"],
+      [".kilocode/setup-script", "Kilo Code legacy worktree setup script"],
+      [".kilocode/setup-script.sh", "Kilo Code legacy worktree setup script"],
+      [".kilocode/setup-script.ps1", "Kilo Code legacy worktree setup script"],
+      [".kilocode/setup-script.cmd", "Kilo Code legacy worktree setup script"],
+      [".kilocode/setup-script.bat", "Kilo Code legacy worktree setup script"],
+    ] as const
+
+    for (const [entry, comment] of items) {
+      await this.addExcludeEntry(excludePath, entry, comment)
+    }
   }
 
   private async ensureWorktreeExclude(worktreePath: string): Promise<void> {
@@ -372,11 +488,7 @@ export class WorktreeManager {
 
       const worktreeGitDir = path.resolve(worktreePath, match[1].trim())
       const mainGitDir = path.dirname(path.dirname(worktreeGitDir))
-      await this.addExcludeEntry(
-        path.join(mainGitDir, "info", "exclude"),
-        `${KILOCODE_DIR}/`,
-        "Kilo Code session metadata",
-      )
+      await this.addExcludeEntry(path.join(mainGitDir, "info", "exclude"), `${KILO_DIR}/`, "Kilo Code session metadata")
     } catch (error) {
       this.log(`Warning: Failed to update git exclude for worktree: ${error}`)
     }
@@ -488,12 +600,29 @@ export class WorktreeManager {
   ): Promise<StartPointResult> {
     const { allowFallback = true } = opts || {}
 
-    // 1. Remote fetch
+    // 1. Remote fetch (with caching to avoid redundant fetches in multi-version mode)
     const remote = await this.resolveRemote()
     if (remote) {
+      const cacheKey = `${this.root}:${remote}:${branch}`
+      const cached = WorktreeManager.fetchCache.get(cacheKey)
+
+      // Skip fetch if recently fetched (within TTL) AND ref exists locally
+      if (cached && Date.now() - cached < WorktreeManager.FETCH_CACHE_TTL) {
+        if (await this.refExistsLocally(`${remote}/${branch}`)) {
+          return {
+            ref: `${remote}/${branch}`,
+            branch,
+            remote,
+            source: "remote",
+          }
+        }
+      }
+
+      // Either not cached or cache is stale - do the fetch
       onProgress?.("fetching", `Fetching ${remote}/${branch}...`)
       try {
         await this.git.fetch(remote, branch)
+        WorktreeManager.fetchCache.set(cacheKey, Date.now())
         if (await this.refExistsLocally(`${remote}/${branch}`)) {
           return {
             ref: `${remote}/${branch}`,
@@ -741,6 +870,7 @@ export class WorktreeManager {
   }
 
   private async createFromPRImpl(url: string): Promise<CreateWorktreeResult> {
+    await this.ensureGitAvailable()
     const parsed = parsePRUrl(url)
     if (!parsed) throw new Error("Invalid PR URL. Expected: https://github.com/owner/repo/pull/123")
 

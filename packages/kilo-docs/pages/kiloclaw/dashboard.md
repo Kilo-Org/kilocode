@@ -98,6 +98,15 @@ Select a version and variant from the dropdowns and click **Save**. To return to
 
 See [Version Pinning](/docs/kiloclaw/version-pinning) for details.
 
+### Version Status Indicators
+
+The Settings tab shows badges indicating your OpenClaw version status:
+
+- **Update available** — A newer OpenClaw version is available in the catalog. Use **Upgrade & Redeploy** to move to that version.
+- **Modified** — OpenClaw was updated on this machine independently of the image. Redeploying will revert to the image version.
+
+These indicators help you track whether your running version is up to date or if a newer version exists in the catalog.
+
 ### Restore Default Config
 
 If your OpenClaw configuration gets corrupted — for example, if the agent edits `openclaw.json` and introduces an error — you can restore it without a full redeploy.
@@ -116,7 +125,6 @@ Your files, workspace, and persistent data are not affected. Only the OpenClaw c
 {% callout type="warning" %}
 This action cannot be undone. Make sure you've saved any important changes to your configuration before restoring.
 {% /callout %}
-
 
 ### Stop, Destroy & Restore
 

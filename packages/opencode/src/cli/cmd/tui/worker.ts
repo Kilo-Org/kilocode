@@ -10,6 +10,7 @@ import { GlobalBus } from "@/bus/global"
 import { createKiloClient, type Event } from "@kilocode/sdk/v2"
 import type { BunWebSocketData } from "hono/bun"
 import { Flag } from "@/flag/flag"
+import { setTimeout as sleep } from "node:timers/promises"
 
 await Log.init({
   print: process.argv.includes("--print-logs"),
@@ -75,7 +76,7 @@ const startEventStream = (directory: string) => {
       ).catch(() => undefined)
 
       if (!events) {
-        await Bun.sleep(250)
+        await sleep(250)
         continue
       }
 
@@ -84,7 +85,7 @@ const startEventStream = (directory: string) => {
       }
 
       if (!signal.aborted) {
-        await Bun.sleep(250)
+        await sleep(250)
       }
     }
   })().catch((error) => {
@@ -137,12 +138,7 @@ export const rpc = {
   async shutdown() {
     Log.Default.info("worker shutting down")
     if (eventStream.abort) eventStream.abort.abort()
-    await Promise.race([
-      Instance.disposeAll(),
-      new Promise((resolve) => {
-        setTimeout(resolve, 5000).unref()
-      }),
-    ])
+    await Instance.disposeAll()
     if (server) server.stop(true)
     // Clear the Rpc message channel so the worker's event loop can drain and
     // exit naturally. Without this, the active onmessage handle keeps the

@@ -8,12 +8,14 @@
  * 3. Injecting Kilo-specific dependencies
  * 4. Preserving Kilo's version number
  * 5. Preserving overrides and patchedDependencies
- * 6. Using "newest wins" strategy for dependency versions
+ * 6. Preserving Kilo's repository configuration
+ * 7. Using "newest wins" strategy for dependency versions
  */
 
 import { $ } from "bun"
 import { info, success, warn, debug } from "../utils/logger"
 import { getCurrentVersion } from "./preserve-versions"
+import { oursHasKilocodeChanges } from "../utils/git"
 
 /**
  * Extract clean version string from a version specifier
@@ -156,7 +158,7 @@ function mergeWithNewestVersions(
 
 export interface PackageJsonResult {
   file: string
-  action: "transformed" | "skipped" | "failed"
+  action: "transformed" | "skipped" | "failed" | "flagged"
   changes: string[]
   dryRun: boolean
 }
@@ -187,6 +189,14 @@ const KILO_DEPENDENCIES: Record<string, Record<string, string>> = {
   // packages/app/package.json needs these
   "packages/app/package.json": {
     "@kilocode/kilo-i18n": "workspace:*",
+  },
+}
+
+// Kilo-specific bin entries to set on specific packages
+const KILO_BIN: Record<string, Record<string, string>> = {
+  "packages/opencode/package.json": {
+    kilo: "./bin/kilo",
+    kilocode: "./bin/kilo",
   },
 }
 
@@ -238,6 +248,12 @@ export async function transformPackageJson(file: string, options: PackageJsonOpt
   if (options.dryRun) {
     info(`[DRY-RUN] Would transform package.json: ${file}`)
     return { file, action: "transformed", changes: [], dryRun: true }
+  }
+
+  // If our version has kilocode_change markers, flag for manual resolution
+  if (await oursHasKilocodeChanges(file)) {
+    warn(`${file} has kilocode_change markers — skipping auto-transform, needs manual resolution`)
+    return { file, action: "flagged", changes: [], dryRun: false }
   }
 
   try {
@@ -326,7 +342,14 @@ export async function transformPackageJson(file: string, options: PackageJsonOpt
         }
       }
 
-      // 6. Handle workspaces for root package.json
+      // 6. Preserve repository (Kilo-specific, upstream doesn't have this)
+      const ourRepo = ourPkg.repository
+      if (ourRepo && JSON.stringify(pkg.repository) !== JSON.stringify(ourRepo)) {
+        pkg.repository = ourRepo
+        changes.push(`repository: preserved Kilo's repository configuration`)
+      }
+
+      // 7. Handle workspaces for root package.json
       // Kilo has removed hosted platform packages (console/*, slack, etc.)
       // so we need to preserve Kilo's workspace configuration instead of taking upstream's
       const ourWorkspaces = ourPkg.workspaces as { packages?: string[]; catalog?: Record<string, string> } | undefined
@@ -384,6 +407,13 @@ export async function transformPackageJson(file: string, options: PackageJsonOpt
           changes.push(`injected: ${name}`)
         }
       }
+    }
+
+    // 9. Set Kilo-specific bin entries
+    const kiloBin = KILO_BIN[relativePath]
+    if (kiloBin) {
+      pkg.bin = kiloBin
+      changes.push(`bin: set Kilo bin entries`)
     }
 
     // Write back with proper formatting
@@ -527,7 +557,14 @@ export async function transformAllPackageJson(options: PackageJsonOptions = {}):
           }
         }
 
-        // 6. Handle workspaces for root package.json
+        // 6. Preserve repository (Kilo-specific, upstream doesn't have this)
+        const kiloRepo = kiloPkg.repository
+        if (kiloRepo && JSON.stringify(pkg.repository) !== JSON.stringify(kiloRepo)) {
+          pkg.repository = kiloRepo
+          changes.push(`repository: preserved Kilo's repository configuration`)
+        }
+
+        // 7. Handle workspaces for root package.json
         // Kilo has removed hosted platform packages (console/*, slack, etc.)
         // so we need to preserve Kilo's workspace configuration instead of taking upstream's
         const kiloWorkspaces = kiloPkg.workspaces as
@@ -591,6 +628,13 @@ export async function transformAllPackageJson(options: PackageJsonOptions = {}):
             changes.push(`injected: ${name}`)
           }
         }
+      }
+
+      // 9. Set Kilo-specific bin entries
+      const kiloBin = KILO_BIN[path]
+      if (kiloBin) {
+        pkg.bin = kiloBin
+        changes.push(`bin: set Kilo bin entries`)
       }
 
       if (changes.length > 0) {

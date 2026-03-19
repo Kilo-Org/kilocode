@@ -6,10 +6,8 @@ export const dict = {
   "kilocode:autocomplete.statusBar.warning": "$(warning) Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.basic": "Kilo Code Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.disabled": "Kilo Code Autocomplete（已停用）",
-  "kilocode:autocomplete.statusBar.tooltip.noCredits":
-    "**帳戶中沒有額度**\n\nKilo Code 帳戶沒有額度。若要使用 Autocomplete，請為帳戶儲值。\n\n[開啟設定](command:kilo-code.settingsButtonClicked)",
   "kilocode:autocomplete.statusBar.tooltip.noUsableProvider":
-    "**未設定 Autocomplete 模型**\n\n若要啟用 Autocomplete，請新增一個使用以下支援供應商的設定檔：{{providers}}。\n\n[開啟設定](command:kilo-code.settingsButtonClicked)",
+    "**未設定 Autocomplete 模型**\n\n若要啟用 Autocomplete，請新增一個使用以下支援供應商的設定檔：{{providers}}。\n\n[開啟設定]({{command}})",
   "kilocode:autocomplete.statusBar.tooltip.sessionTotal": "工作階段總費用：",
   "kilocode:autocomplete.statusBar.tooltip.provider": "供應商：",
   "kilocode:autocomplete.statusBar.tooltip.model": "模型：",

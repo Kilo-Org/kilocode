@@ -5,7 +5,7 @@ import kiloVscodeJson from "./themes/kilo-vscode.json"
 
 // Re-export all upstream theme constants
 export {
-  oc1Theme,
+  oc2Theme,
   tokyonightTheme,
   draculaTheme,
   monokaiTheme,

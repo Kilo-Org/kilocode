@@ -1,7 +1,6 @@
 # Codebase Indexing & Semantic Search
 
 **Priority:** P2
-**Status:** ❌ Not started
 
 ## Remaining Work
 

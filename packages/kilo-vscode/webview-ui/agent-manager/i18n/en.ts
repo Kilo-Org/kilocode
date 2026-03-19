@@ -34,11 +34,17 @@ export const dict = {
 
   "agentManager.tab.close": "Close",
   "agentManager.tab.closeTab": "Close tab",
+  "agentManager.tab.forkSession": "Fork Session",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Open Terminal",
 
-  "agentManager.setup.failed": "Workspace setup failed",
-  "agentManager.setup.settingUp": "Setting up workspace",
+  "agentManager.setup.failed": "Worktree setup failed",
+  "agentManager.setup.settingUp": "Setting up worktree",
+  "agentManager.setup.error.git_not_found":
+    "Git is not installed or not found in PATH. Please install Git and restart VS Code.",
+  "agentManager.setup.error.not_git_repo": "Open a folder that contains a git repository to use worktrees.",
+  "agentManager.setup.error.lfs_missing":
+    "This repository uses Git LFS, but git-lfs was not found. Please install Git LFS.",
   "agentManager.shortcuts.title": "Keyboard Shortcuts",
   "agentManager.shortcuts.category.sidebar": "Sidebar",
   "agentManager.shortcuts.category.tabs": "Tabs",
@@ -82,10 +88,11 @@ export const dict = {
   "agentManager.dialog.versions": "Versions",
   "agentManager.dialog.versionHint": "{{count}} worktrees will run in parallel",
   "agentManager.dialog.compareModels": "Compare Models",
+  "agentManager.dialog.compareModels.tooltip": "Run agents on different models in parallel to compare results",
   "agentManager.dialog.compareModels.searchModels": "Search models...",
   "agentManager.dialog.compareModels.selectModels": "Select models...",
   "agentManager.dialog.creating": "Creating...",
-  "agentManager.dialog.createWorkspace": "Create Worktree",
+  "agentManager.dialog.createWorktree": "Create Worktree",
   "agentManager.dialog.removeImage": "Remove image",
   "agentManager.dialog.advanced": "Advanced...",
 
