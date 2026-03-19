@@ -1339,14 +1339,47 @@
   }
 
   [data-slot="permission-command"] {
+    position: relative;
+    margin-bottom: 4px;
+  }
+
+  [data-slot="permission-command-pre"] {
     font-size: 12px;
     font-family: var(--vscode-editor-font-family, monospace);
     color: var(--text-weak, var(--vscode-descriptionForeground));
     white-space: pre-wrap;
     word-break: break-all;
+    margin: 0;
+    padding: 0;
+    line-height: 1.5;
     max-height: 150px;
-    overflow: auto;
-    margin: 0 0 4px;
+    overflow-y: auto;
+  }
+
+  [data-slot="permission-command-copy"] {
+    all: unset;
+    position: absolute;
+    top: 0px;
+    right: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+    cursor: pointer;
+    color: var(--vscode-foreground);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+
+    &:hover {
+      background: var(--vscode-toolbar-hoverBackground);
+      opacity: 1;
+    }
+  }
+
+  [data-slot="permission-command"]:hover [data-slot="permission-command-copy"] {
+    opacity: 0.5;
   }
 
   [data-slot="permission-hint"] {
