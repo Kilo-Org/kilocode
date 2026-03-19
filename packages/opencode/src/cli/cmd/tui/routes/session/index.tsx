@@ -1500,6 +1500,7 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
               streaming={true}
               content={props.part.text.trim()}
               conceal={ctx.conceal()}
+              concealCode={false}
             />
           </Match>
           <Match when={!Flag.KILO_EXPERIMENTAL_MARKDOWN}>
