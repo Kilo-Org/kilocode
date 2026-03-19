@@ -13,6 +13,7 @@ import { ModelsDev, Prompt } from "./models" // kilocode_change
 import { Auth } from "../auth"
 import { Env } from "../env"
 import { Instance } from "../project/instance"
+import { State } from "../project/state" // kilocode_change
 import { Flag } from "../flag/flag"
 import { iife } from "@/util/iife"
 import { Global } from "../global"
@@ -796,7 +797,8 @@ export namespace Provider {
     }
   }
 
-  const state = Instance.state(async () => {
+  // kilocode_change start
+  async function init() {
     using _ = log.time("state")
     const config = await Config.get()
     const modelsDev = await ModelsDev.get()
@@ -1080,7 +1082,11 @@ export namespace Provider {
       sdk,
       modelLoaders,
     }
-  })
+  }
+
+  const state = Instance.state(init)
+  State.register("config", init)
+  // kilocode_change end
 
   export async function list() {
     return state().then((state) => state.providers)

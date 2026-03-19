@@ -15,6 +15,7 @@ import { SkillTool } from "./skill"
 import type { Agent } from "../agent/agent"
 import { Tool } from "./tool"
 import { Instance } from "../project/instance"
+import { State } from "../project/state" // kilocode_change
 import { Config } from "../config/config"
 import path from "path"
 import { type ToolContext as PluginToolContext, type ToolDefinition } from "@kilocode/plugin"
@@ -35,7 +36,8 @@ import { pathToFileURL } from "url"
 export namespace ToolRegistry {
   const log = Log.create({ service: "tool.registry" })
 
-  export const state = Instance.state(async () => {
+  // kilocode_change start
+  async function init() {
     const custom = [] as Tool.Info[]
 
     const matches = await Config.directories().then((dirs) =>
@@ -60,7 +62,11 @@ export namespace ToolRegistry {
     }
 
     return { custom }
-  })
+  }
+
+  export const state = Instance.state(init)
+  State.register("config", init)
+  // kilocode_change end
 
   function fromPlugin(id: string, def: ToolDefinition): Tool.Info {
     return {

@@ -8,6 +8,9 @@ export namespace State {
 
   const log = Log.create({ service: "state" })
   const recordsByKey = new Map<string, Map<any, Entry>>()
+  // kilocode_change start
+  const groups = new Map<string, Set<any>>()
+  // kilocode_change end
 
   export function create<S>(root: () => string, init: () => S, dispose?: (state: Awaited<S>) => Promise<void>) {
     return () => {
@@ -78,4 +81,25 @@ export namespace State {
       entries.delete(init)
     }
   }
+
+  // kilocode_change start
+  /** Register an init function under a named group for bulk invalidation. */
+  export function register(group: string, init: any) {
+    let set = groups.get(group)
+    if (!set) {
+      set = new Set()
+      groups.set(group, set)
+    }
+    set.add(init)
+  }
+
+  /** Remove all entries in a named group across all directories without calling dispose. */
+  export function invalidateGroup(group: string) {
+    const inits = groups.get(group)
+    if (!inits) return
+    for (const init of inits) {
+      removeByInit(init)
+    }
+  }
+  // kilocode_change end
 }

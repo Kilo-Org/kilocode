@@ -6,6 +6,7 @@ import { createKiloClient } from "@kilocode/sdk"
 import { Server } from "../server/server"
 import { BunProc } from "../bun"
 import { Instance } from "../project/instance"
+import { State } from "../project/state" // kilocode_change
 import { Flag } from "../flag/flag"
 import { CodexAuthPlugin } from "./codex"
 import { Session } from "../session"
@@ -29,7 +30,8 @@ export namespace Plugin {
     GitlabAuthPlugin as unknown as PluginInstance,
   ] // kilocode_change end
 
-  const state = Instance.state(async () => {
+  // kilocode_change start
+  async function load() {
     const client = createKiloClient({
       baseUrl: "http://localhost:4096",
       directory: Instance.directory,
@@ -109,7 +111,11 @@ export namespace Plugin {
       hooks,
       input,
     }
-  })
+  }
+
+  const state = Instance.state(load)
+  State.register("config", load)
+  // kilocode_change end
 
   export async function trigger<
     Name extends Exclude<keyof Required<Hooks>, "auth" | "event" | "tool">,

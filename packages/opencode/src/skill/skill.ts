@@ -4,6 +4,7 @@ import os from "os"
 import { rm } from "fs/promises"
 import { Config } from "../config/config"
 import { Instance } from "../project/instance"
+import { State } from "../project/state" // kilocode_change
 import { NamedError } from "@opencode-ai/util/error"
 import { ConfigMarkdown } from "../config/markdown"
 import { Log } from "../util/log"
@@ -52,7 +53,8 @@ export namespace Skill {
   const KILO_SKILL_PATTERN = "{skill,skills}/**/SKILL.md"
   const SKILL_PATTERN = "**/SKILL.md"
 
-  export const state = Instance.state(async () => {
+  // kilocode_change start
+  async function init() {
     const skills: Record<string, Info> = {}
     const dirs = new Set<string>()
 
@@ -201,7 +203,11 @@ export namespace Skill {
       skills,
       dirs: Array.from(dirs),
     }
-  })
+  }
+
+  export const state = Instance.state(init)
+  State.register("config", init)
+  // kilocode_change end
 
   export async function get(name: string) {
     return state().then((x) => x.skills[name])

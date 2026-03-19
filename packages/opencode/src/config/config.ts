@@ -345,9 +345,11 @@ export namespace Config {
   export const state = Instance.state(init)
 
   // kilocode_change start
-  /** Remove cached config state from all instances so the next access re-reads from disk. */
+  State.register("config", init)
+
+  /** Remove all config-derived caches so the next access re-reads from disk. */
   export function invalidateAll() {
-    State.removeByInit(init)
+    State.invalidateGroup("config")
   }
   // kilocode_change end
 

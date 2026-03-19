@@ -4,6 +4,7 @@ import { Provider } from "../provider/provider"
 import { generateObject, streamObject, type ModelMessage } from "ai"
 import { SystemPrompt } from "../session/system"
 import { Instance } from "../project/instance"
+import { State } from "../project/state" // kilocode_change
 import { Truncate } from "../tool/truncation"
 import { Auth } from "../auth"
 import { ProviderTransform } from "../provider/transform"
@@ -56,7 +57,8 @@ export namespace Agent {
     })
   export type Info = z.infer<typeof Info>
 
-  const state = Instance.state(async () => {
+  // kilocode_change start
+  async function init() {
     const cfg = await Config.get()
 
     const skillDirs = await Skill.dirs()
@@ -348,7 +350,11 @@ export namespace Agent {
     }
 
     return result
-  })
+  }
+
+  const state = Instance.state(init)
+  State.register("config", init)
+  // kilocode_change end
 
   export async function get(agent: string) {
     // kilocode_change start -  Treat "build" as "code" for backward compatibility
