@@ -839,9 +839,8 @@
   border-color: var(--vscode-focusBorder);
 }
 
-.prompt-input:disabled {
+.prompt-input--disabled {
   opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .prompt-input::placeholder {

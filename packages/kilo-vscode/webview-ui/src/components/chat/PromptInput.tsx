@@ -779,6 +779,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           <textarea
             ref={textareaRef}
             class="prompt-input"
+            classList={{ "prompt-input--disabled": isDisabled() }}
             placeholder={placeholder()}
             value={text()}
             onInput={handleInput}
@@ -788,7 +789,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             onClick={clearIfNotAtEnd}
             onSelect={clearIfNotAtEnd}
             onScroll={syncHighlightScroll}
-            disabled={isDisabled()}
+            aria-disabled={isDisabled()}
             rows={1}
           />
         </div>
