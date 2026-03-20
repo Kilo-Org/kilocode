@@ -171,9 +171,10 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     this.recentlyVisitedRangesService = new RecentlyVisitedRangesService(ide)
     this.recentlyEditedTracker = new RecentlyEditedTracker(ide)
 
-    this.acceptedCommand = vscode.commands.registerCommand(INLINE_COMPLETION_ACCEPTED_COMMAND, () =>
-      this.telemetry?.captureAcceptSuggestion(this.lastSuggestion?.length),
-    )
+    this.acceptedCommand = vscode.commands.registerCommand(INLINE_COMPLETION_ACCEPTED_COMMAND, () => {
+      this.telemetry?.captureAcceptSuggestion(this.lastSuggestion?.length)
+      vscode.commands.executeCommand("setContext", "kilo-code.new.autocomplete.hasSuggestions", false)
+    })
   }
 
   public updateSuggestions(fillInAtCursor: FillInAtCursorSuggestion): void {
