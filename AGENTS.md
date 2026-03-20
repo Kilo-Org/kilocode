@@ -10,6 +10,7 @@ Kilo CLI is an open source AI coding agent that generates code from natural lang
 ## Build and Dev
 
 - **Dev**: `bun run dev` (runs from root) or `bun run --cwd packages/opencode --conditions=browser src/index.ts`
+- **Extension**: `bun run extension` (build + launch VS Code with the extension in dev mode). Pass `--no-build` to skip the build.
 - **Typecheck**: `bun turbo typecheck` (uses `tsgo`, not `tsc`)
 - **Test**: `bun test` from `packages/opencode/` (NOT from root -- root blocks tests)
 - **Single test**: `bun test test/tool/tool.test.ts` from `packages/opencode/`

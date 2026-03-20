@@ -63,4 +63,8 @@ export const dict = {
   "marketplace.install": "설치",
   "marketplace.filter.installed": "설치됨",
   "marketplace.error.dismiss": "닫기",
+  "marketplace.warning.busyOne": "하나의 세션이 실행 중이며 중단됩니다",
+  "marketplace.warning.busyMany": "여러 세션이 실행 중이며 중단됩니다",
+  "marketplace.warning.installAnyway": "그래도 설치",
+  "marketplace.warning.cancel": "취소",
 }

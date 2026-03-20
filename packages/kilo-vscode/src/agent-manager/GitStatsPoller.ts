@@ -58,10 +58,19 @@ export class GitStatsPoller {
   > = {}
   private readonly intervalMs: number
   private readonly git: GitOps
+  private skipWorktreeIds = new Set<string>()
 
   constructor(private readonly options: GitStatsPollerOptions) {
     this.intervalMs = options.intervalMs ?? 5000
     this.git = options.git
+  }
+
+  skipWorktree(id: string): void {
+    this.skipWorktreeIds.add(id)
+  }
+
+  unskipWorktree(id: string): void {
+    this.skipWorktreeIds.delete(id)
   }
 
   setEnabled(enabled: boolean): void {
@@ -134,7 +143,7 @@ export class GitStatsPoller {
     const missing = new Set(
       presence.degraded ? [] : presence.worktrees.filter((item) => item.missing).map((item) => item.worktreeId),
     )
-    const active = worktrees.filter((wt) => !missing.has(wt.id))
+    const active = worktrees.filter((wt) => !missing.has(wt.id) && !this.skipWorktreeIds.has(wt.id))
     if (active.length === 0) {
       if (this.lastHash === "") return
       this.lastHash = ""

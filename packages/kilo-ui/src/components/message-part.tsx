@@ -1,4 +1,16 @@
-import { Component, createEffect, createMemo, createSignal, For, Match, on, Show, Switch, type JSX } from "solid-js"
+import {
+  Component,
+  createEffect,
+  createMemo,
+  createSignal,
+  For,
+  Match,
+  on,
+  onCleanup,
+  Show,
+  Switch,
+  type JSX,
+} from "solid-js"
 import stripAnsi from "strip-ansi"
 import { createStore } from "solid-js/store"
 import { Dynamic } from "solid-js/web"
@@ -1179,18 +1191,69 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
   )
 }
 
-// Overrides upstream flat markdown render with a clearly distinguished, collapsed-by-default block.
+// Track part IDs that have been rendered while streaming.
+// Persists across component instances so that when reasoning-end replaces the
+// store object (causing <For> to recreate the component) the new instance
+// knows the part was just streaming and can animate the collapse.
+const streamed = new Set<string>()
+
+// Overrides upstream flat markdown render with streaming reasoning block + auto-collapse.
 // Also filters encrypted reasoning data from OpenRouter that appears as [REDACTED].
 PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProps) {
-  const part = props.part as unknown as ReasoningPart
   const i18n = useI18n()
-  const [open, setOpen] = createSignal(false)
-  const text = () => (part.text ?? "").replace("[REDACTED]", "").trim()
-  const throttledText = createThrottledValue(text)
+
+  const text = () => {
+    const p = props.part as unknown as ReasoningPart
+    return (p.text ?? "").replace("[REDACTED]", "").trim()
+  }
+
+  // Throttle markdown re-renders during streaming
+  const display = createThrottledValue(text)
+
+  // time.end is set by the processor on reasoning-end.
+  // v1 parts lack time entirely → treat as historical.
+  const done = () => {
+    const t = (props.part as any).time
+    return !t || !!t.end
+  }
+
+  const id = (props.part as any).id as string
+
+  // Check before adding — order matters
+  const was = streamed.has(id)
+  if (!done()) streamed.add(id)
+
+  // Streaming → open. Just finished (was streaming, now done) → open briefly
+  // then collapse. Historical → collapsed from the start.
+  const [open, setOpen] = createSignal(!done() || was)
+
+  // Auto-collapse once when reasoning finishes (streaming → done transition).
+  // Uses a flag so manual reopens are not auto-closed again.
+  let collapsed = false
+  createEffect(() => {
+    if (done() && open() && !collapsed) {
+      collapsed = true
+      const timer = setTimeout(() => setOpen(false), 500)
+      onCleanup(() => clearTimeout(timer))
+    }
+  })
+
+  onCleanup(() => {
+    if (done()) streamed.delete(id)
+  })
+
+  // Auto-scroll the content container while streaming
+  let ref: HTMLDivElement | undefined
+  createEffect(() => {
+    display()
+    if (!done() && ref) {
+      ref.scrollTop = ref.scrollHeight
+    }
+  })
 
   return (
-    <Show when={throttledText()}>
-      <div data-component="reasoning-part">
+    <Show when={display()}>
+      <div data-component="reasoning-part" data-streaming={!done() ? "" : undefined}>
         <Collapsible open={open()} onOpenChange={setOpen} class="tool-collapsible">
           <Collapsible.Trigger>
             <div data-slot="reasoning-header">
@@ -1200,8 +1263,8 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
             <Collapsible.Arrow />
           </Collapsible.Trigger>
           <Collapsible.Content>
-            <div data-slot="reasoning-content">
-              <Markdown text={throttledText()} cacheKey={part.id} />
+            <div data-slot="reasoning-content" ref={ref}>
+              <Markdown text={display()} cacheKey={id} />
             </div>
           </Collapsible.Content>
         </Collapsible>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test"
-import { flattenModels, findModel } from "../../webview-ui/src/context/provider-utils"
+import { flattenModels, findModel, isModelValid } from "../../webview-ui/src/context/provider-utils"
 import type { Provider } from "../../webview-ui/src/types/messages"
 
 function makeProvider(id: string, name: string, modelIds: string[]): Provider {
@@ -76,5 +76,28 @@ describe("findModel", () => {
 
   it("returns undefined for empty model list", () => {
     expect(findModel([], { providerID: "openai", modelID: "gpt-4" })).toBeUndefined()
+  })
+})
+
+describe("isModelValid", () => {
+  const providers = {
+    kilo: makeProvider("kilo", "Kilo Gateway", ["kilo-auto/free"]),
+    openai: makeProvider("openai", "OpenAI", ["gpt-4o"]),
+  }
+
+  it("accepts a connected provider model", () => {
+    expect(isModelValid(providers, ["openai"], { providerID: "openai", modelID: "gpt-4o" })).toBe(true)
+  })
+
+  it("rejects a disconnected non-kilo provider", () => {
+    expect(isModelValid(providers, [], { providerID: "openai", modelID: "gpt-4o" })).toBe(false)
+  })
+
+  it("accepts kilo models when present in the catalog", () => {
+    expect(isModelValid(providers, [], { providerID: "kilo", modelID: "kilo-auto/free" })).toBe(true)
+  })
+
+  it("rejects unknown models", () => {
+    expect(isModelValid(providers, ["openai"], { providerID: "openai", modelID: "missing" })).toBe(false)
   })
 })

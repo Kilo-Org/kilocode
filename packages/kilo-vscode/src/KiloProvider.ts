@@ -40,6 +40,18 @@ import { resolveProjectDirectory } from "./project-directory"
 import { getBusySessionCount, seedSessionStatuses } from "./session-status"
 import { handlePermissionResponse as handlePermissionResponseUtil, fetchPendingPermissions } from "./permission-handler"
 
+import {
+  buildActionContext,
+  computeDefaultSelection,
+  fetchProviderData,
+  validateRecents,
+  connectProvider as connectProviderAction,
+  authorizeProviderOAuth as authorizeOAuthAction,
+  completeProviderOAuth as completeOAuthAction,
+  disconnectProvider as disconnectProviderAction,
+  saveCustomProvider as saveCustomProviderAction,
+} from "./provider-actions"
+
 type KiloProviderOptions = {
   projectDirectory?: string | null
   slimEditMetadata?: boolean
@@ -57,6 +69,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     vscode.extensions.getExtension("kilocode.kilo-code")?.packageJSON?.version ?? "unknown"
   /** Cached providersLoaded payload so requestProviders can be served before client is ready */
   private cachedProvidersMessage: unknown = null
+  /** Coalesce provider refreshes — at most one follow-up rerun when a request lands mid-flight. */
+  private providersRefresh: Promise<void> | null = null
+  private providersQueued = false
+  private providersGeneration = 0
   /** Cached agentsLoaded payload so requestAgents can be served before client is ready */
   private cachedAgentsMessage: unknown = null
   /** Cached skillsLoaded payload so requestSkills can be served before client is ready */
@@ -70,7 +86,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /** Cached notificationsLoaded payload */
   private cachedNotificationsMessage: unknown = null
   private pendingReviewComments: unknown[][] = []
-
+  private readyResolvers: (() => void)[] = []
   private trackedSessionIds: Set<string> = new Set()
   private syncedChildSessions: Set<string> = new Set()
   /** Tracks the latest status for each session, used to warn before destructive config operations. */
@@ -411,6 +427,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.isWebviewReady = true
           await this.syncWebviewState("webviewReady")
           this.flushPendingReviewComments()
+          this.readyResolvers.splice(0).forEach((r) => r())
           break
         case "sendMessage": {
           const files = z
@@ -548,6 +565,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "requestProviders":
           this.fetchAndSendProviders().catch((e) => console.error("[Kilo New] fetchAndSendProviders failed:", e))
+          break
+        case "connectProvider":
+        case "authorizeProviderOAuth":
+        case "completeProviderOAuth":
+        case "disconnectProvider":
+        case "saveCustomProvider":
+          await this.handleProviderAction(message)
           break
         case "compact":
           await this.handleCompact(message.sessionID, message.providerID, message.modelID)
@@ -717,6 +741,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestVariants": {
           const variants = this.extensionContext?.globalState.get<Record<string, string>>("variantSelections") ?? {}
           this.postMessage({ type: "variantsLoaded", variants })
+          break
+        }
+        case "persistRecents":
+          await this.extensionContext?.globalState.update("recentModels", validateRecents(message.recents))
+          break
+        case "requestRecents": {
+          const recents = validateRecents(this.extensionContext?.globalState.get("recentModels"))
+          this.postMessage({ type: "recentsLoaded", recents })
           break
         }
         // legacy-migration start
@@ -1226,45 +1258,106 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
-  /**
-   * Fetch providers from the backend and send to webview.
-   *
-   * The backend `/provider` endpoint returns `all` as an array-like object with
-   * numeric keys ("0", "1", …). The webview and sendMessage both need providers
-   * keyed by their real `provider.id` (e.g. "anthropic", "openai"). We re-key
-   * the map here so the rest of the code can use provider.id everywhere.
-   */
+  /** Fetch providers and send to webview. Coalesced: at most one in-flight + one queued. */
   private async fetchAndSendProviders(): Promise<void> {
-    if (!this.client) {
-      // client not ready — serve from cache if available
-      if (this.cachedProvidersMessage) {
-        this.postMessage(this.cachedProvidersMessage)
-      }
+    const next = ++this.providersGeneration
+    if (this.providersRefresh) {
+      this.providersQueued = true
+      await this.providersRefresh
       return
     }
-
-    try {
-      const workspaceDir = this.getWorkspaceDirectory()
-      const { data: response } = await this.client.provider.list({ directory: workspaceDir }, { throwOnError: true })
-
-      const normalized = indexProvidersById(response.all)
-
-      const config = vscode.workspace.getConfiguration("kilo-code.new.model")
-      const providerID = config.get<string>("providerID", "kilo")
-      const modelID = config.get<string>("modelID", "kilo-auto/free")
-
-      const message = {
-        type: "providersLoaded",
-        providers: normalized,
-        connected: response.connected,
-        defaults: response.default,
-        defaultSelection: { providerID, modelID },
+    const task = (async () => {
+      let generation = next
+      while (true) {
+        this.providersQueued = false
+        const client = this.client
+        if (!client) {
+          if (this.cachedProvidersMessage && generation === this.providersGeneration)
+            this.postMessage(this.cachedProvidersMessage)
+          return
+        }
+        try {
+          const { response, authMethods, authStates } = await fetchProviderData(client, this.getWorkspaceDirectory())
+          if (generation !== this.providersGeneration || client !== this.client) {
+            if (!this.providersQueued) return
+            generation = this.providersGeneration
+            continue
+          }
+          const settings = vscode.workspace.getConfiguration("kilo-code.new.model")
+          const message = {
+            type: "providersLoaded",
+            providers: indexProvidersById(response.all),
+            connected: response.connected,
+            defaults: response.default,
+            defaultSelection: computeDefaultSelection(
+              this.cachedConfigMessage as { config?: { model?: string } } | null,
+              settings.get<string>("providerID", ""),
+              settings.get<string>("modelID", ""),
+            ),
+            authMethods,
+            authStates,
+          }
+          this.cachedProvidersMessage = message
+          this.postMessage(message)
+        } catch (error) {
+          if (generation !== this.providersGeneration) {
+            if (!this.providersQueued) return
+            generation = this.providersGeneration
+            continue
+          }
+          console.error("[Kilo New] KiloProvider: Failed to fetch providers:", error)
+        }
+        if (!this.providersQueued) return
+        generation = this.providersGeneration
       }
-      this.cachedProvidersMessage = message
-      this.postMessage(message)
-    } catch (error) {
-      console.error("[Kilo New] KiloProvider: Failed to fetch providers:", error)
+    })()
+    const done = task.finally(() => {
+      if (this.providersRefresh === done) this.providersRefresh = null
+    })
+    this.providersRefresh = done
+    await done
+  }
+
+  private async handleProviderAction(msg: Record<string, unknown>): Promise<void> {
+    const rid = typeof msg.requestId === "string" ? msg.requestId : ""
+    const pid = typeof msg.providerID === "string" ? msg.providerID : ""
+    if (!rid || !pid) return
+    if (!this.client) {
+      const action =
+        msg.type === "disconnectProvider"
+          ? "disconnect"
+          : msg.type === "authorizeProviderOAuth"
+            ? "authorize"
+            : "connect"
+      this.postMessage({
+        type: "providerActionError",
+        requestId: rid,
+        providerID: pid,
+        action,
+        message: "Not connected to CLI backend",
+      })
+      return
     }
+    const ctx = buildActionContext(
+      this.client,
+      (m) => this.postMessage(m),
+      getErrorMessage,
+      this.getWorkspaceDirectory(),
+      () => this.fetchAndSendProviders(),
+    )
+    const set = (m: unknown) => {
+      this.cachedConfigMessage = m
+    }
+    const method = typeof msg.method === "number" ? msg.method : 0
+    const key = typeof msg.apiKey === "string" ? msg.apiKey : undefined
+    const code = typeof msg.code === "string" ? msg.code : undefined
+    const config = msg.config && typeof msg.config === "object" ? (msg.config as Record<string, unknown>) : undefined
+    if (msg.type === "connectProvider" && key) return connectProviderAction(ctx, rid, pid, key)
+    if (msg.type === "authorizeProviderOAuth") return authorizeOAuthAction(ctx, rid, pid, method)
+    if (msg.type === "completeProviderOAuth") return completeOAuthAction(ctx, rid, pid, method, code)
+    if (msg.type === "disconnectProvider") return disconnectProviderAction(ctx, rid, pid, this.cachedConfigMessage, set)
+    if (msg.type === "saveCustomProvider" && config)
+      return saveCustomProviderAction(ctx, rid, pid, config, key, this.cachedConfigMessage, set)
   }
 
   /**
@@ -1885,6 +1978,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
+    const refreshProviders =
+      partial.provider !== undefined ||
+      partial.disabled_providers !== undefined ||
+      partial.enabled_providers !== undefined
+
     // Belt-and-suspenders guard: prevent fetchAndSendConfig from sending a
     // stale configLoaded while this write is in flight (the SSE-triggered reload
     // races with the async config.update() write on the CLI backend).
@@ -1901,12 +1999,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       this.cachedConfigMessage = { type: "configLoaded", config: merged }
       this.postMessage({ type: "configUpdated", config: merged })
+
+      if (refreshProviders) {
+        await this.fetchAndSendProviders()
+      }
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to update config:", error)
       this.postMessage({
         type: "error",
         message: getErrorMessage(error) || "Failed to update config",
       })
+      // Send configUpdated with the last known good config so the webview
+      // clears its saving flag and reverts optimistic state.
+      if (this.cachedConfigMessage) {
+        this.postMessage({ type: "configUpdated", config: (this.cachedConfigMessage as { config: unknown }).config })
+      }
     } finally {
       this.pending--
     }
@@ -2311,11 +2418,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const { data: profileData } = await this.client.kilo.profile(undefined, { throwOnError: true })
       this.postMessage({ type: "profileData", data: profileData })
       this.postMessage({ type: "deviceAuthComplete" })
-
-      // Step 5: If user has organizations, navigate to profile view so they can pick one
-      if (profileData?.profile?.organizations && profileData.profile.organizations.length > 0) {
-        this.postMessage({ type: "navigate", view: "profile" })
-      }
     } catch (error) {
       if (attempt !== this.loginAttempt) {
         return
@@ -2452,6 +2554,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       await this.client.global
         .dispose()
         .catch((e: unknown) => console.warn("[Kilo New] KiloProvider: global.dispose() after logout failed:", e))
+
+      await this.fetchAndSendProviders()
     } catch (error) {
       console.error("[Kilo New] KiloProvider: ❌ Logout failed:", error)
       this.postMessage({
@@ -2537,20 +2641,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
   }
 
-  /**
-   * Extract sessionID from an SSE event, if applicable.
-   * Returns undefined for global events (server.connected, server.heartbeat).
-   */
-  private extractSessionID(event: Event): string | undefined {
-    return this.connectionService.resolveEventSessionId(event)
-  }
-
-  /**
-   * Re-fetch all server-side state after an auth change (login/logout/org switch).
-   * After instance.dispose() clears the server cache, the next request to each
-   * endpoint will re-initialize with the current auth state.
-   * This mirrors the TUI's sync.bootstrap() pattern.
-   */
+  /** Re-fetch all server-side state after an auth change. */
   private async reloadAfterAuthChange(): Promise<void> {
     await Promise.all([
       this.fetchAndSendProviders(),
@@ -2586,7 +2677,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     // Extract sessionID from the event
-    const sessionID = this.extractSessionID(event)
+    const sessionID = this.connectionService.resolveEventSessionId(event)
 
     // Events without sessionID (server.connected, server.heartbeat) → always forward
     // Events with sessionID → only forward if this webview tracks that session
@@ -2599,7 +2690,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     // Refresh provider and agent lists when the server signals a state disposal
-    if (event.type === "server.instance.disposed" || event.type === "global.disposed") {
+    if (event.type === "global.disposed") {
+      void this.reloadAfterAuthChange()
+      return
+    }
+
+    if (event.type === "server.instance.disposed") {
+      const props = event.properties as Record<string, unknown> | null
+      const dir = typeof props?.directory === "string" ? props.directory : undefined
+      if (dir && path.resolve(dir) !== path.resolve(this.getWorkspaceDirectory())) return
       void this.reloadAfterAuthChange()
       return
     }
@@ -2649,10 +2748,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
   }
 
-  /**
-   * Post a message to the webview.
-   * Public so toolbar button commands can send messages.
-   */
+  /** Wait until the webview has sent "webviewReady". Resolves immediately when already ready. */
+  public waitForReady(): Promise<void> {
+    return this.isWebviewReady && this.webview ? Promise.resolve() : new Promise((r) => this.readyResolvers.push(r))
+  }
+  /** Post a message to the webview. Public so toolbar button commands can send messages. */
   public postMessage(message: unknown): void {
     if (!this.webview) {
       const type =
