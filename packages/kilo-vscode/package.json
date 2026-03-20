@@ -294,6 +294,11 @@
         "command": "kilo-code.new.focusChatInput",
         "title": "Focus Chat Input",
         "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.generateTerminalCommand",
+        "title": "Generate Terminal Command",
+        "category": "Kilo Code"
       }
     ],
     "submenus": [
@@ -345,6 +350,13 @@
         }
       ],
       "scm/title": [
+        {
+          "command": "kilo-code.new.generateCommitMessage",
+          "group": "navigation",
+          "when": "scmProvider == git"
+        }
+      ],
+      "scm/input": [
         {
           "command": "kilo-code.new.generateCommitMessage",
           "group": "navigation",
@@ -408,6 +420,11 @@
         "command": "kilo-code.new.focusChatInput",
         "key": "ctrl+shift+a",
         "mac": "cmd+shift+a"
+      },
+      {
+        "command": "kilo-code.new.generateTerminalCommand",
+        "key": "ctrl+shift+g",
+        "mac": "cmd+shift+g"
       },
       {
         "command": "kilo-code.new.agentManagerOpen",
