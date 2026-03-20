@@ -8,6 +8,7 @@ import { PermissionTable } from "@/session/session.sql"
 import { fn } from "@/util/fn"
 import { Log } from "@/util/log"
 import { Wildcard } from "@/util/wildcard"
+import { drainCovered } from "@/kilocode/permission/drain" // kilocode_change
 import os from "os"
 import z from "zod"
 
@@ -215,40 +216,6 @@ export namespace PermissionNext {
 
   // kilocode_change start
 
-  /**
-   * Auto-resolve pending permissions now fully covered by approved or denied rules.
-   * When the user approves/denies a rule on subagent A, sibling subagent B's
-   * pending permission for the same pattern resolves or rejects automatically.
-   */
-  async function drainCovered(exclude?: string) {
-    const s = await state()
-    for (const [id, pending] of Object.entries(s.pending)) {
-      if (id === exclude) continue
-      const actions = pending.info.patterns.map((pattern) =>
-        evaluate(pending.info.permission, pattern, pending.ruleset, s.approved),
-      )
-      const denied = actions.some((r) => r.action === "deny")
-      const allowed = !denied && actions.every((r) => r.action === "allow")
-      if (!denied && !allowed) continue
-      delete s.pending[id]
-      if (denied) {
-        Bus.publish(Event.Replied, {
-          sessionID: pending.info.sessionID,
-          requestID: pending.info.id,
-          reply: "reject",
-        })
-        pending.reject(new DeniedError(s.approved.filter((r) => Wildcard.match(pending.info.permission, r.permission))))
-      } else {
-        Bus.publish(Event.Replied, {
-          sessionID: pending.info.sessionID,
-          requestID: pending.info.id,
-          reply: "always",
-        })
-        pending.resolve()
-      }
-    }
-  }
-
   export const saveAlwaysRules = fn(
     z.object({
       requestID: Identifier.schema("permission"),
@@ -278,7 +245,7 @@ export namespace PermissionNext {
         await Config.updateGlobal({ permission: toConfig(newRules) }, { dispose: false })
       }
 
-      await drainCovered(input.requestID)
+      await drainCovered(s.pending, s.approved, evaluate, Event, DeniedError, input.requestID) // kilocode_change
     },
   )
   // kilocode_change end
