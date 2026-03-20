@@ -10,6 +10,10 @@ export function createKiloClient(config?: Config & { directory?: string; experim
     const customFetch: any = (req: any) => {
       // @ts-ignore
       req.timeout = false
+      // Node.js (undici) requires duplex: 'half' when sending a body via a Request object
+      if (req instanceof Request && req.body) {
+        return fetch(req, { duplex: 'half' } as any)
+      }
       return fetch(req)
     }
     config = {
