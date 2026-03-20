@@ -30,6 +30,7 @@ import type {
 import { ErrorDisplay } from "./ErrorDisplay"
 import { useServer } from "../../context/server"
 import { useSession } from "../../context/session"
+import { useLanguage } from "../../context/language"
 
 function getDirectory(path: string): string {
   const sep = path.includes("/") ? "/" : "\\"
@@ -55,6 +56,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
   const diffComponent = useDiffComponent()
   const server = useServer()
   const session = useSession()
+  const language = useLanguage()
 
   const emptyMessages: SDKMessage[] = []
   const emptyParts: SDKPart[] = []
@@ -151,15 +153,28 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
       {(msg) => (
         <div class="vscode-session-turn" data-message={msg().id}>
           {/* User message */}
-          <div class="vscode-session-turn-user">
+          <div
+            class="vscode-session-turn-user"
+            data-revert-disabled={
+              assistantMessages().length > 0 && !session.revert() && session.status() !== "idle" ? "" : undefined
+            }
+            title={
+              assistantMessages().length > 0 && !session.revert() && session.status() !== "idle"
+                ? language.t("revert.disabled.agentBusy")
+                : undefined
+            }
+          >
             <UserMessageDisplay
               message={msg() as unknown as Parameters<typeof UserMessageDisplay>[0]["message"]}
               parts={parts() as unknown as Parameters<typeof UserMessageDisplay>[0]["parts"]}
               interrupted={interrupted()}
               queued={props.queued}
               onRevert={
-                assistantMessages().length > 0 && session.status() === "idle" && !session.revert()
-                  ? () => session.revertSession(props.messageID)
+                assistantMessages().length > 0 && !session.revert()
+                  ? () => {
+                      if (session.status() !== "idle") return
+                      session.revertSession(props.messageID)
+                    }
                   : undefined
               }
             />

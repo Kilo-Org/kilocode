@@ -119,3 +119,22 @@ describe("DataProvider contract (runtime)", () => {
     expect(src).toMatch(/openFile:\s*props\.onOpenFile/)
   })
 })
+
+describe("BasicTool export contract (runtime)", () => {
+  it("BasicTool and GenericTool are exported from basic-tool", () => {
+    const result = check(`
+      const { BasicTool, GenericTool } = await import("./src/components/basic-tool.tsx")
+      if (typeof BasicTool !== "function") {
+        console.error("BasicTool is " + typeof BasicTool)
+        process.exit(1)
+      }
+      if (typeof GenericTool !== "function") {
+        console.error("GenericTool is " + typeof GenericTool)
+        process.exit(1)
+      }
+      console.log("ok")
+      process.exit(0)
+    `)
+    expect(result.ok, `BasicTool export check failed: ${result.output}`).toBe(true)
+  })
+})

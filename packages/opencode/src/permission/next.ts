@@ -54,8 +54,13 @@ export namespace PermissionNext {
         })
         continue
       }
+      // null is a delete sentinel — skip it (it only appears in patches, not in stored config)
+      if (value === null) continue
       ruleset.push(
-        ...Object.entries(value).map(([pattern, action]) => ({ permission: key, pattern: expand(pattern), action })),
+        // Filter out null entries (delete sentinels) — they don't represent real rules
+        ...Object.entries(value)
+          .filter(([, action]) => action !== null)
+          .map(([pattern, action]) => ({ permission: key, pattern: expand(pattern), action: action as Action })),
       )
     }
     return ruleset
@@ -94,7 +99,7 @@ export namespace PermissionNext {
         continue
       }
 
-      if (existing === undefined) {
+      if (existing === undefined || existing === null) {
         // Use object format to avoid replacing existing granular rules
         // when merged via updateGlobal (e.g. { read: "allow" } would wipe
         // { read: { "*": "ask", "src/*": "allow" } })

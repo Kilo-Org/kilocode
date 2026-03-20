@@ -103,7 +103,7 @@ export class DiffViewerProvider implements vscode.Disposable {
   }
 
   private async resolveLocalDiffTarget(): Promise<{ directory: string; baseBranch: string } | undefined> {
-    return await resolveLocalDiffTarget(this.gitOps, (...args) => this.log(...args))
+    return await resolveLocalDiffTarget(this.gitOps, (...args) => this.log(...args), getWorkspaceRoot())
   }
 
   private async initialFetch(): Promise<void> {

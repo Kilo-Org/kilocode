@@ -76,6 +76,9 @@ const MockProviderProvider: ParentComponent = (props) => {
     defaultSelection: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     models: () => MOCK_MODELS,
     findModel: (sel: any) => _findModel(MOCK_MODELS, sel),
+    authMethods: () => ({}),
+    authStates: () => ({}),
+    isModelValid: () => true,
   }
   return <ProviderContext.Provider value={value}>{props.children}</ProviderContext.Provider>
 }
@@ -201,7 +204,10 @@ const ConfigWrapper: ParentComponent<{ config?: Config }> = (props) => {
     const value = {
       config: () => props.config!,
       loading: () => false,
+      isDirty: () => false,
       updateConfig: noop,
+      saveConfig: noop,
+      discardConfig: noop,
     }
     return <ConfigContext.Provider value={value}>{props.children}</ConfigContext.Provider>
   }

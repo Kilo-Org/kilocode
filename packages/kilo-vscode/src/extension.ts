@@ -1,6 +1,7 @@
 import * as vscode from "vscode"
 import { KiloProvider } from "./KiloProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
+import { VscodeHost } from "./agent-manager/vscode-host"
 import { DiffViewerProvider } from "./DiffViewerProvider"
 import { SettingsEditorProvider } from "./SettingsEditorProvider"
 import { SubAgentViewerProvider } from "./SubAgentViewerProvider"
@@ -11,6 +12,7 @@ import { BrowserAutomationService } from "./services/browser-automation"
 import { TelemetryProxy } from "./services/telemetry"
 import { registerCommitMessageService } from "./services/commit-message"
 import { registerCodeActions, registerTerminalActions, KiloCodeActionProvider } from "./services/code-actions"
+import { registerToggleAutoApprove } from "./commands/toggle-auto-approve"
 
 export function activate(context: vscode.ExtensionContext) {
   console.log("Kilo Code extension is now active")
@@ -47,14 +49,18 @@ export function activate(context: vscode.ExtensionContext) {
   )
 
   // Create Agent Manager provider for editor panel
-  const agentManagerProvider = new AgentManagerProvider(context.extensionUri, connectionService, context)
+  const agentManagerHost = new VscodeHost(context.extensionUri, connectionService, context)
+  const agentManagerProvider = new AgentManagerProvider(agentManagerHost, connectionService)
   context.subscriptions.push(agentManagerProvider)
 
   // Register serializer so Agent Manager restores when VS Code restarts
   context.subscriptions.push(
     vscode.window.registerWebviewPanelSerializer(AgentManagerProvider.viewType, {
       deserializeWebviewPanel(panel: vscode.WebviewPanel) {
-        agentManagerProvider.deserializeWebviewPanel(panel)
+        const ctx = agentManagerHost.wrapExistingPanel(panel, {
+          onBeforeMessage: (msg) => agentManagerProvider.handleMessage(msg),
+        })
+        agentManagerProvider.deserializePanel(ctx)
         return Promise.resolve()
       },
     }),
@@ -103,6 +109,16 @@ export function activate(context: vscode.ExtensionContext) {
       provider.postMessage({ type: "navigate", view: "migration" })
     }),
     // legacy-migration end
+    vscode.commands.registerCommand("kilo-code.new.generateTerminalCommand", async () => {
+      const input = await vscode.window.showInputBox({
+        prompt: "Describe the terminal command you want to generate",
+        placeHolder: "e.g., find all .ts files modified in the last 24 hours",
+      })
+      if (!input) return
+      await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
+      await provider.waitForReady()
+      provider.postMessage({ type: "triggerTask", text: `Generate a terminal command: ${input}` })
+    }),
     vscode.commands.registerCommand("kilo-code.new.openInTab", () => {
       return openKiloInNewTab(context, connectionService)
     }),
@@ -180,6 +196,27 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Register commit message generation
   registerCommitMessageService(context, connectionService)
+
+  // Register toggle auto-approve shortcut (Ctrl+Alt+A / Cmd+Alt+A)
+  const defaultDir = () => vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd()
+  registerToggleAutoApprove(
+    context,
+    connectionService,
+    (sessionId) => {
+      if (sessionId) {
+        const dir =
+          provider.getSessionDirectories().get(sessionId) ?? agentManagerProvider.getSessionDirectories().get(sessionId)
+        if (dir) return dir
+      }
+      return defaultDir()
+    },
+    () => {
+      const dirs = new Set([defaultDir()])
+      for (const dir of provider.getSessionDirectories().values()) dirs.add(dir)
+      for (const dir of agentManagerProvider.getSessionDirectories().values()) dirs.add(dir)
+      return [...dirs]
+    },
+  )
 
   // Register code actions (editor context menus, terminal context menus, keyboard shortcuts)
   registerCodeActions(context, provider, agentManagerProvider)

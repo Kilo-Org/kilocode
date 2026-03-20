@@ -83,7 +83,9 @@ export namespace Config {
     return merged
   }
 
-  async function init() {
+  // kilocode_change start — capture init so resetState() can invalidate the cache entry
+  const stateInit = async () => {
+    // kilocode_change end
     const auth = await Auth.all()
 
     // This ensures Opencode native configs always take precedence over legacy Kilocode configs
@@ -341,11 +343,10 @@ export namespace Config {
       deps,
     }
   }
+  // kilocode_change start — create state from named init so resetState() can invalidate it
+  export const state = Instance.state(stateInit)
 
-  export const state = Instance.state(init)
-
-  // kilocode_change start
-  State.register("config", init)
+  State.register("config", stateInit)
 
   /** Remove all config-derived caches so the next access re-reads from disk. */
   export function invalidateAll() {
@@ -711,7 +712,8 @@ export namespace Config {
   export const Mcp = z.discriminatedUnion("type", [McpLocal, McpRemote])
   export type Mcp = z.infer<typeof Mcp>
 
-  export const PermissionAction = z.enum(["ask", "allow", "deny"]).meta({
+  export const PermissionAction = z.enum(["ask", "allow", "deny"]).nullable().meta({
+    // kilocode_change - nullable allows null as a delete sentinel
     ref: "PermissionActionConfig",
   })
   export type PermissionAction = z.infer<typeof PermissionAction>
@@ -1602,7 +1604,20 @@ export namespace Config {
     // kilocode_change start — skip dispose when caller opts out (e.g. permission-only saves)
     await global.reset()
 
-    if (!dispose) return next
+    if (!dispose) {
+      // kilocode_change start — invalidate all config-derived caches so the next
+      // access re-reads from disk, without tearing down running sessions.
+      invalidateAll()
+
+      GlobalBus.emit("event", {
+        directory: "global",
+        payload: {
+          type: Event.ConfigUpdated.type,
+          properties: {},
+        },
+      })
+      return next
+    }
     // kilocode_change end
 
     // kilocode_change start — invalidate per-instance config caches instead of
