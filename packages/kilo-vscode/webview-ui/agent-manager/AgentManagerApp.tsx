@@ -143,11 +143,16 @@ function useTabScroll(activeTabs: Accessor<SessionInfo[]>, activeId: Accessor<st
   const [showLeft, setShowLeft] = createSignal(false)
   const [showRight, setShowRight] = createSignal(false)
 
+  let scrollFrame: number | undefined
   const update = () => {
-    const el = ref()
-    if (!el) return
-    setShowLeft(el.scrollLeft > 2)
-    setShowRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 2)
+    if (scrollFrame !== undefined) return
+    scrollFrame = requestAnimationFrame(() => {
+      scrollFrame = undefined
+      const el = ref()
+      if (!el) return
+      setShowLeft(el.scrollLeft > 2)
+      setShowRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 2)
+    })
   }
 
   // Wheel → horizontal scroll conversion
@@ -325,6 +330,12 @@ const AgentManagerContent: Component = () => {
   const [localSessionIDs, setLocalSessionIDs] = createSignal<string[]>(persisted?.localSessionIDs ?? [])
   const [sidebarWidth, setSidebarWidth] = createSignal(persisted?.sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH)
   const [sessionsCollapsed, setSessionsCollapsed] = createSignal(false)
+
+  // rAF coalescing for resize handlers — at most one signal write per frame
+  let sidebarRaf: number | undefined
+  let pendingSidebarWidth: number | undefined
+  let diffRaf: number | undefined
+  let pendingDiffWidth: number | undefined
 
   // Diff panel state
   const [diffOpen, setDiffOpen] = createSignal(false)
@@ -613,15 +624,20 @@ const AgentManagerContent: Component = () => {
     return id
   }
 
-  // Persist local session IDs and sidebar width to webview state for recovery (exclude pending tabs)
+  // Persist local session IDs and sidebar width to webview state for recovery (exclude pending tabs).
+  // Debounced to avoid serializing state on every pixel during resize drag.
+  let persistTimer: ReturnType<typeof setTimeout> | undefined
   createEffect(() => {
-    const prev = vscode.getState<Record<string, unknown>>() ?? {}
-    vscode.setState({
-      ...prev,
-      localSessionIDs: localSessionIDs().filter((id) => !isPending(id)),
-      sidebarWidth: sidebarWidth(),
-    })
+    // Read signals eagerly so Solid tracks them as dependencies
+    const ids = localSessionIDs().filter((id) => !isPending(id))
+    const width = sidebarWidth()
+    clearTimeout(persistTimer)
+    persistTimer = setTimeout(() => {
+      const prev = vscode.getState<Record<string, unknown>>() ?? {}
+      vscode.setState({ ...prev, localSessionIDs: ids, sidebarWidth: width })
+    }, 300)
   })
+  onCleanup(() => clearTimeout(persistTimer))
 
   // Save the currently active tab for the current sidebar context before switching away
   const saveTabMemory = () => {
@@ -1927,7 +1943,15 @@ const AgentManagerContent: Component = () => {
           size={sidebarWidth()}
           min={MIN_SIDEBAR_WIDTH}
           max={9999}
-          onResize={(width) => setSidebarWidth(Math.min(width, window.innerWidth * MAX_SIDEBAR_WIDTH_RATIO))}
+          onResize={(width) => {
+            pendingSidebarWidth = Math.min(width, window.innerWidth * MAX_SIDEBAR_WIDTH_RATIO)
+            if (sidebarRaf === undefined) {
+              sidebarRaf = requestAnimationFrame(() => {
+                sidebarRaf = undefined
+                setSidebarWidth(pendingSidebarWidth!)
+              })
+            }
+          }}
         />
         {/* Local repo item */}
         <button
@@ -2582,7 +2606,15 @@ const AgentManagerContent: Component = () => {
                   size={diffWidth()}
                   min={200}
                   max={Math.round(window.innerWidth * 0.8)}
-                  onResize={(w) => setDiffWidth(Math.max(200, Math.min(w, window.innerWidth * 0.8)))}
+                  onResize={(w) => {
+                    pendingDiffWidth = Math.max(200, Math.min(w, window.innerWidth * 0.8))
+                    if (diffRaf === undefined) {
+                      diffRaf = requestAnimationFrame(() => {
+                        diffRaf = undefined
+                        setDiffWidth(pendingDiffWidth!)
+                      })
+                    }
+                  }}
                 />
                 <div class="am-diff-panel-wrapper">
                   <DiffPanel
