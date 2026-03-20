@@ -129,7 +129,8 @@ const defaultBindings: Record<string, string> = {
   closeWorktree: isMac ? "⌘⇧W" : "Ctrl+Shift+W",
   openWorktree: isMac ? "⌘⇧O" : "Ctrl+Shift+O",
   agentManagerOpen: isMac ? "⌘⇧M" : "Ctrl+Shift+M",
-  focusPanel: isMac ? "⌘." : "Ctrl+.",
+  cycleAgentMode: isMac ? "⌘." : "Ctrl+.",
+  cyclePreviousAgentMode: isMac ? "⌘⇧." : "Ctrl+Shift+.",
   ...Object.fromEntries(
     Array.from({ length: MAX_JUMP_INDEX }, (_, i) => [`jumpTo${i + 1}`, isMac ? `⌘${i + 1}` : `Ctrl+${i + 1}`]),
   ),
@@ -255,13 +256,14 @@ function buildShortcutCategories(
       shortcuts: [
         { label: t("agentManager.shortcuts.toggleTerminal"), binding: bindings.showTerminal ?? "" },
         { label: t("agentManager.shortcuts.toggleDiff"), binding: bindings.toggleDiff ?? "" },
-        { label: t("agentManager.shortcuts.focusPanel"), binding: bindings.focusPanel ?? "" },
       ],
     },
     {
       title: t("agentManager.shortcuts.category.global"),
       shortcuts: [
         { label: t("agentManager.shortcuts.openAgentManager"), binding: bindings.agentManagerOpen ?? "" },
+        { label: t("agentManager.shortcuts.cycleAgentMode"), binding: bindings.cycleAgentMode ?? "" },
+        { label: t("agentManager.shortcuts.cyclePreviousAgentMode"), binding: bindings.cyclePreviousAgentMode ?? "" },
         { label: t("agentManager.shortcuts.showShortcuts"), binding: bindings.showShortcuts ?? "" },
       ].filter((s) => s.binding),
     },
@@ -950,6 +952,17 @@ const AgentManagerContent: Component = () => {
     setReviewActive(remembered === REVIEW_TAB_ID && reviewOpenByContext()[worktreeId] === true)
   }
 
+  const cycleAgent = (direction: 1 | -1) => {
+    const available = session.agents().filter((a) => a.mode !== "subagent" && !a.hidden)
+    if (available.length <= 1) return
+    const current = session.selectedAgent()
+    const idx = available.findIndex((a) => a.name === current)
+    const raw = idx + direction
+    const next = raw < 0 ? available.length - 1 : raw >= available.length ? 0 : raw
+    const agent = available[next]
+    if (agent) session.selectAgent(agent.name)
+  }
+
   onMount(() => {
     const handler = (event: MessageEvent) => {
       const msg = event.data as ExtensionMessage
@@ -977,6 +990,8 @@ const AgentManagerContent: Component = () => {
       else if (msg.action === "closeWorktree") closeSelectedWorktree()
       else if (msg.action === "showShortcuts") handleShowKeyboardShortcuts()
       else if (msg.action === "focusInput") window.dispatchEvent(new Event("focusPrompt"))
+      else if (msg.action === "cycleAgentMode" && document.hasFocus()) cycleAgent(1)
+      else if (msg.action === "cyclePreviousAgentMode" && document.hasFocus()) cycleAgent(-1)
       else {
         // Handle jumpTo1 through jumpTo9
         const match = /^jumpTo([1-9])$/.exec(msg.action ?? "")

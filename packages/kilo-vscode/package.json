@@ -171,12 +171,6 @@
         "icon": "$(keyboard)"
       },
       {
-        "command": "kilo-code.new.agentManager.focusPanel",
-        "title": "Agent Manager: Focus Panel",
-        "category": "Kilo Code",
-        "icon": "$(circuit-board)"
-      },
-      {
         "command": "kilo-code.new.agentManager.newTab",
         "title": "Agent Manager: New Tab",
         "category": "Kilo Code"
@@ -298,6 +292,16 @@
       {
         "command": "kilo-code.new.focusChatInput",
         "title": "Focus Chat Input",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.cycleAgentMode",
+        "title": "Cycle Agent Mode",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.cyclePreviousAgentMode",
+        "title": "Cycle Previous Agent Mode",
         "category": "Kilo Code"
       },
       {
@@ -495,12 +499,6 @@
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {
-        "command": "kilo-code.new.agentManager.focusPanel",
-        "key": "ctrl+.",
-        "mac": "cmd+.",
-        "when": "terminalFocus && kilo-code.agentTerminalFocus"
-      },
-      {
         "command": "kilo-code.new.agentManager.newTab",
         "key": "ctrl+t",
         "mac": "cmd+t",
@@ -589,6 +587,16 @@
         "key": "ctrl+9",
         "mac": "cmd+9",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.cycleAgentMode",
+        "key": "ctrl+.",
+        "mac": "cmd+."
+      },
+      {
+        "command": "kilo-code.new.cyclePreviousAgentMode",
+        "key": "ctrl+shift+.",
+        "mac": "cmd+shift+."
       },
       {
         "command": "kilo-code.new.autocomplete.cancelSuggestions",

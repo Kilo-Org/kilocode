@@ -98,6 +98,14 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.cloudHistoryButtonClicked", () => {
       provider.postMessage({ type: "action", action: "cloudHistoryButtonClicked" })
     }),
+    vscode.commands.registerCommand("kilo-code.new.cycleAgentMode", () => {
+      provider.postMessage({ type: "action", action: "cycleAgentMode" })
+      agentManagerProvider.postMessage({ type: "action", action: "cycleAgentMode" })
+    }),
+    vscode.commands.registerCommand("kilo-code.new.cyclePreviousAgentMode", () => {
+      provider.postMessage({ type: "action", action: "cyclePreviousAgentMode" })
+      agentManagerProvider.postMessage({ type: "action", action: "cyclePreviousAgentMode" })
+    }),
     vscode.commands.registerCommand("kilo-code.new.profileButtonClicked", () => {
       settingsEditorProvider.openPanel("profile")
     }),
@@ -149,9 +157,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.agentManager.showShortcuts", () => {
       agentManagerProvider.postMessage({ type: "action", action: "showShortcuts" })
     }),
-    vscode.commands.registerCommand("kilo-code.new.agentManager.focusPanel", () => {
-      agentManagerProvider.focusPanel()
-    }),
+
     vscode.commands.registerCommand("kilo-code.new.agentManager.newTab", () => {
       agentManagerProvider.postMessage({ type: "action", action: "newTab" })
     }),

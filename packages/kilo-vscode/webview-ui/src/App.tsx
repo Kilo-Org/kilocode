@@ -176,7 +176,24 @@ const AppContent: Component = () => {
       case "settingsButtonClicked":
         setCurrentView("settings")
         break
+      case "cycleAgentMode":
+        if (document.hasFocus()) cycleAgent(1)
+        break
+      case "cyclePreviousAgentMode":
+        if (document.hasFocus()) cycleAgent(-1)
+        break
     }
+  }
+
+  const cycleAgent = (direction: 1 | -1) => {
+    const available = session.agents().filter((a) => a.mode !== "subagent" && !a.hidden)
+    if (available.length <= 1) return
+    const current = session.selectedAgent()
+    const idx = available.findIndex((a) => a.name === current)
+    const raw = idx + direction
+    const next = raw < 0 ? available.length - 1 : raw >= available.length ? 0 : raw
+    const agent = available[next]
+    if (agent) session.selectAgent(agent.name)
   }
 
   onMount(() => {

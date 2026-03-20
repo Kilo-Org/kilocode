@@ -61,8 +61,9 @@ export const dict = {
   "agentManager.shortcuts.newTab": "New tab",
   "agentManager.shortcuts.closeTab": "Close tab",
   "agentManager.shortcuts.toggleTerminal": "Toggle terminal",
-  "agentManager.shortcuts.focusPanel": "Focus panel",
   "agentManager.shortcuts.openAgentManager": "Open Agent Manager",
+  "agentManager.shortcuts.cycleAgentMode": "Next agent mode",
+  "agentManager.shortcuts.cyclePreviousAgentMode": "Previous agent mode",
   "agentManager.shortcuts.showShortcuts": "Show keyboard shortcuts",
 
   "agentManager.dialog.removeStaleWorktree.title": "Remove Stale Worktree",
