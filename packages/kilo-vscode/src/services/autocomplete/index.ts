@@ -21,6 +21,12 @@ export const registerAutocompleteProvider = (
     }),
   )
   context.subscriptions.push(
+    vscode.commands.registerCommand("kilo-code.new.autocomplete.cancelSuggestions", () => {
+      vscode.commands.executeCommand("editor.action.inlineSuggest.hide")
+      vscode.commands.executeCommand("setContext", "kilo-code.new.autocomplete.hasSuggestions", false)
+    }),
+  )
+  context.subscriptions.push(
     vscode.commands.registerCommand("kilo-code.new.autocomplete.generateSuggestions", async () => {
       autocompleteManager.codeSuggestion()
     }),

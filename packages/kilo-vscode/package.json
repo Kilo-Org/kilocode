@@ -128,6 +128,11 @@
         "category": "Kilo Code"
       },
       {
+        "command": "kilo-code.new.autocomplete.cancelSuggestions",
+        "title": "Cancel Suggested Edits",
+        "category": "Kilo Code"
+      },
+      {
         "command": "kilo-code.new.agentManager.previousSession",
         "title": "Agent Manager: Previous Session",
         "category": "Kilo Code"
@@ -557,6 +562,23 @@
         "key": "ctrl+9",
         "mac": "cmd+9",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.autocomplete.cancelSuggestions",
+        "key": "escape",
+        "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilo-code.new.autocomplete.hasSuggestions"
+      },
+      {
+        "command": "kilo-code.new.autocomplete.generateSuggestions",
+        "key": "ctrl+l",
+        "mac": "cmd+l",
+        "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.autocomplete.enableSmartInlineTaskKeybinding && !github.copilot.completions.enabled"
+      },
+      {
+        "command": "kilo-code.new.autocomplete.showIncompatibilityExtensionPopup",
+        "key": "ctrl+l",
+        "mac": "cmd+l",
+        "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.autocomplete.enableSmartInlineTaskKeybinding && github.copilot.completions.enabled"
       }
     ],
     "configuration": {

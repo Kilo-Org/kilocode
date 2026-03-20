@@ -315,6 +315,8 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     _context: vscode.InlineCompletionContext,
     _token: vscode.CancellationToken,
   ): Promise<vscode.InlineCompletionItem[] | vscode.InlineCompletionList> {
+    vscode.commands.executeCommand("setContext", "kilo-code.new.autocomplete.hasSuggestions", false)
+
     // Build telemetry context
     const telemetryContext: AutocompleteContext = {
       languageId: document.languageId,
@@ -372,6 +374,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
         }
         this.telemetry?.captureCacheHit(matchingResult.matchType, telemetryContext, matchingResult.text.length)
         this.telemetry?.startVisibilityTracking(matchingResult.fillInAtCursor, "cache", telemetryContext)
+        vscode.commands.executeCommand("setContext", "kilo-code.new.autocomplete.hasSuggestions", true)
         return stringToInlineCompletions(matchingResult.text, position)
       }
 
@@ -398,6 +401,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
         }
         this.telemetry?.captureLlmSuggestionReturned(telemetryContext, cachedResult.text.length)
         this.telemetry?.startVisibilityTracking(cachedResult.fillInAtCursor, "llm", telemetryContext)
+        vscode.commands.executeCommand("setContext", "kilo-code.new.autocomplete.hasSuggestions", true)
       } else {
         this.telemetry?.cancelVisibilityTracking() // No suggestion to show - cancel any pending visibility tracking
       }
