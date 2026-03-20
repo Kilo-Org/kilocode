@@ -76,6 +76,9 @@ const MockProviderProvider: ParentComponent = (props) => {
     defaultSelection: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     models: () => MOCK_MODELS,
     findModel: (sel: any) => _findModel(MOCK_MODELS, sel),
+    authMethods: () => ({}),
+    authStates: () => ({}),
+    isModelValid: () => true,
   }
   return <ProviderContext.Provider value={value}>{props.children}</ProviderContext.Provider>
 }

@@ -21,7 +21,7 @@ export function createKiloClient(config?: Config & { directory?: string }) {
   if (config?.directory) {
     config.headers = {
       ...config.headers,
-      "x-opencode-directory": encodeURIComponent(config.directory),
+      "x-kilo-directory": encodeURIComponent(config.directory),
     }
   }
 

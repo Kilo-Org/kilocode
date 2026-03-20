@@ -354,6 +354,134 @@ describe("WorktreeManager.removeWorktree", () => {
       .catch(() => false)
     expect(exists).toBe(false)
   })
+
+  it("cleans up git metadata after removal", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const git = simpleGit(root)
+
+    const result = await mgr.createWorktree({ prompt: "prune-check" })
+
+    await mgr.removeWorktree(result.path)
+    // Allow background rm to complete
+    await new Promise((r) => setTimeout(r, 200))
+
+    // git worktree list should only show the main repo
+    const raw = await git.raw(["worktree", "list", "--porcelain"])
+    const dirs = raw
+      .split("\n")
+      .filter((l) => l.startsWith("worktree "))
+      .map((l) => l.replace("worktree ", ""))
+    expect(dirs).toHaveLength(1)
+  })
+
+  it("deletes the local branch when branch is provided", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const git = simpleGit(root)
+
+    const result = await mgr.createWorktree({ prompt: "branch-delete" })
+    const branches = await git.branch()
+    expect(branches.all).toContain(result.branch)
+
+    await mgr.removeWorktree(result.path, result.branch)
+
+    const after = await git.branch()
+    expect(after.all).not.toContain(result.branch)
+  })
+
+  it("keeps the branch when branch param is omitted", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const git = simpleGit(root)
+
+    const result = await mgr.createWorktree({ prompt: "keep-branch" })
+    await mgr.removeWorktree(result.path)
+
+    const after = await git.branch()
+    expect(after.all).toContain(result.branch)
+  })
+
+  it("returns quickly even with a dirty worktree", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    const result = await mgr.createWorktree({ prompt: "dirty-wt" })
+
+    // Make the worktree dirty with uncommitted files
+    await fs.writeFile(path.join(result.path, "dirty.txt"), "uncommitted")
+    for (let i = 0; i < 20; i++) {
+      await fs.writeFile(path.join(result.path, `bulk-${i}.txt`), "x".repeat(1000))
+    }
+
+    const start = Date.now()
+    await mgr.removeWorktree(result.path)
+    const elapsed = Date.now() - start
+
+    // The blocking portion (rename + prune) should complete well under 5s.
+    // Old approach with git worktree remove (non-force then force) was much slower.
+    expect(elapsed).toBeLessThan(5000)
+
+    // Original path should be gone immediately
+    const exists = await fs
+      .stat(result.path)
+      .then(() => true)
+      .catch(() => false)
+    expect(exists).toBe(false)
+  })
+
+  it("eventual cleanup: files are fully deleted after background rm", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    const result = await mgr.createWorktree({ prompt: "eventual" })
+    await fs.writeFile(path.join(result.path, "data.txt"), "content")
+
+    await mgr.removeWorktree(result.path)
+
+    // Wait for background rm to finish
+    await new Promise((r) => setTimeout(r, 500))
+
+    // No .kilo-delete-* temp dirs should remain
+    const worktreesDir = path.join(root, ".kilo", "worktrees")
+    const entries = await fs.readdir(worktreesDir)
+    const orphans = entries.filter((e) => e.startsWith(".kilo-delete-"))
+    expect(orphans).toHaveLength(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// WorktreeManager -- discoverWorktrees cleans orphaned temp dirs
+// ---------------------------------------------------------------------------
+
+describe("WorktreeManager.discoverWorktrees orphan cleanup", () => {
+  it("cleans up .kilo-delete-* dirs left by interrupted deletions", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    // Create a worktree so the worktrees directory exists
+    const wt = await mgr.createWorktree({ prompt: "real-wt" })
+
+    // Simulate an orphaned temp dir from an interrupted deletion
+    const orphan = path.join(root, ".kilo", "worktrees", ".kilo-delete-fake-uuid")
+    await fs.mkdir(orphan, { recursive: true })
+    await fs.writeFile(path.join(orphan, "leftover.txt"), "stale")
+
+    const discovered = await mgr.discoverWorktrees()
+
+    // Should only discover the real worktree, not the orphan
+    expect(discovered).toHaveLength(1)
+    expect(discovered[0]?.branch).toBe(wt.branch)
+
+    // Wait for background cleanup
+    await new Promise((r) => setTimeout(r, 300))
+
+    const exists = await fs
+      .stat(orphan)
+      .then(() => true)
+      .catch(() => false)
+    expect(exists).toBe(false)
+  })
 })
 
 // ---------------------------------------------------------------------------

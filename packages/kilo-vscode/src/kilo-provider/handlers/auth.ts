@@ -64,11 +64,6 @@ export async function handleLogin(ctx: AuthContext, attempt: number, getAttempt:
     const { data: profile } = await ctx.client.kilo.profile(undefined, { throwOnError: true })
     ctx.postMessage({ type: "profileData", data: profile })
     ctx.postMessage({ type: "deviceAuthComplete" })
-
-    // Step 4: If user has organizations, navigate to profile view so they can pick one
-    if (profile?.profile?.organizations && profile.profile.organizations.length > 0) {
-      ctx.postMessage({ type: "navigate", view: "profile" })
-    }
   } catch (error) {
     if (attempt !== getAttempt()) return
     ctx.postMessage({
@@ -89,6 +84,8 @@ export async function handleLogout(ctx: AuthContext): Promise<void> {
     ctx.postMessage({ type: "profileData", data: null })
 
     await ctx.disposeGlobal()
+
+    await ctx.fetchAndSendProviders()
   } catch (error) {
     console.error("[Kilo New] KiloProvider: ❌ Logout failed:", error)
     ctx.postMessage({

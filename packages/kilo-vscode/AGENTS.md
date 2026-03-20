@@ -62,12 +62,15 @@ Every client spawns or connects to a `kilo serve` process and communicates via H
 ## Commands
 
 ```bash
+bun run extension        # Build + launch VS Code with the extension in dev mode
 bun run compile          # Type-check + lint + build
 bun run watch            # Watch mode (esbuild + tsc)
 bun run test             # Run tests (requires pretest compilation)
 bun run lint             # ESLint on src/
 bun run format           # Run formatter (do this before committing to avoid styling-only changes in commits)
 ```
+
+The `extension` commands also work from the repo root. Pass `--insiders` to prefer VS Code Insiders, `--workspace PATH` to open a different folder, `--clean` to wipe cached state, or `--wait` to block until VS Code closes. VS Code is auto-detected on macOS, Linux, and Windows; override with `--app-path` or `VSCODE_EXEC_PATH`.
 
 Single test: `bun run test -- --grep "test name"`
 

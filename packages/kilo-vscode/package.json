@@ -128,6 +128,11 @@
         "category": "Kilo Code"
       },
       {
+        "command": "kilo-code.new.autocomplete.cancelSuggestions",
+        "title": "Cancel Suggested Edits",
+        "category": "Kilo Code"
+      },
+      {
         "command": "kilo-code.new.agentManager.previousSession",
         "title": "Agent Manager: Previous Session",
         "category": "Kilo Code"
@@ -294,6 +299,16 @@
         "command": "kilo-code.new.focusChatInput",
         "title": "Focus Chat Input",
         "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.toggleAutoApprove",
+        "title": "Toggle Auto-Approve",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.generateTerminalCommand",
+        "title": "Generate Terminal Command",
+        "category": "Kilo Code"
       }
     ],
     "submenus": [
@@ -345,6 +360,13 @@
         }
       ],
       "scm/title": [
+        {
+          "command": "kilo-code.new.generateCommitMessage",
+          "group": "navigation",
+          "when": "scmProvider == git"
+        }
+      ],
+      "scm/input": [
         {
           "command": "kilo-code.new.generateCommitMessage",
           "group": "navigation",
@@ -408,6 +430,16 @@
         "command": "kilo-code.new.focusChatInput",
         "key": "ctrl+shift+a",
         "mac": "cmd+shift+a"
+      },
+      {
+        "command": "kilo-code.new.toggleAutoApprove",
+        "key": "ctrl+alt+a",
+        "mac": "cmd+alt+a"
+      },
+      {
+        "command": "kilo-code.new.generateTerminalCommand",
+        "key": "ctrl+shift+g",
+        "mac": "cmd+shift+g"
       },
       {
         "command": "kilo-code.new.agentManagerOpen",
@@ -557,6 +589,23 @@
         "key": "ctrl+9",
         "mac": "cmd+9",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.autocomplete.cancelSuggestions",
+        "key": "escape",
+        "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilo-code.new.autocomplete.hasSuggestions"
+      },
+      {
+        "command": "kilo-code.new.autocomplete.generateSuggestions",
+        "key": "ctrl+l",
+        "mac": "cmd+l",
+        "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.autocomplete.enableSmartInlineTaskKeybinding && !github.copilot.completions.enabled"
+      },
+      {
+        "command": "kilo-code.new.autocomplete.showIncompatibilityExtensionPopup",
+        "key": "ctrl+l",
+        "mac": "cmd+l",
+        "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.autocomplete.enableSmartInlineTaskKeybinding && github.copilot.completions.enabled"
       }
     ],
     "configuration": {
@@ -718,7 +767,8 @@
     "test:visual": "playwright test",
     "test:visual:update": "playwright test --update-snapshots",
     "snapshot:build": "bun script/dev-snapshot.ts build",
-    "snapshot:install": "bun script/dev-snapshot.ts install"
+    "snapshot:install": "bun script/dev-snapshot.ts install",
+    "extension": "bun script/launch.ts"
   },
   "devDependencies": {
     "@playwright/test": "1.57.0",
