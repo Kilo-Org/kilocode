@@ -108,12 +108,10 @@ export const PermissionDock: Component<{
   const focusPrompt = () => requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
 
   const onRoot = (e: KeyboardEvent) => {
-    // Only handle shortcuts when focus is on the dock wrapper itself.
-    // Skip buttons (toggle/expand controls), inputs, and textareas so
-    // Enter activates the focused control instead of approving the permission.
     const tag = (e.target as HTMLElement).tagName
-    if (tag === "BUTTON" || tag === "INPUT" || tag === "TEXTAREA") return
 
+    // Escape always denies — even from focused buttons — and stopPropagation
+    // prevents ChatView's global Escape handler from calling session.abort().
     if (e.key === "Escape") {
       e.preventDefault()
       e.stopPropagation()
@@ -123,6 +121,11 @@ export const PermissionDock: Component<{
       focusPrompt()
       return
     }
+
+    // Enter approves, but only when focus is on the dock wrapper itself.
+    // Skip buttons, inputs, and textareas so Enter activates the focused
+    // control (e.g. toggle/expand) instead of approving the permission.
+    if (tag === "BUTTON" || tag === "INPUT" || tag === "TEXTAREA") return
     if (e.key === "Enter") {
       e.preventDefault()
       e.stopPropagation()
