@@ -1793,7 +1793,7 @@ export class AgentManagerProvider implements Disposable {
 
   /** Expose worktree session→directory mappings for the auto-approve toggle. */
   public getSessionDirectories(): ReadonlyMap<string, string> {
-    return this.provider?.getSessionDirectories() ?? new Map()
+    return this.panel?.sessions.getSessionDirectories() ?? new Map()
   }
 
   public postMessage(message: unknown): void {
