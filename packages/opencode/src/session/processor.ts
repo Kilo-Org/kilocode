@@ -49,6 +49,9 @@ export namespace SessionProcessor {
         needsCompaction = false
         const shouldBreak = (await Config.get()).experimental?.continue_loop_on_deny !== true
         while (true) {
+          // kilocode_change start
+          const currentAttemptPartIDs: string[] = []
+          // kilocode_change end
           try {
             let currentText: MessageV2.TextPart | undefined
             let reasoningMap: Record<string, MessageV2.ReasoningPart> = {}
@@ -76,6 +79,9 @@ export namespace SessionProcessor {
                     },
                     metadata: value.providerMetadata,
                   }
+                  // kilocode_change start
+                  currentAttemptPartIDs.push(reasoningPart.id)
+                  // kilocode_change end
                   reasoningMap[value.id] = reasoningPart
                   await Session.updatePart(reasoningPart)
                   break
@@ -111,9 +117,15 @@ export namespace SessionProcessor {
                   break
 
                 case "tool-input-start":
+                  // kilocode_change start
+                  const toolPartID = toolcalls[value.id]?.id ?? Identifier.ascending("part")
+                  if (!toolcalls[value.id]) {
+                    currentAttemptPartIDs.push(toolPartID)
+                  }
                   const part = await Session.updatePart({
-                    id: toolcalls[value.id]?.id ?? Identifier.ascending("part"),
+                    id: toolPartID,
                     messageID: input.assistantMessage.id,
+                    // kilocode_change end
                     sessionID: input.assistantMessage.sessionID,
                     type: "tool",
                     tool: value.toolName,
@@ -235,13 +247,17 @@ export namespace SessionProcessor {
                 case "start-step":
                   stepStart = performance.now() // kilocode_change
                   snapshot = await Snapshot.track()
-                  await Session.updatePart({
+                  // kilocode_change start
+                  const stepStartPart = {
                     id: Identifier.ascending("part"),
                     messageID: input.assistantMessage.id,
                     sessionID: input.sessionID,
                     snapshot,
-                    type: "step-start",
-                  })
+                    type: "step-start" as const,
+                  }
+                  currentAttemptPartIDs.push(stepStartPart.id)
+                  await Session.updatePart(stepStartPart)
+                  // kilocode_change end
                   break
 
                 case "finish-step":
@@ -273,16 +289,20 @@ export namespace SessionProcessor {
                   input.assistantMessage.finish = value.finishReason
                   input.assistantMessage.cost += usage.cost
                   input.assistantMessage.tokens = usage.tokens
-                  await Session.updatePart({
+                  // kilocode_change start
+                  const stepFinishPart = {
                     id: Identifier.ascending("part"),
                     reason: value.finishReason,
                     snapshot: await Snapshot.track(),
                     messageID: input.assistantMessage.id,
                     sessionID: input.assistantMessage.sessionID,
-                    type: "step-finish",
+                    type: "step-finish" as const,
                     tokens: usage.tokens,
                     cost: usage.cost,
-                  })
+                  }
+                  currentAttemptPartIDs.push(stepFinishPart.id)
+                  await Session.updatePart(stepFinishPart)
+                  // kilocode_change end
                   await Session.updateMessage(input.assistantMessage)
                   if (snapshot) {
                     const patch = await Snapshot.patch(snapshot)
@@ -322,6 +342,9 @@ export namespace SessionProcessor {
                     },
                     metadata: value.providerMetadata,
                   }
+                  // kilocode_change start
+                  currentAttemptPartIDs.push(currentText.id)
+                  // kilocode_change end
                   await Session.updatePart(currentText)
                   break
 
@@ -397,6 +420,24 @@ export namespace SessionProcessor {
                   next: Date.now() + delay,
                 })
                 await SessionRetry.sleep(delay, input.abort).catch(() => {})
+                // kilocode_change start
+                // Clean up partial parts from failed attempt to prevent bare assistant messages.
+                // Without this, a retry creates new step-start + parts, but the old partial parts
+                // remain, causing convertToModelMessages() to split them into a bare assistant
+                // message (text only, no tool_calls) which Anthropic rejects.
+                if (currentAttemptPartIDs.length > 0) {
+                  for (const partID of currentAttemptPartIDs) {
+                    await Session.removePart({
+                      sessionID: input.sessionID,
+                      messageID: input.assistantMessage.id,
+                      partID,
+                    })
+                  }
+                  log.info("cleaned up partial parts from failed attempt", {
+                    count: currentAttemptPartIDs.length,
+                  })
+                }
+                // kilocode_change end
                 continue
               }
               input.assistantMessage.error = error
