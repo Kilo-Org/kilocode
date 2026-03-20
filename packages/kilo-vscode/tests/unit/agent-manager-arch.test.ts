@@ -503,21 +503,37 @@ const AGENT_MANAGER_DIR = path.join(ROOT, "src/agent-manager")
  * is structurally impossible to extract (e.g. deep vscode API interleaving)
  * — and document the reason in the entry's `note` field.
  */
-const VSCODE_ALLOWED: Record<string, { maxLines: number; note: string }> = {
-  // God class — decompose into WorktreeOrchestrator, DiffManager, ApplyManager, etc.
-  "AgentManagerProvider.ts": {
-    maxLines: 1900,
-    note: "primary extraction target: break into vscode-free orchestrators",
+const VSCODE_ALLOWED: Record<string, { note: string }> = {
+  // VS Code adapter implementing the Host interface for the Agent Manager
+  "vscode-host.ts": {
+    note: "vscode adapter implementing Host interface",
   },
   // Thin adapter: wraps vscode.window terminal APIs behind TerminalHost interface
   "terminal-host.ts": {
-    maxLines: 60,
     note: "vscode adapter for SessionTerminalManager",
   },
   // Thin adapter: wraps vscode.tasks API behind RunTask callback
   "task-runner.ts": {
-    maxLines: 80,
     note: "vscode adapter for SetupScriptRunner",
+  },
+}
+
+/**
+ * File size caps — prevent large files from growing unchecked.
+ *
+ * When you extract code out of one of these files, lower its maxLines to
+ * the new line count rounded up to the nearest 50.
+ *
+ * DO NOT raise maxLines to accommodate new code. If adding a feature would
+ * exceed the cap, extract logic into a vscode-free helper module and have
+ * the provider call it. Only raise the cap as a last resort when the code
+ * is structurally impossible to extract (e.g. deep vscode API interleaving)
+ * — and document the reason in the entry's `note` field.
+ */
+const MAX_LINES: Record<string, { maxLines: number; note: string }> = {
+  "AgentManagerProvider.ts": {
+    maxLines: 1900,
+    note: "primary extraction target: break into smaller orchestrators",
   },
 }
 
@@ -547,9 +563,9 @@ describe("Agent Manager — VS Code import boundary", () => {
     ).toEqual([])
   })
 
-  it("allowlisted files stay within their maxLines cap", () => {
+  it("capped files stay within their maxLines limit", () => {
     const overweight: string[] = []
-    for (const [file, { maxLines }] of Object.entries(VSCODE_ALLOWED)) {
+    for (const [file, { maxLines }] of Object.entries(MAX_LINES)) {
       const filepath = path.join(AGENT_MANAGER_DIR, file)
       if (!fs.existsSync(filepath)) continue
       const lines = fs.readFileSync(filepath, "utf-8").split("\n").length
