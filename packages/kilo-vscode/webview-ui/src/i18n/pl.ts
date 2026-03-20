@@ -83,6 +83,7 @@ export const dict = {
   "revert.banner.redo": "Redo",
   "revert.banner.redo.all": "Redo All",
   "revert.banner.hint": "Send a new message to make this permanent",
+  "revert.disabled.agentBusy": "Poczekaj aż agent zakończy",
   "command.session.compact": "Kompaktuj sesję",
   "command.session.compact.description": "Podsumuj sesję, aby zmniejszyć rozmiar kontekstu",
   "command.session.fork": "Rozwidlij od wiadomości",
@@ -474,6 +475,8 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Odczyt Todo",
   "ui.permission.toolLabel.todoWrite": "Zapis Todo",
   "ui.permission.toolLabel.codeSearch": "Wyszukiwanie kodu",
+  "ui.permission.toggleWrap": "Przełącz zawijanie tekstu",
+  "ui.permission.copyCommand": "Kopiuj",
   "notification.question.title": "Pytanie",
   "notification.question.description": "{{sessionTitle}} w {{projectName}} ma pytanie",
   "notification.action.goToSession": "Przejdź do sesji",
@@ -1143,4 +1146,11 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} zadań ukończono",
   "task.todos.allDone": "{{count}} zadań ukończono",
+  "settings.saveBar.unsavedChanges": "Niezapisane zmiany",
+  "settings.saveBar.discard": "Odrzuć",
+  "settings.saveBar.save": "Zapisz",
+  "settings.saveBar.warning.one": "Jedna sesja jest uruchomiona i zostanie przerwana",
+  "settings.saveBar.warning.many": "Kilka sesji jest uruchomionych i zostanie przerwanych",
+  "settings.saveBar.saveAnyway": "Zapisz mimo to",
+  "settings.saveBar.cancel": "Anuluj",
 }

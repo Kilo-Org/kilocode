@@ -15,6 +15,7 @@ import type {
   PermissionObjectConfig,
 } from "@kilocode/sdk/v2/client"
 import { PROVIDER_MAP, UNSUPPORTED_PROVIDERS, DEFAULT_MODE_SLUGS } from "./provider-mapping"
+import type { ProviderMapping } from "./provider-mapping"
 import type {
   LegacyProviderProfiles,
   LegacyProviderSettings,
@@ -37,6 +38,7 @@ import type {
 // ---------------------------------------------------------------------------
 
 const SECRET_KEY = "roo_cline_config_api_config"
+const CODEX_OAUTH_SECRET_KEY = "openai-codex-oauth-credentials"
 const MIGRATION_STATUS_KEY = "kilo.legacyMigrationStatus"
 
 type MigrationStatus = "completed" | "skipped"
@@ -67,10 +69,14 @@ export async function detectLegacyData(context: vscode.ExtensionContext): Promis
   const customModes = await readLegacyCustomModes(context)
   const settings = readLegacySettings(context)
 
-  const providers = buildProviderList(profiles)
+  const oauthProviders = new Set<string>()
+  const codexRaw = await context.secrets.get(CODEX_OAUTH_SECRET_KEY)
+  if (codexRaw) oauthProviders.add("openai-codex")
+
+  const providers = buildProviderList(profiles, oauthProviders)
   const mcpServers = buildMcpServerList(mcpSettings)
   const modes = buildCustomModeList(customModes)
-  const defaultModel = resolveDefaultModel(profiles)
+  const defaultModel = resolveDefaultModel(profiles, oauthProviders)
 
   const hasSettings =
     settings.autoApprovalEnabled !== undefined ||
@@ -137,7 +143,7 @@ export async function migrate(
       continue
     }
     onProgress(profileName, "migrating")
-    const result = await migrateProvider(profileName, settings, client)
+    const result = await migrateProvider(context, profileName, settings, client)
     results.push(result)
     onProgress(profileName, result.status, result.message)
   }
@@ -245,6 +251,7 @@ export async function migrate(
  */
 export async function clearLegacyData(context: vscode.ExtensionContext): Promise<void> {
   await context.secrets.delete(SECRET_KEY)
+  await context.secrets.delete(CODEX_OAUTH_SECRET_KEY)
 
   const legacyStateKeys = [
     "kilo-code.allowedCommands",
@@ -308,6 +315,7 @@ export async function clearLegacyData(context: vscode.ExtensionContext): Promise
 // ---------------------------------------------------------------------------
 
 async function migrateProvider(
+  context: vscode.ExtensionContext,
   profileName: string,
   settings: LegacyProviderSettings,
   client: KiloClient,
@@ -333,6 +341,31 @@ async function migrateProvider(
       category: "provider",
       status: "warning",
       message: `Unknown provider "${provider}"`,
+    }
+  }
+
+  // OAuth providers store credentials in a separate VS Code secret
+  if (mapping.oauthSecretKey) {
+    const creds = await readOAuthCredentials(context, mapping.oauthSecretKey)
+    if (!creds) {
+      return { item: profileName, category: "provider", status: "warning", message: "No OAuth credentials found" }
+    }
+    await client.auth.set({ providerID: mapping.id, auth: { type: "oauth" as const, ...creds } })
+    return { item: profileName, category: "provider", status: "success" }
+  }
+
+  // Providers that use env/ADC-based auth (e.g. Vertex AI) — skip auth.set, only migrate config options
+  if (mapping.skipAuth) {
+    await migrateConfigFields(mapping, settings, client)
+    // Warn users who had inline service account credentials — the CLI uses ADC only
+    const hadCredentials = Boolean(settings.vertexJsonCredentials ?? settings.vertexKeyFile)
+    return {
+      item: profileName,
+      category: "provider",
+      status: hadCredentials ? "warning" : "success",
+      message: hadCredentials
+        ? "Project and location migrated. The new CLI uses Application Default Credentials — set GOOGLE_APPLICATION_CREDENTIALS or run 'gcloud auth application-default login'"
+        : undefined,
     }
   }
 
@@ -363,7 +396,27 @@ async function migrateProvider(
     }
   }
 
+  await migrateConfigFields(mapping, settings, client)
+
   return { item: profileName, category: "provider", status: "success" }
+}
+
+async function migrateConfigFields(
+  mapping: ProviderMapping,
+  settings: LegacyProviderSettings,
+  client: KiloClient,
+): Promise<void> {
+  if (!mapping.configFields?.length) return
+  const opts: Record<string, string> = {}
+  for (const { from, option } of mapping.configFields) {
+    const val = settings[from] as string | undefined
+    if (val) opts[option] = val
+  }
+  if (Object.keys(opts).length > 0) {
+    await client.global.config.update({
+      config: { provider: { [mapping.id]: { options: opts } } },
+    })
+  }
 }
 
 async function migrateDefaultModel(settings: LegacyProviderSettings, client: KiloClient): Promise<MigrationResultItem> {
@@ -700,6 +753,35 @@ function convertCustomMode(mode: LegacyCustomMode): AgentConfig {
 }
 
 // ---------------------------------------------------------------------------
+// Internal — OAuth credential helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Reads OAuth credentials stored in a separate VS Code secret (e.g. openai-codex-oauth-credentials).
+ * Returns the fields needed by the CLI's Auth.Oauth type, or null if absent/malformed.
+ */
+async function readOAuthCredentials(
+  context: vscode.ExtensionContext,
+  secretKey: string,
+): Promise<{ access: string; refresh: string; expires: number; accountId?: string } | null> {
+  const raw = await context.secrets.get(secretKey)
+  if (!raw) return null
+  const parsed = (() => {
+    try {
+      return JSON.parse(raw) as Record<string, unknown>
+    } catch {
+      return null
+    }
+  })()
+  if (!parsed) return null
+  const access = parsed.access_token as string | undefined
+  const refresh = parsed.refresh_token as string | undefined
+  const expires = parsed.expires as number | undefined
+  if (!access || !refresh || expires === undefined) return null
+  return { access, refresh, expires, accountId: parsed.accountId as string | undefined }
+}
+
+// ---------------------------------------------------------------------------
 // Internal — reading legacy data from storage
 // ---------------------------------------------------------------------------
 
@@ -921,7 +1003,10 @@ function parseCustomModesYaml(text: string): LegacyCustomMode[] | null {
 // Internal — building display lists for the wizard
 // ---------------------------------------------------------------------------
 
-function buildProviderList(profiles: LegacyProviderProfiles | null): MigrationProviderInfo[] {
+function buildProviderList(
+  profiles: LegacyProviderProfiles | null,
+  oauthProviders: Set<string>,
+): MigrationProviderInfo[] {
   if (!profiles?.apiConfigs) return []
 
   return Object.entries(profiles.apiConfigs).map(([profileName, settings]) => {
@@ -932,7 +1017,13 @@ function buildProviderList(profiles: LegacyProviderProfiles | null): MigrationPr
     const modelField = mapping?.modelField ?? "apiModelId"
     const model = settings[modelField] as string | undefined
 
-    const hasApiKey = mapping ? Boolean(settings[mapping.key]) : false
+    const hasApiKey = mapping?.oauthSecretKey
+      ? oauthProviders.has(provider)
+      : mapping?.skipAuth
+        ? (mapping.configFields?.some((f) => Boolean(settings[f.from])) ?? false)
+        : mapping
+          ? Boolean(settings[mapping.key])
+          : false
 
     return {
       profileName,
@@ -957,12 +1048,18 @@ function buildCustomModeList(modes: LegacyCustomMode[] | null): MigrationCustomM
   return modes.filter((m) => !DEFAULT_MODE_SLUGS.has(m.slug)).map((m) => ({ name: m.name, slug: m.slug }))
 }
 
-function resolveDefaultModel(profiles: LegacyProviderProfiles | null): { provider: string; model: string } | undefined {
+function resolveDefaultModel(
+  profiles: LegacyProviderProfiles | null,
+  oauthProviders: Set<string>,
+): { provider: string; model: string } | undefined {
   if (!profiles?.currentApiConfigName) return undefined
   const active = profiles.apiConfigs[profiles.currentApiConfigName]
   if (!active?.apiProvider) return undefined
   const mapping = PROVIDER_MAP[active.apiProvider]
   if (!mapping) return undefined
+  // If the active profile requires OAuth credentials (e.g. openai-codex) but they are
+  // unavailable, do not offer default-model migration — it would write a broken reference.
+  if (mapping.oauthSecretKey && !oauthProviders.has(active.apiProvider)) return undefined
   const modelField = mapping.modelField ?? "apiModelId"
   const model = active[modelField] as string | undefined
   if (!model) return undefined

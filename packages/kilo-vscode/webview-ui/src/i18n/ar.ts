@@ -83,6 +83,7 @@ export const dict = {
   "revert.banner.redo": "Redo",
   "revert.banner.redo.all": "Redo All",
   "revert.banner.hint": "Send a new message to make this permanent",
+  "revert.disabled.agentBusy": "انتظر انتهاء الوكيل",
   "command.session.compact": "ضغط الجلسة",
   "command.session.compact.description": "تلخيص الجلسة لتقليل حجم السياق",
   "command.session.fork": "تشعب من الرسالة",
@@ -470,6 +471,8 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "قراءة المهام",
   "ui.permission.toolLabel.todoWrite": "كتابة المهام",
   "ui.permission.toolLabel.codeSearch": "بحث الكود",
+  "ui.permission.toggleWrap": "تبديل التفاف الكلمات",
+  "ui.permission.copyCommand": "نسخ",
   "notification.question.title": "سؤال",
   "notification.question.description": "{{sessionTitle}} في {{projectName}} لديه سؤال",
   "notification.action.goToSession": "انتقل إلى الجلسة",
@@ -1124,4 +1127,11 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} مهام مكتملة",
   "task.todos.allDone": "{{count}} مهام مكتملة",
+  "settings.saveBar.unsavedChanges": "تغييرات غير محفوظة",
+  "settings.saveBar.discard": "تجاهل",
+  "settings.saveBar.save": "حفظ",
+  "settings.saveBar.warning.one": "جلسة واحدة تعمل وستتوقف",
+  "settings.saveBar.warning.many": "عدة جلسات تعمل وستتوقف",
+  "settings.saveBar.saveAnyway": "حفظ على أي حال",
+  "settings.saveBar.cancel": "إلغاء",
 }

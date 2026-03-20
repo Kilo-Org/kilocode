@@ -83,6 +83,7 @@ export const dict = {
   "revert.banner.redo": "Redo",
   "revert.banner.redo.all": "Redo All",
   "revert.banner.hint": "Send a new message to make this permanent",
+  "revert.disabled.agentBusy": "Aguarde o agente terminar",
   "command.session.compact": "Compactar sessão",
   "command.session.compact.description": "Resumir a sessão para reduzir o tamanho do contexto",
   "command.session.fork": "Bifurcar da mensagem",
@@ -472,6 +473,8 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Ler Tarefas",
   "ui.permission.toolLabel.todoWrite": "Escrever Tarefas",
   "ui.permission.toolLabel.codeSearch": "Pesquisa de Código",
+  "ui.permission.toggleWrap": "Alternar quebra de linha",
+  "ui.permission.copyCommand": "Copiar",
   "notification.question.title": "Pergunta",
   "notification.question.description": "{{sessionTitle}} em {{projectName}} tem uma pergunta",
   "notification.action.goToSession": "Ir para sessão",
@@ -1147,4 +1150,11 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} tarefas concluídas",
   "task.todos.allDone": "{{count}} tarefas concluídas",
+  "settings.saveBar.unsavedChanges": "Alterações não salvas",
+  "settings.saveBar.discard": "Descartar",
+  "settings.saveBar.save": "Salvar",
+  "settings.saveBar.warning.one": "Uma sessão está em execução e será interrompida",
+  "settings.saveBar.warning.many": "Várias sessões estão em execução e serão interrompidas",
+  "settings.saveBar.saveAnyway": "Salvar mesmo assim",
+  "settings.saveBar.cancel": "Cancelar",
 }

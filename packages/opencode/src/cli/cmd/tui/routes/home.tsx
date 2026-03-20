@@ -15,6 +15,7 @@ import { Installation } from "@/installation"
 import { useKV } from "../context/kv"
 import { useCommandDialog } from "../component/dialog-command"
 import { KiloNews } from "@/kilocode/components/kilo-news" // kilocode_change
+import { useConnected } from "../component/dialog-model" // kilocode_change
 
 // TODO: what is the best way to do this?
 let once = false
@@ -38,9 +39,13 @@ export function Home() {
   const isFirstTimeUser = createMemo(() => sync.data.session.length === 0)
   const tipsHidden = createMemo(() => kv.get("tips_hidden", false))
   const newsHidden = createMemo(() => kv.get("news_hidden", false)) // kilocode_change
+  // kilocode_change start
+  const connected = useConnected()
+  const onboarding = createMemo(() => isFirstTimeUser() && !connected())
+  // kilocode_change end
   const showTips = createMemo(() => {
-    // Don't show tips for first-time users
-    if (isFirstTimeUser()) return false
+    if (onboarding()) return !tipsHidden() // kilocode_change - show onboarding tip
+    // kilocode_change - don't hide tips for connected first-time users
     return !tipsHidden()
   })
 
@@ -129,7 +134,13 @@ export function Home() {
             <KiloNews />
           </Show>
           <Show when={showTips()}>
-            <Tips />
+            <Tips
+              tip={
+                onboarding()
+                  ? "Using a free model \u2014 run {highlight}/connect{/highlight} to add your API key"
+                  : undefined
+              }
+            />
           </Show>
         </box>
         <box flexGrow={1} minHeight={0} />

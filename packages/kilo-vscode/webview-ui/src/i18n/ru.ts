@@ -83,6 +83,7 @@ export const dict = {
   "revert.banner.redo": "Redo",
   "revert.banner.redo.all": "Redo All",
   "revert.banner.hint": "Send a new message to make this permanent",
+  "revert.disabled.agentBusy": "Дождитесь завершения агента",
   "command.session.compact": "Сжать сессию",
   "command.session.compact.description": "Сократить сессию для уменьшения размера контекста",
   "command.session.fork": "Создать ответвление",
@@ -476,6 +477,8 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Чтение списка задач",
   "ui.permission.toolLabel.todoWrite": "Запись списка задач",
   "ui.permission.toolLabel.codeSearch": "Поиск кода",
+  "ui.permission.toggleWrap": "Переключить перенос строк",
+  "ui.permission.copyCommand": "Копировать",
   "notification.question.title": "Вопрос",
   "notification.question.description": "У {{sessionTitle}} в {{projectName}} есть вопрос",
   "notification.action.goToSession": "Перейти к сессии",
@@ -1142,4 +1145,11 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} задач выполнено",
   "task.todos.allDone": "{{count}} задач выполнено",
+  "settings.saveBar.unsavedChanges": "Несохранённые изменения",
+  "settings.saveBar.discard": "Отменить",
+  "settings.saveBar.save": "Сохранить",
+  "settings.saveBar.warning.one": "Один сеанс выполняется и будет прерван",
+  "settings.saveBar.warning.many": "Несколько сеансов выполняются и будут прерваны",
+  "settings.saveBar.saveAnyway": "Сохранить в любом случае",
+  "settings.saveBar.cancel": "Отмена",
 }

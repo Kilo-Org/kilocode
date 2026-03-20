@@ -302,7 +302,8 @@ export interface ModelSelection {
 
 export type PermissionLevel = "allow" | "ask" | "deny"
 
-export type PermissionRule = PermissionLevel | Record<string, PermissionLevel>
+/** null in a PermissionRule object is a delete sentinel — removes the key from the config */
+export type PermissionRule = PermissionLevel | Record<string, PermissionLevel | null>
 
 export type PermissionConfig = Partial<Record<string, PermissionRule>>
 

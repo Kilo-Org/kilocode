@@ -76,7 +76,7 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
       focusItem(len - 1)
     } else if (e.key === "Enter" || e.key === " ") {
       e.preventDefault()
-      if (cur >= 0) pick(props.agents[cur].name)
+      if (cur >= 0 && cur < len) pick(props.agents[cur].name)
     }
   }
 

@@ -115,9 +115,14 @@
     "@kobalte/core": "0.13.11",
     "@opencode-ai/util": "workspace:*",
     "@pierre/diffs": "catalog:",
+    "@solid-primitives/lifecycle": "0.1.2",
     "@solid-primitives/media": "2.3.3",
     "@solid-primitives/resize-observer": "2.1.5",
+    "@solid-primitives/rootless": "1.5.2",
     "lucide-solid": "0.576.0",
+    "motion": "12.34.5",
+    "motion-dom": "12.34.3",
+    "motion-utils": "12.29.2",
     "strip-ansi": "7.1.2"
   }
 }

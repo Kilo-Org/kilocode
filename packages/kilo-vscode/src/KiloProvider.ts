@@ -37,6 +37,7 @@ import {
 } from "./kilo-provider-utils"
 import { MarketplaceService } from "./services/marketplace"
 import { resolveProjectDirectory } from "./project-directory"
+import { getBusySessionCount, seedSessionStatuses } from "./session-status"
 
 type KiloProviderOptions = {
   projectDirectory?: string | null
@@ -71,6 +72,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private trackedSessionIds: Set<string> = new Set()
   private syncedChildSessions: Set<string> = new Set()
+  /** Tracks the latest status for each session, used to warn before destructive config operations. */
+  private sessionStatusMap = new Map<string, SessionStatus["type"]>()
   /** Per-session directory overrides (e.g., worktree paths registered by AgentManagerProvider). */
   private sessionDirectories = new Map<string, string>()
   /** Project ID for the current workspace, used to filter out sessions from other repositories. */
@@ -250,6 +253,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         type: "profileData",
         data: profileData,
       })
+
+      // Seed session status map so the Settings panel knows about already-running sessions.
+      // Must run after webview is ready (postMessage is a no-op before that).
+      void this.seedSessionStatusMap()
     }
 
     // legacy-migration start
@@ -841,6 +848,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             return event.type !== "message.part.updated" && event.type !== "message.part.delta"
           }
 
+          // session.status must always pass through — even for sessions not tracked by this
+          // KiloProvider instance. The Settings panel is a separate provider with no tracked
+          // sessions, but it needs session.status to populate sessionStatusMap and allStatusMap
+          // for the busy-session warning on Save.
+          if (event.type === "session.status") return true
+
           return this.trackedSessionIds.has(sessionId)
         },
         (event) => {
@@ -899,7 +912,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       await this.syncWebviewState("initializeConnection")
       await this.flushPendingSessionRefresh("initializeConnection")
 
-      // Fetch providers, agents, skills, config, and notifications in parallel
+      // Fetch providers, agents, skills, config, notifications, and session statuses in parallel
       await Promise.all([
         this.fetchAndSendProviders(),
         this.fetchAndSendAgents(),
@@ -907,6 +920,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.fetchAndSendCommands(),
         this.fetchAndSendConfig(),
         this.fetchAndSendNotifications(),
+        this.seedSessionStatusMap(),
       ])
       this.sendNotificationSettings()
 
@@ -1530,6 +1544,33 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /**
+   * Seed sessionStatusMap with current session statuses on connect.
+   * Without this, the Settings panel (which has no tracked sessions) would see
+   * busyCount() = 0 for sessions that were already running before it opened.
+   */
+  private async seedSessionStatusMap(): Promise<void> {
+    if (!this.client || this.connectionState !== "connected") return
+    const dir = this.getWorkspaceDirectory()
+    await seedSessionStatuses(this.client, dir, this.sessionStatusMap, (msg) => this.postMessage(msg))
+  }
+
+  /**
+   * Fetch the latest merged config and push it as configUpdated.
+   * Called when global.config.updated SSE fires (config changed without a full dispose).
+   */
+  private async fetchAndSendConfigUpdated(): Promise<void> {
+    if (!this.client || this.connectionState !== "connected") return
+    try {
+      const dir = this.getWorkspaceDirectory()
+      const { data: config } = await this.client.config.get({ directory: dir }, { throwOnError: true })
+      this.cachedConfigMessage = { type: "configLoaded", config }
+      this.postMessage({ type: "configUpdated", config })
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to fetch config after update:", error)
+    }
+  }
+
+  /**
    * Fetch Kilo news/notifications and send to webview.
    * Uses the cached message pattern so the webview gets data immediately on refresh.
    */
@@ -1827,6 +1868,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
   }
 
+  /** Returns the number of sessions currently in "busy" state. */
+  private getBusySessionCount(): number {
+    return getBusySessionCount(this.sessionStatusMap)
+  }
+
   /**
    * Handle config update request from the webview.
    * Applies a partial config update via the global config endpoint, then pushes
@@ -1845,33 +1891,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     try {
       await this.client.global.config.update({ config: partial }, { throwOnError: true })
 
-      // global.config.update only resets the global config cache — the
-      // per-instance merged config (Config.state) is still stale. Force a
-      // full instance disposal so the next config.get re-merges all layers.
-      await this.client.global.dispose({ throwOnError: true })
-
       // Re-fetch the full merged config (global + project + all layers) so the
       // webview receives the complete resolved config, not just global-only data.
+      // Config.state is reset by updateGlobal (via Instance.resetStateEntry) so
+      // config.get() returns fresh data without a full dispose cycle.
       const dir = this.getWorkspaceDirectory()
       const { data: merged } = await this.client.config.get({ directory: dir }, { throwOnError: true })
 
-      const message = {
-        type: "configUpdated",
-        config: merged,
-      }
       this.cachedConfigMessage = { type: "configLoaded", config: merged }
-      this.postMessage(message)
+      this.postMessage({ type: "configUpdated", config: merged })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to update config:", error)
       this.postMessage({
         type: "error",
         message: getErrorMessage(error) || "Failed to update config",
       })
-      // Send configUpdated with the last known good config so the webview
-      // decrements its pendingUpdates counter and reverts the optimistic state.
-      if (this.cachedConfigMessage) {
-        this.postMessage({ type: "configUpdated", config: (this.cachedConfigMessage as { config: unknown }).config })
-      }
     } finally {
       this.pending--
     }
@@ -2567,6 +2601,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // let a foreign session through if it was accidentally tracked.
     if (isEventFromForeignProject(event, this.projectID)) return
 
+    // session.status events pass the onEventFiltered pre-filter for all providers (see line 842),
+    // so this runs on every KiloProvider instance — including the Settings panel which has no
+    // tracked sessions. Update sessionStatusMap and forward to webview before the
+    // trackedSessionIds guard so the Settings panel's allStatusMap stays current for the
+    // busy-session warning on Save.
+    if (event.type === "session.status") {
+      const sid = event.properties.sessionID
+      this.sessionStatusMap.set(sid, event.properties.status.type)
+      const msg = mapSSEEventToWebviewMessage(event, sid)
+      if (msg) this.postMessage(msg)
+      return
+    }
+
     // Extract sessionID from the event
     const sessionID = this.extractSessionID(event)
 
@@ -2583,6 +2630,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Refresh provider and agent lists when the server signals a state disposal
     if (event.type === "server.instance.disposed" || event.type === "global.disposed") {
       void this.reloadAfterAuthChange()
+      return
+    }
+
+    // Config was updated without a full dispose (e.g. permission-only save).
+    // Fetch and push the updated config so the Settings panel reflects the change.
+    if (event.type === "global.config.updated") {
+      void this.fetchAndSendConfigUpdated()
       return
     }
 
@@ -2934,6 +2988,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.trackedSessionIds.clear()
     this.syncedChildSessions.clear()
     this.sessionDirectories.clear()
+    this.sessionStatusMap.clear()
     this.ignoreController?.dispose()
     this.marketplace?.dispose()
   }

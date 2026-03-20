@@ -87,6 +87,7 @@ export const dict = {
   "revert.banner.redo": "Redo",
   "revert.banner.redo.all": "Redo All",
   "revert.banner.hint": "Send a new message to make this permanent",
+  "revert.disabled.agentBusy": "等待 Agent 完成",
   "command.session.compact": "精簡工作階段",
   "command.session.compact.description": "總結工作階段以減少上下文大小",
   "command.session.fork": "從訊息分支",
@@ -468,6 +469,8 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "讀取待辦",
   "ui.permission.toolLabel.todoWrite": "更新待辦",
   "ui.permission.toolLabel.codeSearch": "程式碼搜尋",
+  "ui.permission.toggleWrap": "切換自動換行",
+  "ui.permission.copyCommand": "複製",
   "notification.question.title": "問題",
   "notification.question.description": "{{sessionTitle}}（{{projectName}}）有一個問題",
   "notification.action.goToSession": "前往工作階段",
@@ -1108,4 +1111,11 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} 個待辦已完成",
   "task.todos.allDone": "{{count}} 個待辦已完成",
+  "settings.saveBar.unsavedChanges": "未儲存的變更",
+  "settings.saveBar.discard": "捨棄",
+  "settings.saveBar.save": "儲存",
+  "settings.saveBar.warning.one": "一個工作階段正在執行，將被中斷",
+  "settings.saveBar.warning.many": "多個工作階段正在執行，將被中斷",
+  "settings.saveBar.saveAnyway": "仍然儲存",
+  "settings.saveBar.cancel": "取消",
 } satisfies Partial<Record<Keys, string>>

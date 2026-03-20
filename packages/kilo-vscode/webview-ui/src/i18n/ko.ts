@@ -87,6 +87,7 @@ export const dict = {
   "revert.banner.redo": "Redo",
   "revert.banner.redo.all": "Redo All",
   "revert.banner.hint": "Send a new message to make this permanent",
+  "revert.disabled.agentBusy": "에이전트가 완료될 때까지 기다리세요",
   "command.session.compact": "세션 압축",
   "command.session.compact.description": "컨텍스트 크기를 줄이기 위해 세션 요약",
   "command.session.fork": "메시지에서 분기",
@@ -474,6 +475,8 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "할 일 읽기",
   "ui.permission.toolLabel.todoWrite": "할 일 쓰기",
   "ui.permission.toolLabel.codeSearch": "코드 검색",
+  "ui.permission.toggleWrap": "줄 바꿈 전환",
+  "ui.permission.copyCommand": "복사",
   "notification.question.title": "질문",
   "notification.question.description": "{{projectName}}의 {{sessionTitle}}에서 질문이 있습니다",
   "notification.action.goToSession": "세션으로 이동",
@@ -1127,4 +1130,11 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} 할 일 완료",
   "task.todos.allDone": "{{count}} 할 일 완료",
+  "settings.saveBar.unsavedChanges": "저장되지 않은 변경 사항",
+  "settings.saveBar.discard": "취소",
+  "settings.saveBar.save": "저장",
+  "settings.saveBar.warning.one": "하나의 세션이 실행 중이며 중단됩니다",
+  "settings.saveBar.warning.many": "여러 세션이 실행 중이며 중단됩니다",
+  "settings.saveBar.saveAnyway": "그래도 저장",
+  "settings.saveBar.cancel": "취소",
 }

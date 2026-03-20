@@ -83,6 +83,7 @@ export const dict = {
   "revert.banner.redo": "Redo",
   "revert.banner.redo.all": "Redo All",
   "revert.banner.hint": "Send a new message to make this permanent",
+  "revert.disabled.agentBusy": "รอให้เอเจนต์ทำงานเสร็จ",
   "command.session.compact": "บีบอัดเซสชัน",
   "command.session.compact.description": "สรุปเซสชันเพื่อลดขนาดบริบท",
   "command.session.fork": "แตกแขนงจากข้อความ",
@@ -471,6 +472,8 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "อ่านรายการงาน",
   "ui.permission.toolLabel.todoWrite": "เขียนรายการงาน",
   "ui.permission.toolLabel.codeSearch": "ค้นหาโค้ด",
+  "ui.permission.toggleWrap": "สลับการตัดคำ",
+  "ui.permission.copyCommand": "คัดลอก",
   "notification.question.title": "คำถาม",
   "notification.question.description": "{{sessionTitle}} ใน {{projectName}} มีคำถาม",
   "notification.action.goToSession": "ไปที่เซสชัน",
@@ -1123,4 +1126,11 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} งานเสร็จแล้ว",
   "task.todos.allDone": "{{count}} งานเสร็จแล้ว",
+  "settings.saveBar.unsavedChanges": "การเปลี่ยนแปลงที่ยังไม่ได้บันทึก",
+  "settings.saveBar.discard": "ยกเลิก",
+  "settings.saveBar.save": "บันทึก",
+  "settings.saveBar.warning.one": "มีเซสชันหนึ่งกำลังทำงานและจะถูกขัดจังหวะ",
+  "settings.saveBar.warning.many": "มีหลายเซสชันกำลังทำงานและจะถูกขัดจังหวะ",
+  "settings.saveBar.saveAnyway": "บันทึกต่อไป",
+  "settings.saveBar.cancel": "ยกเลิก",
 }

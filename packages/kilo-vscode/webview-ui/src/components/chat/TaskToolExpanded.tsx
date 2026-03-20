@@ -9,7 +9,7 @@
 
 import { Component, createEffect, createMemo, For, Show } from "solid-js"
 import { ToolRegistry, ToolProps, getToolInfo } from "@kilocode/kilo-ui/message-part"
-import { ToolCall } from "@kilocode/kilo-ui/basic-tool"
+import { BasicTool } from "@kilocode/kilo-ui/basic-tool"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { useData } from "@kilocode/kilo-ui/context/data"
@@ -112,7 +112,7 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
 
   return (
     <div data-component="tool-part-wrapper">
-      <ToolCall variant="panel" icon="task" status={props.status} trigger={trigger()} defaultOpen>
+      <BasicTool icon="task" status={props.status} trigger={trigger()} defaultOpen>
         <div ref={autoScroll.scrollRef} onScroll={autoScroll.handleScroll} data-component="tool-output" data-scrollable>
           <div ref={autoScroll.contentRef} data-component="task-tools">
             <For each={childToolParts()}>
@@ -139,7 +139,7 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
             </For>
           </div>
         </div>
-      </ToolCall>
+      </BasicTool>
     </div>
   )
 }

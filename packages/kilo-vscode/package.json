@@ -721,7 +721,7 @@
     "snapshot:install": "bun script/dev-snapshot.ts install"
   },
   "devDependencies": {
-    "@playwright/test": "1.58.2",
+    "@playwright/test": "1.57.0",
     "@storybook/addon-docs": "10.2.10",
     "@types/diff": "^6.0.0",
     "@types/mocha": "^10.0.10",

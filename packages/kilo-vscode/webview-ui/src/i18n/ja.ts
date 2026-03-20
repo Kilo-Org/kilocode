@@ -83,6 +83,7 @@ export const dict = {
   "revert.banner.redo": "Redo",
   "revert.banner.redo.all": "Redo All",
   "revert.banner.hint": "Send a new message to make this permanent",
+  "revert.disabled.agentBusy": "エージェントの完了を待ってください",
   "command.session.compact": "セッションを圧縮",
   "command.session.compact.description": "セッションを要約してコンテキストサイズを削減",
   "command.session.fork": "メッセージからフォーク",
@@ -471,6 +472,8 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Todo読み込み",
   "ui.permission.toolLabel.todoWrite": "Todo書き込み",
   "ui.permission.toolLabel.codeSearch": "コード検索",
+  "ui.permission.toggleWrap": "折り返しを切り替え",
+  "ui.permission.copyCommand": "コピー",
   "notification.question.title": "質問",
   "notification.question.description": "{{projectName}} の {{sessionTitle}} から質問があります",
   "notification.action.goToSession": "セッションへ移動",
@@ -1136,4 +1139,11 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} タスク完了",
   "task.todos.allDone": "{{count}} タスク完了",
+  "settings.saveBar.unsavedChanges": "未保存の変更",
+  "settings.saveBar.discard": "破棄",
+  "settings.saveBar.save": "保存",
+  "settings.saveBar.warning.one": "1つのセッションが実行中で中断されます",
+  "settings.saveBar.warning.many": "複数のセッションが実行中で中断されます",
+  "settings.saveBar.saveAnyway": "それでも保存",
+  "settings.saveBar.cancel": "キャンセル",
 }

@@ -32,7 +32,7 @@ import { useData } from "../context"
 import { useFileComponent } from "../context/file"
 import { useDialog } from "../context/dialog"
 import { type UiI18n, useI18n } from "../context/i18n"
-import { GenericTool, ToolCall } from "./basic-tool"
+import { GenericTool, BasicTool } from "./basic-tool"
 import { Accordion } from "./accordion"
 import { StickyAccordionHeader } from "./sticky-accordion-header"
 import { Card } from "./card"
@@ -48,17 +48,15 @@ import { checksum } from "@opencode-ai/util/encode"
 import { Tooltip } from "./tooltip"
 import { IconButton } from "./icon-button"
 import { TextShimmer } from "@opencode-ai/ui/text-shimmer"
-import { list } from "@opencode-ai/ui/text-utils"
-import { GrowBox } from "@opencode-ai/ui/grow-box"
-import { COLLAPSIBLE_SPRING } from "@opencode-ai/ui/motion"
-import { busy, hold, createThrottledValue, useToolFade, useContextToolPending } from "@opencode-ai/ui/tool-utils"
+import { GrowBox } from "./grow-box"
+import { COLLAPSIBLE_SPRING } from "./motion"
+import { busy, createThrottledValue, useToolFade, useContextToolPending } from "./tool-utils"
 import {
   ContextToolGroupHeader,
   ContextToolExpandedList,
   ContextToolRollingResults,
-} from "@opencode-ai/ui/context-tool-results"
-import { ShellRollingResults } from "@opencode-ai/ui/shell-rolling-results"
-import { pageVisible } from "@opencode-ai/ui/hooks"
+} from "./context-tool-results"
+import { ShellRollingResults } from "./shell-rolling-results"
 import { extractFilePathFromHref } from "../file-path"
 
 // Windows CLI tools (e.g. winget) use \r to overwrite progress bars in-place.
@@ -294,6 +292,11 @@ function urls(text: string | undefined) {
 const CONTEXT_GROUP_TOOLS = new Set(["read", "glob", "grep", "list"])
 const HIDDEN_TOOLS = new Set(["todowrite", "todoread"])
 
+function list<T>(value: T[] | undefined | null, fallback: T[]) {
+  if (Array.isArray(value)) return value
+  return fallback
+}
+
 function createGroupOpenState() {
   const [state, setState] = createStore<Record<string, boolean>>({})
   const read = (key?: string, collapse?: boolean) => {
@@ -310,18 +313,6 @@ function createGroupOpenState() {
     setState(key, value)
   }
   return { read, controlled, write }
-}
-
-function shouldCollapseGroup(
-  statuses: (string | undefined)[],
-  opts: { afterTool?: boolean; groupTail?: boolean; working?: boolean },
-) {
-  if (opts.afterTool) return true
-  if (opts.groupTail === false) return true
-  if (!pageVisible()) return false
-  if (opts.working) return false
-  if (!statuses.length) return false
-  return !statuses.some((s) => busy(s))
 }
 
 function renderable(part: PartType, showReasoningSummaries = true) {
@@ -361,8 +352,8 @@ function PartGrow(props: {
   grow?: boolean
   watch?: boolean
   open?: boolean
-  spring?: import("@opencode-ai/ui/motion").SpringConfig
-  toggleSpring?: import("@opencode-ai/ui/motion").SpringConfig
+  spring?: import("./motion").SpringConfig
+  toggleSpring?: import("./motion").SpringConfig
 }) {
   return (
     <GrowBox
@@ -518,20 +509,9 @@ export function AssistantParts(props: {
             return COLLAPSIBLE_SPRING
           })
           const contextOpen = createMemo(() => {
-            const collapse = (
-              afterTool?: boolean,
-              groupTail?: boolean,
-              group?: { part: ToolPart; message: AssistantMessage }[],
-            ) =>
-              shouldCollapseGroup(group?.map((item) => item.part.state.status) ?? [], {
-                afterTool,
-                groupTail,
-                working: props.working,
-              })
             const value = ctx()
-            if (value) return groupState.read(value.groupKey, collapse(value.afterTool, value.tail, value.parts))
-            const entry = part()
-            return groupState.read(entry?.groupKey, collapse(entry?.afterTool, entry?.groupTail, entry?.groupParts))
+            if (value) return groupState.read(value.groupKey, true)
+            return groupState.read(part()?.groupKey, true)
           })
           const visible = createMemo(() => {
             if (!context()) return true
@@ -577,9 +557,7 @@ export function AssistantParts(props: {
             ctxPartsPrev = result
             return result
           })
-          const ctxPendingRaw = useContextToolPending(ctxParts, () => !!(props.working && ctx()?.tail))
-          const ctxPending = ctxPendingRaw
-          const ctxHoldOpen = hold(ctxPendingRaw)
+          const ctxPending = useContextToolPending(ctxParts, () => !!(props.working && ctx()?.tail))
           const shell = createMemo(() => {
             const value = part()
             if (!value) return
@@ -631,12 +609,20 @@ export function AssistantParts(props: {
                           onOpenChange={(value: boolean) => groupState.write(entry().groupKey, value)}
                         />
                       </PartGrow>
-                      <ContextToolExpandedList parts={ctxParts()} expanded={!ctxPending() && contextOpen()} />
-                      <ContextToolRollingResults parts={ctxParts()} pending={ctxHoldOpen()} />
+                      <ContextToolExpandedList parts={ctxParts()} expanded={contextOpen() && !ctxPending()} />
+                      <ContextToolRollingResults parts={ctxParts()} pending={contextOpen() && ctxPending()} />
                     </>
                   )}
                 </Show>
-                <Show when={shell()}>{(value) => <ShellRollingResults part={value()} animate={props.animate} />}</Show>
+                <Show when={shell()}>
+                  {(value) => (
+                    <ShellRollingResults
+                      part={value()}
+                      animate={props.animate}
+                      defaultOpen={props.shellToolDefaultOpen}
+                    />
+                  )}
+                </Show>
                 <Show when={!shell() ? part() : undefined}>
                   {(entry) => (
                     <Show when={!entry().context}>
@@ -1035,10 +1021,9 @@ function McpTool(props: ToolProps) {
   return (
     <Show
       when={!props.hideDetails}
-      fallback={<ToolCall variant="row" icon="mcp" status={props.status} trigger={{ title: props.tool }} />}
+      fallback={<BasicTool hideDetails icon="mcp" status={props.status} trigger={{ title: props.tool }} />}
     >
-      <ToolCall
-        variant="panel"
+      <BasicTool
         icon="mcp"
         status={props.status}
         trigger={{ title: props.tool }}
@@ -1053,7 +1038,7 @@ function McpTool(props: ToolProps) {
             </div>
           )}
         </Show>
-      </ToolCall>
+      </BasicTool>
     </Show>
   )
 }
@@ -1477,8 +1462,8 @@ ToolRegistry.register({
     const pending = createMemo(() => busy(props.status))
     return (
       <>
-        <ToolCall
-          variant="row"
+        <BasicTool
+          hideDetails
           {...props}
           icon="glasses"
           onSubtitleClick={
@@ -1514,8 +1499,7 @@ ToolRegistry.register({
     const i18n = useI18n()
     const pending = createMemo(() => busy(props.status))
     return (
-      <ToolCall
-        variant="panel"
+      <BasicTool
         {...props}
         icon="bullet-list"
         trigger={
@@ -1534,7 +1518,7 @@ ToolRegistry.register({
             </div>
           )}
         </Show>
-      </ToolCall>
+      </BasicTool>
     )
   },
 })
@@ -1545,8 +1529,7 @@ ToolRegistry.register({
     const i18n = useI18n()
     const pending = createMemo(() => busy(props.status))
     return (
-      <ToolCall
-        variant="panel"
+      <BasicTool
         {...props}
         icon="magnifying-glass-menu"
         trigger={
@@ -1566,7 +1549,7 @@ ToolRegistry.register({
             </div>
           )}
         </Show>
-      </ToolCall>
+      </BasicTool>
     )
   },
 })
@@ -1580,8 +1563,7 @@ ToolRegistry.register({
     if (props.input.include) args.push("include=" + props.input.include)
     const pending = createMemo(() => busy(props.status))
     return (
-      <ToolCall
-        variant="panel"
+      <BasicTool
         {...props}
         icon="magnifying-glass-menu"
         trigger={
@@ -1601,7 +1583,7 @@ ToolRegistry.register({
             </div>
           )}
         </Show>
-      </ToolCall>
+      </BasicTool>
     )
   },
 })
@@ -1618,8 +1600,8 @@ ToolRegistry.register({
       return value
     })
     return (
-      <ToolCall
-        variant="row"
+      <BasicTool
+        hideDetails
         {...props}
         icon="window-cursor"
         trigger={
@@ -1648,8 +1630,7 @@ ToolRegistry.register({
     })
 
     return (
-      <ToolCall
-        variant="panel"
+      <BasicTool
         {...props}
         icon="window-cursor"
         trigger={{
@@ -1659,7 +1640,7 @@ ToolRegistry.register({
         }}
       >
         <ExaOutput output={props.output} />
-      </ToolCall>
+      </BasicTool>
     )
   },
 })
@@ -1675,8 +1656,7 @@ ToolRegistry.register({
     })
 
     return (
-      <ToolCall
-        variant="panel"
+      <BasicTool
         {...props}
         icon="code"
         trigger={{
@@ -1686,7 +1666,7 @@ ToolRegistry.register({
         }}
       >
         <ExaOutput output={props.output} />
-      </ToolCall>
+      </BasicTool>
     )
   },
 })
@@ -1768,7 +1748,7 @@ ToolRegistry.register({
       </div>
     )
 
-    return <ToolCall variant="row" icon="task" status={props.status} trigger={trigger()} animate />
+    return <BasicTool hideDetails icon="task" status={props.status} trigger={trigger()} animated />
   },
 })
 
@@ -1807,12 +1787,10 @@ ToolRegistry.register({
     }
 
     return (
-      <ToolCall
-        variant="panel"
+      <BasicTool
         {...props}
         icon="console"
-        animate
-        springContent
+        animated
         defaultOpen
         trigger={
           <div data-slot="basic-tool-tool-info-structured">
@@ -1848,7 +1826,7 @@ ToolRegistry.register({
             </pre>
           </div>
         </div>
-      </ToolCall>
+      </BasicTool>
     )
   },
 })
@@ -1873,8 +1851,7 @@ ToolRegistry.register({
 
     return (
       <div data-component="edit-tool">
-        <ToolCall
-          variant="panel"
+        <BasicTool
           {...props}
           icon="code-lines"
           defer
@@ -1927,7 +1904,7 @@ ToolRegistry.register({
             </ToolFileAccordion>
           </Show>
           <DiagnosticsDisplay diagnostics={diagnostics()} />
-        </ToolCall>
+        </BasicTool>
       </div>
     )
   },
@@ -1953,8 +1930,7 @@ ToolRegistry.register({
 
     return (
       <div data-component="write-tool">
-        <ToolCall
-          variant="panel"
+        <BasicTool
           {...props}
           icon="code-lines"
           defer
@@ -1997,7 +1973,7 @@ ToolRegistry.register({
             </ToolFileAccordion>
           </Show>
           <DiagnosticsDisplay diagnostics={diagnostics()} />
-        </ToolCall>
+        </BasicTool>
       </div>
     )
   },
@@ -2046,8 +2022,7 @@ ToolRegistry.register({
 
     return (
       <div data-component="apply-patch-tool">
-        <ToolCall
-          variant="panel"
+        <BasicTool
           {...props}
           icon="code-lines"
           defer
@@ -2220,7 +2195,7 @@ ToolRegistry.register({
               </ToolFileAccordion>
             )}
           </Show>
-        </ToolCall>
+        </BasicTool>
       </div>
     )
   },
@@ -2248,8 +2223,7 @@ ToolRegistry.register({
     })
 
     return (
-      <ToolCall
-        variant="panel"
+      <BasicTool
         {...props}
         defaultOpen
         icon="checklist"
@@ -2278,7 +2252,7 @@ ToolRegistry.register({
             </For>
           </div>
         </Show>
-      </ToolCall>
+      </BasicTool>
     )
   },
 })
@@ -2300,8 +2274,7 @@ ToolRegistry.register({
     })
 
     return (
-      <ToolCall
-        variant="panel"
+      <BasicTool
         {...props}
         defaultOpen={false}
         icon="bubble-5"
@@ -2329,7 +2302,7 @@ ToolRegistry.register({
             </For>
           </div>
         </Show>
-      </ToolCall>
+      </BasicTool>
     )
   },
 })
@@ -2344,8 +2317,8 @@ ToolRegistry.register({
       if (typeof value === "string") return value
     })
     return (
-      <ToolCall
-        variant="row"
+      <BasicTool
+        hideDetails
         icon="brain"
         status={props.status}
         trigger={
@@ -2357,7 +2330,7 @@ ToolRegistry.register({
             revealOnMount
           />
         }
-        animate
+        animated
       />
     )
   },
