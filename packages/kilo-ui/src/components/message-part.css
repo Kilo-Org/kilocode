@@ -127,7 +127,9 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   padding: 8px;
 }
 
-/* Reasoning block: visually distinct from normal agent output */
+/* Reasoning block: visually distinct from normal agent output.
+   While streaming: open with fixed-height scrollable window.
+   When done: auto-collapses; user can click to reopen. */
 [data-component="reasoning-part"] {
   width: 100%;
   border-left: 2px solid var(--border-weak-base);
@@ -189,5 +191,41 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
         color: var(--text-weak);
       }
     }
+  }
+
+  /* Collapse/expand animation via Kobalte's CSS variable */
+  [data-slot="collapsible-content"] {
+    animation: slideUp 300ms ease-out forwards;
+    overflow: hidden;
+
+    &[data-expanded] {
+      animation: slideDown 200ms ease-out forwards;
+    }
+  }
+
+  /* Streaming state: fixed-height window with auto-scroll */
+  &[data-streaming] {
+    [data-slot="reasoning-content"] {
+      max-height: 120px;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+      mask-image: linear-gradient(to bottom, transparent 0%, black 12px, black 85%, transparent 100%);
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 12px, black 85%, transparent 100%);
+    }
+
+    /* Pulse the brain icon while streaming */
+    [data-slot="reasoning-header"] [data-component="icon"] {
+      animation: reasoning-pulse 2s ease-in-out infinite;
+    }
+  }
+}
+
+@keyframes reasoning-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
   }
 }

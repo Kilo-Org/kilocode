@@ -20,6 +20,7 @@ import { SessionTerminalManager } from "./SessionTerminalManager"
 import { createTerminalHost } from "./terminal-host"
 import { executeVscodeTask } from "./task-runner"
 import { forkSession } from "./fork-session"
+import { shouldStopDiffPolling } from "./delete-worktree"
 import { buildKeybindingMap } from "./format-keybinding"
 import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from "./multi-version"
 import { TelemetryProxy, TelemetryEventName } from "../services/telemetry"
@@ -183,6 +184,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     }
 
     await state.load()
+    manager.cleanupOrphanedTempDirs()
 
     // Do not auto-remove stale worktrees on load.
     // Presence checks run in the shared poller and require explicit user cleanup.
@@ -642,24 +644,25 @@ export class AgentManagerProvider implements vscode.Disposable {
     const manager = this.getWorktreeManager()
     const state = this.getStateManager()
     if (!manager || !state) return null
-
     const worktree = state.getWorktree(worktreeId)
     if (!worktree) {
       this.log(`Worktree ${worktreeId} not found in state`)
       return null
     }
-
+    // Remove from state BEFORE disk removal so pollers immediately stop targeting this worktree.
+    this.statsPoller.skipWorktree(worktreeId)
+    const orphaned = state.removeWorktree(worktreeId)
+    if (shouldStopDiffPolling(worktree.path, orphaned, this.cachedDiffTarget, this.diffSessionId)) {
+      this.stopDiffPolling()
+    }
+    for (const s of orphaned) this.provider?.clearSessionDirectory(s.id)
+    this.pushState()
+    // Disk removal after state is clean — pollers no longer reference this worktree.
     try {
-      await manager.removeWorktree(worktree.path)
+      await manager.removeWorktree(worktree.path, worktree.branch)
     } catch (error) {
       this.log(`Failed to remove worktree from disk: ${error}`)
     }
-
-    const orphaned = state.removeWorktree(worktreeId)
-    for (const s of orphaned) {
-      this.provider?.clearSessionDirectory(s.id)
-    }
-    this.pushState()
     this.log(`Deleted worktree ${worktreeId} (${worktree.branch})`)
     return null
   }
@@ -681,19 +684,13 @@ export class AgentManagerProvider implements vscode.Disposable {
     }
 
     const orphaned = state.removeWorktree(worktreeId)
+    if (shouldStopDiffPolling(worktree.path, orphaned, this.cachedDiffTarget, this.diffSessionId)) {
+      this.stopDiffPolling()
+    }
     for (const session of orphaned) {
       this.provider?.clearSessionDirectory(session.id)
     }
     this.clearStaleTracking(worktreeId)
-
-    if (this.cachedDiffTarget && normalizePath(this.cachedDiffTarget.directory) === normalizePath(worktree.path)) {
-      this.stopDiffPolling()
-    }
-
-    if (this.diffSessionId && orphaned.some((session) => session.id === this.diffSessionId)) {
-      this.stopDiffPolling()
-    }
-
     this.pushState()
     this.log(`Removed stale worktree entry ${worktreeId} (${worktree.branch})`)
     return null

@@ -7,6 +7,7 @@ import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import { useConfig } from "../../context/config"
 import { useSession } from "../../context/session"
+import ModelsTab from "./ModelsTab"
 import ProvidersTab from "./ProvidersTab"
 import AgentBehaviourTab from "./AgentBehaviourTab"
 import AutoApproveTab from "./AutoApproveTab"
@@ -97,6 +98,10 @@ const Settings: Component<SettingsProps> = (props) => {
         style={{ flex: 1, overflow: "hidden" }}
       >
         <Tabs.List>
+          <Tabs.Trigger value="models">
+            <Icon name="models" />
+            <span class="label">{language.t("settings.models.title")}</span>
+          </Tabs.Trigger>
           <Tabs.Trigger value="providers">
             <Icon name="providers" />
             <span class="label">{language.t("settings.providers.title")}</span>
@@ -155,6 +160,10 @@ const Settings: Component<SettingsProps> = (props) => {
           </Tabs.Trigger>
         </Tabs.List>
 
+        <Tabs.Content value="models">
+          <h3>{language.t("settings.models.title")}</h3>
+          <ModelsTab />
+        </Tabs.Content>
         <Tabs.Content value="providers">
           <h3>{language.t("settings.providers.title")}</h3>
           <ProvidersTab />
