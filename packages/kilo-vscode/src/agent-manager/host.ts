@@ -34,6 +34,7 @@ export interface OutputHandle {
 export interface SessionProvider {
   setSessionDirectory(id: string, directory: string): void
   clearSessionDirectory(id: string): void
+  getSessionDirectories(): ReadonlyMap<string, string>
   trackSession(id: string): void
   refreshSessions(): void
   registerSession(session: Session): void
