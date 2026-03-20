@@ -168,7 +168,7 @@ export namespace PermissionNext {
       string,
       {
         info: Request
-        ruleset: Ruleset // kilocode_change — preserve original ruleset for drainCovered
+        ruleset: Ruleset // kilocode_change
         resolve: () => void
         reject: (e: any) => void
       }
@@ -201,7 +201,7 @@ export namespace PermissionNext {
             }
             s.pending[id] = {
               info,
-              ruleset, // kilocode_change — preserve for drainCovered
+              ruleset, // kilocode_change
               resolve,
               reject,
             }
