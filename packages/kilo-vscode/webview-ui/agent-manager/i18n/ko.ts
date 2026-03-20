@@ -82,10 +82,11 @@ export const dict = {
   "agentManager.dialog.versions": "버전",
   "agentManager.dialog.versionHint": "{{count}}개의 Worktree가 병렬로 실행됩니다",
   "agentManager.dialog.compareModels": "모델 비교",
+  "agentManager.dialog.compareModels.tooltip": "서로 다른 모델에서 에이전트를 병렬로 실행하여 결과를 비교합니다",
   "agentManager.dialog.compareModels.searchModels": "모델 검색...",
   "agentManager.dialog.compareModels.selectModels": "모델 선택...",
   "agentManager.dialog.creating": "생성 중...",
-  "agentManager.dialog.createWorkspace": "워크트리 생성",
+  "agentManager.dialog.createWorktree": "워크트리 생성",
   "agentManager.dialog.removeImage": "이미지 제거",
   "agentManager.dialog.advanced": "고급...",
 

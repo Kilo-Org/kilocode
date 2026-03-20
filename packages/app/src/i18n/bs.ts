@@ -113,7 +113,6 @@ export const dict = {
   "dialog.model.empty": "Nema rezultata za modele",
   "dialog.model.manage": "Upravljaj modelima",
   "dialog.model.manage.description": "Prilagodi koji se modeli prikazuju u izborniku modela.",
-  "dialog.model.manage.provider.toggle": "Uključi/isključi sve {{provider}} modele",
 
   "dialog.model.unpaid.freeModels.title": "Besplatni modeli koje obezbjeđuje Kilo",
   "dialog.model.unpaid.addMore.title": "Dodaj još modela od popularnih provajdera",
@@ -500,7 +499,6 @@ export const dict = {
   "session.review.loadingChanges": "Učitavanje izmjena...",
   "session.review.empty": "Još nema izmjena u ovoj sesiji",
   "session.review.noChanges": "Nema izmjena",
-  "session.review.noVcs": "Nije otkriven git VCS, stoga promjene sesije neće biti detektovane",
 
   "session.files.selectToOpen": "Odaberi datoteku za otvaranje",
   "session.files.all": "Sve datoteke",
@@ -517,11 +515,7 @@ export const dict = {
   "session.todo.collapse": "Sažmi",
   "session.todo.expand": "Proširi",
 
-  "session.modeSwitch.switching": "Prebacivanje u {{mode}} način rada…",
-  "session.modeSwitch.waiting": "Čekanje na završetak trenutnog zadatka",
-  "session.modeSwitch.notAvailable": "Agent nije dostupan",
-  "session.modeSwitch.fallback": '"{{requested}}" nije pronađen, koristi se "{{actual}}"',
-
+  "session.new.title": "Napravi bilo šta",
   "session.new.worktree.main": "Glavna grana",
   "session.new.worktree.mainWithBranch": "Glavna grana ({{branch}})",
   "session.new.worktree.create": "Kreiraj novi worktree",
@@ -619,8 +613,6 @@ export const dict = {
   "settings.general.row.theme.description": "Prilagodi temu Kilo-a.",
   "settings.general.row.font.title": "Font",
   "settings.general.row.font.description": "Prilagodi monospace font koji se koristi u blokovima koda",
-  "settings.general.row.reasoningSummaries.title": "Prikaži sažetke razmišljanja",
-  "settings.general.row.reasoningSummaries.description": "Prikaži sažetke razmišljanja modela u vremenskoj liniji",
 
   "settings.general.row.shellToolPartsExpanded.title": "Proširi dijelove shell alata",
   "settings.general.row.shellToolPartsExpanded.description":

@@ -89,8 +89,13 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
         <span data-slot="basic-tool-tool-title" class="capitalize">
           {title()}
         </span>
-        <Show when={description()}>
-          <span data-slot="basic-tool-tool-subtitle">{description()}</span>
+        <Show when={description() || childToolParts().length > 0}>
+          <span data-slot="basic-tool-tool-subtitle">
+            {description()}
+            <Show when={childToolParts().length > 0}>
+              {description() ? " " : ""}({childToolParts().length})
+            </Show>
+          </span>
         </Show>
       </div>
       <Show when={!inAgentManager && childSessionId()}>

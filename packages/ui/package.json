@@ -1,11 +1,13 @@
 {
   "name": "@opencode-ai/ui",
-  "version": "7.0.50",
+  "version": "7.0.51",
   "type": "module",
   "license": "MIT",
   "exports": {
     "./package.json": "./package.json",
     "./*": "./src/components/*.tsx",
+    "./tool-utils": "./src/components/tool-utils.ts",
+    "./text-utils": "./src/components/text-utils.ts",
     "./i18n/*": "./src/i18n/*.ts",
     "./pierre": "./src/pierre/index.ts",
     "./pierre/*": "./src/pierre/*.ts",

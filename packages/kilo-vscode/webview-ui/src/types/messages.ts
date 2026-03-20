@@ -201,6 +201,14 @@ export interface SkillInfo {
   location: string
 }
 
+// Slash command info from CLI backend
+export interface SlashCommandInfo {
+  name: string
+  description?: string
+  source?: "command" | "mcp" | "skill"
+  hints: string[]
+}
+
 // Agent/mode info from CLI backend
 export interface AgentInfo {
   name: string
@@ -294,7 +302,8 @@ export interface ModelSelection {
 
 export type PermissionLevel = "allow" | "ask" | "deny"
 
-export type PermissionRule = PermissionLevel | Record<string, PermissionLevel>
+/** null in a PermissionRule object is a delete sentinel — removes the key from the config */
+export type PermissionRule = PermissionLevel | Record<string, PermissionLevel | null>
 
 export type PermissionConfig = Partial<Record<string, PermissionRule>>
 
@@ -613,6 +622,11 @@ export interface AgentsLoadedMessage {
 export interface SkillsLoadedMessage {
   type: "skillsLoaded"
   skills: SkillInfo[]
+}
+
+export interface CommandsLoadedMessage {
+  type: "commandsLoaded"
+  commands: SlashCommandInfo[]
 }
 
 export interface AutocompleteSettingsLoadedMessage {
@@ -1150,6 +1164,7 @@ export type ExtensionMessage =
   | ProvidersLoadedMessage
   | AgentsLoadedMessage
   | SkillsLoadedMessage
+  | CommandsLoadedMessage
   | AutocompleteSettingsLoadedMessage
   | ChatCompletionResultMessage
   | FileSearchResultMessage
@@ -1294,6 +1309,8 @@ export interface ImportAndSendMessage {
   agent?: string
   variant?: string
   files?: FileAttachment[]
+  command?: string
+  commandArgs?: string
 }
 
 export interface LoginRequest {
@@ -1344,12 +1361,34 @@ export interface CompactRequest {
   modelID?: string
 }
 
+export interface OpenSettingsPanelRequest {
+  type: "openSettingsPanel"
+  tab?: string
+}
+
 export interface RequestAgentsMessage {
   type: "requestAgents"
 }
 
 export interface RequestSkillsMessage {
   type: "requestSkills"
+}
+
+export interface RequestCommandsMessage {
+  type: "requestCommands"
+}
+
+export interface SendCommandRequest {
+  type: "sendCommand"
+  command: string
+  arguments: string
+  messageID?: string
+  sessionID?: string
+  providerID?: string
+  modelID?: string
+  agent?: string
+  variant?: string
+  files?: FileAttachment[]
 }
 
 export interface RemoveSkillMessage {
@@ -1359,6 +1398,11 @@ export interface RemoveSkillMessage {
 
 export interface RemoveModeMessage {
   type: "removeMode"
+  name: string
+}
+
+export interface RemoveMcpMessage {
+  type: "removeMcp"
   name: string
 }
 
@@ -1743,6 +1787,7 @@ export type WebviewMessage =
   | LogoutRequest
   | RefreshProfileRequest
   | OpenExternalRequest
+  | OpenSettingsPanelRequest
   | OpenFileRequest
   | CancelLoginRequest
   | SetOrganizationRequest
@@ -1751,8 +1796,11 @@ export type WebviewMessage =
   | CompactRequest
   | RequestAgentsMessage
   | RequestSkillsMessage
+  | RequestCommandsMessage
+  | SendCommandRequest
   | RemoveSkillMessage
   | RemoveModeMessage
+  | RemoveMcpMessage
   | SetLanguageRequest
   | QuestionReplyRequest
   | QuestionRejectRequest

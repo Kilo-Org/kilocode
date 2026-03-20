@@ -83,10 +83,12 @@ export const dict = {
   "agentManager.dialog.versions": "Versionen",
   "agentManager.dialog.versionHint": "{{count}} Worktrees werden parallel ausgeführt",
   "agentManager.dialog.compareModels": "Modelle vergleichen",
+  "agentManager.dialog.compareModels.tooltip":
+    "Agenten parallel auf verschiedenen Modellen ausführen, um Ergebnisse zu vergleichen",
   "agentManager.dialog.compareModels.searchModels": "Modelle suchen...",
   "agentManager.dialog.compareModels.selectModels": "Modelle auswählen...",
   "agentManager.dialog.creating": "Wird erstellt...",
-  "agentManager.dialog.createWorkspace": "Worktree erstellen",
+  "agentManager.dialog.createWorktree": "Worktree erstellen",
   "agentManager.dialog.removeImage": "Bild entfernen",
   "agentManager.dialog.advanced": "Erweitert...",
 

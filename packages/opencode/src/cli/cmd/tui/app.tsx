@@ -116,7 +116,6 @@ export function tui(input: {
   fetch?: typeof fetch
   headers?: RequestInit["headers"]
   events?: EventSource
-  onExit?: () => Promise<void>
 }) {
   // promise to prevent immediate exit
   return new Promise<void>(async (resolve) => {
@@ -131,7 +130,6 @@ export function tui(input: {
 
     const onExit = async () => {
       unguard?.()
-      await input.onExit?.()
       resolve()
     }
 
@@ -642,6 +640,15 @@ function App() {
           if (!next) renderer.setTerminalTitle("")
           return next
         })
+        dialog.clear()
+      },
+    },
+    {
+      title: kv.get("bell_enabled", true) ? "Disable notifications" : "Enable notifications",
+      value: "app.toggle.notifications",
+      category: "System",
+      onSelect: (dialog) => {
+        kv.set("bell_enabled", !kv.get("bell_enabled", true))
         dialog.clear()
       },
     },

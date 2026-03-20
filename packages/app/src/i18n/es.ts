@@ -113,7 +113,6 @@ export const dict = {
   "dialog.model.empty": "Sin resultados de modelos",
   "dialog.model.manage": "Gestionar modelos",
   "dialog.model.manage.description": "Personalizar qué modelos aparecen en el selector de modelos.",
-  "dialog.model.manage.provider.toggle": "Alternar todos los modelos de {{provider}}",
 
   "dialog.model.unpaid.freeModels.title": "Modelos gratuitos proporcionados por Kilo",
   "dialog.model.unpaid.addMore.title": "Añadir más modelos de proveedores populares",
@@ -501,7 +500,6 @@ export const dict = {
   "session.review.loadingChanges": "Cargando cambios...",
   "session.review.empty": "No hay cambios en esta sesión aún",
   "session.review.noChanges": "Sin cambios",
-  "session.review.noVcs": "No se detectó VCS de git, por lo que los cambios de sesión no se detectarán",
 
   "session.files.selectToOpen": "Selecciona un archivo para abrir",
   "session.files.all": "Todos los archivos",
@@ -518,11 +516,7 @@ export const dict = {
   "session.todo.collapse": "Contraer",
   "session.todo.expand": "Expandir",
 
-  "session.modeSwitch.switching": "Cambiando al modo {{mode}}…",
-  "session.modeSwitch.waiting": "Esperando que la tarea actual se complete",
-  "session.modeSwitch.notAvailable": "Agente no disponible",
-  "session.modeSwitch.fallback": '"{{requested}}" no encontrado, usando "{{actual}}"',
-
+  "session.new.title": "Construye lo que quieras",
   "session.new.worktree.main": "Rama principal",
   "session.new.worktree.mainWithBranch": "Rama principal ({{branch}})",
   "session.new.worktree.create": "Crear nuevo árbol de trabajo",
@@ -622,9 +616,6 @@ export const dict = {
   "settings.general.row.theme.description": "Personaliza el tema de Kilo.",
   "settings.general.row.font.title": "Fuente",
   "settings.general.row.font.description": "Personaliza la fuente monoespaciada usada en bloques de código",
-  "settings.general.row.reasoningSummaries.title": "Mostrar resúmenes de razonamiento",
-  "settings.general.row.reasoningSummaries.description":
-    "Mostrar resúmenes de razonamiento del modelo en la línea de tiempo",
 
   "settings.general.row.shellToolPartsExpanded.title": "Expandir partes de la herramienta shell",
   "settings.general.row.shellToolPartsExpanded.description":

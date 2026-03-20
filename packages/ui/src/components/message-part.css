@@ -234,6 +234,12 @@
     gap: 12px;
   }
 
+  &:hover [data-slot="text-part-copy-wrapper"],
+  &:focus-within [data-slot="text-part-copy-wrapper"] {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
   /* kilocode_change: always show copy button for the final turn response */
   [data-slot="text-part-copy-wrapper"][data-is-turn-copy] {
     opacity: 1;
@@ -505,6 +511,7 @@
 
   [data-slot="message-part-title-filename"] {
     /* No text-transform - preserve original filename casing */
+    font-weight: var(--font-weight-regular);
 
     /* kilocode_change start */
     &.clickable {
@@ -517,7 +524,6 @@
       }
     }
     /* kilocode_change end */
-    font-weight: var(--font-weight-regular);
   }
 
   [data-slot="message-part-path"] {

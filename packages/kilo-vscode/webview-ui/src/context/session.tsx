@@ -52,6 +52,7 @@ interface SessionStore {
   parts: Record<string, Part[]> // messageID -> parts
   todos: Record<string, TodoItem[]> // sessionID -> todos
   modelSelections: Record<string, ModelSelection> // agentName -> model (global, extension-lifetime)
+  sessionOverrides: Record<string, ModelSelection> // sessionID -> per-session model override (compare mode)
   agentSelections: Record<string, string> // sessionID -> agent name
   variantSelections: Record<string, string> // "providerID/modelID" -> variant name
 }
@@ -130,6 +131,7 @@ interface SessionContextValue {
   // Agent/mode selection (per-session)
   agents: Accessor<AgentInfo[]>
   removeMode: (name: string) => void
+  removeMcp: (name: string) => void
   selectedAgent: Accessor<string>
   selectAgent: (name: string) => void
   getSessionAgent: (sessionID: string) => string
@@ -151,6 +153,7 @@ interface SessionContextValue {
   revertSession: (messageID: string) => void
   unrevertSession: () => void
   sendMessage: (text: string, providerID?: string, modelID?: string, files?: FileAttachment[]) => void
+  sendCommand: (command: string, args: string, providerID?: string, modelID?: string, files?: FileAttachment[]) => void
   abort: () => void
   compact: () => void
   respondToPermission: (
@@ -245,6 +248,10 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "removeMode", name })
   }
 
+  const removeMcp = (name: string) => {
+    vscode.postMessage({ type: "removeMcp", name })
+  }
+
   // Pending agent selection for before a session exists
   const [pendingAgentSelection, setPendingAgentSelection] = createSignal<string | null>(null)
 
@@ -262,6 +269,7 @@ export const SessionProvider: ParentComponent = (props) => {
     parts: {},
     todos: {},
     modelSelections: {},
+    sessionOverrides: {},
     agentSelections: {},
     variantSelections: {},
   })
@@ -306,8 +314,13 @@ export const SessionProvider: ParentComponent = (props) => {
   })
 
   // Global model selection per agent/mode
-  // Precedence: user override > per-mode config > global config model > VS Code default > kilo-auto/free
+  // Precedence: per-session override > user override > per-mode config > global config model > VS Code default > kilo-auto/free
   const selected = createMemo<ModelSelection | null>(() => {
+    const sid = currentSessionID()
+    if (sid) {
+      const session = store.sessionOverrides[sid]
+      if (session) return session
+    }
     const agentName = selectedAgentName()
     const override = store.modelSelections[agentName]
     if (override) return override
@@ -317,6 +330,9 @@ export const SessionProvider: ParentComponent = (props) => {
     const agentName = selectedAgentName()
     setUserSetAgents((prev) => ({ ...prev, [agentName]: true }))
     setStore("modelSelections", agentName, { providerID, modelID })
+    // Update per-session override so compare-mode sessions stay independent
+    const sid = currentSessionID()
+    if (sid) setStore("sessionOverrides", sid, { providerID, modelID })
   }
 
   /** The config/default model for the current mode (what settings says). */
@@ -347,6 +363,16 @@ export const SessionProvider: ParentComponent = (props) => {
         delete selections[agentName]
       }),
     )
+    // Also clear per-session override so the session falls back to config default
+    const sid = currentSessionID()
+    if (sid) {
+      setStore(
+        "sessionOverrides",
+        produce((overrides) => {
+          delete overrides[sid]
+        }),
+      )
+    }
   }
 
   // Handle agentsLoaded immediately (not in onMount) so we never miss
@@ -665,13 +691,14 @@ export const SessionProvider: ParentComponent = (props) => {
 
         if (existingIndex >= 0) {
           // Update existing part
+          const existing = parts[effectiveMessageID][existingIndex]
           if (
             delta?.type === "text-delta" &&
             delta.textDelta &&
-            parts[effectiveMessageID][existingIndex].type === "text"
+            (existing.type === "text" || existing.type === "reasoning")
           ) {
-            // Append text delta
-            ;(parts[effectiveMessageID][existingIndex] as { text: string }).text += delta.textDelta
+            // Append text delta to text or reasoning parts
+            ;(existing as { text: string }).text += delta.textDelta
           } else {
             // Replace entire part
             parts[effectiveMessageID][existingIndex] = part
@@ -1073,6 +1100,14 @@ export const SessionProvider: ParentComponent = (props) => {
     const id = currentSessionID()
     if (id) {
       setStore("agentSelections", id, name)
+      // Clear per-session model override so the new mode's configured/default
+      // model takes effect instead of the previous mode's override.
+      setStore(
+        "sessionOverrides",
+        produce((overrides) => {
+          delete overrides[id]
+        }),
+      )
     } else {
       setPendingAgentSelection(name)
       // When switching mode, initialize model for the new mode if the user
@@ -1083,6 +1118,40 @@ export const SessionProvider: ParentComponent = (props) => {
         if (sel) setStore("modelSelections", name, sel)
       }
     }
+  }
+
+  /** Create an optimistic user message + parts in the store so the UI updates instantly. */
+  function addOptimistic(sid: string, messageID: string, text: string, files?: FileAttachment[]) {
+    const now = Date.now()
+    const temp: Message = {
+      id: messageID,
+      sessionID: sid,
+      role: "user",
+      createdAt: new Date(now).toISOString(),
+      time: { created: now },
+    }
+    const pending = pendingOptimistic.get(sid) ?? new Set()
+    pending.add(messageID)
+    pendingOptimistic.set(sid, pending)
+
+    const parts: Part[] = []
+    if (text) {
+      parts.push({ type: "text" as const, id: Identifier.ascending("part"), messageID, text })
+    }
+    for (const file of files ?? []) {
+      parts.push({
+        type: "file" as const,
+        id: Identifier.ascending("part"),
+        messageID,
+        mime: file.mime,
+        url: file.url,
+        filename: file.filename,
+      })
+    }
+
+    setStore("messages", sid, (msgs = []) => [...msgs, temp])
+    setStore("parts", messageID, parts)
+    queueMicrotask(() => window.dispatchEvent(new CustomEvent("resumeAutoScroll")))
   }
 
   function sendMessage(text: string, providerID?: string, modelID?: string, files?: FileAttachment[]) {
@@ -1111,49 +1180,60 @@ export const SessionProvider: ParentComponent = (props) => {
     }
 
     const sid = currentSessionID()
-    if (sid) {
-      const now = Date.now()
-      const temp: Message = {
-        id: messageID,
-        sessionID: sid,
-        role: "user",
-        createdAt: new Date(now).toISOString(),
-        time: { created: now },
-      }
-      // Track this optimistic message so handleMessagesLoaded preserves it
-      const pending = pendingOptimistic.get(sid) ?? new Set()
-      pending.add(messageID)
-      pendingOptimistic.set(sid, pending)
-
-      const parts: Part[] = []
-      if (text) {
-        parts.push({ type: "text" as const, id: Identifier.ascending("part"), messageID, text })
-      }
-      for (const file of files ?? []) {
-        parts.push({
-          type: "file" as const,
-          id: Identifier.ascending("part"),
-          messageID,
-          mime: file.mime,
-          url: file.url,
-          filename: file.filename,
-        })
-      }
-
-      setStore("messages", sid, (msgs = []) => [...msgs, temp])
-      setStore("parts", messageID, parts)
-      // The optimistic message is now in the DOM but the session status is
-      // still "idle" (the CLI backend hasn't started yet), so the auto-scroll
-      // ResizeObserver won't scroll on its own. Force scroll to bottom so the
-      // user's own message is immediately visible.
-      queueMicrotask(() => window.dispatchEvent(new CustomEvent("resumeAutoScroll")))
-    }
+    if (sid) addOptimistic(sid, messageID, text, files)
 
     const agent = selectedAgentName() !== defaultAgent() ? selectedAgentName() : undefined
 
     vscode.postMessage({
       type: "sendMessage",
       text,
+      messageID,
+      sessionID: sid,
+      providerID,
+      modelID,
+      agent,
+      variant: currentVariant(),
+      files,
+    })
+  }
+
+  function sendCommand(command: string, args: string, providerID?: string, modelID?: string, files?: FileAttachment[]) {
+    if (!server.isConnected()) {
+      console.warn("[Kilo New] Cannot send command: not connected")
+      return
+    }
+
+    // Cloud previews need import-then-command; post importAndSend with command metadata
+    const preview = cloudPreviewId()
+    if (preview) {
+      const agent = selectedAgentName() !== defaultAgent() ? selectedAgentName() : undefined
+      vscode.postMessage({
+        type: "importAndSend",
+        cloudSessionId: preview,
+        text: `/${command} ${args}`.trim(),
+        messageID: Identifier.ascending("message"),
+        providerID,
+        modelID,
+        agent,
+        variant: currentVariant(),
+        files,
+        command,
+        commandArgs: args,
+      })
+      return
+    }
+
+    const messageID = Identifier.ascending("message")
+    const sid = currentSessionID()
+
+    if (sid) addOptimistic(sid, messageID, `/${command} ${args}`.trim(), files)
+
+    const agent = selectedAgentName() !== defaultAgent() ? selectedAgentName() : undefined
+
+    vscode.postMessage({
+      type: "sendCommand",
+      command,
+      arguments: args,
       messageID,
       sessionID: sid,
       providerID,
@@ -1471,17 +1551,24 @@ export const SessionProvider: ParentComponent = (props) => {
     refreshSkills,
     removeSkill,
     removeMode,
+    removeMcp,
     selectedAgent: selectedAgentName,
     selectAgent,
     getSessionAgent: (sessionID: string) => store.agentSelections[sessionID] ?? defaultAgent(),
     getSessionModel: (sessionID: string) => {
+      const override = store.sessionOverrides[sessionID]
+      if (override) return override
       const agentName = store.agentSelections[sessionID] ?? defaultAgent()
       return store.modelSelections[agentName] ?? provider.defaultSelection()
     },
-    setSessionModel: (_sessionID: string, providerID: string, modelID: string) => {
-      const agentName = selectedAgentName()
-      setUserSetAgents((prev) => ({ ...prev, [agentName]: true }))
-      setStore("modelSelections", agentName, { providerID, modelID })
+    setSessionModel: (sessionID: string, providerID: string, modelID: string) => {
+      // Only write per-session override — do NOT touch global modelSelections or
+      // userSetAgents.  The override is what selected()/getSessionModel() actually
+      // reads, and mutating the global map here is both redundant and harmful: the
+      // agent may not yet be assigned (sendInitialMessage calls setSessionModel
+      // before setSessionAgent), so the write would land on defaultAgent() and
+      // corrupt the default mode's model for later sessions.
+      setStore("sessionOverrides", sessionID, { providerID, modelID })
     },
     setSessionAgent: (sessionID: string, name: string) => {
       setStore("agentSelections", sessionID, name)
@@ -1499,6 +1586,7 @@ export const SessionProvider: ParentComponent = (props) => {
     revertSession,
     unrevertSession,
     sendMessage,
+    sendCommand,
     abort,
     compact,
     respondToPermission,

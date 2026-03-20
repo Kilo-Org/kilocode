@@ -839,9 +839,8 @@
   border-color: var(--vscode-focusBorder);
 }
 
-.prompt-input:disabled {
+.prompt-input--disabled {
   opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .prompt-input::placeholder {
@@ -1036,6 +1035,79 @@
   font-size: 12px;
   color: var(--vscode-descriptionForeground);
   text-align: center;
+}
+
+/* ============================================
+   Slash Command Dropdown
+   ============================================ */
+
+.slash-command-dropdown {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 10;
+  background: var(--vscode-editorWidget-background, var(--vscode-input-background));
+  border: 1px solid var(--vscode-editorWidget-border, var(--vscode-input-border));
+  border-radius: 4px;
+  overflow: hidden;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.slash-command-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--vscode-foreground);
+  min-width: 0;
+}
+
+.slash-command-item--active {
+  background: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
+}
+
+.slash-command-name {
+  flex-shrink: 0;
+  font-weight: 500;
+  font-family: var(--vscode-editor-font-family, monospace);
+}
+
+.slash-command-desc {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.6;
+  font-size: 11px;
+}
+
+.slash-command-empty {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground);
+  text-align: center;
+}
+
+.slash-command-separator {
+  height: 1px;
+  margin: 4px 10px;
+  background: var(--vscode-editorWidget-border, var(--vscode-input-border));
+  opacity: 0.5;
+}
+
+.slash-command-group-label {
+  padding: 4px 10px 2px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--vscode-descriptionForeground);
+  opacity: 0.7;
 }
 
 /* ============================================
@@ -1283,15 +1355,70 @@
   }
 
   [data-slot="permission-command"] {
+    position: relative;
+    margin-bottom: 4px;
+  }
+
+  [data-slot="permission-command-pre"] {
     font-size: 12px;
     font-family: var(--vscode-editor-font-family, monospace);
     color: var(--text-weak, var(--vscode-descriptionForeground));
-    word-break: break-word;
-    margin-bottom: 4px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    margin: 0;
+    padding: 0;
+    line-height: 1.5;
+    max-height: 150px;
+    overflow-y: auto;
+  }
+
+  [data-slot="permission-command-copy"] {
+    all: unset;
+    position: absolute;
+    top: 0px;
+    right: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+    cursor: pointer;
+    color: var(--vscode-foreground);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+
+    &:hover {
+      background: var(--vscode-toolbar-hoverBackground);
+      opacity: 1;
+    }
+  }
+
+  [data-slot="permission-command"]:hover [data-slot="permission-command-copy"] {
+    opacity: 0.5;
   }
 
   [data-slot="permission-hint"] {
     font-size: 12px;
+  }
+
+  [data-slot="permission-patterns"] {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 4px;
+  }
+
+  [data-slot="permission-patterns-title"] {
+    font-size: 12px;
+    color: var(--text-weak, var(--vscode-descriptionForeground));
+  }
+
+  [data-slot="permission-pattern"] {
+    font-size: 12px;
+    font-family: var(--vscode-editor-font-family, monospace);
+    color: var(--text-weak, var(--vscode-descriptionForeground));
+    word-break: break-all;
   }
 
   [data-slot="permission-rules"] {
@@ -1373,15 +1500,6 @@
     gap: 6px;
     padding: 3px 0 3px 8px;
     min-width: 0;
-
-    &[data-decision="approved"] [data-slot="permission-rule"] {
-      color: var(--text-success, var(--vscode-testing-iconPassed, #5cb85c));
-    }
-
-    &[data-decision="denied"] [data-slot="permission-rule"] {
-      color: var(--text-error, var(--vscode-errorForeground, #f44));
-      text-decoration: line-through;
-    }
   }
 
   [data-slot="permission-rule-type"] {
@@ -1693,6 +1811,11 @@
   width: 100%;
 }
 
+.vscode-session-turn-user[data-revert-disabled] [data-component="icon-button"][data-icon="arrow-left"] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .vscode-session-turn-assistant {
   display: flex;
   flex-direction: column;
@@ -1706,11 +1829,10 @@
 
 /* ============================================
    Todo tool — align checkboxes with icon in header
-   The trigger has 8px left padding, 16px icon, 8px gap = 32px total offset.
    ============================================ */
 
 [data-component="todos"] {
-  padding-left: 32px;
+  padding: 12px;
 }
 
 /* ============================================
@@ -2183,5 +2305,114 @@
     & > * {
       max-width: 100%;
     }
+  }
+}
+
+/* ============================================
+   High Contrast Theme Support
+   --vscode-contrastBorder is only defined in HC themes,
+   so transparent fallback keeps normal themes unchanged.
+   ============================================ */
+
+body.vscode-high-contrast,
+body.vscode-high-contrast-light {
+  /* Buttons */
+  .scroll-to-bottom-button,
+  .feedback-button,
+  .startup-error-retry,
+  .kilo-notifications-nav-btn,
+  .image-attachment-remove,
+  .prompt-review-chip-remove,
+  [data-slot="question-progress-nav"],
+  [data-slot="question-collapse-toggle"] {
+    border: 1px solid var(--vscode-contrastBorder, transparent);
+  }
+
+  /* Inputs and textareas */
+  .prompt-input-container,
+  .model-selector-search {
+    border-color: var(--vscode-contrastBorder, var(--vscode-input-border));
+  }
+
+  .prompt-input-container:focus-within,
+  .model-selector-search:focus {
+    border-color: var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
+  }
+
+  /* Dropdowns and popover panels */
+  .file-mention-dropdown,
+  .slash-command-dropdown {
+    border-color: var(--vscode-contrastBorder, var(--vscode-editorWidget-border));
+  }
+
+  /* List items — active selection */
+  .file-mention-item--active,
+  .slash-command-item--active,
+  .model-selector-item.active,
+  .thinking-selector-item.selected,
+  .mode-switcher-item.selected {
+    outline: 1px solid var(--vscode-contrastBorder, transparent);
+    outline-offset: -1px;
+  }
+
+  /* Recent sessions */
+  .recent-session-item {
+    border: 1px solid var(--vscode-contrastBorder, transparent);
+  }
+
+  /* Notification card */
+  .kilo-notifications-card {
+    border: 1px solid var(--vscode-contrastBorder, transparent);
+  }
+
+  /* Revert banner */
+  .revert-banner {
+    border-color: var(--vscode-contrastBorder, var(--vscode-editorWidget-border));
+  }
+
+  /* Image attachments */
+  .image-attachment img {
+    border-color: var(--vscode-contrastBorder, var(--vscode-widget-border));
+  }
+
+  /* Permission dock */
+  [data-component="dock-prompt"][data-kind="permission"] {
+    border-color: var(--vscode-contrastBorder, var(--vscode-panel-border));
+  }
+
+  /* Question dock */
+  [data-component="question-dock"] {
+    border: 1px solid var(--vscode-contrastBorder, transparent);
+  }
+
+  [data-component="question-dock"] [data-slot="question-option"] {
+    border-color: var(--vscode-contrastBorder, var(--border-weak-base));
+  }
+
+  [data-component="question-dock"] [data-slot="question-option-box"] {
+    border-color: var(--vscode-contrastBorder, var(--border-weak-base));
+  }
+
+  [data-component="question-dock"] [data-slot="custom-input-form"] {
+    border-color: var(--vscode-contrastBorder, var(--border-weak-base));
+  }
+
+  /* Prompt hint selector buttons */
+  .prompt-input-hint-selectors [data-component="button"] {
+    border-color: var(--vscode-contrastBorder, transparent) !important;
+  }
+
+  /* Prompt review chips */
+  .prompt-review-chip {
+    border-color: var(--vscode-contrastBorder, var(--vscode-input-border));
+  }
+
+  /* Focus states */
+  .scroll-to-bottom-button:focus-visible,
+  .feedback-button:focus-visible,
+  .recent-session-item:focus-visible,
+  .kilo-notifications-nav-btn:focus-visible {
+    outline: 1px solid var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
+    outline-offset: -1px;
   }
 }

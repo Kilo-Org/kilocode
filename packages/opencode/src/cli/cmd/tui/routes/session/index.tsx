@@ -84,6 +84,7 @@ import { UI } from "@/cli/ui.ts"
 import { useTuiConfig } from "../../context/tui-config"
 
 import { formatMarkdownTables } from "../../util/markdown" // kilocode_change
+import { bell } from "@/kilocode/bell" // kilocode_change
 
 addDefaultParsers(parsers.parsers)
 
@@ -149,6 +150,39 @@ export function Session() {
     return messages().findLast((x) => x.role === "assistant")
   })
 
+  // kilocode_change start - ring terminal bell on task completion
+  createEffect(
+    on(
+      () => [route.sessionID, sync.data.session_status?.[route.sessionID]?.type] as const,
+      ([id, type], prev) => {
+        if (!prev || prev[0] !== id) return
+        if (prev[1] && prev[1] !== "idle" && type === "idle" && bellEnabled()) bell()
+      },
+    ),
+  )
+  // kilocode_change end
+
+  // kilocode_change start - ring terminal bell when input is needed
+  createEffect(
+    on(
+      () => [route.sessionID, permissions().length] as const,
+      ([id, len], prev) => {
+        if (!prev || prev[0] !== id) return
+        if (len > prev[1] && bellEnabled()) bell()
+      },
+    ),
+  )
+  createEffect(
+    on(
+      () => [route.sessionID, questions().length] as const,
+      ([id, len], prev) => {
+        if (!prev || prev[0] !== id) return
+        if (len > prev[1] && bellEnabled()) bell()
+      },
+    ),
+  )
+  // kilocode_change end
+
   const dimensions = useTerminalDimensions()
   const [sidebar, setSidebar] = kv.signal<"auto" | "hide">("sidebar", "auto")
   const [sidebarOpen, setSidebarOpen] = createSignal(false)
@@ -161,6 +195,7 @@ export function Session() {
   const [showHeader, setShowHeader] = kv.signal("header_visible", true)
   const [diffWrapMode] = kv.signal<"word" | "none">("diff_wrap_mode", "word")
   const [animationsEnabled, setAnimationsEnabled] = kv.signal("animations_enabled", true)
+  const [bellEnabled, setBellEnabled] = kv.signal("bell_enabled", true)
   const [showGenericToolOutput, setShowGenericToolOutput] = kv.signal("generic_tool_output_visibility", false)
 
   const wide = createMemo(() => dimensions().width > 120)
