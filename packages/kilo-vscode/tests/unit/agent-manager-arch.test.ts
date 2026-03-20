@@ -50,7 +50,10 @@ describe("Agent Manager CSS Prefix", () => {
     const matches = [...css.matchAll(/\.([a-z][a-z0-9-]*)/gi)]
     const names = [...new Set(matches.map((m) => m[1]))]
 
-    const invalid = names.filter((n) => !n!.startsWith("am-"))
+    // VS Code sets these body classes on webview elements — they are scoping
+    // selectors for high contrast theme support, not agent-manager classes.
+    const host = new Set(["vscode-high-contrast", "vscode-high-contrast-light"])
+    const invalid = names.filter((n) => !n!.startsWith("am-") && !host.has(n!))
 
     expect(invalid, `Classes missing "am-" prefix: ${invalid.join(", ")}`).toEqual([])
   })

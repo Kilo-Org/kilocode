@@ -472,6 +472,8 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Ler Tarefas",
   "ui.permission.toolLabel.todoWrite": "Escrever Tarefas",
   "ui.permission.toolLabel.codeSearch": "Pesquisa de Código",
+  "ui.permission.toggleWrap": "Alternar quebra de linha",
+  "ui.permission.copyCommand": "Copiar",
   "notification.question.title": "Pergunta",
   "notification.question.description": "{{sessionTitle}} em {{projectName}} tem uma pergunta",
   "notification.action.goToSession": "Ir para sessão",
@@ -1000,6 +1002,10 @@ export const dict = {
   "settings.agentBehaviour.removeMode.confirm":
     'Remover o modo "{{name}}"? Isso desativará o modo atualizando sua configuração.',
   "settings.agentBehaviour.removeMode.button": "Remover",
+  "settings.agentBehaviour.removeMcp.title": "Remover servidor MCP",
+  "settings.agentBehaviour.removeMcp.confirm":
+    'Remover o servidor MCP "{{name}}"? Isso o removerá da sua configuração.',
+  "settings.agentBehaviour.removeMcp.button": "Remover",
   "settings.agentBehaviour.skillPaths": "Caminhos de pastas de habilidades",
   "settings.agentBehaviour.skillUrls": "URLs de habilidades",
   "settings.agentBehaviour.removeSkill.title": "Remover habilidade",
@@ -1143,4 +1149,11 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} tarefas concluídas",
   "task.todos.allDone": "{{count}} tarefas concluídas",
+  "settings.saveBar.unsavedChanges": "Alterações não salvas",
+  "settings.saveBar.discard": "Descartar",
+  "settings.saveBar.save": "Salvar",
+  "settings.saveBar.warning.one": "Uma sessão está em execução e será interrompida",
+  "settings.saveBar.warning.many": "Várias sessões estão em execução e serão interrompidas",
+  "settings.saveBar.saveAnyway": "Salvar mesmo assim",
+  "settings.saveBar.cancel": "Cancelar",
 }

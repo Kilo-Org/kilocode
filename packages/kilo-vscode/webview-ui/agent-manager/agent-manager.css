@@ -1725,13 +1725,24 @@ button.am-section-toggle:hover .am-section-label {
 /* Compare mode pill in the version bar */
 
 .am-nv-pill-compare {
-  margin-left: 4px;
-  width: 28px;
-  opacity: 0.6;
+  margin-left: 6px;
+  width: auto;
+  gap: 4px;
+  padding: 0 8px;
+  border: 1px dashed var(--border-base);
+  color: var(--text-weak);
 }
 
 .am-nv-pill-compare:hover {
-  opacity: 1;
+  border-color: var(--border-focus, #007fd4);
+  color: var(--text-base);
+  background: var(--surface-inset-base-hover);
+}
+
+.am-nv-pill-compare-label {
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 /* Compare mode section */
@@ -3185,4 +3196,217 @@ button.am-section-toggle:hover .am-section-label {
   margin-left: auto;
   color: var(--text-weaker);
   font-size: 11px;
+}
+
+/* ============================================
+   High Contrast Theme Support
+   --vscode-contrastBorder is only defined in HC themes,
+   so transparent fallback keeps normal themes unchanged.
+   ============================================ */
+
+body.vscode-high-contrast,
+body.vscode-high-contrast-light {
+  /* Sidebar panel border */
+  .am-sidebar {
+    border-right-color: var(--vscode-contrastBorder, var(--border-weak-base));
+  }
+
+  /* Sidebar items */
+  .am-local-item,
+  .am-worktree-item,
+  .am-item {
+    border: 1px solid var(--vscode-contrastBorder, transparent);
+  }
+
+  .am-local-item-active,
+  .am-worktree-item-active,
+  .am-item-active {
+    border-color: var(--vscode-contrastBorder, transparent);
+  }
+
+  /* Create worktree button */
+  .am-worktree-create {
+    border-color: var(--vscode-contrastBorder, var(--border-weak-base));
+  }
+
+  /* Tab bar */
+  .am-tab-bar {
+    border-bottom-color: var(--vscode-contrastBorder, var(--border-weak-base));
+  }
+
+  .am-tab {
+    border: 1px solid transparent;
+  }
+
+  .am-tab-active {
+    border-color: var(--vscode-contrastBorder, transparent);
+    border-bottom-color: var(--surface-interactive-base);
+  }
+
+  .am-tab-overlay {
+    border-color: var(--vscode-contrastBorder, var(--border-weak-base));
+  }
+
+  /* Inputs and textareas */
+  .am-worktree-rename-input,
+  .am-nv-name-input,
+  .am-advanced-input,
+  .am-pr-input,
+  .am-annotation-textarea {
+    border-color: var(--vscode-contrastBorder, var(--border-base));
+  }
+
+  .am-worktree-rename-input:focus,
+  .am-nv-name-input:focus,
+  .am-advanced-input:focus,
+  .am-pr-input:focus,
+  .am-annotation-textarea:focus {
+    border-color: var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
+  }
+
+  /* Selector trigger (dropdown button) */
+  .am-selector-trigger {
+    border-color: var(--vscode-contrastBorder, var(--border-weak-base));
+  }
+
+  /* Annotation buttons */
+  .am-annotation-btn {
+    border-color: var(--vscode-contrastBorder, var(--border-base));
+  }
+
+  .am-annotation-icon-btn {
+    border: 1px solid var(--vscode-contrastBorder, transparent);
+  }
+
+  /* Version pills */
+  .am-nv-pill,
+  .am-tab-switcher-pill {
+    border: 1px solid var(--vscode-contrastBorder, transparent);
+  }
+
+  .am-nv-pill-active {
+    border-color: var(--vscode-contrastBorder, transparent) !important;
+  }
+
+  .am-tab-switcher-pill-active {
+    border-color: var(--vscode-contrastBorder, transparent) !important;
+  }
+
+  /* Diff toggle button */
+  .am-diff-toggle-btn {
+    border: 1px solid var(--vscode-contrastBorder, transparent);
+  }
+
+  /* Diff panel header */
+  .am-diff-header {
+    border-bottom-color: var(--vscode-contrastBorder, var(--border-weak-base));
+  }
+
+  /* Inline annotations */
+  .am-annotation {
+    border-color: var(--vscode-contrastBorder, var(--border-weak-base));
+  }
+
+  /* Multi-model checkbox */
+  .am-mm-checkbox {
+    outline: 1px solid var(--vscode-contrastBorder, transparent);
+  }
+
+  /* Multi-model count select */
+  .am-mm-count-select {
+    border-color: var(--vscode-contrastBorder, var(--border-base));
+  }
+
+  /* Advanced toggle */
+  .am-advanced-toggle {
+    border: 1px solid var(--vscode-contrastBorder, transparent);
+  }
+
+  /* Keyboard shortcut keys */
+  .am-kbd {
+    border-color: var(--vscode-contrastBorder, var(--border-weak-base));
+  }
+
+  /* Split arrow */
+  .am-split-arrow {
+    border: 1px solid var(--vscode-contrastBorder, transparent);
+  }
+
+  /* Read-only banner */
+  .am-readonly-banner {
+    border-top-color: var(--vscode-contrastBorder, var(--border-weak-base));
+  }
+
+  /* Shortcuts list */
+  .am-shortcuts-list {
+    border-color: var(--vscode-contrastBorder, var(--border-weak-base));
+  }
+
+  .am-shortcuts-row + .am-shortcuts-row {
+    border-top-color: var(--vscode-contrastBorder, var(--border-weak-base));
+  }
+
+  /* Branch items */
+  .am-branch-item {
+    border: 1px solid var(--vscode-contrastBorder, transparent);
+  }
+
+  .am-branch-item:hover {
+    border-color: var(--vscode-contrastBorder, transparent);
+  }
+
+  /* Apply dialog tree */
+  .am-apply-dialog-tree {
+    border-color: var(--vscode-contrastBorder, var(--border-weak-base));
+  }
+
+  /* Hover card keybind */
+  .am-hover-card-keybind {
+    border-color: var(--vscode-contrastBorder, var(--border-weak-base));
+  }
+
+  /* File tree items */
+  .am-file-tree-dir,
+  .am-file-tree-file {
+    border: 1px solid transparent;
+  }
+
+  .am-file-tree-active {
+    border-color: var(--vscode-contrastBorder, transparent);
+  }
+
+  .am-file-tree-check {
+    border-color: var(--vscode-contrastBorder, var(--border-weak-base));
+  }
+
+  /* File tree summary */
+  .am-file-tree-summary {
+    border-top-color: var(--vscode-contrastBorder, var(--border-weak-base));
+  }
+
+  /* Review toolbar */
+  .am-review-toolbar {
+    border-bottom-color: var(--vscode-contrastBorder, var(--border-weak-base));
+  }
+
+  /* Review tree wrapper */
+  .am-review-tree-wrapper {
+    border-right-color: var(--vscode-contrastBorder, var(--border-weak-base));
+  }
+
+  /* Focus states */
+  .am-local-item:focus-visible,
+  .am-worktree-item:focus-visible,
+  .am-item:focus-visible,
+  .am-tab:focus-visible,
+  .am-worktree-create:focus-visible,
+  .am-nv-pill:focus-visible,
+  .am-tab-switcher-pill:focus-visible,
+  .am-diff-toggle-btn:focus-visible,
+  .am-branch-item:focus-visible,
+  .am-file-tree-dir:focus-visible,
+  .am-file-tree-file:focus-visible {
+    outline: 1px solid var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
+    outline-offset: -1px;
+  }
 }

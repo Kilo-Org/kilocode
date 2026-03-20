@@ -476,6 +476,8 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Čitanje liste zadataka",
   "ui.permission.toolLabel.todoWrite": "Ažuriranje liste zadataka",
   "ui.permission.toolLabel.codeSearch": "Pretraga koda",
+  "ui.permission.toggleWrap": "Prebaci prelamanje teksta",
+  "ui.permission.copyCommand": "Kopiraj",
   "notification.question.title": "Pitanje",
   "notification.question.description": "{{sessionTitle}} u {{projectName}} ima pitanje",
   "notification.action.goToSession": "Idi na sesiju",
@@ -999,6 +1001,10 @@ export const dict = {
   "settings.agentBehaviour.removeMode.confirm":
     'Ukloniti mod "{{name}}"? Ovo će onemogućiti mod ažuriranjem vaše konfiguracije.',
   "settings.agentBehaviour.removeMode.button": "Ukloni",
+  "settings.agentBehaviour.removeMcp.title": "Ukloni MCP server",
+  "settings.agentBehaviour.removeMcp.confirm":
+    'Ukloniti MCP server "{{name}}"? Ovo će ga ukloniti iz vaše konfiguracije.',
+  "settings.agentBehaviour.removeMcp.button": "Ukloni",
   "settings.agentBehaviour.skillPaths": "Putanje mapa vještina",
   "settings.agentBehaviour.skillUrls": "URL-ovi vještina",
   "settings.agentBehaviour.removeSkill.title": "Ukloni vještinu",
@@ -1141,4 +1147,11 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} zadataka završeno",
   "task.todos.allDone": "{{count}} zadataka završeno",
+  "settings.saveBar.unsavedChanges": "Nespremljene promjene",
+  "settings.saveBar.discard": "Odbaci",
+  "settings.saveBar.save": "Spremi",
+  "settings.saveBar.warning.one": "Jedna sesija je pokrenuta i bit će prekinuta",
+  "settings.saveBar.warning.many": "Nekoliko sesija je pokrenuto i bit će prekinuto",
+  "settings.saveBar.saveAnyway": "Spremi svejedno",
+  "settings.saveBar.cancel": "Otkaži",
 }

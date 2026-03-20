@@ -192,6 +192,14 @@ const KILO_DEPENDENCIES: Record<string, Record<string, string>> = {
   },
 }
 
+// Kilo-specific bin entries to set on specific packages
+const KILO_BIN: Record<string, Record<string, string>> = {
+  "packages/opencode/package.json": {
+    kilo: "./bin/kilo",
+    kilocode: "./bin/kilo",
+  },
+}
+
 // Packages that should have their name transformed
 const TRANSFORM_PACKAGE_NAMES: Record<string, string> = {
   "packages/opencode/package.json": "@kilocode/cli",
@@ -399,6 +407,13 @@ export async function transformPackageJson(file: string, options: PackageJsonOpt
           changes.push(`injected: ${name}`)
         }
       }
+    }
+
+    // 9. Set Kilo-specific bin entries
+    const kiloBin = KILO_BIN[relativePath]
+    if (kiloBin) {
+      pkg.bin = kiloBin
+      changes.push(`bin: set Kilo bin entries`)
     }
 
     // Write back with proper formatting
@@ -613,6 +628,13 @@ export async function transformAllPackageJson(options: PackageJsonOptions = {}):
             changes.push(`injected: ${name}`)
           }
         }
+      }
+
+      // 9. Set Kilo-specific bin entries
+      const kiloBin = KILO_BIN[path]
+      if (kiloBin) {
+        pkg.bin = kiloBin
+        changes.push(`bin: set Kilo bin entries`)
       }
 
       if (changes.length > 0) {

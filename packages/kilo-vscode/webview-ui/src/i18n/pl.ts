@@ -474,6 +474,8 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Odczyt Todo",
   "ui.permission.toolLabel.todoWrite": "Zapis Todo",
   "ui.permission.toolLabel.codeSearch": "Wyszukiwanie kodu",
+  "ui.permission.toggleWrap": "Przełącz zawijanie tekstu",
+  "ui.permission.copyCommand": "Kopiuj",
   "notification.question.title": "Pytanie",
   "notification.question.description": "{{sessionTitle}} w {{projectName}} ma pytanie",
   "notification.action.goToSession": "Przejdź do sesji",
@@ -997,6 +999,10 @@ export const dict = {
   "settings.agentBehaviour.removeMode.confirm":
     'Usunąć tryb "{{name}}"? Spowoduje to wyłączenie trybu poprzez aktualizację konfiguracji.',
   "settings.agentBehaviour.removeMode.button": "Usuń",
+  "settings.agentBehaviour.removeMcp.title": "Usuń serwer MCP",
+  "settings.agentBehaviour.removeMcp.confirm":
+    'Usunąć serwer MCP "{{name}}"? Spowoduje to usunięcie go z konfiguracji.',
+  "settings.agentBehaviour.removeMcp.button": "Usuń",
   "settings.agentBehaviour.skillPaths": "Ścieżki folderów umiejętności",
   "settings.agentBehaviour.skillUrls": "Adresy URL umiejętności",
   "settings.agentBehaviour.removeSkill.title": "Usuń umiejętność",
@@ -1139,4 +1145,11 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} zadań ukończono",
   "task.todos.allDone": "{{count}} zadań ukończono",
+  "settings.saveBar.unsavedChanges": "Niezapisane zmiany",
+  "settings.saveBar.discard": "Odrzuć",
+  "settings.saveBar.save": "Zapisz",
+  "settings.saveBar.warning.one": "Jedna sesja jest uruchomiona i zostanie przerwana",
+  "settings.saveBar.warning.many": "Kilka sesji jest uruchomionych i zostanie przerwanych",
+  "settings.saveBar.saveAnyway": "Zapisz mimo to",
+  "settings.saveBar.cancel": "Anuluj",
 }

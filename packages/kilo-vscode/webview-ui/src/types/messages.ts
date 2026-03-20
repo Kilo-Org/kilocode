@@ -302,7 +302,8 @@ export interface ModelSelection {
 
 export type PermissionLevel = "allow" | "ask" | "deny"
 
-export type PermissionRule = PermissionLevel | Record<string, PermissionLevel>
+/** null in a PermissionRule object is a delete sentinel — removes the key from the config */
+export type PermissionRule = PermissionLevel | Record<string, PermissionLevel | null>
 
 export type PermissionConfig = Partial<Record<string, PermissionRule>>
 
@@ -1360,6 +1361,11 @@ export interface CompactRequest {
   modelID?: string
 }
 
+export interface OpenSettingsPanelRequest {
+  type: "openSettingsPanel"
+  tab?: string
+}
+
 export interface RequestAgentsMessage {
   type: "requestAgents"
 }
@@ -1392,6 +1398,11 @@ export interface RemoveSkillMessage {
 
 export interface RemoveModeMessage {
   type: "removeMode"
+  name: string
+}
+
+export interface RemoveMcpMessage {
+  type: "removeMcp"
   name: string
 }
 
@@ -1776,6 +1787,7 @@ export type WebviewMessage =
   | LogoutRequest
   | RefreshProfileRequest
   | OpenExternalRequest
+  | OpenSettingsPanelRequest
   | OpenFileRequest
   | CancelLoginRequest
   | SetOrganizationRequest
@@ -1788,6 +1800,7 @@ export type WebviewMessage =
   | SendCommandRequest
   | RemoveSkillMessage
   | RemoveModeMessage
+  | RemoveMcpMessage
   | SetLanguageRequest
   | QuestionReplyRequest
   | QuestionRejectRequest

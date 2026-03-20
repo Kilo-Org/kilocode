@@ -8,6 +8,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Popover } from "@kilocode/kilo-ui/popover"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useVSCode } from "../src/context/vscode"
 import { useSession } from "../src/context/session"
 import { ModelSelectorBase } from "../src/components/shared/ModelSelector"
@@ -448,14 +449,16 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                         {count}
                       </button>
                     ))}
-                    <button
-                      class="am-nv-pill am-nv-pill-compare"
-                      onClick={() => setCompareMode(true)}
-                      type="button"
-                      title={t("agentManager.dialog.compareModels")}
+                    <Tooltip
+                      value={t("agentManager.dialog.compareModels.tooltip")}
+                      placement="top"
+                      contentClass="am-tooltip-wrap"
                     >
-                      <Icon name="layers" size="small" />
-                    </button>
+                      <button class="am-nv-pill am-nv-pill-compare" onClick={() => setCompareMode(true)} type="button">
+                        <Icon name="layers" size="small" />
+                        <span class="am-nv-pill-compare-label">{t("agentManager.dialog.compareModels")}</span>
+                      </button>
+                    </Tooltip>
                   </div>
                   <Show when={versions() > 1}>
                     <span class="am-nv-version-hint">

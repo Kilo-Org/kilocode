@@ -476,6 +476,8 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Чтение списка задач",
   "ui.permission.toolLabel.todoWrite": "Запись списка задач",
   "ui.permission.toolLabel.codeSearch": "Поиск кода",
+  "ui.permission.toggleWrap": "Переключить перенос строк",
+  "ui.permission.copyCommand": "Копировать",
   "notification.question.title": "Вопрос",
   "notification.question.description": "У {{sessionTitle}} в {{projectName}} есть вопрос",
   "notification.action.goToSession": "Перейти к сессии",
@@ -1000,6 +1002,9 @@ export const dict = {
   "settings.agentBehaviour.removeMode.confirm":
     'Удалить режим "{{name}}"? Это отключит режим, обновив вашу конфигурацию.',
   "settings.agentBehaviour.removeMode.button": "Удалить",
+  "settings.agentBehaviour.removeMcp.title": "Удалить сервер MCP",
+  "settings.agentBehaviour.removeMcp.confirm": 'Удалить сервер MCP "{{name}}"? Это удалит его из вашей конфигурации.',
+  "settings.agentBehaviour.removeMcp.button": "Удалить",
   "settings.agentBehaviour.skillPaths": "Пути папок навыков",
   "settings.agentBehaviour.skillUrls": "URL навыков",
   "settings.agentBehaviour.removeSkill.title": "Удалить навык",
@@ -1139,4 +1144,11 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} задач выполнено",
   "task.todos.allDone": "{{count}} задач выполнено",
+  "settings.saveBar.unsavedChanges": "Несохранённые изменения",
+  "settings.saveBar.discard": "Отменить",
+  "settings.saveBar.save": "Сохранить",
+  "settings.saveBar.warning.one": "Один сеанс выполняется и будет прерван",
+  "settings.saveBar.warning.many": "Несколько сеансов выполняются и будут прерваны",
+  "settings.saveBar.saveAnyway": "Сохранить в любом случае",
+  "settings.saveBar.cancel": "Отмена",
 }

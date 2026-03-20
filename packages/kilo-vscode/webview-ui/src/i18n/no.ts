@@ -476,6 +476,8 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Les gjøremål",
   "ui.permission.toolLabel.todoWrite": "Skriv gjøremål",
   "ui.permission.toolLabel.codeSearch": "Kodesøk",
+  "ui.permission.toggleWrap": "Veksle tekstbryting",
+  "ui.permission.copyCommand": "Kopier",
   "notification.question.title": "Spørsmål",
   "notification.question.description": "{{sessionTitle}} i {{projectName}} har et spørsmål",
   "notification.action.goToSession": "Gå til sesjon",
@@ -998,6 +1000,10 @@ export const dict = {
   "settings.agentBehaviour.removeMode.confirm":
     'Vil du fjerne modusen "{{name}}"? Dette vil deaktivere modusen ved å oppdatere konfigurasjonen din.',
   "settings.agentBehaviour.removeMode.button": "Fjern",
+  "settings.agentBehaviour.removeMcp.title": "Fjern MCP-server",
+  "settings.agentBehaviour.removeMcp.confirm":
+    'Vil du fjerne MCP-serveren "{{name}}"? Dette vil fjerne den fra konfigurasjonen din.',
+  "settings.agentBehaviour.removeMcp.button": "Fjern",
   "settings.agentBehaviour.skillPaths": "Ferdighetsmappe-stier",
   "settings.agentBehaviour.skillUrls": "Ferdighets-URLer",
   "settings.agentBehaviour.removeSkill.title": "Fjern ferdighet",
@@ -1133,4 +1139,11 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} oppgaver fullført",
   "task.todos.allDone": "{{count}} oppgaver fullført",
+  "settings.saveBar.unsavedChanges": "Ulagrede endringer",
+  "settings.saveBar.discard": "Forkast",
+  "settings.saveBar.save": "Lagre",
+  "settings.saveBar.warning.one": "En økt kjører og vil bli avbrutt",
+  "settings.saveBar.warning.many": "Flere økter kjører og vil bli avbrutt",
+  "settings.saveBar.saveAnyway": "Lagre uansett",
+  "settings.saveBar.cancel": "Avbryt",
 } satisfies Partial<Record<Keys, string>>

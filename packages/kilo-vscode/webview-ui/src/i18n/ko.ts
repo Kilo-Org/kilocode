@@ -474,6 +474,8 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "할 일 읽기",
   "ui.permission.toolLabel.todoWrite": "할 일 쓰기",
   "ui.permission.toolLabel.codeSearch": "코드 검색",
+  "ui.permission.toggleWrap": "줄 바꿈 전환",
+  "ui.permission.copyCommand": "복사",
   "notification.question.title": "질문",
   "notification.question.description": "{{projectName}}의 {{sessionTitle}}에서 질문이 있습니다",
   "notification.action.goToSession": "세션으로 이동",
@@ -992,6 +994,9 @@ export const dict = {
   "settings.agentBehaviour.removeMode.confirm":
     '모드 "{{name}}"을(를) 제거하시겠습니까? 구성을 업데이트하여 모드를 비활성화합니다.',
   "settings.agentBehaviour.removeMode.button": "제거",
+  "settings.agentBehaviour.removeMcp.title": "MCP 서버 제거",
+  "settings.agentBehaviour.removeMcp.confirm": 'MCP 서버 "{{name}}"을(를) 제거하시겠습니까? 구성에서 제거됩니다.',
+  "settings.agentBehaviour.removeMcp.button": "제거",
   "settings.agentBehaviour.skillPaths": "스킬 폴더 경로",
   "settings.agentBehaviour.skillUrls": "스킬 URL",
   "settings.agentBehaviour.removeSkill.title": "스킬 제거",
@@ -1124,4 +1129,11 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} 할 일 완료",
   "task.todos.allDone": "{{count}} 할 일 완료",
+  "settings.saveBar.unsavedChanges": "저장되지 않은 변경 사항",
+  "settings.saveBar.discard": "취소",
+  "settings.saveBar.save": "저장",
+  "settings.saveBar.warning.one": "하나의 세션이 실행 중이며 중단됩니다",
+  "settings.saveBar.warning.many": "여러 세션이 실행 중이며 중단됩니다",
+  "settings.saveBar.saveAnyway": "그래도 저장",
+  "settings.saveBar.cancel": "취소",
 }

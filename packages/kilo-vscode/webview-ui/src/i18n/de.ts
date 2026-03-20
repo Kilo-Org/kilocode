@@ -480,6 +480,8 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Todo lesen",
   "ui.permission.toolLabel.todoWrite": "Todo schreiben",
   "ui.permission.toolLabel.codeSearch": "Code-Suche",
+  "ui.permission.toggleWrap": "Zeilenumbruch umschalten",
+  "ui.permission.copyCommand": "Kopieren",
   "notification.question.title": "Frage",
   "notification.question.description": "{{sessionTitle}} in {{projectName}} hat eine Frage",
   "notification.action.goToSession": "Zur Sitzung gehen",
@@ -1012,6 +1014,10 @@ export const dict = {
   "settings.agentBehaviour.removeMode.confirm":
     'Modus "{{name}}" entfernen? Dadurch wird der Modus durch Aktualisierung Ihrer Konfiguration deaktiviert.',
   "settings.agentBehaviour.removeMode.button": "Entfernen",
+  "settings.agentBehaviour.removeMcp.title": "MCP-Server entfernen",
+  "settings.agentBehaviour.removeMcp.confirm":
+    'MCP-Server "{{name}}" entfernen? Dadurch wird er aus Ihrer Konfiguration entfernt.',
+  "settings.agentBehaviour.removeMcp.button": "Entfernen",
   "settings.agentBehaviour.skillPaths": "Skill-Ordnerpfade",
   "settings.agentBehaviour.skillUrls": "Skill-URLs",
   "settings.agentBehaviour.removeSkill.title": "Skill entfernen",
@@ -1156,4 +1162,11 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} Aufgaben erledigt",
   "task.todos.allDone": "{{count}} Aufgaben erledigt",
+  "settings.saveBar.unsavedChanges": "Nicht gespeicherte Änderungen",
+  "settings.saveBar.discard": "Verwerfen",
+  "settings.saveBar.save": "Speichern",
+  "settings.saveBar.warning.one": "Eine Sitzung läuft und wird unterbrochen",
+  "settings.saveBar.warning.many": "Mehrere Sitzungen laufen und werden unterbrochen",
+  "settings.saveBar.saveAnyway": "Trotzdem speichern",
+  "settings.saveBar.cancel": "Abbrechen",
 } satisfies Partial<Record<Keys, string>>

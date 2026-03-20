@@ -137,6 +137,10 @@ html[data-theme="kilo-vscode"] {
   --button-ghost-hover: var(--vscode-toolbar-hoverBackground);
   --button-ghost-hover2: var(--vscode-toolbar-activeBackground);
 
+  /* ===== Contrast (high contrast themes only) ===== */
+  --border-contrast: var(--vscode-contrastBorder, transparent);
+  --border-contrast-active: var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
+
   /* ===== Borders ===== */
   --border-base: var(--vscode-panel-border, var(--vscode-widget-border));
   --border-hover: var(--vscode-panel-border, var(--vscode-widget-border));

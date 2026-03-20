@@ -68,6 +68,13 @@ export type EventGlobalDisposed = {
   }
 }
 
+export type EventGlobalConfigUpdated = {
+  type: "global.config.updated"
+  properties: {
+    [key: string]: unknown
+  }
+}
+
 export type EventLspClientDiagnostics = {
   type: "lsp.client.diagnostics"
   properties: {
@@ -143,7 +150,6 @@ export type UserMessage = {
     openTabs?: Array<string>
     activeFile?: string
     shell?: string
-    timezone?: string
   }
 }
 
@@ -990,6 +996,7 @@ export type Event =
   | EventServerInstanceDisposed
   | EventServerConnected
   | EventGlobalDisposed
+  | EventGlobalConfigUpdated
   | EventLspClientDiagnostics
   | EventLspUpdated
   | EventFileEdited
@@ -1068,7 +1075,7 @@ export type ServerConfig = {
   cors?: Array<string>
 }
 
-export type PermissionActionConfig = "ask" | "allow" | "deny"
+export type PermissionActionConfig = "ask" | "allow" | "deny" | null
 
 export type PermissionObjectConfig = {
   [key: string]: PermissionActionConfig
@@ -3449,7 +3456,6 @@ export type SessionPromptData = {
       openTabs?: Array<string>
       activeFile?: string
       shell?: string
-      timezone?: string
     }
     parts: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
   }
@@ -3689,7 +3695,6 @@ export type SessionPromptAsyncData = {
       openTabs?: Array<string>
       activeFile?: string
       shell?: string
-      timezone?: string
     }
     parts: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
   }
