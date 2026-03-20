@@ -3,6 +3,18 @@ import type { KiloClient, Event } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../services/cli-backend/connection-service"
 
 /**
+ * Callback that resolves the correct working directory for a session.
+ * For worktree sessions this returns the worktree path; otherwise the workspace root.
+ */
+export type DirectoryResolver = (sessionId?: string) => string
+
+/**
+ * Returns every unique directory the extension tracks
+ * (workspace root + all registered worktree paths).
+ */
+export type AllDirectories = () => string[]
+
+/**
  * Runtime auto-accept toggle for permissions.
  *
  * Mirrors the desktop app pattern (packages/app/src/context/permission.tsx):
@@ -13,6 +25,8 @@ import type { KiloConnectionService } from "../services/cli-backend/connection-s
 export function registerToggleAutoApprove(
   context: vscode.ExtensionContext,
   connectionService: KiloConnectionService,
+  resolve: DirectoryResolver,
+  directories: AllDirectories,
 ): void {
   let active = false
   // Bumped on disable to invalidate in-flight enable drains
@@ -23,7 +37,7 @@ export function registerToggleAutoApprove(
     if (event.type !== "permission.asked") return
     const client = tryGetClient(connectionService)
     if (!client) return
-    const dir = getWorkspaceDirectory()
+    const dir = resolve(event.properties.sessionID)
     client.permission.reply({ requestID: event.properties.id, directory: dir, reply: "once" }).catch((err) => {
       console.error("[Kilo New] toggleAutoApprove: failed to auto-reply:", err)
     })
@@ -39,21 +53,22 @@ export function registerToggleAutoApprove(
 
       if (active) {
         vscode.window.showInformationMessage("Auto-approve enabled")
-        // Drain any already-pending permission requests (same as desktop app's enable())
+        // Drain any already-pending permission requests across all tracked directories
         const client = tryGetClient(connectionService)
         if (client) {
-          const dir = getWorkspaceDirectory()
-          try {
-            const { data: pending } = await client.permission.list({ directory: dir }, { throwOnError: true })
-            for (const req of pending) {
-              // Bail if toggled off while draining
-              if (generation !== snapshot) break
-              await client.permission.reply({ requestID: req.id, directory: dir, reply: "once" }).catch((err) => {
-                console.error("[Kilo New] toggleAutoApprove: failed to drain pending:", err)
-              })
+          for (const dir of directories()) {
+            if (generation !== snapshot) break
+            try {
+              const { data: pending } = await client.permission.list({ directory: dir }, { throwOnError: true })
+              for (const req of pending) {
+                if (generation !== snapshot) break
+                await client.permission.reply({ requestID: req.id, directory: dir, reply: "once" }).catch((err) => {
+                  console.error("[Kilo New] toggleAutoApprove: failed to drain pending:", err)
+                })
+              }
+            } catch (err) {
+              console.error("[Kilo New] toggleAutoApprove: failed to list pending permissions:", err)
             }
-          } catch (err) {
-            console.error("[Kilo New] toggleAutoApprove: failed to list pending permissions:", err)
           }
         }
       } else {
@@ -69,9 +84,4 @@ function tryGetClient(connectionService: KiloConnectionService): KiloClient | un
   } catch {
     return undefined
   }
-}
-
-function getWorkspaceDirectory(): string {
-  const folder = vscode.workspace.workspaceFolders?.[0]
-  return folder ? folder.uri.fsPath : process.cwd()
 }

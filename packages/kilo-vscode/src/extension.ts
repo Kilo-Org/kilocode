@@ -183,7 +183,23 @@ export function activate(context: vscode.ExtensionContext) {
   registerCommitMessageService(context, connectionService)
 
   // Register toggle auto-approve shortcut (Ctrl+Alt+A / Cmd+Alt+A)
-  registerToggleAutoApprove(context, connectionService)
+  const defaultDir = () => vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd()
+  registerToggleAutoApprove(
+    context,
+    connectionService,
+    (sessionId) => {
+      if (sessionId) {
+        const dir = provider.getSessionDirectories().get(sessionId)
+        if (dir) return dir
+      }
+      return defaultDir()
+    },
+    () => {
+      const dirs = new Set([defaultDir()])
+      for (const dir of provider.getSessionDirectories().values()) dirs.add(dir)
+      return [...dirs]
+    },
+  )
 
   // Register code actions (editor context menus, terminal context menus, keyboard shortcuts)
   registerCodeActions(context, provider, agentManagerProvider)
