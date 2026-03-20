@@ -365,6 +365,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.sessionDirectories.delete(sessionId)
   }
 
+  /** Exposes the session→directory map so callers outside the webview can resolve worktree paths. */
+  public getSessionDirectories(): ReadonlyMap<string, string> {
+    return this.sessionDirectories
+  }
+
   /** Return the currently active session ID, if any. */
   public getCurrentSessionId(): string | undefined {
     return this.currentSession?.id ?? undefined

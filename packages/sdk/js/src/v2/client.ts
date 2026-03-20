@@ -23,14 +23,14 @@ export function createKiloClient(config?: Config & { directory?: string; experim
     const encodedDirectory = isNonASCII ? encodeURIComponent(config.directory) : config.directory
     config.headers = {
       ...config.headers,
-      "x-opencode-directory": encodedDirectory,
+      "x-kilo-directory": encodedDirectory,
     }
   }
 
   if (config?.experimental_workspaceID) {
     config.headers = {
       ...config.headers,
-      "x-opencode-workspace": config.experimental_workspaceID,
+      "x-kilo-workspace": config.experimental_workspaceID,
     }
   }
 

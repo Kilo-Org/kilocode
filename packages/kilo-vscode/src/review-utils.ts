@@ -20,8 +20,8 @@ export function getWorkspaceRoot(): string | undefined {
 export async function resolveLocalDiffTarget(
   gitOps: GitOps,
   log: (...args: unknown[]) => void,
+  root?: string,
 ): Promise<{ directory: string; baseBranch: string } | undefined> {
-  const root = getWorkspaceRoot()
   if (!root) {
     log("Local diff: no workspace root")
     return

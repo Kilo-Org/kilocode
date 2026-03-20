@@ -301,6 +301,11 @@
         "category": "Kilo Code"
       },
       {
+        "command": "kilo-code.new.toggleAutoApprove",
+        "title": "Toggle Auto-Approve",
+        "category": "Kilo Code"
+      },
+      {
         "command": "kilo-code.new.generateTerminalCommand",
         "title": "Generate Terminal Command",
         "category": "Kilo Code"
@@ -425,6 +430,11 @@
         "command": "kilo-code.new.focusChatInput",
         "key": "ctrl+shift+a",
         "mac": "cmd+shift+a"
+      },
+      {
+        "command": "kilo-code.new.toggleAutoApprove",
+        "key": "ctrl+alt+a",
+        "mac": "cmd+alt+a"
       },
       {
         "command": "kilo-code.new.generateTerminalCommand",
