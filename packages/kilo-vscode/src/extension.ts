@@ -199,7 +199,8 @@ export function activate(context: vscode.ExtensionContext) {
     connectionService,
     (sessionId) => {
       if (sessionId) {
-        const dir = provider.getSessionDirectories().get(sessionId)
+        const dir =
+          provider.getSessionDirectories().get(sessionId) ?? agentManagerProvider.getSessionDirectories().get(sessionId)
         if (dir) return dir
       }
       return defaultDir()
@@ -207,6 +208,7 @@ export function activate(context: vscode.ExtensionContext) {
     () => {
       const dirs = new Set([defaultDir()])
       for (const dir of provider.getSessionDirectories().values()) dirs.add(dir)
+      for (const dir of agentManagerProvider.getSessionDirectories().values()) dirs.add(dir)
       return [...dirs]
     },
   )
