@@ -10,7 +10,7 @@ import type { LegacyMigrationData, MigrationSelections } from "../../legacy-migr
 import * as MigrationService from "../../legacy-migration/migration-service"
 
 /** Subset of vscode.ExtensionContext needed by migration handlers. */
-export interface MigrationExtensionContext {
+interface MigrationExtensionContext {
   globalState: {
     get<T>(key: string): T | undefined
     get<T>(key: string, defaultValue: T): T

@@ -7,7 +7,7 @@
 
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 
-export interface QuestionContext {
+interface QuestionContext {
   readonly client: KiloClient | null
   readonly currentSessionId: string | undefined
   postMessage(msg: unknown): void

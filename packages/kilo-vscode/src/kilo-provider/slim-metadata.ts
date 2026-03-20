@@ -6,7 +6,7 @@
  */
 
 /** Strip a filediff down to path + addition/deletion counts. */
-export function slimMeta(meta: unknown): Record<string, unknown> | undefined {
+function slimMeta(meta: unknown): Record<string, unknown> | undefined {
   if (!meta || typeof meta !== "object") return undefined
 
   const obj = meta as Record<string, unknown>
