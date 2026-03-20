@@ -13,15 +13,12 @@ import type {
   Config,
 } from "@kilocode/sdk/v2/client"
 import { type KiloConnectionService, type KilocodeNotification, ServerStartupError } from "./services/cli-backend"
-import type { EditorContext, CloudSessionData } from "./services/cli-backend/types"
+import type { EditorContext } from "./services/cli-backend/types"
 import { FileIgnoreController } from "./services/autocomplete/shims/FileIgnoreController"
 import { handleChatCompletionRequest } from "./services/autocomplete/chat-autocomplete/handleChatCompletionRequest"
 import { handleChatCompletionAccepted } from "./services/autocomplete/chat-autocomplete/handleChatCompletionAccepted"
 import { buildWebviewHtml } from "./utils"
 import { TelemetryProxy, type TelemetryPropertiesProvider } from "./services/telemetry"
-// legacy-migration start
-import * as MigrationService from "./legacy-migration/migration-service"
-// legacy-migration end
 import {
   sessionToWebview,
   indexProvidersById,
@@ -30,7 +27,6 @@ import {
   mapSSEEventToWebviewMessage,
   getErrorMessage,
   isEventFromForeignProject,
-  mapCloudSessionMessageToWebviewMessage,
   loadSessions as loadSessionsUtil,
   flushPendingSessionRefresh as flushPendingSessionRefreshUtil,
   type SessionRefreshContext,
@@ -38,7 +34,36 @@ import {
 import { MarketplaceService } from "./services/marketplace"
 import { resolveProjectDirectory } from "./project-directory"
 import { getBusySessionCount, seedSessionStatuses } from "./session-status"
-import { handlePermissionResponse as handlePermissionResponseUtil, fetchPendingPermissions } from "./permission-handler"
+import { slimPart, slimParts } from "./kilo-provider/slim-metadata"
+// legacy-migration start
+import {
+  checkAndShowMigrationWizard,
+  handleRequestLegacyMigrationData,
+  handleStartLegacyMigration,
+  handleSkipLegacyMigration,
+  handleClearLegacyData,
+  type MigrationContext,
+} from "./kilo-provider/handlers/migration"
+// legacy-migration end
+import {
+  handleLogin,
+  handleLogout,
+  handleSetOrganization,
+  handleRefreshProfile,
+  type AuthContext,
+} from "./kilo-provider/handlers/auth"
+import {
+  handleRequestCloudSessions,
+  handleRequestCloudSessionData,
+  handleImportAndSend,
+  type CloudSessionContext,
+} from "./kilo-provider/handlers/cloud-session"
+import {
+  handlePermissionResponse,
+  fetchAndSendPendingPermissions,
+  type PermissionContext,
+} from "./kilo-provider/handlers/permission-handler"
+import { handleQuestionReply, handleQuestionReject } from "./kilo-provider/handlers/question"
 
 import {
   buildActionContext,
@@ -166,57 +191,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   // A session with many edits can produce multi-MB payloads serialized through
   // postMessage on every session switch. Stripping those strings down to just
   // file path + addition/deletion counts eliminates the dominant cost.
+  // Logic extracted to kilo-provider/slim-metadata.ts
 
-  private slimMeta(meta: unknown) {
-    if (!this.slimEditMetadata) return meta
-    if (!meta || typeof meta !== "object") return undefined
-
-    const obj = meta as Record<string, unknown>
-    const filediff = obj.filediff
-    if (!filediff || typeof filediff !== "object") return undefined
-
-    const diff = filediff as Record<string, unknown>
-    const file = typeof diff.file === "string" ? diff.file : undefined
-    const additions = typeof diff.additions === "number" ? diff.additions : 0
-    const deletions = typeof diff.deletions === "number" ? diff.deletions : 0
-
-    const result: Record<string, unknown> = {
-      filediff: {
-        ...(file ? { file } : {}),
-        additions,
-        deletions,
-      },
-    }
-    // Preserve diagnostics so post-edit LSP errors still render
-    if (obj.diagnostics) result.diagnostics = obj.diagnostics
-    return result
-  }
-
-  /** Strip heavy metadata from a single edit tool part; pass-through for all other part types. */
   private slimPart<T>(part: T): T {
     if (!this.slimEditMetadata) return part
-    if (!part || typeof part !== "object") return part
-
-    const obj = part as Record<string, unknown>
-    if (obj.type !== "tool" || obj.tool !== "edit") return part
-
-    const state = obj.state
-    if (!state || typeof state !== "object") return part
-
-    const next = { ...(state as Record<string, unknown>) }
-    const meta = this.slimMeta(next.metadata)
-    if (meta) next.metadata = meta
-    else delete next.metadata
-
-    return {
-      ...obj,
-      state: next,
-    } as T
+    return slimPart(part)
   }
 
   private slimParts<T>(parts: T[]) {
     if (!this.slimEditMetadata) return parts
-    return parts.map((part) => this.slimPart(part))
+    return slimParts(parts)
   }
 
   /**
@@ -280,9 +264,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Only show the migration wizard once the CLI connection is established so the
     // webview has finished loading providers/agents before we navigate to the wizard.
     if (reason === "webviewReady" && this.connectionState === "connected") {
-      void this.checkAndShowMigrationWizard()
+      void checkAndShowMigrationWizard(this.migrationCtx)
     } else if (reason === "sse-connected") {
-      void this.checkAndShowMigrationWizard()
+      void checkAndShowMigrationWizard(this.migrationCtx)
     }
     // legacy-migration end
   }
@@ -495,7 +479,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           )
           break
         case "permissionResponse":
-          await this.handlePermissionResponse(
+          await handlePermissionResponse(
+            this.permissionCtx,
             message.permissionId,
             message.sessionID,
             message.response,
@@ -522,23 +507,25 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "loadSessions":
           this.handleLoadSessions().catch((e) => console.error("[Kilo New] handleLoadSessions failed:", e))
           break
-        case "login":
-          await this.handleLogin()
+        case "login": {
+          const attempt = ++this.loginAttempt
+          await handleLogin(this.authCtx, attempt, () => this.loginAttempt)
           break
+        }
         case "cancelLogin":
           this.loginAttempt++
           this.postMessage({ type: "deviceAuthCancelled" })
           break
         case "logout":
-          await this.handleLogout()
+          await handleLogout(this.authCtx)
           break
         case "setOrganization":
           if (typeof message.organizationId === "string" || message.organizationId === null) {
-            await this.handleSetOrganization(message.organizationId)
+            await handleSetOrganization(this.authCtx, message.organizationId)
           }
           break
         case "refreshProfile":
-          await this.handleRefreshProfile()
+          await handleRefreshProfile(this.authCtx)
           break
         case "openExternal":
           if (message.url) {
@@ -602,10 +589,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.handleRemoveMcp(message.name).catch((e) => console.error("[Kilo New] handleRemoveMcp failed:", e))
           break
         case "questionReply":
-          await this.handleQuestionReply(message.requestID, message.answers)
+          await handleQuestionReply(this.questionCtx, message.requestID, message.answers)
           break
         case "questionReject":
-          await this.handleQuestionReject(message.requestID)
+          await handleQuestionReject(this.questionCtx, message.requestID)
           break
         case "requestConfig":
           this.fetchAndSendConfig().catch((e) => console.error("[Kilo New] fetchAndSendConfig failed:", e))
@@ -693,7 +680,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           )
           break
         case "requestCloudSessions":
-          await this.handleRequestCloudSessions(message)
+          await handleRequestCloudSessions(this.cloudSessionCtx, message)
           break
         case "requestGitRemoteUrl":
           void this.getGitRemoteUrl().then((url) => {
@@ -701,7 +688,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           })
           break
         case "requestCloudSessionData":
-          void this.handleRequestCloudSessionData(message.sessionId)
+          void handleRequestCloudSessionData(this.cloudSessionCtx, message.sessionId)
           break
         case "importAndSend": {
           const files = z
@@ -714,7 +701,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             .optional()
             .catch(undefined)
             .parse(message.files)
-          void this.handleImportAndSend(
+          void handleImportAndSend(
+            this.cloudSessionCtx,
             message.cloudSessionId,
             message.text,
             typeof message.messageID === "string" ? message.messageID : undefined,
@@ -758,16 +746,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         }
         // legacy-migration start
         case "requestLegacyMigrationData":
-          void this.handleRequestLegacyMigrationData()
+          void handleRequestLegacyMigrationData(this.migrationCtx)
           break
         case "startLegacyMigration":
-          void this.handleStartLegacyMigration(message.selections)
+          void handleStartLegacyMigration(this.migrationCtx, message.selections)
           break
         case "skipLegacyMigration":
-          void this.handleSkipLegacyMigration()
+          void handleSkipLegacyMigration(this.migrationCtx)
           break
         case "clearLegacyData":
-          void this.handleClearLegacyData()
+          void handleClearLegacyData(this.migrationCtx)
           break
         // legacy-migration end
         case "enhancePrompt": {
@@ -914,7 +902,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             }
             await this.syncWebviewState("sse-connected")
             await this.flushPendingSessionRefresh("sse-connected")
-            await this.fetchAndSendPendingPermissions()
+            await fetchAndSendPendingPermissions(this.permissionCtx)
           } catch (error) {
             console.error("[Kilo New] KiloProvider: ❌ Failed during connected state handling:", error)
             this.postMessage({
@@ -1103,7 +1091,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       // Recover any permission.asked events that were missed while the webview
       // was loading or during an SSE reconnection (fire-and-forget).
-      void this.fetchAndSendPendingPermissions()
+      void fetchAndSendPendingPermissions(this.permissionCtx)
     } catch (error) {
       // Silently ignore aborted requests — the user switched to a different session
       if (abort.signal.aborted) return
@@ -1714,211 +1702,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
-  /**
-   * Handle cloud sessions request from webview.
-   * Fetches sessions from the Kilo cloud API and sends them back.
-   */
-  private async handleRequestCloudSessions(message: {
-    cursor?: string
-    limit?: number
-    gitUrl?: string
-  }): Promise<void> {
-    if (!this.client) {
-      this.postMessage({
-        type: "error",
-        message: "Not connected to CLI backend",
-      })
-      return
-    }
-
-    try {
-      const result = await this.client.kilo.cloudSessions({
-        cursor: message.cursor,
-        limit: message.limit,
-        gitUrl: message.gitUrl,
-      })
-
-      this.postMessage({
-        type: "cloudSessionsLoaded",
-        sessions: result.data?.cliSessions ?? [],
-        nextCursor: result.data?.nextCursor ?? null,
-      })
-    } catch (error) {
-      console.error("[Kilo New] KiloProvider: Failed to fetch cloud sessions:", error)
-      this.postMessage({
-        type: "error",
-        message: error instanceof Error ? error.message : "Failed to fetch cloud sessions",
-      })
-    }
-  }
-
-  /**
-   * Fetch full cloud session data for read-only preview.
-   * Transforms the export data into webview message format and sends it back.
-   */
-  private async handleRequestCloudSessionData(sessionId: string): Promise<void> {
-    if (!this.client) {
-      this.postMessage({
-        type: "cloudSessionImportFailed",
-        cloudSessionId: sessionId,
-        error: "Not connected to CLI backend",
-      })
-      return
-    }
-
-    try {
-      const result = await this.client.kilo.cloud.session.get({ id: sessionId })
-      const data = result.data as CloudSessionData | undefined
-      if (!data) {
-        this.postMessage({
-          type: "cloudSessionImportFailed",
-          cloudSessionId: sessionId,
-          error: "Failed to fetch cloud session",
-        })
-        return
-      }
-
-      const messages = (data.messages ?? []).filter((m) => m.info).map(mapCloudSessionMessageToWebviewMessage)
-
-      this.postMessage({
-        type: "cloudSessionDataLoaded",
-        cloudSessionId: sessionId,
-        title: data.info.title ?? "Untitled",
-        messages,
-      })
-    } catch (err) {
-      console.error("[Kilo New] Failed to load cloud session data:", err)
-      this.postMessage({
-        type: "cloudSessionImportFailed",
-        cloudSessionId: sessionId,
-        error: err instanceof Error ? err.message : "Failed to load cloud session",
-      })
-    }
-  }
-
-  /**
-   * Import a cloud session to local storage, then send a new message on it.
-   * This is the "clone on first message" flow — the cloud session becomes a
-   * local session only when the user decides to continue it.
-   */
-  private async handleImportAndSend(
-    cloudSessionId: string,
-    text: string,
-    messageID?: string,
-    providerID?: string,
-    modelID?: string,
-    agent?: string,
-    variant?: string,
-    files?: Array<{ mime: string; url: string }>,
-    command?: string,
-    commandArgs?: string,
-  ): Promise<void> {
-    if (!this.client) {
-      this.postMessage({
-        type: "cloudSessionImportFailed",
-        cloudSessionId,
-        error: "Not connected to CLI backend",
-      })
-      return
-    }
-
-    const workspaceDir = this.getWorkspaceDirectory()
-
-    // Step 1: Import the cloud session with fresh IDs
-    let session: Session | undefined
-    try {
-      const importResult = await this.client.kilo.cloud.session.import({
-        sessionId: cloudSessionId,
-        directory: workspaceDir,
-      })
-      session = importResult.data as Session | undefined
-    } catch (error) {
-      console.error("[Kilo New] KiloProvider: ❌ Cloud session import failed:", error)
-      this.postMessage({
-        type: "cloudSessionImportFailed",
-        cloudSessionId,
-        error: getErrorMessage(error) || "Failed to import session from cloud",
-      })
-      return
-    }
-    if (!session) {
-      this.postMessage({
-        type: "cloudSessionImportFailed",
-        cloudSessionId,
-        error: "Failed to import session from cloud",
-      })
-      return
-    }
-
-    // Track the new local session
-    this.currentSession = session
-    this.trackedSessionIds.add(session.id)
-
-    // Notify webview of the import success
-    this.postMessage({
-      type: "cloudSessionImported",
-      cloudSessionId,
-      session: this.sessionToWebview(session),
-    })
-
-    // Step 2: Send the user's message/command on the new local session
-    try {
-      if (messageID) {
-        this.connectionService.recordMessageSessionId(messageID, session.id)
-      }
-
-      if (command) {
-        const fileParts = files?.map((f) => ({ type: "file" as const, mime: f.mime, url: f.url }))
-        await this.client.session.command(
-          {
-            sessionID: session.id,
-            directory: workspaceDir,
-            command,
-            arguments: commandArgs ?? "",
-            messageID,
-            model: providerID && modelID ? `${providerID}/${modelID}` : undefined,
-            agent,
-            variant,
-            parts: fileParts,
-          },
-          { throwOnError: true },
-        )
-      } else {
-        const parts: Array<TextPartInput | FilePartInput> = []
-        if (files) {
-          for (const f of files) {
-            parts.push({ type: "file", mime: f.mime, url: f.url })
-          }
-        }
-        parts.push({ type: "text", text })
-
-        const editorContext = await this.gatherEditorContext()
-        await this.client.session.promptAsync(
-          {
-            sessionID: session.id,
-            directory: workspaceDir,
-            messageID,
-            parts,
-            model: providerID && modelID ? { providerID, modelID } : undefined,
-            agent,
-            variant,
-            editorContext,
-          },
-          { throwOnError: true },
-        )
-      }
-    } catch (err) {
-      console.error("[Kilo New] Failed to send message after cloud import:", err)
-      this.postMessage({
-        type: "sendMessageFailed",
-        error: err instanceof Error ? err.message : "Failed to send message after import",
-        text,
-        sessionID: session.id,
-        messageID,
-        files,
-      })
-    }
-  }
+  // Cloud session methods extracted to kilo-provider/handlers/cloud-session.ts
 
   /**
    * Persist a dismissed notification ID in globalState and push updated lists to webview.
@@ -2268,213 +2052,65 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
-  /**
-   * Handle permission response from the webview.
-   */
-  private async handlePermissionResponse(
-    permissionId: string,
-    sessionID: string,
-    response: "once" | "always" | "reject",
-    approvedAlways: string[],
-    deniedAlways: string[],
-  ): Promise<void> {
-    if (!this.client) {
-      this.postMessage({ type: "permissionError", permissionID: permissionId })
-      return
-    }
+  // Permission + question handlers extracted to kilo-provider/handlers/permission.ts and question.ts
 
-    const targetSessionID = sessionID || this.currentSession?.id
-    if (!targetSessionID) {
-      console.error("[Kilo New] KiloProvider: No sessionID for permission response")
-      this.postMessage({ type: "permissionError", permissionID: permissionId })
-      return
-    }
-
-    try {
-      const workspaceDir = this.getWorkspaceDirectory(targetSessionID)
-      await handlePermissionResponseUtil(
-        this.client,
-        permissionId,
-        response,
-        approvedAlways,
-        deniedAlways,
-        workspaceDir,
-      )
-    } catch (error) {
-      console.error("[Kilo New] KiloProvider: Failed to respond to permission:", error)
-      this.postMessage({ type: "permissionError", permissionID: permissionId })
+  private get permissionCtx(): PermissionContext {
+    return {
+      client: this.client,
+      currentSessionId: this.currentSession?.id,
+      trackedSessionIds: this.trackedSessionIds,
+      postMessage: (msg) => this.postMessage(msg),
+      getWorkspaceDirectory: (sid) => this.getWorkspaceDirectory(sid),
     }
   }
 
-  /**
-   * Fetch all pending permissions from the backend and forward any that belong
-   * to tracked sessions to the webview.
-   */
-  private async fetchAndSendPendingPermissions(): Promise<void> {
+  private get questionCtx() {
+    return {
+      client: this.client,
+      currentSessionId: this.currentSession?.id,
+      postMessage: (msg: unknown) => this.postMessage(msg),
+      getWorkspaceDirectory: (sid?: string) => this.getWorkspaceDirectory(sid),
+    }
+  }
+
+  // Cloud session handlers extracted to kilo-provider/handlers/cloud-session.ts
+
+  private get cloudSessionCtx(): CloudSessionContext {
+    const self = this
+    return {
+      client: this.client,
+      get currentSession() {
+        return self.currentSession
+      },
+      set currentSession(session) {
+        self.currentSession = session
+      },
+      trackedSessionIds: this.trackedSessionIds,
+      connectionService: this.connectionService,
+      postMessage: (msg) => this.postMessage(msg),
+      getWorkspaceDirectory: (sid) => this.getWorkspaceDirectory(sid),
+      gatherEditorContext: () => this.gatherEditorContext(),
+    }
+  }
+
+  // Auth handlers extracted to kilo-provider/handlers/auth.ts
+
+  private get authCtx(): AuthContext {
+    return {
+      client: this.client,
+      postMessage: (msg) => this.postMessage(msg),
+      getWorkspaceDirectory: () => this.getWorkspaceDirectory(),
+      disposeGlobal: () => this.disposeGlobal(),
+      fetchAndSendProviders: () => this.fetchAndSendProviders(),
+    }
+  }
+
+  private async disposeGlobal(): Promise<void> {
     if (!this.client) return
-    try {
-      const workspaceDir = this.getWorkspaceDirectory()
-      await fetchPendingPermissions(this.client, workspaceDir, this.trackedSessionIds, (msg) => this.postMessage(msg))
-    } catch (error) {
-      console.error("[Kilo New] KiloProvider: Failed to fetch pending permissions:", error)
-    }
-  }
-
-  /**
-   * Handle question reply from the webview.
-   */
-  private async handleQuestionReply(requestID: string, answers: string[][]): Promise<void> {
-    if (!this.client) {
-      this.postMessage({ type: "questionError", requestID })
-      return
-    }
-
-    try {
-      await this.client.question.reply(
-        { requestID, answers, directory: this.getWorkspaceDirectory(this.currentSession?.id) },
-        { throwOnError: true },
-      )
-    } catch (error) {
-      console.error("[Kilo New] KiloProvider: Failed to reply to question:", error)
-      this.postMessage({ type: "questionError", requestID })
-    }
-  }
-
-  /**
-   * Handle question reject (dismiss) from the webview.
-   */
-  private async handleQuestionReject(requestID: string): Promise<void> {
-    if (!this.client) {
-      this.postMessage({ type: "questionError", requestID })
-      return
-    }
-
-    try {
-      await this.client.question.reject(
-        { requestID, directory: this.getWorkspaceDirectory(this.currentSession?.id) },
-        { throwOnError: true },
-      )
-    } catch (error) {
-      console.error("[Kilo New] KiloProvider: Failed to reject question:", error)
-      this.postMessage({ type: "questionError", requestID })
-    }
-  }
-
-  /**
-   * Handle login request from the webview.
-   * Uses the provider OAuth flow: authorize → open browser → callback (polls until complete).
-   * Sends device auth messages so the webview can display a QR code, verification code, and timer.
-   */
-  private async handleLogin(): Promise<void> {
-    if (!this.client) {
-      return
-    }
-
-    const attempt = ++this.loginAttempt
-
-    console.log("[Kilo New] KiloProvider: 🔐 Starting login flow...")
-
-    try {
-      const workspaceDir = this.getWorkspaceDirectory()
-
-      // Step 1: Initiate OAuth authorization
-      const { data: auth } = await this.client.provider.oauth.authorize(
-        { providerID: "kilo", method: 0, directory: workspaceDir },
-        { throwOnError: true },
-      )
-      console.log("[Kilo New] KiloProvider: 🔐 Got auth URL:", auth.url)
-
-      // Parse code from instructions (format: "Open URL and enter code: ABCD-1234")
-      const codeMatch = auth.instructions?.match(/code:\s*(\S+)/i)
-      const code = codeMatch ? codeMatch[1] : undefined
-
-      // The backend already opens the browser via the `open` npm package during
-      // authorize(). Calling vscode.env.openExternal() here would show a VS Code
-      // trust dialog that persists after the user completes authentication in the
-      // browser, and would open a second browser tab. The DeviceAuthCard webview
-      // provides an "Open Browser" button as a user-initiated fallback.
-
-      // Send device auth details to webview
-      this.postMessage({
-        type: "deviceAuthStarted",
-        code,
-        verificationUrl: auth.url,
-        expiresIn: 900, // 15 minutes default
-      })
-
-      // Step 3: Wait for callback (blocks until polling completes)
-      await this.client.provider.oauth.callback(
-        { providerID: "kilo", method: 0, directory: workspaceDir },
-        { throwOnError: true },
-      )
-
-      // Check if this attempt was cancelled
-      if (attempt !== this.loginAttempt) {
-        return
-      }
-
-      console.log("[Kilo New] KiloProvider: 🔐 Login successful")
-
-      await this.client.global
-        .dispose()
-        .catch((e: unknown) => console.warn("[Kilo New] KiloProvider: global.dispose() after login failed:", e))
-
-      // Step 4: Fetch profile and push to webview
-      const { data: profileData } = await this.client.kilo.profile(undefined, { throwOnError: true })
-      this.postMessage({ type: "profileData", data: profileData })
-      this.postMessage({ type: "deviceAuthComplete" })
-    } catch (error) {
-      if (attempt !== this.loginAttempt) {
-        return
-      }
-      this.postMessage({
-        type: "deviceAuthFailed",
-        error: getErrorMessage(error) || "Login failed",
-      })
-    }
-  }
-
-  /**
-   * Handle organization switch request from the webview.
-   * Persists the selection and refreshes profile + providers since both change with org context.
-   */
-  private async handleSetOrganization(organizationId: string | null): Promise<void> {
-    const sdkClient = this.client
-    if (!sdkClient) {
-      return
-    }
-
-    console.log("[Kilo New] KiloProvider: Switching organization:", organizationId ?? "personal")
-    try {
-      await sdkClient.kilo.organization.set({ organizationId }, { throwOnError: true })
-    } catch (error) {
-      console.error("[Kilo New] KiloProvider: Failed to switch organization:", error)
-      // Re-fetch current profile to reset webview state (clears switching indicator) — best-effort
-      try {
-        const profileResult = await sdkClient.kilo.profile()
-        this.postMessage({ type: "profileData", data: profileResult.data ?? null })
-      } catch (profileError) {
-        console.error("[Kilo New] KiloProvider: Failed to refresh profile after org switch error:", profileError)
-      }
-      return
-    }
 
     await this.client.global
       .dispose()
-      .catch((e: unknown) => console.warn("[Kilo New] KiloProvider: global.dispose() after org switch failed:", e))
-
-    // Org switch succeeded — refresh profile and providers independently (best-effort)
-    try {
-      const profileResult = await sdkClient.kilo.profile()
-      this.postMessage({ type: "profileData", data: profileResult.data ?? null })
-    } catch (error) {
-      console.error("[Kilo New] KiloProvider: Failed to refresh profile after org switch:", error)
-    }
-    try {
-      await this.fetchAndSendProviders()
-    } catch (error) {
-      console.error("[Kilo New] KiloProvider: Failed to refresh providers after org switch:", error)
-    }
+      .catch((e: unknown) => console.warn("[Kilo New] KiloProvider: global.dispose() failed:", e))
   }
 
   private handlePreviewImage(dataUrl: string, filename: string): void {
@@ -2537,53 +2173,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       },
       (err) => console.error("[Kilo New] KiloProvider: Failed to open file:", uri.fsPath, err),
     )
-  }
-
-  /**
-   * Handle logout request from the webview.
-   */
-  private async handleLogout(): Promise<void> {
-    if (!this.client) {
-      return
-    }
-
-    try {
-      console.log("[Kilo New] KiloProvider: 🚪 Logging out...")
-      await this.client.auth.remove({ providerID: "kilo" }, { throwOnError: true })
-      console.log("[Kilo New] KiloProvider: 🚪 Logged out successfully")
-      this.postMessage({
-        type: "profileData",
-        data: null,
-      })
-
-      await this.client.global
-        .dispose()
-        .catch((e: unknown) => console.warn("[Kilo New] KiloProvider: global.dispose() after logout failed:", e))
-
-      await this.fetchAndSendProviders()
-    } catch (error) {
-      console.error("[Kilo New] KiloProvider: ❌ Logout failed:", error)
-      this.postMessage({
-        type: "error",
-        message: getErrorMessage(error) || "Failed to logout",
-      })
-    }
-  }
-
-  /**
-   * Handle profile refresh request from the webview.
-   */
-  private async handleRefreshProfile(): Promise<void> {
-    if (!this.client) {
-      return
-    }
-
-    console.log("[Kilo New] KiloProvider: 🔄 Refreshing profile...")
-    const profileResult = await this.client.kilo.profile().catch(() => ({ data: null }))
-    this.postMessage({
-      type: "profileData",
-      data: profileResult.data ?? null,
-    })
   }
 
   /**
@@ -2933,115 +2522,28 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   // legacy-migration start -------------------------------------------------------
+  // Migration handlers extracted to kilo-provider/handlers/migration.ts
 
-  /**
-   * Checks for legacy data on first run and auto-navigates to the migration wizard
-   * if the user has not yet been prompted.
-   */
-  private async checkAndShowMigrationWizard(): Promise<void> {
-    if (!this.extensionContext) return
-    if (this.migrationCheckInFlight) return
-    const status = MigrationService.getMigrationStatus(this.extensionContext)
-    if (status) return // already prompted (skipped or completed)
-
-    this.migrationCheckInFlight = true
-    const data = await MigrationService.detectLegacyData(this.extensionContext)
-    this.migrationCheckInFlight = false
-
-    if (!data.hasData) return
-
-    // Cache so migrate() doesn't re-read from SecretStorage/disk
-    this.cachedLegacyData = data
-
-    console.log("[Kilo New] KiloProvider: 🔄 Legacy data detected, showing migration wizard")
-    this.postMessage({ type: "navigate", view: "migration" })
-    this.postMessage({
-      type: "legacyMigrationData",
-      data: {
-        providers: data.providers,
-        mcpServers: data.mcpServers,
-        customModes: data.customModes,
-        defaultModel: data.defaultModel,
-        settings: data.settings,
+  private get migrationCtx(): MigrationContext {
+    const self = this
+    return {
+      client: this.client,
+      extensionContext: this.extensionContext,
+      postMessage: (msg) => this.postMessage(msg),
+      get cachedLegacyData() {
+        return self.cachedLegacyData
       },
-    })
-  }
-
-  /** Sends the detected legacy data to the webview on explicit request. */
-  private async handleRequestLegacyMigrationData(): Promise<void> {
-    if (!this.extensionContext) return
-    const data = await MigrationService.detectLegacyData(this.extensionContext)
-    // Cache so migrate() doesn't re-read from SecretStorage/disk
-    this.cachedLegacyData = data
-    this.postMessage({
-      type: "legacyMigrationData",
-      data: {
-        providers: data.providers,
-        mcpServers: data.mcpServers,
-        customModes: data.customModes,
-        defaultModel: data.defaultModel,
-        settings: data.settings,
+      set cachedLegacyData(data) {
+        self.cachedLegacyData = data
       },
-    })
-  }
-
-  /** Runs the migration for the selected items. */
-  private async handleStartLegacyMigration(
-    selections: import("./legacy-migration/legacy-types").MigrationSelections,
-  ): Promise<void> {
-    if (!this.extensionContext || !this.client) return
-    try {
-      const results = await MigrationService.migrate(
-        this.extensionContext,
-        this.client,
-        selections,
-        (item, status, message) => {
-          this.postMessage({ type: "legacyMigrationProgress", item, status, message })
-        },
-        this.cachedLegacyData?.settings,
-      )
-
-      // Dispose all instances after migration
-      // Reloading the data will be handled once the server replies with a global.disposed event
-      await this.client.global
-        .dispose()
-        .catch((e: unknown) => console.warn("[Kilo New] KiloProvider: global.dispose() after migration failed:", e))
-
-      // Only mark as completed if at least one item succeeded — if everything failed
-      // the user can still re-run migration via Settings → About.
-      const anySuccess = results.some((r) => r.status === "success")
-
-      if (anySuccess) {
-        await MigrationService.setMigrationStatus(this.extensionContext, "completed")
-      }
-
-      this.postMessage({ type: "legacyMigrationComplete", results })
-    } catch (error) {
-      console.error("[Kilo New] KiloProvider: ❌ Migration failed", error)
-      this.postMessage({
-        type: "legacyMigrationComplete",
-        results: [
-          {
-            item: "Migration",
-            category: "settings",
-            status: "error",
-            message: error instanceof Error ? error.message : String(error),
-          },
-        ],
-      })
+      get migrationCheckInFlight() {
+        return self.migrationCheckInFlight
+      },
+      set migrationCheckInFlight(val) {
+        self.migrationCheckInFlight = val
+      },
+      disposeGlobal: () => this.disposeGlobal(),
     }
-  }
-
-  /** Records that the user skipped migration. */
-  private async handleSkipLegacyMigration(): Promise<void> {
-    if (!this.extensionContext) return
-    await MigrationService.setMigrationStatus(this.extensionContext, "skipped")
-  }
-
-  /** Clears legacy data from SecretStorage and globalState after user opts in. */
-  private async handleClearLegacyData(): Promise<void> {
-    if (!this.extensionContext) return
-    await MigrationService.clearLegacyData(this.extensionContext)
   }
 
   // legacy-migration end ---------------------------------------------------------

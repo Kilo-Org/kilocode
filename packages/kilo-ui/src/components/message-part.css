@@ -37,6 +37,59 @@
   [data-slot="message-part-title-text"] {
     flex-shrink: 0;
   }
+
+  [data-slot="message-part-meta-line"] {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    overflow: hidden;
+    white-space: nowrap;
+    min-width: 0;
+    flex-shrink: 1;
+
+    &.clickable {
+      cursor: pointer;
+      transition: color 0.15s ease;
+
+      &:hover {
+        color: var(--text-base);
+      }
+    }
+  }
+
+  [data-slot="message-part-title-filename"] {
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    direction: rtl;
+    text-align: left;
+  }
+
+  [data-slot="message-part-directory-inline"] {
+    color: var(--text-weak);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    direction: rtl;
+    text-align: left;
+    flex-shrink: 1;
+    min-width: 0;
+  }
+}
+
+/* Prevent long filenames in apply-patch accordion from hiding diff changes */
+[data-component="accordion"][data-scope="apply-patch"] {
+  [data-slot="apply-patch-filename"] {
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    direction: rtl;
+    text-align: left;
+  }
 }
 
 /* Task tool child-session tool list (v1.0.25 style) */
