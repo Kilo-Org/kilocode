@@ -1,6 +1,7 @@
 import * as vscode from "vscode"
 import { KiloProvider } from "./KiloProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
+import { VscodeHost } from "./agent-manager/vscode-host"
 import { DiffViewerProvider } from "./DiffViewerProvider"
 import { SettingsEditorProvider } from "./SettingsEditorProvider"
 import { SubAgentViewerProvider } from "./SubAgentViewerProvider"
@@ -47,14 +48,18 @@ export function activate(context: vscode.ExtensionContext) {
   )
 
   // Create Agent Manager provider for editor panel
-  const agentManagerProvider = new AgentManagerProvider(context.extensionUri, connectionService, context)
+  const agentManagerHost = new VscodeHost(context.extensionUri, connectionService, context)
+  const agentManagerProvider = new AgentManagerProvider(agentManagerHost, connectionService)
   context.subscriptions.push(agentManagerProvider)
 
   // Register serializer so Agent Manager restores when VS Code restarts
   context.subscriptions.push(
     vscode.window.registerWebviewPanelSerializer(AgentManagerProvider.viewType, {
       deserializeWebviewPanel(panel: vscode.WebviewPanel) {
-        agentManagerProvider.deserializeWebviewPanel(panel)
+        const ctx = agentManagerHost.wrapExistingPanel(panel, {
+          onBeforeMessage: (msg) => agentManagerProvider.handleMessage(msg),
+        })
+        agentManagerProvider.deserializePanel(ctx)
         return Promise.resolve()
       },
     }),
