@@ -2007,6 +2007,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         type: "error",
         message: getErrorMessage(error) || "Failed to update config",
       })
+      // Send configUpdated with the last known good config so the webview
+      // clears its saving flag and reverts optimistic state.
+      if (this.cachedConfigMessage) {
+        this.postMessage({ type: "configUpdated", config: (this.cachedConfigMessage as { config: unknown }).config })
+      }
     } finally {
       this.pending--
     }
