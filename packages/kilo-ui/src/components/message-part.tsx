@@ -419,11 +419,21 @@ export function AssistantParts(props: {
       if (part.type === "tool") return part.callID || part.id
       return part.id
     }
-    const parts = props.messages.flatMap((message) =>
-      list(data.store.part?.[message.id], emptyParts)
-        .filter((part) => renderable(part, props.showReasoningSummaries ?? true))
-        .map((part) => ({ message, part })),
-    )
+    const parts = props.messages.flatMap((message) => {
+      const filtered = list(data.store.part?.[message.id], emptyParts).filter((part) =>
+        renderable(part, props.showReasoningSummaries ?? true),
+      )
+      // Ensure reasoning parts appear before text parts within each message.
+      // During streaming the reasoning part may arrive after the text part
+      // in the store (SSE order), but visually reasoning always precedes text.
+      const reasoning: typeof filtered = []
+      const rest: typeof filtered = []
+      for (const p of filtered) {
+        if (p.type === "reasoning") reasoning.push(p)
+        else rest.push(p)
+      }
+      return [...reasoning, ...rest].map((part) => ({ message, part }))
+    })
 
     let start = -1
 
@@ -1190,6 +1200,9 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
 // store object (causing <For> to recreate the component) the new instance
 // knows the part was just streaming and can animate the collapse.
 const streamed = new Set<string>()
+// Tracks parts that have already been auto-collapsed once, so component
+// recreation (from store updates while other parts stream) won't collapse again.
+const autocollapsed = new Set<string>()
 
 // Overrides upstream flat markdown render with streaming reasoning block + auto-collapse.
 // Also filters encrypted reasoning data from OpenRouter that appears as [REDACTED].
@@ -1222,13 +1235,13 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
   const [open, setOpen] = createSignal(!done() || was)
 
   // Auto-collapse once when reasoning finishes (streaming → done transition).
-  // Uses a flag so manual reopens are not auto-closed again.
-  let collapsed = false
+  // Collapses immediately so the grid transition runs in sync with the
+  // streaming-height removal. Module-level Set prevents re-triggering on
+  // component recreation or when the user manually reopens.
   createEffect(() => {
-    if (done() && open() && !collapsed) {
-      collapsed = true
-      const timer = setTimeout(() => setOpen(false), 500)
-      onCleanup(() => clearTimeout(timer))
+    if (done() && open() && !autocollapsed.has(id)) {
+      autocollapsed.add(id)
+      setOpen(false)
     }
   })
 

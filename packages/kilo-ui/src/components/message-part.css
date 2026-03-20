@@ -246,13 +246,22 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
     }
   }
 
-  /* Collapse/expand animation via Kobalte's CSS variable */
+  /* Collapse/expand animation via Kobalte's CSS variable.
+     Uses grid trick: the outer wrapper transitions grid-template-rows
+     between 0fr (collapsed) and 1fr (expanded) so the content smoothly
+     collapses without needing to know the pixel height up front. */
   [data-slot="collapsible-content"] {
-    animation: slideUp 300ms ease-out forwards;
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 250ms ease-out;
     overflow: hidden;
 
+    > * {
+      overflow: hidden;
+    }
+
     &[data-expanded] {
-      animation: slideDown 200ms ease-out forwards;
+      grid-template-rows: 1fr;
     }
   }
 
