@@ -529,4 +529,94 @@ describe("saveAlwaysRules", () => {
       },
     })
   })
+
+  test("multi-pattern: auto-resolves when new rule covers blocking pattern and ruleset covers the rest", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        // Subagent B has "git status && npm install" — two patterns.
+        // Its ruleset already allows "npm install" but "git status" is "ask".
+        const askB = PermissionNext.ask({
+          id: "permission_multi_b",
+          sessionID: "session_b",
+          permission: "bash",
+          patterns: ["git status", "npm install"],
+          metadata: {},
+          always: [],
+          ruleset: [
+            { permission: "bash", pattern: "*", action: "ask" },
+            { permission: "bash", pattern: "npm install", action: "allow" },
+          ],
+        })
+
+        // Subagent A gets "git status" approved
+        const askA = PermissionNext.ask({
+          id: "permission_multi_a",
+          sessionID: "session_a",
+          permission: "bash",
+          patterns: ["git status"],
+          metadata: { rules: ["git *"] },
+          always: ["git *"],
+          ruleset: [{ permission: "bash", pattern: "*", action: "ask" }],
+        })
+
+        // User approves "git *" on subagent A
+        await PermissionNext.saveAlwaysRules({
+          requestID: "permission_multi_a",
+          approvedAlways: ["git *"],
+        })
+        await PermissionNext.reply({ requestID: "permission_multi_a", reply: "once" })
+
+        // B should auto-resolve: "git status" covered by new rule, "npm install" covered by original ruleset
+        await expect(askA).resolves.toBeUndefined()
+        await expect(askB).resolves.toBeUndefined()
+      },
+    })
+  })
+
+  test("multi-pattern: stays pending when new rule covers one pattern but ruleset doesn't cover the other", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        // Subagent B has "git status && curl http://evil.com" — two patterns.
+        // Neither is allowed by the ruleset.
+        const askB = PermissionNext.ask({
+          id: "permission_multi_b2",
+          sessionID: "session_b",
+          permission: "bash",
+          patterns: ["git status", "curl http://evil.com"],
+          metadata: {},
+          always: [],
+          ruleset: [{ permission: "bash", pattern: "*", action: "ask" }],
+        })
+
+        const askA = PermissionNext.ask({
+          id: "permission_multi_a2",
+          sessionID: "session_a",
+          permission: "bash",
+          patterns: ["git status"],
+          metadata: { rules: ["git *"] },
+          always: ["git *"],
+          ruleset: [{ permission: "bash", pattern: "*", action: "ask" }],
+        })
+
+        // User approves "git *" — covers "git status" but NOT "curl"
+        await PermissionNext.saveAlwaysRules({
+          requestID: "permission_multi_a2",
+          approvedAlways: ["git *"],
+        })
+        await PermissionNext.reply({ requestID: "permission_multi_a2", reply: "once" })
+        await expect(askA).resolves.toBeUndefined()
+
+        // B should still be pending (curl not covered)
+        const pending = await PermissionNext.list()
+        expect(pending.some((p) => p.id === "permission_multi_b2")).toBe(true)
+
+        await PermissionNext.reply({ requestID: "permission_multi_b2", reply: "reject" })
+        await expect(askB).rejects.toBeInstanceOf(PermissionNext.RejectedError)
+      },
+    })
+  })
 })

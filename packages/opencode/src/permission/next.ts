@@ -168,6 +168,7 @@ export namespace PermissionNext {
       string,
       {
         info: Request
+        ruleset: Ruleset // kilocode_change — preserve original ruleset for drainCovered
         resolve: () => void
         reject: (e: any) => void
       }
@@ -200,6 +201,7 @@ export namespace PermissionNext {
             }
             s.pending[id] = {
               info,
+              ruleset, // kilocode_change — preserve for drainCovered
               resolve,
               reject,
             }
@@ -223,7 +225,7 @@ export namespace PermissionNext {
     for (const [id, pending] of Object.entries(s.pending)) {
       if (id === exclude) continue
       const actions = pending.info.patterns.map((pattern) =>
-        evaluate(pending.info.permission, pattern, s.approved),
+        evaluate(pending.info.permission, pattern, pending.ruleset, s.approved),
       )
       const denied = actions.some((r) => r.action === "deny")
       const allowed = !denied && actions.every((r) => r.action === "allow")
@@ -334,7 +336,7 @@ export namespace PermissionNext {
         for (const [id, pending] of Object.entries(s.pending)) {
           if (pending.info.sessionID !== sessionID) continue
           const ok = pending.info.patterns.every(
-            (pattern) => evaluate(pending.info.permission, pattern, s.approved).action === "allow",
+            (pattern) => evaluate(pending.info.permission, pattern, pending.ruleset, s.approved).action === "allow", // kilocode_change — include original ruleset
           )
           if (!ok) continue
           delete s.pending[id]
