@@ -204,7 +204,10 @@ const ConfigWrapper: ParentComponent<{ config?: Config }> = (props) => {
     const value = {
       config: () => props.config!,
       loading: () => false,
+      isDirty: () => false,
       updateConfig: noop,
+      saveConfig: noop,
+      discardConfig: noop,
     }
     return <ConfigContext.Provider value={value}>{props.children}</ConfigContext.Provider>
   }

@@ -1,9 +1,9 @@
 import { createMemo, createSignal, For, onMount } from "solid-js"
 import type { ToolPart } from "@kilocode/sdk/v2"
 import { getFilename } from "@opencode-ai/util/path"
+import { useReducedMotion } from "../hooks/use-reduced-motion"
 import { useI18n } from "../context/i18n"
-import { prefersReducedMotion } from "../hooks/use-reduced-motion"
-import { ToolCall } from "./basic-tool"
+import { BasicTool } from "./basic-tool"
 import { ToolStatusTitle } from "./tool-status-title"
 import { AnimatedCountList } from "./tool-count-summary"
 import { RollingResults } from "./rolling-results"
@@ -55,14 +55,10 @@ export function ContextToolGroupHeader(props: {
   const i18n = useI18n()
   const summary = createMemo(() => contextToolSummary(props.parts))
   return (
-    <ToolCall
-      variant="row"
+    <BasicTool
+      hideDetails
       icon="magnifying-glass-menu"
-      open={!props.pending && props.open}
-      showArrow={!props.pending}
-      onOpenChange={(v) => {
-        if (!props.pending) props.onOpenChange(v)
-      }}
+      forceOpen={props.open}
       trigger={
         <div data-component="context-tool-group-trigger" data-pending={props.pending || undefined}>
           <span
@@ -149,10 +145,10 @@ export function ContextToolExpandedList(props: { parts: ToolPart[]; expanded: bo
 }
 
 export function ContextToolRollingResults(props: { parts: ToolPart[]; pending: boolean }) {
+  const reduce = useReducedMotion()
   const wiped = new Set<string>()
   const [mounted, setMounted] = createSignal(false)
   onMount(() => setMounted(true))
-  const reduce = prefersReducedMotion
   const show = () => mounted() && props.pending
   const opacity = useSpring(() => (show() ? 1 : 0), GROW_SPRING)
   const blur = useSpring(() => (show() ? 0 : 2), GROW_SPRING)

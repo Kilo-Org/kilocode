@@ -18,6 +18,7 @@ import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import { useConfig } from "../../context/config"
 import { describePatterns, resolveLabel, savedRuleStates, type RuleDecision } from "./permission-dock-utils"
+import { PermissionCommand } from "./PermissionCommand"
 import type { PermissionRequest } from "../../types/messages"
 
 let rulesExpandedPreference = false
@@ -178,7 +179,7 @@ export const PermissionDock: Component<{
         </Show>
       }
     >
-      <Show when={command()}>{(cmd) => <code data-slot="permission-command">{cmd()}</code>}</Show>
+      <Show when={command()}>{(cmd) => <PermissionCommand command={cmd()} />}</Show>
 
       {(() => {
         const desc = description()

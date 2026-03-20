@@ -467,6 +467,8 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "读取待办",
   "ui.permission.toolLabel.todoWrite": "更新待办",
   "ui.permission.toolLabel.codeSearch": "代码搜索",
+  "ui.permission.toggleWrap": "切换自动换行",
+  "ui.permission.copyCommand": "复制",
   "notification.question.title": "问题",
   "notification.question.description": "{{sessionTitle}}（{{projectName}}）有一个问题",
   "notification.action.goToSession": "前往会话",
@@ -1156,4 +1158,11 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} 个待办已完成",
   "task.todos.allDone": "{{count}} 个待办已完成",
+  "settings.saveBar.unsavedChanges": "未保存的更改",
+  "settings.saveBar.discard": "放弃",
+  "settings.saveBar.save": "保存",
+  "settings.saveBar.warning.one": "一个会话正在运行，将被中断",
+  "settings.saveBar.warning.many": "多个会话正在运行，将被中断",
+  "settings.saveBar.saveAnyway": "仍然保存",
+  "settings.saveBar.cancel": "取消",
 } satisfies Partial<Record<Keys, string>>

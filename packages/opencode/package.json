@@ -88,6 +88,7 @@
     "@kilocode/plugin": "workspace:*",
     "@kilocode/sdk": "workspace:*",
     "@modelcontextprotocol/sdk": "1.25.2",
+    "@morphllm/morphsdk": "0.2.148",
     "@octokit/graphql": "9.0.2",
     "@octokit/rest": "catalog:",
     "@openauthjs/openauth": "catalog:",
@@ -137,8 +138,7 @@
     "xdg-basedir": "5.1.0",
     "yargs": "18.0.0",
     "zod": "catalog:",
-    "zod-to-json-schema": "3.24.5",
-    "@morphllm/morphsdk": "0.2.148"
+    "zod-to-json-schema": "3.24.5"
   },
   "overrides": {
     "drizzle-orm": "1.0.0-beta.16-ea816b6"

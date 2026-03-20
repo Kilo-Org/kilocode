@@ -476,6 +476,8 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Les gjøremål",
   "ui.permission.toolLabel.todoWrite": "Skriv gjøremål",
   "ui.permission.toolLabel.codeSearch": "Kodesøk",
+  "ui.permission.toggleWrap": "Veksle tekstbryting",
+  "ui.permission.copyCommand": "Kopier",
   "notification.question.title": "Spørsmål",
   "notification.question.description": "{{sessionTitle}} i {{projectName}} har et spørsmål",
   "notification.action.goToSession": "Gå til sesjon",
@@ -1186,4 +1188,11 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} oppgaver fullført",
   "task.todos.allDone": "{{count}} oppgaver fullført",
+  "settings.saveBar.unsavedChanges": "Ulagrede endringer",
+  "settings.saveBar.discard": "Forkast",
+  "settings.saveBar.save": "Lagre",
+  "settings.saveBar.warning.one": "En økt kjører og vil bli avbrutt",
+  "settings.saveBar.warning.many": "Flere økter kjører og vil bli avbrutt",
+  "settings.saveBar.saveAnyway": "Lagre uansett",
+  "settings.saveBar.cancel": "Avbryt",
 } satisfies Partial<Record<Keys, string>>

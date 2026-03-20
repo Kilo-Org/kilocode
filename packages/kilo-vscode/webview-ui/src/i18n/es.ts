@@ -475,6 +475,8 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Leer Todo",
   "ui.permission.toolLabel.todoWrite": "Escribir Todo",
   "ui.permission.toolLabel.codeSearch": "Búsqueda de Código",
+  "ui.permission.toggleWrap": "Alternar ajuste de línea",
+  "ui.permission.copyCommand": "Copiar",
   "notification.question.title": "Pregunta",
   "notification.question.description": "{{sessionTitle}} en {{projectName}} tiene una pregunta",
   "notification.action.goToSession": "Ir a sesión",
@@ -1199,4 +1201,11 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} tareas completadas",
   "task.todos.allDone": "{{count}} tareas completadas",
+  "settings.saveBar.unsavedChanges": "Cambios sin guardar",
+  "settings.saveBar.discard": "Descartar",
+  "settings.saveBar.save": "Guardar",
+  "settings.saveBar.warning.one": "Una sesión está en ejecución y se interrumpirá",
+  "settings.saveBar.warning.many": "Varias sesiones están en ejecución y se interrumpirán",
+  "settings.saveBar.saveAnyway": "Guardar de todas formas",
+  "settings.saveBar.cancel": "Cancelar",
 }

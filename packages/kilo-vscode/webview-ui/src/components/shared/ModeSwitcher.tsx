@@ -28,6 +28,8 @@ export interface ModeSwitcherBaseProps {
 
 export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
   const [open, setOpen] = createSignal(false)
+  const [focused, setFocused] = createSignal(-1)
+  let listRef: HTMLDivElement | undefined
 
   // Listen for slash command trigger
   const onTrigger = () => setOpen(true)
@@ -39,6 +41,43 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
   function pick(name: string) {
     props.onSelect(name)
     setOpen(false)
+  }
+
+  function focusItem(idx: number) {
+    const items = listRef?.querySelectorAll<HTMLElement>("[role=option]")
+    if (!items) return
+    const clamped = Math.max(0, Math.min(idx, items.length - 1))
+    setFocused(clamped)
+    items[clamped]?.focus()
+  }
+
+  function onOpen(val: boolean) {
+    setOpen(val)
+    if (val) {
+      const idx = props.agents.findIndex((a) => a.name === props.value)
+      requestAnimationFrame(() => focusItem(idx >= 0 ? idx : 0))
+    }
+  }
+
+  function onKeyDown(e: KeyboardEvent) {
+    const len = props.agents.length
+    const cur = focused()
+    if (e.key === "ArrowDown") {
+      e.preventDefault()
+      focusItem((cur + 1) % len)
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault()
+      focusItem((cur - 1 + len) % len)
+    } else if (e.key === "Home") {
+      e.preventDefault()
+      focusItem(0)
+    } else if (e.key === "End") {
+      e.preventDefault()
+      focusItem(len - 1)
+    } else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault()
+      if (cur >= 0 && cur < len) pick(props.agents[cur].name)
+    }
   }
 
   const triggerLabel = () => {
@@ -55,7 +94,7 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
         placement="top-start"
         fitViewport
         open={open()}
-        onOpenChange={setOpen}
+        onOpenChange={onOpen}
         triggerAs={Button}
         triggerProps={{ variant: "ghost", size: "small" }}
         trigger={
@@ -67,14 +106,16 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
           </>
         }
       >
-        <div class="mode-switcher-list" role="listbox">
+        <div class="mode-switcher-list" role="listbox" ref={listRef} onKeyDown={onKeyDown}>
           <For each={props.agents}>
-            {(agent) => (
+            {(agent, i) => (
               <div
                 class={`mode-switcher-item${agent.name === props.value ? " selected" : ""}`}
                 role="option"
                 aria-selected={agent.name === props.value}
+                tabindex={focused() === i() ? 0 : -1}
                 onClick={() => pick(agent.name)}
+                onFocus={() => setFocused(i())}
               >
                 <span class="mode-switcher-item-name">{agent.name.charAt(0).toUpperCase() + agent.name.slice(1)}</span>
                 <Show when={agent.description}>

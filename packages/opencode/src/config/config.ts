@@ -82,7 +82,9 @@ export namespace Config {
     return merged
   }
 
-  export const state = Instance.state(async () => {
+  // kilocode_change start — capture init so resetState() can invalidate the cache entry
+  const stateInit = async () => {
+    // kilocode_change end
     const auth = await Auth.all()
 
     // This ensures Opencode native configs always take precedence over legacy Kilocode configs
@@ -339,7 +341,10 @@ export namespace Config {
       directories,
       deps,
     }
-  })
+  }
+  // kilocode_change start — create state from named init so resetState() can invalidate it
+  export const state = Instance.state(stateInit)
+  // kilocode_change end
 
   export async function waitForDependencies() {
     const deps = await state().then((x) => x.deps)
@@ -699,7 +704,8 @@ export namespace Config {
   export const Mcp = z.discriminatedUnion("type", [McpLocal, McpRemote])
   export type Mcp = z.infer<typeof Mcp>
 
-  export const PermissionAction = z.enum(["ask", "allow", "deny"]).meta({
+  export const PermissionAction = z.enum(["ask", "allow", "deny"]).nullable().meta({
+    // kilocode_change - nullable allows null as a delete sentinel
     ref: "PermissionActionConfig",
   })
   export type PermissionAction = z.infer<typeof PermissionAction>
@@ -1590,9 +1596,24 @@ export namespace Config {
     // kilocode_change start — skip dispose when caller opts out (e.g. permission-only saves)
     await global.reset()
 
-    if (!dispose) return next;
-    // kilocode_change end
+    if (!dispose) {
+      // Reset Config.state for all instances so the next Config.get() call re-reads
+      // from disk and re-merges all layers (global + project + workspace) in the
+      // correct precedence order. This avoids the stale-cache problem without the
+      // precedence bug that would occur if we merged the global patch directly into
+      // the already-resolved config (which includes project overrides).
+      Instance.resetStateEntry(stateInit)
 
+      GlobalBus.emit("event", {
+        directory: "global",
+        payload: {
+          type: Event.ConfigUpdated.type,
+          properties: {},
+        },
+      })
+      return next
+    }
+    // kilocode_change end
 
     void Instance.disposeAll()
       .catch(() => undefined)
@@ -1605,7 +1626,6 @@ export namespace Config {
           },
         })
       })
-
 
     return next
   }
