@@ -104,13 +104,23 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
     }
 
     window.addEventListener("keydown", onKeyDown, true)
-    window.addEventListener("pointerdown", onPointerDown, true)
-    window.addEventListener("focusin", onFocusIn, true)
+
+    // Defer pointer/focus listeners so the portal content has time to mount
+    // and contentRef is assigned. Without this, autofocus or modal focus-trap
+    // events fire before the ref exists, causing the popover to immediately close.
+    const pending = {
+      id: requestAnimationFrame(() => {
+        pending.id = 0
+        window.addEventListener("pointerdown", onPointerDown, true)
+        window.addEventListener("focusin", onFocusIn, true)
+      }),
+    }
 
     onCleanup(() => {
       window.removeEventListener("keydown", onKeyDown, true)
       window.removeEventListener("pointerdown", onPointerDown, true)
       window.removeEventListener("focusin", onFocusIn, true)
+      if (pending.id) cancelAnimationFrame(pending.id)
     })
   })
 
