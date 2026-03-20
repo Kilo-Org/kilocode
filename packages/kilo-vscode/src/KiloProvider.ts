@@ -69,7 +69,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /** Cached notificationsLoaded payload */
   private cachedNotificationsMessage: unknown = null
   private pendingReviewComments: unknown[][] = []
-
+  private readyResolvers: (() => void)[] = []
   private trackedSessionIds: Set<string> = new Set()
   private syncedChildSessions: Set<string> = new Set()
   /** Tracks the latest status for each session, used to warn before destructive config operations. */
@@ -410,6 +410,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.isWebviewReady = true
           await this.syncWebviewState("webviewReady")
           this.flushPendingReviewComments()
+          this.readyResolvers.splice(0).forEach((r) => r())
           break
         case "sendMessage": {
           const files = z
@@ -2678,10 +2679,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
   }
 
-  /**
-   * Post a message to the webview.
-   * Public so toolbar button commands can send messages.
-   */
+  /** Wait until the webview has sent "webviewReady". Resolves immediately when already ready. */
+  public waitForReady(): Promise<void> {
+    return this.isWebviewReady && this.webview ? Promise.resolve() : new Promise((r) => this.readyResolvers.push(r))
+  }
+  /** Post a message to the webview. Public so toolbar button commands can send messages. */
   public postMessage(message: unknown): void {
     if (!this.webview) {
       const type =

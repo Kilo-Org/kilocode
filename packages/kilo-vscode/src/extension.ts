@@ -110,6 +110,7 @@ export function activate(context: vscode.ExtensionContext) {
       })
       if (!input) return
       await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
+      await provider.waitForReady()
       provider.postMessage({ type: "triggerTask", text: `Generate a terminal command: ${input}` })
     }),
     vscode.commands.registerCommand("kilo-code.new.openInTab", () => {
