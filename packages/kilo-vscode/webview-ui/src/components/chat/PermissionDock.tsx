@@ -108,9 +108,11 @@ export const PermissionDock: Component<{
   const focusPrompt = () => requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
 
   const onRoot = (e: KeyboardEvent) => {
-    // Ignore key events from interactive elements inside the rules section
+    // Only handle shortcuts when focus is on the dock wrapper itself.
+    // Skip buttons (toggle/expand controls), inputs, and textareas so
+    // Enter activates the focused control instead of approving the permission.
     const tag = (e.target as HTMLElement).tagName
-    if (tag === "INPUT" || tag === "TEXTAREA") return
+    if (tag === "BUTTON" || tag === "INPUT" || tag === "TEXTAREA") return
 
     if (e.key === "Escape") {
       e.preventDefault()
