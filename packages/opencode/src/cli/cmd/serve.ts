@@ -17,12 +17,13 @@ async function ensureAppBuilt() {
   console.log("Building web UI...")
   try {
     const bunPath = process.env.BUN_INSTALL?.concat("/bin/bun") || "/root/.bun/bin/bun"
-    const { exitCode } = await Bun.spawn({
+    const proc = Bun.spawn({
       cmd: [bunPath, "run", "build"],
       cwd: resolve(fileURLToPath(new URL("../../../app", import.meta.url))),
       stdout: "inherit",
       stderr: "inherit",
     })
+    const exitCode = await proc.exited
     if (exitCode !== 0) {
       console.log("Warning: Web UI build failed. Server will start but web UI may not be available.")
       return
