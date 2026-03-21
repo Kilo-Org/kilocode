@@ -525,7 +525,7 @@ export async function seedSessionTask(
     `Use this JSON input: ${JSON.stringify({
       description: input.description,
       prompt: input.prompt,
-      subagent_type: input.subagentType ?? "general",
+      subagent_type: input.subagentType ?? "code",
     })}`,
     "Do not output plain text.",
     "Wait for the task to start and return the child session id.",

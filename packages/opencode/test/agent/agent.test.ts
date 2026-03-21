@@ -23,8 +23,7 @@ test("returns default native agents when no config", async () => {
       expect(names).toContain("debug") // kilocode_change
       expect(names).toContain("orchestrator") // kilocode_change
       expect(names).toContain("ask") // kilocode_change
-      expect(names).toContain("general")
-      expect(names).toContain("explore")
+      expect(names).toContain("architect") // kilocode_change
       expect(names).toContain("compaction")
       expect(names).toContain("title")
       expect(names).toContain("summary")
@@ -40,7 +39,7 @@ test("code agent has correct default properties", async () => {
     fn: async () => {
       const code = await Agent.get("code")
       expect(code).toBeDefined()
-      expect(code?.mode).toBe("primary")
+      expect(code?.mode).toBe("all")
       expect(code?.native).toBe(true)
       expect(evalPerm(code, "edit")).toBe("allow")
       expect(evalPerm(code, "bash")).toBe("allow")
@@ -57,7 +56,7 @@ test("ask agent has correct default properties", async () => {
     fn: async () => {
       const ask = await Agent.get("ask")
       expect(ask).toBeDefined()
-      expect(ask?.mode).toBe("primary")
+      expect(ask?.mode).toBe("all")
       expect(ask?.native).toBe(true)
       // ask agent should allow read-only tools
       expect(evalPerm(ask, "read")).toBe("allow")
@@ -128,50 +127,72 @@ test("plan agent denies edits except .kilo/plans/* and .opencode/plans/*", async
 })
 // kilocode_change end
 
-test("explore agent denies edit and write", async () => {
+test("ask agent denies edit and write", async () => {
   await using tmp = await tmpdir()
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      const explore = await Agent.get("explore")
-      expect(explore).toBeDefined()
-      expect(explore?.mode).toBe("subagent")
-      expect(evalPerm(explore, "edit")).toBe("deny")
-      expect(evalPerm(explore, "write")).toBe("deny")
-      expect(evalPerm(explore, "todoread")).toBe("deny")
-      expect(evalPerm(explore, "todowrite")).toBe("deny")
+      const ask = await Agent.get("ask")
+      expect(ask).toBeDefined()
+      expect(ask?.mode).toBe("all")
+      expect(evalPerm(ask, "edit")).toBe("deny")
+      expect(evalPerm(ask, "write")).toBe("deny")
     },
   })
 })
 
-test("explore agent asks for external directories and allows Truncate.GLOB", async () => {
+test("ask agent gates external directories and allows Truncate.GLOB", async () => {
   const { Truncate } = await import("../../src/tool/truncation")
   await using tmp = await tmpdir()
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      const explore = await Agent.get("explore")
-      expect(explore).toBeDefined()
-      expect(PermissionNext.evaluate("external_directory", "/some/other/path", explore!.permission).action).toBe("ask")
-      expect(PermissionNext.evaluate("external_directory", Truncate.GLOB, explore!.permission).action).toBe("allow")
+      const ask = await Agent.get("ask")
+      expect(ask).toBeDefined()
+      // ask agent should deny arbitrary external paths (its deny+allowlist denies by default)
+      expect(PermissionNext.evaluate("external_directory", "/some/other/path", ask!.permission).action).toBe("deny")
+      expect(PermissionNext.evaluate("external_directory", Truncate.GLOB, ask!.permission).action).toBe("allow")
     },
   })
 })
 
-test("general agent denies todo tools", async () => {
+// kilocode_change start - architect agent tests
+test("architect agent is hidden subagent with read-only permissions", async () => {
   await using tmp = await tmpdir()
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      const general = await Agent.get("general")
-      expect(general).toBeDefined()
-      expect(general?.mode).toBe("subagent")
-      expect(general?.hidden).toBeUndefined()
-      expect(evalPerm(general, "todoread")).toBe("deny")
-      expect(evalPerm(general, "todowrite")).toBe("deny")
+      const architect = await Agent.get("architect")
+      expect(architect).toBeDefined()
+      expect(architect?.mode).toBe("subagent")
+      expect(architect?.hidden).toBe(true)
+      expect(architect?.native).toBe(true)
+      // read-only: denies mutating tools
+      expect(evalPerm(architect, "edit")).toBe("deny")
+      expect(evalPerm(architect, "write")).toBe("deny")
+      expect(evalPerm(architect, "bash")).toBe("deny")
+      // allows research tools
+      expect(evalPerm(architect, "read")).toBe("allow")
+      expect(evalPerm(architect, "grep")).toBe("allow")
+      expect(evalPerm(architect, "glob")).toBe("allow")
+      expect(evalPerm(architect, "webfetch")).toBe("allow")
     },
   })
 })
+
+test("architect agent does not appear in task tool agent list", async () => {
+  await using tmp = await tmpdir()
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const agents = await Agent.list()
+      const visible = agents.filter((a) => !a.hidden)
+      const names = visible.map((a) => a.name)
+      expect(names).not.toContain("architect")
+    },
+  })
+})
+// kilocode_change end
 
 test("compaction agent denies all permissions", async () => {
   await using tmp = await tmpdir()
@@ -253,18 +274,18 @@ test("agent disable removes agent from list", async () => {
   await using tmp = await tmpdir({
     config: {
       agent: {
-        explore: { disable: true },
+        debug: { disable: true },
       },
     },
   })
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      const explore = await Agent.get("explore")
-      expect(explore).toBeUndefined()
+      const debug = await Agent.get("debug")
+      expect(debug).toBeUndefined()
       const agents = await Agent.list()
       const names = agents.map((a) => a.name)
-      expect(names).not.toContain("explore")
+      expect(names).not.toContain("debug")
     },
   })
 })
@@ -346,15 +367,15 @@ test("agent mode can be overridden", async () => {
   await using tmp = await tmpdir({
     config: {
       agent: {
-        explore: { mode: "primary" },
+        code: { mode: "primary" },
       },
     },
   })
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      const explore = await Agent.get("explore")
-      expect(explore?.mode).toBe("primary")
+      const code = await Agent.get("code")
+      expect(code?.mode).toBe("primary")
     },
   })
 })
@@ -724,13 +745,19 @@ test("defaultAgent respects default_agent config set to custom agent with mode a
 test("defaultAgent throws when default_agent points to subagent", async () => {
   await using tmp = await tmpdir({
     config: {
-      default_agent: "explore",
+      default_agent: "my_subagent",
+      agent: {
+        my_subagent: {
+          description: "Test subagent",
+          mode: "subagent",
+        },
+      },
     },
   })
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      await expect(Agent.defaultAgent()).rejects.toThrow('default agent "explore" is a subagent')
+      await expect(Agent.defaultAgent()).rejects.toThrow('default agent "my_subagent" is a subagent')
     },
   })
 })

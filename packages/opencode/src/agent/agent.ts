@@ -9,9 +9,9 @@ import { Auth } from "../auth"
 import { ProviderTransform } from "../provider/transform"
 
 import PROMPT_GENERATE from "./generate.txt"
+import PROMPT_ARCHITECT from "./prompt/architect.txt"
 import PROMPT_COMPACTION from "./prompt/compaction.txt"
 import PROMPT_DEBUG from "./prompt/debug.txt"
-import PROMPT_EXPLORE from "./prompt/explore.txt"
 import PROMPT_ASK from "./prompt/ask.txt"
 import PROMPT_ORCHESTRATOR from "./prompt/orchestrator.txt"
 import PROMPT_SUMMARY from "./prompt/summary.txt"
@@ -96,7 +96,7 @@ export namespace Agent {
           }),
           user,
         ),
-        mode: "primary",
+        mode: "all",
         native: true,
       },
       plan: {
@@ -137,7 +137,7 @@ export namespace Agent {
           }),
           user,
         ),
-        mode: "primary",
+        mode: "all",
         native: true,
       },
       orchestrator: {
@@ -200,56 +200,44 @@ export namespace Agent {
             },
           }),
         ),
-        mode: "primary",
+        mode: "all",
         native: true,
       },
       // kilocode_change end
-      general: {
-        name: "general",
-        description: `General-purpose agent for researching complex questions and executing multi-step tasks. Use this agent to execute multiple units of work in parallel.`,
-        permission: PermissionNext.merge(
-          defaults,
-          PermissionNext.fromConfig({
-            todoread: "deny",
-            todowrite: "deny",
-          }),
-          user,
-        ),
+      // kilocode_change start - hidden architect subagent for automated design phases
+      architect: {
+        name: "architect",
+        description:
+          "Analyze the codebase and produce a detailed implementation plan. Read-only — does not write code.",
+        prompt: PROMPT_ARCHITECT,
         options: {},
-        mode: "subagent",
-        native: true,
-      },
-      explore: {
-        name: "explore",
         permission: PermissionNext.merge(
           defaults,
           PermissionNext.fromConfig({
             "*": "deny",
+            read: {
+              "*": "allow",
+              "*.env": "ask",
+              "*.env.*": "ask",
+              "*.env.example": "allow",
+            },
             grep: "allow",
             glob: "allow",
             list: "allow",
-            bash: "allow",
             webfetch: "allow",
             websearch: "allow",
             codesearch: "allow",
-            codebase_search: "allow", // kilocode_change
-            read: "allow",
+            codebase_search: "allow",
             external_directory: {
-              "*": "ask",
-              ...Object.fromEntries(whitelistedDirs.map((dir) => [dir, "allow"])),
+              [Truncate.GLOB]: "allow",
             },
           }),
-          user,
         ),
-        description: `Fast agent specialized for exploring codebases. Use this when you need to quickly find files by patterns (eg. "src/components/**/*.tsx"), search code for keywords (eg. "API endpoints"), or answer questions about the codebase (eg. "how do API endpoints work?"). When calling this agent, specify the desired thoroughness level: "quick" for basic searches, "medium" for moderate exploration, or "very thorough" for comprehensive analysis across multiple locations and naming conventions.`,
-        // kilocode_change - only advertise codebase_search when the experimental flag is on
-        prompt: cfg.experimental?.codebase_search
-          ? `Prefer using the codebase_search tool for codebase searches — it performs intelligent multi-step code search and returns the most relevant code spans.\n\n${PROMPT_EXPLORE}`
-          : PROMPT_EXPLORE,
-        options: {},
         mode: "subagent",
         native: true,
+        hidden: true,
       },
+      // kilocode_change end
       compaction: {
         name: "compaction",
         mode: "primary",

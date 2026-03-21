@@ -19,11 +19,11 @@ You should build your plan incrementally by writing to or editing this file. NOT
 
 ### Phase 1: Initial Understanding
 
-**Goal:** Gain a comprehensive understanding of the user's request by reading through code and asking them questions. Critical: In this phase you should only use the Explore subagent type.
+**Goal:** Gain a comprehensive understanding of the user's request by reading through code and asking them questions. Critical: In this phase you should only use the ask subagent type.
 
 1. Understand the user's request thoroughly
 
-2. **Launch up to 3 Explore agents IN PARALLEL** (single message, multiple tool calls) to efficiently explore the codebase. Each agent can focus on different aspects:
+2. **Launch up to 3 ask agents IN PARALLEL** (single message, multiple tool calls) to efficiently explore the codebase. Each agent can focus on different aspects:
    - Example: One agent searches for existing implementations, another explores related components, a third investigates testing patterns
    - Provide each agent with a specific search focus or area to explore
    - Quality over quantity - 3 agents maximum, but you should try to use the minimum number of agents necessary (usually just 1)
@@ -34,7 +34,7 @@ You should build your plan incrementally by writing to or editing this file. NOT
 
 ### Phase 2: Planning
 
-**Goal:** Come up with an approach to solve the problem identified in phase 1 by launching a Plan subagent.
+**Goal:** Come up with an approach to solve the problem identified in phase 1 by launching a code subagent.
 
 In the agent prompt:
 - Provide any background context that may help the agent with their task without prescribing the exact design itself
