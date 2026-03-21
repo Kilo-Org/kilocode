@@ -297,6 +297,14 @@ export namespace Server {
           }),
         )
         // kilocode_change end
+        .get("/", async (c) => {
+          const indexPath = new URL("../../../app/dist/index.html", import.meta.url)
+          const file = Bun.file(indexPath)
+          if (await file.exists()) {
+            return c.html(await file.text())
+          }
+          return c.text("Web UI not available. Run 'bun run build' in packages/app to build the web UI.", 503)
+        })
         .route("/", FileRoutes())
         .route("/mcp", McpRoutes())
         .route("/tui", TuiRoutes())
@@ -606,22 +614,19 @@ export namespace Server {
             })
           },
         )
-        // kilocode_change start - disable external proxy to app.opencode.ai for privacy/security
+        // kilocode_change start - serve web UI from local app dist
         .all("/*", async (c) => {
-          // const path = c.req.path
-          //
-          // const response = await proxy(`https://app.opencode.ai${path}`, {
-          //   ...c.req,
-          //   headers: {
-          //     ...c.req.raw.headers,
-          //     host: "app.opencode.ai",
-          //   },
-          // })
-          // response.headers.set(
-          //   "Content-Security-Policy",
-          //   "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; media-src 'self' data:; connect-src 'self' data:",
-          // )
-          // return response
+          const path = c.req.path.split("?")[0]
+          const distPath = new URL(`../../../app/dist${path}`, import.meta.url)
+          const file = Bun.file(distPath)
+          if (await file.exists()) {
+            return c.body(file)
+          }
+          const indexPath = new URL("../../../app/dist/index.html", import.meta.url)
+          const indexFile = Bun.file(indexPath)
+          if (await indexFile.exists()) {
+            return c.html(await indexFile.text())
+          }
           return c.notFound()
         }) as unknown as Hono,
     // kilocode_change end
