@@ -266,7 +266,7 @@ const AgentBehaviourTab: Component = () => {
       <Card style={{ "margin-bottom": "12px" }}>
         <div
           style={{
-            "max-height": "320px",
+            "max-height": "50vh",
             "overflow-y": "auto",
           }}
         >
