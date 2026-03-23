@@ -148,26 +148,40 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                 {props.shortcut}
               </span>
             </Show>
+            <Show when={props.stats === undefined}>
+              <div class="am-worktree-stats-skeleton">
+                <div class="am-worktree-stats-skeleton-row" />
+                <div class="am-worktree-stats-skeleton-row" style={{ width: "70%" }} />
+              </div>
+            </Show>
             <Show when={hasStats(props.stats)}>
               <div class="am-worktree-stats">
-                <Show when={props.stats!.files > 0}>
-                  <span class="am-stat-files">{props.stats!.files}f</span>
-                </Show>
-                <Show when={props.stats!.additions > 0 || props.stats!.deletions > 0}>
-                  <span class="am-worktree-diff-stats">
+                <Show
+                  when={props.stats!.additions > 0 || props.stats!.deletions > 0}
+                  fallback={
+                    <Show when={props.stats!.files > 0}>
+                      <span class="am-stat-files">{props.stats!.files}f</span>
+                    </Show>
+                  }
+                >
+                  <div class="am-worktree-stats-row">
                     <Show when={props.stats!.additions > 0}>
                       <span class="am-stat-additions">+{props.stats!.additions}</span>
                     </Show>
                     <Show when={props.stats!.deletions > 0}>
                       <span class="am-stat-deletions">−{props.stats!.deletions}</span>
                     </Show>
-                  </span>
+                  </div>
                 </Show>
-                <Show when={props.stats!.ahead > 0}>
-                  <span class="am-worktree-commits">↑{props.stats!.ahead}</span>
-                </Show>
-                <Show when={props.stats!.behind > 0}>
-                  <span class="am-worktree-behind">↓{props.stats!.behind}</span>
+                <Show when={props.stats!.ahead > 0 || props.stats!.behind > 0}>
+                  <div class="am-worktree-stats-row">
+                    <Show when={props.stats!.ahead > 0}>
+                      <span class="am-worktree-commits">↑{props.stats!.ahead}</span>
+                    </Show>
+                    <Show when={props.stats!.behind > 0}>
+                      <span class="am-worktree-behind">↓{props.stats!.behind}</span>
+                    </Show>
+                  </div>
                 </Show>
               </div>
             </Show>

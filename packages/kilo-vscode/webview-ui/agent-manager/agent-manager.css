@@ -29,7 +29,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;
+  padding: 8px 10px;
+  min-height: 40px;
+  box-sizing: border-box;
   border-radius: var(--radius-sm);
   cursor: pointer;
   background: none;
@@ -183,7 +185,9 @@ button.am-section-toggle:hover .am-section-label {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 10px;
+  padding: 8px 10px;
+  min-height: 40px;
+  box-sizing: border-box;
   border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: var(--font-size-base);
@@ -316,7 +320,8 @@ button.am-section-toggle:hover .am-section-label {
   transition: opacity 200ms ease;
 }
 
-.am-worktree-pending-delete .am-worktree-stats {
+.am-worktree-pending-delete .am-worktree-stats,
+.am-worktree-pending-delete .am-worktree-stats-skeleton {
   display: none;
 }
 
@@ -385,8 +390,9 @@ button.am-section-toggle:hover .am-section-label {
 
 .am-worktree-stats {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
   flex-shrink: 0;
   font-family: var(--font-mono, monospace);
   font-size: 10px;
@@ -394,17 +400,30 @@ button.am-section-toggle:hover .am-section-label {
   font-variant-numeric: tabular-nums;
 }
 
-.am-worktree-diff-stats {
+.am-worktree-stats-row {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-  background: var(--surface-inset-base);
 }
 
-.am-worktree-item-active .am-worktree-diff-stats {
-  background: rgba(255, 255, 255, 0.12);
+.am-worktree-stats-skeleton {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.am-worktree-stats-skeleton-row {
+  width: 48px;
+  height: 8px;
+  border-radius: 3px;
+  background: var(--text-base);
+  animation: am-skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.am-worktree-stats-skeleton-row:nth-child(2) {
+  animation-delay: 0.15s;
 }
 
 .am-stat-files {
@@ -452,7 +471,9 @@ button.am-section-toggle:hover .am-section-label {
 }
 
 .am-worktree-item:hover .am-worktree-stats,
-.am-local-item:hover .am-worktree-stats {
+.am-worktree-item:hover .am-worktree-stats-skeleton,
+.am-local-item:hover .am-worktree-stats,
+.am-local-item:hover .am-worktree-stats-skeleton {
   opacity: 0;
 }
 

@@ -2026,6 +2026,12 @@ const AgentManagerContent: Component = () => {
               <span class="am-local-branch">{repoBranch()}</span>
             </Show>
           </div>
+          <Show when={localStats() === undefined}>
+            <div class="am-worktree-stats-skeleton">
+              <div class="am-worktree-stats-skeleton-row" />
+              <div class="am-worktree-stats-skeleton-row" style={{ width: "70%" }} />
+            </div>
+          </Show>
           <Show
             when={
               localStats() &&
@@ -2037,11 +2043,15 @@ const AgentManagerContent: Component = () => {
             }
           >
             <div class="am-worktree-stats">
-              <Show when={localStats()!.files > 0}>
-                <span class="am-stat-files">{localStats()!.files}f</span>
-              </Show>
-              <Show when={localStats()!.additions > 0 || localStats()!.deletions > 0}>
-                <span class="am-worktree-diff-stats">
+              <Show
+                when={localStats()!.additions > 0 || localStats()!.deletions > 0}
+                fallback={
+                  <Show when={localStats()!.files > 0}>
+                    <span class="am-stat-files">{localStats()!.files}f</span>
+                  </Show>
+                }
+              >
+                <div class="am-worktree-stats-row">
                   <Show when={localStats()!.additions > 0}>
                     <span class="am-stat-additions">+{localStats()!.additions}</span>
                   </Show>
@@ -2051,19 +2061,23 @@ const AgentManagerContent: Component = () => {
                       {localStats()!.deletions}
                     </span>
                   </Show>
-                </span>
+                </div>
               </Show>
-              <Show when={localStats()!.ahead > 0}>
-                <span class="am-worktree-commits">
-                  {"↑"}
-                  {localStats()!.ahead}
-                </span>
-              </Show>
-              <Show when={localStats()!.behind > 0}>
-                <span class="am-worktree-behind">
-                  {"↓"}
-                  {localStats()!.behind}
-                </span>
+              <Show when={localStats()!.ahead > 0 || localStats()!.behind > 0}>
+                <div class="am-worktree-stats-row">
+                  <Show when={localStats()!.ahead > 0}>
+                    <span class="am-worktree-commits">
+                      {"↑"}
+                      {localStats()!.ahead}
+                    </span>
+                  </Show>
+                  <Show when={localStats()!.behind > 0}>
+                    <span class="am-worktree-behind">
+                      {"↓"}
+                      {localStats()!.behind}
+                    </span>
+                  </Show>
+                </div>
               </Show>
             </div>
           </Show>
