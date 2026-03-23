@@ -91,6 +91,11 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                       part={part}
                       message={props.message as SDKMessage}
                       showAssistantCopyPartID={props.showAssistantCopyPartID}
+                      animate={
+                        part.type === "tool" &&
+                        ((part as unknown as ToolPart).state?.status === "pending" ||
+                          (part as unknown as ToolPart).state?.status === "running")
+                      }
                     />
                   }
                 >
