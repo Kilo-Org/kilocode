@@ -2747,7 +2747,7 @@ body.vscode-high-contrast-light {
 
   .prompt-input-container:focus-within,
   .model-selector-search:focus {
-    border-color: var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
+    border-color: var(--vscode-focusBorder);
   }
 
   /* Dropdowns and popover panels */
@@ -2823,7 +2823,7 @@ body.vscode-high-contrast-light {
   .feedback-button:focus-visible,
   .recent-session-item:focus-visible,
   .kilo-notifications-nav-btn:focus-visible {
-    outline: 1px solid var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
+    outline: 1px solid var(--vscode-focusBorder);
     outline-offset: -1px;
   }
 }
