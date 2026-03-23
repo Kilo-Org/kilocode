@@ -1,12 +1,14 @@
 import { describe, it, expect } from "bun:test"
 import {
   fetchAndSendPendingPermissions,
+  recoverablePermissions,
+  recoveryDirs,
+  type RecoverablePermission,
   type PermissionContext,
 } from "../../src/kilo-provider/handlers/permission-handler"
-import type { KiloClient } from "@kilocode/sdk/v2/client"
 
 /** Minimal permission shape returned by the SDK's permission.list(). */
-function pending(id: string, sessionID: string, permission = "bash") {
+function pending(id: string, sessionID: string, permission = "bash"): RecoverablePermission {
   return {
     id,
     sessionID,
@@ -14,14 +16,31 @@ function pending(id: string, sessionID: string, permission = "bash") {
     patterns: ["*"],
     always: [] as string[],
     metadata: {},
-    tool: {},
+    tool: undefined,
   }
 }
 
-/**
- * Build a fake PermissionContext for testing fetchAndSendPendingPermissions.
- * `permsPerDir` maps directory → array of pending permissions the fake backend returns.
- */
+function permissionClient(permsPerDir: Record<string, ReturnType<typeof pending>[]>, queries: string[]) {
+  return {
+    permission: {
+      list: async (args?: { directory?: string }) => {
+        const dir = args?.directory ?? ""
+        queries.push(dir)
+        return { data: permsPerDir[dir] ?? [] }
+      },
+      saveAlwaysRules: async () => ({ data: true }),
+      reply: async () => ({ data: true }),
+    },
+  }
+}
+
+function client(
+  permsPerDir: Record<string, ReturnType<typeof pending>[]>,
+  queries: string[],
+): PermissionContext["client"] {
+  return permissionClient(permsPerDir, queries) as unknown as PermissionContext["client"]
+}
+
 function ctx(opts: {
   tracked: string[]
   dirs?: Map<string, string>
@@ -31,18 +50,10 @@ function ctx(opts: {
   const messages: unknown[] = []
   const queries: string[] = []
   const perms = opts.permsPerDir ?? {}
-
-  const client = {
-    permission: {
-      list: async (args?: { directory?: string }) => {
-        queries.push(args?.directory ?? "")
-        return { data: perms[args?.directory ?? ""] ?? [] }
-      },
-    },
-  } as unknown as KiloClient
+  const sdk = client(perms, queries)
 
   const fake: PermissionContext = {
-    client,
+    client: sdk,
     currentSessionId: undefined,
     trackedSessionIds: new Set(opts.tracked),
     sessionDirectories: opts.dirs ?? new Map(),
@@ -52,6 +63,40 @@ function ctx(opts: {
 
   return { fake, messages, queries }
 }
+
+describe("recoveryDirs", () => {
+  it("returns workspace root when sessionDirectories is empty", () => {
+    expect(recoveryDirs("/workspace", new Map())).toEqual(["/workspace"])
+  })
+
+  it("returns workspace root plus each unique worktree directory", () => {
+    const dirs = new Map([
+      ["s1", "/workspace/.kilo/worktrees/alpha"],
+      ["s2", "/workspace/.kilo/worktrees/beta"],
+      ["s3", "/workspace/.kilo/worktrees/alpha"],
+    ])
+    expect(recoveryDirs("/workspace", dirs)).toEqual([
+      "/workspace",
+      "/workspace/.kilo/worktrees/alpha",
+      "/workspace/.kilo/worktrees/beta",
+    ])
+  })
+})
+
+describe("recoverablePermissions", () => {
+  it("filters out untracked permissions", () => {
+    const seen = new Set<string>()
+    expect(recoverablePermissions([pending("p1", "s1"), pending("p2", "s2")], new Set(["s1"]), seen)).toEqual([
+      pending("p1", "s1"),
+    ])
+  })
+
+  it("deduplicates permissions across queries", () => {
+    const seen = new Set<string>()
+    expect(recoverablePermissions([pending("p1", "s1"), pending("p1", "s1")], new Set(["s1"]), seen)).toHaveLength(1)
+    expect(recoverablePermissions([pending("p1", "s1")], new Set(["s1"]), seen)).toHaveLength(0)
+  })
+})
 
 describe("fetchAndSendPendingPermissions", () => {
   it("queries only workspace root when sessionDirectories is empty", async () => {

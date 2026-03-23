@@ -5,7 +5,9 @@
  * pending permissions after SSE reconnections. No vscode dependency.
  */
 
-import type { KiloClient } from "@kilocode/sdk/v2/client"
+import type { KiloClient, PermissionRequest } from "@kilocode/sdk/v2/client"
+
+export type RecoverablePermission = PermissionRequest
 
 export interface PermissionContext {
   readonly client: KiloClient | null
@@ -14,6 +16,18 @@ export interface PermissionContext {
   readonly sessionDirectories: ReadonlyMap<string, string>
   postMessage(msg: unknown): void
   getWorkspaceDirectory(sessionId?: string): string
+}
+
+export function recoveryDirs(workspace: string, dirs: ReadonlyMap<string, string>) {
+  return [...new Set([workspace, ...dirs.values()])]
+}
+
+export function recoverablePermissions(perms: RecoverablePermission[], tracked: Set<string>, seen: Set<string>) {
+  return perms.filter((perm) => {
+    if (seen.has(perm.id)) return false
+    seen.add(perm.id)
+    return tracked.has(perm.sessionID)
+  })
 }
 
 /**
@@ -75,22 +89,13 @@ export async function handlePermissionResponse(
 export async function fetchAndSendPendingPermissions(ctx: PermissionContext): Promise<void> {
   if (!ctx.client) return
   try {
-    // Query every unique directory (workspace root + worktree paths) so that
-    // pending permissions stored in worktree-scoped Instances are recovered
-    // after SSE reconnects or webview reloads.
-    const dirs = new Set<string>([ctx.getWorkspaceDirectory()])
-    for (const dir of ctx.sessionDirectories.values()) {
-      dirs.add(dir)
-    }
+    const dirs = recoveryDirs(ctx.getWorkspaceDirectory(), ctx.sessionDirectories)
 
     const seen = new Set<string>()
     for (const dir of dirs) {
       const { data } = await ctx.client.permission.list({ directory: dir })
       if (!data) continue
-      for (const perm of data) {
-        if (seen.has(perm.id)) continue
-        seen.add(perm.id)
-        if (!ctx.trackedSessionIds.has(perm.sessionID)) continue
+      for (const perm of recoverablePermissions(data, ctx.trackedSessionIds, seen)) {
         ctx.postMessage({
           type: "permissionRequest",
           permission: {
