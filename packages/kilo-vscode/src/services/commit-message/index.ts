@@ -44,7 +44,8 @@ export function registerCommitMessageService(
     let client: KiloClient | undefined
     try {
       client = connectionService.getClient()
-    } catch {
+    } catch (err) {
+      console.error("[Kilo New] Failed to get client:", err)
       vscode.window.showErrorMessage("Kilo backend is not connected. Please wait for the connection to establish.")
       return
     }

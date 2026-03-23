@@ -180,10 +180,24 @@ export async function generateCommitMessage(request: CommitMessageRequest): Prom
       retries: 3,
     })
 
-    const result = await stream.text
-    log.info("generated", { message: result })
+    // Consume the stream explicitly so that stream-level errors surface
+    // immediately instead of leaving the .text promise hanging (issue #7345).
+    // With some providers/versions of the Vercel AI SDK, `await stream.text`
+    // never resolves when the underlying stream errors out early.
+    let result = ""
+    for await (const chunk of stream.textStream) {
+      result += chunk
+    }
 
+    log.info("generated", { message: result })
     return { message: clean(result) }
+  } catch (err) {
+    if (controller.signal.aborted) {
+      throw new Error("Commit message generation timed out after 30 seconds")
+    }
+    const msg = err instanceof Error ? err.message : String(err)
+    log.error("generation failed", { error: msg })
+    throw new Error(`Failed to generate commit message: ${msg}`)
   } finally {
     clearTimeout(timer)
   }
