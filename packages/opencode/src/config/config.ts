@@ -79,6 +79,18 @@ export namespace Config {
     if (target.instructions && source.instructions) {
       merged.instructions = Array.from(new Set([...target.instructions, ...source.instructions]))
     }
+    // kilocode_change start
+    // Per-key concatenation for modeInstructions (Record<string, string[]>)
+    if (target.modeInstructions && source.modeInstructions) {
+      const modes = new Set([...Object.keys(target.modeInstructions), ...Object.keys(source.modeInstructions)])
+      merged.modeInstructions = {}
+      for (const mode of modes) {
+        merged.modeInstructions[mode] = Array.from(
+          new Set([...(target.modeInstructions[mode] ?? []), ...(source.modeInstructions[mode] ?? [])]),
+        )
+      }
+    }
+    // kilocode_change end
     return merged
   }
 

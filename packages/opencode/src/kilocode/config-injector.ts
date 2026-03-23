@@ -47,10 +47,14 @@ export namespace KilocodeConfigInjector {
     }
 
     if (options.includeRules !== false) {
+      // Collect custom mode slugs from ModesMigrator results (already loaded above)
+      const customModeSlugs = Object.keys(modesMigration.agents ?? {})
+      const rulesModes = customModeSlugs.length > 0 ? [...RulesMigrator.KNOWN_MODES, ...customModeSlugs] : undefined
       const rulesMigration = await RulesMigrator.migrate({
         projectDir: options.projectDir,
         includeGlobal: !options.skipGlobalPaths,
         includeModeSpecific: true,
+        modes: rulesModes,
       })
 
       warnings.push(...rulesMigration.warnings)
