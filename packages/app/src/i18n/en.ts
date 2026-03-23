@@ -616,8 +616,10 @@ export const dict = {
 
   "settings.section.desktop": "Desktop",
   "settings.section.server": "Server",
+  "settings.section.account": "Account",
   "settings.tab.general": "General",
   "settings.tab.shortcuts": "Shortcuts",
+  "settings.account.title": "Account",
   "settings.desktop.section.wsl": "WSL",
   "settings.desktop.wsl.title": "WSL integration",
   "settings.desktop.wsl.description": "Run the Kilo server inside WSL on Windows.",

@@ -71,4 +71,14 @@ export const dict = {
   "marketplace.warning.busyMany": "Several sessions are running and will be interrupted",
   "marketplace.warning.installAnyway": "Install anyway",
   "marketplace.warning.cancel": "Cancel",
+
+  // Account / Profile
+  "profile.title": "Profile",
+  "profile.notLoggedIn": "Not logged in",
+  "profile.action.login": "Login with Kilo Code",
+  "profile.balance.title": "Balance",
+  "profile.balance.refresh": "Refresh balance",
+  "profile.action.dashboard": "Dashboard",
+  "profile.action.logout": "Log Out",
+  "profile.personalAccount": "Personal",
 }
