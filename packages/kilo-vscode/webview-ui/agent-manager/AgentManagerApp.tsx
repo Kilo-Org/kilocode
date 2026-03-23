@@ -2211,7 +2211,8 @@ const AgentManagerContent: Component = () => {
                             label={worktreeLabel(wt)}
                             active={selection() === wt.id}
                             pendingDelete={pendingDelete() === wt.id}
-                            busy={busyWorktrees().has(wt.id) || isAgentBusy(wt.id)}
+                            busy={busyWorktrees().has(wt.id)}
+                            working={isAgentBusy(wt.id)}
                             stale={isStaleWorktree(wt.id)}
                             shortcut={idx() + 2}
                             stats={worktreeStats()[wt.id]}

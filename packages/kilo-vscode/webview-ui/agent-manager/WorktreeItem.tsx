@@ -22,6 +22,8 @@ interface WorktreeItemProps {
   active: boolean
   pendingDelete: boolean
   busy: boolean
+  /** Whether an agent session on this worktree is actively working (shows spinner instead of branch icon). */
+  working: boolean
   stale: boolean
   /** 1-indexed shortcut number shown as ⌘2, ⌘3, etc. Pass 0 or >9 to hide. */
   shortcut: number
@@ -91,7 +93,7 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
             data-sidebar-id={props.worktree.id}
             onClick={() => props.onClick()}
           >
-            <Show when={!props.busy} fallback={<Spinner class="am-worktree-spinner" />}>
+            <Show when={!props.busy && !props.working} fallback={<Spinner class="am-worktree-spinner" />}>
               <Icon name="branch" size="small" />
             </Show>
             <Show when={props.stale}>
