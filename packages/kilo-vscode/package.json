@@ -15,7 +15,7 @@
     "directory": "packages/kilo-vscode"
   },
   "engines": {
-    "vscode": "^1.108.0"
+    "vscode": "^1.105.1"
   },
   "author": {
     "name": "Kilo Code"
@@ -791,7 +791,7 @@
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
     "@types/qrcode": "^1.5.6",
-    "@types/vscode": "^1.108.0",
+    "@types/vscode": "^1.105.1",
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.7.1",
