@@ -796,6 +796,32 @@ const AgentManagerContent: Component = () => {
 
   const isStaleWorktree = (worktreeId: string): boolean => staleWorktreeIds().has(worktreeId)
 
+  /** True when any session in the given ID list is actively working (busy/retry and not blocked by permissions/questions). */
+  const isAnySessionBusy = (ids: string[]): boolean => {
+    if (ids.length === 0) return false
+    const statuses = session.allStatusMap()
+    const perms = session.permissions()
+    const qs = session.questions()
+    for (const id of ids) {
+      const info = statuses[id]
+      if (!info || info.type === "idle") continue
+      const blocked = perms.some((p) => p.sessionID === id) || qs.some((q) => q.sessionID === id)
+      if (!blocked) return true
+    }
+    return false
+  }
+
+  /** True when an agent session assigned to this worktree is actively working. */
+  const isAgentBusy = (worktreeId: string): boolean => {
+    const ids = managedSessions()
+      .filter((ms) => ms.worktreeId === worktreeId)
+      .map((ms) => ms.id)
+    return isAnySessionBusy(ids)
+  }
+
+  /** True when a local session is actively working. */
+  const isLocalBusy = (): boolean => isAnySessionBusy(localSessionIDs())
+
   /** Worktrees sorted so that grouped items are always adjacent, ordered by creation time. */
   const sortedWorktrees = createMemo(() => {
     const all = worktrees()
@@ -1974,11 +2000,13 @@ const AgentManagerContent: Component = () => {
           data-sidebar-id="local"
           onClick={() => selectLocal()}
         >
-          <svg class="am-local-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="2.5" y="3.5" width="15" height="10" rx="1" stroke="currentColor" />
-            <path d="M6 16.5H14" stroke="currentColor" stroke-linecap="square" />
-            <path d="M10 13.5V16.5" stroke="currentColor" />
-          </svg>
+          <Show when={!isLocalBusy()} fallback={<Spinner class="am-worktree-spinner" />}>
+            <svg class="am-local-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="2.5" y="3.5" width="15" height="10" rx="1" stroke="currentColor" />
+              <path d="M6 16.5H14" stroke="currentColor" stroke-linecap="square" />
+              <path d="M10 13.5V16.5" stroke="currentColor" />
+            </svg>
+          </Show>
           <div class="am-local-text">
             <span class="am-local-label">{t("agentManager.local")}</span>
             <Show when={repoBranch()}>
@@ -2183,7 +2211,7 @@ const AgentManagerContent: Component = () => {
                             label={worktreeLabel(wt)}
                             active={selection() === wt.id}
                             pendingDelete={pendingDelete() === wt.id}
-                            busy={busyWorktrees().has(wt.id)}
+                            busy={busyWorktrees().has(wt.id) || isAgentBusy(wt.id)}
                             stale={isStaleWorktree(wt.id)}
                             shortcut={idx() + 2}
                             stats={worktreeStats()[wt.id]}
