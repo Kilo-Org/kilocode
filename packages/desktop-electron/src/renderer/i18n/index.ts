@@ -16,6 +16,7 @@ import { dict as desktopNo } from "./no"
 import { dict as desktopBr } from "./br"
 import { dict as desktopBs } from "./bs"
 import { dict as desktopNl } from "./nl"
+import { dict as desktopTr } from "./tr"
 
 import { dict as appEn } from "../../../../app/src/i18n/en"
 import { dict as appZh } from "../../../../app/src/i18n/zh"
@@ -33,6 +34,7 @@ import { dict as appNo } from "../../../../app/src/i18n/no"
 import { dict as appBr } from "../../../../app/src/i18n/br"
 import { dict as appBs } from "../../../../app/src/i18n/bs"
 import { dict as appNl } from "../../../../app/src/i18n/nl"
+import { dict as appTr } from "../../../../app/src/i18n/tr"
 
 export type Locale =
   | "en"
@@ -51,6 +53,7 @@ export type Locale =
   | "br"
   | "bs"
   | "nl"
+  | "tr"
 
 type RawDictionary = typeof appEn & typeof desktopEn
 type Dictionary = i18n.Flatten<RawDictionary>
@@ -69,6 +72,7 @@ const LOCALES: readonly Locale[] = [
   "ru",
   "bs",
   "nl",
+  "tr",
   "ar",
   "no",
   "br",
@@ -103,6 +107,7 @@ function detectLocale(): Locale {
     if (language.toLowerCase().startsWith("pt")) return "br"
     if (language.toLowerCase().startsWith("bs")) return "bs"
     if (language.toLowerCase().startsWith("nl")) return "nl"
+    if (language.toLowerCase().startsWith("tr")) return "tr"
   }
 
   return "en"
@@ -158,6 +163,7 @@ function build(locale: Locale): Dictionary {
   if (locale === "br") return { ...base, ...i18n.flatten(appBr), ...i18n.flatten(desktopBr) }
   if (locale === "bs") return { ...base, ...i18n.flatten(appBs), ...i18n.flatten(desktopBs) }
   if (locale === "nl") return { ...base, ...i18n.flatten(appNl), ...i18n.flatten(desktopNl) }
+  if (locale === "tr") return { ...base, ...i18n.flatten(appTr), ...i18n.flatten(desktopTr) }
   return { ...base, ...i18n.flatten(appKo), ...i18n.flatten(desktopKo) }
 }
 
