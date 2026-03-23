@@ -22,6 +22,7 @@ import { useFileMention } from "../../hooks/useFileMention"
 import { useSlashCommand } from "../../hooks/useSlashCommand"
 import { useGhostText } from "../../hooks/useGhostText"
 import { useImageAttachments } from "../../hooks/useImageAttachments"
+import { convertToMentionPath } from "../../utils/path-mentions"
 import { usePromptHistory } from "../../hooks/usePromptHistory"
 import { WandSparkles } from "@kilocode/kilo-ui/lucide"
 import { fileName, dirName, buildHighlightSegments, atEnd } from "./prompt-input-utils"
@@ -56,6 +57,24 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const excluded = worktree ? new Set(["sessions"]) : undefined
   const slash = useSlashCommand(vscode, excluded)
   const imageAttach = useImageAttachments()
+  imageAttach.setFilePathDropHandler((paths) => {
+    const cwd = server.workspaceDirectory()
+    const mentions = paths.map((p) => convertToMentionPath(p, cwd))
+    const ref = textareaRef
+    if (!ref) return
+    const val = ref.value
+    const cursor = ref.selectionStart ?? val.length
+    const before = val.substring(0, cursor)
+    const after = val.substring(cursor)
+    const inserted = mentions.join(" ")
+    const result = before + inserted + " " + after
+    ref.value = result
+    setText(result)
+    const pos = cursor + inserted.length + 1
+    ref.setSelectionRange(pos, pos)
+    ref.focus()
+    adjustHeight()
+  })
   const history = usePromptHistory()
 
   const sessionKey = () => session.currentSessionID() ?? "__new__"
