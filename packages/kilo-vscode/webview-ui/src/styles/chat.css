@@ -889,6 +889,7 @@
 
 .prompt-input-ghost-text {
   color: var(--vscode-editorGhostText-foreground, rgba(255, 255, 255, 0.35));
+  display: inline-flex;
 }
 
 .prompt-input-hint {
@@ -1569,6 +1570,133 @@
 
 .mode-switcher-item.selected .mode-switcher-item-desc {
   color: inherit;
+}
+
+/* ============================================
+   Account Switcher (welcome screen header)
+   ============================================ */
+
+.account-switcher {
+  position: relative;
+}
+
+.account-switcher-welcome {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 160px;
+  z-index: 10;
+}
+
+.account-switcher-trigger {
+  width: 100%;
+  cursor: pointer;
+  border: 1px solid var(--vscode-dropdown-border);
+  background: var(--vscode-dropdown-background);
+  color: var(--vscode-dropdown-foreground);
+  border-radius: 4px;
+  padding: 4px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-family: inherit;
+  font-size: var(--vscode-font-size);
+  opacity: 0.9;
+  transition:
+    opacity 150ms,
+    background 150ms,
+    border-color 150ms;
+}
+
+.account-switcher-switching {
+  opacity: 0.6;
+  pointer-events: none;
+  cursor: default;
+}
+
+.account-switcher-trigger:hover:not(:disabled) {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.account-switcher-trigger:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.account-switcher-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-switcher-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.account-switcher-role {
+  border-radius: 9999px;
+  padding: 1px 6px;
+  font-size: 10px;
+  letter-spacing: 0.3px;
+  background: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+}
+
+.account-switcher-chevron {
+  width: 12px;
+  height: 12px;
+  transition: transform 150ms;
+}
+
+.account-switcher-chevron.open {
+  transform: rotate(180deg);
+}
+
+.account-switcher-dropdown {
+  position: absolute;
+  z-index: 20;
+  margin-top: 4px;
+  right: 0;
+  width: max-content;
+  min-width: 100%;
+  max-height: 240px;
+  overflow-y: auto;
+  border-radius: 4px;
+  border: 1px solid var(--vscode-dropdown-border);
+  background: var(--vscode-dropdown-background);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.account-switcher-item {
+  display: flex;
+  width: 100%;
+  cursor: pointer;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  color: var(--vscode-foreground);
+  font-family: inherit;
+  font-size: var(--vscode-font-size);
+  text-align: left;
+}
+
+.account-switcher-item:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.account-switcher-item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ============================================

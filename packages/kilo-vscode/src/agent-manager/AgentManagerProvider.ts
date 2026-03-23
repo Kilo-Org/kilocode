@@ -275,6 +275,10 @@ export class AgentManagerProvider implements Disposable {
       this.state?.setTabOrder(m.key, m.order)
       return null
     }
+    if (m.type === "agentManager.setWorktreeOrder") {
+      this.state?.setWorktreeOrder(m.order)
+      return null
+    }
     if (m.type === "agentManager.setSessionsCollapsed") {
       this.state?.setSessionsCollapsed(m.collapsed)
       return null
@@ -1414,6 +1418,7 @@ export class AgentManagerProvider implements Disposable {
       sessions: state.getSessions(),
       staleWorktreeIds,
       tabOrder: state.getTabOrder(),
+      worktreeOrder: state.getWorktreeOrder(),
       sessionsCollapsed: state.getSessionsCollapsed(),
       reviewDiffStyle: state.getReviewDiffStyle(),
       isGitRepo: true,

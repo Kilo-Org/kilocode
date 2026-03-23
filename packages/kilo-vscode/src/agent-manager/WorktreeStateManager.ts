@@ -47,6 +47,7 @@ interface StateFile {
   worktrees: Record<string, Omit<Worktree, "id">>
   sessions: Record<string, Omit<ManagedSession, "id">>
   tabOrder?: Record<string, string[]>
+  worktreeOrder?: string[]
   sessionsCollapsed?: boolean
   reviewDiffStyle?: "unified" | "split"
   defaultBaseBranch?: string
@@ -67,6 +68,7 @@ export class WorktreeStateManager {
   private worktrees = new Map<string, Worktree>()
   private sessions = new Map<string, ManagedSession>()
   private tabOrder: Record<string, string[]> = {}
+  private worktreeOrder: string[] = []
   private collapsed = false
   private reviewDiffStyle: "unified" | "split" = "unified"
   private defaultBase: string | undefined
@@ -185,6 +187,10 @@ export class WorktreeStateManager {
     // Clean up tab order for this worktree
     delete this.tabOrder[id]
 
+    // Remove from worktree order
+    const idx = this.worktreeOrder.indexOf(id)
+    if (idx !== -1) this.worktreeOrder.splice(idx, 1)
+
     this.log(`Removed worktree ${id}, orphaned ${orphaned.length} sessions`)
     void this.save()
     return orphaned
@@ -237,6 +243,19 @@ export class WorktreeStateManager {
 
   removeTabOrder(key: string): void {
     delete this.tabOrder[key]
+    void this.save()
+  }
+
+  // ---------------------------------------------------------------------------
+  // Worktree order
+  // ---------------------------------------------------------------------------
+
+  getWorktreeOrder(): string[] {
+    return this.worktreeOrder
+  }
+
+  setWorktreeOrder(order: string[]): void {
+    this.worktreeOrder = order
     void this.save()
   }
 
@@ -295,6 +314,7 @@ export class WorktreeStateManager {
       this.worktrees.clear()
       this.sessions.clear()
       this.tabOrder = {}
+      this.worktreeOrder = []
       this.reviewDiffStyle = "unified"
 
       for (const [id, wt] of Object.entries(data.worktrees ?? {})) {
@@ -307,6 +327,9 @@ export class WorktreeStateManager {
       }
       if (data.tabOrder) {
         this.tabOrder = data.tabOrder
+      }
+      if (data.worktreeOrder) {
+        this.worktreeOrder = data.worktreeOrder
       }
       this.collapsed = data.sessionsCollapsed ?? false
       if (data.reviewDiffStyle === "split") {
@@ -378,6 +401,9 @@ export class WorktreeStateManager {
     }
     if (Object.keys(this.tabOrder).length > 0) {
       data.tabOrder = this.tabOrder
+    }
+    if (this.worktreeOrder.length > 0) {
+      data.worktreeOrder = this.worktreeOrder
     }
     if (this.collapsed) {
       data.sessionsCollapsed = true

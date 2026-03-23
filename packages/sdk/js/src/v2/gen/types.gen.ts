@@ -4642,6 +4642,7 @@ export type KiloNotificationsResponses = {
       actionURL: string
     }
     showIn?: Array<string>
+    suggestModelId?: string
   }>
 }
 

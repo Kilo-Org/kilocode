@@ -1,6 +1,7 @@
 import { dict as ar } from "./ar"
 import { dict as br } from "./br"
 import { dict as bs } from "./bs"
+import { dict as nl } from "./nl"
 import { dict as da } from "./da"
 import { dict as de } from "./de"
 import { dict as en } from "./en"
@@ -13,6 +14,7 @@ import { dict as pl } from "./pl"
 import { dict as ru } from "./ru"
 import { dict as th } from "./th"
 import { dict as zh } from "./zh"
+import { dict as tr } from "./tr"
 import { dict as zht } from "./zht"
 import { type dict as enDict } from "./en"
 
@@ -20,6 +22,7 @@ const bundles: Record<string, Record<string, string>> = {
   ar,
   br,
   bs,
+  nl,
   da,
   de,
   en,
@@ -31,6 +34,7 @@ const bundles: Record<string, Record<string, string>> = {
   pl,
   ru,
   th,
+  tr,
   zh,
   zht,
 }

@@ -10,6 +10,8 @@ type SSEEventListener = (event: Event) => void
 type StateListener = (state: ConnectionState) => void
 type SSEEventFilter = (event: Event) => boolean
 type NotificationDismissListener = (notificationId: string) => void
+type LanguageChangeListener = (locale: string) => void
+type ProfileChangeListener = (data: unknown) => void
 
 // Poll /global/health at the same interval as packages/app/src/context/server.tsx.
 // This provides a second detection channel for server death independent of the SSE heartbeat.
@@ -32,6 +34,8 @@ export class KiloConnectionService {
   private readonly eventListeners: Set<SSEEventListener> = new Set()
   private readonly stateListeners: Set<StateListener> = new Set()
   private readonly notificationDismissListeners: Set<NotificationDismissListener> = new Set()
+  private readonly languageChangeListeners: Set<LanguageChangeListener> = new Set()
+  private readonly profileChangeListeners: Set<ProfileChangeListener> = new Set()
 
   /**
    * Shared mapping used to resolve session scope for events that don't reliably include a sessionID.
@@ -166,6 +170,44 @@ export class KiloConnectionService {
   }
 
   /**
+   * Subscribe to language change events broadcast from any KiloProvider. Returns unsubscribe function.
+   */
+  onLanguageChanged(listener: LanguageChangeListener): () => void {
+    this.languageChangeListeners.add(listener)
+    return () => {
+      this.languageChangeListeners.delete(listener)
+    }
+  }
+
+  /**
+   * Broadcast a language change event to all subscribed KiloProvider instances.
+   */
+  notifyLanguageChanged(locale: string): void {
+    for (const listener of this.languageChangeListeners) {
+      listener(locale)
+    }
+  }
+
+  /**
+   * Subscribe to profile change events broadcast from any KiloProvider. Returns unsubscribe function.
+   */
+  onProfileChanged(listener: ProfileChangeListener): () => void {
+    this.profileChangeListeners.add(listener)
+    return () => {
+      this.profileChangeListeners.delete(listener)
+    }
+  }
+
+  /**
+   * Broadcast a profile change event to all subscribed KiloProvider instances.
+   */
+  notifyProfileChanged(data: unknown): void {
+    for (const listener of this.profileChangeListeners) {
+      listener(data)
+    }
+  }
+
+  /**
    * Subscribe to connection state changes. Returns unsubscribe function.
    */
   onStateChange(listener: StateListener): () => void {
@@ -185,6 +227,7 @@ export class KiloConnectionService {
     this.eventListeners.clear()
     this.stateListeners.clear()
     this.notificationDismissListeners.clear()
+    this.profileChangeListeners.clear()
     this.messageSessionIdsByMessageId.clear()
     this.client = null
     this.sseClient = null

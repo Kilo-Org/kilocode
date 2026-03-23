@@ -8,12 +8,18 @@ import { SubAgentViewerProvider } from "./SubAgentViewerProvider"
 import { EXTENSION_DISPLAY_NAME } from "./constants"
 import { KiloConnectionService } from "./services/cli-backend"
 import { registerAutocompleteProvider } from "./services/autocomplete"
+import { ensureBackendForAutocomplete } from "./services/autocomplete/ensure-backend"
+import { AutocompleteServiceManager } from "./services/autocomplete/AutocompleteServiceManager"
 import { BrowserAutomationService } from "./services/browser-automation"
 import { TelemetryProxy } from "./services/telemetry"
 import { registerCommitMessageService } from "./services/commit-message"
 import { registerCodeActions, registerTerminalActions, KiloCodeActionProvider } from "./services/code-actions"
 import { registerToggleAutoApprove } from "./commands/toggle-auto-approve"
 
+// Activated via "onStartupFinished" (package.json) so that commands, code actions, keybindings,
+// autocomplete, commit-message generation, and URI deep links all work immediately — without
+// requiring the user to open a Kilo sidebar or panel first. The CLI backend is NOT spawned here;
+// it starts lazily when a webview connects or when ensureBackendForAutocomplete() triggers it.
 export function activate(context: vscode.ExtensionContext) {
   console.log("Kilo Code extension is now active")
 
@@ -26,7 +32,8 @@ export function activate(context: vscode.ExtensionContext) {
   const browserAutomationService = new BrowserAutomationService(connectionService)
   browserAutomationService.syncWithSettings()
 
-  // Re-register browser automation MCP server on CLI backend reconnect and configure telemetry
+  // Re-register browser automation MCP server on CLI backend reconnect, configure telemetry,
+  // and reload autocomplete so it picks up the now-available backend connection.
   const unsubscribeStateChange = connectionService.onStateChange((state) => {
     if (state === "connected") {
       browserAutomationService.reregisterIfEnabled()
@@ -34,6 +41,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (config) {
         telemetry.configure(config.baseUrl, config.password)
       }
+      AutocompleteServiceManager.getInstance()?.load()
     }
   })
 
@@ -87,8 +95,8 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Create standalone diff viewer provider for the sidebar "Show Changes" action
   const diffViewerProvider = new DiffViewerProvider(context.extensionUri, connectionService)
-  diffViewerProvider.setCommentHandler((comments) => {
-    void provider.appendReviewComments(comments)
+  diffViewerProvider.setCommentHandler((comments, autoSend) => {
+    void provider.appendReviewComments(comments, autoSend)
   })
   context.subscriptions.push(diffViewerProvider)
 
@@ -251,6 +259,9 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Register autocomplete provider
   registerAutocompleteProvider(context, connectionService)
+
+  // Start the CLI backend server eagerly so autocomplete works without opening a Kilo tab.
+  ensureBackendForAutocomplete(connectionService)
 
   // Register commit message generation
   registerCommitMessageService(context, connectionService)

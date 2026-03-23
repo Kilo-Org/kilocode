@@ -370,6 +370,7 @@ export const dict = {
   "language.br": "Português (Brasil)",
   "language.bs": "Bosanski",
   "language.th": "ไทย",
+  "language.tr": "Türkçe",
 
   "toast.theme.title": "Thema gewechselt",
   "toast.scheme.title": "Farbschema",
@@ -1148,6 +1149,7 @@ export const dict = {
   "settings.providers.notSet": "Nicht festgelegt (Server-Standard verwenden)",
   "dialog.model.notSet": "Nicht festgelegt",
   "profile.personalAccount": "Persönliches Konto",
+  "profile.switchingAccount": "Konto wird gewechselt…",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/de.ts
 

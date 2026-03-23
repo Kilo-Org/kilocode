@@ -65,6 +65,10 @@ export const ServerProvider: ParentComponent = (props) => {
           setWorkspaceDirectory(message.directory)
           break
 
+        case "languageChanged":
+          setLanguageOverride(message.locale || undefined)
+          break
+
         case "connectionState":
           console.log("[Kilo New] Connection state changed:", message.state)
           setConnectionState(message.state)

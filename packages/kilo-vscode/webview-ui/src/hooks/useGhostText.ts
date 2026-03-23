@@ -130,10 +130,18 @@ export function useGhostText(vscode: VSCodeContext, getText: () => string, conne
   // Also cancels pending debounce when text is cleared (e.g., on send).
   createEffect(() => {
     const val = getText()
-    if (!val && timer) {
-      // Text cleared - cancel pending debounce to prevent empty-text completion
-      clearTimeout(timer)
-      timer = undefined
+    if (!val) {
+      // Text cleared — cancel pending debounce and invalidate any in-flight
+      // requests so a stale completion response cannot resurface ghost text
+      // over the native placeholder.
+      if (timer) {
+        clearTimeout(timer)
+        timer = undefined
+      }
+      saved = ""
+      savedPrefix = ""
+      prefix = ""
+      counter++
     }
     syncInternal(undefined)
   })

@@ -109,7 +109,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private pending = 0
   /** Cached notificationsLoaded payload */
   private cachedNotificationsMessage: unknown = null
-  private pendingReviewComments: unknown[][] = []
+  private pendingReviewComments: { comments: unknown[]; autoSend: boolean }[] = []
   private readyResolvers: (() => void)[] = []
   private trackedSessionIds: Set<string> = new Set()
   private syncedChildSessions: Set<string> = new Set()
@@ -131,6 +131,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /** Guard to prevent checkAndShowMigrationWizard running concurrently. */ // legacy-migration
   private migrationCheckInFlight = false // legacy-migration
   private unsubscribeNotificationDismiss: (() => void) | null = null
+  private unsubscribeLanguageChange: (() => void) | null = null
+  private unsubscribeProfileChange: (() => void) | null = null
   private initConnectionPromise: Promise<void> | null = null
   private webviewMessageDisposable: vscode.Disposable | null = null
 
@@ -604,6 +606,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           await vscode.workspace
             .getConfiguration("kilo-code.new")
             .update("language", message.locale || undefined, vscode.ConfigurationTarget.Global)
+          this.connectionService.notifyLanguageChanged(message.locale as string)
           break
         case "requestAutocompleteSettings":
           this.sendAutocompleteSettings()
@@ -863,6 +866,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.unsubscribeEvent?.()
     this.unsubscribeState?.()
     this.unsubscribeNotificationDismiss?.()
+    this.unsubscribeLanguageChange?.()
+    this.unsubscribeProfileChange?.()
 
     try {
       const workspaceDir = this.getWorkspaceDirectory()
@@ -922,6 +927,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // Subscribe to notification dismiss broadcast from other KiloProvider instances
       this.unsubscribeNotificationDismiss = this.connectionService.onNotificationDismissed(() => {
         this.fetchAndSendNotifications()
+      })
+
+      // Subscribe to language change broadcast from other KiloProvider instances
+      this.unsubscribeLanguageChange = this.connectionService.onLanguageChanged((locale) => {
+        this.postMessage({ type: "languageChanged", locale })
+      })
+
+      // Subscribe to profile change broadcast from other KiloProvider instances
+      this.unsubscribeProfileChange = this.connectionService.onProfileChanged((data) => {
+        this.postMessage({ type: "profileData", data })
       })
 
       // Get current state and push to webview
@@ -2127,7 +2142,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     await this.client.global
       .dispose()
-      .catch((e: unknown) => console.warn("[Kilo New] KiloProvider: global.dispose() failed:", e))
+      .catch((e: unknown) => console.warn("[Kilo New] KiloProvider: global.dispose() after org switch failed:", e))
+
+    // Org switch succeeded — refresh profile and providers independently (best-effort)
+    try {
+      const profileResult = await this.client!.kilo.profile()
+      // Broadcast to all webviews (sidebar, profile tab, agent manager, etc.)
+      this.connectionService.notifyProfileChanged(profileResult.data ?? null)
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to refresh profile after org switch:", error)
+    }
+    try {
+      await this.fetchAndSendProviders()
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to refresh providers after org switch:", error)
+    }
   }
 
   private handlePreviewImage(dataUrl: string, filename: string): void {
@@ -2382,8 +2411,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
   }
 
-  public async appendReviewComments(comments: unknown[]): Promise<void> {
-    this.pendingReviewComments.push(comments)
+  public async appendReviewComments(comments: unknown[], autoSend = false): Promise<void> {
+    this.pendingReviewComments.push({ comments, autoSend })
 
     if (!this.webview) {
       await vscode.commands.executeCommand(`${KiloProvider.viewType}.focus`)
@@ -2398,8 +2427,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const pending = this.pendingReviewComments
     this.pendingReviewComments = []
 
-    for (const comments of pending) {
-      this.postMessage({ type: "appendReviewComments", comments })
+    for (const entry of pending) {
+      this.postMessage({ type: "appendReviewComments", comments: entry.comments, autoSend: entry.autoSend })
     }
   }
 
@@ -2579,6 +2608,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.unsubscribeEvent?.()
     this.unsubscribeState?.()
     this.unsubscribeNotificationDismiss?.()
+    this.unsubscribeLanguageChange?.()
+    this.unsubscribeProfileChange?.()
     this.webviewMessageDisposable?.dispose()
     this.trackedSessionIds.clear()
     this.syncedChildSessions.clear()

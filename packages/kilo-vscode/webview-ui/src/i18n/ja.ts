@@ -363,6 +363,7 @@ export const dict = {
   "language.br": "Português (Brasil)",
   "language.bs": "Bosanski",
   "language.th": "ไทย",
+  "language.tr": "Türkçe",
 
   "toast.theme.title": "テーマが切り替わりました",
   "toast.scheme.title": "配色",
@@ -1126,6 +1127,7 @@ export const dict = {
   "settings.providers.notSet": "未設定（サーバーのデフォルトを使用）",
   "dialog.model.notSet": "未設定",
   "profile.personalAccount": "個人アカウント",
+  "profile.switchingAccount": "アカウントを切り替え中…",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/ja.ts
 
   "question.summary": "{{total}} 問中 {{n}} 問目",

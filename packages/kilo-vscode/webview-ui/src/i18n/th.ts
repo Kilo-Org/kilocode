@@ -363,6 +363,7 @@ export const dict = {
   "language.br": "Português (Brasil)",
   "language.bs": "Bosanski",
   "language.th": "ไทย",
+  "language.tr": "Türkçe",
 
   "toast.theme.title": "สลับธีมแล้ว",
   "toast.scheme.title": "โทนสี",
@@ -1113,6 +1114,7 @@ export const dict = {
   "settings.providers.notSet": "ไม่ได้ตั้งค่า (ใช้ค่าเริ่มต้นของเซิร์ฟเวอร์)",
   "dialog.model.notSet": "ไม่ได้ตั้งค่า",
   "profile.personalAccount": "บัญชีส่วนตัว",
+  "profile.switchingAccount": "กำลังสลับบัญชี…",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/th.ts
 
   "question.summary": "{{n}} จาก {{total}} คำถาม",

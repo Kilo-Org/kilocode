@@ -66,6 +66,20 @@
       "problemMatcher": []
     },
     {
+      "label": "VSCode - Install",
+      "type": "shell",
+      "command": "bun",
+      "args": ["install", "--frozen-lockfile"],
+      "group": "build",
+      "presentation": {
+        "reveal": "silent"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "VSCode - Compile",
       "type": "shell",
       "command": "bun",
@@ -77,6 +91,7 @@
       "options": {
         "cwd": "${workspaceFolder}/packages/kilo-vscode"
       },
+      "dependsOn": ["VSCode - Install"],
       "problemMatcher": ["$tsc", "$eslint-stylish"]
     },
     {

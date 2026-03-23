@@ -362,6 +362,7 @@ export const dict = {
   "language.br": "Português (Brasil)",
   "language.bs": "Bosanski",
   "language.th": "ไทย",
+  "language.tr": "Türkçe",
 
   "toast.language.title": "Language",
   "toast.language.description": "Switched to {{language}}",
@@ -1140,6 +1141,7 @@ export const dict = {
   "dialog.model.notSet": "Not set",
 
   "profile.personalAccount": "Personal Account",
+  "profile.switchingAccount": "Switching account…",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/en.ts
 

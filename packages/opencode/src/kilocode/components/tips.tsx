@@ -142,4 +142,5 @@ const TIPS = [
   "Run {highlight}/help{/highlight} to show the help dialog",
   "Use {highlight}/rename{/highlight} to rename the current session",
   "Press {highlight}Ctrl+Z{/highlight} to suspend the terminal and return to your shell",
+  "Doing something often? Ask Kilo to save it as a {highlight}/command{/highlight}",
 ]
