@@ -1,4 +1,16 @@
-import { Component, createEffect, createMemo, createSignal, For, Match, on, Show, Switch, type JSX } from "solid-js"
+import {
+  Component,
+  createEffect,
+  createMemo,
+  createSignal,
+  For,
+  Match,
+  on,
+  onCleanup,
+  Show,
+  Switch,
+  type JSX,
+} from "solid-js"
 import stripAnsi from "strip-ansi"
 import { createStore } from "solid-js/store"
 import { Dynamic } from "solid-js/web"
@@ -20,7 +32,7 @@ import { useData } from "../context"
 import { useFileComponent } from "../context/file"
 import { useDialog } from "../context/dialog"
 import { type UiI18n, useI18n } from "../context/i18n"
-import { GenericTool, ToolCall } from "./basic-tool"
+import { GenericTool, BasicTool } from "./basic-tool"
 import { Accordion } from "./accordion"
 import { StickyAccordionHeader } from "./sticky-accordion-header"
 import { Card } from "./card"
@@ -36,17 +48,11 @@ import { checksum } from "@opencode-ai/util/encode"
 import { Tooltip } from "./tooltip"
 import { IconButton } from "./icon-button"
 import { TextShimmer } from "@opencode-ai/ui/text-shimmer"
-import { list } from "@opencode-ai/ui/text-utils"
-import { GrowBox } from "@opencode-ai/ui/grow-box"
-import { COLLAPSIBLE_SPRING } from "@opencode-ai/ui/motion"
-import { busy, hold, createThrottledValue, useToolFade, useContextToolPending } from "@opencode-ai/ui/tool-utils"
-import {
-  ContextToolGroupHeader,
-  ContextToolExpandedList,
-  ContextToolRollingResults,
-} from "@opencode-ai/ui/context-tool-results"
-import { ShellRollingResults } from "@opencode-ai/ui/shell-rolling-results"
-import { pageVisible } from "@opencode-ai/ui/hooks"
+import { GrowBox } from "./grow-box"
+import { COLLAPSIBLE_SPRING } from "./motion"
+import { busy, createThrottledValue, useToolFade, useContextToolPending } from "./tool-utils"
+import { ContextToolGroupHeader, ContextToolExpandedList, ContextToolRollingResults } from "./context-tool-results"
+import { ShellRollingResults } from "./shell-rolling-results"
 import { extractFilePathFromHref } from "../file-path"
 
 // Windows CLI tools (e.g. winget) use \r to overwrite progress bars in-place.
@@ -282,6 +288,11 @@ function urls(text: string | undefined) {
 const CONTEXT_GROUP_TOOLS = new Set(["read", "glob", "grep", "list"])
 const HIDDEN_TOOLS = new Set(["todowrite", "todoread"])
 
+function list<T>(value: T[] | undefined | null, fallback: T[]) {
+  if (Array.isArray(value)) return value
+  return fallback
+}
+
 function createGroupOpenState() {
   const [state, setState] = createStore<Record<string, boolean>>({})
   const read = (key?: string, collapse?: boolean) => {
@@ -298,18 +309,6 @@ function createGroupOpenState() {
     setState(key, value)
   }
   return { read, controlled, write }
-}
-
-function shouldCollapseGroup(
-  statuses: (string | undefined)[],
-  opts: { afterTool?: boolean; groupTail?: boolean; working?: boolean },
-) {
-  if (opts.afterTool) return true
-  if (opts.groupTail === false) return true
-  if (!pageVisible()) return false
-  if (opts.working) return false
-  if (!statuses.length) return false
-  return !statuses.some((s) => busy(s))
 }
 
 function renderable(part: PartType, showReasoningSummaries = true) {
@@ -349,8 +348,8 @@ function PartGrow(props: {
   grow?: boolean
   watch?: boolean
   open?: boolean
-  spring?: import("@opencode-ai/ui/motion").SpringConfig
-  toggleSpring?: import("@opencode-ai/ui/motion").SpringConfig
+  spring?: import("./motion").SpringConfig
+  toggleSpring?: import("./motion").SpringConfig
 }) {
   return (
     <GrowBox
@@ -420,11 +419,21 @@ export function AssistantParts(props: {
       if (part.type === "tool") return part.callID || part.id
       return part.id
     }
-    const parts = props.messages.flatMap((message) =>
-      list(data.store.part?.[message.id], emptyParts)
-        .filter((part) => renderable(part, props.showReasoningSummaries ?? true))
-        .map((part) => ({ message, part })),
-    )
+    const parts = props.messages.flatMap((message) => {
+      const filtered = list(data.store.part?.[message.id], emptyParts).filter((part) =>
+        renderable(part, props.showReasoningSummaries ?? true),
+      )
+      // Ensure reasoning parts appear before text parts within each message.
+      // During streaming the reasoning part may arrive after the text part
+      // in the store (SSE order), but visually reasoning always precedes text.
+      const reasoning: typeof filtered = []
+      const rest: typeof filtered = []
+      for (const p of filtered) {
+        if (p.type === "reasoning") reasoning.push(p)
+        else rest.push(p)
+      }
+      return [...reasoning, ...rest].map((part) => ({ message, part }))
+    })
 
     let start = -1
 
@@ -506,20 +515,9 @@ export function AssistantParts(props: {
             return COLLAPSIBLE_SPRING
           })
           const contextOpen = createMemo(() => {
-            const collapse = (
-              afterTool?: boolean,
-              groupTail?: boolean,
-              group?: { part: ToolPart; message: AssistantMessage }[],
-            ) =>
-              shouldCollapseGroup(group?.map((item) => item.part.state.status) ?? [], {
-                afterTool,
-                groupTail,
-                working: props.working,
-              })
             const value = ctx()
-            if (value) return groupState.read(value.groupKey, collapse(value.afterTool, value.tail, value.parts))
-            const entry = part()
-            return groupState.read(entry?.groupKey, collapse(entry?.afterTool, entry?.groupTail, entry?.groupParts))
+            if (value) return groupState.read(value.groupKey, true)
+            return groupState.read(part()?.groupKey, true)
           })
           const visible = createMemo(() => {
             if (!context()) return true
@@ -565,9 +563,7 @@ export function AssistantParts(props: {
             ctxPartsPrev = result
             return result
           })
-          const ctxPendingRaw = useContextToolPending(ctxParts, () => !!(props.working && ctx()?.tail))
-          const ctxPending = ctxPendingRaw
-          const ctxHoldOpen = hold(ctxPendingRaw)
+          const ctxPending = useContextToolPending(ctxParts, () => !!(props.working && ctx()?.tail))
           const shell = createMemo(() => {
             const value = part()
             if (!value) return
@@ -619,12 +615,20 @@ export function AssistantParts(props: {
                           onOpenChange={(value: boolean) => groupState.write(entry().groupKey, value)}
                         />
                       </PartGrow>
-                      <ContextToolExpandedList parts={ctxParts()} expanded={!ctxPending() && contextOpen()} />
-                      <ContextToolRollingResults parts={ctxParts()} pending={ctxHoldOpen()} />
+                      <ContextToolExpandedList parts={ctxParts()} expanded={contextOpen() && !ctxPending()} />
+                      <ContextToolRollingResults parts={ctxParts()} pending={contextOpen() && ctxPending()} />
                     </>
                   )}
                 </Show>
-                <Show when={shell()}>{(value) => <ShellRollingResults part={value()} animate={props.animate} />}</Show>
+                <Show when={shell()}>
+                  {(value) => (
+                    <ShellRollingResults
+                      part={value()}
+                      animate={props.animate}
+                      defaultOpen={props.shellToolDefaultOpen}
+                    />
+                  )}
+                </Show>
                 <Show when={!shell() ? part() : undefined}>
                   {(entry) => (
                     <Show when={!entry().context}>
@@ -774,109 +778,107 @@ export function UserMessageDisplay(props: {
   return (
     <GrowBox animate={!!props.animate} fade class="w-full min-w-0 self-stretch max-w-full">
       <div data-component="user-message" data-interrupted={props.interrupted ? "" : undefined}>
-        <div data-slot="user-message-inner">
-          <Show when={attachments().length > 0}>
-            <div data-slot="user-message-attachments">
-              <For each={attachments()}>
-                {(file) => (
-                  <div
-                    data-slot="user-message-attachment"
-                    data-type={file.mime.startsWith("image/") ? "image" : "file"}
-                    data-queued={props.queued ? "" : undefined}
-                    onClick={() => {
-                      if (file.mime.startsWith("image/") && file.url) {
-                        openImagePreview(file.url, file.filename)
-                      }
-                    }}
-                  >
-                    <Show
-                      when={file.mime.startsWith("image/") && file.url}
-                      fallback={
-                        <div data-slot="user-message-attachment-icon">
-                          <Icon name="folder" />
-                        </div>
-                      }
-                    >
-                      <img
-                        data-slot="user-message-attachment-image"
-                        src={file.url}
-                        alt={file.filename ?? i18n.t("ui.message.attachment.alt")}
-                      />
-                    </Show>
-                  </div>
-                )}
-              </For>
-            </div>
-          </Show>
-          <Show when={text()}>
-            <>
-              <div data-slot="user-message-body">
-                <div data-slot="user-message-text" data-queued={props.queued ? "" : undefined}>
-                  <HighlightedText text={text()} references={inlineFiles()} agents={agents()} />
-                </div>
-                <GrowBox animate={!!props.animate} open={!!props.queued}>
-                  <div data-slot="user-message-queued-indicator">
-                    <TextShimmer text={i18n.t("ui.message.queued")} />
-                  </div>
-                </GrowBox>
-              </div>
-
-              <div data-slot="user-message-copy-wrapper" data-interrupted={props.interrupted ? "" : undefined}>
-                <Show when={metaHead() || metaTail()}>
-                  <span data-slot="user-message-meta-wrap">
-                    <Show when={metaHead()}>
-                      <span data-slot="user-message-meta" class="text-12-regular text-text-weak cursor-default">
-                        {metaHead()}
-                      </span>
-                    </Show>
-                    <Show when={metaHead() && metaTail()}>
-                      <span data-slot="user-message-meta-sep" class="text-12-regular text-text-weak cursor-default">
-                        {"\u00A0\u00B7\u00A0"}
-                      </span>
-                    </Show>
-                    <Show when={metaTail()}>
-                      <span data-slot="user-message-meta-tail" class="text-12-regular text-text-weak cursor-default">
-                        {metaTail()}
-                      </span>
-                    </Show>
-                  </span>
-                </Show>
-                <Show when={props.onRevert}>
-                  <Tooltip value={i18n.t("ui.message.revert")} placement="right" gutter={4}>
-                    <IconButton
-                      icon="arrow-left"
-                      size="normal"
-                      variant="ghost"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        props.onRevert?.()
-                      }}
-                      aria-label={i18n.t("ui.message.revert")}
-                    />
-                  </Tooltip>
-                </Show>
-                <Tooltip
-                  value={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
-                  placement="right"
-                  gutter={4}
+        <Show when={attachments().length > 0}>
+          <div data-slot="user-message-attachments">
+            <For each={attachments()}>
+              {(file) => (
+                <div
+                  data-slot="user-message-attachment"
+                  data-type={file.mime.startsWith("image/") ? "image" : "file"}
+                  data-queued={props.queued ? "" : undefined}
+                  onClick={() => {
+                    if (file.mime.startsWith("image/") && file.url) {
+                      openImagePreview(file.url, file.filename)
+                    }
+                  }}
                 >
+                  <Show
+                    when={file.mime.startsWith("image/") && file.url}
+                    fallback={
+                      <div data-slot="user-message-attachment-icon">
+                        <Icon name="folder" />
+                      </div>
+                    }
+                  >
+                    <img
+                      data-slot="user-message-attachment-image"
+                      src={file.url}
+                      alt={file.filename ?? i18n.t("ui.message.attachment.alt")}
+                    />
+                  </Show>
+                </div>
+              )}
+            </For>
+          </div>
+        </Show>
+        <Show when={text()}>
+          <>
+            <div data-slot="user-message-body">
+              <div data-slot="user-message-text" data-queued={props.queued ? "" : undefined}>
+                <HighlightedText text={text()} references={inlineFiles()} agents={agents()} />
+              </div>
+              <GrowBox animate={!!props.animate} open={!!props.queued}>
+                <div data-slot="user-message-queued-indicator">
+                  <TextShimmer text={i18n.t("ui.message.queued")} />
+                </div>
+              </GrowBox>
+            </div>
+
+            <div data-slot="user-message-copy-wrapper" data-interrupted={props.interrupted ? "" : undefined}>
+              <Show when={metaHead() || metaTail()}>
+                <span data-slot="user-message-meta-wrap">
+                  <Show when={metaHead()}>
+                    <span data-slot="user-message-meta" class="text-12-regular text-text-weak cursor-default">
+                      {metaHead()}
+                    </span>
+                  </Show>
+                  <Show when={metaHead() && metaTail()}>
+                    <span data-slot="user-message-meta-sep" class="text-12-regular text-text-weak cursor-default">
+                      {"\u00A0\u00B7\u00A0"}
+                    </span>
+                  </Show>
+                  <Show when={metaTail()}>
+                    <span data-slot="user-message-meta-tail" class="text-12-regular text-text-weak cursor-default">
+                      {metaTail()}
+                    </span>
+                  </Show>
+                </span>
+              </Show>
+              <Show when={props.onRevert}>
+                <Tooltip value={i18n.t("ui.message.revert")} placement="right" gutter={4}>
                   <IconButton
-                    icon={copied() ? "check" : "copy"}
+                    icon="arrow-left"
                     size="normal"
                     variant="ghost"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={(event) => {
                       event.stopPropagation()
-                      handleCopy()
+                      props.onRevert?.()
                     }}
-                    aria-label={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
+                    aria-label={i18n.t("ui.message.revert")}
                   />
                 </Tooltip>
-              </div>
-            </>
-          </Show>
-        </div>
+              </Show>
+              <Tooltip
+                value={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
+                placement="right"
+                gutter={4}
+              >
+                <IconButton
+                  icon={copied() ? "check" : "copy"}
+                  size="normal"
+                  variant="ghost"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    handleCopy()
+                  }}
+                  aria-label={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
+                />
+              </Tooltip>
+            </div>
+          </>
+        </Show>
       </div>
     </GrowBox>
   )
@@ -1023,10 +1025,9 @@ function McpTool(props: ToolProps) {
   return (
     <Show
       when={!props.hideDetails}
-      fallback={<ToolCall variant="row" icon="mcp" status={props.status} trigger={{ title: props.tool }} />}
+      fallback={<BasicTool hideDetails icon="mcp" status={props.status} trigger={{ title: props.tool }} />}
     >
-      <ToolCall
-        variant="panel"
+      <BasicTool
         icon="mcp"
         status={props.status}
         trigger={{ title: props.tool }}
@@ -1041,7 +1042,7 @@ function McpTool(props: ToolProps) {
             </div>
           )}
         </Show>
-      </ToolCall>
+      </BasicTool>
     </Show>
   )
 }
@@ -1194,18 +1195,72 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
   )
 }
 
-// Overrides upstream flat markdown render with a clearly distinguished, collapsed-by-default block.
+// Track part IDs that have been rendered while streaming.
+// Persists across component instances so that when reasoning-end replaces the
+// store object (causing <For> to recreate the component) the new instance
+// knows the part was just streaming and can animate the collapse.
+const streamed = new Set<string>()
+// Tracks parts that have already been auto-collapsed once, so component
+// recreation (from store updates while other parts stream) won't collapse again.
+const autocollapsed = new Set<string>()
+
+// Overrides upstream flat markdown render with streaming reasoning block + auto-collapse.
 // Also filters encrypted reasoning data from OpenRouter that appears as [REDACTED].
 PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProps) {
-  const part = props.part as unknown as ReasoningPart
   const i18n = useI18n()
-  const [open, setOpen] = createSignal(false)
-  const text = () => (part.text ?? "").replace("[REDACTED]", "").trim()
-  const throttledText = createThrottledValue(text)
+
+  const text = () => {
+    const p = props.part as unknown as ReasoningPart
+    return (p.text ?? "").replace("[REDACTED]", "").trim()
+  }
+
+  // Throttle markdown re-renders during streaming
+  const display = createThrottledValue(text)
+
+  // time.end is set by the processor on reasoning-end.
+  // v1 parts lack time entirely → treat as historical.
+  const done = () => {
+    const t = (props.part as any).time
+    return !t || !!t.end
+  }
+
+  const id = (props.part as any).id as string
+
+  // Check before adding — order matters
+  const was = streamed.has(id)
+  if (!done()) streamed.add(id)
+
+  // Streaming → open. Just finished (was streaming, now done) → open briefly
+  // then collapse. Historical → collapsed from the start.
+  const [open, setOpen] = createSignal(!done() || was)
+
+  // Auto-collapse once when reasoning finishes (streaming → done transition).
+  // Collapses immediately so the grid transition runs in sync with the
+  // streaming-height removal. Module-level Set prevents re-triggering on
+  // component recreation or when the user manually reopens.
+  createEffect(() => {
+    if (done() && open() && !autocollapsed.has(id)) {
+      autocollapsed.add(id)
+      setOpen(false)
+    }
+  })
+
+  onCleanup(() => {
+    if (done()) streamed.delete(id)
+  })
+
+  // Auto-scroll the content container while streaming
+  let ref: HTMLDivElement | undefined
+  createEffect(() => {
+    display()
+    if (!done() && ref) {
+      ref.scrollTop = ref.scrollHeight
+    }
+  })
 
   return (
-    <Show when={throttledText()}>
-      <div data-component="reasoning-part">
+    <Show when={display()}>
+      <div data-component="reasoning-part" data-streaming={!done() ? "" : undefined}>
         <Collapsible open={open()} onOpenChange={setOpen} class="tool-collapsible">
           <Collapsible.Trigger>
             <div data-slot="reasoning-header">
@@ -1215,8 +1270,8 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
             <Collapsible.Arrow />
           </Collapsible.Trigger>
           <Collapsible.Content>
-            <div data-slot="reasoning-content">
-              <Markdown text={throttledText()} cacheKey={part.id} />
+            <div data-slot="reasoning-content" ref={ref}>
+              <Markdown text={display()} cacheKey={id} />
             </div>
           </Collapsible.Content>
         </Collapsible>
@@ -1243,6 +1298,7 @@ function WebfetchMeta(props: { url: string; animate?: boolean }) {
       <a
         data-slot="basic-tool-tool-subtitle"
         class="clickable subagent-link"
+        title={props.url}
         href={props.url}
         target="_blank"
         rel="noopener noreferrer"
@@ -1355,6 +1411,7 @@ function ToolMetaLine(props: {
   return (
     <span
       ref={ref}
+      title={props.path ? `${props.filename} ${props.path}` : props.filename}
       data-slot={props.soft ? "basic-tool-tool-subtitle" : "message-part-meta-line"}
       classList={{
         "message-part-meta-line": !!props.soft,
@@ -1414,8 +1471,8 @@ ToolRegistry.register({
     const pending = createMemo(() => busy(props.status))
     return (
       <>
-        <ToolCall
-          variant="row"
+        <BasicTool
+          hideDetails
           {...props}
           icon="glasses"
           onSubtitleClick={
@@ -1451,8 +1508,7 @@ ToolRegistry.register({
     const i18n = useI18n()
     const pending = createMemo(() => busy(props.status))
     return (
-      <ToolCall
-        variant="panel"
+      <BasicTool
         {...props}
         icon="bullet-list"
         trigger={
@@ -1471,7 +1527,7 @@ ToolRegistry.register({
             </div>
           )}
         </Show>
-      </ToolCall>
+      </BasicTool>
     )
   },
 })
@@ -1482,8 +1538,7 @@ ToolRegistry.register({
     const i18n = useI18n()
     const pending = createMemo(() => busy(props.status))
     return (
-      <ToolCall
-        variant="panel"
+      <BasicTool
         {...props}
         icon="magnifying-glass-menu"
         trigger={
@@ -1503,7 +1558,7 @@ ToolRegistry.register({
             </div>
           )}
         </Show>
-      </ToolCall>
+      </BasicTool>
     )
   },
 })
@@ -1517,8 +1572,7 @@ ToolRegistry.register({
     if (props.input.include) args.push("include=" + props.input.include)
     const pending = createMemo(() => busy(props.status))
     return (
-      <ToolCall
-        variant="panel"
+      <BasicTool
         {...props}
         icon="magnifying-glass-menu"
         trigger={
@@ -1538,7 +1592,7 @@ ToolRegistry.register({
             </div>
           )}
         </Show>
-      </ToolCall>
+      </BasicTool>
     )
   },
 })
@@ -1555,8 +1609,8 @@ ToolRegistry.register({
       return value
     })
     return (
-      <ToolCall
-        variant="row"
+      <BasicTool
+        hideDetails
         {...props}
         icon="window-cursor"
         trigger={
@@ -1585,8 +1639,7 @@ ToolRegistry.register({
     })
 
     return (
-      <ToolCall
-        variant="panel"
+      <BasicTool
         {...props}
         icon="window-cursor"
         trigger={{
@@ -1596,7 +1649,7 @@ ToolRegistry.register({
         }}
       >
         <ExaOutput output={props.output} />
-      </ToolCall>
+      </BasicTool>
     )
   },
 })
@@ -1612,8 +1665,7 @@ ToolRegistry.register({
     })
 
     return (
-      <ToolCall
-        variant="panel"
+      <BasicTool
         {...props}
         icon="code"
         trigger={{
@@ -1623,7 +1675,7 @@ ToolRegistry.register({
         }}
       >
         <ExaOutput output={props.output} />
-      </ToolCall>
+      </BasicTool>
     )
   },
 })
@@ -1705,7 +1757,7 @@ ToolRegistry.register({
       </div>
     )
 
-    return <ToolCall variant="row" icon="task" status={props.status} trigger={trigger()} animate />
+    return <BasicTool hideDetails icon="task" status={props.status} trigger={trigger()} animated />
   },
 })
 
@@ -1744,12 +1796,10 @@ ToolRegistry.register({
     }
 
     return (
-      <ToolCall
-        variant="panel"
+      <BasicTool
         {...props}
         icon="console"
-        animate
-        springContent
+        animated
         defaultOpen
         trigger={
           <div data-slot="basic-tool-tool-info-structured">
@@ -1785,7 +1835,7 @@ ToolRegistry.register({
             </pre>
           </div>
         </div>
-      </ToolCall>
+      </BasicTool>
     )
   },
 })
@@ -1810,8 +1860,7 @@ ToolRegistry.register({
 
     return (
       <div data-component="edit-tool">
-        <ToolCall
-          variant="panel"
+        <BasicTool
           {...props}
           icon="code-lines"
           defer
@@ -1864,7 +1913,7 @@ ToolRegistry.register({
             </ToolFileAccordion>
           </Show>
           <DiagnosticsDisplay diagnostics={diagnostics()} />
-        </ToolCall>
+        </BasicTool>
       </div>
     )
   },
@@ -1890,8 +1939,7 @@ ToolRegistry.register({
 
     return (
       <div data-component="write-tool">
-        <ToolCall
-          variant="panel"
+        <BasicTool
           {...props}
           icon="code-lines"
           defer
@@ -1934,7 +1982,7 @@ ToolRegistry.register({
             </ToolFileAccordion>
           </Show>
           <DiagnosticsDisplay diagnostics={diagnostics()} />
-        </ToolCall>
+        </BasicTool>
       </div>
     )
   },
@@ -1983,8 +2031,7 @@ ToolRegistry.register({
 
     return (
       <div data-component="apply-patch-tool">
-        <ToolCall
-          variant="panel"
+        <BasicTool
           {...props}
           icon="code-lines"
           defer
@@ -2157,7 +2204,7 @@ ToolRegistry.register({
               </ToolFileAccordion>
             )}
           </Show>
-        </ToolCall>
+        </BasicTool>
       </div>
     )
   },
@@ -2185,8 +2232,7 @@ ToolRegistry.register({
     })
 
     return (
-      <ToolCall
-        variant="panel"
+      <BasicTool
         {...props}
         defaultOpen
         icon="checklist"
@@ -2215,7 +2261,7 @@ ToolRegistry.register({
             </For>
           </div>
         </Show>
-      </ToolCall>
+      </BasicTool>
     )
   },
 })
@@ -2237,8 +2283,7 @@ ToolRegistry.register({
     })
 
     return (
-      <ToolCall
-        variant="panel"
+      <BasicTool
         {...props}
         defaultOpen={false}
         icon="bubble-5"
@@ -2266,7 +2311,7 @@ ToolRegistry.register({
             </For>
           </div>
         </Show>
-      </ToolCall>
+      </BasicTool>
     )
   },
 })
@@ -2281,8 +2326,8 @@ ToolRegistry.register({
       if (typeof value === "string") return value
     })
     return (
-      <ToolCall
-        variant="row"
+      <BasicTool
+        hideDetails
         icon="brain"
         status={props.status}
         trigger={
@@ -2294,7 +2339,7 @@ ToolRegistry.register({
             revealOnMount
           />
         }
-        animate
+        animated
       />
     )
   },

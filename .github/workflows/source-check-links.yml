@@ -1,0 +1,24 @@
+name: Check Source Links
+
+on:
+  pull_request:
+    paths:
+      - "packages/kilo-vscode/src/**"
+      - "packages/kilo-vscode/webview-ui/**"
+      - "packages/opencode/src/**"
+      - "packages/kilo-docs/source-links.md"
+      - "script/extract-source-links.ts"
+      - ".github/workflows/source-check-links.yml"
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  source-links-freshness:
+    if: github.repository == 'Kilo-Org/kilocode'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Check source-links.md is up to date
+        run: bun run script/extract-source-links.ts --check

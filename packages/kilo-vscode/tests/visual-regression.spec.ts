@@ -47,7 +47,11 @@ async function disableAnimations(page: Page) {
 
 // Stories to skip from visual regression (add IDs here if needed)
 // Spinner animation captures at an indeterminate frame, causing flaky diffs.
-const SKIP = new Set<string>(["agentmanager--worktree-item-busy"])
+// Permission dock config-preloaded has non-deterministic toggle rendering.
+const SKIP = new Set<string>([
+  "agentmanager--worktree-item-busy",
+  "composite-webview--permission-dock-config-preloaded",
+])
 
 // Generate one test() per story so Playwright's scheduler can distribute
 // them freely across workers — no manual sharding needed.

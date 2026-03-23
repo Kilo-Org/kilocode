@@ -1,6 +1,7 @@
 import { dict as ar } from "./ar"
 import { dict as br } from "./br"
 import { dict as bs } from "./bs"
+import { dict as nl } from "./nl"
 import { dict as da } from "./da"
 import { dict as de } from "./de"
 import { dict as en } from "./en"
@@ -20,6 +21,7 @@ const bundles: Record<string, Record<string, string>> = {
   ar,
   br,
   bs,
+  nl,
   da,
   de,
   en,

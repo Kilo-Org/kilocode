@@ -119,9 +119,9 @@ Documentation improvements are highly valued contributions:
 2. Test your documentation changes by running the docs site locally:
 
    ```bash
-   cd apps/kilocode-docs
+   cd packages/kilo-docs
    pnpm install
-   pnpm start
+   pnpm dev
    ```
 
 3. Submit a PR with your documentation changes

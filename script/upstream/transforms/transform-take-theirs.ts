@@ -122,9 +122,9 @@ const BRANDING_REPLACEMENTS: BrandingReplacement[] = [
     description: "Window global",
   },
   {
-    pattern: /x-opencode-client/g,
-    replacement: "x-kilo-client",
-    description: "HTTP header",
+    pattern: /x-opencode-/g,
+    replacement: "x-kilo-",
+    description: "HTTP header prefix",
   },
   {
     pattern: /_EXTENSION_OPENCODE_/g,

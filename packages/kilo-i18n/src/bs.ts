@@ -70,4 +70,8 @@ export const dict = {
   "marketplace.install": "Instaliraj",
   "marketplace.filter.installed": "Instalirano",
   "marketplace.error.dismiss": "Odbaci",
+  "marketplace.warning.busyOne": "Jedna sesija je pokrenuta i bit će prekinuta",
+  "marketplace.warning.busyMany": "Nekoliko sesija je pokrenuto i bit će prekinuto",
+  "marketplace.warning.installAnyway": "Instaliraj svejedno",
+  "marketplace.warning.cancel": "Otkaži",
 }

@@ -37,6 +37,59 @@
   [data-slot="message-part-title-text"] {
     flex-shrink: 0;
   }
+
+  [data-slot="message-part-meta-line"] {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    overflow: hidden;
+    white-space: nowrap;
+    min-width: 0;
+    flex-shrink: 1;
+
+    &.clickable {
+      cursor: pointer;
+      transition: color 0.15s ease;
+
+      &:hover {
+        color: var(--text-base);
+      }
+    }
+  }
+
+  [data-slot="message-part-title-filename"] {
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    direction: rtl;
+    text-align: left;
+  }
+
+  [data-slot="message-part-directory-inline"] {
+    color: var(--text-weak);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    direction: rtl;
+    text-align: left;
+    flex-shrink: 1;
+    min-width: 0;
+  }
+}
+
+/* Prevent long filenames in apply-patch accordion from hiding diff changes */
+[data-component="accordion"][data-scope="apply-patch"] {
+  [data-slot="apply-patch-filename"] {
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    direction: rtl;
+    text-align: left;
+  }
 }
 
 /* Task tool child-session tool list (v1.0.25 style) */
@@ -127,7 +180,9 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   padding: 8px;
 }
 
-/* Reasoning block: visually distinct from normal agent output */
+/* Reasoning block: visually distinct from normal agent output.
+   While streaming: open with fixed-height scrollable window.
+   When done: auto-collapses; user can click to reopen. */
 [data-component="reasoning-part"] {
   width: 100%;
   border-left: 2px solid var(--border-weak-base);
@@ -189,5 +244,50 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
         color: var(--text-weak);
       }
     }
+  }
+
+  /* Collapse/expand animation via Kobalte's CSS variable.
+     Uses grid trick: the outer wrapper transitions grid-template-rows
+     between 0fr (collapsed) and 1fr (expanded) so the content smoothly
+     collapses without needing to know the pixel height up front. */
+  [data-slot="collapsible-content"] {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 250ms ease-out;
+    overflow: hidden;
+
+    > * {
+      overflow: hidden;
+    }
+
+    &[data-expanded] {
+      grid-template-rows: 1fr;
+    }
+  }
+
+  /* Streaming state: fixed-height window with auto-scroll */
+  &[data-streaming] {
+    [data-slot="reasoning-content"] {
+      max-height: 120px;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+      mask-image: linear-gradient(to bottom, transparent 0%, black 12px, black 85%, transparent 100%);
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 12px, black 85%, transparent 100%);
+    }
+
+    /* Pulse the brain icon while streaming */
+    [data-slot="reasoning-header"] [data-component="icon"] {
+      animation: reasoning-pulse 2s ease-in-out infinite;
+    }
+  }
+}
+
+@keyframes reasoning-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
   }
 }

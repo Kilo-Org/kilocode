@@ -835,6 +835,80 @@ export const PermissionDockConfigPreloaded: Story = {
 }
 
 // ---------------------------------------------------------------------------
+// 18. Permission dock — bash with very long heredoc command
+// ---------------------------------------------------------------------------
+
+const heredocPermission: PermissionRequest = {
+  id: "perm-heredoc-001",
+  sessionID: SESSION_ID,
+  toolName: "bash",
+  patterns: ["python3"],
+  always: ["python3 *"],
+  args: {
+    command: `python3 << 'EOF'
+import json
+from collections import defaultdict
+from pathlib import Path
+
+events_path = Path('test_sound/events.json')
+extracted_dir = Path('test_sound/extracted')
+
+with open(events_path) as f:
+    events = json.load(f)
+
+# Gather all expected entries and their details
+expected = []  # list of (fsb, index, name, event_path, entry_obj)
+for project in events.get('projects', []):
+    for event in project.get('events', []):
+        for region in event.get('sound_defs', []):
+            for def_ in region.get('defs', []):
+                for entry in def_.get('entries', []):
+                    if entry.get('type') == 'wavatable':
+                        expected.append((
+                            entry.get('fsb'),
+                            entry.get('subsound_index'),
+                            entry.get('subsound_name'),
+                            event.get('path'),
+                            entry
+                        ))
+
+print(f"Total wavetable entries in events.json: {len(expected)}")
+
+# Check which ones got audio_file set
+found_audio = 0
+for _, _, _, _, entry in expected:
+    if entry.get('audio_file'):
+        found_audio += 1
+
+print(f"Entries with audio_file set: {found_audio}")
+print(f"Missing audio_file: {len(expected) - found_audio}")
+EOF`,
+    rules: ["python3 *"],
+  },
+  tool: { messageID: ASST_MSG_ID, callID: "call-heredoc-001" },
+}
+
+export const PermissionDockHeredoc: Story = {
+  name: "Permission Dock — bash heredoc (long command)",
+  render: () => {
+    const perms = [heredocPermission]
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy", permissions: perms }),
+      messages: () => [{ id: "msg-001" }] as any[],
+    }
+    return (
+      <StoryProviders permissions={perms} sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "100%", height: "400px", display: "flex", "flex-direction": "column" }}>
+            <ChatView />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+// ---------------------------------------------------------------------------
 // 17. MCP tool cards — collapsed
 // ---------------------------------------------------------------------------
 

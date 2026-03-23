@@ -126,6 +126,10 @@ export const ServerProvider: ParentComponent = (props) => {
   })
 
   const startLogin = () => {
+    const status = deviceAuth().status
+    if (status === "initiating" || status === "pending") {
+      return
+    }
     setDeviceAuth({ status: "initiating" })
     vscode.postMessage({ type: "login" })
   }

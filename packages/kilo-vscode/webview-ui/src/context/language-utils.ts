@@ -15,6 +15,7 @@ export type Locale =
   | "br"
   | "th"
   | "bs"
+  | "nl"
 
 export const LOCALES: readonly Locale[] = [
   "en",
@@ -33,6 +34,7 @@ export const LOCALES: readonly Locale[] = [
   "br",
   "th",
   "bs",
+  "nl",
 ]
 
 /**
@@ -51,6 +53,9 @@ export function normalizeLocale(lang: string): Locale {
   }
   if (lower.startsWith("nb") || lower.startsWith("nn")) {
     return "no"
+  }
+  if (lower.startsWith("nl")) {
+    return "nl"
   }
   if (lower.startsWith("pt")) {
     return "br"

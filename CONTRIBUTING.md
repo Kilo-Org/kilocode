@@ -24,6 +24,16 @@ The Kilo Community is [on Discord](https://kilo.ai/discord).
   bun dev
   ```
 
+### Developing the VS Code Extension
+
+Build and launch the extension in an isolated VS Code instance:
+
+```bash
+bun run extension        # Build + launch in dev mode
+```
+
+This auto-detects VS Code on macOS, Linux, and Windows. Override with `--app-path PATH` or `VSCODE_EXEC_PATH`. Use `--insiders` to prefer Insiders, `--workspace PATH` to open a specific folder, or `--clean` to reset cached state.
+
 ### Running against a different directory
 
 By default, `bun dev` runs Kilo CLI in the `packages/opencode` directory. To run it against a different directory or repository:
