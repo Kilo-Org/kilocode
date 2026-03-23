@@ -1518,7 +1518,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function syncSession(sessionID: string) {
-    vscode.postMessage({ type: "syncSession", sessionID })
+    vscode.postMessage({ type: "syncSession", sessionID, parentSessionID: currentSessionID() })
   }
 
   const todos = () => {

@@ -1562,6 +1562,7 @@ export interface DismissNotificationMessage {
 export interface SyncSessionRequest {
   type: "syncSession"
   sessionID: string
+  parentSessionID?: string
 }
 
 // Agent Manager worktree messages
