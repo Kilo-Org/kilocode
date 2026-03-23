@@ -1525,6 +1525,7 @@
 
 .mode-switcher-list {
   overflow-y: auto;
+  max-height: min(50vh, 300px);
 }
 
 .mode-switcher-item {
