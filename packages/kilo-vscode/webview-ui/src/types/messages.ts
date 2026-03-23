@@ -251,6 +251,7 @@ export interface KilocodeNotification {
   message: string
   action?: KilocodeNotificationAction
   showIn?: string[]
+  suggestModelId?: string
 }
 
 // Profile types from kilo-gateway
@@ -586,6 +587,7 @@ export interface ReviewComment {
 export interface AppendReviewCommentsMessage {
   type: "appendReviewComments"
   comments: ReviewComment[]
+  autoSend?: boolean
 }
 
 export interface TriggerTaskMessage {

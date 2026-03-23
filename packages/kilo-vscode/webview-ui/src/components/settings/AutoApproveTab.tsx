@@ -112,6 +112,7 @@ const TRAILING_TOOLS: ToolDef[] = [
  * change, this map must be updated to match.
  */
 const TOOL_DEFAULTS: Partial<Record<string, PermissionLevel>> = {
+  bash: "ask",
   doom_loop: "ask",
   external_directory: "ask",
 }

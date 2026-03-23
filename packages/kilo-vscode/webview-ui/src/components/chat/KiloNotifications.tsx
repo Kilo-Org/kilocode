@@ -4,10 +4,16 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { useNotifications } from "../../context/notifications"
 import { useVSCode } from "../../context/vscode"
+import { useSession } from "../../context/session"
+import { useProvider } from "../../context/provider"
+import { KILO_PROVIDER_ID } from "../../../../src/shared/provider-model"
+import { TelemetryEventName } from "../../../../src/services/telemetry/types"
 
 export const KiloNotifications: Component = () => {
   const { filteredNotifications, dismiss } = useNotifications()
   const vscode = useVSCode()
+  const session = useSession()
+  const provider = useProvider()
   const [index, setIndex] = createSignal(0)
 
   const items = filteredNotifications
@@ -27,6 +33,38 @@ export const KiloNotifications: Component = () => {
     if (!n) return
     dismiss(n.id)
     setIndex((i) => Math.min(i, Math.max(0, total() - 2)))
+  }
+
+  /**
+   * Resolve suggestModelId to a kilo-provider model selection.
+   * Only the kilo provider is supported — the model must be present in the
+   * catalog and reachable (isModelValid) before the button is shown.
+   */
+  const suggestedModel = createMemo(() => {
+    const id = current()?.suggestModelId
+    if (!id) return undefined
+    const sel = { providerID: KILO_PROVIDER_ID, modelID: id }
+    if (!provider.isModelValid(sel)) return undefined
+    return sel
+  })
+
+  const canSwitchModel = createMemo(() => {
+    const suggestion = suggestedModel()
+    if (!suggestion) return false
+    const sel = session.selected()
+    if (sel && sel.providerID === suggestion.providerID && sel.modelID === suggestion.modelID) return false
+    return true
+  })
+
+  const handleTryModel = () => {
+    const suggestion = suggestedModel()
+    if (!suggestion) return
+    session.selectModel(suggestion.providerID, suggestion.modelID)
+    vscode.postMessage({
+      type: "telemetry",
+      event: TelemetryEventName.NOTIFICATION_CLICKED,
+      properties: { actionText: "Try model", suggestModelId: current()?.suggestModelId },
+    })
   }
 
   return (
@@ -51,6 +89,11 @@ export const KiloNotifications: Component = () => {
                   <Icon name="arrow-right" size="small" />
                 </button>
               </div>
+            </Show>
+            <Show when={canSwitchModel()}>
+              <Button variant="primary" size="small" onClick={handleTryModel}>
+                Try model
+              </Button>
             </Show>
             <Show when={current()?.action}>
               {(action) => (

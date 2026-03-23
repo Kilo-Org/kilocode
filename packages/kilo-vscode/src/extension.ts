@@ -87,8 +87,8 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Create standalone diff viewer provider for the sidebar "Show Changes" action
   const diffViewerProvider = new DiffViewerProvider(context.extensionUri, connectionService)
-  diffViewerProvider.setCommentHandler((comments) => {
-    void provider.appendReviewComments(comments)
+  diffViewerProvider.setCommentHandler((comments, autoSend) => {
+    void provider.appendReviewComments(comments, autoSend)
   })
   context.subscriptions.push(diffViewerProvider)
 

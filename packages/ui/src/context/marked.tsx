@@ -632,12 +632,18 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
           // kilocode_change start
           codespan({ text }) {
             const file = parseFilePath(text)
+            const escaped = text
+              .replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;")
+              .replace(/"/g, "&quot;")
+              .replace(/'/g, "&#39;")
             if (file) {
               const lineAttr = file.line ? ` data-file-line="${file.line}"` : ""
               const colAttr = file.column ? ` data-file-col="${file.column}"` : ""
-              return `<code class="file-link" data-file-path="${file.path}"${lineAttr}${colAttr}>${text}</code>`
+              return `<code class="file-link" data-file-path="${file.path}"${lineAttr}${colAttr}>${escaped}</code>`
             }
-            return `<code>${text}</code>`
+            return `<code>${escaped}</code>`
           },
           code({ text, lang }) {
             const escaped = text

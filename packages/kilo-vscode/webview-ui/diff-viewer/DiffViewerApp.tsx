@@ -42,7 +42,7 @@ const DiffViewerContent: Component = () => {
   const handler = (event: MessageEvent) => {
     const msg = event.data
     if (msg?.type !== "appendReviewComments" || !Array.isArray(msg.comments)) return
-    post({ type: "diffViewer.sendComments", comments: msg.comments })
+    post({ type: "diffViewer.sendComments", comments: msg.comments, autoSend: !!msg.autoSend })
   }
 
   window.addEventListener("message", handler)

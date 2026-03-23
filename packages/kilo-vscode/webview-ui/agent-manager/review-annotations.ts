@@ -221,7 +221,11 @@ export function buildReviewAnnotation(
 
   actions.appendChild(
     makeActionButton(handlers.labels.sendToChat, makeIcon("M1 1l14 7-14 7V9l10-1L1 7z"), () => {
-      window.dispatchEvent(new MessageEvent("message", { data: { type: "appendReviewComments", comments: [comment] } }))
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          data: { type: "appendReviewComments", comments: [comment], autoSend: true },
+        }),
+      )
       handlers.deleteComment(comment.id)
     }),
   )
