@@ -248,7 +248,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (message.type === "appendReviewComments") {
       const merged = mergeReviewComments(reviewComments(), message.comments)
       replaceReviewComments(merged)
-      textareaRef?.focus()
+      if (message.autoSend && !text().trim() && !isDisabled() && !props.blocked?.()) {
+        handleSend()
+      } else {
+        textareaRef?.focus()
+      }
     }
 
     if (message.type === "triggerTask") {
