@@ -75,7 +75,7 @@ const Settings: Component<SettingsProps> = (props) => {
   }
 
   return (
-    <div style={{ display: "flex", "flex-direction": "column", height: "100%" }}>
+    <div style={{ display: "flex", "flex-direction": "column", height: "100%", "min-height": 0 }}>
       {/* Header */}
       <div
         style={{
