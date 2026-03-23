@@ -85,8 +85,8 @@ Follows the same mode-based routing as Frontier but uses more cost-effective mod
 | Mode                                                           | Resolved Model              |
 | -------------------------------------------------------------- | --------------------------- |
 | `plan`, `general`, `architect`, `orchestrator`, `ask`, `debug` | `moonshotai/kimi-k2.5`      |
-| `build`, `explore`, `code`                                     | `minimax/minimax-m2.5:free` |
-| Default (no mode specified)                                    | `minimax/minimax-m2.5:free` |
+| `build`, `explore`, `code`                                     | `minimax/minimax-m2.7:free` |
+| Default (no mode specified)                                    | `minimax/minimax-m2.7:free` |
 
 ### `kilo-auto/free`
 
@@ -94,8 +94,8 @@ The best available free model for each mode.
 
 | Mode                        | Resolved Model              |
 | --------------------------- | --------------------------- |
-| All modes                   | `minimax/minimax-m2.5:free` |
-| Default (no mode specified) | `minimax/minimax-m2.5:free` |
+| All modes                   | `minimax/minimax-m2.7:free` |
+| Default (no mode specified) | `minimax/minimax-m2.7:free` |
 
 ### Example usage
 

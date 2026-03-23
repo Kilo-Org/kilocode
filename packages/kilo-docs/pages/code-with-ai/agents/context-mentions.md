@@ -108,18 +108,6 @@ The dropdown automatically suggests:
 - Recent git commits
 - Special keywords (`problems`, `terminal`, `git-changes`)
 
-### Drag and Drop
-
-You can also add file mentions by dragging files directly into the chat input:
-
-- **From the Explorer panel** — Drag a file or folder from VS Code's Explorer sidebar into the chat input to insert an `@/path/to/file` mention
-- **From editor tabs** — Drag an open editor tab into the chat input
-- **Multiple files** — Drag multiple files at once to insert space-separated mentions
-
-{% callout type="info" %}
-Dragging image files from your operating system's file manager still creates image attachments rather than @-mentions.
-{% /callout %}
-
 ## Best Practices
 
 | Practice                   | Description                                                                      |
