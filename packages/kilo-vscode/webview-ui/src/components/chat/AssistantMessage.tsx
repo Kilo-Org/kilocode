@@ -58,6 +58,7 @@ function TodoToolCard(props: { part: ToolPart }) {
           output={state?.output}
           status={state?.status}
           defaultOpen
+          reveal={false}
         />
       )}
     </Show>
