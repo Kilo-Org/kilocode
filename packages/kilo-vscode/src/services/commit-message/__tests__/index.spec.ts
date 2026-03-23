@@ -211,5 +211,56 @@ describe("commit-message service", () => {
         expect.any(Function),
       )
     })
+
+    it("uses the matching repository when SourceControl arg is provided", async () => {
+      const mainInputBox = { value: "" }
+      const worktreeInputBox = { value: "" }
+      vi.mocked(vscode.extensions.getExtension).mockReturnValue({
+        isActive: true,
+        activate: vi.fn().mockResolvedValue(undefined),
+        exports: {
+          getAPI: () => ({
+            repositories: [
+              { inputBox: mainInputBox, rootUri: { fsPath: "/main-repo" } },
+              { inputBox: worktreeInputBox, rootUri: { fsPath: "/worktree-repo" } },
+            ],
+          }),
+        },
+      } as any)
+
+      vi.mocked(vscode.window.withProgress).mockImplementation(async (_options, task) => {
+        await task({} as any, {} as any)
+      })
+
+      // Simulate SCM title/input passing the SourceControl for the worktree repo
+      const scmArg = { rootUri: { fsPath: "/worktree-repo" } } as vscode.SourceControl
+      await commandCallback(scmArg)
+
+      // The worktree repo's inputBox should be updated, not the main repo's
+      expect(worktreeInputBox.value).toBe("feat: add new feature")
+      expect(mainInputBox.value).toBe("")
+    })
+
+    it("falls back to first repository when SourceControl arg has no match", async () => {
+      const mainInputBox = { value: "" }
+      vi.mocked(vscode.extensions.getExtension).mockReturnValue({
+        isActive: true,
+        activate: vi.fn().mockResolvedValue(undefined),
+        exports: {
+          getAPI: () => ({
+            repositories: [{ inputBox: mainInputBox, rootUri: { fsPath: "/main-repo" } }],
+          }),
+        },
+      } as any)
+
+      vi.mocked(vscode.window.withProgress).mockImplementation(async (_options, task) => {
+        await task({} as any, {} as any)
+      })
+
+      const scmArg = { rootUri: { fsPath: "/nonexistent-repo" } } as vscode.SourceControl
+      await commandCallback(scmArg)
+
+      expect(mainInputBox.value).toBe("feat: add new feature")
+    })
   })
 })
