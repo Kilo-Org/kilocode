@@ -36,6 +36,8 @@ export interface FileMention {
   setMentionIndex: (index: number) => void
   closeMention: () => void
   parseFileAttachments: (text: string) => FileAttachment[]
+  /** Register paths as active mentions (used by drag-and-drop). Pass cwd to ensure buildFileAttachments resolves correctly. */
+  addPaths: (paths: string[], cwd: string) => void
 }
 
 export function useFileMention(vscode: VSCodeContext): FileMention {
@@ -157,6 +159,15 @@ export function useFileMention(vscode: VSCodeContext): FileMention {
     return false
   }
 
+  const addPaths = (paths: string[], cwd: string) => {
+    if (cwd) workspaceDir = cwd
+    setMentionedPaths((prev) => {
+      const next = new Set(prev)
+      for (const p of paths) next.add(p)
+      return next
+    })
+  }
+
   const parseFileAttachments = (text: string): FileAttachment[] =>
     buildFileAttachments(text, mentionedPaths(), workspaceDir)
 
@@ -171,5 +182,6 @@ export function useFileMention(vscode: VSCodeContext): FileMention {
     setMentionIndex,
     closeMention,
     parseFileAttachments,
+    addPaths,
   }
 }

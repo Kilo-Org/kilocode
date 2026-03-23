@@ -89,19 +89,18 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   const imageAttach = useImageAttachments()
   imageAttach.setFilePathDropHandler((paths) => {
     const cwd = server.workspaceDirectory()
-    const mentions = paths.map((p) => convertToMentionPath(p, cwd))
+    const resolved = paths.map((p) => convertToMentionPath(p, cwd))
     const ref = textareaRef
     if (!ref) return
     const val = ref.value
     const cursor = ref.selectionStart ?? val.length
     const before = val.substring(0, cursor)
     const after = val.substring(cursor)
-    const inserted = mentions.join(" ")
+    const inserted = resolved.map((p) => `@${p}`).join(" ")
     const result = before + inserted + " " + after
     ref.value = result
-    const next = result
-    setPrompt(next)
-    persistPrompt(next)
+    setPrompt(result)
+    persistPrompt(result)
     const pos = cursor + inserted.length + 1
     ref.setSelectionRange(pos, pos)
     ref.focus()
