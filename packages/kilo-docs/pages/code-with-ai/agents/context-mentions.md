@@ -94,6 +94,8 @@ Context mentions are a powerful way to provide Kilo Code with specific informati
 
 ## How to Use Mentions
 
+### Typing @-mentions
+
 1. Type `@` in the chat input to trigger the suggestions dropdown
 2. Continue typing to filter suggestions or use arrow keys to navigate
 3. Select with Enter key or mouse click
@@ -105,6 +107,18 @@ The dropdown automatically suggests:
 - Visible folders
 - Recent git commits
 - Special keywords (`problems`, `terminal`, `git-changes`)
+
+### Drag and Drop
+
+You can also add file mentions by dragging files directly into the chat input:
+
+- **From the Explorer panel** — Drag a file or folder from VS Code's Explorer sidebar into the chat input to insert an `@/path/to/file` mention
+- **From editor tabs** — Drag an open editor tab into the chat input
+- **Multiple files** — Drag multiple files at once to insert space-separated mentions
+
+{% callout type="info" %}
+Dragging image files from your operating system's file manager still creates image attachments rather than @-mentions.
+{% /callout %}
 
 ## Best Practices
 
