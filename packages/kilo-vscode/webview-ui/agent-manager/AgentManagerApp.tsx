@@ -1977,7 +1977,7 @@ const AgentManagerContent: Component = () => {
   }
 
   return (
-    <div class="am-layout">
+    <div class="am-layout" onContextMenu={(e) => e.preventDefault()}>
       <div class="am-sidebar" style={{ width: `${sidebarWidth()}px` }}>
         <ResizeHandle
           direction="horizontal"
