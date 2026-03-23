@@ -3,6 +3,7 @@ import {
   fetchAndSendPendingPermissions,
   type PermissionContext,
 } from "../../src/kilo-provider/handlers/permission-handler"
+import type { KiloClient } from "@kilocode/sdk/v2/client"
 
 /** Minimal permission shape returned by the SDK's permission.list(). */
 function pending(id: string, sessionID: string, permission = "bash") {
@@ -31,15 +32,17 @@ function ctx(opts: {
   const queries: string[] = []
   const perms = opts.permsPerDir ?? {}
 
-  const fake: PermissionContext = {
-    client: {
-      permission: {
-        list: async (args: { directory: string }) => {
-          queries.push(args.directory)
-          return { data: perms[args.directory] ?? [] }
-        },
+  const client = {
+    permission: {
+      list: async (args?: { directory?: string }) => {
+        queries.push(args?.directory ?? "")
+        return { data: perms[args?.directory ?? ""] ?? [] }
       },
-    } as any,
+    },
+  } as unknown as KiloClient
+
+  const fake: PermissionContext = {
+    client,
     currentSessionId: undefined,
     trackedSessionIds: new Set(opts.tracked),
     sessionDirectories: opts.dirs ?? new Map(),
@@ -89,7 +92,7 @@ describe("fetchAndSendPendingPermissions", () => {
     })
     await fetchAndSendPendingPermissions(fake)
     expect(messages).toHaveLength(1)
-    const msg = messages[0] as any
+    const msg = messages[0] as { type: string; permission: { id: string } }
     expect(msg.type).toBe("permissionRequest")
     expect(msg.permission.id).toBe("p1")
   })
