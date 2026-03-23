@@ -753,6 +753,43 @@ button.am-section-toggle:hover .am-section-label {
   color: var(--text-base);
 }
 
+/* Drag-and-drop sortable worktree wrapper */
+
+.am-wt-sortable {
+  touch-action: none;
+  cursor: grab;
+}
+
+body.am-wt-dragging-active,
+body.am-wt-dragging-active * {
+  cursor: grabbing !important;
+}
+
+.am-wt-sortable > [data-slot="hover-card-trigger"] {
+  width: 100%;
+}
+
+.am-wt-dragging {
+  opacity: 0.25;
+}
+
+/* Drag overlay worktree (follows the cursor) */
+
+.am-wt-overlay {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: var(--surface-base);
+  border: 1px solid var(--border-weak-base);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+  color: var(--text-base);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+}
+
 .am-tab-add {
   flex-shrink: 0;
   align-self: center;

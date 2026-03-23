@@ -800,6 +800,7 @@ export interface AgentManagerStateMessage {
   sessions: ManagedSessionState[]
   staleWorktreeIds?: string[]
   tabOrder?: Record<string, string[]>
+  worktreeOrder?: string[]
   sessionsCollapsed?: boolean
   reviewDiffStyle?: "unified" | "split"
   isGitRepo?: boolean
@@ -1713,6 +1714,12 @@ export interface SetTabOrderRequest {
   order: string[]
 }
 
+// Persist sidebar worktree order
+export interface SetWorktreeOrderRequest {
+  type: "agentManager.setWorktreeOrder"
+  order: string[]
+}
+
 // Persist sessions collapsed state
 export interface SetSessionsCollapsedRequest {
   type: "agentManager.setSessionsCollapsed"
@@ -1945,6 +1952,7 @@ export type WebviewMessage =
   | AgentManagerOpenFileRequest
   | CreateMultiVersionRequest
   | SetTabOrderRequest
+  | SetWorktreeOrderRequest
   | SetSessionsCollapsedRequest
   | SetReviewDiffStyleRequest
   | PersistVariantRequest

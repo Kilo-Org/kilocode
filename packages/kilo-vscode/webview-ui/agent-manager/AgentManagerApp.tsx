@@ -7,6 +7,7 @@ import {
   createSignal,
   createMemo,
   createEffect,
+  createRoot,
   on,
   onMount,
   onCleanup,
@@ -37,8 +38,16 @@ import type {
   SessionInfo,
   BranchInfo,
 } from "../src/types/messages"
-import { DragDropProvider, DragDropSensors, DragOverlay, SortableProvider, closestCenter } from "@thisbeyond/solid-dnd"
-import type { DragEvent } from "@thisbeyond/solid-dnd"
+import {
+  DragDropProvider,
+  DragDropSensors,
+  DragOverlay,
+  SortableProvider,
+  closestCenter,
+  createSortable,
+  useDragDropContext,
+} from "@thisbeyond/solid-dnd"
+import type { DragEvent, Transformer } from "@thisbeyond/solid-dnd"
 import { ThemeProvider } from "@kilocode/kilo-ui/theme"
 import { DialogProvider, useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
@@ -617,6 +626,9 @@ const AgentManagerContent: Component = () => {
   const [draggingTab, setDraggingTab] = createSignal<string | undefined>()
   // Tab ordering: context key → ordered session ID array (recovered from extension state)
   const [worktreeTabOrder, setWorktreeTabOrder] = createSignal<Record<string, string[]>>({})
+  // Sidebar worktree order (persisted to extension state)
+  const [sidebarWorktreeOrder, setSidebarWorktreeOrder] = createSignal<string[]>([])
+  const [draggingWorktree, setDraggingWorktree] = createSignal<string | undefined>()
 
   const addPendingTab = () => {
     const id = `${PENDING_PREFIX}${++pendingCounter}`
@@ -796,14 +808,14 @@ const AgentManagerContent: Component = () => {
 
   const isStaleWorktree = (worktreeId: string): boolean => staleWorktreeIds().has(worktreeId)
 
-  /** Worktrees sorted so that grouped items are always adjacent, ordered by creation time. */
+  /** Worktrees sorted so that grouped items are always adjacent, respecting custom order if set. */
   const sortedWorktrees = createMemo(() => {
-    const all = worktrees()
-    if (all.length === 0) return []
+    const ordered = applyTabOrder(worktrees(), sidebarWorktreeOrder())
+    if (ordered.length === 0) return []
 
     // Collect grouped worktrees by groupId
     const grouped = new Map<string, WorktreeState[]>()
-    for (const wt of all) {
+    for (const wt of ordered) {
       if (!wt.groupId) continue
       const list = grouped.get(wt.groupId) ?? []
       list.push(wt)
@@ -813,7 +825,7 @@ const AgentManagerContent: Component = () => {
     // Build output: interleave groups at the position of their earliest member
     const result: WorktreeState[] = []
     const placed = new Set<string>()
-    for (const wt of all) {
+    for (const wt of ordered) {
       if (placed.has(wt.id)) continue
       if (wt.groupId) {
         if (placed.has(wt.groupId)) continue
@@ -1171,6 +1183,7 @@ const AgentManagerContent: Component = () => {
         // server won't connect to send the sessionsLoaded message.
         if (state.isGitRepo === false && !sessionsLoaded()) setSessionsLoaded(true)
         if (state.tabOrder) setWorktreeTabOrder(state.tabOrder)
+        if (state.worktreeOrder) setSidebarWorktreeOrder(state.worktreeOrder)
         if (state.reviewDiffStyle === "split" || state.reviewDiffStyle === "unified") {
           setReviewDiffStyle(state.reviewDiffStyle)
         }
@@ -2160,59 +2173,147 @@ const AgentManagerContent: Component = () => {
                     setRenamingWt(null)
                   }
 
+                  const wtIds = createMemo(() => sortedWorktrees().map((wt) => wt.id))
+
+                  const onWtDragStart = (event: DragEvent) => {
+                    const id = event.draggable?.id
+                    if (typeof id === "string") setDraggingWorktree(id)
+                    document.body.classList.add("am-wt-dragging-active")
+                  }
+
+                  const onWtDragOver = (event: DragEvent) => {
+                    const from = event.draggable?.id
+                    const to = event.droppable?.id
+                    if (typeof from !== "string" || typeof to !== "string") return
+                    setSidebarWorktreeOrder((prev) => {
+                      const current = applyTabOrder(
+                        sortedWorktrees().map((wt) => ({ id: wt.id })),
+                        prev,
+                      ).map((item) => item.id)
+                      return reorderTabs(current, from, to) ?? prev
+                    })
+                  }
+
+                  const onWtDragEnd = () => {
+                    setDraggingWorktree(undefined)
+                    document.body.classList.remove("am-wt-dragging-active")
+                    const order = sortedWorktrees().map((wt) => wt.id)
+                    if (order.length > 0) {
+                      vscode.postMessage({ type: "agentManager.setWorktreeOrder", order })
+                    }
+                  }
+
+                  /** Lock drag movement to the Y axis (vertical-only worktree dragging). */
+                  const ConstrainDragXAxis: Component = () => {
+                    const ctx = useDragDropContext()
+                    if (!ctx) return null
+                    const [
+                      ,
+                      { onDragStart: onStart, onDragEnd: onEnd, addTransformer: add, removeTransformer: remove },
+                    ] = ctx
+                    const xform: Transformer = { id: "constrain-x-axis", order: 100, callback: (t) => ({ ...t, x: 0 }) }
+                    const dispose = createRoot((dispose) => {
+                      onStart(({ draggable }) => {
+                        if (draggable) add("draggables", draggable.id as string, xform)
+                      })
+                      onEnd(({ draggable }) => {
+                        if (draggable) remove("draggables", draggable.id as string, xform.id)
+                      })
+                      return dispose
+                    })
+                    onCleanup(dispose)
+                    return null
+                  }
+
                   return (
-                    <For each={sortedWorktrees()}>
-                      {(wt, idx) => {
-                        const sessions = createMemo(() => managedSessions().filter((ms) => ms.worktreeId === wt.id))
-                        const navHint = () => {
-                          const flat = [
-                            LOCAL as string,
-                            ...sortedWorktrees().map((w) => w.id),
-                            ...unassignedSessions().map((s) => s.id),
-                          ]
-                          const active = selection() ?? session.currentSessionID() ?? ""
-                          return adjacentHint(wt.id, active, flat, kb().previousSession ?? "", kb().nextSession ?? "")
-                        }
-                        const groupSize = () => {
-                          if (!wt.groupId) return 0
-                          return sortedWorktrees().filter((w) => w.groupId === wt.groupId).length
-                        }
-                        return (
-                          <WorktreeItem
-                            worktree={wt}
-                            label={worktreeLabel(wt)}
-                            active={selection() === wt.id}
-                            pendingDelete={pendingDelete() === wt.id}
-                            busy={busyWorktrees().has(wt.id)}
-                            stale={isStaleWorktree(wt.id)}
-                            shortcut={idx() + 2}
-                            stats={worktreeStats()[wt.id]}
-                            navHint={navHint()}
-                            sessions={sessions().length}
-                            grouped={isGrouped(wt)}
-                            groupStart={isGroupStart(wt, idx())}
-                            groupEnd={isGroupEnd(wt, idx())}
-                            groupSize={groupSize()}
-                            renaming={renamingWt() === wt.id}
-                            renameValue={renameValue()}
-                            closeKeybind={kb().closeWorktree ?? ""}
-                            onClick={() => {
-                              if (pendingDelete() === wt.id) {
-                                confirmDeleteWorktree(wt.id)
-                                return
-                              }
-                              selectWorktree(wt.id)
-                            }}
-                            onDelete={(e) => handleDeleteWorktree(wt.id, e)}
-                            onStartRename={(current) => startRename(wt.id, current)}
-                            onRenameInput={(v) => setRenameValue(v)}
-                            onCommitRename={() => commitRename(wt.id)}
-                            onCancelRename={cancelRename}
-                            onRemoveStale={() => confirmRemoveStaleWorktree(wt.id)}
-                          />
-                        )
-                      }}
-                    </For>
+                    <DragDropProvider
+                      onDragStart={onWtDragStart}
+                      onDragEnd={onWtDragEnd}
+                      onDragOver={onWtDragOver}
+                      collisionDetector={closestCenter}
+                    >
+                      <DragDropSensors />
+                      <ConstrainDragXAxis />
+                      <SortableProvider ids={wtIds()}>
+                        <For each={sortedWorktrees()}>
+                          {(wt, idx) => {
+                            const sessions = createMemo(() => managedSessions().filter((ms) => ms.worktreeId === wt.id))
+                            const navHint = () => {
+                              const flat = [
+                                LOCAL as string,
+                                ...sortedWorktrees().map((w) => w.id),
+                                ...unassignedSessions().map((s) => s.id),
+                              ]
+                              const active = selection() ?? session.currentSessionID() ?? ""
+                              return adjacentHint(
+                                wt.id,
+                                active,
+                                flat,
+                                kb().previousSession ?? "",
+                                kb().nextSession ?? "",
+                              )
+                            }
+                            const groupSize = () => {
+                              if (!wt.groupId) return 0
+                              return sortedWorktrees().filter((w) => w.groupId === wt.groupId).length
+                            }
+                            const sortable = createSortable(wt.id)
+                            void sortable
+                            return (
+                              <div
+                                use:sortable
+                                class={`am-wt-sortable ${sortable.isActiveDraggable ? "am-wt-dragging" : ""}`}
+                              >
+                                <WorktreeItem
+                                  worktree={wt}
+                                  label={worktreeLabel(wt)}
+                                  active={selection() === wt.id}
+                                  pendingDelete={pendingDelete() === wt.id}
+                                  busy={busyWorktrees().has(wt.id)}
+                                  stale={isStaleWorktree(wt.id)}
+                                  shortcut={idx() + 2}
+                                  stats={worktreeStats()[wt.id]}
+                                  navHint={navHint()}
+                                  sessions={sessions().length}
+                                  grouped={isGrouped(wt)}
+                                  groupStart={isGroupStart(wt, idx())}
+                                  groupEnd={isGroupEnd(wt, idx())}
+                                  groupSize={groupSize()}
+                                  renaming={renamingWt() === wt.id}
+                                  renameValue={renameValue()}
+                                  closeKeybind={kb().closeWorktree ?? ""}
+                                  onClick={() => {
+                                    if (pendingDelete() === wt.id) {
+                                      confirmDeleteWorktree(wt.id)
+                                      return
+                                    }
+                                    selectWorktree(wt.id)
+                                  }}
+                                  onDelete={(e) => handleDeleteWorktree(wt.id, e)}
+                                  onStartRename={(current) => startRename(wt.id, current)}
+                                  onRenameInput={(v) => setRenameValue(v)}
+                                  onCommitRename={() => commitRename(wt.id)}
+                                  onCancelRename={cancelRename}
+                                  onRemoveStale={() => confirmRemoveStaleWorktree(wt.id)}
+                                />
+                              </div>
+                            )
+                          }}
+                        </For>
+                      </SortableProvider>
+                      <DragOverlay>
+                        {(() => {
+                          const wt = sortedWorktrees().find((w) => w.id === draggingWorktree())
+                          if (!wt) return null
+                          return (
+                            <div class="am-wt-overlay">
+                              <Icon name="branch" size="small" />
+                              <span>{worktreeLabel(wt)}</span>
+                            </div>
+                          )
+                        })()}
+                      </DragOverlay>
+                    </DragDropProvider>
                   )
                 })()}
                 <Show when={worktrees().length === 0}>
