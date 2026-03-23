@@ -187,7 +187,7 @@ export function StatusPopover() {
   const lspCount = createMemo(() => lspItems().length)
   const plugins = createMemo(() => sync.data.config.plugin ?? [])
   const pluginCount = createMemo(() => plugins().length)
-  const pluginEmpty = createMemo(() => pluginEmptyMessage(language.t("dialog.plugins.empty"), "opencode.json"))
+  const pluginEmpty = createMemo(() => pluginEmptyMessage(language.t("dialog.plugins.empty"), "kilo.json"))
   const overallHealthy = createMemo(() => {
     const serverHealthy = server.healthy() === true
     const anyMcpIssue = mcpNames().some((name) => {

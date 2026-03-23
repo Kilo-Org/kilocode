@@ -119,12 +119,12 @@ export const dict = {
   "provider.connect.apiKey.label": "{{provider}} APIキー",
   "provider.connect.apiKey.placeholder": "APIキー",
   "provider.connect.apiKey.required": "APIキーが必要です",
-  "provider.connect.opencodeZen.line1":
+  "provider.connect.kiloZen.line1":
     "OpenCode Zenは、コーディングエージェント向けに最適化された信頼性の高いモデルへのアクセスを提供します。",
-  "provider.connect.opencodeZen.line2": "1つのAPIキーで、Claude、GPT、Gemini、GLMなどのモデルにアクセスできます。",
-  "provider.connect.opencodeZen.visit.prefix": " ",
-  "provider.connect.opencodeZen.visit.link": "opencode.ai/zen",
-  "provider.connect.opencodeZen.visit.suffix": " にアクセスしてAPIキーを取得してください。",
+  "provider.connect.kiloZen.line2": "1つのAPIキーで、Claude、GPT、Gemini、GLMなどのモデルにアクセスできます。",
+  "provider.connect.kiloZen.visit.prefix": " ",
+  "provider.connect.kiloZen.visit.link": "kilo.ai/zen",
+  "provider.connect.kiloZen.visit.suffix": " にアクセスしてAPIキーを取得してください。",
   "provider.connect.oauth.code.visit.prefix": " ",
   "provider.connect.oauth.code.visit.link": "このリンク",
   "provider.connect.oauth.code.visit.suffix":
@@ -269,7 +269,7 @@ export const dict = {
   "dialog.mcp.description": "{{total}}個中{{enabled}}個が有効",
   "dialog.mcp.empty": "MCPが設定されていません",
   "dialog.lsp.empty": "ファイルタイプから自動検出されたLSP",
-  "dialog.plugins.empty": "opencode.jsonで設定されたプラグイン",
+  "dialog.plugins.empty": "kilo.jsonで設定されたプラグイン",
   "mcp.status.connected": "接続済み",
   "mcp.status.failed": "失敗",
   "mcp.status.needs_auth": "認証が必要",
@@ -412,7 +412,7 @@ export const dict = {
   "error.chain.responseBody": "レスポンス本文:\n{{body}}",
   "error.chain.didYouMean": "もしかして: {{suggestions}}",
   "error.chain.modelNotFound": "モデルが見つかりません: {{provider}}/{{model}}",
-  "error.chain.checkConfig": "config (opencode.json) のプロバイダー/モデル名を確認してください",
+  "error.chain.checkConfig": "config (kilo.json) のプロバイダー/モデル名を確認してください",
   "error.chain.mcpFailed": 'MCPサーバー "{{name}}" が失敗しました。注意: KiloはまだMCP認証をサポートしていません。',
   "error.chain.providerAuthFailed": "プロバイダー認証に失敗しました ({{provider}}): {{message}}",
   "error.chain.providerInitFailed":

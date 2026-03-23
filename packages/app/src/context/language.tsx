@@ -81,7 +81,7 @@ type RawDictionary = typeof en & typeof uiEn & typeof kiloEn // kilocode_change
 type Dictionary = i18n.Flatten<RawDictionary>
 
 function cookie(locale: Locale) {
-  return `oc_locale=${encodeURIComponent(locale)}; Path=/; Max-Age=31536000; SameSite=Lax`
+  return `kilo_locale=${encodeURIComponent(locale)}; Path=/; Max-Age=31536000; SameSite=Lax`
 }
 
 const LOCALES: readonly Locale[] = [

@@ -119,13 +119,13 @@ export const dict = {
   "provider.connect.apiKey.label": "Chave de API do {{provider}}",
   "provider.connect.apiKey.placeholder": "Chave de API",
   "provider.connect.apiKey.required": "A chave de API é obrigatória",
-  "provider.connect.opencodeZen.line1":
+  "provider.connect.kiloZen.line1":
     "OpenCode Zen oferece acesso a um conjunto selecionado de modelos confiáveis otimizados para agentes de código.",
-  "provider.connect.opencodeZen.line2":
+  "provider.connect.kiloZen.line2":
     "Com uma única chave de API você terá acesso a modelos como Claude, GPT, Gemini, GLM e mais.",
-  "provider.connect.opencodeZen.visit.prefix": "Visite ",
-  "provider.connect.opencodeZen.visit.link": "opencode.ai/zen",
-  "provider.connect.opencodeZen.visit.suffix": " para obter sua chave de API.",
+  "provider.connect.kiloZen.visit.prefix": "Visite ",
+  "provider.connect.kiloZen.visit.link": "kilo.ai/zen",
+  "provider.connect.kiloZen.visit.suffix": " para obter sua chave de API.",
   "provider.connect.oauth.code.visit.prefix": "Visite ",
   "provider.connect.oauth.code.visit.link": "este link",
   "provider.connect.oauth.code.visit.suffix":
@@ -270,7 +270,7 @@ export const dict = {
   "dialog.mcp.description": "{{enabled}} of {{total}} habilitados",
   "dialog.mcp.empty": "Nenhum MCP configurado",
   "dialog.lsp.empty": "LSPs detectados automaticamente pelos tipos de arquivo",
-  "dialog.plugins.empty": "Plugins configurados em opencode.json",
+  "dialog.plugins.empty": "Plugins configurados em  kilo.json",
   "mcp.status.connected": "conectado",
   "mcp.status.failed": "falhou",
   "mcp.status.needs_auth": "precisa de autenticação",
@@ -413,7 +413,7 @@ export const dict = {
   "error.chain.responseBody": "Corpo da resposta:\n{{body}}",
   "error.chain.didYouMean": "Você quis dizer: {{suggestions}}",
   "error.chain.modelNotFound": "Modelo não encontrado: {{provider}}/{{model}}",
-  "error.chain.checkConfig": "Verifique os nomes de provedor/modelo na sua configuração (opencode.json)",
+  "error.chain.checkConfig": "Verifique os nomes de provedor/modelo na sua configuração (kilo.json)",
   "error.chain.mcpFailed": 'Servidor MCP "{{name}}" falhou. Nota: Kilo ainda não suporta autenticação MCP.',
   "error.chain.providerAuthFailed": "Autenticação do provedor falhou ({{provider}}): {{message}}",
   "error.chain.providerInitFailed":
