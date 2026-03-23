@@ -136,8 +136,14 @@ export namespace Config {
 
     // Load Kilocode rules (legacy fallback)
     try {
+      // kilocode_change start
+      // Collect custom mode slugs from ModesMigrator results (already loaded above)
+      const customModeSlugs = Object.keys(result.agent ?? {})
+      const rulesModes = customModeSlugs.length > 0 ? [...RulesMigrator.KNOWN_MODES, ...customModeSlugs] : undefined
+      // kilocode_change end
       const kilocodeRules = await RulesMigrator.migrate({
         projectDir: Instance.directory,
+        modes: rulesModes, // kilocode_change
       })
       if (kilocodeRules.instructions.length > 0) {
         result = mergeConfigConcatArrays(result, { instructions: kilocodeRules.instructions })
@@ -146,6 +152,14 @@ export namespace Config {
           files: kilocodeRules.instructions,
         })
       }
+      // kilocode_change start
+      if (Object.keys(kilocodeRules.modeInstructions).length > 0) {
+        result = mergeConfigConcatArrays(result, { modeInstructions: kilocodeRules.modeInstructions })
+        log.debug("loaded kilocode mode-specific rules", {
+          modes: Object.keys(kilocodeRules.modeInstructions),
+        })
+      }
+      // kilocode_change end
       for (const warning of kilocodeRules.warnings) {
         log.debug("kilocode rules warning", { warning })
       }
@@ -1264,6 +1278,12 @@ export namespace Config {
             error: "For custom LSP servers, 'extensions' array is required.",
           },
         ),
+      // kilocode_change start
+      modeInstructions: z
+        .record(z.string(), z.array(z.string()))
+        .optional()
+        .describe("Mode-specific instruction files, keyed by agent/mode name"),
+      // kilocode_change end
       instructions: z.array(z.string()).optional().describe("Additional instruction files or patterns to include"),
       layout: Layout.optional().describe("@deprecated Always uses stretch layout."),
       permission: Permission.optional(),

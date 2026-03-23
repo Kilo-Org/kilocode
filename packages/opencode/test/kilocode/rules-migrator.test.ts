@@ -168,6 +168,37 @@ describe("RulesMigrator", () => {
         rules.some((r) => r.source === "global" && r.path.includes(path.join(".kilo", "rules", "global.md"))),
       ).toBe(true)
     })
+
+    test("discovers custom mode directory rules when modes parameter is provided", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, ".kilo", "rules-translate"), { recursive: true })
+          await Bun.write(path.join(dir, ".kilo", "rules-translate", "style.md"), "# Translation rules")
+        },
+      })
+
+      const rules = await RulesMigrator.discoverRules(tmp.path, ["translate"])
+
+      expect(rules).toHaveLength(1)
+      expect(rules[0].source).toBe("project")
+      expect(rules[0].mode).toBe("translate")
+    })
+
+    test("discovers only specified modes when modes parameter is provided", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, ".kilo", "rules-translate"), { recursive: true })
+          await Bun.write(path.join(dir, ".kilo", "rules-translate", "style.md"), "# Translation rules")
+          await fs.mkdir(path.join(dir, ".kilo", "rules-code"), { recursive: true })
+          await Bun.write(path.join(dir, ".kilo", "rules-code", "style.md"), "# Code rules")
+        },
+      })
+
+      const rules = await RulesMigrator.discoverRules(tmp.path, ["translate"])
+
+      expect(rules).toHaveLength(1)
+      expect(rules[0].mode).toBe("translate")
+    })
   })
 
   describe("migrate", () => {
@@ -214,7 +245,7 @@ describe("RulesMigrator", () => {
       expect(result.warnings.some((w) => w.includes("skipped"))).toBe(true)
     })
 
-    test("includes mode-specific rules by default", async () => {
+    test("separates mode-specific rules into modeInstructions", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
           await Bun.write(path.join(dir, ".kilocoderules-code"), "# Code rules")
@@ -223,7 +254,10 @@ describe("RulesMigrator", () => {
 
       const result = await RulesMigrator.migrate({ projectDir: tmp.path })
 
-      expect(result.instructions).toHaveLength(1)
+      expect(result.instructions).toHaveLength(0)
+      expect(result.modeInstructions.code).toBeDefined()
+      expect(result.modeInstructions.code).toHaveLength(1)
+      expect(result.modeInstructions.code[0]).toContain(".kilocoderules-code")
     })
 
     test("returns empty result for project without rules", async () => {
@@ -247,7 +281,57 @@ describe("RulesMigrator", () => {
 
       const result = await RulesMigrator.migrate({ projectDir: tmp.path })
 
-      expect(result.instructions).toHaveLength(3)
+      expect(result.instructions).toHaveLength(2)
+      expect(result.modeInstructions.architect).toHaveLength(1)
+    })
+
+    test("separates generic and mode-specific instructions", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, ".kilo", "rules"), { recursive: true })
+          await Bun.write(path.join(dir, ".kilo", "rules", "main.md"), "# Main rules")
+          await fs.mkdir(path.join(dir, ".kilo", "rules-code"), { recursive: true })
+          await Bun.write(path.join(dir, ".kilo", "rules-code", "style.md"), "# Code style")
+        },
+      })
+
+      const result = await RulesMigrator.migrate({ projectDir: tmp.path })
+
+      expect(result.instructions).toHaveLength(1)
+      expect(result.instructions[0]).toContain("main.md")
+      expect(result.modeInstructions.code).toHaveLength(1)
+      expect(result.modeInstructions.code[0]).toContain("style.md")
+    })
+
+    test("modeInstructions empty when no mode-specific rules exist", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, ".kilo", "rules"), { recursive: true })
+          await Bun.write(path.join(dir, ".kilo", "rules", "main.md"), "# Main rules")
+        },
+      })
+
+      const result = await RulesMigrator.migrate({ projectDir: tmp.path })
+
+      expect(result.instructions).toHaveLength(1)
+      expect(Object.keys(result.modeInstructions)).toHaveLength(0)
+    })
+
+    test("discovers custom mode rules when modes parameter is passed to migrate", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, ".kilo", "rules-translate"), { recursive: true })
+          await Bun.write(path.join(dir, ".kilo", "rules-translate", "glossary.md"), "# Glossary")
+        },
+      })
+
+      const result = await RulesMigrator.migrate({
+        projectDir: tmp.path,
+        modes: ["translate"],
+      })
+
+      expect(result.modeInstructions.translate).toHaveLength(1)
+      expect(result.modeInstructions.translate[0]).toContain("glossary.md")
     })
   })
 })

@@ -12,7 +12,7 @@ export namespace RulesMigrator {
   const globalRulesDirs = () => [path.join(home(), ".kilo", "rules"), path.join(home(), ".kilocode", "rules")]
 
   // Known modes for mode-specific rule discovery
-  const KNOWN_MODES = ["code", "architect", "ask", "debug", "orchestrator"]
+  export const KNOWN_MODES = ["code", "architect", "ask", "debug", "orchestrator"]
 
   export interface RuleFile {
     path: string
@@ -22,6 +22,7 @@ export namespace RulesMigrator {
 
   export interface MigrationResult {
     instructions: string[]
+    modeInstructions: Record<string, string[]>
     warnings: string[]
   }
 
@@ -47,7 +48,7 @@ export namespace RulesMigrator {
     }
   }
 
-  export async function discoverRules(projectDir: string): Promise<RuleFile[]> {
+  export async function discoverRules(projectDir: string, modes?: string[]): Promise<RuleFile[]> {
     const rules: RuleFile[] = []
 
     // 1. Global rules directories (~/.kilo/rules/*.md and ~/.kilocode/rules/*.md)
@@ -86,7 +87,8 @@ export namespace RulesMigrator {
     }
 
     // 4. Mode-specific rules
-    for (const mode of KNOWN_MODES) {
+    const allModes = modes ?? KNOWN_MODES
+    for (const mode of allModes) {
       // Mode-specific directories (.kilo/rules-{mode}/*.md and .kilocode/rules-{mode}/*.md)
       const modeSeen = new Set<string>()
       for (const prefix of [".kilo", ".kilocode"]) {
@@ -117,13 +119,15 @@ export namespace RulesMigrator {
     projectDir: string
     includeGlobal?: boolean
     includeModeSpecific?: boolean
+    modes?: string[]
   }): Promise<MigrationResult> {
     const warnings: string[] = []
     const instructions: string[] = []
+    const modeInstructions: Record<string, string[]> = {}
     const includeGlobal = options.includeGlobal ?? true
     const includeModeSpecific = options.includeModeSpecific ?? true
 
-    const rules = await discoverRules(options.projectDir)
+    const rules = await discoverRules(options.projectDir, options.modes)
 
     for (const rule of rules) {
       // Skip global if not requested
@@ -137,8 +141,13 @@ export namespace RulesMigrator {
         continue
       }
 
-      // Add to instructions array
-      instructions.push(rule.path)
+      // Separate mode-tagged rules into modeInstructions
+      if (rule.mode) {
+        if (!modeInstructions[rule.mode]) modeInstructions[rule.mode] = []
+        modeInstructions[rule.mode].push(rule.path)
+      } else {
+        instructions.push(rule.path)
+      }
 
       // Warn about legacy files
       if (rule.source === "legacy") {
@@ -148,6 +157,6 @@ export namespace RulesMigrator {
       }
     }
 
-    return { instructions, warnings }
+    return { instructions, modeInstructions, warnings }
   }
 }

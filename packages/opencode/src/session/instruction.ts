@@ -67,7 +67,7 @@ export namespace InstructionPrompt {
     state().claims.delete(messageID)
   }
 
-  export async function systemPaths() {
+  export async function systemPaths(agent?: string) {
     const config = await Config.get()
     const paths = new Set<string>()
 
@@ -109,12 +109,32 @@ export namespace InstructionPrompt {
       }
     }
 
+    // kilocode_change start
+    // Mode-specific instructions
+    if (agent && config.modeInstructions?.[agent]) {
+      for (const raw of config.modeInstructions[agent]) {
+        if (raw.startsWith("https://") || raw.startsWith("http://")) continue
+        const instruction = raw.startsWith("~/") ? path.join(os.homedir(), raw.slice(2)) : raw
+        const matches = path.isAbsolute(instruction)
+          ? await Glob.scan(path.basename(instruction), {
+              cwd: path.dirname(instruction),
+              absolute: true,
+              include: "file",
+            }).catch(() => [])
+          : await resolveRelative(instruction)
+        matches.forEach((p) => {
+          paths.add(path.resolve(p))
+        })
+      }
+    }
+    // kilocode_change end
+
     return paths
   }
 
-  export async function system() {
+  export async function system(agent?: string) {
     const config = await Config.get()
-    const paths = await systemPaths()
+    const paths = await systemPaths(agent)
 
     const files = Array.from(paths).map(async (p) => {
       const content = await Filesystem.readText(p).catch(() => "")

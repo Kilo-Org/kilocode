@@ -58,6 +58,10 @@ export namespace KilocodeConfigInjector {
       if (rulesMigration.instructions.length > 0) {
         config.instructions = rulesMigration.instructions
       }
+
+      if (Object.keys(rulesMigration.modeInstructions).length > 0) {
+        config.modeInstructions = rulesMigration.modeInstructions
+      }
     }
 
     if (options.includeIgnore !== false) {
