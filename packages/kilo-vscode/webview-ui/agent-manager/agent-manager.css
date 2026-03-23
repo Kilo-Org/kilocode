@@ -326,11 +326,18 @@ button.am-section-toggle:hover .am-section-label {
 
 .am-worktree-delete-hint {
   font-size: var(--font-size-small);
-  color: var(--icon-critical-base);
+  color: var(--text-on-brand-base);
+  background: var(--surface-critical-strong);
   white-space: nowrap;
   flex-shrink: 0;
-  padding-right: 4px;
+  padding: 1px 8px;
+  border-radius: 4px;
+  cursor: pointer;
   animation: am-hint-slide-in 200ms ease;
+}
+
+.am-worktree-delete-hint:hover {
+  opacity: 0.9;
 }
 
 @keyframes am-hint-slide-in {
