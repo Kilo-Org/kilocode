@@ -59,6 +59,7 @@ export class AutocompleteServiceManager {
   public readonly inlineCompletionProvider: AutocompleteInlineCompletionProvider
   private inlineCompletionProviderDisposable: vscode.Disposable | null = null
   private unsubscribeState: (() => void) | null = null
+  private unsubscribeEvent: (() => void) | null = null
 
   constructor(context: vscode.ExtensionContext, connectionService: KiloConnectionService) {
     if (AutocompleteServiceManager._instance) {
@@ -84,13 +85,25 @@ export class AutocompleteServiceManager {
       () => this.settings,
       workspacePath,
       new AutocompleteTelemetry(),
+      (status) => this.handleFatalAutocompleteError(status),
     )
 
     // Reload when CLI backend connection state changes so autocomplete
     // picks up the connected state even if it wasn't ready at startup.
+    // Also reset error backoff — a reconnect may mean the user re-authenticated
+    // or added credits, so we should give autocomplete a fresh chance.
     this.unsubscribeState = connectionService.onStateChange(() => {
+      this.inlineCompletionProvider.resetBackoff()
       void this.load()
     })
+
+    // Reset error backoff when auth state changes (login, logout, org switch).
+    // The CLI emits global.disposed after these actions, which is the most
+    // reliable signal that credentials may have changed.
+    this.unsubscribeEvent = connectionService.onEventFiltered(
+      (event) => event.type === "global.disposed",
+      () => this.inlineCompletionProvider.resetBackoff(),
+    )
 
     void this.load()
   }
@@ -312,6 +325,27 @@ export class AutocompleteServiceManager {
     return !this.model.hasValidCredentials()
   }
 
+  /**
+   * Handle a fatal (non-retriable) autocomplete error such as 402 Payment Required.
+   * Shows a one-time notification to the user so they know autocomplete is paused.
+   */
+  private handleFatalAutocompleteError(status: number | null): void {
+    const msg =
+      status === 402
+        ? t("kilocode:autocomplete.creditsExhausted.message")
+        : t("kilocode:autocomplete.authError.message")
+
+    if (status === 402) {
+      vscode.window.showWarningMessage(msg, t("kilocode:autocomplete.creditsExhausted.addCredits")).then((choice) => {
+        if (choice === t("kilocode:autocomplete.creditsExhausted.addCredits")) {
+          vscode.env.openExternal(vscode.Uri.parse("https://app.kilo.ai/credits"))
+        }
+      })
+    } else {
+      vscode.window.showWarningMessage(msg)
+    }
+  }
+
   private updateCostTracking(cost: number, _inputTokens: number, _outputTokens: number): void {
     this.completionCount++
     this.sessionCost += cost
@@ -360,9 +394,11 @@ export class AutocompleteServiceManager {
       this.snoozeTimer = null
     }
 
-    // Unsubscribe from connection state changes
+    // Unsubscribe from connection state changes and SSE events
     this.unsubscribeState?.()
     this.unsubscribeState = null
+    this.unsubscribeEvent?.()
+    this.unsubscribeEvent = null
 
     // Dispose inline completion provider registration
     if (this.inlineCompletionProviderDisposable) {

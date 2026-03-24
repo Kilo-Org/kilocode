@@ -65,6 +65,10 @@ export class AutocompleteModel {
     let inputTokens = 0
     let outputTokens = 0
 
+    // Capture SSE-level errors so they propagate to the caller. The SDK's SSE
+    // client catches HTTP errors (402, 401, 429, 5xx) internally and silently
+    // ends the stream. Without this, errors never reach ErrorBackoff.
+    let sseError: Error | undefined
     const { stream } = await client.kilo.fim(
       {
         prefix,
@@ -73,7 +77,13 @@ export class AutocompleteModel {
         maxTokens: 256,
         temperature: 0.2,
       },
-      { signal },
+      {
+        signal,
+        sseMaxRetryAttempts: 1,
+        onSseError: (error) => {
+          sseError = error instanceof Error ? error : new Error(String(error))
+        },
+      },
     )
 
     for await (const chunk of stream) {
@@ -85,6 +95,8 @@ export class AutocompleteModel {
       }
       if (chunk.cost !== undefined) cost = chunk.cost
     }
+
+    if (sseError) throw sseError
 
     return {
       cost,
@@ -126,5 +138,21 @@ export class AutocompleteModel {
       return false
     }
     return this.connectionService.getConnectionState() === "connected"
+  }
+
+  /**
+   * Check the user's credit balance via the profile endpoint.
+   * Returns true if the user has a positive balance, false otherwise.
+   * Returns false on any error (not connected, fetch failed, etc.).
+   */
+  public async hasBalance(): Promise<boolean> {
+    if (!this.connectionService || this.connectionService.getConnectionState() !== "connected") {
+      return false
+    }
+    const result = await this.connectionService
+      .getClient()
+      .kilo.profile()
+      .catch(() => null)
+    return (result?.data?.balance?.balance ?? 0) > 0
   }
 }

@@ -17,6 +17,9 @@ export const dict = {
   "agentManager.worktree.advancedOptions": "Gelişmiş worktree seçenekleri",
   "agentManager.worktree.defaultBaseBranch": "Varsayılan Temel Dal",
   "agentManager.worktree.defaultBaseBranchAuto": "Otomatik algıla",
+  "agentManager.worktree.copyPath": "Yolu Kopyala",
+  "agentManager.worktree.openInVscode": "VS Code'da Aç",
+  "agentManager.worktree.rename": "Yeniden Adlandır",
 
   "agentManager.hoverCard.branch": "DAL",
   "agentManager.hoverCard.base": "Temel",

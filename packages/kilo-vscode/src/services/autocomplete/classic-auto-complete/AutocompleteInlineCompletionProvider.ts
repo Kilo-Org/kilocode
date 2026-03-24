@@ -33,6 +33,7 @@ import { postprocessAutocompleteSuggestion } from "./uselessSuggestionFilter"
 import { shouldSkipAutocomplete } from "./contextualSkip"
 import { FileIgnoreController } from "../shims/FileIgnoreController"
 import { AutocompleteTelemetry } from "./AutocompleteTelemetry"
+import { ErrorBackoff } from "./ErrorBackoff"
 
 const MAX_SUGGESTIONS_HISTORY = 20
 
@@ -135,6 +136,12 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
   private telemetry: AutocompleteTelemetry | null
   /** Information about the last suggestion shown to the user */
   private lastSuggestion: LastSuggestionInfo | null = null
+  /** Circuit breaker / exponential backoff for API errors */
+  public readonly backoff = new ErrorBackoff()
+  /** Optional callback fired once when a fatal (non-retriable) error is first detected */
+  private onFatalError: ((status: number | null) => void) | null = null
+  /** Whether the fatal error notification has already been fired (avoid repeating) */
+  private fatalNotified = false
 
   constructor(
     context: vscode.ExtensionContext,
@@ -143,11 +150,13 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     getSettings: () => AutocompleteServiceSettings | null,
     workspacePath: string,
     telemetry: AutocompleteTelemetry | null = null,
+    onFatalError?: (status: number | null) => void,
   ) {
     this.telemetry = telemetry
     this.model = model
     this.costTrackingCallback = costTrackingCallback
     this.getSettings = getSettings
+    this.onFatalError = onFatalError ?? null
 
     this.ignoreController = (async () => {
       const ignoreController = new FileIgnoreController(workspacePath)
@@ -274,6 +283,15 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     }
   }
 
+  /**
+   * Reset error backoff and allow fatal notifications to fire again.
+   * Call this when auth state changes (login, reconnect, org switch).
+   */
+  public resetBackoff(): void {
+    this.backoff.reset()
+    this.fatalNotified = false
+  }
+
   public dispose(): void {
     if (this.debounceTimer !== null) {
       clearTimeout(this.debounceTimer)
@@ -328,6 +346,24 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
       // bail if no model is available or no valid API credentials configured
       // this prevents errors when autocomplete is enabled but no provider is set up
       return []
+    }
+
+    // Circuit breaker / backoff: skip requests when the API is returning errors.
+    // This prevents flooding the API with thousands of failed requests when
+    // credits are depleted (402), auth is invalid (401/403), or the server
+    // is rate-limiting (429) / having issues (5xx).
+    if (this.backoff.blocked()) {
+      // For 402 (credits depleted), periodically check the balance endpoint
+      // instead of sending a probe FIM request. If the user has added credits,
+      // reset the backoff so autocomplete resumes.
+      if (this.backoff.getFatalStatus() === 402 && this.backoff.shouldProbe()) {
+        const funded = await this.model.hasBalance()
+        if (funded) {
+          this.backoff.reset()
+          this.fatalNotified = false
+        }
+      }
+      if (this.backoff.blocked()) return []
     }
 
     if (!document?.uri?.fsPath) {
@@ -557,6 +593,10 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
 
       this.costTrackingCallback(result.cost, result.inputTokens, result.outputTokens)
 
+      // Successful response — reset any backoff / circuit breaker state
+      this.backoff.success()
+      this.fatalNotified = false
+
       // Always update suggestions, even if text is empty (for caching)
       this.updateSuggestions(result.suggestion)
     } catch (error) {
@@ -571,6 +611,15 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
         },
         telemetryContext,
       )
+
+      // Update circuit breaker / backoff state based on the error kind
+      const kind = this.backoff.failure(error)
+
+      // Notify once when a fatal error (402/401/403) is first detected
+      if (kind === "fatal" && !this.fatalNotified) {
+        this.fatalNotified = true
+        this.onFatalError?.(this.backoff.getFatalStatus())
+      }
     }
   }
 }

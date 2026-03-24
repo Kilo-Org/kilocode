@@ -52,6 +52,7 @@ import { ThemeProvider } from "@kilocode/kilo-ui/theme"
 import { DialogProvider, useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { DropdownMenu } from "@kilocode/kilo-ui/dropdown-menu"
+import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
 import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
 import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff"
@@ -284,29 +285,7 @@ function buildShortcutCategories(
   ].filter((c) => c.shortcuts.length > 0)
 }
 
-/** Parse a display keybinding string into separate key tokens for rendering.
- *  Windows/Linux format ("Ctrl+Shift+W") splits on "+".
- *  Mac format ("⌘⇧W") splits on known modifier symbols. */
-function parseBindingTokens(binding: string): string[] {
-  if (!binding) return []
-  // Windows/Linux: "Ctrl+Shift+W" → ["Ctrl", "Shift", "W"]
-  if (binding.includes("+")) return binding.split("+")
-  // Mac: "⌘⇧W" → ["⌘", "⇧", "W"] — peel off known modifier symbols
-  const tokens: string[] = []
-  let rest = binding
-  const modifiers = ["⌘", "⇧", "⌃", "⌥"]
-  while (rest.length > 0) {
-    const mod = modifiers.find((m) => rest.startsWith(m))
-    if (mod) {
-      tokens.push(mod)
-      rest = rest.slice(mod.length)
-    } else {
-      tokens.push(rest)
-      break
-    }
-  }
-  return tokens
-}
+import { parseBindingTokens } from "./keybind-tokens"
 
 const AgentManagerContent: Component = () => {
   const { t } = useLanguage()
@@ -2325,6 +2304,7 @@ const AgentManagerContent: Component = () => {
                                   renaming={renamingWt() === wt.id}
                                   renameValue={renameValue()}
                                   closeKeybind={kb().closeWorktree ?? ""}
+                                  openKeybind={kb().openWorktree ?? ""}
                                   onClick={() => {
                                     if (pendingDelete() === wt.id) {
                                       confirmDeleteWorktree(wt.id)
@@ -2338,6 +2318,10 @@ const AgentManagerContent: Component = () => {
                                   onCommitRename={() => commitRename(wt.id)}
                                   onCancelRename={cancelRename}
                                   onRemoveStale={() => confirmRemoveStaleWorktree(wt.id)}
+                                  onCopyPath={() => navigator.clipboard.writeText(wt.path)}
+                                  onOpen={() =>
+                                    vscode.postMessage({ type: "agentManager.openWorktree", worktreeId: wt.id })
+                                  }
                                 />
                               </div>
                             )
@@ -2412,34 +2396,46 @@ const AgentManagerContent: Component = () => {
               >
                 <For each={unassignedSessions()}>
                   {(s) => (
-                    <button
-                      class={`am-item ${s.id === session.currentSessionID() && selection() === null ? "am-item-active" : ""}`}
-                      data-sidebar-id={s.id}
-                      onClick={() => {
-                        saveTabMemory()
-                        setSelection(null)
-                        setReviewActive(false)
-                        session.selectSession(s.id)
-                      }}
-                    >
-                      <span class="am-item-title">{s.title || t("agentManager.session.untitled")}</span>
-                      <span class="am-item-time">{formatRelativeDate(s.updatedAt)}</span>
-                      <div class="am-item-promote">
-                        <TooltipKeybind
-                          title={t("agentManager.session.openInWorktree")}
-                          keybind={kb().newWorktree ?? ""}
-                          placement="right"
+                    <ContextMenu>
+                      <ContextMenu.Trigger as="div" style={{ display: "contents" }}>
+                        <button
+                          class={`am-item ${s.id === session.currentSessionID() && selection() === null ? "am-item-active" : ""}`}
+                          data-sidebar-id={s.id}
+                          onClick={() => {
+                            saveTabMemory()
+                            setSelection(null)
+                            setReviewActive(false)
+                            session.selectSession(s.id)
+                          }}
                         >
-                          <IconButton
-                            icon="branch"
-                            size="small"
-                            variant="ghost"
-                            label={t("agentManager.session.openInWorktree")}
-                            onClick={(e: MouseEvent) => handlePromote(s.id, e)}
-                          />
-                        </TooltipKeybind>
-                      </div>
-                    </button>
+                          <span class="am-item-title">{s.title || t("agentManager.session.untitled")}</span>
+                          <span class="am-item-time">{formatRelativeDate(s.updatedAt)}</span>
+                          <div class="am-item-promote">
+                            <TooltipKeybind
+                              title={t("agentManager.session.openInWorktree")}
+                              keybind={kb().newWorktree ?? ""}
+                              placement="right"
+                            >
+                              <IconButton
+                                icon="branch"
+                                size="small"
+                                variant="ghost"
+                                label={t("agentManager.session.openInWorktree")}
+                                onClick={(e: MouseEvent) => handlePromote(s.id, e)}
+                              />
+                            </TooltipKeybind>
+                          </div>
+                        </button>
+                      </ContextMenu.Trigger>
+                      <ContextMenu.Portal>
+                        <ContextMenu.Content class="am-ctx-menu">
+                          <ContextMenu.Item onSelect={() => handlePromote(s.id, new MouseEvent("click"))}>
+                            <Icon name="branch" size="small" />
+                            <ContextMenu.ItemLabel>{t("agentManager.session.openInWorktree")}</ContextMenu.ItemLabel>
+                          </ContextMenu.Item>
+                        </ContextMenu.Content>
+                      </ContextMenu.Portal>
+                    </ContextMenu>
                   )}
                 </For>
               </Show>

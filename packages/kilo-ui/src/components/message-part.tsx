@@ -1077,6 +1077,20 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
                   </div>
                 )
               }
+              const hint =
+                cleaned.includes("before overwriting it. Use the Read tool first") ||
+                cleaned.includes("has been modified since it was last read") ||
+                cleaned.includes("oldString and newString are identical") ||
+                cleaned.includes("must match exactly, including whitespace") ||
+                cleaned.includes("Found multiple matches for oldString")
+              if (hint) {
+                return (
+                  <div data-component="tool-hint">
+                    <Icon name="arrow-right" size="small" />
+                    <span data-slot="tool-hint-message">{cleaned}</span>
+                  </div>
+                )
+              }
               const [title, ...rest] = cleaned.split(": ")
               return (
                 <Card variant="error">

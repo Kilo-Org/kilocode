@@ -41,4 +41,9 @@ export const dict = {
     "Kilo Code Autocomplete блокується конфліктом з GitHub Copilot. Щоб виправити це, ти повинен вимкнути вбудовані пропозиції Copilot.",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "Вимкнути Copilot",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "Вимкнути Autocomplete",
+  "kilocode:autocomplete.creditsExhausted.message":
+    "Kilo Code Autocomplete призупинено, оскільки на твоєму обліковому записі не залишилося кредитів. Додай кредити, щоб відновити автодоповнення.",
+  "kilocode:autocomplete.creditsExhausted.addCredits": "Додати кредити",
+  "kilocode:autocomplete.authError.message":
+    "Kilo Code Autocomplete призупинено через помилку автентифікації. Будь ласка, увійди знову.",
 }
