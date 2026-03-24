@@ -170,6 +170,7 @@ const defaultProps = {
   renaming: false,
   renameValue: "",
   closeKeybind: "⌘⇧W",
+  openKeybind: "⌘⇧O",
   onClick: noop,
   onDelete: noop,
   onStartRename: noop,
@@ -177,6 +178,8 @@ const defaultProps = {
   onCommitRename: noop,
   onCancelRename: noop,
   onRemoveStale: noop,
+  onCopyPath: noop,
+  onOpen: noop,
 }
 
 // ---------------------------------------------------------------------------
