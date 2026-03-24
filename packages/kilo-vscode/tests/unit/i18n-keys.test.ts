@@ -107,8 +107,8 @@ import { dict as cliNo } from "../../src/services/cli-backend/i18n/no"
 import { dict as cliBr } from "../../src/services/cli-backend/i18n/br"
 import { dict as cliTh } from "../../src/services/cli-backend/i18n/th"
 import { dict as cliBs } from "../../src/services/cli-backend/i18n/bs"
-import { dict as cliTr } from "../../src/services/cli-backend/i18n/tr"
 import { dict as cliNl } from "../../src/services/cli-backend/i18n/nl"
+import { dict as cliTr } from "../../src/services/cli-backend/i18n/tr"
 import { dict as cliUk } from "../../src/services/cli-backend/i18n/uk"
 
 import { dict as acEn } from "../../src/services/autocomplete/i18n/en"
@@ -200,8 +200,8 @@ const cliLocales: Record<string, Record<string, string>> = {
   br: cliBr,
   th: cliTh,
   bs: cliBs,
-  tr: cliTr,
   nl: cliNl,
+  tr: cliTr,
   uk: cliUk,
 }
 

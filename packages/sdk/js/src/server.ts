@@ -1,4 +1,5 @@
 import launch from "cross-spawn"
+import { type SpawnOptions } from "node:child_process" // kilocode_change
 import { type Config } from "./gen/types.gen.js"
 import { stop, bindAbort } from "./process.js"
 
@@ -41,7 +42,28 @@ export type ServerOptions = {
   signal?: AbortSignal
   timeout?: number
   config?: Config
+  /** Path to the CLI binary. Defaults to "kilo" (resolved via PATH). */ // kilocode_change
+  command?: string // kilocode_change
+  /** Additional environment variables merged on top of process.env. */ // kilocode_change
+  env?: Record<string, string | undefined> // kilocode_change
+  /** Extra options forwarded to child_process.spawn (e.g. detached, windowsHide). */ // kilocode_change
+  spawnOptions?: Pick<SpawnOptions, "detached" | "windowsHide" | "cwd"> // kilocode_change
 }
+
+// kilocode_change start
+export type ServerResult = {
+  /** Full URL the server is listening on (e.g. "http://127.0.0.1:12345"). */
+  url: string
+  /** Port extracted from the URL. */
+  port: number
+  /** PID of the spawned process (undefined if the process failed to spawn). */
+  pid: number | undefined
+  /** Collected stderr output up to the point the server started (or failed). */
+  stderr: string
+  /** Kill the server process. */
+  close(): void
+}
+// kilocode_change end
 
 export type TuiOptions = {
   project?: string
@@ -52,7 +74,7 @@ export type TuiOptions = {
   config?: Config
 }
 
-export async function createKiloServer(options?: ServerOptions) {
+export async function createKiloServer(options?: ServerOptions): Promise<ServerResult> {
   options = Object.assign(
     {
       hostname: "127.0.0.1",
@@ -65,14 +87,21 @@ export async function createKiloServer(options?: ServerOptions) {
   const args = [`serve`, `--hostname=${options.hostname}`, `--port=${options.port}`]
   if (options.config?.logLevel) args.push(`--log-level=${options.config.logLevel}`)
 
-  const proc = launch(`kilo`, args, {
+  const proc = launch(options.command ?? `kilo`, args, {
     // kilocode_change
     env: {
       ...process.env,
+      ...options.env, // kilocode_change
       KILO_CONFIG_CONTENT: buildConfigEnv(options.config), // kilocode_change
     },
+    stdio: ["ignore", "pipe", "pipe"], // kilocode_change
+    ...options.spawnOptions, // kilocode_change
   })
   let clear = () => {}
+
+  // kilocode_change start
+  const stderrLines: string[] = []
+  // kilocode_change end
 
   const url = await new Promise<string>((resolve, reject) => {
     const id = setTimeout(() => {
@@ -106,7 +135,9 @@ export async function createKiloServer(options?: ServerOptions) {
       }
     })
     proc.stderr?.on("data", (chunk) => {
-      output += chunk.toString()
+      const text = chunk.toString()
+      output += text
+      stderrLines.push(text) // kilocode_change
     })
     proc.on("exit", (code) => {
       clearTimeout(id)
@@ -126,8 +157,15 @@ export async function createKiloServer(options?: ServerOptions) {
     })
   })
 
+  // kilocode_change start
+  const parsed = new URL(url)
+  // kilocode_change end
+
   return {
     url,
+    port: parseInt(parsed.port, 10), // kilocode_change
+    pid: proc.pid, // kilocode_change
+    stderr: stderrLines.join(""), // kilocode_change
     close() {
       clear()
       stop(proc)
