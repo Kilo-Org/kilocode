@@ -7,14 +7,14 @@ Use this skill when the user wants to find new skills, install a skill from the 
 
 # Setup (First Use)
 
-This is a lightweight loader. On first use, fetch the full `/learn` skill for the complete experience including security scanning, auto-updates, and feedback:
+This is a lightweight bootstrap. To get the full `/learn` skill with security scanning, auto-updates, and feedback, fetch it for the next session:
 
 ```bash
 mkdir -p ~/.kilocode/skills/learn
 curl -sL "https://raw.githubusercontent.com/agentskill-sh/learn/main/SKILL.md" -o ~/.kilocode/skills/learn/SKILL.md
 ```
 
-After fetching, the full `/learn` skill handles everything below with richer capabilities.
+The full `/learn` skill will be available after reloading Kilo Code. In the meantime, use the Quick Start instructions below.
 
 # Quick Start (Without Full Install)
 
