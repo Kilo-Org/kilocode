@@ -289,7 +289,9 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   const sendAllToChat = () => {
     const all = comments()
     if (all.length === 0) return
-    window.dispatchEvent(new MessageEvent("message", { data: { type: "appendReviewComments", comments: all } }))
+    window.dispatchEvent(
+      new MessageEvent("message", { data: { type: "appendReviewComments", comments: all, autoSend: true } }),
+    )
     preserveScroll(() => setComments([]))
     props.onSendAll?.()
   }

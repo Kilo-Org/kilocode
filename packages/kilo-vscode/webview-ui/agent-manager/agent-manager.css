@@ -29,7 +29,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;
+  padding: 8px 10px;
+  min-height: 40px;
+  box-sizing: border-box;
   border-radius: var(--radius-sm);
   cursor: pointer;
   background: none;
@@ -183,7 +185,9 @@ button.am-section-toggle:hover .am-section-label {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 10px;
+  padding: 8px 10px;
+  min-height: 40px;
+  box-sizing: border-box;
   border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: var(--font-size-base);
@@ -316,7 +320,8 @@ button.am-section-toggle:hover .am-section-label {
   transition: opacity 200ms ease;
 }
 
-.am-worktree-pending-delete .am-worktree-stats {
+.am-worktree-pending-delete .am-worktree-stats,
+.am-worktree-pending-delete .am-worktree-stats-skeleton {
   display: none;
 }
 
@@ -326,11 +331,18 @@ button.am-section-toggle:hover .am-section-label {
 
 .am-worktree-delete-hint {
   font-size: var(--font-size-small);
-  color: var(--icon-critical-base);
+  color: var(--text-on-brand-base);
+  background: var(--surface-critical-strong);
   white-space: nowrap;
   flex-shrink: 0;
-  padding-right: 4px;
+  padding: 1px 8px;
+  border-radius: 4px;
+  cursor: pointer;
   animation: am-hint-slide-in 200ms ease;
+}
+
+.am-worktree-delete-hint:hover {
+  opacity: 0.9;
 }
 
 @keyframes am-hint-slide-in {
@@ -378,8 +390,9 @@ button.am-section-toggle:hover .am-section-label {
 
 .am-worktree-stats {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
   flex-shrink: 0;
   font-family: var(--font-mono, monospace);
   font-size: 10px;
@@ -387,17 +400,30 @@ button.am-section-toggle:hover .am-section-label {
   font-variant-numeric: tabular-nums;
 }
 
-.am-worktree-diff-stats {
+.am-worktree-stats-row {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-  background: var(--surface-inset-base);
 }
 
-.am-worktree-item-active .am-worktree-diff-stats {
-  background: rgba(255, 255, 255, 0.12);
+.am-worktree-stats-skeleton {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.am-worktree-stats-skeleton-row {
+  width: 48px;
+  height: 8px;
+  border-radius: 3px;
+  background: var(--text-base);
+  animation: am-skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.am-worktree-stats-skeleton-row:nth-child(2) {
+  animation-delay: 0.15s;
 }
 
 .am-stat-files {
@@ -445,7 +471,9 @@ button.am-section-toggle:hover .am-section-label {
 }
 
 .am-worktree-item:hover .am-worktree-stats,
-.am-local-item:hover .am-worktree-stats {
+.am-worktree-item:hover .am-worktree-stats-skeleton,
+.am-local-item:hover .am-worktree-stats,
+.am-local-item:hover .am-worktree-stats-skeleton {
   opacity: 0;
 }
 
@@ -751,6 +779,43 @@ button.am-section-toggle:hover .am-section-label {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   pointer-events: none;
   color: var(--text-base);
+}
+
+/* Drag-and-drop sortable worktree wrapper */
+
+.am-wt-sortable {
+  touch-action: none;
+  cursor: grab;
+}
+
+body.am-wt-dragging-active,
+body.am-wt-dragging-active * {
+  cursor: grabbing !important;
+}
+
+.am-wt-sortable > [data-slot="hover-card-trigger"] {
+  width: 100%;
+}
+
+.am-wt-dragging {
+  opacity: 0.25;
+}
+
+/* Drag overlay worktree (follows the cursor) */
+
+.am-wt-overlay {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: var(--surface-base);
+  border: 1px solid var(--border-weak-base);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+  color: var(--text-base);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
 }
 
 .am-tab-add {

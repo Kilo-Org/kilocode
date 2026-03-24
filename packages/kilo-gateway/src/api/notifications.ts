@@ -15,6 +15,7 @@ export const KilocodeNotificationSchema = z.object({
     })
     .optional(),
   showIn: z.array(z.string()).optional(),
+  suggestModelId: z.string().optional(),
 })
 
 export type KilocodeNotification = z.infer<typeof KilocodeNotificationSchema>

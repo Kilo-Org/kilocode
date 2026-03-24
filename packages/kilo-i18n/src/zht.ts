@@ -62,4 +62,8 @@ export const dict = {
   "marketplace.install": "安裝",
   "marketplace.filter.installed": "已安裝",
   "marketplace.error.dismiss": "關閉",
+  "marketplace.warning.busyOne": "一個工作階段正在執行，將被中斷",
+  "marketplace.warning.busyMany": "多個工作階段正在執行，將被中斷",
+  "marketplace.warning.installAnyway": "仍然安裝",
+  "marketplace.warning.cancel": "取消",
 }

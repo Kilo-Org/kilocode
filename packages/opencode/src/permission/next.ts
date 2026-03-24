@@ -8,6 +8,7 @@ import { PermissionTable } from "@/session/session.sql"
 import { fn } from "@/util/fn"
 import { Log } from "@/util/log"
 import { Wildcard } from "@/util/wildcard"
+import { drainCovered } from "@/kilocode/permission/drain" // kilocode_change
 import os from "os"
 import z from "zod"
 
@@ -168,6 +169,7 @@ export namespace PermissionNext {
       string,
       {
         info: Request
+        ruleset: Ruleset // kilocode_change
         resolve: () => void
         reject: (e: any) => void
       }
@@ -200,6 +202,7 @@ export namespace PermissionNext {
             }
             s.pending[id] = {
               info,
+              ruleset, // kilocode_change
               resolve,
               reject,
             }
@@ -212,6 +215,7 @@ export namespace PermissionNext {
   )
 
   // kilocode_change start
+
   export const saveAlwaysRules = fn(
     z.object({
       requestID: Identifier.schema("permission"),
@@ -240,6 +244,8 @@ export namespace PermissionNext {
       if (newRules.length > 0) {
         await Config.updateGlobal({ permission: toConfig(newRules) }, { dispose: false })
       }
+
+      await drainCovered(s.pending, s.approved, evaluate, Event, DeniedError, input.requestID) // kilocode_change
     },
   )
   // kilocode_change end
@@ -297,7 +303,7 @@ export namespace PermissionNext {
         for (const [id, pending] of Object.entries(s.pending)) {
           if (pending.info.sessionID !== sessionID) continue
           const ok = pending.info.patterns.every(
-            (pattern) => evaluate(pending.info.permission, pattern, s.approved).action === "allow",
+            (pattern) => evaluate(pending.info.permission, pattern, pending.ruleset, s.approved).action === "allow", // kilocode_change — include original ruleset
           )
           if (!ok) continue
           delete s.pending[id]

@@ -246,12 +246,6 @@
     pointer-events: auto;
   }
 
-  &:hover [data-slot="text-part-copy-wrapper"],
-  &:focus-within [data-slot="text-part-copy-wrapper"] {
-    opacity: 1;
-    pointer-events: auto;
-  }
-
   [data-component="markdown"] {
     margin-top: 0;
     font-size: var(--font-size-base);
@@ -552,6 +546,18 @@
       }
     }
     /* kilocode_change end */
+  }
+
+  [data-slot="message-part-filename"] {
+    color: var(--text-strong);
+    flex-shrink: 0;
+  }
+
+  [data-slot="message-part-actions"] {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    justify-content: flex-end;
   }
 
   [data-slot="message-part-filename"] {

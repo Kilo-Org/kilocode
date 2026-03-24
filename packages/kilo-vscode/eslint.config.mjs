@@ -31,5 +31,11 @@ export default [
       "max-lines": ["error", 3000],
     },
   },
+  {
+    files: ["src/KiloProvider.ts"],
+    rules: {
+      "max-lines": ["error", 3200],
+    },
+  },
   eslintConfigPrettier,
 ]

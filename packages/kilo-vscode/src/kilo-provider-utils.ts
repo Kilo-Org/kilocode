@@ -21,18 +21,38 @@ export function getErrorMessage(error: unknown): string {
     const obj = error as Record<string, unknown>
     // Direct .message field
     if (typeof obj.message === "string") return obj.message
-    // Direct .error field
+    // Direct .error field (string)
     if (typeof obj.error === "string") return obj.error
+    // SDK throwOnError shape: { error: { message: "..." } } or { error: { ... } }
+    if (obj.error && typeof obj.error === "object") {
+      const nested = obj.error as Record<string, unknown>
+      if (typeof nested.message === "string") return nested.message
+    }
     // NotFoundError shape: { data: { message: "..." } }
     if (obj.data && typeof obj.data === "object") {
       const data = obj.data as Record<string, unknown>
       if (typeof data.message === "string") return data.message
+      // Hono validator shape: { data: ..., error: [...], success: false }
+      if (Array.isArray(data.error) && data.error.length > 0) {
+        const first = data.error[0]
+        if (typeof first === "string") return first
+        if (first && typeof first === "object" && typeof (first as Record<string, unknown>).message === "string") {
+          return (first as Record<string, unknown>).message as string
+        }
+      }
     }
     // BadRequestError shape: { errors: [{ message: "..." }] }
     if (Array.isArray(obj.errors) && obj.errors.length > 0) {
       const first = obj.errors[0]
       if (typeof first === "string") return first
       if (first && typeof first.message === "string") return first.message
+    }
+    // Last resort: try JSON.stringify for debuggability
+    try {
+      const json = JSON.stringify(error)
+      if (json !== "{}" && json.length < 500) return json
+    } catch (err) {
+      console.warn("[Kilo New] getErrorMessage: JSON.stringify failed", err)
     }
   }
   return String(error)
@@ -181,6 +201,7 @@ export type WebviewMessage =
   | { type: "sessionCreated"; session: ReturnType<typeof sessionToWebview> }
   | { type: "sessionUpdated"; session: ReturnType<typeof sessionToWebview> }
   | { type: "messageRemoved"; sessionID: string; messageID: string }
+  | { type: "sessionError"; sessionID?: string; error?: unknown }
   | null
 
 export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | undefined): WebviewMessage {
@@ -274,6 +295,13 @@ export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | un
         type: "questionResolved",
         requestID: event.properties.requestID,
       }
+    case "session.error": {
+      return {
+        type: "sessionError",
+        sessionID: event.properties.sessionID,
+        error: event.properties.error,
+      }
+    }
     case "session.created":
       return {
         type: "sessionCreated",

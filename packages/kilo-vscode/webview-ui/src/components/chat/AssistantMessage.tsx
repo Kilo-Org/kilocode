@@ -58,6 +58,7 @@ function TodoToolCard(props: { part: ToolPart }) {
           output={state?.output}
           status={state?.status}
           defaultOpen
+          reveal={false}
         />
       )}
     </Show>
@@ -91,6 +92,11 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                       part={part}
                       message={props.message as SDKMessage}
                       showAssistantCopyPartID={props.showAssistantCopyPartID}
+                      animate={
+                        part.type === "tool" &&
+                        ((part as unknown as ToolPart).state?.status === "pending" ||
+                          (part as unknown as ToolPart).state?.status === "running")
+                      }
                     />
                   }
                 >

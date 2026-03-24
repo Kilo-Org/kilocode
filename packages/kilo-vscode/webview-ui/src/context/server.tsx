@@ -65,6 +65,10 @@ export const ServerProvider: ParentComponent = (props) => {
           setWorkspaceDirectory(message.directory)
           break
 
+        case "languageChanged":
+          setLanguageOverride(message.locale || undefined)
+          break
+
         case "connectionState":
           console.log("[Kilo New] Connection state changed:", message.state)
           setConnectionState(message.state)
@@ -126,6 +130,10 @@ export const ServerProvider: ParentComponent = (props) => {
   })
 
   const startLogin = () => {
+    const status = deviceAuth().status
+    if (status === "initiating" || status === "pending") {
+      return
+    }
     setDeviceAuth({ status: "initiating" })
     vscode.postMessage({ type: "login" })
   }

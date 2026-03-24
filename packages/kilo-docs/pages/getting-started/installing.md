@@ -119,6 +119,15 @@ If you prefer to download and install the VSIX file directly:
    - Select "Install from VSIX..."
    - Browse to and select your downloaded `.vsix` file
 
+If you need to temporarily go back to an earlier version, use the same flow with a `.vsix` asset from an older release:
+
+1. Open the [Kilo Code GitHub Releases page](https://github.com/Kilo-Org/kilocode/releases)
+2. Pick the release you want to stay on and download its VS Code `.vsix` asset
+3. In VS Code, open Extensions, click the "..." menu, and select "Install from VSIX..."
+4. Choose the downloaded `.vsix` file to install that version
+
+If you plan to remain on that version for a while, you may also want to temporarily disable extension auto-update in VS Code so it does not immediately update again.
+
 {% image src="/docs/img/installing-vsix.png" alt="Installing Kilo Code using VS Code's Install from VSIX dialog" width="600px" caption="Installing Kilo Code using VS Code's \"Install from VSIX\" dialog" /%}
 
 ## Troubleshooting

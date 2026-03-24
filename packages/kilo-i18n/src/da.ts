@@ -65,4 +65,8 @@ export const dict = {
   "marketplace.install": "Installer",
   "marketplace.filter.installed": "Installeret",
   "marketplace.error.dismiss": "Afvis",
+  "marketplace.warning.busyOne": "En session kører og vil blive afbrudt",
+  "marketplace.warning.busyMany": "Flere sessioner kører og vil blive afbrudt",
+  "marketplace.warning.installAnyway": "Installer alligevel",
+  "marketplace.warning.cancel": "Annuller",
 }

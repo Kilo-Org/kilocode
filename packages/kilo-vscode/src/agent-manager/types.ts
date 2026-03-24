@@ -68,6 +68,7 @@ interface StateMessage {
   sessions: ManagedSession[]
   staleWorktreeIds?: string[]
   tabOrder?: Record<string, string[]>
+  worktreeOrder?: string[]
   sessionsCollapsed?: boolean
   reviewDiffStyle?: "unified" | "split"
   isGitRepo?: boolean
@@ -298,6 +299,11 @@ interface SetTabOrderIn {
   order: string[]
 }
 
+interface SetWorktreeOrderIn {
+  type: "agentManager.setWorktreeOrder"
+  order: string[]
+}
+
 interface SetSessionsCollapsedIn {
   type: "agentManager.setSessionsCollapsed"
   collapsed: boolean
@@ -425,6 +431,7 @@ export type AgentManagerInMessage =
   | RequestStateIn
   | RequestBranchesIn
   | SetTabOrderIn
+  | SetWorktreeOrderIn
   | SetSessionsCollapsedIn
   | SetReviewDiffStyleIn
   | SetDefaultBaseBranchIn

@@ -42,6 +42,15 @@ export class SettingsEditorProvider implements vscode.Disposable {
     return resolvePanelProjectDirectory(active, vscode.workspace.workspaceFolders)
   }
 
+  /** Extract the PanelView from a viewType string like "kilo-code.new.settingsPanel". */
+  static viewFromType(type: string): PanelView | undefined {
+    const match = type.match(/^kilo-code\.new\.(\w+)Panel$/)
+    if (!match) return undefined
+    const view = match[1] as PanelView
+    if (!(view in PANEL_TITLES)) return undefined
+    return view
+  }
+
   openPanel(view: PanelView, tab?: string): void {
     if (tab) this.tabs.set(view, tab)
 
@@ -57,14 +66,31 @@ export class SettingsEditorProvider implements vscode.Disposable {
       return
     }
 
-    const title = PANEL_TITLES[view]
+    const panel = vscode.window.createWebviewPanel(
+      `kilo-code.new.${view}Panel`,
+      PANEL_TITLES[view],
+      vscode.ViewColumn.One,
+      {
+        enableScripts: true,
+        retainContextWhenHidden: true,
+        localResourceRoots: [this.extensionUri],
+      },
+    )
 
-    const panel = vscode.window.createWebviewPanel(`kilo-code.new.${view}Panel`, title, vscode.ViewColumn.One, {
-      enableScripts: true,
-      retainContextWhenHidden: true,
-      localResourceRoots: [this.extensionUri],
-    })
+    this.wirePanel(panel, view, projectDirectory)
+  }
 
+  /** Re-wire a deserialized panel after extension restart. */
+  deserializePanel(panel: vscode.WebviewPanel): void {
+    const view = SettingsEditorProvider.viewFromType(panel.viewType)
+    if (!view) {
+      panel.dispose()
+      return
+    }
+    this.wirePanel(panel, view, this.getProjectDirectory())
+  }
+
+  private wirePanel(panel: vscode.WebviewPanel, view: PanelView, projectDirectory: string | null): void {
     panel.iconPath = {
       light: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-light.svg"),
       dark: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-dark.svg"),
@@ -105,6 +131,7 @@ export class SettingsEditorProvider implements vscode.Disposable {
     this.panels.set(view, panel)
     this.providers.set(view, provider)
 
+    const title = PANEL_TITLES[view]
     panel.onDidDispose(() => {
       console.log(`[Kilo New] ${title} panel disposed`)
       closePanelDisposable.dispose()

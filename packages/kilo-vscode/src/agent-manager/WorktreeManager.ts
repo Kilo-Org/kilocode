@@ -8,7 +8,10 @@
 
 import * as path from "path"
 import * as fs from "fs"
+import { randomUUID } from "crypto"
 import simpleGit, { type SimpleGit } from "simple-git"
+
+const TEMP_PREFIX = ".kilo-delete-"
 import { generateBranchName, sanitizeBranchName } from "./branch-name"
 import type { GitOps } from "./GitOps"
 import { execWithShellEnv } from "./shell-env"
@@ -338,46 +341,83 @@ export class WorktreeManager {
 
   /**
    * Remove a worktree directory and its git bookkeeping.
-   * Called in two scenarios:
-   * 1. Cleanup before re-creation in createWorktree (leftover from crash/interrupted creation)
-   * 2. Future: session deletion from the Agent Manager UI
    *
-   * Tries `git worktree remove` first to properly clean up .git/worktrees/ bookkeeping,
-   * then --force for dirty worktrees, then falls back to fs.rm for orphaned directories
-   * that git doesn't know about.
+   * Uses a rename-prune-background-rm strategy for speed:
+   * 1. Atomically rename the directory so git and pollers stop seeing it instantly
+   * 2. Run `git worktree prune` to clean up .git/worktrees/ metadata
+   * 3. Delete the renamed directory in the background (non-blocking)
+   *
+   * When `branch` is provided the local branch is also deleted after pruning.
    */
-  async removeWorktree(worktreePath: string): Promise<void> {
-    return this.withGitLock(() => this.removeWorktreeImpl(worktreePath))
+  async removeWorktree(worktreePath: string, branch?: string): Promise<void> {
+    return this.withGitLock(() => this.removeWorktreeImpl(worktreePath, branch))
   }
 
-  private async removeWorktreeImpl(worktreePath: string): Promise<void> {
-    const clean = await this.git.raw(["worktree", "remove", worktreePath]).then(
-      () => true,
-      () => false,
-    )
-    if (clean) {
-      this.log(`Removed worktree: ${worktreePath}`)
+  private async removeWorktreeImpl(worktreePath: string, branch?: string): Promise<void> {
+    if (!fs.existsSync(worktreePath)) {
+      // Directory already gone — just prune stale metadata
+      await this.git.raw(["worktree", "prune", "--expire", "now"]).catch(() => {})
+      this.log(`Worktree directory already absent, pruned metadata: ${worktreePath}`)
+      if (branch) await this.deleteBranch(branch)
       return
     }
 
-    const forced = await this.git.raw(["worktree", "remove", "--force", worktreePath]).then(
-      () => true,
-      () => false,
-    )
-    if (forced) {
-      this.log(`Force removed worktree: ${worktreePath}`)
+    if (!this.isManagedPath(worktreePath)) {
+      this.log(`Refusing to remove path outside worktrees directory: ${worktreePath}`)
       return
     }
 
-    // Git doesn't know about this directory — remove it directly
-    if (fs.existsSync(worktreePath)) {
-      if (!this.isManagedPath(worktreePath)) {
-        this.log(`Refusing to remove path outside worktrees directory: ${worktreePath}`)
-        return
-      }
-      await fs.promises.rm(worktreePath, { recursive: true, force: true })
-      this.log(`Removed orphaned worktree directory: ${worktreePath}`)
+    // 1. Atomic rename — makes the worktree instantly invisible to git and pollers.
+    //    rename() is near-instant on the same filesystem (same parent dir guarantees this).
+    const temp = path.join(path.dirname(worktreePath), `.kilo-delete-${randomUUID()}`)
+    try {
+      await fs.promises.rename(worktreePath, temp)
+    } catch {
+      // Rename failed (e.g. locked files on Windows) — fall back to force remove
+      this.log(`Rename failed, falling back to force remove: ${worktreePath}`)
+      await this.git.raw(["worktree", "remove", "--force", worktreePath]).catch(() => {})
+      if (branch) await this.deleteBranch(branch)
+      return
     }
+
+    // 2. Prune git metadata now that the directory is gone from the expected path
+    await this.git.raw(["worktree", "prune", "--expire", "now"]).catch(() => {})
+    this.log(`Removed worktree (rename+prune): ${worktreePath}`)
+
+    // 3. Delete the local branch while we still hold the git lock
+    if (branch) await this.deleteBranch(branch)
+
+    // 4. Background delete — fire-and-forget, cross-platform
+    fs.promises.rm(temp, { recursive: true, force: true }).catch((err) => {
+      this.log(`Background cleanup failed for ${temp}: ${err}`)
+    })
+  }
+
+  private async deleteBranch(branch: string): Promise<void> {
+    try {
+      await this.git.raw(["branch", "-D", branch])
+      this.log(`Deleted branch: ${branch}`)
+    } catch {
+      this.log(`Failed to delete branch (may still be referenced): ${branch}`)
+    }
+  }
+
+  /** Remove orphaned .kilo-delete-* temp dirs left by interrupted deletions. */
+  cleanupOrphanedTempDirs(): void {
+    if (!fs.existsSync(this.dir)) return
+    fs.promises
+      .readdir(this.dir, { withFileTypes: true })
+      .then((entries) => {
+        for (const e of entries) {
+          if (e.isDirectory() && e.name.startsWith(TEMP_PREFIX)) {
+            const stale = path.join(this.dir, e.name)
+            fs.promises.rm(stale, { recursive: true, force: true }).catch((err) => {
+              this.log(`Failed to clean orphaned temp dir ${stale}: ${err}`)
+            })
+          }
+        }
+      })
+      .catch(() => {})
   }
 
   async discoverWorktrees(): Promise<WorktreeInfo[]> {
@@ -385,8 +425,11 @@ export class WorktreeManager {
     if (!fs.existsSync(this.dir)) return []
 
     const entries = await fs.promises.readdir(this.dir, { withFileTypes: true })
+    this.cleanupOrphanedTempDirs()
     const results = await Promise.all(
-      entries.filter((e) => e.isDirectory()).map((e) => this.worktreeInfo(path.join(this.dir, e.name))),
+      entries
+        .filter((e) => e.isDirectory() && !e.name.startsWith(TEMP_PREFIX))
+        .map((e) => this.worktreeInfo(path.join(this.dir, e.name))),
     )
     return results.filter((info): info is WorktreeInfo => info !== undefined)
   }

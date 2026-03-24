@@ -21,6 +21,7 @@ import { CloudImportDialog } from "./CloudImportDialog"
 import { FeedbackDialog } from "./FeedbackDialog"
 import { VscodeSessionTurn } from "./VscodeSessionTurn"
 import { RevertBanner } from "./RevertBanner"
+import { AccountSwitcher } from "../shared/AccountSwitcher"
 import { WorkingIndicator } from "../shared/WorkingIndicator"
 import { activeUserMessageID as getActiveUserMessageID } from "../../context/session-queue"
 
@@ -90,6 +91,9 @@ export const MessageList: Component<MessageListProps> = (props) => {
 
   return (
     <div class="message-list-container">
+      <Show when={isEmpty()}>
+        <AccountSwitcher class="account-switcher-welcome" />
+      </Show>
       <div
         ref={autoScroll.scrollRef}
         onScroll={autoScroll.handleScroll}

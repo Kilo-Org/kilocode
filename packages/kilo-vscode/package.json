@@ -2,7 +2,7 @@
   "name": "kilo-code",
   "displayName": "Kilo Code: AI Coding Agent, Copilot, and Autocomplete",
   "description": "Open Source AI coding agent that generates code from natural language, automates tasks, and runs terminal commands. Features inline autocomplete, browser automation, automated refactoring, and custom modes for planning, coding, and debugging. Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM.",
-  "version": "7.0.51",
+  "version": "7.1.2",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
@@ -15,7 +15,7 @@
     "directory": "packages/kilo-vscode"
   },
   "engines": {
-    "vscode": "^1.108.0"
+    "vscode": "^1.105.1"
   },
   "author": {
     "name": "Kilo Code"
@@ -45,7 +45,7 @@
     "kilocode"
   ],
   "activationEvents": [
-    "onWebviewPanel:kilo-code.new.AgentManagerPanel"
+    "onStartupFinished"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -128,6 +128,11 @@
         "category": "Kilo Code"
       },
       {
+        "command": "kilo-code.new.autocomplete.cancelSuggestions",
+        "title": "Cancel Suggested Edits",
+        "category": "Kilo Code"
+      },
+      {
         "command": "kilo-code.new.agentManager.previousSession",
         "title": "Agent Manager: Previous Session",
         "category": "Kilo Code"
@@ -164,12 +169,6 @@
         "title": "Agent Manager: Show Keyboard Shortcuts",
         "category": "Kilo Code",
         "icon": "$(keyboard)"
-      },
-      {
-        "command": "kilo-code.new.agentManager.focusPanel",
-        "title": "Agent Manager: Focus Panel",
-        "category": "Kilo Code",
-        "icon": "$(circuit-board)"
       },
       {
         "command": "kilo-code.new.agentManager.newTab",
@@ -294,6 +293,26 @@
         "command": "kilo-code.new.focusChatInput",
         "title": "Focus Chat Input",
         "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.cycleAgentMode",
+        "title": "Cycle Agent Mode",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.cyclePreviousAgentMode",
+        "title": "Cycle Previous Agent Mode",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.toggleAutoApprove",
+        "title": "Toggle Auto-Approve",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.generateTerminalCommand",
+        "title": "Generate Terminal Command",
+        "category": "Kilo Code"
       }
     ],
     "submenus": [
@@ -345,6 +364,13 @@
         }
       ],
       "scm/title": [
+        {
+          "command": "kilo-code.new.generateCommitMessage",
+          "group": "navigation",
+          "when": "scmProvider == git"
+        }
+      ],
+      "scm/input": [
         {
           "command": "kilo-code.new.generateCommitMessage",
           "group": "navigation",
@@ -410,6 +436,16 @@
         "mac": "cmd+shift+a"
       },
       {
+        "command": "kilo-code.new.toggleAutoApprove",
+        "key": "ctrl+alt+a",
+        "mac": "cmd+alt+a"
+      },
+      {
+        "command": "kilo-code.new.generateTerminalCommand",
+        "key": "ctrl+shift+g",
+        "mac": "cmd+shift+g"
+      },
+      {
         "command": "kilo-code.new.agentManagerOpen",
         "key": "ctrl+shift+m",
         "mac": "cmd+shift+m"
@@ -461,12 +497,6 @@
         "key": "ctrl+shift+/",
         "mac": "cmd+shift+/",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
-      },
-      {
-        "command": "kilo-code.new.agentManager.focusPanel",
-        "key": "ctrl+.",
-        "mac": "cmd+.",
-        "when": "terminalFocus && kilo-code.agentTerminalFocus"
       },
       {
         "command": "kilo-code.new.agentManager.newTab",
@@ -557,6 +587,33 @@
         "key": "ctrl+9",
         "mac": "cmd+9",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.cycleAgentMode",
+        "key": "ctrl+.",
+        "mac": "cmd+."
+      },
+      {
+        "command": "kilo-code.new.cyclePreviousAgentMode",
+        "key": "ctrl+shift+.",
+        "mac": "cmd+shift+."
+      },
+      {
+        "command": "kilo-code.new.autocomplete.cancelSuggestions",
+        "key": "escape",
+        "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilo-code.new.autocomplete.hasSuggestions"
+      },
+      {
+        "command": "kilo-code.new.autocomplete.generateSuggestions",
+        "key": "ctrl+l",
+        "mac": "cmd+l",
+        "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.autocomplete.enableSmartInlineTaskKeybinding && !github.copilot.completions.enabled"
+      },
+      {
+        "command": "kilo-code.new.autocomplete.showIncompatibilityExtensionPopup",
+        "key": "ctrl+l",
+        "mac": "cmd+l",
+        "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.autocomplete.enableSmartInlineTaskKeybinding && github.copilot.completions.enabled"
       }
     ],
     "configuration": {
@@ -583,7 +640,9 @@
             "no",
             "br",
             "th",
-            "bs"
+            "bs",
+            "tr",
+            "nl"
           ],
           "enumDescriptions": [
             "Auto (VS Code language)",
@@ -602,7 +661,9 @@
             "Norsk",
             "Português (Brasil)",
             "ภาษาไทย",
-            "Bosanski"
+            "Bosanski",
+            "Türkçe",
+            "Nederlands"
           ]
         },
         "kilo-code.new.model.providerID": {
@@ -718,7 +779,8 @@
     "test:visual": "playwright test",
     "test:visual:update": "playwright test --update-snapshots",
     "snapshot:build": "bun script/dev-snapshot.ts build",
-    "snapshot:install": "bun script/dev-snapshot.ts install"
+    "snapshot:install": "bun script/dev-snapshot.ts install",
+    "extension": "bun script/launch.ts"
   },
   "devDependencies": {
     "@playwright/test": "1.57.0",
@@ -727,7 +789,7 @@
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
     "@types/qrcode": "^1.5.6",
-    "@types/vscode": "^1.108.0",
+    "@types/vscode": "^1.105.1",
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.7.1",

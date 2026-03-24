@@ -12,9 +12,7 @@ import z from "zod"
 import path from "path"
 import { readFileSync, readdirSync, existsSync } from "fs"
 import * as schema from "./schema"
-import { Installation } from "../installation"
 import { Flag } from "../flag/flag"
-import { iife } from "@/util/iife"
 
 declare const KILO_MIGRATIONS: { sql: string; timestamp: number; name: string }[] | undefined
 
@@ -28,15 +26,8 @@ export const NotFoundError = NamedError.create(
 const log = Log.create({ service: "db" })
 
 export namespace Database {
-  export const Path = iife(() => {
-    const channel = Installation.CHANNEL
-    // kilocode_change start
-    if (["latest", "beta"].includes(channel) || Flag.KILO_DISABLE_CHANNEL_DB)
-      return path.join(Global.Path.data, "kilo.db")
-    const safe = channel.replace(/[^a-zA-Z0-9._-]/g, "-")
-    return path.join(Global.Path.data, `kilo-${safe}.db`)
-    // kilocode_change end
-  })
+  // kilocode_change - always use kilo.db regardless of channel
+  export const Path = path.join(Global.Path.data, "kilo.db")
 
   type Schema = typeof schema
   export type Transaction = SQLiteTransaction<"sync", void, Schema>

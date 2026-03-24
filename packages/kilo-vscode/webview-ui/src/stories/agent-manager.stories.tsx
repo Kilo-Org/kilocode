@@ -159,6 +159,7 @@ const defaultProps = {
   active: false,
   pendingDelete: false,
   busy: false,
+  working: false,
   stale: false,
   shortcut: 2,
   sessions: 1,
