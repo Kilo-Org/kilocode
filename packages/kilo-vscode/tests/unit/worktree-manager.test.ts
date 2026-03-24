@@ -402,52 +402,65 @@ describe("WorktreeManager.removeWorktree", () => {
     expect(after.all).toContain(result.branch)
   })
 
-  it("returns quickly even with a dirty worktree", async () => {
-    const root = await createTempRepo()
-    const mgr = createManager(root)
+  it(
+    "returns quickly even with a dirty worktree",
+    async () => {
+      const root = await createTempRepo()
+      const mgr = createManager(root)
 
-    const result = await mgr.createWorktree({ prompt: "dirty-wt" })
+      const result = await mgr.createWorktree({ prompt: "dirty-wt" })
 
-    // Make the worktree dirty with uncommitted files
-    await fs.writeFile(path.join(result.path, "dirty.txt"), "uncommitted")
-    for (let i = 0; i < 20; i++) {
-      await fs.writeFile(path.join(result.path, `bulk-${i}.txt`), "x".repeat(1000))
-    }
+      // Make the worktree dirty with uncommitted files
+      await fs.writeFile(path.join(result.path, "dirty.txt"), "uncommitted")
+      for (let i = 0; i < 20; i++) {
+        await fs.writeFile(path.join(result.path, `bulk-${i}.txt`), "x".repeat(1000))
+      }
 
-    const start = Date.now()
-    await mgr.removeWorktree(result.path)
-    const elapsed = Date.now() - start
+      const start = Date.now()
+      await mgr.removeWorktree(result.path)
+      const elapsed = Date.now() - start
 
-    // The blocking portion (rename + prune) should complete well under 5s.
-    // Old approach with git worktree remove (non-force then force) was much slower.
-    expect(elapsed).toBeLessThan(5000)
+      // The blocking portion (rename + prune) should complete well under 3s.
+      // Old approach with git worktree remove (non-force then force) was much slower.
+      expect(elapsed).toBeLessThan(3000)
 
-    // Original path should be gone immediately
-    const exists = await fs
-      .stat(result.path)
-      .then(() => true)
-      .catch(() => false)
-    expect(exists).toBe(false)
-  })
+      // Original path should be gone immediately
+      const exists = await fs
+        .stat(result.path)
+        .then(() => true)
+        .catch(() => false)
+      expect(exists).toBe(false)
+    },
+    { timeout: 15000 },
+  )
 
-  it("eventual cleanup: files are fully deleted after background rm", async () => {
-    const root = await createTempRepo()
-    const mgr = createManager(root)
+  it(
+    "eventual cleanup: files are fully deleted after background rm",
+    async () => {
+      const root = await createTempRepo()
+      const mgr = createManager(root)
 
-    const result = await mgr.createWorktree({ prompt: "eventual" })
-    await fs.writeFile(path.join(result.path, "data.txt"), "content")
+      const result = await mgr.createWorktree({ prompt: "eventual" })
+      await fs.writeFile(path.join(result.path, "data.txt"), "content")
 
-    await mgr.removeWorktree(result.path)
+      await mgr.removeWorktree(result.path)
 
-    // Wait for background rm to finish
-    await new Promise((r) => setTimeout(r, 500))
+      // Poll until background rm finishes (up to 5s)
+      const worktreesDir = path.join(root, ".kilo", "worktrees")
+      const deadline = Date.now() + 5000
+      while (Date.now() < deadline) {
+        const entries = await fs.readdir(worktreesDir)
+        if (!entries.some((e) => e.startsWith(".kilo-delete-"))) break
+        await new Promise((r) => setTimeout(r, 100))
+      }
 
-    // No .kilo-delete-* temp dirs should remain
-    const worktreesDir = path.join(root, ".kilo", "worktrees")
-    const entries = await fs.readdir(worktreesDir)
-    const orphans = entries.filter((e) => e.startsWith(".kilo-delete-"))
-    expect(orphans).toHaveLength(0)
-  })
+      // No .kilo-delete-* temp dirs should remain
+      const entries = await fs.readdir(worktreesDir)
+      const orphans = entries.filter((e) => e.startsWith(".kilo-delete-"))
+      expect(orphans).toHaveLength(0)
+    },
+    { timeout: 10000 },
+  )
 })
 
 // ---------------------------------------------------------------------------

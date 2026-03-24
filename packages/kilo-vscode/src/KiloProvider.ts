@@ -502,7 +502,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           void this.handleLoadMessages(message.sessionID)
           break
         case "syncSession":
-          this.handleSyncSession(message.sessionID).catch((e) =>
+          this.handleSyncSession(message.sessionID, message.parentSessionID).catch((e) =>
             console.error("[Kilo New] handleSyncSession failed:", e),
           )
           break
@@ -1129,12 +1129,23 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Handle syncing a child session (e.g. spawned by the task tool).
    * Tracks the session for SSE events and fetches its messages.
    */
-  private async handleSyncSession(sessionID: string): Promise<void> {
+  private async handleSyncSession(sessionID: string, parentSessionID?: string): Promise<void> {
     if (!this.client) return
     if (this.syncedChildSessions.has(sessionID)) return
 
     this.syncedChildSessions.add(sessionID)
     this.trackedSessionIds.add(sessionID)
+
+    // Inherit the parent's worktree directory so permission responses use
+    // the correct backend Instance. Without this, child sessions in Agent
+    // Manager worktrees fall back to workspace root and fail to find the
+    // pending permission request.
+    if (!this.sessionDirectories.has(sessionID) && parentSessionID) {
+      const dir = this.sessionDirectories.get(parentSessionID)
+      if (dir) {
+        this.sessionDirectories.set(sessionID, dir)
+      }
+    }
 
     try {
       const workspaceDir = this.getWorkspaceDirectory(sessionID)
@@ -2080,6 +2091,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       client: this.client,
       currentSessionId: this.currentSession?.id,
       trackedSessionIds: this.trackedSessionIds,
+      sessionDirectories: this.sessionDirectories,
       postMessage: (msg) => this.postMessage(msg),
       getWorkspaceDirectory: (sid) => this.getWorkspaceDirectory(sid),
     }
