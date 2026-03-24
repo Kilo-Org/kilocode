@@ -173,6 +173,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
 
     pick(value, true)
     setStore("editing", false)
+    if (single()) submit()
   }
 
   const toggleCollapse = () => setStore("collapsed", !store.collapsed)
@@ -217,14 +218,14 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       onKeyDown={onRoot}
     >
       {/* Single unified header row — always visible */}
-      <div data-slot="question-dock-header">
+      <div data-slot="question-dock-header" onClick={toggleCollapse}>
         <div data-slot="question-dock-header-content">
           <div data-slot="question-header-title">{summary()}</div>
           <Show when={store.collapsed}>
             <div data-slot="question-collapsed-preview">{question()?.question}</div>
           </Show>
         </div>
-        <div data-slot="question-header-actions">
+        <div data-slot="question-header-actions" onClick={(e: MouseEvent) => e.stopPropagation()}>
           <Show when={!store.collapsed && !single()}>
             <div data-slot="question-progress">
               <button
