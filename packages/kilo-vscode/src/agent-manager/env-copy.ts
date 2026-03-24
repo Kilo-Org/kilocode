@@ -11,6 +11,7 @@
  */
 
 import * as fs from "node:fs"
+import { constants } from "node:fs"
 import * as path from "node:path"
 
 /** Result returned after a copy attempt. */
@@ -65,17 +66,17 @@ export async function copyEnvFiles(
     const src = path.join(repoPath, name)
     const dst = path.join(worktreePath, name)
 
-    if (fs.existsSync(dst)) {
-      log(`Skipping ${name} (already exists in worktree)`)
-      result.skipped.push(name)
-      continue
-    }
-
     try {
-      await fs.promises.copyFile(src, dst)
+      // COPYFILE_EXCL fails atomically if dst exists — no TOCTOU race.
+      await fs.promises.copyFile(src, dst, constants.COPYFILE_EXCL)
       log(`Copied ${name}`)
       result.copied.push(name)
-    } catch (err) {
+    } catch (err: unknown) {
+      if (err instanceof Error && "code" in err && err.code === "EEXIST") {
+        log(`Skipping ${name} (already exists in worktree)`)
+        result.skipped.push(name)
+        continue
+      }
       log(`Failed to copy ${name}: ${err}`)
     }
   }
