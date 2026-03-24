@@ -88,18 +88,31 @@ export const Instance = {
   get project() {
     return context.use().project
   },
+
+  // kilocode_change start
   /**
    * Check if a path is within the project boundary.
-   * Returns true if path is inside Instance.directory OR Instance.worktree.
-   * Paths within the worktree but outside the working directory should not trigger external_directory permission.
+   * Returns true if path is inside Instance.directory, Instance.worktree, or Instance.project.worktree.
+   * Paths within the repo root but outside the current working directory should not trigger
+   * external_directory permission for worktree-scoped sessions.
    */
   containsPath(filepath: string) {
-    if (Filesystem.contains(Instance.directory, filepath)) return true
-    // Non-git projects set worktree to "/" which would match ANY absolute path.
-    // Skip worktree check in this case to preserve external_directory permissions.
-    if (Instance.worktree === "/") return false
-    return Filesystem.contains(Instance.worktree, filepath)
+    const directory = Instance.directory
+    const inDirectory = Filesystem.contains(directory, filepath)
+    if (inDirectory) return true
+
+    const worktree = Instance.worktree
+    const inWorktree = worktree !== "/" && Filesystem.contains(worktree, filepath)
+    if (inWorktree) return true
+
+    const root = Instance.project.worktree
+    const inRoot = root !== "/" && Filesystem.contains(root, filepath)
+    if (inRoot) return true
+
+    return false
   },
+  // kilocode_change end
+
   state<S>(init: () => S, dispose?: (state: Awaited<S>) => Promise<void>): () => S {
     return State.create(() => Instance.directory, init, dispose)
   },
