@@ -1446,19 +1446,8 @@ export const SessionProvider: ParentComponent = (props) => {
       console.warn("[Kilo New] Cannot delete session: not connected")
       return
     }
-    // Optimistically remove from the list so the UI updates immediately
-    setStore(
-      "sessions",
-      produce((sessions) => {
-        delete sessions[id]
-      }),
-    )
-    setLoaded((prev) => {
-      if (!prev.has(id)) return prev
-      const next = new Set(prev)
-      next.delete(id)
-      return next
-    })
+    // Wait for sessionDeleted from the extension so a backend failure does not
+    // leave the history list out of sync with the real session state.
     vscode.postMessage({ type: "deleteSession", sessionID: id })
   }
 
