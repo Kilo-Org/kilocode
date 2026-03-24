@@ -117,6 +117,11 @@ export class AgentManagerProvider implements Disposable {
   /** Restore the Agent Manager panel from a previously serialized state.
    *  The caller (extension.ts / vscode-host.ts) wraps the raw panel before passing it. */
   public deserializePanel(ctx: PanelContext): void {
+    if (this.panel) {
+      this.log("Panel already exists during deserialization, disposing duplicate")
+      ctx.dispose()
+      return
+    }
     this.log("Deserializing Agent Manager panel")
     this.attachPanel(ctx)
   }
@@ -128,6 +133,11 @@ export class AgentManagerProvider implements Disposable {
 
   /** Wire up a panel context (shared by openPanel and deserializePanel). */
   private attachPanel(ctx: PanelContext): void {
+    if (this.panel) {
+      this.log("Disposing previous panel before attaching new one")
+      this.panel.dispose()
+      this.panel = undefined
+    }
     this.panel = ctx
 
     this.stateReady = this.initializeState()
@@ -135,11 +145,15 @@ export class AgentManagerProvider implements Disposable {
     this.sendKeybindings()
 
     ctx.onDidDispose(() => {
-      this.log("Panel disposed")
-      this.statsPoller.stop()
-      this.stopDiffPolling()
+      // Only clear if this is still the active panel — a newer panel may
+      // have already replaced us via attachPanel.
+      if (this.panel === ctx) {
+        this.log("Panel disposed")
+        this.statsPoller.stop()
+        this.stopDiffPolling()
+        this.panel = undefined
+      }
       ctx.sessions.dispose()
-      this.panel = undefined
     })
   }
 
