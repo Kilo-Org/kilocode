@@ -20,6 +20,32 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
   const todo = createMemo(() => sync.data.todo[props.sessionID] ?? [])
   const messages = createMemo(() => sync.data.message[props.sessionID] ?? [])
 
+  const familyMessages = createMemo(() => {
+    const rootID = session()?.parentID ?? props.sessionID
+    const allSessions = sync.data.session
+    const childrenByParent = new Map<string, string[]>()
+    for (const s of allSessions) {
+      if (s.parentID) {
+        const list = childrenByParent.get(s.parentID)
+        if (list) list.push(s.id)
+        else childrenByParent.set(s.parentID, [s.id])
+      }
+    }
+    const result: any[] = []
+    const queue = [rootID]
+    const visited = new Set<string>()
+    while (queue.length > 0) {
+      const sid = queue.pop()!
+      if (visited.has(sid)) continue
+      visited.add(sid)
+      const msgs = sync.data.message[sid]
+      if (msgs) result.push(...msgs)
+      const children = childrenByParent.get(sid)
+      if (children) queue.push(...children)
+    }
+    return result
+  })
+
   const [expanded, setExpanded] = createStore({
     mcp: true,
     diff: true,
@@ -41,7 +67,7 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
   )
 
   const cost = createMemo(() => {
-    const total = messages().reduce((sum, x) => sum + (x.role === "assistant" ? x.cost : 0), 0)
+    const total = familyMessages().reduce((sum: number, x: any) => sum + (x.role === "assistant" ? x.cost : 0), 0)
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",

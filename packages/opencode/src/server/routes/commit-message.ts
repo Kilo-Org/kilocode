@@ -37,8 +37,13 @@ export const CommitMessageRoutes = lazy(() =>
     ),
     async (c) => {
       const body = c.req.valid("json")
-      const result = await generateCommitMessage(body)
-      return c.json({ message: result.message })
+      try {
+        const result = await generateCommitMessage(body)
+        return c.json({ message: result.message })
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        return c.json({ data: null, errors: [{ message }], success: false as const }, 400)
+      }
     },
   ),
 )

@@ -1549,7 +1549,17 @@ export const SessionProvider: ParentComponent = (props) => {
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()),
   )
 
-  const totalCost = createMemo(() => calcTotalCost(messages()))
+  const totalCost = createMemo(() => {
+    const id = currentSessionID()
+    if (!id) return 0
+    const family = sessionFamily(id)
+    let total = 0
+    for (const sid of family) {
+      const msgs = store.messages[sid] ?? []
+      total += calcTotalCost(msgs)
+    }
+    return total
+  })
 
   // Status text derived from last assistant message parts
   const statusText = createMemo<string | undefined>(() => {

@@ -7,6 +7,7 @@ import { Instance } from "../project/instance"
 import { Flag } from "@/flag/flag"
 import { Log } from "../util/log"
 import { Glob } from "../util/glob"
+import { RulesMigrator } from "../kilocode/rules-migrator"
 import type { MessageV2 } from "./message-v2"
 
 const log = Log.create({ service: "instruction" })
@@ -161,6 +162,20 @@ export namespace InstructionPrompt {
       const filepath = path.resolve(path.join(dir, file))
       if (await Filesystem.exists(filepath)) return filepath
     }
+  }
+
+  export async function modeRules(activeMode: string): Promise<string[]> {
+    const allRules = await RulesMigrator.discoverRules(Instance.directory)
+    const contents: string[] = []
+    for (const rule of allRules) {
+      if (rule.mode && rule.mode === activeMode) {
+        const content = await Filesystem.readText(rule.path).catch(() => "")
+        if (content) {
+          contents.push("Instructions from: " + rule.path + "\n" + content)
+        }
+      }
+    }
+    return contents
   }
 
   export async function resolve(messages: MessageV2.WithParts[], filepath: string, messageID: string) {

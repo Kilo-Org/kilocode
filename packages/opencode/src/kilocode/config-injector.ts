@@ -50,7 +50,7 @@ export namespace KilocodeConfigInjector {
       const rulesMigration = await RulesMigrator.migrate({
         projectDir: options.projectDir,
         includeGlobal: !options.skipGlobalPaths,
-        includeModeSpecific: true,
+        includeModeSpecific: false,
       })
 
       warnings.push(...rulesMigration.warnings)

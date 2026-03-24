@@ -122,6 +122,8 @@ const LOCK_FILES = new Set([
 ])
 
 const MAX_DIFF_LENGTH = 4000
+const MAX_TOTAL_DIFF_SIZE = 100_000
+const MAX_FILES = 50
 
 function isLockFile(filepath: string): boolean {
   const name = filepath.split("/").pop() ?? filepath
@@ -191,9 +193,11 @@ export async function getGitContext(repoPath: string, selectedFiles?: string[]):
   const selected = selectedFiles ? new Set(selectedFiles) : undefined
 
   const files: FileChange[] = []
+  let totalDiffSize = 0
   for (const entry of raw) {
     if (isLockFile(entry.path)) continue
     if (selected && !selected.has(entry.path)) continue
+    if (files.length >= MAX_FILES) continue
 
     const status = mapStatus(entry.status)
     const untracked = isUntracked(entry.status)
@@ -223,7 +227,15 @@ export async function getGitContext(repoPath: string, selectedFiles?: string[]):
       diff = diff.slice(0, MAX_DIFF_LENGTH) + "\n... [truncated]"
     }
 
+    // Stop adding files if the total diff budget is exhausted
+    if (totalDiffSize + diff.length > MAX_TOTAL_DIFF_SIZE) {
+      diff = diff.slice(0, Math.max(0, MAX_TOTAL_DIFF_SIZE - totalDiffSize)) + "\n... [truncated — total diff limit reached]"
+    }
+
+    totalDiffSize += diff.length
     files.push({ status, path: entry.path, diff })
+
+    if (totalDiffSize >= MAX_TOTAL_DIFF_SIZE) continue
   }
 
   return { branch, recentCommits, files }

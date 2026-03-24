@@ -139,6 +139,7 @@ export namespace Config {
     try {
       const kilocodeRules = await RulesMigrator.migrate({
         projectDir: Instance.directory,
+        includeModeSpecific: false,
       })
       if (kilocodeRules.instructions.length > 0) {
         result = mergeConfigConcatArrays(result, { instructions: kilocodeRules.instructions })

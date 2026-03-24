@@ -726,9 +726,11 @@ export namespace SessionPrompt {
       // kilocode_change end
 
       // Build system prompt, adding structured output instruction if needed
+      const modeSpecificRules = await InstructionPrompt.modeRules(agent.name)
       const system = [
         ...(await SystemPrompt.environment(model, lastUser.editorContext)),
         ...(await InstructionPrompt.system()),
+        ...modeSpecificRules,
       ] // kilocode_change
       const format = lastUser.format ?? { type: "text" }
       if (format.type === "json_schema") {

@@ -14,7 +14,7 @@ import { Markdown } from "@opencode-ai/ui/markdown"
 import { ScrollView } from "@opencode-ai/ui/scroll-view"
 import type { Message, Part, UserMessage } from "@kilocode/sdk/v2/client"
 import { useLanguage } from "@/context/language"
-import { getSessionContextMetrics } from "./session-context-metrics"
+import { getSessionContextMetrics, collectFamilyMessages } from "./session-context-metrics"
 import { estimateSessionContextBreakdown, type SessionContextBreakdownKey } from "./session-context-breakdown"
 import { createSessionContextFormatter } from "./session-context-format"
 
@@ -134,7 +134,13 @@ export function SessionContextTab() {
       }),
   )
 
-  const metrics = createMemo(() => getSessionContextMetrics(messages(), sync.data.provider.all))
+  const metrics = createMemo(() => {
+    const id = params.id
+    if (!id) return getSessionContextMetrics([], sync.data.provider.all)
+    const sessions = sync.data.session ?? []
+    const familyMessages = collectFamilyMessages(id, sessions, sync.data.message)
+    return getSessionContextMetrics(familyMessages, sync.data.provider.all)
+  })
   const ctx = createMemo(() => metrics().context)
   const formatter = createMemo(() => createSessionContextFormatter(language.intl()))
 

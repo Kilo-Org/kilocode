@@ -107,6 +107,9 @@ export function registerCommitMessageService(
         .then(undefined, (error: unknown) => {
           if (controller.signal.aborted) {
             console.log("[Kilo New] Commit message generation was cancelled or timed out")
+            vscode.window.showWarningMessage(
+              "Commit message generation timed out. Try selecting fewer files or staging a smaller set of changes.",
+            )
             return
           }
           const msg = getErrorMessage(error)

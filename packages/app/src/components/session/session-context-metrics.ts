@@ -1,5 +1,10 @@
 import type { AssistantMessage, Message } from "@kilocode/sdk/v2/client"
 
+type Session = {
+  id: string
+  parentID?: string
+}
+
 type Provider = {
   id: string
   name?: string
@@ -75,6 +80,34 @@ const build = (messages: Message[] = [], providers: Provider[] = []): Metrics =>
       usage: limit ? Math.round((total / limit) * 100) : null,
     },
   }
+}
+
+export function collectFamilyMessages(
+  sessionID: string,
+  sessions: Session[],
+  messageMap: Record<string, Message[]>,
+): Message[] {
+  const childrenByParent = new Map<string, string[]>()
+  for (const s of sessions) {
+    if (s.parentID) {
+      const list = childrenByParent.get(s.parentID)
+      if (list) list.push(s.id)
+      else childrenByParent.set(s.parentID, [s.id])
+    }
+  }
+
+  const allMessages: Message[] = []
+  const queue = [sessionID]
+  const visited = new Set<string>()
+  while (queue.length > 0) {
+    const sid = queue.pop()!
+    if (visited.has(sid)) continue
+    visited.add(sid)
+    allMessages.push(...(messageMap[sid] ?? []))
+    const children = childrenByParent.get(sid)
+    if (children) queue.push(...children)
+  }
+  return allMessages
 }
 
 export function getSessionContextMetrics(messages: Message[] = [], providers: Provider[] = []) {

@@ -7,7 +7,7 @@ import { useParams } from "@solidjs/router"
 import { useLayout } from "@/context/layout"
 import { useSync } from "@/context/sync"
 import { useLanguage } from "@/context/language"
-import { getSessionContextMetrics } from "@/components/session/session-context-metrics"
+import { getSessionContextMetrics, collectFamilyMessages } from "@/components/session/session-context-metrics"
 
 interface SessionContextUsageProps {
   variant?: "button" | "indicator"
@@ -35,7 +35,11 @@ export function SessionContextUsage(props: SessionContextUsageProps) {
   const sessionKey = createMemo(() => `${params.dir}${params.id ? "/" + params.id : ""}`)
   const tabs = createMemo(() => layout.tabs(sessionKey))
   const view = createMemo(() => layout.view(sessionKey))
-  const messages = createMemo(() => (params.id ? (sync.data.message[params.id] ?? []) : []))
+  const messages = createMemo(() => {
+    if (!params.id) return []
+    const sessions = sync.data.session ?? []
+    return collectFamilyMessages(params.id, sessions, sync.data.message)
+  })
 
   const usd = createMemo(
     () =>
