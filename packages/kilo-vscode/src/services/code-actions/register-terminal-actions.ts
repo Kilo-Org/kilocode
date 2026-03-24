@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 import type { KiloProvider } from "../../KiloProvider"
 import type { AgentManagerProvider } from "../../agent-manager/AgentManagerProvider"
 import { createPrompt } from "./support-prompt"
+import { trimTerminalOutput } from "./terminal-content"
 
 /**
  * Read terminal content via clipboard.
@@ -23,23 +24,12 @@ async function getTerminalContents(commands = -1): Promise<string> {
     await vscode.commands.executeCommand("workbench.action.terminal.copySelection")
     await vscode.commands.executeCommand("workbench.action.terminal.clearSelection")
 
-    let content = (await vscode.env.clipboard.readText()).trim()
+    let content = trimTerminalOutput(await vscode.env.clipboard.readText())
 
     await vscode.env.clipboard.writeText(saved)
 
     if (saved === content) {
       return ""
-    }
-
-    // Trim duplicate trailing prompt line
-    const lines = content.split("\n")
-    const last = lines.pop()?.trim()
-    if (last) {
-      let i = lines.length - 1
-      while (i >= 0 && !lines[i].trim().startsWith(last)) {
-        i--
-      }
-      content = lines.slice(Math.max(i, 0)).join("\n")
     }
 
     return content
