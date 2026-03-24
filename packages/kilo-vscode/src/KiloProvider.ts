@@ -121,6 +121,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private projectID: string | undefined
   /** Abort controller for the current loadMessages request; aborted when a new session is selected. */
   private loadMessagesAbort: AbortController | null = null
+  /** Set after dispose() so async continuations can stop mutating or posting state. */
+  private disposed = false
+  /** Incremented whenever the bound webview lifecycle changes, invalidating older async work. */
+  private stamp = 0
   /** Set when refreshSessions() is called before the client is ready.
    *  Cleared and retried once the connection transitions to "connected". */
   private pendingSessionRefresh = false
@@ -279,6 +283,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     _token: vscode.CancellationToken,
   ) {
     // Store the webview references
+    this.disposed = false
+    this.stamp += 1
     this.isWebviewReady = false
     this.webview = webviewView.webview
 
@@ -303,6 +309,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    */
   public resolveWebviewPanel(panel: vscode.WebviewPanel): void {
     // WebviewPanel can be restored/reloaded; ensure we don't treat it as ready prematurely.
+    this.disposed = false
+    this.stamp += 1
     this.isWebviewReady = false
     this.webview = panel.webview
 
@@ -386,11 +394,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     webview: vscode.Webview,
     options?: { onBeforeMessage?: (msg: Record<string, unknown>) => Promise<Record<string, unknown> | null> },
   ): void {
+    this.disposed = false
+    this.stamp += 1
     this.isWebviewReady = false
     this.webview = webview
     this.onBeforeMessage = options?.onBeforeMessage ?? null
     this.setupWebviewMessageHandler(webview)
     this.initializeConnection()
+  }
+
+  private isAlive(stamp: number, abort?: AbortController): boolean {
+    if (this.disposed || !this.webview || this.stamp !== stamp) return false
+    if (!abort) return true
+    return !abort.signal.aborted
   }
 
   /**
@@ -1044,6 +1060,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.loadMessagesAbort?.abort()
     const abort = new AbortController()
     this.loadMessagesAbort = abort
+    const stamp = this.stamp
 
     try {
       const workspaceDir = this.getWorkspaceDirectory(sessionID)
@@ -1053,7 +1070,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       )
 
       // If this request was aborted while awaiting, skip posting stale results
-      if (abort.signal.aborted) return
+      if (!this.isAlive(stamp, abort)) return
 
       // Update currentSession so fallback logic in handleSendMessage/handleAbort
       // references the correct session after switching.  loadMessages is the
@@ -1065,7 +1082,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.client.session
         .get({ sessionID, directory: workspaceDir })
         .then((result) => {
-          if (result.data && !abort.signal.aborted) {
+          if (result.data && this.isAlive(stamp, abort)) {
             this.currentSession = result.data
           }
         })
@@ -1081,7 +1098,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.client.session
         .status({ directory: workspaceDir })
         .then((result) => {
-          if (!result.data) return
+          if (!this.isAlive(stamp, abort) || !result.data) return
           for (const [sid, info] of Object.entries(result.data) as [string, SessionStatus][]) {
             if (!this.trackedSessionIds.has(sid)) continue
             this.postMessage({
@@ -1112,16 +1129,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       // Recover any permission.asked events that were missed while the webview
       // was loading or during an SSE reconnection (fire-and-forget).
+      if (!this.isAlive(stamp, abort)) return
       void fetchAndSendPendingPermissions(this.permissionCtx)
     } catch (error) {
       // Silently ignore aborted requests — the user switched to a different session
-      if (abort.signal.aborted) return
+      if (abort.signal.aborted || this.disposed) return
       console.error("[Kilo New] KiloProvider: Failed to load messages:", error)
       this.postMessage({
         type: "error",
         message: getErrorMessage(error) || "Failed to load messages",
         sessionID,
       })
+    } finally {
+      if (this.loadMessagesAbort === abort) {
+        this.loadMessagesAbort = null
+      }
     }
   }
 
@@ -2397,6 +2419,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
   /** Post a message to the webview. Public so toolbar button commands can send messages. */
   public postMessage(message: unknown): void {
+    if (this.disposed) {
+      return
+    }
     if (!this.webview) {
       const type =
         typeof message === "object" &&
@@ -2608,16 +2633,26 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Does NOT kill the server — that's the connection service's job.
    */
   dispose(): void {
+    this.disposed = true
+    this.stamp += 1
+    this.isWebviewReady = false
     this.unsubscribeEvent?.()
     this.unsubscribeState?.()
     this.unsubscribeNotificationDismiss?.()
     this.unsubscribeLanguageChange?.()
     this.unsubscribeProfileChange?.()
     this.webviewMessageDisposable?.dispose()
+    this.loadMessagesAbort?.abort()
+    this.loadMessagesAbort = null
+    this.readyResolvers = []
+    this.pendingReviewComments = []
     this.trackedSessionIds.clear()
     this.syncedChildSessions.clear()
     this.sessionDirectories.clear()
     this.sessionStatusMap.clear()
+    this.currentSession = null
+    this.onBeforeMessage = null
+    this.webview = null
     this.ignoreController?.dispose()
     this.chatAutocomplete?.dispose()
     this.marketplace?.dispose()
