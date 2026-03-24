@@ -150,15 +150,15 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   margin-bottom: 0px;
 }
 
-/* User message copy button: tiny reserved space, button overflows on hover.
- * height:2px keeps layout stable; overflow:hidden clips the invisible button;
- * on hover overflow:visible lets the button appear without shifting content. */
+/* User message copy button: collapse wrapper when idle, show on hover.
+ * The wrapper must be tall enough to fully contain the button (20px)
+ * so that hovering the button keeps [data-component="user-message"]
+ * hovered — otherwise :hover is lost and pointer-events/opacity revert. */
 [data-component="user-message"] {
   [data-slot="user-message-copy-wrapper"] {
     min-height: 0;
-    height: 10px;
+    height: 20px;
     margin-top: 0;
-    overflow: hidden;
 
     [data-slot="user-message-meta-wrap"] {
       display: none;
@@ -168,11 +168,6 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
       width: 20px;
       height: 20px;
     }
-  }
-
-  &:hover [data-slot="user-message-copy-wrapper"],
-  &:focus-within [data-slot="user-message-copy-wrapper"] {
-    overflow: visible;
   }
 }
 
