@@ -2773,7 +2773,7 @@ const AgentManagerContent: Component = () => {
                 />
                 <div class="am-diff-panel-wrapper">
                   <DiffPanel
-                    diffs={diffDatas()[currentDiffSessionId() ?? ""] ?? []}
+                    diffs={reviewDiffs()}
                     loading={diffLoading()}
                     loadingFiles={diffFileLoadingForCurrent()}
                     sessionId={currentDiffSessionId()}

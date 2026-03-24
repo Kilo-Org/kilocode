@@ -120,6 +120,31 @@ describe("sanitizeReviewComments", () => {
     const result = sanitizeReviewComments([valid, invalid, missing], [diff("a.ts", "", "content")])
     expect(result).toEqual([valid])
   })
+
+  // Regression: when switching session tabs within a worktree while the diff
+  // panel is open, the DiffPanel's diffs prop resolves to [] because the new
+  // session's diffs haven't been fetched yet (diffDatas keyed by session ID
+  // has no entry for the newly-selected session). sanitizeReviewComments then
+  // runs with the worktree's real comments against an empty diff set and wipes
+  // every comment — since no file in an empty map matches any comment.
+  //
+  // This test proves the data loss mechanism: valid comments are destroyed
+  // when sanitize receives an empty diff set (transient during session switch).
+  it("wipes all valid comments when diffs is empty (session switch race)", () => {
+    const existing = [
+      comment({ file: "src/auth.ts", line: 5 }),
+      comment({ file: "src/auth.ts", line: 12 }),
+      comment({ file: "src/db.ts", line: 3 }),
+    ]
+    // During a tab switch the DiffPanel momentarily receives [] because
+    // diffDatas has no entry for the new session ID yet.
+    const result = sanitizeReviewComments(existing, [])
+    expect(result).toEqual([])
+    // ^ This is the bug: comments should NOT be wiped by a transient empty state.
+    // The fix is in the DiffPanel's diffs source, not in sanitizeReviewComments
+    // itself — DiffPanel must use reviewDiffs() (which has worktree-level fallback)
+    // instead of a direct session-ID lookup into diffDatas.
+  })
 })
 
 // ── formatReviewCommentsMarkdown ────────────────────────────────────────────
