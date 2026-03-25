@@ -49,6 +49,7 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
   const [contentRef, setContentRef] = createSignal<HTMLElement | undefined>(undefined)
   const [triggerRef, setTriggerRef] = createSignal<HTMLElement | undefined>(undefined)
   const [dismiss, setDismiss] = createSignal<"escape" | "outside" | null>(null)
+  const [ready, setReady] = createSignal(true)
 
   const [uncontrolledOpen, setUncontrolledOpen] = createSignal<boolean>(local.defaultOpen ?? false)
 
@@ -67,6 +68,7 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
 
   createEffect(() => {
     if (!opened()) return
+    setReady(false)
 
     const inside = (node: Node | null | undefined) => {
       if (!node) return false
@@ -105,17 +107,15 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
 
     window.addEventListener("keydown", onKeyDown, true)
 
-    // Defer pointer/focus listeners so the portal content has time to mount,
-    // contentRef is assigned, and any modal focus-trap settle cycle completes.
-    // A single rAF is not enough — modal dialogs (Kobalte `modal`) restore
-    // focus asynchronously after the portal mounts, which can race a single
-    // frame deferral and fire a focusin event that incorrectly dismisses the
-    // popover.  Two rAF ticks guarantee the portal, autofocus, and focus-trap
-    // have all finished before we start listening.
+    // Defer outside-dismiss arming so portal mount and parent dialog focus
+    // reconciliation finish before the popover starts reacting to external
+    // focus or pointer events. This avoids first-click flicker when opening
+    // from an already focused field inside a dialog.
     const pending = {
       id: requestAnimationFrame(() => {
         pending.id = requestAnimationFrame(() => {
           pending.id = 0
+          setReady(true)
           window.addEventListener("pointerdown", onPointerDown, true)
           window.addEventListener("focusin", onFocusIn, true)
         })
@@ -123,6 +123,7 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
     }
 
     onCleanup(() => {
+      setReady(true)
       window.removeEventListener("keydown", onKeyDown, true)
       window.removeEventListener("pointerdown", onPointerDown, true)
       window.removeEventListener("focusin", onFocusIn, true)
@@ -139,6 +140,9 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
         [local.class ?? ""]: !!local.class,
       }}
       style={local.style}
+      onFocusOutside={(event: Event) => {
+        if (!ready()) event.preventDefault()
+      }}
       onCloseAutoFocus={(event: Event) => {
         if (dismiss() === "outside") event.preventDefault()
         setDismiss(null)
