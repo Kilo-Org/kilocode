@@ -4,7 +4,10 @@ import { pathToFileURL } from "bun"
 const server = await createKiloServer()
 const client = createKiloClient({ baseUrl: server.url })
 
-const input = await Array.fromAsync(new Bun.Glob("packages/core/*.ts").scan())
+const input: string[] = []
+for await (const file of new Bun.Glob("packages/core/*.ts").scan()) {
+  input.push(file)
+}
 
 const tasks: Promise<void>[] = []
 for await (const file of input) {

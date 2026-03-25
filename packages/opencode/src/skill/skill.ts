@@ -129,14 +129,12 @@ export namespace Skill {
       worktreeRoot: Instance.worktree,
     })
     for (const dir of kilocodeSkillDirs) {
-      const matches = await Array.fromAsync(
-        await Glob.scan(KILO_SKILL_PATTERN, {
-          cwd: dir,
-          absolute: true,
-          include: "file",
-          symlink: true,
-        }),
-      ).catch((error) => {
+      const matches = await Glob.scan(KILO_SKILL_PATTERN, {
+        cwd: dir,
+        absolute: true,
+        include: "file",
+        symlink: true,
+      }).catch((error) => {
         log.error("failed .kilo directory scan for skills", { dir, error })
         return []
       })

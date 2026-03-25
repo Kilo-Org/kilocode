@@ -20,24 +20,30 @@ export namespace ConfigPaths {
   }
 
   export async function directories(directory: string, worktree: string) {
+    const projectDirs: string[] = []
+    if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
+      for await (const target of Filesystem.up({
+        targets: [".kilocode", ".kilo", ".opencode"], // kilocode_change
+        start: directory,
+        stop: worktree,
+      })) {
+        projectDirs.push(target)
+      }
+    }
+
+    const homeDirs: string[] = []
+    for await (const target of Filesystem.up({
+      targets: [".kilocode", ".kilo", ".opencode"], // kilocode_change
+      start: Global.Path.home,
+      stop: Global.Path.home,
+    })) {
+      homeDirs.push(target)
+    }
+
     return [
       Global.Path.config,
-      ...(!Flag.KILO_DISABLE_PROJECT_CONFIG
-        ? await Array.fromAsync(
-            Filesystem.up({
-              targets: [".kilocode", ".kilo", ".opencode"], // kilocode_change
-              start: directory,
-              stop: worktree,
-            }),
-          )
-        : []),
-      ...(await Array.fromAsync(
-        Filesystem.up({
-          targets: [".kilocode", ".kilo", ".opencode"], // kilocode_change
-          start: Global.Path.home,
-          stop: Global.Path.home,
-        }),
-      )),
+      ...projectDirs,
+      ...homeDirs,
       ...(Flag.KILO_CONFIG_DIR ? [Flag.KILO_CONFIG_DIR] : []),
     ]
   }

@@ -123,7 +123,9 @@ async function latestUser(sessionID: string) {
 }
 
 async function sessions() {
-  return Array.fromAsync(Session.list())
+  const list = []
+  for await (const x of Session.list()) list.push(x)
+  return list
 }
 
 const fakeAgent: Agent.Info = {

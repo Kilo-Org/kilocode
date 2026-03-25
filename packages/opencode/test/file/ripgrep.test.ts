@@ -14,7 +14,10 @@ describe("file.ripgrep", () => {
       },
     })
 
-    const files = await Array.fromAsync(Ripgrep.files({ cwd: tmp.path }))
+    const files: string[] = []
+    for await (const f of Ripgrep.files({ cwd: tmp.path })) {
+      files.push(f)
+    }
     const hasVisible = files.includes("visible.txt")
     const hasHidden = files.includes(path.join(".opencode", "thing.json"))
     expect(hasVisible).toBe(true)
@@ -30,7 +33,10 @@ describe("file.ripgrep", () => {
       },
     })
 
-    const files = await Array.fromAsync(Ripgrep.files({ cwd: tmp.path, hidden: false }))
+    const files: string[] = []
+    for await (const f of Ripgrep.files({ cwd: tmp.path, hidden: false })) {
+      files.push(f)
+    }
     const hasVisible = files.includes("visible.txt")
     const hasHidden = files.includes(path.join(".opencode", "thing.json"))
     expect(hasVisible).toBe(true)

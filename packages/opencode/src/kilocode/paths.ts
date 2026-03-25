@@ -57,13 +57,14 @@ export namespace KilocodePaths {
     // Returns parent directories (not skills/) because
     // the glob pattern "skills/[*]/SKILL.md" is applied from the parent
     for (const target of [".kilocode", ".kilo"] as const) {
-      const projectDirs = await Array.fromAsync(
-        Filesystem.up({
-          targets: [target],
-          start: opts.projectDir,
-          stop: opts.worktreeRoot,
-        }),
-      )
+      const projectDirs: string[] = []
+      for await (const dir of Filesystem.up({
+        targets: [target],
+        start: opts.projectDir,
+        stop: opts.worktreeRoot,
+      })) {
+        projectDirs.push(dir)
+      }
       for (const dir of projectDirs) {
         const skillsDir = path.join(dir, "skills")
         if ((await Filesystem.isDir(skillsDir)) && !directories.includes(dir)) {
