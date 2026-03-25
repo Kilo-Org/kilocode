@@ -1133,7 +1133,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       void fetchAndSendPendingPermissions(this.permissionCtx)
     } catch (error) {
       // Silently ignore aborted requests — the user switched to a different session
-      if (abort.signal.aborted || this.disposed) return
+      if (!this.isAlive(stamp, abort)) return
       console.error("[Kilo New] KiloProvider: Failed to load messages:", error)
       this.postMessage({
         type: "error",
@@ -2644,7 +2644,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.webviewMessageDisposable?.dispose()
     this.loadMessagesAbort?.abort()
     this.loadMessagesAbort = null
-    this.readyResolvers = []
+    this.readyResolvers.splice(0).forEach((r) => r())
     this.pendingReviewComments = []
     this.trackedSessionIds.clear()
     this.syncedChildSessions.clear()
