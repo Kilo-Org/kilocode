@@ -590,6 +590,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "removeMcp":
           this.handleRemoveMcp(message.name).catch((e) => console.error("[Kilo New] handleRemoveMcp failed:", e))
           break
+
         case "questionReply":
           await handleQuestionReply(this.questionCtx, message.requestID, message.answers)
           break

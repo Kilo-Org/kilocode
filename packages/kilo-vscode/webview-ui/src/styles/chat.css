@@ -2831,6 +2831,12 @@ body.vscode-light
   }
 }
 
+/* Wider inputs inside cards with data-variant="wide-input" (e.g. edit mode config) */
+[data-variant="wide-input"] [data-slot="settings-row-input"] {
+  flex: 1 1 0%;
+  max-width: none;
+}
+
 /* ============================================
    High Contrast Theme Support
    --vscode-contrastBorder is only defined in HC themes,

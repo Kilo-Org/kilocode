@@ -1067,6 +1067,32 @@ export const dict = {
     "Aucune compétence découverte. Ajoutez des chemins de dossiers ou des URLs ci-dessous pour rendre les compétences disponibles.",
   "settings.agentBehaviour.availableModes": "Modes personnalisés disponibles",
   "settings.agentBehaviour.noModesFound": "Aucun mode trouvé.",
+  "settings.agentBehaviour.createMode": "Créer un nouveau mode",
+  "settings.agentBehaviour.createMode.name": "Nom",
+  "settings.agentBehaviour.createMode.name.placeholder": "ex : reviewer",
+  "settings.agentBehaviour.createMode.name.description":
+    "Identifiant unique du mode. Utilisez uniquement des minuscules, des chiffres et des tirets.",
+  "settings.agentBehaviour.createMode.description": "Description",
+  "settings.agentBehaviour.createMode.description.placeholder":
+    "ex : Examine le code pour la qualité et les meilleures pratiques",
+  "settings.agentBehaviour.createMode.description.help": "Brève description de ce que fait ce mode.",
+  "settings.agentBehaviour.createMode.prompt": "Prompt système",
+  "settings.agentBehaviour.createMode.prompt.placeholder":
+    "ex : Vous êtes un relecteur de code. Concentrez-vous sur la qualité, les bonnes pratiques et les bugs potentiels.",
+  "settings.agentBehaviour.createMode.prompt.help": "Instructions pour l'agent IA lors de l'utilisation de ce mode.",
+  "settings.agentBehaviour.createMode.button": "Créer",
+  "settings.agentBehaviour.createMode.cancel": "Annuler",
+  "settings.agentBehaviour.createMode.nameRequired": "Le nom est requis",
+  "settings.agentBehaviour.createMode.nameInvalid":
+    "Le nom ne doit contenir que des minuscules, des chiffres et des tirets",
+  "settings.agentBehaviour.createMode.nameTaken": "Un mode avec ce nom existe déjà",
+  "settings.agentBehaviour.editMode": "Modifier le mode",
+  "settings.agentBehaviour.editMode.description": "Description",
+  "settings.agentBehaviour.editMode.prompt": "Prompt système",
+  "settings.agentBehaviour.editMode.save": "Terminé",
+  "settings.agentBehaviour.editMode.back": "Retour à la liste",
+  "settings.agentBehaviour.editMode.native": "Mode intégré (définition en lecture seule)",
+  "settings.agentBehaviour.editMode.promptOverride": "Remplacement de prompt personnalisé pour ce mode intégré",
   "settings.agentBehaviour.removeMode.title": "Supprimer le mode",
   "settings.agentBehaviour.removeMode.confirm":
     'Supprimer le mode "{{name}}" ? Cela désactivera le mode en mettant à jour votre configuration.',
