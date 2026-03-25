@@ -237,10 +237,11 @@ const AppContent: Component = () => {
           <MarketplaceView />
         </Match>
         <Match when={currentView() === "history"}>
-          <SessionList onSelectSession={handleSelectSession} />
+          <SessionList onSelectSession={handleSelectSession} onBack={() => setCurrentView("newTask")} />
         </Match>
         <Match when={currentView() === "cloudHistory"}>
           <CloudSessionList
+            onBack={() => setCurrentView("newTask")}
             onSelectSession={(cloudSessionId) => {
               session.selectCloudSession(cloudSessionId)
               setCurrentView("newTask")

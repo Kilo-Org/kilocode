@@ -29,6 +29,9 @@
   "dependencies": {
     "@kilocode/plugin": "workspace:*",
     "@kilocode/sdk": "workspace:*",
+    "@ai-sdk/anthropic": "2.0.65",
+    "@ai-sdk/openai": "2.0.89",
+    "@ai-sdk/openai-compatible": "1.0.32",
     "@openrouter/ai-sdk-provider": "1.5.4",
     "@clack/prompts": "1.0.0-alpha.1",
     "ai": "catalog:",

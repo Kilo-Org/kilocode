@@ -8,7 +8,7 @@ import { lazy } from "@/util/lazy"
 import { Config } from "../config/config" // kilocode_change
 import { ModelCache } from "./model-cache" // kilocode_change
 import { Auth } from "../auth" // kilocode_change
-import { KILO_OPENROUTER_BASE } from "@kilocode/kilo-gateway" // kilocode_change
+import { AI_SDK_PROVIDERS, KILO_OPENROUTER_BASE, PROMPTS } from "@kilocode/kilo-gateway" // kilocode_change
 import { Filesystem } from "../util/filesystem"
 
 // Try to import bundled snapshot (generated at build time)
@@ -29,7 +29,9 @@ const normalizeKiloBaseURL = (baseURL: string | undefined, orgId: string | undef
   return `${trimmed}/api/openrouter`
 }
 
-export const Prompt = z.enum(["codex", "gemini", "beast", "anthropic", "trinity", "anthropic_without_todo"])
+export const Prompt = z.enum(PROMPTS)
+
+export const AiSdkProvider = z.enum(AI_SDK_PROVIDERS)
 // kilocode_change end
 
 export namespace ModelsDev {
@@ -87,6 +89,7 @@ export namespace ModelsDev {
     recommendedIndex: z.number().optional(),
     prompt: Prompt.optional().catch(undefined),
     isFree: z.boolean().optional(),
+    ai_sdk_provider: AiSdkProvider.optional().catch(undefined),
     // kilocode_change end
 
     experimental: z.boolean().optional(),

@@ -173,6 +173,9 @@
       "name": "@kilocode/kilo-gateway",
       "version": "7.1.3",
       "dependencies": {
+        "@ai-sdk/anthropic": "2.0.65",
+        "@ai-sdk/openai": "2.0.89",
+        "@ai-sdk/openai-compatible": "1.0.32",
         "@clack/prompts": "1.0.0-alpha.1",
         "@kilocode/plugin": "workspace:*",
         "@kilocode/sdk": "workspace:*",

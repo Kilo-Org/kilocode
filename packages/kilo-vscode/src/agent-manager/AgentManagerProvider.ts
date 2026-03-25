@@ -13,6 +13,7 @@ import { versionedName } from "./branch-name"
 import { normalizePath, classifyWorktreeError } from "./git-import"
 import { SetupScriptService } from "./SetupScriptService"
 import { SetupScriptRunner } from "./SetupScriptRunner"
+import { copyEnvFiles } from "./env-copy"
 import { SessionTerminalManager } from "./SessionTerminalManager"
 import { createTerminalHost } from "./terminal-host"
 import { executeVscodeTask } from "./task-runner"
@@ -1306,10 +1307,14 @@ export class AgentManagerProvider implements Disposable {
     }
   }
 
-  /** Run the worktree setup script if configured. Blocks until complete. Shows progress in overlay. */
+  /** Copy .env files and run the worktree setup script. Blocks until complete. Shows progress in overlay. */
   private async runSetupScriptForWorktree(worktreePath: string, branch?: string, worktreeId?: string): Promise<void> {
     const root = this.getRoot()
     if (!root) return
+
+    // Always copy .env files from the main repo (before the setup script so it can override)
+    await copyEnvFiles(root, worktreePath, (msg) => this.outputChannel.appendLine(`[EnvCopy] ${msg}`))
+
     try {
       const service = this.getSetupScriptService()
       if (!service || !service.hasScript()) return

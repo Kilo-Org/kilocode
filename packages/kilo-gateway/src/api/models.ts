@@ -1,7 +1,7 @@
 import { z } from "zod"
 import { getKiloUrlFromToken } from "../auth/token.js"
 import { DEFAULT_HEADERS } from "../headers.js"
-import { KILO_API_BASE, KILO_OPENROUTER_BASE, MODELS_FETCH_TIMEOUT_MS } from "./constants.js"
+import { KILO_API_BASE, KILO_OPENROUTER_BASE, MODELS_FETCH_TIMEOUT_MS, PROMPTS, AI_SDK_PROVIDERS } from "./constants.js"
 
 /**
  * OpenRouter model schema
@@ -34,11 +34,9 @@ const openRouterModelSchema = z.object({
   opencode: z
     .object({
       family: z.string().optional(),
-      prompt: z
-        .enum(["codex", "gemini", "beast", "anthropic", "trinity", "anthropic_without_todo"])
-        .optional()
-        .catch(undefined),
+      prompt: z.enum(PROMPTS).optional().catch(undefined),
       variants: z.record(z.string(), z.record(z.string(), z.any())).optional(),
+      ai_sdk_provider: z.enum(AI_SDK_PROVIDERS).optional().catch(undefined),
     })
     .optional(),
 })
@@ -162,6 +160,7 @@ function transformToModelDevFormat(model: OpenRouterModel): any {
     recommendedIndex: model.preferredIndex,
     variants: model.opencode?.variants,
     prompt: model.opencode?.prompt,
+    ai_sdk_provider: model.opencode?.ai_sdk_provider,
     tool_call: supportsTools,
     isFree: model.isFree,
     ...(inputPrice !== undefined &&

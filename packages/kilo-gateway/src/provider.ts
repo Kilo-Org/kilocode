@@ -1,6 +1,8 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider"
-import type { Provider as SDK } from "ai"
-import type { KiloProviderOptions } from "./types.js"
+import { createAnthropic } from "@ai-sdk/anthropic"
+import { createOpenAI } from "@ai-sdk/openai"
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
+import type { KiloProvider, KiloProviderOptions } from "./types.js"
 import { getKiloUrlFromToken, getApiKey } from "./auth/token.js"
 import { buildKiloHeaders, DEFAULT_HEADERS } from "./headers.js"
 import { KILO_API_BASE, ANONYMOUS_API_KEY } from "./api/constants.js"
@@ -21,7 +23,7 @@ import { KILO_API_BASE, ANONYMOUS_API_KEY } from "./api/constants.js"
  * const model = provider.languageModel("anthropic/claude-sonnet-4")
  * ```
  */
-export function createKilo(options: KiloProviderOptions = {}): SDK {
+export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
   // Get API key from options or environment
   const apiKey = getApiKey(options)
 
@@ -66,11 +68,36 @@ export function createKilo(options: KiloProviderOptions = {}): SDK {
     })
   }
 
-  // Create OpenRouter provider with KiloCode configuration
-  return createOpenRouter({
+  const sdkOptions = {
     baseURL: openRouterUrl,
     apiKey: apiKey ?? ANONYMOUS_API_KEY,
     headers: customHeaders,
     fetch: wrappedFetch as typeof fetch,
-  })
+  }
+
+  const openrouter = createOpenRouter(sdkOptions)
+  const anthropic = createAnthropic(sdkOptions)
+  const openai = createOpenAI(sdkOptions)
+  const openaiCompatible = createOpenAICompatible({ ...sdkOptions, name: "kilo.openai-compatible" })
+
+  return {
+    languageModel(modelId) {
+      return openrouter(modelId)
+    },
+    textEmbeddingModel(modelId) {
+      return openrouter.textEmbeddingModel(modelId)
+    },
+    imageModel(modelId) {
+      return openrouter.imageModel(modelId)
+    },
+    anthropic(modelId) {
+      return anthropic(modelId)
+    },
+    openai(modelId) {
+      return openai(modelId)
+    },
+    openaiCompatible(modelId) {
+      return openaiCompatible(modelId)
+    },
+  }
 }
