@@ -56,7 +56,7 @@ export const CloudImportDialog: Component<CloudImportDialogProps> = (props) => {
           error={error()}
         />
         <div class="dialog-confirm-actions">
-          <Button variant="ghost" size="large" onClick={() => dialog.close()}>
+          <Button variant="secondary" size="large" onClick={() => dialog.close()}>
             {language.t("common.cancel")}
           </Button>
           <Button variant="primary" size="large" onClick={submit}>

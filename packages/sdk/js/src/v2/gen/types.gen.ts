@@ -1222,6 +1222,7 @@ export type ProviderConfig = {
       recommendedIndex?: number
       prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo"
       isFree?: boolean
+      ai_sdk_provider?: "anthropic" | "openai" | "openai-compatible" | "openrouter"
       experimental?: boolean
       status?: "alpha" | "beta" | "deprecated"
       options?: {
@@ -1655,6 +1656,7 @@ export type Model = {
   recommendedIndex?: number
   prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo"
   isFree?: boolean
+  ai_sdk_provider?: "anthropic" | "openai" | "openai-compatible" | "openrouter"
 }
 
 export type Provider = {
@@ -4187,6 +4189,7 @@ export type ProviderListResponses = {
           recommendedIndex?: number
           prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo"
           isFree?: boolean
+          ai_sdk_provider?: "anthropic" | "openai" | "openai-compatible" | "openrouter"
           experimental?: boolean
           status?: "alpha" | "beta" | "deprecated"
           options: {
@@ -4594,7 +4597,16 @@ export type KiloModesResponses = {
         whenToUse?: string
         description?: string
         customInstructions?: string
-        groups?: Array<unknown>
+        groups?: Array<
+          | string
+          | [
+              string,
+              {
+                fileRegex?: string
+                description?: string
+              },
+            ]
+        >
       }
     }>
   }

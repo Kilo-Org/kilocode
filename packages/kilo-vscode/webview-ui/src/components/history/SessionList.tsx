@@ -37,6 +37,7 @@ function dateGroupKey(iso: string): (typeof DATE_GROUP_KEYS)[number] {
 
 interface SessionListProps {
   onSelectSession: (id: string) => void
+  onBack?: () => void
 }
 
 const SessionList: Component<SessionListProps> = (props) => {
@@ -130,6 +131,11 @@ const SessionList: Component<SessionListProps> = (props) => {
 
   return (
     <div class="session-list">
+      <div class="session-list-header">
+        <Button variant="ghost" size="small" icon="arrow-left" onClick={() => props.onBack?.()}>
+          {language.t("common.goBack")}
+        </Button>
+      </div>
       <List<SessionInfo>
         items={session.sessions()}
         key={(s) => s.id}

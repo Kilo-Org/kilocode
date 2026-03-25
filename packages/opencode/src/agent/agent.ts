@@ -154,7 +154,7 @@ export namespace Agent {
             grep: "allow",
             glob: "allow",
             list: "allow",
-            bash: "allow",
+            // bash: "allow", // kilocode_change - disabled to prevent orchestrator from writing files via shell commands instead of delegating to sub-agents
             question: "allow",
             task: "allow",
             todoread: "allow",
@@ -168,6 +168,11 @@ export namespace Agent {
             },
           }),
           user,
+          // kilocode_change start - enforce bash deny after user so user config cannot re-enable shell
+          PermissionNext.fromConfig({
+            bash: "deny",
+          }),
+          // kilocode_change end
         ),
         mode: "primary",
         native: true,
