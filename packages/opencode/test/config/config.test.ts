@@ -2056,3 +2056,31 @@ describe("OPENCODE_CONFIG_CONTENT token substitution", () => {
     }
   })
 })
+
+test("prefers kilo.json over opencode.json for v4 migration (Regression Fix)", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      // Legacy config
+      await writeConfig(dir, {
+        model: "legacy/model",
+        username: "legacy-user"
+      }, "opencode.json");
+
+      // Modern config (should take precedence)
+      await writeConfig(dir, {
+        model: "modern/model",
+        username: "modern-user"
+      }, "kilo.json");
+    },
+  });
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await Config.get();
+      // This expectation fails in the current v4 pre-release but passes with our fix
+      expect(config.model).toBe("modern/model");
+      expect(config.username).toBe("modern-user");
+    },
+  });
+});

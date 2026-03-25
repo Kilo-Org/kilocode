@@ -237,7 +237,7 @@ export namespace Config {
     // Project config overrides global and remote config.
     if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
       // kilocode_change start
-      for (const file of ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"]) {
+      for (const file of ["opencode.json", "opencode.jsonc", "kilo.json", "kilo.jsonc"]) {
         // kilocode_change end
         result = mergeConfigConcatArrays(result, await loadFile(file))
       }
@@ -256,7 +256,7 @@ export namespace Config {
 
     const deps = []
 
-    for (const dir of unique(directories)) {
+    for (const dir of unique(directories).toReversed()) {
       // kilocode_change start
       if (
         dir.endsWith(".kilo") ||
@@ -264,7 +264,7 @@ export namespace Config {
         dir.endsWith(".opencode") ||
         dir === Flag.KILO_CONFIG_DIR
       ) {
-        for (const file of ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"]) {
+        for (const file of ["opencode.json", "opencode.jsonc", "kilo.json", "kilo.jsonc"]) {
           // kilocode_change end
           log.debug(`loading config from ${path.join(dir, file)}`)
           result = mergeConfigConcatArrays(result, await loadFile(path.join(dir, file)))
@@ -306,7 +306,7 @@ export namespace Config {
     // This way it only loads config file and not skills/plugins/commands
     if (existsSync(managedDir)) {
       // kilocode_change start
-      for (const file of ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"]) {
+      for (const file of ["opencode.json", "opencode.jsonc", "kilo.json", "kilo.jsonc"]) {
         // kilocode_change end
         result = mergeConfigConcatArrays(result, await loadFile(path.join(managedDir, file)))
       }
@@ -1336,7 +1336,7 @@ export namespace Config {
   export type Info = z.output<typeof Info>
 
   // kilocode_change start — migrate bash permission for existing users before config is consumed
-  const GLOBAL_CONFIG_FILES = ["config.json", "kilo.json", "kilo.jsonc", "opencode.json", "opencode.jsonc"]
+  const GLOBAL_CONFIG_FILES = ["opencode.json", "opencode.jsonc", "kilo.json", "kilo.jsonc", "config.json"]
 
   async function migrateBashPermission() {
     const files = GLOBAL_CONFIG_FILES.map((file) => path.join(Global.Path.config, file))
@@ -1363,7 +1363,7 @@ export namespace Config {
     // existing user without bash permission in any file → write bash:allow to the
     // highest-precedence existing file to preserve their current behavior.
     // if only the legacy TOML file exists, write to config.json (the TOML migration will merge into it)
-    const target = existing.length > 0 ? existing[existing.length - 1] : path.join(Global.Path.config, "config.json")
+    const target = existing.length > 0 ? existing.find(f => f.includes("kilo")) ?? existing[existing.length - 1] : path.join(Global.Path.config, "config.json")
     const text = await Bun.file(target)
       .text()
       .catch(() => "{}")
@@ -1385,13 +1385,10 @@ export namespace Config {
     await migrateBashPermission() // kilocode_change — run before config is read
     let result: Info = pipe(
       {},
-      mergeDeep(await loadFile(path.join(Global.Path.config, "config.json"))),
-      // kilocode_change start
-      mergeDeep(await loadFile(path.join(Global.Path.config, "kilo.json"))),
-      mergeDeep(await loadFile(path.join(Global.Path.config, "kilo.jsonc"))),
-      // kilocode_change end
       mergeDeep(await loadFile(path.join(Global.Path.config, "opencode.json"))),
       mergeDeep(await loadFile(path.join(Global.Path.config, "opencode.jsonc"))),
+      mergeDeep(await loadFile(path.join(Global.Path.config, "kilo.json"))),
+      mergeDeep(await loadFile(path.join(Global.Path.config, "kilo.jsonc"))),
     )
 
     const legacy = path.join(Global.Path.config, "config")
