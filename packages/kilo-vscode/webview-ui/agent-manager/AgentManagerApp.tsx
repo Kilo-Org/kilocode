@@ -2766,7 +2766,6 @@ const AgentManagerContent: Component = () => {
                   setSelection(LOCAL)
                   setReviewActive(false)
                   session.selectSession(id)
-                  vscode.postMessage({ type: "agentManager.openLocally", sessionId: id })
                 }}
                 readonly={readOnly()}
               />
