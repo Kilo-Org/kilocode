@@ -51,7 +51,6 @@ export const MessageList: Component<MessageListProps> = (props) => {
 
   const autoScroll = createAutoScroll({
     working: () => session.status() !== "idle",
-    overflowAnchor: "dynamic",
   })
 
   // Resume auto-scroll when a bottom-dock permission/question is dismissed
