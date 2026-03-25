@@ -35,7 +35,12 @@ export function createAutoScroll(options: AutoScrollOptions) {
     return el.scrollHeight - el.clientHeight > 1
   }
 
-  const markUser = () => {
+  const markUser = (e: Event) => {
+    if (e instanceof WheelEvent) {
+      const target = e.target instanceof Element ? e.target : undefined
+      const nested = target?.closest("[data-scrollable]")
+      if (scroll && nested && nested !== scroll) return
+    }
     userInitiated = true
   }
 
