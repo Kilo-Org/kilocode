@@ -20,6 +20,8 @@ export interface AnnotationMeta {
   file: string
   side: AnnotationSide
   line: number
+  /** When true the annotation should render in edit mode (textarea). */
+  isEditing?: boolean
 }
 
 interface AnnotationHandlers {
@@ -146,7 +148,7 @@ export function buildReviewAnnotation(
   }
 
   const comment = meta.comment!
-  if (handlers.editing === comment.id) {
+  if (meta.isEditing) {
     wrapper.className = "am-annotation am-annotation-draft"
 
     const header = document.createElement("div")

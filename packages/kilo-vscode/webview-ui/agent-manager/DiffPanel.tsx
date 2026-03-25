@@ -242,11 +242,19 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   })
 
   const annotationsForFile = (file: string): DiffLineAnnotation<AnnotationMeta>[] => {
+    const currentEditing = editing()
     const fileComments = commentsByFile().get(file) ?? []
     const result: DiffLineAnnotation<AnnotationMeta>[] = fileComments.map((c) => ({
       side: c.side,
       lineNumber: c.line,
-      metadata: { type: "comment" as const, comment: c, file: c.file, side: c.side, line: c.line },
+      metadata: {
+        type: "comment" as const,
+        comment: c,
+        file: c.file,
+        side: c.side,
+        line: c.line,
+        isEditing: currentEditing === c.id,
+      },
     }))
 
     const d = draft()
