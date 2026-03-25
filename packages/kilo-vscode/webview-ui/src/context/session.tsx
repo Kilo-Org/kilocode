@@ -986,6 +986,13 @@ export const SessionProvider: ParentComponent = (props) => {
   function handleSessionDeleted(sessionID: string) {
     pendingOptimistic.delete(sessionID)
     batch(() => {
+      setLoaded((prev) => {
+        if (!prev.has(sessionID)) return prev
+        const next = new Set(prev)
+        next.delete(sessionID)
+        return next
+      })
+
       // Collect message IDs so we can clean up their parts
       const msgs = store.messages[sessionID] ?? []
       const msgIds = msgs.map((m) => m.id)
