@@ -26,6 +26,18 @@
 - Install CLI: `npm install -g @kilocode/cli`
 - [Official Kilo.ai Home page](https://kilo.ai) (learn more)
 
+## Release Assets
+
+GitHub releases contain both CLI binaries and editor extension assets. Download the asset matching your OS and CPU architecture.
+
+| Asset                       | Description                                                             |
+| --------------------------- | ----------------------------------------------------------------------- |
+| `kilo-*-[os]-[arch].tar.gz` | CLI binary for your OS and architecture (e.g., `kilo-linux-x64.tar.gz`) |
+| `kilo-vscode*.vsix`         | VS Code extension package (usually install via VS Code Marketplace)     |
+| `darwin`                    | macOS                                                                   |
+| `x64`                       | Standard x86-64 (most modern CPUs)                                      |
+| `x64_baseline`              | Older x86-64 CPUs (safer choice for compatibility)                      |
+
 ## Key Features
 
 - **Code Generation:** Kilo can generate code using natural language.
