@@ -4594,7 +4594,16 @@ export type KiloModesResponses = {
         whenToUse?: string
         description?: string
         customInstructions?: string
-        groups?: Array<unknown>
+        groups?: Array<
+          | string
+          | [
+              string,
+              {
+                fileRegex?: string
+                description?: string
+              },
+            ]
+        >
       }
     }>
   }

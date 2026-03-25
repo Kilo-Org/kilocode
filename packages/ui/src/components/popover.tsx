@@ -105,14 +105,20 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
 
     window.addEventListener("keydown", onKeyDown, true)
 
-    // Defer pointer/focus listeners so the portal content has time to mount
-    // and contentRef is assigned. Without this, autofocus or modal focus-trap
-    // events fire before the ref exists, causing the popover to immediately close.
+    // Defer pointer/focus listeners so the portal content has time to mount,
+    // contentRef is assigned, and any modal focus-trap settle cycle completes.
+    // A single rAF is not enough — modal dialogs (Kobalte `modal`) restore
+    // focus asynchronously after the portal mounts, which can race a single
+    // frame deferral and fire a focusin event that incorrectly dismisses the
+    // popover.  Two rAF ticks guarantee the portal, autofocus, and focus-trap
+    // have all finished before we start listening.
     const pending = {
       id: requestAnimationFrame(() => {
-        pending.id = 0
-        window.addEventListener("pointerdown", onPointerDown, true)
-        window.addEventListener("focusin", onFocusIn, true)
+        pending.id = requestAnimationFrame(() => {
+          pending.id = 0
+          window.addEventListener("pointerdown", onPointerDown, true)
+          window.addEventListener("focusin", onFocusIn, true)
+        })
       }),
     }
 
