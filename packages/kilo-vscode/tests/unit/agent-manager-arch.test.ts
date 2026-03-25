@@ -108,7 +108,11 @@ describe("Agent Manager CSS/TSX Consistency", () => {
     const cssMatches = [...css.matchAll(/\.([a-z][a-z0-9-]*)/gi)]
     const defined = [...new Set(cssMatches.map((m) => m[1]!).filter((n) => n.startsWith("am-")))]
 
-    const unused = defined.filter((c) => !tsx.includes(c!))
+    const unused = defined.filter((c) => {
+      const escaped = c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+      const regex = new RegExp(`\\b${escaped}\\b`, "g")
+      return !regex.test(tsx)
+    })
 
     expect(unused, `Classes defined in CSS but not used in TSX: ${unused.join(", ")}`).toEqual([])
   })

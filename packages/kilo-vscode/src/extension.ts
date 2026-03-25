@@ -359,13 +359,24 @@ function waitForWebviewPanelToBeActive(panel: vscode.WebviewPanel): Promise<void
     return Promise.resolve()
   }
 
-  return new Promise((resolve) => {
-    const disposable = panel.onDidChangeViewState((event) => {
-      if (!event.webviewPanel.active) {
-        return
-      }
-      disposable.dispose()
+  return new Promise((resolve, reject) => {
+    let resolved = false
+    const cleanup = () => {
+      if (resolved) return
+      resolved = true
+      viewStateDisposable.dispose()
+      disposeDisposable.dispose()
+    }
+
+    const viewStateDisposable = panel.onDidChangeViewState((event: vscode.WebviewPanelOnDidChangeViewStateEvent) => {
+      if (!event.webviewPanel.active) return
+      cleanup()
       resolve()
+    })
+
+    const disposeDisposable = panel.onDidDispose(() => {
+      cleanup()
+      reject(new Error('Webview panel disposed before becoming active'))
     })
   })
 }

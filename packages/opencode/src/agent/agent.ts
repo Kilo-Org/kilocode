@@ -284,7 +284,6 @@ export namespace Agent {
             grep: "allow",
             glob: "allow",
             list: "allow",
-            bash: "allow",
             webfetch: "allow",
             websearch: "allow",
             codesearch: "allow",

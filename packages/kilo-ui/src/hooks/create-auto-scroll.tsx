@@ -202,6 +202,7 @@ export function createAutoScroll(options: AutoScrollOptions) {
       }
 
       scroll = el
+      lastScrollTop = undefined
 
       if (!el) return
 
