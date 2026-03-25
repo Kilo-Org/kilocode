@@ -29,6 +29,7 @@ export const dict = {
   "agentManager.session.untitled": "未命名",
   "agentManager.session.newSession": "新建工作階段",
   "agentManager.session.openInWorktree": "在 Worktree 中開啟",
+  "agentManager.session.openLocally": "在本機開啟",
   "agentManager.session.readonly": "唯讀工作階段",
   "agentManager.session.noSessions": "沒有開啟的工作階段",
   "agentManager.tab.close": "關閉",

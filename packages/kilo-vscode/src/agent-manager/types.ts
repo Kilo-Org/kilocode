@@ -229,6 +229,11 @@ interface PromoteSessionIn {
   sessionId: string
 }
 
+interface OpenLocallyIn {
+  type: "agentManager.openLocally"
+  sessionId: string
+}
+
 interface AddSessionToWorktreeIn {
   type: "agentManager.addSessionToWorktree"
   worktreeId: string
@@ -417,6 +422,7 @@ export type AgentManagerInMessage =
   | DeleteWorktreeIn
   | RemoveStaleWorktreeIn
   | PromoteSessionIn
+  | OpenLocallyIn
   | AddSessionToWorktreeIn
   | CloseSessionIn
   | ForkSessionIn

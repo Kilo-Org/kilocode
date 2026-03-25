@@ -192,6 +192,11 @@ export class AgentManagerProvider implements Disposable {
     if (m.type === "agentManager.deleteWorktree") return this.onDeleteWorktree(m.worktreeId)
     if (m.type === "agentManager.removeStaleWorktree") return this.onRemoveStaleWorktree(m.worktreeId)
     if (m.type === "agentManager.promoteSession") return this.onPromoteSession(m.sessionId)
+    if (m.type === "agentManager.openLocally") {
+      if (!this.panel) return null
+      this.panel.sessions.clearSessionDirectory(m.sessionId)
+      return null
+    }
     if (m.type === "agentManager.addSessionToWorktree") return this.onAddSessionToWorktree(m.worktreeId)
     if (m.type === "agentManager.forkSession") return this.onForkSession(m.sessionId, m.worktreeId)
     if (m.type === "agentManager.closeSession") return this.onCloseSession(m.sessionId)

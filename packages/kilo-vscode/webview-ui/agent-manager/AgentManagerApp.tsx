@@ -2434,6 +2434,25 @@ const AgentManagerContent: Component = () => {
                             <Icon name="branch" size="small" />
                             <ContextMenu.ItemLabel>{t("agentManager.session.openInWorktree")}</ContextMenu.ItemLabel>
                           </ContextMenu.Item>
+                          <ContextMenu.Item
+                            onSelect={() => {
+                              saveTabMemory()
+                              const pending = activePendingId()
+                              if (pending) {
+                                setLocalSessionIDs((prev) => prev.map((id) => (id === pending ? s.id : id)))
+                                setActivePendingId(undefined)
+                              } else {
+                                setLocalSessionIDs((prev) => [...prev, s.id])
+                              }
+                              setSelection(LOCAL)
+                              setReviewActive(false)
+                              session.selectSession(s.id)
+                              vscode.postMessage({ type: "agentManager.openLocally", sessionId: s.id })
+                            }}
+                          >
+                            <Icon name="folder" size="small" />
+                            <ContextMenu.ItemLabel>{t("agentManager.session.openLocally")}</ContextMenu.ItemLabel>
+                          </ContextMenu.Item>
                         </ContextMenu.Content>
                       </ContextMenu.Portal>
                     </ContextMenu>
@@ -2731,8 +2750,23 @@ const AgentManagerContent: Component = () => {
             <div class="am-chat-wrapper">
               <ChatView
                 onSelectSession={(id) => {
-                  // If on local and selecting a different session, keep local context
+                  const already = localSessionIDs().includes(id)
+                  if (already) {
+                    session.selectSession(id)
+                    if (selection() === null) setSelection(LOCAL)
+                    return
+                  }
+                  const pending = activePendingId()
+                  if (pending) {
+                    setLocalSessionIDs((prev) => prev.map((sid) => (sid === pending ? id : sid)))
+                    setActivePendingId(undefined)
+                  } else {
+                    setLocalSessionIDs((prev) => [...prev, id])
+                  }
+                  setSelection(LOCAL)
+                  setReviewActive(false)
                   session.selectSession(id)
+                  vscode.postMessage({ type: "agentManager.openLocally", sessionId: id })
                 }}
                 readonly={readOnly()}
               />
@@ -2740,6 +2774,26 @@ const AgentManagerContent: Component = () => {
                 <div class="am-readonly-banner">
                   <Icon name="branch" size="small" />
                   <span class="am-readonly-text">{t("agentManager.session.readonly")}</span>
+                  <Button
+                    variant="secondary"
+                    size="small"
+                    onClick={() => {
+                      if (!loaded()) return
+                      const sid = session.currentSessionID()
+                      if (!sid) return
+                      const pending = activePendingId()
+                      if (pending) {
+                        setLocalSessionIDs((prev) => prev.map((id) => (id === pending ? sid : id)))
+                        setActivePendingId(undefined)
+                      } else {
+                        setLocalSessionIDs((prev) => [...prev, sid])
+                      }
+                      setSelection(LOCAL)
+                      vscode.postMessage({ type: "agentManager.openLocally", sessionId: sid })
+                    }}
+                  >
+                    {t("agentManager.session.openLocally")}
+                  </Button>
                   <Button
                     variant="primary"
                     size="small"

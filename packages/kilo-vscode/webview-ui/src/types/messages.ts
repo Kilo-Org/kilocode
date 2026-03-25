@@ -1618,6 +1618,12 @@ export interface PromoteSessionRequest {
   sessionId: string
 }
 
+// Open an unassigned session locally (clear any worktree directory override)
+export interface OpenLocallyRequest {
+  type: "agentManager.openLocally"
+  sessionId: string
+}
+
 // Add a new session to an existing worktree
 export interface AddSessionToWorktreeRequest {
   type: "agentManager.addSessionToWorktree"
@@ -1949,6 +1955,7 @@ export type WebviewMessage =
   | DeleteWorktreeRequest
   | RemoveStaleWorktreeRequest
   | PromoteSessionRequest
+  | OpenLocallyRequest
   | AddSessionToWorktreeRequest
   | ForkSessionRequest
   | CloseSessionRequest
