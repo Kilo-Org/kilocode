@@ -8,3 +8,13 @@ export function parseServerPort(output: string): number | null {
   if (!match) return null
   return parseInt(match[1]!, 10)
 }
+
+const MAX_BUFFER = 1024
+
+export function scanServerPort(prev: string, chunk: string): { text: string; port: number | null } {
+  const text = (prev + chunk).slice(-MAX_BUFFER)
+  return {
+    text,
+    port: parseServerPort(text),
+  }
+}

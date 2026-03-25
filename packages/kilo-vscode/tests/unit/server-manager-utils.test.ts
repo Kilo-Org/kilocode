@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test"
-import { parseServerPort } from "../../src/services/cli-backend/server-utils"
+import { parseServerPort, scanServerPort } from "../../src/services/cli-backend/server-utils"
 import { toErrorMessage } from "../../src/services/cli-backend/server-manager"
 
 describe("parseServerPort", () => {
@@ -43,6 +43,24 @@ describe("parseServerPort", () => {
   it("matches only first occurrence when multiple ports present", () => {
     const output = "listening on http://127.0.0.1:3000 and http://127.0.0.1:4000"
     expect(parseServerPort(output)).toBe(3000)
+  })
+})
+
+describe("scanServerPort", () => {
+  it("detects the port when the startup line is split across chunks", () => {
+    const a = scanServerPort("", "kilo server listening on ")
+    expect(a.port).toBeNull()
+
+    const b = scanServerPort(a.text, "http://127.0.0.1:54321\n")
+    expect(b.port).toBe(54321)
+  })
+
+  it("detects the port when the port digits arrive in a later chunk", () => {
+    const a = scanServerPort("", "kilo server listening on http://127.0.0.1:")
+    expect(a.port).toBeNull()
+
+    const b = scanServerPort(a.text, "54321\n")
+    expect(b.port).toBe(54321)
   })
 })
 

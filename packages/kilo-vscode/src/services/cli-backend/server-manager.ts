@@ -5,7 +5,7 @@ import * as fs from "fs"
 import * as path from "path"
 import * as vscode from "vscode"
 import { t } from "./i18n"
-import { parseServerPort } from "./server-utils"
+import { scanServerPort } from "./server-utils"
 
 export interface ServerInstance {
   port: number
@@ -87,13 +87,16 @@ export class ServerManager {
       console.log("[Kilo New] ServerManager: 📦 Process spawned with PID:", serverProcess.pid)
 
       let resolved = false
+      let text = ""
       const stderrLines: string[] = []
 
       serverProcess.stdout?.on("data", (data: Buffer) => {
         const output = data.toString()
         console.log("[Kilo New] ServerManager: 📥 CLI Server stdout:", output)
 
-        const port = parseServerPort(output)
+        const next = scanServerPort(text, output)
+        text = next.text
+        const port = next.port
         if (port !== null && !resolved) {
           resolved = true
           console.log("[Kilo New] ServerManager: 🎯 Port detected:", port)
