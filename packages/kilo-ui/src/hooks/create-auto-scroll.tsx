@@ -114,6 +114,7 @@ export function createAutoScroll(options: AutoScrollOptions) {
 
     if (distance < threshold()) {
       if (store.userScrolled) setStore("userScrolled", false)
+      lastScrollTop = el.scrollTop
       return
     }
 
