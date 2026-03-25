@@ -1790,6 +1790,21 @@ const AgentManagerContent: Component = () => {
     vscode.postMessage({ type: "agentManager.promoteSession", sessionId })
   }
 
+  const openLocally = (sid: string) => {
+    saveTabMemory()
+    const pending = activePendingId()
+    if (pending) {
+      setLocalSessionIDs((prev) => prev.map((id) => (id === pending ? sid : id)))
+      setActivePendingId(undefined)
+    } else {
+      setLocalSessionIDs((prev) => [...prev, sid])
+    }
+    setSelection(LOCAL)
+    setReviewActive(false)
+    session.selectSession(sid)
+    vscode.postMessage({ type: "agentManager.openLocally", sessionId: sid })
+  }
+
   const handleAddSession = () => {
     const sel = selection()
     if (sel === LOCAL) {
@@ -2434,22 +2449,7 @@ const AgentManagerContent: Component = () => {
                             <Icon name="branch" size="small" />
                             <ContextMenu.ItemLabel>{t("agentManager.session.openInWorktree")}</ContextMenu.ItemLabel>
                           </ContextMenu.Item>
-                          <ContextMenu.Item
-                            onSelect={() => {
-                              saveTabMemory()
-                              const pending = activePendingId()
-                              if (pending) {
-                                setLocalSessionIDs((prev) => prev.map((id) => (id === pending ? s.id : id)))
-                                setActivePendingId(undefined)
-                              } else {
-                                setLocalSessionIDs((prev) => [...prev, s.id])
-                              }
-                              setSelection(LOCAL)
-                              setReviewActive(false)
-                              session.selectSession(s.id)
-                              vscode.postMessage({ type: "agentManager.openLocally", sessionId: s.id })
-                            }}
-                          >
+                          <ContextMenu.Item onSelect={() => openLocally(s.id)}>
                             <Icon name="folder" size="small" />
                             <ContextMenu.ItemLabel>{t("agentManager.session.openLocally")}</ContextMenu.ItemLabel>
                           </ContextMenu.Item>
@@ -2750,22 +2750,12 @@ const AgentManagerContent: Component = () => {
             <div class="am-chat-wrapper">
               <ChatView
                 onSelectSession={(id) => {
-                  const already = localSessionIDs().includes(id)
-                  if (already) {
+                  if (localSessionIDs().includes(id)) {
                     session.selectSession(id)
                     if (selection() === null) setSelection(LOCAL)
                     return
                   }
-                  const pending = activePendingId()
-                  if (pending) {
-                    setLocalSessionIDs((prev) => prev.map((sid) => (sid === pending ? id : sid)))
-                    setActivePendingId(undefined)
-                  } else {
-                    setLocalSessionIDs((prev) => [...prev, id])
-                  }
-                  setSelection(LOCAL)
-                  setReviewActive(false)
-                  session.selectSession(id)
+                  openLocally(id)
                 }}
                 readonly={readOnly()}
               />
@@ -2780,15 +2770,7 @@ const AgentManagerContent: Component = () => {
                       if (!loaded()) return
                       const sid = session.currentSessionID()
                       if (!sid) return
-                      const pending = activePendingId()
-                      if (pending) {
-                        setLocalSessionIDs((prev) => prev.map((id) => (id === pending ? sid : id)))
-                        setActivePendingId(undefined)
-                      } else {
-                        setLocalSessionIDs((prev) => [...prev, sid])
-                      }
-                      setSelection(LOCAL)
-                      vscode.postMessage({ type: "agentManager.openLocally", sessionId: sid })
+                      openLocally(sid)
                     }}
                   >
                     {t("agentManager.session.openLocally")}
