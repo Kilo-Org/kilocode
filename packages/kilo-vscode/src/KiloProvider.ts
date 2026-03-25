@@ -590,6 +590,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "removeMcp":
           this.handleRemoveMcp(message.name).catch((e) => console.error("[Kilo New] handleRemoveMcp failed:", e))
           break
+
         case "questionReply":
           await handleQuestionReply(this.questionCtx, message.requestID, message.answers)
           break
@@ -2471,7 +2472,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           const uri = tab.input.uri
           if (uri.scheme === "file") {
             const rel = path.relative(dir, uri.fsPath)
-            if (!rel.startsWith("..") && controller.validateAccess(uri.fsPath)) {
+            if (!rel.startsWith("..") && !path.isAbsolute(rel) && controller.validateAccess(uri.fsPath)) {
               result.add(rel.replaceAll("\\", "/"))
             }
           }
@@ -2505,7 +2506,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         return undefined
       }
       const relative = path.relative(workspaceDir, fsPath)
-      if (relative.startsWith("..")) {
+      if (relative.startsWith("..") || path.isAbsolute(relative)) {
         return undefined
       }
       return relative

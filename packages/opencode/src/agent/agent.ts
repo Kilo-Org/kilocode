@@ -62,8 +62,58 @@ export namespace Agent {
 
     const skillDirs = await Skill.dirs()
     const whitelistedDirs = [Truncate.GLOB, ...skillDirs.map((dir) => path.join(dir, "*"))]
+    // kilocode_change start — safe bash commands that don't need user approval.
+    // only commands that cannot execute arbitrary code or subprocesses.
+    const bash: Record<string, "allow" | "ask" | "deny"> = {
+      "*": "ask",
+      // read-only / informational
+      "cat *": "allow",
+      "head *": "allow",
+      "tail *": "allow",
+      "less *": "allow",
+      "ls *": "allow",
+      "tree *": "allow",
+      "pwd *": "allow",
+      "echo *": "allow",
+      "wc *": "allow",
+      "which *": "allow",
+      "type *": "allow",
+      "file *": "allow",
+      "diff *": "allow",
+      "du *": "allow",
+      "df *": "allow",
+      "date *": "allow",
+      "uname *": "allow",
+      "whoami *": "allow",
+      "printenv *": "allow",
+      "man *": "allow",
+      // text processing
+      "grep *": "allow",
+      "rg *": "allow",
+      "ag *": "allow",
+      "sort *": "allow",
+      "uniq *": "allow",
+      "cut *": "allow",
+      "tr *": "allow",
+      "jq *": "allow",
+      // file operations
+      "touch *": "allow",
+      "mkdir *": "allow",
+      "cp *": "allow",
+      "mv *": "allow",
+      // compilers (no script execution)
+      "tsc *": "allow",
+      "tsgo *": "allow",
+      // archive
+      "tar *": "allow",
+      "unzip *": "allow",
+      "gzip *": "allow",
+      "gunzip *": "allow",
+    }
+    // kilocode_change end
     const defaults = PermissionNext.fromConfig({
       "*": "allow",
+      bash, // kilocode_change
       doom_loop: "ask",
       external_directory: {
         "*": "ask",
@@ -154,7 +204,7 @@ export namespace Agent {
             grep: "allow",
             glob: "allow",
             list: "allow",
-            bash: "allow",
+            // bash: "allow", // kilocode_change - disabled to prevent orchestrator from writing files via shell commands instead of delegating to sub-agents
             question: "allow",
             task: "allow",
             todoread: "allow",
@@ -168,6 +218,11 @@ export namespace Agent {
             },
           }),
           user,
+          // kilocode_change start - enforce bash deny after user so user config cannot re-enable shell
+          PermissionNext.fromConfig({
+            bash: "deny",
+          }),
+          // kilocode_change end
         ),
         mode: "primary",
         native: true,

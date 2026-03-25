@@ -1071,6 +1071,31 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty": "No MCP servers configured. Edit the opencode config file to add MCP servers.",
   "settings.agentBehaviour.workflowsPlaceholder": "Workflows are managed via workflow files in your workspace.",
   "settings.agentBehaviour.notImplemented": "Not yet implemented.",
+  "settings.agentBehaviour.createMode": "Create New Mode",
+  "settings.agentBehaviour.createMode.name": "Name",
+  "settings.agentBehaviour.createMode.name.placeholder": "e.g. reviewer",
+  "settings.agentBehaviour.createMode.name.description":
+    "Unique identifier for the mode. Use lowercase letters, numbers, and hyphens only.",
+  "settings.agentBehaviour.createMode.description": "Description",
+  "settings.agentBehaviour.createMode.description.placeholder": "e.g. Reviews code for quality and best practices",
+  "settings.agentBehaviour.createMode.description.help": "Short description of what this mode does.",
+  "settings.agentBehaviour.createMode.prompt": "System Prompt",
+  "settings.agentBehaviour.createMode.prompt.placeholder":
+    "e.g. You are a code reviewer. Focus on code quality, best practices, and potential bugs.",
+  "settings.agentBehaviour.createMode.prompt.help": "Instructions for the AI agent when using this mode.",
+  "settings.agentBehaviour.createMode.button": "Create",
+  "settings.agentBehaviour.createMode.cancel": "Cancel",
+  "settings.agentBehaviour.createMode.nameRequired": "Name is required",
+  "settings.agentBehaviour.createMode.nameInvalid":
+    "Name must start with a lowercase letter and contain only lowercase letters, numbers, and hyphens",
+  "settings.agentBehaviour.createMode.nameTaken": "A mode with this name already exists",
+  "settings.agentBehaviour.editMode": "Edit Mode",
+  "settings.agentBehaviour.editMode.description": "Description",
+  "settings.agentBehaviour.editMode.prompt": "System Prompt",
+  "settings.agentBehaviour.editMode.save": "Done",
+  "settings.agentBehaviour.editMode.back": "Back to list",
+  "settings.agentBehaviour.editMode.native": "Built-in mode (read-only definition)",
+  "settings.agentBehaviour.editMode.promptOverride": "Custom prompt override for this built-in mode",
 
   "settings.autoApprove.description":
     "Define how tools are allowed to run. Most tools default to Allow. doom_loop and external_directory default to Ask.",

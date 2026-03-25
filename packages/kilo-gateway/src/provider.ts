@@ -78,7 +78,7 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
   const openrouter = createOpenRouter(sdkOptions)
   const anthropic = createAnthropic(sdkOptions)
   const openai = createOpenAI(sdkOptions)
-  const openaiCompatible = createOpenAICompatible({ ...sdkOptions, name: "kilo.openai-compatible" })
+  const openaiCompatible = createOpenAICompatible({ ...sdkOptions, name: "openaiCompatible" })
 
   return {
     languageModel(modelId) {

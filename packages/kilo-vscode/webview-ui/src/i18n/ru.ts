@@ -1053,6 +1053,32 @@ export const dict = {
     "Навыки не обнаружены. Добавьте пути к папкам навыков или URL-адреса ниже, чтобы сделать навыки доступными.",
   "settings.agentBehaviour.availableModes": "Доступные пользовательские режимы",
   "settings.agentBehaviour.noModesFound": "Режимы не найдены.",
+  "settings.agentBehaviour.createMode": "Создать новый режим",
+  "settings.agentBehaviour.createMode.name": "Название",
+  "settings.agentBehaviour.createMode.name.placeholder": "например, reviewer",
+  "settings.agentBehaviour.createMode.name.description":
+    "Уникальный идентификатор режима. Используйте только строчные буквы, цифры и дефисы.",
+  "settings.agentBehaviour.createMode.description": "Описание",
+  "settings.agentBehaviour.createMode.description.placeholder":
+    "например, Проверяет код на качество и соответствие лучшим практикам",
+  "settings.agentBehaviour.createMode.description.help": "Краткое описание того, что делает этот режим.",
+  "settings.agentBehaviour.createMode.prompt": "Системный промпт",
+  "settings.agentBehaviour.createMode.prompt.placeholder":
+    "например, Вы ревьюер кода. Сосредоточьтесь на качестве кода, лучших практиках и потенциальных ошибках.",
+  "settings.agentBehaviour.createMode.prompt.help": "Инструкции для ИИ-агента при использовании этого режима.",
+  "settings.agentBehaviour.createMode.button": "Создать",
+  "settings.agentBehaviour.createMode.cancel": "Отмена",
+  "settings.agentBehaviour.createMode.nameRequired": "Название обязательно",
+  "settings.agentBehaviour.createMode.nameInvalid": "Название может содержать только строчные буквы, цифры и дефисы",
+  "settings.agentBehaviour.createMode.nameTaken": "Режим с таким названием уже существует",
+  "settings.agentBehaviour.editMode": "Редактировать режим",
+  "settings.agentBehaviour.editMode.description": "Описание",
+  "settings.agentBehaviour.editMode.prompt": "Системный промпт",
+  "settings.agentBehaviour.editMode.save": "Готово",
+  "settings.agentBehaviour.editMode.back": "Вернуться к списку",
+  "settings.agentBehaviour.editMode.native": "Встроенный режим (определение только для чтения)",
+  "settings.agentBehaviour.editMode.promptOverride":
+    "Пользовательское переопределение промпта для этого встроенного режима",
   "settings.agentBehaviour.removeMode.title": "Удалить режим",
   "settings.agentBehaviour.removeMode.confirm":
     'Удалить режим "{{name}}"? Это отключит режим, обновив вашу конфигурацию.',

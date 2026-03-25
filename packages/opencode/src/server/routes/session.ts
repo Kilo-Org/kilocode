@@ -968,5 +968,25 @@ export const SessionRoutes = lazy(() =>
         })
         return c.json(true)
       },
+    )
+    .post(
+      "/viewed",
+      describeRoute({
+        summary: "Set viewed session",
+        description: "Notify the server which session the user is currently viewing, or clear it.",
+        operationId: "session.viewed",
+        responses: {
+          200: {
+            description: "Viewed session updated",
+            content: { "application/json": { schema: resolver(z.boolean()) } },
+          },
+        },
+      }),
+      validator("json", z.object({ sessionID: z.string().optional() })),
+      async (c) => {
+        const { KiloSessions } = await import("../../kilo-sessions/kilo-sessions")
+        await KiloSessions.setViewedSession(c.req.valid("json").sessionID)
+        return c.json(true)
+      },
     ),
 )

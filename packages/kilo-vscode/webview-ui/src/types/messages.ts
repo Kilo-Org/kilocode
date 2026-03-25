@@ -322,6 +322,8 @@ export type PermissionConfig = Partial<Record<string, PermissionRule>>
 export interface AgentConfig {
   model?: string | null
   prompt?: string
+  description?: string
+  mode?: "subagent" | "primary" | "all"
   temperature?: number
   top_p?: number
   steps?: number

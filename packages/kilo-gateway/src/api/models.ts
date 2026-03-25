@@ -48,12 +48,15 @@ const openRouterModelsResponseSchema = z.object({
 type OpenRouterModel = z.infer<typeof openRouterModelSchema>
 
 /**
- * Parse API price string to number (e.g. "0.00001" -> 0.00001)
+ * Parse API price string to number, converting from per-token to per-million-tokens.
+ * The API returns prices in $/token, but downstream cost calculation (getUsage)
+ * divides by 1,000,000 expecting $/M tokens.
  */
 function parseApiPrice(price: string | null | undefined): number | undefined {
   if (!price) return undefined
   const parsed = parseFloat(price)
-  return isNaN(parsed) ? undefined : parsed
+  if (isNaN(parsed)) return undefined
+  return parsed * 1_000_000 // Convert $/token → $/M tokens
 }
 
 /**

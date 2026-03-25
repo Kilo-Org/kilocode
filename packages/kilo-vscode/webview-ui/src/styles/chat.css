@@ -277,8 +277,16 @@
   border-color: var(--vscode-textLink-foreground, #3794ff);
 }
 
+.feedback-button [data-component="icon"] {
+  --icon-base: currentColor;
+}
+
 .feedback-button:hover [data-slot="icon-svg"] {
   color: var(--vscode-editor-background, #1e1e1e);
+}
+
+.feedback-button:hover [data-component="icon"] {
+  --icon-base: var(--vscode-editor-background, #1e1e1e);
 }
 
 /* Feedback Dialog */
@@ -440,6 +448,10 @@
   font-size: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   transition: background-color 0.2s;
+}
+
+.scroll-to-bottom-button [data-component="icon"] {
+  --icon-base: var(--vscode-button-foreground);
 }
 
 .scroll-to-bottom-button:hover {
@@ -2797,6 +2809,35 @@ body.vscode-light
   animation: enhance-spin 1s linear infinite;
 }
 
+/* Settings save bar */
+.settings-save-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 16px;
+  border-top: 1px solid var(--border-weak-base);
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition:
+    max-height 0.2s ease,
+    opacity 0.2s ease,
+    padding 0.2s ease;
+}
+
+.settings-save-bar--visible {
+  max-height: 52px;
+  opacity: 1;
+  padding: 8px 16px;
+}
+
+.settings-save-bar-label {
+  font-size: 12px;
+  color: var(--foreground-secondary);
+  margin-right: auto;
+}
+
 [data-slot="settings-row"] {
   display: flex;
   flex-wrap: wrap;
@@ -2829,6 +2870,12 @@ body.vscode-light
       max-width: 100%;
     }
   }
+}
+
+/* Wider inputs inside cards with data-variant="wide-input" (e.g. edit mode config) */
+[data-variant="wide-input"] [data-slot="settings-row-input"] {
+  flex: 1 1 0%;
+  max-width: none;
 }
 
 /* ============================================

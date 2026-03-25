@@ -100,7 +100,6 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
       <PopupSelector
         expanded={false}
         placement="top-start"
-        preferredHeight={300}
         minHeight={100}
         open={open()}
         onOpenChange={onOpen}
