@@ -594,6 +594,90 @@ describe("session.getUsage", () => {
     // When upstream cost is missing for Kilo, fall back to regular cost field
     expect(result.cost).toBe(0.01)
   })
+
+  test("uses vercel ai gateway marketCost when available", () => {
+    const model = createModel({
+      context: 100_000,
+      output: 32_000,
+      cost: {
+        input: 3,
+        output: 15,
+        cache: { read: 0.3, write: 3.75 },
+      },
+    })
+    const result = Session.getUsage({
+      model,
+      usage: {
+        inputTokens: 1_000_000,
+        outputTokens: 100_000,
+        totalTokens: 1_100_000,
+      },
+      metadata: {
+        gateway: {
+          marketCost: 0.35,
+          cost: 0,
+        },
+      },
+    })
+
+    // Should prefer marketCost over cost (especially for BYOK where cost is often 0)
+    expect(result.cost).toBe(0.35)
+  })
+
+  test("falls back to vercel ai gateway cost when marketCost is 0", () => {
+    const model = createModel({
+      context: 100_000,
+      output: 32_000,
+      cost: {
+        input: 3,
+        output: 15,
+        cache: { read: 0.3, write: 3.75 },
+      },
+    })
+    const result = Session.getUsage({
+      model,
+      usage: {
+        inputTokens: 1_000_000,
+        outputTokens: 100_000,
+        totalTokens: 1_100_000,
+      },
+      metadata: {
+        gateway: {
+          marketCost: 0,
+          cost: 0.25,
+        },
+      },
+    })
+
+    // Should use cost when marketCost is 0
+    expect(result.cost).toBe(0.25)
+  })
+
+  test("falls back to calculated cost when gateway cost fields are missing", () => {
+    const model = createModel({
+      context: 100_000,
+      output: 32_000,
+      cost: {
+        input: 3,
+        output: 15,
+        cache: { read: 0.3, write: 3.75 },
+      },
+    })
+    const result = Session.getUsage({
+      model,
+      usage: {
+        inputTokens: 1_000_000,
+        outputTokens: 100_000,
+        totalTokens: 1_100_000,
+      },
+      metadata: {
+        gateway: {},
+      },
+    })
+
+    // Should fall back to calculated cost when gateway cost is not available
+    expect(result.cost).toBe(3 + 1.5)
+  })
   // kilocode_change end
 
   test.each(["@ai-sdk/anthropic", "@ai-sdk/amazon-bedrock", "@ai-sdk/google-vertex/anthropic"])(

@@ -927,6 +927,30 @@ export namespace Session {
           }
         }
       }
+
+      // Vercel AI Gateway returns cost at providerMetadata.gateway
+      // marketCost is preferred as it reflects actual upstream cost (especially for BYOK)
+      // cost is often "0" for BYOK scenarios
+      const gatewayMetadata = input.metadata?.["gateway"] as
+        | {
+            marketCost?: number
+            cost?: number
+          }
+        | undefined
+
+      if (gatewayMetadata) {
+        const gatewayCost =
+          gatewayMetadata.marketCost !== undefined && gatewayMetadata.marketCost !== 0
+            ? gatewayMetadata.marketCost
+            : gatewayMetadata.cost
+
+        if (gatewayCost !== undefined && gatewayCost !== null && Number.isFinite(gatewayCost)) {
+          return {
+            cost: safe(gatewayCost),
+            tokens,
+          }
+        }
+      }
       // kilocode_change end
 
       const costInfo =
