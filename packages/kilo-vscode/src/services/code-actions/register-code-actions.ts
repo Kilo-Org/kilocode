@@ -6,24 +6,11 @@ import { createPrompt } from "./support-prompt"
 
 const SIDEBAR_FOCUS_COMMAND = "kilo-code.SidebarProvider.focus"
 
-const WAIT_FOR_READY_TIMEOUT_MS = 8000
-
-async function waitForReadyWithTimeout(provider: KiloProvider): Promise<boolean> {
-  const timeout = new Promise<false>((resolve) => setTimeout(() => resolve(false), WAIT_FOR_READY_TIMEOUT_MS))
-  const result = await Promise.race([provider.waitForReady(), timeout])
-  return result !== false
-}
-
 async function postTask(provider: KiloProvider, prompt: string): Promise<void> {
   // Editor quick fixes always target the sidebar so the behavior is consistent
   // regardless of whether Agent Manager is currently open.
   await vscode.commands.executeCommand(SIDEBAR_FOCUS_COMMAND)
-
-  const ready = await waitForReadyWithTimeout(provider)
-  if (!ready) {
-    console.warn("[Kilo New] registerCodeActions: ⏱️ waitForReady timed out, proceeding in degraded state")
-  }
-
+  await provider.waitForReady()
   provider.postMessage({ type: "triggerTask", text: prompt })
 }
 
@@ -32,6 +19,11 @@ export function registerCodeActions(
   provider: KiloProvider,
   agentManager?: AgentManagerProvider,
 ): void {
+  // agentManager is only respected by commands that call target():
+  // - addToContext (routes to agentManager if active, else provider)
+  // - focusChatInput (same routing)
+  // Commands explainCode, fixCode, and improveCode always route through provider (KiloProvider)
+  // and do not respect agentManager — they use postTask() which always targets the sidebar.
   const target = () => (agentManager?.isActive() ? agentManager : provider)
 
   context.subscriptions.push(

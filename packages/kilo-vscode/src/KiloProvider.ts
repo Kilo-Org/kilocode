@@ -2396,6 +2396,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   public waitForReady(): Promise<void> {
     return this.isWebviewReady && this.webview ? Promise.resolve() : new Promise((r) => this.readyResolvers.push(r))
   }
+
   /** Post a message to the webview. Public so toolbar button commands can send messages. */
   public postMessage(message: unknown): void {
     if (!this.webview) {
