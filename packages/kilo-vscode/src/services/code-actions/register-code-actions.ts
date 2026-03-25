@@ -4,6 +4,29 @@ import type { AgentManagerProvider } from "../../agent-manager/AgentManagerProvi
 import { getEditorContext } from "./editor-utils"
 import { createPrompt } from "./support-prompt"
 
+const SIDEBAR_FOCUS_COMMAND = "kilo-code.SidebarProvider.focus"
+
+const WAIT_FOR_READY_TIMEOUT_MS = 8000
+
+async function waitForReadyWithTimeout(provider: KiloProvider): Promise<boolean> {
+  const timeout = new Promise<false>((resolve) => setTimeout(() => resolve(false), WAIT_FOR_READY_TIMEOUT_MS))
+  const result = await Promise.race([provider.waitForReady(), timeout])
+  return result !== false
+}
+
+async function postTask(provider: KiloProvider, prompt: string): Promise<void> {
+  // Editor quick fixes always target the sidebar so the behavior is consistent
+  // regardless of whether Agent Manager is currently open.
+  await vscode.commands.executeCommand(SIDEBAR_FOCUS_COMMAND)
+
+  const ready = await waitForReadyWithTimeout(provider)
+  if (!ready) {
+    console.warn("[Kilo New] registerCodeActions: ⏱️ waitForReady timed out, proceeding in degraded state")
+  }
+
+  provider.postMessage({ type: "triggerTask", text: prompt })
+}
+
 export function registerCodeActions(
   context: vscode.ExtensionContext,
   provider: KiloProvider,
@@ -12,7 +35,7 @@ export function registerCodeActions(
   const target = () => (agentManager?.isActive() ? agentManager : provider)
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("kilo-code.new.explainCode", () => {
+    vscode.commands.registerCommand("kilo-code.new.explainCode", async () => {
       const ctx = getEditorContext()
       if (!ctx) return
       const prompt = createPrompt("EXPLAIN", {
@@ -22,10 +45,10 @@ export function registerCodeActions(
         selectedText: ctx.selectedText,
         userInput: "",
       })
-      provider.postMessage({ type: "triggerTask", text: prompt })
+      await postTask(provider, prompt)
     }),
 
-    vscode.commands.registerCommand("kilo-code.new.fixCode", () => {
+    vscode.commands.registerCommand("kilo-code.new.fixCode", async () => {
       const ctx = getEditorContext()
       if (!ctx) return
       const prompt = createPrompt("FIX", {
@@ -36,10 +59,10 @@ export function registerCodeActions(
         diagnostics: ctx.diagnostics,
         userInput: "",
       })
-      provider.postMessage({ type: "triggerTask", text: prompt })
+      await postTask(provider, prompt)
     }),
 
-    vscode.commands.registerCommand("kilo-code.new.improveCode", () => {
+    vscode.commands.registerCommand("kilo-code.new.improveCode", async () => {
       const ctx = getEditorContext()
       if (!ctx) return
       const prompt = createPrompt("IMPROVE", {
@@ -49,7 +72,7 @@ export function registerCodeActions(
         selectedText: ctx.selectedText,
         userInput: "",
       })
-      provider.postMessage({ type: "triggerTask", text: prompt })
+      await postTask(provider, prompt)
     }),
 
     vscode.commands.registerCommand("kilo-code.new.addToContext", () => {

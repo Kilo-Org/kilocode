@@ -60,6 +60,9 @@ const mockVscode = {
       stat: async () => ({ type: 1, ctime: 0, mtime: 0, size: 0 }),
     },
   },
+  languages: {
+    getDiagnostics: () => [],
+  },
   window: {
     activeTextEditor: undefined,
     visibleTextEditors: [],
@@ -123,3 +126,5 @@ const mockVscode = {
 }
 
 mock.module("vscode", () => mockVscode)
+
+export { mockVscode }
