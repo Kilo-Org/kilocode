@@ -318,8 +318,11 @@ export class WorktreeStateManager {
       this.reviewDiffStyle = "unified"
 
       for (const [id, wt] of Object.entries(data.worktrees ?? {})) {
-        // Rewrite stale .kilocode/ paths (handles both Unix / and Windows \ separators)
-        const fixed = wt.path?.replace(/[/\\]\.kilocode[/\\]/g, `${path.sep}.kilo${path.sep}`) ?? wt.path
+        // Rewrite stale .kilocode paths while preserving the separator style already stored.
+        const fixed =
+          wt.path?.replace(/([/\\])\.kilocode([/\\])/g, (_match, leadingSep, trailingSep) => {
+            return `${leadingSep}.kilo${trailingSep}`
+          }) ?? wt.path
         this.worktrees.set(id, { id, ...wt, path: fixed })
       }
       for (const [id, s] of Object.entries(data.sessions ?? {})) {
