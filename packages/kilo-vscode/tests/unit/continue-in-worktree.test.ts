@@ -80,14 +80,6 @@ describe("continue-in-worktree steps", () => {
     })
   })
 
-  describe("captureState", () => {
-    it("returns ok with snapshot data on a real git repo", async () => {
-      // This test just verifies the StepResult wrapper — git-transfer.test.ts covers the details.
-      // We can't easily test the error path without mocks since git commands resolve gracefully.
-      // The error wrapping is tested indirectly through forkSession error tests.
-    })
-  })
-
   describe("forkSession", () => {
     it("returns error when client is unavailable", async () => {
       const c = ctx()

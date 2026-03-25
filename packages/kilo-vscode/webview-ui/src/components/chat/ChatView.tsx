@@ -110,7 +110,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
         showToast({ title: m.error ?? "Failed to continue in worktree" })
         return
       }
-      setTransferDetail(labels[status] ?? "Working...")
+      setTransferDetail(labels[m.status] ?? "Working...")
     })
     onCleanup(cleanup)
   }

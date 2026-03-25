@@ -2755,6 +2755,15 @@ const AgentManagerContent: Component = () => {
                     if (selection() === null) setSelection(LOCAL)
                     return
                   }
+                  // Navigate to owning worktree instead of forcing into local mode
+                  if (worktreeSessionIds().has(id)) {
+                    const ms = managedSessions().find((s) => s.id === id)
+                    if (ms?.worktreeId) {
+                      selectWorktree(ms.worktreeId)
+                      session.selectSession(id)
+                      return
+                    }
+                  }
                   openLocally(id)
                 }}
                 readonly={readOnly()}
