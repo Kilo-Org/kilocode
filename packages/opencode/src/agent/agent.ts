@@ -62,8 +62,58 @@ export namespace Agent {
 
     const skillDirs = await Skill.dirs()
     const whitelistedDirs = [Truncate.GLOB, ...skillDirs.map((dir) => path.join(dir, "*"))]
+    // kilocode_change start — safe bash commands that don't need user approval.
+    // only commands that cannot execute arbitrary code or subprocesses.
+    const bash: Record<string, "allow" | "ask" | "deny"> = {
+      "*": "ask",
+      // read-only / informational
+      "cat *": "allow",
+      "head *": "allow",
+      "tail *": "allow",
+      "less *": "allow",
+      "ls *": "allow",
+      "tree *": "allow",
+      "pwd *": "allow",
+      "echo *": "allow",
+      "wc *": "allow",
+      "which *": "allow",
+      "type *": "allow",
+      "file *": "allow",
+      "diff *": "allow",
+      "du *": "allow",
+      "df *": "allow",
+      "date *": "allow",
+      "uname *": "allow",
+      "whoami *": "allow",
+      "printenv *": "allow",
+      "man *": "allow",
+      // text processing
+      "grep *": "allow",
+      "rg *": "allow",
+      "ag *": "allow",
+      "sort *": "allow",
+      "uniq *": "allow",
+      "cut *": "allow",
+      "tr *": "allow",
+      "jq *": "allow",
+      // file operations
+      "touch *": "allow",
+      "mkdir *": "allow",
+      "cp *": "allow",
+      "mv *": "allow",
+      // compilers (no script execution)
+      "tsc *": "allow",
+      "tsgo *": "allow",
+      // archive
+      "tar *": "allow",
+      "unzip *": "allow",
+      "gzip *": "allow",
+      "gunzip *": "allow",
+    }
+    // kilocode_change end
     const defaults = PermissionNext.fromConfig({
       "*": "allow",
+      bash, // kilocode_change
       doom_loop: "ask",
       external_directory: {
         "*": "ask",

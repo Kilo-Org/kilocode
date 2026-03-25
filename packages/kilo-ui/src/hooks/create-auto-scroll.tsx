@@ -17,6 +17,7 @@ export function createAutoScroll(options: AutoScrollOptions) {
   let stopTimer: ReturnType<typeof setTimeout> | undefined
   let cleanup: (() => void) | undefined
   let userInitiated = false
+  let lastScrollTop: number | undefined
 
   const threshold = () => options.bottomThreshold ?? 10
 
@@ -54,6 +55,7 @@ export function createAutoScroll(options: AutoScrollOptions) {
 
     // `scrollTop` assignment bypasses any CSS `scroll-behavior: smooth`.
     el.scrollTop = el.scrollHeight
+    lastScrollTop = el.scrollTop
   }
 
   const scrollToBottom = (force: boolean) => {
@@ -112,11 +114,17 @@ export function createAutoScroll(options: AutoScrollOptions) {
 
     if (distance < threshold()) {
       if (store.userScrolled) setStore("userScrolled", false)
+      lastScrollTop = el.scrollTop
       return
     }
 
     if (!store.userScrolled && !byUser) {
-      scrollToBottomNow("auto")
+      if (el.scrollTop < (lastScrollTop ?? el.scrollTop)) {
+        stop()
+      } else {
+        scrollToBottomNow("auto")
+      }
+      lastScrollTop = el.scrollTop
       return
     }
 

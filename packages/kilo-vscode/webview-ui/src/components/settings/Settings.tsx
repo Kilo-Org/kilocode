@@ -36,7 +36,7 @@ const Settings: Component<SettingsProps> = (props) => {
   const vscode = useVSCode()
   const { isDirty, saveConfig, discardConfig } = useConfig()
   const session = useSession()
-  const [active, setActive] = createSignal(props.tab ?? "providers")
+  const [active, setActive] = createSignal(props.tab ?? "models")
 
   const busyCount = () => Object.values(session.allStatusMap()).filter((s) => s.type === "busy").length
 
