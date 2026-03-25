@@ -57,7 +57,7 @@ export class SessionTerminalManager {
       }),
       host.onActiveTerminalChanged((terminal) => {
         const managed = terminal ? this.isManaged(terminal) : false
-        if (terminal) this.panelOpen = true
+        this.panelOpen = !!terminal
         void host.setContext("kilo-code.agentTerminalFocus", managed)
       }),
     )
@@ -230,7 +230,7 @@ export class SessionTerminalManager {
   private updateContextKey(): void {
     const active = this.host.activeTerminal()
     const managed = active ? this.isManaged(active) : false
-    if (active) this.panelOpen = true
+    this.panelOpen = !!active
     void this.host.setContext("kilo-code.agentTerminalFocus", managed)
   }
 

@@ -38,6 +38,14 @@ describe("SessionTerminalManager structure", () => {
     expect(text).toContain("onActiveTerminalChanged")
   })
 
+  it("active terminal listener keeps panelOpen aligned with active terminal presence", () => {
+    const cls = getClass()
+    const ctor = cls.getConstructors()[0]
+    expect(ctor).toBeTruthy()
+    const text = ctor!.getText()
+    expect(text).toContain("this.panelOpen = !!terminal")
+  })
+
   it("dispose clears the context key, disposes terminals, and clears the map", () => {
     const text = body("dispose")
     // All three are required for clean shutdown — missing any would leak resources
@@ -74,6 +82,11 @@ describe("SessionTerminalManager structure", () => {
     expect(showIdx).toBeGreaterThan(-1)
     expect(contextIdx).toBeGreaterThan(-1)
     expect(showIdx, "show must precede updateContextKey").toBeLessThan(contextIdx)
+  })
+
+  it("updateContextKey derives panelOpen from the current active terminal", () => {
+    const text = body("updateContextKey")
+    expect(text).toContain("this.panelOpen = !!active")
   })
 
   it("syncOnSessionSwitch only switches when panel is open", () => {
