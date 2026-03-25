@@ -3,7 +3,7 @@ function isPrompt(line: string): boolean {
   return /[$#>%❯]$/.test(line)
 }
 
-export function trimTerminalOutput(content: string): string {
+export function trimTerminalOutput(content: string, mode: "all" | "recent" = "recent"): string {
   const text = content.trim()
   if (!text) return ""
 
@@ -20,5 +20,6 @@ export function trimTerminalOutput(content: string): string {
   }
 
   if (i < 0) return text
+  if (mode === "all") return lines.slice(0, -1).join("\n")
   return lines.slice(i, -1).join("\n")
 }

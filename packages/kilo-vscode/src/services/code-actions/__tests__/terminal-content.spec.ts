@@ -19,4 +19,8 @@ describe("trimTerminalOutput", () => {
   it("drops a duplicated trailing prompt and keeps the matching command block", () => {
     expect(trimTerminalOutput("$ echo hi\nhi\n$")).toBe("$ echo hi\nhi")
   })
+
+  it("preserves earlier copied terminal history in all mode", () => {
+    expect(trimTerminalOutput("$ a\n1\n$ b\n2\n$", "all")).toBe("$ a\n1\n$ b\n2")
+  })
 })

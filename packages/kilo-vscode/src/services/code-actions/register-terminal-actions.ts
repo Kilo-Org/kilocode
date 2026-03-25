@@ -24,7 +24,7 @@ async function getTerminalContents(commands = -1): Promise<string> {
     await vscode.commands.executeCommand("workbench.action.terminal.copySelection")
     await vscode.commands.executeCommand("workbench.action.terminal.clearSelection")
 
-    let content = trimTerminalOutput(await vscode.env.clipboard.readText())
+    let content = trimTerminalOutput(await vscode.env.clipboard.readText(), commands < 0 ? "all" : "recent")
 
     await vscode.env.clipboard.writeText(saved)
 
