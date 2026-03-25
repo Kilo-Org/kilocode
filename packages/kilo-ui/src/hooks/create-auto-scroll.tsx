@@ -55,6 +55,7 @@ export function createAutoScroll(options: AutoScrollOptions) {
 
     // `scrollTop` assignment bypasses any CSS `scroll-behavior: smooth`.
     el.scrollTop = el.scrollHeight
+    lastScrollTop = el.scrollTop
   }
 
   const scrollToBottom = (force: boolean) => {
