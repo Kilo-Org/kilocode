@@ -735,7 +735,6 @@ button.am-section-toggle:hover .am-section-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 150px;
 }
 
 .am-tab-close {
