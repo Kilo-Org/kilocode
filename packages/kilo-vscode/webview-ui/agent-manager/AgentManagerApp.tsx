@@ -2761,6 +2761,7 @@ const AgentManagerContent: Component = () => {
                     if (ms?.worktreeId) {
                       selectWorktree(ms.worktreeId)
                       session.selectSession(id)
+                      setReviewActive(false)
                       return
                     }
                   }
