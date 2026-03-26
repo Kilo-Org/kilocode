@@ -261,9 +261,12 @@ function App() {
   }
   const [terminalTitleEnabled, setTerminalTitleEnabled] = createSignal(kv.get("terminal_title_enabled", true))
 
+  // kilocode_change start — notify server which session the user is viewing (for live session indicators)
   createEffect(() => {
-    console.log(JSON.stringify(route.data))
+    const sessionID = route.data.type === "session" ? route.data.sessionID : undefined
+    sdk.client.session.viewed({ sessionID }).catch(() => {})
   })
+  // kilocode_change end
 
   // Update terminal window title based on current route and session
   createEffect(() => {

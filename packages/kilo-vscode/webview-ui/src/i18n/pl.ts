@@ -827,8 +827,11 @@ export const dict = {
   "session.delete.button": "Usuń sesję",
   "session.untitled": "Bez tytułu",
   "session.recent": "Ostatnie",
+  "session.showHistory": "Pokaż historię",
   "session.search.placeholder": "Szukaj sesji...",
   "session.empty": "Brak sesji. Kliknij + aby rozpocząć nową rozmowę.",
+  "session.tab.local": "Local",
+  "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Tylko to repozytorium",
   "session.cloud.import": "Importuj z chmury",
   "feedback.button": "Opinie i wsparcie",
@@ -1050,6 +1053,31 @@ export const dict = {
     "Nie znaleziono umiejętności. Dodaj ścieżki folderów lub adresy URL poniżej, aby udostępnić umiejętności.",
   "settings.agentBehaviour.availableModes": "Dostępne tryby niestandardowe",
   "settings.agentBehaviour.noModesFound": "Nie znaleziono trybów.",
+  "settings.agentBehaviour.createMode": "Utwórz nowy tryb",
+  "settings.agentBehaviour.createMode.name": "Nazwa",
+  "settings.agentBehaviour.createMode.name.placeholder": "np. reviewer",
+  "settings.agentBehaviour.createMode.name.description":
+    "Unikalny identyfikator trybu. Używaj tylko małych liter, cyfr i myślników.",
+  "settings.agentBehaviour.createMode.description": "Opis",
+  "settings.agentBehaviour.createMode.description.placeholder":
+    "np. Sprawdza kod pod kątem jakości i najlepszych praktyk",
+  "settings.agentBehaviour.createMode.description.help": "Krótki opis tego, co robi ten tryb.",
+  "settings.agentBehaviour.createMode.prompt": "Prompt systemowy",
+  "settings.agentBehaviour.createMode.prompt.placeholder":
+    "np. Jesteś recenzentem kodu. Skup się na jakości kodu, najlepszych praktykach i potencjalnych błędach.",
+  "settings.agentBehaviour.createMode.prompt.help": "Instrukcje dla agenta AI podczas korzystania z tego trybu.",
+  "settings.agentBehaviour.createMode.button": "Utwórz",
+  "settings.agentBehaviour.createMode.cancel": "Anuluj",
+  "settings.agentBehaviour.createMode.nameRequired": "Nazwa jest wymagana",
+  "settings.agentBehaviour.createMode.nameInvalid": "Nazwa może zawierać tylko małe litery, cyfry i myślniki",
+  "settings.agentBehaviour.createMode.nameTaken": "Tryb o tej nazwie już istnieje",
+  "settings.agentBehaviour.editMode": "Edytuj tryb",
+  "settings.agentBehaviour.editMode.description": "Opis",
+  "settings.agentBehaviour.editMode.prompt": "Prompt systemowy",
+  "settings.agentBehaviour.editMode.save": "Gotowe",
+  "settings.agentBehaviour.editMode.back": "Powrót do listy",
+  "settings.agentBehaviour.editMode.native": "Tryb wbudowany (definicja tylko do odczytu)",
+  "settings.agentBehaviour.editMode.promptOverride": "Niestandardowe nadpisanie promptu dla tego wbudowanego trybu",
   "settings.agentBehaviour.removeMode.title": "Usuń tryb",
   "settings.agentBehaviour.removeMode.confirm":
     'Usunąć tryb "{{name}}"? Spowoduje to wyłączenie trybu poprzez aktualizację konfiguracji.',
@@ -1064,6 +1092,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.confirm":
     'Usunąć umiejętność "{{name}}"? Spowoduje to usunięcie plików umiejętności z dysku.',
   "settings.agentBehaviour.removeSkill.button": "Usuń",
+  "settings.agentBehaviour.rules.description":
+    "Reguły to pliki instrukcji, które kierują zachowaniem agenta. Są one dołączane do promptu systemowego dla każdej rozmowy. Dodaj poniżej ścieżki plików, aby dołączyć dodatkowe reguły.",
   "settings.agentBehaviour.instructionFiles": "Dodatkowe pliki instrukcji",
   "settings.agentBehaviour.instructionFiles.description":
     "Ścieżki do dodatkowych plików instrukcji w prompcie systemowym",

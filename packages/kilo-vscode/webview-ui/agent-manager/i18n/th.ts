@@ -29,6 +29,7 @@ export const dict = {
   "agentManager.session.untitled": "ไม่มีชื่อ",
   "agentManager.session.newSession": "เซสชันใหม่",
   "agentManager.session.openInWorktree": "เปิดใน Worktree",
+  "agentManager.session.openLocally": "เปิดในเครื่อง",
   "agentManager.session.readonly": "เซสชันอ่านอย่างเดียว",
   "agentManager.session.noSessions": "ไม่มีเซสชันที่เปิดอยู่",
   "agentManager.tab.close": "ปิด",

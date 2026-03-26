@@ -73,7 +73,6 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
 
   const autoScroll = createAutoScroll({
     working: running,
-    overflowAnchor: "auto",
   })
 
   const openInTab = (e: MouseEvent) => {

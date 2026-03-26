@@ -129,6 +129,9 @@ import type {
   QuestionRejectResponses,
   QuestionReplyErrors,
   QuestionReplyResponses,
+  RemoteDisableResponses,
+  RemoteEnableResponses,
+  RemoteStatusResponses,
   SessionAbortErrors,
   SessionAbortResponses,
   SessionChildrenErrors,
@@ -174,6 +177,7 @@ import type {
   SessionUnshareResponses,
   SessionUpdateErrors,
   SessionUpdateResponses,
+  SessionViewedResponses,
   SubtaskPartInput,
   TelemetryCaptureErrors,
   TelemetryCaptureResponses,
@@ -2329,6 +2333,43 @@ export class Session2 extends HeyApiClient {
       ...params,
     })
   }
+
+  /**
+   * Set viewed session
+   *
+   * Notify the server which session the user is currently viewing, or clear it.
+   */
+  public viewed<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      sessionID?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "sessionID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<SessionViewedResponses, unknown, ThrowOnError>({
+      url: "/session/viewed",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
 }
 
 export class Part extends HeyApiClient {
@@ -2868,6 +2909,98 @@ export class Telemetry extends HeyApiClient {
         ...options?.headers,
         ...params.headers,
       },
+    })
+  }
+}
+
+export class Remote extends HeyApiClient {
+  /**
+   * Enable remote connection
+   *
+   * Enable WebSocket connection to UserConnectionDO for real-time session relay and commands.
+   */
+  public enable<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<RemoteEnableResponses, unknown, ThrowOnError>({
+      url: "/remote/enable",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Disable remote connection
+   *
+   * Close the remote WebSocket connection to UserConnectionDO.
+   */
+  public disable<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<RemoteDisableResponses, unknown, ThrowOnError>({
+      url: "/remote/disable",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get remote connection status
+   *
+   * Get the current state of the remote WebSocket connection.
+   */
+  public status<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<RemoteStatusResponses, unknown, ThrowOnError>({
+      url: "/remote/status",
+      ...options,
+      ...params,
     })
   }
 }
@@ -4677,6 +4810,11 @@ export class KiloClient extends HeyApiClient {
   private _telemetry?: Telemetry
   get telemetry(): Telemetry {
     return (this._telemetry ??= new Telemetry({ client: this.client }))
+  }
+
+  private _remote?: Remote
+  get remote(): Remote {
+    return (this._remote ??= new Remote({ client: this.client }))
   }
 
   private _commitMessage?: CommitMessage

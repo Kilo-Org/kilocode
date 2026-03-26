@@ -9,7 +9,7 @@ import { BunProc } from "../bun"
 import { Hash } from "../util/hash"
 import { Plugin } from "../plugin"
 import { NamedError } from "@opencode-ai/util/error"
-import { ModelsDev, Prompt } from "./models" // kilocode_change
+import { AiSdkProvider, ModelsDev, Prompt } from "./models" // kilocode_change
 import { Auth } from "../auth"
 import { Env } from "../env"
 import { Instance } from "../project/instance"
@@ -30,7 +30,7 @@ import { createOpenAI } from "@ai-sdk/openai"
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
 import { createOpenRouter, type LanguageModelV2 } from "@openrouter/ai-sdk-provider"
 import { createOpenaiCompatible as createGitHubCopilotOpenAICompatible } from "./sdk/copilot"
-import { createKilo } from "@kilocode/kilo-gateway" // kilocode_change
+import { createKilo, type KiloProvider } from "@kilocode/kilo-gateway" // kilocode_change
 import { createXai } from "@ai-sdk/xai"
 import { createMistral } from "@ai-sdk/mistral"
 import { createGroq } from "@ai-sdk/groq"
@@ -616,6 +616,19 @@ export namespace Provider {
       return {
         autoload: Object.keys(input.models).length > 0,
         options,
+        async getModel(sdk: KiloProvider, modelID: string) {
+          const aiSdkProvider = input.models[modelID]?.ai_sdk_provider
+          if (aiSdkProvider === "anthropic") {
+            return sdk.anthropic(modelID)
+          }
+          if (aiSdkProvider === "openai") {
+            return sdk.openai(modelID)
+          }
+          if (aiSdkProvider === "openai-compatible") {
+            return sdk.openaiCompatible(modelID)
+          }
+          return sdk.languageModel(modelID)
+        },
       }
     },
     // kilocode_change end
@@ -691,6 +704,7 @@ export namespace Provider {
       recommendedIndex: z.number().optional(),
       prompt: Prompt.optional().catch(undefined),
       isFree: z.boolean().optional(),
+      ai_sdk_provider: AiSdkProvider.optional(),
       // kilocode_change end
     })
     .meta({
@@ -778,6 +792,7 @@ export namespace Provider {
       recommendedIndex: model.recommendedIndex,
       prompt: model.prompt,
       isFree: model.isFree,
+      ai_sdk_provider: model.ai_sdk_provider,
       // kilocode_change end
     }
 
@@ -927,6 +942,7 @@ export namespace Provider {
           recommendedIndex: model.recommendedIndex ?? existingModel?.recommendedIndex,
           prompt: model.prompt ?? existingModel?.prompt,
           isFree: model.isFree ?? existingModel?.isFree,
+          ai_sdk_provider: model.ai_sdk_provider ?? existingModel?.ai_sdk_provider,
           // kilocode_change end
         }
         const merged = mergeDeep(ProviderTransform.variants(parsedModel), model.variants ?? {})

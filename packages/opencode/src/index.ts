@@ -28,6 +28,7 @@ import { EOL } from "os"
 // import { WebCommand } from "./cli/cmd/web" // kilocode_change (Disabled unsupported opencode web UI)
 import { PrCommand } from "./cli/cmd/pr"
 import { SessionCommand } from "./cli/cmd/session"
+import { RemoteCommand } from "./cli/cmd/remote" // kilocode_change
 // kilocode_change start - Import telemetry, instance disposal, and legacy migration
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Instance } from "./project/instance" // kilocode_change
@@ -192,6 +193,7 @@ let cli = yargs(hideBin(process.argv))
   // .command(GithubCommand) // kilocode_change (Disabled until backend is ready)
   .command(PrCommand)
   .command(SessionCommand)
+  .command(RemoteCommand) // kilocode_change
   .command(DbCommand)
 
 if (Installation.isLocal()) {

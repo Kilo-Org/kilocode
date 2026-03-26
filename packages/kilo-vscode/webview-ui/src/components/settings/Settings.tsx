@@ -36,7 +36,7 @@ const Settings: Component<SettingsProps> = (props) => {
   const vscode = useVSCode()
   const { isDirty, saveConfig, discardConfig } = useConfig()
   const session = useSession()
-  const [active, setActive] = createSignal(props.tab ?? "providers")
+  const [active, setActive] = createSignal(props.tab ?? "models")
 
   const busyCount = () => Object.values(session.allStatusMap()).filter((s) => s.type === "busy").length
 
@@ -227,29 +227,20 @@ const Settings: Component<SettingsProps> = (props) => {
         </Tabs.Content>
       </Tabs>
 
-      {/* Save bar — visible when there are unsaved config changes */}
-      <Show when={isDirty()}>
-        <div
-          style={{
-            display: "flex",
-            "align-items": "center",
-            "justify-content": "flex-end",
-            gap: "8px",
-            padding: "8px 16px",
-            "border-top": "1px solid var(--border-weak-base)",
-          }}
-        >
-          <span style={{ "font-size": "12px", color: "var(--foreground-secondary)", "margin-right": "auto" }}>
-            {language.t("settings.saveBar.unsavedChanges")}
-          </span>
-          <Button variant="ghost" size="small" onClick={discardConfig}>
-            {language.t("settings.saveBar.discard")}
-          </Button>
-          <Button variant="primary" size="small" onClick={handleSave}>
-            {language.t("settings.saveBar.save")}
-          </Button>
-        </div>
-      </Show>
+      {/* Save bar — slides in when there are unsaved config changes */}
+      <div
+        class={`settings-save-bar${isDirty() ? " settings-save-bar--visible" : ""}`}
+        inert={!isDirty() || undefined}
+        aria-hidden={!isDirty()}
+      >
+        <span class="settings-save-bar-label">{language.t("settings.saveBar.unsavedChanges")}</span>
+        <Button variant="ghost" size="small" onClick={discardConfig}>
+          {language.t("settings.saveBar.discard")}
+        </Button>
+        <Button variant="primary" size="small" onClick={handleSave}>
+          {language.t("settings.saveBar.save")}
+        </Button>
+      </div>
     </div>
   )
 }

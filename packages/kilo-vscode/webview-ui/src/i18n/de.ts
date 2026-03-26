@@ -835,8 +835,11 @@ export const dict = {
   "session.delete.button": "Sitzung löschen",
   "session.untitled": "Unbenannt",
   "session.recent": "Kürzlich",
+  "session.showHistory": "Verlauf anzeigen",
   "session.search.placeholder": "Sitzungen suchen...",
   "session.empty": "Noch keine Sitzungen. Klicke + um eine neue Unterhaltung zu starten.",
+  "session.tab.local": "Local",
+  "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Nur dieses Repository",
   "session.cloud.import": "Aus der Cloud importieren",
   "feedback.button": "Feedback & Support",
@@ -1065,6 +1068,31 @@ export const dict = {
     "Keine Skills gefunden. Fügen Sie unten Skill-Ordnerpfade oder URLs hinzu, um Skills verfügbar zu machen.",
   "settings.agentBehaviour.availableModes": "Verfügbare benutzerdefinierte Modi",
   "settings.agentBehaviour.noModesFound": "Keine Modi gefunden.",
+  "settings.agentBehaviour.createMode": "Neuen Modus erstellen",
+  "settings.agentBehaviour.createMode.name": "Name",
+  "settings.agentBehaviour.createMode.name.placeholder": "z.B. reviewer",
+  "settings.agentBehaviour.createMode.name.description":
+    "Eindeutiger Bezeichner für den Modus. Nur Kleinbuchstaben, Zahlen und Bindestriche.",
+  "settings.agentBehaviour.createMode.description": "Beschreibung",
+  "settings.agentBehaviour.createMode.description.placeholder": "z.B. Überprüft Code auf Qualität und Best Practices",
+  "settings.agentBehaviour.createMode.description.help": "Kurze Beschreibung, was dieser Modus macht.",
+  "settings.agentBehaviour.createMode.prompt": "System-Prompt",
+  "settings.agentBehaviour.createMode.prompt.placeholder":
+    "z.B. Du bist ein Code-Reviewer. Konzentriere dich auf Codequalität, Best Practices und potenzielle Fehler.",
+  "settings.agentBehaviour.createMode.prompt.help": "Anweisungen für den KI-Agenten bei Verwendung dieses Modus.",
+  "settings.agentBehaviour.createMode.button": "Erstellen",
+  "settings.agentBehaviour.createMode.cancel": "Abbrechen",
+  "settings.agentBehaviour.createMode.nameRequired": "Name ist erforderlich",
+  "settings.agentBehaviour.createMode.nameInvalid": "Name darf nur Kleinbuchstaben, Zahlen und Bindestriche enthalten",
+  "settings.agentBehaviour.createMode.nameTaken": "Ein Modus mit diesem Namen existiert bereits",
+  "settings.agentBehaviour.editMode": "Modus bearbeiten",
+  "settings.agentBehaviour.editMode.description": "Beschreibung",
+  "settings.agentBehaviour.editMode.prompt": "System-Prompt",
+  "settings.agentBehaviour.editMode.save": "Fertig",
+  "settings.agentBehaviour.editMode.back": "Zurück zur Liste",
+  "settings.agentBehaviour.editMode.native": "Eingebauter Modus (schreibgeschützte Definition)",
+  "settings.agentBehaviour.editMode.promptOverride":
+    "Benutzerdefinierte Prompt-Überschreibung für diesen eingebauten Modus",
   "settings.agentBehaviour.removeMode.title": "Modus entfernen",
   "settings.agentBehaviour.removeMode.confirm":
     'Modus "{{name}}" entfernen? Dadurch wird der Modus durch Aktualisierung Ihrer Konfiguration deaktiviert.',
@@ -1079,6 +1107,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.confirm":
     'Skill "{{name}}" entfernen? Dadurch werden die Skill-Dateien vom Datenträger gelöscht.',
   "settings.agentBehaviour.removeSkill.button": "Entfernen",
+  "settings.agentBehaviour.rules.description":
+    "Regeln sind Anweisungsdateien, die das Verhalten des Agenten steuern. Sie werden in den System-Prompt für jede Konversation eingebunden. Fügen Sie unten Dateipfade hinzu, um zusätzliche Regeln einzubinden.",
   "settings.agentBehaviour.instructionFiles": "Zusätzliche Anweisungsdateien",
   "settings.agentBehaviour.instructionFiles.description": "Pfade zu zusätzlichen Anweisungsdateien im System-Prompt",
   "settings.agentBehaviour.mcpEmpty":

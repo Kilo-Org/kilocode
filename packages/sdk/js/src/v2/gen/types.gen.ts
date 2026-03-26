@@ -1222,6 +1222,7 @@ export type ProviderConfig = {
       recommendedIndex?: number
       prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo"
       isFree?: boolean
+      ai_sdk_provider?: "anthropic" | "openai" | "openai-compatible" | "openrouter"
       experimental?: boolean
       status?: "alpha" | "beta" | "deprecated"
       options?: {
@@ -1655,6 +1656,7 @@ export type Model = {
   recommendedIndex?: number
   prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo"
   isFree?: boolean
+  ai_sdk_provider?: "anthropic" | "openai" | "openai-compatible" | "openrouter"
 }
 
 export type Provider = {
@@ -3941,6 +3943,27 @@ export type PermissionRespondResponses = {
 
 export type PermissionRespondResponse = PermissionRespondResponses[keyof PermissionRespondResponses]
 
+export type SessionViewedData = {
+  body?: {
+    sessionID?: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/session/viewed"
+}
+
+export type SessionViewedResponses = {
+  /**
+   * Viewed session updated
+   */
+  200: boolean
+}
+
+export type SessionViewedResponse = SessionViewedResponses[keyof SessionViewedResponses]
+
 export type PermissionReplyData = {
   body?: {
     reply: "once" | "always" | "reject"
@@ -4187,6 +4210,7 @@ export type ProviderListResponses = {
           recommendedIndex?: number
           prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo"
           isFree?: boolean
+          ai_sdk_provider?: "anthropic" | "openai" | "openai-compatible" | "openrouter"
           experimental?: boolean
           status?: "alpha" | "beta" | "deprecated"
           options: {
@@ -4355,6 +4379,72 @@ export type TelemetryCaptureResponses = {
 }
 
 export type TelemetryCaptureResponse = TelemetryCaptureResponses[keyof TelemetryCaptureResponses]
+
+export type RemoteEnableData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/remote/enable"
+}
+
+export type RemoteEnableResponses = {
+  /**
+   * Remote connection enabled
+   */
+  200: {
+    enabled: boolean
+    connected: boolean
+  }
+}
+
+export type RemoteEnableResponse = RemoteEnableResponses[keyof RemoteEnableResponses]
+
+export type RemoteDisableData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/remote/disable"
+}
+
+export type RemoteDisableResponses = {
+  /**
+   * Remote connection disabled
+   */
+  200: {
+    enabled: boolean
+    connected: boolean
+  }
+}
+
+export type RemoteDisableResponse = RemoteDisableResponses[keyof RemoteDisableResponses]
+
+export type RemoteStatusData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/remote/status"
+}
+
+export type RemoteStatusResponses = {
+  /**
+   * Remote connection status
+   */
+  200: {
+    enabled: boolean
+    connected: boolean
+  }
+}
+
+export type RemoteStatusResponse = RemoteStatusResponses[keyof RemoteStatusResponses]
 
 export type CommitMessageGenerateData = {
   body?: {
@@ -4594,7 +4684,16 @@ export type KiloModesResponses = {
         whenToUse?: string
         description?: string
         customInstructions?: string
-        groups?: Array<unknown>
+        groups?: Array<
+          | string
+          | [
+              string,
+              {
+                fileRegex?: string
+                description?: string
+              },
+            ]
+        >
       }
     }>
   }

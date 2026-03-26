@@ -830,8 +830,11 @@ export const dict = {
   "session.delete.button": "Eliminar sesión",
   "session.untitled": "Sin título",
   "session.recent": "Recientes",
+  "session.showHistory": "Mostrar historial",
   "session.search.placeholder": "Buscar sesiones...",
   "session.empty": "Aún no hay sesiones. Haz clic en + para iniciar una nueva conversación.",
+  "session.tab.local": "Local",
+  "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Solo este repositorio",
   "session.cloud.import": "Importar desde la nube",
   "feedback.button": "Comentarios y soporte",
@@ -1055,6 +1058,31 @@ export const dict = {
     "No se encontraron habilidades. Agregue rutas de carpetas o URLs abajo para hacer disponibles las habilidades.",
   "settings.agentBehaviour.availableModes": "Modos personalizados disponibles",
   "settings.agentBehaviour.noModesFound": "No se encontraron modos.",
+  "settings.agentBehaviour.createMode": "Crear nuevo modo",
+  "settings.agentBehaviour.createMode.name": "Nombre",
+  "settings.agentBehaviour.createMode.name.placeholder": "ej. reviewer",
+  "settings.agentBehaviour.createMode.name.description":
+    "Identificador único del modo. Use solo letras minúsculas, números y guiones.",
+  "settings.agentBehaviour.createMode.description": "Descripción",
+  "settings.agentBehaviour.createMode.description.placeholder": "ej. Revisa código para calidad y mejores prácticas",
+  "settings.agentBehaviour.createMode.description.help": "Breve descripción de lo que hace este modo.",
+  "settings.agentBehaviour.createMode.prompt": "Prompt del sistema",
+  "settings.agentBehaviour.createMode.prompt.placeholder":
+    "ej. Eres un revisor de código. Enfócate en calidad, mejores prácticas y errores potenciales.",
+  "settings.agentBehaviour.createMode.prompt.help": "Instrucciones para el agente de IA al usar este modo.",
+  "settings.agentBehaviour.createMode.button": "Crear",
+  "settings.agentBehaviour.createMode.cancel": "Cancelar",
+  "settings.agentBehaviour.createMode.nameRequired": "El nombre es obligatorio",
+  "settings.agentBehaviour.createMode.nameInvalid":
+    "El nombre solo puede contener letras minúsculas, números y guiones",
+  "settings.agentBehaviour.createMode.nameTaken": "Ya existe un modo con este nombre",
+  "settings.agentBehaviour.editMode": "Editar modo",
+  "settings.agentBehaviour.editMode.description": "Descripción",
+  "settings.agentBehaviour.editMode.prompt": "Prompt del sistema",
+  "settings.agentBehaviour.editMode.save": "Listo",
+  "settings.agentBehaviour.editMode.back": "Volver a la lista",
+  "settings.agentBehaviour.editMode.native": "Modo integrado (definición de solo lectura)",
+  "settings.agentBehaviour.editMode.promptOverride": "Anulación de prompt personalizado para este modo integrado",
   "settings.agentBehaviour.removeMode.title": "Eliminar modo",
   "settings.agentBehaviour.removeMode.confirm":
     '¿Eliminar el modo "{{name}}"? Esto desactivará el modo actualizando su configuración.',
@@ -1069,6 +1097,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.confirm":
     '¿Eliminar la habilidad "{{name}}"? Esto borrará los archivos de la habilidad del disco.',
   "settings.agentBehaviour.removeSkill.button": "Eliminar",
+  "settings.agentBehaviour.rules.description":
+    "Las reglas son archivos de instrucciones que guían el comportamiento del agente. Se incluyen en el prompt del sistema para cada conversación. Añada rutas de archivos a continuación para incluir reglas adicionales.",
   "settings.agentBehaviour.instructionFiles": "Archivos de instrucciones adicionales",
   "settings.agentBehaviour.instructionFiles.description":
     "Rutas a archivos de instrucciones adicionales incluidos en el prompt del sistema",

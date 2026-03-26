@@ -825,8 +825,11 @@ export const dict = {
   "session.delete.button": "Oturumu sil",
   "session.untitled": "Adsız",
   "session.recent": "Son",
+  "session.showHistory": "Geçmişi Göster",
   "session.search.placeholder": "Oturum ara...",
   "session.empty": "Henüz oturum yok. Yeni bir sohbet başlatmak için + tıklayın.",
+  "session.tab.local": "Local",
+  "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Yalnızca bu depo",
   "session.cloud.import": "Buluttan içe aktar",
   "feedback.button": "Geri Bildirim ve Destek",
@@ -1066,6 +1069,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.confirm":
     '"{{name}}" becerisi kaldırılsın mı? Bu, beceri dosyalarını diskten silecek.',
   "settings.agentBehaviour.removeSkill.button": "Kaldır",
+  "settings.agentBehaviour.rules.description":
+    "Kurallar, ajanın davranışını yönlendiren talimat dosyalarıdır. Her konuşma için sistem komutuna dahil edilirler. Ek kurallar eklemek için aşağıya dosya yolları ekleyin.",
   "settings.agentBehaviour.instructionFiles": "Ek Talimat Dosyaları",
   "settings.agentBehaviour.instructionFiles.description":
     "Sistem komutuna dahil edilen ek talimat dosyalarının yolları",

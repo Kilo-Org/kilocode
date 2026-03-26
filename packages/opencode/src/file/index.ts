@@ -596,12 +596,15 @@ export namespace File {
       const fullPath = path.join(resolved, entry.name)
       const relativePath = path.relative(Instance.directory, fullPath)
       const type = entry.isDirectory() ? "directory" : "file"
+      // On Windows, path.relative() across drives returns an absolute path;
+      // skip the gitignore check in that case to avoid a RangeError from `ignore`.
+      const canIgnore = !path.isAbsolute(relativePath)
       nodes.push({
         name: entry.name,
         path: relativePath,
         absolute: fullPath,
         type,
-        ignored: ignored(type === "directory" ? relativePath + "/" : relativePath),
+        ignored: canIgnore && ignored(type === "directory" ? relativePath + "/" : relativePath),
       })
     }
     return nodes.sort((a, b) => {

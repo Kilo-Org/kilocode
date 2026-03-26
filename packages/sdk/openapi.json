@@ -4334,6 +4334,61 @@
         ]
       }
     },
+    "/session/viewed": {
+      "post": {
+        "operationId": "session.viewed",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Set viewed session",
+        "description": "Notify the server which session the user is currently viewing, or clear it.",
+        "responses": {
+          "200": {
+            "description": "Viewed session updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sessionID": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.session.viewed({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/permission/{requestID}/reply": {
       "post": {
         "operationId": "permission.reply",
@@ -5378,6 +5433,156 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.telemetry.capture({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/remote/enable": {
+      "post": {
+        "operationId": "remote.enable",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Enable remote connection",
+        "description": "Enable WebSocket connection to UserConnectionDO for real-time session relay and commands.",
+        "responses": {
+          "200": {
+            "description": "Remote connection enabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "connected": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["enabled", "connected"]
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.remote.enable({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/remote/disable": {
+      "post": {
+        "operationId": "remote.disable",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Disable remote connection",
+        "description": "Close the remote WebSocket connection to UserConnectionDO.",
+        "responses": {
+          "200": {
+            "description": "Remote connection disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "connected": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["enabled", "connected"]
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.remote.disable({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/remote/status": {
+      "get": {
+        "operationId": "remote.status",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Get remote connection status",
+        "description": "Get the current state of the remote WebSocket connection.",
+        "responses": {
+          "200": {
+            "description": "Remote connection status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "connected": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["enabled", "connected"]
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.remote.status({\n  ...\n})"
           }
         ]
       }
