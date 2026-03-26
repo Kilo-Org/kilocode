@@ -2007,8 +2007,8 @@ interface ApplyPatchFile {
   relativePath: string
   type: "add" | "update" | "delete" | "move"
   diff: string
-  before: string
-  after: string
+  before?: string
+  after?: string
   additions: number
   deletions: number
   movePath?: string
@@ -2158,7 +2158,7 @@ ToolRegistry.register({
                             </Accordion.Trigger>
                           </StickyAccordionHeader>
                           <Accordion.Content>
-                            <Show when={visible()}>
+                            <Show when={visible() && file.before !== undefined}>
                               <div data-component="apply-patch-file-diff">
                                 <Dynamic
                                   component={fileComponent}
@@ -2206,14 +2206,16 @@ ToolRegistry.register({
                   </Switch>
                 }
               >
-                <div data-component="apply-patch-file-diff">
-                  <Dynamic
-                    component={fileComponent}
-                    mode="diff"
-                    before={{ name: file().filePath, contents: file().before }}
-                    after={{ name: file().movePath ?? file().filePath, contents: file().after }}
-                  />
-                </div>
+                <Show when={file().before !== undefined}>
+                  <div data-component="apply-patch-file-diff">
+                    <Dynamic
+                      component={fileComponent}
+                      mode="diff"
+                      before={{ name: file().filePath, contents: file().before }}
+                      after={{ name: file().movePath ?? file().filePath, contents: file().after }}
+                    />
+                  </div>
+                </Show>
               </ToolFileAccordion>
             )}
           </Show>
