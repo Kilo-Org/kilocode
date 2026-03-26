@@ -1099,9 +1099,19 @@ export const dict = {
     "Правила — это файлы инструкций, которые направляют поведение агента. Они включаются в системный промпт для каждого разговора. Добавьте пути к файлам ниже, чтобы включить дополнительные правила.",
   "settings.agentBehaviour.instructionFiles": "Дополнительные файлы инструкций",
   "settings.agentBehaviour.instructionFiles.description": "Пути к дополнительным файлам инструкций в системном промпте",
+  "settings.agentBehaviour.mcpDetail.command": "Команда",
+  "settings.agentBehaviour.mcpDetail.args": "Аргументы",
+  "settings.agentBehaviour.mcpDetail.env": "Окружение",
+  "settings.agentBehaviour.mcpDetail.disabled": "Этот сервер отключён.",
   "settings.agentBehaviour.mcpEmpty":
     "MCP-серверы не настроены. Отредактируйте файл конфигурации opencode для добавления MCP-серверов.",
   "settings.agentBehaviour.workflowsPlaceholder": "Рабочие процессы управляются через файлы рабочих процессов.",
+  "settings.agentBehaviour.workflows.description":
+    "Рабочие процессы — это пользовательские слэш-команды, определённые в вашей конфигурации. Введите /command-name в чате, чтобы вызвать их. Команды настраиваются в opencode.json в разделе 'command'.",
+  "settings.agentBehaviour.workflows.empty":
+    "Пользовательские команды не настроены. Добавьте команды в opencode.json, чтобы увидеть их здесь.",
+  "settings.agentBehaviour.workflows.detail.description": "Описание",
+  "settings.agentBehaviour.workflows.detail.template": "Шаблон",
   "settings.agentBehaviour.notImplemented": "Ещё не реализовано.",
   "settings.autoApprove.description":
     "Определите правила запуска инструментов. Большинство инструментов по умолчанию Разрешены. Для doom_loop и external_directory по умолчанию установлено Спрашивать.",

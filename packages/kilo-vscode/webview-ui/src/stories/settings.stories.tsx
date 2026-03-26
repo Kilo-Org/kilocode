@@ -10,7 +10,7 @@ import { SessionContext } from "../context/session"
 import Settings from "../components/settings/Settings"
 import ProvidersTab from "../components/settings/ProvidersTab"
 import AgentBehaviourTab from "../components/settings/AgentBehaviourTab"
-import type { AgentConfig } from "../types/messages"
+import type { AgentConfig, CommandConfig } from "../types/messages"
 
 const meta: Meta = {
   title: "Settings",
@@ -37,7 +37,7 @@ export const SettingsPanel: Story = {
   name: "Settings — full panel",
   render: () => (
     <StoryProviders>
-      <div style={{ width: "420px", height: "700px", display: "flex", "flex-direction": "column" }}>
+      <div style={{ height: "700px", display: "flex", "flex-direction": "column" }}>
         <Settings />
       </div>
     </StoryProviders>
@@ -48,7 +48,7 @@ export const ProvidersConfigure: Story = {
   name: "ProvidersTab — no providers configured",
   render: () => (
     <StoryProviders>
-      <div style={{ width: "420px", "max-height": "700px", overflow: "auto" }}>
+      <div style={{ "max-height": "700px", overflow: "auto" }}>
         <ProvidersTab />
       </div>
     </StoryProviders>
@@ -70,7 +70,7 @@ export const AgentBehaviourAgents: Story = {
     return (
       <StoryProviders sessionID="agents-story" status="idle">
         <SessionContext.Provider value={session as any}>
-          <div style={{ width: "420px", "max-height": "700px", overflow: "auto" }}>
+          <div style={{ "max-height": "700px", overflow: "auto" }}>
             <AgentBehaviourTab />
           </div>
         </SessionContext.Provider>
@@ -129,8 +129,88 @@ function EditModeWrapper() {
     })
   })
   return (
-    <div ref={ref} style={{ width: "420px", height: "700px", overflow: "auto" }}>
+    <div ref={ref} style={{ height: "700px", overflow: "auto" }}>
       <AgentBehaviourTab />
     </div>
   )
+}
+
+/** Clicks the given subtab button on mount. */
+function SubtabWrapper(props: { tab: string }) {
+  let ref: HTMLDivElement | undefined
+  onMount(() => {
+    requestAnimationFrame(() => {
+      if (!ref) return
+      const buttons = Array.from(ref.querySelectorAll<HTMLButtonElement>("button"))
+      for (const btn of buttons) {
+        if (btn.textContent?.toLowerCase().includes(props.tab.toLowerCase())) {
+          btn.click()
+          return
+        }
+      }
+    })
+  })
+  return (
+    <div ref={ref} style={{ height: "700px", overflow: "auto" }}>
+      <AgentBehaviourTab />
+    </div>
+  )
+}
+
+const MOCK_COMMANDS: Record<string, CommandConfig> = {
+  review: {
+    template: "Review the changes in the current branch and provide feedback on code quality.",
+    description: "Run a code review on the current branch",
+  },
+  deploy: {
+    template: "Build and deploy the application to the staging environment.",
+    description: "Deploy to staging",
+  },
+  test: {
+    template: "Run the full test suite and report any failures.",
+  },
+}
+
+export const AgentBehaviourWorkflows: Story = {
+  name: "AgentBehaviourTab — workflows with commands",
+  render: () => {
+    const session = {
+      ...mockSessionValue({ id: "workflows-story", status: "idle" }),
+      agents: () => MOCK_AGENTS,
+      removeMode: noop,
+      removeMcp: noop,
+      skills: () => [],
+      refreshSkills: noop,
+      removeSkill: noop,
+    }
+    return (
+      <StoryProviders sessionID="workflows-story" status="idle" config={{ command: MOCK_COMMANDS } as any}>
+        <SessionContext.Provider value={session as any}>
+          <SubtabWrapper tab="workflows" />
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+export const AgentBehaviourWorkflowsEmpty: Story = {
+  name: "AgentBehaviourTab — workflows empty state",
+  render: () => {
+    const session = {
+      ...mockSessionValue({ id: "workflows-empty-story", status: "idle" }),
+      agents: () => MOCK_AGENTS,
+      removeMode: noop,
+      removeMcp: noop,
+      skills: () => [],
+      refreshSkills: noop,
+      removeSkill: noop,
+    }
+    return (
+      <StoryProviders sessionID="workflows-empty-story" status="idle">
+        <SessionContext.Provider value={session as any}>
+          <SubtabWrapper tab="workflows" />
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
 }

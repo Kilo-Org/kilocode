@@ -13,6 +13,7 @@ import { useLanguage } from "../../context/language"
 import type { AgentInfo, SkillInfo } from "../../types/messages"
 import ModeEditView from "./ModeEditView"
 import ModeCreateView from "./ModeCreateView"
+import WorkflowsTab from "./agent-behaviour/WorkflowsTab"
 
 type SubtabId = "agents" | "mcpServers" | "rules" | "workflows" | "skills"
 
@@ -398,6 +399,11 @@ const AgentBehaviourTab: Component = () => {
 
   const renderMcpSubtab = () => {
     const mcpEntries = createMemo(() => Object.entries(config().mcp ?? {}))
+    const [expanded, setExpanded] = createSignal<Record<string, boolean>>({})
+
+    const toggle = (name: string) => {
+      setExpanded((prev) => ({ ...prev, [name]: !prev[name] }))
+    }
 
     return (
       <div>
@@ -418,50 +424,136 @@ const AgentBehaviourTab: Component = () => {
         >
           <Card>
             <For each={mcpEntries()}>
-              {([name, mcp], index) => (
-                <div
-                  style={{
-                    display: "flex",
-                    "align-items": "center",
-                    "justify-content": "space-between",
-                    padding: "8px 0",
-                    "border-bottom": index() < mcpEntries().length - 1 ? "1px solid var(--border-weak-base)" : "none",
-                  }}
-                >
-                  <div style={{ flex: 1, "min-width": 0 }}>
-                    <div style={{ "font-weight": "500" }}>{name}</div>
+              {([name, mcp], index) => {
+                const open = () => expanded()[name] ?? false
+                const env = () => Object.entries(mcp.environment ?? mcp.env ?? {})
+                return (
+                  <div
+                    style={{
+                      "border-bottom": index() < mcpEntries().length - 1 ? "1px solid var(--border-weak-base)" : "none",
+                    }}
+                  >
+                    {/* Header row */}
                     <div
                       style={{
-                        "font-size": "12px",
-                        color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
-                        "margin-top": "4px",
-                        "font-family": "var(--vscode-editor-font-family, monospace)",
+                        display: "flex",
+                        "align-items": "center",
+                        "justify-content": "space-between",
+                        padding: "8px 0",
+                        cursor: "pointer",
                       }}
+                      onClick={() => toggle(name)}
                     >
-                      <Show when={mcp.command}>
-                        <div>
-                          command:{" "}
-                          {Array.isArray(mcp.command)
-                            ? mcp.command.join(" ")
-                            : `${mcp.command} ${(mcp.args ?? []).join(" ")}`}
-                        </div>
-                      </Show>
-                      <Show when={mcp.url}>
-                        <div>url: {mcp.url}</div>
-                      </Show>
+                      <div style={{ display: "flex", "align-items": "center", gap: "6px", flex: 1, "min-width": 0 }}>
+                        <IconButton
+                          size="small"
+                          variant="ghost"
+                          icon={open() ? "chevron-down" : "chevron-right"}
+                          onClick={(e: MouseEvent) => {
+                            e.stopPropagation()
+                            toggle(name)
+                          }}
+                        />
+                        <div style={{ "font-weight": "500" }}>{name}</div>
+                        <span
+                          style={{
+                            "font-size": "10px",
+                            color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                          }}
+                        >
+                          {mcp.url ? "remote" : "stdio"}
+                        </span>
+                      </div>
+                      <IconButton
+                        size="small"
+                        variant="ghost"
+                        icon="close"
+                        onClick={(e: MouseEvent) => {
+                          e.stopPropagation()
+                          confirmRemoveMcp(name)
+                        }}
+                      />
                     </div>
+
+                    {/* Expandable detail */}
+                    <Show when={open()}>
+                      <div
+                        style={{
+                          "padding-left": "28px",
+                          "padding-bottom": "8px",
+                          "font-size": "12px",
+                          color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                        }}
+                      >
+                        <Show when={mcp.command}>
+                          <div style={{ "margin-bottom": "4px" }}>
+                            <span style={{ "font-weight": "500" }}>
+                              {language.t("settings.agentBehaviour.mcpDetail.command")}:{" "}
+                            </span>
+                            <span style={{ "font-family": "var(--vscode-editor-font-family, monospace)" }}>
+                              {Array.isArray(mcp.command) ? mcp.command[0] : mcp.command}
+                            </span>
+                          </div>
+                          <Show
+                            when={
+                              (Array.isArray(mcp.command) && mcp.command.length > 1) ||
+                              (!Array.isArray(mcp.command) && mcp.args && mcp.args.length > 0)
+                            }
+                          >
+                            <div style={{ "margin-bottom": "4px" }}>
+                              <span style={{ "font-weight": "500" }}>
+                                {language.t("settings.agentBehaviour.mcpDetail.args")}:{" "}
+                              </span>
+                              <span style={{ "font-family": "var(--vscode-editor-font-family, monospace)" }}>
+                                {Array.isArray(mcp.command)
+                                  ? (mcp.command as string[]).slice(1).join(" ")
+                                  : (mcp.args ?? []).join(" ")}
+                              </span>
+                            </div>
+                          </Show>
+                        </Show>
+                        <Show when={mcp.url}>
+                          <div style={{ "margin-bottom": "4px" }}>
+                            <span style={{ "font-weight": "500" }}>URL: </span>
+                            <span style={{ "font-family": "var(--vscode-editor-font-family, monospace)" }}>
+                              {mcp.url}
+                            </span>
+                          </div>
+                        </Show>
+                        <Show when={env().length > 0}>
+                          <div style={{ "margin-bottom": "4px" }}>
+                            <span style={{ "font-weight": "500" }}>
+                              {language.t("settings.agentBehaviour.mcpDetail.env")}:
+                            </span>
+                          </div>
+                          <For each={env()}>
+                            {([key, val]) => (
+                              <div
+                                style={{
+                                  "padding-left": "8px",
+                                  "font-family": "var(--vscode-editor-font-family, monospace)",
+                                }}
+                              >
+                                {key}={val}
+                              </div>
+                            )}
+                          </For>
+                        </Show>
+                        <Show when={mcp.enabled === false}>
+                          <div
+                            style={{
+                              "margin-top": "4px",
+                              color: "var(--vscode-errorForeground)",
+                            }}
+                          >
+                            {language.t("settings.agentBehaviour.mcpDetail.disabled")}
+                          </div>
+                        </Show>
+                      </div>
+                    </Show>
                   </div>
-                  <IconButton
-                    size="small"
-                    variant="ghost"
-                    icon="close"
-                    onClick={(e: MouseEvent) => {
-                      e.stopPropagation()
-                      confirmRemoveMcp(name)
-                    }}
-                  />
-                </div>
-              )}
+                )
+              }}
             </For>
           </Card>
         </Show>
@@ -716,7 +808,7 @@ const AgentBehaviourTab: Component = () => {
       case "rules":
         return renderRulesSubtab()
       case "workflows":
-        return <Placeholder text={language.t("settings.agentBehaviour.workflowsPlaceholder")} />
+        return <WorkflowsTab />
       case "skills":
         return renderSkillsSubtab()
       default:

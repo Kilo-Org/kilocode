@@ -1074,8 +1074,17 @@ export const dict = {
     "規則是引導代理行為的指令檔案。它們會被包含在每次對話的系統提示詞中。在下方新增檔案路徑以包含額外的規則。",
   "settings.agentBehaviour.instructionFiles": "附加指令檔案",
   "settings.agentBehaviour.instructionFiles.description": "包含在系統提示詞中的附加指令檔案路徑",
+  "settings.agentBehaviour.mcpDetail.command": "指令",
+  "settings.agentBehaviour.mcpDetail.args": "引數",
+  "settings.agentBehaviour.mcpDetail.env": "環境",
+  "settings.agentBehaviour.mcpDetail.disabled": "此伺服器已停用。",
   "settings.agentBehaviour.mcpEmpty": "未設定 MCP 伺服器。編輯 opencode 設定檔以新增 MCP 伺服器。",
   "settings.agentBehaviour.workflowsPlaceholder": "工作流程透過工作區中的工作流程檔案管理。",
+  "settings.agentBehaviour.workflows.description":
+    "工作流程是在設定中定義的自訂斜線命令。在聊天中輸入 /command-name 來呼叫它們。命令在 opencode.json 的 'command' 區段中設定。",
+  "settings.agentBehaviour.workflows.empty": "未設定自訂命令。將命令新增至 opencode.json 即可在此處看到。",
+  "settings.agentBehaviour.workflows.detail.description": "描述",
+  "settings.agentBehaviour.workflows.detail.template": "範本",
   "settings.agentBehaviour.notImplemented": "尚未實作。",
   "settings.autoApprove.description":
     "定義工具的執行權限。大多數工具預設為允許。doom_loop 與 external_directory 預設為詢問。",

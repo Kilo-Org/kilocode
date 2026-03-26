@@ -1087,9 +1087,19 @@ export const dict = {
     "규칙은 에이전트 동작을 안내하는 지시 파일입니다. 모든 대화의 시스템 프롬프트에 포함됩니다. 추가 규칙을 포함하려면 아래에 파일 경로를 추가하세요.",
   "settings.agentBehaviour.instructionFiles": "추가 지시 파일",
   "settings.agentBehaviour.instructionFiles.description": "시스템 프롬프트에 포함되는 추가 지시 파일 경로",
+  "settings.agentBehaviour.mcpDetail.command": "명령어",
+  "settings.agentBehaviour.mcpDetail.args": "인수",
+  "settings.agentBehaviour.mcpDetail.env": "환경",
+  "settings.agentBehaviour.mcpDetail.disabled": "이 서버는 비활성화되어 있습니다.",
   "settings.agentBehaviour.mcpEmpty":
     "MCP 서버가 구성되지 않았습니다. opencode 구성 파일을 편집하여 MCP 서버를 추가하세요.",
   "settings.agentBehaviour.workflowsPlaceholder": "워크플로우는 워크스페이스의 워크플로우 파일을 통해 관리됩니다.",
+  "settings.agentBehaviour.workflows.description":
+    "워크플로우는 구성에서 정의된 사용자 정의 슬래시 명령입니다. 채팅에서 /command-name을 입력하여 실행합니다. 명령은 opencode.json의 'command' 섹션에서 구성됩니다.",
+  "settings.agentBehaviour.workflows.empty":
+    "구성된 사용자 정의 명령이 없습니다. opencode.json에 명령을 추가하면 여기에 표시됩니다.",
+  "settings.agentBehaviour.workflows.detail.description": "설명",
+  "settings.agentBehaviour.workflows.detail.template": "템플릿",
   "settings.agentBehaviour.notImplemented": "아직 구현되지 않았습니다.",
   "settings.autoApprove.description":
     "도구 실행 허용 방식을 정의합니다. 대부분의 도구 기본값은 '허용'입니다. doom_loop 및 external_directory의 기본값은 '확인'입니다.",

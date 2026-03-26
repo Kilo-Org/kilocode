@@ -1091,10 +1091,20 @@ export const dict = {
     "ルールはエージェントの動作を導く指示ファイルです。すべての会話のシステムプロンプトに含まれます。追加のルールを含めるには、以下にファイルパスを追加してください。",
   "settings.agentBehaviour.instructionFiles": "追加の指示ファイル",
   "settings.agentBehaviour.instructionFiles.description": "システムプロンプトに含まれる追加の指示ファイルへのパス",
+  "settings.agentBehaviour.mcpDetail.command": "コマンド",
+  "settings.agentBehaviour.mcpDetail.args": "引数",
+  "settings.agentBehaviour.mcpDetail.env": "環境",
+  "settings.agentBehaviour.mcpDetail.disabled": "このサーバーは無効です。",
   "settings.agentBehaviour.mcpEmpty":
     "MCPサーバーが設定されていません。opencode設定ファイルを編集してMCPサーバーを追加してください。",
   "settings.agentBehaviour.workflowsPlaceholder":
     "ワークフローはワークスペース内のワークフローファイルを通じて管理されます。",
+  "settings.agentBehaviour.workflows.description":
+    "ワークフローは設定で定義されたカスタムスラッシュコマンドです。チャットで /command-name と入力して呼び出します。コマンドは opencode.json の 'command' セクションで設定します。",
+  "settings.agentBehaviour.workflows.empty":
+    "カスタムコマンドが設定されていません。opencode.json にコマンドを追加するとここに表示されます。",
+  "settings.agentBehaviour.workflows.detail.description": "説明",
+  "settings.agentBehaviour.workflows.detail.template": "テンプレート",
   "settings.agentBehaviour.notImplemented": "まだ実装されていません。",
   "settings.autoApprove.description":
     "ツールの実行許可を定義します。ほとんどのツールはデフォルトで「許可」されます。doom_loop と external_directory はデフォルトで「確認」になります。",
