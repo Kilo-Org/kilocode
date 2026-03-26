@@ -90,6 +90,13 @@ export const ReadTool = Tool.define("read", {
       const limit = params.limit ?? DEFAULT_READ_LIMIT
       const offset = params.offset ?? 1
       const start = offset - 1
+
+      if (entries.length > 0 && start >= entries.length) {
+        throw new Error(
+          `Offset ${offset} is out of range, directory only has ${entries.length} entr${entries.length === 1 ? "y" : "ies"}. Use offset=1 to list from the beginning.`,
+        )
+      }
+
       const sliced = entries.slice(start, start + limit)
       const truncated = start + sliced.length < entries.length
 
@@ -187,7 +194,9 @@ export const ReadTool = Tool.define("read", {
     }
 
     if (lines < offset && !(lines === 0 && offset === 1)) {
-      throw new Error(`Offset ${offset} is out of range for this file (${lines} lines)`)
+      throw new Error(
+        `Offset ${offset} is out of range, file only has ${lines} line${lines === 1 ? "" : "s"}. Use offset=1 to read from the beginning.`,
+      )
     }
 
     const content = raw.map((line, index) => {

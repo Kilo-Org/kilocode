@@ -296,7 +296,7 @@ describe("tool.read truncation", () => {
         const read = await ReadTool.init()
         await expect(
           read.execute({ filePath: path.join(tmp.path, "short.txt"), offset: 4, limit: 5 }, ctx),
-        ).rejects.toThrow("Offset 4 is out of range for this file (3 lines)")
+        ).rejects.toThrow("Offset 4 is out of range, file only has 3 lines. Use offset=1 to read from the beginning.")
       },
     })
   })
@@ -329,7 +329,26 @@ describe("tool.read truncation", () => {
       fn: async () => {
         const read = await ReadTool.init()
         await expect(read.execute({ filePath: path.join(tmp.path, "empty.txt"), offset: 2 }, ctx)).rejects.toThrow(
-          "Offset 2 is out of range for this file (0 lines)",
+          "Offset 2 is out of range, file only has 0 lines. Use offset=1 to read from the beginning.",
+        )
+      },
+    })
+  })
+
+  test("throws when directory offset is beyond entry count", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await Promise.all(
+          Array.from({ length: 3 }, (_, i) => Bun.write(path.join(dir, "dir", `file-${i + 1}.txt`), `line${i}`)),
+        )
+      },
+    })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const read = await ReadTool.init()
+        await expect(read.execute({ filePath: path.join(tmp.path, "dir"), offset: 10, limit: 5 }, ctx)).rejects.toThrow(
+          "Offset 10 is out of range, directory only has 3 entries. Use offset=1 to list from the beginning.",
         )
       },
     })
