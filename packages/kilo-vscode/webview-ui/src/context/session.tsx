@@ -345,11 +345,18 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function applyModel(agentName: string, selection: ModelSelection) {
-    setUserSetAgents((prev) => ({ ...prev, [agentName]: true }))
-    setStore("modelSelections", agentName, selection)
     pushRecent(selection)
     const sid = currentSessionID()
-    if (sid) setStore("sessionOverrides", sid, selection)
+    if (sid) {
+      // Per-session only — do NOT mutate the global modelSelections map.
+      // Writing globally here would cause every other session (that hasn't
+      // set its own override) to inherit this session's model.
+      setStore("sessionOverrides", sid, selection)
+    } else {
+      // No active session (sidebar) — write globally
+      setUserSetAgents((prev) => ({ ...prev, [agentName]: true }))
+      setStore("modelSelections", agentName, selection)
+    }
   }
 
   function selectModel(providerID: string, modelID: string) {

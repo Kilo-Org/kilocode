@@ -29,6 +29,7 @@ export const dict = {
   "agentManager.session.untitled": "제목 없음",
   "agentManager.session.newSession": "새 세션",
   "agentManager.session.openInWorktree": "Worktree에서 열기",
+  "agentManager.session.openLocally": "로컬에서 열기",
   "agentManager.session.readonly": "읽기 전용 세션",
   "agentManager.session.noSessions": "열린 세션 없음",
   "agentManager.tab.close": "닫기",

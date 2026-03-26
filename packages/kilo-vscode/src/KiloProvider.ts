@@ -28,6 +28,8 @@ import {
   isEventFromForeignProject,
   loadSessions as loadSessionsUtil,
   flushPendingSessionRefresh as flushPendingSessionRefreshUtil,
+  resolveContextDirectory,
+  resolveWorkspaceDirectory,
   type SessionRefreshContext,
 } from "./kilo-provider-utils"
 import { MarketplaceService } from "./services/marketplace"
@@ -86,6 +88,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private webview: vscode.Webview | null = null
   private currentSession: Session | null = null
+  /** Remembers the last selected session so /new can stay in the same worktree after clearSession. */
+  private contextSessionID: string | undefined
   private connectionState: "connecting" | "connected" | "disconnected" | "error" = "connecting"
   private loginAttempt = 0
   private isWebviewReady = false
@@ -147,6 +151,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /** Optional interceptor called before the standard message handler.
    *  Return null to consume the message, or return a (possibly transformed) message. */
   private onBeforeMessage: ((msg: Record<string, unknown>) => Promise<Record<string, unknown> | null>) | null = null
+
+  /** Handler for "Continue in Worktree" — set by extension.ts to delegate to AgentManagerProvider. */
+  private continueInWorktreeHandler:
+    | ((sessionId: string, progress: (status: string, detail?: string, error?: string) => void) => Promise<void>)
+    | null = null
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -325,6 +334,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    */
   public registerSession(session: Session): void {
     this.currentSession = session
+    this.contextSessionID = session.id
     this.trackedSessionIds.add(session.id)
     this.postMessage({
       type: "sessionCreated",
@@ -372,6 +382,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   public openCloudSession(sessionId: string): void {
     this.postMessage({ type: "openCloudSession", sessionId })
+  }
+
+  /** Register the handler for "Continue in Worktree" messages from the sidebar. */
+  public setContinueInWorktreeHandler(
+    handler: (sessionId: string, progress: (status: string, detail?: string, error?: string) => void) => Promise<void>,
+  ): void {
+    this.continueInWorktreeHandler = handler
   }
 
   /**
@@ -494,6 +511,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           await this.handleCreateSession()
           break
         case "clearSession":
+          this.contextSessionID = this.currentSession?.id ?? this.contextSessionID
           this.currentSession = null
           break
         case "loadMessages":
@@ -539,6 +557,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "openChanges":
           vscode.commands.executeCommand("kilo-code.new.showChanges")
+          break
+        case "continueInWorktree":
+          if (message.sessionId && this.continueInWorktreeHandler) {
+            this.continueInWorktreeHandler(message.sessionId, (status: string, detail?: string, error?: string) => {
+              this.postMessage({ type: "continueInWorktreeProgress", status, detail, error })
+            }).catch((err: unknown) => {
+              console.error("[Kilo New] continueInWorktree failed:", err)
+              this.postMessage({
+                type: "continueInWorktreeProgress",
+                status: "error",
+                error: err instanceof Error ? err.message : String(err),
+              })
+            })
+          }
           break
         case "retryConnection":
           console.log("[Kilo New] KiloProvider: 🔄 Retrying connection...")
@@ -1005,9 +1037,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     try {
-      const workspaceDir = this.getWorkspaceDirectory()
+      const workspaceDir = this.getContextDirectory()
       const { data: session } = await this.client.session.create({ directory: workspaceDir }, { throwOnError: true })
       this.currentSession = session
+      this.contextSessionID = session.id
+      this.trackDirectory(session.id, workspaceDir)
       this.trackedSessionIds.add(session.id)
 
       // Notify webview of the new session
@@ -1030,6 +1064,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private async handleLoadMessages(sessionID: string): Promise<void> {
     // Track the session so we receive its SSE events
     this.trackedSessionIds.add(sessionID)
+    this.contextSessionID = sessionID
 
     if (!this.client) {
       this.postMessage({
@@ -1068,6 +1103,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         .then((result) => {
           if (result.data && !abort.signal.aborted) {
             this.currentSession = result.data
+            this.contextSessionID = result.data.id
           }
         })
         .catch((err: unknown) => console.warn("[Kilo New] KiloProvider: getSession failed (non-critical):", err))
@@ -1855,11 +1891,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private async resolveSession(sessionID?: string): Promise<{ sid: string; dir: string } | undefined> {
     if (!this.client) return undefined
 
-    const dir = this.getWorkspaceDirectory(sessionID || this.currentSession?.id)
+    const dir = sessionID ? this.getWorkspaceDirectory(sessionID) : this.getContextDirectory()
 
     if (!sessionID && !this.currentSession) {
       const { data: session } = await this.client.session.create({ directory: dir }, { throwOnError: true })
       this.currentSession = session
+      this.contextSessionID = session.id
+      this.trackDirectory(session.id, dir)
       this.trackedSessionIds.add(session.id)
       this.postMessage({
         type: "sessionCreated",
@@ -2119,6 +2157,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       },
       set currentSession(session) {
         self.currentSession = session
+        if (session) self.contextSessionID = session.id
       },
       trackedSessionIds: this.trackedSessionIds,
       connectionService: this.connectionService,
@@ -2259,7 +2298,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (!key.startsWith(prefix)) continue
       const parts = key.split(".")
       const section = parts.slice(0, -1).join(".")
-      const leaf = parts[parts.length - 1]
+      const leaf = parts[parts.length - 1]!
       const config = vscode.workspace.getConfiguration(section)
       await config.update(leaf, undefined, vscode.ConfigurationTarget.Global)
     }
@@ -2358,10 +2397,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Side effects that must happen before the webview message is sent
     if (event.type === "session.created" && !this.currentSession) {
       this.currentSession = event.properties.info
+      this.contextSessionID = event.properties.info.id
       this.trackedSessionIds.add(event.properties.info.id)
     }
     if (event.type === "session.updated" && this.currentSession?.id === event.properties.info.id) {
       this.currentSession = event.properties.info
+      this.contextSessionID = event.properties.info.id
     }
 
     const msg = mapSSEEventToWebviewMessage(event, sessionID)
@@ -2545,15 +2586,36 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Checks session directory overrides first (e.g., worktree paths), then falls back to workspace root.
    */
   private getWorkspaceDirectory(sessionId?: string): string {
-    if (sessionId) {
-      const dir = this.sessionDirectories.get(sessionId)
-      if (dir) return dir
-    }
+    return resolveWorkspaceDirectory({
+      sessionID: sessionId,
+      sessionDirectories: this.sessionDirectories,
+      workspaceDirectory: this.getRootDirectory(),
+    })
+  }
+
+  private getContextDirectory(): string {
+    return resolveContextDirectory({
+      currentSessionID: this.currentSession?.id,
+      contextSessionID: this.contextSessionID,
+      sessionDirectories: this.sessionDirectories,
+      workspaceDirectory: this.getRootDirectory(),
+    })
+  }
+
+  private getRootDirectory(): string {
     const workspaceFolders = vscode.workspace.workspaceFolders
     if (workspaceFolders && workspaceFolders.length > 0) {
-      return workspaceFolders[0].uri.fsPath
+      return workspaceFolders[0]!.uri.fsPath
     }
     return process.cwd()
+  }
+
+  private trackDirectory(sessionId: string, dir: string) {
+    if (path.resolve(dir) === path.resolve(this.getRootDirectory())) {
+      this.sessionDirectories.delete(sessionId)
+      return
+    }
+    this.sessionDirectories.set(sessionId, dir)
   }
 
   private getProjectDirectory(sessionId?: string): string | undefined {

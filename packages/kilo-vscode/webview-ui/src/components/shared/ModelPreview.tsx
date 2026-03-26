@@ -2,16 +2,10 @@ import { Component, Show, For } from "solid-js"
 import type { EnrichedModel } from "../../context/provider"
 import { Markdown } from "@kilocode/kilo-ui/markdown"
 import { sanitizeName } from "./model-selector-utils"
+import { fmtPrice } from "./model-preview-utils"
 
 interface Props {
   model: EnrichedModel | null
-}
-
-function fmtPrice(n: number): string {
-  if (n === 0) return "Free"
-  const per1M = n * 1_000_000
-  if (per1M < 0.01) return `$${per1M.toFixed(4)}/1M`
-  return `$${per1M.toFixed(2)}/1M`
 }
 
 function fmtContext(n: number): string {

@@ -503,6 +503,62 @@ export namespace MessageV2 {
   })
   export type WithParts = z.infer<typeof WithParts>
 
+  // kilocode_change start - strip bloated metadata fields from stored parts to prevent multi-MB payloads
+  // This handles both legacy data that was stored with full file contents and keeps the API response lean.
+  function stripPartMetadata(part: Part): Part {
+    if (part.type !== "tool") return part
+    const { state } = part
+    if (state.status !== "completed" && state.status !== "running") return part
+    const meta = state.metadata
+    if (!meta) return part
+
+    let changed = false
+    let next = meta
+
+    // Strip edit tool's filediff.before/after (full file contents)
+    if (meta.filediff && (meta.filediff.before || meta.filediff.after)) {
+      const { before, after, ...rest } = meta.filediff
+      next = { ...next, filediff: rest }
+      changed = true
+    }
+
+    // Strip apply_patch tool's files[].before/after (full file contents per file)
+    if (Array.isArray(meta.files) && meta.files.length > 0 && meta.files[0]?.before !== undefined) {
+      next = {
+        ...next,
+        files: meta.files.map((f: Record<string, unknown>) => {
+          const { before, after, ...rest } = f
+          return rest
+        }),
+      }
+      changed = true
+    }
+
+    if (!changed) return part
+    return { ...part, state: { ...state, metadata: next } } as Part
+  }
+
+  function stripMessageMetadata(info: Info): Info {
+    // Strip summary.diffs before/after from user messages (can be 20+ MB)
+    if (info.role !== "user") return info
+    const user = info as User
+    if (!user.summary?.diffs?.length) return info
+    const has = user.summary.diffs.some((d: Snapshot.FileDiff) => d.before || d.after)
+    if (!has) return info
+    return {
+      ...user,
+      summary: {
+        ...user.summary,
+        diffs: user.summary.diffs.map(({ before, after, ...rest }: Snapshot.FileDiff) => ({
+          ...rest,
+          before: "",
+          after: "",
+        })),
+      },
+    } as Info
+  }
+  // kilocode_change end
+
   export function toModelMessages(
     input: WithParts[],
     model: Provider.Model,
@@ -766,12 +822,12 @@ export namespace MessageV2 {
             .all(),
         )
         for (const row of partRows) {
-          const part = {
+          const part = stripPartMetadata({
             ...row.data,
             id: row.id,
             sessionID: row.session_id,
             messageID: row.message_id,
-          } as MessageV2.Part
+          } as MessageV2.Part) // kilocode_change - strip bloated metadata on read
           const list = partsByMessage.get(row.message_id)
           if (list) list.push(part)
           else partsByMessage.set(row.message_id, [part])
@@ -779,7 +835,7 @@ export namespace MessageV2 {
       }
 
       for (const row of rows) {
-        const info = { ...row.data, id: row.id, sessionID: row.session_id } as MessageV2.Info
+        const info = stripMessageMetadata({ ...row.data, id: row.id, sessionID: row.session_id } as MessageV2.Info) // kilocode_change
         yield {
           info,
           parts: partsByMessage.get(row.id) ?? [],
@@ -796,7 +852,13 @@ export namespace MessageV2 {
       db.select().from(PartTable).where(eq(PartTable.message_id, message_id)).orderBy(PartTable.id).all(),
     )
     return rows.map(
-      (row) => ({ ...row.data, id: row.id, sessionID: row.session_id, messageID: row.message_id }) as MessageV2.Part,
+      (row) =>
+        stripPartMetadata({
+          ...row.data,
+          id: row.id,
+          sessionID: row.session_id,
+          messageID: row.message_id,
+        } as MessageV2.Part), // kilocode_change - strip bloated metadata on read
     )
   })
 
@@ -808,7 +870,7 @@ export namespace MessageV2 {
     async (input): Promise<WithParts> => {
       const row = Database.use((db) => db.select().from(MessageTable).where(eq(MessageTable.id, input.messageID)).get())
       if (!row) throw new Error(`Message not found: ${input.messageID}`)
-      const info = { ...row.data, id: row.id, sessionID: row.session_id } as MessageV2.Info
+      const info = stripMessageMetadata({ ...row.data, id: row.id, sessionID: row.session_id } as MessageV2.Info) // kilocode_change
       return {
         info,
         parts: await parts(input.messageID),

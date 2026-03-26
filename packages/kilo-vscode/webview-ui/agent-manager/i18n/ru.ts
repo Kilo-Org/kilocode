@@ -29,6 +29,7 @@ export const dict = {
   "agentManager.session.untitled": "Без названия",
   "agentManager.session.newSession": "Новая сессия",
   "agentManager.session.openInWorktree": "Открыть в Worktree",
+  "agentManager.session.openLocally": "Открыть локально",
   "agentManager.session.readonly": "Сессия только для чтения",
   "agentManager.session.noSessions": "Нет открытых сессий",
   "agentManager.tab.close": "Закрыть",

@@ -1342,16 +1342,15 @@ export namespace Config {
     const files = GLOBAL_CONFIG_FILES.map((file) => path.join(Global.Path.config, file))
     // also check legacy TOML config — its presence means existing user
     const legacy = path.join(Global.Path.config, "config")
-    const existing: string[] = []
-    for (const file of files) {
-      if (existsSync(file)) existing.push(file)
-    }
+    const existing = files.filter((file) => existsSync(file))
     const hasLegacy = existsSync(legacy)
     // no global config → new user, they'll get the new bash:ask default
     if (existing.length === 0 && !hasLegacy) return
     // check if any config file already has an explicit bash permission
     for (const file of existing) {
-      const text = await Bun.file(file).text()
+      const text = await Bun.file(file)
+        .text()
+        .catch(() => "")
       const data = parseJsonc(text) ?? {}
       if (data.permission?.bash) return
     }
@@ -1372,11 +1371,12 @@ export namespace Config {
         formattingOptions: { insertSpaces: true, tabSize: 2 },
       })
       await Bun.write(target, applyEdits(text, edits))
-    } else {
-      const data = parseJsonc(text) ?? {}
-      const merged = { ...data, permission: { ...data.permission, bash: "allow" } }
-      await Bun.write(target, JSON.stringify(merged, null, 2))
+      log.info("migrated bash permission to allow for existing user", { path: target })
+      return
     }
+    const data = parseJsonc(text) ?? {}
+    const merged = { ...data, permission: { ...data.permission, bash: "allow" } }
+    await Bun.write(target, JSON.stringify(merged, null, 2))
     log.info("migrated bash permission to allow for existing user", { path: target })
   }
   // kilocode_change end

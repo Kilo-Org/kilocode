@@ -13,6 +13,10 @@ import { useLanguage } from "../../context/language"
 import type { AgentInfo, SkillInfo } from "../../types/messages"
 import ModeEditView from "./ModeEditView"
 import ModeCreateView from "./ModeCreateView"
+import McpEditView from "./McpEditView"
+import WorkflowsTab from "./agent-behaviour/WorkflowsTab"
+import { parseImport, MAX_IMPORT_SIZE } from "./mode-io"
+import type { ImportError } from "./mode-io"
 
 type SubtabId = "agents" | "mcpServers" | "rules" | "workflows" | "skills"
 
@@ -67,6 +71,9 @@ const AgentBehaviourTab: Component = () => {
   // Agent view state
   const [agentView, setAgentView] = createSignal<AgentView>("list")
   const [editingAgent, setEditingAgent] = createSignal<string>("")
+
+  // MCP view state
+  const [editingMcp, setEditingMcp] = createSignal<string>("")
 
   // Fetch skills whenever the skills subtab becomes active
   createEffect(() => {
@@ -226,6 +233,41 @@ const AgentBehaviourTab: Component = () => {
     setEditingAgent("")
   }
 
+  const [importError, setImportError] = createSignal("")
+
+  const errorKey = (tag: ImportError) => `settings.agentBehaviour.importMode.${tag}` as const
+
+  const importMode = (file: File) => {
+    setImportError("")
+    if (file.size > MAX_IMPORT_SIZE) {
+      setImportError(language.t(errorKey("tooLarge")))
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = parseImport(reader.result as string, agentNames())
+      if (!result.ok) {
+        setImportError(language.t(errorKey(result.error)))
+        return
+      }
+      const existing = config().agent ?? {}
+      updateConfig({ agent: { ...existing, [result.name]: result.config } })
+      setImportError("")
+    }
+    reader.readAsText(file)
+  }
+
+  const triggerImport = () => {
+    const input = document.createElement("input")
+    input.type = "file"
+    input.accept = ".json"
+    input.onchange = () => {
+      const file = input.files?.[0]
+      if (file) importMode(file)
+    }
+    input.click()
+  }
+
   const renderAgentsSubtab = () => {
     const view = agentView()
     if (view === "create") return <ModeCreateView taken={agentNames()} onBack={back} />
@@ -269,10 +311,27 @@ const AgentBehaviourTab: Component = () => {
           }}
         >
           <div data-slot="settings-row-label-title">{language.t("settings.agentBehaviour.availableAgents")}</div>
-          <Button variant="secondary" size="small" onClick={() => setAgentView("create")}>
-            {language.t("settings.agentBehaviour.createMode")}
-          </Button>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <Button variant="ghost" size="small" onClick={triggerImport}>
+              {language.t("settings.agentBehaviour.importMode")}
+            </Button>
+            <Button variant="secondary" size="small" onClick={() => setAgentView("create")}>
+              {language.t("settings.agentBehaviour.createMode")}
+            </Button>
+          </div>
         </div>
+
+        <Show when={importError()}>
+          <div
+            style={{
+              "font-size": "12px",
+              color: "var(--vscode-errorForeground)",
+              "margin-bottom": "8px",
+            }}
+          >
+            {importError()}
+          </div>
+        </Show>
 
         {/* Agents list - clickable to edit */}
         <Show
@@ -295,6 +354,9 @@ const AgentBehaviourTab: Component = () => {
               {(name, index) => {
                 const agent = () => session.agents().find((a) => a.name === name)
                 const isCustom = () => !agent()?.native
+                const agentCfg = () => config().agent?.[name] ?? {}
+                const disabled = () => agentCfg().disable ?? false
+                const hidden = () => agentCfg().hidden ?? false
                 return (
                   <div
                     style={{
@@ -305,6 +367,7 @@ const AgentBehaviourTab: Component = () => {
                       "border-bottom": index() < agentNames().length - 1 ? "1px solid var(--border-weak-base)" : "none",
                       "border-radius": "4px",
                       cursor: "pointer",
+                      opacity: disabled() ? "0.5" : "1",
                     }}
                     onClick={() => startEdit(name)}
                     onMouseEnter={(e) => {
@@ -328,6 +391,32 @@ const AgentBehaviourTab: Component = () => {
                             }}
                           >
                             custom
+                          </span>
+                        </Show>
+                        <Show when={hidden()}>
+                          <span
+                            style={{
+                              "font-size": "10px",
+                              padding: "1px 5px",
+                              "border-radius": "3px",
+                              background: "var(--bg-subtle-base, var(--vscode-badge-background))",
+                              color: "var(--text-weak-base, var(--vscode-badge-foreground))",
+                            }}
+                          >
+                            {language.t("settings.agentBehaviour.badge.hidden")}
+                          </span>
+                        </Show>
+                        <Show when={disabled()}>
+                          <span
+                            style={{
+                              "font-size": "10px",
+                              padding: "1px 5px",
+                              "border-radius": "3px",
+                              background: "var(--vscode-errorForeground, #f44)",
+                              color: "var(--vscode-errorForeground-foreground, #fff)",
+                            }}
+                          >
+                            {language.t("settings.agentBehaviour.badge.disabled")}
                           </span>
                         </Show>
                       </div>
@@ -398,6 +487,24 @@ const AgentBehaviourTab: Component = () => {
 
   const renderMcpSubtab = () => {
     const mcpEntries = createMemo(() => Object.entries(config().mcp ?? {}))
+    const [expanded, setExpanded] = createSignal<Record<string, boolean>>({})
+
+    const toggle = (name: string) => {
+      setExpanded((prev) => ({ ...prev, [name]: !prev[name] }))
+    }
+
+    if (editingMcp()) {
+      return (
+        <McpEditView
+          name={editingMcp()}
+          onBack={() => setEditingMcp("")}
+          onRemove={(name) => {
+            confirmRemoveMcp(name)
+            setEditingMcp("")
+          }}
+        />
+      )
+    }
 
     return (
       <div>
@@ -418,50 +525,147 @@ const AgentBehaviourTab: Component = () => {
         >
           <Card>
             <For each={mcpEntries()}>
-              {([name, mcp], index) => (
-                <div
-                  style={{
-                    display: "flex",
-                    "align-items": "center",
-                    "justify-content": "space-between",
-                    padding: "8px 0",
-                    "border-bottom": index() < mcpEntries().length - 1 ? "1px solid var(--border-weak-base)" : "none",
-                  }}
-                >
-                  <div style={{ flex: 1, "min-width": 0 }}>
-                    <div style={{ "font-weight": "500" }}>{name}</div>
+              {([name, mcp], index) => {
+                const open = () => expanded()[name] ?? false
+                const env = () => Object.entries(mcp.environment ?? mcp.env ?? {})
+                return (
+                  <div
+                    style={{
+                      "border-bottom": index() < mcpEntries().length - 1 ? "1px solid var(--border-weak-base)" : "none",
+                    }}
+                  >
+                    {/* Header row */}
                     <div
                       style={{
-                        "font-size": "12px",
-                        color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
-                        "margin-top": "4px",
-                        "font-family": "var(--vscode-editor-font-family, monospace)",
+                        display: "flex",
+                        "align-items": "center",
+                        "justify-content": "space-between",
+                        padding: "8px 0",
+                        cursor: "pointer",
                       }}
+                      onClick={() => toggle(name)}
                     >
-                      <Show when={mcp.command}>
-                        <div>
-                          command:{" "}
-                          {Array.isArray(mcp.command)
-                            ? mcp.command.join(" ")
-                            : `${mcp.command} ${(mcp.args ?? []).join(" ")}`}
-                        </div>
-                      </Show>
-                      <Show when={mcp.url}>
-                        <div>url: {mcp.url}</div>
-                      </Show>
+                      <div style={{ display: "flex", "align-items": "center", gap: "6px", flex: 1, "min-width": 0 }}>
+                        <IconButton
+                          size="small"
+                          variant="ghost"
+                          icon={open() ? "chevron-down" : "chevron-right"}
+                          onClick={(e: MouseEvent) => {
+                            e.stopPropagation()
+                            toggle(name)
+                          }}
+                        />
+                        <div style={{ "font-weight": "500" }}>{name}</div>
+                        <span
+                          style={{
+                            "font-size": "10px",
+                            color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                          }}
+                        >
+                          {mcp.url ? "remote" : "stdio"}
+                        </span>
+                      </div>
+                      <div style={{ display: "flex", gap: "4px" }}>
+                        <IconButton
+                          size="small"
+                          variant="ghost"
+                          icon="close"
+                          onClick={(e: MouseEvent) => {
+                            e.stopPropagation()
+                            confirmRemoveMcp(name)
+                          }}
+                        />
+                        <IconButton
+                          size="small"
+                          variant="ghost"
+                          icon="chevron-right"
+                          onClick={(e: MouseEvent) => {
+                            e.stopPropagation()
+                            setEditingMcp(name)
+                          }}
+                        />
+                      </div>
                     </div>
+
+                    {/* Expandable detail */}
+                    <Show when={open()}>
+                      <div
+                        style={{
+                          "padding-left": "28px",
+                          "padding-bottom": "8px",
+                          "font-size": "12px",
+                          color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                        }}
+                      >
+                        <Show when={mcp.command}>
+                          <div style={{ "margin-bottom": "4px" }}>
+                            <span style={{ "font-weight": "500" }}>
+                              {language.t("settings.agentBehaviour.mcpDetail.command")}:{" "}
+                            </span>
+                            <span style={{ "font-family": "var(--vscode-editor-font-family, monospace)" }}>
+                              {Array.isArray(mcp.command) ? mcp.command[0] : mcp.command}
+                            </span>
+                          </div>
+                          <Show
+                            when={
+                              (Array.isArray(mcp.command) && mcp.command.length > 1) ||
+                              (!Array.isArray(mcp.command) && mcp.args && mcp.args.length > 0)
+                            }
+                          >
+                            <div style={{ "margin-bottom": "4px" }}>
+                              <span style={{ "font-weight": "500" }}>
+                                {language.t("settings.agentBehaviour.mcpDetail.args")}:{" "}
+                              </span>
+                              <span style={{ "font-family": "var(--vscode-editor-font-family, monospace)" }}>
+                                {Array.isArray(mcp.command)
+                                  ? (mcp.command as string[]).slice(1).join(" ")
+                                  : (mcp.args ?? []).join(" ")}
+                              </span>
+                            </div>
+                          </Show>
+                        </Show>
+                        <Show when={mcp.url}>
+                          <div style={{ "margin-bottom": "4px" }}>
+                            <span style={{ "font-weight": "500" }}>URL: </span>
+                            <span style={{ "font-family": "var(--vscode-editor-font-family, monospace)" }}>
+                              {mcp.url}
+                            </span>
+                          </div>
+                        </Show>
+                        <Show when={env().length > 0}>
+                          <div style={{ "margin-bottom": "4px" }}>
+                            <span style={{ "font-weight": "500" }}>
+                              {language.t("settings.agentBehaviour.mcpDetail.env")}:
+                            </span>
+                          </div>
+                          <For each={env()}>
+                            {([key, val]) => (
+                              <div
+                                style={{
+                                  "padding-left": "8px",
+                                  "font-family": "var(--vscode-editor-font-family, monospace)",
+                                }}
+                              >
+                                {key}={val}
+                              </div>
+                            )}
+                          </For>
+                        </Show>
+                        <Show when={mcp.enabled === false}>
+                          <div
+                            style={{
+                              "margin-top": "4px",
+                              color: "var(--vscode-errorForeground)",
+                            }}
+                          >
+                            {language.t("settings.agentBehaviour.mcpDetail.disabled")}
+                          </div>
+                        </Show>
+                      </div>
+                    </Show>
                   </div>
-                  <IconButton
-                    size="small"
-                    variant="ghost"
-                    icon="close"
-                    onClick={(e: MouseEvent) => {
-                      e.stopPropagation()
-                      confirmRemoveMcp(name)
-                    }}
-                  />
-                </div>
-              )}
+                )
+              }}
             </For>
           </Card>
         </Show>
@@ -623,6 +827,18 @@ const AgentBehaviourTab: Component = () => {
 
   const renderRulesSubtab = () => (
     <div>
+      {/* Description */}
+      <div
+        style={{
+          "font-size": "12px",
+          color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+          "margin-bottom": "12px",
+          "line-height": "1.5",
+        }}
+      >
+        {language.t("settings.agentBehaviour.rules.description")}
+      </div>
+
       <Card>
         <div
           style={{
@@ -704,7 +920,7 @@ const AgentBehaviourTab: Component = () => {
       case "rules":
         return renderRulesSubtab()
       case "workflows":
-        return <Placeholder text={language.t("settings.agentBehaviour.workflowsPlaceholder")} />
+        return <WorkflowsTab />
       case "skills":
         return renderSkillsSubtab()
       default:
@@ -728,11 +944,12 @@ const AgentBehaviourTab: Component = () => {
             <button
               onClick={() => {
                 setActiveSubtab(subtab.id)
-                // Reset agent view when switching subtabs
+                // Reset views when switching subtabs
                 if (subtab.id === "agents") {
                   setAgentView("list")
                   setEditingAgent("")
                 }
+                setEditingMcp("")
               }}
               style={{
                 padding: "8px 16px",

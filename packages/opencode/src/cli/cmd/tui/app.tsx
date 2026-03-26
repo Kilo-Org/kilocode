@@ -268,6 +268,17 @@ function App() {
   })
   // kilocode_change end
 
+  // kilocode_change start — evict per-session data from store when navigating away
+  createEffect(
+    on(
+      () => (route.data.type === "session" ? route.data.sessionID : undefined),
+      (current, prev) => {
+        if (prev && prev !== current) sync.session.evict(prev)
+      },
+    ),
+  )
+  // kilocode_change end
+
   // Update terminal window title based on current route and session
   createEffect(() => {
     if (!terminalTitleEnabled() || Flag.KILO_DISABLE_TERMINAL_TITLE) return

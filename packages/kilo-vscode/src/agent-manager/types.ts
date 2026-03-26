@@ -229,6 +229,11 @@ interface PromoteSessionIn {
   sessionId: string
 }
 
+interface OpenLocallyIn {
+  type: "agentManager.openLocally"
+  sessionId: string
+}
+
 interface AddSessionToWorktreeIn {
   type: "agentManager.addSessionToWorktree"
   worktreeId: string
@@ -411,12 +416,18 @@ interface AbortIn {
   sessionID: string
 }
 
+interface ContinueInWorktreeIn {
+  type: "continueInWorktree"
+  sessionId: string
+}
+
 /** All messages the Agent Manager expects from the webview (onMessage input). */
 export type AgentManagerInMessage =
   | CreateWorktreeIn
   | DeleteWorktreeIn
   | RemoveStaleWorktreeIn
   | PromoteSessionIn
+  | OpenLocallyIn
   | AddSessionToWorktreeIn
   | CloseSessionIn
   | ForkSessionIn
@@ -451,3 +462,4 @@ export type AgentManagerInMessage =
   | LoadMessagesIn
   | ClearSessionIn
   | AbortIn
+  | ContinueInWorktreeIn

@@ -152,6 +152,7 @@ export function useFileMention(vscode: VSCodeContext): FileMention {
     }
     if (e.key === "Escape") {
       e.preventDefault()
+      e.stopPropagation()
       closeMention()
       return true
     }

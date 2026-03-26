@@ -29,6 +29,7 @@ export const dict = {
   "agentManager.session.untitled": "無題",
   "agentManager.session.newSession": "新しいセッション",
   "agentManager.session.openInWorktree": "Worktreeで開く",
+  "agentManager.session.openLocally": "ローカルで開く",
   "agentManager.session.readonly": "読み取り専用セッション",
   "agentManager.session.noSessions": "開いているセッションがありません",
   "agentManager.tab.close": "閉じる",

@@ -825,8 +825,11 @@ export const dict = {
   "session.delete.button": "Oturumu sil",
   "session.untitled": "Adsız",
   "session.recent": "Son",
+  "session.showHistory": "Geçmişi Göster",
   "session.search.placeholder": "Oturum ara...",
   "session.empty": "Henüz oturum yok. Yeni bir sohbet başlatmak için + tıklayın.",
+  "session.tab.local": "Local",
+  "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Yalnızca bu depo",
   "session.cloud.import": "Buluttan içe aktar",
   "feedback.button": "Geri Bildirim ve Destek",
@@ -1051,11 +1054,25 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Çekirdek örnekleme parametresi (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Maksimum Adım",
   "settings.agentBehaviour.maxSteps.description": "Maksimum ajanlık yinelemesi",
+  "settings.agentBehaviour.hidden.title": "Gizli",
+  "settings.agentBehaviour.hidden.description": "Bu ajanı sohbet girişindeki mod değiştiriciden gizle",
+  "settings.agentBehaviour.disable.title": "Devre dışı",
+  "settings.agentBehaviour.disable.description": "Bu ajanı tamamen devre dışı bırak — hiçbir yerde görünmeyecek",
+  "settings.agentBehaviour.badge.hidden": "gizli",
+  "settings.agentBehaviour.badge.disabled": "devre dışı",
   "settings.agentBehaviour.discoveredSkills": "Keşfedilen Beceriler",
   "settings.agentBehaviour.noSkillsFound":
     "Keşfedilen beceri yok. Becerileri kullanılabilir kılmak için aşağıya beceri klasör yolları veya URL'ler ekleyin.",
   "settings.agentBehaviour.availableModes": "Mevcut Özel Modlar",
   "settings.agentBehaviour.noModesFound": "Mod bulunamadı.",
+  "settings.agentBehaviour.importMode": "İçe Aktar",
+  "settings.agentBehaviour.importMode.invalidName":
+    "Dosyadaki mod adı geçersiz. Ad küçük harfle başlamalı ve yalnızca küçük harfler, rakamlar ve tire içermelidir.",
+  "settings.agentBehaviour.importMode.nameTaken": "Bu ada sahip bir mod zaten mevcut.",
+  "settings.agentBehaviour.importMode.invalidJson":
+    "Geçersiz JSON dosyası. Lütfen geçerli bir ajan tanım dosyası seçin.",
+  "settings.agentBehaviour.importMode.tooLarge": "Dosya çok büyük. Ajan tanımları 1 MB'den küçük olmalıdır.",
+  "settings.agentBehaviour.exportMode": "Ajan tanımını dışa aktar",
   "settings.agentBehaviour.removeMode.title": "Modu kaldır",
   "settings.agentBehaviour.removeMode.confirm":
     '"{{name}}" modu kaldırılsın mı? Bu, yapılandırmanızı güncelleyerek modu devre dışı bırakacak.',
@@ -1066,6 +1083,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.confirm":
     '"{{name}}" becerisi kaldırılsın mı? Bu, beceri dosyalarını diskten silecek.',
   "settings.agentBehaviour.removeSkill.button": "Kaldır",
+  "settings.agentBehaviour.rules.description":
+    "Kurallar, ajanın davranışını yönlendiren talimat dosyalarıdır. Her konuşma için sistem komutuna dahil edilirler. Ek kurallar eklemek için aşağıya dosya yolları ekleyin.",
   "settings.agentBehaviour.instructionFiles": "Ek Talimat Dosyaları",
   "settings.agentBehaviour.instructionFiles.description":
     "Sistem komutuna dahil edilen ek talimat dosyalarının yolları",
@@ -1073,9 +1092,31 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.confirm":
     '"{{name}}" MCP sunucusu kaldırılsın mı? Bu, yapılandırmanızdan kaldırılacak.',
   "settings.agentBehaviour.removeMcp.button": "Kaldır",
+  "settings.agentBehaviour.mcpDetail.command": "Komut",
+  "settings.agentBehaviour.mcpDetail.args": "Argümanlar",
+  "settings.agentBehaviour.mcpDetail.env": "Ortam",
+  "settings.agentBehaviour.mcpDetail.disabled": "Bu sunucu devre dışı.",
+  "settings.agentBehaviour.editMcp": "MCP Sunucusunu Düzenle",
+  "settings.agentBehaviour.editMcp.transportLocal": "Yerel sunucu (stdio taşıma)",
+  "settings.agentBehaviour.editMcp.transportRemote": "Uzak sunucu (SSE/HTTP taşıma)",
+  "settings.agentBehaviour.editMcp.env": "Ortam Değişkenleri",
+  "settings.agentBehaviour.editMcp.env.help": "MCP sunucu sürecine aktarılan değişkenler.",
+  "settings.agentBehaviour.addMcp.command": "Komut",
+  "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
+  "settings.agentBehaviour.addMcp.args": "Argümanlar",
+  "settings.agentBehaviour.addMcp.args.help": "Satır başına bir argüman. Boşluklu yollar olduğu gibi korunur.",
+  "settings.agentBehaviour.addMcp.args.placeholder": "e.g.\n-y\n@modelcontextprotocol/server-filesystem\n/tmp",
+  "settings.agentBehaviour.addMcp.url": "Sunucu URL'si",
+  "settings.agentBehaviour.addMcp.url.placeholder": "e.g. http://localhost:3000/sse",
   "settings.agentBehaviour.mcpEmpty":
     "Yapılandırılmış MCP sunucusu yok. MCP sunucuları eklemek için opencode yapılandırma dosyasını düzenleyin.",
   "settings.agentBehaviour.workflowsPlaceholder": "İş akışları çalışma alanınızdaki iş akışı dosyaları ile yönetilir.",
+  "settings.agentBehaviour.workflows.description":
+    "İş akışları, yapılandırmanızda tanımlanan özel eğik çizgi komutlarıdır. Çağırmak için sohbette /command-name yazın. Komutlar opencode.json dosyasındaki 'command' bölümünde yapılandırılır.",
+  "settings.agentBehaviour.workflows.empty":
+    "Yapılandırılmış özel komut yok. Burada görmek için opencode.json dosyasına komutlar ekleyin.",
+  "settings.agentBehaviour.workflows.detail.description": "Açıklama",
+  "settings.agentBehaviour.workflows.detail.template": "Şablon",
   "settings.agentBehaviour.notImplemented": "Henüz uygulanmadı.",
 
   "settings.autoApprove.description":

@@ -823,8 +823,11 @@ export const dict = {
   "session.delete.button": "Verwijder sessie",
   "session.untitled": "Naamloos",
   "session.recent": "Recent",
+  "session.showHistory": "Geschiedenis weergeven",
   "session.search.placeholder": "Zoek sessies...",
   "session.empty": "Nog geen sessies. Klik op + om een nieuw gesprek te starten.",
+  "session.tab.local": "Local",
+  "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Alleen deze repository",
   "session.cloud.import": "Importeer uit de cloud",
   "feedback.button": "Feedback & Ondersteuning",
@@ -1052,11 +1055,25 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Nucleus sampling parameter (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Max Stappen",
   "settings.agentBehaviour.maxSteps.description": "Maximale agent iteraties",
+  "settings.agentBehaviour.hidden.title": "Verborgen",
+  "settings.agentBehaviour.hidden.description": "Verberg deze agent uit de modusschakelaar in de chatinvoer",
+  "settings.agentBehaviour.disable.title": "Uitgeschakeld",
+  "settings.agentBehaviour.disable.description": "Schakel deze agent volledig uit — deze verschijnt nergens",
+  "settings.agentBehaviour.badge.hidden": "verborgen",
+  "settings.agentBehaviour.badge.disabled": "uitgeschakeld",
   "settings.agentBehaviour.discoveredSkills": "Ontdekte Skills",
   "settings.agentBehaviour.noSkillsFound":
     "Geen skills ontdekt. Voeg hieronder skill mappaden of URL's toe om skills beschikbaar te maken.",
   "settings.agentBehaviour.availableModes": "Beschikbare Aangepaste Modi",
   "settings.agentBehaviour.noModesFound": "Geen modi gevonden.",
+  "settings.agentBehaviour.importMode": "Importeren",
+  "settings.agentBehaviour.importMode.invalidName":
+    "Ongeldige modusnaam in bestand. De naam moet beginnen met een kleine letter en mag alleen kleine letters, cijfers en streepjes bevatten.",
+  "settings.agentBehaviour.importMode.nameTaken": "Er bestaat al een modus met deze naam.",
+  "settings.agentBehaviour.importMode.invalidJson":
+    "Ongeldig JSON-bestand. Selecteer een geldig agentdefinitiebestand.",
+  "settings.agentBehaviour.importMode.tooLarge": "Bestand is te groot. Agentdefinities moeten kleiner zijn dan 1 MB.",
+  "settings.agentBehaviour.exportMode": "Agentdefinitie exporteren",
   "settings.agentBehaviour.removeMode.title": "Verwijder modus",
   "settings.agentBehaviour.removeMode.confirm":
     'Modus "{{name}}" verwijderen? Dit zal de modus uitschakelen door je configuratie bij te werken.',
@@ -1067,6 +1084,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.confirm":
     'Skill "{{name}}" verwijderen? Dit verwijdert de skill bestanden van schijf.',
   "settings.agentBehaviour.removeSkill.button": "Verwijderen",
+  "settings.agentBehaviour.rules.description":
+    "Regels zijn instructiebestanden die het gedrag van de agent sturen. Ze worden opgenomen in de systeemprompt voor elk gesprek. Voeg hieronder bestandspaden toe om aanvullende regels op te nemen.",
   "settings.agentBehaviour.instructionFiles": "Aanvullende Instructiebestanden",
   "settings.agentBehaviour.instructionFiles.description":
     "Paden naar aanvullende instructiebestanden die zijn opgenomen in de systeem prompt",
@@ -1074,9 +1093,32 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.confirm":
     'MCP-server "{{name}}" verwijderen? Dit zal deze uit je configuratie verwijderen.',
   "settings.agentBehaviour.removeMcp.button": "Verwijderen",
+  "settings.agentBehaviour.mcpDetail.command": "Opdracht",
+  "settings.agentBehaviour.mcpDetail.args": "Argumenten",
+  "settings.agentBehaviour.mcpDetail.env": "Omgeving",
+  "settings.agentBehaviour.mcpDetail.disabled": "Deze server is uitgeschakeld.",
+  "settings.agentBehaviour.editMcp": "MCP-server bewerken",
+  "settings.agentBehaviour.editMcp.transportLocal": "Lokale server (stdio-transport)",
+  "settings.agentBehaviour.editMcp.transportRemote": "Externe server (SSE/HTTP-transport)",
+  "settings.agentBehaviour.editMcp.env": "Omgevingsvariabelen",
+  "settings.agentBehaviour.editMcp.env.help": "Variabelen die worden doorgegeven aan het MCP-serverproces.",
+  "settings.agentBehaviour.addMcp.command": "Opdracht",
+  "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
+  "settings.agentBehaviour.addMcp.args": "Argumenten",
+  "settings.agentBehaviour.addMcp.args.help":
+    "Eén argument per regel. Paden met spaties worden ongewijzigd overgenomen.",
+  "settings.agentBehaviour.addMcp.args.placeholder": "e.g.\n-y\n@modelcontextprotocol/server-filesystem\n/tmp",
+  "settings.agentBehaviour.addMcp.url": "Server-URL",
+  "settings.agentBehaviour.addMcp.url.placeholder": "e.g. http://localhost:3000/sse",
   "settings.agentBehaviour.mcpEmpty":
     "Geen MCP-servers geconfigureerd. Bewerk het opencode configuratiebestand om MCP-servers toe te voegen.",
   "settings.agentBehaviour.workflowsPlaceholder": "Workflows worden beheerd via workflowbestanden in je workspace.",
+  "settings.agentBehaviour.workflows.description":
+    "Workflows zijn aangepaste slash-commando's gedefinieerd in je configuratie. Typ /command-name in de chat om ze aan te roepen. Commando's worden geconfigureerd in opencode.json onder de sectie 'command'.",
+  "settings.agentBehaviour.workflows.empty":
+    "Geen aangepaste commando's geconfigureerd. Voeg commando's toe aan opencode.json om ze hier te zien.",
+  "settings.agentBehaviour.workflows.detail.description": "Beschrijving",
+  "settings.agentBehaviour.workflows.detail.template": "Sjabloon",
   "settings.agentBehaviour.notImplemented": "Nog niet geïmplementeerd.",
 
   "settings.autoApprove.description":

@@ -835,8 +835,11 @@ export const dict = {
   "session.delete.button": "Sitzung löschen",
   "session.untitled": "Unbenannt",
   "session.recent": "Kürzlich",
+  "session.showHistory": "Verlauf anzeigen",
   "session.search.placeholder": "Sitzungen suchen...",
   "session.empty": "Noch keine Sitzungen. Klicke + um eine neue Unterhaltung zu starten.",
+  "session.tab.local": "Local",
+  "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Nur dieses Repository",
   "session.cloud.import": "Aus der Cloud importieren",
   "feedback.button": "Feedback & Support",
@@ -1060,6 +1063,12 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Nucleus-Sampling-Parameter (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Max. Schritte",
   "settings.agentBehaviour.maxSteps.description": "Maximale Agent-Iterationen",
+  "settings.agentBehaviour.hidden.title": "Versteckt",
+  "settings.agentBehaviour.hidden.description": "Diesen Agent im Modus-Umschalter der Chat-Eingabe ausblenden",
+  "settings.agentBehaviour.disable.title": "Deaktiviert",
+  "settings.agentBehaviour.disable.description": "Diesen Agent vollständig deaktivieren — er wird nirgends angezeigt",
+  "settings.agentBehaviour.badge.hidden": "versteckt",
+  "settings.agentBehaviour.badge.disabled": "deaktiviert",
   "settings.agentBehaviour.discoveredSkills": "Erkannte Skills",
   "settings.agentBehaviour.noSkillsFound":
     "Keine Skills gefunden. Fügen Sie unten Skill-Ordnerpfade oder URLs hinzu, um Skills verfügbar zu machen.",
@@ -1082,6 +1091,14 @@ export const dict = {
   "settings.agentBehaviour.createMode.nameRequired": "Name ist erforderlich",
   "settings.agentBehaviour.createMode.nameInvalid": "Name darf nur Kleinbuchstaben, Zahlen und Bindestriche enthalten",
   "settings.agentBehaviour.createMode.nameTaken": "Ein Modus mit diesem Namen existiert bereits",
+  "settings.agentBehaviour.importMode": "Importieren",
+  "settings.agentBehaviour.importMode.invalidName":
+    "Ungültiger Modusname in der Datei. Der Name muss mit einem Kleinbuchstaben beginnen und darf nur Kleinbuchstaben, Zahlen und Bindestriche enthalten.",
+  "settings.agentBehaviour.importMode.nameTaken": "Ein Modus mit diesem Namen existiert bereits.",
+  "settings.agentBehaviour.importMode.invalidJson":
+    "Ungültige JSON-Datei. Bitte wählen Sie eine gültige Agenten-Definitionsdatei aus.",
+  "settings.agentBehaviour.importMode.tooLarge": "Datei ist zu groß. Agentdefinitionen müssen unter 1 MB sein.",
+  "settings.agentBehaviour.exportMode": "Agenten-Definition exportieren",
   "settings.agentBehaviour.editMode": "Modus bearbeiten",
   "settings.agentBehaviour.editMode.description": "Beschreibung",
   "settings.agentBehaviour.editMode.prompt": "System-Prompt",
@@ -1098,18 +1115,43 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.confirm":
     'MCP-Server "{{name}}" entfernen? Dadurch wird er aus Ihrer Konfiguration entfernt.',
   "settings.agentBehaviour.removeMcp.button": "Entfernen",
+  "settings.agentBehaviour.editMcp": "MCP-Server bearbeiten",
+  "settings.agentBehaviour.editMcp.transportLocal": "Lokaler Server (stdio-Transport)",
+  "settings.agentBehaviour.editMcp.transportRemote": "Remote-Server (SSE/HTTP-Transport)",
+  "settings.agentBehaviour.editMcp.env": "Umgebungsvariablen",
+  "settings.agentBehaviour.editMcp.env.help": "Variablen, die an den MCP-Serverprozess übergeben werden.",
+  "settings.agentBehaviour.addMcp.command": "Befehl",
+  "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
+  "settings.agentBehaviour.addMcp.args": "Argumente",
+  "settings.agentBehaviour.addMcp.args.help":
+    "Ein Argument pro Zeile. Pfade mit Leerzeichen werden unverändert übernommen.",
+  "settings.agentBehaviour.addMcp.args.placeholder": "e.g.\n-y\n@modelcontextprotocol/server-filesystem\n/tmp",
+  "settings.agentBehaviour.addMcp.url": "Server-URL",
+  "settings.agentBehaviour.addMcp.url.placeholder": "e.g. http://localhost:3000/sse",
   "settings.agentBehaviour.skillPaths": "Skill-Ordnerpfade",
   "settings.agentBehaviour.skillUrls": "Skill-URLs",
   "settings.agentBehaviour.removeSkill.title": "Skill entfernen",
   "settings.agentBehaviour.removeSkill.confirm":
     'Skill "{{name}}" entfernen? Dadurch werden die Skill-Dateien vom Datenträger gelöscht.',
   "settings.agentBehaviour.removeSkill.button": "Entfernen",
+  "settings.agentBehaviour.rules.description":
+    "Regeln sind Anweisungsdateien, die das Verhalten des Agenten steuern. Sie werden in den System-Prompt für jede Konversation eingebunden. Fügen Sie unten Dateipfade hinzu, um zusätzliche Regeln einzubinden.",
   "settings.agentBehaviour.instructionFiles": "Zusätzliche Anweisungsdateien",
   "settings.agentBehaviour.instructionFiles.description": "Pfade zu zusätzlichen Anweisungsdateien im System-Prompt",
+  "settings.agentBehaviour.mcpDetail.command": "Befehl",
+  "settings.agentBehaviour.mcpDetail.args": "Argumente",
+  "settings.agentBehaviour.mcpDetail.env": "Umgebung",
+  "settings.agentBehaviour.mcpDetail.disabled": "Dieser Server ist deaktiviert.",
   "settings.agentBehaviour.mcpEmpty":
     "Keine MCP-Server konfiguriert. Bearbeiten Sie die opencode-Konfigurationsdatei, um MCP-Server hinzuzufügen.",
   "settings.agentBehaviour.workflowsPlaceholder":
     "Workflows werden über Workflow-Dateien in Ihrem Arbeitsbereich verwaltet.",
+  "settings.agentBehaviour.workflows.description":
+    "Workflows sind benutzerdefinierte Slash-Befehle, die in Ihrer Konfiguration definiert sind. Geben Sie /command-name im Chat ein, um sie aufzurufen. Befehle werden in opencode.json im Abschnitt 'command' konfiguriert.",
+  "settings.agentBehaviour.workflows.empty":
+    "Keine benutzerdefinierten Befehle konfiguriert. Fügen Sie Befehle zu opencode.json hinzu, um sie hier zu sehen.",
+  "settings.agentBehaviour.workflows.detail.description": "Beschreibung",
+  "settings.agentBehaviour.workflows.detail.template": "Vorlage",
   "settings.agentBehaviour.notImplemented": "Noch nicht implementiert.",
   "settings.autoApprove.description":
     "Legen Sie fest, wie Tools ausgeführt werden dürfen. Die meisten Tools sind standardmäßig auf Zulassen eingestellt. doom_loop und external_directory sind standardmäßig auf Fragen eingestellt.",

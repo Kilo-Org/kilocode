@@ -837,8 +837,11 @@ export const dict = {
   "session.delete.button": "Supprimer la session",
   "session.untitled": "Sans titre",
   "session.recent": "Récentes",
+  "session.showHistory": "Afficher l'historique",
   "session.search.placeholder": "Rechercher des sessions...",
   "session.empty": "Aucune session pour l'instant. Cliquez + pour démarrer une nouvelle conversation.",
+  "session.tab.local": "Local",
+  "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Uniquement ce dépôt",
   "session.cloud.import": "Importer depuis le cloud",
   "feedback.button": "Commentaires & support",
@@ -1062,6 +1065,12 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Paramètre d'échantillonnage nucleus (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Étapes max.",
   "settings.agentBehaviour.maxSteps.description": "Itérations maximales de l'agent",
+  "settings.agentBehaviour.hidden.title": "Masqué",
+  "settings.agentBehaviour.hidden.description": "Masquer cet agent du sélecteur de mode dans la saisie du chat",
+  "settings.agentBehaviour.disable.title": "Désactivé",
+  "settings.agentBehaviour.disable.description": "Désactiver complètement cet agent — il n'apparaîtra nulle part",
+  "settings.agentBehaviour.badge.hidden": "masqué",
+  "settings.agentBehaviour.badge.disabled": "désactivé",
   "settings.agentBehaviour.discoveredSkills": "Compétences découvertes",
   "settings.agentBehaviour.noSkillsFound":
     "Aucune compétence découverte. Ajoutez des chemins de dossiers ou des URLs ci-dessous pour rendre les compétences disponibles.",
@@ -1086,6 +1095,15 @@ export const dict = {
   "settings.agentBehaviour.createMode.nameInvalid":
     "Le nom ne doit contenir que des minuscules, des chiffres et des tirets",
   "settings.agentBehaviour.createMode.nameTaken": "Un mode avec ce nom existe déjà",
+  "settings.agentBehaviour.importMode": "Importer",
+  "settings.agentBehaviour.importMode.invalidName":
+    "Nom de mode invalide dans le fichier. Le nom doit commencer par une lettre minuscule et ne contenir que des lettres minuscules, des chiffres et des tirets.",
+  "settings.agentBehaviour.importMode.nameTaken": "Un mode avec ce nom existe déjà.",
+  "settings.agentBehaviour.importMode.invalidJson":
+    "Fichier JSON invalide. Veuillez sélectionner un fichier de définition d'agent valide.",
+  "settings.agentBehaviour.importMode.tooLarge":
+    "Le fichier est trop volumineux. Les définitions d'agent doivent faire moins de 1 Mo.",
+  "settings.agentBehaviour.exportMode": "Exporter la définition de l'agent",
   "settings.agentBehaviour.editMode": "Modifier le mode",
   "settings.agentBehaviour.editMode.description": "Description",
   "settings.agentBehaviour.editMode.prompt": "Prompt système",
@@ -1101,18 +1119,43 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.confirm":
     'Supprimer le serveur MCP "{{name}}" ? Cela le supprimera de votre configuration.',
   "settings.agentBehaviour.removeMcp.button": "Supprimer",
+  "settings.agentBehaviour.editMcp": "Modifier le serveur MCP",
+  "settings.agentBehaviour.editMcp.transportLocal": "Serveur local (transport stdio)",
+  "settings.agentBehaviour.editMcp.transportRemote": "Serveur distant (transport SSE/HTTP)",
+  "settings.agentBehaviour.editMcp.env": "Variables d'environnement",
+  "settings.agentBehaviour.editMcp.env.help": "Variables transmises au processus du serveur MCP.",
+  "settings.agentBehaviour.addMcp.command": "Commande",
+  "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
+  "settings.agentBehaviour.addMcp.args": "Arguments",
+  "settings.agentBehaviour.addMcp.args.help":
+    "Un argument par ligne. Les chemins avec des espaces sont conservés tels quels.",
+  "settings.agentBehaviour.addMcp.args.placeholder": "e.g.\n-y\n@modelcontextprotocol/server-filesystem\n/tmp",
+  "settings.agentBehaviour.addMcp.url": "URL du serveur",
+  "settings.agentBehaviour.addMcp.url.placeholder": "e.g. http://localhost:3000/sse",
   "settings.agentBehaviour.skillPaths": "Chemins des dossiers de compétences",
   "settings.agentBehaviour.skillUrls": "URLs de compétences",
   "settings.agentBehaviour.removeSkill.title": "Supprimer la compétence",
   "settings.agentBehaviour.removeSkill.confirm":
     'Supprimer la compétence "{{name}}" ? Cela supprimera les fichiers de la compétence du disque.',
   "settings.agentBehaviour.removeSkill.button": "Supprimer",
+  "settings.agentBehaviour.rules.description":
+    "Les règles sont des fichiers d'instructions qui guident le comportement de l'agent. Elles sont incluses dans le prompt système pour chaque conversation. Ajoutez des chemins de fichiers ci-dessous pour inclure des règles supplémentaires.",
   "settings.agentBehaviour.instructionFiles": "Fichiers d'instructions supplémentaires",
   "settings.agentBehaviour.instructionFiles.description": "Chemins vers des fichiers d'instructions supplémentaires",
+  "settings.agentBehaviour.mcpDetail.command": "Commande",
+  "settings.agentBehaviour.mcpDetail.args": "Arguments",
+  "settings.agentBehaviour.mcpDetail.env": "Environnement",
+  "settings.agentBehaviour.mcpDetail.disabled": "Ce serveur est désactivé.",
   "settings.agentBehaviour.mcpEmpty":
     "Aucun serveur MCP configuré. Modifiez le fichier de configuration opencode pour ajouter des serveurs MCP.",
   "settings.agentBehaviour.workflowsPlaceholder":
     "Les workflows sont gérés via les fichiers de workflow dans votre espace de travail.",
+  "settings.agentBehaviour.workflows.description":
+    "Les workflows sont des commandes slash personnalisées définies dans votre configuration. Tapez /command-name dans le chat pour les invoquer. Les commandes sont configurées dans opencode.json dans la section 'command'.",
+  "settings.agentBehaviour.workflows.empty":
+    "Aucune commande personnalisée configurée. Ajoutez des commandes à opencode.json pour les voir ici.",
+  "settings.agentBehaviour.workflows.detail.description": "Description",
+  "settings.agentBehaviour.workflows.detail.template": "Modèle",
   "settings.agentBehaviour.notImplemented": "Pas encore implémenté.",
   "settings.autoApprove.description":
     "Définissez comment les outils sont autorisés à s'exécuter. La plupart des outils sont définis sur Autoriser par défaut. doom_loop et external_directory sont définis sur Demander par défaut.",

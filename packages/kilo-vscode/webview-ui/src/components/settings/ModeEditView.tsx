@@ -1,5 +1,6 @@
 import { Component, Show, createMemo } from "solid-js"
 import { TextField } from "@kilocode/kilo-ui/text-field"
+import { Switch } from "@kilocode/kilo-ui/switch"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -9,6 +10,7 @@ import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { AgentConfig, AgentInfo } from "../../types/messages"
 import SettingsRow from "./SettingsRow"
+import { buildExport } from "./mode-io"
 
 interface Props {
   name: string
@@ -40,6 +42,18 @@ const ModeEditView: Component<Props> = (props) => {
     })
   }
 
+  const exportMode = () => {
+    const data = buildExport(props.name, cfg())
+    const json = JSON.stringify(data, null, 2)
+    const blob = new Blob([json], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement("a")
+    anchor.href = url
+    anchor.download = `${props.name}.agent.json`
+    anchor.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div>
       <div
@@ -57,15 +71,24 @@ const ModeEditView: Component<Props> = (props) => {
           </span>
         </div>
         <Show when={!native()}>
-          <IconButton
-            size="small"
-            variant="ghost"
-            icon="close"
-            onClick={() => {
-              const a = agent()
-              if (a) props.onRemove(a)
-            }}
-          />
+          <div style={{ display: "flex", gap: "4px" }}>
+            <IconButton
+              size="small"
+              variant="ghost"
+              icon="download"
+              title={language.t("settings.agentBehaviour.exportMode")}
+              onClick={exportMode}
+            />
+            <IconButton
+              size="small"
+              variant="ghost"
+              icon="close"
+              onClick={() => {
+                const a = agent()
+                if (a) props.onRemove(a)
+              }}
+            />
+          </div>
         </Show>
       </div>
 
@@ -156,7 +179,6 @@ const ModeEditView: Component<Props> = (props) => {
         <SettingsRow
           title={language.t("settings.agentBehaviour.maxSteps.title")}
           description={language.t("settings.agentBehaviour.maxSteps.description")}
-          last
         >
           <TextField
             value={cfg().steps?.toString() ?? ""}
@@ -166,6 +188,45 @@ const ModeEditView: Component<Props> = (props) => {
               update({ steps: isNaN(parsed) ? undefined : parsed })
             }}
           />
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.agentBehaviour.hidden.title")}
+          description={language.t("settings.agentBehaviour.hidden.description")}
+        >
+          <Switch
+            checked={cfg().hidden ?? false}
+            onChange={(val) => {
+              update({ hidden: val || undefined })
+              // Clear default_agent if hiding the current default
+              if (val && config().default_agent === props.name) {
+                updateConfig({ default_agent: undefined })
+              }
+            }}
+            hideLabel
+          >
+            {language.t("settings.agentBehaviour.hidden.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.agentBehaviour.disable.title")}
+          description={language.t("settings.agentBehaviour.disable.description")}
+          last
+        >
+          <Switch
+            checked={cfg().disable ?? false}
+            onChange={(val) => {
+              update({ disable: val || undefined })
+              // Clear default_agent if disabling the current default
+              if (val && config().default_agent === props.name) {
+                updateConfig({ default_agent: undefined })
+              }
+            }}
+            hideLabel
+          >
+            {language.t("settings.agentBehaviour.disable.title")}
+          </Switch>
         </SettingsRow>
       </Card>
 

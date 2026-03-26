@@ -6,7 +6,7 @@
  */
 
 /** Strip a filediff down to path + addition/deletion counts. */
-function slimMeta(meta: unknown): Record<string, unknown> | undefined {
+function slimEditMeta(meta: unknown): Record<string, unknown> | undefined {
   if (!meta || typeof meta !== "object") return undefined
 
   const obj = meta as Record<string, unknown>
@@ -30,7 +30,7 @@ function slimMeta(meta: unknown): Record<string, unknown> | undefined {
   return result
 }
 
-/** Strip heavy metadata from a single edit tool part; pass-through for all other part types. */
+/** Strip heavy metadata from a single edit tool part; pass-through for everything else. */
 export function slimPart<T>(part: T): T {
   if (!part || typeof part !== "object") return part
 
@@ -41,7 +41,7 @@ export function slimPart<T>(part: T): T {
   if (!state || typeof state !== "object") return part
 
   const next = { ...(state as Record<string, unknown>) }
-  const meta = slimMeta(next.metadata)
+  const meta = slimEditMeta(next.metadata)
   if (meta) next.metadata = meta
   else delete next.metadata
 
