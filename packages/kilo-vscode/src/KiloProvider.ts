@@ -28,6 +28,7 @@ import {
   isEventFromForeignProject,
   loadSessions as loadSessionsUtil,
   flushPendingSessionRefresh as flushPendingSessionRefreshUtil,
+  resolveContextDirectory,
   resolveWorkspaceDirectory,
   type SessionRefreshContext,
 } from "./kilo-provider-utils"
@@ -1036,10 +1037,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     try {
-      const workspaceDir = this.getWorkspaceDirectory()
+      const workspaceDir = this.getContextDirectory()
       const { data: session } = await this.client.session.create({ directory: workspaceDir }, { throwOnError: true })
       this.currentSession = session
       this.contextSessionID = session.id
+      this.trackDirectory(session.id, workspaceDir)
       this.trackedSessionIds.add(session.id)
 
       // Notify webview of the new session
@@ -1889,12 +1891,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private async resolveSession(sessionID?: string): Promise<{ sid: string; dir: string } | undefined> {
     if (!this.client) return undefined
 
-    const dir = this.getWorkspaceDirectory(sessionID || this.currentSession?.id)
+    const dir = sessionID ? this.getWorkspaceDirectory(sessionID) : this.getContextDirectory()
 
     if (!sessionID && !this.currentSession) {
       const { data: session } = await this.client.session.create({ directory: dir }, { throwOnError: true })
       this.currentSession = session
       this.contextSessionID = session.id
+      this.trackDirectory(session.id, dir)
       this.trackedSessionIds.add(session.id)
       this.postMessage({
         type: "sessionCreated",
@@ -2295,7 +2298,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (!key.startsWith(prefix)) continue
       const parts = key.split(".")
       const section = parts.slice(0, -1).join(".")
-      const leaf = parts[parts.length - 1]
+      const leaf = parts[parts.length - 1]!
       const config = vscode.workspace.getConfiguration(section)
       await config.update(leaf, undefined, vscode.ConfigurationTarget.Global)
     }
@@ -2583,17 +2586,36 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Checks session directory overrides first (e.g., worktree paths), then falls back to workspace root.
    */
   private getWorkspaceDirectory(sessionId?: string): string {
-    const workspaceFolders = vscode.workspace.workspaceFolders
-    const workspaceDirectory =
-      workspaceFolders && workspaceFolders.length > 0 ? workspaceFolders[0].uri.fsPath : process.cwd()
-
     return resolveWorkspaceDirectory({
       sessionID: sessionId,
+      sessionDirectories: this.sessionDirectories,
+      workspaceDirectory: this.getRootDirectory(),
+    })
+  }
+
+  private getContextDirectory(): string {
+    return resolveContextDirectory({
       currentSessionID: this.currentSession?.id,
       contextSessionID: this.contextSessionID,
       sessionDirectories: this.sessionDirectories,
-      workspaceDirectory,
+      workspaceDirectory: this.getRootDirectory(),
     })
+  }
+
+  private getRootDirectory(): string {
+    const workspaceFolders = vscode.workspace.workspaceFolders
+    if (workspaceFolders && workspaceFolders.length > 0) {
+      return workspaceFolders[0]!.uri.fsPath
+    }
+    return process.cwd()
+  }
+
+  private trackDirectory(sessionId: string, dir: string) {
+    if (path.resolve(dir) === path.resolve(this.getRootDirectory())) {
+      this.sessionDirectories.delete(sessionId)
+      return
+    }
+    this.sessionDirectories.set(sessionId, dir)
   }
 
   private getProjectDirectory(sessionId?: string): string | undefined {

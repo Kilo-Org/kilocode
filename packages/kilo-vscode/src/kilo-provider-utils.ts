@@ -169,18 +169,28 @@ export function buildSettingPath(key: string): { section: string; leaf: string }
 
 export function resolveWorkspaceDirectory(input: {
   sessionID?: string
+  sessionDirectories: Map<string, string>
+  workspaceDirectory: string
+}) {
+  if (!input.sessionID) return input.workspaceDirectory
+
+  const dir = input.sessionDirectories.get(input.sessionID)
+  if (dir) return dir
+
+  return input.workspaceDirectory
+}
+
+export function resolveContextDirectory(input: {
   currentSessionID?: string
   contextSessionID?: string
   sessionDirectories: Map<string, string>
   workspaceDirectory: string
 }) {
-  const target = input.sessionID ?? input.currentSessionID ?? input.contextSessionID
-  if (!target) return input.workspaceDirectory
-
-  const dir = input.sessionDirectories.get(target)
-  if (dir) return dir
-
-  return input.workspaceDirectory
+  return resolveWorkspaceDirectory({
+    sessionID: input.currentSessionID ?? input.contextSessionID,
+    sessionDirectories: input.sessionDirectories,
+    workspaceDirectory: input.workspaceDirectory,
+  })
 }
 
 export type WebviewMessage =
