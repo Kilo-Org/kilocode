@@ -1271,4 +1271,31 @@ export const dict = {
   "notifications.action.next": "Next",
   "notifications.action.close": "Close",
   "notifications.action.tryModel": "Try model",
+
+  "settings.agentBehaviour.createMode": "Yeni Mod Oluştur",
+  "settings.agentBehaviour.createMode.name": "Ad",
+  "settings.agentBehaviour.createMode.name.placeholder": "ör. gozden-geciren",
+  "settings.agentBehaviour.createMode.name.description":
+    "Mod için benzersiz tanımlayıcı. Yalnızca küçük harfler, sayılar ve tire kullanın.",
+  "settings.agentBehaviour.createMode.description": "Açıklama",
+  "settings.agentBehaviour.createMode.description.placeholder": "ör. Kalite ve en iyi uygulamalar için kodu inceler",
+  "settings.agentBehaviour.createMode.description.help": "Bu modun ne yaptığının kısa açıklaması.",
+  "settings.agentBehaviour.createMode.prompt": "Sistem İstemi",
+  "settings.agentBehaviour.createMode.prompt.placeholder":
+    "ör. Sen bir kod inceleyicisin. Kod kalitesi, en iyi uygulamalar ve olası hatalara odaklan.",
+  "settings.agentBehaviour.createMode.prompt.help": "Bu mod kullanılırken yapay zeka ajanı için talimatlar.",
+  "settings.agentBehaviour.createMode.button": "Oluştur",
+  "settings.agentBehaviour.createMode.cancel": "İptal",
+  "settings.agentBehaviour.createMode.nameRequired": "Ad gereklidir",
+  "settings.agentBehaviour.createMode.nameInvalid":
+    "Ad küçük harfle başlamalı ve yalnızca küçük harfler, sayılar ve tire içermelidir",
+  "settings.agentBehaviour.createMode.nameTaken": "Bu adla bir mod zaten mevcut",
+  "settings.agentBehaviour.editMode": "Modu Düzenle",
+  "settings.agentBehaviour.editMode.description": "Açıklama",
+  "settings.agentBehaviour.editMode.prompt": "Sistem İstemi",
+  "settings.agentBehaviour.editMode.save": "Tamam",
+  "settings.agentBehaviour.editMode.back": "Listeye dön",
+  "settings.agentBehaviour.editMode.native": "Yerleşik mod (salt okunur tanım)",
+  "settings.agentBehaviour.editMode.promptOverride": "Bu yerleşik mod için özel istem geçersiz kılma",
+  "profile.switchingAccount": "Hesap değiştiriliyor…",
 }
