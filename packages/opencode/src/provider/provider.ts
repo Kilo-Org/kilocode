@@ -1282,6 +1282,14 @@ export namespace Provider {
       return getModel(parsed.providerID, parsed.modelID)
     }
 
+    // kilocode_change start
+    // Default to kilo-auto/small when available
+    const kiloProvider = await state().then((state) => state.providers["kilo"])
+    if (kiloProvider && kiloProvider.models["kilo-auto/small"]) {
+      return getModel("kilo", "kilo-auto/small")
+    }
+    // kilocode_change end
+
     const provider = await state().then((state) => state.providers[providerID])
     if (provider) {
       let priority = [
@@ -1332,14 +1340,6 @@ export namespace Provider {
         }
       }
     }
-
-    // kilocode_change start
-    // Check if kilo provider is available before using it
-    const kiloProvider = await state().then((state) => state.providers["kilo"])
-    if (kiloProvider && kiloProvider.models["kilo-auto/small"]) {
-      return getModel("kilo", "kilo-auto/small")
-    }
-    // kilocode_change end
 
     return undefined
   }

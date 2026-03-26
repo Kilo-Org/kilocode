@@ -914,7 +914,7 @@ test("model with custom cost values", async () => {
   })
 })
 
-test("getSmallModel returns appropriate small model", async () => {
+test("getSmallModel defaults to kilo-auto/small when kilo provider is available", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Bun.write(
@@ -931,9 +931,15 @@ test("getSmallModel returns appropriate small model", async () => {
       Env.set("ANTHROPIC_API_KEY", "test-api-key")
     },
     fn: async () => {
+      const providers = await Provider.list()
       const model = await Provider.getSmallModel("anthropic")
       expect(model).toBeDefined()
-      expect(model?.id).toContain("haiku")
+      if (providers["kilo"]?.models["kilo-auto/small"]) {
+        expect(model?.providerID).toBe("kilo")
+        expect(model?.id).toBe("kilo-auto/small")
+      } else {
+        expect(model?.id).toContain("haiku")
+      }
     },
   })
 })
