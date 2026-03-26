@@ -818,8 +818,11 @@ export const dict = {
   "session.delete.button": "حذف الجلسة",
   "session.untitled": "بدون عنوان",
   "session.recent": "الأخيرة",
+  "session.showHistory": "عرض السجل",
   "session.search.placeholder": "البحث في الجلسات...",
   "session.empty": "لا توجد جلسات بعد. انقر + لبدء محادثة جديدة.",
+  "session.tab.local": "Local",
+  "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "هذا المستودع فقط",
   "session.cloud.import": "استيراد من السحابة",
   "feedback.button": "التغذية الراجعة والدعم",
@@ -1076,6 +1079,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.confirm":
     'هل تريد إزالة المهارة "{{name}}"؟ سيؤدي هذا إلى حذف ملفات المهارة من القرص.',
   "settings.agentBehaviour.removeSkill.button": "إزالة",
+  "settings.agentBehaviour.rules.description":
+    "القواعد هي ملفات تعليمات توجه سلوك الوكيل. يتم تضمينها في موجه النظام لكل محادثة. أضف مسارات الملفات أدناه لتضمين قواعد إضافية.",
   "settings.agentBehaviour.instructionFiles": "ملفات تعليمات إضافية",
   "settings.agentBehaviour.instructionFiles.description": "مسارات ملفات التعليمات الإضافية في موجه النظام",
   "settings.agentBehaviour.mcpEmpty": "لم يتم تهيئة خوادم MCP. قم بتحرير ملف تهيئة opencode لإضافة خوادم MCP.",

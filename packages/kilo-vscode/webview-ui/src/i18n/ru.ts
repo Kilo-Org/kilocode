@@ -831,8 +831,11 @@ export const dict = {
   "session.delete.button": "Удалить сессию",
   "session.untitled": "Без названия",
   "session.recent": "Недавние",
+  "session.showHistory": "Показать историю",
   "session.search.placeholder": "Поиск сессий...",
   "session.empty": "Сессий пока нет. Нажмите + чтобы начать новый разговор.",
+  "session.tab.local": "Local",
+  "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Только этот репозиторий",
   "session.cloud.import": "Импорт из облака",
   "feedback.button": "Отзывы и поддержка",
@@ -1092,6 +1095,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.confirm":
     'Удалить навык "{{name}}"? Это приведет к удалению файлов навыка с диска.',
   "settings.agentBehaviour.removeSkill.button": "Удалить",
+  "settings.agentBehaviour.rules.description":
+    "Правила — это файлы инструкций, которые направляют поведение агента. Они включаются в системный промпт для каждого разговора. Добавьте пути к файлам ниже, чтобы включить дополнительные правила.",
   "settings.agentBehaviour.instructionFiles": "Дополнительные файлы инструкций",
   "settings.agentBehaviour.instructionFiles.description": "Пути к дополнительным файлам инструкций в системном промпте",
   "settings.agentBehaviour.mcpEmpty":

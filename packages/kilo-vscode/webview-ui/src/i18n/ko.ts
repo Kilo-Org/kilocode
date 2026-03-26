@@ -823,8 +823,11 @@ export const dict = {
   "session.delete.button": "세션 삭제",
   "session.untitled": "제목 없음",
   "session.recent": "최근",
+  "session.showHistory": "기록 보기",
   "session.search.placeholder": "세션 검색...",
   "session.empty": "아직 세션이 없습니다. +를 클릭하여 새 대화를 시작하세요.",
+  "session.tab.local": "Local",
+  "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "이 저장소만",
   "session.cloud.import": "클라우드에서 가져오기",
   "feedback.button": "피드백 & 지원",
@@ -1080,6 +1083,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.confirm":
     '스킬 "{{name}}"을(를) 제거하시겠습니까? 디스크에서 스킬 파일이 삭제됩니다.',
   "settings.agentBehaviour.removeSkill.button": "제거",
+  "settings.agentBehaviour.rules.description":
+    "규칙은 에이전트 동작을 안내하는 지시 파일입니다. 모든 대화의 시스템 프롬프트에 포함됩니다. 추가 규칙을 포함하려면 아래에 파일 경로를 추가하세요.",
   "settings.agentBehaviour.instructionFiles": "추가 지시 파일",
   "settings.agentBehaviour.instructionFiles.description": "시스템 프롬프트에 포함되는 추가 지시 파일 경로",
   "settings.agentBehaviour.mcpEmpty":

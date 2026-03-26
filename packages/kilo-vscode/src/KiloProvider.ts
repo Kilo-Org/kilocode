@@ -148,6 +148,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    *  Return null to consume the message, or return a (possibly transformed) message. */
   private onBeforeMessage: ((msg: Record<string, unknown>) => Promise<Record<string, unknown> | null>) | null = null
 
+  /** Handler for "Continue in Worktree" — set by extension.ts to delegate to AgentManagerProvider. */
+  private continueInWorktreeHandler:
+    | ((sessionId: string, progress: (status: string, detail?: string, error?: string) => void) => Promise<void>)
+    | null = null
+
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly connectionService: KiloConnectionService,
@@ -374,6 +379,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.postMessage({ type: "openCloudSession", sessionId })
   }
 
+  /** Register the handler for "Continue in Worktree" messages from the sidebar. */
+  public setContinueInWorktreeHandler(
+    handler: (sessionId: string, progress: (status: string, detail?: string, error?: string) => void) => Promise<void>,
+  ): void {
+    this.continueInWorktreeHandler = handler
+  }
+
   /**
    * Attach to a webview that already has its own HTML set.
    * Sets up message handling and connection without overriding HTML content.
@@ -539,6 +551,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "openChanges":
           vscode.commands.executeCommand("kilo-code.new.showChanges")
+          break
+        case "continueInWorktree":
+          if (message.sessionId && this.continueInWorktreeHandler) {
+            this.continueInWorktreeHandler(message.sessionId, (status: string, detail?: string, error?: string) => {
+              this.postMessage({ type: "continueInWorktreeProgress", status, detail, error })
+            }).catch((err: unknown) => {
+              console.error("[Kilo New] continueInWorktree failed:", err)
+              this.postMessage({
+                type: "continueInWorktreeProgress",
+                status: "error",
+                error: err instanceof Error ? err.message : String(err),
+              })
+            })
+          }
           break
         case "retryConnection":
           console.log("[Kilo New] KiloProvider: 🔄 Retrying connection...")

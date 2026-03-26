@@ -623,6 +623,18 @@ const AgentBehaviourTab: Component = () => {
 
   const renderRulesSubtab = () => (
     <div>
+      {/* Description */}
+      <div
+        style={{
+          "font-size": "12px",
+          color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+          "margin-bottom": "12px",
+          "line-height": "1.5",
+        }}
+      >
+        {language.t("settings.agentBehaviour.rules.description")}
+      </div>
+
       <Card>
         <div
           style={{

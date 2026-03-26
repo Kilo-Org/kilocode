@@ -32,6 +32,7 @@ export const dict = {
   "agentManager.session.untitled": "Adsız",
   "agentManager.session.newSession": "Yeni Oturum",
   "agentManager.session.openInWorktree": "Worktree içinde aç",
+  "agentManager.session.openLocally": "Yerel olarak aç",
   "agentManager.session.readonly": "Salt okunur oturum",
   "agentManager.session.noSessions": "Açık oturum yok",
 

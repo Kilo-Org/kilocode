@@ -827,8 +827,11 @@ export const dict = {
   "session.delete.button": "Usuń sesję",
   "session.untitled": "Bez tytułu",
   "session.recent": "Ostatnie",
+  "session.showHistory": "Pokaż historię",
   "session.search.placeholder": "Szukaj sesji...",
   "session.empty": "Brak sesji. Kliknij + aby rozpocząć nową rozmowę.",
+  "session.tab.local": "Local",
+  "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Tylko to repozytorium",
   "session.cloud.import": "Importuj z chmury",
   "feedback.button": "Opinie i wsparcie",
@@ -1089,6 +1092,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.confirm":
     'Usunąć umiejętność "{{name}}"? Spowoduje to usunięcie plików umiejętności z dysku.',
   "settings.agentBehaviour.removeSkill.button": "Usuń",
+  "settings.agentBehaviour.rules.description":
+    "Reguły to pliki instrukcji, które kierują zachowaniem agenta. Są one dołączane do promptu systemowego dla każdej rozmowy. Dodaj poniżej ścieżki plików, aby dołączyć dodatkowe reguły.",
   "settings.agentBehaviour.instructionFiles": "Dodatkowe pliki instrukcji",
   "settings.agentBehaviour.instructionFiles.description":
     "Ścieżki do dodatkowych plików instrukcji w prompcie systemowym",

@@ -824,8 +824,11 @@ export const dict = {
   "session.delete.button": "Slet session",
   "session.untitled": "Unavngivet",
   "session.recent": "Seneste",
+  "session.showHistory": "Vis historik",
   "session.search.placeholder": "Søg sessioner...",
   "session.empty": "Ingen sessioner endnu. Klik + for at starte en ny samtale.",
+  "session.tab.local": "Local",
+  "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Kun dette repository",
   "session.cloud.import": "Importér fra skyen",
   "feedback.button": "Feedback & support",
@@ -1085,6 +1088,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.confirm":
     'Vil du fjerne færdigheden "{{name}}"? Dette vil slette færdighedsfilerne fra disken.',
   "settings.agentBehaviour.removeSkill.button": "Fjern",
+  "settings.agentBehaviour.rules.description":
+    "Regler er instruktionsfiler, der styrer agentens adfærd. De inkluderes i systemprompten for hver samtale. Tilføj filstier nedenfor for at inkludere yderligere regler.",
   "settings.agentBehaviour.instructionFiles": "Yderligere instruktionsfiler",
   "settings.agentBehaviour.instructionFiles.description": "Stier til yderligere instruktionsfiler i systemprompten",
   "settings.agentBehaviour.mcpEmpty":

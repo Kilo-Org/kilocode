@@ -28,8 +28,7 @@ import { registerVscodeToolOverrides } from "./components/chat/VscodeToolOverrid
 registerExpandedTaskTool()
 // Apply VS Code sidebar preferences to other tools (e.g. bash expanded by default).
 registerVscodeToolOverrides()
-import SessionList from "./components/history/SessionList"
-import CloudSessionList from "./components/history/CloudSessionList"
+import HistoryView from "./components/history/HistoryView"
 import { MigrationWizard } from "./components/migration" // legacy-migration
 import { NotificationsProvider } from "./context/notifications"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
@@ -39,7 +38,6 @@ type ViewType =
   | "newTask"
   | "marketplace"
   | "history"
-  | "cloudHistory"
   | "profile"
   | "settings"
   | "migration" // legacy-migration
@@ -48,7 +46,6 @@ const VALID_VIEWS = new Set<string>([
   "newTask",
   "marketplace",
   "history",
-  "cloudHistory",
   "profile",
   "settings",
   "migration", // legacy-migration
@@ -166,9 +163,6 @@ const AppContent: Component = () => {
       case "historyButtonClicked":
         setCurrentView("history")
         break
-      case "cloudHistoryButtonClicked":
-        setCurrentView("cloudHistory")
-        break
       case "profileButtonClicked":
         setCurrentView("profile")
         break
@@ -229,24 +223,19 @@ const AppContent: Component = () => {
 
   return (
     <div class="container">
-      <Switch fallback={<ChatView />}>
+      <Switch fallback={<ChatView continueInWorktree />}>
         <Match when={currentView() === "newTask"}>
-          <ChatView onSelectSession={handleSelectSession} />
+          <ChatView
+            onSelectSession={handleSelectSession}
+            onShowHistory={() => setCurrentView("history")}
+            continueInWorktree
+          />
         </Match>
         <Match when={currentView() === "marketplace"}>
           <MarketplaceView />
         </Match>
         <Match when={currentView() === "history"}>
-          <SessionList onSelectSession={handleSelectSession} onBack={() => setCurrentView("newTask")} />
-        </Match>
-        <Match when={currentView() === "cloudHistory"}>
-          <CloudSessionList
-            onBack={() => setCurrentView("newTask")}
-            onSelectSession={(cloudSessionId) => {
-              session.selectCloudSession(cloudSessionId)
-              setCurrentView("newTask")
-            }}
-          />
+          <HistoryView onSelectSession={handleSelectSession} onBack={() => setCurrentView("newTask")} />
         </Match>
         <Match when={currentView() === "profile"}>
           <ProfileView

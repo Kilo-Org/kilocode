@@ -824,8 +824,11 @@ export const dict = {
   "session.delete.button": "Delete session",
   "session.untitled": "Untitled",
   "session.recent": "Recent",
+  "session.showHistory": "Show History",
   "session.search.placeholder": "Search sessions...",
   "session.empty": "No sessions yet. Click + to start a new conversation.",
+  "session.tab.local": "Local",
+  "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Only this repository",
   "session.cloud.import": "Import session",
   "feedback.button": "Feedback & Support",
@@ -1062,6 +1065,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "Remove skill",
   "settings.agentBehaviour.removeSkill.confirm": 'Remove skill "{{name}}"? This will delete the skill files from disk.',
   "settings.agentBehaviour.removeSkill.button": "Remove",
+  "settings.agentBehaviour.rules.description":
+    "Rules are instruction files that guide agent behaviour. They are included in the system prompt for every conversation. Add file paths below to include additional rules.",
   "settings.agentBehaviour.instructionFiles": "Additional Instruction Files",
   "settings.agentBehaviour.instructionFiles.description":
     "Paths to additional instruction files that are included in the system prompt",

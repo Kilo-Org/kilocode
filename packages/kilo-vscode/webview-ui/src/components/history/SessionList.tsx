@@ -2,6 +2,7 @@
  * SessionList component
  * Displays all sessions grouped by date, with context menu for rename/delete.
  * Uses kilo-ui List component for keyboard navigation and accessibility.
+ * Header/back button are owned by the parent HistoryView.
  */
 
 import { Component, Show, createSignal, onMount, type JSX } from "solid-js"
@@ -37,7 +38,6 @@ function dateGroupKey(iso: string): (typeof DATE_GROUP_KEYS)[number] {
 
 interface SessionListProps {
   onSelectSession: (id: string) => void
-  onBack?: () => void
 }
 
 const SessionList: Component<SessionListProps> = (props) => {
@@ -131,11 +131,6 @@ const SessionList: Component<SessionListProps> = (props) => {
 
   return (
     <div class="session-list">
-      <div class="session-list-header">
-        <Button variant="ghost" size="small" icon="arrow-left" onClick={() => props.onBack?.()}>
-          {language.t("common.goBack")}
-        </Button>
-      </div>
       <List<SessionInfo>
         items={session.sessions()}
         key={(s) => s.id}

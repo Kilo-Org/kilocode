@@ -825,8 +825,11 @@ export const dict = {
   "session.delete.button": "Excluir sessão",
   "session.untitled": "Sem título",
   "session.recent": "Recentes",
+  "session.showHistory": "Mostrar Histórico",
   "session.search.placeholder": "Buscar sessões...",
   "session.empty": "Nenhuma sessão ainda. Clique + para iniciar uma nova conversa.",
+  "session.tab.local": "Local",
+  "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Apenas este repositório",
   "session.cloud.import": "Importar da nuvem",
   "feedback.button": "Feedback e suporte",
@@ -1090,6 +1093,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.confirm":
     'Remover a habilidade "{{name}}"? Isso excluirá os arquivos da habilidade do disco.',
   "settings.agentBehaviour.removeSkill.button": "Remover",
+  "settings.agentBehaviour.rules.description":
+    "Regras são arquivos de instrução que orientam o comportamento do agente. Elas são incluídas no prompt do sistema para cada conversa. Adicione caminhos de arquivos abaixo para incluir regras adicionais.",
   "settings.agentBehaviour.instructionFiles": "Arquivos de instruções adicionais",
   "settings.agentBehaviour.instructionFiles.description":
     "Caminhos para arquivos de instruções adicionais no prompt do sistema",

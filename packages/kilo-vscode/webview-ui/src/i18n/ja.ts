@@ -822,8 +822,11 @@ export const dict = {
   "session.delete.button": "セッションを削除",
   "session.untitled": "無題",
   "session.recent": "最近",
+  "session.showHistory": "履歴を表示",
   "session.search.placeholder": "セッションを検索...",
   "session.empty": "セッションがありません。+ をクリックして新しい会話を始めましょう。",
+  "session.tab.local": "Local",
+  "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "このリポジトリのみ",
   "session.cloud.import": "クラウドからインポート",
   "feedback.button": "フィードバック & サポート",
@@ -1084,6 +1087,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.confirm":
     'スキル "{{name}}" を削除しますか？これにより、ディスクからスキルファイルが削除されます。',
   "settings.agentBehaviour.removeSkill.button": "削除",
+  "settings.agentBehaviour.rules.description":
+    "ルールはエージェントの動作を導く指示ファイルです。すべての会話のシステムプロンプトに含まれます。追加のルールを含めるには、以下にファイルパスを追加してください。",
   "settings.agentBehaviour.instructionFiles": "追加の指示ファイル",
   "settings.agentBehaviour.instructionFiles.description": "システムプロンプトに含まれる追加の指示ファイルへのパス",
   "settings.agentBehaviour.mcpEmpty":

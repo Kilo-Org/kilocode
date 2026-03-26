@@ -29,6 +29,7 @@ export const dict = {
   "agentManager.session.untitled": "无标题",
   "agentManager.session.newSession": "新建会话",
   "agentManager.session.openInWorktree": "在 Worktree 中打开",
+  "agentManager.session.openLocally": "在本地打开",
   "agentManager.session.readonly": "只读会话",
   "agentManager.session.noSessions": "没有打开的会话",
   "agentManager.tab.close": "关闭",

@@ -29,6 +29,7 @@ export const dict = {
   "agentManager.session.untitled": "Bez naslova",
   "agentManager.session.newSession": "Nova sesija",
   "agentManager.session.openInWorktree": "Otvori u Worktree-u",
+  "agentManager.session.openLocally": "Otvori lokalno",
   "agentManager.session.readonly": "Sesija samo za čitanje",
   "agentManager.session.noSessions": "Nema otvorenih sesija",
   "agentManager.tab.close": "Zatvori",
