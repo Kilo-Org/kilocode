@@ -13,9 +13,10 @@ description: Learn how to use Kilo Code effectively while minimizing or eliminat
 
 From time to time, Kilo works with AI inference providers to offer free models. These are available through the Kilo Gateway. Currently, we are offering these free models:
 
+- **MiniMax M2.5 (free)** - The latest MiniMax model, used as the default for Kilo Auto free tier routing.
 - **MiniMax M2.1 (free)** - A capable model from MiniMax with strong general-purpose performance.
-- **Z.AI: GLM 4.7 (free)** - Latest variant of the GLM family, purpose-built for agent-centric applications.
-- **MoonshotAI: Kimi K2.5 (free)** - Optimized for agentic capabilities, including advanced tool use, reasoning, and code synthesis.
+- **Z.AI: GLM-5 (free)** - Latest variant of the GLM family with improved reasoning and agent capabilities.
+- **CoreThink (free)** - A reasoning-focused model with strong problem-solving capabilities.
 - **Giga Potato (free)** - A stealth release model that is free in its evaluation period.
 - **Arcee AI: Trinity Large Preview (free)** - A preview model from Arcee AI with strong capabilities.
 
@@ -34,7 +35,7 @@ OpenRouter offers several models with generous free tiers. **Note:** You'll need
 - **Qwen3 Coder (free)** - Optimized for agentic coding tasks such as function calling, tool use, and long-context reasoning over repositories.
 - **Z.AI: GLM 4.5 Air (free)** - Lightweight variant of the GLM-4.5 family, purpose-built for agent-centric applications.
 - **DeepSeek: R1 0528 (free)** - Performance on par with OpenAI o1, but open-sourced and with fully open reasoning tokens.
-- **MoonshotAI: Kimi K2 (free)** - Optimized for agentic capabilities, including advanced tool use, reasoning, and code synthesis.
+- **MoonshotAI: Kimi K2.5 (free)** - Optimized for agentic capabilities, including advanced tool use, reasoning, and code synthesis.
 
 ## Cost-Effective Premium Models
 
@@ -60,7 +61,19 @@ When you need more capability than free models provide, these options deliver ex
 - **Best for:** Code analysis, large codebase understanding
 - **Performance:** Strong technical reasoning
 
+**MiniMax M2.7**
+
+- **Cost:** ~$0.40 per million input tokens
+- **Best for:** General-purpose coding, used in Kilo Auto balanced tier
+- **Performance:** Strong all-around capability at very low cost
+
 ### Mid-Range Value Models ($0.50-$2.00 per million tokens)
+
+**MoonshotAI Kimi K2.5**
+
+- **Cost:** ~$0.60 per million input tokens
+- **Best for:** Complex reasoning, used in Kilo Auto balanced tier for planning tasks
+- **Performance:** Strong multilingual and agentic capabilities
 
 **Qwen3 235B**
 
@@ -117,8 +130,8 @@ When you need more capability than free models provide, these options deliver ex
 
 **Start cheap, escalate when needed:**
 
-1. **Begin with free models** (Qwen3 Coder, GLM-4.5-Air)
-2. **Switch to budget models** if free models struggle
+1. **Begin with free models** (MiniMax M2.5, GLM-5, CoreThink)
+2. **Switch to budget models** if free models struggle (MiniMax M2.7, Kimi K2.5)
 3. **Escalate to premium models** only for complex tasks
 
 **Use API Configuration Profiles:**
@@ -148,8 +161,8 @@ When you need more capability than free models provide, these options deliver ex
 **Simple function creation:**
 
 - **Mistral Devstral Small:** 95% success rate
-- **GPT-4:** 98% success rate
-- **Cost difference:** Free vs $0.20 vs $30 per million tokens
+- **Premium models:** 98% success rate
+- **Cost difference:** Free vs $0.20 vs $15+ per million tokens
 
 **Complex refactoring:**
 
@@ -259,7 +272,7 @@ When you need more capability than free models provide, these options deliver ex
 
 - [OpenRouter](/docs/ai-providers/openrouter) - Free models
 - [Groq](/docs/ai-providers/groq) - Fast inference for supported models
-- [Z.ai](https://z.ai/model-api) - Provides a free model GLM-4.5-Flash
+- [Z.ai](https://z.ai/model-api) - Provides free GLM-5 and GLM-4.5-Flash models
 
 **Budget tier options:**
 
@@ -269,7 +282,7 @@ When you need more capability than free models provide, these options deliver ex
 **Premium tier backup:**
 
 - [Anthropic](/docs/ai-providers/anthropic) - Claude for complex reasoning
-- [OpenAI](/docs/ai-providers/openai) - GPT-4 for critical tasks
+- [OpenAI](/docs/ai-providers/openai) - GPT models for critical tasks
 
 ## Measuring Success
 
