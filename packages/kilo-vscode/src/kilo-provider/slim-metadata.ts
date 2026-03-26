@@ -30,45 +30,18 @@ function slimEditMeta(meta: unknown): Record<string, unknown> | undefined {
   return result
 }
 
-/** Strip heavy before/after/diff content from apply_patch file entries. */
-function slimPatchMeta(meta: unknown): Record<string, unknown> | undefined {
-  if (!meta || typeof meta !== "object") return undefined
-
-  const obj = meta as Record<string, unknown>
-  const files = obj.files
-  if (!Array.isArray(files)) return undefined
-
-  return {
-    files: files.map((f) => {
-      if (!f || typeof f !== "object") return f
-      const entry = f as Record<string, unknown>
-      return {
-        filePath: entry.filePath,
-        relativePath: entry.relativePath,
-        type: entry.type,
-        additions: entry.additions ?? 0,
-        deletions: entry.deletions ?? 0,
-        movePath: entry.movePath,
-      }
-    }),
-  }
-}
-
-/** Strip heavy metadata from edit / apply_patch tool parts; pass-through for everything else. */
+/** Strip heavy metadata from a single edit tool part; pass-through for everything else. */
 export function slimPart<T>(part: T): T {
   if (!part || typeof part !== "object") return part
 
   const obj = part as Record<string, unknown>
-  if (obj.type !== "tool") return part
-
-  const tool = obj.tool
-  if (tool !== "edit" && tool !== "apply_patch") return part
+  if (obj.type !== "tool" || obj.tool !== "edit") return part
 
   const state = obj.state
   if (!state || typeof state !== "object") return part
 
   const next = { ...(state as Record<string, unknown>) }
-  const meta = tool === "edit" ? slimEditMeta(next.metadata) : slimPatchMeta(next.metadata)
+  const meta = slimEditMeta(next.metadata)
   if (meta) next.metadata = meta
   else delete next.metadata
 
