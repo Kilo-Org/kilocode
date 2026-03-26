@@ -48,6 +48,19 @@ import { Instance } from "../../src/project/instance"
 import { Auth } from "../../src/auth"
 import { ModelCache } from "../../src/provider/model-cache"
 
+// Clear env vars that inject provider config from outside (e.g. KILO_CONFIG_CONTENT
+// set by the cloud-agent harness) so tests can assert against the config they write.
+function withoutConfigContent<T>(fn: () => Promise<T>): Promise<T> {
+  const saved = process.env["KILO_CONFIG_CONTENT"]
+  const savedOc = process.env["OPENCODE_CONFIG_CONTENT"]
+  delete process.env["KILO_CONFIG_CONTENT"]
+  delete process.env["OPENCODE_CONFIG_CONTENT"]
+  return fn().finally(() => {
+    if (saved !== undefined) process.env["KILO_CONFIG_CONTENT"] = saved
+    if (savedOc !== undefined) process.env["OPENCODE_CONFIG_CONTENT"] = savedOc
+  })
+}
+
 test("model fetch uses accountId from OAuth auth as kilocodeOrganizationId", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
@@ -71,19 +84,20 @@ test("model fetch uses accountId from OAuth auth as kilocodeOrganizationId", asy
         accountId: "org-enterprise-123",
       })
     },
-    fn: async () => {
-      // Reset captured and cache
-      captured = undefined
-      ModelCache.clear("kilo")
+    fn: () =>
+      withoutConfigContent(async () => {
+        // Reset captured and cache
+        captured = undefined
+        ModelCache.clear("kilo")
 
-      // Trigger model fetch through the cache
-      await ModelCache.fetch("kilo")
+        // Trigger model fetch through the cache
+        await ModelCache.fetch("kilo")
 
-      // The fetchKiloModels call should have received the organization ID
-      expect(captured).toBeDefined()
-      expect(captured.kilocodeToken).toBe("test-oauth-token")
-      expect(captured.kilocodeOrganizationId).toBe("org-enterprise-123")
-    },
+        // The fetchKiloModels call should have received the organization ID
+        expect(captured).toBeDefined()
+        expect(captured.kilocodeToken).toBe("test-oauth-token")
+        expect(captured.kilocodeOrganizationId).toBe("org-enterprise-123")
+      }),
   })
 })
 
@@ -109,15 +123,54 @@ test("model fetch without OAuth accountId does not set kilocodeOrganizationId", 
         expires: Date.now() + 3600000,
       })
     },
+    fn: () =>
+      withoutConfigContent(async () => {
+        captured = undefined
+        ModelCache.clear("kilo")
+
+        await ModelCache.fetch("kilo")
+
+        expect(captured).toBeDefined()
+        expect(captured.kilocodeToken).toBe("test-personal-token")
+        expect(captured.kilocodeOrganizationId).toBeUndefined()
+      }),
+  })
+})
+
+// Regression test: kilocodeToken in KILO_CONFIG_CONTENT provider options must be used
+// as the auth header when fetching models (the primary use case for cloud-agent sessions).
+test("model fetch uses kilocodeToken from KILO_CONFIG_CONTENT provider options", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(path.join(dir, "opencode.json"), JSON.stringify({ $schema: "https://app.kilo.ai/config.json" }))
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    init: async () => {
+      // No stored auth — token comes from inline config (KILO_CONFIG_CONTENT)
+      await Auth.remove("kilo")
+    },
     fn: async () => {
-      captured = undefined
-      ModelCache.clear("kilo")
+      const saved = process.env["KILO_CONFIG_CONTENT"]
+      const savedOc = process.env["OPENCODE_CONFIG_CONTENT"]
+      process.env["KILO_CONFIG_CONTENT"] = JSON.stringify({
+        provider: { kilo: { options: { kilocodeToken: "inline-config-token" } } },
+      })
+      delete process.env["OPENCODE_CONFIG_CONTENT"]
+      try {
+        captured = undefined
+        ModelCache.clear("kilo")
 
-      await ModelCache.fetch("kilo")
+        await ModelCache.fetch("kilo")
 
-      expect(captured).toBeDefined()
-      expect(captured.kilocodeToken).toBe("test-personal-token")
-      expect(captured.kilocodeOrganizationId).toBeUndefined()
+        expect(captured).toBeDefined()
+        expect(captured.kilocodeToken).toBe("inline-config-token")
+      } finally {
+        if (saved !== undefined) process.env["KILO_CONFIG_CONTENT"] = saved
+        else delete process.env["KILO_CONFIG_CONTENT"]
+        if (savedOc !== undefined) process.env["OPENCODE_CONFIG_CONTENT"] = savedOc
+      }
     },
   })
 })
@@ -144,29 +197,30 @@ test("ModelCache.clear removes cached entry so next fetch hits the network", asy
         accountId: "org-clear",
       })
     },
-    fn: async () => {
-      // Populate cache
-      captured = undefined
-      ModelCache.clear("kilo")
-      await ModelCache.fetch("kilo")
-      expect(captured).toBeDefined()
+    fn: () =>
+      withoutConfigContent(async () => {
+        // Populate cache
+        captured = undefined
+        ModelCache.clear("kilo")
+        await ModelCache.fetch("kilo")
+        expect(captured).toBeDefined()
 
-      // Verify cache is populated — second fetch should NOT call fetchKiloModels
-      captured = undefined
-      await ModelCache.fetch("kilo")
-      expect(captured).toBeUndefined()
-      expect(ModelCache.get("kilo")).toBeDefined()
+        // Verify cache is populated — second fetch should NOT call fetchKiloModels
+        captured = undefined
+        await ModelCache.fetch("kilo")
+        expect(captured).toBeUndefined()
+        expect(ModelCache.get("kilo")).toBeDefined()
 
-      // Clear the cache
-      ModelCache.clear("kilo")
+        // Clear the cache
+        ModelCache.clear("kilo")
 
-      // get() should return undefined after clear
-      expect(ModelCache.get("kilo")).toBeUndefined()
+        // get() should return undefined after clear
+        expect(ModelCache.get("kilo")).toBeUndefined()
 
-      // Next fetch should call fetchKiloModels again
-      captured = undefined
-      await ModelCache.fetch("kilo")
-      expect(captured).toBeDefined()
-    },
+        // Next fetch should call fetchKiloModels again
+        captured = undefined
+        await ModelCache.fetch("kilo")
+        expect(captured).toBeDefined()
+      }),
   })
 })
