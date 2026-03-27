@@ -34,6 +34,11 @@ export function createKiloClient(config?: Config & { directory?: string; experim
     }
   }
 
+  // Node.js/Electron require duplex: "half" when creating Request objects
+  // with a body. The option propagates through config → opts → requestInit
+  // and is harmless in environments that don't need it (Bun, browsers).
+  ;(config as any).duplex = "half"
+
   const client = createClient(config)
   return new KiloClient({ client })
 }
