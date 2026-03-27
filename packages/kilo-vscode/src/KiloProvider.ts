@@ -113,6 +113,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private cachedCommandsMessage: unknown = null
   /** Cached configLoaded payload so requestConfig can be served before client is ready */
   private cachedConfigMessage: unknown = null
+  /** Cached mcpStatusLoaded payload so requestMcpStatus can be served before client is ready */
+  private cachedMcpStatusMessage: unknown = null
   /** Ref-count of in-flight handleUpdateConfig calls; prevents fetchAndSendConfig from sending stale data */
   private pending = 0
   /** Cached notificationsLoaded payload */
@@ -641,6 +643,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "removeMcp":
           this.handleRemoveMcp(message.name).catch((e) => console.error("[Kilo New] handleRemoveMcp failed:", e))
+          break
+        case "requestMcpStatus":
+          this.fetchAndSendMcpStatus().catch((e) => console.error("[Kilo New] fetchAndSendMcpStatus failed:", e))
+          break
+        case "connectMcp":
+          this.handleConnectMcp(message.name).catch((e) => console.error("[Kilo New] handleConnectMcp failed:", e))
+          break
+        case "disconnectMcp":
+          this.handleDisconnectMcp(message.name).catch((e) =>
+            console.error("[Kilo New] handleDisconnectMcp failed:", e),
+          )
           break
 
         case "questionReply":
@@ -1647,6 +1660,51 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       await this.fetchAndSendConfig()
     } else {
       console.error("[Kilo New] KiloProvider: Failed to remove MCP server:", name)
+    }
+  }
+
+  private async fetchAndSendMcpStatus(): Promise<void> {
+    if (!this.client) {
+      if (this.cachedMcpStatusMessage) {
+        this.postMessage(this.cachedMcpStatusMessage)
+      }
+      return
+    }
+
+    try {
+      const directory = this.getWorkspaceDirectory()
+      const { data } = await this.client.mcp.status({ directory })
+      if (data) {
+        const message = { type: "mcpStatusLoaded", status: data }
+        this.cachedMcpStatusMessage = message
+        this.postMessage(message)
+      }
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to fetch MCP status:", error)
+    }
+  }
+
+  private async handleConnectMcp(name: string): Promise<void> {
+    if (!this.client) return
+    try {
+      const directory = this.getWorkspaceDirectory()
+      await this.client.mcp.connect({ name, directory })
+      await this.fetchAndSendMcpStatus()
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to connect MCP:", name, error)
+      await this.fetchAndSendMcpStatus()
+    }
+  }
+
+  private async handleDisconnectMcp(name: string): Promise<void> {
+    if (!this.client) return
+    try {
+      const directory = this.getWorkspaceDirectory()
+      await this.client.mcp.disconnect({ name, directory })
+      await this.fetchAndSendMcpStatus()
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to disconnect MCP:", name, error)
+      await this.fetchAndSendMcpStatus()
     }
   }
 

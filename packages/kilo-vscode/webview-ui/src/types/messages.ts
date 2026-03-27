@@ -1313,6 +1313,7 @@ export type ExtensionMessage =
   | LanguageChangedMessage
   | ContinueInWorktreeProgressMessage
   | WorktreeStatsLoadedMessage
+  | McpStatusLoadedMessage
 
 // ============================================
 // Messages FROM webview TO extension
@@ -1499,6 +1500,30 @@ export interface RemoveModeMessage {
 export interface RemoveMcpMessage {
   type: "removeMcp"
   name: string
+}
+
+export interface RequestMcpStatusMessage {
+  type: "requestMcpStatus"
+}
+
+export interface ConnectMcpMessage {
+  type: "connectMcp"
+  name: string
+}
+
+export interface DisconnectMcpMessage {
+  type: "disconnectMcp"
+  name: string
+}
+
+export interface McpStatusEntry {
+  status: "connected" | "disabled" | "failed" | "needs_auth" | "needs_client_registration"
+  error?: string
+}
+
+export interface McpStatusLoadedMessage {
+  type: "mcpStatusLoaded"
+  status: Record<string, McpStatusEntry>
 }
 
 export interface SetLanguageRequest {
@@ -1985,6 +2010,9 @@ export type WebviewMessage =
   | RemoveSkillMessage
   | RemoveModeMessage
   | RemoveMcpMessage
+  | RequestMcpStatusMessage
+  | ConnectMcpMessage
+  | DisconnectMcpMessage
   | SetLanguageRequest
   | QuestionReplyRequest
   | QuestionRejectRequest
