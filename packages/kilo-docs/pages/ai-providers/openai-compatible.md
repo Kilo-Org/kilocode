@@ -25,7 +25,7 @@ You'll find these settings in the Kilo Code settings panel (click the {% codicon
 - **API Provider:** Select "OpenAI Compatible".
 - **Base URL:** Enter the base URL provided by your chosen provider. **This is crucial.**
 - **API Key:** Enter your API key.
-- **Model:** Choose a model.
+- **Model:** Choose a model (see [Automatic Model Detection](#automatic-model-detection) below).
 - **Model Configuration:** This lets you customize advanced configuration for the model
   - Max Output Tokens
   - Context Window
@@ -33,6 +33,18 @@ You'll find these settings in the Kilo Code settings panel (click the {% codicon
   - Computer Use
   - Input Price
   - Output Price
+
+### Automatic Model Detection
+
+When configuring a custom OpenAI-compatible provider in the VS Code extension, Kilo Code can automatically detect available models from your provider's `/v1/models` endpoint.
+
+Once you enter a valid **Base URL** and **API Key**, Kilo Code will query the provider and present a searchable model picker with all available models. You can:
+
+- **Search** with fuzzy matching (e.g., typing "gpt4o" finds "gpt-4o-mini")
+- **Select** individual models to add to the provider configuration
+- **Edit** an existing custom provider to add or remove models later
+
+This eliminates the need to manually look up and type model IDs. If auto-detection fails (for example, if the provider doesn't support the `/v1/models` endpoint), you can still enter model IDs manually.
 
 ### Full Endpoint URL Support
 
