@@ -959,6 +959,18 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Kilo Code 확장 프로그램의 모든 설정을 기본값으로 초기화합니다. CLI 또는 백엔드 구성에는 영향을 미치지 않습니다.",
   "settings.aboutKiloCode.resetSettings.button": "모든 설정 초기화",
+  "settings.aboutKiloCode.settingsTransfer.title": "설정 이전",
+  "settings.aboutKiloCode.settingsTransfer.description":
+    "VS Code 인스턴스 간에 설정을 전송하려면 내보내기 또는 가져오기하세요.",
+  "settings.aboutKiloCode.exportSettings": "내보내기",
+  "settings.aboutKiloCode.importSettings": "가져오기",
+  "settings.aboutKiloCode.importSettings.invalidJson":
+    "유효하지 않은 JSON 파일입니다. 올바른 설정 파일을 선택해 주세요.",
+  "settings.aboutKiloCode.importSettings.invalidConfig": "파일에 유효한 Kilo 설정이 포함되어 있지 않습니다.",
+  "settings.aboutKiloCode.importSettings.tooLarge": "파일이 너무 큽니다. 설정 파일은 1 MB 이하여야 합니다.",
+  "settings.aboutKiloCode.importSettings.newerVersion":
+    "이 파일은 더 최신 버전의 Kilo에서 내보낸 것입니다. 일부 설정이 무시될 수 있습니다.",
+  "settings.aboutKiloCode.importSettings.success": "설정을 가져왔습니다. 위의 변경 사항을 확인한 후 저장을 클릭하세요.",
 
   "settings.agentBehaviour.subtab.modes": "모드",
   "settings.agentBehaviour.subtab.agents": "Agents",

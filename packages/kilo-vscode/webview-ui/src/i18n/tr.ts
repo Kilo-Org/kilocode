@@ -963,6 +963,18 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Tüm Kilo Code uzantı ayarlarını varsayılan değerlerine sıfırla. Bu, CLI veya arka uç yapılandırmasını etkilemez.",
   "settings.aboutKiloCode.resetSettings.button": "Tüm Ayarları Sıfırla",
+  "settings.aboutKiloCode.settingsTransfer.title": "Ayar Aktarımı",
+  "settings.aboutKiloCode.settingsTransfer.description":
+    "Ayarlarınızı VS Code örnekleri arasında aktarmak için dışa veya içe aktarın.",
+  "settings.aboutKiloCode.exportSettings": "Dışa Aktar",
+  "settings.aboutKiloCode.importSettings": "İçe Aktar",
+  "settings.aboutKiloCode.importSettings.invalidJson": "Geçersiz JSON dosyası. Lütfen geçerli bir ayar dosyası seçin.",
+  "settings.aboutKiloCode.importSettings.invalidConfig": "Dosya geçerli Kilo ayarları içermiyor.",
+  "settings.aboutKiloCode.importSettings.tooLarge": "Dosya çok büyük. Ayar dosyaları 1 MB altında olmalıdır.",
+  "settings.aboutKiloCode.importSettings.newerVersion":
+    "Bu dosya Kilo'nun daha yeni bir sürümünden dışa aktarılmış. Bazı ayarlar göz ardı edilebilir.",
+  "settings.aboutKiloCode.importSettings.success":
+    "Ayarlar içe aktarıldı. Yukarıdaki değişiklikleri gözden geçirin, ardından Kaydet'e tıklayın.",
 
   "settings.agentBehaviour.subtab.modes": "Modlar",
   "settings.agentBehaviour.subtab.agents": "Ajanlar",

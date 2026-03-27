@@ -954,6 +954,16 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "إعادة تعيين جميع إعدادات إضافة Kilo Code إلى قيمها الافتراضية. لا يؤثر هذا على تكوين CLI أو الواجهة الخلفية.",
   "settings.aboutKiloCode.resetSettings.button": "إعادة تعيين جميع الإعدادات",
+  "settings.aboutKiloCode.settingsTransfer.title": "نقل الإعدادات",
+  "settings.aboutKiloCode.settingsTransfer.description": "تصدير أو استيراد إعداداتك لنقلها بين نُسخ VS Code.",
+  "settings.aboutKiloCode.exportSettings": "تصدير",
+  "settings.aboutKiloCode.importSettings": "استيراد",
+  "settings.aboutKiloCode.importSettings.invalidJson": "ملف JSON غير صالح. يرجى اختيار ملف إعدادات صالح.",
+  "settings.aboutKiloCode.importSettings.invalidConfig": "الملف لا يحتوي على إعدادات Kilo صالحة.",
+  "settings.aboutKiloCode.importSettings.tooLarge": "الملف كبير جدًا. يجب أن تكون ملفات الإعدادات أقل من 1 MB.",
+  "settings.aboutKiloCode.importSettings.newerVersion":
+    "تم تصدير هذا الملف من إصدار أحدث من Kilo. قد يتم تجاهل بعض الإعدادات.",
+  "settings.aboutKiloCode.importSettings.success": "تم استيراد الإعدادات. راجع التغييرات أعلاه، ثم انقر على حفظ.",
 
   "settings.agentBehaviour.subtab.modes": "الأوضاع",
   "settings.agentBehaviour.subtab.agents": "Agents",

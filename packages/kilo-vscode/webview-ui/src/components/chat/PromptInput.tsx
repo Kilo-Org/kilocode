@@ -78,7 +78,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   })
   const history = usePromptHistory()
 
-  const sessionKey = () => session.currentSessionID() ?? worktree?.pendingId() ?? "__new__"
+  const sessionKey = () => session.currentSessionID() ?? "__new__"
 
   const [text, setText] = createSignal("")
   const [reviewComments, setReviewComments] = createSignal<ReviewComment[]>([])

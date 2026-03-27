@@ -74,7 +74,7 @@ import { ProviderProvider } from "../src/context/provider"
 import { ConfigProvider } from "../src/context/config"
 import { NotificationsProvider } from "../src/context/notifications"
 import { SessionProvider, useSession } from "../src/context/session"
-import { WorktreeModeProvider, useWorktreeMode } from "../src/context/worktree-mode"
+import { WorktreeModeProvider } from "../src/context/worktree-mode"
 import { ChatView } from "../src/components/chat"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
 import { LanguageBridge, DataBridge } from "../src/App"
@@ -312,44 +312,6 @@ const AgentManagerContent: Component = () => {
   const repoDefaultBranch = () => defaultBaseBranch() ?? repoDetectedBranch() ?? "main"
   const hasConfiguredBranch = () => !!defaultBaseBranch()
 
-  const applyState = (state: AgentManagerStateMessage) => {
-    setWorktrees(state.worktrees)
-    setManagedSessions(state.sessions)
-    setStaleWorktreeIds(new Set(state.staleWorktreeIds ?? []))
-    if (state.isGitRepo !== undefined) setIsGitRepo(state.isGitRepo)
-    if (!worktreesLoaded()) setWorktreesLoaded(true)
-    if (state.isGitRepo === false && !sessionsLoaded()) setSessionsLoaded(true)
-    if (state.tabOrder) setWorktreeTabOrder(state.tabOrder)
-    if (state.worktreeOrder) setSidebarWorktreeOrder(state.worktreeOrder)
-    if (state.reviewDiffStyle === "split" || state.reviewDiffStyle === "unified") {
-      setReviewDiffStyle(state.reviewDiffStyle)
-    }
-    if ("defaultBaseBranch" in state) setDefaultBaseBranch(state.defaultBaseBranch || undefined)
-    const current = session.currentSessionID()
-    if (current) {
-      const ms = state.sessions.find((s) => s.id === current)
-      if (ms?.worktreeId) setSelection(ms.worktreeId)
-    }
-    const localOrder = state.tabOrder?.[LOCAL]
-    if (localOrder && localSessionIDs().length > 0) {
-      const reordered = applyTabOrder(
-        localSessionIDs().map((id) => ({ id })),
-        localOrder,
-      ).map((item) => item.id)
-      setLocalSessionIDs(reordered)
-    }
-    if (state.sessionsCollapsed !== undefined) setSessionsCollapsed(state.sessionsCollapsed)
-    const ids = new Set(state.worktrees.map((wt) => wt.id))
-    setBusyWorktrees((prev) => {
-      const next = new Map([...prev].filter(([id]) => ids.has(id)))
-      return next.size === prev.size ? prev : next
-    })
-  }
-
-  const requestState = () => {
-    vscode.postMessage({ type: "agentManager.requestState" })
-  }
-
   const DEFAULT_SIDEBAR_WIDTH = 260
   const MIN_SIDEBAR_WIDTH = 200
   const MAX_SIDEBAR_WIDTH_RATIO = 0.4
@@ -396,10 +358,6 @@ const AgentManagerContent: Component = () => {
   let pendingCounter = 0
   const PENDING_PREFIX = "pending:"
   const [activePendingId, setActivePendingId] = createSignal<string | undefined>()
-
-  // Sync activePendingId into WorktreeMode context so PromptInput can key drafts per pending tab
-  const worktreeCtx = useWorktreeMode()
-  createEffect(() => worktreeCtx?.setPendingId(activePendingId()))
 
   // Inline delete confirmation: tracks which worktree is awaiting a second click/press
   const [pendingDelete, setPendingDelete] = createSignal<string | null>(null)
@@ -1039,41 +997,6 @@ const AgentManagerContent: Component = () => {
     if (agent) session.selectAgent(agent.name)
   }
 
-  // Subscribe outside onMount so early sessionsLoaded messages (posted before
-  // the component mounts) are not missed. This matches the codebase pattern for
-  // loaded-message listeners and prevents the loading skeleton from persisting
-  // after a backend crash/restart + panel reopen.
-  const unsubState = vscode.onMessage((msg) => {
-    if (msg.type !== "agentManager.state") return
-    applyState(msg as AgentManagerStateMessage)
-  })
-  onCleanup(unsubState)
-
-  const unsubSessions = vscode.onMessage((msg) => {
-    if (msg.type !== "sessionsLoaded") return
-    if (!sessionsLoaded()) setSessionsLoaded(true)
-  })
-  onCleanup(unsubSessions)
-
-  // Retry state requests while the panel is bootstrapping so reopening after a
-  // backend restart cannot get stuck behind a missed requestState/refresh race.
-  const retryMs = 500
-  const maxRetries = 10
-  let retries = 0
-  const retry = setInterval(() => {
-    if (worktreesLoaded() && sessionsLoaded()) {
-      clearInterval(retry)
-      return
-    }
-    retries++
-    if (retries >= maxRetries) {
-      clearInterval(retry)
-      return
-    }
-    requestState()
-  }, retryMs)
-  onCleanup(() => clearInterval(retry))
-
   onMount(() => {
     const handler = (event: MessageEvent) => {
       const msg = event.data as ExtensionMessage
@@ -1177,6 +1100,11 @@ const AgentManagerContent: Component = () => {
       }
     })
 
+    // Mark sessions loaded as soon as the session context receives data (even if empty)
+    const unsubSessions = vscode.onMessage((msg) => {
+      if (msg.type === "sessionsLoaded" && !sessionsLoaded()) setSessionsLoaded(true)
+    })
+
     const unsub = vscode.onMessage((msg) => {
       if (msg.type === "agentManager.repoInfo") {
         const info = msg as AgentManagerRepoInfoMessage
@@ -1248,6 +1176,46 @@ const AgentManagerContent: Component = () => {
       if (msg.type === "agentManager.keybindings") {
         const ev = msg as AgentManagerKeybindingsMessage
         setKb(ev.bindings)
+      }
+
+      if (msg.type === "agentManager.state") {
+        const state = msg as AgentManagerStateMessage
+        setWorktrees(state.worktrees)
+        setManagedSessions(state.sessions)
+        setStaleWorktreeIds(new Set(state.staleWorktreeIds ?? []))
+        if (state.isGitRepo !== undefined) setIsGitRepo(state.isGitRepo)
+        if (!worktreesLoaded()) setWorktreesLoaded(true)
+        // When not a git repo, also mark sessions as loaded since the Kilo
+        // server won't connect to send the sessionsLoaded message.
+        if (state.isGitRepo === false && !sessionsLoaded()) setSessionsLoaded(true)
+        if (state.tabOrder) setWorktreeTabOrder(state.tabOrder)
+        if (state.worktreeOrder) setSidebarWorktreeOrder(state.worktreeOrder)
+        if (state.reviewDiffStyle === "split" || state.reviewDiffStyle === "unified") {
+          setReviewDiffStyle(state.reviewDiffStyle)
+        }
+        if ("defaultBaseBranch" in state) setDefaultBaseBranch(state.defaultBaseBranch || undefined)
+        const current = session.currentSessionID()
+        if (current) {
+          const ms = state.sessions.find((s) => s.id === current)
+          if (ms?.worktreeId) setSelection(ms.worktreeId)
+        }
+        // Recover local tab order from persisted state
+        const localOrder = state.tabOrder?.[LOCAL]
+        if (localOrder && localSessionIDs().length > 0) {
+          const reordered = applyTabOrder(
+            localSessionIDs().map((id) => ({ id })),
+            localOrder,
+          ).map((item) => item.id)
+          setLocalSessionIDs(reordered)
+        }
+        // Recover sessions collapsed state from extension-persisted state
+        if (state.sessionsCollapsed !== undefined) setSessionsCollapsed(state.sessionsCollapsed)
+        // Clear busy state for worktrees that have been removed
+        const ids = new Set(state.worktrees.map((wt) => wt.id))
+        setBusyWorktrees((prev) => {
+          const next = new Map([...prev].filter(([id]) => ids.has(id)))
+          return next.size === prev.size ? prev : next
+        })
       }
 
       // When a multi-version progress update arrives, mark newly created worktrees as loading
@@ -1417,6 +1385,7 @@ const AgentManagerContent: Component = () => {
       window.removeEventListener("keydown", deleteKeyHandler)
       window.removeEventListener("focus", onWindowFocus)
       unsubCreate()
+      unsubSessions()
       unsub()
     })
   })
@@ -1426,7 +1395,7 @@ const AgentManagerContent: Component = () => {
     selectLocal()
     // Request worktree/session state from extension — handles race where
     // initializeState() pushState fires before the webview is mounted
-    requestState()
+    vscode.postMessage({ type: "agentManager.requestState" })
     // Open a pending "New Session" tab if there are no persisted local sessions
     if (localSessionIDs().length === 0) {
       addPendingTab()

@@ -960,6 +960,19 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Kilo Code拡張機能のすべての設定をデフォルト値にリセットします。CLIやバックエンドの設定には影響しません。",
   "settings.aboutKiloCode.resetSettings.button": "すべての設定をリセット",
+  "settings.aboutKiloCode.settingsTransfer.title": "設定の移行",
+  "settings.aboutKiloCode.settingsTransfer.description":
+    "VS Code インスタンス間で設定を転送するには、エクスポートまたはインポートしてください。",
+  "settings.aboutKiloCode.exportSettings": "エクスポート",
+  "settings.aboutKiloCode.importSettings": "インポート",
+  "settings.aboutKiloCode.importSettings.invalidJson":
+    "無効な JSON ファイルです。有効な設定ファイルを選択してください。",
+  "settings.aboutKiloCode.importSettings.invalidConfig": "ファイルに有効な Kilo の設定が含まれていません。",
+  "settings.aboutKiloCode.importSettings.tooLarge": "ファイルが大きすぎます。設定ファイルは 1 MB 以下にしてください。",
+  "settings.aboutKiloCode.importSettings.newerVersion":
+    "このファイルはより新しいバージョンの Kilo からエクスポートされたものです。一部の設定が無視される場合があります。",
+  "settings.aboutKiloCode.importSettings.success":
+    "設定をインポートしました。上記の変更内容を確認してから、保存をクリックしてください。",
 
   "settings.agentBehaviour.subtab.modes": "モード",
   "settings.agentBehaviour.subtab.agents": "Agents",

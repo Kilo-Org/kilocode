@@ -722,6 +722,11 @@ export interface ConfigUpdatedMessage {
   config: Config
 }
 
+export interface GlobalConfigLoadedMessage {
+  type: "globalConfigLoaded"
+  config: Config
+}
+
 export interface NotificationSettingsLoadedMessage {
   type: "notificationSettingsLoaded"
   settings: {
@@ -1243,6 +1248,7 @@ export type ExtensionMessage =
   | BrowserSettingsLoadedMessage
   | ConfigLoadedMessage
   | ConfigUpdatedMessage
+  | GlobalConfigLoadedMessage
   | NotificationSettingsLoadedMessage
   | NotificationsLoadedMessage
   | AgentManagerSessionMetaMessage
@@ -1547,6 +1553,10 @@ export interface RequestBrowserSettingsMessage {
 
 export interface RequestConfigMessage {
   type: "requestConfig"
+}
+
+export interface RequestGlobalConfigMessage {
+  type: "requestGlobalConfig"
 }
 
 export interface UpdateConfigMessage {
@@ -1971,6 +1981,7 @@ export type WebviewMessage =
   | UpdateSettingRequest
   | RequestBrowserSettingsMessage
   | RequestConfigMessage
+  | RequestGlobalConfigMessage
   | UpdateConfigMessage
   | RequestNotificationSettingsMessage
   | ResetAllSettingsRequest

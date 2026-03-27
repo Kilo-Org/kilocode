@@ -947,6 +947,15 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "将所有 Kilo Code 扩展设置重置为默认值。这不会影响 CLI 或后端配置。",
   "settings.aboutKiloCode.resetSettings.button": "重置所有设置",
+  "settings.aboutKiloCode.settingsTransfer.title": "设置迁移",
+  "settings.aboutKiloCode.settingsTransfer.description": "导出或导入设置，以便在 VS Code 实例之间传输。",
+  "settings.aboutKiloCode.exportSettings": "导出",
+  "settings.aboutKiloCode.importSettings": "导入",
+  "settings.aboutKiloCode.importSettings.invalidJson": "无效的 JSON 文件。请选择有效的设置文件。",
+  "settings.aboutKiloCode.importSettings.invalidConfig": "文件不包含有效的 Kilo 设置。",
+  "settings.aboutKiloCode.importSettings.tooLarge": "文件过大。设置文件必须小于 1 MB。",
+  "settings.aboutKiloCode.importSettings.newerVersion": "此文件由较新版本的 Kilo 导出。部分设置可能会被忽略。",
+  "settings.aboutKiloCode.importSettings.success": "设置已导入。请查看上方的更改，然后点击保存。",
 
   "settings.agentBehaviour.subtab.modes": "模式",
   "settings.agentBehaviour.subtab.agents": "Agents",

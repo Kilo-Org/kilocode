@@ -632,6 +632,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestConfig":
           this.fetchAndSendConfig().catch((e) => console.error("[Kilo New] fetchAndSendConfig failed:", e))
           break
+        case "requestGlobalConfig":
+          this.fetchAndSendGlobalConfig().catch((e) => console.error("[Kilo New] fetchAndSendGlobalConfig failed:", e))
+          break
         case "updateConfig":
           await this.handleUpdateConfig(message.config)
           break
@@ -1697,6 +1700,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage(message)
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to fetch config:", error)
+    }
+  }
+
+  /** Fetch global-only config (no project/managed layers) for settings export. */
+  private async fetchAndSendGlobalConfig(): Promise<void> {
+    if (!this.client || this.connectionState !== "connected") return
+    try {
+      const { data: config } = await this.client.global.config.get({ throwOnError: true })
+      this.postMessage({ type: "globalConfigLoaded", config })
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to fetch global config:", error)
     }
   }
 

@@ -955,6 +955,17 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "รีเซ็ตการตั้งค่าส่วนขยาย Kilo Code ทั้งหมดเป็นค่าเริ่มต้น ไม่ส่งผลกระทบต่อการกำหนดค่า CLI หรือแบ็กเอนด์",
   "settings.aboutKiloCode.resetSettings.button": "รีเซ็ตการตั้งค่าทั้งหมด",
+  "settings.aboutKiloCode.settingsTransfer.title": "ถ่ายโอนการตั้งค่า",
+  "settings.aboutKiloCode.settingsTransfer.description":
+    "ส่งออกหรือนำเข้าการตั้งค่าเพื่อถ่ายโอนระหว่างอินสแตนซ์ VS Code",
+  "settings.aboutKiloCode.exportSettings": "ส่งออก",
+  "settings.aboutKiloCode.importSettings": "นำเข้า",
+  "settings.aboutKiloCode.importSettings.invalidJson": "ไฟล์ JSON ไม่ถูกต้อง กรุณาเลือกไฟล์การตั้งค่าที่ถูกต้อง",
+  "settings.aboutKiloCode.importSettings.invalidConfig": "ไฟล์ไม่มีการตั้งค่า Kilo ที่ถูกต้อง",
+  "settings.aboutKiloCode.importSettings.tooLarge": "ไฟล์มีขนาดใหญ่เกินไป ไฟล์การตั้งค่าต้องมีขนาดไม่เกิน 1 MB",
+  "settings.aboutKiloCode.importSettings.newerVersion":
+    "ไฟล์นี้ถูกส่งออกจาก Kilo เวอร์ชันใหม่กว่า การตั้งค่าบางรายการอาจถูกข้ามไป",
+  "settings.aboutKiloCode.importSettings.success": "นำเข้าการตั้งค่าแล้ว ตรวจสอบการเปลี่ยนแปลงด้านบน จากนั้นคลิกบันทึก",
 
   "settings.agentBehaviour.subtab.modes": "โหมด",
   "settings.agentBehaviour.subtab.agents": "Agents",

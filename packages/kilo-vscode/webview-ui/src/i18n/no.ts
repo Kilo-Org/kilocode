@@ -964,6 +964,18 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Tilbakestill alle Kilo Code-utvidelsesinnstillinger til standardverdier. Dette påvirker ikke CLI- eller backend-konfigurasjon.",
   "settings.aboutKiloCode.resetSettings.button": "Tilbakestill alle innstillinger",
+  "settings.aboutKiloCode.settingsTransfer.title": "Overføring av innstillinger",
+  "settings.aboutKiloCode.settingsTransfer.description":
+    "Eksporter eller importer innstillingene dine for å overføre dem mellom VS Code-instanser.",
+  "settings.aboutKiloCode.exportSettings": "Eksporter",
+  "settings.aboutKiloCode.importSettings": "Importer",
+  "settings.aboutKiloCode.importSettings.invalidJson": "Ugyldig JSON-fil. Vennligst velg en gyldig innstillingsfil.",
+  "settings.aboutKiloCode.importSettings.invalidConfig": "Filen inneholder ikke gyldige Kilo-innstillinger.",
+  "settings.aboutKiloCode.importSettings.tooLarge": "Filen er for stor. Innstillingsfiler må være under 1 MB.",
+  "settings.aboutKiloCode.importSettings.newerVersion":
+    "Denne filen ble eksportert fra en nyere versjon av Kilo. Noen innstillinger kan bli ignorert.",
+  "settings.aboutKiloCode.importSettings.success":
+    "Innstillinger importert. Gjennomgå endringene ovenfor, og klikk deretter på Lagre.",
 
   "settings.agentBehaviour.subtab.modes": "Moduser",
   "settings.agentBehaviour.subtab.agents": "Agents",

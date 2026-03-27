@@ -961,6 +961,18 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Nulstil alle Kilo Code-udvidelsesindstillinger til standardværdierne. Dette påvirker ikke CLI- eller backend-konfiguration.",
   "settings.aboutKiloCode.resetSettings.button": "Nulstil alle indstillinger",
+  "settings.aboutKiloCode.settingsTransfer.title": "Overførsel af indstillinger",
+  "settings.aboutKiloCode.settingsTransfer.description":
+    "Eksportér eller importér dine indstillinger for at overføre dem mellem VS Code-instanser.",
+  "settings.aboutKiloCode.exportSettings": "Eksportér",
+  "settings.aboutKiloCode.importSettings": "Importér",
+  "settings.aboutKiloCode.importSettings.invalidJson": "Ugyldig JSON-fil. Vælg venligst en gyldig indstillingsfil.",
+  "settings.aboutKiloCode.importSettings.invalidConfig": "Filen indeholder ikke gyldige Kilo-indstillinger.",
+  "settings.aboutKiloCode.importSettings.tooLarge": "Filen er for stor. Indstillingsfiler skal være under 1 MB.",
+  "settings.aboutKiloCode.importSettings.newerVersion":
+    "Denne fil blev eksporteret fra en nyere version af Kilo. Nogle indstillinger kan blive ignoreret.",
+  "settings.aboutKiloCode.importSettings.success":
+    "Indstillinger importeret. Gennemgå ændringerne ovenfor, og klik derefter på Gem.",
 
   "settings.agentBehaviour.subtab.modes": "Tilstande",
   "settings.agentBehaviour.subtab.agents": "Agents",

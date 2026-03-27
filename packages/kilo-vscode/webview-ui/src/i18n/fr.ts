@@ -976,6 +976,20 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Réinitialiser tous les paramètres de l'extension Kilo Code à leurs valeurs par défaut. Cela n'affecte pas la configuration CLI ou backend.",
   "settings.aboutKiloCode.resetSettings.button": "Réinitialiser tous les paramètres",
+  "settings.aboutKiloCode.settingsTransfer.title": "Transfert des paramètres",
+  "settings.aboutKiloCode.settingsTransfer.description":
+    "Exportez ou importez vos paramètres pour les transférer entre instances VS Code.",
+  "settings.aboutKiloCode.exportSettings": "Exporter",
+  "settings.aboutKiloCode.importSettings": "Importer",
+  "settings.aboutKiloCode.importSettings.invalidJson":
+    "Fichier JSON invalide. Veuillez sélectionner un fichier de paramètres valide.",
+  "settings.aboutKiloCode.importSettings.invalidConfig": "Le fichier ne contient pas de paramètres Kilo valides.",
+  "settings.aboutKiloCode.importSettings.tooLarge":
+    "Le fichier est trop volumineux. Les fichiers de paramètres doivent faire moins de 1 MB.",
+  "settings.aboutKiloCode.importSettings.newerVersion":
+    "Ce fichier a été exporté depuis une version plus récente de Kilo. Certains paramètres pourraient être ignorés.",
+  "settings.aboutKiloCode.importSettings.success":
+    "Paramètres importés. Vérifiez les modifications ci-dessus, puis cliquez sur Enregistrer.",
 
   "settings.agentBehaviour.subtab.modes": "Modes",
   "settings.agentBehaviour.subtab.agents": "Agents",

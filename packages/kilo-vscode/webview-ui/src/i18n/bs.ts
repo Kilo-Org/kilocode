@@ -966,6 +966,18 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Resetujte sve postavke Kilo Code ekstenzije na zadane vrijednosti. Ovo ne utiče na CLI ili backend konfiguraciju.",
   "settings.aboutKiloCode.resetSettings.button": "Resetuj sve postavke",
+  "settings.aboutKiloCode.settingsTransfer.title": "Prijenos postavki",
+  "settings.aboutKiloCode.settingsTransfer.description":
+    "Izvezite ili uvezite postavke za prijenos između VS Code instanci.",
+  "settings.aboutKiloCode.exportSettings": "Izvezi",
+  "settings.aboutKiloCode.importSettings": "Uvezi",
+  "settings.aboutKiloCode.importSettings.invalidJson": "Nevažeći JSON fajl. Odaberite važeći fajl s postavkama.",
+  "settings.aboutKiloCode.importSettings.invalidConfig": "Fajl ne sadrži važeće Kilo postavke.",
+  "settings.aboutKiloCode.importSettings.tooLarge": "Fajl je prevelik. Fajlovi s postavkama moraju biti manji od 1 MB.",
+  "settings.aboutKiloCode.importSettings.newerVersion":
+    "Ovaj fajl je izvezen iz novije verzije Kilo-a. Neke postavke mogu biti zanemarene.",
+  "settings.aboutKiloCode.importSettings.success":
+    "Postavke su uvezene. Pregledajte promjene iznad, a zatim kliknite Sačuvaj.",
 
   "settings.agentBehaviour.subtab.modes": "Modovi",
   "settings.agentBehaviour.subtab.agents": "Agents",
