@@ -29,31 +29,13 @@ export interface SettingsProps {
   onMigrateClick?: () => void // legacy-migration
 }
 
-const TABS = new Set([
-  "models",
-  "providers",
-  "agentBehaviour",
-  "autoApprove",
-  "browser",
-  "checkpoints",
-  "display",
-  "autocomplete",
-  "notifications",
-  "context",
-  "experimental",
-  "language",
-  "aboutKiloCode",
-])
-
-const validTab = (tab: string | undefined) => (tab && TABS.has(tab) ? tab : "models")
-
 const Settings: Component<SettingsProps> = (props) => {
   const server = useServer()
   const language = useLanguage()
   const vscode = useVSCode()
   const { isDirty, saveConfig, discardConfig } = useConfig()
   const session = useSession()
-  const [active, setActive] = createSignal(validTab(props.tab))
+  const [active, setActive] = createSignal(props.tab ?? "models")
 
   const busyCount = () => Object.values(session.allStatusMap()).filter((s) => s.type === "busy").length
 
@@ -80,7 +62,7 @@ const Settings: Component<SettingsProps> = (props) => {
     on(
       () => props.tab,
       (tab) => {
-        if (tab) setActive(validTab(tab))
+        if (tab) setActive(tab)
       },
     ),
   )
