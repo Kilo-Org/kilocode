@@ -497,7 +497,7 @@ const AgentBehaviourTab: Component = () => {
         failed: "mcp.status.failed",
         needs_auth: "mcp.status.needs_auth",
         disabled: "mcp.status.disabled",
-        needs_client_registration: "mcp.status.needs_auth",
+        needs_client_registration: "mcp.status.needs_registration",
       }[s]
       return key ? language.t(key) : s
     }
@@ -541,7 +541,9 @@ const AgentBehaviourTab: Component = () => {
                 const env = () => Object.entries(mcp.environment ?? mcp.env ?? {})
                 const error = () => {
                   const s = session.mcpStatus()[name]
-                  return s?.status === "failed" ? s.error : undefined
+                  if (s?.status === "failed") return s.error
+                  if (s?.status === "needs_client_registration") return s.error
+                  return undefined
                 }
                 return (
                   <div

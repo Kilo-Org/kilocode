@@ -277,12 +277,14 @@ export const SessionProvider: ParentComponent = (props) => {
 
   const connectMcp = (name: string) => {
     if (mcpLoading()) return
+    if (!server.isConnected()) return
     setMcpLoading(name)
     vscode.postMessage({ type: "connectMcp", name })
   }
 
   const disconnectMcp = (name: string) => {
     if (mcpLoading()) return
+    if (!server.isConnected()) return
     setMcpLoading(name)
     vscode.postMessage({ type: "disconnectMcp", name })
   }

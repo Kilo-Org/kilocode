@@ -268,6 +268,7 @@ export const dict = {
   "mcp.status.connected": "connected",
   "mcp.status.failed": "failed",
   "mcp.status.needs_auth": "needs auth",
+  "mcp.status.needs_registration": "needs client registration",
   "mcp.status.disabled": "disabled",
 
   "dialog.fork.empty": "No messages to fork from",
