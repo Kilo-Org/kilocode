@@ -15,6 +15,7 @@ import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pie
 import type { WorktreeFileDiff } from "../src/types/messages"
 import { useLanguage } from "../src/context/language"
 import { FileTree } from "./FileTree"
+import { treeOrder } from "./file-tree-utils"
 import { getDirectory, getFilename, lineCount, sanitizeReviewComments, type ReviewComment } from "./review-comments"
 import {
   buildFileAnnotations,
@@ -73,6 +74,10 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   let rootRef: HTMLDivElement | undefined
   let scrollRef: HTMLDivElement | undefined
   let syncFrame: number | undefined
+
+  // Reorder diffs to match the file-tree's depth-first visual order so
+  // scrolling through the diff panel matches the tree on the left.
+  const sorted = createMemo(() => treeOrder(props.diffs))
 
   const comments = () => props.comments
   const setComments = (next: ReviewComment[]) => props.onCommentsChange(next)
@@ -481,7 +486,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
           <Show when={props.diffs.length > 0}>
             <div class="am-review-diff-content" data-component="session-review">
               <Accordion multiple value={open()} onChange={setOpen}>
-                <For each={props.diffs}>
+                <For each={sorted()}>
                   {(diff) => {
                     const isAdded = () => diff.status === "added"
                     const isDeleted = () => diff.status === "deleted"
