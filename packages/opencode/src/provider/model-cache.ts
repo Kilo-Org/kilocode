@@ -185,11 +185,9 @@ export namespace ModelCache {
       if (providerConfig?.options?.apiKey) {
         options.kilocodeToken = providerConfig.options.apiKey
       }
-      // kilocode_change start - also read kilocodeToken from config options (preferred over apiKey)
       if (providerConfig?.options?.kilocodeToken) {
         options.kilocodeToken = providerConfig.options.kilocodeToken
       }
-      // kilocode_change end
 
       // kilocode_change start
       if (providerConfig?.options?.kilocodeOrganizationId) {
