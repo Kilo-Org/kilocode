@@ -4,6 +4,7 @@
 
 import { test, expect, mock } from "bun:test"
 import path from "path"
+import fs from "fs/promises"
 
 // Capture the options passed to fetchKiloModels
 let captured: any = undefined
@@ -46,10 +47,12 @@ mock.module("@gitlab/opencode-gitlab-auth", () => ({ default: mockPlugin }))
 import { tmpdir } from "../fixture/fixture"
 import { Instance } from "../../src/project/instance"
 import { Auth } from "../../src/auth"
+import { Env } from "../../src/env"
 import { ModelCache } from "../../src/provider/model-cache"
 
 // Clear env vars that inject provider config from outside (e.g. KILO_CONFIG_CONTENT
 // set by the cloud-agent harness) so tests can assert against the config they write.
+// This uses the same save/restore pattern as config.test.ts.
 function withoutConfigContent<T>(fn: () => Promise<T>): Promise<T> {
   const saved = process.env["KILO_CONFIG_CONTENT"]
   const savedOc = process.env["OPENCODE_CONFIG_CONTENT"]
@@ -137,41 +140,42 @@ test("model fetch without OAuth accountId does not set kilocodeOrganizationId", 
   })
 })
 
-// Regression test: kilocodeToken in KILO_CONFIG_CONTENT provider options must be used
-// as the auth header when fetching models (the primary use case for cloud-agent sessions).
-test("model fetch uses kilocodeToken from KILO_CONFIG_CONTENT provider options", async () => {
+// Regression test: kilocodeToken in provider config options must be used as the auth
+// header when fetching models. This covers the cloud-agent use case where credentials
+// are injected via KILO_CONFIG_CONTENT, and any setup using kilocodeToken instead of
+// the older apiKey option.
+test("model fetch uses kilocodeToken from provider config options", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
-      await Bun.write(path.join(dir, "opencode.json"), JSON.stringify({ $schema: "https://app.kilo.ai/config.json" }))
+      // Write config to .opencode subdirectory, which config loading traverses
+      const opencodeDir = path.join(dir, ".opencode")
+      await fs.mkdir(opencodeDir)
+      await Bun.write(
+        path.join(opencodeDir, "opencode.json"),
+        JSON.stringify({
+          provider: { kilo: { options: { kilocodeToken: "opencode-dir-token" } } },
+        }),
+      )
     },
   })
   await Instance.provide({
     directory: tmp.path,
     init: async () => {
-      // No stored auth — token comes from inline config (KILO_CONFIG_CONTENT)
+      // No stored auth — token comes purely from config
       await Auth.remove("kilo")
+      // Ensure env override is absent for this instance
+      Env.remove("KILO_API_KEY")
     },
-    fn: async () => {
-      const saved = process.env["KILO_CONFIG_CONTENT"]
-      const savedOc = process.env["OPENCODE_CONFIG_CONTENT"]
-      process.env["KILO_CONFIG_CONTENT"] = JSON.stringify({
-        provider: { kilo: { options: { kilocodeToken: "inline-config-token" } } },
-      })
-      delete process.env["OPENCODE_CONFIG_CONTENT"]
-      try {
+    fn: () =>
+      withoutConfigContent(async () => {
         captured = undefined
         ModelCache.clear("kilo")
 
         await ModelCache.fetch("kilo")
 
         expect(captured).toBeDefined()
-        expect(captured.kilocodeToken).toBe("inline-config-token")
-      } finally {
-        if (saved !== undefined) process.env["KILO_CONFIG_CONTENT"] = saved
-        else delete process.env["KILO_CONFIG_CONTENT"]
-        if (savedOc !== undefined) process.env["OPENCODE_CONFIG_CONTENT"] = savedOc
-      }
-    },
+        expect(captured.kilocodeToken).toBe("opencode-dir-token")
+      }),
   })
 })
 
