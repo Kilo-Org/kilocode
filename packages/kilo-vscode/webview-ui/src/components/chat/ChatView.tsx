@@ -183,17 +183,30 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                     </Button>
                   </Tooltip>
                 </Show>
-                <Show when={isSidebar() && session.summary()?.files}>
-                  <Tooltip value="View file changes" placement="top" class="session-diff-wrapper">
+                <Show when={isSidebar()}>
+                  <Tooltip
+                    value={
+                      session.worktreeStats()?.files
+                        ? `${session.worktreeStats()!.files} file${session.worktreeStats()!.files > 1 ? "s" : ""} changed · +${session.worktreeStats()!.additions} -${session.worktreeStats()!.deletions}`
+                        : "No file changes"
+                    }
+                    placement="top"
+                    class="session-diff-wrapper"
+                  >
                     <button
                       class="session-diff-badge"
+                      classList={{
+                        "session-diff-badge--empty": !session.worktreeStats()?.files,
+                        "session-diff-badge--has-changes": !!session.worktreeStats()?.files,
+                      }}
                       onClick={() => vscode.postMessage({ type: "openChanges" })}
                       aria-label={language.t("command.session.show.changes")}
                     >
                       <Icon name="layers" size="small" />
-                      <span class="session-diff-files">{session.summary()!.files}f</span>
-                      <span class="session-diff-add">+{session.summary()!.additions}</span>
-                      <span class="session-diff-del">-{session.summary()!.deletions}</span>
+                      <Show when={session.worktreeStats()?.files}>
+                        <span class="session-diff-add">+{session.worktreeStats()!.additions}</span>
+                        <span class="session-diff-del">-{session.worktreeStats()!.deletions}</span>
+                      </Show>
                     </button>
                   </Tooltip>
                 </Show>

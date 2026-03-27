@@ -963,6 +963,14 @@ export interface AgentManagerLocalStatsMessage {
   stats: LocalGitStats
 }
 
+// Sidebar: Live worktree diff stats (extension → webview)
+export interface WorktreeStatsLoadedMessage {
+  type: "worktreeStatsLoaded"
+  files: number
+  additions: number
+  deletions: number
+}
+
 // Set the model for a session (extension → webview, used during multi-version creation)
 export interface AgentManagerSetSessionModelMessage {
   type: "agentManager.setSessionModel"
@@ -1294,6 +1302,7 @@ export type ExtensionMessage =
   | RecentsLoadedMessage
   | LanguageChangedMessage
   | ContinueInWorktreeProgressMessage
+  | WorktreeStatsLoadedMessage
 
 // ============================================
 // Messages FROM webview TO extension

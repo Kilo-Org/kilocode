@@ -154,6 +154,9 @@ interface SessionContextValue {
   revertedCount: Accessor<number>
   summary: Accessor<SessionInfo["summary"]>
 
+  // Live worktree diff stats (polled from CLI backend)
+  worktreeStats: Accessor<{ files: number; additions: number; deletions: number } | undefined>
+
   // Actions
   revertSession: (messageID: string) => void
   unrevertSession: () => void
@@ -265,6 +268,11 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Cloud session preview state
   const [cloudPreviewId, setCloudPreviewId] = createSignal<string | null>(null)
+
+  // Live worktree diff stats from extension polling
+  const [worktreeStats, setWorktreeStats] = createSignal<
+    { files: number; additions: number; deletions: number } | undefined
+  >()
 
   // Tracks optimistic messageIDs that haven't been confirmed by the server yet.
   // Prevents handleMessagesLoaded from wiping them when it replaces the array.
@@ -635,6 +643,10 @@ export const SessionProvider: ParentComponent = (props) => {
             description: message.error,
           })
           console.error("[Kilo New] Cloud session import failed:", message.error)
+          break
+
+        case "worktreeStatsLoaded":
+          setWorktreeStats({ files: message.files, additions: message.additions, deletions: message.deletions })
           break
       }
     })
@@ -1650,6 +1662,7 @@ export const SessionProvider: ParentComponent = (props) => {
     revert,
     revertedCount,
     summary,
+    worktreeStats,
     revertSession,
     unrevertSession,
     sendMessage,

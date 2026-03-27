@@ -32,6 +32,9 @@ import {
   resolveWorkspaceDirectory,
   type SessionRefreshContext,
 } from "./kilo-provider-utils"
+import { GitOps } from "./agent-manager/GitOps"
+import { GitStatsPoller, type LocalStats } from "./agent-manager/GitStatsPoller"
+import { getWorkspaceRoot } from "./review-utils"
 import { MarketplaceService } from "./services/marketplace"
 import { resolveProjectDirectory } from "./project-directory"
 import { getBusySessionCount, seedSessionStatuses } from "./session-status"
@@ -147,6 +150,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private chatAutocomplete: ChatTextAreaAutocomplete | null = null
   private projectDirectory: string | null | undefined
   private slimEditMetadata = true
+  /** Worktree diff stats poller for the sidebar badge — reuses GitStatsPoller (local stats only) */
+  private statsPoller: GitStatsPoller | null = null
+  private cachedStats: unknown = null
 
   /** Optional interceptor called before the standard message handler.
    *  Return null to consume the message, or return a (possibly transformed) message. */
@@ -266,6 +272,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         data: profileData,
       })
 
+      // Re-send cached worktree stats so the badge renders immediately after webview reload.
+      if (this.cachedStats) this.postMessage(this.cachedStats)
+
       // Seed session status map so the Settings panel knows about already-running sessions.
       // Must run after webview is ready (postMessage is a no-op before that).
       void this.seedSessionStatusMap()
@@ -302,6 +311,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     // Handle messages from webview (shared handler)
     this.setupWebviewMessageHandler(webviewView.webview)
+
+    // Pause stats polling when sidebar is hidden, resume when visible
+    webviewView.onDidChangeVisibility(() => {
+      this.statsPoller?.setEnabled(webviewView.visible)
+    })
 
     // Initialize connection to CLI backend
     this.initializeConnection()
@@ -1003,6 +1017,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.seedSessionStatusMap(),
       ])
       this.sendNotificationSettings()
+
+      // Start polling worktree diff stats for the sidebar badge
+      this.startStatsPolling()
 
       console.log("[Kilo New] KiloProvider: ✅ initializeConnection completed successfully")
     } catch (error) {
@@ -2666,11 +2683,38 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return this.marketplace
   }
 
+  // ── Worktree stats polling (sidebar diff badge) ──────────────────
+
+  private startStatsPolling(): void {
+    this.statsPoller?.stop()
+    const git = new GitOps({ log: () => {} })
+    this.statsPoller = new GitStatsPoller({
+      getWorktrees: () => [],
+      getWorkspaceRoot: () => getWorkspaceRoot(),
+      getClient: () => this.connectionService.getClient(),
+      git,
+      onStats: () => {},
+      onLocalStats: (stats: LocalStats) => {
+        const msg = {
+          type: "worktreeStatsLoaded" as const,
+          files: stats.files,
+          additions: stats.additions,
+          deletions: stats.deletions,
+        }
+        this.cachedStats = msg
+        this.postMessage(msg)
+      },
+      log: () => {},
+    })
+    this.statsPoller.setEnabled(true)
+  }
+
   /**
    * Dispose of the provider and clean up subscriptions.
    * Does NOT kill the server — that's the connection service's job.
    */
   dispose(): void {
+    this.statsPoller?.stop()
     this.unsubscribeEvent?.()
     this.unsubscribeState?.()
     this.unsubscribeNotificationDismiss?.()
