@@ -122,6 +122,16 @@ describe("session.retry.retryable", () => {
 
     expect(SessionRetry.retryable(error)).toBeUndefined()
   })
+
+  test("does not retry FreeUsageLimitError", () => {
+    const error = new MessageV2.APIError({
+      message: "rate limit exceeded",
+      isRetryable: true,
+      responseBody: '{"error":{"code":"FreeUsageLimitError"}}',
+    }).toObject() as ReturnType<NamedError["toObject"]>
+
+    expect(SessionRetry.retryable(error)).toBeUndefined()
+  })
 })
 
 describe("session.message-v2.fromError", () => {
