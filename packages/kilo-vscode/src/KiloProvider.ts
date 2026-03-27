@@ -77,6 +77,7 @@ import {
   disconnectProvider as disconnectProviderAction,
   saveCustomProvider as saveCustomProviderAction,
 } from "./provider-actions"
+import { fetchOpenAIModels, FetchModelsError } from "./shared/fetch-models"
 
 type KiloProviderOptions = {
   projectDirectory?: string | null
@@ -598,6 +599,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "disconnectProvider":
         case "saveCustomProvider":
           await this.handleProviderAction(message)
+          break
+        case "fetchCustomProviderModels":
+          this.handleFetchCustomProviderModels(message).catch((e) =>
+            console.error("[Kilo New] fetchCustomProviderModels failed:", e),
+          )
           break
         case "compact":
           await this.handleCompact(message.sessionID, message.providerID, message.modelID)
@@ -1420,6 +1426,22 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (msg.type === "disconnectProvider") return disconnectProviderAction(ctx, rid, pid, this.cachedConfigMessage, set)
     if (msg.type === "saveCustomProvider" && config)
       return saveCustomProviderAction(ctx, rid, pid, config, key, this.cachedConfigMessage, set)
+  }
+
+  private async handleFetchCustomProviderModels(msg: Record<string, unknown>): Promise<void> {
+    const rid = typeof msg.requestId === "string" ? msg.requestId : ""
+    const url = typeof msg.baseURL === "string" ? msg.baseURL : ""
+    if (!rid || !url) return
+    const key = typeof msg.apiKey === "string" ? msg.apiKey : undefined
+    const headers = msg.headers && typeof msg.headers === "object" ? (msg.headers as Record<string, string>) : undefined
+    try {
+      const models = await fetchOpenAIModels({ baseURL: url, apiKey: key, headers })
+      this.postMessage({ type: "customProviderModelsFetched", requestId: rid, models })
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to fetch models"
+      const auth = err instanceof FetchModelsError && err.auth
+      this.postMessage({ type: "customProviderModelsFetched", requestId: rid, error: message, auth })
+    }
   }
 
   /**

@@ -1202,6 +1202,15 @@ export interface ProviderActionErrorMessage {
   message: string
 }
 
+export interface CustomProviderModelsFetchedMessage {
+  type: "customProviderModelsFetched"
+  requestId: string
+  models?: Array<{ id: string; name: string }>
+  error?: string
+  /** True when error was HTTP 401/403 — hints the user to check their API key */
+  auth?: boolean
+}
+
 export type ExtensionMessage =
   | ReadyMessage
   | ConnectionStateMessage
@@ -1291,6 +1300,7 @@ export type ExtensionMessage =
   | ProviderConnectedMessage
   | ProviderDisconnectedMessage
   | ProviderActionErrorMessage
+  | CustomProviderModelsFetchedMessage
   | RecentsLoadedMessage
   | LanguageChangedMessage
   | ContinueInWorktreeProgressMessage
@@ -1896,6 +1906,14 @@ export interface SaveCustomProviderMessage {
   apiKey?: string
 }
 
+export interface FetchCustomProviderModelsMessage {
+  type: "fetchCustomProviderModels"
+  requestId: string
+  baseURL: string
+  apiKey?: string
+  headers?: Record<string, string>
+}
+
 export interface PersistRecentsRequest {
   type: "persistRecents"
   recents: ModelSelection[]
@@ -2038,6 +2056,7 @@ export type WebviewMessage =
   | CompleteProviderOAuthMessage
   | DisconnectProviderMessage
   | SaveCustomProviderMessage
+  | FetchCustomProviderModelsMessage
   | PersistRecentsRequest
   | RequestRecentsMessage
   | ContinueInWorktreeRequest
