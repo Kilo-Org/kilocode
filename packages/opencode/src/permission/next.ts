@@ -9,6 +9,7 @@ import { fn } from "@/util/fn"
 import { Log } from "@/util/log"
 import { Wildcard } from "@/util/wildcard"
 import { drainCovered } from "@/kilocode/permission/drain" // kilocode_change
+import { ConfigProtection } from "@/kilocode/permission/config-paths" // kilocode_change
 import os from "os"
 import z from "zod"
 
@@ -188,18 +189,27 @@ export namespace PermissionNext {
     async (input) => {
       const s = await state()
       const { ruleset, ...request } = input
+      // kilocode_change start — force "ask" for config file edits
+      const protected_ = ConfigProtection.isRequest(request)
+      // kilocode_change end
       for (const pattern of request.patterns ?? []) {
         const rule = evaluate(request.permission, pattern, ruleset, s.approved)
         log.info("evaluated", { permission: request.permission, pattern, action: rule })
         if (rule.action === "deny")
           throw new DeniedError(ruleset.filter((r) => Wildcard.match(request.permission, r.permission)))
-        if (rule.action === "ask") {
+        // kilocode_change start — override "allow" to "ask" for config paths
+        if (rule.action === "ask" || (rule.action === "allow" && protected_)) {
           const id = input.id ?? Identifier.ascending("permission")
           return new Promise<void>((resolve, reject) => {
             const info: Request = {
               id,
               ...request,
+              metadata: {
+                ...request.metadata,
+                ...(protected_ ? { [ConfigProtection.DISABLE_ALWAYS_KEY]: true } : {}),
+              },
             }
+            // kilocode_change end
             s.pending[id] = {
               info,
               ruleset, // kilocode_change
@@ -226,6 +236,10 @@ export namespace PermissionNext {
       const s = await state()
       const existing = s.pending[input.requestID]
       if (!existing) throw new NotFoundError({ message: `Permission request ${input.requestID} not found` })
+
+      // kilocode_change start — skip rule persistence for config file edits
+      if (ConfigProtection.isRequest(existing.info)) return
+      // kilocode_change end
 
       // Combine metadata.rules (bash hierarchy) and always (all tools).
       // Set preserves insertion order and deduplicates.
@@ -289,6 +303,13 @@ export namespace PermissionNext {
         return
       }
       if (input.reply === "always") {
+        // kilocode_change start — downgrade "always" to "once" for config file edits
+        if (ConfigProtection.isRequest(existing.info)) {
+          existing.resolve()
+          return
+        }
+        // kilocode_change end
+
         for (const pattern of existing.info.always) {
           s.approved.push({
             permission: existing.info.permission,

@@ -176,6 +176,71 @@
   padding: 8px 12px 0;
 }
 
+.session-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.session-actions-row > * {
+  flex: 1 1 0;
+  min-width: fit-content;
+}
+
+/* Tooltip wrapper divs must fill their flex space, and buttons inside must fill the wrapper */
+.session-actions-row > [data-component="tooltip-trigger"] {
+  display: flex;
+}
+
+.session-actions-row > [data-component="tooltip-trigger"] > [data-component="button"] {
+  flex: 1;
+}
+
+/* Diff stats tooltip wrapper — don't grow, push right */
+.session-diff-wrapper {
+  flex: 0 0 auto !important;
+  margin-left: auto;
+}
+
+/* Diff stats badge — matches Agent Manager diff toggle style */
+.session-diff-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+  font-family: var(--vscode-editor-font-family), monospace;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.session-diff-badge:hover {
+  background: var(--vscode-toolbar-hoverBackground);
+}
+
+.session-diff-badge [data-component="icon"] {
+  opacity: 0.7;
+}
+
+.session-diff-files {
+  color: var(--vscode-descriptionForeground);
+}
+
+.session-diff-add {
+  color: #34d399;
+}
+
+.session-diff-del {
+  color: #f87171;
+}
+
 /* ============================================
    Message List
    ============================================ */
@@ -277,8 +342,16 @@
   border-color: var(--vscode-textLink-foreground, #3794ff);
 }
 
+.feedback-button [data-component="icon"] {
+  --icon-base: currentColor;
+}
+
 .feedback-button:hover [data-slot="icon-svg"] {
   color: var(--vscode-editor-background, #1e1e1e);
+}
+
+.feedback-button:hover [data-component="icon"] {
+  --icon-base: var(--vscode-editor-background, #1e1e1e);
 }
 
 /* Feedback Dialog */
@@ -416,6 +489,28 @@
   min-width: 0;
 }
 
+.show-history-btn {
+  appearance: none;
+  border: 1px solid var(--vscode-button-secondaryBorder, var(--vscode-contrastBorder, transparent));
+  border-radius: 4px;
+  background: var(--vscode-button-secondaryBackground, transparent);
+  color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  padding: 5px 10px;
+  margin-top: 4px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.show-history-btn:hover {
+  background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
+}
+
 .recent-session-date {
   font-size: 11px;
   color: var(--vscode-descriptionForeground);
@@ -440,6 +535,10 @@
   font-size: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   transition: background-color 0.2s;
+}
+
+.scroll-to-bottom-button [data-component="icon"] {
+  --icon-base: var(--vscode-button-foreground);
 }
 
 .scroll-to-bottom-button:hover {
@@ -889,6 +988,7 @@
 
 .prompt-input-ghost-text {
   color: var(--vscode-editorGhostText-foreground, rgba(255, 255, 255, 0.35));
+  display: inline-flex;
 }
 
 .prompt-input-hint {
@@ -1572,6 +1672,140 @@
 }
 
 /* ============================================
+   Account Switcher (welcome screen header)
+   ============================================ */
+
+.account-switcher {
+  position: relative;
+}
+
+.welcome-header {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.account-switcher-welcome {
+  width: 160px;
+}
+
+.account-switcher-trigger {
+  width: 100%;
+  cursor: pointer;
+  border: 1px solid var(--vscode-dropdown-border);
+  background: var(--vscode-dropdown-background);
+  color: var(--vscode-dropdown-foreground);
+  border-radius: 4px;
+  padding: 4px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-family: inherit;
+  font-size: var(--vscode-font-size);
+  opacity: 0.9;
+  transition:
+    opacity 150ms,
+    background 150ms,
+    border-color 150ms;
+}
+
+.account-switcher-switching {
+  opacity: 0.6;
+  pointer-events: none;
+  cursor: default;
+}
+
+.account-switcher-trigger:hover:not(:disabled) {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.account-switcher-trigger:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.account-switcher-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-switcher-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.account-switcher-role {
+  border-radius: 9999px;
+  padding: 1px 6px;
+  font-size: 10px;
+  letter-spacing: 0.3px;
+  background: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+}
+
+.account-switcher-chevron {
+  width: 12px;
+  height: 12px;
+  transition: transform 150ms;
+}
+
+.account-switcher-chevron.open {
+  transform: rotate(180deg);
+}
+
+.account-switcher-dropdown {
+  position: absolute;
+  z-index: 20;
+  margin-top: 4px;
+  right: 0;
+  width: max-content;
+  min-width: 100%;
+  max-height: 240px;
+  overflow-y: auto;
+  border-radius: 4px;
+  border: 1px solid var(--vscode-dropdown-border);
+  background: var(--vscode-dropdown-background);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.account-switcher-item {
+  display: flex;
+  width: 100%;
+  cursor: pointer;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  color: var(--vscode-foreground);
+  font-family: inherit;
+  font-size: var(--vscode-font-size);
+  text-align: left;
+}
+
+.account-switcher-item:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.account-switcher-item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ============================================
    Permission Dock (VS Code overrides)
    ============================================ */
 
@@ -1937,7 +2171,8 @@
 }
 
 /* Session List Items */
-.session-list [data-slot="list-item-title"] {
+.session-list [data-slot="list-item-title"],
+.cloud-session-list [data-slot="list-item-title"] {
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -1946,12 +2181,36 @@
   text-align: left;
 }
 
-.session-list [data-slot="list-item-description"] {
+.session-list [data-slot="list-item-description"],
+.cloud-session-list [data-slot="list-item-description"] {
   flex-shrink: 0;
   margin-left: 8px;
   font-size: 12px;
   color: var(--text-weak, var(--vscode-descriptionForeground));
   white-space: nowrap;
+}
+
+body.vscode-light .session-list [data-slot="list-item"][data-active="true"] [data-slot="list-item-description"],
+body.vscode-light .session-list [data-slot="list-item"][data-selected="true"] [data-slot="list-item-description"],
+body.vscode-light .cloud-session-list [data-slot="list-item"][data-active="true"] [data-slot="list-item-description"],
+body.vscode-light
+  .cloud-session-list
+  [data-slot="list-item"][data-selected="true"]
+  [data-slot="list-item-description"] {
+  color: var(--text-on-interactive-base, white);
+}
+
+body.vscode-light
+  .session-list
+  [data-slot="list-item"][data-active="true"]
+  [data-slot="session-delete-button"]
+  [data-slot="icon-svg"],
+body.vscode-light
+  .session-list
+  [data-slot="list-item"][data-selected="true"]
+  [data-slot="session-delete-button"]
+  [data-slot="icon-svg"] {
+  color: var(--text-on-interactive-base, white);
 }
 
 .session-list [data-slot="session-delete-button"] {
@@ -1966,18 +2225,100 @@
   opacity: 1;
 }
 
-/* Cloud Session List */
-.cloud-session-list {
+/* History View (unified Local + Cloud tabs) */
+.history-view {
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
 }
 
-.cloud-session-filters {
+.history-view-header {
   flex-shrink: 0;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--vscode-panel-border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  min-height: 40px;
+}
+
+.history-view-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+
+.history-tab-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--vscode-foreground);
+  opacity: 0.6;
+  transition:
+    opacity 0.1s,
+    background 0.1s;
+  white-space: nowrap;
+}
+
+.history-tab-btn:hover {
+  opacity: 1;
+  background: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.1));
+}
+
+.history-tab-btn--active {
+  opacity: 1;
+  background: var(--vscode-toolbar-activeBackground, rgba(128, 128, 128, 0.2));
+  font-weight: 600;
+}
+
+.history-import-btn {
+  flex-shrink: 0;
+}
+
+.history-view-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Cloud Session List (inside History View) */
+.cloud-session-list {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Make the list search wrapper wrap so the repo filter appears below search */
+.cloud-session-list [data-slot="list-search-wrapper"] {
+  flex-wrap: wrap;
+}
+
+.cloud-session-repo-filter {
+  width: 100%;
+  padding: 4px 10px 2px;
+
+  [data-component="checkbox"] {
+    gap: 8px;
+
+    [data-slot="checkbox-checkbox-label"] {
+      padding-inline-start: 0;
+      margin-inline-end: 0;
+    }
+  }
+}
+
+[data-component="input"][data-variant="normal"] [data-slot="input-wrapper"]:focus-within:not(:has([data-readonly])) {
+  border-color: transparent;
+  box-shadow: none;
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
 }
 
 .cloud-session-load-more {
@@ -1987,35 +2328,51 @@
   padding: 8px;
 }
 
+.cloud-session-load-more-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--vscode-foreground);
+  opacity: 0.6;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.cloud-session-load-more-btn:hover {
+  opacity: 1;
+  background: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.1));
+}
+
 /* ============================================
    Kilo Notifications
    ============================================ */
 
 .kilo-notifications {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 10;
+  width: 280px;
   display: flex;
   flex-direction: column;
-  border-bottom: 1px solid var(--vscode-panel-border);
+  border-radius: 6px;
   animation: kilo-notifications-slide-in 0.3s ease-out;
+  overflow: hidden;
 }
 
 @keyframes kilo-notifications-slide-in {
   from {
-    transform: translateY(-100%);
+    transform: translateX(20px);
     opacity: 0;
   }
   to {
-    transform: translateY(0);
+    transform: translateX(0);
     opacity: 1;
   }
 }
 
 .kilo-notifications-card {
   background-color: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 6px;
   padding: 12px;
   display: flex;
   flex-direction: column;
@@ -2055,6 +2412,65 @@
   display: flex;
   align-items: center;
   gap: 2px;
+}
+
+.kilo-notifications-next-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kilo-notifications-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  padding: 0 8px;
+  background: none;
+  border: 1px solid var(--vscode-focusBorder);
+  border-radius: 3px;
+  color: var(--vscode-focusBorder);
+  font-size: 12px;
+  font-family: var(--vscode-font-family);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.kilo-notifications-action-btn:hover {
+  background-color: var(--vscode-toolbar-hoverBackground);
+}
+
+.kilo-notifications-primary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  padding: 0 8px;
+  background-color: var(--vscode-button-background);
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: var(--vscode-button-foreground);
+  font-size: 12px;
+  font-family: var(--vscode-font-family);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.kilo-notifications-primary-btn:hover {
+  background-color: var(--vscode-button-hoverBackground);
+}
+
+.kilo-notifications-back-link {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+}
+
+.kilo-notifications-back-link:hover {
+  color: var(--vscode-foreground);
 }
 
 .kilo-notifications-nav-btn {
@@ -2557,6 +2973,35 @@
   animation: enhance-spin 1s linear infinite;
 }
 
+/* Settings save bar */
+.settings-save-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 16px;
+  border-top: 1px solid var(--border-weak-base);
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition:
+    max-height 0.2s ease,
+    opacity 0.2s ease,
+    padding 0.2s ease;
+}
+
+.settings-save-bar--visible {
+  max-height: 52px;
+  opacity: 1;
+  padding: 8px 16px;
+}
+
+.settings-save-bar-label {
+  font-size: 12px;
+  color: var(--foreground-secondary);
+  margin-right: auto;
+}
+
 [data-slot="settings-row"] {
   display: flex;
   flex-wrap: wrap;
@@ -2589,6 +3034,12 @@
       max-width: 100%;
     }
   }
+}
+
+/* Wider inputs inside cards with data-variant="wide-input" (e.g. edit mode config) */
+[data-variant="wide-input"] [data-slot="settings-row-input"] {
+  flex: 1 1 0%;
+  max-width: none;
 }
 
 /* ============================================

@@ -42,4 +42,9 @@ export const dict = {
     "Kilo Code Autocomplete को GitHub Copilot के साथ संघर्ष के कारण ब्लॉक किया जा रहा है। इसे ठीक करने के लिए, आपको Copilot के इनलाइन सुझावों को अक्षम करना होगा।",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "Copilot अक्षम करें",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "Autocomplete अक्षम करें",
+  "kilocode:autocomplete.creditsExhausted.message":
+    "Kilo Code Autocomplete रोक दिया गया है क्योंकि आपके खाते में शेष क्रेडिट नहीं है। ऑटोकम्प्लीट फिर से शुरू करने के लिए क्रेडिट जोड़ें।",
+  "kilocode:autocomplete.creditsExhausted.addCredits": "क्रेडिट जोड़ें",
+  "kilocode:autocomplete.authError.message":
+    "प्रमाणीकरण त्रुटि के कारण Kilo Code Autocomplete रोक दिया गया है। कृपया फिर से साइन इन करें।",
 }

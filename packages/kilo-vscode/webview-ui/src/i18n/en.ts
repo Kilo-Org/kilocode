@@ -362,6 +362,7 @@ export const dict = {
   "language.br": "Português (Brasil)",
   "language.bs": "Bosanski",
   "language.th": "ไทย",
+  "language.tr": "Türkçe",
 
   "toast.language.title": "Language",
   "toast.language.description": "Switched to {{language}}",
@@ -823,16 +824,19 @@ export const dict = {
   "session.delete.button": "Delete session",
   "session.untitled": "Untitled",
   "session.recent": "Recent",
+  "session.showHistory": "Show History",
   "session.search.placeholder": "Search sessions...",
   "session.empty": "No sessions yet. Click + to start a new conversation.",
+  "session.tab.local": "Local",
+  "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Only this repository",
-  "session.cloud.import": "Import from cloud",
+  "session.cloud.import": "Import session",
   "feedback.button": "Feedback & Support",
   "feedback.dialog.message": "We'd love to hear your feedback or help with any issues you're experiencing.",
   "feedback.dialog.github": "Report an issue on GitHub",
   "feedback.dialog.discord": "Join our Discord community",
   "feedback.dialog.support": "Customer Support",
-  "session.cloud.import.title": "Import from cloud",
+  "session.cloud.import.title": "Import session",
   "session.cloud.import.placeholder": "Session ID, URL, or kilo import command",
   "session.cloud.import.button": "Import",
   "session.cloud.import.invalid": "Invalid session ID format",
@@ -905,8 +909,7 @@ export const dict = {
   "settings.autocomplete.title": "Autocomplete",
   "settings.notifications.title": "Notifications",
   "settings.context.title": "Context",
-  "settings.terminal.title": "Terminal",
-  "settings.prompts.title": "Prompts",
+
   "settings.experimental.title": "Experimental",
   "settings.language.title": "Language",
   "settings.aboutKiloCode.title": "About Kilo Code",
@@ -983,10 +986,6 @@ export const dict = {
   "common.add": "Add",
   "common.choose": "Choose…",
 
-  "settings.notImplemented": "This section is not implemented yet.",
-  "settings.notImplemented.description":
-    "It will contain configuration options and explanatory text related to the selected settings category. During reimplementation, use this space to validate layout, spacing, scrolling behavior, and navigation state before wiring up real controls.",
-
   "settings.autocomplete.autoTrigger.title": "Enable automatic inline completions",
   "settings.autocomplete.autoTrigger.description": "Automatically show inline completion suggestions as you type",
   "settings.autocomplete.smartKeybinding.title": "Enable smart inline task keybinding",
@@ -1047,6 +1046,12 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Nucleus sampling parameter (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Max Steps",
   "settings.agentBehaviour.maxSteps.description": "Maximum agentic iterations",
+  "settings.agentBehaviour.hidden.title": "Hidden",
+  "settings.agentBehaviour.hidden.description": "Hide this agent from the mode switcher in the chat input",
+  "settings.agentBehaviour.disable.title": "Disabled",
+  "settings.agentBehaviour.disable.description": "Fully disable this agent — it will not appear anywhere",
+  "settings.agentBehaviour.badge.hidden": "hidden",
+  "settings.agentBehaviour.badge.disabled": "disabled",
   "settings.agentBehaviour.discoveredSkills": "Discovered Skills",
   "settings.agentBehaviour.noSkillsFound":
     "No skills discovered. Add skill folder paths or URLs below to make skills available.",
@@ -1061,15 +1066,71 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "Remove skill",
   "settings.agentBehaviour.removeSkill.confirm": 'Remove skill "{{name}}"? This will delete the skill files from disk.',
   "settings.agentBehaviour.removeSkill.button": "Remove",
+  "settings.agentBehaviour.rules.description":
+    "Rules are instruction files that guide agent behaviour. They are included in the system prompt for every conversation. Add file paths below to include additional rules.",
   "settings.agentBehaviour.instructionFiles": "Additional Instruction Files",
   "settings.agentBehaviour.instructionFiles.description":
     "Paths to additional instruction files that are included in the system prompt",
   "settings.agentBehaviour.removeMcp.title": "Remove MCP server",
   "settings.agentBehaviour.removeMcp.confirm": 'Remove MCP server "{{name}}"? This will remove it from your config.',
   "settings.agentBehaviour.removeMcp.button": "Remove",
+  "settings.agentBehaviour.mcpDetail.command": "Command",
+  "settings.agentBehaviour.mcpDetail.args": "Arguments",
+  "settings.agentBehaviour.mcpDetail.env": "Environment",
+  "settings.agentBehaviour.mcpDetail.disabled": "This server is disabled.",
+  "settings.agentBehaviour.editMcp": "Edit MCP Server",
+  "settings.agentBehaviour.editMcp.transportLocal": "Local server (stdio transport)",
+  "settings.agentBehaviour.editMcp.transportRemote": "Remote server (SSE/HTTP transport)",
+  "settings.agentBehaviour.editMcp.env": "Environment Variables",
+  "settings.agentBehaviour.editMcp.env.help": "Variables passed to the MCP server process.",
+  "settings.agentBehaviour.addMcp.command": "Command",
+  "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
+  "settings.agentBehaviour.addMcp.args": "Arguments",
+  "settings.agentBehaviour.addMcp.args.help": "One argument per line. Paths with spaces are preserved as-is.",
+  "settings.agentBehaviour.addMcp.args.placeholder": "e.g.\n-y\n@modelcontextprotocol/server-filesystem\n/tmp",
+  "settings.agentBehaviour.addMcp.url": "Server URL",
+  "settings.agentBehaviour.addMcp.url.placeholder": "e.g. http://localhost:3000/sse",
   "settings.agentBehaviour.mcpEmpty": "No MCP servers configured. Edit the opencode config file to add MCP servers.",
   "settings.agentBehaviour.workflowsPlaceholder": "Workflows are managed via workflow files in your workspace.",
-  "settings.agentBehaviour.notImplemented": "Not yet implemented.",
+  "settings.agentBehaviour.workflows.description":
+    "Workflows are custom slash commands defined in your config. Type /command-name in the chat to invoke them. Commands are configured in opencode.json under the 'command' section.",
+  "settings.agentBehaviour.workflows.empty":
+    "No custom commands configured. Add commands to your opencode.json to see them here.",
+  "settings.agentBehaviour.workflows.detail.description": "Description",
+  "settings.agentBehaviour.workflows.detail.template": "Template",
+
+  "settings.agentBehaviour.createMode": "Create New Mode",
+  "settings.agentBehaviour.createMode.name": "Name",
+  "settings.agentBehaviour.createMode.name.placeholder": "e.g. reviewer",
+  "settings.agentBehaviour.createMode.name.description":
+    "Unique identifier for the mode. Use lowercase letters, numbers, and hyphens only.",
+  "settings.agentBehaviour.createMode.description": "Description",
+  "settings.agentBehaviour.createMode.description.placeholder": "e.g. Reviews code for quality and best practices",
+  "settings.agentBehaviour.createMode.description.help": "Short description of what this mode does.",
+  "settings.agentBehaviour.createMode.prompt": "System Prompt",
+  "settings.agentBehaviour.createMode.prompt.placeholder":
+    "e.g. You are a code reviewer. Focus on code quality, best practices, and potential bugs.",
+  "settings.agentBehaviour.createMode.prompt.help": "Instructions for the AI agent when using this mode.",
+  "settings.agentBehaviour.createMode.button": "Create",
+  "settings.agentBehaviour.createMode.cancel": "Cancel",
+  "settings.agentBehaviour.createMode.nameRequired": "Name is required",
+  "settings.agentBehaviour.createMode.nameInvalid":
+    "Name must start with a lowercase letter and contain only lowercase letters, numbers, and hyphens",
+  "settings.agentBehaviour.createMode.nameTaken": "A mode with this name already exists",
+  "settings.agentBehaviour.importMode": "Import",
+  "settings.agentBehaviour.importMode.invalidName":
+    "Invalid mode name in file. Name must start with a lowercase letter and contain only lowercase letters, numbers, and hyphens.",
+  "settings.agentBehaviour.importMode.nameTaken": "A mode with this name already exists.",
+  "settings.agentBehaviour.importMode.invalidJson": "Invalid JSON file. Please select a valid agent definition file.",
+  "settings.agentBehaviour.importMode.tooLarge": "File is too large. Agent definitions must be under 1 MB.",
+  "settings.agentBehaviour.exportMode": "Export agent definition",
+  "settings.agentBehaviour.editMode": "Edit Mode",
+  "settings.agentBehaviour.editMode.description": "Description",
+  "settings.agentBehaviour.editMode.prompt": "System Prompt",
+  "settings.agentBehaviour.editMode.save": "Done",
+  "settings.agentBehaviour.editMode.back": "Back to list",
+  "settings.agentBehaviour.editMode.native": "Built-in mode (read-only definition)",
+  "settings.agentBehaviour.editMode.promptOverride": "Custom prompt override for this built-in mode",
 
   "settings.autoApprove.description":
     "Define how tools are allowed to run. Most tools default to Allow. doom_loop and external_directory default to Ask.",
@@ -1124,7 +1185,8 @@ export const dict = {
   "settings.providers.defaultModel.title": "Default Model",
   "settings.providers.defaultModel.description": "Primary model for conversations",
   "settings.providers.smallModel.title": "Small Model",
-  "settings.providers.smallModel.description": "Lightweight model for title generation and other quick tasks",
+  "settings.providers.smallModel.description":
+    "Lightweight model for title generation, commit message generation, prompt enhancement, and other quick tasks",
   "settings.providers.modeModels": "Model per Mode",
   "settings.providers.modeModels.description":
     "Override the default model for specific modes. If not set, the global default model is used.",
@@ -1140,6 +1202,7 @@ export const dict = {
   "dialog.model.notSet": "Not set",
 
   "profile.personalAccount": "Personal Account",
+  "profile.switchingAccount": "Switching account…",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/en.ts
 
@@ -1214,4 +1277,9 @@ export const dict = {
   "settings.saveBar.warning.many": "Several sessions are running and will be interrupted",
   "settings.saveBar.saveAnyway": "Save anyway",
   "settings.saveBar.cancel": "Cancel",
+
+  "notifications.action.previous": "Previous",
+  "notifications.action.next": "Next",
+  "notifications.action.close": "Close",
+  "notifications.action.tryModel": "Try model",
 }

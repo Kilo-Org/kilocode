@@ -10,3 +10,8 @@
 - **Prompts tab**: Shows "Not implemented" message
 - **Workflows subtab** (inside AgentBehaviour): Renders a `<Placeholder>` with no functionality
 - Import/export settings functionality
+
+## Related Docs
+
+- **Agent Behaviour tab** (all sub-tabs) → [Agent Behaviour Tab Parity](../agent-behaviour/)
+- **Workflows subtab** → [Rules & Workflows Sub-Tabs Parity](../agent-behaviour/rules-workflows-subtab-parity.md)

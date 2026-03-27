@@ -1077,6 +1077,20 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
                   </div>
                 )
               }
+              const hint =
+                cleaned.includes("before overwriting it. Use the Read tool first") ||
+                cleaned.includes("has been modified since it was last read") ||
+                cleaned.includes("oldString and newString are identical") ||
+                cleaned.includes("must match exactly, including whitespace") ||
+                cleaned.includes("Found multiple matches for oldString")
+              if (hint) {
+                return (
+                  <div data-component="tool-hint">
+                    <Icon name="arrow-right" size="small" />
+                    <span data-slot="tool-hint-message">{cleaned}</span>
+                  </div>
+                )
+              }
               const [title, ...rest] = cleaned.split(": ")
               return (
                 <Card variant="error">
@@ -1292,6 +1306,15 @@ function useToolReveal(pending: () => boolean, animate?: () => boolean) {
 function WebfetchMeta(props: { url: string; animate?: boolean }) {
   let ref: HTMLSpanElement | undefined
   useToolFade(() => ref, { wipe: true, animate: props.animate })
+  const data = useData()
+
+  const open = (event: MouseEvent) => {
+    event.stopPropagation()
+    event.preventDefault()
+    const handler = data.openUrl
+    if (handler) return handler(props.url)
+    window.open(props.url, "_blank", "noopener,noreferrer")
+  }
 
   return (
     <span ref={ref} data-slot="webfetch-meta">
@@ -1302,11 +1325,11 @@ function WebfetchMeta(props: { url: string; animate?: boolean }) {
         href={props.url}
         target="_blank"
         rel="noopener noreferrer"
-        onClick={(event) => event.stopPropagation()}
+        onClick={open}
       >
         {props.url}
       </a>
-      <div data-component="tool-action">
+      <div data-component="tool-action" onClick={open} style={{ cursor: "pointer" }}>
         <Icon name="square-arrow-top-right" size="small" />
       </div>
     </span>
@@ -1993,8 +2016,8 @@ interface ApplyPatchFile {
   relativePath: string
   type: "add" | "update" | "delete" | "move"
   diff: string
-  before: string
-  after: string
+  before?: string
+  after?: string
   additions: number
   deletions: number
   movePath?: string
@@ -2049,7 +2072,6 @@ ToolRegistry.register({
                         path={file().relativePath.includes("/") ? getDirectory(file().relativePath) : undefined}
                         changes={{ additions: file().additions, deletions: file().deletions }}
                         animate={reveal()}
-                        soft
                         onClick={
                           data.openFile && file().filePath
                             ? (e: MouseEvent) => {
@@ -2145,7 +2167,7 @@ ToolRegistry.register({
                             </Accordion.Trigger>
                           </StickyAccordionHeader>
                           <Accordion.Content>
-                            <Show when={visible()}>
+                            <Show when={visible() && file.before !== undefined}>
                               <div data-component="apply-patch-file-diff">
                                 <Dynamic
                                   component={fileComponent}
@@ -2193,14 +2215,16 @@ ToolRegistry.register({
                   </Switch>
                 }
               >
-                <div data-component="apply-patch-file-diff">
-                  <Dynamic
-                    component={fileComponent}
-                    mode="diff"
-                    before={{ name: file().filePath, contents: file().before }}
-                    after={{ name: file().movePath ?? file().filePath, contents: file().after }}
-                  />
-                </div>
+                <Show when={file().before !== undefined}>
+                  <div data-component="apply-patch-file-diff">
+                    <Dynamic
+                      component={fileComponent}
+                      mode="diff"
+                      before={{ name: file().filePath, contents: file().before }}
+                      after={{ name: file().movePath ?? file().filePath, contents: file().after }}
+                    />
+                  </div>
+                </Show>
               </ToolFileAccordion>
             )}
           </Show>

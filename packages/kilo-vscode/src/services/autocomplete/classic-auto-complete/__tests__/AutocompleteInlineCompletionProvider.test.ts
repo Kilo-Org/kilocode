@@ -842,7 +842,7 @@ describe("AutocompleteInlineCompletionProvider", () => {
 
     // Create mock dependencies
     mockModel = {
-      generateResponse: vi.fn().mockResolvedValue({
+      generateFimResponse: vi.fn().mockResolvedValue({
         cost: 0,
         inputTokens: 0,
         outputTokens: 0,
@@ -851,7 +851,7 @@ describe("AutocompleteInlineCompletionProvider", () => {
       }),
       getModelName: vi.fn().mockReturnValue("test-model"),
       getProviderDisplayName: vi.fn().mockReturnValue("test-provider"),
-      supportsFim: vi.fn().mockReturnValue(false), // Default to false for non-FIM tests
+      supportsFim: vi.fn().mockReturnValue(true),
       hasValidCredentials: vi.fn().mockReturnValue(true), // Default to true for tests
     } as unknown as AutocompleteModel
     mockCostTrackingCallback = vi.fn() as CostTrackingCallback
@@ -1421,7 +1421,7 @@ describe("AutocompleteInlineCompletionProvider", () => {
       // Should return empty array because auto-trigger is disabled
       expect(result).toEqual([])
       // Model should not be called
-      expect(mockModel.generateResponse).not.toHaveBeenCalled()
+      expect(mockModel.generateFimResponse).not.toHaveBeenCalled()
     })
 
     it("should block manual trigger when auto-trigger is disabled (defense in depth)", async () => {
@@ -1439,7 +1439,7 @@ describe("AutocompleteInlineCompletionProvider", () => {
       // Should return empty array as defense in depth, even for manual triggers
       // The provider should be deregistered at the manager level when disabled
       expect(result).toEqual([])
-      expect(mockModel.generateResponse).not.toHaveBeenCalled()
+      expect(mockModel.generateFimResponse).not.toHaveBeenCalled()
     })
 
     it("should read settings dynamically on each call", async () => {
@@ -1453,7 +1453,7 @@ describe("AutocompleteInlineCompletionProvider", () => {
 
       // First call with auto-trigger enabled
       await provideWithDebounce(mockDocument, mockPosition, autoContext, mockToken)
-      expect(mockModel.generateResponse).toHaveBeenCalledTimes(1)
+      expect(mockModel.generateFimResponse).toHaveBeenCalledTimes(1)
 
       // Change settings to disable auto-trigger
       mockSettings = { enableAutoTrigger: false }
@@ -1462,7 +1462,7 @@ describe("AutocompleteInlineCompletionProvider", () => {
       const result = await provideWithDebounce(mockDocument, mockPosition, autoContext, mockToken)
 
       // Should not call model again because auto-trigger is now disabled
-      expect(mockModel.generateResponse).toHaveBeenCalledTimes(1)
+      expect(mockModel.generateFimResponse).toHaveBeenCalledTimes(1)
       expect(result).toEqual([])
     })
 
@@ -1479,7 +1479,7 @@ describe("AutocompleteInlineCompletionProvider", () => {
 
       // Should default to false (disabled) when settings are null
       expect(result).toEqual([])
-      expect(mockModel.generateResponse).not.toHaveBeenCalled()
+      expect(mockModel.generateFimResponse).not.toHaveBeenCalled()
     })
 
     it("should allow auto-trigger when explicitly enabled", async () => {
@@ -1494,14 +1494,14 @@ describe("AutocompleteInlineCompletionProvider", () => {
       await provideWithDebounce(mockDocument, mockPosition, autoContext, mockToken)
 
       // Model should be called because auto-trigger is enabled
-      expect(mockModel.generateResponse).toHaveBeenCalled()
+      expect(mockModel.generateFimResponse).toHaveBeenCalled()
     })
   })
 
   describe("failed lookups cache", () => {
     it("should cache failed LLM lookups and not call LLM again for same prefix/suffix", async () => {
       // Mock the model to return empty suggestions
-      vi.mocked(mockModel.generateResponse).mockResolvedValue({
+      vi.mocked(mockModel.generateFimResponse).mockResolvedValue({
         cost: 0.01,
         inputTokens: 100,
         outputTokens: 50,
@@ -1518,11 +1518,11 @@ describe("AutocompleteInlineCompletionProvider", () => {
       )) as vscode.InlineCompletionItem[]
 
       expect(result1).toHaveLength(0)
-      expect(mockModel.generateResponse).toHaveBeenCalledTimes(1)
+      expect(mockModel.generateFimResponse).toHaveBeenCalledTimes(1)
       expect(mockCostTrackingCallback).toHaveBeenCalledWith(0.01, 100, 50)
 
       // Second call with same prefix/suffix - should NOT invoke LLM
-      vi.mocked(mockModel.generateResponse).mockClear()
+      vi.mocked(mockModel.generateFimResponse).mockClear()
       vi.mocked(mockCostTrackingCallback).mockClear()
 
       const result2 = (await provideWithDebounce(
@@ -1533,20 +1533,18 @@ describe("AutocompleteInlineCompletionProvider", () => {
       )) as vscode.InlineCompletionItem[]
 
       expect(result2).toHaveLength(0)
-      expect(mockModel.generateResponse).not.toHaveBeenCalled()
+      expect(mockModel.generateFimResponse).not.toHaveBeenCalled()
       expect(mockCostTrackingCallback).not.toHaveBeenCalled()
     })
 
     it("should not cache successful LLM lookups in failed cache", async () => {
       // Mock the model to return a successful suggestion using proper COMPLETION format
       let callCount = 0
-      vi.mocked(mockModel.generateResponse).mockImplementation(async (_sys, _user, onChunk) => {
+      vi.mocked(mockModel.generateFimResponse).mockImplementation(async (_prefix, _suffix, onChunk) => {
         callCount++
-        // Simulate streaming response with proper COMPLETION format expected by parser
+        // Simulate streaming FIM response
         if (onChunk) {
-          onChunk({ type: "text", text: "<COMPLETION>" })
-          onChunk({ type: "text", text: "console.log('success');" })
-          onChunk({ type: "text", text: "</COMPLETION>" })
+          onChunk("console.log('success');")
         }
         return {
           cost: 0.01,
@@ -1584,7 +1582,7 @@ describe("AutocompleteInlineCompletionProvider", () => {
     it("should cache different prefix/suffix combinations separately", async () => {
       // Mock the model to return empty suggestions
       let callCount = 0
-      vi.mocked(mockModel.generateResponse).mockImplementation(async () => {
+      vi.mocked(mockModel.generateFimResponse).mockImplementation(async () => {
         callCount++
         return {
           cost: 0.01,
@@ -1618,7 +1616,7 @@ describe("AutocompleteInlineCompletionProvider", () => {
     it("should maintain only the last 50 failed lookups (FIFO)", async () => {
       // Mock the model to return empty suggestions
       let callCount = 0
-      vi.mocked(mockModel.generateResponse).mockImplementation(async () => {
+      vi.mocked(mockModel.generateFimResponse).mockImplementation(async () => {
         callCount++
         return {
           cost: 0,
@@ -1664,7 +1662,7 @@ describe("AutocompleteInlineCompletionProvider", () => {
 
     it("should not add duplicate failed lookups", async () => {
       // Mock the model to return empty suggestions
-      vi.mocked(mockModel.generateResponse).mockResolvedValue({
+      vi.mocked(mockModel.generateFimResponse).mockResolvedValue({
         cost: 0,
         inputTokens: 0,
         outputTokens: 0,
@@ -1674,22 +1672,22 @@ describe("AutocompleteInlineCompletionProvider", () => {
 
       // First call - adds to failed cache
       await provideWithDebounce(mockDocument, mockPosition, mockContext, mockToken)
-      expect(mockModel.generateResponse).toHaveBeenCalledTimes(1)
+      expect(mockModel.generateFimResponse).toHaveBeenCalledTimes(1)
 
       // Second call - should use cache, not add duplicate
-      vi.mocked(mockModel.generateResponse).mockClear()
+      vi.mocked(mockModel.generateFimResponse).mockClear()
       await provideWithDebounce(mockDocument, mockPosition, mockContext, mockToken)
-      expect(mockModel.generateResponse).not.toHaveBeenCalled()
+      expect(mockModel.generateFimResponse).not.toHaveBeenCalled()
 
       // Third call - should still use cache
-      vi.mocked(mockModel.generateResponse).mockClear()
+      vi.mocked(mockModel.generateFimResponse).mockClear()
       await provideWithDebounce(mockDocument, mockPosition, mockContext, mockToken)
-      expect(mockModel.generateResponse).not.toHaveBeenCalled()
+      expect(mockModel.generateFimResponse).not.toHaveBeenCalled()
     })
 
     it("should return empty result with zero cost when using failed cache", async () => {
       // Mock the model to return empty suggestions
-      vi.mocked(mockModel.generateResponse).mockResolvedValue({
+      vi.mocked(mockModel.generateFimResponse).mockResolvedValue({
         cost: 0.01,
         inputTokens: 100,
         outputTokens: 50,
@@ -1711,11 +1709,9 @@ describe("AutocompleteInlineCompletionProvider", () => {
   describe("useless suggestion filtering", () => {
     it("should refuse suggestions that match the end of prefix", async () => {
       // Mock the model to return a suggestion that matches the end of prefix
-      vi.mocked(mockModel.generateResponse).mockImplementation(async (_sys, _user, onChunk) => {
+      vi.mocked(mockModel.generateFimResponse).mockImplementation(async (_prefix, _suffix, onChunk) => {
         if (onChunk) {
-          onChunk({ type: "text", text: "<COMPLETION>" })
-          onChunk({ type: "text", text: "= 1" }) // This matches the end of "const x = 1"
-          onChunk({ type: "text", text: "</COMPLETION>" })
+          onChunk("= 1") // This matches the end of "const x = 1"
         }
         return {
           cost: 0.01,
@@ -1735,16 +1731,14 @@ describe("AutocompleteInlineCompletionProvider", () => {
 
       // Should return empty array because the suggestion is useless
       expect(result).toHaveLength(0)
-      expect(mockModel.generateResponse).toHaveBeenCalledTimes(1)
+      expect(mockModel.generateFimResponse).toHaveBeenCalledTimes(1)
     })
 
     it("should refuse suggestions that match the start of suffix", async () => {
       // Mock the model to return a suggestion that matches the start of suffix
-      vi.mocked(mockModel.generateResponse).mockImplementation(async (_sys, _user, onChunk) => {
+      vi.mocked(mockModel.generateFimResponse).mockImplementation(async (_prefix, _suffix, onChunk) => {
         if (onChunk) {
-          onChunk({ type: "text", text: "<COMPLETION>" })
-          onChunk({ type: "text", text: "\nconst" }) // This matches the start of "\nconst y = 2"
-          onChunk({ type: "text", text: "</COMPLETION>" })
+          onChunk("\nconst") // This matches the start of "\nconst y = 2"
         }
         return {
           cost: 0.01,
@@ -1764,16 +1758,14 @@ describe("AutocompleteInlineCompletionProvider", () => {
 
       // Should return empty array because the suggestion is useless
       expect(result).toHaveLength(0)
-      expect(mockModel.generateResponse).toHaveBeenCalledTimes(1)
+      expect(mockModel.generateFimResponse).toHaveBeenCalledTimes(1)
     })
 
     it("should accept useful suggestions that don't match prefix end or suffix start", async () => {
       // Mock the model to return a useful suggestion
-      vi.mocked(mockModel.generateResponse).mockImplementation(async (_sys, _user, onChunk) => {
+      vi.mocked(mockModel.generateFimResponse).mockImplementation(async (_prefix, _suffix, onChunk) => {
         if (onChunk) {
-          onChunk({ type: "text", text: "<COMPLETION>" })
-          onChunk({ type: "text", text: "\nconsole.log('useful');" }) // Useful suggestion
-          onChunk({ type: "text", text: "</COMPLETION>" })
+          onChunk("\nconsole.log('useful');") // Useful suggestion
         }
         return {
           cost: 0.01,
@@ -1794,16 +1786,14 @@ describe("AutocompleteInlineCompletionProvider", () => {
       // Should return the suggestion because it's useful
       expect(result).toHaveLength(1)
       expect(result[0].insertText).toBe("\nconsole.log('useful');")
-      expect(mockModel.generateResponse).toHaveBeenCalledTimes(1)
+      expect(mockModel.generateFimResponse).toHaveBeenCalledTimes(1)
     })
 
     it("should cache refused suggestions as empty to avoid repeated LLM calls", async () => {
       // Mock the model to return a useless suggestion
-      vi.mocked(mockModel.generateResponse).mockImplementation(async (_sys, _user, onChunk) => {
+      vi.mocked(mockModel.generateFimResponse).mockImplementation(async (_prefix, _suffix, onChunk) => {
         if (onChunk) {
-          onChunk({ type: "text", text: "<COMPLETION>" })
-          onChunk({ type: "text", text: "= 1" }) // Matches end of prefix
-          onChunk({ type: "text", text: "</COMPLETION>" })
+          onChunk("= 1") // Matches end of prefix
         }
         return {
           cost: 0.01,
@@ -1823,10 +1813,10 @@ describe("AutocompleteInlineCompletionProvider", () => {
       )) as vscode.InlineCompletionItem[]
 
       expect(result1).toHaveLength(0)
-      expect(mockModel.generateResponse).toHaveBeenCalledTimes(1)
+      expect(mockModel.generateFimResponse).toHaveBeenCalledTimes(1)
 
       // Second call with same prefix/suffix - should use cache, not call LLM
-      vi.mocked(mockModel.generateResponse).mockClear()
+      vi.mocked(mockModel.generateFimResponse).mockClear()
       const result2 = (await provideWithDebounce(
         mockDocument,
         mockPosition,
@@ -1835,7 +1825,7 @@ describe("AutocompleteInlineCompletionProvider", () => {
       )) as vscode.InlineCompletionItem[]
 
       expect(result2).toHaveLength(0)
-      expect(mockModel.generateResponse).not.toHaveBeenCalled()
+      expect(mockModel.generateFimResponse).not.toHaveBeenCalled()
     })
   })
 
@@ -1861,13 +1851,13 @@ describe("AutocompleteInlineCompletionProvider", () => {
       // Should return empty array because credentials are not valid
       expect(result).toHaveLength(0)
       // Model should not be called
-      expect(mockModel.generateResponse).not.toHaveBeenCalled()
+      expect(mockModel.generateFimResponse).not.toHaveBeenCalled()
     })
 
     it("should not attempt an LLM call if credentials become invalid before the debounced fetch executes", async () => {
       // First call executes immediately (leading edge) - just to move provider into debounced mode
       await provider.provideInlineCompletionItems(mockDocument, mockPosition, mockContext, mockToken)
-      expect(mockModel.generateResponse).toHaveBeenCalledTimes(1)
+      expect(mockModel.generateFimResponse).toHaveBeenCalledTimes(1)
 
       // Second call will be debounced. Simulate a model reload happening before the timer fires.
       vi.mocked(mockModel.hasValidCredentials).mockReturnValue(false)
@@ -1878,8 +1868,8 @@ describe("AutocompleteInlineCompletionProvider", () => {
       await vi.advanceTimersByTimeAsync(300)
       await promise
 
-      // If fetch-time validation is working, we do not call generateResponse again.
-      expect(mockModel.generateResponse).toHaveBeenCalledTimes(1)
+      // If fetch-time validation is working, we do not call generateFimResponse again.
+      expect(mockModel.generateFimResponse).toHaveBeenCalledTimes(1)
     })
 
     it("should return suggestions when model has valid credentials", async () => {
@@ -1940,12 +1930,10 @@ describe("AutocompleteInlineCompletionProvider", () => {
     it("should reuse pending request when user types forward (prefix extends, suffix unchanged)", async () => {
       // Mock the model to track call count
       let callCount = 0
-      vi.mocked(mockModel.generateResponse).mockImplementation(async (_sys, _user, onChunk) => {
+      vi.mocked(mockModel.generateFimResponse).mockImplementation(async (_prefix, _suffix, onChunk) => {
         callCount++
         if (onChunk) {
-          onChunk({ type: "text", text: "<COMPLETION>" })
-          onChunk({ type: "text", text: "console.log('test');" })
-          onChunk({ type: "text", text: "</COMPLETION>" })
+          onChunk("console.log('test');")
         }
         return {
           cost: 0.01,
@@ -1988,12 +1976,10 @@ describe("AutocompleteInlineCompletionProvider", () => {
     it("should NOT reuse pending request when suffix changes", async () => {
       // Mock the model to track call count
       let callCount = 0
-      vi.mocked(mockModel.generateResponse).mockImplementation(async (_sys, _user, onChunk) => {
+      vi.mocked(mockModel.generateFimResponse).mockImplementation(async (_prefix, _suffix, onChunk) => {
         callCount++
         if (onChunk) {
-          onChunk({ type: "text", text: "<COMPLETION>" })
-          onChunk({ type: "text", text: "console.log('test');" })
-          onChunk({ type: "text", text: "</COMPLETION>" })
+          onChunk("console.log('test');")
         }
         return {
           cost: 0.01,
@@ -2038,12 +2024,10 @@ describe("AutocompleteInlineCompletionProvider", () => {
     it("should NOT reuse pending request when user backspaces (prefix shrinks)", async () => {
       // Mock the model to track call count
       let callCount = 0
-      vi.mocked(mockModel.generateResponse).mockImplementation(async (_sys, _user, onChunk) => {
+      vi.mocked(mockModel.generateFimResponse).mockImplementation(async (_prefix, _suffix, onChunk) => {
         callCount++
         if (onChunk) {
-          onChunk({ type: "text", text: "<COMPLETION>" })
-          onChunk({ type: "text", text: "console.log('test');" })
-          onChunk({ type: "text", text: "</COMPLETION>" })
+          onChunk("console.log('test');")
         }
         return {
           cost: 0.01,
@@ -2087,7 +2071,7 @@ describe("AutocompleteInlineCompletionProvider", () => {
 
   describe("debounce with leading edge behavior", () => {
     it("should execute immediately on first call (leading edge)", async () => {
-      vi.mocked(mockModel.generateResponse).mockResolvedValue({
+      vi.mocked(mockModel.generateFimResponse).mockResolvedValue({
         cost: 0.01,
         inputTokens: 100,
         outputTokens: 50,
@@ -2100,12 +2084,12 @@ describe("AutocompleteInlineCompletionProvider", () => {
 
       // Model should be called immediately (no timer needed)
       await promise
-      expect(mockModel.generateResponse).toHaveBeenCalledTimes(1)
+      expect(mockModel.generateFimResponse).toHaveBeenCalledTimes(1)
     })
 
     it("should debounce subsequent calls (wait for 300ms of inactivity)", async () => {
       let callCount = 0
-      vi.mocked(mockModel.generateResponse).mockImplementation(async () => {
+      vi.mocked(mockModel.generateFimResponse).mockImplementation(async () => {
         callCount++
         return {
           cost: 0.01,
@@ -2138,7 +2122,7 @@ describe("AutocompleteInlineCompletionProvider", () => {
 
     it("should reset debounce timer on each call (only execute after 300ms of inactivity)", async () => {
       let callCount = 0
-      vi.mocked(mockModel.generateResponse).mockImplementation(async () => {
+      vi.mocked(mockModel.generateFimResponse).mockImplementation(async () => {
         callCount++
         return {
           cost: 0.01,
@@ -2184,7 +2168,7 @@ describe("AutocompleteInlineCompletionProvider", () => {
 
     it("should allow immediate execution after debounce completes (new leading edge)", async () => {
       let callCount = 0
-      vi.mocked(mockModel.generateResponse).mockImplementation(async () => {
+      vi.mocked(mockModel.generateFimResponse).mockImplementation(async () => {
         callCount++
         return {
           cost: 0.01,
@@ -2222,7 +2206,7 @@ describe("AutocompleteInlineCompletionProvider", () => {
   describe("adaptive debounce delay", () => {
     it("should start with initial debounce delay of 300ms", async () => {
       let callCount = 0
-      vi.mocked(mockModel.generateResponse).mockImplementation(async () => {
+      vi.mocked(mockModel.generateFimResponse).mockImplementation(async () => {
         callCount++
         return {
           cost: 0.01,
@@ -2321,7 +2305,7 @@ describe("AutocompleteInlineCompletionProvider", () => {
 
     it("should use adaptive debounce delay after collecting enough samples", async () => {
       let callCount = 0
-      vi.mocked(mockModel.generateResponse).mockImplementation(async () => {
+      vi.mocked(mockModel.generateFimResponse).mockImplementation(async () => {
         callCount++
         return {
           cost: 0.01,
@@ -2365,12 +2349,10 @@ describe("AutocompleteInlineCompletionProvider", () => {
 
     it("should record latency from LLM requests", async () => {
       // Mock the model to simulate a delay
-      vi.mocked(mockModel.generateResponse).mockImplementation(async (_sys, _user, onChunk) => {
+      vi.mocked(mockModel.generateFimResponse).mockImplementation(async (_prefix, _suffix, onChunk) => {
         // Simulate some processing time
         if (onChunk) {
-          onChunk({ type: "text", text: "<COMPLETION>" })
-          onChunk({ type: "text", text: "console.log('test');" })
-          onChunk({ type: "text", text: "</COMPLETION>" })
+          onChunk("console.log('test');")
         }
         return {
           cost: 0.01,

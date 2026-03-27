@@ -365,6 +365,7 @@ export const dict = {
   "language.br": "Português (Brasil)",
   "language.bs": "Bosanski",
   "language.th": "ไทย",
+  "language.tr": "Türkçe",
 
   "toast.theme.title": "Тема переключена",
   "toast.scheme.title": "Цветовая схема",
@@ -830,8 +831,11 @@ export const dict = {
   "session.delete.button": "Удалить сессию",
   "session.untitled": "Без названия",
   "session.recent": "Недавние",
+  "session.showHistory": "Показать историю",
   "session.search.placeholder": "Поиск сессий...",
   "session.empty": "Сессий пока нет. Нажмите + чтобы начать новый разговор.",
+  "session.tab.local": "Local",
+  "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Только этот репозиторий",
   "session.cloud.import": "Импорт из облака",
   "feedback.button": "Отзывы и поддержка",
@@ -912,8 +916,7 @@ export const dict = {
   "settings.autocomplete.title": "Автодополнение",
   "settings.notifications.title": "Уведомления",
   "settings.context.title": "Контекст",
-  "settings.terminal.title": "Терминал",
-  "settings.prompts.title": "Промпты",
+
   "settings.experimental.title": "Экспериментальное",
   "settings.language.title": "Язык",
   "settings.aboutKiloCode.title": "О Kilo Code",
@@ -988,8 +991,7 @@ export const dict = {
 
   "common.add": "Добавить",
   "common.choose": "Выбрать…",
-  "settings.notImplemented": "Этот раздел ещё не реализован.",
-  "settings.notImplemented.description": "Здесь будут параметры конфигурации и пояснительный текст.",
+
   "settings.autocomplete.autoTrigger.title": "Включить автоматическое встроенное дополнение",
   "settings.autocomplete.autoTrigger.description": "Автоматически показывать предложения дополнения при вводе",
   "settings.autocomplete.smartKeybinding.title": "Включить умную клавишу встроенной задачи",
@@ -1047,11 +1049,51 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Параметр nucleus-сэмплирования (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Макс. шагов",
   "settings.agentBehaviour.maxSteps.description": "Максимальное число итераций агента",
+  "settings.agentBehaviour.hidden.title": "Скрытый",
+  "settings.agentBehaviour.hidden.description": "Скрыть этого агента из переключателя режимов в поле ввода чата",
+  "settings.agentBehaviour.disable.title": "Отключён",
+  "settings.agentBehaviour.disable.description": "Полностью отключить этого агента — он не будет отображаться нигде",
+  "settings.agentBehaviour.badge.hidden": "скрытый",
+  "settings.agentBehaviour.badge.disabled": "отключён",
   "settings.agentBehaviour.discoveredSkills": "Обнаруженные навыки",
   "settings.agentBehaviour.noSkillsFound":
     "Навыки не обнаружены. Добавьте пути к папкам навыков или URL-адреса ниже, чтобы сделать навыки доступными.",
   "settings.agentBehaviour.availableModes": "Доступные пользовательские режимы",
   "settings.agentBehaviour.noModesFound": "Режимы не найдены.",
+  "settings.agentBehaviour.createMode": "Создать новый режим",
+  "settings.agentBehaviour.createMode.name": "Название",
+  "settings.agentBehaviour.createMode.name.placeholder": "например, reviewer",
+  "settings.agentBehaviour.createMode.name.description":
+    "Уникальный идентификатор режима. Используйте только строчные буквы, цифры и дефисы.",
+  "settings.agentBehaviour.createMode.description": "Описание",
+  "settings.agentBehaviour.createMode.description.placeholder":
+    "например, Проверяет код на качество и соответствие лучшим практикам",
+  "settings.agentBehaviour.createMode.description.help": "Краткое описание того, что делает этот режим.",
+  "settings.agentBehaviour.createMode.prompt": "Системный промпт",
+  "settings.agentBehaviour.createMode.prompt.placeholder":
+    "например, Вы ревьюер кода. Сосредоточьтесь на качестве кода, лучших практиках и потенциальных ошибках.",
+  "settings.agentBehaviour.createMode.prompt.help": "Инструкции для ИИ-агента при использовании этого режима.",
+  "settings.agentBehaviour.createMode.button": "Создать",
+  "settings.agentBehaviour.createMode.cancel": "Отмена",
+  "settings.agentBehaviour.createMode.nameRequired": "Название обязательно",
+  "settings.agentBehaviour.createMode.nameInvalid": "Название может содержать только строчные буквы, цифры и дефисы",
+  "settings.agentBehaviour.createMode.nameTaken": "Режим с таким названием уже существует",
+  "settings.agentBehaviour.importMode": "Импорт",
+  "settings.agentBehaviour.importMode.invalidName":
+    "Недопустимое имя режима в файле. Имя должно начинаться со строчной буквы и содержать только строчные буквы, цифры и дефисы.",
+  "settings.agentBehaviour.importMode.nameTaken": "Режим с таким названием уже существует.",
+  "settings.agentBehaviour.importMode.invalidJson":
+    "Недопустимый файл JSON. Пожалуйста, выберите корректный файл определения агента.",
+  "settings.agentBehaviour.importMode.tooLarge": "Файл слишком большой. Определения агентов должны быть менее 1 МБ.",
+  "settings.agentBehaviour.exportMode": "Экспортировать определение агента",
+  "settings.agentBehaviour.editMode": "Редактировать режим",
+  "settings.agentBehaviour.editMode.description": "Описание",
+  "settings.agentBehaviour.editMode.prompt": "Системный промпт",
+  "settings.agentBehaviour.editMode.save": "Готово",
+  "settings.agentBehaviour.editMode.back": "Вернуться к списку",
+  "settings.agentBehaviour.editMode.native": "Встроенный режим (определение только для чтения)",
+  "settings.agentBehaviour.editMode.promptOverride":
+    "Пользовательское переопределение промпта для этого встроенного режима",
   "settings.agentBehaviour.removeMode.title": "Удалить режим",
   "settings.agentBehaviour.removeMode.confirm":
     'Удалить режим "{{name}}"? Это отключит режим, обновив вашу конфигурацию.',
@@ -1059,18 +1101,42 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.title": "Удалить сервер MCP",
   "settings.agentBehaviour.removeMcp.confirm": 'Удалить сервер MCP "{{name}}"? Это удалит его из вашей конфигурации.',
   "settings.agentBehaviour.removeMcp.button": "Удалить",
+  "settings.agentBehaviour.editMcp": "Редактировать сервер MCP",
+  "settings.agentBehaviour.editMcp.transportLocal": "Локальный сервер (транспорт stdio)",
+  "settings.agentBehaviour.editMcp.transportRemote": "Удалённый сервер (транспорт SSE/HTTP)",
+  "settings.agentBehaviour.editMcp.env": "Переменные окружения",
+  "settings.agentBehaviour.editMcp.env.help": "Переменные, передаваемые процессу сервера MCP.",
+  "settings.agentBehaviour.addMcp.command": "Команда",
+  "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
+  "settings.agentBehaviour.addMcp.args": "Аргументы",
+  "settings.agentBehaviour.addMcp.args.help": "Один аргумент на строку. Пути с пробелами сохраняются как есть.",
+  "settings.agentBehaviour.addMcp.args.placeholder": "e.g.\n-y\n@modelcontextprotocol/server-filesystem\n/tmp",
+  "settings.agentBehaviour.addMcp.url": "URL сервера",
+  "settings.agentBehaviour.addMcp.url.placeholder": "e.g. http://localhost:3000/sse",
   "settings.agentBehaviour.skillPaths": "Пути папок навыков",
   "settings.agentBehaviour.skillUrls": "URL навыков",
   "settings.agentBehaviour.removeSkill.title": "Удалить навык",
   "settings.agentBehaviour.removeSkill.confirm":
     'Удалить навык "{{name}}"? Это приведет к удалению файлов навыка с диска.',
   "settings.agentBehaviour.removeSkill.button": "Удалить",
+  "settings.agentBehaviour.rules.description":
+    "Правила — это файлы инструкций, которые направляют поведение агента. Они включаются в системный промпт для каждого разговора. Добавьте пути к файлам ниже, чтобы включить дополнительные правила.",
   "settings.agentBehaviour.instructionFiles": "Дополнительные файлы инструкций",
   "settings.agentBehaviour.instructionFiles.description": "Пути к дополнительным файлам инструкций в системном промпте",
+  "settings.agentBehaviour.mcpDetail.command": "Команда",
+  "settings.agentBehaviour.mcpDetail.args": "Аргументы",
+  "settings.agentBehaviour.mcpDetail.env": "Окружение",
+  "settings.agentBehaviour.mcpDetail.disabled": "Этот сервер отключён.",
   "settings.agentBehaviour.mcpEmpty":
     "MCP-серверы не настроены. Отредактируйте файл конфигурации opencode для добавления MCP-серверов.",
   "settings.agentBehaviour.workflowsPlaceholder": "Рабочие процессы управляются через файлы рабочих процессов.",
-  "settings.agentBehaviour.notImplemented": "Ещё не реализовано.",
+  "settings.agentBehaviour.workflows.description":
+    "Рабочие процессы — это пользовательские слэш-команды, определённые в вашей конфигурации. Введите /command-name в чате, чтобы вызвать их. Команды настраиваются в opencode.json в разделе 'command'.",
+  "settings.agentBehaviour.workflows.empty":
+    "Пользовательские команды не настроены. Добавьте команды в opencode.json, чтобы увидеть их здесь.",
+  "settings.agentBehaviour.workflows.detail.description": "Описание",
+  "settings.agentBehaviour.workflows.detail.template": "Шаблон",
+
   "settings.autoApprove.description":
     "Определите правила запуска инструментов. Большинство инструментов по умолчанию Разрешены. Для doom_loop и external_directory по умолчанию установлено Спрашивать.",
   "settings.autoApprove.level.allow": "Разрешить",
@@ -1125,7 +1191,8 @@ export const dict = {
   "settings.providers.defaultModel.title": "Модель по умолчанию",
   "settings.providers.defaultModel.description": "Основная модель для разговоров",
   "settings.providers.smallModel.title": "Малая модель",
-  "settings.providers.smallModel.description": "Лёгкая модель для генерации заголовков и быстрых задач",
+  "settings.providers.smallModel.description":
+    "Лёгкая модель для генерации заголовков, сообщений коммитов, улучшения промптов и других быстрых задач",
   "settings.providers.disabled": "Отключённые провайдеры",
   "settings.providers.disabled.description": "Провайдеры для скрытия из списка",
   "settings.providers.enabled": "Включённые провайдеры (белый список)",
@@ -1133,6 +1200,7 @@ export const dict = {
   "settings.providers.notSet": "Не задано (использовать значение сервера по умолчанию)",
   "dialog.model.notSet": "Не задано",
   "profile.personalAccount": "Личный аккаунт",
+  "profile.switchingAccount": "Переключение аккаунта…",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/ru.ts
 
   "question.summary": "{{n}} из {{total}} вопросов",
@@ -1205,4 +1273,8 @@ export const dict = {
   "settings.saveBar.warning.many": "Несколько сеансов выполняются и будут прерваны",
   "settings.saveBar.saveAnyway": "Сохранить в любом случае",
   "settings.saveBar.cancel": "Отмена",
+  "notifications.action.previous": "Previous",
+  "notifications.action.next": "Next",
+  "notifications.action.close": "Close",
+  "notifications.action.tryModel": "Try model",
 }

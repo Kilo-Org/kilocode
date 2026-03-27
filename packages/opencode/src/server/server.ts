@@ -51,6 +51,7 @@ import { KilocodeRoutes } from "./routes/kilocode" // kilocode_change
 import { Filesystem } from "@/util/filesystem"
 import { QuestionRoutes } from "./routes/question"
 import { PermissionRoutes } from "./routes/permission"
+import { RemoteRoutes } from "./routes/remote" // kilocode_change
 import { GlobalRoutes } from "./routes/global"
 import { MDNS } from "./mdns"
 
@@ -270,6 +271,7 @@ export namespace Server {
         .route("/question", QuestionRoutes())
         .route("/provider", ProviderRoutes())
         .route("/telemetry", TelemetryRoutes()) // kilocode_change
+        .route("/remote", RemoteRoutes()) // kilocode_change
         .route("/commit-message", CommitMessageRoutes()) // kilocode_change
         .route("/enhance-prompt", EnhancePromptRoutes()) // kilocode_change
         .route("/kilocode", KilocodeRoutes()) // kilocode_change

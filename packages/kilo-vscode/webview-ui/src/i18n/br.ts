@@ -362,6 +362,7 @@ export const dict = {
   "language.br": "Português (Brasil)",
   "language.bs": "Bosanski",
   "language.th": "ไทย",
+  "language.tr": "Türkçe",
 
   "toast.theme.title": "Tema alterado",
   "toast.scheme.title": "Esquema de cores",
@@ -824,8 +825,11 @@ export const dict = {
   "session.delete.button": "Excluir sessão",
   "session.untitled": "Sem título",
   "session.recent": "Recentes",
+  "session.showHistory": "Mostrar Histórico",
   "session.search.placeholder": "Buscar sessões...",
   "session.empty": "Nenhuma sessão ainda. Clique + para iniciar uma nova conversa.",
+  "session.tab.local": "Local",
+  "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Apenas este repositório",
   "session.cloud.import": "Importar da nuvem",
   "feedback.button": "Feedback e suporte",
@@ -907,8 +911,7 @@ export const dict = {
   "settings.autocomplete.title": "Autocompletar",
   "settings.notifications.title": "Notificações",
   "settings.context.title": "Contexto",
-  "settings.terminal.title": "Terminal",
-  "settings.prompts.title": "Prompts",
+
   "settings.experimental.title": "Experimental",
   "settings.language.title": "Idioma",
   "settings.aboutKiloCode.title": "Sobre o Kilo Code",
@@ -985,8 +988,7 @@ export const dict = {
 
   "common.add": "Adicionar",
   "common.choose": "Escolher…",
-  "settings.notImplemented": "Esta seção ainda não foi implementada.",
-  "settings.notImplemented.description": "Conterá opções de configuração e texto explicativo.",
+
   "settings.autocomplete.autoTrigger.title": "Ativar completamento automático inline",
   "settings.autocomplete.autoTrigger.description":
     "Mostrar automaticamente sugestões de completamento inline ao digitar",
@@ -1046,11 +1048,50 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Parâmetro de amostragem nucleus (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Passos máximos",
   "settings.agentBehaviour.maxSteps.description": "Iterações máximas do agente",
+  "settings.agentBehaviour.hidden.title": "Oculto",
+  "settings.agentBehaviour.hidden.description": "Ocultar este agente do seletor de modos na entrada do chat",
+  "settings.agentBehaviour.disable.title": "Desativado",
+  "settings.agentBehaviour.disable.description":
+    "Desativar completamente este agente — ele não aparecerá em nenhum lugar",
+  "settings.agentBehaviour.badge.hidden": "oculto",
+  "settings.agentBehaviour.badge.disabled": "desativado",
   "settings.agentBehaviour.discoveredSkills": "Habilidades descobertas",
   "settings.agentBehaviour.noSkillsFound":
     "Nenhuma habilidade encontrada. Adicione caminhos de pastas ou URLs abaixo para disponibilizar habilidades.",
   "settings.agentBehaviour.availableModes": "Modos personalizados disponíveis",
   "settings.agentBehaviour.noModesFound": "Nenhum modo encontrado.",
+  "settings.agentBehaviour.createMode": "Criar Novo Modo",
+  "settings.agentBehaviour.createMode.name": "Nome",
+  "settings.agentBehaviour.createMode.name.placeholder": "ex: reviewer",
+  "settings.agentBehaviour.createMode.name.description":
+    "Identificador único do modo. Use apenas letras minúsculas, números e hífens.",
+  "settings.agentBehaviour.createMode.description": "Descrição",
+  "settings.agentBehaviour.createMode.description.placeholder": "ex: Revisa código para qualidade e boas práticas",
+  "settings.agentBehaviour.createMode.description.help": "Breve descrição do que este modo faz.",
+  "settings.agentBehaviour.createMode.prompt": "Prompt do Sistema",
+  "settings.agentBehaviour.createMode.prompt.placeholder":
+    "ex: Você é um revisor de código. Foque em qualidade, boas práticas e bugs potenciais.",
+  "settings.agentBehaviour.createMode.prompt.help": "Instruções para o agente de IA ao usar este modo.",
+  "settings.agentBehaviour.createMode.button": "Criar",
+  "settings.agentBehaviour.createMode.cancel": "Cancelar",
+  "settings.agentBehaviour.createMode.nameRequired": "Nome é obrigatório",
+  "settings.agentBehaviour.createMode.nameInvalid": "O nome deve conter apenas letras minúsculas, números e hífens",
+  "settings.agentBehaviour.createMode.nameTaken": "Já existe um modo com este nome",
+  "settings.agentBehaviour.importMode": "Importar",
+  "settings.agentBehaviour.importMode.invalidName":
+    "Nome de modo inválido no arquivo. O nome deve começar com uma letra minúscula e conter apenas letras minúsculas, números e hífens.",
+  "settings.agentBehaviour.importMode.nameTaken": "Já existe um modo com este nome.",
+  "settings.agentBehaviour.importMode.invalidJson":
+    "Arquivo JSON inválido. Por favor, selecione um arquivo de definição de agente válido.",
+  "settings.agentBehaviour.importMode.tooLarge": "Arquivo muito grande. Definições de agente devem ter menos de 1 MB.",
+  "settings.agentBehaviour.exportMode": "Exportar definição do agente",
+  "settings.agentBehaviour.editMode": "Editar Modo",
+  "settings.agentBehaviour.editMode.description": "Descrição",
+  "settings.agentBehaviour.editMode.prompt": "Prompt do Sistema",
+  "settings.agentBehaviour.editMode.save": "Concluído",
+  "settings.agentBehaviour.editMode.back": "Voltar à lista",
+  "settings.agentBehaviour.editMode.native": "Modo integrado (definição somente leitura)",
+  "settings.agentBehaviour.editMode.promptOverride": "Substituição de prompt personalizado para este modo integrado",
   "settings.agentBehaviour.removeMode.title": "Remover modo",
   "settings.agentBehaviour.removeMode.confirm":
     'Remover o modo "{{name}}"? Isso desativará o modo atualizando sua configuração.',
@@ -1059,20 +1100,45 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.confirm":
     'Remover o servidor MCP "{{name}}"? Isso o removerá da sua configuração.',
   "settings.agentBehaviour.removeMcp.button": "Remover",
+  "settings.agentBehaviour.editMcp": "Editar Servidor MCP",
+  "settings.agentBehaviour.editMcp.transportLocal": "Servidor local (transporte stdio)",
+  "settings.agentBehaviour.editMcp.transportRemote": "Servidor remoto (transporte SSE/HTTP)",
+  "settings.agentBehaviour.editMcp.env": "Variáveis de Ambiente",
+  "settings.agentBehaviour.editMcp.env.help": "Variáveis passadas para o processo do servidor MCP.",
+  "settings.agentBehaviour.addMcp.command": "Comando",
+  "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
+  "settings.agentBehaviour.addMcp.args": "Argumentos",
+  "settings.agentBehaviour.addMcp.args.help":
+    "Um argumento por linha. Caminhos com espaços são preservados como estão.",
+  "settings.agentBehaviour.addMcp.args.placeholder": "e.g.\n-y\n@modelcontextprotocol/server-filesystem\n/tmp",
+  "settings.agentBehaviour.addMcp.url": "URL do Servidor",
+  "settings.agentBehaviour.addMcp.url.placeholder": "e.g. http://localhost:3000/sse",
   "settings.agentBehaviour.skillPaths": "Caminhos de pastas de habilidades",
   "settings.agentBehaviour.skillUrls": "URLs de habilidades",
   "settings.agentBehaviour.removeSkill.title": "Remover habilidade",
   "settings.agentBehaviour.removeSkill.confirm":
     'Remover a habilidade "{{name}}"? Isso excluirá os arquivos da habilidade do disco.',
   "settings.agentBehaviour.removeSkill.button": "Remover",
+  "settings.agentBehaviour.rules.description":
+    "Regras são arquivos de instrução que orientam o comportamento do agente. Elas são incluídas no prompt do sistema para cada conversa. Adicione caminhos de arquivos abaixo para incluir regras adicionais.",
   "settings.agentBehaviour.instructionFiles": "Arquivos de instruções adicionais",
   "settings.agentBehaviour.instructionFiles.description":
     "Caminhos para arquivos de instruções adicionais no prompt do sistema",
+  "settings.agentBehaviour.mcpDetail.command": "Comando",
+  "settings.agentBehaviour.mcpDetail.args": "Argumentos",
+  "settings.agentBehaviour.mcpDetail.env": "Ambiente",
+  "settings.agentBehaviour.mcpDetail.disabled": "Este servidor está desativado.",
   "settings.agentBehaviour.mcpEmpty":
     "Nenhum servidor MCP configurado. Edite o arquivo de configuração do opencode para adicionar servidores MCP.",
   "settings.agentBehaviour.workflowsPlaceholder":
     "Fluxos de trabalho são gerenciados por arquivos de fluxo de trabalho no espaço de trabalho.",
-  "settings.agentBehaviour.notImplemented": "Ainda não implementado.",
+  "settings.agentBehaviour.workflows.description":
+    "Fluxos de trabalho são comandos de barra personalizados definidos na sua configuração. Digite /command-name no chat para invocá-los. Os comandos são configurados no opencode.json na seção 'command'.",
+  "settings.agentBehaviour.workflows.empty":
+    "Nenhum comando personalizado configurado. Adicione comandos ao opencode.json para vê-los aqui.",
+  "settings.agentBehaviour.workflows.detail.description": "Descrição",
+  "settings.agentBehaviour.workflows.detail.template": "Modelo",
+
   "settings.autoApprove.description":
     "Defina como as ferramentas têm permissão para serem executadas. A maioria das ferramentas tem o padrão Permitir. doom_loop e external_directory têm o padrão Perguntar.",
   "settings.autoApprove.level.allow": "Permitir",
@@ -1128,7 +1194,8 @@ export const dict = {
   "settings.providers.defaultModel.title": "Modelo padrão",
   "settings.providers.defaultModel.description": "Modelo principal para conversas",
   "settings.providers.smallModel.title": "Modelo pequeno",
-  "settings.providers.smallModel.description": "Modelo leve para geração de títulos e tarefas rápidas",
+  "settings.providers.smallModel.description":
+    "Modelo leve para geração de títulos, mensagens de commit, aprimoramento de prompts e outras tarefas rápidas",
   "settings.providers.disabled": "Provedores desativados",
   "settings.providers.disabled.description": "Provedores a ocultar da lista",
   "settings.providers.enabled": "Provedores ativados (lista branca)",
@@ -1136,6 +1203,7 @@ export const dict = {
   "settings.providers.notSet": "Não definido (usar padrão do servidor)",
   "dialog.model.notSet": "Não definido",
   "profile.personalAccount": "Conta pessoal",
+  "profile.switchingAccount": "Trocando de conta…",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/br.ts
 
@@ -1209,4 +1277,8 @@ export const dict = {
   "settings.saveBar.warning.many": "Várias sessões estão em execução e serão interrompidas",
   "settings.saveBar.saveAnyway": "Salvar mesmo assim",
   "settings.saveBar.cancel": "Cancelar",
+  "notifications.action.previous": "Previous",
+  "notifications.action.next": "Next",
+  "notifications.action.close": "Close",
+  "notifications.action.tryModel": "Try model",
 }

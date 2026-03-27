@@ -42,6 +42,19 @@ This document tracks remaining work needed for feature parity with the old exten
 
 ---
 
+## Agent Behaviour Tab Parity
+
+The "Agent Behaviour" settings tab contains 5 sub-tabs in both the legacy and new extensions. The legacy tab was a combined 2800+ lines of UI; the new tab is ~820 lines. Each sub-tab has its own parity doc.
+
+| Sub-Tab                                                               | Remaining Work                                                                                                                                 | Priority |
+| --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| [Modes / Agents](agent-behaviour/modes-subtab-parity.md)              | Core CRUD done (PR #7225). Remaining: when-to-use, system prompt preview, import/export, default variant, hidden/disable, org features         | P2       |
+| [MCP Servers](agent-behaviour/mcp-server-creation.md)                 | Add/edit servers, connection status, enable/disable toggle, restart, per-server timeout, expandable detail (tools/resources/logs/auth)         | P2       |
+| [Rules & Workflows](agent-behaviour/rules-workflows-subtab-parity.md) | Rules: description text, global/workspace separation, per-rule toggles, new file creation, auto-discovery. Workflows: entire sub-tab is a stub | P2/P3    |
+| Skills                                                                | Minor gaps: project/global separation, mode badge per skill. Covered by [Skills System](non-agent-features/skills-system.md)                   | P2       |
+
+---
+
 ## Project Board Issues
 
 Open issues from the [GitHub project board](https://github.com/orgs/Kilo-Org/projects/25/views/1) not covered by the feature docs above. Each item has its own detailed doc.

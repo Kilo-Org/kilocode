@@ -40,4 +40,9 @@ export const dict = {
     "Kilo Code Autocomplete가 GitHub Copilot과의 충돌로 인해 차단되고 있습니다. 이를 해결하려면 Copilot의 인라인 제안을 비활성화해야 합니다.",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "Copilot 비활성화",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "Autocomplete 비활성화",
+  "kilocode:autocomplete.creditsExhausted.message":
+    "계정에 남은 크레딧이 없어 Kilo Code Autocomplete가 일시 중지되었습니다. 자동완성을 재개하려면 크레딧을 추가하세요.",
+  "kilocode:autocomplete.creditsExhausted.addCredits": "크레딧 추가",
+  "kilocode:autocomplete.authError.message":
+    "인증 오류로 인해 Kilo Code Autocomplete가 일시 중지되었습니다. 다시 로그인해 주세요.",
 }

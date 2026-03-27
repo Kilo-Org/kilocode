@@ -16,6 +16,8 @@ import { useKV } from "../context/kv"
 import { useCommandDialog } from "../component/dialog-command"
 import { KiloNews } from "@/kilocode/components/kilo-news" // kilocode_change
 import { useConnected } from "../component/dialog-model" // kilocode_change
+import { RemoteIndicator } from "@/kilocode/remote-tui" // kilocode_change
+import { useSDK } from "../context/sdk" // kilocode_change
 
 // TODO: what is the best way to do this?
 let once = false
@@ -27,6 +29,7 @@ export function Home() {
   const route = useRouteData("home")
   const promptRef = usePromptRef()
   const command = useCommandDialog()
+  const sdk = useSDK() // kilocode_change
   const mcp = createMemo(() => Object.keys(sync.data.mcp).length > 0)
   const mcpError = createMemo(() => {
     return Object.values(sync.data.mcp).some((x) => x.status === "failed")
@@ -149,6 +152,7 @@ export function Home() {
       <box paddingTop={1} paddingBottom={1} paddingLeft={2} paddingRight={2} flexDirection="row" flexShrink={0} gap={2}>
         <text fg={theme.textMuted}>{directory()}</text>
         <box gap={1} flexDirection="row" flexShrink={0}>
+          <RemoteIndicator sdk={sdk} theme={theme} kilo={sync.data.provider_next.connected.includes("kilo")} />
           <Show when={mcp()}>
             <text fg={theme.text}>
               <Switch>

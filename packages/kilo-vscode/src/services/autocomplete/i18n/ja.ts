@@ -41,4 +41,9 @@ export const dict = {
     "Kilo Code AutocompleteがGitHub Copilotとの競合によってブロックされています。これを修正するには、Copilotのインライン提案を無効にする必要があります。",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "Copilotを無効にする",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "Autocompleteを無効にする",
+  "kilocode:autocomplete.creditsExhausted.message":
+    "アカウントのクレジットが残っていないため、Kilo Code Autocompleteが一時停止されました。オートコンプリートを再開するにはクレジットを追加してください。",
+  "kilocode:autocomplete.creditsExhausted.addCredits": "クレジットを追加",
+  "kilocode:autocomplete.authError.message":
+    "認証エラーのため、Kilo Code Autocompleteが一時停止されました。再度サインインしてください。",
 }

@@ -13,6 +13,9 @@ import { KILO_API_BASE } from "@kilocode/kilo-gateway"
 import { Instance } from "@/project/instance"
 import { Vcs } from "@/project/vcs"
 import simpleGit from "simple-git"
+import { RemoteWS } from "@/kilo-sessions/remote-ws"
+import { RemoteSender } from "@/kilo-sessions/remote-sender"
+import { SessionStatus } from "@/session/status"
 
 export namespace KiloSessions {
   const log = Log.create({ service: "kilo-sessions" })
@@ -127,6 +130,12 @@ export namespace KiloSessions {
     },
   })
 
+  const remoteEnabled = process.env["KILO_REMOTE"] === "1"
+  let remote: { conn: RemoteWS.Connection; sender: RemoteSender.Sender; heartbeat: () => Promise<void> } | undefined
+  let enabling: Promise<void> | undefined
+  let remoteSeq = 0
+  let viewedSessionId: string | undefined
+
   export async function init() {
     if (ingestDisabled) return
 
@@ -195,6 +204,118 @@ export namespace KiloSessions {
     Bus.subscribe(Session.Event.TurnClose, async (evt) => {
       await ingest.sync(evt.properties.sessionID, [{ type: "session_close", data: { reason: evt.properties.reason } }])
     })
+
+    if (remoteEnabled) enableRemote().catch((err) => log.warn("remote not enabled", { error: String(err) }))
+    Bus.subscribe(Bus.InstanceDisposed, () => disableRemote())
+  }
+
+  export async function enableRemote() {
+    if (remote) return
+    if (ingestDisabled) return
+    if (enabling) return enabling
+    const seq = ++remoteSeq
+    enabling = (async () => {
+      const token = await kilocodeToken()
+      if (!token) {
+        throw new Error("Unable to enable remote: no Kilo credentials found. Run `kilo auth login`.")
+      }
+
+      const valid = await authValid(token)
+      if (valid === false) {
+        throw new Error("Unable to enable remote: invalid or expired Kilo credentials. Run `kilo auth login`.")
+      }
+      if (valid === undefined) throw new Error("Unable to enable remote: failed to verify Kilo credentials.")
+
+      const url = (process.env["KILO_SESSION_INGEST_URL"] ?? "https://ingest.kilosessions.ai")
+        .replace(/^https:\/\//, "wss://")
+        .replace(/^http:\/\//, "ws://")
+
+      // Capture directory so the heartbeat timer can re-enter the Instance context
+      // (setInterval runs outside AsyncLocalStorage scope)
+      const directory = Instance.directory
+      const getSessions = async () => {
+        const [gitUrl, gitBranch] = await Promise.all([
+          getGitUrl().catch(() => undefined),
+          Vcs.branch().catch(() => undefined),
+        ])
+        const statuses = SessionStatus.list()
+        const ids = new Set(Object.keys(statuses))
+        if (viewedSessionId) ids.add(viewedSessionId)
+        const results = await Promise.all(
+          [...ids].map(async (id) => {
+            const session = await Session.get(id).catch(() => undefined)
+            if (!session) return undefined
+            return {
+              id,
+              status: statuses[id]?.type ?? "idle",
+              title: session.title,
+              parentSessionId: session.parentID,
+              gitUrl,
+              gitBranch,
+            }
+          }),
+        )
+        return results.filter((r): r is NonNullable<typeof r> => !!r)
+      }
+
+      const conn = RemoteWS.connect({
+        url,
+        getToken: kilocodeToken,
+        withContext: (fn) => Instance.provide({ directory, fn }),
+        getSessions,
+        log,
+        onMessage: (msg) => {
+          // Must run inside Instance.provide so Bus.subscribeAll can access
+          // the instance-scoped subscription map via Instance.state().
+          void Instance.provide({ directory, fn: () => sender.handle(msg) })
+        },
+        onClose: () => disableRemote(),
+      })
+
+      const sender = RemoteSender.create({
+        conn,
+        directory: Instance.directory,
+        log,
+      })
+
+      const heartbeat = async () => {
+        conn.send({ type: "heartbeat", sessions: await getSessions() })
+      }
+
+      if (seq !== remoteSeq) {
+        sender.dispose()
+        conn.close()
+        return
+      }
+
+      remote = { conn, sender, heartbeat }
+      log.info("remote connection enabled")
+    })().finally(() => {
+      if (remoteSeq === seq) enabling = undefined
+    })
+
+    return enabling
+  }
+
+  export function disableRemote() {
+    remoteSeq += 1
+    enabling = undefined
+    if (!remote) return
+    remote.sender.dispose()
+    remote.conn.close()
+    remote = undefined
+    log.info("remote connection disabled")
+  }
+
+  export function remoteStatus() {
+    return {
+      enabled: !!remote,
+      connected: remote?.conn.connected ?? false,
+    }
+  }
+  export function setViewedSession(sessionID: string | undefined) {
+    viewedSessionId = sessionID
+    if (remote) void remote.heartbeat().catch((err) => log.warn("heartbeat failed", { error: String(err) }))
   }
 
   export async function create(sessionId: string) {

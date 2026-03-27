@@ -45,28 +45,28 @@ That's it. No configuration needed.
 
 ## Auto Balanced
 
-`kilo-auto/balanced` follows the same mode-based routing structure as Frontier but uses more cost-effective models — Kimi K2.5 for reasoning-heavy modes and Minimax M2.5 (Free) for implementation modes.
+`kilo-auto/balanced` follows the same mode-based routing structure as Frontier but uses more cost-effective models — Kimi K2.5 for reasoning-heavy modes and Minimax M2.7 for implementation modes.
 
 ### Mode-to-Model Mapping
 
-| Mode           | Model Used          | Best For                     |
-| -------------- | ------------------- | ---------------------------- |
-| `architect`    | Kimi K2.5           | System design, planning      |
-| `orchestrator` | Kimi K2.5           | Multi-step task coordination |
-| `ask`          | Kimi K2.5           | Questions, explanations      |
-| `plan`         | Kimi K2.5           | Planning, reasoning          |
-| `general`      | Kimi K2.5           | General assistance           |
-| `debug`        | Kimi K2.5           | Debugging and fixing issues  |
-| `code`         | Minimax M2.5 (Free) | Writing and editing code     |
-| `build`        | Minimax M2.5 (Free) | Implementation tasks         |
-| `explore`      | Minimax M2.5 (Free) | Codebase exploration         |
+| Mode           | Model Used   | Best For                     |
+| -------------- | ------------ | ---------------------------- |
+| `architect`    | Kimi K2.5    | System design, planning      |
+| `orchestrator` | Kimi K2.5    | Multi-step task coordination |
+| `ask`          | Kimi K2.5    | Questions, explanations      |
+| `plan`         | Kimi K2.5    | Planning, reasoning          |
+| `general`      | Kimi K2.5    | General assistance           |
+| `debug`        | Kimi K2.5    | Debugging and fixing issues  |
+| `code`         | Minimax M2.7 | Writing and editing code     |
+| `build`        | Minimax M2.7 | Implementation tasks         |
+| `explore`      | Minimax M2.7 | Codebase exploration         |
 
 **Planning and reasoning tasks** use Kimi K2.5, a strong open-weight reasoning model from Moonshot AI.
 
-**Implementation tasks** use Minimax M2.5, which provides fast, capable code generation at a fraction of frontier model costs.
+**Implementation tasks** use Minimax M2.7, which provides fast, capable code generation at a fraction of frontier model costs.
 
 {% callout type="info" title="Image support" %}
-Auto Balanced does not support image inputs, since Minimax M2.5 does not have vision capabilities.
+Auto Balanced does not support image inputs, since Minimax M2.7 does not have vision capabilities.
 {% /callout %}
 
 ## Benefits

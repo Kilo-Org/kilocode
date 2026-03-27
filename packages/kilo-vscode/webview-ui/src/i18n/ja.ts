@@ -363,6 +363,7 @@ export const dict = {
   "language.br": "Português (Brasil)",
   "language.bs": "Bosanski",
   "language.th": "ไทย",
+  "language.tr": "Türkçe",
 
   "toast.theme.title": "テーマが切り替わりました",
   "toast.scheme.title": "配色",
@@ -821,8 +822,11 @@ export const dict = {
   "session.delete.button": "セッションを削除",
   "session.untitled": "無題",
   "session.recent": "最近",
+  "session.showHistory": "履歴を表示",
   "session.search.placeholder": "セッションを検索...",
   "session.empty": "セッションがありません。+ をクリックして新しい会話を始めましょう。",
+  "session.tab.local": "Local",
+  "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "このリポジトリのみ",
   "session.cloud.import": "クラウドからインポート",
   "feedback.button": "フィードバック & サポート",
@@ -904,8 +908,7 @@ export const dict = {
   "settings.autocomplete.title": "オートコンプリート",
   "settings.notifications.title": "通知",
   "settings.context.title": "コンテキスト",
-  "settings.terminal.title": "ターミナル",
-  "settings.prompts.title": "プロンプト",
+
   "settings.experimental.title": "実験的機能",
   "settings.language.title": "言語",
   "settings.aboutKiloCode.title": "Kilo Codeについて",
@@ -981,9 +984,7 @@ export const dict = {
 
   "common.add": "追加",
   "common.choose": "選択…",
-  "settings.notImplemented": "このセクションはまだ実装されていません。",
-  "settings.notImplemented.description":
-    "選択した設定カテゴリに関連する設定オプションと説明テキストが含まれる予定です。",
+
   "settings.autocomplete.autoTrigger.title": "自動インライン補完を有効にする",
   "settings.autocomplete.autoTrigger.description": "入力時にインライン補完の提案を自動的に表示",
   "settings.autocomplete.smartKeybinding.title": "スマートインラインタスクキーバインドを有効にする",
@@ -1041,11 +1042,50 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "核サンプリングパラメータ（0-1）",
   "settings.agentBehaviour.maxSteps.title": "最大ステップ数",
   "settings.agentBehaviour.maxSteps.description": "最大エージェント反復回数",
+  "settings.agentBehaviour.hidden.title": "非表示",
+  "settings.agentBehaviour.hidden.description": "チャット入力のモード切り替えからこのエージェントを非表示にする",
+  "settings.agentBehaviour.disable.title": "無効",
+  "settings.agentBehaviour.disable.description": "このエージェントを完全に無効にする — どこにも表示されなくなります",
+  "settings.agentBehaviour.badge.hidden": "非表示",
+  "settings.agentBehaviour.badge.disabled": "無効",
   "settings.agentBehaviour.discoveredSkills": "検出されたスキル",
   "settings.agentBehaviour.noSkillsFound":
     "スキルが見つかりません。スキルを利用可能にするには、以下にスキルフォルダパスまたはURLを追加してください。",
   "settings.agentBehaviour.availableModes": "利用可能なカスタムモード",
   "settings.agentBehaviour.noModesFound": "モードが見つかりません。",
+  "settings.agentBehaviour.createMode": "新しいモードを作成",
+  "settings.agentBehaviour.createMode.name": "名前",
+  "settings.agentBehaviour.createMode.name.placeholder": "例: reviewer",
+  "settings.agentBehaviour.createMode.name.description":
+    "モードの一意の識別子。小文字、数字、ハイフンのみ使用できます。",
+  "settings.agentBehaviour.createMode.description": "説明",
+  "settings.agentBehaviour.createMode.description.placeholder": "例: コードの品質とベストプラクティスをレビューします",
+  "settings.agentBehaviour.createMode.description.help": "このモードの機能の簡単な説明。",
+  "settings.agentBehaviour.createMode.prompt": "システムプロンプト",
+  "settings.agentBehaviour.createMode.prompt.placeholder":
+    "例: あなたはコードレビュアーです。コード品質、ベストプラクティス、潜在的なバグに焦点を当ててください。",
+  "settings.agentBehaviour.createMode.prompt.help": "このモードを使用するときのAIエージェントへの指示。",
+  "settings.agentBehaviour.createMode.button": "作成",
+  "settings.agentBehaviour.createMode.cancel": "キャンセル",
+  "settings.agentBehaviour.createMode.nameRequired": "名前は必須です",
+  "settings.agentBehaviour.createMode.nameInvalid": "名前には小文字、数字、ハイフンのみ使用できます",
+  "settings.agentBehaviour.createMode.nameTaken": "この名前のモードはすでに存在します",
+  "settings.agentBehaviour.importMode": "インポート",
+  "settings.agentBehaviour.importMode.invalidName":
+    "ファイル内のモード名が無効です。名前は小文字で始まり、小文字、数字、ハイフンのみを含む必要があります。",
+  "settings.agentBehaviour.importMode.nameTaken": "この名前のモードはすでに存在します。",
+  "settings.agentBehaviour.importMode.invalidJson":
+    "無効なJSONファイルです。有効なエージェント定義ファイルを選択してください。",
+  "settings.agentBehaviour.importMode.tooLarge":
+    "ファイルが大きすぎます。エージェント定義は1 MB以下である必要があります。",
+  "settings.agentBehaviour.exportMode": "エージェント定義をエクスポート",
+  "settings.agentBehaviour.editMode": "モードを編集",
+  "settings.agentBehaviour.editMode.description": "説明",
+  "settings.agentBehaviour.editMode.prompt": "システムプロンプト",
+  "settings.agentBehaviour.editMode.save": "完了",
+  "settings.agentBehaviour.editMode.back": "リストに戻る",
+  "settings.agentBehaviour.editMode.native": "組み込みモード（読み取り専用の定義）",
+  "settings.agentBehaviour.editMode.promptOverride": "この組み込みモードのカスタムプロンプト上書き",
   "settings.agentBehaviour.removeMode.title": "モードを削除",
   "settings.agentBehaviour.removeMode.confirm":
     'モード "{{name}}" を削除しますか？設定を更新してモードを無効にします。',
@@ -1053,19 +1093,43 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.title": "MCPサーバーを削除",
   "settings.agentBehaviour.removeMcp.confirm": 'MCPサーバー "{{name}}" を削除しますか？設定から削除されます。',
   "settings.agentBehaviour.removeMcp.button": "削除",
+  "settings.agentBehaviour.editMcp": "MCPサーバーを編集",
+  "settings.agentBehaviour.editMcp.transportLocal": "ローカルサーバー（stdio トランスポート）",
+  "settings.agentBehaviour.editMcp.transportRemote": "リモートサーバー（SSE/HTTP トランスポート）",
+  "settings.agentBehaviour.editMcp.env": "環境変数",
+  "settings.agentBehaviour.editMcp.env.help": "MCPサーバープロセスに渡される変数。",
+  "settings.agentBehaviour.addMcp.command": "コマンド",
+  "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
+  "settings.agentBehaviour.addMcp.args": "引数",
+  "settings.agentBehaviour.addMcp.args.help": "1行に1つの引数。スペースを含むパスはそのまま保持されます。",
+  "settings.agentBehaviour.addMcp.args.placeholder": "e.g.\n-y\n@modelcontextprotocol/server-filesystem\n/tmp",
+  "settings.agentBehaviour.addMcp.url": "サーバーURL",
+  "settings.agentBehaviour.addMcp.url.placeholder": "e.g. http://localhost:3000/sse",
   "settings.agentBehaviour.skillPaths": "スキルフォルダパス",
   "settings.agentBehaviour.skillUrls": "スキルURL",
   "settings.agentBehaviour.removeSkill.title": "スキルを削除",
   "settings.agentBehaviour.removeSkill.confirm":
     'スキル "{{name}}" を削除しますか？これにより、ディスクからスキルファイルが削除されます。',
   "settings.agentBehaviour.removeSkill.button": "削除",
+  "settings.agentBehaviour.rules.description":
+    "ルールはエージェントの動作を導く指示ファイルです。すべての会話のシステムプロンプトに含まれます。追加のルールを含めるには、以下にファイルパスを追加してください。",
   "settings.agentBehaviour.instructionFiles": "追加の指示ファイル",
   "settings.agentBehaviour.instructionFiles.description": "システムプロンプトに含まれる追加の指示ファイルへのパス",
+  "settings.agentBehaviour.mcpDetail.command": "コマンド",
+  "settings.agentBehaviour.mcpDetail.args": "引数",
+  "settings.agentBehaviour.mcpDetail.env": "環境",
+  "settings.agentBehaviour.mcpDetail.disabled": "このサーバーは無効です。",
   "settings.agentBehaviour.mcpEmpty":
     "MCPサーバーが設定されていません。opencode設定ファイルを編集してMCPサーバーを追加してください。",
   "settings.agentBehaviour.workflowsPlaceholder":
     "ワークフローはワークスペース内のワークフローファイルを通じて管理されます。",
-  "settings.agentBehaviour.notImplemented": "まだ実装されていません。",
+  "settings.agentBehaviour.workflows.description":
+    "ワークフローは設定で定義されたカスタムスラッシュコマンドです。チャットで /command-name と入力して呼び出します。コマンドは opencode.json の 'command' セクションで設定します。",
+  "settings.agentBehaviour.workflows.empty":
+    "カスタムコマンドが設定されていません。opencode.json にコマンドを追加するとここに表示されます。",
+  "settings.agentBehaviour.workflows.detail.description": "説明",
+  "settings.agentBehaviour.workflows.detail.template": "テンプレート",
+
   "settings.autoApprove.description":
     "ツールの実行許可を定義します。ほとんどのツールはデフォルトで「許可」されます。doom_loop と external_directory はデフォルトで「確認」になります。",
   "settings.autoApprove.level.allow": "許可",
@@ -1118,7 +1182,8 @@ export const dict = {
   "settings.providers.defaultModel.title": "デフォルトモデル",
   "settings.providers.defaultModel.description": "会話のプライマリモデル",
   "settings.providers.smallModel.title": "小型モデル",
-  "settings.providers.smallModel.description": "タイトル生成やその他の高速タスク用の軽量モデル",
+  "settings.providers.smallModel.description":
+    "タイトル生成、コミットメッセージ生成、プロンプト改善、およびその他の高速タスク用の軽量モデル",
   "settings.providers.disabled": "無効化されたプロバイダー",
   "settings.providers.disabled.description": "プロバイダーリストから非表示にするプロバイダー",
   "settings.providers.enabled": "有効化されたプロバイダー（ホワイトリスト）",
@@ -1126,6 +1191,7 @@ export const dict = {
   "settings.providers.notSet": "未設定（サーバーのデフォルトを使用）",
   "dialog.model.notSet": "未設定",
   "profile.personalAccount": "個人アカウント",
+  "profile.switchingAccount": "アカウントを切り替え中…",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/ja.ts
 
   "question.summary": "{{total}} 問中 {{n}} 問目",
@@ -1198,4 +1264,8 @@ export const dict = {
   "settings.saveBar.warning.many": "複数のセッションが実行中で中断されます",
   "settings.saveBar.saveAnyway": "それでも保存",
   "settings.saveBar.cancel": "キャンセル",
+  "notifications.action.previous": "Previous",
+  "notifications.action.next": "Next",
+  "notifications.action.close": "Close",
+  "notifications.action.tryModel": "Try model",
 }

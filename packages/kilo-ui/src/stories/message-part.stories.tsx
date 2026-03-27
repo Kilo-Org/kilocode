@@ -353,3 +353,91 @@ export const WithContextGroup: Story = {
     </AllProviders>
   ),
 }
+
+// --- All 5 tool hint error types in a single screenshot ---
+
+const hintErrors: ToolPart[] = [
+  {
+    id: "part-hint-001",
+    sessionID: SESSION_ID,
+    messageID: ASST_MSG_ID,
+    type: "tool",
+    callID: "call-hint-001",
+    tool: "write",
+    state: {
+      status: "error",
+      input: { filePath: "src/config.ts" },
+      error:
+        "Error: File already exists — read it before overwriting it. Use the Read tool first to see its current contents.",
+      time: { start: now - 6000, end: now - 5500 },
+    },
+  },
+  {
+    id: "part-hint-002",
+    sessionID: SESSION_ID,
+    messageID: ASST_MSG_ID,
+    type: "tool",
+    callID: "call-hint-002",
+    tool: "edit",
+    state: {
+      status: "error",
+      input: { filePath: "src/app.tsx" },
+      error: "Error: File has been modified since it was last read. Please read it again before editing.",
+      time: { start: now - 5500, end: now - 5000 },
+    },
+  },
+  {
+    id: "part-hint-003",
+    sessionID: SESSION_ID,
+    messageID: ASST_MSG_ID,
+    type: "tool",
+    callID: "call-hint-003",
+    tool: "edit",
+    state: {
+      status: "error",
+      input: { filePath: "src/utils.ts" },
+      error: "Error: oldString and newString are identical. No changes were made.",
+      time: { start: now - 5000, end: now - 4500 },
+    },
+  },
+  {
+    id: "part-hint-004",
+    sessionID: SESSION_ID,
+    messageID: ASST_MSG_ID,
+    type: "tool",
+    callID: "call-hint-004",
+    tool: "edit",
+    state: {
+      status: "error",
+      input: { filePath: "src/index.ts" },
+      error:
+        "Error: oldString not found in file. The oldString must match exactly, including whitespace and indentation.",
+      time: { start: now - 4500, end: now - 4000 },
+    },
+  },
+  {
+    id: "part-hint-005",
+    sessionID: SESSION_ID,
+    messageID: ASST_MSG_ID,
+    type: "tool",
+    callID: "call-hint-005",
+    tool: "edit",
+    state: {
+      status: "error",
+      input: { filePath: "src/counter.tsx" },
+      error:
+        "Error: Found multiple matches for oldString. Provide more surrounding lines to identify the correct match.",
+      time: { start: now - 4000, end: now - 3500 },
+    },
+  },
+]
+
+const mockDataHintErrors = createMockData(hintErrors)
+
+export const ToolHintErrors: Story = {
+  render: () => (
+    <AllProviders data={mockDataHintErrors}>
+      <AssistantParts messages={[mockAssistantMessage]} />
+    </AllProviders>
+  ),
+}

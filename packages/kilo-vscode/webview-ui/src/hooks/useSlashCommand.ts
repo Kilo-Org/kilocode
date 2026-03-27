@@ -205,6 +205,7 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
     }
     if (e.key === "Escape") {
       e.preventDefault()
+      e.stopPropagation()
       close()
       return true
     }

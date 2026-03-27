@@ -14,14 +14,22 @@ export type SessionMode = "local" | "worktree"
 interface WorktreeModeContextValue {
   mode: Accessor<SessionMode>
   setMode: (mode: SessionMode) => void
+  /** Active pending tab ID (e.g. "pending:1") — set by Agent Manager so PromptInput can key drafts per tab. */
+  pendingId: Accessor<string | undefined>
+  setPendingId: (id: string | undefined) => void
 }
 
 const WorktreeModeContext = createContext<WorktreeModeContextValue>()
 
 export const WorktreeModeProvider: ParentComponent = (props) => {
   const [mode, setMode] = createSignal<SessionMode>("local")
+  const [pendingId, setPendingId] = createSignal<string | undefined>()
 
-  return <WorktreeModeContext.Provider value={{ mode, setMode }}>{props.children}</WorktreeModeContext.Provider>
+  return (
+    <WorktreeModeContext.Provider value={{ mode, setMode, pendingId, setPendingId }}>
+      {props.children}
+    </WorktreeModeContext.Provider>
+  )
 }
 
 /**

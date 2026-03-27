@@ -24,7 +24,7 @@ export class DiffViewerProvider implements vscode.Disposable {
   private cachedDiffTarget: { directory: string; baseBranch: string } | undefined
   private gitOps: GitOps
   private outputChannel: vscode.OutputChannel
-  private onSendComments: ((comments: unknown[]) => void) | undefined
+  private onSendComments: ((comments: unknown[], autoSend: boolean) => void) | undefined
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -38,7 +38,7 @@ export class DiffViewerProvider implements vscode.Disposable {
     appendOutput(this.outputChannel, "DiffViewer", ...args)
   }
 
-  public setCommentHandler(handler: (comments: unknown[]) => void): void {
+  public setCommentHandler(handler: (comments: unknown[], autoSend: boolean) => void): void {
     this.onSendComments = handler
   }
 
@@ -95,7 +95,7 @@ export class DiffViewerProvider implements vscode.Disposable {
     }
 
     if (type === "diffViewer.sendComments" && Array.isArray(msg.comments)) {
-      this.onSendComments?.(msg.comments)
+      this.onSendComments?.(msg.comments, !!msg.autoSend)
       return
     }
 

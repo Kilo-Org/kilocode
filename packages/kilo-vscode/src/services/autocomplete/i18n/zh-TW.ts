@@ -40,4 +40,8 @@ export const dict = {
     "Kilo Code Autocomplete 因與 GitHub Copilot 衝突而被封鎖。若要修正此問題，必須停用 Copilot 的行內建議。",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "停用 Copilot",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "停用 Autocomplete",
+  "kilocode:autocomplete.creditsExhausted.message":
+    "Kilo Code Autocomplete 已暫停，因為你的帳戶沒有剩餘額度。請新增額度以恢復自動補齊。",
+  "kilocode:autocomplete.creditsExhausted.addCredits": "新增額度",
+  "kilocode:autocomplete.authError.message": "Kilo Code Autocomplete 因驗證錯誤已暫停。請重新登入。",
 }

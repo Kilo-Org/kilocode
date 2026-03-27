@@ -20,6 +20,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { useLanguage } from "../src/context/language"
+import { parseBindingTokens } from "./keybind-tokens"
 
 /** Lock drag movement to the X axis (horizontal-only tab dragging). */
 export const ConstrainDragYAxis: Component = () => {
@@ -92,7 +93,7 @@ export const SortableTab: Component<{
           </TooltipKeybind>
         </ContextMenu.Trigger>
         <ContextMenu.Portal>
-          <ContextMenu.Content>
+          <ContextMenu.Content class="am-ctx-menu">
             <Show when={props.onFork}>
               <ContextMenu.Item onSelect={() => props.onFork?.()}>
                 <Icon name="branch" size="small" />
@@ -103,6 +104,13 @@ export const SortableTab: Component<{
             <ContextMenu.Item onSelect={props.onClose}>
               <Icon name="close" size="small" />
               <ContextMenu.ItemLabel>{t("agentManager.tab.close")}</ContextMenu.ItemLabel>
+              <Show when={props.closeKeybind}>
+                <span class="am-menu-shortcut">
+                  {parseBindingTokens(props.closeKeybind ?? "").map((token) => (
+                    <kbd class="am-menu-key">{token}</kbd>
+                  ))}
+                </span>
+              </Show>
             </ContextMenu.Item>
           </ContextMenu.Content>
         </ContextMenu.Portal>

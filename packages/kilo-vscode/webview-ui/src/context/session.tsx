@@ -244,11 +244,14 @@ export const SessionProvider: ParentComponent = (props) => {
     if (pendingAgentSelection() === name) {
       setPendingAgentSelection(null)
     }
-    for (const sid of Object.keys(store.agentSelections)) {
-      if (store.agentSelections[sid] === name) {
-        setStore("agentSelections", sid, undefined as unknown as string)
-      }
-    }
+    setStore(
+      "agentSelections",
+      produce((selections) => {
+        for (const sid of Object.keys(selections)) {
+          if (selections[sid] === name) delete selections[sid]
+        }
+      }),
+    )
 
     vscode.postMessage({ type: "removeMode", name })
   }
@@ -342,11 +345,18 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function applyModel(agentName: string, selection: ModelSelection) {
-    setUserSetAgents((prev) => ({ ...prev, [agentName]: true }))
-    setStore("modelSelections", agentName, selection)
     pushRecent(selection)
     const sid = currentSessionID()
-    if (sid) setStore("sessionOverrides", sid, selection)
+    if (sid) {
+      // Per-session only — do NOT mutate the global modelSelections map.
+      // Writing globally here would cause every other session (that hasn't
+      // set its own override) to inherit this session's model.
+      setStore("sessionOverrides", sid, selection)
+    } else {
+      // No active session (sidebar) — write globally
+      setUserSetAgents((prev) => ({ ...prev, [agentName]: true }))
+      setStore("modelSelections", agentName, selection)
+    }
   }
 
   function selectModel(providerID: string, modelID: string) {
@@ -402,10 +412,24 @@ export const SessionProvider: ParentComponent = (props) => {
     }
     setAgents(message.agents)
     setDefaultAgent(message.defaultAgent)
-    // Initialize pending agent if not yet set by the user
-    if (!pendingAgentSelection()) {
+
+    const names = new Set(message.agents.map((a) => a.name))
+
+    // Reset pending selection if the agent no longer exists (e.g. after org switch)
+    const pending = pendingAgentSelection()
+    if (!pending || !names.has(pending)) {
       setPendingAgentSelection(message.defaultAgent)
     }
+
+    // Clear per-session selections that reference a mode no longer available
+    setStore(
+      "agentSelections",
+      produce((selections) => {
+        for (const sid of Object.keys(selections)) {
+          if (selections[sid] && !names.has(selections[sid]!)) delete selections[sid]
+        }
+      }),
+    )
   })
 
   // Request agents in case the initial push was missed.
@@ -1518,7 +1542,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function syncSession(sessionID: string) {
-    vscode.postMessage({ type: "syncSession", sessionID })
+    vscode.postMessage({ type: "syncSession", sessionID, parentSessionID: currentSessionID() })
   }
 
   const todos = () => {

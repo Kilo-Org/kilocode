@@ -370,6 +370,7 @@ export const dict = {
   "language.br": "Português (Brasil)",
   "language.bs": "Bosanski",
   "language.th": "ไทย",
+  "language.tr": "Türkçe",
 
   "toast.theme.title": "Thema gewechselt",
   "toast.scheme.title": "Farbschema",
@@ -834,8 +835,11 @@ export const dict = {
   "session.delete.button": "Sitzung löschen",
   "session.untitled": "Unbenannt",
   "session.recent": "Kürzlich",
+  "session.showHistory": "Verlauf anzeigen",
   "session.search.placeholder": "Sitzungen suchen...",
   "session.empty": "Noch keine Sitzungen. Klicke + um eine neue Unterhaltung zu starten.",
+  "session.tab.local": "Local",
+  "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Nur dieses Repository",
   "session.cloud.import": "Aus der Cloud importieren",
   "feedback.button": "Feedback & Support",
@@ -916,8 +920,7 @@ export const dict = {
   "settings.autocomplete.title": "Autovervollständigung",
   "settings.notifications.title": "Benachrichtigungen",
   "settings.context.title": "Kontext",
-  "settings.terminal.title": "Terminal",
-  "settings.prompts.title": "Prompts",
+
   "settings.experimental.title": "Experimentell",
   "settings.language.title": "Sprache",
   "settings.aboutKiloCode.title": "Über Kilo Code",
@@ -995,9 +998,7 @@ export const dict = {
 
   "common.add": "Hinzufügen",
   "common.choose": "Auswählen…",
-  "settings.notImplemented": "Dieser Bereich ist noch nicht implementiert.",
-  "settings.notImplemented.description":
-    "Er wird Konfigurationsoptionen und erklärende Texte zur ausgewählten Einstellungskategorie enthalten.",
+
   "settings.autocomplete.autoTrigger.title": "Automatische Inline-Vervollständigung aktivieren",
   "settings.autocomplete.autoTrigger.description":
     "Inline-Vervollständigungsvorschläge beim Tippen automatisch anzeigen",
@@ -1059,11 +1060,50 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Nucleus-Sampling-Parameter (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Max. Schritte",
   "settings.agentBehaviour.maxSteps.description": "Maximale Agent-Iterationen",
+  "settings.agentBehaviour.hidden.title": "Versteckt",
+  "settings.agentBehaviour.hidden.description": "Diesen Agent im Modus-Umschalter der Chat-Eingabe ausblenden",
+  "settings.agentBehaviour.disable.title": "Deaktiviert",
+  "settings.agentBehaviour.disable.description": "Diesen Agent vollständig deaktivieren — er wird nirgends angezeigt",
+  "settings.agentBehaviour.badge.hidden": "versteckt",
+  "settings.agentBehaviour.badge.disabled": "deaktiviert",
   "settings.agentBehaviour.discoveredSkills": "Erkannte Skills",
   "settings.agentBehaviour.noSkillsFound":
     "Keine Skills gefunden. Fügen Sie unten Skill-Ordnerpfade oder URLs hinzu, um Skills verfügbar zu machen.",
   "settings.agentBehaviour.availableModes": "Verfügbare benutzerdefinierte Modi",
   "settings.agentBehaviour.noModesFound": "Keine Modi gefunden.",
+  "settings.agentBehaviour.createMode": "Neuen Modus erstellen",
+  "settings.agentBehaviour.createMode.name": "Name",
+  "settings.agentBehaviour.createMode.name.placeholder": "z.B. reviewer",
+  "settings.agentBehaviour.createMode.name.description":
+    "Eindeutiger Bezeichner für den Modus. Nur Kleinbuchstaben, Zahlen und Bindestriche.",
+  "settings.agentBehaviour.createMode.description": "Beschreibung",
+  "settings.agentBehaviour.createMode.description.placeholder": "z.B. Überprüft Code auf Qualität und Best Practices",
+  "settings.agentBehaviour.createMode.description.help": "Kurze Beschreibung, was dieser Modus macht.",
+  "settings.agentBehaviour.createMode.prompt": "System-Prompt",
+  "settings.agentBehaviour.createMode.prompt.placeholder":
+    "z.B. Du bist ein Code-Reviewer. Konzentriere dich auf Codequalität, Best Practices und potenzielle Fehler.",
+  "settings.agentBehaviour.createMode.prompt.help": "Anweisungen für den KI-Agenten bei Verwendung dieses Modus.",
+  "settings.agentBehaviour.createMode.button": "Erstellen",
+  "settings.agentBehaviour.createMode.cancel": "Abbrechen",
+  "settings.agentBehaviour.createMode.nameRequired": "Name ist erforderlich",
+  "settings.agentBehaviour.createMode.nameInvalid": "Name darf nur Kleinbuchstaben, Zahlen und Bindestriche enthalten",
+  "settings.agentBehaviour.createMode.nameTaken": "Ein Modus mit diesem Namen existiert bereits",
+  "settings.agentBehaviour.importMode": "Importieren",
+  "settings.agentBehaviour.importMode.invalidName":
+    "Ungültiger Modusname in der Datei. Der Name muss mit einem Kleinbuchstaben beginnen und darf nur Kleinbuchstaben, Zahlen und Bindestriche enthalten.",
+  "settings.agentBehaviour.importMode.nameTaken": "Ein Modus mit diesem Namen existiert bereits.",
+  "settings.agentBehaviour.importMode.invalidJson":
+    "Ungültige JSON-Datei. Bitte wählen Sie eine gültige Agenten-Definitionsdatei aus.",
+  "settings.agentBehaviour.importMode.tooLarge": "Datei ist zu groß. Agentdefinitionen müssen unter 1 MB sein.",
+  "settings.agentBehaviour.exportMode": "Agenten-Definition exportieren",
+  "settings.agentBehaviour.editMode": "Modus bearbeiten",
+  "settings.agentBehaviour.editMode.description": "Beschreibung",
+  "settings.agentBehaviour.editMode.prompt": "System-Prompt",
+  "settings.agentBehaviour.editMode.save": "Fertig",
+  "settings.agentBehaviour.editMode.back": "Zurück zur Liste",
+  "settings.agentBehaviour.editMode.native": "Eingebauter Modus (schreibgeschützte Definition)",
+  "settings.agentBehaviour.editMode.promptOverride":
+    "Benutzerdefinierte Prompt-Überschreibung für diesen eingebauten Modus",
   "settings.agentBehaviour.removeMode.title": "Modus entfernen",
   "settings.agentBehaviour.removeMode.confirm":
     'Modus "{{name}}" entfernen? Dadurch wird der Modus durch Aktualisierung Ihrer Konfiguration deaktiviert.',
@@ -1072,19 +1112,44 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.confirm":
     'MCP-Server "{{name}}" entfernen? Dadurch wird er aus Ihrer Konfiguration entfernt.',
   "settings.agentBehaviour.removeMcp.button": "Entfernen",
+  "settings.agentBehaviour.editMcp": "MCP-Server bearbeiten",
+  "settings.agentBehaviour.editMcp.transportLocal": "Lokaler Server (stdio-Transport)",
+  "settings.agentBehaviour.editMcp.transportRemote": "Remote-Server (SSE/HTTP-Transport)",
+  "settings.agentBehaviour.editMcp.env": "Umgebungsvariablen",
+  "settings.agentBehaviour.editMcp.env.help": "Variablen, die an den MCP-Serverprozess übergeben werden.",
+  "settings.agentBehaviour.addMcp.command": "Befehl",
+  "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
+  "settings.agentBehaviour.addMcp.args": "Argumente",
+  "settings.agentBehaviour.addMcp.args.help":
+    "Ein Argument pro Zeile. Pfade mit Leerzeichen werden unverändert übernommen.",
+  "settings.agentBehaviour.addMcp.args.placeholder": "e.g.\n-y\n@modelcontextprotocol/server-filesystem\n/tmp",
+  "settings.agentBehaviour.addMcp.url": "Server-URL",
+  "settings.agentBehaviour.addMcp.url.placeholder": "e.g. http://localhost:3000/sse",
   "settings.agentBehaviour.skillPaths": "Skill-Ordnerpfade",
   "settings.agentBehaviour.skillUrls": "Skill-URLs",
   "settings.agentBehaviour.removeSkill.title": "Skill entfernen",
   "settings.agentBehaviour.removeSkill.confirm":
     'Skill "{{name}}" entfernen? Dadurch werden die Skill-Dateien vom Datenträger gelöscht.',
   "settings.agentBehaviour.removeSkill.button": "Entfernen",
+  "settings.agentBehaviour.rules.description":
+    "Regeln sind Anweisungsdateien, die das Verhalten des Agenten steuern. Sie werden in den System-Prompt für jede Konversation eingebunden. Fügen Sie unten Dateipfade hinzu, um zusätzliche Regeln einzubinden.",
   "settings.agentBehaviour.instructionFiles": "Zusätzliche Anweisungsdateien",
   "settings.agentBehaviour.instructionFiles.description": "Pfade zu zusätzlichen Anweisungsdateien im System-Prompt",
+  "settings.agentBehaviour.mcpDetail.command": "Befehl",
+  "settings.agentBehaviour.mcpDetail.args": "Argumente",
+  "settings.agentBehaviour.mcpDetail.env": "Umgebung",
+  "settings.agentBehaviour.mcpDetail.disabled": "Dieser Server ist deaktiviert.",
   "settings.agentBehaviour.mcpEmpty":
     "Keine MCP-Server konfiguriert. Bearbeiten Sie die opencode-Konfigurationsdatei, um MCP-Server hinzuzufügen.",
   "settings.agentBehaviour.workflowsPlaceholder":
     "Workflows werden über Workflow-Dateien in Ihrem Arbeitsbereich verwaltet.",
-  "settings.agentBehaviour.notImplemented": "Noch nicht implementiert.",
+  "settings.agentBehaviour.workflows.description":
+    "Workflows sind benutzerdefinierte Slash-Befehle, die in Ihrer Konfiguration definiert sind. Geben Sie /command-name im Chat ein, um sie aufzurufen. Befehle werden in opencode.json im Abschnitt 'command' konfiguriert.",
+  "settings.agentBehaviour.workflows.empty":
+    "Keine benutzerdefinierten Befehle konfiguriert. Fügen Sie Befehle zu opencode.json hinzu, um sie hier zu sehen.",
+  "settings.agentBehaviour.workflows.detail.description": "Beschreibung",
+  "settings.agentBehaviour.workflows.detail.template": "Vorlage",
+
   "settings.autoApprove.description":
     "Legen Sie fest, wie Tools ausgeführt werden dürfen. Die meisten Tools sind standardmäßig auf Zulassen eingestellt. doom_loop und external_directory sind standardmäßig auf Fragen eingestellt.",
   "settings.autoApprove.level.allow": "Erlauben",
@@ -1140,7 +1205,8 @@ export const dict = {
   "settings.providers.defaultModel.title": "Standardmodell",
   "settings.providers.defaultModel.description": "Primäres Modell für Gespräche",
   "settings.providers.smallModel.title": "Kleines Modell",
-  "settings.providers.smallModel.description": "Leichtgewichtiges Modell für Titelgenerierung und schnelle Aufgaben",
+  "settings.providers.smallModel.description":
+    "Leichtgewichtiges Modell für Titelgenerierung, Commit-Nachrichten, Prompt-Verbesserung und andere schnelle Aufgaben",
   "settings.providers.disabled": "Deaktivierte Anbieter",
   "settings.providers.disabled.description": "Anbieter aus der Anbieterliste ausblenden",
   "settings.providers.enabled": "Aktivierte Anbieter (Whitelist)",
@@ -1148,6 +1214,7 @@ export const dict = {
   "settings.providers.notSet": "Nicht festgelegt (Server-Standard verwenden)",
   "dialog.model.notSet": "Nicht festgelegt",
   "profile.personalAccount": "Persönliches Konto",
+  "profile.switchingAccount": "Konto wird gewechselt…",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/de.ts
 
@@ -1223,4 +1290,8 @@ export const dict = {
   "settings.saveBar.warning.many": "Mehrere Sitzungen laufen und werden unterbrochen",
   "settings.saveBar.saveAnyway": "Trotzdem speichern",
   "settings.saveBar.cancel": "Abbrechen",
+  "notifications.action.previous": "Previous",
+  "notifications.action.next": "Next",
+  "notifications.action.close": "Close",
+  "notifications.action.tryModel": "Try model",
 } satisfies Partial<Record<Keys, string>>

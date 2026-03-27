@@ -364,6 +364,7 @@ export const dict = {
   "language.br": "Português (Brasil)",
   "language.bs": "Bosanski",
   "language.th": "ไทย",
+  "language.tr": "Türkçe",
 
   "toast.theme.title": "Przełączono motyw",
   "toast.scheme.title": "Schemat kolorów",
@@ -826,8 +827,11 @@ export const dict = {
   "session.delete.button": "Usuń sesję",
   "session.untitled": "Bez tytułu",
   "session.recent": "Ostatnie",
+  "session.showHistory": "Pokaż historię",
   "session.search.placeholder": "Szukaj sesji...",
   "session.empty": "Brak sesji. Kliknij + aby rozpocząć nową rozmowę.",
+  "session.tab.local": "Local",
+  "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Tylko to repozytorium",
   "session.cloud.import": "Importuj z chmury",
   "feedback.button": "Opinie i wsparcie",
@@ -908,8 +912,7 @@ export const dict = {
   "settings.autocomplete.title": "Autouzupełnianie",
   "settings.notifications.title": "Powiadomienia",
   "settings.context.title": "Kontekst",
-  "settings.terminal.title": "Terminal",
-  "settings.prompts.title": "Polecenia",
+
   "settings.experimental.title": "Eksperymentalne",
   "settings.language.title": "Język",
   "settings.aboutKiloCode.title": "O Kilo Code",
@@ -985,8 +988,7 @@ export const dict = {
 
   "common.add": "Dodaj",
   "common.choose": "Wybierz…",
-  "settings.notImplemented": "Ta sekcja nie jest jeszcze zaimplementowana.",
-  "settings.notImplemented.description": "Będzie zawierać opcje konfiguracji i tekst objaśniający.",
+
   "settings.autocomplete.autoTrigger.title": "Włącz automatyczne uzupełnianie inline",
   "settings.autocomplete.autoTrigger.description": "Automatycznie pokazuj sugestie uzupełniania podczas pisania",
   "settings.autocomplete.smartKeybinding.title": "Włącz inteligentny skrót zadania inline",
@@ -1044,11 +1046,50 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Parametr próbkowania nucleus (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Maks. kroki",
   "settings.agentBehaviour.maxSteps.description": "Maksymalna liczba iteracji agenta",
+  "settings.agentBehaviour.hidden.title": "Ukryty",
+  "settings.agentBehaviour.hidden.description": "Ukryj tego agenta z przełącznika trybów w polu czatu",
+  "settings.agentBehaviour.disable.title": "Wyłączony",
+  "settings.agentBehaviour.disable.description": "Całkowicie wyłącz tego agenta — nie pojawi się nigdzie",
+  "settings.agentBehaviour.badge.hidden": "ukryty",
+  "settings.agentBehaviour.badge.disabled": "wyłączony",
   "settings.agentBehaviour.discoveredSkills": "Wykryte umiejętności",
   "settings.agentBehaviour.noSkillsFound":
     "Nie znaleziono umiejętności. Dodaj ścieżki folderów lub adresy URL poniżej, aby udostępnić umiejętności.",
   "settings.agentBehaviour.availableModes": "Dostępne tryby niestandardowe",
   "settings.agentBehaviour.noModesFound": "Nie znaleziono trybów.",
+  "settings.agentBehaviour.createMode": "Utwórz nowy tryb",
+  "settings.agentBehaviour.createMode.name": "Nazwa",
+  "settings.agentBehaviour.createMode.name.placeholder": "np. reviewer",
+  "settings.agentBehaviour.createMode.name.description":
+    "Unikalny identyfikator trybu. Używaj tylko małych liter, cyfr i myślników.",
+  "settings.agentBehaviour.createMode.description": "Opis",
+  "settings.agentBehaviour.createMode.description.placeholder":
+    "np. Sprawdza kod pod kątem jakości i najlepszych praktyk",
+  "settings.agentBehaviour.createMode.description.help": "Krótki opis tego, co robi ten tryb.",
+  "settings.agentBehaviour.createMode.prompt": "Prompt systemowy",
+  "settings.agentBehaviour.createMode.prompt.placeholder":
+    "np. Jesteś recenzentem kodu. Skup się na jakości kodu, najlepszych praktykach i potencjalnych błędach.",
+  "settings.agentBehaviour.createMode.prompt.help": "Instrukcje dla agenta AI podczas korzystania z tego trybu.",
+  "settings.agentBehaviour.createMode.button": "Utwórz",
+  "settings.agentBehaviour.createMode.cancel": "Anuluj",
+  "settings.agentBehaviour.createMode.nameRequired": "Nazwa jest wymagana",
+  "settings.agentBehaviour.createMode.nameInvalid": "Nazwa może zawierać tylko małe litery, cyfry i myślniki",
+  "settings.agentBehaviour.createMode.nameTaken": "Tryb o tej nazwie już istnieje",
+  "settings.agentBehaviour.importMode": "Importuj",
+  "settings.agentBehaviour.importMode.invalidName":
+    "Nieprawidłowa nazwa trybu w pliku. Nazwa musi zaczynać się od małej litery i zawierać tylko małe litery, cyfry i myślniki.",
+  "settings.agentBehaviour.importMode.nameTaken": "Tryb o tej nazwie już istnieje.",
+  "settings.agentBehaviour.importMode.invalidJson":
+    "Nieprawidłowy plik JSON. Proszę wybrać prawidłowy plik definicji agenta.",
+  "settings.agentBehaviour.importMode.tooLarge": "Plik jest za duży. Definicje agentów muszą mieć mniej niż 1 MB.",
+  "settings.agentBehaviour.exportMode": "Eksportuj definicję agenta",
+  "settings.agentBehaviour.editMode": "Edytuj tryb",
+  "settings.agentBehaviour.editMode.description": "Opis",
+  "settings.agentBehaviour.editMode.prompt": "Prompt systemowy",
+  "settings.agentBehaviour.editMode.save": "Gotowe",
+  "settings.agentBehaviour.editMode.back": "Powrót do listy",
+  "settings.agentBehaviour.editMode.native": "Tryb wbudowany (definicja tylko do odczytu)",
+  "settings.agentBehaviour.editMode.promptOverride": "Niestandardowe nadpisanie promptu dla tego wbudowanego trybu",
   "settings.agentBehaviour.removeMode.title": "Usuń tryb",
   "settings.agentBehaviour.removeMode.confirm":
     'Usunąć tryb "{{name}}"? Spowoduje to wyłączenie trybu poprzez aktualizację konfiguracji.',
@@ -1057,19 +1098,43 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.confirm":
     'Usunąć serwer MCP "{{name}}"? Spowoduje to usunięcie go z konfiguracji.',
   "settings.agentBehaviour.removeMcp.button": "Usuń",
+  "settings.agentBehaviour.editMcp": "Edytuj serwer MCP",
+  "settings.agentBehaviour.editMcp.transportLocal": "Serwer lokalny (transport stdio)",
+  "settings.agentBehaviour.editMcp.transportRemote": "Serwer zdalny (transport SSE/HTTP)",
+  "settings.agentBehaviour.editMcp.env": "Zmienne środowiskowe",
+  "settings.agentBehaviour.editMcp.env.help": "Zmienne przekazywane do procesu serwera MCP.",
+  "settings.agentBehaviour.addMcp.command": "Polecenie",
+  "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
+  "settings.agentBehaviour.addMcp.args": "Argumenty",
+  "settings.agentBehaviour.addMcp.args.help": "Jeden argument na linię. Ścieżki ze spacjami są zachowywane bez zmian.",
+  "settings.agentBehaviour.addMcp.args.placeholder": "e.g.\n-y\n@modelcontextprotocol/server-filesystem\n/tmp",
+  "settings.agentBehaviour.addMcp.url": "URL serwera",
+  "settings.agentBehaviour.addMcp.url.placeholder": "e.g. http://localhost:3000/sse",
   "settings.agentBehaviour.skillPaths": "Ścieżki folderów umiejętności",
   "settings.agentBehaviour.skillUrls": "Adresy URL umiejętności",
   "settings.agentBehaviour.removeSkill.title": "Usuń umiejętność",
   "settings.agentBehaviour.removeSkill.confirm":
     'Usunąć umiejętność "{{name}}"? Spowoduje to usunięcie plików umiejętności z dysku.',
   "settings.agentBehaviour.removeSkill.button": "Usuń",
+  "settings.agentBehaviour.rules.description":
+    "Reguły to pliki instrukcji, które kierują zachowaniem agenta. Są one dołączane do promptu systemowego dla każdej rozmowy. Dodaj poniżej ścieżki plików, aby dołączyć dodatkowe reguły.",
   "settings.agentBehaviour.instructionFiles": "Dodatkowe pliki instrukcji",
   "settings.agentBehaviour.instructionFiles.description":
     "Ścieżki do dodatkowych plików instrukcji w prompcie systemowym",
+  "settings.agentBehaviour.mcpDetail.command": "Polecenie",
+  "settings.agentBehaviour.mcpDetail.args": "Argumenty",
+  "settings.agentBehaviour.mcpDetail.env": "Środowisko",
+  "settings.agentBehaviour.mcpDetail.disabled": "Ten serwer jest wyłączony.",
   "settings.agentBehaviour.mcpEmpty":
     "Brak skonfigurowanych serwerów MCP. Edytuj plik konfiguracyjny opencode, aby dodać serwery MCP.",
   "settings.agentBehaviour.workflowsPlaceholder": "Przepływy pracy zarządzane są za pomocą plików przepływów pracy.",
-  "settings.agentBehaviour.notImplemented": "Jeszcze nie zaimplementowano.",
+  "settings.agentBehaviour.workflows.description":
+    "Przepływy pracy to niestandardowe komendy slash zdefiniowane w konfiguracji. Wpisz /command-name na czacie, aby je uruchomić. Komendy konfiguruje się w opencode.json w sekcji 'command'.",
+  "settings.agentBehaviour.workflows.empty":
+    "Brak skonfigurowanych niestandardowych komend. Dodaj komendy do opencode.json, aby je tu zobaczyć.",
+  "settings.agentBehaviour.workflows.detail.description": "Opis",
+  "settings.agentBehaviour.workflows.detail.template": "Szablon",
+
   "settings.autoApprove.description":
     "Zdefiniuj, jak narzędzia mogą być uruchamiane. Większość narzędzi domyślnie ma ustawienie Zezwalaj. doom_loop i external_directory domyślnie mają ustawienie Pytaj.",
   "settings.autoApprove.level.allow": "Zezwól",
@@ -1126,7 +1191,8 @@ export const dict = {
   "settings.providers.defaultModel.title": "Domyślny model",
   "settings.providers.defaultModel.description": "Główny model do rozmów",
   "settings.providers.smallModel.title": "Mały model",
-  "settings.providers.smallModel.description": "Lekki model do generowania tytułów i szybkich zadań",
+  "settings.providers.smallModel.description":
+    "Lekki model do generowania tytułów, wiadomości commitów, ulepszania zapytań i innych szybkich zadań",
   "settings.providers.disabled": "Wyłączeni dostawcy",
   "settings.providers.disabled.description": "Dostawcy do ukrycia z listy",
   "settings.providers.enabled": "Włączeni dostawcy (biała lista)",
@@ -1134,6 +1200,7 @@ export const dict = {
   "settings.providers.notSet": "Nie ustawiono (użyj domyślnego serwera)",
   "dialog.model.notSet": "Nie ustawiono",
   "profile.personalAccount": "Konto osobiste",
+  "profile.switchingAccount": "Przełączanie konta…",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/pl.ts
 
   "question.summary": "{{n}} z {{total}} pytań",
@@ -1206,4 +1273,8 @@ export const dict = {
   "settings.saveBar.warning.many": "Kilka sesji jest uruchomionych i zostanie przerwanych",
   "settings.saveBar.saveAnyway": "Zapisz mimo to",
   "settings.saveBar.cancel": "Anuluj",
+  "notifications.action.previous": "Previous",
+  "notifications.action.next": "Next",
+  "notifications.action.close": "Close",
+  "notifications.action.tryModel": "Try model",
 }

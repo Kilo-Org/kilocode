@@ -26,7 +26,10 @@ export async function seedSessionStatuses(
   try {
     const result = await client.session.status({ directory: dir })
     if (!result.data) return
-    for (const [sid, info] of Object.entries(result.data) as [string, SessionStatus][]) {
+    const active = result.data
+
+    // Seed/update entries the server knows about
+    for (const [sid, info] of Object.entries(active) as [string, SessionStatus][]) {
       map.set(sid, info.type)
       post({
         type: "sessionStatus",
@@ -34,6 +37,15 @@ export async function seedSessionStatuses(
         status: info.type,
         ...(info.type === "retry" ? { attempt: info.attempt, message: info.message, next: info.next } : {}),
       })
+    }
+
+    // Reconcile: any locally non-idle session absent from the server response
+    // means the server lost its in-memory state (crash/restart). Reset to idle.
+    for (const [sid, status] of map) {
+      if (status !== "idle" && !active[sid]) {
+        map.set(sid, "idle")
+        post({ type: "sessionStatus", sessionID: sid, status: "idle" })
+      }
     }
   } catch (error) {
     console.error("[Kilo New] KiloProvider: Failed to seed session statuses:", error)

@@ -363,6 +363,7 @@ export const dict = {
   "language.br": "Português (Brasil)",
   "language.bs": "Bosanski",
   "language.th": "ไทย",
+  "language.tr": "Türkçe",
 
   "toast.language.title": "Jezik",
   "toast.language.description": "Prebačeno na {{language}}",
@@ -829,8 +830,11 @@ export const dict = {
   "session.delete.button": "Izbriši sesiju",
   "session.untitled": "Bez naslova",
   "session.recent": "Nedavne",
+  "session.showHistory": "Prikaži historiju",
   "session.search.placeholder": "Pretraži sesije...",
   "session.empty": "Još nema sesija. Kliknite + za početak novog razgovora.",
+  "session.tab.local": "Local",
+  "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Samo ovaj repozitorij",
   "session.cloud.import": "Uvezi iz oblaka",
   "feedback.button": "Povratne informacije i podrška",
@@ -911,8 +915,7 @@ export const dict = {
   "settings.autocomplete.title": "Automatsko dovršavanje",
   "settings.notifications.title": "Obavještenja",
   "settings.context.title": "Kontekst",
-  "settings.terminal.title": "Terminal",
-  "settings.prompts.title": "Upiti",
+
   "settings.experimental.title": "Eksperimentalno",
   "settings.language.title": "Jezik",
   "settings.aboutKiloCode.title": "O Kilo Code-u",
@@ -987,8 +990,7 @@ export const dict = {
 
   "common.add": "Dodaj",
   "common.choose": "Odaberi…",
-  "settings.notImplemented": "Ovaj dio još nije implementiran.",
-  "settings.notImplemented.description": "Sadržavat će opcije konfiguracije i objašnjenje.",
+
   "settings.autocomplete.autoTrigger.title": "Omogući automatsko inline dovršavanje",
   "settings.autocomplete.autoTrigger.description": "Automatski prikaži prijedloge inline dovršavanja tokom tipkanja",
   "settings.autocomplete.smartKeybinding.title": "Omogući pametnu prečicu inline zadatka",
@@ -1046,11 +1048,49 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Nucleus parametar uzorkovanja (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Maks. koraci",
   "settings.agentBehaviour.maxSteps.description": "Maksimalne iteracije agenta",
+  "settings.agentBehaviour.hidden.title": "Skriveno",
+  "settings.agentBehaviour.hidden.description": "Sakrij ovog agenta iz prebacivača modova u unosu chata",
+  "settings.agentBehaviour.disable.title": "Onemogućeno",
+  "settings.agentBehaviour.disable.description": "Potpuno onemogući ovog agenta — neće se pojaviti nigdje",
+  "settings.agentBehaviour.badge.hidden": "skriveno",
+  "settings.agentBehaviour.badge.disabled": "onemogućeno",
   "settings.agentBehaviour.discoveredSkills": "Otkrivene vještine",
   "settings.agentBehaviour.noSkillsFound":
     "Nisu pronađene vještine. Dodajte putanje mapa ili URL-ove ispod kako biste učinili vještine dostupnim.",
   "settings.agentBehaviour.availableModes": "Dostupni prilagođeni modovi",
   "settings.agentBehaviour.noModesFound": "Nisu pronađeni modovi.",
+  "settings.agentBehaviour.createMode": "Kreiraj novi mod",
+  "settings.agentBehaviour.createMode.name": "Naziv",
+  "settings.agentBehaviour.createMode.name.placeholder": "npr. reviewer",
+  "settings.agentBehaviour.createMode.name.description":
+    "Jedinstveni identifikator moda. Koristite samo mala slova, brojeve i crtice.",
+  "settings.agentBehaviour.createMode.description": "Opis",
+  "settings.agentBehaviour.createMode.description.placeholder": "npr. Pregleda kod za kvalitet i dobre prakse",
+  "settings.agentBehaviour.createMode.description.help": "Kratak opis šta ovaj mod radi.",
+  "settings.agentBehaviour.createMode.prompt": "Sistemski prompt",
+  "settings.agentBehaviour.createMode.prompt.placeholder":
+    "npr. Vi ste recenzent koda. Fokusirajte se na kvalitet, dobre prakse i potencijalne greške.",
+  "settings.agentBehaviour.createMode.prompt.help": "Upute za AI agenta pri korištenju ovog moda.",
+  "settings.agentBehaviour.createMode.button": "Kreiraj",
+  "settings.agentBehaviour.createMode.cancel": "Otkaži",
+  "settings.agentBehaviour.createMode.nameRequired": "Naziv je obavezan",
+  "settings.agentBehaviour.createMode.nameInvalid": "Naziv smije sadržavati samo mala slova, brojeve i crtice",
+  "settings.agentBehaviour.createMode.nameTaken": "Mod s ovim nazivom već postoji",
+  "settings.agentBehaviour.importMode": "Uvezi",
+  "settings.agentBehaviour.importMode.invalidName":
+    "Nevažeći naziv moda u datoteci. Naziv mora počinjati malim slovom i sadržavati samo mala slova, brojeve i crtice.",
+  "settings.agentBehaviour.importMode.nameTaken": "Mod s ovim nazivom već postoji.",
+  "settings.agentBehaviour.importMode.invalidJson":
+    "Nevažeća JSON datoteka. Molimo odaberite važeću datoteku definicije agenta.",
+  "settings.agentBehaviour.importMode.tooLarge": "Datoteka je prevelika. Definicije agenta moraju biti manje od 1 MB.",
+  "settings.agentBehaviour.exportMode": "Izvezi definiciju agenta",
+  "settings.agentBehaviour.editMode": "Uredi mod",
+  "settings.agentBehaviour.editMode.description": "Opis",
+  "settings.agentBehaviour.editMode.prompt": "Sistemski prompt",
+  "settings.agentBehaviour.editMode.save": "Gotovo",
+  "settings.agentBehaviour.editMode.back": "Nazad na listu",
+  "settings.agentBehaviour.editMode.native": "Ugrađeni mod (definicija samo za čitanje)",
+  "settings.agentBehaviour.editMode.promptOverride": "Prilagođeno nadjačavanje prompta za ovaj ugrađeni mod",
   "settings.agentBehaviour.removeMode.title": "Ukloni mod",
   "settings.agentBehaviour.removeMode.confirm":
     'Ukloniti mod "{{name}}"? Ovo će onemogućiti mod ažuriranjem vaše konfiguracije.',
@@ -1059,18 +1099,42 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.confirm":
     'Ukloniti MCP server "{{name}}"? Ovo će ga ukloniti iz vaše konfiguracije.',
   "settings.agentBehaviour.removeMcp.button": "Ukloni",
+  "settings.agentBehaviour.editMcp": "Uredi MCP Server",
+  "settings.agentBehaviour.editMcp.transportLocal": "Lokalni server (stdio transport)",
+  "settings.agentBehaviour.editMcp.transportRemote": "Udaljeni server (SSE/HTTP transport)",
+  "settings.agentBehaviour.editMcp.env": "Varijable okruženja",
+  "settings.agentBehaviour.editMcp.env.help": "Varijable proslijeđene procesu MCP servera.",
+  "settings.agentBehaviour.addMcp.command": "Naredba",
+  "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
+  "settings.agentBehaviour.addMcp.args": "Argumenti",
+  "settings.agentBehaviour.addMcp.args.help": "Jedan argument po liniji. Putanje s razmacima se čuvaju kakve jesu.",
+  "settings.agentBehaviour.addMcp.args.placeholder": "e.g.\n-y\n@modelcontextprotocol/server-filesystem\n/tmp",
+  "settings.agentBehaviour.addMcp.url": "URL servera",
+  "settings.agentBehaviour.addMcp.url.placeholder": "e.g. http://localhost:3000/sse",
   "settings.agentBehaviour.skillPaths": "Putanje mapa vještina",
   "settings.agentBehaviour.skillUrls": "URL-ovi vještina",
   "settings.agentBehaviour.removeSkill.title": "Ukloni vještinu",
   "settings.agentBehaviour.removeSkill.confirm":
     'Ukloniti vještinu "{{name}}"? Ovo će obrisati datoteke vještine sa diska.',
   "settings.agentBehaviour.removeSkill.button": "Ukloni",
+  "settings.agentBehaviour.rules.description":
+    "Pravila su datoteke uputa koje usmjeravaju ponašanje agenta. Uključena su u sistemski prompt za svaki razgovor. Dodajte putanje datoteka ispod kako biste uključili dodatna pravila.",
   "settings.agentBehaviour.instructionFiles": "Dodatne datoteke uputa",
   "settings.agentBehaviour.instructionFiles.description": "Putanje do dodatnih datoteka uputa u sistemskom promptu",
+  "settings.agentBehaviour.mcpDetail.command": "Naredba",
+  "settings.agentBehaviour.mcpDetail.args": "Argumenti",
+  "settings.agentBehaviour.mcpDetail.env": "Okruženje",
+  "settings.agentBehaviour.mcpDetail.disabled": "Ovaj server je onemogućen.",
   "settings.agentBehaviour.mcpEmpty":
     "Nema konfiguriranih MCP servera. Uredite konfiguracijsku datoteku opencode za dodavanje MCP servera.",
   "settings.agentBehaviour.workflowsPlaceholder": "Tokovi rada se upravljaju putem datoteka tokova rada.",
-  "settings.agentBehaviour.notImplemented": "Još nije implementirano.",
+  "settings.agentBehaviour.workflows.description":
+    "Tokovi rada su prilagođene slash komande definirane u vašoj konfiguraciji. Upišite /command-name u chat da ih pokrenete. Komande se konfiguriraju u opencode.json pod sekcijom 'command'.",
+  "settings.agentBehaviour.workflows.empty":
+    "Nema konfiguriranih prilagođenih komandi. Dodajte komande u opencode.json da ih vidite ovdje.",
+  "settings.agentBehaviour.workflows.detail.description": "Opis",
+  "settings.agentBehaviour.workflows.detail.template": "Predložak",
+
   "settings.autoApprove.description":
     "Definišite kako je dozvoljeno pokretanje alata. Većina alata je podrazumijevano na Dozvoli. doom_loop i external_directory su podrazumijevano na Pitaj.",
   "settings.autoApprove.level.allow": "Dozvoli",
@@ -1127,7 +1191,8 @@ export const dict = {
   "settings.providers.defaultModel.title": "Zadani model",
   "settings.providers.defaultModel.description": "Primarni model za razgovore",
   "settings.providers.smallModel.title": "Mali model",
-  "settings.providers.smallModel.description": "Lagani model za generiranje naslova i brze zadatke",
+  "settings.providers.smallModel.description":
+    "Lagani model za generiranje naslova, commit poruka, poboljšanje promptova i druge brze zadatke",
   "settings.providers.disabled": "Onemogućeni pružatelji",
   "settings.providers.disabled.description": "Pružatelji za skrivanje s popisa",
   "settings.providers.enabled": "Omogućeni pružatelji (bijela lista)",
@@ -1135,6 +1200,7 @@ export const dict = {
   "settings.providers.notSet": "Nije postavljeno (koristi zadano servera)",
   "dialog.model.notSet": "Nije postavljeno",
   "profile.personalAccount": "Osobni račun",
+  "profile.switchingAccount": "Prebacivanje računa…",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/bs.ts
 
@@ -1208,4 +1274,8 @@ export const dict = {
   "settings.saveBar.warning.many": "Nekoliko sesija je pokrenuto i bit će prekinuto",
   "settings.saveBar.saveAnyway": "Spremi svejedno",
   "settings.saveBar.cancel": "Otkaži",
+  "notifications.action.previous": "Previous",
+  "notifications.action.next": "Next",
+  "notifications.action.close": "Close",
+  "notifications.action.tryModel": "Try model",
 }
