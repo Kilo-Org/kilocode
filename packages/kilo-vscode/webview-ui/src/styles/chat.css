@@ -932,6 +932,9 @@
   resize: none;
   outline: none;
   scrollbar-gutter: stable;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-x: hidden;
 }
 
 .prompt-input:focus {
