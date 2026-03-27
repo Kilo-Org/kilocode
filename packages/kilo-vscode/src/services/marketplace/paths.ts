@@ -6,7 +6,9 @@ import * as os from "os"
  * This matches where the CLI reads global config from.
  */
 function globalConfigDir(): string {
-  const xdg = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config")
+  const xdg = process.env.XDG_CONFIG_HOME
+    ? path.normalize(process.env.XDG_CONFIG_HOME)
+    : path.normalize(path.join(os.homedir(), ".config"))
   return path.join(xdg, "kilo")
 }
 

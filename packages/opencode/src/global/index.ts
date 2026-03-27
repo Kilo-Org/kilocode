@@ -1,28 +1,18 @@
 import fs from "fs/promises"
-import { xdgData, xdgCache, xdgConfig, xdgState } from "xdg-basedir"
 import path from "path"
-import os from "os"
 import { Filesystem } from "../util/filesystem"
+import { resolveGlobalPaths, resolveHome } from "./paths"
 
 const app = "kilo" // kilocode_change
-
-const data = path.join(xdgData!, app)
-const cache = path.join(xdgCache!, app)
-const config = path.join(xdgConfig!, app)
-const state = path.join(xdgState!, app)
+const paths = resolveGlobalPaths(app)
 
 export namespace Global {
   export const Path = {
     // Allow override via KILO_TEST_HOME for test isolation
     get home() {
-      return process.env.KILO_TEST_HOME || os.homedir() // kilocode_change
+      return resolveHome() // kilocode_change
     },
-    data,
-    bin: path.join(data, "bin"),
-    log: path.join(data, "log"),
-    cache,
-    config,
-    state,
+    ...paths,
   }
 }
 
