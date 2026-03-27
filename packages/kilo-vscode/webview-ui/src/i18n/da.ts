@@ -909,8 +909,7 @@ export const dict = {
   "settings.autocomplete.title": "Autofuldførelse",
   "settings.notifications.title": "Notifikationer",
   "settings.context.title": "Kontekst",
-  "settings.terminal.title": "Terminal",
-  "settings.prompts.title": "Prompts",
+
   "settings.experimental.title": "Eksperimentelt",
   "settings.language.title": "Sprog",
   "settings.aboutKiloCode.title": "Om Kilo Code",
@@ -986,8 +985,7 @@ export const dict = {
 
   "common.add": "Tilføj",
   "common.choose": "Vælg…",
-  "settings.notImplemented": "Denne sektion er endnu ikke implementeret.",
-  "settings.notImplemented.description": "Den vil indeholde konfigurationsmuligheder og forklarende tekst.",
+
   "settings.autocomplete.autoTrigger.title": "Aktiver automatisk inline-fuldførelse",
   "settings.autocomplete.autoTrigger.description": "Vis automatisk inline-fuldførelsesforslag under indtastning",
   "settings.autocomplete.smartKeybinding.title": "Aktiver smart inline-opgave-tastaturgenvej",
@@ -1130,7 +1128,7 @@ export const dict = {
     "Ingen brugerdefinerede kommandoer konfigureret. Tilføj kommandoer til opencode.json for at se dem her.",
   "settings.agentBehaviour.workflows.detail.description": "Beskrivelse",
   "settings.agentBehaviour.workflows.detail.template": "Skabelon",
-  "settings.agentBehaviour.notImplemented": "Endnu ikke implementeret.",
+
   "settings.autoApprove.description":
     "Definer, hvordan værktøjer må køre. De fleste værktøjer er som standard indstillet til Tillad. doom_loop og external_directory er som standard indstillet til Spørg.",
   "settings.autoApprove.level.allow": "Tillad",

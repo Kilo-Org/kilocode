@@ -916,8 +916,7 @@ export const dict = {
   "settings.autocomplete.title": "Автодополнение",
   "settings.notifications.title": "Уведомления",
   "settings.context.title": "Контекст",
-  "settings.terminal.title": "Терминал",
-  "settings.prompts.title": "Промпты",
+
   "settings.experimental.title": "Экспериментальное",
   "settings.language.title": "Язык",
   "settings.aboutKiloCode.title": "О Kilo Code",
@@ -992,8 +991,7 @@ export const dict = {
 
   "common.add": "Добавить",
   "common.choose": "Выбрать…",
-  "settings.notImplemented": "Этот раздел ещё не реализован.",
-  "settings.notImplemented.description": "Здесь будут параметры конфигурации и пояснительный текст.",
+
   "settings.autocomplete.autoTrigger.title": "Включить автоматическое встроенное дополнение",
   "settings.autocomplete.autoTrigger.description": "Автоматически показывать предложения дополнения при вводе",
   "settings.autocomplete.smartKeybinding.title": "Включить умную клавишу встроенной задачи",
@@ -1138,7 +1136,7 @@ export const dict = {
     "Пользовательские команды не настроены. Добавьте команды в opencode.json, чтобы увидеть их здесь.",
   "settings.agentBehaviour.workflows.detail.description": "Описание",
   "settings.agentBehaviour.workflows.detail.template": "Шаблон",
-  "settings.agentBehaviour.notImplemented": "Ещё не реализовано.",
+
   "settings.autoApprove.description":
     "Определите правила запуска инструментов. Большинство инструментов по умолчанию Разрешены. Для doom_loop и external_directory по умолчанию установлено Спрашивать.",
   "settings.autoApprove.level.allow": "Разрешить",

@@ -908,8 +908,7 @@ export const dict = {
   "settings.autocomplete.title": "자동 완성",
   "settings.notifications.title": "알림",
   "settings.context.title": "컨텍스트",
-  "settings.terminal.title": "터미널",
-  "settings.prompts.title": "프롬프트",
+
   "settings.experimental.title": "실험적",
   "settings.language.title": "언어",
   "settings.aboutKiloCode.title": "Kilo Code 정보",
@@ -983,8 +982,7 @@ export const dict = {
 
   "common.add": "추가",
   "common.choose": "선택…",
-  "settings.notImplemented": "이 섹션은 아직 구현되지 않았습니다.",
-  "settings.notImplemented.description": "선택한 설정 카테고리와 관련된 구성 옵션 및 설명 텍스트가 포함될 예정입니다.",
+
   "settings.autocomplete.autoTrigger.title": "자동 인라인 완성 활성화",
   "settings.autocomplete.autoTrigger.description": "입력 시 인라인 완성 제안을 자동으로 표시",
   "settings.autocomplete.smartKeybinding.title": "스마트 인라인 작업 키바인딩 활성화",
@@ -1125,7 +1123,7 @@ export const dict = {
     "구성된 사용자 정의 명령이 없습니다. opencode.json에 명령을 추가하면 여기에 표시됩니다.",
   "settings.agentBehaviour.workflows.detail.description": "설명",
   "settings.agentBehaviour.workflows.detail.template": "템플릿",
-  "settings.agentBehaviour.notImplemented": "아직 구현되지 않았습니다.",
+
   "settings.autoApprove.description":
     "도구 실행 허용 방식을 정의합니다. 대부분의 도구 기본값은 '허용'입니다. doom_loop 및 external_directory의 기본값은 '확인'입니다.",
   "settings.autoApprove.level.allow": "허용",

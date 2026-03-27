@@ -912,8 +912,7 @@ export const dict = {
   "settings.autocomplete.title": "Autouzupełnianie",
   "settings.notifications.title": "Powiadomienia",
   "settings.context.title": "Kontekst",
-  "settings.terminal.title": "Terminal",
-  "settings.prompts.title": "Polecenia",
+
   "settings.experimental.title": "Eksperymentalne",
   "settings.language.title": "Język",
   "settings.aboutKiloCode.title": "O Kilo Code",
@@ -989,8 +988,7 @@ export const dict = {
 
   "common.add": "Dodaj",
   "common.choose": "Wybierz…",
-  "settings.notImplemented": "Ta sekcja nie jest jeszcze zaimplementowana.",
-  "settings.notImplemented.description": "Będzie zawierać opcje konfiguracji i tekst objaśniający.",
+
   "settings.autocomplete.autoTrigger.title": "Włącz automatyczne uzupełnianie inline",
   "settings.autocomplete.autoTrigger.description": "Automatycznie pokazuj sugestie uzupełniania podczas pisania",
   "settings.autocomplete.smartKeybinding.title": "Włącz inteligentny skrót zadania inline",
@@ -1136,7 +1134,7 @@ export const dict = {
     "Brak skonfigurowanych niestandardowych komend. Dodaj komendy do opencode.json, aby je tu zobaczyć.",
   "settings.agentBehaviour.workflows.detail.description": "Opis",
   "settings.agentBehaviour.workflows.detail.template": "Szablon",
-  "settings.agentBehaviour.notImplemented": "Jeszcze nie zaimplementowano.",
+
   "settings.autoApprove.description":
     "Zdefiniuj, jak narzędzia mogą być uruchamiane. Większość narzędzi domyślnie ma ustawienie Zezwalaj. doom_loop i external_directory domyślnie mają ustawienie Pytaj.",
   "settings.autoApprove.level.allow": "Zezwól",

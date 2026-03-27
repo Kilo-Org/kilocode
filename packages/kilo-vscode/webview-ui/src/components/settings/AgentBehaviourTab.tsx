@@ -40,21 +40,6 @@ interface SelectOption {
 
 import SettingsRow from "./SettingsRow"
 
-const Placeholder: Component<{ text: string }> = (props) => (
-  <Card>
-    <p
-      style={{
-        "font-size": "12px",
-        color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
-        margin: 0,
-        "line-height": "1.5",
-      }}
-    >
-      <strong>{useLanguage().t("settings.agentBehaviour.notImplemented")}</strong> {props.text}
-    </p>
-  </Card>
-)
-
 // View states for the agents subtab
 type AgentView = "list" | "create" | "edit"
 

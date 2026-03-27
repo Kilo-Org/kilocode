@@ -899,8 +899,7 @@ export const dict = {
   "settings.autocomplete.title": "自動完成",
   "settings.notifications.title": "通知",
   "settings.context.title": "上下文",
-  "settings.terminal.title": "終端機",
-  "settings.prompts.title": "提示",
+
   "settings.experimental.title": "實驗性功能",
   "settings.language.title": "語言",
   "settings.aboutKiloCode.title": "關於 Kilo Code",
@@ -973,8 +972,7 @@ export const dict = {
 
   "common.add": "新增",
   "common.choose": "選擇…",
-  "settings.notImplemented": "此部分尚未實作。",
-  "settings.notImplemented.description": "此處將包含與所選設定類別相關的設定選項和說明文字。",
+
   "settings.autocomplete.autoTrigger.title": "啟用自動內嵌補全",
   "settings.autocomplete.autoTrigger.description": "在您輸入時自動顯示內嵌補全建議",
   "settings.autocomplete.smartKeybinding.title": "啟用智慧內嵌任務快捷鍵",
@@ -1110,7 +1108,7 @@ export const dict = {
   "settings.agentBehaviour.workflows.empty": "未設定自訂命令。將命令新增至 opencode.json 即可在此處看到。",
   "settings.agentBehaviour.workflows.detail.description": "描述",
   "settings.agentBehaviour.workflows.detail.template": "範本",
-  "settings.agentBehaviour.notImplemented": "尚未實作。",
+
   "settings.autoApprove.description":
     "定義工具的執行權限。大多數工具預設為允許。doom_loop 與 external_directory 預設為詢問。",
   "settings.autoApprove.level.allow": "允許",

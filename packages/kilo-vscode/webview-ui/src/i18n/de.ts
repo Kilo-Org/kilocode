@@ -920,8 +920,7 @@ export const dict = {
   "settings.autocomplete.title": "Autovervollständigung",
   "settings.notifications.title": "Benachrichtigungen",
   "settings.context.title": "Kontext",
-  "settings.terminal.title": "Terminal",
-  "settings.prompts.title": "Prompts",
+
   "settings.experimental.title": "Experimentell",
   "settings.language.title": "Sprache",
   "settings.aboutKiloCode.title": "Über Kilo Code",
@@ -999,9 +998,7 @@ export const dict = {
 
   "common.add": "Hinzufügen",
   "common.choose": "Auswählen…",
-  "settings.notImplemented": "Dieser Bereich ist noch nicht implementiert.",
-  "settings.notImplemented.description":
-    "Er wird Konfigurationsoptionen und erklärende Texte zur ausgewählten Einstellungskategorie enthalten.",
+
   "settings.autocomplete.autoTrigger.title": "Automatische Inline-Vervollständigung aktivieren",
   "settings.autocomplete.autoTrigger.description":
     "Inline-Vervollständigungsvorschläge beim Tippen automatisch anzeigen",
@@ -1152,7 +1149,7 @@ export const dict = {
     "Keine benutzerdefinierten Befehle konfiguriert. Fügen Sie Befehle zu opencode.json hinzu, um sie hier zu sehen.",
   "settings.agentBehaviour.workflows.detail.description": "Beschreibung",
   "settings.agentBehaviour.workflows.detail.template": "Vorlage",
-  "settings.agentBehaviour.notImplemented": "Noch nicht implementiert.",
+
   "settings.autoApprove.description":
     "Legen Sie fest, wie Tools ausgeführt werden dürfen. Die meisten Tools sind standardmäßig auf Zulassen eingestellt. doom_loop und external_directory sind standardmäßig auf Fragen eingestellt.",
   "settings.autoApprove.level.allow": "Erlauben",

@@ -911,8 +911,7 @@ export const dict = {
   "settings.autocomplete.title": "Autocompletar",
   "settings.notifications.title": "Notificações",
   "settings.context.title": "Contexto",
-  "settings.terminal.title": "Terminal",
-  "settings.prompts.title": "Prompts",
+
   "settings.experimental.title": "Experimental",
   "settings.language.title": "Idioma",
   "settings.aboutKiloCode.title": "Sobre o Kilo Code",
@@ -989,8 +988,7 @@ export const dict = {
 
   "common.add": "Adicionar",
   "common.choose": "Escolher…",
-  "settings.notImplemented": "Esta seção ainda não foi implementada.",
-  "settings.notImplemented.description": "Conterá opções de configuração e texto explicativo.",
+
   "settings.autocomplete.autoTrigger.title": "Ativar completamento automático inline",
   "settings.autocomplete.autoTrigger.description":
     "Mostrar automaticamente sugestões de completamento inline ao digitar",
@@ -1140,7 +1138,7 @@ export const dict = {
     "Nenhum comando personalizado configurado. Adicione comandos ao opencode.json para vê-los aqui.",
   "settings.agentBehaviour.workflows.detail.description": "Descrição",
   "settings.agentBehaviour.workflows.detail.template": "Modelo",
-  "settings.agentBehaviour.notImplemented": "Ainda não implementado.",
+
   "settings.autoApprove.description":
     "Defina como as ferramentas têm permissão para serem executadas. A maioria das ferramentas tem o padrão Permitir. doom_loop e external_directory têm o padrão Perguntar.",
   "settings.autoApprove.level.allow": "Permitir",

@@ -915,8 +915,7 @@ export const dict = {
   "settings.autocomplete.title": "Automatsko dovršavanje",
   "settings.notifications.title": "Obavještenja",
   "settings.context.title": "Kontekst",
-  "settings.terminal.title": "Terminal",
-  "settings.prompts.title": "Upiti",
+
   "settings.experimental.title": "Eksperimentalno",
   "settings.language.title": "Jezik",
   "settings.aboutKiloCode.title": "O Kilo Code-u",
@@ -991,8 +990,7 @@ export const dict = {
 
   "common.add": "Dodaj",
   "common.choose": "Odaberi…",
-  "settings.notImplemented": "Ovaj dio još nije implementiran.",
-  "settings.notImplemented.description": "Sadržavat će opcije konfiguracije i objašnjenje.",
+
   "settings.autocomplete.autoTrigger.title": "Omogući automatsko inline dovršavanje",
   "settings.autocomplete.autoTrigger.description": "Automatski prikaži prijedloge inline dovršavanja tokom tipkanja",
   "settings.autocomplete.smartKeybinding.title": "Omogući pametnu prečicu inline zadatka",
@@ -1136,7 +1134,7 @@ export const dict = {
     "Nema konfiguriranih prilagođenih komandi. Dodajte komande u opencode.json da ih vidite ovdje.",
   "settings.agentBehaviour.workflows.detail.description": "Opis",
   "settings.agentBehaviour.workflows.detail.template": "Predložak",
-  "settings.agentBehaviour.notImplemented": "Još nije implementirano.",
+
   "settings.autoApprove.description":
     "Definišite kako je dozvoljeno pokretanje alata. Većina alata je podrazumijevano na Dozvoli. doom_loop i external_directory su podrazumijevano na Pitaj.",
   "settings.autoApprove.level.allow": "Dozvoli",

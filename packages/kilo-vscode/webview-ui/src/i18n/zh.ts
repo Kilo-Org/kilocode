@@ -897,8 +897,7 @@ export const dict = {
   "settings.autocomplete.title": "自动补全",
   "settings.notifications.title": "通知",
   "settings.context.title": "上下文",
-  "settings.terminal.title": "终端",
-  "settings.prompts.title": "提示词",
+
   "settings.experimental.title": "实验性功能",
   "settings.language.title": "语言",
   "settings.aboutKiloCode.title": "关于 Kilo Code",
@@ -971,9 +970,7 @@ export const dict = {
 
   "common.add": "添加",
   "common.choose": "选择…",
-  "settings.notImplemented": "此部分尚未实现。",
-  "settings.notImplemented.description":
-    "此处将包含与所选设置类别相关的配置选项和说明文字。在重新实现期间，可使用此空间验证布局、间距、滚动行为和导航状态，然后再接入实际控件。",
+
   "settings.autocomplete.autoTrigger.title": "启用自动内联补全",
   "settings.autocomplete.autoTrigger.description": "在您输入时自动显示内联补全建议",
   "settings.autocomplete.smartKeybinding.title": "启用智能内联任务快捷键",
@@ -1108,7 +1105,7 @@ export const dict = {
   "settings.agentBehaviour.workflows.empty": "未配置自定义命令。将命令添加到 opencode.json 即可在此处看到。",
   "settings.agentBehaviour.workflows.detail.description": "描述",
   "settings.agentBehaviour.workflows.detail.template": "模板",
-  "settings.agentBehaviour.notImplemented": "尚未实现。",
+
   "settings.autoApprove.description":
     "定义工具的运行权限。大多数工具默认为「允许」。doom_loop 和 external_directory 默认为「询问」。",
   "settings.autoApprove.level.allow": "允许",

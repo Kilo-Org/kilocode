@@ -905,8 +905,7 @@ export const dict = {
   "settings.autocomplete.title": "เติมข้อความอัตโนมัติ",
   "settings.notifications.title": "การแจ้งเตือน",
   "settings.context.title": "บริบท",
-  "settings.terminal.title": "เทอร์มินัล",
-  "settings.prompts.title": "พรอมต์",
+
   "settings.experimental.title": "ทดลอง",
   "settings.language.title": "ภาษา",
   "settings.aboutKiloCode.title": "เกี่ยวกับ Kilo Code",
@@ -979,8 +978,7 @@ export const dict = {
 
   "common.add": "เพิ่ม",
   "common.choose": "เลือก…",
-  "settings.notImplemented": "ส่วนนี้ยังไม่ได้ใช้งาน",
-  "settings.notImplemented.description": "จะมีตัวเลือกการกำหนดค่าและข้อความอธิบาย",
+
   "settings.autocomplete.autoTrigger.title": "เปิดใช้งานการเติมอัตโนมัติแบบอินไลน์",
   "settings.autocomplete.autoTrigger.description": "แสดงข้อเสนอแนะการเติมอัตโนมัติระหว่างพิมพ์",
   "settings.autocomplete.smartKeybinding.title": "เปิดใช้งานปุ่มลัดงานอินไลน์อัจฉริยะ",
@@ -1122,7 +1120,7 @@ export const dict = {
     "ไม่มีคำสั่งแบบกำหนดเองที่กำหนดค่าไว้ เพิ่มคำสั่งใน opencode.json เพื่อดูที่นี่",
   "settings.agentBehaviour.workflows.detail.description": "คำอธิบาย",
   "settings.agentBehaviour.workflows.detail.template": "เทมเพลต",
-  "settings.agentBehaviour.notImplemented": "ยังไม่ได้ใช้งาน",
+
   "settings.autoApprove.description":
     "กำหนดวิธีอนุญาตการทำงานของเครื่องมือ โดยค่าเริ่มต้นเครื่องมือส่วนใหญ่คืออนุญาต ส่วน doom_loop และ external_directory ค่าเริ่มต้นคือถาม",
   "settings.autoApprove.level.allow": "อนุญาต",

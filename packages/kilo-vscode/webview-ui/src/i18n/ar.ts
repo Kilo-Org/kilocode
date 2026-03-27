@@ -903,8 +903,7 @@ export const dict = {
   "settings.autocomplete.title": "الإكمال التلقائي",
   "settings.notifications.title": "الإشعارات",
   "settings.context.title": "السياق",
-  "settings.terminal.title": "المحطة الطرفية",
-  "settings.prompts.title": "الموجهات",
+
   "settings.experimental.title": "تجريبي",
   "settings.language.title": "اللغة",
   "settings.aboutKiloCode.title": "حول Kilo Code",
@@ -978,8 +977,7 @@ export const dict = {
 
   "common.add": "إضافة",
   "common.choose": "اختر…",
-  "settings.notImplemented": "هذا القسم لم يتم تنفيذه بعد.",
-  "settings.notImplemented.description": "سيحتوي على خيارات التكوين والنص التوضيحي.",
+
   "settings.autocomplete.autoTrigger.title": "تمكين الإكمال التلقائي المضمّن",
   "settings.autocomplete.autoTrigger.description": "عرض اقتراحات الإكمال المضمّن تلقائياً أثناء الكتابة",
   "settings.autocomplete.smartKeybinding.title": "تمكين اختصار المهمة المضمّنة الذكي",
@@ -1120,7 +1118,7 @@ export const dict = {
   "settings.agentBehaviour.workflows.empty": "لم يتم تهيئة أوامر مخصصة. أضف أوامر إلى opencode.json لرؤيتها هنا.",
   "settings.agentBehaviour.workflows.detail.description": "الوصف",
   "settings.agentBehaviour.workflows.detail.template": "القالب",
-  "settings.agentBehaviour.notImplemented": "لم يتم التنفيذ بعد.",
+
   "settings.autoApprove.description":
     "تحديد كيفية السماح بتشغيل الأدوات. معظم الأدوات معينة افتراضياً على السماح. doom_loop و external_directory معينة افتراضياً على السؤال.",
   "settings.autoApprove.level.allow": "سماح",

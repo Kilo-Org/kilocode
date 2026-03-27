@@ -909,8 +909,7 @@ export const dict = {
   "settings.autocomplete.title": "Autocomplete",
   "settings.notifications.title": "Notifications",
   "settings.context.title": "Context",
-  "settings.terminal.title": "Terminal",
-  "settings.prompts.title": "Prompts",
+
   "settings.experimental.title": "Experimental",
   "settings.language.title": "Language",
   "settings.aboutKiloCode.title": "About Kilo Code",
@@ -986,10 +985,6 @@ export const dict = {
 
   "common.add": "Add",
   "common.choose": "Choose…",
-
-  "settings.notImplemented": "This section is not implemented yet.",
-  "settings.notImplemented.description":
-    "It will contain configuration options and explanatory text related to the selected settings category. During reimplementation, use this space to validate layout, spacing, scrolling behavior, and navigation state before wiring up real controls.",
 
   "settings.autocomplete.autoTrigger.title": "Enable automatic inline completions",
   "settings.autocomplete.autoTrigger.description": "Automatically show inline completion suggestions as you type",
@@ -1103,7 +1098,7 @@ export const dict = {
     "No custom commands configured. Add commands to your opencode.json to see them here.",
   "settings.agentBehaviour.workflows.detail.description": "Description",
   "settings.agentBehaviour.workflows.detail.template": "Template",
-  "settings.agentBehaviour.notImplemented": "Not yet implemented.",
+
   "settings.agentBehaviour.createMode": "Create New Mode",
   "settings.agentBehaviour.createMode.name": "Name",
   "settings.agentBehaviour.createMode.name.placeholder": "e.g. reviewer",

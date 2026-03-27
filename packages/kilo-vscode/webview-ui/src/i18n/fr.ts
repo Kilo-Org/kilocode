@@ -923,8 +923,7 @@ export const dict = {
   "settings.autocomplete.title": "Autocomplétion",
   "settings.notifications.title": "Notifications",
   "settings.context.title": "Contexte",
-  "settings.terminal.title": "Terminal",
-  "settings.prompts.title": "Prompts",
+
   "settings.experimental.title": "Expérimental",
   "settings.language.title": "Langue",
   "settings.aboutKiloCode.title": "À propos de Kilo Code",
@@ -1002,8 +1001,7 @@ export const dict = {
 
   "common.add": "Ajouter",
   "common.choose": "Choisir…",
-  "settings.notImplemented": "Cette section n'est pas encore implémentée.",
-  "settings.notImplemented.description": "Elle contiendra des options de configuration et du texte explicatif.",
+
   "settings.autocomplete.autoTrigger.title": "Activer la complétion automatique en ligne",
   "settings.autocomplete.autoTrigger.description":
     "Afficher automatiquement les suggestions de complétion lors de la saisie",
@@ -1156,7 +1154,7 @@ export const dict = {
     "Aucune commande personnalisée configurée. Ajoutez des commandes à opencode.json pour les voir ici.",
   "settings.agentBehaviour.workflows.detail.description": "Description",
   "settings.agentBehaviour.workflows.detail.template": "Modèle",
-  "settings.agentBehaviour.notImplemented": "Pas encore implémenté.",
+
   "settings.autoApprove.description":
     "Définissez comment les outils sont autorisés à s'exécuter. La plupart des outils sont définis sur Autoriser par défaut. doom_loop et external_directory sont définis sur Demander par défaut.",
   "settings.autoApprove.level.allow": "Autoriser",

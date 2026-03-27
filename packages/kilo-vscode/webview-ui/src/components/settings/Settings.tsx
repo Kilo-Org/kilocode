@@ -17,8 +17,7 @@ import DisplayTab from "./DisplayTab"
 import AutocompleteTab from "./AutocompleteTab"
 import NotificationsTab from "./NotificationsTab"
 import ContextTab from "./ContextTab"
-import TerminalTab from "./TerminalTab"
-import PromptsTab from "./PromptsTab"
+
 import ExperimentalTab from "./ExperimentalTab"
 import LanguageTab from "./LanguageTab"
 import AboutKiloCodeTab from "./AboutKiloCodeTab"
@@ -138,14 +137,7 @@ const Settings: Component<SettingsProps> = (props) => {
             <Icon name="server" />
             <span class="label">{language.t("settings.context.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="terminal">
-            <Icon name="console" />
-            <span class="label">{language.t("settings.terminal.title")}</span>
-          </Tabs.Trigger>
-          <Tabs.Trigger value="prompts">
-            <Icon name="comment" />
-            <span class="label">{language.t("settings.prompts.title")}</span>
-          </Tabs.Trigger>
+
           <Tabs.Trigger value="experimental">
             <Icon name="settings-gear" />
             <span class="label">{language.t("settings.experimental.title")}</span>
@@ -200,14 +192,7 @@ const Settings: Component<SettingsProps> = (props) => {
           <h3>{language.t("settings.context.title")}</h3>
           <ContextTab />
         </Tabs.Content>
-        <Tabs.Content value="terminal">
-          <h3>{language.t("settings.terminal.title")}</h3>
-          <TerminalTab />
-        </Tabs.Content>
-        <Tabs.Content value="prompts">
-          <h3>{language.t("settings.prompts.title")}</h3>
-          <PromptsTab />
-        </Tabs.Content>
+
         <Tabs.Content value="experimental">
           <h3>{language.t("settings.experimental.title")}</h3>
           <ExperimentalTab />

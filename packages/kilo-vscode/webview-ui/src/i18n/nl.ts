@@ -908,8 +908,7 @@ export const dict = {
   "settings.autocomplete.title": "Automatisch Aanvullen",
   "settings.notifications.title": "Meldingen",
   "settings.context.title": "Context",
-  "settings.terminal.title": "Terminal",
-  "settings.prompts.title": "Prompts",
+
   "settings.experimental.title": "Experimenteel",
   "settings.language.title": "Taal",
   "settings.aboutKiloCode.title": "Over Kilo Code",
@@ -985,10 +984,6 @@ export const dict = {
 
   "common.add": "Toevoegen",
   "common.choose": "Kies…",
-
-  "settings.notImplemented": "Dit gedeelte is nog niet geïmplementeerd.",
-  "settings.notImplemented.description":
-    "Het zal configuratie-opties en verklarende tekst bevatten gerelateerd aan de geselecteerde instellingencategorie. Gebruik deze ruimte tijdens het opnieuw implementeren om lay-out, spatiëring, scrollgedrag en navigatiestatus te valideren voordat de daadwerkelijke besturingselementen worden gekoppeld.",
 
   "settings.autocomplete.autoTrigger.title": "Automatische inline aanvullingen inschakelen",
   "settings.autocomplete.autoTrigger.description":
@@ -1119,7 +1114,6 @@ export const dict = {
     "Geen aangepaste commando's geconfigureerd. Voeg commando's toe aan opencode.json om ze hier te zien.",
   "settings.agentBehaviour.workflows.detail.description": "Beschrijving",
   "settings.agentBehaviour.workflows.detail.template": "Sjabloon",
-  "settings.agentBehaviour.notImplemented": "Nog niet geïmplementeerd.",
 
   "settings.autoApprove.description":
     "Definieer hoe tools mogen worden uitgevoerd. De meeste tools staan standaard op Toestaan. doom_loop en external_directory staan standaard op Vragen.",
