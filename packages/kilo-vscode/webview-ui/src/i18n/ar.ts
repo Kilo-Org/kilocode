@@ -266,6 +266,7 @@ export const dict = {
   "mcp.status.connected": "متصل",
   "mcp.status.failed": "فشل",
   "mcp.status.needs_auth": "يحتاج إلى مصادقة",
+  "mcp.status.needs_registration": "يحتاج إلى تسجيل العميل",
   "mcp.status.disabled": "معطل",
 
   "dialog.fork.empty": "لا توجد رسائل للتفرع منها",

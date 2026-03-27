@@ -266,6 +266,7 @@ export const dict = {
   "mcp.status.connected": "接続済み",
   "mcp.status.failed": "失敗",
   "mcp.status.needs_auth": "認証が必要",
+  "mcp.status.needs_registration": "クライアント登録が必要",
   "mcp.status.disabled": "無効",
 
   "dialog.fork.empty": "フォーク元のメッセージがありません",

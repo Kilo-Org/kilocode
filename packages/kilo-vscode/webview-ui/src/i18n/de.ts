@@ -272,6 +272,7 @@ export const dict = {
   "mcp.status.connected": "verbunden",
   "mcp.status.failed": "fehlgeschlagen",
   "mcp.status.needs_auth": "benötigt Authentifizierung",
+  "mcp.status.needs_registration": "Client-Registrierung erforderlich",
   "mcp.status.disabled": "deaktiviert",
 
   "dialog.fork.empty": "Keine Nachrichten zum Abzweigen vorhanden",

@@ -266,6 +266,7 @@ export const dict = {
   "mcp.status.connected": "conectado",
   "mcp.status.failed": "falhou",
   "mcp.status.needs_auth": "precisa de autenticação",
+  "mcp.status.needs_registration": "precisa de registro do cliente",
   "mcp.status.disabled": "desabilitado",
 
   "dialog.fork.empty": "Nenhuma mensagem para bifurcar",

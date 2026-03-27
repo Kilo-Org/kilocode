@@ -268,6 +268,7 @@ export const dict = {
   "mcp.status.connected": "verbonden",
   "mcp.status.failed": "mislukt",
   "mcp.status.needs_auth": "authenticatie vereist",
+  "mcp.status.needs_registration": "clientregistratie vereist",
   "mcp.status.disabled": "uitgeschakeld",
 
   "dialog.fork.empty": "Geen berichten om van af te splitsen",
