@@ -69,6 +69,8 @@ type ValidateArgs = {
   editing: boolean
   disabledProviders: string[]
   existingProviderIDs: Set<string>
+  /** Preserved env vars from the existing provider config (edit mode only) */
+  existingEnv?: string[]
 }
 
 function validateCustomProvider(input: ValidateArgs) {
@@ -78,6 +80,8 @@ function validateCustomProvider(input: ValidateArgs) {
   const apiKey = input.form.apiKey.trim()
 
   const env = apiKey.match(/^\{env:([^}]+)\}$/)?.[1]?.trim()
+  // When editing and apiKey is empty, preserve existing env from the original config
+  const existingEnv = input.editing && !apiKey ? input.existingEnv : undefined
   const key = apiKey && !env ? apiKey : undefined
 
   const idError = !providerID
@@ -169,7 +173,7 @@ function validateCustomProvider(input: ValidateArgs) {
       config: {
         npm: OPENAI_COMPATIBLE,
         name,
-        ...(env ? { env: [env] } : {}),
+        ...(env ? { env: [env] } : existingEnv ? { env: existingEnv } : {}),
         options,
         models,
       },
@@ -294,8 +298,6 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
   // ── Core fetch logic ────────────────────────────────────────────────
 
   function doFetch() {
-    if (fetching()) return
-
     // Snapshot all values from signals/store before entering async.
     // This avoids reading the store proxy inside callbacks, which could
     // subscribe to unrelated store properties and cause re-render loops.
@@ -310,6 +312,10 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
       .filter((h) => !!h.key && !!h.value)
     const headers = hdrs.length > 0 ? Object.fromEntries(hdrs.map((h) => [h.key, h.value])) : undefined
 
+    // Bump version so any in-flight response from a previous fetch is ignored
+    fetchVersion++
+    const version = fetchVersion
+
     setFetching(true)
     setFetchError(undefined)
     setFetchedModels(undefined)
@@ -322,6 +328,10 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
       if (msg.type !== "customProviderModelsFetched") return
       if (!("requestId" in msg) || msg.requestId !== rid) return
       unsub()
+
+      // Stale response — a newer fetch was triggered while this one was in-flight
+      if (version !== fetchVersion) return
+
       setFetching(false)
 
       if (msg.error) {
@@ -447,6 +457,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
       editing: editing(),
       disabledProviders: config().disabled_providers ?? [],
       existingProviderIDs: new Set(Object.keys(provider.providers())),
+      existingEnv: props.existing?.config?.env,
     })
     setErrors(output.errors)
     return output.result
