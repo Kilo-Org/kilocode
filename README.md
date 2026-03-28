@@ -84,7 +84,7 @@ For most users:
 - **Windows (most PCs):** `kilo-windows-x64.zip`
 - **macOS Apple Silicon:** `kilo-darwin-arm64.zip`
 - **macOS Intel:** `kilo-darwin-x64.zip`
-- **Linux x64:** `kilo-linux-x64.tar,gz`
+- **Linux x64:** `kilo-linux-x64.tar.gz`
 - **Linux on ARM:** `kilo-linux-arm64.tar.gz`
 
 ### Autonomous Mode (CI/CD)
