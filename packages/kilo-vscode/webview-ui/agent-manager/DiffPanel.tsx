@@ -22,6 +22,7 @@ import {
 } from "./review-annotations"
 import { LONG_DIFF_MARKER_FILE_COUNT, initialOpenFiles, isLargeDiffFile } from "./diff-open-policy"
 import { DiffEndMarker } from "./DiffEndMarker"
+import { treeOrder } from "./file-tree-utils"
 
 // --- Data model ---
 
@@ -66,6 +67,10 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   // key changes (different worktree) we re-expand. Within the same key,
   // only pruning happens so the user's manual collapse state is preserved.
   let initializedKey: string | undefined
+
+  // Reorder diffs to match the file-tree's depth-first visual order so
+  // scrolling through the accordion matches the tree grouping.
+  const sorted = createMemo(() => treeOrder(props.diffs))
 
   const comments = () => props.comments
   const setComments = (next: ReviewComment[]) => props.onCommentsChange(next)
@@ -380,7 +385,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       <Show when={props.diffs.length > 0}>
         <div class="am-diff-content" data-component="session-review" ref={scroller}>
           <Accordion multiple value={open()} onChange={setOpen}>
-            <For each={props.diffs}>
+            <For each={sorted()}>
               {(diff) => {
                 const isAdded = () => diff.status === "added"
                 const isDeleted = () => diff.status === "deleted"

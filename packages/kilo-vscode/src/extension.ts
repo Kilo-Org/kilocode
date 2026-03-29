@@ -182,7 +182,7 @@ export function activate(context: vscode.ExtensionContext) {
     }),
     // legacy-migration start
     vscode.commands.registerCommand("kilo-code.new.openMigrationWizard", () => {
-      provider.postMessage({ type: "navigate", view: "migration" })
+      provider.postMessage({ type: "migrationState", needed: true })
     }),
     // legacy-migration end
     vscode.commands.registerCommand("kilo-code.new.generateTerminalCommand", async () => {

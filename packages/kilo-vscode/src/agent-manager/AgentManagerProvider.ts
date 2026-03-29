@@ -276,12 +276,14 @@ export class AgentManagerProvider implements Disposable {
           // already emitted before the webview was ready to receive messages.
           if (this.cachedWorktreeStats) this.postToWebview(this.cachedWorktreeStats)
           if (this.cachedLocalStats) this.postToWebview(this.cachedLocalStats)
-          // Always refresh sessions after pushState so the webview receives
-          // a sessionsLoaded message. Without this unconditional call, closing
-          // and reopening the panel (or recovering from a backend crash) can
-          // leave sessionsLoaded stuck on false because the initial
-          // refreshSessions() in initializeState() raced ahead of mount.
-          this.panel?.sessions.refreshSessions()
+          // Refresh sessions after pushState so the webview's sessionsLoaded
+          // handler is guaranteed to be registered (requestState fires from
+          // onMount). Without this, the initial refreshSessions() in
+          // initializeState() can race ahead of webview mount, causing
+          // sessionsLoaded to never flip to true.
+          if (this.state.getSessions().length > 0) {
+            this.panel?.sessions.refreshSessions()
+          }
         })
         .catch((err) => {
           this.log("initializeState failed, pushing partial state:", err)

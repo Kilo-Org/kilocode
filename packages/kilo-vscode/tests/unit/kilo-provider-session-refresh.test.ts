@@ -80,6 +80,7 @@ function createConnection(client: ReturnType<typeof createClient>) {
     onNotificationDismissed: () => () => undefined,
     onLanguageChanged: () => () => undefined,
     onProfileChanged: () => () => undefined,
+    onMigrationComplete: () => () => undefined,
     getServerInfo: () => ({ port: 12345 }),
     getConnectionState: () => "connected" as const,
     resolveEventSessionId: () => undefined,

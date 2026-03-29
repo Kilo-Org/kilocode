@@ -12,6 +12,7 @@ type SSEEventFilter = (event: Event) => boolean
 type NotificationDismissListener = (notificationId: string) => void
 type LanguageChangeListener = (locale: string) => void
 type ProfileChangeListener = (data: unknown) => void
+type MigrationCompleteListener = () => void
 
 // Poll /global/health at the same interval as packages/app/src/context/server.tsx.
 // This provides a second detection channel for server death independent of the SSE heartbeat.
@@ -36,6 +37,7 @@ export class KiloConnectionService {
   private readonly notificationDismissListeners: Set<NotificationDismissListener> = new Set()
   private readonly languageChangeListeners: Set<LanguageChangeListener> = new Set()
   private readonly profileChangeListeners: Set<ProfileChangeListener> = new Set()
+  private readonly migrationCompleteListeners: Set<MigrationCompleteListener> = new Set()
 
   /**
    * Shared mapping used to resolve session scope for events that don't reliably include a sessionID.
@@ -208,6 +210,25 @@ export class KiloConnectionService {
   }
 
   /**
+   * Subscribe to migration-complete events broadcast from any KiloProvider. Returns unsubscribe function.
+   */
+  onMigrationComplete(listener: MigrationCompleteListener): () => void {
+    this.migrationCompleteListeners.add(listener)
+    return () => {
+      this.migrationCompleteListeners.delete(listener)
+    }
+  }
+
+  /**
+   * Broadcast a migration-complete event to all subscribed KiloProvider instances.
+   */
+  notifyMigrationComplete(): void {
+    for (const listener of this.migrationCompleteListeners) {
+      listener()
+    }
+  }
+
+  /**
    * Subscribe to connection state changes. Returns unsubscribe function.
    */
   onStateChange(listener: StateListener): () => void {
@@ -228,6 +249,7 @@ export class KiloConnectionService {
     this.stateListeners.clear()
     this.notificationDismissListeners.clear()
     this.profileChangeListeners.clear()
+    this.migrationCompleteListeners.clear()
     this.messageSessionIdsByMessageId.clear()
     this.client = null
     this.sseClient = null

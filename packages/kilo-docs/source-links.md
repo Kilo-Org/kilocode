@@ -7,7 +7,6 @@
   <!-- packages/opencode/src/cli/cmd/github.ts -->
 - <https://app.kilo.ai>
   <!-- packages/opencode/src/kilocode/kilo-commands.tsx -->
-  <!-- packages/opencode/src/session/retry.ts -->
 - <https://app.kilo.ai/config.json>
   <!-- packages/opencode/src/config/config.ts -->
 - <https://app.kilo.ai/credits>

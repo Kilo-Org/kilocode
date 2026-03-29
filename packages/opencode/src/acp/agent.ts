@@ -1592,8 +1592,16 @@ export namespace ACP {
     if (specified) return specified
 
     // kilocode_change start
-    const freeModel = await fetchDefaultModel()
-    return { providerID: "kilo", modelID: freeModel }
+    // Only fall back to the Kilo provider if it was present in the available
+    // providers list. When teams configure enabled_providers to use only their
+    // own models, this prevents silently routing requests to an external API.
+    // Note: LiteLLM / custom provider users won't reach here — the function
+    // returns earlier via `specified` (config.model) or the sorted providers list.
+    if (providers.some((p) => p.id === "kilo")) {
+      const freeModel = await fetchDefaultModel()
+      return { providerID: "kilo", modelID: freeModel }
+    }
+    throw new Error("no model available: no providers are configured and no default model is set")
     // kilocode_change end
   }
 

@@ -17,7 +17,7 @@ import ProviderConnectDialog from "./ProviderConnectDialog"
 import ProviderSelectDialog from "./ProviderSelectDialog"
 import { CUSTOM_PROVIDER_ID, isPopularProvider, providerIcon, providerNoteKey, sortProviders } from "./provider-catalog"
 import { visibleConnectedIds } from "./provider-visibility"
-import { KILO_PROVIDER_ID } from "../../../../src/shared/provider-model"
+import { KILO_PROVIDER_ID, CUSTOM_PROVIDER_PACKAGE } from "../../../../src/shared/provider-model"
 import { createProviderAction } from "../../utils/provider-action"
 
 type ProviderSource = "env" | "api" | "config" | "custom"
@@ -81,6 +81,17 @@ const ProvidersTab: Component = () => {
 
   function canDisconnect(item: Provider) {
     return source(item) !== "env"
+  }
+
+  function isCustom(item: Provider) {
+    const cfg = config().provider?.[item.id]
+    return cfg?.npm === CUSTOM_PROVIDER_PACKAGE
+  }
+
+  function editProvider(item: Provider) {
+    const cfg = config().provider?.[item.id]
+    if (!cfg) return
+    dialog.show(() => <CustomProviderDialog existing={{ providerID: item.id, name: item.name, config: cfg }} />)
   }
 
   function disconnect(providerID: string, name: string) {
@@ -203,9 +214,16 @@ const ProvidersTab: Component = () => {
                     </span>
                   }
                 >
-                  <Button size="large" variant="ghost" onClick={() => disconnect(item.id, item.name)}>
-                    {language.t("common.disconnect")}
-                  </Button>
+                  <div style={{ display: "flex", gap: "4px" }}>
+                    <Show when={isCustom(item)}>
+                      <Button size="large" variant="ghost" onClick={() => editProvider(item)}>
+                        {language.t("provider.custom.edit.title")}
+                      </Button>
+                    </Show>
+                    <Button size="large" variant="ghost" onClick={() => disconnect(item.id, item.name)}>
+                      {language.t("common.disconnect")}
+                    </Button>
+                  </div>
                 </Show>
               </div>
             )}

@@ -31,11 +31,15 @@ export interface MigrationContext {
   cachedLegacyData: LegacyMigrationData | null
   migrationCheckInFlight: boolean
   disposeGlobal(): Promise<void>
+  broadcastComplete(): void
 }
 
 /**
- * Check for legacy data on first run and auto-navigate to the migration wizard
+ * Check for legacy data on first run and send migration state to the webview
  * if the user has not yet been prompted.
+ *
+ * Uses a state-based approach (migrationState message) instead of navigate
+ * to avoid race conditions with SettingsEditorProvider's view navigation.
  */
 export async function checkAndShowMigrationWizard(ctx: MigrationContext): Promise<void> {
   if (!ctx.extensionContext) return
@@ -58,9 +62,9 @@ export async function checkAndShowMigrationWizard(ctx: MigrationContext): Promis
   ctx.cachedLegacyData = data
 
   console.log("[Kilo New] KiloProvider: 🔄 Legacy data detected, showing migration wizard")
-  ctx.postMessage({ type: "navigate", view: "migration" })
   ctx.postMessage({
-    type: "legacyMigrationData",
+    type: "migrationState",
+    needed: true,
     data: {
       providers: data.providers,
       mcpServers: data.mcpServers,
@@ -120,6 +124,7 @@ export async function handleStartLegacyMigration(
         ctx.extensionContext as Parameters<typeof MigrationService.setMigrationStatus>[0],
         "completed",
       )
+      ctx.broadcastComplete()
     }
 
     ctx.postMessage({ type: "legacyMigrationComplete", results })
@@ -139,13 +144,14 @@ export async function handleStartLegacyMigration(
   }
 }
 
-/** Record that the user skipped migration. */
+/** Record that the user skipped migration and broadcast to all instances. */
 export async function handleSkipLegacyMigration(ctx: MigrationContext): Promise<void> {
   if (!ctx.extensionContext) return
   await MigrationService.setMigrationStatus(
     ctx.extensionContext as Parameters<typeof MigrationService.setMigrationStatus>[0],
     "skipped",
   )
+  ctx.broadcastComplete()
 }
 
 /** Clear legacy data from SecretStorage and globalState after user opts in. */

@@ -752,6 +752,20 @@ export const dict = {
   "provider.custom.models.name.placeholder": "Nome de Exibição",
   "provider.custom.models.remove": "Remover modelo",
   "provider.custom.models.add": "Adicionar modelo",
+  "provider.custom.models.fetch": "Buscar modelos",
+  "provider.custom.models.fetching": "Buscando\u2026",
+  "provider.custom.models.fetch.error": "Falha ao buscar modelos: {{error}}",
+  "provider.custom.models.fetch.authError": "Falha na autenticação. Verifique a chave de API acima e tente novamente.",
+  "provider.custom.models.fetch.empty": "Nenhum modelo encontrado neste servidor.",
+  "provider.custom.models.fetch.added": "{{count}} modelo(s) adicionado(s).",
+  "provider.custom.models.fetch.allExist": "Todos os modelos buscados já foram adicionados.",
+  "provider.custom.models.fetch.selectAll": "Selecionar todos",
+  "provider.custom.models.fetch.deselectAll": "Desmarcar todos",
+  "provider.custom.models.fetch.found": "{{count}} modelos encontrados",
+  "provider.custom.models.fetch.showing": "Mostrando {{shown}} de {{total}}",
+  "provider.custom.models.fetch.search": "Pesquisar modelos\u2026",
+  "provider.custom.models.fetch.add": "Adicionar {{count}} modelo(s)",
+  "provider.custom.edit.title": "Editar provedor",
   "provider.custom.headers.label": "Headers (opcional)",
   "provider.custom.headers.key.label": "Header",
   "provider.custom.headers.key.placeholder": "Header-Name",
@@ -963,6 +977,20 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Redefinir todas as configurações da extensão Kilo Code para os valores padrão. Isso não afeta a configuração do CLI ou do backend.",
   "settings.aboutKiloCode.resetSettings.button": "Redefinir Todas as Configurações",
+  "settings.aboutKiloCode.settingsTransfer.title": "Transferência de configurações",
+  "settings.aboutKiloCode.settingsTransfer.description":
+    "Exporte ou importe suas configurações para transferi-las entre instâncias do VS Code.",
+  "settings.aboutKiloCode.exportSettings": "Exportar",
+  "settings.aboutKiloCode.importSettings": "Importar",
+  "settings.aboutKiloCode.importSettings.invalidJson":
+    "Arquivo JSON inválido. Selecione um arquivo de configurações válido.",
+  "settings.aboutKiloCode.importSettings.invalidConfig": "O arquivo não contém configurações válidas do Kilo.",
+  "settings.aboutKiloCode.importSettings.tooLarge":
+    "O arquivo é muito grande. Arquivos de configurações devem ter menos de 1 MB.",
+  "settings.aboutKiloCode.importSettings.newerVersion":
+    "Este arquivo foi exportado de uma versão mais recente do Kilo. Algumas configurações podem ser ignoradas.",
+  "settings.aboutKiloCode.importSettings.success":
+    "Configurações importadas. Revise as alterações acima e clique em Salvar.",
 
   "settings.agentBehaviour.subtab.modes": "Modos",
   "settings.agentBehaviour.subtab.agents": "Agents",

@@ -757,6 +757,21 @@ export const dict = {
   "provider.custom.models.name.placeholder": "Naziv za prikaz",
   "provider.custom.models.remove": "Ukloni model",
   "provider.custom.models.add": "Dodaj model",
+  "provider.custom.models.fetch": "Preuzmi modele",
+  "provider.custom.models.fetching": "Preuzimanje\u2026",
+  "provider.custom.models.fetch.error": "Preuzimanje modela nije uspjelo: {{error}}",
+  "provider.custom.models.fetch.authError":
+    "Autentifikacija nije uspjela. Provjerite API ključ iznad i pokušajte ponovo.",
+  "provider.custom.models.fetch.empty": "Nisu pronađeni modeli na ovom serveru.",
+  "provider.custom.models.fetch.added": "Dodano {{count}} model(a).",
+  "provider.custom.models.fetch.allExist": "Svi preuzeti modeli su već dodani.",
+  "provider.custom.models.fetch.selectAll": "Odaberi sve",
+  "provider.custom.models.fetch.deselectAll": "Poništi odabir",
+  "provider.custom.models.fetch.found": "{{count}} modela pronađeno",
+  "provider.custom.models.fetch.showing": "Prikazano {{shown}} od {{total}}",
+  "provider.custom.models.fetch.search": "Pretraži modele\u2026",
+  "provider.custom.models.fetch.add": "Dodaj {{count}} model(a)",
+  "provider.custom.edit.title": "Uredi provajdera",
   "provider.custom.headers.label": "Zaglavlja (opcionalno)",
   "provider.custom.headers.key.label": "Zaglavlje",
   "provider.custom.headers.key.placeholder": "Header-Name",
@@ -966,6 +981,18 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Resetujte sve postavke Kilo Code ekstenzije na zadane vrijednosti. Ovo ne utiče na CLI ili backend konfiguraciju.",
   "settings.aboutKiloCode.resetSettings.button": "Resetuj sve postavke",
+  "settings.aboutKiloCode.settingsTransfer.title": "Prijenos postavki",
+  "settings.aboutKiloCode.settingsTransfer.description":
+    "Izvezite ili uvezite postavke za prijenos između VS Code instanci.",
+  "settings.aboutKiloCode.exportSettings": "Izvezi",
+  "settings.aboutKiloCode.importSettings": "Uvezi",
+  "settings.aboutKiloCode.importSettings.invalidJson": "Nevažeći JSON fajl. Odaberite važeći fajl s postavkama.",
+  "settings.aboutKiloCode.importSettings.invalidConfig": "Fajl ne sadrži važeće Kilo postavke.",
+  "settings.aboutKiloCode.importSettings.tooLarge": "Fajl je prevelik. Fajlovi s postavkama moraju biti manji od 1 MB.",
+  "settings.aboutKiloCode.importSettings.newerVersion":
+    "Ovaj fajl je izvezen iz novije verzije Kilo-a. Neke postavke mogu biti zanemarene.",
+  "settings.aboutKiloCode.importSettings.success":
+    "Postavke su uvezene. Pregledajte promjene iznad, a zatim kliknite Sačuvaj.",
 
   "settings.agentBehaviour.subtab.modes": "Modovi",
   "settings.agentBehaviour.subtab.agents": "Agents",

@@ -34,10 +34,10 @@ Use Kilo Code wherever you work:
 Kilo uses specialized agents to help with different tasks:
 
 - [**Chat Interface**](/docs/code-with-ai/agents/chat-interface) — Conversation-based coding
-- [**Using Modes**](/docs/code-with-ai/agents/using-modes) — Switch between Code, Architect, Debug, and Ask modes
+- [**Using Agents**](/docs/code-with-ai/agents/using-agents) — Switch between Code, Ask, Plan, Debug, and other agents
 - [**Model Selection**](/docs/code-with-ai/agents/model-selection) — Choose the right AI model for each task
 - [**Context Mentions**](/docs/code-with-ai/agents/context-mentions) — Reference files, functions, and symbols
-- [**Orchestrator Mode**](/docs/code-with-ai/agents/orchestrator-mode) — Complex multi-step tasks
+- [**Orchestrator Mode**](/docs/code-with-ai/agents/orchestrator-mode) — Legacy orchestration (now built into all agents)
 - [**Free & Budget Models**](/docs/code-with-ai/agents/free-and-budget-models) — Cost-effective AI options
 
 ## Features
