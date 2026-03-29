@@ -21,7 +21,7 @@ import type { ToolPart, Message as SDKMessage } from "@kilocode/sdk/v2"
 
 function canStop(item: ToolPart) {
   if (item.state?.status !== "running") return false
-  return item.tool === "bash" || item.tool === "task"
+  return item.tool === "bash"
 }
 
 /** Collect all tool parts from all assistant messages in a given session. */
@@ -141,7 +141,7 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
                         aria-label={i18n.t("prompt.action.stopSubtask")}
                         onClick={(e) => {
                           e.stopPropagation()
-                          session.abortPart(childSessionId() || "", item.id)
+                          session.abortPart(childSessionId() || "", item.callID || item.id)
                         }}
                       />
                     </Show>

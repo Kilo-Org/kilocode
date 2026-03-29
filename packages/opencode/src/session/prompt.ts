@@ -1780,8 +1780,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
     await SessionInterrupt.register({
       sessionID: input.sessionID,
-      partID: part.id,
-      callID: part.callID,
+      id: part.id,
       kill,
     })
 

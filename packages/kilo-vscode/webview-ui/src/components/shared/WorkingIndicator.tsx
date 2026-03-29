@@ -16,23 +16,38 @@ export const WorkingIndicator: Component = () => {
 
   const [elapsed, setElapsed] = createSignal(0)
   const [retryCountdown, setRetryCountdown] = createSignal(0)
+  const [continued, setContinued] = createSignal<Record<string, boolean>>({})
+
+  const mark = () => {
+    const id = session.currentSessionID()
+    if (!id) return
+    setContinued((map) => ({ ...map, [id]: true }))
+  }
 
   createEffect(() => {
     const since = session.busySince()
     const status = session.status()
+    const id = session.currentSessionID()
 
-    if (status === "idle" || !since) {
+    if (!id || status === "idle" || !since) {
+      if (id && continued()[id]) {
+        setContinued((map) => {
+          const next = { ...map }
+          delete next[id]
+          return next
+        })
+      }
       setElapsed(0)
       return
     }
 
     setElapsed(Math.floor((Date.now() - since) / 1000))
 
-    const id = setInterval(() => {
+    const timer = setInterval(() => {
       setElapsed(Math.floor((Date.now() - since) / 1000))
     }, 1000)
 
-    onCleanup(() => clearInterval(id))
+    onCleanup(() => clearInterval(timer))
   })
 
   createEffect(() => {
@@ -45,13 +60,13 @@ export const WorkingIndicator: Component = () => {
     const target = info.next
     setRetryCountdown(Math.max(0, Math.ceil((target - Date.now()) / 1000)))
 
-    const id = setInterval(() => {
+    const timer = setInterval(() => {
       const remaining = Math.max(0, Math.ceil((target - Date.now()) / 1000))
       setRetryCountdown(remaining)
-      if (remaining <= 0) clearInterval(id)
+      if (remaining <= 0) clearInterval(timer)
     }, 1000)
 
-    onCleanup(() => clearInterval(id))
+    onCleanup(() => clearInterval(timer))
   })
 
   const statusText = () => {
@@ -81,7 +96,11 @@ export const WorkingIndicator: Component = () => {
     return perms.length > 0 || questions.length > 0
   }
 
-  const long = () => session.status() !== "idle" && elapsed() >= 15
+  const long = () => {
+    const id = session.currentSessionID()
+    if (!id || continued()[id]) return false
+    return session.status() !== "idle" && elapsed() >= 15
+  }
 
   return (
     <Show when={session.status() !== "idle" && !blocked()}>
@@ -93,7 +112,7 @@ export const WorkingIndicator: Component = () => {
         </Show>
         <Show when={long()}>
           <div class="working-actions">
-            <Button size="small" variant="ghost" onClick={() => void 0}>
+            <Button size="small" variant="ghost" onClick={mark}>
               {language.t("migration.whatsNew.continue")}
             </Button>
             <Button size="small" variant="ghost" onClick={() => session.abort()}>

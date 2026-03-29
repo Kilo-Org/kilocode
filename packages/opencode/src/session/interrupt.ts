@@ -2,19 +2,18 @@
 export namespace SessionInterrupt {
   type Item = {
     sessionID: string
-    partID: string
-    callID?: string
+    id: string
     kill(): Promise<void>
   }
 
   const state = new Map<string, Item>()
 
   export async function register(input: Item) {
-    state.set(input.partID, input)
+    state.set(input.id, input)
   }
 
-  export async function unregister(partID: string) {
-    state.delete(partID)
+  export async function unregister(id: string) {
+    state.delete(id)
   }
 
   export async function cancel(input: { sessionID: string; partID: string }) {
@@ -22,15 +21,5 @@ export namespace SessionInterrupt {
     if (!item || item.sessionID !== input.sessionID) return false
     await item.kill()
     return true
-  }
-
-  export async function cancelCall(input: { sessionID: string; callID: string }) {
-    for (const item of state.values()) {
-      if (item.sessionID !== input.sessionID) continue
-      if (item.callID !== input.callID) continue
-      await item.kill()
-      return true
-    }
-    return false
   }
 }

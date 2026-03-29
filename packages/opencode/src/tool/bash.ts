@@ -224,8 +224,7 @@ export const BashTool = Tool.define("bash", async () => {
       if (ctx.callID) {
         await SessionInterrupt.register({
           sessionID: ctx.sessionID,
-          partID: ctx.callID,
-          callID: ctx.callID,
+          id: ctx.callID,
           kill,
         })
       }

@@ -71,7 +71,7 @@ function TodoToolCard(props: { part: ToolPart }) {
 
 function canStop(part: ToolPart) {
   if (part.state?.status !== "running") return false
-  return part.tool === "bash" || part.tool === "task"
+  return part.tool === "bash"
 }
 
 export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
@@ -110,7 +110,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                       onClick={(e) => {
                         e.stopPropagation()
                         const item = part as ToolPart
-                        session.abortPart(item.sessionID, item.id)
+                        session.abortPart(item.sessionID, item.callID || item.id)
                       }}
                     />
                   </div>
