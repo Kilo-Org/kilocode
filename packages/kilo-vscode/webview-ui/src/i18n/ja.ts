@@ -241,6 +241,8 @@ export const dict = {
   "prompt.action.send": "送信",
   "prompt.action.send.blocked": "最初に保留中の質問に答えるか、閉じてください",
   "prompt.action.stop": "停止",
+  "prompt.action.stopTool": "ツールを停止",
+  "prompt.action.stopSubtask": "サブタスクを停止",
   "prompt.action.enhance": "プロンプトを改善",
   "prompt.action.resetModel": "モデルをデフォルトにリセット",
   "prompt.action.enhanceDescription":

@@ -19,6 +19,7 @@ import { BashArity } from "@/permission/arity"
 import { BashHierarchy } from "@/kilocode/bash-hierarchy" // kilocode_change
 import { Truncate } from "./truncation"
 import { Plugin } from "@/plugin"
+import { SessionInterrupt } from "@/session/interrupt"
 
 const MAX_METADATA_LENGTH = 30_000
 const DEFAULT_TIMEOUT = Flag.KILO_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS || 2 * 60 * 1000
@@ -220,6 +221,15 @@ export const BashTool = Tool.define("bash", async () => {
 
       const kill = () => Shell.killTree(proc, { exited: () => exited })
 
+      if (ctx.callID) {
+        await SessionInterrupt.register({
+          sessionID: ctx.sessionID,
+          partID: ctx.callID,
+          callID: ctx.callID,
+          kill,
+        })
+      }
+
       if (ctx.abort.aborted) {
         aborted = true
         await kill()
@@ -241,6 +251,9 @@ export const BashTool = Tool.define("bash", async () => {
         const cleanup = () => {
           clearTimeout(timeoutTimer)
           ctx.abort.removeEventListener("abort", abortHandler)
+          if (ctx.callID) {
+            void SessionInterrupt.unregister(ctx.callID)
+          }
         }
 
         // kilocode_change - use "close" instead of "exit" so stdio streams are fully drained

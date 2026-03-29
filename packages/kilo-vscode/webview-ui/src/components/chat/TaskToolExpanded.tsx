@@ -19,6 +19,11 @@ import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
 import type { ToolPart, Message as SDKMessage } from "@kilocode/sdk/v2"
 
+function canStop(item: ToolPart) {
+  if (item.state?.status !== "running") return false
+  return item.tool === "bash" || item.tool === "task"
+}
+
 /** Collect all tool parts from all assistant messages in a given session. */
 function getSessionToolParts(store: ReturnType<typeof useData>["store"], sessionId: string): ToolPart[] {
   const messages = (store.message?.[sessionId] as SDKMessage[] | undefined)?.filter((m) => m.role === "assistant")
@@ -127,6 +132,18 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
                     <span data-slot="task-tool-title">{info().title}</span>
                     <Show when={subtitle()}>
                       <span data-slot="task-tool-subtitle">{subtitle()}</span>
+                    </Show>
+                    <Show when={canStop(item)}>
+                      <IconButton
+                        icon="circle-x"
+                        size="small"
+                        variant="ghost"
+                        aria-label={i18n.t("prompt.action.stopSubtask")}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          session.abortPart(childSessionId() || "", item.id)
+                        }}
+                      />
                     </Show>
                   </div>
                 )

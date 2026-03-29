@@ -42,6 +42,7 @@ import { TaskTool } from "@/tool/task"
 import { Tool } from "@/tool/tool"
 import { PermissionNext } from "@/permission/next"
 import { SessionStatus } from "./status"
+import { SessionInterrupt } from "./interrupt"
 import { LLM } from "./llm"
 import { iife } from "@/util/iife"
 import { Shell } from "@/shell/shell"
@@ -291,6 +292,10 @@ export namespace SessionPrompt {
     delete s[sessionID]
     SessionStatus.set(sessionID, { type: "idle" })
     return
+  }
+
+  export async function cancelPart(input: { sessionID: string; partID: string }) {
+    return SessionInterrupt.cancel(input)
   }
 
   export const LoopInput = z.object({
@@ -1773,6 +1778,13 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
     const kill = () => Shell.killTree(proc, { exited: () => exited })
 
+    await SessionInterrupt.register({
+      sessionID: input.sessionID,
+      partID: part.id,
+      callID: part.callID,
+      kill,
+    })
+
     if (abort.aborted) {
       aborted = true
       await kill()
@@ -1789,6 +1801,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       proc.on("close", () => {
         exited = true
         abort.removeEventListener("abort", abortHandler)
+        void SessionInterrupt.unregister(part.id)
         resolve()
       })
     })

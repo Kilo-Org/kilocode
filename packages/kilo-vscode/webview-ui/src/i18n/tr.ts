@@ -242,6 +242,8 @@ export const dict = {
   "prompt.action.send": "Gönder",
   "prompt.action.send.blocked": "Bekleyen soruyu önce yanıtlayın veya kapatın",
   "prompt.action.stop": "Durdur",
+  "prompt.action.stopTool": "Aracı durdur",
+  "prompt.action.stopSubtask": "Alt görevi durdur",
   "prompt.action.enhance": "Komutu geliştir",
   "prompt.action.resetModel": "Modeli varsayılana sıfırla",
   "prompt.action.enhanceDescription":

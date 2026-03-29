@@ -3269,6 +3269,42 @@ export type SessionAbortResponses = {
 
 export type SessionAbortResponse = SessionAbortResponses[keyof SessionAbortResponses]
 
+export type SessionAbortPartData = {
+  body?: {
+    partID: string
+  }
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/session/{sessionID}/abort-part"
+}
+
+export type SessionAbortPartErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type SessionAbortPartError = SessionAbortPartErrors[keyof SessionAbortPartErrors]
+
+export type SessionAbortPartResponses = {
+  /**
+   * Aborted part
+   */
+  200: boolean
+}
+
+export type SessionAbortPartResponse = SessionAbortPartResponses[keyof SessionAbortPartResponses]
+
 export type SessionUnshareData = {
   body?: never
   path: {

@@ -245,6 +245,8 @@ export const dict = {
   "prompt.action.send": "전송",
   "prompt.action.send.blocked": "먼저 대기 중인 질문에 답하거나 닫아주세요",
   "prompt.action.stop": "중지",
+  "prompt.action.stopTool": "도구 중지",
+  "prompt.action.stopSubtask": "하위 작업 중지",
   "prompt.action.enhance": "프롬프트 개선",
   "prompt.action.resetModel": "모델을 기본값으로 재설정",
   "prompt.action.enhanceDescription":

@@ -241,6 +241,8 @@ export const dict = {
   "prompt.action.send": "إرسال",
   "prompt.action.send.blocked": "أجب عن السؤال المعلق أو تجاهله أولاً",
   "prompt.action.stop": "توقف",
+  "prompt.action.stopTool": "إيقاف الأداة",
+  "prompt.action.stopSubtask": "إيقاف المهمة الفرعية",
   "prompt.action.enhance": "تحسين النص",
   "prompt.action.resetModel": "إعادة تعيين النموذج إلى الافتراضي",
   "prompt.action.enhanceDescription":

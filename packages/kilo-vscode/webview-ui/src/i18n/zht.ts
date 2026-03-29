@@ -242,6 +242,8 @@ export const dict = {
   "prompt.action.send": "傳送",
   "prompt.action.send.blocked": "請先回答或忽略待處理的問題",
   "prompt.action.stop": "停止",
+  "prompt.action.stopTool": "停止工具",
+  "prompt.action.stopSubtask": "停止子任務",
   "prompt.action.enhance": "改善提示詞",
   "prompt.action.resetModel": "重置模型為預設值",
   "prompt.action.enhanceDescription":

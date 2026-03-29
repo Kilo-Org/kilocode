@@ -381,6 +381,43 @@ export const SessionRoutes = lazy(() =>
       },
     )
     .post(
+      "/:sessionID/abort-part",
+      describeRoute({
+        summary: "Abort running part",
+        description: "Abort a specific running tool or shell part within an active session.",
+        operationId: "session.abortPart",
+        responses: {
+          200: {
+            description: "Aborted part",
+            content: {
+              "application/json": {
+                schema: resolver(z.boolean()),
+              },
+            },
+          },
+          ...errors(400, 404),
+        },
+      }),
+      validator(
+        "param",
+        z.object({
+          sessionID: z.string(),
+        }),
+      ),
+      validator(
+        "json",
+        z.object({
+          partID: z.string(),
+        }),
+      ),
+      async (c) => {
+        const sessionID = c.req.valid("param").sessionID
+        const body = c.req.valid("json")
+        const result = await SessionPrompt.cancelPart({ sessionID, partID: body.partID })
+        return c.json(result)
+      },
+    )
+    .post(
       "/:sessionID/share",
       describeRoute({
         summary: "Share session",

@@ -243,6 +243,8 @@ export const dict = {
   "prompt.action.send": "Pošalji",
   "prompt.action.send.blocked": "Prvo odgovorite ili odbacite pitanje na čekanju",
   "prompt.action.stop": "Zaustavi",
+  "prompt.action.stopTool": "Zaustavi alat",
+  "prompt.action.stopSubtask": "Zaustavi podzadatak",
   "prompt.action.enhance": "Poboljšaj prompt",
   "prompt.action.resetModel": "Resetuj model na zadani",
   "prompt.action.enhanceDescription":

@@ -6,6 +6,7 @@
 
 import { Component, Show, createSignal, createEffect, onCleanup } from "solid-js"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
+import { Button } from "@kilocode/kilo-ui/button"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 
@@ -80,6 +81,8 @@ export const WorkingIndicator: Component = () => {
     return perms.length > 0 || questions.length > 0
   }
 
+  const long = () => session.status() !== "idle" && elapsed() >= 15
+
   return (
     <Show when={session.status() !== "idle" && !blocked()}>
       <div class="working-indicator">
@@ -87,6 +90,16 @@ export const WorkingIndicator: Component = () => {
         <span class="working-text">{statusText()}</span>
         <Show when={elapsed() > 0}>
           <span class="working-elapsed">{formatElapsed()}</span>
+        </Show>
+        <Show when={long()}>
+          <div class="working-actions">
+            <Button size="small" variant="ghost" onClick={() => void 0}>
+              {language.t("migration.whatsNew.continue")}
+            </Button>
+            <Button size="small" variant="ghost" onClick={() => session.abort()}>
+              {language.t("prompt.action.stop")}
+            </Button>
+          </div>
         </Show>
       </div>
     </Show>

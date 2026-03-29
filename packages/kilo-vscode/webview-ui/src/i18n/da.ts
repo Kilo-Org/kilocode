@@ -242,6 +242,8 @@ export const dict = {
   "prompt.action.send": "Send",
   "prompt.action.send.blocked": "Besvar eller afvis det afventende spørgsmål først",
   "prompt.action.stop": "Stop",
+  "prompt.action.stopTool": "Stop værktøj",
+  "prompt.action.stopSubtask": "Stop delopgave",
   "prompt.action.enhance": "Forbedr prompt",
   "prompt.action.resetModel": "Nulstil model til standard",
   "prompt.action.enhanceDescription":

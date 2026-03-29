@@ -242,6 +242,8 @@ export const dict = {
   "prompt.action.send": "ส่ง",
   "prompt.action.send.blocked": "โปรดตอบหรือข้ามคำถามที่รอดำเนินการก่อน",
   "prompt.action.stop": "หยุด",
+  "prompt.action.stopTool": "หยุดเครื่องมือ",
+  "prompt.action.stopSubtask": "หยุดงานย่อย",
   "prompt.action.enhance": "ปรับปรุงพรอมต์",
   "prompt.action.resetModel": "รีเซ็ตโมเดลเป็นค่าเริ่มต้น",
   "prompt.action.enhanceDescription":

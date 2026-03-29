@@ -242,6 +242,8 @@ export const dict = {
   "prompt.action.send": "Отправить",
   "prompt.action.send.blocked": "Сначала ответьте на ожидающий вопрос или отклоните его",
   "prompt.action.stop": "Остановить",
+  "prompt.action.stopTool": "Остановить инструмент",
+  "prompt.action.stopSubtask": "Остановить подзадачу",
   "prompt.action.enhance": "Улучшить промпт",
   "prompt.action.resetModel": "Сбросить модель на значение по умолчанию",
   "prompt.action.enhanceDescription":

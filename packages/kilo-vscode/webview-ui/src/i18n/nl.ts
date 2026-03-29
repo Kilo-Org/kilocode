@@ -243,6 +243,8 @@ export const dict = {
   "prompt.action.send": "Verzenden",
   "prompt.action.send.blocked": "Beantwoord of negeer eerst de openstaande vraag",
   "prompt.action.stop": "Stop",
+  "prompt.action.stopTool": "Tool stoppen",
+  "prompt.action.stopSubtask": "Subtaak stoppen",
   "prompt.action.enhance": "Prompt verbeteren",
   "prompt.action.resetModel": "Model terugzetten naar standaard",
   "prompt.action.enhanceDescription":

@@ -141,6 +141,8 @@ import type {
   RemoteEnableResponses,
   RemoteStatusResponses,
   SessionAbortErrors,
+  SessionAbortPartErrors,
+  SessionAbortPartResponses,
   SessionAbortResponses,
   SessionChildrenErrors,
   SessionChildrenResponses,
@@ -1781,6 +1783,45 @@ export class Session2 extends HeyApiClient {
       url: "/session/{sessionID}/abort",
       ...options,
       ...params,
+    })
+  }
+
+  /**
+   * Abort running part
+   *
+   * Abort a specific running tool or shell part within an active session.
+   */
+  public abortPart<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+      workspace?: string
+      partID?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "partID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<SessionAbortPartResponses, SessionAbortPartErrors, ThrowOnError>({
+      url: "/session/{sessionID}/abort-part",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
     })
   }
 

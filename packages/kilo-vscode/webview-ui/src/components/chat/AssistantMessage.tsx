@@ -7,7 +7,8 @@
  * Active questions and permissions are rendered in the bottom dock.
  */
 
-import { Component, For, Show, createMemo } from "solid-js"
+import { For, Show, createMemo } from "solid-js"
+import type { Component } from "solid-js"
 import { Dynamic } from "solid-js/web"
 import { Part, PART_MAPPING, ToolRegistry } from "@kilocode/kilo-ui/message-part"
 import type {
@@ -17,6 +18,9 @@ import type {
   ToolPart,
 } from "@kilocode/sdk/v2"
 import { useData } from "@kilocode/kilo-ui/context/data"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { useSession } from "../../context/session"
+import { useLanguage } from "../../context/language"
 
 // Tools that the upstream message-part renderer suppresses (returns null for).
 // We render these ourselves via ToolRegistry when they complete,
@@ -65,8 +69,15 @@ function TodoToolCard(props: { part: ToolPart }) {
   )
 }
 
+function canStop(part: ToolPart) {
+  if (part.state?.status !== "running") return false
+  return part.tool === "bash" || part.tool === "task"
+}
+
 export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   const data = useData()
+  const session = useSession()
+  const language = useLanguage()
 
   const parts = createMemo(() => {
     const stored = data.store.part?.[props.message.id]
@@ -85,6 +96,25 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
           return (
             <Show when={isUpstreamSuppressed || PART_MAPPING[part.type]}>
               <div data-component="tool-part-wrapper" data-part-type={part.type}>
+                <Show
+                  when={
+                    part.type === "tool" && canStop(part as ToolPart) && part.sessionID === session.currentSessionID()
+                  }
+                >
+                  <div data-slot="tool-part-actions">
+                    <IconButton
+                      icon="circle-x"
+                      size="small"
+                      variant="ghost"
+                      aria-label={language.t("prompt.action.stopTool")}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        const item = part as ToolPart
+                        session.abortPart(item.sessionID, item.id)
+                      }}
+                    />
+                  </div>
+                </Show>
                 <Show
                   when={isUpstreamSuppressed}
                   fallback={

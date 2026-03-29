@@ -2201,6 +2201,31 @@
   opacity: 0.7;
 }
 
+.working-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+[data-component="tool-part-wrapper"] {
+  position: relative;
+}
+
+[data-slot="tool-part-actions"] {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 1;
+}
+
+[data-slot="task-tool-item"] {
+  display: grid;
+  grid-template-columns: auto minmax(0, auto) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
 /* Session List (inside History View) */
 .session-list {
   display: flex;

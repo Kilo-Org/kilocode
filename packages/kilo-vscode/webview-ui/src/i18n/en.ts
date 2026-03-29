@@ -243,6 +243,8 @@ export const dict = {
   "prompt.action.send": "Send",
   "prompt.action.send.blocked": "Answer or dismiss the pending question first",
   "prompt.action.stop": "Stop",
+  "prompt.action.stopTool": "Stop tool",
+  "prompt.action.stopSubtask": "Stop subtask",
   "prompt.action.enhance": "Enhance prompt",
   "prompt.action.resetModel": "Reset model to default",
   "prompt.action.enhanceDescription":
