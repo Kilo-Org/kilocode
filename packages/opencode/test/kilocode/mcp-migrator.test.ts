@@ -529,6 +529,50 @@ describe("McpMigrator", () => {
 
         expect(result).not.toHaveProperty("headers")
       })
+
+      // Regression: VS Code extension writes "transport" instead of "type"
+      test("converts server using 'transport' field (VS Code extension format)", () => {
+        const server = {
+          transport: "sse",
+          url: "http://localhost:3000/api/mcp/sse",
+        } as any
+
+        const result = McpMigrator.convertServer("cipher-direct", server)
+
+        expect(result).toEqual({
+          type: "remote",
+          url: "http://localhost:3000/api/mcp/sse",
+        })
+      })
+
+      test("converts server using 'transport: streamable-http' field", () => {
+        const server = {
+          transport: "streamable-http",
+          url: "http://localhost:8001/v1/mcp",
+        } as any
+
+        const result = McpMigrator.convertServer("http-server", server)
+
+        expect(result).toEqual({
+          type: "remote",
+          url: "http://localhost:8001/v1/mcp",
+        })
+      })
+
+      test("'type' field takes precedence over 'transport' field", () => {
+        const server = {
+          type: "streamable-http",
+          transport: "sse",
+          url: "http://localhost:4321/mcp",
+        } as any
+
+        const result = McpMigrator.convertServer("precedence-test", server)
+
+        expect(result).toEqual({
+          type: "remote",
+          url: "http://localhost:4321/mcp",
+        })
+      })
     })
 
     describe("migrate", () => {
@@ -711,6 +755,91 @@ describe("McpMigrator", () => {
         expect(result.skipped).toContainEqual({
           name: "disabled",
           reason: "Server is disabled",
+        })
+      })
+
+      // Regression: VS Code extension writes "transport" instead of "type"
+      test("migrates server using 'transport' field (VS Code extension format)", async () => {
+        await using tmp = await tmpdir({
+          init: async (dir) => {
+            const settingsDir = path.join(dir, ".kilocode")
+            await Bun.write(
+              path.join(settingsDir, "mcp.json"),
+              JSON.stringify({
+                mcpServers: {
+                  "cipher-direct": {
+                    transport: "sse",
+                    url: "http://localhost:3000/api/mcp/sse",
+                  },
+                  "cipher-bridge": {
+                    transport: "sse",
+                    url: "http://localhost:3002/sse",
+                  },
+                },
+              }),
+            )
+          },
+        })
+
+        const result = await McpMigrator.migrate({
+          projectDir: tmp.path,
+          skipGlobalPaths: true,
+        })
+
+        expect(Object.keys(result.mcp)).toHaveLength(2)
+        expect(result.mcp["cipher-direct"]).toEqual({
+          type: "remote",
+          url: "http://localhost:3000/api/mcp/sse",
+        })
+        expect(result.mcp["cipher-bridge"]).toEqual({
+          type: "remote",
+          url: "http://localhost:3002/sse",
+        })
+      })
+
+      test("migrates mixed servers with 'type' and 'transport' fields", async () => {
+        await using tmp = await tmpdir({
+          init: async (dir) => {
+            const settingsDir = path.join(dir, ".kilo")
+            await Bun.write(
+              path.join(settingsDir, "mcp.json"),
+              JSON.stringify({
+                mcpServers: {
+                  filesystem: {
+                    command: "npx",
+                    args: ["-y", "@modelcontextprotocol/server-filesystem"],
+                  },
+                  "remote-api": {
+                    type: "streamable-http",
+                    url: "http://localhost:4321/mcp",
+                  },
+                  "sse-api": {
+                    transport: "sse",
+                    url: "https://mcp.example.com/sse",
+                  },
+                },
+              }),
+            )
+          },
+        })
+
+        const result = await McpMigrator.migrate({
+          projectDir: tmp.path,
+          skipGlobalPaths: true,
+        })
+
+        expect(Object.keys(result.mcp)).toHaveLength(3)
+        expect(result.mcp.filesystem).toEqual({
+          type: "local",
+          command: ["npx", "-y", "@modelcontextprotocol/server-filesystem"],
+        })
+        expect(result.mcp["remote-api"]).toEqual({
+          type: "remote",
+          url: "http://localhost:4321/mcp",
+        })
+        expect(result.mcp["sse-api"]).toEqual({
+          type: "remote",
+          url: "https://mcp.example.com/sse",
         })
       })
     })

@@ -11,8 +11,18 @@ export namespace McpMigrator {
   // Remote transport types used by the Kilocode extension
   const REMOTE_TYPES = new Set(["streamable-http", "sse"])
 
+  /**
+   * Get the transport type for a server, checking both "type" and "transport" fields.
+   * The VS Code extension writes configs with "transport" (e.g., "transport": "sse"),
+   * but the CLI historically expected "type". We support both for compatibility.
+   */
+  function getTransportType(server: KilocodeMcpServer): string | undefined {
+    return server.type ?? server.transport
+  }
+
   function isRemote(server: KilocodeMcpServer): boolean {
-    return !!server.type && REMOTE_TYPES.has(server.type)
+    const transportType = getTransportType(server)
+    return !!transportType && REMOTE_TYPES.has(transportType)
   }
 
   // Kilocode MCP server structure
@@ -24,6 +34,7 @@ export namespace McpMigrator {
     alwaysAllow?: string[]
     // Remote server fields
     type?: string
+    transport?: string // VS Code extension writes "transport" instead of "type"
     url?: string
     headers?: Record<string, string>
   }
