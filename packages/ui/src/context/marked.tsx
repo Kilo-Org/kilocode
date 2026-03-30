@@ -385,11 +385,21 @@ function decodeMathEntities(text: string): string {
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/&dollar;/g, "$")
+    .replace(/&#0*36;/g, "$")
+    .replace(/&#x0*24;/gi, "$")
 }
 
+function decodeDollarEntities(text: string): string {
+  return text.replace(/&dollar;|&#0*36;|&#x0*24;/gi, "$")
+}
+
+const displayMathPattern = /\$\$([\s\S]*?)\$\$/g
+const inlineMathPattern = /(?<![\\$])\$(?!\$)(?!\s)((?:[^$\\]|\\.)+?)(?<!\s)\$(?!\$)/g
+
 function renderMathInText(text: string): string {
-  return text
-    .replace(/\$\$([\s\S]*?)\$\$/g, (_, math) => {
+  const source = decodeDollarEntities(text)
+  return source
+    .replace(displayMathPattern, (full, math) => {
       const decoded = decodeMathEntities(math)
       try {
         return katex.renderToString(decoded, {
@@ -398,10 +408,10 @@ function renderMathInText(text: string): string {
           strict: false,
         })
       } catch {
-        return `$$${math}$$`
+        return full
       }
     })
-    .replace(/(?<!\$)\$(?!\$)((?:[^$\\]|\\.)+?)\$(?!\$)/g, (_, math) => {
+    .replace(inlineMathPattern, (full, math) => {
       const decoded = decodeMathEntities(math)
       try {
         return katex.renderToString(decoded, {
@@ -410,7 +420,7 @@ function renderMathInText(text: string): string {
           strict: false,
         })
       } catch {
-        return `$${math}$`
+        return full
       }
     })
 }
@@ -667,6 +677,7 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
       },
       markedKatex({
         throwOnError: false,
+        nonStandard: true,
         strict: false,
       }),
       markedShiki({
