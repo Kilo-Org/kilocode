@@ -37,6 +37,45 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
   })
 
   command.register(() => [
+    // /remote command
+    {
+      value: "remote.toggle",
+      title: "Toggle remote",
+      description: "Enable or disable remote session relay",
+      category: "Kilo",
+      slash: { name: "remote" },
+      enabled: isKiloConnected(),
+      hidden: !isKiloConnected(),
+      onSelect: async () => {
+        try {
+          const current = await sdk.client.remote.status()
+
+          if (current.error || !current.data) {
+            dialog.replace(() => <DialogAlert title="Error" message="Failed to fetch remote status." />)
+            return
+          }
+
+          if (current.data.enabled) {
+            await sdk.client.remote.disable()
+            toast.show({ message: "Remote disabled", variant: "success" })
+          } else {
+            const result = await sdk.client.remote.enable()
+            if (result.error) {
+              const err = result.error as { error?: string }
+              const msg = err?.error ?? "Failed to enable remote."
+              dialog.replace(() => <DialogAlert title="Error" message={msg} />)
+              return
+            }
+            toast.show({ message: "Remote enabled", variant: "success" })
+          }
+
+          dialog.clear()
+        } catch (error) {
+          dialog.replace(() => <DialogAlert title="Error" message={`Failed to toggle remote: ${error}`} />)
+        }
+      },
+    },
+
     // /profile command
     {
       value: "kilo.profile",

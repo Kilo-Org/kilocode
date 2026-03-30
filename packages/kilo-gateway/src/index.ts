@@ -34,6 +34,12 @@ export {
   promptOrganizationSelection,
 } from "./api/profile.js"
 export { fetchKiloModels } from "./api/models.js"
+export {
+  fetchOrganizationModes,
+  clearModesCache,
+  type OrganizationMode,
+  type OrganizationModeConfig,
+} from "./api/modes.js"
 export { fetchKilocodeNotifications, type KilocodeNotification } from "./api/notifications.js"
 
 // ============================================================================
@@ -60,6 +66,7 @@ export type {
   PollOptions,
   PollResult,
   // Provider types
+  KiloProvider,
   KiloProviderOptions,
   KiloMetadata,
   CustomLoaderResult,
@@ -96,4 +103,6 @@ export {
   ENV_VERSION,
   TESTER_SUPPRESS_VALUE,
   ENV_FEATURE,
+  PROMPTS,
+  AI_SDK_PROVIDERS,
 } from "./api/constants.js"

@@ -74,6 +74,10 @@ If the gateway crashes, it's automatically restarted. The machine itself can be 
 Gateway process info is only available when the machine is running.
 {% /callout %}
 
+## Instance Specs
+
+The specs of your instance, including number of CPUs, memory, and storage, are visible at the top right of the instance controls section.
+
 ## Settings
 
 ### Changing the Model

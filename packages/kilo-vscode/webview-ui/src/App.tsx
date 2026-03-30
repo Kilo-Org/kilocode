@@ -20,7 +20,6 @@ import { SessionProvider, useSession } from "./context/session"
 import { LanguageProvider } from "./context/language"
 import { ChatView } from "./components/chat"
 import { MarketplaceView } from "./components/marketplace"
-import { KiloNotifications } from "./components/chat/KiloNotifications"
 import { registerExpandedTaskTool } from "./components/chat/TaskToolExpanded"
 import { registerVscodeToolOverrides } from "./components/chat/VscodeToolOverrides"
 
@@ -29,32 +28,14 @@ import { registerVscodeToolOverrides } from "./components/chat/VscodeToolOverrid
 registerExpandedTaskTool()
 // Apply VS Code sidebar preferences to other tools (e.g. bash expanded by default).
 registerVscodeToolOverrides()
-import SessionList from "./components/history/SessionList"
-import CloudSessionList from "./components/history/CloudSessionList"
+import HistoryView from "./components/history/HistoryView"
 import { MigrationWizard } from "./components/migration" // legacy-migration
 import { NotificationsProvider } from "./context/notifications"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
 import "./styles/chat.css"
 
-type ViewType =
-  | "newTask"
-  | "marketplace"
-  | "history"
-  | "cloudHistory"
-  | "profile"
-  | "settings"
-  | "migration" // legacy-migration
-  | "subAgentViewer"
-const VALID_VIEWS = new Set<string>([
-  "newTask",
-  "marketplace",
-  "history",
-  "cloudHistory",
-  "profile",
-  "settings",
-  "migration", // legacy-migration
-  "subAgentViewer",
-])
+type ViewType = "newTask" | "marketplace" | "history" | "profile" | "settings" | "subAgentViewer"
+const VALID_VIEWS = new Set<string>(["newTask", "marketplace", "history", "profile", "settings", "subAgentViewer"])
 
 /**
  * Bridge our session store to the DataProvider's expected Data shape.
@@ -113,6 +94,10 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     vscode.postMessage({ type: "openFile", filePath, line, column })
   }
 
+  const openUrl = (url: string) => {
+    vscode.postMessage({ type: "openExternal", url })
+  }
+
   const directory = () => {
     const dir = server.workspaceDirectory()
     if (!dir) return ""
@@ -128,6 +113,7 @@ export const DataBridge: Component<{ children: any }> = (props) => {
       onQuestionReply={reply}
       onQuestionReject={reject}
       onOpenFile={open}
+      onOpenUrl={openUrl}
     >
       {props.children}
     </DataProvider>
@@ -151,9 +137,12 @@ export const LanguageBridge: Component<{ children: any }> = (props) => {
 const AppContent: Component = () => {
   const [currentView, setCurrentView] = createSignal<ViewType>("newTask")
   const [settingsTab, setSettingsTab] = createSignal<string | undefined>()
-  const [migrationReturnView, setMigrationReturnView] = createSignal<ViewType>("newTask") // legacy-migration
+  // legacy-migration: state-driven flag independent of currentView to avoid
+  // race conditions with SettingsEditorProvider's navigate messages.
+  const [migrationNeeded, setMigrationNeeded] = createSignal(false)
   const session = useSession()
   const server = useServer()
+  const vscode = useVSCode()
 
   const handleViewAction = (action: string) => {
     switch (action) {
@@ -166,9 +155,6 @@ const AppContent: Component = () => {
         break
       case "historyButtonClicked":
         setCurrentView("history")
-        break
-      case "cloudHistoryButtonClicked":
-        setCurrentView("cloudHistory")
         break
       case "profileButtonClicked":
         setCurrentView("profile")
@@ -218,6 +204,11 @@ const AppContent: Component = () => {
         session.setCurrentSessionID(message.sessionID)
         setCurrentView("subAgentViewer")
       }
+      // legacy-migration: state-driven migration wizard
+      if (message?.type === "migrationState") {
+        console.log("[Kilo New] App: 🔄 migrationState:", message.needed)
+        setMigrationNeeded(message.needed)
+      }
     }
     window.addEventListener("message", handler)
     onCleanup(() => window.removeEventListener("message", handler))
@@ -230,57 +221,50 @@ const AppContent: Component = () => {
 
   return (
     <div class="container">
-      <Switch fallback={<ChatView />}>
-        <Match when={currentView() === "newTask"}>
-          <Show when={!session.currentSessionID()}>
-            <KiloNotifications />
-          </Show>
-          <ChatView onSelectSession={handleSelectSession} />
-        </Match>
-        <Match when={currentView() === "marketplace"}>
-          <MarketplaceView />
-        </Match>
-        <Match when={currentView() === "history"}>
-          <SessionList onSelectSession={handleSelectSession} />
-        </Match>
-        <Match when={currentView() === "cloudHistory"}>
-          <CloudSessionList
-            onSelectSession={(cloudSessionId) => {
-              session.selectCloudSession(cloudSessionId)
-              setCurrentView("newTask")
-            }}
-          />
-        </Match>
-        <Match when={currentView() === "profile"}>
-          <ProfileView
-            profileData={server.profileData()}
-            deviceAuth={server.deviceAuth()}
-            onLogin={server.startLogin}
-          />
-        </Match>
-        <Match when={currentView() === "settings"}>
-          <Settings
-            tab={settingsTab()}
-            onTabChange={setSettingsTab}
-            onMigrateClick={() => {
-              setMigrationReturnView("settings")
-              setCurrentView("migration")
-            }}
-          />
-          {/* legacy-migration */}
-        </Match>
-        {/* legacy-migration start */}
-        <Match when={currentView() === "migration"}>
-          <MigrationWizard
-            onBack={() => setCurrentView(migrationReturnView())}
-            onComplete={() => setCurrentView(migrationReturnView())}
-          />
-        </Match>
-        {/* legacy-migration end */}
-        <Match when={currentView() === "subAgentViewer"}>
-          <ChatView readonly />
-        </Match>
-      </Switch>
+      {/* legacy-migration start — state-driven overlay, independent of currentView */}
+      <Show
+        when={migrationNeeded()}
+        fallback={
+          <Switch fallback={<ChatView continueInWorktree />}>
+            <Match when={currentView() === "newTask"}>
+              <ChatView
+                onSelectSession={handleSelectSession}
+                onShowHistory={() => setCurrentView("history")}
+                continueInWorktree
+              />
+            </Match>
+            <Match when={currentView() === "marketplace"}>
+              <MarketplaceView />
+            </Match>
+            <Match when={currentView() === "history"}>
+              <HistoryView onSelectSession={handleSelectSession} onBack={() => setCurrentView("newTask")} />
+            </Match>
+            <Match when={currentView() === "profile"}>
+              <ProfileView
+                profileData={server.profileData()}
+                deviceAuth={server.deviceAuth()}
+                onLogin={server.startLogin}
+              />
+            </Match>
+            <Match when={currentView() === "settings"}>
+              <Settings
+                tab={settingsTab()}
+                onTabChange={setSettingsTab}
+                onMigrateClick={() => {
+                  setMigrationNeeded(true)
+                  vscode.postMessage({ type: "requestLegacyMigrationData" })
+                }}
+              />
+            </Match>
+            <Match when={currentView() === "subAgentViewer"}>
+              <ChatView readonly />
+            </Match>
+          </Switch>
+        }
+      >
+        <MigrationWizard onBack={() => setMigrationNeeded(false)} onComplete={() => setMigrationNeeded(false)} />
+      </Show>
+      {/* legacy-migration end */}
     </div>
   )
 }

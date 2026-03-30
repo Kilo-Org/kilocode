@@ -5,14 +5,29 @@
  * pending permissions after SSE reconnections. No vscode dependency.
  */
 
-import type { KiloClient } from "@kilocode/sdk/v2/client"
+import type { KiloClient, PermissionRequest } from "@kilocode/sdk/v2/client"
+
+export type RecoverablePermission = PermissionRequest
 
 export interface PermissionContext {
   readonly client: KiloClient | null
   readonly currentSessionId: string | undefined
   readonly trackedSessionIds: Set<string>
+  readonly sessionDirectories: ReadonlyMap<string, string>
   postMessage(msg: unknown): void
   getWorkspaceDirectory(sessionId?: string): string
+}
+
+export function recoveryDirs(workspace: string, dirs: ReadonlyMap<string, string>) {
+  return [...new Set([workspace, ...dirs.values()])]
+}
+
+export function recoverablePermissions(perms: RecoverablePermission[], tracked: Set<string>, seen: Set<string>) {
+  return perms.filter((perm) => {
+    if (seen.has(perm.id)) return false
+    seen.add(perm.id)
+    return tracked.has(perm.sessionID)
+  })
 }
 
 /**
@@ -74,24 +89,27 @@ export async function handlePermissionResponse(
 export async function fetchAndSendPendingPermissions(ctx: PermissionContext): Promise<void> {
   if (!ctx.client) return
   try {
-    const dir = ctx.getWorkspaceDirectory()
-    const { data } = await ctx.client.permission.list({ directory: dir })
-    if (!data) return
-    for (const perm of data) {
-      if (!ctx.trackedSessionIds.has(perm.sessionID)) continue
-      ctx.postMessage({
-        type: "permissionRequest",
-        permission: {
-          id: perm.id,
-          sessionID: perm.sessionID,
-          toolName: perm.permission,
-          patterns: perm.patterns,
-          always: perm.always,
-          args: perm.metadata,
-          message: `Permission required: ${perm.permission}`,
-          tool: perm.tool,
-        },
-      })
+    const dirs = recoveryDirs(ctx.getWorkspaceDirectory(), ctx.sessionDirectories)
+
+    const seen = new Set<string>()
+    for (const dir of dirs) {
+      const { data } = await ctx.client.permission.list({ directory: dir })
+      if (!data) continue
+      for (const perm of recoverablePermissions(data, ctx.trackedSessionIds, seen)) {
+        ctx.postMessage({
+          type: "permissionRequest",
+          permission: {
+            id: perm.id,
+            sessionID: perm.sessionID,
+            toolName: perm.permission,
+            patterns: perm.patterns,
+            always: perm.always,
+            args: perm.metadata,
+            message: `Permission required: ${perm.permission}`,
+            tool: perm.tool,
+          },
+        })
+      }
     }
   } catch (error) {
     console.error("[Kilo New] KiloProvider: Failed to fetch pending permissions:", error)

@@ -8,7 +8,7 @@ import { lazy } from "@/util/lazy"
 import { Config } from "../config/config" // kilocode_change
 import { ModelCache } from "./model-cache" // kilocode_change
 import { Auth } from "../auth" // kilocode_change
-import { KILO_OPENROUTER_BASE } from "@kilocode/kilo-gateway" // kilocode_change
+import { AI_SDK_PROVIDERS, KILO_OPENROUTER_BASE, PROMPTS } from "@kilocode/kilo-gateway" // kilocode_change
 import { Filesystem } from "../util/filesystem"
 
 // Try to import bundled snapshot (generated at build time)
@@ -29,7 +29,9 @@ const normalizeKiloBaseURL = (baseURL: string | undefined, orgId: string | undef
   return `${trimmed}/api/openrouter`
 }
 
-export const Prompt = z.enum(["codex", "gemini", "beast", "anthropic", "trinity", "anthropic_without_todo"])
+export const Prompt = z.enum(PROMPTS)
+
+export const AiSdkProvider = z.enum(AI_SDK_PROVIDERS)
 // kilocode_change end
 
 export namespace ModelsDev {
@@ -87,6 +89,7 @@ export namespace ModelsDev {
     recommendedIndex: z.number().optional(),
     prompt: Prompt.optional().catch(undefined),
     isFree: z.boolean().optional(),
+    ai_sdk_provider: AiSdkProvider.optional().catch(undefined),
     // kilocode_change end
 
     experimental: z.boolean().optional(),
@@ -136,8 +139,15 @@ export namespace ModelsDev {
     }
 
     // Inject kilo provider with dynamic model fetching
-    if (!providers["kilo"]) {
-      const config = await Config.get()
+    // Skip injection entirely when enabled_providers is set and doesn't include "kilo",
+    // or when "kilo" is in disabled_providers. This prevents unnecessary network calls
+    // to the Kilo API for teams using only their own providers (e.g. LiteLLM).
+    const config = await Config.get()
+    const disabled = new Set(config.disabled_providers ?? [])
+    const enabled = config.enabled_providers ? new Set(config.enabled_providers) : null
+    const kiloAllowed = (!enabled || enabled.has("kilo")) && !disabled.has("kilo")
+
+    if (kiloAllowed && !providers["kilo"]) {
       const kiloOptions = config.provider?.kilo?.options
       // kilocode_change start - resolve org ID from auth (OAuth accountId) not just config
       const kiloAuth = await Auth.get("kilo")

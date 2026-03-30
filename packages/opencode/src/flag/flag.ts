@@ -57,7 +57,6 @@ export namespace Flag {
   export const KILO_EXPERIMENTAL_MARKDOWN = !falsy("KILO_EXPERIMENTAL_MARKDOWN")
   export const KILO_MODELS_URL = process.env["KILO_MODELS_URL"]
   export const KILO_MODELS_PATH = process.env["KILO_MODELS_PATH"]
-  export const KILO_DISABLE_CHANNEL_DB = truthy("KILO_DISABLE_CHANNEL_DB")
   export const KILO_SKIP_MIGRATIONS = truthy("KILO_SKIP_MIGRATIONS")
 
   function number(key: string) {
@@ -66,6 +65,8 @@ export namespace Flag {
     const parsed = Number(value)
     return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined
   }
+
+  export const KILO_SESSION_RETRY_LIMIT = number("KILO_SESSION_RETRY_LIMIT")
 }
 
 // Dynamic getter for KILO_DISABLE_PROJECT_CONFIG

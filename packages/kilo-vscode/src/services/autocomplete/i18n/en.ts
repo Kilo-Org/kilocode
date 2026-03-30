@@ -41,4 +41,9 @@ export const dict = {
     "The Kilo Code Autocomplete is being blocked by a conflict with GitHub Copilot. To fix this, you must disable Copilot's inline suggestions.",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "Disable Copilot",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "Disable Autocomplete",
+  "kilocode:autocomplete.creditsExhausted.message":
+    "Kilo Code Autocomplete has been paused because your account has no remaining credits. Add credits to resume autocomplete.",
+  "kilocode:autocomplete.creditsExhausted.addCredits": "Add Credits",
+  "kilocode:autocomplete.authError.message":
+    "Kilo Code Autocomplete has been paused due to an authentication error. Please sign in again.",
 }

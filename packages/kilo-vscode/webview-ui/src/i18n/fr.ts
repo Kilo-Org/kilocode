@@ -268,6 +268,7 @@ export const dict = {
   "mcp.status.connected": "connecté",
   "mcp.status.failed": "échoué",
   "mcp.status.needs_auth": "nécessite auth",
+  "mcp.status.needs_registration": "nécessite enregistrement client",
   "mcp.status.disabled": "désactivé",
 
   "dialog.fork.empty": "Aucun message à partir duquel bifurquer",
@@ -366,6 +367,7 @@ export const dict = {
   "language.br": "Português (Brasil)",
   "language.bs": "Bosanski",
   "language.th": "ไทย",
+  "language.tr": "Türkçe",
 
   "toast.theme.title": "Thème changé",
   "toast.scheme.title": "Schéma de couleurs",
@@ -761,6 +763,20 @@ export const dict = {
   "provider.custom.models.name.placeholder": "Nom d'affichage",
   "provider.custom.models.remove": "Supprimer le modèle",
   "provider.custom.models.add": "Ajouter un modèle",
+  "provider.custom.models.fetch": "Récupérer les modèles",
+  "provider.custom.models.fetching": "Récupération\u2026",
+  "provider.custom.models.fetch.error": "Échec de la récupération des modèles : {{error}}",
+  "provider.custom.models.fetch.authError": "Échec de l'authentification. Vérifiez la clé API ci-dessus et réessayez.",
+  "provider.custom.models.fetch.empty": "Aucun modèle trouvé sur ce serveur.",
+  "provider.custom.models.fetch.added": "{{count}} modèle(s) ajouté(s).",
+  "provider.custom.models.fetch.allExist": "Tous les modèles récupérés sont déjà ajoutés.",
+  "provider.custom.models.fetch.selectAll": "Tout sélectionner",
+  "provider.custom.models.fetch.deselectAll": "Tout désélectionner",
+  "provider.custom.models.fetch.found": "{{count}} modèles trouvés",
+  "provider.custom.models.fetch.showing": "Affichage de {{shown}} sur {{total}}",
+  "provider.custom.models.fetch.search": "Rechercher des modèles\u2026",
+  "provider.custom.models.fetch.add": "Ajouter {{count}} modèle(s)",
+  "provider.custom.edit.title": "Modifier le fournisseur",
   "provider.custom.headers.label": "En-têtes (optionnel)",
   "provider.custom.headers.key.label": "En-tête",
   "provider.custom.headers.key.placeholder": "Header-Name",
@@ -836,8 +852,11 @@ export const dict = {
   "session.delete.button": "Supprimer la session",
   "session.untitled": "Sans titre",
   "session.recent": "Récentes",
+  "session.showHistory": "Afficher l'historique",
   "session.search.placeholder": "Rechercher des sessions...",
   "session.empty": "Aucune session pour l'instant. Cliquez + pour démarrer une nouvelle conversation.",
+  "session.tab.local": "Local",
+  "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Uniquement ce dépôt",
   "session.cloud.import": "Importer depuis le cloud",
   "feedback.button": "Commentaires & support",
@@ -919,8 +938,7 @@ export const dict = {
   "settings.autocomplete.title": "Autocomplétion",
   "settings.notifications.title": "Notifications",
   "settings.context.title": "Contexte",
-  "settings.terminal.title": "Terminal",
-  "settings.prompts.title": "Prompts",
+
   "settings.experimental.title": "Expérimental",
   "settings.language.title": "Langue",
   "settings.aboutKiloCode.title": "À propos de Kilo Code",
@@ -973,6 +991,20 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Réinitialiser tous les paramètres de l'extension Kilo Code à leurs valeurs par défaut. Cela n'affecte pas la configuration CLI ou backend.",
   "settings.aboutKiloCode.resetSettings.button": "Réinitialiser tous les paramètres",
+  "settings.aboutKiloCode.settingsTransfer.title": "Transfert des paramètres",
+  "settings.aboutKiloCode.settingsTransfer.description":
+    "Exportez ou importez vos paramètres pour les transférer entre instances VS Code.",
+  "settings.aboutKiloCode.exportSettings": "Exporter",
+  "settings.aboutKiloCode.importSettings": "Importer",
+  "settings.aboutKiloCode.importSettings.invalidJson":
+    "Fichier JSON invalide. Veuillez sélectionner un fichier de paramètres valide.",
+  "settings.aboutKiloCode.importSettings.invalidConfig": "Le fichier ne contient pas de paramètres Kilo valides.",
+  "settings.aboutKiloCode.importSettings.tooLarge":
+    "Le fichier est trop volumineux. Les fichiers de paramètres doivent faire moins de 1 MB.",
+  "settings.aboutKiloCode.importSettings.newerVersion":
+    "Ce fichier a été exporté depuis une version plus récente de Kilo. Certains paramètres pourraient être ignorés.",
+  "settings.aboutKiloCode.importSettings.success":
+    "Paramètres importés. Vérifiez les modifications ci-dessus, puis cliquez sur Enregistrer.",
 
   "settings.agentBehaviour.subtab.modes": "Modes",
   "settings.agentBehaviour.subtab.agents": "Agents",
@@ -998,8 +1030,7 @@ export const dict = {
 
   "common.add": "Ajouter",
   "common.choose": "Choisir…",
-  "settings.notImplemented": "Cette section n'est pas encore implémentée.",
-  "settings.notImplemented.description": "Elle contiendra des options de configuration et du texte explicatif.",
+
   "settings.autocomplete.autoTrigger.title": "Activer la complétion automatique en ligne",
   "settings.autocomplete.autoTrigger.description":
     "Afficher automatiquement les suggestions de complétion lors de la saisie",
@@ -1061,11 +1092,52 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Paramètre d'échantillonnage nucleus (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Étapes max.",
   "settings.agentBehaviour.maxSteps.description": "Itérations maximales de l'agent",
+  "settings.agentBehaviour.hidden.title": "Masqué",
+  "settings.agentBehaviour.hidden.description": "Masquer cet agent du sélecteur de mode dans la saisie du chat",
+  "settings.agentBehaviour.disable.title": "Désactivé",
+  "settings.agentBehaviour.disable.description": "Désactiver complètement cet agent — il n'apparaîtra nulle part",
+  "settings.agentBehaviour.badge.hidden": "masqué",
+  "settings.agentBehaviour.badge.disabled": "désactivé",
   "settings.agentBehaviour.discoveredSkills": "Compétences découvertes",
   "settings.agentBehaviour.noSkillsFound":
     "Aucune compétence découverte. Ajoutez des chemins de dossiers ou des URLs ci-dessous pour rendre les compétences disponibles.",
   "settings.agentBehaviour.availableModes": "Modes personnalisés disponibles",
   "settings.agentBehaviour.noModesFound": "Aucun mode trouvé.",
+  "settings.agentBehaviour.createMode": "Créer un nouveau mode",
+  "settings.agentBehaviour.createMode.name": "Nom",
+  "settings.agentBehaviour.createMode.name.placeholder": "ex : reviewer",
+  "settings.agentBehaviour.createMode.name.description":
+    "Identifiant unique du mode. Utilisez uniquement des minuscules, des chiffres et des tirets.",
+  "settings.agentBehaviour.createMode.description": "Description",
+  "settings.agentBehaviour.createMode.description.placeholder":
+    "ex : Examine le code pour la qualité et les meilleures pratiques",
+  "settings.agentBehaviour.createMode.description.help": "Brève description de ce que fait ce mode.",
+  "settings.agentBehaviour.createMode.prompt": "Prompt système",
+  "settings.agentBehaviour.createMode.prompt.placeholder":
+    "ex : Vous êtes un relecteur de code. Concentrez-vous sur la qualité, les bonnes pratiques et les bugs potentiels.",
+  "settings.agentBehaviour.createMode.prompt.help": "Instructions pour l'agent IA lors de l'utilisation de ce mode.",
+  "settings.agentBehaviour.createMode.button": "Créer",
+  "settings.agentBehaviour.createMode.cancel": "Annuler",
+  "settings.agentBehaviour.createMode.nameRequired": "Le nom est requis",
+  "settings.agentBehaviour.createMode.nameInvalid":
+    "Le nom ne doit contenir que des minuscules, des chiffres et des tirets",
+  "settings.agentBehaviour.createMode.nameTaken": "Un mode avec ce nom existe déjà",
+  "settings.agentBehaviour.importMode": "Importer",
+  "settings.agentBehaviour.importMode.invalidName":
+    "Nom de mode invalide dans le fichier. Le nom doit commencer par une lettre minuscule et ne contenir que des lettres minuscules, des chiffres et des tirets.",
+  "settings.agentBehaviour.importMode.nameTaken": "Un mode avec ce nom existe déjà.",
+  "settings.agentBehaviour.importMode.invalidJson":
+    "Fichier JSON invalide. Veuillez sélectionner un fichier de définition d'agent valide.",
+  "settings.agentBehaviour.importMode.tooLarge":
+    "Le fichier est trop volumineux. Les définitions d'agent doivent faire moins de 1 Mo.",
+  "settings.agentBehaviour.exportMode": "Exporter la définition de l'agent",
+  "settings.agentBehaviour.editMode": "Modifier le mode",
+  "settings.agentBehaviour.editMode.description": "Description",
+  "settings.agentBehaviour.editMode.prompt": "Prompt système",
+  "settings.agentBehaviour.editMode.save": "Terminé",
+  "settings.agentBehaviour.editMode.back": "Retour à la liste",
+  "settings.agentBehaviour.editMode.native": "Mode intégré (définition en lecture seule)",
+  "settings.agentBehaviour.editMode.promptOverride": "Remplacement de prompt personnalisé pour ce mode intégré",
   "settings.agentBehaviour.removeMode.title": "Supprimer le mode",
   "settings.agentBehaviour.removeMode.confirm":
     'Supprimer le mode "{{name}}" ? Cela désactivera le mode en mettant à jour votre configuration.',
@@ -1074,19 +1146,44 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.confirm":
     'Supprimer le serveur MCP "{{name}}" ? Cela le supprimera de votre configuration.',
   "settings.agentBehaviour.removeMcp.button": "Supprimer",
+  "settings.agentBehaviour.editMcp": "Modifier le serveur MCP",
+  "settings.agentBehaviour.editMcp.transportLocal": "Serveur local (transport stdio)",
+  "settings.agentBehaviour.editMcp.transportRemote": "Serveur distant (transport SSE/HTTP)",
+  "settings.agentBehaviour.editMcp.env": "Variables d'environnement",
+  "settings.agentBehaviour.editMcp.env.help": "Variables transmises au processus du serveur MCP.",
+  "settings.agentBehaviour.addMcp.command": "Commande",
+  "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
+  "settings.agentBehaviour.addMcp.args": "Arguments",
+  "settings.agentBehaviour.addMcp.args.help":
+    "Un argument par ligne. Les chemins avec des espaces sont conservés tels quels.",
+  "settings.agentBehaviour.addMcp.args.placeholder": "e.g.\n-y\n@modelcontextprotocol/server-filesystem\n/tmp",
+  "settings.agentBehaviour.addMcp.url": "URL du serveur",
+  "settings.agentBehaviour.addMcp.url.placeholder": "e.g. http://localhost:3000/sse",
   "settings.agentBehaviour.skillPaths": "Chemins des dossiers de compétences",
   "settings.agentBehaviour.skillUrls": "URLs de compétences",
   "settings.agentBehaviour.removeSkill.title": "Supprimer la compétence",
   "settings.agentBehaviour.removeSkill.confirm":
     'Supprimer la compétence "{{name}}" ? Cela supprimera les fichiers de la compétence du disque.',
   "settings.agentBehaviour.removeSkill.button": "Supprimer",
+  "settings.agentBehaviour.rules.description":
+    "Les règles sont des fichiers d'instructions qui guident le comportement de l'agent. Elles sont incluses dans le prompt système pour chaque conversation. Ajoutez des chemins de fichiers ci-dessous pour inclure des règles supplémentaires.",
   "settings.agentBehaviour.instructionFiles": "Fichiers d'instructions supplémentaires",
   "settings.agentBehaviour.instructionFiles.description": "Chemins vers des fichiers d'instructions supplémentaires",
+  "settings.agentBehaviour.mcpDetail.command": "Commande",
+  "settings.agentBehaviour.mcpDetail.args": "Arguments",
+  "settings.agentBehaviour.mcpDetail.env": "Environnement",
+  "settings.agentBehaviour.mcpDetail.disabled": "Ce serveur est désactivé.",
   "settings.agentBehaviour.mcpEmpty":
-    "Aucun serveur MCP configuré. Modifiez le fichier de configuration opencode pour ajouter des serveurs MCP.",
+    "Aucun serveur MCP configuré. Ajoutez des serveurs MCP dans kilo.jsonc ou demandez à l'agent de les ajouter.",
   "settings.agentBehaviour.workflowsPlaceholder":
     "Les workflows sont gérés via les fichiers de workflow dans votre espace de travail.",
-  "settings.agentBehaviour.notImplemented": "Pas encore implémenté.",
+  "settings.agentBehaviour.workflows.description":
+    "Les workflows sont des commandes slash personnalisées définies dans votre configuration. Tapez /command-name dans le chat pour les invoquer. Les commandes sont configurées dans opencode.json dans la section 'command'.",
+  "settings.agentBehaviour.workflows.empty":
+    "Aucune commande personnalisée configurée. Ajoutez des commandes à opencode.json pour les voir ici.",
+  "settings.agentBehaviour.workflows.detail.description": "Description",
+  "settings.agentBehaviour.workflows.detail.template": "Modèle",
+
   "settings.autoApprove.description":
     "Définissez comment les outils sont autorisés à s'exécuter. La plupart des outils sont définis sur Autoriser par défaut. doom_loop et external_directory sont définis sur Demander par défaut.",
   "settings.autoApprove.level.allow": "Autoriser",
@@ -1143,7 +1240,8 @@ export const dict = {
   "settings.providers.defaultModel.title": "Modèle par défaut",
   "settings.providers.defaultModel.description": "Modèle principal pour les conversations",
   "settings.providers.smallModel.title": "Petit modèle",
-  "settings.providers.smallModel.description": "Modèle léger pour la génération de titres et tâches rapides",
+  "settings.providers.smallModel.description":
+    "Modèle léger pour la génération de titres, de messages de commit, l'amélioration de prompts et d'autres tâches rapides",
   "settings.providers.disabled": "Fournisseurs désactivés",
   "settings.providers.disabled.description": "Fournisseurs à masquer de la liste",
   "settings.providers.enabled": "Fournisseurs activés (liste blanche)",
@@ -1151,6 +1249,7 @@ export const dict = {
   "settings.providers.notSet": "Non défini (utiliser la valeur par défaut du serveur)",
   "dialog.model.notSet": "Non défini",
   "profile.personalAccount": "Compte personnel",
+  "profile.switchingAccount": "Changement de compte…",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/fr.ts
 
   "question.summary": "{{n}} sur {{total}} questions",
@@ -1224,4 +1323,8 @@ export const dict = {
   "settings.saveBar.warning.many": "Plusieurs sessions sont en cours et seront interrompues",
   "settings.saveBar.saveAnyway": "Enregistrer quand même",
   "settings.saveBar.cancel": "Annuler",
+  "notifications.action.previous": "Previous",
+  "notifications.action.next": "Next",
+  "notifications.action.close": "Close",
+  "notifications.action.tryModel": "Try model",
 }

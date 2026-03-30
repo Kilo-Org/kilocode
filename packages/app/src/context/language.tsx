@@ -127,7 +127,7 @@ const INTL: Record<Locale, string> = {
   th: "th",
   bs: "bs",
   nl: "nl",
-  
+
   tr: "tr",
 }
 
@@ -149,7 +149,6 @@ const LABEL_KEY: Record<Locale, keyof Dictionary> = {
   th: "language.th",
   bs: "language.bs",
   nl: "language.nl",
-  
   tr: "language.tr",
 }
 

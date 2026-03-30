@@ -5,13 +5,88 @@ description: "Configure Kilo Code settings and preferences"
 
 # Settings
 
+The VS Code extension can be configured through the Settings window, opened by pressing the gear icon. Both the CLI and the extension can also be configured through interactions with the agent. The current VS Code extension and CLI share the same underlying settings, so changes in one are reflected in the other.
+
+## Managing Settings
+
+{% tabs %}
+{% tab label="VSCode" %}
+
+The VS Code extension provides a **Settings webview UI** accessible from the extension sidebar by clicking the gear icon ({% codicon name="gear" /%}). The UI is organized into tabs including Providers, Auto-Approve, Models, and more.
+
+This UI reads and writes to the same underlying JSONC config files used by the CLI, so changes made in either place are reflected in both.
+
+### Config File Locations
+
+There are two primary config files:
+
+- **Global config:** `~/.config/kilo/kilo.jsonc` — applies to all projects. On Windows, this is `C:\Users\<username>\.config\kilo\kilo.jsonc`.
+- **Project config:** `kilo.jsonc` in your project root, or `.kilo/kilo.jsonc` for a cleaner setup. The `.kilo/` version takes priority if both exist.
+
+{% callout type="warning" %}
+If you check config files into version control, make sure they do not contain API keys or other secrets (e.g., `provider.*.options.apiKey`). Use environment variables for credentials instead.
+{% /callout %}
+
+### Export and Import
+
+Config files are plain-text and portable — copy them between machines and you're done.
+
+{% /tab %}
+{% tab label="CLI" %}
+
+In the CLI, settings are managed via **JSONC config files** directly. Config files are plain-text and portable -- you can copy them between machines.
+
+{% callout type="warning" %}
+If you check `kilo.jsonc` into version control, make sure it does not contain API keys or other secrets (e.g., `provider.*.options.apiKey`). Use environment variables for credentials instead.
+{% /callout %}
+
+### Config File Locations
+
+There are two primary config files:
+
+- **Global config:** `~/.config/kilo/kilo.jsonc` -- applies to all projects. On Windows, this is `C:\Users\<username>\.config\kilo\kilo.jsonc`.
+- **Project config:** `kilo.jsonc` in the root of your project -- overrides global settings for that project.
+
+Both files use the [JSONC](https://code.visualstudio.com/docs/languages/json#_json-with-comments) format (JSON with comments).
+
+### Config File Precedence
+
+Settings are resolved through an 8-level precedence system (lowest to highest priority):
+
+1. **Legacy Kilocode** -- migrated settings from the VSCode extension
+2. **Remote well-known** -- remotely fetched defaults
+3. **Global** -- `~/.config/kilo/kilo.jsonc`
+4. **Custom** -- additional custom config paths
+5. **Project** -- `kilo.jsonc` in the project root
+6. **`.kilo` directory** -- config from a `.kilo/` directory in the project
+7. **Inline environment** -- environment variable overrides
+8. **Managed / Enterprise** -- enterprise-managed configuration (highest priority)
+
+Higher-priority levels override lower ones. This allows organizations to enforce settings at the enterprise level while still letting individual developers customize their local environment.
+
+### Schema Auto-Injection
+
+When you create or open a `kilo.jsonc` file, the CLI automatically injects a `$schema` property pointing to the config JSON schema. This gives you **autocompletion and validation** in any editor that supports JSON Schema (VS Code, JetBrains, etc.).
+
+### Export and Import
+
+There is no traditional export/import of settings -- the JSONC config files themselves are portable. Copy `~/.config/kilo/kilo.jsonc` or `kilo.jsonc` to another machine and you're done.
+
+For **session** export and import, use the CLI commands:
+
+- `kilo export` -- export session data
+- `kilo import` -- import session data
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
+
 Kilo Code allows you to manage your configuration settings effectively through export, import, and reset options. These features are useful for backing up your setup, sharing configurations with others, or restoring default settings if needed.
 
 You can find these options at the bottom of the Kilo Code settings page, accessible via the gear icon ({% codicon name="gear" /%}) in the Kilo Code chat view.
 
 {% image src="/docs/img/settings-management/settings-management.png" alt="Export, Import, and Reset buttons in Kilo Code settings" width="800" caption="Export, Import, and Reset buttons" /%}
 
-## Export Settings
+### Export Settings
 
 Clicking the **Export** button saves your current Kilo Code settings to a JSON file.
 
@@ -24,7 +99,7 @@ Clicking the **Export** button saves your current Kilo Code settings to a JSON f
 
 This creates a backup of your configuration or a file you can share.
 
-## Import Settings
+### Import Settings
 
 Clicking the **Import** button allows you to load settings from a previously exported JSON file.
 
@@ -35,7 +110,7 @@ Clicking the **Import** button allows you to load settings from a previously exp
 - **Merging:** Importing settings **merges** the configurations. It adds new API profiles and updates existing ones and global settings based on the file content. It does **not** delete configurations present in your current setup but missing from the imported file.
 - **Validation:** Only valid settings matching the internal schema can be imported, preventing configuration errors. A success notification appears upon completion.
 
-## Reset Settings
+### Reset Settings
 
 Clicking the **Reset** button completely clears all Kilo Code configuration data and returns the extension to its default state. This is a destructive action intended for troubleshooting or starting fresh.
 
@@ -57,7 +132,23 @@ Clicking the **Reset** button completely clears all Kilo Code configuration data
 
 Use this option only if you are certain you want to remove all Kilo Code data or if instructed during troubleshooting. Consider exporting your settings first if you might want to restore them later.
 
+{% /tab %}
+{% /tabs %}
+
 ## Experimental Features
+
+{% tabs %}
+{% tab label="VSCode" %}
+
+The extension does not currently expose the same experimental feature toggles as the **VSCode (Legacy)** version. Advanced options are configured via the JSONC config files that the Settings webview reads and writes. Refer to the auto-generated `$schema` in your `kilo.jsonc` for the full list of available options.
+
+{% /tab %}
+{% tab label="CLI" %}
+
+The CLI does not currently expose the same experimental feature toggles as the **VSCode (Legacy)** version. Configuration of model behavior, file editing strategies, and other advanced options is handled directly in the JSONC config files. Refer to the auto-generated `$schema` in your `kilo.jsonc` for the full list of available options.
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
 
 {% callout type="info" %}
 These features are experimental and may change in future releases. They provide advanced control over Kilo Code's behavior for specific use cases.
@@ -106,3 +197,6 @@ This setting controls the number of lines read from a file in one batch. To mana
 **Default:** Set in Advanced Settings
 
 You can find this setting in the Kilo Code settings under 'Advanced Settings'.
+
+{% /tab %}
+{% /tabs %}

@@ -214,6 +214,7 @@ export interface SlashCommandInfo {
 // Agent/mode info from CLI backend
 export interface AgentInfo {
   name: string
+  displayName?: string
   description?: string
   mode: "subagent" | "primary" | "all"
   native?: boolean
@@ -251,6 +252,7 @@ export interface KilocodeNotification {
   message: string
   action?: KilocodeNotificationAction
   showIn?: string[]
+  suggestModelId?: string
 }
 
 // Profile types from kilo-gateway
@@ -320,6 +322,10 @@ export type PermissionConfig = Partial<Record<string, PermissionRule>>
 export interface AgentConfig {
   model?: string | null
   prompt?: string
+  description?: string
+  mode?: "subagent" | "primary" | "all"
+  hidden?: boolean
+  disable?: boolean
   temperature?: number
   top_p?: number
   steps?: number
@@ -348,8 +354,10 @@ export interface McpConfig {
 }
 
 export interface CommandConfig {
-  command: string
+  template: string
   description?: string
+  agent?: string
+  model?: string
 }
 
 export interface SkillsConfig {
@@ -416,6 +424,11 @@ export interface ReadyMessage {
 export interface WorkspaceDirectoryChangedMessage {
   type: "workspaceDirectoryChanged"
   directory: string
+}
+
+export interface LanguageChangedMessage {
+  type: "languageChanged"
+  locale: string
 }
 
 export interface ConnectionStateMessage {
@@ -586,6 +599,7 @@ export interface ReviewComment {
 export interface AppendReviewCommentsMessage {
   type: "appendReviewComments"
   comments: ReviewComment[]
+  autoSend?: boolean
 }
 
 export interface TriggerTaskMessage {
@@ -620,7 +634,7 @@ export interface DeviceAuthCancelledMessage {
 
 export interface NavigateMessage {
   type: "navigate"
-  view: "newTask" | "marketplace" | "history" | "cloudHistory" | "profile" | "settings" | "migration" | "subAgentViewer" // legacy-migration: "migration"
+  view: "newTask" | "marketplace" | "history" | "profile" | "settings" | "subAgentViewer"
   tab?: string
 }
 
@@ -705,6 +719,11 @@ export interface ConfigLoadedMessage {
 
 export interface ConfigUpdatedMessage {
   type: "configUpdated"
+  config: Config
+}
+
+export interface GlobalConfigLoadedMessage {
+  type: "globalConfigLoaded"
   config: Config
 }
 
@@ -800,6 +819,7 @@ export interface AgentManagerStateMessage {
   sessions: ManagedSessionState[]
   staleWorktreeIds?: string[]
   tabOrder?: Record<string, string[]>
+  worktreeOrder?: string[]
   sessionsCollapsed?: boolean
   reviewDiffStyle?: "unified" | "split"
   isGitRepo?: boolean
@@ -957,6 +977,14 @@ export interface AgentManagerLocalStatsMessage {
   stats: LocalGitStats
 }
 
+// Sidebar: Live worktree diff stats (extension → webview)
+export interface WorktreeStatsLoadedMessage {
+  type: "worktreeStatsLoaded"
+  files: number
+  additions: number
+  deletions: number
+}
+
 // Set the model for a session (extension → webview, used during multi-version creation)
 export interface AgentManagerSetSessionModelMessage {
   type: "agentManager.setSessionModel"
@@ -1024,6 +1052,18 @@ export interface MigrationResultItem {
   category: "provider" | "mcpServer" | "customMode" | "defaultModel" | "settings"
   status: "success" | "warning" | "error"
   message?: string
+}
+
+export interface MigrationStateMessage {
+  type: "migrationState"
+  needed: boolean
+  data?: {
+    providers: MigrationProviderInfo[]
+    mcpServers: MigrationMcpServerInfo[]
+    customModes: MigrationCustomModeInfo[]
+    defaultModel?: { provider: string; model: string }
+    settings?: LegacySettings
+  }
 }
 
 export interface LegacyMigrationDataMessage {
@@ -1196,6 +1236,15 @@ export interface ProviderActionErrorMessage {
   message: string
 }
 
+export interface CustomProviderModelsFetchedMessage {
+  type: "customProviderModelsFetched"
+  requestId: string
+  models?: Array<{ id: string; name: string }>
+  error?: string
+  /** True when error was HTTP 401/403 — hints the user to check their API key */
+  auth?: boolean
+}
+
 export type ExtensionMessage =
   | ReadyMessage
   | ConnectionStateMessage
@@ -1237,6 +1286,7 @@ export type ExtensionMessage =
   | BrowserSettingsLoadedMessage
   | ConfigLoadedMessage
   | ConfigUpdatedMessage
+  | GlobalConfigLoadedMessage
   | NotificationSettingsLoadedMessage
   | NotificationsLoadedMessage
   | AgentManagerSessionMetaMessage
@@ -1270,6 +1320,7 @@ export type ExtensionMessage =
   | AgentManagerWorktreeStatsMessage
   | AgentManagerLocalStatsMessage
   // legacy-migration start
+  | MigrationStateMessage
   | LegacyMigrationDataMessage
   | LegacyMigrationProgressMessage
   | LegacyMigrationCompleteMessage
@@ -1286,7 +1337,12 @@ export type ExtensionMessage =
   | ProviderConnectedMessage
   | ProviderDisconnectedMessage
   | ProviderActionErrorMessage
+  | CustomProviderModelsFetchedMessage
   | RecentsLoadedMessage
+  | LanguageChangedMessage
+  | ContinueInWorktreeProgressMessage
+  | WorktreeStatsLoadedMessage
+  | McpStatusLoadedMessage
 
 // ============================================
 // Messages FROM webview TO extension
@@ -1475,6 +1531,30 @@ export interface RemoveMcpMessage {
   name: string
 }
 
+export interface RequestMcpStatusMessage {
+  type: "requestMcpStatus"
+}
+
+export interface ConnectMcpMessage {
+  type: "connectMcp"
+  name: string
+}
+
+export interface DisconnectMcpMessage {
+  type: "disconnectMcp"
+  name: string
+}
+
+export interface McpStatusEntry {
+  status: "connected" | "disabled" | "failed" | "needs_auth" | "needs_client_registration"
+  error?: string
+}
+
+export interface McpStatusLoadedMessage {
+  type: "mcpStatusLoaded"
+  status: Record<string, McpStatusEntry>
+}
+
 export interface SetLanguageRequest {
   type: "setLanguage"
   locale: string
@@ -1542,6 +1622,10 @@ export interface RequestConfigMessage {
   type: "requestConfig"
 }
 
+export interface RequestGlobalConfigMessage {
+  type: "requestGlobalConfig"
+}
+
 export interface UpdateConfigMessage {
   type: "updateConfig"
   config: Partial<Config>
@@ -1572,6 +1656,7 @@ export interface DismissNotificationMessage {
 export interface SyncSessionRequest {
   type: "syncSession"
   sessionID: string
+  parentSessionID?: string
 }
 
 // Agent Manager worktree messages
@@ -1612,6 +1697,12 @@ export interface RemoveStaleWorktreeRequest {
 // Promote a session: create a worktree and move the session into it
 export interface PromoteSessionRequest {
   type: "agentManager.promoteSession"
+  sessionId: string
+}
+
+// Open an unassigned session locally (clear any worktree directory override)
+export interface OpenLocallyRequest {
+  type: "agentManager.openLocally"
   sessionId: string
 }
 
@@ -1720,6 +1811,12 @@ export interface CreateMultiVersionRequest {
 export interface SetTabOrderRequest {
   type: "agentManager.setTabOrder"
   key: string
+  order: string[]
+}
+
+// Persist sidebar worktree order
+export interface SetWorktreeOrderRequest {
+  type: "agentManager.setWorktreeOrder"
   order: string[]
 }
 
@@ -1883,6 +1980,14 @@ export interface SaveCustomProviderMessage {
   apiKey?: string
 }
 
+export interface FetchCustomProviderModelsMessage {
+  type: "fetchCustomProviderModels"
+  requestId: string
+  baseURL: string
+  apiKey?: string
+  headers?: Record<string, string>
+}
+
 export interface PersistRecentsRequest {
   type: "persistRecents"
   recents: ModelSelection[]
@@ -1890,6 +1995,29 @@ export interface PersistRecentsRequest {
 
 export interface RequestRecentsMessage {
   type: "requestRecents"
+}
+
+// Continue in Worktree: transfer sidebar session + git state to an isolated worktree
+export interface ContinueInWorktreeRequest {
+  type: "continueInWorktree"
+  sessionId: string
+}
+
+export type ContinueInWorktreeStatus =
+  | "capturing"
+  | "creating"
+  | "setup"
+  | "transferring"
+  | "forking"
+  | "done"
+  | "error"
+
+// Continue in Worktree: progress updates (extension → webview)
+export interface ContinueInWorktreeProgressMessage {
+  type: "continueInWorktreeProgress"
+  status: ContinueInWorktreeStatus
+  detail?: string
+  error?: string
 }
 
 export type WebviewMessage =
@@ -1922,6 +2050,9 @@ export type WebviewMessage =
   | RemoveSkillMessage
   | RemoveModeMessage
   | RemoveMcpMessage
+  | RequestMcpStatusMessage
+  | ConnectMcpMessage
+  | DisconnectMcpMessage
   | SetLanguageRequest
   | QuestionReplyRequest
   | QuestionRejectRequest
@@ -1935,6 +2066,7 @@ export type WebviewMessage =
   | UpdateSettingRequest
   | RequestBrowserSettingsMessage
   | RequestConfigMessage
+  | RequestGlobalConfigMessage
   | UpdateConfigMessage
   | RequestNotificationSettingsMessage
   | ResetAllSettingsRequest
@@ -1947,6 +2079,7 @@ export type WebviewMessage =
   | DeleteWorktreeRequest
   | RemoveStaleWorktreeRequest
   | PromoteSessionRequest
+  | OpenLocallyRequest
   | AddSessionToWorktreeRequest
   | ForkSessionRequest
   | CloseSessionRequest
@@ -1962,6 +2095,7 @@ export type WebviewMessage =
   | AgentManagerOpenFileRequest
   | CreateMultiVersionRequest
   | SetTabOrderRequest
+  | SetWorktreeOrderRequest
   | SetSessionsCollapsedRequest
   | SetReviewDiffStyleRequest
   | PersistVariantRequest
@@ -2001,8 +2135,10 @@ export type WebviewMessage =
   | CompleteProviderOAuthMessage
   | DisconnectProviderMessage
   | SaveCustomProviderMessage
+  | FetchCustomProviderModelsMessage
   | PersistRecentsRequest
   | RequestRecentsMessage
+  | ContinueInWorktreeRequest
 
 // ============================================
 // VS Code API type

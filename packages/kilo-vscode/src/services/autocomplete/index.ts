@@ -1,5 +1,6 @@
 import * as vscode from "vscode"
 import { AutocompleteServiceManager } from "./AutocompleteServiceManager"
+import { ensureBackendForAutocomplete } from "./ensure-backend"
 import type { KiloConnectionService } from "../cli-backend"
 
 export const registerAutocompleteProvider = (
@@ -49,10 +50,12 @@ export const registerAutocompleteProvider = (
     }),
   )
 
-  // Re-load when autocomplete settings change (e.g. toggled from webview or VS Code settings UI)
+  // Re-load when autocomplete settings change (e.g. toggled from webview or VS Code settings UI).
+  // Also ensure the CLI backend is running when autocomplete gets enabled.
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration("kilo-code.new.autocomplete")) {
+        ensureBackendForAutocomplete(connectionService)
         void autocompleteManager.load()
       }
     }),

@@ -41,10 +41,10 @@ export const CodeWithAiNav: NavSection[] = [
         children: "Free & Budget Models",
       },
       {
-        href: "/code-with-ai/agents/using-modes",
-        children: "Modes",
+        href: "/code-with-ai/agents/using-agents",
+        children: "Agents",
         subLinks: [
-          { href: "/code-with-ai/agents/using-modes", children: "Using Modes" },
+          { href: "/code-with-ai/agents/using-agents", children: "Using Agents" },
           {
             href: "/code-with-ai/agents/orchestrator-mode",
             children: "Orchestrator Mode",

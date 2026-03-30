@@ -374,6 +374,24 @@ async function migrateProvider(
     return { item: profileName, category: "provider", status: "warning", message: "No API key found in profile" }
   }
 
+  // The profile endpoint requires type:"oauth". The legacy extension stored the same Kilo
+  // API token — write it in the OAuth format the new extension expects (matching device-auth:
+  // access + refresh + 1-year expiry).
+  if (mapping.id === "kilo") {
+    const org = mapping.organizationIdField ? (settings[mapping.organizationIdField] as string | undefined) : undefined
+    await client.auth.set({
+      providerID: "kilo",
+      auth: {
+        type: "oauth" as const,
+        access: apiKey,
+        refresh: apiKey,
+        expires: Date.now() + 365 * 24 * 60 * 60 * 1000,
+        accountId: org,
+      },
+    })
+    return { item: profileName, category: "provider", status: "success" }
+  }
+
   // For providers that support an organization ID (e.g. Kilo Gateway), migrate using OAuth
   // auth so the CLI can read accountId for org-scoped API requests.
   const organizationId = mapping.organizationIdField

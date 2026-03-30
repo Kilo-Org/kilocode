@@ -68,6 +68,7 @@ interface StateMessage {
   sessions: ManagedSession[]
   staleWorktreeIds?: string[]
   tabOrder?: Record<string, string[]>
+  worktreeOrder?: string[]
   sessionsCollapsed?: boolean
   reviewDiffStyle?: "unified" | "split"
   isGitRepo?: boolean
@@ -237,6 +238,11 @@ interface PromoteSessionIn {
   sessionId: string
 }
 
+interface OpenLocallyIn {
+  type: "agentManager.openLocally"
+  sessionId: string
+}
+
 interface AddSessionToWorktreeIn {
   type: "agentManager.addSessionToWorktree"
   worktreeId: string
@@ -304,6 +310,11 @@ interface RequestBranchesIn {
 interface SetTabOrderIn {
   type: "agentManager.setTabOrder"
   key: string
+  order: string[]
+}
+
+interface SetWorktreeOrderIn {
+  type: "agentManager.setWorktreeOrder"
   order: string[]
 }
 
@@ -420,12 +431,18 @@ interface AbortIn {
   sessionID: string
 }
 
+interface ContinueInWorktreeIn {
+  type: "continueInWorktree"
+  sessionId: string
+}
+
 /** All messages the Agent Manager expects from the webview (onMessage input). */
 export type AgentManagerInMessage =
   | CreateWorktreeIn
   | DeleteWorktreeIn
   | RemoveStaleWorktreeIn
   | PromoteSessionIn
+  | OpenLocallyIn
   | AddSessionToWorktreeIn
   | CloseSessionIn
   | ForkSessionIn
@@ -440,6 +457,7 @@ export type AgentManagerInMessage =
   | RequestStateIn
   | RequestBranchesIn
   | SetTabOrderIn
+  | SetWorktreeOrderIn
   | SetSessionsCollapsedIn
   | SetReviewDiffStyleIn
   | SetDefaultBaseBranchIn
@@ -460,3 +478,4 @@ export type AgentManagerInMessage =
   | LoadMessagesIn
   | ClearSessionIn
   | AbortIn
+  | ContinueInWorktreeIn

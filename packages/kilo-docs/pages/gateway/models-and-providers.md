@@ -82,11 +82,11 @@ Routes to the most capable paid models optimizing for cost, performance, and cap
 
 Follows the same mode-based routing as Frontier but uses more cost-effective models.
 
-| Mode                                                           | Resolved Model              |
-| -------------------------------------------------------------- | --------------------------- |
-| `plan`, `general`, `architect`, `orchestrator`, `ask`, `debug` | `moonshotai/kimi-k2.5`      |
-| `build`, `explore`, `code`                                     | `minimax/minimax-m2.5:free` |
-| Default (no mode specified)                                    | `minimax/minimax-m2.5:free` |
+| Mode                                                           | Resolved Model         |
+| -------------------------------------------------------------- | ---------------------- |
+| `plan`, `general`, `architect`, `orchestrator`, `ask`, `debug` | `moonshotai/kimi-k2.5` |
+| `build`, `explore`, `code`                                     | `minimax/minimax-m2.7` |
+| Default (no mode specified)                                    | `minimax/minimax-m2.7` |
 
 ### `kilo-auto/free`
 

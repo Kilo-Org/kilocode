@@ -8,12 +8,13 @@
   font-size: 13px;
   color: var(--vscode-foreground);
   -webkit-font-smoothing: antialiased;
-  overflow: hidden;
+  overflow-y: auto;
   padding: 16px;
 }
 
 .migration-wizard__container {
-  width: 520px;
+  max-width: 520px;
+  width: 100%;
 }
 
 /* Screen transitions */

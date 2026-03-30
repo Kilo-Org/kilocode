@@ -159,6 +159,7 @@ const defaultProps = {
   active: false,
   pendingDelete: false,
   busy: false,
+  working: false,
   stale: false,
   shortcut: 2,
   sessions: 1,
@@ -169,6 +170,7 @@ const defaultProps = {
   renaming: false,
   renameValue: "",
   closeKeybind: "⌘⇧W",
+  openKeybind: "⌘⇧O",
   onClick: noop,
   onDelete: noop,
   onStartRename: noop,
@@ -176,6 +178,8 @@ const defaultProps = {
   onCommitRename: noop,
   onCancelRename: noop,
   onRemoveStale: noop,
+  onCopyPath: noop,
+  onOpen: noop,
 }
 
 // ---------------------------------------------------------------------------

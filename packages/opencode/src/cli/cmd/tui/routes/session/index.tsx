@@ -1222,6 +1222,8 @@ export function Session() {
             </box>
           </Show>
           <Toast />
+          {/* kilocode_change */}
+          <Footer />
         </box>
         <Show when={sidebarVisible()}>
           <Switch>

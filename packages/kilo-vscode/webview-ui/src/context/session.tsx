@@ -40,6 +40,7 @@ import type {
   ExtensionMessage,
   FileAttachment,
   SendMessageFailedMessage,
+  McpStatusEntry,
 } from "../types/messages"
 import { removeSessionPermissions, upsertPermission } from "./permission-queue"
 import { computeStatus, calcTotalCost, calcContextUsage } from "./session-utils"
@@ -137,6 +138,13 @@ interface SessionContextValue {
   agents: Accessor<AgentInfo[]>
   removeMode: (name: string) => void
   removeMcp: (name: string) => void
+
+  // MCP server status (runtime connect/disconnect)
+  mcpStatus: Accessor<Record<string, McpStatusEntry>>
+  mcpLoading: Accessor<string | null>
+  connectMcp: (name: string) => void
+  disconnectMcp: (name: string) => void
+  refreshMcpStatus: () => void
   selectedAgent: Accessor<string>
   selectAgent: (name: string) => void
   getSessionAgent: (sessionID: string) => string
@@ -153,6 +161,9 @@ interface SessionContextValue {
   revert: Accessor<SessionInfo["revert"]>
   revertedCount: Accessor<number>
   summary: Accessor<SessionInfo["summary"]>
+
+  // Live worktree diff stats (polled from CLI backend)
+  worktreeStats: Accessor<{ files: number; additions: number; deletions: number } | undefined>
 
   // Actions
   revertSession: (messageID: string) => void
@@ -244,11 +255,14 @@ export const SessionProvider: ParentComponent = (props) => {
     if (pendingAgentSelection() === name) {
       setPendingAgentSelection(null)
     }
-    for (const sid of Object.keys(store.agentSelections)) {
-      if (store.agentSelections[sid] === name) {
-        setStore("agentSelections", sid, undefined as unknown as string)
-      }
-    }
+    setStore(
+      "agentSelections",
+      produce((selections) => {
+        for (const sid of Object.keys(selections)) {
+          if (selections[sid] === name) delete selections[sid]
+        }
+      }),
+    )
 
     vscode.postMessage({ type: "removeMode", name })
   }
@@ -257,11 +271,38 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "removeMcp", name })
   }
 
+  // MCP runtime status
+  const [mcpStatus, setMcpStatus] = createSignal<Record<string, McpStatusEntry>>({})
+  const [mcpLoading, setMcpLoading] = createSignal<string | null>(null)
+
+  const connectMcp = (name: string) => {
+    if (mcpLoading()) return
+    if (!server.isConnected()) return
+    setMcpLoading(name)
+    vscode.postMessage({ type: "connectMcp", name })
+  }
+
+  const disconnectMcp = (name: string) => {
+    if (mcpLoading()) return
+    if (!server.isConnected()) return
+    setMcpLoading(name)
+    vscode.postMessage({ type: "disconnectMcp", name })
+  }
+
+  const refreshMcpStatus = () => {
+    vscode.postMessage({ type: "requestMcpStatus" })
+  }
+
   // Pending agent selection for before a session exists
   const [pendingAgentSelection, setPendingAgentSelection] = createSignal<string | null>(null)
 
   // Cloud session preview state
   const [cloudPreviewId, setCloudPreviewId] = createSignal<string | null>(null)
+
+  // Live worktree diff stats from extension polling
+  const [worktreeStats, setWorktreeStats] = createSignal<
+    { files: number; additions: number; deletions: number } | undefined
+  >()
 
   // Tracks optimistic messageIDs that haven't been confirmed by the server yet.
   // Prevents handleMessagesLoaded from wiping them when it replaces the array.
@@ -342,11 +383,18 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function applyModel(agentName: string, selection: ModelSelection) {
-    setUserSetAgents((prev) => ({ ...prev, [agentName]: true }))
-    setStore("modelSelections", agentName, selection)
     pushRecent(selection)
     const sid = currentSessionID()
-    if (sid) setStore("sessionOverrides", sid, selection)
+    if (sid) {
+      // Per-session only — do NOT mutate the global modelSelections map.
+      // Writing globally here would cause every other session (that hasn't
+      // set its own override) to inherit this session's model.
+      setStore("sessionOverrides", sid, selection)
+    } else {
+      // No active session (sidebar) — write globally
+      setUserSetAgents((prev) => ({ ...prev, [agentName]: true }))
+      setStore("modelSelections", agentName, selection)
+    }
   }
 
   function selectModel(providerID: string, modelID: string) {
@@ -402,10 +450,24 @@ export const SessionProvider: ParentComponent = (props) => {
     }
     setAgents(message.agents)
     setDefaultAgent(message.defaultAgent)
-    // Initialize pending agent if not yet set by the user
-    if (!pendingAgentSelection()) {
+
+    const names = new Set(message.agents.map((a) => a.name))
+
+    // Reset pending selection if the agent no longer exists (e.g. after org switch)
+    const pending = pendingAgentSelection()
+    if (!pending || !names.has(pending)) {
       setPendingAgentSelection(message.defaultAgent)
     }
+
+    // Clear per-session selections that reference a mode no longer available
+    setStore(
+      "agentSelections",
+      produce((selections) => {
+        for (const sid of Object.keys(selections)) {
+          if (selections[sid] && !names.has(selections[sid]!)) delete selections[sid]
+        }
+      }),
+    )
   })
 
   // Request agents in case the initial push was missed.
@@ -442,10 +504,32 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "removeSkill", location })
   }
 
+  // MCP status loaded from CLI backend
+  const unsubMcpStatus = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type === "mcpStatusLoaded") {
+      setMcpStatus(message.status)
+      setMcpLoading(null)
+    }
+  })
+
+  // Request MCP status on init with retry (same pattern as agents)
+  let mcpRetries = 0
+  vscode.postMessage({ type: "requestMcpStatus" })
+  const mcpRetryTimer = setInterval(() => {
+    mcpRetries++
+    if (Object.keys(mcpStatus()).length > 0 || mcpRetries >= 5) {
+      clearInterval(mcpRetryTimer)
+      return
+    }
+    vscode.postMessage({ type: "requestMcpStatus" })
+  }, 500)
+
   onCleanup(() => {
     unsubAgents()
     unsubSkills()
+    unsubMcpStatus()
     clearInterval(agentRetryTimer)
+    clearInterval(mcpRetryTimer)
   })
 
   // Variant (thinking effort) selection — keyed by "providerID/modelID"
@@ -611,6 +695,10 @@ export const SessionProvider: ParentComponent = (props) => {
             description: message.error,
           })
           console.error("[Kilo New] Cloud session import failed:", message.error)
+          break
+
+        case "worktreeStatsLoaded":
+          setWorktreeStats({ files: message.files, additions: message.additions, deletions: message.deletions })
           break
       }
     })
@@ -1518,7 +1606,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function syncSession(sessionID: string) {
-    vscode.postMessage({ type: "syncSession", sessionID })
+    vscode.postMessage({ type: "syncSession", sessionID, parentSessionID: currentSessionID() })
   }
 
   const todos = () => {
@@ -1595,6 +1683,11 @@ export const SessionProvider: ParentComponent = (props) => {
     removeSkill,
     removeMode,
     removeMcp,
+    mcpStatus,
+    mcpLoading,
+    connectMcp,
+    disconnectMcp,
+    refreshMcpStatus,
     selectedAgent: selectedAgentName,
     selectAgent,
     getSessionAgent: (sessionID: string) => store.agentSelections[sessionID] ?? defaultAgent(),
@@ -1626,6 +1719,7 @@ export const SessionProvider: ParentComponent = (props) => {
     revert,
     revertedCount,
     summary,
+    worktreeStats,
     revertSession,
     unrevertSession,
     sendMessage,
