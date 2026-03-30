@@ -329,6 +329,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.statsPoller?.setEnabled(webviewView.visible)
     })
 
+    // Push updated autocomplete settings to the webview whenever VS Code config changes.
+    // Registered here (not inside doInitializeConnection) so it works even when disconnected.
+    this.unsubscribeAutocompleteConfig?.()
+    const configDisposable = vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration("kilo-code.new.autocomplete")) {
+        this.sendAutocompleteSettings()
+      }
+    })
+    this.unsubscribeAutocompleteConfig = () => configDisposable.dispose()
+
     // Initialize connection to CLI backend
     this.initializeConnection()
   }
@@ -350,6 +360,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     // Handle messages from webview (shared handler)
     this.setupWebviewMessageHandler(panel.webview)
+
+    // Push updated autocomplete settings to the webview whenever VS Code config changes.
+    // Registered here (not inside doInitializeConnection) so it works even when disconnected.
+    this.unsubscribeAutocompleteConfig?.()
+    const configDisposable = vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration("kilo-code.new.autocomplete")) {
+        this.sendAutocompleteSettings()
+      }
+    })
+    this.unsubscribeAutocompleteConfig = () => configDisposable.dispose()
 
     this.initializeConnection()
   }
@@ -949,7 +969,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.unsubscribeNotificationDismiss?.()
     this.unsubscribeLanguageChange?.()
     this.unsubscribeProfileChange?.()
-    this.unsubscribeAutocompleteConfig?.()
 
     try {
       const workspaceDir = this.getWorkspaceDirectory()
@@ -1020,15 +1039,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.unsubscribeProfileChange = this.connectionService.onProfileChanged((data) => {
         this.postMessage({ type: "profileData", data })
       })
-
-      // Push updated autocomplete settings to the webview whenever VS Code config changes
-      // (e.g. via VS Code settings UI or another provider's updateAutocompleteSetting).
-      const configDisposable = vscode.workspace.onDidChangeConfiguration((e) => {
-        if (e.affectsConfiguration("kilo-code.new.autocomplete")) {
-          this.sendAutocompleteSettings()
-        }
-      })
-      this.unsubscribeAutocompleteConfig = () => configDisposable.dispose()
 
       // legacy-migration start
       // Subscribe to migration-complete broadcast from any KiloProvider instance
