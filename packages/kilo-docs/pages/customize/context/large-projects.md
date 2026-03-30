@@ -1,6 +1,7 @@
 ---
 title: "Large Projects"
 description: "Best practices for using Kilo Code with large codebases"
+platform: legacy
 ---
 
 # Working with Large Projects

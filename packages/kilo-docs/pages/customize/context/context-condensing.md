@@ -17,9 +17,142 @@ Every AI model has a maximum context window - a limit on how much text it can pr
 - Higher API costs due to increased token usage
 - Eventually hitting the context limit and being unable to continue
 
+{% tabs %}
+{% tab label="VSCode" %}
+
+## The Solution: Auto-Compaction
+
+The new platform uses a **Compaction** system to manage context automatically. When your conversation approaches the token limit, compaction kicks in and produces a structured summary that captures:
+
+- The overall goal of the session
+- Key discoveries made along the way
+- What has been accomplished so far
+- Files that were modified
+
+This summary replaces the earlier conversation history, freeing up context window space while maintaining continuity in your work.
+
+## How Compaction Works
+
+### Automatic Compaction
+
+Compaction triggers automatically when the conversation reaches the `usableWindow` token threshold. The full conversation history is sent to a dedicated **compaction agent**, which produces a structured summary. This happens in the background without interrupting your workflow.
+
+### Context Pruning
+
+In addition to compaction, the system can **prune** old tool outputs to reclaim context space incrementally. Tool results older than a 40,000-token recency window are replaced with `"[Old tool result content cleared]"`. This is a lighter-weight mechanism that runs alongside full compaction.
+
+### Manual Compaction
+
+You can also trigger compaction manually:
+
+- **CLI TUI**: Press `<leader>c` to compact the current session
+- **Extension Webview**: Send a `CompactRequest` message to trigger compaction
+
+{% callout type="info" %}
+There is no `/condense` chat command on the new platform. Use the keybinding or message-based invocation instead.
+{% /callout %}
+
+### The Compaction Process
+
+When compaction is triggered:
+
+1. **Threshold Check**: The system detects that context usage has reached the `usableWindow` limit
+2. **Agent Summarization**: The full conversation history is sent to a dedicated compaction agent
+3. **Structured Summary**: The agent produces a summary covering the goal, discoveries, accomplishments, and modified files
+4. **Replacement**: The detailed history is replaced with the compacted summary
+5. **Continuation**: You continue working with the freed-up context space
+
+## Configuration Options
+
+Compaction is configured in your `kilo.jsonc` file:
+
+```jsonc
+{
+  "compaction": {
+    "auto": true, // Enable or disable automatic compaction
+    "reserved": 4096, // Number of tokens to reserve (keep free) after compaction
+    "prune": true, // Enable pruning of old tool outputs beyond the recency window
+  },
+}
+```
+
+| Option                | Type    | Description                                                              |
+| --------------------- | ------- | ------------------------------------------------------------------------ |
+| `compaction.auto`     | boolean | Enable or disable automatic compaction when the context threshold is hit |
+| `compaction.reserved` | number  | Number of tokens to reserve after compaction                             |
+| `compaction.prune`    | boolean | Enable pruning of old tool outputs outside the 40K token recency window  |
+
+{% /tab %}
+{% tab label="CLI" %}
+
+## The Solution: Auto-Compaction
+
+The new platform uses a **Compaction** system to manage context automatically. When your conversation approaches the token limit, compaction kicks in and produces a structured summary that captures:
+
+- The overall goal of the session
+- Key discoveries made along the way
+- What has been accomplished so far
+- Files that were modified
+
+This summary replaces the earlier conversation history, freeing up context window space while maintaining continuity in your work.
+
+## How Compaction Works
+
+### Automatic Compaction
+
+Compaction triggers automatically when the conversation reaches the `usableWindow` token threshold. The full conversation history is sent to a dedicated **compaction agent**, which produces a structured summary. This happens in the background without interrupting your workflow.
+
+### Context Pruning
+
+In addition to compaction, the system can **prune** old tool outputs to reclaim context space incrementally. Tool results older than a 40,000-token recency window are replaced with `"[Old tool result content cleared]"`. This is a lighter-weight mechanism that runs alongside full compaction.
+
+### Manual Compaction
+
+You can also trigger compaction manually:
+
+- **CLI TUI**: Press `<leader>c` to compact the current session
+- **Extension Webview**: Send a `CompactRequest` message to trigger compaction
+
+{% callout type="info" %}
+There is no `/condense` chat command on the new platform. Use the keybinding or message-based invocation instead.
+{% /callout %}
+
+### The Compaction Process
+
+When compaction is triggered:
+
+1. **Threshold Check**: The system detects that context usage has reached the `usableWindow` limit
+2. **Agent Summarization**: The full conversation history is sent to a dedicated compaction agent
+3. **Structured Summary**: The agent produces a summary covering the goal, discoveries, accomplishments, and modified files
+4. **Replacement**: The detailed history is replaced with the compacted summary
+5. **Continuation**: You continue working with the freed-up context space
+
+## Configuration Options
+
+Compaction is configured in your `kilo.jsonc` file:
+
+```jsonc
+{
+  "compaction": {
+    "auto": true, // Enable or disable automatic compaction
+    "reserved": 4096, // Number of tokens to reserve (keep free) after compaction
+    "prune": true, // Enable pruning of old tool outputs beyond the recency window
+  },
+}
+```
+
+| Option                | Type    | Description                                                              |
+| --------------------- | ------- | ------------------------------------------------------------------------ |
+| `compaction.auto`     | boolean | Enable or disable automatic compaction when the context threshold is hit |
+| `compaction.reserved` | number  | Number of tokens to reserve after compaction                             |
+| `compaction.prune`    | boolean | Enable pruning of old tool outputs outside the 40K token recency window  |
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
+
 ## The Solution: Intelligent Condensing
 
-Context Condensing solves this problem by creating a concise summary of your conversation that captures:
+**Context Condensing** solves this problem by creating a concise summary of your conversation that captures:
 
 - The original task or goal
 - Key decisions made during the session
@@ -63,20 +196,6 @@ Context Condensing uses an AI model to generate summaries. You can configure whi
 
 You can configure context condensing thresholds and behavior on a per-profile basis, allowing different settings for different projects or use cases.
 
-## Best Practices
-
-### When to Condense
-
-- **Long sessions**: If you've been working for an extended period on a complex task
-- **Before major transitions**: When switching to a different aspect of your project
-- **When prompted**: When Kilo Code suggests condensing due to context limits
-
-### Maintaining Context Quality
-
-- **Be specific in your initial task**: A clear task description helps create better summaries
-- **Use AGENTS.md**: Combine with [AGENTS.md](/docs/customize/agents-md) for persistent project context that doesn't need to be condensed
-- **Review the summary**: After condensing, the summary is visible in your chat history
-
 ## Troubleshooting
 
 ### Context Condensing Error
@@ -94,6 +213,23 @@ If the condensed summary doesn't capture important details:
 - Consider condensing earlier, before the conversation becomes too long
 - Use clear, specific language when describing your tasks
 - Important context can be reinforced after condensing by reminding Kilo Code of key details
+
+{% /tab %}
+{% /tabs %}
+
+## Best Practices
+
+### When to Condense
+
+- **Long sessions**: If you've been working for an extended period on a complex task
+- **Before major transitions**: When switching to a different aspect of your project
+- **When prompted**: When Kilo Code suggests condensing or compaction due to context limits
+
+### Maintaining Context Quality
+
+- **Be specific in your initial task**: A clear task description helps create better summaries
+- **Use AGENTS.md**: Combine with [AGENTS.md](/docs/customize/agents-md) for persistent project context that doesn't need to be condensed
+- **Review the summary**: After condensing or compaction, the summary is visible in your chat history
 
 ## Related Features
 
