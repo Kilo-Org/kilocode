@@ -10,7 +10,10 @@ export function createKiloClient(config?: Config & { directory?: string; experim
     const customFetch: any = (req: any) => {
       // @ts-ignore
       req.timeout = false
-      return fetch(req)
+      // Pass duplex in the init arg so it survives VS Code's proxy-agent
+      // fetch wrapper, which calls originalFetch(request, { ...init, dispatcher })
+      // and would otherwise drop duplex from the cloned Request.
+      return fetch(req, { duplex: "half" } as any)
     }
     config = {
       ...config,
