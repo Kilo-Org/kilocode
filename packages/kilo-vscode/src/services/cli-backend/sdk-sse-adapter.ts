@@ -143,8 +143,18 @@ export class SdkSSEAdapter {
         console.log("[Kilo New] SSE: 🎬 Calling SDK global.event()...")
         const events = await this.client.global.event({
           signal: attempt.signal,
+          // Disable SDK-internal retries — consumeLoop handles reconnection
+          // with its own outer while-loop. Without this the SDK's infinite
+          // retry loop with exponential backoff runs in parallel, causing
+          // duplicate connections and "error" state flicker.
+          sseMaxRetryAttempts: 1,
           onSseError: (error) => {
             if (signal.aborted) {
+              return
+            }
+            // Filter AbortErrors — they are expected during heartbeat timeout
+            // or manual reconnect() calls, not real connection failures.
+            if (error instanceof DOMException && error.name === "AbortError") {
               return
             }
             console.error("[Kilo New] SSE: ❌ SDK SSE error callback:", error)
@@ -171,7 +181,10 @@ export class SdkSSEAdapter {
 
         console.log("[Kilo New] SSE: 📭 Stream ended normally")
       } catch (error) {
-        if (!signal.aborted) {
+        // Suppress AbortErrors — they are expected when the heartbeat timer
+        // or reconnect() aborts the per-attempt controller.
+        const aborted = signal.aborted || (error instanceof DOMException && error.name === "AbortError")
+        if (!aborted) {
           console.error("[Kilo New] SSE: ❌ Stream error:", error)
           this.notifyError(error instanceof Error ? error : new Error(String(error)))
         }
