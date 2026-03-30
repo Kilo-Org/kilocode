@@ -1153,6 +1153,7 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.args": "Argumenti",
   "settings.agentBehaviour.mcpDetail.env": "Okruženje",
   "settings.agentBehaviour.mcpDetail.disabled": "Ovaj server je onemogućen.",
+  "settings.agentBehaviour.mcpBrowseMarketplace": "Pregledaj Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "Nema konfiguriranih MCP servera. Dodajte MCP servere u kilo.jsonc ili zamolite agenta da ih doda.",
   "settings.agentBehaviour.workflowsPlaceholder": "Tokovi rada se upravljaju putem datoteka tokova rada.",

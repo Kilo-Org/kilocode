@@ -1116,6 +1116,7 @@ export const dict = {
   "settings.agentBehaviour.addMcp.args.placeholder": "e.g.\n-y\n@modelcontextprotocol/server-filesystem\n/tmp",
   "settings.agentBehaviour.addMcp.url": "Server URL",
   "settings.agentBehaviour.addMcp.url.placeholder": "e.g. http://localhost:3000/sse",
+  "settings.agentBehaviour.mcpBrowseMarketplace": "Browse Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "No MCP servers configured. Add MCP servers in kilo.jsonc, or ask the agent to add them for you.",
   "settings.agentBehaviour.workflowsPlaceholder": "Workflows are managed via workflow files in your workspace.",

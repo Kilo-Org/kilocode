@@ -17,6 +17,46 @@ Custom Instructions are IDE-wide and are applied across all workspaces and maint
 
 ## Setting Custom Instructions
 
+{% tabs %}
+{% tab label="VSCode" %}
+
+In the new extension, global and agent-specific instructions are managed through config files and agent Markdown files rather than a UI text area.
+
+**Global instructions** (applied to all agents) — add an `instructions` array to your global config (`~/.config/kilo/kilo.jsonc`):
+
+```json
+{
+  "instructions": ["~/.config/kilo/global-rules.md"]
+}
+```
+
+**Agent-specific instructions** — include them directly in the agent's Markdown file body (`.kilo/agents/my-agent.md`):
+
+```markdown
+---
+model: anthropic/claude-3-5-sonnet-20241022
+---
+
+You are a test engineer focused on code quality.
+Always write tests in the describe/it style.
+Include meaningful test descriptions.
+```
+
+You can also manage instruction file references from:
+
+1. Click the {% codicon name="gear" /%} icon in the sidebar toolbar to open Settings.
+2. Click `Agent Behaviour` → `Rules` sub-tab.
+3. Add or remove instruction file paths.
+
+### Agent-Specific Instructions
+
+Agent-specific instructions are written directly in the agent Markdown file body (`.kilo/agents/{agent-name}.md`). The file content after the YAML frontmatter is used as the agent's system prompt.
+
+For version-controlled per-agent instructions, simply commit the `.kilo/agents/` directory.
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
+
 **How to set them:**
 
 {% image src="/docs/img/custom-instructions/custom-instructions.png" alt="Kilo Code Modes tab showing global custom instructions interface" width="600" caption="Kilo Code Modes tab showing global custom instructions interface" /%}
@@ -40,7 +80,7 @@ Mode-specific instructions can be set using the Modes Tab
         If the mode itself is global (not workspace-specific), any custom instructions you set for it will also apply globally for that mode across all workspaces.
         {% /callout %}
 
-## Mode-Specific Instructions from Files
+#### Mode-Specific Instructions from Files
 
 For version-controlled mode instructions, use the mode rules file paths documented in [Custom Modes](/docs/customize/custom-modes#mode-specific-instructions-via-filesdirectories):
 
@@ -50,6 +90,9 @@ For version-controlled mode instructions, use the mode rules file paths document
 {% callout type="info" title="Legacy Naming Note" %}
 Older naming like `.clinerules-{mode-slug}` is not the recommended path for current Kilo mode-specific instructions.
 {% /callout %}
+
+{% /tab %}
+{% /tabs %}
 
 ## Related Features
 

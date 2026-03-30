@@ -1149,6 +1149,7 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.args": "Argumenter",
   "settings.agentBehaviour.mcpDetail.env": "Miljø",
   "settings.agentBehaviour.mcpDetail.disabled": "Denne serveren er deaktivert.",
+  "settings.agentBehaviour.mcpBrowseMarketplace": "Bla gjennom Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "Ingen MCP-servere konfigurert. Legg til MCP-servere i kilo.jsonc, eller be agenten om å legge dem til.",
   "settings.agentBehaviour.workflowsPlaceholder": "Arbeidsflyter administreres via arbeidsflytfiler i arbeidsområdet.",

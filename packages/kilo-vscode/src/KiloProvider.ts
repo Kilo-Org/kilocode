@@ -281,7 +281,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       // Seed session status map so the Settings panel knows about already-running sessions.
       // Must run after webview is ready (postMessage is a no-op before that).
-      void this.seedSessionStatusMap()
+      // Only reconcile (reset missing busy→idle) when the map is empty, i.e.
+      // on the very first seed before any real-time SSE events have arrived.
+      // On SSE reconnects or webview recreations the live SSE data is
+      // authoritative and reconciliation risks race-resetting busy sessions.
+      const reconcile = this.sessionStatusMap.size === 0
+      void this.seedSessionStatusMap(reconcile)
     }
 
     // legacy-migration start
@@ -574,6 +579,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "openSettingsPanel":
           vscode.commands.executeCommand("kilo-code.new.settingsButtonClicked", message.tab)
+          break
+        case "openMarketplacePanel":
+          vscode.commands.executeCommand("kilo-code.new.marketplaceButtonClicked", this.projectDirectory)
           break
         case "openChanges":
           vscode.commands.executeCommand("kilo-code.new.showChanges")
@@ -1825,11 +1833,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Seed sessionStatusMap with current session statuses on connect.
    * Without this, the Settings panel (which has no tracked sessions) would see
    * busyCount() = 0 for sessions that were already running before it opened.
+   *
+   * @param reconcile When true, reset locally-busy sessions absent from the
+   *   server response to idle (crash recovery). Set to false on SSE reconnects
+   *   to avoid a race where a brief HTTP fetch gap causes the spinner to vanish.
    */
-  private async seedSessionStatusMap(): Promise<void> {
+  private async seedSessionStatusMap(reconcile = true): Promise<void> {
     if (!this.client || this.connectionState !== "connected") return
     const dir = this.getWorkspaceDirectory()
-    await seedSessionStatuses(this.client, dir, this.sessionStatusMap, (msg) => this.postMessage(msg))
+    await seedSessionStatuses(this.client, dir, this.sessionStatusMap, (msg) => this.postMessage(msg), reconcile)
   }
 
   /**

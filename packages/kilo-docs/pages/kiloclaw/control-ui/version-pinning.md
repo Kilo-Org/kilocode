@@ -45,9 +45,3 @@ To return to automatic updates:
 {% callout type="warning" %}
 Clearing a pin and running **Upgrade & Redeploy** will update your instance to the latest supported platform version. Review the changelog before upgrading to check for breaking changes.
 {% /callout %}
-
-## Related
-
-- [Dashboard Reference](/docs/kiloclaw/dashboard)
-- [KiloClaw Overview](/docs/kiloclaw/overview)
-- [Troubleshooting](/docs/kiloclaw/troubleshooting)

@@ -2200,6 +2200,14 @@
   opacity: 0.7;
 }
 
+/* Session List (inside History View) */
+.session-list {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 /* Session List Items */
 .session-list [data-slot="list-item-title"],
 .cloud-session-list [data-slot="list-item-title"] {

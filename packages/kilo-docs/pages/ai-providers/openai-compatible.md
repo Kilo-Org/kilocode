@@ -14,6 +14,9 @@ This document focuses on setting up providers _other than_ the official OpenAI A
 
 ## General Configuration
 
+{% tabs %}
+{% tab label="VSCode (Legacy)" %}
+
 The key to using an OpenAI-compatible provider is to configure two main settings:
 
 1.  **Base URL:** This is the API endpoint for the provider. It will _not_ be `https://api.openai.com/v1` (that's for the official OpenAI API).
@@ -33,6 +36,48 @@ You'll find these settings in the Kilo Code settings panel (click the {% codicon
   - Computer Use
   - Input Price
   - Output Price
+
+{% /tab %}
+{% tab label="VSCode" %}
+
+Open **Settings** (gear icon) and go to the **Providers** tab to add an OpenAI Compatible provider. Enter your API key and the provider's base URL.
+
+The extension stores this in your `kilo.json` config file. You can also edit the config file directly — see the **CLI** tab for the file format.
+
+{% /tab %}
+{% tab label="CLI" %}
+
+Set the API key and base URL as environment variables or configure them in your `kilo.json` config file:
+
+**Environment variable:**
+
+```bash
+export OPENAI_API_KEY="your-api-key"
+```
+
+**Config file** (`~/.config/kilo/kilo.json` or `./kilo.json`):
+
+```jsonc
+{
+  "provider": {
+    "openai-compatible": {
+      "env": ["OPENAI_API_KEY"],
+      "baseURL": "https://api.your-provider.com/v1",
+    },
+  },
+}
+```
+
+Then set your default model:
+
+```jsonc
+{
+  "model": "openai-compatible/model-name",
+}
+```
+
+{% /tab %}
+{% /tabs %}
 
 ### Full Endpoint URL Support
 

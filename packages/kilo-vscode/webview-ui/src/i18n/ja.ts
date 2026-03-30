@@ -1147,6 +1147,7 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.args": "引数",
   "settings.agentBehaviour.mcpDetail.env": "環境",
   "settings.agentBehaviour.mcpDetail.disabled": "このサーバーは無効です。",
+  "settings.agentBehaviour.mcpBrowseMarketplace": "マーケットプレイスを閲覧",
   "settings.agentBehaviour.mcpEmpty":
     "MCPサーバーが設定されていません。kilo.jsoncでMCPサーバーを追加するか、エージェントに追加を依頼してください。",
   "settings.agentBehaviour.workflowsPlaceholder":

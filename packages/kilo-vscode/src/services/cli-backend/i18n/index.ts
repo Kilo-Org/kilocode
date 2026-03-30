@@ -41,7 +41,12 @@ const bundles: Record<string, Record<string, string>> = {
 
 function resolveLocale(lang: string): string {
   const lower = lang.toLowerCase()
-  if (lower.startsWith("zh")) return lower.includes("hant") ? "zht" : "zh"
+  if (lower.startsWith("zh")) {
+    if (lower === "zht") return "zht"
+    const traditional =
+      lower.includes("hant") || lower.includes("-tw") || lower.includes("-hk") || lower.includes("-mo")
+    return traditional ? "zht" : "zh"
+  }
   if (lower.startsWith("nb") || lower.startsWith("nn")) return "no"
   if (lower.startsWith("pt")) return "br"
   for (const key of Object.keys(bundles)) {

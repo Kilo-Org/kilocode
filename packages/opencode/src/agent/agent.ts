@@ -111,6 +111,77 @@ export namespace Agent {
       "gunzip *": "allow",
     }
     // kilocode_change end
+
+    // kilocode_change start — read-only bash commands for the ask agent.
+    // Unlike the default bash allowlist, unknown commands are DENIED (not "ask")
+    // because the ask agent must never modify the filesystem.
+    const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
+      "*": "deny",
+      // read-only / informational
+      "cat *": "allow",
+      "head *": "allow",
+      "tail *": "allow",
+      "less *": "allow",
+      "ls *": "allow",
+      "tree *": "allow",
+      "pwd *": "allow",
+      "echo *": "allow",
+      "wc *": "allow",
+      "which *": "allow",
+      "type *": "allow",
+      "file *": "allow",
+      "diff *": "allow",
+      "du *": "allow",
+      "df *": "allow",
+      "date *": "allow",
+      "uname *": "allow",
+      "whoami *": "allow",
+      "printenv *": "allow",
+      "man *": "allow",
+      // text processing (stdout only, no file modification)
+      "grep *": "allow",
+      "rg *": "allow",
+      "ag *": "allow",
+      "sort *": "allow",
+      "uniq *": "allow",
+      "cut *": "allow",
+      "tr *": "allow",
+      "jq *": "allow",
+      // git — allowlist of read-only subcommands, deny everything else
+      "git *": "deny",
+      "git log *": "allow",
+      "git show *": "allow",
+      "git diff *": "allow",
+      "git status *": "allow",
+      "git blame *": "allow",
+      "git rev-parse *": "allow",
+      "git rev-list *": "allow",
+      "git ls-files *": "allow",
+      "git ls-tree *": "allow",
+      "git ls-remote *": "allow",
+      "git shortlog *": "allow",
+      "git describe *": "allow",
+      "git cat-file *": "allow",
+      "git name-rev *": "allow",
+      "git stash list *": "allow",
+      "git tag -l *": "allow",
+      "git branch --list *": "allow",
+      "git branch -a *": "allow",
+      "git branch -r *": "allow",
+      "git remote -v *": "allow",
+      // gh — require user approval since commands vary widely
+      "gh *": "ask",
+    }
+
+    // kilocode_change start — allow MCP tools in ask agent with user approval.
+    // Generates per-server wildcard rules that override "*": "deny".
+    const mcpRules: Record<string, "allow" | "ask" | "deny"> = {}
+    for (const key of Object.keys(cfg.mcp ?? {})) {
+      const sanitized = key.replace(/[^a-zA-Z0-9_-]/g, "_")
+      mcpRules[sanitized + "_*"] = "ask"
+    }
+    // kilocode_change end
+
     const defaults = PermissionNext.fromConfig({
       "*": "allow",
       bash, // kilocode_change
@@ -237,6 +308,7 @@ export namespace Agent {
           user, // kilocode_change: user before ask-specific so ask's deny+allowlist wins
           PermissionNext.fromConfig({
             "*": "deny",
+            bash: readOnlyBash,
             read: {
               "*": "allow",
               "*.env": "ask",
@@ -254,7 +326,9 @@ export namespace Agent {
             external_directory: {
               [Truncate.GLOB]: "allow",
             },
+            ...mcpRules,
           }),
+          user.filter((r) => r.action === "deny"), // kilocode_change: re-apply user denies so explicit MCP blocks win over mcpRules
         ),
         mode: "primary",
         native: true,

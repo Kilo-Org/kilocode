@@ -20,17 +20,54 @@ Kilo Code will attempt to fetch the list of available models from the Groq API.
 
 ## Configuration in Kilo Code
 
+{% tabs %}
+{% tab label="VSCode (Legacy)" %}
+
 1.  **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
 2.  **Select Provider:** Choose "Groq" from the "API Provider" dropdown.
 3.  **Enter API Key:** Paste your Groq API key into the "Groq API Key" field.
 4.  **Select Model:** Choose your desired model from the "Model" dropdown.
 
-## Tips and Notes
+{% /tab %}
+{% tab label="VSCode" %}
 
-- **High-Speed Inference:** Groq's LPUs provide exceptionally fast response times, making it ideal for interactive development workflows.
-- **Token Limits:** Some models have specific `max_tokens` limits that are automatically handled by Kilo Code (e.g., the `moonshotai/kimi-k2-instruct` model).
-- **Cost Efficiency:** Groq often provides competitive pricing for high-speed inference compared to other providers.
-- **Model Selection:** Choose models based on your specific needs - larger models like `llama3-70b-8192` for complex reasoning tasks, or smaller models like `llama3-8b-8192` for faster, simpler operations.
+Open **Settings** (gear icon) and go to the **Providers** tab to add Groq and enter your API key.
+
+The extension stores this in your `kilo.json` config file. You can also edit the config file directly — see the **CLI** tab for the file format.
+
+{% /tab %}
+{% tab label="CLI" %}
+
+Set the API key as an environment variable or configure it in your `kilo.json` config file:
+
+**Environment variable:**
+
+```bash
+export GROQ_API_KEY="your-api-key"
+```
+
+**Config file** (`~/.config/kilo/kilo.json` or `./kilo.json`):
+
+```jsonc
+{
+  "provider": {
+    "groq": {
+      "env": ["GROQ_API_KEY"],
+    },
+  },
+}
+```
+
+Then set your default model:
+
+```jsonc
+{
+  "model": "groq/llama-3.3-70b-versatile",
+}
+```
+
+{% /tab %}
+{% /tabs %}
 
 ## Supported Models
 
@@ -45,13 +82,6 @@ Kilo Code supports the following models through Groq:
 | `mixtral-8x7b-32768`          | Mistral AI  | 32K tokens     | Mixture of experts architecture       |
 
 **Note:** Model availability may change. Refer to the [Groq documentation](https://console.groq.com/docs/models) for the latest model list and specifications.
-
-## Configuration in Kilo Code
-
-1. **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
-2. **Select Provider:** Choose "Groq" from the "API Provider" dropdown.
-3. **Enter API Key:** Paste your Groq API key into the "Groq API Key" field.
-4. **Select Model:** Choose your desired model from the "Model" dropdown.
 
 ## Model-Specific Features
 

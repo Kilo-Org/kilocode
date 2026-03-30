@@ -1141,6 +1141,7 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.args": "인수",
   "settings.agentBehaviour.mcpDetail.env": "환경",
   "settings.agentBehaviour.mcpDetail.disabled": "이 서버는 비활성화되어 있습니다.",
+  "settings.agentBehaviour.mcpBrowseMarketplace": "마켓플레이스 둘러보기",
   "settings.agentBehaviour.mcpEmpty":
     "MCP 서버가 구성되지 않았습니다. kilo.jsonc에서 MCP 서버를 추가하거나 에이전트에게 추가를 요청하세요.",
   "settings.agentBehaviour.workflowsPlaceholder": "워크플로우는 워크스페이스의 워크플로우 파일을 통해 관리됩니다.",

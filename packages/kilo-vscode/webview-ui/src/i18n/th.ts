@@ -1137,6 +1137,7 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.args": "อาร์กิวเมนต์",
   "settings.agentBehaviour.mcpDetail.env": "สภาพแวดล้อม",
   "settings.agentBehaviour.mcpDetail.disabled": "เซิร์ฟเวอร์นี้ถูกปิดใช้งาน",
+  "settings.agentBehaviour.mcpBrowseMarketplace": "เรียกดู Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "ไม่ได้กำหนดค่าเซิร์ฟเวอร์ MCP เพิ่มเซิร์ฟเวอร์ MCP ใน kilo.jsonc หรือขอให้เอเจนต์เพิ่มให้คุณ",
   "settings.agentBehaviour.workflowsPlaceholder": "เวิร์กโฟลว์จัดการผ่านไฟล์เวิร์กโฟลว์ในพื้นที่ทำงาน",

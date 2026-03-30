@@ -1154,6 +1154,7 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.args": "Аргументы",
   "settings.agentBehaviour.mcpDetail.env": "Окружение",
   "settings.agentBehaviour.mcpDetail.disabled": "Этот сервер отключён.",
+  "settings.agentBehaviour.mcpBrowseMarketplace": "Обзор Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "MCP-серверы не настроены. Добавьте MCP-серверы в kilo.jsonc или попросите агента добавить их.",
   "settings.agentBehaviour.workflowsPlaceholder": "Рабочие процессы управляются через файлы рабочих процессов.",

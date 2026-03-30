@@ -1122,6 +1122,7 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.args": "参数",
   "settings.agentBehaviour.mcpDetail.env": "环境",
   "settings.agentBehaviour.mcpDetail.disabled": "此服务器已禁用。",
+  "settings.agentBehaviour.mcpBrowseMarketplace": "浏览市场",
   "settings.agentBehaviour.mcpEmpty": "未配置 MCP 服务器。在 kilo.jsonc 中添加 MCP 服务器，或让代理为您添加。",
   "settings.agentBehaviour.workflowsPlaceholder": "工作流通过工作区中的工作流文件管理。",
   "settings.agentBehaviour.workflows.description":

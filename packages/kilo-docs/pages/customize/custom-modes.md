@@ -5,7 +5,11 @@ description: "Create and configure custom modes in Kilo Code"
 
 # Custom Modes
 
-Kilo Code allows you to create **custom modes** to tailor Kilo's behavior to specific tasks or workflows. Custom modes can be either **global** (available across all projects) or **project-specific** (defined within a single project).
+Kilo Code allows you to create **custom modes** (also called **agents**) to tailor Kilo's behavior to specific tasks or workflows. Custom modes can be either **global** (available across all projects) or **project-specific** (defined within a single project).
+
+{% callout type="info" %}
+The current VS Code extension (built on the Kilo CLI) uses **agent Markdown files** to define custom modes. The legacy extension used `custom_modes.yaml` / `.kilocodemodes`. See the tabs below for the relevant approach.
+{% /callout %}
 
 ## Sticky Models for Efficient Workflow
 
@@ -88,6 +92,57 @@ When importing modes, you can change the slug in the exported YAML file before i
 3. Import the file - the import process will automatically update rule file paths to match the new slug
 
 ## Methods for Creating and Configuring Custom Modes
+
+{% tabs %}
+{% tab label="VSCode" %}
+
+Custom agents are defined as Markdown files with optional YAML frontmatter. You can place them in:
+
+- **Project agents:** `.kilo/agents/*.md` (or `.opencode/agents/*.md`)
+- **Global agents:** `~/.config/kilo/agents/*.md`
+
+### Agent File Format
+
+```markdown
+---
+model: anthropic/claude-3-5-sonnet-20241022
+description: A specialized agent for writing documentation
+mode: primary
+---
+
+You are a technical writer specializing in clear, concise documentation.
+Focus on clarity, completeness, and consistent formatting.
+```
+
+**YAML frontmatter fields:**
+
+| Field         | Description                                                                   |
+| ------------- | ----------------------------------------------------------------------------- |
+| `model`       | Override the default model for this agent                                     |
+| `description` | Short description shown in the agent selector                                 |
+| `mode`        | `"primary"` (user-selectable), `"subagent"` (invoked by AI only), or `"all"`  |
+| `permission`  | Tool permission overrides (same format as the global `permission` config key) |
+| `temperature` | Model temperature override                                                    |
+| `top_p`       | Model top_p override                                                          |
+
+The filename (without `.md`) becomes the agent's slug and display name.
+
+### Installing via Marketplace
+
+You can also install community-contributed agents from the **Marketplace** tab in the extension sidebar.
+
+### Ask Kilo! (Recommended)
+
+You can also have Kilo create an agent file for you. For example:
+
+```
+Create a new agent called "Documentation Writer". It should only be able to read files and write Markdown files.
+```
+
+Kilo will create the appropriate `.kilo/agents/docs-writer.md` file with the right frontmatter.
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
 
 You can create and configure custom modes in several ways:
 
@@ -513,6 +568,9 @@ customModes:
 - **Colons for Key-Value Pairs:** Keys must be followed by a colon and a space (e.g., `slug: my-mode`)
 - **Hyphens for List Items:** List items start with a hyphen and a space (e.g., `- read`)
 - **Validate Your YAML:** Use online YAML validators or your editor's built-in validation
+
+{% /tab %}
+{% /tabs %}
 
 ## Community Gallery
 

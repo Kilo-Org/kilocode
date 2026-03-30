@@ -1125,6 +1125,7 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.args": "引數",
   "settings.agentBehaviour.mcpDetail.env": "環境",
   "settings.agentBehaviour.mcpDetail.disabled": "此伺服器已停用。",
+  "settings.agentBehaviour.mcpBrowseMarketplace": "瀏覽市場",
   "settings.agentBehaviour.mcpEmpty": "未設定 MCP 伺服器。在 kilo.jsonc 中新增 MCP 伺服器，或請代理為您新增。",
   "settings.agentBehaviour.workflowsPlaceholder": "工作流程透過工作區中的工作流程檔案管理。",
   "settings.agentBehaviour.workflows.description":

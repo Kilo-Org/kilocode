@@ -1146,6 +1146,7 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.args": "Argumenter",
   "settings.agentBehaviour.mcpDetail.env": "Miljø",
   "settings.agentBehaviour.mcpDetail.disabled": "Denne server er deaktiveret.",
+  "settings.agentBehaviour.mcpBrowseMarketplace": "Gennemse Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "Ingen MCP-servere konfigureret. Tilføj MCP-servere i kilo.jsonc, eller bed agenten om at tilføje dem.",
   "settings.agentBehaviour.workflowsPlaceholder": "Workflows administreres via workflow-filer i dit arbejdsområde.",

@@ -140,7 +140,29 @@ Use this option only if you are certain you want to remove all Kilo Code data or
 {% tabs %}
 {% tab label="VSCode" %}
 
-The extension does not currently expose the same experimental feature toggles as the **VSCode (Legacy)** version. Advanced options are configured via the JSONC config files that the Settings webview reads and writes. Refer to the auto-generated `$schema` in your `kilo.jsonc` for the full list of available options.
+The new extension exposes experimental features via the **Experimental** tab in Settings (click the gear icon {% codicon name="gear" /%} → Experimental).
+
+Available experimental toggles include:
+
+- **Share mode** — `manual`, `auto`, or `disabled` session sharing
+- **LSP integration** — expose language server diagnostics to the agent
+- **Paste summary** — summarize large clipboard pastes before including them
+- **Batch tool** — allow the agent to batch multiple tool calls in one step
+
+Advanced options not exposed in the UI can be configured via the `experimental` key in `kilo.jsonc`:
+
+```json
+{
+  "experimental": {
+    "codebase_search": true,
+    "batch_tool": false,
+    "disable_paste_summary": false,
+    "mcp_timeout": 30000
+  }
+}
+```
+
+Refer to the auto-generated `$schema` in your `kilo.jsonc` for the full list of available options.
 
 {% /tab %}
 {% tab label="CLI" %}

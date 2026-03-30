@@ -484,7 +484,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       session.abort()
       return
     }
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
       e.preventDefault()
       handleSend()
     }

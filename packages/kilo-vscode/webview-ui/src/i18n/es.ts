@@ -1161,6 +1161,7 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.args": "Argumentos",
   "settings.agentBehaviour.mcpDetail.env": "Entorno",
   "settings.agentBehaviour.mcpDetail.disabled": "Este servidor está deshabilitado.",
+  "settings.agentBehaviour.mcpBrowseMarketplace": "Explorar Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "No hay servidores MCP configurados. Añada servidores MCP en kilo.jsonc o pida al agente que los añada.",
   "settings.agentBehaviour.workflowsPlaceholder":

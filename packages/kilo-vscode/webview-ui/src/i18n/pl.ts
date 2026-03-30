@@ -1153,6 +1153,7 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.args": "Argumenty",
   "settings.agentBehaviour.mcpDetail.env": "Środowisko",
   "settings.agentBehaviour.mcpDetail.disabled": "Ten serwer jest wyłączony.",
+  "settings.agentBehaviour.mcpBrowseMarketplace": "Przeglądaj Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "Brak skonfigurowanych serwerów MCP. Dodaj serwery MCP w kilo.jsonc lub poproś agenta o ich dodanie.",
   "settings.agentBehaviour.workflowsPlaceholder": "Przepływy pracy zarządzane są za pomocą plików przepływów pracy.",

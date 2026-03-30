@@ -9,7 +9,7 @@ Custom rules provide a powerful way to define project-specific and global behavi
 
 ## Overview
 
-Custom rules allow you to create text-based instructions that all AI models will follow when interacting with your project. These rules act as guardrails and conventions that are consistently respected across all interactions with your codebase. Rules can be managed through both the file system and the built-in UI interface.
+Custom rules allow you to create text-based instructions that all AI models will follow when interacting with your project. These rules act as guardrails and conventions that are consistently respected across all interactions with your codebase.
 
 ## Rule Format
 
@@ -19,20 +19,59 @@ Custom rules can be written in plain text, but Markdown format is recommended fo
 - Use lists (`-`, `*`) to enumerate specific items or constraints
 - Use code blocks (` `) to include code examples when needed
 
-## Rule Types
+## Rule Location and Setup
 
-Kilo Code supports two types of custom rules:
+{% tabs %}
+{% tab label="VSCode" %}
 
-- **Project Rules**: Apply only to the current project workspace
-- **Global Rules**: Apply across all projects and workspaces
+Rules (called "instructions" in the new extension) are Markdown files referenced in your config. You can point to any Markdown file — `AGENTS.md`, `CLAUDE.md`, `.kilo/rules.md`, or any path you choose.
 
-{% callout type="note" title="UI Support" %}
-The built-in rules management UI is available for general rules only. Mode-specific rules must be managed through the file system.
+### Project Instructions
+
+Add an `instructions` array to your project config (`kilo.json` or `.kilo/kilo.jsonc`):
+
+```json
+{
+  "instructions": ["./AGENTS.md", "./.kilo/rules.md"]
+}
+```
+
+### Global Instructions
+
+Add the same `instructions` key to your global config (`~/.config/kilo/kilo.jsonc`):
+
+```json
+{
+  "instructions": ["~/.config/kilo/rules.md"]
+}
+```
+
+### Managing Instructions through the UI
+
+You can also manage instructions from the Settings UI:
+
+1. Click the {% codicon name="gear" /%} icon in the sidebar toolbar to open Settings.
+2. Click the `Agent Behaviour` tab.
+3. Select the `Rules` sub-tab.
+4. Add, edit, or remove instruction file paths from here.
+
+### File Structure Example
+
+```
+project/
+├── AGENTS.md               # auto-detected by the agent
+├── kilo.json               # references rules files
+├── .kilo/
+│   └── rules.md            # project-specific rules
+└── src/
+```
+
+{% callout type="tip" title="Pro Tip: File-Based Team Standards" %}
+Committing your rules Markdown files (e.g. `AGENTS.md` or `.kilo/rules.md`) to version control ensures consistent agent behavior across your entire development team.
 {% /callout %}
 
-## Rule Location
-
-### Project Rules
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
 
 Custom rules are primarily loaded from the **`.kilocode/rules/` directory**. This is the recommended approach for organizing your project-specific rules. Each rule is typically placed in its own Markdown file with a descriptive name:
 
@@ -59,7 +98,7 @@ Global rules are stored in your home directory and apply to all projects:
 │   └── documentation_style.md
 ```
 
-## Managing Rules Through the UI
+### Managing Rules Through the UI
 
 Kilo Code provides a built-in interface for managing your custom rules without manually editing files in the `.kilocode/rules/` directories. To access the UI, click on the <Codicon name="law" /> icon in the **bottom right corner** of the Kilo Code window.
 
@@ -70,9 +109,27 @@ You can access the rules management UI to:
 - Create and edit rules directly in the interface
 - Organize rules by category and priority
 
+{% /tab %}
+{% /tabs %}
+
+## Rule Types
+
+Kilo Code supports two types of custom rules:
+
+- **Project Rules**: Apply only to the current project workspace
+- **Global Rules**: Apply across all projects and workspaces
+
 ## Rule Loading Order
 
-### General Rules (Any Mode)
+{% tabs %}
+{% tab label="VSCode" %}
+
+Instructions are loaded in the order specified in the `instructions` array in the config. The config precedence system applies (project config overrides global config).
+
+Files listed in `AGENTS.md`, `.kilo/AGENTS.md`, or `.opencode/AGENTS.md` at the project root are automatically detected without needing to list them explicitly.
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
 
 Rules are loaded in the following priority order:
 
@@ -99,7 +156,22 @@ Additionally, the system supports mode-specific rules, which are loaded separate
 Currently, mode-specific rules are only supported at the project level.
 When both generic rules and mode-specific rules exist, the mode-specific rules are given priority in the final output.
 
+{% /tab %}
+{% /tabs %}
+
 ## Creating Custom Rules
+
+{% tabs %}
+{% tab label="VSCode" %}
+
+1. Create a Markdown file (e.g. `.kilo/rules.md`) in your project
+2. Add it to your `instructions` array in `kilo.json` or `.kilo/kilo.jsonc`
+3. Write your rules using Markdown formatting
+
+Rules are applied automatically on the next session start.
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
 
 ### Using the UI Interface
 
@@ -131,6 +203,9 @@ To create rules manually:
 4. Save the file
 
 Rules will be automatically applied to all future Kilo Code interactions. Any new changes will be applied immediately.
+
+{% /tab %}
+{% /tabs %}
 
 ## Example Rules
 
@@ -192,10 +267,6 @@ Custom rules can be applied to a wide variety of scenarios:
 - **Keep It Simple**: Rules should be concise and easy to understand
 - **Update Regularly**: Review and update rules as project requirements change
 
-{% callout type="tip" title="Pro Tip: File-Based Team Standards" %}
-When working in team environments, placing `.kilocode/rules/codestyle.md` files under version control allows you to standardize Kilo's behavior across your entire development team. This ensures consistent code style, documentation practices, and development workflows for everyone on the project.
-{% /callout %}
-
 ## Limitations
 
 - Rules are applied on a best-effort basis by the AI models
@@ -204,6 +275,18 @@ When working in team environments, placing `.kilocode/rules/codestyle.md` files 
 - Global rules apply across all projects
 
 ## Troubleshooting
+
+{% tabs %}
+{% tab label="VSCode" %}
+
+If your rules aren't being followed:
+
+1. **Check the `instructions` array** in your config to ensure the file path is correct.
+2. **Verify Markdown formatting**: Ensure the file is valid Markdown.
+3. **Restart the session**: Start a new chat session to pick up config changes.
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
 
 If your custom rules aren't being properly followed:
 
@@ -215,6 +298,9 @@ If your custom rules aren't being properly followed:
    - Legacy files: `.kilocoderules`, `.roorules`, or `.clinerules`
 1. **Rule specificity**: Verify that the rules are specific and unambiguous
 1. **Restart VS Code**: Restart VS Code to ensure the rules are properly loaded
+
+{% /tab %}
+{% /tabs %}
 
 ## Related Features
 
