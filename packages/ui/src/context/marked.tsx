@@ -5,7 +5,7 @@ import katex from "katex"
 import { bundledLanguages, type BundledLanguage } from "shiki"
 import { parseFilePath } from "../file-path" // kilocode_change
 import { createSimpleContext } from "./helper"
-import { getSharedHighlighter, registerCustomTheme, ThemeRegistrationResolved } from "@pierre/diffs"
+import { getSharedHighlighter, registerCustomTheme, type ThemeRegistrationResolved } from "@pierre/diffs"
 
 registerCustomTheme("Kilo", () => {
   return Promise.resolve({
@@ -377,48 +377,51 @@ registerCustomTheme("Kilo", () => {
   } as unknown as ThemeRegistrationResolved)
 })
 
+function decodeMathEntities(text: string): string {
+  return text
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&dollar;/g, "$")
+}
+
 function renderMathInText(text: string): string {
-  let result = text
-
-  // Display math: $$...$$
-  const displayMathRegex = /\$\$([\s\S]*?)\$\$/g
-  result = result.replace(displayMathRegex, (_, math) => {
-    try {
-      return katex.renderToString(math, {
-        displayMode: true,
-        throwOnError: false,
-      })
-    } catch {
-      return `$$${math}$$`
-    }
-  })
-
-  // Inline math: $...$
-  const inlineMathRegex = /(?<!\$)\$(?!\$)((?:[^$\\]|\\.)+?)\$(?!\$)/g
-  result = result.replace(inlineMathRegex, (_, math) => {
-    try {
-      return katex.renderToString(math, {
-        displayMode: false,
-        throwOnError: false,
-      })
-    } catch {
-      return `$${math}$`
-    }
-  })
-
-  return result
+  return text
+    .replace(/\$\$([\s\S]*?)\$\$/g, (_, math) => {
+      const decoded = decodeMathEntities(math)
+      try {
+        return katex.renderToString(decoded, {
+          displayMode: true,
+          throwOnError: false,
+          strict: false,
+        })
+      } catch {
+        return `$$${math}$$`
+      }
+    })
+    .replace(/(?<!\$)\$(?!\$)((?:[^$\\]|\\.)+?)\$(?!\$)/g, (_, math) => {
+      const decoded = decodeMathEntities(math)
+      try {
+        return katex.renderToString(decoded, {
+          displayMode: false,
+          throwOnError: false,
+          strict: false,
+        })
+      } catch {
+        return `$${math}$`
+      }
+    })
 }
 
 function renderMathExpressions(html: string): string {
-  // Split on code/pre/kbd tags to avoid processing their contents
   const codeBlockPattern = /(<(?:pre|code|kbd)[^>]*>[\s\S]*?<\/(?:pre|code|kbd)>)/gi
   const parts = html.split(codeBlockPattern)
 
   return parts
     .map((part, i) => {
-      // Odd indices are the captured code blocks - leave them alone
       if (i % 2 === 1) return part
-      // Process math only in non-code parts
       return renderMathInText(part)
     })
     .join("")
@@ -436,7 +439,7 @@ async function highlightCodeBlocks(html: string): Promise<string> {
   let result = html
   for (const match of matches) {
     const [fullMatch, lang, escapedCode] = match
-    const code = escapedCode
+    const code = (escapedCode ?? "")
       .replace(/&lt;/g, "<")
       .replace(/&gt;/g, ">")
       .replace(/&amp;/g, "&")
@@ -664,7 +667,7 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
       },
       markedKatex({
         throwOnError: false,
-        nonStandard: true,
+        strict: false,
       }),
       markedShiki({
         async highlight(code, lang) {
