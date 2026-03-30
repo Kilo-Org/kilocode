@@ -144,6 +144,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private unsubscribeLanguageChange: (() => void) | null = null
   private unsubscribeProfileChange: (() => void) | null = null
   private unsubscribeMigrationComplete: (() => void) | null = null // legacy-migration
+  private unsubscribeAutocompleteConfig: (() => void) | null = null
   private initConnectionPromise: Promise<void> | null = null
   private webviewMessageDisposable: vscode.Disposable | null = null
 
@@ -948,6 +949,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.unsubscribeNotificationDismiss?.()
     this.unsubscribeLanguageChange?.()
     this.unsubscribeProfileChange?.()
+    this.unsubscribeAutocompleteConfig?.()
 
     try {
       const workspaceDir = this.getWorkspaceDirectory()
@@ -1018,6 +1020,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.unsubscribeProfileChange = this.connectionService.onProfileChanged((data) => {
         this.postMessage({ type: "profileData", data })
       })
+
+      // Push updated autocomplete settings to the webview whenever VS Code config changes
+      // (e.g. via VS Code settings UI or another provider's updateAutocompleteSetting).
+      const configDisposable = vscode.workspace.onDidChangeConfiguration((e) => {
+        if (e.affectsConfiguration("kilo-code.new.autocomplete")) {
+          this.sendAutocompleteSettings()
+        }
+      })
+      this.unsubscribeAutocompleteConfig = () => configDisposable.dispose()
 
       // legacy-migration start
       // Subscribe to migration-complete broadcast from any KiloProvider instance
@@ -2853,6 +2864,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.unsubscribeLanguageChange?.()
     this.unsubscribeProfileChange?.()
     this.unsubscribeMigrationComplete?.()
+    this.unsubscribeAutocompleteConfig?.()
     this.webviewMessageDisposable?.dispose()
     this.trackedSessionIds.clear()
     this.syncedChildSessions.clear()
