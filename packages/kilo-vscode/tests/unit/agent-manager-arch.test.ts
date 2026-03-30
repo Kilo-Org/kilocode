@@ -177,6 +177,8 @@ describe("Agent Manager Provider — onMessage routing", () => {
       "agentManager.addSessionToWorktree",
       "agentManager.forkSession",
       "agentManager.closeSession",
+      "agentManager.persistSession",
+      "agentManager.forgetSession",
       "agentManager.configureSetupScript",
       "agentManager.showTerminal",
       "agentManager.showLocalTerminal",

@@ -204,12 +204,12 @@ export class WorktreeStateManager {
     return session
   }
 
-  /** Move an existing session to a worktree (promotion). */
-  moveSession(sessionId: string, worktreeId: string): void {
+  /** Move an existing session to a worktree (or back to local when null). */
+  moveSession(sessionId: string, worktreeId: string | null): void {
     const session = this.sessions.get(sessionId)
     if (!session) return
     session.worktreeId = worktreeId
-    this.log(`Moved session ${sessionId} to worktree ${worktreeId}`)
+    this.log(`Moved session ${sessionId} to ${worktreeId ?? "local"}`)
     void this.save()
   }
 
