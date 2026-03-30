@@ -1,6 +1,7 @@
 ---
 title: "Workflows"
 description: "Create automated workflows with Kilo Code"
+platform: new
 ---
 
 # Workflows

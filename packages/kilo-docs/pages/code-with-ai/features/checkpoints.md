@@ -34,6 +34,19 @@ You can also toggle this in Settings:
 3. Toggle the snapshot setting
 
 {% /tab %}
+{% tab label="CLI" %}
+
+Checkpoints are controlled by the `snapshot` boolean in your `kilo.jsonc` configuration file:
+
+```json
+{
+  "snapshot": true
+}
+```
+
+When enabled, the system automatically captures snapshots at each step of a task.
+
+{% /tab %}
 {% tab label="VSCode (Legacy)" %}
 
 Access checkpoint settings in Kilo Code settings under the "Checkpoints" section:
@@ -95,6 +108,17 @@ Checkpoints are integrated directly into your workflow through the chat interfac
 - Click **Revert** on any message to restore the workspace to its state before that message
 
 A **Revert Banner** is shown at the top of the chat whenever you are in a reverted state, with an option to return to the current state.
+
+{% /tab %}
+{% tab label="CLI" %}
+
+Checkpoints are captured automatically at each step of a task. In the CLI terminal interface, checkpoints appear as revert points in the conversation. You can revert to any point by selecting the corresponding message.
+
+### Reverting Changes
+
+- **Full revert**: Revert your workspace to any point in the conversation
+- **Undo a revert**: Restore the state before the last revert
+- **Per-file revert**: Selectively undo changes to specific files while keeping others
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
