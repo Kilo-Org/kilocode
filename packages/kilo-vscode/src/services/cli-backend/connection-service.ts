@@ -282,7 +282,7 @@ export class KiloConnectionService {
       const healthy = await this.checkHealth(baseUrl, password)
       if (!healthy && this.state === "connected") {
         console.warn("[Kilo New] ConnectionService: ❤️‍🩹 Health check failed — forcing SSE reconnect")
-        this.sseClient?.disconnect()
+        this.sseClient?.reconnect()
       }
     }, HEALTH_POLL_INTERVAL_MS)
 

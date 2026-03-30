@@ -32,6 +32,7 @@ export class SdkSSEAdapter {
   private readonly stateHandlers = new Set<SSEStateHandler>()
 
   private abortController: AbortController | null = null
+  private attemptController: AbortController | null = null
   private heartbeatTimer: ReturnType<typeof setTimeout> | null = null
 
   // 15s matches packages/app/src/context/global-sdk.tsx — server sends heartbeats
@@ -71,7 +72,22 @@ export class SdkSSEAdapter {
     console.log("[Kilo New] SSE: 🔌 disconnect() called")
     this.abortController?.abort()
     this.abortController = null
+    this.attemptController = null
     this.clearHeartbeat()
+  }
+
+  /**
+   * Force the current SSE attempt to reconnect without killing the outer loop.
+   * Aborts only the per-attempt controller so `consumeLoop` re-enters its
+   * reconnection path instead of terminating permanently.
+   */
+  reconnect(): void {
+    if (!this.attemptController) {
+      console.log("[Kilo New] SSE: ⚠️ reconnect() called but no active attempt")
+      return
+    }
+    console.log("[Kilo New] SSE: 🔄 reconnect() — aborting current attempt")
+    this.attemptController.abort()
   }
 
   /**
@@ -121,6 +137,8 @@ export class SdkSSEAdapter {
       const onAbort = () => attempt.abort()
       signal.addEventListener("abort", onAbort)
 
+      this.attemptController = attempt
+
       try {
         console.log("[Kilo New] SSE: 🎬 Calling SDK global.event()...")
         const events = await this.client.global.event({
@@ -159,6 +177,7 @@ export class SdkSSEAdapter {
         }
       } finally {
         signal.removeEventListener("abort", onAbort)
+        this.attemptController = null
         this.clearHeartbeat()
       }
 
