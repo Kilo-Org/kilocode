@@ -329,15 +329,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.statsPoller?.setEnabled(webviewView.visible)
     })
 
-    // Push updated autocomplete settings to the webview whenever VS Code config changes.
-    // Registered here (not inside doInitializeConnection) so it works even when disconnected.
-    this.unsubscribeAutocompleteConfig?.()
-    const configDisposable = vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration("kilo-code.new.autocomplete")) {
-        this.sendAutocompleteSettings()
-      }
-    })
-    this.unsubscribeAutocompleteConfig = () => configDisposable.dispose()
+    // Register autocomplete config listener here (not inside doInitializeConnection) so it
+    // works even when the provider is disconnected or in an error state.
+    this.registerAutocompleteConfigListener()
 
     // Initialize connection to CLI backend
     this.initializeConnection()
@@ -361,15 +355,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Handle messages from webview (shared handler)
     this.setupWebviewMessageHandler(panel.webview)
 
-    // Push updated autocomplete settings to the webview whenever VS Code config changes.
-    // Registered here (not inside doInitializeConnection) so it works even when disconnected.
-    this.unsubscribeAutocompleteConfig?.()
-    const configDisposable = vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration("kilo-code.new.autocomplete")) {
-        this.sendAutocompleteSettings()
-      }
-    })
-    this.unsubscribeAutocompleteConfig = () => configDisposable.dispose()
+    // Register autocomplete config listener here (not inside doInitializeConnection) so it
+    // works even when the provider is disconnected or in an error state.
+    this.registerAutocompleteConfigListener()
 
     this.initializeConnection()
   }
@@ -453,6 +441,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.webview = webview
     this.onBeforeMessage = options?.onBeforeMessage ?? null
     this.setupWebviewMessageHandler(webview)
+
+    // Register autocomplete config listener here (not inside doInitializeConnection) so it
+    // works even when the provider is disconnected or in an error state.
+    this.registerAutocompleteConfigListener()
+
     this.initializeConnection()
   }
 
@@ -2585,6 +2578,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
       this.postMessage(msg)
     }
+  }
+
+  /**
+   * Register a VS Code config-change listener that pushes autocomplete settings to the webview
+   * whenever the `kilo-code.new.autocomplete` section changes. Safe to call multiple times —
+   * any previous listener is disposed first.
+   */
+  private registerAutocompleteConfigListener(): void {
+    this.unsubscribeAutocompleteConfig?.()
+    const disposable = vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration("kilo-code.new.autocomplete")) {
+        this.sendAutocompleteSettings()
+      }
+    })
+    this.unsubscribeAutocompleteConfig = () => disposable.dispose()
   }
 
   /**
