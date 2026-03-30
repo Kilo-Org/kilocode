@@ -45,7 +45,7 @@ const BRANDING_REPLACEMENTS: BrandingReplacement[] = [
   },
   {
     pattern: /anomalyco\/opencode/g,
-    replacement: "Kilo-Org/kilo",
+    replacement: "Kilo-Org/kilocode",
     description: "GitHub repo reference",
   },
 
@@ -122,9 +122,9 @@ const BRANDING_REPLACEMENTS: BrandingReplacement[] = [
     description: "Window global",
   },
   {
-    pattern: /x-opencode-client/g,
-    replacement: "x-kilo-client",
-    description: "HTTP header",
+    pattern: /x-opencode-/g,
+    replacement: "x-kilo-",
+    description: "HTTP header prefix",
   },
   {
     pattern: /_EXTENSION_OPENCODE_/g,

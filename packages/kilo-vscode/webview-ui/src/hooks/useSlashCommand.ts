@@ -183,6 +183,7 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
     onSelect?: () => void,
   ): boolean => {
     if (!show()) return false
+    if (e.isComposing) return false
 
     const filtered = results()
 
@@ -205,6 +206,7 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
     }
     if (e.key === "Escape") {
       e.preventDefault()
+      e.stopPropagation()
       close()
       return true
     }

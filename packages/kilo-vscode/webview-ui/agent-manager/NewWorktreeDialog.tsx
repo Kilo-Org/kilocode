@@ -10,6 +10,7 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Popover } from "@kilocode/kilo-ui/popover"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useVSCode } from "../src/context/vscode"
+import { useServer } from "../src/context/server"
 import { useSession } from "../src/context/session"
 import { ModelSelectorBase } from "../src/components/shared/ModelSelector"
 import { ModeSwitcherBase } from "../src/components/shared/ModeSwitcher"
@@ -22,6 +23,7 @@ import {
 } from "./MultiModelSelector"
 import { useLanguage } from "../src/context/language"
 import { useImageAttachments } from "../src/hooks/useImageAttachments"
+import { convertToMentionPath } from "../src/utils/path-mentions"
 import { BranchSelect } from "./BranchSelect"
 
 type VersionCount = 1 | 2 | 3 | 4
@@ -56,6 +58,7 @@ function sanitizeBranchName(name: string): string {
 export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBranch?: string }> = (props) => {
   const { t } = useLanguage()
   const vscode = useVSCode()
+  const server = useServer()
   const session = useSession()
 
   const [tab, setTab] = createSignal<DialogTab>("new")
@@ -84,6 +87,25 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   const [highlightedIndex, setHighlightedIndex] = createSignal(0)
 
   const imageAttach = useImageAttachments()
+  imageAttach.setFilePathDropHandler((paths) => {
+    const cwd = server.workspaceDirectory()
+    const resolved = paths.map((p) => convertToMentionPath(p, cwd))
+    const ref = textareaRef
+    if (!ref) return
+    const val = ref.value
+    const cursor = ref.selectionStart ?? val.length
+    const before = val.substring(0, cursor)
+    const after = val.substring(cursor)
+    const inserted = resolved.map((p) => `@${p}`).join(" ")
+    const result = before + inserted + " " + after
+    ref.value = result
+    setPrompt(result)
+    persistPrompt(result)
+    const pos = cursor + inserted.length + 1
+    ref.setSelectionRange(pos, pos)
+    ref.focus()
+    adjustHeight()
+  })
 
   const persistPrompt = (value: string) => {
     const state = vscode.getState<Record<string, unknown>>() ?? {}

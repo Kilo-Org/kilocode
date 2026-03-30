@@ -503,21 +503,37 @@ const AGENT_MANAGER_DIR = path.join(ROOT, "src/agent-manager")
  * is structurally impossible to extract (e.g. deep vscode API interleaving)
  * — and document the reason in the entry's `note` field.
  */
-const VSCODE_ALLOWED: Record<string, { maxLines: number; note: string }> = {
-  // God class — decompose into WorktreeOrchestrator, DiffManager, ApplyManager, etc.
-  "AgentManagerProvider.ts": {
-    maxLines: 1900,
-    note: "primary extraction target: break into vscode-free orchestrators",
+const VSCODE_ALLOWED: Record<string, { note: string }> = {
+  // VS Code adapter implementing the Host interface for the Agent Manager
+  "vscode-host.ts": {
+    note: "vscode adapter implementing Host interface",
   },
   // Thin adapter: wraps vscode.window terminal APIs behind TerminalHost interface
   "terminal-host.ts": {
-    maxLines: 60,
     note: "vscode adapter for SessionTerminalManager",
   },
   // Thin adapter: wraps vscode.tasks API behind RunTask callback
   "task-runner.ts": {
-    maxLines: 80,
     note: "vscode adapter for SetupScriptRunner",
+  },
+}
+
+/**
+ * File size caps — prevent large files from growing unchecked.
+ *
+ * When you extract code out of one of these files, lower its maxLines to
+ * the new line count rounded up to the nearest 50.
+ *
+ * DO NOT raise maxLines to accommodate new code. If adding a feature would
+ * exceed the cap, extract logic into a vscode-free helper module and have
+ * the provider call it. Only raise the cap as a last resort when the code
+ * is structurally impossible to extract (e.g. deep vscode API interleaving)
+ * — and document the reason in the entry's `note` field.
+ */
+const MAX_LINES: Record<string, { maxLines: number; note: string }> = {
+  "AgentManagerProvider.ts": {
+    maxLines: 1900,
+    note: "primary extraction target: break into smaller orchestrators",
   },
 }
 
@@ -547,9 +563,9 @@ describe("Agent Manager — VS Code import boundary", () => {
     ).toEqual([])
   })
 
-  it("allowlisted files stay within their maxLines cap", () => {
+  it("capped files stay within their maxLines limit", () => {
     const overweight: string[] = []
-    for (const [file, { maxLines }] of Object.entries(VSCODE_ALLOWED)) {
+    for (const [file, { maxLines }] of Object.entries(MAX_LINES)) {
       const filepath = path.join(AGENT_MANAGER_DIR, file)
       if (!fs.existsSync(filepath)) continue
       const lines = fs.readFileSync(filepath, "utf-8").split("\n").length
@@ -586,6 +602,69 @@ describe("Agent Manager — VS Code import boundary", () => {
       unnecessary,
       `These files no longer import "vscode" — remove them from VSCODE_ALLOWED:\n` +
         unnecessary.map((u) => `  - ${u}`).join("\n"),
+    ).toEqual([])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Provider chain parity — sidebar App.tsx vs AgentManagerApp.tsx
+//
+// The agent manager reuses ChatView (and therefore MessageList, etc.) from the
+// sidebar. Any context provider that ChatView's tree may call useXxx() on must
+// also be present in the agent manager's provider chain. A missing provider
+// crashes the entire SolidJS component tree silently.
+//
+// Regression: PR #7473 moved KiloNotifications into MessageList. It calls
+// useNotifications(), but NotificationsProvider was only in App.tsx — the agent
+// manager rendered a blank screen.
+// ---------------------------------------------------------------------------
+
+const APP_FILE = path.join(ROOT, "webview-ui/src/App.tsx")
+const AGENT_MANAGER_APP_FILE = path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx")
+
+describe("Agent Manager — provider chain parity with sidebar", () => {
+  /**
+   * Extract provider component names used as JSX elements in a file.
+   * Matches `<FooProvider` and `<FooProvider>` patterns, returning the names.
+   */
+  function extractProviders(content: string): string[] {
+    const matches = [...content.matchAll(/<(\w+Provider)\b/g)]
+    return [...new Set(matches.map((m) => m[1]!))]
+  }
+
+  /**
+   * Providers that the agent manager intentionally omits because it does not
+   * use the components that depend on them. If a shared component (ChatView,
+   * MessageList, etc.) starts using one of these, the test will fail and
+   * force the developer to add the provider to AgentManagerApp.tsx.
+   */
+  const KNOWN_EXCLUSIONS: string[] = [
+    // These are wrapped by LanguageBridge and DataBridge respectively,
+    // which the agent manager already includes in its provider chain.
+    "LanguageProvider",
+    "DataProvider",
+  ]
+
+  it("agent manager includes all context providers from sidebar App.tsx", () => {
+    const sidebar = fs.readFileSync(APP_FILE, "utf-8")
+    const agent = fs.readFileSync(AGENT_MANAGER_APP_FILE, "utf-8")
+
+    const sidebarProviders = extractProviders(sidebar)
+    const agentProviders = extractProviders(agent)
+    const agentSet = new Set(agentProviders)
+    const excluded = new Set(KNOWN_EXCLUSIONS)
+
+    const missing = sidebarProviders.filter((p) => !agentSet.has(p) && !excluded.has(p))
+
+    expect(
+      missing,
+      `These providers are in App.tsx but missing from AgentManagerApp.tsx.\n` +
+        `The agent manager reuses ChatView — any provider that ChatView's component\n` +
+        `tree depends on must be present in both provider chains.\n\n` +
+        `Missing providers:\n` +
+        missing.map((p) => `  - ${p}`).join("\n") +
+        `\n\nFix: add the missing <${missing[0]}> to AgentManagerApp.tsx's provider chain,\n` +
+        `or add it to KNOWN_EXCLUSIONS with a justification if it's truly unused.`,
     ).toEqual([])
   })
 })

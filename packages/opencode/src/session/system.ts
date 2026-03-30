@@ -1,5 +1,6 @@
 import { Ripgrep } from "../file/ripgrep"
 
+import { Global } from "../global" // kilocode_change
 import { Instance } from "../project/instance"
 
 import PROMPT_ANTHROPIC from "./prompt/anthropic.txt"
@@ -67,6 +68,8 @@ export namespace SystemPrompt {
         `  Working directory: ${Instance.directory}`,
         `  Is directory a git repo: ${project.vcs === "git" ? "yes" : "no"}`,
         `  Platform: ${process.platform}`,
+        `  Project config: .kilo/command/*.md, .kilo/agent/*.md, kilo.json, AGENTS.md. Put new commands and agents in .kilo/. Do not use .kilocode/ or .opencode/.`, // kilocode_change
+        `  Global config: ${Global.Path.config}/ (same structure)`, // kilocode_change
         ...staticEnvLines(editorContext), // kilocode_change
         `</env>`,
         `<directories>`,

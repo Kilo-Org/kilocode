@@ -5,9 +5,11 @@ import { RadioGroup } from "@kilocode/kilo-ui/radio-group"
 import { Select } from "@kilocode/kilo-ui/select"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
+import { showToast } from "@kilocode/kilo-ui/toast"
 import { useVSCode } from "../../context/vscode"
 import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
+import { useSession } from "../../context/session"
 import type { MarketplaceItem, McpMarketplaceItem, McpInstallationMethod, McpParameter } from "../../types/marketplace"
 
 interface ScopeOption {
@@ -29,6 +31,7 @@ export const InstallModal = (props: Props) => {
   const vscode = useVSCode()
   const server = useServer()
   const { t } = useLanguage()
+  const session = useSession()
 
   const workspace = () => server.workspaceDirectory()
   const options = (): ScopeOption[] =>
@@ -90,7 +93,7 @@ export const InstallModal = (props: Props) => {
     onCleanup(unsub)
   })
 
-  const handleInstall = () => {
+  const doInstall = () => {
     setInstalling(true)
     const paramValues: Record<string, unknown> = { ...params() }
     if (method()) {
@@ -103,6 +106,24 @@ export const InstallModal = (props: Props) => {
         target: scope().value,
         parameters: Object.keys(paramValues).length > 0 ? paramValues : undefined,
       },
+    })
+  }
+
+  const handleInstall = () => {
+    const busy = Object.values(session.allStatusMap()).filter((s) => s.type === "busy").length
+    if (busy === 0) {
+      doInstall()
+      return
+    }
+    const msg = busy === 1 ? t("marketplace.warning.busyOne") : t("marketplace.warning.busyMany")
+    showToast({
+      variant: "error",
+      title: msg,
+      persistent: true,
+      actions: [
+        { label: t("marketplace.warning.installAnyway"), onClick: doInstall },
+        { label: t("marketplace.warning.cancel"), onClick: "dismiss" },
+      ],
     })
   }
 

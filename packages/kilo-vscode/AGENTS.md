@@ -62,12 +62,15 @@ Every client spawns or connects to a `kilo serve` process and communicates via H
 ## Commands
 
 ```bash
+bun run extension        # Build + launch VS Code with the extension in dev mode
 bun run compile          # Type-check + lint + build
 bun run watch            # Watch mode (esbuild + tsc)
 bun run test             # Run tests (requires pretest compilation)
 bun run lint             # ESLint on src/
 bun run format           # Run formatter (do this before committing to avoid styling-only changes in commits)
 ```
+
+The `extension` commands also work from the repo root. Pass `--insiders` to prefer VS Code Insiders, `--workspace PATH` to open a different folder, `--clean` to wipe cached state, or `--wait` to block until VS Code closes. VS Code is auto-detected on macOS, Linux, and Windows; override with `--app-path` or `VSCODE_EXEC_PATH`.
 
 Single test: `bun run test -- --grep "test name"`
 
@@ -197,6 +200,16 @@ New webview features must use **`@kilocode/kilo-ui`** components instead of raw 
 ## Kilocode Change Markers
 
 This package is entirely Kilo-specific — `kilocode_change` markers are NOT needed in any files under `packages/kilo-vscode/`. The markers are only necessary when modifying shared upstream opencode files.
+
+## Process Spawning (Windows)
+
+On Windows, any `spawn`/`execFile`/`exec` call that does not set `windowsHide: true` will flash a cmd.exe console window at the user. To prevent this, **never import `spawn`, `execFile`, or `exec` from `child_process` directly**. Use the wrappers in `src/util/process.ts` instead — they enforce `windowsHide: true` automatically:
+
+```ts
+import { spawn, exec } from "../util/process"
+```
+
+The `spawn` wrapper covers long-lived processes (e.g. `kilo serve`). The `exec` wrapper covers short commands (e.g. `git`, `tar`). If you need the raw callback form of `execFile` for some reason, pass `windowsHide: true` explicitly in the options object.
 
 ## Style
 

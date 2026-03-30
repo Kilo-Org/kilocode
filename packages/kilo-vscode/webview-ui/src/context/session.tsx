@@ -40,10 +40,15 @@ import type {
   ExtensionMessage,
   FileAttachment,
   SendMessageFailedMessage,
+  McpStatusEntry,
 } from "../types/messages"
 import { removeSessionPermissions, upsertPermission } from "./permission-queue"
 import { computeStatus, calcTotalCost, calcContextUsage } from "./session-utils"
 import { Identifier } from "../utils/id"
+import { resolveModelSelection } from "./model-selection"
+import { KILO_AUTO, parseModelString } from "../../../src/shared/provider-model"
+
+const RECENT_LIMIT = 5
 
 // Store structure for messages and parts
 interface SessionStore {
@@ -51,10 +56,11 @@ interface SessionStore {
   messages: Record<string, Message[]> // sessionID -> messages
   parts: Record<string, Part[]> // messageID -> parts
   todos: Record<string, TodoItem[]> // sessionID -> todos
-  modelSelections: Record<string, ModelSelection> // agentName -> model (global, extension-lifetime)
+  modelSelections: Record<string, ModelSelection | null> // agentName -> model (global, extension-lifetime)
   sessionOverrides: Record<string, ModelSelection> // sessionID -> per-session model override (compare mode)
   agentSelections: Record<string, string> // sessionID -> agent name
   variantSelections: Record<string, string> // "providerID/modelID" -> variant name
+  recentModels: ModelSelection[]
 }
 
 interface SessionContextValue {
@@ -132,6 +138,13 @@ interface SessionContextValue {
   agents: Accessor<AgentInfo[]>
   removeMode: (name: string) => void
   removeMcp: (name: string) => void
+
+  // MCP server status (runtime connect/disconnect)
+  mcpStatus: Accessor<Record<string, McpStatusEntry>>
+  mcpLoading: Accessor<string | null>
+  connectMcp: (name: string) => void
+  disconnectMcp: (name: string) => void
+  refreshMcpStatus: () => void
   selectedAgent: Accessor<string>
   selectAgent: (name: string) => void
   getSessionAgent: (sessionID: string) => string
@@ -148,6 +161,9 @@ interface SessionContextValue {
   revert: Accessor<SessionInfo["revert"]>
   revertedCount: Accessor<number>
   summary: Accessor<SessionInfo["summary"]>
+
+  // Live worktree diff stats (polled from CLI backend)
+  worktreeStats: Accessor<{ files: number; additions: number; deletions: number } | undefined>
 
   // Actions
   revertSession: (messageID: string) => void
@@ -239,11 +255,14 @@ export const SessionProvider: ParentComponent = (props) => {
     if (pendingAgentSelection() === name) {
       setPendingAgentSelection(null)
     }
-    for (const sid of Object.keys(store.agentSelections)) {
-      if (store.agentSelections[sid] === name) {
-        setStore("agentSelections", sid, undefined as unknown as string)
-      }
-    }
+    setStore(
+      "agentSelections",
+      produce((selections) => {
+        for (const sid of Object.keys(selections)) {
+          if (selections[sid] === name) delete selections[sid]
+        }
+      }),
+    )
 
     vscode.postMessage({ type: "removeMode", name })
   }
@@ -252,11 +271,38 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "removeMcp", name })
   }
 
+  // MCP runtime status
+  const [mcpStatus, setMcpStatus] = createSignal<Record<string, McpStatusEntry>>({})
+  const [mcpLoading, setMcpLoading] = createSignal<string | null>(null)
+
+  const connectMcp = (name: string) => {
+    if (mcpLoading()) return
+    if (!server.isConnected()) return
+    setMcpLoading(name)
+    vscode.postMessage({ type: "connectMcp", name })
+  }
+
+  const disconnectMcp = (name: string) => {
+    if (mcpLoading()) return
+    if (!server.isConnected()) return
+    setMcpLoading(name)
+    vscode.postMessage({ type: "disconnectMcp", name })
+  }
+
+  const refreshMcpStatus = () => {
+    vscode.postMessage({ type: "requestMcpStatus" })
+  }
+
   // Pending agent selection for before a session exists
   const [pendingAgentSelection, setPendingAgentSelection] = createSignal<string | null>(null)
 
   // Cloud session preview state
   const [cloudPreviewId, setCloudPreviewId] = createSignal<string | null>(null)
+
+  // Live worktree diff stats from extension polling
+  const [worktreeStats, setWorktreeStats] = createSignal<
+    { files: number; additions: number; deletions: number } | undefined
+  >()
 
   // Tracks optimistic messageIDs that haven't been confirmed by the server yet.
   // Prevents handleMessagesLoaded from wiping them when it replaces the array.
@@ -272,6 +318,7 @@ export const SessionProvider: ParentComponent = (props) => {
     sessionOverrides: {},
     agentSelections: {},
     variantSelections: {},
+    recentModels: [],
   })
 
   // Per-session agent selection
@@ -283,38 +330,40 @@ export const SessionProvider: ParentComponent = (props) => {
     return pendingAgentSelection() ?? defaultAgent()
   })
 
-  /** Parse a "provider/model" config string into a ModelSelection (or null). */
-  function parseModel(raw: string | undefined | null): ModelSelection | null {
-    if (!raw) return null
-    const slash = raw.indexOf("/")
-    if (slash <= 0) return null
-    return { providerID: raw.slice(0, slash), modelID: raw.slice(slash + 1) }
-  }
-
   /** Per-mode model from config (e.g. config.agent.code.model). */
   function getModeModel(agentName: string): ModelSelection | null {
-    return parseModel(config().agent?.[agentName]?.model)
+    return parseModelString(config().agent?.[agentName]?.model)
   }
 
   /** Global default model from config (config.model). */
   function getGlobalModel(): ModelSelection | null {
-    return parseModel(config().model)
+    return parseModelString(config().model)
+  }
+
+  function resolveModel(agentName: string, override?: ModelSelection | null): ModelSelection | null {
+    return resolveModelSelection({
+      providers: provider.providers(),
+      connected: provider.connected(),
+      override,
+      mode: getModeModel(agentName),
+      global: getGlobalModel(),
+      recent: store.recentModels,
+      fallback: KILO_AUTO,
+    })
   }
 
   // Keep model selection in sync with provider/mode default until the user
   // explicitly overrides it.
   createEffect(() => {
-    const def = provider.defaultSelection()
     const agentName = selectedAgentName()
     if (userSetAgents()[agentName]) return
-
-    // Per-mode config > global config model > VS Code default selection
-    const sel = getModeModel(agentName) ?? getGlobalModel() ?? def
-    if (sel) setStore("modelSelections", agentName, sel)
+    const sel = resolveModel(agentName)
+    setStore("modelSelections", agentName, sel)
   })
 
   // Global model selection per agent/mode
   // Precedence: per-session override > user override > per-mode config > global config model > VS Code default > kilo-auto/free
+  // Each candidate is validated against the provider catalog; invalid models fall through.
   const selected = createMemo<ModelSelection | null>(() => {
     const sid = currentSessionID()
     if (sid) {
@@ -322,23 +371,40 @@ export const SessionProvider: ParentComponent = (props) => {
       if (session) return session
     }
     const agentName = selectedAgentName()
-    const override = store.modelSelections[agentName]
-    if (override) return override
-    return getModeModel(agentName) ?? getGlobalModel() ?? provider.defaultSelection()
+    return resolveModel(agentName, store.modelSelections[agentName])
   })
-  function selectModel(providerID: string, modelID: string) {
-    const agentName = selectedAgentName()
-    setUserSetAgents((prev) => ({ ...prev, [agentName]: true }))
-    setStore("modelSelections", agentName, { providerID, modelID })
-    // Update per-session override so compare-mode sessions stay independent
+
+  function pushRecent(selection: ModelSelection) {
+    const key = `${selection.providerID}/${selection.modelID}`
+    const filtered = store.recentModels.filter((r) => `${r.providerID}/${r.modelID}` !== key)
+    const updated = [selection, ...filtered].slice(0, RECENT_LIMIT)
+    setStore("recentModels", updated)
+    vscode.postMessage({ type: "persistRecents", recents: updated })
+  }
+
+  function applyModel(agentName: string, selection: ModelSelection) {
+    pushRecent(selection)
     const sid = currentSessionID()
-    if (sid) setStore("sessionOverrides", sid, { providerID, modelID })
+    if (sid) {
+      // Per-session only — do NOT mutate the global modelSelections map.
+      // Writing globally here would cause every other session (that hasn't
+      // set its own override) to inherit this session's model.
+      setStore("sessionOverrides", sid, selection)
+    } else {
+      // No active session (sidebar) — write globally
+      setUserSetAgents((prev) => ({ ...prev, [agentName]: true }))
+      setStore("modelSelections", agentName, selection)
+    }
+  }
+
+  function selectModel(providerID: string, modelID: string) {
+    applyModel(selectedAgentName(), { providerID, modelID })
   }
 
   /** The config/default model for the current mode (what settings says). */
   const configModel = createMemo<ModelSelection | null>(() => {
     const agentName = selectedAgentName()
-    return getModeModel(agentName) ?? getGlobalModel() ?? provider.defaultSelection()
+    return resolveModel(agentName)
   })
 
   /** True when the active model differs from what the config dictates. */
@@ -384,10 +450,24 @@ export const SessionProvider: ParentComponent = (props) => {
     }
     setAgents(message.agents)
     setDefaultAgent(message.defaultAgent)
-    // Initialize pending agent if not yet set by the user
-    if (!pendingAgentSelection()) {
+
+    const names = new Set(message.agents.map((a) => a.name))
+
+    // Reset pending selection if the agent no longer exists (e.g. after org switch)
+    const pending = pendingAgentSelection()
+    if (!pending || !names.has(pending)) {
       setPendingAgentSelection(message.defaultAgent)
     }
+
+    // Clear per-session selections that reference a mode no longer available
+    setStore(
+      "agentSelections",
+      produce((selections) => {
+        for (const sid of Object.keys(selections)) {
+          if (selections[sid] && !names.has(selections[sid]!)) delete selections[sid]
+        }
+      }),
+    )
   })
 
   // Request agents in case the initial push was missed.
@@ -424,10 +504,32 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "removeSkill", location })
   }
 
+  // MCP status loaded from CLI backend
+  const unsubMcpStatus = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type === "mcpStatusLoaded") {
+      setMcpStatus(message.status)
+      setMcpLoading(null)
+    }
+  })
+
+  // Request MCP status on init with retry (same pattern as agents)
+  let mcpRetries = 0
+  vscode.postMessage({ type: "requestMcpStatus" })
+  const mcpRetryTimer = setInterval(() => {
+    mcpRetries++
+    if (Object.keys(mcpStatus()).length > 0 || mcpRetries >= 5) {
+      clearInterval(mcpRetryTimer)
+      return
+    }
+    vscode.postMessage({ type: "requestMcpStatus" })
+  }, 500)
+
   onCleanup(() => {
     unsubAgents()
     unsubSkills()
+    unsubMcpStatus()
     clearInterval(agentRetryTimer)
+    clearInterval(mcpRetryTimer)
   })
 
   // Variant (thinking effort) selection — keyed by "providerID/modelID"
@@ -469,6 +571,14 @@ export const SessionProvider: ParentComponent = (props) => {
   vscode.postMessage({ type: "requestVariants" })
 
   onCleanup(unsubVariants)
+
+  // Load persisted recent models from extension globalState
+  const unsubRecents = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type !== "recentsLoaded") return
+    setStore("recentModels", message.recents)
+  })
+  vscode.postMessage({ type: "requestRecents" })
+  onCleanup(unsubRecents)
 
   // Handle messages from extension
   onMount(() => {
@@ -538,6 +648,25 @@ export const SessionProvider: ParentComponent = (props) => {
           handleMessageRemoved(message.sessionID, message.messageID)
           break
 
+        case "sessionError": {
+          if (message.error?.name === "MessageAbortedError") break
+          const sid = message.sessionID ?? currentSessionID()
+          if (!sid) break
+          // Find the last user message in this session to use as parentID
+          const msgs = store.messages[sid] ?? []
+          const parent = [...msgs].reverse().find((m) => m.role === "user")
+          const errorMsg: Message = {
+            id: Identifier.ascending("message"),
+            sessionID: sid,
+            role: "assistant",
+            createdAt: new Date().toISOString(),
+            parentID: parent?.id,
+            error: message.error,
+          }
+          handleMessageCreated(errorMsg)
+          break
+        }
+
         case "error":
           // Only clear loading if the error is for the current session
           // (or has no sessionID for backwards compatibility)
@@ -566,6 +695,10 @@ export const SessionProvider: ParentComponent = (props) => {
             description: message.error,
           })
           console.error("[Kilo New] Cloud session import failed:", message.error)
+          break
+
+        case "worktreeStatsLoaded":
+          setWorktreeStats({ files: message.files, additions: message.additions, deletions: message.deletions })
           break
       }
     })
@@ -691,13 +824,14 @@ export const SessionProvider: ParentComponent = (props) => {
 
         if (existingIndex >= 0) {
           // Update existing part
+          const existing = parts[effectiveMessageID][existingIndex]
           if (
             delta?.type === "text-delta" &&
             delta.textDelta &&
-            parts[effectiveMessageID][existingIndex].type === "text"
+            (existing.type === "text" || existing.type === "reasoning")
           ) {
-            // Append text delta
-            ;(parts[effectiveMessageID][existingIndex] as { text: string }).text += delta.textDelta
+            // Append text delta to text or reasoning parts
+            ;(existing as { text: string }).text += delta.textDelta
           } else {
             // Replace entire part
             parts[effectiveMessageID][existingIndex] = part
@@ -1112,9 +1246,7 @@ export const SessionProvider: ParentComponent = (props) => {
       // When switching mode, initialize model for the new mode if the user
       // hasn't explicitly set one for it
       if (!userSetAgents()[name] && !store.modelSelections[name]) {
-        const modeModel = getModeModel(name)
-        const sel = modeModel ?? provider.defaultSelection()
-        if (sel) setStore("modelSelections", name, sel)
+        setStore("modelSelections", name, resolveModel(name))
       }
     }
   }
@@ -1474,7 +1606,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function syncSession(sessionID: string) {
-    vscode.postMessage({ type: "syncSession", sessionID })
+    vscode.postMessage({ type: "syncSession", sessionID, parentSessionID: currentSessionID() })
   }
 
   const todos = () => {
@@ -1551,6 +1683,11 @@ export const SessionProvider: ParentComponent = (props) => {
     removeSkill,
     removeMode,
     removeMcp,
+    mcpStatus,
+    mcpLoading,
+    connectMcp,
+    disconnectMcp,
+    refreshMcpStatus,
     selectedAgent: selectedAgentName,
     selectAgent,
     getSessionAgent: (sessionID: string) => store.agentSelections[sessionID] ?? defaultAgent(),
@@ -1558,7 +1695,7 @@ export const SessionProvider: ParentComponent = (props) => {
       const override = store.sessionOverrides[sessionID]
       if (override) return override
       const agentName = store.agentSelections[sessionID] ?? defaultAgent()
-      return store.modelSelections[agentName] ?? provider.defaultSelection()
+      return resolveModel(agentName, store.modelSelections[agentName])
     },
     setSessionModel: (sessionID: string, providerID: string, modelID: string) => {
       // Only write per-session override — do NOT touch global modelSelections or
@@ -1582,6 +1719,7 @@ export const SessionProvider: ParentComponent = (props) => {
     revert,
     revertedCount,
     summary,
+    worktreeStats,
     revertSession,
     unrevertSession,
     sendMessage,

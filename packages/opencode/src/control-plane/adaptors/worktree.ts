@@ -38,7 +38,7 @@ export const WorktreeAdaptor: Adaptor = {
     const { WorkspaceServer } = await import("../workspace-server/server")
     const url = input instanceof Request || input instanceof URL ? input : new URL(input, "http://kilo.internal")
     const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined))
-    headers.set("x-opencode-directory", config.directory)
+    headers.set("x-kilo-directory", config.directory)
 
     const request = new Request(url, { ...init, headers })
     return WorkspaceServer.App().fetch(request)

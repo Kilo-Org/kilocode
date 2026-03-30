@@ -14,7 +14,8 @@
     "prepare": "husky",
     "random": "echo 'Random script'",
     "hello": "echo 'Hello World!'",
-    "test": "echo 'do not run tests from root' && exit 1"
+    "test": "echo 'do not run tests from root' && exit 1",
+    "extension": "bun --cwd packages/kilo-vscode script/launch.ts"
   },
   "workspaces": {
     "packages": [
@@ -111,6 +112,6 @@
     "@openrouter/ai-sdk-provider@1.5.4": "patches/@openrouter%2Fai-sdk-provider@1.5.4.patch",
     "ghostty-web@0.3.0": "patches/ghostty-web@0.3.0.patch"
   },
-  "version": "7.0.51",
+  "version": "7.1.9",
   "peerDependencies": {}
 }

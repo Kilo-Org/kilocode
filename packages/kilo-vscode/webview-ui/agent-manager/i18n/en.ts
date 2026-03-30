@@ -17,6 +17,9 @@ export const dict = {
   "agentManager.worktree.advancedOptions": "Advanced worktree options",
   "agentManager.worktree.defaultBaseBranch": "Default Base Branch",
   "agentManager.worktree.defaultBaseBranchAuto": "Auto-detect",
+  "agentManager.worktree.copyPath": "Copy Path",
+  "agentManager.worktree.openInVscode": "Open in VS Code",
+  "agentManager.worktree.rename": "Rename",
 
   "agentManager.hoverCard.branch": "BRANCH",
   "agentManager.hoverCard.base": "Base",
@@ -29,6 +32,7 @@ export const dict = {
   "agentManager.session.untitled": "Untitled",
   "agentManager.session.newSession": "New Session",
   "agentManager.session.openInWorktree": "Open in worktree",
+  "agentManager.session.openLocally": "Open locally",
   "agentManager.session.readonly": "Read-only session",
   "agentManager.session.noSessions": "No sessions open",
 
@@ -61,8 +65,9 @@ export const dict = {
   "agentManager.shortcuts.newTab": "New tab",
   "agentManager.shortcuts.closeTab": "Close tab",
   "agentManager.shortcuts.toggleTerminal": "Toggle terminal",
-  "agentManager.shortcuts.focusPanel": "Focus panel",
   "agentManager.shortcuts.openAgentManager": "Open Agent Manager",
+  "agentManager.shortcuts.cycleAgentMode": "Next agent mode",
+  "agentManager.shortcuts.cyclePreviousAgentMode": "Previous agent mode",
   "agentManager.shortcuts.showShortcuts": "Show keyboard shortcuts",
 
   "agentManager.dialog.removeStaleWorktree.title": "Remove Stale Worktree",

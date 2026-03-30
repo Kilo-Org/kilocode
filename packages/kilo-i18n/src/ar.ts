@@ -65,4 +65,8 @@ export const dict = {
   "marketplace.install": "تثبيت",
   "marketplace.filter.installed": "مثبت",
   "marketplace.error.dismiss": "تجاهل",
+  "marketplace.warning.busyOne": "جلسة واحدة تعمل وستتوقف",
+  "marketplace.warning.busyMany": "عدة جلسات تعمل وستتوقف",
+  "marketplace.warning.installAnyway": "تثبيت على أي حال",
+  "marketplace.warning.cancel": "إلغاء",
 }

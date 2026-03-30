@@ -118,6 +118,16 @@ export const Instance = {
     cache.delete(Instance.directory)
     emit(Instance.directory)
   },
+  /**
+   * Reset a specific state entry for all instances without running dispose callbacks.
+   * Used to invalidate config-derived caches (e.g. Config.state) after a no-dispose
+   * config write, so the next Config.get() re-reads from disk with correct precedence.
+   */
+  resetStateEntry(init: (...args: any[]) => any) {
+    for (const dir of cache.keys()) {
+      State.resetEntry(dir, init)
+    }
+  },
   async disposeAll() {
     if (disposal.all) return disposal.all
 

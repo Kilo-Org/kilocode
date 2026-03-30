@@ -8,10 +8,19 @@
  */
 
 import { Component, createSignal, onCleanup, For, Show } from "solid-js"
-import { Popover } from "@kilocode/kilo-ui/popover"
+import { PopupSelector } from "./PopupSelector"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useSession } from "../../context/session"
 import type { AgentInfo } from "../../types/messages"
+
+/** Format an agent for display. Uses displayName if available, otherwise title-cases the slug. */
+function formatAgentLabel(agent: AgentInfo): string {
+  if (agent.displayName) return agent.displayName
+  return agent.name
+    .split(/[-_]/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ")
+}
 
 // ---------------------------------------------------------------------------
 // Reusable base component
@@ -76,23 +85,22 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
       focusItem(len - 1)
     } else if (e.key === "Enter" || e.key === " ") {
       e.preventDefault()
-      if (cur >= 0) pick(props.agents[cur].name)
+      if (cur >= 0 && cur < len) pick(props.agents[cur].name)
     }
   }
 
   const triggerLabel = () => {
     const agent = props.agents.find((a) => a.name === props.value)
-    if (agent) {
-      return agent.name.charAt(0).toUpperCase() + agent.name.slice(1)
-    }
+    if (agent) return formatAgentLabel(agent)
     return props.value || "Code"
   }
 
   return (
     <Show when={hasAgents()}>
-      <Popover
+      <PopupSelector
+        expanded={false}
         placement="top-start"
-        fitViewport
+        minHeight={100}
         open={open()}
         onOpenChange={onOpen}
         triggerAs={Button}
@@ -106,26 +114,34 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
           </>
         }
       >
-        <div class="mode-switcher-list" role="listbox" ref={listRef} onKeyDown={onKeyDown}>
-          <For each={props.agents}>
-            {(agent, i) => (
-              <div
-                class={`mode-switcher-item${agent.name === props.value ? " selected" : ""}`}
-                role="option"
-                aria-selected={agent.name === props.value}
-                tabindex={focused() === i() ? 0 : -1}
-                onClick={() => pick(agent.name)}
-                onFocus={() => setFocused(i())}
-              >
-                <span class="mode-switcher-item-name">{agent.name.charAt(0).toUpperCase() + agent.name.slice(1)}</span>
-                <Show when={agent.description}>
-                  <span class="mode-switcher-item-desc">{agent.description}</span>
-                </Show>
-              </div>
-            )}
-          </For>
-        </div>
-      </Popover>
+        {(bodyH) => (
+          <div
+            class="mode-switcher-list"
+            role="listbox"
+            ref={listRef}
+            onKeyDown={onKeyDown}
+            style={bodyH() !== undefined ? { "max-height": `${bodyH()}px` } : {}}
+          >
+            <For each={props.agents}>
+              {(agent, i) => (
+                <div
+                  class={`mode-switcher-item${agent.name === props.value ? " selected" : ""}`}
+                  role="option"
+                  aria-selected={agent.name === props.value}
+                  tabindex={focused() === i() ? 0 : -1}
+                  onClick={() => pick(agent.name)}
+                  onFocus={() => setFocused(i())}
+                >
+                  <span class="mode-switcher-item-name">{formatAgentLabel(agent)}</span>
+                  <Show when={agent.description}>
+                    <span class="mode-switcher-item-desc">{agent.description}</span>
+                  </Show>
+                </div>
+              )}
+            </For>
+          </div>
+        )}
+      </PopupSelector>
     </Show>
   )
 }

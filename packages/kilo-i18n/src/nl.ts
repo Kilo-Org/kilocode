@@ -1,0 +1,74 @@
+// Kilo-specific translations and overrides
+// Keys here will override any matching keys from upstream translations
+export const dict = {
+  // Kilo Gateway provider translations
+  "provider.connect.kiloGateway.line1":
+    "Kilo Gateway geeft je toegang tot een gecureerde set van betrouwbare, geoptimaliseerde modellen voor coding agents.",
+  "provider.connect.kiloGateway.line2":
+    "Met één enkele API key krijg je toegang tot modellen zoals Claude, GPT, Gemini, GLM en meer.",
+  "provider.connect.kiloGateway.visit.prefix": "Bezoek ",
+  "provider.connect.kiloGateway.visit.link": "kilo.ai",
+  "provider.connect.kiloGateway.visit.suffix": " om je API key op te halen.",
+
+  // Provider dialog translations
+  "dialog.provider.group.recommended": "Aanbevolen",
+  "dialog.provider.kilo.note": "Toegang tot 500+ AI modellen",
+
+  // Reasoning block label
+  "ui.permission.run": "Uitvoeren",
+  "ui.reasoning.label": "Redenering",
+
+  // Marketplace
+  "marketplace.tab.skills": "Skills",
+  "marketplace.tab.mcpServers": "MCP Servers",
+  "marketplace.tab.modes": "Modi",
+  "marketplace.category.all": "Alle",
+  "marketplace.placeholder": "Nog te implementeren",
+  "marketplace.card.installed": "Geïnstalleerd",
+  "marketplace.card.install": "Installeren",
+  "marketplace.card.remove": "Verwijderen",
+  "marketplace.card.removeScope": "Verwijderen ({{scope}})",
+  "marketplace.card.showMore": "Toon meer",
+  "marketplace.card.showLess": "Toon minder",
+  "marketplace.install.title": "Installeer {{name}}",
+  "marketplace.install.scope": "Scope",
+  "marketplace.install.scope.project": "Project",
+  "marketplace.install.scope.global": "Globaal",
+  "marketplace.install.prerequisites": "Vereisten",
+  "marketplace.install.installing": "Installeren...",
+  "marketplace.install.cancel": "Annuleren",
+  "marketplace.install.success": "Succesvol geïnstalleerd!",
+  "marketplace.install.failed": "Installatie mislukt",
+  "marketplace.install.done": "Klaar",
+  "marketplace.install.close": "Sluiten",
+  "marketplace.remove.title": "{{name}} verwijderen?",
+  "marketplace.remove.confirm":
+    "Weet je zeker dat je deze {{type}} wilt verwijderen? Dit verwijdert het uit je {{scope}} configuratie.",
+  "marketplace.remove.cancel": "Annuleren",
+  "marketplace.remove.confirm.button": "Verwijderen",
+  "marketplace.tab.mcp": "MCP",
+  "marketplace.search": "Zoeken...",
+  "marketplace.filter.all": "Alle items",
+  "marketplace.filter.notInstalled": "Niet geïnstalleerd",
+  "marketplace.empty": "Geen items gevonden",
+  "marketplace.badge.mcpServer": "MCP Server",
+  "marketplace.badge.mode": "Modus",
+  "marketplace.card.by": "door {{author}}",
+  "marketplace.install.method": "Installatiemethode",
+  "marketplace.install.parameters": "Parameters",
+  "marketplace.install.optional": "(optioneel)",
+  "marketplace.install.required": "{{name}} is vereist",
+  "marketplace.scope.project": "project",
+  "marketplace.scope.global": "globaal",
+  "marketplace.remove.type.mcp": "MCP server",
+  "marketplace.remove.type.skill": "skill",
+  "marketplace.remove.type.mode": "modus",
+  "marketplace.remove.failed": "Verwijderen van {{name}} mislukt",
+  "marketplace.install": "Installeren",
+  "marketplace.filter.installed": "Geïnstalleerd",
+  "marketplace.error.dismiss": "Sluiten",
+  "marketplace.warning.busyOne": "Er is één sessie actief en deze zal worden onderbroken",
+  "marketplace.warning.busyMany": "Er zijn meerdere sessies actief en deze zullen worden onderbroken",
+  "marketplace.warning.installAnyway": "Toch installeren",
+  "marketplace.warning.cancel": "Annuleren",
+}

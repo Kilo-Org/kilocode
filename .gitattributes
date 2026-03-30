@@ -5,3 +5,13 @@
 # Visual regression baseline snapshots
 packages/kilo-ui/tests/**/*.png filter=lfs diff=lfs merge=lfs -text
 packages/kilo-vscode/tests/**/*.png filter=lfs diff=lfs merge=lfs -text
+
+# Hide non-English localization files by default in GitHub PR diffs.
+**/i18n/*.ts linguist-generated=true
+**/i18n/en.ts linguist-generated=false
+**/i18n/en*.ts linguist-generated=false
+**/i18n/package-nls-en.ts linguist-generated=false
+**/i18n/index.ts linguist-generated=false
+**/i18n/parity.test.ts linguist-generated=false
+packages/kilo-i18n/src/*.ts linguist-generated=true
+packages/kilo-i18n/src/en.ts linguist-generated=false

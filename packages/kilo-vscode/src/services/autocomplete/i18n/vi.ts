@@ -42,4 +42,9 @@ export const dict = {
     "Kilo Code Autocomplete đang bị chặn do xung đột với GitHub Copilot. Để khắc phục điều này, bạn phải tắt các gợi ý inline của Copilot.",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "Tắt Copilot",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "Tắt Autocomplete",
+  "kilocode:autocomplete.creditsExhausted.message":
+    "Kilo Code Autocomplete đã bị tạm dừng vì tài khoản của bạn không còn tín dụng. Thêm tín dụng để tiếp tục sử dụng tự động hoàn thành.",
+  "kilocode:autocomplete.creditsExhausted.addCredits": "Thêm tín dụng",
+  "kilocode:autocomplete.authError.message":
+    "Kilo Code Autocomplete đã bị tạm dừng do lỗi xác thực. Vui lòng đăng nhập lại.",
 }

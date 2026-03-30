@@ -1,7 +1,7 @@
 import * as nodePath from "path"
 import * as os from "os"
-import * as cp from "child_process"
 import * as fs from "fs/promises"
+import { spawn } from "../util/process"
 import simpleGit from "simple-git"
 import { parseWorktreeList, normalizePath } from "./git-import"
 
@@ -349,26 +349,11 @@ export class GitOps {
 
   private exec(args: string[], cwd: string, options?: ExecOptions): Promise<ExecResult> {
     return new Promise((resolve) => {
-      const child = cp.execFile(
-        "git",
-        args,
-        {
-          cwd,
-          env: options?.env,
-          encoding: "utf8",
-          maxBuffer: 64 * 1024 * 1024,
-        },
-        (error, stdout, stderr) => {
-          if (!error) {
-            resolve({ code: 0, stdout, stderr })
-            return
-          }
-          const exec = error as cp.ExecException
-          const code = typeof exec.code === "number" ? exec.code : 1
-          const fallback = exec.message || "Git command failed"
-          resolve({ code, stdout: stdout ?? "", stderr: stderr || fallback })
-        },
-      )
+      const child = spawn("git", args, {
+        cwd,
+        env: options?.env,
+        stdio: ["pipe", "pipe", "pipe"],
+      })
 
       if (options?.stdin !== undefined) {
         if (!child.stdin) {
@@ -377,6 +362,22 @@ export class GitOps {
         }
         child.stdin.end(options.stdin)
       }
+
+      const out: Buffer[] = []
+      const err: Buffer[] = []
+      child.stdout?.on("data", (chunk: Buffer) => out.push(chunk))
+      child.stderr?.on("data", (chunk: Buffer) => err.push(chunk))
+
+      child.on("error", (error) => {
+        resolve({ code: 1, stdout: "", stderr: error.message })
+      })
+      child.on("close", (code) => {
+        resolve({
+          code: code ?? 1,
+          stdout: Buffer.concat(out).toString("utf8"),
+          stderr: Buffer.concat(err).toString("utf8"),
+        })
+      })
     })
   }
 }

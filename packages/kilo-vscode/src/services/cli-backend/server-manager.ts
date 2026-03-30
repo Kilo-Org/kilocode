@@ -1,4 +1,5 @@
-import { spawn, ChildProcess } from "child_process"
+import { type ChildProcess } from "child_process"
+import { spawn } from "../../util/process"
 import * as crypto from "crypto"
 import * as fs from "fs"
 import * as path from "path"
@@ -82,7 +83,6 @@ export class ServerManager {
         },
         stdio: ["ignore", "pipe", "pipe"],
         detached: true,
-        windowsHide: true,
       })
       console.log("[Kilo New] ServerManager: 📦 Process spawned with PID:", serverProcess.pid)
 

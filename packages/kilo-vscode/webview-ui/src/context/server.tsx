@@ -22,7 +22,7 @@ interface ServerContextValue {
   workspaceDirectory: Accessor<string>
 }
 
-const ServerContext = createContext<ServerContextValue>()
+export const ServerContext = createContext<ServerContextValue>()
 
 const initialDeviceAuth: DeviceAuthState = { status: "idle" }
 
@@ -63,6 +63,10 @@ export const ServerProvider: ParentComponent = (props) => {
 
         case "workspaceDirectoryChanged":
           setWorkspaceDirectory(message.directory)
+          break
+
+        case "languageChanged":
+          setLanguageOverride(message.locale || undefined)
           break
 
         case "connectionState":
@@ -126,6 +130,10 @@ export const ServerProvider: ParentComponent = (props) => {
   })
 
   const startLogin = () => {
+    const status = deviceAuth().status
+    if (status === "initiating" || status === "pending") {
+      return
+    }
     setDeviceAuth({ status: "initiating" })
     vscode.postMessage({ type: "login" })
   }

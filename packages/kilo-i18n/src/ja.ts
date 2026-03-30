@@ -63,4 +63,8 @@ export const dict = {
   "marketplace.install": "インストール",
   "marketplace.filter.installed": "インストール済み",
   "marketplace.error.dismiss": "閉じる",
+  "marketplace.warning.busyOne": "1つのセッションが実行中で中断されます",
+  "marketplace.warning.busyMany": "複数のセッションが実行中で中断されます",
+  "marketplace.warning.installAnyway": "それでもインストール",
+  "marketplace.warning.cancel": "キャンセル",
 }

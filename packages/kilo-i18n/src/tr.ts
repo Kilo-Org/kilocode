@@ -65,4 +65,8 @@ export const dict = {
   "marketplace.install": "Yükle",
   "marketplace.filter.installed": "Yüklendi",
   "marketplace.error.dismiss": "Kapat",
+  "marketplace.warning.busyOne": "Bir oturum çalışıyor ve kesintiye uğrayacak",
+  "marketplace.warning.busyMany": "Birden fazla oturum çalışıyor ve kesintiye uğrayacak",
+  "marketplace.warning.installAnyway": "Yine de yükle",
+  "marketplace.warning.cancel": "İptal",
 }

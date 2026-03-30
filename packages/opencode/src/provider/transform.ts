@@ -6,6 +6,7 @@ import type { Provider } from "./provider"
 import type { ModelsDev } from "./models"
 import { iife } from "@/util/iife"
 import { Flag } from "@/flag/flag"
+import { kiloProviderOptions } from "@/kilocode/provider-options"
 
 type Modality = NonNullable<ModelsDev.Model["modalities"]>["input"][number]
 
@@ -503,7 +504,9 @@ export namespace ProviderTransform {
         const copilotEfforts = iife(() => {
           if (id.includes("5.1-codex-max") || id.includes("5.2") || id.includes("5.3"))
             return [...WIDELY_SUPPORTED_EFFORTS, "xhigh"]
-          return WIDELY_SUPPORTED_EFFORTS
+          const arr = [...WIDELY_SUPPORTED_EFFORTS]
+          if (id.includes("gpt-5") && model.release_date >= "2025-12-04") arr.push("xhigh")
+          return arr
         })
         return Object.fromEntries(
           copilotEfforts.map((effort) => [
@@ -933,6 +936,12 @@ export namespace ProviderTransform {
 
       return result
     }
+
+    // kilocode_change start
+    if (model.api.npm === "@kilocode/kilo-gateway") {
+      return kiloProviderOptions(options)
+    }
+    // kilocode_change end
 
     const key = sdkKey(model.api.npm) ?? model.providerID
     return { [key]: options }

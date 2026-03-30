@@ -11,7 +11,7 @@ export function DialogAgent() {
     local.agent.list().map((item) => {
       return {
         value: item.name,
-        title: item.name,
+        title: item.displayName ?? item.name, // kilocode_change
         description: item.native ? "native" : item.description,
       }
     }),
@@ -20,7 +20,7 @@ export function DialogAgent() {
   return (
     <DialogSelect
       title="Select agent"
-      current={local.agent.current().name}
+      current={local.agent.current()?.name ?? ""} // kilocode_change
       options={options()}
       onSelect={(option) => {
         local.agent.set(option.value)

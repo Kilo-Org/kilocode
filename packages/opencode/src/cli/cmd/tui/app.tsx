@@ -20,6 +20,7 @@ import { DialogHelp } from "./ui/dialog-help"
 import { CommandProvider, useCommandDialog } from "@tui/component/dialog-command"
 import { DialogAgent } from "@tui/component/dialog-agent"
 import { DialogSessionList } from "@tui/component/dialog-session-list"
+import { DialogWorkspaceList } from "@tui/component/dialog-workspace-list"
 import { KeybindProvider } from "@tui/context/keybind"
 import { ThemeProvider, useTheme } from "@tui/context/theme"
 import { Home } from "@tui/routes/home"
@@ -260,9 +261,23 @@ function App() {
   }
   const [terminalTitleEnabled, setTerminalTitleEnabled] = createSignal(kv.get("terminal_title_enabled", true))
 
+  // kilocode_change start — notify server which session the user is viewing (for live session indicators)
   createEffect(() => {
-    console.log(JSON.stringify(route.data))
+    const sessionID = route.data.type === "session" ? route.data.sessionID : undefined
+    sdk.client.session.viewed({ sessionID }).catch(() => {})
   })
+  // kilocode_change end
+
+  // kilocode_change start — evict per-session data from store when navigating away
+  createEffect(
+    on(
+      () => (route.data.type === "session" ? route.data.sessionID : undefined),
+      (current, prev) => {
+        if (prev && prev !== current) sync.session.evict(prev)
+      },
+    ),
+  )
+  // kilocode_change end
 
   // Update terminal window title based on current route and session
   createEffect(() => {
@@ -378,6 +393,22 @@ function App() {
         dialog.replace(() => <DialogSessionList />)
       },
     },
+    ...(Flag.KILO_EXPERIMENTAL_WORKSPACES_TUI
+      ? [
+          {
+            title: "Manage workspaces",
+            value: "workspace.list",
+            category: "Workspace",
+            suggested: true,
+            slash: {
+              name: "workspaces",
+            },
+            onSelect: () => {
+              dialog.replace(() => <DialogWorkspaceList />)
+            },
+          },
+        ]
+      : []),
     {
       title: "New session",
       suggested: route.data.type === "session",

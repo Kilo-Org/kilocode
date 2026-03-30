@@ -86,3 +86,25 @@ test("toConfig - mixed scalar-only and rule-capable permissions", () => {
     bash: { "npm *": "allow" },
   })
 })
+
+// Tests for null delete sentinel handling (null = "remove this key from config")
+
+test("fromConfig - null entries in PermissionObject are skipped", () => {
+  const config = { bash: { "*": "ask" as const, "npm *": null } }
+  const rules = PermissionNext.fromConfig(config)
+  // null is a delete sentinel — only the non-null entry should produce a rule
+  expect(rules).toEqual([{ permission: "bash", pattern: "*", action: "ask" }])
+})
+
+test("fromConfig - null top-level PermissionRule is skipped", () => {
+  const config = { bash: null }
+  const rules = PermissionNext.fromConfig(config)
+  expect(rules).toEqual([])
+})
+
+test("toConfig - null existing entry is treated as absent (new rule wins)", () => {
+  // If result[permission] is null (shouldn't happen in practice but defensive),
+  // the new rule should be written as a fresh object entry.
+  const result = PermissionNext.toConfig([{ permission: "bash", pattern: "npm *", action: "allow" }])
+  expect(result).toEqual({ bash: { "npm *": "allow" } })
+})

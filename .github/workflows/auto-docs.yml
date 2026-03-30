@@ -7,9 +7,9 @@ on:
 jobs:
   call-webhook:
     if: >
-        github.event.pull_request.merged == true &&
-        (startsWith(github.event.pull_request.title, 'feat:') ||
-         startsWith(github.event.pull_request.title, 'feat('))
+      github.event.pull_request.merged == true &&
+      (startsWith(github.event.pull_request.title, 'feat:') ||
+       startsWith(github.event.pull_request.title, 'feat('))
     runs-on: ubuntu-latest
     steps:
       - name: Send webhook safely

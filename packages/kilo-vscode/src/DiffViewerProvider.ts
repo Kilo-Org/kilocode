@@ -24,7 +24,7 @@ export class DiffViewerProvider implements vscode.Disposable {
   private cachedDiffTarget: { directory: string; baseBranch: string } | undefined
   private gitOps: GitOps
   private outputChannel: vscode.OutputChannel
-  private onSendComments: ((comments: unknown[]) => void) | undefined
+  private onSendComments: ((comments: unknown[], autoSend: boolean) => void) | undefined
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -38,7 +38,7 @@ export class DiffViewerProvider implements vscode.Disposable {
     appendOutput(this.outputChannel, "DiffViewer", ...args)
   }
 
-  public setCommentHandler(handler: (comments: unknown[]) => void): void {
+  public setCommentHandler(handler: (comments: unknown[], autoSend: boolean) => void): void {
     this.onSendComments = handler
   }
 
@@ -48,21 +48,32 @@ export class DiffViewerProvider implements vscode.Disposable {
       return
     }
 
-    this.panel = vscode.window.createWebviewPanel(DiffViewerProvider.viewType, "Changes", vscode.ViewColumn.One, {
+    const panel = vscode.window.createWebviewPanel(DiffViewerProvider.viewType, "Changes", vscode.ViewColumn.One, {
       enableScripts: true,
       retainContextWhenHidden: true,
       localResourceRoots: [this.extensionUri],
     })
 
-    this.panel.iconPath = {
+    this.wirePanel(panel)
+  }
+
+  /** Re-wire a deserialized panel after extension restart. */
+  public deserializePanel(panel: vscode.WebviewPanel): void {
+    this.wirePanel(panel)
+  }
+
+  private wirePanel(panel: vscode.WebviewPanel): void {
+    this.panel = panel
+
+    panel.iconPath = {
       light: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-light.svg"),
       dark: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-dark.svg"),
     }
 
-    this.panel.webview.onDidReceiveMessage((msg) => this.onMessage(msg), undefined, [])
-    this.panel.webview.html = this.getHtml(this.panel.webview)
+    panel.webview.onDidReceiveMessage((msg) => this.onMessage(msg), undefined, [])
+    panel.webview.html = this.getHtml(panel.webview)
 
-    this.panel.onDidDispose(() => {
+    panel.onDidDispose(() => {
       this.log("Panel disposed")
       this.stopDiffPolling()
       this.panel = undefined
@@ -84,7 +95,7 @@ export class DiffViewerProvider implements vscode.Disposable {
     }
 
     if (type === "diffViewer.sendComments" && Array.isArray(msg.comments)) {
-      this.onSendComments?.(msg.comments)
+      this.onSendComments?.(msg.comments, !!msg.autoSend)
       return
     }
 
@@ -103,7 +114,7 @@ export class DiffViewerProvider implements vscode.Disposable {
   }
 
   private async resolveLocalDiffTarget(): Promise<{ directory: string; baseBranch: string } | undefined> {
-    return await resolveLocalDiffTarget(this.gitOps, (...args) => this.log(...args))
+    return await resolveLocalDiffTarget(this.gitOps, (...args) => this.log(...args), getWorkspaceRoot())
   }
 
   private async initialFetch(): Promise<void> {

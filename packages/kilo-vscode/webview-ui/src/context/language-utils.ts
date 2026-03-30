@@ -15,6 +15,8 @@ export type Locale =
   | "br"
   | "th"
   | "bs"
+  | "tr"
+  | "nl"
 
 export const LOCALES: readonly Locale[] = [
   "en",
@@ -33,6 +35,8 @@ export const LOCALES: readonly Locale[] = [
   "br",
   "th",
   "bs",
+  "tr",
+  "nl",
 ]
 
 /**
@@ -42,7 +46,10 @@ export const LOCALES: readonly Locale[] = [
 export function normalizeLocale(lang: string): Locale {
   const lower = lang.toLowerCase()
   if (lower.startsWith("zh")) {
-    return lower.includes("hant") ? "zht" : "zh"
+    if (lower === "zht") return "zht"
+    const traditional =
+      lower.includes("hant") || lower.includes("-tw") || lower.includes("-hk") || lower.includes("-mo")
+    return traditional ? "zht" : "zh"
   }
   for (const loc of LOCALES) {
     if (lower.startsWith(loc)) {
@@ -51,6 +58,9 @@ export function normalizeLocale(lang: string): Locale {
   }
   if (lower.startsWith("nb") || lower.startsWith("nn")) {
     return "no"
+  }
+  if (lower.startsWith("nl")) {
+    return "nl"
   }
   if (lower.startsWith("pt")) {
     return "br"

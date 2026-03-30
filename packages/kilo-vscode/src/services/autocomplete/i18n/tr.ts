@@ -42,4 +42,9 @@ export const dict = {
     "Kilo Code Autocomplete, GitHub Copilot ile bir çakışma nedeniyle engelleniyor. Bunu düzeltmek için Copilot'un satır içi önerilerini devre dışı bırakmalısın.",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "Copilot'u Devre Dışı Bırak",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "Autocomplete'i Devre Dışı Bırak",
+  "kilocode:autocomplete.creditsExhausted.message":
+    "Hesabında kalan kredin olmadığı için Kilo Code Autocomplete duraklatıldı. Otomatik tamamlamayı sürdürmek için kredi ekle.",
+  "kilocode:autocomplete.creditsExhausted.addCredits": "Kredi Ekle",
+  "kilocode:autocomplete.authError.message":
+    "Bir kimlik doğrulama hatası nedeniyle Kilo Code Autocomplete duraklatıldı. Lütfen tekrar giriş yap.",
 }

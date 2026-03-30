@@ -10,6 +10,9 @@ type SSEEventListener = (event: Event) => void
 type StateListener = (state: ConnectionState) => void
 type SSEEventFilter = (event: Event) => boolean
 type NotificationDismissListener = (notificationId: string) => void
+type LanguageChangeListener = (locale: string) => void
+type ProfileChangeListener = (data: unknown) => void
+type MigrationCompleteListener = () => void
 
 // Poll /global/health at the same interval as packages/app/src/context/server.tsx.
 // This provides a second detection channel for server death independent of the SSE heartbeat.
@@ -32,6 +35,9 @@ export class KiloConnectionService {
   private readonly eventListeners: Set<SSEEventListener> = new Set()
   private readonly stateListeners: Set<StateListener> = new Set()
   private readonly notificationDismissListeners: Set<NotificationDismissListener> = new Set()
+  private readonly languageChangeListeners: Set<LanguageChangeListener> = new Set()
+  private readonly profileChangeListeners: Set<ProfileChangeListener> = new Set()
+  private readonly migrationCompleteListeners: Set<MigrationCompleteListener> = new Set()
 
   /**
    * Shared mapping used to resolve session scope for events that don't reliably include a sessionID.
@@ -166,6 +172,63 @@ export class KiloConnectionService {
   }
 
   /**
+   * Subscribe to language change events broadcast from any KiloProvider. Returns unsubscribe function.
+   */
+  onLanguageChanged(listener: LanguageChangeListener): () => void {
+    this.languageChangeListeners.add(listener)
+    return () => {
+      this.languageChangeListeners.delete(listener)
+    }
+  }
+
+  /**
+   * Broadcast a language change event to all subscribed KiloProvider instances.
+   */
+  notifyLanguageChanged(locale: string): void {
+    for (const listener of this.languageChangeListeners) {
+      listener(locale)
+    }
+  }
+
+  /**
+   * Subscribe to profile change events broadcast from any KiloProvider. Returns unsubscribe function.
+   */
+  onProfileChanged(listener: ProfileChangeListener): () => void {
+    this.profileChangeListeners.add(listener)
+    return () => {
+      this.profileChangeListeners.delete(listener)
+    }
+  }
+
+  /**
+   * Broadcast a profile change event to all subscribed KiloProvider instances.
+   */
+  notifyProfileChanged(data: unknown): void {
+    for (const listener of this.profileChangeListeners) {
+      listener(data)
+    }
+  }
+
+  /**
+   * Subscribe to migration-complete events broadcast from any KiloProvider. Returns unsubscribe function.
+   */
+  onMigrationComplete(listener: MigrationCompleteListener): () => void {
+    this.migrationCompleteListeners.add(listener)
+    return () => {
+      this.migrationCompleteListeners.delete(listener)
+    }
+  }
+
+  /**
+   * Broadcast a migration-complete event to all subscribed KiloProvider instances.
+   */
+  notifyMigrationComplete(): void {
+    for (const listener of this.migrationCompleteListeners) {
+      listener()
+    }
+  }
+
+  /**
    * Subscribe to connection state changes. Returns unsubscribe function.
    */
   onStateChange(listener: StateListener): () => void {
@@ -185,6 +248,8 @@ export class KiloConnectionService {
     this.eventListeners.clear()
     this.stateListeners.clear()
     this.notificationDismissListeners.clear()
+    this.profileChangeListeners.clear()
+    this.migrationCompleteListeners.clear()
     this.messageSessionIdsByMessageId.clear()
     this.client = null
     this.sseClient = null
@@ -217,7 +282,7 @@ export class KiloConnectionService {
       const healthy = await this.checkHealth(baseUrl, password)
       if (!healthy && this.state === "connected") {
         console.warn("[Kilo New] ConnectionService: ❤️‍🩹 Health check failed — forcing SSE reconnect")
-        this.sseClient?.disconnect()
+        this.sseClient?.reconnect()
       }
     }, HEALTH_POLL_INTERVAL_MS)
 

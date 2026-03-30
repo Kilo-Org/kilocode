@@ -21,9 +21,14 @@ export function createKiloClient(config?: Config & { directory?: string }) {
   if (config?.directory) {
     config.headers = {
       ...config.headers,
-      "x-opencode-directory": encodeURIComponent(config.directory),
+      "x-kilo-directory": encodeURIComponent(config.directory),
     }
   }
+
+  // Node.js/Electron require duplex: "half" when creating Request objects
+  // with a body. The option propagates through config → opts → requestInit
+  // and is harmless in environments that don't need it (Bun, browsers).
+  ;(config as any).duplex = "half"
 
   const client = createClient(config)
   return new KiloClient({ client })
