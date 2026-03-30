@@ -31010,6 +31010,23 @@
         "open_weights": true,
         "cost": { "input": 0.3, "output": 0.9 },
         "limit": { "context": 128000, "output": 32768 }
+      },
+      "glm-5.1": {
+        "id": "glm-5.1",
+        "name": "GLM-5.1",
+        "family": "glm",
+        "attachment": false,
+        "reasoning": true,
+        "tool_call": true,
+        "interleaved": { "field": "reasoning_content" },
+        "temperature": true,
+        "knowledge": "2025-04",
+        "release_date": "2026-03-01",
+        "last_updated": "2026-03-01",
+        "modalities": { "input": ["text"], "output": ["text"] },
+        "open_weights": true,
+        "cost": { "input": 0.6, "output": 2.2, "cache_read": 0.11, "cache_write": 0 },
+        "limit": { "context": 204800, "output": 131072 }
       }
     }
   },
