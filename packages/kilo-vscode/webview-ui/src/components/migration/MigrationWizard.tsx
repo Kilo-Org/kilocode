@@ -328,47 +328,23 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
         const mode = customModes().find((m) => m.slug === slug)
         return { item: mode?.name ?? slug, group: "customModes", status: "pending" as const }
       }),
-      ...(migrateSessions() && sessions().length > 0
-        ? [{ item: language.t("migration.progress.sessions"), group: "sessions", status: "pending" as const }]
-        : []),
+      ...(migrateSessions() && sessions().length > 0 ? [{ item: "Chat sessions", group: "sessions", status: "pending" as const }] : []),
       ...(migrateDefaultModel() && defaultModel()
-        ? [{ item: language.t("migration.progress.defaultModel"), group: "defaultModel", status: "pending" as const }]
+        ? [{ item: "Default model", group: "defaultModel", status: "pending" as const }]
         : []),
-      ...(autoApproval.commandRules
-        ? [{ item: language.t("migration.progress.commandRules"), group: "autoApproval", status: "pending" as const }]
-        : []),
-      ...(autoApproval.readPermission
-        ? [{ item: language.t("migration.progress.readPermission"), group: "autoApproval", status: "pending" as const }]
-        : []),
-      ...(autoApproval.writePermission
-        ? [
-            {
-              item: language.t("migration.progress.writePermission"),
-              group: "autoApproval",
-              status: "pending" as const,
-            },
-          ]
-        : []),
+      ...(autoApproval.commandRules ? [{ item: "Command rules", group: "autoApproval", status: "pending" as const }] : []),
+      ...(autoApproval.readPermission ? [{ item: "Read permission", group: "autoApproval", status: "pending" as const }] : []),
+      ...(autoApproval.writePermission ? [{ item: "Write permission", group: "autoApproval", status: "pending" as const }] : []),
       ...(autoApproval.executePermission
-        ? [
-            {
-              item: language.t("migration.progress.executePermission"),
-              group: "autoApproval",
-              status: "pending" as const,
-            },
-          ]
+        ? [{ item: "Execute permission", group: "autoApproval", status: "pending" as const }]
         : []),
-      ...(autoApproval.mcpPermission
-        ? [{ item: language.t("migration.progress.mcpPermission"), group: "autoApproval", status: "pending" as const }]
-        : []),
-      ...(autoApproval.taskPermission
-        ? [{ item: language.t("migration.progress.taskPermission"), group: "autoApproval", status: "pending" as const }]
-        : []),
+      ...(autoApproval.mcpPermission ? [{ item: "MCP permission", group: "autoApproval", status: "pending" as const }] : []),
+      ...(autoApproval.taskPermission ? [{ item: "Task permission", group: "autoApproval", status: "pending" as const }] : []),
       ...(migrateLanguage() && legacySettings()?.language
-        ? [{ item: language.t("migration.progress.language"), group: "language", status: "pending" as const }]
+        ? [{ item: "Language preference", group: "language", status: "pending" as const }]
         : []),
       ...(migrateAutocomplete() && legacySettings()?.autocomplete
-        ? [{ item: language.t("migration.progress.autocomplete"), group: "autocomplete", status: "pending" as const }]
+        ? [{ item: "Autocomplete settings", group: "autocomplete", status: "pending" as const }]
         : []),
     ]
 
