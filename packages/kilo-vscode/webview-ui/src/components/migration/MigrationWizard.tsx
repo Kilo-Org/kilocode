@@ -22,7 +22,15 @@ import type {
   LegacyMigrationCompleteMessage,
 } from "../../types/messages"
 import MigrationError from "./errors/MigrationError"
-import { getSessionMigrationError, getSessionMigrationErrorDetail } from "./errors/error-selectors"
+import {
+  getCurrentSessionError,
+  getCurrentSessionErrorDetail,
+  getGroupMessage,
+  getGroupStatus,
+  getSuccessCount,
+  getTotalCount,
+  type ProgressEntry,
+} from "./migration-view-model"
 import "./migration.css"
 
 // ---------------------------------------------------------------------------
@@ -157,13 +165,6 @@ const WarningSvg = (): JSX.Element => (
 
 type Screen = "whats-new" | "migrate"
 type MigratePhase = "selecting" | "migrating" | "error" | "done"
-
-interface ProgressEntry {
-  item: string
-  group: string
-  status: "pending" | "migrating" | "success" | "warning" | "error"
-  message?: string
-}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -436,21 +437,12 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
     !hasAutocompleteData()
 
   // Group-level status for progress display
-  const groupStatus = (group: string): ProgressEntry["status"] => {
-    const entries = progressEntries().filter((e) => e.group === group)
-    if (entries.length === 0) return "pending"
-    if (entries.some((e) => e.status === "error")) return "error"
-    if (entries.some((e) => e.status === "warning")) return "warning"
-    if (entries.every((e) => e.status === "success")) return "success"
-    if (entries.some((e) => e.status === "migrating")) return "migrating"
-    return "pending"
-  }
-
-  const successCount = () => results().filter((r) => r.status === "success").length
-  const totalCount = () => results().length
-  const groupMessage = (group: string) => progressEntries().find((e) => e.group === group && e.status === "error")?.message
-  const currentSessionError = () => getSessionMigrationError(results, groupMessage)
-  const currentSessionErrorDetail = () => getSessionMigrationErrorDetail(results, groupMessage)
+  const groupStatus = (group: string) => getGroupStatus(progressEntries(), group)
+  const successCount = () => getSuccessCount(results())
+  const totalCount = () => getTotalCount(results())
+  const groupMessage = (group: string) => getGroupMessage(progressEntries(), group)
+  const currentSessionError = () => getCurrentSessionError(results, progressEntries)
+  const currentSessionErrorDetail = () => getCurrentSessionErrorDetail(results, progressEntries)
 
   // ---------------------------------------------------------------------------
   // Status icon renderer
