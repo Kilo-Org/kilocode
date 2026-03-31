@@ -30,8 +30,8 @@ import type {
   MigrationProviderInfo,
   MigrationMcpServerInfo,
   MigrationCustomModeInfo,
-  MigrationResultItem,
 } from "./legacy-types"
+import type { MigrationResultItem } from "./migration-types"
 import { createSessionID } from "./sessions/lib/ids"
 import { migrate as migrateSession } from "./sessions/migrate"
 
