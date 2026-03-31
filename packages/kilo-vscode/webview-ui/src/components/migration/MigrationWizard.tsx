@@ -328,18 +328,30 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
         const mode = customModes().find((m) => m.slug === slug)
         return { item: mode?.name ?? slug, group: "customModes", status: "pending" as const }
       }),
-      ...(migrateSessions() && sessions().length > 0 ? [{ item: "Chat sessions", group: "sessions", status: "pending" as const }] : []),
+      ...(migrateSessions() && sessions().length > 0
+        ? [{ item: "Chat sessions", group: "sessions", status: "pending" as const }]
+        : []),
       ...(migrateDefaultModel() && defaultModel()
         ? [{ item: "Default model", group: "defaultModel", status: "pending" as const }]
         : []),
-      ...(autoApproval.commandRules ? [{ item: "Command rules", group: "autoApproval", status: "pending" as const }] : []),
-      ...(autoApproval.readPermission ? [{ item: "Read permission", group: "autoApproval", status: "pending" as const }] : []),
-      ...(autoApproval.writePermission ? [{ item: "Write permission", group: "autoApproval", status: "pending" as const }] : []),
+      ...(autoApproval.commandRules
+        ? [{ item: "Command rules", group: "autoApproval", status: "pending" as const }]
+        : []),
+      ...(autoApproval.readPermission
+        ? [{ item: "Read permission", group: "autoApproval", status: "pending" as const }]
+        : []),
+      ...(autoApproval.writePermission
+        ? [{ item: "Write permission", group: "autoApproval", status: "pending" as const }]
+        : []),
       ...(autoApproval.executePermission
         ? [{ item: "Execute permission", group: "autoApproval", status: "pending" as const }]
         : []),
-      ...(autoApproval.mcpPermission ? [{ item: "MCP permission", group: "autoApproval", status: "pending" as const }] : []),
-      ...(autoApproval.taskPermission ? [{ item: "Task permission", group: "autoApproval", status: "pending" as const }] : []),
+      ...(autoApproval.mcpPermission
+        ? [{ item: "MCP permission", group: "autoApproval", status: "pending" as const }]
+        : []),
+      ...(autoApproval.taskPermission
+        ? [{ item: "Task permission", group: "autoApproval", status: "pending" as const }]
+        : []),
       ...(migrateLanguage() && legacySettings()?.language
         ? [{ item: "Language preference", group: "language", status: "pending" as const }]
         : []),
