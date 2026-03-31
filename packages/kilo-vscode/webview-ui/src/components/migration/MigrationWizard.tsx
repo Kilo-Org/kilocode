@@ -341,10 +341,22 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
         ? [{ item: language.t("migration.progress.readPermission"), group: "autoApproval", status: "pending" as const }]
         : []),
       ...(autoApproval.writePermission
-        ? [{ item: language.t("migration.progress.writePermission"), group: "autoApproval", status: "pending" as const }]
+        ? [
+            {
+              item: language.t("migration.progress.writePermission"),
+              group: "autoApproval",
+              status: "pending" as const,
+            },
+          ]
         : []),
       ...(autoApproval.executePermission
-        ? [{ item: language.t("migration.progress.executePermission"), group: "autoApproval", status: "pending" as const }]
+        ? [
+            {
+              item: language.t("migration.progress.executePermission"),
+              group: "autoApproval",
+              status: "pending" as const,
+            },
+          ]
         : []),
       ...(autoApproval.mcpPermission
         ? [{ item: language.t("migration.progress.mcpPermission"), group: "autoApproval", status: "pending" as const }]
@@ -690,7 +702,9 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
                   </Show>
                   <div class="migration-wizard__item-text">
                     <div class="label">{language.t("migration.migrate.chatHistory")}</div>
-                    <div class="desc">{language.t("migration.migrate.sessionsDetected", { count: String(sessions().length) })}</div>
+                    <div class="desc">
+                      {language.t("migration.migrate.sessionsDetected", { count: String(sessions().length) })}
+                    </div>
                     <Show
                       when={
                         (phase() === "error" || phase() === "done") &&
@@ -700,7 +714,9 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
                     >
                       <div class="migration-wizard__error-box">
                         <div class="migration-wizard__error-box-header">
-                          <div class="migration-wizard__error-box-title">{language.t("migration.error.sessionFailed")}</div>
+                          <div class="migration-wizard__error-box-title">
+                            {language.t("migration.error.sessionFailed")}
+                          </div>
                           <button
                             type="button"
                             class="migration-wizard__copy-btn"
