@@ -21,6 +21,8 @@ import type {
   LegacyMigrationProgressMessage,
   LegacyMigrationCompleteMessage,
 } from "../../types/messages"
+import MigrationError from "./errors/MigrationError"
+import { getSessionMigrationError, getSessionMigrationErrorDetail } from "./errors/error-selectors"
 import "./migration.css"
 
 // ---------------------------------------------------------------------------
@@ -447,6 +449,8 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
   const successCount = () => results().filter((r) => r.status === "success").length
   const totalCount = () => results().length
   const groupMessage = (group: string) => progressEntries().find((e) => e.group === group && e.status === "error")?.message
+  const currentSessionError = () => getSessionMigrationError(results, groupMessage)
+  const currentSessionErrorDetail = () => getSessionMigrationErrorDetail(results, groupMessage)
 
   // ---------------------------------------------------------------------------
   // Status icon renderer
@@ -687,9 +691,11 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
                   <div class="migration-wizard__item-text">
                     <div class="label">Chat Sessions &amp; History</div>
                     <div class="desc">{sessions().length} sessions detected</div>
-                    <Show when={(phase() === "error" || phase() === "done") && groupStatus("sessions") === "error" && groupMessage("sessions")}>
-                      <div class="migration-wizard__error-text">{groupMessage("sessions")}</div>
-                    </Show>
+                    <MigrationError
+                      when={(phase() === "error" || phase() === "done") && groupStatus("sessions") === "error"}
+                      error={currentSessionError()}
+                      detail={currentSessionErrorDetail()}
+                    />
                   </div>
                 </div>
               </Show>
