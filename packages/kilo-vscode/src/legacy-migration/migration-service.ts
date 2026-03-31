@@ -111,12 +111,8 @@ export async function detectLegacyData(context: vscode.ExtensionContext): Promis
 }
 
 async function readSessionsInGlobalStorage(context: vscode.ExtensionContext) {
-  const dir = vscode.Uri.joinPath(context.globalStorageUri, "tasks")
-  const items = await vscode.workspace.fs.readDirectory(dir).then(
-    (items) => items,
-    () => [] as [string, vscode.FileType][],
-  )
-  return items.filter(([, type]) => type === vscode.FileType.Directory).map(([name]) => name)
+  const items = context.globalState.get<{ id: string }[]>("taskHistory", [])
+  return items.map((item) => item.id)
 }
 
 // ---------------------------------------------------------------------------
