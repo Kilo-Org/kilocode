@@ -265,7 +265,9 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
         setResults(complete.results)
         const hasErrors = complete.results.some((r) => r.status === "error")
         setPhase(hasErrors ? "error" : "done")
-        vscode.postMessage({ type: "loadSessions" })
+        if (!hasErrors) {
+          vscode.postMessage({ type: "loadSessions" })
+        }
       }
     }
 
@@ -833,7 +835,10 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
                 <button
                   type="button"
                   class="migration-wizard__btn migration-wizard__btn--primary"
-                  onClick={() => setPhase("done")}
+                  onClick={() => {
+                    vscode.postMessage({ type: "loadSessions" })
+                    setPhase("done")
+                  }}
                 >
                   Continue
                 </button>
