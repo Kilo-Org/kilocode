@@ -223,17 +223,18 @@ export async function migrate(
     for (const id of selections.sessions) {
       onProgress("Chat sessions", "migrating")
       const result = await migrateSession(id, context, client)
+      const reason = result.ok
+        ? "Session migrated"
+        : result.error instanceof Error
+          ? result.error.message
+          : "Session migration failed"
       results.push({
         item: id,
         category: "session",
         status: result.ok ? "success" : "error",
-        message: result.ok ? "Session migrated" : "Session migration failed",
+        message: reason,
       })
-      onProgress(
-        "Chat sessions",
-        result.ok ? "success" : "error",
-        result.ok ? "Session migrated" : "Session migration failed",
-      )
+      onProgress("Chat sessions", result.ok ? "success" : "error", reason)
     }
   }
 

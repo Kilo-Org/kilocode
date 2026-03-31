@@ -154,7 +154,7 @@ const WarningSvg = (): JSX.Element => (
 // ---------------------------------------------------------------------------
 
 type Screen = "whats-new" | "migrate"
-type MigratePhase = "selecting" | "migrating" | "done"
+type MigratePhase = "selecting" | "migrating" | "error" | "done"
 
 interface ProgressEntry {
   item: string
@@ -263,7 +263,9 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
       if (msg?.type === "legacyMigrationComplete") {
         const complete = msg as LegacyMigrationCompleteMessage
         setResults(complete.results)
-        setPhase("done")
+        const hasErrors = complete.results.some((r) => r.status === "error")
+        setPhase(hasErrors ? "error" : "done")
+        vscode.postMessage({ type: "loadSessions" })
       }
     }
 
@@ -442,6 +444,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
 
   const successCount = () => results().filter((r) => r.status === "success").length
   const totalCount = () => results().length
+  const groupMessage = (group: string) => progressEntries().find((e) => e.group === group && e.status === "error")?.message
 
   // ---------------------------------------------------------------------------
   // Status icon renderer
@@ -682,6 +685,9 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
                   <div class="migration-wizard__item-text">
                     <div class="label">Chat Sessions &amp; History</div>
                     <div class="desc">{sessions().length} sessions detected</div>
+                    <Show when={(phase() === "error" || phase() === "done") && groupStatus("sessions") === "error" && groupMessage("sessions")}>
+                      <div class="migration-wizard__error-text">{groupMessage("sessions")}</div>
+                    </Show>
                   </div>
                 </div>
               </Show>
@@ -771,6 +777,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
               </Show>
 
               {/* Cleanup option after done */}
+              {/*
               <Show when={phase() === "done"}>
                 <div class="migration-wizard__divider" />
                 <div class="migration-wizard__item migration-wizard__item--clickable">
@@ -790,6 +797,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
                   </div>
                 </div>
               </Show>
+              */}
             </div>
           </Show>
 
@@ -819,6 +827,15 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
               <Show when={phase() === "migrating"}>
                 <button type="button" class="migration-wizard__btn migration-wizard__btn--primary" disabled>
                   {language.t("migration.migrate.button")}
+                </button>
+              </Show>
+              <Show when={phase() === "error"}>
+                <button
+                  type="button"
+                  class="migration-wizard__btn migration-wizard__btn--primary"
+                  onClick={() => setPhase("done")}
+                >
+                  Continue
                 </button>
               </Show>
               <Show when={phase() === "done"}>

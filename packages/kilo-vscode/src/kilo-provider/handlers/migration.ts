@@ -118,11 +118,10 @@ export async function handleStartLegacyMigration(
     // Reloading the data will be handled once the server replies with a global.disposed event
     await ctx.disposeGlobal()
 
-    // Only mark as completed if at least one item succeeded — if everything failed
-    // the user can still re-run migration via Settings → About.
+    const failed = results.some((r) => r.status === "error")
     const success = results.some((r) => r.status === "success")
 
-    if (success) {
+    if (!failed && success) {
       await MigrationService.setMigrationStatus(
         ctx.extensionContext as Parameters<typeof MigrationService.setMigrationStatus>[0],
         "completed",

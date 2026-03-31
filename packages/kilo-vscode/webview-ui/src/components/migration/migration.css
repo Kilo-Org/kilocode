@@ -311,6 +311,13 @@
   margin-top: 1px;
 }
 
+.migration-wizard__error-text {
+  font-size: 11px;
+  color: var(--vscode-errorForeground);
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
 /* Disabled items */
 .migration-wizard__item--disabled {
   opacity: 0.45;
