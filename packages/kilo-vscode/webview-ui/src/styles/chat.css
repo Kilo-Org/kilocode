@@ -949,6 +949,45 @@
   align-items: flex-end;
 }
 
+.prompt-stop-bar {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--vscode-errorForeground, #f14c4c) 40%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--vscode-errorForeground, #f14c4c) 12%, transparent);
+  color: var(--vscode-errorForeground, #f14c4c);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.prompt-stop-bar:hover {
+  background: color-mix(in srgb, var(--vscode-errorForeground, #f14c4c) 18%, transparent);
+  border-color: color-mix(in srgb, var(--vscode-errorForeground, #f14c4c) 55%, transparent);
+}
+
+.prompt-stop-bar:focus-visible {
+  outline: 1px solid var(--border-focus, var(--vscode-focusBorder, #007fd4));
+  outline-offset: 1px;
+}
+
+.prompt-stop-bar-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .prompt-input {
   flex: 1;
   min-height: 54px;
@@ -1094,6 +1133,7 @@
       stroke: var(--border-focus, var(--vscode-focusBorder, #007fd4));
     }
   }
+
   [data-component="icon-button"] {
     [data-slot="icon-svg"] {
       color: var(--icon-base) !important;

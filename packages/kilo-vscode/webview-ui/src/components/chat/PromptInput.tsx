@@ -3,7 +3,8 @@
  * Text input with send/abort buttons, ghost-text autocomplete, and @ file mention support
  */
 
-import { Component, createSignal, createEffect, on, For, Index, onCleanup, Show, untrack } from "solid-js"
+import { createSignal, createEffect, on, For, Index, onCleanup, Show, untrack } from "solid-js"
+import type { Component } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -741,6 +742,21 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           </For>
         </div>
       </Show>
+      <Show when={showStop()}>
+        <button
+          type="button"
+          class="prompt-stop-bar"
+          onClick={() => session.abort()}
+          aria-label={language.t("prompt.action.stop")}
+        >
+          <span class="prompt-stop-bar-icon" aria-hidden="true">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+              <rect x="3" y="3" width="10" height="10" rx="1" />
+            </svg>
+          </span>
+          <span>{language.t("prompt.action.stop")}</span>
+        </button>
+      </Show>
       <div class="prompt-input-wrapper">
         <div class="prompt-input-ghost-wrapper">
           <div class="prompt-input-highlight-overlay" ref={highlightRef} aria-hidden="true">
@@ -807,40 +823,22 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
               <WandSparkles size={16} class={enhancing() ? "enhance-spinner" : ""} />
             </Button>
           </Tooltip>
-          <Show
-            when={showStop()}
-            fallback={
-              <Tooltip
-                value={props.blocked?.() ? language.t("prompt.action.send.blocked") : language.t("prompt.action.send")}
-                placement="top"
-              >
-                <Button
-                  variant="ghost"
-                  size="small"
-                  onClick={handleSend}
-                  disabled={!canSend()}
-                  aria-label={language.t("prompt.action.send")}
-                >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M1.5 1.5L14.5 8L1.5 14.5V9L10 8L1.5 7V1.5Z" />
-                  </svg>
-                </Button>
-              </Tooltip>
-            }
+          <Tooltip
+            value={props.blocked?.() ? language.t("prompt.action.send.blocked") : language.t("prompt.action.send")}
+            placement="top"
           >
-            <Tooltip value={language.t("prompt.action.stop")} placement="top">
-              <Button
-                variant="ghost"
-                size="small"
-                onClick={() => session.abort()}
-                aria-label={language.t("prompt.action.stop")}
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="3" y="3" width="10" height="10" rx="1" />
-                </svg>
-              </Button>
-            </Tooltip>
-          </Show>
+            <Button
+              variant="ghost"
+              size="small"
+              onClick={handleSend}
+              disabled={!canSend()}
+              aria-label={language.t("prompt.action.send")}
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M1.5 1.5L14.5 8L1.5 14.5V9L10 8L1.5 7V1.5Z" />
+              </svg>
+            </Button>
+          </Tooltip>
         </div>
       </div>
     </div>

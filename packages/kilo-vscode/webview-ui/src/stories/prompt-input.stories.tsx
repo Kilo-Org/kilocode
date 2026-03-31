@@ -47,6 +47,23 @@ const PromptProviders: ParentComponent<{ variants?: boolean; modelOverride?: boo
   )
 }
 
+const BusyPromptProviders: ParentComponent = (props) => {
+  const base = mockSessionValue({ status: "busy" })
+  const session = {
+    ...base,
+    agents: () => agents,
+    selectedAgent: () => "code",
+  }
+
+  return (
+    <StoryProviders noPadding status="busy">
+      <div style={{ overflow: "hidden" }}>
+        <SessionContext.Provider value={session as any}>{props.children}</SessionContext.Provider>
+      </div>
+    </StoryProviders>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Meta — fullscreen so the screenshot is exactly the component width
 // ---------------------------------------------------------------------------
@@ -116,10 +133,28 @@ export const WithModelOverride420: Story = {
 }
 
 export const WithModelOverride200: Story = {
-  name: "With model override — 200px",
+  name: "With model override - 200px",
   render: () => (
     <PromptProviders modelOverride>
       <PromptInput />
     </PromptProviders>
+  ),
+}
+
+export const Busy420: Story = {
+  name: "Busy with stop bar - 420px",
+  render: () => (
+    <BusyPromptProviders>
+      <PromptInput />
+    </BusyPromptProviders>
+  ),
+}
+
+export const Busy200: Story = {
+  name: "Busy with stop bar - 200px",
+  render: () => (
+    <BusyPromptProviders>
+      <PromptInput />
+    </BusyPromptProviders>
   ),
 }
