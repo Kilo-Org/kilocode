@@ -7,6 +7,7 @@ import { parseSession } from "./parser"
 type Result =
   | {
       ok: true
+      skipped?: boolean
       payload: Awaited<ReturnType<typeof parseSession>>
     }
   | {
