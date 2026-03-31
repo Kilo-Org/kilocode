@@ -823,22 +823,24 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
               <WandSparkles size={16} class={enhancing() ? "enhance-spinner" : ""} />
             </Button>
           </Tooltip>
-          <Tooltip
-            value={props.blocked?.() ? language.t("prompt.action.send.blocked") : language.t("prompt.action.send")}
-            placement="top"
-          >
-            <Button
-              variant="ghost"
-              size="small"
-              onClick={handleSend}
-              disabled={!canSend()}
-              aria-label={language.t("prompt.action.send")}
+          <Show when={!showStop()}>
+            <Tooltip
+              value={props.blocked?.() ? language.t("prompt.action.send.blocked") : language.t("prompt.action.send")}
+              placement="top"
             >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M1.5 1.5L14.5 8L1.5 14.5V9L10 8L1.5 7V1.5Z" />
-              </svg>
-            </Button>
-          </Tooltip>
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={handleSend}
+                disabled={!canSend()}
+                aria-label={language.t("prompt.action.send")}
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M1.5 1.5L14.5 8L1.5 14.5V9L10 8L1.5 7V1.5Z" />
+                </svg>
+              </Button>
+            </Tooltip>
+          </Show>
         </div>
       </div>
     </div>
