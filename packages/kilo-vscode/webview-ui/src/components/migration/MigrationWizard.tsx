@@ -501,10 +501,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
         <div class={screen() === "whats-new" ? "migration-wizard__screen--active" : "migration-wizard__screen--hidden"}>
           <div class="migration-wizard__header">
             <KiloLogo />
-            <h1>
-              {language.t("migration.whatsNew.title")}{" "}
-              <span class="migration-wizard__badge">{language.t("migration.whatsNew.badge")}</span>
-            </h1>
+            <h1>{language.t("migration.whatsNew.title")}</h1>
             <p>{language.t("migration.whatsNew.subtitle")}</p>
           </div>
 

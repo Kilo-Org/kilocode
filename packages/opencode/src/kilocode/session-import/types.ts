@@ -127,6 +127,7 @@ export namespace SessionImportType {
   export const Result = z.object({
     ok: z.boolean(),
     id: z.string(),
+    skipped: z.boolean().optional(),
   })
 
   export const Project = z.object({

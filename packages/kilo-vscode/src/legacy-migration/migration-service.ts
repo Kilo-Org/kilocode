@@ -71,8 +71,7 @@ export async function detectLegacyData(context: vscode.ExtensionContext): Promis
   const mcpSettings = await readLegacyMcpSettings(context)
   const customModes = await readLegacyCustomModes(context)
   const settings = readLegacySettings(context)
-  const detected = await readSessionsInGlobalStorage(context)
-  const sessions = await readSessionsToMigrate(context, detected)
+  const sessions = await readSessionsInGlobalStorage(context)
 
   const oauthProviders = new Set<string>()
   const codexRaw = await context.secrets.get(CODEX_OAUTH_SECRET_KEY)
@@ -118,13 +117,6 @@ async function readSessionsInGlobalStorage(context: vscode.ExtensionContext) {
     () => [] as [string, vscode.FileType][],
   )
   return items.filter(([, type]) => type === vscode.FileType.Directory).map(([name]) => name)
-}
-
-async function readSessionsToMigrate(context: vscode.ExtensionContext, sessions: string[]) {
-  if (sessions.length === 0) return []
-  return sessions.filter(
-    (id) => !context.globalState.get<boolean>(`kilo.migratedSession.${createSessionID(id)}`, false),
-  )
 }
 
 // ---------------------------------------------------------------------------

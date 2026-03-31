@@ -1079,6 +1079,7 @@ export const dict = {
   "settings.agentBehaviour.disable.description": "Deaktiver denne agenten fullstendig — den vises ikke noe sted",
   "settings.agentBehaviour.badge.hidden": "skjult",
   "settings.agentBehaviour.badge.disabled": "deaktivert",
+  "settings.agentBehaviour.badge.deprecated": "Utdatert",
   "settings.agentBehaviour.discoveredSkills": "Oppdagede ferdigheter",
   "settings.agentBehaviour.noSkillsFound":
     "Ingen ferdigheter funnet. Legg til ferdighetsmappestier eller URLer nedenfor for å gjøre ferdigheter tilgjengelige.",
@@ -1235,7 +1236,6 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Hva er nytt i Kilo Code",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "Vi har bygget utvidelsen på nytt med et raskere og mer effektivt grunnlag.",
   "migration.whatsNew.features.performance.title": "Raskere agentytelse",
   "migration.whatsNew.features.performance.detail":
@@ -1294,8 +1294,8 @@ export const dict = {
   "settings.saveBar.warning.many": "Flere økter kjører og vil bli avbrutt",
   "settings.saveBar.saveAnyway": "Lagre uansett",
   "settings.saveBar.cancel": "Avbryt",
-  "notifications.action.previous": "Previous",
-  "notifications.action.next": "Next",
-  "notifications.action.close": "Close",
-  "notifications.action.tryModel": "Try model",
+  "notifications.action.previous": "Forrige",
+  "notifications.action.next": "Neste",
+  "notifications.action.close": "Lukk",
+  "notifications.action.tryModel": "Prøv {{model}}",
 } satisfies Partial<Record<Keys, string>>

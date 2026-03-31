@@ -1086,6 +1086,7 @@ export const dict = {
   "settings.agentBehaviour.disable.description": "Schakel deze agent volledig uit — deze verschijnt nergens",
   "settings.agentBehaviour.badge.hidden": "verborgen",
   "settings.agentBehaviour.badge.disabled": "uitgeschakeld",
+  "settings.agentBehaviour.badge.deprecated": "Verouderd",
   "settings.agentBehaviour.discoveredSkills": "Ontdekte Skills",
   "settings.agentBehaviour.noSkillsFound":
     "Geen skills ontdekt. Voeg hieronder skill mappaden of URL's toe om skills beschikbaar te maken.",
@@ -1238,7 +1239,6 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Wat is er Nieuw in Kilo Code",
-  "migration.whatsNew.badge": "Bèta",
   "migration.whatsNew.subtitle": "We hebben de extensie opnieuw opgebouwd op een snellere, efficiëntere basis.",
   "migration.whatsNew.features.performance.title": "Snellere Agent Prestaties",
   "migration.whatsNew.features.performance.detail":
@@ -1301,8 +1301,8 @@ export const dict = {
   "settings.saveBar.warning.many": "Meerdere sessies zijn actief en worden onderbroken",
   "settings.saveBar.saveAnyway": "Toch opslaan",
   "settings.saveBar.cancel": "Annuleren",
-  "notifications.action.previous": "Previous",
-  "notifications.action.next": "Next",
-  "notifications.action.close": "Close",
-  "notifications.action.tryModel": "Try model",
+  "notifications.action.previous": "Vorige",
+  "notifications.action.next": "Volgende",
+  "notifications.action.close": "Sluiten",
+  "notifications.action.tryModel": "Probeer {{model}}",
 }

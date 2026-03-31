@@ -1066,6 +1066,7 @@ export const dict = {
   "settings.agentBehaviour.disable.description": "تعطيل هذا الوكيل بالكامل — لن يظهر في أي مكان",
   "settings.agentBehaviour.badge.hidden": "مخفي",
   "settings.agentBehaviour.badge.disabled": "معطل",
+  "settings.agentBehaviour.badge.deprecated": "مُهمَل",
   "settings.agentBehaviour.discoveredSkills": "المهارات المكتشفة",
   "settings.agentBehaviour.noSkillsFound":
     "لم يتم العثور على مهارات. أضف مسارات مجلدات أو عناوين URL أدناه لإتاحة المهارات.",
@@ -1219,7 +1220,6 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "ما الجديد في Kilo Code",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "لقد أعدنا بناء الإضافة على أساس أسرع وأكثر كفاءة.",
   "migration.whatsNew.features.performance.title": "أداء أسرع للوكيل",
   "migration.whatsNew.features.performance.detail":
@@ -1280,8 +1280,8 @@ export const dict = {
   "settings.saveBar.warning.many": "عدة جلسات تعمل وستتوقف",
   "settings.saveBar.saveAnyway": "حفظ على أي حال",
   "settings.saveBar.cancel": "إلغاء",
-  "notifications.action.previous": "Previous",
-  "notifications.action.next": "Next",
-  "notifications.action.close": "Close",
-  "notifications.action.tryModel": "Try model",
+  "notifications.action.previous": "السابق",
+  "notifications.action.next": "التالي",
+  "notifications.action.close": "إغلاق",
+  "notifications.action.tryModel": "جرّب {{model}}",
 }

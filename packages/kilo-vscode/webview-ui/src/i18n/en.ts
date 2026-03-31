@@ -1078,6 +1078,7 @@ export const dict = {
   "settings.agentBehaviour.disable.description": "Fully disable this agent — it will not appear anywhere",
   "settings.agentBehaviour.badge.hidden": "hidden",
   "settings.agentBehaviour.badge.disabled": "disabled",
+  "settings.agentBehaviour.badge.deprecated": "deprecated",
   "settings.agentBehaviour.discoveredSkills": "Discovered Skills",
   "settings.agentBehaviour.noSkillsFound":
     "No skills discovered. Add skill folder paths or URLs below to make skills available.",
@@ -1245,7 +1246,6 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "What's New in Kilo Code",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "We've rebuilt the extension on a faster, more efficient foundation.",
   "migration.whatsNew.features.performance.title": "Faster Agent Performance",
   "migration.whatsNew.features.performance.detail":
@@ -1311,5 +1311,5 @@ export const dict = {
   "notifications.action.previous": "Previous",
   "notifications.action.next": "Next",
   "notifications.action.close": "Close",
-  "notifications.action.tryModel": "Try model",
+  "notifications.action.tryModel": "Try {{model}}",
 }

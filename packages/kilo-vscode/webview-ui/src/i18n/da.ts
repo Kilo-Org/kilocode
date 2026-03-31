@@ -1076,6 +1076,7 @@ export const dict = {
   "settings.agentBehaviour.disable.description": "Deaktiver denne agent fuldstændigt — den vises ingen steder",
   "settings.agentBehaviour.badge.hidden": "skjult",
   "settings.agentBehaviour.badge.disabled": "deaktiveret",
+  "settings.agentBehaviour.badge.deprecated": "Udfaset",
   "settings.agentBehaviour.discoveredSkills": "Opdagede skills",
   "settings.agentBehaviour.noSkillsFound":
     "Ingen skills fundet. Tilføj skill-mappestier eller URL'er nedenfor for at gøre skills tilgængelige.",
@@ -1234,7 +1235,6 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Nyheder i Kilo Code",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "Vi har genopbygget udvidelsen på et hurtigere og mere effektivt fundament.",
   "migration.whatsNew.features.performance.title": "Hurtigere agentydelse",
   "migration.whatsNew.features.performance.detail":
@@ -1296,8 +1296,8 @@ export const dict = {
   "settings.saveBar.warning.many": "Flere sessioner kører og vil blive afbrudt",
   "settings.saveBar.saveAnyway": "Gem alligevel",
   "settings.saveBar.cancel": "Annuller",
-  "notifications.action.previous": "Previous",
-  "notifications.action.next": "Next",
-  "notifications.action.close": "Close",
-  "notifications.action.tryModel": "Try model",
+  "notifications.action.previous": "Forrige",
+  "notifications.action.next": "Næste",
+  "notifications.action.close": "Luk",
+  "notifications.action.tryModel": "Prøv {{model}}",
 }

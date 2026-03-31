@@ -3,6 +3,7 @@ import type { LegacyApiMessage, LegacyHistoryItem } from "../legacy-types"
 import { createExtraPartID, createMessageID, createPartID, createSessionID } from "../ids"
 import { toReasoning, toText, toTool } from "./parts-builder"
 import {
+  getFeedbackText,
   isCompletionResult,
   isEnvironmentDetails,
   getReasoningText,
@@ -86,6 +87,13 @@ function parseParts(
     }
 
     if (isToolResult(part)) {
+      const feedback = getFeedbackText(part.content)
+      if (feedback) {
+        parts.push(
+          toText(createExtraPartID(id, index, `feedback-${partIndex}`), messageID, sessionID, created, feedback),
+        )
+      }
+
       // tool_result usually lives in the following user message, while the matching tool_use lives
       // in the earlier assistant message, so we need the whole conversation to reconcile both halves.
       const tool = mergeToolUseAndResult(partID, messageID, sessionID, created, conversation, part)

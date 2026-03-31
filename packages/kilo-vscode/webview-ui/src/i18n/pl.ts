@@ -1080,6 +1080,7 @@ export const dict = {
   "settings.agentBehaviour.disable.description": "Całkowicie wyłącz tego agenta — nie pojawi się nigdzie",
   "settings.agentBehaviour.badge.hidden": "ukryty",
   "settings.agentBehaviour.badge.disabled": "wyłączony",
+  "settings.agentBehaviour.badge.deprecated": "Przestarzały",
   "settings.agentBehaviour.discoveredSkills": "Wykryte umiejętności",
   "settings.agentBehaviour.noSkillsFound":
     "Nie znaleziono umiejętności. Dodaj ścieżki folderów lub adresy URL poniżej, aby udostępnić umiejętności.",
@@ -1243,7 +1244,6 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Co nowego w Kilo Code",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "Przebudowaliśmy rozszerzenie na szybszym i wydajniejszym fundamencie.",
   "migration.whatsNew.features.performance.title": "Szybsza wydajność agenta",
   "migration.whatsNew.features.performance.detail":
@@ -1304,8 +1304,8 @@ export const dict = {
   "settings.saveBar.warning.many": "Kilka sesji jest uruchomionych i zostanie przerwanych",
   "settings.saveBar.saveAnyway": "Zapisz mimo to",
   "settings.saveBar.cancel": "Anuluj",
-  "notifications.action.previous": "Previous",
-  "notifications.action.next": "Next",
-  "notifications.action.close": "Close",
-  "notifications.action.tryModel": "Try model",
+  "notifications.action.previous": "Poprzedni",
+  "notifications.action.next": "Następny",
+  "notifications.action.close": "Zamknij",
+  "notifications.action.tryModel": "Wypróbuj {{model}}",
 }

@@ -2,8 +2,10 @@ import { Database } from "../../storage/db"
 import { SessionTable, MessageTable, PartTable } from "../../session/session.sql"
 import { SessionImportType } from "./types"
 import { Project } from "../../project/project"
+import { eq } from "drizzle-orm"
 
 const key = (input: unknown) => [input] as never
+const target = (input: unknown) => input as never
 
 export namespace SessionImportService {
   export async function project(input: SessionImportType.Project): Promise<SessionImportType.Result> {
@@ -18,6 +20,9 @@ export namespace SessionImportService {
   }
 
   export async function session(input: SessionImportType.Session): Promise<SessionImportType.Result> {
+    const row = Database.use((db) => db.select().from(SessionTable).where(eq(target(SessionTable.id), input.id)).get())
+    if (row) return { ok: true, id: input.id, skipped: true }
+
     Database.use((db) => {
       db.insert(SessionTable)
         .values({
@@ -41,27 +46,8 @@ export namespace SessionImportService {
           time_compacting: input.timeCompacting,
           time_archived: input.timeArchived,
         })
-        .onConflictDoUpdate({
+        .onConflictDoNothing({
           target: key(SessionTable.id),
-          set: {
-            project_id: input.projectID,
-            workspace_id: input.workspaceID,
-            parent_id: input.parentID,
-            slug: input.slug,
-            directory: input.directory,
-            title: input.title,
-            version: input.version,
-            share_url: input.shareURL,
-            summary_additions: input.summary?.additions,
-            summary_deletions: input.summary?.deletions,
-            summary_files: input.summary?.files,
-            summary_diffs: input.summary?.diffs as never,
-            revert: input.revert,
-            permission: input.permission as never,
-            time_updated: input.timeUpdated,
-            time_compacting: input.timeCompacting,
-            time_archived: input.timeArchived,
-          },
         })
         .run()
     })

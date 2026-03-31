@@ -177,4 +177,36 @@ describe("legacy migration migrate", () => {
 
     expect(result.ok).toBe(false)
   })
+
+  it("skips message and part imports when backend reports the session already exists", async () => {
+    const calls: string[] = []
+    const api = {
+      kilocode: {
+        sessionImport: {
+          project: async () => {
+            calls.push("project")
+            return { data: { id: "project-real" } }
+          },
+          session: async () => {
+            calls.push("session")
+            return { data: { ok: true, skipped: true } }
+          },
+          message: async () => {
+            calls.push("message")
+            return { data: { ok: true } }
+          },
+          part: async () => {
+            calls.push("part")
+            return { data: { ok: true } }
+          },
+        },
+      },
+    }
+
+    const result = await migrate("legacy-task-1", ctx() as never, api as never)
+
+    expect(result.ok).toBe(true)
+    expect(result).toHaveProperty("skipped", true)
+    expect(calls).toEqual(["project", "session"])
+  })
 })

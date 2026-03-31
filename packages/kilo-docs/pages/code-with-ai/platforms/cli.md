@@ -1,6 +1,7 @@
 ---
 title: "Kilo CLI"
 description: "Using Kilo Code from the command line"
+platform: new
 ---
 
 {% callout type="warning" title="Version Notice" %}
@@ -167,7 +168,7 @@ Review your code locally before pushing — catch issues early without waiting f
 Configuration is managed through:
 
 - `/connect` command for provider setup (interactive)
-- Config files in **`~/.config/kilo/`**: the CLI (Kilo CLI 1.0 from [Kilo-Org/kilocode](https://github.com/Kilo-Org/kilocode)) merges `config.json`, `opencode.json`, and `opencode.jsonc`. Use **`opencode.json`** (or `opencode.jsonc`) for provider, model, permission, and **MCP** settings. Restart the CLI after editing. See [Using MCP in the CLI](/docs/automate/mcp/using-in-cli) for MCP config format.
+- Config files in **`~/.config/kilo/`**: use **`kilo.jsonc`** for provider, model, permission, and **MCP** settings. Restart the CLI after editing. See [Using MCP in Kilo Code](/docs/automate/mcp/using-in-kilo-code) for MCP config format.
 - `kilo auth` for credential management
 
 ## Slash Commands

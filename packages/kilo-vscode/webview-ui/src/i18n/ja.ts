@@ -1076,6 +1076,7 @@ export const dict = {
   "settings.agentBehaviour.disable.description": "このエージェントを完全に無効にする — どこにも表示されなくなります",
   "settings.agentBehaviour.badge.hidden": "非表示",
   "settings.agentBehaviour.badge.disabled": "無効",
+  "settings.agentBehaviour.badge.deprecated": "非推奨",
   "settings.agentBehaviour.discoveredSkills": "検出されたスキル",
   "settings.agentBehaviour.noSkillsFound":
     "スキルが見つかりません。スキルを利用可能にするには、以下にスキルフォルダパスまたはURLを追加してください。",
@@ -1234,7 +1235,6 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Kilo Codeの新機能",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "より高速で効率的な基盤上に拡張機能を再構築しました。",
   "migration.whatsNew.features.performance.title": "高速なエージェントパフォーマンス",
   "migration.whatsNew.features.performance.detail":
@@ -1295,8 +1295,8 @@ export const dict = {
   "settings.saveBar.warning.many": "複数のセッションが実行中で中断されます",
   "settings.saveBar.saveAnyway": "それでも保存",
   "settings.saveBar.cancel": "キャンセル",
-  "notifications.action.previous": "Previous",
-  "notifications.action.next": "Next",
-  "notifications.action.close": "Close",
-  "notifications.action.tryModel": "Try model",
+  "notifications.action.previous": "前へ",
+  "notifications.action.next": "次へ",
+  "notifications.action.close": "閉じる",
+  "notifications.action.tryModel": "{{model}}を試す",
 }

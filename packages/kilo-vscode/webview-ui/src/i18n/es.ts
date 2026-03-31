@@ -1087,6 +1087,7 @@ export const dict = {
   "settings.agentBehaviour.disable.description": "Desactivar completamente este agente — no aparecerá en ningún lugar",
   "settings.agentBehaviour.badge.hidden": "oculto",
   "settings.agentBehaviour.badge.disabled": "desactivado",
+  "settings.agentBehaviour.badge.deprecated": "Obsoleto",
   "settings.agentBehaviour.discoveredSkills": "Habilidades descubiertas",
   "settings.agentBehaviour.noSkillsFound":
     "No se encontraron habilidades. Agregue rutas de carpetas o URLs abajo para hacer disponibles las habilidades.",
@@ -1251,7 +1252,6 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Novedades en Kilo Code",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "Hemos reconstruido la extensión sobre una base más rápida y eficiente.",
   "migration.whatsNew.features.performance.title": "Rendimiento de agente más rápido",
   "migration.whatsNew.features.performance.detail":
@@ -1313,8 +1313,8 @@ export const dict = {
   "settings.saveBar.warning.many": "Varias sesiones están en ejecución y se interrumpirán",
   "settings.saveBar.saveAnyway": "Guardar de todas formas",
   "settings.saveBar.cancel": "Cancelar",
-  "notifications.action.previous": "Previous",
-  "notifications.action.next": "Next",
-  "notifications.action.close": "Close",
-  "notifications.action.tryModel": "Try model",
+  "notifications.action.previous": "Anterior",
+  "notifications.action.next": "Siguiente",
+  "notifications.action.close": "Cerrar",
+  "notifications.action.tryModel": "Probar {{model}}",
 }

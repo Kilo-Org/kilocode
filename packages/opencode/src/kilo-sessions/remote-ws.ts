@@ -18,6 +18,8 @@ export namespace RemoteWS {
     withContext?: <R>(fn: () => R) => Promise<R> | R
     /** Called when the server permanently closes the connection (e.g. auth failure, conflict) */
     onClose?: (code: number, reason: string) => void
+    /** Inactivity timeout in ms — force-close if no inbound message within this window */
+    timeout?: number
   }
 
   export type Connection = {
@@ -56,6 +58,29 @@ export namespace RemoteWS {
       beat = undefined
     }
 
+    let activity = Date.now()
+    let watchdog: Timer | undefined
+    const timeout = options.timeout ?? 30_000
+
+    function startWatchdog() {
+      stopWatchdog()
+      watchdog = setInterval(
+        () => {
+          if (Date.now() - activity > timeout) {
+            options.log.warn("remote-ws activity timeout, forcing reconnect")
+            stopWatchdog()
+            ws?.close(4000, "activity timeout")
+          }
+        },
+        Math.min(interval, timeout),
+      )
+    }
+
+    function stopWatchdog() {
+      if (watchdog) clearInterval(watchdog)
+      watchdog = undefined
+    }
+
     async function open() {
       if (closed) return
       const token = await options.getToken()
@@ -73,10 +98,13 @@ export namespace RemoteWS {
         backoff = 1000
         for (const msg of buffer) ws!.send(msg)
         buffer.length = 0
+        activity = Date.now()
         startHeartbeat()
+        startWatchdog()
       }
 
       ws.onmessage = (event) => {
+        activity = Date.now()
         const raw = String(event.data)
         let json: unknown
         try {
@@ -99,6 +127,7 @@ export namespace RemoteWS {
         options.log.info("remote-ws closed", { code: event.code, reason: event.reason })
         ws = undefined
         stopHeartbeat()
+        stopWatchdog()
         if (event.code === 4401 || event.code === 4403 || event.code === 4409) {
           options.log.warn("remote-ws closed permanently", {
             code: event.code,
@@ -134,6 +163,7 @@ export namespace RemoteWS {
     function close() {
       closed = true
       stopHeartbeat()
+      stopWatchdog()
       if (timer) clearTimeout(timer)
       if (ws) ws.close()
     }

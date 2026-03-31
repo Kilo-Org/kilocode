@@ -32,4 +32,6 @@ exclude = [
   '^https?://github\.com/',
   # Redirects to login page, blocked by bots
   '^https?://vercel\.link/',
+  # API base URL, returns 404 when fetched directly
+  '^https?://api\.apertis\.ai/v1/?$',
 ]

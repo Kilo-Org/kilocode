@@ -24,7 +24,7 @@ export async function migrate(id: string, context: vscode.ExtensionContext, clie
   try {
     const project = await client.kilocode.sessionImport.project(payload.project, { throwOnError: true })
     const projectID = project.data?.id ?? payload.project.id
-    await client.kilocode.sessionImport.session(
+    const session = await client.kilocode.sessionImport.session(
       {
         ...payload.session,
         projectID,
@@ -33,6 +33,14 @@ export async function migrate(id: string, context: vscode.ExtensionContext, clie
       },
       { throwOnError: true },
     )
+    // Skip child imports when the session already exists so rerunning migration only imports missing sessions.
+    if (session.data?.skipped) {
+      return {
+        ok: true,
+        skipped: true,
+        payload,
+      }
+    }
 
     for (const msg of payload.messages) {
       await client.kilocode.sessionImport.message(msg, { throwOnError: true })
@@ -41,8 +49,6 @@ export async function migrate(id: string, context: vscode.ExtensionContext, clie
     for (const part of payload.parts) {
       await client.kilocode.sessionImport.part(part, { throwOnError: true })
     }
-
-    await context.globalState.update(`kilo.migratedSession.${payload.session.id}`, true)
 
     return {
       ok: true,

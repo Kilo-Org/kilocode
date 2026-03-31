@@ -68,18 +68,6 @@
   width: 100%;
 }
 
-.migration-wizard__badge {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  padding: 3px 9px;
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--vscode-button-background) 15%, transparent);
-  color: var(--vscode-button-background);
-  vertical-align: middle;
-  text-transform: uppercase;
-}
-
 .migration-wizard__header p {
   font-size: 13px;
   color: var(--vscode-descriptionForeground);

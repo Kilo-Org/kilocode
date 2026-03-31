@@ -219,6 +219,7 @@ export interface AgentInfo {
   mode: "subagent" | "primary" | "all"
   native?: boolean
   hidden?: boolean
+  deprecated?: boolean
   color?: string
 }
 

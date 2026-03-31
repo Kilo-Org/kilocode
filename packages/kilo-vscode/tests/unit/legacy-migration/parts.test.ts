@@ -111,6 +111,47 @@ describe("legacy migration parts", () => {
     expect(items.some((x) => x.includes("Created 3 Python files with web development content"))).toBe(true)
   })
 
+  it("adds a visible user text part for feedback embedded in tool_result", () => {
+    const list = parsePartsFromConversation(
+      [
+        {
+          role: "assistant",
+          content: [
+            {
+              type: "tool_use",
+              id: "toolu_feedback_1",
+              name: "attempt_completion",
+              input: {
+                result: "Done.",
+              },
+            },
+          ],
+          ts: 10,
+        },
+        {
+          role: "user",
+          content: [
+            {
+              type: "tool_result",
+              tool_use_id: "toolu_feedback_1",
+              content: [
+                {
+                  type: "text",
+                  text: "The user has provided feedback on the results. Consider their input to continue the task, and then attempt completion again.\n<feedback>\nAdd two more lines\n</feedback>",
+                },
+              ],
+            },
+          ],
+          ts: 11,
+        },
+      ] as LegacyApiMessage[],
+      id,
+      item,
+    )
+
+    expect(text(list)).toContain("Add two more lines")
+  })
+
   it("does not create parts for skipped legacy entries like system messages", () => {
     const list = parsePartsFromConversation(
       [

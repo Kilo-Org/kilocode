@@ -58,11 +58,7 @@ Route requests through unified APIs with additional features:
 - **Regional** - Better latency in certain locations
 
 {% callout type="note" %}
-All API keys use VS Code's Secret Storage—never stored in plain text.
-{% /callout %}
-
-{% callout type="warning" title="Time-to-first-byte timeout" %}
-For all providers, there is a **five-minute timeout** on time to first token. This means if a provider does not begin streaming a response within five minutes of the request being sent, the request will be cancelled. This is a constraint of the Bun runtime and cannot be easily configured.
+In the **VSCode (Legacy)** version, API keys use VS Code's Secret Storage. In the current **VSCode & CLI** version, keys are set via environment variables or referenced in `kilo.json` config files. See individual provider pages for setup instructions for each platform.
 {% /callout %}
 
 ## Next Steps

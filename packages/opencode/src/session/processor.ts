@@ -135,6 +135,30 @@ export namespace SessionProcessor {
                   break
 
                 case "tool-call": {
+                  // kilocode_change start
+                  // If tool-input-start was never emitted, this can happen if arguments are unparseable,
+                  // create the tool part now to prevent missing tool results down the line.
+                  if (!toolcalls[value.toolCallId] && !value.providerExecuted) {
+                    log.warn("tool-call without prior tool-input-start", {
+                      toolCallId: value.toolCallId,
+                      toolName: value.toolName,
+                    })
+                    const created = await Session.updatePart({
+                      id: Identifier.ascending("part"),
+                      messageID: input.assistantMessage.id,
+                      sessionID: input.assistantMessage.sessionID,
+                      type: "tool",
+                      tool: value.toolName,
+                      callID: value.toolCallId,
+                      state: {
+                        status: "pending",
+                        input: {},
+                        raw: "",
+                      },
+                    })
+                    toolcalls[value.toolCallId] = created as MessageV2.ToolPart
+                  }
+                  // kilocode_change end
                   const match = toolcalls[value.toolCallId]
                   if (match) {
                     const part = await Session.updatePart({

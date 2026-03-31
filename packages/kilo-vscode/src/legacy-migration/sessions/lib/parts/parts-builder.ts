@@ -1,5 +1,5 @@
 import type { KilocodeSessionImportPartData as Part } from "@kilocode/sdk/v2"
-import { cleanLegacyTaskText, record } from "./parts-util"
+import { cleanLegacyTaskText, isLegacySystemErrorText, record } from "./parts-util"
 
 type Body = NonNullable<Part["body"]>
 type Data = Body["data"]
@@ -55,6 +55,12 @@ export function toText(
   const data: Text = {
     type: "text",
     text: value,
+    ...(isLegacySystemErrorText(value) && {
+      ignored: true,
+      metadata: {
+        source: "legacy-system-error",
+      },
+    }),
     time: {
       start: created,
       end: created,

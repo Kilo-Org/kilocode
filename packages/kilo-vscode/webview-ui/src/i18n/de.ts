@@ -1096,6 +1096,7 @@ export const dict = {
   "settings.agentBehaviour.disable.description": "Diesen Agent vollständig deaktivieren — er wird nirgends angezeigt",
   "settings.agentBehaviour.badge.hidden": "versteckt",
   "settings.agentBehaviour.badge.disabled": "deaktiviert",
+  "settings.agentBehaviour.badge.deprecated": "Veraltet",
   "settings.agentBehaviour.discoveredSkills": "Erkannte Skills",
   "settings.agentBehaviour.noSkillsFound":
     "Keine Skills gefunden. Fügen Sie unten Skill-Ordnerpfade oder URLs hinzu, um Skills verfügbar zu machen.",
@@ -1260,7 +1261,6 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Neuigkeiten in Kilo Code",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle":
     "Wir haben die Erweiterung auf einer schnelleren, effizienteren Grundlage neu aufgebaut.",
   "migration.whatsNew.features.performance.title": "Schnellere Agentenleistung",
@@ -1323,8 +1323,8 @@ export const dict = {
   "settings.saveBar.warning.many": "Mehrere Sitzungen laufen und werden unterbrochen",
   "settings.saveBar.saveAnyway": "Trotzdem speichern",
   "settings.saveBar.cancel": "Abbrechen",
-  "notifications.action.previous": "Previous",
-  "notifications.action.next": "Next",
-  "notifications.action.close": "Close",
-  "notifications.action.tryModel": "Try model",
+  "notifications.action.previous": "Zurück",
+  "notifications.action.next": "Weiter",
+  "notifications.action.close": "Schließen",
+  "notifications.action.tryModel": "{{model}} ausprobieren",
 } satisfies Partial<Record<Keys, string>>

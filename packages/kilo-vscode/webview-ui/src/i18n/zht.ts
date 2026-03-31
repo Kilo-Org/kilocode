@@ -1060,6 +1060,7 @@ export const dict = {
   "settings.agentBehaviour.disable.description": "完全停用此 Agent — 它將不會出現在任何地方",
   "settings.agentBehaviour.badge.hidden": "隱藏",
   "settings.agentBehaviour.badge.disabled": "已停用",
+  "settings.agentBehaviour.badge.deprecated": "棄用",
   "settings.agentBehaviour.discoveredSkills": "已發現的 Skill",
   "settings.agentBehaviour.noSkillsFound": "未發現任何 Skill。請在下方新增 Skill 資料夾路徑或 URL 以使 Skill 可用。",
   "settings.agentBehaviour.availableModes": "可用自訂模式",
@@ -1199,7 +1200,6 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Kilo Code 新功能",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "我們在更快、更高效的基礎上重新建構了擴充功能。",
   "migration.whatsNew.features.performance.title": "更快的 Agent 效能",
   "migration.whatsNew.features.performance.detail":
@@ -1259,8 +1259,8 @@ export const dict = {
   "settings.saveBar.warning.many": "多個工作階段正在執行，將被中斷",
   "settings.saveBar.saveAnyway": "仍然儲存",
   "settings.saveBar.cancel": "取消",
-  "notifications.action.previous": "Previous",
-  "notifications.action.next": "Next",
-  "notifications.action.close": "Close",
-  "notifications.action.tryModel": "Try model",
+  "notifications.action.previous": "上一個",
+  "notifications.action.next": "下一個",
+  "notifications.action.close": "關閉",
+  "notifications.action.tryModel": "嘗試 {{model}}",
 } satisfies Partial<Record<Keys, string>>

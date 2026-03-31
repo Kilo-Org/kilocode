@@ -15774,6 +15774,9 @@
           "hidden": {
             "type": "boolean"
           },
+          "deprecated": {
+            "type": "boolean"
+          },
           "topP": {
             "type": "number"
           },

@@ -1083,6 +1083,7 @@ export const dict = {
   "settings.agentBehaviour.disable.description": "Bu ajanı tamamen devre dışı bırak — hiçbir yerde görünmeyecek",
   "settings.agentBehaviour.badge.hidden": "gizli",
   "settings.agentBehaviour.badge.disabled": "devre dışı",
+  "settings.agentBehaviour.badge.deprecated": "Kullanımdan kaldırılmış",
   "settings.agentBehaviour.discoveredSkills": "Keşfedilen Beceriler",
   "settings.agentBehaviour.noSkillsFound":
     "Keşfedilen beceri yok. Becerileri kullanılabilir kılmak için aşağıya beceri klasör yolları veya URL'ler ekleyin.",
@@ -1293,8 +1294,8 @@ export const dict = {
   "settings.saveBar.warning.many": "Birden fazla oturum çalışıyor ve kesintiye uğrayacak",
   "settings.saveBar.saveAnyway": "Yine de kaydet",
   "settings.saveBar.cancel": "İptal",
-  "notifications.action.previous": "Previous",
-  "notifications.action.next": "Next",
-  "notifications.action.close": "Close",
-  "notifications.action.tryModel": "Try model",
+  "notifications.action.previous": "Önceki",
+  "notifications.action.next": "Sonraki",
+  "notifications.action.close": "Kapat",
+  "notifications.action.tryModel": "Dene {{model}}",
 }

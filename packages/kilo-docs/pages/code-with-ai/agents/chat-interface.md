@@ -188,6 +188,12 @@ This feature streamlines the interaction when Kilo Code requires clarification, 
 **Pop out to an editor tab.** If the sidebar feels cramped, pop the chat into a full editor tab for more room.
 {% /callout %}
 
+{% callout type="tip" %}
+**Move Kilo Code to the Secondary Side Bar** for a better layout. Right-click on the Kilo Code icon in the Activity Bar and select **Move To → Secondary Side Bar**. This lets you see the Explorer, Search, Source Control, etc. alongside Kilo Code.
+
+{% image src="/docs/img/move-to-secondary.png" alt="Move to Secondary Side Bar" width="600" caption="Move Kilo Code to the Secondary Side Bar for better workspace organization" /%}
+{% /callout %}
+
 {% /tab %}
 {% tab label="CLI" %}
 

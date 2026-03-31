@@ -6,6 +6,7 @@ import { useProvider } from "../../context/provider"
 import { useLanguage } from "../../context/language"
 import { KILO_PROVIDER_ID } from "../../../../src/shared/provider-model"
 import { TelemetryEventName } from "../../../../src/services/telemetry/types"
+import { stripSubProviderPrefix } from "../shared/model-selector-utils"
 
 export const KiloNotifications: Component = () => {
   const { filteredNotifications, dismiss } = useNotifications()
@@ -61,6 +62,14 @@ export const KiloNotifications: Component = () => {
     return true
   })
 
+  const suggestedName = createMemo(() => {
+    const suggestion = suggestedModel()
+    if (!suggestion) return undefined
+    const model = provider.findModel(suggestion)
+    if (!model?.name) return undefined
+    return stripSubProviderPrefix(model.name)
+  })
+
   const handleTryModel = () => {
     const suggestion = suggestedModel()
     if (!suggestion) return
@@ -88,7 +97,7 @@ export const KiloNotifications: Component = () => {
           <div class="kilo-notifications-footer">
             <Show when={canSwitchModel()}>
               <button class="kilo-notifications-action-btn" onClick={handleTryModel}>
-                {language.t("notifications.action.tryModel")}
+                {language.t("notifications.action.tryModel", { model: suggestedName() ?? "" })}
               </button>
             </Show>
             <Show when={current()?.action}>

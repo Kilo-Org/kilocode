@@ -1082,6 +1082,7 @@ export const dict = {
   "settings.agentBehaviour.disable.description": "Potpuno onemogući ovog agenta — neće se pojaviti nigdje",
   "settings.agentBehaviour.badge.hidden": "skriveno",
   "settings.agentBehaviour.badge.disabled": "onemogućeno",
+  "settings.agentBehaviour.badge.deprecated": "Zastarjelo",
   "settings.agentBehaviour.discoveredSkills": "Otkrivene vještine",
   "settings.agentBehaviour.noSkillsFound":
     "Nisu pronađene vještine. Dodajte putanje mapa ili URL-ove ispod kako biste učinili vještine dostupnim.",
@@ -1244,7 +1245,6 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Šta je novo u Kilo Code",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "Ponovo smo izgradili ekstenziju na bržem i efikasnijem temelju.",
   "migration.whatsNew.features.performance.title": "Brže performanse agenta",
   "migration.whatsNew.features.performance.detail":
@@ -1305,8 +1305,8 @@ export const dict = {
   "settings.saveBar.warning.many": "Nekoliko sesija je pokrenuto i bit će prekinuto",
   "settings.saveBar.saveAnyway": "Spremi svejedno",
   "settings.saveBar.cancel": "Otkaži",
-  "notifications.action.previous": "Previous",
-  "notifications.action.next": "Next",
-  "notifications.action.close": "Close",
-  "notifications.action.tryModel": "Try model",
+  "notifications.action.previous": "Prethodni",
+  "notifications.action.next": "Sljedeći",
+  "notifications.action.close": "Zatvori",
+  "notifications.action.tryModel": "Probaj {{model}}",
 }
