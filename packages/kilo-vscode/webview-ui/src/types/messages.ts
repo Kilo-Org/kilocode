@@ -278,6 +278,7 @@ export interface AgentInfo {
   deprecated?: boolean
   color?: string
   permission?: PermissionRuleItem[]
+  prompt?: string
 }
 
 // Server info
@@ -727,6 +728,7 @@ export interface AgentsLoadedMessage {
   agents: AgentInfo[]
   allAgents: AgentInfo[]
   defaultAgent: string
+  subagents?: AgentInfo[]
 }
 
 export interface SkillsLoadedMessage {

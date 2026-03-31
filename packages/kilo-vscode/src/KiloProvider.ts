@@ -1715,11 +1715,23 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       const { visible, defaultAgent } = filterVisibleAgents(agents)
 
+      const mapAgent = (a: (typeof agents)[number]) => ({
+        name: a.name,
+        displayName: a.displayName,
+        description: a.description,
+        mode: a.mode,
+        native: a.native,
+        color: a.color,
+        deprecated: a.deprecated,
+        prompt: a.prompt,
+      })
+
       const message = {
         type: "agentsLoaded",
         agents: visible.map(mapAgent),
         allAgents: agents.map(mapAgent),
         defaultAgent,
+        subagents: agents.filter((a) => a.mode === "subagent").map(mapAgent),
       }
       this.cachedAgentsMessage = message
       this.postMessage(message)
