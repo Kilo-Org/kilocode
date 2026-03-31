@@ -112,7 +112,17 @@ export async function detectLegacyData(context: vscode.ExtensionContext): Promis
 
 async function readSessionsInGlobalStorage(context: vscode.ExtensionContext) {
   const items = context.globalState.get<{ id: string }[]>("taskHistory", [])
-  return items.map((item) => item.id)
+  const base = vscode.Uri.joinPath(context.globalStorageUri, "tasks")
+  const ids: string[] = []
+  for (const item of items) {
+    const file = vscode.Uri.joinPath(base, item.id, "api_conversation_history.json")
+    const exists = await vscode.workspace.fs.stat(file).then(
+      () => true,
+      () => false,
+    )
+    if (exists) ids.push(item.id)
+  }
+  return ids
 }
 
 // ---------------------------------------------------------------------------
