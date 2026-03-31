@@ -1280,6 +1280,8 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "VS Codeのストレージから古い設定を削除します。この移行を再度実行することはできなくなります。",
   "migration.complete.done": "完了",
+  "migration.error.action.copy": "コピー",
+  "migration.error.toast.copied": "エラーをクリップボードにコピーしました",
   // legacy-migration end
 
   "error.details.show": "詳細",

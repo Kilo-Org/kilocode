@@ -1289,6 +1289,8 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "Spowoduje to usunięcie starych ustawień z magazynu VS Code. Nie będzie można ponownie uruchomić tej migracji.",
   "migration.complete.done": "Gotowe",
+  "migration.error.action.copy": "Kopiuj",
+  "migration.error.toast.copied": "Błąd skopiowano do schowka",
   // legacy-migration end
 
   "error.details.show": "Szczegóły",

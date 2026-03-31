@@ -1264,6 +1264,8 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "การดำเนินการนี้จะลบการตั้งค่าเดิมจากที่เก็บข้อมูล VS Code คุณจะไม่สามารถเรียกใช้การย้ายข้อมูลนี้ได้อีก",
   "migration.complete.done": "เสร็จสิ้น",
+  "migration.error.action.copy": "คัดลอก",
+  "migration.error.toast.copied": "คัดลอกข้อผิดพลาดไปยังคลิปบอร์ดแล้ว",
   // legacy-migration end
 
   "error.details.show": "รายละเอียด",

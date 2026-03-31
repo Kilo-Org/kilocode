@@ -1298,6 +1298,8 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "Esto elimina la configuración antigua del almacenamiento de VS Code. No podrás volver a ejecutar esta migración.",
   "migration.complete.done": "Hecho",
+  "migration.error.action.copy": "Copiar",
+  "migration.error.toast.copied": "Error copiado al portapapeles",
   // legacy-migration end
 
   "error.details.show": "Detalles",

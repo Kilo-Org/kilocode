@@ -1308,6 +1308,8 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "Dadurch werden die alten Einstellungen aus dem VS Code-Speicher entfernt. Sie können diese Migration danach nicht erneut ausführen.",
   "migration.complete.done": "Fertig",
+  "migration.error.action.copy": "Kopieren",
+  "migration.error.toast.copied": "Fehler in die Zwischenablage kopiert",
   // legacy-migration end
 
   "error.details.show": "Details",

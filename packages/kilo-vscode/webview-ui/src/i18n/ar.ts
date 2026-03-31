@@ -1265,6 +1265,8 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "هذا يزيل الإعدادات القديمة من مساحة تخزين VS Code. لن تتمكن من إعادة تشغيل هذا الترحيل.",
   "migration.complete.done": "تم",
+  "migration.error.action.copy": "نسخ",
+  "migration.error.toast.copied": "تم نسخ الخطأ إلى الحافظة",
   // legacy-migration end
 
   "error.details.show": "التفاصيل",

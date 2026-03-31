@@ -1285,6 +1285,8 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "Dit verwijdert de oude instellingen uit de VS Code-opslag. U zult deze migratie niet opnieuw kunnen uitvoeren.",
   "migration.complete.done": "Klaar",
+  "migration.error.action.copy": "Kopiëren",
+  "migration.error.toast.copied": "Fout gekopieerd naar het klembord",
   // legacy-migration end
 
   "error.details.show": "Details",

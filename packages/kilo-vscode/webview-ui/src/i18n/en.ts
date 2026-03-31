@@ -1291,6 +1291,8 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "This removes the old settings from VS Code storage. You will not be able to re-run this migration.",
   "migration.complete.done": "Done",
+  "migration.error.action.copy": "Copy",
+  "migration.error.toast.copied": "Error copied to clipboard",
   // legacy-migration end
 
   "error.details.show": "Details",

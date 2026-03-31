@@ -1281,6 +1281,8 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "Dette fjerner de gamle innstillingene fra VS Code-lagringen. Du vil ikke kunne kjøre denne migreringen på nytt.",
   "migration.complete.done": "Ferdig",
+  "migration.error.action.copy": "Kopier",
+  "migration.error.toast.copied": "Feil kopiert til utklippstavlen",
   // legacy-migration end
 
   "task.todos.progress": "{{done}}/{{total}} oppgaver fullført",

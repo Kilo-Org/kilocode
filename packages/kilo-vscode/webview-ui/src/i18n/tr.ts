@@ -1277,6 +1277,8 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "Bu, VS Code depolamasından eski ayarları kaldırır. Bu taşımayı yeniden çalıştıramazsınız.",
   "migration.complete.done": "Bitti",
+  "migration.error.action.copy": "Kopyala",
+  "migration.error.toast.copied": "Hata panoya kopyalandı",
   // legacy-migration end
 
   "error.details.show": "Ayrıntılar",

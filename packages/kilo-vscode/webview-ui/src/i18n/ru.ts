@@ -1288,6 +1288,8 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "Это удалит старые настройки из хранилища VS Code. Вы не сможете запустить эту миграцию повторно.",
   "migration.complete.done": "Готово",
+  "migration.error.action.copy": "Копировать",
+  "migration.error.toast.copied": "Ошибка скопирована в буфер обмена",
   // legacy-migration end
 
   "error.details.show": "Подробности",

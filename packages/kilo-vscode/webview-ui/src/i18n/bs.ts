@@ -1290,6 +1290,8 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "Ovo uklanja stare postavke iz VS Code pohrane. Nećete moći ponovo pokrenuti ovu migraciju.",
   "migration.complete.done": "Završeno",
+  "migration.error.action.copy": "Kopiraj",
+  "migration.error.toast.copied": "Greška kopirana u međuspremnik",
   // legacy-migration end
 
   "error.details.show": "Detalji",

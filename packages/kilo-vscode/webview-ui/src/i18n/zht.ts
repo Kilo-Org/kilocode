@@ -1244,6 +1244,8 @@ export const dict = {
   "migration.complete.cleanup": "清除舊版設定資料",
   "migration.complete.cleanupDescription": "此操作將從 VS Code 儲存中刪除舊版設定。您將無法再次執行此遷移。",
   "migration.complete.done": "完成",
+  "migration.error.action.copy": "複製",
+  "migration.error.toast.copied": "錯誤已複製到剪貼簿",
   // legacy-migration end
 
   "error.details.show": "詳細資訊",
