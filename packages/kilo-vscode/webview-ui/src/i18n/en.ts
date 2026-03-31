@@ -1274,6 +1274,7 @@ export const dict = {
   "migration.migrate.keysDetected": "{{count}} keys detected",
   "migration.migrate.serversConfigured": "{{count}} server(s) configured",
   "migration.migrate.modesFound": "{{count}} mode(s) found",
+  "migration.migrate.sessionsDetected": "{{count}} sessions detected",
   "migration.migrate.nothingToMigrate": "Nothing to migrate was found in the legacy settings.",
 
   // Migrate — item labels (reused from old select keys)
@@ -1291,6 +1292,18 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "This removes the old settings from VS Code storage. You will not be able to re-run this migration.",
   "migration.complete.done": "Done",
+  "migration.progress.sessions": "Chat sessions",
+  "migration.progress.defaultModel": "Default model",
+  "migration.progress.commandRules": "Command rules",
+  "migration.progress.readPermission": "Read permission",
+  "migration.progress.writePermission": "Write permission",
+  "migration.progress.executePermission": "Execute permission",
+  "migration.progress.mcpPermission": "MCP permission",
+  "migration.progress.taskPermission": "Task permission",
+  "migration.progress.language": "Language preference",
+  "migration.progress.autocomplete": "Autocomplete settings",
+  "migration.error.sessionFailed": "Session migration failed",
+  "migration.error.continue": "Continue",
   "migration.error.action.copy": "Copy",
   "migration.error.toast.copied": "Error copied to clipboard",
   // legacy-migration end

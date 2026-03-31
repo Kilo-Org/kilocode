@@ -329,34 +329,34 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
         return { item: mode?.name ?? slug, group: "customModes", status: "pending" as const }
       }),
       ...(migrateSessions() && sessions().length > 0
-        ? [{ item: "Chat sessions", group: "sessions", status: "pending" as const }]
+        ? [{ item: language.t("migration.progress.sessions"), group: "sessions", status: "pending" as const }]
         : []),
       ...(migrateDefaultModel() && defaultModel()
-        ? [{ item: "Default model", group: "defaultModel", status: "pending" as const }]
+        ? [{ item: language.t("migration.progress.defaultModel"), group: "defaultModel", status: "pending" as const }]
         : []),
       ...(autoApproval.commandRules
-        ? [{ item: "Command rules", group: "autoApproval", status: "pending" as const }]
+        ? [{ item: language.t("migration.progress.commandRules"), group: "autoApproval", status: "pending" as const }]
         : []),
       ...(autoApproval.readPermission
-        ? [{ item: "Read permission", group: "autoApproval", status: "pending" as const }]
+        ? [{ item: language.t("migration.progress.readPermission"), group: "autoApproval", status: "pending" as const }]
         : []),
       ...(autoApproval.writePermission
-        ? [{ item: "Write permission", group: "autoApproval", status: "pending" as const }]
+        ? [{ item: language.t("migration.progress.writePermission"), group: "autoApproval", status: "pending" as const }]
         : []),
       ...(autoApproval.executePermission
-        ? [{ item: "Execute permission", group: "autoApproval", status: "pending" as const }]
+        ? [{ item: language.t("migration.progress.executePermission"), group: "autoApproval", status: "pending" as const }]
         : []),
       ...(autoApproval.mcpPermission
-        ? [{ item: "MCP permission", group: "autoApproval", status: "pending" as const }]
+        ? [{ item: language.t("migration.progress.mcpPermission"), group: "autoApproval", status: "pending" as const }]
         : []),
       ...(autoApproval.taskPermission
-        ? [{ item: "Task permission", group: "autoApproval", status: "pending" as const }]
+        ? [{ item: language.t("migration.progress.taskPermission"), group: "autoApproval", status: "pending" as const }]
         : []),
       ...(migrateLanguage() && legacySettings()?.language
-        ? [{ item: "Language preference", group: "language", status: "pending" as const }]
+        ? [{ item: language.t("migration.progress.language"), group: "language", status: "pending" as const }]
         : []),
       ...(migrateAutocomplete() && legacySettings()?.autocomplete
-        ? [{ item: "Autocomplete settings", group: "autocomplete", status: "pending" as const }]
+        ? [{ item: language.t("migration.progress.autocomplete"), group: "autocomplete", status: "pending" as const }]
         : []),
     ]
 
@@ -689,8 +689,8 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
                     </label>
                   </Show>
                   <div class="migration-wizard__item-text">
-                    <div class="label">Chat Sessions &amp; History</div>
-                    <div class="desc">{sessions().length} sessions detected</div>
+                    <div class="label">{language.t("migration.migrate.chatHistory")}</div>
+                    <div class="desc">{language.t("migration.migrate.sessionsDetected", { count: String(sessions().length) })}</div>
                     <Show
                       when={
                         (phase() === "error" || phase() === "done") &&
@@ -700,7 +700,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
                     >
                       <div class="migration-wizard__error-box">
                         <div class="migration-wizard__error-box-header">
-                          <div class="migration-wizard__error-box-title">Session migration failed</div>
+                          <div class="migration-wizard__error-box-title">{language.t("migration.error.sessionFailed")}</div>
                           <button
                             type="button"
                             class="migration-wizard__copy-btn"
@@ -862,7 +862,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
                     setPhase("done")
                   }}
                 >
-                  Continue
+                  {language.t("migration.error.continue")}
                 </button>
               </Show>
               <Show when={phase() === "done"}>
