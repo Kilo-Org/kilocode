@@ -691,7 +691,13 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
                   <div class="migration-wizard__item-text">
                     <div class="label">Chat Sessions &amp; History</div>
                     <div class="desc">{sessions().length} sessions detected</div>
-                    <Show when={(phase() === "error" || phase() === "done") && groupStatus("sessions") === "error" && groupMessage("sessions")}>
+                    <Show
+                      when={
+                        (phase() === "error" || phase() === "done") &&
+                        groupStatus("sessions") === "error" &&
+                        groupMessage("sessions")
+                      }
+                    >
                       <div class="migration-wizard__error-box">
                         <div class="migration-wizard__error-box-header">
                           <div class="migration-wizard__error-box-title">Session migration failed</div>
