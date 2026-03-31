@@ -16,6 +16,7 @@ import type {
 } from "@kilocode/sdk/v2/client"
 import { PROVIDER_MAP, UNSUPPORTED_PROVIDERS, DEFAULT_MODE_SLUGS } from "./provider-mapping"
 import type { ProviderMapping } from "./provider-mapping"
+import { getMigrationErrorMessage } from "./errors/migration-error"
 import type {
   LegacyProviderProfiles,
   LegacyProviderSettings,
@@ -223,11 +224,7 @@ export async function migrate(
     for (const id of selections.sessions) {
       onProgress("Chat sessions", "migrating")
       const result = await migrateSession(id, context, client)
-      const reason = result.ok
-        ? "Session migrated"
-        : result.error instanceof Error
-          ? result.error.message
-          : "Session migration failed"
+      const reason = result.ok ? "Session migrated" : result.message
       results.push({
         item: id,
         category: "session",
@@ -676,7 +673,7 @@ async function migrateAutocomplete(settings: LegacyAutocompleteSettings): Promis
       item: "Autocomplete settings",
       category: "settings",
       status: "error",
-      message: err instanceof Error ? err.message : String(err),
+      message: getMigrationErrorMessage(err),
     }
   }
 }
@@ -724,7 +721,7 @@ async function migrateLanguage(language: string): Promise<MigrationResultItem> {
       item: "Language preference",
       category: "settings",
       status: "error",
-      message: err instanceof Error ? err.message : String(err),
+      message: getMigrationErrorMessage(err),
     }
   }
 }

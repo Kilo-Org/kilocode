@@ -8,6 +8,7 @@
 
 import { Show, createSignal, onMount, onCleanup } from "solid-js"
 import type { Component, JSX } from "solid-js"
+import { showToast } from "@kilocode/kilo-ui/toast"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import type {
@@ -21,16 +22,6 @@ import type {
   LegacyMigrationProgressMessage,
   LegacyMigrationCompleteMessage,
 } from "../../types/messages"
-import MigrationError from "./errors/MigrationError"
-import {
-  getCurrentSessionError,
-  getCurrentSessionErrorDetail,
-  getGroupMessage,
-  getGroupStatus,
-  getSuccessCount,
-  getTotalCount,
-  type ProgressEntry,
-} from "./migration-view-model"
 import "./migration.css"
 
 // ---------------------------------------------------------------------------
@@ -165,6 +156,13 @@ const WarningSvg = (): JSX.Element => (
 
 type Screen = "whats-new" | "migrate"
 type MigratePhase = "selecting" | "migrating" | "error" | "done"
+
+interface ProgressEntry {
+  item: string
+  group: string
+  status: "pending" | "migrating" | "success" | "warning" | "error"
+  message?: string
+}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -389,6 +387,11 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
     props.onComplete()
   }
 
+  const copySessionError = async (text: string) => {
+    await navigator.clipboard.writeText(text)
+    showToast({ variant: "success", title: language.t("migration.error.toast.copied") })
+  }
+
   // ---------------------------------------------------------------------------
   // Data helpers
   // ---------------------------------------------------------------------------
@@ -437,12 +440,20 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
     !hasAutocompleteData()
 
   // Group-level status for progress display
-  const groupStatus = (group: string) => getGroupStatus(progressEntries(), group)
-  const successCount = () => getSuccessCount(results())
-  const totalCount = () => getTotalCount(results())
-  const groupMessage = (group: string) => getGroupMessage(progressEntries(), group)
-  const currentSessionError = () => getCurrentSessionError(results, progressEntries)
-  const currentSessionErrorDetail = () => getCurrentSessionErrorDetail(results, progressEntries)
+  const groupStatus = (group: string): ProgressEntry["status"] => {
+    const entries = progressEntries().filter((entry) => entry.group === group)
+    if (entries.length === 0) return "pending"
+    if (entries.some((entry) => entry.status === "error")) return "error"
+    if (entries.some((entry) => entry.status === "warning")) return "warning"
+    if (entries.every((entry) => entry.status === "success")) return "success"
+    if (entries.some((entry) => entry.status === "migrating")) return "migrating"
+    return "pending"
+  }
+
+  const successCount = () => results().filter((result) => result.status === "success").length
+  const totalCount = () => results().length
+  const groupMessage = (group: string) =>
+    progressEntries().find((entry) => entry.group === group && entry.status === "error")?.message
 
   // ---------------------------------------------------------------------------
   // Status icon renderer
@@ -683,11 +694,21 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
                   <div class="migration-wizard__item-text">
                     <div class="label">Chat Sessions &amp; History</div>
                     <div class="desc">{sessions().length} sessions detected</div>
-                    <MigrationError
-                      when={(phase() === "error" || phase() === "done") && groupStatus("sessions") === "error"}
-                      error={currentSessionError()}
-                      detail={currentSessionErrorDetail()}
-                    />
+                    <Show when={(phase() === "error" || phase() === "done") && groupStatus("sessions") === "error" && groupMessage("sessions")}>
+                      <div class="migration-wizard__error-box">
+                        <div class="migration-wizard__error-box-header">
+                          <div class="migration-wizard__error-box-title">Session migration failed</div>
+                          <button
+                            type="button"
+                            class="migration-wizard__copy-btn"
+                            onClick={() => void copySessionError(groupMessage("sessions")!)}
+                          >
+                            {language.t("migration.error.action.copy")}
+                          </button>
+                        </div>
+                        <div class="migration-wizard__error-text">{groupMessage("sessions")}</div>
+                      </div>
+                    </Show>
                   </div>
                 </div>
               </Show>

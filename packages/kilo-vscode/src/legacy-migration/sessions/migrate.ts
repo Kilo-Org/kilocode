@@ -1,7 +1,6 @@
 import * as vscode from "vscode"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
-import { normalizeMigrationError } from "../errors/migration-error"
-import type { MigrationFailure } from "../errors/migration-failure"
+import { getMigrationErrorMessage } from "../errors/migration-error"
 import type { LegacyHistoryItem } from "./lib/legacy-types"
 import { parseSession } from "./parser"
 
@@ -13,7 +12,7 @@ type Result =
   | {
       ok: false
       payload: Awaited<ReturnType<typeof parseSession>>
-      error: MigrationFailure
+      message: string
     }
 
 export async function migrate(id: string, context: vscode.ExtensionContext, client: KiloClient): Promise<Result> {
@@ -53,7 +52,7 @@ export async function migrate(id: string, context: vscode.ExtensionContext, clie
     return {
       ok: false,
       payload,
-      error: normalizeMigrationError(error),
+      message: getMigrationErrorMessage(error),
     }
   }
 }

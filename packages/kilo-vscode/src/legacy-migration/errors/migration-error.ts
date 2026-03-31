@@ -1,11 +1,8 @@
-import type { MigrationFailure, MigrationFailureKind } from "./migration-failure"
-
 interface ErrorLike {
   message?: unknown
   status?: unknown
   data?: unknown
   body?: unknown
-  cause?: unknown
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -66,38 +63,21 @@ function getData(value: unknown) {
   return undefined
 }
 
-function getCause(value: unknown) {
-  if (!isObject(value)) return undefined
+export function getMigrationErrorMessage(err: unknown) {
+  const message = getMessage(err)
+  if (message) return message
 
-  const cause = (value as ErrorLike).cause
-  const text = getText(cause)
+  const body = getBody(err)
+  if (body) return body
+
+  const data = getData(err)
+  if (data) return data
+
+  const status = getStatus(err)
+  if (status) return `Request failed (${status})`
+
+  const text = getText(err)
   if (text) return text
 
-  return getMessage(cause)
-}
-
-function getKind(value: unknown): MigrationFailureKind {
-  const status = getStatus(value)
-  if (status) return "http"
-  if (getData(value) || getBody(value)) return "sdk"
-  if (value instanceof Error) return "generic"
-  return "unknown"
-}
-
-export function normalizeMigrationError(err: unknown): MigrationFailure {
-  const kind = getKind(err)
-  const message = getMessage(err) ?? getBody(err) ?? getData(err) ?? getText(err) ?? "Unknown migration error"
-  const detail = [getStatus(err), getBody(err), getData(err)].filter((value) => value && value !== message).join(" - ") || undefined
-  const cause = getCause(err)
-
-  return {
-    kind,
-    message,
-    detail,
-    cause,
-  }
-}
-
-export function getMigrationErrorMessage(err: unknown) {
-  return normalizeMigrationError(err).message
+  return "Unknown migration error"
 }
