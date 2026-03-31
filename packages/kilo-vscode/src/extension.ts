@@ -90,6 +90,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.window.registerWebviewPanelSerializer("kilo-code.new.TabPanel", {
       deserializeWebviewPanel(panel: vscode.WebviewPanel) {
         const tabProvider = new KiloProvider(context.extensionUri, connectionService, context)
+        tabProvider.setContinueInWorktreeHandler((sessionId, progress) =>
+          agentManagerProvider.continueFromSidebar(sessionId, progress),
+        )
         tabProvider.resolveWebviewPanel(panel)
         panel.onDidDispose(
           () => {
@@ -196,7 +199,7 @@ export function activate(context: vscode.ExtensionContext) {
       provider.postMessage({ type: "triggerTask", text: `Generate a terminal command: ${input}` })
     }),
     vscode.commands.registerCommand("kilo-code.new.openInTab", () => {
-      return openKiloInNewTab(context, connectionService)
+      return openKiloInNewTab(context, connectionService, agentManagerProvider)
     }),
     vscode.commands.registerCommand("kilo-code.new.showChanges", () => {
       diffViewerProvider.openPanel()
@@ -323,7 +326,11 @@ export function deactivate() {
   TelemetryProxy.getInstance().shutdown()
 }
 
-async function openKiloInNewTab(context: vscode.ExtensionContext, connectionService: KiloConnectionService) {
+async function openKiloInNewTab(
+  context: vscode.ExtensionContext,
+  connectionService: KiloConnectionService,
+  agentManagerProvider: AgentManagerProvider,
+) {
   const lastCol = Math.max(...vscode.window.visibleTextEditors.map((e) => e.viewColumn || 0), 0)
   const hasVisibleEditors = vscode.window.visibleTextEditors.length > 0
 
@@ -345,6 +352,9 @@ async function openKiloInNewTab(context: vscode.ExtensionContext, connectionServ
   }
 
   const tabProvider = new KiloProvider(context.extensionUri, connectionService, context)
+  tabProvider.setContinueInWorktreeHandler((sessionId, progress) =>
+    agentManagerProvider.continueFromSidebar(sessionId, progress),
+  )
   tabProvider.resolveWebviewPanel(panel)
 
   // Wait for the new panel to become active before locking the editor group.
