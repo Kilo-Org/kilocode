@@ -328,9 +328,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
         const mode = customModes().find((m) => m.slug === slug)
         return { item: mode?.name ?? slug, group: "customModes", status: "pending" as const }
       }),
-      ...(migrateSessions() && sessions().length > 0
-        ? [{ item: "Chat sessions", group: "sessions", status: "pending" as const }]
-        : []),
+      ...(migrateSessions() ? sessions().map((id) => ({ item: id, group: "sessions", status: "pending" as const })) : []),
       ...(migrateDefaultModel() && defaultModel()
         ? [{ item: "Default model", group: "defaultModel", status: "pending" as const }]
         : []),
