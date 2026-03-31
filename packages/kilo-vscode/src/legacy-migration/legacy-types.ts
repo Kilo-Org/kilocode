@@ -262,6 +262,18 @@ export interface LegacyCustomMode {
 }
 
 // ---------------------------------------------------------------------------
+// Custom mode prompts (stored in VS Code globalState under "customModePrompts")
+// ---------------------------------------------------------------------------
+
+/** Partial prompt overrides the legacy extension stored per-mode in globalState */
+export interface LegacyPromptComponent {
+  roleDefinition?: string
+  customInstructions?: string
+  whenToUse?: string
+  description?: string
+}
+
+// ---------------------------------------------------------------------------
 // Migration data shapes
 // ---------------------------------------------------------------------------
 
@@ -282,6 +294,8 @@ export interface MigrationMcpServerInfo {
 export interface MigrationCustomModeInfo {
   name: string
   slug: string
+  /** Original slug when migrating a modified native mode under a new slug */
+  nativeSlug?: string
 }
 
 export interface LegacyMigrationData {

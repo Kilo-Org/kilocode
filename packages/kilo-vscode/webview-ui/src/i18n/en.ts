@@ -1271,7 +1271,6 @@ export const dict = {
   "migration.migrate.chatHistoryDesc": "Incompatible with the new architecture",
   "migration.migrate.button": "Migrate Settings",
   "migration.migrate.skip": "Skip",
-  "migration.migrate.back": "Back",
   "migration.migrate.keysDetected": "{{count}} keys detected",
   "migration.migrate.serversConfigured": "{{count}} server(s) configured",
   "migration.migrate.modesFound": "{{count}} mode(s) found",
@@ -1312,7 +1311,6 @@ export const dict = {
   "settings.saveBar.saveAnyway": "Save anyway",
   "settings.saveBar.cancel": "Cancel",
 
-  "notifications.action.previous": "Previous",
   "notifications.action.next": "Next",
   "notifications.action.close": "Close",
   "notifications.action.tryModel": "Try {{model}}",

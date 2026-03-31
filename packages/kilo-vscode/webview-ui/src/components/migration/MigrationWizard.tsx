@@ -838,7 +838,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
                   class="migration-wizard__btn migration-wizard__btn--ghost"
                   onClick={() => setScreen("whats-new")}
                 >
-                  {language.t("migration.migrate.back")}
+                  {language.t("common.goBack")}
                 </button>
                 <button type="button" class="migration-wizard__btn migration-wizard__btn--ghost" onClick={handleSkip}>
                   {language.t("migration.migrate.skip")}
