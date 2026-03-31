@@ -1,9 +1,22 @@
 import * as vscode from "vscode"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
+import { normalizeMigrationError } from "../errors/migration-error"
+import type { MigrationFailure } from "../errors/migration-failure"
 import type { LegacyHistoryItem } from "./lib/legacy-types"
 import { parseSession } from "./parser"
 
-export async function migrate(id: string, context: vscode.ExtensionContext, client: KiloClient) {
+type Result =
+  | {
+      ok: true
+      payload: Awaited<ReturnType<typeof parseSession>>
+    }
+  | {
+      ok: false
+      payload: Awaited<ReturnType<typeof parseSession>>
+      error: MigrationFailure
+    }
+
+export async function migrate(id: string, context: vscode.ExtensionContext, client: KiloClient): Promise<Result> {
   const dir = vscode.Uri.joinPath(context.globalStorageUri, "tasks").fsPath
   const items = context.globalState.get<LegacyHistoryItem[]>("taskHistory", [])
   const item = items.find((item) => item.id === id)
@@ -40,7 +53,7 @@ export async function migrate(id: string, context: vscode.ExtensionContext, clie
     return {
       ok: false,
       payload,
-      error,
+      error: normalizeMigrationError(error),
     }
   }
 }
