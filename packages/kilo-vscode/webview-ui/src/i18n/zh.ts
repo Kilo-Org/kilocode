@@ -431,6 +431,12 @@ export const dict = {
   "error.promotionLimit.description": "免费注册以继续探索500多个模型。只需2分钟，无需信用卡。或稍后再来。",
   "error.promotionLimit.action": "注册",
 
+  "error.upgradeRequired.title": "需要升级",
+  "error.upgradeRequired.description": "您的 Kilo Code 版本已过时且不再受支持。请升级到最新版本以继续使用。",
+  "error.upgradeRequired.action": "更新扩展",
+  "error.upgradeRequired.legacy":
+    "如果您使用的是旧版 Kilocode 扩展，请卸载它并从 VS Code Marketplace 安装新的 Kilo Code 扩展。",
+
   "error.chain.unknown": "未知错误",
   "error.chain.causedBy": "原因：",
   "error.chain.apiError": "API 错误",

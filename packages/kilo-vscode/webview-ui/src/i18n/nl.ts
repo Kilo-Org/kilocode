@@ -438,6 +438,13 @@ export const dict = {
     "Registreer je gratis om door te gaan en 500 andere modellen te ontdekken. Duurt 2 minuten, geen creditcard vereist. Of kom later terug.",
   "error.promotionLimit.action": "Registreren",
 
+  "error.upgradeRequired.title": "Upgrade vereist",
+  "error.upgradeRequired.description":
+    "Uw versie van Kilo Code is verouderd en wordt niet meer ondersteund. Werk bij naar de nieuwste versie om door te gaan.",
+  "error.upgradeRequired.action": "Extensie bijwerken",
+  "error.upgradeRequired.legacy":
+    "Als u de verouderde Kilocode-extensie gebruikt, verwijder deze dan en installeer de nieuwe Kilo Code-extensie vanuit de VS Code Marketplace.",
+
   "error.chain.unknown": "Onbekende fout",
   "error.chain.causedBy": "Veroorzaakt door:",
   "error.chain.apiError": "API-fout",

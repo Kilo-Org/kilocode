@@ -437,6 +437,13 @@ export const dict = {
     "Devam etmek ve 500'den fazla modeli keşfetmek için ücretsiz kayıt olun. 2 dakika sürer, kredi kartı gerekmez. Ya da daha sonra gelin.",
   "error.promotionLimit.action": "Kayıt Ol",
 
+  "error.upgradeRequired.title": "Yükseltme gerekli",
+  "error.upgradeRequired.description":
+    "Kilo Code sürümünüz eski ve artık desteklenmiyor. Devam etmek için lütfen en son sürüme yükseltin.",
+  "error.upgradeRequired.action": "Uzantıyı Güncelle",
+  "error.upgradeRequired.legacy":
+    "Eski Kilocode uzantısını kullanıyorsanız, lütfen kaldırın ve VS Code Marketplace'den yeni Kilo Code uzantısını yükleyin.",
+
   "error.chain.unknown": "Bilinmeyen hata",
   "error.chain.causedBy": "Nedeni:",
   "error.chain.apiError": "API hatası",

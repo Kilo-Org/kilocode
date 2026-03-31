@@ -439,6 +439,13 @@ export const dict = {
     "Registrer deg gratis for å fortsette og utforske over 500 modeller. Tar 2 minutter, ingen kredittkort nødvendig. Eller kom tilbake senere.",
   "error.promotionLimit.action": "Registrer deg",
 
+  "error.upgradeRequired.title": "Oppgradering nødvendig",
+  "error.upgradeRequired.description":
+    "Din versjon av Kilo Code er utdatert og støttes ikke lenger. Vennligst oppgrader til den nyeste versjonen for å fortsette.",
+  "error.upgradeRequired.action": "Oppdater utvidelse",
+  "error.upgradeRequired.legacy":
+    "Hvis du bruker den gamle Kilocode-utvidelsen, vennligst avinstaller den og installer den nye Kilo Code-utvidelsen fra VS Code Marketplace.",
+
   "error.chain.unknown": "Ukjent feil",
   "error.chain.causedBy": "Forårsaket av:",
   "error.chain.apiError": "API-feil",

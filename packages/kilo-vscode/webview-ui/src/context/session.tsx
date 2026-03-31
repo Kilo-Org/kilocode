@@ -49,6 +49,7 @@ import { resolveSessionAgent } from "./session-agent"
 import { queuedUserMessageIDs } from "./session-queue"
 import { PartStash } from "./part-stash"
 import { KILO_AUTO, parseModelString } from "../../../src/shared/provider-model"
+import { isUpgradeRequiredError, parseSessionError } from "../utils/errorUtils"
 
 const RECENT_LIMIT = 5
 const MESSAGE_PAGE_LIMIT = 80
@@ -778,6 +779,10 @@ export const SessionProvider: ParentComponent = (props) => {
 
       case "sessionError": {
         if (message.error?.name === "MessageAbortedError") break
+        // Detect force-upgrade errors and set the global flag
+        if (isUpgradeRequiredError(parseSessionError(message.error))) {
+          server.setUpgradeRequired()
+        }
         const sid = message.sessionID ?? currentSessionID()
         if (!sid) break
         // Find the last user message in this session to use as parentID

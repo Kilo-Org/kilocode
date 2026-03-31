@@ -434,6 +434,13 @@ export const dict = {
     "سجّل مجانًا للمتابعة واستكشاف أكثر من 500 نموذج. يستغرق دقيقتين، بدون بطاقة ائتمان. أو عُد لاحقًا.",
   "error.promotionLimit.action": "التسجيل",
 
+  "error.upgradeRequired.title": "يلزم الترقية",
+  "error.upgradeRequired.description":
+    "إصدار Kilo Code الخاص بك قديم ولم يعد مدعومًا. يرجى الترقية إلى أحدث إصدار للمتابعة.",
+  "error.upgradeRequired.action": "تحديث الإضافة",
+  "error.upgradeRequired.legacy":
+    "إذا كنت تستخدم إضافة Kilocode القديمة، يرجى إلغاء تثبيتها وتثبيت إضافة Kilo Code الجديدة من VS Code Marketplace.",
+
   "error.chain.unknown": "خطأ غير معروف",
   "error.chain.causedBy": "بسبب:",
   "error.chain.apiError": "خطأ API",

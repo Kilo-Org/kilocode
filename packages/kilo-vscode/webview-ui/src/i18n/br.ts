@@ -434,6 +434,13 @@ export const dict = {
     "Cadastre-se gratuitamente para continuar e explorar mais de 500 modelos. Leva 2 minutos, sem cartão de crédito. Ou volte mais tarde.",
   "error.promotionLimit.action": "Cadastrar-se",
 
+  "error.upgradeRequired.title": "Atualização necessária",
+  "error.upgradeRequired.description":
+    "Sua versão do Kilo Code está desatualizada e não é mais suportada. Atualize para a versão mais recente para continuar.",
+  "error.upgradeRequired.action": "Atualizar extensão",
+  "error.upgradeRequired.legacy":
+    "Se você está usando a extensão Kilocode legada, desinstale-a e instale a nova extensão Kilo Code do VS Code Marketplace.",
+
   "error.chain.unknown": "Erro desconhecido",
   "error.chain.causedBy": "Causado por:",
   "error.chain.apiError": "Erro de API",

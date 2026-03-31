@@ -439,6 +439,13 @@ export const dict = {
     "Registrujte se besplatno da nastavite i istražite preko 500 modela. Traje 2 minute, bez kreditne kartice. Ili se vratite kasnije.",
   "error.promotionLimit.action": "Registracija",
 
+  "error.upgradeRequired.title": "Potrebna nadogradnja",
+  "error.upgradeRequired.description":
+    "Vaša verzija Kilo Code je zastarjela i više nije podržana. Nadogradite na najnoviju verziju da biste nastavili.",
+  "error.upgradeRequired.action": "Ažuriraj proširenje",
+  "error.upgradeRequired.legacy":
+    "Ako koristite staro Kilocode proširenje, deinstalirajte ga i instalirajte novo Kilo Code proširenje iz VS Code Marketplace-a.",
+
   "error.chain.unknown": "Nepoznata greška",
   "error.chain.causedBy": "Uzrok:",
   "error.chain.apiError": "API greška",

@@ -21,6 +21,10 @@ interface ServerContextValue {
   languageOverride: Accessor<string | undefined>
   workspaceDirectory: Accessor<string>
   gitInstalled: Accessor<boolean>
+  /** True when the backend has signalled that this extension version is too old. */
+  upgradeRequired: Accessor<boolean>
+  /** Call when an UPGRADE_REQUIRED / HTTP 426 error is received from any source. */
+  setUpgradeRequired: () => void
 }
 
 export const ServerContext = createContext<ServerContextValue>()
@@ -41,6 +45,7 @@ export const ServerProvider: ParentComponent = (props) => {
   const [languageOverride, setLanguageOverride] = createSignal<string | undefined>()
   const [workspaceDirectory, setWorkspaceDirectory] = createSignal<string>("")
   const [gitInstalled, setGitInstalled] = createSignal<boolean>(false)
+  const [upgradeRequired, markUpgradeRequired] = createSignal(false)
 
   const gitSub = vscode.onMessage((m: ExtensionMessage) => {
     if (m.type === "gitStatus") setGitInstalled(m.repo)
@@ -161,6 +166,8 @@ export const ServerProvider: ParentComponent = (props) => {
     languageOverride,
     workspaceDirectory,
     gitInstalled,
+    upgradeRequired,
+    setUpgradeRequired: () => markUpgradeRequired(true),
   }
 
   return <ServerContext.Provider value={value}>{props.children}</ServerContext.Provider>

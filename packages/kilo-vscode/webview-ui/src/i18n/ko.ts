@@ -438,6 +438,13 @@ export const dict = {
     "무료로 가입하여 500개 이상의 모델을 탐색하세요. 2분이면 완료, 신용카드 불필요. 또는 나중에 다시 오세요.",
   "error.promotionLimit.action": "가입하기",
 
+  "error.upgradeRequired.title": "업그레이드 필요",
+  "error.upgradeRequired.description":
+    "Kilo Code 버전이 오래되어 더 이상 지원되지 않습니다. 계속하려면 최신 버전으로 업그레이드해 주세요.",
+  "error.upgradeRequired.action": "확장 프로그램 업데이트",
+  "error.upgradeRequired.legacy":
+    "레거시 Kilocode 확장 프로그램을 사용 중이라면, 제거한 후 VS Code Marketplace에서 새로운 Kilo Code 확장 프로그램을 설치해 주세요.",
+
   "error.chain.unknown": "알 수 없는 오류",
   "error.chain.causedBy": "원인:",
   "error.chain.apiError": "API 오류",

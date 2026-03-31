@@ -45,6 +45,7 @@ export function unwrapError(message: string): string {
 const errorCodes = {
   PAID_MODEL_AUTH_REQUIRED: "PAID_MODEL_AUTH_REQUIRED",
   PROMOTION_MODEL_LIMIT_REACHED: "PROMOTION_MODEL_LIMIT_REACHED",
+  UPGRADE_REQUIRED: "UPGRADE_REQUIRED",
 } as const
 
 export interface ParsedError {
@@ -95,4 +96,49 @@ export function isUnauthorizedPromotionLimitError(parsed: ParsedError | null): b
   return (
     (parsed.statusCode === 401 || parsed.statusCode === 429) && parsed.code === errorCodes.PROMOTION_MODEL_LIMIT_REACHED
   )
+}
+
+/**
+ * Detect a force-upgrade error from the backend. The API proxy returns
+ * HTTP 426 with `{ error: { code: "UPGRADE_REQUIRED" } }` when the
+ * client version is too old to continue.
+ */
+export function isUpgradeRequiredError(parsed: ParsedError | null): boolean {
+  if (!parsed) return false
+  return parsed.code === errorCodes.UPGRADE_REQUIRED || parsed.statusCode === 426
+}
+
+/**
+ * Parse a session error (from SSE `session.error` events) into a ParsedError.
+ * Accepts the looser `{ name: string; data?: Record<string, unknown> }` shape
+ * used by SessionErrorMessage, unlike parseAssistantError which requires the
+ * full SDK AssistantMessage["error"] discriminated union.
+ */
+export function parseSessionError(
+  error: { name: string; data?: Record<string, unknown> } | undefined,
+): ParsedError | null {
+  if (!error) return null
+  if (error.name !== "APIError") return null
+  const data = error.data
+  if (!data) return null
+
+  const statusCode = typeof data.statusCode === "number" ? data.statusCode : undefined
+  const message = typeof data.message === "string" ? data.message : undefined
+
+  let code: string | undefined
+  if (typeof data.responseBody === "string") {
+    try {
+      const body = JSON.parse(data.responseBody) as Record<string, unknown>
+      const err = body.error as Record<string, unknown> | undefined
+      if (err && typeof err.code === "string") {
+        code = err.code
+      } else if (typeof body.code === "string") {
+        code = body.code
+      }
+    } catch {
+      // responseBody is not valid JSON — ignore
+    }
+  }
+
+  return { statusCode, code, message }
 }

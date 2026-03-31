@@ -437,6 +437,13 @@ export const dict = {
     "Зарегистрируйтесь бесплатно, чтобы продолжить и исследовать более 500 моделей. Займёт 2 минуты, кредитная карта не нужна. Или вернитесь позже.",
   "error.promotionLimit.action": "Зарегистрироваться",
 
+  "error.upgradeRequired.title": "Требуется обновление",
+  "error.upgradeRequired.description":
+    "Ваша версия Kilo Code устарела и больше не поддерживается. Пожалуйста, обновите до последней версии, чтобы продолжить.",
+  "error.upgradeRequired.action": "Обновить расширение",
+  "error.upgradeRequired.legacy":
+    "Если вы используете устаревшее расширение Kilocode, удалите его и установите новое расширение Kilo Code из VS Code Marketplace.",
+
   "error.chain.unknown": "Неизвестная ошибка",
   "error.chain.causedBy": "Причина:",
   "error.chain.apiError": "Ошибка API",

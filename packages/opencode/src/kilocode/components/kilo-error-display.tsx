@@ -1,7 +1,7 @@
 import { createMemo, Match, Switch, type JSX } from "solid-js"
 import { SplitBorder } from "@tui/component/border"
 import { useTheme } from "@tui/context/theme"
-import { parseKiloErrorCode, kiloErrorTitle, kiloErrorDescription } from "@/kilocode/kilo-errors"
+import { parseKiloErrorCode, kiloErrorTitle, kiloErrorDescription, KILO_ERROR_CODES } from "@/kilocode/kilo-errors"
 import type { AssistantMessage } from "@kilocode/sdk/v2"
 
 interface KiloErrorBlockProps {
@@ -26,6 +26,13 @@ export function KiloErrorBlock(props: KiloErrorBlockProps) {
     return code ? kiloErrorDescription(code) : undefined
   })
 
+  const hint = createMemo(() => {
+    const code = kiloErrorCode()
+    if (code === KILO_ERROR_CODES.UPGRADE_REQUIRED)
+      return "Run `kilo upgrade` or update the Kilo Code VS Code extension to the latest version."
+    return "Run /connect or `kilo auth login` to connect to Kilo Gateway"
+  })
+
   return (
     <Switch fallback={props.fallback}>
       <Match when={kiloErrorCode()}>
@@ -41,7 +48,7 @@ export function KiloErrorBlock(props: KiloErrorBlockProps) {
         >
           <text fg={theme.text}>{title()}</text>
           <text fg={theme.textMuted}>{description()}</text>
-          <text fg={theme.primary}>{"Run /connect or `kilo auth login` to connect to Kilo Gateway"}</text>
+          <text fg={theme.primary}>{hint()}</text>
         </box>
       </Match>
     </Switch>

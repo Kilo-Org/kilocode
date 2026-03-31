@@ -435,6 +435,13 @@ export const dict = {
     "สมัครฟรีเพื่อดำเนินการต่อและสำรวจโมเดลกว่า 500 รายการ ใช้เวลา 2 นาที ไม่ต้องใช้บัตรเครดิต หรือกลับมาทีหลัง",
   "error.promotionLimit.action": "สมัครสมาชิก",
 
+  "error.upgradeRequired.title": "จำเป็นต้องอัปเกรด",
+  "error.upgradeRequired.description":
+    "เวอร์ชัน Kilo Code ของคุณล้าสมัยและไม่ได้รับการสนับสนุนอีกต่อไป กรุณาอัปเกรดเป็นเวอร์ชันล่าสุดเพื่อดำเนินการต่อ",
+  "error.upgradeRequired.action": "อัปเดตส่วนขยาย",
+  "error.upgradeRequired.legacy":
+    "หากคุณใช้ส่วนขยาย Kilocode เวอร์ชันเก่า กรุณาถอนการติดตั้งและติดตั้งส่วนขยาย Kilo Code ใหม่จาก VS Code Marketplace",
+
   "error.chain.unknown": "ข้อผิดพลาดที่ไม่รู้จัก",
   "error.chain.causedBy": "สาเหตุ:",
   "error.chain.apiError": "ข้อผิดพลาด API",

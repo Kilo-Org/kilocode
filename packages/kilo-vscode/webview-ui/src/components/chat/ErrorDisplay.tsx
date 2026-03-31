@@ -10,7 +10,9 @@ import {
   parseAssistantError,
   isUnauthorizedPaidModelError,
   isUnauthorizedPromotionLimitError,
+  isUpgradeRequiredError,
 } from "../../utils/errorUtils"
+import { UpgradeBanner } from "./UpgradeBanner"
 
 interface ErrorDisplayProps {
   error: NonNullable<AssistantMessage["error"]>
@@ -45,6 +47,9 @@ export const ErrorDisplay: Component<ErrorDisplayProps> = (props) => {
         </Card>
       }
     >
+      <Match when={isUpgradeRequiredError(parsed())}>
+        <UpgradeBanner inline />
+      </Match>
       <Match when={isUnauthorizedPaidModelError(parsed())}>
         <div data-component="auth-prompt">
           <div data-slot="auth-prompt-header">

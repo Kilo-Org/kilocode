@@ -441,6 +441,13 @@ export const dict = {
     "Inscrivez-vous gratuitement pour continuer et explorer plus de 500 modèles. 2 minutes, sans carte bancaire. Ou revenez plus tard.",
   "error.promotionLimit.action": "S'inscrire",
 
+  "error.upgradeRequired.title": "Mise à jour requise",
+  "error.upgradeRequired.description":
+    "Votre version de Kilo Code est obsolète et n'est plus prise en charge. Veuillez mettre à jour vers la dernière version pour continuer.",
+  "error.upgradeRequired.action": "Mettre à jour l'extension",
+  "error.upgradeRequired.legacy":
+    "Si vous utilisez l'ancienne extension Kilocode, veuillez la désinstaller et installer la nouvelle extension Kilo Code depuis le VS Code Marketplace.",
+
   "error.chain.unknown": "Erreur inconnue",
   "error.chain.causedBy": "Causé par :",
   "error.chain.apiError": "Erreur API",

@@ -434,6 +434,13 @@ export const dict = {
     "無料でサインアップして、500以上のモデルを探索しましょう。2分で完了、クレジットカード不要。または後でお戻りください。",
   "error.promotionLimit.action": "サインアップ",
 
+  "error.upgradeRequired.title": "アップグレードが必要です",
+  "error.upgradeRequired.description":
+    "お使いのKilo Codeのバージョンは古く、サポートされなくなりました。続行するには最新バージョンにアップグレードしてください。",
+  "error.upgradeRequired.action": "拡張機能を更新",
+  "error.upgradeRequired.legacy":
+    "レガシーのKilocode拡張機能をお使いの場合は、アンインストールしてVS Code Marketplaceから新しいKilo Code拡張機能をインストールしてください。",
+
   "error.chain.unknown": "不明なエラー",
   "error.chain.causedBy": "原因:",
   "error.chain.apiError": "APIエラー",

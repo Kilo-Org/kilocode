@@ -14,6 +14,7 @@ import { MessageList } from "./MessageList"
 import { PromptInput } from "./PromptInput"
 import { PermissionDock } from "./PermissionDock"
 import { StartupErrorBanner } from "./StartupErrorBanner"
+import { UpgradeBanner } from "./UpgradeBanner"
 import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
@@ -131,6 +132,9 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   return (
     <div class="chat-view">
       <TaskHeader readonly={props.readonly} />
+      <Show when={server.upgradeRequired()}>
+        <UpgradeBanner />
+      </Show>
       <div class="chat-messages-wrapper">
         <div class="chat-messages">
           <MessageList
