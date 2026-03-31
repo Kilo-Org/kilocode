@@ -106,11 +106,6 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
       if (inside(target)) return
       // Node was detached by a reactive update — treat as inside
       if (!target.isConnected) return
-      // Focus left a popover child for an external node — but if the
-      // previously-focused element was inside, the shift was likely
-      // caused by a framework re-render rather than a real outside click
-      const related = event.relatedTarget
-      if (related instanceof Node && inside(related)) return
       close("outside")
     }
 
