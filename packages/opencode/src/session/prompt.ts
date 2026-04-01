@@ -1419,12 +1419,19 @@ export namespace SessionPrompt {
     // Original logic when experimental plan mode is disabled
     if (!Flag.KILO_EXPERIMENTAL_PLAN_MODE) {
       if (input.agent.name === "plan") {
+        const plan = Session.plan(input.session)
+        const exists = await Filesystem.exists(plan)
+        if (!exists) await fs.mkdir(path.dirname(plan), { recursive: true })
+        const relative = path.relative(Instance.worktree, plan)
+        const info = exists
+          ? `A plan file already exists at ${relative}. You can read it and make incremental edits using the edit tool.`
+          : `No plan file exists yet. You should create your plan at ${relative} using the write tool.`
         userMessage.parts.push({
           id: Identifier.ascending("part"),
           messageID: userMessage.info.id,
           sessionID: userMessage.info.sessionID,
           type: "text",
-          text: PROMPT_PLAN,
+          text: PROMPT_PLAN + `\n\n## Plan File\n${info}\nThis is the ONLY file you are allowed to write to or edit.`,
           synthetic: true,
         })
       }
