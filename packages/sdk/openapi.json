@@ -1,3 +1,4 @@
+$ bun run --conditions=browser ./src/index.ts generate
 {
   "openapi": "3.1.1",
   "info": {
@@ -16905,6 +16906,9 @@
             "type": "string"
           },
           "prompt": {
+            "type": "string"
+          },
+          "displayPrompt": {
             "type": "string"
           },
           "options": {
