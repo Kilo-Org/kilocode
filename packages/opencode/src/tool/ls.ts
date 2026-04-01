@@ -25,13 +25,17 @@ export const IGNORE_PATTERNS = [
   "vendor/",
   "tmp/",
   "temp/",
-  ".cache/",
   "cache/",
   "logs/",
   ".venv/",
   "venv/",
   "env/",
-]
+  ".ijwb/",
+  "bazel-bin/",
+  "bazel-out/",
+  "bazel-testlogs/",
+  "bazel-external/",
+  ]
 
 const LIMIT = 100
 

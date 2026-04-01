@@ -2790,7 +2790,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private getRootDirectory(): string {
     const workspaceFolders = vscode.workspace.workspaceFolders
     if (workspaceFolders && workspaceFolders.length > 0) {
-      return workspaceFolders[0]!.uri.fsPath
+      let root = workspaceFolders[0]!.uri.fsPath
+      // Handle Bazel/IntelliJ .ijwb directory
+      if (root.endsWith(".ijwb")) {
+        root = path.dirname(root)
+      }
+      return root
     }
     return process.cwd()
   }

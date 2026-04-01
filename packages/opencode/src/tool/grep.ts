@@ -40,7 +40,20 @@ export const GrepTool = Tool.define("grep", {
     await assertExternalDirectory(ctx, searchPath, { kind: "directory" })
 
     const rgPath = await Ripgrep.filepath()
-    const args = ["-nH", "--hidden", "--no-messages", "--field-match-separator=|", "--regexp", params.pattern]
+    const args = [
+      rgPath,
+      "-nH",
+      "--hidden",
+      "--no-messages",
+      "--glob=!.git/*",
+      "--glob=!bazel-bin/*",
+      "--glob=!bazel-out/*",
+      "--glob=!bazel-testlogs/*",
+      "--glob=!bazel-external/*",
+      "--field-match-separator=|",
+      "--regexp",
+      params.pattern,
+    ]
     if (params.include) {
       args.push("--glob", params.include)
     }
