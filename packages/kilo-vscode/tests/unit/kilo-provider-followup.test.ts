@@ -60,9 +60,11 @@ function connection() {
     },
     onStateChange: () => () => undefined,
     onNotificationDismissed: () => () => undefined,
+    onClearPendingPrompts: () => () => undefined,
     onLanguageChanged: () => () => undefined,
     onProfileChanged: () => () => undefined,
     onMigrationComplete: () => () => undefined,
+    registerDirectoryProvider: () => () => undefined,
     getServerInfo: () => ({ port: 12345 }),
     getConnectionState: () => "connected" as const,
     resolveEventSessionId: (event: Event) => (event.type === "session.created" ? event.properties.info.id : undefined),
@@ -123,6 +125,7 @@ describe("KiloProvider follow-up sessions", () => {
           revert: null,
           summary: null,
         },
+        draftID: undefined,
       },
     ])
   })

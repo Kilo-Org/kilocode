@@ -215,6 +215,7 @@ export async function handleImportAndSend(
       error: err instanceof Error ? err.message : "Failed to send message after import",
       text,
       sessionID: session.id,
+      draftID: session.id,
       messageID,
       files,
     })

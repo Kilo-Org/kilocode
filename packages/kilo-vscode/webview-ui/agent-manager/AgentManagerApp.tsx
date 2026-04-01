@@ -2775,6 +2775,8 @@ const AgentManagerContent: Component = () => {
                 }}
                 readonly={readOnly()}
                 continueInWorktree={selection() === LOCAL}
+                promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}
+                pendingSessionID={selection() === LOCAL ? activePendingId() : undefined}
               />
               <Show when={readOnly()}>
                 <div class="am-readonly-banner">

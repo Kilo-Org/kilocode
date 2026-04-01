@@ -223,6 +223,9 @@ export class AgentManagerProvider implements Disposable {
     if (m.type === "agentManager.addSessionToWorktree") return this.onAddSessionToWorktree(m.worktreeId)
     if (m.type === "agentManager.forkSession") return this.onForkSession(m.sessionId, m.worktreeId)
     if (m.type === "agentManager.closeSession") return this.onCloseSession(m.sessionId)
+    if ((m.type === "sendMessage" || m.type === "sendCommand") && m.draftID && !m.sessionID) {
+      this.activeSessionId = m.draftID
+    }
     if (m.type === "agentManager.configureSetupScript") {
       void this.configureSetupScript()
       return null
