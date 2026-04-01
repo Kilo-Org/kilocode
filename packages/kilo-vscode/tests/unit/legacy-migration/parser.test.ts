@@ -15,14 +15,14 @@ const item = {
 describe("legacy migration parser", () => {
   it("uses the final deterministic ids expected for migration", () => {
     const project = createProject(item)
-    const session = createSession(id, item, project.id)
+    const session = createSession(id, item, project.id, item.workspace)
     const msg1 = createMessageID(id, 0)
     const msg2 = createMessageID(id, 1)
     const prt1 = createPartID(id, 0, 0)
     const prt2 = createPartID(id, 1, 0)
 
     expect(project.id).toBe(createProject(item).id)
-    expect(session.id).toBe(createSession(id, item, project.id).id)
+    expect(session.id).toBe(createSession(id, item, project.id, item.workspace).id)
     expect(session.id.startsWith("ses_migrated_")).toBe(true)
     expect(msg1).toBe(createMessageID(id, 0))
     expect(msg2).toBe(createMessageID(id, 1))

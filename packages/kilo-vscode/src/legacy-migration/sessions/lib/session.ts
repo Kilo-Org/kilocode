@@ -1,15 +1,14 @@
 import type { KilocodeSessionImportSessionData as Session } from "@kilocode/sdk/v2"
 import type { LegacyHistoryItem } from "./legacy-types"
 import { createSessionID } from "./ids"
-import { normalizeLegacyPath } from "./path"
 
-export async function createSession(
+export function createSession(
   id: string,
   item: LegacyHistoryItem | undefined,
   projectID: string,
-): Promise<NonNullable<Session["body"]>> {
+  dir: string,
+): NonNullable<Session["body"]> {
   const session = makeSession()
-  const dir = await normalizeLegacyPath(item?.workspace)
 
   session.id = createSessionID(id)
 
