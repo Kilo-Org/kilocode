@@ -1422,10 +1422,9 @@ export namespace SessionPrompt {
         const plan = Session.plan(input.session)
         const exists = await Filesystem.exists(plan)
         if (!exists) await fs.mkdir(path.dirname(plan), { recursive: true })
-        const relative = path.relative(Instance.worktree, plan)
         const info = exists
-          ? `A plan file already exists at ${relative}. You can read it and make incremental edits using the edit tool.`
-          : `No plan file exists yet. You should create your plan at ${relative} using the write tool.`
+          ? `A plan file already exists at ${plan}. You can read it and make incremental edits using the edit tool.`
+          : `No plan file exists yet. You should create your plan at ${plan} using the write tool.`
         userMessage.parts.push({
           id: Identifier.ascending("part"),
           messageID: userMessage.info.id,
