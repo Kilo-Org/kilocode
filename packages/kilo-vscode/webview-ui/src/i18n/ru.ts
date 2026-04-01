@@ -1186,6 +1186,17 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "Скопировать разрешения как JSON",
   "settings.agentBehaviour.permissions.hint":
     "Правила оцениваются по порядку — побеждает последнее совпавшее правило. Это разрешенный набор правил из бэкенда CLI.",
+  "settings.agentBehaviour.editMode.defaultPrompt": "Default System Prompt",
+  "settings.agentBehaviour.editMode.defaultPrompt.description":
+    "The built-in system prompt for this mode. Set a custom prompt override above to replace it.",
+  "settings.agentBehaviour.editMode.defaultPrompt.none":
+    "This mode uses the default provider-specific prompt (varies by model).",
+  "settings.agentBehaviour.editMode.defaultPrompt.copy": "Copy to clipboard",
+  "settings.agentBehaviour.editMode.defaultPrompt.copied": "Copied!",
+  "settings.agentBehaviour.editMode.subagents": "Sub-Agents",
+  "settings.agentBehaviour.editMode.subagents.description":
+    "Specialized agents that this mode can delegate tasks to via the Task tool.",
+  "settings.agentBehaviour.editMode.subagents.none": "This mode does not use sub-agents.",
   "settings.agentBehaviour.removeMode.title": "Удалить режим",
   "settings.agentBehaviour.removeMode.confirm":
     'Удалить режим "{{name}}"? Это отключит режим, обновив вашу конфигурацию.',

@@ -1172,6 +1172,17 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "권한을 JSON으로 복사",
   "settings.agentBehaviour.permissions.hint":
     "규칙은 순서대로 평가되며, 마지막에 일치하는 규칙이 적용됩니다. 이것은 CLI 백엔드에서 확인된 규칙 세트입니다.",
+  "settings.agentBehaviour.editMode.defaultPrompt": "Default System Prompt",
+  "settings.agentBehaviour.editMode.defaultPrompt.description":
+    "The built-in system prompt for this mode. Set a custom prompt override above to replace it.",
+  "settings.agentBehaviour.editMode.defaultPrompt.none":
+    "This mode uses the default provider-specific prompt (varies by model).",
+  "settings.agentBehaviour.editMode.defaultPrompt.copy": "Copy to clipboard",
+  "settings.agentBehaviour.editMode.defaultPrompt.copied": "Copied!",
+  "settings.agentBehaviour.editMode.subagents": "Sub-Agents",
+  "settings.agentBehaviour.editMode.subagents.description":
+    "Specialized agents that this mode can delegate tasks to via the Task tool.",
+  "settings.agentBehaviour.editMode.subagents.none": "This mode does not use sub-agents.",
   "settings.agentBehaviour.removeMode.title": "모드 제거",
   "settings.agentBehaviour.removeMode.confirm":
     '모드 "{{name}}"을(를) 제거하시겠습니까? 구성을 업데이트하여 모드를 비활성화합니다.',

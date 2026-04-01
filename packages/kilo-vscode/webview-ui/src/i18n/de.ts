@@ -1199,6 +1199,17 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "Berechtigungen als JSON kopieren",
   "settings.agentBehaviour.permissions.hint":
     "Regeln werden der Reihe nach ausgewertet — die letzte übereinstimmende Regel gewinnt. Dies ist das aufgelöste Regelwerk vom CLI-Backend.",
+  "settings.agentBehaviour.editMode.defaultPrompt": "Default System Prompt",
+  "settings.agentBehaviour.editMode.defaultPrompt.description":
+    "The built-in system prompt for this mode. Set a custom prompt override above to replace it.",
+  "settings.agentBehaviour.editMode.defaultPrompt.none":
+    "This mode uses the default provider-specific prompt (varies by model).",
+  "settings.agentBehaviour.editMode.defaultPrompt.copy": "Copy to clipboard",
+  "settings.agentBehaviour.editMode.defaultPrompt.copied": "Copied!",
+  "settings.agentBehaviour.editMode.subagents": "Sub-Agents",
+  "settings.agentBehaviour.editMode.subagents.description":
+    "Specialized agents that this mode can delegate tasks to via the Task tool.",
+  "settings.agentBehaviour.editMode.subagents.none": "This mode does not use sub-agents.",
   "settings.agentBehaviour.removeMode.title": "Modus entfernen",
   "settings.agentBehaviour.removeMode.confirm":
     'Modus "{{name}}" entfernen? Dadurch wird der Modus durch Aktualisierung Ihrer Konfiguration deaktiviert.',

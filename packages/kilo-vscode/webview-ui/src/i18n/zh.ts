@@ -1152,6 +1152,17 @@ export const dict = {
   "settings.agentBehaviour.permissions.col.action": "操作",
   "settings.agentBehaviour.permissions.copy": "复制权限为 JSON",
   "settings.agentBehaviour.permissions.hint": "规则按顺序评估 — 最后匹配的规则生效。这是从 CLI 后端解析出的规则集。",
+  "settings.agentBehaviour.editMode.defaultPrompt": "Default System Prompt",
+  "settings.agentBehaviour.editMode.defaultPrompt.description":
+    "The built-in system prompt for this mode. Set a custom prompt override above to replace it.",
+  "settings.agentBehaviour.editMode.defaultPrompt.none":
+    "This mode uses the default provider-specific prompt (varies by model).",
+  "settings.agentBehaviour.editMode.defaultPrompt.copy": "Copy to clipboard",
+  "settings.agentBehaviour.editMode.defaultPrompt.copied": "Copied!",
+  "settings.agentBehaviour.editMode.subagents": "Sub-Agents",
+  "settings.agentBehaviour.editMode.subagents.description":
+    "Specialized agents that this mode can delegate tasks to via the Task tool.",
+  "settings.agentBehaviour.editMode.subagents.none": "This mode does not use sub-agents.",
   "settings.agentBehaviour.removeMode.title": "移除模式",
   "settings.agentBehaviour.removeMode.confirm": '移除模式 "{{name}}" 吗？这将通过更新配置来禁用该模式。',
   "settings.agentBehaviour.removeMode.button": "移除",

@@ -1168,6 +1168,17 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "คัดลอกสิทธิ์เป็น JSON",
   "settings.agentBehaviour.permissions.hint":
     "กฎจะถูกประเมินตามลำดับ — กฎที่ตรงกันล่าสุดจะมีผล นี่คือชุดกฎที่ประมวลผลแล้วจากแบ็กเอนด์ CLI",
+  "settings.agentBehaviour.editMode.defaultPrompt": "Default System Prompt",
+  "settings.agentBehaviour.editMode.defaultPrompt.description":
+    "The built-in system prompt for this mode. Set a custom prompt override above to replace it.",
+  "settings.agentBehaviour.editMode.defaultPrompt.none":
+    "This mode uses the default provider-specific prompt (varies by model).",
+  "settings.agentBehaviour.editMode.defaultPrompt.copy": "Copy to clipboard",
+  "settings.agentBehaviour.editMode.defaultPrompt.copied": "Copied!",
+  "settings.agentBehaviour.editMode.subagents": "Sub-Agents",
+  "settings.agentBehaviour.editMode.subagents.description":
+    "Specialized agents that this mode can delegate tasks to via the Task tool.",
+  "settings.agentBehaviour.editMode.subagents.none": "This mode does not use sub-agents.",
   "settings.agentBehaviour.removeMode.title": "ลบโหมด",
   "settings.agentBehaviour.removeMode.confirm":
     'ต้องการลบโหมด "{{name}}" หรือไม่? การดำเนินการนี้จะปิดใช้งานโหมดโดยอัปเดตการกำหนดค่าของคุณ',
