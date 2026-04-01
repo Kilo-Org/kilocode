@@ -33,7 +33,7 @@ Each Agent Manager session runs in an isolated git worktree on a separate branch
 
 ### Creating a New Worktree Session
 
-1. Click **New Worktree** or press `Cmd+N` to create a new worktree
+1. Click **New Worktree** or press `Cmd+N` (macOS) / `Ctrl+N` (Windows/Linux) to create a new worktree
 2. Enter a branch name (or let Kilo generate one)
 3. Type your first message to start the agent
 
@@ -63,7 +63,7 @@ You can run up to 4 parallel implementations of the same prompt across separate 
 
 ## Diff / Review Panel
 
-Press `Cmd+D` to toggle the diff panel. It shows a live-updating diff between the worktree and its parent branch.
+Press `Cmd+D` (macOS) / `Ctrl+D` (Windows/Linux) to toggle the diff panel. It shows a live-updating diff between the worktree and its parent branch.
 
 - Select files and click **Apply to Main Branch** to merge changes
 - Conflicts are surfaced with a resolution dialog
@@ -71,7 +71,7 @@ Press `Cmd+D` to toggle the diff panel. It shows a live-updating diff between th
 
 ## Terminals
 
-Each session has a dedicated integrated terminal. Press `Cmd+/` to focus the terminal for the active session.
+Each session has a dedicated integrated terminal. Press `Cmd+/` (macOS) / `Ctrl+/` (Windows/Linux) to focus the terminal for the active session.
 
 ## Setup Scripts
 
@@ -83,21 +83,21 @@ Agent Manager state is persisted in `.kilo/agent-manager.json`. Sessions, worktr
 
 ## Keyboard Shortcuts (Agent Manager Panel)
 
-| Shortcut (macOS)         | Action                            |
-| ------------------------ | --------------------------------- |
-| `Cmd+Shift+M`            | Open Agent Manager                |
-| `Cmd+N`                  | New worktree                      |
-| `Cmd+Shift+N`            | New worktree (advanced options)   |
-| `Cmd+Shift+O`            | Import/open worktree              |
-| `Cmd+Shift+W`            | Close current worktree            |
-| `Cmd+T`                  | New tab (session) in worktree     |
-| `Cmd+W`                  | Close current tab                 |
-| `Cmd+Alt+Up` / `Down`    | Previous / next worktree          |
-| `Cmd+Alt+Left` / `Right` | Previous / next tab in worktree   |
-| `Cmd+/`                  | Show terminal for current session |
-| `Cmd+D`                  | Toggle diff panel                 |
-| `Cmd+Shift+/`            | Show keyboard shortcuts           |
-| `Cmd+1` … `Cmd+9`        | Jump to worktree/session by index |
+| Shortcut (macOS)         | Shortcut (Windows/Linux)  | Action                            |
+| ------------------------ | ------------------------- | --------------------------------- |
+| `Cmd+Shift+M`            | `Ctrl+Shift+M`            | Open Agent Manager                |
+| `Cmd+N`                  | `Ctrl+N`                  | New worktree                      |
+| `Cmd+Shift+N`            | `Ctrl+Shift+N`            | New worktree (advanced options)   |
+| `Cmd+Shift+O`            | `Ctrl+Shift+O`            | Import/open worktree              |
+| `Cmd+Shift+W`            | `Ctrl+Shift+W`            | Close current worktree            |
+| `Cmd+T`                  | `Ctrl+T`                  | New tab (session) in worktree     |
+| `Cmd+W`                  | `Ctrl+W`                  | Close current tab                 |
+| `Cmd+Alt+Up` / `Down`    | `Ctrl+Alt+Up` / `Down`    | Previous / next worktree          |
+| `Cmd+Alt+Left` / `Right` | `Ctrl+Alt+Left` / `Right` | Previous / next tab in worktree   |
+| `Cmd+/`                  | `Ctrl+/`                  | Show terminal for current session |
+| `Cmd+D`                  | `Ctrl+D`                  | Toggle diff panel                 |
+| `Cmd+Shift+/`            | `Ctrl+Shift+/`            | Show keyboard shortcuts           |
+| `Cmd+1` … `Cmd+9`        | `Ctrl+1` … `Ctrl+9`       | Jump to worktree/session by index |
 
 ## Troubleshooting
 
