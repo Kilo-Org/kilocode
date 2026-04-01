@@ -12,7 +12,7 @@ import ProvidersTab from "../components/settings/ProvidersTab"
 import AgentBehaviourTab from "../components/settings/AgentBehaviourTab"
 import ModeEditView from "../components/settings/ModeEditView"
 import McpEditView from "../components/settings/McpEditView"
-import type { AgentConfig, CommandConfig } from "../types/messages"
+import type { AgentConfig, AgentInfo, CommandConfig } from "../types/messages"
 
 const meta: Meta = {
   title: "Settings",
@@ -286,6 +286,214 @@ export const McpEditViewRemote: Story = {
       </div>
     </StoryProviders>
   ),
+}
+
+const MOCK_SYSTEM_PROMPT = `You are a highly skilled software engineer with extensive knowledge in many programming languages, frameworks, design patterns, and best practices.
+
+When the user asks you to perform a task, you should:
+1. Think through the problem carefully
+2. Break it down into clear steps
+3. Implement the solution methodically
+
+You have access to tools for reading/writing files, running commands, and searching code.`
+
+const MOCK_SUBAGENTS: AgentInfo[] = [
+  {
+    name: "subagent",
+    displayName: "Sub-agent",
+    description: "Executes delegated subtasks from the primary agent",
+    mode: "subagent" as const,
+    native: true,
+    prompt: `You are a sub-agent executing a focused subtask delegated by the primary agent.
+
+Complete only what was asked. Do not expand scope or ask clarifying questions.
+Return a concise result when done.`,
+  },
+  {
+    name: "researcher",
+    displayName: "Researcher",
+    description: "Searches the web and gathers information",
+    mode: "subagent" as const,
+    native: true,
+    prompt: undefined,
+  },
+]
+
+/** Renders ModeEditView for a native mode (e.g. "code") and clicks the
+ * DefaultPromptSection chevron to expand it. */
+function ExpandedPromptWrapper() {
+  let ref: HTMLDivElement | undefined
+  onMount(() => {
+    requestAnimationFrame(() => {
+      if (!ref) return
+      // Click the first chevron button inside the DefaultPromptSection card
+      const btns = Array.from(ref.querySelectorAll<HTMLButtonElement>("button"))
+      for (const btn of btns) {
+        const icon = btn.querySelector("svg, [data-icon]")
+        if (icon || btn.closest("[style*='cursor: pointer']")) {
+          // Find the DefaultPromptSection toggle — it's the card that follows
+          // the prompt-override textarea. We look for the card header div.
+          const headerDivs = Array.from(ref.querySelectorAll<HTMLDivElement>("[style*='cursor: pointer']"))
+          if (headerDivs.length > 0) {
+            headerDivs[0].click()
+            return
+          }
+        }
+      }
+    })
+  })
+  const session = {
+    ...mockSessionValue({ id: "prompt-expanded", status: "idle" }),
+    agents: () => [
+      {
+        name: "code",
+        displayName: "Code",
+        description: "General-purpose coding agent",
+        mode: "primary" as const,
+        native: true,
+        prompt: MOCK_SYSTEM_PROMPT,
+      },
+    ],
+    subagents: () => [] as AgentInfo[],
+    removeMode: noop,
+    removeMcp: noop,
+    skills: () => [],
+    refreshSkills: noop,
+    removeSkill: noop,
+  }
+  return (
+    <StoryProviders sessionID="prompt-expanded" status="idle">
+      <SessionContext.Provider value={session as any}>
+        <div ref={ref} style={{ "max-height": "700px", overflow: "auto" }}>
+          <ModeEditView name="code" onBack={noop} onRemove={noop} />
+        </div>
+      </SessionContext.Provider>
+    </StoryProviders>
+  )
+}
+
+/** Renders ModeEditView for the "code" agent (native) that has a system prompt. */
+export const ModeEditNativeWithPrompt: Story = {
+  name: "ModeEditView — native mode with default system prompt (collapsed)",
+  render: () => {
+    const session = {
+      ...mockSessionValue({ id: "native-prompt", status: "idle" }),
+      agents: () => [
+        {
+          name: "code",
+          displayName: "Code",
+          description: "General-purpose coding agent",
+          mode: "primary" as const,
+          native: true,
+          prompt: MOCK_SYSTEM_PROMPT,
+        },
+      ],
+      subagents: () => [] as AgentInfo[],
+      removeMode: noop,
+      removeMcp: noop,
+      skills: () => [],
+      refreshSkills: noop,
+      removeSkill: noop,
+    }
+    return (
+      <StoryProviders sessionID="native-prompt" status="idle">
+        <SessionContext.Provider value={session as any}>
+          <div style={{ "max-height": "700px", overflow: "auto" }}>
+            <ModeEditView name="code" onBack={noop} onRemove={noop} />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+export const ModeEditNativePromptExpanded: Story = {
+  name: "ModeEditView — native mode with default system prompt (expanded)",
+  render: () => <ExpandedPromptWrapper />,
+}
+
+/** Renders ModeEditView with subagents section visible and collapsed. */
+export const ModeEditWithSubagents: Story = {
+  name: "ModeEditView — with sub-agents section (collapsed)",
+  render: () => {
+    const session = {
+      ...mockSessionValue({ id: "subagents-story", status: "idle" }),
+      agents: () => [
+        {
+          name: "code",
+          displayName: "Code",
+          description: "General-purpose coding agent",
+          mode: "primary" as const,
+          native: true,
+          prompt: MOCK_SYSTEM_PROMPT,
+        },
+      ],
+      subagents: () => MOCK_SUBAGENTS,
+      removeMode: noop,
+      removeMcp: noop,
+      skills: () => [],
+      refreshSkills: noop,
+      removeSkill: noop,
+    }
+    return (
+      <StoryProviders sessionID="subagents-story" status="idle">
+        <SessionContext.Provider value={session as any}>
+          <div style={{ "max-height": "700px", overflow: "auto" }}>
+            <ModeEditView name="code" onBack={noop} onRemove={noop} />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+/** Renders ModeEditView with the sub-agents section expanded to show each sub-agent. */
+function ExpandedSubagentsWrapper() {
+  let ref: HTMLDivElement | undefined
+  onMount(() => {
+    requestAnimationFrame(() => {
+      if (!ref) return
+      // Find all cursor:pointer divs (collapsible section headers) and click the
+      // last one which corresponds to the SubagentsSection.
+      const headers = Array.from(ref.querySelectorAll<HTMLDivElement>("[style*='cursor: pointer']"))
+      if (headers.length > 0) {
+        headers[headers.length - 1].click()
+      }
+    })
+  })
+  const session = {
+    ...mockSessionValue({ id: "subagents-expanded", status: "idle" }),
+    agents: () => [
+      {
+        name: "code",
+        displayName: "Code",
+        description: "General-purpose coding agent",
+        mode: "primary" as const,
+        native: true,
+        prompt: MOCK_SYSTEM_PROMPT,
+      },
+    ],
+    subagents: () => MOCK_SUBAGENTS,
+    removeMode: noop,
+    removeMcp: noop,
+    skills: () => [],
+    refreshSkills: noop,
+    removeSkill: noop,
+  }
+  return (
+    <StoryProviders sessionID="subagents-expanded" status="idle">
+      <SessionContext.Provider value={session as any}>
+        <div ref={ref} style={{ "max-height": "700px", overflow: "auto" }}>
+          <ModeEditView name="code" onBack={noop} onRemove={noop} />
+        </div>
+      </SessionContext.Provider>
+    </StoryProviders>
+  )
+}
+
+export const ModeEditSubagentsExpanded: Story = {
+  name: "ModeEditView — with sub-agents section (expanded)",
+  render: () => <ExpandedSubagentsWrapper />,
 }
 
 export const ModeEditExport: Story = {
