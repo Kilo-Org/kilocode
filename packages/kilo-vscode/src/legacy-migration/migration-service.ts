@@ -767,9 +767,10 @@ async function migrateLanguage(language: string): Promise<MigrationResultItem> {
 // ---------------------------------------------------------------------------
 
 function convertMcpServer(server: LegacyMcpServer): McpLocalConfig | McpRemoteConfig | null {
+  const enabled = server.disabled ? { enabled: false as const } : {}
   if (server.type === "sse" || server.type === "streamable-http") {
     if (!server.url) return null
-    return { type: "remote", url: server.url, headers: server.headers }
+    return { type: "remote", url: server.url, headers: server.headers, ...enabled }
   }
   // Default: stdio
   if (!server.command) return null
@@ -779,6 +780,7 @@ function convertMcpServer(server: LegacyMcpServer): McpLocalConfig | McpRemoteCo
     command,
     environment: server.env,
     ...(server.timeout !== undefined && { timeout: server.timeout }),
+    ...enabled,
   }
 }
 
@@ -1145,9 +1147,11 @@ function buildProviderList(
 
 function buildMcpServerList(settings: LegacyMcpSettings | null): MigrationMcpServerInfo[] {
   if (!settings?.mcpServers) return []
-  return Object.entries(settings.mcpServers)
-    .filter(([, server]) => !server.disabled)
-    .map(([name, server]) => ({ name, type: server.type ?? "stdio" }))
+  return Object.entries(settings.mcpServers).map(([name, server]) => ({
+    name,
+    type: server.type ?? "stdio",
+    disabled: server.disabled,
+  }))
 }
 
 /** @internal — exported for testing only */

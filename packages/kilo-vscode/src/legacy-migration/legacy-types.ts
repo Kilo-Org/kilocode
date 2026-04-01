@@ -289,6 +289,7 @@ export interface MigrationProviderInfo {
 export interface MigrationMcpServerInfo {
   name: string
   type: string
+  disabled?: boolean
 }
 
 export interface MigrationCustomModeInfo {
