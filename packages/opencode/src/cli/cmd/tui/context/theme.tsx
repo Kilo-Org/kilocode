@@ -178,7 +178,14 @@ export const DEFAULT_THEMES: Record<string, ThemeJson> = {
   colorblind, // kilocode_change
 }
 
+// kilocode_change start
+function isValidTheme(t: unknown): t is ThemeJson {
+  return t != null && typeof t === "object" && "theme" in t && t.theme != null && typeof t.theme === "object"
+}
+// kilocode_change end
+
 function resolveTheme(theme: ThemeJson, mode: "dark" | "light") {
+  if (!isValidTheme(theme)) return resolveTheme(kilo as ThemeJson, mode) // kilocode_change
   const defs = theme.defs ?? {}
   function resolveColor(c: ColorValue): RGBA {
     if (c instanceof RGBA) return c
@@ -356,15 +363,23 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
       init()
     })
 
+    // kilocode_change start - safe fallback to kilo import if store lookup fails
     const values = createMemo(() => {
-      return resolveTheme(store.themes[store.active] ?? store.themes.kilo, store.mode)
+      try {
+        const active = store.themes[store.active] ?? store.themes.kilo ?? (kilo as ThemeJson)
+        return resolveTheme(active, store.mode)
+      } catch {
+        return resolveTheme(kilo as ThemeJson, store.mode)
+      }
     })
+    // kilocode_change end
 
     const syntax = createMemo(() => generateSyntax(values()))
     const subtleSyntax = createMemo(() => generateSubtleSyntax(values()))
 
+    // kilocode_change - use empty object as proxy target; all reads go through the getter
     return {
-      theme: new Proxy(values(), {
+      theme: new Proxy({} as Theme, {
         get(_target, prop) {
           // @ts-expect-error
           return values()[prop]
@@ -416,7 +431,12 @@ async function getCustomThemes() {
       symlink: true,
     })) {
       const name = path.basename(item, ".json")
-      result[name] = await Filesystem.readJson(item)
+      // kilocode_change start - validate custom theme JSON and protect built-in keys
+      if (name in DEFAULT_THEMES) continue
+      const json = await Filesystem.readJson(item).catch(() => null)
+      if (!isValidTheme(json)) continue
+      result[name] = json
+      // kilocode_change end
     }
   }
   return result
