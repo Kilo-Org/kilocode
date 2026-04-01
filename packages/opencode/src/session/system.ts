@@ -74,7 +74,7 @@ export namespace SystemPrompt {
         `</env>`,
         `<directories>`,
         `  ${
-          project.vcs === "git"
+          project.vcs === "git" && false
             ? await Ripgrep.tree({
                 cwd: Instance.directory,
                 limit: 50,

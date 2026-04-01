@@ -949,6 +949,7 @@ export const dict = {
   "prompt.placeholder.default": "Wpisz wiadomość... (Enter, aby wysłać, Shift+Enter dla nowej linii)",
 
   "context.usage.sessionCost": "Koszt sesji",
+  "context.stats.thisSession": "Ta sesja",
 
   "time.justNow": "przed chwilą",
   "time.minutesAgo": "{{count}} min temu",
@@ -1244,7 +1245,6 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Co nowego w Kilo Code",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "Przebudowaliśmy rozszerzenie na szybszym i wydajniejszym fundamencie.",
   "migration.whatsNew.features.performance.title": "Szybsza wydajność agenta",
   "migration.whatsNew.features.performance.detail":
@@ -1269,7 +1269,6 @@ export const dict = {
   "migration.migrate.chatHistoryDesc": "Niekompatybilne z nową architekturą",
   "migration.migrate.button": "Migruj ustawienia",
   "migration.migrate.skip": "Pomiń",
-  "migration.migrate.back": "Wstecz",
   "migration.migrate.keysDetected": "Wykryto {{count}} kluczy",
   "migration.migrate.serversConfigured": "Skonfigurowano {{count}} serwer(ów)",
   "migration.migrate.modesFound": "Znaleziono {{count}} tryb(ów)",
@@ -1290,6 +1289,11 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "Spowoduje to usunięcie starych ustawień z magazynu VS Code. Nie będzie można ponownie uruchomić tej migracji.",
   "migration.complete.done": "Gotowe",
+  "migration.migrate.sessionsDetected": "Wykryto {{count}} sesji",
+  "migration.error.sessionFailed": "Migracja sesji nie powiodła się",
+  "migration.error.continue": "Kontynuuj",
+  "migration.error.action.copy": "Kopiuj",
+  "migration.error.toast.copied": "Błąd skopiowano do schowka",
   // legacy-migration end
 
   "error.details.show": "Szczegóły",
@@ -1303,7 +1307,6 @@ export const dict = {
   "settings.saveBar.warning.many": "Kilka sesji jest uruchomionych i zostanie przerwanych",
   "settings.saveBar.saveAnyway": "Zapisz mimo to",
   "settings.saveBar.cancel": "Anuluj",
-  "notifications.action.previous": "Poprzedni",
   "notifications.action.next": "Następny",
   "notifications.action.close": "Zamknij",
   "notifications.action.tryModel": "Wypróbuj {{model}}",

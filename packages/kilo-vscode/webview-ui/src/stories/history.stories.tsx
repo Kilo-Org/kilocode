@@ -73,7 +73,7 @@ const WithSessions: ParentComponent<{ sessions?: typeof mockSessions }> = (props
     selectModel: noop,
     hasModelOverride: () => false,
     clearModelOverride: noop,
-    totalCost: () => 0,
+    costBreakdown: () => [],
     contextUsage: () => undefined,
     agents: () => [{ name: "code", description: "Code mode", mode: "primary" as const }],
     selectedAgent: () => "code",

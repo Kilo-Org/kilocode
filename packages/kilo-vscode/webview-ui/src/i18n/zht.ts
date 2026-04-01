@@ -934,6 +934,7 @@ export const dict = {
   "prompt.placeholder.default": "輸入訊息... (Enter 送出，Shift+Enter 換行)",
 
   "context.usage.sessionCost": "工作階段費用",
+  "context.stats.thisSession": "此工作階段",
 
   "time.justNow": "剛剛",
   "time.minutesAgo": "{{count}} 分鐘前",
@@ -1200,7 +1201,6 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Kilo Code 新功能",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "我們在更快、更高效的基礎上重新建構了擴充功能。",
   "migration.whatsNew.features.performance.title": "更快的 Agent 效能",
   "migration.whatsNew.features.performance.detail":
@@ -1225,7 +1225,6 @@ export const dict = {
   "migration.migrate.chatHistoryDesc": "與新架構不相容",
   "migration.migrate.button": "遷移設定",
   "migration.migrate.skip": "略過",
-  "migration.migrate.back": "返回",
   "migration.migrate.keysDetected": "偵測到 {{count}} 個金鑰",
   "migration.migrate.serversConfigured": "已設定 {{count}} 個伺服器",
   "migration.migrate.modesFound": "發現 {{count}} 個模式",
@@ -1245,6 +1244,11 @@ export const dict = {
   "migration.complete.cleanup": "清除舊版設定資料",
   "migration.complete.cleanupDescription": "此操作將從 VS Code 儲存中刪除舊版設定。您將無法再次執行此遷移。",
   "migration.complete.done": "完成",
+  "migration.migrate.sessionsDetected": "偵測到 {{count}} 個工作階段",
+  "migration.error.sessionFailed": "工作階段遷移失敗",
+  "migration.error.continue": "繼續",
+  "migration.error.action.copy": "複製",
+  "migration.error.toast.copied": "錯誤已複製到剪貼簿",
   // legacy-migration end
 
   "error.details.show": "詳細資訊",
@@ -1258,7 +1262,6 @@ export const dict = {
   "settings.saveBar.warning.many": "多個工作階段正在執行，將被中斷",
   "settings.saveBar.saveAnyway": "仍然儲存",
   "settings.saveBar.cancel": "取消",
-  "notifications.action.previous": "上一個",
   "notifications.action.next": "下一個",
   "notifications.action.close": "關閉",
   "notifications.action.tryModel": "嘗試 {{model}}",

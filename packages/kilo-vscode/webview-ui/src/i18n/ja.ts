@@ -944,6 +944,7 @@ export const dict = {
   "prompt.placeholder.default": "メッセージを入力... (Enterで送信、Shift+Enterで改行)",
 
   "context.usage.sessionCost": "セッションコスト",
+  "context.stats.thisSession": "このセッション",
 
   "time.justNow": "たった今",
   "time.minutesAgo": "{{count}}分前",
@@ -1235,7 +1236,6 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Kilo Codeの新機能",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "より高速で効率的な基盤上に拡張機能を再構築しました。",
   "migration.whatsNew.features.performance.title": "高速なエージェントパフォーマンス",
   "migration.whatsNew.features.performance.detail":
@@ -1260,7 +1260,6 @@ export const dict = {
   "migration.migrate.chatHistoryDesc": "新しいアーキテクチャと互換性がありません",
   "migration.migrate.button": "設定を移行",
   "migration.migrate.skip": "スキップ",
-  "migration.migrate.back": "戻る",
   "migration.migrate.keysDetected": "{{count}}個のキーを検出",
   "migration.migrate.serversConfigured": "{{count}}個のサーバーが設定済み",
   "migration.migrate.modesFound": "{{count}}個のモードが見つかりました",
@@ -1281,6 +1280,11 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "VS Codeのストレージから古い設定を削除します。この移行を再度実行することはできなくなります。",
   "migration.complete.done": "完了",
+  "migration.migrate.sessionsDetected": "{{count}} 件のセッションが見つかりました",
+  "migration.error.sessionFailed": "セッションの移行に失敗しました",
+  "migration.error.continue": "続行",
+  "migration.error.action.copy": "コピー",
+  "migration.error.toast.copied": "エラーをクリップボードにコピーしました",
   // legacy-migration end
 
   "error.details.show": "詳細",
@@ -1294,7 +1298,6 @@ export const dict = {
   "settings.saveBar.warning.many": "複数のセッションが実行中で中断されます",
   "settings.saveBar.saveAnyway": "それでも保存",
   "settings.saveBar.cancel": "キャンセル",
-  "notifications.action.previous": "前へ",
   "notifications.action.next": "次へ",
   "notifications.action.close": "閉じる",
   "notifications.action.tryModel": "{{model}}を試す",

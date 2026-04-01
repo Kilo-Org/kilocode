@@ -68,18 +68,6 @@
   width: 100%;
 }
 
-.migration-wizard__badge {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  padding: 3px 9px;
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--vscode-button-background) 15%, transparent);
-  color: var(--vscode-button-background);
-  vertical-align: middle;
-  text-transform: uppercase;
-}
-
 .migration-wizard__header p {
   font-size: 13px;
   color: var(--vscode-descriptionForeground);
@@ -183,7 +171,7 @@
 
 .migration-wizard__item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 14px;
   padding: 11px 20px;
   border-top: 1px solid var(--vscode-panel-border);
@@ -309,6 +297,83 @@
   color: var(--vscode-descriptionForeground);
   line-height: 1.4;
   margin-top: 1px;
+}
+
+.migration-wizard__error-text {
+  font-size: 11px;
+  color: var(--vscode-errorForeground);
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
+.migration-wizard__error-box {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--vscode-errorForeground) 28%, transparent);
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--vscode-errorForeground) 8%, transparent), transparent),
+    color-mix(in srgb, var(--vscode-editor-background) 92%, var(--vscode-errorForeground) 8%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 10px 24px rgba(0, 0, 0, 0.14);
+}
+
+.migration-wizard__error-box-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.migration-wizard__error-box-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--vscode-foreground);
+  letter-spacing: 0.01em;
+}
+
+.migration-wizard__error-box .migration-wizard__error-text {
+  margin-top: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--vscode-errorForeground) 92%, white 8%);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.migration-wizard__copy-btn {
+  appearance: none;
+  border: 1px solid var(--vscode-panel-border);
+  background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  color: var(--vscode-foreground);
+  border-radius: 8px;
+  padding: 5px 10px;
+  min-height: 28px;
+  font-family: var(--vscode-font-family);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    transform 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.migration-wizard__copy-btn:hover {
+  background: var(--vscode-list-hoverBackground);
+  border-color: var(--vscode-focusBorder);
+}
+
+.migration-wizard__copy-btn:active {
+  background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground));
+}
+
+.migration-wizard__copy-btn:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 2px;
 }
 
 /* Disabled items */
@@ -441,5 +506,10 @@ body.vscode-high-contrast-light {
 
   .migration-wizard__divider {
     background: var(--vscode-contrastBorder, var(--vscode-panel-border));
+  }
+
+  .migration-wizard__error-box,
+  .migration-wizard__copy-btn {
+    border-color: var(--vscode-contrastBorder, var(--vscode-errorForeground));
   }
 }

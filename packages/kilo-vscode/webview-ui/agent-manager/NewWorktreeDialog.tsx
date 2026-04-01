@@ -515,7 +515,8 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                 <Popover
                   open={compareOpen()}
                   onOpenChange={setCompareOpen}
-                  placement="bottom-start"
+                  placement="top-start"
+                  flip={false}
                   sameWidth
                   class="am-compare-popover"
                   trigger={

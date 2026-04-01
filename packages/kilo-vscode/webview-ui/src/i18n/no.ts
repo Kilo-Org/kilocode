@@ -949,6 +949,7 @@ export const dict = {
   "prompt.placeholder.default": "Skriv en melding... (Enter for å sende, Shift+Enter for ny linje)",
 
   "context.usage.sessionCost": "Sesjonskostnad",
+  "context.stats.thisSession": "Denne sesjonen",
 
   "time.justNow": "akkurat nå",
   "time.minutesAgo": "{{count}} min siden",
@@ -1236,7 +1237,6 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Hva er nytt i Kilo Code",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "Vi har bygget utvidelsen på nytt med et raskere og mer effektivt grunnlag.",
   "migration.whatsNew.features.performance.title": "Raskere agentytelse",
   "migration.whatsNew.features.performance.detail":
@@ -1261,7 +1261,6 @@ export const dict = {
   "migration.migrate.chatHistoryDesc": "Ikke kompatibel med den nye arkitekturen",
   "migration.migrate.button": "Migrer innstillinger",
   "migration.migrate.skip": "Hopp over",
-  "migration.migrate.back": "Tilbake",
   "migration.migrate.keysDetected": "{{count}} nøkler oppdaget",
   "migration.migrate.serversConfigured": "{{count}} server(e) konfigurert",
   "migration.migrate.modesFound": "{{count}} modus(er) funnet",
@@ -1282,6 +1281,11 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "Dette fjerner de gamle innstillingene fra VS Code-lagringen. Du vil ikke kunne kjøre denne migreringen på nytt.",
   "migration.complete.done": "Ferdig",
+  "migration.migrate.sessionsDetected": "{{count}} økter oppdaget",
+  "migration.error.sessionFailed": "Øktmigrering mislyktes",
+  "migration.error.continue": "Fortsett",
+  "migration.error.action.copy": "Kopier",
+  "migration.error.toast.copied": "Feil kopiert til utklippstavlen",
   // legacy-migration end
 
   "task.todos.progress": "{{done}}/{{total}} oppgaver fullført",
@@ -1293,7 +1297,6 @@ export const dict = {
   "settings.saveBar.warning.many": "Flere økter kjører og vil bli avbrutt",
   "settings.saveBar.saveAnyway": "Lagre uansett",
   "settings.saveBar.cancel": "Avbryt",
-  "notifications.action.previous": "Forrige",
   "notifications.action.next": "Neste",
   "notifications.action.close": "Lukk",
   "notifications.action.tryModel": "Prøv {{model}}",

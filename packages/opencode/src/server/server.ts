@@ -101,7 +101,7 @@ export namespace Server {
           return basicAuth({ username, password })(c, next)
         })
         .use(async (c, next) => {
-          const skipLogging = c.req.path === "/log"
+          const skipLogging = c.req.path === "/log" || c.req.path === "/telemetry/capture" // kilocode_change
           if (!skipLogging) {
             log.info("request", {
               method: c.req.method,

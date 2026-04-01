@@ -43,7 +43,13 @@ import type {
   McpStatusEntry,
 } from "../types/messages"
 import { removeSessionPermissions, upsertPermission } from "./permission-queue"
-import { computeStatus, calcTotalCost, calcContextUsage } from "./session-utils"
+import {
+  computeStatus,
+  calcContextUsage,
+  buildFamilyCosts,
+  buildFamilyLabels,
+  buildCostBreakdown,
+} from "./session-utils"
 import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
 import { KILO_AUTO, parseModelString } from "../../../src/shared/provider-model"
@@ -126,7 +132,7 @@ interface SessionContextValue {
   clearModelOverride: () => void
 
   // Cost and context usage for the current session
-  totalCost: Accessor<number>
+  costBreakdown: Accessor<Array<{ label: string; cost: number }>>
   contextUsage: Accessor<ContextUsage | undefined>
 
   // Skills loaded from the CLI backend
@@ -1444,18 +1450,24 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function replyToQuestion(requestID: string, answers: string[][]) {
     clearQuestionError(requestID)
+    const question = questions().find((item) => item.id === requestID)
+    const sessionID = question?.sessionID ?? currentSessionID() ?? ""
     vscode.postMessage({
       type: "questionReply",
       requestID,
+      sessionID,
       answers,
     })
   }
 
   function rejectQuestion(requestID: string) {
     clearQuestionError(requestID)
+    const question = questions().find((item) => item.id === requestID)
+    const sessionID = question?.sessionID ?? currentSessionID() ?? ""
     vscode.postMessage({
       type: "questionReject",
       requestID,
+      sessionID,
     })
   }
 
@@ -1620,7 +1632,27 @@ export const SessionProvider: ParentComponent = (props) => {
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()),
   )
 
-  const totalCost = createMemo(() => calcTotalCost(messages()))
+  /** Per-session cost — only reads store.messages (not parts). */
+  const familyCosts = createMemo<Map<string, number>>(() => {
+    const id = currentSessionID()
+    if (!id) return new Map()
+    return buildFamilyCosts(sessionFamily(id), store.messages)
+  })
+
+  /** Child session labels — only reads store.parts (not message costs). */
+  const familyLabels = createMemo<Map<string, string>>(() => {
+    const id = currentSessionID()
+    if (!id) return new Map()
+    return buildFamilyLabels(sessionFamily(id), store.messages as any, store.parts as any)
+  })
+
+  /** Combined cost breakdown with labels. */
+  const costBreakdown = createMemo<Array<{ label: string; cost: number }>>(() => {
+    const id = currentSessionID()
+    const costs = familyCosts()
+    if (!id || costs.size === 0) return []
+    return buildCostBreakdown(id, costs, familyLabels(), language.t("context.stats.thisSession"))
+  })
 
   // Status text derived from last assistant message parts
   const statusText = createMemo<string | undefined>(() => {
@@ -1675,7 +1707,7 @@ export const SessionProvider: ParentComponent = (props) => {
     selectModel,
     hasModelOverride,
     clearModelOverride,
-    totalCost,
+    costBreakdown,
     contextUsage,
     agents,
     skills,

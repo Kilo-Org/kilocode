@@ -61,6 +61,7 @@ export function getErrorMessage(error: unknown): string {
 export function sessionToWebview(session: Session) {
   return {
     id: session.id,
+    parentID: session.parentID ?? null,
     title: session.title,
     createdAt: new Date(session.time.created).toISOString(),
     updatedAt: new Date(session.time.updated).toISOString(),

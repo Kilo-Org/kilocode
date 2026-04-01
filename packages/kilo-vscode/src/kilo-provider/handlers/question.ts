@@ -15,37 +15,51 @@ interface QuestionContext {
 }
 
 /** Handle question reply from the webview. */
-export async function handleQuestionReply(ctx: QuestionContext, requestID: string, answers: string[][]): Promise<void> {
+export async function handleQuestionReply(
+  ctx: QuestionContext,
+  requestID: string,
+  answers: string[][],
+  sessionID?: string,
+): Promise<boolean> {
   if (!ctx.client) {
     ctx.postMessage({ type: "questionError", requestID })
-    return
+    return false
   }
+
+  const sid = sessionID ?? ctx.currentSessionId
 
   try {
     await ctx.client.question.reply(
-      { requestID, answers, directory: ctx.getWorkspaceDirectory(ctx.currentSessionId) },
+      { requestID, answers, directory: ctx.getWorkspaceDirectory(sid) },
       { throwOnError: true },
     )
+    return true
   } catch (error) {
     console.error("[Kilo New] KiloProvider: Failed to reply to question:", error)
     ctx.postMessage({ type: "questionError", requestID })
+    return false
   }
 }
 
 /** Handle question reject (dismiss) from the webview. */
-export async function handleQuestionReject(ctx: QuestionContext, requestID: string): Promise<void> {
+export async function handleQuestionReject(
+  ctx: QuestionContext,
+  requestID: string,
+  sessionID?: string,
+): Promise<boolean> {
   if (!ctx.client) {
     ctx.postMessage({ type: "questionError", requestID })
-    return
+    return false
   }
 
+  const sid = sessionID ?? ctx.currentSessionId
+
   try {
-    await ctx.client.question.reject(
-      { requestID, directory: ctx.getWorkspaceDirectory(ctx.currentSessionId) },
-      { throwOnError: true },
-    )
+    await ctx.client.question.reject({ requestID, directory: ctx.getWorkspaceDirectory(sid) }, { throwOnError: true })
+    return true
   } catch (error) {
     console.error("[Kilo New] KiloProvider: Failed to reject question:", error)
     ctx.postMessage({ type: "questionError", requestID })
+    return false
   }
 }

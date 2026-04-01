@@ -944,6 +944,7 @@ export const dict = {
   "prompt.placeholder.default": "메시지를 입력하세요... (Enter로 전송, Shift+Enter로 줄 바꿈)",
 
   "context.usage.sessionCost": "세션 비용",
+  "context.stats.thisSession": "이 세션",
 
   "time.justNow": "방금",
   "time.minutesAgo": "{{count}}분 전",
@@ -1223,7 +1224,6 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Kilo Code의 새로운 기능",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "더 빠르고 효율적인 기반 위에 확장 프로그램을 재구축했습니다.",
   "migration.whatsNew.features.performance.title": "더 빠른 에이전트 성능",
   "migration.whatsNew.features.performance.detail":
@@ -1248,7 +1248,6 @@ export const dict = {
   "migration.migrate.chatHistoryDesc": "새 아키텍처와 호환되지 않음",
   "migration.migrate.button": "설정 마이그레이션",
   "migration.migrate.skip": "건너뛰기",
-  "migration.migrate.back": "뒤로",
   "migration.migrate.keysDetected": "{{count}}개의 키 감지됨",
   "migration.migrate.serversConfigured": "{{count}}개의 서버 구성됨",
   "migration.migrate.modesFound": "{{count}}개의 모드 발견됨",
@@ -1269,6 +1268,11 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "이 작업은 VS Code 저장소에서 이전 설정을 제거합니다. 이 마이그레이션을 다시 실행할 수 없게 됩니다.",
   "migration.complete.done": "완료",
+  "migration.migrate.sessionsDetected": "{{count}}개의 세션이 감지되었습니다",
+  "migration.error.sessionFailed": "세션 마이그레이션에 실패했습니다",
+  "migration.error.continue": "계속",
+  "migration.error.action.copy": "복사",
+  "migration.error.toast.copied": "오류가 클립보드에 복사되었습니다",
   // legacy-migration end
 
   "error.details.show": "상세 정보",
@@ -1282,7 +1286,6 @@ export const dict = {
   "settings.saveBar.warning.many": "여러 세션이 실행 중이며 중단됩니다",
   "settings.saveBar.saveAnyway": "그래도 저장",
   "settings.saveBar.cancel": "취소",
-  "notifications.action.previous": "이전",
   "notifications.action.next": "다음",
   "notifications.action.close": "닫기",
   "notifications.action.tryModel": "{{model}} 시도",

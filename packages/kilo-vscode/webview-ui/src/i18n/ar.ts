@@ -939,6 +939,7 @@ export const dict = {
   "prompt.placeholder.default": "اكتب رسالة... (Enter للإرسال، Shift+Enter لسطر جديد)",
 
   "context.usage.sessionCost": "تكلفة الجلسة",
+  "context.stats.thisSession": "هذه الجلسة",
 
   "time.justNow": "الآن",
   "time.minutesAgo": "قبل {{count}} دقيقة",
@@ -1220,7 +1221,6 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "ما الجديد في Kilo Code",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "لقد أعدنا بناء الإضافة على أساس أسرع وأكثر كفاءة.",
   "migration.whatsNew.features.performance.title": "أداء أسرع للوكيل",
   "migration.whatsNew.features.performance.detail":
@@ -1245,7 +1245,6 @@ export const dict = {
   "migration.migrate.chatHistoryDesc": "غير متوافق مع البنية الجديدة",
   "migration.migrate.button": "ترحيل الإعدادات",
   "migration.migrate.skip": "تخطي",
-  "migration.migrate.back": "رجوع",
   "migration.migrate.keysDetected": "تم اكتشاف {{count}} مفاتيح",
   "migration.migrate.serversConfigured": "تم تكوين {{count}} خادم(خوادم)",
   "migration.migrate.modesFound": "تم العثور على {{count}} وضع(أوضاع)",
@@ -1266,6 +1265,11 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "هذا يزيل الإعدادات القديمة من مساحة تخزين VS Code. لن تتمكن من إعادة تشغيل هذا الترحيل.",
   "migration.complete.done": "تم",
+  "migration.migrate.sessionsDetected": "تم اكتشاف {{count}} جلسة",
+  "migration.error.sessionFailed": "فشل ترحيل الجلسة",
+  "migration.error.continue": "متابعة",
+  "migration.error.action.copy": "نسخ",
+  "migration.error.toast.copied": "تم نسخ الخطأ إلى الحافظة",
   // legacy-migration end
 
   "error.details.show": "التفاصيل",
@@ -1279,7 +1283,6 @@ export const dict = {
   "settings.saveBar.warning.many": "عدة جلسات تعمل وستتوقف",
   "settings.saveBar.saveAnyway": "حفظ على أي حال",
   "settings.saveBar.cancel": "إلغاء",
-  "notifications.action.previous": "السابق",
   "notifications.action.next": "التالي",
   "notifications.action.close": "إغلاق",
   "notifications.action.tryModel": "جرّب {{model}}",

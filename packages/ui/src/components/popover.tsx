@@ -95,6 +95,8 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
       const target = event.target
       if (!(target instanceof Node)) return
       if (inside(target)) return
+      // Node was detached by a reactive update — treat as inside
+      if (!target.isConnected) return
       close("outside")
     }
 
@@ -102,6 +104,8 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
       const target = event.target
       if (!(target instanceof Node)) return
       if (inside(target)) return
+      // Node was detached by a reactive update — treat as inside
+      if (!target.isConnected) return
       close("outside")
     }
 
@@ -140,8 +144,14 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
         [local.class ?? ""]: !!local.class,
       }}
       style={local.style}
+      onInteractOutside={(event: Event) => {
+        // Custom window-level handlers manage outside dismissal;
+        // always prevent Kobalte's built-in interact-outside close
+        // to avoid double-firing and stale-node false positives.
+        event.preventDefault()
+      }}
       onFocusOutside={(event: Event) => {
-        if (!ready()) event.preventDefault()
+        event.preventDefault()
       }}
       onCloseAutoFocus={(event: Event) => {
         if (dismiss() === "outside") event.preventDefault()

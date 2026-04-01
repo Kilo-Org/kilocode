@@ -952,6 +952,7 @@ export const dict = {
   "prompt.placeholder.default": "Unesite poruku... (Enter za slanje, Shift+Enter za novi red)",
 
   "context.usage.sessionCost": "Cijena sesije",
+  "context.stats.thisSession": "Ova sesija",
 
   "time.justNow": "upravo sada",
   "time.minutesAgo": "prije {{count}} min",
@@ -1245,7 +1246,6 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Šta je novo u Kilo Code",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "Ponovo smo izgradili ekstenziju na bržem i efikasnijem temelju.",
   "migration.whatsNew.features.performance.title": "Brže performanse agenta",
   "migration.whatsNew.features.performance.detail":
@@ -1270,7 +1270,6 @@ export const dict = {
   "migration.migrate.chatHistoryDesc": "Nekompatibilno sa novom arhitekturom",
   "migration.migrate.button": "Migriraj postavke",
   "migration.migrate.skip": "Preskoči",
-  "migration.migrate.back": "Nazad",
   "migration.migrate.keysDetected": "{{count}} ključeva otkriveno",
   "migration.migrate.serversConfigured": "{{count}} server(a) konfigurisano",
   "migration.migrate.modesFound": "{{count}} režim(a) pronađeno",
@@ -1291,6 +1290,11 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "Ovo uklanja stare postavke iz VS Code pohrane. Nećete moći ponovo pokrenuti ovu migraciju.",
   "migration.complete.done": "Završeno",
+  "migration.migrate.sessionsDetected": "Otkrivene {{count}} sesije",
+  "migration.error.sessionFailed": "Migracija sesije nije uspjela",
+  "migration.error.continue": "Nastavi",
+  "migration.error.action.copy": "Kopiraj",
+  "migration.error.toast.copied": "Greška kopirana u međuspremnik",
   // legacy-migration end
 
   "error.details.show": "Detalji",
@@ -1304,7 +1308,6 @@ export const dict = {
   "settings.saveBar.warning.many": "Nekoliko sesija je pokrenuto i bit će prekinuto",
   "settings.saveBar.saveAnyway": "Spremi svejedno",
   "settings.saveBar.cancel": "Otkaži",
-  "notifications.action.previous": "Prethodni",
   "notifications.action.next": "Sljedeći",
   "notifications.action.close": "Zatvori",
   "notifications.action.tryModel": "Probaj {{model}}",

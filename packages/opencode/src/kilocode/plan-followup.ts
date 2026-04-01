@@ -5,6 +5,7 @@ import { TuiEvent } from "@/cli/cmd/tui/event"
 import { Flag } from "@/flag/flag"
 import { Global } from "@/global"
 import { Identifier } from "@/id/id"
+import { Instance } from "@/project/instance"
 import { Provider } from "@/provider/provider"
 import { Question } from "@/question"
 import { Session } from "@/session"
@@ -266,6 +267,7 @@ export namespace PlanFollowup {
       model: input.model,
       variant: input.variant,
     })
+    const session = await Session.get(input.sessionID)
     const [handover, todos] = await Promise.all([
       generateHandover({ messages: input.messages, model: input.model, abort: input.abort }),
       Todo.get(input.sessionID),
@@ -282,24 +284,34 @@ export namespace PlanFollowup {
       sections.push(`## Todo List\n\n${todoList}`)
     }
 
-    const next = await Session.create({})
-    await inject({
-      sessionID: next.id,
-      agent: "code",
-      model: code.model,
-      variant: code.variant,
-      text: sections.join("\n\n"),
-      synthetic: false,
+    await Instance.provide({
+      directory: session.directory,
+      fn: async () => {
+        const next = await Session.create({})
+        await inject({
+          sessionID: next.id,
+          agent: "code",
+          model: code.model,
+          variant: code.variant,
+          text: sections.join("\n\n"),
+          synthetic: false,
+        })
+        if (todos.length) {
+          await Todo.update({ sessionID: next.id, todos })
+        }
+        await Bus.publish(TuiEvent.SessionSelect, { sessionID: next.id })
+        void import("@/session/prompt")
+          .then((item) =>
+            Instance.provide({
+              directory: next.directory,
+              fn: () => item.SessionPrompt.loop({ sessionID: next.id }),
+            }),
+          )
+          .catch((error) => {
+            log.error("failed to start follow-up session", { sessionID: next.id, error })
+          })
+      },
     })
-    if (todos.length) {
-      await Todo.update({ sessionID: next.id, todos })
-    }
-    await Bus.publish(TuiEvent.SessionSelect, { sessionID: next.id })
-    void import("@/session/prompt")
-      .then((item) => item.SessionPrompt.loop({ sessionID: next.id }))
-      .catch((error) => {
-        log.error("failed to start follow-up session", { sessionID: next.id, error })
-      })
   }
 
   export async function ask(input: {

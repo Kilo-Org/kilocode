@@ -128,6 +128,7 @@ export interface SessionFileDiff {
 // Session info (simplified for webview)
 export interface SessionInfo {
   id: string
+  parentID?: string | null
   title?: string
   createdAt: string
   updatedAt: string
@@ -1053,6 +1054,7 @@ export interface MigrationStateMessage {
     providers: MigrationProviderInfo[]
     mcpServers: MigrationMcpServerInfo[]
     customModes: MigrationCustomModeInfo[]
+    sessions?: string[]
     defaultModel?: { provider: string; model: string }
     settings?: LegacySettings
   }
@@ -1064,6 +1066,7 @@ export interface LegacyMigrationDataMessage {
     providers: MigrationProviderInfo[]
     mcpServers: MigrationMcpServerInfo[]
     customModes: MigrationCustomModeInfo[]
+    sessions?: string[]
     defaultModel?: { provider: string; model: string }
     settings?: LegacySettings
   }
@@ -1100,6 +1103,7 @@ export interface StartLegacyMigrationMessage {
     providers: string[]
     mcpServers: string[]
     customModes: string[]
+    sessions?: string[]
     defaultModel: boolean
     settings: {
       autoApproval: MigrationAutoApprovalSelections
@@ -1558,12 +1562,14 @@ export interface SetLanguageRequest {
 export interface QuestionReplyRequest {
   type: "questionReply"
   requestID: string
+  sessionID?: string
   answers: string[][]
 }
 
 export interface QuestionRejectRequest {
   type: "questionReject"
   requestID: string
+  sessionID?: string
 }
 
 export interface DeleteSessionRequest {

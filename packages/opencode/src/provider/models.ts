@@ -178,6 +178,28 @@ export namespace ModelsDev {
       }
     }
 
+    // Inject Apertis provider with dynamic model fetching
+    if (!providers["apertis"]) {
+      const apertisConfigObj = await Config.get()
+      const apertisConfig = apertisConfigObj.provider?.apertis?.options
+      const apertisBaseURL = apertisConfig?.baseURL ?? "https://api.apertis.ai/v1"
+      const apertisFetchOptions = {
+        ...(apertisConfig?.baseURL ? { baseURL: apertisConfig.baseURL } : {}),
+      }
+      const apertisModels = await ModelCache.fetch("apertis", apertisFetchOptions).catch(() => ({}))
+      providers["apertis"] = {
+        id: "apertis",
+        name: "Apertis",
+        env: ["APERTIS_API_KEY"],
+        api: apertisBaseURL,
+        npm: "@ai-sdk/openai-compatible",
+        models: apertisModels,
+      }
+      if (Object.keys(apertisModels).length === 0) {
+        ModelCache.refresh("apertis", apertisFetchOptions).catch(() => {})
+      }
+    }
+
     return providers
     // kilocode_change end
   }
