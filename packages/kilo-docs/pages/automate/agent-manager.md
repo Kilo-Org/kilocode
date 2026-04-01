@@ -75,7 +75,7 @@ Each session has a dedicated integrated terminal. Press `Cmd+/` to focus the ter
 
 ## Setup Scripts
 
-Place an executable script at `.kilo/setup-script` in your project root. It runs automatically whenever a new worktree is created (useful for `npm install`, env setup, etc.).
+Place an executable script at `.kilo/setup-script` in your project root. It runs automatically whenever a new worktree is created (useful for `npm install`, env setup, etc.). Root-level `.env` and `.env.*` files are also auto-copied from the main repo before the setup script runs.
 
 ## Session State and Persistence
 
