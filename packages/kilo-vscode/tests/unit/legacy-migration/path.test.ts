@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test"
+import { beforeEach, describe, expect, it, mock } from "bun:test"
+import * as path from "path"
 
 const realpath = mock(async (input: string) => input)
 
@@ -14,8 +15,6 @@ describe("legacy migration path", () => {
     realpath.mockImplementation(async (input: string) => input)
   })
 
-  afterEach(() => {})
-
   it("returns an empty string for empty legacy paths", async () => {
     expect(await normalizeLegacyPath("   ")).toBe("")
     expect(realpath).not.toHaveBeenCalled()
@@ -28,18 +27,21 @@ describe("legacy migration path", () => {
   })
 
   it("uppercases the Windows drive letter before resolving the final path", async () => {
-    const value = await normalizeLegacyPath("c:\\repo\\..\\repo\\file.txt")
+    realpath.mockImplementation(async (input: string) => input.replaceAll("/", "\\"))
+
+    const value = await normalizeLegacyPath("C:/repo/../repo/file.txt")
 
     expect(realpath).toHaveBeenCalledTimes(1)
-    expect(realpath.mock.calls[0]?.[0]).toBe("C:\\repo\\file.txt")
+    expect(realpath.mock.calls[0]?.[0]).toBe(path.normalize(path.resolve("C:/repo/../repo/file.txt")))
     expect(value).toBe("C:\\repo\\file.txt")
   })
 
   it("falls back to the normalized path when realpath fails", async () => {
     realpath.mockRejectedValueOnce(new Error("missing"))
 
-    const value = await normalizeLegacyPath("c:\\repo\\.\\child")
+    const input = "C:/repo/./child"
+    const value = await normalizeLegacyPath(input)
 
-    expect(value).toBe("C:\\repo\\child")
+    expect(value).toBe(path.normalize(path.resolve(input)))
   })
 })

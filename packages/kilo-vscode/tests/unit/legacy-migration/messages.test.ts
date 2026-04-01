@@ -43,7 +43,7 @@ function sample(): LegacyApiMessage[] {
 
 describe("legacy migration messages", () => {
   it("parses a basic legacy conversation into ordered user and assistant messages with stable ids", () => {
-    const list = parseMessagesFromConversation(sample(), id, item)
+    const list = parseMessagesFromConversation(sample(), id, item.workspace, item)
 
     expect(list).toHaveLength(2)
     expect(list[0]?.data.role).toBe("user")
@@ -53,7 +53,7 @@ describe("legacy migration messages", () => {
   })
 
   it("creates valid assistant message metadata for the SDK/backend shape", () => {
-    const list = parseMessagesFromConversation(sample(), id, item)
+    const list = parseMessagesFromConversation(sample(), id, item.workspace, item)
     const msg = list.find((x) => x.data.role === "assistant")
 
     expect(msg?.data.role).toBe("assistant")
@@ -66,7 +66,7 @@ describe("legacy migration messages", () => {
   })
 
   it("ignores unsupported legacy entries instead of producing broken messages", () => {
-    const list = parseMessagesFromConversation(sample(), id, item)
+    const list = parseMessagesFromConversation(sample(), id, item.workspace, item)
 
     expect(list).toHaveLength(2)
     expect(list.some((x) => x.data.role !== "user" && x.data.role !== "assistant")).toBe(false)
@@ -92,6 +92,7 @@ describe("legacy migration messages", () => {
         },
       ],
       id,
+      item.workspace,
       item,
     )
 
