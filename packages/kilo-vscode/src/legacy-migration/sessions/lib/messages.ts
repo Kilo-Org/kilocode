@@ -13,7 +13,7 @@ export function parseMessagesFromConversation(
   dirOrItem?: string | LegacyHistoryItem,
   item?: LegacyHistoryItem,
 ): Array<NonNullable<Message["body"]>> {
-  const dir = typeof dirOrItem === "string" ? dirOrItem : dirOrItem?.workspace ?? ""
+  const dir = typeof dirOrItem === "string" ? dirOrItem : (dirOrItem?.workspace ?? "")
   const next = typeof dirOrItem === "string" ? item : dirOrItem
 
   return conversation
