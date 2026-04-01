@@ -27,13 +27,14 @@ describe("legacy migration path", () => {
   })
 
   it("uppercases the Windows drive letter before resolving the final path", async () => {
-    realpath.mockImplementation(async (input: string) => input.replaceAll("/", "\\"))
+    realpath.mockImplementation(async (input: string) => input)
 
-    const value = await normalizeLegacyPath("C:/repo/../repo/file.txt")
+    const value = await normalizeLegacyPath("c:/repo/../repo/file.txt")
+    const expected = path.normalize(path.resolve("c:/repo/../repo/file.txt"))
 
     expect(realpath).toHaveBeenCalledTimes(1)
-    expect(realpath.mock.calls[0]?.[0]).toBe(path.normalize(path.resolve("C:/repo/../repo/file.txt")))
-    expect(value).toBe("C:\\repo\\file.txt")
+    expect(realpath.mock.calls[0]?.[0]).toBe(expected.replace(/^c:/, "C:"))
+    expect(value).toBe(expected.replace(/^c:/, "C:"))
   })
 
   it("falls back to the normalized path when realpath fails", async () => {
