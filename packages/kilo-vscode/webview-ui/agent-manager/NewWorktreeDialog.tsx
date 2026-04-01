@@ -1,6 +1,6 @@
 // New Worktree dialog — prompt, versions, model, mode, import tab
 
-import { Component, For, Show, createSignal, createMemo, onMount, onCleanup } from "solid-js"
+import { Component, For, Show, createSignal, createEffect, createMemo, onMount, onCleanup } from "solid-js"
 import type { AgentManagerBranchesMessage, AgentManagerImportResultMessage, BranchInfo } from "../src/types/messages"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { showToast } from "@kilocode/kilo-ui/toast"
@@ -22,7 +22,7 @@ import {
   allocationsToArray,
 } from "./MultiModelSelector"
 import { useLanguage } from "../src/context/language"
-import { useImageAttachments } from "../src/hooks/useImageAttachments"
+import { useImageAttachments, type ImageAttachment } from "../src/hooks/useImageAttachments"
 import { convertToMentionPath } from "../src/utils/path-mentions"
 import { BranchSelect } from "./BranchSelect"
 
@@ -107,10 +107,22 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
     adjustHeight()
   })
 
+  // Restore cached images from webview state
+  const cachedImages = cached?.advancedDialogImages as ImageAttachment[] | undefined
+  if (cachedImages?.length) imageAttach.replace(cachedImages)
+
   const persistPrompt = (value: string) => {
     const state = vscode.getState<Record<string, unknown>>() ?? {}
     vscode.setState({ ...state, advancedDialogPrompt: value || undefined })
   }
+
+  const persistImages = (imgs: ImageAttachment[]) => {
+    const state = vscode.getState<Record<string, unknown>>() ?? {}
+    vscode.setState({ ...state, advancedDialogImages: imgs.length > 0 ? imgs : undefined })
+  }
+
+  // Auto-persist images to webview state on any change
+  createEffect(() => persistImages(imageAttach.images()))
 
   let textareaRef: HTMLTextAreaElement | undefined
 
@@ -167,6 +179,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
     })
 
     persistPrompt("")
+    persistImages([])
     props.onClose()
   }
 
