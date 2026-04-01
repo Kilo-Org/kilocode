@@ -32,6 +32,7 @@ export class SdkSSEAdapter {
   private readonly stateHandlers = new Set<SSEStateHandler>()
 
   private abortController: AbortController | null = null
+  private attemptController: AbortController | null = null
   private heartbeatTimer: ReturnType<typeof setTimeout> | null = null
 
   // 15s matches packages/app/src/context/global-sdk.tsx — server sends heartbeats
@@ -71,7 +72,22 @@ export class SdkSSEAdapter {
     console.log("[Kilo New] SSE: 🔌 disconnect() called")
     this.abortController?.abort()
     this.abortController = null
+    this.attemptController = null
     this.clearHeartbeat()
+  }
+
+  /**
+   * Force the current SSE attempt to reconnect without killing the outer loop.
+   * Aborts only the per-attempt controller so `consumeLoop` re-enters its
+   * reconnection path instead of terminating permanently.
+   */
+  reconnect(): void {
+    if (!this.attemptController) {
+      console.log("[Kilo New] SSE: ⚠️ reconnect() called but no active attempt")
+      return
+    }
+    console.log("[Kilo New] SSE: 🔄 reconnect() — aborting current attempt")
+    this.attemptController.abort()
   }
 
   /**
@@ -121,12 +137,24 @@ export class SdkSSEAdapter {
       const onAbort = () => attempt.abort()
       signal.addEventListener("abort", onAbort)
 
+      this.attemptController = attempt
+
       try {
         console.log("[Kilo New] SSE: 🎬 Calling SDK global.event()...")
         const events = await this.client.global.event({
           signal: attempt.signal,
+          // Disable SDK-internal retries — consumeLoop handles reconnection
+          // with its own outer while-loop. Without this the SDK's infinite
+          // retry loop with exponential backoff runs in parallel, causing
+          // duplicate connections and "error" state flicker.
+          sseMaxRetryAttempts: 1,
           onSseError: (error) => {
             if (signal.aborted) {
+              return
+            }
+            // Filter AbortErrors — they are expected during heartbeat timeout
+            // or manual reconnect() calls, not real connection failures.
+            if (error instanceof DOMException && error.name === "AbortError") {
               return
             }
             console.error("[Kilo New] SSE: ❌ SDK SSE error callback:", error)
@@ -153,12 +181,16 @@ export class SdkSSEAdapter {
 
         console.log("[Kilo New] SSE: 📭 Stream ended normally")
       } catch (error) {
-        if (!signal.aborted) {
+        // Suppress AbortErrors — they are expected when the heartbeat timer
+        // or reconnect() aborts the per-attempt controller.
+        const aborted = signal.aborted || (error instanceof DOMException && error.name === "AbortError")
+        if (!aborted) {
           console.error("[Kilo New] SSE: ❌ Stream error:", error)
           this.notifyError(error instanceof Error ? error : new Error(String(error)))
         }
       } finally {
         signal.removeEventListener("abort", onAbort)
+        this.attemptController = null
         this.clearHeartbeat()
       }
 

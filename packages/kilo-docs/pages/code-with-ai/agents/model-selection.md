@@ -19,6 +19,33 @@ This isn't benchmarks from some lab. It's real usage data from developers like y
 
 While the specifics change constantly, some principles stay consistent:
 
+### How to Select and Switch Models
+
+{% tabs %}
+{% tab label="VSCode" %}
+
+- Use the **model selector** in the chat prompt area to pick a model for the current session. You can also type `/models` to open the model picker.
+- Set per-agent defaults and a global default in the **Settings** panel (Models tab), or directly in the `kilo.jsonc` config file.
+- **Model precedence:** Session override → Per-agent config → Global config → Recent models → Kilo Auto (free).
+
+{% /tab %}
+{% tab label="CLI" %}
+
+- In the TUI, use the **model picker** (`Ctrl+X m` or `/models`) to switch models.
+- For non-interactive use, pass `--model` flag to `kilo run` (e.g., `kilo run --model claude-sonnet-4-20250514`).
+- Set the global default with the `model` key in `kilo.jsonc`, or configure per-agent models in the `agent` section.
+- **Model precedence:** `--model` flag → Per-agent config → Last used in session → Global config → Recent models → First available.
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
+
+- Use the **model dropdown** in the chat panel to select a model for each conversation.
+- Configure **API profiles** in Settings to group provider + model combinations and switch between them quickly.
+- Models are **sticky per mode** — each mode (Code, Architect, Debug, etc.) remembers the last model you selected.
+
+{% /tab %}
+{% /tabs %}
+
 **For complex coding tasks**: Premium models (Claude Sonnet/Opus, GPT-5 class, Gemini Pro) typically handle nuanced requirements, large refactors, and architectural decisions better.
 
 **For everyday coding**: Mid-tier models often provide the best balance of speed, cost, and quality. They're fast enough to keep your flow state intact and capable enough for most tasks.

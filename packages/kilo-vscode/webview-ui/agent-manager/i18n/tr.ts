@@ -17,6 +17,9 @@ export const dict = {
   "agentManager.worktree.advancedOptions": "Gelişmiş worktree seçenekleri",
   "agentManager.worktree.defaultBaseBranch": "Varsayılan Temel Dal",
   "agentManager.worktree.defaultBaseBranchAuto": "Otomatik algıla",
+  "agentManager.worktree.copyPath": "Yolu Kopyala",
+  "agentManager.worktree.openInVscode": "VS Code'da Aç",
+  "agentManager.worktree.rename": "Yeniden Adlandır",
 
   "agentManager.hoverCard.branch": "DAL",
   "agentManager.hoverCard.base": "Temel",
@@ -29,6 +32,7 @@ export const dict = {
   "agentManager.session.untitled": "Adsız",
   "agentManager.session.newSession": "Yeni Oturum",
   "agentManager.session.openInWorktree": "Worktree içinde aç",
+  "agentManager.session.openLocally": "Yerel olarak aç",
   "agentManager.session.readonly": "Salt okunur oturum",
   "agentManager.session.noSessions": "Açık oturum yok",
 

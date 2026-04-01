@@ -81,6 +81,9 @@ const SKIP_DIRS = ["node_modules", ".storybook", "stories", "test", "tests", "__
 // Subdirectories containing vendored/third-party code
 const SKIP_PATH_SEGMENTS = ["continuedev"]
 
+// Individual files to skip (data files full of non-user-facing URLs)
+const SKIP_FILES = ["models-snapshot.ts"]
+
 function shouldExclude(url: string): boolean {
   return EXCLUDE_PATTERNS.some((re) => re.test(url))
 }
@@ -94,6 +97,8 @@ function shouldSkipFile(filepath: string): boolean {
   if (/\.spec\.[jt]sx?$/.test(filepath)) return true
   if (/\.stories\.[jt]sx?$/.test(filepath)) return true
   if (/\/i18n\//.test(filepath) && !filepath.endsWith("en.ts")) return true
+  const basename = path.basename(filepath)
+  if (SKIP_FILES.includes(basename)) return true
   return false
 }
 

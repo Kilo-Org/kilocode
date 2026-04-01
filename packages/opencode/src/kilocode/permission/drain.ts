@@ -1,6 +1,7 @@
 import { Bus } from "@/bus"
 import { Wildcard } from "@/util/wildcard"
 import type { PermissionNext } from "@/permission/next"
+import { ConfigProtection } from "@/kilocode/permission/config-paths"
 
 /**
  * Auto-resolve pending permissions now fully covered by approved or denied rules.
@@ -25,6 +26,8 @@ export async function drainCovered(
 ) {
   for (const [id, entry] of Object.entries(pending)) {
     if (id === exclude) continue
+    // Never auto-resolve config file edit permissions
+    if (ConfigProtection.isRequest(entry.info)) continue
     const actions = entry.info.patterns.map((pattern) =>
       evaluate(entry.info.permission, pattern, entry.ruleset, approved),
     )

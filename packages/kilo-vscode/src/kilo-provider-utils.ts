@@ -61,6 +61,7 @@ export function getErrorMessage(error: unknown): string {
 export function sessionToWebview(session: Session) {
   return {
     id: session.id,
+    parentID: session.parentID ?? null,
     title: session.title,
     createdAt: new Date(session.time.created).toISOString(),
     updatedAt: new Date(session.time.updated).toISOString(),
@@ -165,6 +166,32 @@ export function buildSettingPath(key: string): { section: string; leaf: string }
   const section = parts.slice(0, -1).join(".")
   const leaf = parts[parts.length - 1]!
   return { section, leaf }
+}
+
+export function resolveWorkspaceDirectory(input: {
+  sessionID?: string
+  sessionDirectories: Map<string, string>
+  workspaceDirectory: string
+}) {
+  if (!input.sessionID) return input.workspaceDirectory
+
+  const dir = input.sessionDirectories.get(input.sessionID)
+  if (dir) return dir
+
+  return input.workspaceDirectory
+}
+
+export function resolveContextDirectory(input: {
+  currentSessionID?: string
+  contextSessionID?: string
+  sessionDirectories: Map<string, string>
+  workspaceDirectory: string
+}) {
+  return resolveWorkspaceDirectory({
+    sessionID: input.currentSessionID ?? input.contextSessionID,
+    sessionDirectories: input.sessionDirectories,
+    workspaceDirectory: input.workspaceDirectory,
+  })
 }
 
 export type WebviewMessage =

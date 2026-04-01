@@ -110,6 +110,11 @@ function clean(text: string): string {
   return result.trim()
 }
 
+// Maximum time (ms) to wait for the LLM to produce a commit message before
+// aborting. Prevents the HTTP request from hanging indefinitely when the
+// provider is slow or the stream stalls (e.g. due to config state races).
+const TIMEOUT_MS = 30_000
+
 export async function generateCommitMessage(request: CommitMessageRequest): Promise<CommitMessageResponse> {
   const ctx = await getGitContext(request.path, request.selectedFiles)
   if (ctx.files.length === 0) {
@@ -141,38 +146,59 @@ export async function generateCommitMessage(request: CommitMessageRequest): Prom
     userMessage = `IMPORTANT: Generate a COMPLETELY DIFFERENT commit message from the previous one. The previous message was: "${request.previousMessage}". Use a different type, scope, or description approach.\n\n${userMessage}`
   }
 
-  const stream = await LLM.stream({
-    agent,
-    user: {
-      id: "commit-message",
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
+
+  try {
+    const stream = await LLM.stream({
+      agent,
+      user: {
+        id: "commit-message",
+        sessionID: "commit-message",
+        role: "user",
+        model: {
+          providerID: model.providerID,
+          modelID: model.id,
+        },
+        time: {
+          created: Date.now(),
+          completed: Date.now(),
+        },
+      } as any,
+      tools: {},
+      model,
+      small: true,
+      messages: [
+        {
+          role: "user" as const,
+          content: userMessage,
+        },
+      ],
+      abort: controller.signal,
       sessionID: "commit-message",
-      role: "user",
-      model: {
-        providerID: model.providerID,
-        modelID: model.id,
-      },
-      time: {
-        created: Date.now(),
-        completed: Date.now(),
-      },
-    } as any,
-    tools: {},
-    model,
-    small: true,
-    messages: [
-      {
-        role: "user" as const,
-        content: userMessage,
-      },
-    ],
-    abort: new AbortController().signal,
-    sessionID: "commit-message",
-    system: [],
-    retries: 3,
-  })
+      system: [],
+      retries: 3,
+    })
 
-  const result = await stream.text
-  log.info("generated", { message: result })
+    // Consume the stream explicitly so that stream-level errors surface
+    // immediately instead of leaving the .text promise hanging (issue #7345).
+    // With some providers/versions of the Vercel AI SDK, `await stream.text`
+    // never resolves when the underlying stream errors out early.
+    let result = ""
+    for await (const chunk of stream.textStream) {
+      result += chunk
+    }
 
-  return { message: clean(result) }
+    log.info("generated", { message: result })
+    return { message: clean(result) }
+  } catch (err) {
+    if (controller.signal.aborted) {
+      throw new Error("Commit message generation timed out after 30 seconds")
+    }
+    const msg = err instanceof Error ? err.message : String(err)
+    log.error("generation failed", { error: msg })
+    throw new Error(`Failed to generate commit message: ${msg}`)
+  } finally {
+    clearTimeout(timer)
+  }
 }

@@ -150,15 +150,15 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   margin-bottom: 0px;
 }
 
-/* User message copy button: tiny reserved space, button overflows on hover.
- * height:2px keeps layout stable; overflow:hidden clips the invisible button;
- * on hover overflow:visible lets the button appear without shifting content. */
+/* User message copy button: collapse wrapper when idle, show on hover.
+ * The wrapper must be tall enough to fully contain the button (20px)
+ * so that hovering the button keeps [data-component="user-message"]
+ * hovered — otherwise :hover is lost and pointer-events/opacity revert. */
 [data-component="user-message"] {
   [data-slot="user-message-copy-wrapper"] {
     min-height: 0;
-    height: 10px;
+    height: 20px;
     margin-top: 0;
-    overflow: hidden;
 
     [data-slot="user-message-meta-wrap"] {
       display: none;
@@ -168,11 +168,6 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
       width: 20px;
       height: 20px;
     }
-  }
-
-  &:hover [data-slot="user-message-copy-wrapper"],
-  &:focus-within [data-slot="user-message-copy-wrapper"] {
-    overflow: visible;
   }
 }
 
@@ -289,5 +284,28 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   }
   50% {
     opacity: 1;
+  }
+}
+
+[data-component="tool-hint"] {
+  display: flex;
+  align-items: start;
+  gap: 6px;
+  padding: 4px 8px;
+  border-left: 2px solid var(--border-weak-base);
+
+  [data-component="icon"] {
+    flex-shrink: 0;
+    color: var(--icon-weak-base);
+    margin-top: 1px;
+  }
+
+  [data-slot="tool-hint-message"] {
+    font-family: var(--font-family-sans);
+    font-size: var(--font-size-small);
+    font-style: italic;
+    color: var(--text-weak);
+    opacity: 0.9;
+    line-height: var(--line-height-large);
   }
 }

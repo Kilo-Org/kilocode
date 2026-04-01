@@ -13,10 +13,6 @@ export const ContributingNav: NavSection[] = [
         href: "/contributing/ecosystem",
         children: "Ecosystem",
       },
-      {
-        href: "/contributing/cline-to-kilo-migration",
-        children: "Cline to Kilo Migration",
-      },
     ],
   },
   {

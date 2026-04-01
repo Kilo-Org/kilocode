@@ -4,12 +4,52 @@ sidebar_label: ChatGPT Plus/Pro
 
 # Using ChatGPT Subscriptions With Kilo Code
 
+{% tabs %}
+{% tab label="VSCode (Legacy)" %}
+
 1. Open Kilo Code settings (click the gear icon {% codicon name="gear" /%} in the Kilo Code panel).
 2. In **API Provider**, select **OpenAI – ChatGPT Plus/Pro**.
 3. Click **Sign in to OpenAI Codex**.
 4. Finish the sign-in flow in your browser.
 5. Back in Kilo Code settings, pick a model from the dropdown.
 6. Save.
+
+{% /tab %}
+{% tab label="VSCode" %}
+
+Open **Settings** (gear icon) and go to the **Providers** tab. ChatGPT Plus/Pro uses OAuth authentication — follow the sign-in flow to connect your ChatGPT subscription.
+
+{% /tab %}
+{% tab label="CLI" %}
+
+ChatGPT Plus/Pro uses OAuth authentication, which is only available in the VS Code extension. For the CLI, use the [OpenAI API provider](/docs/ai-providers/openai) with an API key instead:
+
+```bash
+export OPENAI_API_KEY="your-api-key"
+```
+
+**Config file** (`~/.config/kilo/kilo.json` or `./kilo.json`):
+
+```jsonc
+{
+  "provider": {
+    "openai": {
+      "env": ["OPENAI_API_KEY"],
+    },
+  },
+}
+```
+
+Then set your default model:
+
+```jsonc
+{
+  "model": "openai/gpt-4.1",
+}
+```
+
+{% /tab %}
+{% /tabs %}
 
 ## Tips and Notes
 

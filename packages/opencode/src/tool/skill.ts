@@ -7,6 +7,8 @@ import { PermissionNext } from "../permission/next"
 import { Ripgrep } from "../file/ripgrep"
 import { iife } from "@/util/iife"
 
+const BUILTIN = Skill.BUILTIN_LOCATION // kilocode_change
+
 export const SkillTool = Tool.define("skill", async (ctx) => {
   const skills = await Skill.all()
 
@@ -35,13 +37,18 @@ export const SkillTool = Tool.define("skill", async (ctx) => {
           "Invoke this tool to load a skill when a task matches one of the available skills listed below:",
           "",
           "<available_skills>",
-          ...accessibleSkills.flatMap((skill) => [
-            `  <skill>`,
-            `    <name>${skill.name}</name>`,
-            `    <description>${skill.description}</description>`,
-            `    <location>${pathToFileURL(skill.location).href}</location>`,
-            `  </skill>`,
-          ]),
+          // kilocode_change start - guard pathToFileURL for builtin skills
+          ...accessibleSkills.flatMap((skill) => {
+            const loc = skill.location === BUILTIN ? BUILTIN : pathToFileURL(skill.location).href
+            return [
+              `  <skill>`,
+              `    <name>${skill.name}</name>`,
+              `    <description>${skill.description}</description>`,
+              `    <location>${loc}</location>`,
+              `  </skill>`,
+            ]
+          }),
+          // kilocode_change end
           "</available_skills>",
         ].join("\n")
 
@@ -72,6 +79,25 @@ export const SkillTool = Tool.define("skill", async (ctx) => {
         always: [params.name],
         metadata: {},
       })
+
+      // kilocode_change start - built-in skills have no filesystem directory
+      if (skill.location === BUILTIN) {
+        return {
+          title: `Loaded skill: ${skill.name}`,
+          output: [
+            `<skill_content name="${skill.name}">`,
+            `# Skill: ${skill.name}`,
+            "",
+            skill.content.trim(),
+            "</skill_content>",
+          ].join("\n"),
+          metadata: {
+            name: skill.name,
+            dir: BUILTIN,
+          },
+        }
+      }
+      // kilocode_change end
 
       const dir = path.dirname(skill.location)
       const base = pathToFileURL(dir).href

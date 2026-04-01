@@ -16,6 +16,8 @@ import type {
 } from "@kilocode/sdk/v2/client"
 import { PROVIDER_MAP, UNSUPPORTED_PROVIDERS, DEFAULT_MODE_SLUGS } from "./provider-mapping"
 import type { ProviderMapping } from "./provider-mapping"
+import { NATIVE_MODE_DEFAULTS } from "./native-mode-defaults"
+import { getMigrationErrorMessage } from "./errors/migration-error"
 import type {
   LegacyProviderProfiles,
   LegacyProviderSettings,
@@ -24,14 +26,17 @@ import type {
   LegacyMcpServer,
   LegacySettings,
   LegacyAutocompleteSettings,
+  LegacyPromptComponent,
   LegacyMigrationData,
   MigrationSelections,
   MigrationAutoApprovalSelections,
   MigrationProviderInfo,
   MigrationMcpServerInfo,
   MigrationCustomModeInfo,
-  MigrationResultItem,
 } from "./legacy-types"
+import type { MigrationResultItem } from "./migration-types"
+import { createSessionID } from "./sessions/lib/ids"
+import { migrate as migrateSession } from "./sessions/migrate"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -67,7 +72,9 @@ export async function detectLegacyData(context: vscode.ExtensionContext): Promis
   const profiles = await readLegacyProviderProfiles(context)
   const mcpSettings = await readLegacyMcpSettings(context)
   const customModes = await readLegacyCustomModes(context)
+  const prompts = readLegacyCustomModePrompts(context)
   const settings = readLegacySettings(context)
+  const sessions = await readSessionsInGlobalStorage(context)
 
   const oauthProviders = new Set<string>()
   const codexRaw = await context.secrets.get(CODEX_OAUTH_SECRET_KEY)
@@ -75,7 +82,7 @@ export async function detectLegacyData(context: vscode.ExtensionContext): Promis
 
   const providers = buildProviderList(profiles, oauthProviders)
   const mcpServers = buildMcpServerList(mcpSettings)
-  const modes = buildCustomModeList(customModes)
+  const modes = buildCustomModeList(customModes, prompts)
   const defaultModel = resolveDefaultModel(profiles, oauthProviders)
 
   const hasSettings =
@@ -92,16 +99,33 @@ export async function detectLegacyData(context: vscode.ExtensionContext): Promis
     Boolean(settings.language) ||
     Boolean(settings.autocomplete)
 
-  const hasData = providers.length > 0 || mcpServers.length > 0 || modes.length > 0 || hasSettings
+  const hasData =
+    providers.length > 0 || mcpServers.length > 0 || modes.length > 0 || hasSettings || sessions.length > 0
 
   return {
     providers,
     mcpServers,
     customModes: modes,
+    sessions: sessions.length > 0 ? sessions : undefined,
     defaultModel,
     settings: hasSettings ? settings : undefined,
     hasData,
   }
+}
+
+async function readSessionsInGlobalStorage(context: vscode.ExtensionContext) {
+  const items = context.globalState.get<{ id: string }[]>("taskHistory", [])
+  const base = vscode.Uri.joinPath(context.globalStorageUri, "tasks")
+  const ids: string[] = []
+  for (const item of items) {
+    const file = vscode.Uri.joinPath(base, item.id, "api_conversation_history.json")
+    const exists = await vscode.workspace.fs.stat(file).then(
+      () => true,
+      () => false,
+    )
+    if (exists) ids.push(item.id)
+  }
+  return ids
 }
 
 // ---------------------------------------------------------------------------
@@ -131,6 +155,7 @@ export async function migrate(
   const profiles = await readLegacyProviderProfiles(context)
   const mcpSettings = await readLegacyMcpSettings(context)
   const customModes = await readLegacyCustomModes(context)
+  const prompts = readLegacyCustomModePrompts(context)
   const legacySettings = cachedSettings ?? readLegacySettings(context)
 
   const results: MigrationResultItem[] = []
@@ -179,21 +204,70 @@ export async function migrate(
   }
 
   // Migrate custom modes as agents
-  if (selections.customModes.length > 0 && customModes) {
+  if (selections.customModes.length > 0) {
     const agentConfig: Record<string, AgentConfig> = {}
+    // Build a lookup of detected modes by slug so we can resolve nativeSlug
+    const detected = buildCustomModeList(customModes, prompts)
     for (const slug of selections.customModes) {
-      const mode = customModes.find((m) => m.slug === slug)
-      if (!mode) {
+      const info = detected.find((m) => m.slug === slug)
+      if (!info) {
         results.push({ item: slug, category: "customMode", status: "error", message: "Mode not found" })
         continue
       }
-      onProgress(mode.name, "migrating")
-      agentConfig[slug] = convertCustomMode(mode)
-      results.push({ item: mode.name, category: "customMode", status: "success" })
-      onProgress(mode.name, "success")
+
+      if (info.nativeSlug) {
+        // Modified native mode — merge YAML custom mode + customModePrompts
+        const merged = buildMergedNativeMode(
+          customModes?.find((m) => m.slug === info.nativeSlug),
+          prompts?.[info.nativeSlug],
+          info.nativeSlug,
+        )
+        if (merged) {
+          onProgress(info.name, "migrating")
+          const agent = convertCustomMode(merged)
+          // Set explicit name so the UI shows "(Custom)" instead of title-casing the slug
+          agent.name = info.name
+          agentConfig[slug] = agent
+          results.push({ item: info.name, category: "customMode", status: "success" })
+          onProgress(info.name, "success")
+        } else {
+          results.push({
+            item: info.name,
+            category: "customMode",
+            status: "error",
+            message: "Failed to build merged mode",
+          })
+        }
+      } else {
+        // Regular custom mode (existing behavior)
+        const mode = customModes?.find((m) => m.slug === slug)
+        if (!mode) {
+          results.push({ item: slug, category: "customMode", status: "error", message: "Mode not found" })
+          continue
+        }
+        onProgress(mode.name, "migrating")
+        agentConfig[slug] = convertCustomMode(mode)
+        results.push({ item: mode.name, category: "customMode", status: "success" })
+        onProgress(mode.name, "success")
+      }
     }
     if (Object.keys(agentConfig).length > 0) {
       await client.global.config.update({ config: { agent: agentConfig } })
+    }
+  }
+
+  if (selections.sessions?.length) {
+    for (const id of selections.sessions) {
+      onProgress(id, "migrating")
+      const result = await migrateSession(id, context, client)
+      const reason = result.ok ? "Session migrated" : result.message
+      results.push({
+        item: id,
+        category: "session",
+        status: result.ok ? "success" : "error",
+        message: reason,
+      })
+      onProgress(id, result.ok ? "success" : "error", reason)
     }
   }
 
@@ -372,6 +446,24 @@ async function migrateProvider(
   const apiKey = settings[mapping.key] as string | undefined
   if (!apiKey) {
     return { item: profileName, category: "provider", status: "warning", message: "No API key found in profile" }
+  }
+
+  // The profile endpoint requires type:"oauth". The legacy extension stored the same Kilo
+  // API token — write it in the OAuth format the new extension expects (matching device-auth:
+  // access + refresh + 1-year expiry).
+  if (mapping.id === "kilo") {
+    const org = mapping.organizationIdField ? (settings[mapping.organizationIdField] as string | undefined) : undefined
+    await client.auth.set({
+      providerID: "kilo",
+      auth: {
+        type: "oauth" as const,
+        access: apiKey,
+        refresh: apiKey,
+        expires: Date.now() + 365 * 24 * 60 * 60 * 1000,
+        accountId: org,
+      },
+    })
+    return { item: profileName, category: "provider", status: "success" }
   }
 
   // For providers that support an organization ID (e.g. Kilo Gateway), migrate using OAuth
@@ -617,7 +709,7 @@ async function migrateAutocomplete(settings: LegacyAutocompleteSettings): Promis
       item: "Autocomplete settings",
       category: "settings",
       status: "error",
-      message: err instanceof Error ? err.message : String(err),
+      message: getMigrationErrorMessage(err),
     }
   }
 }
@@ -665,7 +757,7 @@ async function migrateLanguage(language: string): Promise<MigrationResultItem> {
       item: "Language preference",
       category: "settings",
       status: "error",
-      message: err instanceof Error ? err.message : String(err),
+      message: getMigrationErrorMessage(err),
     }
   }
 }
@@ -743,11 +835,22 @@ function convertCustomModePermissions(groups: LegacyCustomMode["groups"]): Permi
 }
 
 function convertCustomMode(mode: LegacyCustomMode): AgentConfig {
-  const prompt = [mode.roleDefinition, mode.customInstructions].filter(Boolean).join("\n\n")
+  const parts = [mode.roleDefinition]
+  if (mode.customInstructions?.trim()) {
+    parts.push(
+      [
+        "USER'S CUSTOM INSTRUCTIONS",
+        "",
+        "The following additional instructions are provided by the user, and should be followed to the best of your ability.",
+        "",
+        `Mode-specific Instructions:\n${mode.customInstructions.trim()}`,
+      ].join("\n"),
+    )
+  }
   return {
     mode: "primary",
-    description: mode.customInstructions ?? mode.roleDefinition?.slice(0, 120),
-    prompt,
+    description: mode.description ?? mode.whenToUse ?? mode.roleDefinition?.slice(0, 120),
+    prompt: parts.filter(Boolean).join("\n\n"),
     permission: convertCustomModePermissions(mode.groups),
   }
 }
@@ -822,6 +925,10 @@ async function readLegacyCustomModes(context: vscode.ExtensionContext): Promise<
   if (!bytes) return null
   const text = Buffer.from(bytes).toString("utf8")
   return parseCustomModesYaml(text)
+}
+
+function readLegacyCustomModePrompts(context: vscode.ExtensionContext): Record<string, LegacyPromptComponent> | null {
+  return context.globalState.get<Record<string, LegacyPromptComponent>>("customModePrompts") ?? null
 }
 
 function readLegacySettings(context: vscode.ExtensionContext): LegacySettings {
@@ -1043,9 +1150,96 @@ function buildMcpServerList(settings: LegacyMcpSettings | null): MigrationMcpSer
     .map(([name, server]) => ({ name, type: server.type ?? "stdio" }))
 }
 
-function buildCustomModeList(modes: LegacyCustomMode[] | null): MigrationCustomModeInfo[] {
-  if (!modes) return []
-  return modes.filter((m) => !DEFAULT_MODE_SLUGS.has(m.slug)).map((m) => ({ name: m.name, slug: m.slug }))
+/** @internal — exported for testing only */
+export function buildCustomModeList(
+  modes: LegacyCustomMode[] | null,
+  prompts: Record<string, LegacyPromptComponent> | null,
+): MigrationCustomModeInfo[] {
+  const result: MigrationCustomModeInfo[] = []
+
+  // Non-native custom modes (existing behavior)
+  if (modes) {
+    for (const m of modes) {
+      if (!DEFAULT_MODE_SLUGS.has(m.slug)) {
+        result.push({ name: m.name, slug: m.slug })
+      }
+    }
+  }
+
+  // Modified native modes — detect user modifications and offer migration under a new slug
+  for (const slug of DEFAULT_MODE_SLUGS) {
+    const defaults = NATIVE_MODE_DEFAULTS[slug]
+    if (!defaults) continue // "build" has no legacy defaults
+
+    const yaml = modes?.find((m) => m.slug === slug)
+    const prompt = prompts?.[slug]
+
+    if (!isNativeModeModified(yaml, prompt, defaults)) continue
+
+    const name = yaml?.name ?? defaults.name
+    result.push({ name: `${name} (Custom)`, slug: `${slug}-custom`, nativeSlug: slug })
+  }
+
+  return result
+}
+
+/**
+ * Checks whether a native mode has been meaningfully modified from its defaults.
+ * A full YAML override always counts as modified. For customModePrompts, we compare
+ * each field against the known default and only count it if it actually differs.
+ * @internal — exported for testing only
+ */
+export function isNativeModeModified(
+  yaml: LegacyCustomMode | undefined,
+  prompt: LegacyPromptComponent | undefined,
+  defaults: { roleDefinition: string; customInstructions?: string; whenToUse?: string; description?: string },
+): boolean {
+  if (yaml) return true
+  if (!prompt) return false
+
+  if (prompt.roleDefinition && prompt.roleDefinition !== defaults.roleDefinition) return true
+  if (prompt.customInstructions && prompt.customInstructions !== (defaults.customInstructions ?? "")) return true
+  if (prompt.whenToUse && prompt.whenToUse !== (defaults.whenToUse ?? "")) return true
+  if (prompt.description && prompt.description !== (defaults.description ?? "")) return true
+
+  return false
+}
+
+/**
+ * Builds a merged LegacyCustomMode for a modified native mode by combining the YAML
+ * custom mode (if any) with customModePrompts overrides. When only prompts exist, the
+ * native defaults provide the base structure (name, groups).
+ * @internal — exported for testing only
+ */
+export function buildMergedNativeMode(
+  yaml: LegacyCustomMode | undefined,
+  prompt: LegacyPromptComponent | undefined,
+  slug: string,
+): LegacyCustomMode | null {
+  const defaults = NATIVE_MODE_DEFAULTS[slug]
+  if (!defaults) return null
+
+  const base: LegacyCustomMode = yaml
+    ? { ...yaml }
+    : {
+        slug,
+        name: defaults.name,
+        roleDefinition: defaults.roleDefinition,
+        customInstructions: defaults.customInstructions,
+        whenToUse: defaults.whenToUse,
+        description: defaults.description,
+        groups: [...defaults.groups],
+      }
+
+  // Overlay customModePrompts on top (matching legacy runtime behavior)
+  if (prompt) {
+    if (prompt.roleDefinition) base.roleDefinition = prompt.roleDefinition
+    if (prompt.customInstructions) base.customInstructions = prompt.customInstructions
+    if (prompt.whenToUse) base.whenToUse = prompt.whenToUse
+    if (prompt.description) base.description = prompt.description
+  }
+
+  return base
 }
 
 function resolveDefaultModel(

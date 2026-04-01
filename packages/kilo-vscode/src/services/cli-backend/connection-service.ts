@@ -12,6 +12,9 @@ type SSEEventFilter = (event: Event) => boolean
 type NotificationDismissListener = (notificationId: string) => void
 type LanguageChangeListener = (locale: string) => void
 type ProfileChangeListener = (data: unknown) => void
+type MigrationCompleteListener = () => void
+type ClearPendingPromptsListener = () => void
+type DirectoryProvider = () => string[]
 
 // Poll /global/health at the same interval as packages/app/src/context/server.tsx.
 // This provides a second detection channel for server death independent of the SSE heartbeat.
@@ -36,6 +39,9 @@ export class KiloConnectionService {
   private readonly notificationDismissListeners: Set<NotificationDismissListener> = new Set()
   private readonly languageChangeListeners: Set<LanguageChangeListener> = new Set()
   private readonly profileChangeListeners: Set<ProfileChangeListener> = new Set()
+  private readonly migrationCompleteListeners: Set<MigrationCompleteListener> = new Set()
+  private readonly clearPendingPromptsListeners: Set<ClearPendingPromptsListener> = new Set()
+  private readonly directoryProviders: Set<DirectoryProvider> = new Set()
 
   /**
    * Shared mapping used to resolve session scope for events that don't reliably include a sessionID.
@@ -208,6 +214,107 @@ export class KiloConnectionService {
   }
 
   /**
+   * Subscribe to migration-complete events broadcast from any KiloProvider. Returns unsubscribe function.
+   */
+  onMigrationComplete(listener: MigrationCompleteListener): () => void {
+    this.migrationCompleteListeners.add(listener)
+    return () => {
+      this.migrationCompleteListeners.delete(listener)
+    }
+  }
+
+  /**
+   * Broadcast a migration-complete event to all subscribed KiloProvider instances.
+   */
+  notifyMigrationComplete(): void {
+    for (const listener of this.migrationCompleteListeners) {
+      listener()
+    }
+  }
+
+  /**
+   * Subscribe to clear-pending-prompts broadcast. Returns unsubscribe function.
+   * Fired after a config save drains all pending permissions/questions so each
+   * webview can clear stale prompt UI.
+   */
+  onClearPendingPrompts(listener: ClearPendingPromptsListener): () => void {
+    this.clearPendingPromptsListeners.add(listener)
+    return () => {
+      this.clearPendingPromptsListeners.delete(listener)
+    }
+  }
+
+  /**
+   * Register a callback that returns workspace directories tracked by a
+   * KiloProvider (root + worktree dirs). Used by drainPendingPrompts() to
+   * cover all active Instance directories across every provider.
+   */
+  registerDirectoryProvider(provider: DirectoryProvider): () => void {
+    this.directoryProviders.add(provider)
+    return () => {
+      this.directoryProviders.delete(provider)
+    }
+  }
+
+  /**
+   * Reject all pending permission requests and questions across every
+   * directory known to any KiloProvider **and** every project the CLI
+   * backend has ever opened. The project list covers worktree sessions
+   * whose provider was disposed (panel/sidebar closed) while the CLI
+   * backend kept running.
+   *
+   * Must be called before operations that trigger Instance.disposeAll()
+   * (e.g. config save) to prevent orphaned Promises from freezing
+   * sessions.
+   *
+   * Throws if any list/reject call fails so callers can abort the
+   * destructive operation.
+   */
+  async drainPendingPrompts(): Promise<void> {
+    if (!this.client) return
+
+    // Collect directories from all mounted providers (root + worktree dirs).
+    const dirs = new Set<string>()
+    for (const provider of this.directoryProviders) {
+      for (const dir of provider()) {
+        dirs.add(dir)
+      }
+    }
+
+    // Also include every project directory the CLI backend knows about.
+    // This covers worktree sessions whose KiloProvider was already disposed.
+    const { data: projects, error: projectsErr } = await this.client.project.list()
+    if (projectsErr) throw new Error(`Failed to list projects: ${String(projectsErr)}`)
+    if (projects) {
+      for (const p of projects) {
+        dirs.add(p.worktree)
+      }
+    }
+
+    for (const dir of dirs) {
+      const { data: perms, error: permsErr } = await this.client.permission.list({ directory: dir })
+      if (permsErr) throw new Error(`Failed to list permissions for ${dir}: ${String(permsErr)}`)
+      if (perms) {
+        for (const perm of perms) {
+          const { error } = await this.client.permission.reply({ requestID: perm.id, reply: "reject", directory: dir })
+          if (error) throw new Error(`Failed to reject permission ${perm.id}: ${String(error)}`)
+        }
+      }
+      const { data: qs, error: qsErr } = await this.client.question.list({ directory: dir })
+      if (qsErr) throw new Error(`Failed to list questions for ${dir}: ${String(qsErr)}`)
+      if (qs) {
+        for (const q of qs) {
+          const { error } = await this.client.question.reject({ requestID: q.id, directory: dir })
+          if (error) throw new Error(`Failed to reject question ${q.id}: ${String(error)}`)
+        }
+      }
+    }
+    for (const listener of this.clearPendingPromptsListeners) {
+      listener()
+    }
+  }
+
+  /**
    * Subscribe to connection state changes. Returns unsubscribe function.
    */
   onStateChange(listener: StateListener): () => void {
@@ -228,6 +335,9 @@ export class KiloConnectionService {
     this.stateListeners.clear()
     this.notificationDismissListeners.clear()
     this.profileChangeListeners.clear()
+    this.migrationCompleteListeners.clear()
+    this.clearPendingPromptsListeners.clear()
+    this.directoryProviders.clear()
     this.messageSessionIdsByMessageId.clear()
     this.client = null
     this.sseClient = null
@@ -260,7 +370,7 @@ export class KiloConnectionService {
       const healthy = await this.checkHealth(baseUrl, password)
       if (!healthy && this.state === "connected") {
         console.warn("[Kilo New] ConnectionService: ❤️‍🩹 Health check failed — forcing SSE reconnect")
-        this.sseClient?.disconnect()
+        this.sseClient?.reconnect()
       }
     }, HEALTH_POLL_INTERVAL_MS)
 

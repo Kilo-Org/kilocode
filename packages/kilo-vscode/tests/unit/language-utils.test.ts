@@ -15,8 +15,11 @@ describe("normalizeLocale", () => {
   })
 
   it("returns 'zht' for Traditional Chinese", () => {
+    expect(normalizeLocale("zht")).toBe("zht")
     expect(normalizeLocale("zh-Hant")).toBe("zht")
-    expect(normalizeLocale("zh-TW")).toBe("zh")
+    expect(normalizeLocale("zh-TW")).toBe("zht")
+    expect(normalizeLocale("zh-HK")).toBe("zht")
+    expect(normalizeLocale("zh-MO")).toBe("zht")
     expect(normalizeLocale("zh-hant-TW")).toBe("zht")
   })
 

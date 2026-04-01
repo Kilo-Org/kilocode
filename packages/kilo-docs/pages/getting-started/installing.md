@@ -14,54 +14,16 @@ Get started with Kilo Code by installing it on your preferred platform. Choose y
 
 ## VS Code Extension
 
-{% partial file="install-vscode.md" /%}
-
-{% /tab %}
-{% tab label="VS Code (Preview)" %}
-
-## VS Code Preview Extension
-
-{% callout type="info" %}
-We're rebuilding Kilo Code from the ground up on the new [Kilo CLI](https://github.com/Kilo-Org/kilocode). The pre-release extension is available for users who want to try the latest architecture and provide feedback, and don't mind some missing features and rough edges.
-{% /callout %}
-
-The pre-release extension is a complete rebuild featuring:
-
-- A new Solid.js-based UI
-- Deep integration with the Kilo CLI backend
-- Improved session management and model switching
-
-### Current Status
-
-This is an early pre-release. Core features like chat, markdown rendering, authentication, and model/mode switching are working. Some features from the stable extension are still being implemented.
-
-For the full feature status, see the [feature parity tracking document](https://github.com/Kilo-Org/kilocode/blob/main/packages/kilo-vscode/docs/opencode-migration-plan.md).
-
-### Installing the Pre-Release
+The current Kilo Code extension is built on the [Kilo CLI](https://github.com/Kilo-Org/kilocode) and is distributed as the **pre-release version** on the VS Code Marketplace.
 
 1. Open VS Code
 2. Go to Extensions (`Ctrl+Shift+X` / `Cmd+Shift+X`)
 3. Search for "Kilo Code"
 4. Click the dropdown arrow next to **Install** and select **Install Pre-Release Version**
 
-### Switching Back to Stable
-
-If you need to return to the stable version:
-
-1. Open Extensions in VS Code
-2. Find Kilo Code
-3. Click the dropdown and select **Switch to Release Version**
-
-### Feedback and Issues
-
-Report issues or provide feedback in the [Kilo-Org/kilocode repository](https://github.com/Kilo-Org/kilocode/issues).
-
-{% /tab %}
-{% tab label="JetBrains" %}
-
-## JetBrains IDEs
-
-{% partial file="install-jetbrains.md" /%}
+{% callout type="info" %}
+The "pre-release" label is a VS Code Marketplace distribution channel — the extension is stable and recommended for all users.
+{% /callout %}
 
 {% /tab %}
 {% tab label="CLI" %}
@@ -69,6 +31,27 @@ Report issues or provide feedback in the [Kilo-Org/kilocode repository](https://
 ## Command Line Interface
 
 {% partial file="install-cli.md" /%}
+
+{% /tab %}
+{% tab label="VS Code (Legacy)" %}
+
+## VS Code Legacy Extension
+
+The legacy extension is the previous version of Kilo Code for VS Code. It is still available but is no longer actively developed. We recommend installing the current extension (see the **VS Code** tab).
+
+To install or switch back to the legacy version:
+
+1. Open VS Code
+2. Go to Extensions (`Ctrl+Shift+X` / `Cmd+Shift+X`)
+3. Search for "Kilo Code"
+4. Click the dropdown arrow next to **Install** and select **Switch to Release Version**
+
+{% /tab %}
+{% tab label="JetBrains" %}
+
+## JetBrains IDEs
+
+{% partial file="install-jetbrains.md" /%}
 
 {% /tab %}
 {% tab label="Slack" %}

@@ -41,4 +41,9 @@ export const dict = {
     "يتم حظر Kilo Code Autocomplete بسبب تعارض مع GitHub Copilot. لإصلاح هذا، يجب عليك تعطيل اقتراحات Copilot المضمنة.",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "تعطيل Copilot",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "تعطيل الإكمال التلقائي",
+  "kilocode:autocomplete.creditsExhausted.message":
+    "تم إيقاف Kilo Code Autocomplete مؤقتًا لأن حسابك لا يحتوي على رصيد متبقٍ. أضف رصيدًا لاستئناف الإكمال التلقائي.",
+  "kilocode:autocomplete.creditsExhausted.addCredits": "إضافة رصيد",
+  "kilocode:autocomplete.authError.message":
+    "تم إيقاف Kilo Code Autocomplete مؤقتًا بسبب خطأ في المصادقة. يرجى تسجيل الدخول مرة أخرى.",
 }

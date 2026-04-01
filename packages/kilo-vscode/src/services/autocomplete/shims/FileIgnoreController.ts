@@ -10,6 +10,11 @@ const GITIGNORE = ".gitignore"
  */
 const SENSITIVE_PATTERNS = [".env", ".env.*"]
 
+// Matches Windows drive-letter absolute paths (e.g. "C:/" or "c:\").
+// path.isAbsolute() on POSIX does not recognise these, so we check explicitly
+// to avoid passing them to the `ignore` package which throws a RangeError.
+const WINDOWS_DRIVE = /^[a-zA-Z]:[/\\]/
+
 function toPosix(filePath: string): string {
   return filePath.replace(/\\/g, "/")
 }
@@ -87,7 +92,7 @@ export class FileIgnoreController {
     }
 
     const relative = path.relative(this.workspacePath, resolved)
-    if (!relative || relative.startsWith("..")) {
+    if (!relative || relative.startsWith("..") || path.isAbsolute(relative) || WINDOWS_DRIVE.test(relative)) {
       return null
     }
 

@@ -1222,6 +1222,7 @@ export type ProviderConfig = {
       recommendedIndex?: number
       prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo"
       isFree?: boolean
+      ai_sdk_provider?: "anthropic" | "openai" | "openai-compatible" | "openrouter"
       experimental?: boolean
       status?: "alpha" | "beta" | "deprecated"
       options?: {
@@ -1388,6 +1389,10 @@ export type Config = {
    * @deprecated Use 'share' field instead. Share newly created sessions automatically
    */
   autoshare?: boolean
+  /**
+   * Enable remote control of sessions via Kilo Cloud. Equivalent to running /remote on startup.
+   */
+  remote_control?: boolean
   /**
    * Automatically update to the latest version. Set to true to auto-update, false to disable, or 'notify' to show update notifications
    */
@@ -1655,6 +1660,7 @@ export type Model = {
   recommendedIndex?: number
   prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo"
   isFree?: boolean
+  ai_sdk_provider?: "anthropic" | "openai" | "openai-compatible" | "openrouter"
 }
 
 export type Provider = {
@@ -1933,10 +1939,12 @@ export type Command = {
 
 export type Agent = {
   name: string
+  displayName?: string
   description?: string
   mode: "subagent" | "primary" | "all"
   native?: boolean
   hidden?: boolean
+  deprecated?: boolean
   topP?: number
   temperature?: number
   color?: string
@@ -3940,6 +3948,27 @@ export type PermissionRespondResponses = {
 
 export type PermissionRespondResponse = PermissionRespondResponses[keyof PermissionRespondResponses]
 
+export type SessionViewedData = {
+  body?: {
+    sessionID?: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/session/viewed"
+}
+
+export type SessionViewedResponses = {
+  /**
+   * Viewed session updated
+   */
+  200: boolean
+}
+
+export type SessionViewedResponse = SessionViewedResponses[keyof SessionViewedResponses]
+
 export type PermissionReplyData = {
   body?: {
     reply: "once" | "always" | "reject"
@@ -4186,6 +4215,7 @@ export type ProviderListResponses = {
           recommendedIndex?: number
           prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo"
           isFree?: boolean
+          ai_sdk_provider?: "anthropic" | "openai" | "openai-compatible" | "openrouter"
           experimental?: boolean
           status?: "alpha" | "beta" | "deprecated"
           options: {
@@ -4355,6 +4385,72 @@ export type TelemetryCaptureResponses = {
 
 export type TelemetryCaptureResponse = TelemetryCaptureResponses[keyof TelemetryCaptureResponses]
 
+export type RemoteEnableData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/remote/enable"
+}
+
+export type RemoteEnableResponses = {
+  /**
+   * Remote connection enabled
+   */
+  200: {
+    enabled: boolean
+    connected: boolean
+  }
+}
+
+export type RemoteEnableResponse = RemoteEnableResponses[keyof RemoteEnableResponses]
+
+export type RemoteDisableData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/remote/disable"
+}
+
+export type RemoteDisableResponses = {
+  /**
+   * Remote connection disabled
+   */
+  200: {
+    enabled: boolean
+    connected: boolean
+  }
+}
+
+export type RemoteDisableResponse = RemoteDisableResponses[keyof RemoteDisableResponses]
+
+export type RemoteStatusData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/remote/status"
+}
+
+export type RemoteStatusResponses = {
+  /**
+   * Remote connection status
+   */
+  200: {
+    enabled: boolean
+    connected: boolean
+  }
+}
+
+export type RemoteStatusResponse = RemoteStatusResponses[keyof RemoteStatusResponses]
+
 export type CommitMessageGenerateData = {
   body?: {
     /**
@@ -4432,6 +4528,325 @@ export type EnhancePromptEnhanceResponses = {
 }
 
 export type EnhancePromptEnhanceResponse = EnhancePromptEnhanceResponses[keyof EnhancePromptEnhanceResponses]
+
+export type KilocodeSessionImportProjectData = {
+  body?: {
+    id: string
+    worktree: string
+    vcs?: string
+    name?: string
+    iconUrl?: string
+    iconColor?: string
+    timeCreated: number
+    timeUpdated: number
+    timeInitialized?: number
+    sandboxes: Array<string>
+    commands?: {
+      start?: string
+    }
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/session-import/project"
+}
+
+export type KilocodeSessionImportProjectErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeSessionImportProjectError =
+  KilocodeSessionImportProjectErrors[keyof KilocodeSessionImportProjectErrors]
+
+export type KilocodeSessionImportProjectResponses = {
+  /**
+   * Project import result
+   */
+  200: {
+    ok: boolean
+    id: string
+    skipped?: boolean
+  }
+}
+
+export type KilocodeSessionImportProjectResponse =
+  KilocodeSessionImportProjectResponses[keyof KilocodeSessionImportProjectResponses]
+
+export type KilocodeSessionImportSessionData = {
+  body?: {
+    id: string
+    projectID: string
+    workspaceID?: string
+    parentID?: string
+    slug: string
+    directory: string
+    title: string
+    version: string
+    shareURL?: string
+    summary?: {
+      additions: number
+      deletions: number
+      files: number
+      diffs?: Array<{
+        [key: string]: unknown
+      }>
+    }
+    revert?: {
+      messageID: string
+      partID?: string
+      snapshot?: string
+      diff?: string
+    }
+    permission?: {
+      [key: string]: unknown
+    }
+    timeCreated: number
+    timeUpdated: number
+    timeCompacting?: number
+    timeArchived?: number
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/session-import/session"
+}
+
+export type KilocodeSessionImportSessionErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeSessionImportSessionError =
+  KilocodeSessionImportSessionErrors[keyof KilocodeSessionImportSessionErrors]
+
+export type KilocodeSessionImportSessionResponses = {
+  /**
+   * Session import result
+   */
+  200: {
+    ok: boolean
+    id: string
+    skipped?: boolean
+  }
+}
+
+export type KilocodeSessionImportSessionResponse =
+  KilocodeSessionImportSessionResponses[keyof KilocodeSessionImportSessionResponses]
+
+export type KilocodeSessionImportMessageData = {
+  body?: {
+    id: string
+    sessionID: string
+    timeCreated: number
+    data:
+      | {
+          role: "user"
+          time: {
+            created: number
+          }
+          agent: string
+          model: {
+            providerID: string
+            modelID: string
+          }
+          tools?: {
+            [key: string]: boolean
+          }
+        }
+      | {
+          role: "assistant"
+          time: {
+            created: number
+            completed?: number
+          }
+          parentID: string
+          modelID: string
+          providerID: string
+          mode: string
+          agent: string
+          path: {
+            cwd: string
+            root: string
+          }
+          summary?: boolean
+          cost: number
+          tokens: {
+            total?: number
+            input: number
+            output: number
+            reasoning: number
+            cache: {
+              read: number
+              write: number
+            }
+          }
+          structured?: unknown
+          variant?: string
+          finish?: string
+        }
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/session-import/message"
+}
+
+export type KilocodeSessionImportMessageErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeSessionImportMessageError =
+  KilocodeSessionImportMessageErrors[keyof KilocodeSessionImportMessageErrors]
+
+export type KilocodeSessionImportMessageResponses = {
+  /**
+   * Message import result
+   */
+  200: {
+    ok: boolean
+    id: string
+    skipped?: boolean
+  }
+}
+
+export type KilocodeSessionImportMessageResponse =
+  KilocodeSessionImportMessageResponses[keyof KilocodeSessionImportMessageResponses]
+
+export type KilocodeSessionImportPartData = {
+  body?: {
+    id: string
+    messageID: string
+    sessionID: string
+    timeCreated?: number
+    data:
+      | {
+          type: "text"
+          text: string
+          synthetic?: boolean
+          ignored?: boolean
+          time?: {
+            start: number
+            end?: number
+          }
+          metadata?: {
+            [key: string]: unknown
+          }
+        }
+      | {
+          type: "reasoning"
+          text: string
+          metadata?: {
+            [key: string]: unknown
+          }
+          time: {
+            start: number
+            end?: number
+          }
+        }
+      | {
+          type: "tool"
+          callID: string
+          tool: string
+          state:
+            | {
+                status: "pending"
+                input: {
+                  [key: string]: unknown
+                }
+                raw: string
+              }
+            | {
+                status: "running"
+                input: {
+                  [key: string]: unknown
+                }
+                title?: string
+                metadata?: {
+                  [key: string]: unknown
+                }
+                time: {
+                  start: number
+                }
+              }
+            | {
+                status: "completed"
+                input: {
+                  [key: string]: unknown
+                }
+                output: string
+                title: string
+                metadata: {
+                  [key: string]: unknown
+                }
+                time: {
+                  start: number
+                  end: number
+                  compacted?: number
+                }
+              }
+            | {
+                status: "error"
+                input: {
+                  [key: string]: unknown
+                }
+                error: string
+                metadata?: {
+                  [key: string]: unknown
+                }
+                time: {
+                  start: number
+                  end: number
+                }
+              }
+          metadata?: {
+            [key: string]: unknown
+          }
+        }
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/session-import/part"
+}
+
+export type KilocodeSessionImportPartErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeSessionImportPartError = KilocodeSessionImportPartErrors[keyof KilocodeSessionImportPartErrors]
+
+export type KilocodeSessionImportPartResponses = {
+  /**
+   * Part import result
+   */
+  200: {
+    ok: boolean
+    id: string
+    skipped?: boolean
+  }
+}
+
+export type KilocodeSessionImportPartResponse =
+  KilocodeSessionImportPartResponses[keyof KilocodeSessionImportPartResponses]
 
 export type KilocodeRemoveSkillData = {
   body?: {
@@ -4564,6 +4979,51 @@ export type KiloOrganizationSetResponses = {
 }
 
 export type KiloOrganizationSetResponse = KiloOrganizationSetResponses[keyof KiloOrganizationSetResponses]
+
+export type KiloModesData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilo/modes"
+}
+
+export type KiloModesResponses = {
+  /**
+   * Organization modes list
+   */
+  200: {
+    modes: Array<{
+      id: string
+      organization_id: string
+      name: string
+      slug: string
+      created_by: string
+      created_at: string
+      updated_at: string
+      config: {
+        roleDefinition?: string
+        whenToUse?: string
+        description?: string
+        customInstructions?: string
+        groups?: Array<
+          | string
+          | [
+              string,
+              {
+                fileRegex?: string
+                description?: string
+              },
+            ]
+        >
+      }
+    }>
+  }
+}
+
+export type KiloModesResponse = KiloModesResponses[keyof KiloModesResponses]
 
 export type KiloFimData = {
   body?: {

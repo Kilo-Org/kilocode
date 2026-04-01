@@ -22,6 +22,7 @@ import { useFileMention } from "../../hooks/useFileMention"
 import { useSlashCommand } from "../../hooks/useSlashCommand"
 import { useGhostText } from "../../hooks/useGhostText"
 import { useImageAttachments } from "../../hooks/useImageAttachments"
+import { convertToMentionPath } from "../../utils/path-mentions"
 import { usePromptHistory } from "../../hooks/usePromptHistory"
 import { WandSparkles } from "@kilocode/kilo-ui/lucide"
 import { fileName, dirName, buildHighlightSegments, atEnd } from "./prompt-input-utils"
@@ -56,6 +57,25 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const excluded = worktree ? new Set(["sessions"]) : undefined
   const slash = useSlashCommand(vscode, excluded)
   const imageAttach = useImageAttachments()
+  imageAttach.setFilePathDropHandler((paths) => {
+    const cwd = server.workspaceDirectory()
+    const resolved = paths.map((p) => convertToMentionPath(p, cwd))
+    const ref = textareaRef
+    if (!ref) return
+    const val = ref.value
+    const cursor = ref.selectionStart ?? val.length
+    const before = val.substring(0, cursor)
+    const after = val.substring(cursor)
+    const inserted = resolved.map((p) => `@${p}`).join(" ")
+    const result = before + inserted + " " + after
+    ref.value = result
+    setText(result)
+    mention.addPaths(resolved, cwd)
+    const pos = cursor + inserted.length + 1
+    ref.setSelectionRange(pos, pos)
+    ref.focus()
+    adjustHeight()
+  })
   const history = usePromptHistory()
 
   const sessionKey = () => session.currentSessionID() ?? "__new__"
@@ -149,6 +169,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       const pending = reviewDrafts.get(key) ?? []
       setText(draft)
       setReviewComments(pending)
+      setEnhancing(false)
+      preEnhanceText = null
       history.reset()
       if (textareaRef) {
         textareaRef.value = draft
@@ -294,7 +316,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
     if (message.type === "enhancePromptResult") {
       const result = message as import("../../types/messages").EnhancePromptResultMessage
-      if (result.requestId === `enhance-${enhanceCounter}`) {
+      if (result.requestId === `enhance-${sessionKey()}-${enhanceCounter}`) {
         setText(result.text)
         setEnhancing(false)
         if (textareaRef) {
@@ -307,7 +329,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
     if (message.type === "enhancePromptError") {
       const result = message as import("../../types/messages").EnhancePromptErrorMessage
-      if (result.requestId === `enhance-${enhanceCounter}`) {
+      if (result.requestId === `enhance-${sessionKey()}-${enhanceCounter}`) {
         setEnhancing(false)
       }
     }
@@ -462,7 +484,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       session.abort()
       return
     }
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
       e.preventDefault()
       handleSend()
     }
@@ -486,7 +508,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     preEnhanceText = text()
     enhanceCounter++
     setEnhancing(true)
-    vscode.postMessage({ type: "enhancePrompt", text: draft, requestId: `enhance-${enhanceCounter}` })
+    vscode.postMessage({ type: "enhancePrompt", text: draft, requestId: `enhance-${sessionKey()}-${enhanceCounter}` })
   }
 
   const handleSend = () => {

@@ -7,6 +7,7 @@
 
 import { fetchProfile, fetchBalance } from "../api/profile.js"
 import { fetchKilocodeNotifications, KilocodeNotificationSchema } from "../api/notifications.js"
+import { fetchOrganizationModes, clearModesCache } from "../api/modes.js"
 import { KILO_API_BASE, HEADER_FEATURE } from "../api/constants.js"
 import { buildKiloHeaders } from "../headers.js"
 import type { ImportDeps, DrizzleDb } from "../cloud-sessions.js"
@@ -204,8 +205,82 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
         })
 
         ModelCache.clear("kilo")
+        clearModesCache()
 
         return c.json(true)
+      },
+    )
+    .get(
+      "/modes",
+      describeRoute({
+        summary: "Get organization custom modes",
+        description: "Fetch custom modes defined for the current organization",
+        operationId: "kilo.modes",
+        responses: {
+          200: {
+            description: "Organization modes list",
+            content: {
+              "application/json": {
+                schema: resolver(
+                  z.object({
+                    modes: z.array(
+                      z.object({
+                        id: z.string(),
+                        organization_id: z.string(),
+                        name: z.string(),
+                        slug: z.string(),
+                        created_by: z.string(),
+                        created_at: z.string(),
+                        updated_at: z.string(),
+                        config: z.object({
+                          roleDefinition: z.string().optional(),
+                          whenToUse: z.string().optional(),
+                          description: z.string().optional(),
+                          customInstructions: z.string().optional(),
+                          groups: z
+                            .array(
+                              z.union([
+                                z.string(),
+                                z.tuple([
+                                  z.string(),
+                                  z.object({ fileRegex: z.string().optional(), description: z.string().optional() }),
+                                ]),
+                              ]),
+                            )
+                            .optional(),
+                        }),
+                      }),
+                    ),
+                  }),
+                ),
+              },
+            },
+          },
+        },
+      }),
+      async (c: any) => {
+        const auth = await Auth.get("kilo")
+
+        if (!auth || auth.type !== "oauth") {
+          return c.json({ modes: [] })
+        }
+
+        const token = auth.access
+        if (!token) {
+          return c.json({ modes: [] })
+        }
+
+        const orgId = auth.accountId
+        if (!orgId) {
+          return c.json({ modes: [] })
+        }
+
+        try {
+          const modes = await fetchOrganizationModes(token, orgId)
+          return c.json({ modes })
+        } catch {
+          return c.json({ modes: [] })
+        }
       },
     )
     .post(

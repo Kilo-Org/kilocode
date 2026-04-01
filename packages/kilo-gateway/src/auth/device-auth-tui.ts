@@ -1,4 +1,4 @@
-import open from "open"
+import { execFile } from "child_process"
 import type { DeviceAuthInitiateResponse, DeviceAuthPollResponse } from "../types.js"
 import { poll } from "./polling.js"
 import { getKiloProfile, getKiloDefaultModel } from "../api/profile.js"
@@ -70,10 +70,14 @@ export async function authenticateWithDeviceAuthTUI(inputs?: Record<string, stri
   const authData = await initiateDeviceAuth()
   const { code, verificationUrl, expiresIn } = authData
 
-  // Step 2: Open browser
-  await open(verificationUrl).catch(() => {
-    // Silently fail if browser can't be opened - user can manually open URL
-  })
+  // Step 2: Open browser (windowsHide: true prevents cmd.exe flash on Windows)
+  const [cmd, ...args] =
+    process.platform === "darwin"
+      ? ["open", verificationUrl]
+      : process.platform === "win32"
+        ? ["cmd", "/c", "start", "", verificationUrl]
+        : ["xdg-open", verificationUrl]
+  execFile(cmd, args, { windowsHide: true })
 
   // Step 3: Return instructions and callback for TUI to handle
   return {

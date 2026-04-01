@@ -17,6 +17,9 @@ export const dict = {
   "agentManager.worktree.advancedOptions": "Geavanceerde worktree opties",
   "agentManager.worktree.defaultBaseBranch": "Standaard basis branch",
   "agentManager.worktree.defaultBaseBranchAuto": "Automatisch detecteren",
+  "agentManager.worktree.copyPath": "Pad kopiëren",
+  "agentManager.worktree.openInVscode": "Openen in VS Code",
+  "agentManager.worktree.rename": "Hernoemen",
 
   "agentManager.hoverCard.branch": "BRANCH",
   "agentManager.hoverCard.base": "Basis",
@@ -29,6 +32,7 @@ export const dict = {
   "agentManager.session.untitled": "Naamloos",
   "agentManager.session.newSession": "Nieuwe sessie",
   "agentManager.session.openInWorktree": "Openen in worktree",
+  "agentManager.session.openLocally": "Lokaal openen",
   "agentManager.session.readonly": "Alleen-lezen sessie",
   "agentManager.session.noSessions": "Geen open sessies",
 

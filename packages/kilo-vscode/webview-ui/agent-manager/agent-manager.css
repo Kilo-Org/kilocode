@@ -735,7 +735,6 @@ button.am-section-toggle:hover .am-section-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 150px;
 }
 
 .am-tab-close {
@@ -3473,5 +3472,34 @@ body.vscode-high-contrast-light {
   .am-file-tree-file:focus-visible {
     outline: 1px solid var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
     outline-offset: -1px;
+  }
+}
+
+/* Context menu — restyle to match dropdown-menu visuals.
+   The kilo-ui ContextMenu component hardcodes its own data-component / data-slot
+   attributes after the prop spread, so we can't override them via props.
+   Instead we apply a class and re-declare the styles here. */
+
+.am-ctx-menu {
+  min-width: 210px;
+  border: 1px solid color-mix(in oklch, var(--border-base) 50%, transparent) !important;
+  box-shadow: var(--shadow-md) !important;
+
+  [data-slot="context-menu-item"],
+  [data-slot="context-menu-checkbox-item"],
+  [data-slot="context-menu-radio-item"],
+  [data-slot="context-menu-sub-trigger"] {
+    padding: 6px 10px;
+    font-size: var(--font-size-small);
+    transition: none;
+
+    &:hover,
+    &[data-highlighted] {
+      background: var(--surface-raised-base-hover);
+    }
+  }
+
+  [data-slot="context-menu-separator"] {
+    margin: 4px 0;
   }
 }

@@ -17,10 +17,54 @@ Kilo Code supports Google's Gemini family of models through the Google AI Gemini
 
 ## Configuration in Kilo Code
 
+{% tabs %}
+{% tab label="VSCode (Legacy)" %}
+
 1.  **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
 2.  **Select Provider:** Choose "Google Gemini" from the "API Provider" dropdown.
 3.  **Enter API Key:** Paste your Gemini API key into the "Gemini API Key" field.
 4.  **Select Model:** Choose your desired Gemini model from the "Model" dropdown.
+
+{% /tab %}
+{% tab label="VSCode" %}
+
+Open **Settings** (gear icon) and go to the **Providers** tab to add Google Gemini and enter your API key.
+
+The extension stores this in your `kilo.json` config file. You can also edit the config file directly — see the **CLI** tab for the file format.
+
+{% /tab %}
+{% tab label="CLI" %}
+
+Set the API key as an environment variable or configure it in your `kilo.json` config file:
+
+**Environment variable:**
+
+```bash
+export GOOGLE_GENERATIVE_AI_API_KEY="your-api-key"
+```
+
+**Config file** (`~/.config/kilo/kilo.json` or `./kilo.json`):
+
+```jsonc
+{
+  "provider": {
+    "google": {
+      "env": ["GOOGLE_GENERATIVE_AI_API_KEY"],
+    },
+  },
+}
+```
+
+Then set your default model:
+
+```jsonc
+{
+  "model": "google/gemini-2.5-pro",
+}
+```
+
+{% /tab %}
+{% /tabs %}
 
 ## Tips and Notes
 

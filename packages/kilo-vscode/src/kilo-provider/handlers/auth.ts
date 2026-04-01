@@ -14,6 +14,7 @@ export interface AuthContext {
   getWorkspaceDirectory(): string
   disposeGlobal(): Promise<void>
   fetchAndSendProviders(): Promise<void>
+  fetchAndSendAgents(): Promise<void>
 }
 
 /**
@@ -130,6 +131,11 @@ export async function handleSetOrganization(ctx: AuthContext, organizationId: st
     await ctx.fetchAndSendProviders()
   } catch (error) {
     console.error("[Kilo New] KiloProvider: Failed to refresh providers after org switch:", error)
+  }
+  try {
+    await ctx.fetchAndSendAgents()
+  } catch (error) {
+    console.error("[Kilo New] KiloProvider: Failed to refresh agents after org switch:", error)
   }
 }
 

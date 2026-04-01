@@ -201,6 +201,16 @@ New webview features must use **`@kilocode/kilo-ui`** components instead of raw 
 
 This package is entirely Kilo-specific — `kilocode_change` markers are NOT needed in any files under `packages/kilo-vscode/`. The markers are only necessary when modifying shared upstream opencode files.
 
+## Process Spawning (Windows)
+
+On Windows, any `spawn`/`execFile`/`exec` call that does not set `windowsHide: true` will flash a cmd.exe console window at the user. To prevent this, **never import `spawn`, `execFile`, or `exec` from `child_process` directly**. Use the wrappers in `src/util/process.ts` instead — they enforce `windowsHide: true` automatically:
+
+```ts
+import { spawn, exec } from "../util/process"
+```
+
+The `spawn` wrapper covers long-lived processes (e.g. `kilo serve`). The `exec` wrapper covers short commands (e.g. `git`, `tar`). If you need the raw callback form of `execFile` for some reason, pass `windowsHide: true` explicitly in the options object.
+
 ## Style
 
 Follow monorepo root AGENTS.md style guide:

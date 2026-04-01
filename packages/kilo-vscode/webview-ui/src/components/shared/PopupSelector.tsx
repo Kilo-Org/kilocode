@@ -97,11 +97,11 @@ export function PopupSelector<T extends ValidComponent = ValidComponent>(props: 
 
   const bodyH = createMemo(() => {
     const preferred = local.expanded ? local.preferredExpandedHeight : local.preferredHeight
-    if (preferred === undefined) return undefined
     const h = panelH()
-    if (h === undefined) return preferred
     // 26px = 2px border + 24px popover-body padding (12px top + 12px bottom)
-    const max = h - 26
+    const max = h !== undefined ? h - 26 : undefined
+    if (preferred === undefined) return max !== undefined ? Math.max(local.minHeight ?? 100, max) : undefined
+    if (max === undefined) return preferred
     return Math.max(local.minHeight ?? 100, Math.min(preferred, max))
   })
 

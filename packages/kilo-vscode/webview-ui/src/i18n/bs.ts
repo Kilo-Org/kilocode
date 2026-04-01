@@ -268,6 +268,7 @@ export const dict = {
   "mcp.status.connected": "povezano",
   "mcp.status.failed": "neuspjelo",
   "mcp.status.needs_auth": "potrebna autentifikacija",
+  "mcp.status.needs_registration": "potrebna registracija klijenta",
   "mcp.status.disabled": "onemogućeno",
 
   "dialog.fork.empty": "Nema poruka za fork",
@@ -757,6 +758,21 @@ export const dict = {
   "provider.custom.models.name.placeholder": "Naziv za prikaz",
   "provider.custom.models.remove": "Ukloni model",
   "provider.custom.models.add": "Dodaj model",
+  "provider.custom.models.fetch": "Preuzmi modele",
+  "provider.custom.models.fetching": "Preuzimanje\u2026",
+  "provider.custom.models.fetch.error": "Preuzimanje modela nije uspjelo: {{error}}",
+  "provider.custom.models.fetch.authError":
+    "Autentifikacija nije uspjela. Provjerite API ključ iznad i pokušajte ponovo.",
+  "provider.custom.models.fetch.empty": "Nisu pronađeni modeli na ovom serveru.",
+  "provider.custom.models.fetch.added": "Dodano {{count}} model(a).",
+  "provider.custom.models.fetch.allExist": "Svi preuzeti modeli su već dodani.",
+  "provider.custom.models.fetch.selectAll": "Odaberi sve",
+  "provider.custom.models.fetch.deselectAll": "Poništi odabir",
+  "provider.custom.models.fetch.found": "{{count}} modela pronađeno",
+  "provider.custom.models.fetch.showing": "Prikazano {{shown}} od {{total}}",
+  "provider.custom.models.fetch.search": "Pretraži modele\u2026",
+  "provider.custom.models.fetch.add": "Dodaj {{count}} model(a)",
+  "provider.custom.edit.title": "Uredi provajdera",
   "provider.custom.headers.label": "Zaglavlja (opcionalno)",
   "provider.custom.headers.key.label": "Zaglavlje",
   "provider.custom.headers.key.placeholder": "Header-Name",
@@ -830,8 +846,11 @@ export const dict = {
   "session.delete.button": "Izbriši sesiju",
   "session.untitled": "Bez naslova",
   "session.recent": "Nedavne",
+  "session.showHistory": "Prikaži historiju",
   "session.search.placeholder": "Pretraži sesije...",
   "session.empty": "Još nema sesija. Kliknite + za početak novog razgovora.",
+  "session.tab.local": "Local",
+  "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Samo ovaj repozitorij",
   "session.cloud.import": "Uvezi iz oblaka",
   "feedback.button": "Povratne informacije i podrška",
@@ -912,8 +931,7 @@ export const dict = {
   "settings.autocomplete.title": "Automatsko dovršavanje",
   "settings.notifications.title": "Obavještenja",
   "settings.context.title": "Kontekst",
-  "settings.terminal.title": "Terminal",
-  "settings.prompts.title": "Upiti",
+
   "settings.experimental.title": "Eksperimentalno",
   "settings.language.title": "Jezik",
   "settings.aboutKiloCode.title": "O Kilo Code-u",
@@ -934,6 +952,7 @@ export const dict = {
   "prompt.placeholder.default": "Unesite poruku... (Enter za slanje, Shift+Enter za novi red)",
 
   "context.usage.sessionCost": "Cijena sesije",
+  "context.stats.thisSession": "Ova sesija",
 
   "time.justNow": "upravo sada",
   "time.minutesAgo": "prije {{count}} min",
@@ -962,8 +981,20 @@ export const dict = {
   "settings.aboutKiloCode.support.prefix": "Za pitanja o naplati ili računu, kontaktirajte korisničku podršku na",
   "settings.aboutKiloCode.resetSettings.title": "Resetovanje postavki",
   "settings.aboutKiloCode.resetSettings.description":
-    "Resetujte sve postavke Kilo Code ekstenzije na zadane vrijednosti. Ovo ne utiče na CLI ili backend konfiguraciju.",
+    "Ovo resetuje samo postavke specifične za VS Code ekstenziju na njihove zadane vrijednosti. Postavke koje se dijele s CLI-jem, kao što su načini rada i pravila automatskog odobravanja, pohranjene su u CLI konfiguraciji i neće biti resetovane.",
   "settings.aboutKiloCode.resetSettings.button": "Resetuj sve postavke",
+  "settings.aboutKiloCode.settingsTransfer.title": "Prijenos postavki",
+  "settings.aboutKiloCode.settingsTransfer.description":
+    "Izvezite ili uvezite postavke za prijenos između VS Code instanci.",
+  "settings.aboutKiloCode.exportSettings": "Izvezi",
+  "settings.aboutKiloCode.importSettings": "Uvezi",
+  "settings.aboutKiloCode.importSettings.invalidJson": "Nevažeći JSON fajl. Odaberite važeći fajl s postavkama.",
+  "settings.aboutKiloCode.importSettings.invalidConfig": "Fajl ne sadrži važeće Kilo postavke.",
+  "settings.aboutKiloCode.importSettings.tooLarge": "Fajl je prevelik. Fajlovi s postavkama moraju biti manji od 1 MB.",
+  "settings.aboutKiloCode.importSettings.newerVersion":
+    "Ovaj fajl je izvezen iz novije verzije Kilo-a. Neke postavke mogu biti zanemarene.",
+  "settings.aboutKiloCode.importSettings.success":
+    "Postavke su uvezene. Pregledajte promjene iznad, a zatim kliknite Sačuvaj.",
 
   "settings.agentBehaviour.subtab.modes": "Modovi",
   "settings.agentBehaviour.subtab.agents": "Agents",
@@ -988,8 +1019,7 @@ export const dict = {
 
   "common.add": "Dodaj",
   "common.choose": "Odaberi…",
-  "settings.notImplemented": "Ovaj dio još nije implementiran.",
-  "settings.notImplemented.description": "Sadržavat će opcije konfiguracije i objašnjenje.",
+
   "settings.autocomplete.autoTrigger.title": "Omogući automatsko inline dovršavanje",
   "settings.autocomplete.autoTrigger.description": "Automatski prikaži prijedloge inline dovršavanja tokom tipkanja",
   "settings.autocomplete.smartKeybinding.title": "Omogući pametnu prečicu inline zadatka",
@@ -1047,11 +1077,51 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Nucleus parametar uzorkovanja (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Maks. koraci",
   "settings.agentBehaviour.maxSteps.description": "Maksimalne iteracije agenta",
+  "settings.agentBehaviour.hidden.title": "Skriveno",
+  "settings.agentBehaviour.hidden.description": "Sakrij ovog agenta iz prebacivača modova u unosu chata",
+  "settings.agentBehaviour.disable.title": "Onemogućeno",
+  "settings.agentBehaviour.disable.description": "Potpuno onemogući ovog agenta — neće se pojaviti nigdje",
+  "settings.agentBehaviour.badge.hidden": "skriveno",
+  "settings.agentBehaviour.badge.disabled": "onemogućeno",
+  "settings.agentBehaviour.badge.deprecated": "Zastarjelo",
   "settings.agentBehaviour.discoveredSkills": "Otkrivene vještine",
   "settings.agentBehaviour.noSkillsFound":
     "Nisu pronađene vještine. Dodajte putanje mapa ili URL-ove ispod kako biste učinili vještine dostupnim.",
   "settings.agentBehaviour.availableModes": "Dostupni prilagođeni modovi",
   "settings.agentBehaviour.noModesFound": "Nisu pronađeni modovi.",
+  "settings.agentBehaviour.createMode": "Kreiraj novi mod",
+  "settings.agentBehaviour.createMode.name": "Naziv",
+  "settings.agentBehaviour.createMode.name.placeholder": "npr. reviewer",
+  "settings.agentBehaviour.createMode.name.description":
+    "Jedinstveni identifikator moda. Koristite samo mala slova, brojeve i crtice.",
+  "settings.agentBehaviour.createMode.description": "Opis",
+  "settings.agentBehaviour.createMode.description.placeholder": "npr. Pregleda kod za kvalitet i dobre prakse",
+  "settings.agentBehaviour.createMode.description.help": "Kratak opis šta ovaj mod radi.",
+  "settings.agentBehaviour.createMode.prompt": "Sistemski prompt",
+  "settings.agentBehaviour.createMode.prompt.placeholder":
+    "npr. Vi ste recenzent koda. Fokusirajte se na kvalitet, dobre prakse i potencijalne greške.",
+  "settings.agentBehaviour.createMode.prompt.help": "Upute za AI agenta pri korištenju ovog moda.",
+  "settings.agentBehaviour.createMode.button": "Kreiraj",
+  "settings.agentBehaviour.createMode.cancel": "Otkaži",
+  "settings.agentBehaviour.createMode.nameRequired": "Naziv je obavezan",
+  "settings.agentBehaviour.createMode.nameInvalid": "Naziv smije sadržavati samo mala slova, brojeve i crtice",
+  "settings.agentBehaviour.createMode.nameTaken": "Mod s ovim nazivom već postoji",
+  "settings.agentBehaviour.importMode": "Uvezi",
+  "settings.agentBehaviour.importMode.invalidName":
+    "Nevažeći naziv moda u datoteci. Naziv mora počinjati malim slovom i sadržavati samo mala slova, brojeve i crtice.",
+  "settings.agentBehaviour.importMode.nameTaken": "Mod s ovim nazivom već postoji.",
+  "settings.agentBehaviour.importMode.invalidJson":
+    "Nevažeća JSON datoteka. Molimo odaberite važeću datoteku definicije agenta.",
+  "settings.agentBehaviour.importMode.tooLarge": "Datoteka je prevelika. Definicije agenta moraju biti manje od 1 MB.",
+  "settings.agentBehaviour.exportMode": "Izvezi definiciju agenta",
+  "settings.agentBehaviour.editMode": "Uredi mod",
+  "settings.agentBehaviour.editMode.description": "Opis",
+  "settings.agentBehaviour.editMode.prompt": "Sistemski prompt",
+  "settings.agentBehaviour.editMode.save": "Gotovo",
+  "settings.agentBehaviour.editMode.back": "Nazad na listu",
+  "settings.agentBehaviour.editMode.native":
+    "Ovo je ugrađeni način rada. Njegova osnovna definicija ne može se mijenjati, ali ispod možete konfigurirati nadjačavanja.",
+  "settings.agentBehaviour.editMode.promptOverride": "Prilagođeno nadjačavanje prompta za ovaj ugrađeni mod",
   "settings.agentBehaviour.removeMode.title": "Ukloni mod",
   "settings.agentBehaviour.removeMode.confirm":
     'Ukloniti mod "{{name}}"? Ovo će onemogućiti mod ažuriranjem vaše konfiguracije.',
@@ -1060,18 +1130,43 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.confirm":
     'Ukloniti MCP server "{{name}}"? Ovo će ga ukloniti iz vaše konfiguracije.',
   "settings.agentBehaviour.removeMcp.button": "Ukloni",
+  "settings.agentBehaviour.editMcp": "Uredi MCP Server",
+  "settings.agentBehaviour.editMcp.transportLocal": "Lokalni server (stdio transport)",
+  "settings.agentBehaviour.editMcp.transportRemote": "Udaljeni server (SSE/HTTP transport)",
+  "settings.agentBehaviour.editMcp.env": "Varijable okruženja",
+  "settings.agentBehaviour.editMcp.env.help": "Varijable proslijeđene procesu MCP servera.",
+  "settings.agentBehaviour.addMcp.command": "Naredba",
+  "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
+  "settings.agentBehaviour.addMcp.args": "Argumenti",
+  "settings.agentBehaviour.addMcp.args.help": "Jedan argument po liniji. Putanje s razmacima se čuvaju kakve jesu.",
+  "settings.agentBehaviour.addMcp.args.placeholder": "e.g.\n-y\n@modelcontextprotocol/server-filesystem\n/tmp",
+  "settings.agentBehaviour.addMcp.url": "URL servera",
+  "settings.agentBehaviour.addMcp.url.placeholder": "e.g. http://localhost:3000/sse",
   "settings.agentBehaviour.skillPaths": "Putanje mapa vještina",
   "settings.agentBehaviour.skillUrls": "URL-ovi vještina",
   "settings.agentBehaviour.removeSkill.title": "Ukloni vještinu",
   "settings.agentBehaviour.removeSkill.confirm":
     'Ukloniti vještinu "{{name}}"? Ovo će obrisati datoteke vještine sa diska.',
   "settings.agentBehaviour.removeSkill.button": "Ukloni",
+  "settings.agentBehaviour.rules.description":
+    "Pravila su datoteke uputa koje usmjeravaju ponašanje agenta. Uključena su u sistemski prompt za svaki razgovor. Dodajte putanje datoteka ispod kako biste uključili dodatna pravila.",
   "settings.agentBehaviour.instructionFiles": "Dodatne datoteke uputa",
   "settings.agentBehaviour.instructionFiles.description": "Putanje do dodatnih datoteka uputa u sistemskom promptu",
+  "settings.agentBehaviour.mcpDetail.command": "Naredba",
+  "settings.agentBehaviour.mcpDetail.args": "Argumenti",
+  "settings.agentBehaviour.mcpDetail.env": "Okruženje",
+  "settings.agentBehaviour.mcpDetail.disabled": "Ovaj server je onemogućen.",
+  "settings.agentBehaviour.mcpBrowseMarketplace": "Pregledaj Marketplace",
   "settings.agentBehaviour.mcpEmpty":
-    "Nema konfiguriranih MCP servera. Uredite konfiguracijsku datoteku opencode za dodavanje MCP servera.",
+    "Nema konfiguriranih MCP servera. Dodajte MCP servere u kilo.jsonc ili zamolite agenta da ih doda.",
   "settings.agentBehaviour.workflowsPlaceholder": "Tokovi rada se upravljaju putem datoteka tokova rada.",
-  "settings.agentBehaviour.notImplemented": "Još nije implementirano.",
+  "settings.agentBehaviour.workflows.description":
+    "Tokovi rada su prilagođene slash komande definirane u vašoj konfiguraciji. Upišite /command-name u chat da ih pokrenete. Komande se konfiguriraju u opencode.json pod sekcijom 'command'.",
+  "settings.agentBehaviour.workflows.empty":
+    "Nema konfiguriranih prilagođenih komandi. Dodajte komande u opencode.json da ih vidite ovdje.",
+  "settings.agentBehaviour.workflows.detail.description": "Opis",
+  "settings.agentBehaviour.workflows.detail.template": "Predložak",
+
   "settings.autoApprove.description":
     "Definišite kako je dozvoljeno pokretanje alata. Većina alata je podrazumijevano na Dozvoli. doom_loop i external_directory su podrazumijevano na Pitaj.",
   "settings.autoApprove.level.allow": "Dozvoli",
@@ -1128,7 +1223,8 @@ export const dict = {
   "settings.providers.defaultModel.title": "Zadani model",
   "settings.providers.defaultModel.description": "Primarni model za razgovore",
   "settings.providers.smallModel.title": "Mali model",
-  "settings.providers.smallModel.description": "Lagani model za generiranje naslova i brze zadatke",
+  "settings.providers.smallModel.description":
+    "Lagani model za generiranje naslova, commit poruka, poboljšanje promptova i druge brze zadatke",
   "settings.providers.disabled": "Onemogućeni pružatelji",
   "settings.providers.disabled.description": "Pružatelji za skrivanje s popisa",
   "settings.providers.enabled": "Omogućeni pružatelji (bijela lista)",
@@ -1151,7 +1247,6 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Šta je novo u Kilo Code",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "Ponovo smo izgradili ekstenziju na bržem i efikasnijem temelju.",
   "migration.whatsNew.features.performance.title": "Brže performanse agenta",
   "migration.whatsNew.features.performance.detail":
@@ -1176,7 +1271,6 @@ export const dict = {
   "migration.migrate.chatHistoryDesc": "Nekompatibilno sa novom arhitekturom",
   "migration.migrate.button": "Migriraj postavke",
   "migration.migrate.skip": "Preskoči",
-  "migration.migrate.back": "Nazad",
   "migration.migrate.keysDetected": "{{count}} ključeva otkriveno",
   "migration.migrate.serversConfigured": "{{count}} server(a) konfigurisano",
   "migration.migrate.modesFound": "{{count}} režim(a) pronađeno",
@@ -1197,6 +1291,11 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "Ovo uklanja stare postavke iz VS Code pohrane. Nećete moći ponovo pokrenuti ovu migraciju.",
   "migration.complete.done": "Završeno",
+  "migration.migrate.sessionsDetected": "Otkrivene {{count}} sesije",
+  "migration.error.sessionFailed": "Migracija sesije nije uspjela",
+  "migration.error.continue": "Nastavi",
+  "migration.error.action.copy": "Kopiraj",
+  "migration.error.toast.copied": "Greška kopirana u međuspremnik",
   // legacy-migration end
 
   "error.details.show": "Detalji",
@@ -1210,4 +1309,7 @@ export const dict = {
   "settings.saveBar.warning.many": "Nekoliko sesija je pokrenuto i bit će prekinuto",
   "settings.saveBar.saveAnyway": "Spremi svejedno",
   "settings.saveBar.cancel": "Otkaži",
+  "notifications.action.next": "Sljedeći",
+  "notifications.action.close": "Zatvori",
+  "notifications.action.tryModel": "Probaj {{model}}",
 }

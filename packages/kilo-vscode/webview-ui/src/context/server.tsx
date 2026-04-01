@@ -22,7 +22,7 @@ interface ServerContextValue {
   workspaceDirectory: Accessor<string>
 }
 
-const ServerContext = createContext<ServerContextValue>()
+export const ServerContext = createContext<ServerContextValue>()
 
 const initialDeviceAuth: DeviceAuthState = { status: "idle" }
 

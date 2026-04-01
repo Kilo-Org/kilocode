@@ -51,10 +51,10 @@ export class SettingsEditorProvider implements vscode.Disposable {
     return view
   }
 
-  openPanel(view: PanelView, tab?: string): void {
+  openPanel(view: PanelView, tab?: string, directory?: string | null): void {
     if (tab) this.tabs.set(view, tab)
 
-    const projectDirectory = this.getProjectDirectory()
+    const projectDirectory = directory ?? this.getProjectDirectory()
     const existing = this.panels.get(view)
     if (existing) {
       this.providers.get(view)?.setProjectDirectory(projectDirectory)

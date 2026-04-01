@@ -41,6 +41,7 @@ import { ConfigPaths } from "./paths"
 import { Filesystem } from "@/util/filesystem"
 
 import { ModesMigrator } from "../kilocode/modes-migrator" // kilocode_change
+import { fetchOrganizationModes } from "@kilocode/kilo-gateway" // kilocode_change
 import { RulesMigrator } from "../kilocode/rules-migrator" // kilocode_change
 import { WorkflowsMigrator } from "../kilocode/workflows-migrator" // kilocode_change
 import { McpMigrator } from "../kilocode/mcp-migrator" // kilocode_change
@@ -171,6 +172,26 @@ export namespace Config {
       }
     } catch (err) {
       log.warn("failed to load kilocode ignore patterns", { error: err })
+    }
+    // kilocode_change end
+
+    // kilocode_change start - Load organization custom modes from Kilo Cloud API
+    // These override legacy Kilocode modes but are overridden by well-known, global, and project config
+    try {
+      const kilo = auth["kilo"]
+      if (kilo?.type === "oauth" && kilo.access && kilo.accountId) {
+        const modes = await fetchOrganizationModes(kilo.access, kilo.accountId)
+        if (modes.length > 0) {
+          const agents = ModesMigrator.convertOrganizationModes(modes)
+          result = mergeConfigConcatArrays(result, { agent: agents })
+          log.debug("loaded organization custom modes", {
+            count: modes.length,
+            modes: modes.map((m) => m.slug),
+          })
+        }
+      }
+    } catch (err) {
+      log.warn("failed to load organization custom modes", { error: err })
     }
     // kilocode_change end
 
@@ -1138,6 +1159,10 @@ export namespace Config {
         .boolean()
         .optional()
         .describe("@deprecated Use 'share' field instead. Share newly created sessions automatically"),
+      remote_control: z // kilocode_change
+        .boolean()
+        .optional()
+        .describe("Enable remote control of sessions via Kilo Cloud. Equivalent to running /remote on startup."),
       autoupdate: z
         .union([z.boolean(), z.literal("notify")])
         .optional()
@@ -1314,7 +1339,54 @@ export namespace Config {
 
   export type Info = z.output<typeof Info>
 
+  // kilocode_change start — migrate bash permission for existing users before config is consumed
+  const GLOBAL_CONFIG_FILES = ["config.json", "kilo.json", "kilo.jsonc", "opencode.json", "opencode.jsonc"]
+
+  async function migrateBashPermission() {
+    const files = GLOBAL_CONFIG_FILES.map((file) => path.join(Global.Path.config, file))
+    // also check legacy TOML config — its presence means existing user
+    const legacy = path.join(Global.Path.config, "config")
+    const existing = files.filter((file) => existsSync(file))
+    const hasLegacy = existsSync(legacy)
+    // no global config → new user, they'll get the new bash:ask default
+    if (existing.length === 0 && !hasLegacy) return
+    // check if any config file already has an explicit bash permission
+    for (const file of existing) {
+      const text = await Bun.file(file)
+        .text()
+        .catch(() => "")
+      const data = parseJsonc(text) ?? {}
+      if (data.permission?.bash) return
+    }
+    // also check legacy TOML config for bash permission
+    if (hasLegacy) {
+      const toml = await import(pathToFileURL(legacy).href, { with: { type: "toml" } }).catch(() => undefined)
+      if (toml?.default?.permission?.bash) return
+    }
+    // existing user without bash permission in any file → write bash:allow to the
+    // highest-precedence existing file to preserve their current behavior.
+    // if only the legacy TOML file exists, write to config.json (the TOML migration will merge into it)
+    const target = existing.length > 0 ? existing[existing.length - 1] : path.join(Global.Path.config, "config.json")
+    const text = await Bun.file(target)
+      .text()
+      .catch(() => "{}")
+    if (target.endsWith(".jsonc")) {
+      const edits = modify(text, ["permission", "bash"], "allow", {
+        formattingOptions: { insertSpaces: true, tabSize: 2 },
+      })
+      await Bun.write(target, applyEdits(text, edits))
+      log.info("migrated bash permission to allow for existing user", { path: target })
+      return
+    }
+    const data = parseJsonc(text) ?? {}
+    const merged = { ...data, permission: { ...data.permission, bash: "allow" } }
+    await Bun.write(target, JSON.stringify(merged, null, 2))
+    log.info("migrated bash permission to allow for existing user", { path: target })
+  }
+  // kilocode_change end
+
   export const global = lazy(async () => {
+    await migrateBashPermission() // kilocode_change — run before config is read
     let result: Info = pipe(
       {},
       mergeDeep(await loadFile(path.join(Global.Path.config, "config.json"))),

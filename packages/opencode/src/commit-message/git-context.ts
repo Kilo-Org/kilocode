@@ -133,6 +133,7 @@ function git(args: string[], cwd: string): string {
     cwd,
     stdout: "pipe",
     stderr: "pipe",
+    windowsHide: true, // kilocode_change - prevent cmd.exe flash on Windows
   })
   return result.stdout.toString().trimEnd()
 }
@@ -144,7 +145,7 @@ function parseNameStatus(output: string): Array<{ status: string; path: string }
     let path: string
     if (status!.startsWith("R")) {
       // Rename: rest = ["old.ts", "new.ts"], use the new path
-      path = rest[1] ?? rest[0]
+      path = rest[1] ?? rest[0] ?? ""
     } else {
       path = rest.join("\t")
     }

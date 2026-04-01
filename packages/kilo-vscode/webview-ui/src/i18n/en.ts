@@ -268,6 +268,7 @@ export const dict = {
   "mcp.status.connected": "connected",
   "mcp.status.failed": "failed",
   "mcp.status.needs_auth": "needs auth",
+  "mcp.status.needs_registration": "needs client registration",
   "mcp.status.disabled": "disabled",
 
   "dialog.fork.empty": "No messages to fork from",
@@ -752,6 +753,20 @@ export const dict = {
   "provider.custom.models.name.placeholder": "Display Name",
   "provider.custom.models.remove": "Remove model",
   "provider.custom.models.add": "Add model",
+  "provider.custom.models.fetch": "Fetch models",
+  "provider.custom.models.fetching": "Fetching\u2026",
+  "provider.custom.models.fetch.error": "Failed to fetch models: {{error}}",
+  "provider.custom.models.fetch.authError": "Authentication failed. Check the API key above and try again.",
+  "provider.custom.models.fetch.empty": "No models found on this server.",
+  "provider.custom.models.fetch.added": "Added {{count}} model(s).",
+  "provider.custom.models.fetch.allExist": "All fetched models are already added.",
+  "provider.custom.models.fetch.selectAll": "Select all",
+  "provider.custom.models.fetch.deselectAll": "Deselect all",
+  "provider.custom.models.fetch.found": "{{count}} models found",
+  "provider.custom.models.fetch.showing": "Showing {{shown}} of {{total}}",
+  "provider.custom.models.fetch.search": "Search models\u2026",
+  "provider.custom.models.fetch.add": "Add {{count}} model(s)",
+  "provider.custom.edit.title": "Edit provider",
   "provider.custom.headers.label": "Headers (optional)",
   "provider.custom.headers.key.label": "Header",
   "provider.custom.headers.key.placeholder": "Header-Name",
@@ -824,16 +839,19 @@ export const dict = {
   "session.delete.button": "Delete session",
   "session.untitled": "Untitled",
   "session.recent": "Recent",
+  "session.showHistory": "Show History",
   "session.search.placeholder": "Search sessions...",
   "session.empty": "No sessions yet. Click + to start a new conversation.",
+  "session.tab.local": "Local",
+  "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Only this repository",
-  "session.cloud.import": "Import from cloud",
+  "session.cloud.import": "Import session",
   "feedback.button": "Feedback & Support",
   "feedback.dialog.message": "We'd love to hear your feedback or help with any issues you're experiencing.",
   "feedback.dialog.github": "Report an issue on GitHub",
   "feedback.dialog.discord": "Join our Discord community",
   "feedback.dialog.support": "Customer Support",
-  "session.cloud.import.title": "Import from cloud",
+  "session.cloud.import.title": "Import session",
   "session.cloud.import.placeholder": "Session ID, URL, or kilo import command",
   "session.cloud.import.button": "Import",
   "session.cloud.import.invalid": "Invalid session ID format",
@@ -906,8 +924,7 @@ export const dict = {
   "settings.autocomplete.title": "Autocomplete",
   "settings.notifications.title": "Notifications",
   "settings.context.title": "Context",
-  "settings.terminal.title": "Terminal",
-  "settings.prompts.title": "Prompts",
+
   "settings.experimental.title": "Experimental",
   "settings.language.title": "Language",
   "settings.aboutKiloCode.title": "About Kilo Code",
@@ -928,6 +945,7 @@ export const dict = {
   "prompt.placeholder.error": "Connection failed. Check the output panel or restart the extension.",
 
   "context.usage.sessionCost": "Session cost",
+  "context.stats.thisSession": "This session",
 
   "time.justNow": "just now",
   "time.minutesAgo": "{{count}} min ago",
@@ -956,8 +974,19 @@ export const dict = {
   "settings.aboutKiloCode.support.prefix": "For billing or account questions, contact Customer Support at",
   "settings.aboutKiloCode.resetSettings.title": "Reset Settings",
   "settings.aboutKiloCode.resetSettings.description":
-    "Reset all Kilo Code extension settings to their default values. This does not affect CLI or backend configuration.",
+    "This resets only VS Code extension-specific settings to their default values. Settings shared with the CLI, such as modes and auto-approve rules, are stored in the CLI configuration and will not be reset.",
   "settings.aboutKiloCode.resetSettings.button": "Reset All Settings",
+  "settings.aboutKiloCode.settingsTransfer.title": "Settings Transfer",
+  "settings.aboutKiloCode.settingsTransfer.description":
+    "Export or import your settings to transfer them between VS Code instances.",
+  "settings.aboutKiloCode.exportSettings": "Export",
+  "settings.aboutKiloCode.importSettings": "Import",
+  "settings.aboutKiloCode.importSettings.invalidJson": "Invalid JSON file. Please select a valid settings file.",
+  "settings.aboutKiloCode.importSettings.invalidConfig": "File does not contain valid Kilo settings.",
+  "settings.aboutKiloCode.importSettings.tooLarge": "File is too large. Settings files must be under 1 MB.",
+  "settings.aboutKiloCode.importSettings.newerVersion":
+    "This file was exported from a newer version of Kilo. Some settings may be ignored.",
+  "settings.aboutKiloCode.importSettings.success": "Settings imported. Review the changes above, then click Save.",
 
   "settings.agentBehaviour.subtab.modes": "Modes",
   "settings.agentBehaviour.subtab.agents": "Agents",
@@ -983,10 +1012,6 @@ export const dict = {
 
   "common.add": "Add",
   "common.choose": "Choose…",
-
-  "settings.notImplemented": "This section is not implemented yet.",
-  "settings.notImplemented.description":
-    "It will contain configuration options and explanatory text related to the selected settings category. During reimplementation, use this space to validate layout, spacing, scrolling behavior, and navigation state before wiring up real controls.",
 
   "settings.autocomplete.autoTrigger.title": "Enable automatic inline completions",
   "settings.autocomplete.autoTrigger.description": "Automatically show inline completion suggestions as you type",
@@ -1048,6 +1073,13 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Nucleus sampling parameter (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Max Steps",
   "settings.agentBehaviour.maxSteps.description": "Maximum agentic iterations",
+  "settings.agentBehaviour.hidden.title": "Hidden",
+  "settings.agentBehaviour.hidden.description": "Hide this agent from the mode switcher in the chat input",
+  "settings.agentBehaviour.disable.title": "Disabled",
+  "settings.agentBehaviour.disable.description": "Fully disable this agent — it will not appear anywhere",
+  "settings.agentBehaviour.badge.hidden": "hidden",
+  "settings.agentBehaviour.badge.disabled": "disabled",
+  "settings.agentBehaviour.badge.deprecated": "deprecated",
   "settings.agentBehaviour.discoveredSkills": "Discovered Skills",
   "settings.agentBehaviour.noSkillsFound":
     "No skills discovered. Add skill folder paths or URLs below to make skills available.",
@@ -1062,15 +1094,73 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "Remove skill",
   "settings.agentBehaviour.removeSkill.confirm": 'Remove skill "{{name}}"? This will delete the skill files from disk.',
   "settings.agentBehaviour.removeSkill.button": "Remove",
+  "settings.agentBehaviour.rules.description":
+    "Rules are instruction files that guide agent behaviour. They are included in the system prompt for every conversation. Add file paths below to include additional rules.",
   "settings.agentBehaviour.instructionFiles": "Additional Instruction Files",
   "settings.agentBehaviour.instructionFiles.description":
     "Paths to additional instruction files that are included in the system prompt",
   "settings.agentBehaviour.removeMcp.title": "Remove MCP server",
   "settings.agentBehaviour.removeMcp.confirm": 'Remove MCP server "{{name}}"? This will remove it from your config.',
   "settings.agentBehaviour.removeMcp.button": "Remove",
-  "settings.agentBehaviour.mcpEmpty": "No MCP servers configured. Edit the opencode config file to add MCP servers.",
+  "settings.agentBehaviour.mcpDetail.command": "Command",
+  "settings.agentBehaviour.mcpDetail.args": "Arguments",
+  "settings.agentBehaviour.mcpDetail.env": "Environment",
+  "settings.agentBehaviour.mcpDetail.disabled": "This server is disabled.",
+  "settings.agentBehaviour.editMcp": "Edit MCP Server",
+  "settings.agentBehaviour.editMcp.transportLocal": "Local server (stdio transport)",
+  "settings.agentBehaviour.editMcp.transportRemote": "Remote server (SSE/HTTP transport)",
+  "settings.agentBehaviour.editMcp.env": "Environment Variables",
+  "settings.agentBehaviour.editMcp.env.help": "Variables passed to the MCP server process.",
+  "settings.agentBehaviour.addMcp.command": "Command",
+  "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
+  "settings.agentBehaviour.addMcp.args": "Arguments",
+  "settings.agentBehaviour.addMcp.args.help": "One argument per line. Paths with spaces are preserved as-is.",
+  "settings.agentBehaviour.addMcp.args.placeholder": "e.g.\n-y\n@modelcontextprotocol/server-filesystem\n/tmp",
+  "settings.agentBehaviour.addMcp.url": "Server URL",
+  "settings.agentBehaviour.addMcp.url.placeholder": "e.g. http://localhost:3000/sse",
+  "settings.agentBehaviour.mcpBrowseMarketplace": "Browse Marketplace",
+  "settings.agentBehaviour.mcpEmpty":
+    "No MCP servers configured. Add MCP servers in kilo.jsonc, or ask the agent to add them for you.",
   "settings.agentBehaviour.workflowsPlaceholder": "Workflows are managed via workflow files in your workspace.",
-  "settings.agentBehaviour.notImplemented": "Not yet implemented.",
+  "settings.agentBehaviour.workflows.description":
+    "Workflows are custom slash commands defined in your config. Type /command-name in the chat to invoke them. Commands are configured in opencode.json under the 'command' section.",
+  "settings.agentBehaviour.workflows.empty":
+    "No custom commands configured. Add commands to your opencode.json to see them here.",
+  "settings.agentBehaviour.workflows.detail.description": "Description",
+  "settings.agentBehaviour.workflows.detail.template": "Template",
+
+  "settings.agentBehaviour.createMode": "Create New Mode",
+  "settings.agentBehaviour.createMode.name": "Name",
+  "settings.agentBehaviour.createMode.name.placeholder": "e.g. reviewer",
+  "settings.agentBehaviour.createMode.name.description":
+    "Unique identifier for the mode. Use lowercase letters, numbers, and hyphens only.",
+  "settings.agentBehaviour.createMode.description": "Description",
+  "settings.agentBehaviour.createMode.description.placeholder": "e.g. Reviews code for quality and best practices",
+  "settings.agentBehaviour.createMode.description.help": "Short description of what this mode does.",
+  "settings.agentBehaviour.createMode.prompt": "System Prompt",
+  "settings.agentBehaviour.createMode.prompt.placeholder":
+    "e.g. You are a code reviewer. Focus on code quality, best practices, and potential bugs.",
+  "settings.agentBehaviour.createMode.prompt.help": "Instructions for the AI agent when using this mode.",
+  "settings.agentBehaviour.createMode.button": "Create",
+  "settings.agentBehaviour.createMode.cancel": "Cancel",
+  "settings.agentBehaviour.createMode.nameRequired": "Name is required",
+  "settings.agentBehaviour.createMode.nameInvalid":
+    "Name must start with a lowercase letter and contain only lowercase letters, numbers, and hyphens",
+  "settings.agentBehaviour.createMode.nameTaken": "A mode with this name already exists",
+  "settings.agentBehaviour.importMode": "Import",
+  "settings.agentBehaviour.importMode.invalidName":
+    "Invalid mode name in file. Name must start with a lowercase letter and contain only lowercase letters, numbers, and hyphens.",
+  "settings.agentBehaviour.importMode.nameTaken": "A mode with this name already exists.",
+  "settings.agentBehaviour.importMode.invalidJson": "Invalid JSON file. Please select a valid agent definition file.",
+  "settings.agentBehaviour.importMode.tooLarge": "File is too large. Agent definitions must be under 1 MB.",
+  "settings.agentBehaviour.exportMode": "Export agent definition",
+  "settings.agentBehaviour.editMode": "Edit Mode",
+  "settings.agentBehaviour.editMode.description": "Description",
+  "settings.agentBehaviour.editMode.prompt": "System Prompt",
+  "settings.agentBehaviour.editMode.save": "Done",
+  "settings.agentBehaviour.editMode.back": "Back to list",
+  "settings.agentBehaviour.editMode.native": "Built-in mode (read-only definition)",
+  "settings.agentBehaviour.editMode.promptOverride": "Custom prompt override for this built-in mode",
 
   "settings.autoApprove.description":
     "Define how tools are allowed to run. Most tools default to Allow. doom_loop and external_directory default to Ask.",
@@ -1125,7 +1215,8 @@ export const dict = {
   "settings.providers.defaultModel.title": "Default Model",
   "settings.providers.defaultModel.description": "Primary model for conversations",
   "settings.providers.smallModel.title": "Small Model",
-  "settings.providers.smallModel.description": "Lightweight model for title generation and other quick tasks",
+  "settings.providers.smallModel.description":
+    "Lightweight model for title generation, commit message generation, prompt enhancement, and other quick tasks",
   "settings.providers.modeModels": "Model per Mode",
   "settings.providers.modeModels.description":
     "Override the default model for specific modes. If not set, the global default model is used.",
@@ -1156,7 +1247,6 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "What's New in Kilo Code",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "We've rebuilt the extension on a faster, more efficient foundation.",
   "migration.whatsNew.features.performance.title": "Faster Agent Performance",
   "migration.whatsNew.features.performance.detail":
@@ -1181,10 +1271,10 @@ export const dict = {
   "migration.migrate.chatHistoryDesc": "Incompatible with the new architecture",
   "migration.migrate.button": "Migrate Settings",
   "migration.migrate.skip": "Skip",
-  "migration.migrate.back": "Back",
   "migration.migrate.keysDetected": "{{count}} keys detected",
   "migration.migrate.serversConfigured": "{{count}} server(s) configured",
   "migration.migrate.modesFound": "{{count}} mode(s) found",
+  "migration.migrate.sessionsDetected": "{{count}} sessions detected",
   "migration.migrate.nothingToMigrate": "Nothing to migrate was found in the legacy settings.",
 
   // Migrate — item labels (reused from old select keys)
@@ -1202,6 +1292,10 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "This removes the old settings from VS Code storage. You will not be able to re-run this migration.",
   "migration.complete.done": "Done",
+  "migration.error.sessionFailed": "Session migration failed",
+  "migration.error.continue": "Continue",
+  "migration.error.action.copy": "Copy",
+  "migration.error.toast.copied": "Error copied to clipboard",
   // legacy-migration end
 
   "error.details.show": "Details",
@@ -1216,4 +1310,8 @@ export const dict = {
   "settings.saveBar.warning.many": "Several sessions are running and will be interrupted",
   "settings.saveBar.saveAnyway": "Save anyway",
   "settings.saveBar.cancel": "Cancel",
+
+  "notifications.action.next": "Next",
+  "notifications.action.close": "Close",
+  "notifications.action.tryModel": "Try {{model}}",
 }
