@@ -20,7 +20,7 @@ export interface NormalizedSession {
 
 export async function parseSession(id: string, dir: string, item?: LegacyHistoryItem): Promise<NormalizedSession> {
   const project = createProject(item)
-  const session = createSession(id, item, project.id)
+  const session = await createSession(id, item, project.id)
   const file = await getApiConversationHistory(id, dir)
   const conversation = parseFile(file)
   const messages = parseMessagesFromConversation(conversation, id, item)
