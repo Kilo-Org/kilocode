@@ -1,6 +1,9 @@
 import { describe, expect, it } from "bun:test"
 import {
+  MASKED_CUSTOM_PROVIDER_KEY,
   parseCustomProviderSecret,
+  resolveCustomProviderKey,
+  resolveCustomProviderAuth,
   sanitizeCustomProviderConfig,
   validateProviderID,
 } from "../../src/shared/custom-provider"
@@ -28,6 +31,34 @@ describe("parseCustomProviderSecret", () => {
   it("rejects invalid env references", () => {
     const result = parseCustomProviderSecret("{env:bad-name}")
     expect("error" in result ? result.error : "").toBe("Invalid environment variable name")
+  })
+})
+
+describe("resolveCustomProviderAuth", () => {
+  it("preserves auth when the api key field is unchanged", () => {
+    expect(resolveCustomProviderAuth(undefined, false)).toEqual({ mode: "preserve" })
+  })
+
+  it("stores a changed api key", () => {
+    expect(resolveCustomProviderAuth(" sk-test ", true)).toEqual({ mode: "set", key: "sk-test" })
+  })
+
+  it("clears auth when the field was changed to empty", () => {
+    expect(resolveCustomProviderAuth(undefined, true)).toEqual({ mode: "clear" })
+  })
+})
+
+describe("resolveCustomProviderKey", () => {
+  it("returns a masked value for api-backed providers", () => {
+    expect(resolveCustomProviderKey("api")).toBe(MASKED_CUSTOM_PROVIDER_KEY)
+  })
+
+  it("hides non-api auth from the edit form", () => {
+    expect(resolveCustomProviderKey("oauth")).toBe("")
+  })
+
+  it("returns empty when there is no saved key", () => {
+    expect(resolveCustomProviderKey(undefined)).toBe("")
   })
 })
 

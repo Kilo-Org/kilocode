@@ -14,6 +14,7 @@ import { useProvider } from "../../context/provider"
 import { useVSCode } from "../../context/vscode"
 import type { ExtensionMessage, ProviderConfig } from "../../types/messages"
 import { createProviderAction } from "../../utils/provider-action"
+import { MASKED_CUSTOM_PROVIDER_KEY, resolveCustomProviderKey } from "../../../../src/shared/custom-provider"
 
 const PROVIDER_ID = /^[a-z0-9][a-z0-9-_]*$/
 const OPENAI_COMPATIBLE = "@ai-sdk/openai-compatible"
@@ -219,11 +220,17 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     return entries.map(([key, value]) => ({ key, value }))
   }
 
+  const auth = props.existing?.config?.env?.length
+    ? undefined
+    : props.existing
+      ? provider.authStates()[props.existing.providerID]
+      : undefined
+
   const [form, setForm] = createStore<FormState>({
     providerID: props.existing?.providerID ?? "",
     name: props.existing?.name ?? "",
     baseURL: (props.existing?.config?.options as { baseURL?: string } | undefined)?.baseURL ?? "",
-    apiKey: "",
+    apiKey: resolveCustomProviderKey(auth),
     models: initModels(),
     headers: initHeaders(),
     saving: false,
@@ -236,6 +243,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     models: form.models.map(() => ({})),
     headers: form.headers.map(() => ({})),
   })
+  const [apiTouched, setApiTouched] = createSignal(false)
 
   // ── Fetch models state ──────────────────────────────────────────────
 
@@ -271,7 +279,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
   // (including setForm("models", ...)) invalidates effects that read from
   // the same store, causing unwanted re-runs that wipe the model picker.
   const [fetchURL, setFetchURL] = createSignal(form.baseURL)
-  const [fetchKey, setFetchKey] = createSignal(form.apiKey)
+  const [fetchKey, setFetchKey] = createSignal("")
   let fetchVersion = 0
 
   createEffect(() => {
@@ -400,7 +408,8 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     if (picked.length === 0) return
 
     // Replace the single empty row or append
-    const empty = form.models.length === 1 && !form.models[0].id.trim() && !form.models[0].name.trim()
+    const row = form.models[0]
+    const empty = form.models.length === 1 && !!row && !row.id.trim() && !row.name.trim()
     const merged = empty ? picked : [...form.models, ...picked]
 
     setForm("models", merged)
@@ -477,7 +486,8 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
         type: "saveCustomProvider",
         providerID: result.providerID,
         config: result.config,
-        apiKey: result.key,
+        apiKey: apiTouched() ? result.key : undefined,
+        apiKeyChanged: apiTouched(),
       },
       {
         onConnected: () => {
@@ -589,8 +599,10 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
               description={language.t("provider.custom.field.apiKey.description")}
               value={form.apiKey}
               onChange={(v) => {
-                setForm("apiKey", v)
-                setFetchKey(v)
+                const key = !apiTouched() && form.apiKey === MASKED_CUSTOM_PROVIDER_KEY ? v.replace(/^\*+/, "") : v
+                setApiTouched(true)
+                setForm("apiKey", key)
+                setFetchKey(key)
               }}
             />
           </div>

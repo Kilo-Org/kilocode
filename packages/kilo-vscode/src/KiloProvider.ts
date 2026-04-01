@@ -1488,6 +1488,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
     const method = typeof msg.method === "number" ? msg.method : 0
     const key = typeof msg.apiKey === "string" ? msg.apiKey : undefined
+    const keyChanged = msg.apiKeyChanged === true
     const code = typeof msg.code === "string" ? msg.code : undefined
     const config = msg.config && typeof msg.config === "object" ? (msg.config as Record<string, unknown>) : undefined
     if (msg.type === "connectProvider" && key) return connectProviderAction(ctx, rid, pid, key)
@@ -1495,7 +1496,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (msg.type === "completeProviderOAuth") return completeOAuthAction(ctx, rid, pid, method, code)
     if (msg.type === "disconnectProvider") return disconnectProviderAction(ctx, rid, pid, this.cachedConfigMessage, set)
     if (msg.type === "saveCustomProvider" && config)
-      return saveCustomProviderAction(ctx, rid, pid, config, key, this.cachedConfigMessage, set)
+      return saveCustomProviderAction(ctx, rid, pid, config, key, keyChanged, this.cachedConfigMessage, set)
   }
 
   private async handleFetchCustomProviderModels(msg: Record<string, unknown>): Promise<void> {
