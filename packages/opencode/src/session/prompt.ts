@@ -1418,6 +1418,7 @@ export namespace SessionPrompt {
 
     // Original logic when experimental plan mode is disabled
     if (!Flag.KILO_EXPERIMENTAL_PLAN_MODE) {
+      // kilocode_change start - inject plan file path so agent writes to .kilo/plans/
       if (input.agent.name === "plan") {
         const plan = Session.plan(input.session)
         const exists = await Filesystem.exists(plan)
@@ -1434,6 +1435,7 @@ export namespace SessionPrompt {
           synthetic: true,
         })
       }
+      // kilocode_change end
       const wasPlan = input.messages.some((msg) => msg.info.role === "assistant" && msg.info.agent === "plan")
       // kilocode_change start - renamed from "build" to "code"
       if (wasPlan && input.agent.name === "code") {
