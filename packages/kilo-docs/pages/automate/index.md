@@ -36,7 +36,6 @@ Connect Kilo Code to external tools and services:
 - [**Using MCP in Kilo Code**](/docs/automate/mcp/using-in-kilo-code) — Configuration guide
 - [**STDIO & SSE Transports**](/docs/automate/mcp/server-transports) — Local and remote server options
 - [**MCP vs API**](/docs/automate/mcp/mcp-vs-api) — When to use MCP
-- [**Using MCP in CLI**](/docs/automate/mcp/using-in-cli) — CLI-specific MCP setup
 
 ## Integrations
 

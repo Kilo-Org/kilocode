@@ -16,6 +16,7 @@ import { Locale } from "@/util/locale"
 import { Global } from "@/global"
 import { useDialog } from "../../ui/dialog"
 import { useTuiConfig } from "../../context/tui-config"
+import { ConfigProtection } from "@/kilocode/permission/config-paths" // kilocode_change
 
 type PermissionStage = "permission" | "always" | "reject"
 
@@ -158,12 +159,12 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
             <Switch>
               <Match when={props.request.always.length === 1 && props.request.always[0] === "*"}>
                 {/* kilocode_change */}
-                <TextBody title={"This will allow " + props.request.permission + " until Kilo is restarted."} />
+                <TextBody title={"This will allow " + props.request.permission + " permanently."} />
               </Match>
               <Match when={true}>
                 <box paddingLeft={1} gap={1}>
                   {/* kilocode_change */}
-                  <text fg={theme.textMuted}>This will allow the following patterns until Kilo is restarted</text>
+                  <text fg={theme.textMuted}>This will allow the following patterns permanently</text>
                   <box>
                     <For each={props.request.always}>
                       {(pattern) => (
@@ -428,12 +429,18 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
             </box>
           )
 
+          // kilocode_change start — hide "Always allow" for config file edits
+          const options: Record<string, string> = props.request.metadata?.[ConfigProtection.DISABLE_ALWAYS_KEY]
+            ? { once: "Allow once", reject: "Reject" }
+            : { once: "Allow once", always: "Allow always", reject: "Reject" }
+          // kilocode_change end
+
           const body = (
             <Prompt
               title="Permission required"
               header={header()}
               body={current.body}
-              options={{ once: "Allow once", always: "Allow always", reject: "Reject" }}
+              options={options}
               escapeKey="reject"
               fullscreen
               onSelect={(option) => {

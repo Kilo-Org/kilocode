@@ -8,6 +8,8 @@ import type { QuestionAnswer, QuestionRequest } from "@kilocode/sdk/v2"
 import { useLanguage } from "@/context/language"
 import { useSDK } from "@/context/sdk"
 
+const cache = new Map<string, { tab: number; answers: QuestionAnswer[]; custom: string[]; customOn: boolean[] }>()
+
 // kilocode_change start - add onModeAction prop for mode-switching support
 export const SessionQuestionDock: Component<{
   request: QuestionRequest
@@ -21,16 +23,18 @@ export const SessionQuestionDock: Component<{
   const questions = createMemo(() => props.request.questions)
   const total = createMemo(() => questions().length)
 
+  const cached = cache.get(props.request.id)
   const [store, setStore] = createStore({
-    tab: 0,
-    answers: [] as QuestionAnswer[],
-    custom: [] as string[],
-    customOn: [] as boolean[],
+    tab: cached?.tab ?? 0,
+    answers: cached?.answers ?? ([] as QuestionAnswer[]),
+    custom: cached?.custom ?? ([] as string[]),
+    customOn: cached?.customOn ?? ([] as boolean[]),
     editing: false,
     sending: false,
   })
 
   let root: HTMLDivElement | undefined
+  let replied = false
 
   const question = createMemo(() => questions()[store.tab])
   const options = createMemo(() => question()?.options ?? [])
@@ -113,6 +117,16 @@ export const SessionQuestionDock: Component<{
     })
   })
 
+  onCleanup(() => {
+    if (replied) return
+    cache.set(props.request.id, {
+      tab: store.tab,
+      answers: store.answers.map((a) => (a ? [...a] : [])),
+      custom: store.custom.map((s) => s ?? ""),
+      customOn: store.customOn.map((b) => b ?? false),
+    })
+  })
+
   const fail = (err: unknown) => {
     const message = err instanceof Error ? err.message : String(err)
     showToast({ title: language.t("common.requestFailed"), description: message })
@@ -125,6 +139,8 @@ export const SessionQuestionDock: Component<{
     setStore("sending", true)
     try {
       await sdk.client.question.reply({ requestID: props.request.id, answers })
+      replied = true
+      cache.delete(props.request.id)
     } catch (err) {
       fail(err)
     } finally {
@@ -139,6 +155,8 @@ export const SessionQuestionDock: Component<{
     setStore("sending", true)
     try {
       await sdk.client.question.reject({ requestID: props.request.id })
+      replied = true
+      cache.delete(props.request.id)
     } catch (err) {
       fail(err)
     } finally {

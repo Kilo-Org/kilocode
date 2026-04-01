@@ -25,8 +25,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command:
-      "bunx storybook build -o ./storybook-static && bunx http-server ./storybook-static -p 6006 --silent",
+    command: "bunx storybook build -o ./storybook-static && bunx http-server ./storybook-static -p 6006 --silent",
     url: "http://localhost:6006",
     reuseExistingServer: !process.env["CI"],
     timeout: 300_000,

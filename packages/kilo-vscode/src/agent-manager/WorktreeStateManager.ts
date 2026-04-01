@@ -1,7 +1,7 @@
 /**
  * WorktreeStateManager - Centralized persistent state for agent manager worktrees and sessions.
  *
- * Persists to `.kilocode/agent-manager.json`. Decouples worktrees from sessions
+ * Persists to `.kilo/agent-manager.json`. Decouples worktrees from sessions
  * (many sessions per worktree) and provides CRUD operations for both.
  *
  * Data model:
@@ -47,13 +47,15 @@ interface StateFile {
   worktrees: Record<string, Omit<Worktree, "id">>
   sessions: Record<string, Omit<ManagedSession, "id">>
   tabOrder?: Record<string, string[]>
+  worktreeOrder?: string[]
   sessionsCollapsed?: boolean
   reviewDiffStyle?: "unified" | "split"
   defaultBaseBranch?: string
 }
 
+import { KILO_DIR, migrateAgentManagerData } from "./constants"
+
 const STATE_FILE = "agent-manager.json"
-const KILOCODE_DIR = ".kilocode"
 
 let counter = 0
 
@@ -66,6 +68,7 @@ export class WorktreeStateManager {
   private worktrees = new Map<string, Worktree>()
   private sessions = new Map<string, ManagedSession>()
   private tabOrder: Record<string, string[]> = {}
+  private worktreeOrder: string[] = []
   private collapsed = false
   private reviewDiffStyle: "unified" | "split" = "unified"
   private defaultBase: string | undefined
@@ -73,8 +76,12 @@ export class WorktreeStateManager {
   private saving: Promise<void> | undefined
   private pendingSave = false
 
+  private readonly root: string
+  private migrated = false
+
   constructor(root: string, log: (msg: string) => void) {
-    this.file = path.join(root, KILOCODE_DIR, STATE_FILE)
+    this.root = root
+    this.file = path.join(root, KILO_DIR, STATE_FILE)
     this.log = log
   }
 
@@ -180,6 +187,10 @@ export class WorktreeStateManager {
     // Clean up tab order for this worktree
     delete this.tabOrder[id]
 
+    // Remove from worktree order
+    const idx = this.worktreeOrder.indexOf(id)
+    if (idx !== -1) this.worktreeOrder.splice(idx, 1)
+
     this.log(`Removed worktree ${id}, orphaned ${orphaned.length} sessions`)
     void this.save()
     return orphaned
@@ -236,6 +247,19 @@ export class WorktreeStateManager {
   }
 
   // ---------------------------------------------------------------------------
+  // Worktree order
+  // ---------------------------------------------------------------------------
+
+  getWorktreeOrder(): string[] {
+    return this.worktreeOrder
+  }
+
+  setWorktreeOrder(order: string[]): void {
+    this.worktreeOrder = order
+    void this.save()
+  }
+
+  // ---------------------------------------------------------------------------
   // Sessions collapsed
   // ---------------------------------------------------------------------------
 
@@ -279,22 +303,36 @@ export class WorktreeStateManager {
   // ---------------------------------------------------------------------------
 
   async load(): Promise<void> {
+    // Migrate Agent Manager data from .kilocode → .kilo before first read
+    if (!this.migrated) {
+      this.migrated = true
+      await migrateAgentManagerData(this.root, this.log)
+    }
     try {
       const content = await fs.promises.readFile(this.file, "utf-8")
       const data = JSON.parse(content) as StateFile
       this.worktrees.clear()
       this.sessions.clear()
       this.tabOrder = {}
+      this.worktreeOrder = []
       this.reviewDiffStyle = "unified"
 
       for (const [id, wt] of Object.entries(data.worktrees ?? {})) {
-        this.worktrees.set(id, { id, ...wt })
+        // Rewrite stale .kilocode paths while preserving the separator style already stored.
+        const fixed =
+          wt.path?.replace(/([/\\])\.kilocode([/\\])/g, (_match, leadingSep, trailingSep) => {
+            return `${leadingSep}.kilo${trailingSep}`
+          }) ?? wt.path
+        this.worktrees.set(id, { id, ...wt, path: fixed })
       }
       for (const [id, s] of Object.entries(data.sessions ?? {})) {
         this.sessions.set(id, { id, ...s })
       }
       if (data.tabOrder) {
         this.tabOrder = data.tabOrder
+      }
+      if (data.worktreeOrder) {
+        this.worktreeOrder = data.worktreeOrder
       }
       this.collapsed = data.sessionsCollapsed ?? false
       if (data.reviewDiffStyle === "split") {
@@ -366,6 +404,9 @@ export class WorktreeStateManager {
     }
     if (Object.keys(this.tabOrder).length > 0) {
       data.tabOrder = this.tabOrder
+    }
+    if (this.worktreeOrder.length > 0) {
+      data.worktreeOrder = this.worktreeOrder
     }
     if (this.collapsed) {
       data.sessionsCollapsed = true

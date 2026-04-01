@@ -31,6 +31,7 @@ import {
 import { Log } from "../util/log"
 import { pathToFileURL } from "bun"
 import { Filesystem } from "../util/filesystem"
+import { Hash } from "../util/hash"
 import { ACPSessionManager } from "./session"
 import type { ACPConfig } from "./types"
 import { Provider } from "../provider/provider"
@@ -283,7 +284,7 @@ export namespace ACP {
                 const output = this.bashOutput(part)
                 const content: ToolCallContent[] = []
                 if (output) {
-                  const hash = String(Bun.hash(output))
+                  const hash = Hash.fast(output)
                   if (part.tool === "bash") {
                     if (this.bashSnapshots.get(part.callID) === hash) {
                       await this.connection
@@ -519,19 +520,21 @@ export namespace ACP {
     async initialize(params: InitializeRequest): Promise<InitializeResponse> {
       log.info("initialize", { protocolVersion: params.protocolVersion })
 
+      // kilocode_change start
       const authMethod: AuthMethod = {
-        description: "Run `opencode auth login` in the terminal",
-        name: "Login with opencode",
-        id: "opencode-login",
+        description: "Run `kilo auth login` in the terminal",
+        name: "Login with Kilo",
+        id: "kilo-login",
       }
+      // kilocode_change end
 
       // If client supports terminal-auth capability, use that instead.
       if (params.clientCapabilities?._meta?.["terminal-auth"] === true) {
         authMethod._meta = {
           "terminal-auth": {
-            command: "opencode",
+            command: "kilo",
             args: ["auth", "login"],
-            label: "OpenCode Login",
+            label: "Kilo Login", // kilocode_change
           },
         }
       }
@@ -556,7 +559,7 @@ export namespace ACP {
         },
         authMethods: [authMethod],
         agentInfo: {
-          name: "OpenCode",
+          name: "Kilo", // kilocode_change
           version: Installation.VERSION,
         },
       }
@@ -1589,8 +1592,16 @@ export namespace ACP {
     if (specified) return specified
 
     // kilocode_change start
-    const freeModel = await fetchDefaultModel()
-    return { providerID: "kilo", modelID: freeModel }
+    // Only fall back to the Kilo provider if it was present in the available
+    // providers list. When teams configure enabled_providers to use only their
+    // own models, this prevents silently routing requests to an external API.
+    // Note: LiteLLM / custom provider users won't reach here — the function
+    // returns earlier via `specified` (config.model) or the sorted providers list.
+    if (providers.some((p) => p.id === "kilo")) {
+      const freeModel = await fetchDefaultModel()
+      return { providerID: "kilo", modelID: freeModel }
+    }
+    throw new Error("no model available: no providers are configured and no default model is set")
     // kilocode_change end
   }
 

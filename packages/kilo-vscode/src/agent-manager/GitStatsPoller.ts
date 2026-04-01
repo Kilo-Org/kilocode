@@ -58,10 +58,19 @@ export class GitStatsPoller {
   > = {}
   private readonly intervalMs: number
   private readonly git: GitOps
+  private skipWorktreeIds = new Set<string>()
 
   constructor(private readonly options: GitStatsPollerOptions) {
     this.intervalMs = options.intervalMs ?? 5000
     this.git = options.git
+  }
+
+  skipWorktree(id: string): void {
+    this.skipWorktreeIds.add(id)
+  }
+
+  unskipWorktree(id: string): void {
+    this.skipWorktreeIds.delete(id)
   }
 
   setEnabled(enabled: boolean): void {
@@ -134,7 +143,7 @@ export class GitStatsPoller {
     const missing = new Set(
       presence.degraded ? [] : presence.worktrees.filter((item) => item.missing).map((item) => item.worktreeId),
     )
-    const active = worktrees.filter((wt) => !missing.has(wt.id))
+    const active = worktrees.filter((wt) => !missing.has(wt.id) && !this.skipWorktreeIds.has(wt.id))
     if (active.length === 0) {
       if (this.lastHash === "") return
       this.lastHash = ""
@@ -149,7 +158,7 @@ export class GitStatsPoller {
           try {
             const base = remoteRef(wt)
             const [{ data: diffs }, ab] = await Promise.all([
-              client.worktree.diff({ directory: wt.path, base }, { throwOnError: true }),
+              client.worktree.diffSummary({ directory: wt.path, base }, { throwOnError: true }),
               this.git.aheadBehind(wt.path, base, wt.remote),
             ])
             const files = diffs.length
@@ -250,7 +259,7 @@ export class GitStatsPoller {
         if (base && client) {
           this.options.log(`Local stats: using HTTP client with base=${base}`)
           const [{ data: diffs }, ab] = await Promise.all([
-            client.worktree.diff({ directory: root, base }, { throwOnError: true }),
+            client.worktree.diffSummary({ directory: root, base }, { throwOnError: true }),
             this.git.aheadBehind(root, base, remote),
           ])
           files = diffs.length

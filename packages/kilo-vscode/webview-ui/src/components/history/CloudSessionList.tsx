@@ -2,11 +2,11 @@
  * CloudSessionList component
  * Displays cloud sessions from the Kilo cloud API, grouped by date.
  * Supports filtering by repository (git URL) and search by title.
+ * Header/back button/import button are owned by the parent HistoryView.
  */
 
-import { Component, createSignal, createEffect, onMount, onCleanup, Show } from "solid-js"
+import { Component, Show, createSignal, createEffect, onMount, onCleanup } from "solid-js"
 import { List } from "@kilocode/kilo-ui/list"
-import { Button } from "@kilocode/kilo-ui/button"
 import { Checkbox } from "@kilocode/kilo-ui/checkbox"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
@@ -125,12 +125,7 @@ const CloudSessionList: Component<CloudSessionListProps> = (props) => {
   }
 
   return (
-    <div class="session-list cloud-session-list">
-      <div class="cloud-session-filters">
-        <Checkbox checked={repoOnly()} onChange={setRepoOnly}>
-          {language.t("session.cloud.repoOnly") ?? "Only this repository"}
-        </Checkbox>
-      </div>
+    <div class="cloud-session-list">
       <List<DisplaySession>
         items={sessions()}
         key={(s) => s.id}
@@ -138,7 +133,18 @@ const CloudSessionList: Component<CloudSessionListProps> = (props) => {
         onSelect={(s) => {
           if (s) props.onSelectSession?.(s.id)
         }}
-        search={{ placeholder: language.t("session.search.placeholder"), autofocus: false }}
+        search={{
+          placeholder: language.t("session.search.placeholder"),
+          autofocus: false,
+          action:
+            gitUrl() !== null ? (
+              <div class="cloud-session-repo-filter">
+                <Checkbox checked={repoOnly()} onChange={setRepoOnly}>
+                  {language.t("session.cloud.repoOnly") ?? "Only this repository"}
+                </Checkbox>
+              </div>
+            ) : undefined,
+        }}
         emptyMessage={
           loading() ? (language.t("common.loading") ?? "Loading...") : (language.t("session.empty") ?? "No sessions")
         }
@@ -157,9 +163,9 @@ const CloudSessionList: Component<CloudSessionListProps> = (props) => {
       </List>
       <Show when={nextCursor() && !loading()}>
         <div class="cloud-session-load-more">
-          <Button variant="ghost" size="small" onClick={loadMore}>
+          <button class="cloud-session-load-more-btn" onClick={loadMore}>
             {language.t("common.loadMore") ?? "Load more"}
-          </Button>
+          </button>
         </div>
       </Show>
     </div>

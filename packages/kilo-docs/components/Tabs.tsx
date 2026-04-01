@@ -27,16 +27,16 @@ export function Tabs({ children }: TabsProps) {
   )
 
   const indexFromHash = () => {
-    if (typeof window === "undefined") return 0
     const hash = window.location.hash.slice(1)
     if (!hash) return 0
     const found = tabs.findIndex((tab) => slugify(tab.props.label) === hash)
     return found >= 0 ? found : 0
   }
 
-  const [activeIndex, setActiveIndex] = useState(indexFromHash)
+  const [activeIndex, setActiveIndex] = useState(0)
 
   useEffect(() => {
+    setActiveIndex(indexFromHash())
     const onHashChange = () => setActiveIndex(indexFromHash())
     window.addEventListener("hashchange", onHashChange)
     return () => window.removeEventListener("hashchange", onHashChange)

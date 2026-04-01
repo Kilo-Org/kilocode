@@ -1,6 +1,7 @@
 import { $ } from "bun"
 import path from "path"
 import fs from "fs/promises"
+import { Filesystem } from "../util/filesystem"
 import { Log } from "../util/log"
 import { Flag } from "../flag/flag"
 import { Global } from "../global"
@@ -8,11 +9,13 @@ import z from "zod"
 import { Config } from "../config/config"
 import { Instance } from "../project/instance"
 import { Scheduler } from "../scheduler"
+import * as KiloSnapshot from "../kilocode/snapshot" // kilocode_change
 
 export namespace Snapshot {
   const log = Log.create({ service: "snapshot" })
   const hour = 60 * 60 * 1000
   const prune = "7.days"
+  export const MAX_DIFF_SIZE = 256 * 1024 // kilocode_change
 
   export function init() {
     Scheduler.register({
@@ -33,10 +36,11 @@ export namespace Snapshot {
       .then(() => true)
       .catch(() => false)
     if (!exists) return
-    const result = await $`git --git-dir ${git} --work-tree ${Instance.worktree} gc --prune=${prune}`
-      .quiet()
-      .cwd(Instance.directory)
-      .nothrow()
+    const result =
+      await $`git -c core.autocrlf=false -c core.longpaths=true -c core.symlinks=true --git-dir ${git} --work-tree ${Instance.worktree} gc --prune=${prune}`
+        .quiet()
+        .cwd(Instance.directory)
+        .nothrow()
     if (result.exitCode !== 0) {
       log.warn("cleanup failed", {
         exitCode: result.exitCode,
@@ -52,23 +56,7 @@ export namespace Snapshot {
     if (Instance.project.vcs !== "git" || Flag.KILO_CLIENT === "acp") return
     const cfg = await Config.get()
     if (cfg.snapshot === false) return
-    const git = gitdir()
-    if (await fs.mkdir(git, { recursive: true })) {
-      await $`git init`
-        .env({
-          ...process.env,
-          GIT_DIR: git,
-          GIT_WORK_TREE: Instance.worktree,
-        })
-        .quiet()
-        .nothrow()
-      // Configure git to not convert line endings on Windows
-      await $`git --git-dir ${git} config core.autocrlf false`.quiet().nothrow()
-      await $`git --git-dir ${git} config core.longpaths true`.quiet().nothrow()
-      await $`git --git-dir ${git} config core.symlinks true`.quiet().nothrow()
-      await $`git --git-dir ${git} config core.fsmonitor false`.quiet().nothrow()
-      log.info("initialized")
-    }
+    const git = await KiloSnapshot.prepare() // kilocode_change
     await add(git)
     const hash = await $`git --git-dir ${git} --work-tree ${Instance.worktree} write-tree`
       .quiet()
@@ -86,7 +74,7 @@ export namespace Snapshot {
   export type Patch = z.infer<typeof Patch>
 
   export async function patch(hash: string): Promise<Patch> {
-    const git = gitdir()
+    const git = await KiloSnapshot.prepare() // kilocode_change
     await add(git)
     const result =
       await $`git -c core.autocrlf=false -c core.longpaths=true -c core.symlinks=true -c core.quotepath=false --git-dir ${git} --work-tree ${Instance.worktree} diff --no-ext-diff --name-only ${hash} -- .`
@@ -114,7 +102,7 @@ export namespace Snapshot {
 
   export async function restore(snapshot: string) {
     log.info("restore", { commit: snapshot })
-    const git = gitdir()
+    const git = await KiloSnapshot.prepare() // kilocode_change
     const result =
       await $`git -c core.longpaths=true -c core.symlinks=true --git-dir ${git} --work-tree ${Instance.worktree} read-tree ${snapshot} && git -c core.longpaths=true -c core.symlinks=true --git-dir ${git} --work-tree ${Instance.worktree} checkout-index -a -f`
         .quiet()
@@ -133,8 +121,8 @@ export namespace Snapshot {
 
   export async function revert(patches: Patch[]) {
     const files = new Set<string>()
-    const git = gitdir()
     for (const item of patches) {
+      const git = await KiloSnapshot.prepare() // kilocode_change
       for (const file of item.files) {
         if (files.has(file)) continue
         log.info("reverting", { file, hash: item.hash })
@@ -165,7 +153,7 @@ export namespace Snapshot {
   }
 
   export async function diff(hash: string) {
-    const git = gitdir()
+    const git = await KiloSnapshot.prepare() // kilocode_change
     await add(git)
     const result =
       await $`git -c core.autocrlf=false -c core.longpaths=true -c core.symlinks=true -c core.quotepath=false --git-dir ${git} --work-tree ${Instance.worktree} diff --no-ext-diff ${hash} -- .`
@@ -200,7 +188,7 @@ export namespace Snapshot {
     })
   export type FileDiff = z.infer<typeof FileDiff>
   export async function diffFull(from: string, to: string): Promise<FileDiff[]> {
-    const git = gitdir()
+    const git = await KiloSnapshot.prepare() // kilocode_change
     const result: FileDiff[] = []
     const status = new Map<string, "added" | "deleted" | "modified">()
 
@@ -227,13 +215,22 @@ export namespace Snapshot {
       if (!line) continue
       const [additions, deletions, file] = line.split("\t")
       const isBinaryFile = additions === "-" && deletions === "-"
-      const before = isBinaryFile
+      // kilocode_change start
+      const oversized =
+        !isBinaryFile &&
+        ((parseInt(await $`git --git-dir ${git} cat-file -s ${from}:${file}`.quiet().nothrow().text()) || 0) >
+          MAX_DIFF_SIZE ||
+          (parseInt(await $`git --git-dir ${git} cat-file -s ${to}:${file}`.quiet().nothrow().text()) || 0) >
+            MAX_DIFF_SIZE)
+      const skip = isBinaryFile || oversized
+      // kilocode_change end
+      const before = skip
         ? ""
         : await $`git -c core.autocrlf=false -c core.longpaths=true -c core.symlinks=true --git-dir ${git} --work-tree ${Instance.worktree} show ${from}:${file}`
             .quiet()
             .nothrow()
             .text()
-      const after = isBinaryFile
+      const after = skip
         ? ""
         : await $`git -c core.autocrlf=false -c core.longpaths=true -c core.symlinks=true --git-dir ${git} --work-tree ${Instance.worktree} show ${to}:${file}`
             .quiet()
@@ -254,8 +251,7 @@ export namespace Snapshot {
   }
 
   function gitdir() {
-    const project = Instance.project
-    return path.join(Global.Path.data, "snapshot", project.id)
+    return KiloSnapshot.gitdir() // kilocode_change
   }
 
   async function add(git: string) {
@@ -271,13 +267,12 @@ export namespace Snapshot {
     const target = path.join(git, "info", "exclude")
     await fs.mkdir(path.join(git, "info"), { recursive: true })
     if (!file) {
-      await Bun.write(target, "")
+      await Filesystem.write(target, "")
       return
     }
-    const text = await Bun.file(file)
-      .text()
-      .catch(() => "")
-    await Bun.write(target, text)
+    const text = await Filesystem.readText(file).catch(() => "")
+
+    await Filesystem.write(target, text)
   }
 
   async function excludes() {

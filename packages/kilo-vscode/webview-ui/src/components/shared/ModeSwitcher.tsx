@@ -7,11 +7,21 @@
  * ModeSwitcher     — thin wrapper wired to session context for chat usage.
  */
 
-import { Component, createSignal, For, Show } from "solid-js"
-import { Popover } from "@kilocode/kilo-ui/popover"
+import { Component, createSignal, onCleanup, For, Show } from "solid-js"
+import { PopupSelector } from "./PopupSelector"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useSession } from "../../context/session"
+import { useLanguage } from "../../context/language"
 import type { AgentInfo } from "../../types/messages"
+
+/** Format an agent for display. Uses displayName if available, otherwise title-cases the slug. */
+function formatAgentLabel(agent: AgentInfo): string {
+  if (agent.displayName) return agent.displayName
+  return agent.name
+    .split(/[-_]/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ")
+}
 
 // ---------------------------------------------------------------------------
 // Reusable base component
@@ -28,6 +38,14 @@ export interface ModeSwitcherBaseProps {
 
 export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
   const [open, setOpen] = createSignal(false)
+  const [focused, setFocused] = createSignal(-1)
+  const language = useLanguage()
+  let listRef: HTMLDivElement | undefined
+
+  // Listen for slash command trigger
+  const onTrigger = () => setOpen(true)
+  window.addEventListener("openModePicker", onTrigger)
+  onCleanup(() => window.removeEventListener("openModePicker", onTrigger))
 
   const hasAgents = () => props.agents.length > 1
 
@@ -36,20 +54,57 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
     setOpen(false)
   }
 
+  function focusItem(idx: number) {
+    const items = listRef?.querySelectorAll<HTMLElement>("[role=option]")
+    if (!items) return
+    const clamped = Math.max(0, Math.min(idx, items.length - 1))
+    setFocused(clamped)
+    items[clamped]?.focus()
+  }
+
+  function onOpen(val: boolean) {
+    setOpen(val)
+    if (val) {
+      const idx = props.agents.findIndex((a) => a.name === props.value)
+      requestAnimationFrame(() => focusItem(idx >= 0 ? idx : 0))
+    }
+  }
+
+  function onKeyDown(e: KeyboardEvent) {
+    const len = props.agents.length
+    const cur = focused()
+    if (e.key === "ArrowDown") {
+      e.preventDefault()
+      focusItem((cur + 1) % len)
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault()
+      focusItem((cur - 1 + len) % len)
+    } else if (e.key === "Home") {
+      e.preventDefault()
+      focusItem(0)
+    } else if (e.key === "End") {
+      e.preventDefault()
+      focusItem(len - 1)
+    } else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault()
+      if (cur >= 0 && cur < len) pick(props.agents[cur].name)
+    }
+  }
+
   const triggerLabel = () => {
     const agent = props.agents.find((a) => a.name === props.value)
-    if (agent) {
-      return agent.name.charAt(0).toUpperCase() + agent.name.slice(1)
-    }
+    if (agent) return formatAgentLabel(agent)
     return props.value || "Code"
   }
 
   return (
     <Show when={hasAgents()}>
-      <Popover
+      <PopupSelector
+        expanded={false}
         placement="top-start"
+        minHeight={100}
         open={open()}
-        onOpenChange={setOpen}
+        onOpenChange={onOpen}
         triggerAs={Button}
         triggerProps={{ variant: "ghost", size: "small" }}
         trigger={
@@ -61,24 +116,49 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
           </>
         }
       >
-        <div class="mode-switcher-list" role="listbox">
-          <For each={props.agents}>
-            {(agent) => (
-              <div
-                class={`mode-switcher-item${agent.name === props.value ? " selected" : ""}`}
-                role="option"
-                aria-selected={agent.name === props.value}
-                onClick={() => pick(agent.name)}
-              >
-                <span class="mode-switcher-item-name">{agent.name.charAt(0).toUpperCase() + agent.name.slice(1)}</span>
-                <Show when={agent.description}>
-                  <span class="mode-switcher-item-desc">{agent.description}</span>
-                </Show>
-              </div>
-            )}
-          </For>
-        </div>
-      </Popover>
+        {(bodyH) => (
+          <div
+            class="mode-switcher-list"
+            role="listbox"
+            ref={listRef}
+            onKeyDown={onKeyDown}
+            style={bodyH() !== undefined ? { "max-height": `${bodyH()}px` } : {}}
+          >
+            <For each={props.agents}>
+              {(agent, i) => (
+                <div
+                  class={`mode-switcher-item${agent.name === props.value ? " selected" : ""}`}
+                  role="option"
+                  aria-selected={agent.name === props.value}
+                  tabindex={focused() === i() ? 0 : -1}
+                  onClick={() => pick(agent.name)}
+                  onFocus={() => setFocused(i())}
+                >
+                  <div style={{ display: "flex", "align-items": "center", gap: "6px" }}>
+                    <span class="mode-switcher-item-name">{formatAgentLabel(agent)}</span>
+                    <Show when={agent.deprecated}>
+                      <span
+                        style={{
+                          "font-size": "10px",
+                          padding: "1px 5px",
+                          "border-radius": "3px",
+                          background: "var(--vscode-editorWarning-foreground, #cca700)",
+                          color: "var(--vscode-editorWarning-foreground-text, #1e1e1e)",
+                        }}
+                      >
+                        {language.t("settings.agentBehaviour.badge.deprecated")}
+                      </span>
+                    </Show>
+                  </div>
+                  <Show when={agent.description}>
+                    <span class="mode-switcher-item-desc">{agent.description}</span>
+                  </Show>
+                </div>
+              )}
+            </For>
+          </div>
+        )}
+      </PopupSelector>
     </Show>
   )
 }
@@ -90,5 +170,14 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
 export const ModeSwitcher: Component = () => {
   const session = useSession()
 
-  return <ModeSwitcherBase agents={session.agents()} value={session.selectedAgent()} onSelect={session.selectAgent} />
+  return (
+    <ModeSwitcherBase
+      agents={session.agents()}
+      value={session.selectedAgent()}
+      onSelect={(name) => {
+        session.selectAgent(name)
+        requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
+      }}
+    />
+  )
 }

@@ -30,6 +30,7 @@ export interface KilocodeNotification {
   message: string
   action?: KilocodeNotificationAction
   showIn?: string[]
+  suggestModelId?: string
 }
 
 // Profile types from kilo-gateway
@@ -113,6 +114,4 @@ export interface EditorContext {
   activeFile?: string
   /** User's default shell (from vscode.env.shell) */
   shell?: string
-  /** User's timezone (e.g. "Europe/Amsterdam") */
-  timezone?: string
 }

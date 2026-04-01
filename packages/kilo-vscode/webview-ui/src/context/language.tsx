@@ -25,6 +25,9 @@ import { dict as uiNo } from "@kilocode/kilo-ui/i18n/no"
 import { dict as uiBr } from "@kilocode/kilo-ui/i18n/br"
 import { dict as uiTh } from "@kilocode/kilo-ui/i18n/th"
 import { dict as uiBs } from "@kilocode/kilo-ui/i18n/bs"
+import { dict as uiTr } from "@kilocode/kilo-ui/i18n/tr"
+import { dict as uiNl } from "@kilocode/kilo-ui/i18n/nl"
+import { dict as uiUk } from "@kilocode/kilo-ui/i18n/uk"
 import { dict as appEn } from "../i18n/en"
 import { dict as appZh } from "../i18n/zh"
 import { dict as appZht } from "../i18n/zht"
@@ -41,6 +44,9 @@ import { dict as appNo } from "../i18n/no"
 import { dict as appBr } from "../i18n/br"
 import { dict as appTh } from "../i18n/th"
 import { dict as appBs } from "../i18n/bs"
+import { dict as appTr } from "../i18n/tr"
+import { dict as appNl } from "../i18n/nl"
+import { dict as appUk } from "../i18n/uk"
 import { dict as amEn } from "../../agent-manager/i18n/en"
 import { dict as amZh } from "../../agent-manager/i18n/zh"
 import { dict as amZht } from "../../agent-manager/i18n/zht"
@@ -57,6 +63,9 @@ import { dict as amNo } from "../../agent-manager/i18n/no"
 import { dict as amBr } from "../../agent-manager/i18n/br"
 import { dict as amTh } from "../../agent-manager/i18n/th"
 import { dict as amBs } from "../../agent-manager/i18n/bs"
+import { dict as amTr } from "../../agent-manager/i18n/tr"
+import { dict as amNl } from "../../agent-manager/i18n/nl"
+import { dict as amUk } from "../../agent-manager/i18n/uk"
 import { dict as kiloEn } from "@kilocode/kilo-i18n/en"
 import { dict as kiloZh } from "@kilocode/kilo-i18n/zh"
 import { dict as kiloZht } from "@kilocode/kilo-i18n/zht"
@@ -73,13 +82,16 @@ import { dict as kiloNo } from "@kilocode/kilo-i18n/no"
 import { dict as kiloBr } from "@kilocode/kilo-i18n/br"
 import { dict as kiloTh } from "@kilocode/kilo-i18n/th"
 import { dict as kiloBs } from "@kilocode/kilo-i18n/bs"
+import { dict as kiloTr } from "@kilocode/kilo-i18n/tr"
+import { dict as kiloNl } from "@kilocode/kilo-i18n/nl"
+import { dict as kiloUk } from "@kilocode/kilo-i18n/uk"
 import { useVSCode } from "./vscode"
 import { normalizeLocale as _normalizeLocale, resolveTemplate as _resolveTemplate } from "./language-utils"
 
 export type { Locale } from "./language-utils"
 export { LOCALES } from "./language-utils"
 import type { Locale } from "./language-utils"
-import { LOCALES } from "./language-utils"
+import { LOCALES, RTL_LOCALES, localeToBcp47 } from "./language-utils"
 
 export const LOCALE_LABELS: Record<Locale, string> = {
   en: "English",
@@ -98,6 +110,9 @@ export const LOCALE_LABELS: Record<Locale, string> = {
   br: "Português (Brasil)",
   th: "ภาษาไทย",
   bs: "Bosanski",
+  tr: "Türkçe",
+  nl: "Nederlands",
+  uk: "Українська",
 }
 
 // Merge 4 dict layers: app + ui + kilo + agent manager (kilo and agent manager override last)
@@ -119,6 +134,9 @@ const dicts: Record<Locale, Record<string, string>> = {
   br: { ...base, ...appBr, ...uiBr, ...kiloBr, ...amEn, ...amBr },
   th: { ...base, ...appTh, ...uiTh, ...kiloTh, ...amEn, ...amTh },
   bs: { ...base, ...appBs, ...uiBs, ...kiloBs, ...amEn, ...amBs },
+  tr: { ...base, ...appTr, ...uiTr, ...kiloTr, ...amEn, ...amTr },
+  nl: { ...base, ...appNl, ...uiNl, ...kiloNl, ...amEn, ...amNl },
+  uk: { ...base, ...appUk, ...uiUk, ...kiloUk, ...amEn, ...amUk },
 }
 
 function normalizeLocale(lang: string): Locale {
@@ -163,6 +181,13 @@ export const LanguageProvider: ParentComponent<LanguageProviderProps> = (props) 
   })
 
   const dict = createMemo(() => dicts[locale()] ?? dicts.en)
+
+  // Update <html lang> and <html dir> when locale changes
+  createEffect(() => {
+    const loc = locale()
+    document.documentElement.lang = localeToBcp47(loc)
+    document.documentElement.dir = RTL_LOCALES.has(loc) ? "rtl" : "ltr"
+  })
 
   const t = (key: UiI18nKey, params?: UiI18nParams) => {
     const text = (dict() as Record<string, string>)[key] ?? String(key)

@@ -18,7 +18,7 @@ Before installing the Kilo Code plugin, ensure you have:
 1. If you don't have a JetBrains IDE installed, download one from [jetbrains.com](https://www.jetbrains.com/)
 2. Then, you can click the button below to install Kilo Code directly from the JetBrains Marketplace:
 
-[![Install Kilo Code](https://img.shields.io/badge/Install%20Kilo%20Code-F8F674?style=for-the-badge)](https://plugins.jetbrains.com/plugin/28350-kilo-code)
+[![Install Kilo Code](https://raster.shields.io/badge/Install%20Kilo%20Code-F8F674?style=for-the-badge)](https://plugins.jetbrains.com/plugin/28350-kilo-code)
 
 ### Install from JetBrains Marketplace
 

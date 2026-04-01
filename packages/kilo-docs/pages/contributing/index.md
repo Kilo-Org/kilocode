@@ -6,7 +6,7 @@ description: "Contribute to Kilo Code"
 # Contributing Overview
 
 {% callout type="info" %}
-**New versions of the VS Code extension and CLI are being developed in [Kilo-Org/Kilo](https://github.com/Kilo-Org/Kilo)** (extension at `packages/kilo-vscode`, CLI at `packages/opencode`). If you're looking to contribute to the extension or CLI, please head over to that repository.
+**New versions of the VS Code extension and CLI are being developed in [Kilo-Org/kilocode](https://github.com/Kilo-Org/kilocode)** (extension at `packages/kilo-vscode`, CLI at `packages/opencode`). If you're looking to contribute to the extension or CLI, please head over to that repository.
 {% /callout %}
 
 Kilo Code is an open-source project that welcomes contributions from developers of all skill levels. This guide will help you get started with contributing to Kilo Code, whether you're fixing bugs, adding features, improving documentation, or sharing custom modes.
@@ -119,9 +119,9 @@ Documentation improvements are highly valued contributions:
 2. Test your documentation changes by running the docs site locally:
 
    ```bash
-   cd apps/kilocode-docs
+   cd packages/kilo-docs
    pnpm install
-   pnpm start
+   pnpm dev
    ```
 
 3. Submit a PR with your documentation changes

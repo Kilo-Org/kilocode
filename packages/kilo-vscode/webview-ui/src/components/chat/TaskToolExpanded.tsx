@@ -17,7 +17,6 @@ import { useI18n } from "@kilocode/kilo-ui/context/i18n"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
-import { useWorktreeMode } from "../../context/worktree-mode"
 import type { ToolPart, Message as SDKMessage } from "@kilocode/sdk/v2"
 
 /** Collect all tool parts from all assistant messages in a given session. */
@@ -41,15 +40,13 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
   const i18n = useI18n()
   const session = useSession()
   const vscode = useVSCode()
-  const worktreeMode = useWorktreeMode()
-  // Hide the open-in-tab button inside the Agent Manager
-  const inAgentManager = worktreeMode !== undefined
 
   const childSessionId = () => props.metadata.sessionId as string | undefined
 
   const running = createMemo(() => props.status === "pending" || props.status === "running")
 
-  // Sync child session into store whenever we have a sessionId
+  // Warm child session data immediately so completed task tools already have
+  // their compact child tool list available when the user expands them.
   createEffect(() => {
     const id = childSessionId()
     if (!id) return
@@ -72,7 +69,6 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
 
   const autoScroll = createAutoScroll({
     working: running,
-    overflowAnchor: "auto",
   })
 
   const openInTab = (e: MouseEvent) => {
@@ -88,11 +84,16 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
         <span data-slot="basic-tool-tool-title" class="capitalize">
           {title()}
         </span>
-        <Show when={description()}>
-          <span data-slot="basic-tool-tool-subtitle">{description()}</span>
+        <Show when={description() || childToolParts().length > 0}>
+          <span data-slot="basic-tool-tool-subtitle">
+            {description()}
+            <Show when={childToolParts().length > 0}>
+              {description() ? " " : ""}({childToolParts().length})
+            </Show>
+          </span>
         </Show>
       </div>
-      <Show when={!inAgentManager && childSessionId()}>
+      <Show when={childSessionId()}>
         <IconButton
           icon="square-arrow-top-right"
           size="small"

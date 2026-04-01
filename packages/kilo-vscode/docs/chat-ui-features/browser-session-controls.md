@@ -1,11 +1,6 @@
 # Browser Session Controls
 
 **Priority:** P3
-**Status:** 🔨 Partial
-
-## What Exists
-
-`BrowserTab` settings UI has enable/disable toggle, system Chrome, and headless mode options. `BrowserAutomationService` handles Playwright MCP server registration. Browser tool calls appear as generic MCP tool entries in chat.
 
 ## Remaining Work
 

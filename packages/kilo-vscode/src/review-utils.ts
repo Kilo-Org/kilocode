@@ -20,8 +20,8 @@ export function getWorkspaceRoot(): string | undefined {
 export async function resolveLocalDiffTarget(
   gitOps: GitOps,
   log: (...args: unknown[]) => void,
+  root?: string,
 ): Promise<{ directory: string; baseBranch: string } | undefined> {
-  const root = getWorkspaceRoot()
   if (!root) {
     log("Local diff: no workspace root")
     return
@@ -42,8 +42,32 @@ export async function resolveLocalDiffTarget(
   return { directory: root, baseBranch: base }
 }
 
-export function hashFileDiffs(diffs: FileDiff[]): string {
-  return diffs.map((diff) => `${diff.file}:${diff.status}:${diff.additions}:${diff.deletions}:${diff.after}`).join("|")
+export function hashFileDiffs(
+  diffs: Array<
+    FileDiff & {
+      tracked?: boolean
+      generatedLike?: boolean
+      summarized?: boolean
+      stamp?: string
+    }
+  >,
+): string {
+  return diffs
+    .map((diff) => {
+      const content = diff.summarized ? "" : `${diff.before}:${diff.after}`
+      return [
+        diff.file,
+        diff.status,
+        diff.additions,
+        diff.deletions,
+        diff.tracked ? "tracked" : "untracked",
+        diff.generatedLike ? "generated" : "source",
+        diff.summarized ? "summary" : "detail",
+        diff.stamp ?? "",
+        content,
+      ].join(":")
+    })
+    .join("|")
 }
 
 export function openFileInEditor(

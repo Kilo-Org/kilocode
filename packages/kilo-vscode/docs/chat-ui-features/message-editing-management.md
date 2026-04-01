@@ -1,7 +1,6 @@
 # Message Editing & Management
 
 **Priority:** P1
-**Status:** ❌ Not started
 
 ## Remaining Work
 
@@ -10,4 +9,4 @@
 - Click-to-edit on message text
 - Timestamp display on messages
 - Redo previous message via up-arrow key
-- Map edit/delete to CLI session operations (fork-from-message + re-run) since CLI is the source of truth for session history
+- Map edit/delete to CLI session operations (fork-from-message + re-run)

@@ -4,6 +4,7 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
+    "types": ["bun"],
     "skipLibCheck": true,
     "noUncheckedIndexedAccess": false
   },

@@ -16,7 +16,10 @@ import PROMPT_ASK from "./prompt/ask.txt"
 import PROMPT_ORCHESTRATOR from "./prompt/orchestrator.txt"
 import PROMPT_SUMMARY from "./prompt/summary.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
+
 import { PermissionNext } from "@/permission/next"
+import { NamedError } from "@opencode-ai/util/error" // kilocode_change
+import { Glob } from "../util/glob" // kilocode_change
 import { mergeDeep, pipe, sortBy, values } from "remeda"
 import { Global } from "@/global"
 import path from "path"
@@ -29,10 +32,12 @@ export namespace Agent {
   export const Info = z
     .object({
       name: z.string(),
+      displayName: z.string().optional(), // kilocode_change - human-readable name for org modes
       description: z.string().optional(),
       mode: z.enum(["subagent", "primary", "all"]),
       native: z.boolean().optional(),
       hidden: z.boolean().optional(),
+      deprecated: z.boolean().optional(),
       topP: z.number().optional(),
       temperature: z.number().optional(),
       color: z.string().optional(),
@@ -58,8 +63,129 @@ export namespace Agent {
 
     const skillDirs = await Skill.dirs()
     const whitelistedDirs = [Truncate.GLOB, ...skillDirs.map((dir) => path.join(dir, "*"))]
+    // kilocode_change start — safe bash commands that don't need user approval.
+    // only commands that cannot execute arbitrary code or subprocesses.
+    const bash: Record<string, "allow" | "ask" | "deny"> = {
+      "*": "ask",
+      // read-only / informational
+      "cat *": "allow",
+      "head *": "allow",
+      "tail *": "allow",
+      "less *": "allow",
+      "ls *": "allow",
+      "tree *": "allow",
+      "pwd *": "allow",
+      "echo *": "allow",
+      "wc *": "allow",
+      "which *": "allow",
+      "type *": "allow",
+      "file *": "allow",
+      "diff *": "allow",
+      "du *": "allow",
+      "df *": "allow",
+      "date *": "allow",
+      "uname *": "allow",
+      "whoami *": "allow",
+      "printenv *": "allow",
+      "man *": "allow",
+      // text processing
+      "grep *": "allow",
+      "rg *": "allow",
+      "ag *": "allow",
+      "sort *": "allow",
+      "uniq *": "allow",
+      "cut *": "allow",
+      "tr *": "allow",
+      "jq *": "allow",
+      // file operations
+      "touch *": "allow",
+      "mkdir *": "allow",
+      "cp *": "allow",
+      "mv *": "allow",
+      // compilers (no script execution)
+      "tsc *": "allow",
+      "tsgo *": "allow",
+      // archive
+      "tar *": "allow",
+      "unzip *": "allow",
+      "gzip *": "allow",
+      "gunzip *": "allow",
+    }
+    // kilocode_change end
+
+    // kilocode_change start — read-only bash commands for the ask agent.
+    // Unlike the default bash allowlist, unknown commands are DENIED (not "ask")
+    // because the ask agent must never modify the filesystem.
+    const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
+      "*": "deny",
+      // read-only / informational
+      "cat *": "allow",
+      "head *": "allow",
+      "tail *": "allow",
+      "less *": "allow",
+      "ls *": "allow",
+      "tree *": "allow",
+      "pwd *": "allow",
+      "echo *": "allow",
+      "wc *": "allow",
+      "which *": "allow",
+      "type *": "allow",
+      "file *": "allow",
+      "diff *": "allow",
+      "du *": "allow",
+      "df *": "allow",
+      "date *": "allow",
+      "uname *": "allow",
+      "whoami *": "allow",
+      "printenv *": "allow",
+      "man *": "allow",
+      // text processing (stdout only, no file modification)
+      "grep *": "allow",
+      "rg *": "allow",
+      "ag *": "allow",
+      "sort *": "allow",
+      "uniq *": "allow",
+      "cut *": "allow",
+      "tr *": "allow",
+      "jq *": "allow",
+      // git — allowlist of read-only subcommands, deny everything else
+      "git *": "deny",
+      "git log *": "allow",
+      "git show *": "allow",
+      "git diff *": "allow",
+      "git status *": "allow",
+      "git blame *": "allow",
+      "git rev-parse *": "allow",
+      "git rev-list *": "allow",
+      "git ls-files *": "allow",
+      "git ls-tree *": "allow",
+      "git ls-remote *": "allow",
+      "git shortlog *": "allow",
+      "git describe *": "allow",
+      "git cat-file *": "allow",
+      "git name-rev *": "allow",
+      "git stash list *": "allow",
+      "git tag -l *": "allow",
+      "git branch --list *": "allow",
+      "git branch -a *": "allow",
+      "git branch -r *": "allow",
+      "git remote -v *": "allow",
+      // gh — require user approval since commands vary widely
+      "gh *": "ask",
+    }
+
+    // kilocode_change start — allow MCP tools in ask agent with user approval.
+    // Generates per-server wildcard rules that override "*": "deny".
+    const mcpRules: Record<string, "allow" | "ask" | "deny"> = {}
+    for (const key of Object.keys(cfg.mcp ?? {})) {
+      const sanitized = key.replace(/[^a-zA-Z0-9_-]/g, "_")
+      mcpRules[sanitized + "_*"] = "ask"
+    }
+    // kilocode_change end
+
     const defaults = PermissionNext.fromConfig({
       "*": "allow",
+      bash, // kilocode_change
       doom_loop: "ask",
       external_directory: {
         "*": "ask",
@@ -150,7 +276,7 @@ export namespace Agent {
             grep: "allow",
             glob: "allow",
             list: "allow",
-            bash: "allow",
+            // bash: "allow", // kilocode_change - disabled to prevent orchestrator from writing files via shell commands instead of delegating to sub-agents
             question: "allow",
             task: "allow",
             todoread: "allow",
@@ -158,14 +284,21 @@ export namespace Agent {
             webfetch: "allow",
             websearch: "allow",
             codesearch: "allow",
+            codebase_search: "allow", // kilocode_change
             external_directory: {
               [Truncate.GLOB]: "allow",
             },
           }),
           user,
+          // kilocode_change start - enforce bash deny after user so user config cannot re-enable shell
+          PermissionNext.fromConfig({
+            bash: "deny",
+          }),
+          // kilocode_change end
         ),
         mode: "primary",
         native: true,
+        deprecated: true,
       },
       ask: {
         name: "ask",
@@ -177,6 +310,7 @@ export namespace Agent {
           user, // kilocode_change: user before ask-specific so ask's deny+allowlist wins
           PermissionNext.fromConfig({
             "*": "deny",
+            bash: readOnlyBash,
             read: {
               "*": "allow",
               "*.env": "ask",
@@ -190,10 +324,13 @@ export namespace Agent {
             webfetch: "allow",
             websearch: "allow",
             codesearch: "allow",
+            codebase_search: "allow", // kilocode_change
             external_directory: {
               [Truncate.GLOB]: "allow",
             },
+            ...mcpRules,
           }),
+          user.filter((r) => r.action === "deny"), // kilocode_change: re-apply user denies so explicit MCP blocks win over mcpRules
         ),
         mode: "primary",
         native: true,
@@ -227,6 +364,7 @@ export namespace Agent {
             webfetch: "allow",
             websearch: "allow",
             codesearch: "allow",
+            codebase_search: "allow", // kilocode_change
             read: "allow",
             external_directory: {
               "*": "ask",
@@ -236,7 +374,10 @@ export namespace Agent {
           user,
         ),
         description: `Fast agent specialized for exploring codebases. Use this when you need to quickly find files by patterns (eg. "src/components/**/*.tsx"), search code for keywords (eg. "API endpoints"), or answer questions about the codebase (eg. "how do API endpoints work?"). When calling this agent, specify the desired thoroughness level: "quick" for basic searches, "medium" for moderate exploration, or "very thorough" for comprehensive analysis across multiple locations and naming conventions.`,
-        prompt: PROMPT_EXPLORE,
+        // kilocode_change - only advertise codebase_search when the experimental flag is on
+        prompt: cfg.experimental?.codebase_search
+          ? `Prefer using the codebase_search tool for codebase searches — it performs intelligent multi-step code search and returns the most relevant code spans.\n\n${PROMPT_EXPLORE}`
+          : PROMPT_EXPLORE,
         options: {},
         mode: "subagent",
         native: true,
@@ -316,9 +457,15 @@ export namespace Agent {
       item.mode = value.mode ?? item.mode
       item.color = value.color ?? item.color
       item.hidden = value.hidden ?? item.hidden
+      item.deprecated = value.deprecated ?? item.deprecated
       item.name = value.name ?? item.name
       item.steps = value.steps ?? item.steps
       item.options = mergeDeep(item.options, value.options ?? {})
+      // kilocode_change  start - populate displayName from org mode options
+      if (item.options?.displayName && typeof item.options.displayName === "string") {
+        item.displayName = item.options.displayName
+      }
+      // kilocode_change end
       item.permission = PermissionNext.merge(item.permission, PermissionNext.fromConfig(value.permission ?? {}))
     }
 
@@ -438,4 +585,82 @@ export namespace Agent {
     const result = await generateObject(params)
     return result.object
   }
+
+  // kilocode_change start
+  export const RemoveError = NamedError.create(
+    "AgentRemoveError",
+    z.object({
+      name: z.string(),
+      message: z.string(),
+    }),
+  )
+
+  /**
+   * Remove a custom agent by deleting its markdown source file and/or
+   * removing it from legacy .kilocodemodes YAML files.
+   * Scans all config directories for agent/mode .md files matching the name,
+   * then also checks the .kilocodemodes files the ModesMigrator reads.
+   */
+  export async function remove(name: string) {
+    const agents = await state()
+    const agent = agents[name]
+    if (!agent) throw new RemoveError({ name, message: "agent not found" })
+    if (agent.native) throw new RemoveError({ name, message: "cannot remove native agent" })
+    // kilocode_change start - prevent removal of organization-managed agents
+    if (agent.options?.source === "organization")
+      throw new RemoveError({ name, message: "cannot remove organization agent — manage it from the cloud dashboard" })
+    // kilocode_change end
+
+    const { unlink, readFile, writeFile } = await import("fs/promises")
+    let found = false
+
+    // 1. Delete .md files from config directories
+    const dirs = await Config.directories()
+    const patterns = ["{agent,agents}/**/" + name + ".md", "{mode,modes}/" + name + ".md"]
+    for (const dir of dirs) {
+      for (const pattern of patterns) {
+        const matches = await Glob.scan(pattern, { cwd: dir, absolute: true, dot: true })
+        for (const file of matches) {
+          if (await Bun.file(file).exists()) {
+            await unlink(file)
+            found = true
+          }
+        }
+      }
+    }
+
+    // 2. Remove from legacy .kilocodemodes YAML files (read by ModesMigrator)
+    const { ModesMigrator } = await import("@/kilocode/modes-migrator")
+    const { KilocodePaths } = await import("@/kilocode/paths")
+    const os = await import("os")
+    const matter = (await import("gray-matter")).default
+    const home = os.default.homedir()
+    const modesFiles = [
+      path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "custom_modes.yaml"),
+      path.join(home, ".kilocode", "cli", "global", "settings", "custom_modes.yaml"),
+      path.join(home, ".kilocodemodes"),
+      path.join(Instance.directory, ".kilocodemodes"),
+    ]
+
+    for (const file of modesFiles) {
+      const modes = await ModesMigrator.readModesFile(file)
+      if (!modes.length) continue
+
+      const filtered = modes.filter((m) => m.slug !== name)
+      if (filtered.length === modes.length) continue
+
+      // Rewrite the file without the removed mode
+      const yaml = matter
+        .stringify("", { customModes: filtered })
+        .replace(/^---\n/, "")
+        .replace(/\n---\n?$/, "")
+      await writeFile(file, yaml)
+      found = true
+    }
+
+    if (!found) throw new RemoveError({ name, message: "no agent file found on disk" })
+
+    await Instance.dispose()
+  }
+  // kilocode_change end
 }

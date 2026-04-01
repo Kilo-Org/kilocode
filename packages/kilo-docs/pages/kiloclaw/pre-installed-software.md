@@ -41,10 +41,9 @@ The following packages are installed via `apt` on top of the base image:
 
 ## Browser
 
-| Tool | Description |
-|------|-------------|
+| Tool              | Description                                                                                                                                              |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Headless Chromium | Built-in browser for web browsing, screenshots, and CDP automation. Works with OpenClaw's browser tool out of the box. Requires the "full" tool profile. |
-
 
 ## Languages & Runtimes
 
@@ -72,7 +71,6 @@ These package managers are available for installing libraries and dependencies:
 | GitHub CLI (`gh`)    | Unpinned (GitHub apt repo)  |
 | 1Password CLI (`op`) | 2.32.1 (1Password apt repo) |
 
-
 ## npm Global Packages
 
 The following packages are installed globally via `npm`:
@@ -85,15 +83,14 @@ The following packages are installed globally via `npm`:
 
 ## OpenClaw Skills & Integrations
 
-| Tool | Description |
-|------|-------------|
+| Tool         | Description                                                           |
+| ------------ | --------------------------------------------------------------------- |
 | gog (gogcli) | Google Workspace CLI — Gmail, Calendar, Drive, Contacts, Sheets, Docs |
-| blogwatcher | Monitor blogs and RSS/Atom feeds for updates |
-| xurl | Authenticated requests to the X (Twitter) API |
-| gifgrep | Search GIF providers, download results, extract stills |
-| summarize | Summarize or extract text/transcripts from URLs and files |
-| goplaces | Location and places lookup |
-
+| blogwatcher  | Monitor blogs and RSS/Atom feeds for updates                          |
+| xurl         | Authenticated requests to the X (Twitter) API                         |
+| gifgrep      | Search GIF providers, download results, extract stills                |
+| summarize    | Summarize or extract text/transcripts from URLs and files             |
+| goplaces     | Location and places lookup                                            |
 
 ## Installing Additional Tools
 
@@ -106,8 +103,6 @@ Your agent can install additional tools at runtime:
 {% callout type="tip" %}
 These tools receive updates when you **Upgrade & Redeploy** your instance from the [KiloClaw Dashboard](/docs/kiloclaw/dashboard#redeploy). Check the changelog for image update announcements.
 {% /callout %}
-
-
 
 ## Related
 

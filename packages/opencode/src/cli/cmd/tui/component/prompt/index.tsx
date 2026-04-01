@@ -34,6 +34,7 @@ import { useToast } from "../../ui/toast"
 import { useKV } from "../../context/kv"
 import { useTextareaKeybindings } from "../textarea-keybindings"
 import { DialogSkill } from "../dialog-skill"
+import { shouldSummarize as shouldPasteSummary } from "@/kilocode/paste-summary"
 
 export type PromptProps = {
   sessionID?: string
@@ -574,7 +575,7 @@ export function Prompt(props: PromptProps) {
     if (store.mode === "shell") {
       sdk.client.session.shell({
         sessionID,
-        agent: local.agent.current().name,
+        agent: local.agent.current()?.name ?? "", // kilocode_change
         model: {
           providerID: selectedModel.providerID,
           modelID: selectedModel.modelID,
@@ -601,7 +602,7 @@ export function Prompt(props: PromptProps) {
         sessionID,
         command: command.slice(1),
         arguments: args,
-        agent: local.agent.current().name,
+        agent: local.agent.current()?.name ?? "", // kilocode_change
         model: `${selectedModel.providerID}/${selectedModel.modelID}`,
         messageID,
         variant,
@@ -618,7 +619,7 @@ export function Prompt(props: PromptProps) {
           sessionID,
           ...selectedModel,
           messageID,
-          agent: local.agent.current().name,
+          agent: local.agent.current()?.name ?? "", // kilocode_change
           model: selectedModel,
           variant,
           parts: [
@@ -739,7 +740,7 @@ export function Prompt(props: PromptProps) {
   const highlight = createMemo(() => {
     if (keybind.leader) return theme.border
     if (store.mode === "shell") return theme.primary
-    return local.agent.color(local.agent.current().name)
+    return local.agent.color(local.agent.current()?.name ?? "") // kilocode_change
   })
 
   const showVariant = createMemo(() => {
@@ -759,7 +760,7 @@ export function Prompt(props: PromptProps) {
   })
 
   const spinnerDef = createMemo(() => {
-    const color = local.agent.color(local.agent.current().name)
+    const color = local.agent.color(local.agent.current()?.name ?? "") // kilocode_change
     return {
       frames: createFrames({
         color,
@@ -830,6 +831,11 @@ export function Prompt(props: PromptProps) {
                 autocomplete.onInput(value)
                 syncExtmarksWithPromptParts()
               }}
+              // kilocode_change start
+              onCursorChange={() => {
+                if (store.mode === "normal") autocomplete.onCursorChange()
+              }}
+              // kilocode_change end
               keyBindings={textareaKeybindings()}
               onKeyDown={async (e) => {
                 if (props.disabled) {
@@ -976,15 +982,14 @@ export function Prompt(props: PromptProps) {
                   } catch {}
                 }
 
-                const lineCount = (pastedContent.match(/\n/g)?.length ?? 0) + 1
-                if (
-                  (lineCount >= 3 || pastedContent.length > 150) &&
-                  !sync.data.config.experimental?.disable_paste_summary
-                ) {
+                // kilocode_change start
+                const summary = shouldPasteSummary(pastedContent)
+                if (summary.summarize && !sync.data.config.experimental?.disable_paste_summary) {
                   event.preventDefault()
-                  pasteText(pastedContent, `[Pasted ~${lineCount} lines]`)
+                  pasteText(pastedContent, `[Pasted ~${summary.lines} lines]`)
                   return
                 }
+                // kilocode_change end
 
                 // Force layout update and render for the pasted content
                 setTimeout(() => {
@@ -1013,7 +1018,11 @@ export function Prompt(props: PromptProps) {
             />
             <box flexDirection="row" flexShrink={0} paddingTop={1} gap={1}>
               <text fg={highlight()}>
-                {store.mode === "shell" ? "Shell" : Locale.titlecase(local.agent.current().name)}{" "}
+                {/* kilocode_change start */}
+                {store.mode === "shell"
+                  ? "Shell"
+                  : (local.agent.current()?.displayName ?? Locale.titlecase(local.agent.current()?.name ?? ""))}{" "}
+                {/* kilocode_change end */}
               </text>
               <Show when={store.mode === "normal"}>
                 <box flexDirection="row" gap={1}>

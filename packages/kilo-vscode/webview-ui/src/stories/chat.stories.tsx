@@ -13,6 +13,7 @@ import { ChatView } from "../components/chat/ChatView"
 import { TaskHeader } from "../components/chat/TaskHeader"
 import { QuestionDock } from "../components/chat/QuestionDock"
 import { SessionContext } from "../context/session"
+import { ServerContext } from "../context/server"
 import type { QuestionRequest, TodoItem } from "../types/messages"
 
 const SESSION_ID = "story-session-chat-001"
@@ -98,7 +99,7 @@ export const ChatViewWithMessages: Story = {
     const session = {
       ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
       messages: () => [{ id: "msg-001" }] as any[],
-      totalCost: () => 0.0012,
+      costBreakdown: () => [{ label: "Parent session", cost: 0.0012 }],
       contextUsage: () => ({ tokens: 512, percentage: 6 }),
     }
     return (
@@ -134,6 +135,38 @@ export const QuestionDockMulti: Story = {
     <StoryProviders sessionID={SESSION_ID} questions={[multiQuestion]}>
       <div style={{ width: "100%" }}>
         <QuestionDock request={multiQuestion} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+/** Many options to verify the max-height scroll constraint */
+const manyOptionsQuestion: QuestionRequest = {
+  id: "q-many-001",
+  sessionID: SESSION_ID,
+  questions: [
+    {
+      question: "What would you like to work on today?",
+      header: "Quick check-in",
+      options: [
+        { label: "Fix a bug", description: "Debug and resolve an issue in the codebase" },
+        { label: "Add a feature", description: "Implement new functionality" },
+        { label: "Refactor code", description: "Improve existing code structure or quality" },
+        { label: "Write tests", description: "Add or improve test coverage" },
+        { label: "Review code", description: "Provide feedback on code changes" },
+        { label: "Update docs", description: "Improve documentation" },
+        { label: "Performance", description: "Optimize for speed or memory" },
+      ],
+    },
+  ],
+}
+
+export const QuestionDockManyOptions: Story = {
+  name: "QuestionDock — many options (scrollable)",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} questions={[manyOptionsQuestion]}>
+      <div style={{ width: "100%" }}>
+        <QuestionDock request={manyOptionsQuestion} />
       </div>
     </StoryProviders>
   ),
@@ -204,4 +237,52 @@ export const TaskHeaderWithTodosAllDone: Story = {
       </StoryProviders>
     )
   },
+}
+
+// ---------------------------------------------------------------------------
+// Welcome screen with AccountSwitcher + KiloNotifications
+// ---------------------------------------------------------------------------
+
+const MOCK_NOTIFICATION = {
+  id: "notif-1",
+  title: "Try BYOK for Kilo Gateway",
+  message: "Bring your own API key for even more flexibility with Kilo Gateway models.",
+  action: { actionText: "Learn more", actionURL: "https://kilo.ai/docs" },
+}
+
+/** Mock server context with profile data so AccountSwitcher is visible */
+const mockServer = {
+  connectionState: () => "connected" as const,
+  serverInfo: () => undefined,
+  extensionVersion: () => "1.0.0",
+  errorMessage: () => undefined,
+  errorDetails: () => undefined,
+  isConnected: () => true,
+  profileData: () => ({
+    profile: {
+      email: "dev@kilo.dev",
+      name: "Dev User",
+      organizations: [{ id: "org-1", name: "Kilo Org", role: "member" }],
+    },
+    balance: { balance: 5.0 },
+    currentOrgId: "org-1",
+  }),
+  deviceAuth: () => ({ status: "idle" as const }),
+  startLogin: () => {},
+  vscodeLanguage: () => "en",
+  languageOverride: () => undefined,
+  workspaceDirectory: () => "/project",
+}
+
+export const WelcomeWithSwitcherAndNotification: Story = {
+  name: "Welcome — account switcher + notification",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} status="idle" noPadding notifications={[MOCK_NOTIFICATION]}>
+      <ServerContext.Provider value={mockServer as any}>
+        <div style={{ width: "100%", height: "600px", display: "flex", "flex-direction": "column" }}>
+          <ChatView />
+        </div>
+      </ServerContext.Provider>
+    </StoryProviders>
+  ),
 }

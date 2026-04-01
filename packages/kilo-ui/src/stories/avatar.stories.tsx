@@ -33,10 +33,15 @@ export const WithCustomColors: Story = {
   args: { fallback: "KL", background: "#1a4d8f", foreground: "#ffffff" },
 }
 
+// Inline data URI so the visual regression test never depends on network.
+// 32×32 avatar silhouette (blue circle, white head, light-blue shoulders).
+const AVATAR_DATA_URI =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAq0lEQVR4nNXUyw2AIBBFUfuyO9u0Awtwqa5IjIDzeW8cIZml3CMGp2n0NS/7+WlMO2lhKgQJwxBpw9aiITxxGgKJUxBoXIMIfXvoFFIBmqvEBFSIIQCsWwABJIRlHzegh7Du4Y4zJxUBfYI0wLod4oQANGErRA3wxDUI1e8Yib8hqngLwIj3EE3AExEF6MZ/ASgIZvyOEONRCFO8LCbAHGdBoDACoYYlFPL8Bcdqxc2w0JfIAAAAAElFTkSuQmCC"
+
 export const WithImage: Story = {
   args: {
     fallback: "OC",
-    src: "https://avatars.githubusercontent.com/u/154330673?s=48",
+    src: AVATAR_DATA_URI,
   },
 }
 

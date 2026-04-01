@@ -9,6 +9,31 @@ When you install Kilo Code, you'll be prompted to sign in or create a free accou
 
 ## Quick Start with Kilo Account
 
+{% tabs %}
+{% tab label="VSCode" %}
+
+The extension prompts you to sign in when you first open the sidebar. Click **Sign In** and complete the browser-based flow. The extension communicates with the CLI backend, so authentication is shared between the CLI and extension.
+
+{% /tab %}
+{% tab label="CLI" %}
+
+Run the auth command and follow the browser-based sign-in flow:
+
+```bash
+kilo auth login
+```
+
+This may open your browser to complete authentication. Once signed in, your credentials are stored locally and used for all future sessions.
+
+To verify your auth status:
+
+```bash
+kilo auth list
+```
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
+
 1. Click **"Try Kilo Code for Free"** in the extension
 2. Sign in with your Google account
 3. Allow VS Code to open the authorization URL
@@ -16,6 +41,9 @@ When you install Kilo Code, you'll be prompted to sign in or create a free accou
 {% image src="/docs/img/signupflow.gif" alt="Sign up and registration flow with Kilo Code" /%}
 
 That's it! You're ready to [start your first task](/docs/getting-started/quickstart).
+
+{% /tab %}
+{% /tabs %}
 
 {% callout type="tip" title="Bonus Credits" %}
 [Add credits to your account](https://app.kilo.ai/profile) and get $20 bonus credits, or sign up for [Kilo Pass](https://kilo.ai/features/kilo-pass).
@@ -75,11 +103,47 @@ Already have a ChatGPT subscription? You can use it with Kilo Code through the [
 
 ### Configuring Your Provider
 
+{% tabs %}
+{% tab label="VSCode" %}
+
+1. Open the Kilo Code sidebar in VS Code
+2. Click the gear icon ({% codicon name="gear" /%}) to open **Settings**
+3. Go to the **Providers** tab
+4. Select your provider and enter your API key
+5. Choose your model
+
+You can also use `kilo auth login` for providers that support OAuth (like GitHub Copilot). The extension reads from the same underlying config files as the CLI, so provider settings are shared.
+
+{% /tab %}
+{% tab label="CLI" %}
+
+Set the API key as an environment variable:
+
+```bash
+export ANTHROPIC_API_KEY="sk-ant-..."
+```
+
+Or use `kilo auth login` for providers that support OAuth (like GitHub Copilot).
+
+To set a default model:
+
+```jsonc
+{
+  "model": "anthropic/claude-sonnet-4-20250514",
+}
+```
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
+
 1. Click the {% kilo-code-icon /%} icon in the VS Code sidebar
 2. Select your API provider from the dropdown
 3. Paste your API key
-4. Choose your model:
+4. Choose your model
 5. Click **"Let's go!"**
+
+{% /tab %}
+{% /tabs %}
 
 {% callout type="info" title="Need Help?" %}
 Reach out to our [support team](mailto:hi@kilo.ai) or join our [Discord community](https://kilo.ai/discord).

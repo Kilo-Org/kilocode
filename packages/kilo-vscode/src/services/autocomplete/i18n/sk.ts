@@ -6,10 +6,8 @@ export const dict = {
   "kilocode:autocomplete.statusBar.warning": "$(warning) Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.basic": "Kilo Code Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.disabled": "Kilo Code Autocomplete (zakázané)",
-  "kilocode:autocomplete.statusBar.tooltip.noCredits":
-    "**Na tvojom účte nie sú žiadne kredity**\n\nTvoj účet Kilo Code nemá žiadne kredity. Pre použitie automatického doplňovania prosím pridaj kredity na svoj účet.\n\n[Otvoriť Nastavenia](command:kilo-code.settingsButtonClicked)",
   "kilocode:autocomplete.statusBar.tooltip.noUsableProvider":
-    "**Nie je nakonfigurovaný žiadny model automatického doplňovania**\n\nPre povolenie automatického doplňovania pridaj profil s jedným z týchto podporovaných poskytovateľov: {{providers}}.\n\n[Otvoriť Nastavenia](command:kilo-code.settingsButtonClicked)",
+    "**Nie je nakonfigurovaný žiadny model automatického doplňovania**\n\nPre povolenie automatického doplňovania pridaj profil s jedným z týchto podporovaných poskytovateľov: {{providers}}.\n\n[Otvoriť Nastavenia]({{command}})",
   "kilocode:autocomplete.statusBar.tooltip.sessionTotal": "Celkové náklady relácie:",
   "kilocode:autocomplete.statusBar.tooltip.provider": "Poskytovateľ:",
   "kilocode:autocomplete.statusBar.tooltip.model": "Model:",
@@ -43,4 +41,9 @@ export const dict = {
     "Kilo Code Autocomplete je blokované konfliktom s GitHub Copilot. Pre vyriešenie tohto problému musíš zakázať inline návrhy Copilot.",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "Zakázať Copilot",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "Zakázať Autocomplete",
+  "kilocode:autocomplete.creditsExhausted.message":
+    "Kilo Code Autocomplete bolo pozastavené, pretože na tvojom účte nezostali žiadne kredity. Pridaj kredity na obnovenie automatického dopĺňania.",
+  "kilocode:autocomplete.creditsExhausted.addCredits": "Pridať kredity",
+  "kilocode:autocomplete.authError.message":
+    "Kilo Code Autocomplete bolo pozastavené kvôli chybe overenia. Prosím, prihlás sa znova.",
 }

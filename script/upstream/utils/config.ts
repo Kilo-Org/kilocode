@@ -74,7 +74,6 @@ export const defaultConfig: MergeConfig = {
     "SECURITY.md",
     "AGENTS.md",
     // GitHub workflows - MANUAL REVIEW (can break CI/CD)
-    ".github/workflows/publish-stable.yml",
     ".github/workflows/publish.yml",
     ".github/workflows/close-stale-prs.yml",
     ".github/pull_request_template.md",
@@ -82,6 +81,8 @@ export const defaultConfig: MergeConfig = {
     ".opencode/command/commit.md",
     // Kilo-specific publish scripts
     "packages/opencode/script/publish-registries.ts",
+    // Generated OpenAPI spec - kept ours and regenerated post-merge via script/generate.ts
+    "packages/sdk/openapi.json",
     // GitHub Action - Kilo version is fully ported and complete
     "github/action.yml",
     "github/README.md",
@@ -102,6 +103,7 @@ export const defaultConfig: MergeConfig = {
     "README.de.md",
     "README.es.md",
     "README.fr.md",
+    "README.gr.md",
     "README.it.md",
     "README.ja.md",
     "README.ko.md",
@@ -111,6 +113,7 @@ export const defaultConfig: MergeConfig = {
     "README.th.md",
     "README.tr.md",
     "README.uk.md",
+    "README.vi.md",
     "README.zh.md",
     "README.zht.md",
     // Stats file
@@ -201,6 +204,10 @@ export const defaultConfig: MergeConfig = {
     "packages/opencode/test/kilocode",
     "packages/kilo-gateway",
     "packages/kilo-telemetry",
+    "packages/kilo-vscode",
+    "packages/kilo-ui",
+    "packages/kilo-docs",
+    "packages/kilo-i18n",
     "script/upstream",
   ],
 

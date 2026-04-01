@@ -28,6 +28,16 @@ export namespace State {
     }
   }
 
+  /**
+   * Remove a specific state entry without running its dispose callback.
+   * The next call to the accessor will re-initialize from scratch.
+   * Used to invalidate config-derived caches (e.g. Config.state) without
+   * triggering a full Instance.dispose() that would kill running sessions.
+   */
+  export function resetEntry(key: string, init: (...args: any[]) => any) {
+    recordsByKey.get(key)?.delete(init)
+  }
+
   export async function dispose(key: string) {
     const entries = recordsByKey.get(key)
     if (!entries) return

@@ -6,6 +6,7 @@ import type { Provider } from "./provider"
 import type { ModelsDev } from "./models"
 import { iife } from "@/util/iife"
 import { Flag } from "@/flag/flag"
+import { kiloProviderOptions } from "@/kilocode/provider-options"
 
 type Modality = NonNullable<ModelsDev.Model["modalities"]>["input"][number]
 
@@ -251,9 +252,54 @@ export namespace ProviderTransform {
     })
   }
 
+  // kilocode_change - function added
+  function fixDuplicateReasoning(msgs: ModelMessage[], model: Provider.Model) {
+    for (const msg of msgs) {
+      if (!Array.isArray(msg.content)) {
+        continue
+      }
+      const encryptedDataSet = new Set<string>()
+      const textSet = new Set<string>()
+      for (const part of msg.content) {
+        const openrouterProviderOptions = part.providerOptions?.openrouter as
+          | {
+              reasoning_details?: { data?: string; text?: string; signature?: string }[]
+            }
+          | undefined
+        if (!openrouterProviderOptions || !openrouterProviderOptions.reasoning_details) {
+          continue
+        }
+        openrouterProviderOptions.reasoning_details = openrouterProviderOptions.reasoning_details.filter((rd) => {
+          if (rd.data) {
+            if (!encryptedDataSet.has(rd.data)) {
+              encryptedDataSet.add(rd.data)
+              return true
+            }
+            return false
+          }
+          if (rd.text) {
+            if ((model.family === "claude" || model.id.includes("claude")) && !rd.signature) return false
+            if (!textSet.has(rd.text)) {
+              textSet.add(rd.text)
+              return true
+            }
+            return false
+          }
+          return true
+        })
+      }
+    }
+  }
+
   export function message(msgs: ModelMessage[], model: Provider.Model, options: Record<string, unknown>) {
     msgs = unsupportedParts(msgs, model)
     msgs = normalizeMessages(msgs, model, options)
+
+    // kilocode_change - workaround for @openrouter/ai-sdk-provider v1 duplicating reasoning
+    // fixed in https://github.com/OpenRouterTeam/ai-sdk-provider/pull/344/
+    if (model.api.npm === "@openrouter/ai-sdk-provider") {
+      fixDuplicateReasoning(msgs, model)
+    }
 
     if (
       (model.providerID === "anthropic" ||
@@ -376,7 +422,13 @@ export namespace ProviderTransform {
     switch (model.api.npm) {
       case "@kilocode/kilo-gateway": // kilocode_change
       case "@openrouter/ai-sdk-provider":
-        if (!model.id.includes("gpt") && !model.id.includes("gemini-3") && !model.id.includes("claude")) return {}
+        if (
+          !model.id.includes("gpt") &&
+          !model.id.includes("gemini-3") &&
+          !model.id.includes("claude") &&
+          !model.id.includes("mercury") // kilocode_change
+        )
+          return {}
         return Object.fromEntries(OPENAI_EFFORTS.map((effort) => [effort, { reasoning: { effort } }]))
 
       // TODO: YOU CANNOT SET max_tokens if this is set!!!
@@ -452,7 +504,9 @@ export namespace ProviderTransform {
         const copilotEfforts = iife(() => {
           if (id.includes("5.1-codex-max") || id.includes("5.2") || id.includes("5.3"))
             return [...WIDELY_SUPPORTED_EFFORTS, "xhigh"]
-          return WIDELY_SUPPORTED_EFFORTS
+          const arr = [...WIDELY_SUPPORTED_EFFORTS]
+          if (id.includes("gpt-5") && model.release_date >= "2025-12-04") arr.push("xhigh")
+          return arr
         })
         return Object.fromEntries(
           copilotEfforts.map((effort) => [
@@ -883,6 +937,12 @@ export namespace ProviderTransform {
       return result
     }
 
+    // kilocode_change start
+    if (model.api.npm === "@kilocode/kilo-gateway") {
+      return kiloProviderOptions(options)
+    }
+    // kilocode_change end
+
     const key = sdkKey(model.api.npm) ?? model.providerID
     return { [key]: options }
   }
@@ -912,6 +972,31 @@ export namespace ProviderTransform {
 
     // Convert integer enums to string enums for Google/Gemini
     if (model.providerID === "google" || model.api.id.includes("gemini")) {
+      const isPlainObject = (node: unknown): node is Record<string, any> =>
+        typeof node === "object" && node !== null && !Array.isArray(node)
+      const hasCombiner = (node: unknown) =>
+        isPlainObject(node) && (Array.isArray(node.anyOf) || Array.isArray(node.oneOf) || Array.isArray(node.allOf))
+      const hasSchemaIntent = (node: unknown) => {
+        if (!isPlainObject(node)) return false
+        if (hasCombiner(node)) return true
+        return [
+          "type",
+          "properties",
+          "items",
+          "prefixItems",
+          "enum",
+          "const",
+          "$ref",
+          "additionalProperties",
+          "patternProperties",
+          "required",
+          "not",
+          "if",
+          "then",
+          "else",
+        ].some((key) => key in node)
+      }
+
       const sanitizeGemini = (obj: any): any => {
         if (obj === null || typeof obj !== "object") {
           return obj
@@ -942,19 +1027,18 @@ export namespace ProviderTransform {
           result.required = result.required.filter((field: any) => field in result.properties)
         }
 
-        if (result.type === "array") {
+        if (result.type === "array" && !hasCombiner(result)) {
           if (result.items == null) {
             result.items = {}
           }
-          // Ensure items has at least a type if it's an empty object
-          // This handles nested arrays like { type: "array", items: { type: "array", items: {} } }
-          if (typeof result.items === "object" && !Array.isArray(result.items) && !result.items.type) {
+          // Ensure items has a type only when it's still schema-empty.
+          if (isPlainObject(result.items) && !hasSchemaIntent(result.items)) {
             result.items.type = "string"
           }
         }
 
         // Remove properties/required from non-object types (Gemini rejects these)
-        if (result.type && result.type !== "object") {
+        if (result.type && result.type !== "object" && !hasCombiner(result)) {
           delete result.properties
           delete result.required
         }

@@ -54,6 +54,25 @@ describe("syncMentionedPaths", () => {
     syncMentionedPaths(paths, "no references")
     expect(paths.has("foo.ts")).toBe(true)
   })
+
+  it("does not false-match when a shorter path is prefix of a longer one", () => {
+    const paths = new Set(["src/a.ts", "src/a.tsx"])
+    const result = syncMentionedPaths(paths, "@src/a.tsx only")
+    expect(result.has("src/a.tsx")).toBe(true)
+    expect(result.has("src/a.ts")).toBe(false)
+  })
+
+  it("matches @path at end of text (no trailing space)", () => {
+    const paths = new Set(["foo.ts"])
+    const result = syncMentionedPaths(paths, "check @foo.ts")
+    expect(result.has("foo.ts")).toBe(true)
+  })
+
+  it("matches @path at start of text", () => {
+    const paths = new Set(["foo.ts"])
+    const result = syncMentionedPaths(paths, "@foo.ts is important")
+    expect(result.has("foo.ts")).toBe(true)
+  })
 })
 
 describe("buildTextAfterMentionSelect", () => {

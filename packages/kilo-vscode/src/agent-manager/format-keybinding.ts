@@ -32,3 +32,42 @@ export function formatKeybinding(raw: string, mac: boolean): string {
     })
   return mac ? symbols.join("") : symbols.join("+")
 }
+
+/** Agent Manager command prefix for keybinding extraction. */
+const AM_PREFIX = "kilo-code.new.agentManager."
+
+/** Global commands whose keybindings are forwarded to the webview. */
+const GLOBAL_KEYBINDINGS: Record<string, string> = {
+  "kilo-code.new.agentManagerOpen": "agentManagerOpen",
+  "kilo-code.new.cycleAgentMode": "cycleAgentMode",
+  "kilo-code.new.cyclePreviousAgentMode": "cyclePreviousAgentMode",
+}
+
+/**
+ * Build a keybinding map from VS Code's raw `contributes.keybindings` array.
+ * Returns a record of action name → formatted shortcut string.
+ */
+export function buildKeybindingMap(
+  keybindings: Array<{ command: string; key?: string; mac?: string }>,
+  mac: boolean,
+): Record<string, string> {
+  const bindings: Record<string, string> = {}
+
+  for (const kb of keybindings) {
+    const raw = mac ? (kb.mac ?? kb.key) : kb.key
+    if (!raw) continue
+
+    if (kb.command.startsWith(AM_PREFIX)) {
+      bindings[kb.command.slice(AM_PREFIX.length)] = formatKeybinding(raw, mac)
+    } else if (GLOBAL_KEYBINDINGS[kb.command]) {
+      bindings[GLOBAL_KEYBINDINGS[kb.command]] = formatKeybinding(raw, mac)
+    }
+  }
+
+  // Ensure fallback bindings are always present (may be missing from
+  // cached packageJSON if the extension hasn't been fully reloaded)
+  if (!bindings.toggleDiff) bindings.toggleDiff = formatKeybinding(mac ? "cmd+d" : "ctrl+d", mac)
+  if (!bindings.showShortcuts) bindings.showShortcuts = formatKeybinding(mac ? "cmd+shift+/" : "ctrl+shift+/", mac)
+
+  return bindings
+}

@@ -11,8 +11,8 @@ describe("WorktreeStateManager", () => {
 
   beforeEach(() => {
     root = fs.mkdtempSync(path.join(os.tmpdir(), "wtsm-test-"))
-    // Pre-create .kilocode dir so fire-and-forget saves don't race on mkdir
-    fs.mkdirSync(path.join(root, ".kilocode"), { recursive: true })
+    // Pre-create .kilo dir so fire-and-forget saves don't race on mkdir
+    fs.mkdirSync(path.join(root, ".kilo"), { recursive: true })
     logs.length = 0
     manager = new WorktreeStateManager(root, (msg) => logs.push(msg))
   })
@@ -164,14 +164,14 @@ describe("WorktreeStateManager", () => {
       expect(manager.getSessions()).toHaveLength(0)
     })
 
-    it("creates .kilocode directory if missing", async () => {
+    it("creates .kilo directory if missing", async () => {
       const fresh = path.join(root, "subdir")
       const mgr = new WorktreeStateManager(fresh, () => {})
       mgr.addWorktree({ branch: "test", path: "/tmp/test", parentBranch: "main" })
       await mgr.flush()
       await mgr.save()
 
-      expect(fs.existsSync(path.join(fresh, ".kilocode", "agent-manager.json"))).toBe(true)
+      expect(fs.existsSync(path.join(fresh, ".kilo", "agent-manager.json"))).toBe(true)
     })
   })
 
@@ -244,7 +244,7 @@ describe("WorktreeStateManager", () => {
       await manager.flush()
       await manager.save()
 
-      const content = fs.readFileSync(path.join(root, ".kilocode", "agent-manager.json"), "utf-8")
+      const content = fs.readFileSync(path.join(root, ".kilo", "agent-manager.json"), "utf-8")
       const data = JSON.parse(content)
       expect(data.tabOrder).toBeUndefined()
     })
@@ -278,7 +278,7 @@ describe("WorktreeStateManager", () => {
       await manager.flush()
       await manager.save()
 
-      const content = fs.readFileSync(path.join(root, ".kilocode", "agent-manager.json"), "utf-8")
+      const content = fs.readFileSync(path.join(root, ".kilo", "agent-manager.json"), "utf-8")
       const data = JSON.parse(content)
       expect(data.sessionsCollapsed).toBeUndefined()
     })
@@ -302,7 +302,7 @@ describe("WorktreeStateManager", () => {
     })
 
     it("resolves relative paths against root", async () => {
-      const relative = ".kilocode/worktrees/test-branch"
+      const relative = ".kilo/worktrees/test-branch"
       const absolute = path.join(root, relative)
       fs.mkdirSync(absolute, { recursive: true })
 
@@ -390,7 +390,7 @@ describe("WorktreeStateManager", () => {
 
   describe("load with corrupt data", () => {
     it("handles malformed JSON gracefully", async () => {
-      const file = path.join(root, ".kilocode", "agent-manager.json")
+      const file = path.join(root, ".kilo", "agent-manager.json")
       fs.writeFileSync(file, "not-valid-json{{{", "utf-8")
 
       await manager.load()
@@ -403,7 +403,7 @@ describe("WorktreeStateManager", () => {
     })
 
     it("handles partial data with missing sessions key", async () => {
-      const file = path.join(root, ".kilocode", "agent-manager.json")
+      const file = path.join(root, ".kilo", "agent-manager.json")
       fs.writeFileSync(
         file,
         JSON.stringify({
@@ -420,7 +420,7 @@ describe("WorktreeStateManager", () => {
     })
 
     it("handles partial data with missing worktrees key", async () => {
-      const file = path.join(root, ".kilocode", "agent-manager.json")
+      const file = path.join(root, ".kilo", "agent-manager.json")
       fs.writeFileSync(
         file,
         JSON.stringify({ sessions: { "s-1": { worktreeId: null, createdAt: new Date().toISOString() } } }),
@@ -431,6 +431,125 @@ describe("WorktreeStateManager", () => {
 
       expect(manager.getWorktrees()).toHaveLength(0)
       expect(manager.getSessions()).toHaveLength(1)
+    })
+  })
+
+  describe("legacy .kilocode migration", () => {
+    it("migrates and loads state from .kilocode when .kilo is absent", async () => {
+      // Remove the .kilo dir created in beforeEach
+      fs.rmSync(path.join(root, ".kilo"), { recursive: true, force: true })
+
+      // Write state to legacy .kilocode dir (migration will move it to .kilo)
+      const legacyDir = path.join(root, ".kilocode")
+      fs.mkdirSync(legacyDir, { recursive: true })
+      fs.writeFileSync(
+        path.join(legacyDir, "agent-manager.json"),
+        JSON.stringify({
+          worktrees: {
+            "wt-legacy": {
+              branch: "legacy-branch",
+              path: "/tmp/legacy",
+              parentBranch: "main",
+              createdAt: new Date().toISOString(),
+            },
+          },
+          sessions: {},
+        }),
+        "utf-8",
+      )
+
+      await manager.load()
+
+      expect(manager.getWorktrees()).toHaveLength(1)
+      expect(manager.getWorktrees()[0].branch).toBe("legacy-branch")
+    })
+
+    it("skips migration when .kilo state already exists", async () => {
+      // .kilo state already present — migration should skip agent-manager.json
+      fs.writeFileSync(
+        path.join(root, ".kilo", "agent-manager.json"),
+        JSON.stringify({
+          worktrees: {
+            "wt-new": {
+              branch: "new-branch",
+              path: "/tmp/new",
+              parentBranch: "main",
+              createdAt: new Date().toISOString(),
+            },
+          },
+          sessions: {},
+        }),
+        "utf-8",
+      )
+
+      // Legacy .kilocode state
+      const legacyDir = path.join(root, ".kilocode")
+      fs.mkdirSync(legacyDir, { recursive: true })
+      fs.writeFileSync(
+        path.join(legacyDir, "agent-manager.json"),
+        JSON.stringify({
+          worktrees: {
+            "wt-old": {
+              branch: "old-branch",
+              path: "/tmp/old",
+              parentBranch: "main",
+              createdAt: new Date().toISOString(),
+            },
+          },
+          sessions: {},
+        }),
+        "utf-8",
+      )
+
+      await manager.load()
+
+      expect(manager.getWorktrees()).toHaveLength(1)
+      expect(manager.getWorktrees()[0].branch).toBe("new-branch")
+    })
+
+    it("rewrites stale .kilocode paths in worktree entries (unix)", async () => {
+      fs.writeFileSync(
+        path.join(root, ".kilo", "agent-manager.json"),
+        JSON.stringify({
+          worktrees: {
+            "wt-stale": {
+              branch: "fix",
+              path: "/repo/.kilocode/worktrees/fix",
+              parentBranch: "main",
+              createdAt: new Date().toISOString(),
+            },
+          },
+          sessions: {},
+        }),
+        "utf-8",
+      )
+
+      await manager.load()
+
+      expect(manager.getWorktrees()[0].path).toBe(`/repo/.kilo/worktrees/fix`)
+    })
+
+    it("rewrites stale .kilocode paths with backslashes (windows)", async () => {
+      fs.writeFileSync(
+        path.join(root, ".kilo", "agent-manager.json"),
+        JSON.stringify({
+          worktrees: {
+            "wt-win": {
+              branch: "fix",
+              path: "C:\\.kilocode\\worktrees\\fix",
+              parentBranch: "main",
+              createdAt: new Date().toISOString(),
+            },
+          },
+          sessions: {},
+        }),
+        "utf-8",
+      )
+
+      await manager.load()
+
+      // Separator style from the stored path is preserved (backslashes stay as backslashes)
+      expect(manager.getWorktrees()[0].path).toBe("C:\\.kilo\\worktrees\\fix")
     })
   })
 })

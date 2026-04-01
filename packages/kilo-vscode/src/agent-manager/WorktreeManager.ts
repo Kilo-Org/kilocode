@@ -3,11 +3,12 @@
  *
  * Ported from kilocode/src/core/kilocode/agent-manager/WorktreeManager.ts.
  * Handles creation, discovery, and cleanup of worktrees stored in
- * {projectRoot}/.kilocode/worktrees/
+ * {projectRoot}/.kilo/worktrees/
  */
 
 import * as path from "path"
 import * as fs from "fs"
+import { randomUUID } from "crypto"
 import simpleGit, { type SimpleGit } from "simple-git"
 import { generateBranchName, sanitizeBranchName } from "./branch-name"
 import type { GitOps } from "./GitOps"
@@ -25,6 +26,9 @@ import {
   type PRInfo,
   type BranchListItem,
 } from "./git-import"
+
+const TEMP_PREFIX = ".kilo-delete-"
+const RM_OPTS: fs.RmOptions = { recursive: true, force: true, maxRetries: 3, retryDelay: 200 }
 
 interface WorktreeInfo {
   branch: string
@@ -77,7 +81,8 @@ function stripRemotePrefix(ref: string): { branch: string; remote?: string } {
   return { branch: ref }
 }
 
-const KILOCODE_DIR = ".kilocode"
+import { KILO_DIR, LEGACY_DIR, migrateAgentManagerData } from "./constants"
+
 const SESSION_ID_FILE = "session-id"
 const METADATA_FILE = "metadata.json"
 
@@ -87,13 +92,21 @@ export class WorktreeManager {
   private readonly git: SimpleGit
   private readonly ops: GitOps | undefined
   private readonly log: (msg: string) => void
+  private migrated = false
 
   constructor(root: string, log: (msg: string) => void, ops?: GitOps) {
     this.root = root
-    this.dir = path.join(root, KILOCODE_DIR, "worktrees")
+    this.dir = path.join(root, KILO_DIR, "worktrees")
     this.git = simpleGit(root)
     this.ops = ops
     this.log = log
+  }
+
+  /** Run once before first read/write to migrate Agent Manager data from .kilocode → .kilo. */
+  private async ensureMigrated(): Promise<void> {
+    if (this.migrated) return
+    this.migrated = true
+    await migrateAgentManagerData(this.root, this.log)
   }
 
   // ---------------------------------------------------------------------------
@@ -104,6 +117,12 @@ export class WorktreeManager {
   // callers (e.g. multi-version worktree creation) don't hit index.lock
   // conflicts. Operations on different repositories proceed in parallel.
   private static locks = new Map<string, Promise<void>>()
+
+  // Cache for fetched refs: avoids redundant git fetch calls when creating
+  // multiple worktrees from the same base branch (e.g., multi-version mode).
+  // Key: `${root}:${remote}:${branch}`, Value: timestamp when fetch was done
+  private static fetchCache = new Map<string, number>()
+  private static readonly FETCH_CACHE_TTL = 60_000 // 1 minute
 
   private withGitLock<T>(fn: () => Promise<T>): Promise<T> {
     const key = this.root
@@ -128,7 +147,21 @@ export class WorktreeManager {
     branchName?: string
     onProgress?: (step: WorktreeProgressStep, message: string, detail?: string) => void
   }): Promise<CreateWorktreeResult> {
+    await this.ensureMigrated()
     return this.withGitLock(() => this.createWorktreeImpl(params))
+  }
+
+  private async ensureGitAvailable(): Promise<void> {
+    try {
+      await execWithShellEnv("git", ["--version"])
+    } catch (error) {
+      if (error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT") {
+        throw new Error(
+          "Git is not installed or not found in PATH. Please install Git (https://git-scm.com) and restart VS Code.",
+        )
+      }
+      throw error
+    }
   }
 
   private async createWorktreeImpl(params: {
@@ -138,6 +171,7 @@ export class WorktreeManager {
     branchName?: string
     onProgress?: (step: WorktreeProgressStep, message: string, detail?: string) => void
   }): Promise<CreateWorktreeResult> {
+    await this.ensureGitAvailable()
     const repo = await this.git.checkIsRepo()
     if (!repo)
       throw new Error(
@@ -187,7 +221,18 @@ export class WorktreeManager {
     }
 
     const sanitized = params.branchName ? sanitizeBranchName(params.branchName) : undefined
-    let branch = params.existingBranch ?? (sanitized || undefined) ?? generateBranchName(params.prompt || "agent-task")
+    let branch: string
+    if (params.existingBranch) {
+      branch = params.existingBranch
+    } else if (sanitized) {
+      branch = sanitized
+    } else {
+      const existing = await this.git
+        .branch()
+        .then((b) => b.all)
+        .catch(() => [] as string[])
+      branch = generateBranchName(params.prompt || "agent-task", existing)
+    }
 
     if (params.existingBranch) {
       const exists = await this.branchExists(branch)
@@ -211,7 +256,7 @@ export class WorktreeManager {
       const args = params.existingBranch
         ? ["worktree", "add", worktreePath, branch]
         : ["worktree", "add", "-b", branch, worktreePath, startRef!]
-      await this.git.raw(args)
+      await this.runWorktreeAdd(args, worktreePath)
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
       if (msg.includes("already checked out")) {
@@ -230,7 +275,7 @@ export class WorktreeManager {
       const retryArgs = params.existingBranch
         ? ["worktree", "add", worktreePath, branch]
         : ["worktree", "add", "-b", branch, worktreePath, startRef!]
-      await this.git.raw(retryArgs)
+      await this.runWorktreeAdd(retryArgs, worktreePath)
     }
 
     this.log(
@@ -247,61 +292,151 @@ export class WorktreeManager {
   }
 
   /**
-   * Remove a worktree directory and its git bookkeeping.
-   * Called in two scenarios:
-   * 1. Cleanup before re-creation in createWorktree (leftover from crash/interrupted creation)
-   * 2. Future: session deletion from the Agent Manager UI
+   * Run `git worktree add` with post-checkout hook tolerance.
    *
-   * Tries `git worktree remove` first to properly clean up .git/worktrees/ bookkeeping,
-   * then --force for dirty worktrees, then falls back to fs.rm for orphaned directories
-   * that git doesn't know about.
+   * Hooks like husky or lefthook run after `git worktree add` and can cause
+   * a non-zero exit code even though the worktree was created successfully.
+   * When a hook failure is detected, we verify the worktree was registered
+   * via `git worktree list --porcelain` before treating it as a real error.
    */
-  async removeWorktree(worktreePath: string): Promise<void> {
-    return this.withGitLock(() => this.removeWorktreeImpl(worktreePath))
-  }
-
-  private async removeWorktreeImpl(worktreePath: string): Promise<void> {
-    const clean = await this.git.raw(["worktree", "remove", worktreePath]).then(
-      () => true,
-      () => false,
-    )
-    if (clean) {
-      this.log(`Removed worktree: ${worktreePath}`)
-      return
-    }
-
-    const forced = await this.git.raw(["worktree", "remove", "--force", worktreePath]).then(
-      () => true,
-      () => false,
-    )
-    if (forced) {
-      this.log(`Force removed worktree: ${worktreePath}`)
-      return
-    }
-
-    // Git doesn't know about this directory — remove it directly
-    if (fs.existsSync(worktreePath)) {
-      if (!this.isManagedPath(worktreePath)) {
-        this.log(`Refusing to remove path outside worktrees directory: ${worktreePath}`)
+  private async runWorktreeAdd(args: string[], wtPath: string): Promise<void> {
+    try {
+      await this.git.raw(args)
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error)
+      if (this.isHookError(msg) && (await this.worktreeRegistered(wtPath))) {
+        this.log(`Ignoring post-checkout hook failure for ${wtPath}: ${msg}`)
         return
       }
-      await fs.promises.rm(worktreePath, { recursive: true, force: true })
-      this.log(`Removed orphaned worktree directory: ${worktreePath}`)
+      throw error
     }
+  }
+
+  /**
+   * Detect post-checkout hook failures in git error output.
+   * Hooks like husky or lefthook run after `git worktree add` and can fail
+   * with a non-zero exit code even though the worktree was created.
+   */
+  private isHookError(msg: string): boolean {
+    const lower = msg.toLowerCase()
+    return (
+      (lower.includes("hook") || lower.includes("husky") || lower.includes("lefthook")) &&
+      (lower.includes("post-checkout") || lower.includes("post_checkout"))
+    )
+  }
+
+  /**
+   * Verify that git actually registered a worktree at the given path by
+   * checking `git worktree list --porcelain`. Used to confirm that a
+   * worktree was created despite a non-zero exit code (e.g., hook failure).
+   */
+  private async worktreeRegistered(wtPath: string): Promise<boolean> {
+    try {
+      const raw = await this.git.raw(["worktree", "list", "--porcelain"])
+      const normalized = normalizePath(wtPath)
+      return parseWorktreeList(raw).some((e) => normalizePath(e.path) === normalized)
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * Remove a worktree directory and its git bookkeeping.
+   *
+   * Uses a rename-prune-background-rm strategy for speed:
+   * 1. Atomically rename the directory so git and pollers stop seeing it instantly
+   * 2. Run `git worktree prune` to clean up .git/worktrees/ metadata
+   * 3. Delete the renamed directory in the background (non-blocking)
+   *
+   * When `branch` is provided the local branch is also deleted after pruning.
+   */
+  async removeWorktree(worktreePath: string, branch?: string): Promise<void> {
+    return this.withGitLock(() => this.removeWorktreeImpl(worktreePath, branch))
+  }
+
+  private async removeWorktreeImpl(worktreePath: string, branch?: string): Promise<void> {
+    if (!fs.existsSync(worktreePath)) {
+      // Directory already gone — just prune stale metadata
+      await this.git.raw(["worktree", "prune", "--expire", "now"]).catch(() => {})
+      this.log(`Worktree directory already absent, pruned metadata: ${worktreePath}`)
+      if (branch) await this.deleteBranch(branch)
+      return
+    }
+
+    if (!this.isManagedPath(worktreePath)) {
+      this.log(`Refusing to remove path outside worktrees directory: ${worktreePath}`)
+      return
+    }
+
+    // 1. Atomic rename — makes the worktree instantly invisible to git and pollers.
+    //    rename() is near-instant on the same filesystem (same parent dir guarantees this).
+    const temp = path.join(path.dirname(worktreePath), `.kilo-delete-${randomUUID()}`)
+    try {
+      await fs.promises.rename(worktreePath, temp)
+    } catch {
+      // Rename failed (e.g. locked files on Windows) — fall back to force remove
+      this.log(`Rename failed, falling back to force remove: ${worktreePath}`)
+      await this.git.raw(["worktree", "remove", "--force", worktreePath]).catch(() => {})
+      if (branch) await this.deleteBranch(branch)
+      return
+    }
+
+    // 2. Prune git metadata now that the directory is gone from the expected path
+    await this.git.raw(["worktree", "prune", "--expire", "now"]).catch(() => {})
+    this.log(`Removed worktree (rename+prune): ${worktreePath}`)
+
+    // 3. Delete the local branch while we still hold the git lock
+    if (branch) await this.deleteBranch(branch)
+
+    // 4. Background delete — fire-and-forget, cross-platform
+    fs.promises.rm(temp, RM_OPTS).catch((err) => {
+      this.log(`Background cleanup failed for ${temp}: ${err}`)
+    })
+  }
+
+  private async deleteBranch(branch: string): Promise<void> {
+    try {
+      await this.git.raw(["branch", "-D", branch])
+      this.log(`Deleted branch: ${branch}`)
+    } catch {
+      this.log(`Failed to delete branch (may still be referenced): ${branch}`)
+    }
+  }
+
+  /** Remove orphaned .kilo-delete-* temp dirs left by interrupted deletions. */
+  cleanupOrphanedTempDirs(): void {
+    if (!fs.existsSync(this.dir)) return
+    fs.promises
+      .readdir(this.dir, { withFileTypes: true })
+      .then((entries) => {
+        for (const e of entries) {
+          if (e.isDirectory() && e.name.startsWith(TEMP_PREFIX)) {
+            const stale = path.join(this.dir, e.name)
+            fs.promises.rm(stale, RM_OPTS).catch((err) => {
+              this.log(`Failed to clean orphaned temp dir ${stale}: ${err}`)
+            })
+          }
+        }
+      })
+      .catch(() => {})
   }
 
   async discoverWorktrees(): Promise<WorktreeInfo[]> {
+    await this.ensureMigrated()
     if (!fs.existsSync(this.dir)) return []
 
     const entries = await fs.promises.readdir(this.dir, { withFileTypes: true })
+    this.cleanupOrphanedTempDirs()
     const results = await Promise.all(
-      entries.filter((e) => e.isDirectory()).map((e) => this.worktreeInfo(path.join(this.dir, e.name))),
+      entries
+        .filter((e) => e.isDirectory() && !e.name.startsWith(TEMP_PREFIX))
+        .map((e) => this.worktreeInfo(path.join(this.dir, e.name))),
     )
     return results.filter((info): info is WorktreeInfo => info !== undefined)
   }
 
   async writeMetadata(worktreePath: string, sessionId: string, parentBranch: string, remote?: string): Promise<void> {
-    const dir = path.join(worktreePath, KILOCODE_DIR)
+    const dir = path.join(worktreePath, KILO_DIR)
     if (!fs.existsSync(dir)) await fs.promises.mkdir(dir, { recursive: true })
 
     const meta: Record<string, string> = { sessionId, parentBranch }
@@ -319,7 +454,19 @@ export class WorktreeManager {
   async readMetadata(
     worktreePath: string,
   ): Promise<{ sessionId: string; parentBranch?: string; remote?: string } | undefined> {
-    const dir = path.join(worktreePath, KILOCODE_DIR)
+    // Check .kilo/ first, then legacy .kilocode/
+    for (const dirName of [KILO_DIR, LEGACY_DIR]) {
+      const result = await this.readMetadataFrom(worktreePath, dirName)
+      if (result) return result
+    }
+    return undefined
+  }
+
+  private async readMetadataFrom(
+    worktreePath: string,
+    dirName: string,
+  ): Promise<{ sessionId: string; parentBranch?: string; remote?: string } | undefined> {
+    const dir = path.join(worktreePath, dirName)
 
     // Try metadata.json first (has parentBranch + remote)
     try {
@@ -355,13 +502,26 @@ export class WorktreeManager {
   async ensureGitExclude(): Promise<void> {
     const gitDir = await this.resolveGitDir()
     const excludePath = path.join(gitDir, "info", "exclude")
-    await this.addExcludeEntry(excludePath, ".kilocode/worktrees/", "Kilo Code agent worktrees")
-    await this.addExcludeEntry(excludePath, ".kilocode/agent-manager.json", "Kilo Agent Manager state")
-    await this.addExcludeEntry(excludePath, ".kilocode/setup-script", "Kilo Code worktree setup script")
-    await this.addExcludeEntry(excludePath, ".kilocode/setup-script.sh", "Kilo Code worktree setup script")
-    await this.addExcludeEntry(excludePath, ".kilocode/setup-script.ps1", "Kilo Code worktree setup script")
-    await this.addExcludeEntry(excludePath, ".kilocode/setup-script.cmd", "Kilo Code worktree setup script")
-    await this.addExcludeEntry(excludePath, ".kilocode/setup-script.bat", "Kilo Code worktree setup script")
+    const items = [
+      [".kilo/worktrees/", "Kilo Code agent worktrees"],
+      [".kilo/agent-manager.json", "Kilo Agent Manager state"],
+      [".kilo/setup-script", "Kilo Code worktree setup script"],
+      [".kilo/setup-script.sh", "Kilo Code worktree setup script"],
+      [".kilo/setup-script.ps1", "Kilo Code worktree setup script"],
+      [".kilo/setup-script.cmd", "Kilo Code worktree setup script"],
+      [".kilo/setup-script.bat", "Kilo Code worktree setup script"],
+      [".kilocode/worktrees/", "Kilo Code legacy agent worktrees"],
+      [".kilocode/agent-manager.json", "Kilo Agent Manager legacy state"],
+      [".kilocode/setup-script", "Kilo Code legacy worktree setup script"],
+      [".kilocode/setup-script.sh", "Kilo Code legacy worktree setup script"],
+      [".kilocode/setup-script.ps1", "Kilo Code legacy worktree setup script"],
+      [".kilocode/setup-script.cmd", "Kilo Code legacy worktree setup script"],
+      [".kilocode/setup-script.bat", "Kilo Code legacy worktree setup script"],
+    ] as const
+
+    for (const [entry, comment] of items) {
+      await this.addExcludeEntry(excludePath, entry, comment)
+    }
   }
 
   private async ensureWorktreeExclude(worktreePath: string): Promise<void> {
@@ -372,11 +532,7 @@ export class WorktreeManager {
 
       const worktreeGitDir = path.resolve(worktreePath, match[1].trim())
       const mainGitDir = path.dirname(path.dirname(worktreeGitDir))
-      await this.addExcludeEntry(
-        path.join(mainGitDir, "info", "exclude"),
-        `${KILOCODE_DIR}/`,
-        "Kilo Code session metadata",
-      )
+      await this.addExcludeEntry(path.join(mainGitDir, "info", "exclude"), `${KILO_DIR}/`, "Kilo Code session metadata")
     } catch (error) {
       this.log(`Warning: Failed to update git exclude for worktree: ${error}`)
     }
@@ -488,12 +644,29 @@ export class WorktreeManager {
   ): Promise<StartPointResult> {
     const { allowFallback = true } = opts || {}
 
-    // 1. Remote fetch
+    // 1. Remote fetch (with caching to avoid redundant fetches in multi-version mode)
     const remote = await this.resolveRemote()
     if (remote) {
+      const cacheKey = `${this.root}:${remote}:${branch}`
+      const cached = WorktreeManager.fetchCache.get(cacheKey)
+
+      // Skip fetch if recently fetched (within TTL) AND ref exists locally
+      if (cached && Date.now() - cached < WorktreeManager.FETCH_CACHE_TTL) {
+        if (await this.refExistsLocally(`${remote}/${branch}`)) {
+          return {
+            ref: `${remote}/${branch}`,
+            branch,
+            remote,
+            source: "remote",
+          }
+        }
+      }
+
+      // Either not cached or cache is stale - do the fetch
       onProgress?.("fetching", `Fetching ${remote}/${branch}...`)
       try {
         await this.git.fetch(remote, branch)
+        WorktreeManager.fetchCache.set(cacheKey, Date.now())
         if (await this.refExistsLocally(`${remote}/${branch}`)) {
           return {
             ref: `${remote}/${branch}`,
@@ -741,6 +914,7 @@ export class WorktreeManager {
   }
 
   private async createFromPRImpl(url: string): Promise<CreateWorktreeResult> {
+    await this.ensureGitAvailable()
     const parsed = parsePRUrl(url)
     if (!parsed) throw new Error("Invalid PR URL. Expected: https://github.com/owner/repo/pull/123")
 

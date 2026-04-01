@@ -74,6 +74,10 @@ If the gateway crashes, it's automatically restarted. The machine itself can be 
 Gateway process info is only available when the machine is running.
 {% /callout %}
 
+## Instance Specs
+
+The specs of your instance, including number of CPUs, memory, and storage, are visible at the top right of the instance controls section.
+
 ## Settings
 
 ### Changing the Model
@@ -96,7 +100,16 @@ You can pin your instance to a specific OpenClaw version and variant from the Se
 
 Select a version and variant from the dropdowns and click **Save**. To return to automatic updates, clear the version pin and save.
 
-See [Version Pinning](/docs/kiloclaw/version-pinning) for details.
+See [Version Pinning](/docs/kiloclaw/control-ui/version-pinning) for details.
+
+### Version Status Indicators
+
+The Settings tab shows badges indicating your OpenClaw version status:
+
+- **Update available** — A newer OpenClaw version is available in the catalog. Use **Upgrade & Redeploy** to move to that version.
+- **Modified** — OpenClaw was updated on this machine independently of the image. Redeploying will revert to the image version.
+
+These indicators help you track whether your running version is up to date or if a newer version exists in the catalog.
 
 ### Restore Default Config
 
@@ -116,7 +129,6 @@ Your files, workspace, and persistent data are not affected. Only the OpenClaw c
 {% callout type="warning" %}
 This action cannot be undone. Make sure you've saved any important changes to your configuration before restoring.
 {% /callout %}
-
 
 ### Stop, Destroy & Restore
 
@@ -187,4 +199,4 @@ These are the beta specifications for machines and subject to change without not
 - [OpenClaw Control UI](/docs/kiloclaw/control-ui)
 - [Connecting Chat Platforms](/docs/kiloclaw/chat-platforms)
 - [Troubleshooting](/docs/kiloclaw/troubleshooting)
-- [KiloClaw Pricing](/docs/kiloclaw/pricing)
+- [KiloClaw Pricing](/docs/kiloclaw/faq/pricing)

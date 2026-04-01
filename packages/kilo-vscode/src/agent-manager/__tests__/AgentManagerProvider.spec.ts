@@ -1,32 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
 
-vi.mock("vscode", () => ({
-  window: {},
-  workspace: {},
-  ViewColumn: { One: 1 },
-}))
-
-vi.mock("../../services/telemetry", () => ({
-  TelemetryProxy: {
-    capture: vi.fn(),
-  },
-  TelemetryEventName: {
-    AGENT_MANAGER_SESSION_STARTED: "agent-manager-session-started",
-  },
-}))
-
-vi.mock("../../KiloProvider", () => ({
-  KiloProvider: class {
-    attachToWebview() {}
-    setSessionDirectory() {}
-    trackSession() {}
-    refreshSessions() {}
-    registerSession() {}
-    clearSessionDirectory() {}
-    dispose() {}
-  },
-}))
-
 vi.mock("../WorktreeManager", () => ({
   WorktreeManager: class {},
 }))
@@ -74,6 +47,10 @@ vi.mock("../SessionTerminalManager", () => ({
   },
 }))
 
+vi.mock("../terminal-host", () => ({
+  createTerminalHost: () => ({}),
+}))
+
 vi.mock("../format-keybinding", () => ({
   formatKeybinding: (value: string) => value,
 }))
@@ -87,6 +64,23 @@ vi.mock("../git-import", () => ({
 }))
 
 import { AgentManagerProvider } from "../AgentManagerProvider"
+import type { Host, OutputHandle } from "../host"
+
+function createMockHost(): Host {
+  return {
+    openPanel: vi.fn(),
+    workspacePath: () => "/repo",
+    showError: vi.fn(),
+    openDocument: vi.fn().mockResolvedValue(undefined),
+    openFile: vi.fn(),
+    openFolder: vi.fn(),
+    createOutput: () => ({ appendLine: vi.fn(), dispose: vi.fn() }) as OutputHandle,
+    extensionKeybindings: () => [],
+    serverPort: () => undefined,
+    capture: vi.fn(),
+    dispose: vi.fn(),
+  }
+}
 
 function deferred() {
   let resolve: (() => void) | undefined
@@ -100,8 +94,10 @@ function deferred() {
 }
 
 function createHarness() {
+  const host = createMockHost()
   const manager = Object.create(AgentManagerProvider.prototype) as {
-    provider: { registerSession: ReturnType<typeof vi.fn> }
+    host: Host
+    panel: { sessions: { registerSession: ReturnType<typeof vi.fn> } } | undefined
     stateReady: Promise<void> | undefined
     createWorktreeOnDisk: ReturnType<typeof vi.fn>
     runSetupScriptForWorktree: ReturnType<typeof vi.fn>
@@ -113,8 +109,11 @@ function createHarness() {
     onCreateWorktree: () => Promise<null>
   }
 
-  manager.provider = {
-    registerSession: vi.fn(),
+  manager.host = host
+  manager.panel = {
+    sessions: {
+      registerSession: vi.fn(),
+    },
   }
   manager.stateReady = Promise.resolve()
   manager.createWorktreeOnDisk = vi.fn()
@@ -129,11 +128,11 @@ function createHarness() {
 }
 
 describe("AgentManagerProvider worktree creation", () => {
-  it("registers the first worktree session with KiloProvider", async () => {
+  it("registers the first worktree session with session provider", async () => {
     const manager = createHarness()
     const created = {
       worktree: { id: "wt-1" },
-      result: { path: "/repo/.kilocode/worktrees/wt-1", branch: "feature/wt-1", parentBranch: "main" },
+      result: { path: "/repo/.kilo/worktrees/wt-1", branch: "feature/wt-1", parentBranch: "main" },
     }
     const session = { id: "session-1" }
     const state = { addSession: vi.fn() }
@@ -145,7 +144,7 @@ describe("AgentManagerProvider worktree creation", () => {
     await manager.onCreateWorktree()
 
     expect(state.addSession).toHaveBeenCalledWith("session-1", "wt-1")
-    expect(manager.provider.registerSession).toHaveBeenCalledWith(session)
+    expect(manager.panel!.sessions.registerSession).toHaveBeenCalledWith(session)
   })
 
   it("waits for state initialization before creating a worktree", async () => {
@@ -155,7 +154,7 @@ describe("AgentManagerProvider worktree creation", () => {
     manager.stateReady = ready.promise
     manager.createWorktreeOnDisk.mockResolvedValue({
       worktree: { id: "wt-2" },
-      result: { path: "/repo/.kilocode/worktrees/wt-2", branch: "feature/wt-2", parentBranch: "main" },
+      result: { path: "/repo/.kilo/worktrees/wt-2", branch: "feature/wt-2", parentBranch: "main" },
     })
     manager.createSessionInWorktree.mockResolvedValue({ id: "session-2" })
     manager.getStateManager.mockReturnValue({ addSession: vi.fn() })

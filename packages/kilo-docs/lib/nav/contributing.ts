@@ -13,10 +13,6 @@ export const ContributingNav: NavSection[] = [
         href: "/contributing/ecosystem",
         children: "Ecosystem",
       },
-      {
-        href: "/contributing/cline-to-kilo-migration",
-        children: "Cline to Kilo Migration",
-      },
     ],
   },
   {
@@ -65,10 +61,6 @@ export const ContributingNav: NavSection[] = [
           {
             href: "/contributing/architecture/track-repo-url",
             children: "Track Repo URL",
-          },
-          {
-            href: "/contributing/architecture/vercel-ai-gateway",
-            children: "Vercel AI Gateway",
           },
           {
             href: "/contributing/architecture/voice-transcription",

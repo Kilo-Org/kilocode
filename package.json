@@ -9,11 +9,13 @@
     "dev": "bun run --cwd packages/opencode --conditions=browser src/index.ts",
     "dev:desktop": "bun --cwd packages/desktop tauri dev",
     "dev:web": "bun --cwd packages/app dev",
+    "dev:storybook": "bun --cwd packages/storybook storybook",
     "typecheck": "bun turbo typecheck",
     "prepare": "husky",
     "random": "echo 'Random script'",
     "hello": "echo 'Hello World!'",
-    "test": "echo 'do not run tests from root' && exit 1"
+    "test": "echo 'do not run tests from root' && exit 1",
+    "extension": "bun --cwd packages/kilo-vscode script/launch.ts"
   },
   "workspaces": {
     "packages": [
@@ -33,13 +35,13 @@
       "@tsconfig/bun": "1.0.9",
       "@cloudflare/workers-types": "4.20251008.0",
       "@openauthjs/openauth": "0.0.0-20250322224806",
-      "@pierre/diffs": "1.1.0-beta.17",
+      "@pierre/diffs": "1.1.0-beta.18",
       "@solid-primitives/storage": "4.3.3",
       "@tailwindcss/vite": "4.1.11",
       "diff": "8.0.2",
       "dompurify": "3.3.1",
-      "drizzle-kit": "1.0.0-beta.12-a5629fb",
-      "drizzle-orm": "1.0.0-beta.12-a5629fb",
+      "drizzle-kit": "1.0.0-beta.16-ea816b6",
+      "drizzle-orm": "1.0.0-beta.16-ea816b6",
       "ai": "5.0.124",
       "hono": "4.10.7",
       "hono-openapi": "1.1.2",
@@ -49,7 +51,7 @@
       "marked-shiki": "1.2.1",
       "@playwright/test": "1.51.0",
       "typescript": "5.8.2",
-      "@typescript/native-preview": "7.0.0-dev.20251207.1",
+      "@typescript/native-preview": "7.0.0-dev.20260316.1",
       "zod": "4.1.8",
       "remeda": "2.26.0",
       "shiki": "3.20.0",
@@ -68,19 +70,21 @@
     "@actions/artifact": "5.0.1",
     "@tsconfig/bun": "catalog:",
     "@types/mime-types": "3.0.1",
+    "@typescript/native-preview": "catalog:",
     "glob": "13.0.5",
     "husky": "9.1.7",
     "prettier": "3.6.2",
     "semver": "^7.6.0",
     "sst": "3.18.10",
-    "turbo": "2.5.6"
+    "turbo": "2.8.13"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.933.0",
     "@kilocode/plugin": "workspace:*",
     "@opencode-ai/script": "workspace:*",
     "@kilocode/sdk": "workspace:*",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "@morphllm/morphsdk": "0.2.141"
   },
   "repository": {
     "type": "git",
@@ -96,7 +100,8 @@
     "protobufjs",
     "tree-sitter",
     "tree-sitter-bash",
-    "web-tree-sitter"
+    "web-tree-sitter",
+    "electron"
   ],
   "overrides": {
     "@types/bun": "catalog:",
@@ -107,6 +112,6 @@
     "@openrouter/ai-sdk-provider@1.5.4": "patches/@openrouter%2Fai-sdk-provider@1.5.4.patch",
     "ghostty-web@0.3.0": "patches/ghostty-web@0.3.0.patch"
   },
-  "version": "7.0.46",
+  "version": "7.1.17",
   "peerDependencies": {}
 }

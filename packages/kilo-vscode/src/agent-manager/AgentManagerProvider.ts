@@ -1,47 +1,48 @@
-import * as vscode from "vscode"
 import * as fs from "fs"
 import * as path from "path"
-import type { KiloClient, Session, FileDiff } from "@kilocode/sdk/v2/client"
+import type { KiloClient, Session } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { getErrorMessage } from "../kilo-provider-utils"
 import { isAbsolutePath } from "../path-utils"
-import { KiloProvider } from "../KiloProvider"
-import { buildWebviewHtml } from "../utils"
 import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
 import { WorktreeStateManager, remoteRef } from "./WorktreeStateManager"
 import { chooseBaseBranch, normalizeBaseBranch } from "./base-branch"
 import { GitStatsPoller, type WorktreePresenceResult } from "./GitStatsPoller"
 import { GitOps, type ApplyConflict } from "./GitOps"
 import { versionedName } from "./branch-name"
-import { normalizePath } from "./git-import"
+import { normalizePath, classifyWorktreeError } from "./git-import"
 import { SetupScriptService } from "./SetupScriptService"
 import { SetupScriptRunner } from "./SetupScriptRunner"
+import { copyEnvFiles } from "./env-copy"
 import { SessionTerminalManager } from "./SessionTerminalManager"
 import { createTerminalHost } from "./terminal-host"
 import { executeVscodeTask } from "./task-runner"
-import { formatKeybinding } from "./format-keybinding"
-import { TelemetryProxy, TelemetryEventName } from "../services/telemetry"
-import { MAX_MULTI_VERSIONS } from "./constants"
+import { forkSession } from "./fork-session"
+import { continueInWorktree } from "./continue-in-worktree"
+
+import { shouldStopDiffPolling } from "./delete-worktree"
+import { buildKeybindingMap } from "./format-keybinding"
+import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from "./multi-version"
+import { PLATFORM } from "./constants"
 import type { AgentManagerOutMessage, AgentManagerInMessage } from "./types"
-import { getWorkspaceRoot, hashFileDiffs, openFileInEditor, resolveLocalDiffTarget } from "../review-utils"
+import { hashFileDiffs, resolveLocalDiffTarget } from "../review-utils"
+import type { Host, PanelContext, OutputHandle, SessionProvider, Disposable } from "./host"
 
 /**
  * AgentManagerProvider opens the Agent Manager panel.
  *
  * Uses WorktreeStateManager for centralized state persistence. Worktrees and
- * sessions are stored in `.kilocode/agent-manager.json`. The UI shows two
+ * sessions are stored in `.kilo/agent-manager.json`. The UI shows two
  * sections: WORKTREES (top) with managed worktrees + their sessions, and
- * SESSIONS (bottom) with unassociated workspace sessions.
+ * SESSIONS (bottom) with unassociated local sessions.
  */
-const PLATFORM = "agent-manager" as const
 const LOCAL_DIFF_ID = "local" as const
 
-export class AgentManagerProvider implements vscode.Disposable {
+export class AgentManagerProvider implements Disposable {
   public static readonly viewType = "kilo-code.new.AgentManagerPanel"
 
-  private panel: vscode.WebviewPanel | undefined
-  private provider: KiloProvider | undefined
-  private outputChannel: vscode.OutputChannel
+  private panel: PanelContext | undefined
+  private outputChannel: OutputHandle
   private worktrees: WorktreeManager | undefined
   private state: WorktreeStateManager | undefined
   private setupScript: SetupScriptService | undefined
@@ -53,21 +54,21 @@ export class AgentManagerProvider implements vscode.Disposable {
   private lastDiffHash: string | undefined
   private statsPoller: GitStatsPoller
   private gitOps: GitOps
-  private cachedDiffTarget: { directory: string; baseBranch: string } | undefined
+  private cachedDiffTarget: { sessionId: string; directory: string; baseBranch: string } | undefined
   private staleWorktreeIds = new Set<string>()
   private cachedWorktreeStats: AgentManagerOutMessage | undefined
   private cachedLocalStats: AgentManagerOutMessage | undefined
   private applyingWorktreeId: string | undefined
+
   /** Session ID most recently loaded via a `loadMessages` message from the webview.
-   *  Updated synchronously — unlike KiloProvider.currentSession which depends on
+   *  Updated synchronously — unlike the session provider's currentSession which depends on
    *  an async `session.get` round-trip and can be stale during rapid tab switches. */
   private activeSessionId: string | undefined
-
   constructor(
-    private readonly extensionUri: vscode.Uri,
+    private readonly host: Host,
     private readonly connectionService: KiloConnectionService,
   ) {
-    this.outputChannel = vscode.window.createOutputChannel("Kilo Agent Manager")
+    this.outputChannel = host.createOutput("Kilo Agent Manager")
     this.terminalManager = new SessionTerminalManager(
       (msg) => this.outputChannel.appendLine(`[SessionTerminal] ${msg}`),
       createTerminalHost(),
@@ -75,7 +76,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     this.gitOps = new GitOps({ log: (...args) => this.log(...args) })
     this.statsPoller = new GitStatsPoller({
       getWorktrees: () => this.state?.getWorktrees() ?? [],
-      getWorkspaceRoot: () => this.getWorkspaceRoot(),
+      getWorkspaceRoot: () => this.getRoot(),
       getClient: () => this.connectionService.getClient(),
       onStats: (stats) => {
         const msg = { type: "agentManager.worktreeStats" as const, stats }
@@ -103,46 +104,60 @@ export class AgentManagerProvider implements vscode.Disposable {
   public openPanel(): void {
     if (this.panel) {
       this.log("Panel already open, revealing")
-      this.panel.reveal(vscode.ViewColumn.One)
+      this.panel.reveal()
+      this.postToWebview({ type: "action", action: "focusInput" })
       return
     }
     this.log("Opening Agent Manager panel")
-    TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_OPENED, { source: PLATFORM })
+    this.host.capture("Agent Manager Opened", { source: PLATFORM })
 
-    this.panel = vscode.window.createWebviewPanel(
-      AgentManagerProvider.viewType,
-      "Agent Manager",
-      vscode.ViewColumn.One,
-      {
-        enableScripts: true,
-        retainContextWhenHidden: true,
-        localResourceRoots: [this.extensionUri],
-      },
+    this.attachPanel(
+      this.host.openPanel({
+        onBeforeMessage: (msg) => this.onMessage(msg),
+      }),
     )
+  }
 
-    this.panel.iconPath = {
-      light: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-light.svg"),
-      dark: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-dark.svg"),
+  /** Restore the Agent Manager panel from a previously serialized state.
+   *  The caller (extension.ts / vscode-host.ts) wraps the raw panel before passing it. */
+  public deserializePanel(ctx: PanelContext): void {
+    if (this.panel) {
+      this.log("Panel already exists during deserialization, disposing duplicate")
+      ctx.dispose()
+      return
     }
+    this.log("Deserializing Agent Manager panel")
+    this.attachPanel(ctx)
+  }
 
-    this.panel.webview.html = this.getHtml(this.panel.webview)
+  /** Message interceptor — exposed for the deserialization path in extension.ts. */
+  public handleMessage(msg: Record<string, unknown>): Promise<Record<string, unknown> | null> {
+    return this.onMessage(msg)
+  }
 
-    this.provider = new KiloProvider(this.extensionUri, this.connectionService)
-    this.provider.attachToWebview(this.panel.webview, {
-      onBeforeMessage: (msg) => this.onMessage(msg),
-    })
+  /** Wire up a panel context (shared by openPanel and deserializePanel). */
+  private attachPanel(ctx: PanelContext): void {
+    if (this.panel) {
+      this.log("Disposing previous panel before attaching new one")
+      this.panel.dispose()
+      this.panel = undefined
+    }
+    this.panel = ctx
 
     this.stateReady = this.initializeState()
     void this.sendRepoInfo()
     this.sendKeybindings()
 
-    this.panel.onDidDispose(() => {
-      this.log("Panel disposed")
-      this.statsPoller.stop()
-      this.stopDiffPolling()
-      this.provider?.dispose()
-      this.provider = undefined
-      this.panel = undefined
+    ctx.onDidDispose(() => {
+      // Only clear if this is still the active panel — a newer panel may
+      // have already replaced us via attachPanel.
+      if (this.panel === ctx) {
+        this.log("Panel disposed")
+        this.statsPoller.stop()
+        this.stopDiffPolling()
+        this.panel = undefined
+      }
+      ctx.sessions.dispose()
     })
   }
 
@@ -159,15 +174,16 @@ export class AgentManagerProvider implements vscode.Disposable {
     }
 
     await state.load()
+    manager.cleanupOrphanedTempDirs()
 
     // Do not auto-remove stale worktrees on load.
     // Presence checks run in the shared poller and require explicit user cleanup.
 
-    // Register all worktree sessions with KiloProvider
+    // Register all worktree sessions with the session provider
     for (const worktree of state.getWorktrees()) {
       for (const session of state.getSessions(worktree.id)) {
-        this.provider?.setSessionDirectory(session.id, worktree.path)
-        this.provider?.trackSession(session.id)
+        this.panel?.sessions.setSessionDirectory(session.id, worktree.path)
+        this.panel?.sessions.trackSession(session.id)
       }
     }
 
@@ -176,7 +192,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     // Refresh sessions so worktree sessions appear in the list
     if (state.getSessions().length > 0) {
-      this.provider?.refreshSessions()
+      this.panel?.sessions.refreshSessions()
     }
   }
 
@@ -193,7 +209,19 @@ export class AgentManagerProvider implements vscode.Disposable {
     if (m.type === "agentManager.deleteWorktree") return this.onDeleteWorktree(m.worktreeId)
     if (m.type === "agentManager.removeStaleWorktree") return this.onRemoveStaleWorktree(m.worktreeId)
     if (m.type === "agentManager.promoteSession") return this.onPromoteSession(m.sessionId)
+    if (m.type === "agentManager.openLocally") {
+      if (!this.panel) return null
+      this.panel.sessions.clearSessionDirectory(m.sessionId)
+      return null
+    }
+    if (m.type === "continueInWorktree") {
+      void this.continueFromSidebar(m.sessionId, (status, detail, error) => {
+        this.panel?.postMessage({ type: "continueInWorktreeProgress", status, detail, error })
+      })
+      return null
+    }
     if (m.type === "agentManager.addSessionToWorktree") return this.onAddSessionToWorktree(m.worktreeId)
+    if (m.type === "agentManager.forkSession") return this.onForkSession(m.sessionId, m.worktreeId)
     if (m.type === "agentManager.closeSession") return this.onCloseSession(m.sessionId)
     if (m.type === "agentManager.configureSetupScript") {
       void this.configureSetupScript()
@@ -210,6 +238,9 @@ export class AgentManagerProvider implements vscode.Disposable {
     if (m.type === "agentManager.openWorktree") {
       this.openWorktreeDirectory(m.worktreeId)
       return null
+    }
+    if (m.type === "previewImage") {
+      return msg
     }
     if (m.type === "agentManager.showExistingLocalTerminal") {
       this.terminalManager.syncLocalOnSessionSwitch()
@@ -234,7 +265,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     if (m.type === "agentManager.requestState") {
       void this.stateReady
         ?.then(() => {
-          // When the workspace is not a git repo (or has no folder open),
+          // When the folder is not a git repo (or has no folder open),
           // this.state is never created. pushState() silently returns in that
           // case, so re-send the empty/non-git state explicitly.
           if (!this.state) {
@@ -252,7 +283,7 @@ export class AgentManagerProvider implements vscode.Disposable {
           // initializeState() can race ahead of webview mount, causing
           // sessionsLoaded to never flip to true.
           if (this.state.getSessions().length > 0) {
-            this.provider?.refreshSessions()
+            this.panel?.sessions.refreshSessions()
           }
         })
         .catch((err) => {
@@ -271,6 +302,10 @@ export class AgentManagerProvider implements vscode.Disposable {
     }
     if (m.type === "agentManager.setTabOrder") {
       this.state?.setTabOrder(m.key, m.order)
+      return null
+    }
+    if (m.type === "agentManager.setWorktreeOrder") {
+      this.state?.setWorktreeOrder(m.order)
       return null
     }
     if (m.type === "agentManager.setSessionsCollapsed") {
@@ -311,6 +346,10 @@ export class AgentManagerProvider implements vscode.Disposable {
       void this.onRequestWorktreeDiff(m.sessionId)
       return null
     }
+    if (m.type === "agentManager.requestWorktreeDiffFile") {
+      void this.onRequestWorktreeDiffFile(m.sessionId, m.file)
+      return null
+    }
     if (m.type === "agentManager.applyWorktreeDiff") {
       const selectedFiles = Array.isArray(m.selectedFiles)
         ? [
@@ -337,9 +376,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 
     // Intercept generic "openFile" from DataBridge (markdown links, tool subtitle clicks)
     // and route through worktree-aware resolution — but only for worktree sessions.
-    // Local sessions fall through to KiloProvider which resolves against workspace root.
+    // Local sessions fall through to the session provider which resolves against the repo root.
     // Uses activeSessionId (set synchronously by loadMessages) rather than
-    // KiloProvider.currentSession which can be stale during rapid tab switches.
+    // the session provider's currentSession which can be stale during rapid tab switches.
     if (m.type === "openFile") {
       const sessionId = this.activeSessionId
       const state = this.getStateManager()
@@ -350,7 +389,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     }
 
     // Track the active session synchronously so worktree-aware file resolution
-    // uses the correct session even before KiloProvider's async session.get completes.
+    // uses the correct session even before the session provider's async session.get completes.
     if (m.type === "loadMessages") {
       this.activeSessionId = m.sessionID
       this.terminalManager.syncOnSessionSwitch(m.sessionID)
@@ -360,16 +399,16 @@ export class AgentManagerProvider implements vscode.Disposable {
     if (m.type === "clearSession") {
       this.activeSessionId = undefined
       void Promise.resolve().then(() => {
-        if (!this.provider || !this.state) return
+        if (!this.panel || !this.state) return
         for (const id of this.state.worktreeSessionIds()) {
-          this.provider.trackSession(id)
+          this.panel.sessions.trackSession(id)
         }
       })
     }
 
     // Track when a user stops/cancels a running session in the agent manager
     if (m.type === "abort") {
-      TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_SESSION_STOPPED, {
+      this.host.capture("Agent Manager Session Stopped", {
         source: PLATFORM,
         sessionId: m.sessionID,
       })
@@ -426,6 +465,7 @@ export class AgentManagerProvider implements vscode.Disposable {
         type: "agentManager.worktreeSetup",
         status: "error",
         message: "Open a folder that contains a git repository to use worktrees",
+        errorCode: "not_git_repo",
       })
       return null
     }
@@ -451,8 +491,9 @@ export class AgentManagerProvider implements vscode.Disposable {
         type: "agentManager.worktreeSetup",
         status: "error",
         message: msg,
+        errorCode: classifyWorktreeError(msg),
       })
-      TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_SESSION_ERROR, {
+      this.host.capture("Agent Manager Session Error", {
         source: PLATFORM,
         error: msg,
         context: "createWorktree",
@@ -474,7 +515,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     this.postToWebview({
       type: "agentManager.worktreeSetup",
       status: "creating",
-      message: "Setting up workspace...",
+      message: "Setting up worktree...",
       branch: result.branch,
       worktreeId: worktree.id,
     })
@@ -499,7 +540,7 @@ export class AgentManagerProvider implements vscode.Disposable {
         message: "Not connected to CLI backend",
         worktreeId,
       })
-      TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_SESSION_ERROR, {
+      this.host.capture("Agent Manager Session Error", {
         source: PLATFORM,
         error: "Not connected to CLI backend",
         context: "createSession",
@@ -529,7 +570,7 @@ export class AgentManagerProvider implements vscode.Disposable {
         message: `Failed to create session: ${err}`,
         worktreeId,
       })
-      TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_SESSION_ERROR, {
+      this.host.capture("Agent Manager Session Error", {
         source: PLATFORM,
         error: err,
         context: "createSession",
@@ -591,9 +632,9 @@ export class AgentManagerProvider implements vscode.Disposable {
     const state = this.getStateManager()!
     state.addSession(session.id, created.worktree.id)
     this.registerWorktreeSession(session.id, created.result.path)
-    this.provider?.registerSession(session)
+    this.panel?.sessions.registerSession(session)
     this.notifyWorktreeReady(session.id, created.result, created.worktree.id)
-    TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_SESSION_STARTED, {
+    this.host.capture("Agent Manager Session Started", {
       source: PLATFORM,
       sessionId: session.id,
       worktreeId: created.worktree.id,
@@ -608,24 +649,25 @@ export class AgentManagerProvider implements vscode.Disposable {
     const manager = this.getWorktreeManager()
     const state = this.getStateManager()
     if (!manager || !state) return null
-
     const worktree = state.getWorktree(worktreeId)
     if (!worktree) {
       this.log(`Worktree ${worktreeId} not found in state`)
       return null
     }
-
+    // Remove from state BEFORE disk removal so pollers immediately stop targeting this worktree.
+    this.statsPoller.skipWorktree(worktreeId)
+    const orphaned = state.removeWorktree(worktreeId)
+    if (shouldStopDiffPolling(worktree.path, orphaned, this.cachedDiffTarget, this.diffSessionId)) {
+      this.stopDiffPolling()
+    }
+    for (const s of orphaned) this.panel?.sessions.clearSessionDirectory(s.id)
+    this.pushState()
+    // Disk removal after state is clean — pollers no longer reference this worktree.
     try {
-      await manager.removeWorktree(worktree.path)
+      await manager.removeWorktree(worktree.path, worktree.branch)
     } catch (error) {
       this.log(`Failed to remove worktree from disk: ${error}`)
     }
-
-    const orphaned = state.removeWorktree(worktreeId)
-    for (const s of orphaned) {
-      this.provider?.clearSessionDirectory(s.id)
-    }
-    this.pushState()
     this.log(`Deleted worktree ${worktreeId} (${worktree.branch})`)
     return null
   }
@@ -647,19 +689,13 @@ export class AgentManagerProvider implements vscode.Disposable {
     }
 
     const orphaned = state.removeWorktree(worktreeId)
+    if (shouldStopDiffPolling(worktree.path, orphaned, this.cachedDiffTarget, this.diffSessionId)) {
+      this.stopDiffPolling()
+    }
     for (const session of orphaned) {
-      this.provider?.clearSessionDirectory(session.id)
+      this.panel?.sessions.clearSessionDirectory(session.id)
     }
     this.clearStaleTracking(worktreeId)
-
-    if (this.cachedDiffTarget && normalizePath(this.cachedDiffTarget.directory) === normalizePath(worktree.path)) {
-      this.stopDiffPolling()
-    }
-
-    if (this.diffSessionId && orphaned.some((session) => session.id === this.diffSessionId)) {
-      this.stopDiffPolling()
-    }
-
     this.pushState()
     this.log(`Removed stale worktree entry ${worktreeId} (${worktree.branch})`)
     return null
@@ -667,6 +703,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
   /** Promote a session: create a worktree and move the session into it. */
   private async onPromoteSession(sessionId: string): Promise<null> {
+    await this.waitForStateReady("onPromoteSession")
     const created = await this.createWorktreeOnDisk({})
     if (!created) return null
 
@@ -716,7 +753,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     } catch (error) {
       const err = getErrorMessage(error)
       this.postToWebview({ type: "error", message: `Failed to create session: ${err}` })
-      TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_SESSION_ERROR, {
+      this.host.capture("Agent Manager Session Error", {
         source: PLATFORM,
         error: err,
         context: "addSessionToWorktree",
@@ -734,17 +771,40 @@ export class AgentManagerProvider implements vscode.Disposable {
       worktreeId,
     })
 
-    if (this.provider) {
-      this.provider.registerSession(session)
+    if (this.panel) {
+      this.panel.sessions.registerSession(session)
     }
 
-    TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_SESSION_STARTED, {
+    this.host.capture("Agent Manager Session Started", {
       source: PLATFORM,
       sessionId: session.id,
       worktreeId,
     })
     this.log(`Added session ${session.id} to worktree ${worktreeId}`)
     return null
+  }
+
+  private onForkSession(sessionId: string, worktreeId?: string) {
+    return forkSession(
+      {
+        getClient: () => this.connectionService.getClient(),
+        state: this.getStateManager(),
+        postError: (msg) => this.postToWebview({ type: "error", message: msg }),
+        registerWorktreeSession: (sid, dir) => this.registerWorktreeSession(sid, dir),
+        pushState: () => this.pushState(),
+        notifyForked: (s, from, wt) =>
+          this.postToWebview({
+            type: "agentManager.sessionForked",
+            sessionId: s.id,
+            forkedFromId: from,
+            worktreeId: wt,
+          }),
+        registerSession: (s) => this.panel?.sessions.registerSession(s),
+        log: (...args) => this.log(...args),
+      },
+      sessionId,
+      worktreeId,
+    )
   }
 
   /** Close (remove) a session from its worktree. */
@@ -766,6 +826,7 @@ export class AgentManagerProvider implements vscode.Disposable {
   private async onCreateMultiVersion(
     msg: Extract<AgentManagerInMessage, { type: "agentManager.createMultiVersion" }>,
   ): Promise<null> {
+    await this.waitForStateReady("onCreateMultiVersion")
     const text = msg.text?.trim() || undefined
 
     const worktreeName = msg.name?.trim() || undefined
@@ -774,33 +835,15 @@ export class AgentManagerProvider implements vscode.Disposable {
     const baseBranch = msg.baseBranch
     const branchName = msg.branchName?.trim() || undefined
 
-    // Expand model allocations into per-version model assignments
-    const rawAllocations = msg.modelAllocations
-    const perVersionModels: Array<{ providerID: string; modelID: string } | undefined> = []
-    if (rawAllocations && rawAllocations.length > 0) {
-      for (const alloc of rawAllocations) {
-        const clamped = Math.min(Math.max(Math.floor(alloc.count) || 0, 0), MAX_MULTI_VERSIONS)
-        for (let c = 0; c < clamped; c++) {
-          perVersionModels.push({ providerID: alloc.providerID, modelID: alloc.modelID })
-        }
-        if (perVersionModels.length >= MAX_MULTI_VERSIONS) break
-      }
-    }
-
-    const versions =
-      perVersionModels.length > 0
-        ? Math.min(perVersionModels.length, MAX_MULTI_VERSIONS)
-        : Math.min(Math.max(Number(msg.versions) || 1, 1), MAX_MULTI_VERSIONS)
-
-    // Fall back to single model when not in compare mode
-    const providerID = perVersionModels.length > 0 ? undefined : msg.providerID
-    const modelID = perVersionModels.length > 0 ? undefined : msg.modelID
+    const fallback = msg.providerID && msg.modelID ? { providerID: msg.providerID, modelID: msg.modelID } : undefined
+    const resolved = resolveVersionModels(msg.modelAllocations, fallback, Number(msg.versions) || 1)
+    const { models, versions, providerID, modelID } = resolved
 
     // Generate a shared group ID for multi-version worktrees
     const groupId = versions > 1 ? `grp-${Date.now()}` : undefined
 
     this.log(
-      `Creating ${versions} worktrees${perVersionModels.length > 0 ? " (model comparison)" : ""}${text ? ` for: ${text.slice(0, 60)}` : ""}${groupId ? ` (group=${groupId})` : ""}`,
+      `Creating ${versions} worktrees${models.length > 0 ? " (model comparison)" : ""}${text ? ` for: ${text.slice(0, 60)}` : ""}${groupId ? ` (group=${groupId})` : ""}`,
     )
 
     // Notify webview that multi-version creation has started
@@ -813,14 +856,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     })
 
     // Phase 1: Create all worktrees + sessions first
-    const created: Array<{
-      worktreeId: string
-      sessionId: string
-      path: string
-      branch: string
-      parentBranch: string
-      versionIndex: number
-    }> = []
+    const created: CreatedVersion[] = []
 
     for (let i = 0; i < versions; i++) {
       this.log(`Creating worktree ${i + 1}/${versions}`)
@@ -858,7 +894,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       // Set the per-version model immediately so the UI selector reflects
       // the correct model as soon as the worktree appears, before Phase 2.
       // Uses a dedicated message type to avoid clearing the busy state.
-      const versionModel = perVersionModels[i]
+      const versionModel = models[i]
       const earlyProviderID = versionModel?.providerID ?? providerID
       const earlyModelID = versionModel?.modelID ?? modelID
       if (earlyProviderID && earlyModelID) {
@@ -879,7 +915,7 @@ export class AgentManagerProvider implements vscode.Disposable {
         versionIndex: i,
       })
 
-      TelemetryProxy.capture(TelemetryEventName.AGENT_MANAGER_SESSION_STARTED, {
+      this.host.capture("Agent Manager Session Started", {
         source: PLATFORM,
         sessionId: session.id,
         worktreeId: wt.worktree.id,
@@ -902,40 +938,15 @@ export class AgentManagerProvider implements vscode.Disposable {
     }
 
     // Phase 2: Send the initial prompt to all sessions, or clear busy state if no text.
-    // Always include per-version model so the UI selector reflects the correct model.
-    for (let i = 0; i < created.length; i++) {
-      const entry = created[i]!
-      // Use the original version index to match the correct model from perVersionModels,
-      // since `created` may have gaps if earlier worktree creations failed.
-      const versionModel = perVersionModels[entry.versionIndex]
-      const versionProviderID = versionModel?.providerID ?? providerID
-      const versionModelID = versionModel?.modelID ?? modelID
+    const messages = buildInitialMessages(created, models, { providerID, modelID }, text, agent, files)
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i]!
       if (text) {
-        this.log(
-          `Sending initial message to version ${i + 1} (session=${entry.sessionId}${versionModel ? `, model=${versionProviderID}/${versionModelID}` : ""})`,
-        )
-        this.postToWebview({
-          type: "agentManager.sendInitialMessage",
-          sessionId: entry.sessionId,
-          worktreeId: entry.worktreeId,
-          text,
-          providerID: versionProviderID,
-          modelID: versionModelID,
-          agent,
-          files,
-        })
-        if (i < created.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 300))
-        }
-      } else {
-        // No prompt — still include model info so the UI selector is correct
-        this.postToWebview({
-          type: "agentManager.sendInitialMessage",
-          sessionId: entry.sessionId,
-          worktreeId: entry.worktreeId,
-          providerID: versionProviderID,
-          modelID: versionModelID,
-        })
+        this.log(`Sending initial message to version ${i + 1} (session=${msg.sessionId})`)
+      }
+      this.postToWebview({ type: "agentManager.sendInitialMessage", ...msg })
+      if (text && i < messages.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 300))
       }
     }
 
@@ -949,7 +960,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     })
 
     if (created.length === 0) {
-      vscode.window.showErrorMessage(`Failed to create any of the ${versions} multi-version worktrees.`)
+      this.host.showError(`Failed to create any of the ${versions} multi-version worktrees.`)
     }
 
     this.log(`Multi-version creation complete: ${created.length}/${versions} versions`)
@@ -1073,8 +1084,9 @@ export class AgentManagerProvider implements vscode.Disposable {
         raw.includes("already used by worktree") || raw.includes("already checked out")
           ? `Branch "${branch}" is already checked out in another worktree`
           : raw
-      this.postToWebview({ type: "agentManager.worktreeSetup", status: "error", message: msg })
-      this.postToWebview({ type: "agentManager.importResult", success: false, message: msg })
+      const code = classifyWorktreeError(msg)
+      this.postToWebview({ type: "agentManager.worktreeSetup", status: "error", message: msg, errorCode: code })
+      this.postToWebview({ type: "agentManager.importResult", success: false, message: msg, errorCode: code })
     } finally {
       this.importing = false
     }
@@ -1113,7 +1125,7 @@ export class AgentManagerProvider implements vscode.Disposable {
         this.postToWebview({
           type: "agentManager.worktreeSetup",
           status: "creating",
-          message: "Setting up workspace...",
+          message: "Setting up worktree...",
           branch: result.branch,
           worktreeId: worktree.id,
         })
@@ -1143,8 +1155,9 @@ export class AgentManagerProvider implements vscode.Disposable {
         raw.includes("already used by worktree") || raw.includes("already checked out")
           ? "This PR's branch is already checked out in another worktree"
           : raw
-      this.postToWebview({ type: "agentManager.worktreeSetup", status: "error", message: msg })
-      this.postToWebview({ type: "agentManager.importResult", success: false, message: msg })
+      const code = classifyWorktreeError(msg)
+      this.postToWebview({ type: "agentManager.worktreeSetup", status: "error", message: msg, errorCode: code })
+      this.postToWebview({ type: "agentManager.importResult", success: false, message: msg, errorCode: code })
     } finally {
       this.importing = false
     }
@@ -1281,7 +1294,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       this.postToWebview({
         type: "agentManager.importResult",
         success: true,
-        message: `Imported ${imported} workspace${imported !== 1 ? "s" : ""}`,
+        message: `Imported ${imported} worktree${imported !== 1 ? "s" : ""}`,
       })
       this.log(`Imported ${imported}/${externals.length} external worktrees`)
     } catch (error) {
@@ -1297,39 +1310,8 @@ export class AgentManagerProvider implements vscode.Disposable {
   // ---------------------------------------------------------------------------
 
   private sendKeybindings(): void {
-    const ext = vscode.extensions.getExtension("kilocode.kilo-code")
-    const keybindings: Array<{ command: string; key?: string; mac?: string }> =
-      ext?.packageJSON?.contributes?.keybindings ?? []
-
-    const mac = process.platform === "darwin"
-    const prefix = "kilo-code.new.agentManager."
-    const bindings: Record<string, string> = {}
-
-    // Global keybindings exposed to the shortcuts dialog
-    const globals: Record<string, string> = {
-      "kilo-code.new.agentManagerOpen": "agentManagerOpen",
-    }
-
-    for (const kb of keybindings) {
-      const raw = mac ? (kb.mac ?? kb.key) : kb.key
-      if (!raw) continue
-
-      if (kb.command.startsWith(prefix)) {
-        bindings[kb.command.slice(prefix.length)] = formatKeybinding(raw, mac)
-      } else if (globals[kb.command]) {
-        bindings[globals[kb.command]] = formatKeybinding(raw, mac)
-      }
-    }
-
-    // Ensure toggleDiff binding is always present (may be missing from
-    // cached packageJSON if the extension hasn't been fully reloaded)
-    if (!bindings.toggleDiff) {
-      bindings.toggleDiff = formatKeybinding(mac ? "cmd+d" : "ctrl+d", mac)
-    }
-    if (!bindings.showShortcuts) {
-      bindings.showShortcuts = formatKeybinding(mac ? "cmd+shift+/" : "ctrl+shift+/", mac)
-    }
-
+    const keybindings = this.host.extensionKeybindings()
+    const bindings = buildKeybindingMap(keybindings, process.platform === "darwin")
     this.postToWebview({ type: "agentManager.keybindings", bindings })
   }
 
@@ -1347,17 +1329,20 @@ export class AgentManagerProvider implements vscode.Disposable {
       }
       const resolved = service.resolveScript()
       if (!resolved) return
-      const document = await vscode.workspace.openTextDocument(resolved.path)
-      await vscode.window.showTextDocument(document)
+      await this.host.openDocument(resolved.path)
     } catch (error) {
       this.log(`Failed to open setup script: ${error}`)
     }
   }
 
-  /** Run the worktree setup script if configured. Blocks until complete. Shows progress in overlay. */
+  /** Copy .env files and run the worktree setup script. Blocks until complete. Shows progress in overlay. */
   private async runSetupScriptForWorktree(worktreePath: string, branch?: string, worktreeId?: string): Promise<void> {
-    const root = this.getWorkspaceRoot()
+    const root = this.getRoot()
     if (!root) return
+
+    // Always copy .env files from the main repo (before the setup script so it can override)
+    await copyEnvFiles(root, worktreePath, (msg) => this.outputChannel.appendLine(`[EnvCopy] ${msg}`))
+
     try {
       const service = this.getSetupScriptService()
       if (!service || !service.hasScript()) return
@@ -1407,9 +1392,9 @@ export class AgentManagerProvider implements vscode.Disposable {
   // ---------------------------------------------------------------------------
 
   private registerWorktreeSession(sessionId: string, directory: string): void {
-    if (!this.provider) return
-    this.provider.setSessionDirectory(sessionId, directory)
-    this.provider.trackSession(sessionId)
+    if (!this.panel) return
+    this.panel.sessions.setSessionDirectory(sessionId, directory)
+    this.panel.sessions.trackSession(sessionId)
   }
 
   private onWorktreePresence(result: WorktreePresenceResult): void {
@@ -1466,6 +1451,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       sessions: state.getSessions(),
       staleWorktreeIds,
       tabOrder: state.getTabOrder(),
+      worktreeOrder: state.getWorktreeOrder(),
       sessionsCollapsed: state.getSessionsCollapsed(),
       reviewDiffStyle: state.getReviewDiffStyle(),
       isGitRepo: true,
@@ -1475,7 +1461,7 @@ export class AgentManagerProvider implements vscode.Disposable {
     this.statsPoller.setEnabled(worktrees.length > 0 || this.panel !== undefined)
   }
 
-  /** Push empty state when the workspace is not a git repo or has no workspace folder. */
+  /** Push empty state when the folder is not a git repo or has no folder open. */
   private pushEmptyState(): void {
     this.staleWorktreeIds.clear()
     this.postToWebview({
@@ -1492,15 +1478,15 @@ export class AgentManagerProvider implements vscode.Disposable {
   // Manager accessors
   // ---------------------------------------------------------------------------
 
-  private getWorkspaceRoot(): string | undefined {
-    return getWorkspaceRoot()
+  private getRoot(): string | undefined {
+    return this.host.workspacePath()
   }
 
   private getWorktreeManager(): WorktreeManager | undefined {
     if (this.worktrees) return this.worktrees
-    const root = this.getWorkspaceRoot()
+    const root = this.getRoot()
     if (!root) {
-      this.log("getWorktreeManager: no workspace folder available")
+      this.log("getWorktreeManager: no folder available")
       return undefined
     }
     this.worktrees = new WorktreeManager(
@@ -1513,9 +1499,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 
   private getStateManager(): WorktreeStateManager | undefined {
     if (this.state) return this.state
-    const root = this.getWorkspaceRoot()
+    const root = this.getRoot()
     if (!root) {
-      this.log("getStateManager: no workspace folder available")
+      this.log("getStateManager: no folder available")
       return undefined
     }
     this.state = new WorktreeStateManager(root, (msg) => this.outputChannel.appendLine(`[StateManager] ${msg}`))
@@ -1524,9 +1510,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 
   private getSetupScriptService(): SetupScriptService | undefined {
     if (this.setupScript) return this.setupScript
-    const root = this.getWorkspaceRoot()
+    const root = this.getRoot()
     if (!root) {
-      this.log("getSetupScriptService: no workspace folder available")
+      this.log("getSetupScriptService: no folder available")
       return undefined
     }
     this.setupScript = new SetupScriptService(root)
@@ -1564,9 +1550,9 @@ export class AgentManagerProvider implements vscode.Disposable {
     }
 
     const state = this.getStateManager()
-    const root = this.getWorkspaceRoot()
+    const root = this.getRoot()
     if (!state || !root) {
-      this.postApplyResult(worktreeId, "error", "Open a git workspace to apply changes")
+      this.postApplyResult(worktreeId, "error", "Open a git repository to apply changes")
       return
     }
 
@@ -1625,27 +1611,25 @@ export class AgentManagerProvider implements vscode.Disposable {
     const target = path.normalize(worktree.path)
     if (!fs.existsSync(target)) {
       this.log(`openWorktreeDirectory: missing path ${target}`)
-      void vscode.window.showErrorMessage("Worktree folder does not exist on disk.")
+      this.host.showError("Worktree folder does not exist on disk.")
       return
     }
-    const uri = vscode.Uri.file(target)
-    void vscode.commands.executeCommand("vscode.openFolder", uri, true)
+    this.host.openFolder(target, true)
   }
 
   /** Open a file from a worktree or local session in the VS Code editor.
    * Absolute paths (Unix `/…` or Windows `C:\…`) are opened directly.
    * Relative paths are resolved against the session's worktree directory
-   * (or workspace root for local sessions) with symlink-traversal protection. */
+   * (or repo root for local sessions) with symlink-traversal protection. */
   private openWorktreeFile(sessionId: string, filePath: string, line?: number, column?: number): void {
     if (isAbsolutePath(filePath)) {
-      const uri = vscode.Uri.file(filePath)
-      openFileInEditor(uri.fsPath, line, column, vscode.ViewColumn.Active, "AgentManagerProvider")
+      this.host.openFile(filePath, line, column)
       return
     }
     const state = this.getStateManager()
     if (!state) return
     const session = state.getSession(sessionId)
-    const base = session?.worktreeId ? state.getWorktree(session.worktreeId)?.path : this.getWorkspaceRoot()
+    const base = session?.worktreeId ? state.getWorktree(session.worktreeId)?.path : this.getRoot()
     if (!base) return
     // Resolve real paths to prevent symlink traversal and normalize for
     // consistent comparison on both Unix and Windows.
@@ -1659,7 +1643,7 @@ export class AgentManagerProvider implements vscode.Disposable {
       console.error("[Kilo New] AgentManagerProvider: Cannot resolve file path:", err)
       return
     }
-    openFileInEditor(resolved, line, column, vscode.ViewColumn.Active, "AgentManagerProvider")
+    this.host.openFile(resolved, line, column)
   }
 
   /** Resolve worktree path + parentBranch for a session, or undefined if not applicable. */
@@ -1690,11 +1674,11 @@ export class AgentManagerProvider implements vscode.Disposable {
     return { directory: worktree.path, baseBranch: remoteRef(worktree) }
   }
 
-  /** Resolve diff target for the local workspace — diffs against the remote tracking
+  /** Resolve diff target for the local repo — diffs against the remote tracking
    *  branch, falling back to the repo's default branch, and ultimately to HEAD so
    *  local-only repos (no remote) still show working-tree changes in the diff panel. */
   private async resolveLocalDiffTarget(): Promise<{ directory: string; baseBranch: string } | undefined> {
-    return await resolveLocalDiffTarget(this.gitOps, (...args) => this.log(...args))
+    return await resolveLocalDiffTarget(this.gitOps, (...args) => this.log(...args), this.getRoot())
   }
 
   /** One-shot diff fetch with loading indicators. Resolves target async, then fetches. */
@@ -1712,12 +1696,12 @@ export class AgentManagerProvider implements vscode.Disposable {
     if (!target) return
 
     // Cache the resolved target so subsequent polls skip resolution entirely
-    this.cachedDiffTarget = target
+    this.cachedDiffTarget = { sessionId, ...target }
 
     this.postToWebview({ type: "agentManager.worktreeDiffLoading", sessionId, loading: true })
     try {
       const client = this.connectionService.getClient()
-      const { data: diffs } = await client.worktree.diff(
+      const { data: diffs } = await client.worktree.diffSummary(
         { directory: target.directory, base: target.baseBranch },
         { throwOnError: true },
       )
@@ -1739,12 +1723,12 @@ export class AgentManagerProvider implements vscode.Disposable {
 
   /** Polling diff fetch — uses cached target, no loading state, only pushes when hash changes. */
   private async pollDiff(sessionId: string): Promise<void> {
-    const target = this.cachedDiffTarget
+    const target = this.cachedDiffTarget?.sessionId === sessionId ? this.cachedDiffTarget : undefined
     if (!target) return
 
     try {
       const client = this.connectionService.getClient()
-      const { data: diffs } = await client.worktree.diff(
+      const { data: diffs } = await client.worktree.diffSummary(
         { directory: target.directory, base: target.baseBranch },
         { throwOnError: true },
       )
@@ -1758,6 +1742,32 @@ export class AgentManagerProvider implements vscode.Disposable {
       this.postToWebview({ type: "agentManager.worktreeDiff", sessionId, diffs: files })
     } catch (err) {
       this.log("Failed to poll worktree diff:", err)
+    }
+  }
+
+  private async onRequestWorktreeDiffFile(sessionId: string, file: string): Promise<void> {
+    if (!file) return
+
+    if (this.stateReady) {
+      await this.stateReady.catch((err) => this.log("stateReady rejected, continuing diff detail resolve:", err))
+    }
+
+    const target =
+      this.cachedDiffTarget?.sessionId === sessionId ? this.cachedDiffTarget : await this.resolveDiffTarget(sessionId)
+    if (!target) return
+
+    this.cachedDiffTarget = { sessionId, directory: target.directory, baseBranch: target.baseBranch }
+
+    try {
+      const client = this.connectionService.getClient()
+      const { data } = await client.worktree.diffFile(
+        { directory: target.directory, base: target.baseBranch, file },
+        { throwOnError: true },
+      )
+      this.postToWebview({ type: "agentManager.worktreeDiffFile", sessionId, file, diff: data ?? null })
+    } catch (err) {
+      this.log("Failed to fetch worktree diff file:", err)
+      this.postToWebview({ type: "agentManager.worktreeDiffFile", sessionId, file, diff: null })
     }
   }
 
@@ -1795,17 +1805,7 @@ export class AgentManagerProvider implements vscode.Disposable {
   }
 
   private postToWebview(message: AgentManagerOutMessage): void {
-    if (this.panel?.webview) void this.panel.webview.postMessage(message)
-  }
-
-  private getHtml(webview: vscode.Webview): string {
-    return buildWebviewHtml(webview, {
-      scriptUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "agent-manager.js")),
-      styleUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "agent-manager.css")),
-      iconsBaseUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "assets", "icons")),
-      title: "Agent Manager",
-      port: this.connectionService.getServerInfo()?.port,
-    })
+    this.panel?.postMessage(message)
   }
 
   /**
@@ -1822,23 +1822,65 @@ export class AgentManagerProvider implements vscode.Disposable {
    */
   public focusPanel(): void {
     if (!this.panel) return
-    this.panel.reveal(vscode.ViewColumn.One, false)
+    this.panel.reveal(false)
+    this.postToWebview({ type: "action", action: "focusInput" })
   }
 
   public isActive(): boolean {
     return this.panel?.active === true
   }
 
+  /** Expose worktree session→directory mappings for the auto-approve toggle. */
+  public getSessionDirectories(): ReadonlyMap<string, string> {
+    return this.panel?.sessions.getSessionDirectories() ?? new Map()
+  }
+
+  /**
+   * Continue a sidebar session in a new worktree.
+   * Captures git state, creates worktree, applies state, forks session.
+   * Called from KiloProvider when the sidebar sends "continueInWorktree".
+   */
+  public async continueFromSidebar(
+    sessionId: string,
+    progress: (status: string, detail?: string, error?: string) => void,
+  ): Promise<void> {
+    const root = this.getRoot()
+    if (!root) {
+      progress("error", undefined, "No workspace folder open")
+      return
+    }
+
+    this.openPanel()
+    await this.waitForStateReady("continueFromSidebar")
+
+    await continueInWorktree(
+      {
+        root,
+        getClient: () => this.connectionService.getClient(),
+        createWorktreeOnDisk: (opts) => this.createWorktreeOnDisk(opts),
+        runSetupScript: (p, b, id) => this.runSetupScriptForWorktree(p, b, id),
+        getStateManager: () => this.getStateManager(),
+        registerWorktreeSession: (sid, dir) => this.registerWorktreeSession(sid, dir),
+        registerSession: (session) => this.panel?.sessions.registerSession(session),
+        notifyReady: (sid, result, wid) => this.notifyWorktreeReady(sid, result, wid),
+        capture: (event, props) => this.host.capture(event, props),
+        log: (...args) => this.log(...args),
+      },
+      sessionId,
+      progress,
+    )
+  }
+
   public postMessage(message: unknown): void {
-    this.panel?.webview.postMessage(message)
+    this.panel?.postMessage(message)
   }
 
   public dispose(): void {
     this.stopDiffPolling()
     this.statsPoller.stop()
     this.terminalManager.dispose()
-    this.provider?.dispose()
     this.panel?.dispose()
     this.outputChannel.dispose()
+    this.host.dispose()
   }
 }

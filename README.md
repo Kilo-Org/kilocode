@@ -1,9 +1,9 @@
 <p align="center">
-  <a href="https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code"><img src="https://img.shields.io/badge/VS_Code_Marketplace-007ACC?style=flat&logo=visualstudiocode&logoColor=white" alt="VS Code Marketplace"></a>
-  <a href="https://x.com/kilocode"><img src="https://img.shields.io/badge/kilocode-000000?style=flat&logo=x&logoColor=white" alt="X (Twitter)"></a>
-  <a href="https://blog.kilo.ai"><img src="https://img.shields.io/badge/Blog-555?style=flat&logo=substack&logoColor=white" alt="Substack Blog"></a>
-  <a href="https://kilo.ai/discord"><img src="https://img.shields.io/badge/Join%20Discord-5865F2?style=flat&logo=discord&logoColor=white" alt="Discord"></a>
-  <a href="https://www.reddit.com/r/kilocode/"><img src="https://img.shields.io/badge/Join%20r%2Fkilocode-D84315?style=flat&logo=reddit&logoColor=white" alt="Reddit"></a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code"><img src="https://raster.shields.io/badge/VS_Code_Marketplace-007ACC?style=flat&logo=visualstudiocode&logoColor=white" alt="VS Code Marketplace"></a>
+  <a href="https://x.com/kilocode"><img src="https://raster.shields.io/badge/kilocode-000000?style=flat&logo=x&logoColor=white" alt="X (Twitter)"></a>
+  <a href="https://blog.kilo.ai"><img src="https://raster.shields.io/badge/Blog-555?style=flat&logo=substack&logoColor=white" alt="Substack Blog"></a>
+  <a href="https://kilo.ai/discord"><img src="https://raster.shields.io/badge/Join%20Discord-5865F2?style=flat&logo=discord&logoColor=white" alt="Discord"></a>
+  <a href="https://www.reddit.com/r/kilocode/"><img src="https://raster.shields.io/badge/Join%20r%2Fkilocode-D84315?style=flat&logo=reddit&logoColor=white" alt="Reddit"></a>
 </p>
 
 # 🚀 Kilo
@@ -56,6 +56,7 @@ npx @kilocode/cli
 Then run `kilo` in any project directory to start.
 
 <!-- kilocode_change start -->
+
 ### npm Install Note: Hidden `.kilo` File
 
 On some systems and npm versions, installing `@kilocode/cli` can create a hidden `.kilo` file near the installed `kilo` command (for example in a global npm bin directory). This file is an npm-generated launcher helper, not project data.
@@ -74,7 +75,7 @@ Download the latest binary or source code from the [Releases page](https://githu
 - `x64` is standard 64-bit Intel/AMD CPUs.
 - `x64-baseline` is a compatibility build for older x64 CPUs(do not support AVX Instruction).
 - `arm64` is ARM-based Linux/MacOS.
-- `musl` is statically linked Linux build for Alpine/minimal Docker without glibc. Alpine/minimal Docker users should prefer the matching *-musl asset.
+- `musl` is statically linked Linux build for Alpine/minimal Docker without glibc. Alpine/minimal Docker users should prefer the matching \*-musl asset.
 - `kilo-vscode-*.vsix` is the VS Code extension package and not the CLI binary.
 - `Source code` releases are for building from source, not normal installation.
 
@@ -83,7 +84,7 @@ For most users:
 - **Windows (most PCs):** `kilo-windows-x64.zip`
 - **macOS Apple Silicon:** `kilo-darwin-arm64.zip`
 - **macOS Intel:** `kilo-darwin-x64.zip`
-- **Linux x64:** `kilo-linux-x64.tar,gz`
+- **Linux x64:** `kilo-linux-x64.tar.gz`
 - **Linux on ARM:** `kilo-linux-arm64.tar.gz`
 
 ### Autonomous Mode (CI/CD)

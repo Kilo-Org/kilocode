@@ -19,6 +19,7 @@ export const ThinkingSelector: Component = () => {
   function pick(value: string) {
     session.selectVariant(value)
     setOpen(false)
+    requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
   }
 
   const triggerLabel = () => {

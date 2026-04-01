@@ -66,6 +66,37 @@ To fill empty seats or remove members ahead of seat deletion, see the [team mana
 
 To fill empty seats or remove members ahead of seat deletion, see the [team management](/docs/collaborate/teams/team-management) page.
 
+## Automatic Top-Up
+
+Ensure your team has uninterrupted access to Kilo Code by enabling Automatic Top-Up. This feature keeps your organization's balance funded so you never have to worry about manual recharges.
+
+### How It Works
+
+- **Initial Verification** — To verify your payment method, a one-time charge for your selected top-up amount will be processed immediately upon enabling this feature.
+- **Automatic Thresholds** — Once enabled, Kilo Code will automatically recharge your balance whenever it falls below $50.00.
+
+{% callout type="warning" title="Payment Failure" %}
+If a payment fails, we will notify you via email and automatically pause auto-top-ups to prevent repeated billing attempts. You can resume this feature at any time from your settings.
+{% /callout %}
+
+- **Flexibility** — You can disable automatic top-ups at any time.
+- **No Expiration** — Any credits you purchase will never expire; they remain available in your account until used.
+
+### Configuring Automatic Top-Up
+
+1. Navigate to your **Organization Settings**
+2. Select **Billing & Credits**
+3. Locate the **Automatic Top-Up** section and toggle the feature **ON**
+4. Set your **Top-Up Amount** — the amount to add to your balance each time a recharge is triggered
+
+{% callout type="note" %}
+The minimum top-up amount is **$100.00**.
+{% /callout %}
+
+5. Click **Save Changes** to confirm
+
+Once saved, your initial top-up will be processed immediately to verify your payment method.
+
 ## Invoices
 
 Invoices for any payment on the Kilo Code platform, for seats or credits, will be available in the Invoices tab.

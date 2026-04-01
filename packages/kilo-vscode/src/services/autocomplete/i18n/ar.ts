@@ -6,10 +6,8 @@ export const dict = {
   "kilocode:autocomplete.statusBar.warning": "$(warning) Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.basic": "Kilo Code Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.disabled": "Kilo Code Autocomplete (معطل)",
-  "kilocode:autocomplete.statusBar.tooltip.noCredits":
-    "**لا يوجد رصيد في حسابك**\n\nحساب Kilo Code الخاص بك لا يحتوي على رصيد. لاستخدام الإكمال التلقائي، يرجى إضافة رصيد إلى حسابك.\n\n[فتح الإعدادات](command:kilo-code.settingsButtonClicked)",
   "kilocode:autocomplete.statusBar.tooltip.noUsableProvider":
-    "**لم يتم تكوين نموذج الإكمال التلقائي**\n\nلتمكين الإكمال التلقائي، أضف ملفًا شخصيًا مع أحد هذه المزودين المدعومين: {{providers}}.\n\n[فتح الإعدادات](command:kilo-code.settingsButtonClicked)",
+    "**لم يتم تكوين نموذج الإكمال التلقائي**\n\nلتمكين الإكمال التلقائي، أضف ملفًا شخصيًا مع أحد هذه المزودين المدعومين: {{providers}}.\n\n[فتح الإعدادات]({{command}})",
   "kilocode:autocomplete.statusBar.tooltip.sessionTotal": "إجمالي تكلفة الجلسة:",
   "kilocode:autocomplete.statusBar.tooltip.provider": "المزود:",
   "kilocode:autocomplete.statusBar.tooltip.model": "النموذج:",
@@ -43,4 +41,9 @@ export const dict = {
     "يتم حظر Kilo Code Autocomplete بسبب تعارض مع GitHub Copilot. لإصلاح هذا، يجب عليك تعطيل اقتراحات Copilot المضمنة.",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "تعطيل Copilot",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "تعطيل الإكمال التلقائي",
+  "kilocode:autocomplete.creditsExhausted.message":
+    "تم إيقاف Kilo Code Autocomplete مؤقتًا لأن حسابك لا يحتوي على رصيد متبقٍ. أضف رصيدًا لاستئناف الإكمال التلقائي.",
+  "kilocode:autocomplete.creditsExhausted.addCredits": "إضافة رصيد",
+  "kilocode:autocomplete.authError.message":
+    "تم إيقاف Kilo Code Autocomplete مؤقتًا بسبب خطأ في المصادقة. يرجى تسجيل الدخول مرة أخرى.",
 }

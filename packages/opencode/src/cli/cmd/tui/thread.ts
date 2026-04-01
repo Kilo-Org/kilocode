@@ -3,10 +3,11 @@ import { tui } from "./app"
 import { Rpc } from "@/util/rpc"
 import { type rpc } from "./worker"
 import path from "path"
+import { text as streamText } from "node:stream/consumers"
 import { fileURLToPath } from "url"
 import { UI } from "@/cli/ui"
-import { iife } from "@/util/iife"
 import { Log } from "@/util/log"
+import { withTimeout } from "@/util/timeout"
 import { withNetworkOptions, resolveNetworkOptions } from "@/cli/network"
 import { Filesystem } from "@/util/filesystem"
 import type { Event } from "@kilocode/sdk/v2"
@@ -44,7 +45,24 @@ function createWorkerFetch(client: RpcClient): typeof fetch {
 function createEventSource(client: RpcClient): EventSource {
   return {
     on: (handler) => client.on<Event>("event", handler),
+    setWorkspace: (workspaceID) => {
+      void client.call("setWorkspace", { workspaceID })
+    },
   }
+}
+
+async function target() {
+  if (typeof KILO_WORKER_PATH !== "undefined") return KILO_WORKER_PATH
+  const dist = new URL("./cli/cmd/tui/worker.js", import.meta.url)
+  if (await Filesystem.exists(fileURLToPath(dist))) return dist
+  return new URL("./worker.ts", import.meta.url)
+}
+
+async function input(value?: string) {
+  const piped = process.stdin.isTTY ? undefined : await streamText(process.stdin)
+  if (!value) return piped
+  if (!piped) return value
+  return piped + "\n" + value
 }
 
 export const TuiThreadCommand = cmd({
@@ -114,24 +132,22 @@ export const TuiThreadCommand = cmd({
       }
       // kilocode_change end
 
-      // Resolve relative paths against PWD to preserve behavior when using --cwd flag
-      const baseCwd = process.env.PWD ?? process.cwd()
-      const cwd = args.project ? path.resolve(baseCwd, args.project) : process.cwd()
-      const localWorker = new URL("./worker.ts", import.meta.url)
-      const distWorker = new URL("./cli/cmd/tui/worker.js", import.meta.url)
-      const workerPath = await iife(async () => {
-        if (typeof KILO_WORKER_PATH !== "undefined") return KILO_WORKER_PATH
-        if (await Filesystem.exists(fileURLToPath(distWorker))) return distWorker
-        return localWorker
-      })
+      // Resolve relative --project paths from PWD, then use the real cwd after
+      // chdir so the thread and worker share the same directory key.
+      const root = Filesystem.resolve(process.env.PWD ?? process.cwd())
+      const next = args.project
+        ? Filesystem.resolve(path.isAbsolute(args.project) ? args.project : path.join(root, args.project))
+        : Filesystem.resolve(process.cwd())
+      const file = await target()
       try {
-        process.chdir(cwd)
-      } catch (e) {
-        UI.error("Failed to change directory to " + cwd)
+        process.chdir(next)
+      } catch {
+        UI.error("Failed to change directory to " + next)
         return
       }
+      const cwd = Filesystem.resolve(process.cwd())
 
-      const worker = new Worker(workerPath, {
+      const worker = new Worker(file, {
         env: Object.fromEntries(
           Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined),
         ),
@@ -139,52 +155,42 @@ export const TuiThreadCommand = cmd({
       worker.onerror = (e) => {
         Log.Default.error(e)
       }
+
       const client = Rpc.client<typeof rpc>(worker)
-      process.on("uncaughtException", (e) => {
+      const error = (e: unknown) => {
         Log.Default.error(e)
-      })
-      process.on("unhandledRejection", (e) => {
-        Log.Default.error(e)
-      })
-      process.on("SIGUSR2", async () => {
-        await client.call("reload", undefined)
-      })
+      }
+      const reload = () => {
+        client.call("reload", undefined).catch((err) => {
+          Log.Default.warn("worker reload failed", {
+            error: err instanceof Error ? err.message : String(err),
+          })
+        })
+      }
+      process.on("uncaughtException", error)
+      process.on("unhandledRejection", error)
+      process.on("SIGUSR2", reload)
+
+      let stopped = false
+      const stop = async () => {
+        if (stopped) return
+        stopped = true
+        process.off("uncaughtException", error)
+        process.off("unhandledRejection", error)
+        process.off("SIGUSR2", reload)
+        await withTimeout(client.call("shutdown", undefined), 5000).catch((error) => {
+          Log.Default.warn("worker shutdown failed", {
+            error: error instanceof Error ? error.message : String(error),
+          })
+        })
+        worker.terminate()
+      }
       // kilocode_change start - graceful shutdown on external signals
       // The worker's postMessage for the RPC result may never be delivered
       // after shutdown because the worker's event loop drains. Send the
       // shutdown request without awaiting the response, wait for the worker
       // to exit naturally or force-terminate after a timeout.
       // Guard against multiple invocations (SIGHUP + SIGTERM + onExit).
-      const terminateWorker = () => {
-        if (shutdown.pending) return shutdown.pending
-        const state = {
-          closed: false,
-        }
-        const result = new Promise<void>((resolve) => {
-          worker.addEventListener(
-            "close",
-            () => {
-              state.closed = true
-              resolve()
-            },
-            { once: true },
-          )
-          setTimeout(resolve, 5000).unref()
-          client.call("shutdown", undefined).catch((error) => {
-            Log.Default.debug("worker shutdown RPC failed", { error })
-          })
-        }).then(async () => {
-          if (state.closed) return
-          await Promise.resolve()
-            .then(() => worker.terminate())
-            .catch((error) => {
-              shutdown.pending = undefined
-              Log.Default.debug("worker terminate failed", { error })
-            })
-        })
-        shutdown.pending = result
-        return result
-      }
       const shutdownAndExit = (input: { reason: string; code: number; signal?: NodeJS.Signals }) => {
         if (shutdown.exiting) return
         shutdown.exiting = true
@@ -195,12 +201,12 @@ export const TuiThreadCommand = cmd({
           pid: process.pid,
           ppid: process.ppid,
         })
-        terminateWorker()
-          .catch((error) => {
+        stop()
+          .catch((err) => {
             Log.Default.error("failed to terminate worker during shutdown", {
               reason: input.reason,
               signal: input.signal,
-              error,
+              error: err,
             })
           })
           .finally(() => {
@@ -221,19 +227,19 @@ export const TuiThreadCommand = cmd({
           try {
             process.kill(parent, 0)
             return false
-          } catch (error) {
-            const code = (error as NodeJS.ErrnoException).code
+          } catch (err) {
+            const code = (err as NodeJS.ErrnoException).code
             if (code !== "ESRCH") {
               Log.Default.debug("parent liveness check failed", {
                 parent,
                 code,
-                error,
+                error: err,
               })
               return false
             }
             Log.Default.debug("detected dead parent process", {
               parent,
-              error,
+              error: err,
             })
             return true
           }
@@ -244,82 +250,75 @@ export const TuiThreadCommand = cmd({
       orphanWatch.unref()
       // kilocode_change end
 
-      const prompt = await iife(async () => {
-        const piped = !process.stdin.isTTY ? await Bun.stdin.text() : undefined
-        if (!args.prompt) return piped
-        return piped ? piped + "\n" + args.prompt : args.prompt
-      })
+      const prompt = await input(args.prompt)
       const config = await Instance.provide({
         directory: cwd,
         fn: () => TuiConfig.get(),
       })
 
-      // Check if server should be started (port or hostname explicitly set in CLI or config)
-      const networkOpts = await resolveNetworkOptions(args)
-      const shouldStartServer =
+      const network = await resolveNetworkOptions(args)
+      const external =
         process.argv.includes("--port") ||
         process.argv.includes("--hostname") ||
         process.argv.includes("--mdns") ||
-        networkOpts.mdns ||
-        networkOpts.port !== 0 ||
-        networkOpts.hostname !== "127.0.0.1"
+        network.mdns ||
+        network.port !== 0 ||
+        network.hostname !== "127.0.0.1"
 
-      let url: string
-      let customFetch: typeof fetch | undefined
-      let events: EventSource | undefined
-
-      if (shouldStartServer) {
-        // Start HTTP server for external access
-        const server = await client.call("server", networkOpts)
-        url = server.url
-      } else {
-        // Use direct RPC communication (no HTTP)
-        url = "http://kilo.internal"
-        customFetch = createWorkerFetch(client)
-        events = createEventSource(client)
-      }
-
-      // kilocode_change start - import cloud session before TUI renders
-      if (args.cloudFork && args.session) {
-        UI.println("Importing session from cloud...")
-        const sdk = createKiloClient({
-          baseUrl: url,
-          fetch: customFetch,
-          directory: cwd,
-        })
-        const id = await importCloudSession(sdk, args.session).catch(() => undefined)
-        if (!id) {
-          UI.error("Failed to import session from cloud")
-          shutdownAndExit({ reason: "cloud-fork-failed", code: 1 })
-          return
-        }
-        args.session = id
-        args.cloudFork = false
-      }
-      // kilocode_change end
-
-      const tuiPromise = tui({
-        url,
-        config,
-        directory: cwd,
-        fetch: customFetch,
-        events,
-        args: {
-          continue: args.continue,
-          sessionID: args.session,
-          agent: args.agent,
-          model: args.model,
-          prompt,
-          fork: args.fork,
-        },
-        onExit: () => terminateWorker(),
-      })
+      const transport = external
+        ? {
+            url: (await client.call("server", network)).url,
+            fetch: undefined,
+            events: undefined,
+          }
+        : {
+            url: "http://kilo.internal",
+            fetch: createWorkerFetch(client),
+            events: createEventSource(client),
+          }
 
       setTimeout(() => {
         client.call("checkUpgrade", { directory: cwd }).catch(() => {})
-      }, 1000)
+      }, 1000).unref?.()
 
-      await tuiPromise
+      try {
+        // kilocode_change start - import cloud session before TUI renders
+        if (args.cloudFork && args.session) {
+          UI.println("Importing session from cloud...")
+          const sdk = createKiloClient({
+            baseUrl: transport.url,
+            fetch: transport.fetch,
+            directory: cwd,
+          })
+          const id = await importCloudSession(sdk, args.session).catch(() => undefined)
+          if (!id) {
+            UI.error("Failed to import session from cloud")
+            shutdownAndExit({ reason: "cloud-fork-failed", code: 1 })
+            return
+          }
+          args.session = id
+          args.cloudFork = false
+        }
+        // kilocode_change end
+
+        await tui({
+          url: transport.url,
+          config,
+          directory: cwd,
+          fetch: transport.fetch,
+          events: transport.events,
+          args: {
+            continue: args.continue,
+            sessionID: args.session,
+            agent: args.agent,
+            model: args.model,
+            prompt,
+            fork: args.fork,
+          },
+        })
+      } finally {
+        await stop()
+      }
     } finally {
       unguard?.()
     }

@@ -11,7 +11,8 @@ interface ServerContextValue {
   connectionState: Accessor<ConnectionState>
   serverInfo: Accessor<ServerInfo | undefined>
   extensionVersion: Accessor<string | undefined>
-  error: Accessor<string | undefined>
+  errorMessage: Accessor<string | undefined>
+  errorDetails: Accessor<string | undefined>
   isConnected: Accessor<boolean>
   profileData: Accessor<ProfileData | null>
   deviceAuth: Accessor<DeviceAuthState>
@@ -21,7 +22,7 @@ interface ServerContextValue {
   workspaceDirectory: Accessor<string>
 }
 
-const ServerContext = createContext<ServerContextValue>()
+export const ServerContext = createContext<ServerContextValue>()
 
 const initialDeviceAuth: DeviceAuthState = { status: "idle" }
 
@@ -31,7 +32,8 @@ export const ServerProvider: ParentComponent = (props) => {
   const [connectionState, setConnectionState] = createSignal<ConnectionState>("connecting")
   const [serverInfo, setServerInfo] = createSignal<ServerInfo | undefined>()
   const [extensionVersion, setExtensionVersion] = createSignal<string | undefined>()
-  const [error, setError] = createSignal<string | undefined>()
+  const [errorMessage, setErrorMessage] = createSignal<string | undefined>()
+  const [errorDetails, setErrorDetails] = createSignal<string | undefined>()
   const [profileData, setProfileData] = createSignal<ProfileData | null>(null)
   const [deviceAuth, setDeviceAuth] = createSignal<DeviceAuthState>(initialDeviceAuth)
   const [vscodeLanguage, setVscodeLanguage] = createSignal<string | undefined>()
@@ -46,7 +48,8 @@ export const ServerProvider: ParentComponent = (props) => {
           setServerInfo(message.serverInfo)
           if (message.extensionVersion) setExtensionVersion(message.extensionVersion)
           setConnectionState("connected")
-          setError(undefined)
+          setErrorMessage(undefined)
+          setErrorDetails(undefined)
           if (message.vscodeLanguage) {
             setVscodeLanguage(message.vscodeLanguage)
           }
@@ -62,19 +65,26 @@ export const ServerProvider: ParentComponent = (props) => {
           setWorkspaceDirectory(message.directory)
           break
 
+        case "languageChanged":
+          setLanguageOverride(message.locale || undefined)
+          break
+
         case "connectionState":
           console.log("[Kilo New] Connection state changed:", message.state)
           setConnectionState(message.state)
           if (message.error) {
-            setError(message.error)
+            setErrorMessage(message.userMessage ?? message.error)
+            setErrorDetails(message.userDetails ?? message.error)
           } else if (message.state === "connected") {
-            setError(undefined)
+            setErrorMessage(undefined)
+            setErrorDetails(undefined)
           }
           break
 
         case "error":
           console.error("[Kilo New] Server error:", message.message)
-          setError(message.message)
+          setErrorMessage(message.message)
+          setErrorDetails(message.message)
           break
 
         case "profileData":
@@ -120,6 +130,10 @@ export const ServerProvider: ParentComponent = (props) => {
   })
 
   const startLogin = () => {
+    const status = deviceAuth().status
+    if (status === "initiating" || status === "pending") {
+      return
+    }
     setDeviceAuth({ status: "initiating" })
     vscode.postMessage({ type: "login" })
   }
@@ -128,7 +142,8 @@ export const ServerProvider: ParentComponent = (props) => {
     connectionState,
     serverInfo,
     extensionVersion,
-    error,
+    errorMessage,
+    errorDetails,
     isConnected: () => connectionState() === "connected",
     profileData,
     deviceAuth,

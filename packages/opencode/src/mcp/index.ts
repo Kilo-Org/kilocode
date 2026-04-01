@@ -3,6 +3,15 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js"
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js"
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
+// kilocode_change start
+// The MCP SDK only sets windowsHide:true in Electron (checks `'type' in process`).
+// When running inside the VS Code extension on Windows, set process.type so the SDK
+// hides cmd.exe windows when spawning MCP servers. The extension passes KILO_PLATFORM=vscode
+// so we use that to scope this shim to the vscode context only.
+if (process.platform === "win32" && process.env.KILO_PLATFORM === "vscode" && !("type" in process)) {
+  ;(process as NodeJS.Process & { type: string }).type = "browser"
+}
+// kilocode_change end
 import { UnauthorizedError } from "@modelcontextprotocol/sdk/client/auth.js"
 import {
   CallToolResultSchema,
@@ -112,6 +121,7 @@ export namespace MCP {
   function registerNotificationHandlers(client: MCPClient, serverName: string) {
     client.setNotificationHandler(ToolListChangedNotificationSchema, async () => {
       log.info("tools list changed notification received", { server: serverName })
+      ;(await state()).toolsCache.delete(serverName) // kilocode_change
       Bus.publish(ToolsChanged, { server: serverName })
     })
   }
@@ -160,6 +170,28 @@ export namespace MCP {
     return typeof entry === "object" && entry !== null && "type" in entry
   }
 
+  async function descendants(pid: number): Promise<number[]> {
+    if (process.platform === "win32") return []
+    const pids: number[] = []
+    const queue = [pid]
+    while (queue.length > 0) {
+      const current = queue.shift()!
+      const proc = Bun.spawn(["pgrep", "-P", String(current)], { stdout: "pipe", stderr: "pipe" })
+      const [code, out] = await Promise.all([proc.exited, new Response(proc.stdout).text()]).catch(
+        () => [-1, ""] as const,
+      )
+      if (code !== 0) continue
+      for (const tok of out.trim().split(/\s+/)) {
+        const cpid = parseInt(tok, 10)
+        if (!isNaN(cpid) && pids.indexOf(cpid) === -1) {
+          pids.push(cpid)
+          queue.push(cpid)
+        }
+      }
+    }
+    return pids
+  }
+
   const state = Instance.state(
     async () => {
       const cfg = await Config.get()
@@ -193,9 +225,25 @@ export namespace MCP {
       return {
         status,
         clients,
+        toolsCache: new Map<string, MCPToolDef[]>(), // kilocode_change — per-server listTools cache
       }
     },
     async (state) => {
+      // The MCP SDK only signals the direct child process on close.
+      // Servers like chrome-devtools-mcp spawn grandchild processes
+      // (e.g. Chrome) that the SDK never reaches, leaving them orphaned.
+      // Kill the full descendant tree first so the server exits promptly
+      // and no processes are left behind.
+      for (const client of Object.values(state.clients)) {
+        const pid = (client.transport as any)?.pid
+        if (typeof pid !== "number") continue
+        for (const dpid of await descendants(pid)) {
+          try {
+            process.kill(dpid, "SIGTERM")
+          } catch {}
+        }
+      }
+
       await Promise.all(
         Object.values(state.clients).map((client) =>
           client.close().catch((error) => {
@@ -256,6 +304,7 @@ export namespace MCP {
 
   export async function add(name: string, mcp: Config.Mcp) {
     const s = await state()
+    s.toolsCache.delete(name) // kilocode_change
     const result = await create(name, mcp)
     if (!result) {
       const status = {
@@ -347,7 +396,7 @@ export namespace MCP {
       for (const { name, transport } of transports) {
         try {
           const client = new Client({
-            name: "opencode",
+            name: "kilo", // kilocode_change
             version: Installation.VERSION,
           })
           await withTimeout(client.connect(transport), connectTimeout)
@@ -383,7 +432,7 @@ export namespace MCP {
               // Show toast for needs_auth
               Bus.publish(TuiEvent.ToastShow, {
                 title: "MCP Authentication Required",
-                message: `Server "${key}" requires authentication. Run: opencode mcp auth ${key}`,
+                message: `Server "${key}" requires authentication. Run: kilo mcp auth ${key}`, // kilocode_change
                 variant: "warning",
                 duration: 8000,
               }).catch((e) => log.debug("failed to show toast", { error: e }))
@@ -426,7 +475,7 @@ export namespace MCP {
       const connectTimeout = mcp.timeout ?? DEFAULT_TIMEOUT
       try {
         const client = new Client({
-          name: "opencode",
+          name: "kilo", // kilocode_change
           version: Installation.VERSION,
         })
         await withTimeout(client.connect(transport), connectTimeout)
@@ -513,6 +562,7 @@ export namespace MCP {
   }
 
   export async function connect(name: string) {
+    ;(await state()).toolsCache.delete(name) // kilocode_change
     const cfg = await Config.get()
     const config = cfg.mcp ?? {}
     const mcp = config[name]
@@ -553,6 +603,7 @@ export namespace MCP {
 
   export async function disconnect(name: string) {
     const s = await state()
+    s.toolsCache.delete(name) // kilocode_change
     const client = s.clients[name]
     if (client) {
       await client.close().catch((error) => {
@@ -577,6 +628,12 @@ export namespace MCP {
 
     const toolsResults = await Promise.all(
       connectedClients.map(async ([clientName, client]) => {
+        // kilocode_change start — use cached listTools when available
+        const cached = s.toolsCache.get(clientName)
+        if (cached) {
+          return { clientName, client, toolsResult: { tools: cached } }
+        }
+        // kilocode_change end
         const toolsResult = await client.listTools().catch((e) => {
           log.error("failed to get tools", { clientName, error: e.message })
           const failedStatus = {
@@ -587,6 +644,7 @@ export namespace MCP {
           delete s.clients[clientName]
           return undefined
         })
+        if (toolsResult) s.toolsCache.set(clientName, toolsResult.tools) // kilocode_change
         return { clientName, client, toolsResult }
       }),
     )
@@ -763,7 +821,7 @@ export namespace MCP {
     // Try to connect - this will trigger the OAuth flow
     try {
       const client = new Client({
-        name: "opencode",
+        name: "kilo", // kilocode_change
         version: Installation.VERSION,
       })
       await client.connect(transport)

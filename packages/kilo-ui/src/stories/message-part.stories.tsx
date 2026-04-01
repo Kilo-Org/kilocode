@@ -1,15 +1,15 @@
 /** @jsxImportSource solid-js */
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
-import { Message, AssistantMessageDisplay, UserMessageDisplay } from "@opencode-ai/ui/message-part"
-// Side-effect import: registers kilo-ui's PART_MAPPING override for reasoning blocks
-import "../components/message-part"
+import { UserMessageDisplay, AssistantParts } from "../components/message-part"
 import { DataProvider } from "@opencode-ai/ui/context/data"
-import { DiffComponentProvider } from "@opencode-ai/ui/context/diff"
-import { CodeComponentProvider } from "@opencode-ai/ui/context/code"
+import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff"
+import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
+import { FileComponentProvider } from "@kilocode/kilo-ui/context/file"
 import { DialogProvider } from "@opencode-ai/ui/context/dialog"
 import { MarkedProvider } from "@opencode-ai/ui/context/marked"
-import { Diff } from "@opencode-ai/ui/diff"
-import { Code } from "@opencode-ai/ui/code"
+import { Diff } from "@kilocode/kilo-ui/diff"
+import { Code } from "@kilocode/kilo-ui/code"
+import { File } from "@kilocode/kilo-ui/file"
 import type { UserMessage, AssistantMessage, TextPart, ToolPart, ReasoningPart } from "@kilocode/sdk/v2"
 
 const SESSION_ID = "session-story-001"
@@ -57,6 +57,8 @@ const userTextPart: TextPart = {
   text: "Can you review my code and suggest improvements?",
 }
 
+// --- Context group tools (read/glob/grep/list) → grouped header path ---
+
 const completedToolPart: ToolPart = {
   id: "part-tool-001",
   sessionID: SESSION_ID,
@@ -74,17 +76,73 @@ const completedToolPart: ToolPart = {
   },
 }
 
-const runningToolPart: ToolPart = {
-  id: "part-tool-002",
+const grepCompleted: ToolPart = {
+  id: "part-grep-001",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-grep-001",
+  tool: "grep",
+  state: {
+    status: "completed",
+    input: { pattern: "createSignal", path: "src/" },
+    output:
+      "src/counter.tsx:1: import { createSignal } from 'solid-js'\nsrc/app.tsx:3: const [count, setCount] = createSignal(0)",
+    title: "Search",
+    metadata: {},
+    time: { start: now - 7800, end: now - 7400 },
+  },
+}
+
+const globCompleted: ToolPart = {
+  id: "part-glob-001",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-glob-001",
+  tool: "glob",
+  state: {
+    status: "completed",
+    input: { pattern: "src/**/*.tsx", path: "." },
+    output: "src/counter.tsx\nsrc/app.tsx\nsrc/index.tsx",
+    title: "Found 3 files",
+    metadata: {},
+    time: { start: now - 7600, end: now - 7300 },
+  },
+}
+
+// --- Bash tool → ShellRollingResults path ---
+
+const bashCompleted: ToolPart = {
+  id: "part-bash-001",
   sessionID: SESSION_ID,
   messageID: ASST_MSG_ID,
   type: "tool",
   callID: "call-bash-001",
   tool: "bash",
   state: {
-    status: "running",
+    status: "completed",
     input: { description: "Run tests", command: "bun test" },
-    title: "Running tests...",
+    output:
+      "bun test v1.0.0\n\n✓ counter.test.tsx > renders correctly (2ms)\n✓ counter.test.tsx > increments count (1ms)\n\n2 tests passed [34ms]",
+    title: "Run tests",
+    metadata: {},
+    time: { start: now - 5000, end: now - 4500 },
+  },
+}
+
+// --- Edit tool → normal Part/ToolPartDisplay path (non-bash, non-context-group) ---
+
+const runningToolPart: ToolPart = {
+  id: "part-tool-002",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-edit-001",
+  tool: "edit",
+  state: {
+    status: "running",
+    input: { filePath: "src/counter.tsx" },
     metadata: {},
     time: { start: now - 3000 },
   },
@@ -95,16 +153,17 @@ const errorToolPart: ToolPart = {
   sessionID: SESSION_ID,
   messageID: ASST_MSG_ID,
   type: "tool",
-  callID: "call-bash-002",
-  tool: "bash",
+  callID: "call-edit-002",
+  tool: "edit",
   state: {
     status: "error",
-    input: { description: "Build project", command: "bun build" },
-    error: "Build failed: Module not found 'missing-dep'",
-    metadata: {},
+    input: { filePath: "src/missing-file.tsx" },
+    error: "ENOENT: no such file or directory 'src/missing-file.tsx'",
     time: { start: now - 6000, end: now - 5500 },
   },
 }
+
+// --- Reasoning part ---
 
 const reasoningPart: ReasoningPart = {
   id: "part-reasoning-001",
@@ -115,34 +174,62 @@ const reasoningPart: ReasoningPart = {
   time: { start: now - 9000, end: now - 8500 },
 }
 
-const mockData = {
-  session: [],
-  session_status: {},
-  session_diff: {},
-  message: {
-    [SESSION_ID]: [mockUserMessage, mockAssistantMessage],
-  },
-  part: {
-    [USER_MSG_ID]: [userTextPart],
-    [ASST_MSG_ID]: [textPart, completedToolPart],
-  },
+// ---------------------------------------------------------------------------
+// Mock data factory — static constants avoid re-creating arrays on every
+// reactive access, which would cause SolidJS to see constant "changes".
+// ---------------------------------------------------------------------------
+
+function createMockData(parts: (TextPart | ToolPart | ReasoningPart)[]) {
+  return {
+    session: [],
+    session_status: {},
+    session_diff: {},
+    message: {
+      [SESSION_ID]: [mockUserMessage, mockAssistantMessage],
+    },
+    part: {
+      [USER_MSG_ID]: [userTextPart],
+      [ASST_MSG_ID]: parts,
+    },
+  }
 }
 
-function AllProviders(props: { children: any }) {
+type MockData = ReturnType<typeof createMockData>
+
+// AssistantMessage + text + completed read (context group grouped header)
+const mockData = createMockData([completedToolPart, textPart])
+// Only the running edit tool — matches old WithRunningTool single-part intent
+const mockDataRunning = createMockData([runningToolPart])
+// Only the error edit tool — matches old WithErrorTool single-part intent
+const mockDataError = createMockData([errorToolPart])
+// Reasoning + text — matches old WithReasoning single-reasoning intent
+const mockDataReasoning = createMockData([reasoningPart, textPart])
+// Completed bash tool — exercises ShellRollingResults path
+const mockDataBash = createMockData([bashCompleted])
+// Three context-group tools — exercises ContextToolGroupHeader collapse path
+const mockDataContextGroup = createMockData([completedToolPart, grepCompleted, globCompleted, textPart])
+
+function AllProviders(props: { children: any; data?: MockData }) {
   return (
-    <DataProvider data={mockData} directory="/project">
+    <DataProvider data={props.data ?? mockData} directory="/project">
       <DiffComponentProvider component={Diff}>
         <CodeComponentProvider component={Code}>
-          <DialogProvider>
-            <MarkedProvider>
-              <div style={{ padding: "16px", "max-width": "700px" }}>{props.children}</div>
-            </MarkedProvider>
-          </DialogProvider>
+          <FileComponentProvider component={File}>
+            <DialogProvider>
+              <MarkedProvider>
+                <div style={{ padding: "16px", "max-width": "700px" }}>{props.children}</div>
+              </MarkedProvider>
+            </DialogProvider>
+          </FileComponentProvider>
         </CodeComponentProvider>
       </DiffComponentProvider>
     </DataProvider>
   )
 }
+
+// ---------------------------------------------------------------------------
+// Stories
+// ---------------------------------------------------------------------------
 
 const meta: Meta = {
   title: "Components/MessagePart",
@@ -151,6 +238,8 @@ const meta: Meta = {
 
 export default meta
 type Story = StoryObj
+
+// --- User message bubble ---
 
 export const UserMessageStory: Story = {
   name: "UserMessage",
@@ -161,76 +250,194 @@ export const UserMessageStory: Story = {
   ),
 }
 
+// --- Assistant: text + one completed read tool (grouped header) ---
+
 export const AssistantMessageStory: Story = {
   name: "AssistantMessage",
   render: () => (
     <AllProviders>
-      <AssistantMessageDisplay message={mockAssistantMessage} parts={[textPart, completedToolPart]} />
+      <AssistantParts messages={[mockAssistantMessage]} />
     </AllProviders>
   ),
 }
+
+// --- Edit tool in running/pending state (Part → ToolPartDisplay path) ---
 
 export const WithRunningTool: Story = {
   render: () => (
-    <AllProviders>
-      <AssistantMessageDisplay message={mockAssistantMessage} parts={[runningToolPart]} />
+    <AllProviders data={mockDataRunning}>
+      <AssistantParts messages={[mockAssistantMessage]} working />
     </AllProviders>
   ),
 }
 
+// --- Edit tool in error state → renders red error card ---
+
 export const WithErrorTool: Story = {
   render: () => (
-    <AllProviders>
-      <AssistantMessageDisplay message={mockAssistantMessage} parts={[errorToolPart]} />
+    <AllProviders data={mockDataError}>
+      <AssistantParts messages={[mockAssistantMessage]} />
     </AllProviders>
   ),
 }
+
+// --- User + assistant stacked (tool first, then text — matches original order) ---
 
 export const FullConversationTurn: Story = {
   render: () => (
     <AllProviders>
       <div style={{ display: "flex", "flex-direction": "column", gap: "8px" }}>
         <UserMessageDisplay message={mockUserMessage} parts={[userTextPart]} />
-        <AssistantMessageDisplay message={mockAssistantMessage} parts={[completedToolPart, textPart]} />
+        <AssistantParts messages={[mockAssistantMessage]} />
       </div>
     </AllProviders>
   ),
 }
 
+// --- Reasoning block collapsed (default state) ---
+
 export const WithReasoningCollapsed: Story = {
   name: "WithReasoning (collapsed)",
   render: () => (
-    <AllProviders>
-      <AssistantMessageDisplay message={mockAssistantMessage} parts={[reasoningPart, textPart]} />
+    <AllProviders data={mockDataReasoning}>
+      <AssistantParts messages={[mockAssistantMessage]} />
     </AllProviders>
   ),
 }
 
+// --- Reasoning block expanded via play interaction ---
+
 export const WithReasoningExpanded: Story = {
   name: "WithReasoning (expanded)",
-  render: () => {
-    // Use a wrapper to render with the collapsible open by default
-    const expandedReasoningPart = { ...reasoningPart, id: "part-reasoning-expanded" }
-    return (
-      <AllProviders>
-        <AssistantMessageDisplay message={mockAssistantMessage} parts={[expandedReasoningPart, textPart]} />
-      </AllProviders>
-    )
-  },
+  render: () => (
+    <AllProviders data={mockDataReasoning}>
+      <AssistantParts messages={[mockAssistantMessage]} />
+    </AllProviders>
+  ),
   play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
-    // Click the collapsible trigger to expand it
     const trigger = canvasElement.querySelector("[data-slot='reasoning-header']")?.closest("button")
     if (trigger) trigger.click()
   },
 }
 
-export const MessageSwitch: Story = {
+// --- Bash tool (completed, collapsed) — exercises the ShellRollingResults path ---
+
+export const WithBashTool: Story = {
   render: () => (
-    <AllProviders>
-      <div style={{ display: "flex", "flex-direction": "column", gap: "8px" }}>
-        <Message message={mockUserMessage} parts={[userTextPart]} />
-        <Message message={mockAssistantMessage} parts={[textPart, completedToolPart]} />
-      </div>
+    <AllProviders data={mockDataBash}>
+      <AssistantParts messages={[mockAssistantMessage]} />
+    </AllProviders>
+  ),
+}
+
+// --- Bash tool (completed, expanded) — play clicks the header to open the output panel ---
+
+export const WithBashToolExpanded: Story = {
+  render: () => (
+    <AllProviders data={mockDataBash}>
+      <AssistantParts messages={[mockAssistantMessage]} />
+    </AllProviders>
+  ),
+  play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+    const header = canvasElement.querySelector("[data-slot='shell-rolling-header-clip']") as HTMLElement | null
+    if (header) header.click()
+  },
+}
+
+// --- Three context-group tools + text — exercises ContextToolGroupHeader collapse ---
+
+export const WithContextGroup: Story = {
+  render: () => (
+    <AllProviders data={mockDataContextGroup}>
+      <AssistantParts messages={[mockAssistantMessage]} />
+    </AllProviders>
+  ),
+}
+
+// --- All 5 tool hint error types in a single screenshot ---
+
+const hintErrors: ToolPart[] = [
+  {
+    id: "part-hint-001",
+    sessionID: SESSION_ID,
+    messageID: ASST_MSG_ID,
+    type: "tool",
+    callID: "call-hint-001",
+    tool: "write",
+    state: {
+      status: "error",
+      input: { filePath: "src/config.ts" },
+      error:
+        "Error: File already exists — read it before overwriting it. Use the Read tool first to see its current contents.",
+      time: { start: now - 6000, end: now - 5500 },
+    },
+  },
+  {
+    id: "part-hint-002",
+    sessionID: SESSION_ID,
+    messageID: ASST_MSG_ID,
+    type: "tool",
+    callID: "call-hint-002",
+    tool: "edit",
+    state: {
+      status: "error",
+      input: { filePath: "src/app.tsx" },
+      error: "Error: File has been modified since it was last read. Please read it again before editing.",
+      time: { start: now - 5500, end: now - 5000 },
+    },
+  },
+  {
+    id: "part-hint-003",
+    sessionID: SESSION_ID,
+    messageID: ASST_MSG_ID,
+    type: "tool",
+    callID: "call-hint-003",
+    tool: "edit",
+    state: {
+      status: "error",
+      input: { filePath: "src/utils.ts" },
+      error: "Error: oldString and newString are identical. No changes were made.",
+      time: { start: now - 5000, end: now - 4500 },
+    },
+  },
+  {
+    id: "part-hint-004",
+    sessionID: SESSION_ID,
+    messageID: ASST_MSG_ID,
+    type: "tool",
+    callID: "call-hint-004",
+    tool: "edit",
+    state: {
+      status: "error",
+      input: { filePath: "src/index.ts" },
+      error:
+        "Error: oldString not found in file. The oldString must match exactly, including whitespace and indentation.",
+      time: { start: now - 4500, end: now - 4000 },
+    },
+  },
+  {
+    id: "part-hint-005",
+    sessionID: SESSION_ID,
+    messageID: ASST_MSG_ID,
+    type: "tool",
+    callID: "call-hint-005",
+    tool: "edit",
+    state: {
+      status: "error",
+      input: { filePath: "src/counter.tsx" },
+      error:
+        "Error: Found multiple matches for oldString. Provide more surrounding lines to identify the correct match.",
+      time: { start: now - 4000, end: now - 3500 },
+    },
+  },
+]
+
+const mockDataHintErrors = createMockData(hintErrors)
+
+export const ToolHintErrors: Story = {
+  render: () => (
+    <AllProviders data={mockDataHintErrors}>
+      <AssistantParts messages={[mockAssistantMessage]} />
     </AllProviders>
   ),
 }

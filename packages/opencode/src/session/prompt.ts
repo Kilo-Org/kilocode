@@ -47,6 +47,7 @@ import { iife } from "@/util/iife"
 import { Shell } from "@/shell/shell"
 import { Truncate } from "@/tool/truncation"
 import { PlanFollowup } from "@/kilocode/plan-followup" // kilocode_change
+import { environmentDetails } from "@/kilocode/editor-context" // kilocode_change
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -130,7 +131,6 @@ export namespace SessionPrompt {
         openTabs: z.array(z.string()).optional(),
         activeFile: z.string().optional(),
         shell: z.string().optional(),
-        timezone: z.string().optional(),
       })
       .optional(),
     // kilocode_change end
@@ -323,6 +323,12 @@ export namespace SessionPrompt {
     // Note: On session resumption, state is reset but outputFormat is preserved
     // on the user message and will be retrieved from lastUser below
     let structuredOutput: unknown | undefined
+
+    // kilocode_change — cache environment details per turn so the last user
+    // message stays byte-identical across tool-loop steps (prompt caching).
+    // Keyed by user message ID so it recomputes when a new user message arrives.
+    let envBlock: string | undefined
+    let envUser: string | undefined
 
     let step = 0
     const session = await Session.get(sessionID)
@@ -556,6 +562,7 @@ export namespace SessionPrompt {
             },
             agent: lastUser.agent,
             model: lastUser.model,
+            editorContext: lastUser.editorContext, // kilocode_change — preserve editor context
           }
           await Session.updateMessage(summaryUserMsg)
           await Session.updatePart({
@@ -579,6 +586,7 @@ export namespace SessionPrompt {
           abort,
           sessionID,
           auto: task.auto,
+          overflow: task.overflow,
         })
         if (result === "stop") break
         continue
@@ -693,6 +701,30 @@ export namespace SessionPrompt {
 
       await Plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs })
 
+      // kilocode_change start — ephemerally inject dynamic editor context into last user message
+      if (envUser !== lastUser.id) {
+        envBlock = environmentDetails(lastUser.editorContext)
+        envUser = lastUser.id
+      }
+      if (envBlock) {
+        const idx = msgs.findLastIndex((m) => m.info.role === "user")
+        if (idx !== -1)
+          msgs[idx] = {
+            ...msgs[idx],
+            parts: [
+              ...msgs[idx].parts,
+              {
+                id: Identifier.ascending("part"),
+                sessionID,
+                messageID: msgs[idx].info.id,
+                type: "text",
+                text: envBlock,
+              } satisfies MessageV2.TextPart,
+            ],
+          }
+      }
+      // kilocode_change end
+
       // Build system prompt, adding structured output instruction if needed
       const system = [
         ...(await SystemPrompt.environment(model, lastUser.editorContext)),
@@ -762,6 +794,7 @@ export namespace SessionPrompt {
           agent: lastUser.agent,
           model: lastUser.model,
           auto: true,
+          overflow: !processor.message.finish,
         })
       }
       continue
@@ -1385,16 +1418,24 @@ export namespace SessionPrompt {
 
     // Original logic when experimental plan mode is disabled
     if (!Flag.KILO_EXPERIMENTAL_PLAN_MODE) {
+      // kilocode_change start - inject plan file path so agent writes to .kilo/plans/
       if (input.agent.name === "plan") {
+        const plan = Session.plan(input.session)
+        const exists = await Filesystem.exists(plan)
+        if (!exists) await fs.mkdir(path.dirname(plan), { recursive: true })
+        const info = exists
+          ? `A plan file already exists at ${plan}. You can read it and make incremental edits using the edit tool.`
+          : `No plan file exists yet. You should create your plan at ${plan} using the write tool.`
         userMessage.parts.push({
           id: Identifier.ascending("part"),
           messageID: userMessage.info.id,
           sessionID: userMessage.info.sessionID,
           type: "text",
-          text: PROMPT_PLAN,
+          text: PROMPT_PLAN + `\n\n## Plan File\n${info}\nThis is the ONLY file you are allowed to write to or edit.`,
           synthetic: true,
         })
       }
+      // kilocode_change end
       const wasPlan = input.messages.some((msg) => msg.info.role === "assistant" && msg.info.agent === "plan")
       // kilocode_change start - renamed from "build" to "code"
       if (wasPlan && input.agent.name === "code") {

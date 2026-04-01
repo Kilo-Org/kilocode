@@ -7,6 +7,7 @@ import {
   parseWorktreeList,
   checkedOutBranchesFromWorktreeList,
   classifyPRError,
+  classifyWorktreeError,
   validateGitRef,
 } from "../../src/agent-manager/git-import"
 
@@ -393,5 +394,48 @@ describe("validateGitRef", () => {
   it("rejects values containing .. (git ref traversal)", () => {
     expect(() => validateGitRef("foo/../bar", "ref")).toThrow()
     expect(() => validateGitRef("..hidden", "ref")).toThrow()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// classifyWorktreeError
+// ---------------------------------------------------------------------------
+
+describe("classifyWorktreeError", () => {
+  it("detects git not found from spawn ENOENT", () => {
+    expect(classifyWorktreeError("spawn git ENOENT")).toBe("git_not_found")
+    expect(
+      classifyWorktreeError(
+        "Error: spawn git ENOENT at ChildProcess._handle.onexit (node:internal/child_process:285:19)",
+      ),
+    ).toBe("git_not_found")
+  })
+
+  it("detects git not found from PATH message", () => {
+    expect(
+      classifyWorktreeError("Git is not installed or not found in PATH. Please install Git and restart VS Code."),
+    ).toBe("git_not_found")
+  })
+
+  it("detects not a git repository", () => {
+    expect(
+      classifyWorktreeError(
+        "This folder is not a git repository. Initialize a repository or open a git project to use worktrees.",
+      ),
+    ).toBe("not_git_repo")
+  })
+
+  it("detects Git LFS missing", () => {
+    expect(
+      classifyWorktreeError(
+        "This repository uses Git LFS, but git-lfs was not found. Please install Git LFS to use this repository.",
+      ),
+    ).toBe("lfs_missing")
+  })
+
+  it("returns undefined for unrecognized errors", () => {
+    expect(classifyWorktreeError('Branch "foo" already exists')).toBeUndefined()
+    expect(classifyWorktreeError("Failed to create worktree: fatal: unknown error")).toBeUndefined()
+    expect(classifyWorktreeError("something went wrong")).toBeUndefined()
   })
 })

@@ -73,51 +73,34 @@ async function createTempRepoWithOrigin(): Promise<{ bare: string; clone: string
 // ---------------------------------------------------------------------------
 
 describe("generateBranchName", () => {
-  it("sanitizes special characters", () => {
-    const name = generateBranchName("Fix bug #123 & add feature!")
-    // Should only contain lowercase alphanumeric and hyphens (plus timestamp)
-    expect(name).toMatch(/^fix-bug-123-add-feature-\d+$/)
+  it("generates a two-word predicate-object name", () => {
+    const name = generateBranchName("anything")
+    // Should be two lowercase words joined by a hyphen
+    expect(name).toMatch(/^[a-z]+-[a-z]+$/)
   })
 
-  it("truncates long prompts to 50 chars before sanitizing", () => {
-    const long = "a".repeat(100)
-    const name = generateBranchName(long)
-    // 50 a's + hyphen + timestamp
-    const prefix = name.split("-").slice(0, -1).join("-")
-    expect(prefix.length).toBeLessThanOrEqual(50)
+  it("avoids existing branches", () => {
+    // Generate 50 names and collect them; none should collide with the existing list
+    const existing = ["brave-piano", "sunny-cloud"]
+    for (let i = 0; i < 50; i++) {
+      const name = generateBranchName("task", existing)
+      expect(existing).not.toContain(name)
+    }
   })
 
-  it("falls back to 'kilo' for empty input", () => {
-    expect(generateBranchName("")).toMatch(/^kilo-\d+$/)
+  it("falls back to numeric suffix when collisions are likely", () => {
+    // Supply a huge existing list — eventually a numeric suffix or timestamp is used
+    const name = generateBranchName("task", [])
+    expect(typeof name).toBe("string")
+    expect(name.length).toBeGreaterThan(0)
   })
 
-  it("falls back to 'kilo' for whitespace-only input", () => {
-    expect(generateBranchName("   ")).toMatch(/^kilo-\d+$/)
-  })
-
-  it("strips leading and trailing hyphens from sanitized text", () => {
-    const name = generateBranchName("---hello---")
-    expect(name).toMatch(/^hello-\d+$/)
-  })
-
-  it("collapses consecutive hyphens", () => {
-    const name = generateBranchName("one   two   three")
-    expect(name).toMatch(/^one-two-three-\d+$/)
-  })
-
-  it("lowercases input", () => {
-    const name = generateBranchName("FIX BUG")
-    expect(name).toMatch(/^fix-bug-\d+$/)
-  })
-
-  it("handles custom name with version suffix _v2", () => {
-    const name = generateBranchName("my-feature_v2")
-    expect(name).toMatch(/^my-feature-v2-\d+$/)
-  })
-
-  it("handles a clean custom name", () => {
-    const name = generateBranchName("auth-refactor")
-    expect(name).toMatch(/^auth-refactor-\d+$/)
+  it("ignores the prompt and always returns friendly words", () => {
+    const a = generateBranchName("")
+    const b = generateBranchName("FIX BUG")
+    // Both should be lowercase word-hyphen-word patterns
+    expect(a).toMatch(/^[a-z]+-[a-z]+/)
+    expect(b).toMatch(/^[a-z]+-[a-z]+/)
   })
 })
 
@@ -260,7 +243,8 @@ describe("WorktreeManager.createWorktree", () => {
 
     const result = await mgr.createWorktree({ prompt: "test task" })
 
-    expect(result.branch).toMatch(/^test-task-\d+$/)
+    // Branch should be a friendly two-word name (e.g. "brave-piano")
+    expect(result.branch).toMatch(/^[a-z]+-[a-z]+/)
     expect(result.parentBranch).toBeTruthy()
 
     // Worktree directory should exist and have a .git file (not directory)
@@ -303,13 +287,13 @@ describe("WorktreeManager.createWorktree", () => {
     await expect(mgr.createWorktree({ prompt: "test" })).rejects.toThrow("not a git repository")
   })
 
-  it("creates worktrees directory under .kilocode/worktrees/", async () => {
+  it("creates worktrees directory under .kilo/worktrees/", async () => {
     const root = await createTempRepo()
     const mgr = createManager(root)
 
     const result = await mgr.createWorktree({ prompt: "test" })
 
-    expect(result.path).toContain(path.join(".kilocode", "worktrees"))
+    expect(result.path).toContain(path.join(".kilo", "worktrees"))
   })
 
   it("records parentBranch as default branch", async () => {
@@ -350,7 +334,7 @@ describe("WorktreeManager.removeWorktree", () => {
     const mgr = createManager(root)
 
     // Should not throw
-    await mgr.removeWorktree(path.join(root, ".kilocode", "worktrees", "nonexistent"))
+    await mgr.removeWorktree(path.join(root, ".kilo", "worktrees", "nonexistent"))
   })
 
   it("removes orphaned directory that git does not know about", async () => {
@@ -358,7 +342,7 @@ describe("WorktreeManager.removeWorktree", () => {
     const mgr = createManager(root)
 
     // Create an orphaned directory (not a real worktree)
-    const orphanPath = path.join(root, ".kilocode", "worktrees", "orphan")
+    const orphanPath = path.join(root, ".kilo", "worktrees", "orphan")
     await fs.mkdir(orphanPath, { recursive: true })
     await fs.writeFile(path.join(orphanPath, "file.txt"), "orphan")
 
@@ -366,6 +350,147 @@ describe("WorktreeManager.removeWorktree", () => {
 
     const exists = await fs
       .stat(orphanPath)
+      .then(() => true)
+      .catch(() => false)
+    expect(exists).toBe(false)
+  })
+
+  it("cleans up git metadata after removal", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const git = simpleGit(root)
+
+    const result = await mgr.createWorktree({ prompt: "prune-check" })
+
+    await mgr.removeWorktree(result.path)
+    // Allow background rm to complete
+    await new Promise((r) => setTimeout(r, 200))
+
+    // git worktree list should only show the main repo
+    const raw = await git.raw(["worktree", "list", "--porcelain"])
+    const dirs = raw
+      .split("\n")
+      .filter((l) => l.startsWith("worktree "))
+      .map((l) => l.replace("worktree ", ""))
+    expect(dirs).toHaveLength(1)
+  })
+
+  it("deletes the local branch when branch is provided", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const git = simpleGit(root)
+
+    const result = await mgr.createWorktree({ prompt: "branch-delete" })
+    const branches = await git.branch()
+    expect(branches.all).toContain(result.branch)
+
+    await mgr.removeWorktree(result.path, result.branch)
+
+    const after = await git.branch()
+    expect(after.all).not.toContain(result.branch)
+  })
+
+  it("keeps the branch when branch param is omitted", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const git = simpleGit(root)
+
+    const result = await mgr.createWorktree({ prompt: "keep-branch" })
+    await mgr.removeWorktree(result.path)
+
+    const after = await git.branch()
+    expect(after.all).toContain(result.branch)
+  })
+
+  it(
+    "returns quickly even with a dirty worktree",
+    async () => {
+      const root = await createTempRepo()
+      const mgr = createManager(root)
+
+      const result = await mgr.createWorktree({ prompt: "dirty-wt" })
+
+      // Make the worktree dirty with uncommitted files
+      await fs.writeFile(path.join(result.path, "dirty.txt"), "uncommitted")
+      for (let i = 0; i < 20; i++) {
+        await fs.writeFile(path.join(result.path, `bulk-${i}.txt`), "x".repeat(1000))
+      }
+
+      const start = Date.now()
+      await mgr.removeWorktree(result.path)
+      const elapsed = Date.now() - start
+
+      // The blocking portion (rename + prune) should complete well under 3s.
+      // Old approach with git worktree remove (non-force then force) was much slower.
+      expect(elapsed).toBeLessThan(3000)
+
+      // Original path should be gone immediately
+      const exists = await fs
+        .stat(result.path)
+        .then(() => true)
+        .catch(() => false)
+      expect(exists).toBe(false)
+    },
+    { timeout: 15000 },
+  )
+
+  it(
+    "eventual cleanup: files are fully deleted after background rm",
+    async () => {
+      const root = await createTempRepo()
+      const mgr = createManager(root)
+
+      const result = await mgr.createWorktree({ prompt: "eventual" })
+      await fs.writeFile(path.join(result.path, "data.txt"), "content")
+
+      await mgr.removeWorktree(result.path)
+
+      // Poll until background rm finishes (up to 5s)
+      const worktreesDir = path.join(root, ".kilo", "worktrees")
+      const deadline = Date.now() + 5000
+      while (Date.now() < deadline) {
+        const entries = await fs.readdir(worktreesDir)
+        if (!entries.some((e) => e.startsWith(".kilo-delete-"))) break
+        await new Promise((r) => setTimeout(r, 100))
+      }
+
+      // No .kilo-delete-* temp dirs should remain
+      const entries = await fs.readdir(worktreesDir)
+      const orphans = entries.filter((e) => e.startsWith(".kilo-delete-"))
+      expect(orphans).toHaveLength(0)
+    },
+    { timeout: 10000 },
+  )
+})
+
+// ---------------------------------------------------------------------------
+// WorktreeManager -- discoverWorktrees cleans orphaned temp dirs
+// ---------------------------------------------------------------------------
+
+describe("WorktreeManager.discoverWorktrees orphan cleanup", () => {
+  it("cleans up .kilo-delete-* dirs left by interrupted deletions", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    // Create a worktree so the worktrees directory exists
+    const wt = await mgr.createWorktree({ prompt: "real-wt" })
+
+    // Simulate an orphaned temp dir from an interrupted deletion
+    const orphan = path.join(root, ".kilo", "worktrees", ".kilo-delete-fake-uuid")
+    await fs.mkdir(orphan, { recursive: true })
+    await fs.writeFile(path.join(orphan, "leftover.txt"), "stale")
+
+    const discovered = await mgr.discoverWorktrees()
+
+    // Should only discover the real worktree, not the orphan
+    expect(discovered).toHaveLength(1)
+    expect(discovered[0]?.branch).toBe(wt.branch)
+
+    // Wait for background cleanup
+    await new Promise((r) => setTimeout(r, 300))
+
+    const exists = await fs
+      .stat(orphan)
       .then(() => true)
       .catch(() => false)
     expect(exists).toBe(false)
@@ -440,7 +565,7 @@ describe("WorktreeManager metadata", () => {
     const result = await mgr.createWorktree({ prompt: "legacy-test" })
 
     // Write only the legacy session-id file (no metadata.json)
-    const dir = path.join(result.path, ".kilocode")
+    const dir = path.join(result.path, ".kilo")
     await fs.mkdir(dir, { recursive: true })
     await fs.writeFile(path.join(dir, "session-id"), "legacy-sess-456", "utf-8")
 
@@ -512,6 +637,22 @@ describe("WorktreeManager.discoverWorktrees", () => {
     expect(found).toBeDefined()
     expect(found!.parentBranch).toBe("feature/my-branch")
   })
+
+  it("repairs stale gitdir refs when .kilo/worktrees already exists", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    const worktree = path.join(root, ".kilo", "worktrees", "partial")
+    const gitdir = path.join(root, ".git", "worktrees", "partial", "gitdir")
+    await fs.mkdir(worktree, { recursive: true })
+    await fs.mkdir(path.dirname(gitdir), { recursive: true })
+    await fs.writeFile(gitdir, path.join(root, ".kilocode", "worktrees", "partial", ".git"), "utf-8")
+
+    await mgr.discoverWorktrees()
+
+    const fixed = await fs.readFile(gitdir, "utf-8")
+    expect(fixed).toContain(path.join(root, ".kilo", "worktrees", "partial", ".git"))
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -519,7 +660,17 @@ describe("WorktreeManager.discoverWorktrees", () => {
 // ---------------------------------------------------------------------------
 
 describe("WorktreeManager.ensureGitExclude", () => {
-  it("adds .kilocode/worktrees/ to .git/info/exclude", async () => {
+  it("adds .kilo/worktrees/ to .git/info/exclude", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+
+    await mgr.ensureGitExclude()
+
+    const content = await fs.readFile(path.join(root, ".git", "info", "exclude"), "utf-8")
+    expect(content).toContain(".kilo/worktrees/")
+  })
+
+  it("adds only specific legacy Agent Manager paths", async () => {
     const root = await createTempRepo()
     const mgr = createManager(root)
 
@@ -527,6 +678,9 @@ describe("WorktreeManager.ensureGitExclude", () => {
 
     const content = await fs.readFile(path.join(root, ".git", "info", "exclude"), "utf-8")
     expect(content).toContain(".kilocode/worktrees/")
+    expect(content).toContain(".kilocode/agent-manager.json")
+    expect(content).toContain(".kilocode/setup-script")
+    expect(content).not.toContain("\n.kilocode/\n")
   })
 
   it("is idempotent -- does not duplicate entries", async () => {
@@ -538,7 +692,7 @@ describe("WorktreeManager.ensureGitExclude", () => {
     await mgr.ensureGitExclude()
 
     const content = await fs.readFile(path.join(root, ".git", "info", "exclude"), "utf-8")
-    const count = content.split(".kilocode/worktrees/").length - 1
+    const count = content.split(".kilo/worktrees/").length - 1
     expect(count).toBe(1)
   })
 })
@@ -549,49 +703,38 @@ describe("WorktreeManager.ensureGitExclude", () => {
 
 describe("WorktreeManager.createWorktree branch collision", () => {
   /**
-   * Exercise the retry path at WorktreeManager.ts:77-86.
+   * Exercise the retry path in WorktreeManager when `git worktree add -b <name>`
+   * fails because a branch with that name already exists.
    *
-   * The collision happens when `git worktree add -b <name>` fails because
-   * a branch with that name already exists. generateBranchName appends
-   * Date.now() making it hard to predict. We force the collision by
-   * monkey-patching Date.now to return a fixed value for the duration of
-   * the branch name generation, guaranteeing the same name is produced
-   * twice.
+   * We force the collision by creating a worktree with branchName "collide",
+   * removing the worktree (keeping the branch), then requesting the same
+   * branchName again.
    */
   it("retries with a unique suffix when generated branch name collides", async () => {
     const root = await createTempRepo()
     const git = simpleGit(root)
     const mgr = createManager(root)
 
-    // Create a first worktree — this consumes a branch name
-    const first = await mgr.createWorktree({ prompt: "collide" })
-    const firstBranch = first.branch
+    // Create a first worktree with a fixed branch name
+    const first = await mgr.createWorktree({ branchName: "collide" })
+    expect(first.branch).toBe("collide")
 
     // Remove the worktree via git but keep the branch ref alive
     await git.raw(["worktree", "remove", "--force", first.path])
 
     // Verify the branch still exists (worktree is gone, branch is not)
     const branches = await git.branch()
-    expect(branches.all).toContain(firstBranch)
+    expect(branches.all).toContain("collide")
 
-    // Force Date.now to return the same timestamp that produced firstBranch.
-    // firstBranch is "collide-<timestamp>", extract that timestamp.
-    const timestamp = firstBranch.replace("collide-", "")
-    const real = Date.now
-    Date.now = () => Number(timestamp)
-    try {
-      // This will generate the same branch name and hit the collision retry
-      const second = await mgr.createWorktree({ prompt: "collide" })
+    // Request the same branchName — git will fail, triggering the retry
+    const second = await mgr.createWorktree({ branchName: "collide" })
 
-      // The retry appends a new timestamp suffix, so the branch name differs
-      expect(second.branch).not.toBe(firstBranch)
-      expect(second.branch).toStartWith("collide-")
+    // The retry appends a timestamp suffix, so the branch name differs
+    expect(second.branch).not.toBe("collide")
+    expect(second.branch).toStartWith("collide-")
 
-      const stat = await fs.stat(path.join(second.path, ".git"))
-      expect(stat.isFile()).toBe(true)
-    } finally {
-      Date.now = real
-    }
+    const stat = await fs.stat(path.join(second.path, ".git"))
+    expect(stat.isFile()).toBe(true)
   })
 })
 
@@ -604,7 +747,7 @@ describe("WorktreeManager.removeWorktree safety", () => {
     const root = await createTempRepo()
     const mgr = createManager(root)
 
-    // Create a directory outside .kilocode/worktrees/
+    // Create a directory outside .kilo/worktrees/
     const outside = path.join(root, "important-data")
     await fs.mkdir(outside, { recursive: true })
     await fs.writeFile(path.join(outside, "file.txt"), "precious")

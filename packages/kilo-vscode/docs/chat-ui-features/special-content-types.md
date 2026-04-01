@@ -1,14 +1,6 @@
 # Special Content Types
 
 **Priority:** P1
-**Status:** 🔨 Partial
-
-## What Exists
-
-- Reasoning blocks render as collapsible sections via `PART_MAPPING["reasoning"]`
-- Rich per-tool renderers for read, edit, write, apply_patch, bash, glob, grep, webfetch, task, todowrite, todoread, question
-- Error cards with icon, title, and message via `Card variant="error"`
-- Unregistered/MCP tools fall through to `GenericTool` display
 
 ## Remaining Work
 

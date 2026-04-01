@@ -7,6 +7,45 @@ description: "AI-powered code autocompletion in Kilo Code"
 
 Kilo Code's autocomplete feature provides intelligent code suggestions and completions while you're typing, helping you write code faster and more efficiently. It offers both automatic and manual triggering options.
 
+{% tabs %}
+{% tab label="VSCode" %}
+
+## How Autocomplete Works
+
+The extension uses **Fill-in-the-Middle (FIM)** completion powered by Codestral (`mistralai/codestral-2508`). It analyzes the code before and after your cursor to generate contextually accurate inline suggestions.
+
+## Triggering Options
+
+### Auto-trigger
+
+Autocomplete is **enabled by default** and automatically shows inline suggestions as you type. Suggestions appear as ghost text that you can accept with `Tab`.
+
+### Trigger on keybinding (Cmd+L)
+
+Press `Cmd+L` (Mac) or `Ctrl+L` (Windows/Linux) to manually request a completion at your cursor position.
+
+{% callout type="note" %}
+This keybinding requires `kilo-code.new.autocomplete.enableSmartInlineTaskKeybinding` to be enabled in VS Code settings. It is **disabled by default**.
+{% /callout %}
+
+## Status Bar
+
+The extension displays an **autocomplete status indicator** in the VS Code status bar, including:
+
+- Current autocomplete state (active/snoozed)
+- Cumulative cost tracking for autocomplete requests
+
+### Snooze / Unsnooze
+
+You can temporarily disable autocomplete by clicking the status bar item to **snooze** it. Click again to **unsnooze** and re-enable suggestions.
+
+## Copilot Conflict Detection
+
+The extension automatically detects if **GitHub Copilot** inline suggestions are enabled and warns you about potential conflicts. Disable Copilot's inline completions for the best experience with Kilo Code autocomplete.
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
+
 ## How Autocomplete Works
 
 Autocomplete analyzes your code context and provides:
@@ -85,6 +124,9 @@ Then, toggle to 'disabled':
 If using Cursor, go to **Settings** > **Cursor Settings** > **Tab**, and toggle off 'Cursor Tab':
 
 {% image src="https://github.com/user-attachments/assets/fd2eeae2-f770-40ca-8a72-a9d5a1c17d47" alt="Disable Cursor autocomplete" width="800" caption="Disable Cursor autocomplete" /%}
+
+{% /tab %}
+{% /tabs %}
 
 ## Best Practices
 

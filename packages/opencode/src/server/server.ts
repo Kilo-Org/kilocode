@@ -5,7 +5,7 @@ import { describeRoute, generateSpecs, validator, resolver, openAPIRouteHandler 
 import { Hono } from "hono"
 import { cors } from "hono/cors"
 import { streamSSE } from "hono/streaming"
-import { proxy } from "hono/proxy"
+// import { proxy } from "hono/proxy" // kilocode_change - disabled external proxy
 import { basicAuth } from "hono/basic-auth"
 import z from "zod"
 import { Provider } from "../provider/provider"
@@ -22,6 +22,8 @@ import { ModelCache } from "../provider/model-cache" // kilocode_change
 import { Flag } from "../flag/flag"
 import { Command } from "../command"
 import { Global } from "../global"
+import { WorkspaceContext } from "../control-plane/workspace-context"
+import { WorkspaceRouterMiddleware } from "../control-plane/workspace-router-middleware"
 import { ProjectRoutes } from "./routes/project"
 import { SessionRoutes } from "./routes/session"
 import { PtyRoutes } from "./routes/pty"
@@ -43,10 +45,13 @@ import type { ContentfulStatusCode } from "hono/utils/http-status"
 import { websocket } from "hono/bun"
 import { HTTPException } from "hono/http-exception"
 import { errors } from "./error"
-import { CommitMessageRoutes } from "./routes/commit-message"
+import { CommitMessageRoutes } from "./routes/commit-message" // kilocode_change
 import { EnhancePromptRoutes } from "./routes/enhance-prompt" // kilocode_change
+import { KilocodeRoutes } from "./routes/kilocode" // kilocode_change
+import { Filesystem } from "@/util/filesystem"
 import { QuestionRoutes } from "./routes/question"
 import { PermissionRoutes } from "./routes/permission"
+import { RemoteRoutes } from "./routes/remote" // kilocode_change
 import { GlobalRoutes } from "./routes/global"
 import { MDNS } from "./mdns"
 
@@ -96,7 +101,7 @@ export namespace Server {
           return basicAuth({ username, password })(c, next)
         })
         .use(async (c, next) => {
-          const skipLogging = c.req.path === "/log"
+          const skipLogging = c.req.path === "/log" || c.req.path === "/telemetry/capture" // kilocode_change
           if (!skipLogging) {
             log.info("request", {
               method: c.req.method,
@@ -209,36 +214,54 @@ export namespace Server {
         )
         .use(async (c, next) => {
           if (c.req.path === "/log") return next()
-          const raw = c.req.query("directory") || c.req.header("x-opencode-directory") || process.cwd()
-          const directory = (() => {
-            try {
-              return decodeURIComponent(raw)
-            } catch {
-              return raw
-            }
-          })()
-          return Instance.provide({
-            directory,
-            init: InstanceBootstrap,
+          const workspaceID = c.req.query("workspace") || c.req.header("x-kilo-workspace")
+          const raw = c.req.query("directory") || c.req.header("x-kilo-directory") || process.cwd()
+          const directory = Filesystem.resolve(
+            (() => {
+              try {
+                return decodeURIComponent(raw)
+              } catch {
+                return raw
+              }
+            })(),
+          )
+
+          return WorkspaceContext.provide({
+            workspaceID,
             async fn() {
-              return next()
+              return Instance.provide({
+                directory,
+                init: InstanceBootstrap,
+                async fn() {
+                  return next()
+                },
+              })
             },
           })
         })
+        .use(WorkspaceRouterMiddleware)
         .get(
           "/doc",
           openAPIRouteHandler(app, {
             documentation: {
               info: {
-                title: "opencode",
+                title: "kilo", // kilocode_change
                 version: "0.0.3",
-                description: "opencode api",
+                description: "kilo api", // kilocode_change
               },
               openapi: "3.1.1",
             },
           }),
         )
-        .use(validator("query", z.object({ directory: z.string().optional() })))
+        .use(
+          validator(
+            "query",
+            z.object({
+              directory: z.string().optional(),
+              workspace: z.string().optional(),
+            }),
+          ),
+        )
         .route("/project", ProjectRoutes())
         .route("/pty", PtyRoutes())
         .route("/config", ConfigRoutes())
@@ -248,8 +271,10 @@ export namespace Server {
         .route("/question", QuestionRoutes())
         .route("/provider", ProviderRoutes())
         .route("/telemetry", TelemetryRoutes()) // kilocode_change
+        .route("/remote", RemoteRoutes()) // kilocode_change
         .route("/commit-message", CommitMessageRoutes()) // kilocode_change
         .route("/enhance-prompt", EnhancePromptRoutes()) // kilocode_change
+        .route("/kilocode", KilocodeRoutes()) // kilocode_change
         // kilocode_change start - Kilo Gateway routes
         .route(
           "/kilo",
@@ -503,6 +528,7 @@ export namespace Server {
             return c.json(await LSP.status())
           },
         )
+
         .get(
           "/formatter",
           describeRoute({
@@ -582,22 +608,25 @@ export namespace Server {
             })
           },
         )
+        // kilocode_change start - disable external proxy to app.opencode.ai for privacy/security
         .all("/*", async (c) => {
-          const path = c.req.path
-
-          const response = await proxy(`https://app.opencode.ai${path}`, {
-            ...c.req,
-            headers: {
-              ...c.req.raw.headers,
-              host: "app.opencode.ai",
-            },
-          })
-          response.headers.set(
-            "Content-Security-Policy",
-            "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; media-src 'self' data:; connect-src 'self' data:",
-          )
-          return response
+          // const path = c.req.path
+          //
+          // const response = await proxy(`https://app.opencode.ai${path}`, {
+          //   ...c.req,
+          //   headers: {
+          //     ...c.req.raw.headers,
+          //     host: "app.opencode.ai",
+          //   },
+          // })
+          // response.headers.set(
+          //   "Content-Security-Policy",
+          //   "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; media-src 'self' data:; connect-src 'self' data:",
+          // )
+          // return response
+          return c.notFound()
         }) as unknown as Hono,
+    // kilocode_change end
   )
 
   export async function openapi() {
@@ -605,9 +634,9 @@ export namespace Server {
     const result = await generateSpecs(App() as Hono, {
       documentation: {
         info: {
-          title: "opencode",
+          title: "kilo", // kilocode_change
           version: "1.0.0",
-          description: "opencode api",
+          description: "kilo api", // kilocode_change
         },
         openapi: "3.1.1",
       },

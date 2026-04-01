@@ -1,0 +1,35 @@
+name: Trigger webhook for feat PRs
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  call-webhook:
+    if: >
+      github.event.pull_request.merged == true &&
+      (startsWith(github.event.pull_request.title, 'feat:') ||
+       startsWith(github.event.pull_request.title, 'feat('))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send webhook safely
+        run: |
+          payload=$(jq -n \
+            --arg repo "${GITHUB_REPOSITORY}" \
+            --arg pr_number "${{ github.event.pull_request.number }}" \
+            --arg title "${{ github.event.pull_request.title }}" \
+            --arg body "${{ github.event.pull_request.body }}" \
+            --arg author "${{ github.event.pull_request.user.login }}" \
+            --arg merged_at "${{ github.event.pull_request.merged_at }}" \
+            '{
+              repo: $repo,
+              pr_number: $pr_number,
+              title: $title,
+              description: $body,
+              author: $author,
+              merged_at: $merged_at
+            }'
+          )
+          curl --fail-with-body -X POST "${{ secrets.DOC_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            --data-raw "$payload"

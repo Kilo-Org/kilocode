@@ -6,10 +6,8 @@ export const dict = {
   "kilocode:autocomplete.statusBar.warning": "$(warning) Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.basic": "Kilo Code Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.disabled": "Kilo Code Autocomplete (đã tắt)",
-  "kilocode:autocomplete.statusBar.tooltip.noCredits":
-    "**Không có tín dụng trong tài khoản của bạn**\n\nTài khoản Kilo Code của bạn không có tín dụng. Để sử dụng tự động hoàn thành, vui lòng thêm tín dụng vào tài khoản của bạn.\n\n[Mở Cài đặt](command:kilo-code.settingsButtonClicked)",
   "kilocode:autocomplete.statusBar.tooltip.noUsableProvider":
-    "**Chưa cấu hình mô hình tự động hoàn thành**\n\nĐể bật tự động hoàn thành, hãy thêm hồ sơ với một trong các nhà cung cấp được hỗ trợ sau: {{providers}}.\n\n[Mở Cài đặt](command:kilo-code.settingsButtonClicked)",
+    "**Chưa cấu hình mô hình tự động hoàn thành**\n\nĐể bật tự động hoàn thành, hãy thêm hồ sơ với một trong các nhà cung cấp được hỗ trợ sau: {{providers}}.\n\n[Mở Cài đặt]({{command}})",
   "kilocode:autocomplete.statusBar.tooltip.sessionTotal": "Tổng chi phí phiên:",
   "kilocode:autocomplete.statusBar.tooltip.provider": "Nhà cung cấp:",
   "kilocode:autocomplete.statusBar.tooltip.model": "Mô hình:",
@@ -44,4 +42,9 @@ export const dict = {
     "Kilo Code Autocomplete đang bị chặn do xung đột với GitHub Copilot. Để khắc phục điều này, bạn phải tắt các gợi ý inline của Copilot.",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "Tắt Copilot",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "Tắt Autocomplete",
+  "kilocode:autocomplete.creditsExhausted.message":
+    "Kilo Code Autocomplete đã bị tạm dừng vì tài khoản của bạn không còn tín dụng. Thêm tín dụng để tiếp tục sử dụng tự động hoàn thành.",
+  "kilocode:autocomplete.creditsExhausted.addCredits": "Thêm tín dụng",
+  "kilocode:autocomplete.authError.message":
+    "Kilo Code Autocomplete đã bị tạm dừng do lỗi xác thực. Vui lòng đăng nhập lại.",
 }

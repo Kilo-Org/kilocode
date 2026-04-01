@@ -10,8 +10,11 @@ import * as fuzzysort from "fuzzysort"
 
 export function useConnected() {
   const sync = useSync()
+  // kilocode_change - exclude "kilo" (anonymous autoload) alongside "opencode"
   return createMemo(() =>
-    sync.data.provider.some((x) => x.id !== "opencode" || Object.values(x.models).some((y) => y.cost?.input !== 0)),
+    sync.data.provider.some(
+      (x) => (x.id !== "opencode" && x.id !== "kilo") || Object.values(x.models).some((y) => y.cost?.input !== 0),
+    ),
   )
 }
 
@@ -30,11 +33,7 @@ export function DialogModel(props: { providerID?: string }) {
   const kiloRank = createMemo(() => {
     const provider = sync.data.provider.find((provider) => provider.id === "kilo")
     const models = provider?.models ?? {}
-    return new Map(
-      Object.entries(models).map(
-        ([id, info]) => [id, info.recommendedIndex ?? Infinity] as const,
-      ),
-    )
+    return new Map(Object.entries(models).map(([id, info]) => [id, info.recommendedIndex ?? Infinity] as const))
   })
   // kilocode_change end
 
@@ -121,7 +120,7 @@ export function DialogModel(props: { providerID?: string }) {
           }),
           sortBy(
             // kilocode_change start - Sort within Recommended / Kilo Gateway
-            (x) => (x.value.providerID === "kilo" ? kiloRank().get(x.value.modelID) ?? Infinity : 0),
+            (x) => (x.value.providerID === "kilo" ? (kiloRank().get(x.value.modelID) ?? Infinity) : 0),
             // kilocode_change end
             (x) => x.footer !== "Free",
             (x) => x.title,

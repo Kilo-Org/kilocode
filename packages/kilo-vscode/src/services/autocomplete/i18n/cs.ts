@@ -6,10 +6,8 @@ export const dict = {
   "kilocode:autocomplete.statusBar.warning": "$(warning) Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.basic": "Kilo Code Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.disabled": "Kilo Code Autocomplete (zakázáno)",
-  "kilocode:autocomplete.statusBar.tooltip.noCredits":
-    "**Na tvém účtu nejsou žádné kredity**\n\nTvůj účet Kilo Code nemá žádné kredity. Pro použití automatického doplňování prosím přidej kredity na svůj účet.\n\n[Otevřít Nastavení](command:kilo-code.settingsButtonClicked)",
   "kilocode:autocomplete.statusBar.tooltip.noUsableProvider":
-    "**Není nakonfigurován žádný model automatického doplňování**\n\nPro povolení automatického doplňování přidej profil s jedním z těchto podporovaných poskytovatelů: {{providers}}.\n\n[Otevřít Nastavení](command:kilo-code.settingsButtonClicked)",
+    "**Není nakonfigurován žádný model automatického doplňování**\n\nPro povolení automatického doplňování přidej profil s jedním z těchto podporovaných poskytovatelů: {{providers}}.\n\n[Otevřít Nastavení]({{command}})",
   "kilocode:autocomplete.statusBar.tooltip.sessionTotal": "Celkové náklady relace:",
   "kilocode:autocomplete.statusBar.tooltip.provider": "Poskytovatel:",
   "kilocode:autocomplete.statusBar.tooltip.model": "Model:",
@@ -43,4 +41,9 @@ export const dict = {
     "Kilo Code Autocomplete je blokováno konfliktem s GitHub Copilot. Pro vyřešení tohoto problému musíš zakázat inline návrhy Copilot.",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "Zakázat Copilot",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "Zakázat Autocomplete",
+  "kilocode:autocomplete.creditsExhausted.message":
+    "Kilo Code Autocomplete bylo pozastaveno, protože na tvém účtu nezbyly žádné kredity. Přidej kredity pro obnovení automatického doplňování.",
+  "kilocode:autocomplete.creditsExhausted.addCredits": "Přidat kredity",
+  "kilocode:autocomplete.authError.message":
+    "Kilo Code Autocomplete bylo pozastaveno kvůli chybě ověření. Prosím, přihlas se znovu.",
 }

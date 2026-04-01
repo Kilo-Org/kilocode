@@ -3,6 +3,17 @@ import { WorkflowsMigrator } from "../../src/kilocode/workflows-migrator"
 import { tmpdir } from "../fixture/fixture"
 import path from "path"
 
+async function withHome<T>(home: string, fn: () => Promise<T>): Promise<T> {
+  const prev = process.env.HOME
+  process.env.HOME = home
+  try {
+    return await fn()
+  } finally {
+    if (prev) process.env.HOME = prev
+    else delete process.env.HOME
+  }
+}
+
 describe("WorkflowsMigrator", () => {
   describe("extractNameFromFilename", () => {
     test("extracts name from simple filename", () => {
@@ -60,7 +71,7 @@ Actual description here.`
     test("discovers project workflows", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
-          const workflowsDir = path.join(dir, ".kilocode", "workflows")
+          const workflowsDir = path.join(dir, ".kilo", "workflows")
           await Bun.write(path.join(workflowsDir, "test-workflow.md"), "# Test\n\nDescription")
         },
       })
@@ -69,6 +80,21 @@ Actual description here.`
 
       expect(workflows).toHaveLength(1)
       expect(workflows[0].name).toBe("test-workflow")
+      expect(workflows[0].source).toBe("project")
+    })
+
+    test("discovers workflows from legacy .kilocode/workflows/", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          const workflowsDir = path.join(dir, ".kilocode", "workflows")
+          await Bun.write(path.join(workflowsDir, "legacy-workflow.md"), "# Legacy\n\nLegacy workflow")
+        },
+      })
+
+      const workflows = await WorkflowsMigrator.discoverWorkflows(tmp.path, true)
+
+      expect(workflows).toHaveLength(1)
+      expect(workflows[0].name).toBe("legacy-workflow")
       expect(workflows[0].source).toBe("project")
     })
 
@@ -83,7 +109,7 @@ Actual description here.`
     test("only discovers .md files", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
-          const workflowsDir = path.join(dir, ".kilocode", "workflows")
+          const workflowsDir = path.join(dir, ".kilo", "workflows")
           await Bun.write(path.join(workflowsDir, "workflow.md"), "# Workflow")
           await Bun.write(path.join(workflowsDir, "readme.txt"), "Not a workflow")
           await Bun.write(path.join(workflowsDir, "config.json"), "{}")
@@ -94,6 +120,21 @@ Actual description here.`
 
       expect(workflows).toHaveLength(1)
       expect(workflows[0].name).toBe("workflow")
+    })
+
+    test("discovers global workflows from ~/.kilo/workflows/", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(path.join(dir, ".kilo", "workflows", "global.md"), "# Global\n\nGlobal workflow")
+          await Bun.write(path.join(dir, "repo", "README.md"), "repo")
+        },
+      })
+
+      const workflows = await withHome(tmp.path, () => WorkflowsMigrator.discoverWorkflows(path.join(tmp.path, "repo")))
+
+      expect(
+        workflows.some((w) => w.source === "global" && w.path.includes(path.join(".kilo", "workflows", "global.md"))),
+      ).toBe(true)
     })
   })
 
@@ -130,7 +171,7 @@ Actual description here.`
     test("migrates project workflows to commands", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
-          const workflowsDir = path.join(dir, ".kilocode", "workflows")
+          const workflowsDir = path.join(dir, ".kilo", "workflows")
           await Bun.write(
             path.join(workflowsDir, "code-review.md"),
             "# Code Review\n\nPerform a code review.\n\n## Steps\n\n1. Review",
@@ -158,7 +199,7 @@ Actual description here.`
     test("migrates multiple workflows", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
-          const workflowsDir = path.join(dir, ".kilocode", "workflows")
+          const workflowsDir = path.join(dir, ".kilo", "workflows")
           await Bun.write(path.join(workflowsDir, "review.md"), "# Review\n\nReview code")
           await Bun.write(path.join(workflowsDir, "deploy.md"), "# Deploy\n\nDeploy app")
         },
@@ -179,7 +220,7 @@ Actual description here.`
           await Bun.write(path.join(globalDir, "shared.md"), "# Shared\n\nGlobal version")
 
           // Create project workflows
-          const projectDir = path.join(dir, ".kilocode", "workflows")
+          const projectDir = path.join(dir, ".kilo", "workflows")
           await Bun.write(path.join(projectDir, "shared.md"), "# Shared\n\nProject version")
 
           return globalDir

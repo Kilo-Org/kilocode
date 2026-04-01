@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest"
 
 // Mock vscode following the pattern from AutocompleteServiceManager.spec.ts
 vi.mock("vscode", () => {
@@ -38,7 +38,7 @@ import type { KiloConnectionService } from "../../cli-backend/connection-service
 describe("commit-message service", () => {
   let mockContext: vscode.ExtensionContext
   let mockConnectionService: KiloConnectionService
-  let mockHttpClient: { generateCommitMessage: ReturnType<typeof vi.fn> }
+  let mockClient: { commitMessage: { generate: Mock } }
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -47,12 +47,14 @@ describe("commit-message service", () => {
       subscriptions: [],
     } as any
 
-    mockHttpClient = {
-      generateCommitMessage: vi.fn().mockResolvedValue("feat: add new feature"),
+    mockClient = {
+      commitMessage: {
+        generate: vi.fn().mockResolvedValue({ data: { message: "feat: add new feature" } }),
+      },
     }
 
     mockConnectionService = {
-      getHttpClient: vi.fn().mockReturnValue(mockHttpClient),
+      getClient: vi.fn().mockReturnValue(mockClient),
     } as any
   })
 
@@ -87,12 +89,12 @@ describe("commit-message service", () => {
       registerCommitMessageService(mockContext, mockConnectionService)
 
       // Extract the registered command callback
-      const registerCall = vi.mocked(vscode.commands.registerCommand).mock.calls[0]!
+      const registerCall = (vscode.commands.registerCommand as Mock).mock.calls[0]!
       commandCallback = registerCall[1] as (...args: any[]) => Promise<void>
     })
 
     it("shows error when git extension is not found", async () => {
-      vi.mocked(vscode.extensions.getExtension).mockReturnValue(undefined)
+      ;(vscode.extensions.getExtension as Mock).mockReturnValue(undefined)
 
       await commandCallback()
 
@@ -100,13 +102,13 @@ describe("commit-message service", () => {
     })
 
     it("shows error when no git repository is found", async () => {
-      vi.mocked(vscode.extensions.getExtension).mockReturnValue({
+      ;(vscode.extensions.getExtension as Mock).mockReturnValue({
         isActive: true,
         activate: vi.fn().mockResolvedValue(undefined),
         exports: {
           getAPI: () => ({ repositories: [] }),
         },
-      } as any)
+      })
 
       await commandCallback()
 
@@ -114,7 +116,7 @@ describe("commit-message service", () => {
     })
 
     it("shows error when backend is not connected", async () => {
-      vi.mocked(vscode.extensions.getExtension).mockReturnValue({
+      ;(vscode.extensions.getExtension as Mock).mockReturnValue({
         isActive: true,
         activate: vi.fn().mockResolvedValue(undefined),
         exports: {
@@ -122,8 +124,8 @@ describe("commit-message service", () => {
             repositories: [{ inputBox: { value: "" }, rootUri: { fsPath: "/repo" } }],
           }),
         },
-      } as any)
-      vi.mocked(mockConnectionService.getHttpClient as any).mockImplementation(() => {
+      })
+      ;(mockConnectionService.getClient as Mock).mockImplementation(() => {
         throw new Error("Not connected")
       })
 
@@ -134,9 +136,9 @@ describe("commit-message service", () => {
       )
     })
 
-    it("calls generateCommitMessage on the HTTP client with repository root path", async () => {
+    it("calls commitMessage.generate on the SDK client with repository root path", async () => {
       const mockInputBox = { value: "" }
-      vi.mocked(vscode.extensions.getExtension).mockReturnValue({
+      ;(vscode.extensions.getExtension as Mock).mockReturnValue({
         isActive: true,
         activate: vi.fn().mockResolvedValue(undefined),
         exports: {
@@ -144,21 +146,24 @@ describe("commit-message service", () => {
             repositories: [{ inputBox: mockInputBox, rootUri: { fsPath: "/repo" } }],
           }),
         },
-      } as any)
+      })
 
-      // Make withProgress execute its callback
-      vi.mocked(vscode.window.withProgress).mockImplementation(async (_options, task) => {
-        await task({} as any, {} as any)
+      const mockToken = { onCancellationRequested: vi.fn() }
+      ;(vscode.window.withProgress as Mock).mockImplementation(async (_options: any, task: any) => {
+        await task({}, mockToken)
       })
 
       await commandCallback()
 
-      expect(mockHttpClient.generateCommitMessage).toHaveBeenCalledWith("/repo", undefined, undefined)
+      expect(mockClient.commitMessage.generate).toHaveBeenCalledWith(
+        { path: "/repo", selectedFiles: undefined, previousMessage: undefined },
+        expect.objectContaining({ throwOnError: true }),
+      )
     })
 
     it("sets the generated message on the repository inputBox", async () => {
       const mockInputBox = { value: "" }
-      vi.mocked(vscode.extensions.getExtension).mockReturnValue({
+      ;(vscode.extensions.getExtension as Mock).mockReturnValue({
         isActive: true,
         activate: vi.fn().mockResolvedValue(undefined),
         exports: {
@@ -166,10 +171,11 @@ describe("commit-message service", () => {
             repositories: [{ inputBox: mockInputBox, rootUri: { fsPath: "/repo" } }],
           }),
         },
-      } as any)
+      })
 
-      vi.mocked(vscode.window.withProgress).mockImplementation(async (_options, task) => {
-        await task({} as any, {} as any)
+      const mockToken = { onCancellationRequested: vi.fn() }
+      ;(vscode.window.withProgress as Mock).mockImplementation(async (_options: any, task: any) => {
+        await task({}, mockToken)
       })
 
       await commandCallback()
@@ -177,9 +183,9 @@ describe("commit-message service", () => {
       expect(mockInputBox.value).toBe("feat: add new feature")
     })
 
-    it("shows progress in SourceControl location", async () => {
+    it("shows cancellable progress in SourceControl location", async () => {
       const mockInputBox = { value: "" }
-      vi.mocked(vscode.extensions.getExtension).mockReturnValue({
+      ;(vscode.extensions.getExtension as Mock).mockReturnValue({
         isActive: true,
         activate: vi.fn().mockResolvedValue(undefined),
         exports: {
@@ -187,10 +193,11 @@ describe("commit-message service", () => {
             repositories: [{ inputBox: mockInputBox, rootUri: { fsPath: "/repo" } }],
           }),
         },
-      } as any)
+      })
 
-      vi.mocked(vscode.window.withProgress).mockImplementation(async (_options, task) => {
-        await task({} as any, {} as any)
+      const mockToken = { onCancellationRequested: vi.fn() }
+      ;(vscode.window.withProgress as Mock).mockImplementation(async (_options: any, task: any) => {
+        await task({}, mockToken)
       })
 
       await commandCallback()
@@ -199,9 +206,61 @@ describe("commit-message service", () => {
         expect.objectContaining({
           location: vscode.ProgressLocation.SourceControl,
           title: "Generating commit message...",
+          cancellable: true,
         }),
         expect.any(Function),
       )
+    })
+
+    it("uses the matching repository when SourceControl arg is provided", async () => {
+      const mainInputBox = { value: "" }
+      const worktreeInputBox = { value: "" }
+      vi.mocked(vscode.extensions.getExtension).mockReturnValue({
+        isActive: true,
+        activate: vi.fn().mockResolvedValue(undefined),
+        exports: {
+          getAPI: () => ({
+            repositories: [
+              { inputBox: mainInputBox, rootUri: { fsPath: "/main-repo" } },
+              { inputBox: worktreeInputBox, rootUri: { fsPath: "/worktree-repo" } },
+            ],
+          }),
+        },
+      } as any)
+
+      vi.mocked(vscode.window.withProgress).mockImplementation(async (_options, task) => {
+        await task({} as any, {} as any)
+      })
+
+      // Simulate SCM title/input passing the SourceControl for the worktree repo
+      const scmArg = { rootUri: { fsPath: "/worktree-repo" } } as vscode.SourceControl
+      await commandCallback(scmArg)
+
+      // The worktree repo's inputBox should be updated, not the main repo's
+      expect(worktreeInputBox.value).toBe("feat: add new feature")
+      expect(mainInputBox.value).toBe("")
+    })
+
+    it("falls back to first repository when SourceControl arg has no match", async () => {
+      const mainInputBox = { value: "" }
+      vi.mocked(vscode.extensions.getExtension).mockReturnValue({
+        isActive: true,
+        activate: vi.fn().mockResolvedValue(undefined),
+        exports: {
+          getAPI: () => ({
+            repositories: [{ inputBox: mainInputBox, rootUri: { fsPath: "/main-repo" } }],
+          }),
+        },
+      } as any)
+
+      vi.mocked(vscode.window.withProgress).mockImplementation(async (_options, task) => {
+        await task({} as any, {} as any)
+      })
+
+      const scmArg = { rootUri: { fsPath: "/nonexistent-repo" } } as vscode.SourceControl
+      await commandCallback(scmArg)
+
+      expect(mainInputBox.value).toBe("feat: add new feature")
     })
   })
 })

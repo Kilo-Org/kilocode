@@ -12,6 +12,7 @@ import type { AssistantMessage as SDKAssistantMessage, TextPart, ToolPart } from
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { AssistantMessage } from "../components/chat/AssistantMessage"
 import { ChatView } from "../components/chat/ChatView"
+import { Part } from "@kilocode/kilo-ui/message-part"
 import { registerVscodeToolOverrides } from "../components/chat/VscodeToolOverrides"
 import { SessionContext } from "../context/session"
 import type { PermissionRequest, QuestionRequest } from "../types/messages"
@@ -161,6 +162,7 @@ const globPermission: PermissionRequest = {
   sessionID: SESSION_ID,
   toolName: "glob",
   patterns: ["**/*.md"],
+  always: ["*"],
   args: { pattern: "**/*.md" },
   tool: { messageID: ASST_MSG_ID, callID: "call-glob-001" },
 }
@@ -170,7 +172,8 @@ const bashPermission: PermissionRequest = {
   sessionID: SESSION_ID,
   toolName: "bash",
   patterns: ["bun test"],
-  args: { command: "bun test" },
+  always: ["bun *"],
+  args: { command: "bun test", rules: ["bun *", "bun test"] },
   tool: { messageID: ASST_MSG_ID, callID: "call-bash-001" },
 }
 
@@ -179,6 +182,7 @@ const dockPermission: PermissionRequest = {
   sessionID: SESSION_ID,
   toolName: "write",
   patterns: ["src/main.tsx", "src/utils.ts"],
+  always: ["*"],
   args: {},
   // No `tool` field — this is a non-tool (dock) permission
 }
@@ -291,6 +295,7 @@ const todoWritePermission: PermissionRequest = {
   sessionID: SESSION_ID,
   toolName: "todowrite",
   patterns: ["*"],
+  always: ["*"],
   args: {},
   tool: { messageID: ASST_MSG_ID, callID: "call-todo-001" },
 }
@@ -546,23 +551,6 @@ export const MultipleToolCalls: Story = {
 }
 
 // ---------------------------------------------------------------------------
-// 8. Inline question (tool-linked question rendered in message flow)
-// ---------------------------------------------------------------------------
-
-export const InlineQuestion: Story = {
-  name: "Inline Question",
-  render: () => {
-    const qs = [questionRequest]
-    const data = dataWith([textPart, questionToolPart])
-    return (
-      <StoryProviders data={data} questions={qs} sessionID={SESSION_ID}>
-        <AssistantMessage message={baseAssistantMessage} />
-      </StoryProviders>
-    )
-  },
-}
-
-// ---------------------------------------------------------------------------
 // 9. Dismissed question (right-aligned "Questions dismissed" text)
 // ---------------------------------------------------------------------------
 
@@ -614,6 +602,377 @@ export const TodoWriteCompleted: Story = {
     return (
       <StoryProviders data={data} sessionID={SESSION_ID}>
         <AssistantMessage message={baseAssistantMessage} />
+      </StoryProviders>
+    )
+  },
+}
+
+// ---------------------------------------------------------------------------
+// 12. Permission dock — edit tool with file patterns
+// ---------------------------------------------------------------------------
+
+const editPermission: PermissionRequest = {
+  id: "perm-edit-001",
+  sessionID: SESSION_ID,
+  toolName: "edit",
+  patterns: ["src/components/App.tsx", "src/utils/helpers.ts"],
+  always: ["*"],
+  args: {},
+  tool: { messageID: ASST_MSG_ID, callID: "call-edit-001" },
+}
+
+export const PermissionDockEdit: Story = {
+  name: "Permission Dock — edit",
+  render: () => {
+    const perms = [editPermission]
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy", permissions: perms }),
+      messages: () => [{ id: "msg-001" }] as any[],
+    }
+    return (
+      <StoryProviders permissions={perms} sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "100%", height: "350px", display: "flex", "flex-direction": "column" }}>
+            <ChatView />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+// ---------------------------------------------------------------------------
+// 13. Permission dock — websearch tool
+// ---------------------------------------------------------------------------
+
+const websearchPermission: PermissionRequest = {
+  id: "perm-websearch-001",
+  sessionID: SESSION_ID,
+  toolName: "websearch",
+  patterns: ["*"],
+  always: ["*"],
+  args: {},
+  tool: { messageID: ASST_MSG_ID, callID: "call-websearch-001" },
+}
+
+export const PermissionDockWebsearch: Story = {
+  name: "Permission Dock — websearch",
+  render: () => {
+    const perms = [websearchPermission]
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy", permissions: perms }),
+      messages: () => [{ id: "msg-001" }] as any[],
+    }
+    return (
+      <StoryProviders permissions={perms} sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "100%", height: "300px", display: "flex", "flex-direction": "column" }}>
+            <ChatView />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+// ---------------------------------------------------------------------------
+// 14. Permission dock — external_directory tool
+// ---------------------------------------------------------------------------
+
+const externalDirPermission: PermissionRequest = {
+  id: "perm-extdir-001",
+  sessionID: SESSION_ID,
+  toolName: "external_directory",
+  patterns: ["/home/user/other-project/*"],
+  always: ["/home/user/other-project/*"],
+  args: { filepath: "/home/user/other-project/config.json" },
+  tool: { messageID: ASST_MSG_ID, callID: "call-extdir-001" },
+}
+
+export const PermissionDockExternalDir: Story = {
+  name: "Permission Dock — external directory",
+  render: () => {
+    const perms = [externalDirPermission]
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy", permissions: perms }),
+      messages: () => [{ id: "msg-001" }] as any[],
+    }
+    return (
+      <StoryProviders permissions={perms} sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "100%", height: "300px", display: "flex", "flex-direction": "column" }}>
+            <ChatView />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+// ---------------------------------------------------------------------------
+// 15. Permission dock — bash with many rules (5+ rules for overflow testing)
+// ---------------------------------------------------------------------------
+
+const bashManyRulesPermission: PermissionRequest = {
+  id: "perm-bash-many-001",
+  sessionID: SESSION_ID,
+  toolName: "bash",
+  patterns: ["npm install"],
+  always: ["npm install *"],
+  args: {
+    command: "npm install",
+    rules: ["npm *", "npm install", "npm run *", "npm test", "npm run build", "npx *"],
+  },
+  tool: { messageID: ASST_MSG_ID, callID: "call-bash-many-001" },
+}
+
+export const PermissionDockBashManyRules: Story = {
+  name: "Permission Dock — bash many rules",
+  render: () => {
+    const perms = [bashManyRulesPermission]
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy", permissions: perms }),
+      messages: () => [{ id: "msg-001" }] as any[],
+    }
+    return (
+      <StoryProviders permissions={perms} sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "100%", height: "400px", display: "flex", "flex-direction": "column" }}>
+            <ChatView />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+// ---------------------------------------------------------------------------
+// 16. Permission dock — subagent (from child session)
+// ---------------------------------------------------------------------------
+
+const subagentPermission: PermissionRequest = {
+  id: "perm-subagent-001",
+  sessionID: "child-session-001",
+  toolName: "bash",
+  patterns: ["git status"],
+  always: ["git status *"],
+  args: { command: "git status", rules: ["git *", "git status"] },
+  tool: { messageID: ASST_MSG_ID, callID: "call-subagent-001" },
+}
+
+export const PermissionDockSubagent: Story = {
+  name: "Permission Dock — subagent",
+  render: () => {
+    const perms = [subagentPermission]
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy", permissions: perms }),
+      messages: () => [{ id: "msg-001" }] as any[],
+      // Override scopedPermissions to include child session permissions in the family
+      scopedPermissions: () => perms,
+    }
+    return (
+      <StoryProviders permissions={perms} sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "100%", height: "300px", display: "flex", "flex-direction": "column" }}>
+            <ChatView />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+// ---------------------------------------------------------------------------
+// 17. Permission dock — bash with pre-populated config rules
+// ---------------------------------------------------------------------------
+
+const bashConfigPermission: PermissionRequest = {
+  id: "perm-bash-config-001",
+  sessionID: SESSION_ID,
+  toolName: "bash",
+  patterns: ["npm install"],
+  always: ["npm install *"],
+  args: {
+    command: "npm install",
+    rules: ["npm *", "npm install", "npm run *", "npm test", "git *", "npx *"],
+  },
+  tool: { messageID: ASST_MSG_ID, callID: "call-bash-config-001" },
+}
+
+export const PermissionDockConfigPreloaded: Story = {
+  name: "Permission Dock — config pre-populated",
+  render: () => {
+    const perms = [bashConfigPermission]
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy", permissions: perms }),
+      messages: () => [{ id: "msg-001" }] as any[],
+    }
+    return (
+      <StoryProviders
+        permissions={perms}
+        sessionID={SESSION_ID}
+        status="busy"
+        noPadding
+        config={{
+          permission: {
+            bash: {
+              "*": "ask",
+              "npm *": "allow",
+              "npm install": "allow",
+              "git *": "deny",
+            },
+          },
+        }}
+      >
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "100%", height: "400px", display: "flex", "flex-direction": "column" }}>
+            <ChatView />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+// ---------------------------------------------------------------------------
+// 18. Permission dock — bash with very long heredoc command
+// ---------------------------------------------------------------------------
+
+const heredocPermission: PermissionRequest = {
+  id: "perm-heredoc-001",
+  sessionID: SESSION_ID,
+  toolName: "bash",
+  patterns: ["python3"],
+  always: ["python3 *"],
+  args: {
+    command: `python3 << 'EOF'
+import json
+from collections import defaultdict
+from pathlib import Path
+
+events_path = Path('test_sound/events.json')
+extracted_dir = Path('test_sound/extracted')
+
+with open(events_path) as f:
+    events = json.load(f)
+
+# Gather all expected entries and their details
+expected = []  # list of (fsb, index, name, event_path, entry_obj)
+for project in events.get('projects', []):
+    for event in project.get('events', []):
+        for region in event.get('sound_defs', []):
+            for def_ in region.get('defs', []):
+                for entry in def_.get('entries', []):
+                    if entry.get('type') == 'wavatable':
+                        expected.append((
+                            entry.get('fsb'),
+                            entry.get('subsound_index'),
+                            entry.get('subsound_name'),
+                            event.get('path'),
+                            entry
+                        ))
+
+print(f"Total wavetable entries in events.json: {len(expected)}")
+
+# Check which ones got audio_file set
+found_audio = 0
+for _, _, _, _, entry in expected:
+    if entry.get('audio_file'):
+        found_audio += 1
+
+print(f"Entries with audio_file set: {found_audio}")
+print(f"Missing audio_file: {len(expected) - found_audio}")
+EOF`,
+    rules: ["python3 *"],
+  },
+  tool: { messageID: ASST_MSG_ID, callID: "call-heredoc-001" },
+}
+
+export const PermissionDockHeredoc: Story = {
+  name: "Permission Dock — bash heredoc (long command)",
+  render: () => {
+    const perms = [heredocPermission]
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy", permissions: perms }),
+      messages: () => [{ id: "msg-001" }] as any[],
+    }
+    return (
+      <StoryProviders permissions={perms} sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "100%", height: "400px", display: "flex", "flex-direction": "column" }}>
+            <ChatView />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+// ---------------------------------------------------------------------------
+// 17. MCP tool cards — collapsed
+// ---------------------------------------------------------------------------
+
+const mcpCompleted: ToolPart = {
+  id: "part-mcp-001",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-mcp-001",
+  tool: "vercel_search_vercel_documentation",
+  state: {
+    status: "completed",
+    input: { topic: "serverless functions" },
+    output:
+      "## Serverless Function Configuration\n\nSource: https://vercel.com/docs/build-output-api/primitives\n\nThis TypeScript type definition (`ServerlessFunctionConfig`) specifies configuration for Vercel Serverless Functions.\n\n```ts\ntype ServerlessFunctionConfig = {\n  handler: string;\n  runtime: string;\n  memory?: number;\n  maxDuration?: number;\n}\n```",
+    title: "Search Vercel docs",
+    metadata: {},
+    time: { start: now - 4000, end: now - 3500 },
+  },
+}
+
+const mcpShort: ToolPart = {
+  id: "part-mcp-002",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-mcp-002",
+  tool: "sentry_search_issues",
+  state: {
+    status: "completed",
+    input: { query: "unresolved errors" },
+    output:
+      "Found 3 issues:\n- PROJ-123: TypeError in auth flow\n- PROJ-456: Network timeout\n- PROJ-789: Null reference",
+    title: "Search issues",
+    metadata: {},
+    time: { start: now - 3000, end: now - 2800 },
+  },
+}
+
+export const McpToolCards: Story = {
+  name: "MCP Tool Cards — collapsed",
+  render: () => {
+    const data = dataWith([mcpCompleted, mcpShort])
+    return (
+      <StoryProviders data={data} sessionID={SESSION_ID}>
+        <AssistantMessage message={baseAssistantMessage} />
+      </StoryProviders>
+    )
+  },
+}
+
+// ---------------------------------------------------------------------------
+// 18. MCP tool card — expanded (defaultOpen)
+// ---------------------------------------------------------------------------
+
+export const McpToolExpanded: Story = {
+  name: "MCP Tool Card — expanded",
+  render: () => {
+    const data = dataWith([mcpCompleted])
+    return (
+      <StoryProviders data={data} sessionID={SESSION_ID}>
+        <div data-component="tool-part-wrapper" data-part-type="tool">
+          <Part part={mcpCompleted} message={baseAssistantMessage as any} defaultOpen />
+        </div>
       </StoryProviders>
     )
   },

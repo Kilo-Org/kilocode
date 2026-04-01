@@ -10,6 +10,11 @@
     font-size: 12px;
   }
 
+  [data-slot="basic-tool-tool-info-structured"] {
+    min-width: 0;
+    overflow: hidden;
+  }
+
   [data-slot="message-part-title"] {
     align-items: baseline;
   }
@@ -20,6 +25,7 @@
 
   [data-slot="basic-tool-tool-info-main"] {
     align-items: baseline;
+    overflow: hidden;
   }
 
   [data-slot="basic-tool-icon"] {
@@ -40,6 +46,57 @@
 
   [data-slot="message-part-title-filename"] {
     font-size: 12px;
+  }
+
+  [data-slot="message-part-meta-line"] {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    overflow: hidden;
+    white-space: nowrap;
+    min-width: 0;
+    flex-shrink: 1;
+    font-size: 12px;
+
+    &.clickable {
+      cursor: pointer;
+      transition: color 0.15s ease;
+
+      &:hover {
+        color: var(--text-base);
+      }
+    }
+  }
+
+  [data-slot="message-part-title-filename"] {
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    direction: rtl;
+    text-align: left;
+  }
+
+  [data-slot="message-part-directory-inline"] {
+    color: var(--text-weak);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    direction: rtl;
+    text-align: left;
+    flex-shrink: 1;
+    min-width: 0;
+    font-size: 12px;
+  }
+
+  [data-slot="webfetch-meta"] {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    overflow: hidden;
+    min-width: 0;
+    flex-shrink: 1;
   }
 }
 
@@ -73,10 +130,41 @@ html[data-theme="kilo-vscode"] [data-component="tool-part-wrapper"][data-part-ty
       padding: 0 8px;
       height: 36px;
       background-color: var(--surface-inset-base, var(--vscode-sideBar-background));
+
+      &:hover {
+        background-color: var(--surface-inset-base-hover, var(--vscode-list-hoverBackground));
+      }
     }
 
     [data-slot="collapsible-trigger"][aria-expanded="true"] {
       border-bottom: 1px solid var(--border-weak-base, var(--vscode-panel-border));
+    }
+
+    /* Arrow always visible (no fade-on-hover) */
+    [data-slot="collapsible-arrow"] {
+      opacity: 1;
+    }
+
+    /* Arrow: DOWN when collapsed, UP when expanded (matches question-dock toggle) */
+    [data-slot="collapsible-arrow-icon"] {
+      transform: translateZ(0) rotate(0deg);
+    }
+
+    [data-slot="collapsible-trigger"][aria-expanded="true"] [data-slot="collapsible-arrow-icon"] {
+      transform: translateZ(0) rotate(180deg);
+    }
+  }
+
+  /* Expandable tool output content */
+  [data-component="tool-output"] {
+    padding: 8px 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    min-width: 0;
+    overflow: hidden;
+
+    &[data-scrollable] {
+      overflow-y: auto;
     }
   }
 }

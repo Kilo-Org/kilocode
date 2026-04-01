@@ -12,7 +12,7 @@
     opacity 120ms;
 
   &[data-variant="ghost"]:hover:not(:disabled) {
-    background: var(--button-ghost-hover, var(--surface-base-hover));
+    background: var(--button-ghost-hover, var(--surface-base-hover, rgba(128, 128, 128, 0.2)));
   }
 
   &:active:not([data-disabled]) {

@@ -6,10 +6,8 @@ export const dict = {
   "kilocode:autocomplete.statusBar.warning": "$(warning) Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.basic": "Kilo Code Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.disabled": "Kilo Code Autocomplete (비활성화됨)",
-  "kilocode:autocomplete.statusBar.tooltip.noCredits":
-    "**계정에 크레딧이 없습니다**\n\nKilo Code 계정에 크레딧이 없습니다. 자동완성을 사용하려면 계정에 크레딧을 추가해 주세요.\n\n[설정 열기](command:kilo-code.settingsButtonClicked)",
   "kilocode:autocomplete.statusBar.tooltip.noUsableProvider":
-    "**자동완성 모델이 구성되지 않았습니다**\n\n자동완성을 활성화하려면 다음 지원되는 제공업체 중 하나로 프로필을 추가하세요: {{providers}}.\n\n[설정 열기](command:kilo-code.settingsButtonClicked)",
+    "**자동완성 모델이 구성되지 않았습니다**\n\n자동완성을 활성화하려면 다음 지원되는 제공업체 중 하나로 프로필을 추가하세요: {{providers}}.\n\n[설정 열기]({{command}})",
   "kilocode:autocomplete.statusBar.tooltip.sessionTotal": "세션 총 비용:",
   "kilocode:autocomplete.statusBar.tooltip.provider": "제공업체:",
   "kilocode:autocomplete.statusBar.tooltip.model": "모델:",
@@ -42,4 +40,9 @@ export const dict = {
     "Kilo Code Autocomplete가 GitHub Copilot과의 충돌로 인해 차단되고 있습니다. 이를 해결하려면 Copilot의 인라인 제안을 비활성화해야 합니다.",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "Copilot 비활성화",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "Autocomplete 비활성화",
+  "kilocode:autocomplete.creditsExhausted.message":
+    "계정에 남은 크레딧이 없어 Kilo Code Autocomplete가 일시 중지되었습니다. 자동완성을 재개하려면 크레딧을 추가하세요.",
+  "kilocode:autocomplete.creditsExhausted.addCredits": "크레딧 추가",
+  "kilocode:autocomplete.authError.message":
+    "인증 오류로 인해 Kilo Code Autocomplete가 일시 중지되었습니다. 다시 로그인해 주세요.",
 }

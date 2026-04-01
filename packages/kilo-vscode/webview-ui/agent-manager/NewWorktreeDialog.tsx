@@ -8,7 +8,9 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Popover } from "@kilocode/kilo-ui/popover"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useVSCode } from "../src/context/vscode"
+import { useServer } from "../src/context/server"
 import { useSession } from "../src/context/session"
 import { ModelSelectorBase } from "../src/components/shared/ModelSelector"
 import { ModeSwitcherBase } from "../src/components/shared/ModeSwitcher"
@@ -21,6 +23,7 @@ import {
 } from "./MultiModelSelector"
 import { useLanguage } from "../src/context/language"
 import { useImageAttachments } from "../src/hooks/useImageAttachments"
+import { convertToMentionPath } from "../src/utils/path-mentions"
 import { BranchSelect } from "./BranchSelect"
 
 type VersionCount = 1 | 2 | 3 | 4
@@ -55,6 +58,7 @@ function sanitizeBranchName(name: string): string {
 export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBranch?: string }> = (props) => {
   const { t } = useLanguage()
   const vscode = useVSCode()
+  const server = useServer()
   const session = useSession()
 
   const [tab, setTab] = createSignal<DialogTab>("new")
@@ -67,7 +71,8 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
 
   // --- New tab state ---
   const [name, setName] = createSignal("")
-  const [prompt, setPrompt] = createSignal("")
+  const cached = vscode.getState<Record<string, unknown>>()
+  const [prompt, setPrompt] = createSignal((cached?.advancedDialogPrompt as string) ?? "")
   const [versions, setVersions] = createSignal<VersionCount>(1)
   const [model, setModel] = createSignal<{ providerID: string; modelID: string } | null>(null)
   const [compareMode, setCompareMode] = createSignal(false)
@@ -82,17 +87,38 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   const [highlightedIndex, setHighlightedIndex] = createSignal(0)
 
   const imageAttach = useImageAttachments()
+  imageAttach.setFilePathDropHandler((paths) => {
+    const cwd = server.workspaceDirectory()
+    const resolved = paths.map((p) => convertToMentionPath(p, cwd))
+    const ref = textareaRef
+    if (!ref) return
+    const val = ref.value
+    const cursor = ref.selectionStart ?? val.length
+    const before = val.substring(0, cursor)
+    const after = val.substring(cursor)
+    const inserted = resolved.map((p) => `@${p}`).join(" ")
+    const result = before + inserted + " " + after
+    ref.value = result
+    setPrompt(result)
+    persistPrompt(result)
+    const pos = cursor + inserted.length + 1
+    ref.setSelectionRange(pos, pos)
+    ref.focus()
+    adjustHeight()
+  })
+
+  const persistPrompt = (value: string) => {
+    const state = vscode.getState<Record<string, unknown>>() ?? {}
+    vscode.setState({ ...state, advancedDialogPrompt: value || undefined })
+  }
 
   let textareaRef: HTMLTextAreaElement | undefined
 
   onMount(() => {
-    requestAnimationFrame(() => {
-      if (!textareaRef) return
-      textareaRef.focus()
-      textareaRef.select()
-    })
     setBranchesLoading(true)
     vscode.postMessage({ type: "agentManager.requestBranches" })
+    // Resize textarea if restoring a cached prompt
+    if (prompt()) adjustHeight()
   })
 
   const effectiveBaseBranch = () => baseBranch() ?? defaultBranch()
@@ -140,6 +166,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
       files: imgFiles,
     })
 
+    persistPrompt("")
     props.onClose()
   }
 
@@ -179,7 +206,8 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
       if (ev.success) {
         props.onClose()
       } else {
-        showToast({ variant: "error", title: t("agentManager.import.failed"), description: ev.message })
+        const description = ev.errorCode ? t(`agentManager.setup.error.${ev.errorCode}`) : ev.message
+        showToast({ variant: "error", title: t("agentManager.import.failed"), description })
       }
     }
   })
@@ -246,7 +274,14 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                   <For each={imageAttach.images()}>
                     {(img) => (
                       <div class="image-attachment">
-                        <img src={img.dataUrl} alt={img.filename} title={img.filename} />
+                        <img
+                          src={img.dataUrl}
+                          alt={img.filename}
+                          title={img.filename}
+                          onClick={() =>
+                            vscode.postMessage({ type: "previewImage", dataUrl: img.dataUrl, filename: img.filename })
+                          }
+                        />
                         <button
                           type="button"
                           class="image-attachment-remove"
@@ -264,6 +299,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                 <div class="prompt-input-ghost-wrapper am-prompt-input-ghost-wrapper">
                   <textarea
                     ref={textareaRef}
+                    autofocus
                     class="prompt-input am-prompt-input"
                     placeholder={t(
                       isMac
@@ -272,7 +308,9 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                     )}
                     value={prompt()}
                     onInput={(e) => {
-                      setPrompt(e.currentTarget.value)
+                      const val = e.currentTarget.value
+                      setPrompt(val)
+                      persistPrompt(val)
                       adjustHeight()
                     }}
                     onPaste={(e) => imageAttach.handlePaste(e)}
@@ -433,14 +471,16 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                         {count}
                       </button>
                     ))}
-                    <button
-                      class="am-nv-pill am-nv-pill-compare"
-                      onClick={() => setCompareMode(true)}
-                      type="button"
-                      title={t("agentManager.dialog.compareModels")}
+                    <Tooltip
+                      value={t("agentManager.dialog.compareModels.tooltip")}
+                      placement="top"
+                      contentClass="am-tooltip-wrap"
                     >
-                      <Icon name="layers" size="small" />
-                    </button>
+                      <button class="am-nv-pill am-nv-pill-compare" onClick={() => setCompareMode(true)} type="button">
+                        <Icon name="layers" size="small" />
+                        <span class="am-nv-pill-compare-label">{t("agentManager.dialog.compareModels")}</span>
+                      </button>
+                    </Tooltip>
                   </div>
                   <Show when={versions() > 1}>
                     <span class="am-nv-version-hint">
@@ -475,7 +515,8 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                 <Popover
                   open={compareOpen()}
                   onOpenChange={setCompareOpen}
-                  placement="bottom-start"
+                  placement="top-start"
+                  flip={false}
                   sameWidth
                   class="am-compare-popover"
                   trigger={
@@ -518,7 +559,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                   </>
                 }
               >
-                {t("agentManager.dialog.createWorkspace")}
+                {t("agentManager.dialog.createWorktree")}
               </Show>
             </Button>
           </div>

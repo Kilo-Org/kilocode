@@ -42,3 +42,7 @@ jobs:
       - name: Check for dead code (knip)
         working-directory: packages/kilo-vscode
         run: bun run knip
+
+      - name: Check for kilocode_change markers
+        working-directory: packages/kilo-vscode
+        run: bun run check-kilocode-change

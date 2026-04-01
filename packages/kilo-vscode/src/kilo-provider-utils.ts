@@ -21,18 +21,38 @@ export function getErrorMessage(error: unknown): string {
     const obj = error as Record<string, unknown>
     // Direct .message field
     if (typeof obj.message === "string") return obj.message
-    // Direct .error field
+    // Direct .error field (string)
     if (typeof obj.error === "string") return obj.error
+    // SDK throwOnError shape: { error: { message: "..." } } or { error: { ... } }
+    if (obj.error && typeof obj.error === "object") {
+      const nested = obj.error as Record<string, unknown>
+      if (typeof nested.message === "string") return nested.message
+    }
     // NotFoundError shape: { data: { message: "..." } }
     if (obj.data && typeof obj.data === "object") {
       const data = obj.data as Record<string, unknown>
       if (typeof data.message === "string") return data.message
+      // Hono validator shape: { data: ..., error: [...], success: false }
+      if (Array.isArray(data.error) && data.error.length > 0) {
+        const first = data.error[0]
+        if (typeof first === "string") return first
+        if (first && typeof first === "object" && typeof (first as Record<string, unknown>).message === "string") {
+          return (first as Record<string, unknown>).message as string
+        }
+      }
     }
     // BadRequestError shape: { errors: [{ message: "..." }] }
     if (Array.isArray(obj.errors) && obj.errors.length > 0) {
       const first = obj.errors[0]
       if (typeof first === "string") return first
       if (first && typeof first.message === "string") return first.message
+    }
+    // Last resort: try JSON.stringify for debuggability
+    try {
+      const json = JSON.stringify(error)
+      if (json !== "{}" && json.length < 500) return json
+    } catch (err) {
+      console.warn("[Kilo New] getErrorMessage: JSON.stringify failed", err)
     }
   }
   return String(error)
@@ -41,9 +61,15 @@ export function getErrorMessage(error: unknown): string {
 export function sessionToWebview(session: Session) {
   return {
     id: session.id,
+    parentID: session.parentID ?? null,
     title: session.title,
     createdAt: new Date(session.time.created).toISOString(),
     updatedAt: new Date(session.time.updated).toISOString(),
+    // Use null (not undefined) so the value survives postMessage JSON serialization.
+    // Without this, unrevert responses lose the revert key entirely and the
+    // SolidJS store merge never clears the existing revert state.
+    revert: session.revert ?? null,
+    summary: session.summary ?? null,
   }
 }
 
@@ -142,6 +168,32 @@ export function buildSettingPath(key: string): { section: string; leaf: string }
   return { section, leaf }
 }
 
+export function resolveWorkspaceDirectory(input: {
+  sessionID?: string
+  sessionDirectories: Map<string, string>
+  workspaceDirectory: string
+}) {
+  if (!input.sessionID) return input.workspaceDirectory
+
+  const dir = input.sessionDirectories.get(input.sessionID)
+  if (dir) return dir
+
+  return input.workspaceDirectory
+}
+
+export function resolveContextDirectory(input: {
+  currentSessionID?: string
+  contextSessionID?: string
+  sessionDirectories: Map<string, string>
+  workspaceDirectory: string
+}) {
+  return resolveWorkspaceDirectory({
+    sessionID: input.currentSessionID ?? input.contextSessionID,
+    sessionDirectories: input.sessionDirectories,
+    workspaceDirectory: input.workspaceDirectory,
+  })
+}
+
 export type WebviewMessage =
   | {
       type: "partUpdated"
@@ -162,6 +214,7 @@ export type WebviewMessage =
         sessionID: string
         toolName: string
         patterns: string[]
+        always: string[]
         args: Record<string, unknown>
         message: string
         tool?: { messageID: string; callID: string }
@@ -174,6 +227,8 @@ export type WebviewMessage =
   | { type: "permissionError"; permissionID: string }
   | { type: "sessionCreated"; session: ReturnType<typeof sessionToWebview> }
   | { type: "sessionUpdated"; session: ReturnType<typeof sessionToWebview> }
+  | { type: "messageRemoved"; sessionID: string; messageID: string }
+  | { type: "sessionError"; sessionID?: string; error?: unknown }
   | null
 
 export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | undefined): WebviewMessage {
@@ -209,6 +264,14 @@ export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | un
         },
       }
     }
+    case "message.removed": {
+      const props = event.properties as { sessionID: string; messageID: string }
+      return {
+        type: "messageRemoved",
+        sessionID: props.sessionID,
+        messageID: props.messageID,
+      }
+    }
     case "session.status": {
       const info = event.properties.status
       return {
@@ -226,6 +289,7 @@ export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | un
           sessionID: event.properties.sessionID,
           toolName: event.properties.permission,
           patterns: event.properties.patterns ?? [],
+          always: event.properties.always ?? [],
           args: event.properties.metadata,
           message: `Permission required: ${event.properties.permission}`,
           tool: event.properties.tool,
@@ -258,6 +322,13 @@ export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | un
         type: "questionResolved",
         requestID: event.properties.requestID,
       }
+    case "session.error": {
+      return {
+        type: "sessionError",
+        sessionID: event.properties.sessionID,
+        error: event.properties.error,
+      }
+    }
     case "session.created":
       return {
         type: "sessionCreated",

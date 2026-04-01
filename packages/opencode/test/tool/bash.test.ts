@@ -306,8 +306,10 @@ describe("tool.bash permissions", () => {
         await bash.execute({ command: "ls -la", description: "List" }, testCtx)
         const bashReq = requests.find((r) => r.permission === "bash")
         expect(bashReq).toBeDefined()
-        const pattern = bashReq!.always[0]
-        expect(pattern).toBe("ls *")
+        // kilocode_change start — hierarchy adds base wildcard + exact
+        expect(bashReq!.always).toContain("ls *")
+        expect(bashReq!.metadata.rules).toContain("ls -la")
+        // kilocode_change end
       },
     })
   })

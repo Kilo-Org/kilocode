@@ -67,8 +67,11 @@ export namespace SessionRetry {
       if (isKiloError(error)) return undefined
       // kilocode_change end
       if (!error.data.isRetryable) return undefined
-      if (error.data.responseBody?.includes("FreeUsageLimitError"))
-        return `Free usage exceeded, add credits https://opencode.ai/zen`
+      // kilocode_change start - FreeUsageLimitError is not retryable: retrying the same
+      // capped model is futile and the backoff loop cannot be broken by switching
+      // models in the chat selector (the retry loop holds a stale model ref).
+      if (error.data.responseBody?.includes("FreeUsageLimitError")) return undefined
+      // kilocode_change end
       return error.data.message.includes("Overloaded") ? "Provider is overloaded" : error.data.message
     }
 

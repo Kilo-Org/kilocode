@@ -66,6 +66,20 @@
       "problemMatcher": []
     },
     {
+      "label": "VSCode - Install",
+      "type": "shell",
+      "command": "bun",
+      "args": ["install", "--frozen-lockfile"],
+      "group": "build",
+      "presentation": {
+        "reveal": "silent"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "VSCode - Compile",
       "type": "shell",
       "command": "bun",
@@ -77,6 +91,7 @@
       "options": {
         "cwd": "${workspaceFolder}/packages/kilo-vscode"
       },
+      "dependsOn": ["VSCode - Install"],
       "problemMatcher": ["$tsc", "$eslint-stylish"]
     },
     {
@@ -101,9 +116,27 @@
       "problemMatcher": []
     },
     {
-      "label": "install-dev-extension",
+      "label": "VSCode - DevSnapshot - Build",
       "type": "shell",
-      "command": "bun script/install-dev-extension.ts",
+      "command": "bun run snapshot:build",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/packages/kilo-vscode"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "VSCode - DevSnapshot - Install",
+      "type": "shell",
+      "command": "bun run snapshot:install",
       "group": "build",
       "presentation": {
         "echo": true,

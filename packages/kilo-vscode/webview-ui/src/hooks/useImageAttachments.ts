@@ -1,5 +1,6 @@
 import { createSignal } from "solid-js"
 import { ACCEPTED_IMAGE_TYPES, isAcceptedImageType, isDragLeavingComponent } from "./image-attachments-utils"
+import { extractDropPaths } from "../utils/path-mentions"
 
 export interface ImageAttachment {
   id: string
@@ -8,9 +9,18 @@ export interface ImageAttachment {
   dataUrl: string
 }
 
+/** Callback for handling text/URI file path drops. */
+export type FilePathDropHandler = (paths: string[]) => void
+
 export function useImageAttachments() {
   const [images, setImages] = createSignal<ImageAttachment[]>([])
   const [dragging, setDragging] = createSignal(false)
+  let onFilePaths: FilePathDropHandler | undefined
+
+  /** Register a handler for file path drops (text/URI-list). */
+  const setFilePathDropHandler = (handler: FilePathDropHandler) => {
+    onFilePaths = handler
+  }
 
   const add = (file: File) => {
     if (!isAcceptedImageType(file.type)) return
@@ -33,6 +43,8 @@ export function useImageAttachments() {
 
   const clear = () => setImages([])
 
+  const replace = (next: ImageAttachment[]) => setImages(next)
+
   const handlePaste = (event: ClipboardEvent) => {
     const items = Array.from(event.clipboardData?.items ?? [])
     const imageItems = items.filter((item) => item.kind === "file" && ACCEPTED_IMAGE_TYPES.includes(item.type))
@@ -45,8 +57,12 @@ export function useImageAttachments() {
   }
 
   const handleDragOver = (event: DragEvent) => {
-    const hasFiles = event.dataTransfer?.types.includes("Files")
-    if (!hasFiles) return
+    const types = event.dataTransfer?.types
+    if (!types) return
+    // Accept file drops and VS Code URI-list drops (explorer, editor tabs).
+    // Do NOT accept bare text/plain here — that would intercept normal text drags.
+    const acceptable = types.includes("Files") || types.includes("application/vnd.code.uri-list")
+    if (!acceptable) return
     event.preventDefault()
     setDragging(true)
   }
@@ -60,7 +76,18 @@ export function useImageAttachments() {
   const handleDrop = (event: DragEvent) => {
     setDragging(false)
     event.preventDefault()
-    const files = event.dataTransfer?.files
+    const dt = event.dataTransfer
+    if (!dt) return
+
+    // First: check for text/URI file path drops (VS Code explorer, editor tabs)
+    const paths = extractDropPaths(dt)
+    if (paths && paths.length > 0 && onFilePaths) {
+      onFilePaths(paths)
+      return
+    }
+
+    // Second: fall through to image file drops
+    const files = dt.files
     if (!files) return
     for (const file of Array.from(files)) add(file)
   }
@@ -71,9 +98,11 @@ export function useImageAttachments() {
     add,
     remove,
     clear,
+    replace,
     handlePaste,
     handleDragOver,
     handleDragLeave,
     handleDrop,
+    setFilePathDropHandler,
   }
 }

@@ -16,7 +16,6 @@ describe("ChatTextAreaAutocomplete", () => {
     it("should work with non-FIM models using chat-based completion", async () => {
       // Setup: Model without FIM support (like Mistral)
       const mockModel = new AutocompleteModel()
-      mockModel.loaded = true
 
       vi.spyOn(mockModel, "hasValidCredentials").mockReturnValue(true)
       vi.spyOn(mockModel, "supportsFim").mockReturnValue(false)

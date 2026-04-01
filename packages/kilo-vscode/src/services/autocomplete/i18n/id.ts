@@ -6,10 +6,8 @@ export const dict = {
   "kilocode:autocomplete.statusBar.warning": "$(warning) Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.basic": "Kilo Code Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.disabled": "Kilo Code Autocomplete (dinonaktifkan)",
-  "kilocode:autocomplete.statusBar.tooltip.noCredits":
-    "**Tidak ada kredit di akun kamu**\n\nAkun Kilo Code kamu tidak memiliki kredit. Untuk menggunakan autocomplete, silakan tambahkan kredit ke akun kamu.\n\n[Buka Pengaturan](command:kilo-code.settingsButtonClicked)",
   "kilocode:autocomplete.statusBar.tooltip.noUsableProvider":
-    "**Tidak ada model autocomplete yang dikonfigurasi**\n\nUntuk mengaktifkan autocomplete, tambahkan profil dengan salah satu penyedia yang didukung ini: {{providers}}.\n\n[Buka Pengaturan](command:kilo-code.settingsButtonClicked)",
+    "**Tidak ada model autocomplete yang dikonfigurasi**\n\nUntuk mengaktifkan autocomplete, tambahkan profil dengan salah satu penyedia yang didukung ini: {{providers}}.\n\n[Buka Pengaturan]({{command}})",
   "kilocode:autocomplete.statusBar.tooltip.sessionTotal": "Total biaya sesi:",
   "kilocode:autocomplete.statusBar.tooltip.provider": "Penyedia:",
   "kilocode:autocomplete.statusBar.tooltip.model": "Model:",
@@ -44,4 +42,9 @@ export const dict = {
     "Kilo Code Autocomplete diblokir oleh konflik dengan GitHub Copilot. Untuk memperbaiki ini, Anda harus menonaktifkan saran inline Copilot.",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "Nonaktifkan Copilot",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "Nonaktifkan Autocomplete",
+  "kilocode:autocomplete.creditsExhausted.message":
+    "Kilo Code Autocomplete telah dijeda karena akun Anda tidak memiliki sisa kredit. Tambahkan kredit untuk melanjutkan autocomplete.",
+  "kilocode:autocomplete.creditsExhausted.addCredits": "Tambah Kredit",
+  "kilocode:autocomplete.authError.message":
+    "Kilo Code Autocomplete telah dijeda karena kesalahan autentikasi. Silakan masuk kembali.",
 }

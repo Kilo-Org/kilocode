@@ -25,7 +25,7 @@ export namespace ConfigPaths {
       ...(!Flag.KILO_DISABLE_PROJECT_CONFIG
         ? await Array.fromAsync(
             Filesystem.up({
-              targets: [".kilo", ".opencode"], // kilocode_change
+              targets: [".kilocode", ".kilo", ".opencode"], // kilocode_change
               start: directory,
               stop: worktree,
             }),
@@ -33,7 +33,7 @@ export namespace ConfigPaths {
         : []),
       ...(await Array.fromAsync(
         Filesystem.up({
-          targets: [".kilo", ".opencode"], // kilocode_change
+          targets: [".kilocode", ".kilo", ".opencode"], // kilocode_change
           start: Global.Path.home,
           stop: Global.Path.home,
         }),
