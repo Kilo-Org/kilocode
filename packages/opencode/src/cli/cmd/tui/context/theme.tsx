@@ -180,7 +180,10 @@ export const DEFAULT_THEMES: Record<string, ThemeJson> = {
 
 // kilocode_change start
 function isValidTheme(t: unknown): t is ThemeJson {
-  return t != null && typeof t === "object" && "theme" in t && t.theme != null && typeof t.theme === "object"
+  if (t == null || typeof t !== "object" || !("theme" in t)) return false
+  const theme = (t as Record<string, unknown>).theme
+  if (theme == null || typeof theme !== "object") return false
+  return "background" in theme && "text" in theme && "primary" in theme
 }
 // kilocode_change end
 
