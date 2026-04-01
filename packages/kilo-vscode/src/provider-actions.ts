@@ -44,6 +44,9 @@ export function buildActionContext(
     getErrorMessage: errFn,
     workspaceDir: dir,
     disposeGlobal: async (reason: string) => {
+      // Wait for the server to finish disposing before refreshing providers.
+      // Shared State.dispose() now has a hard per-disposer timeout, so this
+      // wait is bounded without needing a client-side timeout here.
       await client.global.dispose().catch((error: unknown) => {
         console.warn(`[Kilo New] KiloProvider: global.dispose() after ${reason} failed:`, error)
       })
