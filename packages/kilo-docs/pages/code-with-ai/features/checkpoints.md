@@ -68,7 +68,7 @@ Access checkpoint settings in Kilo Code settings under the "Checkpoints" section
 {% tabs %}
 {% tab label="VSCode" %}
 
-The new extension uses **git-based snapshots** to track your workspace state. A dedicated bare Git repository is created outside your project directory to store snapshot data — your project's own `.git` history is never touched.
+The new extension uses **git-based snapshots** to track your workspace state. A dedicated Git repository (with a detached work tree pointing at your project) is created outside your project directory to store snapshot data — your project's own `.git` history is never touched.
 
 Snapshots are captured automatically at two points during each agent step:
 
@@ -257,7 +257,7 @@ When you click "Redo All" (unrevert):
 
 ### Storage and Cleanup
 
-Snapshot data is stored per-project and is automatically garbage-collected. A background process runs `git gc` periodically to prune snapshot objects older than 7 days that are no longer referenced by any session.
+Snapshot data is stored per-project and is periodically cleaned up. A background process runs `git gc --prune=7.days` every hour, which removes unreachable snapshot objects older than 7 days. Because snapshots are stored as raw tree hashes (not refs or commits), older snapshots may be pruned by garbage collection even if a session still references them.
 
 ### Worktree Isolation
 
