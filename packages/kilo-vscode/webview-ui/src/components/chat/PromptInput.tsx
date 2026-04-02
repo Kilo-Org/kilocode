@@ -223,9 +223,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   // Start a new task, carrying over the current prompt text (without auto-sending it)
   const onNewTaskRequest = () => {
-    const key = draftKey()
-    saveDraft(key, text().trim(), reviewComments(), imageAttach.images())
+    const draft = text().trim()
+    const comments = reviewComments()
+    const imgs = imageAttach.images()
     session.clearCurrentSession()
+    // After clearing, draftKey() points to the "new" bucket — save there
+    // so the session-switch effect restores the prompt in the new-task view.
+    saveDraft(draftKey(), draft, comments, imgs)
   }
   window.addEventListener("newTaskRequest", onNewTaskRequest)
   onCleanup(() => window.removeEventListener("newTaskRequest", onNewTaskRequest))
