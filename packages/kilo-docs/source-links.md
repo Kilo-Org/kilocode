@@ -21,7 +21,7 @@
   <!-- packages/kilo-vscode/webview-ui/src/components/profile/ProfileView.tsx -->
 - <https://app.kilo.ai/usage>
   <!-- packages/opencode/src/kilocode/components/dialog-kilo-profile.tsx -->
-- <https://blog.kilo.ai/we-completely-rebuilt-the-kilo-vs-code-extension>
+- <https://blog.kilo.ai/p/new-kilo-for-vs-code-is-live>
   <!-- packages/kilo-vscode/webview-ui/src/components/migration/MigrationWizard.tsx -->
 - <https://chatgpt.com/explore/plus>
   <!-- packages/opencode/src/provider/error.ts -->
