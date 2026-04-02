@@ -1713,6 +1713,7 @@
 .welcome-header {
   position: absolute;
   top: 12px;
+  left: 12px;
   right: 12px;
   z-index: 10;
   display: flex;
