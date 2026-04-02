@@ -34,7 +34,7 @@ You can also toggle this in Settings:
 3. Toggle the snapshot setting on or off
 
 {% callout type="info" %}
-Unlike the legacy extension which used a separate shadow Git repository, the new extension uses a dedicated bare Git repository stored outside your project. Your project's `.git` history is never modified by the snapshot system.
+Unlike the legacy extension which used a separate shadow Git repository, the new extension uses a dedicated snapshot Git repository stored outside your project. Your project's `.git` history is never modified by the snapshot system.
 {% /callout %}
 
 {% /tab %}
@@ -234,7 +234,7 @@ To restore a project to a previous checkpoint state:
 
 The snapshot system consists of:
 
-1. **Bare Git Repository**: A dedicated bare Git repository created outside your project at `~/.local/share/kilo/snapshot/<project-id>/`. This stores all snapshot tree objects without affecting your project's Git history.
+1. **Snapshot Git Repository**: A dedicated Git repository created outside your project at `~/.local/share/kilo/snapshot/<project-id>/<worktree-hash>/`. This stores all snapshot tree objects without affecting your project's Git history. Each worktree gets its own snapshot repository, identified by a hash of the worktree path.
 
 2. **Step-level Snapshots**: The agent runtime automatically runs `git write-tree` against your workspace before and after each agent step. The resulting tree hashes are stored alongside the conversation messages.
 
