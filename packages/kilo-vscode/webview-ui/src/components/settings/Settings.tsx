@@ -21,6 +21,7 @@ import ContextTab from "./ContextTab"
 import ExperimentalTab from "./ExperimentalTab"
 import LanguageTab from "./LanguageTab"
 import AboutKiloCodeTab from "./AboutKiloCodeTab"
+import CustomLlmTab from "./CustomLlmTab"
 import { useServer } from "../../context/server"
 
 export interface SettingsProps {
@@ -138,6 +139,10 @@ const Settings: Component<SettingsProps> = (props) => {
             <span class="label">{language.t("settings.context.title")}</span>
           </Tabs.Trigger>
 
+          <Tabs.Trigger value="customLlm">
+            <Icon name="models" />
+            <span class="label">Custom LLMs</span>
+          </Tabs.Trigger>
           <Tabs.Trigger value="experimental">
             <Icon name="settings-gear" />
             <span class="label">{language.t("settings.experimental.title")}</span>
@@ -193,6 +198,10 @@ const Settings: Component<SettingsProps> = (props) => {
           <ContextTab />
         </Tabs.Content>
 
+        <Tabs.Content value="customLlm">
+          <h3>Custom LLMs</h3>
+          <CustomLlmTab />
+        </Tabs.Content>
         <Tabs.Content value="experimental">
           <h3>{language.t("settings.experimental.title")}</h3>
           <ExperimentalTab />

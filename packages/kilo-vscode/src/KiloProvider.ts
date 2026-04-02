@@ -689,6 +689,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           )
           break
 
+        case "requestCustomLlmList":
+          this.fetchAndSendCustomLlmList().catch((e) =>
+            console.error("[Kilo New] fetchAndSendCustomLlmList failed:", e),
+          )
+          break
+        case "saveCustomLlm":
+          this.handleSaveCustomLlm(message).catch((e) => console.error("[Kilo New] handleSaveCustomLlm failed:", e))
+          break
+        case "deleteCustomLlm":
+          this.handleDeleteCustomLlm(message.id).catch((e) =>
+            console.error("[Kilo New] handleDeleteCustomLlm failed:", e),
+          )
+          break
+
         case "questionReply":
           this.noteFollowup(message.answers, message.sessionID)
           if (!(await handleQuestionReply(this.questionCtx, message.requestID, message.answers, message.sessionID))) {
@@ -1797,6 +1811,85 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       await this.fetchAndSendMcpStatus()
     }
   }
+
+  // ── Custom LLM admin ────────────────────────────────────
+  private cachedCustomLlmMessage: unknown = null
+
+  private async fetchAndSendCustomLlmList(): Promise<void> {
+    const config = this.connectionService.getServerConfig()
+    if (!config) {
+      if (this.cachedCustomLlmMessage) this.postMessage(this.cachedCustomLlmMessage)
+      return
+    }
+    try {
+      const res = await fetch(`${config.baseUrl}/kilocode/custom-llm`, {
+        headers: { Authorization: `Basic ${Buffer.from(`kilo:${config.password}`).toString("base64")}` },
+      })
+      const items = await res.json()
+      const message = { type: "customLlmListLoaded", items }
+      this.cachedCustomLlmMessage = message
+      this.postMessage(message)
+    } catch (err) {
+      console.error("[Kilo New] fetchAndSendCustomLlmList failed:", err)
+    }
+  }
+
+  private async handleSaveCustomLlm(msg: Record<string, unknown>): Promise<void> {
+    const config = this.connectionService.getServerConfig()
+    if (!config) {
+      this.postMessage({ type: "customLlmError", message: "Not connected" })
+      return
+    }
+    const id = typeof msg.id === "string" ? msg.id : undefined
+    const name = typeof msg.name === "string" ? msg.name : ""
+    const body = typeof msg.config === "string" ? msg.config : ""
+    const auth = `Basic ${Buffer.from(`kilo:${config.password}`).toString("base64")}`
+    try {
+      const url = id ? `${config.baseUrl}/kilocode/custom-llm/${id}` : `${config.baseUrl}/kilocode/custom-llm`
+      const method = id ? "PUT" : "POST"
+      const res = await fetch(url, {
+        method,
+        headers: { Authorization: auth, "Content-Type": "application/json" },
+        body: JSON.stringify({ name, config: body }),
+      })
+      if (!res.ok) {
+        const err = await res.text()
+        this.postMessage({ type: "customLlmError", message: err })
+        return
+      }
+      const item = await res.json()
+      this.postMessage({ type: "customLlmSaved", item, action: id ? "updated" : "created" })
+      await this.fetchAndSendCustomLlmList()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Save failed"
+      this.postMessage({ type: "customLlmError", message })
+    }
+  }
+
+  private async handleDeleteCustomLlm(id: string): Promise<void> {
+    const config = this.connectionService.getServerConfig()
+    if (!config) {
+      this.postMessage({ type: "customLlmError", message: "Not connected" })
+      return
+    }
+    try {
+      const res = await fetch(`${config.baseUrl}/kilocode/custom-llm/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Basic ${Buffer.from(`kilo:${config.password}`).toString("base64")}` },
+      })
+      if (!res.ok) {
+        const err = await res.text()
+        this.postMessage({ type: "customLlmError", message: err })
+        return
+      }
+      this.postMessage({ type: "customLlmDeleted", id })
+      await this.fetchAndSendCustomLlmList()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Delete failed"
+      this.postMessage({ type: "customLlmError", message })
+    }
+  }
+  // ─────────────────────────────────────────────────────────
 
   /**
    * Dispose the CLI backend instance so it re-reads config from disk.

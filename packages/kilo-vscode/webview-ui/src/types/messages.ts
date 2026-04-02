@@ -1351,6 +1351,40 @@ export type ExtensionMessage =
   | WorktreeStatsLoadedMessage
   | McpStatusLoadedMessage
   | ClearPendingPromptsMessage
+  | CustomLlmListLoadedMessage
+  | CustomLlmSavedMessage
+  | CustomLlmDeletedMessage
+  | CustomLlmErrorMessage
+
+// Custom LLM admin types
+export interface CustomLlmInfo {
+  id: string
+  name: string
+  config: string
+  time_created: number
+  time_updated: number
+}
+
+export interface CustomLlmListLoadedMessage {
+  type: "customLlmListLoaded"
+  items: CustomLlmInfo[]
+}
+
+export interface CustomLlmSavedMessage {
+  type: "customLlmSaved"
+  item: CustomLlmInfo
+  action: "created" | "updated"
+}
+
+export interface CustomLlmDeletedMessage {
+  type: "customLlmDeleted"
+  id: string
+}
+
+export interface CustomLlmErrorMessage {
+  type: "customLlmError"
+  message: string
+}
 
 // ============================================
 // Messages FROM webview TO extension
@@ -2175,6 +2209,26 @@ export type WebviewMessage =
   | ToggleFavoriteRequest
   | RequestFavoritesMessage
   | ContinueInWorktreeRequest
+  | RequestCustomLlmListMessage
+  | SaveCustomLlmMessage
+  | DeleteCustomLlmMessage
+
+// Custom LLM admin request messages
+export interface RequestCustomLlmListMessage {
+  type: "requestCustomLlmList"
+}
+
+export interface SaveCustomLlmMessage {
+  type: "saveCustomLlm"
+  id?: string
+  name: string
+  config: string
+}
+
+export interface DeleteCustomLlmMessage {
+  type: "deleteCustomLlm"
+  id: string
+}
 
 // ============================================
 // VS Code API type
