@@ -70,15 +70,17 @@ Access checkpoint settings in Kilo Code settings under the "Checkpoints" section
 
 The new extension uses **git-based snapshots** to track your workspace state. A dedicated Git repository (with a detached work tree pointing at your project) is created outside your project directory to store snapshot data — your project's own `.git` history is never touched.
 
-Snapshots are captured automatically at two points during each agent turn:
+Snapshots are captured automatically at the boundaries of each model call within an agent turn:
 
-1. **Before** the agent starts responding to your message (step start)
-2. **After** the agent finishes its entire response, including all tool calls (step finish)
+1. **Before** the model starts generating (step start)
+2. **After** the model finishes and its tool calls have been executed (step finish)
 
-A "step" corresponds to one full user message → agent response cycle. If the agent makes multiple file edits, runs commands, and writes more code all within a single response, that entire sequence is treated as one step. There are no intermediate checkpoints between individual tool calls within the same turn.
+A single user message can produce **multiple steps**. For example, if the agent edits a file, runs a command, sees the output, and then edits another file, each model call in that sequence gets its own snapshot pair. The system records which files changed in each step.
+
+However, while snapshots are taken at each step boundary, **the revert UI operates at the user message level**. You can only revert to the point just before a user message was sent — you cannot revert to an intermediate step within a single agent response.
 
 {% callout type="warning" %}
-Revert granularity is **per user message**, not per individual file edit. If the agent modifies 10 files across several tool calls in a single response, reverting will undo all 10 changes at once — you cannot selectively revert to a point midway through the agent's response.
+Revert granularity is **per user message**, not per individual step or file edit. If the agent makes changes across multiple steps within a single response, reverting will undo all of those changes at once.
 {% /callout %}
 
 {% callout type="info" %}
