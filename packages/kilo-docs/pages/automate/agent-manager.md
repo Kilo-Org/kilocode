@@ -71,7 +71,14 @@ Press `Cmd+D` (macOS) / `Ctrl+D` (Windows/Linux) to toggle the diff panel. It sh
 
 ## Terminals
 
-Each session has a dedicated integrated terminal. Press `Cmd+/` (macOS) / `Ctrl+/` (Windows/Linux) to focus the terminal for the active session.
+Each session has a dedicated integrated terminal rooted in the session's worktree directory. Press `Cmd+/` (macOS) / `Ctrl+/` (Windows/Linux) to focus the terminal for the active session.
+
+### Switching Between Terminal and Agent Manager
+
+A common workflow is letting the agent work, then switching to the terminal to run tests or inspect the worktree, then switching back to control the agent:
+
+1. **Agent Manager → Terminal:** Press `Cmd+/` (macOS) / `Ctrl+/` (Windows/Linux) to open and focus the terminal for the current session. The terminal runs inside the session's worktree, so commands like `npm test` or `git status` operate on the agent's isolated branch.
+2. **Terminal → Agent Manager:** Press `Cmd+Shift+M` (macOS) / `Ctrl+Shift+M` (Windows/Linux) to bring focus back to the Agent Manager panel and its prompt input. This works from anywhere in VS Code — the terminal, another editor tab, or the sidebar.
 
 ## Setup Scripts
 
@@ -83,21 +90,21 @@ Agent Manager state is persisted in `.kilo/agent-manager.json`. Sessions, worktr
 
 ## Keyboard Shortcuts (Agent Manager Panel)
 
-| Shortcut (macOS)         | Shortcut (Windows/Linux)  | Action                            |
-| ------------------------ | ------------------------- | --------------------------------- |
-| `Cmd+Shift+M`            | `Ctrl+Shift+M`            | Open Agent Manager                |
-| `Cmd+N`                  | `Ctrl+N`                  | New worktree                      |
-| `Cmd+Shift+N`            | `Ctrl+Shift+N`            | New worktree (advanced options)   |
-| `Cmd+Shift+O`            | `Ctrl+Shift+O`            | Import/open worktree              |
-| `Cmd+Shift+W`            | `Ctrl+Shift+W`            | Close current worktree            |
-| `Cmd+T`                  | `Ctrl+T`                  | New tab (session) in worktree     |
-| `Cmd+W`                  | `Ctrl+W`                  | Close current tab                 |
-| `Cmd+Alt+Up` / `Down`    | `Ctrl+Alt+Up` / `Down`    | Previous / next worktree          |
-| `Cmd+Alt+Left` / `Right` | `Ctrl+Alt+Left` / `Right` | Previous / next tab in worktree   |
-| `Cmd+/`                  | `Ctrl+/`                  | Show terminal for current session |
-| `Cmd+D`                  | `Ctrl+D`                  | Toggle diff panel                 |
-| `Cmd+Shift+/`            | `Ctrl+Shift+/`            | Show keyboard shortcuts           |
-| `Cmd+1` … `Cmd+9`        | `Ctrl+1` … `Ctrl+9`       | Jump to worktree/session by index |
+| Shortcut (macOS)         | Shortcut (Windows/Linux)  | Action                                           |
+| ------------------------ | ------------------------- | ------------------------------------------------ |
+| `Cmd+Shift+M`            | `Ctrl+Shift+M`            | Open / focus Agent Manager (works from anywhere) |
+| `Cmd+N`                  | `Ctrl+N`                  | New worktree                                     |
+| `Cmd+Shift+N`            | `Ctrl+Shift+N`            | New worktree (advanced options)                  |
+| `Cmd+Shift+O`            | `Ctrl+Shift+O`            | Import/open worktree                             |
+| `Cmd+Shift+W`            | `Ctrl+Shift+W`            | Close current worktree                           |
+| `Cmd+T`                  | `Ctrl+T`                  | New tab (session) in worktree                    |
+| `Cmd+W`                  | `Ctrl+W`                  | Close current tab                                |
+| `Cmd+Alt+Up` / `Down`    | `Ctrl+Alt+Up` / `Down`    | Previous / next worktree                         |
+| `Cmd+Alt+Left` / `Right` | `Ctrl+Alt+Left` / `Right` | Previous / next tab in worktree                  |
+| `Cmd+/`                  | `Ctrl+/`                  | Focus terminal for current session               |
+| `Cmd+D`                  | `Ctrl+D`                  | Toggle diff panel                                |
+| `Cmd+Shift+/`            | `Ctrl+Shift+/`            | Show keyboard shortcuts                          |
+| `Cmd+1` … `Cmd+9`        | `Ctrl+1` … `Ctrl+9`       | Jump to worktree/session by index                |
 
 ## Troubleshooting
 
