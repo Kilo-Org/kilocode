@@ -1164,6 +1164,10 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "Arquivos de instruções adicionais",
   "settings.agentBehaviour.instructionFiles.description":
     "Caminhos para arquivos de instruções adicionais no prompt do sistema",
+  "settings.agentBehaviour.claudeCompat.heading": "Compatibilidade com Claude Code",
+  "settings.agentBehaviour.claudeCompat.title": "Carregar Arquivos do Claude Code",
+  "settings.agentBehaviour.claudeCompat.description":
+    "Carrega as instruções e skills do CLAUDE.md a partir do seu diretório de configuração do Claude Code para as sessões. Ative esta opção se deseja que o Kilo utilize suas instruções e skills do Claude Code. Requer reinicialização.",
   "settings.agentBehaviour.mcpDetail.command": "Comando",
   "settings.agentBehaviour.mcpDetail.args": "Argumentos",
   "settings.agentBehaviour.mcpDetail.env": "Ambiente",
