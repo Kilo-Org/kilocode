@@ -164,6 +164,9 @@ export const dict = {
   "model.tag.free": "無料",
   "model.tag.latest": "最新",
   "model.group.recommended": "推奨",
+  "model.group.favorites": "お気に入り",
+  "model.favorite.add": "お気に入りに追加",
+  "model.favorite.remove": "お気に入りから削除",
 
   "model.provider.anthropic": "Anthropic",
   "model.provider.openai": "OpenAI",

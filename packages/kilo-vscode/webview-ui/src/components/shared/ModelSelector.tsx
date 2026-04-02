@@ -7,14 +7,17 @@
  * ModelSelector    — thin wrapper wired to session context for chat usage.
  */
 
-import { Component, createSignal, createMemo, createEffect, onCleanup, For, Show, createSelector } from "solid-js"
+import { createSignal, createMemo, createEffect, onCleanup, For, Show, createSelector, useContext } from "solid-js"
+import type { Component } from "solid-js"
 import { PopupSelector } from "./PopupSelector"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tag } from "@kilocode/kilo-ui/tag"
+import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
-import { useProvider, EnrichedModel } from "../../context/provider"
-import { useSession } from "../../context/session"
+import { useProvider } from "../../context/provider"
+import type { EnrichedModel } from "../../context/provider"
+import { useSession, SessionContext } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { ModelSelection } from "../../types/messages"
 import {
@@ -27,9 +30,42 @@ import {
 } from "./model-selector-utils"
 import { ModelPreview } from "./ModelPreview"
 
+// ---------------------------------------------------------------------------
+// Row / group key helpers — single source of truth for key formatting
+// ---------------------------------------------------------------------------
+
+const CLEAR_KEY = "clear"
+const FAVORITES_KEY = "favorites"
+const RECOMMENDED_KEY = "recommended"
+
+function modelKey(providerID: string, modelID: string) {
+  return `${providerID}/${modelID}`
+}
+
+function rowKey(kind: "model" | "favorite", providerID: string, modelID: string) {
+  return `${kind}:${providerID}/${modelID}`
+}
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+interface ModelRow {
+  key: string
+  kind: "clear" | "favorite" | "model"
+  model?: EnrichedModel
+}
+
 interface ModelGroup {
-  providerName: string
-  models: EnrichedModel[]
+  key: string
+  label: string
+  rows: ModelRow[]
+}
+
+interface ScrollAnchor {
+  key: string
+  top: number | undefined
+  scroll: number
 }
 
 // ---------------------------------------------------------------------------
@@ -54,16 +90,24 @@ export interface ModelSelectorBaseProps {
 export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   const { connected, models, findModel } = useProvider()
   const language = useLanguage()
+  // Session context is optional — ModelSelectorBase is also used in Settings
+  // where SessionProvider may not be mounted.
+  const session = useContext(SessionContext)
   const activeModel = () => findModel(props.value)
 
   const [open, setOpen] = createSignal(false)
   const [expanded, setExpanded] = createSignal(false)
   const [search, setSearch] = createSignal("")
   const [debouncedSearch, setDebouncedSearch] = createSignal("")
-  const [selectedIndex, setSelectedIndex] = createSignal(0)
-  const [preActiveIdx, setPreActiveIdx] = createSignal(-1)
-  const [previewIdx, setPreviewIdx] = createSignal(-1)
+  const [selectedKey, setSelectedKey] = createSignal(CLEAR_KEY)
+  const [preActiveKey, setPreActiveKey] = createSignal<string | null>(null)
+  const [previewKey, setPreviewKey] = createSignal<string | null>(null)
   const [previewHeight, setPreviewHeight] = createSignal(500)
+  // Snapshot of the active model key captured when the popover opens.
+  // Used to reorder favorites so the current model appears first — but only
+  // based on the state at open-time, not reactively, to avoid list jumps
+  // when the user picks a different model while the popover is still open.
+  const [openSnapshot, setOpenSnapshot] = createSignal<string | null>(null)
 
   let searchRef: HTMLInputElement | undefined
   let searchWrapperRef: HTMLDivElement | undefined
@@ -72,6 +116,9 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   let bodyRef: HTMLDivElement | undefined
   let previewTimer: ReturnType<typeof setTimeout> | undefined
   const [pointer, setPointer] = createSignal(true)
+  // Ref map: row key → DOM element. Populated by each row's ref callback,
+  // avoids DOM queries for scroll anchoring and scrollIntoView.
+  const refs = new Map<string, HTMLDivElement>()
 
   function onSplitterMouseDown(e: MouseEvent) {
     e.preventDefault()
@@ -127,84 +174,183 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     return visibleModels().filter((m) => m.name.toLowerCase().includes(q))
   })
 
-  // Grouped for rendering — recommended models float to the top as their own group
+  // Live set of favorited keys — drives star icon visual state (filled vs outline).
+  // Toggling never changes the list structure, so no items jump.
+  const favoriteKeys = createMemo(() => {
+    if (!session) return new Set<string>()
+    return new Set(session.favoriteModels().map((f) => modelKey(f.providerID, f.modelID)))
+  })
+
+  const favoriteModels = createMemo(() => {
+    if (!session || debouncedSearch()) return []
+    const map = new Map(visibleModels().map((m) => [modelKey(m.providerID, m.id), m]))
+    const list = session
+      .favoriteModels()
+      .map((f) => map.get(modelKey(f.providerID, f.modelID)))
+      .filter((m): m is EnrichedModel => !!m)
+    const snap = openSnapshot()
+    if (!snap) return list
+    const idx = list.findIndex((m) => modelKey(m.providerID, m.id) === snap)
+    if (idx <= 0) return list
+    const item = list[idx]
+    if (!item) return list
+    return [item, ...list.slice(0, idx), ...list.slice(idx + 1)]
+  })
+
   const groups = createMemo<ModelGroup[]>(() => {
     const recommended: EnrichedModel[] = []
-    const map = new Map<string, ModelGroup>()
+    const map = new Map<string, EnrichedModel[]>()
 
     for (const m of filtered()) {
       if (m.recommendedIndex !== undefined) {
         recommended.push(m)
-      } else {
-        const group = map.get(m.providerID) ?? { providerName: m.providerName, models: [] }
-        group.models.push(m)
-        map.set(m.providerID, group)
+        continue
       }
+      const list = map.get(m.providerID) ?? []
+      list.push(m)
+      map.set(m.providerID, list)
     }
 
     recommended.sort((a, b) => (a.recommendedIndex ?? Infinity) - (b.recommendedIndex ?? Infinity))
 
-    for (const group of map.values()) {
-      group.models.sort((a, b) => a.name.localeCompare(b.name))
+    const result: ModelGroup[] = []
+
+    const favorites = favoriteModels()
+
+    if (favorites.length > 0) {
+      result.push({
+        key: FAVORITES_KEY,
+        label: language.t("model.group.favorites"),
+        rows: favorites.map((m) => ({
+          key: rowKey("favorite", m.providerID, m.id),
+          kind: "favorite",
+          model: m,
+        })),
+      })
     }
 
-    const rest = [...map.entries()].sort(([a], [b]) => providerSortKey(a) - providerSortKey(b)).map(([, g]) => g)
+    if (recommended.length > 0) {
+      result.push({
+        key: RECOMMENDED_KEY,
+        label: language.t("model.group.recommended"),
+        rows: recommended.map((m) => ({
+          key: rowKey("model", m.providerID, m.id),
+          kind: "model",
+          model: m,
+        })),
+      })
+    }
 
-    return recommended.length > 0
-      ? [{ providerName: language.t("model.group.recommended"), models: recommended }, ...rest]
-      : rest
+    const rest: ModelGroup[] = [...map.entries()]
+      .sort(([a], [b]) => providerSortKey(a) - providerSortKey(b))
+      .map(([id, list]) => {
+        list.sort((a, b) => a.name.localeCompare(b.name))
+        return {
+          key: id,
+          label: list[0]?.providerName ?? id,
+          rows: list.map((m) => ({
+            key: rowKey("model", m.providerID, m.id),
+            kind: "model",
+            model: m,
+          })),
+        }
+      })
+
+    return [...result, ...rest]
   })
 
-  // Flat list for keyboard indexing (mirrors render order)
-  const flatFiltered = createMemo(() => groups().flatMap((g) => g.models))
-
-  // Offset for "clear" option at the top of the list
-  const clearOffset = () => (props.allowClear ? 1 : 0)
-
-  // Pre-computed index map — avoids O(n) indexOf on every hover event
-  const flatIndexMap = createMemo(() => {
-    const map = new Map<EnrichedModel, number>()
-    const offset = clearOffset()
-    flatFiltered().forEach((m, i) => map.set(m, i + offset))
-    return map
+  const rows = createMemo<ModelRow[]>(() => {
+    const list = groups().flatMap((g) => g.rows)
+    if (!props.allowClear) return list
+    return [{ key: CLEAR_KEY, kind: "clear" }, ...list]
   })
 
-  // Preview shows the debounced previewIdx — smooth keyboard nav, buffered render
-  const previewModel = createMemo(() => {
-    const idx = previewIdx()
-    return idx >= 0 ? (flatFiltered()[idx - clearOffset()] ?? null) : null
+  const rowMap = createMemo(() => new Map(rows().map((row) => [row.key, row] as const)))
+  const rowIndex = createMemo(() => new Map(rows().map((row, i) => [row.key, i] as const)))
+  const canonicalKey = (m: EnrichedModel) => rowKey("model", m.providerID, m.id)
+  const favoriteKey = (m: EnrichedModel) => rowKey("favorite", m.providerID, m.id)
+  const defaultKey = () => rows()[0]?.key ?? CLEAR_KEY
+  const activeKey = (m?: EnrichedModel | null) => {
+    if (!m) return props.allowClear ? CLEAR_KEY : defaultKey()
+    const key = modelKey(m.providerID, m.id)
+    if (!debouncedSearch() && favoriteKeys().has(key)) return favoriteKey(m)
+    return canonicalKey(m)
+  }
+  const [anchor, setAnchor] = createSignal<ScrollAnchor | null>(null)
+
+  const previewModel = createMemo(() => rowMap().get(previewKey() ?? "")?.model ?? null)
+
+  const isSelected = createSelector(selectedKey)
+  const isPreActive = createSelector(preActiveKey)
+
+  // When the row list changes (filter, favorite toggle, provider connect),
+  // preserve the current selection if it still exists; otherwise fall back
+  // to the first row.  This must NOT read activeModel() — doing so would
+  // cause a reactive loop where picking a model triggers a rows rebuild
+  // which resets selection.
+  createEffect(() => {
+    rows() // track
+    setSelectedKey((prev) => (rowMap().has(prev) ? prev : defaultKey()))
+    setPreActiveKey((prev) => (prev && rowMap().has(prev) ? prev : null))
+    setPreviewKey((prev) => (prev && rowMap().has(prev) ? prev : null))
   })
 
-  // createSelector gives fine-grained reactivity: only the two items that
-  // change (old selected → new selected) re-render, not the entire list.
-  const isSelected = createSelector(selectedIndex)
-  const isPreActive = createSelector(preActiveIdx)
+  createEffect(() => {
+    const saved = anchor()
+    rows()
+    if (!saved || !listRef) return
+    requestAnimationFrame(() => {
+      if (!listRef) {
+        setAnchor(null)
+        return
+      }
+      const el = refs.get(saved.key)
+      if (el && saved.top !== undefined) {
+        listRef.scrollTop += el.getBoundingClientRect().top - saved.top
+      } else {
+        listRef.scrollTop = saved.scroll
+      }
+      setAnchor(null)
+    })
+  })
 
-  // Reset selection when filter changes
+  // Reset selection when the search filter changes. Uses canonicalKey
+  // directly (not activeKey) to avoid a reactive dependency on favoriteKeys,
+  // which would cause star/unstar to reset selection mid-interaction.
+  // Falls back to defaultKey when the active model is filtered out.
   createEffect(() => {
     filtered() // track
-    setSelectedIndex(0)
-    setPreActiveIdx(-1)
-    setPreviewIdx(-1)
+    const active = activeModel()
+    const canon = active ? canonicalKey(active) : null
+    const next = canon && rowMap().has(canon) ? canon : props.allowClear ? CLEAR_KEY : defaultKey()
+    setSelectedKey(next)
+    setPreActiveKey(next)
+    setPreviewKey(next)
   })
 
-  // Focus search input, set selectedIndex to active model, and scroll it into view when popover opens
   createEffect(() => {
     if (open()) {
       const active = activeModel()
-      const activeIdx = active ? (flatIndexMap().get(active) ?? 0) : 0
-      setSelectedIndex(activeIdx)
-      setPreActiveIdx(activeIdx)
-      setPreviewIdx(activeIdx)
-      requestAnimationFrame(() => {
-        searchRef?.focus()
-        listRef?.querySelector(".model-selector-item.active")?.scrollIntoView({ block: "center" })
+      const snap = active ? modelKey(active.providerID, active.id) : null
+      setOpenSnapshot(snap)
+      // Defer key resolution to next microtask so favoriteModels/groups/rows
+      // recompute with the snapshot before we try to resolve the key.
+      queueMicrotask(() => {
+        const next = activeKey(activeModel())
+        setSelectedKey(next ?? CLEAR_KEY)
+        setPreActiveKey(next)
+        setPreviewKey(next)
+        requestAnimationFrame(() => {
+          searchRef?.focus()
+          scrollRow(next ?? CLEAR_KEY, "center")
+        })
       })
-    } else {
-      setSearch("")
-      setDebouncedSearch("")
-      clearTimeout(previewTimer)
+      return
     }
+    setOpenSnapshot(null)
+    setSearch("")
+    setDebouncedSearch("")
+    clearTimeout(previewTimer)
   })
 
   // Listen for slash command trigger
@@ -218,13 +364,71 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   }
 
   function pickClear() {
+    setSelectedKey(CLEAR_KEY)
+    setPreActiveKey(CLEAR_KEY)
+    setPreviewKey(CLEAR_KEY)
     props.onSelect("", "")
     setOpen(false)
   }
 
+  function setRow(key: string) {
+    setSelectedKey(key)
+    setPreActiveKey(key)
+  }
+
+  function schedulePreview(key: string | null) {
+    clearTimeout(previewTimer)
+    previewTimer = setTimeout(() => setPreviewKey(key), 200)
+  }
+
+  function scrollRow(key: string | null | undefined, block: ScrollLogicalPosition = "nearest") {
+    if (key) refs.get(key)?.scrollIntoView({ block })
+  }
+
+  function move(step: number) {
+    const list = rows()
+    if (list.length === 0) return
+    const idx = rowIndex().get(selectedKey()) ?? 0
+    const next = Math.max(0, Math.min(idx + step, list.length - 1))
+    const key = list[next]?.key ?? CLEAR_KEY
+    setRow(key)
+    schedulePreview(key)
+    scrollSelectedIntoView()
+  }
+
+  function selectRow(row: ModelRow) {
+    if (row.kind === "clear") {
+      pickClear()
+      return
+    }
+    if (!row.model) return
+    setRow(row.key)
+    setPreviewKey(row.key)
+    pick(row.model)
+  }
+
+  function toggleFavorite(model: EnrichedModel, row: ModelRow) {
+    if (!session) return
+    const canon = canonicalKey(model)
+    // When unfavoriting from the top duplicate, the favorite row will
+    // disappear — anchor to the canonical provider row instead so the
+    // scroll restore finds an element that still exists after rerender.
+    const key = row.kind === "favorite" ? canon : row.key
+    const el = refs.get(key)
+    setAnchor({
+      key,
+      top: el?.getBoundingClientRect().top,
+      scroll: listRef?.scrollTop ?? 0,
+    })
+    if (row.kind === "favorite") {
+      setRow(canon)
+      setPreviewKey(canon)
+    }
+    session.toggleFavorite(model.providerID, model.id)
+  }
+
   function handleKeyDown(e: KeyboardEvent) {
-    const items = flatFiltered()
-    const totalLen = items.length + clearOffset()
+    const list = rows()
 
     if (e.key === "Escape") {
       e.preventDefault()
@@ -232,46 +436,34 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
       return
     }
 
-    if (totalLen === 0) {
+    if (list.length === 0) {
       return
     }
 
     if (e.key === "ArrowDown") {
       e.preventDefault()
       setPointer(false)
-      const next = Math.min(selectedIndex() + 1, totalLen - 1)
-      setSelectedIndex(next)
-      setPreActiveIdx(next)
-      clearTimeout(previewTimer)
-      previewTimer = setTimeout(() => setPreviewIdx(next), 200)
-      scrollSelectedIntoView()
-    } else if (e.key === "ArrowUp") {
+      move(1)
+      return
+    }
+
+    if (e.key === "ArrowUp") {
       e.preventDefault()
       setPointer(false)
-      const next = Math.max(selectedIndex() - 1, 0)
-      setSelectedIndex(next)
-      setPreActiveIdx(next)
-      clearTimeout(previewTimer)
-      previewTimer = setTimeout(() => setPreviewIdx(next), 200)
-      scrollSelectedIntoView()
-    } else if (e.key === "Enter") {
+      move(-1)
+      return
+    }
+
+    if (e.key === "Enter") {
       e.preventDefault()
-      const idx = selectedIndex()
-      if (props.allowClear && idx === 0) {
-        pickClear()
-      } else {
-        const item = items[idx - clearOffset()]
-        if (item) {
-          pick(item)
-        }
-      }
+      const row = rowMap().get(selectedKey())
+      if (row) selectRow(row)
     }
   }
 
   function scrollSelectedIntoView() {
     requestAnimationFrame(() => {
-      const el = listRef?.querySelector(".model-selector-item.keyboard-focused")
-      el?.scrollIntoView({ block: "nearest" })
+      scrollRow(preActiveKey() ?? selectedKey(), "nearest")
     })
   }
 
@@ -359,14 +551,14 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                   onClick={() => {
                     setExpanded((v) => {
                       if (v) {
-                        setPreActiveIdx(-1)
-                        setPreviewIdx(-1)
+                        setPreActiveKey(null)
+                        setPreviewKey(null)
                       }
                       return !v
                     })
                     requestAnimationFrame(() => {
                       searchRef?.focus()
-                      listRef?.querySelector(".model-selector-item.active")?.scrollIntoView({ block: "nearest" })
+                      scrollRow(preActiveKey() ?? selectedKey(), "nearest")
                     })
                   }}
                 />
@@ -374,13 +566,13 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
             </div>
 
             <div class="model-selector-list" role="listbox" ref={listRef}>
-              <Show when={flatFiltered().length === 0 && !props.allowClear}>
+              <Show when={rows().length === 0 && !props.allowClear}>
                 <div class="model-selector-empty">{language.t("dialog.model.empty")}</div>
               </Show>
 
               <Show when={props.allowClear}>
                 <div
-                  class={`model-selector-item${isSelected(0) && !pointer() ? " keyboard-focused" : ""}${isSelected(0) ? " selected" : ""}${!props.value?.providerID ? " active" : ""}`}
+                  class={`model-selector-item${isSelected(CLEAR_KEY) && !pointer() ? " keyboard-focused" : ""}${isSelected(CLEAR_KEY) ? " selected" : ""}${!props.value?.providerID ? " active" : ""}`}
                   role="option"
                   aria-selected={!props.value?.providerID}
                   onClick={() => pickClear()}
@@ -388,7 +580,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                     setPointer(true)
                   }}
                   onMouseEnter={() => {
-                    if (pointer()) setSelectedIndex(0)
+                    if (pointer()) setSelectedKey(CLEAR_KEY)
                   }}
                 >
                   <span class="model-selector-item-name" style={{ "font-style": "italic", opacity: 0.7 }}>
@@ -400,33 +592,39 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
               <For each={groups()}>
                 {(group) => (
                   <>
-                    <div class="model-selector-group-label">{group.providerName}</div>
-                    <For each={group.models}>
-                      {(model) => {
-                        const idx = () => flatIndexMap().get(model) ?? 0
-                        const hovered = () => isSelected(idx())
-                        const preActive = () => isPreActive(idx())
+                    <div class="model-selector-group-label">{group.label}</div>
+                    <For each={group.rows}>
+                      {(row) => {
+                        if (!row.model) return null
+                        const model = row.model
+                        const hovered = () => isSelected(row.key)
+                        const preActive = () => isPreActive(row.key)
                         const showSelectBtn = () => expanded() && preActive() && !isActive(model)
+                        const starred = () => favoriteKeys().has(modelKey(model.providerID, model.id))
+                        const showProvider = () => row.kind === "favorite"
                         return (
                           <div
-                            class={`model-selector-item${(hovered() && !pointer()) || preActive() ? " keyboard-focused" : ""}${hovered() || preActive() ? " selected" : ""}${isActive(model) ? " active" : ""}`}
+                            ref={(el) => {
+                              refs.set(row.key, el)
+                              onCleanup(() => refs.delete(row.key))
+                            }}
+                            class={`model-selector-item${(hovered() && !pointer()) || preActive() ? " keyboard-focused" : ""}${hovered() || preActive() ? " selected" : ""}${isActive(model) && row.kind === "model" ? " active" : ""}`}
                             role="option"
-                            aria-selected={isActive(model)}
+                            aria-selected={isActive(model) && row.kind === "model"}
                             onClick={() => {
-                              setSelectedIndex(idx())
-                              setPreActiveIdx(idx())
-                              setPreviewIdx(idx())
-                              if (!expanded()) pick(model)
+                              setRow(row.key)
+                              setPreviewKey(row.key)
+                              if (!expanded()) selectRow(row)
                               searchRef?.focus()
                             }}
                             onDblClick={() => {
-                              if (expanded()) pick(model)
+                              if (expanded()) selectRow(row)
                             }}
                             onMouseMove={() => {
                               setPointer(true)
                             }}
                             onMouseEnter={() => {
-                              if (pointer()) setSelectedIndex(idx())
+                              if (pointer()) setSelectedKey(row.key)
                             }}
                           >
                             <div class="model-selector-item-left">
@@ -446,13 +644,32 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                               <Show when={isFree(model)}>
                                 <Tag data-variant="member">{language.t("model.tag.free")}</Tag>
                               </Show>
+                              <Show when={showProvider()}>
+                                <span class="model-selector-item-provider-tag">{model.providerName}</span>
+                              </Show>
                             </div>
+                            <Show when={session}>
+                              <button
+                                type="button"
+                                class={`model-selector-star${starred() ? " model-selector-star--active" : ""}`}
+                                aria-label={
+                                  starred() ? language.t("model.favorite.remove") : language.t("model.favorite.add")
+                                }
+                                aria-pressed={starred()}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  toggleFavorite(model, row)
+                                }}
+                              >
+                                <Icon name={starred() ? "star-filled" : "star"} size="small" />
+                              </button>
+                            </Show>
                             <Show when={expanded()}>
                               <button
                                 class={`model-selector-item-select-btn${showSelectBtn() ? "" : " model-selector-item-select-btn--hidden"}`}
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  pick(model)
+                                  selectRow(row)
                                 }}
                               >
                                 {language.t("dialog.model.select")}

@@ -165,6 +165,9 @@ export const dict = {
   "model.tag.free": "Gratis",
   "model.tag.latest": "Nyeste",
   "model.group.recommended": "Anbefalet",
+  "model.group.favorites": "Favoritter",
+  "model.favorite.add": "Føj til favoritter",
+  "model.favorite.remove": "Fjern fra favoritter",
 
   "model.provider.anthropic": "Anthropic",
   "model.provider.openai": "OpenAI",

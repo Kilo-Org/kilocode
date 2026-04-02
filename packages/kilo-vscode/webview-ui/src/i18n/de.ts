@@ -169,6 +169,9 @@ export const dict = {
   "model.tag.free": "Kostenlos",
   "model.tag.latest": "Neueste",
   "model.group.recommended": "Empfohlen",
+  "model.group.favorites": "Favoriten",
+  "model.favorite.add": "Zu Favoriten hinzufügen",
+  "model.favorite.remove": "Aus Favoriten entfernen",
 
   "model.provider.anthropic": "Anthropic",
   "model.provider.openai": "OpenAI",

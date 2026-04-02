@@ -125,23 +125,13 @@ export async function handleStartLegacyMigration(
         ctx.extensionContext as Parameters<typeof MigrationService.setMigrationStatus>[0],
         "completed",
       )
+      ctx.broadcastComplete()
       ctx.refreshSessions()
-    } else {
-      await MigrationService.setMigrationStatus(
-        ctx.extensionContext as Parameters<typeof MigrationService.setMigrationStatus>[0],
-        "failed",
-      )
     }
-    ctx.broadcastComplete()
 
     ctx.postMessage({ type: "legacyMigrationComplete", results })
   } catch (error) {
     console.error("[Kilo New] KiloProvider: ❌ Migration failed", error)
-    await MigrationService.setMigrationStatus(
-      ctx.extensionContext as Parameters<typeof MigrationService.setMigrationStatus>[0],
-      "failed",
-    )
-    ctx.broadcastComplete()
     ctx.postMessage({
       type: "legacyMigrationComplete",
       results: [

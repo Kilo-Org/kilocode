@@ -168,6 +168,9 @@ export const dict = {
   "model.tag.free": "무료",
   "model.tag.latest": "최신",
   "model.group.recommended": "추천",
+  "model.group.favorites": "즐겨찾기",
+  "model.favorite.add": "즐겨찾기에 추가",
+  "model.favorite.remove": "즐겨찾기에서 제거",
 
   "model.provider.anthropic": "Anthropic",
   "model.provider.openai": "OpenAI",

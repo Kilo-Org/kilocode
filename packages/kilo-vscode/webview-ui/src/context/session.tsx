@@ -57,6 +57,7 @@ interface SessionStore {
   agentSelections: Record<string, string> // sessionID -> agent name
   variantSelections: Record<string, string> // "providerID/modelID" -> variant name
   recentModels: ModelSelection[]
+  favoriteModels: ModelSelection[]
 }
 
 interface SessionContextValue {
@@ -152,6 +153,10 @@ interface SessionContextValue {
   variantList: () => string[]
   currentVariant: () => string | undefined
   selectVariant: (value: string) => void
+
+  // Model favorites
+  favoriteModels: Accessor<ModelSelection[]>
+  toggleFavorite: (providerID: string, modelID: string) => void
 
   // Revert/undo state for the current session
   revert: Accessor<SessionInfo["revert"]>
@@ -325,6 +330,7 @@ export const SessionProvider: ParentComponent = (props) => {
     agentSelections: {},
     variantSelections: {},
     recentModels: [],
+    favoriteModels: [],
   })
 
   // Per-session agent selection
@@ -585,6 +591,24 @@ export const SessionProvider: ParentComponent = (props) => {
   })
   vscode.postMessage({ type: "requestRecents" })
   onCleanup(unsubRecents)
+
+  // Load persisted favorite models from extension globalState
+  const unsubFavorites = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type !== "favoritesLoaded") return
+    setStore("favoriteModels", message.favorites)
+  })
+  vscode.postMessage({ type: "requestFavorites" })
+  onCleanup(unsubFavorites)
+
+  function toggleFavorite(providerID: string, modelID: string) {
+    const key = `${providerID}/${modelID}`
+    const idx = store.favoriteModels.findIndex((f) => `${f.providerID}/${f.modelID}` === key)
+    const updated =
+      idx >= 0 ? store.favoriteModels.filter((_, i) => i !== idx) : [...store.favoriteModels, { providerID, modelID }]
+    const action = idx >= 0 ? "remove" : "add"
+    setStore("favoriteModels", updated)
+    vscode.postMessage({ type: "toggleFavorite", action, providerID, modelID })
+  }
 
   // Handle messages from extension
   onMount(() => {
@@ -1778,6 +1802,8 @@ export const SessionProvider: ParentComponent = (props) => {
     allParts,
     allStatusMap,
     familyData,
+    favoriteModels: () => store.favoriteModels,
+    toggleFavorite,
     variantList,
     currentVariant,
     selectVariant,

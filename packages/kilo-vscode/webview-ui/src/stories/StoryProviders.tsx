@@ -179,6 +179,8 @@ export function mockSessionValue(overrides?: {
     worktreeStats: () => undefined,
     revertSession: noop,
     unrevertSession: noop,
+    favoriteModels: () => [],
+    toggleFavorite: noop,
     variantList: () => [],
     currentVariant: () => undefined,
     selectVariant: noop,

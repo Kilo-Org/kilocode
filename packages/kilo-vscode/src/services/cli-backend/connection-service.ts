@@ -13,6 +13,7 @@ type NotificationDismissListener = (notificationId: string) => void
 type LanguageChangeListener = (locale: string) => void
 type ProfileChangeListener = (data: unknown) => void
 type MigrationCompleteListener = () => void
+type FavoritesChangeListener = (favorites: Array<{ providerID: string; modelID: string }>) => void
 type ClearPendingPromptsListener = () => void
 type DirectoryProvider = () => string[]
 
@@ -40,6 +41,7 @@ export class KiloConnectionService {
   private readonly languageChangeListeners: Set<LanguageChangeListener> = new Set()
   private readonly profileChangeListeners: Set<ProfileChangeListener> = new Set()
   private readonly migrationCompleteListeners: Set<MigrationCompleteListener> = new Set()
+  private readonly favoritesChangeListeners: Set<FavoritesChangeListener> = new Set()
   private readonly clearPendingPromptsListeners: Set<ClearPendingPromptsListener> = new Set()
   private readonly directoryProviders: Set<DirectoryProvider> = new Set()
 
@@ -233,6 +235,25 @@ export class KiloConnectionService {
   }
 
   /**
+   * Subscribe to favorites change events broadcast from any KiloProvider. Returns unsubscribe function.
+   */
+  onFavoritesChanged(listener: FavoritesChangeListener): () => void {
+    this.favoritesChangeListeners.add(listener)
+    return () => {
+      this.favoritesChangeListeners.delete(listener)
+    }
+  }
+
+  /**
+   * Broadcast a favorites change event to all subscribed KiloProvider instances.
+   */
+  notifyFavoritesChanged(favorites: Array<{ providerID: string; modelID: string }>): void {
+    for (const listener of this.favoritesChangeListeners) {
+      listener(favorites)
+    }
+  }
+
+  /**
    * Subscribe to clear-pending-prompts broadcast. Returns unsubscribe function.
    * Fired after a config save drains all pending permissions/questions so each
    * webview can clear stale prompt UI.
@@ -336,6 +357,7 @@ export class KiloConnectionService {
     this.notificationDismissListeners.clear()
     this.profileChangeListeners.clear()
     this.migrationCompleteListeners.clear()
+    this.favoritesChangeListeners.clear()
     this.clearPendingPromptsListeners.clear()
     this.directoryProviders.clear()
     this.messageSessionIdsByMessageId.clear()

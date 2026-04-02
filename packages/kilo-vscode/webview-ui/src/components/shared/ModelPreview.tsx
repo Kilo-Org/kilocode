@@ -1,6 +1,9 @@
-import { Component, Show, For } from "solid-js"
+import { Component, Show, For, useContext } from "solid-js"
 import type { EnrichedModel } from "../../context/provider"
+import { SessionContext } from "../../context/session"
 import { Markdown } from "@kilocode/kilo-ui/markdown"
+import { Icon } from "@kilocode/kilo-ui/icon"
+import { useLanguage } from "../../context/language"
 import { sanitizeName } from "./model-selector-utils"
 import { fmtPrice } from "./model-preview-utils"
 
@@ -29,6 +32,8 @@ const MODALITY_LABELS: Record<string, string> = {
 
 export const ModelPreview: Component<Props> = (props) => {
   const m = () => props.model
+  const session = useContext(SessionContext)
+  const language = useLanguage()
 
   return (
     <div class="model-preview">
@@ -50,10 +55,31 @@ export const ModelPreview: Component<Props> = (props) => {
               <Show when={model().isFree}>
                 <span class="model-preview-badge model-preview-badge--free model-preview-badge--top-right">Free</span>
               </Show>
-              {/* Header — name + provider */}
+              {/* Header — name + provider + star */}
               <div class="model-preview-header">
                 <div class="model-preview-name-row">
                   <span class="model-preview-name">{sanitizeName(model().name)}</span>
+                  <Show when={session}>
+                    {(() => {
+                      const starred = () =>
+                        session!
+                          .favoriteModels()
+                          .some((f) => f.providerID === model().providerID && f.modelID === model().id)
+                      return (
+                        <button
+                          type="button"
+                          class={`model-selector-star model-selector-star--preview${starred() ? " model-selector-star--active" : ""}`}
+                          aria-label={
+                            starred() ? language.t("model.favorite.remove") : language.t("model.favorite.add")
+                          }
+                          aria-pressed={starred()}
+                          onClick={() => session!.toggleFavorite(model().providerID, model().id)}
+                        >
+                          <Icon name={starred() ? "star-filled" : "star"} size="small" />
+                        </button>
+                      )
+                    })()}
+                  </Show>
                 </div>
                 <span class="model-preview-provider">{model().providerName}</span>
               </div>

@@ -83,6 +83,12 @@ export function validateRecents(raw: unknown): Array<{ providerID: string; model
     .map((r) => ({ providerID: r.providerID, modelID: r.modelID }))
 }
 
+/** Validate and sanitize favorite model selections from untrusted sources. */
+export function validateFavorites(raw: unknown): Array<{ providerID: string; modelID: string }> {
+  if (!Array.isArray(raw)) return []
+  return raw.filter(isModelSelection).map((r) => ({ providerID: r.providerID, modelID: r.modelID }))
+}
+
 export function computeDefaultSelection(
   cachedConfig: { config?: { model?: string } } | null,
   vscodePID: string,
