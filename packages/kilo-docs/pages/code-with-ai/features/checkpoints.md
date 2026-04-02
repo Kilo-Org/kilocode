@@ -70,12 +70,16 @@ Access checkpoint settings in Kilo Code settings under the "Checkpoints" section
 
 The new extension uses **git-based snapshots** to track your workspace state. A dedicated Git repository (with a detached work tree pointing at your project) is created outside your project directory to store snapshot data — your project's own `.git` history is never touched.
 
-Snapshots are captured automatically at two points during each agent step:
+Snapshots are captured automatically at two points during each agent turn:
 
-1. **Before** the agent makes changes (step start)
-2. **After** the agent finishes making changes (step finish)
+1. **Before** the agent starts responding to your message (step start)
+2. **After** the agent finishes its entire response, including all tool calls (step finish)
 
-This means every round of edits the agent performs is bookmarked, and the exact set of files changed in each step is recorded. You don't need to do anything — snapshots happen in the background whenever the agent runs.
+A "step" corresponds to one full user message → agent response cycle. If the agent makes multiple file edits, runs commands, and writes more code all within a single response, that entire sequence is treated as one step. There are no intermediate checkpoints between individual tool calls within the same turn.
+
+{% callout type="warning" %}
+Revert granularity is **per user message**, not per individual file edit. If the agent modifies 10 files across several tool calls in a single response, reverting will undo all 10 changes at once — you cannot selectively revert to a point midway through the agent's response.
+{% /callout %}
 
 {% callout type="info" %}
 Snapshots respect your `.gitignore` rules. Files ignored by Git (such as `node_modules/`, `dist/`, or `.env`) are excluded from snapshots.
@@ -124,6 +128,8 @@ Click the diff summary on any agent turn to expand it and see which files were m
 Every user message in the chat that has a corresponding agent response shows a **Revert to here** button (a left-arrow icon) when you hover over it:
 
 {% image src="/docs/img/checkpoints/revert-to-here-button.png" alt="Revert to here button shown on hover over a user message" width="350" /%}
+
+The revert button appears on **user messages only** — these are the revert points in the conversation. You revert to the state your workspace was in just before a given user message was sent. There is no way to revert to a point partway through an agent response.
 
 Clicking **Revert to here** does two things:
 
