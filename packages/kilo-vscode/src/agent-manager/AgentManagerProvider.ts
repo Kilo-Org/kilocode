@@ -239,6 +239,10 @@ export class AgentManagerProvider implements Disposable {
       this.openWorktreeDirectory(m.worktreeId)
       return null
     }
+    if (m.type === "agentManager.copyToClipboard") {
+      this.host.copyToClipboard(m.text)
+      return null
+    }
     if (m.type === "previewImage") {
       return msg
     }

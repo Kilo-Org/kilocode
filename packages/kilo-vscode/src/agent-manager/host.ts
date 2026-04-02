@@ -101,6 +101,9 @@ export interface Host {
   /** Get the CLI server port (for webview CSP). */
   serverPort(): number | undefined
 
+  /** Copy text to the system clipboard. */
+  copyToClipboard(text: string): void
+
   /** Capture a telemetry event. */
   capture(event: string, properties?: Record<string, unknown>): void
 

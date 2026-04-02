@@ -262,6 +262,11 @@ interface OpenWorktreeIn {
   worktreeId: string
 }
 
+interface CopyToClipboardIn {
+  type: "agentManager.copyToClipboard"
+  text: string
+}
+
 interface ShowExistingLocalTerminalIn {
   type: "agentManager.showExistingLocalTerminal"
 }
@@ -435,6 +440,7 @@ export type AgentManagerInMessage =
   | ShowTerminalIn
   | ShowLocalTerminalIn
   | OpenWorktreeIn
+  | CopyToClipboardIn
   | ShowExistingLocalTerminalIn
   | RequestRepoInfoIn
   | CreateMultiVersionIn

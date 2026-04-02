@@ -2340,7 +2340,9 @@ const AgentManagerContent: Component = () => {
                                   onCommitRename={() => commitRename(wt.id)}
                                   onCancelRename={cancelRename}
                                   onRemoveStale={() => confirmRemoveStaleWorktree(wt.id)}
-                                  onCopyPath={() => navigator.clipboard.writeText(wt.path)}
+                                  onCopyPath={() =>
+                                    vscode.postMessage({ type: "agentManager.copyToClipboard", text: wt.path })
+                                  }
                                   onOpen={() =>
                                     vscode.postMessage({ type: "agentManager.openWorktree", worktreeId: wt.id })
                                   }

@@ -152,6 +152,10 @@ export class VscodeHost implements Host {
     return this.connectionService.getServerInfo()?.port
   }
 
+  copyToClipboard(text: string): void {
+    void vscode.env.clipboard.writeText(text)
+  }
+
   capture(event: string, properties?: Record<string, unknown>): void {
     TelemetryProxy.capture(event as TelemetryEventName, properties)
   }
