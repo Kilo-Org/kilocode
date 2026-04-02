@@ -990,6 +990,11 @@ export const dict = {
   "settings.aboutKiloCode.importSettings.success":
     "設定をインポートしました。上記の変更内容を確認してから、保存をクリックしてください。",
 
+  "settings.aboutKiloCode.telemetry.title": "テレメトリ",
+  "settings.aboutKiloCode.telemetry.description":
+    "テレメトリは VS Code の組み込みテレメトリ設定によって制御されます。無効にするには、設定 > テレメトリ > Telemetry Level に移動して「off」に設定してください。変更を適用するには、VS Code を再起動してください。",
+  "settings.aboutKiloCode.telemetry.openSettings": "テレメトリ設定を開く",
+
   "settings.agentBehaviour.subtab.modes": "モード",
   "settings.agentBehaviour.subtab.agents": "Agents",
   "settings.agentBehaviour.subtab.mcpServers": "MCPサーバー",

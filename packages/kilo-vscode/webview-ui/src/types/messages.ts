@@ -1494,6 +1494,11 @@ export interface OpenSettingsPanelRequest {
   tab?: string
 }
 
+export interface OpenVSCodeSettingsRequest {
+  type: "openVSCodeSettings"
+  query: string
+}
+
 export interface OpenMarketplacePanelRequest {
   type: "openMarketplacePanel"
 }
@@ -2047,6 +2052,7 @@ export type WebviewMessage =
   | RefreshProfileRequest
   | OpenExternalRequest
   | OpenSettingsPanelRequest
+  | OpenVSCodeSettingsRequest
   | OpenMarketplacePanelRequest
   | OpenFileRequest
   | CancelLoginRequest

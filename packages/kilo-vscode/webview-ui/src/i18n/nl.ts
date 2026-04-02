@@ -993,6 +993,11 @@ export const dict = {
   "settings.aboutKiloCode.importSettings.success":
     "Instellingen geïmporteerd. Controleer de bovenstaande wijzigingen en klik vervolgens op Opslaan.",
 
+  "settings.aboutKiloCode.telemetry.title": "Telemetrie",
+  "settings.aboutKiloCode.telemetry.description":
+    'Telemetrie wordt beheerd door de ingebouwde telemetrie-instelling van VS Code. Om dit uit te schakelen, gaat u naar Instellingen > Telemetrie > Telemetrieniveau en stelt u dit in op "off". Herstart VS Code om de wijziging toe te passen.',
+  "settings.aboutKiloCode.telemetry.openSettings": "Telemetrie-instellingen openen",
+
   "settings.agentBehaviour.subtab.modes": "Modi",
   "settings.agentBehaviour.subtab.agents": "Agents",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Servers",

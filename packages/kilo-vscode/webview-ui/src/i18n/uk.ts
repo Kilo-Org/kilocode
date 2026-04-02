@@ -994,6 +994,11 @@ export const dict = {
   "settings.aboutKiloCode.importSettings.success":
     "Налаштування імпортовано. Перегляньте зміни вище, потім натисніть Зберегти.",
 
+  "settings.aboutKiloCode.telemetry.title": "Телеметрія",
+  "settings.aboutKiloCode.telemetry.description":
+    'Телеметрія керується вбудованим налаштуванням телеметрії VS Code. Щоб вимкнути її, перейдіть до Налаштування > Телеметрія > Рівень телеметрії та встановіть значення "off". Перезапустіть VS Code, щоб застосувати зміну.',
+  "settings.aboutKiloCode.telemetry.openSettings": "Відкрити налаштування телеметрії",
+
   "settings.agentBehaviour.subtab.modes": "Режими",
   "settings.agentBehaviour.subtab.agents": "Агенти",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-сервери",

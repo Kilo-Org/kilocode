@@ -996,6 +996,11 @@ export const dict = {
   "settings.aboutKiloCode.importSettings.success":
     "Postavke su uvezene. Pregledajte promjene iznad, a zatim kliknite Sačuvaj.",
 
+  "settings.aboutKiloCode.telemetry.title": "Telemetrija",
+  "settings.aboutKiloCode.telemetry.description":
+    'Telemetrija je kontrolisana ugrađenom postavkom za telemetriju u VS Code-u. Da biste je onemogućili, idite na Postavke > Telemetrija > Nivo telemetrije i postavite na "off". Ponovo pokrenite VS Code da biste primijenili promjenu.',
+  "settings.aboutKiloCode.telemetry.openSettings": "Otvori postavke telemetrije",
+
   "settings.agentBehaviour.subtab.modes": "Modovi",
   "settings.agentBehaviour.subtab.agents": "Agents",
   "settings.agentBehaviour.subtab.mcpServers": "MCP serveri",

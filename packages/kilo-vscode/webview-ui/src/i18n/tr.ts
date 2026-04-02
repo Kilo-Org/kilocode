@@ -993,6 +993,11 @@ export const dict = {
   "settings.aboutKiloCode.importSettings.success":
     "Ayarlar içe aktarıldı. Yukarıdaki değişiklikleri gözden geçirin, ardından Kaydet'e tıklayın.",
 
+  "settings.aboutKiloCode.telemetry.title": "Telemetri",
+  "settings.aboutKiloCode.telemetry.description":
+    "Telemetri, VS Code'un yerleşik telemetri ayarı tarafından kontrol edilir. Devre dışı bırakmak için Ayarlar > Telemetri > Telemetri Düzeyi'ne gidin ve \"off\" olarak ayarlayın. Değişikliği uygulamak için VS Code'u yeniden başlatın.",
+  "settings.aboutKiloCode.telemetry.openSettings": "Telemetri Ayarlarını Aç",
+
   "settings.agentBehaviour.subtab.modes": "Modlar",
   "settings.agentBehaviour.subtab.agents": "Ajanlar",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Sunucuları",

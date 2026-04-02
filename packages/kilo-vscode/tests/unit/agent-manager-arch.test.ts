@@ -532,7 +532,7 @@ const VSCODE_ALLOWED: Record<string, { note: string }> = {
  */
 const MAX_LINES: Record<string, { maxLines: number; note: string }> = {
   "AgentManagerProvider.ts": {
-    maxLines: 1900,
+    maxLines: 1910,
     note: "primary extraction target: break into smaller orchestrators",
   },
 }

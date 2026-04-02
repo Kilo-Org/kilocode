@@ -973,6 +973,11 @@ export const dict = {
   "settings.aboutKiloCode.importSettings.newerVersion": "此文件由较新版本的 Kilo 导出。部分设置可能会被忽略。",
   "settings.aboutKiloCode.importSettings.success": "设置已导入。请查看上方的更改，然后点击保存。",
 
+  "settings.aboutKiloCode.telemetry.title": "遥测",
+  "settings.aboutKiloCode.telemetry.description":
+    '遥测由 VS Code 的内置遥测设置控制。若要将其禁用，请转到「设置」>「遥测」>「遥测级别」并将其设置为 "off"。重启 VS Code 以应用更改。',
+  "settings.aboutKiloCode.telemetry.openSettings": "打开遥测设置",
+
   "settings.agentBehaviour.subtab.modes": "模式",
   "settings.agentBehaviour.subtab.agents": "Agents",
   "settings.agentBehaviour.subtab.mcpServers": "MCP 服务器",

@@ -983,6 +983,11 @@ export const dict = {
     "ไฟล์นี้ถูกส่งออกจาก Kilo เวอร์ชันใหม่กว่า การตั้งค่าบางรายการอาจถูกข้ามไป",
   "settings.aboutKiloCode.importSettings.success": "นำเข้าการตั้งค่าแล้ว ตรวจสอบการเปลี่ยนแปลงด้านบน จากนั้นคลิกบันทึก",
 
+  "settings.aboutKiloCode.telemetry.title": "Telemetry",
+  "settings.aboutKiloCode.telemetry.description":
+    'Telemetry ถูกควบคุมโดยการตั้งค่า Telemetry ในตัวของ VS Code หากต้องการปิดใช้งาน ให้ไปที่ Settings > Telemetry > Telemetry Level แล้วตั้งค่าเป็น "off" รีสตาร์ท VS Code เพื่อให้การเปลี่ยนแปลงมีผล',
+  "settings.aboutKiloCode.telemetry.openSettings": "เปิดการตั้งค่า Telemetry",
+
   "settings.agentBehaviour.subtab.modes": "โหมด",
   "settings.agentBehaviour.subtab.agents": "Agents",
   "settings.agentBehaviour.subtab.mcpServers": "เซิร์ฟเวอร์ MCP",

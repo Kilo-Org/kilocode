@@ -988,6 +988,11 @@ export const dict = {
     "이 파일은 더 최신 버전의 Kilo에서 내보낸 것입니다. 일부 설정이 무시될 수 있습니다.",
   "settings.aboutKiloCode.importSettings.success": "설정을 가져왔습니다. 위의 변경 사항을 확인한 후 저장을 클릭하세요.",
 
+  "settings.aboutKiloCode.telemetry.title": "원격 측정",
+  "settings.aboutKiloCode.telemetry.description":
+    '원격 측정은 VS Code에 내장된 원격 측정 설정으로 제어됩니다. 비활성화하려면 설정 > 원격 측정 > 원격 측정 수준으로 이동하여 "off"로 설정하세요. 변경 사항을 적용하려면 VS Code를 다시 시작하세요.',
+  "settings.aboutKiloCode.telemetry.openSettings": "원격 측정 설정 열기",
+
   "settings.agentBehaviour.subtab.modes": "모드",
   "settings.agentBehaviour.subtab.agents": "Agents",
   "settings.agentBehaviour.subtab.mcpServers": "MCP 서버",

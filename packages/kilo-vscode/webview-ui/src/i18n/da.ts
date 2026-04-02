@@ -990,6 +990,11 @@ export const dict = {
   "settings.aboutKiloCode.importSettings.success":
     "Indstillinger importeret. Gennemgå ændringerne ovenfor, og klik derefter på Gem.",
 
+  "settings.aboutKiloCode.telemetry.title": "Telemetri",
+  "settings.aboutKiloCode.telemetry.description":
+    'Telemetri styres af VS Codes indbyggede telemetriindstilling. For at deaktivere den, gå til Indstillinger > Telemetry > Telemetry Level og sæt den til "off". Genstart VS Code for at anvende ændringen.',
+  "settings.aboutKiloCode.telemetry.openSettings": "Åbn telemetriindstillinger",
+
   "settings.agentBehaviour.subtab.modes": "Tilstande",
   "settings.agentBehaviour.subtab.agents": "Agents",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-servere",

@@ -988,6 +988,11 @@ export const dict = {
     "This file was exported from a newer version of Kilo. Some settings may be ignored.",
   "settings.aboutKiloCode.importSettings.success": "Settings imported. Review the changes above, then click Save.",
 
+  "settings.aboutKiloCode.telemetry.title": "Telemetry",
+  "settings.aboutKiloCode.telemetry.description":
+    'Telemetry is controlled by VS Code\'s built-in telemetry setting. To disable it, go to Settings > Telemetry > Telemetry Level and set it to "off". Restart VS Code to apply the change.',
+  "settings.aboutKiloCode.telemetry.openSettings": "Open Telemetry Settings",
+
   "settings.agentBehaviour.subtab.modes": "Modes",
   "settings.agentBehaviour.subtab.agents": "Agents",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Servers",
