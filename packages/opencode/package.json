@@ -126,6 +126,7 @@
     "opentui-spinner": "0.0.6",
     "partial-json": "0.1.7",
     "remeda": "catalog:",
+    "rotating-file-stream": "3.2.9",
     "simple-git": "3.31.1",
     "solid-js": "catalog:",
     "strip-ansi": "7.1.2",
