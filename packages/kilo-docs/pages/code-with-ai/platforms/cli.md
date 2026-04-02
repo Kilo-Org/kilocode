@@ -320,13 +320,17 @@ Project-level configuration takes precedence over global settings.
 
 Common configuration options include:
 
-- **`model`** - Default model to use
-- **`provider`** - Provider-specific settings (API keys, base URLs, custom models)
+- **`model`** - Default model in `provider_id/model_id` format (e.g., `"anthropic/claude-sonnet-4-20250514"`)
+- **`provider`** - Provider-specific settings (API keys, base URLs, [custom models](/docs/code-with-ai/agents/custom-models))
 - **`mcp`** - MCP server configuration
 - **`permission`** - Tool permission settings (`allow` or `ask`)
 - **`instructions`** - Paths to instruction files (e.g., `["CONTRIBUTING.md", ".cursor/rules/*.md"]`)
 - **`formatter`** - Code formatter configuration
 - **`disabled_providers`** / **`enabled_providers`** - Control which providers are available
+
+{% callout type="tip" %}
+**Using a model that's not in the built-in list?** You can register any model by adding it under `provider.<provider_id>.models` in your config file. See [Custom Models](/docs/code-with-ai/agents/custom-models) for full details and examples.
+{% /callout %}
 
 ### Environment Variables
 

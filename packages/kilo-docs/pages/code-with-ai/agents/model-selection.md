@@ -54,6 +54,8 @@ While the specifics change constantly, some principles stay consistent:
 
 **For local/private work**: Ollama and LM Studio let you run models locally. The tradeoff is usually speed and capability for privacy and zero API costs.
 
+**Using an unlisted model?** You can register any model — including fine-tunes, newly released models, or custom local models — by adding it to your config file. See [Custom Models](/docs/code-with-ai/agents/custom-models) for details.
+
 ## Context Windows Matter
 
 One thing that doesn't change: context window size matters for your workflow.

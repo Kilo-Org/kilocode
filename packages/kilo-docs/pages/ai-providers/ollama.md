@@ -116,6 +116,32 @@ Then set your default model:
 {% /tab %}
 {% /tabs %}
 
+## Using Custom or Unlisted Models
+
+If your Ollama model doesn't appear in the Kilo model picker, register it as a custom model in your config file:
+
+```jsonc
+{
+  "model": "ollama/my-finetune:latest",
+  "provider": {
+    "ollama": {
+      "models": {
+        "my-finetune:latest": {
+          "name": "My Fine-tuned Model",
+          "tool_call": true,
+          "limit": {
+            "context": 32768,
+            "output": 8192,
+          },
+        },
+      },
+    },
+  },
+}
+```
+
+See [Custom Models](/docs/code-with-ai/agents/custom-models) for the full list of configuration fields and more examples.
+
 ## Further Reading
 
 Refer to the [Ollama documentation](https://ollama.com/docs) for more information on installing, configuring and using Ollama.

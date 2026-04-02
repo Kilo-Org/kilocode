@@ -40,9 +40,25 @@ You'll find these settings in the Kilo Code settings panel (click the {% codicon
 {% /tab %}
 {% tab label="VSCode" %}
 
-Open **Settings** (gear icon) and go to the **Providers** tab to add an OpenAI Compatible provider. Enter your API key and the provider's base URL.
+1. Open **Settings** (gear icon) and go to the **Providers** tab.
+2. Scroll to the bottom and click **Custom provider**.
 
-The extension stores this in your `kilo.json` config file. You can also edit the config file directly — see the **CLI** tab for the file format.
+![Custom provider button](/docs/img/custom-models/custom-provider-button.png)
+
+3. Fill in the custom provider dialog:
+
+![Custom provider configuration dialog](/docs/img/custom-models/custom-provider-details.png)
+
+- **Provider ID** — A unique identifier (e.g., `my-provider`).
+- **Display name** — A human-readable name shown in the UI.
+- **Base URL** — The provider's OpenAI-compatible API endpoint (e.g., `https://api.your-provider.com/v1`). Kilo auto-fetches available models when a valid URL is entered.
+- **API key** — Your API key. Optional — leave empty if authentication is handled via headers.
+- **Models** — Add models manually or select from the auto-fetched list.
+- **Headers** (optional) — Custom HTTP headers as key-value pairs.
+
+4. Click **Submit** to save. The provider's models appear in the model picker.
+
+For additional model configuration (token limits, tool calling, variants), edit the `kilo.jsonc` config file directly — see the **CLI** tab or the [Custom Models](/docs/code-with-ai/agents/custom-models) guide.
 
 {% /tab %}
 {% tab label="CLI" %}
