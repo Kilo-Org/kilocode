@@ -156,5 +156,11 @@ export class VscodeHost implements Host {
     TelemetryProxy.capture(event as TelemetryEventName, properties)
   }
 
+  refreshGit(): void {
+    // Trigger VS Code's built-in git extension to re-scan repositories.
+    // This picks up worktrees whose gitdir refs were just rewritten by migration.
+    void vscode.commands.executeCommand("git.refresh")
+  }
+
   dispose(): void {}
 }

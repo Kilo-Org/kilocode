@@ -173,8 +173,16 @@ export class AgentManagerProvider implements Disposable {
       return
     }
 
-    await state.load()
+    const migration = await state.load()
     manager.cleanupOrphanedTempDirs()
+
+    // When the .kilocode → .kilo migration rewrote git worktree refs, nudge
+    // VS Code's git extension to re-discover them. Without this, worktrees
+    // won't appear in Source Control until the next VS Code restart.
+    if (migration.refsFixed > 0) {
+      this.log(`Migration fixed ${migration.refsFixed} git worktree ref(s), refreshing git`)
+      this.host.refreshGit()
+    }
 
     // Do not auto-remove stale worktrees on load.
     // Presence checks run in the shared poller and require explicit user cleanup.

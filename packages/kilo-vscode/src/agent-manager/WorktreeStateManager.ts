@@ -53,7 +53,7 @@ interface StateFile {
   defaultBaseBranch?: string
 }
 
-import { KILO_DIR, migrateAgentManagerData } from "./constants"
+import { KILO_DIR, migrateAgentManagerData, type MigrationResult } from "./constants"
 
 const STATE_FILE = "agent-manager.json"
 
@@ -302,11 +302,12 @@ export class WorktreeStateManager {
   // Persistence
   // ---------------------------------------------------------------------------
 
-  async load(): Promise<void> {
+  async load(): Promise<MigrationResult> {
     // Migrate Agent Manager data from .kilocode → .kilo before first read
+    let migration: MigrationResult = { refsFixed: 0 }
     if (!this.migrated) {
       this.migrated = true
-      await migrateAgentManagerData(this.root, this.log)
+      migration = await migrateAgentManagerData(this.root, this.log)
     }
     try {
       const content = await fs.promises.readFile(this.file, "utf-8")
@@ -346,6 +347,7 @@ export class WorktreeStateManager {
         this.log(`Failed to load state: ${error}`)
       }
     }
+    return migration
   }
 
   /** Remove worktrees whose directories no longer exist on disk. */
