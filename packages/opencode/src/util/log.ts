@@ -67,10 +67,18 @@ export namespace Log {
     )
     await fs.truncate(logpath).catch(() => {})
     // kilocode_change start - use rotating-file-stream to cap log files at 50 MB
+    const dir = path.dirname(logpath)
     const stream = createStream(path.basename(logpath), {
       size: "50M",
-      maxFiles: 1,
-      path: path.dirname(logpath),
+      maxFiles: 3,
+      history: path.join(dir, ".log-history"),
+      path: dir,
+    })
+    stream.on("error", (err: Error) => {
+      process.stderr.write("log stream error: " + err.message + "\n")
+    })
+    stream.on("warning", (err: Error) => {
+      process.stderr.write("log stream warning: " + err.message + "\n")
     })
     write = (msg: any) => {
       stream.write(msg)
