@@ -70,7 +70,7 @@ export namespace Log {
     const dir = path.dirname(logpath)
     const stream = createStream(path.basename(logpath), {
       size: "50M",
-      maxFiles: 1,
+      maxFiles: 10,
       history: path.join(dir, ".log-history"),
       path: dir,
     })
