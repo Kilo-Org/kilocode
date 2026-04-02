@@ -548,7 +548,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
           </div>
 
           <div class="migration-wizard__blog-link">
-            <a href="https://blog.kilo.ai/we-completely-rebuilt-the-kilo-vs-code-extension">
+            <a href="https://blog.kilo.ai/p/new-kilo-for-vs-code-is-live">
               {language.t("migration.whatsNew.blogLink")} <span>&rarr;</span>
             </a>
           </div>
