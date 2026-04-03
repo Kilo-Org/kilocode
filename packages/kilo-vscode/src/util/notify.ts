@@ -8,8 +8,9 @@ import { exec } from "./process"
 export async function sendOsNotification(title: string, body: string): Promise<void> {
   switch (os.platform()) {
     case "darwin": {
-      // osascript -e receives the string directly; escape double quotes for AppleScript double-quoted strings
-      const esc = (s: string) => s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
+      // osascript -e receives the string directly; escape backslashes, quotes, and control characters for AppleScript
+      const esc = (s: string) =>
+        s.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t")
       await exec("osascript", ["-e", `display notification "${esc(body)}" with title "${esc(title)}"`]).catch(() => {
         // osascript may not be available — fall back silently
       })

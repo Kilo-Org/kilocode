@@ -163,10 +163,11 @@ export async function playSound(soundId: SoundID): Promise<void> {
       break
     case "win32":
       try {
+        const safePath = filePath.replace(/'/g, "''")
         await exec("powershell", [
           "-NonInteractive",
           "-Command",
-          `$s = New-Object System.Media.SoundPlayer("${filePath.replace(/\\/g, "\\\\")}"); $s.PlaySync(); $s.Dispose()`,
+          `$path = '${safePath}'; $s = New-Object System.Media.SoundPlayer($path); $s.PlaySync(); $s.Dispose()`,
         ])
       } catch {
         // No audio
