@@ -172,6 +172,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   let highlightRef: HTMLDivElement | undefined
   let dropdownRef: HTMLDivElement | undefined
   let slashDropdownRef: HTMLDivElement | undefined
+  let fileRef: HTMLInputElement | undefined
   // Save/restore input text when switching sessions.
   // Uses `on()` to track only draftKey — avoids re-running on every keystroke.
   createEffect(
@@ -529,6 +530,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   const canEnhance = () => !isBusy() && !isDisabled() && !enhancing()
 
+  const pick = () => fileRef?.click()
+
   const handleEnhance = () => {
     if (isDisabled() || enhancing() || isBusy()) return
     const draft = text().trim()
@@ -839,6 +842,36 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           </Show>
         </div>
         <div class="prompt-input-hint-actions">
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/png,image/jpeg,image/gif,image/webp"
+            class="hidden"
+            onChange={(e) => {
+              const file = e.currentTarget.files?.[0]
+              if (file) imageAttach.add(file)
+              e.currentTarget.value = ""
+            }}
+          />
+          <Tooltip value={language.t("prompt.action.attachFile")} placement="top">
+            <Button
+              variant="ghost"
+              size="small"
+              onClick={pick}
+              disabled={isDisabled() || isBusy()}
+              aria-label={language.t("prompt.action.attachFile")}
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path
+                  d="M5.5 8.5l3.56-3.56a2 2 0 112.83 2.83L7.62 12.04a3.5 3.5 0 11-4.95-4.95l4.6-4.6"
+                  stroke="currentColor"
+                  stroke-width="1.4"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </Button>
+          </Tooltip>
           <Tooltip value={language.t("prompt.action.enhance")} placement="top">
             <Button
               variant="ghost"
