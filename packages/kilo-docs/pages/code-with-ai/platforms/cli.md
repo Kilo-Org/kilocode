@@ -1,6 +1,7 @@
 ---
 title: "Kilo CLI"
 description: "Using Kilo Code from the command line"
+platform: new
 ---
 
 {% callout type="warning" title="Version Notice" %}
@@ -167,7 +168,7 @@ Review your code locally before pushing — catch issues early without waiting f
 Configuration is managed through:
 
 - `/connect` command for provider setup (interactive)
-- Config files in **`~/.config/kilo/`**: the CLI (Kilo CLI 1.0 from [Kilo-Org/kilocode](https://github.com/Kilo-Org/kilocode)) merges `config.json`, `opencode.json`, and `opencode.jsonc`. Use **`opencode.json`** (or `opencode.jsonc`) for provider, model, permission, and **MCP** settings. Restart the CLI after editing. See [Using MCP in the CLI](/docs/automate/mcp/using-in-cli) for MCP config format.
+- Config files in **`~/.config/kilo/`**: use **`kilo.jsonc`** for provider, model, permission, and **MCP** settings. Restart the CLI after editing. See [Using MCP in Kilo Code](/docs/automate/mcp/using-in-kilo-code) for MCP config format.
 - `kilo auth` for credential management
 
 ## Slash Commands
@@ -175,7 +176,7 @@ Configuration is managed through:
 The CLI's interactive mode supports slash commands for common operations. The main commands are documented above in the [Interactive Slash Commands](#interactive-slash-commands) section.
 
 {% callout type="tip" %}
-**Confused about /newtask vs /smol in the IDE?** See the [Using Modes](/docs/code-with-ai/agents/using-modes#understanding-newtask-vs-smol) documentation for details.
+**Confused about /newtask vs /smol in the IDE?** See the [Using Agents](/docs/code-with-ai/agents/using-agents#understanding-newtask-vs-smol) documentation for details.
 {% /callout %}
 
 ## Permissions
@@ -319,13 +320,17 @@ Project-level configuration takes precedence over global settings.
 
 Common configuration options include:
 
-- **`model`** - Default model to use
-- **`provider`** - Provider-specific settings (API keys, base URLs, custom models)
+- **`model`** - Default model in `provider_id/model_id` format (e.g., `"anthropic/claude-sonnet-4-20250514"`)
+- **`provider`** - Provider-specific settings (API keys, base URLs, [custom models](/docs/code-with-ai/agents/custom-models))
 - **`mcp`** - MCP server configuration
 - **`permission`** - Tool permission settings (`allow` or `ask`)
 - **`instructions`** - Paths to instruction files (e.g., `["CONTRIBUTING.md", ".cursor/rules/*.md"]`)
 - **`formatter`** - Code formatter configuration
 - **`disabled_providers`** / **`enabled_providers`** - Control which providers are available
+
+{% callout type="tip" %}
+**Using a model that's not in the built-in list?** You can register any model by adding it under `provider.<provider_id>.models` in your config file. See [Custom Models](/docs/code-with-ai/agents/custom-models) for full details and examples.
+{% /callout %}
 
 ### Environment Variables
 
@@ -463,10 +468,20 @@ The CLI supports overriding config values with environment variables. The suppor
 - For `kilocode` provider: `KILOCODE_<FIELD_NAME>` (e.g., `KILOCODE_MODEL` → `kilocodeModel`)
 - For other providers: `KILO_<FIELD_NAME>` (e.g., `KILO_API_KEY` → `apiKey`)
 
-## Switching into an Organization from the CLI
+## Using the CLI in an Organization
 
-Use the `/teams` command to see a list of all organizations you can switch into.
+If you belong to a Kilo organization (Team or Enterprise), you can route CLI requests through that organization. The process differs slightly between interactive and non-interactive usage.
 
-Use `/teams` and select a team to switch teams.
+### Interactive Usage
 
-The process is the same when switching into a Team or Enterprise organization.
+In an interactive CLI session, use the `/teams` command to select an organization from your membership list.
+
+Your selection is persisted locally so it carries over to future sessions.
+
+### Non-Interactive Usage (`kilo run`)
+
+There is no `--org` or `--team` flag on `kilo run`. Instead, the organization is determined from the following sources, in order of priority (highest first):
+
+1. **`KILO_ORG_ID` environment variable** — Best for non-interactive and CI environments. 
+
+2. **`Persisted selection from the last `/teams` pick`** — If you've run an interactive session and selected an organization via `/teams`, that selection is stored in the CLI auth file and reused automatically.

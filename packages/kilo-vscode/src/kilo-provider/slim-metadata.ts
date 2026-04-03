@@ -1,54 +1,169 @@
 /**
- * Pure data-transform helpers that strip heavy edit-tool metadata from
+ * Pure data-transform helpers that strip heavy tool metadata from
  * message parts before sending them to the webview via postMessage.
+ *
+ * The webview communicates with the extension over VS Code's IPC bridge.
+ * Every message is JSON-serialised → deserialised on each side.  Tool parts
+ * from edit, apply_patch, multiedit and write often carry full file contents
+ * (before/after snapshots, patch text, written content).  Sending those on
+ * every session switch makes serialisation the dominant bottleneck.
+ *
+ * This module strips fields the webview never (or rarely) needs while keeping
+ * everything required to render collapsed tool-part headers and diagnostics.
  *
  * No vscode dependency — safe to unit-test in isolation.
  */
 
-/** Strip a filediff down to path + addition/deletion counts. */
-function slimMeta(meta: unknown): Record<string, unknown> | undefined {
-  if (!meta || typeof meta !== "object") return undefined
+// Max chars to keep for truncated output fields (bash metadata.output etc.)
+const OUTPUT_CAP = 4000
 
-  const obj = meta as Record<string, unknown>
-  const filediff = obj.filediff
-  if (!filediff || typeof filediff !== "object") return undefined
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
-  const diff = filediff as Record<string, unknown>
-  const file = typeof diff.file === "string" ? diff.file : undefined
-  const additions = typeof diff.additions === "number" ? diff.additions : 0
-  const deletions = typeof diff.deletions === "number" ? diff.deletions : 0
-
-  const result: Record<string, unknown> = {
-    filediff: {
-      ...(file ? { file } : {}),
-      additions,
-      deletions,
-    },
-  }
-  // Preserve diagnostics so post-edit LSP errors still render
-  if (obj.diagnostics) result.diagnostics = obj.diagnostics
-  return result
+function isObj(v: unknown): v is Record<string, unknown> {
+  return !!v && typeof v === "object" && !Array.isArray(v)
 }
 
-/** Strip heavy metadata from a single edit tool part; pass-through for all other part types. */
+/** Truncate a string value to cap, appending a marker when trimmed. */
+function cap(v: unknown, limit = OUTPUT_CAP): string | undefined {
+  if (typeof v !== "string") return undefined
+  if (v.length <= limit) return v
+  return v.slice(0, limit) + `\n… (truncated, ${v.length - limit} chars omitted)`
+}
+
+// ---------------------------------------------------------------------------
+// Per-tool slimmers
+// ---------------------------------------------------------------------------
+
+/** edit: strip filediff.before/after (webview falls back to input.oldString/newString). */
+function slimEdit(state: Record<string, unknown>): Record<string, unknown> {
+  const next = { ...state }
+  const meta = state.metadata
+  if (!isObj(meta)) {
+    delete next.metadata
+    return next
+  }
+
+  const result: Record<string, unknown> = {}
+  const fd = meta.filediff
+  if (isObj(fd)) {
+    result.filediff = {
+      ...(typeof fd.file === "string" ? { file: fd.file } : {}),
+      additions: typeof fd.additions === "number" ? fd.additions : 0,
+      deletions: typeof fd.deletions === "number" ? fd.deletions : 0,
+    }
+  }
+  if (meta.diagnostics) result.diagnostics = meta.diagnostics
+  next.metadata = result
+  return next
+}
+
+/** apply_patch: strip files[].before/after/diff + input.patchText. */
+function slimPatch(state: Record<string, unknown>): Record<string, unknown> {
+  const next = { ...state }
+  const meta = state.metadata
+  if (isObj(meta) && Array.isArray(meta.files)) {
+    next.metadata = {
+      ...meta,
+      files: (meta.files as Record<string, unknown>[]).map((f) => ({
+        filePath: f.filePath,
+        relativePath: f.relativePath,
+        type: f.type,
+        additions: f.additions,
+        deletions: f.deletions,
+        movePath: f.movePath,
+      })),
+    }
+    if (isObj(meta) && meta.diagnostics) {
+      ;(next.metadata as Record<string, unknown>).diagnostics = meta.diagnostics
+    }
+  }
+  // Strip the full patch text from input — only keep files count for title
+  const input = state.input
+  if (isObj(input) && typeof input.patchText === "string") {
+    next.input = { ...input, patchText: undefined }
+  }
+  return next
+}
+
+/** multiedit: strip nested results (each is a full edit metadata object). */
+function slimMultiedit(state: Record<string, unknown>): Record<string, unknown> {
+  const next = { ...state }
+  const meta = state.metadata
+  if (isObj(meta) && Array.isArray(meta.results)) {
+    next.metadata = {
+      ...meta,
+      results: (meta.results as Record<string, unknown>[]).map((r) => {
+        const slim: Record<string, unknown> = {}
+        if (r.diagnostics) slim.diagnostics = r.diagnostics
+        const fd = r.filediff
+        if (isObj(fd)) {
+          slim.filediff = {
+            ...(typeof fd.file === "string" ? { file: fd.file } : {}),
+            additions: typeof fd.additions === "number" ? fd.additions : 0,
+            deletions: typeof fd.deletions === "number" ? fd.deletions : 0,
+          }
+        }
+        return slim
+      }),
+    }
+  }
+  return next
+}
+
+/** write: strip input.content (entire file). Keep filePath + diagnostics. */
+function slimWrite(state: Record<string, unknown>): Record<string, unknown> {
+  const next = { ...state }
+  const input = state.input
+  if (isObj(input) && typeof input.content === "string") {
+    next.input = { ...input, content: undefined }
+  }
+  return next
+}
+
+/** bash: truncate metadata.output (up to 30KB) and state.output (up to 50KB). */
+function slimBash(state: Record<string, unknown>): Record<string, unknown> {
+  const next = { ...state }
+  const meta = state.metadata
+  if (isObj(meta) && typeof meta.output === "string" && meta.output.length > OUTPUT_CAP) {
+    next.metadata = { ...meta, output: cap(meta.output) }
+  }
+  if (typeof state.output === "string" && (state.output as string).length > OUTPUT_CAP) {
+    next.output = cap(state.output)
+  }
+  return next
+}
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
+const slimmers: Record<string, (state: Record<string, unknown>) => Record<string, unknown>> = {
+  edit: slimEdit,
+  apply_patch: slimPatch,
+  multiedit: slimMultiedit,
+  write: slimWrite,
+  bash: slimBash,
+}
+
+/** Strip heavy metadata from a single tool part; pass-through for non-tool parts. */
 export function slimPart<T>(part: T): T {
   if (!part || typeof part !== "object") return part
 
   const obj = part as Record<string, unknown>
-  if (obj.type !== "tool" || obj.tool !== "edit") return part
+  if (obj.type !== "tool") return part
+
+  const tool = obj.tool
+  if (typeof tool !== "string") return part
+
+  const fn = slimmers[tool]
+  if (!fn) return part
 
   const state = obj.state
-  if (!state || typeof state !== "object") return part
+  if (!isObj(state)) return part
 
-  const next = { ...(state as Record<string, unknown>) }
-  const meta = slimMeta(next.metadata)
-  if (meta) next.metadata = meta
-  else delete next.metadata
-
-  return {
-    ...obj,
-    state: next,
-  } as T
+  return { ...obj, state: fn(state) } as T
 }
 
 /** Slim every part in an array. */

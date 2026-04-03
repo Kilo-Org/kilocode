@@ -78,11 +78,11 @@ export const dict = {
   "command.session.undo.description": "Deshacer el último mensaje",
   "command.session.redo": "Rehacer",
   "command.session.redo.description": "Rehacer el último mensaje deshecho",
-  "revert.banner.count_one": "{{count}} message reverted",
-  "revert.banner.count_other": "{{count}} messages reverted",
-  "revert.banner.redo": "Redo",
-  "revert.banner.redo.all": "Redo All",
-  "revert.banner.hint": "Send a new message to make this permanent",
+  "revert.banner.count_one": "{{count}} mensaje revertido",
+  "revert.banner.count_other": "{{count}} mensajes revertidos",
+  "revert.banner.redo": "Rehacer",
+  "revert.banner.redo.all": "Rehacer todo",
+  "revert.banner.hint": "Envía un nuevo mensaje para hacerlo permanente",
   "revert.disabled.agentBusy": "Espera a que el agente termine",
   "command.session.compact": "Compactar sesión",
   "command.session.compact.description": "Resumir la sesión para reducir el tamaño del contexto",
@@ -165,6 +165,9 @@ export const dict = {
   "model.tag.free": "Gratis",
   "model.tag.latest": "Último",
   "model.group.recommended": "Recomendado",
+  "model.group.favorites": "Favoritos",
+  "model.favorite.add": "Añadir a favoritos",
+  "model.favorite.remove": "Eliminar de favoritos",
 
   "model.provider.anthropic": "Anthropic",
   "model.provider.openai": "OpenAI",
@@ -267,6 +270,7 @@ export const dict = {
   "mcp.status.connected": "conectado",
   "mcp.status.failed": "fallido",
   "mcp.status.needs_auth": "necesita auth",
+  "mcp.status.needs_registration": "necesita registro de cliente",
   "mcp.status.disabled": "deshabilitado",
 
   "dialog.fork.empty": "No hay mensajes desde donde bifurcar",
@@ -757,6 +761,21 @@ export const dict = {
   "provider.custom.models.name.placeholder": "Nombre para mostrar",
   "provider.custom.models.remove": "Eliminar modelo",
   "provider.custom.models.add": "Añadir modelo",
+  "provider.custom.models.fetch": "Obtener modelos",
+  "provider.custom.models.fetching": "Obteniendo\u2026",
+  "provider.custom.models.fetch.error": "Error al obtener modelos: {{error}}",
+  "provider.custom.models.fetch.authError":
+    "Autenticación fallida. Verifica la clave de API arriba e intenta de nuevo.",
+  "provider.custom.models.fetch.empty": "No se encontraron modelos en este servidor.",
+  "provider.custom.models.fetch.added": "Se añadieron {{count}} modelo(s).",
+  "provider.custom.models.fetch.allExist": "Todos los modelos obtenidos ya están añadidos.",
+  "provider.custom.models.fetch.selectAll": "Seleccionar todo",
+  "provider.custom.models.fetch.deselectAll": "Deseleccionar todo",
+  "provider.custom.models.fetch.found": "{{count}} modelos encontrados",
+  "provider.custom.models.fetch.showing": "Mostrando {{shown}} de {{total}}",
+  "provider.custom.models.fetch.search": "Buscar modelos\u2026",
+  "provider.custom.models.fetch.add": "Añadir {{count}} modelo(s)",
+  "provider.custom.edit.title": "Editar proveedor",
   "provider.custom.headers.label": "Headers (opcional)",
   "provider.custom.headers.key.label": "Header",
   "provider.custom.headers.key.placeholder": "Header-Name",
@@ -830,8 +849,11 @@ export const dict = {
   "session.delete.button": "Eliminar sesión",
   "session.untitled": "Sin título",
   "session.recent": "Recientes",
+  "session.showHistory": "Mostrar historial",
   "session.search.placeholder": "Buscar sesiones...",
   "session.empty": "Aún no hay sesiones. Haz clic en + para iniciar una nueva conversación.",
+  "session.tab.local": "Local",
+  "session.tab.cloud": "Nube",
   "session.cloud.repoOnly": "Solo este repositorio",
   "session.cloud.import": "Importar desde la nube",
   "feedback.button": "Comentarios y soporte",
@@ -913,8 +935,7 @@ export const dict = {
   "settings.autocomplete.title": "Autocompletado",
   "settings.notifications.title": "Notificaciones",
   "settings.context.title": "Contexto",
-  "settings.terminal.title": "Terminal",
-  "settings.prompts.title": "Prompts",
+
   "settings.experimental.title": "Experimental",
   "settings.language.title": "Idioma",
   "settings.aboutKiloCode.title": "Acerca de Kilo Code",
@@ -935,6 +956,7 @@ export const dict = {
   "prompt.placeholder.default": "Escribe un mensaje... (Enter para enviar, Shift+Enter para nueva línea)",
 
   "context.usage.sessionCost": "Coste de la sesión",
+  "context.stats.thisSession": "Esta sesión",
 
   "time.justNow": "justo ahora",
   "time.minutesAgo": "hace {{count}} min",
@@ -963,11 +985,30 @@ export const dict = {
   "settings.aboutKiloCode.support.prefix": "Para preguntas de facturación o cuenta, contacta al Soporte al Cliente en",
   "settings.aboutKiloCode.resetSettings.title": "Restablecer configuración",
   "settings.aboutKiloCode.resetSettings.description":
-    "Restablecer todas las configuraciones de la extensión Kilo Code a sus valores predeterminados. Esto no afecta la configuración del CLI o del backend.",
+    "Esto restablece únicamente las configuraciones específicas de la extensión VS Code a sus valores predeterminados. Las configuraciones compartidas con el CLI, como los modos y las reglas de aprobación automática, se almacenan en la configuración del CLI y no serán restablecidas.",
   "settings.aboutKiloCode.resetSettings.button": "Restablecer toda la configuración",
+  "settings.aboutKiloCode.settingsTransfer.title": "Transferencia de ajustes",
+  "settings.aboutKiloCode.settingsTransfer.description":
+    "Exporta o importa tus ajustes para transferirlos entre instancias de VS Code.",
+  "settings.aboutKiloCode.exportSettings": "Exportar",
+  "settings.aboutKiloCode.importSettings": "Importar",
+  "settings.aboutKiloCode.importSettings.invalidJson":
+    "Archivo JSON no válido. Seleccione un archivo de ajustes válido.",
+  "settings.aboutKiloCode.importSettings.invalidConfig": "El archivo no contiene ajustes válidos de Kilo.",
+  "settings.aboutKiloCode.importSettings.tooLarge":
+    "El archivo es demasiado grande. Los archivos de ajustes deben ser menores de 1 MB.",
+  "settings.aboutKiloCode.importSettings.newerVersion":
+    "Este archivo fue exportado desde una versión más reciente de Kilo. Algunos ajustes podrían ignorarse.",
+  "settings.aboutKiloCode.importSettings.success":
+    "Ajustes importados. Revise los cambios anteriores y luego haga clic en Guardar.",
+
+  "settings.aboutKiloCode.telemetry.title": "Telemetría",
+  "settings.aboutKiloCode.telemetry.description":
+    'La telemetría está controlada por la configuración de telemetría integrada de VS Code. Para desactivarla, ve a Configuración > Telemetría > Nivel de telemetría y establécelo en "off". Reinicia VS Code para aplicar el cambio.',
+  "settings.aboutKiloCode.telemetry.openSettings": "Abrir configuración de telemetría",
 
   "settings.agentBehaviour.subtab.modes": "Modos",
-  "settings.agentBehaviour.subtab.agents": "Agents",
+  "settings.agentBehaviour.subtab.agents": "Agentes",
   "settings.agentBehaviour.subtab.mcpServers": "Servidores MCP",
   "settings.agentBehaviour.subtab.rules": "Reglas",
   "settings.agentBehaviour.subtab.workflows": "Flujos de trabajo",
@@ -990,8 +1031,7 @@ export const dict = {
 
   "common.add": "Añadir",
   "common.choose": "Elegir…",
-  "settings.notImplemented": "Esta sección aún no está implementada.",
-  "settings.notImplemented.description": "Contendrá opciones de configuración y texto explicativo.",
+
   "settings.autocomplete.autoTrigger.title": "Habilitar completado en línea automático",
   "settings.autocomplete.autoTrigger.description": "Mostrar automáticamente sugerencias de completado al escribir",
   "settings.autocomplete.smartKeybinding.title": "Habilitar atajo inteligente de tarea en línea",
@@ -1050,11 +1090,53 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Parámetro de muestreo nucleus (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Pasos máximos",
   "settings.agentBehaviour.maxSteps.description": "Iteraciones máximas del agente",
+  "settings.agentBehaviour.hidden.title": "Oculto",
+  "settings.agentBehaviour.hidden.description": "Ocultar este agente del selector de modos en la entrada del chat",
+  "settings.agentBehaviour.disable.title": "Desactivado",
+  "settings.agentBehaviour.disable.description": "Desactivar completamente este agente — no aparecerá en ningún lugar",
+  "settings.agentBehaviour.badge.hidden": "oculto",
+  "settings.agentBehaviour.badge.disabled": "desactivado",
+  "settings.agentBehaviour.badge.deprecated": "Obsoleto",
   "settings.agentBehaviour.discoveredSkills": "Habilidades descubiertas",
   "settings.agentBehaviour.noSkillsFound":
     "No se encontraron habilidades. Agregue rutas de carpetas o URLs abajo para hacer disponibles las habilidades.",
   "settings.agentBehaviour.availableModes": "Modos personalizados disponibles",
   "settings.agentBehaviour.noModesFound": "No se encontraron modos.",
+  "settings.agentBehaviour.createMode": "Crear nuevo modo",
+  "settings.agentBehaviour.createMode.name": "Nombre",
+  "settings.agentBehaviour.createMode.name.placeholder": "ej. reviewer",
+  "settings.agentBehaviour.createMode.name.description":
+    "Identificador único del modo. Use solo letras minúsculas, números y guiones.",
+  "settings.agentBehaviour.createMode.description": "Descripción",
+  "settings.agentBehaviour.createMode.description.placeholder": "ej. Revisa código para calidad y mejores prácticas",
+  "settings.agentBehaviour.createMode.description.help": "Breve descripción de lo que hace este modo.",
+  "settings.agentBehaviour.createMode.prompt": "Prompt del sistema",
+  "settings.agentBehaviour.createMode.prompt.placeholder":
+    "ej. Eres un revisor de código. Enfócate en calidad, mejores prácticas y errores potenciales.",
+  "settings.agentBehaviour.createMode.prompt.help": "Instrucciones para el agente de IA al usar este modo.",
+  "settings.agentBehaviour.createMode.button": "Crear",
+  "settings.agentBehaviour.createMode.cancel": "Cancelar",
+  "settings.agentBehaviour.createMode.nameRequired": "El nombre es obligatorio",
+  "settings.agentBehaviour.createMode.nameInvalid":
+    "El nombre solo puede contener letras minúsculas, números y guiones",
+  "settings.agentBehaviour.createMode.nameTaken": "Ya existe un modo con este nombre",
+  "settings.agentBehaviour.importMode": "Importar",
+  "settings.agentBehaviour.importMode.invalidName":
+    "Nombre de modo no válido en el archivo. El nombre debe comenzar con una letra minúscula y contener solo letras minúsculas, números y guiones.",
+  "settings.agentBehaviour.importMode.nameTaken": "Ya existe un modo con este nombre.",
+  "settings.agentBehaviour.importMode.invalidJson":
+    "Archivo JSON no válido. Por favor, seleccione un archivo de definición de agente válido.",
+  "settings.agentBehaviour.importMode.tooLarge":
+    "El archivo es demasiado grande. Las definiciones de agente deben ser menores de 1 MB.",
+  "settings.agentBehaviour.exportMode": "Exportar definición del agente",
+  "settings.agentBehaviour.editMode": "Editar modo",
+  "settings.agentBehaviour.editMode.description": "Descripción",
+  "settings.agentBehaviour.editMode.prompt": "Prompt del sistema",
+  "settings.agentBehaviour.editMode.save": "Listo",
+  "settings.agentBehaviour.editMode.back": "Volver a la lista",
+  "settings.agentBehaviour.editMode.native":
+    "Este es un modo integrado. Su definición base no se puede cambiar, pero puedes configurar sobreescrituras a continuación.",
+  "settings.agentBehaviour.editMode.promptOverride": "Anulación de prompt personalizado para este modo integrado",
   "settings.agentBehaviour.removeMode.title": "Eliminar modo",
   "settings.agentBehaviour.removeMode.confirm":
     '¿Eliminar el modo "{{name}}"? Esto desactivará el modo actualizando su configuración.',
@@ -1063,20 +1145,45 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.confirm":
     '¿Eliminar el servidor MCP "{{name}}"? Esto lo eliminará de su configuración.',
   "settings.agentBehaviour.removeMcp.button": "Eliminar",
+  "settings.agentBehaviour.editMcp": "Editar servidor MCP",
+  "settings.agentBehaviour.editMcp.transportLocal": "Servidor local (transporte stdio)",
+  "settings.agentBehaviour.editMcp.transportRemote": "Servidor remoto (transporte SSE/HTTP)",
+  "settings.agentBehaviour.editMcp.env": "Variables de entorno",
+  "settings.agentBehaviour.editMcp.env.help": "Variables pasadas al proceso del servidor MCP.",
+  "settings.agentBehaviour.addMcp.command": "Comando",
+  "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
+  "settings.agentBehaviour.addMcp.args": "Argumentos",
+  "settings.agentBehaviour.addMcp.args.help": "Un argumento por línea. Las rutas con espacios se conservan tal cual.",
+  "settings.agentBehaviour.addMcp.args.placeholder": "e.g.\n-y\n@modelcontextprotocol/server-filesystem\n/tmp",
+  "settings.agentBehaviour.addMcp.url": "URL del servidor",
+  "settings.agentBehaviour.addMcp.url.placeholder": "e.g. http://localhost:3000/sse",
   "settings.agentBehaviour.skillPaths": "Rutas de carpetas de habilidades",
   "settings.agentBehaviour.skillUrls": "URLs de habilidades",
   "settings.agentBehaviour.removeSkill.title": "Eliminar habilidad",
   "settings.agentBehaviour.removeSkill.confirm":
     '¿Eliminar la habilidad "{{name}}"? Esto borrará los archivos de la habilidad del disco.',
   "settings.agentBehaviour.removeSkill.button": "Eliminar",
+  "settings.agentBehaviour.rules.description":
+    "Las reglas son archivos de instrucciones que guían el comportamiento del agente. Se incluyen en el prompt del sistema para cada conversación. Añada rutas de archivos a continuación para incluir reglas adicionales.",
   "settings.agentBehaviour.instructionFiles": "Archivos de instrucciones adicionales",
   "settings.agentBehaviour.instructionFiles.description":
     "Rutas a archivos de instrucciones adicionales incluidos en el prompt del sistema",
+  "settings.agentBehaviour.mcpDetail.command": "Comando",
+  "settings.agentBehaviour.mcpDetail.args": "Argumentos",
+  "settings.agentBehaviour.mcpDetail.env": "Entorno",
+  "settings.agentBehaviour.mcpDetail.disabled": "Este servidor está deshabilitado.",
+  "settings.agentBehaviour.mcpBrowseMarketplace": "Explorar Marketplace",
   "settings.agentBehaviour.mcpEmpty":
-    "No hay servidores MCP configurados. Edite el archivo de configuración de opencode para añadir servidores MCP.",
+    "No hay servidores MCP configurados. Añada servidores MCP en kilo.jsonc o pida al agente que los añada.",
   "settings.agentBehaviour.workflowsPlaceholder":
     "Los flujos de trabajo se gestionan mediante archivos de flujo de trabajo en su espacio de trabajo.",
-  "settings.agentBehaviour.notImplemented": "Aún no implementado.",
+  "settings.agentBehaviour.workflows.description":
+    "Los flujos de trabajo son comandos de barra personalizados definidos en su configuración. Escriba /command-name en el chat para invocarlos. Los comandos se configuran en opencode.json en la sección 'command'.",
+  "settings.agentBehaviour.workflows.empty":
+    "No hay comandos personalizados configurados. Añada comandos a opencode.json para verlos aquí.",
+  "settings.agentBehaviour.workflows.detail.description": "Descripción",
+  "settings.agentBehaviour.workflows.detail.template": "Plantilla",
+
   "settings.autoApprove.description":
     "Defina cómo se permite la ejecución de las herramientas. La mayoría de las herramientas tienen como valor predeterminado Permitir. doom_loop y external_directory tienen como valor predeterminado Preguntar.",
   "settings.autoApprove.level.allow": "Permitir",
@@ -1132,7 +1239,8 @@ export const dict = {
   "settings.providers.defaultModel.title": "Modelo predeterminado",
   "settings.providers.defaultModel.description": "Modelo principal para conversaciones",
   "settings.providers.smallModel.title": "Modelo pequeño",
-  "settings.providers.smallModel.description": "Modelo ligero para generación de títulos y tareas rápidas",
+  "settings.providers.smallModel.description":
+    "Modelo ligero para generación de títulos, mensajes de commit, mejora de prompts y otras tareas rápidas",
   "settings.providers.disabled": "Proveedores deshabilitados",
   "settings.providers.disabled.description": "Proveedores a ocultar de la lista de proveedores",
   "settings.providers.enabled": "Proveedores habilitados (lista blanca)",
@@ -1154,14 +1262,13 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Novedades en Kilo Code",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "Hemos reconstruido la extensión sobre una base más rápida y eficiente.",
   "migration.whatsNew.features.performance.title": "Rendimiento de agente más rápido",
   "migration.whatsNew.features.performance.detail":
     "Las llamadas a herramientas en paralelo y los subagentes permiten que tu agente aborde más a la vez — así pasas menos tiempo esperando y más tiempo entregando.",
   "migration.whatsNew.features.interface.title": "Interfaz optimizada",
   "migration.whatsNew.features.interface.detail": "Menos distracciones, más fácil y rápido de leer.",
-  "migration.whatsNew.features.agentManager.title": "Agent Manager",
+  "migration.whatsNew.features.agentManager.title": "Administrador de agentes",
   "migration.whatsNew.features.agentManager.detail":
     "Una interfaz unificada para ejecutar múltiples agentes en paralelo, cada uno en su propio worktree — supervisa el progreso, cambia de contexto y revisa cambios en un solo lugar.",
   "migration.whatsNew.features.foundation.title": "Base compartida",
@@ -1180,10 +1287,10 @@ export const dict = {
   "migration.migrate.chatHistoryDesc": "Incompatible con la nueva arquitectura",
   "migration.migrate.button": "Migrar configuración",
   "migration.migrate.skip": "Omitir",
-  "migration.migrate.back": "Atrás",
   "migration.migrate.keysDetected": "{{count}} claves detectadas",
   "migration.migrate.serversConfigured": "{{count}} servidor(es) configurado(s)",
   "migration.migrate.modesFound": "{{count}} modo(s) encontrado(s)",
+  "migration.migrate.sessionsDetected": "{{count}} sesiones detectadas",
   "migration.migrate.nothingToMigrate": "No se encontró nada para migrar en la configuración heredada.",
 
   // Migrate — item labels (reused from old select keys)
@@ -1201,6 +1308,10 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "Esto elimina la configuración antigua del almacenamiento de VS Code. No podrás volver a ejecutar esta migración.",
   "migration.complete.done": "Hecho",
+  "migration.error.sessionFailed": "La migración de la sesión falló",
+  "migration.error.continue": "Continuar",
+  "migration.error.action.copy": "Copiar",
+  "migration.error.toast.copied": "Error copiado al portapapeles",
   // legacy-migration end
 
   "error.details.show": "Detalles",
@@ -1214,8 +1325,7 @@ export const dict = {
   "settings.saveBar.warning.many": "Varias sesiones están en ejecución y se interrumpirán",
   "settings.saveBar.saveAnyway": "Guardar de todas formas",
   "settings.saveBar.cancel": "Cancelar",
-  "notifications.action.previous": "Previous",
-  "notifications.action.next": "Next",
-  "notifications.action.close": "Close",
-  "notifications.action.tryModel": "Try model",
+  "notifications.action.next": "Siguiente",
+  "notifications.action.close": "Cerrar",
+  "notifications.action.tryModel": "Probar {{model}}",
 }

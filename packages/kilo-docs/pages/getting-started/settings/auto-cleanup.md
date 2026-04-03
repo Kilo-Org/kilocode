@@ -1,3 +1,7 @@
+---
+platform: legacy
+---
+
 # Auto Cleanup
 
 Auto Cleanup automatically manages your task history by removing old tasks to free up disk space and improve performance. Tasks are intelligently classified and retained based on their type and age, ensuring important work is preserved while temporary or experimental tasks are cleaned up.

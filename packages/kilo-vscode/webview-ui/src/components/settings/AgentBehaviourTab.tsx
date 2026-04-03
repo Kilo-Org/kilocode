@@ -6,11 +6,19 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
+import { Switch } from "@kilocode/kilo-ui/switch"
 
 import { useConfig } from "../../context/config"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
-import type { AgentConfig, AgentInfo, SkillInfo } from "../../types/messages"
+import { useVSCode } from "../../context/vscode"
+import type { AgentInfo, SkillInfo } from "../../types/messages"
+import ModeEditView from "./ModeEditView"
+import ModeCreateView from "./ModeCreateView"
+import McpEditView from "./McpEditView"
+import WorkflowsTab from "./agent-behaviour/WorkflowsTab"
+import { parseImport, MAX_IMPORT_SIZE } from "./mode-io"
+import type { ImportError } from "./mode-io"
 
 type SubtabId = "agents" | "mcpServers" | "rules" | "workflows" | "skills"
 
@@ -34,31 +42,27 @@ interface SelectOption {
 
 import SettingsRow from "./SettingsRow"
 
-const Placeholder: Component<{ text: string }> = (props) => (
-  <Card>
-    <p
-      style={{
-        "font-size": "12px",
-        color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
-        margin: 0,
-        "line-height": "1.5",
-      }}
-    >
-      <strong>{useLanguage().t("settings.agentBehaviour.notImplemented")}</strong> {props.text}
-    </p>
-  </Card>
-)
+// View states for the agents subtab
+type AgentView = "list" | "create" | "edit"
 
 const AgentBehaviourTab: Component = () => {
   const language = useLanguage()
   const { config, updateConfig } = useConfig()
   const session = useSession()
   const dialog = useDialog()
+  const vscode = useVSCode()
   const [activeSubtab, setActiveSubtab] = createSignal<SubtabId>("agents")
-  const [selectedAgent, setSelectedAgent] = createSignal<string>("")
   const [newSkillPath, setNewSkillPath] = createSignal("")
   const [newSkillUrl, setNewSkillUrl] = createSignal("")
   const [newInstruction, setNewInstruction] = createSignal("")
+  const browse = () => vscode.postMessage({ type: "openMarketplacePanel" })
+
+  // Agent view state
+  const [agentView, setAgentView] = createSignal<AgentView>("list")
+  const [editingAgent, setEditingAgent] = createSignal<string>("")
+
+  // MCP view state
+  const [editingMcp, setEditingMcp] = createSignal<string>("")
 
   // Fetch skills whenever the skills subtab becomes active
   createEffect(() => {
@@ -70,8 +74,8 @@ const AgentBehaviourTab: Component = () => {
   const agentNames = createMemo(() => {
     const names = session.agents().map((a) => a.name)
     // Also include any agents from config that might not be in the agent list
-    const configAgents = Object.keys(config().agent ?? {})
-    for (const name of configAgents) {
+    const agents = Object.keys(config().agent ?? {})
+    for (const name of agents) {
       if (!names.includes(name)) {
         names.push(name)
       }
@@ -83,30 +87,6 @@ const AgentBehaviourTab: Component = () => {
     { value: "", label: language.t("common.default") },
     ...agentNames().map((name) => ({ value: name, label: name })),
   ])
-
-  const agentSelectorOptions = createMemo<SelectOption[]>(() => [
-    { value: "", label: language.t("settings.agentBehaviour.selectAgent") },
-    ...agentNames().map((name) => ({ value: name, label: name })),
-  ])
-
-  const currentAgentConfig = createMemo<AgentConfig>(() => {
-    const name = selectedAgent()
-    if (!name) {
-      return {}
-    }
-    return config().agent?.[name] ?? {}
-  })
-
-  const updateAgentConfig = (name: string, partial: Partial<AgentConfig>) => {
-    const existing = config().agent ?? {}
-    const current = existing[name] ?? {}
-    updateConfig({
-      agent: {
-        ...existing,
-        [name]: { ...current, ...partial },
-      },
-    })
-  }
 
   const instructions = () => config().instructions ?? []
 
@@ -214,7 +194,14 @@ const AgentBehaviourTab: Component = () => {
                 // Delay optimistic removal until after dialog close animation (100ms)
                 // to prevent the reactive list re-render from firing click handlers
                 // on shifted list items while the dialog overlay is still present.
-                setTimeout(() => session.removeMode(agent.name), 150)
+                setTimeout(() => {
+                  session.removeMode(agent.name)
+                  // If we were editing this mode, go back to list
+                  if (editingAgent() === agent.name) {
+                    setAgentView("list")
+                    setEditingAgent("")
+                  }
+                }, 150)
               }}
             >
               {language.t("settings.agentBehaviour.removeMode.button")}
@@ -225,205 +212,259 @@ const AgentBehaviourTab: Component = () => {
     ))
   }
 
-  const renderAgentsSubtab = () => (
-    <div>
-      {/* Default agent */}
-      <Card style={{ "margin-bottom": "12px" }}>
-        <SettingsRow
-          title={language.t("settings.agentBehaviour.defaultAgent.title")}
-          description={language.t("settings.agentBehaviour.defaultAgent.description")}
-          last
-        >
-          <Select
-            options={defaultAgentOptions()}
-            current={defaultAgentOptions().find((o) => o.value === (config().default_agent ?? ""))}
-            value={(o) => o.value}
-            label={(o) => o.label}
-            onSelect={(o) => {
-              if (!o) return
-              const next = o.value || undefined
-              if (next === (config().default_agent ?? undefined)) return
-              updateConfig({ default_agent: next })
-            }}
-            variant="secondary"
-            size="small"
-            triggerVariant="settings"
-          />
-        </SettingsRow>
-      </Card>
+  const startEdit = (name: string) => {
+    setEditingAgent(name)
+    setAgentView("edit")
+  }
 
-      {/* Available agents list */}
-      <hr
-        style={{
-          border: "none",
-          "border-top": "1px solid var(--border-weak-base)",
-          margin: "16px 0",
-        }}
-      />
-      <div data-slot="settings-row-label-title" style={{ "margin-bottom": "8px" }}>
-        {language.t("settings.agentBehaviour.availableAgents")}
-      </div>
-      <Card style={{ "margin-bottom": "12px" }}>
-        <For each={agentNames()}>
-          {(name, index) => {
-            const agent = () => session.agents().find((a) => a.name === name)
-            return (
-              <div
-                style={{
-                  display: "flex",
-                  "align-items": "center",
-                  "justify-content": "space-between",
-                  padding: "8px 4px",
-                  "border-bottom": index() < agentNames().length - 1 ? "1px solid var(--border-weak-base)" : "none",
-                  "border-radius": "4px",
-                }}
-              >
-                <div>
-                  <div style={{ "font-weight": "500", "font-size": "13px" }}>{name}</div>
-                  <Show when={agent()?.description}>
-                    <div
-                      style={{
-                        "font-size": "11px",
-                        color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
-                        "margin-top": "2px",
-                      }}
-                    >
-                      {agent()!.description}
-                    </div>
-                  </Show>
-                </div>
-              </div>
-            )
-          }}
-        </For>
-      </Card>
+  const back = () => {
+    setAgentView("list")
+    setEditingAgent("")
+  }
 
-      <Show when={selectedAgent()}>
-        <Card>
-          {/* Model override */}
+  const [importError, setImportError] = createSignal("")
+
+  const errorKey = (tag: ImportError) => `settings.agentBehaviour.importMode.${tag}` as const
+
+  const importMode = (file: File) => {
+    setImportError("")
+    if (file.size > MAX_IMPORT_SIZE) {
+      setImportError(language.t(errorKey("tooLarge")))
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = parseImport(reader.result as string, agentNames())
+      if (!result.ok) {
+        setImportError(language.t(errorKey(result.error)))
+        return
+      }
+      const existing = config().agent ?? {}
+      updateConfig({ agent: { ...existing, [result.name]: result.config } })
+      setImportError("")
+    }
+    reader.readAsText(file)
+  }
+
+  const triggerImport = () => {
+    const input = document.createElement("input")
+    input.type = "file"
+    input.accept = ".json"
+    input.onchange = () => {
+      const file = input.files?.[0]
+      if (file) importMode(file)
+    }
+    input.click()
+  }
+
+  const renderAgentsSubtab = () => {
+    const view = agentView()
+    if (view === "create") return <ModeCreateView taken={agentNames()} onBack={back} />
+    if (view === "edit") return <ModeEditView name={editingAgent()} onBack={back} onRemove={confirmRemoveMode} />
+
+    return (
+      <div>
+        {/* Default agent */}
+        <Card style={{ "margin-bottom": "12px" }}>
           <SettingsRow
-            title={language.t("settings.agentBehaviour.modelOverride.title")}
-            description={language.t("settings.agentBehaviour.modelOverride.description")}
-          >
-            <TextField
-              value={currentAgentConfig().model ?? ""}
-              placeholder="e.g. anthropic/claude-sonnet-4-20250514"
-              onChange={(val) =>
-                updateAgentConfig(selectedAgent(), {
-                  model: val.trim() || undefined,
-                })
-              }
-            />
-          </SettingsRow>
-
-          {/* System prompt */}
-          <SettingsRow
-            title={language.t("settings.agentBehaviour.prompt.title")}
-            description={language.t("settings.agentBehaviour.prompt.description")}
-          >
-            <TextField
-              value={currentAgentConfig().prompt ?? ""}
-              placeholder="Custom instructions…"
-              multiline
-              onChange={(val) =>
-                updateAgentConfig(selectedAgent(), {
-                  prompt: val.trim() || undefined,
-                })
-              }
-            />
-          </SettingsRow>
-
-          {/* Temperature */}
-          <SettingsRow
-            title={language.t("settings.agentBehaviour.temperature.title")}
-            description={language.t("settings.agentBehaviour.temperature.description")}
-          >
-            <TextField
-              value={currentAgentConfig().temperature?.toString() ?? ""}
-              placeholder={language.t("common.default")}
-              onChange={(val) => {
-                const parsed = parseFloat(val)
-                updateAgentConfig(selectedAgent(), { temperature: isNaN(parsed) ? undefined : parsed })
-              }}
-            />
-          </SettingsRow>
-
-          {/* Top-p */}
-          <SettingsRow
-            title={language.t("settings.agentBehaviour.topP.title")}
-            description={language.t("settings.agentBehaviour.topP.description")}
-          >
-            <TextField
-              value={currentAgentConfig().top_p?.toString() ?? ""}
-              placeholder={language.t("common.default")}
-              onChange={(val) => {
-                const parsed = parseFloat(val)
-                updateAgentConfig(selectedAgent(), { top_p: isNaN(parsed) ? undefined : parsed })
-              }}
-            />
-          </SettingsRow>
-
-          {/* Max steps */}
-          <SettingsRow
-            title={language.t("settings.agentBehaviour.maxSteps.title")}
-            description={language.t("settings.agentBehaviour.maxSteps.description")}
+            title={language.t("settings.agentBehaviour.defaultAgent.title")}
+            description={language.t("settings.agentBehaviour.defaultAgent.description")}
             last
           >
-            <TextField
-              value={currentAgentConfig().steps?.toString() ?? ""}
-              placeholder={language.t("common.default")}
-              onChange={(val) => {
-                const parsed = parseInt(val, 10)
-                updateAgentConfig(selectedAgent(), { steps: isNaN(parsed) ? undefined : parsed })
+            <Select
+              options={defaultAgentOptions()}
+              current={defaultAgentOptions().find((o) => o.value === (config().default_agent ?? ""))}
+              value={(o) => o.value}
+              label={(o) => o.label}
+              onSelect={(o) => {
+                if (!o) return
+                const next = o.value || undefined
+                if (next === (config().default_agent ?? undefined)) return
+                updateConfig({ default_agent: next })
               }}
+              variant="secondary"
+              size="small"
+              triggerVariant="settings"
             />
           </SettingsRow>
         </Card>
-      </Show>
 
-      {/* Available modes (non-native only, with remove button) */}
-      <Show when={removableModes().length > 0}>
-        <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>
-          {language.t("settings.agentBehaviour.availableModes")}
-        </h4>
-        <Card>
-          <For each={removableModes()}>
-            {(agent, index) => (
+        {/* Available agents list header + create button */}
+        <div
+          style={{
+            display: "flex",
+            "align-items": "center",
+            "justify-content": "space-between",
+            "margin-bottom": "8px",
+            "margin-top": "16px",
+          }}
+        >
+          <div data-slot="settings-row-label-title">{language.t("settings.agentBehaviour.availableAgents")}</div>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <Button variant="ghost" size="small" onClick={triggerImport}>
+              {language.t("settings.agentBehaviour.importMode")}
+            </Button>
+            <Button variant="ghost" size="small" onClick={browse}>
+              {language.t("settings.agentBehaviour.mcpBrowseMarketplace")}
+            </Button>
+            <Button variant="secondary" size="small" onClick={() => setAgentView("create")}>
+              {language.t("settings.agentBehaviour.createMode")}
+            </Button>
+          </div>
+        </div>
+
+        <Show when={importError()}>
+          <div
+            style={{
+              "font-size": "12px",
+              color: "var(--vscode-errorForeground)",
+              "margin-bottom": "8px",
+            }}
+          >
+            {importError()}
+          </div>
+        </Show>
+
+        {/* Agents list - clickable to edit */}
+        <Show
+          when={agentNames().length > 0}
+          fallback={
+            <Card style={{ "margin-bottom": "12px" }}>
               <div
                 style={{
-                  display: "flex",
-                  "align-items": "center",
-                  "justify-content": "space-between",
-                  padding: "8px 0",
-                  "border-bottom": index() < removableModes().length - 1 ? "1px solid var(--border-weak-base)" : "none",
+                  "font-size": "12px",
+                  color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
                 }}
               >
-                <div style={{ flex: 1, "min-width": 0 }}>
-                  <div data-slot="settings-row-label-title" style={{ "margin-bottom": "0" }}>
-                    {agent.name}
-                  </div>
-                  <Show when={agent.description}>
-                    <div data-slot="settings-row-label-subtitle" style={{ "margin-top": "4px" }}>
-                      {agent.description}
-                    </div>
-                  </Show>
-                </div>
-                <IconButton
-                  size="small"
-                  variant="ghost"
-                  icon="close"
-                  onClick={(e: MouseEvent) => {
-                    e.stopPropagation()
-                    confirmRemoveMode(agent)
-                  }}
-                />
+                {language.t("settings.agentBehaviour.noModesFound")}
               </div>
-            )}
-          </For>
-        </Card>
-      </Show>
-    </div>
-  )
+            </Card>
+          }
+        >
+          <Card style={{ "margin-bottom": "12px" }}>
+            <For each={agentNames()}>
+              {(name, index) => {
+                const agent = () => session.agents().find((a) => a.name === name)
+                const isCustom = () => !agent()?.native
+                const agentCfg = () => config().agent?.[name] ?? {}
+                const disabled = () => agentCfg().disable ?? false
+                const hidden = () => agentCfg().hidden ?? false
+                const deprecated = () => agent()?.deprecated ?? false
+                return (
+                  <div
+                    style={{
+                      display: "flex",
+                      "align-items": "center",
+                      "justify-content": "space-between",
+                      padding: "8px 4px",
+                      "border-bottom": index() < agentNames().length - 1 ? "1px solid var(--border-weak-base)" : "none",
+                      "border-radius": "4px",
+                      cursor: "pointer",
+                      opacity: disabled() ? "0.5" : "1",
+                    }}
+                    onClick={() => startEdit(name)}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "var(--bg-hover-base, var(--vscode-list-hoverBackground))"
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "transparent"
+                    }}
+                  >
+                    <div style={{ flex: 1, "min-width": 0 }}>
+                      <div style={{ display: "flex", "align-items": "center", gap: "6px" }}>
+                        <div style={{ "font-weight": "500", "font-size": "13px" }}>{name}</div>
+                        <Show when={isCustom()}>
+                          <span
+                            style={{
+                              "font-size": "10px",
+                              padding: "1px 5px",
+                              "border-radius": "3px",
+                              background: "var(--bg-subtle-base, var(--vscode-badge-background))",
+                              color: "var(--text-weak-base, var(--vscode-badge-foreground))",
+                            }}
+                          >
+                            custom
+                          </span>
+                        </Show>
+                        <Show when={hidden()}>
+                          <span
+                            style={{
+                              "font-size": "10px",
+                              padding: "1px 5px",
+                              "border-radius": "3px",
+                              background: "var(--bg-subtle-base, var(--vscode-badge-background))",
+                              color: "var(--text-weak-base, var(--vscode-badge-foreground))",
+                            }}
+                          >
+                            {language.t("settings.agentBehaviour.badge.hidden")}
+                          </span>
+                        </Show>
+                        <Show when={disabled()}>
+                          <span
+                            style={{
+                              "font-size": "10px",
+                              padding: "1px 5px",
+                              "border-radius": "3px",
+                              background: "var(--vscode-errorForeground, #f44)",
+                              color: "var(--vscode-errorForeground-foreground, #fff)",
+                            }}
+                          >
+                            {language.t("settings.agentBehaviour.badge.disabled")}
+                          </span>
+                        </Show>
+                        <Show when={deprecated()}>
+                          <span
+                            style={{
+                              "font-size": "10px",
+                              padding: "1px 5px",
+                              "border-radius": "3px",
+                              background: "var(--vscode-editorWarning-foreground, #cca700)",
+                              color: "var(--vscode-editorWarning-foreground-text, #1e1e1e)",
+                            }}
+                          >
+                            {language.t("settings.agentBehaviour.badge.deprecated")}
+                          </span>
+                        </Show>
+                      </div>
+                      <Show when={agent()?.description}>
+                        <div
+                          style={{
+                            "font-size": "11px",
+                            color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                            "margin-top": "2px",
+                            overflow: "hidden",
+                            "text-overflow": "ellipsis",
+                            "white-space": "nowrap",
+                          }}
+                        >
+                          {agent()!.description}
+                        </div>
+                      </Show>
+                    </div>
+                    <div style={{ display: "flex", "align-items": "center", gap: "4px" }}>
+                      <Show when={isCustom()}>
+                        <IconButton
+                          size="small"
+                          variant="ghost"
+                          icon="close"
+                          onClick={(e: MouseEvent) => {
+                            e.stopPropagation()
+                            const a = agent()
+                            if (a) confirmRemoveMode(a)
+                          }}
+                        />
+                      </Show>
+                      <IconButton size="small" variant="ghost" icon="chevron-right" />
+                    </div>
+                  </div>
+                )
+              }}
+            </For>
+          </Card>
+        </Show>
+      </div>
+    )
+  }
 
   const confirmRemoveMcp = (name: string) => {
     dialog.show(() => (
@@ -452,9 +493,64 @@ const AgentBehaviourTab: Component = () => {
 
   const renderMcpSubtab = () => {
     const mcpEntries = createMemo(() => Object.entries(config().mcp ?? {}))
+    const [expanded, setExpanded] = createSignal<Record<string, boolean>>({})
+
+    const toggle = (name: string) => {
+      setExpanded((prev) => ({ ...prev, [name]: !prev[name] }))
+    }
+
+    const statusColor = (name: string) => {
+      const s = session.mcpStatus()[name]?.status
+      if (s === "connected") return "var(--vscode-testing-iconPassed, #4caf50)"
+      if (s === "failed") return "var(--vscode-testing-iconFailed, #f44336)"
+      if (s === "needs_auth" || s === "needs_client_registration")
+        return "var(--vscode-editorWarning-foreground, #ff9800)"
+      if (s === "disabled") return "var(--vscode-disabledForeground, #888)"
+      return "var(--vscode-disabledForeground, #888)"
+    }
+
+    const statusLabel = (name: string) => {
+      const s = session.mcpStatus()[name]?.status
+      if (!s) return ""
+      const key = {
+        connected: "mcp.status.connected",
+        failed: "mcp.status.failed",
+        needs_auth: "mcp.status.needs_auth",
+        disabled: "mcp.status.disabled",
+        needs_client_registration: "mcp.status.needs_registration",
+      }[s]
+      return key ? language.t(key) : s
+    }
+
+    const isConnected = (name: string) => session.mcpStatus()[name]?.status === "connected"
+
+    if (editingMcp()) {
+      return (
+        <McpEditView
+          name={editingMcp()}
+          onBack={() => setEditingMcp("")}
+          onRemove={(name) => {
+            confirmRemoveMcp(name)
+            setEditingMcp("")
+          }}
+        />
+      )
+    }
 
     return (
       <div>
+        <div
+          style={{
+            display: "flex",
+            "align-items": "center",
+            "justify-content": "flex-end",
+            "margin-bottom": "8px",
+          }}
+        >
+          <Button variant="secondary" size="small" onClick={browse}>
+            {language.t("settings.agentBehaviour.mcpBrowseMarketplace")}
+          </Button>
+        </div>
         <Show
           when={mcpEntries().length > 0}
           fallback={
@@ -472,50 +568,183 @@ const AgentBehaviourTab: Component = () => {
         >
           <Card>
             <For each={mcpEntries()}>
-              {([name, mcp], index) => (
-                <div
-                  style={{
-                    display: "flex",
-                    "align-items": "center",
-                    "justify-content": "space-between",
-                    padding: "8px 0",
-                    "border-bottom": index() < mcpEntries().length - 1 ? "1px solid var(--border-weak-base)" : "none",
-                  }}
-                >
-                  <div style={{ flex: 1, "min-width": 0 }}>
-                    <div style={{ "font-weight": "500" }}>{name}</div>
+              {([name, mcp], index) => {
+                const open = () => expanded()[name] ?? false
+                const env = () => Object.entries(mcp.environment ?? mcp.env ?? {})
+                const error = () => {
+                  const s = session.mcpStatus()[name]
+                  if (s?.status === "failed") return s.error
+                  if (s?.status === "needs_client_registration") return s.error
+                  return undefined
+                }
+                return (
+                  <div
+                    style={{
+                      "border-bottom": index() < mcpEntries().length - 1 ? "1px solid var(--border-weak-base)" : "none",
+                    }}
+                  >
+                    {/* Header row */}
                     <div
                       style={{
-                        "font-size": "12px",
-                        color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
-                        "margin-top": "4px",
-                        "font-family": "var(--vscode-editor-font-family, monospace)",
+                        display: "flex",
+                        "align-items": "center",
+                        "justify-content": "space-between",
+                        padding: "8px 0",
+                        cursor: "pointer",
                       }}
+                      onClick={() => toggle(name)}
                     >
-                      <Show when={mcp.command}>
-                        <div>
-                          command:{" "}
-                          {Array.isArray(mcp.command)
-                            ? mcp.command.join(" ")
-                            : `${mcp.command} ${(mcp.args ?? []).join(" ")}`}
+                      <div style={{ display: "flex", "align-items": "center", gap: "6px", flex: 1, "min-width": 0 }}>
+                        <IconButton
+                          size="small"
+                          variant="ghost"
+                          icon={open() ? "chevron-down" : "chevron-right"}
+                          onClick={(e: MouseEvent) => {
+                            e.stopPropagation()
+                            toggle(name)
+                          }}
+                        />
+                        {/* Status dot */}
+                        <div
+                          style={{
+                            width: "6px",
+                            height: "6px",
+                            "border-radius": "50%",
+                            "background-color": statusColor(name),
+                            "flex-shrink": "0",
+                          }}
+                        />
+                        <div style={{ "font-weight": "500" }}>{name}</div>
+                        <span
+                          style={{
+                            "font-size": "10px",
+                            color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                          }}
+                        >
+                          {statusLabel(name) || (mcp.url ? "remote" : "stdio")}
+                        </span>
+                      </div>
+                      <div style={{ display: "flex", gap: "4px", "align-items": "center" }}>
+                        <div onClick={(e: MouseEvent) => e.stopPropagation()}>
+                          <Switch
+                            checked={isConnected(name)}
+                            disabled={session.mcpLoading() === name}
+                            onChange={() => {
+                              if (isConnected(name)) {
+                                session.disconnectMcp(name)
+                              } else {
+                                session.connectMcp(name)
+                              }
+                            }}
+                            hideLabel
+                          >
+                            {name}
+                          </Switch>
                         </div>
-                      </Show>
-                      <Show when={mcp.url}>
-                        <div>url: {mcp.url}</div>
-                      </Show>
+                        <IconButton
+                          size="small"
+                          variant="ghost"
+                          icon="close"
+                          onClick={(e: MouseEvent) => {
+                            e.stopPropagation()
+                            confirmRemoveMcp(name)
+                          }}
+                        />
+                        <IconButton
+                          size="small"
+                          variant="ghost"
+                          icon="chevron-right"
+                          onClick={(e: MouseEvent) => {
+                            e.stopPropagation()
+                            setEditingMcp(name)
+                          }}
+                        />
+                      </div>
                     </div>
+
+                    {/* Error message */}
+                    <Show when={error()}>
+                      <div
+                        style={{
+                          "padding-left": "28px",
+                          "padding-bottom": "4px",
+                          "font-size": "11px",
+                          color: "var(--vscode-errorForeground)",
+                        }}
+                      >
+                        {error()}
+                      </div>
+                    </Show>
+
+                    {/* Expandable detail */}
+                    <Show when={open()}>
+                      <div
+                        style={{
+                          "padding-left": "28px",
+                          "padding-bottom": "8px",
+                          "font-size": "12px",
+                          color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                        }}
+                      >
+                        <Show when={mcp.command}>
+                          <div style={{ "margin-bottom": "4px" }}>
+                            <span style={{ "font-weight": "500" }}>
+                              {language.t("settings.agentBehaviour.mcpDetail.command")}:{" "}
+                            </span>
+                            <span style={{ "font-family": "var(--vscode-editor-font-family, monospace)" }}>
+                              {Array.isArray(mcp.command) ? mcp.command[0] : mcp.command}
+                            </span>
+                          </div>
+                          <Show
+                            when={
+                              (Array.isArray(mcp.command) && mcp.command.length > 1) ||
+                              (!Array.isArray(mcp.command) && mcp.args && mcp.args.length > 0)
+                            }
+                          >
+                            <div style={{ "margin-bottom": "4px" }}>
+                              <span style={{ "font-weight": "500" }}>
+                                {language.t("settings.agentBehaviour.mcpDetail.args")}:{" "}
+                              </span>
+                              <span style={{ "font-family": "var(--vscode-editor-font-family, monospace)" }}>
+                                {Array.isArray(mcp.command)
+                                  ? (mcp.command as string[]).slice(1).join(" ")
+                                  : (mcp.args ?? []).join(" ")}
+                              </span>
+                            </div>
+                          </Show>
+                        </Show>
+                        <Show when={mcp.url}>
+                          <div style={{ "margin-bottom": "4px" }}>
+                            <span style={{ "font-weight": "500" }}>URL: </span>
+                            <span style={{ "font-family": "var(--vscode-editor-font-family, monospace)" }}>
+                              {mcp.url}
+                            </span>
+                          </div>
+                        </Show>
+                        <Show when={env().length > 0}>
+                          <div style={{ "margin-bottom": "4px" }}>
+                            <span style={{ "font-weight": "500" }}>
+                              {language.t("settings.agentBehaviour.mcpDetail.env")}:
+                            </span>
+                          </div>
+                          <For each={env()}>
+                            {([key, val]) => (
+                              <div
+                                style={{
+                                  "padding-left": "8px",
+                                  "font-family": "var(--vscode-editor-font-family, monospace)",
+                                }}
+                              >
+                                {key}={val}
+                              </div>
+                            )}
+                          </For>
+                        </Show>
+                      </div>
+                    </Show>
                   </div>
-                  <IconButton
-                    size="small"
-                    variant="ghost"
-                    icon="close"
-                    onClick={(e: MouseEvent) => {
-                      e.stopPropagation()
-                      confirmRemoveMcp(name)
-                    }}
-                  />
-                </div>
-              )}
+                )
+              }}
             </For>
           </Card>
         </Show>
@@ -525,6 +754,18 @@ const AgentBehaviourTab: Component = () => {
 
   const renderSkillsSubtab = () => (
     <div>
+      <div
+        style={{
+          display: "flex",
+          "align-items": "center",
+          "justify-content": "flex-end",
+          "margin-bottom": "8px",
+        }}
+      >
+        <Button variant="secondary" size="small" onClick={browse}>
+          {language.t("settings.agentBehaviour.mcpBrowseMarketplace")}
+        </Button>
+      </div>
       {/* Discovered skills */}
       <h4 style={{ "margin-top": "0", "margin-bottom": "8px" }}>
         {language.t("settings.agentBehaviour.discoveredSkills")}
@@ -677,6 +918,18 @@ const AgentBehaviourTab: Component = () => {
 
   const renderRulesSubtab = () => (
     <div>
+      {/* Description */}
+      <div
+        style={{
+          "font-size": "12px",
+          color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+          "margin-bottom": "12px",
+          "line-height": "1.5",
+        }}
+      >
+        {language.t("settings.agentBehaviour.rules.description")}
+      </div>
+
       <Card>
         <div
           style={{
@@ -758,7 +1011,7 @@ const AgentBehaviourTab: Component = () => {
       case "rules":
         return renderRulesSubtab()
       case "workflows":
-        return <Placeholder text={language.t("settings.agentBehaviour.workflowsPlaceholder")} />
+        return <WorkflowsTab />
       case "skills":
         return renderSkillsSubtab()
       default:
@@ -780,7 +1033,15 @@ const AgentBehaviourTab: Component = () => {
         <For each={subtabs}>
           {(subtab) => (
             <button
-              onClick={() => setActiveSubtab(subtab.id)}
+              onClick={() => {
+                setActiveSubtab(subtab.id)
+                // Reset views when switching subtabs
+                if (subtab.id === "agents") {
+                  setAgentView("list")
+                  setEditingAgent("")
+                }
+                setEditingMcp("")
+              }}
               style={{
                 padding: "8px 16px",
                 border: "none",

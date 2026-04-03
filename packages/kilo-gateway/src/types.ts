@@ -1,4 +1,4 @@
-import type { Provider as SDK } from "ai"
+import type { LanguageModel, Provider, Provider as SDK } from "ai"
 import type { LanguageModelV2 } from "@openrouter/ai-sdk-provider"
 
 // ============================================================================
@@ -157,6 +157,12 @@ export interface ProviderInfo {
   key?: string
   options: Record<string, any>
   models: Record<string, any>
+}
+
+export type KiloProvider = Provider & {
+  anthropic(modelId: string): LanguageModel
+  openai(modelId: string): LanguageModel
+  openaiCompatible(modelId: string): LanguageModel
 }
 
 // Re-export LanguageModelV2 for convenience

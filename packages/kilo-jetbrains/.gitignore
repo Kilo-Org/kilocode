@@ -1,0 +1,5 @@
+.gradle/
+build/
+.intellijPlatform/
+.ai/
+!gradle/wrapper/gradle-wrapper.jar

@@ -548,9 +548,8 @@ describe("WorktreeStateManager", () => {
 
       await manager.load()
 
-      // path.sep is / on unix, \ on windows — the rewrite uses path.sep
-      const expected = `C:${path.sep}.kilo${path.sep}worktrees\\fix`
-      expect(manager.getWorktrees()[0].path).toBe(expected)
+      // Separator style from the stored path is preserved (backslashes stay as backslashes)
+      expect(manager.getWorktrees()[0].path).toBe("C:\\.kilo\\worktrees\\fix")
     })
   })
 })

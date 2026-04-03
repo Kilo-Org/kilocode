@@ -72,6 +72,7 @@ import { VSCodeProvider, useVSCode } from "../src/context/vscode"
 import { ServerProvider } from "../src/context/server"
 import { ProviderProvider } from "../src/context/provider"
 import { ConfigProvider } from "../src/context/config"
+import { NotificationsProvider } from "../src/context/notifications"
 import { SessionProvider, useSession } from "../src/context/session"
 import { WorktreeModeProvider } from "../src/context/worktree-mode"
 import { ChatView } from "../src/components/chat"
@@ -1083,20 +1084,24 @@ const AgentManagerContent: Component = () => {
     }
     window.addEventListener("focus", onWindowFocus)
 
-    // When a session is created while on local, replace the current pending tab with the real session.
-    // Guard against duplicate sessionCreated events (HTTP response + SSE can both fire).
+    // When a session is created, add it as a local tab. This handles both direct
+    // creation from the prompt input and backend-created follow-up sessions (plan
+    // follow-up "Start new session"). Guard against duplicates (HTTP + SSE can both fire).
     const unsubCreate = vscode.onMessage((msg) => {
-      if (msg.type === "sessionCreated" && selection() === LOCAL) {
-        const created = msg as { type: string; session: { id: string } }
-        if (localSessionIDs().includes(created.session.id)) return
-        const pending = activePendingId()
-        if (pending) {
-          setLocalSessionIDs((prev) => prev.map((id) => (id === pending ? created.session.id : id)))
-          setActivePendingId(undefined)
-        } else {
-          setLocalSessionIDs((prev) => [...prev, created.session.id])
-        }
+      if (msg.type !== "sessionCreated") return
+      const created = msg as { type: string; session: { id: string } }
+      if (localSessionIDs().includes(created.session.id)) return
+      if (worktreeSessionIds().has(created.session.id)) return
+      const pending = selection() === LOCAL ? activePendingId() : undefined
+      if (pending) {
+        setLocalSessionIDs((prev) => prev.map((id) => (id === pending ? created.session.id : id)))
+        setActivePendingId(undefined)
+      } else {
+        saveTabMemory()
+        setLocalSessionIDs((prev) => [...prev, created.session.id])
+        setSelection(LOCAL)
       }
+      session.selectSession(created.session.id)
     })
 
     // Mark sessions loaded as soon as the session context receives data (even if empty)
@@ -1156,6 +1161,8 @@ const AgentManagerContent: Component = () => {
 
       if (msg.type === "agentManager.sessionAdded") {
         const ev = msg as { type: string; sessionId: string; worktreeId: string }
+        saveTabMemory()
+        setSelection(ev.worktreeId)
         session.selectSession(ev.sessionId)
       }
 
@@ -1789,6 +1796,21 @@ const AgentManagerContent: Component = () => {
     vscode.postMessage({ type: "agentManager.promoteSession", sessionId })
   }
 
+  const openLocally = (sid: string) => {
+    saveTabMemory()
+    const pending = activePendingId()
+    if (pending) {
+      setLocalSessionIDs((prev) => prev.map((id) => (id === pending ? sid : id)))
+      setActivePendingId(undefined)
+    } else {
+      setLocalSessionIDs((prev) => [...prev, sid])
+    }
+    setSelection(LOCAL)
+    setReviewActive(false)
+    session.selectSession(sid)
+    vscode.postMessage({ type: "agentManager.openLocally", sessionId: sid })
+  }
+
   const handleAddSession = () => {
     const sel = selection()
     if (sel === LOCAL) {
@@ -2318,7 +2340,9 @@ const AgentManagerContent: Component = () => {
                                   onCommitRename={() => commitRename(wt.id)}
                                   onCancelRename={cancelRename}
                                   onRemoveStale={() => confirmRemoveStaleWorktree(wt.id)}
-                                  onCopyPath={() => navigator.clipboard.writeText(wt.path)}
+                                  onCopyPath={() =>
+                                    vscode.postMessage({ type: "agentManager.copyToClipboard", text: wt.path })
+                                  }
                                   onOpen={() =>
                                     vscode.postMessage({ type: "agentManager.openWorktree", worktreeId: wt.id })
                                   }
@@ -2432,6 +2456,10 @@ const AgentManagerContent: Component = () => {
                           <ContextMenu.Item onSelect={() => handlePromote(s.id, new MouseEvent("click"))}>
                             <Icon name="branch" size="small" />
                             <ContextMenu.ItemLabel>{t("agentManager.session.openInWorktree")}</ContextMenu.ItemLabel>
+                          </ContextMenu.Item>
+                          <ContextMenu.Item onSelect={() => openLocally(s.id)}>
+                            <Icon name="folder" size="small" />
+                            <ContextMenu.ItemLabel>{t("agentManager.session.openLocally")}</ContextMenu.ItemLabel>
                           </ContextMenu.Item>
                         </ContextMenu.Content>
                       </ContextMenu.Portal>
@@ -2730,15 +2758,44 @@ const AgentManagerContent: Component = () => {
             <div class="am-chat-wrapper">
               <ChatView
                 onSelectSession={(id) => {
-                  // If on local and selecting a different session, keep local context
-                  session.selectSession(id)
+                  if (localSessionIDs().includes(id)) {
+                    session.selectSession(id)
+                    if (selection() === null) setSelection(LOCAL)
+                    return
+                  }
+                  // Navigate to owning worktree instead of forcing into local mode
+                  if (worktreeSessionIds().has(id)) {
+                    const ms = managedSessions().find((s) => s.id === id)
+                    if (ms?.worktreeId) {
+                      selectWorktree(ms.worktreeId)
+                      session.selectSession(id)
+                      setReviewActive(false)
+                      return
+                    }
+                  }
+                  openLocally(id)
                 }}
                 readonly={readOnly()}
+                continueInWorktree={selection() === LOCAL}
+                promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}
+                pendingSessionID={selection() === LOCAL ? activePendingId() : undefined}
               />
               <Show when={readOnly()}>
                 <div class="am-readonly-banner">
                   <Icon name="branch" size="small" />
                   <span class="am-readonly-text">{t("agentManager.session.readonly")}</span>
+                  <Button
+                    variant="secondary"
+                    size="small"
+                    onClick={() => {
+                      if (!loaded()) return
+                      const sid = session.currentSessionID()
+                      if (!sid) return
+                      openLocally(sid)
+                    }}
+                  >
+                    {t("agentManager.session.openLocally")}
+                  </Button>
                   <Button
                     variant="primary"
                     size="small"
@@ -2838,13 +2895,15 @@ export const AgentManagerApp: Component = () => {
                     <FileComponentProvider component={File}>
                       <ProviderProvider>
                         <ConfigProvider>
-                          <SessionProvider>
-                            <WorktreeModeProvider>
-                              <DataBridge>
-                                <AgentManagerContent />
-                              </DataBridge>
-                            </WorktreeModeProvider>
-                          </SessionProvider>
+                          <NotificationsProvider>
+                            <SessionProvider>
+                              <WorktreeModeProvider>
+                                <DataBridge>
+                                  <AgentManagerContent />
+                                </DataBridge>
+                              </WorktreeModeProvider>
+                            </SessionProvider>
+                          </NotificationsProvider>
                         </ConfigProvider>
                       </ProviderProvider>
                     </FileComponentProvider>

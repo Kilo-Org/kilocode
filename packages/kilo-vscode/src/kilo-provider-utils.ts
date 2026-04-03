@@ -61,6 +61,7 @@ export function getErrorMessage(error: unknown): string {
 export function sessionToWebview(session: Session) {
   return {
     id: session.id,
+    parentID: session.parentID ?? null,
     title: session.title,
     createdAt: new Date(session.time.created).toISOString(),
     updatedAt: new Date(session.time.updated).toISOString(),
@@ -167,6 +168,32 @@ export function buildSettingPath(key: string): { section: string; leaf: string }
   return { section, leaf }
 }
 
+export function resolveWorkspaceDirectory(input: {
+  sessionID?: string
+  sessionDirectories: Map<string, string>
+  workspaceDirectory: string
+}) {
+  if (!input.sessionID) return input.workspaceDirectory
+
+  const dir = input.sessionDirectories.get(input.sessionID)
+  if (dir) return dir
+
+  return input.workspaceDirectory
+}
+
+export function resolveContextDirectory(input: {
+  currentSessionID?: string
+  contextSessionID?: string
+  sessionDirectories: Map<string, string>
+  workspaceDirectory: string
+}) {
+  return resolveWorkspaceDirectory({
+    sessionID: input.currentSessionID ?? input.contextSessionID,
+    sessionDirectories: input.sessionDirectories,
+    workspaceDirectory: input.workspaceDirectory,
+  })
+}
+
 export type WebviewMessage =
   | {
       type: "partUpdated"
@@ -198,7 +225,7 @@ export type WebviewMessage =
   | { type: "questionResolved"; requestID: string }
   | { type: "permissionResolved"; permissionID: string }
   | { type: "permissionError"; permissionID: string }
-  | { type: "sessionCreated"; session: ReturnType<typeof sessionToWebview> }
+  | { type: "sessionCreated"; session: ReturnType<typeof sessionToWebview>; draftID?: string }
   | { type: "sessionUpdated"; session: ReturnType<typeof sessionToWebview> }
   | { type: "messageRemoved"; sessionID: string; messageID: string }
   | { type: "sessionError"; sessionID?: string; error?: unknown }

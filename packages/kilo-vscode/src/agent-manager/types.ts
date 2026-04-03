@@ -229,6 +229,11 @@ interface PromoteSessionIn {
   sessionId: string
 }
 
+interface OpenLocallyIn {
+  type: "agentManager.openLocally"
+  sessionId: string
+}
+
 interface AddSessionToWorktreeIn {
   type: "agentManager.addSessionToWorktree"
   worktreeId: string
@@ -255,6 +260,11 @@ interface ShowLocalTerminalIn {
 interface OpenWorktreeIn {
   type: "agentManager.openWorktree"
   worktreeId: string
+}
+
+interface CopyToClipboardIn {
+  type: "agentManager.copyToClipboard"
+  text: string
 }
 
 interface ShowExistingLocalTerminalIn {
@@ -396,6 +406,33 @@ interface LoadMessagesIn {
   sessionID: string
 }
 
+interface SendMessageIn {
+  type: "sendMessage"
+  text: string
+  messageID?: string
+  sessionID?: string
+  draftID?: string
+  providerID?: string
+  modelID?: string
+  agent?: string
+  variant?: string
+  files?: Array<{ mime: string; url: string; filename?: string }>
+}
+
+interface SendCommandIn {
+  type: "sendCommand"
+  command: string
+  arguments: string
+  messageID?: string
+  sessionID?: string
+  draftID?: string
+  providerID?: string
+  modelID?: string
+  agent?: string
+  variant?: string
+  files?: Array<{ mime: string; url: string; filename?: string }>
+}
+
 interface ClearSessionIn {
   type: "clearSession"
 }
@@ -411,12 +448,18 @@ interface AbortIn {
   sessionID: string
 }
 
+interface ContinueInWorktreeIn {
+  type: "continueInWorktree"
+  sessionId: string
+}
+
 /** All messages the Agent Manager expects from the webview (onMessage input). */
 export type AgentManagerInMessage =
   | CreateWorktreeIn
   | DeleteWorktreeIn
   | RemoveStaleWorktreeIn
   | PromoteSessionIn
+  | OpenLocallyIn
   | AddSessionToWorktreeIn
   | CloseSessionIn
   | ForkSessionIn
@@ -424,6 +467,7 @@ export type AgentManagerInMessage =
   | ShowTerminalIn
   | ShowLocalTerminalIn
   | OpenWorktreeIn
+  | CopyToClipboardIn
   | ShowExistingLocalTerminalIn
   | RequestRepoInfoIn
   | CreateMultiVersionIn
@@ -449,5 +493,8 @@ export type AgentManagerInMessage =
   | GenericOpenFileIn
   | PreviewImageIn
   | LoadMessagesIn
+  | SendMessageIn
+  | SendCommandIn
   | ClearSessionIn
   | AbortIn
+  | ContinueInWorktreeIn

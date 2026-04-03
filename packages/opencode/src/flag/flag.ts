@@ -65,6 +65,8 @@ export namespace Flag {
     const parsed = Number(value)
     return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined
   }
+
+  export const KILO_SESSION_RETRY_LIMIT = number("KILO_SESSION_RETRY_LIMIT")
 }
 
 // Dynamic getter for KILO_DISABLE_PROJECT_CONFIG

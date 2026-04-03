@@ -5,6 +5,115 @@ description: "Manage and orchestrate multiple AI agents"
 
 # Agent Manager
 
+The Agent Manager is a control panel for running and orchestrating multiple Kilo Code agents, with support for parallel worktree-isolated sessions.
+
+{% tabs %}
+{% tab label="VSCode" %}
+
+The Agent Manager is a **full-panel editor tab** built directly into the extension. All sessions share the single `kilo serve` backend process. It supports:
+
+- Multiple parallel sessions, each in its own git worktree
+- A diff/review panel showing changes vs. the parent branch
+- Dedicated VS Code integrated terminals per session
+- Setup scripts and `.env` auto-copy on worktree creation
+- Session import from existing branches, external worktrees, or GitHub PR URLs
+- "Continue in Worktree" to promote a sidebar session to the Agent Manager
+
+## Opening the Agent Manager
+
+- Keyboard shortcut: `Cmd+Shift+M` (macOS) / `Ctrl+Shift+M` (Windows/Linux)
+- Command Palette: "Kilo Code: Open Agent Manager"
+- Click the Agent Manager icon in the sidebar toolbar
+
+The panel opens as an editor tab and stays active across focus changes.
+
+## Working with Worktrees
+
+Each Agent Manager session runs in an isolated git worktree on a separate branch, keeping your main branch clean.
+
+### Creating a New Worktree Session
+
+1. Click **New Worktree** or press `Cmd+N` (macOS) / `Ctrl+N` (Windows/Linux) to create a new worktree
+2. Enter a branch name (or let Kilo generate one)
+3. Type your first message to start the agent
+
+A new git worktree is created from your current branch. The agent works in isolation — your main branch is unaffected.
+
+### Multi-Version Mode
+
+You can run up to 4 parallel implementations of the same prompt across separate worktrees:
+
+1. Click the multi-version button and enter a prompt
+2. Optionally assign different models to each version
+3. Kilo creates one worktree + session per version and runs them in parallel
+
+### Importing Existing Work
+
+- **From a branch:** Import an existing git branch as a worktree
+- **From a GitHub PR URL:** Paste a PR URL to import it as a worktree
+- **From an external worktree:** Import a worktree that already exists on disk
+- **Continue in Worktree:** From the sidebar chat, promote the current session to a new Agent Manager worktree
+
+## Sending Messages, Approvals, and Control
+
+- **Continue the conversation:** Send a follow-up message to the running agent
+- **Approvals:** The Permission Dock shows tool approval prompts — approve once, approve always, or deny
+- **Cancel:** Sends a cooperative stop signal to the agent
+- **Stop:** Force-terminates the session and marks it as stopped
+
+## Diff / Review Panel
+
+Press `Cmd+D` (macOS) / `Ctrl+D` (Windows/Linux) to toggle the diff panel. It shows a live-updating diff between the worktree and its parent branch.
+
+- Select files and click **Apply to Main Branch** to merge changes
+- Conflicts are surfaced with a resolution dialog
+- Supports unified and split diff views
+
+## Terminals
+
+Each session has a dedicated integrated terminal rooted in the session's worktree directory. Press `Cmd+/` (macOS) / `Ctrl+/` (Windows/Linux) to focus the terminal for the active session.
+
+### Switching Between Terminal and Agent Manager
+
+A common workflow is letting the agent work, then switching to the terminal to run tests or inspect the worktree, then switching back to control the agent:
+
+1. **Agent Manager → Terminal:** Press `Cmd+/` (macOS) / `Ctrl+/` (Windows/Linux) to open and focus the terminal for the current session. The terminal runs inside the session's worktree, so commands like `npm test` or `git status` operate on the agent's isolated branch.
+2. **Terminal → Agent Manager:** Press `Cmd+Shift+M` (macOS) / `Ctrl+Shift+M` (Windows/Linux) to bring focus back to the Agent Manager panel and its prompt input. This works from anywhere in VS Code — the terminal, another editor tab, or the sidebar.
+
+## Setup Scripts
+
+Place an executable script at `.kilo/setup-script` in your project root. It runs automatically whenever a new worktree is created (useful for `npm install`, env setup, etc.). Root-level `.env` and `.env.*` files are also auto-copied from the main repo before the setup script runs.
+
+## Session State and Persistence
+
+Agent Manager state is persisted in `.kilo/agent-manager.json`. Sessions, worktrees, and their order are restored on reload.
+
+## Keyboard Shortcuts (Agent Manager Panel)
+
+| Shortcut (macOS)         | Shortcut (Windows/Linux)  | Action                                           |
+| ------------------------ | ------------------------- | ------------------------------------------------ |
+| `Cmd+Shift+M`            | `Ctrl+Shift+M`            | Open / focus Agent Manager (works from anywhere) |
+| `Cmd+N`                  | `Ctrl+N`                  | New worktree                                     |
+| `Cmd+Shift+N`            | `Ctrl+Shift+N`            | New worktree (advanced options)                  |
+| `Cmd+Shift+O`            | `Ctrl+Shift+O`            | Import/open worktree                             |
+| `Cmd+Shift+W`            | `Ctrl+Shift+W`            | Close current worktree                           |
+| `Cmd+T`                  | `Ctrl+T`                  | New tab (session) in worktree                    |
+| `Cmd+W`                  | `Ctrl+W`                  | Close current tab                                |
+| `Cmd+Alt+Up` / `Down`    | `Ctrl+Alt+Up` / `Down`    | Previous / next worktree                         |
+| `Cmd+Alt+Left` / `Right` | `Ctrl+Alt+Left` / `Right` | Previous / next tab in worktree                  |
+| `Cmd+/`                  | `Ctrl+/`                  | Focus terminal for current session               |
+| `Cmd+D`                  | `Ctrl+D`                  | Toggle diff panel                                |
+| `Cmd+Shift+/`            | `Ctrl+Shift+/`            | Show keyboard shortcuts                          |
+| `Cmd+1` … `Cmd+9`        | `Ctrl+1` … `Ctrl+9`       | Jump to worktree/session by index                |
+
+## Troubleshooting
+
+- **"Please open a folder…" error** — the Agent Manager requires a VS Code workspace folder
+- **Worktree creation fails** — ensure Git is installed and the workspace is a valid git repository. Open the main repository (where `.git` is a directory), not an existing worktree checkout.
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
+
 The Agent Manager is a dedicated control panel for running and supervising Kilo Code agents as interactive CLI processes. It supports:
 
 - Local sessions
@@ -22,7 +131,7 @@ This page reflects the actual implementation in the extension.
 
 ## Opening the Agent Manager
 
-- Command Palette: “Kilo Code: Open Agent Manager”
+- Command Palette: "Kilo Code: Open Agent Manager"
 - Or use the title/menu entry if available in your Kilo Code UI
 
 The panel opens as a webview and stays active across focus changes.
@@ -34,13 +143,13 @@ The panel opens as a webview and stays active across focus changes.
   - Approve or reject, optionally adding a short note
 - Cancel vs Stop
   - Cancel sends a structured cancel message to the running process (clean cooperative stop)
-  - Stop force-terminates the underlying CLI process, updating status to “stopped”
+  - Stop force-terminates the underlying CLI process, updating status to "stopped"
 
 ## Resuming an existing session
 
 You can continue a session later (local or remote):
 
-- If a session is not currently running, the Agent Manager will spawn a new CLI process attached to that session’s ID
+- If a session is not currently running, the Agent Manager will spawn a new CLI process attached to that session's ID
 - Labels from the original session are preserved whenever possible
 - Your first follow-up message becomes the continuation input
 
@@ -143,6 +252,9 @@ Message transcripts are fetched from a signed blob and exclude internal checkpoi
 - Authentication errors
   - Verify you're logged in via extension settings or using CLI with kilocode provider
   - BYOK configurations do not support Agent Manager authentication
+
+{% /tab %}
+{% /tabs %}
 
 ## Related features
 

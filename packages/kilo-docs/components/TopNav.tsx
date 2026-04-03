@@ -336,9 +336,9 @@ export function TopNav({ onMobileMenuToggle, isMobileMenuOpen = false, showMobil
       {/* Announcement banner */}
       <div className="announcement-banner">
         <p>
-          We're <Link href="https://blog.kilo.ai/p/kilo-cli">replatforming our extensions on the new Kilo CLI</Link>.
-          Contribute to the new CLI and pre-release extensions at{" "}
-          <Link href="https://github.com/Kilo-Org/kilocode">Kilo-Org/kilocode</Link>.
+          The all-new Kilo Code extension is here, rebuilt on the{" "}
+          <Link href="/code-with-ai/platforms/vscode/whats-new">Kilo CLI</Link> for speed, flexibility, and continued access to 500+ models via the Kilo Gateway
+          →
         </p>
       </div>
 

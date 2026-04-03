@@ -101,8 +101,14 @@ export interface Host {
   /** Get the CLI server port (for webview CSP). */
   serverPort(): number | undefined
 
+  /** Copy text to the system clipboard. */
+  copyToClipboard(text: string): void
+
   /** Capture a telemetry event. */
   capture(event: string, properties?: Record<string, unknown>): void
+
+  /** Ask VS Code's git extension to re-scan repositories (e.g. after worktree ref migration). */
+  refreshGit(): void
 
   /** Dispose all host resources. */
   dispose(): void

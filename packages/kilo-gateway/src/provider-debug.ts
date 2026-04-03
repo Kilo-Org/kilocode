@@ -2,7 +2,7 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 import type { Provider as SDK } from "ai"
 import type { KiloProviderOptions } from "./types.js"
 import { getKiloUrlFromToken, getApiKey } from "./auth/token.js"
-import { buildKiloHeaders, DEFAULT_HEADERS } from "./headers.js"
+import { buildKiloHeaders, getDefaultHeaders } from "./headers.js"
 import { KILO_API_BASE, ANONYMOUS_API_KEY } from "./api/constants.js"
 
 /**
@@ -32,7 +32,7 @@ export function createKiloDebug(options: KiloProviderOptions = {}): SDK {
 
   // Merge custom headers with defaults
   const customHeaders = {
-    ...DEFAULT_HEADERS,
+    ...getDefaultHeaders(),
     ...buildKiloHeaders(undefined, {
       kilocodeOrganizationId: options.kilocodeOrganizationId,
       kilocodeTesterWarningsDisabledUntil: undefined,

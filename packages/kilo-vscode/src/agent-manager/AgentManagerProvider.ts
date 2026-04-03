@@ -18,6 +18,8 @@ import { SessionTerminalManager } from "./SessionTerminalManager"
 import { createTerminalHost } from "./terminal-host"
 import { executeVscodeTask } from "./task-runner"
 import { forkSession } from "./fork-session"
+import { continueInWorktree } from "./continue-in-worktree"
+
 import { shouldStopDiffPolling } from "./delete-worktree"
 import { buildKeybindingMap } from "./format-keybinding"
 import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from "./multi-version"
@@ -57,11 +59,11 @@ export class AgentManagerProvider implements Disposable {
   private cachedWorktreeStats: AgentManagerOutMessage | undefined
   private cachedLocalStats: AgentManagerOutMessage | undefined
   private applyingWorktreeId: string | undefined
+
   /** Session ID most recently loaded via a `loadMessages` message from the webview.
    *  Updated synchronously — unlike the session provider's currentSession which depends on
    *  an async `session.get` round-trip and can be stale during rapid tab switches. */
   private activeSessionId: string | undefined
-
   constructor(
     private readonly host: Host,
     private readonly connectionService: KiloConnectionService,
@@ -103,6 +105,7 @@ export class AgentManagerProvider implements Disposable {
     if (this.panel) {
       this.log("Panel already open, revealing")
       this.panel.reveal()
+      this.postToWebview({ type: "action", action: "focusInput" })
       return
     }
     this.log("Opening Agent Manager panel")
@@ -118,6 +121,11 @@ export class AgentManagerProvider implements Disposable {
   /** Restore the Agent Manager panel from a previously serialized state.
    *  The caller (extension.ts / vscode-host.ts) wraps the raw panel before passing it. */
   public deserializePanel(ctx: PanelContext): void {
+    if (this.panel) {
+      this.log("Panel already exists during deserialization, disposing duplicate")
+      ctx.dispose()
+      return
+    }
     this.log("Deserializing Agent Manager panel")
     this.attachPanel(ctx)
   }
@@ -129,6 +137,11 @@ export class AgentManagerProvider implements Disposable {
 
   /** Wire up a panel context (shared by openPanel and deserializePanel). */
   private attachPanel(ctx: PanelContext): void {
+    if (this.panel) {
+      this.log("Disposing previous panel before attaching new one")
+      this.panel.dispose()
+      this.panel = undefined
+    }
     this.panel = ctx
 
     this.stateReady = this.initializeState()
@@ -136,11 +149,15 @@ export class AgentManagerProvider implements Disposable {
     this.sendKeybindings()
 
     ctx.onDidDispose(() => {
-      this.log("Panel disposed")
-      this.statsPoller.stop()
-      this.stopDiffPolling()
+      // Only clear if this is still the active panel — a newer panel may
+      // have already replaced us via attachPanel.
+      if (this.panel === ctx) {
+        this.log("Panel disposed")
+        this.statsPoller.stop()
+        this.stopDiffPolling()
+        this.panel = undefined
+      }
       ctx.sessions.dispose()
-      this.panel = undefined
     })
   }
 
@@ -156,8 +173,16 @@ export class AgentManagerProvider implements Disposable {
       return
     }
 
-    await state.load()
+    const migration = await state.load()
     manager.cleanupOrphanedTempDirs()
+
+    // When the .kilocode → .kilo migration rewrote git worktree refs, nudge
+    // VS Code's git extension to re-discover them. Without this, worktrees
+    // won't appear in Source Control until the next VS Code restart.
+    if (migration.refsFixed > 0) {
+      this.log(`Migration fixed ${migration.refsFixed} git worktree ref(s), refreshing git`)
+      this.host.refreshGit()
+    }
 
     // Do not auto-remove stale worktrees on load.
     // Presence checks run in the shared poller and require explicit user cleanup.
@@ -192,9 +217,23 @@ export class AgentManagerProvider implements Disposable {
     if (m.type === "agentManager.deleteWorktree") return this.onDeleteWorktree(m.worktreeId)
     if (m.type === "agentManager.removeStaleWorktree") return this.onRemoveStaleWorktree(m.worktreeId)
     if (m.type === "agentManager.promoteSession") return this.onPromoteSession(m.sessionId)
+    if (m.type === "agentManager.openLocally") {
+      if (!this.panel) return null
+      this.panel.sessions.clearSessionDirectory(m.sessionId)
+      return null
+    }
+    if (m.type === "continueInWorktree") {
+      void this.continueFromSidebar(m.sessionId, (status, detail, error) => {
+        this.panel?.postMessage({ type: "continueInWorktreeProgress", status, detail, error })
+      })
+      return null
+    }
     if (m.type === "agentManager.addSessionToWorktree") return this.onAddSessionToWorktree(m.worktreeId)
     if (m.type === "agentManager.forkSession") return this.onForkSession(m.sessionId, m.worktreeId)
     if (m.type === "agentManager.closeSession") return this.onCloseSession(m.sessionId)
+    if ((m.type === "sendMessage" || m.type === "sendCommand") && m.draftID && !m.sessionID) {
+      this.activeSessionId = m.draftID
+    }
     if (m.type === "agentManager.configureSetupScript") {
       void this.configureSetupScript()
       return null
@@ -209,6 +248,10 @@ export class AgentManagerProvider implements Disposable {
     }
     if (m.type === "agentManager.openWorktree") {
       this.openWorktreeDirectory(m.worktreeId)
+      return null
+    }
+    if (m.type === "agentManager.copyToClipboard") {
+      this.host.copyToClipboard(m.text)
       return null
     }
     if (m.type === "previewImage") {
@@ -1795,6 +1838,7 @@ export class AgentManagerProvider implements Disposable {
   public focusPanel(): void {
     if (!this.panel) return
     this.panel.reveal(false)
+    this.postToWebview({ type: "action", action: "focusInput" })
   }
 
   public isActive(): boolean {
@@ -1804,6 +1848,42 @@ export class AgentManagerProvider implements Disposable {
   /** Expose worktree session→directory mappings for the auto-approve toggle. */
   public getSessionDirectories(): ReadonlyMap<string, string> {
     return this.panel?.sessions.getSessionDirectories() ?? new Map()
+  }
+
+  /**
+   * Continue a sidebar session in a new worktree.
+   * Captures git state, creates worktree, applies state, forks session.
+   * Called from KiloProvider when the sidebar sends "continueInWorktree".
+   */
+  public async continueFromSidebar(
+    sessionId: string,
+    progress: (status: string, detail?: string, error?: string) => void,
+  ): Promise<void> {
+    const root = this.getRoot()
+    if (!root) {
+      progress("error", undefined, "No workspace folder open")
+      return
+    }
+
+    this.openPanel()
+    await this.waitForStateReady("continueFromSidebar")
+
+    await continueInWorktree(
+      {
+        root,
+        getClient: () => this.connectionService.getClient(),
+        createWorktreeOnDisk: (opts) => this.createWorktreeOnDisk(opts),
+        runSetupScript: (p, b, id) => this.runSetupScriptForWorktree(p, b, id),
+        getStateManager: () => this.getStateManager(),
+        registerWorktreeSession: (sid, dir) => this.registerWorktreeSession(sid, dir),
+        registerSession: (session) => this.panel?.sessions.registerSession(session),
+        notifyReady: (sid, result, wid) => this.notifyWorktreeReady(sid, result, wid),
+        capture: (event, props) => this.host.capture(event, props),
+        log: (...args) => this.log(...args),
+      },
+      sessionId,
+      progress,
+    )
   }
 
   public postMessage(message: unknown): void {

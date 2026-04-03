@@ -99,7 +99,7 @@ export const ChatViewWithMessages: Story = {
     const session = {
       ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
       messages: () => [{ id: "msg-001" }] as any[],
-      totalCost: () => 0.0012,
+      costBreakdown: () => [{ label: "Parent session", cost: 0.0012 }],
       contextUsage: () => ({ tokens: 512, percentage: 6 }),
     }
     return (

@@ -57,15 +57,27 @@ export namespace SessionRevert {
     if (revert) {
       const session = await Session.get(input.sessionID)
       revert.snapshot = session.revert?.snapshot ?? (await Snapshot.track())
-      await Snapshot.revert(patches)
-      if (revert.snapshot) revert.diff = await Snapshot.diff(revert.snapshot)
+
+      // kilocode_change start - compute diffs BEFORE reverting files so the diff
+      // reflects changes being undone (files on disk still have AI modifications)
       const rangeMessages = all.filter((msg) => msg.info.id >= revert!.messageID)
       const diffs = await SessionSummary.computeDiff({ messages: rangeMessages })
+      await Snapshot.revert(patches)
+      if (revert.snapshot) revert.diff = await Snapshot.diff(revert.snapshot)
+      // kilocode_change end
       await Storage.write(["session_diff", input.sessionID], diffs)
       Bus.publish(Session.Event.Diff, {
         sessionID: input.sessionID,
         diff: diffs,
       })
+      // kilocode_change start - strip full file contents before persisting to DB
+      const summaryDiffs = diffs.map((d) => ({
+        file: d.file,
+        additions: d.additions,
+        deletions: d.deletions,
+        status: d.status,
+      }))
+      // kilocode_change end
       return Session.setRevert({
         sessionID: input.sessionID,
         revert,
@@ -73,6 +85,7 @@ export namespace SessionRevert {
           additions: diffs.reduce((sum, x) => sum + x.additions, 0),
           deletions: diffs.reduce((sum, x) => sum + x.deletions, 0),
           files: diffs.length,
+          diffs: summaryDiffs, // kilocode_change
         },
       })
     }

@@ -166,6 +166,9 @@ export const dict = {
   "model.tag.free": "Gratis",
   "model.tag.latest": "Nieuwste",
   "model.group.recommended": "Aanbevolen",
+  "model.group.favorites": "Favorieten",
+  "model.favorite.add": "Toevoegen aan favorieten",
+  "model.favorite.remove": "Verwijderen uit favorieten",
   "model.provider.anthropic": "Anthropic",
   "model.provider.openai": "OpenAI",
   "model.provider.google": "Google",
@@ -268,6 +271,7 @@ export const dict = {
   "mcp.status.connected": "verbonden",
   "mcp.status.failed": "mislukt",
   "mcp.status.needs_auth": "authenticatie vereist",
+  "mcp.status.needs_registration": "clientregistratie vereist",
   "mcp.status.disabled": "uitgeschakeld",
 
   "dialog.fork.empty": "Geen berichten om van af te splitsen",
@@ -363,6 +367,7 @@ export const dict = {
   "language.br": "Português (Brasil)",
   "language.bs": "Bosanski",
   "language.th": "ไทย",
+  "language.tr": "Türkçe",
 
   "toast.language.title": "Taal",
   "toast.language.description": "Omgeschakeld naar {{language}}",
@@ -733,7 +738,7 @@ export const dict = {
   "provider.custom.description.prefix": "Configureer een OpenAI-compatibele provider. Zie de ",
   "provider.custom.description.link": "provider configuratie documentatie",
   "provider.custom.description.suffix": ".",
-  "provider.custom.field.providerID.label": "Provider ID",
+  "provider.custom.field.providerID.label": "Provider-ID",
   "provider.custom.field.providerID.placeholder": "mijnprovider",
   "provider.custom.field.providerID.description": "Kleine letters, cijfers, koppeltekens of onderstrepingstekens",
   "provider.custom.field.name.label": "Weergavenaam",
@@ -750,6 +755,21 @@ export const dict = {
   "provider.custom.models.name.placeholder": "Weergavenaam",
   "provider.custom.models.remove": "Model verwijderen",
   "provider.custom.models.add": "Model toevoegen",
+  "provider.custom.models.fetch": "Modellen ophalen",
+  "provider.custom.models.fetching": "Ophalen\u2026",
+  "provider.custom.models.fetch.error": "Kan modellen niet ophalen: {{error}}",
+  "provider.custom.models.fetch.authError":
+    "Authenticatie mislukt. Controleer de API-sleutel hierboven en probeer het opnieuw.",
+  "provider.custom.models.fetch.empty": "Geen modellen gevonden op deze server.",
+  "provider.custom.models.fetch.added": "{{count}} model(len) toegevoegd.",
+  "provider.custom.models.fetch.allExist": "Alle opgehaalde modellen zijn al toegevoegd.",
+  "provider.custom.models.fetch.selectAll": "Alles selecteren",
+  "provider.custom.models.fetch.deselectAll": "Alles deselecteren",
+  "provider.custom.models.fetch.found": "{{count}} modellen gevonden",
+  "provider.custom.models.fetch.showing": "{{shown}} van {{total}} weergegeven",
+  "provider.custom.models.fetch.search": "Modellen zoeken\u2026",
+  "provider.custom.models.fetch.add": "{{count}} model(len) toevoegen",
+  "provider.custom.edit.title": "Provider bewerken",
   "provider.custom.headers.label": "Headers (optioneel)",
   "provider.custom.headers.key.label": "Header",
   "provider.custom.headers.key.placeholder": "Header-Naam",
@@ -767,7 +787,7 @@ export const dict = {
   "provider.custom.error.duplicate": "Duplicaat",
   "settings.models.title": "Modellen",
   "settings.models.description": "Model-instellingen zullen hier configureerbaar zijn.",
-  "settings.agents.title": "Agents",
+  "settings.agents.title": "Agenten",
   "settings.agents.description": "Agent-instellingen zullen hier configureerbaar zijn.",
   "settings.commands.title": "Opdrachten",
   "settings.commands.description": "Opdracht-instellingen zullen hier configureerbaar zijn.",
@@ -823,8 +843,11 @@ export const dict = {
   "session.delete.button": "Verwijder sessie",
   "session.untitled": "Naamloos",
   "session.recent": "Recent",
+  "session.showHistory": "Geschiedenis weergeven",
   "session.search.placeholder": "Zoek sessies...",
   "session.empty": "Nog geen sessies. Klik op + om een nieuw gesprek te starten.",
+  "session.tab.local": "Lokaal",
+  "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Alleen deze repository",
   "session.cloud.import": "Importeer uit de cloud",
   "feedback.button": "Feedback & Ondersteuning",
@@ -857,9 +880,9 @@ export const dict = {
   "workspace.delete.title": "Verwijder workspace",
   "workspace.delete.confirm": 'Workspace "{{name}}" verwijderen?',
   "workspace.delete.button": "Verwijder workspace",
-  "workspace.reset.title": "Reset workspace",
+  "workspace.reset.title": "Werkruimte herstellen",
   "workspace.reset.confirm": 'Workspace "{{name}}" resetten?',
-  "workspace.reset.button": "Reset workspace",
+  "workspace.reset.button": "Werkruimte herstellen",
   "workspace.reset.archived.none": "Er worden geen actieve sessies gearchiveerd.",
   "workspace.reset.archived.one": "1 sessie wordt gearchiveerd.",
   "workspace.reset.archived.many": "{{count}} sessies worden gearchiveerd.",
@@ -900,13 +923,12 @@ export const dict = {
   "settings.agentBehaviour.title": "Agent Gedrag",
   "settings.autoApprove.title": "Automatisch Goedkeuren",
   "settings.browser.title": "Browser",
-  "settings.checkpoints.title": "Checkpoints",
+  "settings.checkpoints.title": "Controlepunten",
   "settings.display.title": "Weergave",
   "settings.autocomplete.title": "Automatisch Aanvullen",
   "settings.notifications.title": "Meldingen",
   "settings.context.title": "Context",
-  "settings.terminal.title": "Terminal",
-  "settings.prompts.title": "Prompts",
+
   "settings.experimental.title": "Experimenteel",
   "settings.language.title": "Taal",
   "settings.aboutKiloCode.title": "Over Kilo Code",
@@ -927,6 +949,7 @@ export const dict = {
   "prompt.placeholder.error": "Verbinding mislukt. Controleer het uitvoerpaneel of herstart de extensie.",
 
   "context.usage.sessionCost": "Sessiekosten",
+  "context.stats.thisSession": "Deze sessie",
 
   "time.justNow": "zojuist",
   "time.minutesAgo": "{{count}} min geleden",
@@ -956,11 +979,30 @@ export const dict = {
     "Voor vragen over facturering of je account, neem contact op met Klantenservice op",
   "settings.aboutKiloCode.resetSettings.title": "Instellingen resetten",
   "settings.aboutKiloCode.resetSettings.description":
-    "Reset alle instellingen van de Kilo Code extensie naar hun standaardwaarden. Dit heeft geen invloed op CLI of backend configuratie.",
+    "Dit reset alleen VS Code-extensiespecifieke instellingen naar hun standaardwaarden. Instellingen die gedeeld worden met de CLI, zoals modi en regels voor automatisch goedkeuren, worden opgeslagen in de CLI-configuratie en worden niet gereset.",
   "settings.aboutKiloCode.resetSettings.button": "Alle instellingen resetten",
+  "settings.aboutKiloCode.settingsTransfer.title": "Instellingen overdragen",
+  "settings.aboutKiloCode.settingsTransfer.description":
+    "Exporteer of importeer uw instellingen om ze tussen VS Code-instanties over te dragen.",
+  "settings.aboutKiloCode.exportSettings": "Exporteren",
+  "settings.aboutKiloCode.importSettings": "Importeren",
+  "settings.aboutKiloCode.importSettings.invalidJson":
+    "Ongeldig JSON-bestand. Selecteer een geldig instellingenbestand.",
+  "settings.aboutKiloCode.importSettings.invalidConfig": "Het bestand bevat geen geldige Kilo-instellingen.",
+  "settings.aboutKiloCode.importSettings.tooLarge":
+    "Het bestand is te groot. Instellingenbestanden moeten kleiner zijn dan 1 MB.",
+  "settings.aboutKiloCode.importSettings.newerVersion":
+    "Dit bestand is geëxporteerd vanuit een nieuwere versie van Kilo. Sommige instellingen worden mogelijk genegeerd.",
+  "settings.aboutKiloCode.importSettings.success":
+    "Instellingen geïmporteerd. Controleer de bovenstaande wijzigingen en klik vervolgens op Opslaan.",
+
+  "settings.aboutKiloCode.telemetry.title": "Telemetrie",
+  "settings.aboutKiloCode.telemetry.description":
+    'Telemetrie wordt beheerd door de ingebouwde telemetrie-instelling van VS Code. Om dit uit te schakelen, gaat u naar Instellingen > Telemetrie > Telemetrieniveau en stelt u dit in op "off". Herstart VS Code om de wijziging toe te passen.',
+  "settings.aboutKiloCode.telemetry.openSettings": "Telemetrie-instellingen openen",
 
   "settings.agentBehaviour.subtab.modes": "Modi",
-  "settings.agentBehaviour.subtab.agents": "Agents",
+  "settings.agentBehaviour.subtab.agents": "Agenten",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Servers",
   "settings.agentBehaviour.subtab.rules": "Regels",
   "settings.agentBehaviour.subtab.workflows": "Workflows",
@@ -982,10 +1024,6 @@ export const dict = {
 
   "common.add": "Toevoegen",
   "common.choose": "Kies…",
-
-  "settings.notImplemented": "Dit gedeelte is nog niet geïmplementeerd.",
-  "settings.notImplemented.description":
-    "Het zal configuratie-opties en verklarende tekst bevatten gerelateerd aan de geselecteerde instellingencategorie. Gebruik deze ruimte tijdens het opnieuw implementeren om lay-out, spatiëring, scrollgedrag en navigatiestatus te valideren voordat de daadwerkelijke besturingselementen worden gekoppeld.",
 
   "settings.autocomplete.autoTrigger.title": "Automatische inline aanvullingen inschakelen",
   "settings.autocomplete.autoTrigger.description":
@@ -1049,14 +1087,29 @@ export const dict = {
   "settings.agentBehaviour.temperature.title": "Temperatuur",
   "settings.agentBehaviour.temperature.description": "Sampling temperatuur (0-2)",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Nucleus sampling parameter (0-1)",
+  "settings.agentBehaviour.topP.description": "Nucleus-samplingparameter (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Max Stappen",
   "settings.agentBehaviour.maxSteps.description": "Maximale agent iteraties",
+  "settings.agentBehaviour.hidden.title": "Verborgen",
+  "settings.agentBehaviour.hidden.description": "Verberg deze agent uit de modusschakelaar in de chatinvoer",
+  "settings.agentBehaviour.disable.title": "Uitgeschakeld",
+  "settings.agentBehaviour.disable.description": "Schakel deze agent volledig uit — deze verschijnt nergens",
+  "settings.agentBehaviour.badge.hidden": "verborgen",
+  "settings.agentBehaviour.badge.disabled": "uitgeschakeld",
+  "settings.agentBehaviour.badge.deprecated": "Verouderd",
   "settings.agentBehaviour.discoveredSkills": "Ontdekte Skills",
   "settings.agentBehaviour.noSkillsFound":
     "Geen skills ontdekt. Voeg hieronder skill mappaden of URL's toe om skills beschikbaar te maken.",
   "settings.agentBehaviour.availableModes": "Beschikbare Aangepaste Modi",
   "settings.agentBehaviour.noModesFound": "Geen modi gevonden.",
+  "settings.agentBehaviour.importMode": "Importeren",
+  "settings.agentBehaviour.importMode.invalidName":
+    "Ongeldige modusnaam in bestand. De naam moet beginnen met een kleine letter en mag alleen kleine letters, cijfers en streepjes bevatten.",
+  "settings.agentBehaviour.importMode.nameTaken": "Er bestaat al een modus met deze naam.",
+  "settings.agentBehaviour.importMode.invalidJson":
+    "Ongeldig JSON-bestand. Selecteer een geldig agentdefinitiebestand.",
+  "settings.agentBehaviour.importMode.tooLarge": "Bestand is te groot. Agentdefinities moeten kleiner zijn dan 1 MB.",
+  "settings.agentBehaviour.exportMode": "Agentdefinitie exporteren",
   "settings.agentBehaviour.removeMode.title": "Verwijder modus",
   "settings.agentBehaviour.removeMode.confirm":
     'Modus "{{name}}" verwijderen? Dit zal de modus uitschakelen door je configuratie bij te werken.',
@@ -1067,6 +1120,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.confirm":
     'Skill "{{name}}" verwijderen? Dit verwijdert de skill bestanden van schijf.',
   "settings.agentBehaviour.removeSkill.button": "Verwijderen",
+  "settings.agentBehaviour.rules.description":
+    "Regels zijn instructiebestanden die het gedrag van de agent sturen. Ze worden opgenomen in de systeemprompt voor elk gesprek. Voeg hieronder bestandspaden toe om aanvullende regels op te nemen.",
   "settings.agentBehaviour.instructionFiles": "Aanvullende Instructiebestanden",
   "settings.agentBehaviour.instructionFiles.description":
     "Paden naar aanvullende instructiebestanden die zijn opgenomen in de systeem prompt",
@@ -1074,10 +1129,33 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.confirm":
     'MCP-server "{{name}}" verwijderen? Dit zal deze uit je configuratie verwijderen.',
   "settings.agentBehaviour.removeMcp.button": "Verwijderen",
+  "settings.agentBehaviour.mcpDetail.command": "Opdracht",
+  "settings.agentBehaviour.mcpDetail.args": "Argumenten",
+  "settings.agentBehaviour.mcpDetail.env": "Omgeving",
+  "settings.agentBehaviour.mcpDetail.disabled": "Deze server is uitgeschakeld.",
+  "settings.agentBehaviour.editMcp": "MCP-server bewerken",
+  "settings.agentBehaviour.editMcp.transportLocal": "Lokale server (stdio-transport)",
+  "settings.agentBehaviour.editMcp.transportRemote": "Externe server (SSE/HTTP-transport)",
+  "settings.agentBehaviour.editMcp.env": "Omgevingsvariabelen",
+  "settings.agentBehaviour.editMcp.env.help": "Variabelen die worden doorgegeven aan het MCP-serverproces.",
+  "settings.agentBehaviour.addMcp.command": "Opdracht",
+  "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
+  "settings.agentBehaviour.addMcp.args": "Argumenten",
+  "settings.agentBehaviour.addMcp.args.help":
+    "Eén argument per regel. Paden met spaties worden ongewijzigd overgenomen.",
+  "settings.agentBehaviour.addMcp.args.placeholder": "e.g.\n-y\n@modelcontextprotocol/server-filesystem\n/tmp",
+  "settings.agentBehaviour.addMcp.url": "Server-URL",
+  "settings.agentBehaviour.addMcp.url.placeholder": "e.g. http://localhost:3000/sse",
+  "settings.agentBehaviour.mcpBrowseMarketplace": "Bladeren door Marketplace",
   "settings.agentBehaviour.mcpEmpty":
-    "Geen MCP-servers geconfigureerd. Bewerk het opencode configuratiebestand om MCP-servers toe te voegen.",
+    "Geen MCP-servers geconfigureerd. Voeg MCP-servers toe in kilo.jsonc of vraag de agent om ze toe te voegen.",
   "settings.agentBehaviour.workflowsPlaceholder": "Workflows worden beheerd via workflowbestanden in je workspace.",
-  "settings.agentBehaviour.notImplemented": "Nog niet geïmplementeerd.",
+  "settings.agentBehaviour.workflows.description":
+    "Workflows zijn aangepaste slash-commando's gedefinieerd in je configuratie. Typ /command-name in de chat om ze aan te roepen. Commando's worden geconfigureerd in opencode.json onder de sectie 'command'.",
+  "settings.agentBehaviour.workflows.empty":
+    "Geen aangepaste commando's geconfigureerd. Voeg commando's toe aan opencode.json om ze hier te zien.",
+  "settings.agentBehaviour.workflows.detail.description": "Beschrijving",
+  "settings.agentBehaviour.workflows.detail.template": "Sjabloon",
 
   "settings.autoApprove.description":
     "Definieer hoe tools mogen worden uitgevoerd. De meeste tools staan standaard op Toestaan. doom_loop en external_directory staan standaard op Vragen.",
@@ -1139,7 +1217,7 @@ export const dict = {
   "settings.providers.defaultModel.description": "Primair model voor gesprekken",
   "settings.providers.smallModel.title": "Klein Model",
   "settings.providers.smallModel.description":
-    "Lichtgewicht model voor het genereren van titels en andere snelle taken",
+    "Lichtgewicht model voor het genereren van titels, commit-berichten, promptverbetering en andere snelle taken",
   "settings.providers.modeModels": "Model per Modus",
   "settings.providers.modeModels.description":
     "Overschrijf het standaard model voor specifieke modi. Indien niet ingesteld, wordt het globale standaard model gebruikt.",
@@ -1171,14 +1249,13 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Wat is er Nieuw in Kilo Code",
-  "migration.whatsNew.badge": "Bèta",
   "migration.whatsNew.subtitle": "We hebben de extensie opnieuw opgebouwd op een snellere, efficiëntere basis.",
   "migration.whatsNew.features.performance.title": "Snellere Agent Prestaties",
   "migration.whatsNew.features.performance.detail":
     "Parallelle tool calls en subagents laten je agent meer tegelijk aanpakken — zodat je minder tijd besteedt aan wachten en meer tijd aan releasen.",
   "migration.whatsNew.features.interface.title": "Gestroomlijnde Interface",
   "migration.whatsNew.features.interface.detail": "Minder afleiding, makkelijker en sneller te lezen.",
-  "migration.whatsNew.features.agentManager.title": "Agent Manager",
+  "migration.whatsNew.features.agentManager.title": "Agentenbeheer",
   "migration.whatsNew.features.agentManager.detail":
     "Een uniforme interface voor het parallel uitvoeren van meerdere agents, elk op zijn eigen worktree — monitor de voortgang, wissel van context en bekijk wijzigingen op één plek.",
   "migration.whatsNew.features.foundation.title": "Gedeelde Basis",
@@ -1197,7 +1274,6 @@ export const dict = {
   "migration.migrate.chatHistoryDesc": "Niet compatibel met de nieuwe architectuur",
   "migration.migrate.button": "Migreer Instellingen",
   "migration.migrate.skip": "Overslaan",
-  "migration.migrate.back": "Terug",
   "migration.migrate.keysDetected": "{{count}} sleutels gedetecteerd",
   "migration.migrate.serversConfigured": "{{count}} server(s) geconfigureerd",
   "migration.migrate.modesFound": "{{count}} modus(sen) gevonden",
@@ -1218,6 +1294,11 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "Dit verwijdert de oude instellingen uit de VS Code-opslag. U zult deze migratie niet opnieuw kunnen uitvoeren.",
   "migration.complete.done": "Klaar",
+  "migration.migrate.sessionsDetected": "{{count}} sessies gedetecteerd",
+  "migration.error.sessionFailed": "Sessiemigratie is mislukt",
+  "migration.error.continue": "Doorgaan",
+  "migration.error.action.copy": "Kopiëren",
+  "migration.error.toast.copied": "Fout gekopieerd naar het klembord",
   // legacy-migration end
 
   "error.details.show": "Details",
@@ -1232,8 +1313,33 @@ export const dict = {
   "settings.saveBar.warning.many": "Meerdere sessies zijn actief en worden onderbroken",
   "settings.saveBar.saveAnyway": "Toch opslaan",
   "settings.saveBar.cancel": "Annuleren",
-  "notifications.action.previous": "Previous",
-  "notifications.action.next": "Next",
-  "notifications.action.close": "Close",
-  "notifications.action.tryModel": "Try model",
+  "notifications.action.next": "Volgende",
+  "notifications.action.close": "Sluiten",
+  "notifications.action.tryModel": "Probeer {{model}}",
+  // Missing translations - English fallbacks until translated
+  "settings.agentBehaviour.createMode": "Nieuwe modus aanmaken",
+  "settings.agentBehaviour.createMode.button": "Aanmaken",
+  "settings.agentBehaviour.createMode.cancel": "Annuleren",
+  "settings.agentBehaviour.createMode.description": "Beschrijving",
+  "settings.agentBehaviour.createMode.description.help": "Korte beschrijving van wat deze modus doet.",
+  "settings.agentBehaviour.createMode.description.placeholder": "e.g. Reviews code for quality and best practices",
+  "settings.agentBehaviour.createMode.name": "Naam",
+  "settings.agentBehaviour.createMode.name.description":
+    "Unieke identifier voor de modus. Gebruik alleen kleine letters, cijfers en koppeltekens.",
+  "settings.agentBehaviour.createMode.name.placeholder": "e.g. reviewer",
+  "settings.agentBehaviour.createMode.nameInvalid":
+    "Naam moet beginnen met een kleine letter en mag alleen kleine letters, cijfers en koppeltekens bevatten",
+  "settings.agentBehaviour.createMode.nameRequired": "Naam is verplicht",
+  "settings.agentBehaviour.createMode.nameTaken": "Er bestaat al een modus met deze naam",
+  "settings.agentBehaviour.createMode.prompt": "Systeemprompt",
+  "settings.agentBehaviour.createMode.prompt.help": "Instructies voor de AI-agent bij gebruik van deze modus.",
+  "settings.agentBehaviour.createMode.prompt.placeholder":
+    "e.g. You are a code reviewer. Focus on code quality, best practices, and potential bugs.",
+  "settings.agentBehaviour.editMode": "Modus bewerken",
+  "settings.agentBehaviour.editMode.back": "Terug naar lijst",
+  "settings.agentBehaviour.editMode.description": "Beschrijving",
+  "settings.agentBehaviour.editMode.native": "Ingebouwde modus (alleen-lezen definitie)",
+  "settings.agentBehaviour.editMode.prompt": "Systeemprompt",
+  "settings.agentBehaviour.editMode.promptOverride": "Aangepaste systeemprompt voor deze ingebouwde modus",
+  "settings.agentBehaviour.editMode.save": "Klaar",
 }

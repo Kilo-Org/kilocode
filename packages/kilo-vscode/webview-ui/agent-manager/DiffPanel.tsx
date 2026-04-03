@@ -14,9 +14,15 @@ import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pie
 import type { WorktreeFileDiff } from "../src/types/messages"
 import { useLanguage } from "../src/context/language"
 import { getDirectory, getFilename, lineCount, sanitizeReviewComments, type ReviewComment } from "./review-comments"
-import { buildReviewAnnotation, type AnnotationLabels, type AnnotationMeta } from "./review-annotations"
+import {
+  buildFileAnnotations,
+  buildReviewAnnotation,
+  type AnnotationLabels,
+  type AnnotationMeta,
+} from "./review-annotations"
 import { LONG_DIFF_MARKER_FILE_COUNT, initialOpenFiles, isLargeDiffFile } from "./diff-open-policy"
 import { DiffEndMarker } from "./DiffEndMarker"
+import { treeOrder } from "./file-tree-utils"
 
 // --- Data model ---
 
@@ -61,6 +67,10 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   // key changes (different worktree) we re-expand. Within the same key,
   // only pruning happens so the user's manual collapse state is preserved.
   let initializedKey: string | undefined
+
+  // Reorder diffs to match the file-tree's depth-first visual order so
+  // scrolling through the accordion matches the tree grouping.
+  const sorted = createMemo(() => treeOrder(props.diffs))
 
   const comments = () => props.comments
   const setComments = (next: ReviewComment[]) => props.onCommentsChange(next)
@@ -242,22 +252,9 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   })
 
   const annotationsForFile = (file: string): DiffLineAnnotation<AnnotationMeta>[] => {
-    const fileComments = commentsByFile().get(file) ?? []
-    const result: DiffLineAnnotation<AnnotationMeta>[] = fileComments.map((c) => ({
-      side: c.side,
-      lineNumber: c.line,
-      metadata: { type: "comment" as const, comment: c, file: c.file, side: c.side, line: c.line },
-    }))
-
-    const d = draft()
-    if (d && d.file === file) {
-      // Reuse stable reference for draft to prevent pierre cache invalidation
-      if (!draftMeta || draftMeta.file !== d.file || draftMeta.side !== d.side || draftMeta.line !== d.line) {
-        draftMeta = { type: "draft", comment: null, file: d.file, side: d.side, line: d.line }
-      }
-      result.push({ side: d.side, lineNumber: d.line, metadata: draftMeta })
-    }
-    return result
+    const result = buildFileAnnotations(file, commentsByFile().get(file) ?? [], editing(), draft(), draftMeta)
+    draftMeta = result.draftMeta
+    return result.annotations
   }
 
   const buildAnnotation = (annotation: DiffLineAnnotation<AnnotationMeta>): HTMLElement | undefined => {
@@ -388,7 +385,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       <Show when={props.diffs.length > 0}>
         <div class="am-diff-content" data-component="session-review" ref={scroller}>
           <Accordion multiple value={open()} onChange={setOpen}>
-            <For each={props.diffs}>
+            <For each={sorted()}>
               {(diff) => {
                 const isAdded = () => diff.status === "added"
                 const isDeleted = () => diff.status === "deleted"

@@ -17,8 +17,7 @@ import DisplayTab from "./DisplayTab"
 import AutocompleteTab from "./AutocompleteTab"
 import NotificationsTab from "./NotificationsTab"
 import ContextTab from "./ContextTab"
-import TerminalTab from "./TerminalTab"
-import PromptsTab from "./PromptsTab"
+
 import ExperimentalTab from "./ExperimentalTab"
 import LanguageTab from "./LanguageTab"
 import AboutKiloCodeTab from "./AboutKiloCodeTab"
@@ -36,7 +35,7 @@ const Settings: Component<SettingsProps> = (props) => {
   const vscode = useVSCode()
   const { isDirty, saveConfig, discardConfig } = useConfig()
   const session = useSession()
-  const [active, setActive] = createSignal(props.tab ?? "providers")
+  const [active, setActive] = createSignal(props.tab ?? "models")
 
   const busyCount = () => Object.values(session.allStatusMap()).filter((s) => s.type === "busy").length
 
@@ -138,14 +137,7 @@ const Settings: Component<SettingsProps> = (props) => {
             <Icon name="server" />
             <span class="label">{language.t("settings.context.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="terminal">
-            <Icon name="console" />
-            <span class="label">{language.t("settings.terminal.title")}</span>
-          </Tabs.Trigger>
-          <Tabs.Trigger value="prompts">
-            <Icon name="comment" />
-            <span class="label">{language.t("settings.prompts.title")}</span>
-          </Tabs.Trigger>
+
           <Tabs.Trigger value="experimental">
             <Icon name="settings-gear" />
             <span class="label">{language.t("settings.experimental.title")}</span>
@@ -200,14 +192,7 @@ const Settings: Component<SettingsProps> = (props) => {
           <h3>{language.t("settings.context.title")}</h3>
           <ContextTab />
         </Tabs.Content>
-        <Tabs.Content value="terminal">
-          <h3>{language.t("settings.terminal.title")}</h3>
-          <TerminalTab />
-        </Tabs.Content>
-        <Tabs.Content value="prompts">
-          <h3>{language.t("settings.prompts.title")}</h3>
-          <PromptsTab />
-        </Tabs.Content>
+
         <Tabs.Content value="experimental">
           <h3>{language.t("settings.experimental.title")}</h3>
           <ExperimentalTab />
@@ -227,29 +212,20 @@ const Settings: Component<SettingsProps> = (props) => {
         </Tabs.Content>
       </Tabs>
 
-      {/* Save bar — visible when there are unsaved config changes */}
-      <Show when={isDirty()}>
-        <div
-          style={{
-            display: "flex",
-            "align-items": "center",
-            "justify-content": "flex-end",
-            gap: "8px",
-            padding: "8px 16px",
-            "border-top": "1px solid var(--border-weak-base)",
-          }}
-        >
-          <span style={{ "font-size": "12px", color: "var(--foreground-secondary)", "margin-right": "auto" }}>
-            {language.t("settings.saveBar.unsavedChanges")}
-          </span>
-          <Button variant="ghost" size="small" onClick={discardConfig}>
-            {language.t("settings.saveBar.discard")}
-          </Button>
-          <Button variant="primary" size="small" onClick={handleSave}>
-            {language.t("settings.saveBar.save")}
-          </Button>
-        </div>
-      </Show>
+      {/* Save bar — slides in when there are unsaved config changes */}
+      <div
+        class={`settings-save-bar${isDirty() ? " settings-save-bar--visible" : ""}`}
+        inert={!isDirty() || undefined}
+        aria-hidden={!isDirty()}
+      >
+        <span class="settings-save-bar-label">{language.t("settings.saveBar.unsavedChanges")}</span>
+        <Button variant="ghost" size="small" onClick={discardConfig}>
+          {language.t("settings.saveBar.discard")}
+        </Button>
+        <Button variant="primary" size="small" onClick={handleSave}>
+          {language.t("settings.saveBar.save")}
+        </Button>
+      </div>
     </div>
   )
 }

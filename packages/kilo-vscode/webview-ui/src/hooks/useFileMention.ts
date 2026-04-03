@@ -132,6 +132,7 @@ export function useFileMention(vscode: VSCodeContext): FileMention {
     onSelect?: () => void,
   ): boolean => {
     if (!showMention()) return false
+    if (e.isComposing) return false
 
     if (e.key === "ArrowDown") {
       e.preventDefault()
@@ -152,6 +153,7 @@ export function useFileMention(vscode: VSCodeContext): FileMention {
     }
     if (e.key === "Escape") {
       e.preventDefault()
+      e.stopPropagation()
       closeMention()
       return true
     }

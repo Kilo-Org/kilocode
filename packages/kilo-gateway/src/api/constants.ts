@@ -27,8 +27,8 @@ export const DEFAULT_FREE_MODEL = "kilo-auto/free"
 /** Token expiration duration in milliseconds (1 year) */
 export const TOKEN_EXPIRATION_MS = 365 * 24 * 60 * 60 * 1000
 
-/** User-Agent header value for requests */
-export const USER_AGENT = "opencode-kilo-provider"
+/** User-Agent header base value for requests */
+export const USER_AGENT_BASE = "opencode-kilo-provider"
 
 /** Content-Type header value for requests */
 export const CONTENT_TYPE = "application/json"
@@ -69,3 +69,7 @@ export const HEADER_FEATURE = "X-KILOCODE-FEATURE"
 
 /** Environment variable name for feature override */
 export const ENV_FEATURE = "KILOCODE_FEATURE"
+
+export const PROMPTS = ["codex", "gemini", "beast", "anthropic", "trinity", "anthropic_without_todo"] as const
+
+export const AI_SDK_PROVIDERS = ["anthropic", "openai", "openai-compatible", "openrouter"] as const

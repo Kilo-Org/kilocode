@@ -131,5 +131,5 @@ Auto Model is actively being improved. We'd love to hear how it's working for yo
 ## Related
 
 - [Model Selection Guide](/docs/code-with-ai/agents/model-selection) - General guidance on choosing models
-- [Using Modes](/docs/code-with-ai/agents/using-modes) - Learn about different Kilo Code modes
+- [Using Agents](/docs/code-with-ai/agents/using-agents) - Learn about different Kilo Code agents
 - [Free & Budget Models](/docs/code-with-ai/agents/free-and-budget-models) - Cost-effective alternatives

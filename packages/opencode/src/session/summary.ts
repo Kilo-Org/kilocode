@@ -121,16 +121,23 @@ export namespace SessionSummary {
     }),
     async (input) => {
       const diffs = await Storage.read<Snapshot.FileDiff[]>(["session_diff", input.sessionID]).catch(() => [])
+      // kilocode_change start — scrub oversized diffs from stored session_diff
       const next = diffs.map((item) => {
         const file = unquoteGitPath(item.file)
-        if (file === item.file) return item
+        const oversized =
+          Buffer.byteLength(item.before) > Snapshot.MAX_DIFF_SIZE ||
+          Buffer.byteLength(item.after) > Snapshot.MAX_DIFF_SIZE
+        if (file === item.file && !oversized) return item
         return {
           ...item,
           file,
+          before: oversized ? "" : item.before,
+          after: oversized ? "" : item.after,
         }
       })
-      const changed = next.some((item, i) => item.file !== diffs[i]?.file)
+      const changed = next.some((item, i) => item !== diffs[i])
       if (changed) Storage.write(["session_diff", input.sessionID], next).catch(() => {})
+      // kilocode_change end
       return next
     },
   )

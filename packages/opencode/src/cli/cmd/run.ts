@@ -317,7 +317,7 @@ export const RunCommand = cmd({
           describe: "auto-approve all permissions (for autonomous/pipeline usage)",
           default: false,
         })
-        // kilocode_change end
+      // kilocode_change end
     )
   },
   handler: async (args) => {

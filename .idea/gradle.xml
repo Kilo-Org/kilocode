@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="GradleMigrationSettings" migrationVersion="1" />
+  <component name="GradleSettings">
+    <option name="linkedExternalProjectsSettings">
+      <GradleProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$/packages/kilo-jetbrains" />
+        <option name="gradleJvm" value="#JAVA_HOME" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$/packages/kilo-jetbrains" />
+            <option value="$PROJECT_DIR$/packages/kilo-jetbrains/backend" />
+            <option value="$PROJECT_DIR$/packages/kilo-jetbrains/frontend" />
+            <option value="$PROJECT_DIR$/packages/kilo-jetbrains/shared" />
+          </set>
+        </option>
+      </GradleProjectSettings>
+    </option>
+  </component>
+</project>

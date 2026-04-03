@@ -10,8 +10,6 @@ import * as path from "path"
 import * as fs from "fs"
 import { randomUUID } from "crypto"
 import simpleGit, { type SimpleGit } from "simple-git"
-
-const TEMP_PREFIX = ".kilo-delete-"
 import { generateBranchName, sanitizeBranchName } from "./branch-name"
 import type { GitOps } from "./GitOps"
 import { execWithShellEnv } from "./shell-env"
@@ -28,6 +26,9 @@ import {
   type PRInfo,
   type BranchListItem,
 } from "./git-import"
+
+const TEMP_PREFIX = ".kilo-delete-"
+const RM_OPTS: fs.RmOptions = { recursive: true, force: true, maxRetries: 3, retryDelay: 200 }
 
 interface WorktreeInfo {
   branch: string
@@ -388,7 +389,7 @@ export class WorktreeManager {
     if (branch) await this.deleteBranch(branch)
 
     // 4. Background delete — fire-and-forget, cross-platform
-    fs.promises.rm(temp, { recursive: true, force: true }).catch((err) => {
+    fs.promises.rm(temp, RM_OPTS).catch((err) => {
       this.log(`Background cleanup failed for ${temp}: ${err}`)
     })
   }
@@ -411,7 +412,7 @@ export class WorktreeManager {
         for (const e of entries) {
           if (e.isDirectory() && e.name.startsWith(TEMP_PREFIX)) {
             const stale = path.join(this.dir, e.name)
-            fs.promises.rm(stale, { recursive: true, force: true }).catch((err) => {
+            fs.promises.rm(stale, RM_OPTS).catch((err) => {
               this.log(`Failed to clean orphaned temp dir ${stale}: ${err}`)
             })
           }

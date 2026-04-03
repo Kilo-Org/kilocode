@@ -4,7 +4,7 @@
  */
 import type { KiloClient } from "@kilocode/sdk/v2"
 import { validateProviderID as validateProviderIDShared } from "./shared/custom-provider"
-import { sanitizeCustomProviderConfig } from "./shared/custom-provider"
+import { resolveCustomProviderAuth, sanitizeCustomProviderConfig } from "./shared/custom-provider"
 import { KILO_AUTO, parseModelString } from "./shared/provider-model"
 
 /**
@@ -28,7 +28,17 @@ export async function fetchProviderData(client: KiloClient, dir: string) {
     authRequest,
   ])
   const authStates: Record<string, AuthState> = {}
-  return { response, authMethods, authStates }
+  const all = response.all.map((item) => {
+    const raw = item as Record<string, unknown>
+    if (typeof raw.id === "string" && typeof raw.key === "string" && raw.key) {
+      authStates[raw.id] = "api"
+    }
+    if (!("key" in raw)) return item
+    const next = { ...raw }
+    delete next.key
+    return next as (typeof response.all)[number]
+  })
+  return { response: { ...response, all }, authMethods, authStates }
 }
 
 export function buildActionContext(
@@ -44,6 +54,9 @@ export function buildActionContext(
     getErrorMessage: errFn,
     workspaceDir: dir,
     disposeGlobal: async (reason: string) => {
+      // Wait for the server to finish disposing before refreshing providers.
+      // Shared State.dispose() now has a hard per-disposer timeout, so this
+      // wait is bounded without needing a client-side timeout here.
       await client.global.dispose().catch((error: unknown) => {
         console.warn(`[Kilo New] KiloProvider: global.dispose() after ${reason} failed:`, error)
       })
@@ -68,6 +81,12 @@ export function validateRecents(raw: unknown): Array<{ providerID: string; model
     .filter(isModelSelection)
     .slice(0, 5)
     .map((r) => ({ providerID: r.providerID, modelID: r.modelID }))
+}
+
+/** Validate and sanitize favorite model selections from untrusted sources. */
+export function validateFavorites(raw: unknown): Array<{ providerID: string; modelID: string }> {
+  if (!Array.isArray(raw)) return []
+  return raw.filter(isModelSelection).map((r) => ({ providerID: r.providerID, modelID: r.modelID }))
 }
 
 export function computeDefaultSelection(
@@ -246,6 +265,7 @@ export async function saveCustomProvider(
   providerID: string,
   provider: Record<string, unknown>,
   apiKey: string | undefined,
+  apiKeyChanged: boolean,
   cachedConfigMessage: unknown,
   setCachedConfig: (msg: unknown) => void,
 ) {
@@ -281,10 +301,13 @@ export async function saveCustomProvider(
     setCachedConfig(msg)
     ctx.postMessage({ type: "configUpdated", config: updated })
 
+    const auth = resolveCustomProviderAuth(apiKey, apiKeyChanged)
+
     try {
-      if (apiKey) {
-        await ctx.client.auth.set({ providerID: id, auth: { type: "api", key: apiKey } }, { throwOnError: true })
-      } else {
+      if (auth.mode === "set") {
+        await ctx.client.auth.set({ providerID: id, auth: { type: "api", key: auth.key } }, { throwOnError: true })
+      }
+      if (auth.mode === "clear") {
         await ctx.client.auth.remove({ providerID: id }, { throwOnError: true })
       }
     } catch (error) {

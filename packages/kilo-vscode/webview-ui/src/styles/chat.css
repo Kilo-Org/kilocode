@@ -174,6 +174,101 @@
 /* New Task Button */
 .new-task-button-wrapper {
   padding: 8px 12px 0;
+  container-type: inline-size;
+}
+
+.session-actions-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+/* All direct children share extra space equally, but start from their content size */
+.session-actions-row > * {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Tooltip wrappers fill their flex slot, buttons fill the tooltip wrapper */
+.session-actions-row > [data-component="tooltip-trigger"] {
+  display: flex;
+}
+
+.session-actions-row > [data-component="tooltip-trigger"] > [data-component="button"] {
+  flex: 1;
+}
+
+/* Diff wrapper also stretches evenly (same flex as buttons) */
+.session-diff-wrapper {
+  display: flex !important;
+}
+
+/* Diff stats badge — fills its flex slot, content centered */
+.session-diff-badge {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+  font-family: var(--vscode-editor-font-family), monospace;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  white-space: nowrap;
+  position: relative;
+}
+
+.session-diff-badge--empty {
+  opacity: 0.5;
+}
+
+.session-diff-badge:hover {
+  background: var(--vscode-toolbar-hoverBackground);
+}
+
+.session-diff-badge [data-component="icon"] {
+  opacity: 0.7;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.session-diff-add {
+  color: #34d399;
+}
+
+.session-diff-del {
+  color: #f87171;
+}
+
+/* Collapse diff stats to icon-only when truly narrow */
+@container (max-width: 300px) {
+  .session-diff-add,
+  .session-diff-del {
+    display: none;
+  }
+
+  .session-diff-badge {
+    padding: 4px 6px;
+    overflow: hidden;
+  }
+
+  /* Dot indicator on the icon when collapsed and there are changes */
+  .session-diff-badge--has-changes [data-component="icon"]::after {
+    content: "";
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #34d399;
+  }
 }
 
 /* ============================================
@@ -187,8 +282,9 @@
 
 .message-list {
   height: 100%;
+  overflow-x: hidden;
   overflow-y: auto;
-  padding: 12px;
+  padding: 12px 16px;
 }
 
 .message-list-loading {
@@ -277,8 +373,16 @@
   border-color: var(--vscode-textLink-foreground, #3794ff);
 }
 
+.feedback-button [data-component="icon"] {
+  --icon-base: currentColor;
+}
+
 .feedback-button:hover [data-slot="icon-svg"] {
   color: var(--vscode-editor-background, #1e1e1e);
+}
+
+.feedback-button:hover [data-component="icon"] {
+  --icon-base: var(--vscode-editor-background, #1e1e1e);
 }
 
 /* Feedback Dialog */
@@ -416,6 +520,28 @@
   min-width: 0;
 }
 
+.show-history-btn {
+  appearance: none;
+  border: 1px solid var(--vscode-button-secondaryBorder, var(--vscode-contrastBorder, transparent));
+  border-radius: 4px;
+  background: var(--vscode-button-secondaryBackground, transparent);
+  color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  padding: 5px 10px;
+  margin-top: 4px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.show-history-btn:hover {
+  background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
+}
+
 .recent-session-date {
   font-size: 11px;
   color: var(--vscode-descriptionForeground);
@@ -440,6 +566,10 @@
   font-size: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   transition: background-color 0.2s;
+}
+
+.scroll-to-bottom-button [data-component="icon"] {
+  --icon-base: var(--vscode-button-foreground);
 }
 
 .scroll-to-bottom-button:hover {
@@ -1451,6 +1581,53 @@
   opacity: 0.8;
 }
 
+.model-selector-item-provider-tag {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--vscode-descriptionForeground);
+  opacity: 0.8;
+}
+
+.model-selector-star {
+  all: unset;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--vscode-descriptionForeground);
+  opacity: 0;
+  transition:
+    opacity 0.1s ease,
+    color 0.1s ease;
+}
+
+.model-selector-star [data-component="icon"] {
+  color: inherit;
+}
+
+.model-selector-item:hover .model-selector-star,
+.model-selector-item.selected .model-selector-star,
+.model-selector-star--active {
+  opacity: 1;
+}
+
+.model-selector-star--active {
+  color: var(--vscode-list-highlightForeground);
+}
+
+.model-selector-star:hover {
+  color: var(--vscode-list-highlightForeground);
+  opacity: 1;
+}
+
+.model-selector-star--preview {
+  opacity: 1;
+}
+
 .model-selector-item-select-btn {
   flex-shrink: 0;
   padding: 2px 10px;
@@ -1583,6 +1760,7 @@
 .welcome-header {
   position: absolute;
   top: 12px;
+  left: 12px;
   right: 12px;
   z-index: 10;
   display: flex;
@@ -1648,7 +1826,7 @@
 
 .account-switcher-role {
   border-radius: 9999px;
-  padding: 1px 6px;
+  padding: 1px 12px;
   font-size: 10px;
   letter-spacing: 0.3px;
   background: var(--vscode-badge-background);
@@ -2071,8 +2249,17 @@
   opacity: 0.7;
 }
 
+/* Session List (inside History View) */
+.session-list {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 /* Session List Items */
-.session-list [data-slot="list-item-title"] {
+.session-list [data-slot="list-item-title"],
+.cloud-session-list [data-slot="list-item-title"] {
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -2081,12 +2268,36 @@
   text-align: left;
 }
 
-.session-list [data-slot="list-item-description"] {
+.session-list [data-slot="list-item-description"],
+.cloud-session-list [data-slot="list-item-description"] {
   flex-shrink: 0;
   margin-left: 8px;
   font-size: 12px;
   color: var(--text-weak, var(--vscode-descriptionForeground));
   white-space: nowrap;
+}
+
+body.vscode-light .session-list [data-slot="list-item"][data-active="true"] [data-slot="list-item-description"],
+body.vscode-light .session-list [data-slot="list-item"][data-selected="true"] [data-slot="list-item-description"],
+body.vscode-light .cloud-session-list [data-slot="list-item"][data-active="true"] [data-slot="list-item-description"],
+body.vscode-light
+  .cloud-session-list
+  [data-slot="list-item"][data-selected="true"]
+  [data-slot="list-item-description"] {
+  color: var(--text-on-interactive-base, white);
+}
+
+body.vscode-light
+  .session-list
+  [data-slot="list-item"][data-active="true"]
+  [data-slot="session-delete-button"]
+  [data-slot="icon-svg"],
+body.vscode-light
+  .session-list
+  [data-slot="list-item"][data-selected="true"]
+  [data-slot="session-delete-button"]
+  [data-slot="icon-svg"] {
+  color: var(--text-on-interactive-base, white);
 }
 
 .session-list [data-slot="session-delete-button"] {
@@ -2101,18 +2312,100 @@
   opacity: 1;
 }
 
-/* Cloud Session List */
-.cloud-session-list {
+/* History View (unified Local + Cloud tabs) */
+.history-view {
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
 }
 
-.cloud-session-filters {
+.history-view-header {
   flex-shrink: 0;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--vscode-panel-border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  min-height: 40px;
+}
+
+.history-view-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+
+.history-tab-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--vscode-foreground);
+  opacity: 0.6;
+  transition:
+    opacity 0.1s,
+    background 0.1s;
+  white-space: nowrap;
+}
+
+.history-tab-btn:hover {
+  opacity: 1;
+  background: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.1));
+}
+
+.history-tab-btn--active {
+  opacity: 1;
+  background: var(--vscode-toolbar-activeBackground, rgba(128, 128, 128, 0.2));
+  font-weight: 600;
+}
+
+.history-import-btn {
+  flex-shrink: 0;
+}
+
+.history-view-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Cloud Session List (inside History View) */
+.cloud-session-list {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Make the list search wrapper wrap so the repo filter appears below search */
+.cloud-session-list [data-slot="list-search-wrapper"] {
+  flex-wrap: wrap;
+}
+
+.cloud-session-repo-filter {
+  width: 100%;
+  padding: 4px 10px 2px;
+
+  [data-component="checkbox"] {
+    gap: 8px;
+
+    [data-slot="checkbox-checkbox-label"] {
+      padding-inline-start: 0;
+      margin-inline-end: 0;
+    }
+  }
+}
+
+[data-component="input"][data-variant="normal"] [data-slot="input-wrapper"]:focus-within:not(:has([data-readonly])) {
+  border-color: transparent;
+  box-shadow: none;
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
 }
 
 .cloud-session-load-more {
@@ -2122,12 +2415,28 @@
   padding: 8px;
 }
 
+.cloud-session-load-more-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--vscode-foreground);
+  opacity: 0.6;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.cloud-session-load-more-btn:hover {
+  opacity: 1;
+  background: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.1));
+}
+
 /* ============================================
    Kilo Notifications
    ============================================ */
 
 .kilo-notifications {
-  width: 280px;
   display: flex;
   flex-direction: column;
   border-radius: 6px;
@@ -2180,9 +2489,10 @@
 
 .kilo-notifications-footer {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  min-height: 28px;
+  gap: 16px;
+  container-type: inline-size;
 }
 
 .kilo-notifications-nav {
@@ -2195,6 +2505,23 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
+  margin-left: auto;
+  align-self: flex-start;
+}
+
+.kilo-notifications-cta-group {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  flex: 1 1 auto;
+}
+
+@container (max-width: 300px) {
+  .kilo-notifications-cta-group {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 .kilo-notifications-action-btn {
@@ -2750,6 +3077,35 @@
   animation: enhance-spin 1s linear infinite;
 }
 
+/* Settings save bar */
+.settings-save-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 16px;
+  border-top: 1px solid var(--border-weak-base);
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition:
+    max-height 0.2s ease,
+    opacity 0.2s ease,
+    padding 0.2s ease;
+}
+
+.settings-save-bar--visible {
+  max-height: 52px;
+  opacity: 1;
+  padding: 8px 16px;
+}
+
+.settings-save-bar-label {
+  font-size: 12px;
+  color: var(--foreground-secondary);
+  margin-right: auto;
+}
+
 [data-slot="settings-row"] {
   display: flex;
   flex-wrap: wrap;
@@ -2782,6 +3138,12 @@
       max-width: 100%;
     }
   }
+}
+
+/* Wider inputs inside cards with data-variant="wide-input" (e.g. edit mode config) */
+[data-variant="wide-input"] [data-slot="settings-row-input"] {
+  flex: 1 1 0%;
+  max-width: none;
 }
 
 /* ============================================

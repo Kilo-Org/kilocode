@@ -6,7 +6,7 @@ import {
   HEADER_EDITORNAME,
   HEADER_MACHINEID,
   HEADER_FEATURE,
-  USER_AGENT,
+  USER_AGENT_BASE,
   CONTENT_TYPE,
   DEFAULT_EDITOR_NAME,
   ENV_EDITOR_NAME,
@@ -37,11 +37,22 @@ export function getFeatureHeader(): string | undefined {
 }
 
 /**
+ * Get User-Agent header value.
+ * Appends the version from KILOCODE_VERSION when available.
+ */
+export function getUserAgent(): string {
+  const version = process.env[ENV_VERSION]
+  return version ? `${USER_AGENT_BASE}/${version}` : USER_AGENT_BASE
+}
+
+/**
  * Default headers for KiloCode requests
  */
-export const DEFAULT_HEADERS = {
-  "User-Agent": USER_AGENT,
-  "Content-Type": CONTENT_TYPE,
+export function getDefaultHeaders(): Record<string, string> {
+  return {
+    "User-Agent": getUserAgent(),
+    "Content-Type": CONTENT_TYPE,
+  }
 }
 
 /**
