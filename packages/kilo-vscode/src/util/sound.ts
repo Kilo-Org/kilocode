@@ -2,7 +2,7 @@ import { exec } from "../util/process"
 import * as path from "path"
 import * as fs from "fs"
 
-const SOUND_DIR = path.join(__dirname, ".")
+const SOUND_DIR = path.join(__dirname, "../../kilo-vscode/audio-wav")
 
 export type SoundID =
   | "alert-01"
@@ -129,17 +129,18 @@ export async function playSound(soundId: SoundID): Promise<void> {
   const filePath = path.join(SOUND_DIR, file)
   if (!fs.existsSync(filePath)) return
 
+  // Validate path to prevent PowerShell injection
+  if (!filePath.match(/^[a-zA-Z0-9_/.-]+$/)) return
+
   const platform = process.platform
 
   switch (platform) {
     case "darwin":
       try {
-        const { exec: _exec } = await import("child_process")
-        await _exec(`afplay "${filePath}"`)
+        await exec("afplay", [filePath])
       } catch {
         try {
-          const { exec: _exec } = await import("child_process")
-          await _exec(`play "${filePath}"`)
+          await exec("play", [filePath])
         } catch {
           // No audio
         }
@@ -147,16 +148,13 @@ export async function playSound(soundId: SoundID): Promise<void> {
       break
     case "linux":
       try {
-        const { exec: _exec } = await import("child_process")
-        await _exec(`/usr/bin/aplay -f CD "${filePath}"`)
+        await exec("/usr/bin/aplay", ["-f", "CD", filePath])
       } catch {
         try {
-          const { exec: _exec } = await import("child_process")
-          await _exec(`paplay "${filePath}"`)
+          await exec("paplay", [filePath])
         } catch {
           try {
-            const { exec: _exec } = await import("child_process")
-            await _exec(`play "${filePath}"`)
+            await exec("play", [filePath])
           } catch {
             // No audio
           }

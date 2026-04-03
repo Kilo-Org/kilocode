@@ -11,7 +11,9 @@ export async function sendOsNotification(title: string, body: string): Promise<v
 
   switch (os.platform()) {
     case "darwin":
-      await exec("osascript", ["-e", `display notification "${escaped}" with title "${escapedTitle}"`])
+      await exec("osascript", ["-e", `display notification "${escaped}" with title "${escapedTitle}"`]).catch(() => {
+        // osascript may not be available — fall back silently
+      })
       break
     case "linux":
       await exec("notify-send", [escapedTitle, escaped]).catch(() => {
@@ -30,7 +32,9 @@ export async function sendOsNotification(title: string, body: string): Promise<v
           `$textNodes.Item(1).AppendChild($xml.CreateTextNode("${escaped}")) > $null; ` +
           `$toast = [Windows.UI.Notifications.ToastNotification]::new($xml); ` +
           `[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("Kilo Code").Show($toast)`,
-      ])
+      ]).catch(() => {
+        // PowerShell may not be available — fall back silently
+      })
       break
   }
 }
