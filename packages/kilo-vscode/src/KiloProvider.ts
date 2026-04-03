@@ -62,6 +62,7 @@ import { getTerminalContents } from "./services/terminal/context"
 import { disposeGitChangesTarget } from "./kilo-provider/git-changes-target"
 import { interceptMessage } from "./kilo-provider/git-changes-request"
 import { sendOsNotification } from "./util/notify"
+import { playSound, resolveSoundId } from "./util/sound"
 import { matchFollowup, recordFollowup, type Followup } from "./kilo-provider/followup-session"
 import { clearCommandsCache, loadCommands } from "./kilo-provider/commands"
 import { fetchMessagePage, MESSAGE_PAGE_LIMIT } from "./kilo-provider/message-page"
@@ -2422,6 +2423,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const config = vscode.workspace.getConfiguration("kilo-code.new.notifications")
     if (!config.get<boolean>(setting, true)) return
     if (this.lastFocusState) return
+
+    const soundConfig = vscode.workspace.getConfiguration("kilo-code.new.sounds")
+    const soundSetting = soundConfig.get<string>(setting, "default")
+    const soundId = resolveSoundId(soundSetting, setting)
+    if (soundId) {
+      void playSound(soundId)
+    }
+
     void sendOsNotification(title, message ?? title)
   }
 
