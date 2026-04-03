@@ -440,34 +440,6 @@ export function activate(context: vscode.ExtensionContext) {
     ),
   )
 
-  // TODO-REMOVE: Test notification with sound
-  context.subscriptions.push(
-    vscode.commands.registerCommand("kilo-code.new.testNotification", async () => {
-      const { resolveSoundId, playSound } = await import("./util/sound")
-      const { sendOsNotification } = await import("./util/notify")
-
-      const type = await vscode.window.showQuickPick(["agent", "permissions", "errors"], {
-        placeHolder: "Select notification type",
-      })
-      if (!type) return
-
-      const soundConfig = vscode.workspace.getConfiguration("kilo-code.new.sounds")
-      const soundSetting = soundConfig.get<string>(type, "default")
-      const soundId = resolveSoundId(soundSetting, type as "agent" | "permissions" | "errors")
-
-      // Debug: show soundId and path info
-      const { default: path } = await import("path")
-      const { default: fs } = await import("fs")
-      const debugPath = path.join(__dirname, "../../kilo-vscode/audio-wav", soundId + ".wav")
-      const exists = fs.existsSync(debugPath)
-      vscode.window.showInformationMessage(`soundId: ${soundId}, path: ${debugPath}, exists: ${exists}`)
-
-      if (soundId) await playSound(soundId)
-
-      await sendOsNotification(`Test ${type}`, "This is a test notification with sound")
-    }),
-  )
-
   // Register URI handler for session imports (vscode://kilocode.kilo-code/kilocode/s/{sessionId})
   context.subscriptions.push(
     vscode.window.registerUriHandler({

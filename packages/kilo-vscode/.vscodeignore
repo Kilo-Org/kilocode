@@ -28,3 +28,4 @@ AGENTS.md
 
 # Include audio files for sound notifications
 !audio-wav/**
+!audio/**

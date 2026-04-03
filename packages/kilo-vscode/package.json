@@ -144,11 +144,6 @@
         "category": "Kilo Code"
       },
       {
-        "command": "kilo-code.new.testNotification",
-        "title": "Test Notification with Sound",
-        "category": "Kilo Code"
-      },
-      {
         "command": "kilo-code.new.autocomplete.generateSuggestions",
         "title": "Generate Suggested Edits",
         "category": "Kilo Code"
