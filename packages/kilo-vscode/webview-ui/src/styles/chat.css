@@ -2442,7 +2442,8 @@ body.vscode-light
   border-radius: 6px;
   animation: kilo-notifications-slide-in 0.3s ease-out;
   overflow: hidden;
-  width: 280px;
+  max-width: 280px;
+  width: 100%;
   align-self: flex-end;
 }
 
