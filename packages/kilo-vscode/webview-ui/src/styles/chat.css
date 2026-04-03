@@ -2442,6 +2442,8 @@ body.vscode-light
   border-radius: 6px;
   animation: kilo-notifications-slide-in 0.3s ease-out;
   overflow: hidden;
+  width: 280px;
+  align-self: flex-end;
 }
 
 @keyframes kilo-notifications-slide-in {
@@ -2489,9 +2491,8 @@ body.vscode-light
 
 .kilo-notifications-footer {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 16px;
+  flex-direction: column;
+  gap: 8px;
   container-type: inline-size;
 }
 
@@ -2505,23 +2506,13 @@ body.vscode-light
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-shrink: 0;
-  margin-left: auto;
-  align-self: flex-start;
+  align-self: flex-end;
 }
 
 .kilo-notifications-cta-group {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: 6px;
-  flex: 1 1 auto;
-}
-
-@container (max-width: 300px) {
-  .kilo-notifications-cta-group {
-    flex-direction: column;
-    align-items: flex-start;
-  }
 }
 
 .kilo-notifications-action-btn {
