@@ -32,17 +32,21 @@ These prompts are injected into the agent's system prompt and apply across all s
 Kilo automatically discovers instruction files at your project root and in parent directories (via `findUp`). The following filenames are recognized:
 
 - **`AGENTS.md`** — The primary instruction file for Kilo
-- **`CLAUDE.md`** — Also supported for compatibility
+- **`CLAUDE.md`** — Supported for compatibility (requires Claude Code Compatibility to be enabled — see below)
 - **`CONTEXT.md`** — Additional project context
 
 Place any of these files at your project root to provide project-wide instructions to the agent.
+
+{% callout type="note" title="Claude Code Compatibility" %}
+Loading of `CLAUDE.md` files and `.claude/` directories is controlled by the **Claude Code Compatibility** toggle in **Settings → Agent Behaviour → Rules**. This setting is **disabled by default**. Enable it if you want Kilo to pick up `CLAUDE.md` instruction files and `.claude/skills/`. Changing this setting requires an extension restart.
+{% /callout %}
 
 ### Global Instructions
 
 For instructions that apply across all your projects, place an `AGENTS.md` file in your global config directory:
 
 - **Kilo:** `~/.config/kilo/AGENTS.md`
-- **Claude-compatible:** `~/.claude/CLAUDE.md`
+- **Claude-compatible:** `~/.claude/CLAUDE.md` (requires Claude Code Compatibility enabled)
 
 Project-level instructions are loaded before global instructions and apply to every session.
 

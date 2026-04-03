@@ -80,10 +80,14 @@ your-project/
 
 ### Compatibility Directories
 
-For interoperability with other tools, the CLI also loads skills from:
+For interoperability with other tools, skills are also loaded from:
 
-- `.claude/skills/` — Claude Code compatibility
+- `.claude/skills/` — Claude Code compatibility (requires the toggle below)
 - `.agents/skills/` — Open agent standard
+
+{% callout type="note" title="Claude Code Compatibility" %}
+Loading skills from `.claude/skills/` is controlled by the **Claude Code Compatibility** toggle in **Settings → Agent Behaviour → Rules**. This setting is **disabled by default**. Enable it to load skills from `.claude/skills/` alongside `CLAUDE.md` instruction files. Changing this setting requires an extension restart.
+{% /callout %}
 
 ### Additional Skill Paths and Remote URLs
 
