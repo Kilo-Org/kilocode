@@ -130,7 +130,7 @@ export async function playSound(soundId: SoundID): Promise<void> {
   if (!fs.existsSync(filePath)) return
 
   // Validate path to prevent PowerShell injection
-  if (!filePath.match(/^[a-zA-Z0-9_/.:\\-]+$/)) return
+  if (!filePath.match(/^[-a-zA-Z0-9_/.:\\ ]+$/)) return
 
   const platform = process.platform
 

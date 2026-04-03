@@ -6,23 +6,25 @@ import { exec } from "./process"
  * Uses platform-specific commands so notifications appear even when VS Code is focused.
  */
 export async function sendOsNotification(title: string, body: string): Promise<void> {
-  const escaped = body.replace(/"/g, '\\"').replace(/'/g, "'\\''")
-  const escapedTitle = title.replace(/"/g, '\\"').replace(/'/g, "'\\''")
-
   switch (os.platform()) {
-    case "darwin":
-      await exec("osascript", ["-e", `display notification "${escaped}" with title "${escapedTitle}"`]).catch(() => {
+    case "darwin": {
+      // osascript -e receives the string directly; escape double quotes for AppleScript double-quoted strings
+      const esc = (s: string) => s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
+      await exec("osascript", ["-e", `display notification "${esc(body)}" with title "${esc(title)}"`]).catch(() => {
         // osascript may not be available — fall back silently
       })
       break
+    }
     case "linux":
-      await exec("notify-send", [escapedTitle, escaped]).catch(() => {
+      // notify-send receives raw arguments directly, no shell escaping needed
+      await exec("notify-send", [title, body]).catch(() => {
         // notify-send may not be installed — fall back silently
       })
       break
     case "win32": {
-      const encodedTitle = Buffer.from(escapedTitle, "utf8").toString("base64")
-      const encodedBody = Buffer.from(escaped, "utf8").toString("base64")
+      // base64 encoding prevents injection; use raw text (no shell escaping)
+      const encodedTitle = Buffer.from(title, "utf8").toString("base64")
+      const encodedBody = Buffer.from(body, "utf8").toString("base64")
       await exec("powershell", [
         "-NonInteractive",
         "-Command",
