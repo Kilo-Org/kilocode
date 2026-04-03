@@ -1255,6 +1255,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.unsubscribeFocus = vscode.window.onDidChangeWindowState((state) => {
           this.lastFocusState = state.focused
         })
+        this.lastFocusState = vscode.window.state.focused
       }
 
       // Subscribe to notification dismiss broadcast from other KiloProvider instances

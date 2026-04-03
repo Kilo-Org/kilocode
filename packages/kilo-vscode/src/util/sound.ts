@@ -2,7 +2,7 @@ import { exec } from "../util/process"
 import * as path from "path"
 import * as fs from "fs"
 
-const SOUND_DIR = path.join(__dirname, "../../kilo-vscode/audio-wav")
+const SOUND_DIR = path.join(__dirname, "../audio-wav")
 
 export type SoundID =
   | "alert-01"
@@ -130,7 +130,7 @@ export async function playSound(soundId: SoundID): Promise<void> {
   if (!fs.existsSync(filePath)) return
 
   // Validate path to prevent PowerShell injection
-  if (!filePath.match(/^[a-zA-Z0-9_/.-]+$/)) return
+  if (!filePath.match(/^[a-zA-Z0-9_/.:\\-]+$/)) return
 
   const platform = process.platform
 
