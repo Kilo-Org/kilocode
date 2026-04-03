@@ -1128,6 +1128,10 @@ export const dict = {
     "规则是指导代理行为的指令文件。它们会被包含在每次对话的系统提示词中。在下方添加文件路径以包含额外的规则。",
   "settings.agentBehaviour.instructionFiles": "附加指令文件",
   "settings.agentBehaviour.instructionFiles.description": "包含在系统提示词中的附加指令文件路径",
+  "settings.agentBehaviour.claudeCompat.heading": "Claude Code 兼容性",
+  "settings.agentBehaviour.claudeCompat.title": "加载 Claude Code 文件",
+  "settings.agentBehaviour.claudeCompat.description":
+    "将 Claude Code 配置目录中的 CLAUDE.md 指令和技能加载到会话中。如果您希望 Kilo 使用您的 Claude Code 指令和技能，请启用此选项。需要重启。",
   "settings.agentBehaviour.mcpDetail.command": "命令",
   "settings.agentBehaviour.mcpDetail.args": "参数",
   "settings.agentBehaviour.mcpDetail.env": "环境",
