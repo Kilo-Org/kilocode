@@ -207,7 +207,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /** Sessions that were in "busy" state — used to detect busy→idle transitions for notifications. */
   private busySessions = new Set<string>()
   /** Last known VS Code window focus state — used to decide whether to show OS notifications. */
-  private lastFocusState = vscode.window.state.focused
+  private lastFocusState: boolean | undefined = undefined
   /** Per-session directory overrides (e.g., worktree paths registered by AgentManagerProvider). */
   private sessionDirectories = new Map<string, string>()
   private permissionDirectories = new Map<string, string>()
@@ -1251,9 +1251,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       })
 
       // Track VS Code window focus state for OS notification decisions
-      this.unsubscribeFocus = vscode.window.onDidChangeWindowState((state) => {
-        this.lastFocusState = state.focused
-      })
+      if (vscode.window.onDidChangeWindowState) {
+        this.unsubscribeFocus = vscode.window.onDidChangeWindowState((state) => {
+          this.lastFocusState = state.focused
+        })
+      }
 
       // Subscribe to notification dismiss broadcast from other KiloProvider instances
       this.unsubscribeNotificationDismiss = this.connectionService.onNotificationDismissed(() => {
@@ -2422,7 +2424,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private notifyIfNotFocused(setting: "agent" | "permissions" | "errors", title: string, message?: string): void {
     const config = vscode.workspace.getConfiguration("kilo-code.new.notifications")
     if (!config.get<boolean>(setting, true)) return
-    if (this.lastFocusState) return
+    // Only skip notification if we're explicitly focused (not undefined)
+    if (this.lastFocusState === true) return
 
     const soundConfig = vscode.workspace.getConfiguration("kilo-code.new.sounds")
     const soundSetting = soundConfig.get<string>(setting, "default")
