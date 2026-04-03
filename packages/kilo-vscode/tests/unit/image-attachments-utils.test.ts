@@ -11,6 +11,11 @@ describe("ACCEPTED_IMAGE_TYPES", () => {
     expect(ACCEPTED_IMAGE_TYPES).toContain("image/jpeg")
     expect(ACCEPTED_IMAGE_TYPES).toContain("image/gif")
     expect(ACCEPTED_IMAGE_TYPES).toContain("image/webp")
+    expect(ACCEPTED_IMAGE_TYPES).toContain("image/bmp")
+    expect(ACCEPTED_IMAGE_TYPES).toContain("image/tiff")
+    expect(ACCEPTED_IMAGE_TYPES).toContain("image/tif")
+    expect(ACCEPTED_IMAGE_TYPES).toContain("image/heic")
+    expect(ACCEPTED_IMAGE_TYPES).toContain("image/avif")
   })
 })
 
@@ -20,6 +25,11 @@ describe("isAcceptedImageType", () => {
     expect(isAcceptedImageType("image/jpeg")).toBe(true)
     expect(isAcceptedImageType("image/gif")).toBe(true)
     expect(isAcceptedImageType("image/webp")).toBe(true)
+    expect(isAcceptedImageType("image/bmp")).toBe(true)
+    expect(isAcceptedImageType("image/tiff")).toBe(true)
+    expect(isAcceptedImageType("image/tif")).toBe(true)
+    expect(isAcceptedImageType("image/heic")).toBe(true)
+    expect(isAcceptedImageType("image/avif")).toBe(true)
   })
 
   it("returns false for non-image types", () => {
@@ -34,7 +44,6 @@ describe("isAcceptedImageType", () => {
 
   it("returns false for image types not in the accepted list", () => {
     expect(isAcceptedImageType("image/svg+xml")).toBe(false)
-    expect(isAcceptedImageType("image/bmp")).toBe(false)
   })
 })
 

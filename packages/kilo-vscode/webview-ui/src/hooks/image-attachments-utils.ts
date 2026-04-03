@@ -1,4 +1,14 @@
-export const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"]
+export const ACCEPTED_IMAGE_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+  "image/bmp",
+  "image/tiff",
+  "image/tif",
+  "image/heic",
+  "image/avif",
+]
 
 /** Returns true if the given MIME type is an accepted image type. */
 export function isAcceptedImageType(mimeType: string): boolean {
