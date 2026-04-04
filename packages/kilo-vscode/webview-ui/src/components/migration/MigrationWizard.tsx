@@ -410,6 +410,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
   }
 
   const handleDone = () => {
+    vscode.postMessage({ type: "finalizeLegacyMigration" })
     if (clearLegacyData()) {
       vscode.postMessage({ type: "clearLegacyData" })
     }

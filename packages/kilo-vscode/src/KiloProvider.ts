@@ -45,6 +45,7 @@ import {
   checkAndShowMigrationWizard,
   handleRequestLegacyMigrationData,
   handleStartLegacyMigration,
+  handleFinalizeLegacyMigration,
   handleSkipLegacyMigration,
   handleClearLegacyData,
   type MigrationContext,
@@ -893,6 +894,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "clearLegacyData":
           void handleClearLegacyData(this.migrationCtx)
+          break
+        case "finalizeLegacyMigration":
+          void handleFinalizeLegacyMigration(this.migrationCtx)
           break
         // legacy-migration end
         case "enhancePrompt": {

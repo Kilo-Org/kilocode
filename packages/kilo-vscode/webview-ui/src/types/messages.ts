@@ -1147,6 +1147,10 @@ export interface SkipLegacyMigrationMessage {
 export interface ClearLegacyDataMessage {
   type: "clearLegacyData"
 }
+
+export interface FinalizeLegacyMigrationMessage {
+  type: "finalizeLegacyMigration"
+}
 // legacy-migration end
 
 // Enhance prompt result (extension → webview)
@@ -2184,6 +2188,7 @@ export type WebviewMessage =
   | StartLegacyMigrationMessage
   | SkipLegacyMigrationMessage
   | ClearLegacyDataMessage
+  | FinalizeLegacyMigrationMessage
   // legacy-migration end
   | ApplyWorktreeDiffMessage
   | EnhancePromptRequest

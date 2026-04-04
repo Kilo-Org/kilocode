@@ -39,6 +39,10 @@ export interface MigrationContext {
   broadcastComplete(): void
 }
 
+interface MigrationFinalization {
+  results: Awaited<ReturnType<typeof MigrationService.migrate>>
+}
+
 function postSessionProgress(ctx: MigrationContext, progress: MigrationSessionProgress): void {
   ctx.postMessage({
     type: "legacyMigrationSessionProgress",
@@ -135,21 +139,6 @@ export async function handleStartLegacyMigration(
       ctx.cachedLegacyData?.sessions,
     )
 
-    const failed = results.some((r) => r.status === "error")
-    const success = results.some((r) => r.status === "success")
-
-    if (!failed && success) {
-      // Dispose all instances after a fully successful migration.
-      // Reloading the data will be handled once the server replies with a global.disposed event.
-      await ctx.disposeGlobal()
-      await MigrationService.setMigrationStatus(
-        ctx.extensionContext as Parameters<typeof MigrationService.setMigrationStatus>[0],
-        "completed",
-      )
-      ctx.broadcastComplete()
-      ctx.refreshSessions()
-    }
-
     ctx.postMessage({ type: "legacyMigrationComplete", results })
   } catch (error) {
     console.error("[Kilo New] KiloProvider: ❌ Migration failed", error)
@@ -165,6 +154,17 @@ export async function handleStartLegacyMigration(
       ],
     })
   }
+}
+
+export async function handleFinalizeLegacyMigration(ctx: MigrationContext): Promise<void> {
+  if (!ctx.extensionContext) return
+  await ctx.disposeGlobal()
+  await MigrationService.setMigrationStatus(
+    ctx.extensionContext as Parameters<typeof MigrationService.setMigrationStatus>[0],
+    "completed",
+  )
+  ctx.broadcastComplete()
+  ctx.refreshSessions()
 }
 
 /** Record that the user skipped migration and broadcast to all instances. */
