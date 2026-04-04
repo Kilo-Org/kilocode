@@ -6,7 +6,11 @@
  */
 
 import type { KiloClient } from "@kilocode/sdk/v2/client"
-import type { LegacyMigrationData, MigrationSelections } from "../../legacy-migration/legacy-types"
+import type {
+  LegacyMigrationData,
+  MigrationSelections,
+  MigrationSessionProgress,
+} from "../../legacy-migration/legacy-types"
 import * as MigrationService from "../../legacy-migration/migration-service"
 
 /** Subset of vscode.ExtensionContext needed by migration handlers. */
@@ -33,6 +37,19 @@ export interface MigrationContext {
   migrationCheckInFlight: boolean
   disposeGlobal(): Promise<void>
   broadcastComplete(): void
+}
+
+function postSessionProgress(ctx: MigrationContext, progress: MigrationSessionProgress): void {
+  ctx.postMessage({
+    type: "legacyMigrationSessionProgress",
+    session: progress.session,
+    index: progress.index,
+    total: progress.total,
+    phase: progress.phase,
+    current: progress.current,
+    count: progress.count,
+    error: progress.error,
+  })
 }
 
 /**
@@ -111,7 +128,11 @@ export async function handleStartLegacyMigration(
       (item, status, message) => {
         ctx.postMessage({ type: "legacyMigrationProgress", item, status, message })
       },
+      (progress: MigrationSessionProgress) => {
+        postSessionProgress(ctx, progress)
+      },
       ctx.cachedLegacyData?.settings,
+      ctx.cachedLegacyData?.sessions,
     )
 
     const failed = results.some((r) => r.status === "error")

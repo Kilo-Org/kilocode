@@ -1093,6 +1093,19 @@ export interface LegacyMigrationProgressMessage {
   message?: string
 }
 
+export type LegacyMigrationSessionPhase = "project" | "session" | "messages" | "parts" | "skipped" | "done" | "error"
+
+export interface LegacyMigrationSessionProgressMessage {
+  type: "legacyMigrationSessionProgress"
+  session: MigrationSessionInfo
+  index: number
+  total: number
+  phase: LegacyMigrationSessionPhase
+  current?: number
+  count?: number
+  error?: string
+}
+
 export interface LegacyMigrationCompleteMessage {
   type: "legacyMigrationComplete"
   results: MigrationResultItem[]
@@ -1337,6 +1350,7 @@ export type ExtensionMessage =
   | MigrationStateMessage
   | LegacyMigrationDataMessage
   | LegacyMigrationProgressMessage
+  | LegacyMigrationSessionProgressMessage
   | LegacyMigrationCompleteMessage
   // legacy-migration end
   | EnhancePromptResultMessage

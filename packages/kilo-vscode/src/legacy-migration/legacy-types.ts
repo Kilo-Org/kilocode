@@ -345,3 +345,15 @@ export interface MigrationSelections {
   defaultModel: boolean
   settings: MigrationSettingsSelections
 }
+
+export type MigrationSessionPhase = "project" | "session" | "messages" | "parts" | "skipped" | "done" | "error"
+
+export interface MigrationSessionProgress {
+  session: MigrationSessionInfo
+  index: number
+  total: number
+  phase: MigrationSessionPhase
+  current?: number
+  count?: number
+  error?: string
+}

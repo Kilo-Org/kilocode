@@ -34,6 +34,7 @@ import type {
   MigrationMcpServerInfo,
   MigrationCustomModeInfo,
   MigrationSessionInfo,
+  MigrationSessionProgress,
 } from "./legacy-types"
 import type { MigrationResultItem } from "./migration-types"
 import { createSessionID } from "./sessions/lib/ids"
@@ -145,6 +146,8 @@ export type ProgressCallback = (
   message?: string,
 ) => void
 
+export type SessionProgressCallback = (progress: MigrationSessionProgress) => void
+
 /**
  * Executes migration for the selected items.
  * Calls onProgress for each item with real-time status updates.
@@ -157,13 +160,16 @@ export async function migrate(
   client: KiloClient,
   selections: MigrationSelections,
   onProgress: ProgressCallback,
+  onSessionProgress?: SessionProgressCallback,
   cachedSettings?: LegacySettings,
+  cachedSessions?: MigrationSessionInfo[],
 ): Promise<MigrationResultItem[]> {
   const profiles = await readLegacyProviderProfiles(context)
   const mcpSettings = await readLegacyMcpSettings(context)
   const customModes = await readLegacyCustomModes(context)
   const prompts = readLegacyCustomModePrompts(context)
   const legacySettings = cachedSettings ?? readLegacySettings(context)
+  const sessions = cachedSessions ?? (await readSessionsInGlobalStorage(context))
 
   const results: MigrationResultItem[] = []
 
@@ -264,8 +270,18 @@ export async function migrate(
   }
 
   if (selections.sessions?.length) {
+    const info = cachedSessions ?? sessions
     for (const id of selections.sessions) {
       onProgress(id, "migrating")
+      const session = info.find((item: MigrationSessionInfo) => item.id === id)
+      if (session && onSessionProgress) {
+        onSessionProgress({
+          session,
+          index: results.filter((item) => item.category === "session").length + 1,
+          total: selections.sessions.length,
+          phase: "session",
+        })
+      }
       const result = await migrateSession(id, context, client)
       const reason = result.ok ? "Session migrated" : result.message
       results.push({
