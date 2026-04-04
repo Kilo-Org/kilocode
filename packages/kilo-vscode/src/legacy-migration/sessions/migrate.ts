@@ -1,6 +1,7 @@
 import * as vscode from "vscode"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { getMigrationErrorMessage } from "../errors/migration-error"
+import type { MigrationSessionInfo, MigrationSessionProgress } from "../legacy-types"
 import type { LegacyHistoryItem } from "./lib/legacy-types"
 import { parseSession } from "./parser"
 
@@ -16,15 +17,39 @@ type Result =
       message: string
     }
 
-export async function migrate(id: string, context: vscode.ExtensionContext, client: KiloClient): Promise<Result> {
+type Progress = Omit<MigrationSessionProgress, "session" | "index" | "total">
+type ProgressCallback = (progress: Progress) => void
+
+function trimError(input: string) {
+  return input.length <= 100 ? input : `${input.slice(0, 100)}...`
+}
+
+export async function migrate(
+  id: string,
+  context: vscode.ExtensionContext,
+  client: KiloClient,
+  meta?: {
+    session: MigrationSessionInfo
+    index: number
+    total: number
+  },
+  onProgress?: ProgressCallback,
+): Promise<Result> {
   const dir = vscode.Uri.joinPath(context.globalStorageUri, "tasks").fsPath
   const items = context.globalState.get<LegacyHistoryItem[]>("taskHistory", [])
   const item = items.find((item) => item.id === id)
   const payload = await parseSession(id, dir, item)
 
+  const progress = (next: Progress) => {
+    if (!meta || !onProgress) return
+    onProgress(next)
+  }
+
   try {
+    progress({ phase: "project" })
     const project = await client.kilocode.sessionImport.project(payload.project, { throwOnError: true })
     const projectID = project.data?.id ?? payload.project.id
+    progress({ phase: "session" })
     const session = await client.kilocode.sessionImport.session(
       {
         ...payload.session,
@@ -36,6 +61,7 @@ export async function migrate(id: string, context: vscode.ExtensionContext, clie
     )
     // Skip child imports when the session already exists so rerunning migration only imports missing sessions.
     if (session.data?.skipped) {
+      progress({ phase: "skipped" })
       return {
         ok: true,
         skipped: true,
@@ -43,19 +69,29 @@ export async function migrate(id: string, context: vscode.ExtensionContext, clie
       }
     }
 
-    for (const msg of payload.messages) {
+    progress({ phase: "messages", current: 0, count: payload.messages.length })
+    for (const [index, msg] of payload.messages.entries()) {
       await client.kilocode.sessionImport.message(msg, { throwOnError: true })
+      progress({ phase: "messages", current: index + 1, count: payload.messages.length })
     }
 
-    for (const part of payload.parts) {
+    progress({ phase: "parts", current: 0, count: payload.parts.length })
+    for (const [index, part] of payload.parts.entries()) {
       await client.kilocode.sessionImport.part(part, { throwOnError: true })
+      progress({ phase: "parts", current: index + 1, count: payload.parts.length })
     }
+
+    progress({ phase: "done" })
 
     return {
       ok: true,
       payload,
     }
   } catch (error) {
+    progress({
+      phase: "error",
+      error: trimError(getMigrationErrorMessage(error)),
+    })
     return {
       ok: false,
       payload,

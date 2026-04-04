@@ -36,6 +36,7 @@ import type {
   MigrationSessionInfo,
   MigrationSessionProgress,
 } from "./legacy-types"
+import { buildSessionMeta, buildSessionProgress } from "./migration-session-progress"
 import type { MigrationResultItem } from "./migration-types"
 import { createSessionID } from "./sessions/lib/ids"
 import { migrate as migrateSession } from "./sessions/migrate"
@@ -271,18 +272,13 @@ export async function migrate(
 
   if (selections.sessions?.length) {
     const info = cachedSessions ?? sessions
-    for (const id of selections.sessions) {
+    const list = selections.sessions
+    for (const [index, id] of list.entries()) {
       onProgress(id, "migrating")
       const session = info.find((item: MigrationSessionInfo) => item.id === id)
-      if (session && onSessionProgress) {
-        onSessionProgress({
-          session,
-          index: results.filter((item) => item.category === "session").length + 1,
-          total: selections.sessions.length,
-          phase: "session",
-        })
-      }
-      const result = await migrateSession(id, context, client)
+      const meta = buildSessionMeta(session, index, list.length)
+      const progress = buildSessionProgress(meta, onSessionProgress)
+      const result = await migrateSession(id, context, client, meta, progress)
       const reason = result.ok ? "Session migrated" : result.message
       results.push({
         item: id,
