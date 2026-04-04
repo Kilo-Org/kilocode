@@ -370,6 +370,25 @@
   gap: 2px;
 }
 
+.migration-session-summary__list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: calc(1.45em * 3 + 8px);
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.migration-session-summary__item {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--vscode-descriptionForeground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-height: 1.45em;
+}
+
 .migration-session-summary__row {
   display: flex;
   align-items: center;
