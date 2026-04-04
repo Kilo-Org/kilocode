@@ -21,6 +21,7 @@ import type {
   LegacySettings,
   LegacyMigrationDataMessage,
   LegacyMigrationProgressMessage,
+  LegacyMigrationSessionProgressMessage,
   LegacyMigrationCompleteMessage,
 } from "../../types/messages"
 import "./migration.css"
@@ -165,6 +166,16 @@ interface ProgressEntry {
   message?: string
 }
 
+interface SessionProgressState {
+  session: MigrationSessionInfo
+  index: number
+  total: number
+  phase: LegacyMigrationSessionProgressMessage["phase"]
+  current?: number
+  count?: number
+  error?: string
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -202,6 +213,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
   // Progress tracking
   const [progressEntries, setProgressEntries] = createSignal<ProgressEntry[]>([])
   const [results, setResults] = createSignal<MigrationResultItem[]>([])
+  const [sessionProgress, setSessionProgress] = createSignal<SessionProgressState | undefined>(undefined)
 
   // Cleanup preference
   const [clearLegacyData, setClearLegacyData] = createSignal(false)
@@ -259,6 +271,19 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
             message: update.message,
           }
           return existing >= 0 ? prev.map((e, i) => (i === existing ? entry : e)) : [...prev, entry]
+        })
+      }
+
+      if (msg?.type === "legacyMigrationSessionProgress") {
+        const update = msg as LegacyMigrationSessionProgressMessage
+        setSessionProgress({
+          session: update.session,
+          index: update.index,
+          total: update.total,
+          phase: update.phase,
+          current: update.current,
+          count: update.count,
+          error: update.error,
         })
       }
 
