@@ -33,6 +33,7 @@ import type {
   MigrationProviderInfo,
   MigrationMcpServerInfo,
   MigrationCustomModeInfo,
+  MigrationSessionInfo,
 } from "./legacy-types"
 import type { MigrationResultItem } from "./migration-types"
 import { createSessionID } from "./sessions/lib/ids"
@@ -114,18 +115,24 @@ export async function detectLegacyData(context: vscode.ExtensionContext): Promis
 }
 
 async function readSessionsInGlobalStorage(context: vscode.ExtensionContext) {
-  const items = context.globalState.get<{ id: string }[]>("taskHistory", [])
+  const items = context.globalState.get<{ id: string; task?: string; workspace?: string; ts?: number }[]>("taskHistory", [])
   const base = vscode.Uri.joinPath(context.globalStorageUri, "tasks")
-  const ids: string[] = []
+  const sessions: MigrationSessionInfo[] = []
   for (const item of items) {
     const file = vscode.Uri.joinPath(base, item.id, "api_conversation_history.json")
     const exists = await vscode.workspace.fs.stat(file).then(
       () => true,
       () => false,
     )
-    if (exists) ids.push(item.id)
+    if (!exists) continue
+    sessions.push({
+      id: item.id,
+      title: item.task?.trim() || item.id,
+      directory: item.workspace?.trim() || "",
+      time: item.ts ?? 0,
+    })
   }
-  return ids
+  return sessions
 }
 
 // ---------------------------------------------------------------------------

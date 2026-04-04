@@ -15,6 +15,7 @@ import type {
   MigrationProviderInfo,
   MigrationMcpServerInfo,
   MigrationCustomModeInfo,
+  MigrationSessionInfo,
   MigrationResultItem,
   MigrationAutoApprovalSelections,
   LegacySettings,
@@ -184,7 +185,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
   const [providers, setProviders] = createSignal<MigrationProviderInfo[]>([])
   const [mcpServers, setMcpServers] = createSignal<MigrationMcpServerInfo[]>([])
   const [customModes, setCustomModes] = createSignal<MigrationCustomModeInfo[]>([])
-  const [sessions, setSessions] = createSignal<string[]>([])
+  const [sessions, setSessions] = createSignal<MigrationSessionInfo[]>([])
   const [defaultModel, setDefaultModel] = createSignal<{ provider: string; model: string } | undefined>(undefined)
   const [legacySettings, setLegacySettings] = createSignal<LegacySettings | undefined>(undefined)
 
@@ -253,7 +254,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
           const existing = prev.findIndex((e) => e.item === update.item)
           const entry: ProgressEntry = {
             item: update.item,
-            group: existing >= 0 ? prev[existing].group : update.item,
+            group: existing >= 0 ? prev[existing]?.group || update.item : update.item,
             status: update.status,
             message: update.message,
           }
@@ -329,7 +330,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
         return { item: mode?.name ?? slug, group: "customModes", status: "pending" as const }
       }),
       ...(migrateSessions()
-        ? sessions().map((id) => ({ item: id, group: "sessions", status: "pending" as const }))
+        ? sessions().map((session) => ({ item: session.id, group: "sessions", status: "pending" as const }))
         : []),
       ...(migrateDefaultModel() && defaultModel()
         ? [{ item: "Default model", group: "defaultModel", status: "pending" as const }]
@@ -369,7 +370,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
         providers: selectedProviderNames,
         mcpServers: selectedMcpNames,
         customModes: selectedModesSlugs,
-        sessions: migrateSessions() ? sessions() : [],
+        sessions: migrateSessions() ? sessions().map((session) => session.id) : [],
         defaultModel: migrateDefaultModel(),
         settings: {
           autoApproval,

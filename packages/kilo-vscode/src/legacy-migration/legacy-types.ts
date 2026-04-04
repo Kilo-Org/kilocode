@@ -299,11 +299,18 @@ export interface MigrationCustomModeInfo {
   nativeSlug?: string
 }
 
+export interface MigrationSessionInfo {
+  id: string
+  title: string
+  directory: string
+  time: number
+}
+
 export interface LegacyMigrationData {
   providers: MigrationProviderInfo[]
   mcpServers: MigrationMcpServerInfo[]
   customModes: MigrationCustomModeInfo[]
-  sessions?: string[]
+  sessions?: MigrationSessionInfo[]
   defaultModel?: { provider: string; model: string }
   settings?: LegacySettings
   hasData: boolean
