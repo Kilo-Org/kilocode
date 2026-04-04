@@ -14,6 +14,7 @@ import type { Hooks } from "@kilocode/plugin"
 import { Process } from "../../util/process"
 import { text } from "node:stream/consumers"
 import { setTimeout as sleep } from "node:timers/promises"
+import { Filesystem } from "../../util/filesystem"
 
 type PluginAuth = NonNullable<Hooks["auth"]>
 
@@ -225,6 +226,26 @@ export const AuthListCommand = cmd({
         const homedir = os.homedir()
         const displayPath = authPath.startsWith(homedir) ? authPath.replace(homedir, "~") : authPath
         prompts.intro(`Credentials ${UI.Style.TEXT_DIM}${displayPath}`)
+        
+        // Read raw auth.json to display $schema and provider metadata
+        const rawAuthData = await Filesystem.readJson<Record<string, unknown>>(authPath).catch(() => ({}))
+        
+        // Display $schema field if present
+        if (rawAuthData && "$schema" in rawAuthData && rawAuthData.$schema) {
+          prompts.log.info(`Schema ${UI.Style.TEXT_DIM}${String(rawAuthData.$schema)}`)
+        }
+        
+        // Display provider section if present
+        if (rawAuthData && "provider" in rawAuthData && rawAuthData.provider && typeof rawAuthData.provider === "object") {
+          UI.empty()
+          prompts.intro("Provider Configuration")
+          for (const [providerId, providerInfo] of Object.entries(rawAuthData.provider as Record<string, unknown>)) {
+            if (typeof providerInfo === "object" && providerInfo !== null && "name" in providerInfo) {
+              prompts.log.info(`${String(providerInfo.name)} ${UI.Style.TEXT_DIM}configured`)
+            }
+          }
+        }
+        
         const results = Object.entries(await Auth.all())
         const database = await ModelsDev.get()
 
